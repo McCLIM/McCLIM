@@ -1068,7 +1068,11 @@
 	      (when (command-enabled command-name *application-frame*)
 		(funcall suggester cline-name command-name)))
 	    command-table)))
-    (multiple-value-bind (object success string)
+    ;; Bind the frame's command table so that the command-enabled
+    ;; test passes with this command table.
+    (letf (((frame-command-table *application-frame*)
+	    (find-command-table command-table)))
+      (multiple-value-bind (object success string)
 	(complete-input stream
 			#'(lambda (so-far mode)
 			    (complete-from-generator so-far
@@ -1078,7 +1082,7 @@
 			:partial-completers '(#\space))
       (if success
 	  (values object type)
-	  (simple-parse-error "No command named ~S" string)))))
+	  (simple-parse-error "No command named ~S" string))))))
 
 (defun command-line-command-parser (command-table stream)
   (let ((command-name nil)
