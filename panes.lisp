@@ -937,6 +937,25 @@ During realization the child of the spacing will have as cordinates
    (vscrollbar :initform nil)
    (hscrollbar :initform nil)))
 
+(defun scroll-page-callback (scroll-bar direction)
+  (with-slots (client orientation) scroll-bar
+    (multiple-value-bind (old-x old-y)
+        (untransform-position (sheet-transformation client)
+                              0 0)
+      (if (eq orientation :vertical)
+          (scroll-extent client
+                         old-x
+                         (- old-y
+                            (* direction
+                               (bounding-rectangle-height
+                                (pane-viewport-region client)))))
+          (scroll-extent client
+                         (- old-x
+                            (* direction
+                               (bounding-rectangle-width
+                                (pane-viewport-region client))))
+                         old-y)))))
+
 (defmethod initialize-instance :after ((pane scroller-pane) &rest args)
   (declare (ignore args))
   (with-slots (scroll-bar viewport vscrollbar hscrollbar) pane
@@ -956,12 +975,10 @@ During realization the child of the spacing will have as cordinates
                                             old-x (* new-value (scroll-bar-length gadget)))))
                        :scroll-up-page-callback
                        #'(lambda (scroll-bar)
-                           (declare (ignore scroll-bar))
-                           (format *debug-io* "To the top!~%"))
+                           (scroll-page-callback scroll-bar 1))
                        :scroll-down-page-callback
                        #'(lambda (scroll-bar)
-                           (declare (ignore scroll-bar))
-                           (format *debug-io* "To the bottom!~%"))
+                           (scroll-page-callback scroll-bar -1))
                        :foreground +grey40+
                        :background +grey+))
       (sheet-adopt-child pane vscrollbar))
@@ -978,6 +995,12 @@ During realization the child of the spacing will have as cordinates
                                           (gadget-client gadget)))))
                              (scroll-extent (gadget-client gadget)
                                             (* new-value (scroll-bar-length gadget)) old-y)))
+                       :scroll-up-page-callback
+                       #'(lambda (scroll-bar)
+                           (scroll-page-callback scroll-bar 1))
+                       :scroll-down-page-callback
+                       #'(lambda (scroll-bar)
+                           (scroll-page-callback scroll-bar -1))
                        :foreground +grey40+
                        :background +grey+))
       (sheet-adopt-child pane hscrollbar))))
