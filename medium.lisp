@@ -32,7 +32,8 @@
 ;;; Media
 
 ;; - MEDIUM-DRAW-POINTS*, MEDIUM-DRAW-LINES*, MEDIUM-DRAW-RECTANGLES*
-;; - MEDIUM-DRAW-RECTANGLES*
+;; - MEDIUM-DRAW-RECTANGLES*: POSITION-SEQ argument can be a
+;;   vector. Use MAP-REPEATED-SEQUENCE.
 ;;
 ;; --GB 2002-02-26
 
@@ -524,20 +525,21 @@
                             t filled))))
 
 (defmethod medium-draw-rectangles* :around ((medium basic-medium) position-seq filled)
-  ;; point-seq can be a vector! --GB
   (let ((tr (medium-transformation medium)))
     (if (rectilinear-transformation-p tr)
         (loop for (left top right bottom) on position-seq by #'cddddr
+              ;; point-seq can be a vector! --GB
               nconcing (multiple-value-list
                         (transform-rectangle* tr left top right bottom)) into position-seq
               finally (call-next-method medium position-seq filled))
-        (loop for (left top right bottom) on position-seq by #'cddddr
-              do (medium-draw-polygon* medium (list left top
-                                                    left bottom
-                                                    right bottom
-                                                    right top)
-                                       t filled)))))
-
+        (map-repeated-sequence nil 4
+                               (lambda (left top right bottom)
+                                 (medium-draw-polygon* medium (list left top
+                                                                    left bottom
+                                                                    right bottom
+                                                                    right top)
+                                                       t filled))
+                               position-seq))))
 
 (defmethod medium-draw-ellipse* :around ((medium basic-medium) center-x center-y
                                          radius-1-dx radius-1-dy radius-2-dx radius-2-dy
