@@ -41,14 +41,15 @@
 ;;; buffer-close-line*
 
 (defclass basic-buffer ()
-  ())
+  ()
+  (:documentation "basic-buffer is a protocol class that specifies basic insert
+  and delete operations on a buffer of text (generally)."))
 
 (defclass basic-buffer-mixin (basic-buffer)
   ((lines :accessor lines :initarg :lines
 	  :initform (make-instance 'dbl-list-head))
    (tick :accessor tick :initarg :tick :initform 0)
-   (point :accessor point :documentation "A buffer-pointer that
-  maintains the current insertion point.")
+   
    (size :reader size :initform 0)))
 
 (define-condition buffer-bounds-error (goatee-error)
@@ -63,28 +64,6 @@
 		     (buffer-bounds-error-pos condition)))))
 
 
-;;; A moment of convenience, a lifetime of regret...
-
-(defmethod point* ((buf basic-buffer-mixin))
-  (let ((point (point buf)))
-    (values (line point) (pos point))))
-
-(defgeneric* (setf point*) (line pos buffer))
-
-(defmethod* (setf point*) (line pos (buf basic-buffer-mixin))
-  (let ((point (slot-value buf 'point)))
-    ;; If there's a next line, the point can't be moved past the
-    ;; newline at the end of the line.
-    (when (and (next line)
-	       (> pos (1- (size line))))
-      (error 'buffer-bounds-error :buffer buf :line line :pos pos))
-    (when (not (eq (line point) line))
-      (setf (tick line) (incf (tick buf))))
-    (setf (location* point) (values line pos))
-    (setf (tick (line point)) (incf (tick buf)))
-    (values line pos)))
-
-
 (defclass buffer-line (flexivector dbl-list)
   ((buffer :accessor buffer :initarg :buffer)
    (tick :accessor tick :initarg :tick :initform 0)))
@@ -96,10 +75,8 @@
   (apply #'make-instance 'buffer-line :buffer buffer initargs))
 
 (defmethod initialize-instance :after ((obj basic-buffer-mixin) &key)
-  (dbl-insert-after (make-buffer-line obj :tick (incf (tick obj))) (lines obj))
-  (setf (point obj) (make-instance 'location
-				   :line (dbl-head (lines obj))
-				   :pos 0)))
+  (dbl-insert-after (make-buffer-line obj :tick (incf (tick obj))) (lines
+								    obj)))
 
 (defgeneric char-ref (buffer position))
 
@@ -155,51 +132,7 @@
     (setf (tick line) (incf (tick buffer)))
     (values line (+ pos len))))
 
-;;; Insert is the convenience function; thing can contain newline(s).
-;;;
-;;; Soon insert, delete-char et al. won't need to maintain the point; should
-;;; they set it at all?
 
-(defmethod insert ((buffer basic-buffer) (c character)
-		   &key position line (pos 0))
-  (cond (position
-	 (setf (point buffer) position))
-	(line
-	 (setf (point* buffer) (values line pos))))
-  (let* ((pt (slot-value buffer 'point))
-	 (line (line pt))
-	 (pos (pos pt)))
-    (setf (location* pt)
-	  (if (eql c #\Newline)
-	      (buffer-open-line* buffer line pos)
-	      (buffer-insert* buffer c line pos)))
-    nil))
-
-(defmethod insert ((buffer basic-buffer) (s string)
-		   &key position line (pos 0) (start 0) (end (length s)))
-  (cond (position
-	 (setf (point buffer) position))
-	(line
-	 (setf (point* buffer) (values line pos))))
-  (multiple-value-bind (line pos)
-      (point* buffer)
-    (loop for search-start = start then (1+ found-newline)
-	  for found-newline = (position #\Newline s
-					:start search-start
-					:end end)
-	  while found-newline
-	  do (progn
-	       (setf (values line pos)
-		     (buffer-insert* buffer s line pos
-				     :start search-start
-				     :end found-newline))
-	       (setf (values line pos)
-		     (buffer-open-line* buffer line pos)))
-	  finally (setf (values line pos)
-			(buffer-insert* buffer s line pos
-					:start search-start :end end)))
-    (setf (point* buffer) (values line pos)))
-  nil)
 
 (defgeneric buffer-close-line* (buffer line direction)
   (:documentation "If DIRECTION is positive, delete the newline at the
@@ -250,141 +183,10 @@
 	      (values line (+ pos n))))
     (setf (tick line) (incf (tick buffer)))))
 
-(defmethod delete-char ((buf basic-buffer) &optional (n 1)
-			&key position line (pos 0))
-  (cond (position
-	 (setf (point buf) position))
-	(line
-	 (setf (point* buf) (values line pos))))
-  (multiple-value-bind (line pos)
-      (point* buf)
-    (if (>= n 0)
-	(loop with remaining = n
-	      for last-point = (line-last-point line)
-	      while (> (+ remaining pos) last-point)
-	      do (let ((del-chars (- last-point pos)))
-		   (when (> del-chars 0)
-		     (buffer-delete-char* buf line pos (1- del-chars)))
-		   ;; Up against the end, this should signal an error
-		   (setf (values line pos) (buffer-close-line* buf line 1)) 
-		   (decf remaining (1+ del-chars)))
-	    finally (setf (values line pos)
-		          (buffer-delete-char* buf line pos remaining)))
-	(loop with remaining = (- n)
-	      while (< (- pos remaining) 0)
-	      do (progn
-		   (buffer-delete-char* buf line pos (- pos))
-		   (decf remaining pos)
-		   (setf (values line pos)
-			 (buffer-close-line* buf line -1)))
-	      finally (setf (values line pos)
-			    (buffer-delete-char* buf line pos (- remaining)))))
-    (setf (point* buf) (values line pos)))
-  nil)
-
-(defun adjust-fill (array new-fill)
-  (if (> new-fill (car (array-dimensions array)))
-      (adjust-array array new-fill :fill-pointer new-fill)
-      (setf (fill-pointer array) new-fill))
-  array)
-
-(defgeneric buffer-string (buffer &key start end))
-
-(defmethod buffer-string ((buf basic-buffer) &key start end result)
-  (declare (ignore start end))
-  (let ((result (if result
-		    (adjust-fill result (size buf))
-		    (make-string (size buf)))))
-    (loop for line-in-string = 0 then (+ line-in-string (size line))
-	  for line = (dbl-head (lines buf)) then (next line)
-	  while line
-	  do (flexivector-string-into line result :start1 line-in-string))
-    result))
-
-(defun line-last-point (line)
-  "Returns the last legal value for a position on a line, which is either
-  before the newline, if there is one, or after the last character."
-  (let* ((size (size line))
-	 (last-char (if (> size 0)
-			(char-ref line (1- size))
-			nil)))
-    (cond ((and last-char (char= last-char #\Newline))
-	   (1- size))
-	  (t size))))
-
-(defmethod forward-char* ((buf basic-buffer) n
-			  &key (position (point buf)) line (pos 0))
-  (multiple-value-bind (line pos)
-      (if line
-	  (values line pos)
-	  (location* position))
-    (if (>= n 0)
-	(loop for current-line = line then (next current-line)
-	      for current-pos = pos then 0
-	      for current-line-size = (or (and current-line (size current-line))
-					  0)
-	      for ends-in-nl = (and current-line
-				    (char= (char-ref current-line
-						     (1-
-						      current-line-size))
-					   #\Newline))
-	      for chars-to-eol = (- current-line-size
-				    (if ends-in-nl 1 0)
-				    current-pos)
-	      ;; point goes before #\newline, then to the next line.
-	      for remaining = n then (- remaining chars-to-eol)
-	      until (or (null current-line) (<= remaining chars-to-eol))
-	      finally (if (null current-line)
-			  (error 'buffer-bounds-error :buffer buf)
-			  (return (values current-line
-					  (+ current-pos remaining)))))
-	(loop for current-line = line then (and (prev current-line)
-					      (typep (prev current-line)
-						       'dbl-list))
-	      for current-line-size = (or (and current-line (size current-line))
-					  0)
-	      for current-pos = pos then (1- current-line-size)
-	      for remaining = (- n) then (- remaining current-pos)
-	      until (and current-line (<= remaining current-pos))
-	      finally (if (null current-line)
-			  (error 'buffer-bounds-error :buffer buf)
-			  (return (values current-line
-					  (- current-pos remaining))))))))
-
-(defmethod forward-char ((buf basic-buffer) n &rest key-args)
-  (multiple-value-bind (new-line new-pos)
-      (apply #'forward-char* buf n key-args)
-    (make-instance 'location :line new-line :pos new-pos)))
-
-(defgeneric end-of-line* (buffer &key position line pos))
-
-(defgeneric end-of-line (buffer &rest key-args))
-
-(defmethod end-of-line* ((buf basic-buffer)
-			 &key (position (point buf)) line (pos 0))
-  (multiple-value-bind (line pos)
-      (if line
-	  (values line pos)
-	  (location* position))
-    (values line (line-last-point line))))
-
-(defmethod end-of-line ((buf basic-buffer) &rest key-args)
-  (multiple-value-bind (new-line new-pos)
-      (apply #'end-of-line* buf key-args)
-    (make-instance 'location :line new-line :pos new-pos)))
-
-(defgeneric beginning-of-line* (buffer &key position line pos))
-
-(defmethod beginning-of-line* ((buf basic-buffer)
-			       &key (position (point buf)) line (pos 0))
-  (multiple-value-bind (line pos)
-      (if line
-	  (values line pos)
-	  (location* position))
-    (values line 0)))
 
 ;;; The need for these should go away once we have real buffer pointers...
-
+;;; ... but we'll keep 'em around; these might be useful for basic-buffers even
+;;; though they're overridden by methods on editable-buffer.
 (defmethod beginning-of-buffer* ((buf basic-buffer))
   (values (dbl-head (lines buf))
 	  0))
@@ -494,28 +296,6 @@
 		 (push bp (bps this-line))))
       (values line new-pos))))
 
-;;; In the next go-around, this will have buffer pointers, including the point
-;;;which will be auto-updated.
-
-(defclass editable-buffer (bp-buffer-mixin basic-buffer-mixin)
-  ((buffer-start :accessor buffer-start
-		 :documentation "A fixed buffer pointer at the start of the buffer.")
-   (buffer-end :accessor buffer-end
-	       :documentation "A buffer pointer at the end of the buffer.")))
-
-(defmethod initialize-instance :after ((obj editable-buffer)
-				       &key initial-contents
-				       (start 0)
-				       (end (when initial-contents
-					      (length initial-contents))))
-  (setf (buffer-start obj) (make-instance 'fixed-buffer-pointer
-					  :line (dbl-head (lines obj))
-					  :pos 0))
-  (setf (buffer-end obj) (make-instance 'buffer-pointer
-				     :line (dbl-head (lines obj))
-				     :pos 0))
-  (when initial-contents
-    (insert obj initial-contents :start start :end end)))
 
 (defmacro with-buffer-pointer* ((bp-var line pos &key (class ''buffer-pointer))
 				&body body)
@@ -541,13 +321,3 @@
        (with-buffer-pointer* (,bp-var ,line-var ,pos-var :class ,class)
 	 ,@body))))
 
-(defmacro with-point ((buffer) &body body)
-  "Saves and restores the point of buffer around body."
-  (let ((bp-var (gensym "BP"))
-	(buffer-var (gensym "BUFFER")))
-    `(let ((,buffer-var ,buffer))
-       (with-buffer-pointer (,bp-var (point ,buffer-var))
-	 (unwind-protect
-	      (progn
-		,@body)
-	   (setf (location* (point ,buffer-var)) (location* ,bp-var)))))))
