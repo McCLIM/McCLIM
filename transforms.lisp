@@ -4,7 +4,7 @@
 ;;;   Created: 1998-09-29
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: transforms.lisp,v 1.24 2003/08/10 07:29:55 gilbert Exp $
+;;;       $Id: transforms.lisp,v 1.25 2003/11/07 20:22:02 hefner1 Exp $
 ;;; --------------------------------------------------------------------------------------
 ;;;  (c) copyright 1998,1999,2003 by Gilbert Baumann
 ;;;  (c) copyright 2000 by 
@@ -558,7 +558,7 @@ transformation protocol."))
                         (do-on-vector)))
                      ((typep coord-seq 'vector)
                       (locally
-                          (declare (type simple-vector coord-seq))
+                          (declare (type vector coord-seq))
                         (do-on-vector)))
                      ((typep coord-seq 'list)
                       (locally
@@ -733,6 +733,9 @@ transformation protocol."))
   nil)
 
 ;; $Log: transforms.lisp,v $
+;; Revision 1.24  2003/08/10 07:29:55  gilbert
+;; delete one of the two definitions of MAKE-TRANSLATION-TRANSFORMATION.
+;;
 ;; Revision 1.23  2003/08/09 00:55:40  gilbert
 ;; Introduced special classes for the identity and translations for both
 ;; less consing and less cycles spend.
