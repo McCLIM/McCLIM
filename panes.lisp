@@ -1036,7 +1036,7 @@ During realization the child of the spacer will have as cordinates
 
 ;;; CLIM-STREAM-PANE
 
-(defclass clim-stream-pane (output-recording-stream sheet-leaf-mixin basic-pane)
+(defclass clim-stream-pane (standard-output-recording-stream sheet-leaf-mixin basic-pane)
   ((display-time :initform nil
 		 :initarg :display-time
 		 :accessor pane-display-time)
