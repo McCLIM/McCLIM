@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.81 2002/05/20 20:18:03 mikemac Exp $
+;;; $Id: panes.lisp,v 1.82 2002/06/02 00:25:31 mikemac Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -283,12 +283,6 @@
    (port :initarg :port)
    (frame :initarg :frame :initform *application-frame* :reader pane-frame)
    (enabledp :initform nil :initarg :enabledp :accessor pane-enabledp)
-   (sr-width :initform nil :initarg :width)
-   (sr-height :initform nil :initarg :height)
-   (sr-max-width :initform nil :initarg :max-width)
-   (sr-max-height :initform nil :initarg :max-height)
-   (sr-min-width :initform nil :initarg :min-width)
-   (sr-min-height :initform nil :initarg :min-height)
    (space-requirement :initform nil :accessor pane-space-requirement)
    ;; New sizes, for allocating protocol
    (new-width :initform nil)
@@ -654,14 +648,8 @@
 				      (height nil height-p)
 				      (min-height nil min-height-p)
 				      (max-height nil max-height-p))
-  (with-slots (sr-width sr-height sr-max-width sr-max-height
-	       sr-min-width sr-min-height) pane
-    (when width-p (setf sr-width width))
-    (when min-width-p (setf sr-min-width min-width))
-    (when max-width-p (setf sr-max-width max-width))
-    (when height-p (setf sr-height height))
-    (when min-height-p (setf sr-min-height min-height))
-    (when max-height-p (setf sr-max-height max-height)))
+  (declare (ignore width width-p min-width min-width-p max-width max-width-p
+		   height height-p min-height min-height-p max-height max-height-p))
   (if resize-frame
       ;; we didn't find the :resize-frame option in define-application-frame
       (layout-frame (pane-frame pane))
@@ -1666,25 +1654,24 @@ During realization the child of the spacing will have as cordinates
                                    10))) ; picked an arbitrary number - BTS
                          old-y)))))
 
-(defun is-in-scroller-pane (pane)
-  (let ((parent (sheet-parent pane)))
-    (and (typep parent 'viewport-pane)
-         (typep (sheet-parent parent) 'scroller-pane))))
-
 (defmethod pane-viewport ((pane basic-pane))
-  (when (is-in-scroller-pane pane)
-    (sheet-parent pane)))
+  (let ((parent (sheet-parent pane)))
+    (if (and parent (not (typep parent 'viewport-pane)))
+	(pane-viewport parent)
+      parent)))
 
 (defmethod pane-viewport-region ((pane basic-pane))
-  (when (is-in-scroller-pane pane)
-    (sheet-region pane)))
+  (let ((viewport (pane-viewport pane)))
+    (if viewport
+	(sheet-region viewport))))
 
 (defmethod pane-scroller ((pane basic-pane))
-  (when (is-in-scroller-pane pane)
-    (sheet-parent (sheet-parent pane))))
+  (let ((viewport (pane-viewport pane)))
+    (if viewport
+	(sheet-parent viewport))))
 
-(defun update-scroll-bars (pane entire-region x y)
-  (declare (ignore pane entire-region x y))
+(defun update-scroll-bars (pane)
+  (declare (ignore pane))
   #+ignore(multiple-value-bind (min-x min-y max-x max-y) (bounding-rectangle* entire-region)
     (with-slots (vscrollbar hscrollbar viewport) (pane-scroller pane)
       (when vscrollbar
@@ -1701,10 +1688,46 @@ During realization the child of the spacing will have as cordinates
 	(dispatch-repaint hscrollbar (sheet-region hscrollbar))))))
 
 (defmethod scroll-extent ((pane basic-pane) x y)
-  (when (is-in-scroller-pane pane)
-    (move-sheet pane (round (- x)) (round (- y)));xxx
-    #+NIL(update-scroll-bars pane (sheet-region pane) x y)
-    #+NIL(dispatch-repaint pane (sheet-region pane))))
+  (let ((viewport (pane-viewport pane)))
+    (when viewport
+      (set-bounding-rectangle-position (sheet-region pane) x y)
+      ;; find out the coordinates, in the coordinates system of
+      ;; pane, of the upper-left corner, i.e. the one with
+      ;; coordinates (0,0) in the viewport
+      (multiple-value-bind (x0 y0)
+	  (untransform-position (sheet-transformation pane) 0 0)
+	(let ((dx (- x0 x))
+	      (dy (- y0 y)))
+	  ;; alter the sheet transformation to reflect the new position
+	  (setf (sheet-transformation pane)
+	    (make-translation-transformation (- x) (- y)))
+          (update-scroll-bars pane)
+	  ;; see if we can use any of the existing output via blting
+	  (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
+	    (cond
+	     ((and (zerop dx)
+		   (< (abs dy) (- y2 y1)))
+	      (scroll-area pane 0 dy)
+	      (cond
+	       ((< dy 0)
+		(medium-clear-area (sheet-medium pane) 0 (+ y2 dy) (- x2 x1) (- y2 y1))
+		(handle-repaint pane (make-bounding-rectangle x1 (+ y2 dy) x2 y2)))
+	       (t
+		(medium-clear-area (sheet-medium pane) 0 0 (- x2 x1) dy)
+		(handle-repaint pane (make-bounding-rectangle x1 y1 x2 (+ y1 dy))))))
+	     ((and (zerop dy)
+		   (< (abs dx) (- x2 x1)))
+	      (scroll-area pane dx 0)
+	      (cond
+	       ((< dx 0)
+		(medium-clear-area (sheet-medium pane) (+ x2 dx) 0 (- x2 x1) (- y2 y1))
+		(handle-repaint pane (make-bounding-rectangle (+ x2 dx) y1 x2 y2)))
+	       (t
+		(medium-clear-area (sheet-medium pane) 0 0 dx (- y2 y1))
+		(handle-repaint pane (make-bounding-rectangle x1 y1 (+ x1 dx) y2)))))
+	     (t
+	      (medium-clear-area (sheet-medium pane) 0 0 (- x2 x1) (- y2 y1))
+	      (handle-repaint pane (sheet-region pane))))))))))
 
 ;;; LABEL PANE
 
@@ -1930,54 +1953,6 @@ During realization the child of the spacing will have as cordinates
 	(multiple-value-bind (destx desty)
 	    (untransform-position transform dx dy)
 	  (copy-area pane  srcx srcy (- x2 x1) (- y2 y1) destx desty))))))
-
-(defmethod scroll-extent ((pane clim-stream-pane) x y)
-  (when (is-in-scroller-pane pane)
-    (let ((new-x (max x 0))
-	  (new-y (max y 0))
-	  (output-history (pane-output-history pane)))
-      (let ((entire-region
-	     (make-bounding-rectangle 0 0
-				      (bounding-rectangle-max-x output-history)
-				      (bounding-rectangle-max-y output-history)))
-	    dx dy)
-	(set-bounding-rectangle-position (sheet-region pane) new-x new-y)
-	;; find out the coordinates, in the coordinates system of
-	;; pane, of the upper-left corner, i.e. the one with
-	;; coordinates (0,0) in the viewport
-	(multiple-value-bind (x0 y0)
-	    (untransform-position (sheet-transformation pane) 0 0)
-	  (setq dx (- x0 new-x)
-		dy (- y0 new-y))
-	  ;; alter the sheet transformation to reflect the new position
-	  (setf (sheet-transformation pane)
-	    (make-translation-transformation (- x) (- y)))
-          (update-scroll-bars pane entire-region new-x new-y)
-	  (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
-	    (cond
-	     ((and (zerop dx)
-		   (< (abs dy) (- y2 y1)))
-	      (scroll-area pane 0 dy)
-	      (cond
-	       ((< dy 0)
-		(medium-clear-area (sheet-medium pane) 0 (+ y2 dy) (- x2 x1) (- y2 y1))
-		(stream-replay pane (make-bounding-rectangle x1 (+ y2 dy) x2 y2)))
-	       (t
-		(medium-clear-area (sheet-medium pane) 0 0 (- x2 x1) dy)
-		(stream-replay pane (make-bounding-rectangle x1 y1 x2 (+ y1 dy))))))
-	     ((and (zerop dy)
-		   (< (abs dx) (- x2 x1)))
-	      (scroll-area pane dx 0)
-	      (cond
-	       ((< dx 0)
-		(medium-clear-area (sheet-medium pane) (+ x2 dx) 0 (- x2 x1) (- y2 y1))
-		(stream-replay pane (make-bounding-rectangle (+ x2 dx) y1 x2 y2)))
-	       (t
-		(medium-clear-area (sheet-medium pane) 0 0 dx (- y2 y1))
-		(stream-replay pane (make-bounding-rectangle x1 y1 (+ x1 dx) y2)))))
-	     (t
-	      (medium-clear-area (sheet-medium pane) 0 0 (- x2 x1) (- y2 y1))
-	      (stream-replay pane (sheet-region pane))))))))))
 
 (defmethod stream-set-input-focus ((stream clim-stream-pane))
   (with-slots (port) stream
