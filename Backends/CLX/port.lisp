@@ -1377,67 +1377,72 @@
 
 (defmethod release-selection ((port clx-port) &optional time)
   (xlib:set-selection-owner
-   (clim-clx::clx-port-display port)
+   (clx-port-display port)
    :primary nil time)
   (setf (selection-owner port) nil))
 
 (defmethod request-selection ((port clx-port) requestor time)
-  (xlib:convert-selection :primary :UTF8_STRING requestor :bounce time))
+  (xlib:convert-selection :primary :STRING requestor :bounce time))
 
-(defmethod get-selection-from-event ((event clx-selection-notify-event))
-  (when (null (selection-event-property event))
-    (format *trace-output* "~&;; Notify property is null! Why did this happen?~%"))
-  (map 'string #'code-char
-       (xlib:get-property (sheet-direct-mirror (event-sheet event))
-                          (selection-event-property event)
-                          ;; :type :text
-                          :delete-p t
-                          :result-type 'vector)))
+(defmethod get-selection-from-event ((port clx-port) (event clx-selection-notify-event))
+  ; (describe event *trace-output*)  
+  (if (null (selection-event-property event))
+      (progn
+        (format *trace-output* "~&;; Oops, selection-notify property is null. Trying the cut buffer instead..~%")
+        (xlib:cut-buffer (clx-port-display port)))                
+      (map 'string #'code-char
+           (xlib:get-property (sheet-direct-mirror (event-sheet event))
+                              (selection-event-property event)
+                              ;; :type :text
+                              :delete-p t
+                              :result-type 'vector))))
 
-(defmethod send-selection ((event clx-selection-request-event) string)
+;; Incredibly crappy broken unportable Latin 1 encoder which should be
+;; replaced by various implementation-specific versions.
+(defun latin1-encode (string)
+  (delete-if (lambda (x) (or (< x 0)
+                             (> x 255)))
+             (map 'vector #'char-code string)))
+
+;; TODO: INCR property?
+(defmethod send-selection ((port clx-port) (event clx-selection-request-event) string)
   (let ((requestor (selection-event-requestor event))
         (property  (selection-event-property event))
         (target    (selection-event-target event))
         (time      (event-timestamp event)))
     (when (null property)
-      (format *trace-output* "~&* Requestor property is null! *~%"))
+      (format *trace-output* "~&* Requestor property is null! *~%"))    
     (describe event *trace-output*)
     (finish-output *trace-output*)
-    (cond ((member target '(:UTF8_STRING :STRING :TEXT))
-           (xlib:change-property requestor property
-                                 (utf-8-encode
-                                  (concatenate 'vector (map 'vector #'char-code string)))
-                                 ;;:UTF8_STRING ;###
-                                 target
-                                 8)            
-           (xlib:send-event requestor
+    (flet ((send-event (&key target (property property))
+             (format *trace-output*
+                     "~&;; clim-clx::send-selection - Requested target ~A, sent ~A to property ~A.~%"
+                     (selection-event-target event)
+                     target
+                     property)                     
+             (xlib:send-event requestor
                             :selection-notify nil
                             :window requestor
                             :selection :primary
-                            :target target ;; :UTF8_STRING 
+                            :target target
                             :property property
-                            :time time))
-          ((member target '(:COMPOUND_TEXT))
-           (xlib:change-property requestor property
-                                 (vector 65 65 67
-                                         #x1B #x24 #x29 #x41
-                                         #xA1 #xD4
-                                         67 65 67)
-                                 :COMPOUND_TEXT
-                                 8)            
-           (xlib:send-event requestor
-                            :selection-notify nil
-                            :window requestor
-                            :selection :primary
-                            :target :COMPOUND_TEXT
-                            :property property
-                            :time time))
-          (t
-           (xlib:send-event requestor
-                            :selection-notify nil
-                            :window requestor
-                            :selection :primary
-                            :target :UTF8_STRING ;;target
-                            :property nil ;;property
                             :time time)))
+      (cond ((member target '(:UTF8_STRING :TEXT))
+             (xlib:change-property requestor property
+                                   (utf-8-encode
+                                    (concatenate 'vector (map 'vector #'char-code string)))
+                                   :UTF8_STRING
+                                   8)
+             (send-event :target :UTF8_STRING))
+            ((member target '(:STRING :COMPOUND_TEXT))
+             (xlib:change-property requestor property                                   
+                                   (latin1-encode string)
+                                   :COMPOUND_TEXT
+                                   8)            
+             (send-event :target :COMPOUND_TEXT))
+            (t
+             (format *trace-output*
+                     "~&;; Warning, unhandled type \"~A\". Trying to send as UTF8_STRING.~%"
+                     target)
+             (send-event :target :UTF8_STRING :property nil)))) ;; ...
     (xlib:display-force-output (xlib:window-display requestor))))

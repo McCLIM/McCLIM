@@ -72,10 +72,10 @@ its current owner. This should cause a selection-notify-event to be delivered.")
 (defgeneric bind-selection (port window &optional time)
   (:documentation "Take ownership of the selection."))
 
-(defgeneric send-selection (request-event string)
+(defgeneric send-selection (port request-event string)
   (:documentation "Send 'string' to a client in response to a selection-request-event."))
 
-(defgeneric get-selection-from-event (event)
+(defgeneric get-selection-from-event (port event)
   (:documentation "Given a selection-notify event, return a string containing
 the incoming selection."))
 
@@ -244,9 +244,7 @@ the incoming selection."))
                                            :sheet owner
                                            :selection :primary))))
       (when (bind-selection (port pane) pane (event-timestamp event))
-	(setf (selection-owner (port pane)) pane))
-      ;;
-      )))
+	(setf (selection-owner (port pane)) pane)))))
 
 (defun repaint-markings (pane old-markings new-markings)
   (let ((old-region (reduce #'region-union (mapcar #'(lambda (x) (marking-region pane x)) old-markings)
@@ -377,18 +375,18 @@ the incoming selection."))
 ;;;; Selections Events
 
 (defmethod dispatch-event :around ((pane cut-and-paste-mixin #|extended-output-stream|#)
-                                   (event selection-clear-event))
+                                   (event selection-clear-event))  
   (pane-clear-markings pane (event-timestamp event)))
 
 (defmethod dispatch-event :around ((pane cut-and-paste-mixin #|extended-output-stream|#)
-                                   (event selection-request-event))
-  (send-selection event (fetch-selection pane)))
+                                   (event selection-request-event))  
+  (send-selection (port pane) event (fetch-selection pane)))
 
 
 
 (defmethod dispatch-event :around ((pane cut-and-paste-mixin #|extended-output-stream|#)
                                    (event selection-notify-event))
-  (let ((matter (get-selection-from-event event)))
+  (let ((matter (get-selection-from-event (port pane) event)))
     #+NIL
     (format *trace-output* "Got ~S.~%" matter)
     (loop for c across matter do
