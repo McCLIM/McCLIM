@@ -410,10 +410,6 @@ state ~S lambda list ~S"
      center-x center-y radius-1-dx radius-1-dy radius-2-dx radius-2-dy
      start-angle end-angle filled))
 
-(def-stream-method medium-draw-oval*
-    ((stream standard-encapsulating-stream)
-     center-x center-y radius-x radius-y filled))
-
 (def-stream-method medium-draw-circle*
     ((stream standard-encapsulating-stream)
      center-x center-y radius

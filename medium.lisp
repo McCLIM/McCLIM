@@ -561,16 +561,6 @@
                           radius-2-dx radius-2-dy
                           start-angle end-angle filled)))))
 
-(defmethod medium-draw-oval* :around ((medium basic-medium) center-x center-y
-                                         radius-x radius-y filled)
-  (let* ((ellipse (make-elliptical-arc* center-x center-y
-                                        radius-x 0
-                                        0 radius-y))
-         (transformed-ellipse (transform-region (medium-transformation medium)
-                                                ellipse)))
-    (multiple-value-bind (center-x center-y) (ellipse-center-point* transformed-ellipse)
-      (call-next-method medium center-x center-y radius-x radius-y filled))))
-
 (defmethod medium-draw-circle* :around ((medium basic-medium) center-x center-y
                                          radius start-angle end-angle filled)
   (let* ((ellipse (make-elliptical-arc* center-x center-y

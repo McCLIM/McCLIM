@@ -451,46 +451,53 @@
                        (when from-head
                          (draw-arrow-head sheet x2 y2 x1 y1 head-length head-width))))
 
-#|
 (defun draw-oval (sheet center-pt x-radius y-radius
 		  &rest args
 		  &key (filled t) ink clipping-region transformation
-		       line-style line-thickness line-unit line-dashes line-cap-shape)
-  (declare (ignore sheet center-pt x-radius y-radius args
-		   filled ink clipping-region transformation
-		   line-style line-thickness line-unit line-dashes line-cap-shape))
-  (error "DRAW-OVAL is not implemented"))
+                       line-style line-thickness line-unit line-dashes line-cap-shape)
+  (declare (ignore filled ink clipping-region transformation
+		   line-style line-thickness
+		   line-unit line-dashes line-cap-shape))
+  (multiple-value-bind (x1 y1) (point-position center-pt)
+    (apply #'draw-oval* sheet x1 y1 x-radius y-radius args)))
 
 (defun draw-oval* (sheet center-x center-y x-radius y-radius
-		  &rest args
-		  &key (filled t) ink clipping-region transformation
-		       line-style line-thickness line-unit line-dashes line-cap-shape)
-  (declare (ignore sheet center-x center-y x-radius y-radius args
-		   filled ink clipping-region transformation
-		   line-style line-thickness line-unit line-dashes line-cap-shape))
-  (error "DRAW-OVAL* is not implemented"))
-|#
-
-(defun draw-oval (sheet center x-radius y-radius
-			&rest args
-			&key (filled t)
-			     ink clipping-region transformation line-style line-thickness
-			     line-unit line-dashes line-joint-shape)
-  (declare (ignore ink clipping-region transformation line-style line-thickness
-		   line-unit line-dashes line-joint-shape))
-  (with-medium-options (sheet args)
-    (multiple-value-bind (x y) (point-position center)
-	(medium-draw-oval* medium x y x-radius y-radius filled))))
-
-(defun draw-oval* (sheet x y x-radius y-radius
-			&rest args
-			&key (filled t)
-			     ink clipping-region transformation line-style line-thickness
-			     line-unit line-dashes line-joint-shape)
-  (declare (ignore ink clipping-region transformation line-style line-thickness
-		   line-unit line-dashes line-joint-shape))
-  (with-medium-options (sheet args)
-    (medium-draw-oval* medium x y x-radius y-radius filled)))
+                   &rest args
+                   &key (filled t) ink clipping-region transformation
+                         line-style line-thickness line-unit line-dashes line-cap-shape)
+  (declare (ignore ink clipping-region transformation
+		   line-style line-thickness
+		   line-unit line-dashes line-cap-shape))
+  (check-type x-radius (real 0))
+  (check-type y-radius (real 0))
+  (if (or (coordinate= x-radius 0) (coordinate= y-radius 0))
+      (draw-circle* sheet center-x center-y (max x-radius y-radius)
+                    :filled filled)
+      (with-medium-options (sheet args)
+        (if (coordinate<= y-radius x-radius)
+            (let ((x1 (- center-x x-radius)) (x2 (+ center-x x-radius))
+                  (y1 (- center-y y-radius)) (y2 (+ center-y y-radius)))
+              (if filled
+                  (progn (draw-rectangle* sheet x1 y1 x2 y2)
+                         (draw-circle* sheet x1 center-y y-radius
+                                       :start-angle (/ pi 2)
+                                       :end-angle (* pi 1.5))
+                         (draw-circle* sheet x2 center-y y-radius
+                                       :start-angle (* pi 1.5)
+                                       :end-angle (/ pi 2)))
+                  (progn (draw-lines* sheet (list x1 y1 x2 y1
+                                                  x1 y2 x2 y2))
+                         (draw-circle* sheet x1 center-y y-radius
+                                       :filled nil
+                                       :start-angle (/ pi 2)
+                                       :end-angle (* pi 1.5))
+                         (draw-circle* sheet x2 center-y y-radius
+                                       :filled nil
+                                       :start-angle (* pi 1.5)
+                                       :end-angle (/ pi 2)))))
+            (with-rotation (sheet (/ pi 2) (make-point center-x center-y))
+              (draw-oval* sheet center-x center-y y-radius x-radius
+                          :filled filled))))))
 
 
 ;;; Pixmap functions
@@ -589,7 +596,6 @@
 (def-graphic-op draw-ellipse (center-x center-y
 				  radius-1-dx radius-1-dy radius-2-dx radius-2-dy
 				  start-angle end-angle filled))
-(def-graphic-op draw-oval (center-x center-y radius-x radius-y filled))
 (def-graphic-op draw-circle (center-x center-y radius start-angle end-angle filled))
 (def-graphic-op draw-text (string x y
 			       start end

@@ -350,16 +350,6 @@
                        start-angle (- end-angle start-angle)
                        filled)))))
 
-(defmethod medium-draw-oval* ((medium clx-medium) center-x center-y radius-x radius-y filled)
-  (with-transformed-position ((sheet-native-transformation (medium-sheet medium))
-                              center-x center-y)
-    (with-CLX-graphics (medium)
-      (xlib:draw-arc mirror gc
-                     (round (- center-x radius-x)) (round (- center-y radius-y))
-                     (round (* radius-x 2)) (round (* radius-y 2))
-                     0.0 (* 2 pi)
-                     filled))))
-
 (defmethod medium-draw-circle* ((medium clx-medium) center-x center-y radius start-angle end-angle filled)
   (with-transformed-position ((sheet-native-transformation (medium-sheet medium))
                               center-x center-y)

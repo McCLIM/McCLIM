@@ -50,7 +50,6 @@
                 #:MEDIUM-DRAW-CIRCLE*
                 #:DRAW-IMAGE
                 #:TEXT-STYLE-CHARACTER-WIDTH
-                #:MEDIUM-DRAW-OVAL*
                 #:HEIGHT                ;this seems bogus
                 #:WIDTH                 ;dito
                 #:COORDINATE=
