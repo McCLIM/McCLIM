@@ -1,7 +1,7 @@
 ;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
 
 ;;;  (c) copyright 2002 by Michael McDonald (mikemac@mikemac.com)
-;;;  (c) copyright 2002 by Tim Moore (moore@bricoworks.com)
+;;;  (c) copyright 2002,2003 by Tim Moore (moore@bricoworks.com)
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -22,53 +22,6 @@
 
 #|
 Incremental Redisplay Theory of Operation
-
-In McCLIM I'm abandoning the compute-difference-set protocol from the spec.
-It's not clear how record movement interacts with layers, antialiasing, etc.,
-and with our current lame compound output record representation it's probably
-not a good idea.  Instead I've created compute-affected-region, which just
-returns the regions that need to be erased and redrawn.  Perhaps this can be
-couched in terms of compute-difference-set later...
-
-Because records may overlap, it's essential to preserve the drawing order
-encoded in the record tree.  Therefore, we can't just erase and redraw
-individual records; we need to collect regions that need to be erased and
-drawn, then test records in the tree against those regions.  Regions that are
-redrawn also need to be erased, of course.
-
-At first, updating-output creates a compound output record similar to a normal
-compound-output-record.  redisplay is called on the top level updating-output-
-record.  Each recursive invocation calls compute-new-output-records-1.  If the
-record passes the cache test, nothing further is done.  Otherwise, the node is
-marked dirty, the child output records are snapshotted , graphics state for that
-node is restored, and the  displayer continuation is called.  That leaves new
-records as the children of the node.
-
-Next, compute-affected-region is called on the top level node.  Nodes are
-examined in the old and current sets.  The different cases are:
-
-* Record in old set is not an updating-output-record.  Its region is
-erased.
-
-* Record in new set is not an updating-output-record.  Its region is drawn
-
-* Record is in old set, but not in the current set.  All the
-displayed-output-records under it must be erased.
-
-* Record is in current set, but not old set.  All its displayed-output-records
-must be drawn.
-
-* Record is in both old and new set.  If it's not dirty, nothing is done.
-Otherwise recurse and collect the regions to be erased and drawn.
-
-The code can be simplified by treating all non updating-output-records as
-dirty.
-
-I thought of this process originally in terms of an "clear region" -- to be
-erased -- and an "draw region" which needs to be drawn.  In practice, we can't
-distinguish between the two because any region we erase needs to be redrawn and
-vice-versa.  So, it simplifys things to only keep track of a single dirty
-region in compute-affected-region.
 
 |#
 
@@ -177,7 +130,7 @@ record operations are forwarded to this record.")
     (values (cursor-x state) (cursor-y state))))
 
 (defmethod* (setf output-record-end-cursor-position)
-    (x y (record basic-output-record))
+    (x y (record updating-output-record-mixin))
   (let ((state (end-graphics-state record)))
     (setf (values (cursor-x state) (cursor-y state)) (values x y))))
 
@@ -228,6 +181,12 @@ record operations are forwarded to this record.")
 (defclass standard-updating-output-record (updating-output-record-mixin)
   ())
 
+(defmethod print-object ((obj standard-updating-output-record) stream)
+  (print-unreadable-object (obj stream :type t :identity t)
+    (when (slot-boundp obj 'x1)
+      (with-slots (x1 y1 x2 y2) obj
+	(format stream "X ~S:~S Y ~S:~S " x1 x2 y1 y2))
+      (format stream "~S" (output-record-dirty obj)))))
 ;;; 
 (defvar *current-updating-output* nil)
 
@@ -264,73 +223,121 @@ record operations are forwarded to this record.")
     (funcall displayer stream))
   (setf (output-record-dirty record) :updated))
 
-(defun displayed-records-region (record)
-  "Returns the region of all the displayed records in the leaves of record"
-  (let ((region +nowhere+))
-    (labels ((do-record (r)
-	       (cond ((typep r 'compound-output-record)
-		      (map-over-output-records #'do-record r))
-		     (t (setq region (region-union region r))))))
-      (do-record record)
-      region)))
+(defgeneric find-child-output-record (record use-old-elements record-type
+				      &rest initargs
+				      &key unique-id unique-id-test))
 
-(defgeneric compute-delete-region (record))
+(defgeneric find-equal-display-record (root use-old-elements record))
 
-(defmethod compute-delete-region ((record standard-displayed-output-record))
-  record)
+(defmethod find-equal-display-record ((root standard-updating-output-record)
+				      use-old-elements
+				      record)
+  (cond ((eq (output-record-dirty root) :clean)
+	 nil)
+	(use-old-elements
+	 (when (slot-boundp root 'old-children)
+	   (find-equal-display-record (old-children root)
+				      use-old-elements
+				      record)))
+	(t (find-equal-display-record (sub-record root)
+				      use-old-elements
+				      record))))
 
-(defmethod compute-delete-region ((record compound-output-record))
-  (let ((dirty-region +nowhere+))
-    (map-over-output-records
+(defmethod find-equal-display-record ((root compound-output-record)
+				      use-old-elements
+				      record)
+  (map-over-output-records-overlapping-region
+   #'(lambda (r)
+       (let ((result (find-equal-display-record r use-old-elements record)))
+	 (when result
+	   (return-from find-equal-display-record result))))
+   root
+   record)
+  nil)
+
+(defmethod find-equal-display-record ((root displayed-output-record)
+				      use-old-elements
+				      record)
+  (declare (ignore use-old-elements))
+  (if (output-record-equal root record)
+      root
+      nil))
+
+(defgeneric map-over-displayed-output-records
+    (function root use-old-elements clean)
+  (:documentation "Call function on all displayed-output-records in ROOT's
+ tree, respecting use-old-elements."))
+
+(defmethod map-over-displayed-output-records (function
+					      (root standard-updating-output-record)
+					      use-old-elements
+					      clean)
+  (cond ((and (not clean) (eq (output-record-dirty root) :clean))
+	 nil)
+	((and use-old-elements (slot-boundp root 'old-children))
+	 (map-over-displayed-output-records function
+					    (old-children root)
+					    use-old-elements
+					    clean))
+	((not use-old-elements)
+	 (map-over-displayed-output-records function
+					    (sub-record root)
+					    use-old-elements
+					    clean))
+	(t nil)))
+
+(defmethod map-over-displayed-output-records (function
+					      (root compound-output-record)
+					      use-old-elements
+					      clean)
+  (flet ((mapper (record)
+	   (map-over-displayed-output-records function
+					      record
+					      use-old-elements
+					      clean)))
+    (declare (dynamic-extent #'mapper))
+    (map-over-output-records #'mapper root)))
+
+(defmethod map-over-displayed-output-records (function
+					      (root displayed-output-record)
+					      use-old-elements
+					      clean)
+  (declare (ignore clean))
+  (declare (ignore use-old-elements))
+  (funcall function root))
+
+(defgeneric compute-difference-set (record &optional check-overlapping
+					   offset-x offset-y
+					   old-offset-x old-offset-y))
+
+(defmethod compute-difference-set ((record standard-updating-output-record)
+				   &optional check-overlapping
+				   offset-x offset-y
+				   old-offset-x old-offset-y)
+  (declare (ignore check-overlapping offset-x offset-y
+		   old-offset-x old-offset-y))
+  (let ((existing-output-records (make-hash-table :test #'eq))
+	(draws nil)
+	(erases nil))
+    ;; Find which new output records are already on screen
+    (map-over-displayed-output-records
      #'(lambda (r)
-	 (setf dirty-region
-	       (region-union dirty-region (compute-delete-region r))))
-     record)
-    dirty-region))
-
-(defmethod compute-delete-region ((record standard-updating-output-record))
-  (let ((dirty-region +nowhere+)
-	(dirty (output-record-dirty record)))
-    ;; If it's not new or unchanged...
-    (when (or (null dirty)
-	      (eq dirty :updated))
-      (map-over-output-records
-       #'(lambda (r)
-	   (setf dirty-region
-		 (region-union dirty-region (compute-delete-region r))))
-       (old-children record)))
-    ;; Release garbage
-    (setf (old-children record) nil)
-    dirty-region))
-
-(defgeneric compute-draw-region (record))
-
-(defmethod compute-draw-region ((record standard-displayed-output-record))
-  record)
-
-(defmethod compute-draw-region ((record compound-output-record))
-  (let ((dirty-region +nowhere+))
-    (map-over-output-records
+	 (let ((old (find-equal-display-record record t r)))
+	   (if old
+	       (setf (gethash old existing-output-records) r)
+	       (push r draws))))
+     record
+     nil
+     nil)
+    ;; Find old records that should be erased
+    (map-over-displayed-output-records
      #'(lambda (r)
-	 (setf dirty-region
-	       (region-union dirty-region (compute-draw-region r))))
-     record)
-    dirty-region))
-
-;;; Can the same (eq) output-record appear in both old and new children if it's
-;;; not an updating-output-record?  Hmm, I suppose...
-
-(defmethod compute-draw-region ((record standard-updating-output-record))
-  (let ((dirty (output-record-dirty record)))
-    (format *debug-io* "compute-draw-region ~S dirty: ~S~%" record dirty)
-    (prog1
-	(if (or (eq dirty :updated)
-		(eq dirty :new))
-	    (call-next-method)
-	    +nowhere+)
-      (setf (output-record-dirty record) nil))))
-
-;;; Work in progress
+	 (unless (gethash r existing-output-records)
+	   (push r erases)))
+     record
+     t
+     nil)
+    (values erases nil draws nil nil)))
 
 (defvar *enable-updating-output* nil
   "Switch to turn on incremental redisplay")
@@ -360,7 +367,6 @@ record operations are forwarded to this record.")
 				      :fixed-position fixed-position
 				      :displayer continuation)
 	       (setq record *current-updating-output*)
-	       (push record id-map)
 	       (setf (start-graphics-state record)
 		     (medium-graphics-state stream))
 	       (funcall continuation stream)
@@ -372,7 +378,8 @@ record operations are forwarded to this record.")
 	    ((not (funcall cache-test
 			   cache-value
 			   (output-record-cache-value record)))
-	     (compute-new-output-records-1 record stream continuation))
+	     (compute-new-output-records-1 record stream continuation)
+	     (setf (slot-value record 'cache-value) cache-value))
 	    (t
 	     ;; It doesn't need to be updated, but it does go into the
 	     ;; parent's sequence of records
@@ -382,23 +389,19 @@ record operations are forwarded to this record.")
 	     (set-medium-graphics-state(end-graphics-state record) stream)))
       record)))
 
-#+nil
-(defmethod invoke-updating-output (stream
-				   continuation
-				   (record-type
-				    (eql 'standard-updating-output-record))
-				   unique-id id-test cache-value cache-test
-				   &key (fixed-position nil) (all-new nil)
-				   (parent-cache nil))
-  (funcall continuation stream))
-
 ; &key (unique-id (gensym)) was used earlier,
 ; changed to (unique-id `',(gensym)) as per gilham's request
 ; please CHECKME and delete this comment :]
 
+(defun force-update-cache-test (a b)
+  (declare (ignore a b))
+  nil)
+
 (defmacro updating-output
     ((stream
-      &key (unique-id `',(gensym)) (id-test '#'eql) cache-value (cache-test '#'eql)
+      &key (unique-id `',(gensym)) (id-test '#'eql)
+      (cache-value ''no-cache-value cache-value-supplied-p)
+      (cache-test '#'eql)
       (fixed-position nil fixed-position-p)
       (all-new nil all-new-p)
       (parent-cache nil parent-cache-p)
@@ -406,6 +409,8 @@ record operations are forwarded to this record.")
      &body body)
   (when (eq stream t)
     (setq stream '*standard-output*))
+  (unless cache-value-supplied-p
+    (setq cache-test '#'force-update-cache-test))
   (let ((func (gensym "UPDATING-OUTPUT-CONTINUATION")))
     `(flet ((,func (,stream)
 	      ,@body))
@@ -431,21 +436,28 @@ record operations are forwarded to this record.")
 				    &optional (check-overlapping t))
   (declare (ignore check-overlapping))
   (letf (((slot-value stream 'redisplaying-p) t))
-    (compute-new-output-records record stream)
-    (let ((delete-region (compute-delete-region record))
-	  (draw-region (compute-draw-region record)))
-      (format *debug-io* "delete: ~S~%draw: ~S~%" delete-region draw-region)
-      (with-output-recording-options (stream :record nil :draw t)
-	(with-drawing-options (stream :clipping-region delete-region)
-	  (with-bounding-rectangle* (x1 y1 x2 y2)
-	      record
-	    (draw-rectangle* stream x1 y1 x2 y2 :ink +background-ink+)))
-	(with-drawing-options (stream :clipping-region draw-region)
-	  (with-bounding-rectangle* (x1 y1 x2 y2)
-	      record
-	    (draw-rectangle* stream x1 y1 x2 y2 :ink +background-ink+))))
-      (replay record stream delete-region)
-      (replay record stream draw-region))))
+    (let ((*current-updating-output* record))
+      (compute-new-output-records record stream)
+      (multiple-value-bind (erases moves draws)
+	  (compute-difference-set record)
+	(declare (ignore moves))
+	(with-output-recording-options (stream :record nil :draw t)
+	  (loop for r in erases
+		do (with-bounding-rectangle* (x1 y1 x2 y2)
+		       r
+		     (draw-rectangle* stream x1 y1 x2 y2
+				      :ink +background-ink+)))
+	  (loop for r in draws
+		do (with-bounding-rectangle* (x1 y1 x2 y2)
+		       r
+		     (draw-rectangle* stream x1 y1 x2 y2
+				      :ink +background-ink+))))
+	;; Redraw all the regions that have been erased.  This takes care of all
+	;; random records that might overlap.
+	(loop for r in erases
+	      do (replay record stream r))
+	(loop for r in draws
+	      do (replay record stream r))))))
 
 (defun convert-from-relative-to-absolute-coordinates (stream record)
   (let ((scy (if stream (bounding-rectangle-height stream) 0.0d0))

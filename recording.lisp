@@ -65,14 +65,6 @@
 ;;; output record class"? Is it OUTPUT-RECORD or BASIC-OUTPUT-RECORD?
 ;;; Now they are defined on OUTPUT-RECORD.
 
-;;; TDO
-;;;
-;;; Text output record must save ink and clipping region. But its
-;;; protocol does not give any way to do it! And a user can put in a
-;;; history a record of any class :(. Now we are using
-;;; *DRAWING-OPTIONS* to put the necessary information and make sure
-;;; that only instances of STANDARD-TEXT-OUTPUT-RECORD are used for
-;;; recording. -- APD, 2002-06-15.
 
 (in-package :clim-internals)
 
@@ -275,12 +267,76 @@ unspecified. "))
 ;;; 21.3 Incremental Redisplay Protocol.  These generic functions need
 ;;; to be implemented for all the basic displayed-output-records, so they are
 ;;; defined in this file.
+;;;
+;;; match-output-records and find-child-output-record, as defined in
+;;; the CLIM spec, are pretty silly.  How does incremental redisplay know
+;;; what keyword arguments to supply to find-child-output-record?  Through
+;;; a gf specialized on the type of the record it needs to match... why
+;;; not define the search function and the predicate on two records then!
+;;;
+;;; We'll implement match-output-records and find-child-output-record,
+;;; but we won't actually use them.  Instead, output-record-equal will
+;;; match two records, and find-child-record-equal will search for the
+;;; equivalent record.
 
 (defgeneric match-output-records (record &rest args))
+
+;;; These gf's use :most-specific-last because one of the least
+;;; specific methods will check the bounding boxes of the records, which
+;;; should cause an early out most of the time.
 
 (defgeneric match-output-records-1 (record &key)
   (:method-combination and :most-specific-last))
 
+(defgeneric output-record-equal (record1 record2)
+  (:method-combination and :most-specific-last))
+
+(defmethod output-record-equal :around (record1 record2)
+  (if (eq (class-of record1) (class-of record2))
+      (call-next-method)
+      nil))
+
+;;; The code for match-output-records-1 and output-record-equal
+;;; methods are very similar, hence this macro.  In order to exploit
+;;; the similarities, it's necessary to treat the slots of the second
+;;; record like variables, so for convenience the macro will use
+;;; slot-value on both records.
+
+(defmacro defrecord-predicate (record-type slots &body body)
+  "Each element of SLOTS is either a symbol or (:initarg-name slot-name)."
+  (let* ((slot-names (mapcar #'(lambda (slot-spec)
+				 (if (consp slot-spec)
+				     (cadr slot-spec)
+				     slot-spec))
+			     slots))
+	 (supplied-vars (mapcar #'(lambda (slot)
+				    (gensym (symbol-name
+					     (symbol-concat slot '#:-p))))
+				slot-names))
+	 (key-args (mapcar #'(lambda (slot-spec supplied)
+			       `(,slot-spec nil ,supplied))
+			   slots supplied-vars))
+	 (key-arg-alist (mapcar #'cons slot-names supplied-vars)))
+    `(progn
+       (defmethod output-record-equal and ((record ,record-type)
+					   (record2 ,record-type))
+	 (macrolet ((if-supplied (var &body supplied-body)
+		      (declare (ignore var))
+		      `(progn ,@supplied-body)))
+	   (with-slots ,slot-names
+	       record2
+	     ,@body)))
+       (defmethod match-output-records-1 and ((record ,record-type)
+					      &key ,@key-args)
+	 (macrolet ((if-supplied (var &body supplied-body)
+		      (let ((supplied-var (cdr (assoc var ',key-arg-alist))))
+			(unless supplied-var
+			  (error "Unknown slot ~S" var))
+			`(or (null ,supplied-var)
+			     (progn ,@supplied-body)))))
+	   ,@body)))
+    
+    ))
 ;;; Macros
 (defmacro with-output-recording-options ((stream
 					  &key (record nil record-supplied-p)
@@ -829,10 +885,9 @@ were added."
 (defmethod set-medium-graphics-state :after ((state gs-ink-mixin) medium)
   (setf (medium-ink medium) (graphics-state-ink state)))
 
-(defmethod match-output-records-1 and ((record gs-ink-mixin)
-				       &key (ink nil inkp))
-  (or (null inkp)
-      (design-equalp (graphics-state-ink record) ink)))
+(defrecord-predicate gs-ink-mixin (ink)
+  (if-supplied ink
+    (design-equalp (slot-value record 'ink) ink)))
 
 (defclass gs-clip-mixin (graphics-state)
   ((clip :initarg :clipping-region :accessor graphics-state-clip
@@ -884,6 +939,10 @@ were added."
   (or clipp
       (region-equal (graphics-state-clip record) clip)))
 
+(defrecord-predicate gs-clip-mixin ((:clipping-region clip))
+  (if-supplied clip
+    (region-equal (slot-value record 'clip) clip)))
+
 ;;; 16.3.2. Graphics Displayed Output Records
 (defclass standard-displayed-output-record (gs-clip-mixin gs-ink-mixin
 					    basic-output-record
@@ -905,10 +964,9 @@ were added."
 (defmethod set-medium-graphics-state :after ((state gs-line-style-mixin) medium)
   (setf (medium-line-style medium) (graphics-state-line-style state)))
 
-(defmethod match-output-records-1 and ((record gs-line-style-mixin)
-				       &key (line-style nil line-style-p))
-  (or (null line-style-p)
-      (line-style-equalp (graphics-state-line-style record) line-style)))
+(defrecord-predicate gs-line-style-mixin (line-style)
+  (if-supplied line-style
+    (line-style-equalp (slot-value record 'line-style) line-style)))
 
 (defgeneric graphics-state-line-style-border (record medium)
   (:method ((record gs-line-style-mixin) medium)
@@ -930,10 +988,9 @@ were added."
 (defmethod set-medium-graphics-state :after ((state gs-text-style-mixin) medium)
   (setf (medium-text-style medium) (graphics-state-text-style state)))
 
-(defmethod match-output-records-1 and ((record gs-text-style-mixin)
-				       &key (text-style nil text-style-p))
-  (or (null text-style-p)
-      (text-style-equalp (graphics-state-text-style record) text-style)))
+(defrecord-predicate gs-text-style-mixin (text-style)
+  (if-supplied text-style
+    (text-style-equalp (slot-value record 'text-style) text-style)))
 
 (defclass standard-graphics-displayed-output-record
     (standard-displayed-output-record
@@ -953,6 +1010,10 @@ were added."
 	     (or (null y1-p) (coordinate= my-y1 y1))
 	     (or (null x2-p) (coordinate= my-x2 x2))
 	     (or (null y2-p) (coordinate= my-y2 y2))))))
+
+(defmethod output-record-equal and ((record standard-displayed-output-record)
+				    (record2 standard-displayed-output-record))
+  (region-equal record record2))
 
 ;;; This is an around method so that more specific before methods can be
 ;;; defined for the various mixin classes, that modify the state after it has
@@ -1018,11 +1079,6 @@ were added."
 		   for elt2 across coord-seq
 		   always (coordinate= elt1 elt2))))))
 
-;;; Do we need to save/restore graphics state in each call to
-;;; replay-output-record, or could we do it only in replay?  I'd like to save
-;;; state in a graphics state object, but I'm not going to allocate one in each
-;;; recursive invocation of replay-output-record :P -- moore
-
 (defmacro def-grecording (name ((&rest mixins) &rest args) &body body)
   (let ((method-name (symbol-concat '#:medium- name '*))
 	(class-name (symbol-concat name '#:-output-record))
@@ -1087,14 +1143,11 @@ were added."
 	(incf point-x dx)
 	(incf point-y dy)))))
 
-(defmethod match-output-records-1 and ((record draw-point-output-record)
-				       &key (point-x nil point-x-p)
-				       (point-y nil point-y-p))
-  (and (or (null point-x-p)
-	   (coordinate= (slot-value record 'point-x) point-x))
-       (or (null point-y-p)
-	   (coordinate= (slot-value record 'point-y) point-y))))
-
+(defrecord-predicate draw-point-output-record (point-x point-y)
+  (and (if-supplied point-x
+	 (coordinate= (slot-value record 'point-x) point-x))
+       (if-supplied point-y
+	 (coordinate= (slot-value record 'point-y) point-y))))
 
 (def-grecording draw-points ((coord-seq-mixin gs-line-style-mixin) coord-seq)
   ;; coord-seq has already been transformed
@@ -1130,24 +1183,23 @@ were added."
 	(incf point-x2 dx)
 	(incf point-y2 dy)))))
 
-(defmethod match-output-records-1 and ((record draw-line-output-record)
-				       &key (point-x1 nil point-x1-p)
-				       (point-y1 nil point-y1-p)
-				       (point-x2 nil point-x2-p)
-				       (point-y2 nil point-y2-p))
-  (and (or (null point-x1-p)
-	   (coordinate= (slot-value record 'point-x1) point-x1))
-       (or (null point-y1-p)
-	   (coordinate= (slot-value record 'point-y1) point-y1))
-       (or (null point-x2-p)
-	   (coordinate= (slot-value record 'point-x2) point-x2))
-       (or (null point-y2-p)
-	   (coordinate= (slot-value record 'point-y2) point-y2))))
-
+(defrecord-predicate draw-line-output-record (point-x1 point-y1
+					      point-x2 point-y2)
+  (and (if-supplied point-x1
+	 (coordinate= (slot-value record 'point-x1) point-x1))
+       (if-supplied point-y1
+	 (coordinate= (slot-value record 'point-y1) point-y1))
+       (if-supplied point-x2
+	 (coordinate= (slot-value record 'point-x2) point-x2))
+       (if-supplied point-y2
+	 (coordinate= (slot-value record 'point-y2) point-y2))))
 
 (def-grecording draw-lines ((coord-seq-mixin gs-line-style-mixin) coord-seq)
   (let ((border (graphics-state-line-style-border graphic medium)))
     (coord-seq-bounds coord-seq border)))
+
+;;; (setf output-record-position) and predicates for draw-lines-output-record
+;;; are taken care of by methods on superclasses.
 
 ;;; Helper function
 (defun normalize-coords (dx dy &optional unit)
@@ -1266,13 +1318,11 @@ were added."
     (polygon-record-bounding-rectangle
      coord-seq closed filled line-style border (medium-miter-limit medium))))
 
-(defmethod match-output-records-1 and ((record draw-polygon-output-record)
-				       &key (closed nil closedp)
-				       (filled nil filledp))
-  (and (or (null closedp)
-	   (eql (slot-value record 'closed) closed))
-       (or (null filledp)
-	   (eql (slot-value record 'filled) filled))))
+(defrecord-predicate draw-polygon-output-record (closed filled)
+  (and (if-supplied closed
+	 (eql (slot-value record 'closed) closed))
+       (if-supplied filled
+	 (eql (slot-value record 'filled) filled))))
 
 (def-grecording draw-rectangle ((gs-line-style-mixin)
 				left top right bottom filled)
@@ -1296,22 +1346,17 @@ were added."
 	(incf right dx)
 	(incf bottom dy)))))
 
-(defmethod match-output-records-1 and ((record draw-rectangle-output-record)
-				       &key (left nil leftp)
-				       (top nil topp)
-				       (right nil rightp)
-				       (bottom nil bottomp)
-				       (filled nil filledp))
-  (and (or (null leftp)
-	   (coordinate= (slot-value record 'left) left))
-       (or (null topp)
-	   (coordinate= (slot-value record 'top) top))
-       (or (null rightp)
-	   (coordinate= (slot-value record 'right) right))
-       (or (null bottomp)
-	   (coordinate= (slot-value record 'bottom) bottom))
-       (or (null filledp)
-	   (eql (slot-value record 'filled) filled))))
+(defrecord-predicate draw-rectangle-output-record (left top right bottom filled)
+  (and (if-supplied left
+	 (coordinate= (slot-value record 'left) left))
+       (if-supplied top
+	 (coordinate= (slot-value record 'top) top))
+       (if-supplied right
+	 (coordinate= (slot-value record 'right) right))
+       (if-supplied bottom
+	 (coordinate= (slot-value record 'bottom) bottom))
+       (if-supplied filled
+	 (eql (slot-value record 'filled) filled))))
 
 (def-grecording draw-ellipse ((gs-line-style-mixin)
 			      center-x center-y
@@ -1342,12 +1387,10 @@ were added."
 	(incf center-x dx)
 	(incf center-y dy)))))
 
-(defmethod match-output-records-1 and ((record draw-ellipse-output-record)
-				       &key (center-x nil center-x-p)
-				       (center-y nil center-y-p))
-  (and (or (null center-x-p)
+(defrecord-predicate draw-ellipse-output-record (center-x center-y)
+  (and (if-supplied center-x
 	   (coordinate= (slot-value record 'center-x) center-x))
-       (or (null center-y-p)
+       (if-supplied center-y
 	   (coordinate= (slot-value record 'center-y) center-y))))
 
 (def-grecording draw-text ((gs-text-style-mixin) string point-x point-y start end
@@ -1393,46 +1436,42 @@ were added."
 	(incf toward-x dx)
 	(incf toward-y dy)))))
 
-(defmethod match-output-records-1 and ((record draw-text-output-record)
-				       &key (string nil stringp)
-				       (start nil startp)
-				       (end nil endp)
-				       (point-x nil point-x-p)
-				       (point-y nil point-y-p)
-				       (align-x nil align-x-p)
-				       (align-y nil align-y-p)
-				       (toward-x nil toward-x-p)
-				       (toward-y nil toward-y-p)
-				       (transform-glyphs nil
-							 transform-glyphs-p))
-   (and (or (null stringp)
-	    (string= (slot-value record 'string) string))
-	(or (null startp)
-	    (eql (slot-value record 'start) start))
-	(or (null endp)
-	    (eql (slot-value record 'end) end))
-	(or (null point-x-p)
-	    (coordinate= (slot-value record 'point-x) point-x))
-	(or (null point-y-p)
-	    (coordinate= (slot-value record 'point-y) point-y))
-	(or (null align-x-p)
-	    (eq (slot-value record 'align-x) align-x))
-	(or (null align-y-p)
-	    (eq (slot-value record 'align-y) align-y))
-	(or (null toward-x-p)
-	    (coordinate= (slot-value record 'toward-x) toward-x))
-	(or (null toward-y-p)
-	    (coordinate= (slot-value record 'toward-y) toward-y))
-	(or (null transform-glyphs-p)
-	    (eq (slot-value record 'transform-glyphs) transform-glyphs))))
+(defrecord-predicate draw-text-output-record
+    (string start end point-x point-y align-x align-y toward-x toward-y
+     transform-glyphs)
+  (and (if-supplied string
+	 (string= (slot-value record 'string) string))
+       (if-supplied start
+	 (eql (slot-value record 'start) start))
+       (if-supplied end
+	 (eql (slot-value record 'end) end))
+       (if-supplied point-x
+	 (coordinate= (slot-value record 'point-x) point-x))
+       (if-supplied point-y
+	 (coordinate= (slot-value record 'point-y) point-y))
+       (if-supplied align-x
+	 (eq (slot-value record 'align-x) align-x))
+       (if-supplied align-y
+	 (eq (slot-value record 'align-y) align-y))
+       (if-supplied toward-x
+	 (coordinate= (slot-value record 'toward-x) toward-x))
+       (if-supplied toward-y
+	 (coordinate= (slot-value record 'toward-y) toward-y))
+       (if-supplied transform-glyphs
+	 (eq (slot-value record 'transform-glyphs) transform-glyphs))))
 
 ;;; 16.3.3. Text Displayed Output Record
-(defvar *drawing-options* (list +foreground-ink+ +everywhere+)
-  "The ink and the clipping region of the current stream.") ; XXX TDO
 
 (defclass styled-string (gs-text-style-mixin gs-clip-mixin gs-ink-mixin)
   ((start-x :initarg :start-x)
    (string :initarg :string :reader styled-string-string)))
+
+(defmethod output-record-equal and ((record styled-string)
+				    (record2 styled-string))
+  (and (coordinate= (slot-value record 'start-x)
+		    (slot-value record2 'start-x))
+       (string= (slot-value record 'string)
+		(slot-value record2 'string))))
 
 (defclass standard-text-displayed-output-record
     (text-displayed-output-record standard-displayed-output-record)
@@ -1454,6 +1493,30 @@ were added."
     ((obj standard-text-displayed-output-record) &key stream)
   (when stream
     (setf (slot-value obj 'medium) (sheet-medium stream))))
+
+;;; Forget match-output-records-1 for standard-text-displayed-output-record; it
+;;; doesn't make much sense because these records have state that is not
+;;; initialized via initargs.
+
+(defmethod output-record-equal and
+    ((record standard-text-displayed-output-record)
+     (record2 standard-text-displayed-output-record))
+  (with-slots
+	(initial-x1 initial-y1 start-x start-y end-x end-y wrapped strings)
+      record2
+    (and (coordinate= (slot-value record 'initial-x1) initial-x1)
+	 (coordinate= (slot-value record 'initial-y1) initial-y1)
+	 (coordinate= (slot-value record 'start-x) start-x)
+	 (coordinate= (slot-value record 'start-y) start-y)
+	 (coordinate= (slot-value record 'end-x) end-x)
+	 (coordinate= (slot-value record 'end-y) end-y)
+	 (eq (slot-value record 'wrapped) wrapped)
+	 (coordinate= (slot-value record 'baseline)
+		      (slot-value record2 'baseline))
+	 (eql (length (slot-value record 'strings)) (length strings));XXX
+	 (loop for s1 in (slot-value record 'strings)
+	       for s2 in strings
+	       always (output-record-equal s1 s2))))))
 
 (defmethod print-object ((self standard-text-displayed-output-record) stream)
   (print-unreadable-object (self stream :type t :identity t)
@@ -1714,9 +1777,7 @@ were added."
   (when (and (stream-recording-p stream)
              (slot-value stream 'local-record-p))
     (let* ((medium (sheet-medium stream))
-           (text-style (medium-text-style medium))
-           (*drawing-options* (list (medium-ink medium) ; XXX TDO
-                                    (medium-clipping-region medium))))
+           (text-style (medium-text-style medium)))
       (stream-add-string-output stream line 0 nil text-style
                                 (stream-string-width stream line
                                                      :text-style text-style)
@@ -1841,3 +1902,6 @@ according to the flags RECORD and DRAW."
 (defmethod handle-repaint ((stream output-recording-stream) region)
   (stream-replay stream region))
 
+(defmethod scroll-extent :around ((stream output-recording-stream) x y)
+  (when (stream-drawing-p stream)
+    (call-next-method)))

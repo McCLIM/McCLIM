@@ -339,7 +339,14 @@ than one line of output."))
 	      (:allow
 	       )))
           (scroll-extent stream 0 (max 0 (- (+ cy height) %view-height)))
-	  (draw-rectangle* medium cx cy (+ margin 4) (+ cy height)
+	  ;; mikemac says that this "erase the new line" behavior is
+	  ;; required by the stream text protocol, but I don't see
+	  ;; it.  I'm happy to put this back in again, but in the
+	  ;; meantime it makes debugging of updating-output a bit easier
+	  ;; not to have "extra" records laying around.  If/When it goes
+	  ;; back in... the draw-rectangle has to happen on the stream,
+	  ;; not the medium. -- moore
+	  #+nil(draw-rectangle* medium cx cy (+ margin 4) (+ cy height)
 			   :ink +background-ink+
 			   :filled t)
 	  (setq baseline 0
