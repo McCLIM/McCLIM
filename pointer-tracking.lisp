@@ -91,12 +91,12 @@
      collect `#',handler-name into fn-names
      append `(,event-name #',handler-name) into tracking-pointer-args
      finally (return `(flet ,bindings
-			(declare (dynamic-extent ,@fn-names))
-			(invoke-tracking-pointer-loop *application-frame*
+                        (declare (dynamic-extent ,@fn-names))
+                        (invoke-tracking-pointer-loop *application-frame*
 						      ,sheet
 						      ,@tracking-pointer-args
-						      ,@args
-						      :allow-other-keys t)))))
+                                                      ,@args
+                                                      #-cmu18e :allow-other-keys #-cmu18e t)))))
 
 (defun invoke-tracking-pointer-loop (frame sheet &rest args)
   (apply #'tracking-pointer-loop
