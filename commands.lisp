@@ -584,6 +584,7 @@
 		      (unless (delimiter-gesture-p gesture)
 			(unread-gesture gesture
 					:stream ,stream-var)))))
+             (declare (ignorable (function eat-delimiter-or-activator)))
 	     (let ((gesture (read-gesture :stream ,stream-var
 					  :timeout 0
 					  :peek-p t)))
