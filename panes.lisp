@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.82 2002/06/02 00:25:31 mikemac Exp $
+;;; $Id: panes.lisp,v 1.83 2002/06/20 07:38:47 adejneka Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -731,9 +731,11 @@
     ;; avoid going into an infinite loop by not using (setf sheet-transformation)
     (setf (slot-value pane 'transformation)
 	  (make-translation-transformation x y))
+    (invalidate-cached-transformations pane)
     ;; avoid going into an infinite loop by not using (setf sheet-region)
     (setf (slot-value pane 'region)
 	  (make-bounding-rectangle 0 0 width height))
+    (invalidate-cached-regions pane)
     (allocate-space pane width height)))
 
 #-nil
@@ -749,9 +751,11 @@
         ;; avoid going into an infinite loop by not using (setf sheet-transformation)
         (setf (slot-value pane 'transformation)
 	      (make-translation-transformation x y))
+        (invalidate-cached-transformations pane)
         ;; avoid going into an infinite loop by not using (setf sheet-region)
         (setf (slot-value pane 'region)
 	      (make-bounding-rectangle 0 0 width height))
+        (invalidate-cached-regions pane)
         #+nil
         (allocate-space pane width height)
         (when (or (/= width  old-width)
