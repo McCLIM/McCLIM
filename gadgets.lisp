@@ -6,6 +6,7 @@
 ;;; and Julien Boninfante (boninfan@emi.u-bordeaux.fr)
 ;;;  (c) copyright 2001 by
 ;;; Lionel Salabartan (salabart@emi.u-bordeaux.fr)
+;;;  (c) copyright 2001 by Michael McDonald (mikemac@mikemac.com)
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
