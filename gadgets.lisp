@@ -29,7 +29,7 @@
 ;;; Gadget
 ;;;
 
-(defclass gadget (immediate-sheet-input-mixin immediate-repainting-mixin pane)
+(defclass gadget (permanent-medium-sheet-output-mixin immediate-sheet-input-mixin immediate-repainting-mixin pane)
   ((id :initarg :id
        :initform (gensym "GADGET")
        :accessor gadget-id)
