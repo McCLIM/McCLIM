@@ -365,7 +365,7 @@
 
 (defmethod stream-listen ((stream standard-extended-input-stream))
   (with-encapsulating-stream (estream stream)
-    (loop for char = (read-gesture-or-reason :timeout 0 :peek-p t)
+    (loop for char = (read-gesture-or-reason estream :timeout 0 :peek-p t)
 	  do (if (read-result-p char)
 		 (loop-finish)
 		 (stream-read-gesture estream)) ; consume pointer gesture
