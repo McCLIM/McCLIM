@@ -138,33 +138,33 @@
                              (to-drawable clx-medium) to-x to-y)
   (xlib:copy-area (sheet-direct-mirror (medium-sheet from-drawable))
                   (medium-gcontext from-drawable +background-ink+)
-                  from-x from-y width height
+                  (round from-x) (round from-y) (round width) (round height)
                   (sheet-direct-mirror (medium-sheet to-drawable))
-                  to-x to-y))
+                  (round to-x) (round to-y)))
 
 (defmethod medium-copy-area ((from-drawable clx-medium) from-x from-y width height
                              (to-drawable pixmap) to-x to-y)
   (xlib:copy-area (sheet-direct-mirror (medium-sheet from-drawable))
                   (medium-gcontext from-drawable +background-ink+)
-                  from-x from-y width height
+                  (round from-x) (round from-y) (round width) (round height)
                   (pixmap-mirror to-drawable)
-                  to-x to-y))
+                  (round to-x) (round to-y)))
 
 (defmethod medium-copy-area ((from-drawable pixmap) from-x from-y width height
                              (to-drawable clx-medium) to-x to-y)
   (xlib:copy-area (pixmap-mirror from-drawable)
                   (medium-gcontext to-drawable +background-ink+)
-                  from-x from-y width height
+                  (round from-x) (round from-y) (round width) (round height)
                   (sheet-direct-mirror (medium-sheet to-drawable))
-                  to-x to-y))
+                  (round to-x) (round to-y)))
 
 (defmethod medium-copy-area ((from-drawable pixmap) from-x from-y width height
                              (to-drawable pixmap) to-x to-y)
   (xlib:copy-area (pixmap-mirror from-drawable)
                   (medium-gcontext from-drawable +background-ink+) ; FIXME!!!!!
-                  from-x from-y width height
+                  (round from-x) (round from-y) (round width) (round height)
                   (pixmap-mirror to-drawable)
-                  to-x to-y))
+                  (round to-x) (round to-y)))
 
 
 ;;; Medium-specific Drawing Functions
