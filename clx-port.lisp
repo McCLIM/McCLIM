@@ -44,7 +44,7 @@
   (initialize-clx port))
 
 (defun clx-error-handler (display error-name &key &allow-other-keys)
-  nil)
+  (format *error-output* "clx-error: ~a~%" error-name))
 
 (defmethod initialize-clx ((port clx-port))
   (let ((options (cdr (port-server-path port))))
@@ -98,16 +98,13 @@
   (realize-mirror-aux port sheet
 		      :border-width 0 ; (border-pane-width sheet)
 		      :event-mask '(:exposure
-				    :key-press :key-release
-				    :button-press :button-release
 				    :structure-notify)))
 
 (defmethod realize-mirror ((port clx-port) (sheet top-level-sheet-pane))
   (let ((frame (pane-frame sheet))
 	(window (realize-mirror-aux port sheet
 				    :map nil
-				    :event-mask '(:exposure
-						  :structure-notify))))
+				    :event-mask '(:structure-notify))))
     (setf (xlib:wm-name window) (frame-pretty-name frame))
     (setf (xlib:wm-icon-name window) (frame-pretty-name frame))))
 
@@ -115,8 +112,7 @@
   (realize-mirror-aux port sheet
 		      :override-redirect :on
 		      :map nil
-		      :event-mask '(:exposure
-				    :structure-notify)))
+		      :event-mask '(:structure-notify)))
 
 (defmethod realize-mirror ((port clx-port) (sheet menu-button-pane))
   (realize-mirror-aux port sheet
@@ -130,7 +126,7 @@
 
 (defmethod unrealize-mirror ((port clx-port) (sheet sheet))
   (when (port-lookup-mirror port sheet)
-    (xlib:destroy-window (port-lookup-mirror port sheet))))
+    (xlib:unmap-window (port-lookup-mirror port sheet))))
 
 (defmethod port-set-sheet-region ((port clx-port) (graft graft) region)
   (declare (ignore region))
@@ -165,7 +161,7 @@
   (xlib:close-display (clx-port-display port)))
 
 (defun event-handler (&rest event-slots
-                      &key display window event-key code state time width height x y
+                      &key display window event-key code state mode time width height x y
                       &allow-other-keys)
   (let ((sheet (and window
 		    (port-lookup-sheet *clx-port* window))))
@@ -187,11 +183,14 @@
        (make-instance 'pointer-enter-event :pointer 0 :button code :x x :y y
 		      :sheet sheet :modifier-state state :timestamp time))
       (:leave-notify
-       (make-instance 'pointer-exit-event :pointer 0 :button code :x x :y y
+       (make-instance (if (eq mode :ungrab) 'pointer-ungrab-event 'pointer-exit-event)
+	              :pointer 0 :button code :x x :y y
 		      :sheet sheet :modifier-state state :timestamp time))
       (:configure-notify
        (make-instance 'window-configuration-event :sheet sheet
 		      :x x :y y :width width :height height))
+      (:unmap-notify
+       (make-instance 'window-unmap-event :sheet sheet))
       (:destroy-notify
        (make-instance 'window-destroy-event :sheet sheet))
       (:motion-notify
@@ -334,6 +333,9 @@
 (defmethod port-mirror-height ((port clx-port) sheet)
   (let ((mirror (port-lookup-mirror port sheet)))
     (xlib:drawable-height mirror)))
+
+(defmethod port-destroy-mirror ((port clx-port) mirror)
+  (xlib:destroy-window mirror))
 
 (defmethod graft ((port clx-port))
   (port-grafts port))
