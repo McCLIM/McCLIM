@@ -818,17 +818,27 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
       (setq end (min end (1- (length string))))
       (setq end (1- (length string))))
   (let ((length (max 0 (- (1+ end) start))))
-    (setq string (make-array length :displaced-to string
-			     :displaced-index-offset start
-			     :element-type (array-element-type string)))
-    (with-slots (strings baseline width max-height start-y end-x end-y) text-record
-                (setq baseline (max baseline new-baseline)
-                      strings (nconc strings (list (list end-x text-style (make-array (length string) :initial-contents string :element-type 'character :adjustable t :fill-pointer t))))
-                      end-x (+ end-x string-width)
-                      max-height (max max-height height)
-                      end-y (max end-y (+ start-y max-height))
-                      width (+ width string-width))))
-  (tree-recompute-extent text-record))
+    (cond
+     ((= length 1)
+      (add-character-output-to-text-record text-record (aref string start) text-style string-width height new-baseline))
+     (t
+      (setq string (make-array length :displaced-to string
+			       :displaced-index-offset start
+			       :element-type (array-element-type string)))
+      (with-slots (strings baseline width max-height start-y end-x end-y) text-record
+	(setq baseline (max baseline new-baseline)
+	      strings (nconc strings
+			     (list (list end-x text-style
+					 (make-array (length string)
+						     :initial-contents string
+						     :element-type 'character
+						     :adjustable t
+						     :fill-pointer t))))
+	      end-x (+ end-x string-width)
+	      max-height (max max-height height)
+	      end-y (max end-y (+ start-y max-height))
+	      width (+ width string-width)))
+      (tree-recompute-extent text-record)))))
 
 (defmethod replay-output-record ((record text-displayed-output-record) stream
 				 &optional region (x-offset 0) (y-offset 0))
@@ -849,9 +859,9 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
              (letf (((slot-value stream 'baseline) baseline))
                (loop for (x text-style string) in strings
                      do (setf (medium-text-style new-medium) text-style)
-                     (setf (stream-cursor-position stream)
-                           (values (+ x (- x1 initial-x1)) start-y))
-                     (stream-write-line stream string)))
+			(setf (stream-cursor-position stream)
+			  (values (+ x (- x1 initial-x1)) start-y))
+			(stream-write-line stream string)))
              ;; clipping region
              #|restore cursor position? set to (end-x,end-y)?|#
              #+nil(loop for y = (+ start-y baseline)
