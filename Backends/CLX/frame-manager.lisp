@@ -65,15 +65,9 @@
       (allocate-space sheet
                       (space-requirement-width q)
                       (space-requirement-height q))
-      (let ((mirror (sheet-direct-mirror (slot-value frame 'top-level-sheet))))
-        (setf (xlib:wm-normal-hints mirror)
-              (xlib:make-wm-size-hints 
-               :width  (round (space-requirement-width q))
-               :height (round (space-requirement-height q))
-               :max-width (min 65535 (round (space-requirement-max-width q)))
-               :max-height (min 65535 (round (space-requirement-max-height q)))
-               :min-width (round (space-requirement-min-width q))
-               :min-height (round (space-requirement-min-height q))))
+      (let* ((top-level-sheet (frame-top-level-sheet frame))
+             (mirror (sheet-direct-mirror top-level-sheet)))
+        (tell-window-manager-about-space-requirents top-level-sheet)
         ;; :structure-notify events were not yet turned on, turn them
         ;; on now, so that we get informed about the windows position
         ;; (and possibly size), when the window gets maped.
@@ -82,3 +76,22 @@
                       (xlib:make-event-mask :structure-notify)))
         (when (sheet-enabled-p sheet)
           (xlib:map-window mirror) )))))
+
+(defmethod tell-window-manager-about-space-requirents ((pane top-level-sheet-pane))
+  (let ((q (compose-space pane)))
+    (let ((mirror (sheet-direct-mirror pane)))
+      (setf (xlib:wm-normal-hints mirror)
+            (xlib:make-wm-size-hints 
+             :width  (round (space-requirement-width q))
+             :height (round (space-requirement-height q))
+             :max-width (min 65535 (round (space-requirement-max-width q)))
+             :max-height (min 65535 (round (space-requirement-max-height q)))
+             :min-width (round (space-requirement-min-width q))
+             :min-height (round (space-requirement-min-height q)))) ) ))
+
+(defmethod tell-window-manager-about-space-requirents ((pane t))
+  ;; hmm
+  nil)
+
+(defmethod note-space-requirements-changed :after ((graft clx-graft) pane)
+  (tell-window-manager-about-space-requirents pane)
