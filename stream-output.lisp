@@ -162,7 +162,7 @@
 	 (old-transform (medium-transformation medium))
 	 (width (port-mirror-width port stream))
 	 (height (port-mirror-height port stream)))
-    (setf (medium-transformation medium) (make-instance 'transformation))
+    (setf (medium-transformation medium) +identity-transformation+)
     (unwind-protect
 	(cond
 	 ((> dy 0)
