@@ -327,7 +327,7 @@
 (defparameter *command-parser-table* (make-hash-table)
   "Mapping from command names to argument parsing functions.")
 
-(defvar *unsupplied-argument-maker* (cons nil nil))
+(defvar *unsupplied-argument-marker* (cons nil nil))
 
 (defvar *command-name-delimiters* '(command-delimiter))
 
@@ -355,7 +355,7 @@
 			       accept-keys))))))
       `(defun ,name (,stream-var)
 	(let ,(mapcar #'(lambda (arg)
-			  `(,arg *unsupplied-argument-maker*))
+			  `(,arg *unsupplied-argument-marker*))
 		      required-arg-names)
 	  (block activated
 	    (let ((gesture (read-gesture :stream ,stream-var
@@ -561,10 +561,18 @@
 				    (view textual-view)
 				    &key (default nil defaultp) default-type)
   (let ((command (funcall *command-parser* command-table stream)))
+    #+nil
+    (progn
+      (format *debug-io* "~&; Command accepted: ~S.~%" command)
+      (finish-output *debug-io*))
     (cond ((and (null command) defaultp)
 	   (values default default-type))
 	  ((null command)
 	   (simple-parse-error "Empty command"))
+          ((partial-command-p command)
+           (funcall *partial-command-parser*
+            command-table stream command
+            (position *unsupplied-argument-marker* command)))
 	  (t (values command type)))))
 
 (defmacro define-presentation-to-command-translator
@@ -601,6 +609,9 @@
 (defun command-arguments (command)
   (rest command))
 
+(defun partial-command-p (command)
+  (member *unsupplied-argument-marker* command))
+
 (defun read-command (command-table
 		     &key (stream *standard-input*)
 			  (command-parser *command-parser*)
@@ -615,11 +626,11 @@
 	(let ((command (accept `(command :command-table ,command-table)
 			       :stream stream
 			       :prompt nil)))
-	  (if (member *unsupplied-argument-maker* command)
+	  (if (partial-command-p command)
 	    (progn
 	      (beep)
 	      (format *query-io* "~&Argument ~D not supplied.~&"
-		      (position *unsupplied-argument-maker* command))
+		      (position *unsupplied-argument-marker* command))
 	      nil)
 	    command))
       ((or simple-parse-error input-not-of-required-type)  (c)
