@@ -252,6 +252,11 @@ rendered on MEDIUM with the style LINE-STYLE."))
 
 (defgeneric presentation-translators (command-table))
 
+(defgeneric stream-default-view (stream)
+  (:method (stream)
+    (declare (ignore stream))
+    +textual-view+))
+
 #||
 
 Further undeclared functions
