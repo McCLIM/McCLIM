@@ -1422,6 +1422,35 @@ were added."
        (if-supplied (center-y coordinate)
 	 (coordinate= (slot-value record 'center-y) center-y))))
 
+;;;; Patterns
+
+(def-grecording draw-pattern (() pattern x y)
+  (let ((width (pattern-width pattern))
+        (height (pattern-height pattern)))
+    (values x y (+ x width) (+ y height))))
+
+(defmethod* (setf output-record-position) :around (nx ny (record draw-pattern-output-record))
+  (with-slots (x1 y1 x y)
+      record
+    (let ((dx (- nx x1))
+	  (dy (- ny y1)))
+      (multiple-value-prog1
+	  (call-next-method)
+	(incf x dx)
+	(incf y dy)))))
+
+(defrecord-predicate draw-pattern-output-record (x y pattern)
+  ;; ### I am not so sure about the correct usage of DEFRECORD-PREDICATE
+  ;; --GB 2003-08-15
+  (and (if-supplied (x coordinate)
+	 (coordinate= (slot-value record 'x) x))
+       (if-supplied (y coordinate)
+	 (coordinate= (slot-value record 'y) y))
+       (if-supplied (pattern pattern)
+         (eq (slot-value record 'pattern) pattern))))
+
+;;;; Text
+
 (def-grecording draw-text ((gs-text-style-mixin) string point-x point-y start end
 			   align-x align-y toward-x toward-y transform-glyphs)
   ;; FIXME!!! Text direction.
