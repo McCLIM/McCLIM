@@ -78,6 +78,29 @@
 		     `(invoke-tracking-pointer ,sheet ,@handlers ,@args))))))
 
 
+(defmacro with-pointer-grabbed ((port sheet &key pointer) &body body)
+  (with-gensyms (the-port the-sheet the-pointer grabbed)
+    `(let* ((,the-port ,port)
+	    (,the-sheet ,sheet)
+	    (,the-pointer (or ,pointer (port-pointer ,the-port)))
+	    (,grabbed nil))
+       ;; Don't end up in the debugger with the pointer grabbed! 
+       (handler-bind ((error #'(lambda (c)
+				 (declare (ignore c))
+				 (when ,grabbed
+				   (port-ungrab-pointer ,the-port
+							,the-pointer
+							,the-sheet)
+				   (setq ,grabbed nil)))))
+	 (unwind-protect
+	      (when (port-grab-pointer ,the-port ,the-pointer ,the-sheet)
+		(setq ,grabbed t)
+		,@body)
+	   (when ,grabbed
+	     (port-ungrab-pointer ,the-port ,the-pointer ,the-sheet)))))))
+	   
+				   
+
 (defun invoke-tracking-pointer
     (sheet
      pointer-motion-handler presentation-handler
@@ -93,64 +116,73 @@
                              presentation-button-release-handler)))
     (unless highlight-p (setq highlight presentations-p))
     (with-sheet-medium (medium sheet)
-      (unwind-protect
-         (with-method (distribute-event :around ((port (eql port)) event)
-                                        ;; XXX specialize on EVENT?
-                                        ;; :SUPER-AROUND?
-                                        (queue-event sheet event))
-           (when multiple-window            
-             (port-grab-pointer (port medium) (or pointer (port-pointer port)) sheet))
-           (with-input-context (context-type :override t)  ()
-             (loop
-                 (let ((event (event-read sheet)))
-                   (when (and (eq sheet (event-sheet event))
-                              (typep event 'pointer-motion-event))
-                     (queue-event sheet event)
-                     (highlight-applicable-presentation (pane-frame sheet) sheet *input-context*))
-                   (cond ((and (typep event 'pointer-event)
-                               #+nil
-                               (eq (pointer-event-pointer event)
-                                   pointer))                     
-                          (let* ((x (pointer-event-x event))
-                                 (y (pointer-event-y event))
-                                 (window (event-sheet event))
-                                 (presentation (and presentations-p
-                                                    (find-innermost-applicable-presentation
-                                                     *input-context*
-                                                     sheet ; XXX
-                                                     x y
-                                                     :modifier-state (event-modifier-state event)))))
-                            (when (and highlight presentation)
-                              (frame-highlight-at-position (pane-frame sheet) window x y))
-                            ;; FIXME Convert X,Y to SHEET coordinates; user
-                            ;; coordinates
-                            (typecase event
-                              (pointer-motion-event
-                               (if (and presentation presentation-handler)
-                                   (funcall presentation-handler
-                                            :presentation presentation
-                                            :window window :x x :y y)
-                                   (maybe-funcall pointer-motion-handler
-                                                  :window window :x x :y y)))
-                              (pointer-button-press-event                               
-                               (if (and presentation presentation-button-press-handler)
-                                   (funcall presentation-button-press-handler
-                                            :presentation presentation
-                                            :event event :x x :y y)
-                                   (maybe-funcall pointer-button-press-handler
-                                                  :event event :x x :y y)))
-                              (pointer-button-release-event
-                               (if (and presentation presentation-button-release-handler)
-                                   (funcall presentation-button-release-handler
-                                            :presentation presentation
-                                            :event event :x x :y y)
-                                   (maybe-funcall pointer-button-release-handler
-                                                  :event event :x x :y y))))))
-                         ((typep event '(or keyboard-event character symbol))
-                          (maybe-funcall keyboard-handler
-                                         :gesture event #|XXX|#))
-                         (t (handle-event #|XXX|# (event-sheet event) event)))))))
-      ;; Cleanup
-      (when multiple-window
-        (port-ungrab-pointer (port medium) (or pointer (port-pointer port)) sheet))))))
+      (flet ((do-tracking ()
+	       (with-input-context (context-type :override t)
+		 ()
+		 (loop
+		  (let ((event (event-read sheet)))
+		    (when (and (eq sheet (event-sheet event))
+			       (typep event 'pointer-motion-event))
+		      (queue-event sheet event)
+		      (highlight-applicable-presentation
+		       (pane-frame sheet) sheet *input-context*))
+		    (cond ((and (typep event 'pointer-event)
+				#+nil
+				(eq (pointer-event-pointer event)
+				    pointer))                     
+			   (let* ((x (pointer-event-x event))
+				  (y (pointer-event-y event))
+				  (window (event-sheet event))
+				  (presentation
+				   (and presentations-p
+					(find-innermost-applicable-presentation
+					 *input-context*
+					 sheet ; XXX
+					 x y
+					 :modifier-state (event-modifier-state event)))))
+			     (when (and highlight presentation)
+			       (frame-highlight-at-position
+				(pane-frame sheet) window x y))
+			     ;; FIXME Convert X,Y to SHEET coordinates; user
+			     ;; coordinates
+			     (typecase event
+			       (pointer-motion-event
+				(if (and presentation presentation-handler)
+				    (funcall presentation-handler
+					     :presentation presentation
+					     :window window :x x :y y)
+				    (maybe-funcall
+				     pointer-motion-handler
+				     :window window :x x :y y)))
+			       (pointer-button-press-event
+				(if (and presentation
+					 presentation-button-press-handler)
+				    (funcall
+				     presentation-button-press-handler
+				     :presentation presentation
+				     :event event :x x :y y)
+				    (maybe-funcall
+				     pointer-button-press-handler
+				     :event event :x x :y y)))
+			       (pointer-button-release-event
+				(if (and presentation
+					 presentation-button-release-handler)
+				    (funcall
+				     presentation-button-release-handler
+				     :presentation presentation
+				     :event event :x x :y y)
+				    (maybe-funcall
+				     pointer-button-release-handler
+				     :event event :x x :y y))))))
+			  ((typep event
+				  '(or keyboard-event character symbol))
+			   (maybe-funcall keyboard-handler
+					  :gesture event #|XXX|#))
+			  (t (handle-event #|XXX|# (event-sheet event)
+						   event))))))))
+	(if multiple-window
+	    (with-pointer-grabbed ((port medium) sheet)
+	      (do-tracking))
+	    (do-tracking))
+	))))
 

@@ -146,7 +146,8 @@
    (cursor-table :initform (make-hash-table :test #'eq)
                  :accessor clx-port-cursor-table)
    (design-cache :initform (make-hash-table :test #'eq))
-   (pointer :reader port-pointer)))
+   (pointer :reader port-pointer)
+   (pointer-grab-sheet :accessor pointer-grab-sheet :initform nil)))
 
 (defun parse-clx-server-path (path)
   (pop path)
@@ -1164,18 +1165,33 @@
 ;; FIXME: What happens when CLIM code calls tracking-pointer recursively?
 ;; I expect the xlib:grab-pointer call will fail, and so the call to
 ;; xlib:ungrab-pointer will ungrab prematurely.
+
+;;; XXX Locks around pointer-grab-sheet!!!
+
 (defmethod port-grab-pointer ((port clx-port) pointer sheet)
   ;; FIXME: Use timestamps?
-  (xlib:grab-pointer (sheet-mirror sheet)
-                     '(:button-press :button-release
-                       :leave-window :enter-window
-                       :pointer-motion :pointer-motion-hint)
-                     ; Probably we want to set :cursor here..
-                     :owner-p t))
+  (let ((grab-result (xlib:grab-pointer
+		      (sheet-mirror sheet)
+		      '(:button-press :button-release
+			:leave-window :enter-window
+			:pointer-motion :pointer-motion-hint)
+		      ;; Probably we want to set :cursor here..
+		      :owner-p t)))
+    (if (eq grab-result :success)
+	(setf (pointer-grab-sheet port) sheet)
+	nil)))
 
 (defmethod port-ungrab-pointer ((port clx-port) pointer sheet)
   (declare (ignore pointer))
-  (xlib:ungrab-pointer (clx-port-display port)))
+  (when (eq (pointer-grab-sheet port) sheet)
+    (xlib:ungrab-pointer (clx-port-display port))
+    (setf (pointer-grab-sheet port) nil)))
+
+(defmethod distribute-event :around ((port clx-port) event)
+  (let ((grab-sheet (pointer-grab-sheet port)))
+    (if grab-sheet
+	(queue-event grab-sheet event)
+	(call-next-method))))
 
 (defmethod set-sheet-pointer-cursor ((port clx-port) sheet cursor)
   (let ((cursor (gethash cursor (clx-port-cursor-table port))))
