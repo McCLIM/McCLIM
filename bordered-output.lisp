@@ -45,8 +45,9 @@
     (let ((record (with-new-output-record (stream)
                     (funcall cont stream))))
       (with-bounding-rectangle* (left top right bottom) record
-        (letf (((medium-transformation medium) +identity-transformation+))
-          (funcall (gethash shape *border-types*)
+        (with-identity-transformation (medium)
+          (funcall (or (gethash shape *border-types*)
+                       (error "Border shape ~S not defined." shape))
                    :stream stream
                    :record record
                    :left left :top top
