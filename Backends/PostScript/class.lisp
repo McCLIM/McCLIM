@@ -29,7 +29,6 @@
 ;;; - WITH-OUTPUT-TO-POSTSCRIPT-STREAM should offer a :PAPER-SIZE option.
 ;;; - NEW-PAGE should also offer to specify the page name.
 ;;; - device fonts are missing
-;;; - font metrics are missing
 ;;;
 ;;;--GB
 
@@ -38,17 +37,13 @@
 ;;;; Medium
 
 (defclass postscript-medium (basic-medium)
-  ((file-stream :initarg :file-stream :reader postscript-medium-file-stream)
-   (document-fonts :initform '())
-   (graphics-state-stack :initform '())))
-
-(defun make-postscript-medium (file-stream stream)
-  (make-instance 'postscript-medium
-                 :sheet stream
-                 :file-stream file-stream))
+  ())
 
 (defmacro postscript-medium-graphics-state (medium)
-  `(first (slot-value ,medium 'graphics-state-stack)))
+  `(first (slot-value (medium-sheet ,medium) 'graphics-state-stack)))
+
+(defun postscript-medium-file-stream (medium)
+  (postscript-stream-file-stream (medium-sheet medium)))
 
 
 ;;;; Stream
@@ -76,9 +71,11 @@
                   :reader sheet-native-region)
    (transformation :initarg :transformation
                    :reader sheet-native-transformation)
-   (current-page :initform 0)))
+   (current-page :initform 0)
+   (document-fonts :initform '())
+   (graphics-state-stack :initform '())))
 
-(defun make-postscript-stream (file-stream device-type
+(defun make-postscript-stream (file-stream port device-type
                                multi-page scale-to-fit
                                orientation header-comments)
   (declare (ignore multi-page scale-to-fit))
@@ -91,8 +88,32 @@
         (transform (make-postscript-transformation device-type orientation)))
     (make-instance 'postscript-stream
                    :file-stream file-stream
+                   :port port
                    :title title :for for
                    :orientation orientation
                    :paper device-type
                    :native-region region
                    :transformation transform)))
+
+
+;;;; Port
+
+(defclass postscript-port (basic-port)
+  ((stream #| :initarg :stream |#
+           #| :initform (error "Unspecified stream.") |#
+           ;; I think this is right, but BASIC-PORT accepts only
+           ;; :SERVER-PATH initarg. -- APD, 2002-06-06
+
+           :reader postscript-port-stream)
+   (font-mapping :initform (make-hash-table)
+                 :reader postscript-port-font-mapping)))
+
+;;; FIXME!!! The following method should be removed. -- APD, 2002-06-06
+(defmethod initialize-instance :after ((port postscript-port)
+                                       &rest initargs
+                                       &key server-path)
+  (declare (ignore initargs))
+  (destructuring-bind (ps &key stream) server-path
+    (assert (eq ps :ps))
+    (check-type stream stream)
+    (setf (slot-value port 'stream) stream)))

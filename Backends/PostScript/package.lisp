@@ -22,6 +22,7 @@
 
 (defpackage "CLIM-POSTSCRIPT"
   (:use "CLIM" "CLIM-LISP")
+  (:export "LOAD-AFM-FILE")
   (:import-from "CLIM-INTERNALS"
                 "GET-ENVIRONMENT-VARIABLE"
                 "MAP-REPEATED-SEQUENCE"

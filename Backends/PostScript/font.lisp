@@ -21,6 +21,7 @@
 ;;; TODO:
 ;;;
 ;;; - Kerning, ligatures.
+;;; - device fonts
 
 (in-package :CLIM-POSTSCRIPT)
 
@@ -62,6 +63,7 @@
 ;;;
 (defun text-size-in-font (font-name size string start end)
   (declare (string string))
+  (unless end (setq end (length string)))
   (let* ((font-info (or (gethash font-name *font-metrics*)
                         (error "Unknown font ~S." font-name)))
          (char-names (font-info-char-names font-info))
@@ -87,3 +89,97 @@
             (* scale width)
             (* scale upper-height)
             (* scale (+ upper-height ascent))))) ;?
+
+;;;
+(defconstant +postscript-fonts+
+  '(:fix (:roman "Courier"
+          :bold "Courier-Bold"
+          :italic "Courier-Oblique"
+          :bold-italic "Courier-BoldOblique"
+          :italic-bold "Courier-BoldOblique")
+    :serif (:roman "Times-Roman"
+            :bold "Times-Bold"
+            :italic "Times-Italic"
+            :bold-italic "Times-BoldItalic"
+            :italic-bold "Times-BoldItalic")
+    :sans-serif (:roman "Helvetica"
+                 :bold "Helvetica-Bold"
+                 :italic "Helvetica-Oblique"
+                 :bold-italic "Helvetica-BoldOblique"
+                 :italic-bold "Helvetica-BoldOblique")))
+
+(defconstant +postscript-font-sizes+
+  '(:normal 14
+    :tiny 8
+    :very-small 10
+    :small 12
+    :large 18
+    :very-large 20
+    :huge 24))
+
+(defmethod text-style-mapping ((port postscript-port) text-style
+                               &optional character-set)
+  (declare (ignore character-set))
+  (or (gethash text-style (postscript-port-font-mapping port))
+      (multiple-value-bind (family face size) (text-style-components text-style)
+        (let* ((family-fonts (or (getf +postscript-fonts+ family)
+                                 (getf +postscript-fonts+ :fix)))
+               (font-name (or (getf family-fonts face)
+                              (getf family-fonts :roman)))
+               (size-number (if (numberp size)
+                                (round size)
+                                (or (getf +postscript-font-sizes+ size)
+                                    (getf +postscript-font-sizes+ :normal)))))
+          (cons font-name size-number)))))
+
+(defmethod (setf text-style-mapping) (mapping (port postscript-port)
+                                      text-style &optional character-set)
+  (declare (ignore character-set))
+  (check-type text-style text-style)
+  (unless (and (consp mapping)
+               (stringp (car mapping))
+               (numberp (cdr mapping)))
+    (error "Mapping a text style to a style specification is not~
+    implemented."))
+  (when (not (gethash (car mapping) *font-metrics*))
+    (cerror "Ignore." "Mapping text style ~S to an unknown font ~S."
+            text-style (car mapping)))
+  (setf (gethash text-style (postscript-port-font-mapping port))
+        mapping))
+
+;; The following four functions should be rewritten: AFM contains all
+;; needed information
+(defmethod text-style-ascent (text-style (medium postscript-medium))
+  (multiple-value-bind (width height final-x final-y baseline)
+      (text-size medium "I" :text-style text-style)
+    (declare (ignore width height final-x final-y))
+    baseline))
+
+(defmethod text-style-descent (text-style (medium postscript-medium))
+  (multiple-value-bind (width height final-x final-y baseline)
+      (text-size medium "q" :text-style text-style)
+    (declare (ignore width final-x final-y))
+    (- height baseline)))
+
+(defmethod text-style-height (text-style (medium postscript-medium))
+  (multiple-value-bind (width height final-x final-y baseline)
+      (text-size medium "Iq" :text-style text-style)
+    (declare (ignore width final-x final-y baseline))
+    height))
+
+(defmethod text-style-width (text-style (medium postscript-medium))
+  (multiple-value-bind (width height final-x final-y baseline)
+      (text-size medium "M" :text-style text-style)
+    (declare (ignore height final-x final-y baseline))
+    width))
+
+(defmethod text-size ((medium postscript-medium) string
+                      &key text-style (start 0) end)
+  (when (characterp string) (setq string (string string)))
+  (unless end (setq end (length string)))
+  (destructuring-bind (font . size)
+      (text-style-mapping (port medium)
+                          (merge-text-styles text-style
+                                             (medium-merged-text-style medium)))
+    (text-size-in-font font size
+                       string start (or end (length string)))))

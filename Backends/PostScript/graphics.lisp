@@ -35,13 +35,6 @@
 ;;; - POSTSCRIPT-ACTUALIZE-GRAPHICS-STATE: fix CLIPPING-REGION reusing logic
 ;;; - MEDIUM-DRAW-... should not duplicate code from POSTSCRIPT-ADD-PATH
 ;;; - structure this file
-;;; - implement functions dealing with text and move them into another file
-
-;;; Also missing IMO:
-;;;
-;;; - device fonts are missing
-;;;
-;;;--GB
 
 (in-package :CLIM-POSTSCRIPT)
 
@@ -55,11 +48,11 @@
 
 (defun postscript-save-graphics-state (medium)
   (push (copy-alist (postscript-medium-graphics-state medium))
-        (slot-value medium 'graphics-state-stack))
+        (slot-value (medium-sheet medium) 'graphics-state-stack))
   (format (postscript-medium-file-stream medium) "gsave~%"))
 
 (defun postscript-restore-graphics-state (medium)
-  (pop (slot-value medium 'graphics-state-stack))
+  (pop (slot-value (medium-sheet medium) 'graphics-state-stack))
   (format (postscript-medium-file-stream medium) "grestore~%"))
 
 (defun invoke-with-graphics-state (medium continuation)
@@ -241,6 +234,8 @@
       (format stream "] 0 setdash~%"))))
 
 ;;; Color
+(defgeneric medium-color-rgb (medium ink))
+
 (defmethod medium-color-rgb (medium (ink (eql +foreground-ink+)))
   (medium-color-rgb medium (medium-foreground medium)))
 
@@ -421,52 +416,15 @@
                            "fill~%"
                            "stroke~%"))))))
 
-(defconstant +postscript-fonts+
-  '(:fix (:roman "Courier"
-          :bold "Courier-Bold"
-          :italic "Courier-Oblique"
-          :bold-italic "Courier-BoldOblique"
-          :italic-bold "Courier-BoldOblique")
-    :serif (:roman "Times-Roman"
-            :bold "Times-Bold"
-            :italic "Times-Italic"
-            :bold-italic "Times-BoldItalic"
-            :italic-bold "Times-BoldItalic")
-    :sans-serif (:roman "Helvetica"
-                 :bold "Helvetica-Bold"
-                 :italic "Helvetica-Oblique"
-                 :bold-italic "Helvetica-BoldOblique"
-                 :italic-bold "Helvetica-BoldOblique")))
-
-(defconstant +postscript-font-sizes+
-  '(:normal 14
-    :tiny 8
-    :very-small 10
-    :small 12
-    :large 18
-    :very-large 20
-    :huge 24))
-
-(defun text-style->postscript-font (text-style)
-  (multiple-value-bind (family face size) (text-style-components text-style)
-    (let* ((family-fonts (or (getf +postscript-fonts+ family)
-                             (getf +postscript-fonts+ :fix)))
-           (font-name (or (getf family-fonts face)
-                          (getf family-fonts :roman)))
-           (size-number (if (numberp size)
-                            (round size)
-                            (or (getf +postscript-font-sizes+ size)
-                                (getf +postscript-font-sizes+ :normal)))))
-      (values font-name size-number))))
-
 (defun medium-font (medium)
-  (text-style->postscript-font (medium-text-style medium)))
+  (text-style-mapping (port medium) (medium-merged-text-style medium)))
 
 (defmethod postscript-set-graphics-state (stream medium
                                           (kind (eql :text-style)))
-  (multiple-value-bind (font size)
+  (destructuring-bind (font . size)
       (medium-font medium)
-    (pushnew font (slot-value medium 'document-fonts) :test #'string=)
+    (pushnew font (slot-value (medium-sheet medium) 'document-fonts)
+             :test #'string=)
     (format stream "/~A findfont ~D scalefont setfont~%" font size)))
 
 (defun postscript-escape-char (char)
@@ -495,7 +453,7 @@
                    (make-string 1 :initial-element string)
                    (subseq string start end)))
   (let ((*transformation* (sheet-native-transformation (medium-sheet medium))))
-    (with-slots (file-stream) medium
+    (let ((file-stream (postscript-medium-file-stream medium)))
       (postscript-actualize-graphics-state file-stream medium :color :text-style)
       (with-graphics-state (medium)
         #+ignore
@@ -523,8 +481,8 @@
                     (format-postscript-number ty))))
         (multiple-value-bind (total-width total-height
                               final-x final-y baseline)
-            (multiple-value-call #'text-size-in-font
-              (medium-font medium) string 0 (length string))
+            (destructuring-bind (font . size) (medium-font medium)
+              (text-size-in-font font size string 0 nil))
           (declare (ignore final-x final-y))
           ;; Only one line?
           (setq x (ecase align-x
@@ -540,39 +498,3 @@
           (moveto file-stream x y))
         (format file-stream "(~A) show~%" (postscript-escape-string string))))))
 
-;; The following four functions should be rewritten: AFM contains all
-;; needed information
-(defmethod text-style-ascent (text-style (medium postscript-medium))
-  (multiple-value-bind (width height final-x final-y baseline)
-      (text-size medium "I" :text-style text-style)
-    (declare (ignore width height final-x final-y))
-    baseline))
-
-(defmethod text-style-descent (text-style (medium postscript-medium))
-  (multiple-value-bind (width height final-x final-y baseline)
-      (text-size medium "q" :text-style text-style)
-    (declare (ignore width final-x final-y))
-    (- height baseline)))
-
-(defmethod text-style-height (text-style (medium postscript-medium))
-  (multiple-value-bind (width height final-x final-y baseline)
-      (text-size medium "Iq" :text-style text-style)
-    (declare (ignore width final-x final-y baseline))
-    height))
-
-(defmethod text-style-width (text-style (medium postscript-medium))
-  (multiple-value-bind (width height final-x final-y baseline)
-      (text-size medium "M" :text-style text-style)
-    (declare (ignore height final-x final-y baseline))
-    width))
-
-(defmethod text-size ((medium postscript-medium) string
-                      &key text-style (start 0) end)
-  (when (characterp string)
-    (setq string (string string)))
-  (multiple-value-bind (font size)
-      (text-style->postscript-font
-       (merge-text-styles text-style
-                          (medium-merged-text-style medium)))
-    (text-size-in-font font size
-                       string start (or end (length string)))))

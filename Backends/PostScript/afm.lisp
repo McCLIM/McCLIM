@@ -165,7 +165,8 @@
 
 ;;; FIXME: This function should be given a right name, exported from
 ;;; CLIM-POSTSCRIPT and documented in the manual.
-(defun read-afm-file (afm-filename)
+(defun load-afm-file (afm-filename)
+  "Loads font information from the specified AFM file."
   (multiple-value-call #'define-font-metrics
     (with-open-file (stream afm-filename)
       (read-afm-stream stream))))

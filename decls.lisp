@@ -179,6 +179,8 @@ place if STRING were output to MEDIUM starting at position (0,0).
 Returns total width, total height, final x cursor position, final y
 cursor position, baseline."))
 
+(defgeneric text-style-mapping (port text-style &optional character-set))
+
 (defgeneric (setf medium-foreground) (new-value medium))
 (defgeneric (setf medium-background) (new-value medium))
 (defgeneric (setf medium-ink) (new-value medium))
@@ -188,6 +190,8 @@ cursor position, baseline."))
 (defgeneric (setf medium-text-style) (new-value medium))
 (defgeneric (setf medium-default-text-style) (new-value medium))
 
+(defgeneric (setf text-style-mapping)
+    (mapping port text-style &optional character-set))
 (defgeneric line-style-effective-thickness (line-style medium)
   (:documentation
    "Returns the thickness in device units of a line,

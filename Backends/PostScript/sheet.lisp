@@ -52,36 +52,39 @@
                                                 multi-page scale-to-fit
                                                 (orientation :portrait)
                                                 header-comments)
-  (let ((stream (make-postscript-stream file-stream device-type
-                                        multi-page scale-to-fit
-                                        orientation header-comments)))
-    (prog2
-        (with-slots (file-stream title for orientation paper) stream
-          (format file-stream "%!PS-Adobe-3.0~%")
-          (format file-stream "%%Creator: McCLIM~%")
-          (format file-stream "%%Title: ~A~%" title)
-          (format file-stream "%%For: ~A~%" for)
-          (format file-stream "%%LanguageLevel: 2~%")
-          (format file-stream "%%DocumentMedia: ~A~%" paper)
-          (format file-stream "%%Orientation: ~A~%"
-                  (ecase orientation
-                    (:portrait "Portrait")
-                    (:landscape "Landscape")))
-          (format file-stream "%%Pages: (atend)~%")
-          (format file-stream "%%DocumentNeededResources: (atend)~%")
-          (format file-stream "%%EndComments~%~%")
-          (start-page stream))
-        (with-graphics-state ((sheet-medium stream))
-          ;; we need at least one level of saving -- APD, 2002-02-11
-          (funcall continuation stream))
+  (let* ((port (find-port :server-path `(:ps :stream ,file-stream)))
+         (stream (make-postscript-stream file-stream port device-type
+                                         multi-page scale-to-fit
+                                         orientation header-comments)))
+    (unwind-protect
+         (progn
+           (with-slots (file-stream title for orientation paper) stream
+             (format file-stream "%!PS-Adobe-3.0~%")
+             (format file-stream "%%Creator: McCLIM~%")
+             (format file-stream "%%Title: ~A~%" title)
+             (format file-stream "%%For: ~A~%" for)
+             (format file-stream "%%LanguageLevel: 2~%")
+             (format file-stream "%%DocumentMedia: ~A~%" paper)
+             (format file-stream "%%Orientation: ~A~%"
+                     (ecase orientation
+                       (:portrait "Portrait")
+                       (:landscape "Landscape")))
+             (format file-stream "%%Pages: (atend)~%")
+             (format file-stream "%%DocumentNeededResources: (atend)~%")
+             (format file-stream "%%EndComments~%~%")
+             (start-page stream))
+           (with-graphics-state ((sheet-medium stream))
+             ;; we need at least one level of saving -- APD, 2002-02-11
+             (funcall continuation stream)))
       (with-slots (file-stream current-page) stream
         (format file-stream "showpage~%~%")
         (format file-stream "%%Trailer~%")
         (format file-stream "%%Pages: ~D~%" current-page)
         (format file-stream "%%DocumentNeededResources: ~{font ~A~%~^%%+ ~}~%"
-                (reverse (slot-value (sheet-medium stream) 'document-fonts)))
+                (reverse (slot-value stream 'document-fonts)))
         (format file-stream "%%EOF~%")
-        (finish-output file-stream)))))
+        (finish-output file-stream))
+      (destroy-port port))))
 
 (defun start-page (stream)
   (with-slots (file-stream current-page transformation) stream
@@ -102,13 +105,8 @@
 (defmethod medium-drawable ((medium postscript-medium))
   (postscript-medium-file-stream medium))
 
-(defmethod port ((medium postscript-medium))
-  ;; FIXME
-  nil)
-
-(defmethod make-medium (port (sheet postscript-stream))
-  (declare (ignorable port))
-  (make-postscript-medium (postscript-stream-file-stream sheet) sheet))
+(defmethod make-medium ((port postscript-port) (sheet postscript-stream))
+  (make-instance 'postscript-medium :sheet sheet :port port))
 
 
 (defmethod sheet-direct-mirror ((sheet postscript-stream))
@@ -120,25 +118,28 @@
 (defmethod sheet-mirror ((sheet postscript-stream))
   (sheet-direct-mirror sheet))
 
-(defmethod realize-mirror (port (sheet postscript-stream))
+(defmethod realize-mirror ((port postscript-port) (sheet postscript-stream))
   (sheet-direct-mirror sheet))
 
-(defmethod destroy-mirror (port (sheet postscript-stream))
+(defmethod destroy-mirror ((port postscript-port) (sheet postscript-stream))
   (error "Can't destroy mirror for the postscript stream ~S." sheet))
 
+#+nil
 (defmethod port ((sheet postscript-stream))
   ;; FIXME
   nil)
 
 ;;; Internal methods
-(defmethod climi::port-mirror-width (port (stream postscript-stream))
+(defmethod climi::port-mirror-width ((port postscript-port)
+                                     (stream postscript-stream))
   (let ((region (sheet-native-region stream)))
     (with-bounding-rectangle* (min-x min-y max-x max-y)
         region
       (declare (ignore min-y max-y))
       (- max-x min-x))))
 
-(defmethod climi::port-mirror-height (port (stream postscript-stream))
+(defmethod climi::port-mirror-height ((port postscript-port)
+                                      (stream postscript-stream))
   (let ((region (sheet-native-region stream)))
     (with-bounding-rectangle* (min-x min-y max-x max-y)
         region
@@ -185,3 +186,11 @@
 
 (defmethod graft ((sheet postscript-graft))
   sheet)
+
+;;; Port
+
+(setf (get :ps :port-type) 'postscript-port)
+(setf (get :ps :server-path-parser) 'parse-postscript-server-path)
+
+(defun parse-postscript-server-path (path)
+  path)
