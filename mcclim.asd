@@ -39,8 +39,8 @@
     (unless (ignore-errors (ext:search-list "gray-streams:"))
       (setf (ext:search-list "gray-streams:")
 	'("target:pcl/" "library:subsystems/")))
-    (if (fboundp 'without-package-locks)
-	(without-package-locks
+    (if (fboundp 'extensions:without-package-locks)
+	(extensions:without-package-locks
 	 (load "gray-streams:gray-streams-library"))
       (load "gray-streams:gray-streams-library")))
   #-clx
