@@ -376,6 +376,9 @@ If there are no named panes, only the single, top level pane is returned."))
 						       `(make-pane ',(first form)
 								   :name ',name ,@(cdr form)))))
 						  (t `(make-pane ',(first form) :name ',name ,@(cdr form))))))
+                                           ;; hmm?! --GB
+                                           (setf (slot-value pane 'name) ',name)
+                                           ;;
 					   (push pane (slot-value frame 'panes))
 					   pane))))
 	   (setf (slot-value frame 'pane)
