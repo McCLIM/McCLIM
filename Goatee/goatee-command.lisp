@@ -32,6 +32,13 @@
 (defvar *last-command* nil)
 (defvar *insert-extent* nil)
 
+;; This doesn't match the emacs behavior exactly, but I think these make more
+;; sense for working in lisp. +,*,and others are what's missing. 
+(defparameter *word-delimiters* (concatenate 'string "() {}[]-:;,.#'`&\""
+                                             '(#\newline #\linefeed #\tab #\return))
+  "Characters which delimit words for the Meta-F/B/etc movement commands.")
+
+
 (defun add-gesture-command-to-table (gesture-spec command-name table)
   (multiple-value-bind (gesture-name modifier-bits)
       (if (atom gesture-spec)
@@ -87,6 +94,19 @@
 	      (setf (last-command area) command)))
 	  (redisplay-area area)))))
 
+;; Utilities for the word movement commands
+
+(defun move-until (movefn test)
+  (let ((line (point* *buffer*)))
+    (loop do (funcall movefn)        
+      until (or (not (eq line (point* *buffer*)))
+                (funcall test (char-ref *buffer* (point *buffer*)))))))
+
+(defun move-until-test-first (movefn test)
+  (loop for c = (char-ref *buffer* (point *buffer*))
+    until (funcall test c)
+    do (funcall movefn)))
+
 (defun insert-character (&key input-gesture &allow-other-keys)
   (insert *buffer* input-gesture))
 
@@ -102,6 +122,40 @@
 
 (defun backward-character (&key &allow-other-keys)
   (setf (point* *buffer*) (forward-char* *buffer* -1)))
+
+;; Why must I handle both flexivector and buffer bounds errors below?
+(defun forward-word (&key &allow-other-keys)
+  (handler-case
+      (progn
+        (move-until-test-first #'forward-character #'(lambda (c) (not (find c *word-delimiters* :test #'char=))))
+        (move-until-test-first #'forward-character #'(lambda (c) (find c *word-delimiters* :test #'char=))))
+    (buffer-bounds-error ())
+    (flexivector-bounds-error ())))
+
+(defun backward-word (&key &allow-other-keys)
+  (handler-case
+      (progn
+        (move-until #'backward-character #'(lambda (c) (not (find c *word-delimiters* :test #'char=))))
+        (move-until #'backward-character #'(lambda (c) (find c *word-delimiters* :test #'char=)))
+        (forward-character))
+    (buffer-bounds-error ())
+    (flexivector-bounds-error ())))
+
+(defun backwards-delete-word (&key &allow-other-keys)
+  (flet ((current-loc ()  (multiple-value-bind (line pos)
+                              (point* *buffer*)
+                            (make-instance 'location :line line :pos pos))))
+    (let ((end-location (current-loc)))
+      (backward-word)
+      (kill-region *kill-ring* *buffer* (current-loc) end-location))))
+
+(defun delete-word (&key &allow-other-keys)
+  (flet ((current-loc ()  (multiple-value-bind (line pos)
+                              (point* *buffer*)
+                            (make-instance 'location :line line :pos pos))))
+    (let ((start-location (current-loc)))
+      (forward-word)
+      (kill-region *kill-ring* *buffer* start-location (current-loc)))))
 
 (defun end-line (&key &allow-other-keys)
   (setf (point* *buffer*) (end-of-line* *buffer*)))
@@ -191,11 +245,17 @@
 			      'insert-character
 			      *simple-area-gesture-table*)
 
-(add-gesture-command-to-table #\delete
+;; I've changed the key mapping around a bit in an attempt
+;; to get things more emacs-like. --Hefner
+(add-gesture-command-to-table #\Backspace
 			      'backwards-delete-character
 			      *simple-area-gesture-table*)
 
 (add-gesture-command-to-table '(#\d :control)
+			      'delete-character
+			      *simple-area-gesture-table*)
+
+(add-gesture-command-to-table '(#\Delete)
 			      'delete-character
 			      *simple-area-gesture-table*)
 
@@ -205,6 +265,22 @@
 
 (add-gesture-command-to-table '(#\b :control)
 			      'backward-character
+			      *simple-area-gesture-table*)
+
+(add-gesture-command-to-table '(#\f :meta)
+			      'forward-word
+			      *simple-area-gesture-table*)
+
+(add-gesture-command-to-table '(#\b :meta)
+			      'backward-word
+			      *simple-area-gesture-table*)
+
+(add-gesture-command-to-table '(#\backspace :meta)
+			      'backwards-delete-word
+			      *simple-area-gesture-table*)
+
+(add-gesture-command-to-table '(#\delete :meta)
+			      'delete-word
 			      *simple-area-gesture-table*)
 
 (add-gesture-command-to-table '(#\a :control)
