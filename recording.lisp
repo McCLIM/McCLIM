@@ -1443,7 +1443,10 @@ were added."
 
 (def-grecording draw-rectangle ((gs-line-style-mixin)
 				left top right bottom filled)
-  (let ((border (graphics-state-line-style-border graphic medium)))
+  (let ((transform (medium-transformation medium))
+	(border (graphics-state-line-style-border graphic medium)))
+    (setf (values left top) (transform-position transform left top))
+    (setf (values right bottom) (transform-position transform right bottom))
     (polygon-record-bounding-rectangle
      (vector left top left bottom right bottom right top)
      t filled line-style border
@@ -1479,19 +1482,26 @@ were added."
 			      center-x center-y
 			      radius-1-dx radius-1-dy radius-2-dx radius-2-dy
 			      start-angle end-angle filled)
-  (multiple-value-bind (min-x min-y max-x max-y)
-      (bounding-rectangle* (make-ellipse* center-x center-y
-					  radius-1-dx radius-1-dy
-					  radius-2-dx radius-2-dy
-					  :start-angle start-angle
-					  :end-angle end-angle))
-    (if filled
-        (values min-x min-y max-x max-y)
-	(let ((border (graphics-state-line-style-border graphic medium)))
-	  (values (- min-x border)
-		  (- min-y border)
-		  (+ max-x border)
-		  (+ max-y border))))))
+  (let ((transform (medium-transformation medium)))
+    (setf (values center-x center-y)
+	  (transform-position transform center-x center-y))
+    (setf (values radius-1-dx radius-1-dy)
+	  (transform-distance transform radius-1-dx radius-1-dy))
+    (setf (values radius-2-dx radius-2-dy)
+	  (transform-distance transform radius-2-dx radius-2-dy))
+    (multiple-value-bind (min-x min-y max-x max-y)
+	(bounding-rectangle* (make-ellipse* center-x center-y
+					    radius-1-dx radius-1-dy
+					    radius-2-dx radius-2-dy
+					    :start-angle start-angle
+					    :end-angle end-angle))
+      (if filled
+	  (values min-x min-y max-x max-y)
+	  (let ((border (graphics-state-line-style-border graphic medium)))
+	    (values (- min-x border)
+		    (- min-y border)
+		    (+ max-x border)
+		    (+ max-y border)))))))
 
 (defmethod* (setf output-record-position) :around
     (nx ny (record draw-ellipse-output-record))
@@ -1512,9 +1522,13 @@ were added."
 
 ;;;; Patterns
 
+;;; The Spec says that "transformation only affects the position at
+;;; which the pattern is drawn, not the pattern itself"
 (def-grecording draw-pattern (() pattern x y)
   (let ((width (pattern-width pattern))
-        (height (pattern-height pattern)))
+        (height (pattern-height pattern))
+	(transform (medium-transformation medium)))
+    (setf (values x y) (transform-position transform x y))
     (values x y (+ x width) (+ y height))))
 
 (defmethod* (setf output-record-position) :around (nx ny (record draw-pattern-output-record))
@@ -1552,7 +1566,10 @@ were added."
         (ascent (text-style-ascent text-style (sheet-medium stream)))
         (descent (text-style-descent text-style (sheet-medium stream)))
         (height (+ ascent descent))
+	(transform (medium-transformation medium))
         left top right bottom)
+   (setf (values point-x point-y)
+	 (transform-position transform point-x point-y))
    (ecase align-x
      (:left (setq left point-x
                   right (+ point-x width)))
