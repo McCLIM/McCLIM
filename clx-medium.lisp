@@ -111,17 +111,61 @@
 			     (round (- x2 x1)) (round (- y2 y1))
 			     filled)))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Methods for text styles
+
+(defmethod text-size ((medium clx-medium) string &key text-style (start 0) end)
+  (when (characterp string)
+    (setf string (make-string 1 :initial-element string)))
+  (unless end (setf end (length string)))
+  (unless text-style (setf text-style (medium-text-style medium)))
+  (if (= start end)
+      (values 0 0 0 0 0)
+      (let ((gctxt (slot-value medium 'gc))
+            (position-newline (position #\newline string :start start)))
+        (if position-newline
+            (multiple-value-bind (width ascent descent left right
+                                        font-ascent direction first-not-done)
+                (xlib:text-extents gctxt string :start start :end position-newline)
+              (declare
+               (ignorable left right font-ascent direction first-not-done))
+              (multiple-value-bind (w h x y baseline)
+                  (text-size medium string :text-style text-style
+                             :start (1+ position-newline) :end end)
+                (values (max w width) (+ ascent descent h)
+                        x (+ ascent descent y) (+ ascent descent baseline))))
+            (multiple-value-bind (width ascent descent left right
+                                        font-ascent direction first-not-done)
+                (xlib:text-extents (slot-value medium 'gc) string
+                                   :start start :end position-newline)
+              (declare
+               (ignorable left right font-ascent direction first-not-done))
+              (values width (+ ascent descent) width 0 ascent))))))
+
 (defmethod medium-draw-text* ((medium clx-medium) string x y
-			      start end
-			      align-x align-y
-			      toward-x toward-y transform-glyphs)
-  (declare (ignore align-x align-y toward-x toward-y transform-glyphs))
+                              start end
+                              align-x align-y
+                              toward-x toward-y transform-glyphs)
+  (declare (ignore toward-x toward-y transform-glyphs))
   (with-CLX-graphics (medium)
-    (if (characterp string)
-	(setq string (make-string 1 :initial-element string)))
-    (if (null end)
-	(setq end (length string)))
+    (when (characterp string)
+      (setq string (make-string 1 :initial-element string)))
+    (when (null end) (setq end (length string)))
     (multiple-value-bind (tx ty) (transform-position (medium-transformation medium) x y)
+      (multiple-value-bind (text-width text-height x y baseline) 
+	   (text-size medium string :start start :end end)
+	(declare (ignore x y))
+	(unless (and (eq align-x :left) (eq align-y :baseline))	    
+	  (setq tx (- tx (ecase align-x
+				(:left 0)
+				(:center (round text-width 2))
+				(:right text-width))))
+	  (setq ty (ecase align-y
+			  (:top (+ ty baseline))
+			  (:center (+ ty baseline (- (floor text-height 2))))
+			  (:baseline ty)
+			  (:bottom (+ ty baseline (- text-height)))))))
       (xlib:draw-glyphs mirror gc (round tx) (round ty) string :start start :end end))))
 
 (defmethod medium-buffering-output-p ((medium clx-medium))
