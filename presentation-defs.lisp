@@ -1402,7 +1402,7 @@
 							      separator))
 	collect element
 	do (progn
-	     (when (not (eql (peek-char stream) seperator))
+	     (when (not (eql (peek-char stream) separator))
 	       (loop-finish))
 	     (read-char stream)
 	     (when echo-space
