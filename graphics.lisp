@@ -95,7 +95,7 @@
 			       &body body)
   `(flet ((graphics-op (medium)
 	    ,@body))
-     (declare (dynamic-extent #'graphics-op))
+     #-clisp (declare (dynamic-extent #'graphics-op))
      (apply #'do-graphics-with-options ,sheet #'graphics-op ,args)))
 
 (defun draw-point (sheet point
