@@ -3,6 +3,8 @@
 ;;;  (c) copyright 2001 by
 ;;;           Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
 ;;;           Lionel Salabartan (salabart@emi.u-bordeaux.fr)
+;;;  (c) copyright 2002 by
+;;;           Alexey Dejneka (adejneka@comail.ru)
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -18,6 +20,19 @@
 ;;; License along with this library; if not, write to the
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
+
+;;; TODO:
+;;;
+;;; - clipping
+;;; - - more regions to draw
+;;; - (?) blending
+;;; - check MEDIUM-DRAW-TEXT*
+;;; - (?) WITH-OUTPUT-TO-POSTSCRIPT-STREAM should bind its first argument
+;;;   to stream, not to medium.
+;;;
+;;; - POSTSCRIPT-ACTUALIZE-GRAPHICS-STATE should use caching
+;;; - MEDIUM-DRAW-... should not duplicate code from POSTSCRIPT-ADD-PATH
+;;; - structure this file
 
 (in-package :CLIM-INTERNALS)
 
@@ -95,6 +110,104 @@
     (format file-stream "showpage~%")
     (format file-stream "%%Page: ~D ~:*~D~%" (incf current-page))))
 
+
+;;; Postscript output utilities
+
+(defmacro with-graphics-state ((stream) &body body)
+  (let ((gstream (gensym)))
+    `(let ((,gstream ,stream))
+      (format ,gstream "gsave~%")
+      ,@body
+      (format ,gstream "grestore~%"))))
+
+(defun format-postscript-number (number)
+  (if (not (integerp number))
+      (coerce number 'single-float)
+      number))
+
+(defun format-postscript-angle (angle)
+  (format-postscript-number (* angle (/ 180 pi))))
+
+
+;;; 
+
+(defgeneric postscript-add-path (stream region)
+  (:documentation
+   "Adds REGION (if it is a path) or its boundary (if it is an area)
+   to the current path of STREAM."))
+
+(defmethod postscript-add-path (stream (region (eql +nowhere+)))
+  (declare (ignore stream region)))
+
+(defmethod postscript-add-path (stream (region standard-region-union))
+  (map-over-region-set-regions (lambda (region)
+                                 (postscript-add-path stream region))
+                               region))
+
+(defmethod postscript-add-path (stream (region standard-region-intersection))
+  (with-graphics-state (stream)
+    #+nil (format stream "initclip~%")
+    (loop for subregion in (region-set-regions region)
+          do (format stream "newpath~%")
+             (postscript-add-path stream subregion)
+             (format stream "clip~%"))
+    (format stream "clippath false upath~%"))
+  (format stream "uappend~%"))
+
+(defmethod postscript-add-path (stream (polygon polygon))
+  (let ((points (polygon-points polygon)))
+    (format stream "~A ~A moveto~%"
+            (format-postscript-number (point-x (first points)))
+            (format-postscript-number (point-y (first points))))
+    (loop for point in (rest points)
+          do (format stream "~A ~A lineto~%"
+                     (format-postscript-number (point-x point))
+                     (format-postscript-number (point-y point))))
+    (format stream "closepath~%")))
+
+(defmethod postscript-add-path (stream (ellipse ellipse))
+  (multiple-value-bind (center-x center-y)
+      (ellipse-center-point* ellipse)
+    (let ((start-angle (or (ellipse-start-angle ellipse) 0))
+          (end-angle (or (ellipse-end-angle ellipse) (* 2 pi))))
+      (multiple-value-bind (ndx1 ndy1 ndx2 ndy2) (ellipse-normal-radii* ellipse)
+        (let* ((angle (atan* ndx1 ndy1))
+               (s1 (sqrt (+ (* ndx1 ndx1) (* ndy1 ndy1))))
+               (s2 (sqrt (+ (* ndx2 ndx2) (* ndy2 ndy2))))
+               (tr (compose-transformation-with-scaling
+                    (make-rotation-transformation angle)
+                    s1 s2))
+               (start-angle (untransform-angle tr start-angle))
+               (end-angle (untransform-angle tr end-angle)))
+          (format stream "matrix currentmatrix~%")
+          (format stream "~A ~A translate~%"
+                  (format-postscript-number center-x)
+                  (format-postscript-number center-y))
+          (format stream "~A rotate~%"
+                  (format-postscript-angle angle))
+          (format stream "~A ~A scale~%"
+                  (format-postscript-number s1) (format-postscript-number s2))
+          (format stream "0 0 1 ~A ~A arc~%"
+                  (format-postscript-angle start-angle)
+                  (format-postscript-angle end-angle))
+          ;; (when filled ; uncomment when this code will be shared
+          ;;              ; with ...-ELLIPTICAL-ARC
+          (format stream "0 0 lineto~%")
+          ;;)
+          (format stream "closepath~%")
+          (format stream "setmatrix~%"))))))
+
+
+;;; Graphics state
+
+(defgeneric postscript-set-graphics-state (stream medium kind))
+
+(defun postscript-actualize-graphics-state (stream medium &rest states)
+  "Sets graphics parameters named in STATES."
+  (loop for state in (cons :clipping-region states)
+        ;; every drawing function depends on clipping region
+        do (postscript-set-graphics-state stream medium state)))
+
 (defconstant +postscript-line-joints+ '(:miter 0
                                         :round 1
                                         :bevel 2
@@ -107,7 +220,8 @@
 
 (defconstant +postscript-default-line-dashes+ '(3 3))
 
-(defun postscript-line-style (stream medium)
+(defmethod postscript-set-graphics-state (stream medium
+                                          (kind (eql :line-style)))
   (let ((line-style (medium-line-style medium)))
     (format stream "~A setlinewidth ~A setlinejoin ~A setlinecap~%"
             (line-style-thickness line-style)
@@ -132,58 +246,74 @@
   (declare (ignore medium))
   (color-rgb ink))
 
-(defun postscript-color (stream medium)
-  (multiple-value-bind (r g b) (medium-color-rgb medium (medium-ink medium))
+(defmethod postscript-set-graphics-state (stream medium (kind (eql :color)))
+  (multiple-value-bind (r g b)
+      (medium-color-rgb medium (medium-ink medium))
     (format stream "~,3F ~,3F ~,3F setrgbcolor~%" r g b)))
 
 (defun postscript-line-style-and-color (stream medium)
   (postscript-line-style stream medium)
   (postscript-color stream medium))
 
-(defmacro with-graphics-state ((stream) &body body)
-  (let ((gstream (gensym)))
-    `(let ((,gstream ,stream))
-      (format ,gstream "gsave~%")
-      ,@body
-      (format ,gstream "grestore~%"))))
+(defgeneric postscript-set-clipping-region (stream region))
 
-(defun format-postscript-number (number)
-  (if (not (integerp number))
-      (coerce number 'single-float)
-      number))
+(defmethod postscript-set-clipping-region (stream region)
+  (format stream "newpath~%")
+  (postscript-add-path stream region)
+  (format stream "clip~%"))
 
-(defun format-postscript-angle (angle)
-  (format-postscript-number (* angle (/ 180 pi))))
+(defmethod postscript-set-clipping-region (stream (region (eql +everywhere+)))
+  (declare (ignore stream region)))
+
+(defmethod postscript-set-clipping-region (stream (region (eql +nowhere+)))
+  (declare (ignore region))
+  (format stream "~@
+newpath
+0 0 moveto
+closepath
+clip
+"))
+
+(defmethod postscript-set-graphics-state (stream medium
+                                          (kind (eql :clipping-region)))
+  (postscript-set-clipping-region stream
+                                  (medium-clipping-region medium)))
+
+
+;;; Medium drawing functions
+
+;;; FIXME: the following methods should share code with POSTSCRIPT-ADD-PATH
 
 (defmethod medium-draw-point* ((medium postscript-medium) x y)
   (let ((stream (postscript-medium-file-stream medium)))
     (with-graphics-state (stream)
+      (postscript-actualize-graphics-state stream medium :color)
+      (format stream "newpath~%")
       (format stream "~A ~A ~A 0 360 arc~%"
 	      (format-postscript-number x) (format-postscript-number y)
               (format-postscript-number
                (/ (line-style-thickness (medium-line-style medium)) 2)))
       (format stream "0 setlinewidth~%")
-      (postscript-color stream medium)
       (format stream "fill~%"))))
 
 (defmethod medium-draw-points* ((medium postscript-medium) coord-seq)
   (let ((stream (postscript-medium-file-stream medium)))
     (with-graphics-state (stream)
       (format stream "0 setlinewidth~%")
-      (postscript-color stream medium)
       (loop with radius = (/ (line-style-thickness (medium-line-style medium)) 2)
 	    for (x y) on coord-seq by #'cddr
 	    do (progn
+                 (format stream "newpath~%")
 		 (format stream "~A ~A ~A 0 360 arc~%"
                          (format-postscript-number x) (format-postscript-number y)
                          (format-postscript-number radius))
-		 (format stream "fill~%")
-		 (format stream "newpath~%"))))))
+		 (format stream "fill~%"))))))
 
 (defmethod medium-draw-line* ((medium postscript-medium) x1 y1 x2 y2)
   (let ((stream (postscript-medium-file-stream medium)))
     (with-graphics-state (stream)
-      (postscript-line-style-and-color stream medium)
+      (postscript-actualize-graphics-state stream medium :line-style :color)
+      (format stream "newpath~%")
       (format stream "~A ~A moveto ~A ~A lineto~%"
               (format-postscript-number x1) (format-postscript-number y1)
               (format-postscript-number x2) (format-postscript-number y2))
@@ -192,7 +322,8 @@
 (defmethod medium-draw-lines* ((medium postscript-medium) coord-seq)
   (let ((stream (postscript-medium-file-stream medium)))
     (with-graphics-state (stream)
-      (postscript-line-style-and-color stream medium)
+      (postscript-actualize-graphics-state stream medium :line-style :color)
+      (format stream "newpath~%")
       (loop with points = (apply #'vector coord-seq)
             for i below (length coord-seq) by 4
             do
@@ -207,6 +338,8 @@
   (assert (evenp (length coord-seq)))
   (let ((stream (postscript-medium-file-stream medium)))
     (with-graphics-state (stream)
+      (postscript-actualize-graphics-state stream medium :line-style :color)
+      (format stream "newpath~%")
       (format stream "~A ~A moveto~%"
               (format-postscript-number (car coord-seq))
               (format-postscript-number (cadr coord-seq)))
@@ -216,7 +349,6 @@
             finally (format stream "~%"))
       (when closed
         (format stream "closepath~%"))
-      (postscript-line-style-and-color stream medium)
       (format stream (if filled
                          "fill~%"
                          "stroke~%")))))
@@ -224,13 +356,14 @@
 (defmethod medium-draw-rectangle* ((medium postscript-medium) x1 y1 x2 y2 filled)
   (let ((stream (postscript-medium-file-stream medium)))
     (with-graphics-state (stream)
+      (postscript-actualize-graphics-state stream medium :line-style :color)
+      (format stream "newpath~%")
       (format stream "~A ~A moveto ~A ~A lineto ~A ~A lineto ~A ~A lineto~%"
               (format-postscript-number x1) (format-postscript-number y1)
               (format-postscript-number x2) (format-postscript-number y1)
               (format-postscript-number x2) (format-postscript-number y2)
               (format-postscript-number x1) (format-postscript-number y2))
       (format stream "closepath~%")
-      (postscript-line-style-and-color stream medium)
       (format stream (if filled
                          "fill~%"
                          "stroke~%")))))
@@ -239,6 +372,8 @@
   (assert (evenp (length position-seq)))
   (let ((stream (postscript-medium-file-stream medium)))
     (with-graphics-state (stream)
+      (postscript-actualize-graphics-state stream medium :line-style :color)
+      (format stream "newpath~%")
       (loop for (x1 y1 x2 y2) on position-seq by #'cddddr
             do (format stream "~A ~A moveto ~A ~A lineto ~A ~A lineto ~A ~A lineto~%"
                        (format-postscript-number x1) (format-postscript-number y1)
@@ -246,7 +381,6 @@
                        (format-postscript-number x2) (format-postscript-number y2)
                        (format-postscript-number x1) (format-postscript-number y2))
             (format stream "closepath~%"))
-      (postscript-line-style-and-color stream medium)
       (format stream (if filled
                          "fill~%"
                          "stroke~%")))))
@@ -269,6 +403,7 @@
              (start-angle (untransform-angle tr start-angle))
              (end-angle (untransform-angle tr end-angle)))
         (with-graphics-state (stream)
+          (postscript-actualize-graphics-state stream medium :line-style :color)
           (format stream "matrix currentmatrix~%")
           (format stream "~A ~A translate~%"
                   (format-postscript-number center-x)
@@ -277,13 +412,13 @@
                   (format-postscript-angle angle))
           (format stream "~A ~A scale~%"
                   (format-postscript-number s1) (format-postscript-number s2))
+          (format stream "newpath~%")
           (format stream "0 0 1 ~A ~A arc~%"
                   (format-postscript-angle start-angle)
                   (format-postscript-angle end-angle))
           (when filled
             (format stream "0 0 lineto~%"))
           (format stream "setmatrix~%")
-          (postscript-line-style-and-color stream medium)
           (format stream (if filled
                              "fill~%"
                            "stroke~%")))))))
