@@ -85,7 +85,18 @@
 
    #.(OR
       #+(AND :CMU :MP (NOT :PTHREAD))  "Lisp-Dep/mp-cmu"
-      #+:SBCL                          "Lisp-Dep/mp-sbcl"
+      ;;
+      ;; This is perhaps a poor attempt of mine to conditionalize on
+      ;; the actual presence of the SB-THREAD package which I guess
+      ;; should only be available on multithreading SBCL.
+      ;;
+      ;; If this breaks, blame me.
+      ;;
+      ;; --GB 2003-03-14
+      #+:SBCL
+      (if (find-package "SB-THREAD")
+          "Lisp-Dep/mp-sbcl"
+          "Lisp-Dep/mp-nil")
       #+:EXCL                          "Lisp-Dep/mp-acl"
       #+:OPENMCL                       "Lisp-Dep/mp-openmcl"
       #| fall back |#                  "Lisp-Dep/mp-nil")
