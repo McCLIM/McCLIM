@@ -1,5 +1,52 @@
+;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: PP2; -*-
+;;; ---------------------------------------------------------------------------
+;;;     Title: PPRINT for McCLIM
+;;;   Created: 2003-05-18
+;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
+;;;   License: LGPL (See file COPYING for details).
+;;;       $Id: pprint.lisp,v 1.2 2003/05/18 08:56:19 gilbert Exp $
+;;; ---------------------------------------------------------------------------
+;;;  (c) copyright 2003 by Gilbert Baumann
+
+;;; This library is free software; you can redistribute it and/or
+;;; modify it under the terms of the GNU Library General Public
+;;; License as published by the Free Software Foundation; either
+;;; version 2 of the License, or (at your option) any later version.
+;;;
+;;; This library is distributed in the hope that it will be useful,
+;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;;; Library General Public License for more details.
+;;;
+;;; You should have received a copy of the GNU Library General Public
+;;; License along with this library; if not, write to the 
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; Boston, MA  02111-1307  USA.
+
+;;;; Notes
+
+;; - INVOKE-WITH-LOGICAL-BLOCK
+;;
+;; - The specification is explict about depth abbreviation and dotted
+;;   So the common implementation should share this. Specifically that
+;;   is the DESCEND-INTO and the implementation of POP and
+;;   EXIT-IF-EXHAUSTED. Whether DESCEND-INTO might also be worth
+;;   protocolizing is an open question. Although a case can be made
+;;   for also protocolizing that.
+
+;; - Hefner wants nifty unreadable objects therefore we might think
+;;   about protolizing print-unreadable-object too.
+
+;; - How we can integrate this into a _practically_ closed source lisp
+;;   like ACL or Lispworks is uncertain. But looking at the macro
+;;   expansion both seem to use XP so the source is there and we could
+;;   figure out which functions need to be adviced / replaced.
+
+;; - I have no clue how *PRINT-CIRCLE* and *PRINT-SHARE* are
+;;   implemented, we need to figure that out.
+
 (defpackage :pp2
-    (:use :clim :clim-lisp)
+  (:use :clim :clim-lisp)
   (:import-from :SB-PRETTY
    #:INVOKE-WITH-LOGICAL-BLOCK
    #:STREAM-PPRINT-TAB 
@@ -13,16 +60,19 @@
 ;;;; Patching SBCL into shape
 ;;;;
 
+(declaim (notinline sb-pretty::pretty-stream-p))
+
 (defvar *orig-invoke-with-logical-block*
   #'invoke-with-logical-block)
 
 (defvar *orig-pretty-stream-p*
   #'sb-pretty::pretty-stream-p)
 
-(fmakunbound 'sb-pretty::pretty-stream-p)
-(defgeneric sb-pretty::pretty-stream-p (stream))
-(defmethod sb-pretty::pretty-stream-p (stream)
-  (funcall *orig-pretty-stream-p* stream))
+(progn ;;eval-when (compile eval load)
+  (fmakunbound 'sb-pretty::pretty-stream-p)
+  (defgeneric sb-pretty::pretty-stream-p (stream))
+  (defmethod sb-pretty::pretty-stream-p (stream)
+    (funcall *orig-pretty-stream-p* stream)))
 
 (fmakunbound 'stream-pprint-newline)
 (defgeneric stream-pprint-newline (stream kind))
@@ -53,6 +103,7 @@
                                              &rest args
                                              &key prefix per-line-prefix suffix)
   (apply *orig-invoke-with-logical-block* stream continuation object args))
+
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -259,12 +310,14 @@
                (stream object (clim:presentation-type-of object))
              (doit stream object)))
           (t
-           (let ((*pretty-printing-in-effect-p* t))
+           (let ((*pretty-printing-in-effect-p* t)
+                 (*phase* *phase*))
              (with-end-of-line-action (stream :allow)
                (multiple-value-bind (cx cy) (stream-cursor-position stream)
-                 (start-phase-1 stream)
-                 (with-output-recording-options (stream :record nil :draw nil)
-                   (doit stream object))
+                 (with-end-of-page-action (stream :allow)
+                   (start-phase-1 stream)
+                   (with-output-recording-options (stream :record nil :draw nil)
+                     (doit stream object)))
                  (start-phase-2 stream cx cy)
                  (with-output-as-presentation (stream object (clim:presentation-type-of object))
                    (doit stream object)))))))))
@@ -280,7 +333,7 @@
 
 (defvar *items*)
 (defvar *last-observerd-x*)
-(defvar *phase*)
+(defvar *phase* :illegal)
 (defvar *level* 0)
 (defvar *pointer* 0)
 (defvar *block-stack* nil)
@@ -359,6 +412,8 @@
             :x (stream-cursor-position stream))
       *items*))
     (:doit
+     (unless (typep (aref *items* *pointer*) 'block-start)
+       (error "You're not playing by the rules."))
      (push (aref *items* *pointer*) *block-stack*)
      (setf (block-x0 (car *block-stack*)) (stream-cursor-position stream))
      (setf (block-ind (car *block-stack*)) (stream-cursor-position stream))
@@ -376,96 +431,101 @@
       *items*)
      (decf *level*))
     (:doit
+     (unless (typep (aref *items* *pointer*) 'block-end)
+       (error "You're not playing by the rules."))
      (pop *block-stack*)
      (incf *pointer*)
      ))
   (write-string suffix stream))
 
-(defparameter *print-w* 700)
+(defparameter *print-w* 500)
 
 (defparameter *debug-p* nil)
 
 (defmethod stream-pprint-newline ((stream extended-output-stream) kind)
-  (ecase *phase*
-    (:collect
-     (push (make-instance 'newline
-            :x (stream-cursor-position stream)
-            :level *level*
-            :kind kind)
-      *items*))
-    (:doit
-     (labels ((dobreak ()
-                (setf (newline-taken-p (aref *items* *pointer*)) t)
-                (terpri stream)
-                (multiple-value-bind (x y) (stream-cursor-position stream)
-                  (setf (stream-cursor-position stream)
-                        (values (block-ind (car *block-stack*))
-                                y)))))
-       (case kind
-         (:fill
-          (when *debug-p*
-            (princ "{f}"))
-          (let* ((i (car (newline-following-section (aref *items* *pointer*))))
-                 (j (cdr (newline-following-section (aref *items* *pointer*))))
-                 (w (- (item-x (aref *items* j))
-                       (item-x (aref *items* i)))))
-            (cond ((or
-                    (some #'(lambda (x)
-                              (typecase x
-                                (newline (newline-taken-p x))))
-                          (subseq *items*
-                                  (car (newline-preceeding-section (aref *items* *pointer*)))
-                                  (cdr (newline-preceeding-section (aref *items* *pointer*)))))
-                    (>= (+ (stream-cursor-position stream)
-                           w)
-                        *print-w*))
-                   (dobreak))
-                  (t
-                   )
-                  )))
-         (:mandatory
-          (dobreak))
-         (:linear
-          (let* ((i (car (newline-containing-section (aref *items* *pointer*))))
-                 (j (cdr (newline-containing-section (aref *items* *pointer*))))
-                 (w (- (item-x (aref *items* j))
-                       (item-x (aref *items* i)))))
-            #||                         ;
-            (princ "{l")
-            (princ i) (princ ".")(princ j)(princ ".")(princ w)
-            (princ "}")
-            ||#
+  (when *pretty-printing-in-effect-p*
+    (ecase *phase*
+      (:collect
+       (push (make-instance 'newline
+              :x (stream-cursor-position stream)
+              :level *level*
+              :kind kind)
+        *items*))
+      (:doit
+       (unless (typep (aref *items* *pointer*) 'newline)
+         (error "You're not playing by the rules."))
+       (labels ((dobreak ()
+                  (setf (newline-taken-p (aref *items* *pointer*)) t)
+                  (terpri stream)
+                  (multiple-value-bind (x y) (stream-cursor-position stream)
+                    (setf (stream-cursor-position stream)
+                          (values (block-ind (car *block-stack*))
+                                  y)))))
+         (case kind
+           (:fill
             (when *debug-p*
-              (let ((*print-pretty* nil))
-                (princ "{L")
-                (princ w)
-                (princ ":")
-                (princ (stream-cursor-position stream))
-                (princ (cons i j))
-                (princ ".")
-                (princ (newline-level (aref *items* *pointer*)))
-                (princ "}")))
-            (cond ((or
-                    #+NIL
-                    (not
-                     (section-fits-p i j (stream-cursor-position stream)))
-                    (>= ;;(+ (stream-cursor-position stream) w)
-                     (+ (block-x0 (car *block-stack*)) w)
-                        *print-w*)
-                    #+NIL
-                    (some #'(lambda (x)
-                              (typecase x
-                                (newline (newline-taken-p x))))
-                          (subseq *items* i j))
-                    ;;(block-linear-newline-taken-p(car *block-stack*))
-                    )
-                   (setf (block-linear-newline-taken-p(car *block-stack*))
-                         t)
-                   (dobreak))
-                  (t
-                   nil))))))
-     (incf *pointer*)
-     )))
+              (princ "{f}"))
+            (let* ((i (car (newline-following-section (aref *items* *pointer*))))
+                   (j (cdr (newline-following-section (aref *items* *pointer*))))
+                   (w (- (item-x (aref *items* j))
+                         (item-x (aref *items* i)))))
+              (cond ((or
+                      (some #'(lambda (x)
+                                (typecase x
+                                  (newline (newline-taken-p x))))
+                            (subseq *items*
+                                    (car (newline-preceeding-section (aref *items* *pointer*)))
+                                    (cdr (newline-preceeding-section (aref *items* *pointer*)))))
+                      (>= (+ (stream-cursor-position stream)
+                             w)
+                          *print-w*))
+                     (dobreak))
+                    (t
+                     )
+                    )))
+           (:mandatory
+            (dobreak))
+           (:linear
+            (let* ((i (car (newline-containing-section (aref *items* *pointer*))))
+                   (j (cdr (newline-containing-section (aref *items* *pointer*))))
+                   (w (- (item-x (aref *items* j))
+                         (item-x (aref *items* i)))))
+              #||                       ;
+              (princ "{l")
+              (princ i) (princ ".")(princ j)(princ ".")(princ w)
+              (princ "}")
+              ||#
+              (when *debug-p*
+                (let ((*print-pretty* nil))
+                  (princ "{L")
+                  (princ w)
+                  (princ ":")
+                  (princ (stream-cursor-position stream))
+                  (princ (cons i j))
+                  (princ ".")
+                  (princ (newline-level (aref *items* *pointer*)))
+                  (princ "}")))
+              (cond ((or
+                      #+NIL
+                      (not
+                       (section-fits-p i j (stream-cursor-position stream)))
+                      (>=;;(+ (stream-cursor-position stream) w)
+                       (+ (block-x0 (car *block-stack*)) w)
+                       *print-w*)
+                      #+NIL
+                      (some #'(lambda (x)
+                                (typecase x
+                                  (newline (newline-taken-p x))))
+                            (subseq *items* i j))
+                      ;;(block-linear-newline-taken-p(car *block-stack*))
+                      )
+                     (setf (block-linear-newline-taken-p(car *block-stack*))
+                           t)
+                     (dobreak))
+                    (t
+                     nil))))))
+       (incf *pointer*)
+       ))))
 
 (defun fill-newline-breaks-p (*pointer* x0)
   (let* ((i (car (newline-following-section (aref *items* *pointer*))))
@@ -517,25 +577,26 @@
                  t)))))))
 
 (defmethod stream-pprint-indent ((stream extended-output-stream) relative-to amount)
-  (ecase *phase*
-    (:collect
-     (push (make-instance 'indent
-            :relative-to relative-to
-            :amount amount
-            :x (stream-cursor-position stream))
-      *items*))
-    (:doit
-     (case relative-to
-       (:current
-        (setf (block-ind (car *block-stack*))
-         (+ (stream-cursor-position stream)
-          (* amount (text-size stream "m")))))
-       (:block
-        (setf (block-ind (car *block-stack*))
-         (+ (block-x0 (car *block-stack*))
-          (* amount (text-size stream "m"))))))
-     (incf *pointer*)
-     )))
+  (when *pretty-printing-in-effect-p*
+    (ecase *phase*
+      (:collect
+       (push (make-instance 'indent
+              :relative-to relative-to
+              :amount amount
+              :x (stream-cursor-position stream))
+        *items*))
+      (:doit
+       (case relative-to
+         (:current
+          (setf (block-ind (car *block-stack*))
+           (+ (stream-cursor-position stream)
+            (* amount (text-size stream "m")))))
+         (:block
+          (setf (block-ind (car *block-stack*))
+           (+ (block-x0 (car *block-stack*))
+            (* amount (text-size stream "m"))))))
+       (incf *pointer*)
+       ))))
 
 ;;;;
 
@@ -585,7 +646,8 @@
                  (list (make-instance 'item :x (stream-cursor-position stream))))
          'vector))
   ;;
-  (print *items* *trace-output*)
+  (when *debug-p*
+    (print *items* *trace-output*))
   (setf *pointer* 0)
   (setf *phase* :doit)
   (setf (stream-cursor-position stream) (values cx cy))
@@ -626,7 +688,8 @@
   (cond ((and (extended-output-stream-p stream)
               (atom object)
               *print-escape*)
-         (print object *trace-output*)
+         (when *debug-p*
+           (print object *trace-output*))
          (with-output-as-presentation (stream object (clim:presentation-type-of object))
            (funcall (sb-pretty::pprint-dispatch object) stream object)))
         (t
@@ -673,3 +736,7 @@
  *my-dispatch*)
 
 (defmethod climi::text-style-equalp (x y) (eq x y))
+
+;;
+;; $Log: $
+;;
