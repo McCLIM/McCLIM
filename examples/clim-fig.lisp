@@ -21,14 +21,15 @@
 
 (in-package :CLIM-INTERNALS)
 
-;; What is this? --GB
-(export 'clim::canvas-pane "CLIM")
-
 (defclass canvas-pane (application-pane)
   ((first-point-x :initform nil)
    (first-point-y :initform nil)
    (canvas-pixmap :initform nil)
    (selected-object :initform nil)))
+
+(defun set-status-line (string)
+  (setf (gadget-value (slot-value *application-frame* 'clim-demo::status))
+	string))
 
 (defmethod handle-event ((pane canvas-pane) (event pointer-button-press-event))
   (when (= (pointer-event-button event) +pointer-left-button+)
@@ -37,8 +38,8 @@
 	    (pixmap-height (round (bounding-rectangle-height (sheet-region pane)))))
 	(setq first-point-x (pointer-event-x event))
 	(setq first-point-y (pointer-event-y event))
-	(with-slots (clim-demo::line-style clim-demo::current-color) *application-frame*
-	  (case (clim-demo::clim-fig-drawing-mode *application-frame*)
+	(with-slots (clim-demo::line-style clim-demo::current-color clim-demo::drawing-mode) *application-frame*
+	  (case clim-demo::drawing-mode
 	    (:point
 	     (draw-point* pane first-point-x first-point-y
 			  :ink clim-demo::current-color
@@ -75,7 +76,11 @@
                (radius-y (- y first-point-y))
 	       (pixmap-width (round (bounding-rectangle-width (sheet-region pane))))
 	       (pixmap-height (round (bounding-rectangle-height (sheet-region pane)))))
-	  (with-slots (clim-demo::current-color clim-demo::constrict-mode) *application-frame*
+	  (with-slots (clim-demo::current-color clim-demo::drawing-mode clim-demo::constrict-mode) *application-frame*
+          (set-status-line (format nil "~:(~A~) from (~D,~D) to (~D,~D)~%"
+                                   clim-demo::drawing-mode
+                                   (round first-point-x) (round first-point-y)
+                                   (round x) (round y)))
 	    (with-output-recording-options (pane :record nil)
 	      (copy-from-pixmap canvas-pixmap 0 0 pixmap-width pixmap-height pane 0 0)
               (when clim-demo::constrict-mode
@@ -84,7 +89,7 @@
                         radius-y (* (signum-1 radius-y) radius-max)
                         x (+ first-point-x radius-x)
                         y (+ first-point-y radius-y))))
-	      (case (clim-demo::clim-fig-drawing-mode *application-frame*)
+	      (case clim-demo::drawing-mode
 		(:line
                  (when clim-demo::constrict-mode
                    (if (= (- (pointer-event-x event) first-point-x) radius-x)
@@ -112,6 +117,8 @@
     (with-slots (first-point-x first-point-y canvas-pixmap) pane
       (let ((pixmap-width (round (bounding-rectangle-width (sheet-region pane))))
 	    (pixmap-height (round (bounding-rectangle-height (sheet-region pane)))))
+        (set-status-line " ")
+
 	(when (and first-point-x first-point-y canvas-pixmap)
           (copy-from-pixmap canvas-pixmap 0 0 pixmap-width pixmap-height pane 0 0)
           (deallocate-pixmap canvas-pixmap)
@@ -224,35 +231,33 @@
 (define-command com-undo ()
   (let* ((output-history (clim-fig-output-record *application-frame*))
          (record (first (last (output-record-children output-history)))))
-    (unless (null record)
-      (with-output-recording-options (*standard-output* :record nil)
-        (with-bounding-rectangle* (x1 y1 x2 y2) record
-          (draw-rectangle* *standard-output* x1 y1 x2 y2 :ink +background-ink+)
-          (delete-output-record record output-history)
-          (push record (clim-fig-redo-list *application-frame*))
-          (replay-output-record output-history *standard-output*
-                                (make-rectangle* x1 y1 x2 y2)))))))
+    (if record
+        (with-output-recording-options (*standard-output* :record nil)
+          (with-bounding-rectangle* (x1 y1 x2 y2) record
+            (draw-rectangle* *standard-output* x1 y1 x2 y2 :ink +background-ink+)
+            (delete-output-record record output-history)
+            (push record (clim-fig-redo-list *application-frame*))
+            (replay-output-record output-history *standard-output*
+                                  (make-rectangle* x1 y1 x2 y2))))
+        (beep))))
 
 (define-command com-redo ()
   (let* ((output-history (clim-fig-output-record *application-frame*))
          (record (pop (clim-fig-redo-list *application-frame*))))
-    (when record
-      (with-output-recording-options (*standard-output* :record nil)
-        (with-bounding-rectangle* (x1 y1 x2 y2) record
-          (draw-rectangle* *standard-output* x1 y1 x2 y2 :ink +background-ink+)
-          (add-output-record record output-history)
-          (replay-output-record output-history *standard-output*
-                                (make-rectangle* x1 y1 x2 y2)))))))
+    (if record
+        (with-output-recording-options (*standard-output* :record nil)
+          (with-bounding-rectangle* (x1 y1 x2 y2) record
+            (draw-rectangle* *standard-output* x1 y1 x2 y2 :ink +background-ink+)
+            (add-output-record record output-history)
+            (replay-output-record output-history *standard-output*
+                                  (make-rectangle* x1 y1 x2 y2))))
+        (beep))))
 
 (define-command com-clear ()
-  (let ((output-history (clim-fig-output-record *application-frame*)))
-    (with-output-recording-options (*standard-output* :record nil)
-      (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region *standard-output*)
-        (draw-rectangle* *standard-output* x1 y1 x2 y2 :ink +background-ink+)))
-    (setf (clim-demo::clim-fig-redo-list *application-frame*)
-          (append (output-record-children output-history)
-                  (clim-demo::clim-fig-redo-list *application-frame*)))
-    (clear-output-record output-history)))
+  (setf (clim-demo::clim-fig-redo-list *application-frame*)
+        (append (output-record-children (clim-fig-output-record *application-frame*))
+                (clim-demo::clim-fig-redo-list *application-frame*)))
+  (window-clear *standard-output*))
 
 (make-command-table 'file-command-table
 		    :errorp nil
@@ -276,9 +281,10 @@
    (current-color :initform +black+ :accessor clim-fig-current-color)
    (line-style :initform (make-line-style) :accessor clim-fig-line-style)
    (fill-mode :initform nil :accessor clim-fig-fill-mode)
-   (constrict-mode :initform nil :accessor clim-fig-constrict-mode))
+   (constrict-mode :initform nil :accessor clim-fig-constrict-mode)
+   (status :initform nil :accessor clim-fig-status))
   (:panes
-   (canvas :canvas)
+   (canvas (make-pane 'climi::canvas-pane))
    (menu-bar (climi::make-menu-bar 'menubar-command-table :height 25))
    (line-width-slider :slider
 		      :label "Line Width"
@@ -362,7 +368,8 @@
           :label "Clear"
           :activate-callback #'(lambda (x)
                                  (declare (ignore x))
-                                 (com-clear))))
+                                 (com-clear)))
+   (status :text-field :value "CLIM Fig"))
   (:layouts
    (default
      (vertically ()
@@ -379,7 +386,8 @@
            point-button line-button arrow-button
            ellipse-button rectangle-button)
          (scrolling (:width 600 :height 400) canvas))
-       (horizontally (:height 30) clear undo redo))))
+       (horizontally (:height 30) clear undo redo)
+       status)))
    (:top-level (clim-fig-frame-top-level)))
 
 (defmethod clim-fig-frame-top-level ((frame application-frame) &key)
@@ -387,7 +395,10 @@
 	(*standard-output* (frame-standard-output frame))
 	(*query-io* (frame-query-io frame)))
     (setf (slot-value frame 'output-record)
-          (stream-current-output-record *standard-output*))
+          (stream-current-output-record *standard-output*)
+          (slot-value frame 'status)
+          (find-if #'(lambda (pane) (typep pane 'text-field-pane))
+                   (frame-panes frame)))
     (catch 'exit
       (loop (read-command (frame-pane frame))))
     (destroy-port (climi::port frame))))
