@@ -117,7 +117,19 @@
 		 (medium-transform-position medium (aref points i) (aref points (1+ i)))
 	       (setf (aref points i) (round tx)
 		     (aref points (1+ i)) (round ty)))
-	  finally (xlib:draw-lines mirror gc points))))
+	  finally (xlib:draw-segments mirror gc points))))
+
+(defmethod medium-draw-polygon* ((medium clx-medium) coord-seq closed filled)
+  (assert (evenp (length coord-seq)))
+  (with-CLX-graphics (medium)
+    (loop for (x y) on coord-seq by #'cddr
+          as (tx ty) = (mapcar #'round (multiple-value-list
+                                        (medium-transform-position medium x y)))
+          nconcing (list tx ty) into points
+          finally (when closed
+                    (setf points (nconc points
+                                        (list (first points) (second points)))))
+                  (xlib:draw-lines mirror gc points :fill-p filled))))
 
 (defmethod medium-draw-rectangle* ((medium clx-medium) left top right bottom filled)
   (with-CLX-graphics (medium)
