@@ -22,7 +22,11 @@
 
 (in-package :clim-demo)
 
+(defparameter *calculator-text-style*
+  (make-text-style :sans-serif :roman :large))
+
 (defun calculator ()
+  #+nil
   (progn
     (loop for port in climi::*all-ports*
         do (destroy-port port))
@@ -88,6 +92,7 @@
   (make-pane 'push-button-pane
 	     :label label
 	     :activate-callback operator
+             :text-style *calculator-text-style*
 	     :width width :height height
 	     :max-width  max-width :min-width min-width
 	     :max-height max-height :min-height min-height))
@@ -111,7 +116,7 @@
    (eight    (make-button "8" (queue-number 8)))
    (nine     (make-button "9" (queue-number 9)))
    (zero     (make-button "0" (queue-number 0)))
-   (screen   :text-field :value "0")
+   (screen   :text-field :value "0" :text-style *calculator-text-style*)
    (ac       (make-button "AC" #'initac))
    (ce       (make-button "CE" #'initce)))
 
@@ -121,7 +126,7 @@
          (vertically (:width 150 :max-width 500)
            (setf text-field screen)
            (horizontally (:height 50) ac ce)
-           (tabling ()
+           (tabling (:grid t)
              (list one two plus)
              (list three four dash)
              (list five six multiply)
