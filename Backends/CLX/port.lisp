@@ -72,29 +72,28 @@
 					      :structure-notify
 					      :pointer-motion)))
   (when (null (port-lookup-mirror port sheet))
-    (with-sheet-medium (medium sheet)
-      (let* ((desired-color (medium-background (sheet-medium sheet)))
-	     (color (multiple-value-bind (r g b)
-			(color-rgb desired-color)
-		      (xlib:make-color :red r :green g :blue b)))
-	     (pixel (xlib:alloc-color (xlib:screen-default-colormap (clx-port-screen port))
-				      color))
-	     (window (xlib:create-window
-		      :parent (sheet-mirror (sheet-parent sheet))
-		      :width width 
-		      :height height
-		      :x x :y y
-		      :border-width border-width
-		      :border border
-		      :override-redirect override-redirect
-		      :backing-store backing-store
-		      :gravity :north-west
-		      :background pixel
-		      :event-mask (apply #'xlib:make-event-mask
-					 event-mask))))
-	(port-register-mirror (port sheet) sheet window)
-	(when map
-	  (xlib:map-window window)))))
+    (let* ((desired-color (medium-background sheet))
+           (color (multiple-value-bind (r g b)
+                      (color-rgb desired-color)
+                    (xlib:make-color :red r :green g :blue b)))
+           (pixel (xlib:alloc-color (xlib:screen-default-colormap (clx-port-screen port))
+                                    color))
+           (window (xlib:create-window
+                    :parent (sheet-mirror (sheet-parent sheet))
+                    :width width 
+                    :height height
+                    :x x :y y
+                    :border-width border-width
+                    :border border
+                    :override-redirect override-redirect
+                    :backing-store backing-store
+                    :gravity :north-west
+                    :background pixel
+                    :event-mask (apply #'xlib:make-event-mask
+                                       event-mask))))
+      (port-register-mirror (port sheet) sheet window)
+      (when map
+        (xlib:map-window window))))
   (port-lookup-mirror port sheet))
 
 (defmethod realize-mirror ((port clx-port) (sheet mirrored-sheet-mixin))
@@ -236,8 +235,8 @@
 
 (defmethod make-medium ((port clx-port) sheet)
   (make-instance 'clx-medium 
-		 :port port 
-		 :graft (find-graft :port port) 
+		 ;; :port port 
+		 ;; :graft (find-graft :port port) 
 		 :sheet sheet))
 
 (defconstant *clx-text-families* '(:fix "adobe-courier"
