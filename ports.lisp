@@ -298,4 +298,5 @@
   (:documentation "Sets the cursor associated with SHEET. CURSOR is a symbol, as described in the Franz user's guide."))
 
 (defmethod set-sheet-pointer-cursor ((port basic-port) sheet cursor)
+  (declare (ignore sheet cursor))
   (warn "Port ~A has not implemented sheet pointer cursors." port))

@@ -138,6 +138,7 @@
   "Goatee/kill-ring"
   "Goatee/goatee-command"
   "Goatee/editing-stream"
+  "Goatee/presentation-history"
   )
 
 ;;; CLIM-PostScript is not a backend in the normal sense.

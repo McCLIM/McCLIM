@@ -4,7 +4,7 @@
 ;;;   Created: 1998-09-29
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: transforms.lisp,v 1.25 2003/11/07 20:22:02 hefner1 Exp $
+;;;       $Id: transforms.lisp,v 1.26 2004/03/24 09:30:29 moore Exp $
 ;;; --------------------------------------------------------------------------------------
 ;;;  (c) copyright 1998,1999,2003 by Gilbert Baumann
 ;;;  (c) copyright 2000 by 
@@ -69,6 +69,9 @@ transformation protocol."))
 
 (defclass standard-identity-transformation (standard-transformation)
   ())
+
+(defparameter +identity-transformation+
+  (make-instance 'standard-identity-transformation))
 
 (defclass standard-translation (standard-transformation)
   ((dx :type coordinate :initarg :dx)
@@ -217,9 +220,6 @@ transformation protocol."))
       ;; determinant was zero, so signal error
       (error 'transformation-underspecified
              :coords (list x1 y1 x2 y2 x3 y3 x1-image y1-image x2-image y2-image x3-image y3-image)) )))
-
-(defparameter +identity-transformation+
-  (make-instance 'standard-identity-transformation))
 
 (define-condition transformation-error (error)
   ())
@@ -733,6 +733,10 @@ transformation protocol."))
   nil)
 
 ;; $Log: transforms.lisp,v $
+;; Revision 1.25  2003/11/07 20:22:02  hefner1
+;; Fixed erroneous declaration (declared something as simple-vector inside a
+;; (typep coord-seq 'vector) cond clause.
+;;
 ;; Revision 1.24  2003/08/10 07:29:55  gilbert
 ;; delete one of the two definitions of MAKE-TRANSLATION-TRANSFORMATION.
 ;;

@@ -18,8 +18,11 @@
 (export 'ccl::stream-finish-output :ccl)
 
 (defpackage :clim-mop
+  #-openmcl-partial-mop
   (:use :common-lisp)
   #+openmcl-partial-mop
+  (:use :openmcl-mop)
+  #+nil					; #+openmcl-partial-mop
   (:import-from :openmcl-mop
 		#:validate-superclass #:class-finalized-p
 		#:finalize-inheritance #:class-prototype
@@ -47,7 +50,7 @@
 		#:class-direct-superclasses #:generic-function-methods
 		#:method-specializers #:compute-applicable-methods
 		#:funcallable-standard-class #:slot-definition-name)
-  #+openmcl-partial-mop
+  #+nil					;#+openmcl-partial-mop
   (:export #:validate-superclass #:class-finalized-p
 	   #:finalize-inheritance #:class-prototype
 	   #:class-precedence-list #:class-direct-subclasses
@@ -85,7 +88,11 @@
 	   #:extract-specializer-names #:extract-lambda-list
 	   #:class-slots))
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (loop for sym being the symbols of :clim-mop
+	do (export sym :clim-mop)))
 
+#-openmcl-partial-mop
 (in-package :clim-mop)
 
 #-openmcl-partial-mop
@@ -220,3 +227,43 @@
 		(initialize-class class t)
 		class)))
 
+;;; Fake compute-applicable-methods-using-classes, for the Show
+;;; Applicable Methods command in the listener.
+
+#+openmcl-partial-mop
+(in-package :ccl)
+#+openmcl-partial-mop
+(progn
+  (defgeneric compute-applicable-methods-using-classes (gf args))
+  (defmethod compute-applicable-methods-using-classes
+      ((gf standard-generic-function) args)
+    (let* ((methods (%gf-methods gf))
+	   (args-length (length args))
+	   (bits (inner-lfun-bits gf))
+	   arg-count res)
+      (when methods
+	(setq arg-count (length (%method-specializers (car methods))))
+	(unless (<= arg-count args-length)
+	  (error "Too few args to ~s" gf))
+	(unless (or (logbitp $lfbits-rest-bit bits)
+		    (logbitp $lfbits-restv-bit bits)
+		    (logbitp $lfbits-keys-bit bits)
+		    (<= args-length 
+			(+ (ldb $lfbits-numreq bits) (ldb $lfbits-numopt bits))))
+	  (error "Too many args to ~s" gf))
+	(let ((cpls (make-list arg-count)))
+	  (declare (dynamic-extent cpls))
+	  (do* ((args-tail args (cdr args-tail))
+		(cpls-tail cpls (cdr cpls-tail)))
+	       ((null cpls-tail))
+	    (setf (car cpls-tail)
+		  (%class-precedence-list (car args-tail))))
+	  (dolist (m methods)
+	    (when (find-if #'(lambda (spec)
+			       (typep spec 'eql-specializer))
+			   (%method-specializers m))
+	      (return-from compute-applicable-methods-using-classes
+		(values nil nil)))
+	    (if (%method-applicable-p m args cpls)
+		(push m res)))
+	  (values (sort-methods res cpls (%gf-precedence-list gf)) t))))))

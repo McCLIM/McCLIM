@@ -2231,6 +2231,8 @@ according to the flags RECORD and DRAW."
                                                                     record region)))))
         (grok-record record)))))
 
+;;; Debugging hacks
+
 (defmethod count-records (r)
   1)
 

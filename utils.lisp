@@ -321,6 +321,8 @@ by the number of variables in VARS."
 ;;;
 
 (defmacro with-gensyms (syms &body body)
+  "Binds each symbol in the list `syms' to a gensym which uses the
+  name of the symbol."
   `(let ,(mapcar (lambda (symbol) `(,symbol (gensym ,(symbol-name symbol))))
                  syms)
      ,@ body))
@@ -512,3 +514,41 @@ STREAM in the direction DIRECTION."
                     (:vertical   (values 0 1))))
               (/ value (sqrt (+ (* dx dx) (* dy dy))))))))))))
 
+(defun delete-1 (item list &key (test #'eql) (key #'identity))
+  "Delete 1 ITEM from LIST. Second value is T if item was deleted."
+  (loop
+     for tail on list
+       and tail-prev = nil then tail
+     for (list-item) = tail
+     if (funcall test item (funcall key list-item))
+       do (return-from delete-1
+	    (if tail-prev
+		(progn
+		  (setf (cdr tail-prev) (cdr tail))
+		  (values list t))
+		(values (cdr tail) t)))
+     finally (return (values list nil))))
+
+;;; Why do I feel like I've written this function 8 million times
+;;; already?
+
+(defun parse-lambda-list (ll)
+  "Extract the parts of a function or method lambda list.
+
+  Returns values of required, &optional, &rest and &key
+  parameters. 5th value indicates that &key was seen"
+  (loop
+       with state = 'required
+       for var in ll
+       if (member var '(&optional &rest &key))
+        do (setq state var)
+       else if (eq state 'required)
+         collect var into required
+       else if (eq state '&optional)
+         collect var into optional
+       else if (eq state '&rest)
+         collect var into rest
+       else if (eq state '&key)
+         collect var into key
+       end
+       finally (return (values required optional rest key (eq state '&key)))))

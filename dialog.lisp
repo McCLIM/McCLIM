@@ -233,16 +233,22 @@ accept of this query")))
   (declare (ignore view))
   (apply #'prompt-for-accept-1 stream type :display-default nil args))
 
-(define-command (com-query-exit :command-table accepting-values :name nil)
+(define-command (com-query-exit :command-table accepting-values
+				:name nil
+				:provide-output-destination-keyword nil)
     ()
   (signal 'av-exit))
 
-(define-command (com-query-abort :command-table accepting-values :name nil)
+(define-command (com-query-abort :command-table accepting-values
+				 :name nil
+				 :provide-output-destination-keyword nil)
     ()
   (and (find-restart 'abort)
        (invoke-restart 'abort)))
 
-(define-command (com-change-query :command-table accepting-values :name nil)
+(define-command (com-change-query :command-table accepting-values
+				  :name nil
+				  :provide-output-destination-keyword nil)
     ((query-identifier t)
      (value t))
   (when *accepting-values-stream*
@@ -260,7 +266,9 @@ a query is selected for input." ))
   (:documentation "Deselect a query field: turn the cursor off, turn off
 highlighting, etc." ))
 
-(define-command (com-select-query :command-table accepting-values :name nil)
+(define-command (com-select-query :command-table accepting-values
+				  :name nil
+				  :provide-output-destination-keyword nil)
     ((query-identifier t))
   (when *accepting-values-stream*
     (with-accessors ((selected-query selected-query))
@@ -284,7 +292,9 @@ highlighting, etc." ))
 	      (throw-object-ptype '(com-deselect-query)
 				  '(command :command-table accepting-values))))))))
 
-(define-command (com-deselect-query :command-table accepting-values :name nil)
+(define-command (com-deselect-query :command-table accepting-values
+				    :name nil
+				    :provide-output-destination-keyword nil)
     ()
   (when *accepting-values-stream*
     (with-accessors ((selected-query selected-query))

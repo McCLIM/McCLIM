@@ -33,6 +33,7 @@
 (define-command-table dev-commands)
 
 
+
 ;;; Presentation types
 
 (define-presentation-type class () :inherit-from 'expression)
@@ -40,7 +41,21 @@
 (define-presentation-type slot-definition () :inherit-from 'expression)
 (define-presentation-type function-name () :inherit-from 'symbol)
 (define-presentation-type process () :inherit-from 'expression)
-(define-presentation-type generic-function () :inherit-from 'expression)
+
+(define-presentation-type generic-function () :inherit-from 't)
+
+(define-presentation-method presentation-typep
+    (object (type generic-function))
+  (typep object 'generic-function))
+
+(define-presentation-type standard-generic-function ()
+  :inherit-from 'generic-function)
+
+(define-presentation-type method ()
+  :inherit-from 'expression)
+
+(define-presentation-type standard-method ()
+  :inherit-from 'method)
 
 (define-presentation-type directory-stack () :inherit-from 'expression)
 (define-presentation-type bytes () :inherit-from 'integer)
@@ -48,10 +63,72 @@
 
 ;;; Presentation methods
 
+(define-presentation-method present (object (type standard-method)
+				     stream (view textual-view)
+				     &key &allow-other-keys)
+  (let ((name (clim-mop:generic-function-name
+	       (clim-mop:method-generic-function object)))
+	(qualifiers (clim-mop:method-qualifiers object))
+	(specializers (clim-mop:method-specializers object))
+	(lambda-list (clim-mop:method-lambda-list object))
+	(class-of-t (find-class t)))
+    (format stream "~S ~{~S ~}(" name qualifiers)
+    (multiple-value-bind (required optional rest key key-present)
+	(climi::parse-lambda-list lambda-list)
+      (loop
+	 for spec in specializers
+	 for arg in required
+	 for first-time = t then nil
+	 do
+	   (unless first-time
+	     (write-char #\space stream))
+	   (if (eq spec class-of-t)
+	       (present arg 'symbol :stream stream)
+	       (progn
+		 (write-char #\( stream)
+		 (present arg 'symbol :stream stream)
+		 (write-char #\space  stream)
+		 (with-output-as-presentation (stream spec 'class)
+		   (format stream "~S)" (clim-mop:class-name spec))))))
+      (when optional
+	(format stream " &optional ~{~A ~^ ~}" optional))
+      (when rest
+	(format stream " &rest ~A" (car rest)))
+      (when key-present
+	(format stream " &key"))
+      (loop
+	   for arg in key
+	   for key-arg = (cond ((symbolp arg)
+				(intern (symbol-name arg) :keyword))
+			       ((symbolp (car arg))
+				(intern (symbol-name (car arg)) :keyword) )
+			       (t (caar arg)))
+	   do (format stream " ~S" key-arg))
+      (write-char #\) stream))))
+  
+
 (define-presentation-method present (object (type generic-function)
                                      stream (view textual-view)
                                      &key &allow-other-keys)
   (princ (clim-mop:generic-function-name object) stream))
+
+(define-presentation-method accept
+    ((type generic-function) stream (view textual-view) &key)
+  ;; generic-functions are a subclass of standard-object, so they can be
+  ;; accepted as expressions!
+  (let ((fn (accept 'expression
+		    :stream stream
+		    :view view
+		    :history 'generic-function
+		    :prompt nil)))
+    ;;
+    (when (typep fn 'generic-function)
+      (return-from accept fn))
+    (handler-case
+	(fdefinition fn)
+      (error ()
+	(simple-parse-error "~S is not the name of a generic function."
+			    fn)))))
 
 (define-presentation-method present (object (type bytes)
                                      stream (view textual-view)
@@ -112,12 +189,14 @@
 ;;; Arguably, these belong in the standard command table.
 
 (define-command (com-clear-output :name "Clear Output History"
-				   :command-table dev-commands)
+				  :command-table dev-commands
+				  :provide-output-destination-keyword nil)
     ()
   (window-clear *standard-output*))
 
 (define-command (com-exit :name "Exit"
-			  :command-table dev-commands)
+			  :command-table dev-commands
+			  :provide-output-destination-keyword nil)
     ()
   (frame-exit *application-frame*))
 
@@ -170,7 +249,8 @@
 	    
 
 (define-command (com-apropos :name "Apropos"
-			     :command-table dev-commands)
+			     :command-table dev-commands
+			     :provide-output-destination-keyword t)
     ((string 'clim:string :prompt "string"))
 ; Fix keyword handling in the CP sometime..
 ;     &key (package-name 'package-name :prompt "in package" :default nil)
@@ -181,7 +261,8 @@
   (note "Results have been saved to ~A~%" '*APROPOS-LIST*))
 
 (define-command (com-trace :name "Trace"
-			   :command-table dev-commands)
+			   :command-table dev-commands
+			   :provide-output-destination-keyword nil)
     ((fsym 'function-name :prompt "function-name"))
   (if (fboundp fsym)
       (progn 
@@ -190,7 +271,8 @@
     (format T "~&Function ~W is not defined.~%" fsym)))
 
 (define-command (com-untrace :name "Untrace"
-			     :command-table dev-commands)
+			     :command-table dev-commands
+			     :provide-output-destination-keyword nil)
     ((fsym 'symbol :prompt "function name"))
   (if (fboundp fsym)
       (progn
@@ -200,22 +282,26 @@
 
 
 (define-command (com-load-file :name "Load File"
-                               :command-table dev-commands)
+                               :command-table dev-commands
+			       :provide-output-destination-keyword t)
   ((pathname 'pathname :prompt "pathname"))
   (load pathname))
 
 (define-command (com-compile-file :name "Compile File"
-                                  :command-table dev-commands)
+                                  :command-table dev-commands
+				  :provide-output-destination-keyword t)
   ((pathname 'pathname :prompt "pathname"))
   (compile-file pathname))
 
 (define-command (com-compile-and-load :name "Compile and load"
-                                      :command-table dev-commands)
+                                      :command-table dev-commands
+				      :provide-output-destination-keyword t)
   ((pathname 'pathname :prompt "pathname"))
   (load (compile-file pathname)))
 
 (define-command (com-room :name "Room"
-                          :command-table dev-commands)
+                          :command-table dev-commands
+			  :provide-output-destination-keyword t)
   ()
   (room))
 
@@ -255,7 +341,8 @@
     (find-class spec nil)))
 
 (define-command (com-show-class-superclasses :name "Show Class Superclasses"
-                                             :command-table dev-commands)
+                                             :command-table dev-commands
+					     :provide-output-destination-keyword t)
     ((class-spec 'class-name :prompt "class"))
   (let ((class (frob-to-class class-spec)))
     (if (null class)
@@ -263,7 +350,8 @@
         (class-grapher *standard-output* class #'clim-mop:class-direct-superclasses))))
 
 (define-command (com-show-class-subclasses :name "Show Class Subclasses"
-                                           :command-table dev-commands)
+                                           :command-table dev-commands
+					   :provide-output-destination-keyword t)
     ((class-spec 'class-name :prompt "class"))
   (let ((class (frob-to-class class-spec)))
     (if (not (null class))
@@ -413,7 +501,8 @@
                          class))))
 
 (define-command (com-show-class-slots :name "Show Class Slots"
-				      :command-table dev-commands)
+				      :command-table dev-commands
+				      :provide-output-destination-keyword t)
     ((class-name 'clim:symbol :prompt "class name"))
   (let ((class (find-class class-name nil)))
     (if (null class)
@@ -476,7 +565,8 @@
 
 (define-command (com-show-class-generic-functions
                  :name "Show Class Generic Functions"
-                 :command-table dev-commands)
+                 :command-table dev-commands
+		 :provide-output-destination-keyword t)
     ((class-spec 'class-name :prompt "class"))
   (let ((class (frob-to-class class-spec)))
     (if (null class)
@@ -489,18 +579,208 @@
                                          (present item 'generic-function :stream stream))
                         :move-cursor T))))))
 
-(define-command (com-show-applicable-methods
+(defun method-applicable-to-args-p (method args arg-types)
+  (loop
+     for specializer in (clim-mop:method-specializers method)
+     for arg in args
+     for arg-type in arg-types
+     unless (cond ((eq arg-type :wild)
+		   t)
+		  ((typep specializer 'clim-mop:eql-specializer)
+		   (and (not (eq arg arg-type))
+			    (eql arg
+				 (clim-mop:eql-specializer-object
+				  specializer))))
+		  ((eq arg arg-type)
+		   (subtypep arg-type specializer))
+		  (t (typep arg specializer)))
+     return nil
+     finally (return t)))
+
+(defun get-applicable-methods (gf args arg-types)
+  (mapcan #'(lambda (method)
+	      (when (method-applicable-to-args-p method args arg-types)
+		(list method)))
+	  (clim-mop:generic-function-methods gf)))
+
+(defun sort-methods-by-args (methods arg-types)
+  (let ((cpls (mapcar #'(lambda (type)
+			  (if (eq type :wild)
+			      nil
+			      (clim-mop:class-precedence-list type)))
+		      arg-types)))
+    (flet ((sorter (meth1 meth2)
+	     (loop
+		for spec1 in (clim-mop:method-specializers meth1)
+		for spec2 in (clim-mop:method-specializers meth2)
+		for arg-type in arg-types
+		for cpl in cpls
+		for spec1-cpl = (unless (typep spec1 'clim-mop:eql-specializer)
+				  (clim-mop:class-precedence-list spec1))
+		for spec2-cpl = (unless (typep spec1 'clim-mop:eql-specializer)
+				  (clim-mop:class-precedence-list spec2))
+		do (cond ((eq spec1 spec2)) ;Keep going
+			 ((eq arg-type :wild)
+			  (cond ((typep spec1 'clim-mop:eql-specializer)
+				 (unless (typep spec2
+						'clim-mop:eql-specializer)
+				   (return-from sorter t)))
+				((typep spec1 'clim-mop:eql-specializer)
+				 (return-from sorter nil))
+				((subtypep spec1 spec2)
+				 (return-from sorter t))
+				((subtypep spec2 spec1)
+				 (return-from sorter nil))
+				;; Types are not related
+				(t (let ((cpl-len1 (length spec1-cpl))
+					 (cpl-len2 (length spec2-cpl)))
+				     (cond ((> cpl-len1 cpl-len2)
+					    (return-from sorter t))
+					   ((< cpl-len1 cpl-len2)
+					    (return-from sorter nil)))))))
+			 ;; An actual instance
+			 ((typep spec1 'clim-mop:eql-specializer)
+			  (return-from sorter t))
+			 ((typep spec2 'clim-mop:eql-specializer)
+			  (return-from sorter nil))
+			 (t (let ((pos1 (position spec1 cpl))
+				  (pos2 (position spec2 cpl)))
+			      (cond ((< pos1 pos2)
+				     (return-from sorter t))
+				    ((> pos1 pos2)
+				     (return-from sorter nil))))))
+		  finally (return nil))))
+      (declare (dynamic-extent #'sorter))
+      (sort methods #'sorter))))
+
+(defun show-specialized-methods (gf stream methods arg-types)
+  (let ((before nil)
+	(after nil)
+	(around nil)
+	(primary nil))
+    (loop
+       for meth in methods
+       for (qualifier) = (clim-mop:method-qualifiers meth)
+       do (case qualifier
+	    (:before
+	     (push meth before))
+	    (:after
+	     (push meth after))
+	    (:around
+	     (push meth around))
+	    (t (push meth primary))))
+    (setq before (sort-methods-by-args before arg-types))
+    (setq after (nreverse (sort-methods-by-args after arg-types)))
+    (setq around (sort-methods-by-args around arg-types))
+    (setq primary (sort-methods-by-args primary arg-types))
+    (flet ((do-meths (kind methods)
+	     (with-text-face (stream :italic)
+	       (format stream "~A methods:~%" kind))
+	     (loop
+		for meth in methods
+		do
+		  (present meth 'standard-method :stream stream)
+		  (terpri stream))))
+      (do-meths "Before" before)
+      (do-meths "Around" around)
+      (do-meths "Primary" primary)
+      (do-meths "After" after))))
+
+(defun make-gf-specialized-ptype (gf-name)
+  (let ((gf nil))
+    (handler-case
+	(setq gf (fdefinition gf-name))
+      (error ()
+	(return-from make-gf-specialized-ptype nil)))
+    (unless (typep gf 'generic-function)
+      (return-from make-gf-specialized-ptype nil))
+    (let ((required (climi::parse-lambda-list
+		     (clim-mop::generic-function-lambda-list gf))))
+      (loop
+	 for arg in required
+	 collect (make-presentation-type-specifier
+		  '(expression)
+		  :description (format nil "~A" arg))
+	   into args
+	 finally (return `(sequence-enumerated ,@args))))))
+
+
+(define-command (com-show-generic-function
 		 :name t
-		 :command-table dev-commands)
+		 :command-table dev-commands
+		 :provide-output-destination-keyword t)
     ((gf 'generic-function :prompt "a generic function")
-     (arguments '(sequence class-name)))
-  (let* ((gf-object (fdefinition gf))
-	 (arg-classes (map 'list #'find-class arguments)))
-    (multiple-value-bind (result valid)
-	(clim-mop:compute-applicable-methods-using-classes gf-object
-							   arg-classes)
-      (when valid
-	(pprint result)))))
+     &key (classes 'boolean :default nil :mentioned-default t)
+     (methods 'boolean :default nil :mentioned-default t)
+     (specialized (make-gf-specialized-ptype gf)
+		  :prompt "function arguments" :default nil
+		  :display-default nil))
+  (when specialized
+    (setq methods t))
+  (let ((doc-string (documentation gf t)))
+    (with-text-face (*standard-output* :italic)
+      (format *standard-output* "Lambda list:~%"))
+    (format *standard-output* "~S~%" (clim-mop:generic-function-lambda-list
+				      gf))
+    (when doc-string
+      (with-text-face (*standard-output* :italic)
+	(format *standard-output* "Documentation:~%~A~&" doc-string)))
+    (when classes
+      (with-text-face (*standard-output* :italic)
+	(format *standard-output* "Classes:~%"))
+      (let ((class-list nil)
+	    (meths (clim-mop:generic-function-methods gf)))
+	(loop
+	   for m in meths
+	   do (loop for arg in (clim-mop:method-specializers m)
+		 unless (typep arg 'clim-mop:eql-specializer)
+		 do (pushnew arg class-list)))
+	(loop
+	   for class in class-list
+	   do (progn
+		(with-output-as-presentation (*standard-output*
+					      (clim-mop:class-name class)
+					      'class-name)
+		  (format *standard-output*
+			  "~S~%" (clim-mop:class-name class)))))))
+    (when methods
+      (let ((args nil)
+	    (arg-types nil))
+	(if (null specialized)
+	    (setq args
+		  (mapcar (constantly :wild)
+			  (clim-mop:generic-function-argument-precedence-order
+			   gf))
+		  arg-types
+		  args)
+	    (loop
+	       with arg = nil and arg-type = nil
+	       for arg-for-spec in specialized
+	       do (setf (values arg arg-type)
+			(cond ((eq arg-for-spec '*)
+			       (values :wild :wild))
+			      ((and (listp arg-for-spec)
+				    (eq (car arg-for-spec) 'quote))
+			       (values (cadr arg-for-spec)
+				       (class-of (cadr arg-for-spec))))
+			      ((symbolp arg-for-spec)
+			       (let ((class (find-class arg-for-spec)))
+				 (values class class)))
+			      ((typep arg-for-spec 'standard-class)
+			       (values arg-for-spec arg-for-spec))
+			      (t (values arg-for-spec
+					 (class-of arg-for-spec)))))
+	       collect arg into collect-args
+	       collect arg-type into collect-arg-types
+	       finally (setf (values args arg-types)
+			     (values collect-args collect-arg-types))))
+	(let ((meths (get-applicable-methods gf args arg-types)))
+	  (with-text-face (*standard-output* :italic)
+	    (format *standard-output* "Methods:~%"))
+	  (show-specialized-methods gf *standard-output* meths arg-types))))))
+
+
+
 
 ;;; Filesystem Commands
 ;;; -------------------
@@ -553,7 +833,8 @@
 ;; Change to using an :ICONIC view for pathnames?
 
 (define-command (com-show-directory :name "Show Directory"
-				    :command-table dev-commands)
+				    :command-table dev-commands
+				    :provide-output-destination-keyword t)
     ((pathname 'pathname #+nil(or 'string 'pathname) :prompt "pathname")
      &key
      #+NIL (sort-by '(member name size modify none) :default 'name)
@@ -802,7 +1083,9 @@
   () ())
 
 
-(define-command (com-edit-file :name "Edit File" :command-table dev-commands)
+(define-command (com-edit-file :name "Edit File"
+			       :command-table dev-commands
+			       :provide-output-destination-keyword nil)
   ((pathname 'pathname  :prompt "pathname"))
   (clim-sys:make-process (lambda () (ed pathname))))
 
@@ -821,11 +1104,14 @@
   (object)
   (list object))
 
-(define-command (com-show-file :name "Show File" :command-table dev-commands)
+(define-command (com-show-file :name "Show File" :command-table dev-commands
+			       :provide-output-destination-keyword t)
   ((object 'pathname :prompt "pathname"))
   (show-file object))
 
-(define-command (com-edit-definition :name "Edit Definition" :command-table dev-commands)
+(define-command (com-edit-definition :name "Edit Definition"
+				     :command-table dev-commands
+				     :provide-output-destination-keyword nil)
   ((symbol 'symbol :prompt "function-name"))
   (clim-sys:make-process (lambda () (ed symbol))))
 
@@ -859,13 +1145,16 @@
 ;; McCLIM fixme: Shouldn't we be able to activate before the (args) prompt
 ;; since defaults are defined?
 ;; FIXME: Disabled input, as it usually seems to hang.
-(define-command (com-run :name "Run" :command-table dev-commands)
+(define-command (com-run :name "Run" :command-table dev-commands
+			 :provide-output-destination-keyword t)
   ((program 'string :prompt "command")
    (args '(sequence string) :default nil :prompt "args"))
   (run-program program args :wait T :input nil))
 
 ;; Replace this command with a keyword to COM-RUN.
-(define-command (com-background-run :name "Background Run" :command-table dev-commands)
+(define-command (com-background-run :name "Background Run"
+				    :command-table dev-commands
+				    :provide-output-destination-keyword t)
   ((program 'string :prompt "command")
    (args '(sequence string) :default nil :prompt "args"))
   (run-program program args :wait nil :output nil :input nil))
@@ -958,3 +1247,38 @@
                             :move-cursor t)
               (note "Command table is empty.~%~%") ))))))
 
+ 
+;;; Various Lisp goodies
+
+(define-presentation-type package ()
+  :inherit-from t)
+
+(define-presentation-method presentation-typep (object (type package))
+  (packagep object))
+
+(define-presentation-method present (object (type package) stream
+				     (view textual-view)
+				     &key)
+  (princ (package-name object) stream))
+
+(define-presentation-method accept ((type package) stream (view textual-view)
+				    &key)
+  (multiple-value-bind
+	(object success)
+      (completing-from-suggestions (stream)
+	(loop
+	   for p in (list-all-packages)
+	   do (progn
+		(suggest (package-name p) p)
+		(loop
+		   for n in (package-nicknames p)
+		   do (suggest n p)))))
+    (if success
+	object
+	(simple-parse-error "No package"))))
+
+(define-command (com-set-package :name t
+				 :command-table dev-commands
+				 :provide-output-destination-keyword nil)
+    ((p 'package))
+  (setf *package* p))

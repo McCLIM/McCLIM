@@ -28,17 +28,20 @@
 ;;; accepting an expression returns immediately after typing the closing
 ;;; delimiter -- à la Genera et Mac Lisp -- or if an activation gesture is
 ;;; required. 
-(define-presentation-type expression ()
-  :options (auto-activate)
-  :inherit-from t)
-
-
 ;;; preserve-whitespace controls whether the accept method uses read or
 ;;; read-preserving-whitespace. This is used in our redefinitions of read and
 ;;; read-preserving-whitespace that accept forms.
+
+(define-presentation-type expression ()
+  :options (auto-activate (preserve-whitespace t) (subform-read nil))
+  :inherit-from t)
+
+
 (define-presentation-type form ()
   :options (auto-activate (preserve-whitespace t) (subform-read nil))
-  :inherit-from `((expression) :auto-activate ,auto-activate))
+  :inherit-from `((expression) :auto-activate ,auto-activate
+		  :preserve-whitespace ,preserve-whitespace
+		  :subform-read ,subform-read ))
 
 ;;; Actual definitions of presentation methods and types.  They've
 ;;; been separated from the macro and presentation class definitions and
@@ -784,13 +787,14 @@ call-next-method to get the \"real\" answer based on the stream type."))
 						additional-delimiter-gestures
 						delimiter-gestures)
 					    :override delimitersp)
-		    (multiple-value-bind (object object-type)
-			(apply-presentation-generic-function
-			 accept
-			 type stream view
-			 `(,@(and defaultp `(:default ,default))
-			   ,@(and default-type-p
-				  `(:default-type ,default-type))))
+		    (let ((accept-results
+			   (multiple-value-list
+			    (apply-presentation-generic-function
+			     accept
+			     type stream view
+			     `(,@(and defaultp `(:default ,default))
+				 ,@(and default-type-p
+					`(:default-type ,default-type)))))))
 		      ;; Eat trailing activation gesture
 		      ;; XXX what about pointer gestures?
 		      (unless *recursive-accept-p*
@@ -798,7 +802,10 @@ call-next-method to get the \"real\" answer based on the stream type."))
 			  (unless (or (null ag) (eq ag stream))
 			    (unless (activation-gesture-p ag)
 			      (unread-char ag stream)))))
-		      (values object (or object-type type)))))
+		      (values (car accept-results)
+			      (if (cdr accept-results)
+				  (cadr accept-results)
+				  type)))))
 		;; A presentation was clicked on, or something
 		(t
 		 (when (and replace-input
@@ -1309,8 +1316,7 @@ call-next-method to get the \"real\" answer based on the stream type."))
 (define-presentation-method accept 
     ((type pathname) stream (view textual-view)
      &key (default *default-pathname-defaults*)
-     default-type)
-  (declare (ignore default-type))
+     )
   (let* ((namestring (read-token stream))
 	 (path (parse-namestring namestring)))
     (if merge-default
@@ -1388,15 +1394,18 @@ call-next-method to get the \"real\" answer based on the stream type."))
 				     (view textual-view)
 				     &key acceptably for-context-type)
   (declare (ignore acceptably for-context-type))
-  (present object (presentation-type-of object)
-	   :stream stream :view view))
+  (let ((obj-pos (position object sequence :test test :key value-key)))
+    (if obj-pos
+	(write-string (funcall name-key (elt sequence obj-pos)) stream)
+	;; Should define a condition type here.
+	(error "~S is not of presentation type ~S" object type))))
 
 (define-presentation-method accept ((type completion)
 				    stream
 				    (view textual-view)
 				    &key (default nil defaultp) default-type)
   (accept-using-completion (make-presentation-type-specifier
-			    `(completion ,parameters)
+			    `(completion ,@parameters)
 			    options)
 			   stream
 			   #'(lambda (input-string mode)
@@ -1611,28 +1620,34 @@ call-next-method to get the \"real\" answer based on the stream type."))
 (define-presentation-method accept ((type sequence)
 				    stream
 				    (view textual-view)
-				    &key (default nil defaultp) default-type)
-  (let ((initial-char (peek-char nil stream nil nil)))
-    (when (or (delimiter-gesture-p initial-char)
-	      (activation-gesture-p initial-char)
-	      (null initial-char))
-      (return-from accept (if defaultp
-			      (values default default-type)
-			      nil))))
-  (loop for element = (accept type	; i.e., the type parameter
-			      :stream stream
-			      :view view
-			      :prompt nil
-			      :additional-delimiter-gestures (list
-							      separator))
-	collect element
-	do (progn
-	     (when (not (eql (peek-char nil stream nil nil) separator))
-	       (loop-finish))
-	     (read-char stream)
-	     (when echo-space
-	       ;; Make the space a noise string
-	       (input-editor-format stream " ")))))
+				    &key (default nil)
+				    (default-type type))
+  (loop
+     with element = nil and element-type = nil
+       and separators = (list separator)
+     for first-time = t then nil
+     do (setf (values element element-type)
+	      (accept type		; i.e., the type parameter
+		      :stream stream
+		      :view view
+		      :prompt nil
+		      :additional-delimiter-gestures separators
+		      :default nil :default-type nil))
+     when (null element-type)
+       return (if first-time
+		  (values default default-type)
+		  sequence-val)
+     end
+     collect element into sequence-val
+     do (progn
+	  (when (not (eql (peek-char nil stream nil nil) separator))
+	    (loop-finish))
+	  (read-char stream)
+	  (when echo-space
+	    ;; Make the space a noise string
+	    (input-editor-format stream " ")))
+     finally (return sequence-val)))
+
 
 (define-presentation-type sequence-enumerated (&rest types)
   :options ((separator #\,) (echo-space t))
@@ -1711,6 +1726,39 @@ call-next-method to get the \"real\" answer based on the stream type."))
 	       (if acceptably
 		   (princ separator stream)
 		   (terpri stream))))))
+
+(define-presentation-method accept ((type sequence-enumerated)
+				    stream
+				    (view textual-view)
+				    &key (default nil defaultp) default-type)
+  (loop
+     with element = nil and element-type = nil
+       and separators = (list separator) 
+     for first-time = t then nil
+     for this-type in types
+     do (setf (values element element-type)
+	      (accept this-type
+		      :stream stream
+		      :view view
+		      :prompt t
+		      :display-default nil
+		      :additional-delimiter-gestures separators
+		      :default nil :default-type nil))
+     when (null element-type)
+       if first-time
+         return (values default default-type)
+       else
+         do (simple-parse-error "Sequence has too few elements.")
+       end
+     end
+     collect element
+     do (progn
+	  (when (not (eql (peek-char nil stream nil nil) separator))
+	    (loop-finish))
+	  (read-char stream)
+	  (when echo-space
+	    ;; Make the space a noise string
+	    (input-editor-format stream " ")))))
 
 (define-presentation-type or (&rest types)
   :inherit-from t
@@ -1800,7 +1848,7 @@ call-next-method to get the \"real\" answer based on the stream type."))
 				     &key acceptably for-context-type)
   (declare (ignore for-context-type))
   (let ((*print-readably* acceptably))
-    (princ object stream)))
+    (prin1 object stream)))
 
 (define-presentation-method accept ((type expression) stream
 				    (view textual-view)
@@ -1812,5 +1860,5 @@ call-next-method to get the \"real\" answer based on the stream type."))
   (type-key parameters options type
    stream view default default-supplied-p present-p query-identifier))
 
-;;; All the form reading stuff is in builtin-commands.lisp
+;;; All the expression and form reading stuff is in builtin-commands.lisp
 

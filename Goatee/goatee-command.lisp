@@ -62,7 +62,7 @@
 (defmethod lookup-gesture-command ((gesture key-press-event) table)
   (let ((modifier-state (logandc1 climi::+alt-key+
 				  (event-modifier-state gesture))))
-				
+    #+nil
     (format *trace-output* "lookup-gesture-command: ~S ~S~%"
 	    modifier-state
 	    (keyboard-event-key-name gesture))

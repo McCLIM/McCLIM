@@ -4,7 +4,7 @@
 ;;;   Created: 1998-12-02 19:26
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: regions.lisp,v 1.27 2004/03/01 12:52:29 hefner1 Exp $
+;;;       $Id: regions.lisp,v 1.28 2004/03/24 09:30:29 moore Exp $
 ;;; --------------------------------------------------------------------------------------
 ;;;  (c) copyright 1998,1999,2001 by Gilbert Baumann
 ;;;  (c) copyright 2001 by Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
@@ -659,49 +659,50 @@
        (+ (* 2 b c) (* 2 e f))          ; y
        (+ (* c c) (* f f) -1)))) )
 
-;;; Halbachsen einer Ellipse
+;;; Straight from the horse's mouth -- moore
+;;;
+;;; Axis of an ellipse
 ;;; -------------------------
 
-;; Sei eine beliebige Ellipse mit Mittelpunkt am Ursprung wie folgt gegeben:
+;; Given an ellipse with its center at the origin, as
 
 ;;    ax^2 + by^2 + cxy - 1 = 0
 
-;; Die Halbachsen einer Ellipse sind gerade dadurch gekennzeichnet, dass der
-;; Radius dort maximal/minmal wird. Sei (x,y) ein Punkt auf der
-;; Ellipsenperipherie, dann ist der Radius r (Abstand zum Ursprung) dort:
+;; The two axis of an ellipse are characterized by minimizing and
+;; maximizing the radius. Let (x,y) be a point on the delimiter of the
+;; ellipse. It's radius (distance from the origin) then is:
 
 ;;    r^2 = x^2 + y^2
 
-;; Die Halbachsen zu finden, kann man als Minimierungsproblem mit
-;; Nebenbedingung formulieren. Wir konstruierten uns also nach Schema die
-;; geeignete Hilfsfunktion H:
+;; To find the axis can now be stated as an minimization problem with
+;; constraints. So mechanically construct the auxiliarry function H:
 
 ;;   H = x^2 + y^2 - k(ax^2 + by^2 + cxy - 1)
 
-;; zu loesen dann:
+;; So the following set of equations remain to be solved
 
 ;;   (I)   dH/dx = 0 = 2x + 2kax + kcy 
 ;;  (II)   dH/dy = 0 = 2y + 2kby + kcx
 ;; (III)   dH/dk = 0 = ax^2 + by^2 + cxy - 1
 
-;; Nun, ich verrechne mich immer hoffungslos, so habe ich das dann mit Hilfe von
-;; Maxima geloest:
-
-;; in etwa so ...
+;; Unfortunately, as I always do the math work - hopelessly, even -
+;; Maxima is the tool of my choice:
 
 ;; g1: 2*x + 2*k*a*x + k*c*y$
 ;; g2: 2*y + 2*k*b*y + k*c*x$
 ;; g3: a*x*x + b*y*y + c*x*y -1$
 
 ;; sol1: solve ([g1,g2],[k,y])$
-;; /* Das gibt zwei Loesungen wegen der auftretenen Quadrate,
-;;  * die letzte gleichung 3 muss man dann zweimal fuer beide Loesungen
-;;  * fuer y behandeln
+
+;; /* This yields two solutions because of the squares with occur. The
+;;  * last equation (G3) must therefore be handled for both solutions for
+;;  * y.
 ;;  */
+
 ;; y1: rhs(first(rest(first(sol1))))$
 ;; y2: rhs(first(rest(first(rest(sol1)))))$
 
-;; /* Das gefundene `y' einsetzen */
+;; /* Substitute the 'y' found. */
 ;; sol2: solve(subst(y1,y,g3),x);
 ;; x11: rhs(first(sol2));
 ;; x12: rhs(first(rest(sol2)));
@@ -710,7 +711,7 @@
 ;; x21: rhs(first(sol3));
 ;; x22: rhs(first(rest(sol3)));
 
-;; /* alles ausgeben */
+;; /* dump everything */
 ;; dumpsol([[x=x11,y=y1], [x=x12,y=y1], [x=x21,y=y2], [x=x22,y=y2]]);
 
 (defun ellipse-normal-radii* (ell)
@@ -720,40 +721,52 @@
            (values  0 (sqrt (/ 1 b))
                     (sqrt (/ 1 a)) 0))
           (t
-           (let (x y)
-	     #+:excl(declare (ignore y))
-             (values
-              ;; Solution number  1 
-              (setq x (- (/ c (sqrt (+ (- (* (* c c) (sqrt (+ (* c c) (* b b) (- (* 2 a b)) (* a a)))))
-                                       (- (* 2 (* b b) (sqrt (+ (* c c) (* b b) (- (* 2 a b)) (* a a)))))
-                                       (* 2 a b (sqrt (+ (* c c) (* b b) (- (* 2 a b)) (* a a))))
-                                       (* 2 b (* c c)) (* 2 (expt b 3)) (- (* 4 a (* b b))) (* 2 (* a a) b)))))) 
-              (setq y (- (/ (+ (* (sqrt (+ (* c c) (* b b) (- (* 2 a b)) (* a a))) x) (- (* b x)) (* a x)) 
-                            c))) 
-              ;; ;; solution number  2 
-              ;; (setq x (/ c (sqrt (+ (- (* (* c c) (sqrt (+ (* c c) (* b b) (- (* 2 a b)) (* a a)))))
-              ;;                       (- (* 2 (* b b) (sqrt (+ (* c c) (* b b) (- (* 2 a b)) (* a a)))))
-              ;;                       (* 2 a b (sqrt (+ (* c c) (* b b) (- (* 2 a b)) (* a a))))
-              ;;                       (* 2 b (* c c)) (* 2 (expt b 3)) (- (* 4 a (* b b))) (* 2 (* a a) b))))) 
-              ;; (setq y (- (/ (+ (* (sqrt (+ (* c c) (* b b) (- (* 2 a b)) (* a a))) x)
-              ;;                  (- (* b x)) (* a x)) c))) 
-       
-              ;; solution number  3 
-              (setq x (- (/ c (sqrt (+ (* (* c c) (sqrt (+ (* c c) (* b b) (- (* 2 a b)) (* a a))))
-                                       (* 2 (* b b) (sqrt (+ (* c c) (* b b) (- (* 2 a b)) (* a a))))
-                                       (- (* 2 a b (sqrt (+ (* c c) (* b b) (- (* 2 a b)) (* a a)))))
-                                       (* 2 b (* c c)) (* 2 (expt b 3)) (- (* 4 a (* b b))) (* 2 (* a a) b)))))) 
-              (setq y (- (/ (+ (- (* (sqrt (+ (* c c) (* b b) (- (* 2 a b)) (* a a))) x)) (- (* b x)) (* a x))
-                            c))) 
-
-              ;; ;; solution number  4 
-              ;; (setq x (/ c (sqrt (+ (* (* c c) (sqrt (+ (* c c) (* b b) (- (* 2 a b)) (* a a))))
-              ;;                       (* 2 (* b b) (sqrt (+ (* c c) (* b b) (- (* 2 a b)) (* a a))))
-              ;;                       (- (* 2 a b (sqrt (+ (* c c) (* b b) (- (* 2 a b)) (* a a)))))
-              ;;                       (* 2 b (* c c)) (* 2 (expt b 3)) (- (* 4 a (* b b))) (* 2 (* a a) b))))) 
-              ;; (setq y (- (/ (+ (- (* (sqrt (+ (* c c) (* b b) (- (* 2 a b)) (* a a))) x)) (- (* b x)) (* a x)) c))) 
-              
-              ))) )))
+	   (let* ((x1 (- (/ c
+			    (sqrt (+ (- (* (* c c)
+					   (sqrt (+ (* c c)
+						    (* b b)
+						    (- (* 2 a b)) (* a a)))))
+				     (- (* 2 (* b b)
+					   (sqrt (+ (* c c) (* b b)
+						    (- (* 2 a b)) (* a a)))))
+				     (* 2 a b (sqrt (+ (* c c) (* b b)
+						       (- (* 2 a b))
+						       (* a a))))
+				     (* 2 b (* c c))
+				     (* 2 (expt b 3))
+				     (- (* 4 a (* b b))) (* 2 (* a a) b))))))
+		  (y1 (- (/ (+ (* (sqrt (+ (* c c)
+					   (* b b)
+					   (- (* 2 a b))
+					   (* a a)))
+				  x1)
+			       (- (* b x1)) (* a x1)) 
+			    c)))
+		  (x2 (- (/ c
+			    (sqrt (+ (* (* c c)
+					(sqrt (+ (* c c)
+						 (* b b)
+						 (- (* 2 a b))
+						 (* a a))))
+				     (* 2 (* b b) (sqrt (+ (* c c)
+							   (* b b)
+							   (- (* 2 a b))
+							   (* a a))))
+				     (- (* 2 a b (sqrt (+ (* c c)
+							  (* b b)
+							  (- (* 2 a b))
+							  (* a a)))))
+				     (* 2 b (* c c))
+				     (* 2 (expt b 3))
+				     (- (* 4 a (* b b))) (* 2 (* a a) b))))))
+		  (y2 (- (/ (+ (- (* (sqrt (+ (* c c)
+					      (* b b)
+					      (- (* 2 a b))
+					      (* a a)))
+				     x2))
+			       (- (* b x2)) (* a x2))
+			    c))))
+	     (values x1 y1 x2 y2))))))
 
 ;;; ---- Intersection of Ellipse vs. Ellipse ---------------------------------------------
 

@@ -573,9 +573,10 @@
 				 (values (car item) t menu-object 1)))
 			 (setf success nil
 			       nmatches 0))))
-		 (if (> nmatches 0)
-		     (insert-input input)
-		     (beep))
+		 (unless (and (eq mode :complete) (not success))
+		   (if (> nmatches 0)
+		       (insert-input input)
+		       (beep)))
 		 (cond ((and success (eq mode :complete))
 			(return-from complete-input
 			  (values object success input)))

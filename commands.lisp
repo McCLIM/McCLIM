@@ -127,7 +127,7 @@
 
 (define-presentation-method accept ((type command-table) stream
 				    (view textual-view)
-				    &key (default nil defaultp) default-type)
+				    &key)
   (multiple-value-bind (table success string)
       (completing-from-suggestions (stream)
 	(loop
@@ -178,7 +178,13 @@
     (string-capitalize
      (substitute
       #\Space #\-
-      (subseq name (string/= "COM-" name))))))
+      (subseq name (if (string= "COM-" name :end2 (min (length name) 4))
+		       4
+		       0))))))
+
+(defun keyword-arg-name-from-symbol (symbol)
+  (let ((name (symbol-name symbol)))
+    (string-capitalize (substitute #\Space #\- name))))
 
 (defun remove-command-from-command-table (command-name
 					  command-table
@@ -521,8 +527,12 @@
 
 (defclass command-parsers ()
   ((parser :accessor parser :initarg :parser)
-   (partial-parser :accessor partial-parser :initarg :partial-parser))
-  (:documentation "A container for a command's parsing functions"))
+   (partial-parser :accessor partial-parser :initarg :partial-parser)
+   (argument-unparser :accessor argument-unparser
+		      :initarg :argument-unparser))
+  
+  (:documentation "A container for a command's parsing functions and
+  data for unparsing"))
 
 (defparameter *command-parser-table* (make-hash-table)
   "Mapping from command names to argument parsing functions.")
@@ -577,6 +587,8 @@
 		      ,accept-args-var
 		      (list* :default ,command-arg ,accept-args-var))))))))
 
+(defun make-keyword (sym)
+  (intern (symbol-name sym) :keyword))
 
 (defun make-key-acceptors (stream keyword-args key-results)
   ;; We don't use the name as a variable, and we do want a symbol in the
@@ -584,10 +596,8 @@
   (when (null keyword-args)
     (return-from make-key-acceptors nil))
   (setq keyword-args (mapcar #'(lambda (arg)
-				 (cons (intern (symbol-name (car arg))
-					       :keyword)
-				       (cdr arg)))
-			     keyword-args))
+				 (cons (make-keyword (car arg)) (cdr arg)))
+			     keyword-args))  
   (let ((key-possibilities (gensym "KEY-POSSIBILITIES"))
 	(member-ptype (gensym "MEMBER-PTYPE"))
 	(key-result (gensym "KEY-RESULT"))
@@ -598,16 +608,23 @@
 					  &key (when t) &allow-other-keys)
 			 key-arg
 		       (declare (ignore ptype))
-		       `(when ,when
-			  (push ,name ,key-possibilities))))
+		       (let ((key-arg-name (concatenate
+					    'string
+					    ":"
+					    (keyword-arg-name-from-symbol
+					     name))))
+			 `(when ,when
+			    (push `(,,key-arg-name ,,name)
+				  ,key-possibilities)))))
 		 keyword-args)
        (setq ,key-possibilities (nreverse ,key-possibilities))
        (when ,key-possibilities
-	 (let ((,member-ptype (cons 'member ,key-possibilities)))
+	 (input-editor-format ,stream "~%(keywords)")
+	 (let ((,member-ptype `(token-or-type ,,key-possibilities null)))
 	   (loop
 	     (let* ((,key-result (prog1 (accept ,member-ptype
                                                 :stream ,stream
-                                                :prompt "keywords")
+                                                :prompt nil)
                                    (eat-delimiter-or-activator)))
 		    (,val-result
 		     (case ,key-result
@@ -682,6 +699,53 @@
 				(terpri ,stream)))))
 	   (list ,command-name ,@required-arg-names))))))
 
+;;; XXX What do to about :acceptably? Probably need to wait for Goatee "buffer
+;;; streams" so we can insert an accept-result-extent in the buffer for
+;;; unacceptable objects. -- moore 
+(defun make-unprocessor-fun (name required-args key-args)
+  (with-gensyms (command command-args stream key key-arg-val seperator arg-tail)
+    ;; Bind the argument variables because expressions in the
+    ;; following arguments (including the presentation type!) might
+    ;; reference them.
+    (let ((required-arg-bindings nil)
+	  (key-case-clauses nil))
+      (loop
+	 for (arg ptype-form) in required-args
+	 collect `(,arg (progn
+			  (write-char ,seperator ,stream)
+			  (present (car ,command-args) ,ptype-form
+				   :stream ,stream)
+			  (pop ,command-args)))
+	   into arg-bindings
+	 finally (setq required-arg-bindings arg-bindings))
+      (loop
+	 for (arg ptype-form) in key-args
+	 for arg-key = (make-keyword arg)
+	 collect `(,arg-key
+		   
+		   (format ,stream "~C:~A~C"
+			   ,seperator
+			   ,(keyword-arg-name-from-symbol arg)
+			   ,seperator)
+		   (present ,key-arg-val ,ptype-form
+				       :stream ,stream))
+	   into key-clauses
+	 finally (setq key-case-clauses key-clauses))
+      `(defun ,name (,command ,stream)
+	 (declare (ignorable ,stream))
+	 (let* ((,seperator #\Space) (,command-args (cdr ,command))
+		,@required-arg-bindings)
+	   (declare (ignorable ,seperator ,command-args
+			       ,@(mapcar #'car required-arg-bindings )))
+	   ,@(when key-args
+		   `((loop
+			for ,arg-tail on ,command-args by #'cddr
+			for (,key ,key-arg-val) = ,arg-tail
+			do (progn
+			     (case ,key
+			       ,@key-case-clauses)
+			     (when (cddr ,arg-tail)
+			       (write-char ,seperator ,stream)))))))))))
 
 (defun make-command-translators (command-name command-table args)
   "Helper function to create command presentation translators for a command."
@@ -729,7 +793,8 @@
 			  (object)
 			  (list ,@command-args)))))))))
 
-(defmacro define-command (name-and-options args &body body)
+;;; Vanilla define-command, as defined by the standard
+(defmacro %define-command (name-and-options args &body body)
   (unless (listp name-and-options)
     (setq name-and-options (list name-and-options)))
   (destructuring-bind (func &key command-table name menu keystroke)
@@ -757,8 +822,10 @@
 				       (symbol-package func)))
 	     (partial-parser-fun-name (gentemp (format nil "~A%PARTIAL%"
 						       (symbol-name func))
-					       
-					       (symbol-package func))))
+					       (symbol-package func)))
+	     (arg-unparser-fun-name (gentemp (format nil "~A%unparser%"
+						     (symbol-name func))
+					     (symbol-package func))))
 	`(progn
 	  (defun ,func ,command-func-args
 	    ,@body)
@@ -776,13 +843,136 @@
 				     required-args
 				     keyword-args)
 	  ,(make-partial-parser-fun partial-parser-fun-name required-args)
+	  ,(make-unprocessor-fun arg-unparser-fun-name
+				 required-args
+				 keyword-args)
 	  ,(and command-table
 		(make-command-translators func command-table required-args))
 	  (setf (gethash ',func *command-parser-table*)
 	        (make-instance 'command-parsers
 		               :parser #',accept-fun-name
-		               :partial-parser #',partial-parser-fun-name))
+		               :partial-parser #',partial-parser-fun-name
+			       :argument-unparser #',arg-unparser-fun-name))
 	  ',func)))))
+
+;;; define-command with output destination extension
+
+(defclass output-destination ()
+  ())
+
+(defgeneric invoke-with-standard-output (continuation destination)
+  (:documentation "Invokes `continuation' (with no arguments) with
+  *standard-output* rebound according to `destination'"))
+
+(defclass standard-output-destination (output-destination)
+  ())
+
+(defmethod invoke-with-standard-output (continuation (destination null))
+  "Calls `continuation' without rebinding *standard-output* at all."
+  (funcall continuation))
+
+(defclass stream-destination (output-destination)
+  ((destination-stream :accessor destination-stream
+		       :initarg :destination-stream)))
+
+(defmethod invoke-with-standard-output
+    (continuation (destination stream-destination))
+  (let ((*standard-output* (destination-stream destination)))
+    (funcall continuation)))
+
+(define-presentation-method accept
+    ((type stream-destination) stream (view textual-view)
+     &key)
+  (let ((dest (eval (accept 'form
+			    :stream stream
+			    :view view
+			    :default *standard-output*))))
+    (if (and (streamp dest)
+	     (output-stream-p dest))
+	(make-instance 'stream-destination :destination-stream dest)
+	(input-not-of-required-type dest type))))
+
+(defclass file-destination (output-destination)
+  ((file :accessor file :initarg :file)))
+
+(defmethod invoke-with-standard-output
+    (continuation (destination file-destination))
+  (with-open-file (*standard-output* (file destination)
+				     :direction :output :if-exists :supersede)
+    (funcall continuation)))
+
+(define-presentation-method accept
+    ((type file-destination) stream (view textual-view)
+     &key)
+  (let ((path (accept 'pathname :stream stream :prompt nil)))
+    ;; Give subclasses a shot
+    (with-presentation-type-decoded (type-name)
+        type
+	(format *debug-io* "file destination type = ~S~%" type)
+	(make-instance type-name :file path))))
+
+(defclass postscript-destination (file-destination)
+  ())
+
+(defmethod invoke-with-standard-output
+    (continuation (destination postscript-destination))
+  (call-next-method #'(lambda ()
+			(with-output-to-postscript-stream
+			    (ps-stream *standard-output*)
+			  (let ((*standard-output* ps-stream))
+			    (funcall continuation))))
+		    destination))
+
+(defparameter *output-destination-types*
+  '(("File" file-destination)
+    ("Postscript File" postscript-destination)
+    ("Stream" stream-destination)))
+
+(define-presentation-method accept
+    ((type output-destination) stream (view textual-view)
+     &key)
+  (let ((type (accept `(member-alist ,*output-destination-types*)
+		      :stream stream
+		      :view view
+		      :default 'stream-destination
+		      :additional-delimiter-gestures '(#\space))))
+    (read-char stream)
+    (accept type :stream stream :view view)))
+
+;;; The default for :provide-output-destination-keyword is nil until we fix
+;;; some unfortunate problems with completion, defaulting, and keyword
+;;; arguments.
+
+(defmacro define-command (name-and-options args &body body)
+  (unless (listp name-and-options)
+    (setq name-and-options (list name-and-options)))
+  (destructuring-bind (func &rest options
+		       &key (provide-output-destination-keyword nil)
+		       &allow-other-keys)
+      name-and-options
+    (with-keywords-removed (options (:provide-output-destination-keyword))
+      (if provide-output-destination-keyword
+	  (multiple-value-bind (required optional rest key key-supplied)
+	      (parse-lambda-list args)
+	    (declare (ignore required optional rest key))
+	    (let* ((destination-arg '(output-destination 'output-destination
+				      :default nil))
+		   (new-args (if key-supplied
+				 `(,@args ,destination-arg)
+				 `(,@args &key ,destination-arg))))
+	      (multiple-value-bind (decls new-body)
+		  (get-body-declarations body)
+		(with-gensyms (destination-continuation)
+		  `(%define-command (,func ,@options) ,new-args
+		     ,@decls
+		     (flet ((,destination-continuation ()
+			      ,@new-body))
+		       (declare (dynamic-extent #',destination-continuation))
+		       (invoke-with-standard-output #',destination-continuation
+						    output-destination)))))))
+	  `(%define-command (,func ,@options)
+			    ,args
+	     ,@body)))))
 
 ;;; Note that command table inheritance is the opposite of Common Lisp
 ;;; subclassing / subtyping: the inheriting table defines a superset
@@ -858,13 +1048,19 @@
   (write-string (command-line-name-for-command (car command) command-table
 					       :errorp :create)
 		stream)
-  (with-delimiter-gestures (*command-argument-delimiters* :override t)
-    (loop for arg in (cdr command)
-	do (progn
-	     (write-char #\space stream)
-	     (write-token (present-to-string arg (presentation-type-of arg)
-					     :acceptably t)
-			  stream)))))
+  (when (cdr command)
+    (let ((parser-obj (gethash (car command) *command-parser-table*)))
+      (if parser-obj
+	  (funcall (argument-unparser parser-obj) command stream)
+	    (with-delimiter-gestures (*command-argument-delimiters*
+				      :override t)
+	      (loop for arg in (cdr command)
+		 do (progn
+		      (write-char #\space stream)
+		      (write-token
+		       (present-to-string arg
+					  (presentation-type-of arg))
+		       stream))))))))
 
 ;;; Assume that stream is a goatee-based input editing stream for the moment...
 ;;;
@@ -1058,7 +1254,9 @@
 ;;; form to command-or-form won't help either because translators aren't
 ;;; applied more than once.
 ;;;
-;;; With 
+;;; By calling the input context continuation directly -- which was
+;;; established by the call to (accept 'command-or-form ...) -- we let it do
+;;; all the cleanup like replacing input, etc.
 
 (define-presentation-method accept ((type command-or-form) stream
 				    (view textual-view)

@@ -101,8 +101,8 @@
                            (present object (presentation-type presentation)
                                     :stream stream
                                     :sensitive nil)))))
-  (object)
-  object)
+  (object presentation)
+  (values object (presentation-type presentation)))
 
 (define-presentation-action presentation-menu
     (t nil global-command-table
@@ -139,6 +139,11 @@
 (define-gesture-name :literal-expression :pointer-button-press
   (:left :meta))
 
+(defun document-form-translator (object &key stream &allow-other-keys)
+  (unless (constantp object)
+    (write-char #\' stream))
+  (present object 'form :stream stream))
+
 (macrolet ((%frob-exp (type-name)
 	     (let ((expression-translator-name (symbol-concat
 						type-name
@@ -154,7 +159,8 @@
 	      `(define-presentation-translator ,form-translator-name
 		   (,type-name form global-command-table
 			       :gesture :select
-			       :menu nil)
+			       :menu nil
+			       :documentation document-form-translator)
 		 (object)
 		 object)))
 	   (%frob-form (type-name)
@@ -162,7 +168,8 @@
 	       `(define-presentation-translator ,form-translator-name
 		    (,type-name form global-command-table
 				:gesture :select
-				:menu nil)
+				:menu nil
+				:documentation document-form-translator)
 		  (object)
 		  (if (constantp object)
 		      object
@@ -184,7 +191,8 @@
   (frob string)
   (frob pathname)
   (frob-form symbol)
-  (frob-form sequence))
+  (frob-form sequence)
+  (frob standard-object))
 
 (define-presentation-translator expression-to-form
     (expression form global-command-table
@@ -196,10 +204,13 @@
       `',object
       object))
 
+;;; I changed :menu nil to :menu t because :literal-expression is hard for me
+;;; to type on my Mac :) I'm not sure why I excluded this from the menu
+;;; originally. 
 (define-presentation-translator expression-as-form
     (expression form global-command-table
      :gesture :literal-expression
-     :menu nil
+     :menu t
      :documentation "expression as literal"
      :tester ((object)
 	      (or (symbolp object) (consp object)))
@@ -254,14 +265,14 @@
 			      (whitespacep gesture))))  
 	    (read-gesture :stream stream)))
 	(multiple-value-bind (object type)
-	    (accept '((form) :subform-read t) :stream stream :prompt nil)
+	    (accept '((expression) :subform-read t) :stream stream :prompt nil)
 	  (values object (if (presentation-subtypep type 'list-terminator)
 			     nil
 			     t))))
       (funcall *sys-%read-list-expression* stream *dot-ok* *termch*)))
 ) 					; with-system-redefinition-allowed
 
-(define-presentation-method accept ((type form) stream (view textual-view)
+(define-presentation-method accept ((type expression) stream (view textual-view)
 				    &key (default nil defaultp) default-type)
   (declare (ignore default defaultp default-type))
   (let* ((object nil)
@@ -273,9 +284,9 @@
 	      (setq object val)
 	      (return-from accept (values nil 'list-terminator))))
 	;; We don't want activation gestures like :return causing an eof
-	;; while reading a form, so we turn the activation gestures into
-	;; delimiter gestures.
-	(with-delimiter-gestures (*activation-gestures*)
+	;; while reading a form. Also, we don't want spaces within forms or
+	;; strings causing a premature return either!
+	(with-delimiter-gestures (nil :override t)
 	  (with-activation-gestures (nil :override t)
 	    (setq object (funcall (if preserve-whitespace
 				      *sys-read-preserving-whitespace*
@@ -283,13 +294,17 @@
 				  stream
 				  *eof-error-p* *eof-value* *recursivep*)))))
     (setq ptype (presentation-type-of object))
-    (unless (presentation-subtypep ptype 'form)
-      (setq ptype 'form))
+    (unless (presentation-subtypep ptype 'expression)
+      (setq ptype 'expression))
     (if (or subform-read auto-activate)
 	(values object ptype)
-	(loop for c = (read-char stream)
-	      until (activation-gesture-p c)
-	      finally (return (values object ptype))))))
+	(loop
+	   for c = (read-char stream)
+	   until (or (activation-gesture-p c) (delimiter-gesture-p c))
+	   finally
+	     (when (delimiter-gesture-p c)
+	       (unread-char c stream))
+	     (return (values object ptype))))))
 
 (with-system-redefinition-allowed
 (defun read (&optional (stream *standard-input*)
@@ -300,7 +315,7 @@
       (let ((*eof-error-p* eof-error-p)
 	    (*eof-value* eof-value)
 	    (*recursivep* recursivep))
-	(accept '((form) :auto-activate t :preserve-whitespace nil)
+	(accept '((expression) :auto-activate t :preserve-whitespace nil)
 		:stream stream :prompt nil))
       (funcall *sys-read* stream eof-error-p eof-value recursivep)))
 
@@ -312,7 +327,7 @@
       (let ((*eof-error-p* eof-error-p)
 	    (*eof-value* eof-value)
 	    (*recursivep* recursivep))
-	(accept '((form) :auto-activate t :preserve-whitespace t)
+	(accept '((expression) :auto-activate t :preserve-whitespace t)
 		:stream stream :prompt nil))
       (funcall *sys-read-preserving-whitespace*
 	       stream eof-error-p eof-value recursivep)))

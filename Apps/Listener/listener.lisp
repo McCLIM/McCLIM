@@ -165,7 +165,31 @@
   #-CMU18d *debug-io*)
 
 (defmethod run-frame-top-level ((frame listener) &key &allow-other-keys)
-  (let ((*debug-io* (or *listener-debug-io* (get-frame-pane frame 'interactor))))
+  (let ((*debug-io* (or *listener-debug-io*
+			(get-frame-pane frame 'interactor)))
+	;; Borrowed from OpenMCL.
+	;; from CLtL2, table 22-7:
+	(*package* *package*)
+	(*print-array* *print-array*)
+	(*print-base* *print-base*)
+	(*print-case* *print-case*)
+	(*print-circle* *print-circle*)
+	(*print-escape* *print-escape*)
+	(*print-gensym* *print-gensym*)
+	(*print-length* *print-length*)
+	(*print-level* *print-level*)
+	(*print-lines* *print-lines*)
+	(*print-miser-width* *print-miser-width*)
+	(*print-pprint-dispatch* *print-pprint-dispatch*)
+	(*print-pretty* *print-pretty*)
+	(*print-radix* *print-radix*)
+	(*print-readably* *print-readably*)
+	(*print-right-margin* *print-right-margin*)
+	(*read-base* *read-base*)
+	(*read-default-float-format* *read-default-float-format*)
+	(*read-eval* *read-eval*)
+	(*read-suppress* *read-suppress*)
+	(*readtable* *readtable*))
     (loop while 
       (catch 'return-to-listener
 	(restart-case (call-next-method)
@@ -239,7 +263,6 @@
 				       &key (stream *standard-input*))
   "Read a command or form, taking care to manage the input context
    and whatever else need be done."
-  (declare (ignore stream))
   (multiple-value-bind (x y)  (stream-cursor-position stream)    
     (with-input-context ('command) (object object-type)
             (call-next-method)
@@ -319,4 +342,3 @@
   (clim-sys:make-process  (lambda ()
 			    (run-listener system-command-reader))
 			  :name "Listener"))
-
