@@ -22,11 +22,11 @@
 ;;; - Check types: RATIONAL, COORDINATE, REAL?
 ;;; - Better error detection.
 ;;; - Item list formatting.
-;;; - Multiple columns.
+;;; - Multiple columns: all columns are assumed to have the same width.
 ;;; - :MOVE-CURSOR T support.
 ;;; - All types of spacing, widths, heights.
 ;;; - FIXMEs.
-;;; - Bug: only one option of :X-SPACING and :Y-SPACING works now.
+;;; - Bug: only one option of :X-SPACING and :Y-SPACING works now. (?)
 
 (in-package :CLIM-INTERNALS)
 
@@ -109,7 +109,8 @@ or an item list."))
                                                          (or ,min-height 0)
                                                          :vertical))
          (declare (ignore ,record))
-         ,@body))))
+         (letf (((stream-cursor-position ,stream) (values 0 0)))
+           ,@body)))))
 
 
 
@@ -331,6 +332,7 @@ skips intervening non-table output record structures."))
                                         standard-sequence-output-record)
   ((x-spacing :initarg :x-spacing)
    (y-spacing :initarg :y-spacing)
+   (multiple-columns :initarg :multiple-columns)
    (multiple-columns-x-spacing :initarg :multiple-columns-x-spacing)
    (equalize-column-widths :initarg :equalize-column-widths)))
 
@@ -375,12 +377,15 @@ skips intervening non-table output record structures."))
   (setq y-spacing (parse-space stream (or y-spacing
                                           (stream-vertical-spacing stream))
                                :vertical))
-  (unless multiple-columns-x-spacing
-    (setq multiple-columns-x-spacing x-spacing))
+  (setq multiple-columns-x-spacing
+        (if multiple-columns-x-spacing
+            (parse-space stream multiple-columns-x-spacing :horizontal)
+            x-spacing))
   (with-new-output-record
       (stream record-type table
               :x-spacing x-spacing
               :y-spacing y-spacing
+              :multiple-columns multiple-columns
               :multiple-columns-x-spacing multiple-columns-x-spacing
               :equalize-column-widths equalize-column-widths)
     (multiple-value-bind (cursor-old-x cursor-old-y)
@@ -483,6 +488,11 @@ modifying list BLOCK-INFOS or vector SIZES."))
   (declare (ignore stream))
   ()) ; Nothing to do
 
+(defmethod adjust-multiple-columns ((table empty-standard-table-output-record)
+                                    stream)
+  (declare (ignore stream))
+  ()) ; Nothing to do
+
 ;;; Table of rows
 (defclass table-of-rows-output-record (standard-table-output-record)
   ())
@@ -508,6 +518,37 @@ modifying list BLOCK-INFOS or vector SIZES."))
     (dotimes (i (length widths))
       (setf (aref widths i) max-width))))
 
+(defmethod adjust-multiple-columns ((table table-of-rows-output-record) stream)
+  (let ((n-columns (slot-value table 'multiple-columns))
+        (x-spacing (slot-value table 'multiple-columns-x-spacing))
+        (width (bounding-rectangle-width table))
+        (stream-width (stream-text-margin stream)) ; XXX - (bounding-rectangle-min-x table)
+        (n-rows 0))
+    (when (eq n-columns t)
+      (setq n-columns (floor (+ stream-width x-spacing)
+                             (+ width x-spacing))))
+    (when (<= n-columns 1) (return-from adjust-multiple-columns))
+    (map-over-table-elements (lambda (row) (declare (ignore row))
+                                     (incf n-rows))
+                             table
+                             :row)
+    (when (<= n-rows 1) (return-from adjust-multiple-columns))
+    (let* ((cy (bounding-rectangle-min-y table))
+           (column-size (ceiling n-rows n-columns))
+           (rest column-size)
+           (dx 0)
+           (dy 0))
+      (map-over-table-elements
+       (lambda (row)
+         (multiple-value-bind (x y) (output-record-position row)
+           (when (= rest 0)
+             (incf dx (+ width x-spacing)) ; XXX
+             (setq dy (- cy y))
+             (setq rest column-size))
+           (setf (output-record-position row) (values (+ x dx) (+ y dy)))
+           (decf rest)))
+       table :row))))
+
 ;;; Table of columns
 (defclass table-of-columns-output-record (standard-table-output-record)
   ())
@@ -532,3 +573,8 @@ modifying list BLOCK-INFOS or vector SIZES."))
             :maximize (block-info-common-size i))))
     (loop :for i :in block-infos
        :do (setf (block-info-common-size i) max-width))))
+
+(defmethod adjust-multiple-columns ((table table-of-columns-output-record)
+                                    stream)
+  (declare (ignore stream))
+  ()) ; Nothing to do (?)
