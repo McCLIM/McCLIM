@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.88 2002/06/27 17:33:04 gilbert Exp $
+;;; $Id: panes.lisp,v 1.89 2002/06/30 08:21:43 adejneka Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -71,15 +71,15 @@
 ;; - TABLE-PANE
 ;;   . test units
 ;;   . adopt/disown/enable/disable
-;;   . x-spacing, y-spaceing
+;;   . x-spacing, y-spacing
 ;;   . allow for partially filled rows/cols?
-;;   
+;;
 ;; - GRID-PANE
 ;;   . align children
 ;;   . inherit from table-pane?
 ;;   . test units
 ;;   . adopt/disown/enable/disable
-;;   . x-spacing, y-spaceing
+;;   . x-spacing, y-spacing
 ;;
 ;; - SPACING-PANE
 ;;   . align child
@@ -93,7 +93,7 @@
 ;;   . test units
 ;;   . adopt/disown/enable/disable
 ;;   . expand child? leave it?
-;; 
+;;
 ;; - SCROLLER-PANE
 ;;   . much!
 ;;
@@ -772,7 +772,7 @@
 
 ;;; SHEET
 
-;; FIXME: Should it exists ???
+;; FIXME: Should it exist ???
 (defmethod note-space-requirements-changed ((sheet sheet) (pane composite-pane))
   (values))
 
@@ -849,7 +849,7 @@
   (if (eq (box-layout-orientation pane) :vertical)
       (box-layout-mixin/vertically-allocate-space pane width height)
       (box-layout-mixin/horizontally-allocate-space pane width height)))
-        
+
 (dada
  ((major   width        height)
   (minor   height       width)
@@ -1206,7 +1206,7 @@
                 :min-height (space-requirement-min-height c)
                 :max-height (space-requirement-max-height c))))
           #+NIL
-          (format T "~%;;; TABLE-PANE sr = ~S." res)
+          (format *debug-io* "~%;;; TABLE-PANE sr = ~S." res)
           res)))))
 
 (defmethod allocate-space ((pane table-pane) width height &aux rsrs csrs)
@@ -1711,9 +1711,9 @@ During realization the child of the spacing will have as cordinates
 
 (defmethod pane-viewport ((pane basic-pane))
   (let ((parent (sheet-parent pane)))
-    (if (and parent (not (typep parent 'viewport-pane)))
-	(pane-viewport parent)
-      parent)))
+    (if (and parent (typep parent 'viewport-pane))
+	parent
+      nil)))
 
 (defmethod pane-viewport-region ((pane basic-pane))
   (let ((viewport (pane-viewport pane)))
@@ -1886,7 +1886,7 @@ During realization the child of the spacing will have as cordinates
 		:initform nil
 		:initarg :scroll-bars
 		:accessor pane-scroll-bars)
-   (display-function :initform 'default-frame-top-level
+   (display-function :initform 'clim-stream-pane-default-display-function
 		     :initarg :display-function
 		     :accessor pane-display-function)
    ; Should inherit from label-pane for this one ??
@@ -1924,6 +1924,10 @@ During realization the child of the spacing will have as cordinates
 (defmethod window-refresh ((pane clim-stream-pane))
   (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
     (draw-rectangle* (sheet-medium pane) x1 y1 x2 y2 :ink +background-ink+))
+  (stream-replay pane))
+
+(defun clim-stream-pane-default-display-function (frame pane)
+  (declare (ignore frame))
   (stream-replay pane))
 
 (defmethod window-viewport ((pane clim-stream-pane))
@@ -2021,7 +2025,7 @@ During realization the child of the spacing will have as cordinates
 				    &allow-other-keys)
   (declare (ignorable scroll-bars))
   (loop for key in '(:type :scroll-bars :border-width)
-	do (remf options key))
+	do (remf options key)) ; XXX
   ;; The user space requirement options belong to the scroller ..
   (let ((user-sr
          (loop for key in '(:width :height :max-width :max-height :min-width :min-height)
@@ -2119,6 +2123,8 @@ During realization the child of the spacing will have as cordinates
 ;;; trampoline will simply call the method for the medium. -- moore
 ;;;
 ;;; Thanks! --GB
+;;;
+;;; Why are they placed here? -- APD
 
 (defmethod text-size ((sheet sheet) string &rest more)
   (apply #'text-size (sheet-medium sheet) string more))
