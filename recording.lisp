@@ -742,7 +742,7 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
   (let ((method-name (intern (format nil "MEDIUM-~A*" name)))
 	(class-name (intern (format nil "~A-OUTPUT-RECORD" name)))
 	(medium (gensym "MEDIUM"))
-	(border (gensym "BORDER")))
+        (border 'border))
     `(progn
        (defclass ,class-name (graphics-displayed-output-record-mixin)
 	 ,(compute-class-vars args))
@@ -752,12 +752,11 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
 		      stream ink clipping-region transform
 		      line-style text-style
 		      ,@args) graphic
-           (let ((,border (1+ (/ (line-style-thickness line-style) 2))))
-             (multiple-value-bind (lf tp rt bt) (progn ,@body)
-               (setq x1 (- lf ,border)
-                     y1 (- tp ,border)
-                     x2 (+ rt ,border)
-                     y2 (+ bt ,border))))
+           (let ((,border (/ (line-style-effective-thickness
+                              line-style (sheet-medium stream))
+                             2)))
+             (declare (ignorable ,border))
+             (multiple-value-setq (x1 y1 x2 y2) (progn ,@body)))
            (setf x x1
                  y y1
                  initial-x1 x1
@@ -800,7 +799,10 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
 
 (def-grecording draw-point (point-x point-y)
   (with-transformed-position (transform point-x point-y)
-     (values point-x point-y point-x point-y)))
+     (values (- point-x border)
+             (- point-y border)
+             (+ point-x border)
+             (+ point-y border))))
 
 (def-grecording draw-points (coord-seq)
   (with-transformed-positions (transform coord-seq)
@@ -809,13 +811,18 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
            minimize y into min-y
            maximize x into max-x
            maximize y into max-y
-           finally (return (values min-x min-y max-x max-y)))))
+           finally (return (values (- min-x border)
+                                   (- min-y border)
+                                   (+ max-x border)
+                                   (+ max-y border))))))
 
 (def-grecording draw-line (point-x1 point-y1 point-x2 point-y2)
   (with-transformed-position (transform point-x1 point-y1)
     (with-transformed-position (transform point-x2 point-y2)
-      (values (min point-x1 point-x2) (min point-y1 point-y2)
-              (max point-x1 point-x2) (max point-y1 point-y2)))))
+      (values (- (min point-x1 point-x2) border)
+              (- (min point-y1 point-y2) border)
+              (+ (max point-x1 point-x2) border)
+              (+ (max point-y1 point-y2) border)))))
 
 (def-grecording draw-lines (coord-seq)
   (with-transformed-positions (transform coord-seq)
@@ -824,7 +831,10 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
            minimize y into min-y
            maximize x into max-x
            maximize y into max-y
-           finally (return (values min-x min-y max-x max-y)))))
+           finally (return (values (- min-x border)
+                                   (- min-y border)
+                                   (+ max-x border)
+                                   (+ max-y border))))))
 
 (def-grecording draw-polygon (coord-seq closed filled)
   ;; FIXME !!!
@@ -837,26 +847,48 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
            minimize y into min-y
            maximize x into max-x
            maximize y into max-y
-           finally (return (values min-x min-y max-x max-y)))))
+           finally (return (if filled
+                               (values min-x min-y max-x max-y)
+                               (values (- min-x border)
+                                       (- min-y border)
+                                       (+ max-x border)
+                                       (+ max-y border)))))))
 
 (def-grecording draw-rectangle (left top right bottom filled)
   ;; FIXME!!! If the rectangle is a line/point, MAKE-RECTANGLE* gives +NOWHERE+,
   ;; and BOUNDING-RECTANGLE* signals an error.
-  (bounding-rectangle* (transform-region transform
-                                         (make-rectangle* left top right bottom))))
+  (multiple-value-bind (min-x min-y max-x max-y)
+      (bounding-rectangle* (transform-region transform
+                                             (make-rectangle*
+                                              left top right bottom)))
+    (if filled
+        (values min-x min-y max-x max-y)
+        (values (- min-x border)
+                (- min-y border)
+                (+ max-x border)
+                (+ max-y border)))))
 
 (def-grecording draw-ellipse (center-x center-y
 			      radius-1-dx radius-1-dy radius-2-dx radius-2-dy
 			      start-angle end-angle filled)
-  (bounding-rectangle* (transform-region transform
-                                         (make-ellipse* center-x center-y
-                                                        radius-1-dx radius-1-dy radius-2-dx radius-2-dy
-                                                        :start-angle start-angle
-                                                        :end-angle end-angle))))
+  (multiple-value-bind (min-x min-y max-x max-y)
+      (bounding-rectangle*
+       (transform-region transform
+                         (make-ellipse* center-x center-y
+                                        radius-1-dx radius-1-dy
+                                        radius-2-dx radius-2-dy
+                                        :start-angle start-angle
+                                        :end-angle end-angle)))
+    (if filled
+        (values min-x min-y max-x max-y)
+        (values (- min-x border)
+                (- min-y border)
+                (+ max-x border)
+                (+ max-y border)))))
 
 (def-grecording draw-text (string point-x point-y start end
 			   align-x align-y toward-x toward-y transform-glyphs)
-  ;; FIXME!!! transformation
+  ;; FIXME!!! Text direction.
   ;; Multiple lines?
  (let* ((width (stream-string-width stream string
                                     :start start :end end
