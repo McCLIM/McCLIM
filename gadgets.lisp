@@ -912,6 +912,9 @@
 (defclass gadget-output-record (output-record) ())
 
 (defmacro with-output-as-gadget (stream &body body)
+  (declare (type symbol stream))
+  (when (eq stream t)
+    (setq stream '*standard-output*))
   (let ((gadget (gensym))
 	(gadget-output-record (gensym)))
     `(let* ((,gadget (progn ,@body))
