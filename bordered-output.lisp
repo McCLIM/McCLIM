@@ -35,7 +35,7 @@
   (unless stream
     (setq stream *standard-output*))
   (let ((continuation-name (gensym)))
-    `(flet ((,continuation-name () ,@body))
+    `(flet ((,continuation-name (,stream) ,@body))
        (invoke-surrounding-output-with-border ,stream
                                               #',continuation-name
                                               ,@drawing-options))))
@@ -43,15 +43,17 @@
 (defun invoke-surrounding-output-with-border (stream cont
                                               &rest drawing-options
                                               &key (shape :rectangle) (move-cursor t))
-  (let ((record (with-new-output-record (stream)
-                  (funcall cont))))
-    (with-bounding-rectangle* (left top right bottom) record
-      (funcall (gethash shape *border-types*)
-               :stream stream
-               :record record
-               :left left :top top
-               :right right :bottom bottom
-               :allow-other-keys t))))
+  (with-sheet-medium (medium stream)
+    (let ((record (with-new-output-record (stream)
+                    (funcall cont stream))))
+      (with-bounding-rectangle* (left top right bottom) record
+        (letf (((medium-transformation medium) +identity-transformation+))
+          (funcall (gethash shape *border-types*)
+                   :stream stream
+                   :record record
+                   :left left :top top
+                   :right right :bottom bottom
+                   :allow-other-keys t))))))
 
 (defmacro define-border-type (shape arglist &body body)
   (check-type arglist list)
