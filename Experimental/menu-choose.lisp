@@ -37,11 +37,10 @@
 
 ;;; TODO:
 ;;;
-;;; aborting
-;;; multiple columns
-;;; returned values
-;;; menu frame size
-;;; layout
+;;; - aborting
+;;; + returned values
+;;; + menu frame size
+;;; + layout
 
 (in-package :CLIM-INTERNALS)
 
@@ -93,8 +92,7 @@
      &key item-printer
      max-width max-height n-rows n-columns x-spacing y-spacing row-wise
      cell-align-x cell-align-y)
-  (declare (ignore default-item max-width max-height n-rows n-columns
-                   row-wise)) ; FIXME!!!
+  (declare (ignore default-item))
   (orf item-printer #'print-menu-item)
   (format-items items
                 :stream stream
@@ -102,9 +100,13 @@
                 :presentation-type presentation-type
                 :x-spacing x-spacing
                 :y-spacing y-spacing
+                :n-columns n-columns
+                :n-rows n-rows
+                :max-width max-width
+                :max-height max-height
                 :cell-align-x cell-align-x
                 :cell-align-y (or cell-align-y :top)
-                :row-wise nil))
+                :row-wise row-wise))
 
 
 (defmacro with-menu ((menu &optional associated-window
@@ -121,9 +123,11 @@
 
 (defun invoke-with-menu (continuation associated-window deexpose)
   (declare (ignore deexpose))           ; FIXME!!!
-  (let* ((associated-window (or associated-window *application-frame*))
-         (fm (frame-manager associated-window))
-         (stream (make-pane-1 fm associated-window 'command-menu-pane))
+  (let* ((associated-frame (if associated-window
+                               (pane-frame associated-window)
+                               *application-frame*))
+         (fm (frame-manager associated-frame))
+         (stream (make-pane-1 fm associated-frame 'command-menu-pane))
          (frame (make-menu-frame stream)))
     (adopt-frame fm frame)
     (change-space-requirements stream :width 1 :height 1)
@@ -139,8 +143,10 @@
 ;;;
 (defmethod menu-choose
     (items &rest args &key associated-window &allow-other-keys)
-  (let ((frame-manager (frame-manager (or associated-window
-                                          *application-frame*))))
+  (let* ((associated-frame (if associated-window
+                               (pane-frame associated-window)
+                               *application-frame*))
+         (frame-manager (frame-manager associated-frame)))
     (apply #'frame-manager-menu-choose frame-manager items args)))
 
 (defmethod frame-manager-menu-choose
@@ -168,12 +174,18 @@
                                :row-wise row-wise
                                :cell-align-x cell-align-x
                                :cell-align-y cell-align-y)))
-    (with-menu (menu)
+    (with-menu (menu associated-window)
       (when text-style
         (setf (medium-text-style menu) text-style))
       (multiple-value-bind (object event)
           (menu-choose-from-drawer menu (or presentation-type 'menu-item)
-                                   #'drawer)
+                                   #'drawer
+                                   :cache cache
+                                   :unique-id unique-id
+                                   :id-test id-test
+                                   :cache-value cache-value
+                                   :cache-test cache-test
+                                   :pointer-documentation pointer-documentation)
         ;; What is OBJECT? Assuming it is a menu item... - APD, 2002-08-03.
         (values (menu-item-value object) object event)))))
 
@@ -190,10 +202,11 @@
                                  :width x2
                                  :height y2
                                  :resize-frame t)))
-  (handler-case
-      (with-input-context (presentation-type :override t)
-            (object type event)
-          (loop
-             (read-gesture :stream menu))
-        (t (values object event)))
-    (abort-gesture () (values nil))))
+  (let ((*pointer-documentation-output* pointer-documentation))
+    (handler-case
+        (with-input-context (presentation-type :override t)
+              (object type event)
+            (loop
+               (read-gesture :stream menu))
+          (t (values object event)))
+      (abort-gesture () (values nil)))))
