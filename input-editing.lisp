@@ -457,7 +457,7 @@
                            (values object t input)))
 		       (error 'simple-completion-error
                             :format-control "complete-input: While rescanning,~
-                                             can't match ~A~A~"
+                                             can't match ~A~A"
                             :format-arguments (list so-far  gesture)
 			    
                             :input-so-far so-far))))
