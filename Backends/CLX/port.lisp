@@ -484,10 +484,13 @@
                  ,@body)))))))
 
 (defun decode-x-button-code (code)
-  ;; FIXME: X mouse has 5 buttons.
+  ;; FIXME: CLIM doesn't provide for more then 3 buttons, how should
+  ;; we handle this better?
   (aref #.(vector +pointer-left-button+
                   +pointer-middle-button+
-                  +pointer-right-button+)
+                  +pointer-right-button+
+		  nil
+		  nil)
         (1- code)))
 
 ;; From "Inter-Client Communication Conventions Manual", Version 2.0.xf86.1,
