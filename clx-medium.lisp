@@ -70,7 +70,7 @@
 (defun clipping-region->rect-seq (medium clipping-region)
   (loop for region in (nreverse (region-set-regions clipping-region
                                                     :normalize :x-banding))
-        as rectangle = (transform-region (medium-transformation medium) region)
+        as rectangle = (bounding-rectangle (transform-region (medium-transformation medium) region))
         nconcing (list (round (rectangle-min-x rectangle))
                        (round (rectangle-min-y rectangle))
                        (round (rectangle-width rectangle))
