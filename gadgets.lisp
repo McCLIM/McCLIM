@@ -275,7 +275,8 @@
   ;; Half-baked attempt to be compatible with Lispworks. ??? -moore
   ;; Inherited from basic-pane with different defaults.
   ((foreground  :initform +black+)
-   (background  :initform +white+)))
+   (background  :initform +white+)
+   ))
 
 
 ;; Where is this standard-gadget from? --GB
@@ -1098,6 +1099,7 @@ and must never be nil."))
 		      :initarg :show-as-default-p
 		      :accessor push-button-show-as-default-p))
   (:default-initargs
+   :text-style (make-text-style :sans-serif nil nil)
     :background *3d-normal-color*
     :align-x :center
     :align-y :center
@@ -1165,6 +1167,7 @@ and must never be nil."))
 		   :reader toggle-button-indicator-type
                    :initform :some-of) )
   (:default-initargs
+   :text-style (make-text-style :sans-serif nil nil)
     :align-x :left
     :align-y :center
     :x-spacing 3
@@ -1247,6 +1250,7 @@ and must never be nil."))
 			    standard-gadget-pane)
   ()
   (:default-initargs
+    :text-style (make-text-style :sans-serif nil nil)
     :background *3d-normal-color*
     :x-spacing 3
     :y-spacing 2
@@ -1902,7 +1906,7 @@ and must never be nil."))
 (defclass radio-box-pane (radio-box rack-layout-mixin sheet-multiple-child-mixin basic-pane)
   ()
   (:default-initargs
-      :background *3d-normal-color*))
+   :background *3d-normal-color*))
 
 (defmethod initialize-instance :after ((pane radio-box-pane)
                                        &key choices current-selection orientation &allow-other-keys)
@@ -1931,7 +1935,8 @@ and must never be nil."))
 (defclass check-box-pane (check-box rack-layout-mixin sheet-multiple-child-mixin basic-pane)
   ()
   (:default-initargs
-      :background *3d-normal-color*))
+   :text-style (make-text-style :sans-serif nil nil)
+   :background *3d-normal-color*))
 
 (defmethod initialize-instance :after ((pane check-box-pane)
                                        &key choices current-selection orientation &allow-other-keys)
