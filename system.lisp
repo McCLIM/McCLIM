@@ -81,6 +81,7 @@
 ;   "exports"
    "gadgets"
    "menu"
+   "table-formatting"
    "postscript-medium"
    ))
    
