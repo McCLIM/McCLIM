@@ -178,8 +178,7 @@
   (dolist (sym *apropos-list*)
     (present-symbol sym *standard-output* T)
       (terpri))
-  (clim:with-text-face (T :italic)
-       (format T "Results have been saved to ~A~%" '*APROPOS-LIST*)))
+  (note "Results have been saved to ~A~%" '*APROPOS-LIST*))
 
 (define-command (com-trace :name "Trace"
 			   :command-table dev-commands)
@@ -260,8 +259,8 @@
     ((class-spec 'class-name :prompt "class"))
   (let ((class (frob-to-class class-spec)))
     (if (null class)
-	(italic (T) (format T "~&~A is not a defined class.~%" class-spec))
-      (class-grapher *standard-output* class #'clim-mop:class-direct-superclasses))))
+	(note "~A is not a defined class." class-spec)
+        (class-grapher *standard-output* class #'clim-mop:class-direct-superclasses))))
 
 (define-command (com-show-class-subclasses :name "Show Class Subclasses"
                                            :command-table dev-commands)
@@ -269,8 +268,7 @@
   (let ((class (frob-to-class class-spec)))
     (if (not (null class))
         (class-grapher *standard-output* class #'clim-mop:class-direct-subclasses)
-      (italic (T)
-        (format T "~&~A is not a defined class.~%" class-spec)))))
+      (note "~A is not a defined class." class-spec))))
 
 
 ; Lookup direct slots from along the CPL given a class and a slot name.
@@ -295,12 +293,7 @@
 (defparameter *slot-writers-ink*  +black+)
 (defparameter *slot-documentation-ink* +turquoise4+)
 
-(defmacro italisansf (&rest args)
-  `(italic (T)
-     (with-text-family (T :sans-serif)
-       (format T ,@args))))   
 
-;; Oops, I'm ignoring STREAM. Fix this.
 (defun present-slot (slot class &key (stream *standard-output*))
   "Formats a slot definition into a table row."
   (let* ((name (clim-mop:slot-definition-name slot))
@@ -311,7 +304,8 @@
          (direct-slots (direct-slot-definitions class name))
          (readers (reduce #'append (filtermap direct-slots #'clim-mop:slot-definition-readers)))
          (writers (reduce #'append (filtermap direct-slots #'clim-mop:slot-definition-writers)))
-         (documentation (first (filtermap direct-slots (lambda (x) (documentation x T))))))
+         (documentation (first (filtermap direct-slots (lambda (x) (documentation x T)))))
+         (*standard-output* stream))
 
   (macrolet ((with-ink ((var) &body body)
                `(with-drawing-options (T :ink ,(intern (concatenate 'string "*SLOT-" (symbol-name var) "-INK*")))
@@ -321,7 +315,7 @@
                    (with-ink (,var) ,@body) )))
     
     (fcell (name :left)
-     (with-output-as-presentation (stream slot 'slot-definition)
+     (with-output-as-presentation (T slot 'slot-definition)
        (princ name))
      (unless (eq type T)
        (fresh-line)
@@ -334,7 +328,7 @@
     (fcell (initform :left)
       (if initfunc
           (format T "~W" initform)
-        (italisansf "No initform")))
+        (note "No initform")))
 
     #+NIL   ; argh, shouldn't this work?
     (formatting-cell ()
@@ -343,22 +337,22 @@
           (fcell (readers :center)
                  (if readers
                      (dolist (reader readers)  (format T "~A~%" reader))
-                   (italisansf " No readers")))
+                   (note "No readers")))
           (fcell (writers :center)
                  (if writers
                      (dolist (writer writers)  (format T "~A~%" writer))
-                   (italisansf "No writers"))))))
+                   (note "No writers"))))))
 
     (formatting-cell (T :align-x :left)
       (if (not (or readers writers))
-          (italisansf "No accessors")
+          (note "No accessors")
         (progn
           (with-ink (readers)
             (if readers (dolist (reader readers)  (format T "~A~%" reader))
-              (italisansf "No readers~%")))
+              (note "No readers~%")))
           (with-ink (writers)
             (if writers (dolist (writer writers)  (format T "~A~%" writer))
-              (italisansf "No writers"))))))
+              (note "No writers"))))))
 
     (fcell (documentation :left)
       (when documentation (with-text-family (T :serif) (princ documentation))))
@@ -426,16 +420,15 @@
 	(format T "~&~A is not a defined class.~%" class-name)
       (let ((slots (clim-mop:class-slots class)))
 	(if (null slots)
-	    (with-text-face (T :italic)
-	       (format T "~&~%This class has no slots.~%~%"))
-	  (progn
+	    (note "~%This class has no slots.~%~%")
+            (progn
             ; oddly, looks much better in courier, because of all the capital letters.
 ;            (with-text-family (T :sans-serif)
               (invoke-as-heading
-                (lambda ()
-                  (format T "~&Slots for ")
-                  (with-output-as-presentation (T (clim-mop:class-name class) 'class-name)
-                    (princ (clim-mop:class-name class)))))
+               (lambda ()
+                 (format T "~&Slots for ")
+                 (with-output-as-presentation (T (clim-mop:class-name class) 'class-name)
+                   (princ (clim-mop:class-name class)))))
               (present-the-slots class) ))))))
 
 (defparameter *ignorable-internal-class-names*
@@ -487,7 +480,7 @@
     ((class-spec 'class-name :prompt "class"))
   (let ((class (frob-to-class class-spec)))
     (if (null class)
-        (italic (T) (format T "~&~A is not a defined class.~%" class-spec))
+        (note "~A is not a defined class." class-spec)
       (let ((funcs (sort (class-funcs class) (lambda (a b)
                                                (symbol< (clim-mop:generic-function-name a)
                                                         (clim-mop:generic-function-name b))))))
@@ -624,9 +617,9 @@
   ((pathname 'pathname :prompt "pathname"))
   (let ((pathname (merge-pathnames pathname)))
     (cond ((not (probe-file pathname))
-           (italic (T) (format T "~&~A does not exist.~%" pathname)))
+           (note "~A does not exist." pathname))
           ((not (directoryp pathname))
-           (format T "~&~A is not a directory.~%" pathname))
+           (note "~A is not a directory." pathname))
           (T (change-directory (merge-pathnames pathname))) )))
 
 (define-command (com-up-directory :name "Up Directory"
@@ -635,9 +628,10 @@
   (let ((parent (parent-directory *default-pathname-defaults*)))
     (when parent
       (change-directory parent)
-      (italic (T) (format T "~&The current directory is now ")
-              (present (truename parent))
-              (terpri)))))
+      (italic (T)
+        (format T "~&The current directory is now ")
+        (present (truename parent))
+        (terpri)))))
   
 (define-gesture-name :change-directory :pointer-button-press
   (:middle))
@@ -763,7 +757,7 @@
                                   :command-table dev-commands)
   ()
   (if (null *directory-stack*)
-      (italic (T) (format T "~&The directory stack is empty!~%"))
+      (note "The directory stack is empty!")
     (progn 
       (com-change-directory (pop *directory-stack*))
       (italic (T) (comment-on-dir-stack)))))
@@ -793,7 +787,7 @@
                                           :command-table dev-commands)
   ()
   (if (null *directory-stack*)
-      (italic (T) (format T "~&The directory stack is empty!~%"))
+      (note "~&The directory stack is empty!~%")
     (dolist (pathname *directory-stack*)
       (fresh-line)
       (pretty-pretty-pathname pathname *standard-output*) )))
@@ -910,6 +904,13 @@
     (display-evalues values)
     (fresh-line)))
 
+(define-command (com-reload-mime-database :name "Reload Mime Database"
+                                          :command-table dev-commands)
+    ()
+  (progn
+    (load-mime-types)
+    (load-mailcaps)))
+
 ;;; Some CLIM developer commands
 
 (define-command (com-show-command-table :name t :command-table dev-commands)
@@ -921,14 +922,30 @@
 	(processed-commands (make-hash-table :test #'eq)))
     (do-command-table-inheritance (ct table)
       (let ((commands nil))
-	(map-over-command-table-names
-	 #'(lambda (name command)
+	(map-over-command-table-commands
+	 #'(lambda (command)
 	     (unless (gethash command processed-commands)
-	       (push name commands)
+	       (push command commands)
 	       (setf (gethash command processed-commands) t)))
 	 ct
 	 :inherited nil)
-	(push (cons ct (sort commands #'string-lessp)) our-tables)))
+	(push (cons ct (sort commands
+                             (lambda (x y)
+                               (string-lessp (command-line-name-for-command x ct :errorp :create)
+                                             (command-line-name-for-command y ct :errorp :create))))) our-tables)))
     (setq our-tables (nreverse our-tables))
-    )
-  )
+
+    (when show-commands ;; sure, why not?
+      (dolist (foo our-tables)
+        (let ((ct       (car foo))
+              (commands (cdr foo)))
+          (invoke-as-heading
+           (lambda ()
+             (format T "Command table ")
+             (with-output-as-presentation (t ct 'clim:command-table)
+               (princ (command-table-name ct)))))
+          (if commands
+              (format-items commands :printer (lambda (cmd s) (present cmd 'clim:command-name :stream s))
+                            :move-cursor t)
+              (note "Command table is empty.~%~%") ))))))
+

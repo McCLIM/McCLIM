@@ -168,6 +168,15 @@
 (defmacro underlining ((stream) &body body)
   `(bordering (,stream :underline) ,@body))
 
+(defun note (string &rest args)
+  (let ((stream *query-io*))
+    (italic (stream)
+      (with-text-family (stream :sans-serif)
+        (fresh-line stream)
+        (apply #'format *query-io* string args)
+        (fresh-line stream)))))
+          
+
 (defun vertical-gap (stream &optional (fraction 3))
   (when (eq stream t) (setf stream *standard-output*))
   (stream-increment-cursor-position stream 0
@@ -187,7 +196,8 @@ this point, increment it by SPACING, which defaults to zero."
   (stream-increment-cursor-position stream
 				    (if (> (stream-cursor-position stream) x)
 					spacing
-				      (- x (stream-cursor-position stream)))))
+                                        (- x (stream-cursor-position stream)))
+                                    0))
 
 ;;; Pathname evil
 ;;; Fixme: Invent some more useful operators for manipulating pathnames, add a
