@@ -383,7 +383,6 @@
 
 
 (defun input-context-wait-test (stream)
-  (declare (ignore stream))
   (let* ((queue (stream-input-buffer stream))
 	 (event (event-queue-peek queue)))
     (when event
@@ -427,14 +426,14 @@
 					    (event-sheet button-event)
 					    button-event))
 
-(defmacro with-input-context ((type &key override) 
+(defmacro with-input-context ((type &key override)
 			      (&optional (object-var (gensym))
 					 (type-var (gensym))
 					 event-var
 					 options-var)
-			      form 
+			      form
 			      &body pointer-cases)
-  (let ((vars `(,object-var 
+  (let ((vars `(,object-var
 		,type-var
 		,@(and event-var `(,event-var))
 		,@(and options-var `(,options-var))))
@@ -443,9 +442,9 @@
     `(block ,return-block
        (multiple-value-bind ,vars
 	   (block ,context-block
-	     (let ((*input-context* 
+	     (let ((*input-context*
 		    (cons (cons (expand-presentation-type-abbreviation ,type)
-				#'(lambda (object type event options)
+                                #'(lambda (object type event options)
 				    (return-from ,context-block
 				      (values object type event options))))
 			  ,(if override nil '*input-context*)))
@@ -454,6 +453,7 @@
 		   (*input-wait-test* #'input-context-wait-test)
 		   (*input-wait-handler* #'input-context-event-handler))
 	       (return-from ,return-block ,form )))
+         (declare (ignorable ,object-var ,type-var)) ; XXX only when they are GENSYMed
 	 (cond ,@(mapcar #'(lambda (pointer-case)
 			     (destructuring-bind (case-type &body case-body)
 				 pointer-case
