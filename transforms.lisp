@@ -6,6 +6,8 @@
 ;;;   License: LGPL (See file COPYING for details).
 ;;; --------------------------------------------------------------------------------------
 ;;;  (c) copyright 1998,1999 by Gilbert Baumann
+;;;  (c) copyright 2000 by 
+;;;           Robert Strandh (strandh@labri.u-bordeaux.fr)
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
