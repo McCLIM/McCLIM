@@ -370,7 +370,7 @@
 ;; *  Latin 1
 ;; *  Byte 3 = 0
 ;; */
-(define-keysym :SPACE #x20)
+(define-keysym :| | #x20)
 (define-keysym :! #x21)
 (define-keysym :|"| #x22)
 (define-keysym :|#| #x23)
