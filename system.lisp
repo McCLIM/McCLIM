@@ -64,7 +64,7 @@
   #+:SBCL      "Lisp-Dep/fix-sbcl"
   "package")
 
-(clim-defsystem (:clim-frontend)
+(clim-defsystem (:clim)
    ;; First possible patches
    #+:CMU       "Lisp-Dep/fix-cmu"
    #+:EXCL	"Lisp-Dep/fix-acl"
@@ -119,7 +119,7 @@
    "incremental-redisplay"
    )
 
-(clim-defsystem (:clim-clx :depends-on (:clim-frontend))
+(clim-defsystem (:clim-clx :depends-on (:clim))
   "Backends/CLX/package"
   "Backends/CLX/keysyms"
   "Backends/CLX/keysymdef"
@@ -131,11 +131,12 @@
   "Backends/CLX/clim-extensions"
   )
 
-(clim-defsystem (:clim-looks :depends-on (:clim-frontend))
+(clim-defsystem (:clim-looks :depends-on (:clim))
   "looks/pixie")
 
 ;;; Will depend on :goatee soon...
-(clim-defsystem (:clim :depends-on (:clim-frontend :clim-clx)))
+;;; name of :clim-clx-user chosen by mikemac for no good reason
+(clim-defsystem (:clim-clx-user :depends-on (:clim :clim-clx)))
 
 (clim-defsystem (:clim-examples :depends-on (:clim :clim-looks))
    "Examples/calculator"
@@ -150,7 +151,7 @@
    "Examples/presentation-test"
    "Examples/gadget-test")
 
-(clim-defsystem (:goatee :depends-on (:clim-frontend))
+(clim-defsystem (:goatee :depends-on (:clim))
   "Goatee/dbl-list"
   "Goatee/flexivector"
   "Goatee/buffer"
