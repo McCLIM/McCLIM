@@ -56,13 +56,11 @@
 
 (defun make-postscript-transformation (paper-size-name orientation)
   (multiple-value-bind (width height) (paper-size paper-size-name)
-    (let* ((height/2 (/ height 2))
-           (transform (make-reflection-transformation*
-                       0 height/2
-                       width height/2)))
-      (case orientation
-        (:portrait transform)
-        (:landscape (compose-transformation-with-rotation
-                     transform
-                     (/ pi 2) (make-point (/ width 2) height/2)))
-        (t (error "Unknown orientation"))))))
+    (case orientation
+        (:portrait (make-3-point-transformation*
+                    0 0  0 height  width 0
+                    0 height  0 0  width height))
+        (:landscape (make-3-point-transformation*
+                     0 0  0 width  height 0
+                     width height  0 height  width 0))
+        (t (error "Unknown orientation")))))
