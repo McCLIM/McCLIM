@@ -170,7 +170,7 @@ sheet-supports-only-one-child error to be signalled."))
   nil)
 
 (defmethod sheet-adopt-child ((sheet basic-sheet) (child sheet))
-  (error "~S attempting to adopt a child" sheet))
+  (error "~S attempting to adopt ~S" sheet child))
 
 (defmethod sheet-adopt-child :after ((sheet basic-sheet) (child sheet))
   (note-sheet-adopted child)
@@ -704,3 +704,8 @@ sheet-supports-only-one-child error to be signalled."))
 
 (defmethod bounding-rectangle* ((sheet sheet))
   (bounding-rectangle* (sheet-region sheet)))
+
+;;; The null sheet
+
+(defclass null-sheet (basic-sheet) ())
+
