@@ -34,7 +34,7 @@ To run the listener:
 
 If you have a multithreaded lisp, you can start the listener in a separate
 thread, thereby leaving your main REPL available:
- * (clim-listener:run-listener-process)
+ * (clim-listener:run-listener :new-process t)
 
 
 Compatibility
@@ -151,5 +151,4 @@ There is currently no debugger integration with the listener, which is not
 particularly convenient. Gilbert Baumann has modified the CMUCL debugger so
 that it is capable of displaying on a CLIM stream. These modifications are
 contained in the file cmucl-hacks.lisp. If you want to try this, load the
-file and (setf *debug-io* *standard-output*) within the CLIM listener. It
-works fairly well, although user input is not visible.
+file and (setf *debug-io* *standard-output*) within the CLIM listener.

@@ -37,11 +37,16 @@
                           :min-height h
                           :max-height h)))
 
-;; This is really horrible, but no one has complained or fixed it yet.
-(defmethod handle-repaint ((pane wholine-pane) region)
-  (declare (ignore region))
-  (window-clear pane)
-  (redisplay-frame-pane (pane-frame pane) pane))
+(defvar *reconfiguring-wholine* nil)
+
+(defmethod allocate-space ((pane wholine-pane) width height)
+  (unless *reconfiguring-wholine*
+    (let ((*reconfiguring-wholine* t))
+      (call-next-method)
+      (window-clear pane)
+      (redisplay-frame-pane (pane-frame pane) pane))))
+
+
 
 (defun print-package-name (stream)
   (let ((foo (package-name *package*)))
@@ -99,7 +104,7 @@
                       0))
         (stream-add-output-record pane record)))))))
 
-;; This is a command history.
+;; This is a (very simple) command history.
 ;; Should we move this into CLIM-INTERNALS ?
 ;; Possibly this should become something integrated with the presentation
 ;; histories which I have not played with.
@@ -127,6 +132,16 @@
                 (formatting-cell ()
                    (present command 'command))))))
 
+(defparameter *listener-initial-function* nil)
+
+(defun listener-initial-display-function (frame pane)
+  (declare (ignore frame pane))
+  (when *listener-initial-function*
+    (funcall-in-listener
+     (lambda ()
+       (funcall *listener-initial-function*)
+       (fresh-line)))))
+  
 
 ;;; Listener application frame
 (define-application-frame listener (standard-application-frame
@@ -134,9 +149,11 @@
     ((system-command-reader :accessor system-command-reader
 			    :initarg :system-command-reader
 			    :initform t))
-  (:panes (interactor :interactor :scroll-bars T)
+  (:panes (interactor :interactor :scroll-bars T
+                      :display-function #'listener-initial-display-function
+                      :display-time t)
           (doc :pointer-documentation)
-          (wholine (make-pane 'wholine-pane  ;; :min-height 18 :max-height 18
+          (wholine (make-pane 'wholine-pane
                      :display-function 'display-wholine :scroll-bars nil
                      :display-time :command-loop :end-of-line-action :allow)))
   (:top-level (default-frame-top-level :prompt 'print-listener-prompt))
@@ -149,26 +166,17 @@
 
 ;;; Lisp listener command loop
 
+;; Set this to true if you want the listener to bind *debug-io* to the
+;; listener window.
+(defparameter *listener-use-debug-io* #+hefner t #-hefner nil)
 
-;;  ACCEPT '(OR COMMAND FORM) should now work work, so I need to experiment
-;;  with that at some point. It could save me from having to reimplement half
-;;  of accept as part of the toplevel. This should allow command completion to
-;;  work properly again.
-
-; Now that I have LISTENER-TOP-LEVEL, should I move the binding of the restart
-; inside there? Or should I move this inside McCLIM?
-
-;; Only bind this in CMU for now, as no other lisp is likely to 
-;; handle it well without a little tweaking.
-(defparameter *listener-debug-io*
-  #+CMU18d nil
-  #-CMU18d *debug-io*)
-
-(defmethod run-frame-top-level ((frame listener) &key &allow-other-keys)
-  (let ((*debug-io* (or *listener-debug-io*
-			(get-frame-pane frame 'interactor)))
+(defmethod run-frame-top-level ((frame listener) &key listener-funcall &allow-other-keys)
+  (let ((*debug-io* (if *listener-use-debug-io*
+                        (get-frame-pane frame 'interactor)
+			*debug-io*))
 	;; Borrowed from OpenMCL.
 	;; from CLtL2, table 22-7:
+        (*listener-initial-function* listener-funcall)
 	(*package* *package*)
 	(*print-array* *print-array*)
 	(*print-base* *print-base*)
@@ -189,13 +197,35 @@
 	(*read-default-float-format* *read-default-float-format*)
 	(*read-eval* *read-eval*)
 	(*read-suppress* *read-suppress*)
-	(*readtable* *readtable*))
+	(*readtable* *readtable*))    
     (loop while 
       (catch 'return-to-listener
 	(restart-case (call-next-method)
 	  (return-to-listener ()
 	    :report "Return to listener."
 	    (throw 'return-to-listener T)))))))
+
+;; Oops. As we've ditched our custom toplevel, we now have to duplicate all
+;; this setup work to implement one little trick.
+(defun funcall-in-listener (fn)
+  (let* ((frame *application-frame*)
+         (*standard-input*  (or (frame-standard-input frame)
+                                *standard-input*))
+         (*standard-output* (or (frame-standard-output frame)
+                                *standard-output*))
+         (query-io  (frame-query-io frame))
+         (*query-io* (or query-io *query-io*))
+         (*pointer-documentation-output* (frame-pointer-documentation-output frame))
+         (interactorp (typep *query-io* 'interactor-pane)))
+    ;; FIXME - Something strange is happening which causes the initial command
+    ;; prompt to be indented incorrectly after performing this output. Various
+    ;; things like as calling TERPRI, manually moving the cursor, and closing
+    ;; the open output record, don't seem to help.
+    (with-room-for-graphics (*standard-output* :first-quadrant nil
+                                               :move-cursor t)
+      (funcall fn)
+      (stream-close-text-output-record *standard-output*)
+      (fresh-line))))      
 
 (defparameter *form-opening-characters*
   '(#\( #\) #\[ #\] #\# #\; #\: #\' #\" #\* #\, #\` #\- 
@@ -229,7 +259,7 @@
 			  (prog2
 			      (when (char= c #\,)
 				(read-gesture :stream stream)) ; lispm behavior 
-			      #| ---> |# (list 'com-eval (accept 'form :stream stream :prompt nil))
+                   #| ---> |# (list 'com-eval (accept 'form :stream stream :prompt nil))
 			    (setf type 'command #|'form|# )) ; FIXME? 
 			  (prog1
 			      (accept '(command :command-table listener)  :stream stream
@@ -241,23 +271,7 @@
 	    (princ c *query-io*)
 	    (terpri *query-io*)
 	    nil))
-	object))
-  )
-
-#+nil
-(defun listener-read (frame stream)
-  "Read a command or form, taking care to manage the input context
-   and whatever else need be done."
-  (multiple-value-bind (x y)  (stream-cursor-position stream)    
-    (with-input-context ('command) (object object-type)
-            (read-frame-command frame :stream stream)
-        (command
-         ;; Kludge the cursor position - Goatee will have moved it all around
-         (setf (stream-cursor-position stream) (values x y))
-         (present object object-type
-                  :view (stream-default-view stream)
-                  :stream stream)
-         object))))
+	object)))
 
 (defmethod read-frame-command :around ((frame listener)
 				       &key (stream *standard-input*))
@@ -274,71 +288,26 @@
                   :stream stream)
          object))))
 
-(defun update-panes (frame)
-  "Updates any panes that require redisplay."  
-  (map-over-sheets #'(lambda (pane)
-                       (multiple-value-bind (redisplayp clearp)
-                           (pane-needs-redisplay pane)
-                         (when redisplayp
-                           (when (and clearp
-                                      (or (not (climi::pane-incremental-redisplay
-                                                pane))
-                                          (not climi::*enable-updating-output*)))
-                             (window-clear pane))                           
-                           (redisplay-frame-pane frame pane)
-                           (unless (eq redisplayp :command-loop)
-                             (setf (pane-needs-redisplay pane) nil)))))
-                   (frame-top-level-sheet frame)))
-
 (defun print-listener-prompt (stream frame)
   (declare (ignore frame))
   (with-text-face (stream :italic)
     (print-package-name stream)
     (princ "> " stream)))
 
-#+nil
-(defun listener-top-level
-    (frame
-     &key (command-parser 'command-line-command-parser)
-	  (command-unparser 'command-line-command-unparser)
-	  (partial-command-parser
-	   'command-line-read-remaining-arguments-for-partial-command)
-          &allow-other-keys)
-  (let ((*default-pathname-defaults* *default-pathname-defaults*))
-    (loop
-        (let ((*standard-input* (frame-standard-input frame))
-              (*standard-output* (frame-standard-output frame))
-              (*query-io* (frame-query-io frame))            
-              (*pointer-documentation-output* (frame-pointer-documentation-output
-                                               frame))
-              ;; during development, don't alter *error-output*
-              ;; (*error-output* (frame-error-output frame))
-              (*command-parser* command-parser)
-              (*command-unparser* command-unparser)
-              (*partial-command-parser* partial-command-parser)
-              (interactor (get-frame-pane frame 'interactor)))
-          (update-panes frame)
-          (print-listener-prompt interactor)
-          (setf (cursor-visibility (stream-text-cursor *standard-input*)) nil)
-          (let ((command (listener-read frame interactor)))
-            (fresh-line)
-            (cond ((partial-command-p command)
-                   (format *query-io* "~&Argument ~D not supplied.~&"
-                           (position *unsupplied-argument-marker* command)))
-                  (command (apply (command-name command)
-                                  (command-arguments command)))
-                  (T nil))
-            (fresh-line))))))
-
 (defmethod frame-standard-output ((frame listener))
   (get-frame-pane frame 'interactor))
 
-(defun run-listener (&optional (system-command-reader nil))
-   (run-frame-top-level
-    (make-application-frame 'listener
-			    :system-command-reader system-command-reader)))
-
-(defun run-listener-process (&optional (system-command-reader nil))
-  (clim-sys:make-process  (lambda ()
-			    (run-listener system-command-reader))
-			  :name "Listener"))
+(defun run-listener (&key (system-command-reader nil)
+                          (new-process nil)
+                          (process-name "Listener")
+                          (eval nil))
+  (flet ((run ()
+           (run-frame-top-level
+            (make-application-frame 'listener
+                                    :system-command-reader system-command-reader)
+            :listener-funcall (cond ((null eval) nil)
+                                    ((functionp eval) eval)
+                                    (t (lambda () (eval eval)))))))
+    (if new-process
+        (clim-sys:make-process #'run :name process-name)
+        (run))))
