@@ -672,19 +672,13 @@
 (defmethod medium-draw-rectangles* :around ((medium transform-coordinates-mixin) position-seq filled)
   (let ((tr (medium-transformation medium)))
     (if (rectilinear-transformation-p tr)
-        (loop for (left top right bottom) on position-seq by #'cddddr
-              ;; point-seq can be a vector! --GB
-              nconcing (multiple-value-list
-                        (transform-rectangle* tr left top right bottom)) into position-seq
-              finally (call-next-method medium position-seq filled))
-        (map-repeated-sequence nil 4
-                               (lambda (left top right bottom)
-                                 (medium-draw-polygon* medium (list left top
-                                                                    left bottom
-                                                                    right bottom
-                                                                    right top)
-                                                       t filled))
-                               position-seq))))
+        (call-next-method medium (transform-positions tr position-seq) filled)
+        (do-sequence ((left top right bottom) position-seq)
+          (medium-draw-polygon* medium (vector left top
+                                               left bottom
+                                               right bottom
+                                               right top)
+                                t filled)))))
 
 (defmethod medium-draw-ellipse* :around ((medium transform-coordinates-mixin) center-x center-y
                                          radius-1-dx radius-1-dy radius-2-dx radius-2-dy
