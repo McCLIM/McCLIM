@@ -1416,35 +1416,47 @@ function lambda list"))
 		 prompt-mode
 		 display-default
 		 query-identifier
-		 activation-gestures
-		 additional-activation-gestures
+		 (activation-gestures nil activationsp)
+		 (additional-activation-gestures nil additional-activations-p)
 		 delimiter-gestures
 		 additional-delimiter-gestures)
   (declare (ignore prompt prompt-mode))
   (when (and defaultp (not default-type-p))
     (error ":default specified without :default-type"))
+  (when (and activationsp additional-activations-p)
+    (error "only one of :activation-gestures or ~
+            :additional-activation-gestures may be passed to accept."))
+  (unless (or activationsp additional-activations-p *activation-gestures*)
+    (setq activation-gestures *standard-activation-gestures*))
   (with-input-context (type)
     (object object-type event options)
     (with-input-editing (stream)
-      (when defaultp
-	;; If the user supplies empty input, return a default.  This is my best
-	;; guess as to what "empty" means.
-	(let ((initial-char (read-gesture :stream stream :peek-p t)))
-	  (cond ((activation-gesture-p initial-char)
-		 (read-gesture :stream stream)
-		 (return-from accept-1 (values default default-type)))
-		((and *recursive-accept-p* (delimiter-gesture-p initial-char))
-		 (return-from accept-1 (values default default-type))))))
-      (multiple-value-bind (object object-type)
-	  (apply-presentation-generic-function accept
-					       type
-					       stream
-					       view
-					       `(,@(and defaultp
-							`(,default))
-						 ,@(and default-type-p
-							`(,default-type-p))))
-	(values object (or object-type type))))
+      (with-activation-gestures ((if additional-activations-p
+				     additional-activation-gestures
+				     activation-gestures)
+				 :override activationsp)
+	(multiple-value-bind (object object-type)
+	    (apply-presentation-generic-function accept
+						 type
+						 stream
+						 view
+						 `(,@(and defaultp
+							  `(:default ,default))
+						   ,@(and default-type-p
+							  `(:default-type
+							    ,default-type))))
+	  ;; Eat trailing activation gesture
+	  ;; XXX what about pointer gestures?
+	  (unless *recursive-accept-p*
+	    (let ((ag (read-char-no-hang stream nil stream t)))
+	      (when (and ag
+			 (not (eq ag stream))
+			 (activation-gesture-p ag)))
+	      (unless (or (null ag)
+			  (eq ag stream))
+		(unless (activation-gesture-p ag)
+		  (unread-char ag stream)))))
+	  (values object (or object-type type)))))
     ;; A presentation was clicked on, or something
     (t
      (values object object-type))))
@@ -1540,18 +1552,22 @@ function lambda list"))
     (type record stream state)
   (highlight-output-record record stream state))
 
-(defun accept-using-read (stream ptype)
+(defun accept-using-read (stream ptype default default-type defaultp)
   (let* ((*read-eval* nil)
-	 (token (read-token stream))
-	 (result (handler-case (read-from-string token)
-		   (error (c)
-		     (declare (ignore c))
-		     (simple-parse-error "Error parsing ~S for presentation type ~S"
-					 token
-					 ptype)))))
-    (if (presentation-typep result ptype)
-	(values result ptype)
-	(input-not-of-required-type result ptype))))
+	 (token (read-token stream)))
+    (when (and (zerop (length token))
+	       defaultp)
+      (return-from accept-using-read (values default default-type)))
+    (let ((result (handler-case (read-from-string token)
+		    (error (c)
+		      (declare (ignore c))
+		      (simple-parse-error "Error parsing ~S for presentation type ~S"
+					  token
+					  ptype)))))
+      (if (presentation-typep result ptype)
+	  (values result ptype)
+	  (input-not-of-required-type result ptype)))))
+
 
 ;;; The presentation types
 
@@ -1614,9 +1630,8 @@ function lambda list"))
       (princ object stream)))
 
 (define-presentation-method accept ((type symbol) stream (view textual-view)
-				    &key default default-type)
-  (declare (ignore default default-type))
-  (accept-using-read stream type))
+				    &key (default nil defaultp) default-type)
+  (accept-using-read stream type default default-type defaultp))
   
 (define-presentation-type keyword () :inherit-from 'symbol)
 
@@ -1685,10 +1700,9 @@ function lambda list"))
     (princ object stream)))
 
 (define-presentation-method accept ((type real) stream (view textual-view)
-				    &key default default-type)
-  (declare (ignore default default-type))
+				    &key (default nil defaultp) default-type)
   (let ((*read-base* base))
-    (accept-using-read stream type)))
+    (accept-using-read stream type default default-type defaultp)))
 
 ;;; Define a method that will do the comparision for all real types.  It's
 ;;; already determined that that the numeric class of type is a subtype of
@@ -2298,9 +2312,8 @@ function lambda list"))
 
 (define-presentation-method accept ((type expression) stream
 				    (view textual-view)
-				    &key default default-type)
-  (declare (ignore default default-type))
-  (accept-using-read stream type))
+				    &key (default nil defaultp) default-type)
+  (accept-using-read stream type default default-type defaultp))
 
 (define-presentation-type form ()
   :inherit-from `expression)

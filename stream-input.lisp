@@ -28,6 +28,33 @@
 
 (defconstant +read-char-map+ '((#\Return . #\Newline) (#\Backspace . #\Delete)))
 
+(defvar *abort-gestures* '(:abort))
+
+(defvar *accelerator-gestures* nil)
+
+(define-condition abort-gesture (condition)
+  ((event :reader %abort-gesture-event :initarg :event)))
+
+(defgeneric abort-gesture-event (condition))
+
+(defmethod abort-gesture-event ((condition abort-gesture))
+  (%abort-gesture-event condition))
+
+(define-condition accelerator-gesture (condition)
+  ((event :reader %accelerator-gesture-event :initarg :event)
+   (numeric-argument :reader %accelerator-gesture-numeric-argument
+		     :initarg :numeric-argument
+		     :initform 1)))
+
+(defgeneric accelerator-gesture-event (condition))
+
+(defmethod accelerator-gesture-event ((condition accelerator-gesture))
+  (%accelerator-gesture-event condition))
+
+(defmethod accelerator-gesture-numeric-argument
+    ((condition accelerator-gesture))
+  (%accelerator-gesture-numeric-argument condition))
+
 (defun char-for-read (char)
   (let ((new-char (cdr (assoc char +read-char-map+))))
     (or new-char char)))
@@ -232,10 +259,19 @@
        ;; Something might be in the stream buffer.
        (when (> (length buffer) 0)
 	 (let ((gesture (pop-gesture buffer peek-p)))
-	   (if (and pointer-button-press-handler
+	   (cond ((and pointer-button-press-handler
 		    (typep gesture 'pointer-button-press-event))
-	       (funcall pointer-button-press-handler stream gesture)
-	       (return-from stream-read-gesture gesture))))))))
+		  (funcall pointer-button-press-handler stream
+			   gesture))
+		 ((loop for gesture-name in *abort-gestures*
+			thereis (event-matches-gesture-name-p gesture
+							      gesture-name))
+		  (signal 'abort-gesture :event gesture))
+		 ((loop for gesture-name in *accelerator-gestures*
+			thereis (event-matches-gesture-name-p gesture
+							      gesture-name))
+		  (signal 'accelerator-gesture :event gesture))
+		 (t (return-from stream-read-gesture gesture)))))))))
 
 
 (defgeneric stream-input-wait (stream &key timeout input-wait-test))
@@ -287,18 +323,32 @@
 ;;; Standard stream methods on standard-extended-input-stream.  Ignore any
 ;;; pointer gestures in the input buffer.
 
+
+(defun read-gesture-or-reason (stream &rest args)
+  (multiple-value-bind (result reason)
+      (apply #'stream-read-gesture stream args)
+    (or result reason)))
+
+(defun read-result-p (gesture)
+  (or (characterp gesture)
+      (member gesture '(:eof :timeout) :test #'eq)))
+
 (defmethod stream-read-char ((stream standard-extended-input-stream))
   (with-encapsulating-stream (estream stream)
-    (loop for char = (stream-read-gesture estream)
-	  until (characterp char)
+    (loop for char = (read-gesture-or-reason estream)
+	  until (read-result-p char)
 	  finally (return (char-for-read char)))))
 
 (defmethod stream-read-char-no-hang ((stream standard-extended-input-stream))
   (with-encapsulating-stream (estream stream)
-    (loop for char = (stream-read-gesture estream :timeout 0)
-	  do (when (or (null char) (characterp char))
+    (loop for char = (read-gesture-or-reason estream :timeout 0)
+	  do (when (read-result-p char)
 	       (loop-finish))
-	  finally (return (char-for-read char)))))
+	  finally (return (cond ((eq char :eof)
+				 :eof)
+				((eq char :timeout)
+				 nil)
+				(t (char-for-read char))) ))))
 
 (defmethod stream-unread-char ((stream standard-extended-input-stream)
 			       char)
@@ -307,22 +357,22 @@
 
 (defmethod stream-peek-char ((stream standard-extended-input-stream))
   (with-encapsulating-stream (estream stream)
-    (loop for char = (stream-read-gesture estream :peek-p t)
-	  do (if (characterp char)
+    (loop for char = (read-gesture-or-reason estream :peek-p t)
+	  do (if (read-result-p char)
 		 (loop-finish)
 		 (stream-read-gesture estream)) ; consume pointer gesture
 	  finally (return (char-for-read char)))))
 
 (defmethod stream-listen ((stream standard-extended-input-stream))
   (with-encapsulating-stream (estream stream)
-    (loop
-     (if (stream-input-wait estream :timeout 0)
-	 (let ((gesture (stream-read-gesture estream :peek-p t)))
-	   (if (characterp gesture)
-	       (return-from stream-listen t)
-	       (stream-read-gesture estream))) ; consume pointer gesture
-	 (return-from stream-listen nil)))))
+    (loop for char = (read-gesture-or-reason :timeout 0 :peek-p t)
+	  do (if (read-result-p char)
+		 (loop-finish)
+		 (stream-read-gesture estream)) ; consume pointer gesture
+	  finally (return (characterp char)))))
 
+
+;;; stream-read-line returns a second value of t if terminated by eof.
 (defmethod stream-read-line ((stream standard-extended-input-stream))
   (with-encapsulating-stream (estream stream)
     (let ((result (make-array 1
@@ -330,9 +380,10 @@
 			      :adjustable t
 			      :fill-pointer 0)))
       (loop for char = (stream-read-char estream)
-	    while (not (char= char #\Newline))
+	    while (and (characterp char) (not (char= char #\Newline)))
 	    do (vector-push-extend char result)
-	    finally (return (subseq result 0))))))
+	    finally (return (values (subseq result 0)
+				    (not (characterp char))))))))
 
 ;;; Gestures
 
@@ -388,7 +439,7 @@
 				   device-name
 				   modifier-state)
   (and (eql (keyboard-event-key-name event) device-name)
-       (eql (event-modifier-state event) modifer-state)))
+       (eql (event-modifier-state event) modifier-state)))
 
 (defmethod %event-matches-gesture ((event pointer-button-press-event)
 				   type
@@ -476,3 +527,33 @@
 
 (define-gesture-name :newline :keyboard (#\newline))
 (define-gesture-name :return :keyboard (#\return))
+
+;;; Extension: support for handling abort gestures that appears to be
+;;; in real CLIM
+
+;;; From the hyperspec, more or less
+
+(defun invoke-condition-restart (c)
+  (let ((restarts (compute-restarts c)))
+    (loop for i from 0
+	  for restart in restarts
+	  do (format t "~&~D: ~A~%" i restart))
+    (loop with n = nil
+	  and k = (length restarts)
+	  until (and (integerp n) (>= n 0) (< n k))
+	  do (progn
+	       (format t "~&Option: ")
+	       (setq n (read))
+	       (fresh-line))
+	  finally
+	  #-cmu (invoke-restart (nth n restarts))
+	  #+cmu (funcall (conditions::restart-function (nth n restarts))))))
+
+(defmacro catch-abort-gestures (format-args &body body)
+  `(restart-case
+       (handler-bind ((abort-gesture #'invoke-condition-restart))
+	 ,@body)
+     (nil ()
+       :report (lambda (s) (format s ,@format-args))
+       :test (lambda (c) (typep c 'abort-gesture))
+      nil)))

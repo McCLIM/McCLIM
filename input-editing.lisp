@@ -44,7 +44,8 @@
    (insertion-pointer :accessor stream-insertion-pointer :initform 0)
    (scan-pointer :accessor stream-scan-pointer :initform 0)
    (rescan-queued :accessor rescan-queued :initform nil)
-   (rescanning-p :reader stream-rescanning-p :initform nil)))
+   (rescanning-p :reader stream-rescanning-p :initform nil)
+   (activated :accessor stream-activated :initform nil)))
 
 (defclass input-editing-noise-string ()
   ((noise-string :accessor noise-string :initarg :noise-string)))
@@ -59,20 +60,24 @@
   (with-slots (buffer insertion-pointer scan-pointer)
       stream
     (loop
-     (if (< scan-pointer insertion-pointer)
-	 (return-from stream-read-gesture
-	   (prog1
-	       (aref buffer scan-pointer)
-	     (unless peek-p
-	       (incf scan-pointer))))
-	 (multiple-value-bind (gesture type)
-	     (apply #'stream-read-gesture
-		    (encapsulating-stream-stream stream)
-		    rest-args)
-	   (let ((result (stream-process-gesture stream gesture type)))
-	     (when result
-	       	(vector-push-extend result buffer)
-		(incf insertion-pointer))))))))
+     (cond ((< scan-pointer insertion-pointer)
+	    (return-from stream-read-gesture
+	      (prog1
+		  (aref buffer scan-pointer)
+		(unless peek-p
+		  (incf scan-pointer)))))
+	   ;; If activated, insertion pointer is at fill pointer
+	   ((stream-activated stream)
+	    (return-from stream-read-gesture (values nil :eof)))
+	   (t (multiple-value-bind (gesture type)
+		  (apply #'stream-read-gesture
+			 (encapsulating-stream-stream stream)
+			 rest-args)
+		(let ((result (stream-process-gesture stream gesture type)))
+		  (when result
+		    (vector-push-extend result buffer)
+		    (incf insertion-pointer)))))))))
+
 
 (defmethod stream-unread-gesture ((stream standard-input-editing-stream)
 				  gesture)
@@ -86,8 +91,14 @@
 
 (defmethod stream-process-gesture ((stream standard-input-editing-stream)
 				   gesture type)
+  (declare (ignore type))
+  (when (activation-gesture-p gesture)
+    (setf (stream-activated stream) t)
+    (setf (stream-insertion-pointer stream)
+	  (fill-pointer (stream-input-buffer stream))))
   (if (characterp gesture)
       (progn
+	;XXX going away shortly.
 	(when (encapsulating-stream-stream stream)
 	  (write-char (if (eql gesture #\Return)
 			  #\Newline
@@ -136,36 +147,35 @@
 (define-condition rescan-condition (condition)
   ())
 
-(defun invoke-with-input-editing (stream
-				  continuation
-				  input-sensitizer
-				  initial-contents
-				  class)
+(defgeneric invoke-with-input-editing
+    (stream continuation input-sensitizer initial-contents class))
+
+(defmethod invoke-with-input-editing ((stream extended-input-stream)
+				      continuation
+				       input-sensitizer
+				      initial-contents
+				      class)
   (declare (ignore input-sensitizer initial-contents))
-  (with-activation-gestures (*standard-activation-gestures*)
-    (if (typep stream 'extended-input-stream)
-	(let ((editing-stream (make-instance class :stream stream))
-	      (first-time t))
-	  (loop
-	   (if first-time
-	       (setq first-time nil)
-	       (reset-scan-pointer stream))
-	   (block rescan
-	     (handler-bind ((rescan-condition #'(lambda (c)
-						  (declare (ignore c))
-						  (return-from rescan nil))))
-	       (return-from invoke-with-input-editing
-		 (multiple-value-prog1
-		     (funcall continuation editing-stream)
-		   ;; The user can still do editing, which will blow out of here
-		   ;; and repeat the main loop again.
-		   (loop for gesture = (stream-read-gesture editing-stream)
-			 until (activation-gesture-p gesture))))))))
-	(funcall continuation stream))))
+  (let ((editing-stream (make-instance class :stream stream)))
+    (loop
+     (block rescan
+       (handler-bind ((rescan-condition #'(lambda (c)
+					    (declare (ignore c))
+					    (reset-scan-pointer editing-stream)
+					    (return-from rescan nil))))
+	 (return-from invoke-with-input-editing
+	   (multiple-value-prog1
+	       (funcall continuation editing-stream))))))))
+
+(defmethod invoke-with-input-editing
+    (stream continuation input-sensitizer initial-contents class)
+  (declare (ignore input-sensitizer initial-contents class))
+  (funcall continuation stream))
 
 (defgeneric reset-scan-pointer (stream &optional scan-pointer))
 
-(defmethod reset-scan-pointer (stream &optional (scan-pointer 0))
+(defmethod reset-scan-pointer ((stream standard-input-editing-stream)
+			       &optional (scan-pointer 0))
   (setf (stream-scan-pointer stream) scan-pointer)
   (setf (slot-value stream 'rescanning-p) t))
 

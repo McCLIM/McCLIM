@@ -37,12 +37,14 @@
     (setf (cursor-visibility (stream-text-cursor *standard-input*)) t)
     (present "Hallo" 'string)
     (loop
-     (present (summation-total frame) 'real)
-     (fresh-line)
-     (let ((new-val (accept 'real
-			    :default (summation-total frame)
-			    :default-type 'real)))
+     (climi::catch-abort-gestures ("Return to ~A command level"
+				   (frame-pretty-name frame))
+       (present (summation-total frame) 'real)
        (fresh-line)
-       (incf (summation-total frame) new-val)))))
+       (let ((new-val (accept 'real
+			      :default (summation-total frame)
+			      :default-type 'real)))
+	 (fresh-line)
+	 (incf (summation-total frame) new-val))))))
 
 
