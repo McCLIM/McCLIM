@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.134 2003/11/11 23:45:15 moore Exp $
+;;; $Id: panes.lisp,v 1.135 2003/11/19 13:51:17 moore Exp $
 
 (in-package :clim-internals)
 
@@ -2417,6 +2417,15 @@
 
 ;;; 29.4.5 Creating a Standalone CLIM Window
 
+(defclass window-stream (clim-stream-pane)
+  ())
+
+(defmethod close ((stream window-stream)
+		  &key abort)
+  (declare (ignore abort))
+  (disable-frame (pane-frame stream))
+  (call-next-method))
+
 (define-application-frame a-window-stream (standard-encapsulating-stream
                                            standard-extended-input-stream
                                            fundamental-character-output-stream
@@ -2426,7 +2435,7 @@
    (io
     (scrolling (:height 400 :width 700)
       (setf (slot-value *application-frame* 'stream)
-        (make-pane 'clim-stream-pane
+        (make-pane 'window-stream
                    :width 700
                    :height 2000)))))
   (:layouts
@@ -2449,8 +2458,7 @@
                                 (scroll-bars :vertical)
                                 borders
                                 label)
-  (declare (ignorable left top right bottom width height
-                      foreground background
+  (declare (ignorable foreground background
                       text-style
                       vertical-spacing
                       end-of-line-action
@@ -2468,7 +2476,13 @@
   (let* ((fm (find-frame-manager :port port))
          (frame (make-application-frame 'a-window-stream
                                         :frame-event-queue input-buffer
-                                        :frame-manager fm)))
+                                        :frame-manager fm
+					:left left
+					:top top
+					:right right
+					:bottom bottom
+					:width width
+					:height height)))
     ;; Adopt and enable the pane
     (when (eq (frame-state frame) :disowned)
       (adopt-frame fm frame))
@@ -2479,7 +2493,7 @@
     (unless input-buffer
       (clim-sys:make-process (lambda () (let ((*application-frame* frame))
                                           (standalone-event-loop)))))
-    frame))
+    (slot-value frame 'stream)))
 
 (defun standalone-event-loop ()
   "An simple event loop for applications that want all events to be handled by

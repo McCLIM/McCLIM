@@ -735,11 +735,14 @@
 ;;; Internal function to highlight just one presentation
 
 (defun highlight-presentation-1 (presentation stream state)
-  (funcall-presentation-generic-function highlight-presentation
-					 (presentation-type presentation)
-					 presentation
-					 stream
-					 state))
+  (if (or (eq (presentation-single-box presentation) t)
+	  (eq (presentation-single-box presentation) :highlighting))
+      (highlight-output-record-rectangle presentation stream state)
+      (funcall-presentation-generic-function highlight-presentation
+					     (presentation-type presentation)
+					     presentation
+					     stream
+					     state)))
 
 (define-default-presentation-method highlight-presentation
     (type record stream state)

@@ -255,7 +255,10 @@
 			      'delete-character
 			      *simple-area-gesture-table*)
 
-(add-gesture-command-to-table '(#\Delete)
+;;; XXX In OpenMCL Darwin, #\Delete and #\Backspace map to the same
+;;; character (bs)! This is not the place for silly conditionals; do
+;;; we have to punt on CL characters, hack our own read table, or what?
+(add-gesture-command-to-table '(#-openmcl #\Delete #+openmcl #\DEL)
 			      'delete-character
 			      *simple-area-gesture-table*)
 

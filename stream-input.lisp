@@ -29,7 +29,10 @@
 ;;  Why exactly do we want to see #\Delete instead of #\Backspace?
 ;;  There is a seperate Delete key, unless your keyboard is strange. --Hefner
 
-(defconstant +read-char-map+ '((#\Return . #\Newline) #+nil (#\Backspace . #\Delete)))
+(defconstant +read-char-map+ '((#\Return . #\Newline)
+			       #+nil (#\Backspace . #\Delete)))
+
+
 
 (defvar *abort-gestures* '(:abort))
 

@@ -50,6 +50,10 @@ Running the demos
 4. A some of the demos should be run using the function clim-demo::run-test:
    (clim-demo::run-test 'clim-demo::address-book)
    (clim-demo::run-test 'goatee::goatee-test)
+   [N.B.: This advice is mostly obsolete. The usual way to start a
+   CLIM application is with e.g.,
+   (run-frame-top-level (make-application-frame 'clim-demo::address-book)
+   Any problems that result should be reported as bugs.]
 
 Note:
 

@@ -64,15 +64,22 @@ Running the demos
 
    when you get tired of it, hit ^C in the Lisp listener.
 
-4. A some of the demos should be run using the function clim-demo::run-test:
+4. Some of the demos should be run using the function clim-demo::run-test:
    (clim-demo::run-test 'clim-demo::address-book)
    (clim-demo::run-test 'goatee::goatee-test)
+   [N.B.: This advice is mostly obsolete. The usual way to start a
+   CLIM application is with e.g.,
+   (run-frame-top-level (make-application-frame 'clim-demo::address-book)
+   Any problems that result should be reported as bugs.]
+
+5. You will get much better performance after executing this form:
+   (setf mp::*idle-process* mp::*initial-process*)
 
 How to create a Lisp core file
 ------------------------------
 
-In order to run McCLIM on CMU CL, you need a Lisp core file that
-contains:
+In order to run McCLIM on CMU CL, it is convenient to create a Lisp
+core file that contains:
 
    - CLX, the Common Lisp interface to the X Window System
    - mk:defsystem, the portable, free defsystem facility

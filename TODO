@@ -18,8 +18,6 @@ TBM:20031112:002300
 
     More spiffy presentation accept and present methods
 
-    presentation-single-box
-
     presentation type histories
 
     presentation-default-processor
@@ -72,6 +70,9 @@ RS:20030805:101708
     each pane to decide when it wants the input focus. 
 
 ======================  Resolved issues ======================
+TBM:20031119:142500
+    presentation-single-box
+
 TBM:20031113:234700
     surrounding-output-with-border - :move-cursor
 

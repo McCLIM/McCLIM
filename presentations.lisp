@@ -1548,21 +1548,29 @@ and used to ensure that presentation-translators-caches are up to date.")
   
   t)
 
+(defun presentation-contains-position (record x y)
+  (let ((single-box (presentation-single-box record)))
+    (multiple-value-bind (min-x min-y max-x max-y)
+	(output-record-hit-detection-rectangle* record)
+      (if (and (<= min-x x max-x) (<= min-y y max-y))
+	  (if (or (null single-box) (eq single-box :higlighting))
+	      (output-record-refined-position-test record x y)
+	      t)
+	  nil))))
+
 (defun map-over-presentations-containing-position (func record x y)
   "maps recursively over all presentations in record, including record."
   (map-over-output-records-containing-position
    #'(lambda (child)
-       (when (output-record-p child)
+       (when (output-record-p child)	; ? What else could it be? --moore
 	 (map-over-presentations-containing-position func child x y))
+       #+nil
        (when (presentationp child)
 	 (funcall func child)))
    record
    x y)
   (when (and (presentationp record)
-             (multiple-value-bind (min-x min-y max-x max-y)
-		 (output-record-hit-detection-rectangle* record)
-	       (and (<= min-x x max-x) (<= min-y y max-y)))
-	     (output-record-refined-position-test record x y))
+	     (presentation-contains-position record x y))
     (funcall func record)))
 
 (defvar *null-presentation*)

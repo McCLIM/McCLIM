@@ -560,11 +560,7 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
   (declare (ignore x y))
   t)
 
-;;; XXX Should this only be defined on recording streams?
-(defmethod highlight-output-record ((record output-record)
-				    stream state)
-  ;; XXX DC
-  ;; XXX Disable recording?
+(defun highlight-output-record-rectangle (record stream state)
   (with-identity-transformation (stream)
     (multiple-value-bind (x1 y1 x2 y2)
         (output-record-hit-detection-rectangle* record)
@@ -572,10 +568,16 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
         (:highlight	 
          (draw-rectangle* (sheet-medium stream) x1 y1 (1- x2) (1- y2)
                           :filled nil :ink +foreground-ink+)) ; XXX +FLIPPING-INK+? 
-        (:unhighlight	 
-	 (repaint-sheet stream record)
-         #+nil(draw-rectangle* (sheet-medium stream) x1 y1 (1- x2) (1- y2)
-                          :filled nil :ink +background-ink+)))))) ; XXX +FLIPPING-INK+?
+        (:unhighlight
+	 ;; FIXME: repaint the hit detection rectangle. It could be bigger than
+	 ;;; the bounding rectangle.
+	 (repaint-sheet stream record))))))
+
+;;; XXX Should this only be defined on recording streams?
+(defmethod highlight-output-record ((record output-record) stream state)
+  ;; XXX DC
+  ;; XXX Disable recording?
+  (highlight-output-record-rectangle record stream state))
 
 ;;; 16.2.2. The Output Record "Database" Protocol
 

@@ -18,7 +18,10 @@
 
 (in-package :goatee)
 
-(defclass flexivector ()
+;;; Much implementation is done in flexivector-base so we can easily
+;;; create flexivectors with general elements
+
+(defclass flexivector-base ()
   ((store :accessor store)
    (size :accessor size)
    (gap :accessor gap)
@@ -26,14 +29,7 @@
    (size-increment :accessor size-increment :initarg :size-increment
 		   :initform 32)))
 
-(defmethod print-object ((object flexivector) stream)
-  (print-unreadable-object (object stream :type t)
-    (write-char #\" stream)
-    (loop for i from 0 below (size object)
-	  do (write-char (char-ref object i) stream))
-    (write-char #\" stream)))
-
-(defmethod initialize-instance :after ((obj flexivector)
+(defmethod initialize-instance :after ((obj flexivector-base)
 				       &key initial-store
 				       initial-contents
 				       (start 0)
@@ -72,34 +68,66 @@ of size ~S"
 		     (flexivector-bounds-error-flexivector condition)
 		     (size (flexivector-bounds-error-flexivector condition))))))
 
+(defclass flexivector (flexivector-base)
+  ()
+  (:documentation "A flexivector that stores characters"))
+
+(defmethod initialize-instance :after ((obj flexivector)
+				       &key initial-contents
+				       (start 0)
+				       (end (when initial-contents
+					      (length initial-contents))))
+  (if initial-contents
+      (let ((len (- end start)))
+	(setf (store obj) (make-array (- end start) :element-type 'character))
+	(replace (store obj) initial-contents :start2 start :end2 end)
+	(setf (size obj) len)
+	(setf (gap obj) len)
+	(setf (gap-size obj) 0))
+      (progn
+	(setf (store obj) (make-array (size-increment obj)
+				      :element-type 'character))
+	(setf (size obj) 0)
+	(setf (gap obj) 0)
+	(setf (gap-size obj) (size-increment obj)))))
+
+(defmethod print-object ((object flexivector) stream)
+  (print-unreadable-object (object stream :type t)
+    (write-char #\" stream)
+    (loop for i from 0 below (size object)
+	  do (write-char (char-ref object i) stream))
+    (write-char #\" stream)))
+
+
 (defmethod char-ref ((fv flexivector) pos)
   (when (or (>= pos (size fv))
 	    (< pos 0))
     (error 'flexivector-bounds-error :flexivector fv :pos pos))
   (if (< pos (gap fv))
-      (char (store fv) pos)
-      (char (store fv) (+ pos (gap-size fv)))))
+      (schar (store fv) pos)
+      (schar (store fv) (+ pos (gap-size fv)))))
 
-(defun gap-to-insertion-point (buf point)
-  (cond ((eql point (gap buf))
-	 (return-from gap-to-insertion-point nil))
-	((> (gap buf) point)
-	 (replace (store buf) (store buf)
-		  :start1 (+ point (gap-size buf))
-		  :end1 (+ (gap buf) (gap-size buf))
-		  :start2 point
-		  :end2 (gap buf)))
-	(t (let ((point-in-store (if (<= point (gap buf))
-				     point
-				     (+ point (gap-size buf)))))
-	     (replace (store buf) (store buf)
-		      :start1 (gap buf)
-		      :end1 (- point-in-store (gap-size buf))
-		      :start2 (+ (gap buf) (gap-size buf))
-		      :end2 point-in-store))))
+(defgeneric gap-to-insertion-point (buf point))
+
+(defmethod gap-to-insertion-point ((buf flexivector-base) point)
+  (let ((gap (gap buf))
+	(store (store buf))
+	(gap-size (gap-size buf)))
+    (cond ((eql point gap)
+	   (return-from gap-to-insertion-point nil))
+	  ((> gap point)
+	   (replace store store
+		    :start1 (+ point gap-size) :end1 (+ gap gap-size)
+		    :start2 point :end2 gap))
+	  (t (let ((point-in-store (+ point gap-size)))
+	       (replace store store
+			:start1 gap :end1 (- point-in-store gap-size)
+			:start2 (+ gap gap-size) :end2 point-in-store)))))
   (setf (gap buf) point))
 
-(defun ensure-point-gap (buf position len)
+(defgeneric ensure-point-gap (buf position len))
+
+(defmethod ensure-point-gap ((buf flexivector-base) position len)
   (when (not (eql position (gap buf)))
     (gap-to-insertion-point buf position))
   (unless (<= len (gap-size buf))
@@ -113,14 +141,21 @@ of size ~S"
       (setf (store buf) new-store)
       (setf (gap-size buf) new-gap-size))))
 
-(defun update-flexivector-for-insertion (buf len)
+(defgeneric update-flexivector-for-insertion (buf len)
+  (:documentation "Update the flexivector for an insertion at the gap (LEN is 
+ positive) or a backwards deletion at the gap (LEN is negative)."))
+
+(defmethod update-flexivector-for-insertion ((buf flexivector-base) len)
   (incf (size buf) len)
   (incf (gap buf) len)
   (decf (gap-size buf) len))
 
-(defgeneric insert (vector thing &key position))
+(defgeneric insert (vector thing &key position)
+  (:documentation "Generalized insertion of THING into an ordered
+ CONTAINTER at the generalized POSITION."))
 
 (defmethod insert ((buf flexivector) (c character) &key (position 0))
+  "Insert character C into flexivector BUF at POSITION."
   (ensure-point-gap buf position 1)
   (setf (schar (store buf) position) c)
   (update-flexivector-for-insertion buf 1)
@@ -128,21 +163,29 @@ of size ~S"
 
 (defmethod insert ((buf flexivector) (str string)
 		    &key (position 0) (start 0) (end (length str)))
+  "Insert string STR into flexivector BUF at POSITION."
   (let ((len (length str)))
     (ensure-point-gap buf position len)
     (replace (store buf) str :start1 position :start2 start :end2 end)
     (update-flexivector-for-insertion buf len))
   buf)
 
-(defgeneric delete-char (buf &optional n &key position))
+(defgeneric delete-element (buf &optional n &key position))
 
-(defmethod delete-char ((buf flexivector)  &optional (n 1) &key (position 0))
+
+(defmethod delete-element ((buf flexivector-base)  &optional (n 1)
+			   &key (position 0))
   (ensure-point-gap buf position 0)
   (if (> n 0)
       (progn
 	(incf (gap-size buf) n)
 	(decf (size buf) n))
       (update-flexivector-for-insertion buf n)))
+
+(defgeneric delete-char (buf &optional n &key position))
+
+(defmethod delete-char ((buf flexivector) &optional (n 1) &key (position 0))
+  (delete-element buf n :position position))
 
 (defgeneric flexivector-string (buf &key start end))
 
