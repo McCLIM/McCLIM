@@ -187,7 +187,8 @@
   (let ((*standard-input* (frame-standard-input frame))
 	(*standard-output* (frame-standard-output frame))
 	(*query-io* (frame-query-io frame))
-	(*error-output* (frame-error-output frame))
+	;; during development, don't alter *error-output*
+	;(*error-output* (frame-error-output frame))
 	(*command-parser* command-parser)
 	(*command-unparser* command-unparser)
 	(*partial-command-parser* partial-command-parser)
