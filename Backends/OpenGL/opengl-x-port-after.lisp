@@ -20,7 +20,9 @@
 (in-package :CLIM-INTERNALS)
 
 
+; should be in the port structure...
 (defparameter *x-visual* nil)
+; perhaps not this one
 (defparameter *opengl-glx-context* nil)
 
 ; (setf (get :x11 :port-type) 'opengl-port)
@@ -79,8 +81,16 @@
 (defmacro key-mod (mask)
   `(mod ,mask xlib-gl:Button1MotionMask))
 
+(defun find-leaf-sheet-containing-point (frame x y)
+  (loop with last = nil
+        with prev = nil
+        while (setf prev last
+                    last (child-containing-position (frame x y)))
+        finally (return last)))
+
 (defun get-next-event-aux (port)
-  (let ((event (xlib-gl:make-xevent)))
+  (let ((event   (opengl-port-xevent port))
+        (display (opengl-port-display port)))
     (xlib-gl:XNextEvent (opengl-port-display port) event)
     (let ((event-type (xlib-gl:xanyevent-type event)))
       (prog1
@@ -169,57 +179,64 @@
 		   (declare (type fixnum x y modifier)
 			    (type (unsigned-byte 24) sheet-signature)
 			    (type bignum  time))
-		   (when (eq (xlib-gl:xmotionevent-window event) (sheet-direct-mirror (opengl-port-top-level port)))
-		   (if (= sheet-signature *current-sheet-signature*)
-		       ;; pointer is in the same sheet as for the previous event
-		       (make-instance 'pointer-motion-event
-			 :pointer 0
-			 :button (find-button modifier)
-			 :x x
-			 :y y
-			 :sheet sheet
-			 :modifier-state (key-mod modifier)
-			 :timestamp time)
-
-		       ;; not in same sheet
-		       (when sheet
-			 (let ((button (find-button modifier))
-			       (modifier (key-mod modifier))
-			       (last-sheet (find-related-sheet port)))
-			   (declare (type fixnum button modifier)
-				    (type sheet last-sheet))
-			   (progn
-			     (unless (= *current-sheet-signature* 0)
-			       (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-native-region last-sheet)
-				 (declare (type coordinate x1 y1 x2 y2))
-				 (dispatch-event last-sheet
-						 (make-instance 'pointer-exit-event
-						   :pointer 0
-						   :button button
-						   :x (max x1 (min x x2))
-						   :y (max y1 (min y y2))
-						   :sheet last-sheet
-						   :modifier-state modifier
-						   :timestamp (- time 2)))))
-					; change the current-sheet
-			     (setf *current-sheet-signature* sheet-signature)
-			     (dispatch-event sheet
-					     (make-instance 'pointer-enter-event
-					       :pointer 0
-					       :button button
-					       :x x
-					       :y y
-					       :sheet sheet
-					       :modifier-state modifier
-					       :timestamp (1- time)))
-			     (make-instance 'pointer-motion-event
+		   (when (eq (xlib-gl:xmotionevent-window event)
+                             (sheet-direct-mirror (opengl-port-top-level port)))
+		     (if (= sheet-signature *current-sheet-signature*)
+		         ;; pointer is in the same sheet as for the previous event
+                         (let ((peek    (opengl-port-xpeek  port)))
+                           (unless (and (when (> (xlib-gl:XPending display) 0)
+                                          (xlib-gl:XPeekEvent display peek)
+                                          t)
+                                         (eq (xlib-gl:XAnyEvent-Type peek)
+                                            xlib-gl:MotionNotify))
+		             (make-instance 'pointer-motion-event
 			       :pointer 0
-			       :button button
+			       :button (find-button modifier)
 			       :x x
 			       :y y
 			       :sheet sheet
-			       :modifier-state modifier
-			       :timestamp time))))))))
+			       :modifier-state (key-mod modifier)
+			       :timestamp time)))
+
+		         ;; not in same sheet
+		         (when sheet
+			   (let ((button (find-button modifier))
+			         (modifier (key-mod modifier))
+			         (last-sheet (find-related-sheet port)))
+			     (declare (type fixnum button modifier)
+				      (type sheet last-sheet))
+			     (progn
+			       (unless (= *current-sheet-signature* 0)
+			         (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-native-region last-sheet)
+				   (declare (type coordinate x1 y1 x2 y2))
+				   (dispatch-event last-sheet
+						   (make-instance 'pointer-exit-event
+						     :pointer 0
+						     :button button
+						     :x (max x1 (min x x2))
+						     :y (max y1 (min y y2))
+						     :sheet last-sheet
+						     :modifier-state modifier
+						     :timestamp (- time 2)))))
+					  ; change the current-sheet
+			       (setf *current-sheet-signature* sheet-signature)
+			       (dispatch-event sheet
+					       (make-instance 'pointer-enter-event
+					         :pointer 0
+					         :button button
+					         :x x
+					         :y y
+					         :sheet sheet
+					         :modifier-state modifier
+					         :timestamp (1- time)))
+			         (make-instance 'pointer-motion-event
+			           :pointer 0
+			           :button button
+			           :x x
+			           :y y
+			           :sheet sheet
+			           :modifier-state modifier
+			           :timestamp time))))))))
 			 
 		((eq event-type xlib-gl:configurenotify)
 		 ; the configure notification will be only send to the top-level-sheet
@@ -250,8 +267,7 @@
 						      (+ x (xlib-gl:xexposeevent-width event))
 						      (+ y (xlib-gl:xexposeevent-height event))))))
 		
-		(t nil))
-	(xlib-gl:free-xevent event)))))
+		(t nil))))))
 
 
 ;; OpenGL graft
@@ -295,33 +311,40 @@
 
 ;; top-level-sheet-pane
 
+; Integrate with the aux
 (defmethod realize-mirror ((port opengl-port) (sheet top-level-sheet-pane))
   (let ((display (opengl-port-display port))
 	(screen-id (or (cadr (member :screen-id (port-server-path port))) 0))
 	(root (opengl-port-root port)))
-    (setf *x-visual*
-	  (gl:glXChooseVisual display screen-id
-			      (make-array 3 :element-type '(signed-byte 32)
-					  :initial-contents (list gl:GLX_RGBA gl:GLX_DOUBLEBUFFER xlib-gl:None))))
+    (unless *x-visual*
+      (setf *x-visual*
+	    (gl:glXChooseVisual
+                display screen-id
+                (make-array 3
+                     :element-type '(signed-byte 32)
+                     :initial-contents (list gl:GLX_RGBA gl:GLX_DOUBLEBUFFER xlib-gl:None)))))
     (when (zerop *x-visual*)
       (error "Error with X-Windows : couldn't get an RGB, double-buffered visual."))
-    (let ((attributes (xlib-gl:make-xsetwindowattributes)))
-      (xlib-gl:set-xsetwindowattributes-bit_gravity! attributes xlib-gl:NorthWestGravity)
-      (xlib-gl:set-xsetwindowattributes-colormap! attributes
-					       (xlib-gl:XcreateColormap display root
-								     (xlib-gl:XVisualInfo-visual *x-visual*)
-								     xlib-gl:AllocNone))
-      (xlib-gl:set-xsetwindowattributes-event_mask! attributes
-						 (+ xlib-gl:ExposureMask xlib-gl:KeyPressMask xlib-gl:KeyReleaseMask
-						    xlib-gl:ButtonPressMask xlib-gl:ButtonReleaseMask
-						    xlib-gl:PointerMotionMask
-						    xlib-gl:EnterWindowMask xlib-gl:LeaveWindowMask
-						    xlib-gl:StructureNotifyMask))
+    (let ((attributes (xlib-gl:make-XSetWindowAttributes)))
+      (xlib-gl:set-XSetWindowAttributes-Bit_Gravity! attributes xlib-gl:NorthWestGravity)
+      (xlib-gl:set-XSetWindowAttributes-Colormap!
+         attributes
+         (xlib-gl:XCreateColormap
+            display
+            root
+            (xlib-gl:XVisualInfo-visual *x-visual*)
+            xlib-gl:AllocNone))
+      (xlib-gl:Set-XSetWindowAttributes-Event_Mask!
+         attributes
+         (logior xlib-gl:ExposureMask    xlib-gl:KeyPressMask      xlib-gl:KeyReleaseMask
+                 xlib-gl:ButtonPressMask xlib-gl:ButtonReleaseMask xlib-gl:PointerMotionMask
+                 xlib-gl:EnterWindowMask xlib-gl:LeaveWindowMask   xlib-gl:StructureNotifyMask))
       (let ((window (xlib-gl:XCreateWindow display root 0 0 100 100 0
-					(xlib-gl:XVisualInfo-depth *x-visual*) xlib-gl:InputOutput
-					(xlib-gl:XVisualInfo-visual *x-visual*)
-					(+ xlib-gl:CWBitGravity xlib-gl:CWColormap xlib-gl:CWEventMask)
-					attributes))
+                        (xlib-gl:XVisualInfo-depth *x-visual*)
+                        xlib-gl:InputOutput
+                        (xlib-gl:XVisualInfo-visual *x-visual*)
+                        (+ xlib-gl:CWBitGravity xlib-gl:CWColormap xlib-gl:CWEventMask)
+                        attributes))
 	    (pretty-name (frame-pretty-name (pane-frame sheet))))
 	(setf *opengl-glx-context* (gl:glXCreateContext display *x-visual* NULL 1))
 	(when (zerop *opengl-glx-context*)
@@ -332,7 +355,7 @@
 	(setf (opengl-port-top-level port) sheet)
 	(xlib-gl:XStoreName display window pretty-name)
 	(xlib-gl:XSetIconName display window pretty-name)
-	(gl:glXMakeCurrent display window *opengl-glx-context*)
+	(gl:GLXMakeCurrent display window *opengl-glx-context*)
 	(xlib-gl:free-xsetwindowattributes attributes)))))
 
 (defmethod port-mirror-width ((port opengl-port) (sheet top-level-sheet-pane))
@@ -388,21 +411,29 @@
 	(attributes (xlib-gl:make-xsetwindowattributes)))
     (xlib-gl:set-xsetwindowattributes-bit_gravity! attributes xlib-gl:NorthWestgravity)
     (xlib-gl:set-xsetwindowattributes-override_redirect! attributes 1)
-    (xlib-gl:set-xsetwindowattributes-colormap! attributes (xlib-gl:XcreateColormap display root
-									      (xlib-gl:XVisualInfo-visual *x-visual*)
-									      xlib-gl:AllocNone))
-    (xlib-gl:set-xsetwindowattributes-event_mask! attributes
-					       (+ xlib-gl:ExposureMask xlib-gl:KeyPressMask xlib-gl:KeyReleaseMask
-						  xlib-gl:ButtonPressMask xlib-gl:ButtonReleaseMask
-						  xlib-gl:PointerMotionMask
-						  xlib-gl:EnterWindowMask xlib-gl:LeaveWindowMask
-						  xlib-gl:StructureNotifyMask xlib-gl:OwnerGrabButtonMask))
+    (xlib-gl:set-xsetwindowattributes-colormap!
+       attributes
+       (xlib-gl:XcreateColormap display root
+          (xlib-gl:XVisualInfo-visual *x-visual*)
+          xlib-gl:AllocNone))
+    (xlib-gl:set-xsetwindowattributes-event_mask!
+       attributes
+       (logior xlib-gl:ExposureMask
+               xlib-gl:KeyPressMask
+               xlib-gl:KeyReleaseMask
+	       xlib-gl:ButtonPressMask
+               xlib-gl:ButtonReleaseMask
+	       xlib-gl:PointerMotionMask
+               xlib-gl:EnterWindowMask
+               xlib-gl:LeaveWindowMask
+               xlib-gl:StructureNotifyMask
+               xlib-gl:OwnerGrabButtonMask))
     (let ((window (xlib-gl:XCreateWindow display root 0 0 100 100 1
-				      (xlib-gl:XVisualInfo-depth *x-visual*) xlib-gl:InputOutput
-				      (xlib-gl:XVisualInfo-visual *x-visual*)
-				      (+ xlib-gl:CWBitGravity xlib-gl:CWOverrideRedirect
-					 xlib-gl:CWColormap xlib-gl:CWEventMask)
-				      attributes)))
+                     (xlib-gl:XVisualInfo-depth *x-visual*) xlib-gl:InputOutput
+                     (xlib-gl:XVisualInfo-visual *x-visual*)
+                     (logior xlib-gl:CWBitGravity xlib-gl:CWOverrideRedirect
+                             xlib-gl:CWColormap xlib-gl:CWEventMask)
+                     attributes)))
       (port-register-mirror port sheet window)
       (setf (opengl-port-top-level port) sheet)
       (with-slots (signature->sheet) port

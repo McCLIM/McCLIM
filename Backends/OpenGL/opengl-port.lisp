@@ -24,10 +24,18 @@
 ;; OpenGL port class
 
 (defclass opengl-port (basic-port opengl-graphical-system-port-mixin)
-  ((signature->sheet :type hash-table
-		     :initform (make-hash-table))
-   (sheet->signature-dl :type hash-table
-			:initform (make-hash-table :test #'eq))))
+  ((signature->sheet
+     :type hash-table
+     :initform (make-hash-table))
+   (sheet->signature-dl
+     :type hash-table
+     :initform (make-hash-table :test #'eq))
+   (xevent
+     :initform (xlib-gl:make-xevent)
+     :reader opengl-port-xevent)
+   (xpeek
+     :initform (xlib-gl:make-xevent)
+     :reader opengl-port-xpeek)))
 
 (defun recognize-sheet (port signature)
   (declare (type (unsigned-byte 24) signature)
@@ -46,7 +54,8 @@
   `(cdr (opengl-sheet-infos ,port ,sheet)))
 
 (defmethod port-register-signature ((port opengl-port) sheet)
-  (declare (type immediate-repainting-mixin sheet))
+ ;(declare (type immediate-repainting-mixin sheet))
+  (declare (type clim-repainting-mixing sheet))
   (let ((signature (get-signature)))
     (declare (type (unsigned-byte 24) signature))
     (with-slots (sheet->signature-dl signature->sheet) port
@@ -54,7 +63,8 @@
 	    (gethash sheet sheet->signature-dl) (cons signature (gl:glGenLists 1))))))
 
 (defmethod port-unregister-signature ((port opengl-port) sheet)
-  (declare (type immediate-repainting-mixin sheet))
+ ;(declare (type immediate-repainting-mixin sheet))
+  (declare (type clim-repainting-mixing sheet))
   (with-slots (sheet->signature-dl signature->sheet) port
     (let ((signature-and-dl (gethash sheet sheet->signature-dl)))
       (declare (type cons signature-and-dl))
@@ -106,7 +116,7 @@
   (declare (type opengl-port port)
 	   (type sheet sheet)
 	   (type boolean mode))
-  (when (typep sheet 'immediate-repainting-mixin)
+  (when (typep sheet 'clim-repainting-mixin)
     (if mode
         #+nil
 	(repaint-sheet sheet (sheet-region sheet))
@@ -141,7 +151,7 @@
       (call-next-method)
       (draw-the-entire-scene (port sheet))))
 
-(defmethod handle-repaint :around ((sheet immediate-repainting-mixin) region)
+(defmethod handle-repaint :around ((sheet clim-repainting-mixin) region)
   (declare (ignore region))
   (if *drawing-flag*
       (call-next-method)
@@ -195,7 +205,9 @@
 (defparameter *current-sheet-signature* (the (unsigned-byte 24) 0))
 
 (defmacro increment-signature (signature)
-  `(setf ,signature (the (unsigned-byte 24) (+ (the (unsigned-byte 24) 1) ,signature))))
+  `(setf ,signature (the (unsigned-byte 24) (+ (the (unsigned-byte 24) 1) ,signature)))
+ ;`(setf ,signature (the (unsigned-byte 24) (random #xFFF)))
+   )
 
 (defun initialize-signature-count ()
   (let ((count 0))
@@ -208,8 +220,35 @@
   (recognize-sheet port *current-sheet-signature*))
 
 (defmacro pixel-to-color (pixel)
-  `(+ (aref ,pixel 0) (ash (aref ,pixel 1) 8) (ash (aref ,pixel 2) 16)))
+  `(logior (aref ,pixel 0) (ash (aref ,pixel 1) 8) (ash (aref ,pixel 2) 16)))
 
+#|
+
+ok, there is a very big vulnerability in this design, and that is that if your
+pixel layout changes, your signatures need to reflect this, or your events
+will disappear into the blue yonder...
+
+The following is for a 565 16 bit display, which is what I happen to use.
+
+I'll have a look at fixing this in a more portable fashion in a bit,
+until then, feel free to adjust the numbers, etc - BTS
+
+|#
+
+(defmacro color-to-signature (color) ; 565
+  `(logior (ash (logand ,color #b000000000000000011111000) -3)
+           (ash (logand ,color #b000000001111110000000000) -5)
+           (ash (logand ,color #b111110000000000000000000) -8)))
+
+(defmacro signature-to-color (signature)
+  `(logior (ash (logand ,signature #b0000000000011111) 3)
+           (ash (logand ,signature #b0000011111100000) 5)
+           (ash (logand ,signature #b1111100000000000) 8)))
+
+;(defmacro color-to-signature (color) color)
+;(defmacro signature-to-color (signature) signature)
+
+; this does the drawing
 (defun find-sheet-signature (port x y)
   (let ((pixel (make-array 3 :element-type '(unsigned-byte 8)))
 	(sx (coerce x 'double-float))
@@ -225,11 +264,18 @@
     (opengl-draw port (opengl-port-top-level port) nil)
     (gl:glReadPixels 0 0 1 1 gl:GL_RGB gl:GL_UNSIGNED_BYTE (find-array-address pixel))
     (gl:glViewport (aref viewport-infos 0) (aref viewport-infos 1)
-		   (aref viewport-infos 2) (aref viewport-infos 3))
+                   (aref viewport-infos 2) (aref viewport-infos 3))
     (gl:glMatrixMode gl:GL_PROJECTION)
     (gl:glPopMatrix)
     (gl:glMatrixMode gl:GL_MODELVIEW)
-    (pixel-to-color pixel)))
+
+    #+nil
+    (progn ; debugging - to see the fields
+       (opengl-draw port (opengl-port-top-level port) nil)
+       (format *debug-io* "pixel = ~A~%" (color-to-signature (pixel-to-color pixel)))
+       (flush port (opengl-port-top-level port))) ; to see what's happening
+
+    (color-to-signature (pixel-to-color pixel))))
 
   
 ;; Event
@@ -265,10 +311,13 @@
 
 ; 255 represents the Maximum number with (unsigned-byte 8) representation = (1111 1111)base2
 (defmacro set-color (signature)
-  `(gl:glColor3ub (logand ,signature 255)
-		  (logand (ash ,signature -8) 255)
-		  (logand (ash ,signature -16) 255)))
+  `(let ((color (signature-to-color ,signature)))
+     (gl:glColor3ub (logand      color      #xFF)
+		    (logand (ash color  -8) #xFF)
+		    (logand (ash color -16) #xFF))))
 
+; this is where we draw the sheets in their signature colours, in order to determine
+; where we clicked, I'm not convinced that this is a particularly good idea, myself
 (defun recompute-recognizing-drawing (sheet)
   (let* ((port (port sheet))
 	 (infos (opengl-sheet-infos port sheet))
@@ -439,12 +488,12 @@
        nil)
       ; default : region intersection/union/difference are not handled. [yet?]
       ; error
-        )))
+      (format *debug-io* "Tried to draw an unknown type of shape ~A~%" (type-of native-region)))))
 
-(defmethod note-sheet-region-changed :after ((sheet immediate-repainting-mixin))
+(defmethod note-sheet-region-changed :after ((sheet clim-repainting-mixin))
   (recompute-recognizing-drawing sheet))
   
-(defmethod note-sheet-transformation-changed :after ((sheet immediate-repainting-mixin))
+(defmethod note-sheet-transformation-changed :after ((sheet clim-repainting-mixin))
   (recompute-recognizing-drawing sheet))
 
 (defmethod port-copy-area ((port opengl-port) sheet from-x from-y width height to-x to-y)
@@ -476,10 +525,10 @@
   nil)
 
 
-(defmethod note-sheet-grafted :after ((sheet immediate-repainting-mixin))
+(defmethod note-sheet-grafted :after ((sheet clim-repainting-mixin))
   (port-register-signature (port sheet) sheet))
 
-(defmethod note-sheet-degrafted :after ((sheet immediate-repainting-mixin))
+(defmethod note-sheet-degrafted :after ((sheet clim-repainting-mixin))
   (port-unregister-signature (port sheet) sheet))
 
 (defmethod window-clear ((sheet mirrored-sheet-mixin))
