@@ -379,7 +379,7 @@
   (error 'simple-parse-error
 	 :format-control format-string :format-arguments format-args))
 
-(define-condition input-not-of-required-type (error)
+(define-condition input-not-of-required-type (parse-error)
   ((string :reader not-required-type-string :initarg :string)
    (type :reader not-required-type-type :initarg :type))
   (:report (lambda (condition stream)
