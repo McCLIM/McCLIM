@@ -1988,6 +1988,7 @@
    #:text-style-width
    ;; Text selection protocol
    #:selection-owner
+   #:selection-timestamp
    #:selection-event
    #:selection-clear-event
    #:selection-notify-event

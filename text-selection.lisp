@@ -244,7 +244,8 @@ the incoming selection."))
                                            :sheet owner
                                            :selection :primary))))
       (when (bind-selection (port pane) pane (event-timestamp event))
-	(setf (selection-owner (port pane)) pane)))))
+	(setf (selection-owner (port pane)) pane)
+	(setf (selection-timestamp (port pane)) (event-timestamp event))))))
 
 (defun repaint-markings (pane old-markings new-markings)
   (let ((old-region (reduce #'region-union (mapcar #'(lambda (x) (marking-region pane x)) old-markings)

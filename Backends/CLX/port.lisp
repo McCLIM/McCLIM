@@ -165,7 +165,8 @@
    (design-cache :initform (make-hash-table :test #'eq))
    (pointer :reader port-pointer)
    (pointer-grab-sheet :accessor pointer-grab-sheet :initform nil)
-   (selection-owner :initform nil :accessor selection-owner)))
+   (selection-owner :initform nil :accessor selection-owner)
+   (selection-timestamp :initform nil :accessor selection-timestamp)))
 
 (defun parse-clx-server-path (path)
   (pop path)
@@ -1314,19 +1315,23 @@
 
 ;; we at least want to support:
 
-;; :TEXT, :STRING
-;;
-;; :UTF8_STRING
-;;     As seen from xterm [make that the prefered encoding]
-;;
-;; :COMPOUND_TEXT
-;;    Perhaps relatively easy to produce, hard to grok.
-;;
-
+;;; :TEXT, :STRING
+;;;
+;;; :UTF8_STRING
+;;;    As seen from xterm [make that the preferred encoding]
+;;;
+;;; :COMPOUND_TEXT
+;;;    Perhaps relatively easy to produce, hard to grok.
+;;;
+;;; :TARGETS
+;;;    Clients want legitimately to find out what we support.
+;;;
+;;; :TIMESTAMP
+;;;    Clients want to know when we took ownership of the selection.
 
 ;;; Utilities
 
-(defun utf-8-encode (code-points)
+(defun utf8-string-encode (code-points)
   (let ((res (make-array (length code-points)
                          :adjustable t
                          :fill-pointer 0)))
@@ -1379,7 +1384,8 @@
   (xlib:set-selection-owner
    (clx-port-display port)
    :primary nil time)
-  (setf (selection-owner port) nil))
+  (setf (selection-owner port) nil)
+  (setf (selection-timestamp port) nil))
 
 (defmethod request-selection ((port clx-port) requestor time)
   (xlib:convert-selection :primary :STRING requestor :bounce time))
@@ -1399,50 +1405,88 @@
 
 ;; Incredibly crappy broken unportable Latin 1 encoder which should be
 ;; replaced by various implementation-specific versions.
-(defun latin1-encode (string)
-  (delete-if (lambda (x) (or (< x 0)
-                             (> x 255)))
-             (map 'vector #'char-code string)))
+(flet ((latin1-code-p (x)
+	 (not (or (< x 9) (< 10 x 32) (< #x7f x #xa0) (> x 255)))))
+  (defun string-encode (string)
+    (delete-if-not #'latin1-code-p (map 'vector #'char-code string)))
+  (defun exactly-encodable-as-string-p (string)
+    (every #'latin1-code-p (map 'vector #'char-code string))))
 
-;; TODO: INCR property?
-(defmethod send-selection ((port clx-port) (event clx-selection-request-event) string)
+;;; TODO: INCR property?
+;;;
+;;; FIXME: per ICCCM we MUST support :MULTIPLE
+(defmethod send-selection
+    ((port clx-port) (event clx-selection-request-event) string)
   (let ((requestor (selection-event-requestor event))
         (property  (selection-event-property event))
         (target    (selection-event-target event))
         (time      (event-timestamp event)))
     (when (null property)
-      (format *trace-output* "~&* Requestor property is null! *~%"))    
-    (describe event *trace-output*)
-    (finish-output *trace-output*)
+      (format *trace-output* "~&* Requestor property is null! *~%"))
+    #+nil ; debugging output
+    (progn
+      (describe event *trace-output*)
+      (finish-output *trace-output*))
     (flet ((send-event (&key target (property property))
+	     ;; debugging output, but the KDE Klipper client turns out
+	     ;; to poll other clients for selection, which means it
+	     ;; would be bad to print at every request.
+	     #+nil
              (format *trace-output*
                      "~&;; clim-clx::send-selection - Requested target ~A, sent ~A to property ~A.~%"
                      (selection-event-target event)
                      target
-                     property)                     
+                     property)
              (xlib:send-event requestor
-                            :selection-notify nil
-                            :window requestor
-                            :selection :primary
-                            :target target
-                            :property property
-                            :time time)))
-      (cond ((member target '(:UTF8_STRING :TEXT))
-             (xlib:change-property requestor property
-                                   (utf-8-encode
-                                    (concatenate 'vector (map 'vector #'char-code string)))
-                                   :UTF8_STRING
-                                   8)
-             (send-event :target :UTF8_STRING))
-            ((member target '(:STRING :COMPOUND_TEXT))
-             (xlib:change-property requestor property                                   
-                                   (latin1-encode string)
-                                   :COMPOUND_TEXT
-                                   8)            
-             (send-event :target :COMPOUND_TEXT))
-            (t
-             (format *trace-output*
-                     "~&;; Warning, unhandled type \"~A\". Trying to send as UTF8_STRING.~%"
-                     target)
-             (send-event :target :UTF8_STRING :property nil)))) ;; ...
+			      :selection-notify nil
+			      :window requestor
+			      :event-window requestor
+			      :selection :primary
+			      :target target
+			      :property property
+			      :time time)))
+      (case target
+	((:UTF8_STRING)
+	 (xlib:change-property requestor property
+			       (utf8-string-encode
+				(map 'vector #'char-code string))
+			       :UTF8_STRING 8)
+	 (send-event :target :UTF8_STRING))
+	((:STRING :COMPOUND_TEXT)
+	 (xlib:change-property requestor property
+			       (string-encode string)
+			       target 8)            
+	 (send-event :target target))
+	((:TEXT)
+	 (cond
+	   ((exactly-encodable-as-string-p string)
+	    (xlib:change-property requestor property
+				  (string-encode string)
+				  :STRING 8)
+	    (send-event :target :STRING))
+	   (t 
+	    (xlib:change-property requestor property
+				  (utf8-string-encode
+				   (map 'vector #'char-code string))
+				  :UTF8_STRING 8)
+	    (send-event :target :UTF8_STRING))))
+	((:TARGETS)
+	 (let* ((display (clx-port-display port))
+		(targets (mapcar (lambda (x) (xlib:intern-atom display x))
+				 '(:TARGETS :STRING :TEXT :UTF8_STRING
+				   :COMPOUND_TEXT :TIMESTAMP))))
+	   (xlib:change-property requestor property targets target 32))
+	 (send-event :target :TARGETS))
+	((:TIMESTAMP)
+	 (when (null (selection-timestamp port))
+	   (format *trace-output* "~&;; selection-timestamp is null!~%"))
+	 (xlib:change-property requestor property
+			       (list (selection-timestamp port))
+			       target 32)
+	 (send-event :target :TIMESTAMP))
+	(t
+	 (format *trace-output*
+		 "~&;; Warning, unhandled type \"~A\". ~
+                  Sending property NIL to target.~%" target)
+	 (send-event :target target :property nil))))
     (xlib:display-force-output (xlib:window-display requestor))))
