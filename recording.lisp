@@ -78,6 +78,8 @@
 ;;; 16.2.1. The Basic Output Record Protocol
 #+:cmu(declaim (ftype (function (output-record) (values rational rational))
 		      output-record-position))
+;; XXX What does #+:CMU mean? FTYPE was excluded from ANSI CL? Other
+;; compilers try to check type declarations?
 (defgeneric output-record-position (record)
   (:documentation
    "Returns the x and y position of RECORD. The position is the
@@ -1107,16 +1109,15 @@ were added."
                     ;; coord-seq argument into a vector.
                     (let (,@(when (member 'coord-seq args)
                                   (list `(coord-seq
-                                          (if (listp coord-seq)
-                                              (coerce coord-seq 'vector)
-                                              coord-seq)))))
+                                          (if (vectorp coord-seq)
+                                              coord-seq
+                                              (coerce coord-seq 'vector))))))
                       (make-instance ',class-name
                                      :stream stream
                                      ,@arg-list))))
 	       (stream-add-output-record stream record)))
 	   (when (stream-drawing-p stream)
-             (with-identity-transformation (medium)
-               (,method-name medium ,@args)))))
+             (,method-name medium ,@args))))
        (defmethod replay-output-record ((record ,class-name) stream
 					&optional (region +everywhere+)
                                         (x-offset 0) (y-offset 0))
