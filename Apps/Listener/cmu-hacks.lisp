@@ -43,7 +43,7 @@
 	       (replace so-far input)
 	       (replace-input stream input :rescan nil)))
  	(multiple-value-bind (object success input)
-	    (complete-input-rescan stream func partial-completers so-far)
+	    (complete-input-rescan stream func partial-completers so-far allow-any-input)
 	  (when success
 	    (return-from complete-input (values object success input))))
 	(loop
