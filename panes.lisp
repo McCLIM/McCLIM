@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.61 2002/02/23 23:22:24 mikemac Exp $
+;;; $Id: panes.lisp,v 1.62 2002/02/25 05:50:39 strandh Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -172,6 +172,14 @@
   `(space-requirement-min-width (pane-space-requirement ,pane)))
 (defmacro sr-min-height (pane)
   `(space-requirement-min-height (pane-space-requirement ,pane)))
+
+(defclass layout-protocol-mixin ()
+  ((space-requirement :accessor pane-space-requirement
+                      :initform nil)
+   (current-width     :accessor pane-current-width
+                      :initform nil)
+   (current-height    :accessor pane-current-height
+                      :initform nil) ))
 
 (defclass pane (standard-sheet-input-mixin
 		;;temporary-medium-sheet-output-mixin
@@ -402,14 +410,6 @@
     (merge-user-specified-options pane sr)))
 
 ;;
-
-(defclass layout-protocol-mixin ()
-  ((space-requirement :accessor pane-space-requirement
-                      :initform nil)
-   (current-width     :accessor pane-current-width
-                      :initform nil)
-   (current-height    :accessor pane-current-height
-                      :initform nil) ))
 
 (defmethod allocate-space :around ((pane layout-protocol-mixin) width height)
   (unless (and (eql (pane-current-width pane) width)
