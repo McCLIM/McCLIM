@@ -746,7 +746,6 @@
 	(make-translation-transformation border-width border-width))
       (allocate-space child (- width (* 2 border-width)) (- height (* 2 border-width))))))
 
-
 ;; RESTRAINING PANE
 
 (defclass restraining-pane (composite-pane) ())
