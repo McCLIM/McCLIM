@@ -1556,17 +1556,18 @@ function lambda list"))
                                                    (frame-command-table
                                                     frame))))
                (loop for translator in maybe-translators
-                     when (test-presentation-translator translator
-                                                        presentation
-                                                        context-ptype
-                                                        frame
-                                                        window
-                                                        x y
-                                                        :event event
-                                                        :modifier-state
-                                                        modifier-state
-                                                        :for-menu for-menu
-							:button button)
+                     when (and (or (not for-menu) (eql for-menu (menu translator)))
+                               (test-presentation-translator translator
+                                                             presentation
+                                                             context-ptype
+                                                             frame
+                                                             window
+                                                             x y
+                                                             :event event
+                                                             :modifier-state
+                                                             modifier-state
+                                                             :for-menu for-menu
+                                                             :button button))
                      do (funcall func translator presentation context)
                         (setq found t)))))
       (loop for context in input-context
@@ -1719,35 +1720,35 @@ function lambda list"))
   (let (items)
     (map-applicable-translators
      #'(lambda (translator presentation context)
-	 (when (eql (menu translator) for-menu)
-	   (push 
-	    (make-presentation-translator-menu-item :translator translator
-						    :presentation presentation
-						    :context context)
-	    items)))
-     presentation input-context frame window x y :for-menu t)
-    (setq items (nreverse items))
-    (multiple-value-bind (item object event)
-        (menu-choose items
-                     :associated-window window
-                     :printer #'(lambda (item stream)
-                                  (document-presentation-translator
-                                   (presentation-translator-menu-item-translator item)
-                                   (presentation-translator-menu-item-presentation item)
-                                   (presentation-translator-menu-item-context item)
-                                   frame nil window x y
-                                   :stream stream))
-                     :label label
-                     :pointer-documentation *pointer-documentation-output*)
-      (declare (ignore object))
-      (when item
-	(multiple-value-bind (object ptype options)
-	    (call-presentation-translator (presentation-translator-menu-item-translator item)
-					  (presentation-translator-menu-item-presentation item)
-					  (presentation-translator-menu-item-context item)
-					  frame
-					  event
-					  window
-					  x y)
-	  (when ptype
-	    (funcall (cdr (presentation-translator-menu-item-context item)) object ptype event options)))))))
+	 (push
+          (make-presentation-translator-menu-item :translator translator
+                                                  :presentation presentation
+                                                  :context context)
+          items))
+     presentation input-context frame window x y :for-menu for-menu)
+    (when items
+      (setq items (nreverse items))
+      (multiple-value-bind (item object event)
+          (menu-choose items
+                       :associated-window window
+                       :printer #'(lambda (item stream)
+                                    (document-presentation-translator
+                                     (presentation-translator-menu-item-translator item)
+                                     (presentation-translator-menu-item-presentation item)
+                                     (presentation-translator-menu-item-context item)
+                                     frame nil window x y
+                                     :stream stream))
+                       :label label
+                       :pointer-documentation *pointer-documentation-output*)
+        (declare (ignore object))
+        (when item
+          (multiple-value-bind (object ptype options)
+              (call-presentation-translator (presentation-translator-menu-item-translator item)
+                                            (presentation-translator-menu-item-presentation item)
+                                            (presentation-translator-menu-item-context item)
+                                            frame
+                                            event
+                                            window
+                                            x y)
+            (when ptype
+              (funcall (cdr (presentation-translator-menu-item-context item)) object ptype event options))))))))
