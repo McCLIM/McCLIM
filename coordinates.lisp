@@ -35,7 +35,7 @@
 
 (defun coordinate-epsilon ()
   ;; tweak if you like
-  (* (expt 2 10) double-float-epsilon))
+  (* #.(expt 2 10) double-float-epsilon))
 
 (defun coordinate= (x y)
   (< (abs (- x y)) (coordinate-epsilon)))
