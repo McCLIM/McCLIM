@@ -186,7 +186,7 @@ by the number of variables in VARS."
 		(loop for ,tail-var on ,seq-var by #',(list-stepper var-length)
 		      do (,body-fun ,@list-args)))
 	       (vector
-		(loop for ,i from 0 below (length ,seq-var) by ,var-length
+		(loop for ,i of-type fixnum from 0 below (length ,seq-var) by ,var-length
 		      do (,body-fun ,@vector-args))))))
 	 ,@(when result-form
 	     `((let ,vars		;Bind variables to nil
@@ -380,3 +380,13 @@ in KEYWORDS removed."
          symbol)
         (t
          (error "~S does not look too good as a symbol."))))
+
+(defun gen-invoke-trampoline (fun to-bind to-pass body)
+  "Macro helper function, generates the LABELS / INVOKE-WITH-... ideom."
+  (let ((cont (gensym ".CONT.")))
+    `(labels ((,cont (,@to-bind)
+               (declare (ignorable ,@to-bind))
+               ,@body))
+      (declare (dynamic-extent #',cont))
+      (,fun ,@to-bind #',cont ,@to-pass))))
+
