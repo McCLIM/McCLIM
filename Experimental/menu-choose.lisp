@@ -256,7 +256,8 @@
     (menu presentation-type drawer
      &key x-position y-position cache unique-id id-test cache-value cache-test
      default-presentation pointer-documentation)
-  (funcall drawer menu presentation-type)
+  (with-room-for-graphics (menu :first-quadrant nil)
+    (funcall drawer menu presentation-type))
   (when (typep menu 'command-menu-pane)
     (with-bounding-rectangle* (x1 y1 x2 y2)
         (stream-output-history menu)
