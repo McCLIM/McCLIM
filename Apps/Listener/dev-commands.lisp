@@ -38,7 +38,6 @@
 (define-presentation-type slot-definition () :inherit-from 'expression)
 (define-presentation-type function-name () :inherit-from 'symbol)
 (define-presentation-type process () :inherit-from 'expression)
-
 (define-presentation-type generic-function () :inherit-from 't)
 
 (define-presentation-method presentation-typep
@@ -216,9 +215,9 @@
   "The apropos command stores its output here.")
 
 (defparameter *apropos-symbol-unbound-family* :fix)
-(defparameter *apropos-symbol-unbound-face* :roman)
+(defparameter *apropos-symbol-unbound-face*   :roman)
 (defparameter *apropos-symbol-bound-family*   :fix)
-(defparameter *apropos-symbol-bound-face*   :roman)
+(defparameter *apropos-symbol-bound-face*     :roman)
 
 ;; FIXME: Make this a present method specialzed on a view?
 
@@ -237,13 +236,10 @@
        (cond ((eql (symbol-package symbol)
                    (find-package "KEYWORD"))
               (make-rgb-color 0.46 0.0 0.0))
-             ((fboundp symbol)
-              (make-rgb-color 0.0 0.0 0.3))
-             ((find-class symbol nil)
-              (make-rgb-color 0.03 0.35 0.48))
-             ((boundp symbol)
-              (make-rgb-color 0.0 0.0 0.0))
-             (t (make-rgb-color 0.6 0.6 0.6))))
+             ((fboundp symbol)        (make-rgb-color 0.0  0.0  0.3))
+             ((find-class symbol nil) (make-rgb-color 0.03 0.35 0.48))
+             ((boundp symbol)         (make-rgb-color 0.0  0.0  0.0))
+             (t                       (make-rgb-color 0.6  0.6  0.6))))
     (with-drawing-options (stream :ink ink :text-style style)
       (with-output-as-presentation (stream symbol 'clim:symbol)
         (if show-package
@@ -350,28 +346,33 @@
 
 ;;; CLOS introspection commands
 
+(defparameter *graph-edge-ink* (make-rgb-color 0.72 0.72 0.72))
+(defparameter *graph-text-style* (make-text-style :fix :roman :normal))
+
 (defun class-grapher (stream class inferior-fun)
   "Does the graphing for Show Class Superclasses and Subclasses commands"
   (let ((normal-ink +foreground-ink+)
-        (arrow-ink  (make-rgb-color 0.72 0.72 0.72))	
-	(text-style (make-text-style :fix :roman :normal)))
+        (arrow-ink  *graph-edge-ink*)
+	(text-style *graph-text-style*))
     (with-drawing-options (stream :text-style text-style)
-    (format-graph-from-roots (list class)
-			     #'(lambda (class stream)                                 
-                                 (with-drawing-options (stream :ink normal-ink
-							       :text-style text-style)
-                                   (with-output-as-presentation (stream (clim-mop:class-name class) 'class-name)
-                                     ; (surrounding-output-with-border (stream :shape :drop-shadow)
+      (format-graph-from-roots (list class)
+                               #'(lambda (class stream)
+                                   (with-drawing-options (stream :ink normal-ink
+                                                                 :text-style text-style)
+                                     ;; Present class name rather than class here because the printing of the
+                                     ;; class object itself is rather long and freaks out the pointer doc pane.
+                                     (with-output-as-presentation (stream (clim-mop:class-name class) 'class-name)
+                                        ; (surrounding-output-with-border (stream :shape :drop-shadow)
 				       (princ (clim-mop:class-name class))))) ;)
-			     inferior-fun
-			     :stream stream
-                             :merge-duplicates T
-                             :graph-type :tree
-			     :orientation :horizontal
-			     :arc-drawer
-			     #'(lambda (stream foo bar x1 y1 x2 y2)
-				 (declare (ignore foo bar))
-				 (draw-arrow* stream x1 y1 x2 y2 :ink arrow-ink))))))
+                               inferior-fun
+                               :stream stream
+                               :merge-duplicates T
+                               :graph-type :tree
+                               :orientation :horizontal
+                               :arc-drawer
+                               #'(lambda (stream foo bar x1 y1 x2 y2)
+                                   (declare (ignore foo bar))
+                                   (draw-arrow* stream x1 y1 x2 y2 :ink arrow-ink))))))
 
 (defun frob-to-class (spec)
   (if (typep spec 'class)
@@ -418,7 +419,6 @@
 (defparameter *slot-readers-ink*  +black+)
 (defparameter *slot-writers-ink*  +black+)
 (defparameter *slot-documentation-ink* +turquoise4+)
-
 
 (defun present-slot (slot class &key (stream *standard-output*))
   "Formats a slot definition into a table row."
@@ -492,7 +492,7 @@
       (dolist (slot-b (clim-mop:class-direct-slots class))
         (when (eq name (clim-mop:slot-definition-name slot-b))
           (return-from earliest-slot-definer class)))))
-  (error "Slot ~W doesn't seem to be defined in ~W" slot class))
+  (error "Slot ~W does not appear to be defined in ~W" slot class))
 
 (defun class-sorted-slots (class)
   "Sort the slots in order of definition within the CPL, superclasses first."
@@ -567,13 +567,13 @@
                    (not (typep c 'standard-class))))
              classes))
 
-(defun x-specializer-direct-generic-functions (specializer)
+(defun x-specializer-direct-generic-functions (specializer)  ;; FIXME - move to CLIM-MOP
   #+PCL (pcl::specializer-direct-generic-functions specializer)
   #+SBCL (sb-pcl::specializer-direct-generic-functions specializer)
   #+openmcl-partial-mop
   (openmcl-mop:specializer-direct-generic-functions specializer)
   #-(or PCL SBCL openmcl-partial-mop)
-  (error "Sorry, not supported in your CL implementation. See the function X-SPECIALIZER-DIRECT-GENERIC-FUNCTION if you're interested in fixing this."))
+  (error "Sorry, not supported in your CL implementation. See the function X-SPECIALIZER-DIRECT-GENERIC-FUNCTION if you are interested in fixing this."))
 
 (defun class-funcs (class)
   (let ((classes (remove-ignorable-classes (copy-list (clim-mop:class-precedence-list class))))
@@ -582,23 +582,24 @@
       (setf gfs (append gfs (x-specializer-direct-generic-functions x))))
     (remove-duplicates gfs)))
 
-(defun not-really-symbol< (a b)
-  (when (and (consp a)
-             (second a)
-             (symbolp (second a)))
-    (setf a (second a)))
-  (when (and (consp b)
-             (second b)
-             (symbolp (second b)))
-    (setf b (second b)))
-  (unless (and (symbolp a) (symbolp b))
-    (return-from not-really-symbol< (string< (princ-to-string a)
-                                             (princ-to-string b))))
-  (cond ((not (eq (symbol-package a)
-                  (symbol-package b)))
-         (string< (package-name (symbol-package a))
-                  (package-name (symbol-package b))))
-        (T (string< (symbol-name a) (symbol-name b)))))
+(defun slot-name-sortp (a b)
+  (flet ((slot-name-symbol (x)
+           (or (and (consp x)
+                    (second x)
+                    (symbolp (second x))
+                    (second x))
+               x)))
+    (let ((a (slot-name-symbol a))
+          (b (slot-name-symbol b)))  
+      (if (and (symbolp a) (symbolp b))
+          (cond ((not (eq (symbol-package a)
+                          (symbol-package b)))
+                 (string< (package-name (symbol-package a))
+                          (package-name (symbol-package b))))
+                (T (string< (symbol-name a)
+                            (symbol-name b))))
+          (string< (princ-to-string a)
+                   (princ-to-string b))))))
 
 (define-command (com-show-class-generic-functions
                  :name "Show Class Generic Functions"
@@ -609,8 +610,8 @@
     (if (null class)
         (note "~A is not a defined class." class-spec)
       (let ((funcs (sort (class-funcs class) (lambda (a b)
-                                               (not-really-symbol< (clim-mop:generic-function-name a)
-                                                        (clim-mop:generic-function-name b))))))
+                                               (slot-name-sortp (clim-mop:generic-function-name a)
+                                                                (clim-mop:generic-function-name b))))))
         (with-text-size (T :small)
           (format-items funcs :printer (lambda (item stream)
                                          (present item 'generic-function :stream stream))
@@ -852,7 +853,7 @@
 (defun count-external-symbols (package)
   "Return the number of external symbols in PACKAGE."
   #+cmu  (values (lisp::external-symbol-count package))
-  #+sbcl (values (sb-int:external-symbol-count package))
+  #+sbcl (values (sb-int:package-external-symbol-count package))
   #-(or cmu sbcl) (portable-external-symbol-count package))
 
 (defun package-grapher (stream package inferior-fun)
