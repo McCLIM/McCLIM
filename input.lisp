@@ -382,3 +382,67 @@
 
 (defclass clim-sheet-input-mixin (#+clim-mp standard-sheet-input-mixin #-clim-mp immediate-sheet-input-mixin)
   ())
+
+;;;
+(defmacro tracking-pointer
+    ((sheet &rest args
+            &key pointer multiple-window transformp context-type highlight)
+     &body body)
+  (declare (ignorable pointer multiple-window transformp context-type highlight))
+  (when (eq sheet 't)
+    (setq sheet '*standard-output*))
+  (check-type sheet symbol)
+  (loop for event-name in '(:pointer-motion
+                            :presentation
+                            :pointer-button-press
+                            :presentation-button-press
+                            :pointer-button-release
+                            :presentation-button-release
+                            :keyboard)
+     for handler-name = (gensym (symbol-name event-name))
+     collect `(,handler-name ,@ (or (cdr (assoc event-name body))
+                                    '((&rest args) (declare (ignore args)))))
+     into bindings
+     collect `#',handler-name into handler-names
+     finally
+     (return `(flet ,bindings
+                (declare (dynamic-extent ,@handler-names))
+                (invoke-tracking-pointer ,sheet ,@handler-names
+                                         ,@args)))))
+
+(defun invoke-tracking-pointer
+    (sheet
+     pointer-motion-handler presentation-handler
+     pointer-button-press-handler presentation-button-press-handler
+     pointer-button-release-handler presentation-button-release-handler
+     keyboard-handler
+     &key pointer multiple-window transformp context-type highlight)
+  ;; (setq pointer (port-pointer sheet))
+  (let ((port (port sheet)))
+    (with-method (distribute-event :around ((port (eql port)) event)
+                                   ;; XXX specialize on EVENT?
+                                   (queue-event sheet event))
+      (loop for event = (event-read sheet)
+         do (cond ((and (typep event 'pointer-event)
+                        #+nil
+                        (eq (pointer-event-pointer event)
+                            pointer))
+                   (let ((x (pointer-event-x event))
+                         (y (pointer-event-y event))
+                         (window (event-sheet event)))
+                     ;; XXX Convert X,Y to SHEET coordinates
+                     ;; XXX user coordinates
+                     (typecase event
+                       (pointer-motion-event
+                        (funcall pointer-motion-handler
+                                 :window window :x x :y y))
+                       (pointer-button-press-event
+                        (funcall pointer-button-press-handler
+                                 :event event :x x :y y))
+                       (pointer-button-release-event
+                        (funcall pointer-button-release-handler
+                                 :event event :x x :y y)))))
+                  ((typep event 'keyboard-event)
+                   (funcall keyboard-handler
+                            :gesture event #|XXX|#))
+                  (t (handle-event #|XXX|# (event-sheet event) event)))))))
