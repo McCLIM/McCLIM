@@ -249,15 +249,16 @@
 
 ;;; Constants dealing with events
 
-(defconstant +pointer-left-button+ 1)
-(defconstant +pointer-middle-button+ 2)
-(defconstant +pointer-right-button+ 3)
+(defconstant +pointer-left-button+   #x01)
+(defconstant +pointer-middle-button+ #x02)
+(defconstant +pointer-right-button+  #x04)
 
-(defconstant +shift-key+ 1)
-(defconstant +control-key+ 2)
-(defconstant +meta-key+ 4)
-(defconstant +super-key+ 8)
-(defconstant +hyper-key+ 16)
+(defconstant +shift-key+             #x0100)
+(defconstant +control-key+           #x0200)
+(defconstant +meta-key+              #x0400)
+(defconstant +super-key+             #x0800)
+(defconstant +hyper-key+             #x1000)
+(defconstant +alt-key+               #x2000)
 
 (defmacro key-modifier-state-match-p (button modifier-state &body clauses)
   (let ((button-names '((:left . +pointer-left-button+)
