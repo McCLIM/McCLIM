@@ -610,7 +610,7 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
 
 (defmethod delete-output-record :after (child (record compound-output-record)
                                               &optional (errorp t))
-  (declare (ignore errorp))
+  (declare (ignore errorp))           
   (with-bounding-rectangle* (x1 y1 x2 y2) child
     (recompute-extent-for-changed-child record child x1 y1 x2 y2)))
 
@@ -747,7 +747,14 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
       ;; If so, we can use min/max to grow record's current rectangle.
       ;; If not, the child has shrunk, and we need to fully recompute.                              
       (multiple-value-bind (nx1 ny1 nx2 ny2) 
-          (cond ((null-bounding-rectangle-p record)
+          (cond ((not (find changed-child (output-record-children record)))
+                 ;; Ouch! - when tree ORs are really implemented, this call to
+                 ;; OUTPUT-RECORD-CHILDREN may start consing, and we'll have to
+                 ;; think about this. The spec seems to have forgotten an efficient
+                 ;; means of doing this sort of test. I guess I could use MAP-OVER-...                 
+                 (%tree-recompute-extent* record))
+                 
+                ((null-bounding-rectangle-p record)
                  (%tree-recompute-extent* record))
                 ((null-bounding-rectangle-p changed-child)
                  (values ox1 oy1 ox2 oy2))
@@ -759,8 +766,8 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
                          (max cx2 ox2) (max cy2 oy2)))
                 (T (%tree-recompute-extent* record)))        
         
-        (with-slots (x1 y1 x2 y2 parent) record
-          (setf x1 nx1 y1 ny1 x2 nx2 y2 ny2)
+        (with-slots (x y x1 y1 x2 y2 parent) record
+          (setf x nx1 y ny1 x1 nx1 y1 ny1 x2 nx2 y2 ny2)
           (unless (or (null parent)
                       (and (= nx1 ox1) (= ny1 oy1)
                            (= nx2 ox2) (= nx2 oy2)))
@@ -801,14 +808,14 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
   (with-slots (children) record
     (let ((pos (position child children :test #'eq)))
       (if (null pos)
-	  (when errorp
-	    (error "~S is not a child of ~S" child record))
-	  (progn
-	    (setq children (replace children children
-				    :start1 pos
-				    :start2 (1+ pos)))
-	    (decf (fill-pointer children))
-            (setf (output-record-parent child) nil))))))
+          (when errorp
+            (error "~S is not a child of ~S" child record))
+        (progn
+          (setq children (replace children children
+                                  :start1 pos
+                                  :start2 (1+ pos)))
+          (decf (fill-pointer children))
+          (setf (output-record-parent child) nil))))))
 
 (defmethod clear-output-record ((record standard-sequence-output-record))
   (let ((children (output-record-children record)))
@@ -1705,10 +1712,12 @@ were added."
 
 (defmethod text-displayed-output-record-string
     ((record standard-text-displayed-output-record))
-  (with-output-to-string (result)
-    (with-slots (strings) record
-      (loop for (nil nil substring) in strings
-         do (write-string substring result)))))
+  (with-slots (strings) record
+    (if (= 1 (length strings))
+        (styled-string-string (first strings))
+      (with-output-to-string (result)
+        (loop for styled-string in strings
+          do (write-string (styled-string-string styled-string) result))))))
 
 ;;; 16.3.4. Top-Level Output Records
 (defclass stream-output-history-mixin ()
