@@ -5,6 +5,7 @@
 ;;;           Iban Hatchondo (hatchond@emi.u-bordeaux.fr)
 ;;;           Julien Boninfante (boninfan@emi.u-bordeaux.fr)
 ;;;           Robert Strandh (strandh@labri.u-bordeaux.fr)
+;;;  (c) copyright 2001 by Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -42,7 +43,13 @@
       (setf (xlib:gcontext-font gc) (text-style-to-X-font port (medium-text-style medium))
 	    (xlib:gcontext-foreground gc) (X-pixel port ink)
 	    (xlib:gcontext-background gc) (X-pixel port (medium-background medium))
-	    (xlib:gcontext-line-width gc) (line-style-thickness line-style))
+            (xlib:gcontext-line-width gc) (line-style-thickness line-style)
+            (xlib:gcontext-cap-style gc) (line-style-cap-shape line-style)
+            (xlib:gcontext-join-style gc) (line-style-joint-shape line-style))
+      (let ((dashes (line-style-dashes line-style)))
+        (unless (null dashes)
+          (setf (xlib:gcontext-line-style gc) :dash
+                (xlib:gcontext-dashes gc) (if (eq dashes t) 3 dashes))))
       gc)))
 
 (defmethod medium-gcontext ((medium clx-medium) (ink (eql +foreground-ink+)))
@@ -72,6 +79,10 @@
 				(sheet-region (medium-sheet medium)))
     (transform-position (medium-transformation medium)
 			(- x xr) (- y yr))))
+
+(defun medium-transform-distance (medium dx dy)
+  (transform-distance (medium-transformation medium)
+                      dx dy))
 
 (defmethod medium-draw-point* ((medium clx-medium) x y)
   (with-CLX-graphics (medium)
@@ -122,6 +133,26 @@
 			     (round x1) (round y1)
 			     (round (- x2 x1)) (round (- y2 y1))
 			     filled)))))
+
+(defmethod medium-draw-ellipse* ((medium clx-medium) center-x center-y
+				 radius-1-dx radius-1-dy radius-2-dx radius-2-dy
+				 start-angle end-angle filled)
+  (unless (or (= radius-2-dx radius-1-dy 0) (= radius-1-dx radius-2-dy 0))
+    (error "MEDIUM-DRAW-ELLIPSE* not yet implemented for non axis-aligned ellipses."))
+  (with-CLX-graphics (medium)
+    (multiple-value-bind (x y)
+	(medium-transform-position medium center-x center-y)
+      (multiple-value-bind (dx1 dy1)
+          (medium-transform-distance medium radius-1-dx radius-1-dy)
+        (multiple-value-bind (dx2 dy2)
+            (medium-transform-distance medium radius-2-dx radius-2-dy)
+          (let ((d1 (+ dx1 dy1))
+                (d2 (+ dx2 dy2)))
+            (xlib:draw-arc mirror gc
+                           (round (- x d1)) (round (- y d2))
+                           (round (* d1 2)) (round (* d2 2))
+                           start-angle end-angle
+                           filled)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
