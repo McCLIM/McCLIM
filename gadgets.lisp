@@ -411,6 +411,12 @@
   (setf (gadget-label-align-x pane) :center
 	(gadget-label-align-y pane) :center))
 
+(defmethod initialize-instance :after ((pane toggle-button-pane) &rest rest)
+  (declare (ignore rest))
+  (when (gadget-value pane)
+    (setf (slot-value pane 'current-color)
+	  (gadget-pushed-and-highlighted-color pane))))
+
 (defmethod handle-event ((pane toggle-button-pane) (event pointer-enter-event))
   (with-slots (armed) pane
     (unless armed
