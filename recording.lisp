@@ -818,7 +818,9 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
       (setq end (min end (1- (length string))))
       (setq end (1- (length string))))
   (let ((length (max 0 (- (1+ end) start))))
-    (setq string (make-array length :displaced-to string :displaced-index-offset start))
+    (setq string (make-array length :displaced-to string
+			     :displaced-index-offset start
+			     :element-type (array-element-type string)))
     (with-slots (strings baseline width max-height start-y end-x end-y) text-record
                 (setq baseline (max baseline new-baseline)
                       strings (nconc strings (list (list end-x text-style (make-array (length string) :initial-contents string :element-type 'character :adjustable t :fill-pointer t))))
