@@ -649,6 +649,11 @@
 		 :initarg :show-value-p
 		 :accessor gadget-show-value-p)))
 
+;; This values should be changeable by user. That's
+;; why they are parameters, and not constants.
+(defparameter slider-button-width 30)
+(defparameter slider-button-height 10)
+
 (defmethod drag-callback ((pane slider-pane) client gadget-id value)
   (declare (ignore client gadget-id))
   (when (slider-drag-callback pane)
@@ -657,27 +662,19 @@
 (defmethod handle-event ((pane slider-pane) (event pointer-enter-event))
   (with-slots (armed) pane
     (unless armed
-      (setf armed t
-	    (gadget-current-color pane) (gadget-highlighted-color pane))
-      (armed-callback pane (gadget-client pane) (gadget-id pane)))))
+      (setf armed t))
+    (armed-callback pane (gadget-client pane) (gadget-id pane))))
 
 (defmethod handle-event ((pane slider-pane) (event pointer-exit-event))
   (with-slots (armed) pane
     (when armed
-      (setf armed nil
-	    (gadget-current-color pane) (gadget-normal-color pane))
-      (when (gadget-show-value-p pane)
-	(setf (gadget-show-value-p pane) nil)))
+      (setf armed nil))
     (disarmed-callback pane (gadget-client pane) (gadget-id pane))))
-
 
 (defmethod handle-event ((pane slider-pane) (event pointer-button-press-event))
   (with-slots (armed) pane
      (when armed
-       (setf armed ':button-press)
-       (when (gadget-show-value-p pane)
-	 (setf (gadget-show-value-p pane) nil)))))
-       
+       (setf armed ':button-press))))       
 
 (defmethod handle-event ((pane slider-pane) (event pointer-motion-event))
   (with-slots (armed) pane
@@ -691,7 +688,6 @@
   (with-slots (armed) pane
     (when armed
       (setf armed t
-	    (gadget-show-value-p pane) t
 	    (gadget-value pane :invoke-callback t) (convert-position-to-value pane (pointer-event-y event)))
       (dispatch-repaint pane (sheet-region pane)))))
 
@@ -701,28 +697,46 @@
 (defmethod convert-position-to-value ((pane slider-pane) y)
   (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
     (declare (ignore x1 x2))
-    (round (+ (gadget-min-value pane) (/ (* (gadget-range pane) (- y2 y)) (- y2 y1))))))
+    (let* ((slider-button-half-height (ash slider-button-height -1))
+	   (good-y1 (+ y1 slider-button-half-height))
+	   (good-y2 (- y2 slider-button-half-height))
+	   (good-position (max good-y1 (min y good-y2))))
+      (+ (gadget-min-value pane) (/ (* (gadget-range pane) (- good-position good-y1))
+				    (- good-y2 good-y1))))))
 
 (defmethod repaint-sheet ((pane slider-pane) region)
   (declare (ignore region))
-  (let ((region (sheet-region pane))
-	(position (convert-value-to-position pane)))
-    (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* region)
-      (let ((middle-x (round (- x2 x1) 2)))
-	(display-gadget-background pane (gadget-current-color pane) 0 0 (- x2 x1) (- y2 y1))
-	(draw-line* pane middle-x y1 middle-x y2 :ink +black+)
-	(draw-rectangle* pane (- middle-x 15) (- position 5)
-		       (+ middle-x 15) (+ position 5)
-		       :ink +grey75+ :filled t)
-	(draw-edges-lines* pane (- middle-x 15) (- position 5) (+ middle-x 15) (+ position 5))
-	(when (gadget-show-value-p pane)
-	  (draw-text* pane (princ-to-string (gadget-value pane))
-		      (+ middle-x 20) position))))))
+  (with-double-buffering (pane)
+    (let ((position (convert-value-to-position pane))
+	  (slider-button-half-width (ash slider-button-width -1))
+	  (slider-button-half-height (ash slider-button-height -1)))
+      (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
+	(let ((middle-x (round (- x2 x1) 2)))
+	  (display-gadget-background pane (gadget-current-color pane) 0 0 (- x2 x1) (- y2 y1))
+	  (draw-line* pane middle-x (+ y1 slider-button-half-height)
+		      middle-x (- y2 slider-button-half-height)
+		      :ink +black+)
+	  (draw-rectangle* pane
+			   (- middle-x slider-button-half-width) (- position slider-button-half-height)
+			   (+ middle-x slider-button-half-width) (+ position slider-button-half-height)
+			   :ink +gray85+ :filled t)
+	  (draw-edges-lines* pane
+			     (- middle-x slider-button-half-width) (- position slider-button-half-height)
+			     (+ middle-x slider-button-half-width) (+ position slider-button-half-height))
+	  (when (gadget-show-value-p pane)
+	    (draw-text* pane (princ-to-string (gadget-value pane))
+			(- middle-x slider-button-half-width)
+			(- position slider-button-half-height))))))))
 
 (defmethod convert-value-to-position ((pane slider-pane))
   (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
     (declare (ignore x1 x2))
-    (- y2 (/ (* (- (gadget-value pane) (gadget-min-value pane)) (- y2 y1)) (gadget-range pane)))))
+    (let* ((slider-button-half-height (ash slider-button-height -1))
+	   (good-y1 (+ y1 slider-button-half-height))
+	   (good-y2 (- y2 slider-button-half-height)))
+      (+ good-y1 (/ (* (- (gadget-value pane) (gadget-min-value pane))
+		       (- good-y2 good-y1))
+		    (gadget-range pane))))))
 
 
 ;;
