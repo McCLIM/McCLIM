@@ -728,7 +728,7 @@
 				:bold-italic    "bold-i"
 				:italic-bold    "bold-i"))
 
-(defconstant *clx-text-sizes* '(:normal         14
+(defparameter *clx-text-sizes* '(:normal         14
 				:tiny            8
 				:very-small     10
 				:small          12
