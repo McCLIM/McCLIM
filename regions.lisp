@@ -1,4 +1,4 @@
-;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: CLIMB; -*-
+;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: CLIM-INTERNALS; -*-
 ;;; --------------------------------------------------------------------------------------
 ;;;     Title: The CLIM Region Datatype
 ;;;   Created: 1998-12-02 19:26
@@ -2119,10 +2119,12 @@
 
 ;;;
 
-(defmethod print-object ((self standard-rectangle) sink)
-  (with-slots (x1 y1 x2 y2) self
-    (format sink "#<~S ~S ~S ~S ~S>" (type-of self)
-            x1 y1 x2 y2)))
+(defmethod print-object ((self standard-rectangle) stream)
+  (print-unreadable-object (self stream :type t :identity t)
+    (if (slot-boundp self 'x1)
+	(with-slots (x1 y1 x2 y2) self
+	  (format stream "X ~S:~S Y ~S:~S" x1 y1 x2 y2))
+      (format stream "X 0:0 Y 0:0"))))
 
 
 ;;; exports
