@@ -1,4 +1,4 @@
-;;; -*- Mode: Lisp; Package: INSPECTOR -*-
+;;; -*- Mode: Lisp; Package: CLOUSEAU -*-
 
 ;;;  (c) copyright 2005 by
 ;;;           Robert Strandh (strandh@labri.fr)
@@ -348,8 +348,10 @@ use implementation-specific functions to be more informative."
           (inspect-object uses pane)))))
 
 (defmethod inspect-object ((object vector) pane)
+  ;; Using 'vector as the presentation type may be nonstandard, but it
+  ;; is more useful than the default.
   (with-output-as-presentation
-      (pane object (presentation-type-of object))
+      (pane object 'vector)
     (formatting-table (pane)
       (formatting-row (pane)
         (formatting-cell (pane)
