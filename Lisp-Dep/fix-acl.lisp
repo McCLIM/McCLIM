@@ -8,10 +8,8 @@
 (require :loop)
 
 (defpackage :clim-mop
-  (:use :clos)
-  (:import-from :common-lisp
-		#:class-name #:compute-applicable-methods)
-  (:export #:class-name #:compute-applicable-methods))
+  (:use :clos))
+
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (do-external-symbols (sym :clos)
