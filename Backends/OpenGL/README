@@ -1,0 +1,78 @@
+	-How to use Free-CLIM with OpenGL backend version 0.1-
+
+- Installation -
+
+I've installed those bindings for CMUCL, and that needed a few changes in the source code.
+The version that i've used is not the most recent (i used the 2000-09-18 release), because i did not need the bindings with GLUT library.
+I think there are not many differences with these bindings for other Common Lisp releases.
+
+1. Get OpenGL/MesaGL bindings
+You can download it at this address : 
+ftp://ftp.cs.toronto.edu/pub/mann/Software/Lisp/
+or find it in the Free-CLIM cvs directory : McCLIM/OpenGL/archives/
+
+2. Untar the file
+
+3. For CMUCL :
+Open the "cmucl-interface-defpackage.lisp" file and change the "vector-data-address" by "array-data-address"
+Open the "gl.lisp" file and add these few lines :
+
+(foreign-function glgentextures (INT (POINTER INT)) VOID "glGenTextures")
+(foreign-function glbindtexture (INT INT) VOID "glBindTexture")
+(foreign-function glcopyteximage1d (INT INT INT INT INT INT INT) VOID "glCopyTexImage1D")
+(foreign-function glcopyteximage2d (INT INT INT INT INT INT INT INT) VOID "glCopyTexImage2D")
+(foreign-function glcopytexsubimage1d (INT INT INT INT INT INT) VOID "glCopyTexSubImage1D")
+(foreign-function glcopytexsubimage2d (INT INT INT INT INT INT INT INT) VOID "glCopyTexSubImage2D")
+
+4. Compile the bindings, according to the bindings README file.
+
+
+- How to use the backend -
+
+This backend is provided for OpenGL working with X Window System.
+
+1. Start Lisp
+
+2. Load the OpenGL bindings file :
+
+   (load "<OpenGL bindings directory>/defsystem.lisp")
+   (load-gl)
+   (load-xlib)
+
+2. Load the system definition file:
+
+   (load "system-opengl.lisp")
+
+3. Load the file patch-cmu.lisp
+
+   (load "patch-cmu.lisp")
+
+4. Load the source code of the system:
+
+   (operate-on-system :clim :load :load-source-instead-of-binary t)
+   (operate-on-system :clim-opengl :load :load-source-instead-of-binary t)
+   (operate-on-system :clim-examples :load :load-source-instead-of-binary t)
+
+5. Compile and load the system:
+
+   (operate-on-system :clim :compile)
+   (operate-on-system :clim-opengl :compile)
+   (operate-on-system :clim-examples :compile)
+
+6. Load the compiled system:
+
+   (operate-on-system :clim :load)
+   (operate-on-system :clim-opengl :load)
+   (operate-on-system :clim-examples :load)
+
+
+- Major thing to do -
+
+* Implement the use of the clipping-region for opengl-medium
+
+
+- BUGS -
+
+Unfortunaly, there are lots of bugs.
+They will be resolved little by little in the future.
+This version could be considered as the beta-test version of the backend.
