@@ -641,7 +641,7 @@ skips intervening non-table output record structures."))
                                    (adjust-cell* item x y width
                                                  (bounding-rectangle-height item)
                                                  (output-record-baseline item))))
-                           (incf y h)))))
+                           (incf y (+ h y-spacing))))))
                 (t
                  ;; This is somewhat easier ...
                  (let (h)
