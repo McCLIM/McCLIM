@@ -189,9 +189,6 @@
   (declare (ignore stream))
   nil)
 
-(defun 2+ (x)
-  (+ x 2))
-
 ; version with a cache of about 64ko = array of size 63000 
 (defun read-ppm-p6 (stream)
   (declare (optimize (speed 3)))
