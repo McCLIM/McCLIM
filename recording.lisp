@@ -540,7 +540,8 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
 (defmethod invoke-with-new-output-record ((stream output-recording-stream)
                                           continuation record-type
                                           &rest initargs
-                                          &key parent)
+                                          &key parent
+					  &allow-other-keys)
   (stream-close-text-output-record stream)
   (unless parent
     (setq parent (stream-current-output-record stream)))

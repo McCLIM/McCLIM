@@ -80,6 +80,7 @@
    "events"
    "repaint"
    "graphics"
+   "views"
    "encapsulate"
    "stream-output"
    "recording"
@@ -127,3 +128,15 @@
    "Examples/transformations-test"
    "Examples/stream-test"
    ))
+
+#+mk-defsystem
+(defun build-everything ()
+  (mk:oos :clim :load :load-source-instead-of-binary t)
+  (mk:oos :clim-clx :load :load-source-instead-of-binary t)
+  (mk:oos :clim-examples :load :load-source-instead-of-binary t)
+  (mk:oos :clim :compile)
+  (mk:oos :clim-clx :compile)
+  (mk:oos :clim-examples :compile)
+  (mk:oos :clim :load)
+  (mk:oos :clim-clx :load)
+  (mk:oos :clim-examples :load))

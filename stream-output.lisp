@@ -144,8 +144,8 @@
 	:initform :scroll
 	:accessor stream-end-of-page-action)
    (view :initarg :default-view
-	 :initform nil
-	 :reader stream-default-view)
+	 :initform +textual-view+
+	 :accessor stream-default-view)
    (baseline :initform 0
 	     :reader stream-baseline)
    (height :initform 0)
@@ -325,7 +325,7 @@ than one line of output."))
 (defmethod stream-text-margin ((stream standard-extended-output-stream))
   (with-slots (margin) stream
     (or margin
-	(- (port-mirror-width (port stream) (or (stream-default-view stream) stream))
+	(- (port-mirror-width (port stream) stream)
 	   6))))
 
 (defmethod stream-line-height ((stream standard-extended-output-stream) &key (text-style nil))

@@ -1072,60 +1072,6 @@ function lambda list"))
 	(with-output-to-string (s)
 	  (describe-it s)))))
 
-;;; Views...
-
-(defclass view ()
-  ())
-
-(defun viewp (object)
-  (typep object 'view))
-
-(defclass textual-view (view)
-  ())
-
-(defclass textual-menu-view (textual-view)
-  ())
-
-(defclass textual-dialog-view (textual-view)
-  ())
-
-(defclass gadget-view (view)
-  ())
-
-(defclass gadget-menu-view (gadget-view)
-  ())
-
-(defclass gadget-dialog-view (gadget-view)
-  ())
-
-(defclass pointer-documentation-view (textual-view)
-  ())
-
-(defparameter +textual-view+ (make-instance 'textual-view))
-
-(defparameter +textual-menu-view+ (make-instance 'textual-menu-view))
-
-(defparameter +textual-dialog-view+ (make-instance 'textual-dialog-view))
-
-(defparameter +gadget-view+ (make-instance 'gadget-view))
-
-(defparameter +gadget-menu-view+ (make-instance 'gadget-menu-view))
-
-(defparameter +gadget-dialog-view+ (make-instance 'gadget-dialog-view))
-
-(defparameter +pointer-documentation-view+
-  (make-instance 'pointer-documentation-view))
-
-;;; Reasonable defaults, I guess...
-
-(defmethod stream-default-view (stream)
-  (declare (ignore stream))
-  +textual-view+)
-
-(defmethod (setf stream-default-view) (view stream)
-  (declare (ignore stream))
-  view)
-
 ;;; XXX The spec calls out that the presentation generic function has keyword
 ;;; arguments acceptably and for-context-type, but the examples I've seen don't
 ;;; mention them at all in the methods defined for present.  So, leave them out
@@ -1263,6 +1209,197 @@ function lambda list"))
 	    (values string (fill-pointer string))
 	    result)))))
 
+;;; Context-dependent input
+;;; An input context is a cons of a presentation type and a continuation to
+;;; call to return a presentation to that input context.
+
+(defvar *input-context* nil)
+
+(defun input-context-type (context-entry)
+  (car context-entry))
+
+(defmacro with-input-context ((type &key override) 
+			      (&optional (object-var (gensym))
+					 (type-var (gensym))
+					 event-var
+					 options-var)
+			      form 
+			      &body pointer-cases)
+  (let ((vars `(,object-var 
+		,type-var
+		,@(and event-var `(,event-var))
+		,@(and options-var `(,options-var))))
+	(return-block (gensym "RETURN-BLOCK"))
+	(context-block (gensym "CONTEXT-BLOCK")))
+    `(block ,return-block
+       (multiple-value-bind ,vars
+	   (block ,context-block
+	     (let ((*input-context* 
+		    (cons (cons ,type
+				#'(lambda (object type event options)
+				    (return-from ,context-block
+				      (values object type event options))))
+			  ,(if override nil '*input-context*))))
+	       (return-from ,return-block ,form )))
+	 (cond ,@(mapcar #'(lambda (pointer-case)
+			     (destructuring-bind (case-type &body case-body)
+				 pointer-case
+			       `((presentation-subtypep ,type-var ',case-type)
+				 ,@case-body)))
+			 pointer-cases))))))
+
+(define-presentation-generic-function %accept accept
+    (type-key parameters options type stream view &key))
+
+(defvar *recursive-accept-p* nil)
+(defvar *recursive-accept-1-p* nil)
+
+
+(defun accept (type &rest rest-args &key
+	       (stream *standard-input* streamp)
+	       (view (stream-default-view stream))
+	       default
+	       (default-type nil default-type-p)
+	       provide-default
+	       insert-default
+	       replace-input
+	       (history nil historyp)
+	       active-p
+	       prompt
+	       prompt-mode
+	       display-default
+	       query-identifier
+	       activation-gestures
+	       additional-activation-gestures
+	       delimiter-gestures
+	       additional-delimiter-gestures)
+  (declare (ignore default
+		   provide-default
+		   insert-default
+		   replace-input
+		   active-p
+		   prompt
+		   prompt-mode
+		   display-default
+		   query-identifier
+		   activation-gestures
+		   additional-activation-gestures
+		   delimiter-gestures
+		   additional-delimiter-gestures))
+  (let* ((real-type (expand-presentation-type-abbreviation type))
+	 (real-default-type (and default-type-p
+				 (expand-presentation-type-abbreviation
+				  default-type)))
+	 (real-history-type (and historyp
+				 (expand-presentation-type-abbreviation
+				  history-type)))
+	 (new-rest-args (if (or streamp default-type-p historyp)
+			    (copy-list rest-args)
+			    rest-args))
+	 (*recursive-accept-p* *recursive-accept-1-p*)
+	 (*recursive-accept-1-p* t))
+    (when streamp
+      (remf new-rest-args :stream))
+    (when default-type-p
+      (setf (getf new-rest-args :default-type) real-default-type))
+    (when historyp
+      (setf (getf new-rest-args :history) real-history-type))
+    (apply #'prompt-for-accept stream real-type view new-rest-args)
+    (apply #'stream-accept stream real-type new-rest-args)))
+
+(defgeneric stream-accept (stream type
+			   &key
+			   view
+			   default
+			   default-type
+			   provide-default
+			   insert-default
+			   replace-input
+			   history
+			   active-p
+			   prompt
+			   prompt-mode
+			   display-default
+			   query-identifier
+			   activation-gestures
+			   additional-activation-gestures
+			   delimiter-gestures
+			   additional-delimiter-gestures))
+
+(defmethod stream-accept ((stream standard-extended-input-stream) type
+			  &rest args)
+  (apply #'accept-1 stream type args))
+
+(defun accept-1 (stream type &key
+		 (view (stream-default-view stream))
+		 (default nil defaultp)
+		 (default-type nil default-type-p)
+		 provide-default
+		 insert-default
+		 replace-input
+		 history
+		 active-p
+		 prompt
+		 prompt-mode
+		 display-default
+		 query-identifier
+		 activation-gestures
+		 additional-activation-gestures
+		 delimiter-gestures
+		 additional-delimiter-gestures)
+  (declare (ignore prompt prompt-mode))
+  (with-input-context (type)
+    (object object-type event options)
+    (with-input-editing (stream)
+      (multiple-value-bind (object object-type)
+	  (apply-presentation-generic-function accept
+					       type
+					       stream
+					       view
+					       `(,@(and defaultp
+							`(,default))
+						 ,@(and default-type-p
+							`(,default-type-p))))
+	(values object (or object-type type))))
+    ;; A presentation was clicked on, or something
+    (t
+     (values object object-type))))
+
+(defgeneric prompt-for-accept (stream type view &key))
+
+(defmethod prompt-for-accept ((stream standard-extended-input-stream)
+			      type view
+			      &rest accept-args)
+  (apply #'prompt-for-accept-1 stream type accept-args))
+
+(defun prompt-for-accept-1 (stream type
+			    &key
+			    (default nil defaultp)
+			    (default-type type)
+			    (prompt t)
+			    (prompt-mode :normal)
+			    (display-default prompt)
+			    &allow-other-keys)
+  (flet ((display-using-mode (stream prompt default)
+	   (ecase prompt-mode
+	     (:normal
+	      (if *recursive-accept-p*
+		  (input-editor-format stream "(~A~@[[~A]~]) " prompt default)
+		  (input-editor-format stream "~A~@[[~A]~]: " prompt default)))
+	     (:raw
+	      (input-editor-format stream "~A" prompt)))))
+    (let ((prompt-string (if (eq prompt t)
+			     (format nil "Enter ~A"
+				     (describe-presentation-type type nil))
+			     prompt))
+	  (default-string (if (and defaultp display-default)
+			      (present-to-string default default-type)
+			      nil)))
+      (cond ((null prompt)
+	   nil)
+	  (t
+	   (display-using-mode stream prompt-string default-string))))))
+
 
 ;;; The presentation types
 
@@ -1381,6 +1518,15 @@ function lambda list"))
   (let ((*print-base* base)
 	(*print-radix* radix))
     (princ object stream)))
+
+(define-presentation-method accept ((type real) stream (view textual-view)
+				    &key default default-type)
+  (declare (ignore default default-type))
+  (let* ((token (read-token stream))
+	 (*read-base* base)
+	 (*read-eval* nil)
+	 (result (read-from-string token)))
+    result))
 
 ;;; Define a method that will do the comparision for all real types.  It's
 ;;; already determined that that the numeric class of type is a subtype of

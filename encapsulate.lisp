@@ -517,3 +517,10 @@ state ~S lambda list ~S"
 (def-stream-method stream-unread-gesture 
     ((stream standard-encapsulating-stream) gesture))
 
+;;; Presentation type generics
+
+(def-stream-method stream-default-view
+    ((stream standard-encapsulating-stream)))
+
+(def-stream-method (setf stream-default-view)
+    (view (stream standard-encapsulating-stream)))
