@@ -61,7 +61,8 @@
   (loop for port in climi::*all-ports*
 	do (destroy-port port))
   (setq climi::*all-ports* nil)
-  (run-frame-top-level (make-application-frame name)))
+  (when name
+    (run-frame-top-level (make-application-frame name))))
 
 (defun echo-stream-test ()
   (run-test 'stream-test))

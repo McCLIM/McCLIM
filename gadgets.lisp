@@ -705,8 +705,9 @@ and must never be nil."))
 ;;; 30.4.8 The abstract text-field Gadget
 
 (defclass text-field (value-gadget action-gadget)
-  ()
-  (:documentation "The value is a string"))
+  ((editable-p :accessor editable-p :initarg editable-p :initform t))
+  (:documentation "The value is a string")
+  (:default-initargs :value ""))
 
 ;;; 30.4.9 The abstract text-editor Gadget
 
@@ -2026,8 +2027,17 @@ and must never be nil."))
 (defparameter *default-text-field-text-style*
     (make-text-style :fixed :roman :normal))
 
-(defclass text-field-pane (text-field basic-pane #|permanent-medium-sheet-output-mixin|#)
-  ()
+(defclass text-field-pane (text-field 
+			   standard-extended-output-stream
+			   standard-output-recording-stream
+			   enter/exit-arms/disarms-mixin
+			   basic-pane)
+  ((area :accessor area :initform nil 
+	 :documentation "The Goatee area used for text editing.")
+   (previous-focus :accessor previous-focus :initform nil
+		   :documentation
+		   "The pane that previously had keyboard focus")
+   (exposed :accessor exposed :initform nil))
   (:default-initargs
     :text-style *default-text-field-text-style*))
 
@@ -2038,9 +2048,68 @@ and must never be nil."))
 
 (defmethod initialize-instance :after ((pane text-field-pane) &rest rest)
   (declare (ignore rest))
-  (setf (medium-text-style (sheet-medium pane))
-    (slot-value pane 'text-style)))
+  #+nil (setf (medium-text-style (sheet-medium pane))
+	      (slot-value pane 'text-style)))
 
+(defmethod handle-repaint :after ((pane text-field-pane) region)
+  (declare (ignore region))
+  (unless (exposed pane)
+    (multiple-value-bind (cx cy)
+	(stream-cursor-position pane)
+      (setf (cursor-visibility (stream-text-cursor pane)) nil)
+      (setf (area pane) (make-instance 'goatee:simple-screen-area
+				       :area-stream pane
+				       :x-position cx
+				       :y-position cy
+				       :initial-contents (slot-value pane
+								     'value))))
+    (stream-add-output-record pane (area pane))))
+
+;;; Unilaterally declare a "focus follows mouse" policy.  I don't like this
+;;; much; the whole issue of keyboard focus needs a lot more thought,
+;;; especially when multiple application frames per port become possible.
+
+(defmethod armed-callback :after ((gadget text-field-pane) client id)
+  (declare (ignore client id))
+  (let ((port (port gadget)))
+    (setf (previous-focus gadget) (port-keyboard-input-focus port))
+    (setf (port-keyboard-input-focus port) gadget)))
+
+(defmethod disarmed-callback :after ((gadget text-field-pane) client id)
+  (declare (ignore client id))
+  (let ((port (port gadget)))
+    (setf (port-keyboard-input-focus port) (previous-focus gadget))
+    (setf (previous-focus gadget) nil)))
+
+(defmethod handle-event ((gadget text-field-pane) (event key-press-event))
+  (let ((gesture (convert-to-gesture event))
+	(*activation-gestures* *standard-activation-gestures*))
+    (when (activation-gesture-p gesture)
+      (activate-callback gadget (gadget-client gadget) (gadget-id gadget))
+      (return-from handle-event t))
+    (goatee:execute-gesture-command gesture
+				    (area gadget)
+				    goatee::*simple-area-gesture-table*)
+    (let ((new-value (goatee::buffer-string (goatee::buffer (area gadget)))))
+      (unless (string= (gadget-value gadget) new-value)
+	(setf (slot-value gadget 'value) new-value)
+	(value-changed-callback gadget 
+				(gadget-client gadget) 
+				(gadget-id gadget)
+				new-value)))))
+
+(defmethod (setf gadget-value) :after (new-value (gadget text-field-pane)
+				       &key invoke-callback)
+  (declare (ignore invoke-callback))
+  (let* ((area (area gadget))
+	 (buffer (goatee::buffer area))
+	 (start (goatee::buffer-start buffer))
+	 (end (goatee::buffer-end buffer)))
+    (goatee::delete-region buffer start end)
+    (goatee::insert buffer new-value :position start)
+    (goatee::redisplay-area area)))
+
+#+nil
 (defmethod handle-repaint ((pane text-field-pane) region)
   (declare (ignore region))
   (with-special-choices (pane)
@@ -2053,11 +2122,6 @@ and must never be nil."))
                     :align-x :left
                     :align-y :baseline)))))
 
-(defmethod (setf gadget-value) :after (value (pane text-field-pane) &key invoke-callback)
-  (declare (ignore value invoke-callback))
-  ;;xxx(queue-repaint pane (sheet-region pane))
-  (handle-repaint pane (sheet-region pane))
-  )
 
 (defmethod compose-space ((pane text-field-pane) &key width height)
   (declare (ignore width height))

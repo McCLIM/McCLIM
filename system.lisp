@@ -34,6 +34,7 @@
   (load "library:subsystems/defsystem"))
 
 (pushnew :CLIM *features*)
+(pushnew :MCCLIM *features*)
 
 #+mk-defsystem (use-package "MK")
 

@@ -24,6 +24,15 @@
   beginning of the line.")
    (last-line :accessor last-line :initarg :last-line :initform nil)))
 
+(defmethod initialize-instance :after ((obj editable-area)
+				       &key initial-contents)
+  (when initial-contents
+    (if (slot-boundp obj 'buffer)
+	(error "Only one of :buffer and :initial-contents may be supplied")
+	(setf (slot-value obj 'buffer)
+	      (make-instance 'editable-buffer
+			     :initial-contents initial-contents)))))
+
 (defgeneric area-first-line (area))
 
 (defmethod area-first-line ((area editable-area))

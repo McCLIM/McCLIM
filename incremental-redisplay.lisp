@@ -49,10 +49,15 @@ record operations are forwarded to this record.")
    (old-start-y :accessor old-start-y)
    ;; XXX Need to capture the "user" transformation, I think; deal with that
    ;; later.
-   (old-subrecord :accessor old-children
+   (old-children :accessor old-children
 		 :documentation "Contains the output record tree for the
   current display.")
-   (id-map :accessor id-map :initform nil)))
+   (id-map :accessor id-map :initform nil)
+   (dirty :accessor dirty :initform nil
+	  :documentation 
+	  "If T, record was visited by compute-new-output-records-1.")
+   ;; on-screen state?
+   ))
 
 (defmethod initialize-instance :after ((obj updating-output-record-mixin)
 				       &key)
@@ -118,6 +123,61 @@ record operations are forwarded to this record.")
 
 (defvar *current-updating-output* nil)
 
+(defgeneric compute-new-output-records (record stream))
+
+(defgeneric compute-new-output-records-1 (record stream displayer)
+  (:documentation "Like compute-new-output-records with an explicit
+  displayer function."))
+
+(defmethod compute-new-output-records ((record standard-updating-output-record)
+				       stream)
+  (compute-new-output-records-1 record 
+				stream
+				(output-record-displayer record)))
+
+(defmethod compute-new-output-records-1 
+    ((record standard-updating-output-record)
+     stream
+     displayer)
+  (setf (old-children record) (sub-record record))
+  (multiple-value-bind (x y)
+      (output-record-position record)
+    (setf (values (old-x record) (old-y record)) (values x y))
+    (setf (old-start-x record) (start-x record))
+    (setf (old-start-y record) (start-y record))
+    (setf (values (old-min-x record) (old-min-y record)
+		  (old-max-x record) (old-max-y record))
+	  (bounding-rectangle* record))
+    (delete-output-record record (output-record-parent record))
+    (add-output-record record (stream-current-output-record stream))
+    (setf (sub-record record) (make-instance 'standard-sequence-output-record
+					     :x-position x :y-position y
+					     :parent record)))
+  (letf (((stream-current-output-record stream) record))
+    (funcall displayer stream)))
+
+(defgeneric compute-affected-region (record old-p))
+
+(defmethod compute-affected-region ((record output-record) old-p)
+  (let ((result +nowhere+))
+    (map-over-output-records
+     #'(lambda (r)
+	 (setf result (region-union result 
+				    (compute-affected-region r old-p))))
+     record)
+    result))
+
+(defmethod compute-affected-region ((record standard-updating-output-record)
+				    old-p)
+  (if (dirty record)
+      (progn
+	(setf (dirty record) nil)
+	(compute-affected-region (if old-p
+				     (old-children record)
+				     (sub-record record))
+				 old-p))
+      +nowhere+))
+
 ;;; Work in progress
 #+nil
 (defmethod invoke-updating-output ((stream updating-output-stream-mixin)
@@ -128,19 +188,16 @@ record operations are forwarded to this record.")
 				   &key (fixed-position nil) (all-new nil)
 				   (parent-cache nil))
   (with-accessors ((id-map id-map))
-      (cond (parent-cache
-	     (id-map parent-cache))
-	    (*current-updating-output*
-	     (id-map *current-updating-output*))
-	    (t (id-map stream)))
+      (or parent-cache *current-updating-output* stream)
     (let ((record (find unique-id id-map :test id-test)))
       (cond ((or all-new (not (stream-redisplaying-p)))
 	     (setf id-map (delete record id-map :test #'eq))
-	     (with-output-to-output-record (stream record-type
+	     (with-output-to-output-record (stream
+					    'standard-updating-output-record
 					    *current-updating-output*
 					    :unique-id unique-id
 					    :id-test id-test
-					    :cache-value cache-value
+ 					    :cache-value cache-value
 					    :cache-test cache-test
 					    :fixed-position fixed-position
 					    :displayer continuation)

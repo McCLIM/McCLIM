@@ -84,7 +84,7 @@
 (defmethod insert ((buffer editable-buffer) (c character)
 		   &key position line (pos 0))
   (cond (position
-	 (setf (point buffer) position))
+	 (setf (point* buffer) (location* position)))
 	(line
 	 (setf (point* buffer) (values line pos))))
   (let* ((pt (slot-value buffer 'point))
@@ -98,7 +98,7 @@
 (defmethod insert ((buffer editable-buffer) (s string)
 		   &key position line (pos 0) (start 0) (end (length s)))
   (cond (position
-	 (setf (point buffer) position))
+	 (setf (point* buffer) (location* position)))
 	(line
 	 (setf (point* buffer) (values line pos))))
   (multiple-value-bind (line pos)
@@ -121,7 +121,7 @@
 (defmethod delete-char ((buf editable-buffer) &optional (n 1)
 			&key position line (pos 0))
   (cond (position
-	 (setf (point buf) position))
+	 (setf (point* buf) (location* position)))
 	(line
 	 (setf (point* buf) (values line pos))))
   (multiple-value-bind (line pos)

@@ -138,7 +138,13 @@
 (defun presentation-subtypep (type maybe-supertype)
   (when (equal type maybe-supertype)
     (return-from presentation-subtypep (values t t)))
-  (let ((super-name (presentation-type-name maybe-supertype)))
+  (with-presentation-type-decoded (super-name super-parameters)
+    maybe-supertype
+    (when (eq super-name 'or)
+      (loop for or-type in super-parameters
+	    when (presentation-subtypep type or-type)
+	    do (return-from presentation-subtypep (values t t))
+	    finally (return-from presentation-subtypep (values nil t))))
     (map-over-presentation-type-supertypes
      #'(lambda (name massaged)
 	 (when (eq name super-name)
@@ -383,7 +389,8 @@
     (when event
       (let ((sheet (event-sheet event)))
 	(when (and (output-recording-stream-p sheet)
-		   (typep event 'pointer-event))
+		   (typep event 'pointer-event)
+		   (not (gadgetp sheet)))
 	  (return-from input-context-wait-test t))))
     nil))
 
@@ -1472,6 +1479,21 @@
 		      :acceptably acceptably
 		      :for-context-type for-context-type)
 	     (loop-finish))))
+
+(define-presentation-method accept ((type or)
+				    (stream input-editing-stream)
+				    (view textual-view)
+				    &key (default nil defaultp) default-type)
+  (let ((scan-begin (stream-scan-pointer stream)))
+    (loop for or-type in types
+	  do (handler-case (return (accept or-type
+					   :stream stream
+					   :view view
+					   :default default
+					   :default-type default-type
+					   :prompt nil))
+	       (parse-error () (setf (stream-scan-pointer stream) scan-begin)))
+	  finally (simple-parse-error "Input type is not one of ~S" types))))
 
 ;;; What does and inherit from?  Maybe we'll punt on that for the moment.
 ;;; Unless it inherits from its arguments...

@@ -265,6 +265,13 @@
           (merge-text-styles text-style (medium-merged-text-style medium))))
     (funcall continuation medium)))
 
+;;; For compatibility with real CLIM, which apparently lets you call this
+;;; on non-CLIM streams.
+
+(defmethod invoke-with-text-style ((medium t) continuation text-style)
+  (declare (ignore text-style))
+  (funcall continuation medium))
+
 (defmacro with-text-family ((medium family) &body body)
   (declare (type symbol medium))
   (when (eq medium t)
