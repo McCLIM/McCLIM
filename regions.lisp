@@ -848,7 +848,7 @@
   ;;  - die letzte Zeile des Hornerschemas (Divisionsergebnis)
   (let ((n (length polynom)))
     (cond ((= n 0) (values 0))
-          ((= n 1) (values (aref polynom 0) #()))
+          ((= n 1) (values (aref polynom 0) '#()))
           (t
            (let ((b (make-array (1- n))))
              (setf (aref b 0) (aref polynom 0))
