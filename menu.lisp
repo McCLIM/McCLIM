@@ -255,9 +255,6 @@
 
 ;;; Menu creation from command tables
 
-;; for now, accept only types :command and :menu, and only 
-;; command names as values of :command
-
 (defparameter *enabled-text-style*  (make-text-style :sans-serif :roman :normal))
 (defparameter *disabled-text-style* (make-text-style :sans-serif :roman :normal))
 

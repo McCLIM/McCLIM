@@ -660,8 +660,7 @@
 			:timestamp time))
         ;;
 	(:configure-notify
-         ;; it would be nice to consolidate these for resizes, but because of the
-         ;; interleaving exposures it becomes a bit tricky to do at this point. - BTS
+         ;; Resizes are consolidated later..   --Hefner
          (cond ((and (eq (sheet-parent sheet) (graft sheet))
                      (not override-redirect-p)
                      (not send-event-p))
@@ -672,11 +671,21 @@
                 ;; there the window managers decoration in between,
                 ;; only the size is correct, so we need to deduce the
                 ;; position from our idea of it.
-                (multiple-value-bind (x y) (transform-position
-                                            (compose-transformations
-                                             (sheet-transformation sheet)
-                                             (sheet-native-transformation (graft sheet)))
-                                            0 0)
+
+                ;; I believe the code below is totally wrong, because
+                ;; sheet-native-transformation will not be up to date.
+                ;; Instead, query the new coordinates from the X server,
+                ;; and later the event handler will set the correct
+                ;; native-transformation using those. --Hefner
+;                (multiple-value-bind (x y) (transform-position
+;                                            (compose-transformations
+;                                             (sheet-transformation sheet)
+;                                             (sheet-native-transformation (graft sheet)))
+;                                            0 0)
+
+                ;; Easier to let X compute the position relative to the root window for us.
+                (multiple-value-bind (x y)
+                    (xlib:translate-coordinates window 0 0 (clx-port-window *clx-port*))
                   (make-instance 'window-configuration-event
                                  :sheet sheet
                                  :x x

@@ -1473,9 +1473,10 @@ and used to ensure that presentation-translators-caches are up to date.")
 	  (setf (gethash (cons from-name to-name)
 			 (presentation-translators-cache
 			  (presentation-translators command-table)))
-		(map 'list
-		     #'car
-		     (sort translator-vector #'translator-lessp))))))))
+                (remove-duplicates
+                 (map 'list
+                      #'car
+                      (sort translator-vector #'translator-lessp)))))))))
 
 (defgeneric call-presentation-translator
     (translator presentation context-type frame event window x y))
