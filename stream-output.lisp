@@ -168,15 +168,11 @@
     (setf*-cursor-position (+ x dx) (+ y dy) (stream-text-cursor stream))))
 
 (defmethod scroll-vertical ((stream extended-output-stream) dy)
-  (with-slots (tx ty) (sheet-transformation stream)
-    (setq tx (- tx)
-	  ty (- ty))
+  (multiple-value-bind (tx ty) (bounding-rectangle-position (sheet-region stream))
     (scroll-extent stream tx (+ ty dy))))
 
 (defmethod scroll-horizontal ((stream extended-output-stream) dx)
-  (with-slots (tx ty) (sheet-transformation stream)
-    (setq tx (- tx)
-	  ty (- ty))
+  (multiple-value-bind (tx ty) (bounding-rectangle-position (sheet-region stream))
     (scroll-extent stream (+ tx dx) ty)))
 
 (defmacro with-cursor-off (stream &body body)
