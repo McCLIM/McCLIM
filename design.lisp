@@ -59,11 +59,32 @@
     (print-unreadable-object (color stream :type nil :identity t)
       (format stream "COLOR ~S" name))))
 
+(defvar *color-hash-table* (make-hash-table :test #'eql))
+
+(defun compute-color-key (red green blue)
+  (+ (ash (round (* 255 red)) 16)
+     (ash (round (* 255 green)) 8)
+     (round (* 255 blue))))
+
 (defun make-rgb-color (red green blue)
-  (make-instance 'color :red red :green green :blue blue))
+  (let* ((key (compute-color-key red green blue))
+	 (entry (gethash key *color-hash-table*)))
+    (declare (type fixnum key))
+    (if entry
+	entry
+	(setf (gethash key *color-hash-table*)
+	      (make-instance 'named-color :red red :green green :blue blue)))))
 
 (defun make-named-color (name red green blue)
-  (make-instance 'named-color :name name :red red :green green :blue blue))
+  (let* ((key (compute-color-key red green blue))
+	 (entry (gethash key *color-hash-table*)))
+    (declare (type fixnum key))
+    (cond (entry
+	   (when (string-equal (slot-value entry 'name) "Unnamed color")
+	     (setf (slot-value entry 'name) name))
+	   entry)
+	  (t (setf (gethash key *color-hash-table*)
+		   (make-instance 'named-color :name name :red red :green green :blue blue))))))
 
 ;;; For ihs to rgb conversion, we use the formula 
 ;;;  i = (r+g+b)/3
@@ -97,7 +118,7 @@
 	    (t (make-rgb-color x z y))))))
 
 (defun make-gray-color (intensity)
-  (make-instance 'color :red intensity :green intensity :blue intensity))
+  (make-rgb-color intensity intensity intensity))
 
 (defmethod color-rgb ((color color))
   (with-slots (red green blue) color
