@@ -36,7 +36,7 @@
 	:initform +black+
 	:accessor medium-ink)
    (transformation :initarg :transformation
-		   :initform (make-instance 'transformation)
+		   :initform +identity-transformation+ 
 		   :accessor medium-transformation)
    (clipping-region :initarg :clipping-region
 		    :initform +everywhere+
