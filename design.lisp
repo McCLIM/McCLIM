@@ -19,6 +19,65 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
+;;;; Some Notes
+
+;; The design design has a pitfall:
+;;
+;; As drawing is specified, a design of class opacity carries no color
+;; and thus borrows its color from  +foreground-ink+. So that
+;;
+;; (make-opacity v) == (compose-in +foreground-ink+ (make-opacity v))
+;;
+;; This implies, that an opacity is not neccessary uniform, it depends
+;; on the selected foreground ink.
+;;
+;; They halfway fix this by specifing that the mask argument of
+;; compose-in and compose-out is thought as to be drawn with
+;; +foreground-ink+ = +background-ink+ = +black+.
+;;
+;; But Is (make-opacity 1) really the same as +foreground-ink+? 
+;;     Or: Is
+;;         (compose-in D +foreground-ink+) different from
+;;         (compose-in D (make-opacity 1))?
+;;
+;; If the above equation is true, we get a funny algebra:
+;;
+;; (make-opacity 0) = +transparent-ink+ = +nowhere+
+;; (make-opacity 1) = +foreground-ink+ = +everywhere+
+;;
+;; --GB
+
+;;;; What we may want to have
+
+;; It might be handy to have the equivalent of parent-relative
+;; backgrounds. We can specify new indirect inks:
+;;
+;; +parent-background+
+;; +parent-relative-background+
+;; +parent-foreground+
+;; +parent-relative-foreground+
+;;
+;; The relative one would have the same "absolute" origin as the
+;; relevant inks of the parent.
+;;
+;; When they are evaluated, they look at the parent's
+;; foreground/background ink. Though the relative variants are
+;; expensive, when you want to scroll them ...
+;;
+;;
+;; Further we really should specify some form of indirekt ink
+;; protocol.
+;;
+;; --GB
+
+;;;; Design Protocol
+
+;;
+;; DRAW-DESIGN already is all you need for a design protocol.
+;;
+;; --GB
+
+
 (in-package :CLIM-INTERNALS)
 
 (define-protocol-class design ())
@@ -226,15 +285,16 @@
 
 (define-protocol-class opacity (design))
 
+(defmethod print-object ((object opacity) stream)
+  (print-unreadable-object (object stream :identity nil :type t)
+    (format stream "~S" (opacity-value object))))
+
 ;; Note: Though tempting, opacity is not a uniform-design!
 
 (defclass standard-opacity (opacity)
   ((value :initarg :value
           :type (real 0 1)
           :reader opacity-value)))
-
-(defvar +transparent-ink+ 
-    (load-time-value (make-instance 'standard-opacity :value 0)))
 
 (defun make-opacity (value)
   (setf value (clamp value 0 1))        ;defensive programming
@@ -244,6 +304,9 @@
          +foreground-ink+)
         (t
          (make-instance 'standard-opacity :value value))))
+
+(defvar +transparent-ink+ 
+    (load-time-value (make-instance 'standard-opacity :value 0)))
 
 ;;;;
 ;;;; 13.6 Indirect Inks
@@ -297,6 +360,15 @@
 ;;;; 14 General Designs
 ;;;;
 
+(declaim (inline color-blend-function))
+(defun color-blend-function (r1 g1 b1 o1  r2 g2 b2 o2)
+  (let* ((o3 (+ o1 (* (- 1 o1) o2)))
+         (r3 (/ (+ (* r1 o1) (* (- 1 o1) o2 r2)) o3))
+         (g3 (/ (+ (* g1 o1) (* (- 1 o1) o2 g2)) o3))
+         (b3 (/ (+ (* b1 o1) (* (- 1 o1) o2 b2)) o3)))
+    (values
+     r3 g3 b3 o3)))
+
 (defgeneric compose-over (design1 design2))
 (defgeneric compose-in (ink mask))
 (defgeneric compose-out (ink mask))
@@ -327,3 +399,430 @@
     :width width
     :height height
     :design design))
+
+
+;;;
+
+(defclass in-compositum (design)
+  ((ink :initarg :ink :reader compositum-ink)
+   (mask :initarg :mask :reader compositum-mask)))
+
+(defmethod print-object ((object in-compositum) stream)
+  (print-unreadable-object (object stream :identity nil :type t)
+    (format stream "~S ~S ~S ~S"
+            :ink (compositum-ink object)
+            :mask (compositum-mask object))))
+
+(defclass uniform-compositum (in-compositum)
+  ;; we use this class to represent rgbo values
+  ())
+
+(defclass over-compositum (design)
+  ((foreground :initarg :foreground :reader compositum-foreground)
+   (background :initarg :background :reader compositum-background)))
+
+(defmethod compose-in ((ink design) (mask design))
+  (make-instance 'in-compositum
+    :ink ink
+    :mask mask))
+
+(defmethod compose-in ((ink color) (mask opacity))
+  (make-instance 'uniform-compositum
+    :ink ink
+    :mask mask))
+
+(defmethod compose-in ((ink color) (mask uniform-compositum))
+  (make-instance 'uniform-compositum
+    :ink ink
+    :mask (compositum-mask mask)))
+
+(defmethod compose-over ((foreground design) (background design))
+  (make-instance 'over-compositum
+    :foreground foreground
+    :background background))
+
+(defmethod compose-over ((foreground color) (background design))
+  foreground)
+
+(defmethod compose-over ((foreground uniform-compositum) (background uniform-compositum))
+  (multiple-value-bind (r g b o) 
+      (multiple-value-call #'color-blend-function
+        (color-rgb (compositum-ink foreground))
+        (opacity-value (compositum-mask foreground))
+        (color-rgb (compositum-ink background))
+        (opacity-value (compositum-ink background)))
+    (cond ((= o 1)
+           (make-rgb-color r g b))
+          ((= o 0)
+           +transparent-ink+))))
+
+(defconstant *opacity-epsilon* 1/256)
+
+(defmethod compose-over ((foreground uniform-compositum) (background color))
+  (multiple-value-bind (r g b o) 
+      (multiple-value-call #'color-blend-function
+        (color-rgb (compositum-ink foreground))
+        (opacity-value (compositum-mask foreground))
+        (color-rgb background)
+        1)
+    (cond ((< (abs (- o 1)) *opacity-epsilon*)
+           (make-rgb-color r g b))
+          ((< (abs (- o 0)) *opacity-epsilon*)
+           +transparent-ink+)
+          (t
+           (make-instance 'uniform-compositum
+             :ink (make-rgb-color r g b)
+             :mask (make-opacity o))))))
+
+;;;
+;;; color
+;;; opacity
+;;; indirect-ink
+;;; in-compositum
+;;; over-compositum
+;;; out-compositum
+;;; uniform-compositum
+;;;
+
+
+;;;; ------------------------------------------------------------------------------------------
+;;;;
+;;;; COMPOSE-IN
+;;;;
+
+(defun make-uniform-compositum (ink opacity-value)
+  (cond ((= opacity-value 0)
+         +transparent-ink+)
+        ((= opacity-value 1)
+         ink)
+        (t
+         (make-instance 'uniform-compositum
+           :ink ink
+           :mask (make-opacity opacity-value)))))
+;;; COLOR
+
+(defmethod compose-in ((ink design) (mask color))
+  (declare (ignorable ink))
+  ink)
+
+;;; OPACITY
+
+(defmethod compose-in ((ink opacity) (mask opacity))
+  (make-opacity (* (opacity-value ink) (opacity-value mask))))
+
+(defmethod compose-in ((ink color) (mask opacity))
+  (make-uniform-compositum ink (opacity-value mask)))
+
+;;; UNIFORM-COMPOSITUM
+
+(defmethod compose-in ((ink uniform-compositum) (mask uniform-compositum))
+  (make-uniform-compositum (compositum-ink ink)
+                           (* (opacity-value (compositum-mask ink))
+                              (opacity-value (compositum-mask mask)))))
+
+(defmethod compose-in ((ink uniform-compositum) (mask opacity))
+  (make-uniform-compositum (compositum-ink ink)
+                           (* (opacity-value (compositum-mask ink))
+                              (opacity-value mask))))
+
+(defmethod compose-in ((ink opacity) (mask uniform-compositum))
+  (make-opacity (* (opacity-value mask)
+                   (opacity-value (compositum-mask mask)))))
+
+(defmethod compose-in ((ink color) (mask uniform-compositum))
+  (make-uniform-compositum ink (opacity-value mask)))
+
+;;; IN-COMPOSITUM
+
+;; Since compose-in is associative, we can write it this way:
+(defmethod compose-in ((ink in-compositum) (mask design))
+  (compose-in (compositum-ink ink)
+              (compose-in (compositum-mask ink)
+                          mask)))
+
+#+NYI
+(defmethod compose-in ((ink opacity) (mask in-compositum))
+  (declare (ignorable ink mask))
+  )
+
+#+NYI
+(defmethod compose-in ((ink color) (mask in-compositum))
+  (declare (ignorable ink mask))
+  )
+
+
+;;; OUT-COMPOSITUM
+
+#+NYI
+(defmethod compose-in ((ink out-compositum) (mask out-compositum))
+  (declare (ignorable ink mask))
+  )
+
+#+NYI
+(defmethod compose-in ((ink out-compositum) (mask in-compositum))
+  (declare (ignorable ink mask))
+  )
+
+#+NYI
+(defmethod compose-in ((ink out-compositum) (mask uniform-compositum))
+  (declare (ignorable ink mask))
+  )
+
+#+NYI
+(defmethod compose-in ((ink out-compositum) (mask opacity))
+  (declare (ignorable ink mask))
+  )
+
+#+NYI
+(defmethod compose-in ((ink uniform-compositum) (mask out-compositum))
+  (declare (ignorable ink mask))
+  )
+
+#+NYI
+(defmethod compose-in ((ink opacity) (mask out-compositum))
+  (declare (ignorable ink mask))
+  )
+
+#+NYI
+(defmethod compose-in ((ink color) (mask out-compositum))
+  (declare (ignorable ink mask))
+  )
+
+
+;;; OVER-COMPOSITUM
+
+#+NYI
+(defmethod compose-in ((ink over-compositum) (mask over-compositum))
+  (declare (ignorable ink mask))
+  )
+
+#+NYI
+(defmethod compose-in ((ink over-compositum) (mask out-compositum))
+  (declare (ignorable ink mask))
+  )
+
+#+NYI
+(defmethod compose-in ((ink over-compositum) (mask in-compositum))
+  (declare (ignorable ink mask))
+  )
+
+#+NYI
+(defmethod compose-in ((ink over-compositum) (mask uniform-compositum))
+  (declare (ignorable ink mask))
+  )
+
+#+NYI
+(defmethod compose-in ((ink over-compositum) (mask opacity))
+  (declare (ignorable ink mask))
+  )
+
+#+NYI
+(defmethod compose-in ((ink out-compositum) (mask over-compositum))
+  (declare (ignorable ink mask))
+  )
+
+#+NYI
+(defmethod compose-in ((ink uniform-compositum) (mask over-compositum))
+  (declare (ignorable ink mask))
+  )
+
+#+NYI
+(defmethod compose-in ((ink opacity) (mask over-compositum))
+  (declare (ignorable ink mask))
+  )
+
+#+NYI
+(defmethod compose-in ((ink color) (mask over-compositum))
+  (declare (ignorable ink mask))
+  )
+
+;;;; ------------------------------------------------------------------------------------------
+;;;;
+;;;;  Compose-Over
+;;;;
+
+;;; COLOR
+
+(defmethod compose-over ((foreground color) (background design))
+  (declare (ignorable background))
+  foreground)
+
+;;; OPACITY
+
+(defmethod compose-over ((foreground opacity) (background opacity))
+  (make-opacity
+   (+ (opacity-value foreground)
+      (* (- 1 (opacity-value foreground)) (opacity-value background)))))
+
+(defmethod compose-over ((foreground opacity) (background color))
+  (make-instance 'over-compositum
+    :foreground foreground
+    :background background))
+
+;;; UNIFORM-COMPOSITUM
+
+(defmethod compose-over ((foreground uniform-compositum) (background uniform-compositum))
+  (multiple-value-bind (r g b o)
+      (multiple-value-call #'color-blend-function
+        (color-rgb (compositum-ink foreground))
+        (opacity-value (compositum-mask foreground))
+        (color-rgb (compositum-ink background))
+        (opacity-value (compositum-mask background)))
+    (make-uniform-compositum
+     (make-rgb-color r g b)
+     o)))
+
+(defmethod compose-over ((foreground uniform-compositum) (background opacity))
+  (make-instance 'over-compositum
+    :foreground foreground
+    :background background))
+
+(defmethod compose-over ((foreground uniform-compositum) (background color))
+  (multiple-value-bind (r g b o)
+      (multiple-value-call #'color-blend-function
+        (color-rgb (compositum-ink foreground))
+        (opacity-value (compositum-mask foreground))
+        (color-rgb background)
+        1)
+    (make-uniform-compositum
+     (make-rgb-color r g b)
+     o)))
+
+(defmethod compose-over ((foreground opacity) (background uniform-compositum))
+  (multiple-value-bind (r g b o)
+      (multiple-value-call #'color-blend-function
+        (color-rgb foreground)
+        1
+        (color-rgb (compositum-ink background))
+        (opacity-value (compositum-mask background)))
+    (make-uniform-compositum
+     (make-rgb-color r g b)
+     o)))
+
+;;; IN-COMPOSITUM
+
+#+NYI
+(defmethod compose-over ((foreground in-compositum) (background in-compositum))
+  (declare (ignorable foreground background))
+  )
+
+#+NYI
+(defmethod compose-over ((foreground in-compositum) (background uniform-compositum))
+  (declare (ignorable foreground background))
+  )
+
+#+NYI
+(defmethod compose-over ((foreground in-compositum) (background opacity))
+  (declare (ignorable foreground background))
+  )
+
+#+NYI
+(defmethod compose-over ((foreground in-compositum) (background color))
+  (declare (ignorable foreground background))
+  )
+
+#+NYI
+(defmethod compose-over ((foreground uniform-compositum) (background in-compositum))
+  (declare (ignorable foreground background))
+  )
+
+#+NYI
+(defmethod compose-over ((foreground opacity) (background in-compositum))
+  (declare (ignorable foreground background))
+  )
+
+;;; OUT-COMPOSITUM
+
+#+NYI
+(defmethod compose-over ((foreground out-compositum) (background out-compositum))
+  (declare (ignorable foreground background))
+  )
+
+#+NYI
+(defmethod compose-over ((foreground out-compositum) (background in-compositum))
+  (declare (ignorable foreground background))
+  )
+
+#+NYI
+(defmethod compose-over ((foreground out-compositum) (background uniform-compositum))
+  (declare (ignorable foreground background))
+  )
+
+#+NYI
+(defmethod compose-over ((foreground out-compositum) (background opacity))
+  (declare (ignorable foreground background))
+  )
+
+#+NYI
+(defmethod compose-over ((foreground out-compositum) (background color))
+  (declare (ignorable foreground background))
+  )
+
+#+NYI
+(defmethod compose-over ((foreground in-compositum) (background out-compositum))
+  (declare (ignorable foreground background))
+  )
+
+#+NYI
+(defmethod compose-over ((foreground uniform-compositum) (background out-compositum))
+  (declare (ignorable foreground background))
+  )
+
+#+NYI
+(defmethod compose-over ((foreground color) (background out-compositum))
+  (declare (ignorable foreground background))
+  )
+
+;;; OVER-COMPOSITUM
+
+#+NYI
+(defmethod compose-over ((foreground over-compositum) (background over-compositum))
+  (declare (ignorable foreground background))
+  )
+
+#+NYI
+(defmethod compose-over ((foreground over-compositum) (background out-compositum))
+  (declare (ignorable foreground background))
+  )
+
+#+NYI
+(defmethod compose-over ((foreground over-compositum) (background in-compositum))
+  (declare (ignorable foreground background))
+  )
+
+#+NYI
+(defmethod compose-over ((foreground over-compositum) (background uniform-compositum))
+  (declare (ignorable foreground background))
+  )
+
+#+NYI
+(defmethod compose-over ((foreground over-compositum) (background opacity))
+  (declare (ignorable foreground background))
+  )
+
+#+NYI
+(defmethod compose-over ((foreground over-compositum) (background color))
+  (declare (ignorable foreground background))
+  )
+
+#+NYI
+(defmethod compose-over ((foreground out-compositum) (background over-compositum))
+  (declare (ignorable foreground background))
+  )
+
+#+NYI
+(defmethod compose-over ((foreground in-compositum) (background over-compositum))
+  (declare (ignorable foreground background))
+  )
+
+#+NYI
+(defmethod compose-over ((foreground uniform-compositum) (background over-compositum))
+  (declare (ignorable foreground background))
+  )
+
+#+NYI
+(defmethod compose-over ((foreground opacity) (background over-compositum))
+  (declare (ignorable foreground background))
+  )
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
