@@ -28,7 +28,7 @@
 
 #||
 
-$Id: events.lisp,v 1.4 2004/08/21 20:51:28 duncan Exp $
+$Id: events.lisp,v 1.5 2005/03/04 07:35:39 afuchs Exp $
 
 All these are copied pretty much from CLX/port.lisp
 
@@ -334,7 +334,7 @@ when a notification is added to the queue."
 		   (target-sheet (port-lookup-sheet-for-view *beagle-port* target-view)))
 	      (unless (null target-sheet)
 		(format *debug-io* "Setting focus in *beagle-port* onto (hopefully correct) sheet: ~S~%" target-sheet)
-		(set-port-keyboard-focus target-sheet *beagle-port*))))))
+		(%set-port-keyboard-focus target-sheet *beagle-port*))))))
        ((send (send notification 'name) :is-equal-to-string #@"NSWindowDidExposeNotification")
 	(setf return-event
 	      (make-instance 'window-repaint-event :timestamp (incf timestamp)
@@ -720,7 +720,7 @@ when a notification is added to the queue."
 ;;; Cocoa note: the Frame (NSWindow) must be made key for us to receive events; but they
 ;;; must then be sent to the Sheet that has focus.
 
-(defmethod set-port-keyboard-focus (focus (port beagle-port))
+(defmethod %set-port-keyboard-focus (focus (port beagle-port) &key timestamp)
   (let ((mirror (sheet-mirror focus)))
     (debug-log 2 "events.lisp:set-port-keyboard-focus - got mirror ~S~%" mirror)
     (when mirror
