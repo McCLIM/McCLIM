@@ -281,11 +281,11 @@
   (defun compute-class-vars (names)
     (cons (list 'stream :initarg :stream)
 	  (loop for name in names
-		collecting (list name :initarg (intern name :keyword)))))
+		collecting (list name :initarg (intern (symbol-name name) :keyword)))))
 
   (defun compute-arg-list (names)
     (loop for name in names
-	  nconcing (list (intern name :keyword) name)))
+	  nconcing (list (intern (symbol-name name) :keyword) name)))
   )
 
 (defun make-merged-medium (sheet ink clip transform line-style text-style)
@@ -298,7 +298,6 @@
     medium))
 
 (defmacro def-grecording (name (&rest args) &body body)
-  (declare (ignore path))
   (let ((method-name (intern (format nil "MEDIUM-~A*" name)))
 	(class-name (intern (format nil "~A-OUTPUT-RECORD" name)))
 	(old-medium (gensym))
@@ -388,8 +387,8 @@
   (let* ((width (stream-string-width stream string
                                      :start start :end end
                                      :text-style text-style))
-         (ascent (text-style-ascent (port (sheet-medium stream)) text-style))
-         (descent (text-style-descent (port (sheet-medium stream)) text-style))
+         (ascent (text-style-ascent text-style (port (sheet-medium stream))))
+         (descent (text-style-descent text-style (port (sheet-medium stream))))
          (height (+ ascent descent))
          left top right bottom)
     (ecase align-x
