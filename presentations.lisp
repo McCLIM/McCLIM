@@ -52,284 +52,296 @@ method lambda list"))
 ;;; with CLOS classes, objects with this metaclass are used as a proxy for the
 ;;; type during presentation method dispatch.  Otherwise this holds useful 
 ;;; info about the class.
-;;; 
-(defclass presentation-type ()
-  ((type-name :accessor type-name :initarg :type-name
-	      :documentation "The name assigned to the presentation
+;;;
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defclass presentation-type ()
+    ((type-name :accessor type-name :initarg :type-name
+		:documentation "The name assigned to the presentation
 type, as opposed to the name constructed for the class")
-   (ptype-specializer :accessor ptype-specializer :initarg :ptype-specializer
-		      :documentation "The symbol to use as the specializer for
+     (ptype-specializer :accessor ptype-specializer :initarg :ptype-specializer
+			:documentation "The symbol to use as the specializer for
 this type in presentation methods")
-   (parameters :accessor parameters :initarg :parameters :initform nil)
-   (parameters-lambda-list :accessor parameters-lambda-list
+     (parameters :accessor parameters :initarg :parameters :initform nil)
+     (parameters-lambda-list :accessor parameters-lambda-list
 			     :initarg :parameters-lambda-list
 			     :initform nil
 			     :documentation "The parameters lambda list, altered for use in destructuring bind")
-   (options :accessor options :initarg :options :initform nil)
-   (options-lambda-list :accessor options-lambda-list
+     (options :accessor options :initarg :options :initform nil)
+     (options-lambda-list :accessor options-lambda-list
 			  :initarg :options-lambda-list
 			  :initform nil
 			  :documentation "The options lambda list,
 altered for use in destructuring bind")
-   (inherit-from :accessor inherit-from
-		 :initarg :inherit-from
-		 :documentation "Inherit-from form with dummys substituted")
-   (inherit-from-function :accessor inherit-from-function
-			   :initarg :inherit-from-function
-			   :documentation "Function that returns the inherit-from form")
-   (description :accessor description :initarg :description)
-   (history :accessor history :initarg :history :initform nil
-	    :documentation "Who knows?")
-   (parameters-are-types :accessor parameters-are-types 
-			 :initarg :parameters-are-types
-			 :initform nil)
-   (expansion-function :accessor expansion-function
-		       :initarg :expansion-function
-		       :documentation "A function which expands the typespec
+     (inherit-from :accessor inherit-from
+		   :initarg :inherit-from
+		   :documentation "Inherit-from form with dummys substituted")
+     (inherit-from-function :accessor inherit-from-function
+			    :initarg :inherit-from-function
+			    :documentation "Function that returns the inherit-from form")
+     (description :accessor description :initarg :description)
+     (history :accessor history :initarg :history :initform nil
+	      :documentation "Who knows?")
+     (parameters-are-types :accessor parameters-are-types 
+			   :initarg :parameters-are-types
+			   :initform nil)
+     (expansion-function :accessor expansion-function
+			 :initarg :expansion-function
+			 :documentation "A function which expands the typespec
 fully, including defaulting parameters and options.")))
 
-(defmethod initialize-instance :after ((obj presentation-type) &key)
-  (unless (slot-boundp obj 'ptype-specializer)
-    (setf (slot-value obj 'ptype-specializer)
-	  (make-presentation-type-name (slot-value obj 'type-name)))))
+  (defmethod initialize-instance :after ((obj presentation-type) &key)
+    (unless (slot-boundp obj 'ptype-specializer)
+      (setf (slot-value obj 'ptype-specializer)
+	    (make-presentation-type-name (slot-value obj 'type-name)))))
 
-(defclass presentation-type-class (presentation-type standard-class)
-  ())
+  (defclass presentation-type-class (presentation-type standard-class)
+    ())
 
-(defmethod clim-mop:validate-superclass ((class presentation-type-class) 
-				    (super standard-class))
-  t)
+  (defmethod clim-mop:validate-superclass ((class presentation-type-class) 
+					   (super standard-class))
+    t)
 
-(defclass clos-presentation-type (presentation-type)
-  ((clos-class :accessor clos-class :initarg :clos-class
-	       :documentation "Holds the class object of the CLOS class of this presentation type")))
+  (defclass clos-presentation-type (presentation-type)
+    ((clos-class :accessor clos-class :initarg :clos-class
+		 :documentation "Holds the class object of the CLOS class of this presentation type")))
 
-(defmethod initialize-instance :after ((obj clos-presentation-type)
-				       &key (ptype-specializer
-					     nil
-					     ptype-specializer-p))
-  (declare (ignore ptype-specializer))
-  (unless ptype-specializer-p
-    (setf (slot-value obj 'ptype-specializer) (slot-value obj 'type-name))))
+  (defmethod initialize-instance :after ((obj clos-presentation-type)
+					 &key (ptype-specializer
+					       nil
+					       ptype-specializer-p))
+	     (declare (ignore ptype-specializer))
+	     (unless ptype-specializer-p
+	       (setf (slot-value obj 'ptype-specializer)
+		     (slot-value obj 'type-name))))
 
-(defun make-presentation-type-name (name)
-  (intern (format nil "(presentation-type ~A::~A)"
-		  (package-name (symbol-package name))
-		  (symbol-name name))
-	  :clim-internals))
+  (defun make-presentation-type-name (name)
+    (intern (format nil "(presentation-type ~A::~A)"
+		    (package-name (symbol-package name))
+		    (symbol-name name))
+	    :clim-internals))
 
-(defun transform-parameters-lambda-list (ll)
-  "Change the destructuring  lambda list so that any optional or key variable
+  (defun transform-parameters-lambda-list (ll)
+    "Change the destructuring  lambda list so that any optional or key variable
 that has no default is supplied with '*"
-  (when (atom ll)
-    (return-from transform-parameters-lambda-list ll))
-  (let ((state 'required))
-    (loop for lambda-var in ll
-	  collect
-	  (cond ((member lambda-var lambda-list-keywords :test #'eq)
-		 (setq state lambda-var)
-		 lambda-var)
-		((eq state '&optional)
-		 (if (atom lambda-var)
-		     `(,lambda-var '*)
-		     (cons (transform-parameters-lambda-list (car lambda-var))
-			   (or (cdr lambda-var) '('*)))))
-		((eq state '&key)
-		 (cond ((atom lambda-var)
-			`(,lambda-var '*))
-		       ((atom (car lambda-var))
-			(cons (car lambda-var)
-			      (or (cdr lambda-var) '('*))))
-		       (t (destructuring-bind
-				((var pattern)
-				 &optional (default nil default-p)
-				 &rest supplied-tail)
-			      lambda-var
-			    `((,var ,(transform-parameters-lambda-list
-				      pattern))
-			      ,(if default-p
-				   default
-				   '*)
-			      ,@supplied-tail)))))
-		((member state '(required &rest &body &whole))
-		 (when (eq state '&whole)
-		   (setq state 'required))
-		 (transform-parameters-lambda-list lambda-var))
-		(t lambda-var)))))
+    (when (atom ll)
+      (return-from transform-parameters-lambda-list ll))
+    (let ((state 'required))
+      (loop for lambda-var in ll
+	    collect
+	    (cond ((member lambda-var lambda-list-keywords :test #'eq)
+		   (setq state lambda-var)
+		   lambda-var)
+		  ((eq state '&optional)
+		   (if (atom lambda-var)
+		       `(,lambda-var '*)
+		       (cons (transform-parameters-lambda-list (car lambda-var))
+			     (or (cdr lambda-var) '('*)))))
+		  ((eq state '&key)
+		   (cond ((atom lambda-var)
+			  `(,lambda-var '*))
+			 ((atom (car lambda-var))
+			  (cons (car lambda-var)
+				(or (cdr lambda-var) '('*))))
+			 (t (destructuring-bind
+				  ((var pattern)
+				   &optional (default nil default-p)
+				   &rest supplied-tail)
+				lambda-var
+			      `((,var ,(transform-parameters-lambda-list
+					pattern))
+				,(if default-p
+				     default
+				     '*)
+				,@supplied-tail)))))
+		  ((member state '(required &rest &body &whole))
+		   (when (eq state '&whole)
+		     (setq state 'required))
+		   (transform-parameters-lambda-list lambda-var))
+		  (t lambda-var)))))
 
 ;;; I'm not using COLLECT because I'm superstitious about doing a
 ;;; LOOP-FINISH out of the collect form.  Call me paranoid.
-(defun fake-params-args (ll)
-  (let ((state 'required)
-	(result nil))
-    (loop for lambda-var in ll
-	  do (cond ((member lambda-var lambda-list-keywords :test #'eq)
-		    (setq state lambda-var)
-		    (unless (eq state '&whole)
-		      (loop-finish)))
-		   ((eq state '&whole)
-		    (setq state 'required))
-		   ((atom lambda-var)
-		    (push (gensym (symbol-name lambda-var)) result))
-		   (t (push (fake-params-args lambda-var) result)))
-	  finally (return (nreverse result)))))
+  (defun fake-params-args (ll)
+    (let ((state 'required)
+	  (result nil))
+      (loop for lambda-var in ll
+	    do (cond ((member lambda-var lambda-list-keywords :test #'eq)
+		      (setq state lambda-var)
+		      (unless (eq state '&whole)
+			(loop-finish)))
+		     ((eq state '&whole)
+		      (setq state 'required))
+		     ((atom lambda-var)
+		      (push (gensym (symbol-name lambda-var)) result))
+		     (t (push (fake-params-args lambda-var) result)))
+	    finally (return (nreverse result)))))
 
 ;;; Yet another variation on a theme...
 
-(defun get-all-params (ll)
-  (unless ll
-    (return-from get-all-params nil))
-  (when (atom ll)
-    (return-from get-all-params (list ll)))
-  (let ((state 'required))
-    (loop for arg in ll
-	  append (cond ((member arg lambda-list-keywords :test #'eq)
-			(setq state arg)
-			nil)
-		       ((eq state 'required)
-			(get-all-params arg))
-		       ((or (eq state '&optional) (eq state '&aux))
-			(if (atom arg)
-			    (list arg)
-			    (get-all-params (car arg))))
-		       ((eq state '&key)
-			(cond ((atom arg)
-			       (list arg))
-			      ((atom (car arg))
-			       (list (car arg)))
-			      (t (get-all-params (cadar arg)))))
-		       ((member state '(required &rest &body &whole))
-			(when (eq state '&whole)
-			  (setq state 'required))
-			(get-all-params arg))
-		       (t nil)))))
+  (defun get-all-params (ll)
+    (unless ll
+      (return-from get-all-params nil))
+    (when (atom ll)
+      (return-from get-all-params (list ll)))
+    (let ((state 'required))
+      (loop for arg in ll
+	    append (cond ((member arg lambda-list-keywords :test #'eq)
+			  (setq state arg)
+			  nil)
+			 ((eq state 'required)
+			  (get-all-params arg))
+			 ((or (eq state '&optional) (eq state '&aux))
+			  (if (atom arg)
+			      (list arg)
+			      (get-all-params (car arg))))
+			 ((eq state '&key)
+			  (cond ((atom arg)
+				 (list arg))
+				((atom (car arg))
+				 (list (car arg)))
+				(t (get-all-params (cadar arg)))))
+			 ((member state '(required &rest &body &whole))
+			  (when (eq state '&whole)
+			    (setq state 'required))
+			  (get-all-params arg))
+			 (t nil)))))
 
 ;;; ...And another.  Given a lambda list, return a form that replicates the
 ;;; structure of the argument with variables filled in.
 
-(defun map-over-lambda-list (function ll &key (pass-lambda-list-keywords nil))
-  (declare (ignore function pass-lambda-list-keywords))
-  (unless ll
-    (return-from map-over-lambda-list nil))
-  (when (atom ll)
-    (return-from map-over-lambda-list ll))
-  (loop for args-tail = ll then (cdr args-tail))
-  )
+  (defun map-over-lambda-list (function ll
+			       &key (pass-lambda-list-keywords nil))
+    (declare (ignore function pass-lambda-list-keywords))
+    (unless ll
+      (return-from map-over-lambda-list nil))
+    (when (atom ll)
+      (return-from map-over-lambda-list ll))
+    (loop for args-tail = ll then (cdr args-tail)))
 
-(defun make-keyword (sym)
-  (intern (symbol-name sym) :keyword))
+  (defun make-keyword (sym)
+    (intern (symbol-name sym) :keyword))
 
-(defun cull-keywords (keys prop-list)
-  (let ((plist (copy-list prop-list)))
-    (loop for key in keys
-	  do (remf plist key))
-    plist))
+  (defun cull-keywords (keys prop-list)
+    (let ((plist (copy-list prop-list)))
+      (loop for key in keys
+	    do (remf plist key))
+      plist))
 
-(defun recreate-lambda-list (ll)
-  "Helper function.  Returns a form that, when evaluated inside a
+  (defun recreate-lambda-list (ll)
+    "Helper function.  Returns a form that, when evaluated inside a
 DESTRUCTURING-BIND using ll, recreates the argument list with all defaults
 filled in."
-  (unless ll
-    (return-from recreate-lambda-list nil))
-  (when (atom ll)
-    (return-from recreate-lambda-list ll))
-  (let ((state 'required)
-	(rest-var nil)
-	(has-keys nil)
-	(keys nil)
-	(allow-other-keys nil))
-    (loop for arg in ll
-	  append (cond ((member arg lambda-list-keywords :test #'eq)
-			(setq state arg)
-			(when (eq arg '&key)
-			  (setq has-keys t))
-			(when (eq arg '&allow-other-keys)
-			  (setq allow-other-keys t))
-			nil)
-		       ((eq state '&whole)
-			nil)
-		       ((eq state 'required)
-			(list (recreate-lambda-list arg)))
-		       ((eq state '&optional)
-			(if (atom arg)
-			    (list arg)
-			    (list (recreate-lambda-list (car arg)))))
-		       ((or (eq state '&rest) (eq state '&body))
-			(setq rest-var arg)
-			nil)
-		       ((eq state '&key)
-			(let ((key nil)
-			      (var nil))
-			  (cond ((atom arg)
-				 (setq key (make-keyword arg)
-				       var arg))
-				((atom (car arg))
-				 (setq key (make-keyword (car arg))
-				       var (car arg)))
+    (unless ll
+      (return-from recreate-lambda-list nil))
+    (when (atom ll)
+      (return-from recreate-lambda-list ll))
+    (let ((state 'required)
+	  (rest-var nil)
+	  (has-keys nil)
+	  (keys nil)
+	  (allow-other-keys nil))
+      (loop for arg in ll
+	    append (cond ((member arg lambda-list-keywords :test #'eq)
+			  (setq state arg)
+			  (when (eq arg '&key)
+			    (setq has-keys t))
+			  (when (eq arg '&allow-other-keys)
+			    (setq allow-other-keys t))
+			  nil)
+			 ((eq state '&whole)
+			  nil)
+			 ((eq state 'required)
+			  (list (recreate-lambda-list arg)))
+			 ((eq state '&optional)
+			  (if (atom arg)
+			      (list arg)
+			      (list (recreate-lambda-list (car arg)))))
+			 ((or (eq state '&rest) (eq state '&body))
+			  (setq rest-var arg)
+			  nil)
+			 ((eq state '&key)
+			  (let ((key nil)
+				(var nil))
+			    (cond ((atom arg)
+				   (setq key (make-keyword arg)
+					 var arg))
+				  ((atom (car arg))
+				   (setq key (make-keyword (car arg))
+					 var (car arg)))
 				
-				(t (destructuring-bind
-					 ((keyword pattern) &rest tail)
-				       arg
-				     (declare (ignore tail))
-				     (setq key keyword
-					   var (recreate-lambda-list
-						pattern)))))
-			  (push key keys)
-			  (list key var)))
-		       (t nil))
-	  into result-form
-	  finally (cond ((or (not rest-var)
-			     (and has-keys
-				  (not allow-other-keys)))
-			 (return `(list ,@result-form)))
-			((not has-keys)
-			 (return `(list* ,@result-form ,rest-var)))
-			(t (return `(list* ,@result-form
-				           (cull-keywords ',(nreverse keys)
-					                  ,rest-var))))))))
+				  (t (destructuring-bind
+					   ((keyword pattern) &rest tail)
+					 arg
+				       (declare (ignore tail))
+				       (setq key keyword
+					     var (recreate-lambda-list
+						  pattern)))))
+			    (push key keys)
+			    (list key var)))
+			 (t nil))
+	    into result-form
+	    finally (cond ((or (not rest-var)
+			       (and has-keys
+				    (not allow-other-keys)))
+			   (return `(list ,@result-form)))
+			  ((not has-keys)
+			   (return `(list* ,@result-form ,rest-var)))
+			  (t (return `(list* ,@result-form
+				       (cull-keywords ',(nreverse keys)
+					,rest-var))))))))
 
-(defun transform-options-lambda-list (ll)
-  "Return a legal lambda list given an options specification"
-  (let ((descriptionp nil))
-    (loop for spec in ll
-	  collect (if (atom spec)
-		      (progn
-			(when (eq (make-keyword spec) :description)
-			  (setq descriptionp t))
-			spec)
-		      (progn
-			(let ((key (if (atom (car spec))
-				       (make-keyword (car spec))
-				       (caar spec))))
-			  (when (eq key :description)
-			    (setq descriptionp t)))
-			(ldiff spec (cdddr spec))))
-	  into specs
-	  finally (return `(&key
-			    ,@specs
-			    ,@(unless descriptionp
-			        `(((:description ,(gensym))))))))))
+  (defun transform-options-lambda-list (ll)
+    "Return a legal lambda list given an options specification"
+    (let ((descriptionp nil))
+      (loop for spec in ll
+	    collect (if (atom spec)
+			(progn
+			  (when (eq (make-keyword spec) :description)
+			    (setq descriptionp t))
+			  spec)
+			(progn
+			  (let ((key (if (atom (car spec))
+					 (make-keyword (car spec))
+					 (caar spec))))
+			    (when (eq key :description)
+			      (setq descriptionp t)))
+			  (ldiff spec (cdddr spec))))
+	    into specs
+	    finally (return `(&key
+			      ,@specs
+			      ,@(unless descriptionp
+					`(((:description ,(gensym))))))))))
 
 
 ;;; External function
-(defun presentation-type-name (type)
-  (cond ((atom type)
-	 type)
-	((atom (car type))
-	 (car type))
-	(t (caar type))))
+  (defun presentation-type-name (type)
+    (cond ((atom type)
+	   type)
+	  ((atom (car type))
+	   (car type))
+	  (t (caar type))))
 
-(defun decode-parameters (type)
-  (cond ((atom type)
-	 nil)
-	((atom (car type))
-	 (cdr type))
-	(t (cdar type))))
+  (defun decode-parameters (type)
+    (cond ((atom type)
+	   nil)
+	  ((atom (car type))
+	   (cdr type))
+	  (t (cdar type))))
 
-(defun decode-options (type)
-  (if (or (atom type) (atom (car type)))
-      nil
-      (cdr type)))
+  (defun decode-options (type)
+    (if (or (atom type) (atom (car type)))
+	nil
+	(cdr type)))
+
+  (defun make-inherit-from-lambda (params-ll options-ll form)
+    (let ((type (gensym "TYPE")))
+      `(lambda (,type)
+	(destructuring-bind ,params-ll (decode-parameters ,type)
+	  (declare (ignorable ,@(get-all-params params-ll)))
+	  (destructuring-bind ,options-ll (decode-options ,type)
+	    (declare (ignorable ,@(get-all-params options-ll)))
+	    ,form)))))
+) ; eval-when
 
 (defmacro with-presentation-type-decoded ((name
 					   &optional (params nil params-p)
@@ -342,32 +354,26 @@ filled in."
 	    ,@(and options-p `((,options (decode-options ,type-var)))))
        ,@body)))
 
-(defun make-inherit-from-lambda (params-ll options-ll form)
-  (let ((type (gensym "TYPE")))
-    `(lambda (,type)
-       (destructuring-bind ,params-ll (decode-parameters ,type)
-	 (declare (ignorable ,@(get-all-params params-ll)))
-	 (destructuring-bind ,options-ll (decode-options ,type)
-	   (declare (ignorable ,@(get-all-params options-ll)))
-	   ,form)))))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun make-expansion-lambda (params-ll options-ll)
+    (let ((params-form (recreate-lambda-list params-ll))
+	  (options-form (recreate-lambda-list options-ll))
+	  (parameters (gensym))
+	  (options (gensym)))
+      `(lambda (typespec)
+	 (with-presentation-type-decoded (name ,parameters ,options)
+	   typespec
+	   (make-type-spec name
+	    (destructuring-bind ,params-ll
+		,parameters
+	      ,params-form)
+	    (destructuring-bind ,options-ll
+		,options
+	      ,options-form)))))))
 
-(defun make-expansion-lambda (params-ll options-ll)
-  (let ((params-form (recreate-lambda-list params-ll))
-	(options-form (recreate-lambda-list options-ll))
-	(parameters (gensym))
-	(options (gensym)))
-    `(lambda (typespec)
-       (with-presentation-type-decoded (name ,parameters ,options)
-	 typespec
-	 (make-type-spec name
-			 (destructuring-bind ,params-ll
-			     ,parameters
-			   ,params-form)
-			 (destructuring-bind ,options-ll
-			     ,options
-			   ,options-form))))))
 
-(defvar *presentation-type-table* (make-hash-table :test #'eq))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defvar *presentation-type-table* (make-hash-table :test #'eq)))
 
 (defgeneric get-ptype-metaclass (type))
 
@@ -417,73 +423,76 @@ supertypes of TYPE that are presentation types"))
 (defmethod presentation-ptype-supers ((type clos-presentation-type))
   (presentation-ptype-supers (clos-class type)))
 
-(defmethod ptype-specializer ((type symbol))
-  (let ((ptype (gethash type *presentation-type-table*)))
-    (if ptype
-	(ptype-specializer ptype)
-	(ptype-specializer (find-class type)))))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defmethod ptype-specializer ((type symbol))
+    (let ((ptype (gethash type *presentation-type-table*)))
+      (if ptype
+	  (ptype-specializer ptype)
+	  (ptype-specializer (find-class type)))))
 
-(defmethod ptype-specializer ((type standard-class))
-  (clim-mop:class-name type))
+  (defmethod ptype-specializer ((type standard-class))
+    (clim-mop:class-name type)))
 
 ;;; XXX This is total bullshit, but works with our patched definition of
 ;;; defclass in CMUCL.  I think we need to patch defclass in every
 ;;; implementation to record a CLOS class at compiletime.  On the other hand,
 ;;; I think we can assume that if a CLOS class exists at compile time, it will
 ;;; exist at load/run time too.
-(defun compile-time-clos-p (name)
-  (let ((meta (find-class name nil)))
-    (and meta
-	 (typep meta 'standard-class))))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun compile-time-clos-p (name)
+    (let ((meta (find-class name nil)))
+      (and meta
+	   (typep meta 'standard-class))))
 
-(defun make-default-description (name)
-  "Create a description string from the type name"
-  (let ((downcase-name (string-downcase name)))
-    (setq downcase-name (nsubstitute-if-not #\Space
-					    #'alphanumericp
-					    downcase-name))
-    (string-trim " " downcase-name)))
+  (defun make-default-description (name)
+    "Create a description string from the type name"
+    (let ((downcase-name (string-downcase name)))
+      (setq downcase-name (nsubstitute-if-not #\Space
+					      #'alphanumericp
+					      downcase-name))
+      (string-trim " " downcase-name)))
 
-(defun record-presentation-type (name parameters params-ll options options-ll
-				 inherit-from-func description history
-				 parameters-are-types
-				 compile-time-p
-				 supers expansion-func)
-  (let* ((fake-name (make-presentation-type-name name))
-	 (ptype-class-args (list :type-name name
-				 :parameters parameters
-				 :parameters-lambda-list params-ll
-				 :options options
-				 :options-lambda-list options-ll
-				 :inherit-from-function inherit-from-func
-				 :description description
-				 :history history
-				 :parameters-are-types parameters-are-types
-				 :expansion-function expansion-func))
-	 (ptype-meta
-	  (if compile-time-p
-	      (apply #'make-instance
-		     (if (compile-time-clos-p name)
-			 'clos-presentation-type
-			 'presentation-type)
-		     ptype-class-args)
-	      (let* ((clos-meta (find-class name nil))
-		     (closp (typep clos-meta 'standard-class)))
-		(if closp
-		    (apply #'make-instance 'clos-presentation-type
-			   :clos-class clos-meta
-			   ptype-class-args)
-		    (let ((directs (mapcar #'(lambda (super)
-					       (or (get-ptype-metaclass super)
-						   super))
-				    supers)))
-		      (apply #'clim-mop:ensure-class fake-name
-			     :name fake-name
-			     :metaclass 'presentation-type-class
-			     :direct-superclasses directs
-			     ptype-class-args)))))))
-    (setf (gethash name *presentation-type-table*) ptype-meta)
-    ptype-meta))
+  (defun record-presentation-type (name parameters params-ll options options-ll
+				   inherit-from-func description history
+				   parameters-are-types
+				   compile-time-p
+				   supers expansion-func)
+    (let* ((fake-name (make-presentation-type-name name))
+	   (ptype-class-args (list :type-name name
+				   :parameters parameters
+				   :parameters-lambda-list params-ll
+				   :options options
+				   :options-lambda-list options-ll
+				   :inherit-from-function inherit-from-func
+				   :description description
+				   :history history
+				   :parameters-are-types parameters-are-types
+				   :expansion-function expansion-func))
+	   (ptype-meta
+	    (if compile-time-p
+		(apply #'make-instance
+		       (if (compile-time-clos-p name)
+			   'clos-presentation-type
+			   'presentation-type)
+		       ptype-class-args)
+		(let* ((clos-meta (find-class name nil))
+		       (closp (typep clos-meta 'standard-class)))
+		  (if closp
+		      (apply #'make-instance 'clos-presentation-type
+			     :clos-class clos-meta
+			     ptype-class-args)
+		      (let ((directs (mapcar #'(lambda (super)
+						 (or (get-ptype-metaclass super)
+						     super))
+					     supers)))
+			(apply #'clim-mop:ensure-class fake-name
+			       :name fake-name
+			       :metaclass 'presentation-type-class
+			       :direct-superclasses directs
+			       ptype-class-args)))))))
+      (setf (gethash name *presentation-type-table*) ptype-meta)
+      ptype-meta))
+  ); eval-when
 
 (defgeneric massage-type-for-super (type-name super-name type-spec)
   (:documentation "translate TYPE-SPEC from that of TYPE-NAME to one
@@ -620,7 +629,8 @@ suitable for SUPER-NAME"))
 	     (declare (ignorable ,@ignorable-vars))
 	     ,@body))))))
 
-(defvar *presentation-type-abbreviations* (make-hash-table :test #'eq))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defvar *presentation-type-abbreviations* (make-hash-table :test #'eq)))
 
 (defmacro define-presentation-type-abbreviation (name parameters
 						 equivalent-type
@@ -713,19 +723,20 @@ suitable for SUPER-NAME"))
 ;;; Presentation methods.  The basic dispatch is performed via CLOS
 ;;; instances that are standins for the presentation types.
 
-(defclass presentation-generic-function ()
-  ((generic-function-name :accessor generic-function-name
-			  :initarg :generic-function-name)
-   (lambda-list :accessor lambda-list :initarg :lambda-list)
-   (type-key-arg :accessor type-key-arg :initarg :type-key-arg)
-   (parameters-arg :accessor parameters-arg :initarg :parameters-arg
-		   :initform nil)
-   (options-arg :accessor options-arg :initarg :options-arg :initform nil)
-   (type-arg-position :accessor type-arg-position
-		      :initarg :type-arg-position)))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defclass presentation-generic-function ()
+    ((generic-function-name :accessor generic-function-name
+			    :initarg :generic-function-name)
+     (lambda-list :accessor lambda-list :initarg :lambda-list)
+     (type-key-arg :accessor type-key-arg :initarg :type-key-arg)
+     (parameters-arg :accessor parameters-arg :initarg :parameters-arg
+		     :initform nil)
+     (options-arg :accessor options-arg :initarg :options-arg :initform nil)
+     (type-arg-position :accessor type-arg-position
+			:initarg :type-arg-position)))
 
-
-(defvar *presentation-gf-table* (make-hash-table :test #'eq))
+  (defvar *presentation-gf-table* (make-hash-table :test #'eq))
+) ; eval-when
 
 ;;; The hard part of presentation methods: translating the type specifier for
 ;;; superclasses.
@@ -798,15 +809,19 @@ function lambda list"))
 			     :options-arg ',options-arg
 			     :type-arg-position ,type-arg-pos)))
 	   (defgeneric ,generic-function-name ,gf-lambda-list ,@options)))))
-    
-(defun parse-method-body (args)
-  (loop for arglist on args
-	for (arg) = arglist
-	while (atom arg)
-	collect arg into qualifiers
-	finally (if (eq (caadr arglist) 'declare)
-		    (return (values qualifiers arg (cadr arglist) (cddr arglist)))
-		  (return (values qualifiers arg nil (cdr arglist))))))
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun parse-method-body (args)
+    (loop for arglist on args
+	  for (arg) = arglist
+	  while (atom arg)
+	  collect arg into qualifiers
+	  finally (if (eq (caadr arglist) 'declare)
+		      (return (values qualifiers
+				      arg
+				      (cadr arglist)
+				      (cddr arglist)))
+		      (return (values qualifiers arg nil (cdr arglist)))))))
 
 (defmacro define-presentation-method (name &rest args)
   (when (eq name 'presentation-subtypep)
@@ -1574,7 +1589,7 @@ function lambda list"))
 (define-presentation-method present (object (type symbol) stream
 				     (view textual-view)
 				     &key acceptably for-context-type)
-  (declare (ignore acceptably for-context-type))
+  (declare (ignore for-context-type))
   (if acceptably
       (prin1 object stream)
       (princ object stream)))
@@ -1860,10 +1875,12 @@ function lambda list"))
 (defmethod default-completion-name-key (item)
   (princ-to-string item))
 
-(defconstant +completion-options+
-  '((name-key 'default-completion-name-key)
-    documentation-key
-    (partial-completers '(#\Space))))
+;;; Someone decided to patch defconstant, so we need the eval-when :P
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defconstant +completion-options+
+    '((name-key 'default-completion-name-key)
+      documentation-key
+      (partial-completers '(#\Space)))))
 
 (define-presentation-type completion (sequence
 				      &key (test 'eql) (value-key 'identity))

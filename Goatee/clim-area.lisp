@@ -122,7 +122,7 @@ be, on the screen")
 (defmethod redisplay-line ((line screen-line) stream)
   (let* ((medium (sheet-medium stream))
 	 (style (text-style (output-record-parent line))))
-    (with-slots (current-contents)
+    (with-slots (current-contents ascent descent baseline)
 	line
       (multiple-value-bind (unchanged
 			    current-unchanged-from-start
@@ -170,14 +170,28 @@ be, on the screen")
 			   (- descent ascent)
 			   (+ new-unchanged-left x)
 			   y)
-		(if (< new-line-end current-line-end)
-		    (draw-rectangle* medium
-				     new-line-end
-				     y
-				     (- current-line-end new-line-end)
-				     (- descent ascent)
-				     :ink +background-ink+
-				     :filled t))))))))))
+		;; If the line is now shorter, erase the old end of line.
+		(erase-line line medium new-line-end line-end)
+		;; Erase the changed middle
+		(erase-line line medium start-width new-unchanged-left)
+		;; Draw the middle
+		(draw-text* medium current-contents (+ x start-width) baseline
+			    :start line-unchanged-from-start
+			    :end line-unchanged-from-end)
+		))))))))
+
+
+(defmethod erase-line ((line screen-line) medium left right)
+  "Erase line from left to right (which are relative to the line
+origin)"
+  (when (< left right)
+    (multiple-value-bind (x y)
+	(output-record-position line)
+      (with-slots (ascent descent)
+	  line
+	(draw-rectangle* medium (+ left x) y (- right left) (- ascent descent)
+			 :ink (medium-background medium)
+			 :filled t)))))
 
 
 (defmethod redisplay-window ((pane goatee-pane) region)

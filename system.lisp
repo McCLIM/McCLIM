@@ -99,7 +99,7 @@
    "recording"
    "stream-input"
    "input-editing"
-   ;; "presentations"
+    "presentations"
    "commands"
    "frames"
    "panes"
