@@ -530,6 +530,14 @@ supertypes of TYPE that are presentation types"))
 (defmethod presentation-ptype-supers ((type clos-presentation-type))
   (presentation-ptype-supers (clos-class type)))
 
+;;; External function
+
+(defun presentation-type-direct-supertypes (type)
+  (with-presentation-type-decoded (name)
+      type
+    (let ((supers (presentation-ptype-supers name)))
+      (mapcar #'class-presentation-type-name supers))))
+
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defmethod ptype-specializer ((type symbol))
     (let ((ptype (gethash type *presentation-type-table*)))

@@ -95,7 +95,8 @@
 			(invoke-tracking-pointer-loop *application-frame*
 						      ,sheet
 						      ,@tracking-pointer-args
-						      ,@args)))))
+						      ,@args
+						      :allow-other-keys t)))))
 
 (defun invoke-tracking-pointer-loop (frame sheet &rest args)
   (apply #'tracking-pointer-loop

@@ -277,7 +277,9 @@ frame, if any")
 
 (defmethod generate-panes :before (fm  (frame application-frame))
   (declare (ignore fm))
-  (when (frame-panes frame)
+  (when (and (frame-panes frame)
+	     (eq (sheet-parent (frame-panes frame))
+		 (frame-top-level-sheet frame)))
     (sheet-disown-child (frame-top-level-sheet frame) (frame-panes frame)))
   (loop
      for (nil . pane) in (frame-panes-for-layout frame)
