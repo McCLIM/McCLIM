@@ -7,6 +7,7 @@
 ;;;           Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
 ;;;           Lionel Salabartan (salabart@emi.u-bordeaux.fr)
 ;;;  (c) copyright 2001, 2002 by Alexey Dejneka (adejneka@comail.ru)
+;;;  (c) copyright 2003 by Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -1730,11 +1731,6 @@ were added."
             (when errorp
               (error "~S is not contained in ~S." record stream)))))))
 
-(defun copy-textual-output-history (window stream &optional region record)
-  ;; FIXME
-  (declare (ignore window stream region record))
-  (error "Not implemented."))
-
 ;;; 16.4.3. Text Output Recording
 (defmethod stream-text-output-record
     ((stream standard-output-recording-stream) text-style)
@@ -1968,3 +1964,75 @@ according to the flags RECORD and DRAW."
 					  (handle-repaint s region))
 				      sheet
 				      region))
+
+;;; ----------------------------------------------------------------------------
+;;;  Baseline
+;;;
+
+(defmethod output-record-baseline ((record output-record))
+  "Fall back method"
+  (values
+   (bounding-rectangle-max-y record)
+   nil))
+
+(defmethod output-record-baseline ((record standard-text-displayed-output-record))
+  (with-slots (baseline) record
+    (values
+     baseline
+     t)))
+
+(defmethod output-record-baseline ((record compound-output-record))
+  (map-over-output-records (lambda (sub-record)
+                             (multiple-value-bind (baseline definitive)
+                                 (output-record-baseline sub-record)
+                               (when definitive
+                                 (return-from output-record-baseline
+                                   (values baseline t)))))
+                           record)
+  (values (bounding-rectangle-max-y record) nil))
+
+;;; ----------------------------------------------------------------------------
+;;;  copy-textual-output
+;;;
+
+(defun copy-textual-output-history (window stream &optional region record)
+  (unless region (setf region +everywhere+))
+  (unless record (setf record (stream-output-history window)))
+  (let* ((text-style (medium-default-text-style window))
+         (char-width (stream-character-width window #\n :text-style text-style))
+         (line-height (+ (stream-line-height window :text-style text-style)
+                         (stream-vertical-spacing window))))
+    #+NIL
+    (print (list char-width line-height
+                 (stream-line-height window :text-style text-style)
+                 (stream-vertical-spacing window))
+           *trace-output*)
+    ;; humble first ...
+    (let ((cy nil)
+          (cx 0))
+      (labels ((grok-record (record)
+                 (cond ((typep record 'standard-text-displayed-output-record)
+                        (with-slots (start-y start-x end-x strings) record
+                          (setf cy (or cy start-y))
+                          #+NIL
+                          (print (list (list cx cy)
+                                       (list start-x end-x start-y))
+                                 *trace-output*)
+                          (when (> start-y cy)
+                            (dotimes (k (round (- start-y cy) line-height))
+                              (terpri stream))
+                            (setf cy start-y
+                                  cx 0))
+                          (dotimes (k (round (- start-x cx) char-width))
+                            (princ " " stream))
+                          (setf cx end-x)
+                          (dolist (string strings)
+                            (with-slots (string) string
+                              (princ string stream))
+                            #+NIL
+                            (print (list start-x start-y string)
+                                   *trace-output*))))
+                       (t
+                        (map-over-output-records-overlapping-region #'grok-record
+                                                                    record region)))))
+        (grok-record record)))))
