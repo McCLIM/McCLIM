@@ -388,7 +388,8 @@
     (when event
       (let ((sheet (event-sheet event)))
 	(when (and (output-recording-stream-p sheet)
-		   (typep event 'pointer-event)
+		   (or (typep event 'pointer-event)
+		       (typep event 'keyboard-event))
 		   (not (gadgetp sheet)))
 	  (return-from input-context-wait-test t))))
     nil))
@@ -398,12 +399,14 @@
   (let* ((queue (stream-input-buffer stream))
 	 (event (event-queue-peek queue)))
     (when (and event
-	       (typep event 'pointer-event)
-	       (or prefer-pointer-window (eq stream (event-sheet event))))
+	       (or (and (typep event 'pointer-event)
+			(or prefer-pointer-window 
+			    (eq stream (event-sheet event))))
+		   (typep event 'keyboard-event)))
       ;; Stream only needs to see button press events.
       ;; XXX Need to think about this more.  Should any pointer events be
       ;; passed through?  If there's no presentation, maybe?
-      (unless #+nil(typep event 'pointer-button-press-event) nil
+      (unless (typep event 'keyboard-event)
 	(event-queue-read queue))
       (frame-input-context-track-pointer frame
 					 input-context

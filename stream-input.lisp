@@ -81,8 +81,9 @@
       ;XXX
       (flet ((do-one-event (event)
 	       (if (and (typep event 'key-press-event)
-			(characterp (keyboard-event-key-name event)))
-		   (let ((char (char-for-read (keyboard-event-key-name event))))
+			(keyboard-event-character event))
+		   (let ((char (char-for-read (keyboard-event-character
+					       event))))
 		     (stream-write-char pane char)
 		     (return-from stream-read-char char))
 		   (handle-event (event-sheet event) event))))
@@ -106,8 +107,8 @@
 	if (null event)
 	   return nil
 	if (and (typep event 'key-press-event)
-		(characterp (keyboard-event-key-name event)))
-	  return (char-for-read (keyboard-event-key-name event))
+		(keyboard-event-character event))
+	  return (char-for-read (keyboard-event-character event))
 	else
 	  do (handle-event (event-sheet event) event))))
 
@@ -200,13 +201,14 @@
 
 (defmethod convert-to-gesture ((ev key-press-event))
   (let ((modifiers (event-modifier-state ev))
-	(event ev))
+	(event ev)
+	(char nil))
     (when (or (zerop modifiers)
 	      (eql modifiers +shift-key+))
-      (setq event (keyboard-event-key-name ev)))
-    (cond ((characterp event)
-	   (char-for-read event))
-	  (t event))))
+      (setq char (keyboard-event-character ev)))
+    (if char
+	(char-for-read char)
+	event)))
 
 (defmethod convert-to-gesture ((ev pointer-button-press-event))
   ev)

@@ -1669,12 +1669,12 @@ function lambda list"))
                                              modifier-state
 					     nil)))
 
-(defun find-innnermost-presentation-context (input-context window x y
-					     &key
-					     (top-record
-					      (stream-output-history window))
-					     (frame *application-frame*)
-					     event modifier-state button)
+(defun find-innermost-presentation-context (input-context window x y
+					    &key
+					    (top-record
+					     (stream-output-history window))
+					    (frame *application-frame*)
+					    event modifier-state button)
   (find-innermost-presentation-match input-context
 				     (stream-output-history window)
 				     frame

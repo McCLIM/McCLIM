@@ -717,101 +717,130 @@ FRAME-EXIT condition."))
 ;;; presentations -- menu choices, for example -- could influence pointer
 ;;; documentation window.
 
+(defgeneric frame-compute-pointer-documentation-state 
+    (frame input-context stream event)
+  (:documentation
+   "Compute a state object that will be used to generate pointer documentation."))
+
+(defmethod frame-compute-pointer-documentation-state
+    ((frame standard-application-frame) input-context stream event)
+  (let* ((current-modifier (event-modifier-state event))
+	 (x (device-event-x event))
+	 (y (device-event-y event))
+	 (new-translators
+	  (loop for (button) in +button-documentation+
+	      for context-list = (multiple-value-list
+				  (find-innermost-presentation-context
+				   input-context
+				   stream
+				   x y
+				   :modifier-state current-modifier
+				   :button button))
+	      when (car context-list)
+	      collect (cons button context-list))))
+    (list current-modifier new-translators)))
+
+(defgeneric frame-compare-pointer-documentation-state
+    (frame input-context stream old-state new-state))
+
+(defmethod frame-compare-pointer-documentation-state
+    ((frame standard-application-frame) input-context stream
+     old-state new-state)
+  (equal old-state new-state))
+
+(defgeneric frame-print-pointer-documentation
+    (frame input-context stream state event))
+
+(defmethod frame-print-pointer-documentation
+    ((frame standard-application-frame) input-context stream state event)
+  (unless state
+    (return-from frame-print-pointer-documentation nil))
+  (destructuring-bind (current-modifier new-translators)
+      state
+    (let ((x (device-event-x event))
+	  (y (device-event-y event))
+	  (pstream *pointer-documentation-output*))
+      (loop for (button presentation translator context)
+	    in new-translators
+	    for name = (cadr (assoc button +button-documentation+))
+	    for first-one = t then nil
+	    do (progn
+		 (unless first-one
+		   (write-string "; " pstream))
+		 (unless (zerop current-modifier)
+		   (print-modifiers pstream current-modifier :short)
+		   (write-string "-" pstream))
+		 (format pstream "~A: " name)
+		 (document-presentation-translator translator
+						   presentation
+						   (input-context-type context)
+						   *application-frame*
+						   event
+						   stream
+						   x y
+						   :stream pstream
+						   :documentation-type
+						   :pointer))
+	    finally (when new-translators
+		      (write-char #\. pstream)))
+      ;; Wasteful to do this after doing
+      ;; find-innermost-presentation-context above... look at doing this
+      ;; first and then doing the innermost test.
+      (let ((all-translators (find-applicable-translators
+			      (stream-output-history stream)
+			      input-context
+			      *application-frame*
+			      stream
+			      x y
+			      :for-menu t))
+	    (other-modifiers nil))
+	(loop for (translator) in all-translators
+	      for gesture = (gesture translator)
+	      unless (eq gesture t)
+	      do (loop for (name type modifier) in gesture
+		       unless (eql modifier current-modifier)
+		       do (pushnew modifier other-modifiers)))
+	(when other-modifiers
+	  (setf other-modifiers (sort other-modifiers #'cmp-modifiers))
+	  (terpri pstream)
+	  (write-string "To see other commands, press "	pstream)
+	  (loop for modifier-tail on other-modifiers
+		for (modifier) = modifier-tail
+		for count from 0
+		do (progn
+		     (if (null (cdr modifier-tail))
+			 (progn
+			   (when (> count 1)
+			     (write-char #\, pstream))
+			   (when (> count 0)
+			     (write-string " or " pstream)))
+			 (when (> count 0)
+			   (write-string ", " pstream)))
+		     (print-modifiers pstream modifier :long)))
+	  (write-char #\. pstream))))))
+
 (defmethod frame-update-pointer-documentation
     ((frame standard-application-frame) input-context stream event)
   (when *pointer-documentation-output*
     (with-accessors ((frame-documentation-state frame-documentation-state))
 	frame
-      (destructuring-bind (&optional modifier-bits translators)
-	  frame-documentation-state
-	(let* ((current-modifier (event-modifier-state event))
-	       (x (pointer-event-x event))
-	       (y (pointer-event-y event))
-	       (new-translators
-		(loop for (button) in +button-documentation+
-		      for context-list = (multiple-value-list
-					  (find-innnermost-presentation-context
-					   input-context
-					   stream
-					   x y
-					   :modifier-state current-modifier
-					   :button button))
-		      when (car context-list)
-		      collect (cons button context-list))))
-	  (unless (and (eql modifier-bits current-modifier)
-		       (equal translators new-translators))
-	    ;; State is different, so print out new documentation
-	    (window-clear *pointer-documentation-output*)
-	    (loop for (button presentation translator context)
-	            in new-translators
-		  for name = (cadr (assoc button +button-documentation+))
-		  for first-one = t then nil
-		  do (progn
-		       (unless first-one
-			 (write-string "; " *pointer-documentation-output*))
-		       (unless (zerop current-modifier)
-			 (print-modifiers *pointer-documentation-output*
-					  current-modifier
-					  :short)
-			 (write-string "-" *pointer-documentation-output*))
-		       (format *pointer-documentation-output* "~A: " name)
-		       (document-presentation-translator
-			translator
-			presentation
-			(input-context-type context)
-			*application-frame*
-			event
-			stream
-			x y
-			:stream *pointer-documentation-output*
-			:documentation-type :pointer))
-		  finally (when new-translators
-			    (write-char #\. *pointer-documentation-output*)))
-	    ;; Wasteful to do this after doing
-	    ;; find-innnermost-presentation-context above... look at doing this
-	    ;; first and then doing the innermost test.
-	    (let ((all-translators (find-applicable-translators
-				    (stream-output-history stream)
-				    input-context
-				    *application-frame*
-				    stream
-				    x y
-				    :for-menu t))
-		  (other-modifiers nil))
-	      (loop for (translator) in all-translators
-		    for gesture = (gesture translator)
-		    unless (eq gesture t)
-		    do (loop for (name type modifier) in gesture
-			     unless (eql modifier current-modifier)
-			     do (pushnew modifier other-modifiers)))
-	      (when other-modifiers
-		(setf other-modifiers (sort other-modifiers #'cmp-modifiers))
-		(terpri *pointer-documentation-output*)
-		(write-string "To see other commands, press "
-			      *pointer-documentation-output*)
-		(loop for modifier-tail on other-modifiers
-		      for (modifier) = modifier-tail
-		      for count from 0
-		      do (progn
-			   (if (null (cdr modifier-tail))
-			       (progn
-				 (when (> count 1)
-				   (write-char #\,
-					       *pointer-documentation-output*))
-				 (when (> count 0)
-				   (write-string
-				    " or "
-				    *pointer-documentation-output*)))
-			       (when (> count 0)
-				 (write-string
-				  ", "
-				  *pointer-documentation-output*)))
-			   (print-modifiers *pointer-documentation-output*
-					    modifier
-					    :long)))
-		(write-char #\. *pointer-documentation-output*)))
-	    (setq frame-documentation-state (list current-modifier
-						  new-translators))))))))
+      (let ((new-state (frame-compute-pointer-documentation-state frame
+								  input-context
+								  stream
+								  event)))
+	(unless (frame-compare-pointer-documentation-state
+		 frame
+		 input-context
+		 stream
+		 frame-documentation-state
+		 new-state)
+	  (window-clear *pointer-documentation-output*)
+	  (frame-print-pointer-documentation frame
+					     input-context
+					     stream
+					     new-state
+					     event)
+	  (setq frame-documentation-state new-state))))))
 
 (defmethod frame-input-context-track-pointer
     ((frame standard-application-frame)
@@ -838,8 +867,8 @@ FRAME-EXIT condition."))
 	(let ((presentation (find-innermost-applicable-presentation
 			     input-context
 			     stream
-			     (pointer-event-x event)
-			     (pointer-event-y event)
+			     (device-event-x event)
+			     (device-event-y event)
 			     :frame frame
 			     :modifier-state (event-modifier-state event))))
 	  (maybe-unhighlight presentation)

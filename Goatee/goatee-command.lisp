@@ -23,6 +23,9 @@
 ;;; A gesture table is a hash table keyed by keyboard gesture (and
 ;;; pointer gesture too?) name.  The value is an alist of
 ;;; (modifier-bits . command-name).
+;;;
+;;; XXX This is looking up keysym names, not gestures.  Do we care?
+;;; Probably...
 
 (defparameter *simple-area-gesture-table* (make-hash-table))
 

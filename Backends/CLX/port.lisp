@@ -424,11 +424,13 @@
       (case event-key
 	((:key-press :key-release)
          (multiple-value-bind (keyname modifier-state)
-	     (x-event-to-key-name-and-modifiers *clx-port* code state)
+	     (x-event-to-key-name-and-modifiers *clx-port* 
+						event-key code state)
            (make-instance (if (eq event-key :key-press)
 			      'key-press-event
 			      'key-release-event)
              :key-name keyname
+	     :key-character (and (characterp keyname) keyname)
 	     :x x :y y
 	     :graft-x root-x
 	     :graft-y root-y

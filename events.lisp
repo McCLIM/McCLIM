@@ -98,10 +98,8 @@
 (defclass keyboard-event (device-event)
   ((key-name :initarg :key-name
 	     :reader keyboard-event-key-name)
-   ))
-
-(defmethod keyboard-event-character ((keyboard-event keyboard-event))
-  nil)
+   (key-character :initarg :key-character :reader keyboard-event-character
+		  :initform nil)))
 
 (defclass key-press-event (keyboard-event)
   (
@@ -135,6 +133,11 @@
 (defmethod pointer-event-y ((event pointer-event))
   (get-pointer-position ((event-sheet event) event) y))
 
+(defmethod device-event-x ((event device-event))
+  (get-pointer-position ((event-sheet event) event) x))
+
+(defmethod device-event-y ((event device-event))
+  (get-pointer-position ((event-sheet event) event) y))
 
 (defclass pointer-button-event (pointer-event)
   (

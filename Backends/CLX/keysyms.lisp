@@ -50,7 +50,12 @@
 		nil
 		(list (lookup-keysym second-x-keysym)))))))
 
-(defun x-event-to-key-name-and-modifiers (port keycode state)
+;;; The X state is the state before the current event, so key events
+;;; for the modifier keys don't reflect the state that results from
+;;; pressing or releasing those keys.  We want the CLIM modifiers to
+;;; reflect the post event state.
+
+(defun x-event-to-key-name-and-modifiers (port event-key keycode state)
   (multiple-value-bind (clim-modifiers shift-lock? caps-lock? mode-switch?)
       (x-event-state-modifiers port state)
     (let* ((display (clx-port-display port))
@@ -68,9 +73,19 @@
 						  (if caps-lock? t shift?))
                                                 1 0)
                                             (if mode-switch?
-                                                2 0)))))
-      (values (or char (lookup-keysym keysym))
-	      clim-modifiers))))
+                                                2 0))))
+	   ;; XXX
+	   #+nil
+	   (result (or char (lookup-keysym keysym)))
+	   (result (if (characterp char)
+		       char
+		       (lookup-keysym keysym)))
+	   (result-modifiers (if (characterp result)
+				 clim-modifiers ;; ?? true?
+				 (modify-modifiers event-key
+						   result
+						   clim-modifiers))))
+      (values result result-modifiers))))
 
 ;;; Modifier cache
 ;;;
@@ -139,6 +154,16 @@
 	      (logtest +shift-lock+ other-modifiers)
 	      (logtest +caps-lock+ other-modifiers)
 	      (logtest +mode-switch+ other-modifiers)))))
+
+(defun modify-modifiers (event-key keysym modifiers)
+  (let ((keysym-modifier (loop for (keysyms modifier) in +clim-modifiers+
+			       if (member keysym keysyms)
+			       return modifier)))
+    (cond ((and keysym-modifier (eq event-key :key-press))
+	   (logior modifiers keysym-modifier))
+	  ((and keysym-modifier (eq event-key :key-release))
+	   (logandc2 modifiers keysym-modifier))
+	  (t modifiers))))
 ;;;;
 
 (defun numeric-keysym-to-character (keysym)
@@ -148,8 +173,3 @@
 (defun keysym-to-character (keysym)
   (numeric-keysym-to-character (reverse-lookup-keysym keysym)))
 
-;; XXX This is bogus. 
-;(defmethod keyboard-event-character ((keyboard-event keyboard-event))
-;  (and (zerop (logand (event-modifier-state keyboard-event)
-;                      (logior +meta-key+ +hyper-key+ +super-key+ +control-key+ +alt-key+)))
-;       (keysym-to-character (keyboard-event-key-name keyboard-event))))
