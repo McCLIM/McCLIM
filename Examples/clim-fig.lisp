@@ -19,16 +19,15 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-(in-package :CLIM-INTERNALS)
+(in-package :clim-demo)
 
 (defclass canvas-pane (application-pane)
   ((first-point-x :initform nil)
    (first-point-y :initform nil)
-   (canvas-pixmap :initform nil)
    (selected-object :initform nil)))
 
 (defun set-status-line (string)
-  (setf (gadget-value (slot-value *application-frame* 'clim-demo::status))
+  (setf (gadget-value (slot-value *application-frame* 'status))
 	string))
 
 #+nil
@@ -41,26 +40,53 @@
   (handle-event pane event))
 )
 
+(defun draw-figure (pane x y x1 y1 &key fastp)
+  (with-slots (line-style current-color fill-mode constrict-mode)
+      *application-frame*
+    (let* ((radius-x (- x1 x))
+           (radius-y (- y1 y))
+           (line-style (if fastp (medium-line-style pane) line-style))
+           (fill-mode (if fastp nil fill-mode)))
+      (when constrict-mode
+        (case (clim-fig-drawing-mode *application-frame*)
+          ((:line :arrow)
+           (if (> (abs radius-x) (abs radius-y))
+               (setf y1 y)
+               (setf x1 x)))
+          ((:rectangle :ellipse)
+           (let ((radius-max (max (abs radius-x) (abs radius-y))))
+             (setf radius-x (* (signum-1 radius-x) radius-max)
+                   radius-y (* (signum-1 radius-y) radius-max)
+                   x1 (+ x radius-x)
+                   y1 (+ y radius-y))))))
+      (case (clim-fig-drawing-mode *application-frame*)
+        (:line
+         (draw-line* pane x y x1 y1
+                     :ink current-color
+                     :line-style line-style))
+        (:arrow
+         (with-new-output-record (pane)
+           (draw-arrow* pane x y x1 y1
+                        :ink current-color
+                        :line-style line-style
+                        :to-head t :head-width 20 :head-length 20)))
+        (:rectangle
+         (draw-rectangle* pane x y x1 y1 :filled fill-mode
+                          :ink current-color
+                          :line-style line-style))
+        (:ellipse
+         (draw-ellipse* pane x y radius-x 0 0 radius-y
+                        :filled fill-mode
+                        :ink current-color :line-style line-style))))))
+
 (defmethod handle-event ((pane canvas-pane) (event pointer-button-press-event))
   (when (= (pointer-event-button event) +pointer-left-button+)
-    (with-slots (first-point-x first-point-y canvas-pixmap) pane
-      (let ((pixmap-width (round (bounding-rectangle-width (sheet-region pane))))
-	    (pixmap-height (round (bounding-rectangle-height (sheet-region pane)))))
-	(setq first-point-x (pointer-event-x event))
-	(setq first-point-y (pointer-event-y event))
-	(with-slots (clim-demo::line-style clim-demo::current-color clim-demo::drawing-mode) *application-frame*
-	  (case clim-demo::drawing-mode
-	    (:point
-	     (draw-point* pane first-point-x first-point-y
-			  :ink clim-demo::current-color
-                          :line-style clim-demo::line-style))))
-	(setf canvas-pixmap (allocate-pixmap pane pixmap-width pixmap-height))
-        (copy-to-pixmap pane 0 0 pixmap-width pixmap-height canvas-pixmap))))
+    (handle-draw-object pane event))
   (when (= (pointer-event-button event) +pointer-right-button+)
     (with-slots (first-point-x first-point-y selected-object) pane
       (setq first-point-x (pointer-event-x event)
             first-point-y (pointer-event-y event))
-      (setf selected-object (search-selected-object (climi::pane-output-history pane)
+      (setf selected-object (search-selected-object (stream-output-history pane)
                                                     first-point-x
                                                     first-point-y)))))
 
@@ -76,106 +102,39 @@
       1
       (signum value)))
 
-(defmethod handle-event ((pane canvas-pane) (event pointer-motion-event))
-  (with-slots (first-point-x first-point-y canvas-pixmap) pane
-      (when (and first-point-x first-point-y canvas-pixmap)
-	(let* ((x (pointer-event-x event))
-	       (y (pointer-event-y event))
-               (radius-x (- x first-point-x))
-               (radius-y (- y first-point-y))
-	       (pixmap-width (round (bounding-rectangle-width (sheet-region pane))))
-	       (pixmap-height (round (bounding-rectangle-height (sheet-region pane)))))
-	  (with-slots (clim-demo::current-color clim-demo::drawing-mode clim-demo::constrict-mode) *application-frame*
-          (set-status-line (format nil "~:(~A~) from (~D,~D) to (~D,~D)~%"
-                                   clim-demo::drawing-mode
-                                   (round first-point-x) (round first-point-y)
-                                   (round x) (round y)))
-	    (with-output-recording-options (pane :record nil)
-	      (copy-from-pixmap canvas-pixmap 0 0 pixmap-width pixmap-height pane 0 0)
-              (when clim-demo::constrict-mode
-                (let ((radius-max (max (abs radius-x) (abs radius-y))))
-                  (setf radius-x (* (signum-1 radius-x) radius-max)
-                        radius-y (* (signum-1 radius-y) radius-max)
-                        x (+ first-point-x radius-x)
-                        y (+ first-point-y radius-y))))
-	      (case clim-demo::drawing-mode
-		(:line
-                 (when clim-demo::constrict-mode
-                   (if (= (- (pointer-event-x event) first-point-x) radius-x)
-                       (setf y first-point-y)
-                       (setf x first-point-x)))
-		 (draw-line* pane first-point-x first-point-y x y
-			     :ink clim-demo::current-color :line-thickness 1))
-                (:arrow
-                 (when clim-demo::constrict-mode
-                   (if (= (- (pointer-event-x event) first-point-x) radius-x)
-                       (setf y first-point-y)
-                       (setf x first-point-x)))
-		 (draw-arrow* pane first-point-x first-point-y x y
-                              :ink clim-demo::current-color :line-thickness 1
-                              :to-head t :head-width 20 :head-length 20))
-		(:rectangle
-		 (draw-rectangle* pane first-point-x first-point-y x y :filled nil
-				  :ink clim-demo::current-color :line-thickness 1))
-                (:ellipse
-                 (draw-ellipse* pane first-point-x first-point-y radius-x 0 0 radius-y :filled nil
-                                :ink clim-demo::current-color :line-thickness 1)))))))))
+(defun handle-draw-object (pane event)
+  (let* ((x1 (pointer-event-x event))
+         (y1 (pointer-event-y event))
+         (pixmap-width (round (bounding-rectangle-width (sheet-region pane))))
+         (pixmap-height (round (bounding-rectangle-height (sheet-region pane))))
+         (canvas-pixmap (allocate-pixmap pane pixmap-width pixmap-height)))
+    (copy-to-pixmap pane 0 0 pixmap-width pixmap-height canvas-pixmap)
+    (tracking-pointer (pane)
+      (:pointer-motion (&key window x y)
+         (declare (ignore window))
+         (set-status-line (format nil "~:(~A~) from (~D,~D) to (~D,~D)~%"
+                                  (slot-value *application-frame*
+                                              'drawing-mode)
+                                  (round x1) (round y1)
+                                  (round x) (round y)))
+         (with-output-recording-options (pane :record nil)
+           (copy-from-pixmap canvas-pixmap 0 0 pixmap-width pixmap-height pane 0 0)
+           (draw-figure pane
+                        x1 y1 x y
+                        :fastp t)))
+      (:pointer-button-release (&key event x y)
+         (when (= (pointer-event-button event)
+                  +pointer-left-button+)
+           (set-status-line " ")
+           (copy-from-pixmap canvas-pixmap 0 0 pixmap-width pixmap-height pane 0 0)
+           (deallocate-pixmap canvas-pixmap)
+           (draw-figure pane
+                        x1 y1
+                        x y)
+           (setf (clim-fig-redo-list *application-frame*) nil)
+           (return-from handle-draw-object))))))
 
 (defmethod handle-event ((pane canvas-pane) (event pointer-button-release-event))
-  (when (= (pointer-event-button event) +pointer-left-button+)
-    (with-slots (first-point-x first-point-y canvas-pixmap) pane
-      (let ((pixmap-width (round (bounding-rectangle-width (sheet-region pane))))
-	    (pixmap-height (round (bounding-rectangle-height (sheet-region pane)))))
-        (set-status-line " ")
-
-	(when (and first-point-x first-point-y canvas-pixmap)
-          (copy-from-pixmap canvas-pixmap 0 0 pixmap-width pixmap-height pane 0 0)
-          (deallocate-pixmap canvas-pixmap)
-          (setf canvas-pixmap nil)
-	  (with-slots (clim-demo::line-style
-                       clim-demo::current-color
-                       clim-demo::fill-mode
-                       clim-demo::constrict-mode) *application-frame*
-	    (let* ((x (pointer-event-x event))
-		   (y (pointer-event-y event))
-		   (radius-x (- x first-point-x))
-                   (radius-y (- y first-point-y)))
-              (when clim-demo::constrict-mode
-                (let ((radius-max (max (abs radius-x) (abs radius-y))))
-                  (setf radius-x (* (signum-1 radius-x) radius-max)
-                        radius-y (* (signum-1 radius-y) radius-max)
-                        x (+ first-point-x radius-x)
-                        y (+ first-point-y radius-y))))
-	      (case (clim-demo::clim-fig-drawing-mode *application-frame*)
-		(:line
-                 (when clim-demo::constrict-mode
-                   (if (= (- (pointer-event-x event) first-point-x) radius-x)
-                       (setf y first-point-y)
-                       (setf x first-point-x)))
-		 (draw-line* pane first-point-x first-point-y x y
-			     :ink clim-demo::current-color
-                             :line-style clim-demo::line-style))
-		(:arrow
-                 (when clim-demo::constrict-mode
-                   (if (= (- (pointer-event-x event) first-point-x) radius-x)
-                       (setf y first-point-y)
-                       (setf x first-point-x)))
-                 (with-new-output-record (pane)
-                   (draw-arrow* pane first-point-x first-point-y x y
-                                :ink clim-demo::current-color
-                                :line-style clim-demo::line-style
-                                :to-head t :head-width 20 :head-length 20)))
-		(:rectangle
-		 (draw-rectangle* pane first-point-x first-point-y x y :filled clim-demo::fill-mode
-				  :ink clim-demo::current-color
-                                  :line-style clim-demo::line-style))
-                (:ellipse
-		 (draw-ellipse* pane first-point-x first-point-y radius-x 0 0 radius-y
-                                :filled clim-demo::fill-mode
-				:ink clim-demo::current-color :line-style clim-demo::line-style))))
-	    (setf (clim-demo::clim-fig-redo-list *application-frame*) nil))
-	  (setf first-point-x nil
-		first-point-y nil)))))
   (when (= (pointer-event-button event) +pointer-right-button+)
     (with-slots (first-point-x first-point-y selected-object) pane
       (when selected-object
@@ -192,21 +151,20 @@
               first-point-x nil
               first-point-y nil)))))
 
-(in-package :clim-demo)
-
 (defun clim-fig ()
   (loop for port in climi::*all-ports*
       do (destroy-port port))
   (setq climi::*all-ports* nil)
- ;(run-frame-top-level (make-application-frame 'clim-fig))
-  (setq frame (make-application-frame 'clim-fig))
-  (setq fm (frame-manager frame))
-  (setq port (climi::frame-manager-port fm))
-  (setq pane (first (frame-panes frame)))
-  (setq medium (sheet-medium pane))
-  (setq graft (graft frame))
-  (setq vbox (climi::frame-pane frame))
-  (run-frame-top-level frame))
+ (run-frame-top-level (make-application-frame 'clim-fig))
+ ;(setq frame (make-application-frame 'clim-fig))
+ ;(setq fm (frame-manager frame))
+ ;(setq port (climi::frame-manager-port fm))
+ ;(setq pane (first (frame-panes frame)))
+ ;(setq medium (sheet-medium pane))
+ ;(setq graft (graft frame))
+ ;(setq vbox (climi::frame-pane frame))
+ ;(run-frame-top-level frame)
+ )
 
 (defun make-colored-button (color &key width height)
   (make-pane 'push-button-pane
@@ -299,7 +257,7 @@
    (constrict-mode :initform nil :accessor clim-fig-constrict-mode)
    (status :initform nil :accessor clim-fig-status))
   (:panes
-   (canvas :canvas)
+   (canvas (make-pane 'canvas-pane))
    (menu-bar (climi::make-menu-bar 'menubar-command-table :height 25))
    (line-width-slider :slider
 		      :label "Line Width"
@@ -404,6 +362,7 @@
          (scrolling (:width 600 :height 400) canvas))
        (horizontally (:height 30) clear undo redo)
        status)))
+;  #+nil
    (:top-level (clim-fig-frame-top-level)))
 
 (defmethod clim-fig-frame-top-level ((frame application-frame) &key)
