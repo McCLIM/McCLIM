@@ -109,4 +109,5 @@
    "examples/menutest"
    "examples/address-book"
    "examples/traffic-lights"
+   "examples/clim-fig"
    ))
