@@ -227,10 +227,10 @@ to a table cell within the row."))
 
 (defmethod map-over-row-cells (function
                                (row-record standard-row-output-record))
-  (map-over-output-records-overlapping-region
+  (map-over-output-records
    #'(lambda (record)
        (when (cell-output-record-p record) (funcall function record)))
-   row-record +everywhere+))
+   row-record))
 
 (defmacro formatting-row ((&optional (stream t)
                            &key (record-type 'standard-row-output-record))
@@ -291,10 +291,10 @@ corresponding to a table cell within the column."))
 
 (defmethod map-over-column-cells
     (function (column-record standard-column-output-record))
-  (map-over-output-records-overlapping-region
+  (map-over-output-records
    #'(lambda (record)
        (when (cell-output-record-p record) (funcall function record)))
-   column-record +everywhere+))
+   column-record))
 
 (defmacro formatting-column ((&optional (stream t)
                               &key (record-type 'standard-column-output-record))
@@ -395,7 +395,7 @@ modifying list BLOCK-INFOS or vector SIZES."))
 (defmethod map-over-table-elements (function
                                     (table-record standard-table-output-record)
                                     type)
-  (map-over-output-records-overlapping-region
+  (map-over-output-records
    #'(lambda (record)
        (when (or
               (and (row-output-record-p record)
@@ -403,8 +403,7 @@ modifying list BLOCK-INFOS or vector SIZES."))
               (and (column-output-record-p record)
                    (member type '(:column :row-or-column))))
          (funcall function record)))
-   table-record
-   +everywhere+))
+   table-record))
 
 (defun collect-block-infos (table)
   "Returns a list of BLOCK-INFOs for blocks in TABLE."
@@ -417,6 +416,7 @@ modifying list BLOCK-INFOS or vector SIZES."))
 
 (defmethod adjust-table-cells ((table-record standard-table-output-record)
                                stream)
+  (declare (ignore stream))
   (let* ((cell-spacing (table-cell-spacing table-record))
          (block-spacing (table-block-spacing table-record))
          (infos (collect-block-infos table-record))
