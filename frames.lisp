@@ -1337,23 +1337,47 @@ frame, if any")
 				    (cdr hilited)
 				    :unhighlight)))))
 
+;;; Poor man's find-applicable-translators. tracking-pointer doesn't want to
+;;; see any results from presentation translators.
+
+(defun highlight-for-tracking-pointer (frame stream x y input-context)
+  (let ((context-ptype (input-context-type (car input-context)))
+	(presentation nil)
+	(current-hilited (frame-hilited-presentation frame)))
+    (if (output-recording-stream-p stream)
+	(progn
+	  (block found-presentation
+	    (flet ((do-presentation (p)
+		     (when (presentation-subtypep (presentation-type p)
+						  context-ptype)
+		       (setq presentation p)
+		       (return-from found-presentation nil))))
+	      (declare (dynamic-extent #'do-presentation))
+	      (map-over-presentations-containing-position
+	       #'do-presentation (stream-output-history stream) x y)))
+	  (when (and current-hilited
+		     (not (eq (car current-hilited) presentation)))
+	    (highlight-presentation-1 (car current-hilited)
+				      (cdr current-hilited)
+				      :unhighlight))
+	  (if presentation
+	      (progn
+		(setf (frame-hilited-presentation frame)
+		      (cons presentation stream))
+		(highlight-presentation-1 presentation stream :highlight)))
+	  presentation))))
+
 (defmethod tracking-pointer-loop-step :before
     ((state frame-tracking-pointer-state) (event pointer-event) x y)
   (declare (ignore x y))
   (when (highlight state)
     (let ((stream (event-sheet event)))
       (setf (applicable-presentation state)
-	    (frame-highlight-at-position *application-frame* stream
-					 (device-event-x event)
-					 (device-event-y event)
-					 (event-modifier-state event)
-					 (input-context state)
-					 :highlight (highlight state)))
-      ;;; Hmmm, probably don't want to do this
-      #+nil (frame-update-pointer-documentation frame
-					  (input-context state)
-					  stream
-					  event))))
+	    (highlight-for-tracking-pointer *application-frame* stream
+					    (device-event-x event)
+					    (device-event-y event)
+					    (input-context state))))))
+
 
 (macrolet ((frob (event handler)
 	     `(defmethod tracking-pointer-loop-step
