@@ -543,7 +543,7 @@ sheet-supports-only-one-child error to be signalled."))
   ((child :initform nil :accessor sheet-child)))
 
 (defmethod sheet-children ((sheet sheet-single-child-mixin))
-  (list (sheet-child sheet)))
+  (and (sheet-child sheet) (list (sheet-child sheet))))
 
 (define-condition sheet-supports-only-one-child (error) ())
 
