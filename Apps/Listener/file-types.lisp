@@ -115,7 +115,7 @@
   (assert (find-class media-type nil))
   ; XXX Bad, probably I should put all the symbols in one MIME package or something.
   (let ((full-type (intern (concatenate 'string (symbol-name media-type) "/" (symbol-name subtype))
-                           (symbol-package subtype))))
+                           (find-package :clim-listener) )))  ;FIXME
     `(progn (defclass ,full-type (mime-type ,media-type)
               ((media-subtype :initform ',subtype)))
             ,@(mapcar (lambda (opt)
@@ -124,7 +124,9 @@
                                           (setf (gethash ext *extension-mapping*) ',full-type)))
                           (:names `(defmagic ,full-type ,@(rest opt)))
                           (:icon `(setf (gethash ',full-type *icon-mapping*) ,(second opt)))))
-                      options))))
+                      options)
+            (clim-mop:finalize-inheritance (find-class ',full-type))
+)))
  
 (defmethod icon-of ((pathname pathname))
 ;  (debugf "ICON-OF (pathname) " pathname)
@@ -242,9 +244,10 @@
                   (position-if (lambda (c) (member c '(#\space #\tab)))
                                string  :start (1+ pos-slash)))
          (media-type (string-upcase (subseq string start pos-slash)))
-         (media-type-sym (intern media-type))
+         (media-type-sym (intern media-type (find-package :clim-listener)))
          (subtype (string-upcase (subseq string (1+ pos-slash) pos-end)))
-         (full-symbol (intern (concatenate 'string media-type "/" subtype))))
+         (full-symbol (intern (concatenate 'string media-type "/" subtype)
+                              (find-package :clim-listener))))
     (values media-type-sym full-symbol (intern subtype) pos-end)))
 
 ;;; PARSE-NETSCAPE-MIME-TYPE and PARSE-STANDARD-MIME-TYPE return the various
@@ -284,7 +287,8 @@
                                  (1- end)
                                end))
                    (bar (subseq string real-start real-end))
-                   (keysym (intern (string-upcase foo) (find-package :keyword)))
+                   (keysym (intern (string-upcase foo)
+                                   (find-package :keyword)))
                    (value (case keysym
                             (:type (nth-value 1 (read-mime-type bar)))
                             (:exts (read-extensions bar))
@@ -530,9 +534,6 @@
             (if view-command 
                 (run-program "/bin/sh" `("-c" ,(gen-view-command-line def pathname) "&"))
               (format T "~&No view-command!~%"))))))))
-
-
-
 
 
 
