@@ -81,35 +81,6 @@
       (pane object (presentation-type-of object))  
     (print object pane)))
 
-(defun class-slots (class)
-  #+sbcl (sb-mop:class-slots class)
-  #+openmcl (ccl:class-slots class)
-  #-(or sbcl openmcl) (error "no MOP"))
-
-(defun slot-definition-name (slot)
-  #+sbcl (sb-mop:slot-definition-name slot)
-  #+openmcl (ccl:slot-definition-name slot)
-  #-(or sbcl openmcl) (error "no MOP"))
-
-(defun generic-function-name (generic-function)
-  #+sbcl (sb-mop:generic-function-name generic-function)
-  #+openmcl (ccl:generic-function-name generic-function)
-  #-(or sbcl openmcl) (error "no MOP"))
-
-(defun generic-function-methods (generic-function)
-  #+sbcl (sb-mop:generic-function-methods generic-function)
-  #+openmcl (ccl:generic-function-methods generic-function)
-  #-(or sbcl openmcl) (error "no MOP"))
-
-(defun method-specializers (method)
-  #+sbcl (sb-mop:method-specializers method)
-  #+openmcl (ccl:method-specializers method)
-  #-(or sbcl openmcl) (error "no MOP"))
-
-(defun method-generic-function (method)
-  #+sbcl (sb-mop:method-generic-function method)
-  #+openmcl (ccl:method-generic-function method)
-  #-(or sbcl openmcl) (error "no MOP"))
 
 (define-presentation-type settable-slot ()
   :inherit-from t)
@@ -148,8 +119,8 @@
   (let ((class (class-of object)))
     (inspector-table
         (print (class-name class) pane)
-      (loop for slot in (reverse (class-slots class))
-            do (let ((slot-name (slot-definition-name slot)))
+      (loop for slot in (reverse (clim-mop:class-slots class))
+            do (let ((slot-name (clim-mop:slot-definition-name slot)))
 		  (inspector-table-row
                     (with-output-as-presentation
                         (pane (cons object slot-name) 'settable-slot)
@@ -202,14 +173,15 @@
 
 (defmethod inspect-object ((object generic-function) pane)
   (inspector-table
-      (format pane "Generic Function: ~s" (generic-function-name object))
-    (loop for method in (generic-function-methods object)
+      (format pane "Generic Function: ~s"
+	      (clim-mop:generic-function-name object))
+    (loop for method in (clim-mop:generic-function-methods object)
           do (with-output-as-presentation
                  (pane method (presentation-type-of method))
                (formatting-row (pane)
                  (formatting-cell (pane)
                    (print (method-qualifiers method)))
-                 (loop for specializer in (method-specializers method)
+                 (loop for specializer in (clim-mop:method-specializers method)
                     do (formatting-cell (pane)
                          (format pane "~s " (class-name specializer)))))))))
 
@@ -335,7 +307,7 @@
 
 (define-inspector-command (com-remove-method :name t)
     ((obj 'method :gesture :delete :prompt "Remove method"))
-  (remove-method (method-generic-function obj) obj))
+  (remove-method (clim-mop:method-generic-function obj) obj))
 
 (define-inspector-command (com-set-slot :name t)
     ((slot 'settable-slot :gesture :select :prompt "Set slot"))
