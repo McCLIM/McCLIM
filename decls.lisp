@@ -210,6 +210,8 @@
 (defgeneric port-deallocate-pixmap (port pixmap))
 (defgeneric port-mirror-width (port sheet))
 (defgeneric port-mirror-height (port sheet))
+(defgeneric port-enable-sheet (port sheet))
+(defgeneric port-disable-sheet (port sheet))
 
 ;;;
 
