@@ -36,12 +36,19 @@
 (defun parse-space (stream specification direction)
   "Returns the amount of space given by SPECIFICATION relating to the
 STREAM in the direction DIRECTION."
-  (declare (ignore stream direction))
   (etypecase specification
-    (number (coordinate specification))
-    ((or string character))
-    (function)
-    (list)))
+    (integer specification)
+    ((or string character) (multiple-value-bind (width height)
+                               (text-size stream specification)
+                             (ecase direction
+                               (:horizontal width)
+                               (:vertical height))))
+    (function (let ((record (with-output-to-output-record (stream)
+                              (funcall specification))))
+                (ecase direction
+                  (:horizontal (bounding-rectangle-width record))
+                  (:vertical (bounding-rectangle-height record)))))
+    (list (error "Not implemented."))))
 
 
 ;;; Cell formatting
@@ -82,22 +89,26 @@ or an item list."))
 
 (defmacro formatting-cell ((&optional (stream t)
                             &key (align-x :left) (align-y :center) ; FIXME!!! It must be :baseline, but it is not yet implemented
-                                 (min-width (coordinate 0)) ; ???
-                                 (min-height (coordinate 0))
+                                 min-width min-height
                                  (record-type 'standard-cell-output-record))
                            &body body)
-  (declare (type symbol stream))
+  (check-type stream symbol)
   (when (eq stream 't)
     (setq stream '*standard-output*))
-  (let ((record (gensym))
-        (parent (gensym)))
+  (let ((record (gensym "RECORD"))
+        (parent (gensym "PARENT")))
     `(progn
        (let ((,parent (stream-current-output-record ,stream)))
          (assert (or (row-output-record-p ,parent)
                      (column-output-record-p ,parent))))
        (with-new-output-record (,stream ,record-type ,record
                                 :align-x ,align-x :align-y ,align-y
-                                :min-width ,min-width :min-height ,min-height)
+                                :min-width (parse-space ,stream
+                                                        (or ,min-width 0)
+                                                        :horizontal)
+                                :min-height (parse-space ,stream
+                                                         (or ,min-height 0)
+                                                         :vertical))
          (declare (ignore ,record))
          ,@body))))
 
@@ -126,7 +137,7 @@ the individual dimensions of cells in the BLOCK. "))
 
 (defclass block-info ()
   ((common-size :type real
-                :initform (coordinate 0)
+                :initform 0
                 :accessor block-info-common-size)
    (number-of-cells :type integer
                     :initform 0
@@ -158,7 +169,7 @@ dimension."
   (declare (type block-output-record block)
            (type (vector real) sizes)
            (type real common-coordinate common-size))
-  (let ((cell-coordinate (coordinate 0))
+  (let ((cell-coordinate 0)
         (cell-number 0))
     (map-over-block-cells
      #'(lambda (cell)
@@ -324,25 +335,31 @@ skips intervening non-table output record structures."))
    (multiple-columns-x-spacing :initarg :multiple-columns-x-spacing)
    (equalize-column-widths :initarg :equalize-column-widths)))
 
-(defmacro formatting-table ((&optional (stream t)
-                             &key (x-spacing 0) (y-spacing 0) ; FIXME!!!
-                             multiple-columns
-                             (multiple-columns-x-spacing nil multiple-columns-x-spacing-supplied-p)
-                             equalize-column-widths (move-cursor t)
-                             (record-type 'empty-standard-table-output-record)
-                             &allow-other-keys)
-                            &body body)
+(defmacro formatting-table
+    ((&optional (stream t)
+      &key x-spacing y-spacing
+      multiple-columns
+      (multiple-columns-x-spacing nil multiple-columns-x-spacing-supplied-p)
+      equalize-column-widths (move-cursor t)
+      (record-type 'empty-standard-table-output-record)
+      &allow-other-keys)
+     &body body)
   ;; FIXME!!! Possible recomputation
   (when (eq stream t)
     (setq stream '*standard-output*))
-  (let ((table (gensym))
-        (cursor-old-x (gensym))
-        (cursor-old-y (gensym)))
-    `(with-new-output-record (,stream ,record-type ,table
-                              :x-spacing ,x-spacing
-                              :y-spacing ,y-spacing
-                              :multiple-columns ,multiple-columns
-                              :equalize-column-widths ,equalize-column-widths)
+  (let ((table (gensym "TABLE"))
+        (cursor-old-x (gensym "CURSOR-OLD-X-"))
+        (cursor-old-y (gensym "CURSOR-OLD-Y-")))
+    `(with-new-output-record
+         (,stream ,record-type ,table
+                  :x-spacing (parse-space ,stream ,(or x-spacing #\Space)
+                                          :horizontal)
+                  :y-spacing (parse-space ,stream
+                                          ,(or y-spacing
+                                               `(stream-vertical-spacing ,stream))
+                                          :vertical)
+                  :multiple-columns ,multiple-columns
+                  :equalize-column-widths ,equalize-column-widths)
        (multiple-value-bind (,cursor-old-x ,cursor-old-y)
            (stream-cursor-position ,stream)
          (with-output-recording-options (,stream :record t :draw nil)
@@ -363,11 +380,11 @@ skips intervening non-table output record structures."))
        ,table)))
 
 ;;; Internal
-(defgeneric table-cell-spacing (table stream)
+(defgeneric table-cell-spacing (table)
   (:documentation "Spacing between cells in blocks when the TABLE is
 to be displayed on the STREAM."))
 
-(defgeneric table-block-spacing (table stream)
+(defgeneric table-block-spacing (table)
   (:documentation "Spacing between blocks in the TABLE when it is to
 be displayed on the STREAM."))
 
@@ -393,22 +410,21 @@ modifying list BLOCK-INFOS or vector SIZES."))
   "Returns a list of BLOCK-INFOs for blocks in TABLE."
   (let ((infos nil))
     (map-over-table-elements
-     #'(lambda (block)
-         (push (block-info block) infos))
+     #'(lambda (block) (push (block-info block) infos))
      table
      :row-or-column)
     (nreverse infos)))
 
 (defmethod adjust-table-cells ((table-record standard-table-output-record)
                                stream)
-  (let* ((cell-spacing (table-cell-spacing table-record stream))
-         (block-spacing (table-block-spacing table-record stream))
+  (let* ((cell-spacing (table-cell-spacing table-record))
+         (block-spacing (table-block-spacing table-record))
          (infos (collect-block-infos table-record))
          (max-block-length (loop :for info :in infos
                               :maximize (block-info-number-of-cells info)))
          (sizes (make-array (list max-block-length)
                             :element-type 'real
-                            :initial-element (coordinate 0))))
+                            :initial-element 0)))
     (loop :for info :in infos
        :for block-sizes = (block-info-cell-sizes info)
        :do (loop :for i = 0 :then (1+ i)
@@ -418,7 +434,7 @@ modifying list BLOCK-INFOS or vector SIZES."))
     (when (slot-value table-record 'equalize-column-widths)
       (table-equalize-column-widths table-record infos sizes))
     (map-over-table-elements
-     (let ((common-coordinate (coordinate 0)))
+     (let ((common-coordinate 0))
        #'(lambda (block)
            (let ((common-size (block-info-common-size (pop infos))))
              (adjust-block block sizes
@@ -453,10 +469,10 @@ modifying list BLOCK-INFOS or vector SIZES."))
   (when (column-output-record-p record)
     (error "Trying to add a column into a row table.")))
 
-(defmethod table-cell-spacing ((table table-of-rows-output-record) stream)
-  (parse-space stream (slot-value table 'x-spacing) :horizontal))
-(defmethod table-block-spacing ((table table-of-rows-output-record) stream)
-  (parse-space stream (slot-value table 'y-spacing) :vertical))
+(defmethod table-cell-spacing ((table table-of-rows-output-record))
+  (slot-value table 'x-spacing))
+(defmethod table-block-spacing ((table table-of-rows-output-record))
+  (slot-value table 'y-spacing))
 
 (defmethod table-equalize-column-widths ((table table-of-rows-output-record)
                                          block-infos widths)
@@ -478,10 +494,10 @@ modifying list BLOCK-INFOS or vector SIZES."))
   (when (row-output-record-p record)
     (error "Trying to add a column into a row table.")))
 
-(defmethod table-cell-spacing ((table table-of-columns-output-record) stream)
-  (parse-space stream (slot-value table 'y-spacing) :vertical))
-(defmethod table-block-spacing ((table table-of-columns-output-record) stream)
-  (parse-space stream (slot-value table 'x-spacing) :horizontal))
+(defmethod table-cell-spacing ((table table-of-columns-output-record))
+  (slot-value table 'y-spacing))
+(defmethod table-block-spacing ((table table-of-columns-output-record))
+  (slot-value table 'x-spacing))
 
 (defmethod table-equalize-column-widths ((table table-of-columns-output-record)
                                          block-infos heights)
