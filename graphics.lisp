@@ -769,26 +769,31 @@
 (defmethod draw-design (medium (color indirect-ink) &rest options &key &allow-other-keys)
   (apply #'draw-design medium +everywhere+ :ink color options))
 
-
-;;;
+;;;;
 
 (defun draw-pattern* (medium pattern x y &key clipping-region transformation)
   ;; Note: I believe the sample implementation in the spec is incorrect.
   ;; --GB
   (check-type pattern pattern)
-  (let ((width (pattern-width pattern))
+  (cond ((or clipping-region transformation)
+         (with-drawing-options (medium :clipping-region clipping-region
+                                       :transformation transformation)
+           ;; Now this is totally bogus.
+           (medium-draw-pattern* medium pattern x y) ))
+        (t
+         ;; What happens if there is already a transformation
+         ;; applied to the medium?
+         (medium-draw-pattern* medium pattern x y))))
+
+(defmethod medium-draw-pattern* (medium pattern x y)
+  (let ((width  (pattern-width pattern))
         (height (pattern-height pattern)))
-    (cond ((or clipping-region transformation)
-           (with-drawing-options (medium :clipping-region clipping-region
-                                         :transformation transformation)
-             ;; Now this is totally bogus.
-             (draw-rectangle* medium x y (+ x width) (+ y height)
-                              :filled t :ink pattern)))
-          (t
-           ;; What happens if there is already a transformation
-           ;; applied to the medium?
-           (draw-rectangle* medium x y (+ x width) (+ y height)
-                            :filled t
-                            :ink (transform-region
-                                  (make-translation-transformation x y)
-                                  pattern))))))
+    #+NIL ;; debugging aid.
+    (draw-rectangle* medium x y (+ x width) (+ y height)
+                     :filled t
+                     :ink +red+)
+    (draw-rectangle* medium x y (+ x width) (+ y height)
+                     :filled t
+                     :ink (transform-region
+                           (make-translation-transformation x y)
+                           pattern))))
