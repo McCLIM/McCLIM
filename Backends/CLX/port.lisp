@@ -1,4 +1,4 @@
-;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
+;;; -*- Mode: Lisp; Package: CLIM-CLX; -*-
 
 ;;;  (c) copyright 1998,1999,2000 by Michael McDonald (mikemac@mikemac.com)
 ;;;  (c) copyright 2000,2001 by 
@@ -21,7 +21,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-(in-package :CLIM-INTERNALS)
+(in-package :CLIM-CLX)
 
 ;;; CLX-PORT class
 
@@ -82,7 +82,7 @@
 				      (xlib:display-roots (clx-port-display port))))
     (setf (clx-port-window port) (xlib:screen-root (clx-port-screen port)))
     (make-graft port)
-    (when *multiprocessing-p*
+    (when clim-sys:*multiprocessing-p*
       (setf (port-event-process port)
         (clim-sys:make-process
          (lambda ()
@@ -249,12 +249,14 @@
   nil)
 
 (defmethod port-set-sheet-transformation ((port clx-port) (sheet mirrored-sheet-mixin) transformation)
+  (declare (ignore transformation)) ;; why?
   (let ((mirror (sheet-direct-mirror sheet)))
     (multiple-value-bind (tr rg) (invent-sheet-mirror-transformation-and-region sheet)
       (multiple-value-bind (x y) (transform-position tr 0 0)
         (multiple-value-bind (x1 y1 x2 y2) (if (eql rg +nowhere+)
                                                (values 0 0 0 0)
                                                (bounding-rectangle* rg))
+          (declare (ignore x1 y1))      ;XXX assumed to be 0
           (setf (xlib:drawable-x mirror) (round x)
                 (xlib:drawable-y mirror) (round y))
           (setf (xlib:drawable-width mirror)  (clamp 1 (round x2) #xFFFF)
@@ -264,11 +266,14 @@
           )))))
 
 (defmethod port-set-sheet-region ((port clx-port) (sheet mirrored-sheet-mixin) region)
+  (declare (ignore region)) ;; why?
   (let ((mirror (sheet-direct-mirror sheet)))
     (multiple-value-bind (tr rg) (invent-sheet-mirror-transformation-and-region sheet)
+      (declare (ignore tr))
       (multiple-value-bind (x1 y1 x2 y2) (if (eql rg +nowhere+)
                                              (values 0 0 0 0)
                                              (bounding-rectangle* rg))
+        (declare (ignore x1 y1))      ;XXX assumed to be 0
         (setf x2 (round x2))
         (setf y2 (round y2))
         (cond ((or (<= x2 0) (<= y2 0))
@@ -296,6 +301,7 @@
 (defun event-handler (&rest event-slots
                       &key display window event-key code state mode time width height x y data count
                       &allow-other-keys)
+  (declare (ignorable event-slots))
   (let ((sheet (and window
 		    (port-lookup-sheet *clx-port* window))))
     (declare (special *clx-port*))
@@ -407,7 +413,7 @@
 (defmethod text-style-to-X-font ((port clx-port) text-style)
   (let ((table (slot-value port 'font-table)))
     (or (gethash text-style table)
-	(with-slots (family face size) text-style
+        (multiple-value-bind (family face size) (text-style-components text-style)
 	  (let* ((family-name (if (stringp family)
 				  family
 				  (or (getf *clx-text-families* family)

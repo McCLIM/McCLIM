@@ -1,4 +1,4 @@
-;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
+;;; -*- Mode: Lisp; Package: CLIM-CLX -*-
 
 ;;;  (c) copyright 1998,1999,2000 by Michael McDonald (mikemac@mikemac.com)
 
@@ -17,7 +17,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-(in-package :CLIM-INTERNALS)
+(in-package :CLIM-CLX)
 
 ;;; CLX-GRAFT class
 

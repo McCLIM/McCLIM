@@ -1,4 +1,4 @@
-;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: CLIM-INTERNALS; -*-
+;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: CLIM-CLX; -*-
 ;;; --------------------------------------------------------------------------------------
 ;;;     Title: X11 keysym handling
 ;;;   Created: 2002-02-11
@@ -22,7 +22,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-(in-package :CLIM-INTERNALS)
+(in-package :CLIM-CLX)
 
 (defvar *keysym-hash-table*
     (make-hash-table :test #'eql))
@@ -105,6 +105,7 @@
 (defun keysym-to-character (keysym)
   (numeric-keysym-to-character (reverse-lookup-keysym keysym)))
 
+;; XXX This is bogus. 
 (defmethod keyboard-event-character ((keyboard-event keyboard-event))
   (and (zerop (logand (event-modifier-state keyboard-event)
                       (logior +meta-key+ +hyper-key+ +super-key+ +control-key+ +alt-key+)))

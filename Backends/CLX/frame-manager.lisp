@@ -1,4 +1,4 @@
-;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
+;;; -*- Mode: Lisp; Package: CLIM-CLX -*-
 
 ;;;  (c) copyright 1998,1999,2000,2001 by Michael McDonald (mikemac@mikemac.com)
 
@@ -17,7 +17,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-(in-package :CLIM-INTERNALS)
+(in-package :CLIM-CLX)
 
 ;;; CLX-FRAME-MANAGER class
 
@@ -40,7 +40,6 @@
 	 :manager fm
 	 :port (port frame)
 	 args))
-
 
 (defmethod adopt-frame :after ((fm clx-frame-manager) (frame menu-frame))
   (xlib:map-window (sheet-direct-mirror (slot-value frame 'top-level-sheet))))

@@ -1,4 +1,4 @@
-;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
+;;; -*- Mode: Lisp; Package: CLIM-CLX -*-
 
 ;;;  (c) copyright 1998,1999,2000,2001 by Michael McDonald (mikemac@mikemac.com)
 ;;;  (c) copyright 2000 by 
@@ -22,7 +22,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-(in-package :CLIM-INTERNALS)
+(in-package :CLIM-CLX)
 
 ;;; Needed changes:
 
@@ -341,7 +341,7 @@
                               center-x center-y)
     (with-CLX-graphics (medium)
       (xlib:draw-arc mirror gc
-                     (round (- center-x radius-dx)) (round (- center-y radius-dy))
+                     (round (- center-x radius)) (round (- center-y radius))
                      radius radius
                      start-angle (- end-angle start-angle)
                      filled))))
