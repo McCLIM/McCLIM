@@ -1506,7 +1506,18 @@ function lambda list"))
     (type record stream state)
   (highlight-output-record record stream state))
 
-
+(defun accept-using-read (stream ptype)
+  (let* ((*read-eval* nil)
+	 (token (read-token stream))
+	 (result (handler-case (read-from-string token)
+		   (error (c)
+		     (declare (ignore c))
+		     (simple-parse-error "Error parsing ~S for presentation type ~S"
+					 token
+					 ptype)))))
+    (if (presentation-typep result ptype)
+	(values result ptype)
+	(input-not-of-required-type result ptype))))
 
 ;;; The presentation types
 
@@ -1564,12 +1575,25 @@ function lambda list"))
 				     (view textual-view)
 				     &key acceptably for-context-type)
   (declare (ignore acceptably for-context-type))
-  (princ object stream))
+  (if acceptably
+      (prin1 object stream)
+      (princ object stream)))
 
+(define-presentation-method accept ((type symbol) stream (view textual-view)
+				    &key default default-type)
+  (declare (ignore default default-type))
+  (accept-using-read stream type))
+  
 (define-presentation-type keyword () :inherit-from 'symbol)
 
 (define-presentation-method presentation-typep (object (type keyword))
   (keywordp object))
+
+(define-presentation-method present (object (type keyword) stream
+				     (view textual-view)
+				     &key acceptably for-context-type)
+  (declare (ignore acceptably for-context-type))
+  (prin1 object stream))
 
 (defmethod presentation-type-of ((object symbol))
   (if (eq (symbol-package object) (find-package :keyword))
@@ -1612,7 +1636,7 @@ function lambda list"))
   (and (realp object)
        (or (eq low '*)
 	   (<= low object))
-       (or (eq high *)
+       (or (eq high '*)
 	   (<= object high))))
 
 (defmethod presentation-type-of ((object real))
@@ -1629,11 +1653,8 @@ function lambda list"))
 (define-presentation-method accept ((type real) stream (view textual-view)
 				    &key default default-type)
   (declare (ignore default default-type))
-  (let* ((token (read-token stream))
-	 (*read-base* base)
-	 (*read-eval* nil)
-	 (result (read-from-string token)))
-    result))
+  (let ((*read-base* base))
+    (accept-using-read stream type)))
 
 ;;; Define a method that will do the comparision for all real types.  It's
 ;;; already determined that that the numeric class of type is a subtype of
@@ -1680,9 +1701,9 @@ function lambda list"))
 
 (define-presentation-method presentation-typep (object (type integer))
   (and (integerp object)
-       (or (eq low '*)
+       (or (eq' low '*)
 	   (<= low object))
-       (or (eq high '*)
+       (or (eq' high '*)
 	   (<= object high))))
 
 (defmethod presentation-type-of ((object integer))
@@ -1796,6 +1817,16 @@ function lambda list"))
 				     &key acceptably for-context-type)
   (declare (ignore acceptably for-context-type))
   (princ object stream))
+
+(define-presentation-method accept ((type string) stream (view textual-view)
+				    &key default default-type)
+  (declare (ignore default default-type))
+  (let ((result (read-token stream)))
+    (if (numberp length)
+	(if (eql length (length result))
+	    (values result type)
+	    (input-not-of-required-type result type))
+	(values result type))))
 
 (define-presentation-type pathname ()
   :options ((default-version :newest) default-type (merge-default t)))

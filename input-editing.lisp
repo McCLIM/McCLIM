@@ -258,3 +258,23 @@
 	  finally (progn
 		    (unread-gesture gesture :stream stream)
 		    (return (subseq result 0))))))
+
+;;; Signalling Errors Inside present (sic)
+
+(define-condition simple-parse-error (simple-condition parse-error)
+  ())
+
+(defun simple-parse-error (format-string &rest format-args)
+  (error 'simple-parse-error
+	 :format-string format-string :format-arguments format-args))
+
+(define-condition input-not-of-required-type (error)
+  ((string :reader not-required-type-string :initarg :string)
+   (type :reader not-required-type-type :initarg :type))
+  (:report (lambda (condition stream)
+	     (format stream "Input ~S is not of required type ~S"
+		     (not-required-type-string condition)
+		     (not-required-type-type condition)))))
+
+(defun input-not-of-required-type (object type)
+  (error 'input-not-of-required-type :string object :type type))

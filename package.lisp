@@ -1733,3 +1733,6 @@
 
 (defpackage :CLIM-USER
   (:use :clim :clim-lisp))
+
+(defpackage :GOATEE
+  (:use :clim :clim-lisp))

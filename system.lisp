@@ -131,6 +131,20 @@
    "Examples/presentation-test"
    ))
 
+(defsystem :goatee #-mk-defsystem ()
+  #+mk-defsystem :source-pathname #+mk-defsystem *clim-directory*
+  #+mk-defsystem :source-extension #+mk-defsystem "lisp"
+  #+mk-defsystem :depends-on #+mk-defsystem (:clim)
+  #+mk-defsystem :components
+  (:serial
+   #-mk-defsystem :clim
+   "Goatee/dbl-list"
+   "Goatee/flexivector"
+   "Goatee/buffer"
+   "Goatee/editable-area"
+   "Goatee/clim-area"
+   ))
+
 #+mk-defsystem
 (defun build-everything ()
   (mk:oos :clim :load :load-source-instead-of-binary t)

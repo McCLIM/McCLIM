@@ -30,7 +30,7 @@ returns a list in CLIM X11 format (:x11 :host host-name :display-id display-numb
 :screen-id screen-number)."
   (let* ((colon (position #\: s))
 	 (dot (position #\. s :start colon))
-	 (host-name (if (zerop colon) "localhost" (subseq s 0 colon)))
+	 (host-name (subseq s 0 colon))
 	 (display-number (parse-integer s :start (1+ colon) :end dot))
 	 (screen-number (if dot (parse-integer s :start (1+ dot)) 0)))
     (list :x11 :host host-name :display-id display-number :screen-id screen-number)))
