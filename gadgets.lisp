@@ -405,7 +405,9 @@
 ;; MENU-BUTTON gadget
 ;;
 
-(defclass menu-button (value-gadget labelled-gadget-mixin) ()
+(defclass menu-button (value-gadget labelled-gadget-mixin)
+  (;; used to prevent repaints on destroyed windows
+   (destroyed :initform nil))
   (:documentation "The value is a button"))
 
 (defclass menu-button-pane (menu-button) ())
