@@ -1892,10 +1892,12 @@ and must never be nil."))
 	      ; horizontal orientation
 	      (values (+ x1 (ash slider-button-short-dim -1))
 		      (- x2 (ash slider-button-short-dim -1))))
-        (+ good-dim1 (/ (* (- (gadget-value pane) (gadget-min-value pane))
-			   (- good-dim2 good-dim1))
-		        (gadget-range pane)))))))
-
+        (+ good-dim1 (* (- good-dim2 good-dim1)
+                        (if (zerop (gadget-range pane))
+                            0.5
+                          (/ (- (gadget-value pane) (gadget-min-value pane))
+                             (gadget-range pane)))))))))
+           
 ;;; ------------------------------------------------------------------------------------------
 ;;;  30.4.6 The concrete radio-box and check-box Gadgets
 
