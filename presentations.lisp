@@ -1708,3 +1708,44 @@ function lambda list"))
 	  (when ptype
 	    (funcall (cdr context) object ptype event options)))))))
 
+(defstruct presentation-translator-menu-item
+  translator
+  presentation
+  context)
+
+(defun call-presentation-menu
+    (presentation input-context frame window x y
+     &key for-menu label)
+  (let (items)
+    (map-applicable-translators
+     #'(lambda (translator presentation context)
+         (push (make-presentation-translator-menu-item :translator translator
+                                                       :presentation presentation
+                                                       :context context)
+               items))
+     presentation input-context frame window x y :for-menu for-menu)
+    (setq items (nreverse items))
+    (multiple-value-bind (item object event)
+        (menu-choose items
+                     :associated-window window
+                     :printer #'(lambda (item stream)
+                                  (document-presentation-translator
+                                   (presentation-translator-menu-item-translator item)
+                                   (presentation-translator-menu-item-presentation item)
+                                   (presentation-translator-menu-item-context item)
+                                   frame nil window x y
+                                   :stream stream))
+                     :label label
+                     :pointer-documentation *pointer-documentation-output*)
+      (declare (ignore object))
+      (when item
+	(multiple-value-bind (object ptype options)
+	    (call-presentation-translator (presentation-translator-menu-item-translator item)
+					  (presentation-translator-menu-item-presentation item)
+					  (presentation-translator-menu-item-context item)
+					  frame
+					  event
+					  window
+					  x y)
+	  (when ptype
+	    (funcall (cdr (presentation-translator-menu-item-context item)) object ptype event options)))))))

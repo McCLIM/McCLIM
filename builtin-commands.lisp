@@ -88,3 +88,13 @@
 			      :sensitive nil)))
   (object)
   object)
+
+(define-presentation-action presentation-menu
+    (t nil global-command-table
+       :documentation "Menu"
+       :menu nil
+       :gesture :menu)
+  (presentation frame window x y)
+  (call-presentation-menu presentation *input-context*
+                          frame window x y
+                          :for-menu t))
