@@ -628,8 +628,10 @@ and must never be nil."))
 (defmethod value-changed-callback :before (value-gadget (client check-box) gadget-id value)
   (declare (ignorable gadget-id))
   (if value
-      (setf (gadget-value client :invoke-callback t) (adjoin value-gadget (gadget-value client)))
-      (setf (gadget-value client :invoke-callback t) (remove value-gadget (gadget-value client)))))
+      (setf (gadget-value client :invoke-callback t)
+            (adjoin value-gadget (gadget-value client)))
+      (setf (gadget-value client :invoke-callback t)
+            (remove value-gadget (gadget-value client)))))
 
 (defmethod (setf gadget-value) :after (buttons (check-box check-box) &key invoke-callback)
   ;; this is silly, but works ...
