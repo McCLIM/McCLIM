@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.93 2002/07/31 11:58:10 adejneka Exp $
+;;; $Id: panes.lisp,v 1.94 2002/07/31 18:54:48 gilbert Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -862,13 +862,14 @@
  (defmethod xically-content-sr** ((pane box-layout-mixin) child)
    (let (p)
      (cond ((constraint-slot pane child 'fill-p)
-            (make-space-requirement
-             :major 0
-             :min-major 0
-             :max-major +fill+
-             :minor 0
-             :min-minor 0
-             :max-minor 0))
+            (let ((child-space (compose-space child)))
+              (make-space-requirement
+               :major     (space-requirement-major child-space)
+               :min-major (space-requirement-min-major child-space)
+               :max-major +fill+
+               :minor     (space-requirement-minor child-space)
+               :min-minor (space-requirement-min-minor child-space)
+               :max-minor (space-requirement-max-minor child-space))))
            ((setq p (constraint-slot pane child 'fixed-size))
             (let ((sr (compose-space child)))
               (make-space-requirement
@@ -1026,7 +1027,8 @@
                ,@options
                :contents (list ,@(mapcar (lambda (content)
                                            (cond ((and (consp content)
-                                                       (realp (first content)))
+                                                       (or (realp (first content))
+                                                           (member (first content) '(+fill+ :fill))))
                                                   `(list ',(first content)
                                                          ,(second content)))
                                                  (t
@@ -1044,11 +1046,21 @@
 
  (defmethod initialize-instance :after ((pane xbox-pane) &key contents &allow-other-keys)
    (let ((children (mapcar (lambda (content)
+                             ;; Note: if you extend the allowed
+                             ;; "syntax" also update the XICALLY macro
+                             ;; also. --GB
                              (cond ((panep content)
                                     content)
                                    ;;
                                    ((or (eql content +fill+) (eql content '+fill+))
                                     (let ((child (make-instance 'null-pane)))
+                                      (setf (constraint-slot pane child 'fill-p) t)
+                                      child))
+                                   ;;
+                                   ((and (consp content)
+                                         (or (member (car content) '(+fill+ :fill))
+                                             (eql (car content) +fill+)))
+                                    (let ((child  (cadr content)))
                                       (setf (constraint-slot pane child 'fill-p) t)
                                       child))
                                    ;;
