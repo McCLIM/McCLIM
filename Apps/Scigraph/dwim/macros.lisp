@@ -47,7 +47,7 @@ advised of the possiblity of such damages.
 				  &body body)
   `(print-unreadable-object (,object ,stream
 			     :type ,(member :typep options)
-			     :identity (not (member :no-pointer options)))
+			     :identity ,(not (member :no-pointer options)))
      ,@body))
 
 (defmacro with-stack-list ((var &rest elements) &body body)
