@@ -711,7 +711,10 @@
    (show-value-p :type boolean
 		 :initform nil
 		 :initarg :show-value-p
-		 :accessor gadget-show-value-p)))
+		 :accessor gadget-show-value-p)
+   (decimal-places :initform 0
+                   :initarg :decimal-places
+                   :reader slider-decimal-places)))
 
 ;; This values should be changeable by user. That's
 ;; why they are parameters, and not constants.
@@ -783,6 +786,12 @@
 	 (/ (* (gadget-range pane) (- (max good-dim1 (min dim good-dim2)) good-dim1))
 	    (- good-dim2 good-dim1))))))
 
+(defun format-value (value decimal-places)
+  (if (<= decimal-places 0)
+      (format nil "~D" (round value))
+      (let ((control-string (format nil "~~,~DF" decimal-places)))
+        (format nil control-string value))))
+
 (defmethod repaint-sheet ((pane slider-pane) region)
   (declare (ignore region))
   (with-special-choices (pane)
@@ -806,7 +815,8 @@
 				 (- middle slider-button-half-long-dim) (- position slider-button-half-short-dim)
 				 (+ middle slider-button-half-long-dim) (+ position slider-button-half-short-dim))
 	      (when (gadget-show-value-p pane)
-		(draw-text* pane (princ-to-string (gadget-value pane))
+		(draw-text* pane (format-value (gadget-value pane)
+                                               (slider-decimal-places pane))
 			    5 ;(- middle slider-button-half-short-dim)
 			    10))) ;(- position slider-button-half-long-dim))))
 	    ; horizontal case
@@ -823,7 +833,8 @@
 				 (- position slider-button-half-short-dim) (- middle slider-button-half-long-dim)
 				 (+ position slider-button-half-short-dim) (+ middle slider-button-half-long-dim))
 	      (when (gadget-show-value-p pane)
-		(draw-text* pane (princ-to-string (gadget-value pane))
+		(draw-text* pane (format-value (gadget-value pane)
+                                               (slider-decimal-places pane))
 			    5 ;(- position slider-button-half-short-dim)
 			    (- middle slider-button-half-long-dim)))))))))
 

@@ -298,7 +298,8 @@
                             (setf line-style
                                   (make-merged-line-style line-style
                                                           :thickness (round value)))))
-		      :show-value-p nil
+		      :show-value-p t
+                      :decimal-places 0
 		      :height 50
 		      :orientation :horizontal)
    (round-shape-toggle :toggle-button
