@@ -62,6 +62,7 @@ Finally, the old tree is walked.  All updating-output-records in state
 ;;; medium for graphics state?
 (defclass updating-output-stream-mixin (extended-output-stream)
   ((redisplaying-p :reader stream-redisplaying-p :initform nil)
+   (do-note-output-record :accessor do-note-output-record :initform t)
    (id-map :accessor id-map :initform nil)))
 
 (defgeneric redisplayable-stream-p (stream))
@@ -558,6 +559,16 @@ record is stored.")
 
 (defvar *dump-updating-output* nil)
 
+;;; Protocol for notifying that records have been added or deleted,
+;;; for real, during redisplay.
+
+(defgeneric redisplay-add-output-record (record stream)
+  (:documentation "Process an output record that has been added (i.e.,
+  was not in the output history of the stream) during redisplay. The
+  record has not been displayed yet."))
+
+(defgeneric redisplay-delete-output-record (record stream))
+
 (defgeneric redisplay-output-record (record stream
 				     &optional check-overlapping))
 
@@ -570,24 +581,19 @@ record is stored.")
 	  (current-graphics-state (medium-graphics-state stream)))
       (unwind-protect
 	   (progn
-	     (set-medium-graphics-state (start-graphics-state record) stream)
-	     (compute-new-output-records record stream)
-	     (when *dump-updating-output*
-	       (dump-updating record :both *trace-output*))
+	     (letf (((do-note-output-record stream) nil))
+	       (set-medium-graphics-state (start-graphics-state record) stream)
+	       (compute-new-output-records record stream)
+	       (when *dump-updating-output*
+		 (dump-updating record :both *trace-output*)))
 	     (multiple-value-bind (erases moves draws)
 		 (compute-difference-set record)
 	       (declare (ignore moves))
 	       (with-output-recording-options (stream :record nil :draw t)
 		 (loop for r in erases
-		       do (with-bounding-rectangle* (x1 y1 x2 y2)
-			    r
-			    (draw-rectangle* stream x1 y1 x2 y2
-					     :ink +background-ink+)))
+		       do (redisplay-delete-output-record r stream))
 		 (loop for r in draws
-		       do (with-bounding-rectangle* (x1 y1 x2 y2)
-			    r
-			    (draw-rectangle* stream x1 y1 x2 y2
-					     :ink +background-ink+))))
+		       do (redisplay-add-output-record r stream)))
 	       ;; Redraw all the regions that have been erased.
 	       ;; This takes care of all random records that might overlap.
 	       (loop for r in erases
@@ -595,6 +601,40 @@ record is stored.")
 	       (loop for r in draws
 		     do (replay record stream r))))
 	(set-medium-graphics-state current-graphics-state stream)))))
+
+(defmethod redisplay-add-output-record (record
+					(stream updating-output-stream-mixin))
+  (with-bounding-rectangle* (x1 y1 x2 y2)
+    record
+    (draw-rectangle* stream x1 y1 x2 y2
+		     :ink +background-ink+)))
+
+(defmethod redisplay-add-output-record :after
+    (record (stream updating-output-stream-mixin))
+  (note-output-record-got-sheet record stream))
+
+(defmethod redisplay-delete-output-record
+    (record (stream updating-output-stream-mixin))
+  (with-bounding-rectangle* (x1 y1 x2 y2)
+    record
+    (draw-rectangle* stream x1 y1 x2 y2
+		     :ink +background-ink+)))
+
+(defmethod redisplay-delete-output-record :after
+    (record (stream updating-output-stream-mixin))
+  (note-output-record-lost-sheet record stream))
+
+;;; Suppress the got-sheet/lost-sheet notices during redisplay.
+
+(defmethod note-output-record-lost-sheet :around
+    (record (sheet updating-output-stream-mixin))
+  (when (do-note-output-record sheet)
+    (call-next-method)))
+
+(defmethod note-output-record-got-sheet :around
+    (record (sheet updating-output-stream-mixin))
+  (when (do-note-output-record sheet)
+    (call-next-method)))
 
 (defun delete-stale-updating-output (record)
   (map-over-updating-output
@@ -607,16 +647,6 @@ record is stored.")
 			 :test (output-record-id-test r))))))
    record
    t))
-
-
-#+ignore
-(defun convert-from-relative-to-absolute-coordinates (stream record)
-  (let ((scy (if stream (bounding-rectangle-height stream) 0.0d0))
-        (scx (if stream (bounding-rectangle-width stream) 0.0d0))
-        (ory 0.0d0)
-        (orx 0.0d0))
-    (if record (multiple-value-setq (ory orx) (output-record-position record)))
-    (values (+ scy ory) (+ scx orx))))
 
 (defun convert-from-relative-to-absolute-coordinates (stream record)
   (declare (ignore stream))

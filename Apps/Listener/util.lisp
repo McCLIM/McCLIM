@@ -58,13 +58,16 @@
 
 (defun directoryp (pathname)
   "Returns pathname when supplied with a directory, otherwise nil"
-  (if (pathname-name pathname) nil pathname))
+  (if (or (pathname-name pathname) (pathname-type pathname))
+      nil
+      pathname))
 
 (defun getenv (var)
   (or 
    #+cmu (cdr (assoc var ext:*environment-list*))
    #+sbcl (sb-ext:posix-getenv var)
-   #+lispworks (lw:environment-variable var)    
+   #+lispworks (lw:environment-variable var)
+   #+openmcl (ccl::getenv var)
    nil))
 
 ;; Need to strip filename/type/version from directory?.. FIXME?
@@ -119,8 +122,12 @@
                 (when pn (push pn list))))
           (sb-posix::free-dirent dirent))))))
 
+#+openmcl
+(defun list-directory (pathname)
+  (directory pathname :directories t :follow-links nil))
+
 ;; Fallback to ANSI CL
-#-(OR CMU SBCL)
+#-(OR CMU SBCL OPENMCL)
 (defun list-directory (pathname)
   (directory pathname))
 

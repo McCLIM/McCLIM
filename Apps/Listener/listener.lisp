@@ -57,8 +57,7 @@
   (declare (ignore frame))
   (let* ((*standard-output* pane)
          (username (or #+cmu (cdr (assoc :user ext:*environment-list*))
-                       #+sbcl (sb-ext:posix-getenv "USER")
-                       #+lispworks (lw:environment-variable "USER")
+		       #-cmu (getenv "USER")
                        "luser"))  ; sorry..
          (sitename (machine-instance))
          (memusage #+cmu (lisp::dynamic-usage)
@@ -192,12 +191,29 @@
 	object))
   )
 
+#+nil
 (defun listener-read (frame stream)
   "Read a command or form, taking care to manage the input context
    and whatever else need be done."
   (multiple-value-bind (x y)  (stream-cursor-position stream)    
     (with-input-context ('command) (object object-type)
             (read-frame-command frame :stream stream)
+        (command
+         ;; Kludge the cursor position - Goatee will have moved it all around
+         (setf (stream-cursor-position stream) (values x y))
+         (present object object-type
+                  :view (stream-default-view stream)
+                  :stream stream)
+         object))))
+
+(defmethod read-frame-command :around ((frame listener)
+				       &key (stream *standard-input*))
+  "Read a command or form, taking care to manage the input context
+   and whatever else need be done."
+  (declare (ignore stream))
+  (multiple-value-bind (x y)  (stream-cursor-position stream)    
+    (with-input-context ('command) (object object-type)
+            (call-next-method)
         (command
          ;; Kludge the cursor position - Goatee will have moved it all around
          (setf (stream-cursor-position stream) (values x y))

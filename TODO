@@ -10,8 +10,6 @@ TBM:20031112:002300
 
     make-design-from-output-record
 
-    filling-output - :after-line-break-initially
-
     (setf* pointer-position)
 
     drag-output-record, dragging-output
