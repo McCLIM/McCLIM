@@ -4,7 +4,7 @@
 ;;;   Created: 1998-09-29
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: transforms.lisp,v 1.26 2004/03/24 09:30:29 moore Exp $
+;;;       $Id: transforms.lisp,v 1.27 2004/03/31 13:31:20 moore Exp $
 ;;; --------------------------------------------------------------------------------------
 ;;;  (c) copyright 1998,1999,2003 by Gilbert Baumann
 ;;;  (c) copyright 2000 by 
@@ -731,16 +731,3 @@ transformation protocol."))
 (defmethod transformation-equal ((t2 t)
                                  (t1 standard-translation))
   nil)
-
-;; $Log: transforms.lisp,v $
-;; Revision 1.25  2003/11/07 20:22:02  hefner1
-;; Fixed erroneous declaration (declared something as simple-vector inside a
-;; (typep coord-seq 'vector) cond clause.
-;;
-;; Revision 1.24  2003/08/10 07:29:55  gilbert
-;; delete one of the two definitions of MAKE-TRANSLATION-TRANSFORMATION.
-;;
-;; Revision 1.23  2003/08/09 00:55:40  gilbert
-;; Introduced special classes for the identity and translations for both
-;; less consing and less cycles spend.
-;;

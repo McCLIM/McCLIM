@@ -273,8 +273,7 @@
 ) 					; with-system-redefinition-allowed
 
 (define-presentation-method accept ((type expression) stream (view textual-view)
-				    &key (default nil defaultp) default-type)
-  (declare (ignore default defaultp default-type))
+				    &key)
   (let* ((object nil)
 	 (ptype nil))
     (if (and #-openmcl nil subform-read)

@@ -549,6 +549,20 @@
 
 (defvar *numeric-argument-marker* (cons nil nil))
 
+;;; A type indicating empty input. For example, if one types <space>
+;;; to get the default value of a keyword argument, and then types
+;;; <return>, we don't want to see "None" in the output history. So,
+;;; we define this subtype of null that has no output. It's not meant
+;;; to be read if the form is ever accepted again.
+
+(define-presentation-type empty ()
+  :inherit-from 'null)
+
+(define-presentation-method present
+    (object (type empty) stream (view textual-view) &key &allow-other-keys)
+  (declare (ignore object stream)))
+
+
 (defun accept-form-for-argument (stream arg)
   (let ((accept-keys '(:default :default-type :display-default
 		       :prompt :documentation)))
@@ -623,11 +637,12 @@
        (setq ,key-possibilities (nreverse ,key-possibilities))
        (when ,key-possibilities
 	 (input-editor-format ,stream "~%(keywords)")
-	 (let ((,member-ptype `(token-or-type ,,key-possibilities null)))
+	 (let ((,member-ptype `(token-or-type ,,key-possibilities empty)))
 	   (loop
 	     (let* ((,key-result (prog1 (accept ,member-ptype
                                                 :stream ,stream
-                                                :prompt nil)
+                                                :prompt nil
+						:default nil)
                                    (eat-delimiter-or-activator)))
 		    (,val-result
 		     (case ,key-result
@@ -1014,7 +1029,7 @@
 
 (define-presentation-method accept ((type command-name) stream
 				    (view textual-view)
-				    &key (default nil defaultp) default-type)
+				    &key)
   (flet ((generator (string suggester)
 	   (map-over-command-table-names suggester command-table)))
     (multiple-value-bind (object success string)
@@ -1122,15 +1137,9 @@
 
 (define-presentation-method accept ((type command) stream
 				    (view textual-view)
-				    &key (default nil defaultp) default-type)
+				    &key)
   (let ((command (funcall *command-parser* command-table stream)))
-    #+nil
-    (progn
-      (format *trace-output* "~&; Command accepted: ~S.~%" command)
-      (finish-output *trace-output*))
-    (cond ((and (null command) defaultp)
-	   (values default default-type))
-	  ((null command)
+    (cond ((null command)
 	   (simple-parse-error "Empty command"))
           ((partial-command-p command)
            (funcall *partial-command-parser*
@@ -1263,8 +1272,7 @@
 
 (define-presentation-method accept ((type command-or-form) stream
 				    (view textual-view)
-				    &key (default nil defaultp)
-				    default-type)
+				    &key)
   (let ((command-ptype `(command :command-table ,command-table)))
     (with-input-context (`(or ,command-ptype form))
         (object type event options)

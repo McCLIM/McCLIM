@@ -31,8 +31,12 @@
 
 (define-protocol-class input-editing-stream ())
 
+(defclass empty-input-mixin ()
+  ()
+  (:documentation "A mixin class used for detecting empty input"))
 
-(defclass standard-input-editing-stream (goatee:goatee-input-editing-mixin
+(defclass standard-input-editing-stream (empty-input-mixin
+					 goatee:goatee-input-editing-mixin
 					 input-editing-stream
 					 standard-encapsulating-stream)
   ((buffer :reader stream-input-buffer
@@ -94,7 +98,8 @@
 	     ;; If activated, insertion pointer is at fill pointer
 	     ((stream-activated stream)
 	      (return-from stream-read-gesture (values nil :eof)))
-	     (t (setf (slot-value stream 'rescanning-p) nil)
+	     (t (when (eql scan-pointer (fill-pointer buffer))
+		  (setf (slot-value stream 'rescanning-p) nil))
 		(loop for result = (multiple-value-bind (gesture type)
 				       (apply #'stream-read-gesture
 					      (encapsulating-stream-stream
@@ -121,19 +126,6 @@
 ;;; The editing functions of stream-process-gesture are performed by the
 ;;; primary method on goatee-input-editing-mixin
 ;;;
-;;; This is commented out for now because I believe the stream should
-;;; be activated by stream-read-gesture seeing an activation gesture. -- moore
-#+nil
-(defmethod stream-process-gesture :after ((stream standard-input-editing-stream)
-					  gesture
-					  type)
-  (declare (ignore type))
-  (when (activation-gesture-p gesture)
-    (unless (eql (stream-insertion-pointer stream)
-		 (fill-pointer (stream-input-buffer stream)))
-      (format *debug-io* "Editing stream activated, but IP is not at FP.~%")
-      (break))
-    (setf (stream-activated stream) t)))
 
 ;;; These helper functions take the arguments of ACCEPT so that they
 ;;; can be used directly by ACCEPT.
@@ -448,7 +440,7 @@
 			      allow-any-input)
   (when (stream-rescanning-p stream)
     (loop for gesture = (read-gesture :stream stream :timeout 0)
-	  while (stream-rescanning-p stream) ; also nil if no input available
+	  while (and gesture (stream-rescanning-p stream))
 	  if (complete-gesture-p gesture)
 	    do (let (input success object nmatches)
 		 (when (gesture-match gesture partial-completers)
@@ -463,10 +455,11 @@
                          (unread-gesture gesture :stream stream)
                          (return-from complete-input-rescan
                            (values object t input)))
-                     (error 'simple-completion-error
+		       (error 'simple-completion-error
                             :format-control "complete-input: While rescanning,~
-                                             can't match ~A~A"
-                            :format-arguments (list so-far gesture)
+                                             can't match ~A~A~"
+                            :format-arguments (list so-far  gesture)
+			    
                             :input-so-far so-far))))
 	  end
 	  do (vector-push-extend gesture so-far)
@@ -757,3 +750,67 @@
 					     partial-completers
 					     :action mode))
 		complete-input-args)))))
+
+;;; Infrasructure for detecting empty input, thus allowing accept-1
+;;; to supply a default.
+
+;;; continuation = (stream scan-pointer <function of one arg (gesture)>
+(defvar *empty-input-continuations* nil)
+
+(defun invoke-empty-input (stream gesture)
+  "Invoke the continuation of the empty accept before the first non-empty
+  accept."
+  (let ((scan-pointer (1- (stream-scan-pointer stream))))
+    (loop
+       with active-continuation = nil
+       for continuation in *empty-input-continuations*
+       for (cont-stream cont-scan-pointer) = continuation
+       while (and (eq stream cont-stream)
+		  (eql scan-pointer cont-scan-pointer))
+       do (setq active-continuation continuation)
+       finally (when active-continuation
+		 (unread-char gesture stream)
+		 (funcall (caddr active-continuation))))
+    t))
+
+(defmethod stream-read-gesture :around ((stream empty-input-mixin)
+					&key timeout peek-p
+					input-wait-test
+					input-wait-handler
+					pointer-button-press-handler)
+  (declare (ignore timeout input-wait-test input-wait-handler
+		   pointer-button-press-handler))
+  (if peek-p
+      (call-next-method)
+      (multiple-value-bind (gesture reason)
+	  (call-next-method)
+	(when (and gesture
+		   (or (activation-gesture-p gesture)
+		       (delimiter-gesture-p gesture)))
+	  (invoke-empty-input stream gesture))
+	;; invoke-empty-input won't return if it can invoke a continuation
+	(values gesture reason))))
+
+(defmacro handle-empty-input ((stream) input-form &body handler-forms)
+  "Establishes a context on `stream' (a `standard-input-editing-stream') in
+  which empty input entered in `input-form' i.e., an activation gesture or
+  delimiter gesture typed with no other characters, may transfer control to
+  `handler-forms'. The gesture that caused the transfer remains to be read in
+  `stream'. Control is transferred to the outermost `handle-empty-input' form
+  that is empty.
+
+  Note: noise strings in the buffer, such as the prompts of recursive calls to
+  `accept', cause input to not be empty. However, the prompt generated by
+  `accept' is generally not part of its own empty input context."
+  (with-gensyms (return-block context-block)
+    `(block ,return-block
+       (block ,context-block
+	 (let ((*empty-input-continuations*
+		(cons (list ,stream
+			    (stream-scan-pointer ,stream)
+			    #'(lambda ()
+				(return-from ,context-block)))
+		      *empty-input-continuations*)))
+	   (return-from ,return-block ,input-form)))
+       ,@handler-forms)))
+

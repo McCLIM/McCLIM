@@ -723,11 +723,12 @@
       (do-meths "After" after))))
 
 (defun make-gf-specialized-ptype (gf-name)
-  (let ((gf nil))
-    (handler-case
-	(setq gf (fdefinition gf-name))
-      (error ()
-	(return-from make-gf-specialized-ptype nil)))
+  (let ((gf gf-name))
+    (unless (typep gf 'generic-function)
+      (handler-case
+	  (setq gf (fdefinition gf-name))
+	(error ()
+	  (return-from make-gf-specialized-ptype nil))))
     (unless (typep gf 'generic-function)
       (return-from make-gf-specialized-ptype nil))
     (let ((required (climi::parse-lambda-list
