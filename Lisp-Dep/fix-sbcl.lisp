@@ -27,7 +27,7 @@
           :clim-lisp-patch))
 
 (defmacro clim-lisp-patch:defconstant (symbol value &optional docu)
-  `(defparameter ,symbol ,value ,@(and docu (list docu))))
+  `(defvar ,symbol ,value ,@(and docu (list docu))))
 
 (defvar clim-lisp-patch::*compile-time-clos-names* (make-hash-table))
 
