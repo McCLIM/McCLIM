@@ -309,7 +309,8 @@
 	      if (or (null line)
 		     (not (eq (buffer-line line) buffer-line)))
 	        return (values nil prev-line prev-buffer-line)
-	      do nil			;XXX workaround CMUCL bug
+              do (progn nil)            ;XXX workaround CMUCL bug
+                                        ; Is it still necessary? -- APD, 2002-06-25
 	      until (eq buffer-line buf-end)
 	      ;; If there are still lines in the area list, then there was a
 	      ;; change.
@@ -328,7 +329,8 @@
 	        return (values nil
 			       area-beginning-end prev-line
 			       buffer-beginning-end prev-buffer-line)
-	      do nil			;XXX workaround CMUCL bug
+              do (progn nil)            ;XXX workaround CMUCL bug
+                                        ; Is it still necessary? -- APD, 2002-06-25
 	      until (eq buffer-line buf-start)
 	      finally (return (values nil
 				      area-beginning-end line
