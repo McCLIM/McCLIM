@@ -19,6 +19,13 @@
 
 (in-package :CLIM-INTERNALS)
 
+(defun get-environment-variable (string)
+  #+excl (sys:getenv string)
+  #+cmu (cdr (assoc string ext:*environment-list* :test #'string=))
+  #+clisp (sys::getenv (string string))
+  #+sbcl (sb-ext::posix-getenv string)
+  #-(or excl cmu clisp sbcl) (error "GET-ENVIRONMENT-VARIABLE not implemented"))
+
 (defun last1 (list)
   (first (last list)))
 

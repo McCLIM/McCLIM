@@ -23,27 +23,15 @@
 
 (in-package :CLIM-INTERNALS)
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-(defun parse-display-variable (s)
-  "Given a string in standard X11 display format host-name:display-number:screen-number,
-returns a list in CLIM X11 format (:x11 :host host-name :display-id display-number
-:screen-id screen-number)."
-  (let* ((colon (position #\: s))
-	 (dot (position #\. s :start colon))
-	 (host-name (subseq s 0 colon))
-	 (display-number (parse-integer s :start (1+ colon) :end dot))
-	 (screen-number (if dot (parse-integer s :start (1+ dot)) 0)))
-    (list :x11 :host host-name :display-id display-number :screen-id screen-number)))
+(defvar *default-server-path* NIL)
 
-(defun get-environment-variable (string)
-  #+excl (sys:getenv string)
-  #+cmu (cdr (assoc string ext:*environment-list* :test #'string=))
-  #+clisp (sys::getenv (string string))
-  #+sbcl (sb-ext::posix-getenv string)
-  #-(or excl cmu clisp sbcl) (error "GET-ENVIRONMENT-VARIABLE not implemented")))
-		
-(defvar *default-server-path*
-    #+unix (parse-display-variable (get-environment-variable "DISPLAY")))
+(defvar *server-path-search-order* '(:clx :x11 :genera))
+
+(defun find-default-server-path ()
+  (loop for port in *server-path-search-order*
+	if (get port :port-type)
+	   do (return-from find-default-server-path (list port))
+	finally (error "No CLIM backends have been loaded!")))
 
 (defvar *all-ports* nil)
 
@@ -81,6 +69,11 @@ returns a list in CLIM X11 format (:x11 :host host-name :display-id display-numb
     :accessor port-lock) ))
 
 (defun find-port (&key (server-path *default-server-path*))
+  (if (null server-path)
+      (setq server-path (find-default-server-path)))
+  (if (atom server-path)
+      (setq server-path (list server-path)))
+  (setq server-path (funcall (get (first server-path) :server-path-parser) server-path))
   (loop for port in *all-ports*
       if (equal server-path (port-server-path port))
       do (return port)

@@ -35,7 +35,23 @@
    (color-table :initform (make-hash-table :test #'eq))
    (font-table :initform (make-hash-table :test #'eq))) )
 
+(defun parse-clx-server-path (path)
+  (pop path)
+  (let* ((s (get-environment-variable "DISPLAY"))
+	 (colon (position #\: s))
+	 (dot (position #\. s :start colon))
+	 (host-name (subseq s 0 colon))
+	 (display-number (parse-integer s :start (1+ colon) :end dot))
+	 (screen-number (if dot (parse-integer s :start (1+ dot)) 0)))
+    (list :clx
+	  :host (getf path :host host-name)
+	  :display-id (getf path :display-id display-number)
+	  :screen-id (getf path :screen-id screen-number))))
+
 (setf (get :x11 :port-type) 'clx-port)
+(setf (get :x11 :server-path-parser) 'parse-clx-server-path)
+(setf (get :clx :port-type) 'clx-port)
+(setf (get :clx :server-path-parser) 'parse-clx-server-path)
 
 (defmethod initialize-instance :after ((port clx-port) &rest args)
   (declare (ignore args))
