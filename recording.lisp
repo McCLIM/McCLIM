@@ -626,7 +626,7 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
   0)
 
 (defmethod map-over-output-records
-    (function (record basic-output-record)
+    (function (record displayed-output-record)
      &optional (x-offset 0) (y-offset 0)
      &rest function-args)
   (declare (ignore function x-offset y-offset function-args))
@@ -644,7 +644,7 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
        (output-record-children record)))
 
 (defmethod map-over-output-records-containing-position
-    (function (record basic-output-record) x y
+    (function (record displayed-output-record) x y
      &optional (x-offset 0) (y-offset 0)
      &rest function-args)
   (declare (ignore function x y x-offset y-offset function-args))
@@ -668,7 +668,7 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
        (output-record-children record)))
 
 (defmethod map-over-output-records-overlapping-region
-    (function (record basic-output-record) region
+    (function (record displayed-output-record) region
      &optional (x-offset 0) (y-offset 0)
      &rest function-args)
   (declare (ignore function region x-offset y-offset function-args))
@@ -684,7 +684,7 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
   (declare (ignore x-offset y-offset))
   (map nil
        (lambda (child) (when (region-intersects-region-p region child)
-                         (apply function child function-args)))
+  			 (apply function child function-args)))
        (output-record-children record)))
 
 (defun null-bounding-rectangle-p (bbox)
