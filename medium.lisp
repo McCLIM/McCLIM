@@ -509,6 +509,21 @@
                                          right top)
                             t filled))))
 
+(defmethod medium-draw-rectangles* :around ((medium basic-medium) position-seq filled)
+  (let ((tr (medium-transformation medium)))
+    (if (rectilinear-transformation-p tr)
+        (loop for (left top right bottom) on position-seq by #'cddddr
+              nconcing (multiple-value-list
+                        (transform-rectangle* tr left top right bottom)) into position-seq
+              finally (call-next-method medium position-seq filled))
+        (loop for (left top right bottom) on position-seq by #'cddddr
+              do (medium-draw-polygon* medium (list left top
+                                                    left bottom
+                                                    right bottom
+                                                    right top)
+                                       t filled)))))
+
+
 (defmethod medium-draw-ellipse* :around ((medium basic-medium) center-x center-y
                                          radius-1-dx radius-1-dy radius-2-dx radius-2-dy
                                          start-angle end-angle filled)
@@ -534,10 +549,22 @@
                                       align-x align-y
                                       toward-x toward-y transform-glyphs)
   ;;!!! FIX ME!
-  (call-next-method medium string x y
-                    start end
-                    align-x align-y
-                    toward-x toward-y transform-glyphs))
+  (let ((tr (medium-transformation medium)))
+    (with-transformed-position (tr x y)
+      (call-next-method medium string x y
+                        start end
+                        align-x align-y
+                        toward-x toward-y transform-glyphs))))
+
+(defmethod medium-draw-glyph :around ((medium basic-medium) element x y
+                                      align-x align-y toward-x toward-y
+                                      transform-glyphs)
+  (let ((tr (medium-transformation medium)))
+    (with-transformed-position (tr x y)
+      (call-next-method medium string x y
+                        start end
+                        align-x align-y
+                        toward-x toward-y transform-glyphs))))
 
 
 ;;; Other Medium-specific Output Functions

@@ -256,6 +256,29 @@
   (with-medium-options (sheet args)
     (medium-draw-rectangle* medium x1 y1 x2 y2 filled)))
 
+(defun draw-rectangles (sheet points
+                        &rest args
+                        &key (filled t)
+                        ink clipping-region transformation line-style line-thickness
+			line-unit line-dashes line-joint-shape)
+  (declare (ignore ink clipping-region transformation line-style line-thickness
+		   line-unit line-dashes line-joint-shape))
+  (with-medium-options (sheet args)
+    (loop for point in points
+	  nconcing (multiple-value-bind (x y) (point-position point)
+		     (list x y)) into position-seq
+	  finally (medium-draw-rectangles* medium position-seq filled))))
+
+(defun draw-rectangles* (sheet position-seq
+                         &rest args
+                         &key (filled t)
+                         ink clipping-region transformation line-style line-thickness
+                         line-unit line-dashes line-joint-shape)
+  (declare (ignore ink clipping-region transformation line-style line-thickness
+		   line-unit line-dashes line-joint-shape))
+  (with-medium-options (sheet args)
+    (medium-draw-rectangles* medium position-seq filled)))
+
 (defun draw-triangle (sheet point1 point2 point3
                       &rest args
                       &key (filled t)
@@ -517,6 +540,7 @@
 (def-graphic-op draw-lines (coord-seq))
 (def-graphic-op draw-polygon (coord-seq closed filled))
 (def-graphic-op draw-rectangle (left top right bottom filled))
+(def-graphic-op draw-rectangles (position-seq filled))
 (def-graphic-op draw-ellipse (center-x center-y
 				  radius-1-dx radius-1-dy radius-2-dx radius-2-dy
 				  start-angle end-angle filled))

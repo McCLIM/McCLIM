@@ -26,7 +26,7 @@
 
 ;;; CLX-MEDIUM class
 
-(defclass clx-medium (medium)
+(defclass clx-medium (basic-medium)
   ((gc :initform nil)
    )
   )
@@ -92,37 +92,17 @@
 	 (progn ,@body)
        #+ignore(xlib:free-gcontext gc))))
 
-(defun medium-transform-position (medium x y)
-  (multiple-value-bind (xr yr) (bounding-rectangle* 
-				(sheet-region (medium-sheet medium)))
-    ; the right method to use is the medium-device-transformation, but
-    ; as the device-transformation, in the case of the back-end CLX, is 
-    ; the identity transformation, a short path is used for optimizing
-    ; the drawing operations.
-    (transform-position (medium-transformation medium) ;(medium-device-transformation medium)
-			(- x xr) (- y yr))))
-
-(defun medium-transform-distance (medium dx dy)
-  ; the right method to use is the medium-device-transformation, but
-  ; as the device-transformation, in the case of the back-end CLX, is 
-  ; the identity transformation, a short path is used for optimizing
-  ; the drawing operations.
-  (transform-distance (medium-transformation medium) ;(medium-device-transformation medium)
-                      dx dy))
-
 (defmethod medium-draw-point* ((medium clx-medium) x y)
   (with-CLX-graphics (medium)
-    (multiple-value-bind (tx ty)
-	(medium-transform-position medium x y)
-      (if (< (line-style-thickness line-style) 2)
-	  (xlib:draw-point mirror gc (round tx) (round ty))
+    (if (< (line-style-thickness line-style) 2)
+        (xlib:draw-point mirror gc (round x) (round y))
 	(let* ((radius (round (line-style-thickness line-style) 2))
                (diameter (* radius 2)))
 	  (xlib:draw-arc mirror gc
-			 (round (- tx radius)) (round (- ty radius))
+			 (round (- x radius)) (round (- y radius))
 			 diameter diameter
 			 0 (* 2 pi)
-			 t))))))
+			 t)))))
 
 (defmethod medium-draw-points* ((medium clx-medium) coord-seq)
   (loop for (x y) on coord-seq by #'cddr
@@ -130,61 +110,42 @@
 
 (defmethod medium-draw-line* ((medium clx-medium) x1 y1 x2 y2)
   (with-CLX-graphics (medium)
-    (multiple-value-bind (tx1 ty1)
-	(medium-transform-position medium x1 y1)
-      (multiple-value-bind (tx2 ty2)
-	  (medium-transform-position medium x2 y2)
-	(xlib:draw-line mirror gc (round tx1) (round ty1) (round tx2) (round ty2))))))
+    (xlib:draw-line mirror gc (round x1) (round y1) (round x2) (round y2))))
 
 (defmethod medium-draw-lines* ((medium clx-medium) coord-seq)
   (with-CLX-graphics (medium)
-    (loop with points = (apply #'vector coord-seq)
-	  for i below (length coord-seq) by 2
-	  do (multiple-value-bind (tx ty)
-		 (medium-transform-position medium (aref points i) (aref points (1+ i)))
-	       (setf (aref points i) (round tx)
-		     (aref points (1+ i)) (round ty)))
-	  finally (xlib:draw-segments mirror gc points))))
+    (let ((points (apply #'vector (mapcar #'round coord-seq))))
+      (xlib:draw-segments mirror gc points))))
 
 (defmethod medium-draw-polygon* ((medium clx-medium) coord-seq closed filled)
   (assert (evenp (length coord-seq)))
+  (setq coord-seq (mapcar #'round coord-seq))
   (with-CLX-graphics (medium)
-    (loop for (x y) on coord-seq by #'cddr
-          as (tx ty) = (mapcar #'round (multiple-value-list
-                                        (medium-transform-position medium x y)))
-          nconcing (list tx ty) into points
-          finally (when closed
-                    (setf points (nconc points
-                                        (list (first points) (second points)))))
-                  (xlib:draw-lines mirror gc points :fill-p filled))))
+    (xlib:draw-lines mirror gc
+                     (if closed
+                         (append coord-seq (list (first coord-seq)
+                                                 (second coord-seq)))
+                         coord-seq)
+                     :fill-p filled)))
 
 (defmethod medium-draw-rectangle* ((medium clx-medium) left top right bottom filled)
   (with-CLX-graphics (medium)
-    (multiple-value-bind (x1 y1)
-	(medium-transform-position medium left top)
-      (multiple-value-bind (x2 y2)
-	  (medium-transform-position medium right bottom)
-        (if (rectilinear-transformation-p (medium-transformation medium))
-            (progn
-              (if (< x2 x1)
-                  (rotatef x1 x2))
-              (if (< y2 y1)
-                  (rotatef y1 y2))
-              (xlib:draw-rectangle mirror gc
-                                   (round x1) (round y1)
-                                   (round (- x2 x1)) (round (- y2 y1))
-                                   filled))
-            (multiple-value-bind (x1* y1*)
-                (medium-transform-position medium right top)
-              (multiple-value-bind (x2* y2*)
-                  (medium-transform-position medium left bottom)
-                (xlib:draw-lines mirror gc
-                                 (list (round x1) (round y1)
-                                       (round x1*) (round y1*)
-                                       (round x2) (round y2)
-                                       (round x2*) (round y2*)
-                                       (round x1) (round y1))
-                                 :fill-p filled))))))))
+    (if (< right left)
+        (rotatef left right))
+    (if (< bottom top)
+        (rotatef top bottom))
+    (xlib:draw-rectangle mirror gc
+                         (round left) (round top)
+                         (round (- right left)) (round (- bottom top))
+                         filled)))
+
+(defmethod medium-draw-rectangles* ((medium clx-medium) position-seq filled)
+  (assert (evenp (length position-seq)))
+  (with-CLX-graphics (medium)
+    (loop for (left top right bottom) on position-seq by #'cddddr
+          nconcing (list (round left) (round top)
+                         (round (- right left)) (round (- bottom top))) into points
+          finally (xlib:draw-rectangles mirror gc points filled))))
 
 (defmethod medium-draw-ellipse* ((medium clx-medium) center-x center-y
 				 radius-1-dx radius-1-dy radius-2-dx radius-2-dy
@@ -192,19 +153,13 @@
   (unless (or (= radius-2-dx radius-1-dy 0) (= radius-1-dx radius-2-dy 0))
     (error "MEDIUM-DRAW-ELLIPSE* not yet implemented for non axis-aligned ellipses."))
   (with-CLX-graphics (medium)
-    (multiple-value-bind (x y)
-	(medium-transform-position medium center-x center-y)
-      (multiple-value-bind (dx1 dy1)
-          (medium-transform-distance medium radius-1-dx radius-1-dy)
-        (multiple-value-bind (dx2 dy2)
-            (medium-transform-distance medium radius-2-dx radius-2-dy)
-          (let ((dx (abs (+ dx1 dx2)))
-                (dy (abs (+ dy1 dy2))))
-            (xlib:draw-arc mirror gc
-                           (round (- x dx)) (round (- y dy))
-                           (round (* dx 2)) (round (* dy 2))
-                           start-angle (- end-angle start-angle)
-                           filled)))))))
+    (let ((radius-dx (abs (+ radius-1-dx radius-2-dx)))
+          (radius-dy (abs (+ radius-1-dy radius-2-dy))))
+      (xlib:draw-arc mirror gc
+                     (round (- center-x radius-dx)) (round (- center-y radius-dy))
+                     (round (* radius-dx 2)) (round (* radius-dy 2))
+                     start-angle (- end-angle start-angle)
+                     filled))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -294,24 +249,22 @@
     (when (characterp string)
       (setq string (make-string 1 :initial-element string)))
     (when (null end) (setq end (length string)))
-    (multiple-value-bind (tx ty)
-	(medium-transform-position medium x y)
-      (multiple-value-bind (text-width text-height x y baseline) 
-	  (text-size medium string :start start :end end)
-	(declare (ignore x y))
-	(unless (and (eq align-x :left) (eq align-y :baseline))	    
-	  (setq tx (- tx (ecase align-x
-			   (:left 0)
-			   (:center (round text-width 2))
-			   (:right text-width))))
-	  (setq ty (ecase align-y
-		     (:top (+ ty baseline))
-		     (:center (+ ty baseline (- (floor text-height 2))))
-		     (:baseline ty)
-		     (:bottom (+ ty baseline (- text-height)))))))
-      (xlib:draw-glyphs mirror gc (round tx) (round ty) string
-                        :start start :end end
-                        :translate #'translate))))
+    (multiple-value-bind (text-width text-height x-cursor y-cursor baseline) 
+        (text-size medium string :start start :end end)
+      (declare (ignore x-cursor y-cursor))
+      (unless (and (eq align-x :left) (eq align-y :baseline))	    
+        (setq x (- x (ecase align-x
+                       (:left 0)
+                       (:center (round text-width 2))
+                       (:right text-width))))
+        (setq y (ecase align-y
+                  (:top (+ y baseline))
+                  (:center (+ y baseline (- (floor text-height 2))))
+                  (:baseline y)
+                  (:bottom (+ y baseline (- text-height)))))))
+    (xlib:draw-glyphs mirror gc (round x) (round y) string
+                      :start start :end end
+                      :translate #'translate)))
 
 (defmethod medium-buffering-output-p ((medium clx-medium))
   t)
@@ -324,10 +277,8 @@
 			      transform-glyphs)
   (declare (ignore toward-x toward-y transform-glyphs align-x align-y))
   (with-CLX-graphics (medium)
-    (multiple-value-bind (tx ty)
-	(medium-transform-position medium x y)
-      (xlib:draw-glyph mirror gc (round tx) (round ty) element
-                       :translate #'translate))))
+    (xlib:draw-glyph mirror gc (round x) (round y) element
+                     :translate #'translate)))
 
 
 ;;; Other Medium-specific Output Functions
