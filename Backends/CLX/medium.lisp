@@ -481,8 +481,8 @@
                        (if closed
                            (concatenate 'vector
                                         coord-seq
-                                        (vector (first coord-seq)
-                                                (second coord-seq)))
+                                        (vector (elt coord-seq 0)
+                                                (elt coord-seq 1)))
                            coord-seq)
                        :fill-p filled))))
 
