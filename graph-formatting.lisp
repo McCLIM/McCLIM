@@ -127,32 +127,33 @@
         generation-separation (or generation-separation 30)
         within-generation-separation (or within-generation-separation 10))
   ;;
-  (let ((graph-output-record
-         (with-new-output-record (stream (find-graph-type graph-type)
-                                         graph-output-record
-                                         :orientation orientation
-                                         :center-nodes center-nodes
-                                         :cutoff-depth cutoff-depth
-                                         :merge-duplicates merge-duplicates
-                                         :generation-separation generation-separation
-                                         :within-generation-separation within-generation-separation
-                                         :hash-table (make-hash-table :test duplicate-test))
-           (with-output-recording-options (stream :draw nil :record t)
-             (generate-graph-nodes graph-output-record stream root-objects
-                                   object-printer inferior-producer
-                                   :duplicate-key duplicate-key
-                                   :duplicate-test duplicate-test)
-             (layout-graph-nodes graph-output-record stream arc-drawer arc-drawing-options)
-             (layout-graph-edges graph-output-record stream arc-drawer arc-drawing-options)))))
-    (setf (output-record-position graph-output-record)
-          (stream-cursor-position stream))
-    (with-output-recording-options (stream :draw t :record nil)
-      (replay-output-record graph-output-record stream))
-    (when move-cursor
-      (setf (stream-cursor-position stream)
-            (values (bounding-rectangle-max-x graph-output-record)
-                    (bounding-rectangle-max-y graph-output-record))))
-    graph-output-record))
+  (multiple-value-bind (cursor-old-x cursor-old-y)
+      (stream-cursor-position stream)
+    (let ((graph-output-record
+           (with-new-output-record (stream (find-graph-type graph-type)
+                                           graph-output-record
+                                           :orientation orientation
+                                           :center-nodes center-nodes
+                                           :cutoff-depth cutoff-depth
+                                           :merge-duplicates merge-duplicates
+                                           :generation-separation generation-separation
+                                           :within-generation-separation within-generation-separation
+                                           :hash-table (make-hash-table :test duplicate-test))
+             (with-output-recording-options (stream :draw nil :record t)
+               (generate-graph-nodes graph-output-record stream root-objects
+                                     object-printer inferior-producer
+                                     :duplicate-key duplicate-key
+                                     :duplicate-test duplicate-test)
+               (layout-graph-nodes graph-output-record stream arc-drawer arc-drawing-options)
+               (layout-graph-edges graph-output-record stream arc-drawer arc-drawing-options)))))
+      (setf (output-record-position graph-output-record)
+            (values cursor-old-x cursor-old-y))
+      (replay graph-output-record stream)
+      (when move-cursor
+        (setf (stream-cursor-position stream)
+              (values (bounding-rectangle-max-x graph-output-record)
+                      (bounding-rectangle-max-y graph-output-record))))
+      graph-output-record)))
 
 ;;;; Graph Output Records
 
@@ -183,9 +184,12 @@
     :initform nil
     :accessor graph-root-nodes) ))
 
-(defclass tree-graph-output-record (standard-graph-output-record))
-(defclass dag-graph-output-record (standard-graph-output-record))
-(defclass digraph-graph-output-record (standard-graph-output-record))
+(defclass tree-graph-output-record (standard-graph-output-record)
+  ())
+(defclass dag-graph-output-record (standard-graph-output-record)
+  ())
+(defclass digraph-graph-output-record (standard-graph-output-record)
+  ())
 
 ;;;; Nodes
 
