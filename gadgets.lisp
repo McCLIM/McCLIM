@@ -86,9 +86,12 @@
 ;;
 ;; --GB
 
-;; Should RADIO-BOX-PANE and CHECK-BOX-PANE use rack or box layout?
+;; - Should RADIO-BOX-PANE and CHECK-BOX-PANE use rack or box layout?
 
-;; I would like to have a :ACTIVE-P initarg
+;; - I would like to have a :ACTIVE-P initarg
+
+;; - :CHOICES initarg to RADIO-BOX and CHECK-BOX is from Franz' user
+;;   guide.
 
 ;;;; TODO
 
@@ -1674,13 +1677,18 @@ and must never be nil."))
 (defmethod initialize-instance :after ((pane radio-box-pane)
                                        &key choices current-selection orientation &allow-other-keys)
   (setf (box-layout-orientation pane) orientation)
-  (dolist (c choices)
-    (setf (gadget-value pane) current-selection)
-    (cond ((stringp c)
-           (setf c (make-pane 'toggle-button-pane :label c :value nil))))
-    (setf (gadget-value c) (if (eq c (radio-box-current-selection pane)) t nil))
-    (setf (gadget-client c) pane)
-    (sheet-adopt-child pane c) ))
+  (setf (gadget-value pane) current-selection)
+  (let ((children
+         (mapcar (lambda (c)
+                   (let ((c (if (stringp c)
+                                (make-pane 'toggle-button-pane :label c :value nil)
+                                c)))
+                     (setf (gadget-value c) (if (eq c (radio-box-current-selection pane)) t nil))
+                     (setf (gadget-client c) pane)
+                     c))
+                 choices)))
+    (mapc (curry #'sheet-adopt-child pane) children)
+    (reorder-sheets pane children)))
 
 (defmethod (setf gadget-value) :after (button (radio-box radio-box-pane) &key invoke-callback)
   ;; this is silly, but works ...
@@ -1699,13 +1707,18 @@ and must never be nil."))
 (defmethod initialize-instance :after ((pane check-box-pane)
                                        &key choices current-selection orientation &allow-other-keys)
   (setf (box-layout-orientation pane) orientation)
-  (dolist (c choices)
-    (setf (gadget-value pane) current-selection)
-    (cond ((stringp c)
-           (setf c (make-pane 'toggle-button-pane :label c :value nil))))
-    (setf (gadget-value c) (if (member c current-selection) t nil))
-    (setf (gadget-client c) pane)
-    (sheet-adopt-child pane c) ))
+  (setf (gadget-value pane) current-selection)
+  (let ((children
+         (mapcar (lambda (c)
+                   (let ((c (if (stringp c)
+                                (make-pane 'toggle-button-pane :label c :value nil)
+                                c)))
+                     (setf (gadget-value c) (if (member c current-selection) t nil))
+                     (setf (gadget-client c) pane)
+                     c))
+                 choices)))
+    (mapc (curry #'sheet-adopt-child pane) children)
+    (reorder-sheets pane children) ))
 
 ;;; ------------------------------------------------------------------------------------------
 ;;;  30.4.7 The concrete list-pane and option-pane Gadgets
