@@ -50,7 +50,9 @@
   (typep x 'output-record))
 
 (defclass displayed-output-record (standard-bounding-rectangle output-record-mixin)
-  ((ink :initarg :ink :reader displayed-output-record-ink)))
+  ((ink :initarg :ink :reader displayed-output-record-ink)
+   (initial-x1 :initarg :initial-x1)
+   (initial-y1 :initarg :initial-y1)))
 
 (defun displayed-output-record-p (x)
   (typep x 'displayed-output-record))
@@ -65,9 +67,13 @@
     (values x y)))
 
 (defmethod setf*-output-record-position (nx ny (record output-record-mixin))
-  (with-slots (x y) record
-              (setq x nx
-                    y ny)))
+  (with-slots (x y x1 y1 x2 y2) record
+    (let ((dx (- nx x))
+          (dy (- ny y)))
+      (incf x1 dx) (incf y1 dy)
+      (incf x2 dx) (incf y2 dy))
+    (setq x nx
+          y ny)))
 
 (defmethod setf*-output-record-position :before (nx ny (record output-record))
   (multiple-value-bind (old-x old-y) (output-record-position record)
@@ -110,7 +116,7 @@
         (setf (stream-recording-p stream) old-record-p)))))
 
 (defmethod replay-output-record ((record output-record) stream
-				 &optional region x-offset y-offset)
+				 &optional region (x-offset 0) (y-offset 0))
   (when (null region)
     (setq region +everywhere+))
   (map-over-output-records-overlaping-region
@@ -336,7 +342,7 @@
 (defmacro with-output-recording-options ((stream &key (record t) (draw t)) &body body)
   (declare (type symbol stream))
   (when (eq stream 't)
-    (setq stream *standard-output*))
+    (setq stream '*standard-output*))
   (let ((continuation-name (gensym)))
     `(let ((,continuation-name #'(lambda (,stream) ,@body)))
        (invoke-with-output-recording-options ,stream
@@ -348,20 +354,21 @@
   ((stream output-recording-stream) continuation record draw)
   "Calls CONTINUATION on STREAM enabling or disabling recording and drawing
 according to the flags RECORD and DRAW."
+  (declare (dynamic-extent continuation))
   (with-slots (recording-p drawing-p) stream
-              (let ((old-record recording-p)
-                    (old-draw drawing-p))
-                (unwind-protect
-                    (progn
-                      (setq recording-p record
-                            drawing-p draw)
-                      (funcall continuation stream))
-                  (setq recording-p old-record
-                        drawing-p old-draw)))))
+    (let ((old-record recording-p)
+          (old-draw drawing-p))
+      (unwind-protect
+           (progn
+             (setq recording-p record
+                   drawing-p draw)
+             (funcall continuation stream))
+        (setq recording-p old-record
+              drawing-p old-draw)))))
 
 (defmacro with-new-output-record ((stream
                                    &optional
-                                   (record-type ''standard-sequence-output-record)
+                                   (record-type 'standard-sequence-output-record)
                                    (record nil record-supplied-p)
                                    &rest initargs)
                                   &body body)
@@ -385,7 +392,7 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
     #'(lambda (,stream ,record)
         ,(unless record-supplied-p `(declare (ignore ,record)))
         ,@body)
-    ,record-type
+    ',record-type
     ,@initargs))
 
 (defmethod invoke-with-new-output-record ((stream output-recording-stream)
@@ -426,12 +433,10 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
 
 #|
 (defmethod handle-event :after ((stream output-recording-stream) (event pointer-button-press-event))
-  (highlight-output-record (stream-current-output-record stream) stream :highlight)
-  (highlight-output-record (stream-output-history stream) stream :highlight))
+  (highlight-output-record (stream-current-output-record stream) stream :highlight))
 
 (defmethod handle-event :before ((stream output-recording-stream) (event pointer-button-release-event))
-  (highlight-output-record (stream-current-output-record stream) stream :unhighlight)
-  (highlight-output-record (stream-output-history stream) stream :unhighlight))
+  (highlight-output-record (stream-current-output-record stream) stream :unhighlight))
 |#
 
 
@@ -470,7 +475,7 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
 	 ,(compute-class-vars args))
        (defmethod initialize-instance :after ((graphic ,class-name) &rest args)
 	 (declare (ignore args))
-	 (with-slots (x1 y1 x2 y2
+	 (with-slots (x y x1 y1 x2 y2 initial-x1 initial-y1
 		      stream ink clipping-region transform
 		      line-style text-style
 		      ,@args) graphic
@@ -479,13 +484,11 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
                (setq x1 (- lf ,border)
                      y1 (- tp ,border)
                      x2 (+ rt ,border)
-                     y2 (+ bt ,border))))))
-       (defmethod setf*-output-record-position :before (nx ny (record ,class-name))
-         (with-slots (x y x1 y1 x2 y2) record
-                     (let ((dx (- nx x))
-                           (dy (- ny y)))
-                       (incf x1 dx) (incf y1 dy)
-                       (incf x2 dx) (incf y2 dy))))
+                     y2 (+ bt ,border))))
+           (setf x x1
+                 y y1
+                 initial-x1 x1
+                 initial-y1 y1)))
        (defmethod ,method-name :around ((stream output-recording-stream) ,@args)
 	 (with-sheet-medium (medium stream)
 	   (when (stream-recording-p stream)
@@ -501,21 +504,26 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
 	   (when (stream-drawing-p stream)
 	     (call-next-method))))
        (defmethod replay-output-record ((record ,class-name) stream
-					&optional (region +everywhere+) x-offset y-offset)
-	 (declare (ignore x-offset y-offset))
-	 (with-slots (x y ink clip transform line-style text-style ,@args) record
-                     (let ((transformation (compose-translation-with-transformation transform x y)))
-                       (let ((,old-medium (sheet-medium stream))
-                             (,new-medium (make-merged-medium stream ink (region-intersection clip
-                                                                                              (untransform-region transformation region))
-                                                              transformation line-style text-style)))
-                         (finish-output *error-output*)
-                         (unwind-protect
-                             (progn
-                               (setf (sheet-medium stream) ,new-medium)
-                               (setf (medium-sheet ,new-medium) stream)
-                               (,method-name ,new-medium ,@args))
-                           (setf (sheet-medium stream) ,old-medium)))))))))
+					&optional (region +everywhere+)
+                                        (x-offset 0) (y-offset 0))
+	 (with-slots (x y initial-x1 initial-y1
+                      ink clip transform line-style text-style ,@args) record
+           (let ((transformation (compose-translation-with-transformation
+                                  transform
+                                  (+ (- x initial-x1) x-offset)
+                                  (+ (- y initial-y1) y-offset))))
+             (let ((,old-medium (sheet-medium stream))
+                   (,new-medium (make-merged-medium stream ink
+                                                    (region-intersection clip
+                                                                         (untransform-region transformation region))
+                                                    transformation line-style text-style)))
+               (finish-output *error-output*)
+               (unwind-protect
+                    (progn
+                      (setf (sheet-medium stream) ,new-medium)
+                      (setf (medium-sheet ,new-medium) stream)
+                      (,method-name ,new-medium ,@args))
+                 (setf (sheet-medium stream) ,old-medium)))))))))
 
 (def-grecording draw-point (point-x point-y)
   (with-transformed-position (transform point-x point-y)
