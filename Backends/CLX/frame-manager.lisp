@@ -94,4 +94,4 @@
   nil)
 
 (defmethod note-space-requirements-changed :after ((graft clx-graft) pane)
-  (tell-window-manager-about-space-requirents pane)
+  (tell-window-manager-about-space-requirents pane))
