@@ -61,11 +61,12 @@
   (queue-repaint sheet event))
 
 (defmethod dispatch-repaint ((sheet standard-repainting-mixin) region)
-  (queue-repaint sheet (make-instance 'window-repaint-event
-                                      :sheet sheet
-                                      :region (transform-region
-                                               (sheet-native-transformation sheet)
-                                               region))))
+  (when (sheet-mirror sheet)            ;only dispatch repaints, when the sheet has a mirror
+    (queue-repaint sheet (make-instance 'window-repaint-event
+                                        :sheet sheet
+                                        :region (transform-region
+                                                 (sheet-native-transformation sheet)
+                                                 region)))))
 
 (defmethod handle-event ((sheet standard-repainting-mixin)
 			 (event window-repaint-event))
@@ -95,11 +96,12 @@
 (defclass sheet-mute-repainting-mixin () ())
 
 (defmethod dispatch-repaint ((sheet sheet-mute-repainting-mixin) region)
-  (queue-repaint sheet (make-instance 'window-repaint-event
-                                      :sheet sheet
-                                      :region (transform-region
-                                               (sheet-native-transformation sheet)
-                                               region))))
+  (when (sheet-mirror sheet)            ;only dispatch repaints, when the sheet has a mirror
+    (queue-repaint sheet (make-instance 'window-repaint-event
+                                        :sheet sheet
+                                        :region (transform-region
+                                                 (sheet-native-transformation sheet)
+                                                 region)))))
 
 ;;; I know what the spec says about sheet-mute-repainting-mixin, but I don't
 ;;; think it's right; "repaint-sheet that does nothing" makes no sense.
