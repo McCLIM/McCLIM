@@ -58,9 +58,7 @@
 	return (keyboard-event-key-name event))))
 
 (defclass extended-input-stream (fundamental-character-input-stream)
-  ((input-buffer :accessor stream-input-buffer :initarg :input-buffer
-		 :initform (make-array 1 :adjustable t :fill-pointer 0))
-   (pointer)
+  ((pointer)
    (cursor :initarg :text-cursor)))
 
 (defgeneric extended-input-stream-p (object)
@@ -69,8 +67,7 @@
   (:method ((object t))
     nil))
 
-(defclass standard-extended-input-stream (immediate-sheet-input-mixin
-					  extended-input-stream)
+(defclass standard-extended-input-stream (extended-input-stream)
   ())
 
 (defvar *input-wait-test* nil)
@@ -90,8 +87,8 @@
 	     (setq char #\Newline))
 	    (#\Backspace
 	     (setq char #\Delete)))
-	  (vector-push-extend char buffer))
-	(vector-push-extend event buffer))))
+	  (event-queue-append buffer char))
+	(event-queue-append buffer event))))
 
 
 (defmethod handle-event ((stream standard-extended-input-stream)
@@ -121,17 +118,24 @@
 				 pointer-button-press-handler))
 
 (defun pop-gesture (buffer peek-p)
-  (prog1
-      (aref buffer 0)
-    (unless peek-p
-      (replace buffer buffer :start1 0 :start2 1)
-      (decf (fill-pointer buffer)))))
+  (if peek-p
+      (event-queue-peek buffer)
+    (event-queue-read buffer)))
 
 (defun repush-gesture (gesture buffer)
-  (let ((old-fill (fill-pointer buffer)))
-    (incf (fill-pointer buffer))
-    (replace buffer buffer :start1 1 :start2 0 :end2 old-fill)
-    (setf (aref buffer 0) gesture)))
+  (event-queue-prepend buffer gesture))
+
+(defmethod convert-to-gesture ((ev event))
+  nil)
+
+(defmethod convert-to-gesture ((ev character))
+  ev)
+
+(defmethod convert-to-gesture ((ev symbol))
+  ev)
+
+(defmethod convert-to-gesture ((ev key-press-event))
+  (keyboard-event-key-name ev))
 
 (defmethod stream-read-gesture ((stream standard-extended-input-stream)
 				&key timeout peek-p
@@ -145,12 +149,14 @@
 	  (*pointer-button-press-handler* pointer-button-press-handler)
 	  (buffer (stream-input-buffer stream)))
       (loop
-	(if (> (fill-pointer buffer) 0)
+	(if (event-queue-listen buffer)
 	    (let ((gesture (pop-gesture buffer peek-p)))
 	      (when (and pointer-button-press-handler
 			 (typep gesture 'pointer-button-press-event))
 		(funcall pointer-button-press-handler stream gesture))
-	      (return-from stream-read-gesture gesture))
+	      (setq gesture (convert-to-gesture gesture))
+	      (if gesture
+		  (return-from stream-read-gesture gesture)))
 	  ;; Wait for input... or not
 	  (multiple-value-bind (available reason)
 	      (stream-input-wait estream
@@ -172,7 +178,7 @@
 			      &key timeout input-wait-test)
   (let ((buffer (stream-input-buffer stream)))
     (loop
-     (if (> (fill-pointer buffer) 0)
+     (if (event-queue-listen buffer)
 	 (progn
 	   (return-from stream-input-wait t))
 	 (progn

@@ -71,6 +71,10 @@
           (t
            (push item (event-queue-head eq))))))
 
+(defmethod event-queue-peek ((eq standard-event-queue))
+  (with-lock-held ((event-queue-lock eq))
+    (first (event-queue-head eq))))
+
 (defmethod event-queue-peek-if (predicate (eq standard-event-queue))
   "Goes thru the whole event queue an returns the first event, which
    satisfies 'predicate' and leaves the event in the queue.
@@ -84,22 +88,26 @@
 ;; STANDARD-SHEET-INPUT-MIXIN
 
 (defclass standard-sheet-input-mixin ()
-  ((queue :initform (make-instance 'standard-event-queue))
+  ((queue :initform (make-instance 'standard-event-queue)
+	  :reader sheet-event-queue)
    (port :initform nil
 	 :initarg :port
 	 :reader port)
    ))
 
-(defmethod dispatch-event ((sheet standard-sheet-input-mixin) event)
-  (if (typep event 'device-event)
-      (queue-event sheet event)
-    (handle-event sheet event)))
+(defmethod stream-input-buffer ((stream standard-sheet-input-mixin))
+  (sheet-event-queue stream))
 
-(defmethod dispatch-event ((sheet standard-sheet-input-mixin) (event device-event))
-  (queue-event sheet event))
+;(defmethod dispatch-event ((sheet standard-sheet-input-mixin) event)
+;  (if (typep event 'device-event)
+;      (queue-event sheet event)
+;    (handle-event sheet event)))
 
 (defmethod dispatch-event ((sheet standard-sheet-input-mixin) event)
   (handle-event sheet event))
+
+(defmethod dispatch-event ((sheet standard-sheet-input-mixin) (event device-event))
+  (queue-event sheet event))
 
 (defmethod queue-event ((sheet standard-sheet-input-mixin) event)
   (with-slots (queue) sheet
