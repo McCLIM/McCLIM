@@ -473,12 +473,14 @@
 			      ,spaces))))
 
 (defun format-children (children number-per-line)
-  (let ((formated))
-    (do ((i 0 (+ i number-per-line)))
-	((= i (length children)))
-	(setf formated (append formated
-			       (list (subseq children i (+ i number-per-line))))))
-    formated))
+  (let (formated aux)
+    (loop for child in children
+	  for i from 1
+	  do (push child aux)
+	  (when (= (mod i number-per-line) 0)
+	    (push (nreverse aux) formated)
+	    (setf aux nil)))
+    (nreverse formated)))
 
 (defmethod compute-space ((table table-pane))
   (let* ((space (make-space-requirement))
@@ -776,9 +778,9 @@
   (pane-space-requirement pane))
 
 (defmethod window-clear ((pane clim-stream-pane))
-  (dispatch-repaint pane (sheet-region pane))
-  (setf (pane-output-history pane) (make-instance 'standard-tree-output-history)))
-  ;(let ((cursor (stream-text-cursor pane))) 
+;  (setf (pane-output-history pane) (make-instance 'standard-tree-output-history))
+  (dispatch-repaint pane (sheet-region pane)))
+    ;(let ((cursor (stream-text-cursor pane))) 
    ; (when cursor
     ;  (setf (cursor-position cursor) 0 0))))
 
@@ -795,9 +797,8 @@
   (dispatch-repaint pane (sheet-region pane)))
 
 (defmethod window-viewport-position ((pane clim-stream-pane))
-  (multiple-value-bind (x1 y1 x2 y2)
-      (rectangle-edges* (sheet-region pane))
-    (declare (ignore x2 y2))
+  (multiple-value-bind (x1 y1)
+      (bounding-rectangle* (sheet-region pane))
     (values x1 y1)))
 
 (defmethod (setf window-viewport-position) (x y (pane clim-stream-pane))
@@ -881,4 +882,5 @@
   (apply #'make-clim-stream-pane 
 	 :type 'application-pane 
 	 options))
+
 
