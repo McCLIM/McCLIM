@@ -50,6 +50,9 @@
 (defun gadgetp (object)
   (typep object 'gadget))
 
+(defmethod compose-space ((gadget gadget))
+  (pane-space-requirement gadget))
+
 ;;
 ;; gadget's colors
 ;;
@@ -73,17 +76,32 @@
 
 (defmethod initialize-instance :after ((gadget gadget-color-mixin) &rest args)
   (declare (ignore args))
-  (setf (gadget-current-color gadget) (gadget-normal-color gadget)))
+  (setf (slot-value gadget 'current-color) (gadget-normal-color gadget)))
 
-(defmethod define-gadget-color ((gadget gadget-color-mixin) x1 y1 x2 y2)
+(defmethod display-gadget-background ((gadget gadget-color-mixin) x1 y1 x2 y2)
   (draw-rectangle* gadget x1 y1 x2 y2 :ink (gadget-current-color gadget) :filled t))
+
+(defmethod (setf gadget-current-color) :after (color (gadget gadget-color-mixin))
+  (declare (ignore color))
+  (dispatch-repaint gadget (sheet-region gadget)))
+  
+
+;;;
+;;; gadgets look
+;;;
+
+(defun draw-edges-lines* (pane x1 y1 x2 y2)
+  (draw-line* pane x1 y1 x2 y1 :ink +white+)
+  (draw-line* pane x1 y1 x1 y2 :ink +white+)
+  (draw-line* pane x1 y2 x2 y2 :ink +black+)
+  (draw-line* pane x2 y1 x2 y2 :ink +black+))
 
 
 ;;
 ;; gadget sub-classes
 ;;
 
-(defclass basic-gadget (gadget gadget-color-mixin)
+(defclass basic-gadget (gadget gadget-color-mixin sheet-parent-mixin sheet-leaf-mixin mirrored-sheet)
   ;; Half-baked attempt to be compatible with Lispworks.
   ())
 
@@ -156,8 +174,7 @@
 
 (defmethod (setf gadget-value) 
   (value (gadget value-gadget) &key invoke-callback)
-  (setf (slot-value gadget 'value)
-        value)
+  (setf (slot-value gadget 'value) value)
   (when invoke-callback
     (value-changed-callback gadget 
                             (gadget-client gadget) 
@@ -259,7 +276,7 @@
 
 (defclass push-button (action-gadget labelled-gadget-mixin) ())
   
-(defclass push-button-pane  (push-button clim-stream-pane)
+(defclass push-button-pane  (push-button)
   ((show-as-default-p :type (member '(t nil))
 		      :initform nil
 		      :initarg :show-as-default-p
@@ -270,37 +287,33 @@
 (defmethod handle-event ((pane push-button-pane) (event pointer-enter-event))
   (with-slots (armed) pane
     (unless armed
-      (setf armed t)
-      (setf (gadget-current-color pane) (gadget-highlighted-color pane))
-      (dispatch-repaint pane (sheet-region pane))
+      (setf armed t
+	    (gadget-current-color pane) (gadget-highlighted-color pane))
       (armed-callback pane (gadget-client pane) (gadget-id pane)))))
 
 (defmethod handle-event ((pane push-button-pane) (event pointer-exit-event))
   (with-slots (armed) pane
     (when armed
-      (setf (push-button-show-as-default-p pane) nil)
-      (setf armed nil)
-      (setf (gadget-current-color pane) (gadget-normal-color pane))
-      (dispatch-repaint pane (sheet-region pane))
+      (setf (push-button-show-as-default-p pane) nil
+	    armed nil
+	    (gadget-current-color pane) (gadget-normal-color pane))
       (disarmed-callback pane (gadget-client pane) (gadget-id pane)))))
 
 (defmethod handle-event ((pane push-button-pane) (event pointer-button-press-event))
   (with-slots (armed) pane
     (unless armed
       (armed-callback pane (gadget-client pane) (gadget-id pane)))
-    (setf armed ':button-press)
-    (setf (push-button-show-as-default-p pane) t)
-    (setf (gadget-current-color pane) (gadget-pushed-and-highlighted-color pane))
-    (dispatch-repaint pane (sheet-region pane))))
+    (setf armed ':button-press
+	  (push-button-show-as-default-p pane) t
+	  (gadget-current-color pane) (gadget-pushed-and-highlighted-color pane))))    
 
 (defmethod handle-event ((pane push-button-pane) (event pointer-button-release-event))
   (with-slots (armed) pane
     (when (eql armed ':button-press)
       (activate-callback pane (gadget-client pane) (gadget-id pane))
-      (setf armed t)
-      (setf (push-button-show-as-default-p pane) nil)
-      (setf (gadget-current-color pane) (gadget-highlighted-color pane))
-      (dispatch-repaint pane (sheet-region pane))
+      (setf armed t
+	    (push-button-show-as-default-p pane) nil
+	    (gadget-current-color pane) (gadget-highlighted-color pane))
       (disarmed-callback pane (gadget-client pane) (gadget-id pane)))))
 
 (defmethod handle-event ((pane push-button-pane) (event window-repaint-event))
@@ -315,18 +328,10 @@
 	    x1 1
 	    y2 (- y2 y1 1)
 	    y1 1)
-      (define-gadget-color pane x1 y1 x2 y2)
+      (display-gadget-background pane x1 y1 x2 y2)
       (if (push-button-show-as-default-p pane)
-	  (progn
-	    (draw-line* pane x1 y1 x2 y1 :ink +black+)
-	    (draw-line* pane x1 y1 x1 y2 :ink +black+)
-	    (draw-line* pane x1 y2 x2 y2 :ink +white+)
-	    (draw-line* pane x2 y1 x2 y2 :ink +white+))
-	  (progn
-	    (draw-line* pane x1 y1 x2 y1 :ink +white+)
-	    (draw-line* pane x1 y1 x1 y2 :ink +white+)
-	    (draw-line* pane x1 y2 x2 y2 :ink +black+)
-	    (draw-line* pane x2 y1 x2 y2 :ink +black+)))
+	  (draw-edges-lines* pane x2 y2 x1 y1)
+	  (draw-edges-lines* pane x1 y1 x2 y2))
       (draw-text* pane text
 		  (round (- x2 x1) 2)
 		  (round (- y2 y1) 2)
@@ -341,7 +346,7 @@
 (defclass toggle-button (value-gadget labelled-gadget-mixin) ()
   (:documentation "The value is either t either nil"))
 
-(defclass toggle-button-pane (toggle-button clim-stream-pane)
+(defclass toggle-button-pane (toggle-button)
   ((indicator-type :type (member '(:one-of :some-of))
 		   :initarg :indicator-type
 		   :reader toggle-button-indicator-type)))
@@ -366,25 +371,22 @@
       (if (gadget-value pane)
 	  (setf (gadget-current-color pane) (gadget-pushed-and-highlighted-color pane))
 	  (setf (gadget-current-color pane) (gadget-normal-color pane)))
-      (dispatch-repaint pane (sheet-region pane))
       (disarmed-callback pane (gadget-client pane) (gadget-id pane)))))
 
 (defmethod handle-event ((pane toggle-button-pane) (event pointer-button-press-event))
   (with-slots (armed) pane
     (unless armed
       (armed-callback pane (gadget-client pane) (gadget-id pane)))
-    (setf armed ':button-press)
-    (setf (gadget-current-color pane) (gadget-pushed-and-highlighted-color pane))
-    (dispatch-repaint pane (sheet-region pane))))     
+    (setf armed ':button-press
+	  (gadget-current-color pane) (gadget-pushed-and-highlighted-color pane))))
       
 (defmethod handle-event ((pane toggle-button-pane) (event pointer-button-release-event))
   (with-slots (armed) pane
     (when (eql armed ':button-press)
-      (setf (gadget-value pane :invoke-callback t) (not (gadget-value pane)))
-      (setf armed t)
+      (setf armed t
+	    (gadget-value pane :invoke-callback t) (not (gadget-value pane)))
       (unless (gadget-value pane)
-	(setf (gadget-current-color pane) (gadget-highlighted-color pane))
-	(dispatch-repaint pane (sheet-region pane)))
+	(setf (gadget-current-color pane) (gadget-highlighted-color pane)))
       (disarmed-callback pane (gadget-client pane) (gadget-id pane)))))
 
 (defmethod handle-event ((pane toggle-button-pane) (event window-repaint-event))
@@ -400,18 +402,10 @@
 	    x1 1
 	    y2 (- y2 y1 1)
 	    y1 1)
-      (define-gadget-color pane x1 y1 x2 y2)
+      (display-gadget-background pane x1 y1 x2 y2)
       (if (or (gadget-value pane) (eql armed ':button-press))
-	  (progn
-	    (draw-line* pane x1 y1 x2 y1 :ink +black+)
-	    (draw-line* pane x1 y1 x1 y2 :ink +black+)
-	    (draw-line* pane x1 y2 x2 y2 :ink +white+)
-	    (draw-line* pane x2 y1 x2 y2 :ink +white+))
-	  (progn
-	    (draw-line* pane x1 y1 x2 y1 :ink +white+)
-	    (draw-line* pane x1 y1 x1 y2 :ink +white+)
-	    (draw-line* pane x1 y2 x2 y2 :ink +black+)
-	    (draw-line* pane x2 y1 x2 y2 :ink +black+)))
+	  (draw-edges-lines* pane x2 y2 x1 y1)
+	  (draw-edges-lines* pane x1 y1 x2 y2))
       (draw-text* pane text
 		     (round (- x2 x1) 2)
 		     (round (- y2 y1) 2)
@@ -426,7 +420,7 @@
 (defclass menu-button (value-gadget labelled-gadget-mixin) ()
   (:documentation "The value is a button"))
 
-(defclass menu-button-pane (menu-button clim-stream-pane) ())
+(defclass menu-button-pane (menu-button) ())
 
 (defclass clx-menu-button-pane (menu-button-pane) ())
 
@@ -455,7 +449,7 @@
 (defmethod handle-event ((pane menu-button-pane) (event pointer-button-release-event))
   (with-slots (armed) pane
     (when (eql armed ':button-press)
-      (value-changed-callback pane (gadget-client pane) (gadget-id pane) t) ;FALSE for the value
+      (value-changed-callback pane (gadget-client pane) (gadget-id pane) t) ;FALSE
       (setf armed t)
       (dispatch-repaint pane (sheet-region pane))
       (disarmed-callback pane (gadget-client pane) (gadget-id pane)))))
@@ -478,7 +472,7 @@
 (defclass scroll-bar (value-gadget oriented-gadget-mixin range-gadget-mixin) ()
   (:documentation "The value is a real number"))
 
-(defclass scroll-bar-pane (scroll-bar clim-stream-pane)
+(defclass scroll-bar-pane (scroll-bar)
   ((drag-callback :initarg :drag-callback
 		  :reader scroll-bar-drag-callback)
    (scroll-to-bottom-callback :initarg :scroll-to-bottom-callback
@@ -538,25 +532,91 @@
 ;; SLIDER gadget
 ;;
 
-(defclass slider-gadget (value-gadget oriented-gadget-mixin range-gadget-mixin labelled-gadget-mixin) ()
+(defgeneric drag-callback (slider client gadget-id value))
+
+(defclass slider-gadget (value-gadget oriented-gadget-mixin range-gadget-mixin
+				      labelled-gadget-mixin gadget-color-mixin) ()
   (:documentation "The value is a real number"))
   
-(defclass slider-pane (slider-gadget clim-stream-pane)
-  ((drag-callback :initarg :drag-callback
+(defclass slider-pane (slider-gadget)
+  ((drag-callback :initform nil
+		  :initarg :drag-callback
 		  :reader slider-drag-callback)
-   (show-value-p :type (member '(t nil)) ; don't have understood where is to use ?
+   (show-value-p :type boolean
+		 :initform nil
 		 :initarg :show-value-p
-		 :reader gadget-show-value-p)))
+		 :accessor gadget-show-value-p)))
 
 (defclass clx-slider-pane (slider-pane) ())
 
 (defmethod drag-callback ((pane slider-pane) client gadget-id value)
   (declare (ignore client gadget-id))
-  (funcall (slider-drag-callback pane) pane value))
+  (when (slider-drag-callback pane)
+    (funcall (slider-drag-callback pane) pane value)))
 
-(defmethod drag-callback :after ((pane slider-pane) client gadget-id value)
-  (declare (ignore client gadget-id))
-  (setf (gadget-value pane :invoke-callback t) value))
+(defmethod handle-event ((pane slider-pane) (event pointer-enter-event))
+  (setf (gadget-current-color pane) (gadget-highlighted-color pane)))
+
+(defmethod handle-event ((pane slider-pane) (event pointer-exit-event))
+  (with-slots (armed) pane
+    (when armed
+      (setf armed nil)
+      (when (gadget-show-value-p pane)
+	(setf (gadget-show-value-p pane) nil)))
+    (setf (gadget-current-color pane) (gadget-normal-color pane))))
+
+(defmethod handle-event ((pane slider-pane) (event pointer-button-press-event))
+  (with-slots (armed) pane
+     (unless armed
+       (setf armed t)
+       (when (gadget-show-value-p pane)
+	 (setf (gadget-show-value-p pane) nil)))))
+       
+
+(defmethod handle-event ((pane slider-pane) (event pointer-motion-event))
+  (with-slots (armed) pane
+    (when armed
+      (let ((value (convert-position-to-value pane (pointer-event-y event))))
+	(setf (gadget-value pane :invoke-callback nil) value)
+	(drag-callback pane (gadget-client pane) (gadget-id pane) value)
+	(dispatch-repaint pane (sheet-region pane))))))
+
+(defmethod handle-event ((pane slider-pane) (event pointer-button-release-event))
+  (with-slots (armed) pane
+    (when armed
+      (setf armed nil
+	    (gadget-show-value-p pane) t
+	    (gadget-value pane :invoke-callback t) (convert-position-to-value pane (pointer-event-y event)))
+      (dispatch-repaint pane (sheet-region pane)))))
+
+(defmethod handle-event ((pane slider-pane) (event window-repaint-event))
+  (dispatch-repaint pane (sheet-region pane)))
+
+(defmethod convert-position-to-value ((pane slider-pane) y)
+  (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
+    (declare (ignore x1 x2))
+    (round (+ (gadget-min-value pane) (/ (* (gadget-range pane) (- y2 y)) (- y2 y1))))))
+
+(defmethod repaint-sheet ((pane slider-pane) region)
+  (declare (ignore region))
+  (let ((region (sheet-region pane))
+	(position (convert-value-to-position pane)))
+    (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* region)
+      (let ((middle-x (round (- x2 x1) 2)))
+	(display-gadget-background pane 0 0 (- x2 x1) (- y2 y1))
+	(draw-line* pane middle-x y1 middle-x y2 :ink +black+)
+	(draw-rectangle* pane (- middle-x 15) (- position 5)
+		       (+ middle-x 15) (+ position 5)
+		       :ink +grey75+ :filled t)
+	(draw-edges-lines* pane (- middle-x 15) (- position 5) (+ middle-x 15) (+ position 5))
+	(when (gadget-show-value-p pane)
+	  (draw-text* pane (princ-to-string (gadget-value pane))
+		      (+ middle-x 20) position))))))
+
+(defmethod convert-value-to-position ((pane slider-pane))
+  (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
+    (declare (ignore x1 x2))
+    (- y2 (/ (* (- (gadget-value pane) (gadget-min-value pane)) (- y2 y1)) (gadget-range pane)))))
 
 
 ;;
@@ -595,20 +655,24 @@
 (defclass text-field (value-gadget action-gadget) ()
   (:documentation "The value is a string"))
 
-(defclass text-field-pane (text-field clim-stream-pane) ())
+(defclass text-field-pane (text-field) ())
 
 (defmethod handle-event ((pane text-field-pane) (event window-repaint-event))
   (dispatch-repaint pane (sheet-region pane)))
 
 (defmethod repaint-sheet ((pane text-field-pane) region)
   (declare (ignore region))
-  (let ((fun (pane-display-function pane)))
-    (when fun
-      (funcall fun pane))))
+  (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
+    (draw-text* pane (gadget-value pane)
+		(round (- x2 x1))
+		(round (- y2 y1) 2)
+		:align-x :right
+		:align-y :center)))
 
 (defmethod (setf gadget-value) :after (value (pane text-field-pane) &key invoke-callback)
   (declare (ignore value invoke-callback))
-  (window-clear pane))
+  (window-clear pane)
+  (dispatch-repaint pane (sheet-region pane)))
 
 (defclass clx-text-field-pane (text-field-pane) ())
 
@@ -620,7 +684,7 @@
 (defclass text-editor (text-field) ()
   (:documentation "The value is a string"))
 
-(defclass text-editor-pane (text-editor clim-stream-pane)
+(defclass text-editor-pane (text-editor)
   ((width :type integer
 	  :initarg :width
 	  :reader text-editor-width)
