@@ -57,7 +57,8 @@
    (sheet :initarg :sheet
           :initform nil                 ; this means that medium is not linked to a sheet
           :reader medium-sheet
-          :writer (setf %medium-sheet) )))
+          :writer (setf %medium-sheet) ))
+  (:documentation "The basic class, on which all CLIM mediums are built.") )
 
 (defclass ungrafted-medium (basic-medium) ())
 
@@ -403,10 +404,6 @@
 
 
 ;;; BASIC-MEDIUM class
-
-(defclass basic-medium (medium)
-  ()
-  (:documentation "The basic class, on which all CLIM mediums are built."))
 
 (defmacro with-transformed-position ((transformation x y) &body body)
   `(multiple-value-bind (,x ,y) (transform-position ,transformation ,x ,y)
