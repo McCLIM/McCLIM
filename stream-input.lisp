@@ -123,7 +123,11 @@
 
 (defclass standard-extended-input-stream (extended-input-stream)
   ((pointer)
-   (cursor :initarg :text-cursor)))
+   (cursor :initarg :text-cursor)
+   (last-gesture :accessor last-gesture :initform nil
+    :documentation "Holds the last gesture returned by
+  stream-read-gesture (not peek-p), untransformed, so it can easily be
+  unread.")))
 
 (defvar *input-wait-test* nil)
 (defvar *input-wait-handler* nil)
@@ -254,7 +258,8 @@
 	 ;; An event should  be in the stream buffer now.
 	 (when (handle-non-stream-event buffer)
 	   (go wait-for-char))
-	 (let ((gesture (convert-to-gesture (pop-gesture buffer peek-p))))
+	 (let* ((raw-gesture (pop-gesture buffer peek-p))
+		(gesture (convert-to-gesture raw-gesture)))
 	   ;; Sometimes key press events get generated with a key code for
 	   ;; which there is no keysym.  This seems to happen on my machine
 	   ;; when keys are hit rapidly in succession.  I'm not sure if this is
@@ -274,7 +279,8 @@
 			thereis (event-matches-gesture-name-p gesture
 							      gesture-name))
 		  (signal 'accelerator-gesture :event gesture))
-		 (t (return-from stream-read-gesture gesture))))
+		 (t (setf (last-gesture stream) raw-gesture)
+		    (return-from stream-read-gesture gesture))))
 	 (go wait-for-char)))))
 
 
@@ -315,8 +321,12 @@
 
 (defmethod stream-unread-gesture ((stream standard-extended-input-stream)
 				  gesture)
+  (declare (ignore gesture))
   (with-encapsulating-stream (estream stream)
-    (repush-gesture gesture (stream-input-buffer estream))))
+    (let ((gesture (last-gesture stream)))
+      (when gesture
+	(setf (last-gesture stream) nil)
+	(repush-gesture gesture (stream-input-buffer estream))))))
 
 ;;; Standard stream methods on standard-extended-input-stream.  Ignore any
 ;;; pointer gestures in the input buffer.
