@@ -1367,6 +1367,7 @@ and must never be nil."))
          (* 1/3 (- maxv minv)))))
 
 (defmethod (setf scroll-bar-thumb-size) :after (new-value (sb scroll-bar-pane))
+  (declare (ignore new-value))
   (handle-repaint sb +everywhere+))     ;arg
 
 (defmethod scroll-bar-up-region ((sb scroll-bar-pane))
@@ -1505,6 +1506,7 @@ and must never be nil."))
              (with-bounding-rectangle* (ox1 oy1 ox2 oy2) (scroll-bar-thumb-region sb)
                (setf (gadget-value sb) new-value)
                (with-bounding-rectangle* (nx1 ny1 nx2 ny2) (scroll-bar-thumb-region sb)
+		 (declare (ignore nx2))
                  (copy-area sb ox1 oy1 (- ox2 ox1) (- oy2 oy1) nx1 ny1)
                  (if (< oy1 ny1)
                      (draw-rectangle* sb ox1 oy1 ox2 ny1 :ink *3d-normal-color*)
@@ -1968,6 +1970,7 @@ and must never be nil."))
 	  (slot-value gadget 'normal) +white+)))
 
 (defmethod initialize-instance :after ((pane text-field-pane) &rest rest)
+  (declare (ignore rest))
   (setf (medium-text-style (sheet-medium pane))
     (slot-value pane 'text-style)))
 
