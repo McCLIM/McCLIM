@@ -22,16 +22,16 @@
 (in-package :CLIM-DEMO)
 
 (defun address-book ()
+  (declare (special frame fm port pane medium graft))
   (loop for port in climi::*all-ports*
       do (destroy-port port))
   (setq climi::*all-ports* nil)
   (setq frame (make-application-frame 'address-book))
   (setq fm (frame-manager frame))
   (setq port (climi::frame-manager-port fm))
-  (setq pane (third (frame-panes frame)))
+  (setq pane (frame-standard-output frame))
   (setq medium (sheet-medium pane))
   (setq graft (graft frame))
-  (setq vbox (frame-pane frame))
   (run-frame-top-level frame))
 
 (defun test-define-application-frame ()
