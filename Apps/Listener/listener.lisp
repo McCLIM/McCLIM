@@ -53,7 +53,8 @@
 (defun frob-pathname (pathname)
   (namestring (truename pathname)))
 
-(defun really-display-wholine (pane)
+(defun display-wholine (frame pane)
+  (declare (ignore frame))
   (let* ((*standard-output* pane)
          (username (or #+cmu (cdr (assoc :user ext:*environment-list*))
                        #+sbcl (sb-ext:posix-getenv "USER")
@@ -100,22 +101,13 @@
         (stream-add-output-record pane record)))))))
 
 
-;; Why am I doing this?
-;; The display function get stored in the application frame. If I happen to
-;; change and recompile this display function, it doesn't take effect until
-;; I restart the app, and that's a real pain when hacking.
-
-(defun display-wholine (frame pane)
-  (really-display-wholine pane))
-    
-
 ;;; Listener application frame
 (define-application-frame listener ()
     ()
   (:panes (interactor :interactor :scroll-bars T)
           (doc :pointer-documentation)
           (wholine (make-pane 'wholine-pane  ;; :min-height 18 :max-height 18
-                     :display-function #'display-wholine :scroll-bars nil
+                     :display-function 'display-wholine :scroll-bars nil
                      :display-time :command-loop :end-of-line-action :allow)))
   (:top-level (listener-top-level))
   (:command-table (listener :inherit-from (dev-commands)))
