@@ -679,7 +679,6 @@
         ;;
 	(:client-message
 	 (when (eq (xlib:atom-name display (aref data 0)) :wm_delete_window)
-	   (destroy-mirror (port sheet) sheet)
 	   (make-instance 'window-manager-delete-event
 	     :sheet sheet
 	     :timestamp time)))
