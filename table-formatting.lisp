@@ -82,7 +82,7 @@ STREAM in the direction DIRECTION."
                                         (graft-height graft :units gunit)))
                (ecase direction
                  (:horizontal (values 1 0))
-                 (:horizontal (values 0 1))))
+                 (:vertical   (values 0 1))))
          (/ value (sqrt (+ (* dx dx) (* dy dy)))))))))
 
 
