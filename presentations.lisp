@@ -637,42 +637,49 @@ suitable for SUPER-NAME"))
     (options ptype)))
 
 (defmacro with-presentation-type-parameters ((type-name type) &body body)
-  (let ((ptype (gethash type-name *presentation-type-table*)))
+  (let ((ptype (get-ptype type-name)))
     (unless ptype
       (error "~S is not a presentation type name." type-name))
-    (let* ((params-ll (parameters-lambda-list ptype))
-	   (params (gensym "PARAMS"))
-	   (type-var (gensym "TYPE-VAR"))
-	   (ignorable-vars (get-all-params params-ll)))
-      `(let ((,type-var ,type))
-	 (unless (eq ',type-name (presentation-type-name ,type-var))
-	   (error "Presentation type specifier ~S does not match the name ~S"
-		  ,type-var
-		  ',type-name))
-	 (let ((,params (decode-parameters ,type-var)))
-	   (declare (ignorable ,params))
-	   (destructuring-bind ,params-ll ,params
-	     (declare (ignorable ,@ignorable-vars))
-	     ,@body))))))
+    (if (typep ptype 'presentation-type)
+	(let* ((params-ll (parameters-lambda-list ptype))
+	       (params (gensym "PARAMS"))
+	       (type-var (gensym "TYPE-VAR"))
+	       (ignorable-vars (get-all-params params-ll)))
+	  `(let ((,type-var ,type))
+	    (unless (eq ',type-name (presentation-type-name ,type-var))
+	      (error "Presentation type specifier ~S does not match the name ~S"
+		     ,type-var
+		     ',type-name))
+	    (let ((,params (decode-parameters ,type-var)))
+	      (declare (ignorable ,params))
+	      (destructuring-bind ,params-ll ,params
+		(declare (ignorable ,@ignorable-vars))
+		,@body))))
+	`(let ()
+	   ,@body))))
+
 
 (defmacro with-presentation-type-options ((type-name type) &body body)
-  (let ((ptype (gethash type-name *presentation-type-table*)))
+  (let ((ptype (get-ptype type-name)))
     (unless ptype
       (error "~S is not a presentation type name." type-name))
-    (let* ((options-ll (options-lambda-list ptype))
-	   (options (gensym "OPTIONS"))
-	   (type-var (gensym "TYPE-VAR"))
-	   (ignorable-vars (get-all-params options-ll)))
-      `(let ((,type-var ,type))
-	 (unless (eq ',type-name (presentation-type-name ,type-var))
-	   (error "Presentation type specifier ~S does not match the name ~S"
-		  ,type-var
-		  ',type-name))
-	 (let ((,options (decode-options ,type-var)))
-	   (declare (ignorable ,options))
-	   (destructuring-bind ,options-ll ,options
-	     (declare (ignorable ,@ignorable-vars))
-	     ,@body))))))
+    (if (typep ptype 'presentation-type)
+	(let* ((options-ll (options-lambda-list ptype))
+	       (options (gensym "OPTIONS"))
+	       (type-var (gensym "TYPE-VAR"))
+	       (ignorable-vars (get-all-params options-ll)))
+	  `(let ((,type-var ,type))
+	    (unless (eq ',type-name (presentation-type-name ,type-var))
+	      (error "Presentation type specifier ~S does not match the name ~S"
+		     ,type-var
+		     ',type-name))
+	    (let ((,options (decode-options ,type-var)))
+	      (declare (ignorable ,options))
+	      (destructuring-bind ,options-ll ,options
+		(declare (ignorable ,@ignorable-vars))
+		,@body))))
+	`(let ()
+	   ,@body))))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defvar *presentation-type-abbreviations* (make-hash-table :test #'eq)))
@@ -1129,7 +1136,19 @@ function lambda list"))
 
 (defmethod print-object ((obj presentation-translator) stream)
   (print-unreadable-object (obj stream :identity t)
-    (format stream "Translator from ~S to ~S" (from-type obj) (to-type obj))))
+    (format stream "Translator ~S from ~S to ~S"
+	    (name obj) (from-type obj) (to-type obj))))
+
+(defclass presentation-action (presentation-translator)
+  ())
+
+(defmethod initialize-instance :after ((obj presentation-action)
+				       &key &allow-other-keys)
+  (setf (slot-value obj 'tester-definitive) t))
+
+(defmethod print-object ((obj presentation-action) stream)
+  (print-unreadable-object (obj stream :identity t)
+    (format stream "Action from ~S to ~S" (from-type obj) (to-type obj))))
 
 ;;; This lives in a command table
 
@@ -1180,6 +1199,28 @@ function lambda list"))
       (push translator
 	    (gethash (from-type translator) simple-type-translators)))))
 
+(defun make-translator-fun (args body)
+  (multiple-value-bind (ll ignore)
+      (make-translator-ll args)
+    `(lambda ,ll
+       ,@(and ignore (list ignore))
+       ,@body)))
+
+(defun make-documentation-fun (from-type doc-arg)
+  (cond ((and doc-arg (symbolp doc-arg))
+	 doc-arg)
+	((consp doc-arg)
+	 (make-translator-fun (car doc-arg) (cdr doc-arg)))
+	((stringp doc-arg)
+	 `(lambda (object &key stream &allow-other-keys)
+	   (declare (ignore object))
+	   (write-string ,doc-arg stream)))
+	((null doc-arg)
+	 `(lambda (object &key stream &allow-other-keys)
+	   (present object ',from-type
+	    :stream stream :sensitive nil)))
+	(t (error "Can't handle doc-arg ~S" doc-arg))))
+
 (defmacro define-presentation-translator
     (name (from-type to-type command-table &key
 	   (gesture :select)
@@ -1191,53 +1232,71 @@ function lambda list"))
 	   (priority 0))
      arglist
      &body body)
-  (labels ((make-translator-fun (args body)
-	     (multiple-value-bind (ll ignore)
-		 (make-translator-ll args)
-	       `(lambda ,ll
-		  ,@(and ignore (list ignore))
-		  ,@body)))
-	   (make-documentation-fun (doc-arg)
-	     (cond ((and doc-arg (symbolp doc-arg))
-		    doc-arg)
-		   ((consp doc-arg)
-		    (make-translator-fun (car doc-arg) (cdr doc-arg)))
-		   ((stringp doc-arg)
-		    `(lambda (object &key stream &allow-other-keys)
-		      (declare (ignore object))
-		      (write-string ,doc-arg stream)))
-		   ((null doc-arg)
-		    `(lambda (object &key stream &allow-other-keys)
-		      (present object ',from-type
-		       :stream stream :sensitive nil)))
-		   (t (error "Can't handle doc-arg ~S" doc-arg)))))
-    (let* ((real-from-type (expand-presentation-type-abbreviation from-type))
-	   (real-to-type (expand-presentation-type-abbreviation to-type)))
-      `(add-translator (presentation-translators (find-command-table
-						  ',command-table))
-		       (make-instance
-			'presentation-translator
-			:name ',name
-			:from-type ',real-from-type
-			:to-type ',real-to-type
-			:gesture ,(if (eq gesture t)
-				      t
-				      `(gethash ',gesture *gesture-names*))
-			:tester ,(if (symbolp tester)
-				     `',tester
-				     `#',(make-translator-fun (car tester)
-							      (cdr tester)))
-			:tester-definitive ',tester-definitive
-			:documentation #',(make-documentation-fun
-					   documentation)
-			,@(when pointer-documentation-p
-				`(:pointer-documentation
-				  #',(make-documentation-fun
-				      pointer-documentation)))
-			:menu ',menu
-			:priority ,priority
-			:translator-function #',(make-translator-fun arglist
-								     body))))))
+  (let* ((real-from-type (expand-presentation-type-abbreviation from-type))
+	 (real-to-type (expand-presentation-type-abbreviation to-type)))
+    `(add-translator (presentation-translators (find-command-table
+						',command-table))
+      (make-instance
+       'presentation-translator
+       :name ',name
+       :from-type ',real-from-type
+       :to-type ',real-to-type
+       :gesture ,(if (eq gesture t)
+		     t
+		     `(gethash ',gesture *gesture-names*))
+       :tester ,(if (symbolp tester)
+		    `',tester
+		    `#',(make-translator-fun (car tester)
+					     (cdr tester)))
+       :tester-definitive ',tester-definitive
+       :documentation #',(make-documentation-fun from-type
+						 documentation)
+       ,@(when pointer-documentation-p
+	       `(:pointer-documentation
+		 #',(make-documentation-fun from-type
+					    pointer-documentation)))
+       :menu ',menu
+       :priority ,priority
+       :translator-function #',(make-translator-fun arglist
+						    body)))))
+
+(defmacro define-presentation-action
+    (name (from-type to-type command-table &key
+	   (gesture :select)
+	   (tester 'default-translator-tester testerp)
+	   (documentation nil documentationp)
+	   (pointer-documentation nil pointer-documentation-p)
+	   (menu t)
+	   (priority 0))
+     arglist
+     &body body)
+  (let* ((real-from-type (expand-presentation-type-abbreviation from-type))
+	 (real-to-type (expand-presentation-type-abbreviation to-type)))
+    `(add-translator (presentation-translators (find-command-table
+						',command-table))
+      (make-instance
+       'presentation-action
+       :name ',name
+       :from-type ',real-from-type
+       :to-type ',real-to-type
+       :gesture ,(if (eq gesture t)
+		     t
+		     `(gethash ',gesture *gesture-names*))
+       :tester ,(if (symbolp tester)
+		    `',tester
+		    `#',(make-translator-fun (car tester)
+					     (cdr tester)))
+       :documentation #',(make-documentation-fun from-type
+						 documentation)
+       ,@(when pointer-documentation-p
+	       `(:pointer-documentation
+		 #',(make-documentation-fun from-type
+					    pointer-documentation)))
+       :menu ',menu
+       :priority ,priority
+       :translator-function #',(make-translator-fun arglist
+						    body)))))
+
 ;;; define-presentation-to-command-translator is in commands.lisp
 
 ;;; 23.7.2 Presentation Translator Functions
@@ -1359,8 +1418,12 @@ function lambda list"))
 		     #'car
 		     (sort translator-vector #'translator-lessp))))))))
 
-(defun call-presentation-translator
-    (translator presentation context-type frame event window x y)
+(defgeneric call-presentation-translator
+    (translator presentation context-type frame event window x y))
+
+(defmethod call-presentation-translator
+    ((translator presentation-translator) presentation context-type
+     frame event window x y)
   (multiple-value-bind (object ptype options)
       (funcall (translator-function translator)
 	       (presentation-object presentation)
@@ -1373,6 +1436,19 @@ function lambda list"))
 	       :y y)
     (values object (or ptype context-type) options)))
 
+(defmethod call-presentation-translator
+    ((translator presentation-action) presentation context-type
+     frame event window x y)
+  (funcall (translator-function translator)
+	   (presentation-object presentation)
+	   :presentation presentation
+	   :context-type context-type
+	   :frame frame
+	   :event event
+	   :window window
+	   :x x
+	   :y y)
+  (values nil nil nil))
 
 (defun test-presentation-translator
     (translator presentation context-type frame window x y
@@ -1579,4 +1655,6 @@ function lambda list"))
 					  event
 					  window
 					  x y)
-	  (funcall (cdr context) object ptype event options))))))
+	  (when ptype
+	    (funcall (cdr context) object ptype event options)))))))
+
