@@ -841,7 +841,7 @@
 	do (progn
 	     (write-char #\space stream)
 	     (write-token (present-to-string arg (presentation-type-of arg)
-					     :acceptably nil)
+					     :acceptably t)
 			  stream)))))
 
 ;;; Assume that stream is a goatee-based input editing stream for the moment...
@@ -864,7 +864,7 @@
 
 (defparameter *command-parser* #'command-line-command-parser)
 
-(defvar *command-unparser* #'command-line-command-unparser)
+(defparameter *command-unparser* #'command-line-command-unparser)
 
 (defvar *partial-command-parser*
   #'command-line-read-remaining-arguments-for-partial-command)

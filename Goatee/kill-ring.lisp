@@ -28,7 +28,8 @@
 (defclass ring (dbl-list-head)
    ((last-access :accessor last-access
 		 :documentation "Pointer to the element that was
-		 accessed last.")
+		 accessed last."
+		 :initform nil)
     (end         :accessor end
 		 :initform nil
 		 :documentation "Last element in the list."))
@@ -39,9 +40,7 @@
   ((head :accessor head :initarg :head :initform nil)))
 
 (defun make-ring ()
-  (let ((ring (make-instance 'ring)))
-    (setf (last-access ring) nil)
-    ring))
+  (make-instance 'ring))
 
 (defmethod forward ((r ring))
   "Move forward in a ring."
