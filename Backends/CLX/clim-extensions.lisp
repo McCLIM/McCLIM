@@ -230,13 +230,13 @@
 							     background-pixel))
 						(incf pos)
 						(incf y incy)))))
-						
-					((coordinate= ty1 ty2) ; vertical case
+				
+				     ((coordinate= ty1 ty2) ; vertical case
 				      (when (<= 0 ty1 r-image-height)
-					(let ((dx (abs (floor (- x-max x-min))))    
-					      (incx (/ (- tx2 tx1) (- x-max x-min)))
-					      (x (floor tx1))
-					      (y (floor ty1))) 					 
+					(let* ((dx (abs (ceiling (- x-max x-min))))    
+					       (incx (/ (- tx2 tx1) dx))
+					       (x (floor tx1))
+					       (y (floor ty1))) 					 
 					  (declare (type fixnum dx x y)) 
 					  (loop for j of-type fixnum from 0 to dx
 						do (setf (aref flat-data pos)
