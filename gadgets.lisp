@@ -594,9 +594,6 @@
 			      :min-width (min 10 *scrollbar-thickness*)
 			      :width (* 2 *scrollbar-thickness*))))
 
-(defmethod allocate-space ((sb scroll-bar-pane) width height)
-  (set-width-and-height sb width height))
-
 (defmethod repaint-sheet ((sb scroll-bar-pane) region)
   (declare (ignore region))
   (with-bounding-rectangle* (minx miny maxx maxy) (sheet-region sb)
