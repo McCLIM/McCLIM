@@ -41,20 +41,26 @@
 
 (defun menu-draw-highlighted (gadget)
   (with-slots (label) gadget
-    (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region gadget))
+    (multiple-value-bind (x1 y1 x2 y2) 
+	(bounding-rectangle* (sheet-region gadget))
       (let ((w (- x2 x1))
 	    (h (- y2 y1)))
-	(draw-rectangle* gadget -1 -1 x2 y2 :ink (gadget-highlighted-color gadget) :filled t)
-	(draw-edges-lines* gadget 1 1 (1- w) (1- h))
+	(draw-rectangle* gadget -1 -1 x2 y2
+			 :ink (gadget-highlighted-color gadget)
+			 :filled t)
+	(draw-edges-lines* gadget 1 1 (- w 2) (- h 2))
 	(draw-text* gadget label (round w 2) (round h 2)
 		    :align-x :center :align-y :center)))))
 
 (defun menu-draw-unhighlighted (gadget)
   (with-slots (label) gadget
-    (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region gadget))
+    (multiple-value-bind (x1 y1 x2 y2)
+	(bounding-rectangle* (sheet-region gadget))
       (let ((w (- x2 x1))
 	    (h (- y2 y1)))
-	(draw-rectangle* gadget -1 -1 x2 y2 :ink (gadget-normal-color gadget) :filled t)
+	(draw-rectangle* gadget -1 -1 x2 y2
+			 :ink (gadget-normal-color gadget)
+			 :filled t)
 	(draw-text* gadget label (round w 2) (round h 2)
 		    :align-x :center :align-y :center)))))
 
@@ -126,7 +132,8 @@
 	 (items (mapcar #'(lambda (item)
 			    (make-menu-button-from-menu-item item client))
 			(slot-value (find-command-table (slot-value sub-menu 'command-table)) 'menu)))
-	 (rack (make-pane-1 manager frame 'vrack-pane :contents items))
+	 (rack (make-pane-1 manager frame 'vrack-pane
+			    :background +grey80+ :contents items))
 	 (raised (make-pane-1 manager frame 'raised-pane :contents (list rack))))
     (with-slots (bottomp) sub-menu
       (multiple-value-bind (xmin ymin xmax ymax)
@@ -228,12 +235,19 @@
 (defmethod disarm-menu ((object menu-bar))
   (setf (slot-value object 'armed) nil))
 
-
-(defun make-menu-bar (command-table)
+(defun make-menu-bar (command-table 
+		      &key width height
+		           max-width max-height
+			   min-width min-height)
   (with-slots (menu) (find-command-table command-table)
-    (raising (:border-width 1) 
-	     (make-pane 'menu-bar
-			:contents
-			(mapcar #'(lambda (item)
-				    (make-menu-button-from-menu-item item nil :bottomp t))
-				menu)))))
+    (raising () 
+      (make-pane 
+          'menu-bar
+	  :background +grey80+						
+	  :width width :height height
+	  :max-width max-width :max-height max-height
+	  :min-width min-width :min-height min-height
+	  :contents
+	  (loop for item in menu
+		collect 
+		 (make-menu-button-from-menu-item item nil :bottomp t))))))
