@@ -1,6 +1,10 @@
 ;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
 
 ;;;  (c) copyright 1998,1999,2000 by Michael McDonald (mikemac@mikemac.com)
+;;;  (c) copyright 2000 by 
+;;;           Iban Hatchondo (hatchond@emi.u-bordeaux.fr)
+;;;           Julien Boninfante (boninfan@emi.u-bordeaux.fr)
+;;;           Robert Strandh (strandh@labri.u-bordeaux.fr)
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -68,7 +72,8 @@
 		    :event-mask (xlib:make-event-mask
 				 :exposure :key-press :key-release
 				 :button-press :button-release
-				 :enter-window :leave-window))))
+				 :enter-window :leave-window
+				 :structure-notify))))
       (port-register-mirror (port sheet) sheet window)
       (xlib:map-window window))))
 
@@ -92,7 +97,8 @@
 		    :background pixel
 		    :event-mask (xlib:make-event-mask
 				 :exposure :key-press :key-release
-				 :button-press :button-release))))
+				 :button-press :button-release
+				 :structure-notify))))
       (port-register-mirror (port sheet) sheet window)
       (xlib:map-window window))))
 
@@ -106,7 +112,7 @@
   (xlib:close-display (clx-port-display port)))
 
 (defun event-handler (&rest event-slots
-                      &key display window event-key code state x y
+                      &key display window event-key code state time width height x y
                       &allow-other-keys)
   (let ((sheet (and window
 		    (port-lookup-sheet *clx-port* window))))
@@ -114,22 +120,25 @@
     (case event-key
       (:key-press
        (make-instance 'key-press-event :key-name (xlib:keycode->character display code state)
-		      :sheet sheet :modifier-state state))
+		      :sheet sheet :modifier-state state :timestamp time))
       (:key-release
        (make-instance 'key-release-event :key-name (xlib:keycode->character display code state)
-		      :sheet sheet :modifier-state state))
+		      :sheet sheet :modifier-state state :timestamp time))
       (:button-release
        (make-instance 'pointer-button-release-event :pointer 0 :button code :x x :y y
-		      :sheet sheet :modifier-state state))
+		      :sheet sheet :modifier-state state :timestamp time))
       (:button-press
        (make-instance 'pointer-button-press-event :pointer 0 :button code :x x :y y
-		      :sheet sheet :modifier-state state))
+		      :sheet sheet :modifier-state state :timestamp time))
       (:enter-notify
        (make-instance 'pointer-enter-event :pointer 0 :button code :x x :y y
-		      :sheet sheet :modifier-state state))
+		      :sheet sheet :modifier-state state :timestamp time))
       (:leave-notify
        (make-instance 'pointer-exit-event :pointer 0 :button code :x x :y y
-		      :sheet sheet :modifier-state state))
+		      :sheet sheet :modifier-state state :timestamp time))
+      (:configure-notify
+       (make-instance 'window-configuration-event :sheet sheet
+		      :width width :height height :modifier-state state))
       (:exposure
        (make-instance 'window-repaint-event :sheet sheet :modifier-state state))
       (t
@@ -262,3 +271,25 @@
 
 (defmethod graft ((port clx-port))
   (port-grafts port))
+
+;; resize the mirrors
+
+(defmethod allocate-space :after ((pane pane) width height)
+  (declare (ignore width height))
+  (let ((mirror (sheet-direct-mirror pane)))
+    (when (and mirror (not (typep pane 'top-level-sheet-pane)))
+      (let* ((region (sheet-region pane))
+	     (mirror-w (xlib:drawable-width mirror))
+	     (mirror-h (xlib:drawable-height mirror))
+	     (mirror-x (xlib:drawable-x mirror))
+	     (mirror-y (xlib:drawable-y mirror))
+	     (new-width (round (bounding-rectangle-width region)))
+	     (new-height (round (bounding-rectangle-height region))))
+        (multiple-value-bind (x1 y1) (bounding-rectangle* region)
+	  (unless (and (= mirror-w new-width) (= mirror-h new-height)
+		       (= mirror-x (round x1)) (= mirror-y (round y1)))
+	    (setf (xlib:drawable-x mirror) (round x1)
+		  (xlib:drawable-y mirror) (round y1)
+		  (xlib:drawable-width mirror) new-width
+		  (xlib:drawable-height mirror) new-height)))))))
+

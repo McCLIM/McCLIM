@@ -1,6 +1,10 @@
 ;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
 
 ;;;  (c) copyright 1998,1999,2000 by Michael McDonald (mikemac@mikemac.com)
+;;;  (c) copyright 2000 by 
+;;;           Iban Hatchondo (hatchond@emi.u-bordeaux.fr)
+;;;           Julien Boninfante (boninfan@emi.u-bordeaux.fr)
+;;;           Robert Strandh (strandh@labri.u-bordeaux.fr)
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -151,8 +155,8 @@
   (sheet-mirror (event-sheet window-event)))
 
 (defclass window-configuration-event (window-event)
-  (
-   ))
+  ((width :initarg :width :reader window-configuration-event-width)
+   (height :initarg :height :reader window-configuration-event-height)))
 
 (defclass window-repaint-event (window-event)
   (
@@ -269,3 +273,4 @@
 ;; corresponding to the set of standard characters (such as the
 ;; alphanumerics) will be a symbol in the keyword package.
 ;; ???!
+
