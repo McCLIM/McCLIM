@@ -4,9 +4,9 @@
 ;;;   Created: 1998-12-02 19:26
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: regions.lisp,v 1.11 2001/07/12 15:17:31 gilbert Exp $
+;;;       $Id: regions.lisp,v 1.12 2001/07/17 05:50:51 gilbert Exp $
 ;;; --------------------------------------------------------------------------------------
-;;;  (c) copyright 1998,1999 by Gilbert Baumann
+;;;  (c) copyright 1998,1999,2001 by Gilbert Baumann
 ;;;  (c) copyright 2001 by Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
 
 ;;; This library is free software; you can redistribute it and/or
@@ -28,6 +28,9 @@
 
 ;;;  When        Who    What
 ;;; --------------------------------------------------------------------------------------
+;;;  2001-07-16  GB     added (REGION-CONTAINS-POSITION-P STANDARD-ELLIPSE ..)
+;;;                     added (BOUNDING-RECTANGLE* STANDARD-ELLIPSE)
+;;;                     added (REGION-INTERSECTION LINE STANDARD-ELLIPSE) and vice versa
 ;;;  2001-07-12  GB     fixed bugs in
 ;;;                     (BOUNDING-RECTANGLE* STANDARD-REGION-UNION)
 ;;;                     (BOUNDING-RECTANGLE* STANDARD-REGION-INTERSECTION)
@@ -38,6 +41,9 @@
 ;;;                     REGION is now a subclass of DESIGN.
 ;;;  2001-01-21  GB     fixed bug in (TRANSFORM-REGION T RECTANGLE-SET)
 ;;;                     added some documentation
+
+;;;  GB = Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
+;;;  AR = Arnaud Rouanet <rouanet@emi.u-bordeaux.fr>
 
 ;;; ---- TODO ----------------------------------------------------------------------------
 
@@ -483,7 +489,8 @@
              (multiple-value-bind (x2* y2*) (transform-position transformation x2 y2)
                (make-rectangle* x1* y1* x2* y2*)))))
         (t
-         (make-polygon (mapcar (lambda (p) (transform-region transformation p)) (polygon-points rect)))) ))
+         (make-polygon (mapcar (lambda (p) (transform-region transformation p)) 
+                               (polygon-points rect)))) ))
 
 (defmethod region-contains-position-p ((self standard-rectangle) x y)
   (multiple-value-bind (x1 y1 x2 y2) (rectangle-edges* self)
@@ -563,6 +570,56 @@
         :tr (compose-transformations transformation tr)
         :start-angle start-angle*
         :end-angle end-angle*))))
+
+(defmethod region-contains-position-p ((self standard-ellipse) x y)
+  ;; XXX start/end angle still missing
+  (with-slots (tr) self
+    (multiple-value-bind (x y) (untransform-position tr x y)
+      (<= (+ (* x x) (* y y)) 1))))
+
+(defmethod bounding-rectangle* ((region standard-ellipse))
+  ;; XXX we can do better than this.
+  (with-slots (tr) region
+    (bounding-rectangle* (transform-region tr (make-rectangle* -1 -1 1 1)))))
+
+(defun intersection-line/unit-circle (x1 y1 x2 y2)
+  "Computes the intersection of the line from (x1,y1) to (x2,y2) and the unit circle.
+   If the intersection is empty, NIL is returned.
+   Otherwise four values are returned: x1, y1, x2, y2; the start and end point of the
+   resulting line."
+  (let* ((dx (- x2 x1))
+         (dy (- y2 y1))
+         (a (+ (expt dx 2) (expt dy 2)))
+         (b (+ (* 2 x1 dx) (* 2 y1 dy)))
+         (c (+ (expt x1 2) (expt y1 2) -1)))
+    (let ((s1 (- (/ (+ (sqrt (- (expt b 2) (* 4 a c))) b) (* 2 a))))
+          (s2 (- (/ (- b (sqrt (- (expt b 2) (* 4 a c)))) (* 2 a)))))
+      (cond ((and (realp s1) (realp s2)
+                  (not (and (< s1 0) (< s2 0)))
+                  (not (and (> s1 1) (> s2 1))))
+             (let ((s1 (max 0 (min 1 s1)))
+                   (s2 (max 0 (min 1 s2))))
+               (values (+ x1 (* s1 dx))
+                       (+ y1 (* s1 dy))
+                       (+ x1 (* s2 dx))
+                       (+ y1 (* s2 dy)))))
+            (t
+             nil)))))
+
+(defmethod region-intersection ((line line) (ellipse standard-ellipse))
+  (with-slots (tr) ellipse
+    (multiple-value-bind (x1 y1 x2 y2)
+        (multiple-value-call #'intersection-line/unit-circle
+                             (multiple-value-call #'untransform-position tr (line-start-point* line))
+                             (multiple-value-call #'untransform-position tr (line-end-point* line)))
+      (if x1
+          (multiple-value-call #'make-line*
+                               (transform-position tr x1 y1)
+                               (transform-position tr x2 y2))
+        +nowhere+))))
+
+(defmethod region-intersection ((ellipse standard-ellipse) (line standard-line))
+  (region-intersection ellipse line))
 
 ;;; ---- 2.5.6.2 Accessors for CLIM Elliptical Objects -----------------------------------
 
