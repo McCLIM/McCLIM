@@ -4,7 +4,7 @@
 ;;;   Created: 1998-09-29
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: transforms.lisp,v 1.28 2004/10/06 12:03:56 moore Exp $
+;;;       $Id: transforms.lisp,v 1.29 2005/02/02 10:18:58 tmoore Exp $
 ;;; --------------------------------------------------------------------------------------
 ;;;  (c) copyright 1998,1999,2003 by Gilbert Baumann
 ;;;  (c) copyright 2000 by 
@@ -434,8 +434,13 @@ transformation protocol."))
   ;; transformation. To use WITH-DRAWING-OPTIONS which concatenates the the
   ;; transformation given to the existing one we just pass the inverse.
   ;;
-  ;; Further we don't use LETF since it is a pretty much broken idea in case
-  ;; of multithreading.
+  ;; "Further we don't use LETF since it is a pretty much broken idea in case
+  ;; of multithreading." -- gilbert
+  ;;
+  ;; "That may be, but all of the transformation functions/macros are
+  ;; going to set the medium state at some point (see
+  ;; with-drawing-options), and that's not thread-safe either. So I
+  ;; say, 'just use LETF.'" -- moore
   ;;
   ;; Q: Do we want a invoke-with-identity-transformation?
   ;;
