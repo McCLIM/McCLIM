@@ -575,9 +575,7 @@
 ;; SCROLL-BAR-PANE
 
 (defclass scroll-bar-pane (basic-pane scroll-bar)
-  ((length :initarg :length
-           :accessor scroll-bar-length)
-   (dragged :initform nil))
+  ((dragged :initform nil))
   (:default-initargs :value 0
                      :min-value 0
                      :max-value 1
@@ -587,33 +585,125 @@
   (if (eq (gadget-orientation sb) :vertical)
       (make-space-requirement :min-width 1
 			      :width *scrollbar-thickness*
-			      :min-height (min 10 *scrollbar-thickness*)
-			      :height (* 2 *scrollbar-thickness*))
+			      :min-height (* 3 *scrollbar-thickness*)
+			      :height (* 4 *scrollbar-thickness*))
       (make-space-requirement :min-height 1
 			      :height *scrollbar-thickness*
-			      :min-width (min 10 *scrollbar-thickness*)
-			      :width (* 2 *scrollbar-thickness*))))
+			      :min-width (* 3 *scrollbar-thickness*)
+			      :width (* 4 *scrollbar-thickness*))))
 
 (defmethod repaint-sheet ((sb scroll-bar-pane) region)
   (declare (ignore region))
   (with-bounding-rectangle* (minx miny maxx maxy) (sheet-region sb)
     (with-special-choices (sb)
       (draw-rectangle* sb minx miny maxx maxy :filled t :ink (medium-background sb))
-      (let ((width (- maxx minx))
-	    (height (- maxy miny)))
-	(if (eq (gadget-orientation sb) :vertical)
+      (let ((width (- maxx minx (* 2 *scrollbar-thickness*)))
+	    (height (- maxy miny (* 2 *scrollbar-thickness*)))
+	    (pos (/ (- (gadget-value sb)
+		       (gadget-min-value sb))
+		    (gadget-range sb)))
+	    (len (/ (if (eq (gadget-orientation sb) :vertical)
+			(- maxy miny)
+		      (- maxx minx))
+		    (gadget-range sb)))
+	    (highlight +white+)
+	    (shadow +black+)
+	    (thickness 2))
+	(cond
+	 ((eq (gadget-orientation sb) :vertical)
+	  (let ((points (list (/ (- maxx minx) 2) miny
+			      (1- maxx) (1- *scrollbar-thickness*)
+			      minx (1- *scrollbar-thickness*))))
+	    (draw-polygon* sb points
+			   :filled t :ink (medium-foreground sb))
+	    (draw-polygon* sb points
+			   :closed nil :filled nil :line-thickness thickness :ink shadow)
+	    (draw-line* sb
+			(first points) (second points)
+			(fifth points) (sixth points)
+			:line-thickness thickness :ink highlight))
+	  (let ((x-min minx)
+		(y-min (+ miny
+			  (* height pos)
+			  *scrollbar-thickness*))
+		(x-max (1- maxx))
+		(y-max (1- (min (+ miny
+				   (* height (+ pos len))
+				   *scrollbar-thickness*)
+				(- maxy *scrollbar-thickness*)))))
 	    (draw-rectangle* sb
-			     minx (+ miny (* height (gadget-value sb)))
-			     maxx (+ miny (* height (+ (gadget-value sb)
-                                                       (/ height (scroll-bar-length sb)))))
+			     x-min y-min x-max y-max
 			     :filled t :ink (medium-foreground sb))
+	    (draw-line* sb
+			x-max y-min x-max y-max
+			:line-thickness thickness :ink shadow)
+	    (draw-line* sb
+			x-min y-max x-max y-max
+			:line-thickness thickness :ink shadow)
+	    (draw-line* sb
+			x-min y-min x-max y-min
+			:line-thickness thickness :ink highlight)
+	    (draw-line* sb
+			x-min y-min x-min y-max
+			:line-thickness thickness :ink highlight))
+	  (let ((points (list (/ (- maxx minx) 2) (1- maxy)
+			      minx (- maxy *scrollbar-thickness*)
+			      (1- maxx) (- maxy *scrollbar-thickness*))))
+	    (draw-polygon* sb points
+			   :filled t :ink (medium-foreground sb))
+	    (draw-line* sb
+			(first points) (second points)
+			(fifth points) (sixth points)
+			:line-thickness thickness :ink shadow)
+	    (draw-polygon* sb points
+			   :closed nil :filled nil :line-thickness thickness :ink highlight)))
+	 (t
+	  (let ((points (list (1- *scrollbar-thickness*) miny
+			      minx (/ (+ miny maxy) 2)
+			      (1- *scrollbar-thickness*) (1- maxy))))
+	    (draw-polygon* sb points
+			   :filled t :ink (medium-foreground sb))
+	    (draw-line* sb
+			(first points) (second points)
+			(fifth points) (sixth points)
+			:line-thickness thickness :ink shadow)
+	    (draw-polygon* sb points
+			   :closed nil :filled nil :line-thickness thickness :ink highlight))
+	  (let ((x-min (+ minx
+			  (* width pos)
+			  *scrollbar-thickness*))
+		(y-min miny)
+		(x-max (1- (min (+ minx
+				   (* width (+ pos len))
+				   *scrollbar-thickness*)
+				(- maxx *scrollbar-thickness*))))
+		(y-max (1- maxy)))
 	    (draw-rectangle* sb
-			     (+ minx (* width (gadget-value sb)))
-                             miny
-			     (+ minx (* width (+ (gadget-value sb)
-                                                 (/ width (scroll-bar-length sb)))))
-                             maxy
-                             :filled t :ink (medium-foreground sb)))))))
+			     x-min y-min x-max y-max
+			     :filled t :ink (medium-foreground sb))
+	    (draw-line* sb
+			x-max y-min x-max y-max
+			:line-thickness thickness :ink shadow)
+	    (draw-line* sb
+			x-min y-max x-max y-max
+			:line-thickness thickness :ink shadow)
+	    (draw-line* sb
+			x-min y-min x-max y-min
+			:line-thickness thickness :ink highlight)
+	    (draw-line* sb
+			x-min y-min x-min y-max
+			:line-thickness thickness :ink highlight))
+	  (let ((points (list (- maxx *scrollbar-thickness*) miny
+			      (1- maxx) (/ (+ minx maxx) 2)
+			      (- maxx *scrollbar-thickness*) (1- maxy))))
+	    (draw-polygon* sb points
+			   :filled t :ink (medium-foreground sb))
+	    (draw-polygon* sb points
+			   :closed nil :filled nil :line-thickness thickness :ink shadow)
+	    (draw-line* sb
+			(first points) (second points)
+			(fifth points) (sixth points)
+			:line-thickness thickness :ink highlight))))))))
 
 (defmethod handle-event ((sb scroll-bar-pane) (event window-repaint-event))
   (dispatch-repaint sb (sheet-region sb)))

@@ -964,7 +964,6 @@ During realization the child of the spacing will have as cordinates
       (setq vscrollbar
             (make-pane 'scroll-bar-pane
                        :orientation :vertical
-                       :length (bounding-rectangle-height (sheet-region viewport))
                        :client (first (sheet-children viewport))
                        :drag-callback
                        #'(lambda (gadget new-value)
@@ -979,8 +978,8 @@ During realization the child of the spacing will have as cordinates
                        :scroll-down-page-callback
                        #'(lambda (scroll-bar)
                            (scroll-page-callback scroll-bar -1))
-                       :foreground +grey40+
-                       :background +grey+))
+                       :foreground +grey+
+                       :background +grey40+))
       (sheet-adopt-child pane vscrollbar))
     (when (not (eq scroll-bar :vertical))
       (setq hscrollbar
