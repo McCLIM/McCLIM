@@ -76,45 +76,44 @@
                    :orientation orientation)))
 
 (defmacro with-output-to-postscript-stream ((stream-var file-stream
-                                            &key device-type
-                                            multi-page scale-to-fit
-                                            (orientation :portrait)
-                                            header-comments)
+                                             &rest options)
                                             &body body)
-  `(let ((,stream-var (make-postscript-medium ,file-stream ,device-type
-                                              ,multi-page ,scale-to-fit
-                                              ,orientation ,header-comments)))
-    (invoke-with-output-to-postscript-stream ,stream-var
-     #'(lambda (,stream-var) ,@body))))
+  (let ((cont (gensym)))
+    `(labels ((,cont (,stream-var)
+               ,@body))
+      (declare (dynamic-extent #',cont))
+      (invoke-with-output-to-postscript-stream #',cont ,file-stream ,@options))))
 
-(defmethod invoke-with-output-to-postscript-stream ((medium postscript-medium) continuation)
-  (funcall continuation medium))
-
-(defmethod invoke-with-output-to-postscript-stream :before ((medium postscript-medium) continuation)
-  (declare (ignore continuation))
-  (with-slots (file-stream title for orientation) medium
-    (format file-stream "%!PS-Adobe-3.0~%")
-    (format file-stream "%%Title: ~A~%" title)
-    (format file-stream "%%For: ~A~%" for)
-    (format file-stream "%%Orientation: ~A~%"
-            (ecase orientation
-              (:portrait "Portrait")
-              (:landscape "Landscape")))
-    (format file-stream "%%Pages: (atend)~%")
-    (format file-stream "%%DocumentNeededResources: (atend)~%")
-    (format file-stream "%%EndComments~%~%")
-    (format file-stream "%%Page: 1 1~%")
-    (format file-stream "newpath~%")))
-
-(defmethod invoke-with-output-to-postscript-stream :after ((medium postscript-medium) continuation)
-  (declare (ignore continuation))
-  (with-slots (file-stream current-page document-fonts) medium
-    (format file-stream "showpage~%~%")
-    (format file-stream "%%Trailer~%")
-    (format file-stream "%%Pages: ~D~%" current-page)
-    (format file-stream "%%DocumentNeededResources: ~{font ~A~%~^%%+ ~}~%" (reverse document-fonts))
-    (format file-stream "%%EOF~%")
-    (finish-output file-stream)))
+(defun invoke-with-output-to-postscript-stream (continuation
+                                                file-stream &key device-type
+                                                multi-page scale-to-fit
+                                                (orientation :portrait)
+                                                header-comments)
+  (let ((medium (make-postscript-medium file-stream device-type
+                                        multi-page scale-to-fit
+                                        orientation header-comments)))
+    (prog2
+        (with-slots (file-stream title for orientation) medium
+          (format file-stream "%!PS-Adobe-3.0~%")
+          (format file-stream "%%Title: ~A~%" title)
+          (format file-stream "%%For: ~A~%" for)
+          (format file-stream "%%Orientation: ~A~%"
+                  (ecase orientation
+                    (:portrait "Portrait")
+                    (:landscape "Landscape")))
+          (format file-stream "%%Pages: (atend)~%")
+          (format file-stream "%%DocumentNeededResources: (atend)~%")
+          (format file-stream "%%EndComments~%~%")
+          (format file-stream "%%Page: 1 1~%")
+          (format file-stream "newpath~%"))
+        (funcall continuation medium)
+      (with-slots (file-stream current-page document-fonts) medium
+        (format file-stream "showpage~%~%")
+        (format file-stream "%%Trailer~%")
+        (format file-stream "%%Pages: ~D~%" current-page)
+        (format file-stream "%%DocumentNeededResources: ~{font ~A~%~^%%+ ~}~%" (reverse document-fonts))
+        (format file-stream "%%EOF~%")
+        (finish-output file-stream)))))
 
 (defun new-page (stream)
   (with-slots (file-stream current-page) stream
@@ -527,7 +526,7 @@ clip
 ;;;; POSTSCRIPT-GRAFT
 ;;;;
 
-(defclass postscript-graft ()
+(defclass postscript-graft (basic-sheet sheet-leaf-mixin)
   ((width  :initform 210 :reader postscript-graft-width)
    (height :initform 297 :reader postscript-graft-height)))
 
@@ -555,3 +554,8 @@ clip
 
 (defun make-postscript-graft ()
   (make-instance 'postscript-graft))
+
+(defmethod sheet-region ((sheet postscript-graft))
+  (make-rectangle* 0 0
+                   (graft-width sheet :units (graft-units sheet))
+                   (graft-height sheet :units (graft-units sheet))))
