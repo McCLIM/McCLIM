@@ -2,6 +2,8 @@
 
 (unexport 'ext::e :ext)
 
+(setf *compile-print* nil)
+(setf *gc-verbose* nil)
 
 
 
