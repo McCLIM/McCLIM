@@ -4,7 +4,7 @@
 ;;;   Created: 1998-12-02 19:26
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: regions.lisp,v 1.10 2001/07/09 16:27:50 boninfan Exp $
+;;;       $Id: regions.lisp,v 1.11 2001/07/12 15:17:31 gilbert Exp $
 ;;; --------------------------------------------------------------------------------------
 ;;;  (c) copyright 1998,1999 by Gilbert Baumann
 ;;;  (c) copyright 2001 by Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
@@ -28,13 +28,16 @@
 
 ;;;  When        Who    What
 ;;; --------------------------------------------------------------------------------------
+;;;  2001-07-12  GB     fixed bugs in
+;;;                     (BOUNDING-RECTANGLE* STANDARD-REGION-UNION)
+;;;                     (BOUNDING-RECTANGLE* STANDARD-REGION-INTERSECTION)
+;;;  2001-07-09  GB     maybe fixed a bug in MAP-OVER-SCHNITT-GERADE/POLYGON.
 ;;;  2001-03-09  AR     fixed a bug in MAKE-ELLIPICAL-THING
 ;;;                     fixed STANDARD-ELLIPTICAL-ARC defclass
 ;;;  2001-03-06  AR     fixed bug in (REGION-EQUAL STANDARD-RECTANGLE STANDARD-RECTANGLE)
 ;;;                     REGION is now a subclass of DESIGN.
 ;;;  2001-01-21  GB     fixed bug in (TRANSFORM-REGION T RECTANGLE-SET)
 ;;;                     added some documentation
-;;;  2001-07-09  GB     maybe fixed a bug in MAP-OVER-SCHNITT-GERADE/POLYGON.
 
 ;;; ---- TODO ----------------------------------------------------------------------------
 
@@ -2098,7 +2101,7 @@
 (defmethod bounding-rectangle* ((self standard-region-union))
   (let (bx1 by1 bx2 by2)
     (map-over-region-set-regions (lambda (r)
-                                   (with-slots (x1 y1 x2 y2) r
+                                   (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* r)
                                      (setf bx1 (min (or bx1 x1) x1)
                                            bx2 (max (or bx2 x2) x2)
                                            by1 (min (or by1 y1) y1)
@@ -2120,7 +2123,7 @@
   ;; kill+yank alert
   (let (bx1 by1 bx2 by2)
     (map-over-region-set-regions (lambda (r)
-                                   (with-slots (x1 y1 x2 y2) r
+                                   (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* r)
                                      (setf bx1 (min (or bx1 x1) x1)
                                            bx2 (max (or bx2 x2) x2)
                                            by1 (min (or by1 y1) y1)
