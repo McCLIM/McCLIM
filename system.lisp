@@ -122,10 +122,10 @@
   )
 
 (clim-defsystem (:clim-postscript :depends-on (:clim-core))
-   "Backends/postscript/package"
-   "Backends/postscript/class"
-   "Backends/postscript/graphics"
-   "Backends/postscript/sheet"
+   "Backends/PostScript/package"
+   "Backends/PostScript/class"
+   "Backends/PostScript/graphics"
+   "Backends/PostScript/sheet"
    )
 
 (clim-defsystem (:clim :depends-on (:clim-core :goatee-core :clim-postscript))
