@@ -66,7 +66,7 @@
    (myy :type coordinate)
    (tx  :type coordinate)
    (ty  :type coordinate)
-   (inverse :type (or nil standard-transformation)
+   (inverse :type (or null standard-transformation)
             :initform nil
             :documentation "Cached inverse transformation.") ))
 
