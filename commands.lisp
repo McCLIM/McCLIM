@@ -259,7 +259,7 @@
 		(command-accessible-in-command-table-p
 		 command-name
 		 (find-command-table table)))
-	    (command-table-inherit-from command-table))))
+	    (command-table-inherit-from (find-command-table command-table)))))
 
 (defun find-command-from-command-line-name (name command-table &key (errorp t))
   (apply-with-command-table-inheritance
