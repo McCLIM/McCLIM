@@ -18,7 +18,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-(in-package :CLIM-INTERNALS)
+(in-package :clim-internals)
 
 (defmethod menu-root ((button menu-button-pane))
   (menu-root (gadget-client button)))

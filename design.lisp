@@ -76,7 +76,7 @@
 ;; --GB
 
 
-(in-package :CLIM-INTERNALS)
+(in-package :clim-internals)
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
 (define-protocol-class design ())
@@ -261,7 +261,7 @@
   (with-open-file (out "X11-colors.lisp" :direction :output :if-exists :supersede)
     (with-open-file (in "/usr/X11/lib/X11/rgb.txt" :direction :input)
       (format out ";;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-~%~%")
-      (format out "(in-package :CLIM-INTERNALS)~%~%")
+      (format out "(in-package :clim-internals)~%~%")
       (loop with names = nil
 	  for line = (read-line in nil nil)
 	  until (null line)

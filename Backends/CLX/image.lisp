@@ -35,7 +35,7 @@
    "COLORMAP-IMAGE"
    "SPECTRAL-IMAGE"))
 
-(in-package :IMAGE)
+(in-package :image)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

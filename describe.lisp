@@ -17,7 +17,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-(in-package :COMMON-LISP)
+(in-package :common-lisp)
 
 #+excl
 (eval-when (:compile-toplevel :load-toplevel :execute)

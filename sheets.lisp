@@ -30,7 +30,7 @@
 ;;;
 ;;; The sheet protocol
 
-(in-package :CLIM-INTERNALS)
+(in-package :clim-internals)
 
 (defgeneric sheet-parent (sheet)
   (:documentation

@@ -22,7 +22,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-(in-package :CLIM-CLX)
+(in-package :clim-clx)
 
 ;;; Needed changes:
 
@@ -596,7 +596,7 @@
             (illegal-sequence))))))
 
 #+unicode
-(in-package :CLIM-CLX)
+(in-package :clim-clx)
 
 #-unicode
 (defmethod text-size ((medium clx-medium) string &key text-style (start 0) end)

@@ -22,7 +22,7 @@
 ;;; - Gap computation
 ;;; - Implement :DROP-SHADOW, :UNDERLINE
 
-(in-package :CLIM-INTERNALS)
+(in-package :clim-internals)
 
 (defvar *border-types* (make-hash-table))
 

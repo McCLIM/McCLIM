@@ -17,7 +17,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-(in-package :CLIM-INTERNALS)
+(in-package :clim-internals)
 
 (defclass graft (sheet-multiple-child-mixin mirrored-sheet-mixin basic-sheet)
   ((orientation :initform :default

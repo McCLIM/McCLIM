@@ -27,7 +27,7 @@
 ;;;
 ;;; The Repaint Protocol
 
-(in-package :CLIM-INTERNALS)
+(in-package :clim-internals)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

@@ -33,7 +33,7 @@
 ;;; - Bug: only one option of :X-SPACING and :Y-SPACING works now. (?)
 ;;; - Item list formatting: what is :EQUALIZE-COLUMN-WIDTHS?!
 
-(in-package :CLIM-INTERNALS)
+(in-package :clim-internals)
 
 ;;; Space specification parsing
 #+ignore(deftype space () 'real)

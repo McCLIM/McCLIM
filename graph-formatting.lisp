@@ -3,7 +3,7 @@
 ;;;     Title: Graph Formatting
 ;;;   Created: 2002-08-13
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: graph-formatting.lisp,v 1.6 2002/11/28 19:56:56 mikemac Exp $
+;;;       $Id: graph-formatting.lisp,v 1.7 2003/03/21 21:36:59 mikemac Exp $
 ;;; ---------------------------------------------------------------------------
 
 ;;;  (c) copyright 2002 by Gilbert Baumann
@@ -23,7 +23,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
  
-(in-package :CLIM-INTERNALS)
+(in-package :clim-internals)
 
 ;;;; Notes
 

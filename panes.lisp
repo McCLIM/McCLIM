@@ -27,9 +27,9 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.116 2003/03/21 15:15:08 mikemac Exp $
+;;; $Id: panes.lisp,v 1.117 2003/03/21 21:36:59 mikemac Exp $
 
-(in-package :CLIM-INTERNALS)
+(in-package :clim-internals)
 
 ;;;;
 ;;;; Ambiguities and Obmissions

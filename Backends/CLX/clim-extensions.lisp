@@ -23,7 +23,7 @@
   ; but while it is, it needs to ensure that the use-package'ing
   ; happens before the rest of the file is read.
 
-  (in-package :CLIM-CLX)
+(in-package :clim-clx)
   (use-package :IMAGE))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

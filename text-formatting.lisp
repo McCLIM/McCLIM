@@ -23,7 +23,7 @@
 ;;;
 ;;; - FILLING-OUTPUT
 
-(in-package :CLIM-INTERNALS)
+(in-package :clim-internals)
 
 (defun format-textual-list (sequence printer
                             &key stream separator conjunction

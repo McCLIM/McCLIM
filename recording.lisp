@@ -74,7 +74,7 @@
 ;;; that only instances of STANDARD-TEXT-OUTPUT-RECORD are used for
 ;;; recording. -- APD, 2002-06-15.
 
-(in-package :CLIM-INTERNALS)
+(in-package :clim-internals)
 
 (define-protocol-class output-record (bounding-rectangle)
   ())

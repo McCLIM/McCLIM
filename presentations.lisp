@@ -21,7 +21,7 @@
 ;;; functions and methods, presentation translators, finding an applicable
 ;;;presentation.
 
-(in-package :CLIM-INTERNALS)
+(in-package :clim-internals)
 
 ;;; PRESENTATION class
 

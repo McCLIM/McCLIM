@@ -1,6 +1,6 @@
 ;;; Stub for ACCEPTING-VALUES.
 
-(in-package :CLIM-INTERNALS)
+(in-package :clim-internals)
 
 (defmacro accepting-values
     ((&optional (stream t)

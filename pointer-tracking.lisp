@@ -29,7 +29,7 @@
 ;;;
 ;;; - - remove invoke-tracking-pointer; remove unnecessary checks.
 
-(in-package :CLIM-INTERNALS)
+(in-package :clim-internals)
 
 (defmacro tracking-pointer
     ((sheet &rest args

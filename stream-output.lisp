@@ -19,7 +19,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-(in-package :CLIM-INTERNALS)
+(in-package :clim-internals)
 
 ;;; Note: in the methods defined on output streams, I often use
 ;;;	  the sheet's medium as the argument to the draw-* routines.

@@ -19,7 +19,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-(in-package :CLIM-DEMO)
+(in-package :clim-demo)
 
 (defun address-book ()
   (declare (special frame fm port pane medium graft))
@@ -27,11 +27,11 @@
       do (destroy-port port))
   (setq climi::*all-ports* nil)
   (setq frame (make-application-frame 'address-book))
-  (setq fm (frame-manager frame))
-  (setq port (climi::frame-manager-port fm))
-  (setq pane (frame-standard-output frame))
-  (setq medium (sheet-medium pane))
-  (setq graft (graft frame))
+;  (setq fm (frame-manager frame))
+;  (setq port (climi::frame-manager-port fm))
+;  (setq pane (frame-standard-output frame))
+;  (setq medium (sheet-medium pane))
+;  (setq graft (graft frame))
   (run-frame-top-level frame))
 
 (defun test-define-application-frame ()

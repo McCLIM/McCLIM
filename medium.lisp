@@ -59,7 +59,7 @@
 ;; [1] or even a code position
 ;; --GB
 
-(in-package :CLIM-INTERNALS)
+(in-package :clim-internals)
 
 ;; This must come early, because of implementation quirks:
 

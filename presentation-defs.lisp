@@ -18,7 +18,7 @@
 
 ;;; Definitions for the standard presentation types and generic functions
 
-(in-package :CLIM-INTERNALS)
+(in-package :clim-internals)
 
 ;;; These types are defined early so the classes will be available for
 ;;; the presentation generic function MOPery at method definition time,

@@ -20,7 +20,7 @@
 
 (defpackage :MENUTEST (:USE :CLIM :CLIM-EXTENSIONS :CLIM-LISP))
 
-(in-package :MENUTEST)
+(in-package :menutest)
 
 (defun menutest ()
   (loop for port in climi::*all-ports*

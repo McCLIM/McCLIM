@@ -29,7 +29,7 @@
 ;;;  2002-02-10  GB     named allocator function
 ;;;  2001-05-21  GB     created
 
-(in-package :CLIM-INTERNALS)
+(in-package :clim-internals)
 
 ;;;; 32.1 Resources
 

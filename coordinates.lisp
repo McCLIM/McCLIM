@@ -24,7 +24,7 @@
 
 ;;!EXPORT coordinate
 
-(in-package :CLIM-INTERNALS)
+(in-package :clim-internals)
 
 (deftype coordinate () 'double-float)
 

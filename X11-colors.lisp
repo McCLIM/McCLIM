@@ -17,7 +17,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-(in-package :CLIM-INTERNALS)
+(in-package :clim-internals)
 
 ; $XConsortium: rgb.txt,v 10.41 94/02/20 18:39:36 rws Exp $
 (defconstant +snow+ (make-named-color "snow" 1.0000 0.9804 0.9804))

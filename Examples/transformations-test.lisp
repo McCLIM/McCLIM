@@ -21,7 +21,7 @@
 (defpackage "CLIM-TRANSFORMATIONS-TEST"
   (:use :clim :clim-lisp))
 
-(in-package :CLIM-TRANSFORMATIONS-TEST)
+(in-package :clim-transformations-test)
 
 (defparameter *transformations-test-file* #p"transformations-test.ps")
 
