@@ -66,8 +66,8 @@
 
 (defmethod setf*-output-record-position (nx ny (record output-record-mixin))
   (with-slots (x y) record
-    (setq x nx
-	  y ny)))
+              (setq x nx
+                    y ny)))
 
 (defmethod setf*-output-record-position :before (nx ny (record output-record))
   (multiple-value-bind (old-x old-y) (output-record-position record)
@@ -81,8 +81,10 @@
   (declare (ignore nx ny))
   (with-bounding-rectangle* (min-x min-y max-x max-y) record
     (call-next-method)
-    (recompute-extent-for-changed-child (output-record-parent record) record
-                                        min-x min-y max-x max-y)))
+    (let ((parent (output-record-parent record)))
+      (when parent
+        (recompute-extent-for-changed-child parent record
+                                            min-x min-y max-x max-y)))))
 
 (defmethod output-record-start-cursor-position ((record displayed-output-record))
   (values nil nil))
@@ -326,24 +328,81 @@
   (setf (stream-current-output-record stream) (stream-output-history stream)))
 
 (defmethod stream-add-output-record ((stream output-recording-stream) record)
-  (add-output-record record (stream-output-history stream)))
+  (add-output-record record (stream-current-output-record stream)))
 
 (defmethod stream-replay ((stream output-recording-stream) &optional region)
   (replay (stream-output-history stream) stream region))
 
 (defmacro with-output-recording-options ((stream &key (record t) (draw t)) &body body)
-  (let ((old-record (gensym))
-	(old-draw (gensym)))
-    `(with-slots (recording-p drawing-p) ,stream
-       (let ((,old-record recording-p)
-	     (,old-draw drawing-p))
-	 (unwind-protect
-	     (progn
-	       (setq recording-p ,record
-		     drawing-p ,draw)
-	       ,@body)
-	   (setq recording-p ,old-record
-		 drawing-p ,old-draw))))))
+  (declare (type symbol stream))
+  (when (eq stream 't)
+    (setq stream *standard-output*))
+  (let ((continuation-name (gensym)))
+    `(let ((,continuation-name #'(lambda (,stream) ,@body)))
+       (invoke-with-output-recording-options ,stream
+                                             ,continuation-name
+                                             ,record
+                                             ,draw))))
+
+(defmethod invoke-with-output-recording-options
+  ((stream output-recording-stream) continuation record draw)
+  "Calls CONTINUATION on STREAM enabling or disabling recording and drawing
+according to the flags RECORD and DRAW."
+  (with-slots (recording-p drawing-p) stream
+              (let ((old-record recording-p)
+                    (old-draw drawing-p))
+                (unwind-protect
+                    (progn
+                      (setq recording-p record
+                            drawing-p draw)
+                      (funcall continuation stream))
+                  (setq recording-p old-record
+                        drawing-p old-draw)))))
+
+(defmacro with-new-output-record ((stream
+                                   &optional
+                                   (record-type ''standard-sequence-output-record)
+                                   (record nil record-supplied-p)
+                                   &rest initargs)
+                                  &body body)
+  "Creates a new output record of type RECORD-TYPE and then captures
+the output of BODY into the new output record, and inserts the new
+record into the current \"open\" output record assotiated with STREAM.
+    If RECORD is supplied, it is the name of a variable that will be
+lexically bound to the new output record inside the body. INITARGS are
+CLOS initargs that are passed to MAKE-INSTANCE when the new output
+record is created.
+    It returns the created output record.
+    The STREAM argument is a symbol that is bound to an output
+recording stream. If it is T, *STANDARD-OUTPUT* is used."
+  (declare (type symbol stream record))
+  (when (eq stream 't)
+    (setq stream '*standard-output*))
+  (unless record-supplied-p
+    (setq record (gensym)))
+  `(invoke-with-new-output-record
+    ,stream
+    #'(lambda (,stream ,record)
+        ,(unless record-supplied-p `(declare (ignore ,record)))
+        ,@body)
+    ,record-type
+    ,@initargs))
+
+(defmethod invoke-with-new-output-record ((stream output-recording-stream)
+                                          continuation record-type
+                                          &rest initargs
+                                          &key parent)
+  (unless parent
+    (setq parent (stream-current-output-record stream)))
+  (let ((new-record (apply #'make-instance record-type :parent parent initargs))
+        (old-record (stream-current-output-record stream)))
+    (unwind-protect
+        (progn
+          (setf (stream-current-output-record stream) new-record)
+          (funcall continuation stream new-record))
+      (setf (stream-current-output-record stream) old-record)
+      (stream-add-output-record stream new-record))
+    new-record))
 
 (defmethod scroll-vertical :around ((stream output-recording-stream) dy)
   (declare (ignore dy))
@@ -421,6 +480,12 @@
                      y1 (- tp ,border)
                      x2 (+ rt ,border)
                      y2 (+ bt ,border))))))
+       (defmethod setf*-output-record-position :before (nx ny (record ,class-name))
+         (with-slots (x y x1 y1 x2 y2) record
+                     (let ((dx (- nx x))
+                           (dy (- ny y)))
+                       (incf x1 dx) (incf y1 dy)
+                       (incf x2 dx) (incf y2 dy))))
        (defmethod ,method-name :around ((stream output-recording-stream) ,@args)
 	 (with-sheet-medium (medium stream)
 	   (when (stream-recording-p stream)
@@ -438,18 +503,19 @@
        (defmethod replay-output-record ((record ,class-name) stream
 					&optional (region +everywhere+) x-offset y-offset)
 	 (declare (ignore x-offset y-offset))
-	 (with-slots (ink clip transform line-style text-style ,@args) record
-	   (let ((,old-medium (sheet-medium stream))
-		 (,new-medium (make-merged-medium stream ink (region-intersection clip
-                                                                (untransform-region transform region))
-                                                  transform line-style text-style)))
-             (finish-output *error-output*)
-	     (unwind-protect
-		 (progn
-		   (setf (sheet-medium stream) ,new-medium)
-		   (setf (medium-sheet ,new-medium) stream)
-		   (,method-name ,new-medium ,@args))
-	       (setf (sheet-medium stream) ,old-medium))))))))
+	 (with-slots (x y ink clip transform line-style text-style ,@args) record
+                     (let ((transformation (compose-translation-with-transformation transform x y)))
+                       (let ((,old-medium (sheet-medium stream))
+                             (,new-medium (make-merged-medium stream ink (region-intersection clip
+                                                                                              (untransform-region transformation region))
+                                                              transformation line-style text-style)))
+                         (finish-output *error-output*)
+                         (unwind-protect
+                             (progn
+                               (setf (sheet-medium stream) ,new-medium)
+                               (setf (medium-sheet ,new-medium) stream)
+                               (,method-name ,new-medium ,@args))
+                           (setf (sheet-medium stream) ,old-medium)))))))))
 
 (def-grecording draw-point (point-x point-y)
   (with-transformed-position (transform point-x point-y)
@@ -480,6 +546,10 @@
            finally (return (values min-x min-y max-x max-y)))))
 
 (def-grecording draw-polygon (coord-seq closed filled)
+  ;; FIXME !!!
+  ;; If LINE-STYLE-JOINT-SHAPE is :MITTER, then the bb is larger than
+  ;; these numbers by (LINE-THICKNESS / (sin (angle / 2))),
+  ;; which is larger than LINE-THICKNESS
   (with-transformed-positions (transform coord-seq)
      (loop for (x y) on coord-seq by #'cddr
            minimize x into min-x
@@ -501,7 +571,7 @@
 
 (def-grecording draw-text (string point-x point-y start end
 			   align-x align-y toward-x toward-y transform-glyphs)
-  ;; XXX transformation!!!
+  ;; FIXME!!! transformation
  (let* ((width (stream-string-width stream string
                                     :start start :end end
                                     :text-style text-style))
