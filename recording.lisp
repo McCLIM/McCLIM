@@ -120,7 +120,7 @@ position of the upper-left corner of its bounding rectangle. The
 position is relative to the stream, where (0,0) is (initially) the
 upper-left corner of the stream."))
 
-;(defgeneric* output-record-position (x y record))
+(defgeneric* (setf output-record-position) (x y record))
 
 (declaim (ftype (function (output-record) (values integer integer))
                 output-record-start-cursor-position))
@@ -130,7 +130,7 @@ upper-left corner of the stream."))
 positions are relative to the stream, where (0,0) is (initially) the
 upper-left corner of the stream."))
 
-;(defgeneric* output-record-start-cursor-position (x y record))
+(defgeneric* (setf output-record-start-cursor-position) (x y record))
 
 (declaim (ftype (function (output-record) (values integer integer))
                 output-record-end-cursor-position))
@@ -140,7 +140,7 @@ upper-left corner of the stream."))
 positions are relative to the stream, where (0,0) is (initially) the
 upper-left corner of the stream."))
 
-;(defgeneric* output-record-end-cursor-position (x y record))
+(defgeneric* (setf output-record-end-cursor-position) (x y record))
 
 (defgeneric output-record-parent (record)
   (:documentation
@@ -206,7 +206,7 @@ Only those records that overlap REGION are displayed."))
   (with-slots (x y) record
     (values x y)))
 
-(defmethod setf*-output-record-position (nx ny (record output-record-mixin))
+(defmethod* (setf output-record-position) (nx ny (record output-record-mixin))
   (with-slots (x y x1 y1 x2 y2) record
     (let ((dx (- nx x))
           (dy (- ny y)))
@@ -215,15 +215,15 @@ Only those records that overlap REGION are displayed."))
     (setq x nx
           y ny)))
 
-(defmethod setf*-output-record-position :before (nx ny (record output-record))
+(defmethod* (setf output-record-position) :before (nx ny (record output-record))
   (multiple-value-bind (old-x old-y) (output-record-position record)
     (loop with dx = (- nx old-x)
           and dy = (- ny old-y)
           for child in (output-record-children record)
           do (multiple-value-bind (x y) (output-record-position child)
-               (setf*-output-record-position (+ x dx) (+ y dy) child)))))
+               (setf (output-record-position child) (values (+ x dx) (+ y dy)))))))
 
-(defmethod setf*-output-record-position :around (nx ny (record output-record-mixin))
+(defmethod* (setf output-record-position) :around (nx ny (record output-record-mixin))
   (declare (ignore nx ny))
   (with-bounding-rectangle* (min-x min-y max-x max-y) record
     (call-next-method)
@@ -235,14 +235,14 @@ Only those records that overlap REGION are displayed."))
 (defmethod output-record-start-cursor-position ((record displayed-output-record))
   (values nil nil))
 
-(defmethod setf*-output-record-start-cursor-position (x y (record displayed-output-record))
+(defmethod* (setf output-record-start-cursor-position) (x y (record displayed-output-record))
   (declare (ignore x y))
   nil)
 
 (defmethod output-record-end-cursor-position ((record displayed-output-record))
   (values nil nil))
 
-(defmethod setf*-output-record-end-cursor-position (x y (record displayed-output-record))
+(defmethod* (setf output-record-end-cursor-position) (x y (record displayed-output-record))
   (declare (ignore x y))
   nil)
 
@@ -254,7 +254,7 @@ Only those records that overlap REGION are displayed."))
         (unwind-protect
              (letf (((stream-recording-p stream) nil))
                (replay-output-record record stream region))
-          (setf*-stream-cursor-position cx cy stream))))))
+          (setf (stream-cursor-position stream) (values cx cy)))))))
 
 (defmethod replay-output-record ((record output-record) stream
 				 &optional region (x-offset 0) (y-offset 0))
@@ -291,10 +291,10 @@ Only those records that overlap REGION are displayed."))
   (
    ))
 
-(defmethod setf*-output-record-position (nx ny (record standard-sequence-output-record))
+(defmethod* (setf output-record-position) (nx ny (record standard-sequence-output-record))
   (with-slots (x y) record
-              (setq x nx
-                    y ny)))
+    (setq x nx
+          y ny)))
 
 (defmethod output-record-children ((output-record output-record))
   (with-slots (children) output-record
@@ -832,14 +832,14 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
                     x2 (coordinate (+ x width))
                     y2 (coordinate (+ y max-height)))))
 
-(defmethod setf*-output-record-position :before (nx ny (record text-displayed-output-record))
+(defmethod* (setf output-record-position) :before (nx ny (record text-displayed-output-record))
   (with-slots (x1 y1 x2 y2 x y start-x start-y end-x end-y) record
-              (let ((dx (- nx x))
-                    (dy (- ny y)))
-                (incf start-x dx)
-                (incf start-y dy)
-                (incf end-x dx)
-                (incf end-y dy))))
+    (let ((dx (- nx x))
+          (dy (- ny y)))
+      (incf start-x dx)
+      (incf start-y dy)
+      (incf end-x dx)
+      (incf end-y dy))))
 
 (defmethod add-character-output-to-text-record ((text-record text-displayed-output-record)
 						character text-style char-width height
@@ -887,11 +887,12 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
                     x-offset
                     y-offset))
              
-             (setf*-stream-cursor-position start-x start-y stream)
+             (setf (stream-cursor-position stream) (values start-x start-y))
              (letf (((slot-value stream 'baseline) baseline))
                (loop for (x text-style string) in strings
                      do (setf (medium-text-style new-medium) text-style)
-                     (setf*-stream-cursor-position (+ x (- x1 initial-x1)) start-y stream)
+                     (setf (stream-cursor-position stream)
+                           (values (+ x (- x1 initial-x1)) start-y))
                      (stream-write-line stream string)))
              ;; clipping region
              #|restore cursor position? set to (end-x,end-y)?|#
@@ -1032,7 +1033,7 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
 (defmethod stream-terpri :after ((stream standard-output-recording-stream))
   (stream-close-text-output-record stream))
 
-(defmethod setf*-stream-cursor-position :after (x y (stream standard-output-recording-stream))
+(defmethod* (setf stream-cursor-position) :after (x y (stream standard-output-recording-stream))
   (stream-close-text-output-record stream))
 
 ;(defmethod stream-set-cursor-position :after ((stream standard-output-recording-stream))

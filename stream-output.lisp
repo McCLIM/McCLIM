@@ -40,12 +40,15 @@
   (multiple-value-bind (cx cy) (stream-cursor-position stream)
     (cond
      ((eq char #\Newline)
-      (setf*-stream-cursor-position 0 (+ cy
-					    (stream-line-height stream)
-					    (stream-vertical-spacing stream)) stream))
+      (setf (stream-cursor-position stream)
+            (value 0
+                   (+ cy
+                      (stream-line-height stream)
+                      (stream-vertical-spacing stream)))))
      (t
       (draw-text* (sheet-medium stream) char cx (+ cy (stream-baseline stream)))
-      (setf*-stream-cursor-position (+ cx (stream-character-width stream char)) cy stream)))))
+      (setf (stream-cursor-position stream)
+            (values (+ cx (stream-character-width stream char)) cy))))))
 
 
 
@@ -79,7 +82,9 @@
   (with-slots (x y) cursor
     (values x y)))
 
-(defmethod setf*-cursor-position (nx ny (cursor cursor))
+(defgeneric* (setf cursor-position) (nx ny cursor))
+
+(defmethod* (setf cursor-position) (nx ny (cursor cursor))
   (with-slots (x y visibility) cursor
     (if visibility
 	(display-cursor cursor :erase))
@@ -157,16 +162,19 @@
 (defmethod stream-cursor-position ((stream extended-output-stream))
   (cursor-position (stream-text-cursor stream)))
 
-(defmethod setf*-stream-cursor-position (x y (stream extended-output-stream))
-  (setf*-cursor-position x y (stream-text-cursor stream)))
+(defgeneric* (setf stream-cursor-position) (x y stream))
+
+(defmethod* (setf stream-cursor-position) (x y (stream extended-output-stream))
+  (setf (cursor-position (stream-text-cursor stream)) (values x y)))
+
 (defmethod direct-setf*-stream-cursor-position (x y (stream extended-output-stream))
   ;; This method is used for updating cursor position after output to
   ;; the stream.
-  (setf*-cursor-position x y (stream-text-cursor stream)))
+  (setf (cursor-position (stream-text-cursor stream)) (values x y)))
 
 (defmethod stream-increment-cursor-position ((stream extended-output-stream) dx dy)
   (multiple-value-bind (x y) (cursor-position (stream-text-cursor stream))
-    (setf*-cursor-position (+ x dx) (+ y dy) (stream-text-cursor stream))))
+    (setf (cursor-position (stream-text-cursor stream)) (values (+ x dx) (+ y dy)))))
 
 (defmethod scroll-vertical ((stream extended-output-stream) dy)
   (multiple-value-bind (tx ty) (bounding-rectangle-position (sheet-region stream))
@@ -245,7 +253,7 @@ than one line of output."))
 			   :filled t)
 	  (setq baseline 0
 		height 0)
-	  (setf*-stream-cursor-position cx cy stream))
+	  (setf (stream-cursor-position stream) (values cx cy)))
 	 (t
 	  (let ((width (stream-character-width stream char :text-style text-style)))
 	    (when (>= (+ cx width) margin)
@@ -257,7 +265,7 @@ than one line of output."))
 		     (setq cx new-cx
 			   cy new-cy
 			   baseline current-baseline)
-                     (setf*-stream-cursor-position cx cy stream))))
+                     (setf (stream-cursor-position stream) (values cx cy)))))
 		(:scroll
 		 (scroll-horizontal stream width))
 		(:allow
@@ -331,7 +339,7 @@ than one line of output."))
 (defmacro with-room-for-graphics ((&optional (stream t)
 				   &key (move-cursor t) height record-type)
 				  &body body)
-  (declare (ignore stream move-cursor height record-type body)
+  (declare (ignore move-cursor height record-type body)
            (type symbol stream))
   (when (eq stream t)
     (setq stream '*standard-output*))

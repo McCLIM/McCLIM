@@ -1080,8 +1080,7 @@ During realization the child of the spacer will have as cordinates
     (clear-output-record output-history))
   (let ((cursor (stream-text-cursor pane)))
     (when cursor
-      (setf*-cursor-position 0 0 cursor)))
-;      (setf* (cursor-position cursor) (values 0 0))))
+      (setf (cursor-position cursor) (values 0 0))))
   (scroll-extent pane 0 0))
 
 (defmethod window-refresh ((pane clim-stream-pane))

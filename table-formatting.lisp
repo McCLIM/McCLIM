@@ -66,7 +66,7 @@ or an item list."))
                 (:top (- y top))
                 (:center (+ y (/ (- height top bottom) 2))))))
       (multiple-value-bind (cell-x cell-y) (output-record-position cell)
-        (setf*-output-record-position (+ cell-x dx) (+ cell-y dy) cell)))))
+        (setf (output-record-position cell) (values (+ cell-x dx) (+ cell-y dy)))))))
 
 ;;; STANDARD-CELL-OUTPUT-RECORD class
 (defclass standard-cell-output-record (cell-output-record
@@ -350,11 +350,11 @@ skips intervening non-table output record structures."))
            ,@body
            (finish-output ,stream))
          (adjust-table-cells ,table ,stream)
-         (setf*-output-record-position ,cursor-old-x ,cursor-old-y ,table)
+         (setf (output-record-position ,table) (values ,cursor-old-x ,cursor-old-y))
          (replay-output-record ,table ,stream)
          (if ,move-cursor
-             nil ;(setf*-cursor-position cursor-new-x cursor-new-y ,table) ;FIXME!!!
-           (setf*-stream-cursor-position ,cursor-old-x ,cursor-old-y ,stream)))
+             nil ;(setf (cursor-position ,table) (values cursor-new-x cursor-new-y)) ;FIXME!!!
+           (setf (stream-cursor-position ,stream) (values ,cursor-old-x ,cursor-old-y))))
        ,table)))
 
 ;;; Internal

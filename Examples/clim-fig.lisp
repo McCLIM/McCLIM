@@ -162,10 +162,10 @@
   (when (= (pointer-event-button event) +pointer-right-button+)
     (with-slots (first-point-x first-point-y selected-object) pane
       (when selected-object
-        (multiple-value-bind (old-x old-y) (climi::output-record-position selected-object)
-          (climi::setf*-output-record-position (+ old-x (- (pointer-event-x event) first-point-x))
-                                               (+ old-y (- (pointer-event-y event) first-point-y))
-                                               selected-object))
+        (multiple-value-bind (old-x old-y) (output-record-position selected-object)
+          (setf (output-record-position selected-object)
+                (values (+ old-x (- (pointer-event-x event) first-point-x))
+                        (+ old-y (- (pointer-event-y event) first-point-y)))))
         (with-output-recording-options (*standard-output* :record nil)
           (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
             (draw-rectangle* pane x1 y1 x2 y2 :ink +background-ink+))
