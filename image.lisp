@@ -538,8 +538,7 @@
 (defmethod handle-event ((pane image-pane) (event climi::window-repaint-event))
   (dispatch-repaint pane (window-event-region event)))
 
-(defmethod handle-repaint ((sheet image-pane) medium region)
-  (declare (ignore medium))
+(defmethod handle-repaint ((sheet image-pane) region)
   (repaint-sheet sheet region))
 
 ;; [Julien] As drawing-image mostly doesn't work, except drawaing everything (sigh !..)

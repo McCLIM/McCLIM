@@ -123,7 +123,7 @@
 
 (defclass pane (standard-sheet-input-mixin
 		temporary-medium-sheet-output-mixin
-		sheet-transformation-mixin sheet)
+		sheet-transformation-mixin basic-sheet)
   (
    #+ignore(foreground :initarg :foreground
 		       :initform +black+
@@ -1089,7 +1089,7 @@ During realization the child of the spacing will have as cordinates
    )
   (:documentation ""))
 
-(defmacro labelled ((&rest options) &body contents)
+(defmacro labelling ((&rest options) &body contents)
   `(make-instance 'label-pane ,@options :contents (list ,@contents)))
 
 

@@ -121,7 +121,7 @@ sheet-supports-only-one-child error to be signalled."))
 
 (defgeneric dispatch-repaint (sheet region))
 (defgeneric queue-repaint (sheet region))
-(defgeneric handle-repaint (sheet medium region))
+(defgeneric handle-repaint (sheet region))
 (defgeneric repaint-sheet (sheet region))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -142,6 +142,12 @@ sheet-supports-only-one-child error to be signalled."))
 ;;;; sheet protocol class
 
 (defclass sheet ()
+  ())
+
+(defun sheetp (x)
+  (typep x 'sheet))
+
+(defclass basic-sheet (sheet)
   ((region :type region
 	   :initarg :region
 	   :initform (make-bounding-rectangle 0 0 100 100)
@@ -153,47 +159,55 @@ sheet-supports-only-one-child error to be signalled."))
 ; Native region is volatile, and is only computed at the first request when it's equal to nil.
 ; Invalidate-cached-region method sets the native-region to nil.
 
-(defun sheetp (x)
-  (typep x 'sheet))
-
-(defmethod sheet-parent ((sheet sheet))
+(defmethod sheet-parent ((sheet basic-sheet))
   nil)
 
-(defmethod set-sheets-parent ((sheet sheet) (parent sheet))
-  (error "Attempting to set the parent of a sheet that has no parent"))
-
-(defmethod sheet-children ((sheet sheet))
+(defmethod sheet-children ((sheet basic-sheet))
   nil)
 
-(defmethod sheet-adopt-child ((sheet sheet) (child sheet))
+(defmethod sheet-adopt-child ((sheet basic-sheet) (child sheet))
   (error "SHEET attempting to adopt a child"))
+
+(defmethod sheet-adopt-child :after ((sheet basic-sheet) (child sheet))
+  (note-sheet-adopted child)
+  (when (sheet-grafted-p sheet)
+    (note-sheet-grafted child)))
 
 (define-condition sheet-is-not-child (error) ())
 
-(defmethod sheet-disown-child ((sheet sheet) (child sheet) &key (errorp t))
-  (when errorp
+(defmethod sheet-disown-child :before ((sheet basic-sheet) (child sheet) &key (errorp t))
+  (when (and (not (member child (sheet-children sheet))) errorp)
     (error 'sheet-is-not-child)))
 
-(defmethod sheet-siblings ((sheet sheet))
+(defmethod sheet-disown-child :after ((sheet basic-sheet) (child sheet) &key (errorp t))
+  (declare (ignore errorp))
+  (note-sheet-disowned child)
+  (when (sheet-grafted-p sheet)
+    (note-sheet-degrafted child)))
+
+(defmethod sheet-siblings ((sheet basic-sheet))
+  (when (not (sheet-parent sheet))
+    (error 'sheet-is-not-child))
   (remove sheet (sheet-children (sheet-parent sheet))))
 
-(defmethod sheet-enabled-children ((sheet sheet))
+(defmethod sheet-enabled-children ((sheet basic-sheet))
   (delete-if-not #'sheet-enabled-p (copy-list (sheet-children sheet))))
 
-(defmethod sheet-ancestor-p ((sheet sheet) (putative-ancestor sheet))
-  (eq sheet putative-ancestor))
+(defmethod sheet-ancestor-p ((sheet basic-sheet)
+			     (putative-ancestor sheet))
+  (or (eq sheet putative-ancestor)
+      (and (sheet-parent sheet)
+	   (sheet-ancestor-p (sheet-parent sheet) putative-ancestor))))
 
-(defmethod raise-sheet ((sheet sheet))
-  (setf (sheet-children sheet) (cons sheet (remove sheet (sheet-children sheet))))
-  sheet)
+(defmethod raise-sheet ((sheet basic-sheet))
+  (error 'sheet-is-not-child))
 
-(defmethod bury-sheet ((sheet sheet))
-  (setf (sheet-children sheet) (nconc (remove sheet (sheet-children sheet)) (list sheet)))
-  sheet)
+(defmethod bury-sheet ((sheet basic-sheet))
+  (error 'sheet-is-not-child))
 
 (define-condition sheet-ordering-underspecified (error) ())
 
-(defmethod reorder-sheets ((sheet sheet) new-ordering)
+(defmethod reorder-sheets ((sheet basic-sheet) new-ordering)
   (when (set-difference (sheet-children sheet) new-ordering)
     (error 'sheet-ordering-underspecified))
   (when (set-difference new-ordering (sheet-children sheet))
@@ -201,51 +215,99 @@ sheet-supports-only-one-child error to be signalled."))
   (setf (sheet-children sheet) new-ordering)
   sheet)
 
-(defmethod sheet-viewable-p ((sheet sheet))
+(defmethod sheet-viewable-p ((sheet basic-sheet))
   (and (sheet-parent sheet)
        (sheet-viewable-p (sheet-parent sheet))
        (sheet-enabled-p sheet)))
 
-(defmethod sheet-occluding-sheets ((sheet sheet) (child sheet))
+(defmethod sheet-occluding-sheets ((sheet basic-sheet) (child sheet))
   (labels ((fun (l)
 		(cond ((eq (car l) child) '())
-		      ((region-intersects-region-p
-			(sheet-region (car l)) (sheet-region child))
+		      ((and (sheet-enabled-p (car l))
+                            (region-intersects-region-p
+                             (sheet-region (car l)) (sheet-region child)))
 		       (cons (car l) (fun (cdr l))))
 		      (t (fun (cdr l))))))
     (fun (sheet-children sheet))))
 
-(defmethod sheet-transformation ((sheet sheet))
+(defmethod map-over-sheets (function (sheet basic-sheet))
+  (declare (dynamic-extent function))
+  (funcall function sheet)
+  (mapc #'(lambda (child) (map-over-sheets function child))
+        (sheet-children sheet))
+  nil)
+
+(defmethod (setf sheet-enabled-p) :after (enabled-p (sheet basic-sheet))
+  (if enabled-p
+      (note-sheet-enabled sheet)
+      (note-sheet-disabled sheet)))
+
+(defmethod sheet-transformation ((sheet basic-sheet))
   (error "Attempting to get the TRANSFORMATION of a SHEET that doesn't contain one"))
 
-(defmethod (setf sheet-transformation) (transformation (sheet sheet))
+(defmethod (setf sheet-transformation) (transformation (sheet basic-sheet))
   (declare (ignore transformation))
   (error "Attempting to set the TRANSFORMATION of a SHEET that doesn't contain one"))
 
-(defmethod map-sheet-position-to-parent ((sheet sheet) x y)
+(defmethod move-sheet ((sheet basic-sheet) x y)
+  (let ((transform (sheet-transformation sheet)))
+    (multiple-value-bind (old-x old-y)
+        (transform-position transform 0 0)
+      (setf (sheet-transformation sheet)
+            (compose-translation-with-transformation
+              transform (- x old-x) (- y old-y))))))
+
+(defmethod resize-sheet ((sheet basic-sheet) width height)
+  (setf (sheet-region sheet)
+        (make-bounding-rectangle 0 0 width height)))
+
+(defmethod move-and-resize-sheet ((sheet basic-sheet) x y width height)
+  (move-sheet sheet x y)
+  (resize-sheet sheet width height))
+
+(defmethod map-sheet-position-to-parent ((sheet basic-sheet) x y)
   (declare (ignore x y))
   (error "Sheet has no parent"))
 
-(defmethod map-sheet-position-to-child ((sheet sheet) x y)
+(defmethod map-sheet-position-to-child ((sheet basic-sheet) x y)
   (declare (ignore x y))
   (error "Sheet has no parent"))
 
-(defmethod map-sheet-rectangle*-to-parent ((sheet sheet) x1 y1 x2 y2)
+(defmethod map-sheet-rectangle*-to-parent ((sheet basic-sheet) x1 y1 x2 y2)
   (declare (ignore x1 y1 x2 y2))
   (error "Sheet has no parent"))
 
-(defmethod map-sheet-rectangle*-to-child ((sheet sheet) x1 y1 x2 y2)
+(defmethod map-sheet-rectangle*-to-child ((sheet basic-sheet) x1 y1 x2 y2)
   (declare (ignore x1 y1 x2 y2))
   (error "Sheet has no parent"))
 
-(defmethod child-containing-position ((sheet sheet) x y)
+(defmethod map-over-sheets-containing-position (function (sheet basic-sheet) x y)
+  (declare (dynamic-extent function))
+  (map-over-sheets #'(lambda (child)
+                       (multiple-value-bind (tx ty) (map-sheet-position-to-child child x y)
+                         (when (region-contains-position-p (sheet-region child) tx ty)
+                           (funcall function child))))
+                   sheet))
+
+
+(defmethod map-over-sheets-overlapping-region (function (sheet basic-sheet) region)
+  (declare (dynamic-extent function))
+  (map-over-sheets #'(lambda (child)
+                       (when (region-intersects-region-p
+                              region
+                              (transform-region (sheet-transformation child)
+                                                (sheet-region child)))
+                         (funcall function child)))
+                   sheet))
+
+(defmethod child-containing-position ((sheet basic-sheet) x y)
   (loop for child in (sheet-children sheet)
       do (multiple-value-bind (tx ty) (map-sheet-position-to-child child x y)
 	    (if (and (sheet-enabled-p child)
 		     (region-contains-position-p (sheet-region child) tx ty))
 		(return child)))))
 
-(defmethod children-overlapping-region ((sheet sheet) (region region))
+(defmethod children-overlapping-region ((sheet basic-sheet) (region region))
   (loop for child in (sheet-children sheet)
       if (and (sheet-enabled-p child)
 	      (region-intersects-region-p 
@@ -254,10 +316,10 @@ sheet-supports-only-one-child error to be signalled."))
 				 (sheet-region child))))
       collect child))
 
-(defmethod children-overlapping-rectangle* ((sheet sheet) x1 y1 x2 y2)
+(defmethod children-overlapping-rectangle* ((sheet basic-sheet) x1 y1 x2 y2)
   (children-overlapping-region sheet (make-rectangle* x1 y1 x2 y2)))
 
-(defmethod sheet-delta-transformation ((sheet sheet) (ancestor (eql nil)))
+(defmethod sheet-delta-transformation ((sheet basic-sheet) (ancestor (eql nil)))
   (cond ((sheet-parent sheet)
 	 (compose-transformations (sheet-transformation sheet)
 				  (sheet-delta-transformation
@@ -266,7 +328,7 @@ sheet-supports-only-one-child error to be signalled."))
   
 (define-condition sheet-is-not-ancestor (error) ())
 
-(defmethod sheet-delta-transformation ((sheet sheet) (ancestor sheet))
+(defmethod sheet-delta-transformation ((sheet basic-sheet) (ancestor sheet))
   (cond ((eq sheet ancestor) +identity-transformation+)
 	((sheet-parent sheet)
 	 (compose-transformations (sheet-transformation sheet)
@@ -274,62 +336,64 @@ sheet-supports-only-one-child error to be signalled."))
 				   (sheet-parent sheet) ancestor)))
 	(t (error 'sheet-is-not-ancestor))))
 
-(defmethod sheet-allocated-region ((sheet sheet) (child sheet))
+(defmethod sheet-allocated-region ((sheet basic-sheet) (child sheet))
   (reduce #'region-difference
-	  (mapc #'(lambda (child)
-		    (transform-region (sheet-transformation child)
-				      (sheet-region child)))
-		(cons child (sheet-occluding-sheets sheet child)))))
+	  (mapcar #'(lambda (child)
+                      (transform-region (sheet-transformation child)
+                                        (sheet-region child)))
+                  (cons child (sheet-occluding-sheets sheet child)))))
 
-(defmethod sheet-direct-mirror ((sheet sheet))
+(defmethod sheet-direct-mirror ((sheet basic-sheet))
   nil)
 
-(defmethod sheet-mirrored-ancestor ((sheet sheet))
+(defmethod sheet-mirrored-ancestor ((sheet basic-sheet))
   (if (sheet-parent sheet)
       (sheet-mirrored-ancestor (sheet-parent sheet))))
 
-(defmethod sheet-mirror ((sheet sheet))
+(defmethod sheet-mirror ((sheet basic-sheet))
   (let ((mirrored-ancestor (sheet-mirrored-ancestor sheet)))
     (if mirrored-ancestor
 	(sheet-direct-mirror mirrored-ancestor))))
 
-(defmethod graft ((sheet sheet))
+(defmethod graft ((sheet basic-sheet))
   nil)
 
-(defmethod graft ((sheet null))
-  (values))
+(defmethod note-sheet-grafted ((sheet basic-sheet))
+  (mapc #'note-sheet-grafted (sheet-children sheet)))
 
-(defmethod note-sheet-grafted ((sheet sheet))
+(defmethod note-sheet-degrafted ((sheet basic-sheet))
+  (mapc #'note-sheet-degrafted (sheet-children sheet)))
+
+(defmethod note-sheet-adopted ((sheet basic-sheet))
   nil)
 
-(defmethod note-sheet-degrafted ((sheet sheet))
+(defmethod note-sheet-disowned ((sheet basic-sheet))
   nil)
 
-(defmethod note-sheet-adopted ((sheet sheet))
-  (when (sheet-grafted-p sheet)
-    (note-sheet-grafted sheet)))
+(defmethod note-sheet-enabled ((sheet basic-sheet))
+  (mapc #'note-sheet-enabled (sheet-children sheet)))
 
-(defmethod note-sheet-disowned ((sheet sheet))
-  nil)
+(defmethod note-sheet-disabled ((sheet basic-sheet))
+  (mapc #'note-sheet-disabled (sheet-children sheet)))
 
-(defmethod note-sheet-region-changed ((sheet sheet))
+(defmethod note-sheet-region-changed ((sheet basic-sheet))
   nil) ;have to change
 
-(defmethod note-sheet-transformation-changed ((sheet sheet))
+(defmethod note-sheet-transformation-changed ((sheet basic-sheet))
   nil)
 
-(defmethod sheet-native-region :before ((sheet sheet))
+(defmethod sheet-native-region :before ((sheet basic-sheet))
   (with-slots (native-region) sheet
     (unless native-region
       (setf native-region (compute-native-region sheet)))))
 
-(defmethod sheet-device-region ((sheet sheet))
+(defmethod sheet-device-region ((sheet basic-sheet))
   (get-medium-device-region sheet))
 
-(defmethod compute-native-region ((sheet sheet))
+(defmethod compute-native-region ((sheet basic-sheet))
   (port-compute-native-region (port sheet) sheet))
 
-(defmethod invalidate-cached-regions ((sheet sheet))
+(defmethod invalidate-cached-regions ((sheet basic-sheet))
   (with-slots (native-region) sheet
     (when native-region
       (setf native-region nil)
@@ -337,22 +401,22 @@ sheet-supports-only-one-child error to be signalled."))
     (loop for child of-type sheet in (sheet-children sheet)
 	  do (invalidate-cached-regions child))))
 
-(defmethod (setf sheet-region) :after (region (sheet sheet))
+(defmethod (setf sheet-region) :after (region (sheet basic-sheet))
   (declare (ignore region))
   (note-sheet-region-changed sheet)
   ; when sheet-region changes, native-region and device-region change too. So, the old-values are false.
   (invalidate-cached-regions sheet))
 
-(defmethod sheet-native-transformation ((sheet sheet))
+(defmethod sheet-native-transformation ((sheet basic-sheet))
   (error "Attempting to get the native-transformation of a generic sheet"))
 
-(defmethod sheet-device-transformation ((sheet sheet))
+(defmethod sheet-device-transformation ((sheet basic-sheet))
   (error "Attempting to get the device-transformation of a generic sheet"))
 
-(defmethod compute-native-transformation ((sheet sheet))
+(defmethod compute-native-transformation ((sheet basic-sheet))
   (error "Attempting to compute the native-transformation of a generic sheet"))
 
-(defmethod invalidate-cached-transformations ((sheet sheet))
+(defmethod invalidate-cached-transformations ((sheet basic-sheet))
   (error "Attempting to invalidate native- and device-transformation of a generic sheet"))
 
 
@@ -364,10 +428,6 @@ sheet-supports-only-one-child error to be signalled."))
 (defclass sheet-parent-mixin ()
   ((parent :initform nil :accessor sheet-parent)))
 
-
-(defmethod set-sheets-parent ((child sheet-parent-mixin) (parent sheet))
-  (setf (slot-value child 'parent) parent))
-
 (define-condition sheet-already-has-parent (error) ())
 (define-condition sheet-is-ancestor (error) ())
 
@@ -378,31 +438,11 @@ sheet-supports-only-one-child error to be signalled."))
 (defmethod sheet-adopt-child :after (sheet (child sheet-parent-mixin))
   (setf (sheet-parent child) sheet))
 
-(defmethod sheet-disown-child :before (sheet
-				       (child sheet-parent-mixin)
-				       &key (errorp t))
-  (when (and errorp (not (eq sheet (sheet-parent child))))
-    (error 'sheet-is-not-child)))
-
 (defmethod sheet-disown-child :after (sheet
 				      (child sheet-parent-mixin)
 				      &key (errorp t))
-  (declare (ignore errorp))
-  (setf (sheet-parent child) nil)
-  (note-sheet-disowned child)
-  (when (sheet-grafted-p sheet)
-    (note-sheet-degrafted child)))
-
-(defmethod sheet-siblings ((sheet sheet-parent-mixin))
-  (when (not (sheet-parent sheet))
-    (error 'sheet-is-not-child))
-  (remove sheet (sheet-children (sheet-parent sheet))))
-
-(defmethod sheet-ancestor-p ((sheet sheet-parent-mixin)
-			     (putative-ancestor sheet))
-  (or (eq sheet putative-ancestor)
-      (and (sheet-parent sheet)
-	   (sheet-ancestor-p (sheet-parent sheet) putative-ancestor))))
+  (declare (ignore sheet errorp))
+  (setf (sheet-parent child) nil))
 
 (defmethod raise-sheet ((sheet sheet-parent-mixin))
   (when (not (sheet-parent sheet))
@@ -425,13 +465,13 @@ sheet-supports-only-one-child error to be signalled."))
   (transform-position (sheet-transformation sheet) x y))
 
 (defmethod map-sheet-position-to-child ((sheet sheet-parent-mixin) x y)
-  (transform-position (invert-transformation (sheet-transformation sheet)) x y))
+  (untransform-position (sheet-transformation sheet) x y))
 
 (defmethod map-sheet-rectangle*-to-parent ((sheet sheet-parent-mixin) x1 y1 x2 y2)
   (transform-rectangle* (sheet-transformation sheet) x1 y1 x2 y2))
 
 (defmethod map-sheet-rectangle*-to-child ((sheet sheet-parent-mixin) x1 y1 x2 y2)
-  (transform-rectangle* (invert-transformation (sheet-transformation sheet)) x1 y1 x2 y2))
+  (untransform-rectangle* (sheet-transformation sheet) x1 y1 x2 y2))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -455,34 +495,27 @@ sheet-supports-only-one-child error to be signalled."))
 ;;; sheet single child mixin
 
 (defclass sheet-single-child-mixin ()
-  ((children :initform nil :initarg :child :accessor sheet-children)))
+  ((child :initform nil :accessor sheet-child)))
+
+(defmethod sheet-children ((sheet sheet-single-child-mixin))
+  (list (sheet-child sheet)))
 
 (define-condition sheet-supports-only-one-child (error) ())
 
 (defmethod sheet-adopt-child :before ((sheet sheet-single-child-mixin)
-				      child)
-  (declare (ignorable child))
-  (when (sheet-children sheet) (error 'sheet-supports-only-one-child))
-  (when (sheet-parent child) (error 'sheet-already-has-parent)))
+				      (child sheet-parent-mixin))
+  (when (sheet-child sheet)
+    (error 'sheet-supports-only-one-child)))
 
 (defmethod sheet-adopt-child ((sheet sheet-single-child-mixin)
 			      (child sheet-parent-mixin))
-  (setf (sheet-children sheet) (list child)))
-
-(defmethod sheet-adopt-child :after ((sheet sheet-single-child-mixin)
-				     (child sheet-parent-mixin))
-  (declare (ignorable sheet))
-  (note-sheet-adopted child))
+  (setf (sheet-child sheet) child))
 
 (defmethod sheet-disown-child ((sheet sheet-single-child-mixin)
 			       (child sheet-parent-mixin)
 			       &key (errorp t))
   (declare (ignore errorp))
-  (setf (sheet-children sheet) nil))
-
-(defmethod reorder-sheets ((sheet sheet-single-child-mixin) new-order)
-  (declare (ignorable sheet new-order))
-  nil)
+  (setf (sheet-child sheet) nil))
 
 (defmethod raise-sheet-internal (sheet (parent sheet-single-child-mixin))
   (declare (ignorable sheet parent))
@@ -491,12 +524,6 @@ sheet-supports-only-one-child error to be signalled."))
 (defmethod bury-sheet-internal (sheet (parent sheet-single-child-mixin))
   (declare (ignorable sheet parent))
   (values))
-
-(defmethod note-sheet-grafted ((sheet sheet-single-child-mixin))
-  (note-sheet-grafted (first (sheet-children sheet))))
-
-(defmethod note-sheet-degrafted ((sheet sheet-single-child-mixin))
-  (note-sheet-degrafted (first (sheet-children sheet))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -508,14 +535,7 @@ sheet-supports-only-one-child error to be signalled."))
 
 (defmethod sheet-adopt-child ((sheet sheet-multiple-child-mixin)
 			      (child sheet-parent-mixin))
-  (when (sheet-parent child)
-    (error 'sheet-already-has-parent))
   (push child (sheet-children sheet)))
-
-(defmethod sheet-adopt-child :after ((sheet sheet-multiple-child-mixin)
-				     (child sheet-parent-mixin))
-  (declare (ignorable sheet))
-  (note-sheet-adopted child))
 
 (defmethod sheet-disown-child ((sheet sheet-multiple-child-mixin)
 			       (child sheet-parent-mixin)
@@ -530,12 +550,6 @@ sheet-supports-only-one-child error to be signalled."))
 (defmethod bury-sheet-internal (sheet (parent sheet-multiple-child-mixin))
   (setf (sheet-children parent)
 	(append (delete sheet (sheet-children parent)) (list  sheet))))
-
-(defmethod note-sheet-grafted ((sheet sheet-multiple-child-mixin))
-  (mapcar #'note-sheet-grafted (sheet-children sheet)))
-
-(defmethod note-sheet-degrafted ((sheet sheet-multiple-child-mixin))
-  (mapcar #'note-sheet-degrafted (sheet-children sheet)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -577,30 +591,27 @@ sheet-supports-only-one-child error to be signalled."))
   ((transformation :initform +identity-transformation+
 		   :reader sheet-transformation)))
 
-(defclass sheet-translation-transformation-mixin (sheet-native-transformation-mixin)
+(defclass sheet-transformation-mixin (sheet-native-transformation-mixin)
   ((transformation :initform +identity-transformation+
 		   :initarg :transformation
 		   :accessor sheet-transformation)))
+
+(defclass sheet-translation-transformation-mixin (sheet-transformation-mixin)
+  ())
 
 (defmethod (setf sheet-transformation) :before ((transformation transformation)
 						(sheet sheet-translation-transformation-mixin))
   (if (not (translation-transformation-p transformation))
       (error "Attempting to set the SHEET-TRANSFORMATION of a SHEET-TRANSLATION-TRANSFORMATION-MIXIN to a non translation transformation")))
 
-(defclass sheet-y-inverting-transformation-mixin (sheet-native-transformation-mixin)
-  ((transformation :initform (make-transformation 0 0 0 -1 0 0)
-		   :initarg :transformation
-		   :accessor sheet-transformation)))
+(defclass sheet-y-inverting-transformation-mixin (sheet-transformation-mixin)
+  ()
+  (:default-initargs :transformation (make-transformation 1 0 0 -1 0 0)))
 
 (defmethod (setf sheet-transformation) :before ((transformation transformation)
 						(sheet sheet-y-inverting-transformation-mixin))
   (if (not (y-inverting-transformation-p transformation))
       (error "Attempting to set the SHEET-TRANSFORMATION of a SHEET-Y-INVERTING-TRANSFORMATION-MIXIN to a non Y inverting transformation")))
-
-(defclass sheet-transformation-mixin (sheet-native-transformation-mixin)
-  ((transformation :initform +identity-transformation+
-		   :initarg :transformation
-		   :accessor sheet-transformation)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -633,48 +644,3 @@ sheet-supports-only-one-child error to be signalled."))
 
 (defmethod (setf sheet-transformation) :after (transformation (sheet mirrored-sheet-mixin))
   (port-set-sheet-transformation (port sheet) sheet transformation))
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; repaint protocol classes
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; standard repainting mixin
-
-(defclass standard-repainting-mixin () ())
-
-(defmethod dispatch-repaint ((sheet standard-repainting-mixin) region)
-  (queue-repaint sheet region))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; immediate repainting mixin
-
-(defclass immediate-repainting-mixin () ())
-
-(defmethod dispatch-repaint ((sheet immediate-repainting-mixin) region)
-  (handle-repaint sheet nil region))
-
-(defmethod handle-repaint ((sheet immediate-repainting-mixin) medium region)
-  (declare (ignore medium region))
-  (repaint-sheet sheet (sheet-region sheet))
-  (loop for child in (sheet-children sheet)
-	for region = (sheet-region child)
-	do (repaint-sheet child region)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; sheet mute repainting mixin
-
-(defclass sheet-mute-repainting-mixin () ())
-
-(defmethod dispatch-repaint ((sheet sheet-mute-repainting-mixin) region)
-  (handle-repaint sheet nil region))
-
-(defmethod repaint-sheet ((sheet sheet-mute-repainting-mixin) region)
-  (declare (ignorable sheet region))
-  (format *debug-io* "repaint ~S~%" sheet)
-  (values))
-
