@@ -224,7 +224,8 @@
                                              (ash (ldb (byte 8 0) fg) 8)
                                              #xFFFF)
                                        0 0 1 1))
-        ;;(xlib:draw-point source-pixmap gc 0 0)
+        (setf (xlib::picture-clip-mask (drawable-picture mirror))
+              (xlib::gcontext-clip-mask gc))
         (xlib::render-composite-glyphs
          (drawable-picture mirror)
          (display-the-glyph-set display)
@@ -453,3 +454,17 @@
 		;; to clx :] we stick with :unsorted until that can be sorted out
 		(setf (xlib:gcontext-clip-mask gc :unsorted) rect-seq)))))
       gc)))
+
+;;;
+;;; This fixes the worst offenders making the assumption that drawing
+;;; would be idempotent.
+;;;
+
+(defmethod clim:handle-repaint :around ((s clim:sheet-with-medium-mixin) r)
+  (let ((m (clim:sheet-medium s))
+        (r (clim:bounding-rectangle
+            (clim:region-intersection r (clim:sheet-region s)))))
+    (unless (eql r clim:+nowhere+)
+      (clim:with-drawing-options (m :clipping-region r)
+        (clim:draw-design m r :ink clim:+background-ink+)
+        (call-next-method s r)))))
