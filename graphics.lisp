@@ -480,7 +480,7 @@
 		   line-unit line-dashes line-joint-shape))
   (with-medium-options (sheet args)
     (multiple-value-bind (x y) (point-position center)
-	(medium-draw-oval* medium x y filled))))
+	(medium-draw-oval* medium x y x-radius y-radius filled))))
 
 (defun draw-oval* (sheet x y x-radius y-radius
 			&rest args
