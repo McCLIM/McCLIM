@@ -330,7 +330,7 @@
   (setf (gadget-thumb-size pane) value))
 
 (defmethod gadget-up-region ((pane pixie-scroll-bar-pane))
-  (with-bounding-rectangle* (minx miny maxx ma)
+  (with-bounding-rectangle* (minx miny maxx maxy)
       (transform-region (vertical-gadget-orientation-transformation pane)
                         (sheet-region pane))
     (declare (ignore maxy))
