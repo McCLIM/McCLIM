@@ -705,12 +705,10 @@
 			  (object)
 			  (list ,@command-args)))))))))
 
-;;; XXX temporarily make name default to t so we can debug command line
-;;; processing with some interesting examples
 (defmacro define-command (name-and-options args &body body)
   (unless (listp name-and-options)
     (setq name-and-options (list name-and-options)))
-  (destructuring-bind (func &key command-table (name t) menu keystroke)
+  (destructuring-bind (func &key command-table name menu keystroke)
       name-and-options
     (multiple-value-bind (required-args keyword-args)
 	(loop for arg-tail on args

@@ -620,11 +620,11 @@ advised of the possiblity of such damages.
    (:clim-1.0 (clim::position-window-near-carefully
 	       (clim:frame-top-level-window frame)
 	       left bottom))
-   ((and :clim-2 (not :mcclim)) (clim:position-sheet-carefully
-				 (clim:frame-top-level-sheet frame)
-				 left bottom))
-   (:mcclim
-     nil)))
+   ((and :clim-2 (not :mcclim))
+    (clim:position-sheet-carefully (clim:frame-top-level-sheet frame)
+				   left bottom))
+   ;; uhh...
+   (:mcclim nil)))
 
 (defmethod get-frame-pane (frame pane-name)
   #FEATURE-CASE

@@ -43,41 +43,43 @@
                     (funcall cont stream))))
       (with-bounding-rectangle* (left top right bottom) record
         (with-identity-transformation (medium)
-          (funcall (or (gethash shape *border-types*)
-                       (error "Border shape ~S not defined." shape))
-                   :stream stream
-                   :record record
-                   :left left :top top
-                   :right right :bottom bottom
-                   :allow-other-keys t))))))
+	  (with-keywords-removed (drawing-options (:shape :move-cursor))
+	    (apply (or (gethash shape *border-types*)
+		       (error "Border shape ~S not defined." shape))
+		   :stream stream
+		   :record record
+		   :left left :top top
+		   :right right :bottom bottom
+		   :allow-other-keys t
+		   drawing-options)))))))
 
 (defmacro define-border-type (shape arglist &body body)
   (check-type arglist list)
   (loop for arg in arglist
-     do (check-type arg symbol)
-        (assert (member arg '(&key stream record left top right bottom)
-                        :test #'string-equal)))
+     do (check-type arg symbol))
+  ;; The Franz User guide implies that &key isn't needed.
+  (pushnew '&key arglist)
   `(setf (gethash ,shape *border-types*)
          (lambda ,arglist ,@body)))
 
 
 ;;;; Standard border types
 
-(define-border-type :rectangle (&key stream left top right bottom)
+(define-border-type :rectangle (stream left top right bottom)
   (let ((gap 3)) ; FIXME
     (draw-rectangle* stream
                      (- left gap) (- top gap)
                      (+ right gap) (+ bottom gap)
                      :filled nil)))
 
-(define-border-type :oval (&key stream left top right bottom)
+(define-border-type :oval (stream left top right bottom)
   (let ((gap 3)) ; FIXME
     (draw-oval* stream
                 (/ (+ left right) 2) (/ (+ top bottom) 2)
                 (+ (/ (- right left) 2) gap) (+ (/ (- bottom top) 2) gap)
                 :filled nil)))
 
-(define-border-type :drop-shadow (&key stream left top right bottom)
+(define-border-type :drop-shadow (stream left top right bottom)
   (let* ((gap 3) ; FIXME?
 	 (offset 4)
 	 (left-edge (- left gap))
@@ -96,7 +98,7 @@
 		     (+ right-edge offset) (+ bottom-edge offset)
 		     :filled T)))
 
-(define-border-type :underline (&key stream record)
+(define-border-type :underline (stream record)
   (labels ((fn (record)                 
              (loop for child across (output-record-children record) do
                (typecase child

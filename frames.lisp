@@ -92,7 +92,8 @@
             :accessor %frame-manager)
    (keyboard-input-focus :initform nil
                          :accessor keyboard-input-focus)
-   (properties :initarg :properties
+   (properties :accessor %frame-properties
+	       :initarg :properties
 	       :initform nil)
    (top-level :initform '(default-frame-top-level)
 	      :initarg :top-level
@@ -102,7 +103,8 @@
 			 :accessor frame-hilited-presentation)
    (user-supplied-geometry :initform nil
 			   :initarg :user-supplied-geometry)
-   (process :reader frame-process :initform (current-process))))
+   (process :reader frame-process :initform (current-process))
+   (client-settings :accessor client-settings :initform nil)))
 
 ;;; Generic operations
 ; (defgeneric frame-name (frame))
@@ -167,8 +169,10 @@ FRAME-EXIT condition."))
 (defgeneric frame-replay (frame stream &optional region))
 (defgeneric notify-user (frame message &key associated-window title
                          documentation exit-boxes name style text-style))
-;(defgeneric frame-properties (frame property))
-;(defgeneric (setf frame-properties) (value frame property))
+(defgeneric frame-properties (frame property))
+(defgeneric (setf frame-properties) (value frame property))
+(defgeneric (setf client-setting) (value frame setting))
+(defgeneric reset-frame (frame &rest client settings))
 
 ; extension
 (defgeneric frame-schedule-timer-event (frame sheet delay token))
@@ -310,6 +314,16 @@ input focus. This is a McCLIM extension."))
          (window-clear sheet))
        (redisplay-frame-pane frame sheet :force-p force-p)))
    (frame-top-level-sheet frame)))
+
+(defmethod frame-replay (frame stream &optional region)
+  (declare (ignore frame))
+  (stream-replay stream region))
+
+(defmethod frame-properties ((frame application-frame) property)
+  (getf (%frame-properties frame) property))
+
+(defmethod (setf frame-properties) (value (frame application-frame) property)
+  (setf (getf (%frame-properties frame) property) value))
 
 ;;; Command loop interface
 
@@ -1088,10 +1102,10 @@ input focus. This is a McCLIM extension."))
 (defmethod (setf keyboard-input-focus) :after (focus frame)
   (set-port-keyboard-focus focus (port frame)))
 
-;;; This might do something more useful someday.
+(defmethod (setf client-setting) (value frame setting)
+  (setf (getf (client-settings frame) setting) value))
 
-(defgeneric reset-frame (frame &rest args))
-
-(defmethod reset-frame ((frame t) &rest args)
-  (declare (ignore args))
-  nil)
+(defmethod reset-frame (frame &rest client-settings)
+  (declare (ignore frame))
+  (loop for (setting value) on client-settings by #'cddr
+	do (setf (client-setting frame setting) value)))
