@@ -59,7 +59,7 @@ toolkits such as GTK, Tk, and Motif.
 But there is much more to using CLIM.  In CLIM, the upper layer with
 panes and gadgets is written on top of a basic layer containing more
 basic functionality in the form of sheets.  Objects in the upper layer
-are typically instances of classed derived from those of the lower
+are typically instances of classes derived from those of the lower
 layer.  Thus, nothing prevents a user from adding new gadgets and
 panes by writing code that uses the sheet layer. 
 
@@ -186,7 +186,7 @@ CLIM generalizes the concept of a hierarchy of window in a windowing
 system in several different ways.  A window in a windowing system
 generalizes to a \gloss{sheet} in CLIM.  More precisely, a window in a
 windowing system generalizes to the \gloss{sheet region} of a sheet.
-A CLIM sheet in an abstract concept with an infinite \gloss{drawing
+A CLIM sheet is an abstract concept with an infinite \gloss{drawing
 plane} and the \gloss{region} of the sheet is the potentially visible
 part of that drawing plane. 
 
@@ -697,7 +697,7 @@ probably the simplest one.
 \chapter{Panes}
 
 Panes are subclasses of sheets.  Some panes are \gloss{layout panes}
-that determine the size and position its children according to rules
+that determine the size and position of its children according to rules
 specific to each particular type of layout pane.  Examples of layout
 panes are vertical and horizontal boxes, tables etc.
 
@@ -711,7 +711,7 @@ mean that:
   rotation component, only translation and scaling.
 \end{itemize0}
 
-Of course, the specification is unclear hear.  Panes are subclasses of
+Of course, the specification is unclear here.  Panes are subclasses of
 sheets, and sheets don't have a shape per-se.  Their \emph{regions}
 may have a shape, but the sheet itself certainly does not.  
 
@@ -971,7 +971,7 @@ pixel value.
 
 This function returns the maximum number of levels of gray that can be
 represented by the image.  The value returned by this function minus
-one would yield a color value of 255,255,55 if it were the value of a
+one would yield a color value of 255,255,255 if it were the value of a
 pixel.
 
 \defgeneric {gray-image-max-level} {gray-level-image}
@@ -1210,7 +1210,7 @@ A transformation used to transform \gloss{user coordinates} into
 Mike McDonald started developing McCLIM in 1998.  His initial
 objective was to be able to run the famous ``address book'' demo, and
 to distribute the first version when this demo ran.  With this in
-mind, he work ``horizontally'', i.e., writing enough of the code for
+mind, he worked ``horizontally'', i.e., writing enough of the code for
 many of the chapters of the specification to be able to run the
 address book example.  In particular, Mike wrote the code for chapters
 15 (Extended Stream Output), 16 (Output Recording), and 28
@@ -1231,7 +1231,7 @@ code and writing large parts of chapters 7 (Properties of Sheets) and
 Mirrored Sheets), 10 (Drawing Options), 11 (Text Styles), 12
 (Graphics), and 13 (Drawing in Color).
 
-Early 2000, Robert got in touch with Mike and eventually convinced him
+In early 2000, Robert got in touch with Mike and eventually convinced him
 to distribute his code, also according to the LGPL.  This was a major
 turning point for the project, as the code base was now sufficiently
 large that a number of small demos were actually running.  Robert
@@ -1288,7 +1288,7 @@ to make major progress on McCLIM.  Julien's first task was to create a
 large demo that showed many of the existing features of McCLIM (a
 ``killer app'').  It was decided to use Gsharp since Julien was already
 familiar with the application and since it was a sufficiently
-complcated application that most of the features would be tested.  An
+complicated application that most of the features would be tested.  An
 additional advantage of a large application was to serve as a ``smoke
 test'' to run whenever substantial modifications to the code base had
 been made.  As part of the Gsharp project, Julien first worked on
