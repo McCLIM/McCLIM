@@ -415,6 +415,7 @@ STREAM in the direction DIRECTION."
                              (ecase direction
                                (:horizontal width)
                                (:vertical height))))
+    #+nil ; WITH-OUTPUT-TO-OUTPUT-RECORD not yet defined as a macro
     (function (let ((record (with-output-to-output-record (stream)
                               (funcall specification))))
                 (ecase direction

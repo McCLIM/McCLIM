@@ -39,6 +39,7 @@ whether accept creates a new record or just returns the default value.
                                 #',accepting-values-continuation
                                 ,@args))))
 
+#+nil ; CLHS 3.2.2.3 "undefined consequences for multiple definitions"
 (defun invoke-accepting-values
     (stream body
      &key own-window exit-boxes initially-select-query-identifier

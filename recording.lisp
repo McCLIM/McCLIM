@@ -323,20 +323,26 @@ unspecified. "))
     `(progn
        (defmethod output-record-equal and ((record ,record-type)
 					   (record2 ,record-type))
-	 (macrolet ((if-supplied (var &body supplied-body)
-		      (declare (ignore var))
+	 (macrolet ((if-supplied ((var &optional (type t)) &body supplied-body)
+		      (declare (ignore var type))
 		      `(progn ,@supplied-body)))
 	   (with-slots ,slot-names
 	       record2
 	     ,@body)))
        (defmethod match-output-records-1 and ((record ,record-type)
 					      &key ,@key-args)
-	 (macrolet ((if-supplied (var &body supplied-body)
+	 (macrolet ((if-supplied ((var &optional (type t)) &body supplied-body)
 		      (let ((supplied-var (cdr (assoc var ',key-arg-alist))))
 			(unless supplied-var
 			  (error "Unknown slot ~S" var))
 			`(or (null ,supplied-var)
-			     (progn ,@supplied-body)))))
+			     ,@(if (eq type t)
+				   `((progn ,@supplied-body))
+				   `((if (typep ,var ',type)
+					 (progn ,@supplied-body)
+					 (error 'type-error
+						:datum ,var
+						:expected-type ',type))))))))
 	   ,@body)))
     
     ))
@@ -890,7 +896,7 @@ were added."
   (setf (medium-ink medium) (graphics-state-ink state)))
 
 (defrecord-predicate gs-ink-mixin (ink)
-  (if-supplied ink
+  (if-supplied (ink)
     (design-equalp (slot-value record 'ink) ink)))
 
 (defclass gs-clip-mixin (graphics-state)
@@ -938,13 +944,8 @@ were added."
   #+nil
   (setf (medium-clipping-region medium) (graphics-state-clip state)))
 
-(defmethod match-output-records-1 and ((record gs-clip-mixin)
-				       &key (clip nil clipp))
-  (or clipp
-      (region-equal (graphics-state-clip record) clip)))
-
 (defrecord-predicate gs-clip-mixin ((:clipping-region clip))
-  (if-supplied clip
+  (if-supplied (clip)
     (region-equal (slot-value record 'clip) clip)))
 
 ;;; 16.3.2. Graphics Displayed Output Records
@@ -969,7 +970,7 @@ were added."
   (setf (medium-line-style medium) (graphics-state-line-style state)))
 
 (defrecord-predicate gs-line-style-mixin (line-style)
-  (if-supplied line-style
+  (if-supplied (line-style)
     (line-style-equalp (slot-value record 'line-style) line-style)))
 
 (defgeneric graphics-state-line-style-border (record medium)
@@ -993,7 +994,7 @@ were added."
   (setf (medium-text-style medium) (graphics-state-text-style state)))
 
 (defrecord-predicate gs-text-style-mixin (text-style)
-  (if-supplied text-style
+  (if-supplied (text-style)
     (text-style-equalp (slot-value record 'text-style) text-style)))
 
 (defclass standard-graphics-displayed-output-record
@@ -1010,10 +1011,20 @@ were added."
       (region-equal record bounding-rectangle)
       (multiple-value-bind (my-x1 my-y1 my-x2 my-y2)
 	  (bounding-rectangle* record)
-	(and (or (null x1-p) (coordinate= my-x1 x1))
-	     (or (null y1-p) (coordinate= my-y1 y1))
-	     (or (null x2-p) (coordinate= my-x2 x2))
-	     (or (null y2-p) (coordinate= my-y2 y2))))))
+	(macrolet ((coordinate=-or-lose (key mine)
+		     `(if (typep ,key 'coordinate)
+		          (coordinate= ,mine ,key)
+		          (error 'type-error
+			         :datum ,key
+			         :expected-type 'coordinate))))
+	  (and (or (null x1-p)
+		   (coordinate=-or-lose x1 my-x1))
+	       (or (null y1-p)
+		   (coordinate=-or-lose y1 my-y1))
+	       (or (null x2-p)
+		   (coordinate=-or-lose x2 my-x2))
+	       (or (null y2-p)
+		   (coordinate=-or-lose y2 my-y2)))))))
 
 (defmethod output-record-equal and ((record standard-displayed-output-record)
 				    (record2 standard-displayed-output-record))
@@ -1151,9 +1162,9 @@ were added."
 	(incf point-y dy)))))
 
 (defrecord-predicate draw-point-output-record (point-x point-y)
-  (and (if-supplied point-x
+  (and (if-supplied (point-x coordinate)
 	 (coordinate= (slot-value record 'point-x) point-x))
-       (if-supplied point-y
+       (if-supplied (point-y coordinate)
 	 (coordinate= (slot-value record 'point-y) point-y))))
 
 (def-grecording draw-points ((coord-seq-mixin gs-line-style-mixin) coord-seq)
@@ -1192,13 +1203,13 @@ were added."
 
 (defrecord-predicate draw-line-output-record (point-x1 point-y1
 					      point-x2 point-y2)
-  (and (if-supplied point-x1
+  (and (if-supplied (point-x1 coordinate)
 	 (coordinate= (slot-value record 'point-x1) point-x1))
-       (if-supplied point-y1
+       (if-supplied (point-y1 coordinate)
 	 (coordinate= (slot-value record 'point-y1) point-y1))
-       (if-supplied point-x2
+       (if-supplied (point-x2 coordinate)
 	 (coordinate= (slot-value record 'point-x2) point-x2))
-       (if-supplied point-y2
+       (if-supplied (point-y2 coordinate)
 	 (coordinate= (slot-value record 'point-y2) point-y2))))
 
 (def-grecording draw-lines ((coord-seq-mixin gs-line-style-mixin) coord-seq)
@@ -1326,9 +1337,9 @@ were added."
      coord-seq closed filled line-style border (medium-miter-limit medium))))
 
 (defrecord-predicate draw-polygon-output-record (closed filled)
-  (and (if-supplied closed
+  (and (if-supplied (closed)
 	 (eql (slot-value record 'closed) closed))
-       (if-supplied filled
+       (if-supplied (filled)
 	 (eql (slot-value record 'filled) filled))))
 
 (def-grecording draw-rectangle ((gs-line-style-mixin)
@@ -1354,15 +1365,15 @@ were added."
 	(incf bottom dy)))))
 
 (defrecord-predicate draw-rectangle-output-record (left top right bottom filled)
-  (and (if-supplied left
+  (and (if-supplied (left coordinate)
 	 (coordinate= (slot-value record 'left) left))
-       (if-supplied top
+       (if-supplied (top coordinate)
 	 (coordinate= (slot-value record 'top) top))
-       (if-supplied right
+       (if-supplied (right coordinate)
 	 (coordinate= (slot-value record 'right) right))
-       (if-supplied bottom
+       (if-supplied (bottom coordinate)
 	 (coordinate= (slot-value record 'bottom) bottom))
-       (if-supplied filled
+       (if-supplied (filled)
 	 (eql (slot-value record 'filled) filled))))
 
 (def-grecording draw-ellipse ((gs-line-style-mixin)
@@ -1395,10 +1406,10 @@ were added."
 	(incf center-y dy)))))
 
 (defrecord-predicate draw-ellipse-output-record (center-x center-y)
-  (and (if-supplied center-x
-	   (coordinate= (slot-value record 'center-x) center-x))
-       (if-supplied center-y
-	   (coordinate= (slot-value record 'center-y) center-y))))
+  (and (if-supplied (center-x coordinate)
+	 (coordinate= (slot-value record 'center-x) center-x))
+       (if-supplied (center-y coordinate)
+	 (coordinate= (slot-value record 'center-y) center-y))))
 
 (def-grecording draw-text ((gs-text-style-mixin) string point-x point-y start end
 			   align-x align-y toward-x toward-y transform-glyphs)
@@ -1448,25 +1459,25 @@ were added."
 (defrecord-predicate draw-text-output-record
     (string start end point-x point-y align-x align-y toward-x toward-y
      transform-glyphs)
-  (and (if-supplied string
+  (and (if-supplied (string)
 	 (string= (slot-value record 'string) string))
-       (if-supplied start
+       (if-supplied (start)
 	 (eql (slot-value record 'start) start))
-       (if-supplied end
+       (if-supplied (end)
 	 (eql (slot-value record 'end) end))
-       (if-supplied point-x
+       (if-supplied (point-x coordinate)
 	 (coordinate= (slot-value record 'point-x) point-x))
-       (if-supplied point-y
+       (if-supplied (point-y coordinate)
 	 (coordinate= (slot-value record 'point-y) point-y))
-       (if-supplied align-x
+       (if-supplied (align-x)
 	 (eq (slot-value record 'align-x) align-x))
-       (if-supplied align-y
+       (if-supplied (align-y)
 	 (eq (slot-value record 'align-y) align-y))
-       (if-supplied toward-x
+       (if-supplied (toward-x coordinate)
 	 (coordinate= (slot-value record 'toward-x) toward-x))
-       (if-supplied toward-y
+       (if-supplied (toward-y coordinate)
 	 (coordinate= (slot-value record 'toward-y) toward-y))
-       (if-supplied transform-glyphs
+       (if-supplied (transform-glyphs)
 	 (eq (slot-value record 'transform-glyphs) transform-glyphs))))
 
 ;;; 16.3.3. Text Displayed Output Record
