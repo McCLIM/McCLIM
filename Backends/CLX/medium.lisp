@@ -281,8 +281,11 @@
   (let ((font (text-style-to-X-font (port medium) text-style)))
     (+ (xlib:font-ascent font) (xlib:font-descent font))))
 
+(defmethod text-style-character-width (text-style (medium clx-medium) char)
+  (xlib:char-width (text-style-to-X-font (port medium) text-style) (char-code char)))
+
 (defmethod text-style-width (text-style (medium clx-medium))
-  (xlib:char-width (text-style-to-X-font (port medium) text-style) (char-code #\m)))
+  (text-style-character-width text-style medium #\m))
 
 (defun translate (src src-start src-end afont dst dst-start)
   ;; This is for replacing the clx-translate-default-function
@@ -293,9 +296,9 @@
 	   (type xlib:array-index src-start src-end dst-start)
 	   (type (or null xlib:font) afont)
 	   (type vector dst))
-  (declare (xlib::clx-values integer
-			     (or null integer xlib:font)
-			     (or null integer)))
+  #+cmucl(declare (xlib::clx-values integer
+				    (or null integer xlib:font)
+				    (or null integer)))
   (let ((min-char-index (xlib:font-min-char afont))
 	(max-char-index (xlib:font-max-char afont)))
     afont

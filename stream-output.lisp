@@ -155,32 +155,36 @@
 (defun extended-output-stream-p (x)
   (typep x 'extended-output-stream))
 
-(defmethod initialize-instance :after ((stream extended-output-stream) &rest args)
+(defclass standard-extended-output-stream (extended-output-stream)
+  ()
+  )
+
+(defmethod initialize-instance :after ((stream standard-extended-output-stream) &rest args)
   (declare (ignore args))
   (setf (stream-text-cursor stream) (make-instance 'standard-text-cursor :sheet stream)))
 
-(defmethod stream-cursor-position ((stream extended-output-stream))
+(defmethod stream-cursor-position ((stream standard-extended-output-stream))
   (cursor-position (stream-text-cursor stream)))
 
 (defgeneric* (setf stream-cursor-position) (x y stream))
 
-(defmethod* (setf stream-cursor-position) (x y (stream extended-output-stream))
+(defmethod* (setf stream-cursor-position) (x y (stream standard-extended-output-stream))
   (setf (cursor-position (stream-text-cursor stream)) (values x y)))
 
-(defmethod direct-setf*-stream-cursor-position (x y (stream extended-output-stream))
+(defmethod direct-setf*-stream-cursor-position (x y (stream standard-extended-output-stream))
   ;; This method is used for updating cursor position after output to
   ;; the stream.
   (setf (cursor-position (stream-text-cursor stream)) (values x y)))
 
-(defmethod stream-increment-cursor-position ((stream extended-output-stream) dx dy)
+(defmethod stream-increment-cursor-position ((stream standard-extended-output-stream) dx dy)
   (multiple-value-bind (x y) (cursor-position (stream-text-cursor stream))
     (setf (cursor-position (stream-text-cursor stream)) (values (+ x dx) (+ y dy)))))
 
-(defmethod scroll-vertical ((stream extended-output-stream) dy)
+(defmethod scroll-vertical ((stream standard-extended-output-stream) dy)
   (multiple-value-bind (tx ty) (bounding-rectangle-position (sheet-region stream))
     (scroll-extent stream tx (+ ty dy))))
 
-(defmethod scroll-horizontal ((stream extended-output-stream) dx)
+(defmethod scroll-horizontal ((stream standard-extended-output-stream) dx)
   (multiple-value-bind (tx ty) (bounding-rectangle-position (sheet-region stream))
     (scroll-extent stream (+ tx dx) ty)))
 
@@ -195,7 +199,7 @@
        (if visible
 	   (setf (cursor-visibility cursor) t)))))
 
-(defmethod stream-wrap-line ((stream extended-output-stream))
+(defmethod stream-wrap-line ((stream standard-extended-output-stream))
   (let ((margin (stream-text-margin stream)))
     (multiple-value-bind (cx cy) (stream-cursor-position stream)
       (declare (ignore cx))
@@ -214,7 +218,7 @@ than one line of output."))
        (draw-text* (sheet-medium stream) line
                    cx (+ cy baseline vspace)))))
 
-(defmethod stream-write-char ((stream extended-output-stream) char)
+(defmethod stream-write-char ((stream standard-extended-output-stream) char)
   (let* ((cursor (stream-text-cursor stream))
 	 (visible (cursor-visibility cursor))
 	 (medium (sheet-medium stream))
@@ -276,7 +280,7 @@ than one line of output."))
     (if visible
 	(setf (cursor-visibility cursor) t))))
 
-(defmethod stream-write-string ((stream extended-output-stream) string
+(defmethod stream-write-string ((stream standard-extended-output-stream) string
 				&optional (start 0) end)
   (if (null end)
       (setq end (length string)))
@@ -285,7 +289,7 @@ than one line of output."))
 	    for char = (aref string i)
 	    do (stream-write-char stream char))))
 
-;(defmethod stream-write-string ((stream extended-output-stream) string
+;(defmethod stream-write-string ((stream standard-extended-output-stream) string
 ;				&optional (start 0) end)
 ;  (if (null end)
 ;      (setq end (length string)))
@@ -294,12 +298,12 @@ than one line of output."))
 ;	    for char = (aref string i)
 ;	    do (do-char))))
 
-(defmethod stream-character-width ((stream extended-output-stream) char &key (text-style nil))
-  (port-character-width (port stream)
-			(or text-style (medium-text-style (sheet-medium stream)))
-			char))
+(defmethod stream-character-width ((stream standard-extended-output-stream) char &key (text-style nil))
+  (text-style-character-width (or text-style (medium-text-style (sheet-medium stream)))
+			      (sheet-medium stream)
+			      char))
 
-(defmethod stream-string-width ((stream extended-output-stream) string
+(defmethod stream-string-width ((stream standard-extended-output-stream) string
 				&key (start 0) (end nil) (text-style nil))
   (if (null text-style)
       (setq text-style (medium-text-style (sheet-medium stream))))
@@ -318,21 +322,23 @@ than one line of output."))
     (let ((width (stream-character-width stream string :text-style text-style)))
       (values width width)))))
 
-(defmethod stream-text-margin ((stream extended-output-stream))
+(defmethod stream-text-margin ((stream standard-extended-output-stream))
   (with-slots (margin) stream
     (or margin
 	(- (port-mirror-width (port stream) (or (stream-default-view stream) stream))
 	   6))))
 
-(defmethod stream-line-height ((stream extended-output-stream) &key (text-style nil))
-  (port-line-height (port stream) (or text-style (medium-text-style (sheet-medium stream)))))
+(defmethod stream-line-height ((stream standard-extended-output-stream) &key (text-style nil))
+  (+ (text-style-height (or text-style (medium-text-style (sheet-medium stream)))
+			(sheet-medium stream))
+     (stream-vertical-spacing stream)))
 
-(defmethod stream-line-column ((stream extended-output-stream))
+(defmethod stream-line-column ((stream standard-extended-output-stream))
   (multiple-value-bind (x y) (stream-cursor-position stream)
     (declare (ignore y))
     (floor x (stream-string-width stream " "))))
 
-(defmethod stream-start-line-p ((stream extended-output-stream))
+(defmethod stream-start-line-p ((stream standard-extended-output-stream))
   (multiple-value-bind (x y) (stream-cursor-position stream)
     (zerop x)))
 
