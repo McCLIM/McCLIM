@@ -30,7 +30,7 @@
 
 (defmethod* (setf cursor-position) (nx ny (cursor screen-area-cursor))
   (declare (ignore nx ny))
-  (when (cursor-visibility cursor)
+  (when (cursor-state cursor)
     (error "screen-area-cursor ~S must not be visible when position is
   set"
 	   cursor))
@@ -75,7 +75,7 @@
 			 :x-position x
 			 :y-position y))))
   (initialize-area-from-buffer area (buffer area))
-  (setf (cursor-visibility (cursor area)) t)
+  (setf (cursor-visibility (cursor area)) :on)
   (tree-recompute-extent area))
 
 (defmethod line-text-width ((area simple-screen-area)
@@ -193,13 +193,13 @@
 	   ((medium-transformation medium)
             +identity-transformation+) ; Is it necessary?
            )
-      (when (and cursor (cursor-visibility cursor))
+      (when (and cursor (cursor-state cursor))
 	(climi::display-cursor cursor :erase))
       (multiple-value-bind (x y) (output-record-position record)
 	(declare (ignore y))
 	(draw-text* stream (current-contents record)
                     x (slot-value record 'baseline)))
-      (when (and cursor (cursor-visibility cursor))
+      (when (and cursor (cursor-state cursor))
 	(climi::flip-screen-cursor cursor)))))
 
 (defmethod output-record-refined-position-test ((record screen-line) x y)
@@ -319,7 +319,7 @@
   (dbl-kill-after (lines area))
   (setf (line (area-bp-start area)) nil)
   (setf (line (area-bp-end area)) nil)
-  (letf (((cursor-visibility (cursor area)) nil))
+  (letf (((cursor-visibility (cursor area)) :off))
     (initialize-area-from-buffer area (buffer area)))
   (with-bounding-rectangle* (x1 y1 x2 y2)
       area
@@ -461,6 +461,7 @@
 (defmethod redisplay-line ((line screen-line) stream)
   (let* ((medium (sheet-medium stream))
 	 (style (text-style (output-record-parent line))))
+    (declare (ignorable style))
     (with-slots (current-contents ascent descent baseline cursor buffer-line)
 	line
       (multiple-value-bind (unchanged
@@ -469,8 +470,8 @@
 			    line-unchanged-from-start
 			    line-unchanged-from-end)
 	  (get-line-differences line)
-	(when (and cursor (cursor-visibility cursor))
-	  (setf (cursor-visibility cursor) nil))
+	(when (and cursor (cursor-state cursor))
+	  (setf (cursor-visibility cursor) :off))
 	(unless unchanged
 	  (let* ((area (editable-area line))
 		 (start-width (if (> current-unchanged-from-start 0)
@@ -531,7 +532,7 @@
 	;; Now deal with the cursor
 	(line-update-cursor line stream)
 	(when cursor
-	  (setf (cursor-visibility cursor) t))))))
+	  (setf (cursor-visibility cursor) :on))))))
 
 (defun maybe-scroll (cursor)
   (let ((pane (cursor-sheet cursor))
@@ -568,7 +569,7 @@
 			    current-contents
 			    :end point-pos
 			    :text-style (text-style (editable-area line))))))
-	  (letf (((cursor-visibility cursor) nil))
+	  (letf (((cursor-visibility cursor) :off))
 	    (when (and (slot-boundp cursor 'screen-line)
 		       (screen-line cursor)
 		       (not (eq line (screen-line cursor))))
