@@ -305,9 +305,8 @@ Only those records that overlap REGION are displayed."))
 
 (defmethod add-output-record :before (child (record output-record-mixin))
   (when (null (output-record-children record))
-    (with-bounding-rectangle* (min-x min-y max-x max-y) child
     (with-slots (x1 y1 x2 y2) record
-      (setf (values x1 y1 x2 y2) (bounding-rectangle* child))))))
+      (setf (values x1 y1 x2 y2) (bounding-rectangle* child)))))
 
 (defmethod add-output-record :after (child (record output-record))
   (recompute-extent-for-new-child record child))
@@ -669,13 +668,11 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
 (defmethod scroll-vertical :around ((stream output-recording-stream) dy)
   (declare (ignore dy))
   (with-output-recording-options (stream :record nil)
-    (declare (ignore stream))
     (call-next-method)))
 
 (defmethod scroll-horizontal :around ((stream output-recording-stream) dx)
   (declare (ignore dx))
   (with-output-recording-options (stream :record nil)
-    (declare (ignore stream))
     (call-next-method)))
 
 (defmethod repaint-sheet ((stream output-recording-stream) region)
