@@ -186,6 +186,12 @@
                     :override-redirect override-redirect
                     :backing-store backing-store
                     :gravity :north-west
+                    ;; Evil Hack -- but helps enormously (Has anybody
+                    ;; a good idea how to sneak the concept of
+                    ;; bit-gravity into CLIM)? --GB
+                    :bit-gravity (if (typep sheet 'climi::extended-output-stream)
+                                     :north-west
+                                     :forget)
                     :background pixel
                     :event-mask (apply #'xlib:make-event-mask
                                        event-mask))))
