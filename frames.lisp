@@ -112,8 +112,8 @@
 			       (+ 100 (space-requirement-height space))))
     (allocate-space (frame-top-level-sheet frame)
 		    (space-requirement-width space) (space-requirement-height space)))
-  (realize-mirror (port frame) (frame-top-level-sheet frame))
-  (calculate-standard-panes frame))
+  (sheet-adopt-child (graft frame) (frame-top-level-sheet frame)))
+;  (calculate-standard-panes frame))
 
 (defmethod find-pane-named ((frame application-frame) name)
   (loop for pane in (frame-panes frame)
@@ -249,7 +249,7 @@
 	 (t-l-s (make-pane-1 fm frame 'composite-pane
 			     :name 'top-level-sheet)))
     (setf (slot-value frame 'top-level-sheet) t-l-s)
-    (sheet-adopt-child (graft frame) t-l-s)
+;    (sheet-adopt-child (graft frame) t-l-s)
     (generate-panes fm frame)))
   
 (defmethod disown-frame ((fm frame-manager) (frame application-frame))
