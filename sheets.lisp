@@ -775,6 +775,21 @@ that this might be different from the sheet's native region."
                                                  (effective-mirror-region ancestor)))
       (sheet-mirror-region sheet))))
 
+;;; Internal interface for enabling/disabling motion hints
+
+(defgeneric sheet-motion-hints (sheet)
+  (:documentation "Returns t if motion hints are enabled for this sheet"))
+
+(defmethod sheet-motion-hints ((sheet mirrored-sheet-mixin))
+  (when (sheet-direct-mirror sheet)
+    (port-motion-hints (port sheet) sheet)))
+
+(defgeneric (setf sheet-motion-hints) (val sheet))
+
+(defmethod (setf sheet-motion-hints) (val (sheet mirrored-sheet-mixin))
+  (when (sheet-direct-mirror sheet)
+    (setf (port-motion-hints (port sheet) sheet) val)))
+
 ;;;; Coordinate Swizzling
 
 ;; This implements what I call "coordinate swizzling", the illusion that

@@ -600,3 +600,20 @@
       (port sheet)
     (when (eq port-pointer-sheet sheet)
       (setq port-pointer-sheet nil))))
+
+(defgeneric stream-pointer-position (stream &key pointer))
+
+(defmethod stream-pointer-position ((stream standard-extended-input-stream)
+				    &key (pointer
+					  (port-pointer (port stream))))
+  (multiple-value-bind (x y)
+      (pointer-position pointer)
+    (let ((pointer-sheet (port-pointer-sheet (port stream))))
+      (if (eq stream pointer-sheet)
+	  (values x y)
+	  ;; Is this right?
+	  (multiple-value-bind (native-x native-y)
+	      (transform-position (sheet-native-transformation stream) x y)
+	    (untransform-position (sheet-native-transformation pointer-sheet)
+				  native-x
+				  native-y))))))

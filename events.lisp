@@ -167,6 +167,14 @@
   (
    ))
 
+(defclass motion-hint-mixin ()
+  ()
+  (:documentation "A mixin class for events that are a motion hint;
+    pointer location coordinates need to be fetched explicitly."))
+
+(defclass pointer-motion-hint-event (pointer-motion-event motion-hint-mixin)
+  ())
+
 (defclass pointer-boundary-event (pointer-motion-event)
   (
    ))

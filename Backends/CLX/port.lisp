@@ -271,7 +271,7 @@
 				    :button-press :button-release
 				    :enter-window :leave-window
 				    :structure-notify
-				    :pointer-motion
+				    :pointer-motion :pointer-motion-hint
 				    :button-motion
 				    :owner-grab-button)
                       :map (sheet-enabled-p sheet)))
@@ -353,6 +353,24 @@
 (defmethod destroy-port :before ((port clx-port))
   (xlib:close-display (clx-port-display port)))
 
+(defmethod port-motion-hints ((port clx-port) (sheet mirrored-sheet-mixin))
+  (let ((event-mask (xlib:window-event-mask (sheet-direct-mirror sheet))))
+    (if (zerop (logand event-mask
+		       #.(xlib:make-event-mask :pointer-motion-hint)))
+	nil
+	t)))
+
+(defmethod (setf port-motion-hints)
+    (val (port clx-port) (sheet mirrored-sheet-mixin))
+  (let* ((mirror (sheet-direct-mirror sheet))
+	 (event-mask (xlib:window-event-mask mirror)))
+    (setf (xlib:window-event-mask mirror)
+	  (if val
+	      (logior event-mask #.(xlib:make-event-mask :pointer-motion-hint))
+	      (logandc2 event-mask
+			#.(xlib:make-event-mask :pointer-motion-hint)))))
+  val)
+
 ; think about rewriting this macro to be nicer
 (defmacro peek-event ((display &rest keys) &body body)
   (let ((escape (gensym)))
@@ -402,8 +420,10 @@
 ;; correct size.
 
 (defun event-handler (&rest event-slots
-                      &key display window event-key code state mode time width height x y root-x root-y data
-                           override-redirect-p send-event-p
+                      &key display window event-key code state mode time
+		      width height x y root-x root-y
+		      data override-redirect-p send-event-p
+		      hint-p
                       &allow-other-keys)
   ;; NOTE: Although it might be tempting to compress (consolidate)
   ;; events here, this is the wrong place. In our current architecture
@@ -507,14 +527,33 @@
 	(:destroy-notify
 	 (make-instance 'window-destroy-event :sheet sheet))
 	(:motion-notify
-         (make-instance 'pointer-motion-event :pointer 0 :button code
-                        :x x :y y
-                        :graft-x root-x
-                        :graft-y root-y
-                        :sheet sheet
-			:modifier-state (x-event-state-modifiers *clx-port*
-								 state)
-			:timestamp time))
+	 (let ((modifier-state (x-event-state-modifiers *clx-port*
+							state)))
+	   (if hint-p
+	       (multiple-value-bind (x y same-screen-p child mask
+				     root-x root-y)
+		   (xlib:query-pointer window)
+		 (declare (ignore mask))
+		 ;; If not same-screen-p or the child is different
+		 ;; from the original event, assume we're way out of date
+		 ;; and don't return an event.
+		 (when (and same-screen-p (not child))
+		   (make-instance 'pointer-motion-hint-event
+				  :pointer 0 :button code
+				  :x x :y y
+				  :graft-x root-x :graft-y root-y
+				  :sheet sheet
+				  :modifier-state modifier-state
+				  :timestamp time)))
+	       (progn
+		 (make-instance 'pointer-motion-event
+				:pointer 0 :button code
+				:x x :y y
+				:graft-x root-x
+				:graft-y root-y
+				:sheet sheet
+				:modifier-state modifier-state
+				:timestamp time)))))
         ;;
 	((:exposure :display)
          ;; Notes:

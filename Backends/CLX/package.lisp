@@ -21,6 +21,7 @@
                 #:port-grafts
                 #:port-enable-sheet
                 #:port-disable-sheet
+		#:port-motion-hints
                 ;;
                 #:port-set-mirror-region
                 #:port-set-mirror-transformation
@@ -71,6 +72,7 @@
                 #:MIRRORED-PIXMAP
                 #:WINDOW-DESTROY-EVENT
                 #:POINTER-UNGRAB-EVENT
+		#:POINTER-MOTION-HINT-EVENT
                 #:DEVICE-FONT-TEXT-STYLE
                 ;;
                 ) )

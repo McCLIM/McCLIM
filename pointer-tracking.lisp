@@ -41,6 +41,7 @@
     (setq sheet '*standard-output*))
   (check-type sheet symbol)
   (loop
+     with motion-events = (assoc :pointer-motion body)
      for event-name in '(:pointer-motion
                          :presentation
                          :pointer-button-press
@@ -58,8 +59,11 @@
      finally
      (return `(flet ,bindings
                 (declare (dynamic-extent ,@handler-names))
-                (invoke-tracking-pointer ,sheet ,@handlers
-                                         ,@args)))))
+	        ,(if motion-events
+		     `(letf (((sheet-motion-hints ,sheet) nil))
+		        (invoke-tracking-pointer ,sheet ,@handlers ,@args))
+		     `(invoke-tracking-pointer ,sheet ,@handlers ,@args))))))
+
 
 (defun invoke-tracking-pointer
     (sheet

@@ -1883,7 +1883,8 @@
    "IMAGE-PANE"
    "DRAW-LABEL"
    "COMPOSE-SPACE-AUX"
-   "SIMPLE-EVENT-LOOP"))
+   "SIMPLE-EVENT-LOOP"
+   "POINTER-MOTION-HINT-EVENT"))
 
 (defpackage "CLIM-INTERNALS"
   (:use #:clim #:clim-sys #:clim-extensions #:clim-lisp)
