@@ -66,7 +66,13 @@ USER(2): (load-system :clim)
 Warning: ADDRESS is defined more than once as a type in the file
          /home/mikemac/src/Lisp/McCLIM/examples/address-book.lisp.
 T
-USER(3): (load "test")
-; Loading ./test.lisp
-T
-USER(4): (clim-demo::address-book)
+
+
+  To run the demos:
+
+USER(3): (clim-demo::calculator)
+
+  or
+
+USER(3): (clim-demo::colorslider)
+
