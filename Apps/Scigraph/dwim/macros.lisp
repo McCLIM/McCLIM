@@ -644,9 +644,9 @@ advised of the possiblity of such damages.
 (defmacro with-redisplayable-output
 	  ((&key stream
 		 (unique-id nil unique-id-p)
-		 (id-test #'eq)
+		 (id-test '#'eq)
 		 (cache-value nil cache-value-p)
-		 (cache-test #'eql) copy-cache-value)
+		 (cache-test '#'eql) copy-cache-value)
 	   &body body)
   #+clim `(if (clim:extended-input-stream-p ,stream)
 	      (clim:updating-output

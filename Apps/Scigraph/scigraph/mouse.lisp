@@ -90,7 +90,7 @@ advised of the possiblity of such damages.
 	(when stream
 	  (window-clear stream)
 	  (format stream string)))))
-   ((and :clim-2 (not :mcclim)))
+   ((and :clim-2 (not :mcclim))
     (progn
       (ignore stream)
       (clim:frame-manager-display-pointer-documentation-string
@@ -100,7 +100,9 @@ advised of the possiblity of such damages.
        string))
    (:mcclim
     (progn
-      (clim:window-cla))))
+      (ignore stream)
+      (clim-extensions:frame-display-pointer-documentation-string
+       *application-frame* clim:*pointer-documentation-output* string))))
    ((not :clim) nil)))
 
 (defmacro with-mouse-documentation ((window string) &body body)

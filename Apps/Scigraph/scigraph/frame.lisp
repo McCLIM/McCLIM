@@ -134,7 +134,10 @@ class.  So you should do the following (in the ws package, 'natch):
 		;; in combination with a coordinate sorted set output history.  In
 		;; our case, graph annotations sometimes get put into the history wrong.
 		;; At that point, they lose their mouse sensitivity.
-		:OUTPUT-RECORD (MAKE-INSTANCE 'CLIM:R-TREE-OUTPUT-HISTORY)
+		#-mcclim
+		:OUTPUT-RECORD
+		#-mcclim
+		(MAKE-INSTANCE 'CLIM:R-TREE-OUTPUT-HISTORY)
 		))))
   #+clim-2
   (:pointer-documentation t)

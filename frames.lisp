@@ -897,6 +897,7 @@ input focus. This is a McCLIM extension."))
 (defmethod frame-compare-pointer-documentation-state
     ((frame standard-application-frame) input-context stream
      old-state new-state)
+  (declare (ignore input-context stream))
   (equal old-state new-state))
 
 (defgeneric frame-print-pointer-documentation
@@ -993,6 +994,24 @@ input focus. This is a McCLIM extension."))
 					     event)
 	  (setq frame-documentation-state new-state))))))
 
+;;; A hook for applications to draw random strings in the
+;;; *pointer-documentation-output* without screwing up the real pointer
+;;; documentation too badly.
+
+(defgeneric frame-display-pointer-documentation-string
+    (frame documentation-stream string))
+
+(defmethod frame-display-pointer-documentation-string
+    ((frame standard-application-frame) documentation-stream string)
+  (when *pointer-documentation-output*
+    (with-accessors ((frame-documentation-state frame-documentation-state))
+        frame
+      (unless (frame-compare-pointer-documentation-state
+	       frame nil documentation-stream frame-documentation-state string)
+	(window-clear documentation-stream)
+	(write-string string documentation-stream)
+	(setq frame-documentation-state string)))))
+
 (defmethod frame-input-context-track-pointer
     ((frame standard-application-frame)
      input-context
@@ -1032,7 +1051,7 @@ input focus. This is a McCLIM extension."))
 	(progn
 	  (maybe-unhighlight nil)
 	  (setf (frame-hilited-presentation frame) nil)))))
-  
+
 (defmethod frame-input-context-track-pointer :before
     ((frame standard-application-frame) input-context
      (stream output-recording-stream) event)

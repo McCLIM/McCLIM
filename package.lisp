@@ -1888,7 +1888,8 @@
    #:box-adjuster-gadget
    #:compose-space-aux
    #:simple-event-loop
-   #:pointer-motion-hint-event))
+   #:pointer-motion-hint-event
+   #:frame-display-pointer-documentation-string))
 
 (defpackage :clim-internals
   (:use :clim :clim-sys :clim-extensions :clim-lisp)
