@@ -1467,7 +1467,8 @@
    ))
 
 (defpackage :CLIM
-  (:use :clim-extensions :clim-internals :common-lisp)
+  (:use #+nil :clim-extensions ; will use it later
+        :clim-internals :common-lisp)
   )
 
 ;(let ((climi-package (find-package :climi))
@@ -1561,7 +1562,12 @@
    "DRAW-LABEL"
    "COMPOSE-SPACE-AUX"))
 
+(use-package :clim-extensions :clim)
+
 (defpackage :CLIM-DEMO
   (:use :clim-extensions :clim :common-lisp)
   #+excl(:import-from :excl compile-system load-system exit)
   )
+
+(defpackage :CLIM-USER
+  (:use :clim :common-lisp))
