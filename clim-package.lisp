@@ -1150,6 +1150,7 @@
 	   "WITH-TEXT-FACE"
 	   "WITH-TEXT-FAMILY"
 	   "WITH-TEXT-SIZE"
+	   "WITH-TRANSLATION"
 	   "WRITE-TOKEN"
 	   ) ; :export
   )

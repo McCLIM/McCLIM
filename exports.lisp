@@ -1256,6 +1256,7 @@
 		     with-text-family
 		     with-text-size
 		     with-text-style
+		     with-translation
 		     write-token
 
 		     ;;; X11 Color names - some are NOT in the spec - mikemac
