@@ -296,6 +296,13 @@
           (and (coordinate/= dx1 0) (coordinate= dy1 0)
                (coordinate= dx2 0) (coordinate/= dy2 0))))))
 
+(defmethod y-inverting-transformation-p ((transformation standard-transformation))
+  (multiple-value-bind (mxx mxy myx myy) (get-transformation transformation)
+    (and (coordinate= mxx 1)
+         (coordinate= mxy 0)
+         (coordinate= myx 0)
+         (coordinate= myy -1))))
+
 (defmethod compose-transformations ((transformation2 standard-transformation) (transformation1 standard-transformation))
   ;; (compose-transformations A B)x = (A o B)x = ABx
   (multiple-value-bind (a1 b1 d1 e1 c1 f1) (get-transformation transformation1)
