@@ -2058,8 +2058,7 @@ and must never be nil."))
 	 :documentation "The Goatee area used for text editing.")
    (previous-focus :accessor previous-focus :initform nil
 		   :documentation
-		   "The pane that previously had keyboard focus")
-   (exposed :accessor exposed :initform nil))
+		   "The pane that previously had keyboard focus"))
   (:default-initargs
     :text-style *default-text-field-text-style*))
 
@@ -2073,12 +2072,14 @@ and must never be nil."))
   #-nil (setf (medium-text-style (sheet-medium pane))
 	      (slot-value pane 'text-style)))
 
-(defmethod handle-repaint :after ((pane text-field-pane) region)
+;; Is there really a benefit to waiting until the first painting to
+;; create the goatee instance? Why not use INITIALIZE-INSTANCE?
+(defmethod handle-repaint :before ((pane text-field-pane) region)
   (declare (ignore region))
-  (unless (exposed pane)
+  (unless (area pane)
     (multiple-value-bind (cx cy)
-	(stream-cursor-position pane)
-      (setf (cursor-visibility (stream-text-cursor pane)) nil)
+	(stream-cursor-position pane)      
+      (setf (cursor-visibility (stream-text-cursor pane)) nil)      
       (setf (area pane) (make-instance 'goatee:simple-screen-area
 				       :area-stream pane
 				       :x-position cx
