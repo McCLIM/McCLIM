@@ -28,8 +28,7 @@
 
 (defclass clx-medium (basic-medium)
   ((gc :initform nil)
-   )
-  )
+   ) )
 
 
 ;;; secondary methods for changing text styles and line styles
@@ -214,25 +213,53 @@
                                0 (* 2 pi)) into arcs
                 finally (xlib:draw-arcs mirror gc arcs t))))))
 
+(defun round-coordinate (x)
+  "Function used for rounding coordinates."
+  ;; We use "mercantile rounding", instead of the CL round to nearest
+  ;; even number, when in doubt.
+  ;;
+  ;; Reason: As the CLIM drawing model is specified, you quite often
+  ;; want to operate with coordinates, which are multiples of 1/2. 
+  ;; Using CL:ROUND gives you "random" results. Using "mercantile
+  ;; rounding" gives you consistent results.
+  ;;
+  (floor (+ x 1/2)))
+
 (defmethod medium-draw-line* ((medium clx-medium) x1 y1 x2 y2)
   (let ((tr (sheet-native-transformation (medium-sheet medium))))
     (with-transformed-position (tr x1 y1)
       (with-transformed-position (tr x2 y2)
         (with-CLX-graphics (medium)
-          (xlib:draw-line mirror gc (round x1) (round y1) (round x2) (round y2)))))))
+          (let ((x1 (round-coordinate x1))
+                (y1 (round-coordinate y1))
+                (x2 (round-coordinate x2))
+                (y2 (round-coordinate y2)))
+            (cond ((and (<= #x-8000 x1 #x7FFF) (<= #x-8000 y1 #x7FFF)
+                        (<= #x-8000 x2 #x7FFF) (<= #x-8000 y2 #x7FFF))
+                   (xlib:draw-line mirror gc x1 y1 x2 y2))
+                  (t
+                   (let ((line (region-intersection (make-rectangle* #x-8000 #x-8000 #x7FFF #x7FFF)
+                                                    (make-line* x1 y1 x2 y2))))
+                     (when (linep line)
+                       (multiple-value-bind (x1 y1) (line-start-point* line)
+                         (multiple-value-bind (x2 y2) (line-end-point* line)
+                           (xlib:draw-line mirror gc
+                                           (min #x7FFF (max #x-8000 (round-coordinate x1)))
+                                           (min #x7FFF (max #x-8000 (round-coordinate y1)))
+                                           (min #x7FFF (max #x-8000 (round-coordinate x2)))
+                                           (min #x7FFF (max #x-8000 (round-coordinate y2))))))))))))))))
 
 (defmethod medium-draw-lines* ((medium clx-medium) coord-seq)
-  (with-transformed-positions ((sheet-native-transformation (medium-sheet medium))
-                               coord-seq)
-    (with-CLX-graphics (medium)
-      (let ((points (apply #'vector (mapcar #'round coord-seq))))
-        (xlib:draw-segments mirror gc points)))))
+  (map-repeated-sequence nil 4
+                         (lambda (x1 y1 x2 y2)
+                           (medium-draw-line* medium x1 y1 x2 y2))
+                         coord-seq))
 
 (defmethod medium-draw-polygon* ((medium clx-medium) coord-seq closed filled)
   (assert (evenp (length coord-seq)))
   (with-transformed-positions ((sheet-native-transformation (medium-sheet medium))
                                coord-seq)
-    (setq coord-seq (mapcar #'round coord-seq))
+    (setq coord-seq (mapcar #'round-coordinate coord-seq))
     (with-CLX-graphics (medium)
       (xlib:draw-lines mirror gc
                        (if closed
@@ -250,10 +277,17 @@
               (rotatef left right))
           (if (< bottom top)
               (rotatef top bottom))
-          (xlib:draw-rectangle mirror gc
-                               (round left) (round top)
-                               (round (- right left)) (round (- bottom top))
-                               filled))))))
+          (let ((left   (round-coordinate left))
+                (top    (round-coordinate top))
+                (right  (round-coordinate right))
+                (bottom (round-coordinate bottom)))
+            ;; To clip rectangles, we just need to clamp the cooridnates
+            (xlib:draw-rectangle mirror gc
+                                        (max #x-8000 (min #x7FFF left))
+                                        (max #x-8000 (min #x7FFF top))
+                                        (max 0 (min #xFFFF (- right left)))
+                                        (max 0 (min #xFFFF (- bottom top)))
+                                        filled) ))))))
 
 (defmethod medium-draw-rectangles* ((medium clx-medium) position-seq filled)
   (assert (evenp (length position-seq)))
@@ -404,7 +438,7 @@
                     (:center (+ y baseline (- (floor text-height 2))))
                     (:baseline y)
                     (:bottom (+ y baseline (- text-height)))))))
-      (xlib:draw-glyphs mirror gc (round x) (round y) string
+      (xlib:draw-glyphs mirror gc (round-coordinate x) (round-coordinate y) string
                         :start start :end end
                         :translate #'translate))))
 
@@ -447,3 +481,6 @@
   ;; CLX-MEDIUM right here? --GB
   (with-double-buffering (sheet)
     (funcall continuation sheet)))
+
+;;;;
+
