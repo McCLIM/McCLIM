@@ -145,9 +145,10 @@
 (defmethod medium-device-region :before ((medium medium))
   (with-slots (device-region) medium
     (unless device-region
-      (region-intersection (transform-region (medium-device-transformation medium)
-					     (medium-clipping-region medium))
-			   (sheet-native-region (medium-sheet medium))))))
+      (setf device-region
+            (region-intersection (transform-region (medium-device-transformation medium)
+                                                   (medium-clipping-region medium))
+                                 (sheet-native-region (medium-sheet medium)))))))
 
 (defun get-medium-device-region (sheet)
   (medium-device-region (sheet-medium sheet)))
