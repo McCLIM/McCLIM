@@ -189,40 +189,46 @@
   ())
 
 (define-condition transformation-underspecified (transformation-error)
-  ((coords :initarg :coords))
-  (:report (lambda (self sink)
-             (with-slots (coords) self
-               (apply #'format sink "The three points (~D,~D), (~D,~D), and (~D,~D) are propably collinear."
-                      (subseq coords 0 6))))))
+  ((coords :initarg :coords
+	   :reader transformation-error-coords))
+  (:report
+   (lambda (self sink)
+     (apply #'format sink "The three points (~D,~D), (~D,~D), and (~D,~D) are propably collinear."
+	    (subseq (transformation-error-coords self) 0 6)))))
 
 (define-condition reflection-underspecified (transformation-error)
-  ((coords :initarg :coords)
-   (why :initarg :why :initform nil))
+  ((coords :initarg :coords
+	   :reader transformation-error-coords)
+   (why :initarg :why :initform nil
+	:reader transformation-error-why))
   (:report (lambda (self sink)
-             (with-slots (coords why) self
-               (apply #'format sink "The two points (~D,~D) and (~D,~D) are coincident."
-                      coords)
-               (when why
-                 (format sink " (That was determined by the following error:~%~A)"
-                         why))))))
+	     (apply #'format sink "The two points (~D,~D) and (~D,~D) are coincident."
+		    (transformation-error-coords self))
+	     (when (transformation-error-why self)
+	       (format sink " (That was determined by the following error:~%~A)"
+		       (transformation-error-why self))))))
 
 (define-condition singular-transformation (transformation-error) 
-  ((transformation :initarg :transformation)
-   (why :initarg :why :initform nil))
+  ((transformation :initarg :transformation
+		   :reader transformation-error-transformation)
+   (why :initarg :why :initform nil
+	:reader transformation-error-why))
   (:report (lambda (self sink)
-             (with-slots (transformation why) self
-                 (format sink "Attempt to invert the probably singular transformation ~S."
-                         transformation)
-                 (when why
-                   (format sink "~%Another error occurred while computing the inverse:~%    ~A" why))))))
+	     (format sink "Attempt to invert the probably singular transformation ~S."
+		     (transformation-error-transformation self))
+	     (when (transformation-error-why self)
+	       (format sink "~%Another error occurred while computing the inverse:~%    ~A"
+		       (transformation-error-why self))))))
 
 (define-condition rectangle-transformation-error (transformation-error)
-  ((transformation :initarg :transformation)
-   (rect :initarg :rect))
+  ((transformation :initarg :transformation
+		   :reader transformation-error-transformation)
+   (rect :initarg :rect
+	 :reader transformation-error-rect))
   (:report (lambda (self sink)
-             (with-slots (transformation rect) self
-               (format sink "Attempt to transform the rectangle ~S through the non-rectilinear transformation ~S."
-                       rect transformation)))))
+	     (format sink "Attempt to transform the rectangle ~S through the non-rectilinear transformation ~S."
+		     (transformation-error-rect self)
+		     (transformation-error-transformation self)))))
 
 (defmethod transformation-equal ((transformation1 standard-transformation) (transformation2 standard-transformation))
   (every #'coordinate=
