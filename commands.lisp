@@ -333,5 +333,5 @@
 			  (partial-command-parser *partial-command-parser*)
 			  use-keystrokes)
   (declare (ignore command-table command-parser command-unparser partial-command-parser use-keystrokes))
-  (read stream))
+  (read-preserving-whitespace stream))
 

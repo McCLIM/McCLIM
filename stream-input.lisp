@@ -55,3 +55,330 @@
 	if (and (typep event 'key-release-event)
 		(characterp (keyboard-event-key-name event)))
 	return (keyboard-event-key-name event))))
+
+(defclass extended-input-stream (fundamental-character-input-stream)
+  ((input-buffer :accessor stream-input-buffer :initarg :input-buffer
+		 :initform (make-array 1 :adjustable t :fill-pointer 0))
+   (pointer)
+   (cursor :initarg :text-cursor)))
+
+(defgeneric extended-input-stream-p (object)
+  (:method ((object extended-input-stream))
+    t)
+  (:method ((object t))
+    nil))
+
+(defclass standard-extended-input-stream (immediate-sheet-input-mixin
+					  extended-input-stream)
+  ())
+
+(defvar *input-wait-test* nil)
+(defvar *input-wait-handler* nil)
+(defvar *pointer-button-press-handler* nil)
+
+;;; XXX Do there need to be locks around access to the buffer?
+
+(defmethod handle-event ((stream standard-extended-input-stream)
+			 (event key-press-event))
+  (let ((char (keyboard-event-key-name event))
+	(buffer (stream-input-buffer stream)))
+    (if (characterp char)
+	(progn
+	  (case char
+	    (#\Return
+	     (setq char #\Newline))
+	    (#\Backspace
+	     (setq char #\Delete)))
+	  (vector-push-extend char buffer))
+	(vector-push-extend event buffer))))
+
+
+(defmethod handle-event ((stream standard-extended-input-stream)
+			 (event pointer-button-press-event))
+  (vector-push-extend event (stream-input-buffer stream)))
+
+(defun read-gesture (&key
+		     (stream *standard-input*)
+		     timeout
+		     peek-p
+		     (input-wait-test *input-wait-test*)
+		     (input-wait-handler *input-wait-handler*)
+		     (pointer-button-press-handler
+		      *pointer-button-press-handler*))
+  (stream-read-gesture stream
+		       :timeout timeout
+		       :peek-p peek-p
+		       :input-wait-test input-wait-test
+		       :input-wait-handler input-wait-handler
+		       :pointer-button-press-handler
+		       pointer-button-press-handler))
+
+(defgeneric stream-read-gesture (stream
+				 &key timeout peek-p
+				 input-wait-test
+				 input-wait-handler
+				 pointer-button-press-handler))
+
+(defun pop-gesture (buffer peek-p)
+  (prog1
+      (aref buffer 0)
+    (unless peek-p
+      (replace buffer buffer :start1 0 :start2 1)
+      (decf (fill-pointer buffer)))))
+
+(defun repush-gesture (gesture buffer)
+  (let ((old-fill (fill-pointer buffer)))
+    (incf (fill-pointer buffer))
+    (replace buffer buffer :start1 1 :start2 0 :end2 old-fill)
+    (setf (aref buffer 0) gesture)))
+
+(defmethod stream-read-gesture ((stream standard-extended-input-stream)
+				&key timeout peek-p
+				(input-wait-test *input-wait-test*)
+				(input-wait-handler *input-wait-handler*)
+				(pointer-button-press-handler
+				 *pointer-button-press-handler*))
+  (with-encapsulating-stream (estream stream)
+    (let ((*input-wait-test* input-wait-test)
+	  (*input-wait-handler* input-wait-handler)
+	  (*pointer-button-press-handler* pointer-button-press-handler)
+	  (buffer (stream-input-buffer stream)))
+      (loop
+	(if (> (fill-pointer buffer) 0)
+	    (let ((gesture (pop-gesture buffer peek-p)))
+	      (when (and pointer-button-press-handler
+			 (typep gesture 'pointer-button-press-event))
+		(funcall pointer-button-press-handler stream gesture))
+	      (return-from stream-read-gesture gesture))
+	  ;; Wait for input... or not
+	  (multiple-value-bind (available reason)
+	      (stream-input-wait estream
+				 :timeout timeout
+				 :input-wait-test input-wait-test)
+	    (unless available
+	      (if (eq reason :timeout)
+		  (return-from stream-read-gesture (values nil :timeout))
+		(funcall input-wait-handler stream))))))))
+  )
+
+
+(defgeneric stream-input-wait (stream &key timeout input-wait-test))
+
+(defmethod stream-input-wait ((stream standard-extended-input-stream)
+			      &key timeout input-wait-test)
+  (let ((buffer (stream-input-buffer stream)))
+    (loop
+     (if (> (fill-pointer buffer) 0)
+	 (progn
+	   (return-from stream-input-wait t))
+	 (progn
+	   (when (and input-wait-test (funcall input-wait-test stream))
+	     (return-from stream-input-wait (values nil :input-wait-test)))
+	   (multiple-value-bind (result reason)
+	       ;; XXX need to decay timeout on multiple trips through the loop
+	       (process-next-event (port stream) :timeout timeout)
+	     (when (and (not result) (eq reason :timeout))
+	       (return-from stream-input-wait (values nil :timeout)))))))))
+
+
+(defun unread-gesture (gesture &key (stream *standard-input*))
+  (stream-unread-gesture stream gesture))
+
+(defgeneric stream-unread-gesture (stream gesture))
+
+(defmethod stream-unread-gesture ((stream standard-extended-input-stream)
+				  gesture)
+  (with-encapsulating-stream (estream stream)
+    (repush-gesture gesture (stream-input-buffer estream))))
+
+;;; Standard stream methods on standard-extended-input-stream.  Ignore any
+;;; pointer gestures in the input buffer.
+
+(defmethod stream-read-char ((stream standard-extended-input-stream))
+  (with-encapsulating-stream (estream stream)
+    (loop for char = (stream-read-gesture estream)
+	  until (characterp char)
+	  finally (return char))))
+
+(defmethod stream-read-char-no-hang ((stream standard-extended-input-stream))
+  (with-encapsulating-stream (estream stream)
+    (loop for char = (stream-read-gesture estream :timeout 0)
+	  do (when (or (null char) (characterp char))
+	       (loop-finish))
+	  finally (return char))))
+
+(defmethod stream-unread-char ((stream standard-extended-input-stream)
+			       char)
+  (with-encapsulating-stream (estream stream)
+    (stream-unread-gesture estream char)))
+
+(defmethod stream-peek-char ((stream standard-extended-input-stream))
+  (with-encapsulating-stream (estream stream)
+    (loop for char = (stream-read-gesture estream :peek-p t)
+	  do (if (characterp char)
+		 (loop-finish)
+		 (stream-read-gesture estream)) ; consume pointer gesture
+	  finally (return char))))
+
+(defmethod stream-listen ((stream standard-extended-input-stream))
+  (with-encapsulating-stream (estream stream)
+    (loop
+     (if (stream-input-wait estream :timeout 0)
+	 (let ((gesture (stream-read-gesture estream :peek-p t)))
+	   (if (characterp gesture)
+	       (return-from stream-listen t)
+	       (stream-read-gesture estream))) ; consume pointer gesture
+	 (return-from stream-listen nil)))))
+
+(defmethod stream-read-line ((stream standard-extended-input-stream))
+  (with-encapsulating-stream (estream stream)
+    (let ((result (make-array 1
+			      :element-type character
+			      :adjustable t
+			      :fill-pointer 0)))
+      (loop for char = (stream-read-char estream)
+	    while (not (char= char #\Newline))
+	    do (vector-push-extend char result)
+	    finally (return (subseq result 0))))))
+
+;;; Gestures
+
+(defparameter *gesture-names* (make-hash-table))
+
+(defmacro define-gesture-name (name type gesture-spec &key (unique t))
+  `(add-gesture-name ',name ',type ',gesture-spec ,@(and unique
+							 `(:unique ',unique))))
+
+;;; XXX perhaps this should be in the backend somewhere?
+(defconstant +name-to-char+ '((:newline . #\newline)
+			      (:linefeed . #\linefeed)
+			      (:return . #\return)
+			      (:tab . #\tab)
+			      (:backspace . #\backspace)
+			      (:page . #\page)
+			      (:rubout . #\rubout)))
+
+(defun add-gesture-name (name type gesture-spec &key unique)
+  (destructuring-bind (device-name . modifiers)
+      gesture-spec
+    (let* ((modifier-state (apply #'make-modifier-state modifiers)))
+      (cond ((and (eq type :keyboard)
+		  (symbolp device-name))
+	     (let ((real-device-name (cdr (assoc device-name +name-to-char+))))
+	       (unless real-device-name
+		 (error "~S is not a known key name" device-name))
+	       (setq device-name real-device-name)))
+	    ((and (member type '(:pointer-button
+				 :pointer-button-press
+				 :pointer-button-release)
+			  :test #'eq))
+	     (let ((real-device-name
+		    (case device-name
+		      (:left +pointer-left-button+)
+		      (:middle +pointer-middle-button+)
+		      (:right +pointer-right-button+)
+		      (t (error "~S is not a known button")))))
+	       (setq device-name real-device-name))))
+      (let ((gesture-entry (list type device-name modifier-state)))
+	(if unique
+	    (setf (gethash name *gesture-names*) (list gesture-entry))
+	    (push gesture-entry (gethash name *gesture-names*)))))))
+
+
+(defgeneric %event-matches-gesture (event type device-name modifier-state))
+
+(defmethod %event-matches-gesture (event type device-name modifier-state)
+  nil)
+
+(defmethod %event-matches-gesture ((event key-press-event)
+				   (type (eql :keyboard))
+				   device-name
+				   modifer-state)
+  (and (eql (keyboard-event-key-name event) device-name)
+       (eql (event-modifier-state event) modifer-state)))
+
+(defmethod %event-matches-gesture ((event pointer-button-press-event)
+				   type
+				   device-name
+				   modifer-state)
+  (and (or (eql type :pointer-button-press)
+	   (eql type :pointer-button))
+       (eql (pointer-event-button event) device-name)
+       (eql (event-modifier-state event) modifier-state)))
+
+(defmethod %event-matches-gesture ((event pointer-button-release-event)
+				   type
+				   device-name
+				   modifer-state)
+  (and (or (eql type :pointer-button-release)
+	   (eql type :pointer-button))
+       (eql (pointer-event-button event) device-name)
+       (eql (event-modifier-state event) modifier-state)))
+
+(defmethod %event-matches-gesture ((event pointer-button-event)
+				   type
+				   device-name
+				   modifer-state)
+  (and (or (eql type :pointer-button-press)
+	   (eql type :pointer-button-release)
+	   (eql type :pointer-button))
+       (eql (pointer-event-button event) device-name)
+       (eql (event-modifier-state event) modifier-state)))
+
+;;; Because gesture objects are either characters or event objects, support
+;;; characters here too.
+
+(defmethod %event-matches-gesture ((event character)
+				   (type (eql :keyboard))
+				   device-name
+				   modifier-state)
+  (and (eql event device-name)
+       (eql modifier-state 0)))
+
+(defun event-matches-gesture-name-p (event gesture-name)
+  (let ((gesture-entry (gethash gesture-name *gesture-names*)))
+    (loop for (type device-name modifier-state) in gesture-entry
+	  do (when (%event-matches-gesture event
+					   type
+					   device-name
+					   modifier-state)
+	       (return-from event-matches-gesture-name-p t))
+	  finally (return nil))))
+
+(defun modifier-state-matches-gesture-name-p (modifier-state gesture-name)
+  (loop for (type device-name gesture-state) in (gethash gesture-name
+							 *gesture-names*)
+	do (when (eql gesture-state modifer-state)
+	     (return-from modifier-state-matches-gesture-name-p t))
+	finally (return nil)))
+
+
+(defun make-modifier-state (&rest modifiers)
+  (loop for result = 0 then (logior (case modifier
+				      (:shift +shift-key+)
+				      (:control +control-key+)
+				      (:meta +meta-key+)
+				      (:super +super-key+)
+				      (:hyper +hyper-key+)
+				      (t (error "~S is not a known modifier")))
+				    result)
+	for modifier in modifiers
+	finally (return result)))
+
+;;; Standard gesture names
+
+(define-gesture-name :abort :keyboard (#\c :control))
+(define-gesture-name :clear-input :keyboard (#\u :control))
+(define-gesture-name :complete :keyboard (:tab))
+(define-gesture-name :help :keyboard (#\/ :control))
+
+(define-gesture-name :select :pointer-button-press (:left))
+(define-gesture-name :describe :pointer-button-press (:middle))
+(define-gesture-name :menu :pointer-button-press (:right))
+(define-gesture-name :edit :pointer-button-press (:left :meta))
+(define-gesture-name :delete :pointer-button-press (:middle :shift))
+
+;;; Define so we have a gesture for #\newline that we can use in
+;;; *standard-activation-gestures*
+
+(define-gesture-name newline :keyboard (#\newline))

@@ -348,7 +348,7 @@ If there are no named panes, only the single, top level pane is returned."))
 
 (defun make-single-pane-generate-panes-form (class-name pane)
   `(defmethod generate-panes ((fm frame-manager) (frame ,class-name))
-     (let ((*application-frame* frame))
+     (with-look-and-feel-realization (fm frame)
        (let ((pane ,pane))
 	 (setf (slot-value frame 'pane) pane)))))
 
@@ -410,7 +410,7 @@ If there are no named panes, only the single, top level pane is returned."))
 	(error ":pane cannot be specified along with either :panes or :layouts"))
     (if pane
 	(setq panes (list 'single-pane pane)
-	      layouts (list :default (first pane))))
+	      layouts `((:default ,(car pane)))))
     (setq current-layout (first (first layouts)))
     `(progn
        (defclass ,name ,superclasses

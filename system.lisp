@@ -80,9 +80,11 @@
    "events"
    "repaint"
    "graphics"
+   "encapsulate"
    "stream-output"
    "recording"
    "stream-input"
+   "input-editing"
    "presentations"
    "commands"
    "frames"
@@ -123,4 +125,5 @@
    "Examples/clim-fig"
    "Examples/postscript-test"
    "Examples/transformations-test"
+   "Examples/stream-test"
    ))

@@ -304,7 +304,8 @@
 
 ;;; WINDOW STREAM
 
-(defclass window-stream (standard-extended-output-stream standard-input-stream)
+(defclass window-stream (standard-extended-output-stream 
+			 standard-extended-input-stream)
   (
    )
   )
@@ -1214,6 +1215,18 @@ During realization the child of the spacing will have as cordinates
 (defmethod* (setf window-viewport-position) (x y (pane clim-stream-pane))
   (scroll-extent pane x y))
 
+(defun scroll-area (pane dx dy)
+  (let ((transform (sheet-transformation pane)))
+    ;; Region has been "scrolled" already.
+    (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
+      (multiple-value-bind (destx desty)
+	  (transform-position transform x1 y1)
+	(multiple-value-bind (srcx srcy)
+	    (transform-position transform (- x1 dx) (- y1 dy))
+	  (format *debug-io* "dx ~S dy ~S srcx ~S srcy ~S destx ~S desty ~S~%"
+		  dx dy srcx srcy destx desty)
+	  (copy-area pane  srcx srcy (- x2 x1) (- y2 y1) destx desty))))))
+
 (defmethod scroll-extent ((pane clim-stream-pane) x y)
   (when (is-in-scroller-pane pane)
     (let ((new-x (max x 0))
@@ -1242,6 +1255,8 @@ During realization the child of the spacing will have as cordinates
 	     ((and (zerop dx)
 		   (< (abs dy) (- y2 y1)))
 	      (copy-area pane 0 0 (- x2 x1) (- y2 y1) 0 dy)
+	      #+nil
+	      (scroll-area pane 0 dy)
 	      (cond
 	       ((< dy 0)
 		(draw-rectangle* (sheet-medium pane) x1 (+ y2 dy) x2 y2 :ink +background-ink+)
@@ -1253,6 +1268,8 @@ During realization the child of the spacing will have as cordinates
 	     ((and (zerop dy)
 		   (< (abs dx) (- x2 x1)))
 	      (copy-area pane 0 0 (- x2 x1) (- y2 y1) dx 0)
+	      #+nil
+	      (scroll-area pane dx 0)
 	      (cond
 	       ((< dx 0)
 		(draw-rectangle* (sheet-medium pane) (+ x2 dx) y1 x2 y2 :ink +background-ink+)
