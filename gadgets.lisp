@@ -406,7 +406,7 @@
 	    (draw-line* pane x1 y1 x2 y1 :ink +black+)
 	    (draw-line* pane x1 y1 x1 y2 :ink +black+)
 	    (draw-line* pane x1 y2 x2 y2 :ink +white+)
-	       (draw-line* pane x2 y1 x2 y2 :ink +white+))
+	    (draw-line* pane x2 y1 x2 y2 :ink +white+))
 	  (progn
 	    (draw-line* pane x1 y1 x2 y1 :ink +white+)
 	    (draw-line* pane x1 y1 x1 y2 :ink +white+)
@@ -599,6 +599,19 @@
 
 (defclass text-field-pane (text-field clim-stream-pane) ())
 
+(defmethod handle-event ((pane text-field-pane) (event window-repaint-event))
+  (dispatch-repaint pane (sheet-region pane)))
+
+(defmethod repaint-sheet ((pane text-field-pane) region)
+  (declare (ignore region))
+  (let ((fun (pane-display-function pane)))
+    (when fun
+      (funcall fun pane))))
+
+(defmethod (setf gadget-value) :after (value (pane text-field-pane) &key invoke-callback)
+  (declare (ignore value invoke-callback))
+  (window-clear pane))
+
 (defclass clx-text-field-pane (text-field-pane) ())
 
 
@@ -639,6 +652,7 @@
 				    :children (list ,gadget))))
        (stream-add-output-record ,stream ,gadget-output-record)
        ,gadget)))
+
 
 
 
