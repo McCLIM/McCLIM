@@ -54,6 +54,9 @@
 
 (in-package :clim-internals)
 
+(defvar *table-suppress-update* nil
+  "Used to control whether changes to table cells propagate upwards.")
+
 ;;; Cell formatting
 (define-protocol-class cell-output-record (output-record))
 
@@ -64,6 +67,16 @@
    (align-y    :initform :baseline :initarg :align-y    :reader cell-align-y)
    (min-width  :initform 0   :initarg :min-width  :reader cell-min-width)
    (min-height :initform 0   :initarg :min-height :reader cell-min-height)))
+
+;;; If this were a primary method it wouldn't override the default
+;;; behavior for the parent being a compound-output-record because of
+;;; the order of the argument list.
+(defmethod recompute-extent-for-changed-child :around
+    (record (changed-child standard-cell-output-record)
+     old-min-x old-min-y old-max-x old-max-y)
+  (unless *table-suppress-update*
+    (call-next-method))
+  record)
 
 (defun table-cell-allowed-as-child-of (record)
   "Internal. A predicate which decides whether 'record' can take a
@@ -284,11 +297,14 @@ skips intervening non-table output record structures."))
               :equalize-column-widths equalize-column-widths)
     (multiple-value-bind (cursor-old-x cursor-old-y)
         (stream-cursor-position stream)
-      (with-output-recording-options (stream :record t :draw nil)
-        (funcall continuation stream)
-        (finish-output stream))
-      (adjust-table-cells table stream)
-      (when multiple-columns (adjust-multiple-columns table stream))
+      (let ((*table-suppress-update* t))
+	(with-output-recording-options (stream :record t :draw nil)
+	  (funcall continuation stream)
+	  (finish-output stream))
+	(adjust-table-cells table stream)
+	(when multiple-columns (adjust-multiple-columns table stream))
+	(setq *table-suppress-update* nil)
+	(tree-recompute-extent table))
       #+NIL
       (setf (output-record-position table)
             (values cursor-old-x cursor-old-y))

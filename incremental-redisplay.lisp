@@ -165,7 +165,9 @@ record operations are forwarded to this record.")
    (parent-cache :accessor parent-cache :initarg :parent-cache
 		 :documentation "The parent cache in which this updating output
 record is stored.")
-   
+   (stream :accessor updating-output-stream :initarg :stream :initarg nil
+	   :documentation "Capture the screen in order to restrict update to
+					visible records")
    ;; on-screen state?
    ))
 
@@ -197,7 +199,6 @@ record is stored.")
     (x y (record updating-output-record-mixin))
   (let ((state (end-graphics-state record)))
     (setf (values (cursor-x state) (cursor-y state)) (values x y))))
-
 
 (defmethod output-record-children ((record updating-output-record-mixin))
   (output-record-children (sub-record record)))
@@ -357,13 +358,14 @@ record is stored.")
 (defmethod find-equal-display-record ((root compound-output-record)
 				      use-old-elements
 				      record)
-  (map-over-output-records-overlapping-region
-   #'(lambda (r)
-       (let ((result (find-equal-display-record r use-old-elements record)))
-	 (when result
-	   (return-from find-equal-display-record result))))
-   root
-   record)
+  (when (region-intersects-region-p root record)
+    (map-over-output-records-overlapping-region
+     #'(lambda (r)
+	 (let ((result (find-equal-display-record r use-old-elements record)))
+	   (when result
+	     (return-from find-equal-display-record result))))
+     root
+     record))
   nil)
 
 (defmethod find-equal-display-record ((root displayed-output-record)
@@ -375,46 +377,57 @@ record is stored.")
       nil))
 
 (defgeneric map-over-displayed-output-records
-    (function root use-old-elements clean)
+    (function root use-old-elements clean clip-region)
   (:documentation "Call function on all displayed-output-records in ROOT's
  tree, respecting use-old-elements."))
+
+(defmethod map-over-displayed-output-records :around
+    (function root use-old-elements clean (clip-rectangle bounding-rectangle))
+  (declare (ignore function use-old-elements clean))
+  (when (region-intersects-region-p root clip-rectangle)
+    (call-next-method)))
 
 (defmethod map-over-displayed-output-records (function
 					      (root standard-updating-output-record)
 					      use-old-elements
-					      clean)
+					      clean
+					      clip-rectangle)
   (cond ((and (not clean) (eq (output-record-dirty root) :clean))
 	 nil)
 	((and use-old-elements (slot-boundp root 'old-children))
 	 (map-over-displayed-output-records function
 					    (old-children root)
 					    use-old-elements
-					    clean))
+					    clean
+					    clip-rectangle))
 	((not use-old-elements)
 	 (map-over-displayed-output-records function
 					    (sub-record root)
 					    use-old-elements
-					    clean))
+					    clean
+					    clip-rectangle))
 	(t nil)))
 
 (defmethod map-over-displayed-output-records (function
 					      (root compound-output-record)
 					      use-old-elements
-					      clean)
+					      clean
+					      clip-rectangle)
   (flet ((mapper (record)
 	   (map-over-displayed-output-records function
 					      record
 					      use-old-elements
-					      clean)))
+					      clean
+					      clip-rectangle)))
     (declare (dynamic-extent #'mapper))
     (map-over-output-records #'mapper root)))
 
 (defmethod map-over-displayed-output-records (function
 					      (root displayed-output-record)
 					      use-old-elements
-					      clean)
-  (declare (ignore clean))
-  (declare (ignore use-old-elements))
+					      clean
+					      clip-rectangle)
+  (declare (ignore clean use-old-elements clip-rectangle))
   (funcall function root))
 
 (defgeneric compute-difference-set (record &optional check-overlapping
@@ -429,25 +442,29 @@ record is stored.")
 		   old-offset-x old-offset-y))
   (let ((existing-output-records (make-hash-table :test #'eq))
 	(draws nil)
-	(erases nil))
+	(erases nil)
+	;; XXX!
+	(visible-region (pane-viewport-region (updating-output-stream record))))
     ;; Find which new output records are already on screen
     (map-over-displayed-output-records
      #'(lambda (r)
 	 (let ((old (find-equal-display-record record t r)))
-	   (if old
-	       (setf (gethash old existing-output-records) r)
-	       (push r draws))))
+	     (if old
+		 (setf (gethash old existing-output-records) r)
+		 (push r draws))))
      record
      nil
-     nil)
+     nil
+     visible-region)
     ;; Find old records that should be erased
     (map-over-displayed-output-records
      #'(lambda (r)
 	 (unless (gethash r existing-output-records)
-	   (push r erases)))
+	     (push r erases)))
      record
      t
-     nil)
+     nil
+     visible-region)
     (values erases nil draws nil nil)))
 
 (defparameter *enable-updating-output* t
@@ -478,7 +495,8 @@ record is stored.")
 					:cache-test cache-test
 					:fixed-position fixed-position
 					:displayer continuation
-					:parent-cache parent-cache)
+					:parent-cache parent-cache
+					:stream stream)
 		 (setq record *current-updating-output*)
 		 (setf (start-graphics-state record)
 		       (medium-graphics-state stream))

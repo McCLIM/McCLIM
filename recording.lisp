@@ -463,7 +463,7 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
   (with-bounding-rectangle* (min-x min-y max-x max-y) record
     (call-next-method)
     (let ((parent (output-record-parent record)))
-      (when parent
+      (when (and parent (not (slot-value parent 'in-moving-p)))
         (recompute-extent-for-changed-child parent record
                                             min-x min-y max-x max-y))))
   (values nx ny))
@@ -774,7 +774,39 @@ the associated sheet can be determined."
 	  (values x y x y))
 	(values new-x1 new-y1 new-x2 new-y2))))
 
+(defgeneric tree-recompute-extent-aux (record))
 
+(defmethod tree-recompute-extent-aux (record)
+  (bounding-rectangle* record))
+
+(defmethod tree-recompute-extent-aux ((record compound-output-record))
+  (let ((new-x1 0)
+	(new-y1 0)
+	(new-x2 0)
+	(new-y2 0)
+	(first-time t))
+    (map-over-output-records
+     (lambda (child)
+       (if first-time
+           (progn
+             (multiple-value-setq (new-x1 new-y1 new-x2 new-y2)
+               (tree-recompute-extent-aux child))
+             (setq first-time nil))
+           (multiple-value-bind (cx1 cy1 cx2 cy2)
+	       (tree-recompute-extent-aux child)
+             (minf new-x1 cx1)
+             (minf new-y1 cy1)
+             (maxf new-x2 cx2)
+             (maxf new-y2 cy2))))
+     record)
+    (with-slots (x y x1 y1 x2 y2)
+	record
+      (if first-time			;No children
+	  (values x1 y1 x2 y2)
+	  (progn
+	    (setf (values x y x1 y1 x2 y2)
+		  (values new-x1 new-y1 new-x1 new-y1 new-x2 new-y2))
+	    (values new-x1 new-y1 new-x2 new-y2))))))
 
 (defmethod recompute-extent-for-changed-child
     ((record compound-output-record) changed-child
@@ -786,21 +818,18 @@ the associated sheet can be determined."
       ;; If so, we can use min/max to grow record's current rectangle.
       ;; If not, the child has shrunk, and we need to fully recompute.                              
       (multiple-value-bind (nx1 ny1 nx2 ny2) 
-          (cond ((not (find changed-child (output-record-children record)))
-                 ;; Ouch! - when tree ORs are really implemented, this call to
-                 ;; OUTPUT-RECORD-CHILDREN may start consing, and we'll have to
-                 ;; think about this. The spec seems to have forgotten an efficient
-                 ;; means of doing this sort of test. I guess I could use MAP-OVER-...                 
+          (cond ((not (output-record-parent changed-child))
+		 ;; The child has been deleted; who knows what the
+		 ;; new bounding box might be.
                  (%tree-recompute-extent* record))
-                 
-                ((null-bounding-rectangle-p record)
+                ((eql (output-record-count record) 1)
+		 (values cx1 cy1 cx2 cy2))
+		#+nil((null-bounding-rectangle-p record)
                  (%tree-recompute-extent* record))
-                ((null-bounding-rectangle-p changed-child)
+                #+nil((null-bounding-rectangle-p changed-child)
                  (values ox1 oy1 ox2 oy2))
-                ((or (and (= old-min-x 0.0d0) (= old-min-y 0.0d0)
-                          (= old-max-x 0.0d0) (= old-max-y 0.0d0))
-                     (and (<= cx1 old-min-x) (<= cy1 old-min-y)
-                          (>= cx2 old-max-x) (>= cy2 old-max-y)))
+                ((and (<= cx1 old-min-x) (<= cy1 old-min-y)
+		      (>= cx2 old-max-x) (>= cy2 old-max-y))
                  (values (min cx1 ox1) (min cy1 oy1)
                          (max cx2 ox2) (max cy2 oy2)))
                 (T (%tree-recompute-extent* record)))        
@@ -819,17 +848,24 @@ the associated sheet can be determined."
 ;; --Hefner, 8/7/02
 
 (defmethod tree-recompute-extent ((record compound-output-record))
-  (with-slots (x1 y1 x2 y2) record
-    (setf (values x1 y1 x2 y2) (%tree-recompute-extent* record)))
+  (tree-recompute-extent-aux record)
   record)
 
 (defmethod tree-recompute-extent :around ((record compound-output-record))
-  (let ((old-rectangle (multiple-value-call #'make-bounding-rectangle
-                         (bounding-rectangle* record))))
+  (with-bounding-rectangle* (old-x1 old-y1 old-x2 old-y2)
+    record
     (call-next-method)
-    (with-slots (parent x1 y1 x2 y2) record
-      (when (and parent (not (region-equal old-rectangle record)))
-        (recompute-extent-for-changed-child parent record x1 y1 x2 y2))))
+    (with-bounding-rectangle* (x1 y1 x2 y2)
+      record
+      (let ((parent (output-record-parent record)))
+	(when (and parent
+		   (not (and (= old-x1 x1)
+			     (= old-y1 y1)
+			     (= old-x2 x2)
+			     (= old-y2 y2))))
+	  (recompute-extent-for-changed-child parent record
+					      old-x1 old-y1
+					      old-x2 old-y2)))))
   record)
 
 ;;; 16.3.1. Standard output record classes
@@ -2145,3 +2181,25 @@ according to the flags RECORD and DRAW."
                         (map-over-output-records-overlapping-region #'grok-record
                                                                     record region)))))
         (grok-record record)))))
+
+(defmethod count-records (r)
+  1)
+
+(defmethod count-records ((r compound-output-record))
+  (let ((count 0))
+    (map-over-output-records
+     (lambda (child)
+       (incf count (count-records child)))
+     r)
+    (1+ count)))
+
+(defmethod count-displayed-records ((r displayed-output-record))
+  1)
+
+(defmethod count-displayed-records ((r compound-output-record))
+  (let ((count 0))
+    (map-over-output-records
+     (lambda (child)
+       (incf count (count-records child)))
+     r)
+    count))
