@@ -14,10 +14,10 @@
 ;
 ;;;
 
-(export '(pixie-look pixie/clx-look))
+(export '(pixie-look #+clx pixie/clx-look))
 
 (defclass pixie-look (frame-manager) ())
-(defclass pixie/clx-look (pixie-look clim-clx::clx-frame-manager) ())
+#+clx (defclass pixie/clx-look (pixie-look clim-clx::clx-frame-manager) ())
 
 ; our stub inside clim proper
 (defmethod make-pane-1 ((fm pixie-look) (frame application-frame) type &rest args)

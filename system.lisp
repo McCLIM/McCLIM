@@ -176,7 +176,7 @@
 (load (merge-pathnames "Backends/CLX/system" *clim-directory*))
 #+gl(load (merge-pathnames "Backends/OpenGL/system" *clim-directory*))
 
-(clim-defsystem (:clim-looks :depends-on (:clim-clx #+gl :clim-opengl))
+(clim-defsystem (:clim-looks :depends-on (#+clx :clim-clx #+gl :clim-opengl))
   "Looks/pixie")
 
 ;;; Will depend on :goatee soon...
