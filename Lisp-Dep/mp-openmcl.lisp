@@ -134,3 +134,26 @@
 (defmacro with-recursive-lock-held ((place &optional state) &body body)
   `(with-lock-held (,place   ,@(if state (list state) nil)) ,@body))
 
+;;; Condition variable simulation
+
+(defun make-condition-variable () (ccl:make-semaphore))
+
+(defun condition-wait (cv lock &optional timeout)
+  (let ((lock-error nil))
+    (unwind-protect
+	 (progn
+	   (handler-bind ((ccl::lock-not-owner #'(lambda (c)
+						   (declare (ignore c))
+						   (setq lock-error t))))
+	     (ccl:release-lock lock))
+	   ;; OS error return value?
+	   (if timeout
+	       (progn
+		 (ccl:timed-wait-on-semaphore cv timeout)
+		 t)
+	       (ccl:wait-on-semaphore cv)))
+      (unless lock-error
+	(ccl:grab-lock lock)))))
+
+(defun condition-notify (cv)
+  (ccl:signal-semaphore cv))

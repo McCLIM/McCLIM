@@ -902,7 +902,7 @@ suitable for SUPER-NAME"))
 		      t)
 		     (t nil))))
 
-(defmethod clim-mop:compute-applicable-methods :around
+(defmethod compute-applicable-methods :around
     ((gf presentation-generic-function) arguments)
   (let ((methods (call-next-method)))
     (if (typep (class-of (car arguments)) 'presentation-type-class)

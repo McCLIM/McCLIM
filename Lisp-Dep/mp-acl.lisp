@@ -107,3 +107,22 @@
 (defmacro with-recursive-lock-held ((place &optional state) &body body)
   `(mp:with-process-lock (,place ,@(if state (list :whostate state) nil))
      .,body))
+
+(defun make-condition-variable () (mp:make-gate nil))
+
+;;; Lock is held on entry
+(defun condition-wait (cv lock &optional timeout)
+  (mp:close-gate cv)
+  (mp:process-unlock lock)
+  (unwind-protect
+       (if timeout
+	   (mp:process-wait-with-timeout "Waiting on condition variable"
+					 timeout
+					 #'mp:gate-open-p)
+	   (progn
+	     (mp:process-wait "Waiting on condition variable" #'mp:gate-open-p)
+	     t))
+    (mp:process-lock lock)))
+
+(defun condition-notify (cv)
+  (mp:open-gate cv))

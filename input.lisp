@@ -33,7 +33,11 @@
    (tail :initform nil
          :accessor event-queue-tail
          :documentation "Tail pointer of event queue.")
-   ; experimental extension for scheduled event insersion
+   (processes
+         :initform (make-condition-variable)
+	 :accessor event-queue-processes
+	 :documentation "Condition variable for waiting processes")
+   ;; experimental extension for scheduled event insersion
    (schedule-time
          :initform nil
          :accessor event-schedule-time
@@ -52,74 +56,44 @@
          :accessor event-queue-port
          :documentation "The port which will be generating events for the queue.")))
 
+(defmethod event-queue-read-no-hang/locked ((eq standard-event-queue))
+  (check-schedule eq)
+  (let ((res (pop (event-queue-head eq))))
+    (when (null (event-queue-head eq))
+      (setf (event-queue-tail eq) nil))
+    res))
+
 (defmethod event-queue-read-no-hang ((eq standard-event-queue))
   "Reads one event from the queue, if there is no event just return NIL."
   (with-lock-held ((event-queue-lock eq))
-    (check-schedule eq)
-    (let ((res (pop (event-queue-head eq))))
-      (when (null (event-queue-head eq))
-        (setf (event-queue-tail eq) nil))
-      res)))
+    (event-queue-read-no-hang/locked eq)))
 
 (defmethod event-queue-read ((eq standard-event-queue))
   "Reads one event from the queue, if there is no event, hang until here is one."
-  (loop
-      (check-schedule eq)
-      (let ((res (event-queue-read-no-hang eq)))
-        (when res
-          (return res))
-        ; is there an event waiting to be scheduled?
-        (with-slots (schedule-time) eq
-          (let* ((now    (now))
-                 (timeout (when schedule-time (- schedule-time now))))
-            (if timeout
-                (if *multiprocessing-p*
-                    (process-wait-with-timeout "Waiting for event"
-                                   timeout
-                                   (lambda ()
-                                     (not (null (event-queue-head eq)))))
-                    (process-wait-with-timeout "Waiting for event"
-                                   timeout
-                                   (lambda ()
-                                     (loop for port in climi::*all-ports*
-                                        ; this is dubious
-                                        do (process-next-event port))
-                                     (not (null (event-queue-head eq))))))
-                ; no timeout
-                (if *multiprocessing-p*
-                    (process-wait  "Waiting for event"
-                                   (lambda ()
-                                     (not (null (event-queue-head eq)))))
-                    (process-wait  "Waiting for event"
-                                   (lambda ()
-                                     (loop for port in climi::*all-ports*
-                                        ; this is dubious
-                                        do (process-next-event port))
-                                     (not (null (event-queue-head eq))))))))))))
+  (let ((lock (event-queue-lock eq)))
+    (with-lock-held (lock)
+      (loop
+	 (check-schedule eq)
+	 (let ((res (event-queue-read-no-hang/locked eq)))
+	   (when res
+	     (return res))
+	   ;; is there an event waiting to be scheduled?
+	   (with-slots (schedule-time) eq
+	     (let* ((now    (now))
+		    (timeout (when schedule-time (- schedule-time now))))
+	       (condition-wait (event-queue-processes eq) lock timeout))))))))
 
 (defmethod event-queue-read-with-timeout ((eq standard-event-queue)
                                           timeout wait-function)
-  (loop
-      (check-schedule eq)
-      (let ((res (event-queue-read-no-hang eq)))
-        (when res
-          (return res))
-        (if *multiprocessing-p*
-            (process-wait-with-timeout  "Waiting for event"
-                                        timeout
-                                        (lambda ()
-                                          (or
-                                           (not (null (event-queue-head eq)))
-                                           (funcall wait-function))))
-            (process-wait-with-timeout  "Waiting for event"
-                                        timeout
-                                        (lambda ()
-                                          (loop for port in climi::*all-ports*
-                                                ;; this is dubious
-                                                do (process-next-event port))
-                                          (or
-                                           (not (null (event-queue-head eq)))
-                                           (funcall wait-function))))))))
+  (let ((lock (event-queue-lock eq)))
+    (with-lock-held (lock)
+      (loop
+	 (check-schedule eq)
+	 (let ((res (event-queue-read-no-hang/locked eq)))
+	   (when res
+	     (return res))
+	   (warn "event-queue-read-with-timeout ignoring predicate")
+	   (condition-wait (event-queue-processes eq) lock timeout))))))
 
 (defmethod event-queue-append ((eq standard-event-queue) item)
   "Append the item at the end of the queue. Does event compression."
@@ -213,7 +187,8 @@
                           xs))))
 	    (setf (event-queue-head eq) (fun (event-queue-head eq))))))
      ;; Regular events are just appended:
-       (t (append-event))))))
+       (t (append-event))))
+    (condition-notify (event-queue-processes eq))))
 
 (defmethod event-queue-prepend ((eq standard-event-queue) item)
   "Prepend the item to the beginning of the queue."
@@ -222,7 +197,8 @@
            (setf (event-queue-head eq) (cons item nil)
                  (event-queue-tail eq) (event-queue-head eq)))
           (t
-           (push item (event-queue-head eq))))))
+           (push item (event-queue-head eq))))
+    (condition-notify (event-queue-processes eq))))
 
 (defmethod event-queue-peek ((eq standard-event-queue))
   (with-lock-held ((event-queue-lock eq))
@@ -246,6 +222,8 @@
 
 (defmethod event-queue-listen-or-wait ((eq standard-event-queue) &key timeout)
   (check-schedule eq)
+  (let ((lock (event-queue-lock eq)))
+    (with-lock-held (lock)
   (with-slots (schedule-time) eq
     (flet ((pred ()
              (not (null (event-queue-head eq)))))
@@ -261,19 +239,20 @@
                                         (min (- schedule-time now)
                                              (- timeout-time now))
                                         (- timeout-time now))))
-                       (process-wait-with-timeout "Listening for event" timeout #'pred))
+			   (condition-wait (event-queue-processes eq)
+					   lock timeout))
                do    (check-schedule eq)))
         (schedule-time
          (loop do (when (pred)
                     (return t))
-               do (process-wait-with-timeout "Listening for event"
-                          (- schedule-time (now)) #'pred)
+		   do (condition-wait
+		       (event-queue-processes eq) lock (- schedule-time (now)))
                do (check-schedule eq)))
         (t
           (or (pred)
               (progn
-                (process-wait "Listening for event" #'pred)
-                t)))))))
+		   (condition-wait (event-queue-processes eq) lock)
+		   t)))))))))
 
 (defmethod check-schedule ((eq standard-event-queue))
   ; see if it's time to inject a scheduled event into the queue.

@@ -22,7 +22,7 @@
 ;;; wrappers which the MOP can't grok, so use the PCL versions
 ;;; instead.
 
-#-sb-mop
+#+nil
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (flet ((reexport (symbols)
            (import symbols :clim-lisp-patch)

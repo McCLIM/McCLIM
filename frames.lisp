@@ -494,15 +494,18 @@ frame, if any")))
 
 (defmethod read-frame-command :around ((frame application-frame)
 				       &key (stream *standard-input*))
-  (declare (ignore stream))
   (with-input-context ('menu-item)
-    (object)
-    (call-next-method)
+      (object)
+      (call-next-method)
     (menu-item
      (let ((command (command-menu-item-value object)))
-       (if (listp command)
-	   command
-	   (list command))))))
+       (unless (listp command)
+	 (setq command (list command)))
+       (if (and (typep stream 'interactor-pane)
+		(member *unsupplied-argument-marker* command :test #'eq))
+	   (command-line-read-remaining-arguments-for-partial-command
+	    (frame-command-table frame) stream command 0)
+	   command)))))
 
 (defmethod read-frame-command ((frame application-frame)
 			       &key (stream *standard-input*))

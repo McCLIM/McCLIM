@@ -114,3 +114,24 @@
 (defmacro with-recursive-lock-held ((place &optional state) &body body)
   (declare (ignore place state))
   `(progn ,@body))
+
+;;; This is a bit dodgy; it depends on the condition notifier to be
+;;; called from process-next-event. However, I don't feel obligated
+;;; to put too much work into CLIM-SYS on non-multiprocessing platforms.
+
+(defun make-condition-variable (list nil))
+
+(defun condition-wait (cv lock &optional timeout)
+  (declare (ignore lock))
+  (flet ((wait-func ()
+	   (lambda ()
+	     (loop for port in climi::*all-ports* ;; this is dubious
+		do (process-next-event port))
+	     (car cv))))
+    (setf (car cv) nil)
+    (if timeout
+	(process-wait-with-timeout "Waiting for event" timeout #'wait-func)
+	(process-wait "Waiting for event" #'wait-func))))
+
+(defun condition-notify (cv)
+  (setf (car cv) t))

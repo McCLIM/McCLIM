@@ -871,17 +871,24 @@
 (defun command-line-read-remaining-arguments-for-partial-command
     (command-table stream partial-command start-position)
   (declare (ignore start-position))
-  (let ((interactor (encapsulating-stream-stream stream))
-	(editor-record (goatee::area stream)))
-    (multiple-value-bind (x1 y1 x2 y2)
-	(bounding-rectangle* editor-record)
-      ;; Start the dialog below the editor area
-      (letf (((stream-cursor-position interactor) (values x1 y2)))
-	(fresh-line interactor)
-	;; FIXME error checking needed here? -- moore
-	(funcall (partial-parser (gethash (command-name partial-command)
-					  *command-parser-table*))
-		 command-table interactor partial-command)))))
+  (let ((partial-parser (partial-parser (gethash (command-name partial-command)
+						 *command-parser-table*))))
+    (if (encapsulating-stream-p stream)
+	(let ((interactor (encapsulating-stream-stream stream))
+	      (editor-record (goatee::area stream)))
+	  (multiple-value-bind (x1 y1 x2 y2)
+	      (bounding-rectangle* editor-record)
+	    (declare (ignore y1 x2))
+	    ;; Start the dialog below the editor area
+	    (letf (((stream-cursor-position interactor) (values x1 y2)))
+	      (fresh-line interactor)
+	      ;; FIXME error checking needed here? -- moore
+	      (funcall partial-parser
+		       command-table interactor partial-command))))
+	(progn
+	  (fresh-line stream)
+	  (funcall partial-parser
+		 command-table stream  partial-command)))))
 
 
 (defparameter *command-parser* #'command-line-command-parser)

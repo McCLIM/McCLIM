@@ -178,3 +178,18 @@
 	       (setf (process-state *current-process*) ,state))
 	     ,@body)
 	(setf (process-state *current-process*) ,old-state))))))
+
+(defun make-condition-variable () (sb-thread:make-waitqueue))
+
+(defun condition-wait (cv lock &optional timeout)
+  (if timeout
+      (handler-case 
+	  (sb-ext:with-timeout timeout
+	    (sb-thread:condition-wait cv lock))
+	(sb-ext:timeout (c)
+	  (declare (ignore c))
+	  nil))
+      (sb-thread:condition-wait cv lock)))
+
+(defun condition-notify (cv)
+  (sb-thread:condition-notify cv))

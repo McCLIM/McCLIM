@@ -40,7 +40,12 @@
      :reader opengl-port-xevent)
    (xpeek
      :initform (xlib-gl:make-xevent)
-     :reader opengl-port-xpeek)))
+     :reader opengl-port-xpeek)
+   (synthesized-events :initform nil :accessor synthesized-events
+		       :documentation "List of events resulting from
+   the generation of multiple CLIM events from a single X event.")
+   (current-sheet :initform nil :accessor current-sheet
+		  :documentation "Current sheet under the pointer.")))
 
 (defun recognize-sheet (port signature)
   (declare (type (unsigned-byte 24) signature)

@@ -1,4 +1,4 @@
-;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
+;;; -*- Mode: Lisp; Package: CLIM-FFI -*-
 
 ;;;  (c) copyright 2003 by Tim Moore (moore@bricoworks.com)
 ;;; This library is free software; you can redistribute it and/or
