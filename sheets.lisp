@@ -640,7 +640,11 @@ sheet-supports-only-one-child error to be signalled."))
 ;;; mirrored sheet
 
 (defclass mirrored-sheet-mixin ()
-  ((port :initform nil :initarg :port :accessor port)))
+  ((port :initform nil :initarg :port :accessor port)
+   (mirror-transformation
+    :initform nil
+    :accessor sheet-mirror-transformation
+    )))
 
 (defmethod sheet-direct-mirror ((sheet mirrored-sheet-mixin))
   (port-lookup-mirror (port sheet) sheet))
@@ -655,6 +659,8 @@ sheet-supports-only-one-child error to be signalled."))
   (sheet-direct-mirror sheet))
 
 (defmethod note-sheet-grafted :before ((sheet mirrored-sheet-mixin))
+  (unless (port sheet)
+    (error "~S called on sheet ~S, which has no port?!" 'note-sheet-grafted sheet))
   (realize-mirror (port sheet) sheet))
 
 (defmethod note-sheet-degrafted :after ((sheet mirrored-sheet-mixin))
