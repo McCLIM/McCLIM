@@ -761,22 +761,28 @@
 ;;; to supply a default.
 
 ;;; continuation = (stream scan-pointer <function of one arg (gesture)>
+;;; activation-gestures delimiter gestures)
 (defvar *empty-input-continuations* nil)
 
 (defun invoke-empty-input (stream gesture)
-  "Invoke the continuation of the empty accept before the first non-empty
-  accept."
+  "Invoke the continuation of the empty `accept' before the first non-empty
+  accept `gesture' must be a member of that `accept''s activation or continuation
+  gestures."
   (let ((scan-pointer (1- (stream-scan-pointer stream))))
     (loop
-       with active-continuation = nil
+       with active-continuation-function = nil
        for continuation in *empty-input-continuations*
-       for (cont-stream cont-scan-pointer) = continuation
+       for (cont-stream cont-scan-pointer func activations delimeters)
+	 = continuation
        while (and (eq stream cont-stream)
 		  (eql scan-pointer cont-scan-pointer))
-       do (setq active-continuation continuation)
-       finally (when active-continuation
+       when (or (gesture-match gesture activations)
+		(gesture-match gesture delimeters))
+         do (setq active-continuation-function func)
+       end
+       finally (when active-continuation-function
 		 (unread-char gesture stream)
-		 (funcall (caddr active-continuation))))
+		 (funcall active-continuation-function)))
     t))
 
 (defmethod stream-read-gesture :around ((stream empty-input-mixin)
@@ -815,7 +821,9 @@
 		(cons (list ,stream
 			    (stream-scan-pointer ,stream)
 			    #'(lambda ()
-				(return-from ,context-block)))
+				(return-from ,context-block))
+			    *activation-gestures*
+			    *delimiter-gestures*)
 		      *empty-input-continuations*)))
 	   (return-from ,return-block ,input-form)))
        ,@handler-forms)))
