@@ -1671,7 +1671,10 @@ and must never be nil."))
 		   :accessor gadget-show-value-p)
    (decimal-places :initform 0
                    :initarg :decimal-places
-                   :reader slider-decimal-places)))
+                   :reader slider-decimal-places)
+   (number-of-quanta :initform nil
+                     :initarg :number-of-quanta
+                     :reader slider-number-of-quanta)))
 
 
 (defmethod initialize-instance :before ((pane slider-pane) &rest rest)
@@ -1698,7 +1701,7 @@ and must never be nil."))
 (defmethod handle-event ((pane slider-pane) (event pointer-button-press-event))
   (with-slots (armed) pane
      (when armed
-       (setf armed ':button-press))))       
+       (setf armed ':button-press))))
 
 (defmethod handle-event ((pane slider-pane) (event pointer-motion-event))
   (with-slots (armed) pane
@@ -1727,15 +1730,21 @@ and must never be nil."))
   (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
     (multiple-value-bind (good-dim1 good-dim2)
 	(if (eq (gadget-orientation pane) :vertical)
-	    ; vertical orientation
+	    ;; vertical orientation
 	    (values (+ y1 (ash slider-button-short-dim -1))
 		    (- y2 (ash slider-button-short-dim -1)))
-	    ; horizontal orientation
+	    ;; horizontal orientation
 	    (values (+ x1 (ash slider-button-short-dim -1))
 		    (- x2 (ash slider-button-short-dim -1))))
-      (+ (gadget-min-value pane)
-	 (/ (* (gadget-range pane) (- (max good-dim1 (min dim good-dim2)) good-dim1))
-	    (- good-dim2 good-dim1))))))
+      (let ((displacement
+             (/ (- (max good-dim1 (min dim good-dim2)) good-dim1)
+                (- good-dim2 good-dim1)))
+            (quanta (slider-number-of-quanta pane)))
+        (+ (gadget-min-value pane)
+           (* (gadget-range pane)
+              (if quanta
+                  (/ (round (* displacement quanta)) quanta)
+                  displacement)))))))
 
 (defun format-value (value decimal-places)
   (if (<= decimal-places 0)
