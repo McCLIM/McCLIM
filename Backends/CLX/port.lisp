@@ -126,7 +126,8 @@
 
 (defmethod unrealize-mirror ((port clx-port) (sheet sheet))
   (when (port-lookup-mirror port sheet)
-    (xlib:unmap-window (port-lookup-mirror port sheet))))
+    (xlib:destroy-window (port-lookup-mirror port sheet))
+    (port-unregister-mirror port sheet (sheet-mirror sheet))))
 
 (defmethod port-set-sheet-region ((port clx-port) (graft graft) region)
   (declare (ignore region))
@@ -166,40 +167,39 @@
   (let ((sheet (and window
 		    (port-lookup-sheet *clx-port* window))))
     (declare (special *clx-port*))
-    (case event-key
-      (:key-press
-       (make-instance 'key-press-event :key-name (xlib:keycode->character display code state)
-		      :sheet sheet :modifier-state state :timestamp time))
-      (:key-release
-       (make-instance 'key-release-event :key-name (xlib:keycode->character display code state)
-		      :sheet sheet :modifier-state state :timestamp time))
-      (:button-release
-       (make-instance 'pointer-button-release-event :pointer 0 :button code :x x :y y
-		      :sheet sheet :modifier-state state :timestamp time))
-      (:button-press
-       (make-instance 'pointer-button-press-event :pointer 0 :button code :x x :y y
-		      :sheet sheet :modifier-state state :timestamp time))
-      (:enter-notify
-       (make-instance 'pointer-enter-event :pointer 0 :button code :x x :y y
-		      :sheet sheet :modifier-state state :timestamp time))
-      (:leave-notify
-       (make-instance (if (eq mode :ungrab) 'pointer-ungrab-event 'pointer-exit-event)
-	              :pointer 0 :button code :x x :y y
-		      :sheet sheet :modifier-state state :timestamp time))
-      (:configure-notify
-       (make-instance 'window-configuration-event :sheet sheet
-		      :x x :y y :width width :height height))
-      (:unmap-notify
-       (make-instance 'window-unmap-event :sheet sheet))
-      (:destroy-notify
-       (make-instance 'window-destroy-event :sheet sheet))
-      (:motion-notify
-       (make-instance 'pointer-motion-event :pointer 0 :button code :x x :y y
-                     :sheet sheet :modifier-state state :timestamp time))
-      ((:exposure :display)
-       (make-instance 'window-repaint-event :sheet sheet))
-      (t
-       nil))))
+    (when sheet
+      (case event-key
+	(:key-press
+	 (make-instance 'key-press-event :key-name (xlib:keycode->character display code state)
+			:sheet sheet :modifier-state state :timestamp time))
+	(:key-release
+	 (make-instance 'key-release-event :key-name (xlib:keycode->character display code state)
+			:sheet sheet :modifier-state state :timestamp time))
+	(:button-release
+	 (make-instance 'pointer-button-release-event :pointer 0 :button code :x x :y y
+			:sheet sheet :modifier-state state :timestamp time))
+	(:button-press
+	 (make-instance 'pointer-button-press-event :pointer 0 :button code :x x :y y
+			:sheet sheet :modifier-state state :timestamp time))
+	(:enter-notify
+	 (make-instance 'pointer-enter-event :pointer 0 :button code :x x :y y
+			:sheet sheet :modifier-state state :timestamp time))
+	(:leave-notify
+	 (make-instance (if (eq mode :ungrab) 'pointer-ungrab-event 'pointer-exit-event)
+	   :pointer 0 :button code :x x :y y
+	   :sheet sheet :modifier-state state :timestamp time))
+	(:configure-notify
+	 (make-instance 'window-configuration-event :sheet sheet
+			:x x :y y :width width :height height))
+	(:destroy-notify
+	 (make-instance 'window-destroy-event :sheet sheet))
+	(:motion-notify
+	 (make-instance 'pointer-motion-event :pointer 0 :button code :x x :y y
+			:sheet sheet :modifier-state state :timestamp time))
+	((:exposure :display)
+	 (make-instance 'window-repaint-event :sheet sheet))
+	(t
+	 nil)))))
 
 (defmethod get-next-event ((port clx-port) &key wait-function timeout)
   (declare (ignore wait-function timeout))
@@ -333,9 +333,6 @@
 (defmethod port-mirror-height ((port clx-port) sheet)
   (let ((mirror (port-lookup-mirror port sheet)))
     (xlib:drawable-height mirror)))
-
-(defmethod port-destroy-mirror ((port clx-port) mirror)
-  (xlib:destroy-window mirror))
 
 (defmethod graft ((port clx-port))
   (port-grafts port))
