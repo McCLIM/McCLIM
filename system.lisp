@@ -131,6 +131,7 @@
    "input-editing"
    "presentations"
    "presentation-defs"
+   "pointer-tracking" ; depends on WITH-INPUT-CONTEXT
    "commands"
    "frames"
    "incremental-redisplay"
