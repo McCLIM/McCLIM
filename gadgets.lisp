@@ -728,11 +728,13 @@ and must never be nil."))
 
 (defmethod armed-callback :after ((gadget arm/disarm-repaint-mixin) client id)
   (declare (ignore client id))
-  (dispatch-repaint gadget +everywhere+))
+  (dispatch-repaint gadget (or (pane-viewport-region gadget)
+                               (sheet-region gadget))))
 
 (defmethod disarmed-callback :after ((gadget arm/disarm-repaint-mixin) client id)
   (declare (ignore client id))
-  (dispatch-repaint gadget +everywhere+))
+  (dispatch-repaint gadget (or (pane-viewport-region gadget)
+                               (sheet-region gadget))))
 
 (defclass value-changed-repaint-mixin ()
   ()
@@ -742,7 +744,8 @@ and must never be nil."))
 (defmethod (setf gadget-value) :after (new-value (gadget value-changed-repaint-mixin)
                                        &key &allow-other-keys)
   (declare (ignore new-value))
-  (dispatch-repaint gadget +everywhere+))
+  (dispatch-repaint gadget (or (pane-viewport-region gadget)
+                               (sheet-region gadget))))
 
 ;;;; Event handling mixins
 
