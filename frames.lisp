@@ -532,10 +532,10 @@ frame, if any")
 	       (redisplay-frame-panes frame :force-p first-time)
 	       (setq first-time nil)
 	       (if query-io
-		   ;; We don't need to turn the cursor on here, as Goatee has
-		   ;; its own cursor which will appear. In fact, as a sane
-		   ;; interface policy, leave it off by default, and hopefully
-		   ;; this doesn't violate the spec.
+                 ;; We don't need to turn the cursor on here, as Goatee has its own
+                 ;; cursor which will appear. In fact, leaving it on causes much
+                 ;; bit flipping and slows command output somewhat. So, leave it
+                 ;; off by default, and hope this doesn't violate the spec.  
 		   (progn            
 		     (setf (cursor-visibility (stream-text-cursor *query-io*))
 			   nil)
@@ -732,11 +732,17 @@ frame, if any")
   (push (cons name pane) (frame-panes-for-layout frame))
   pane)
 
-(defun do-pane-creation-form (name form)
+(defun coerce-pane-name (pane name)
+  (when pane 
+    (setf (slot-value pane 'name) name)    
+    (push pane (frame-named-panes (pane-frame pane))))
+  pane)
+
+(defun do-pane-creation-form (name form)  
   (cond
     ((and (= (length form) 1)
 	  (listp (first form)))
-     (first form))
+     `(coerce-pane-name ,(first form) ',name))
     ((keywordp (first form))
      (let ((maker (intern (concatenate 'string
 				       (symbol-name '#:make-clim-)
@@ -997,7 +1003,9 @@ frame, if any")
 
 (defconstant +button-documentation+ '((#.+pointer-left-button+ "L")
 				      (#.+pointer-middle-button+ "M")
-				      (#.+pointer-right-button+ "R")))
+                                      (#.+pointer-right-button+ "R")
+                                      (#.+pointer-wheel-up+ "WheelUp")
+                                      (#.+pointer-wheel-down+ "WheelDown")))
 
 (defconstant +modifier-documentation+
   '((#.+shift-key+ "sh" "Shift")
