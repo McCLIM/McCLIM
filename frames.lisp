@@ -216,15 +216,20 @@ FRAME-EXIT condition."))
   (declare (ignore fm))
   (sheet-adopt-child (frame-top-level-sheet frame) (frame-pane frame))
   (sheet-adopt-child (graft frame) (frame-top-level-sheet frame))
-  (setf (sheet-transformation (frame-top-level-sheet frame))
-	(make-translation-transformation 100 100))
   (let ((space (compose-space (frame-top-level-sheet frame))))
     ;; automatically generates a window-configuation-event
     ;; which then calls allocate-space
+    ;;
+    ;; Not any longer, we turn of CONFIGURE-NOTIFY events until the
+    ;; window is mapped and do the space allocation now, so that all
+    ;; sheets will have their correct geometry at once. --GB
     (setf (sheet-region (frame-top-level-sheet frame))
 	  (make-bounding-rectangle 0 0
 				   (space-requirement-width space)
-				   (space-requirement-height space)))))
+				   (space-requirement-height space)))
+    (allocate-space (frame-top-level-sheet frame)
+                    (space-requirement-width space)
+                    (space-requirement-height space)) ))
 
 (defmethod layout-frame ((frame application-frame) &optional width height)
   (let ((pane (frame-pane frame)))
@@ -323,18 +328,16 @@ FRAME-EXIT condition."))
 	  (partial-command-parser
 	   'command-line-read-remaining-arguments-for-partial-command)
 	  (prompt "Command: "))
-  (when *multiprocessing-p*
-    (sleep 4)) ; wait for the panes to be finalized - KLUDGE!!! - mikemac
   (loop
     (let ((*standard-input* (frame-standard-input frame))
 	  (*standard-output* (frame-standard-output frame))
 	  (*query-io* (frame-query-io frame))
 	  ;; during development, don't alter *error-output*
-					;(*error-output* (frame-error-output frame))
+          ;; (*error-output* (frame-error-output frame))
 	  (*command-parser* command-parser)
 	  (*command-unparser* command-unparser)
 	  (*partial-command-parser* partial-command-parser)
-	  (prompt-style (make-text-style :fixed :italic :normal)))
+	  (prompt-style (make-text-style :fix :italic :normal)))
       (map-over-sheets #'(lambda (pane)
 			   (if (and (typep pane 'clim-stream-pane)
 				    (eq (pane-display-time pane) :command-loop)
@@ -350,7 +353,7 @@ FRAME-EXIT condition."))
 	    (if (stringp prompt)
 		(write-string prompt *standard-input*)
 	      (funcall prompt *standard-input* frame))
-	    (finish-output *standard-input*)))
+	    (finish-output *standard-input*)))	  
 	(let ((command (read-frame-command frame)))
 	  (fresh-line *standard-input*)
 	  (when command
