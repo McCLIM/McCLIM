@@ -443,6 +443,21 @@
 	    (setf (gethash name *gesture-names*) (list gesture-entry))
 	    (push gesture-entry (gethash name *gesture-names*)))))))
 
+(defgeneric character-gesture-name (name))
+
+(defmethod character-gesture-name ((name character))
+  name)
+
+(defmethod character-gesture-name ((name symbol))
+  (let ((entry (car (gethash name *gesture-names*))))
+    (if entry
+	(destructuring-bind (type device-name modifier-state)
+	    entry
+	  (if (and (eq type :keyboard)
+		   (eql modifier-state 0))
+	      device-name
+	      nil))
+	nil)))
 
 (defgeneric %event-matches-gesture (event type device-name modifier-state))
 

@@ -46,7 +46,10 @@
 ;;; buffer-delete-char*
 ;;; buffer-open-line*
 ;;; buffer-close-line*
-
+;;;
+;;; All modifications to a buffer are done through those 4 generic
+;;; functions, so subclasses can update themselves via
+;;;;before/after/around methods on them.
 (defclass basic-buffer ()
   ()
   (:documentation "basic-buffer is a protocol class that specifies basic insert

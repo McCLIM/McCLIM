@@ -75,21 +75,15 @@
 	      (let ((gesture (aref buffer scan-pointer)))
 		(cond ((typep gesture 'noise-string-property)
 		       (incf scan-pointer))
+		      ; XXX What about if peek-p is true?
 		      ((and (not peek-p)
 			    (typep gesture 'goatee::accept-result-extent))
-		       (throw-object-ptype (object gesture)
-					   (goatee::result-type gesture))))
-		(if (typep gesture 'noise-string-property)
-                    ;; This seems dubious as gesture is already tested
-                    ;; for being a noise string above, we wind up
-                    ;; incrementing the scan-pointer twice.
-                    ;; --GB 2003-05-30
-                    ;; (incf scan-pointer)
-		    nil
-		    (progn
-		      (unless peek-p
-			(incf scan-pointer))
-		      (return-from stream-read-gesture gesture)))))
+		       (incf scan-pointer)
+		       (throw-object-ptype (goatee::object gesture)
+					   (goatee::result-type gesture)))
+		      (t (unless peek-p
+			   (incf scan-pointer))
+			 (return-from stream-read-gesture gesture)))))
 	     ;; If activated, insertion pointer is at fill pointer
 	     ((stream-activated stream)
 	      (return-from stream-read-gesture (values nil :eof)))
@@ -129,6 +123,32 @@
       (break))
     (setf (stream-activated stream) t)))
 
+;;; These helper functions take the arguments of ACCEPT so that they
+;;; can be used directly by ACCEPT.
+
+(defun make-activation-gestures
+    (&key (activation-gestures nil activation-gestures-p)
+     (additional-activation-gestures nil additional-activations-p)
+     (existing-activation-gestures *activation-gestures*)
+     &allow-other-keys)
+  (cond (additional-activations-p
+	 (append additional-activation-gestures existing-activation-gestures))
+	(activation-gestures-p
+	 activation-gestures)
+	(t (or existing-activation-gestures
+	       *standard-activation-gestures*))))
+
+(defun make-delimiter-gestures
+    (&key (delimiter-gestures nil delimiter-gestures-p)
+     (additional-delimiter-gestures nil additional-delimiters-p)
+     (existing-delimiter-gestures *delimiter-gestures*)
+     &allow-other-keys)
+  (cond (additional-delimiters-p
+	 (append additional-delimiter-gestures existing-delimiter-gestures))
+	(delimiter-gestures-p
+	 delimiter-gestures)
+	(t existing-delimiter-gestures)))
+
 (defmacro with-activation-gestures ((gestures &key override) &body body)
   ;; XXX Guess this implies that gestures need to be defined at compile time.
   ;; Sigh.
@@ -136,12 +156,15 @@
 			       (gethash gestures *gesture-names*))
 			  `(list ',gestures)
 			  gestures))
-	(gestures (gensym)))
-    `(let* ((,gestures ,gesture-form)
-	    (*activation-gestures* (if ,override
-				       ,gestures
-				       (append ,gestures
-					       *activation-gestures*))))
+	(gestures (gensym))
+	(override-var (gensym)))
+    `(let* ((,gestures ,gesture-form)	;Preserve evaluation order of arguments
+	    (,override-var ,override)
+	    (*activation-gestures* (make-activation-gestures
+				    (if ,override-var
+					:activation-gestures
+					:additional-activation-gestures)
+				    ,gestures)))
        ,@body)))
 
 (defmacro with-delimiter-gestures ((gestures &key override) &body body)
@@ -151,12 +174,15 @@
 			       (gethash gestures *gesture-names*))
 			  `(list ',gestures)
 			  gestures))
-	(gestures (gensym)))
-    `(let* ((,gestures ,gesture-form)
-	    (*delimiter-gestures* (if ,override
-				      ,gestures
-				      (append ,gestures
-					      *delimiter-gestures*))))
+	(gestures (gensym))
+	(override-var (gensym)))
+    `(let* ((,gestures ,gesture-form)	;Preserve evaluation order of arguments
+	    (,override-var ,override)
+	    (*delimiter-gestures* (make-delimiter-gestures
+				   (if ,override-var
+				       :delimiter-gestures
+				       :additional-delimiter-gestures)
+				   ,gestures)))
        ,@body)))
 
 (defun activation-gesture-p (gesture)
@@ -191,6 +217,15 @@
 (defgeneric invoke-with-input-editing
     (stream continuation input-sensitizer initial-contents class))
 
+(defmethod invoke-with-input-editing :around ((stream extended-output-stream)
+					      continuation
+					      input-sensitizer
+					      initial-contents
+					      class)
+  (declare (ignore continuation input-sensitizer initial-contents class))
+  (letf (((cursor-visibility (stream-text-cursor stream)) nil))
+    (call-next-method)))
+
 (defmethod invoke-with-input-editing ((stream extended-input-stream)
 				      continuation
 				      input-sensitizer
@@ -210,6 +245,16 @@
 	      (return-from invoke-with-input-editing
 		(funcall continuation editing-stream)))))
       (finalize editing-stream input-sensitizer))))
+
+(defun input-editing-rescan-loop (editing-stream continuation)
+  (loop
+   (block rescan
+     (handler-bind ((rescan-condition #'(lambda (c)
+					  (declare (ignore c))
+					  (reset-scan-pointer editing-stream)
+					  (return-from rescan nil))))
+       (return-from input-editing-rescan-loop
+	 (funcall continuation editing-stream))))))
 
 (defmethod invoke-with-input-editing
     (stream continuation input-sensitizer initial-contents class)

@@ -31,6 +31,13 @@
    (snapshot :accessor snapshot :initarg :snapshot
 	     :initform (make-instance 'editing-stream-snapshot))))
 
+(defmethod cursor-visibility ((stream goatee-input-editing-mixin))
+  (cursor-visibility (area stream)))
+
+(defmethod (setf cursor-visibility) (visibility
+				     (stream goatee-input-editing-mixin))
+  (setf (cursor-visibility (area stream)) visibility))
+
 (defclass noise-extent (extent)
   ()
   (:documentation "Characters within the extent are input editor noise
@@ -44,22 +51,31 @@
 
 ;;; Stream is the encapsulated stream
 (defmethod initialize-instance :after ((obj goatee-input-editing-mixin)
-					&key stream (initial-contents ""))
+				       &key stream (initial-contents "")
+				       (cursor-visibility t))
   (multiple-value-bind (cx cy)
       (stream-cursor-position stream)
-    (setf (cursor-visibility (stream-text-cursor stream)) nil)
-    (setf (area obj)
-	  (make-instance
-	   'simple-screen-area
-	   :area-stream stream
-	   :buffer (make-instance
-		    'editable-buffer
-		    :initial-contents initial-contents)
-	   :x-position cx
-	   :y-position cy))
-    (stream-add-output-record stream (area obj))
-    ;; initialize input-editing-stream state to conform to our reality
-    (make-input-editing-stream-snapshot obj (area obj))))
+    (let ((max-width (- (stream-text-margin stream) cx)))
+      ;; XXX hack to give area a fixed size rectangle that can be highlighted
+      (with-output-recording-options (stream :draw nil :record t)
+	(draw-rectangle* stream cx cy
+			 (+ cx max-width) (+ cy (stream-line-height stream))
+			 :ink (medium-background stream)
+			 :filled nil))
+      (setf (area obj)
+	    (make-instance
+	     'simple-screen-area
+	     :area-stream stream
+	     :buffer (make-instance 'editable-buffer
+				    :initial-contents initial-contents)
+	     :x-position cx
+	     :y-position cy
+	     :cursor-visibility cursor-visibility
+	     :max-width max-width))
+      (stream-add-output-record stream (area obj))
+      ;; initialize input-editing-stream state to conform to our reality
+      (make-input-editing-stream-snapshot obj (area obj)))
+    ))
 
 (defvar climi::*noise-string-start*)
 (defvar climi::*noise-string*)

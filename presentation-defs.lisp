@@ -525,7 +525,6 @@
 				     rest-args))))
       (when historyp
 	(setf rest-args (list* :history real-history-type rest-args)))
-      (apply #'prompt-for-accept stream real-type view rest-args)
       (apply #'stream-accept stream real-type rest-args))))
 
 
@@ -549,11 +548,17 @@
 			   additional-delimiter-gestures))
 
 (defmethod stream-accept ((stream standard-extended-input-stream) type
-			  &rest args)
+			  &rest args
+			  &key (view (stream-default-view stream))
+			  &allow-other-keys)
+  (apply #'prompt-for-accept stream type view args)
   (apply #'accept-1 stream type args))
 
 (defmethod stream-accept ((stream standard-input-editing-stream) type
-			  &rest args)
+			  &rest args
+			  &key (view (stream-default-view stream))
+			  &allow-other-keys)
+  (apply #'prompt-for-accept stream type view args)
   (apply #'accept-1 stream type args))
 
 (defmethod stream-accept ((stream #.*string-input-stream-class*) type
@@ -1634,4 +1639,9 @@
 				    (view textual-view)
 				    &key (default nil defaultp) default-type)
   (accept-using-read stream type default default-type defaultp))
+
+(define-presentation-generic-function %accept-present-default
+    accept-present-default
+  (type-key parameters options type
+   stream view default default-supplied-p present-p query-identifier))
 

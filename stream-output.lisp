@@ -120,16 +120,12 @@
     (values x y)))
 
 (defmethod* (setf cursor-position) (nx ny (cursor cursor-mixin))
-  (with-slots (x y cursor-state) cursor
-    (if cursor-state
-	(flip-screen-cursor cursor))
-    (multiple-value-prog1
-	(setf (values x y) (values nx ny)))
-    (if cursor-state
-	(flip-screen-cursor cursor)))
-  (when (output-recording-stream-p (cursor-sheet cursor))
-    (stream-close-text-output-record (cursor-sheet cursor))))
-  
+  (with-slots (x y) cursor
+    (letf (((cursor-state cursor) nil))
+      (multiple-value-prog1
+	  (setf (values x y) (values nx ny))))
+    (when (output-recording-stream-p (cursor-sheet cursor))
+    (stream-close-text-output-record (cursor-sheet cursor)))))
 
 (defmethod flip-screen-cursor ((cursor cursor-mixin))
   (with-slots (x y sheet width) cursor
@@ -291,15 +287,13 @@
   (declare (ignorable region))
   (let ((cursor (stream-text-cursor stream)))
     (if (cursor-state cursor)
-	(progn
-	  ;; Erase the cursor so that the subsequent flip operation will make a
-	  ;; cursor, whether or not the next-method erases the location of the
-	  ;; cursor.
-	  ;; XXX clip to region?  No one else seems to...
-          ;; Sure clip to region! --GB
-	  (display-cursor cursor :erase)
-	  (call-next-method)
-	  (flip-screen-cursor cursor))
+	;; Erase the cursor so that the subsequent flip operation will make a
+	;; cursor, whether or not the next-method erases the location of the
+	;; cursor.
+	;; XXX clip to region?  No one else seems to...
+	;; Sure clip to region! --GB
+	(letf (((cursor-state cursor) nil))
+	  (call-next-method))
 	(call-next-method))))
 
 (defmethod scroll-vertical ((stream standard-extended-output-stream) dy)

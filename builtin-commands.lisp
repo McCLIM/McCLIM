@@ -52,7 +52,7 @@
 ;;; table, but we don't exactly have a surplus of commands yet...
 
 (define-command (com-describe :command-table global-command-table
-		 :name "Describe")
+			      :name "Describe")
     ((obj 'expression
 	  :prompt "object"
 	  :gesture :describe))

@@ -20,9 +20,9 @@
 
 ;;; Need to support replay and redisplay (buffer has changed).  Redisplay needs
 ;;; to have the idea of incremental redisplay (update screen directly) and
-;;; start over from scratch.  We won't hook into the CLIM idea of
-;;; incremental redisplay just yet as it isn't implemented in McCLIM.
-;;; (Actually, we probably won't even when it is implemented.)
+;;; start over from scratch.  Note that this is different from the
+;;; CLIM concept of incremental redisplay, which happens when commands
+;;; are executed (usually).
 
 ;;; cheat and use this McCLIM internal class :)
 (defclass screen-area-cursor (clim-internals::cursor-mixin cursor)
@@ -52,12 +52,16 @@
    (max-width :accessor max-width :initarg :max-width :initform nil
 	      :documentation "Maximum available width for area.")
    (gutter-width :accessor gutter-width :initarg :gutter-width :initform 12
-		 :documentation "Width of gutter at end of line"))
-  (:documentation "A Goatee editable area implemented inside of an output
-  record."))
+		 :documentation "Width of gutter at end of line")
+   (foreground-ink :accessor foreground-ink :initarg :foreground-ink
+		   :documentation "Default foreground color (ink) for area")
+   (background-ink :accessor background-ink :initarg :background-ink
+		   :documentation "Default background color (ink) for area"))
+  (:documentation "A Goatee editable area implemented as an output record."))
 
 (defmethod initialize-instance :after ((area simple-screen-area)
-				       &key area-stream)
+				       &key area-stream
+				       (cursor-visibility :on))
   (when (not (slot-boundp area 'text-style))
     (if area-stream
 	(setf (text-style area) (medium-text-style area-stream))
@@ -74,9 +78,24 @@
 			 :sheet (area-stream area)
 			 :x-position x
 			 :y-position y))))
+  (when (not (slot-boundp area 'max-width))
+    (setf (max-width area) (if area-stream
+			       (- (stream-text-margin area-stream)
+				  (output-record-position area)) ; x
+			       (* 80 9))))
+  (when (not (slot-boundp area 'foreground-ink))
+    (setf (foreground-ink area) (medium-foreground area-stream)))
+  (when (not (slot-boundp area 'background-ink))
+    (setf (background-ink area) (medium-background area-stream)))
   (initialize-area-from-buffer area (buffer area))
-  (setf (cursor-visibility (cursor area)) :on)
+  (setf (cursor-visibility (cursor area)) cursor-visibility)
   (tree-recompute-extent area))
+
+(defmethod cursor-visibility ((area simple-screen-area))
+  (cursor-visibility (cursor area)))
+
+(defmethod (setf cursor-visibility) (vis (area simple-screen-area))
+  (setf (cursor-visibility (cursor area)) vis))
 
 (defmethod line-text-width ((area simple-screen-area)
 			    ;; XXX need a less implementation-dependent class
@@ -89,7 +108,8 @@
 	  for char = (char-ref line i)
 	  sum (text-size stream char :text-style text-style))))
 
-(defclass screen-line (editable-area-line displayed-output-record rectangle)
+(defclass screen-line (editable-area-line displayed-output-record
+					  climi::basic-output-record)
   ((current-contents :accessor current-contents :initarg :current-contents
 		     :initform (make-array '(1)
 					   :adjustable t
@@ -100,12 +120,21 @@
    (ascent :accessor ascent :initarg :ascent)
    (descent :accessor descent :initarg :descent)
    (baseline :accessor baseline :initarg :baseline)
-   (x :initarg :x-position :initform 0)
-   (y :initarg :y-position :initform 0)
-   (parent :initarg :parent :initform nil :reader output-record-parent)
+   #+nil(x :initarg :x-position :initform 0)
+   #+nil(y :initarg :y-position :initform 0)
+   #+nil(parent :initarg :parent :initform nil :reader output-record-parent)
    (width :accessor width :initarg :width)
    (cursor :accessor cursor :initarg :cursor :initform nil)
    (line-breaks :accessor line-breaks :initform nil)))
+
+(defmethod (setf width) :after (width (line screen-line))
+  (setf (slot-value line 'climi::x2) (+ (slot-value line 'climi::x1) width)))
+
+(defmethod (setf ascent) :after (ascent (line screen-line))
+  (setf (slot-value line 'climi::y2) (+ (slot-value line 'climi::y1) ascent)))
+
+(defmethod (setf descent) :after (descent (line screen-line))
+  (setf (slot-value line 'climi::y2) (+ (slot-value line 'climi::y1) descent)))
 
 (defun line-contents-sans-newline (buffer-line &key destination)
   (let* ((contents-size (line-last-point buffer-line)))
@@ -142,16 +171,18 @@
     (multiple-value-bind (x y)
 	(output-record-position obj)
       (declare (ignore x))
+      (setf (slot-value obj 'climi::y2) (+ y (ascent obj) (descent obj)))
       (setf (baseline obj) (+ y (ascent obj))))))
 
-
+#+nil
 (defmethod output-record-position ((record screen-line))
   (values (slot-value record 'x) (slot-value record 'y)))
 
+#+nil
 (defmethod* (setf output-record-position) (nx ny (record screen-line))
   (setf (values (slot-value record 'x) (slot-value record 'y))
 	(values nx ny)))
-
+#+nil
 (defmethod bounding-rectangle* ((record screen-line))
   (let ((x (slot-value record 'x))
 	(y (slot-value record 'y)))
@@ -161,6 +192,7 @@
 	    (+ y (slot-value record 'ascent) (slot-value record 'descent)))))
 
 ;;; Implement the rectangle protocol; now region stuff should work.
+#+nil
 (defmethod rectangle-edges* ((record screen-line))
   (bounding-rectangle* record))
 
@@ -182,6 +214,12 @@
   (declare (ignore function x y x-offset y-offset continuation-args))
   nil)
 
+(defmethod foreground-ink ((line screen-line))
+  (foreground-ink (output-record-parent line)))
+
+(defmethod background-ink ((line screen-line))
+  (background-ink (output-record-parent line)))
+
 (defmethod replay-output-record ((record screen-line) stream
 				 &optional region (x-offset 0) (y-offset 0))
   (declare (ignore region x-offset y-offset))
@@ -197,7 +235,8 @@
       (multiple-value-bind (x y) (output-record-position record)
 	(declare (ignore y))
 	(draw-text* stream (current-contents record)
-                    x (slot-value record 'baseline)))
+                    x (slot-value record 'baseline)
+		    :ink (foreground-ink record)))
       (when (and cursor (cursor-state cursor))
 	(climi::flip-screen-cursor cursor)))))
 
@@ -325,7 +364,7 @@
     (let* ((stream (area-stream area))
 	   (medium (sheet-medium stream)))
       (draw-rectangle* medium x1 y1 x2 y2
-			 :ink (medium-background medium)
+			 :ink (background-ink area)
 			 :filled t)))
   (replay area (area-stream area)))
 
@@ -519,7 +558,8 @@
 		  (draw-text* medium current-contents
 			      (+ x start-width) baseline
 			      :start line-unchanged-from-start
-			      :end line-unchanged-from-end)))
+			      :end line-unchanged-from-end
+			      :ink (foreground-ink line))))
 	      ;; Old, wrong, bounding rectangle
 	      (with-bounding-rectangle* (old-min-x old-min-y old-max-x old-max-y)
 		  line
@@ -557,27 +597,28 @@
 (defmethod line-update-cursor ((line screen-line) stream)
   (multiple-value-bind (point-line point-pos)
       (point* (buffer (editable-area line)))
-    (with-slots (cursor baseline ascent current-contents x) line
-      (if (eq point-line (buffer-line line))
-	  (setf cursor (cursor (editable-area line)))
-	  (setf cursor nil))
-      (when cursor
-	(let ((cursor-x (+ x
-			   (stream-string-width
-			    stream
-			    current-contents
-			    :end point-pos
-			    :text-style (text-style (editable-area line))))))
-	  (letf (((cursor-visibility cursor) :off))
-	    (when (and (slot-boundp cursor 'screen-line)
-		       (screen-line cursor)
-		       (not (eq line (screen-line cursor))))
-	      (setf (cursor (screen-line cursor)) nil))
-	    (setf (screen-line cursor) line)
-	    (setf (cursor-position cursor)
-		  (values cursor-x
-			  (- baseline ascent)))
-            (maybe-scroll cursor)))))))
+    (with-slots (cursor baseline ascent current-contents) line
+      (let ((x (output-record-position line)))
+	(if (eq point-line (buffer-line line))
+	    (setf cursor (cursor (editable-area line)))
+	    (setf cursor nil))
+	(when cursor
+	  (let ((cursor-x (+ x
+			     (stream-string-width
+			      stream
+			      current-contents
+			      :end point-pos
+			      :text-style (text-style (editable-area line))))))
+	    (letf (((cursor-visibility cursor) :off))
+	      (when (and (slot-boundp cursor 'screen-line)
+			 (screen-line cursor)
+			 (not (eq line (screen-line cursor))))
+		(setf (cursor (screen-line cursor)) nil))
+	      (setf (screen-line cursor) line)
+	      (setf (cursor-position cursor)
+		    (values cursor-x
+			    (- baseline ascent)))
+	      (maybe-scroll cursor))))))))
 
 
 (defmethod erase-line ((line screen-line) medium left right)
@@ -591,5 +632,5 @@ origin)"
 	(draw-rectangle* medium
 			 (+ left x) y
 			 (+ x right) (+ y ascent descent)
-			 :ink (medium-background medium)
+			 :ink (background-ink line)
 			 :filled t)))))
