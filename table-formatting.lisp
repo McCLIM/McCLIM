@@ -186,13 +186,13 @@ to a table cell within the row."))
   (map-over-row-cells function block))
 
 (defmethod cell-common-size (cell (block row-output-record))
-  (declare (ignore block)
+  (declare #-cmu (ignore block)
            (type cell-output-record cell))
   (max (bounding-rectangle-height cell)
        (cell-min-height cell)))
 
 (defmethod cell-size (cell (block row-output-record))
-  (declare (ignore block)
+  (declare #-cmu (ignore block)
            (type cell-output-record cell))
   (max (bounding-rectangle-width cell)
        (cell-min-width cell)))
@@ -200,7 +200,7 @@ to a table cell within the row."))
 (defmethod block-adjust-cell* (cell (block row-output-record)
                                cell-coordinate common-coordinate
                                size common-size)
-  (declare (ignore block)
+  (declare #-cmu (ignore block)
            (type cell-output-record cell)
            (type coordinate cell-coordinate common-coordinate size common-size))
   (adjust-cell* cell
@@ -252,13 +252,13 @@ corresponding to a table cell within the column."))
   (map-over-column-cells function block))
 
 (defmethod cell-common-size (cell (block column-output-record))
-  (declare (ignore block)
+  (declare #-cmu (ignore block)
            (type cell-output-record cell))
   (max (bounding-rectangle-width cell)
        (cell-min-width cell)))
 
 (defmethod cell-size (cell (block column-output-record))
-  (declare (ignore block)
+  (declare #-cmu (ignore block)
            (type cell-output-record cell))
   (max (bounding-rectangle-height cell)
        (cell-min-height cell)))
@@ -266,7 +266,7 @@ corresponding to a table cell within the column."))
 (defmethod block-adjust-cell* (cell (block column-output-record)
                                cell-coordinate common-coordinate
                                size common-size)
-  (declare (ignore block)
+  (declare #-cmu (ignore block)
            (type cell-output-record cell)
            (type coordinate cell-coordinate common-coordinate size common-size))
   (adjust-cell* cell
@@ -432,7 +432,7 @@ list BLOCK-INFOS or vector SIZES."))
 
 (defmethod adjust-table-cells ((table-record empty-standard-table-output-record)
                                stream)
-  (declare (ignore table-record stream))
+  (declare (ignore #-cmu table-record stream))
   ()) ; Nothing to do
 
 ;;; Table of rows
@@ -451,7 +451,7 @@ list BLOCK-INFOS or vector SIZES."))
 
 (defmethod table-equalize-column-widths ((table table-of-rows-output-record)
                                          block-infos widths)
-  (declare (ignore table block-infos)
+  (declare (ignore #-cmu table block-infos)
            (type (vector coordinate) widths))
   (let ((max-width
          (loop :for w :across widths
@@ -475,7 +475,7 @@ list BLOCK-INFOS or vector SIZES."))
 
 (defmethod table-equalize-column-widths ((table table-of-columns-output-record)
                                          block-infos heights)
-  (declare (ignore table heights)
+  (declare (ignore #-cmu table heights)
            (type list block-infos))
   (let ((max-width
           (loop :for i :in block-infos
