@@ -16,11 +16,16 @@ Install instructions for CMU Common Lisp
    (load "system.lisp")
 
 4. Compile and load the system:
-
+   (operate-on-system :clim :compile)  ;; Build CLIM
+   (operate-on-system :clim-clx :compile) ;; Build a backend
    (operate-on-system :clim-examples :compile)
+
+The first two steps can be done in one step with the :clim-clx-user target:
+   (operate-on-system :clim-clx-user :compile)
 
 7. At a later date, after everything is compiled, load the compiled system:
 
+   (operate-on-system :clim-clx-user :load)
    (operate-on-system :clim-examples :load)
 
 Running the demos
@@ -50,6 +55,10 @@ Running the demos
    Use the three sliders to adjust RGB values to obtain a color.
 
    when you get tired of it, hit ^C in the Lisp listener.
+
+4. A some of the demos should be run using the function clim-demo::run-test:
+   (clim-demo::run-test 'clim-demo::address-book)
+   (clim-demo::run-test 'goatee::goatee-test)
 
 How to create a Lisp core file
 ------------------------------
