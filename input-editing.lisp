@@ -627,15 +627,16 @@
 ;;; The possibilities action is different enough that I don't want to add to
 ;;; the spaghetti above...
 
-(defun complete-from-generator-possibilities
+(defun complete-from-generator-possibilities  
     (initial-string generator predicate)
   (let ((possibilities nil)
 	(nmatches 0)
 	(initial-len (length initial-string)))
-    (flet ((suggester (str obj)
+    (flet ((suggester (str obj)	     
 	     (unless (funcall predicate obj)
 	       (return-from suggester nil))
-	     (when (>= (mismatch initial-string str :test #'char-equal)
+	     (when (>= (or (mismatch initial-string str :test #'char-equal)
+			   (length initial-string))
 		       initial-len)
 	       (incf nmatches)
 	       (push (cons str obj) possibilities))))
