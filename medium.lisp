@@ -88,6 +88,8 @@
 (defgeneric text-style-width (text-style medium))
 (defgeneric text-style-fixed-width-p (text-style medium))
 
+(defgeneric text-style-equalp (style1 style2))
+
 (defclass standard-text-style (text-style)
   ((family   :initarg :text-family
 	     :initform :fix
@@ -195,6 +197,14 @@
 (defmethod print-object ((self text-style) stream)
   (print-unreadable-object (self stream :type t :identity nil)
     (format stream "~{~S~^ ~}" (multiple-value-list (text-style-components self)))))
+
+(defmethod text-style-equalp ((style1 standard-text-style)
+			      (style2 standard-text-style))
+  (and (eql (text-style-family style1) (text-style-family style2))
+       (eql (text-style-face style1) (text-style-face style2))
+       (eql (text-style-size style1) (text-style-size style2))
+       #+unicode (eql (text-style-language style1)
+		      (text-style-language style2))))
 
 (defconstant *default-text-style* (make-text-style :fix :roman :normal))
 
@@ -497,6 +507,8 @@
 
 (define-protocol-class line-style ())
 
+(defgeneric line-style-equalp (arg1 arg2))
+
 (defclass standard-line-style (line-style)
   ((unit        :initarg :line-unit
 	        :initform :normal
@@ -556,6 +568,13 @@
 (defmethod medium-miter-limit ((medium medium))
   #.(* 2 single-float-epsilon))
 
+(defmethod line-style-equalp ((style1 standard-line-style)
+			      (style2 standard-line-style))
+  (and (eql (line-style-unit style1) (line-style-unit style2))
+       (eql (line-style-thickness style1) (line-style-thickness style2))
+       (eql (line-style-joint-shape style1) (line-style-joint-shape style2))
+       (eql (line-style-cap-shape style1) (line-style-cap-shape style2))
+       (eql (line-style-thickness style1) (line-style-thickness style2))))
 
 ;;; Misc ops
 

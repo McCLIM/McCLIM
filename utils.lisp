@@ -85,6 +85,16 @@ evaluated."
          (setf ,@old-values-set-form)
          ,update-form))))
 
+;;; XXX This is currently broken with respect to declarations
+
+(defmacro letf* ((&rest forms) &body body)
+  (if (null forms)
+      `(locally
+	 ,@body)
+      `(letf (,(car forms))
+	 (letf* (,(cdr forms))
+	   ,@body))))
+
 (defun map-repeated-sequence (result-type n function sequence)
   "Like CL:MAP, but applies \\arg{function} to \\arg{n} consecutive
 elements of \\arg{sequence}. All the function's return values will be
@@ -334,7 +344,7 @@ by the number of variables in VARS."
     (loop for arg-tail on arg-list by #'cddr
 	  for (key) = arg-tail
 	  do (when (member key keywords :test #'eq)
-	       (setq clean-tail (cdr arg-tail))))
+	       (setq clean-tail (cddr arg-tail))))
     ;; Cons up the new arg list until we hit the clean-tail, then nconc that on
     ;; the end.
     (loop for arg-tail on arg-list by #'cddr

@@ -811,3 +811,23 @@
   )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; Comparison of designs.
+
+(defgeneric design-equalp (design1 design2))
+
+(defmethod design-equalp :around ((design1 t) (design2 t))
+  (or (eql design1 design2)
+      (call-next-method)))
+
+(defmethod design-equalp ((design1 t) (design2 t))
+  nil)
+
+(defmethod design-equalp ((design1 standard-color) (design2 standard-color))
+  (multiple-value-bind (r1 g1 b1)
+      (color-rgb design1)
+    (multiple-value-bind (r2 g2 b2)
+	(color-rgb design2)
+      (and (= r1 r2)
+	   (= g1 g2)
+	   (= b1 b2)))))

@@ -96,18 +96,20 @@
   (with-slots (gc) medium
     (when gc
       (let ((clipping-region (medium-device-region medium)))
-        (unless (region-equal clipping-region +nowhere+)
-	  (let ((rect-seq (clipping-region->rect-seq clipping-region)))
-	    (when rect-seq
-	      #+nil
-	      ;; ok, what McCLIM is generating is not :yx-banded... (currently at least)
-	      (setf (xlib:gcontext-clip-mask gc :yx-banded) rect-seq)
-	      #-nil
-	      ;; the region code doesn't support yx-banding...
-	      ;; or does it? what does y-banding mean in this implementation?
-	      ;; well, apparantly it doesn't mean what y-sorted means
-	      ;; to clx :] we stick with :unsorted until that can be sorted out
-	      (setf (xlib:gcontext-clip-mask gc :unsorted) rect-seq))))))))
+        (if (region-equal clipping-region +nowhere+)
+	    (setf (xlib:gcontext-clip-mask gc) #())
+	    (let ((rect-seq (clipping-region->rect-seq clipping-region)))
+	      (when rect-seq
+		#+nil
+		;; ok, what McCLIM is generating is not :yx-banded...
+		;; (currently at least)
+		(setf (xlib:gcontext-clip-mask gc :yx-banded) rect-seq)
+		#-nil
+		;; the region code doesn't support yx-banding...
+		;; or does it? what does y-banding mean in this implementation?
+		;; well, apparantly it doesn't mean what y-sorted means
+		;; to clx :] we stick with :unsorted until that can be sorted out
+		(setf (xlib:gcontext-clip-mask gc :unsorted) rect-seq))))))))
   
 
 (defgeneric medium-gcontext (medium ink))
@@ -139,18 +141,20 @@
       ;; Here is a bug with regard to clipping ... ;-( --GB )
       #-NIL ; being fixed at the moment, a bit twitchy though -- BTS
       (let ((clipping-region (medium-device-region medium)))
-        (unless (region-equal clipping-region +nowhere+)
-	  (let ((rect-seq (clipping-region->rect-seq clipping-region)))
-	    (when rect-seq
-	      #+nil
-	      ;; ok, what McCLIM is generating is not :yx-banded... (currently at least)
-	      (setf (xlib:gcontext-clip-mask gc :yx-banded) rect-seq)
-	      #-nil
-	      ;; the region code doesn't support yx-banding...
-	      ;; or does it? what does y-banding mean in this implementation?
-	      ;; well, apparantly it doesn't mean what y-sorted means
-	      ;; to clx :] we stick with :unsorted until that can be sorted out
-	      (setf (xlib:gcontext-clip-mask gc :unsorted) rect-seq)))))
+        (if (region-equal clipping-region +nowhere+)
+	    (setf (xlib:gcontext-clip-mask gc) #())
+	    (let ((rect-seq (clipping-region->rect-seq clipping-region)))
+	      (when rect-seq
+		#+nil
+		;; ok, what McCLIM is generating is not :yx-banded...
+		;; (currently at least)
+		(setf (xlib:gcontext-clip-mask gc :yx-banded) rect-seq)
+		#-nil
+		;; the region code doesn't support yx-banding...
+		;; or does it? what does y-banding mean in this implementation?
+		;; well, apparantly it doesn't mean what y-sorted means
+		;; to clx :] we stick with :unsorted until that can be sorted out
+		(setf (xlib:gcontext-clip-mask gc :unsorted) rect-seq)))))
       gc)))
 
 (defmethod medium-gcontext ((medium clx-medium) (ink (eql +foreground-ink+)))
@@ -399,31 +403,31 @@
     (error "MEDIUM-DRAW-ELLIPSE* not yet implemented for non axis-aligned ellipses."))
   (with-transformed-position ((sheet-native-transformation (medium-sheet medium))
                               center-x center-y)
-    (let* ((end-angle (- end-angle start-angle))
-           (end-angle (if (< end-angle start-angle)
-                          (+ (* pi 2) end-angle)
-                          end-angle)))
+    (let* ((arc-angle (- end-angle start-angle))
+           (arc-angle (if (< end-angle 0)
+                          (+ (* pi 2) arc-angle)
+                          arc-angle)))
       (with-CLX-graphics (medium)
         (let ((radius-dx (abs (+ radius-1-dx radius-2-dx)))
               (radius-dy (abs (+ radius-1-dy radius-2-dy))))
           (xlib:draw-arc mirror gc
                          (round (- center-x radius-dx)) (round (- center-y radius-dy))
                          (round (* radius-dx 2)) (round (* radius-dy 2))
-                         start-angle end-angle
+                         start-angle arc-angle
                          filled))))))
 
 (defmethod medium-draw-circle* ((medium clx-medium) center-x center-y radius start-angle end-angle filled)
   (with-transformed-position ((sheet-native-transformation (medium-sheet medium))
                               center-x center-y)
-    (let* ((end-angle (- end-angle start-angle))
-           (end-angle (if (< end-angle start-angle)
-                          (+ (* pi 2) end-angle)
-                          end-angle)))
+    (let* ((arc-angle (- end-angle start-angle))
+           (arc-angle (if (< end-angle 0)
+                          (+ (* pi 2) arc-angle)
+                          arc-angle)))
       (with-CLX-graphics (medium)
         (xlib:draw-arc mirror gc
                        (round (- center-x radius)) (round (- center-y radius))
                        radius radius
-                       start-angle (- end-angle start-angle)
+                       start-angle arc-angle
                        filled)))))
 
 

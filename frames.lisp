@@ -297,6 +297,10 @@ FRAME-EXIT condition."))
 (defmethod frame-exit-frame ((c frame-exit))
   (%frame-exit-frame c))
 
+(defmethod redisplay-frame-pane ((frame application-frame) pane &key force-p)
+  (declare (ignore pane force-p))
+  nil)
+
 (defmethod run-frame-top-level ((frame application-frame) &key &allow-other-keys)
   (handler-bind ((frame-exit #'(lambda (condition)
                                  (declare (ignore condition))
@@ -350,14 +354,17 @@ FRAME-EXIT condition."))
 	  (*partial-command-parser* partial-command-parser)
 	  (prompt-style (make-text-style :fix :italic :normal)))
       (map-over-sheets #'(lambda (pane)
-			   (if (and (typep pane 'clim-stream-pane)
-				    (eq (pane-display-time pane) :command-loop)
-				    (pane-display-function pane))
-			       (let ((func (pane-display-function pane)))
-				 (window-clear pane)
-				 (funcall func frame pane) ; XXX other arguments
-                                        ; XXX incremental redisplay
-                                 )))
+			   (multiple-value-bind (redisplayp clearp)
+			       (pane-needs-redisplay pane)
+			     (when redisplayp
+			       (when (and clearp
+					  (or (not (pane-incremental-redisplay
+						    pane))
+					      (not *enable-updating-output*)))
+				 (window-clear pane))
+			       (redisplay-frame-pane frame pane)
+			       (unless (eq redisplayp :command-loop)
+				 (setf (pane-needs-redisplay pane) nil)))))
 		       (frame-top-level-sheet frame))
       (when *standard-input*
 	(setf (cursor-visibility (stream-text-cursor *standard-input*)) t)

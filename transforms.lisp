@@ -410,6 +410,12 @@
                              (transform-position transformation x y))
                          coord-seq))
 
+(defun transform-position-sequence (seq-type transformation coord-seq)
+  (map-repeated-sequence seq-type
+                         2 (lambda (x y)
+                             (transform-position transformation x y))
+                         coord-seq))
+
 (defmethod transform-rectangle* ((transformation transformation) x1 y1 x2 y2)
   (if (rectilinear-transformation-p transformation)
       (multiple-value-bind (x1 y1) (transform-position transformation x1 y1)

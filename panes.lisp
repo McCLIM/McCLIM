@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.109 2002/11/21 03:54:49 mikemac Exp $
+;;; $Id: panes.lisp,v 1.110 2003/01/28 08:17:41 moore Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -296,7 +296,8 @@
    ;; New sizes, for allocating protocol
    (new-width :initform nil)
    (new-height :initform nil)
-   )
+   (redisplay-needed :accessor pane-redisplay-needed
+		     :initarg :redisplay-neeeded :initform nil))
   (:documentation ""))
 
 (defmethod print-object ((pane pane) sink)
@@ -325,6 +326,14 @@
 (defmethod allocate-space ((pane pane) width height)
   (declare (ignorable pane width height))
   )
+
+(defmethod pane-needs-redisplay ((pane pane))
+  (let ((do-redisplay (pane-redisplay-needed pane)))
+    (values do-redisplay
+	    (and do-redisplay (not (eq do-redisplay :no-clear))))))
+
+(defmethod (setf pane-needs-redisplay) (value (pane pane))
+  (setf (pane-redisplay-needed pane) value))
 
 ;;; WINDOW STREAM
 
@@ -1959,16 +1968,15 @@ During realization the child of the spacing will have as cordinates
 ;;; 29.4 CLIM Stream Panes
 ;;;
 
-(defclass clim-stream-pane (permanent-medium-sheet-output-mixin
+(defclass clim-stream-pane (updating-output-stream-mixin
+			    permanent-medium-sheet-output-mixin
                             #-clim-mp standard-repainting-mixin
                             standard-extended-input-stream
                             standard-extended-output-stream
                             standard-output-recording-stream
                             ;; sheet-leaf-mixin
                             basic-pane)
-  ((display-time :initform nil
-		 :initarg :display-time
-		 :accessor pane-display-time)
+  ((redisplay-needed :initarg :display-time) 
    (incremental-redisplay :type (member '(t nil))
 			  :initform nil
 			  :initarg :incremental-redisplay
@@ -2004,7 +2012,11 @@ During realization the child of the spacing will have as cordinates
    (user-max-width :accessor pane-user-max-width)
    (user-height :accessor pane-user-height)
    (user-min-height :accessor pane-user-min-height)
-   (user-max-height :accessor pane-user-max-height))
+   (user-max-height :accessor pane-user-max-height)
+   (updating-record :accessor clim-stream-pane-updating-record
+		    :initarg :updating-record :initform nil
+		    :documentation "For incremental output, holds the
+   top level updating-output-record."))
   (:documentation
    "This class implements a pane that supports the CLIM graphics,
     extended input and output, and output recording protocols."))
@@ -2077,7 +2089,8 @@ During realization the child of the spacing will have as cordinates
     (values x y)))
 
 (defmethod* (setf window-viewport-position) (x y (pane clim-stream-pane))
-  (scroll-extent pane x y))
+  (scroll-extent pane x y)
+  (values x y))
 
 ;; this function appears to be unused, however...
 ;; v-- does this handle scrolling with occlusion? ie, if another thing is overlapping
@@ -2108,6 +2121,28 @@ During realization the child of the spacing will have as cordinates
   (declare (ignore timeout peek-p input-wait-test input-wait-handler
 		   pointer-button-press-handler))
   (force-output stream))
+
+(defmethod redisplay-frame-pane ((frame application-frame)
+				 (pane clim-stream-pane)
+				 &key force-p)
+  (flet ((invoke-display ()
+	   (let ((display-function (pane-display-function pane)))
+	     (cond ((consp display-function)
+		    (apply (car display-function)
+			   frame pane (cdr display-function)))
+		   (display-function
+		    (funcall display-function frame pane))
+		   (t nil)))))
+    (if (and (pane-incremental-redisplay pane)
+	     *enable-updating-output*)	;XXX
+	(if (or (null (clim-stream-pane-updating-record pane))
+		force-p)
+	    (setf (clim-stream-pane-updating-record pane)
+		  (updating-output (pane)
+		    (invoke-display)))
+	    (redisplay (clim-stream-pane-updating-record pane) pane))
+	(invoke-display))))
+
 
 ;;; INTERACTOR PANES
 
