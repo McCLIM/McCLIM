@@ -68,7 +68,8 @@
 
 (defmethod medium-gcontext ((medium clx-medium) (ink (eql +flipping-ink+)))
   (let ((gc (medium-gcontext medium (medium-background medium))))
-    (setf (xlib:gcontext-background gc) (X-pixel (port medium) (medium-foreground medium)))
+    (setf (xlib:gcontext-background gc)
+	  (X-pixel (port medium) (medium-foreground medium)))
     gc))
 
 (defun clipping-region->rect-seq (medium clipping-region)
@@ -209,6 +210,46 @@
 ;;;
 ;;; Methods for text styles
 
+(defun translate (src src-start src-end afont dst dst-start)
+  ;; This is for replacing the clx-translate-default-function
+  ;; who does'nt know about accentated characters because
+  ;; of a call to cl:graphic-char-p that return nil with accentated characters.
+  ;; For further informations, on a clx-translate-function, see the clx-man.
+  (declare (type sequence src)
+	   (type xlib:array-index src-start src-end dst-start)
+	   (type (or null xlib:font) afont)
+	   (type vector dst))
+  (declare (xlib::clx-values integer
+			     (or null integer xlib:font)
+			     (or null integer)))
+  (let ((min-char-index (xlib:font-min-char afont))
+	(max-char-index (xlib:font-max-char afont)))
+    afont
+    (if (stringp src)
+	(do ((i src-start (xlib::index+ i 1))
+	     (j dst-start (xlib::index+ j 1))
+	     (char))
+	    ((xlib::index>= i src-end)
+	     i)
+	    (declare (type xlib:array-index i j))
+	    (setq char (xlib:char->card8 (char src i)))
+	    (if (or (< char min-char-index) (> char max-char-index))
+		(return i)
+	        (setf (aref dst j) char)))
+        (do ((i src-start (xlib::index+ i 1))
+	     (j dst-start (xlib::index+ j 1))
+	     (elt))
+	    ((xlib::index>= i src-end)
+	     i)
+	    (declare (type xlib:array-index i j))
+	    (setq elt (elt src i))
+	    (when (characterp elt) (setq elt (xlib:char->card8 elt)))
+	    (if (or (not (integerp elt)) 
+		    (< elt min-char-index)
+		    (> elt max-char-index))
+		(return i)
+	        (setf (aref dst j) elt))))))
+
 (defmethod text-size ((medium clx-medium) string &key text-style (start 0) end)
   (when (characterp string)
     (setf string (make-string 1 :initial-element string)))
@@ -220,20 +261,28 @@
             (position-newline (position #\newline string :start start)))
         (if position-newline
             (multiple-value-bind (width ascent descent left right
-                                        font-ascent direction first-not-done)
-                (xlib:text-extents gctxt string :start start :end position-newline)
-              (declare
-               (ignorable left right font-ascent direction first-not-done))
+                                        font-ascent font-descent direction
+                                        first-not-done)
+                (xlib:text-extents gctxt string
+                                   :start start :end position-newline
+                                   :translate #'translate)
+              (declare (ignorable left right
+				  font-ascent font-descent
+				  direction first-not-done))
               (multiple-value-bind (w h x y baseline)
                   (text-size medium string :text-style text-style
                              :start (1+ position-newline) :end end)
                 (values (max w width) (+ ascent descent h)
                         x (+ ascent descent y) (+ ascent descent baseline))))
             (multiple-value-bind (width ascent descent left right
-                                        font-ascent direction first-not-done)
-                (xlib:text-extents gctxt string :start start :end position-newline)
-              (declare
-               (ignorable left right font-ascent direction first-not-done))
+                                        font-ascent font-descent direction
+                                        first-not-done)
+                (xlib:text-extents gctxt string
+                                   :start start :end position-newline
+                                   :translate #'translate)
+              (declare (ignorable left right
+				  font-ascent font-descent
+				  direction first-not-done))
               (values width (+ ascent descent) width 0 ascent))))))
 
 (defmethod medium-draw-text* ((medium clx-medium) string x y
@@ -260,7 +309,9 @@
 		     (:center (+ ty baseline (- (floor text-height 2))))
 		     (:baseline ty)
 		     (:bottom (+ ty baseline (- text-height)))))))
-      (xlib:draw-glyphs mirror gc (round tx) (round ty) string :start start :end end))))
+      (xlib:draw-glyphs mirror gc (round tx) (round ty) string
+                        :start start :end end
+                        :translate #'translate))))
 
 (defmethod medium-buffering-output-p ((medium clx-medium))
   t)
@@ -275,7 +326,8 @@
   (with-CLX-graphics (medium)
     (multiple-value-bind (tx ty)
 	(medium-transform-position medium x y)
-      (xlib:draw-glyph mirror gc (round tx) (round ty) element))))
+      (xlib:draw-glyph mirror gc (round tx) (round ty) element
+                       :translate #'translate))))
 
 
 ;;; Other Medium-specific Output Functions
