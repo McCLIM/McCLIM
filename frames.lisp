@@ -370,6 +370,21 @@ input focus. This is a McCLIM extension."))
 	  (:disowned
 	   (disown-frame (frame-manager frame) frame)))))))
 
+(defun redisplay-changed-panes (frame)
+  (map-over-sheets #'(lambda (pane)
+                       (multiple-value-bind (redisplayp clearp)
+                           (pane-needs-redisplay pane)
+                         (when redisplayp
+                           (when (and clearp
+                                      (or (not (pane-incremental-redisplay
+                                                pane))
+                                          (not *enable-updating-output*)))
+                             (window-clear pane))
+                           (redisplay-frame-pane frame pane)
+                           (unless (eq redisplayp :command-loop)
+                             (setf (pane-needs-redisplay pane) nil)))))
+                   (frame-top-level-sheet frame)))
+
 (defmethod default-frame-top-level
     ((frame application-frame)
      &key (command-parser 'command-line-command-parser)
@@ -389,19 +404,7 @@ input focus. This is a McCLIM extension."))
 	  (*command-unparser* command-unparser)
 	  (*partial-command-parser* partial-command-parser)
 	  (prompt-style (make-text-style :fix :italic :normal)))
-      (map-over-sheets #'(lambda (pane)
-			   (multiple-value-bind (redisplayp clearp)
-			       (pane-needs-redisplay pane)
-			     (when redisplayp
-			       (when (and clearp
-					  (or (not (pane-incremental-redisplay
-						    pane))
-					      (not *enable-updating-output*)))
-				 (window-clear pane))
-			       (redisplay-frame-pane frame pane)
-			       (unless (eq redisplayp :command-loop)
-				 (setf (pane-needs-redisplay pane) nil)))))
-		       (frame-top-level-sheet frame))
+      (redisplay-changed-panes frame)      
       (when *standard-input*
         ;; We don't need to turn the cursor on here, as Goatee has its own
         ;; cursor which will appear. In fact, as a sane interface policy,
