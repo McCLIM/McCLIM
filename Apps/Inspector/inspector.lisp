@@ -31,6 +31,9 @@
 (define-application-frame inspector ()
   ((dico :initform (make-hash-table) :reader dico)
    (cons-cell-dico :initform (make-hash-table) :reader cons-cell-dico)
+   (disassembly-dico :initform (make-hash-table) :reader disassembly-dico
+		     :documentation "A hash table specifying which
+functions should display disassembly")
    (print-length :initform (make-hash-table) :reader print-length
 		 :documentation "A hash table mapping list objects to
 their specific print lengths, if they have one.")
@@ -111,7 +114,7 @@ information is present."))
 (defmethod inspect-object (object pane)
   (with-output-as-presentation
       (pane object (presentation-type-of object))  
-    (print object pane)))
+    (prin1 object pane)))
 
 
 (define-presentation-type settable-slot ()
@@ -182,15 +185,13 @@ structure objects."
      (when (clim-mop:class-direct-superclasses class)
        (inspector-table-row
 	(princ "Superclasses" pane)
-	(dolist (superclass (clim-mop:class-direct-superclasses class))
-	  (inspect-object superclass pane)
-	  (terpri pane))))
+	(inspect-vertical-list (clim-mop:class-direct-superclasses class)
+			       pane)))
      (when (clim-mop:class-direct-subclasses class)
        (inspector-table-row
 	(princ "Subclasses" pane)
-	(dolist (subclass (clim-mop:class-direct-subclasses class))
-	  (inspect-object subclass pane)
-	  (terpri pane))))
+	(inspect-vertical-list (clim-mop:class-direct-subclasses class)
+			       pane)))
      (loop for slot in (reverse (clim-mop:class-slots class))
 	   do (let ((slot-name (clim-mop:slot-definition-name slot)))
 		(inspector-table-row
@@ -211,14 +212,15 @@ that are allowed before abbreviation kicks in")
 (defun inspect-structure-or-object-briefly (object pane)
   (with-output-as-presentation
       (pane object (presentation-type-of object))
-    (handler-case
-	(let ((representation (with-output-to-string (string)
-				(prin1 object string))))
-	  (if (< (length representation) *object-representation-max-length*)
-	      (princ representation pane)
-	      (format pane "#<~S ...>" (class-name (class-of object)))))
-      (error ()
-	(format pane "#<unprintable ~S>" (class-name (class-of object)))))))
+    (with-text-family (pane :fix)
+      (handler-case
+	  (let ((representation (with-output-to-string (string)
+				  (prin1 object string))))
+	    (if (< (length representation) *object-representation-max-length*)
+		(princ representation pane)
+		(format pane "#<~S ...>" (class-name (class-of object)))))
+	(error ()
+	  (format pane "#<unprintable ~S>" (class-name (class-of object))))))))
 
 (defmethod inspect-object-briefly ((object standard-object) pane)
   (inspect-structure-or-object-briefly object pane))
@@ -271,13 +273,48 @@ moderately-sized list."
 	  (formatting-cell (pane)
 	    (inspect-object (cdr object) pane))))))
 
+(defun inspect-vertical-list (object pane)
+  "Inspect a list without the parentheses, putting each element on a
+new line. This is useful for showing things like direct class
+subclasses, since displaying those as a plain list looks ugly and is
+inconvenient to use."
+  ;; Ordinarily this would be taken care of in the :around method for
+  ;; INSPECT-OBJECT, but since this is not a normal inspection view,
+  ;; we need to do it ourselves. Yes, it would be better if we could
+  ;; find another way to do this.
+  (let ((*print-length* (or (gethash object (print-length
+					     *application-frame*))
+			    *print-length*)))
+    (with-output-as-presentation
+	(pane object 'cons)
+      (formatting-table (pane)
+	(formatting-column (pane)
+	  (do
+	   ((length 0 (1+ length))
+	    (cdr (cdr object) (cdr cdr))
+	    (car (car object) (car cdr)))
+	   ((cond ((eq nil cdr)
+		   (formatting-cell (pane) (inspect-object car pane))
+		   t)
+		  ((not (consp cdr))
+		   (formatting-cell (pane) (inspect-object car pane))
+		   (formatting-cell (pane) (princ "." pane))
+		   (formatting-cell (pane) (inspect-object cdr pane))
+		   t)
+		  ((and *print-length* (>= length *print-length*))
+		   (with-output-as-presentation (pane object 'long-list-tail)
+		     (formatting-cell (pane) (princ "..." pane)))
+		   t)
+		  (t nil)))
+	    (formatting-cell (pane) (inspect-object car pane))))))))
+
 (defun inspect-cons-as-list (object pane)
   "Inspect a cons cell in a traditional, plain-text format. The only
 difference between this and simply using the Lisp printer is that this
 code takes advantage of CLIM's tables and presentations to make the
 list as interactive as you would expect."
   (with-output-as-presentation
-    (pane object 'cons)
+      (pane object 'cons)
     (formatting-table (pane)
       (formatting-row (pane)
         (formatting-cell (pane)
@@ -334,7 +371,8 @@ list as interactive as you would expect."
 	  (pane method (presentation-type-of method))
 	(formatting-row (pane)
 	  (formatting-cell (pane)
-	    (print (method-qualifiers method)))
+	    (with-text-family (pane :fix)
+	      (print (clim-mop:method-qualifiers method) pane)))
 	  (loop for specializer in (clim-mop:method-specializers method)
 		do (formatting-cell (pane)
 		     (if (typep specializer 'clim-mop:eql-specializer)
@@ -369,19 +407,29 @@ use implementation-specific functions to be more informative."
     ;; please add code for it and send patches.
     #-sbcl (generic-print fun)))
 
+;; This is ugly. I think CLIM requires there to be a presentation type
+;; for every class, so we should use FUNCTION---but I'm not sure how
+;; well that will work.
+(define-presentation-type inspected-function ()
+  :inherit-from t)
+
 (defmethod inspect-object ((object function) pane)
   (with-output-as-presentation
-       (pane object (presentation-type-of object))
+       (pane object 'inspected-function)
     (with-heading-style (pane)
       (princ "Function: " pane))
-    (princ (pretty-print-function object) pane)
+    (with-text-family (pane :fix)
+      (princ (pretty-print-function object) pane))
     #+sbcl
     (unless (typep object 'generic-function)
       (with-heading-style (pane)
 	(format pane "~&Type: "))
-      (princ (sb-kernel:%simple-fun-type (sb-kernel:%closure-fun object))
-	     pane))
-    (print-documentation object pane)))
+      (with-text-family (pane :fix)
+	(princ (sb-kernel:%simple-fun-type (sb-kernel:%closure-fun object))
+	       pane)))
+    (print-documentation object pane)
+    (when (gethash object (disassembly-dico *application-frame*))
+      (display-disassembly object pane))))
 
 (defmethod inspect-object-briefly ((object package) pane)
   ;; Display as 'Package: "PACKAGE-NAME"'. We're doing something a
@@ -389,7 +437,9 @@ use implementation-specific functions to be more informative."
   ;; be a tad inconsistent, but the other way looks very odd.
   (with-output-as-presentation
       (pane object (presentation-type-of object))
-    (format pane "Package: ~S" (package-name object))))
+    (princ "Package: " pane)
+    (with-text-family (pane :fix)
+      (princ (package-name object) pane))))
 
 (defmethod inspect-object ((object package) pane)
   (inspector-table
@@ -399,22 +449,13 @@ use implementation-specific functions to be more informative."
       (inspect-object (package-name object) pane))
     (inspector-table-row
       (princ "Nicknames:" pane)
-      (dolist (nick (package-nicknames object))
-        (inspect-object nick pane)))
+      (inspect-vertical-list (package-nicknames object) pane))
     (inspector-table-row
       (princ "Used by:")
-      ;; FIXME: This should use some sort of list formatting, so that
-      ;; it can obey conventions about *print-length* and reuse code
-      ;; for modifying it. To support this, list printing should
-      ;; support delimiterless, one-item-per-line display.
-      (dolist (used-by (package-used-by-list object))
-	(fresh-line pane)
-	(inspect-object used-by pane)))
+      (inspect-vertical-list (package-used-by-list object) pane))
     (inspector-table-row
       (princ "Uses:")
-      (dolist (uses (package-use-list object))
-	(fresh-line pane)
-	(inspect-object uses pane)))))
+      (inspect-vertical-list (package-use-list object) pane))))
 
 (defmethod inspect-object ((object vector) pane)
   (with-output-as-presentation
@@ -483,7 +524,8 @@ them."
 (defmethod inspect-object-briefly ((object symbol) pane)
   (with-output-as-presentation
       (pane object (presentation-type-of object))
-    (prin1 object)))
+    (with-text-family (pane :fix)
+      (prin1 object))))
 
 (defmethod inspect-object ((object symbol) pane)
   (inspector-table
@@ -624,3 +666,17 @@ available in direct slots."
           (with-heading-style (stream)
 	    (format stream "~&Writers: "))
           (present writers (presentation-type-of writers) :stream stream))))))
+
+(define-inspector-command (com-disassemble :name t)
+    ((obj 'inspected-function
+	  :menu "Disassemble"
+	  :prompt "Select a function"))
+  (when (typep obj 'function)
+    (togglef (gethash obj (disassembly-dico *application-frame*)))))
+
+(define-presentation-to-command-translator disassemble-function
+    (inspected-function com-disassemble inspector
+			:documentation "Toggle Disassembly"
+			:menu t)
+    (object)
+  (list object))
