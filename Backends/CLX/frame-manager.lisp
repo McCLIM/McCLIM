@@ -45,4 +45,22 @@
   (xlib:map-window (sheet-direct-mirror (slot-value frame 'top-level-sheet))))
 
 (defmethod adopt-frame :after ((fm clx-frame-manager) (frame application-frame))
-  (xlib:map-window (sheet-direct-mirror (slot-value frame 'top-level-sheet))))
+  (let ((sheet (slot-value frame 'top-level-sheet)))
+    (let ((q (compose-space sheet)))
+      (allocate-space sheet
+                      (space-requirement-width q)
+                      (space-requirement-height q))
+      (let ((mirror (sheet-direct-mirror (slot-value frame 'top-level-sheet))))
+        (setf (xlib:wm-normal-hints mirror)
+              (xlib:make-wm-size-hints 
+               :width  (round (space-requirement-width q))
+               :height (round (space-requirement-height q))
+               :max-width (min 65535 (round (space-requirement-max-width q)))
+               :max-height (min 65535 (round (space-requirement-max-height q)))
+               :min-width (round (space-requirement-min-width q))
+               :min-height (round (space-requirement-min-height q))))
+        (xlib:map-window mirror)
+        (setf (xlib:window-event-mask mirror)
+              (logior (xlib:window-event-mask mirror)
+                      (xlib:make-event-mask :structure-notify)))
+        ))))
