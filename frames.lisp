@@ -134,7 +134,7 @@
   (sheet-adopt-child (graft frame) (frame-top-level-sheet frame))
   (setf (sheet-transformation (frame-top-level-sheet frame))
 	(make-translation-transformation 100 100))
-  (let ((space (compose-space (frame-top-level-sheet frame))))
+  (let ((space (compute-and-set-space (frame-top-level-sheet frame))))
     ;; automatically generates a window-configuation-event
     ;; which then calls allocate-space
     (setf (sheet-region (frame-top-level-sheet frame))
@@ -152,7 +152,7 @@
     (if (and  width (not height))
 	(error "LAYOUT-FRAME must be called with both WIDTH and HEIGHT or neither"))
     (if (and (null width) (null height))
-	(let ((space (compose-space pane)))
+	(let ((space (compute-and-set-space pane)))
 	  (setq width (space-requirement-width space))
 	  (setq height (space-requirement-height space))))
     (allocate-space pane width height)))
@@ -398,7 +398,7 @@
     (let ((graft (find-graft :port (frame-manager-port fm))))
       (sheet-adopt-child graft t-l-s)
       (setf (graft frame) graft))
-    (let ((space (compose-space t-l-s)))
+    (let ((space (compute-and-set-space t-l-s)))
       (allocate-space (frame-pane frame)
 		      (space-requirement-width space)
 		      (space-requirement-height space))
