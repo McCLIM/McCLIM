@@ -57,16 +57,7 @@
 ;;;;  Transformations
 ;;;;
 
-(defclass transformation () ())         ;Protocol class
-
-#+:DEBUG
-(defmethod initialize-instance :after ((self transformation) &rest args)
-  (declare (ignorable self args))
-  (error "You are a fool; you are not supposed to create an instance of ~S."
-	 'transformation))
-
-(defun transformationp (object)
-  (typep object 'transformation))
+(define-protocol-class transformation ())
 
 (defclass standard-transformation (transformation)
   ((mxx :type coordinate)
@@ -79,16 +70,10 @@
             :initform nil
             :documentation "Cached inverse transformation.") ))
 
-
-#+:DEBUG
-(defmethod initialize-instance :after ((self standard-transformation) args)
-  (declare (ignorable self args)) )
-
 (defmethod print-object ((self standard-transformation) sink)
-  ;; printer
-  (apply #'format sink "#<~S ~S ~S ~S ~S ~S ~S>"
-         (type-of self)
-         (multiple-value-list (get-transformation self))))
+  (print-unreadable-object (self sink :identity nil :type t)
+    (apply #'format sink "~S ~S ~S ~S ~S ~S"
+           (multiple-value-list (get-transformation self)))))
 
 (defun make-transformation (mxx mxy myx myy tx ty)
   ;; Make a transformation, which will map a point (x,y) into
@@ -243,7 +228,8 @@
 		     (transformation-error-rect self)
 		     (transformation-error-transformation self)))))
 
-(defmethod transformation-equal ((transformation1 standard-transformation) (transformation2 standard-transformation))
+(defmethod transformation-equal ((transformation1 standard-transformation) 
+                                 (transformation2 standard-transformation))
   (every #'coordinate=
          (multiple-value-list (get-transformation transformation1))
          (multiple-value-list (get-transformation transformation2))))
