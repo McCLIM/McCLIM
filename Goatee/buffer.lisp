@@ -235,7 +235,7 @@
 
 (defmethod update-for-insert ((bp fixed-buffer-pointer) pos delta)
   (when (> (pos bp) pos)
-    (incf (pos bp))))
+    (incf (pos bp) delta)))
 
 (defmethod buffer-insert* :after
     ((buffer basic-buffer-mixin) (c character) line pos &key)
