@@ -226,7 +226,7 @@
     ;;
     (labels ((seek-symbol (name packages)
                ;; Seek the a symbol named 'name' in `packages'
-               (or (some #'(lambda (p) 
+               (or (some #'(lambda (p)
                              (multiple-value-bind (sym res) (find-symbol name p)
                                (if (eql res :external)
                                    (list sym)
@@ -236,7 +236,13 @@
                           (finish-output)
                           nil)))
              (dump-defpackage (&aux imports export-ansi export-gray)
-               (labels ((grok (symbols packages)
+               (labels ((push-import-from (symbol package)
+                          (let ((pair (assoc package imports)))
+                            (if pair
+                                (push symbol (cdr pair))
+                                (push `(,package . (,symbol))
+                                      imports))))
+                        (grok (symbols packages)
                           (let ((res nil))
                             (dolist (nam symbols)
                               (let ((sym (seek-symbol nam packages)))
@@ -249,23 +255,23 @@
                                      ;;
                                      (format T "~&;; ~S is patched." sym)
                                      (finish-output)
-                                     (push `(:import-from
-                                             :clim-lisp-patch
-                                             ,nam)
-                                           imports) )
+                                     (push-import-from nam
+                                                       :clim-lisp-patch))
                                     (t
                                      (setf sym (car sym))
                                      ;; CLISP has no (:import ..) ARG!
-                                     (push `(:import-from
-                                             ,(package-name (symbol-package sym))
-                                             ,(symbol-name sym))
-                                           imports))))))
+                                     (push-import-from
+                                      (symbol-name sym)
+                                      (package-name (symbol-package sym))))))))
                             res)))
                  (setf export-ansi (grok all-ansi-symbols packages))
                  (setf export-gray (grok gray-symbols gray-packages))
                  `(progn
                    (defpackage "CLIM-LISP" (:use)
-                     ,@imports
+                     ,@(mapcar (lambda (spec)
+                                 (destructuring-bind (package . syms) spec
+                                   `(:import-from ,package ,@syms)))
+                               imports)
                      (:export
                       ,@(mapcar #'symbol-name export-ansi)
                       ,@(mapcar #'symbol-name export-gray) )) ))))
@@ -1861,10 +1867,10 @@
 (defpackage "CLIM-EXTENSIONS"
   (:use)
   (:export
-   "SPACING-PANE" "SPACING" 
-   "RAISED-PANE" "RAISING" 
+   "SPACING-PANE" "SPACING"
+   "RAISED-PANE" "RAISING"
    "VIEWPORT-PANE"
-   "SCROLLER-PANE" "SCROLLING" 
+   "SCROLLER-PANE" "SCROLLING"
    "DRAW-GLYPH" "DEVICE-FONT-TEXT-STYLE-P"
    "DRAW-IMAGE"
    "IMAGE-PANE"
