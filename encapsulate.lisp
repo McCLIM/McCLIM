@@ -351,6 +351,19 @@ state ~S lambda list ~S"
 (def-stream-method (setf medium-default-text-style)
     (text-style (stream standard-encapsulating-stream)))
 
+(def-stream-method text-size ((stream standard-encapsulating-stream) string
+                              &key text-style start end))
+
+(def-stream-method text-style-ascent (text-style (stream standard-encapsulating-stream)))
+
+(def-stream-method text-style-descent (text-style (stream standard-encapsulating-stream)))
+
+(def-stream-method text-style-height (text-style (stream standard-encapsulating-stream)))
+
+(def-stream-method text-style-width (text-style (stream standard-encapsulating-stream)))
+
+(def-stream-method text-style-fixed-width-p (text-style (stream standard-encapsulating-stream)))
+
 (def-stream-method sheet-medium ((stream standard-encapsulating-stream)))
 
 (def-stream-method queue-repaint ((stream standard-encapsulating-stream)
@@ -448,20 +461,25 @@ state ~S lambda list ~S"
 (def-stream-method stream-increment-cursor-position
     ((stream standard-encapsulating-stream) dx dy))
 
-(def-stream-method stream-character-width 
+(def-stream-method stream-character-width
     ((stream standard-encapsulating-stream)
-     string 
+     character
+     &key text-style))
+
+(def-stream-method stream-string-width
+    ((stream standard-encapsulating-stream)
+     string
      &key start end text-style))
 
 (def-stream-method stream-text-margin ((stream standard-encapsulating-stream)))
 
-(def-stream-method (setf stream-text-margin) 
+(def-stream-method (setf stream-text-margin)
     (margin (stream standard-encapsulating-stream)))
 
 (def-stream-method stream-line-height ((stream standard-encapsulating-stream)
 				       &key text-style))
 
-(def-stream-method stream-vertical-spacing 
+(def-stream-method stream-vertical-spacing
     ((stream standard-encapsulating-stream)))
 
 (def-stream-method stream-baseline ((stream standard-encapsulating-stream)))
@@ -478,7 +496,7 @@ state ~S lambda list ~S"
 (def-stream-method (setf stream-end-of-page-action)
     (action (stream standard-encapsulating-stream)))
 
-(def-stream-method medium-buffering-output-p 
+(def-stream-method medium-buffering-output-p
     ((stream standard-encapsulating-stream)))
 
 (def-stream-method (setf medium-buffering-output-p)
@@ -486,7 +504,7 @@ state ~S lambda list ~S"
 
 ;;; Extended Input Streams
 
-(def-stream-method extended-input-stream-p 
+(def-stream-method extended-input-stream-p
     ((stream standard-encapsulating-stream)))
 
 (def-stream-method stream-input-buffer
@@ -495,25 +513,87 @@ state ~S lambda list ~S"
 (def-stream-method (setf stream-input-buffer)
     (buffer (stream standard-encapsulating-stream)))
 
-(def-stream-method stream-pointer-position 
+(def-stream-method stream-pointer-position
     ((stream standard-encapsulating-stream) &key pointer))
 
 (def-stream-method (setf stream-pointer-position)
     (x y (stream standard-encapsulating-stream) &key pointer))
 
-(def-stream-method stream-set-input-focus 
+(def-stream-method stream-set-input-focus
     ((stream standard-encapsulating-stream)))
 
 (def-stream-method stream-read-gesture
     ((stream standard-encapsulating-stream)
-     &key timeout peek-p input-wait-test input-wait-handler 
+     &key timeout peek-p input-wait-test input-wait-handler
      pointer-button-press-handler))
 
 (def-stream-method stream-input-wait ((stream standard-encapsulating-stream)
 				      &key timeout input-wait-test))
 
-(def-stream-method stream-unread-gesture 
+(def-stream-method stream-unread-gesture
     ((stream standard-encapsulating-stream) gesture))
+
+;;; Output recording
+
+(def-stream-method stream-recording-p
+    ((stream standard-encapsulating-stream)))
+
+(def-stream-method (setf stream-recording-p)
+    (recording-p (stream standard-encapsulating-stream)))
+
+(def-stream-method stream-drawing-p
+    ((stream standard-encapsulating-stream)))
+
+(def-stream-method (setf stream-drawing-p)
+    (drawing-p (stream standard-encapsulating-stream)))
+
+(def-stream-method stream-output-history
+    ((stream standard-encapsulating-stream)))
+
+(def-stream-method stream-current-output-record
+    ((stream standard-encapsulating-stream)))
+
+(def-stream-method (setf stream-current-output-record)
+    (record (stream standard-encapsulating-stream)))
+
+(def-stream-method stream-add-output-record
+    ((stream standard-encapsulating-stream) record))
+
+(def-stream-method stream-replay
+    ((stream standard-encapsulating-stream) &optional region))
+
+(def-stream-method erase-output-record
+    (record (stream standard-encapsulating-stream) &optional errorp))
+
+(def-stream-method stream-text-output-record
+    ((stream standard-encapsulating-stream) text-style))
+
+(def-stream-method stream-close-text-output-record
+    ((stream standard-encapsulating-stream)))
+
+(def-stream-method stream-add-character-output
+  ((stream standard-encapsulating-stream)
+   character text-style width height baseline))
+
+(def-stream-method stream-add-string-output
+  ((stream standard-encapsulating-stream)
+   string start end text-style width height baseline))
+
+(def-stream-method invoke-with-output-recording-options
+    ((stream standard-encapsulating-stream) continuation record draw))
+
+(def-stream-method invoke-with-new-output-record
+    ((stream standard-encapsulating-stream) continuation record-type
+     &rest initargs
+     &key
+     &allow-other-keys))
+
+(def-stream-method invoke-with-output-to-output-record
+    ((stream standard-encapsulating-stream) continuation record-type
+     &rest initargs
+     &key
+     &allow-other-keys))
+
 
 ;;; Presentation type generics
 
