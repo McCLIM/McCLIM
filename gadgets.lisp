@@ -477,7 +477,7 @@
 
 (defclass menu-button-pane (menu-button) ())
 
-(defmethod initialize-instance :before ((pane toggle-button-pane) &rest rest)
+(defmethod initialize-instance :before ((pane menu-button-pane) &rest rest)
   (declare (ignore rest))
   (setf (gadget-label-align-x pane) :center
 	(gadget-label-align-y pane) :center))
