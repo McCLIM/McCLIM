@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.135 2003/11/19 13:51:17 moore Exp $
+;;; $Id: panes.lisp,v 1.136 2003/12/16 23:20:18 hefner1 Exp $
 
 (in-package :clim-internals)
 
@@ -2346,6 +2346,9 @@
 
 ;;; Pointer Documentation Pane
 
+(defparameter *default-pointer-documentation-background* +black+)
+(defparameter *default-pointer-documentation-foreground* +white+)
+
 (defclass pointer-documentation-pane (clim-stream-pane)
   ()
   (:default-initargs 
@@ -2356,8 +2359,8 @@
    :min-height '(2 :line)
    :max-height '(2 :line)
    :text-style (make-text-style :sans-serif :roman :normal)
-   :foreground +white+
-   :background +black+
+   :foreground *default-pointer-documentation-foreground*
+   :background *default-pointer-documentation-background*
    :end-of-line-action :allow
    :end-of-page-action :allow))
 
