@@ -294,6 +294,7 @@ FRAME-EXIT condition."))
 
 (defmethod run-frame-top-level ((frame application-frame))
   (handler-bind ((frame-exit #'(lambda (condition)
+                                 (declare (ignore condition))
 				 (return-from run-frame-top-level nil))))
     (apply (first (frame-top-level frame)) frame (rest (frame-top-level frame)))))
 
@@ -402,7 +403,7 @@ FRAME-EXIT condition."))
                        `(vertically () (clim-internals::make-menu-bar
                                          ',class-name)
                                        ,pane))
-                      ((listp menu-bar)
+                      ((consp menu-bar) ;; was: (listp menu-bar) --GB
                        `(vertically () (clim-internals::make-menu-bar
                                          (make-command-table nil
                                               :menu ',menu-bar))
@@ -411,6 +412,9 @@ FRAME-EXIT condition."))
                        `(vertically () (clim-internals::make-menu-bar
                                         ',menu-bar)
                                       ,pane))
+                      ;; The form below is unreachable with (listp
+                      ;; menu-bar) instead of (consp menu-bar) above
+                      ;; --GB
                       (t pane))))
          (setf (slot-value frame 'pane) pane)))))
 
