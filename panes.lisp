@@ -34,25 +34,25 @@
 (defgeneric change-space-requirements (pane &rest rest))
 (defgeneric note-space-requirements-changed (sheet pane))
 
-;;; PANES
+;;; Space Requirements
 
 (defconstant +fill+ (expt 10 (floor (log most-positive-fixnum 10))))
 
 (defclass space-requirement () ())
 
-(defclass standard-space-requirement ()
-  ((width :initform 1
-	  :initarg :width
-	  :reader space-requirement-width)
-   (max-width :initform 1
-	      :initarg :max-width
-	      :reader space-requirement-max-width)
-   (min-width :initform 1
-	      :initarg :min-width
-	      :reader space-requirement-min-width)
-   (height :initform 1
-	   :initarg :height
-	   :reader space-requirement-height)
+(defclass standard-space-requirement (space-requirement)
+  ((width      :initform 1
+	       :initarg :width
+	       :reader space-requirement-width)
+   (max-width  :initform 1
+	       :initarg :max-width
+	       :reader space-requirement-max-width)
+   (min-width  :initform 1
+	       :initarg :min-width
+	       :reader space-requirement-min-width)
+   (height     :initform 1
+	       :initarg :height
+	       :reader space-requirement-height)
    (max-height :initform 1
 	       :initarg :max-height
 	       :reader space-requirement-max-height)
@@ -60,7 +60,7 @@
 	       :initarg :min-height
 	       :reader space-requirement-min-height) ) )
 
-(defmethod print-object ((space space-requirement) stream)
+(defmethod print-object ((space standard-space-requirement) stream)
   (with-slots (width height min-width max-width min-height max-height) space
     (print-unreadable-object (space stream :type t :identity nil)
       (format stream "width: ~S [~S,~S] height: ~S [~S,~S]"
@@ -114,7 +114,21 @@
                               space-req
                               :width width :min-width min-width :max-width max-width
                               :height height :min-height min-height :max-height max-height))
-  
+
+(deftype spacing-value ()
+  ;; just for documentation
+  `(satisfies spacing-value-p))
+
+(defun spacing-value-p (x)
+  (or (integerp x)
+      (and (consp x)
+           (realp (car x))
+           (consp (cdr x))
+           (member (cadr x) '(:point :pixel :mm :character :line))
+           (null (cddr x)))))
+
+;;; PANES
+
 ;; Macros for quick access to space-requirement slots.
 (defmacro sr-width (pane)
   `(space-requirement-width (pane-space-requirement ,pane)))
@@ -132,15 +146,10 @@
 (defclass pane (standard-sheet-input-mixin
 		;;temporary-medium-sheet-output-mixin
 		sheet-transformation-mixin
+                layout-protocol-mixin
                 basic-sheet
                 )
   (
-   #+ignore(foreground :initarg :foreground
-		       :initform +black+
-		       :reader pane-foreground)
-   #+ignore(background :initarg :background
-		       :initform +white+
-		       :reader pane-background)
    (text-style :initarg :text-style :initform nil :reader pane-text-style)
    (name :initarg :name :initform "(Unnamed Pane)" :reader pane-name)
    (manager :initarg :manager)
@@ -160,76 +169,15 @@
    )
   (:documentation ""))
 
+(defmethod print-object ((pane pane) sink)
+  (print-unreadable-object (pane sink :type t :identity t)
+    (prin1 (pane-name pane) sink)))
+
 (defun panep (x)
   (typep x 'pane))
 
 (defun make-pane (type &rest args)
   (apply #'make-pane-1 *pane-realizer* *application-frame* type args))
-
-#||
-;; dummy but useful
-(defmacro do-in (size min max)
-  `(max ,min (min ,max ,size)))
-;; moved as clamp into utils.lisp
-||#
-
-(defun get-pane-width (pane)
-  ;; Give the region size if already set, otherwise, give the space-requirement
-  (let ((width (rectangle-width (sheet-region pane))))
-    (if (or (not width) (zerop width)) (sr-width pane) width)))
-
-(defun get-pane-height (pane)
-  ;; Give the region size if already set, otherwise, give the space-requirement
-  (let ((height (rectangle-height (sheet-region pane))))
-    (if (or (not height) (zerop height)) (sr-height pane) height)))
-
-(defun make-extremums-children-ratio-width (pane children)
-  (with-slots (sorted-max-w-r sorted-min-w-r) pane
-    (loop for child in children
-	  for max-width-ratio = (/ (sr-width child) (sr-max-width child))
-	  for min-width-ratio = (/ (sr-width child) (sr-min-width child))
-	  collect (cons max-width-ratio child) into max-w-ratios
-	  collect (cons min-width-ratio child) into min-w-ratios
-	  finally (setf sorted-max-w-r (sort max-w-ratios #'> :key #'car)
-			sorted-min-w-r (sort min-w-ratios #'< :key #'car)))))
-
-(defun make-extremums-children-ratio-height (pane children)
-  (with-slots (sorted-max-h-r sorted-min-h-r) pane
-    (loop for child in children
-	  for max-height-ratio = (/ (sr-height child) (sr-max-height child))
-	  for min-height-ratio = (/ (sr-height child) (sr-min-height child))
-	  collect (cons max-height-ratio child) into max-h-ratios
-	  collect (cons min-height-ratio child) into min-h-ratios
-	  finally (setf sorted-max-h-r (sort max-h-ratios #'> :key #'car)
-			sorted-min-h-r (sort min-h-ratios #'< :key #'car)))))
-
-(defun allocate-space-internal-width (pane size)
-  (loop with sum = (slot-value pane 'sum-width)
-	and maxs = (slot-value pane 'sorted-max-w-r)
-	and mins = (slot-value pane 'sorted-min-w-r)
-	for (nil . child) in (if (>= size sum) maxs mins)
-	and box-size = sum then (- box-size (get-pane-width child))
-	for tmp = (round (/ (* size (get-pane-width child)) box-size))
-	for new-size = (clamp tmp (sr-min-width child) (sr-max-width child))
-	for new-sum = new-size then (+ new-sum new-size)
-	do (decf size new-size)
-	   (setf (slot-value child 'new-width) new-size)
-	finally
-	   (setf (slot-value pane 'sum-width) new-sum)))
-
-(defun allocate-space-internal-height (pane size)
-  (loop with sum = (slot-value pane 'sum-height) 
-	and maxs = (slot-value pane 'sorted-max-h-r)
-	and mins = (slot-value pane 'sorted-min-h-r)
-	for (nil . child) in (if (>= size sum) maxs mins)
-	and box-size = sum then (- box-size (get-pane-height child))
-	for tmp = (round (/ (* size (get-pane-height child)) box-size))
-	for new-size = (clamp tmp (sr-min-height child) (sr-max-height child))
-	for new-sum = new-size then (+ new-sum new-size)
-	do (decf size new-size)
-	   (setf (slot-value child 'new-height) new-size)
-	finally
-	   (setf (slot-value pane 'sum-height) new-sum)))
 
 (defmethod medium-foreground ((pane pane))
   (medium-foreground (sheet-medium pane)))
@@ -247,63 +195,22 @@
   (make-space-requirement :width 200
 			  :height 200))
 
-(defmethod compose-space :around ((pane pane))
-  (with-slots (sr-width sr-height sr-max-width
-                        sr-max-height sr-min-width sr-min-height
-                        space-requirement) pane
-    (unless space-requirement
-      (let ((request (call-next-method)))
-	(when (spacing-p pane)
-	  (with-slots (margin-width margin-height
-                                    margin-max-width margin-max-height
-                                    margin-min-width margin-min-height) pane
-	    (let ((child (first (sheet-children pane))))
-	      (setf sr-width (+ margin-width (sr-width child))
-		    sr-height (+ margin-height (sr-height child))
-		    sr-max-width (+ margin-max-width (sr-max-width child))
-		    sr-max-height (+ margin-max-height (sr-max-height child))
-		    sr-min-width (+ margin-min-width (sr-min-width child))
-		    sr-min-height (+ margin-min-height (sr-min-height child)) ))))
-        (let* ((max-width (or sr-max-width
-                              sr-width
-                              (space-requirement-max-width request)))
-               (max-height (or sr-max-height
-                               sr-height
-                               (space-requirement-max-height request)))
-               (min-width (or sr-min-width
-                              sr-width
-                              (space-requirement-min-width request)))
-               (min-height (or sr-min-height
-                               sr-height
-                               (space-requirement-min-height request)))
-               (width (clamp (or sr-width (space-requirement-width request))
-                             min-width
-                             max-width))
-               (height (clamp (or sr-height (space-requirement-height request))
-                              min-height
-                              max-height)))
-          (setf space-requirement
-                (make-space-requirement
-                 :width width
-                 :height height
-                 :max-width max-width
-                 :max-height max-height
-                 :min-width min-width
-                 :min-height min-height))))
-      (compute-extremum pane))
-    space-requirement))
+;;???
+(defmethod allocate-space :before ((pane pane) width height)
+  width height
+  '(unless (typep 'pane 'top-level-sheet-pane)
+    (resize-sheet pane width height)))
 
 (defmethod allocate-space ((pane pane) width height)
-  (resize-sheet pane width height))
+  (declare (ignorable pane width height))
+  )
 
-(defmethod compute-extremum ((pane pane))
-  (declare (ignorable pane))
-  nil)
-
+;;???
 (defmethod change-space-requirements ((pane pane) &rest rest)
   (declare (ignore rest))
   (values))
 
+;;???
 (defmethod note-space-requirements-changed (sheet (pane pane))
   (declare (ignore sheet))
   (setf (pane-space-requirement pane) nil)
@@ -317,63 +224,266 @@
 
 ;;; WINDOW STREAM
 
+;; ???
 (defclass window-stream (standard-extended-output-stream 
 			 standard-extended-input-stream)
-  (
-   )
-  )
+  () )
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Since, I hate to duplicate code for HBOX and VBOX, I define this
+;; evil macro:
+
+(defmacro dada ((&rest substs) &body body)
+  "This is an evil macro."
+  `(progn
+     ,@(loop for k from 1 below (length (first substs)) collect
+             (labels ((subst-one (new old sym)
+                        (let ((p (search (symbol-name old) (symbol-name sym))))
+                          (cond ((not (null p))
+                                 (let ((pack (if (eq (symbol-package sym)
+                                                     (find-package :keyword))
+                                                 (symbol-package sym)
+                                               *package*)))
+                                   (intern (concatenate 'string 
+                                             (subseq (symbol-name sym) 0 p)
+                                             (symbol-name new)
+                                             (subseq (symbol-name sym) 
+                                                     (+ p (length (symbol-name old)))))
+                                           pack)))
+                                (t
+                                 sym))))
+                      (walk (x)
+                        (cond ((symbolp x)
+                               (dolist (subst substs)
+                                 (setf x (subst-one (elt subst k) (first subst) x)))
+                               x)
+                              ((atom x) x)
+                              ((consp x) 
+                               (cons (walk (car x)) (walk (cdr x)))))))
+               `(locally
+                  ,@(walk body))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;
+
+;; All panes allow for user specified space requirement options, so we
+;; define a mixin class to hold the corresponding slots:
+
+(defclass space-requirement-options-mixin ()
+  (;; These slots correspond to the options given by the user.
+   (user-width       :reader pane-user-width
+                     :type   spacing-value)
+   (user-min-width   :reader pane-user-min-width
+                     :type   spacing-value)
+   (user-max-width   :reader pane-user-max-width
+                     :type   spacing-value)
+   (user-height      :reader pane-user-height
+                     :type   spacing-value)
+   (user-min-height  :reader pane-user-min-height
+                     :type   spacing-value)
+   (user-max-height  :reader pane-user-max-height
+                     :type   spacing-value)
+   (x-spacing        :reader pane-x-spacing
+                     :type spacing-value)
+   (y-spacing        :reader pane-y-spacing
+                     :type spacing-value)))
+
+;; The exact behaviour though is different:
+
+(defclass standard-space-requirement-options-mixin (space-requirement-options-mixin) ())
+(defclass border-space-requirement-options-mixin   (space-requirement-options-mixin) ())
+
+;; 
+
+(defmethod grok-user-space-requirement-options ((pane space-requirement-options-mixin)
+                                                &key width max-width min-width
+                                                     height max-height min-height
+                                                     x-spacing y-spacing spacing
+                                                &allow-other-keys)
+  (setf (slot-value pane 'x-spacing) (spacing-value-to-device-units pane (or x-spacing spacing 0))
+        (slot-value pane 'y-spacing) (spacing-value-to-device-units pane (or y-spacing spacing 0)) 
+        (slot-value pane 'user-width) width
+        (slot-value pane 'user-min-width) (or min-width width)
+        (slot-value pane 'user-max-width) (or max-width width)
+        (slot-value pane 'user-height) height
+        (slot-value pane 'user-min-height) (or min-height height)
+        (slot-value pane 'user-max-height) (or max-height height) ))
+
+(defmethod initialize-instance :after ((pane space-requirement-options-mixin)
+                                       &rest space-req-keys)
+  (apply #'grok-user-space-requirement-options pane space-req-keys))
+
+(defmethod compose-space :around ((pane standard-space-requirement-options-mixin))
+  ;; merge user specified options.
+  (let ((sr (call-next-method)))
+    (unless sr
+      (warn "~S has no idea about its speac-requirements." pane)
+      (setf sr (make-space-requirement :width 100 :height 100)))
+    (multiple-value-bind (width min-width max-width height min-height max-height)
+        (space-requirement-components sr)
+      (with-slots (user-width user-min-width user-max-width
+                   user-height user-min-height user-max-height) pane
+
+        (dada ((foo width height))
+              ;; the user wins on the "primary" dimensions
+              (when user-foo
+                (setf foo (spacing-value-to-device-units pane user-foo)))
+              ;; 
+              (setf min-foo 
+                (clamp
+                 (cond ((and (consp user-min-foo) (eq (cadr user-min-foo) :relative))
+                        (- foo (car user-min-foo)))
+                       ((not (null user-min-foo))
+                        (spacing-value-to-device-units pane user-min-foo))
+                       (t
+                        min-foo))
+                 0 foo))
+              ;;
+              (setf max-foo 
+                (max foo
+                     (cond ((and (consp user-max-foo) (eq (cadr user-max-foo) :relative))
+                            (+ foo (car user-max-foo)))
+                           ((not (null user-max-foo))
+                            (spacing-value-to-device-units pane user-max-foo))
+                           (t
+                            max-foo))))))
+      (make-space-requirement
+       :width width
+       :min-width min-width
+       :max-width max-width
+       :height height
+       :min-height min-height
+       :max-height max-height) )))
+
+
+;;
+
+(defclass layout-protocol-mixin ()
+  ((space-requirement :accessor pane-space-requirement
+                      :initform nil)
+   (current-width     :accessor pane-current-width
+                      :initform nil)
+   (current-height    :accessor pane-current-height
+                      :initform nil) ))
+
+(defmethod allocate-space :around ((pane layout-protocol-mixin) width height)
+  (unless (and (eql (pane-current-width pane) width)
+               (eql (pane-current-height pane) height))
+    (setf (pane-current-width pane) width
+          (pane-current-height pane) height)
+    (unless (typep pane 'top-level-sheet-pane)
+      (resize-sheet pane width height))
+    (call-next-method)))
+
+(defmethod compose-space :around ((pane layout-protocol-mixin))
+  (or (pane-space-requirement pane)
+      (setf (pane-space-requirement pane)
+        (call-next-method))))
+
+(defmethod change-space-requirements ((pane layout-protocol-mixin) &rest space-req-keys &key resize-frame &allow-other-keys)
+  (apply #'grok-user-space-requirement-options pane space-req-keys)
+  (note-space-requirements-changed (sheet-parent pane) pane))
+
+(defmethod note-space-requirements-changed ((sheet layout-protocol-mixin) (pane layout-protocol-mixin))
+  (setf (pane-space-requirement pane) (compose-space pane)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; BASIC-PANE
 
-#+NIL
-(defclass basic-pane (window-stream
-		      sheet-parent-mixin
-		      mirrored-sheet-mixin
-		      permanent-medium-sheet-output-mixin
-		      pane)
-  ()
-  )
+(defclass basic-pane (;; layout-protocol-mixin
+                      standard-space-requirement-options-mixin
+                      sheet-parent-mixin mirrored-sheet-mixin pane)
+  ((foreground       :initarg :foreground
+                     :initform +black+
+                     :reader pane-foreground)
+   (background       :initarg :background
+                     :initform +white+
+                     :reader pane-background)
+   (text-style       :initarg :text-style
+                     :initform *default-text-style*
+                     :reader pane-text-style)
+         
+   (align-x          :initarg :align-x
+                     :type (member :left :center :right)
+                     :initform :left          ;??
+                     :reader pane-align-x)
+   (align-y          :initarg :align-y
+                     :type (member :top :center :bottom)
+                     :initform :top           ;??
+                     :reader pane-align-y) ))
 
-(defclass basic-pane (sheet-parent-mixin mirrored-sheet-mixin pane)
-  ())
+(defmethod engraft-medium :after (medium port (pane basic-pane))
+  (declare (ignore port))
+  ;; implements 29.2.2, last sentence.
+  (setf (medium-foreground medium) (pane-foreground pane)
+        (medium-background medium) (pane-background pane)
+        (medium-text-style medium) (pane-text-style pane)))
 
-(defmethod initialize-instance :after ((pane basic-pane) &rest args
-				       &key (background nil)
-					    (foreground nil)
-				       &allow-other-keys)
-  (declare (ignore args))
-  (when background
-    (setf (medium-background pane) background))
-  (when foreground
-    (setf (medium-foreground pane) foreground)))
-
-;;; COMPOSITE PANE
+;;;;
+;;;; Composite Panes
+;;;;
 
 (defclass composite-pane (sheet-multiple-child-mixin
 			  basic-pane)
-  (
-   ;; Caution :
-   ;; For respect of children wishes when increasing or decreasing size.
-   ;; Children are sort by (/ max-size size) and (/min-size size)
-   (sorted-max-w-r :initform nil)
-   (sorted-max-h-r :initform nil)
-   (sorted-min-w-r :initform nil)
-   (sorted-min-h-r :initform nil)
-   (sum-width :initform nil)
-   (sum-height :initform nil))
+  ((contents :initform nil :initarg :contents))
   (:documentation "protocol class"))
 
+(defclass content ()
+  ((pane       :initarg :pane
+               :initform nil
+               :reader content-pane
+               :type (or pane null)
+               :documentation "The particular pane, this content specifiction belongs to."))
+  (:documentation
+   "This class represents one item of composite-pane's contents list."))
 
 (defmethod initialize-instance :after ((pane composite-pane)
 				       &rest args
 				       &key contents
 				       &allow-other-keys)
   (declare (ignore args))
-  (if contents
-      (unless (typep (first contents) 'list) ;; temporary medecine
-	(loop for child in (reverse contents)
-	      do (sheet-adopt-child pane child)))))
+  (setf (slot-value pane 'contents) (parse-contents pane contents))
+  (dolist (content (slot-value pane 'contents))
+    (when (content-pane content)
+      (sheet-adopt-child pane (content-pane content)))))
 
+(defmethod parse-contents ((pane pane) contents)
+  (mapcar #'(lambda (content)
+              (cond ((panep content)
+                     (make-instance 'plain-content :pane content))
+                    ((or (eql content +fill+) (eql content '+fill+))
+                     (make-instance 'fill-content))
+                    ((and (realp content) (>= content 0))
+                     (make-instance 'constant-content :amount content))
+                    ((and (consp content)
+                          (realp (car content))
+                          (>= (car content) 0)
+                          (consp (cdr content))
+                          (panep (cadr content))
+                          (null (cddr content)))
+                     (let ((number (car content))
+                           (pane   (cadr content)))
+                       (if (< number 1)
+                           (make-instance 'proportional-content :pane pane :proportion number)
+                         (make-instance 'constant-content :pane pane :amount number))))
+                    (t
+                     (error "~S is not a valid element in the ~S option of ~S."
+                            content :contents pane))))
+          contents))
+
+(defmethod spacing-value-to-device-units (pane x)
+  (cond ((realp x) x)
+        ((consp x)
+         (ecase (cadr x)
+           (:pixels (car x))
+           (:point  (* (car x) (graft-pixels-per-inch (graft pane)) 1/72))
+           (:mm     (* (car x) (graft-pixels-per-millimeter (graft pane))))
+           (:character (* (car x) (text-style-character-width (pane-text-style pane)
+                                                               (sheet-medium pane)
+                                                               #\m)))
+           (:line  (* (car x)
+                      (stream-line-height pane)))))))
 
 (defmacro changing-space-requirement (&body body &key resize-frame)
   (declare (ignore resize-frame))
@@ -425,7 +535,6 @@
 
 (defmethod allocate-space ((pane single-child-composite-pane) width height)
   (when (first (sheet-children pane))
-    (resize-sheet pane width height)
     (allocate-space (first (sheet-children pane)) width height)))
 
 ;;; TOP-LEVEL-SHEET
@@ -480,183 +589,329 @@
 (defmethod note-space-requirements-changed ((sheet sheet) (pane composite-pane))
   (values))
 
+;;; Special content classes for VBOX/HBOX
 
-;;; HBOX-PANE
+(defclass fill-content (content) ())
 
-(defclass hbox-pane (composite-pane)
-  ()
-  (:documentation ""))
+(defclass constant-fill-content (content) 
+  ((amount :initarg :amount 
+           :reader constant-fill-content-amount)))
 
-(defmacro horizontally ((&rest options
-			 &key (equalize-height t)
-			 &allow-other-keys) &body contents)
-  (remf options :equalize-height)
-  (if equalize-height
-      `(make-pane 'hrack-pane ,@options :contents (list ,@contents))
-      `(make-pane 'hbox-pane ,@options :contents (list ,@contents))))
+(defclass proportional-content (content)
+  ((proportion :initarg :proportion
+               :initform nil
+               :type (or (real 0 1) null)
+               :reader content-proportion
+               :documentation "User specified proportion or NIL.")))
 
-(defmethod compose-space ((box hbox-pane))
-  (loop with space = (make-space-requirement)
-	for child in (sheet-children box)	
-	for request = (compose-space child)
-	sum (get-pane-width child) into sum-width
-	do (setq space (space-requirement+* space
-                         :width (space-requirement-width request)
-                         :max-width (space-requirement-max-width request)
-                         :min-height (space-requirement-min-width request)))
-         (setq space (space-requirement-combine* #'max space
-                         :height (space-requirement-height request)
-                         :max-height (space-requirement-max-height request)
-                         :min-height (space-requirement-min-height request)))
-	finally (progn		  
-		  (setf (slot-value box 'sum-width) sum-width)
-		  (return space))))
+(defclass constant-content (content) 
+  ((amount :initarg :amount 
+           :reader constant-content-amount)))
 
-(defmethod compute-extremum ((box hbox-pane))
-  (make-extremums-children-ratio-width box (sheet-children box)))
+(defclass plain-content (content) ())
 
-(defmethod allocate-space ((box hbox-pane) width height)
-  (resize-sheet box width height)
-  (allocate-space-internal-width box width)
-  (loop for child in (sheet-children box)
-	for nw = (slot-value child 'new-width)
-	and x = 0 then (+ x nw)
-	and nh = (/ (* height (get-pane-height child)) (get-pane-height box))
-        do (move-sheet child x 0)
-	   (setf nh (clamp nh (sr-min-height child) (sr-max-height child)))
-	   (allocate-space child nw (round nh))))
+(dada
+ ((major   width        height)
+  (minor   height       width)
+  (xbox    hbox         vbox)
+  (xrack   hrack        vrack)
+  (xically horizontally vertically))
 
-;;; VBOX-PANE
+ (defmacro xically ((&rest options
+                     &key equalize-minor
+                     &allow-other-keys)
+                    &body contents)
+   (remf options :equalize-minor)
+   `(make-pane ',(if equalize-minor
+                     'xrack-pane
+                   'xbox-pane)
+               ,@options
+               :contents (list ,@(mapcar (lambda (content)
+                                           (cond ((and (consp content)
+                                                       (realp (first content)))
+                                                  `(list ',(first content)
+                                                         ,(second content)))
+                                                 (t
+                                                  content)))
+                                         contents))))
 
-(defclass vbox-pane (composite-pane)
-  ()
-  (:documentation ""))
+ (defclass xbox-pane (composite-pane 
+                      permanent-medium-sheet-output-mixin ;arg!
+                      )
+   ()
+   (:documentation ""))
+ 
 
-(defmacro vertically ((&rest options
-		       &key (equalize-width t)
-		       &allow-other-keys) &body contents)
-  (remf options :equalize-width)
-  (if equalize-width
-      `(make-pane 'vrack-pane ,@options :contents (list ,@contents))
-      `(make-pane 'vbox-pane ,@options :contents (list ,@contents))))
+ (defmethod content-sr* ((box xbox-pane) (content fill-content))
+   (declare (ignorable box content))
+   (make-space-requirement
+    :major 0
+    :min-major 0
+    :max-major +fill+
+    :minor 0
+    :min-minor 0
+    :max-minor 0))
 
-(defmethod compose-space ((box vbox-pane))
-  (loop with space = (make-space-requirement)
-	for child in (sheet-children box)
-	for request = (compose-space child)
-	sum (get-pane-height child) into sum-height
-	do (setq space (space-requirement-combine* #'max space
-                         :width (space-requirement-width request)
-                         :max-width (space-requirement-max-width request)
-                         :min-height (space-requirement-min-width request)))
-         (setq space (space-requirement+* space
-                         :height (space-requirement-height request)
-                         :max-height (space-requirement-max-height request)
-                         :min-height (space-requirement-min-height request)))
-	finally (progn 
-		  (setf (slot-value box 'sum-height) sum-height)
-		  (return space))))
-	   
-(defmethod compute-extremum ((box vbox-pane))
-  (make-extremums-children-ratio-height box (sheet-children box)))
+ (defmethod content-sr* ((box xbox-pane) (content constant-content))
+   (declare (ignorable box content))
+   (let ((x (constant-content-amount content))
+         (sr (and (content-pane content)
+                  (compose-space (content-pane content)))))
+     (make-space-requirement
+      :major     x
+      :min-major x
+      :max-major x
+      :minor     (if sr (space-requirement-minor sr) 0)
+      :min-minor (if sr (space-requirement-min-minor sr) 0)
+      :max-minor (if sr (space-requirement-max-minor sr) 0))))
 
-(defmethod allocate-space ((box vbox-pane) width height)
-  (resize-sheet box width height)
-  (allocate-space-internal-height box height)
-  (loop for child in (sheet-children box)
-	  for nh = (slot-value child 'new-height)
-	  and y = 0 then (+ y nh)
-	  and nw = (/ (* width (get-pane-width child)) (get-pane-width box))
-	  do (move-sheet child 0 y)
-	     (setf nw (clamp nw (sr-min-width child) (sr-max-width child)))
-	     (allocate-space child (round nw) nh)))
-  
-;;; HRACK-PANE
+ (defmethod content-sr* ((box xbox-pane) (content proportional-content))
+   (compose-space (content-pane content)))
 
-(defclass hrack-pane (composite-pane)
-  ()
-  (:documentation ""))
+ (defmethod content-sr* ((box xbox-pane) (content plain-content))
+   (compose-space (content-pane content)))
+ 
+ (defmethod compose-space ((box xbox-pane))
+   (with-slots (contents) box
+     (loop
+         for content in contents
+         for sr = (content-sr* box content)
+         sum (space-requirement-major sr) into major
+         sum (space-requirement-min-major sr) into min-major
+         sum (space-requirement-max-major sr) into max-major
+         maximize (space-requirement-minor sr) into minor
+         maximize (space-requirement-min-minor sr) into min-minor
+         minimize (space-requirement-max-minor sr) into max-minor
+         finally
+           (return
+             (make-space-requirement
+              :major major
+              :min-major (min min-major major)
+              :max-major (max max-major major)
+              :minor minor
+              :min-minor (min min-minor minor)
+              :max-minor (max max-minor minor))))))
 
-(defmethod compose-space ((rack hrack-pane))
-  (loop for child in (sheet-children rack)
-        for sr = (compose-space child)
-        maximize (space-requirement-height sr) into height
-        maximize (space-requirement-min-height sr) into min-height
-        minimize (space-requirement-max-height sr) into max-height
-        sum (space-requirement-width sr) into width
-        sum (space-requirement-min-width sr) into min-width
-        sum (space-requirement-max-width sr) into max-width
-        finally
-        (progn
-          (setf (slot-value rack 'sum-width) (max min-width width))
-          (return (make-space-requirement
-                   :min-height  min-height
-                   :height      (max min-height height)
-                   :max-height  (max max-width height)
-                   :min-width min-width
-                   :width     (max min-width width)
-                   :max-width (max max-width width))) )))
+ (defmethod allocate-space-aux ((box xbox-pane) width height)
+   (with-slots (contents) box
+     (let* ((content-srs (mapcar #'(lambda (c) (content-sr* box c)) contents))
+            (allot       (mapcar #'ceiling (mapcar #'space-requirement-major content-srs)))
+            (wanted      (reduce #'+ allot))
+            (excess      (- major wanted)))
+       #+NIL
+       (progn
+         (format T "~&;; ALLOCATE-SPACE-AUX ~S~%" box)
+         (format T "~&;;   major = ~D, wanted = ~D, excess = ~D, allot = ~D.~%"
+                 major wanted excess allot))
 
-(defmethod compute-extremum ((rack hrack-pane))
-  (make-extremums-children-ratio-width rack (sheet-children rack)))
+       (let ((qvector
+              (mapcar (lambda (c)
+                        (typecase c
+                          (fill-content
+                           (vector 1 0 0))
+                          (proportional-content
+                           (vector 0 (content-proportion c) 0))
+                          (t
+                           (vector 0 0 (abs (- (if (> excess 0)
+                                                   (space-requirement-max-major (content-sr* box c))
+                                                 (space-requirement-min-major (content-sr* box c)))
+                                               (space-requirement-major (content-sr* box c))))))))
+                      contents)))
+         ;;
+         #+NIL
+         (progn
+           (format T "~&;;   old allotment = ~S.~%" allot)
+           (format T "~&;;   qvector 0 = ~S.~%" (mapcar #'(lambda (x) (elt x 0)) qvector))
+           (format T "~&;;   qvector 1 = ~S.~%" (mapcar #'(lambda (x) (elt x 1)) qvector))
+           (format T "~&;;   qvector 2 = ~S.~%" (mapcar #'(lambda (x) (elt x 2)) qvector)))
+         ;;
+         (dotimes (j 3)
+           (let ((sum (reduce #'+ (mapcar (lambda (x) (elt x j)) qvector))))
+             (unless (zerop sum)
+               (setf allot
+                 (mapcar (lambda (allot content q)
+                           (let ((q (elt q j)))
+                             (let ((delta (ceiling (if (zerop sum) 0 (/ (* excess q) sum)))))
+                               (decf excess delta)
+                               (decf sum q)
+                               (+ allot delta))))
+                         allot contents qvector))
+               #+NIL
+               (format T "~&;;   new excess = ~F, allotment = ~S.~%" excess allot)
+               )))
+         ;;
+         #+NIL (format T "~&;;   excess = ~F.~%" excess)
+         #+NIL (format T "~&;;   new allotment = ~S.~%" allot)
 
-(defmethod allocate-space ((rack hrack-pane) width height)
-  (resize-sheet rack width height)
-  (allocate-space-internal-width rack width)
-  (loop for child in (sheet-children rack)
-	for nw = (slot-value child 'new-width)
-	and x = 0 then (+ x (round nw))
-        do (move-sheet child x 0)
-	   (allocate-space child nw height)))
-
-;;; VRACK-PANE
-
-(defclass vrack-pane (composite-pane)
-  ()
-  (:documentation ""))
-
-(defmethod compose-space ((rack vrack-pane))
-  (loop for child in (sheet-children rack)
-        for sr = (compose-space child)
-        maximize (space-requirement-width sr) into width
-        maximize (space-requirement-min-width sr) into min-width
-        minimize (space-requirement-max-width sr) into max-width
-        sum (space-requirement-height sr) into height
-        sum (space-requirement-min-height sr) into min-height
-        sum (space-requirement-max-height sr) into max-height
-        finally
-        (progn
-          (setf (slot-value rack 'sum-height) (max min-height height))
-          (return (make-space-requirement
-                   :min-width  min-width
-                   :width      (max min-width width)
-                   :max-width  (max max-height width)
-                   :min-height min-height
-                   :height     (max min-height height)
-                   :max-height (max max-height height))) )))
-
-(defmethod compute-extremum ((rack vrack-pane))
-  (make-extremums-children-ratio-height rack (sheet-children rack)))
-  
-(defmethod allocate-space ((rack vrack-pane) width height)
-  (resize-sheet rack width height)
-  (allocate-space-internal-height rack height)
-  (loop for child in (sheet-children rack)
-	for nh = (slot-value child 'new-height)
-	and y = 0 then (+ y nh)
-        do (move-sheet child 0 y)
-	   (allocate-space child width nh)))
+         (values allot
+                 (mapcar #'ceiling (mapcar #'space-requirement-minor content-srs))) ))))
+ 
+ (defmethod allocate-space ((box xbox-pane) width height)
+   (declare (ignore minor))
+   (with-slots (contents) box
+     (multiple-value-bind (majors minors) (allocate-space-aux box width height)
+       ;; now actually layout the children
+       (let ((x 0))
+         (loop 
+             for content in contents 
+             for major in majors 
+             for minor in minors
+             do
+               (let ((child (content-pane content)))
+                 (when child
+                   #+NIL
+                   (format T "~&;;   child ~S at 0, ~D ~D x ~D~%" 
+                           child x width height)
+                   (move-sheet child
+                               ((lambda (major minor) height width) x 0)
+                               ((lambda (major minor) width height) x 0))
+                   (allocate-space child 
+                                   width height)
+                   )
+                 (incf x major)))))))
+ 
+ (defclass xrack-pane (xbox-pane) ())
+ 
+ (defmethod allocate-space-aux :around ((box xrack-pane) width height)
+   (multiple-value-bind (majors minors) (call-next-method)
+     (values majors
+             (mapcar (lambda (x) x minor) minors))))
+ )
 
 ;;; TABLE PANE
 
 (defclass table-pane (composite-pane)
-  ((number-per-line :type integer :initform 0 :accessor table-pane-number)
-   ;; the same list that is given during creation
-   (logical-children-layout :initform nil :reader format-children)
-   )
+  (array)
   (:documentation "The table layout implies that each colums has the same width
- and each lines has the same height - same rules for max and min -"))
+ and each lines has the same height - same rules for max and min -")
+  )
 
+(defclass table-content (content)
+  ((row :initarg :row :reader table-content-row)
+   (col :initarg :col :reader table-content-col)
+   ))
+
+(defmethod parse-contents ((pane table-pane) contents)
+  (loop 
+      for row in contents
+      for i from 0
+      nconc (loop
+                for col in row
+                for j from 0
+                collect (make-instance 'table-content 
+                          :pane col
+                          :row i
+                          :col j))))
+
+(defmethod initialize-instance :after ((pane table-pane) &key &allow-other-keys)
+  (with-slots (contents array) pane
+    (let ((nrows (1+ (loop for c in contents maximize (table-content-row c))))
+          (ncols (1+ (loop for c in contents maximize (table-content-col c)))))
+      (setf array (make-array (list nrows ncols) :initial-element nil))
+      (dolist (c contents)
+        (setf (aref array (table-content-row c) (table-content-col c)) c)))))
+
+(dada ((xically horizontally vertically)
+       (major   width height)
+       (minor   height  width))
+      ;;
+      (defun stack-space-requirements-xically (srs)
+        (loop
+            for sr in srs
+            sum (space-requirement-major sr) into major
+            sum (space-requirement-min-major sr) into min-major
+            sum (space-requirement-max-major sr) into max-major
+            maximize (space-requirement-minor sr) into minor
+            maximize (space-requirement-min-minor sr) into min-minor
+            minimize (space-requirement-max-minor sr) into max-minor
+            finally
+              (return
+                (make-space-requirement
+                 :major major
+                 :min-major (min min-major major)
+                 :max-major (max max-major major)
+                 :minor minor
+                 :min-minor (min min-minor minor)
+                 :max-minor (max max-minor minor)))))
+      
+      (defun allot-space-xically (srs major)
+        (let* ((allot (mapcar #'space-requirement-major srs))
+               (wanted (reduce #'+ allot))
+               (excess (- major wanted))
+               (qs
+                (mapcar (lambda (sr)
+                          (abs (- (if (> excess 0)
+                                                  (space-requirement-max-major sr)
+                                                (space-requirement-min-major sr))
+                                              (space-requirement-major sr))))
+                        srs)))
+          (let ((sum (reduce #'+ qs)))
+            (unless (zerop sum)
+              (setf allot
+                (mapcar (lambda (allot q)
+                          (let ((delta (ceiling (if (zerop sum) 0 (/ (* excess q) sum)))))
+                            (decf excess delta)
+                            (decf sum q)
+                            (+ allot delta)))
+                        allot qs))))
+          allot)) )
+
+(defmethod table-pane-row-space-requirement ((pane table-pane) i)
+  (with-slots ( array) pane
+    (stack-space-requirements-horizontally
+     (loop for j from 0 below (array-dimension array 1)
+         collect (compose-space (content-pane (aref array i j)))))))
+
+(defmethod table-pane-col-space-requirement ((pane table-pane) j)
+  (with-slots ( array) pane
+    (stack-space-requirements-vertically
+     (loop for i from 0 below (array-dimension array 0)
+         collect (compose-space (content-pane (aref array i j)))))))
+
+(defmethod compose-space ((pane table-pane))
+  (with-slots (contents array) pane
+    (let ((rsrs (loop for i from 0 below (array-dimension array 0) collect (table-pane-row-space-requirement pane i)))
+          (csrs (loop for j from 0 below (array-dimension array 1) collect (table-pane-col-space-requirement pane j))))
+      (let ((r (stack-space-requirements-vertically rsrs))
+            (c (stack-space-requirements-horizontally csrs)))
+        (let ((res
+               (make-space-requirement
+                :width (space-requirement-width r)
+                :min-width (space-requirement-min-width r)
+                :max-width (space-requirement-max-width r)
+                :height (space-requirement-height c)
+                :min-height (space-requirement-min-height c)
+                :max-height (space-requirement-max-height c))))
+          #+NIL (format T "~%;;; TABLE-PANE sr = ~S." res)
+          res)))))
+
+(defmethod allocate-space ((pane table-pane) width height &aux rsrs csrs)
+  (with-slots (contents array) pane
+    ;; allot rows
+    (let ((rows (allot-space-vertically
+                 (setq rsrs (loop for i from 0 below (array-dimension array 0) collect (table-pane-row-space-requirement pane i)))
+                 height))
+          (cols (allot-space-horizontally
+                 (setq csrs (loop for j from 0 below (array-dimension array 1) collect (table-pane-col-space-requirement pane j)))
+                 width)))
+      #+NIL(progn
+             (format T "~&;; row space requirements = ~S." rsrs)
+             (format T "~&;; col space requirements = ~S." csrs)
+             (format T "~&;; row allotment: needed = ~S result = ~S." height rows)
+             (format T "~&;; col allotment: needed = ~S result = ~S." width cols))
+      ;; now finally layout each child
+      (loop
+          for y = 0 then (+ y h)
+          for h in rows
+          for i from 0
+          do (loop
+                 for x = 0 then (+ x w)
+                 for w in cols
+                 for j from 0
+                 do (progn
+                      (move-sheet (content-pane (aref array i j)) x y)
+                      (allocate-space (content-pane (aref array i j)) w h)))))))
+#||
 (defmethod initialize-instance :before ((table table-pane)
 					&rest args
 					&key contents
@@ -664,88 +919,17 @@
   (declare (ignore args))
   (unless (apply #'= (mapcar #'length contents))
     (error "The variable contents hasn't the good format")))
-
-(defmethod initialize-instance :after ((table table-pane)
-				       &rest args
-				       &key contents
-				       &allow-other-keys)
-  (declare (ignore args))
-  (loop for children in (reverse contents)
-	do (loop for child in (reverse children)
-		 do (sheet-adopt-child table child)))
-  (setf (table-pane-number table) (length (first contents))
-	(slot-value table 'logical-children-layout) contents))
+||#
 
 (defun table-pane-p (pane)
   (typep pane 'table-pane))
 
-(defmacro tabling ((&rest options &key (grid t) &allow-other-keys) &body contents)
+(defmacro tabling ((&rest options &key (grid nil) &allow-other-keys) &body contents)
   (if grid
       `(make-pane 'grid-pane ,@options :contents (list ,@contents))
       `(make-pane 'table-pane ,@options :contents (list ,@contents))))
 
-(defmethod compose-space ((table table-pane))
-  (mapc #'compose-space (sheet-children table))
-  (let* ((space (make-space-requirement))
-	 (nb-children-p-l (table-pane-number table))
-	 (nb-children-p-c (/ (length (sheet-children table)) nb-children-p-l))
-	 (max-size (max nb-children-p-l nb-children-p-c))
-	 (space-vec (make-array (list 6 max-size) :initial-element 0)))
-    (loop for i from 0 below (second (array-dimensions space-vec))
-	  do (incf (aref space-vec 2 i) (if (< i nb-children-p-l) 500000 0))
-	     (incf (aref space-vec 3 i) 500000))
-    (loop for child in (sheet-children table) and i from 0
-	  for c = (mod i nb-children-p-l)
-	  and l = 0 then (incf l (if (zerop c) 1 0)) 
-	  when (and (zerop i) (zerop l)) sum (get-pane-width child) into sum-width
-	  when (zerop c) sum (get-pane-height child) into sum-height 
-	  do (setf (aref space-vec 0 c)
-		   (max (sr-width child) (aref space-vec 0 c))
-		   (aref space-vec 2 c)
-		   (min (sr-max-width child) (aref space-vec 2 c))
-		   (aref space-vec 4 c)
-		   (max (sr-min-width child) (aref space-vec 4 c))
-		   (aref space-vec 1 l)
-		   (max (sr-height child) (aref space-vec 1 l))
-		   (aref space-vec 3 l)
-		   (min (sr-max-height child) (aref space-vec 3 l))
-		   (aref space-vec 5 l)
-		   (max (sr-min-height child) (aref space-vec 5 l)))
-	  finally (setf (slot-value table 'sum-width) sum-width
-			(slot-value table 'sum-height) sum-height))
-    (loop for i from 0 below (second (array-dimensions space-vec))
-	  do (incf (space-requirement-width space) (aref space-vec 0 i))
-	     (incf (space-requirement-height space) (aref space-vec 1 i))
-	     (incf (space-requirement-max-width space) (aref space-vec 2 i))
-	     (incf (space-requirement-max-height space) (aref space-vec 3 i))
-	     (incf (space-requirement-min-width space) (aref space-vec 4 i))
-	     (incf (space-requirement-min-height space) (aref space-vec 5 i)))
-    space))
 
-(defmethod compute-extremum ((table table-pane))
-  ;; Because in a table-pane each columns cells has the same width
-  ;; and each lines cells has the same height, will make a line-reference
-  ;; and a column reference. (first line and column of the table.
-  ;; (ie. They will represent the size reference for lines and columns)
-  (make-extremums-children-ratio-height
-       table (mapcar #'car (format-children table)))
-  (make-extremums-children-ratio-width
-       table (car (format-children table))))
-
-(defmethod allocate-space ((table table-pane) width height)
-  (resize-sheet table width height)
-  (allocate-space-internal-height table height)
-  (allocate-space-internal-width table width)
-  (loop for children in (format-children table)
-	for line-ref in (mapcar #'car (format-children table))
-	for new-height = (slot-value line-ref 'new-height)
-	and y = 0 then (+ y new-height)
-	do (loop for child in children
-		 for ref in (car (format-children table))
-		 for new-width = (slot-value ref 'new-width)
-		 and x = 0 then (+ x new-width)
-                 do (move-sheet child x y)
-		    (allocate-space child new-width new-height))))
 
 ;(defmethod sheet-adopt-child :before ((table table-pane) child)
 ;  (declare (ignore child))
@@ -793,7 +977,6 @@
 		  :min-height (* min-height nb-children-pc)))))
      
 (defmethod allocate-space ((grid grid-pane) width height)
-  (resize-sheet grid width height)
   (loop with nb-kids-p-l = (table-pane-number grid)
 	with nb-kids-p-c = (/ (length (sheet-children grid)) nb-kids-p-l)
 	for children in (format-children grid) 
@@ -812,56 +995,64 @@
 ;;; SPACING PANE
 
 (defclass spacing-pane (composite-pane)
-  ((margin-width :initform nil :initarg :width)
-   (margin-height :initform nil :initarg :height)
-   (margin-max-width :initform nil :initarg :max-width)
-   (margin-max-height :initform nil :initarg :max-height)
-   (margin-min-width :initform nil :initarg :min-width)
-   (margin-min-height :initform nil :initarg :min-height))
+  ()
   (:documentation "The spacing pane will create a margin for his child.
 The margin sizes (w h) are given with the :width and :height initargs.
 During realization the child of the spacing will have as cordinates
  x = w/2 , y = h/2."))
 
-(defmethod initialize-instance :after ((spacing spacing-pane) &rest ignore)
-  (declare (ignore ignore))
-  (with-slots (margin-width margin-height
-	       margin-max-width margin-max-height
-	       margin-min-width margin-min-height) spacing
-    (setf margin-width (or margin-width 0)
-	  margin-height (or margin-height 0)
-	  margin-max-width (or margin-max-width margin-width)
-	  margin-max-height (or margin-max-height margin-height)
-	  margin-min-width (or margin-min-width margin-width)
-	  margin-min-height (or margin-min-height margin-height))))
+(defmacro spacing ((&rest options) &body contents)
+  `(make-pane 'spacing-pane ,@options :contents (list ,@contents)))
 
 (defun spacing-p (pane)
   (typep pane 'spacing-pane))
 
-(defmacro spacing ((&rest options) &body contents)
-  `(make-pane 'spacing-pane ,@options :contents (list ,@contents)))
+(defmethod parse-contents ((pane spacing-pane) contents)
+  (cond ((and (consp contents)
+              (null (cdr contents))
+              (panep (car contents)))
+         (list (make-instance 'plain-content :pane (car contents))))
+        (t
+         (error "Bogus ~S option: ~S. A ~S needs exactly one child not more, not less."
+                :contents
+                'spacing-pane))))
+
+(defmethod initialize-instance :after ((spacing spacing-pane) &key thickness &allow-other-keys)
+  (with-slots (user-width user-min-width user-max-width
+               user-height user-min-height user-max-height)
+      spacing
+    (setf user-width  (max (or thickness 0) (or user-width 0)))
+    (setf user-height (max (or thickness 0) (or user-height 0)))
+    ;; hmm
+    ))
 
 (defmethod compose-space ((spacing spacing-pane))
-  (compose-space (first (sheet-children spacing))))
+  (with-slots (contents
+               user-width user-min-width user-max-width
+               user-height user-min-height user-max-height) spacing
+    (let ((sr (compose-space (content-pane (first contents)))))
+      (make-space-requirement
+       :width           (+ (or user-width 0) (space-requirement-width sr))
+       :height          (+ (or user-height 0) (space-requirement-height sr))
+       :min-width       (min (+ (or user-width 0) (space-requirement-width sr))
+                             (+ (space-requirement-min-width sr) (or user-min-width 0)))
+       :min-height      (min (+ (or user-height 0) (space-requirement-height sr))
+                             (+ (space-requirement-min-height sr) (or user-min-height 0)))
+       :max-width       (max (+ (or user-width 0) (space-requirement-width sr))
+                             (+ (space-requirement-max-width sr) (or user-max-width 0)))
+       :max-height      (max (+ (or user-height 0) (space-requirement-height sr))
+                             (+ (space-requirement-max-height sr) (or user-max-height 0))) ))))
 
 (defmethod allocate-space ((spacing spacing-pane) width height)
-  (resize-sheet spacing width height)
-  (let* ((child (first (sheet-children spacing)))
-	 (margin-width (- (sr-width spacing) (sr-width child)))
-	 (margin-height (- (sr-height spacing) (sr-height child))))
-    (setf margin-width
-	  (clamp (round (/ (* width margin-width) (get-pane-width spacing)))
-		 (slot-value spacing 'margin-min-width)
-		 (slot-value spacing 'margin-max-width))
-	  margin-height
-	  (clamp (round (/ (* height margin-height) (get-pane-height spacing)))
-		 (slot-value spacing 'margin-min-height)
-		 (slot-value spacing 'margin-max-height))
-	  (sheet-transformation child)
-	  (make-translation-transformation (/ margin-width 2)
-					   (/ margin-height 2)))
-    (allocate-space child (- width margin-width) (- height margin-height))))
-
+  (with-slots (contents user-width user-height) spacing
+    (allocate-space (content-pane (first contents))
+                    (- width user-width)
+                    (- height user-height))
+    (move-and-resize-sheet (content-pane (first contents))
+                           (/ user-width 2) (/ user-height 2)
+                           (- width user-width)
+                           (- height user-height))))
+   
 ;;; BORDER-PANE
 
 (defclass border-pane (spacing-pane)
@@ -871,6 +1062,7 @@ During realization the child of the spacing will have as cordinates
 
 (defmethod initialize-instance :after ((bp border-pane) &rest ignore)
   (declare (ignore ignore))
+  #+NIL
   (with-slots (border-width) bp
     (let ((2*border-width (* 2 border-width)))
       (setf (slot-value bp 'margin-width) 2*border-width
@@ -884,7 +1076,6 @@ During realization the child of the spacing will have as cordinates
   `(make-pane 'border-pane ,@options :contents (list ,@contents)))
 
 (defmethod allocate-space ((bp border-pane) width height)
-  (resize-sheet bp width height)
   (when (first (sheet-children bp))
     (let ((border-width (border-pane-width bp)))
       (setf (sheet-transformation (first (sheet-children bp)))
@@ -933,10 +1124,14 @@ During realization the child of the spacing will have as cordinates
 
 (defclass viewport-pane (single-child-composite-pane) ())
 
+(defmethod allocate-space ((pane viewport-pane) w h)
+  (allocate-space (first (sheet-children pane))
+                  (space-requirement-width (compose-space (first (sheet-children pane))))
+                  (space-requirement-height (compose-space (first (sheet-children pane))))))
 
 ;;; SCROLLER-PANE
 
-(defparameter *scrollbar-thickness* 16)
+(defparameter *scrollbar-thickness* 15)
 
 (defclass scroller-pane (composite-pane)
   ((scroll-bar :type (member '(t :vertical :horizontal))
@@ -994,6 +1189,16 @@ During realization the child of the spacing will have as cordinates
                        :client (first (sheet-children viewport))
                        :drag-callback
                        #'(lambda (gadget new-value)
+                           (scroll-extent (gadget-client gadget)
+                                          0
+                                          (* new-value 
+                                             (- (bounding-rectangle-max-y
+                                                 (sheet-region
+                                                  (gadget-client gadget)))
+                                                (bounding-rectangle-max-y
+                                                 (sheet-region
+                                                  viewport)))))
+                           #+NIL
                            (let ((old-x (bounding-rectangle-min-x
                                          (pane-viewport-region
                                           (gadget-client gadget)))))
@@ -1065,7 +1270,6 @@ During realization the child of the spacing will have as cordinates
         (make-space-requirement))))
 
 (defmethod allocate-space ((pane scroller-pane) width height)
-  (resize-sheet pane width height)
   (with-slots (viewport vscrollbar hscrollbar) pane
     (when viewport
       (setf (sheet-transformation viewport)
@@ -1080,11 +1284,17 @@ During realization the child of the spacing will have as cordinates
 		      *scrollbar-thickness*
 		      (if hscrollbar (- height *scrollbar-thickness*) height)))
     (when hscrollbar
+      #+NIL
       (setf (sheet-transformation hscrollbar)
 	(make-translation-transformation (if vscrollbar
                                              *scrollbar-thickness*
                                              0)
                                          (- height *scrollbar-thickness*)))
+      (move-sheet hscrollbar
+                  (if vscrollbar
+                      *scrollbar-thickness*
+                    0)
+                  (- height *scrollbar-thickness*))
       (allocate-space hscrollbar
 		      (if vscrollbar (- width *scrollbar-thickness*) width)
 		      *scrollbar-thickness*))))
@@ -1107,6 +1317,7 @@ During realization the child of the spacing will have as cordinates
     (sheet-parent (sheet-parent pane))))
 
 (defun update-scroll-bars (pane entire-region x y)
+  #+NIL
   (multiple-value-bind (min-x min-y max-x max-y) (bounding-rectangle* entire-region)
     (with-slots (vscrollbar hscrollbar viewport) (pane-scroller pane)
       (when vscrollbar
@@ -1124,20 +1335,158 @@ During realization the child of the spacing will have as cordinates
 
 (defmethod scroll-extent ((pane basic-pane) x y)
   (when (is-in-scroller-pane pane)
-    (move-sheet pane x y)
-    (update-scroll-bars pane (sheet-region pane) x y)
-    (dispatch-repaint pane (sheet-region pane))))
+    (move-sheet pane (- x) (- y))
+    #+NIL(update-scroll-bars pane (sheet-region pane) x y)
+    #+NIL(dispatch-repaint pane (sheet-region pane))))
 
 ;;; LABEL PANE
 
-(defclass label-pane (composite-pane)
+(defclass label-pane (composite-pane permanent-medium-sheet-output-mixin)
   ((label :type string :initarg :label :accessor label-pane-label)
+   (alignment :type (member :bottom :top)
+              :initform :top
+              :initarg :label-alignment
+              :reader label-pane-label-alignment)
    )
   (:documentation ""))
 
 (defmacro labelling ((&rest options) &body contents)
-  `(make-instance 'label-pane ,@options :contents (list ,@contents)))
+  `(make-pane 'label-pane ,@options :contents (list ,@contents)))
 
+(defmethod label-pane-margins ((pane label-pane))
+  (let ((m0 2)
+        (a (text-style-ascent (pane-text-style pane) pane))
+        (d (text-style-descent (pane-text-style pane) pane)))
+    (values
+     ;; margins of inner sheet region
+     (+ a (* 2 m0))
+     (+ a (if (eq (label-pane-label-alignment pane) :top) d 0) (* 2 m0))
+     (+ a (* 2 m0))
+     (+ a (if (eq (label-pane-label-alignment pane) :top) 0 d) (* 2 m0))
+     ;; margins of surrounding border
+     (+ m0 (/ a 2))
+     (+ m0 (/ a 2))
+     (+ m0 (/ a 2))
+     (+ m0 (if (eq (label-pane-label-alignment pane) :top) 0 d) (/ a 2)) 
+     ;; position of text
+     (+ m0 (if (slot-value pane 'contents) 
+               (+ a m0 m0 d)
+             0))
+     (+ m0 a))))
+
+(defmethod compose-space ((pane label-pane))
+  (let* ((w (text-size pane (label-pane-label pane)))
+         (a (text-style-ascent (pane-text-style pane) pane))
+         (d (text-style-descent (pane-text-style pane) pane))
+         (m0 2)
+         (h (+ a d m0 m0)))
+    (cond ((slot-value pane 'contents)
+           (let ((sr2 (compose-space (content-pane (first (slot-value pane 'contents))))))
+             (multiple-value-bind (right top left bottom) (label-pane-margins pane)
+               (make-space-requirement
+                ;; label!
+                :width      (+ left right (max (+ w m0 m0) (space-requirement-width sr2)))
+                :min-width  (+ left right (max (+ w m0 m0) (space-requirement-min-width sr2)))
+                :max-width  (+ left right (max (+ w m0 m0) (space-requirement-max-width sr2)))
+                :height     (+ top bottom (space-requirement-height sr2))
+                :min-height (+ top bottom (space-requirement-min-height sr2))
+                :max-height (+ top bottom (space-requirement-max-height sr2))))))
+          (t
+           (incf w m0)
+           (incf w m0)
+           (let ((sr1 (make-space-requirement :width w :min-width w :max-width w
+                                              :height h :min-height h :max-height h)))
+             (when (slot-value pane 'contents)
+               (let ((sr2 (compose-space (content-pane (first (slot-value pane 'contents))))))
+                 (setf sr1
+                   (make-space-requirement
+                    :width      (max (space-requirement-width sr1) (space-requirement-width sr2))
+                    :min-width  (max (space-requirement-min-width sr1) (space-requirement-min-width sr2))
+                    :max-width  (max (space-requirement-max-width sr1) (space-requirement-max-width sr2))
+                    :height     (+ (space-requirement-height sr1) (space-requirement-height sr2))
+                    :min-height (+ (space-requirement-min-height sr1) (space-requirement-min-height sr2))
+                    :max-height (+ (space-requirement-max-height sr1) (space-requirement-max-height sr2))))))
+             sr1)))))
+
+(defmethod allocate-space ((pane label-pane) width height)
+  (multiple-value-bind (right top left bottom) (label-pane-margins pane)
+    (declare (ignorable right top left bottom))
+    (when (slot-value pane 'contents)
+      (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
+        (move-sheet (content-pane (first (slot-value pane 'contents)))
+                    (+ x1 left) (+ y1 top))
+        (allocate-space (content-pane (first (slot-value pane 'contents)))
+                        (- (- x2 right) (+ x1 left))
+                        (- (- y2 bottom) (+ y1 top)))))))
+             
+
+(defun curry (fun &rest args)
+  #'(lambda (&rest more)
+      (apply fun (append args more))))
+
+(defmethod draw-design (medium (design rectangle))
+  (multiple-value-call #'draw-rectangle* medium (rectangle-edges* design)))
+
+(defmethod draw-design (medium (design standard-region-union))
+  (map-over-region-set-regions (curry #'draw-design medium)
+                               design))
+
+(defmethod draw-design (medium (design standard-line))
+  (multiple-value-call #'draw-line* medium 
+                       (line-start-point* design)
+                       (line-end-point* design)))
+
+(defmethod draw-design (medium (design standard-polyline))
+  (map-over-polygon-segments (curry #'draw-line* medium)
+                             design))
+
+(defmethod draw-design (medium (design (eql +nowhere+)))
+  )
+
+(defmethod repaint-sheet ((pane label-pane) region)
+  (declare (ignore region))
+  (let ((m0 2)
+        (a (text-style-ascent (pane-text-style pane) pane))
+        (d (text-style-descent (pane-text-style pane) pane))
+        (tw (text-size pane (label-pane-label pane))))
+    (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
+      (multiple-value-bind (iright itop ileft ibottom
+                            bright btop bleft bbottom)
+          (label-pane-margins pane)
+        (declare (ignorable iright itop ileft ibottom))
+        (multiple-value-bind (tx ty)
+            (values (ecase (pane-align-x pane)
+                      (:left (+ x1 m0 (if (slot-value pane 'contents) 
+                                          (+ a m0 m0 d)
+                                        0)))
+                      (:right (- x2 m0 (if (slot-value pane 'contents) 
+                                           (+ a m0 m0 d)
+                                         0)
+                                 tw))
+                      (:center (- (/ (- x2 x1) 2) (/ tw 2))))
+                    (ecase (label-pane-label-alignment pane)
+                      (:top (+ y1 m0 a))
+                      (:bottom (- y2 m0 d))))
+          (draw-text* pane (label-pane-label pane)
+                      tx ty)
+          (when (slot-value pane 'contents)
+            (draw-design pane 
+                         (region-difference
+                          (make-polyline* (list
+                                           (+ x1 bleft) (+ y1 btop)
+                                           (+ x1 bleft) (- y2 bbottom)
+                                           (- x2 bright) (- y2 bbottom)
+                                           (- x2 bright) (+ y1 btop))
+                                          :closed t)
+                          (make-rectangle* (- tx m0) (- ty a) (+ tx tw m0) (+ ty d)))) ))))))
+
+;;xxx
+(defmethod dispatch-repaint ((label-pane label-pane) region)
+  (repaint-sheet label-pane region))
+
+;;xxx
+(defmethod handle-event ((pane label-pane) (event window-repaint-event))
+  (dispatch-repaint pane (sheet-region pane)))
 
 ;;; GENERIC FUNCTIONS
 
@@ -1235,6 +1584,7 @@ During realization the child of the spacing will have as cordinates
 (defmethod* (setf window-viewport-position) (x y (pane clim-stream-pane))
   (scroll-extent pane x y))
 
+#+NIL
 (defun scroll-area (pane dx dy)
   (let ((transform (sheet-transformation pane)))
     ;; Region has been "scrolled" already.
@@ -1247,6 +1597,7 @@ During realization the child of the spacing will have as cordinates
 		  dx dy srcx srcy destx desty)
 	  (copy-area pane  srcx srcy (- x2 x1) (- y2 y1) destx desty))))))
 
+#+NIL
 (defmethod scroll-extent ((pane clim-stream-pane) x y)
   (when (is-in-scroller-pane pane)
     (let ((new-x (max x 0))
@@ -1387,12 +1738,17 @@ During realization the child of the spacing will have as cordinates
 
 ;;; 29.4.5 Creating a Standalone CLIM Window
 
-(define-application-frame a-window-stream () ()
-                          (:panes
-                           (io
-                            (make-pane 'clim-stream-pane)))
-                          (:layouts
-                           (:default io)))
+(define-application-frame a-window-stream () 
+  ((the-io))
+  (:panes
+   (io
+    (scrolling (:height 400 :width 700)
+      (setf (slot-value *application-frame* 'the-io)
+        (make-pane 'clim-stream-pane
+                   :width 700
+                   :height 2000)))))
+  (:layouts
+   (:default io)))
 
 (defun open-window-stream (&key port
                                 left top right bottom width height
@@ -1433,3 +1789,106 @@ During realization the child of the spacing will have as cordinates
                                      :frame-manager fm)))
     (with-look-and-feel-realization (fm fr))
     fr))
+
+(defun foofoo ()
+  (open-window-stream))
+
+
+
+(defmethod text-size ((sheet sheet) string &rest more)
+  (apply #'text-size (sheet-medium sheet) string more))
+(defmethod text-style-ascent (ts (sheet sheet))
+  (text-style-ascent ts (sheet-medium sheet)))
+(defmethod text-style-descent (ts (sheet sheet))
+  (text-style-descent ts (sheet-medium sheet)))
+
+;;;;;;
+
+#||
+(defclass list-pane (value-gadget)
+  ((mode        :initarg :mode
+                :initform :some-of
+                :reader list-pane-mode
+                :type (member :one-of :some-of))
+   (items       :initarg :items
+                :initform nil
+                :reader list-pane-items
+                :type sequence)
+   (name-key    :initarg :name-key
+                :initform #'princ-to-string
+                :reader list-pane-name-key
+                :documentation "A function to be applied to items to gain a printable representation")
+   (value-key   :initarg :value-key
+                :initform #'identity
+                :reader list-pane-value-key
+                :documentation "A function to be applied to items to gain its value 
+                                for the purpose of GADGET-VALUE.")
+   (test        :initarg :test
+                :initform #'eql
+                :reader list-pane-test
+                :documentation "A function to compare two items for equality.") ))
+
+(defclass generic-list-pane (basic-pane list-pane permanent-medium-sheet-output-mixin)
+  ((item-strings :initform nil
+                 :documentation "Vector of item strings.")
+   (selected-items :initform nil
+                   :documentation "List of indexes of selected items.")
+   ))
+
+(defmethod generic-list-pane-item-strings ((pane generic-list-pane))
+  (with-slots (item-strings) pane
+    (or item-strings
+        (setf item-strings
+          (map 'vector (lambda (item)
+                         (let ((s (funcall (list-pane-name-key pane) item)))
+                           (if (stringp s)
+                               s
+                             (princ-to-string s)))) ;defensive programming!
+               (list-pane-items pane))))))
+
+(defmethod compose-space ((pane generic-list-pane))
+  (let* ((n (length (generic-list-pane-item-strings pane)))
+         (w (reduce #'max (map 'vector (lambda (item-string)
+                                         (text-size pane item-string))
+                               (generic-list-pane-item-strings pane))
+                    :initial-value 0))
+         (h (* n (+ (text-style-ascent (pane-text-style pane) pane)
+                    (text-style-descent (pane-text-style pane) pane)))))
+    (make-space-requirement :width w :height h
+                            :min-width w :min-height h
+                            :max-width w :max-height h)))
+
+#+NIL
+(defmethod allocate-space ((pane generic-list-pane) width height)
+  )
+
+(defmethod handle-repaint ((pane generic-list-pane) region)
+  (with-slots (selected-items) pane
+    (let* ((a (text-style-ascent (pane-text-style pane) pane))
+           (d (text-style-descent (pane-text-style pane) pane)))
+      (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
+        (loop
+            for i from 0
+            for x across (generic-list-pane-item-strings pane) do
+              (let ((y (+ a (* i (+ a d)))))
+                (cond ((member i selected-items)
+                       (draw-rectangle* pane x1 (- y a) x2 (+ y d))
+                       (draw-text* pane x 0 y :ink +background-ink+))
+                      (t
+                       (draw-rectangle* pane x1 (- y a) x2 (+ y d) :ink +background-ink+)
+                       (draw-text* pane x 0 y)))))))))
+
+(defmethod handle-event ((pane generic-list-pane) (event pointer-button-press-event))
+  (multiple-value-bind (mx my) (values (pointer-event-x event) (pointer-event-y event))
+    (let ((k (floor my (+ (text-style-ascent (pane-text-style pane) pane)
+                          (text-style-descent (pane-text-style pane) pane))))
+          (n (length (generic-list-pane-item-strings pane))))
+      (if (member k (slot-value pane 'selected-items))
+          (setf (slot-value pane 'selected-items) (delete k (slot-value pane 'selected-items)))
+        (pushnew k (slot-value pane 'selected-items)))
+      (dispatch-repaint pane +everywhere+)
+      )))
+
+(defmethod handle-event ((sheet immediate-repainting-mixin) (event window-repaint-event))
+  (dispatch-repaint sheet (window-event-region event)))
+||#
