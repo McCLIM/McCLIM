@@ -25,9 +25,12 @@
   ()
   )
 
-(defmacro define-presentation-type (name slots)
+(defmacro define-presentation-type (name parameters
+                                         &key options inherit-from
+                                         description (history t)
+                                         parameters-are-types)
   `(defclass ,name (presentation)
-     ,slots
+     ,parameters
      ))
 
 (defmacro define-presentation-method (name arglist &body body)
