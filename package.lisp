@@ -338,6 +338,11 @@
    "T")
   ;;
   (:export
+
+   ;; This list of exported symbols was automatically generated from the
+   ;; specification as of version 1.17 of this very file, please think twice
+   ;; before fiddling with it. Thanks! --GB 2002-11-10
+
    "*ABORT-GESTURES*"                   ;variable
    "*ACCELERATOR-GESTURES*"             ;variable
    "*ACTIVATION-GESTURES*"              ;variable
@@ -1238,8 +1243,8 @@
    "SCROLL-TO-TOP-CALLBACK"             ;callback
    "SCROLL-UP-LINE-CALLBACK"            ;callback
    "SCROLL-UP-PAGE-CALLBACK"            ;callback
-  ;"SCROLLER-PANE"                      ;pane
-  ;"SCROLLING"                          ;macro
+   "SCROLLER-PANE"                      ;pane
+   "SCROLLING"                          ;macro
    "SEQUENCE"                           ;presentation type
    "SEQUENCE-ENUMERATED"                ;presentation type
    "SET-HIGHLIGHTED-PRESENTATION"       ;function
@@ -1300,8 +1305,8 @@
    "SPACE-REQUIREMENT-MIN-HEIGHT"       ;generic function
    "SPACE-REQUIREMENT-MIN-WIDTH"        ;generic function
    "SPACE-REQUIREMENT-WIDTH"            ;generic function
-;  "SPACING"                            ;macro
-;  "SPACING-PANE"                       ;pane
+   "SPACING"                            ;macro
+   "SPACING-PANE"                       ;pane
    "STANDARD-APPLICATION-FRAME"         ;class
    "STANDARD-BOUNDING-RECTANGLE"        ;class
    "STANDARD-CELL-OUTPUT-RECORD"        ;class
@@ -1873,11 +1878,9 @@
   (:export
    "LINE-STYLE-EFFECTIVE-THICKNESS"
    "MEDIUM-MITER-LIMIT"
-   "SPACING-PANE" "SPACING"
    "RAISED-PANE" "RAISING"
    "LOWERED-PANE" "LOWERING"
    "VIEWPORT-PANE"
-   "SCROLLER-PANE" "SCROLLING"
    "DRAW-GLYPH" "DEVICE-FONT-TEXT-STYLE-P"
    "DRAW-IMAGE"
    "IMAGE-PANE"
