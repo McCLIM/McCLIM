@@ -189,7 +189,7 @@
 	     (return-from stream-input-wait (values nil :input-wait-test)))
 	   (multiple-value-bind (result reason)
 	       ;; XXX need to decay timeout on multiple trips through the loop
-	       (process-next-event (port stream) :timeout timeout)
+	       (port-wait-on-event-processing (port stream) :timeout timeout)
 	     (when (and (not result) (eq reason :timeout))
 	       (return-from stream-input-wait (values nil :timeout)))))))))
 

@@ -66,7 +66,9 @@
    
    (lock
     :initform (make-recursive-lock "port lock")
-    :accessor port-lock) ))
+    :accessor port-lock)
+   (event-count :initform 0)
+   ))
 
 (defun find-port (&key (server-path *default-server-path*))
   (if (null server-path)
@@ -132,6 +134,11 @@
   (declare (ignore wait-function timeout))
   (error "Calling GET-NEXT-EVENT on a PORT protocol class"))
 
+(defmethod get-next-event :after ((port basic-port) &key wait-function timeout)
+  (declare (ignore wait-function timeout))
+  (with-slots (event-count) port
+    (incf event-count)))
+
 (defmethod process-next-event ((port basic-port) &key wait-function timeout)
   (let ((event (get-next-event port :wait-function wait-function :timeout timeout)))
     (cond
@@ -141,6 +148,21 @@
       (distribute-event port event)
       t))))
 
+(defmethod port-wait-on-event-processing ((port basic-port) &key wait-function timeout)
+  (declare (ignorable wait-function))
+  (if *multiprocessing-p*
+      (with-slots (event-count) port
+	(let ((old-event-count event-count)
+	      (flag nil))
+	  (process-wait-with-timeout "Wait for event" timeout
+				     #'(lambda ()
+					 (when (not (= old-event-count event-count))
+					   (setq flag t))))
+	  (if flag
+	      t
+	    (values nil :timeout))))
+    (process-next-event port :wait-function wait-function :timeout timeout)))
+  
 (defmethod distribute-event ((port basic-port) event)
   (cond
    ((typep event 'keyboard-event)
