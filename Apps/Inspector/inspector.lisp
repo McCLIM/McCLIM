@@ -31,6 +31,7 @@
 (define-application-frame inspector ()
   ((dico :initform (make-hash-table) :reader dico)
    (cons-cell-dico :initform (make-hash-table) :reader cons-cell-dico)
+   (print-length :initform (make-hash-table) :reader print-length)
    (obj :initarg :obj :reader obj))
   (:pointer-documentation t)
   (:panes
@@ -88,7 +89,10 @@ information is present."))
         ((not (gethash object (dico *application-frame*)))
          (inspect-object-briefly object pane))
         (t
-         (let ((*inspected-objects* (cons object *inspected-objects*)))
+	 (let ((*inspected-objects* (cons object *inspected-objects*))
+               (*print-length* (or (gethash object (print-length
+						    *application-frame*))
+                                   *print-length*)))
            (call-next-method)))))
 
 ;; This behavior should be overridden by methods for specific object
@@ -111,6 +115,7 @@ information is present."))
   :inherit-from t)
 (define-presentation-type cons ()
   :inherit-from t)
+(define-presentation-type long-list-tail () :inherit-from t)
 
 (define-presentation-method present (object (type settable-slot) 
 				     stream
@@ -278,9 +283,9 @@ list as interactive as you would expect."
                   (formatting-cell (pane) (inspect-object cdr pane))
                   (formatting-cell (pane) (princ ")" pane))
                   t)
-                 ((>= length *print-length*)
-                  (formatting-cell (pane) (inspect-object car pane))
-                  (formatting-cell (pane) (princ "..." pane))
+		 ((and *print-length* (>= length *print-length*))
+                  (with-output-as-presentation (pane object 'long-list-tail)
+                    (formatting-cell (pane) (princ "...)" pane)))
                   t)
                  (t nil)))
           (formatting-cell (pane) (inspect-object car pane)))))))
@@ -505,8 +510,15 @@ them."
     (inspector obj :new-process t)))
 
 (define-inspector-command (com-toggle-show-list-cells :name t)
-  ((obj 'cons :gesture :select :prompt "Select a cons or list"))
+    ((obj 'cons :gesture :select :prompt "Select a cons or list"))
   (togglef (gethash obj (cons-cell-dico *application-frame*))))
+
+(define-inspector-command (com-show-10-more-items :name t)
+    ((obj 'long-list-tail :gesture :select :prompt "Select a truncated list"))
+  (if (gethash obj (print-length *application-frame*))
+      (incf (gethash obj (print-length *application-frame*)) 10)
+      (setf (gethash obj (print-length *application-frame*))
+	    (+ 10 *print-length*))))
 
 (define-inspector-command (com-toggle-inspect :name t)
     ((obj t :gesture :select :prompt "Select an object"))
