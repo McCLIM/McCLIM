@@ -9,6 +9,8 @@
 ;;;  (c) copyright 2001 by
 ;;;           Lionel Salabartan (salabart@emi.u-bordeaux.fr)
 ;;;           Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
+;;;  (c) copyright 2002 by
+;;;           Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -25,9 +27,35 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.59 2002/02/22 19:11:01 gilbert Exp $
+;;; $Id: panes.lisp,v 1.60 2002/02/22 21:10:02 gilbert Exp $
 
 (in-package :CLIM-INTERNALS)
+
+;;;;
+;;;; Ambiguities and Obmissions
+;;;; 
+
+;; This is a scratch pad, were we can document, what the spec doesn't
+;; tells us about CLIM. Reason: While coding, one sees were the spec
+;; is vague or wrong; later when the task to update the spec is due,
+;; things might be forgotten. --GB
+
+;;
+;; - Default of :equalize-width / :equalize-height is T
+;;
+;; - LAYOUT-PANE is mentioned in the spec's example, but not in the
+;;   text.
+;;
+;; - Behaviour of :align-x, :align-y is uncertain.
+;;   (Should it be specifed on the childs? on the parents?)
+;;
+;; - BORDER-PANE is not in the spec and just a different name of
+;;   OUTLINED-PANE, where is it from? --GB
+;; 
+;; - RAISED-PANE, where form? --GB
+;;
+
+
 
 ;;; GENERIC FUNCTIONS
 
@@ -652,7 +680,7 @@
   (minor-spacing x-spacing y-spacing)  )
 
  (defmacro xically ((&rest options
-                     &key equalize-minor
+                     &key (equalize-minor t)
                      &allow-other-keys)
                     &body contents)
    (remf options :equalize-minor)
