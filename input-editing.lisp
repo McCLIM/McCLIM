@@ -50,6 +50,11 @@
 
 ;;; Have to reexamine how many of the keyword arguments to stream-read-gesture
 ;;; should really be passed to the encapsulated stream.
+;;;
+;;; OK, know I know :)  They should all be passed, except for peek-p.
+;;; However, the loop that calls the encapsulated stream needs to return
+;;; null if we see a :timeout or :eof.
+
 (defmethod stream-read-gesture ((stream standard-input-editing-stream)
 				&rest rest-args &key peek-p
 				&allow-other-keys)
@@ -70,9 +75,15 @@
 	   (t (setf (slot-value stream 'rescanning-p) nil)
 	      (loop for result = (multiple-value-bind (gesture type)
 				     (apply #'stream-read-gesture
-					    (encapsulating-stream-stream stream)
+					    (encapsulating-stream-stream
+					     stream)
 					    rest-args)
-				   (stream-process-gesture stream gesture type))
+				   (when (null gesture)
+				     (return-from stream-read-gesture
+				       (values gesture type)))
+				   (stream-process-gesture stream
+							   gesture
+							   type))
 		    until result))))))
 
 
@@ -345,7 +356,8 @@
 (defvar *completion-gestures* '(:complete))
 
 (define-condition simple-completion-error (simple-parse-error)
-  ())
+  ((input-so-far :reader completion-error-input-so-far
+		 :initarg :input-so-far)))
 
 ;;; wrapper around event-matches-gesture-name-p to match against characters too.
 
@@ -397,7 +409,8 @@
 		     (error 'simple-completion-error
 			    :format-control "complete-input: While rescanning,~
                                              can't match ~A~A"
-			    :format-arguments (list so-far gesture)))))
+			    :format-arguments (list so-far gesture)
+			    :input-so-far so-far ))))
 	  end
 	  do (vector-push-extend gesture so-far)
 	  finally (unread-gesture gesture :stream stream)))
@@ -441,7 +454,7 @@
 				   (funcall func (subseq so-far 0) :complete))
 			     (setf mode :complete))
 		       ;; Preserve the delimiter
-		       (when (eq mode :complete)
+		       (when (and success (eq mode :complete))
 			 (unread-gesture gesture :stream stream))
 		       (if (> nmatches 0)
 			   (insert-input input)
@@ -449,13 +462,14 @@
 		       (cond ((and success (eq mode :complete))
 			      (return-from complete-input
 				(values object success input)))
-			     ((eq mode :complete)
+			     ((activation-gesture-p gesture)
 			      (if allow-any-input
 				  (return-from complete-input
 				    (values nil t (subseq so-far 0)))
 				  (error 'simple-completion-error
 				     :format-control "Input ~S does not match"
-				     :format-arguments (list so-far))))))
+				     :format-arguments (list so-far)
+				     :input-so-far so-far)))))
 		     (vector-push-extend gesture so-far)))))))
 
 ;;; helper function

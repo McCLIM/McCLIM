@@ -30,7 +30,7 @@
   (print-unreadable-object (object stream :type t)
     (write-char #\" stream)
     (loop for i from 0 below (size object)
-	  do (write-char (char-ref object i)))
+	  do (write-char (char-ref object i) stream))
     (write-char #\" stream)))
 
 (defmethod initialize-instance :after ((obj flexivector)

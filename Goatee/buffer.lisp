@@ -76,7 +76,7 @@
     ;; If there's a next line, the point can't be moved past the
     ;; newline at the end of the line.
     (when (and (next line)
-	       (>= pos (1- (size line))))
+	       (> pos (1- (size line))))
       (error 'buffer-bounds-error :buffer buf :line line :pos pos))
     (when (not (eq (line point) line))
       (setf (tick line) (incf (tick buf))))
@@ -209,7 +209,7 @@
 
 (defmethod buffer-close-line* ((buffer basic-buffer-mixin) line direction)
   (multiple-value-bind (this-line next-line)
-      (if (> 0 direction)
+      (if (< 0 direction)
 	  (values line (next line))
 	  (values (prev line) line))
     (unless (typep this-line 'dbl-list)
@@ -266,9 +266,10 @@
 		   (when (> del-chars 0)
 		     (buffer-delete-char* buf line pos (1- del-chars)))
 		   ;; Up against the end, this should signal an error
-		   (buffer-close-line* buf line 1)
-		   (decf remaining del-chars))
-	      finally (buffer-delete-char* buf line pos remaining))
+		   (setf (values line pos) (buffer-close-line* buf line 1)) 
+		   (decf remaining (1+ del-chars)))
+	    finally (setf (values line pos)
+		          (buffer-delete-char* buf line pos remaining)))
 	(loop with remaining = (- n)
 	      while (< (- pos remaining) 0)
 	      do (progn
@@ -337,9 +338,9 @@
 			  (error 'buffer-bounds-error :buffer buf)
 			  (return (values current-line
 					  (+ current-pos remaining)))))
-	(loop for current-line = line then (and (typep (prev current-line)
-						       'dbl-list)
-						(prev current-line))
+	(loop for current-line = line then (and (prev current-line)
+					      (typep (prev current-line)
+						       'dbl-list))
 	      for current-line-size = (or (and current-line (size current-line))
 					  0)
 	      for current-pos = pos then (1- current-line-size)
@@ -481,7 +482,7 @@
 (defmethod buffer-close-line* :around
     ((buffer bp-buffer-mixin) (line bp-buffer-line) direction)
   (multiple-value-bind (this-line next-line)
-      (if (> 0 direction)
+      (if (< 0 direction)
 	  (values line (next line))
 	  (values (prev line) line))
     (multiple-value-bind (line new-pos)
@@ -489,6 +490,7 @@
       (loop for bp in (bps next-line)
 	    do (progn
 		 (incf (pos bp) new-pos)
+		 (setf (line bp) this-line)
 		 (push bp (bps this-line))))
       (values line new-pos))))
 

@@ -25,7 +25,16 @@
 (defmacro clim-lisp-patch:defconstant (symbol value &optional docu)
   `(defparameter ,symbol ,value ,@(and docu (list docu))))
 
-(defmacro clim-lisp-patch:defclass (&rest args)
-  ;; CMU's compiler barks much less this way
-  `(eval-when (compile load eval)
-    (defclass ,@args)))
+(defvar clim-lisp-patch::*compile-time-clos-names* (make-hash-table))
+
+(defun clim-lisp-patch::compile-time-clos-class-p (name)
+  (gethash name clim-lisp-patch::*compile-time-clos-names* nil))
+
+(defmacro clim-lisp-patch:defclass (name &rest args)
+  `(progn
+     (eval-when (:compile-toplevel)
+       (setf (gethash ',name clim-lisp-patch::*compile-time-clos-names*) t))
+     ;; CMU's compiler barks much less this way (so the original
+     ;; comment says; we should try turning this off in 18d.
+     (eval-when (:compile-toplevel :load-toplevel :execute)
+       (cl:defclass ,name ,@args))))

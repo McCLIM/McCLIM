@@ -362,15 +362,23 @@
 			     `(,arg *unsupplied-argument-maker*))
 		  required-arg-names)
 	     (block activated
-	       (let (gesture)
+	       (let ((gesture (read-gesture :stream ,stream-var
+					    :timeout 0
+					    :peek-p t)))
+		 (cond ((and gesture (activation-gesture-p gesture))
+			(return-from activated nil))
+		       (gesture
+			(unread-gesture gesture :stream ,stream-var)))
 		 ,@(mapcan #'(lambda (arg)
 			       `(,(make-accept arg)
-				 (setq gesture (read-gesture :stream ,stream-var))
+				 (setq gesture (read-gesture :stream
+							     ,stream-var))
 				 (when (or (null gesture)
 					   (activation-gesture-p gesture))
 				   (return-from activated nil))
 				 (unless (delimiter-gesture-p gesture)
-				   (unread-gesture gesture :stream ,stream-var))))
+				   (unread-gesture gesture
+						   :stream ,stream-var))))
 			   required-args)))
 	     (list ,@required-arg-names)))))))
 
@@ -455,9 +463,8 @@
       (setq command-name (accept `(command-name :command-table ,command-table)
 				 :stream stream :prompt nil))
       (let ((delimiter (read-gesture :stream stream :peek-p t)))
-	(when (and delimiter
-		   (or (activation-gesture-p delimiter)
-		       (delimiter-gesture-p delimiter)))
+	;; Let argument parsing function see activation gestures.
+	(when (and delimiter (delimiter-gesture-p delimiter))
 	  (read-gesture :stream stream))))
     (with-delimiter-gestures (*command-argument-delimiters* :override t)
       (setq command-args (funcall (gethash command-name *command-parser-table*)
@@ -524,9 +531,16 @@
 	(*command-unparser* command-unparser)
 	(*partial-command-parser* partial-command-parser))
     (handler-case
-	(accept `(command :command-table ,command-table)
-	    :stream stream
-	    :prompt nil)
+	(let ((command (accept `(command :command-table ,command-table)
+			       :stream stream
+			       :prompt nil)))
+	  (if (member *unsupplied-argument-maker* command)
+	    (progn
+	      (beep)
+	      (format *query-io* "~&Argument ~D not supplied.~&"
+		      (position *unsupplied-argument-maker* command))
+	      nil)
+	    command))
       ((or simple-parse-error input-not-of-required-type)  (c)
        (beep)
        (fresh-line *query-io*)
@@ -537,12 +551,18 @@
 ;;; Global help command
 
 (define-command (com-help :command-table global-command-table :name "Help")
-    ()
-  (let ((command-table (frame-command-table *application-frame*))
-	(command-names nil))
-    (map-over-command-table-names #'(lambda (name command)
-				      (declare (ignore command))
-				      (push name command-names))
-				  command-table)
-    (setf command-names (sort command-names #'string-lessp))
-    (format *query-io* "Available commands:~%~{~A~%~}" command-names)))
+    ((kind '(completion (("Keyboard" keyboard) ("Commands" commands))
+	                :value-key cadr)
+	   :prompt "with"
+	   :default 'keyboard))
+  (if (eq kind 'keyboard)
+      (format *query-io* "Input editor commands are like Emacs.~%")
+      (let ((command-table (frame-command-table *application-frame*))
+	    (command-names nil))
+	(map-over-command-table-names #'(lambda (name command)
+					  (declare (ignore command))
+					  (push name command-names))
+				      command-table)
+	(setf command-names (sort command-names #'string-lessp))
+	(format *query-io* "Available commands:~%~{~A~%~}" command-names))))
+

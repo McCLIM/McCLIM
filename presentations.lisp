@@ -466,10 +466,15 @@ supertypes of TYPE that are presentation types"))
 ;;; I think we can assume that if a CLOS class exists at compile time, it will
 ;;; exist at load/run time too.
 (eval-when (:compile-toplevel :load-toplevel :execute)
+  #-(or excl cmu sbcl)
   (defun compile-time-clos-p (name)
     (let ((meta (find-class name nil)))
       (and meta
 	   (typep meta 'standard-class))))
+
+  #+(or excl cmu sbcl)
+  (defun compile-time-clos-p (name)
+    (clim-lisp-patch::compile-time-clos-class-p name))
 
   (defun make-default-description (name)
     "Create a description string from the type name"
@@ -1637,6 +1642,25 @@ function lambda list"))
 	  (values result ptype)
 	  (input-not-of-required-type result ptype)))))
 
+(defun accept-using-completion (type stream func default defaultp default-type
+				&rest complete-with-input-key-args)
+  "A wrapper around complete-with-input that returns the presentation type with
+  the completed object and performs defaulting for empty input."
+  (handler-bind ((simple-completion-error
+		  #'(lambda (c)
+		      (when (and (zerop (length (completion-error-input-so-far
+						 c)))
+				 defaultp)
+			(return-from accept-using-completion
+			  (values default default-type))))))
+    (multiple-value-bind (object success input)
+	(apply #'complete-input stream func complete-with-input-key-args)
+      (if success
+	  (values object type)
+	  (simple-parse-error "Error parsing ~S for presentation type ~S"
+			      input
+			      type)))))
+  
 ;;; When no accept method has been defined for a type, allow some kind of
 ;;; input.  The accept can be satisfied with pointer input, of course, and this
 ;;; allows the clever user a way to input the type at the keyboard, using #. or
@@ -1698,18 +1722,15 @@ function lambda list"))
 
 (define-presentation-method accept ((type boolean) stream (view textual-view)
 				    &key (default nil defaultp) default-type)
-  (multiple-value-bind (object success input)
-      (complete-input stream
-		      #'(lambda (input-string mode)
-			  (complete-from-possibilities
-			   input-string
-			   '(("yes" t) ("no" nil) ("t" t) ("nil" nil))
-			   nil
-			   :action mode)))
-    (if success
-	(values object type)
-	(values nil type))))
-
+  (accept-using-completion 'boolean
+			   stream
+			   #'(lambda (input-string mode)
+			       (complete-from-possibilities
+				input-string
+				'(("yes" t) ("no" nil))
+				nil
+				:action mode))
+			   default default-p default-type))
 
 (define-presentation-type symbol ())
 
@@ -2055,6 +2076,25 @@ function lambda list"))
   (declare (ignore acceptably for-context-type))
   (present object (presentation-type-of object)
 	   :stream stream :view view))
+
+(define-presentation-method accept ((type completion)
+				    stream
+				    (view textual-view)
+				    &key (default nil defaultp) default-type)
+  (accept-using-completion (make-presentation-type-specifier
+			    `(completion ,parameters)
+			    options)
+			   stream
+			   #'(lambda (input-string mode)
+			       (complete-from-possibilities
+				input-string
+				sequence
+				partial-completers
+				:action mode
+				:name-key name-key
+				:value-key value-key))
+			   default defaultp default-type
+			   :partial-completers partial-completers))
 
 (define-presentation-type-abbreviation member (&rest elements)
   (make-presentation-type-specifier `(completion ,elements)
