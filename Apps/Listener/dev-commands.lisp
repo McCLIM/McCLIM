@@ -475,6 +475,7 @@
                         :move-cursor T))))))
 
 (define-command (com-show-applicable-methods
+		 :name t
 		 :command-table dev-commands)
     ((gf 'generic-function :prompt "a generic function")
      (arguments '(sequence class-name)))

@@ -98,6 +98,8 @@
    (top-level :initform '(default-frame-top-level)
 	      :initarg :top-level
 	      :reader frame-top-level)
+   (top-level-lambda :initarg :top-level-lambda
+		     :reader frame-top-level-lambda)
    (hilited-presentation :initform nil
 			 :initarg :hilited-presentation
 			 :accessor frame-hilited-presentation)
@@ -356,7 +358,7 @@ input focus. This is a McCLIM extension."))
   (handler-bind ((frame-exit #'(lambda (condition)
                                  (declare (ignore condition))
 				 (return-from run-frame-top-level nil))))
-    (apply (first (frame-top-level frame)) frame (rest (frame-top-level frame)))))
+    (funcall (frame-top-level-lambda frame) frame)))
 
 (defmethod run-frame-top-level :around ((frame application-frame) &key)
   (let ((*application-frame* frame)
@@ -458,20 +460,21 @@ input focus. This is a McCLIM extension."))
 	     (format *query-io* "~&Command aborted.~&")
 	     (beep)))))))
 
-
-
-
-(defmethod read-frame-command ((frame application-frame)
-			       &key (stream *standard-input*))
+(defmethod read-frame-command :around ((frame application-frame)
+				       &key (stream *standard-input*))
+  (declare (ignore stream))
   (with-input-context ('menu-item)
     (object)
-    (read-command (frame-command-table frame) :stream stream)
+    (call-next-method)
     (menu-item
      (let ((command (command-menu-item-value object)))
        (if (listp command)
 	   command
 	   (list command))))))
 
+(defmethod read-frame-command ((frame application-frame)
+			       &key (stream *standard-input*))
+      (read-command (frame-command-table frame) :stream stream))
 
 (defmethod execute-frame-command ((frame application-frame) command)
   (apply (command-name command) (command-arguments command)))
@@ -665,7 +668,8 @@ input focus. This is a McCLIM extension."))
 	(top-level '(default-frame-top-level))
 	(others nil)	
 	(pointer-documentation nil)
-	(geometry nil))
+	(geometry nil)
+	(frame-arg (gensym "FRAME-ARG")))
     (loop for (prop . values) in options
 	do (case prop
 	     (:pane (setq pane (first values)))
@@ -705,8 +709,10 @@ input focus. This is a McCLIM extension."))
 	   :menu-bar ',menu-bar
 	   :current-layout ',current-layout
 	   :layouts ',layouts
-	   :top-level ',top-level
-	     )
+	   :top-level (list ',(car top-level) ,@(cdr top-level))
+	   :top-level-lambda (lambda (,frame-arg)
+			       (,(car top-level) ,frame-arg
+				                 ,@(cdr top-level))))
 	 ,@others)
        ,@(if geometry
 	     `((setf (get ',name 'application-frame-geometry) ',geometry)))
@@ -910,7 +916,6 @@ input focus. This is a McCLIM extension."))
 
 (defmethod frame-compute-pointer-documentation-state
     ((frame standard-application-frame) input-context stream event)
-  (declare (ignore input-context))
   (let* ((current-modifier (event-modifier-state event))
 	 (x (device-event-x event))
 	 (y (device-event-y event))
@@ -1122,6 +1127,5 @@ input focus. This is a McCLIM extension."))
   (setf (getf (client-settings frame) setting) value))
 
 (defmethod reset-frame (frame &rest client-settings)
-  (declare (ignore frame))
   (loop for (setting value) on client-settings by #'cddr
 	do (setf (client-setting frame setting) value)))

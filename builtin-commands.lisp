@@ -134,26 +134,52 @@
   ()
   (funcall *completion-possibilities-continuation*))
 
+;;; Turn symbols and lists into forms
+
+(define-gesture-name :literal-expression :pointer-button-press
+  (:left :meta))
+
+(define-presentation-translator expression-to-form
+    (expression form global-command-table
+     :gesture :select
+     :menu nil
+     :priority 11)
+  (object)
+  (if (or (consp object) (and (symbolp object) (not (null object))))
+      `',object
+      object))
+
+(define-presentation-translator expression-as-form
+    (expression form global-command-table
+     :gesture :literal-expression
+     :menu nil
+     :documentation "expression as literal"
+     :tester ((object)
+	      (or (symbolp object) (consp object)))
+     :tester-definitive t)
+  (object)
+  (values object 'form))
+
 ;;; Support for accepting subforms of a form.
 
-(define-presentation-type subform ()
+;;; Used to signal a read that ends a list
+(define-presentation-type list-terminator ()
   :inherit-from 'form)
 
-(define-presentation-type list-terminator ()
-  :inherit-from 't)
+(defvar *sys-read* #'read)
+(defvar *sys-read-preserving-whitespace* #'read-preserving-whitespace)
 
-(define-presentation-translator subform-reader
-    (form subform global-command-table
-     :gesture :select
-     :pointer-documentation "subform")
-  (object)
-  object)
-
-#+openmcl
-(defvar *sys-%read-list-expression* #'ccl::%read-list-expression)
+;;; Arguments for read
+(defvar *eof-error-p* t)
+(defvar *eof-value* nil)
+(defvar *recursivep* nil)
 
 ;;; For passing arguments to the call to %read-list-expression.
 ;;; Gross, but not as gross as using presentation type options.
+;;;
+;;; XXX But I am using a presentation type option to choice the
+;;; subform reader; what's the difference? Granted the presentation
+;;;type specifier is constant.... -- moore
 
 (defvar *dot-ok*)
 (defvar *termch*)
@@ -165,16 +191,10 @@
       (char= char #\Tab)))
 
 #+openmcl
-(with-system-redefinition-allowed
-(define-presentation-method accept ((type subform) stream (view textual-view)
-				    &key default default-type)
-  (declare (ignore default default-type))
-  (multiple-value-bind (val valid)
-      (funcall *sys-%read-list-expression* stream *dot-ok* *termch*)
-    (if valid
-	(values val 'subform)
-	(values nil 'list-terminator))))
+(defvar *sys-%read-list-expression* #'ccl::%read-list-expression)
 
+#+openmcl
+(with-system-redefinition-allowed
 (defun ccl::%read-list-expression (stream *dot-ok* &optional (*termch* #\)))
   (if (typep stream 'input-editing-stream)
       (progn
@@ -187,9 +207,66 @@
 			      (whitespacep gesture))))  
 	    (read-gesture :stream stream)))
 	(multiple-value-bind (object type)
-	    (accept 'subform :stream stream :prompt nil)
+	    (accept '((form) :subform-read t) :stream stream :prompt nil)
 	  (values object (if (presentation-subtypep type 'list-terminator)
 			     nil
 			     t))))
       (funcall *sys-%read-list-expression* stream *dot-ok* *termch*)))
 ) 					; with-system-redefinition-allowed
+
+(define-presentation-method accept ((type form) stream (view textual-view)
+				    &key (default nil defaultp) default-type)
+  (declare (ignore default defaultp default-type))
+  (let* ((object nil)
+	 (ptype nil))
+    (if (and #-openmcl nil subform-read)
+	(multiple-value-bind (val valid)
+	    (funcall *sys-%read-list-expression* stream *dot-ok* *termch*)
+	  (if valid
+	      (setq object val)
+	      (return-from accept (values nil 'list-terminator))))
+	;; We don't want activation gestures like :return causing an eof
+	;; while reading a form, so we turn the activation gestures into
+	;; delimiter gestures.
+	(with-delimiter-gestures (*activation-gestures*)
+	  (with-activation-gestures (nil :override t)
+	    (setq object (funcall (if preserve-whitespace
+				      *sys-read-preserving-whitespace*
+				      *sys-read*)
+				  stream
+				  *eof-error-p* *eof-value* *recursivep*)))))
+    (setq ptype (presentation-type-of object))
+    (unless (presentation-subtypep ptype 'form)
+      (setq ptype 'form))
+    (if (or subform-read auto-activate)
+	(values object ptype)
+	(loop for c = (read-char stream)
+	      until (activation-gesture-p c)
+	      finally (return (values object ptype))))))
+
+(with-system-redefinition-allowed
+(defun read (&optional (stream *standard-input*)
+	     (eof-error-p t)
+	     (eof-value nil)
+	     (recursivep nil))
+  (if (typep stream 'input-editing-stream)
+      (let ((*eof-error-p* eof-error-p)
+	    (*eof-value* eof-value)
+	    (*recursivep* recursivep))
+	(accept '((form) :auto-activate t :preserve-whitespace nil)
+		:stream stream :prompt nil))
+      (funcall *sys-read* stream eof-error-p eof-value recursivep)))
+
+(defun read-preserving-whitespace (&optional (stream *standard-input*)
+	     (eof-error-p t)
+	     (eof-value nil)
+	     (recursivep nil))
+  (if (typep stream 'input-editing-stream)
+      (let ((*eof-error-p* eof-error-p)
+	    (*eof-value* eof-value)
+	    (*recursivep* recursivep))
+	(accept '((form) :auto-activate t :preserve-whitespace t)
+		:stream stream :prompt nil))
+      (funcall *sys-read-preserving-whitespace*
+	       stream eof-error-p eof-value recursivep)))
+) ; with-system-redefinition-allowed

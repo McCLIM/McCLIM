@@ -36,8 +36,6 @@ TBM:20031112:002300
 
     display-command-table-menu, menu-choose-command-from-table
 
-    command-or-form presentation type
-
     raise-frame, bury-frame, notify-user
 
     :accept-values panes
@@ -70,6 +68,9 @@ RS:20030805:101708
     each pane to decide when it wants the input focus. 
 
 ======================  Resolved issues ======================
+TBM:20031124:230300
+    command-or-form presentation type
+
 TBM:20031119:142500
     presentation-single-box
 

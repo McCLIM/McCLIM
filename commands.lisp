@@ -1012,3 +1012,36 @@
 
 (defun substitute-numeric-argument-marker (command numeric-arg)
   (substitute numeric-arg *numeric-argument-marker* command))
+
+(defvar *command-dispatchers* '(#\:))
+
+(define-presentation-type command-or-form
+    (&key (command-table (frame-command-table *application-frame*)))
+  :inherit-from t)
+
+;;; What's the deal with this use of with-input-context inside of
+;;; accept? When this accept method is called, we want to accept both
+;;; commands and forms via mouse clicks, both before and after the
+;;; command dispatch character is typed. But command translators to
+;;; command or form won't be applicable... translators from command or
+;;; form to command-or-form won't help either because translators aren't
+;;; applied more than once.
+;;;
+;;; With 
+
+(define-presentation-method accept ((type command-or-form) stream
+				    (view textual-view)
+				    &key (default nil defaultp)
+				    default-type)
+  (let ((command-ptype `(command :command-table ,command-table)))
+    (with-input-context (`(or ,command-ptype form))
+        (object type event options)
+        (let ((initial-char (read-gesture :stream stream :peek-p t)))
+	  (if (member initial-char *command-dispatchers*)
+	      (progn
+		(read-gesture :stream stream)
+		(accept command-ptype :stream stream :view view :prompt nil))
+	      (accept 'form :stream stream :view view :prompt nil)))
+      (t
+       (funcall (cdar *input-context*) object type event options)))))
+

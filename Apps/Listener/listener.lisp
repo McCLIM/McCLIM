@@ -103,13 +103,15 @@
 
 ;;; Listener application frame
 (define-application-frame listener ()
-    ()
+    ((system-command-reader :accessor system-command-reader
+			    :initarg :system-command-reader
+			    :initform t))
   (:panes (interactor :interactor :scroll-bars T)
           (doc :pointer-documentation)
           (wholine (make-pane 'wholine-pane  ;; :min-height 18 :max-height 18
                      :display-function 'display-wholine :scroll-bars nil
                      :display-time :command-loop :end-of-line-action :allow)))
-  (:top-level (listener-top-level))
+  (:top-level (default-frame-top-level :prompt 'print-listener-prompt))
   (:command-table (listener :inherit-from (dev-commands)))
   (:layouts (default
 	      (vertically ()
@@ -154,34 +156,41 @@
 
 (defmethod read-frame-command ((frame listener) &key (stream *standard-input*))  
   "Specialized for the listener, read a lisp form to eval, or a command."
-  (let (object type)
-    (handler-case 
-        (with-input-editing (stream :input-sensitizer
-                                    (lambda (stream cont)
-                                      (if type
-                                          (with-output-as-presentation
-                                              (stream object type)
-                                            (funcall cont))
-                                        (funcall cont))))
-          (let ((c (read-gesture :stream stream :peek-p t)))
-            (setf object
-                  (if (member c *form-opening-characters*)
-                      (prog2
-                        (when (char= c #\,)
-                          (read-gesture :stream stream))  ; lispm behavior 
-             #| ---> |# (list 'com-eval (accept 'form :stream stream :prompt nil))
-                        (setf type 'command #|'form|# )) ; FIXME? 
-                    (prog1
-                      (accept '(command :command-table listener)  :stream stream
-                              :prompt nil)
-                      (setf type 'command))))))
-      ((or simple-parse-error input-not-of-required-type)  (c)
-       (beep)
-       (fresh-line *query-io*)
-       (princ c *query-io*)
-       (terpri *query-io*)
-       nil))
-  object))
+  (if (system-command-reader frame)
+      (multiple-value-bind (object type)
+	  (accept 'command-or-form :stream stream :prompt nil)
+	(if (presentation-subtypep type 'command)
+	    object
+	    `(com-eval ,object)))
+      (let (object type)
+	(handler-case 
+	    (with-input-editing (stream :input-sensitizer
+					(lambda (stream cont)
+					  (if type
+					      (with-output-as-presentation
+						  (stream object type)
+						(funcall cont))
+					      (funcall cont))))
+	      (let ((c (read-gesture :stream stream :peek-p t)))
+		(setf object
+		      (if (member c *form-opening-characters*)
+			  (prog2
+			      (when (char= c #\,)
+				(read-gesture :stream stream)) ; lispm behavior 
+			      #| ---> |# (list 'com-eval (accept 'form :stream stream :prompt nil))
+			    (setf type 'command #|'form|# )) ; FIXME? 
+			  (prog1
+			      (accept '(command :command-table listener)  :stream stream
+				      :prompt nil)
+			    (setf type 'command))))))
+	  ((or simple-parse-error input-not-of-required-type)  (c)
+	    (beep)
+	    (fresh-line *query-io*)
+	    (princ c *query-io*)
+	    (terpri *query-io*)
+	    nil))
+	object))
+  )
 
 (defun listener-read (frame stream)
   "Read a command or form, taking care to manage the input context
@@ -213,11 +222,13 @@
                              (setf (pane-needs-redisplay pane) nil)))))
                    (frame-top-level-sheet frame)))
 
-(defun print-listener-prompt (stream)
+(defun print-listener-prompt (stream frame)
+  (declare (ignore frame))
   (with-text-face (stream :italic)
     (print-package-name stream)
     (princ "> " stream)))
 
+#+nil
 (defun listener-top-level
     (frame
      &key (command-parser 'command-line-command-parser)
@@ -255,10 +266,13 @@
   (get-frame-pane frame 'interactor))
 
 
-(defun run-listener ()
+(defun run-listener (&optional (system-command-reader nil))
    (run-frame-top-level
-    (make-application-frame 'listener)))
+    (make-application-frame 'listener
+			    :system-command-reader system-command-reader)))
 
-(defun run-listener-process ()
-  (clim-sys:make-process  #'run-listener :name "Listener"))
+(defun run-listener-process (&optional (system-command-reader nil))
+  (clim-sys:make-process  (lambda ()
+			    (run-listener system-command-reader))
+			  :name "Listener"))
 

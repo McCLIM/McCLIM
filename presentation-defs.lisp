@@ -42,7 +42,7 @@
 ;;; read-preserving-whitespace. This is used in our redefinitions of read and
 ;;; read-preserving-whitespace that accept forms.
 (define-presentation-type form ()
-  :options (auto-activate (preserve-whitespace t))
+  :options (auto-activate (preserve-whitespace t) (subform-read nil))
   :inherit-from `((expression) :auto-activate ,auto-activate))
 
 (defparameter *ptype-form-class* (get-ptype-metaclass 'form))
@@ -860,7 +860,7 @@
 			   default defaultp default-type))
 
 (define-presentation-type symbol ()
-  :inherit-from 'form)
+  :inherit-from 'expression)
 
 (define-presentation-method presentation-typep (object (type symbol))
   (symbolp object))
@@ -911,7 +911,7 @@
 						 :view +textual-view+))
 
 (define-presentation-type number ()
-  :inherit-from 'form)
+  :inherit-from 'expression)
 
 (define-presentation-method presentation-typep (object (type number))
   (numberp object))
@@ -1097,7 +1097,7 @@
   (frob float))
 
 (define-presentation-type character ()
-  :inherit-from 'form)
+  :inherit-from 'expression)
 
 (define-presentation-method presentation-typep (object (type character))
   (characterp object))
@@ -1112,7 +1112,7 @@
   (princ object stream))
 
 (define-presentation-type string (&optional length)
-  :inherit-from 'form)
+  :inherit-from 'expression)
 
 (define-presentation-method presentation-typep (object (type string))
   (and (stringp object)
@@ -1152,7 +1152,7 @@
 
 (define-presentation-type pathname ()
   :options ((default-version :newest) default-type (merge-default t))
-  :inherit-from 'form)
+  :inherit-from 'expression)
 
 (define-presentation-method presentation-typep (object (type pathname))
   (pathnamep object))
@@ -1407,7 +1407,7 @@
 
 (define-presentation-type sequence (type)
   :options ((separator #\,) (echo-space t))
-  :inherit-from 'form
+  :inherit-from 'expression
   :parameters-are-types t)
 
 (define-presentation-method presentation-typep (object (type sequence))
@@ -1496,7 +1496,7 @@
 
 (define-presentation-type sequence-enumerated (&rest types)
   :options ((separator #\,) (echo-space t))
-  :inherit-from 'form
+  :inherit-from 'expression
   :parameters-are-types t)
 
 (define-presentation-method presentation-typep (object
@@ -1672,61 +1672,5 @@
   (type-key parameters options type
    stream view default default-supplied-p present-p query-identifier))
 
-(defvar *sys-read* #'read)
-(defvar *sys-read-preserving-whitespace* #'read-preserving-whitespace)
-
-;;; Arguments for read
-(defvar *eof-error-p* t)
-(defvar *eof-value* nil)
-(defvar *recursivep* nil)
-
-(define-presentation-method accept ((type form) stream (view textual-view)
-				    &key (default nil defaultp) default-type)
-  (declare (ignore default defaultp default-type))
-  (let* ((object nil)
-	 (ptype nil))
-    ;; We don't want activation gestures like :return causing an eof
-    ;; while reading a form, so we turn the activation gestures into
-    ;; delimiter gestures.
-    (with-delimiter-gestures (*activation-gestures*)
-      (with-activation-gestures (nil :override t)
-	(setq object (funcall (if preserve-whitespace
-				  *sys-read-preserving-whitespace*
-				  *sys-read*)
-			      stream *eof-error-p* *eof-value* *recursivep*))
-	(setq ptype (presentation-type-of object))))
-    (unless (presentation-subtypep ptype 'form)
-      (setq ptype 'form))
-    (if auto-activate
-	(values object ptype)
-	(loop for c = (read-char stream)
-	      until (activation-gesture-p c)
-	      finally (return (values object ptype))))))
-
-(with-system-redefinition-allowed
-(defun read (&optional (stream *standard-input*)
-	     (eof-error-p t)
-	     (eof-value nil)
-	     (recursivep nil))
-  (if (typep stream 'input-editing-stream)
-      (let ((*eof-error-p* eof-error-p)
-	    (*eof-value* eof-value)
-	    (*recursivep* recursivep))
-	(accept '((form) :auto-activate t :preserve-whitespace nil)
-		:stream stream :prompt nil))
-      (funcall *sys-read* stream eof-error-p eof-value recursivep)))
-
-(defun read-preserving-whitespace (&optional (stream *standard-input*)
-	     (eof-error-p t)
-	     (eof-value nil)
-	     (recursivep nil))
-  (if (typep stream 'input-editing-stream)
-      (let ((*eof-error-p* eof-error-p)
-	    (*eof-value* eof-value)
-	    (*recursivep* recursivep))
-	(accept '((form) :auto-activate t :preserve-whitespace t)
-		:stream stream :prompt nil))
-      (funcall *sys-read-preserving-whitespace*
-	       stream eof-error-p eof-value recursivep)))
-) ; with-system-redefinition-allowed
+;;; All the form reading stuff is in builtin-commands.lisp
 
