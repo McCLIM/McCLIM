@@ -1002,12 +1002,14 @@ During realization the child of the spacer will have as cordinates
       (with-bounding-rectangle* (rminx rminy rmaxx rmaxy)
 	  (sheet-region (first (sheet-children viewport)))
 	(when vscrollbar
-	  (setf (scrollbar-offset vscrollbar) (/ (- rminy hminy) (- hmaxy hminy)))
-	  (setf (scrollbar-length vscrollbar) (/ (- rmaxy rminy) (- hmaxy hminy)))
+          (let ((delta-y (max (- hmaxy hminy) 1)))
+            (setf (scrollbar-offset vscrollbar) (/ (- rminy hminy) delta-y))
+            (setf (scrollbar-length vscrollbar) (/ (- rmaxy rminy) delta-y)))
 	  (window-refresh vscrollbar))
 	(when hscrollbar
-	  (setf (scrollbar-offset hscrollbar) (/ (- rminx hminx) (- hmaxx hminx)))
-	  (setf (scrollbar-length hscrollbar) (/ (- rmaxx rminx) (- hmaxx hminx)))
+          (let ((delta-x (max (- hmaxx hminx) 1)))
+            (setf (scrollbar-offset hscrollbar) (/ (- rminx hminx) delta-x))
+            (setf (scrollbar-length hscrollbar) (/ (- rmaxx rminx) delta-x)))
 	  (window-refresh hscrollbar))))))
 
 
@@ -1072,17 +1074,19 @@ During realization the child of the spacer will have as cordinates
 			  :max-width 300 :max-height 300))
 
 (defmethod window-clear ((pane clim-stream-pane))
-; (setf (pane-output-history pane)
-;	(make-instance 'standard-tree-output-history))
-  (dispatch-repaint pane (sheet-region pane)))
-; (let ((cursor (stream-text-cursor pane))) 
-;   (when cursor
-;     (setf (cursor-position cursor) 0 0))))
+  (let ((output-history (pane-output-history pane)))
+    (with-bounding-rectangle* (x1 y1 x2 y2) output-history
+      (draw-rectangle* (sheet-medium pane) x1 y1 x2 y2 :ink +background-ink+))
+    (clear-output-record output-history))
+  (let ((cursor (stream-text-cursor pane)))
+    (when cursor
+      (setf*-cursor-position 0 0 cursor)))
+;      (setf* (cursor-position cursor) (values 0 0))))
+  (scroll-extent pane 0 0))
 
 (defmethod window-refresh ((pane clim-stream-pane))
   (window-clear pane)
-  (when (typep pane 'output-recording-stream)
-    (funcall (pane-display-function pane))))
+  (stream-replay pane))
 
 (defmethod window-viewport ((pane clim-stream-pane))
   (sheet-region pane))
