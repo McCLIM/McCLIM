@@ -1721,9 +1721,16 @@ function lambda list"))
     (map-applicable-translators
      #'(lambda (translator presentation context)
 	 (push
-          (make-presentation-translator-menu-item :translator translator
-                                                  :presentation presentation
-                                                  :context context)
+          `(,(make-presentation-translator-menu-item :translator translator
+                                                     :presentation presentation
+                                                     :context context)
+             :documentation ,(with-output-to-string (stream)
+                               (document-presentation-translator
+                                translator
+                                presentation
+                                input-context
+                                frame nil window x y
+                                :stream stream)))
           items))
      presentation input-context frame window x y :for-menu for-menu)
     (when items
