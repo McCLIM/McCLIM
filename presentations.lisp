@@ -208,6 +208,7 @@ that has no default is supplied with '*"
 ;;; structure of the argument with variables filled in.
 
 (defun map-over-lambda-list (function ll &key (pass-lambda-list-keywords nil))
+  (declare (ignore function pass-lambda-list-keywords))
   (unless ll
     (return-from map-over-lambda-list nil))
   (when (atom ll)
@@ -800,10 +801,12 @@ function lambda list"))
     
 (defun parse-method-body (args)
   (loop for arglist on args
-	      for (arg) = arglist
-	      while (atom arg)
-	      collect arg into qualifiers
-	      finally (return (values qualifiers arg (cdr arglist)))))
+	for (arg) = arglist
+	while (atom arg)
+	collect arg into qualifiers
+	finally (if (eq (caadr arglist) 'declare)
+		    (return (values qualifiers arg (cadr arglist) (cddr arglist)))
+		  (return (values qualifiers arg nil (cdr arglist))))))
 
 (defmacro define-presentation-method (name &rest args)
   (when (eq name 'presentation-subtypep)
@@ -816,7 +819,7 @@ function lambda list"))
     (with-accessors ((parameters-arg parameters-arg)
 		     (options-arg options-arg))
       gf
-      (multiple-value-bind (qualifiers lambda-list body)
+      (multiple-value-bind (qualifiers lambda-list decls body)
 	  (parse-method-body args)
 	(let ((type-arg (nth (1- (type-arg-position gf)) lambda-list)))
 	  (unless (consp type-arg)
@@ -855,6 +858,7 @@ function lambda list"))
 			  ,@real-body))))
 	      (setf (nth (type-arg-position gf) method-ll) type-var)
 	      `(defmethod ,(generic-function-name gf) ,@qualifiers ,method-ll
+		 ,decls
 		,@real-body))))))))
 
 
@@ -862,11 +866,12 @@ function lambda list"))
   (let ((gf (gethash name *presentation-gf-table*)))
     (unless gf
       (error "~S is not a presentation generic function" name))
-    (multiple-value-bind (qualifiers lambda-list body)
+    (multiple-value-bind (qualifiers lambda-list decls body)
 	(parse-method-body args)
       `(defmethod ,(generic-function-name gf) ,@qualifiers (,(type-key-arg gf)
 							    ,@lambda-list)
-	 (declare (ignorable ,(type-key-arg gf)))
+	 (declare (ignorable ,(type-key-arg gf))
+		  ,@(cdr decls))
 	 ,@body))))
 
 (defun %funcall-presentation-generic-function (name gf type-arg-position
@@ -915,6 +920,7 @@ function lambda list"))
 (defgeneric presentation-type-of (object))
 
 (defmethod presentation-type-of (object)
+  (declare (ignore object))
   'expression)
 
 (defmethod presentation-type-of ((object standard-object))
@@ -981,7 +987,7 @@ function lambda list"))
   
 (defmacro define-subtypep-method (&rest args)
   (let ((gf (gethash 'presentation-subtypep *presentation-gf-table*)))
-    (multiple-value-bind (qualifiers lambda-list body)
+    (multiple-value-bind (qualifiers lambda-list decls body)
 	(parse-method-body args)
       (let ((type-arg (nth (1- (type-arg-position gf)) lambda-list)))
 	
@@ -996,7 +1002,8 @@ function lambda list"))
 			     ,@(copy-list lambda-list))))
 	    (setf (nth (type-arg-position gf) method-ll) type-var)
 	    `(defmethod %presentation-subtypep ,@qualifiers ,method-ll
-	      (declare (ignorable ,(type-key-arg gf)))
+	      (declare (ignorable ,(type-key-arg gf))
+		       ,@(cdr decls))
 	      ,@body)))))))
 
 (defun presentation-subtypep (type maybe-supertype)
@@ -1055,15 +1062,15 @@ function lambda list"))
 				   &optional
 				   (stream *standard-output*)
 				   (plural-count 1))
-  (flet ((describe (stream)
+  (flet ((describe-it (stream)
 	   (funcall-presentation-generic-function describe-presentation-type
 						  type
 						  stream
 						  plural-count)))
     (if stream
-	(describe stream)
+	(describe-it stream)
 	(with-output-to-string (s)
-	  (describe s)))))
+	  (describe-it s)))))
 
 ;;; Views...
 
@@ -1112,10 +1119,11 @@ function lambda list"))
 ;;; Reasonable defaults, I guess...
 
 (defmethod stream-default-view (stream)
+  (declare (ignore stream))
   +textual-view+)
 
 (defmethod (setf stream-default-view) (view stream)
-  (declare (ignore view stream))
+  (declare (ignore stream))
   view)
 
 ;;; XXX The spec calls out that the presentation generic function has keyword
@@ -1134,12 +1142,14 @@ function lambda list"))
 				       (record-type ''standard-presentation)
 				       &allow-other-keys)
 				       &body body)
+  (declare (ignore parent single-box modifier))
   (when (eq stream t)
     (setq stream '*standard-output*))
   (let ((output-record (gensym))
 	(invoke-key-args (cull-keywords '(:record-type
 					  :allow-sensitive-inferiors)
 					key-args)))
+    (declare (ignore invoke-key-args))
      `(flet ((continuation (,stream ,output-record)
 	      (declare (ignore ,output-record))
 	      (let ((*allow-sensitive-inferiors*
@@ -1259,6 +1269,7 @@ function lambda list"))
 (define-presentation-type t ())
 
 (define-presentation-method presentation-typep (object (type t))
+  (declare (ignore object))
   t)
 
 (define-presentation-method present (object (type t)
@@ -1272,6 +1283,7 @@ function lambda list"))
 (define-presentation-type nil ())
 
 (define-presentation-method presentation-typep (object (type nil))
+  (declare (ignore object))
   nil)
 
 (define-presentation-type null ())
@@ -1283,7 +1295,7 @@ function lambda list"))
 				     stream
 				     (view textual-view)
 				     &key acceptably for-context-type)
-  (declare (ignore acceptably for-context-type))
+  (declare (ignore object acceptably for-context-type))
   (write-string "None" stream))
 
 (define-presentation-type boolean ())
@@ -1294,7 +1306,7 @@ function lambda list"))
 (define-presentation-method present (object (type boolean) stream
 				     (view textual-view)
 				     &key acceptably for-context-type)
-  (declare (ignore view acceptably for-context-type))
+  (declare (ignore acceptably for-context-type))
   (if object
       (write-string "Yes" stream)
       (write-string "No" stream)))
@@ -1307,7 +1319,7 @@ function lambda list"))
 (define-presentation-method present (object (type symbol) stream
 				     (view textual-view)
 				     &key acceptably for-context-type)
-  (declare (ignore view acceptably for-context-type))
+  (declare (ignore acceptably for-context-type))
   (princ object stream))
 
 (define-presentation-type keyword () :inherit-from 'symbol)
@@ -1342,7 +1354,7 @@ function lambda list"))
 (define-presentation-method present (object (type complex) stream
 				     (view textual-view)
 				     &key acceptably for-context-type)
-  (declare (ignore view acceptably for-context-type))
+  (declare (ignore acceptably for-context-type))
   (present (realpart object) (presentation-type-of (realpart object))
 	   :stream stream :view view :sensitive nil)
   (write-char #\Space stream)
