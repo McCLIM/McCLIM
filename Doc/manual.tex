@@ -62,15 +62,15 @@ panes and gadgets is written on top of a basic layer containing more
 basic functionality in the form of sheets.  Objects in the upper layer
 are typically instances of classes derived from those of the lower
 layer.  Thus, nothing prevents a user from adding new gadgets and
-panes by writing code that uses the sheet layer. 
+panes by writing code that uses the sheet layer.
 
 Finally, since CLIM is written in Common Lisp, essentially all parts
-of it can be modified, replaced, or extended.  
+of it can be modified, replaced, or extended.
 
 For that reason, a user's manual for CLIM must contain not only a
 description of the protocols of the upper layer, but also of all
 protocols, classes, functions, macros, etc. that are part of the
-specification. 
+specification.
 
 This manual documents McCLIM 0.01 which is a partial implementation of
 the CLIM 2.0 specification.
@@ -852,7 +852,7 @@ recalculation of the space occupied by potentially each pane in the
 \genfun{note-space-requirement-changed} on a pane \var{P}. In McCLIM,
 we must therefore invalidate the stored space-requirement value and
 re-invoke \genfun{compose-space} on \var{P}.  Finally, the
-\gloss{parent} of \var{P} must be notified recursively.  
+\gloss{parent} of \var{P} must be notified recursively.
 
 This process would be repeated for all the panes on a path from
 \var{P} to the top-level pane, if it weren't for the fact that some
@@ -867,9 +867,69 @@ children.  Thus, we stop calling
   and \initarg{:height}
 \end{itemize}
 
-In either of those cases, \genfun{allocate-space} is called. 
+In either of those cases, \genfun{allocate-space} is called.
+
+
+\chapter{Output Recording}
+
+\section{Protocol Changes}
+
+% \initarg{:parent}
+
+\defgeneric {(setf output-record-parent)} {parent record}
+
+Additional protocol generic function.
+
+\arg{parent} may be an output record or \cl{nil}.
+
+\defgeneric {replay-output-record} {record stream \optional region
+  x-offset y-offset}
+\defgeneric {map-over-output-records-containing-position}
+ {function record x y \optional x-offset y-offset \rest function-args}
+\defgeneric {map-over-output-records-overlapping-region}
+ {function record region \optional x-offset y-offset \rest function-args}
+
+\arg{x-offset} and \arg{y-offset} are ignored.
+
+% XXX \defgeneric displayed-output-record-ink for text records
+
+\defgeneric {add-output-record} {child record}
+
+Sets \arg{record} to be the parent of \arg{child}.
+
+\defgeneric {delete-output-record} {child record \optional (errorp t)}
+
+If \arg{child} is a child of \arg{record}, sets the parent of
+\arg{child} to \cl{nil}.
+
+\defgeneric {clear-output-record} {record}
+
+Sets the parent of all children of \arg{record} to \cl{nil}.
+
+% \defgeneric {invoke-with-new-output-record} :parent key
+
+\defmacro {with-new-output-record} {({stream \optional record-type
+  record \rest initargs}) \body body}
+\defmacro {with-output-to-output-record} {({stream \optional
+  record-type record \rest initargs}) \body body}
+
+\arg{record-type} is evaluated.
+
 
 \part{Extensions}
+
+\chapter{Output Recording}
+
+% map-over-output-records
+
+\section{Standard classes}
+
+\defclass{standard-output-recording-stream}
+
+This class is mixed into some other stream class to add output
+recording facilities. It is not instantiable.
+
+% what methods must be implemented on the original stream?
 
 \chapter{Drawing Two-Dimensional Images}
 
@@ -883,7 +943,7 @@ has a color which also depends on the exact type of the image.  You
 can think of the color as an interpretation of the pixel value by the
 type of image. 
 
-Te coordinate system of an image has (0,0) in its upper-left corner.
+The coordinate system of an image has (0,0) in its upper-left corner.
 The x coordinate grows to the right and the y coordinate downwards.  
 
 \defprotoclass{image}
