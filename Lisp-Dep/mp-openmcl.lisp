@@ -83,15 +83,25 @@
 
 ;; We perhaps could make use of EXCL::ATOMICALLY, which is
 ;; undocumented, but seems to do what we want.
+;; Use EXCL::ATOMICALLY in OpenMCL?? - mikemac
 
+#-openmcl-native-threads
 (defmacro atomic-incf (place)
   `(ccl:without-interrupts
     (incf (the fixnum ,place))))
 
+#-openmcl-native-threads
 (defmacro atomic-decf (place)
   `(ccl:without-interrupts
     (decf (the fixnum ,place))))
 
+#+openmcl-native-threads
+(defmacro atomic-incf (place)
+   `(ccl::atomic-incf ,place))
+
+#+openmcl-native-threads
+(defmacro atomic-decf (place)
+   `(ccl::atomic-decf ,place))
 ;;; 32.3 Locks
 
 (defun make-lock (&optional name)
