@@ -219,10 +219,22 @@
 	      (region-intersects-region-p region (transform-region (sheet-transformation child) (sheet-region child))))
       collect child))
 
-(defmethod sheet-delta-transformation ((sheet sheet))
+(defmethod sheet-delta-transformation ((sheet sheet) (ancestor (eql nil)))
   (if (sheet-parent sheet)
-      (compose-transformations (sheet-transformation sheet) (sheet-delta-transformation (sheet-parent sheet)))
-    (compose-transformations (sheet-transformation sheet) +identity-transformation+)))
+      (compose-transformations (sheet-transformation sheet)
+			       (sheet-delta-transformation
+				(sheet-parent sheet) ancestor))
+      (sheet-transformation sheet)))
+  
+(define-condition sheet-is-not-ancestor (error) ())
+
+(defmethod sheet-delta-transformation ((sheet sheet) (ancestor sheet))
+  (cond ((eq sheet ancestor) +identity-transformation+)
+	((sheet-parent sheet)
+	 (compose-transformations (sheet-transformation sheet)
+				  (sheet-delta-transformation
+				   (sheet-parent sheet) ancestor)))
+	(t (error 'sheet-is-not-ancestor))))
 
 (defmethod sheet-allocated-region ((sheet sheet) (child sheet))
   (loop with region = (sheet-region child)
@@ -298,3 +310,26 @@
 ;;; REALIZE-MIRROR and UNREALIZE-MIRROR have been moved to ports.lisp because
 ;;; they require the PORT class to be defined
 
+;;; Repaint protocol
+
+(defclass standard-repaint-mixin () ())
+
+(defmethod dispatch-repaint ((sheet standard-repaint-mixin) region)
+  (queue-repaint sheet region))
+
+(defclass immediate-repaint-mixin () ())
+
+(defmethod dispatch-repaint ((sheet immediate-repaint-mixin) region)
+  (handle-repaint sheet nil region))
+
+(defclass mute-repaint-mixin () ())
+
+(defmethod dispatch-repaint ((sheet mute-repaint-mixin) region)
+  (handle-repaint sheet nil region))
+
+(defmethod dispatch-repaint ((sheet standard-repaint-mixin) region)
+  (queue-repaint sheet region))
+
+(defmethod repaint-sheet ((sheet mute-repaint-mixin) region)
+  (declare (ignore region))
+  (values))
