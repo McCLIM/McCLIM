@@ -180,20 +180,21 @@
               :host (xlib:display-host (slot-value object 'display))
               :display-id (xlib:display-display (slot-value object 'display))))))
 
-(defun clx-error-handler (display error-name &key &allow-other-keys)
-  (declare (ignore display))
-  (format *error-output* "Received clx-error in ~a: ~a~%"
-          (clim-sys:current-process) error-name))
+(defun clx-error-handler (display error-name &rest args &key major &allow-other-keys)
+  (unless (and (eql major 42)  ; 42 is SetInputFocus, we ignore match-errors from that
+               (eq error-name 'xlib:match-error))
+    (format *error-output* "Received CLX ~A in process ~W~%"
+            error-name (clim-sys:process-name (clim-sys:current-process)))
+    (apply #'xlib:default-error-handler display error-name args)))
 
 (defmethod initialize-clx ((port clx-port))
   (let ((options (cdr (port-server-path port))))
     (setf (clx-port-display port)
 	  (xlib:open-display (getf options :host "") :display (getf options :display-id 0)))
     (progn
-      #+nil
       (setf (xlib:display-error-handler (clx-port-display port))
         #'clx-error-handler)
-    
+
       #+nil
       (setf (xlib:display-after-function (clx-port-display port)) #'xlib:display-force-output))
     
@@ -526,17 +527,6 @@
 ;; size and position, while genuine configure events only state the
 ;; correct size.
 
-(defun safely-set-input-focus (display window revert-to &optional timestamp)
-  "Sets the input focus, binding a handler for BadMatch errors and syncing with
-the server, in case the window is not visible."
-  #+nil(format *trace-output* "~&Process ~W changed the input focus.~%" (clim-sys:current-process))
-  (xlib:with-display (display)
-     (xlib:display-finish-output display) ; don't laugh, it works.
-     (handler-case (progn (xlib:set-input-focus display window revert-to timestamp)
-                       (xlib:display-finish-output display))
-       (xlib:match-error ()
-          #+nil(format *trace-output* "~&Safely handled the BadMatch.~%" )))))
-
 (defun event-handler (&rest event-slots
                       &key display window event-key code state mode time
 		      width height x y root-x root-y
@@ -703,8 +693,8 @@ the server, in case the window is not visible."
             (let* ((frame (pane-frame sheet))
                    (focus (climi::keyboard-input-focus frame)))
               (when (and focus (sheet-mirror focus))
-                (safely-set-input-focus (clx-port-display *clx-port*)
-                                        (sheet-mirror focus) :parent time)
+                (xlib:set-input-focus (clx-port-display *clx-port*)
+                                      (sheet-mirror focus) :parent time)
                 nil)))))
 	(t
 	 (unless (xlib:event-listen (clx-port-display *clx-port*))
@@ -1070,4 +1060,4 @@ the server, in case the window is not visible."
 (defmethod climi::set-port-keyboard-focus (focus (port clx-port))
   (let ((mirror (sheet-mirror focus)))
     (when mirror
-      (safely-set-input-focus (clx-port-display port) mirror :parent nil))))
+      (xlib:set-input-focus (clx-port-display port) mirror :parent nil))))
