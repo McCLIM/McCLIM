@@ -44,7 +44,7 @@
 					    (stream-line-height stream)
 					    (stream-vertical-spacing stream)) stream))
      (t
-      (draw-text* stream char cx (+ cy (stream-baseline stream)))
+      (draw-text* (sheet-medium stream) char cx (+ cy (stream-baseline stream)))
       (setf*-stream-cursor-position (+ cx (stream-character-width stream char)) cy stream)))))
 
 
@@ -247,7 +247,7 @@
 		 (scroll-horizontal stream width))
 		(:allow
 		 )))
-	    (draw-text* stream char cx (+ cy baseline vspace) :text-style text-style)
+	    (draw-text* (sheet-medium stream) char cx (+ cy baseline vspace) :text-style text-style)
 	    (setq cx (+ cx width))
 	    (setf*-stream-cursor-position cx cy stream))))))
     (if visible
