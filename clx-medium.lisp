@@ -61,7 +61,7 @@
 	  (mirror (port-lookup-mirror port (medium-sheet ,medium)))
 	  (line-style (medium-line-style ,medium))
 	  (ink (medium-ink ,medium))
-	  (gc (medium-gcontext ,medium (medium-ink ,medium))))
+	  (gc (medium-gcontext ,medium ink)))
      line-style ink
      (unwind-protect
 	 (progn ,@body)
@@ -126,7 +126,7 @@
   (unless text-style (setf text-style (medium-text-style medium)))
   (if (= start end)
       (values 0 0 0 0 0)
-      (let ((gctxt (slot-value medium 'gc))
+      (let ((gctxt (medium-gcontext medium (medium-ink medium)))
             (position-newline (position #\newline string :start start)))
         (if position-newline
             (multiple-value-bind (width ascent descent left right
@@ -141,8 +141,7 @@
                         x (+ ascent descent y) (+ ascent descent baseline))))
             (multiple-value-bind (width ascent descent left right
                                         font-ascent direction first-not-done)
-                (xlib:text-extents (slot-value medium 'gc) string
-                                   :start start :end position-newline)
+                (xlib:text-extents gctxt string :start start :end position-newline)
               (declare
                (ignorable left right font-ascent direction first-not-done))
               (values width (+ ascent descent) width 0 ascent))))))
