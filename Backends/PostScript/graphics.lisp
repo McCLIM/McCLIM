@@ -39,26 +39,22 @@
 (in-package :CLIM-POSTSCRIPT)
 
 ;;; Postscript output utilities
-(defun format-postscript-number (number)
-  (if (not (integerp number))
-      (string-right-trim
-       "." (string-right-trim
-            "0" (format nil "~,3F" (coerce number 'single-float))))
-      number))
+(defun write-number (stream number)
+  (format stream "~,3F " (coerce number 'single-float)))
 
-(defun format-postscript-angle (angle)
-  (format-postscript-number (* angle (/ 180 pi))))
+(defun write-angle (stream angle)
+  (write-number stream (* angle (/ 180 pi))))
 
 (defun write-coordinates (stream x y)
   (with-transformed-position (*transformation* x y)
-    (format stream "~A ~A "
-            (format-postscript-number x)
-            (format-postscript-number y))))
+    (write-number stream x)
+    (write-number stream y)))
 
 (defun write-transformation* (stream mxx mxy myx myy tx ty)
-  (format stream "[~{~A~^ ~}] "
-          (loop for c in (list mxx myx mxy myy tx ty)
-             collect (format-postscript-number c))))
+  (write-char #\[ stream)
+  (dolist (c (list mxx myx mxy myy tx ty))
+     (write-number stream c))
+  (write-string "] " stream))
 
 ;;; Low level functions
 (defstruct postscript-procedure
@@ -152,11 +148,10 @@ setmatrix")
            (start-angle (or (ellipse-start-angle circle) 0))
            (end-angle (or (ellipse-end-angle circle) (* 2 pi))))
       (write-string (if filled "true " "false ") stream)
-      (format stream "~A ~A "
-              (format-postscript-angle (if (< end-angle start-angle)
-                                           (+ end-angle (* 2 pi))
-                                           end-angle))
-              (format-postscript-angle start-angle))
+      (write-angle stream (if (< end-angle start-angle)
+                              (+ end-angle (* 2 pi))
+                              end-angle))
+      (write-angle stream start-angle)
       (write-transformation* stream ndx2 ndx1 ndy2 ndy1 cx cy)
       (format stream "pe~%"))))
 
@@ -287,17 +282,15 @@ setmatrix")
                                           (kind (eql :line-style)))
   (let* ((line-style (medium-line-style medium))
          (scale (line-style-scale line-style)))
-    (format stream "~D setlinewidth ~A setlinejoin ~A setlinecap~%"
-            (format-postscript-number
-             (* scale (line-style-thickness line-style)))
+    (write-number stream (* scale (line-style-thickness line-style)))
+    (format stream "setlinewidth ~A setlinejoin ~A setlinecap~%"
             (getf +postscript-line-joints+
                   (line-style-joint-shape line-style))
             (getf +postscript-line-caps+
                   (line-style-cap-shape line-style)))
     (let ((dashes (line-style-dashes line-style)))
       (format stream "[")
-      (mapc (lambda (l) (format stream "~D " (format-postscript-number
-                                              (* scale l))))
+      (mapc (lambda (l) (write-number stream (* scale l)))
             (if (eq dashes 't)
                 +postscript-default-line-dashes+
                 dashes))
@@ -319,10 +312,10 @@ setmatrix")
 (defmethod postscript-set-graphics-state (stream medium (kind (eql :color)))
   (multiple-value-bind (r g b)
       (medium-color-rgb medium (medium-ink medium))
-    (format stream "~A ~A ~A setrgbcolor~%"
-            (format-postscript-number r)
-            (format-postscript-number g)
-            (format-postscript-number b))))
+    (write-number stream r)
+    (write-number stream g)
+    (write-number stream b)
+    (format stream "setrgbcolor~%")))
 
 ;;; Clipping region
 (defgeneric postscript-set-clipping-region (stream region))
@@ -357,23 +350,25 @@ setmatrix")
 (defmethod medium-draw-point* ((medium postscript-medium) x y)
   (let ((stream (postscript-medium-file-stream medium))
         (*transformation* (sheet-native-transformation (medium-sheet medium)))
-        (radius (format-postscript-number (/ (medium-line-thickness medium) 2))))
+        (radius (/ (medium-line-thickness medium) 2)))
     (postscript-actualize-graphics-state stream medium :color)
     (format stream "newpath~%")
     (write-coordinates stream x y)
-    (format stream "~A 0 360 arc~%" radius)
+    (write-number stream radius)
+    (format stream "0 360 arc~%")
     (format stream "fill~%")))
 
 (defmethod medium-draw-points* ((medium postscript-medium) coord-seq)
   (let ((stream (postscript-medium-file-stream medium))
         (*transformation* (sheet-native-transformation (medium-sheet medium)))
-        (radius (format-postscript-number (/ (medium-line-thickness medium) 2))))
+        (radius (/ (medium-line-thickness medium) 2)))
     (postscript-actualize-graphics-state stream medium :color)
     (map-repeated-sequence 'nil 2
                            (lambda (x y)
                              (format stream "newpath~%")
                              (write-coordinates stream x y)
-                             (format stream "~A 0 360 arc~%" radius)
+                             (write-number stream radius)
+                             (format stream "0 360 arc~%")
                              (format stream "fill~%"))
                            coord-seq)))
 
