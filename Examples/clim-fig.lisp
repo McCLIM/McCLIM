@@ -60,16 +60,24 @@
                    x1 (+ x radius-x)
                    y1 (+ y radius-y))))))
       (case (clim-fig-drawing-mode *application-frame*)
+        (:point
+         (draw-point* pane x y :ink current-color
+                      :line-style line-style))
         (:line
          (draw-line* pane x y x1 y1
                      :ink current-color
                      :line-style line-style))
         (:arrow
-         (with-new-output-record (pane)
-           (draw-arrow* pane x y x1 y1
-                        :ink current-color
-                        :line-style line-style
-                        :to-head t :head-width 20 :head-length 20)))
+         (if fastp
+             (draw-arrow* pane x y x1 y1
+                          :ink current-color
+                          :line-style line-style
+                          :to-head t :head-width 20 :head-length 20)
+             (with-new-output-record (pane)
+               (draw-arrow* pane x y x1 y1
+                            :ink current-color
+                            :line-style line-style
+                            :to-head t :head-width 20 :head-length 20))))
         (:rectangle
          (draw-rectangle* pane x y x1 y1 :filled fill-mode
                           :ink current-color
@@ -109,30 +117,32 @@
          (pixmap-height (round (bounding-rectangle-height (sheet-region pane))))
          (canvas-pixmap (allocate-pixmap pane pixmap-width pixmap-height)))
     (copy-to-pixmap pane 0 0 pixmap-width pixmap-height canvas-pixmap)
-    (tracking-pointer (pane)
-      (:pointer-motion (&key window x y)
-         (declare (ignore window))
-         (set-status-line (format nil "~:(~A~) from (~D,~D) to (~D,~D)~%"
-                                  (slot-value *application-frame*
-                                              'drawing-mode)
-                                  (round x1) (round y1)
-                                  (round x) (round y)))
-         (with-output-recording-options (pane :record nil)
-           (copy-from-pixmap canvas-pixmap 0 0 pixmap-width pixmap-height pane 0 0)
-           (draw-figure pane
-                        x1 y1 x y
-                        :fastp t)))
-      (:pointer-button-release (&key event x y)
-         (when (= (pointer-event-button event)
-                  +pointer-left-button+)
-           (set-status-line " ")
-           (copy-from-pixmap canvas-pixmap 0 0 pixmap-width pixmap-height pane 0 0)
-           (deallocate-pixmap canvas-pixmap)
-           (draw-figure pane
-                        x1 y1
-                        x y)
-           (setf (clim-fig-redo-list *application-frame*) nil)
-           (return-from handle-draw-object))))))
+    (multiple-value-bind (x y)
+        (block processor
+          (if (eq (slot-value *application-frame* 'drawing-mode) :point)
+              (values x1 y1)
+              (tracking-pointer (pane)
+                (:pointer-motion (&key window x y)
+                                 (declare (ignore window))
+                                 (set-status-line (format nil "~:(~A~) from (~D,~D) to (~D,~D)~%"
+                                                          (slot-value *application-frame*
+                                                                      'drawing-mode)
+                                                          (round x1) (round y1)
+                                                          (round x) (round y)))
+                                 (with-output-recording-options (pane :record nil)
+                                   (copy-from-pixmap canvas-pixmap 0 0 pixmap-width pixmap-height pane 0 0)
+                                   (draw-figure pane
+                                                x1 y1 x y
+                                                :fastp t)))
+                (:pointer-button-release (&key event x y)
+                                         (when (= (pointer-event-button event)
+                                                  +pointer-left-button+)
+                                           (return-from processor (values x y)))))))
+      (set-status-line " ")
+      (copy-from-pixmap canvas-pixmap 0 0 pixmap-width pixmap-height pane 0 0)
+      (deallocate-pixmap canvas-pixmap)
+      (draw-figure pane x1 y1 x y)
+      (setf (clim-fig-redo-list *application-frame*) nil))))
 
 (defmethod handle-event ((pane canvas-pane) (event pointer-button-release-event))
   (when (= (pointer-event-button event) +pointer-right-button+)
