@@ -364,7 +364,7 @@
      query-identifier for-context-type)
   (declare (ignore query-identifier))
   (let ((result (present-to-string object type
-				   :view view :acceptably t
+				   :view view :acceptably nil
 				   :for-context-type for-context-type)))
     (apply #'replace-input stream result `(,@(and buffer-start-supplied-p
 						  `(:buffer-start

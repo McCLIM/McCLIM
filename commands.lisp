@@ -539,7 +539,7 @@
 	do (progn
 	     (write-char #\space stream)
 	     (write-token (present-to-string arg (presentation-type-of arg)
-					     :acceptably t)
+					     :acceptably nil)
 			  stream)))))
 
 (defparameter *command-parser* #'command-line-command-parser)
