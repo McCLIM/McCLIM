@@ -34,37 +34,21 @@ Install instructions for CMU Common Lisp
 Running the demos
 -----------------
 
-1. Load the file "test.lisp":
-
-   (load "test.lisp")
-
-2. Run the address-book demo
-
-   (clim-demo::address-book)
-
-   You should now see a window with three panes, the lower one of
-   which has a prompt "Command:"
-
-   In this pane, you can now type commands similar to Lisp forms,
-   except that the form must be a function call of a Lisp function and
-   the arguments are not evaluated like this:
-
-   Command: (car (a b c))
-   
-   A
-   Command: (+ 3 4)
-
-   7 
-   Command: 
-
-   when you get tired of it, hit ^C in the Lisp listener.
-
-3. Run the calculator demo
+1. Run the calculator demo
 
    (clim-demo::calculator)
 
-   This demo is self-explanatory.  Note, the calculator currently does not calculate.
+   This demo is self-explanatory.
 	
+   when you get tired of it, hit ^C in the Lisp listener.
+
+2. Run the slider demo
+
+   (clim-demo::sliderdemo)
+
+   You should see a slider next to the calculator.  We are working on
+   improving this demo.
+
    when you get tired of it, hit ^C in the Lisp listener.
 
 How to create a Lisp core file
