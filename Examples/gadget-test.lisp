@@ -191,8 +191,9 @@
         ;text-edit
          slider-h
          (horizontally ()
-           slider-v
-           slider-v2
+           (vertically ()
+             slider-v
+             slider-v2)
            slider-v3
            slider-v4
            image)

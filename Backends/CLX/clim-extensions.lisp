@@ -18,9 +18,13 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-(in-package :CLIM-INTERNALS)
+(eval-when (:compile-toplevel :load-toplevel)
+  ; I don't think that this should be necessarily here,
+  ; but while it is, it needs to ensure that the use-package'ing
+  ; happens before the rest of the file is read.
 
-(use-package :IMAGE)
+  (in-package :CLIM-INTERNALS)
+  (use-package :IMAGE))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

@@ -19,7 +19,8 @@
 ;;; Boston, MA  02111-1307  USA.
 
 (defpackage "IMAGE"
-  (:use #:clim-lisp)
+; (:use #:clim-lisp)
+  (:use #:common-lisp)
   (:export    
    "WRITE-PNM" "READ-IMAGE-FILE"
    "IMAGE" "IMAGE-COLOR" "IMAGE-GADGET" "IMAGE-HEIGHT"
