@@ -54,6 +54,7 @@
       #+(AND :CMU :MP (NOT :PTHREAD))  "lisp-dep/mp-cmu"
       #+EXCL                           "lisp-dep/mp-acl"
       #| fall back |#                  "lisp-dep/mp-nil")
+   "utils"
    "defresource"
    "setf-star"
    
