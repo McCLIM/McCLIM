@@ -373,3 +373,14 @@ origin)"
 			 :ink (medium-background medium)
 			 :filled t)))))
 
+;;; Don't know if this is a good place for this...
+
+(defun make-input-editing-stream-snapshot (stream area)
+  (let ((buffer (buffer area)))
+    (buffer-string buffer :result (stream-input-buffer stream))
+    (multiple-value-bind (point-line pos)
+	(point* buffer)
+      (loop for line = (dbl-head (lines buffer))
+	    until (eq line point-line)
+	    accumulating (size line) into ip
+	    finally (setf (insertion-pointer stream) (+ ip pos))))))

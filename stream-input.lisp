@@ -195,9 +195,6 @@
 (defmethod convert-to-gesture ((ev symbol))
   ev)
 
-(defmethod convert-to-gesture ((ev window-manager-delete-event))
-  (frame-exit (pane-frame (event-sheet ev))))
-
 (defmethod convert-to-gesture ((ev key-press-event))
   (let ((modifiers (event-modifier-state ev)))
     (if (or (zerop modifiers)
@@ -208,7 +205,8 @@
 (defmethod convert-to-gesture ((ev pointer-button-press-event))
   ev)
 
-(defmethod handle-event ((stream standard-extended-input-stream) event)
+(defmethod handle-event ((stream standard-extended-input-stream)
+			 (event key-press-event))
   (let ((buffer (stream-input-buffer stream))
 	(gesture (convert-to-gesture event)))
     (cond ((characterp gesture)
@@ -221,6 +219,11 @@
 	  (gesture
 	   (vector-push-extend gesture buffer))
 	  (t nil))))
+
+(defmethod handle-event ((stream standard-extended-input-stream)
+			 (event pointer-button-event))
+  (vector-push-extend event (stream-input-buffer stream)))
+
 
 (defmethod stream-read-gesture ((stream standard-extended-input-stream)
 				&key timeout peek-p

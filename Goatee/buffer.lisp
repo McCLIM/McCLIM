@@ -245,7 +245,9 @@
 (defmethod buffer-string ((buf basic-buffer) &key start end result)
   (declare (ignore start end))
   (let ((result (if result
-		    (adjust-array result (size buff))
+		    (progn
+		      (adjust-array result (size buf))
+		      (setf (fill-pointer result) (size buf)))
 		    (make-string (size buf)))))
     (loop for line-in-string = 0 then (+ line-in-string (size line))
 	  for line = (dbl-head (lines buf)) then (next line)
