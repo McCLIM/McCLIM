@@ -19,17 +19,19 @@
 
 ;;; TODO:
 ;;;
+;;; - Check types: RATIONAL, COORDINATE, REAL?
 ;;; - Better error detection.
 ;;; - Item list formatting.
 ;;; - Multiple columns.
 ;;; - :MOVE-CURSOR T support.
 ;;; - All types of spacing, widths, heights.
 ;;; - FIXMEs.
+;;; - Bug: only one option of :X-SPACING and :Y-SPACING works now.
 
 (in-package :CLIM-INTERNALS)
 
 ;;; Space specification parsing
-#+ignore(deftype space () 'coordinate)
+#+ignore(deftype space () 'real)
 
 (defun parse-space (stream specification direction)
   "Returns the amount of space given by SPECIFICATION relating to the
@@ -55,7 +57,7 @@ or an item list."))
   (:documentation "Fits the cell in the rectangle."))
 
 (defmethod adjust-cell* ((cell cell-output-record) x y width height)
-  (declare (type coordinate x y width height))
+  (declare (type real x y width height))
   (multiple-value-bind (left top right bottom) (bounding-rectangle* cell)
     (let ((dx (ecase (cell-align-x cell)
                 (:left (- x left))
@@ -123,7 +125,7 @@ the individual dimensions of cells in the BLOCK. "))
   (:documentation "Fits the CELL of the BLOCK in the retangle."))
 
 (defclass block-info ()
-  ((common-size :type coordinate
+  ((common-size :type real
                 :initform (coordinate 0)
                 :accessor block-info-common-size)
    (number-of-cells :type integer
@@ -154,8 +156,8 @@ of the cells in the BLOCK. SPACING is a space between cells. The BLOCK
 will start at COMMON-COORDININATE and will have COMMON-SIZE on common
 dimension."
   (declare (type block-output-record block)
-           (type (vector coordinate) sizes)
-           (type coordinate common-coordinate common-size))
+           (type (vector real) sizes)
+           (type real common-coordinate common-size))
   (let ((cell-coordinate (coordinate 0))
         (cell-number 0))
     (map-over-block-cells
@@ -201,7 +203,7 @@ to a table cell within the row."))
                                cell-coordinate common-coordinate
                                size common-size)
   (declare (type cell-output-record cell)
-           (type coordinate cell-coordinate common-coordinate
+           (type real cell-coordinate common-coordinate
                             size common-size))
   (adjust-cell* cell
                 cell-coordinate common-coordinate
@@ -265,7 +267,7 @@ corresponding to a table cell within the column."))
                                cell-coordinate common-coordinate
                                size common-size)
   (declare (type cell-output-record cell)
-           (type coordinate cell-coordinate common-coordinate
+           (type real cell-coordinate common-coordinate
                             size common-size))
   (adjust-cell* cell
                 common-coordinate cell-coordinate
@@ -330,8 +332,7 @@ skips intervening non-table output record structures."))
                              (record-type 'empty-standard-table-output-record)
                              &allow-other-keys)
                             &body body)
-  (declare (ignore multiple-columns-x-spacing-supplied-p
-		   multiple-columns-x-spacing)) ; FIXME!!! Possible recomputation
+  ;; FIXME!!! Possible recomputation
   (when (eq stream t)
     (setq stream '*standard-output*))
   (let ((table (gensym))
@@ -406,7 +407,7 @@ modifying list BLOCK-INFOS or vector SIZES."))
          (max-block-length (loop :for info :in infos
                               :maximize (block-info-number-of-cells info)))
          (sizes (make-array (list max-block-length)
-                            :element-type 'coordinate
+                            :element-type 'real
                             :initial-element (coordinate 0))))
     (loop :for info :in infos
        :for block-sizes = (block-info-cell-sizes info)
@@ -460,7 +461,7 @@ modifying list BLOCK-INFOS or vector SIZES."))
 (defmethod table-equalize-column-widths ((table table-of-rows-output-record)
                                          block-infos widths)
   (declare (ignore block-infos)
-           (type (vector coordinate) widths))
+           (type (vector real) widths))
   (let ((max-width
          (loop :for w :across widths
             :maximize w)))
