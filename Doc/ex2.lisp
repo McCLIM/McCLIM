@@ -18,10 +18,10 @@
 (defun app-main ()
   (run-frame-top-level (make-application-frame 'superapp)))
 
-(define-superapp-command com-quit ()
+(define-superapp-command (com-quit :name t) ()
   (frame-exit *application-frame*))
 
-(define-superapp-command com-parity ((number 'integer))
+(define-superapp-command (com-parity :name t) ((number 'integer))
   (format t "~a is ~a~%" number
 	  (if (oddp number)
 	      "odd"
