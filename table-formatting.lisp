@@ -374,14 +374,11 @@ skips intervening non-table output record structures."))
       (setf (output-record-position item-list)
             (stream-cursor-position stream))
       (if move-cursor
-          ;; FIXME!!!
-          #+ignore
           (setf (stream-cursor-position stream)
-                (values cursor-new-x cursor-new-y))
-          #-ignore
-          nil
-          (setf (stream-cursor-position stream)
-                (values cursor-old-x cursor-old-y)))
+                (values (bounding-rectangle-max-x item-list)
+                        (bounding-rectangle-max-y item-list)))
+        (setf (stream-cursor-position stream)
+              (values cursor-old-x cursor-old-y)))
       (replay item-list stream)
       item-list)))
 
