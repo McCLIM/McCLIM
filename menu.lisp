@@ -218,6 +218,7 @@
 
 (defmethod initialize-instance :after ((pane menu-bar)
 				       &rest args
+				       &key
 				       &allow-other-keys)
   (declare (ignore args))
   (setf (slot-value pane 'items) (copy-list (sheet-children pane)))
