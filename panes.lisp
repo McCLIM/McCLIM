@@ -94,9 +94,14 @@
    (enabledp :initform nil
 	     :initarg :enabledp
 	     :accessor pane-enabledp)
-   (space-requirement :initarg :space-requirement
-		      :initform (make-space-requirement :width 300 :max-width 300
-							:height 300 :max-height 300)
+   (sr-width :initform nil :initarg :width)
+   (sr-max-width :initform nil :initarg :max-width)
+   (sr-min-width :initform nil :initarg :min-width)
+   (sr-height :initform nil :initarg :height)
+   (sr-max-height :initform nil :initarg :max-height)
+   (sr-min-height :initform nil :initarg :min-height)
+   (space-requirement :initform (make-space-requirement :width 600 :max-width 600
+							:height 600 :max-height 600)
 		      :accessor pane-space-requirement)
    )
   )
@@ -113,24 +118,31 @@
 (defmethod (setf medium-background) (ink (pane pane))
   (setf (medium-background (sheet-medium pane)) ink))
 
-(defmethod compose-space ((pane pane))
-  (or (pane-space-requirement pane)
-      (make-space-requirement :width 300 :max-width 300
-			      :height 300 :max-height 300)))
-
-
 (defun panep (x)
   (typep x 'pane))
 
 (defun make-pane (type &rest args)
   (apply #'make-pane-1 *pane-realizer* *application-frame* type args))
 
+(defun compute-and-set-space (pane)
+  (with-slots (sr-width sr-max-width sr-min-width sr-height sr-max-height sr-min-height) pane
+    (let* ((req (when (or (null sr-width) (null sr-height))
+		  (compose-space pane)))
+	   (new (make-space-requirement
+		 :width (or sr-width (space-requirement-width req))
+		 :height (or sr-height (space-requirement-height req))
+		 :max-width (or sr-max-width sr-width (space-requirement-max-width req))
+		 :max-height (or sr-max-height sr-height (space-requirement-max-height req))
+		 :min-width (or sr-min-width sr-width (space-requirement-min-width req))
+		 :min-height (or sr-min-height sr-height (space-requirement-min-height req)))))
+      (setf (pane-space-requirement pane) new)
+      new)))
+
 (defmethod compose-space ((pane pane))
-  (setf (pane-space-requirement pane)
-    (make-space-requirement :width 200
-			    :max-width 200
-			    :height 200
-			    :max-height 200)))
+  (make-space-requirement :width 200
+			  :max-width 200
+			  :height 200
+			  :max-height 200))
 
 (defun set-width-and-height (rectangular-sheet width height)
   (multiple-value-bind (x1 y1)
@@ -177,11 +189,6 @@
   (if foreground
       (setf (medium-foreground pane) foreground)))
 
-(defmethod compose-space ((basic basic-pane))
-  (ask-space-children basic)
-  (compute-space basic))
-
-
 ;;; COMPOSITE PANE
 
 (defclass composite-pane (sheet-multiple-child-mixin
@@ -202,64 +209,33 @@
 	      do (sheet-adopt-child pane child)))))
 
 
-(defmethod ask-space-children ((composite composite-pane))
-  (mapcar #'compose-space (sheet-children composite)))
-
-;;; FIXME: this one shoud be removed
-(defmethod compute-space ((composite composite-pane))
-  (let ((space (make-space-requirement)))
-    (loop for child in (sheet-children composite)
-	  for request = (pane-space-requirement child)
-	  do (progn (incf (space-requirement-width space)
-			  (space-requirement-width request))
-		    (incf (space-requirement-max-width space)
-			  (space-requirement-max-width request))
-		    (incf (space-requirement-min-width space)
-			  (space-requirement-min-width request))
-		    (incf (space-requirement-height space)
-			  (space-requirement-height request))
-		    (incf (space-requirement-max-height space)
-			  (space-requirement-max-height request))
-		    (incf (space-requirement-min-height space)
-			  (space-requirement-min-height request))))
-    (setf (pane-space-requirement composite) space)
-    space))
-
 (defmacro changing-space-requirement (&body body &key resize-frame)
   `(progn
      ,@body))
 
 (defmethod change-space-requirements ((pane composite-pane)
-				      &rest space-req-keys
 				      &key resize-frame
-				      space-requirement-width
-				      space-requirement-min-width
-				      space-requirement-max-width
-				      space-requirement-height
-				      space-requirement-min-height
-				      space-requirement-max-height)
-  (declare (ignore space-req-keys))
-  (when space-requirement-width
-    (setf (space-requirement-width pane) space-requirement-width))
-  (when space-requirement-min-width
-    (setf (space-requirement-min-width pane) space-requirement-min-width))
-  (when space-requirement-max-width
-    (setf (space-requirement-max-width pane) space-requirement-max-width))
-  (when space-requirement-height
-    (setf (space-requirement-height pane) space-requirement-height))
-  (when space-requirement-min-height
-    (setf (space-requirement-min-height pane) space-requirement-min-height))
-  (when space-requirement-max-height
-    (setf (space-requirement-max-height pane) space-requirement-max-height))
+				      (width nil width-p)
+				      (min-width nil min-width-p)
+				      (max-width nil max-width-p)
+				      (height nil height-p)
+				      (min-height nil min-height-p)
+				      (max-height nil max-height-p))
+  (with-slots (sr-width sr-max-width sr-min-width sr-height sr-max-height sr-min-height) pane
+    (when width-p (setf sr-width width))
+    (when min-width-p (setf sr-min-width min-width))
+    (when max-width-p (setf sr-max-width max-width))
+    (when height-p (setf sr-height height))
+    (when min-height-p (setf sr-min-height min-height))
+    (when max-height-p (setf sr-max-height max-height)))
   (if resize-frame
       (layout-frame (pane-frame pane))
-      ; we didn't find the :resize-frame option in define-application-frame
-    (note-space-requirements-changed (sheet-parent pane) pane)))
+      ;; we didn't find the :resize-frame option in define-application-frame
+      (note-space-requirements-changed (sheet-parent pane) pane)))
 
 (defmethod note-space-requirements-changed ((sheet composite-pane) (pane composite-pane))
-  (if (eq sheet (sheet-parent pane))
-      (compose-space pane)
-      (compute-space sheet))
+  (unless (eq sheet (sheet-parent pane))
+    (error sheet-is-not-child))
   (note-space-requirements-changed (sheet-parent sheet) pane))
 
 ;;; SINGLE-CHILD-COMPOSITE PANE
@@ -281,7 +257,7 @@
 
 (defmethod compose-space ((pane single-child-composite-pane))
   (if (sheet-children pane)
-      (compose-space (first (sheet-children pane)))
+      (compute-and-set-space (first (sheet-children pane)))
     (make-space-requirement)))
 
 (defmethod allocate-space ((pane single-child-composite-pane) width height)
@@ -298,8 +274,11 @@
   ()
   (:documentation "For the first pane in the architecture"))
 
+(defmethod compose-space ((pane top-level-sheet-pane))
+  (compute-and-set-space (first (sheet-children pane))))
+
 (defmethod allocate-space ((pane top-level-sheet-pane) width height)
-  (allocate-space (car (sheet-children pane)) width height))
+  (allocate-space (first (sheet-children pane)) width height))
 
 (defmethod dispatch-event ((pane top-level-sheet-pane) event)
   (handle-event pane event))
@@ -344,7 +323,7 @@
 (defmethod compose-space ((box hbox-pane))
   (let ((space (make-space-requirement)))
     (loop for child in (sheet-children box)
-	for request = (compose-space child)
+	for request = (compute-and-set-space child)
 	do (incf (space-requirement-width space)
 		 (space-requirement-width request))
 	   (incf (space-requirement-max-width space)
@@ -397,7 +376,7 @@
 (defmethod compose-space ((box vbox-pane))
   (let ((space (make-space-requirement)))
     (loop for child in (sheet-children box)
-	for request = (compose-space child)
+	for request = (compute-and-set-space child)
 	do (setf (space-requirement-width space)
 	     (max (space-requirement-width space)
 		  (space-requirement-width request)))
@@ -442,7 +421,7 @@
 (defmethod compose-space ((rack hrack-pane))
   (let ((space (make-space-requirement)))
     (loop for child in (sheet-children rack)
-	for request = (compose-space child)
+	for request = (compute-and-set-space child)
 	do (incf (space-requirement-width space)
 		 (space-requirement-width request))
 	   (incf (space-requirement-max-width space)
@@ -485,7 +464,7 @@
 (defmethod compose-space ((rack vrack-pane))
   (let ((space (make-space-requirement)))
     (loop for child in (sheet-children rack)
-	for request = (compose-space child)
+	for request = (compute-and-set-space child)
 	do (setf (space-requirement-width space)
 	     (max (space-requirement-width space)
 		  (space-requirement-width request)))
@@ -564,7 +543,8 @@
     (nreverse formated)))
 
 
-(defmethod compute-space ((table table-pane))
+(defmethod compose-space ((table table-pane))
+  (mapc #'compute-and-set-space (sheet-children table))
   (let* ((space (make-space-requirement))
 	 (h-spaces (format-children (mapcar #'pane-space-requirement (sheet-children table))
 				    (table-pane-number table)))
@@ -575,7 +555,6 @@
     (change-formated-spaces v-spaces space-requirement-height)
     (change-formated-spaces v-spaces space-requirement-min-height)
     (change-formated-spaces v-spaces space-requirement-max-height)
-    (setf (pane-space-requirement table) space)
     space))
 
 (defun find-collums-and-rows-size (table)
@@ -664,7 +643,8 @@
 (defmacro spacing ((&rest options) &body contents)
   `(make-pane 'spacer-pane ,@options :contents (list ,@contents)))
 
-(defmethod compute-space ((spacer spacer-pane))
+(defmethod compose-space ((spacer spacer-pane))
+  (compute-and-set-space (first (sheet-children spacer)))
   (let ((space (make-space-requirement))
 	(margin-space (pane-space-requirement spacer))
 	(child-space (pane-space-requirement (first (sheet-children spacer)))))
@@ -719,7 +699,7 @@
 
 (defmethod compose-space ((bp border-pane))
   (let ((space (make-space-requirement))
-	(request (compose-space (first (sheet-children bp))))
+	(request (compute-and-set-space (first (sheet-children bp))))
 	(border-width*2 (* 2 (border-pane-width bp))))
     (setf (space-requirement-width space)
 	  (+ border-width*2 (space-requirement-width request)))
@@ -745,6 +725,26 @@
 	(make-translation-transformation border-width border-width))
       (allocate-space child (- width (* 2 border-width)) (- height (* 2 border-width))))))
 
+;;; RAISED PANE
+
+(defclass raised-pane (border-pane) ())
+
+(defmacro raising ((&rest options
+		    &key background &allow-other-keys) contents)
+  `(make-pane 'raised-pane ,@options :contents (list ,contents)))
+
+(defmethod dispatch-repaint ((raised-pane raised-pane) region)
+  (repaint-sheet raised-pane region))
+
+(defmethod handle-event ((pane raised-pane) (event window-repaint-event))
+  (dispatch-repaint pane (sheet-region pane)))
+
+(defmethod repaint-sheet ((pane raised-pane) region)
+  (declare (ignore region))
+  (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
+    (draw-edges-lines* pane 0 0 (1- (- x2 x1)) (1- (- y2 y1)))))
+
+
 ;; RESTRAINING PANE
 
 (defclass restraining-pane (composite-pane) ())
@@ -761,12 +761,9 @@
 
 (defclass bboard-pane (composite-pane) ())
 
-(defmethod ask-space-children ((bboard bboard-pane))
-  (values))
-
-(defmethod compute-space ((bboard bboard-pane))
-  (pane-space-requirement bboard))
-
+(defmethod compose-space ((bboard bboard-pane))
+  (make-space-requirement :width 300 :max-width 300 :min-width 300
+			  :height 300 :max-height 300 :min-height 300))
 
 ;; VIEWPORT
 
@@ -808,7 +805,7 @@
 (defmethod compose-space ((pane scroller-pane))
   (with-slots (viewport) pane
     (if viewport
-	(let ((req (compose-space viewport)))
+	(let ((req (compute-and-set-space viewport)))
 	  (incf (space-requirement-width req) 10)
 	  (incf (space-requirement-min-width req) 10)
 	  (incf (space-requirement-max-width req) 10)
@@ -925,11 +922,9 @@
 		   :initarg :output-history
 		   :accessor pane-output-history)))
 
-(defmethod ask-space-children ((pane clim-stream-pane))
-  (values))
-
-(defmethod compute-space ((pane clim-stream-pane))
-  (pane-space-requirement pane))
+(defmethod compose-space ((pane clim-stream-pane))
+  (make-space-requirement :width 300 :height 300
+			  :max-width 300 :max-height 300))
 
 (defmethod window-clear ((pane clim-stream-pane))
 ;  (setf (pane-output-history pane) (make-instance 'standard-tree-output-history))
