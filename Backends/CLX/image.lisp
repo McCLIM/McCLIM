@@ -245,12 +245,12 @@
                          &rest args
                          &key clipping-region transformation)
   (declare (ignorable args))
-  (climi::with-sheet-medium (medium sheet)
-    (setf (climi::medium-transformation medium) (or transformation climi::+identity-transformation+)
-	  (climi::medium-clipping-region medium) (or clipping-region climi::+everywhere+))
+  (with-sheet-medium (medium sheet)
+    (setf (medium-transformation medium) (or transformation +identity-transformation+)
+	  (medium-clipping-region medium) (or clipping-region +everywhere+))
     (medium-draw-image* medium image)))
 
-(climi::def-graphic-op draw-image (image))
+(def-graphic-op draw-image (image))
 
 (defun compute-pixel-value-truecolor-image-24 (pixel colormap)
   (declare (ignore colormap)
@@ -308,13 +308,13 @@
       (symbol-function (intern (format nil "COMPUTE-PIXEL-VALUE-~a" (type-of image)) :clim-internals))))
 
 (defmacro medium-draw-translation-image (medium image transformation clipping-region)
-  `(multiple-value-bind (mxx mxy myx myy tx ty) (climi::get-transformation ,transformation)
+  `(multiple-value-bind (mxx mxy myx myy tx ty) (get-transformation ,transformation)
      (declare (ignore mxx mxy myx myy)
-	      (type climi::coordinate tx ty))
-     (multiple-value-bind (x1 y1 x2 y2) (climi::bounding-rectangle* ,clipping-region)
-       (declare (type climi::coordinate x1 y1 x2 y2))
+	      (type coordinate tx ty))
+     (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* ,clipping-region)
+       (declare (type coordinate x1 y1 x2 y2))
        (medium-draw-linear-image ,medium ,image
-				 (climi::make-bounding-rectangle (- x1 tx) (- y1 ty)
+				 (make-bounding-rectangle (- x1 tx) (- y1 ty)
 								 (- x2 tx) (- y2 ty))
 				 :print-x (round tx) :print-y (round ty)))))
 
@@ -323,13 +323,13 @@
   (let* ((r-image-width (1- (image-width image)))
 	 (r-image-height (1- (image-height image))))
     (declare (type fixnum r-image-width r-image-height))
-    (climi::with-bounding-rectangle* (x-min y-min x-max y-max) clipping-region
-      (declare (type climi::coordinate x-min y-min x-max y-max))
+    (with-bounding-rectangle* (x-min y-min x-max y-max) clipping-region
+      (declare (type coordinate x-min y-min x-max y-max))
       (when (or (<= 0 x-min r-image-width)
 		(<= x-min 0 x-max))
-	(climi::with-CLX-graphics (medium)
-	  (let* ((colormap (xlib:screen-default-colormap (climi::clx-port-screen climi::port)))
-		 (depth (xlib:drawable-depth climi::mirror))
+	(with-CLX-graphics (medium)
+	  (let* ((colormap (xlib:screen-default-colormap (clx-port-screen port)))
+		 (depth (xlib:drawable-depth mirror))
 		 (computing-pixel-function (choose-computing-pixel image depth))
 		 (pixels (image-pixels image))
 		 (x-min* (round (max x-min 0)))
@@ -350,47 +350,47 @@
 		  do (loop for j of-type fixnum from x-min* to x-max*
 			   do (setf (aref data i j)
 				    (funcall computing-pixel-function (aref pixels i j) colormap))))
-	    (xlib:put-image climi::mirror climi::gc server-image
+	    (xlib:put-image mirror gc server-image
 			    :width width
 			    :height height
 			    :x start-x
 			    :y start-y)
-	    (xlib::display-force-output (climi::clx-port-display (climi::port medium)))))))))
+	    (xlib::display-force-output (clx-port-display (port medium)))))))))
   
 
-(defmethod medium-draw-image* ((medium climi::clx-medium) (image rgb-image))
+(defmethod medium-draw-image* ((medium clx-medium) (image rgb-image))
   (declare (optimize (speed 3)))
-  (let ((transformation (climi::medium-transformation medium))
-	(clipping-region (climi::medium-clipping-region medium)))
-    (declare (type climi::standard-transformation transformation)
-	     (type climi::region clipping-region))
+  (let ((transformation (medium-transformation medium))
+	(clipping-region (medium-clipping-region medium)))
+    (declare (type standard-transformation transformation)
+	     (type region clipping-region))
     (cond ; casual cases : identity or translation transformations
-     ((climi::transformation-equal transformation climi::+identity-transformation+)
+     ((transformation-equal transformation +identity-transformation+)
       (medium-draw-linear-image medium image clipping-region))
-     ((climi::translation-transformation-p transformation)
+     ((translation-transformation-p transformation)
       (medium-draw-translation-image medium image transformation clipping-region))
           ; other cases
      (t
       (let* ((image-width (image-width image))
 	     (image-height (image-height image))
-	     (intersection (climi::region-intersection
+	     (intersection (region-intersection
 			    clipping-region
-			    (climi::transform-region transformation
-						     (climi::make-bounding-rectangle 0 0
+			    (transform-region transformation
+						     (make-bounding-rectangle 0 0
 										     image-width
 										     image-height)))))
 	(declare (type fixnum image-width image-height)
-		 (type climi::region intersection))
-	(unless (climi::region-equal intersection climi::+nowhere+)
-	  (climi::with-CLX-graphics (medium)
-	    (climi::with-bounding-rectangle* (x-min y-min x-max y-max) intersection
-	      (declare (type climi::coordinate x-min y-min x-max y-max))
-	      (let* ((colormap (xlib:screen-default-colormap (climi::clx-port-screen climi::port)))
-		     (depth (xlib:drawable-depth climi::mirror))
+		 (type region intersection))
+	(unless (region-equal intersection +nowhere+)
+	  (with-CLX-graphics (medium)
+	    (with-bounding-rectangle* (x-min y-min x-max y-max) intersection
+	      (declare (type coordinate x-min y-min x-max y-max))
+	      (let* ((colormap (xlib:screen-default-colormap (clx-port-screen port)))
+		     (depth (xlib:drawable-depth mirror))
 		     (computing-pixel-function (choose-computing-pixel image depth))
-		     (background-pixel (climi::X-pixel (climi::port medium) (climi::medium-background medium)))
-		     (inverse-transformation (climi::invert-transformation transformation))
-		     (image-region (climi::make-bounding-rectangle 0 0 (1- image-width) (1- image-height)))
+		     (background-pixel (X-pixel (port medium) (medium-background medium)))
+		     (inverse-transformation (invert-transformation transformation))
+		     (image-region (make-bounding-rectangle 0 0 (1- image-width) (1- image-height)))
 		     (pixels (image-pixels image))
 		     (flat-pixels (make-array (* image-width image-height) :element-type `(unsigned-byte ,depth)
 					      :displaced-to pixels))
@@ -403,8 +403,8 @@
 		     (server-image (xlib:create-image :data data :depth depth)))
 		(declare (type xlib::colormap colormap)
 			 (type (unsigned-byte 16) depth)
-			 (type climi::standard-transformation inverse-transformation)
-			 (type climi::standard-rectangle image-region)
+			 (type standard-transformation inverse-transformation)
+			 (type standard-rectangle image-region)
 			 (type fixnum data-width)
 			 (type xlib::image server-image))
 
@@ -413,21 +413,21 @@
 		      (y-min* (floor y-min))
 		      (x-max* (floor (1+ x-max)))
 		      (y-max* (floor (1+ y-max))))
-		  (setf (xlib:gcontext-clip-mask climi::gc) (list x-min* y-min* x-max* y-max*))
-		  (xlib:clear-area climi::mirror :x x-min* :y y-min*
+		  (setf (xlib:gcontext-clip-mask gc) (list x-min* y-min* x-max* y-max*))
+		  (xlib:clear-area mirror :x x-min* :y y-min*
 				   :width (- x-max* x-min*) :height (- y-max* y-min*)
 				   :exposures-p nil))
 			   
-		(loop for i of-type climi::coordinate from y-min to y-max
-		      do (multiple-value-bind (tx1 ty1) (climi::transform-position inverse-transformation
+		(loop for i of-type coordinate from y-min to y-max
+		      do (multiple-value-bind (tx1 ty1) (transform-position inverse-transformation
 										   x-min i)
-			   (declare (type climi::coordinate tx1 ty1))
-			   (multiple-value-bind (tx2 ty2) (climi::transform-position inverse-transformation
+			   (declare (type coordinate tx1 ty1))
+			   (multiple-value-bind (tx2 ty2) (transform-position inverse-transformation
 										     x-max i)
-			     (declare (type climi::coordinate tx2 ty2))
+			     (declare (type coordinate tx2 ty2))
 			     (let ((pos 0))
 			       (declare (type fixnum pos))
-			       (cond ((climi::coordinate= tx1 tx2) ; horizontal case
+			       (cond ((coordinate= tx1 tx2) ; horizontal case
 				      (when (<= 0 tx1 r-image-width)
 					(let ((dy (abs (round (- ty2 ty1))))
 					      (incy (if (< ty1 ty2) 1 -1))
@@ -436,7 +436,7 @@
 					  (declare (type fixnum dy incy x y))
 					  (loop for j of-type fixnum from 0 to dy
 						do (setf (aref flat-data pos)
-							 (if (climi::region-contains-position-p image-region x y)
+							 (if (region-contains-position-p image-region x y)
 							     (funcall computing-pixel-function
 								      (aref pixels y x)
 								      colormap)
@@ -444,7 +444,7 @@
 						(incf pos)
 						(incf y incy)))))
 				     
-				     ((climi::coordinate= ty1 ty2) ; vertical case
+				     ((coordinate= ty1 ty2) ; vertical case
 				      (when (<= 0 ty1 r-image-height)
 					(let ((dx (abs (round (- tx2 tx1))))
 					      (incx (if (< tx1 tx2) 1 -1))
@@ -453,7 +453,7 @@
 					  (declare (type fixnum dx incx x y))
 					  (loop for j of-type fixnum from 0 to dx
 						do (setf (aref flat-data pos)
-							 (if (climi::region-contains-position-p image-region x y)
+							 (if (region-contains-position-p image-region x y)
 							     (funcall computing-pixel-function
 								      (aref pixels y x)
 								      colormap)
@@ -462,12 +462,12 @@
 						(incf x incx)))))
 
 				     (t ; other case
-				      (let ((line (climi::region-intersection (climi::make-line* tx1 ty1 tx2 ty2)
+				      (let ((line (region-intersection (make-line* tx1 ty1 tx2 ty2)
 									      image-region)))
-					(declare (type climi::region line))
-					(unless (climi::region-equal line climi::+nowhere+)
+					(declare (type region line))
+					(unless (region-equal line +nowhere+)
 					  (with-slots (x1 y1 x2 y2) line
-					    (declare (type climi::coordinate x1 y1 x2 y2))
+					    (declare (type coordinate x1 y1 x2 y2))
 
 					    (incf pos (round (abs (- y1 ty1))))
 					    (fill flat-data background-pixel :start 0 :end pos)
@@ -513,12 +513,12 @@
 								    (aref flat-pixels (+ x1* y1*)))
 							      (incf pos))))))))))
 
-			       (xlib:put-image climi::mirror climi::gc server-image
+			       (xlib:put-image mirror gc server-image
 					       :width pos
 					       :height 1
 					       :x (floor x-min)
 					       :y (floor i))))))))
-		(xlib::display-force-output (climi::clx-port-display (climi::port medium))))))))))
+		(xlib::display-force-output (clx-port-display (port medium))))))))))
 						     
 				 
 
@@ -527,15 +527,15 @@
 ;;;
 ;;; image pane
 
-(defclass image-gadget (climi::basic-gadget) ())
+(defclass image-gadget (basic-gadget) ())
 
 (defclass image-pane (image-gadget)
   ((image :type image :initform nil :initarg :image :reader image)))
 
-(defmethod realize-mirror ((port climi::clx-port) (pane image-pane))
-  (climi::realize-mirror-aux port pane :backing-store :always))
+(defmethod realize-mirror ((port clx-port) (pane image-pane))
+  (realize-mirror-aux port pane :backing-store :always))
 
-(defmethod handle-event ((pane image-pane) (event climi::window-repaint-event))
+(defmethod handle-event ((pane image-pane) (event window-repaint-event))
   (dispatch-repaint pane (window-event-region event)))
 
 (defmethod handle-repaint ((sheet image-pane) region)
@@ -555,28 +555,28 @@
 ;;;
 ;;; image as label
 
-(defmethod compose-space-aux ((pane climi::labelled-gadget) (label image))
+(defmethod compose-space-aux ((pane labelled-gadget) (label image))
   (let ((width (image-width label))
 	(height (image-height label)))
-    (climi::make-space-requirement :width width :height height
+    (make-space-requirement :width width :height height
 				   :min-width width :min-height height
 				   :max-width width :max-height height)))
 
-(defmethod draw-label ((pane climi::labelled-gadget) (label image) x y)
-  (climi::with-bounding-rectangle* (x1 y1 x2 y2) (climi::sheet-region pane)
+(defmethod draw-label ((pane labelled-gadget) (label image) x y)
+  (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
     (declare (ignore x1 x2)
-	     (type climi::coordinate x2 y2))
+	     (type coordinate x2 y2))
     (let* ((image-width (image-width label))
 	   (image-height (image-height label))
-	   (tx (- x (ecase (climi::gadget-label-align-x pane)
+	   (tx (- x (ecase (gadget-label-align-x pane)
 		      (:left 0)
 		      (:center (round image-width 2))
 		      (:right image-width))))
-	   (ty (ecase (climi::gadget-label-align-y pane)
+	   (ty (ecase (gadget-label-align-y pane)
 		 (:top y1)
 		 (:center (- (round (- y2 y1) 2) (round image-height 2)))
 		 (:baseline y)
 		 (:bottom (- y2 image-height)))))
       (draw-image pane label
-		  :clipping-region (climi::sheet-region pane)
-		  :transformation (climi::make-translation-transformation tx ty)))))
+		  :clipping-region (sheet-region pane)
+		  :transformation (make-translation-transformation tx ty)))))
