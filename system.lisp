@@ -101,11 +101,11 @@
   #+mk-defsystem :components
   (:serial
    #-mk-defsystem :clim
-   "clx-port"
-   "clx-medium"
-   "clx-graft"
-   "clx-frame-manager"
-   "image"
+   "Backends/CLX/port"
+   "Backends/CLX/medium"
+   "Backends/CLX/graft"
+   "Backends/CLX/frame-manager"
+   "Backends/CLX/image"
    ))
    
 (defsystem :clim-examples #-mk-defsystem ()
@@ -115,12 +115,12 @@
   #+mk-defsystem :components
   (:serial
    #-mk-defsystem :clim-clx
-   "examples/calculator"
-   "examples/colorslider"
-   "examples/menutest"
-   "examples/address-book"
-   "examples/traffic-lights"
-   "examples/clim-fig"
-   "examples/postscript-test"
-   "examples/transformations-test"
+   "Examples/calculator"
+   "Examples/colorslider"
+   "Examples/menutest"
+   "Examples/address-book"
+   "Examples/traffic-lights"
+   "Examples/clim-fig"
+   "Examples/postscript-test"
+   "Examples/transformations-test"
    ))
