@@ -21,8 +21,8 @@
 
 (in-package :common-lisp-user)
 
-#+excl(require :clx)
-#+excl(require :loop)
+#+:excl(require :clx)
+#+:excl(require :loop)
 
 (defparameter *clim-directory* (directory-namestring *load-truename*))
 
@@ -51,14 +51,14 @@
 
    ;; First possible patches
    #+:CMU       "Lisp-Dep/fix-cmu"
-   #+EXCL	"Lisp-Dep/fix-acl"
+   #+:EXCL	"Lisp-Dep/fix-acl"
    "package"
 
    "decls"
 
    #.(OR
       #+(AND :CMU :MP (NOT :PTHREAD))  "Lisp-Dep/mp-cmu"
-      #+EXCL                           "Lisp-Dep/mp-acl"
+      #+:EXCL                          "Lisp-Dep/mp-acl"
       #| fall back |#                  "Lisp-Dep/mp-nil")
    "utils"
    "defresource"
