@@ -145,7 +145,7 @@
       (:motion-notify
        (make-instance 'pointer-motion-event :pointer 0 :button code :x x :y y
                      :sheet sheet :modifier-state state :timestamp time))
-      (:exposure
+      ((:exposure :display)
        (make-instance 'window-repaint-event :sheet sheet :modifier-state state))
       (t
        nil))))
