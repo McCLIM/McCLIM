@@ -26,6 +26,7 @@
 
 ;;;  When        Who    What
 ;;; --------------------------------------------------------------------------------------
+;;;  2002-02-10  GB     named allocator function
 ;;;  2001-05-21  GB     created
 
 (in-package :CLIM-INTERNALS)
@@ -249,18 +250,23 @@
                (allocator ()
                  ;; Function for ALLOCATE-RESOURCE
                  (let ((r.  (gensym "R."))
-                       (ro. (gensym "RO.")))
-                   `(lambda (,r. ,@parameters)
-                      (let ((,ro. ,(find-expr r.)))
-                        (declare (type resource-object ,ro.))
-                        ;; install parameters in resource-object and eval initializer
-                        ,(install-parameters-expr ro.)
-                        (let ((,name (resource-object-object ,ro.)))
-                          (declare (ignorable ,name))
-                          ,initializer)
-                        ;; done
-                        (values (resource-object-object ,ro.)
-                                ,ro.)))))
+                       (ro. (gensym "RO."))
+                       (fn. (make-symbol
+                               (with-standard-io-syntax
+                                   (let ((*package* (find-package :keyword)))
+                                     (format nil "ALLOCATOR for ~S" name))))))
+                   `(labels ((,fn. (,r. ,@parameters)
+                              (let ((,ro. ,(find-expr r.)))
+                                (declare (type resource-object ,ro.))
+                                ;; install parameters in resource-object and eval initializer
+                                ,(install-parameters-expr ro.)
+                                (let ((,name (resource-object-object ,ro.)))
+                                  (declare (ignorable ,name))
+                                  ,initializer)
+                                ;; done
+                                (values (resource-object-object ,ro.)
+                                        ,ro.))))
+                     #',fn.)))
                
                (install-parameters-expr (ro.)
                  (and parameters-needed-p
