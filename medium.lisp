@@ -430,12 +430,12 @@
 (defmethod medium-copy-area ((from-drawable basic-medium) from-x from-y width height
                              to-drawable to-x to-y)
   (declare (ignore from-x from-y width height to-drawable to-x to-y))
-  (error "MEDIUM-COPY-AREA is not implemented for generic PORTs"))
+  (error "MEDIUM-COPY-AREA is not implemented for basic MEDIUMs"))
 
 (defmethod medium-copy-area (from-drawable from-x from-y width height
                              (to-drawable basic-medium) to-x to-y)
   (declare (ignore from-drawable from-x from-y width height to-x to-y))
-  (error "MEDIUM-COPY-AREA is not implemented for generic PORTs"))
+  (error "MEDIUM-COPY-AREA is not implemented for basic MEDIUMs"))
 
 
 ;;; Medium-specific Drawing Functions
@@ -533,6 +533,22 @@
       (call-next-method medium element x y
                         align-x align-y toward-x toward-y
                         transform-glyphs))))
+
+(defmethod medium-copy-area :around ((from-drawable basic-medium)
+                                     from-x from-y width height
+                                     to-drawable to-x to-y)
+  (with-transformed-position ((medium-transformation from-drawable)
+                              from-x from-y)
+    (call-next-method from-drawable from-x from-y width height
+                      to-drawable to-x to-y)))
+
+(defmethod medium-copy-area :around (from-drawable from-x from-y width height
+                                     (to-drawable  basic-medium)
+                                     to-x to-y)
+  (with-transformed-position ((medium-transformation to-drawable)
+                              to-x to-y)
+    (call-next-method from-drawable from-x from-y width height
+                      to-drawable to-x to-y)))
 
 ;;; Fall-through Methods For Multiple Objects Drawing Functions
 
