@@ -352,7 +352,7 @@
   (stream-replay stream region))
 
 (defmethod handle-event ((stream output-recording-stream) (event window-repaint-event))
-  (repaint-sheet stream nil))
+  (repaint-sheet stream (window-event-region event)))
 
 (defmethod handle-event ((stream output-recording-stream) (event pointer-button-press-event))
   (with-slots (button x y) event
@@ -396,7 +396,8 @@
   (let ((method-name (intern (format nil "MEDIUM-~A*" name)))
 	(class-name (intern (format nil "~A-OUTPUT-RECORD" name)))
 	(old-medium (gensym))
-	(new-medium (gensym)))
+	(new-medium (gensym))
+	(border (gensym)))
     `(progn
        (defclass ,class-name (graphics-displayed-output-record)
 	 ,(compute-class-vars args))
@@ -406,11 +407,12 @@
 		      stream ink clipping-region transformation
 		      line-style text-style
 		      ,@args) graphic
-	   (multiple-value-bind (lf tp rt bt) (progn ,@body)
-	     (setq x1 lf
-		   y1 tp
-		   x2 rt
-		   y2 bt))))
+           (let ((,border (1+ (/ (line-style-thickness line-style) 2))))
+             (multiple-value-bind (lf tp rt bt) (progn ,@body)
+               (setq x1 (- lf ,border)
+                     y1 (- tp ,border)
+                     x2 (+ rt ,border)
+                     y2 (+ bt ,border))))))
        (defmethod ,method-name :around ((stream output-recording-stream) ,@args)
 	 (with-sheet-medium (medium stream)
 	   (when (stream-recording-p stream)
