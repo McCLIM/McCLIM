@@ -18,17 +18,17 @@
 
 (in-package :goatee)
 
-(defclass buffer-pointer ()
+(defclass location ()
   ((line :accessor line :initarg :line)
    (pos :accessor pos :initarg :pos))
   (:documentation "A location in a buffer."))
 
-(defmethod location* ((bp buffer-pointer))
+(defmethod location* ((bp location))
   (values (line bp) (pos bp)))
 
 (defgeneric* (setf location*) (line pos bp))
 
-(defmethod* (setf location*) (line pos (bp buffer-pointer))
+(defmethod* (setf location*) (line pos (bp location))
   (setf (values (line bp) (pos bp)) (values line pos)))
 
 ;;; basic-buffer must implement:
@@ -36,7 +36,7 @@
 ;;; tick
 ;;; size
 ;;; buffer-insert*
-;;; buffer-delete*
+;;; buffer-delete-char*
 ;;; buffer-open-line*
 ;;; buffer-close-line*
 
@@ -95,18 +95,11 @@
 (defmethod make-buffer-line ((buffer basic-buffer-mixin) &rest initargs)
   (apply #'make-instance 'buffer-line :buffer buffer initargs))
 
-(defmethod initialize-instance :after ((obj basic-buffer-mixin)
-				       &key initial-contents
-				       (start 0)
-				       (end (when initial-contents
-					      (length initial-contents))))
+(defmethod initialize-instance :after ((obj basic-buffer-mixin) &key)
   (dbl-insert-after (make-buffer-line obj :tick (incf (tick obj))) (lines obj))
-  (setf (point obj) (make-instance 'buffer-pointer
+  (setf (point obj) (make-instance 'location
 				   :line (dbl-head (lines obj))
-				   :pos 0))
-  (when initial-contents
-    (insert obj initial-contents :start start :end end)))
-
+				   :pos 0)))
 
 (defgeneric char-ref (buffer position))
 
@@ -136,12 +129,16 @@
 	  (setf (tick line) (incf (tick buf)))
 	  (dbl-insert-after new-line line)
 	  (incf (slot-value buf 'size))
-	  (values new-line 0)))))
+	  (values new-line 0))
+	(error 'buffer-bounds-error :buffer buf :line line :pos pos))))
 
 (defgeneric buffer-insert* (buffer thing line pos &key))
 
 (defmethod buffer-insert* ((buffer basic-buffer-mixin) (c character) line pos
 			   &key)
+  (when (or (> pos (line-last-point line))
+	    (< pos 0))
+    (error 'buffer-bounds-error :buffer buffer :line line :pos pos))
   (insert line c :position pos)
   (incf (slot-value buffer 'size))
   (setf (tick line) (incf (tick buffer)))
@@ -149,6 +146,9 @@
 
 (defmethod buffer-insert* ((buffer basic-buffer-mixin) (s string) line pos
 			   &key (start 0) (end (length s)))
+  (when (or (> pos (line-last-point line))
+	    (< pos 0))
+    (error 'buffer-bounds-error :buffer buffer :line line :pos pos))
   (let ((len (- end start)))
     (insert line s :position pos :start start :end end)
     (incf (slot-value buffer 'size) len)
@@ -202,7 +202,7 @@
   nil)
 
 (defgeneric buffer-close-line* (buffer line direction)
-  (:documentation "If DIRECTION is positive, elete the newline at the
+  (:documentation "If DIRECTION is positive, delete the newline at the
   end of line, bring the following line's contents onto line, and
   delete the following line.  If DIRECTION is negative, first move back
   one line, then do the deletion." ))
@@ -353,7 +353,7 @@
 (defmethod forward-char ((buf basic-buffer) n &rest key-args)
   (multiple-value-bind (new-line new-pos)
       (apply #'forward-char* buf n key-args)
-    (make-instance 'buffer-pointer :line new-line :pos new-pos)))
+    (make-instance 'location :line new-line :pos new-pos)))
 
 (defgeneric end-of-line* (buffer &key position line pos))
 
@@ -370,7 +370,7 @@
 (defmethod end-of-line ((buf basic-buffer) &rest key-args)
   (multiple-value-bind (new-line new-pos)
       (apply #'end-of-line* buf key-args)
-    (make-instance 'buffer-pointer :line new-line :pos new-pos)))
+    (make-instance 'location :line new-line :pos new-pos)))
 
 (defgeneric beginning-of-line* (buffer &key position line pos))
 
@@ -393,8 +393,159 @@
 	while (next line)
 	finally (return (end-of-line* buf :line line))))
 
+;;; Buffer pointers and the bp-buffer-mixin that maintains them.
+
+(defclass bp-buffer-mixin ()
+  ())
+
+(defclass bp-buffer-line (buffer-line)
+  ((bps :accessor bps :initarg :bps :initform nil)))
+
+(defmethod make-buffer-line ((buffer bp-buffer-mixin) &rest initargs)
+  (apply #'make-instance 'bp-buffer-line :buffer buffer initargs))
+
+(defclass buffer-pointer (location)
+  ()
+  (:documentation "Buffer pointer that moves with insertions at its location"))
+
+(defmethod initialize-instance :after ((obj buffer-pointer) &key)
+  (when (slot-boundp obj 'line)
+    (push obj (bps (line obj)))))
+
+(defmethod (setf line) (new-line (bp buffer-pointer))
+  (when (slot-boundp bp 'line)
+    (setf (bps (line bp)) (delete bp (bps (line bp))))
+    (prog1
+	(call-next-method)
+      (when new-line
+	(push bp (bps (line bp)))))))
+
+(defgeneric update-for-insert (bp pos delta))
+
+(defmethod update-for-insert ((bp buffer-pointer) pos delta)
+  (when (>= (pos bp) pos)
+    (incf (pos bp) delta)))
+
+(defclass fixed-buffer-pointer (buffer-pointer)
+  ()
+  (:documentation "Buffer pointer that doesn't move with insertions at its location"))
+
+(defmethod update-for-insert ((bp fixed-buffer-pointer) pos delta)
+  (when (> (pos bp) pos)
+    (incf (pos bp))))
+
+(defmethod buffer-insert* :after
+    ((buffer basic-buffer-mixin) (c character) line pos &key)
+  (loop for bp in (bps line)
+	do (update-for-insert bp pos 1)))
+  
+(defmethod buffer-insert* :after
+    ((buffer basic-buffer-mixin) (s string) line pos
+     &key (start 0) (end (length s)))
+  (loop with len = (- end start)
+	for bp in (bps line)
+	do (update-for-insert bp pos len)))
+
+(defmethod buffer-delete-char* :after ((buffer bp-buffer-mixin) line pos n)
+  (cond ((> n 0)
+	 (loop for bp in (bps line)
+	       when (> (pos bp) pos)
+	       do (setf (pos bp) (max pos (- (pos bp) n)))))
+	((< n 0)
+	 (loop with new-pos = (+ pos n)
+	       for bp in (bps line)
+	       do (cond ((>= (pos bp) pos)
+			 (incf (pos bp) n))
+			((> (pos bp) new-pos)
+			 (setf (pos bp) new-pos)))))))
+
+(defmethod buffer-open-line* :around
+    ((buf bp-buffer-mixin) (line bp-buffer-line) pos)
+  (multiple-value-bind (new-line new-pos)
+      (call-next-method)
+    (loop for bp in (bps line)
+	  if (typecase bp
+	       (fixed-buffer-pointer
+		(> (pos bp) pos))
+	       (t (>= (pos bp) pos)))
+	    do (setf (line bp) new-line
+		     (pos bp) (- (pos bp) pos))
+	    and collect bp into new-line-bps
+	  else
+	    collect bp into old-line-bps
+	  end
+	  finally (setf (bps line) old-line-bps
+			(bps new-line) new-line-bps))
+    (values new-line new-pos)))
+
+(defmethod buffer-close-line* :around
+    ((buffer bp-buffer-mixin) (line bp-buffer-line) direction)
+  (multiple-value-bind (this-line next-line)
+      (if (> 0 direction)
+	  (values line (next line))
+	  (values (prev line) line))
+    (multiple-value-bind (line new-pos)
+	(call-next-method)
+      (loop for bp in (bps next-line)
+	    do (progn
+		 (incf (pos bp) new-pos)
+		 (push bp (bps this-line))))
+      (values line new-pos))))
+
 ;;; In the next go-around, this will have buffer pointers, including the point
 ;;;which will be auto-updated.
 
-(defclass editable-buffer (basic-buffer-mixin)
-  ())
+(defclass editable-buffer (bp-buffer-mixin basic-buffer-mixin)
+  ((buffer-start :accessor buffer-start
+		 :documentation "A fixed buffer pointer at the start of the buffer.")
+   (buffer-end :accessor buffer-end
+	       :documentation "A buffer pointer at the end of the buffer.")))
+
+(defmethod initialize-instance :after ((obj editable-buffer)
+				       &key initial-contents
+				       (start 0)
+				       (end (when initial-contents
+					      (length initial-contents))))
+  (setf (buffer-start obj) (make-instance 'fixed-buffer-pointer
+					  :line (dbl-head (lines obj))
+					  :pos 0))
+  (setf (buffer-end obj) (make-instance 'buffer-pointer
+				     :line (dbl-head (lines obj))
+				     :pos 0))
+  (when initial-contents
+    (insert obj initial-contents :start start :end end)))
+
+(defmacro with-buffer-pointer* ((bp-var line pos &key (class ''buffer-pointer))
+				&body body)
+  "Like with-buffer-pointer, but takes line and pos as initialization
+  arguments."
+  (let ((bp-temp (gensym)))
+     `(let* ((,bp-temp (make-instance ,class :line ,line :pos ,pos))
+	     (,bp-var ,bp-temp))
+	(unwind-protect
+	     (progn
+	       ,@body)
+	  (setf (line ,bp-temp) nil)))))
+
+(defmacro with-buffer-pointer ((bp-var location &key (class ''buffer-pointer))
+			       &body body)
+  "binds bp-var to a buffer pointer initialized to location.  Class is the
+   class of the buffer pointer, defaulting to 'buffer-pointer. bp-var is
+   deallocated when at exit from the form."
+  (let ((line-var (gensym "LINE"))
+	(pos-var (gensym "POS")))
+     `(multiple-value-bind (,line-var ,pos-var)
+	  (location* ,location)
+       (with-buffer-pointer* (,bp-var ,line-var ,pos-var :class ,class)
+	 ,@body))))
+
+(defmacro with-point ((buffer) &body body)
+  "Saves and restores the point of buffer around body."
+  (let ((bp-var (gensym "BP"))
+	(buffer-var (gensym "BUFFER")))
+    `(let ((,buffer-var ,buffer))
+       (with-buffer-pointer (,bp-var (point ,buffer-var))
+	 (unwind-protect
+	      (progn
+		,@body)
+	   (setf (location* (point ,buffer-var)) (location* ,bp-var)))))))

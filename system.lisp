@@ -167,7 +167,7 @@
    "Examples/calculator"
    "Examples/colorslider"
    "Examples/menutest"
-  ;"Examples/address-book"
+   "Examples/address-book"
    "Examples/traffic-lights"
    "Examples/clim-fig"
    "Examples/postscript-test"

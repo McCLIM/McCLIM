@@ -67,7 +67,8 @@
 	   ;; If activated, insertion pointer is at fill pointer
 	   ((stream-activated stream)
 	    (return-from stream-read-gesture (values nil :eof)))
-	   (t (loop for result = (multiple-value-bind (gesture type)
+	   (t (setf (slot-value stream 'rescanning-p) nil)
+	      (loop for result = (multiple-value-bind (gesture type)
 				     (apply #'stream-read-gesture
 					    (encapsulating-stream-stream stream)
 					    rest-args)
@@ -111,6 +112,20 @@
 					       *activation-gestures*))))
        ,@body)))
 
+(defmacro with-delimiter-gestures ((gestures &key override) &body body)
+  ;; XXX Guess this implies that gestures need to be defined at compile time.
+  ;; Sigh.
+  (let ((gesture-form (if (and (symbolp gestures)
+			       (gethash gestures *gesture-names*))
+			  `(list ',gestures)
+			  gestures))
+	(gestures (gensym)))
+    `(let* ((,gestures ,gesture-form)
+	    (*delimiter-gestures* (if ,override
+				      ,gestures
+				      (append ,gestures
+					      *delimiter-gestures*))))
+       ,@body)))
 
 (defun activation-gesture-p (gesture)
   (loop for gesture-name in *activation-gestures*
@@ -235,7 +250,10 @@
 				format-string
 				&rest format-args)
   (declare (ignore format-string format-args))
-  nil)
+  (fresh-line *debug-io*)
+  (apply #'format *debug-io* format-string format-args)
+  (fresh-line *debug-io*)
+  (force-output *debug-io*))
 
 ;;; Defaults for replace-input and presentation-replace-input.
 
@@ -275,7 +293,8 @@
 			 :input-wait-handler input-wait-handler
 			 :pointer-button-press-handler
 			 pointer-button-press-handler)
-	  do (cond ((or (activation-gesture-p gesture)
+	  do (cond ((or (null gesture)
+			(activation-gesture-p gesture)
 			(typep gesture 'pointer-button-event)
 			(and (not in-quotes)
 			     (delimiter-gesture-p gesture)))
@@ -308,7 +327,7 @@
 
 (defun simple-parse-error (format-string &rest format-args)
   (error 'simple-parse-error
-	 :format-string format-string :format-arguments format-args))
+	 :format-control format-string :format-arguments format-args))
 
 (define-condition input-not-of-required-type (error)
   ((string :reader not-required-type-string :initarg :string)
@@ -320,3 +339,285 @@
 
 (defun input-not-of-required-type (object type)
   (error 'input-not-of-required-type :string object :type type))
+
+;;; 24.5 Completion
+
+(defvar *completion-gestures* '(:complete))
+
+(define-condition simple-completion-error (simple-parse-error)
+  ())
+
+;;; wrapper around event-matches-gesture-name-p to match against characters too.
+
+(defgeneric gesture-matches-spec-p (gesture spec)
+  (:documentation "Match a gesture against a gesture name or character."))
+
+(defmethod gesture-matches-spec-p (gesture (spec symbol))
+  (event-matches-gesture-name-p gesture spec))
+
+(defmethod gesture-matches-spec-p ((gesture character) (spec character))
+  (char-equal gesture spec))
+
+(defmethod gesture-matches-spec-p (gesture spec)
+  nil)
+
+(defun gesture-match (gesture list)
+  "Returns t if gesture matches any gesture spec in list."
+  (some #'(lambda (name)
+	    (gesture-matches-spec-p gesture name))
+	list))
+
+;;; Helpers for complete-input, which is just getting too long.
+
+(defun complete-gesture-p (gesture)
+  (or (delimiter-gesture-p gesture) (activation-gesture-p gesture)))
+
+;;; Break out rescanning case for complete-input.
+;;;
+;;; funky logic; we don't know if we're still rescanning until after the call
+;;; to read-gesture. 
+(defun complete-input-rescan (stream func partial-completers so-far)
+  (when (stream-rescanning-p stream)
+    (loop for gesture = (read-gesture :stream stream)
+	  while (stream-rescanning-p stream)
+	  if (complete-gesture-p gesture)
+	    do (let (input success object nmatches)
+		 (when (gesture-match gesture partial-completers)
+		   (setf (values input success object nmatches)
+			 (funcall func (subseq so-far 0) :complete-limited)))
+		 (unless (> nmatches 0)
+		   ;; Not a partial match; better be a total match
+		   (setf (values input success object)
+			 (funcall func (subseq so-far 0) :complete))
+		   (if success
+		     (progn
+		       (unread-gesture gesture :stream stream)
+		       (return-from complete-input-rescan
+			 (values object success input)))
+		     (error 'simple-completion-error
+			    :format-control "complete-input: While rescanning,~
+                                             can't match ~A~A"
+			    :format-arguments (list so-far gesture)))))
+	  end
+	  do (vector-push-extend gesture so-far)
+	  finally (unread-gesture gesture :stream stream)))
+  nil)
+
+(defun complete-input (stream func &key
+		       partial-completers allow-any-input possibility-printer
+		       (help-displays-possibilities t))
+  (declare (ignore allow-any-input))
+  (declare (ignore possibility-printer help-displays-possibilities))
+  (let ((so-far (make-array 1 :element-type 'character :adjustable t
+			    :fill-pointer 0)))
+    (with-input-position (stream)
+      (flet ((insert-input (input)
+	       (adjust-array so-far (length input) :fill-pointer (length input))
+	       (replace so-far input)
+	       (replace-input stream input :rescan nil)))
+	(multiple-value-bind (object success input)
+	    (complete-input-rescan stream func partial-completers so-far)
+	  (when success
+	    (return-from complete-input (values object success input))))
+	(loop for gesture = (read-gesture :stream stream)
+	      for mode = (cond ((gesture-match gesture partial-completers)
+				:complete-limited)
+			       ((gesture-match gesture *completion-gestures*)
+				:complete-maximal)
+			       ((complete-gesture-p gesture)
+				:complete)
+			       (t nil))
+	      do (if mode
+		     (multiple-value-bind
+			   (input success object nmatches possibilities)
+			 (funcall func (subseq so-far 0) mode)
+		       (when (and (zerop nmatches)
+				  (eq mode :complete-limited)
+				  (complete-gesture-p gesture))
+			     ;; Gesture is both a partial completer and a
+			     ;; delimiter e.g., #\space.  If no partial match,
+			     ;; try again with a total match.
+			     (setf (values input success object nmatches
+					   possibilities)
+				   (funcall func (subseq so-far 0) :complete))
+			     (setf mode :complete))
+		       ;; Preserve the delimiter
+		       (when (and success (eq mode :complete))
+			 (unread-gesture gesture :stream stream))
+		       (if (> nmatches 0)
+			   (insert-input input)
+			   (beep))
+		       (cond ((and success (eq mode :complete))
+			      (return-from complete-input
+				(values object success input)))
+			     ((activation-gesture-p gesture)
+			      (error 'simple-completion-error
+				     :format-control "Input ~S does not match"
+				     :format-arguments (list so-far)))))
+		     (vector-push-extend gesture so-far)))))))
+
+;;; helper function
+
+(defun left-prefix (string1 string2 &key (end nil))
+  "Returns the common prefix of string1 and string2, up to end"
+  (let* ((end1 (if end
+		   (min (length string1) end)
+		   nil))
+	 (end2 (if end
+		   (min (length string2) end)
+		   nil))
+	 (mismatch (mismatch string1 string2 :test #'char-equal
+			     :end1 end1 :end2 end2)))
+    (cond (mismatch
+	   (subseq string1 0 mismatch))
+	  (end
+	   (subseq string1 0 end))
+	  (t string1))))
+
+(defun complete-from-generator (initial-string generator delimiters &key
+				(action :complete)
+				(predicate (constantly t)))
+  (when (eq action :possibilities)
+    (return-from complete-from-generator
+      (complete-from-generator-possibilities initial-string
+					     generator
+					     predicate)))
+  (let ((initial-string-len (length initial-string))
+	(candidate-match nil)
+	(matches 0)
+	(object nil)
+	(identical nil)
+	(identical-match nil)
+	(identical-object nil)
+	(actual-match nil))
+    (flet ((suggester (str obj)
+	     (unless (funcall predicate obj)
+	       (return-from suggester nil))
+	     (let ((partial-match-end
+		    (and (eq action :complete-limited)
+			 (>= (length str) initial-string-len)
+			 (position-if #'(lambda (c) (member c delimiters))
+				      str
+				      :start initial-string-len))))
+	       (when (and (eq action :complete-limited)
+			  (null partial-match-end))
+		 (return-from suggester nil))
+	       (unless partial-match-end
+		 (setq partial-match-end (1- (length str))))
+	       (let ((mismatch-initial (mismatch initial-string str
+						 :test #'char-equal)))
+		 (cond ((and mismatch-initial
+			     (>= mismatch-initial (length initial-string)))
+			(incf matches)
+			(unless candidate-match
+			  (setq object obj))
+			(setf candidate-match
+			      (cond (candidate-match
+				     (left-prefix candidate-match
+						  str
+						  :end (1+ partial-match-end)))
+				    (partial-match-end
+				     (subseq str 0 (1+ partial-match-end)))
+				    (t str))
+			      actual-match str))
+		       ((null mismatch-initial)
+			(incf matches)
+			;; If there's a longer match we want to find it.
+			(if (eq action :complete-maximal)
+			    (progn
+			      (setf identical-match str)
+			      (setf identical-object obj))
+			    (progn
+			      (setf candidate-match str)
+			      (setf object obj)))
+			(setf identical t)))))))
+      (funcall generator initial-string #'suggester)
+      (let ((partial-match-before-end (and (eq action :complete-limited)
+					   (eql matches 1)
+					   (< (length candidate-match)
+					      (length actual-match)))))
+	(values (or candidate-match identical-match initial-string)
+		(or (and identical
+			 (or (not (eq action :complete-maximal))
+			     (eql matches 1)))
+		    (and (eql matches 1)
+			 (not partial-match-before-end)))
+		(if (eq action :complete-maximal)
+		    (cond ((and (eql matches 2) identical-match)
+			   object)
+			  ((and identical-match (eql matches 1))
+			   identical-object)
+			  ((eql matches 1)
+			   object))
+		    (and (or identical (and (eql matches 1)
+					    (not partial-match-before-end)))
+			 object))
+		matches
+		nil)))))
+
+;;; The possibilities action is different enough that I don't want to add to
+;;; the spaghetti above...
+
+(defun complete-from-generator-possibilities
+    (initial-string generator predicate)
+  (let ((possibilities nil)
+	(nmatches 0)
+	(initial-len (length initial-string)))
+    (flet ((suggester (str obj)
+	     (unless (funcall predicate obj)
+	       (return-from suggester nil))
+	     (when (>= (mismatch initial-string str :test #'char-equal)
+		       initial-len)
+	       (incf nmatches)
+	       (push (list str obj) possibilities))))
+      (funcall generator initial-string #'suggester)
+      (if (and (eql nmatches 1)
+	       (string-equal initial-string (caar possibilities)))
+	  (values (caar possibilities)
+		  t
+		  (cdar possibilities)
+		  nmatches
+		  possibilities)
+	  (values initial-string nil nil nmatches possibilities)))))
+
+(defun complete-from-possibilities (initial-string completions delimiters &key
+				    (action :complete)
+				    (predicate (constantly t))
+				    (name-key #'car)
+				    (value-key #'cadr))
+  (flet ((generator (input-string suggester)
+	   (declare (ignore input-string))
+	   (loop for possibility in completions
+		 do (funcall suggester
+			     (funcall name-key possibility)
+			     (funcall value-key possibility)))))
+    (complete-from-generator initial-string #'generator delimiters
+			     :action action
+			     :predicate predicate)))
+
+(defmacro completing-from-suggestions ((stream &rest args) &body body)
+  (when (eq stream t)
+    (setq stream '*standard-input*))
+  (let ((generator (gensysm "GENERATOR"))
+	(input-string (gensysm "INPUT-STRING"))
+	(suggester (gensym "SUGGESTER")))
+     `(flet ((,generator (,input-string ,suggester)
+	      (declare (ignore ,input-string))
+	      (flet ((suggest (completion object)
+		       (funcall ,suggester completion object)))
+		,@body)))
+       ;; This sucks, but we can't use args to the macro directly because
+       ;; we want the partial-delimiters argument and we need to insure its
+       ;; proper evaluation order with everything else.
+       (let* ((complete-input-args (list ,args))
+	      (partial-completers (getf ,complete-input-args
+					:partial-completers
+					nil)))
+	 (apply #'complete-input
+		,stream
+		#'(lambda (so-far mode)
+		    (complete-from-generator so-far
+					     #',generator
+					     partial-completers
+					     :action mode))
+		complete-input-args)))))

@@ -176,8 +176,9 @@
 (defmethod distribute-event ((port basic-port) event)
   (cond
    ((typep event 'keyboard-event)
-    (dispatch-event (or (port-keyboard-input-focus port) (event-sheet event))
-		    event))
+    (when (port-keyboard-input-focus port)
+      (setf (slot-value event 'sheet) (port-keyboard-input-focus port)))
+    (dispatch-event (event-sheet event) event))
    ((typep event 'window-event)
 ;   (dispatch-event (window-event-mirrored-sheet event) event)
     (dispatch-event (event-sheet event) event))

@@ -108,6 +108,10 @@
 				       'insert-character
 				       *simple-area-gesture-table*))
 
+(add-gesture-command-to-table #\tab
+			      'insert-character
+			      *simple-area-gesture-table*)
+
 (add-gesture-command-to-table #\rubout
 			      'backwards-delete-character
 			      *simple-area-gesture-table*)

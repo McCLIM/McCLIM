@@ -318,7 +318,7 @@ FRAME-EXIT condition."))
 	  (command-unparser 'command-line-command-unparser)
 	  (partial-command-parser
 	   'command-line-read-remaining-arguments-for-partial-command)
-	  (prompt nil))
+	  (prompt "Command: "))
   (when *multiprocessing-p*
     (sleep 4)) ; wait for the panes to be finalized - KLUDGE!!! - mikemac
   (loop
@@ -345,21 +345,22 @@ FRAME-EXIT condition."))
 	(when prompt
 	  (with-text-style (*standard-input* prompt-style)
 	    (if (stringp prompt)
-		(stream-write-string *standard-input* prompt)
-	      (apply prompt (list *standard-input* frame)))
-	    (stream-finish-output *standard-input*)))
-	(setq results (multiple-value-list (execute-frame-command frame (read-frame-command frame))))
-	(loop for result in results
-	      do (print result *standard-input*))
-	(terpri *standard-input*))
-      )))
+		(write-string prompt *standard-input*)
+	      (funcall prompt *standard-input* frame))
+	    (finish-output *standard-input*)))
+	(let ((command (read-frame-command frame)))
+	  (fresh-line *standard-input*)
+	  (when command
+	    (execute-frame-command frame command))
+	  (fresh-line *standard-input*))))))
+
 
 (defmethod read-frame-command ((frame application-frame) &key (stream *standard-input*))
   (read-command (frame-command-table frame) :stream stream))
 
 (defmethod execute-frame-command ((frame application-frame) command)
-  #+ignore (apply (command-name command) (command-arguments command))
-  (eval command))
+  (apply (command-name command) (command-arguments command)))
+
 
 (defmethod make-pane-1 ((fm frame-manager) (frame application-frame) type &rest args)
   `(make-pane-1 ,fm ,frame ',type ,@args))

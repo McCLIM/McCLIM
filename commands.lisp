@@ -2,6 +2,7 @@
 
 ;;;  (c) copyright 1998,1999,2000 by Michael McDonald (mikemac@mikemac.com)
 ;;;  (c) copyright 2000 by Robert Strandh (strandh@labri.u-bordeaux.fr)
+;;;  (c) copyright 2002 by Tim Moore (moore@bricoworks.com)
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -118,7 +119,7 @@
 
 (defmacro define-command-table (name &key inherit-from menu)
   (let ((inherit (cond (inherit-from)
-		       (t '(clim-global-command-table))))
+		       (t '(global-command-table))))
 	(menu-items menu))
     `(let ((old-table (gethash ',name *command-tables* nil)))
        (if old-table
@@ -327,27 +328,183 @@
 ;;;
 ;;; Commands
 
-(defmacro define-command (name-and-options args &body body)
-  (let* ((func (if (consp name-and-options) (first name-and-options) name-and-options))
-         (options (if (consp name-and-options) (rest name-and-options) nil))
-	 (command-table (getf options :command-table nil))
-	 (name (getf options :name (command-name-from-symbol func)))
-	 (menu (getf options :menu nil))
-	 (keystroke (getf options :keystroke nil))
-	 )
-    `(progn
-       (defun ,func ,(loop for arg in args
-			 collect (first arg))
-         ,@body)
-       ,(if command-table
-            `(add-command-to-command-table ',func ',command-table
-                                           :name ,name :menu ,menu
-                                           :keystroke ,keystroke :errorp nil))
-       ',func)))
+(defparameter *command-parser-table* (make-hash-table)
+  "Mapping from command names to argument parsing functions.")
 
-(defvar *command-parser* nil)
-(defvar *command-unparser* nil)
+(defvar *unsupplied-argument-maker* (cons nil nil))
+
+(defvar *command-name-delimiters* '(command-delimiter))
+
+(defvar *command-argument-delimiters* '(command-delimiter))
+
+(defun make-argument-accept-fun (name required-args keyword-args)
+  (let ((stream-var (gensym "STREAM"))
+	(required-arg-names (mapcar #'car required-args)))
+    (flet ((make-accept (arg-clause)
+	     (let ((arg (car arg-clause))
+		   (ptype (cadr arg-clause))
+		   (key-args (cddr arg-clause))
+		   (accept-keys '(:default :default-type :display-default
+				  :prompt :documentation)))
+	       `(setq ,arg (accept ,ptype
+			    :stream ,stream-var
+			    ,@(mapcan
+			       #'(lambda (key)
+				   (let ((val (getf key-args
+						    key
+						    stream-var)))
+				     (unless (eq val stream-var)
+				       `(,key ,val))))
+			       accept-keys))))))
+      `(defun ,name (,stream-var)
+	 (let ,(mapcar #'(lambda (arg)
+			   `(,arg *unsupplied-argument-maker*))
+		       required-arg-names)
+	   (block activated
+	     (let (gesture)
+	       ,@(mapcan #'(lambda (arg)
+			     `(,(make-accept arg)
+			       (setq gesture (read-gesture :stream ,stream-var))
+			       (when (or (null gesture)
+					 (activation-gesture-p gesture))
+				 (return-from activated nil))
+			       (unless (delimiter-gesture-p gesture)
+				 (unread-gesture gesture :stream ,stream-var))))
+			 required-args)))
+	   (list ,@required-arg-names))))))
+
+;;; XXX temporarily make name default t so we can debug command line processing
+;;; with some interesting examples
+(defmacro define-command (name-and-options args &body body)
+  (unless (listp name-and-options)
+    (setq name-and-options (list name-and-options)))
+  (destructuring-bind (func &key command-table (name t) menu keystroke)
+      name-and-options
+    (multiple-value-bind (required-args keyword-args)
+	(loop for arg-tail on args
+	      for (arg) = arg-tail
+	      unless (eq arg '&key)
+	      collect arg into required
+	      finally (return (values required (cdr arg-tail))))
+      (let* ((command-func-args
+	      `(,@(mapcar #'car required-args)
+		,@(and
+		   keyword-args
+		   `(&key ,@(mapcar #'(lambda (arg-clause)
+					(destructuring-bind (arg-name ptype
+							     &key default
+							     &allow-other-keys)
+					    arg-clause
+					  (declare (ignore ptype))
+					  `(arg-name default)))
+				    keyword-args)))))
+	     (accept-fun-name (gentemp (format nil "~A%ACCEPTOR%"
+					       (symbol-name func)
+					       (symbol-package func)) )))
+	
+	`(progn
+	  (defun ,func ,command-func-args
+	    ,@body)
+	  ,(if command-table
+	       `(add-command-to-command-table ',func ',command-table
+		 :name ,name :menu ,menu
+		 :keystroke ,keystroke :errorp nil))
+	  ,(make-argument-accept-fun accept-fun-name
+				     required-args
+				     keyword-args)
+	  (setf (gethash ',func *command-parser-table*) #',accept-fun-name)
+	  ',func)))))
+
+(define-presentation-type command-name
+    (&key (command-table (frame-command-table *application-frame*))))
+
+(define-presentation-method presentation-typep (object (type command-name))
+  (command-accessible-in-command-table-p object command-table))
+
+(define-presentation-method present (object (type command-name)
+				     stream
+				     (view textual-view)
+				     &key acceptably for-context-type)
+  (declare (ignore acceptably for-context-type))
+  (princ (command-line-name-for-command object command-table :errorp :create)
+	 stream))
+
+
+(define-presentation-method accept ((type command-name) stream
+				    (view textual-view)
+				    &key (default nil defaultp) default-type)
+  (flet ((generator (string suggester)
+	   (map-over-command-table-names suggester command-table)))
+    (multiple-value-bind (object success string)
+	(complete-input stream
+			#'(lambda (so-far mode)
+			    (complete-from-generator so-far
+						     #'generator
+						     '(#\space)
+						     :action mode))
+			:partial-completers '(#\space))
+      (if success
+	  (values object type)
+	  (simple-parse-error "No command named ~S" string)))))
+
+(defun command-line-command-parser (command-table stream)
+  (let ((command-name nil)
+	(command-args nil))
+    (with-delimiter-gestures (*command-name-delimiters* :override t)
+      (setq command-name (accept `(command-name :command-table ,command-table)
+				 :stream stream :prompt nil))
+      (let ((delimiter (read-gesture :stream stream :peek-p t)))
+	(when (and delimiter
+		   (or (activation-gesture-p delimiter)
+		       (delimiter-gesture-p delimiter)))
+	  (read-gesture :stream stream))))
+    (with-delimiter-gestures (*command-argument-delimiters* :override t)
+      (setq command-args (funcall (gethash command-name *command-parser-table*)
+				  stream)))
+    (cons command-name command-args)))
+
+(defun command-line-command-unparser (command-table stream command)
+  (write-string (command-line-name-for-command (car command) command-table
+					       :errorp :create)
+		stream)
+  (with-delimiter-gestures (*command-argument-delimiters* :override t)
+    (loop for arg in (cdr command)
+	do (progn
+	     (write-char #\space stream)
+	     (write-token (present-to-string arg (presentation-type-of arg)
+					     :acceptably t)
+			  stream)))))
+
+(defparameter *command-parser* #'command-line-command-parser)
+
+(defvar *command-unparser* #'command-line-command-unparser)
+
 (defvar *partial-command-parser* nil)
+
+(define-presentation-type command
+    (&key (command-table (frame-command-table *application-frame*))))
+
+(define-presentation-method presentation-typep (object (type command))
+  (and (consp object)
+       (presentation-typep (car object)
+			   `(command-name :command-table ,command-table))))
+
+(define-presentation-method present (object (type command)
+				     stream
+				     (view textual-view)
+				     &key acceptably for-context-type)
+  (declare (ignore acceptably for-context-type))
+  (funcall *command-unparser* command-table stream object))
+
+(define-presentation-method accept ((type command) stream
+				    (view textual-view)
+				    &key (default nil defaultp) default-type)
+  (let ((command (funcall *command-parser* command-table stream)))
+    (cond ((and (null command) defaultp)
+	   (values default default-type))
+	  ((null command)
+	   (simple-parse-error "Empty command"))
+	  (t (values command type)))))
 
 (defun command-name (command)
   (first command))
@@ -356,12 +513,25 @@
   (rest command))
 
 (defun read-command (command-table
-		     &key (stream *query-io*)
+		     &key (stream *standard-input*)
 			  (command-parser *command-parser*)
 			  (command-unparser *command-unparser*)
 			  (partial-command-parser *partial-command-parser*)
 			  use-keystrokes)
-  (declare (ignore command-table command-parser command-unparser partial-command-parser use-keystrokes))
-#+ignore  (read-preserving-whitespace stream)
-  (accept 'expression :stream stream))
+  (declare (ignore use-keystrokes))
+  (let ((*command-parser* command-parser)
+	(*command-unparser* command-unparser)
+	(*partial-command-parser* partial-command-parser))
+    (handler-case
+	(accept `(command :command-table ,command-table)
+	    :stream stream
+	    :prompt nil)
+      ((or simple-parse-error input-not-of-required-type)  (c)
+       (beep)
+       (fresh-line *query-io*)
+       (princ c *query-io*)
+       (terpri *query-io*)
+       nil))))
+
+
 

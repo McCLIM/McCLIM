@@ -118,7 +118,7 @@
 
 ;;; Hopefully only used on small buffers.
 
-(defun offset-location* (buffer offset)
+(defun location*-offset (buffer offset)
   (loop for line = (dbl-head (lines buffer)) then (next line)
 	for size = (and line (size line))
 	while line
@@ -133,12 +133,24 @@
   size of buffer ~S"
 		       :format-arguments (list offset buffer))))
 
+(defun offset-location* (buffer line pos)
+  (loop with end-line = (location* (buffer-end buffer))
+	for buf-line = (location* (buffer-start buffer)) then (next buf-line)
+	until (or (eq buf-line line) (eq buf-line end-line))
+	summing (size line) into total-offset
+	finally (progn
+		  (unless (eq buf-line line)
+		    (error 'goatee-error
+			   :format "Location line ~S pos ~S isn't in buffer ~S"
+			   :format-arguments (list line pos buffer)))
+		  (return (+ total-offset pos)))))
+
 (defmethod replace-input ((stream goatee-input-editing-mixin) new-input
 			  &key
 			  (start 0)
 			  (end (length new-input))
 			  (buffer-start nil buffer-start-supplied-p)
-			  (rescan nil))
+			  (rescan nil rescan-supplied-p))
   (unless buffer-start-supplied-p
     (if (eq stream climi::*current-input-stream*)
 	(setq buffer-start climi::*current-input-position*)
@@ -148,20 +160,33 @@
 	 (buf (buffer area))
 	 (del-chars (- scan-pointer buffer-start)))
     (if (<= 0 del-chars)
-	(if (mismatch (stream-input-buffer stream) new-input
-		      :start1 buffer-start :end1 scan-pointer
-		      :start2 start :end2 end)
-	    (multiple-value-bind (line pos)
-		(offset-location* buf buffer-start)
-	      (when (> del-chars 0)
-		(delete-char buf del-chars :line line :pos pos))
-	      ;; location should be preserved across the delete-char, but it
-	      ;; would be safest to use a buffer pointer or something...
-	      (insert buf new-input :line line :pos pos :start start :end end)
-	      (redisplay-area area)
-	      (queue-rescan stream))
-	    (when rescan
-	      (queue-rescan stream)))
+	(progn
+	  (with-point (buf)
+	    (if (mismatch (stream-input-buffer stream) new-input
+			  :start1 buffer-start :end1 scan-pointer
+			  :start2 start :end2 end)
+		(multiple-value-bind (line pos)
+		    (location*-offset buf buffer-start)
+		  (when (> del-chars 0)
+		    (delete-char buf del-chars :line line :pos pos))
+		  ;; location should be preserved across the delete-char, but it
+		  ;; would be safest to use a buffer pointer or something...
+		  (insert buf new-input
+			  :line line :pos pos :start start :end end)
+		  (make-input-editing-stream-snapshot stream area)
+		  ;; If not rescanning, adjust scan pointer to point after new
+		  ;; input
+		  (if (and rescan-supplied-p (null rescan))
+		      (setf (stream-scan-pointer stream)
+			    (offset-location* buf
+					      (line (point buf))
+					      (pos (point buf))))
+		      (queue-rescan stream)))
+		(when rescan
+		  (queue-rescan stream))))
+	  (setf (stream-insertion-pointer stream)
+		(offset-location* buf (line (point buf)) (pos (point buf))))
+	  (redisplay-area area))
 	(warn "replace-input stream ~S: buffer-start ~S is greater than ~
                scan-pointer ~S.  Don't know how to deal with that."
 	      stream

@@ -160,22 +160,31 @@ that has no default is supplied with '*"
 		   (transform-parameters-lambda-list lambda-var))
 		  (t lambda-var)))))
 
-;;; I'm not using COLLECT because I'm superstitious about doing a
-;;; LOOP-FINISH out of the collect form.  Call me paranoid.
   (defun fake-params-args (ll)
-    (let ((state 'required)
-	  (result nil))
-      (loop for lambda-var in ll
-	    do (cond ((member lambda-var lambda-list-keywords :test #'eq)
-		      (setq state lambda-var)
-		      (unless (eq state '&whole)
-			(loop-finish)))
-		     ((eq state '&whole)
-		      (setq state 'required))
-		     ((atom lambda-var)
-		      (push (gensym (symbol-name lambda-var)) result))
-		     (t (push (fake-params-args lambda-var) result)))
-	    finally (return (nreverse result)))))
+    (let ((state 'required))
+      (flet ((do-arg (lambda-var)
+	       (let ((var-name (symbol-name lambda-var)))
+		 (cond ((or (eq state 'required) (eq state '&optional))
+			(list (gensym var-name)))
+		       ((eq state '&key)
+			`(,(intern var-name :keyword) ,(gensym var-name)))
+		       (t nil)))))
+	(loop for lambda-var in ll
+	      append (cond ((member lambda-var lambda-list-keywords :test #'eq)
+			    (setq state lambda-var)
+			    nil)
+			   ((eq state '&whole)
+			    (setq state 'required)
+			    nil)
+			   ((atom lambda-var)
+			    (do-arg lambda-var))
+			   ((consp lambda-var)
+			    (let ((var (car lambda-var)))
+			      (do-arg (if (and (eq state '&key) (consp var))
+					  (car var)
+					  var))))
+			   (t (list (fake-params-args lambda-var))))))))
+  
 
 ;;; Yet another variation on a theme...
 
@@ -899,7 +908,9 @@ function lambda list"))
 	      (setf (nth (type-arg-position gf) method-ll) type-var)
 	      `(defmethod ,(generic-function-name gf) ,@qualifiers ,method-ll
 		 ,decls
-		,@real-body))))))))
+		 (block ,name
+		   ,@real-body)))))))))
+
 
 
 (defmacro define-default-presentation-method (name &rest args)
@@ -943,6 +954,10 @@ function lambda list"))
 (define-presentation-generic-function  %presentation-typep presentation-typep
   (type-key parameters object type))
 
+(define-default-presentation-method presentation-typep (object type)
+  (declare (ignore object type))
+  nil)
+
 (defun presentation-typep (object type)
   (with-presentation-type-decoded (name parameters)
     type
@@ -969,7 +984,8 @@ function lambda list"))
     (let ((parameter-ll (parameters-lambda-list ptype-entry)))
       (when (eq (car parameter-ll) '&whole)
 	(setq parameter-ll (cddr parameter-ll)))
-      (if (member (car parameter-ll) lambda-list-keywords)
+      (if (or (null parameter-ll)
+	      (member (car parameter-ll) lambda-list-keywords))
 	  name
 	  (call-next-method)))))
 
@@ -1074,6 +1090,17 @@ function lambda list"))
 (define-presentation-generic-function %describe-presentation-type
     describe-presentation-type
   (type-key parameters options type stream plural-count ))
+
+;;; Support for the default method on describe-presentation-type: if a CLOS
+;;; class has been defined as a presentation type, get description out of the
+;;; presentation type.
+
+(defmethod description ((class standard-class))
+  (let* ((name (clim-mop:class-name class))
+	 (ptype-entry (gethash name *presentation-type-table*)))
+    (if ptype-entry
+	(description ptype-entry)
+	(make-default-description name))))
 
 (define-default-presentation-method describe-presentation-type
     (type stream plural-count)
@@ -1280,12 +1307,16 @@ function lambda list"))
 	       (typep event 'pointer-event)
 	       (or prefer-pointer-window (eq stream (event-sheet event))))
       ;; Stream only needs to see button press events.
-      (unless (typep event 'pointer-button-press-event)
+      ;; XXX Need to think about this more.  Should any pointer events be
+      ;; passed through?  If there's no presentation, maybe?
+      (unless #+nil(typep event 'pointer-button-press-event) nil
 	(event-queue-read queue))
       (frame-input-context-track-pointer frame
 					 input-context
 					 (event-sheet event)
-					 event))))
+					 event)
+      (when (typep event 'pointer-button-press-event)
+	(funcall *pointer-button-press-handler* stream event)))))
   
 
 
@@ -1341,11 +1372,14 @@ function lambda list"))
 (defvar *recursive-accept-p* nil)
 (defvar *recursive-accept-1-p* nil)
 
+;;; The spec says "default-type most be a presentation type specifier", but the
+;;; examples we have imply that default-type is optional, so we'll be liberal
+;;; in what we accept.
 
 (defun accept (type &rest rest-args &key
 	       (stream *standard-input* streamp)
 	       (view (stream-default-view stream))
-	       default
+	       (default nil defaultp)
 	       (default-type nil default-type-p)
 	       provide-default
 	       insert-default
@@ -1360,8 +1394,7 @@ function lambda list"))
 	       additional-activation-gestures
 	       delimiter-gestures
 	       additional-delimiter-gestures)
-  (declare (ignore default
-		   provide-default
+  (declare (ignore provide-default
 		   insert-default
 		   replace-input
 		   active-p
@@ -1387,8 +1420,11 @@ function lambda list"))
 	 (*recursive-accept-1-p* t))
     (when streamp
       (remf new-rest-args :stream))
-    (when default-type-p
-      (setf (getf new-rest-args :default-type) real-default-type))
+    (cond (default-type-p
+	   (setf (getf new-rest-args :default-type) real-default-type))
+	  (defaultp
+	   (setf (getf new-rest-args :default-type)
+		 (presentation-type-of default))))
     (when historyp
       (setf (getf new-rest-args :history) real-history-type))
     (apply #'prompt-for-accept stream real-type view new-rest-args)
@@ -1417,13 +1453,17 @@ function lambda list"))
 			  &rest args)
   (apply #'accept-1 stream type args))
 
+(defmethod stream-accept ((stream standard-input-editing-stream) type
+			  &rest args)
+  (apply #'accept-1 stream type args))
+
 (defun accept-1 (stream type &key
 		 (view (stream-default-view stream))
 		 (default nil defaultp)
 		 (default-type nil default-type-p)
 		 provide-default
 		 insert-default
-		 replace-input
+		 (replace-input t)
 		 history
 		 active-p
 		 prompt
@@ -1450,7 +1490,7 @@ function lambda list"))
 			       (with-output-as-presentation
 				   (stream sensitizer-object sensitizer-type)
 				 (funcall cont))))
-      (with-input-position (stream)
+      (with-input-position (stream)	; support for calls to replace-input
 	(setf (values sensitizer-object sensitizer-type)
 	      (with-input-context (type)
 		(object object-type event options)
@@ -1477,18 +1517,16 @@ function lambda list"))
 		    (values object (or object-type type))))
 		;; A presentation was clicked on, or something
 		(t
-		 (when (getf options :echo t)
+		 (when (and replace-input (getf options :echo t))
 		   (presentation-replace-input stream object object-type view
 					       :rescan nil))
 		 (values object object-type))))
-	;; Just to make it clear...
+	;; Just to make it clear that we're returning values
 	(values sensitizer-object sensitizer-type)))))
-
-
 
 (defgeneric prompt-for-accept (stream type view &key))
 
-(defmethod prompt-for-accept ((stream standard-extended-input-stream)
+(defmethod prompt-for-accept ((stream t)
 			      type view
 			      &rest accept-args)
   (apply #'prompt-for-accept-1 stream type accept-args))
@@ -1510,7 +1548,8 @@ function lambda list"))
 	     (:raw
 	      (input-editor-format stream "~A" prompt)))))
     (let ((prompt-string (if (eq prompt t)
-			     (format nil "Enter ~A"
+			     (format nil "~:[Enter ~;~]~A"
+				     *recursive-accept-p*
 				     (describe-presentation-type type nil nil))
 			     prompt))
 	  (default-string (if (and defaultp display-default)
@@ -1577,9 +1616,14 @@ function lambda list"))
     (type record stream state)
   (highlight-output-record record stream state))
 
-(defun accept-using-read (stream ptype default default-type defaultp)
-  (let* ((*read-eval* nil)
-	 (token (read-token stream)))
+(define-default-presentation-method present
+    (object type stream (view textual-view) &key acceptably for-context-type)
+  (declare (ignore acceptably for-context-type))
+  (princ object stream))
+
+(defun accept-using-read (stream ptype default default-type defaultp
+			  &key ((:read-eval *read-eval*) nil))
+  (let* ((token (read-token stream)))
     (when (and (zerop (length token))
 	       defaultp)
       (return-from accept-using-read (values default default-type)))
@@ -1593,6 +1637,17 @@ function lambda list"))
 	  (values result ptype)
 	  (input-not-of-required-type result ptype)))))
 
+;;; When no accept method has been defined for a type, allow some kind of
+;;; input.  The accept can be satisfied with pointer input, of course, and this
+;;; allows the clever user a way to input the type at the keyboard, using #. or
+;;; some other printed representation.
+;;;
+;;; XXX Once we "go live" we probably want to disable this, probably with a
+;;; beep and warning that input must be clicked on.
+
+(define-default-presentation-method accept
+    (type stream (view textual-view) &key (default nil defaultp) default-type)
+  (accept-using-read stream type default default-type defaultp :read-eval t))
 
 ;;; The presentation types
 
@@ -1879,11 +1934,11 @@ function lambda list"))
 		    (eql length super-length))
 		t)))))
 
+;;; `(string ,length) would be more specific, but is not "likely to be useful
+;;; to the programmer."
+
 (defmethod presentation-type-of ((object string))
-  (if (or (adjustable-array-p object)
-	  (array-has-fill-pointer-p object))
-      'string
-      `(string ,(length object))))
+  'string)
 
 (define-presentation-method present (object (type string) stream
 				     (view textual-view)
