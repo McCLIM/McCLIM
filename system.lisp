@@ -143,6 +143,7 @@
    "bordered-output"
    "builtin-commands"
    "dialog" ; depends on table formatting
+   ;; "Experimental/menu-choose" ; depends on table formatting, presentations
    )
 
 (load (merge-pathnames "Backends/CLX/system" *clim-directory*))
