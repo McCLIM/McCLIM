@@ -134,6 +134,7 @@ advised of the possiblity of such damages.
   ;; This requirement gives the caller the freedom to use an "abbreviated"
   ;; drawing for the inner loop, which may be necessary to create the
   ;; illusion of animation.
+  #+nil
   (declare (downward-funarg draw-it erase-it move-it) (values gesture x y)
 	   (compiled-function draw-it erase-it move-it))
 
@@ -287,7 +288,7 @@ advised of the possiblity of such damages.
 
 (defun mouse-input-rectangle (stream)
   "Return edges of rectangle in stream coordinates."
-  (declare (values left top right bottom button))
+  ;;(declare (values left top right bottom button))
   (multiple-value-bind (left top)
       (device-mouse-point stream)
     (when left
@@ -317,7 +318,7 @@ advised of the possiblity of such damages.
 (defun device-specify-rectangle (stream)
   "Ask user to specify a rectangle on STREAM with the mouse.
    Returns LEFT TOP RIGHT BOTTOM in UV coordinates."
-  (declare (values left top right bottom))
+  ;;(declare (values left top right bottom))
   (multiple-value-bind (left top right bottom button)
       (mouse-input-rectangle stream)
     (when left

@@ -309,6 +309,7 @@ advised of the possiblity of such damages.
   "Compute the margin sizes.  Whopperize this to add margin size.
   DON'T SIDE EFFECT."		     
   (declare (ignore STREAM)
+	   #+nil
 	   (values left-margin-size right-margin-size
 		   bottom-margin-size top-margin-size))
   (values 0 0 0 0))
@@ -383,7 +384,7 @@ advised of the possiblity of such damages.
 
 (defmethod SCREEN-OUTSIDE ((self ESSENTIAL-GRAPH-MARGIN-MIXIN) STREAM)
   "Returns outside edges of graph in screen coordinates."
-  (declare (values left right bottom top))
+  ;;(declare (values left right bottom top))
   (multiple-value-bind (le re be te) (uv-outside self)
     (multiple-value-setq (le be) (uv-to-screen stream le be))
     (multiple-value-setq (re te) (uv-to-screen stream re te))
@@ -391,7 +392,7 @@ advised of the possiblity of such damages.
 
 (defmethod SCREEN-INSIDE ((self ESSENTIAL-GRAPH-MARGIN-MIXIN)  STREAM)
   "Returns inside edges of graph in screen coordinates."
-  (declare (values left right bottom top))
+  ;;(declare (values left right bottom top))
   (with-slots (ull vll uur vur) self
     (multiple-value-bind (le be) (uv-to-screen stream ull vll)
       (multiple-value-bind (re te) (uv-to-screen stream uur vur)

@@ -71,7 +71,7 @@ advised of the possiblity of such damages.
 
 (defmethod drag-object ((self moving-object) STREAM &optional mouse-line initial-x initial-y)
   "Drag the object around by tracking the mouse."
-  (declare (values stream-x stream-y button))
+  ;;(declare (values stream-x stream-y button))
   (when (and initial-x initial-y)
     (stream-set-pointer-position* stream initial-x initial-y))
   (multiple-value-setq (initial-x initial-y)
@@ -192,7 +192,7 @@ advised of the possiblity of such damages.
 (defun closest-point (u v mapper points)
   "Map over a set of points to find the nearest one."
   ;; Don't care about coordinate systems here, that is the caller's problem.
-  (declare (values closest-point closest-u closest-v))
+  ;;(declare (values closest-point closest-u closest-v))
   (macrolet ((distance (a0 b0 a1 b1)
 	       ;; Omit the sqrt as an efficiency hack.
 	       `(let ((a (- ,a0 ,a1))
@@ -464,7 +464,7 @@ advised of the possiblity of such damages.
 
 (defun define-point (graph stream &key (x 0) (y 0) (slider *slider*))
   "Use the slider to choose a point off the graph."
-  (declare (values x y))
+  ;;(declare (values x y))
   (setf (slider-graphs slider) (graphs-for-slider graph))
   (setf (slider-x slider) x (slider-y slider) y)
   (multiple-value-bind (x1 y1 button)
@@ -479,7 +479,7 @@ advised of the possiblity of such damages.
 		      (x2 0) (y2 0)
 		      (slider *rectangle-slider*))
   "Use the slider to choose two points defining the edges of a box."
-  (declare (values (x1 y1 x2 y2)))
+  ;;(declare (values (x1 y1 x2 y2)))
   (let ((slider1 (rectangle-slider-1 slider))
 	(slider2 (rectangle-slider-2 slider)))
     (setf (slider-graphs slider) (graphs-for-slider graph))

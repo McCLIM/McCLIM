@@ -238,8 +238,9 @@ advised of the possiblity of such damages.
 						    (command-pretty-name
 						     (copy-seq (string command-name))))
 					 #+mcclim
-					 ,@(:provide-output-destination-keyword
-					    ,provide-output-destination-keyword))
+					 :provide-output-destination-keyword
+					 #+mcclim
+					 ,provide-output-destination-keyword)
 	 ,arguments ,@body))))
 
 (defun install-command (command-table command-symbol &optional command-name)

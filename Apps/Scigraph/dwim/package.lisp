@@ -27,6 +27,10 @@ advised of the possiblity of such damages.
 
 (in-package #+ansi-cl :common-lisp-user #-ansi-cl :user)
 
+#+mcclim
+(eval-when (compile load eval)
+  (pushnew :clim-2 *features*))
+
 (eval-when (compile load eval)
   (#+genera future-common-lisp::defpackage
    #-genera defpackage

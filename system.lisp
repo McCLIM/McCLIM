@@ -206,4 +206,44 @@
    "Goatee/goatee-test")
 
 
-
+(clim-defsystem (:scigraph :depends-on (:clim #+clx :clim-looks))
+  ;; The DWIM part of SCIGRAPH		
+  "Apps/Scigraph/dwim/package"
+  "Apps/Scigraph/dwim/feature-case"
+  "Apps/Scigraph/dwim/macros"
+  "Apps/Scigraph/dwim/tv"
+  "Apps/Scigraph/dwim/draw"
+  "Apps/Scigraph/dwim/present"
+  "Apps/Scigraph/dwim/extensions"
+  "Apps/Scigraph/dwim/wholine"
+  "Apps/Scigraph/dwim/export"
+  ;; The Scigraph part
+  "Apps/Scigraph/scigraph/package" 
+  "Apps/Scigraph/scigraph/copy"
+  "Apps/Scigraph/scigraph/dump"
+  "Apps/Scigraph/scigraph/duplicate"
+  "Apps/Scigraph/scigraph/random"
+  "Apps/Scigraph/scigraph/menu-tools"
+  "Apps/Scigraph/scigraph/basic-classes"
+  "Apps/Scigraph/scigraph/draw"
+  "Apps/Scigraph/scigraph/mouse"
+  "Apps/Scigraph/scigraph/color"
+  "Apps/Scigraph/scigraph/basic-graph"
+  "Apps/Scigraph/scigraph/graph-mixins"
+  "Apps/Scigraph/scigraph/axis"
+  "Apps/Scigraph/scigraph/moving-object"
+  "Apps/Scigraph/scigraph/symbol"
+  "Apps/Scigraph/scigraph/graph-data"
+  "Apps/Scigraph/scigraph/legend"
+  "Apps/Scigraph/scigraph/graph-classes"
+  "Apps/Scigraph/scigraph/present"
+  "Apps/Scigraph/scigraph/annotations"
+  "Apps/Scigraph/scigraph/annotated-graph"
+  "Apps/Scigraph/scigraph/contour"
+  "Apps/Scigraph/scigraph/equation"
+  "Apps/Scigraph/scigraph/popup-accept"
+  "Apps/Scigraph/scigraph/popup-accept-methods"
+  "Apps/Scigraph/scigraph/duplicate-methods"
+  "Apps/Scigraph/scigraph/frame"
+  "Apps/Scigraph/scigraph/export"
+  "Apps/Scigraph/scigraph/demo-frame")

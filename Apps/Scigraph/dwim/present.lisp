@@ -50,7 +50,7 @@ advised of the possiblity of such damages.
     (clim:bounding-rectangle record)))
 
 (defun continuation-output-size (continuation stream)
-  (declare (values width height))
+  ;;(declare (values width height))
   #FEATURE-CASE
   (((not :clim) (dw:continuation-output-size continuation stream))
    (:clim-0.9 (multiple-value-bind (width height)
@@ -153,7 +153,7 @@ advised of the possiblity of such damages.
 
 (defun bounding-rectangle* (presentation)
   "Get the bounding edges of the presentation."
-  (declare (values left top right bottom))
+  ;;(declare (values left top right bottom))
   #FEATURE-CASE
   (((not :clim)
     (when (presentation-p presentation)

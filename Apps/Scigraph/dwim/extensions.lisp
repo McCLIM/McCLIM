@@ -216,6 +216,9 @@ advised of the possiblity of such damages.
       (funcall predicate))
      (:CLIM-1.0
       (clim-utils::make-process predicate :name name-or-keywords))
+     ((and :clim-2 :cmu (not :x86))
+      ;; This is a hack for CMUCL
+      (funcall predicate))
      (:CLIM-2
       ;; The Spec says that make-process takes a keyword arg... -- moore
       (CLIM-SYS:make-process predicate #+mcclim :name name-or-keywords)))))

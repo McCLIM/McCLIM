@@ -247,7 +247,7 @@
 
 
 (defun make-contrasting-inks (n &optional k)
-  (declare (special +contrasting-colors+))
+  ;;(declare (special +contrasting-colors+))
   (if (> n (length +contrasting-colors+))
       (error "The argument N is out of range [1-~D]" (length +contrasting-colors+)))
   (if (null k)

@@ -1163,7 +1163,8 @@
   (setf (slot-value obj 'tester)
 	#'(lambda (&rest args)
 	    (if (command-enabled command-name *application-frame*)
-		(apply tester args)
+		(when tester
+		  (apply tester args))
 		nil))))
 
 (defmacro define-presentation-to-command-translator 

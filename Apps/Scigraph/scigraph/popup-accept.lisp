@@ -96,7 +96,7 @@ advised of the possiblity of such damages.
 	collect (if (consp VALUE) (copy-list VALUE) VALUE)))
 
 (defmethod abort-protect ((self t) (continuation t))
-  (declare (values instance aborted-p))
+  ;;(declare (values instance aborted-p))
   (let ((snapshot (snapshot-object-state self)))
     #-clim
     (si:condition-case (ERR)
@@ -136,7 +136,7 @@ advised of the possiblity of such damages.
 
 (defmethod popup-accept-from-presentation ((self t) (stream t) (presentation t))
   "Like popup-accept except you get a hook onto the presentation."
-  (declare (values self aborted-p))
+  ;;(declare (values self aborted-p))
   (values self (eq (popup-accept self stream) :abort)))
 
 (define-command (com-pop-edit :command-table :global)

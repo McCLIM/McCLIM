@@ -349,7 +349,7 @@ without any way to override them.  So this is commented out.
 		   (pattern %pattern))
   "Draw a dashed-line between (x1 y1) and (x2 y2) in the given style
    0 <= style <= 7."
-  (declare (values ds))
+  ;;(declare (values ds))
   (assert (numberp ds))
   (let ((dash-patterns *dash-patterns*)
 	(dash-step-size *dash-step-size*)

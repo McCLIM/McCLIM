@@ -204,7 +204,7 @@ advised of the possiblity of such damages.
    (:clim-2 (clim:stream-increment-cursor-position stream x y))))
 
 (defmethod stream-viewport (stream)
-  (declare (values left top right bottom))
+  ;;(declare (values left top right bottom))
   #FEATURE-CASE
   (((not :clim) (send stream :visible-cursorpos-limits))
    (:clim-0.9
@@ -243,7 +243,7 @@ advised of the possiblity of such damages.
 		       (clim:bounding-rectangle-height stream)))))))))
 
 (defmethod stream-viewport-size (stream)
-  (declare (values width height))
+  ;;(declare (values width height))
   (multiple-value-bind (left top right bottom) (stream-viewport stream)
       (values (- right left) (- bottom top)))) 
 
@@ -315,7 +315,7 @@ advised of the possiblity of such damages.
       (values (truncate x) (truncate y))))))
 
 (defun pointer-input-rectangle* (&key (stream *standard-input*) left top right bottom)
-  (declare (values left top right bottom))
+  ;;(declare (values left top right bottom))
   #+clim (declare (ignore stream left top right bottom))
   #FEATURE-CASE
   (((not :clim)
@@ -669,7 +669,7 @@ advised of the possiblity of such damages.
    ((not :clim) (scl:send-if-handles stream :set-viewport-position left top))))
 
 (defmethod window-history-limits (stream)
-  (declare (values left top right bottom))
+  ;;(declare (values left top right bottom))
   #+(or (not clim) clim-0.9) (declare (ignore stream))
   #FEATURE-CASE
   ((:clim-1.0
