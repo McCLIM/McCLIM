@@ -50,9 +50,6 @@
 (defun gadgetp (object)
   (typep object 'gadget))
 
-(defmethod compose-space ((gadget gadget))
-  (pane-space-requirement gadget))
-
 ;;
 ;; gadget's colors
 ;;
@@ -231,6 +228,19 @@
 		     :initarg :label-text-style
                      :accessor gadget-label-text-style)))
 
+(defmethod compose-space ((pane labelled-gadget))
+  (with-sheet-medium (medium pane)
+    (multiple-value-bind (width height)
+	(text-size medium (gadget-label pane)
+		   :text-style (gadget-label-text-style pane))
+      ;; FIXME remove explicit values
+      ;; instead use spacer pane in derived classes
+      (let ((tw (* 1.3 width))
+	    (th (* 2.5 height)))
+	(make-space-requirement :width tw :height th
+				:max-width tw :max-height th
+				:min-width tw :min-height th)))))
+
 (defclass labelled-gadget-mixin (labelled-gadget)
   ;; Try to be compatible with Lispworks' CLIM.
   ())
@@ -274,7 +284,7 @@
 ;; PUSH-BUTTON gadget
 ;;
 
-(defclass push-button (action-gadget labelled-gadget-mixin) ())
+(defclass push-button (labelled-gadget-mixin action-gadget) ())
   
 (defclass push-button-pane  (push-button)
   ((show-as-default-p :type (member '(t nil))
@@ -333,7 +343,7 @@
 ;; TOGGLE-BUTTON gadget
 ;;
 
-(defclass toggle-button (value-gadget labelled-gadget-mixin) ()
+(defclass toggle-button (labelled-gadget-mixin value-gadget) ()
   (:documentation "The value is either t either nil"))
 
 (defclass toggle-button-pane (toggle-button)
@@ -405,7 +415,7 @@
 ;; MENU-BUTTON gadget
 ;;
 
-(defclass menu-button (value-gadget labelled-gadget-mixin)
+(defclass menu-button (labelled-gadget-mixin value-gadget)
   ()
   (:documentation "The value is a button"))
 
@@ -562,8 +572,12 @@
 ;; SLIDER gadget
 ;;
 
-(defclass slider-gadget (value-gadget oriented-gadget-mixin range-gadget-mixin
-				      labelled-gadget-mixin gadget-color-mixin) ()
+(defclass slider-gadget (labelled-gadget-mixin
+			 value-gadget
+			 oriented-gadget-mixin
+			 range-gadget-mixin
+			 gadget-color-mixin)
+  ()
   (:documentation "The value is a real number"))
   
 (defclass slider-pane (slider-gadget)
@@ -698,6 +712,14 @@
   (window-clear pane)
   (dispatch-repaint pane (sheet-region pane)))
 
+(defmethod compose-space ((pane text-field-pane))
+  (with-sheet-medium (medium pane)
+    (multiple-value-bind (width height)
+	(text-size medium (gadget-value pane))
+      (make-space-requirement :width width :height height
+			      :max-width width :max-height height
+			      :min-width width :min-height height))))
+
 ;;
 ;; TEXT-EDITOR gadget
 ;;
@@ -713,10 +735,9 @@
 	   :initarg :height
 	   :reader text-editor-height)))
 
-(defmethod compute-space ((pane text-editor-pane))
-  (setf (pane-space-requirement pane)
-	(make-space-requirement :width (text-editor-width pane)
-				:height (text-editor-height pane))))
+(defmethod compose-space ((pane text-editor-pane))
+  (make-space-requirement :width 300 :max-width 300 :min-width 300
+			  :height 300 :max-height 300 :min-height 300))
 
 
 ;;
