@@ -1,0 +1,12 @@
+RS:20030805:102038
+    Output recording is broken for records that inherit from
+    coord-seq-mixin.  Contrary to comments in the code, the coordinate
+    sequence is not transformed before the output record is created. 
+
+RS:20030805:101708
+    The way the text-field pane handles keyboard input focus (by
+    remembering who had it before and restoring it) does not work very
+    well with respect to other X applications.  It would be better for
+    each pane to decide when it wants the input focus. 
+
+======================  Resolved issues ======================

@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.125 2003/07/31 09:35:29 hefner1 Exp $
+;;; $Id: panes.lisp,v 1.126 2003/08/05 07:26:03 strandh Exp $
 
 (in-package :clim-internals)
 
@@ -2081,7 +2081,6 @@
                             #-clim-mp standard-repainting-mixin
                             standard-extended-input-stream
                             standard-extended-output-stream
-                            transform-coordinates-mixin
                             standard-output-recording-stream
                             ;; sheet-leaf-mixin
                             basic-pane
