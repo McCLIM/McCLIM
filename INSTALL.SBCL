@@ -1,7 +1,7 @@
 Install instructions for SBCL
 -----------------------------
 
-1. Get a recent SBCL, it will be equipped be ASDF, which you will
+1. Get a recent SBCL, it will be equipped with ASDF, which you will
    need.
 
 2. If you don't have CLX in your SBCL, check this URL:
@@ -12,31 +12,37 @@ Install instructions for SBCL
    directory, start SBCL and:
 
    * (load "clx.asd")
-   * (asdf:oos 'asdf:load-op :clx)
+   * (asdf:operate 'asdf:load-op :clx)
    * (quit)
 
-   Read the INSTALL.asdf file in the directory on how to hook CLX into
+   Read the README file in the directory on how to hook CLX into
    asdf so it will be loaded automagically. 
 
-2. Go back to this directory, CLIM, and start sbcl
+   Note that CLX versions prior to 0.5.4 had poor performance
+   characteristics with McCLIM; if you see many messages involving
+   "process-block timed out", you may wish to upgrade your CLX.
 
-3. Load the system definition file:
+3. Go back to this directory, McCLIM, and start sbcl; ensure that you
+   have CLX loaded.
+
+4. Load the system definition file:
 
    * (load "system.lisp")
 
-4. Load the system (which will also compile it):
+5. Load the system (which will also compile it):
 
-   * (asdf:oos 'asdf:load-op :clim)  ;; Build CLIM
-   * (asdf:oos 'asdf:load-op :clim-clx) ;; Build a backend
-   * (asdf:oos 'asdf:load-op :clim-examples)
+   * (asdf:operate 'asdf:load-op :clim)		;; Build CLIM
+   * (asdf:operate 'asdf:load-op :clim-clx)	;; Build a backend
+   * (asdf:operate 'asdf:load-op :clim-examples)
 
-The first two steps can be done in one step with the :clim-clx-user target:
-   (asdf:oos 'asdf:load-op :clim-clx-user)
+   The first two steps can be done in one step with the :clim-clx-user target:
+   (asdf:operate 'asdf:load-op :clim-clx-user)
 
-5. At a later date, after everything is compiled, load the compiled system:
+6. At a later date, after everything is compiled, load the compiled
+   system (from an sbcl which already has CLX loaded):
 
-   * (asdf:oos 'asdf:load-op :clim)  ;; Load CLIM
-   * (asdf:oos 'asdf:load-op :clim-clx) ;; Load backend
+   * (asdf:operate 'asdf:load-op :clim)  ;; Load CLIM
+   * (asdf:operate 'asdf:load-op :clim-clx) ;; Load backend
 
 
 Running the demos
@@ -67,7 +73,7 @@ Running the demos
 
    when you get tired of it, hit ^C in the Lisp listener.
 
-4. A some of the demos should be run using the function clim-demo::run-test:
+4. Some of the demos should be run using the function clim-demo::run-test:
    (clim-demo::run-test 'clim-demo::address-book)
    (clim-demo::run-test 'goatee::goatee-test)
 
