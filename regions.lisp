@@ -4,7 +4,7 @@
 ;;;   Created: 1998-12-02 19:26
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: regions.lisp,v 1.22 2002/06/21 06:30:41 adejneka Exp $
+;;;       $Id: regions.lisp,v 1.23 2002/06/27 16:47:00 gilbert Exp $
 ;;; --------------------------------------------------------------------------------------
 ;;;  (c) copyright 1998,1999,2001 by Gilbert Baumann
 ;;;  (c) copyright 2001 by Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
@@ -28,6 +28,8 @@
 
 ;;;  When        Who    What
 ;;; --------------------------------------------------------------------------------------
+;;;  2002-06-27  GB     REGION-INTERSECTS-REGION-P has an :around method on bounding
+;;;                     rectangles.
 ;;;  2002-06-04  APD    partially fixed (BOUNDING-RECTANGLE* STANDARD-ELLIPSE)
 ;;;  2001-07-16  GB     added (REGION-CONTAINS-POSITION-P STANDARD-ELLIPSE ..)
 ;;;                     added (BOUNDING-RECTANGLE* STANDARD-ELLIPSE)
@@ -2227,6 +2229,7 @@
     (values x1 y1)))
 
 (defmethod set-bounding-rectangle-position ((self standard-rectangle) x y)
+  ;;(error "DO NOT CALL ME")
   (with-slots (x1 y1 x2 y2) self
     (setq x2 (+ x (- x2 x1))
 	  y2 (+ y (- y2 y1))
@@ -2267,3 +2270,27 @@
 	(with-slots (x1 y1 x2 y2) self
 	  (format stream "X ~S:~S Y ~S:~S" x1 x2 y1 y2))
       (format stream "X 0:0 Y 0:0"))))
+
+
+;;;;
+
+
+(defmethod region-intersects-region-p :around ((a bounding-rectangle) (b bounding-rectangle))
+  (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* a)
+    (multiple-value-bind (u1 v1 u2 v2) (bounding-rectangle* b)
+      (cond ((and (<= u1 x2) (<= x1 u2)
+                  (<= v1 y2) (<= y1 v2))
+             (call-next-method))
+            (t
+             nil)))))
+
+(defmethod region-intersects-region-p ((a standard-rectangle) (b standard-rectangle))
+  (declare (ignorable a b))
+  ;; for rectangles, the bounding rectangle test is correct, so if we
+  ;; wind up here, we just can return T.
+  t
+  ;;(multiple-value-bind (x1 y1 x2 y2) (rectangle-edges* a)
+  ;;  (multiple-value-bind (u1 v1 u2 v2) (rectangle-edges* b)
+  ;;    (and (<= u1 x2) (<= x1 u2)
+  ;;         (<= v1 y2) (<= y1 v2))))
+  )
