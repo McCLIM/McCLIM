@@ -147,11 +147,18 @@
       ,@body
       (format ,gstream "grestore~%"))))
 
+(defun format-postscript-number (number)
+  (if (not (integerp number))
+      (coerce number 'single-float)
+      number))
+
 (defmethod medium-draw-point* ((medium postscript-medium) x y)
   (let ((stream (postscript-medium-file-stream medium)))
     (with-graphics-state (stream)
-      (format stream "~,15G ~,15G ~,15G 0 360 arc~%"
-	      x y (/ (line-style-thickness (medium-line-style medium)) 2))
+      (format stream "~A ~A ~A 0 360 arc~%"
+	      (format-postscript-number x) (format-postscript-number y)
+              (format-postscript-number
+               (/ (line-style-thickness (medium-line-style medium)) 2)))
       (format stream "0 setlinewidth~%")
       (postscript-color stream medium)
       (format stream "fill~%"))))
@@ -164,7 +171,9 @@
       (loop with radius = (/ (line-style-thickness (medium-line-style medium)) 2)
 	    for (x y) on coord-seq by #'cddr
 	    do (progn
-		 (format stream "~,15G ~,15G ~,15G 0 360 arc~%" x y radius)
+		 (format stream "~A ~A ~A 0 360 arc~%"
+                         (format-postscript-number x) (format-postscript-number y)
+                         (format-postscript-number radius))
 		 (format stream "fill~%")
 		 (format stream "newpath~%"))))))
 
@@ -172,7 +181,9 @@
   (let ((stream (postscript-medium-file-stream medium)))
     (with-graphics-state (stream)
       (postscript-line-style-and-color stream medium)
-      (format stream "~,15G ~,15G moveto ~,15G ~,15G lineto~%" x1 y1 x2 y2)
+      (format stream "~A ~A moveto ~A ~A lineto~%"
+              (format-postscript-number x1) (format-postscript-number y1)
+              (format-postscript-number x2) (format-postscript-number y2))
       (format stream "stroke~%"))))
 
 (defmethod medium-draw-lines* ((medium postscript-medium) coord-seq)
@@ -182,18 +193,23 @@
       (loop with points = (apply #'vector coord-seq)
             for i below (length coord-seq) by 4
             do
-            (format stream "~,15G ~,15G moveto ~,15G ~,15G lineto~%"
-                    (aref points i) (aref points (1+ i))
-                    (aref points (+ i 2)) (aref points (+ i 3)))
+            (format stream "~A ~A moveto ~A ~A lineto~%"
+                    (format-postscript-number (aref points i))
+                    (format-postscript-number (aref points (1+ i)))
+                    (format-postscript-number (aref points (+ i 2)))
+                    (format-postscript-number (aref points (+ i 3))))
             finally (format stream "stroke~%")))))
 
 (defmethod medium-draw-polygon* ((medium postscript-medium) coord-seq closed filled)
   (assert (evenp (length coord-seq)))
   (let ((stream (postscript-medium-file-stream medium)))
     (with-graphics-state (stream)
-      (format stream "~,15G ~,15G moveto~%" (car coord-seq) (cadr coord-seq))
+      (format stream "~A ~A moveto~%"
+              (format-postscript-number (car coord-seq))
+              (format-postscript-number (cadr coord-seq)))
       (loop for (x y) on (cddr coord-seq) by #'cddr
-            do (format stream "~,15G ~,15G lineto~%" x y)
+            do (format stream "~A ~A lineto~%"
+                       (format-postscript-number x) (format-postscript-number y))
             finally (format stream "~%"))
       (when closed
         (format stream "closepath~%"))
@@ -205,8 +221,11 @@
 (defmethod medium-draw-rectangle* ((medium postscript-medium) x1 y1 x2 y2 filled)
   (let ((stream (postscript-medium-file-stream medium)))
     (with-graphics-state (stream)
-      (format stream "~,15G ~,15G moveto ~,15G ~,15G lineto ~,15G ~,15G lineto ~,15G ~,15G lineto~%"
-              x1 y1 x2 y1 x2 y2 x1 y2)
+      (format stream "~A ~A moveto ~A ~A lineto ~A ~A lineto ~A ~A lineto~%"
+              (format-postscript-number x1) (format-postscript-number y1)
+              (format-postscript-number x2) (format-postscript-number y1)
+              (format-postscript-number x2) (format-postscript-number y2)
+              (format-postscript-number x1) (format-postscript-number y2))
       (format stream "closepath~%")
       (postscript-line-style-and-color stream medium)
       (format stream (if filled
@@ -217,20 +236,31 @@
 				 radius1-dx radius1-dy radius2-dx radius2-dy
 				 start-angle end-angle filled)
   (let ((stream (postscript-medium-file-stream medium))
-	(mod1 (sqrt (+ (* radius1-dx radius1-dx)
-                       (* radius1-dy radius1-dy))))
-	(mod2 (sqrt (+ (* radius2-dx radius2-dx)
-                       (* radius2-dy radius2-dy)))))
-    (with-graphics-state (stream)
-      (format stream "matrix currentmatrix~%")
-      (format stream "~,15G ~,15G translate~%" center-x center-y)
-      (format stream "~,15G ~,15G scale~%" mod1 mod2)
-      (format stream "0 0 1 ~,15G ~,15G arc~%" (* 180 (/ start-angle pi)) (* 180 (/ end-angle pi)))
-      (format stream "setmatrix~%")
-      (postscript-line-style-and-color stream medium)
-      (format stream (if filled
-                         "fill~%"
-                         "stroke~%")))))
+        (ellipse (make-ellipse* center-x center-y
+                                radius1-dx radius1-dy radius2-dx radius2-dy
+                                :start-angle start-angle
+                                :end-angle end-angle)))
+    (multiple-value-bind (ndx1 ndy1 ndx2 ndy2) (ellipse-normal-radii* ellipse)
+      (let ((angle (atan* ndx1 ndy1))
+            (s1 (sqrt (+ (* ndx1 ndx1) (* ndy1 ndy1))))
+            (s2 (sqrt (+ (* ndx2 ndx2) (* ndy2 ndy2)))))
+        (with-graphics-state (stream)
+          (format stream "matrix currentmatrix~%")
+          (format stream "~A ~A translate~%"
+                  (format-postscript-number center-x)
+                  (format-postscript-number center-y))
+          (format stream "~A rotate~%"
+                  (format-postscript-number (* 180 (/ angle pi))))
+          (format stream "~A ~A scale~%"
+                  (format-postscript-number s1) (format-postscript-number s2))
+          (format stream "0 0 1 ~A ~A arc~%"
+                  (format-postscript-number (* 180 (/ (- start-angle angle) pi)))
+                  (format-postscript-number (* 180 (/ (- end-angle angle) pi))))
+          (format stream "setmatrix~%")
+          (postscript-line-style-and-color stream medium)
+          (format stream (if filled
+                             "fill~%"
+                             "stroke~%")))))))
 
 (defconstant +postscript-fonts+ '(:fix (:roman "Courier"
                                         :bold "Courier-Bold"
@@ -300,5 +330,6 @@
             (text-style->postscript-font (medium-text-style medium))
           (pushnew font document-fonts :test #'string=)
           (format file-stream "/~A findfont ~D scalefont setfont~%" font size)
-          (format file-stream "~,15G ~,15G moveto~%" x y)
+          (format file-stream "~A ~A moveto~%"
+                  (format-postscript-number x) (format-postscript-number y))
           (format file-stream "(~A) show~%" (postscript-escape-string string))))))
