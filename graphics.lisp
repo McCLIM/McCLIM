@@ -384,27 +384,39 @@
 		   &rest args
 		   &key ink clipping-region transformation
 			line-style line-thickness
-			line-unit line-dashes line-cap-shapeto-head
-			from-head head-length head-width)
-  (declare (ignore sheet point-1 point-2 args
-		   ink clipping-region transformation
+			line-unit line-dashes line-cap-shape
+                        to-head from-head (head-length 0) (head-width 0))
+  (declare (ignore ink clipping-region transformation
 		   line-style line-thickness
-		   line-unit line-dashes line-cap-shapeto-head
-		   from-head head-length head-width))
-  (error "DRAW-ARROW is not implemented"))
+		   line-unit line-dashes line-cap-shape
+                   to-head from-head head-length head-width))
+  (multiple-value-bind (x1 y1) (point-position point-1)
+    (multiple-value-bind (x2 y2) (point-position point-2)
+      (apply #'draw-arrow* sheet x1 y1 x2 y2 args))))
+
+(defun draw-arrow-head (sheet x1 y1 x2 y2 length width)
+  (with-translation (sheet x2 y2)
+                    (with-rotation (sheet (atan* (- x1 x2)
+                                                 (- y1 y2)))
+                                   (draw-polygon* sheet
+                                                  (list length (- (/ width 2))
+                                                        0 0
+                                                        length (/ width 2))
+                                                  :filled nil
+                                                  :closed nil))))
 
 (defun draw-arrow* (sheet x1 y1 x2 y2
 		   &rest args
 		   &key ink clipping-region transformation
 			line-style line-thickness
-			line-unit line-dashes line-cap-shapeto-head
-			from-head head-length head-width)
-  (declare (ignore sheet x1 y1 x2 y2 args
-		   ink clipping-region transformation
-		   line-style line-thickness
-		   line-unit line-dashes line-cap-shapeto-head
-		   from-head head-length head-width))
-  (error "DRAW-ARROW* is not implemented"))
+			line-unit line-dashes line-cap-shape
+                        to-head from-head (head-length 0) (head-width 0))
+  (with-medium-options (sheet args)
+                       (draw-line* sheet x1 y1 x2 y2)
+                       (when to-head
+                         (draw-arrow-head sheet x1 y1 x2 y2 head-length head-width))
+                       (when from-head
+                         (draw-arrow-head sheet x2 y2 x1 y1 head-length head-width))))
 
 (defun draw-oval (sheet center-pt x-radius y-radius
 		  &rest args
