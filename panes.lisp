@@ -1,7 +1,9 @@
 ;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
 
-;;;  (c) copyright 2000 by Hatchondo Iban and Boninfante Julien
-;;; hatchond@emi.u-bordeaux.fr , boninfan@emi.u-bordeaux.fr 
+;;;  (c) copyright 2000 by 
+;;;           Iban Hatchondo (hatchond@emi.u-bordeaux.fr)
+;;;           Julien Boninfante (boninfan@emi.u-bordeaux.fr)
+
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -236,6 +238,19 @@
       (compute-space sheet))
   (note-space-requirements-changed (sheet-parent sheet) pane))
 
+;; TOP-LEVEL-SHEET
+
+(defclass top-level-sheet-pane (composite-pane) ()
+  (:documentation "For the first pane in the architecture"))
+
+(defmethod dispatch-event ((pane top-level-sheet-pane) event)
+  (handle-event pane event))
+
+(defmethod handle-event ((pane top-level-sheet-pane) (event window-configuration-event))
+  (let ((width (window-configuration-event-width event))
+        (height (window-configuration-event-height event)))
+    (setf (sheet-region pane) (make-bounding-rectangle 0 0 width height))
+    (allocate-space pane width height)))
 
 ;; SHEET 
 
@@ -866,3 +881,4 @@
   (apply #'make-clim-stream-pane 
 	 :type 'application-pane 
 	 options))
+
