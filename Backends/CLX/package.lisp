@@ -7,6 +7,7 @@
   (:export #:keysym-port-mixin
 	   #:lookup-keysym
 	   #:modifier-mapping
+	   #:reverse-lookup-keysym
 	   #:x-event-state-modifiers
 	   #:x-keysym-to-clim-modifiers))
 

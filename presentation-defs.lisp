@@ -20,13 +20,9 @@
 
 (in-package :clim-internals)
 
-;;; These types are defined early so the classes will be available for
-;;; the presentation generic function MOPery at method definition time,
-;;; even though our MOP magic probably won't be invoked then.
-
-(define-presentation-type t ())
-
-(defparameter *ptype-t-class* (get-ptype-metaclass 't))
+;;; The presentation type for T is the built-in type T. The correspondence is
+;;; established by hand in presentations.lisp.
+;(define-presentation-type t ())
 
 ;;; auto-activate is described in the Franz user guide; it controls whether an
 ;;; accepting an expression returns immediately after typing the closing
@@ -36,7 +32,6 @@
   :options (auto-activate)
   :inherit-from t)
 
-(defparameter *ptype-expression-class* (get-ptype-metaclass 'expression))
 
 ;;; preserve-whitespace controls whether the accept method uses read or
 ;;; read-preserving-whitespace. This is used in our redefinitions of read and
@@ -44,8 +39,6 @@
 (define-presentation-type form ()
   :options (auto-activate (preserve-whitespace t) (subform-read nil))
   :inherit-from `((expression) :auto-activate ,auto-activate))
-
-(defparameter *ptype-form-class* (get-ptype-metaclass 'form))
 
 ;;; Actual definitions of presentation methods and types.  They've
 ;;; been separated from the macro and presentation class definitions and
@@ -1007,7 +1000,7 @@ call-next-method to get the \"real\" answer based on the stream type."))
 			   default defaultp default-type))
 
 (define-presentation-type symbol ()
-  :inherit-from 'expression)
+  :inherit-from 't)
 
 (define-presentation-method presentation-typep (object (type symbol))
   (symbolp object))
@@ -1058,7 +1051,7 @@ call-next-method to get the \"real\" answer based on the stream type."))
 						 :view +textual-view+))
 
 (define-presentation-type number ()
-  :inherit-from 'expression)
+  :inherit-from 't)
 
 (define-presentation-method presentation-typep (object (type number))
   (numberp object))
@@ -1244,7 +1237,7 @@ call-next-method to get the \"real\" answer based on the stream type."))
   (frob float))
 
 (define-presentation-type character ()
-  :inherit-from 'expression)
+  :inherit-from 't)
 
 (define-presentation-method presentation-typep (object (type character))
   (characterp object))
@@ -1259,7 +1252,7 @@ call-next-method to get the \"real\" answer based on the stream type."))
   (princ object stream))
 
 (define-presentation-type string (&optional length)
-  :inherit-from 'expression)
+  :inherit-from 't)
 
 (define-presentation-method presentation-typep (object (type string))
   (and (stringp object)
@@ -1299,7 +1292,7 @@ call-next-method to get the \"real\" answer based on the stream type."))
 
 (define-presentation-type pathname ()
   :options ((default-version :newest) default-type (merge-default t))
-  :inherit-from 'expression)
+  :inherit-from 't)
 
 (define-presentation-method presentation-typep (object (type pathname))
   (pathnamep object))
@@ -1554,7 +1547,7 @@ call-next-method to get the \"real\" answer based on the stream type."))
 
 (define-presentation-type sequence (type)
   :options ((separator #\,) (echo-space t))
-  :inherit-from 'expression
+  :inherit-from 't
   :parameters-are-types t)
 
 (define-presentation-method presentation-typep (object (type sequence))
@@ -1643,7 +1636,7 @@ call-next-method to get the \"real\" answer based on the stream type."))
 
 (define-presentation-type sequence-enumerated (&rest types)
   :options ((separator #\,) (echo-space t))
-  :inherit-from 'expression
+  :inherit-from 't
   :parameters-are-types t)
 
 (define-presentation-method presentation-typep (object

@@ -139,6 +139,53 @@
 (define-gesture-name :literal-expression :pointer-button-press
   (:left :meta))
 
+(macrolet ((%frob-exp (type-name)
+	     (let ((expression-translator-name (symbol-concat
+						type-name
+						'-to-expression)))
+	       `(define-presentation-translator ,expression-translator-name
+		    (,type-name expression global-command-table
+				:gesture :select
+				:menu nil)
+		  (object)
+		  object)))
+	   (%frob-constant-form (type-name)
+	     (let ((form-translator-name (symbol-concat type-name '-to-form)))
+	      `(define-presentation-translator ,form-translator-name
+		   (,type-name form global-command-table
+			       :gesture :select
+			       :menu nil)
+		 (object)
+		 object)))
+	   (%frob-form (type-name)
+	     (let ((form-translator-name (symbol-concat type-name '-to-form)))
+	       `(define-presentation-translator ,form-translator-name
+		    (,type-name form global-command-table
+				:gesture :select
+				:menu nil)
+		  (object)
+		  (if (constantp object)
+		      object
+		      `',object))))
+	   
+	   (frob (type-name)
+	     `(progn
+		(%frob-exp ,type-name)
+		(%frob-constant-form ,type-name)))
+	   (frob-form (type-name)
+	     `(progn
+		(%frob-exp ,type-name)
+		(%frob-form ,type-name))))
+  (frob null)
+  (frob boolean)
+  (frob keyword)
+  (frob number)
+  (frob character)
+  (frob string)
+  (frob pathname)
+  (frob-form symbol)
+  (frob-form sequence))
+
 (define-presentation-translator expression-to-form
     (expression form global-command-table
      :gesture :select
