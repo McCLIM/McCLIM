@@ -9,6 +9,12 @@ Install instructions for CMU Common Lisp
 
    If you don't, check the section "How to create a Lisp core file". 
 
+   *Note*: If you get mk:defsystem from CLOCC and load it using
+   CLOCC's facilities, you need to restore PCL's default behavior for
+   defining classes, methods and functions.  Make sure that the
+   variables pcl::*defclass-times*, pcl::*defmethod-times*, and
+   pcl::*defgeneric-times* have the value '(load eval).
+
 2. Start Lisp
 
 3. Load the system definition file:

@@ -22,12 +22,8 @@
            (export symbols :clim-lisp-patch)))
     (reexport '(pcl:class-name pcl:class-of
                 pcl:find-class pcl::standard-class)))
-  (export '(clim-lisp-patch::defconstant
-            clim-lisp-patch::defclass)
+  (export '(clim-lisp-patch::defclass)
           :clim-lisp-patch))
-
-(defmacro clim-lisp-patch:defconstant (symbol value &optional docu)
-  `(defparameter ,symbol ,value ,@(and docu (list docu))))
 
 (defvar clim-lisp-patch::*compile-time-clos-names* (make-hash-table))
 

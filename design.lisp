@@ -78,6 +78,7 @@
 
 (in-package :CLIM-INTERNALS)
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
 (define-protocol-class design ())
 
 ;; Some internal superclasses:
@@ -118,7 +119,11 @@
     (print-unreadable-object (color stream :type t :identity nil)
       (format stream "~S" name))))
 
-(defvar *color-hash-table* (make-hash-table :test #'eql))
+(defmethod make-load-form ((color named-color) &optional env)
+  (make-load-form-saving-slots color :environment env))
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defvar *color-hash-table* (make-hash-table :test #'eql)))
 
 (defun compute-color-key (red green blue)
   (+ (ash (round (* 255 red)) 16)
@@ -145,6 +150,7 @@
 	   entry)
 	  (t (setf (gethash key *color-hash-table*)
 		   (make-instance 'named-color :name name :red red :green green :blue blue))))))
+) ; eval-when
 
 ;;;    ;;; For ihs to rgb conversion, we use the formula 
 ;;;    ;;;  i = (r+g+b)/3

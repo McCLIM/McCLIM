@@ -86,7 +86,14 @@
 	  :reader event-sheet)
    (modifier-state :initarg :modifier-state
 		   :reader event-modifier-state)
-   ))
+   (x :initarg :x
+      :reader device-event-native-x)
+   (y :initarg :y
+      :reader device-event-native-y)
+   (graft-x :initarg :graft-x
+            :reader device-event-native-graft-x)
+   (graft-y :initarg :graft-y
+            :reader device-event-native-graft-y)))
 
 (defclass keyboard-event (device-event)
   ((key-name :initarg :key-name
@@ -109,20 +116,16 @@
 	    :reader pointer-event-pointer)
    (button :initarg :button
 	   :reader pointer-event-button)
-   (x :initarg :x
-      :reader pointer-event-native-x)
-   (y :initarg :y
-      :reader pointer-event-native-y)
-   (graft-x :initarg :graft-x
-            :reader pointer-event-native-graft-x)
-   (graft-y :initarg :graft-y
-            :reader pointer-event-native-graft-y) ))
+   (x :reader pointer-event-native-x)
+   (y :reader pointer-event-native-y)
+   (graft-x :reader pointer-event-native-graft-x)
+   (graft-y :reader pointer-event-native-graft-y) ))
 
 (defmacro get-pointer-position ((sheet event) &body body)
   `(multiple-value-bind (x y)
        (untransform-position (sheet-native-transformation ,sheet)
-			     (pointer-event-native-x ,event)
-			     (pointer-event-native-y ,event))
+			     (device-event-native-x ,event)
+			     (device-event-native-y ,event))
      (declare (ignorable x y))
      ,@body))
   

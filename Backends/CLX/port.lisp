@@ -429,6 +429,9 @@
 			      'key-press-event
 			      'key-release-event)
              :key-name keyname
+	     :x x :y y
+	     :graft-x root-x
+	     :graft-y root-y
              :sheet sheet :modifier-state modifier-state :timestamp time)))
 	((:button-press :button-release)
 	 (let ((modifier-state (x-event-state-modifiers *clx-port* state)))

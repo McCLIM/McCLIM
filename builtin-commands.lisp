@@ -65,7 +65,11 @@
 
 (define-presentation-to-command-translator com-describe-presentation
     (t com-describe global-command-table
-     :gesture :describe-presentation)
+     :gesture :describe-presentation
+     :tester ((presentation)
+	      (not (eq presentation *null-presentation*)))
+     :documentation "Describe Presentation"
+     :pointer-documentation "Describe Presentation")
   (presentation)
   (list presentation))
 

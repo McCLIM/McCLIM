@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.95 2002/08/02 08:05:16 moore Exp $
+;;; $Id: panes.lisp,v 1.96 2002/08/03 08:28:47 moore Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -2018,7 +2018,12 @@ During realization the child of the spacing will have as cordinates
   (:default-initargs :display-time nil
                      :scroll-bars nil
 		     :default-view +pointer-documentation-view+
-		     :height 30))
+		     :height 36
+		     :text-style (make-text-style :sans-serif :roman :normal)
+		     :foreground +white+
+		     :background +black+
+		     :end-of-line-action :allow
+		     :end-of-page-action :allow))
 
 
 ;;; CONSTRUCTORS

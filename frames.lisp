@@ -691,14 +691,17 @@ FRAME-EXIT condition."))
 	  (t (< cnt-a cnt-b)))))
 
 (defun print-modifiers (stream modifiers style)
-  (loop with trailing = nil
-	for (bit short long) in +modifier-documentation+
-	when (logtest bit modifiers)
-	do (progn
-	     (format stream "~:[~;-~]~A" trailing (if (eq style :short)
-						      short
-						      long))
-	     (setq trailing t))))
+  (if (zerop modifiers)
+      (when (eq style :long)
+	(write-string "<nothing>" stream))
+      (loop with trailing = nil
+	    for (bit short long) in +modifier-documentation+
+	    when (logtest bit modifiers)
+	    do (progn
+		 (format stream "~:[~;-~]~A" trailing (if (eq style :short)
+							  short
+							  long))
+		 (setq trailing t)))))
 
 
 ;;; We don't actually want to print out the translator documentation and redraw
@@ -788,15 +791,21 @@ FRAME-EXIT condition."))
 			      *pointer-documentation-output*)
 		(loop for modifier-tail on other-modifiers
 		      for (modifier) = modifier-tail
-		      for first-one = t then nil
+		      for count from 0
 		      do (progn
-			   (when (not first-one)
-			     (write-string ", "
-					   *pointer-documentation-output*))
-			   (when (and (null (cdr modifier-tail))
-				      (not first-one))
-			     (write-string "or "
-					   *pointer-documentation-output*))
+			   (if (null (cdr modifier-tail))
+			       (progn
+				 (when (> count 1)
+				   (write-char #\,
+					       *pointer-documentation-output*))
+				 (when (> count 0)
+				   (write-string
+				    " or "
+				    *pointer-documentation-output*)))
+			       (when (> count 0)
+				 (write-string
+				  ", "
+				  *pointer-documentation-output*)))
 			   (print-modifiers *pointer-documentation-output*
 					    modifier
 					    :long)))

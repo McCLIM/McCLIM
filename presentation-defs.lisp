@@ -1104,7 +1104,6 @@
 (defmethod default-completion-name-key (item)
   (princ-to-string item))
 
-;;; Someone decided to patch defconstant, so we need the eval-when :P
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defconstant +completion-options+
     '((name-key 'default-completion-name-key)

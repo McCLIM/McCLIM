@@ -70,7 +70,7 @@
 ;;;; 11 Text Styles
 ;;;;
 
-(eval-when (eval load compile)
+(eval-when (:compile-toplevel :load-toplevel :execute)
 
 (define-protocol-class text-style ()
   ())
@@ -96,6 +96,9 @@
    (size   :initarg :text-size
 	   :initform :normal
 	   :reader text-style-size)))
+
+(defmethod make-load-form ((obj standard-text-style) &optional env)
+  (make-load-form-saving-slots obj :environment env))
 
 (defun family-key (family)
   (ecase family
@@ -133,7 +136,8 @@
      (* 16 (face-key face))
      (family-key family)))
 
-(defvar *text-style-hash-table* (make-hash-table :test #'eql))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defvar *text-style-hash-table* (make-hash-table :test #'eql)))
 
 (defun make-text-style (family face size)
   (let ((key (text-style-key family face size)))
