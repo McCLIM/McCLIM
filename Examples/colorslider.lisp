@@ -51,7 +51,8 @@
        (setf ,(case position (1 `(car rgb)) (2 `(cadr rgb)) (3 `(caddr rgb)))
 	     (/ value 10000)
 	     (clim-internals::gadget-current-color colored)
-	       (apply #'clim-internals::make-named-color "our-color" rgb)))))
+	       (apply #'clim-internals::make-named-color "our-color"
+		      (mapcar #'(lambda (color) (coerce color 'single-float)) rgb))))))
 
 (defvar callback-red (define-slider-callback "SLIDER-R" 1))
 (defvar callback-green (define-slider-callback "SLIDER-G" 2))
