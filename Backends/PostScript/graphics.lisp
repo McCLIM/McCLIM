@@ -45,7 +45,7 @@
 (in-package :CLIM-POSTSCRIPT)
 
 (defvar *transformation* nil
-  "Native trannformation")
+  "Native transformation")
 
 ;;; Postscript output utilities
 (defmacro with-graphics-state ((medium) &body body)
@@ -534,9 +534,3 @@
                           (medium-text-style medium)))
     (text-size-in-font font size
                        string start (or end (length string)))))
-
-
-(defmethod climi::text-style-character-width
-    (text-style (medium postscript-medium) char)
-  ;; Where did this function come from??? -- APD
-  (values (text-size medium char :text-style text-style)))
