@@ -26,42 +26,161 @@
 
 (in-package :CLIM-INTERNALS)
 
+;;;; Notes
+
+;; There is STANDARD-GADGET in this file but not in the spec, where
+;; from? Lispworks?
+
+;; The spec says ORIENTED-GADGET-MIXIN, we call it ORIENTED-GADGET and
+;; later define ORIENTED-GADGET-MIXIN with the remark "Try to be
+;; compatible with Lispworks' CLIM."
+;;
+;; This makes me suspect, that either "ORIENTED-GADGET-MIXIN" in the
+;; spec is a typo, or all other classes like e.g. ACTION-GADGET should
+;; really be named e.g. ACTION-GADGET-MIXIN. Also that would make more
+;; sense to me. --GB
+
+;; We have: LABELLED-GADGET, the spec has LABELLED-GADGET-MIXIN. Typo? 
+;; Compatibility?
+
+;; Why is there GADGET-LABEL-TEXT-STYLE? The spec says, that just the
+;; pane's text-style should be borrowed.
+
+;; Is "no label" as initarg to labelled gadget really such a good
+;; idea? I would prefer "".
+
+;; RANGE-GADGET / RANGE-GADGET-MIXIN: same thing as with
+;; ORIENTED-GADGET-MIXIN.
+
+;; Why is there no (SETF GADGET-RANGE*) in the spec? Omission?
+
+;; I would like to make COMPOSE-LABEL-SPACE and DRAW-LABEL* into some
+;; sort of label protocol, so that application programmers can
+;; programm their own sort of labels alleviateing the need for
+;; something like a drawn button gadget.
+;;
+;; Q: Can we make it so that a mixin class can override another mixin
+;;    class?
+;;
+;;    All the programmer should need to do is e.g.
+;;
+;;    (defclass pattern-label-mixin ()
+;;      (pattern :initarg :pattern))
+;;
+;;    (defmethod compose-label-space ((me pattern-label-mixin))
+;;      (with-slots (pattern) me
+;;        (make-space-requirement :width (pattern-width pattern)
+;;                                :height (pattern-height pattern))))
+;;
+;;    (defmethod draw-label ((me pattern-label-mixin) x1 y1 x2 y2)
+;;      (with-slots (pattern) me
+;;        (draw-design me (transform-region (make-translation-transformation x1 y1)
+;;                                          pattern))))
+;;
+;;    (defclass patterned-button (pattern-label-mixin push-button-pane)
+;;      ())
+;;
+;; But then this probably is backwards. Specifing that :LABEL can be
+;; another pane probably is much easier and would still allow for the
+;; backend to choose the concrete widget class for us.
+;;
+;; --GB
+
+;; Should RADIO-BOX-PANE and CHECK-BOX-PANE use rack or box layout?
+
+;; I would like to have a :ACTIVE-P initarg
+
+;;;; TODO
+
+;; - the scroll-bar needs more work:
+;;    . dragging should not change the value, the value should only
+;;      be changed after releasing the mouse.
+;;    . it should arm/disarm
+;;    . it should be deactivatable
+
+;; - the slider needs a total overhaul
+
+;; - LIST-PANE must move from panes.lisp here.
+
+;; - OPTION-PANE needs an implmentation
+
+;; - TEXT-FILED, TEXT-AREA dito
+
+;; - GADGET-COLOR-MIXIN is currently kind of dangling, we should reuse
+;;   it for effective-gadget-foreground et al.
+
+;; - The color of a 3Dish border should be derived from a gadget's
+;;   background.
+
+;; - It seems that 3D-BORDER-MIXIN is only used for the scroll-bar, so
+;;   remove it
+
+;;;; ------------------------------------------------------------------------------------------
+;;;;
+;;;;  30.3 Basic Gadget Classes
+;;;;
 
 ;;;
 ;;; Gadget
 ;;;
 
-(defclass gadget (;;permanent-medium-sheet-output-mixin
-                  immediate-sheet-input-mixin
-                  immediate-repainting-mixin pane
-                  )
-  ((id :initarg :id
-       :initform (gensym "GADGET")
-       :accessor gadget-id)
-   (client :initarg :client
-           :initform *application-frame*
-           :accessor gadget-client)
-   (armed-callback :initarg :armed-callback
-                   :initform nil
-                   :reader gadget-armed-callback)
+(define-protocol-class gadget (pane)
+  ((id                :initarg :id
+                      :initform (gensym "GADGET")
+                      :accessor gadget-id)
+   (client            :initarg :client
+                      :initform *application-frame*
+                      :accessor gadget-client)
+   (armed-callback    :initarg :armed-callback
+                      :initform nil
+                      :reader gadget-armed-callback)
    (disarmed-callback :initarg :disarmed-callback
                       :initform nil
                       :reader gadget-disarmed-callback)
-   (active-p;; [Arthur] I'm not so sure about the value for :initform.
-    ;; Maybe T is better? Or maybe we should call
-    ;; ACTIVATE-GADGET after creating a gadget?
-    :initform t
-    :reader gadget-active-p)
-   (armed :initform nil)))
+   ;; [Arthur] I'm not so sure about the value for :initform.
+   ;; Maybe T is better? Or maybe we should call
+   ;; ACTIVATE-GADGET after creating a gadget?
+   ;;
+   ;; I think, T is correct here --GB
+   (active-p            :initform t
+                        :reader gadget-active-p)
+   ;;
+   ;; I am not so lucky with the armed slot in GADGET --GB
+   (armed               :initform nil)
 
-(defun gadgetp (object)
-  (typep object 'gadget))
+   ;; These are directly borrowed from BASIC-PANE I am still not sure
+   ;; about the exact class hierarchy to implement. --GB
+
+   (foreground       :initarg :foreground
+                     :initform +black+
+                     :reader pane-foreground)
+   (background       :initarg :background
+                     :initform +white+
+                     :reader pane-background)
+   (text-style       :initarg :text-style
+                     :initform *default-text-style*
+                     :reader pane-text-style)
+
+   (align-x          :initarg :align-x
+                     :type (member :left :center :right)
+                     :initform :left    ;??
+                     :reader pane-align-x)
+   (align-y          :initarg :align-y
+                     :type (member :top :center :bottom)
+                     :initform :top     ;??
+                     :reader pane-align-y) )
+  )
+
+;;;
 
 (defun invoke-callback (pane callback &rest more-arguments)
   (when callback
     (let ((*application-frame* (pane-frame pane)))
       (apply callback pane more-arguments))))
-  
+
+;;
+;; gadget sub-classes
+;;
 
 ;;
 ;; gadget's colors
@@ -90,9 +209,8 @@
 
 (defmethod (setf gadget-current-color) :after (color (gadget gadget-color-mixin))
   (declare (ignore color))
-  (dispatch-repaint gadget (sheet-region gadget)))
+  '(dispatch-repaint gadget (sheet-region gadget)))
   
-
 ;;;
 ;;; gadgets look
 ;;;
@@ -106,64 +224,579 @@
   (draw-line* pane x1 y2 x2 y2 :ink +black+)
   (draw-line* pane x2 y1 x2 y2 :ink +black+))
 
-;;;;
-;;;; 3D-BORDER-MIXIN Class
-;;;;
-
-;; 3D-BORDER-MIXIN class can be used to add a 3D-ish border to
-;; panes. There are three new options:
-;;
-;;  :border-width       The width of the border
-;;  :border-style       The border's style one of :inset, :outset, :groove, :ridge, :solid,
-;;                      :double, :dotted, :dashed
-;;                      [:dotted and :dashed are not yet implemented]
-;;
-;;  :border-color       The border's color
-;;                      [Not implemented yet]
-;;
-;; [These options are modelled after CSS].
-;;
-;; When using 3D-BORDER-MIXIN, one should query the pane's inner
-;; region, where drawing should take place, by PANE-INNER-REGION.
-;;
-;; --GB
-
 #||
-;; Motif-ish
-(defparameter *3d-dark-color*   (make-gray-color .45))
-(defparameter *3d-normal-color* (make-gray-color .75))
-(defparameter *3d-light-color*  (make-gray-color .92))
-(defparameter *3d-inner-color*  (make-gray-color .65))
+;; Labelled-gadget
+
+(defgeneric draw-label (gadget label x y))
+
+(defmethod compose-space ((pane labelled-gadget))
+  (compose-space-aux pane (gadget-label pane)))
+
+(defmethod compose-space-aux ((pane labelled-gadget) (label string))
+  (with-sheet-medium (medium pane)
+    (let ((as (text-style-ascent (gadget-label-text-style pane) pane))
+          (ds (text-style-ascent (gadget-label-text-style pane) pane)))
+      (multiple-value-bind (width height)
+          (text-size medium (gadget-label pane)
+                     :text-style (gadget-label-text-style pane))
+        (setf height (+ as ds))
+        ;; FIXME remove explicit values
+        ;; instead use spacer pane in derived classes
+        (let ((tw (* 1.3 width))
+              (th (* 2.5 height)))
+          (setf th (+ 6 height))
+          (make-space-requirement :width tw :height th
+                                  :max-width 400 :max-height 400
+                                  :min-width tw :min-height th))))))
+
+(defmethod draw-label ((pane labelled-gadget) (label string) x y)
+  (draw-text* pane label
+	      x y
+	      :align-x (gadget-label-align-x pane)
+	      :align-y (gadget-label-align-y pane)
+	      :text-style (gadget-label-text-style pane)))
 ||#
 
-;; Gtk-ish
+(defclass basic-gadget (permanent-medium-sheet-output-mixin
+                        sheet-parent-mixin
+                        sheet-leaf-mixin
+                        ;; I am also not that lucky with mirrored-sheet-mixin here.
+                        ;; What about backends that do have mirrors? --GB
+                        mirrored-sheet-mixin
+                        gadget-color-mixin
+                        immediate-sheet-input-mixin
+                        immediate-repainting-mixin
+                        gadget
+                        )
+  ;; Half-baked attempt to be compatible with Lispworks.
+  ())
 
-(defparameter *3d-dark-color*   (make-gray-color .59))
-(defparameter *3d-normal-color* (make-gray-color .84))
-(defparameter *3d-light-color*  (make-gray-color 1.0))
-(defparameter *3d-inner-color*  (make-gray-color .75))
+;; Where is this standard-gadget from? --GB
+(defclass standard-gadget (basic-gadget)
+  ())
 
-(defclass 3D-border-mixin ()
-  ((border-width :initarg :border-width :initform 2)
-   (border-style :initarg :border-style :initform :outset)
-   (border-color :initarg :border-color :initform "???")))
+(defgeneric armed-callback (gadget client gadget-id))
+(defgeneric disarmed-callback (gadget client gadget-id))
 
-(defmethod pane-inner-region ((pane 3D-border-mixin))
-  (with-slots (border-width) pane
-    (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
-      (make-rectangle* (+ x1 border-width) (+ y1 border-width)
-                       (- x2 border-width) (- y2 border-width)))))
+;; "The default methods (on standard-gadget) call the function stored
+;; in gadget-armed-callback or gadget-disarmed-callback with one argument,
+;; the gadget."
 
-(defmethod handle-repaint :after ((pane 3D-border-mixin) region)
-  (declare (ignore region))
-  (with-slots (border-width border-style) pane
-    (draw-bordered-polygon pane (polygon-points (bounding-rectangle (sheet-region pane)))
-                           :border-width border-width
-                           :style border-style)))
+(defmethod armed-callback ((gadget standard-gadget) client gadget-id)
+  (declare (ignore client gadget-id))
+  (invoke-callback gadget (gadget-armed-callback gadget)))
+
+(defmethod disarmed-callback ((gadget standard-gadget) client gadget-id)
+  (declare (ignore client gadget-id))
+  (invoke-callback gadget (gadget-disarmed-callback gadget)))
+
+;;
+;; arming and disarming gadgets
+;;
+
+;; Redrawing is supposed to be handled on an :AFTER method on arm- and
+;; disarm-callback.
+
+(defmethod arm-gadget ((gadget basic-gadget) &optional (value t))
+  (with-slots (armed) gadget
+    (unless (eql armed value)
+      (setf armed value)
+      (if value
+          (armed-callback gadget (gadget-client gadget) (gadget-id gadget))
+          (disarmed-callback gadget (gadget-client gadget) (gadget-id gadget))))))
+
+(defmethod disarm-gadget ((gadget basic-gadget))
+  (arm-gadget gadget nil))
+
+;;;
+;;; Activation
+;;;
+
+(defgeneric activate-gadget (gadget))
+(defgeneric deactivate-gadget (gadget))
+(defgeneric note-gadget-activated (client gadget))
+(defgeneric note-gadget-deactivated (client gadget))
+
+(defmethod activate-gadget ((gadget gadget))
+  (with-slots (active-p) gadget
+    (unless active-p
+      (setf active-p t)
+      (note-gadget-activated (gadget-client gadget) gadget))))
+
+(defmethod deactivate-gadget ((gadget gadget))
+  (with-slots (active-p) gadget
+    (when active-p
+      (setf active-p nil)
+      (note-gadget-deactivated (gadget-client gadget) gadget))))
+
+(defmethod note-gadget-activated (client (gadget gadget))
+  (declare (ignore client))
+  ;; Default: do nothing  
+  )
+
+(defmethod note-gadget-deactivated (client (gadget gadget))
+  (declare (ignore client))
+  ;; Default: do nothing
+  )
+
+;;;
+;;; Value-gadget
+;;;
+
+(defclass value-gadget (standard-gadget)
+  ((value :initarg :value
+          :reader gadget-value)
+   (value-changed-callback :initarg :value-changed-callback
+                           :initform nil
+                           :reader gadget-value-changed-callback)))
+
+(defgeneric (setf gadget-value) (value gadget &key invoke-callback))
+
+(defmethod (setf gadget-value) (value (gadget value-gadget) &key invoke-callback)
+  (setf (slot-value gadget 'value) value)
+  (when invoke-callback
+    (value-changed-callback gadget 
+                            (gadget-client gadget) 
+                            (gadget-id gadget)
+                            value)))
+
+(defgeneric value-changed-callback (value-gadget client gadget-id value))
+
+(defmethod value-changed-callback ((gadget value-gadget) client gadget-id value)
+  (declare (ignore client gadget-id))
+  (invoke-callback gadget (gadget-value-changed-callback gadget) value))
+
+;;;
+;;; Action-gadget
+;;;
+
+(defclass action-gadget (standard-gadget)
+  ((activate-callback :initarg :activate-callback
+                      :initform nil
+                      :reader gadget-activate-callback)))
+
+(defgeneric activate-callback (action-gadget client gadget-id))
+
+(defmethod activate-callback ((gadget action-gadget) client gadget-id)
+  (declare (ignore client gadget-id))
+  (invoke-callback gadget (gadget-activate-callback gadget)))
+
+;;;
+;;; Oriented-gadget
+;;;
+
+(defclass oriented-gadget ()
+  ((orientation :type    (member :vertical :horizontal)
+		:initarg :orientation
+                :reader  gadget-orientation)))
+
+(defclass oriented-gadget-mixin (oriented-gadget)
+  ;; Try to be compatible with Lispworks' CLIM.
+  ())
 
 ;;;;
-;;;; 3D-ish Look
+;;;; labelled-gadget
 ;;;;
+
+(defclass labelled-gadget ()
+  ((label       :initarg :label
+                :initform "No label"
+                :accessor gadget-label)
+   (align-x     :initarg :align-x
+                :accessor gadget-label-align-x)
+   (align-y     :initarg :align-y
+                :accessor gadget-label-align-y)
+   (text-style  :initform *default-text-style*
+		:initarg :text-style
+                :accessor gadget-text-style)))
+
+(defclass labelled-gadget-mixin (labelled-gadget)
+  ;; Try to be compatible with Lispworks' CLIM.
+  ())
+
+;;;;
+;;;; Range-gadget
+;;;;
+
+(defclass range-gadget ()
+  ((min-value :initarg :min-value
+              :accessor gadget-min-value)
+   (max-value :initarg :max-value
+              :accessor gadget-max-value)))
+
+(defclass range-gadget-mixin (range-gadget)
+  ;; Try to be compatible with Lispworks' CLIM.
+  ())
+
+(defgeneric gadget-range (range-gadget)
+  (:documentation
+   "Returns the difference of the maximum and minimum value of RANGE-GADGET."))
+
+(defmethod gadget-range ((gadget range-gadget))
+  (- (gadget-max-value gadget)
+     (gadget-min-value gadget)))
+
+(defgeneric gadget-range* (range-gadget)
+  (:documentation 
+   "Returns the minimum and maximum value of RANGE-GADGET as two values."))
+
+(defmethod gadget-range* ((gadget range-gadget))
+  (values (gadget-min-value gadget)
+          (gadget-max-value gadget)))
+
+
+;;;; ------------------------------------------------------------------------------------------
+;;;;
+;;;;  30.4 Abstract Gadget Classes
+;;;;
+
+;;; 30.4.1 The abstract push-button Gadget
+
+(defclass push-button (labelled-gadget-mixin action-gadget)
+  ())
+
+;;; 30.4.2 The abstract toggle-button Gadget
+
+(defclass toggle-button (labelled-gadget-mixin value-gadget)
+  ()
+  (:documentation "The value is either t either nil"))
+
+;;; 30.4.3 The abstract menu-button Gadget
+
+(defclass menu-button (labelled-gadget-mixin value-gadget)
+  ()
+  (:documentation "The value is a button"))
+
+;;; 30.4.4 The abstract scroll-bar Gadget
+
+(defgeneric drag-callback (pane client gadget-id value))
+(defgeneric scroll-to-top-callback (scroll-bar client gadget-id))
+(defgeneric scroll-to-bottom-callback (scroll-bar client gadget-id))
+(defgeneric scroll-up-line-callback (scroll-bar client gadget-id))
+(defgeneric scroll-up-page-callback (scroll-bar client gadget-id))
+(defgeneric scroll-down-line-callback (scroll-bar client gadget-id))
+(defgeneric scroll-down-page-callback (scroll-bar client gadget-id))
+
+(defclass scroll-bar (value-gadget oriented-gadget-mixin range-gadget-mixin)
+  ((drag-callback :initarg :drag-callback
+		  :initform nil
+		  :reader scroll-bar-drag-callback)
+   (scroll-to-bottom-callback :initarg :scroll-to-bottom-callback
+			      :initform nil
+			      :reader scroll-bar-scroll-to-bottom-callback)
+   (scroll-to-top-callback :initarg :scroll-to-top-callback
+			   :initform nil
+			   :reader scroll-bar-scroll-to-top-callback)
+   (scroll-down-line-callback :initarg :scroll-down-line-callback
+                              :initform nil
+                              :reader scroll-bar-scroll-down-line-callback)
+   (scroll-up-line-callback :initarg :scroll-up-line-callback
+                            :initform nil
+                            :reader scroll-bar-scroll-up-line-callback)
+   (scroll-down-page-callback :initarg :scroll-down-page-callback
+                              :initform nil
+                              :reader scroll-bar-scroll-down-page-callback)
+   (scroll-up-page-callback :initarg :scroll-up-page-callback
+                            :initform nil
+                            :reader scroll-bar-scroll-up-page-callback)
+   (thumb-size :initarg :thumb-size :initform 1/4
+               :accessor scroll-bar-thumb-size)
+   ))
+
+(defmethod drag-callback ((pane scroll-bar) client gadget-id value)
+  (declare (ignore client gadget-id))
+  (invoke-callback pane (scroll-bar-drag-callback pane) value))
+
+(defmethod scroll-to-top-callback ((pane scroll-bar) client gadget-id)
+  (declare (ignore client gadget-id))
+  (invoke-callback pane (scroll-bar-scroll-to-top-callback pane)))
+
+(defmethod scroll-to-bottom-callback ((pane scroll-bar) client gadget-id)
+  (declare (ignore client gadget-id))
+  (invoke-callback pane (scroll-bar-scroll-to-bottom-callback pane)))
+
+(defmethod scroll-up-line-callback ((pane scroll-bar) client gadget-id)
+  (declare (ignore client gadget-id))
+  (invoke-callback pane (scroll-bar-scroll-up-line-callback pane)))
+
+(defmethod scroll-up-page-callback ((pane scroll-bar) client gadget-id)
+  (declare (ignore client gadget-id))
+  (invoke-callback pane (scroll-bar-scroll-up-page-callback pane)))
+
+(defmethod scroll-down-line-callback ((pane scroll-bar) client gadget-id)
+  (declare (ignore client gadget-id))
+  (invoke-callback pane (scroll-bar-scroll-down-line-callback pane)))
+
+(defmethod scroll-down-page-callback ((pane scroll-bar) client gadget-id)
+  (declare (ignore client gadget-id))
+  (invoke-callback pane (scroll-bar-scroll-down-page-callback pane)))
+
+;;; 30.4.5 The abstract slider Gadget
+
+(defclass slider-gadget (labelled-gadget-mixin
+			 value-gadget
+			 oriented-gadget-mixin
+			 range-gadget-mixin
+			 gadget-color-mixin
+                         ;;
+                         value-changed-repaint-mixin
+                         )
+  ()
+  (:documentation "The value is a real number, and default value for orientation is :vertical,
+and must never be nil."))
+
+;;; 30.4.6 The abstract radio-box and check-box Gadgets
+
+;; The only real different between a RADIO-BOX and a CHECK-BOX is the
+;; number of allowed selections.
+
+(defclass radio-box (value-gadget oriented-gadget-mixin) 
+  ()
+  (:documentation "The value is a button")
+  (:default-initargs
+    :value nil))
+
+;; RADIO-BOX-CURRENT-SELECTION is just a synonym for GADGET-VALUE:
+
+(defmethod radio-box-current-selection ((radio-box radio-box))
+  (gadget-value radio-box))
+
+(defmethod (setf radio-box-current-selection) (new-value (radio-box radio-box))
+  (setf (gadget-value radio-box) new-value))
+
+(defmethod radio-box-selections ((pane radio-box))
+  (let ((v (radio-box-current-selection pane)))
+    (and v (list v))))
+
+(defmethod value-changed-callback :before (value-gadget (client radio-box) gadget-id value)
+  (declare (ignorable value-gadget gadget-id value))
+  ;; Note that we ignore 'value', this is because if value is non-NIL,
+  ;; then the toggle button was turned off, which would make no
+  ;; toggle-button turned on => constraint "always exactly one
+  ;; selected" missed. So simply turning this toggle button on again
+  ;; fixes it.
+  (unless (or (and (not value)
+                   (not (eq (gadget-value client) value-gadget)))
+              (and value
+                   (eq (gadget-value client) value-gadget)))
+    (setf (gadget-value client :invoke-callback t) value-gadget)))
+
+;;;; CHECK-BOX
+
+(defclass check-box (value-gadget oriented-gadget-mixin) 
+  ()
+  (:documentation "The value is a list of buttons")
+  (:default-initargs
+      :value nil))
+
+;; CHECK-BOX-CURRENT-SELECTION is just a synonym for GADGET-VALUE:
+
+(defmethod check-box-current-selection ((check-box check-box))
+  (gadget-value check-box))
+
+(defmethod (setf check-box-current-selection) (new-value (check-box check-box))
+  (setf (gadget-value check-box) new-value))
+
+(defmethod value-changed-callback :before (value-gadget (client check-box) gadget-id value)
+  (declare (ignorable gadget-id))
+  (if value
+      (setf (gadget-value client :invoke-callback t) (adjoin value-gadget (gadget-value client)))
+      (setf (gadget-value client :invoke-callback t) (remove value-gadget (gadget-value client)))))
+
+(defmethod (setf gadget-value) :after (buttons (check-box check-box) &key invoke-callback)
+  ;; this is silly, but works ...
+  (dolist (c (sheet-children check-box))
+    (unless (eq (not (null (member c buttons)))
+                (not (null (gadget-value c))))
+      (setf (gadget-value c :invoke-callback invoke-callback) (member c buttons)) )))
+
+(defmacro with-radio-box ((&rest options
+                           &key (type :one-of) (orientation :vertical) &allow-other-keys)
+                          &body body)
+  (let ((contents (gensym "CONTENTS-"))
+        (selected-p (gensym "SELECTED-P-"))
+        (initial-selection (gensym "INITIAL-SELECTION-")))
+    `(let ((,contents nil)
+           (,selected-p nil)
+           (,initial-selection nil))
+       (declare (special ,selected-p))
+       (flet ((make-pane (type &rest options)
+                (cond ((eq type 'toggle-button)
+                       (let ((pane (apply #'make-pane type 
+                                          :value ,selected-p 
+                                          :indicator-type ',type
+                                          options)))
+                         (push pane ,contents)
+                         (when ,selected-p
+                           (push pane ,initial-selection))))
+                      (t
+                       (error "oops")))))
+         (macrolet ((radio-box-current-selection (subform)
+                      `(let ((,',selected-p t))
+                         (declare (special ,',selected-p))
+                         ,(cond ((stringp subform)
+                                 `(make-pane 'toggle-button :label ,subform))
+                                (t
+                                 subform)))))
+           ,@(mapcar (lambda (form)
+                       (cond ((stringp form)
+                              `(make-pane 'toggle-button :label ,form))
+                             (t
+                              form)))
+                     body)))
+       (make-pane ',(if (eq type :one-of) 
+                            'radio-box
+                            'check-box)
+                  :orientation ',orientation
+                  :current-selection ,(if (eq type :one-of)
+                                          `(or (first ,initial-selection)
+                                               (first ,contents))
+                                        `,initial-selection)
+                  :choices (reverse ,contents)
+                  ,@options))))
+
+;;; 30.4.7 The abstract list-pane and option-pane Gadgets
+
+(defclass list-pane (value-gadget)
+  ()
+  (:documentation 
+   "The instantiable class that implements an abstract list pane, that is, a gadget
+    whose semantics are similar to a radio box or check box, but whose visual
+    appearance is a list of buttons."))
+
+(defclass option-pane (value-gadget)
+  ()
+  (:documentation
+   "The instantiable class that implements an abstract option pane, that is, a
+    gadget whose semantics are identical to a list pane, but whose visual
+    appearance is a single push button which, when pressed, pops up a menu of
+    selections."))
+
+;;; 30.4.8 The abstract text-field Gadget
+
+(defclass text-field (value-gadget action-gadget)
+  ()
+  (:documentation "The value is a string"))
+
+;;; 30.4.9 The abstract text-editor Gadget
+
+(defclass text-editor (text-field)
+  ()
+  (:documentation "The value is a string"))
+
+;;;; ------------------------------------------------------------------------------------------
+;;;;
+;;;;  Mixin Classes for Concrete Gadgets
+;;;;
+
+(defclass standard-gadget-pane (;;permanent-medium-sheet-output-mixin
+                                ;;immediate-sheet-input-mixin
+                                ;;immediate-repainting-mixin
+                                standard-gadget)
+  ()
+  (:documentation
+   "PANE class to include in gadget pane classes."))
+
+;;;; Redrawing mixins
+
+(defclass arm/disarm-repaint-mixin ()
+  ()
+  (:documentation
+   "Mixin class for gadgets, whose appearence depends on its armed state."))
+
+(defmethod armed-callback :after ((gadget arm/disarm-repaint-mixin) client id)
+  (declare (ignore client id))
+  (dispatch-repaint gadget +everywhere+))
+
+(defmethod disarmed-callback :after ((gadget arm/disarm-repaint-mixin) client id)
+  (declare (ignore client id))
+  (dispatch-repaint gadget +everywhere+))
+
+(defclass value-changed-repaint-mixin ()
+  ()
+  (:documentation
+   "Mixin class for gadgets, whose appearence depends on its value."))
+
+(defmethod (setf gadget-value) :after (new-value (gadget value-changed-repaint-mixin) 
+                                       &key &allow-other-keys)
+  (declare (ignore new-value))
+  (dispatch-repaint gadget +everywhere+))
+
+;;;; Event handling mixins
+
+(defclass enter/exit-arms/disarms-mixin ()
+  ()
+  (:documentation
+   "Mixin class for gadgets, which will be armed, when the mouse enters and 
+    disarmed, when the mouse leaves."))
+
+(defmethod handle-event :before ((pane enter/exit-arms/disarms-mixin) (event pointer-enter-event))
+  (declare (ignorable event))
+  (arm-gadget pane))
+
+(defmethod handle-event :after ((pane enter/exit-arms/disarms-mixin) (event pointer-exit-event))
+  (declare (ignorable event))
+  (disarm-gadget pane))
+
+;;;; changing-label-invokes-layout-protocol-mixin
+
+(defclass changing-label-invokes-layout-protocol-mixin ()
+  ()
+  (:documentation
+   "Mixin class for gadgets, which want invoke the layout protocol, if the label changes."))
+
+;;;; Common behavior on STANDARD-GADGET-PANE and BASIC-GADGET
+
+;;
+;; When a gadget is not activated, it receives no device events.
+;;
+(defmethod handle-event :around ((pane standard-gadget) (event device-event))
+  (when (gadget-active-p pane)
+    (call-next-method)))
+
+;; When a gadget is deactivated, it cannot be armed.
+
+;; Glitch: upon re-activation the mouse might happen to be in the
+;; gadget and thus re-arm it immediately, that is not implemented.
+
+(defmethod note-gadget-deactivated :after (client (gadget standard-gadget))
+  (declare (ignorable client))
+  (disarm-gadget gadget))
+
+;;
+
+(defmethod compose-label-space ((gadget labelled-gadget-mixin))
+  (with-slots (label align-x align-y) gadget
+    (let ((as (text-style-ascent (pane-text-style gadget) gadget))
+          (ds (text-style-descent (pane-text-style gadget) gadget))
+          (w  (text-size gadget label :text-style (pane-text-style gadget))))
+      (make-space-requirement :width w :min-width w :max-width w
+                              :height (+ as ds) :min-height (+ as ds) :max-height (+ as ds)))))
+
+(defmethod draw-label* ((pane labelled-gadget-mixin) x1 y1 x2 y2
+                        &key (ink +foreground-ink+))
+  (with-slots (align-x align-y label) pane
+    (let ((as (text-style-ascent (pane-text-style pane) pane))
+          (ds (text-style-descent (pane-text-style pane) pane))
+          (w  (text-size pane label :text-style (pane-text-style pane))))
+      (draw-text* pane label
+                  (case align-x
+                    ((:left) x1)
+                    ((:right) (- x2 w))
+                    ((:center) (/ (+ x1 x2 (- w)) 2))
+                    (otherwise x1))     ;defensive programming
+                  (case align-y
+                    ((:top) (+ y1 as))
+                    ((:center) (/ (+ y1 y2 (- as ds)) 2))
+                    ((:bottom) (- y2 ds))
+                    (otherwise (/ (+ y1 y2 (- as ds)) 2))))))) ;defensive programming
+
+;;;; ------------------------------------------------------------------------------------------
+;;;;
+;;;;  Drawing Utilities for Concrete Gadgets
+;;;;
+
+;;; 3D-ish Look
 
 ;; DRAW-BORDERED-POLYGON medium point-seq &key border-width style
 ;;
@@ -334,399 +967,266 @@
                (draw-pieces outer-points omiddle-points +black+ +black+)
                (draw-pieces imiddle-points inner-points +black+ +black+))))))))) )
 
-;;
-;; gadget sub-classes
-;;
-
-(defclass basic-gadget (
-                        permanent-medium-sheet-output-mixin
-                        sheet-parent-mixin 
-                        sheet-leaf-mixin
-                        mirrored-sheet-mixin
-                        gadget-color-mixin
-                        gadget
-                        ;;basic-pane
-                        )
-  ;; Half-baked attempt to be compatible with Lispworks.
-  ())
-
-(defclass standard-gadget (basic-gadget)
-  ())
-
-(defgeneric armed-callback (gadget client gadget-id))
-(defgeneric disarmed-callback (gadget client gadget-id))
-
-;; "The default methods (on standard-gadget) call the function stored
-;; in gadget-armed-callback or gadget-disarmed-callback with one argument,
-;; the gadget."
-
-(defmethod armed-callback ((gadget standard-gadget) client gadget-id)
-  (declare (ignore client gadget-id))
-  (let ((callback (gadget-armed-callback gadget)))
-    (when callback
-      (funcall callback gadget))))
-
-(defmethod disarmed-callback ((gadget standard-gadget) client gadget-id)
-  (declare (ignore client gadget-id))
-  (let ((callback (gadget-disarmed-callback gadget)))
-    (when callback
-      (funcall callback gadget))))
-
-
-;; Client warning
-
-; Warning the gadget's client is useful (and made) when a changement has come
-(defgeneric warn-client (gadget client))
-
-; Default methods does nothing
-; Now, the default client of a gadget is its application-frame (here *application-frame*)
-(defmethod warn-client (gadget (frame application-frame))
-  (declare (ignorable gadget frame))
-  (values))
-
-(defmethod warn-client (gadget (sheet sheet))
-  (declare (ignorable gadget sheet))
-  (values))
-
-; The moment to warn the client
-; [Julien] I'm not sure about this moment, but it works well...
-(defmethod handle-event :after ((gadget standard-gadget) (event pointer-button-press-event))
-  (when (gadget-client gadget)
-    (warn-client gadget (gadget-client gadget))))
-
-
-;;;
-;;; Activation
-;;;
-
-(defgeneric activate-gadget (gadget))
-(defgeneric deactivate-gadget (gadget))
-(defgeneric note-gadget-activated (client gadget))
-(defgeneric note-gadget-deactivated (client gadget))
-
-(defmethod activate-gadget ((gadget gadget))
-  (with-slots (active-p) gadget
-    (unless active-p
-      (setf active-p t)
-      (note-gadget-activated (gadget-client gadget) gadget))))
-
-(defmethod deactivate-gadget ((gadget gadget))
-  (with-slots (active-p) gadget
-    (when active-p
-      (setf active-p nil)
-      (note-gadget-deactivated (gadget-client gadget) gadget))))
-
-(defmethod note-gadget-activated (client (gadget gadget))
-  (declare (ignore client))
-  ;; Default: do nothing  
-  )
-
-(defmethod note-gadget-deactivated (client (gadget gadget))
-  (declare (ignore client))
-  ;; Default: do nothing
-  )
-
-;;;
-;;; Value-gadget
-;;;
-
-(defclass value-gadget (standard-gadget)
-  ((value :initarg :value
-          :reader gadget-value)
-   (value-changed-callback :initarg :value-changed-callback
-                           :initform nil
-                           :reader gadget-value-changed-callback)))
-
-(defgeneric (setf gadget-value) (value gadget &key invoke-callback))
-
-(defmethod (setf gadget-value) (value (gadget value-gadget) &key invoke-callback)
-  (setf (slot-value gadget 'value) value)
-  (when invoke-callback
-    (value-changed-callback gadget 
-                            (gadget-client gadget) 
-                            (gadget-id gadget)
-                            value)))
-
-(defgeneric value-changed-callback (value-gadget client gadget-id value))
-
-(defmethod value-changed-callback ((gadget value-gadget) client gadget-id value)
-  (declare (ignore client gadget-id))
-  (invoke-callback gadget (gadget-value-changed-callback gadget) value))
-
+(defun draw-bordered-rectangle* (medium x1 y1 x2 y2 &rest options)
+  (apply #'draw-bordered-polygon
+         medium
+         (polygon-points (make-rectangle* x1 y1 x2 y2))
+         options))
   
-;;;
-;;; Action-gadget
-;;;
 
-(defclass action-gadget (standard-gadget)
-  ((activate-callback :initarg :activate-callback
-                      :initform nil
-                      :reader gadget-activate-callback)))
+;;;;
+;;;; 3D-BORDER-MIXIN Class
+;;;;
 
-(defgeneric activate-callback (action-gadget client gadget-id))
-
-(defmethod activate-callback ((gadget action-gadget) client gadget-id)
-  (declare (ignore client gadget-id))
-  (let ((callback (gadget-activate-callback gadget)))
-    (when callback
-      (let ((*application-frame* (pane-frame gadget)))
-        (funcall callback gadget)))))
-
-;;;
-;;; Oriented-gadget, labelled-gadget, range-gadget
-;;;
-
-;; Oriented-gadget
-
-(defclass oriented-gadget ()
-  ((orientation :type (member '(:vertical :horizontal))
-		:initarg :orientation
-                :reader gadget-orientation)))
-
-(defclass oriented-gadget-mixin (oriented-gadget)
-  ;; Try to be compatible with Lispworks' CLIM.
-  ())
-
-
-;; Labelled-gadget
-
-(defgeneric draw-label (gadget label x y))
-
-(defclass labelled-gadget ()
-  ((label :initarg :label
-	  :initform "No label"
-          :accessor gadget-label)
-   (align-x :initarg :align-x
-            :accessor gadget-label-align-x)
-   (align-y :initarg :align-y
-            :accessor gadget-label-align-y)
-   (label-text-style :initform *default-text-style*
-		     :initarg :label-text-style
-                     :accessor gadget-label-text-style)))
-
-(defmethod compose-space ((pane labelled-gadget))
-  (compose-space-aux pane (gadget-label pane)))
-
-(defmethod compose-space-aux ((pane labelled-gadget) (label string))
-  (with-sheet-medium (medium pane)
-    (multiple-value-bind (width height)
-	(text-size medium (gadget-label pane)
-		   :text-style (gadget-label-text-style pane))
-      ;; FIXME remove explicit values
-      ;; instead use spacer pane in derived classes
-      (let ((tw (* 1.3 width))
-	    (th (* 2.5 height)))
-	(make-space-requirement :width tw :height th
-				:max-width 400 :max-height 400
-				:min-width tw :min-height th)))))
-
-(defmethod draw-label ((pane labelled-gadget) (label string) x y)
-  (draw-text* pane label
-	      x y
-	      :align-x (gadget-label-align-x pane)
-	      :align-y (gadget-label-align-y pane)
-	      :text-style (gadget-label-text-style pane)))
-
-(defclass labelled-gadget-mixin (labelled-gadget)
-  ;; Try to be compatible with Lispworks' CLIM.
-  ())
-
-;; LATER: Implement the following: "Changing the label of a gadget
-;; may result in invoking the layout protocol on the gadget and its
-;; ancestor sheets." (And similarly for changing the alignment or
-;; the label text style of a gadget.)
-
-
-;; Range-gadget
-
-(defclass range-gadget ()
-  ((min-value :initarg :min-value
-              :accessor gadget-min-value)
-   (max-value :initarg :max-value
-              :accessor gadget-max-value)))
-
-(defclass range-gadget-mixin (range-gadget)
-  ;; Try to be compatible with Lispworks' CLIM.
-  ())
-
-(defgeneric gadget-range (range-gadget)
-  (:documentation
-   "Returns the difference of the maximum and minimum value of RANGE-GADGET."))
-
-(defmethod gadget-range ((gadget range-gadget))
-  (- (gadget-max-value gadget)
-     (gadget-min-value gadget)))
-
-(defgeneric gadget-range* (range-gadget)
-  (:documentation 
-   "Returns the minimum and maximum value of RANGE-GADGET as two values."))
-
-(defmethod gadget-range* ((gadget range-gadget))
-  (values (gadget-min-value gadget)
-          (gadget-max-value gadget)))
-
-
+;; 3D-BORDER-MIXIN class can be used to add a 3D-ish border to
+;; panes. There are three new options:
 ;;
-;; PUSH-BUTTON gadget
+;;  :border-width       The width of the border
+;;  :border-style       The border's style one of :inset, :outset, :groove, :ridge, :solid,
+;;                      :double, :dotted, :dashed
+;;                      [:dotted and :dashed are not yet implemented]
 ;;
+;;  :border-color       The border's color
+;;                      [Not implemented yet]
+;;
+;; [These options are modelled after CSS].
+;;
+;; When using 3D-BORDER-MIXIN, one should query the pane's inner
+;; region, where drawing should take place, by PANE-INNER-REGION.
+;;
+;; --GB
 
-(defclass push-button (labelled-gadget-mixin action-gadget) ())
-  
-(defclass push-button-pane  (push-button basic-pane standard-space-requirement-options-mixin )
-  ((show-as-default-p :type boolean
+#||
+;; Motif-ish
+(defparameter *3d-dark-color*   (make-gray-color .45))
+(defparameter *3d-normal-color* (make-gray-color .75))
+(defparameter *3d-light-color*  (make-gray-color .92))
+(defparameter *3d-inner-color*  (make-gray-color .65))
+||#
+
+;; Gtk-ish
+
+(defparameter *3d-dark-color*   (make-gray-color .59))
+(defparameter *3d-normal-color* (make-gray-color .84))
+(defparameter *3d-light-color*  (make-gray-color 1.0))
+(defparameter *3d-inner-color*  (make-gray-color .75))
+
+(defclass 3D-border-mixin ()
+  ((border-width :initarg :border-width :initform 2)
+   (border-style :initarg :border-style :initform :outset)
+   (border-color :initarg :border-color :initform "???")))
+
+(defmethod pane-inner-region ((pane 3D-border-mixin))
+  (with-slots (border-width) pane
+    (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
+      (make-rectangle* (+ x1 border-width) (+ y1 border-width)
+                       (- x2 border-width) (- y2 border-width)))))
+
+(defmethod handle-repaint :after ((pane 3D-border-mixin) region)
+  (declare (ignore region))
+  (with-slots (border-width border-style) pane
+    (draw-bordered-polygon pane (polygon-points (bounding-rectangle (sheet-region pane)))
+                           :border-width border-width
+                           :style border-style)))
+
+;;;; ------------------------------------------------------------------------------------------
+;;;;
+;;;;  30.4a Concrete Gadget Classes
+;;;;
+
+;; xxx move these!
+
+(defparameter *3d-border-thickness* 2)
+
+;;; Common colors:
+
+(defmethod gadget-highlight-background ((gadget standard-gadget))
+  (compose-over (compose-in +paleturquoise+ (make-opacity .5))
+                (pane-background gadget)))
+
+(defmethod effective-gadget-foreground ((gadget standard-gadget))
+  (if (gadget-active-p gadget)
+      +foreground-ink+
+      (compose-over (compose-in (pane-foreground gadget)
+                                (make-opacity .5))
+                    (pane-background gadget))))
+
+(defmethod effective-gadget-background ((gadget standard-gadget))
+  (if (slot-value gadget 'armed)
+      (gadget-highlight-background gadget)
+      (pane-background gadget)))
+
+(defmethod effective-gadget-input-area-color ((gadget standard-gadget))
+  (if (gadget-active-p gadget)
+      +LEMONCHIFFON+
+      (compose-over (compose-in +LEMONCHIFFON+ (make-opacity .5))
+                    (pane-background gadget))))
+
+;;; ------------------------------------------------------------------------------------------
+;;; 30.4.1 The concrete push-button Gadget
+
+(defclass push-button-pane  (push-button
+                             changing-label-invokes-layout-protocol-mixin
+                             arm/disarm-repaint-mixin
+                             enter/exit-arms/disarms-mixin
+                             standard-space-requirement-options-mixin
+                             standard-gadget-pane)
+  ((pressedp          :initform nil)
+   (show-as-default-p :type boolean
 		      :initform nil
 		      :initarg :show-as-default-p
-		      :accessor push-button-show-as-default-p)))
+		      :accessor push-button-show-as-default-p))
+  (:default-initargs
+    :background *3d-normal-color*
+    :align-x :center
+    :align-y :center
+    :x-spacing 4
+    :y-spacing 4))
 
-(defmethod initialize-instance :before ((pane push-button-pane) &rest rest)
-  (declare (ignore rest))
-  (setf (gadget-label-align-x pane) :center
-	(gadget-label-align-y pane) :center))
-
-(defmethod handle-event ((pane push-button-pane) (event pointer-enter-event))
-  (with-slots (armed) pane
-    (unless armed
-      (setf armed t
-	    (gadget-current-color pane) (gadget-highlighted-color pane))
-      (armed-callback pane (gadget-client pane) (gadget-id pane)))))
-
-(defmethod handle-event ((pane push-button-pane) (event pointer-exit-event))
-  (with-slots (armed) pane
-    (when armed
-      (setf armed nil
-	    (gadget-current-color pane) (gadget-normal-color pane))
-      (disarmed-callback pane (gadget-client pane) (gadget-id pane)))))
+(defmethod compose-space ((gadget push-button-pane))
+  (space-requirement+* (space-requirement+* (compose-label-space gadget)
+                                            :min-width (* 2 (pane-x-spacing gadget))
+                                            :width (* 2 (pane-x-spacing gadget))
+                                            :max-width (* 2 (pane-x-spacing gadget))
+                                            :min-height (* 2 (pane-y-spacing gadget))
+                                            :height (* 2 (pane-y-spacing gadget))
+                                            :max-height (* 2 (pane-y-spacing gadget)))
+                       :min-width (* 2 *3d-border-thickness*)
+                       :width (* 2 *3d-border-thickness*)
+                       :max-width (* 2 *3d-border-thickness*)
+                       :min-height (* 2 *3d-border-thickness*)
+                       :height (* 2 *3d-border-thickness*)
+                       :max-height (* 2 *3d-border-thickness*)))
 
 (defmethod handle-event ((pane push-button-pane) (event pointer-button-press-event))
-  (with-slots (armed) pane
-    (unless armed
-      (armed-callback pane (gadget-client pane) (gadget-id pane)))
-    (setf armed ':button-press
-	  (gadget-current-color pane) (gadget-pushed-and-highlighted-color pane))))    
+  (with-slots (pressedp) pane
+    (setf pressedp t)
+    (dispatch-repaint pane +everywhere+)))
 
 (defmethod handle-event ((pane push-button-pane) (event pointer-button-release-event))
-  (with-slots (armed) pane
-    (when (eql armed ':button-press)
+  (with-slots (armed pressedp) pane
+    (setf pressedp nil)
+    (when armed
       (activate-callback pane (gadget-client pane) (gadget-id pane))
-      (setf armed t
-	    (gadget-current-color pane) (gadget-highlighted-color pane))
-      (disarmed-callback pane (gadget-client pane) (gadget-id pane)))))
-
-#+NIL
-(defmethod handle-event ((pane push-button-pane) (event window-repaint-event))
-  (dispatch-repaint pane (sheet-region pane)))
+      (setf pressedp nil)
+      (dispatch-repaint pane +everywhere+))))
 
 (defmethod handle-repaint ((pane push-button-pane) region)
   (declare (ignore region))
-  (with-special-choices (pane)
+  (with-slots (armed pressedp) pane
     (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
-      (declare (type coordinate x1 y1 x2 y2))
-      (let ((w (- x2 x1)) 
-	    (h (- y2 y1)))
-	(display-gadget-background pane (gadget-current-color pane) 0 0 w h)
-	(if (eq (slot-value pane 'armed) ':button-press)
-	    (progn 
-	      (when (push-button-show-as-default-p pane)
-		(draw-edges-lines* pane (2- w) (2- h) 0 0))
-	      (draw-edges-lines* pane (1- w) (1- h) 0 0))
-	    (progn
-	      (when (push-button-show-as-default-p pane)
-		(draw-edges-lines* pane 0 0 (2- w) (2- h)))
-	      (draw-edges-lines* pane 0 0 (1- w) (1- h))))
-	(draw-label pane (gadget-label pane) (round w 2) (round h 2))))))
+      (draw-rectangle* pane x1 y1 x2 y2 :ink (effective-gadget-background pane))
+      (draw-bordered-rectangle* pane x1 y1 x2 y2
+                                :style (if (and pressedp armed) :inset :outset))
+      (multiple-value-bind (x1 y1 x2 y2) (values (+ x1 *3d-border-thickness* (pane-x-spacing pane))
+                                                 (+ y1 *3d-border-thickness* (pane-y-spacing pane))
+                                                 (- x2 *3d-border-thickness* (pane-x-spacing pane))
+                                                 (- y2 *3d-border-thickness* (pane-y-spacing pane)))
+        (draw-label* pane x1 y1 x2 y2
+                     :ink (effective-gadget-foreground pane))))))
 
+;;; ------------------------------------------------------------------------------------------
+;;;  30.4.2 The concrete toggle-button Gadget
 
-
-;;
-;; TOGGLE-BUTTON gadget
-;;
-
-(defclass toggle-button (labelled-gadget-mixin value-gadget) ()
-  (:documentation "The value is either t either nil"))
-
-(defclass toggle-button-pane (toggle-button)
+(defclass toggle-button-pane (toggle-button 
+                              ;; repaint behavior:
+                              arm/disarm-repaint-mixin
+                              value-changed-repaint-mixin
+                              ;; callback behavior:
+                              changing-label-invokes-layout-protocol-mixin
+                              ;; event handling:
+                              enter/exit-arms/disarms-mixin
+                              ;; other
+                              standard-space-requirement-options-mixin
+                              standard-gadget-pane)
   ((indicator-type :type (member '(:one-of :some-of))
 		   :initarg :indicator-type
-		   :reader toggle-button-indicator-type)))
-; We don't have implemented the difference of appearence whether the 
-; indicator-type is :one-of or :some-of
+		   :reader toggle-button-indicator-type
+                   :initform :some-of) )
+  (:default-initargs
+    :align-x :left
+    :align-y :center
+    :x-spacing 3
+    :y-spacing 3
+    :background *3d-normal-color*))
 
-(defmethod initialize-instance :before ((pane toggle-button-pane) &rest rest)
-  (declare (ignore rest))
-  (setf (gadget-label-align-x pane) :center
-	(gadget-label-align-y pane) :center))
+(defmethod compose-space ((pane toggle-button-pane))
+  (let ((sr (compose-label-space pane)))
+    (space-requirement+*
+     (space-requirement+* sr
+                          :min-width  (* 3 (pane-x-spacing pane))
+                          :width      (* 3 (pane-x-spacing pane))
+                          :max-width  (* 3 (pane-x-spacing pane))
+                          :min-height (* 2 (pane-y-spacing pane))
+                          :height     (* 2 (pane-y-spacing pane))
+                          :max-height (* 2 (pane-y-spacing pane)))
+     :min-width (space-requirement-height sr)
+     :width     (space-requirement-height sr)
+     :max-width (space-requirement-height sr)
+     :min-height 0
+     :max-height 0
+     :height 0)))
 
-(defmethod initialize-instance :after ((pane toggle-button-pane) &rest rest)
-  (declare (ignore rest))
-  (when (gadget-value pane)
-    (setf (slot-value pane 'current-color)
-	  (gadget-pushed-and-highlighted-color pane))))
+(defmethod draw-toggle-button-indicator ((gadget standard-gadget-pane) (type (eql :one-of)) value
+                                         x1 y1 x2 y2)
+  (multiple-value-bind (cx cy) (values (/ (+ x1 x2) 2) (/ (+ y1 y2) 2))
+    (multiple-value-bind (rx ry) (values (/ (- y2 y1) 2) (/ (- x2 x1) 2))
+      (draw-ellipse* gadget cx cy 0 ry rx 0
+                     :start-angle (* 1/4 pi)
+                     :end-angle (* 5/4 pi)
+                     :ink *3d-dark-color*)
+      (draw-ellipse* gadget cx cy 0 ry rx 0
+                     :start-angle (* 5/4 pi)
+                     :end-angle (* 9/4 pi)
+                     :ink *3d-light-color*)
+      (draw-ellipse* gadget cx cy 0 (max 1 (- ry 2)) (max 1 (- rx 2)) 0
+                     :ink (effective-gadget-input-area-color gadget))
+      (when value
+        (draw-ellipse* gadget cx cy 0 (max 1 (- ry 4)) (max 1 (- rx 4)) 0
+                       :ink (effective-gadget-foreground gadget))))))
 
-(defmethod handle-event ((pane toggle-button-pane) (event pointer-enter-event))
-  (with-slots (armed) pane
-    (unless armed
-      (setf armed t)
-      (unless (gadget-value pane)
-	(setf (gadget-current-color pane) (gadget-highlighted-color pane)))
-      (armed-callback pane (gadget-client pane) (gadget-id pane)))))
-
-(defmethod handle-event ((pane toggle-button-pane) (event pointer-exit-event))
-  (with-slots (armed) pane
-    (when armed
-      (setf armed nil)
-      (if (gadget-value pane)
-	  (setf (gadget-current-color pane) (gadget-pushed-and-highlighted-color pane))
-	  (setf (gadget-current-color pane) (gadget-normal-color pane)))
-      (disarmed-callback pane (gadget-client pane) (gadget-id pane)))))
-
-(defmethod handle-event ((pane toggle-button-pane) (event pointer-button-press-event))
-  (with-slots (armed) pane
-    (unless armed
-      (armed-callback pane (gadget-client pane) (gadget-id pane)))
-    (setf armed ':button-press
-	  (gadget-current-color pane) (gadget-pushed-and-highlighted-color pane))))
-      
-(defmethod handle-event ((pane toggle-button-pane) (event pointer-button-release-event))
-  (with-slots (armed) pane
-    (when (eql armed ':button-press)
-      (setf armed t
-	    (gadget-value pane :invoke-callback t) (not (gadget-value pane)))
-      (unless (gadget-value pane)
-	(setf (gadget-current-color pane) (gadget-highlighted-color pane)))
-      (disarmed-callback pane (gadget-client pane) (gadget-id pane)))))
-
-#+NIL
-(defmethod handle-event ((pane toggle-button-pane) (event window-repaint-event))
-  (dispatch-repaint pane (sheet-region pane)))
+(defmethod draw-toggle-button-indicator ((pane standard-gadget-pane) (type (eql :some-of)) value
+                                         x1 y1 x2 y2)
+  (draw-rectangle* pane x1 y1 x2 y2 :ink (effective-gadget-input-area-color pane))
+  (draw-bordered-rectangle* pane x1 y1 x2 y2 :style :inset)
+  (when value
+    (multiple-value-bind (x1 y1 x2 y2) (values (+ x1 3) (+ y1 3)
+                                               (- x2 3) (- y2 3))
+      (draw-line* pane x1 y1 x2 y2 :ink (effective-gadget-foreground pane) :line-thickness 2)
+      (draw-line* pane x2 y1 x1 y2 :ink (effective-gadget-foreground pane) :line-thickness 2))))
 
 (defmethod handle-repaint ((pane toggle-button-pane) region)
   (declare (ignore region))
-  (with-special-choices (pane)
-    (let ((region (sheet-region pane))
-	  (armed (slot-value pane 'armed)))
-      (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* region)
-	(display-gadget-background pane (gadget-current-color pane) x1 y1 x2 y2)
-	(if (or (gadget-value pane) (eql armed ':button-press))
-	    (draw-edges-lines* pane (1- x2) (1- y2) x1 y1)
-	    (draw-edges-lines* pane x1 y1 (1- x2) (1- y2)))
-	(draw-label pane (gadget-label pane) (round (- x2 x1) 2) (round (- y2 y1) 2))))))
+  (when (sheet-grafted-p pane)
+    (with-special-choices (pane)
+      (with-slots (armed) pane
+        (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
+          (draw-rectangle* pane x1 y1 x2 y2 :ink (effective-gadget-background pane))
+          (let* ((as (text-style-ascent (pane-text-style pane) pane))
+                 (ds (text-style-descent (pane-text-style pane) pane)) )
+            (multiple-value-bind (tx1 ty1 tx2 ty2)
+                (values (+ x1 (pane-x-spacing pane))
+                        (- (/ (+ y1 y2) 2) (/ (+ as ds) 2))
+                        (+ x1 (pane-x-spacing pane) (+ as ds))
+                        (+ (/ (+ y1 y2) 2) (/ (+ as ds) 2)))
+              (draw-toggle-button-indicator pane (toggle-button-indicator-type pane) (gadget-value pane)
+                                            tx1 ty1 tx2 ty2)
+              (draw-label* pane (+ tx2 (pane-x-spacing pane)) y1 x2 y2
+                           :ink (effective-gadget-foreground pane)))))))))
 
+(defmethod handle-event ((pane toggle-button-pane) (event pointer-button-release-event))
+  (with-slots (armed) pane
+    (when armed
+      (setf (gadget-value pane :invoke-callback t) (not (gadget-value pane))))))
 
+;;; ------------------------------------------------------------------------------------------
+;;;  30.4.3 The concrete menu-button Gadget
 
-;;
-;; MENU-BUTTON gadget
-;;
-
-(defclass menu-button (labelled-gadget-mixin value-gadget)
+(defclass menu-button-pane (menu-button standard-gadget-pane)
   ()
-  (:documentation "The value is a button"))
-
-(defclass menu-button-pane (menu-button) ())
-
-(defmethod initialize-instance :before ((pane menu-button-pane) &rest rest)
-  (declare (ignore rest))
-  (setf (gadget-label-align-x pane) :center
-	(gadget-label-align-y pane) :center))
+  (:default-initargs
+    :align-x :center
+    :align-y :center))
 
 (defmethod handle-repaint ((pane menu-button-pane) region)
   (declare (ignore region))
@@ -735,99 +1235,16 @@
       (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* region)
 	(let ((w (- x2 x1))
 	      (h (- y2 y1)))
+          (draw-rectangle* pane x1 y1 x2 y2
+                           :ink (effective-gadget-background pane)
+                           :filled t)
 	  (cond ((slot-value pane 'armed)
-		 (draw-rectangle* pane 0 0 w h
-				  :ink (gadget-highlighted-color pane)
-				  :filled t)
 		 (draw-edges-lines* pane (- w 2) (- h 2) 1 1))
-		(t
-		 (draw-rectangle* pane 0 0 w h
-				  :ink (gadget-normal-color pane)
-				  :filled t)))
-	  (draw-label pane (gadget-label pane) (round w 2) (round h 2)))))))
+		(t))
+          (draw-label* pane x1 y1 x2 y2 :ink (effective-gadget-foreground pane)))))))
 
-
-
-;;;;
-;;;; SCROLL-BAR gadget
-;;;;
-
-(defgeneric drag-callback (pane client gadget-id value))
-(defgeneric scroll-to-top-callback (scroll-bar client gadget-id))
-(defgeneric scroll-to-bottom-callback (scroll-bar client gadget-id))
-(defgeneric scroll-up-line-callback (scroll-bar client gadget-id))
-(defgeneric scroll-up-page-callback (scroll-bar client gadget-id))
-(defgeneric scroll-down-line-callback (scroll-bar client gadget-id))
-(defgeneric scroll-down-page-callback (scroll-bar client gadget-id))
-
-(defclass scroll-bar (value-gadget oriented-gadget-mixin range-gadget-mixin)
-  ((drag-callback :initarg :drag-callback
-		  :initform nil
-		  :reader scroll-bar-drag-callback)
-   (scroll-to-bottom-callback :initarg :scroll-to-bottom-callback
-			      :initform nil
-			      :reader scroll-bar-scroll-to-bottom-callback)
-   (scroll-to-top-callback :initarg :scroll-to-top-callback
-			   :initform nil
-			   :reader scroll-bar-scroll-to-top-callback)
-   (scroll-down-line-callback :initarg :scroll-down-line-callback
-                              :initform nil
-                              :reader scroll-bar-scroll-down-line-callback)
-   (scroll-up-line-callback :initarg :scroll-up-line-callback
-                            :initform nil
-                            :reader scroll-bar-scroll-up-line-callback)
-   (scroll-down-page-callback :initarg :scroll-down-page-callback
-                              :initform nil
-                              :reader scroll-bar-scroll-down-page-callback)
-   (scroll-up-page-callback :initarg :scroll-up-page-callback
-                            :initform nil
-                            :reader scroll-bar-scroll-up-page-callback)
-
-   #||
-   (thumb-size :initarg :thumb-size :initform 1/4
-               :reader scroll-bar-thumb-size)
-   ||#
-   ))
-
-(defmethod drag-callback ((pane scroll-bar) client gadget-id value)
-  (declare (ignore client gadget-id))
-  (when (scroll-bar-drag-callback pane)
-    (funcall (scroll-bar-drag-callback pane) pane value)))
-
-(defmacro invoke-callbacks (pane callback)
-  (let ((call (gensym)))
-    `(let ((,call (funcall (symbol-function ,callback) ,pane)))
-       (when ,call
-         (let ((*application-frame* (pane-frame pane)))
-           (funcall ,call ,pane))))))
-
-(defmethod scroll-to-top-callback ((pane scroll-bar) client gadget-id)
-  (declare (ignore client gadget-id))
-  (invoke-callbacks pane 'scroll-bar-scroll-to-top-callback))
-
-(defmethod scroll-to-bottom-callback ((pane scroll-bar) client gadget-id)
-  (declare (ignore client gadget-id))
-  (invoke-callbacks pane 'scroll-bar-scroll-to-bottom-callback))
-
-(defmethod scroll-up-line-callback ((pane scroll-bar) client gadget-id)
-  (declare (ignore client gadget-id))
-  (invoke-callbacks pane 'scroll-bar-scroll-up-line-callback))
-
-(defmethod scroll-up-page-callback ((pane scroll-bar) client gadget-id)
-  (declare (ignore client gadget-id))
-  (invoke-callbacks pane 'scroll-bar-scroll-up-page-callback))
-
-(defmethod scroll-down-line-callback ((pane scroll-bar) client gadget-id)
-  (declare (ignore client gadget-id))
-  (invoke-callbacks pane 'scroll-bar-scroll-down-line-callback))
-
-(defmethod scroll-down-page-callback ((pane scroll-bar) client gadget-id)
-  (declare (ignore client gadget-id))
-  (invoke-callbacks pane 'scroll-bar-scroll-down-page-callback))
-
-;;;;
-;;;; SCROLL-BAR-PANE
-;;;;
+;;; ------------------------------------------------------------------------------------------
+;;;  30.4.4 The concrete scroll-bar Gadget
 
 (defclass scroll-bar-pane (basic-pane scroll-bar 3D-border-mixin)
   ((event-state :initform nil)
@@ -867,11 +1284,15 @@
 
 ;;; Scroll-bar's sub-regions
 
+#+NIL
 (defmethod scroll-bar-thumb-size ((sb scroll-bar-pane))
   "Return the size of the scrollbar's thumb."
   (multiple-value-bind (minv maxv) (gadget-range* sb)
     (max 1/100000                         ;hack to cope with GADGET-RANGE* being empty
          (* 1/3 (- maxv minv)))))
+
+(defmethod (setf scroll-bar-thumb-size) :after (new-value (sb scroll-bar-pane))
+  (handle-repaint sb +everywhere+))     ;arg
 
 (defmethod scroll-bar-up-region ((sb scroll-bar-pane))
   (with-bounding-rectangle* (minx miny maxx maxy) (transform-region (scroll-bar-transformation sb)
@@ -1003,8 +1424,19 @@
                                                   (bounding-rectangle-max-y (scroll-bar-thumb-bed-region sb))
                                                   (gadget-min-value sb)
                                                   (+ (gadget-max-value sb) ts))))))
+           ;; Blitter hack:
+           #-NIL
+           (with-drawing-options (sb :transformation (scroll-bar-transformation sb))
+             (with-bounding-rectangle* (ox1 oy1 ox2 oy2) (scroll-bar-thumb-region sb)
+               (setf (gadget-value sb) new-value)
+               (with-bounding-rectangle* (nx1 ny1 nx2 ny2) (scroll-bar-thumb-region sb)
+                 (copy-area sb ox1 oy1 (- ox2 ox1) (- oy2 oy1) nx1 ny1)
+                 (if (< oy1 ny1)
+                     (draw-rectangle* sb ox1 oy1 ox2 ny1 :ink *3d-normal-color*)
+                   (draw-rectangle* sb ox1 oy2 ox2 ny2 :ink *3d-normal-color*)))))
+           #+NIL
+           (dispatch-repaint sb +everywhere+)
            (setf (gadget-value sb) new-value)
-           (dispatch-repaint sb +everywhere+) 
            (drag-callback sb (gadget-client sb) (gadget-id sb)
                           new-value) ))))))
 
@@ -1065,9 +1497,9 @@
                                      :style :inset
                                      :border-width 1))) )))))
 
-;;
-;; SLIDER gadget
-;;
+
+;;; ------------------------------------------------------------------------------------------
+;;;  30.4.5 The concrete slider Gadget
 
 ;; ----------------------------------------------------------
 ;; What should be done for having a better look for sliders
@@ -1078,15 +1510,12 @@
 ;; slider's sheet, probably his child).
 ;; ----------------------------------------------------------
 
-(defclass slider-gadget (labelled-gadget-mixin
-			 value-gadget
-			 oriented-gadget-mixin
-			 range-gadget-mixin
-			 gadget-color-mixin)
-  ()
-  (:documentation "The value is a real number, and default value for orientation is :vertical, and must never be nil."))
-  
-(defclass slider-pane (slider-gadget)
+;; This values should be changeable by user. That's
+;; why they are parameters, and not constants.
+(defparameter slider-button-long-dim 30)
+(defparameter slider-button-short-dim 10)
+
+(defclass slider-pane (slider-gadget basic-pane)
   ((drag-callback :initform nil
 		  :initarg :drag-callback
 		  :reader slider-drag-callback)
@@ -1098,10 +1527,6 @@
                    :initarg :decimal-places
                    :reader slider-decimal-places)))
 
-;; This values should be changeable by user. That's
-;; why they are parameters, and not constants.
-(defparameter slider-button-long-dim 30)
-(defparameter slider-button-short-dim 10)
 
 (defmethod initialize-instance :before ((pane slider-pane) &rest rest)
   (declare (ignore rest))
@@ -1236,82 +1661,155 @@
 			 (- good-dim2 good-dim1))
 		      (gadget-range pane))))))
 
+;;; ------------------------------------------------------------------------------------------
+;;;  30.4.6 The concrete radio-box and check-box Gadgets
 
-;;
-;; RADIO-BOX gadget
-;;
+;; radio-box
 
-(defclass radio-box (value-gadget oriented-gadget-mixin) ()
-  (:documentation "The value is a button"))
-  
-(defclass radio-box-pane (radio-box)
-  ((current-selection :type 'toggle-button
-		      :initarg :current-selection
-		      :accessor radio-box-current-selection)))
+(defclass radio-box-pane (radio-box rack-layout-mixin sheet-multiple-child-mixin basic-pane)
+  ()
+  (:default-initargs
+      :background *3d-normal-color*))
 
-(defmethod (setf radio-box-current-selection) :before (button (pane radio-box-pane))
-  (declare (ignore button))
-  (let ((old-button (radio-box-current-selection pane)))
-    (setf (gadget-value old-button :invoke-callback t) nil)
-    (dispatch-repaint old-button (sheet-region old-button))))
+(defmethod initialize-instance :after ((pane radio-box-pane)
+                                       &key choices current-selection orientation &allow-other-keys)
+  (setf (box-layout-orientation pane) orientation)
+  (dolist (c choices)
+    (setf (gadget-value pane) current-selection)
+    (cond ((stringp c)
+           (setf c (make-pane 'toggle-button-pane :label c :value nil))))
+    (setf (gadget-value c) (if (eq c (radio-box-current-selection pane)) t nil))
+    (setf (gadget-client c) pane)
+    (sheet-adopt-child pane c) ))
 
-(defmethod warn-client ((gadget toggle-button-pane) (client radio-box-pane))
-  (setf (radio-box-current-selection client) gadget))
+(defmethod (setf gadget-value) :after (button (radio-box radio-box-pane) &key invoke-callback)
+  ;; this is silly, but works ...
+  (dolist (c (sheet-children radio-box))
+    (unless (eq (not (null (eq c button)))
+                (not (null (gadget-value c))))
+      (setf (gadget-value c :invoke-callback invoke-callback) (eq c button)) )))
 
-(defun find-current (&rest l)
-    (let (current)
-      (loop for element in l
-	    do (when (equal (first element) 'radio-box-current-selection)
-		 (return (setf current element))))
-      (or current (first l))))
+;; check-box
 
-(defmacro with-radio-box ((&rest options) &body body)
-  (let* ((current (apply #'find-current body))
-	 (other-body (remove current body)))
-    (when (eql (first current) 'radio-box-current-selection)
-      (setf current (second current))) ; first case of the or in find-current
-    `(let* ((current-button ,current)
-	    (radio-box (make-pane-1 (slot-value *application-frame* 'manager)
-				    *application-frame*
-				    'radio-box-pane
-				    ,@options
-				    :current-selection current-button)))
-       (mapcar #'(lambda (gadget) (setf (gadget-client gadget) radio-box))
-	       (list ,@other-body))
-       (mapcar #'(lambda (gadget) (setf (gadget-value gadget :invoke-callback t) nil))
-	       (list ,@other-body))
-       (setf (gadget-client current-button) radio-box
-	     (gadget-value current-button :invoke-callback t) t)
-       radio-box)))
+(defclass check-box-pane (check-box rack-layout-mixin sheet-multiple-child-mixin basic-pane)
+  ()
+  (:default-initargs
+      :background *3d-normal-color*))
 
+(defmethod initialize-instance :after ((pane check-box-pane)
+                                       &key choices current-selection orientation &allow-other-keys)
+  (setf (box-layout-orientation pane) orientation)
+  (dolist (c choices)
+    (setf (gadget-value pane) current-selection)
+    (cond ((stringp c)
+           (setf c (make-pane 'toggle-button-pane :label c :value nil))))
+    (setf (gadget-value c) (if (member c current-selection) t nil))
+    (setf (gadget-client c) pane)
+    (sheet-adopt-child pane c) ))
 
-;;;
-;;; TEXT-FIELD gadget
-;;;
+;;; ------------------------------------------------------------------------------------------
+;;;  30.4.7 The concrete list-pane and option-pane Gadgets
+
+#||
+(defclass list-pane (value-gadget)
+  ((mode        :initarg :mode
+                :initform :some-of
+                :reader list-pane-mode
+                :type (member :one-of :some-of))
+   (items       :initarg :items
+                :initform nil
+                :reader list-pane-items
+                :type sequence)
+   (name-key    :initarg :name-key
+                :initform #'princ-to-string
+                :reader list-pane-name-key
+                :documentation "A function to be applied to items to gain a printable representation")
+   (value-key   :initarg :value-key
+                :initform #'identity
+                :reader list-pane-value-key
+                :documentation "A function to be applied to items to gain its value
+                                for the purpose of GADGET-VALUE.")
+   (test        :initarg :test
+                :initform #'eql
+                :reader list-pane-test
+                :documentation "A function to compare two items for equality.") ))
+
+(defclass generic-list-pane (basic-pane list-pane #|permanent-medium-sheet-output-mixin|# )
+  ((item-strings :initform nil
+                 :documentation "Vector of item strings.")
+   (selected-items :initform nil
+                   :documentation "List of indexes of selected items.")
+   ))
+
+(defmethod generic-list-pane-item-strings ((pane generic-list-pane))
+  (with-slots (item-strings) pane
+    (or item-strings
+        (setf item-strings
+          (map 'vector (lambda (item)
+                         (let ((s (funcall (list-pane-name-key pane) item)))
+                           (if (stringp s)
+                               s
+                             (princ-to-string s)))) ;defensive programming!
+               (list-pane-items pane))))))
+
+(defmethod compose-space ((pane generic-list-pane))
+  (let* ((n (length (generic-list-pane-item-strings pane)))
+         (w (reduce #'max (map 'vector (lambda (item-string)
+                                         (text-size pane item-string))
+                               (generic-list-pane-item-strings pane))
+                    :initial-value 0))
+         (h (* n (+ (text-style-ascent (pane-text-style pane) pane)
+                    (text-style-descent (pane-text-style pane) pane)))))
+    (make-space-requirement :width w :height h
+                            :min-width w :min-height h
+                            :max-width w :max-height h)))
+
+#+NIL
+(defmethod allocate-space ((pane generic-list-pane) width height)
+  )
+
+(defmethod handle-repaint ((pane generic-list-pane) region)
+  (with-slots (selected-items) pane
+    (let* ((a (text-style-ascent (pane-text-style pane) pane))
+           (d (text-style-descent (pane-text-style pane) pane)))
+      (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
+        (loop
+            for i from 0
+            for x across (generic-list-pane-item-strings pane) do
+              (let ((y (+ a (* i (+ a d)))))
+                (cond ((member i selected-items)
+                       (draw-rectangle* pane x1 (- y a) x2 (+ y d))
+                       (draw-text* pane x 0 y :ink +background-ink+))
+                      (t
+                       (draw-rectangle* pane x1 (- y a) x2 (+ y d) :ink +background-ink+)
+                       (draw-text* pane x 0 y)))))))))
+
+(defmethod handle-event ((pane generic-list-pane) (event pointer-button-press-event))
+  (multiple-value-bind (mx my) (values (pointer-event-x event) (pointer-event-y event))
+    (let ((k (floor my (+ (text-style-ascent (pane-text-style pane) pane)
+                          (text-style-descent (pane-text-style pane) pane))))
+          (n (length (generic-list-pane-item-strings pane))))
+      (if (member k (slot-value pane 'selected-items))
+          (setf (slot-value pane 'selected-items) (delete k (slot-value pane 'selected-items)))
+        (pushnew k (slot-value pane 'selected-items)))
+      (dispatch-repaint pane +everywhere+)
+      )))
+
+(defmethod handle-event ((sheet immediate-repainting-mixin) (event window-repaint-event))
+  (dispatch-repaint sheet (window-event-region event)))
+||#
+
+;;; ------------------------------------------------------------------------------------------
+;;;  30.4.8 The concrete text-field Gadget
+
 
 (defparameter *default-text-field-text-style*
     (make-text-style :fixed :roman :normal))
 
-(defclass text-field (value-gadget action-gadget)
-  ((text-style
-    :initform *default-text-field-text-style*
-    :initarg  :text-style)
-
-   ;;
-   (point       :initform 0)
-   (offset      :initform 0)
-   (mark :initform nil)
-   (region-active-p :initform nil)
-   (drag-mode :initform nil)
-   
-   (prefix      :initform nil
-                ;; The currently typed prefix.
-                )
-   )
-
-  (:documentation "The value is a string"))
-
-(defclass text-field-pane (text-field basic-pane permanent-medium-sheet-output-mixin) ())
+(defclass text-field-pane (text-field basic-pane #|permanent-medium-sheet-output-mixin|#)
+  ()
+  (:default-initargs
+    :text-style *default-text-field-text-style*))
 
 (defmethod initialize-instance :after ((gadget text-field) &rest rest)
   (unless (getf rest :normal)
@@ -1358,13 +1856,8 @@
 (defmethod allocate-space ((pane text-field-pane) w h)
   (resize-sheet pane w h))
   
-
-;;
-;; TEXT-EDITOR gadget
-;;
-
-(defclass text-editor (text-field) ()
-  (:documentation "The value is a string"))
+;;; ------------------------------------------------------------------------------------------
+;;;  30.4.9 The concrete text-editor Gadget
 
 (defclass text-editor-pane (text-editor)
   ((width :type integer
@@ -1386,6 +1879,10 @@
 			  :min-height height
 			  :max-height height)))
 
+;;;; ------------------------------------------------------------------------------------------
+;;;;
+;;;;  30.5 Integrating Gadgets and Output Records
+;;;;
 
 ;;
 ;; GADGET-OUTPUT-RECORD
