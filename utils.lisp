@@ -381,7 +381,7 @@ in KEYWORDS removed."
         ((symbolp symbol)
          symbol)
         (t
-         (error "~S does not look too good as a symbol."))))
+         (error "~S does not look too good as a symbol." symbol))))
 
 (defun gen-invoke-trampoline (fun to-bind to-pass body)
   "Macro helper function, generates the LABELS / INVOKE-WITH-... ideom."
