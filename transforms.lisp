@@ -1,11 +1,12 @@
 ;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: CLIM-INTERNALS; -*-
 ;;; --------------------------------------------------------------------------------------
 ;;;     Title: The CLIM Transformations
-;;;   Created: 1998-09-29 20:23
+;;;   Created: 1998-09-29
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
+;;;       $Id: transforms.lisp,v 1.23 2003/08/09 00:55:40 gilbert Exp $
 ;;; --------------------------------------------------------------------------------------
-;;;  (c) copyright 1998,1999 by Gilbert Baumann
+;;;  (c) copyright 1998,1999,2003 by Gilbert Baumann
 ;;;  (c) copyright 2000 by 
 ;;;           Robert Strandh (strandh@labri.u-bordeaux.fr)
 
@@ -60,15 +61,33 @@
 (define-protocol-class transformation ())
 
 (defclass standard-transformation (transformation)
-  ((mxx :type coordinate)
-   (mxy :type coordinate)
-   (myx :type coordinate)
-   (myy :type coordinate)
-   (tx  :type coordinate)
-   (ty  :type coordinate)
-   (inverse :type (or null standard-transformation)
+  ()
+  (:documentation
+   "All CLIM transformations inherit from this. All transformations of this class
+should provide a method for GET-TRANSFORMATION, as this is our internal
+transformation protocol."))
+
+(defclass standard-identity-transformation (standard-transformation)
+  ())
+
+(defclass standard-translation (standard-transformation)
+  ((dx :type coordinate :initarg :dx)
+   (dy :type coordinate :initarg :dy)))
+
+(defclass cached-inverse-transformation-mixin ()
+  ((inverse :type (or null standard-transformation)
             :initform nil
-            :documentation "Cached inverse transformation.") ))
+            :documentation "Cached inverse transformation.")))
+
+(defclass standard-hairy-transformation (standard-transformation cached-inverse-transformation-mixin)
+  ((mxx :type coordinate :initarg :mxx)
+   (mxy :type coordinate :initarg :mxy)
+   (myx :type coordinate :initarg :myx)
+   (myy :type coordinate :initarg :myy)
+   (tx  :type coordinate :initarg :tx)
+   (ty  :type coordinate :initarg :ty))
+  (:documentation
+   "A transformation class which is neither the identity nor a translation."))
 
 (defmethod print-object ((self standard-transformation) sink)
   (print-unreadable-object (self sink :identity nil :type t)
@@ -79,23 +98,39 @@
   ;; Make a transformation, which will map a point (x,y) into
   ;;  x' = mxx*x + mxy*y + tx
   ;;  y' = myx*x + myy*y + ty
-  (let ((res (make-instance 'standard-transformation)))
-    (setf (slot-value res 'mxx) (coerce mxx 'coordinate)
-          (slot-value res 'mxy) (coerce mxy 'coordinate)
-          (slot-value res 'myx) (coerce myx 'coordinate)
-          (slot-value res 'myy) (coerce myy 'coordinate)
-          (slot-value res 'tx)  (coerce tx 'coordinate)
-          (slot-value res 'ty)  (coerce ty 'coordinate))
-    res))
+  (let ((mxx (coerce mxx 'coordinate))
+        (mxy (coerce mxy 'coordinate))
+        (myx (coerce myx 'coordinate))
+        (myy (coerce myy 'coordinate))
+        (tx (coerce tx 'coordinate))
+        (ty (coerce ty 'coordinate)))
+    (cond ((and (= 1 mxx) (= 0 mxy) (= 0 myx) (= 1 myy))
+           (cond ((and (= 0 tx) (= 0 ty))
+                  +identity-transformation+)
+                 (t
+                  (make-translation-transformation tx ty))))
+          (t
+           (make-instance 'standard-hairy-transformation
+                          :mxx mxx :mxy mxy :tx tx
+                          :myx myx :myy myy :ty ty)))))
 
-(defmethod get-transformation ((self standard-transformation))
-  ;; Get the values of the transformation matrix as multiple values.
-  ;; This is not an exported function!
-  (with-slots (mxx mxy myx myy tx ty) self
+(defgeneric get-transformation (transformation)
+  (:documentation
+   "Get the values of the transformation matrix as multiple values. This is not an exported function!"))
+
+(defmethod get-transformation ((transformation standard-identity-transformation))
+  (values 1 0 0 1 0 0))
+
+(defmethod get-transformation ((transformation standard-translation))
+  (with-slots (dx dy) transformation
+    (values 1 0 0 1 dx dy)))
+
+(defmethod get-transformation ((transformation standard-hairy-transformation))
+  (with-slots (mxx mxy myx myy tx ty) transformation
     (values mxx mxy myx myy tx ty)))
 
 (defun make-translation-transformation (translation-x translation-y)
-  (make-transformation 1 0 0 1 translation-x translation-y))
+  (make-instance 'standard-translation :dx translation-x :dy translation-y))
 
 (defun make-rotation-transformation (angle &optional origin)
   (if origin
@@ -126,7 +161,9 @@
 (defun make-scaling-transformation* (scale-x scale-y &optional origin-x origin-y)
   (let ((origin-x (or origin-x 0))
         (origin-y (or origin-y 0)))
-    (make-transformation scale-x 0 0 scale-y (- origin-x (* scale-x origin-x)) (- origin-y (* scale-y origin-y)))) )
+    (make-transformation scale-x 0
+                         0 scale-y
+                         (- origin-x (* scale-x origin-x)) (- origin-y (* scale-y origin-y)))) )
 
 (defun make-reflection-transformation (point1 point2)
   (make-reflection-transformation* (point-x point1) (point-y point1) (point-x point2) (point-y point2)))
@@ -181,7 +218,7 @@
              :coords (list x1 y1 x2 y2 x3 y3 x1-image y1-image x2-image y2-image x3-image y3-image)) )))
 
 (defparameter +identity-transformation+
-  (make-transformation 1 0 0 1 0 0))
+  (make-instance 'standard-identity-transformation))
 
 (define-condition transformation-error (error)
   ())
@@ -234,15 +271,27 @@
          (multiple-value-list (get-transformation transformation1))
          (multiple-value-list (get-transformation transformation2))))
 
+;; make-transformation always returns +identity-transformation+, if
+;; the transformation to be build would be the identity. So we
+;; IDENTITY-TRANSFORMATION-P can just specialize on
+;; STANDARD-IDENTITY-TRANSFORMATION.
+
+(defmethod identity-transformation-p ((transformation standard-identity-transformation))
+  t)
+
 (defmethod identity-transformation-p ((transformation standard-transformation))
-  (transformation-equal transformation +identity-transformation+))
+  nil)
+
+;; Same for translations, but +identity-transformation+ is a translation too.
+
+(defmethod translation-transformation-p ((transformation standard-translation))
+  t)
+
+(defmethod translation-transformation-p ((transformation standard-identity-transformation))
+  t)
 
 (defmethod translation-transformation-p ((transformation standard-transformation))
-  (multiple-value-bind (mxx mxy myx myy) (get-transformation transformation)
-    (and (coordinate= mxx 1)
-         (coordinate= mxy 0)
-         (coordinate= myx 0)
-         (coordinate= myy 1))))
+  nil)
 
 (defun transformation-determinant (tr)
   (multiple-value-bind (mxx mxy myx myy) (get-transformation tr)
@@ -271,6 +320,7 @@
   ;; what gives (scaling-transformation-p (make-translation-transformation 17 42))
   ;; I think it would be strange if (s-t-p (make-s-t* 2 1 1 0)) is not T. -- APD
   (multiple-value-bind (mxx mxy myx myy tx ty) (get-transformation transformation)
+    (declare (ignore tx ty))
     (and (coordinate= 0 mxy) (coordinate= 0 myx)
          (coordinate/= 0 mxx) (coordinate/= 0 myy)))) ; ?
 
@@ -290,7 +340,8 @@
          (coordinate= myx 0)
          (coordinate= myy -1))))
 
-(defmethod compose-transformations ((transformation2 standard-transformation) (transformation1 standard-transformation))
+(defmethod compose-transformations ((transformation2 standard-transformation)
+                                    (transformation1 standard-transformation))
   ;; (compose-transformations A B)x = (A o B)x = ABx
   (multiple-value-bind (a1 b1 d1 e1 c1 f1) (get-transformation transformation1)
     (multiple-value-bind (a2 b2 d2 e2 c2 f2) (get-transformation transformation2)
@@ -301,34 +352,38 @@
                            (+ (* a2 c1) (* b2 f1) c2)
                            (+ (* d2 c1) (* e2 f1) f2) ))))
 
-(defmethod invert-transformation ((transformation standard-transformation))
+(defmethod invert-transformation :around ((transformation cached-inverse-transformation-mixin))
   (with-slots (inverse) transformation
     (or inverse
-        (let ((computed-inverse
-               (restart-case
-                (or
-                 (handler-case (multiple-value-bind (mxx mxy myx myy tx ty) (get-transformation transformation)
-                                 (let ((det (- (* mxx myy) (* myx mxy))))
-                                   (if (coordinate= 0 det)
-                                       nil
-                                     (let ((/det (/ det)))
-                                       (let ((mxx (* /det myy))
-                                             (mxy (* /det (- mxy)))
-                                             (myx (* /det (- myx)))
-                                             (myy (* /det mxx)))
-                                         (make-transformation mxx mxy myx myy
-                                                              (+ (* -1 mxx tx) (* -1 mxy ty))
-                                                              (+ (* -1 myx tx) (* -1 myy ty))))))))
-                               (error (c)
-                                      (error 'singular-transformation :why c :transformation transformation)))
-                 (error 'singular-transformation :transformation transformation))
-                (use-value (value)
-                           :report (lambda (sink)
-                                     (format sink "Supply a transformation to use instead of the inverse."))
-                           value))))
-          (setf (slot-value computed-inverse 'inverse) transformation)
+        (let ((computed-inverse (call-next-method)))
+          (when (typep computed-inverse 'cached-inverse-transformation-mixin)
+            (setf (slot-value computed-inverse 'inverse) transformation))
           (setf inverse computed-inverse)
           computed-inverse))))
+
+(defmethod invert-transformation ((transformation standard-transformation))
+  (restart-case
+      (or
+       (handler-case
+           (multiple-value-bind (mxx mxy myx myy tx ty) (get-transformation transformation)
+             (let ((det (- (* mxx myy) (* myx mxy))))
+               (if (coordinate= 0 det)
+                   nil
+                   (let ((/det (/ det)))
+                     (let ((mxx (* /det myy))
+                           (mxy (* /det (- mxy)))
+                           (myx (* /det (- myx)))
+                           (myy (* /det mxx)))
+                       (make-transformation mxx mxy myx myy
+                                            (+ (* -1 mxx tx) (* -1 mxy ty))
+                                            (+ (* -1 myx tx) (* -1 myy ty))))))))
+         (error (c)
+                (error 'singular-transformation :why c :transformation transformation)))
+       (error 'singular-transformation :transformation transformation))
+    (use-value (value)
+               :report (lambda (sink)
+                         (format sink "Supply a transformation to use instead of the inverse."))
+               value)))
 
 (defun compose-translation-with-transformation (transformation dx dy)
   (compose-transformations (make-translation-transformation dx dy) transformation))
@@ -354,7 +409,8 @@
 
 (defmacro with-scaling ((medium sx &optional sy origin) &body body)
   (if sy
-      `(with-drawing-options (,medium :transformation (make-scaling-transformation ,sx ,sy ,@(if origin (list origin) nil)))
+      `(with-drawing-options (,medium :transformation (make-scaling-transformation
+                                                       ,sx ,sy ,@(if origin (list origin) nil)))
          ,@body)
     (let ((sx-var (make-symbol "SX")))
       `(let* ((,sx-var ,sx))
@@ -595,3 +651,88 @@
         (let ((my-angle (atan* ix iy))
               (null-angle (atan* x0 y0)))
           (+ (* rotations 2 pi) (correct-angle my-angle null-angle)))))))
+
+
+;;;; Methods on special transformations for performance.
+
+(defmethod compose-transformations ((transformation2 standard-translation)
+                                    (transformation1 standard-translation))
+  ;; (compose-transformations A B)x = (A o B)x = ABx
+  (with-slots ((dx1 dx) (dy1 dy)) transformation1
+    (with-slots ((dx2 dx) (dy2 dy)) transformation2
+      (make-instance 'standard-translation
+                     :dx (+ dx1 dx2)
+                     :dy (+ dy1 dy2)))))
+
+(defmethod compose-transformations (transformation2
+                                    (transformation1 standard-identity-transformation))
+  transformation2)
+
+(defmethod compose-transformations ((transformation2 standard-identity-transformation)
+                                    transformation1)
+  transformation1)
+
+(defmethod invert-transformation ((transformation standard-identity-transformation))
+  transformation)
+
+(defmethod invert-transformation ((transformation standard-translation))
+  (with-slots (dx dy) transformation
+    (make-translation-transformation (- dx) (- dy))))
+
+(defmethod transform-position ((transformation standard-translation) x y)
+  (with-slots (dx dy) transformation
+    (let ((x (coordinate x))
+          (y (coordinate y)))
+      (declare (type coordinate dx dy x y))
+      (values (+ x dx) (+ y dy)))))
+
+(defmethod transform-position ((transformation standard-identity-transformation) x y)
+  (values x y))
+
+(defmethod transform-region ((transformation standard-identity-transformation) region)
+  region)
+
+(defun make-translation-transformation (dx dy)
+  (make-instance 'standard-translation
+                 :dx (coordinate dx) :dy (coordinate dy)))
+
+(defmethod rectilinear-transformation-p ((tr standard-identity-transformation))
+  t)
+
+(defmethod rectilinear-transformation-p ((tr standard-translation))
+  t)
+
+(defmethod scaling-transformation-p ((tr standard-translation))
+  t)
+
+(defmethod scaling-transformation-p ((tr standard-identity-transformation))
+  t)
+
+(defmethod transformation-equal ((t1 standard-identity-transformation)
+                                 (t2 standard-identity-transformation))
+  t)
+
+(defmethod transformation-equal ((t1 standard-identity-transformation)
+                                 (t2 t))
+  nil)
+
+(defmethod transformation-equal ((t2 t)
+                                 (t1 standard-identity-transformation))
+  nil)
+
+(defmethod transformation-equal ((t1 standard-translation)
+                                 (t2 standard-translation))
+  (with-slots ((dx1 dx) (dy1 dy)) t1
+    (with-slots ((dx2 dx) (dy2 dy)) t2
+      (and (coordinate= dx1 dx2)
+           (coordinate= dy1 dy2)))))
+
+(defmethod transformation-equal ((t1 standard-translation)
+                                 (t2 t))
+  nil)
+
+(defmethod transformation-equal ((t2 t)
+                                 (t1 standard-translation))
+  nil)
+
+;; $Log: $
