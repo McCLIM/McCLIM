@@ -126,7 +126,9 @@
 		    do (let ((slot-name (slot-definition-name slot)))
 			 (formatting-row (pane)
 			   (formatting-cell (pane :align-x :right)
-			     (format pane "~a:" slot-name))
+			     (with-output-as-presentation
+				 (pane slot (present-type-of slot))
+			       (format pane "~a:" slot-name)))
 			   (formatting-cell (pane)
 			     (inspect-object (slot-value object slot-name) pane))))))))))))
 
