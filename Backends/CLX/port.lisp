@@ -63,6 +63,7 @@
 				(border-width 0) (border 0)
 				(override-redirect :off)
 				(map t)
+				(backing-store :not-useful)
 				(event-mask `(:exposure 
 					      :key-press :key-release
 					      :button-press :button-release
@@ -85,6 +86,8 @@
 		      :border-width border-width
 		      :border border
 		      :override-redirect override-redirect
+		      :backing-store backing-store
+		      :gravity :north-west
 		      :background pixel
 		      :event-mask (apply #'xlib:make-event-mask
 					 event-mask))))
@@ -206,12 +209,16 @@
 	(t
 	 nil)))))
 
-(defmethod get-next-event ((port clx-port) &key wait-function timeout)
-  (declare (ignore wait-function timeout))
+(defmethod get-next-event ((port clx-port) &key wait-function (timeout nil))
+  (declare (ignore wait-function))
   (let ((*clx-port* port))
     (declare (special *clx-port*))
     (xlib:display-finish-output (clx-port-display port))
-    (xlib:process-event (clx-port-display port) :handler #'event-handler :discard-p t)))
+    ; temporary solution
+    (or (xlib:process-event (clx-port-display port) :timeout timeout :handler #'event-handler :discard-p t)
+	:timeout)))
+;; [Mike] Timeoute and wait-functions are both implementation 
+;;        specific and hence best done in the backends.
 
 (defmethod make-graft ((port clx-port) &key (orientation :default) (units :device))
   (let ((graft (make-instance 'clx-graft
@@ -336,8 +343,8 @@
   (when (null (port-lookup-mirror port pixmap))
     (let* ((window (sheet-direct-mirror (pixmap-sheet pixmap)))
 	   (pix (xlib:create-pixmap 
-		    :width (pixmap-width pixmap)
-		    :height (pixmap-height pixmap)
+		    :width (round (pixmap-width pixmap))
+		    :height (round (pixmap-height pixmap))
 		    :depth (xlib:drawable-depth window)
 		    :drawable window)))
       (port-register-mirror port pixmap pix))
