@@ -664,10 +664,10 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
                                                     transformation line-style text-style)))
                (unwind-protect
                     (progn
-                      (setf (sheet-medium stream) ,new-medium)
-                      (setf (medium-sheet ,new-medium) stream)
+                      (setf (%sheet-medium stream) ,new-medium) ;is sheet a sheet-with-medium-mixin? --GB
+                      (setf (%medium-sheet ,new-medium) stream) ;is medium a basic-medium? --GB
                       (,method-name ,new-medium ,@args))
-                 (setf (sheet-medium stream) ,old-medium)))))))))
+                 (setf (%sheet-medium stream) ,old-medium))))))))) ;is sheet a sheet-with-medium-mixin? --GB
 
 (def-grecording draw-point (point-x point-y)
   (with-transformed-position (transform point-x point-y)
@@ -854,8 +854,8 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
 	  (new-medium (make-medium (port stream) stream)))
       (unwind-protect
            (progn
-             (setf (sheet-medium stream) new-medium)
-             (setf (medium-sheet new-medium) stream)
+             (setf (%sheet-medium stream) new-medium) ;is sheet a sheet-with-medium-mixin? --GB
+             (setf (%medium-sheet new-medium) stream) ;is medium a basic medium?
              (setf (medium-transformation new-medium)
                    (make-translation-transformation
                     x-offset
@@ -880,7 +880,7 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
                                   (+ wrapped 0) start-y (+ wrapped 4) (+ start-y max-height)
                                   :ink +foreground-ink+
                                   :filled t)))
-	(setf (sheet-medium stream) old-medium)))))
+	(setf (%sheet-medium stream) old-medium))))) ;is sheet a sheet-with-medium-mixin? --GB
 
 (defmethod output-record-start-cursor-position ((record text-displayed-output-record))
   (with-slots (start-x start-y) record
