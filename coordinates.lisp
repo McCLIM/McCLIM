@@ -28,6 +28,11 @@
 
 (deftype coordinate () 'double-float)
 
+(defun coordinate (n)
+  "Coerces N to be a coordinate."
+  (declare (type number n))
+  (coerce n 'coordinate))
+
 (defun coordinate-epsilon ()
   ;; tweak if you like
   (* (expt 2 10) double-float-epsilon))
