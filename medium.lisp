@@ -360,3 +360,91 @@
 	   (progn
 	     ,@body)
 	 (setf (medium-buffering-output-p ,medium) ,old-buffer)))))
+
+
+;;; BASIC-MEDIUM class
+
+(defclass basic-medium (medium)
+  ()
+  (:documentation "The basic class, on which all CLIM mediums are built."))
+
+(defmacro with-transformed-position ((transformation x y) &body body)
+  `(multiple-value-bind (,x ,y) (transform-position ,transformation ,x ,y)
+     ,@body))
+
+(defmacro with-transformed-distance ((transformation dx dy) &body body)
+  `(multiple-value-bind (,dx ,dy) (transform-distance ,transformation ,dx ,dy)
+     ,@body))
+
+(defmacro with-transformed-positions ((transformation coord-seq) &body body)
+  `(let ((,coord-seq (transform-positions ,transformation ,coord-seq)))
+     ,@body))
+
+
+(defmethod medium-draw-point* :around ((medium basic-medium) x y)
+  (let ((tr (medium-transformation medium)))
+    (with-transformed-position (tr x y)
+                               (call-next-method medium x y))))
+
+(defmethod medium-draw-points* :around ((medium basic-medium) coord-seq)
+  (let ((tr (medium-transformation medium)))
+    (with-transformed-positions (tr coord-seq)
+                                (call-next-method medium coord-seq))))
+
+(defmethod medium-draw-line* :around ((medium basic-medium) x1 y1 x2 y2)
+  (let ((tr (medium-transformation medium)))
+    (with-transformed-position (tr x1 y1)
+                               (with-transformed-position (tr x2 y2)
+                                                          (call-next-method medium x1 y1 x2 y2)))))
+
+(defmethod medium-draw-lines* :around ((medium basic-medium) coord-seq)
+  (let ((tr (medium-transformation medium)))
+    (with-transformed-positions (tr coord-seq)
+                                (call-next-method medium coord-seq))))
+
+(defmethod medium-draw-polygon* :around ((medium basic-medium) coord-seq closed filled)
+  (let ((tr (medium-transformation medium)))
+    (with-transformed-positions (tr coord-seq)
+                                (call-next-method medium coord-seq closed filled))))
+
+(defmethod medium-draw-rectangle* :around ((medium basic-medium) left top right bottom filled)
+  (let ((tr (medium-transformation medium)))
+    (if (rectilinear-transformation-p tr)
+        (multiple-value-bind (left top right bottom)
+            (transform-rectangle* tr left top right bottom)
+          (call-next-method medium left top right bottom filled))
+      (medium-draw-polygon* medium (list left top
+                                         left bottom
+                                         right bottom
+                                         right top)
+                            t filled))))
+
+(defmethod medium-draw-ellipse* :around ((medium basic-medium) center-x center-y
+                                         radius-1-dx radius-1-dy radius-2-dx radius-2-dy
+                                         start-angle end-angle filled)
+  (let* ((ellipse (make-elliptical-arc* center-x center-y
+                                        radius-1-dx radius-1-dy
+                                        radius-2-dx radius-2-dy
+                                        :start-angle start-angle
+                                        :end-angle end-angle))
+         (transformed-ellipse (transform-region (medium-transformation medium)
+                                                ellipse))
+         (start-angle (ellipse-start-angle transformed-ellipse))
+         (end-angle (ellipse-end-angle transformed-ellipse)))
+    (multiple-value-bind (center-x center-y) (ellipse-center-point* transformed-ellipse)
+      (multiple-value-bind (radius-1-dx radius-1-dy radius-2-dx radius-2-dy)
+          (ellipse-radii transformed-ellipse)
+        (call-next-method medium center-x center-y
+                          radius-1-dx radius-1-dy
+                          radius-2-dx radius-2-dy
+                          start-angle end-angle filled)))))
+
+(defmethod medium-draw-text* :around ((medium basic-medium) string x y
+                                      start end
+                                      align-x align-y
+                                      toward-x toward-y transform-glyphs)
+  ;;!!! FIX ME!
+  (call-next-method medium string x y
+                    start end
+                    align-x align-y
+                    toward-x toward-y transform-glyphs))
