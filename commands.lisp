@@ -548,9 +548,10 @@
        (when ,key-possibilities
 	 (let ((,member-ptype (cons 'member ,key-possibilities)))
 	   (loop
-	     (let* ((,key-result (accept ,member-ptype
-					 :stream ,stream
-					 :prompt "keywords"))
+	     (let* ((,key-result (prog1 (accept ,member-ptype
+                                                :stream ,stream
+                                                :prompt "keywords")
+                                   (eat-delimiter-or-activator)))
 		    (,val-result
 		     (case ,key-result
 		       ,@(mapcar
