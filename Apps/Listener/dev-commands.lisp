@@ -28,11 +28,7 @@
 ;; else suggests itself. Mostly to make them layout nice in a
 ;; command menu, if anyone wants such a thing.
 
-;; Some of the presentation translators might be broken, need to look into that.
-
 (define-command-table dev-commands)
-
-
 
 ;;; Presentation types
 
@@ -60,6 +56,16 @@
 (define-presentation-type directory-stack () :inherit-from 'expression)
 (define-presentation-type bytes () :inherit-from 'integer)
 (define-presentation-type lisp-memory-usage () :inherit-from 'bytes)
+
+(define-presentation-type package () :inherit-from 'expression)
+(define-presentation-method presentation-typep (object (type package))
+  (typep object 'package))
+
+(define-presentation-type package-name () :inherit-from 'string)
+(define-presentation-method presentation-typep (object (type package-name))
+  (find-package 'object))
+    
+
 
 ;;; Presentation methods
 
@@ -89,7 +95,8 @@
 		 (present arg 'symbol :stream stream)
 		 (write-char #\space  stream)
 		 (with-output-as-presentation (stream spec 'class)
-		   (format stream "~S)" (clim-mop:class-name spec))))))
+		   (format stream "~S" (clim-mop:class-name spec)))
+                 (write-char #\) stream))))
       (when optional
 	(format stream " &optional ~{~A ~^ ~}" optional))
       (when rest
@@ -214,51 +221,81 @@
 
 ;; FIXME: Make this a present method specialzed on a view?
 
-(defun present-symbol (symbol &optional (stream *standard-output*) show-package)
-  (with-output-as-presentation (stream symbol 'clim:symbol)
-    (multiple-value-bind (style ink)
-	(values
-	 (if (or (fboundp symbol)
-		 (boundp  symbol)
-		 (find-class symbol nil))
-	     (make-text-style *apropos-symbol-bound-family*
-			      *apropos-symbol-unbound-face*
-			      :normal)
-	     (make-text-style *apropos-symbol-unbound-family*
-			      *apropos-symbol-bound-face*
-			      :normal))
-	 (cond ((eql (symbol-package symbol)
-		     (find-package "KEYWORD"))
-		(make-rgb-color 0.46 0.0 0.0))
-	       ((fboundp symbol)
-		(make-rgb-color 0.0 0.0 0.3))
-	       ((find-class symbol nil)
-		(make-rgb-color 0.03 0.35 0.48))
-	       ((boundp symbol)
-		(make-rgb-color 0.0 0.0 0.0))
-	       (t (make-rgb-color 0.6 0.6 0.6))))
-      (with-drawing-options (stream :ink ink :text-style style)
-	(if show-package (let ((*package* (find-package :common-lisp-user)))
-			       (format stream "~W" symbol))
-	      (princ (symbol-name symbol) stream))
-	(when (boundp symbol)
-	  (format stream " = ")
-	  (with-drawing-options (stream :ink +olivedrab+ ;; XXX
-					:text-style (make-text-style :fixed :roman :small))
-	    (format  stream "~W" (symbol-value symbol)))) ))))
-	    
+(defun apropos-present-symbol (symbol &optional (stream *standard-output*) show-package)
+  (multiple-value-bind (style ink)
+      (values
+       (if (or (fboundp symbol)
+               (boundp  symbol)
+               (find-class symbol nil))
+           (make-text-style *apropos-symbol-bound-family*
+                            *apropos-symbol-unbound-face*
+                            :normal)
+           (make-text-style *apropos-symbol-unbound-family*
+                            *apropos-symbol-bound-face*
+                            :normal))
+       (cond ((eql (symbol-package symbol)
+                   (find-package "KEYWORD"))
+              (make-rgb-color 0.46 0.0 0.0))
+             ((fboundp symbol)
+              (make-rgb-color 0.0 0.0 0.3))
+             ((find-class symbol nil)
+              (make-rgb-color 0.03 0.35 0.48))
+             ((boundp symbol)
+              (make-rgb-color 0.0 0.0 0.0))
+             (t (make-rgb-color 0.6 0.6 0.6))))
+    (with-drawing-options (stream :ink ink :text-style style)
+      (with-output-as-presentation (stream symbol 'clim:symbol)
+        (if show-package
+            (let ((*package* (find-package :common-lisp-user)))
+              (format stream "~W" symbol))
+            (princ (symbol-name symbol) stream)))
+      (when (boundp symbol)
+        (format stream " = ")
+        (with-drawing-options (stream :ink +olivedrab+ ;; XXX
+                                      :text-style (make-text-style :fixed :roman :small))
+          (let ((object (symbol-value symbol)))
+            (present object (presentation-type-of object) :stream stream)))))))
+
+;; These are used by com-apropos to filter the list of symbols according to the domain keyword
+(defgeneric apropos-applicable-p (spec symbol))
+
+(defmethod apropos-applicable-p ((spec (eql 'symbols)) symbol) t)
+
+(defmethod apropos-applicable-p ((spec (eql 'classes)) symbol)
+  (find-class symbol nil))  
+
+(defmethod apropos-applicable-p ((spec (eql 'functions)) symbol)
+  (fboundp symbol))
+
+(defmethod apropos-applicable-p ((spec (eql 'variables)) symbol)
+  (boundp symbol))
+
+(defmethod apropos-applicable-p ((spec (eql 'command-tables)) symbol)
+  (find-command-table symbol :errorp nil))
+
+;(defmethod apropos-applicable-p ((spec (eql 'presentation-type)) symbol)
+;  (find-presentation-type-class symbol nil))
 
 (define-command (com-apropos :name "Apropos"
 			     :command-table dev-commands
 			     :provide-output-destination-keyword t)
-    ((string 'clim:string :prompt "string"))
-; Fix keyword handling in the CP sometime..
-;     &key (package-name 'package-name :prompt "in package" :default nil)
-  (setf *apropos-list* (apropos-list string #+nil(find-package package-name)))
-  (dolist (sym *apropos-list*)
-    (present-symbol sym *standard-output* T)
-      (terpri))
-  (note "Results have been saved to ~A~%" '*APROPOS-LIST*))
+    ((string 'clim:string :prompt "string")
+     &key
+     (package '(or package-name package) :prompt "in package" :default nil)
+     (domain '(member symbols classes functions variables command-tables) :prompt "domain" :default 'symbols))
+  (let ((real-package (when package
+                        (if (typep package 'package)
+                            package
+                            (find-package package)))))
+    (when (and package (not real-package))
+      (cerror "Search all packages instead" "No package specified by ~A could be found." package))
+    (let ((symbols (remove-if-not (lambda (sym) (apropos-applicable-p domain sym))
+                                  (apropos-list string real-package))))
+      (dolist (sym symbols)
+        (apropos-present-symbol sym *standard-output* T)
+        (terpri))
+      (setf *apropos-list* symbols)
+      (note "Results have been saved to ~W~%" '*APROPOS-LIST*))))
 
 (define-command (com-trace :name "Trace"
 			   :command-table dev-commands
@@ -323,8 +360,8 @@
                                  (with-drawing-options (stream :ink normal-ink
 							       :text-style text-style)
                                    (with-output-as-presentation (stream (clim-mop:class-name class) 'class-name)
-                                     (surrounding-output-with-border (stream :shape :drop-shadow)
-				       (princ (clim-mop:class-name class))))))
+                                     ; (surrounding-output-with-border (stream :shape :drop-shadow)
+				       (princ (clim-mop:class-name class))))) ;)
 			     inferior-fun
 			     :stream stream
                              :merge-duplicates T
@@ -544,8 +581,7 @@
       (setf gfs (append gfs (x-specializer-direct-generic-functions x))))
     (remove-duplicates gfs)))
 
-;; Oops, guess this isn't really comparing symbols anymore. What to call it, then?
-(defun symbol< (a b)
+(defun not-really-symbol< (a b)
   (when (and (consp a)
              (second a)
              (symbolp (second a)))
@@ -555,8 +591,8 @@
              (symbolp (second b)))
     (setf b (second b)))
   (unless (and (symbolp a) (symbolp b))
-    (return-from symbol< (string< (princ-to-string a)
-                                  (princ-to-string b))))
+    (return-from not-really-symbol< (string< (princ-to-string a)
+                                             (princ-to-string b))))
   (cond ((not (eq (symbol-package a)
                   (symbol-package b)))
          (string< (package-name (symbol-package a))
@@ -572,7 +608,7 @@
     (if (null class)
         (note "~A is not a defined class." class-spec)
       (let ((funcs (sort (class-funcs class) (lambda (a b)
-                                               (symbol< (clim-mop:generic-function-name a)
+                                               (not-really-symbol< (clim-mop:generic-function-name a)
                                                         (clim-mop:generic-function-name b))))))
         (with-text-size (T :small)
           (format-items funcs :printer (lambda (item stream)
