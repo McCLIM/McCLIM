@@ -301,8 +301,21 @@ record is stored.")
     (setf (values (old-min-x record) (old-min-y record)
 		  (old-max-x record) (old-max-y record))
 	  (bounding-rectangle* record))
+    ;;
+    ;; Moore:
+    ;;
+    ;;   I added the delete-output-record record. If ommited the
+    ;;   record is sometimes added needlessly. When that happens the
+    ;;   output history winds up with multiple (identical?) copies of
+    ;;   this output record. This can be observered in e.g. weird-irc.
+    ;;
+    ;;   Please look into this.
+    ;;
+    ;;                                          --GB 2003-05-15
+    (delete-output-record record (output-record-parent record) nil)
     (setf (output-record-parent record) nil)
     (add-output-record record (stream-current-output-record stream))
+    
     (setf (sub-record record) (make-instance 'updating-output-children-record
 					     :x-position x :y-position y
 					     :parent record)))
