@@ -245,3 +245,29 @@ Note:
               (locally ,@body)
            (remove-method #',name ,new-method)
            (when ,old-method (add-method #',name ,old-method)))))))
+
+;;; Anaphoric
+
+(defmacro aif (test-form then-form &optional else-form)
+  `(let ((it ,test-form))
+     (if it ,then-form ,else-form)))
+
+(defmacro awhen (test-form &body body)
+  `(aif ,test-form
+        (progn ,@body)))
+
+(defmacro aand (&rest args)
+  (cond ((endp args) t)
+        ((endp (rest args)) (first args))
+        (t `(aif ,(first args) (aand ,@(rest args))))))
+
+;;;
+(declaim (inline maybe-funcall maybe-apply))
+
+(defun maybe-funcall (function &rest args)
+  "If FUNCTION is not NIL, funcall it."
+  (when function (apply function args)))
+
+(defun maybe-apply (function &rest args)
+  "If FUNCTION is not NIL, apply it."
+  (when function (apply #'apply function args)))
