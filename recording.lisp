@@ -34,6 +34,10 @@
 ;;; - When DRAWING-P is NIL, should stream cursor move?
 ;;;
 ;;; - :{X,Y}-OFFSET.
+;;;
+;;; - (SETF OUTPUT-RECORD-START-CURSOR-POSITION) does not affect the
+;;; bounding rectangle. What does it affect?
+;;;
 
 ;;; Bug: (SETF OUTPUT-RECORD-POSITION) returns the record instead of
 ;;; the position. It is useful for debugging, but it is wrong.
@@ -74,7 +78,15 @@ position of the upper-left corner of its bounding rectangle. The
 position is relative to the stream, where (0,0) is (initially) the
 upper-left corner of the stream."))
 
-(defgeneric* (setf output-record-position) (x y record))
+(defgeneric* (setf output-record-position) (x y record)
+  (:documentation
+   "Changes the x and y position of the RECORD to be X and Y, and
+updates the bounding rectangle to reflect the new position (and saved
+cursor positions, if the output record stores it). If RECORD has any
+children, all of the children (and their descendants as well) will be
+moved by the same amount as RECORD was moved. The bounding rectangles
+of all of RECORD's ancestors will also be updated to be large enough
+to contain RECORD."))
 
 #+:cmu(declaim (ftype (function (output-record) (values integer integer))
 		      output-record-start-cursor-position))
@@ -242,6 +254,74 @@ unspecified. "))
      &allow-other-keys))
 
 (defgeneric make-design-from-output-record (record))
+
+;;; Macros
+(defmacro with-output-recording-options ((stream
+					  &key (record nil record-supplied-p)
+					       (draw nil draw-supplied-p))
+					 &body body)
+  (when (eq stream 't) (setq stream '*standard-output*))
+  (check-type stream symbol)
+  (with-gensyms (continuation)
+    `(flet ((,continuation  (,stream) ,@body))
+       (declare (dynamic-extent #',continuation))
+       (invoke-with-output-recording-options
+        ,stream #',continuation
+        ,(if record-supplied-p record `(stream-recording-p ,stream))
+        ,(if draw-supplied-p draw `(stream-drawing-p ,stream))))))
+
+(defmacro with-new-output-record ((stream
+                                   &optional
+                                   (record-type ''standard-sequence-output-record)
+                                   (record nil record-supplied-p)
+                                   &rest initargs)
+                                  &body body)
+  "Creates a new output record of type RECORD-TYPE and then captures
+the output of BODY into the new output record, and inserts the new
+record into the current \"open\" output record assotiated with STREAM.
+    If RECORD is supplied, it is the name of a variable that will be
+lexically bound to the new output record inside the body. INITARGS are
+CLOS initargs that are passed to MAKE-INSTANCE when the new output
+record is created.
+    It returns the created output record.
+    The STREAM argument is a symbol that is bound to an output
+recording stream. If it is T, *STANDARD-OUTPUT* is used."
+  (when (eq stream 't) (setq stream '*standard-output*))
+  (check-type stream symbol)
+  (unless record-supplied-p (setq record (gensym)))
+  `(invoke-with-new-output-record ,stream
+                                  #'(lambda (,stream ,record)
+                                      (declare (ignorable ,stream ,record))
+                                      ,@body)
+                                  ,record-type
+                                  ,@initargs))
+
+(defmacro with-output-to-output-record
+    ((stream
+      &optional (record-type ''standard-sequence-output-record)
+                (record nil record-supplied-p)
+      &rest initargs)
+     &body body)
+  "Creates a new output record of type RECORD-TYPE and then captures
+the output of BODY into the new output record. The cursor position of
+STREAM is initially bound to (0,0)
+    If RECORD is supplied, it is the name of a variable that will be
+lexically bound to the new output record inside the body. INITARGS are
+CLOS initargs that are passed to MAKE-INSTANCE when the new output
+record is created.
+    It returns the created output record.
+    The STREAM argument is a symbol that is bound to an output
+recording stream. If it is T, *STANDARD-OUTPUT* is used."
+  (when (eq stream 't) (setq stream '*standard-output*))
+  (check-type stream symbol)
+  (unless record-supplied-p (setq record (gensym "RECORD")))
+  `(invoke-with-output-to-output-record
+    ,stream
+    #'(lambda (,stream ,record)
+        (declare (ignorable ,stream ,record))
+        ,@body)
+    ,record-type
+    ,@initargs))
 
 
 ;;;; Implementation
@@ -887,7 +967,6 @@ were added."
   (with-slots (strings baseline max-height start-y wrapped
                x1 y1 initial-x1 initial-y1) record
     (with-sheet-medium (medium stream) ;is sheet a sheet-with-medium-mixin? --GB
-      ;; XXX Disable recording?
       (letf (((medium-text-style medium) (make-text-style nil nil nil))
              ((medium-ink medium) +foreground-ink+)
              ((medium-clipping-region medium) +everywhere+)
@@ -1064,7 +1143,8 @@ were added."
         (if (output-record-ancestor-p (stream-output-history stream) record)
             (progn
               (delete-output-record record (output-record-parent record))
-              (draw-rectangle* stream x1 y1 x2 y2 :ink +background-ink+)
+              (with-output-recording-options (stream :record nil)
+                (draw-rectangle* stream x1 y1 x2 y2 :ink +background-ink+))
               (stream-replay stream region))
             (when errorp
               (error "~S is not contained in ~S." record stream)))))))
@@ -1191,20 +1271,6 @@ were added."
 
 ;;; 16.4.4. Output Recording Utilities
 
-(defmacro with-output-recording-options ((stream
-					  &key (record nil record-supplied-p)
-					       (draw nil draw-supplied-p))
-					 &body body)
-  (when (eq stream 't) (setq stream '*standard-output*))
-  (check-type stream symbol)
-  (with-gensyms (continuation)
-    `(flet ((,continuation  (,stream) ,@body))
-       (declare (dynamic-extent #',continuation))
-       (invoke-with-output-recording-options
-        ,stream #',continuation
-        ,(if record-supplied-p record `(stream-recording-p ,stream))
-        ,(if draw-supplied-p draw `(stream-drawing-p ,stream))))))
-
 (defmethod invoke-with-output-recording-options
   ((stream output-recording-stream) continuation record draw)
   "Calls CONTINUATION on STREAM enabling or disabling recording and drawing
@@ -1212,32 +1278,6 @@ according to the flags RECORD and DRAW."
   (letf (((stream-recording-p stream) record)
 	 ((stream-drawing-p stream) draw))
     (funcall continuation stream)))
-
-(defmacro with-new-output-record ((stream
-                                   &optional
-                                   (record-type 'standard-sequence-output-record)
-                                   (record nil record-supplied-p)
-                                   &rest initargs)
-                                  &body body)
-  "Creates a new output record of type RECORD-TYPE and then captures
-the output of BODY into the new output record, and inserts the new
-record into the current \"open\" output record assotiated with STREAM.
-    If RECORD is supplied, it is the name of a variable that will be
-lexically bound to the new output record inside the body. INITARGS are
-CLOS initargs that are passed to MAKE-INSTANCE when the new output
-record is created.
-    It returns the created output record.
-    The STREAM argument is a symbol that is bound to an output
-recording stream. If it is T, *STANDARD-OUTPUT* is used."
-  (when (eq stream 't) (setq stream '*standard-output*))
-  (check-type stream symbol)
-  (unless record-supplied-p (setq record (gensym)))
-  `(invoke-with-new-output-record ,stream
-                                  #'(lambda (,stream ,record)
-                                      (declare (ignorable ,stream ,record))
-                                      ,@body)
-                                  ',record-type
-                                  ,@initargs))
 
 (defmethod invoke-with-new-output-record ((stream output-recording-stream)
                                           continuation record-type
@@ -1251,33 +1291,6 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
       (finish-output stream))
     (stream-add-output-record stream new-record)
     new-record))
-
-(defmacro with-output-to-output-record
-    ((stream
-      &optional (record-type 'standard-sequence-output-record)
-                (record nil record-supplied-p)
-      &rest initargs)
-     &body body)
-  "Creates a new output record of type RECORD-TYPE and then captures
-the output of BODY into the new output record. The cursor position of
-STREAM is initially bound to (0,0)
-    If RECORD is supplied, it is the name of a variable that will be
-lexically bound to the new output record inside the body. INITARGS are
-CLOS initargs that are passed to MAKE-INSTANCE when the new output
-record is created.
-    It returns the created output record.
-    The STREAM argument is a symbol that is bound to an output
-recording stream. If it is T, *STANDARD-OUTPUT* is used."
-  (when (eq stream 't) (setq stream '*standard-output*))
-  (check-type stream symbol)
-  (unless record-supplied-p (setq record (gensym "RECORD")))
-  `(invoke-with-output-to-output-record
-    ,stream
-    #'(lambda (,stream ,record)
-        (declare (ignorable ,stream ,record))
-        ,@body)
-    ',record-type
-    ,@initargs))
 
 (defmethod invoke-with-output-to-output-record
     ((stream output-recording-stream) continuation record-type
