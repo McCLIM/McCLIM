@@ -39,59 +39,32 @@
       (disarmed-callback button client id)
       (dispatch-repaint button (sheet-region button)))))
 
-#|
-  (defun menu-draw-highlighted (gadget)
-    (with-slots (label) gadget
-      (multiple-value-bind (x1 y1 x2 y2) 
-	  (bounding-rectangle* (sheet-region gadget))
-        (let ((w (- x2 x1))
-	      (h (- y2 y1)))
-	  (draw-rectangle* gadget -1 -1 x2 y2
-			   :ink (gadget-highlighted-color gadget)
-			   :filled t)
-	  (draw-edges-lines* gadget 1 1 (- w 2) (- h 2))
-	  (draw-text* gadget label (round w 2) (round h 2)
-		      :align-x :center :align-y :center)))))
-|#
-
 (defun menu-draw-highlighted (gadget)
-  (with-special-choices (gadget)
-    (with-slots (label) gadget
-      (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region gadget)
-	(let ((w (- x2 x1))
-	      (h (- y2 y1)))
-	  (draw-rectangle* gadget -1 -1 x2 y2
-			   :ink (gadget-highlighted-color gadget)
-			   :filled t)
-	  (draw-edges-lines* gadget 0 0 (1- w) (1- h)) ;(- w 2) (- h 2)
-	  (draw-text* gadget label (round w 2) (round h 2)
-		      :align-x :center :align-y :center))))))
-
-#|
-  (defun menu-draw-unhighlighted (gadget)
-    (with-slots (label) gadget
-      (multiple-value-bind (x1 y1 x2 y2)
-	  (bounding-rectangle* (sheet-region gadget))
-        (let ((w (- x2 x1))
-	      (h (- y2 y1)))
-	  (draw-rectangle* gadget -1 -1 x2 y2
-			   :ink (gadget-normal-color gadget)
-			   :filled t)
-	  (draw-text* gadget label (round w 2) (round h 2)
-		      :align-x :center :align-y :center)))))
-|#
+  (when (sheet-mirror gadget)           ;XXX only do this when the gadget is realized.
+    (with-special-choices (gadget)
+      (with-slots (label) gadget
+        (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region gadget)
+          (let ((w (- x2 x1))
+                (h (- y2 y1)))
+            (draw-rectangle* gadget -1 -1 x2 y2
+                             :ink (gadget-highlighted-color gadget)
+                             :filled t)
+            (draw-edges-lines* gadget 0 0 (1- w) (1- h)) ;(- w 2) (- h 2)
+            (draw-text* gadget label (round w 2) (round h 2)
+                        :align-x :center :align-y :center)))))))
 
 (defun menu-draw-unhighlighted (gadget)
-  (with-special-choices (gadget)
-    (with-slots (label) gadget
-      (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region gadget)
-	(let ((w (- x2 x1))
-	      (h (- y2 y1)))
-	  (draw-rectangle* gadget -1 -1 w h ;-1 -1 x2 y2
-			   :ink (gadget-normal-color gadget)
-			   :filled t)
-	  (draw-text* gadget label (round w 2) (round h 2)
-		      :align-x :center :align-y :center))))))
+  (when (sheet-mirror gadget)           ;XXX only do this when the gadget is realized.
+    (with-special-choices (gadget)
+      (with-slots (label) gadget
+        (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region gadget)
+          (let ((w (- x2 x1))
+                (h (- y2 y1)))
+            (draw-rectangle* gadget -1 -1 w h ;-1 -1 x2 y2
+                             :ink (gadget-normal-color gadget)
+                             :filled t)
+            (draw-text* gadget label (round w 2) (round h 2)
+                        :align-x :center :align-y :center)))))))
 
 (defmethod handle-event ((pane menu-button-pane) (event pointer-enter-event))
   (when (slot-value (slot-value pane 'client) 'armed)
@@ -131,7 +104,7 @@
 (defmethod handle-event ((pane menu-button-leaf-pane) (event pointer-ungrab-event))
   (destroy-substructure (menu-root pane)))
 
-(defmethod repaint-sheet ((pane menu-button-leaf-pane) region)
+(defmethod handle-repaint ((pane menu-button-leaf-pane) region)
   (declare (ignore region))
   (with-slots (armed) pane
     (if armed
@@ -195,7 +168,7 @@
 (defmethod handle-event ((pane menu-button-submenu-pane) (event pointer-button-release-event))
   (destroy-substructure (menu-root pane)))
 
-(defmethod repaint-sheet ((pane menu-button-submenu-pane) region)
+(defmethod handle-repaint ((pane menu-button-submenu-pane) region)
   (declare (ignore region))
   (with-slots (submenu-frame) pane
     (if submenu-frame
