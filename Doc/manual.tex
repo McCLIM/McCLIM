@@ -260,14 +260,13 @@ given in the coordinate system of the sheet.
 
 In McCLIM, every grafted sheet has a \gloss{native transformation}.
 The native transformation is used by drawing functions to translate
-sheet coordinates to native coordinates, so that drawing can occur on
-the (not necessarily immediate) mirror of the sheet.  It would
-therefore be enough for sheets that support the \gloss{output
-  protocol} to have a native transformation.  However, it is easier to
+sheet coordinates to \gloss{native coordinates}, so that drawing can
+occur on the (not necessarily immediate) mirror of the sheet.  It
+would therefore be enough for sheets that support the \gloss{output
+protocol} to have a native transformation.  However, it is easier to
 generalize it to all sheets, in order to simplify the programming of
-the computation of the native transformation. 
-Thus, in McCLIM, even sheets that are mute for output have a native
-transformation. 
+the computation of the native transformation.  Thus, in McCLIM, even
+sheets that are mute for output have a native transformation.
 
 In McCIM, every grafted sheet also has a \gloss{native region}.  The
 native region is intersection the sheet region and the region of all
@@ -486,20 +485,20 @@ simplify that algorithm, let us define the native transformation for a
 for a non-mirrored sheet). 
 
 \begin{enumerate0}
-
-\item The native transformation of the graft is decided by the frame
-manager.  It may be the \gloss{identity transformation} or a
-transformation from millimeters to pixels, or whatever the frame
-manager decides. 
-
+  
+\item The native transformation of the top level sheet is decided by
+  the frame manager.  It may be the \gloss{identity transformation} or
+  a transformation from millimeters to pixels, or whatever the frame
+  manager decides.
+  
 \item The native transformation of any mirrored sheet other than the
-graft is the composition of the inverse of its mirror transformation,
-the native transformation of its parent, and its own sheet
-transformation. 
-
+  top level sheet is the composition of the inverse of its mirror
+  transformation, the native transformation of its parent, and its own
+  sheet transformation.
+  
 \item The native transformation of any sheet without a mirror is the
-composition of the native transformation of its parent and its own
-sheet transformation.
+  composition of the native transformation of its parent and its own
+  sheet transformation.
 \end{enumerate0}
 
 \section{Computing the native region}
@@ -742,12 +741,12 @@ transformation is probably a translation of that of its parent.
 
 Notice also that the native transformation of a pane need not be the
 composition of the identity transformation and a translation.  That
-would be the case only of the native transformation of the graft is
-the identity transformation, but that need not be the case.  It is
-possible for the frame manager to impose a coordinate system in (say)
-millimeters as opposed to pixels.  The native transformation of the
-graft of such a frame manager is a scaling with coefficients other
-than 1. 
+would be the case only of the native transformation of the top level
+sheet is the identity transformation, but that need not be the case.
+It is possible for the frame manager to impose a coordinate system in
+(say) millimeters as opposed to pixels.  The native transformation of
+the top level sheet of such a frame manager is a scaling with
+coefficients other than 1.
 
 \section{Layout protocol}
 
@@ -1037,13 +1036,31 @@ indicates desired image quality (for formats with lossy compression).
 
 \chapter{Glossary}
 
+\glossentry{Direct mirror}
+
+A \gloss{mirror} of a sheet which is not shared with any of the
+ancestors of the sheet.  All grafted McCLIM sheets have mirrors, but
+not all have direct mirrors.  A McCLIM sheet that does not have a
+direct mirror uses the direct mirror of its first ancestor having a
+direct mirror for graphics output.  Asking for the direct mirror of a
+sheet that does not have a direct mirror returns nil.
+
+Whether a McCLIM sheet has a direct mirror or not, is decided by the
+frame manager.  Some frame managers may only allow for the graft to be
+a mirrored sheet.  Even frame managers that \emph{allow} hierarchical
+mirrors may decide not to allocate a direct mirror for a particular
+sheet.  Although sheets with a direct mirror must be instances of the
+class mirrored-sheet-mixin, whether a McCLIM sheet has a direct mirror
+or not is not determined statically by the class of a sheet, but
+dynamically by the frame manager. 
+
 \glossentry{Mirror}
 
 A device window such as an X11 window that parallels a \gloss{sheet}
 in the CLIM \gloss{sheet hierarchy}.  A \gloss{sheet} having such a
-mirror is called a \gloss{mirrored sheet}.  When \gloss{drawing
-functions} are called on a \gloss{mirrored sheet}, they are forwarded
-to the host windowing system as drawing commands on the
+\emph{direct} mirror is called a \gloss{mirrored sheet}.  When
+\gloss{drawing functions} are called on a \gloss{mirrored sheet}, they
+are forwarded to the host windowing system as drawing commands on the
 \gloss{mirror}.
 
 CLIM \gloss{sheet}s that are not mirrored must be \gloss{descendents}
@@ -1053,30 +1070,40 @@ the \gloss{sheet} that receives the drawing commands.
 \glossentry{Mirrored sheet}
 
 A \gloss{sheet} in the CLIM \gloss{sheet hiearchy} that has a direct
-parallel (called the \gloss{mirror}) in the host windowing system.  A
-mirrored sheet is always an instance of the class
+parallel (called the \gloss{direct mirror}) in the host windowing
+system.  A mirrored sheet is always an instance of the class
 \class{mirrored-sheet-mixin}, but instances of that class are not
 necessarily mirrored sheets.  The sheet is called a mirrored sheet
-only if it currently has a mirror.  There may be several reasons for
-an instance of that class not to currently have a mirror.  One is that
-the sheet is not \gloss{grafted}.  Only grafted sheets can have
-mirrors.  Another one is that the \gloss{frame manager} responsible
-for the look and feel of the sheet hierarchy may decide that it is
-inappropriate for the sheet to have a mirror, for instance if the
-underlying windowing system does not allow nested windows inside an
-application, or that it would simply be a better use of resources not
-to create a mirror for the sheet.  An example of the last example
-would be a stream pane inside a the \gloss{viewport} of a
-\gloss{scroller pane}.  The graphics objects (usually text) that
-appear in a stream pane can have very large coordinate values, simply
-because there are many lines of text.  Should the stream pane be
-mirrored, the coordinate values used on the mirror may easily go
-beyond what the underlying windowing system accepts.  X11, for
-instance, can not handle coordinates greater than 64k (16 bit unsigned
-integer).  By not having a mirror for the stream pane, the coordinates
-will be translated to those of the mirror of the \gloss{viewport}
-before being submitted to the windowing system, which gives more
-reasonable coordinate values. 
+only if it currently has a direct mirror.  There may be several
+reasons for an instance of that class not to currently have a direct
+mirror.  One is that the sheet is not \gloss{grafted}.  Only grafted
+sheets can have mirrors.  Another one is that the \gloss{frame
+manager} responsible for the look and feel of the sheet hierarchy may
+decide that it is inappropriate for the sheet to have a direct mirror,
+for instance if the underlying windowing system does not allow nested
+windows inside an application, or that it would simply be a better use
+of resources not to create a direct mirror for the sheet.  An example
+of the last example would be a stream pane inside a the
+\gloss{viewport} of a \gloss{scroller pane}.  The graphics objects
+(usually text) that appear in a stream pane can have very large
+coordinate values, simply because there are many lines of text.
+Should the stream pane be mirrored, the coordinate values used on the
+mirror may easily go beyond what the underlying windowing system
+accepts.  X11, for instance, can not handle coordinates greater than
+64k (16 bit unsigned integer).  By not having a direct mirror for the
+stream pane, the coordinates will be translated to those of the (not
+necessarily direct) mirror of the \gloss{viewport} before being
+submitted to the windowing system, which gives more reasonable
+coordinate values.
+
+It is important to realize the implications of this terminology.  A
+mirrored sheet is therefore not a sheet that has a mirror.  All
+grafted sheets have mirrors.  For the sheet to be a mirrored sheet it
+has to have a \emph{direct} mirror.  Also, a call to
+\genfun{sheet-mirror} returns a mirror for all grafted sheets, whether
+the sheet is a mirrored sheet or not.  A call to
+\genfun{sheet-direct-mirror}, on the other hand, returns nil if the
+sheet is not a mirrored sheet. 
 
 \glossentry{Mirror transformation}
 
@@ -1096,10 +1123,10 @@ frame manager can impose a native coordinate system with other units,
 such as millimeters. 
 
 The native coordinate system of a sheet is the native coordinate
-system of its mirror (direct or not).  Thus, a sheet without a mirror
-has the same native coordinate system as its parent.  To obtain native
-coordinates of the parent of a mirror, use the \gloss{mirror
-transformation}. 
+system of its mirror (direct or not).  Thus, a sheet without a direct
+mirror has the same native coordinate system as its parent.  To obtain
+native coordinates of the parent of a mirror, use the \gloss{mirror
+transformation}.
 
 \glossentry{Native region}
 
