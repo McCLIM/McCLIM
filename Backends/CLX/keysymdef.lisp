@@ -214,7 +214,7 @@
 (define-keysym :R15 #xffe0)
 
 (define-keysym :SHIFT-LEFT #xffe1)
-(define-keysym :SHIFT-RIRGHT #xffe2)
+(define-keysym :SHIFT-RIGHT #xffe2)
 (define-keysym :CONTROL-LEFT #xffe3)
 (define-keysym :CONTROL-RIGHT #xffe4)
 (define-keysym :CAPS-LOCK #xffe5)
