@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.101 2002/09/14 04:02:36 brian Exp $
+;;; $Id: panes.lisp,v 1.102 2002/09/15 19:09:27 brian Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -324,10 +324,12 @@
 			  :height (or height 200)))
 
 ;;???
+#+nil ; this method is silly, because it does nothing.
 (defmethod allocate-space :before ((pane pane) width height)
   width height
   '(unless (typep 'pane 'top-level-sheet-pane)
     (resize-sheet pane width height)))
+
 
 (defmethod allocate-space ((pane pane) width height)
   (declare (ignorable pane width height))
@@ -1578,21 +1580,25 @@ During realization the child of the spacing will have as cordinates
         (let ((req
                ; v-- where does this requirement come from?
                (make-space-requirement
-                :width 200 :height 200 :max-width +fill+ :max-height +fill+
+                :width 300 :height 300 :max-width +fill+ :max-height +fill+
                 :min-width 30
                 :min-height 30)))
           (when vscrollbar
-            (setq req (space-requirement+ req
-                        (space-requirement+* (compose-space vscrollbar)
-                                              :height     *scrollbar-thickness*
-                                              :min-height *scrollbar-thickness*
-                                              :max-height *scrollbar-thickness*))))
+            (setq req (space-requirement+*
+                        (space-requirement-combine #'max
+                              req
+                              (compose-space vscrollbar))
+                        :height     *scrollbar-thickness*
+                        :min-height *scrollbar-thickness*
+                        :max-height *scrollbar-thickness*)))
           (when hscrollbar
-            (setq req (space-requirement+ req
-                        (space-requirement+* (compose-space hscrollbar)
-                                              :width     *scrollbar-thickness*
-                                              :min-width *scrollbar-thickness*
-                                              :max-width *scrollbar-thickness*))))
+            (setq req (space-requirement+*
+                        (space-requirement-combine #'max
+                              req
+                              (compose-space hscrollbar))
+                        :width     *scrollbar-thickness*
+                        :min-width *scrollbar-thickness*
+                        :max-width *scrollbar-thickness*)))
           req)
         (make-space-requirement))))
 
