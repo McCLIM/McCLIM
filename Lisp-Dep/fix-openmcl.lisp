@@ -22,27 +22,6 @@
   (:use :common-lisp)
   #+openmcl-partial-mop
   (:use :openmcl-mop)
-  #+nil					; #+openmcl-partial-mop
-  (:import-from :openmcl-mop
-		#:validate-superclass #:class-finalized-p
-		#:finalize-inheritance #:class-prototype
-		#:class-precedence-list #:class-direct-subclasses
-		#:class-direct-superclasses
-		#:generic-function-methods #:method-specializers
-		#:generic-function-name
-		#:compute-applicable-methods
-		#:funcallable-standard-class
-		#:slot-definition-name #:slot-definition-type
-		#:slot-definition-allocation
-		#:slot-definition-initargs #:slot-definition-initfunction
-		#:slot-definition-initform #:slot-definition-readers
-		#:slot-definition-writers
-		#:eql-specializer-object
-		#:intern-eql-specializer
-		#:ensure-class
-		#:compute-applicable-methods-using-classes
-		#:extract-specializer-names #:extract-lambda-list
-		#:class-slots #:class-direct-slots)
   #+openmcl-partial-mop
   (:import-from :ccl #:class-name #:eql-specializer)
   #-openmcl-partial-mop
@@ -50,28 +29,6 @@
 		#:class-direct-superclasses #:generic-function-methods
 		#:method-specializers #:compute-applicable-methods
 		#:funcallable-standard-class #:slot-definition-name)
-  #+nil					;#+openmcl-partial-mop
-  (:export #:validate-superclass #:class-finalized-p
-	   #:finalize-inheritance #:class-prototype
-	   #:class-precedence-list #:class-direct-subclasses
-	   #:class-direct-superclasses
-	   #:class-name
-	   #:generic-function-methods #:method-specializers
-	   #:generic-function-name
-	   #:compute-applicable-methods
-	   #:funcallable-standard-class
-	   #:slot-definition-allocation
-	   #:slot-definition-name #:slot-definition-type
-	   #:slot-definition-initargs #:slot-definition-initfunction
-	   #:slot-definition-initform #:slot-definition-readers
-	   #:slot-definition-writers
-	   #:eql-specializer
-	   #:eql-specializer-object
-	   #:intern-eql-specializer
-	   #:ensure-class
-	   #:compute-applicable-methods-using-classes
-	   #:extract-specializer-names #:extract-lambda-list
-	   #:class-slots #:class-direct-slots)
   #-openmcl-partial-mop
   (:export #:validate-superclass #:class-finalized-p
 	   #:finalize-inheritance ccl::class-prototype
@@ -88,6 +45,7 @@
 	   #:extract-specializer-names #:extract-lambda-list
 	   #:class-slots))
 
+#+openmcl-partial-mop
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (loop for sym being the symbols of :clim-mop
 	do (export sym :clim-mop)))
