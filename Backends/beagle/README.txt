@@ -128,12 +128,40 @@ Should use CLIM:*DEFAULT-FRAME-MANAGER* for this!
 Note that as yet, no native (aqua) look and feel panes have been defined,
 so it doesn't matter which one you use.
 
+multiple ports:
+---------------
+If you have an X server running and have loaded both the beagle and clx
+backends, you can mix and match. For example, by issuing the following:-
+
+(in the following, '>' is the terminal prompt, '?' is the OpenMCL
+ command-line prompt, '->' is the OpenMCL Listener prompt and 'CL-USER>'
+ is the CLX Listener prompt)
+
+1.  > openmcl
+2.  ? (require "COCOA")
+3.  -> (require "ASDF")
+4.  -> (load "home:load-clim")
+5.  -> (load "home:load-clx")
+6.  -> (load "home:load-beagle")
+7.  -> (setf climi::*default-server-path* :clx)
+8.  -> (clim-listener:run-listener)
+9.  CL-USER> (setf climi::*default-server-path* :beagle)
+10. CL-USER> (clim-listener:run-listener-process)
+
+I can get both a CLX and a Beagle Listener running simultaneously.
+You can also do a (clim-listener:run-listener-process) in (8) and
+then run the other listener from the OpenMCL Listener.
+Other variations probably work too, but I haven't experimented too
+much.
+(7) isn't necessary, since the CLX port appears in the server-path
+search order before the Beagle port does.
+
 
 listener:
 ---------
 If you want to run the Listener in this back end as it currently stands, you
 need to make the following modifications to
-'Apps/Listener/dev-commands.lisp':-
+'Apps/Listener/dev-commands.lisp' (or put up with broken directory display):-
 
 1. Modify 'pretty-pretty-pathname', removing:
 
@@ -155,6 +183,8 @@ KNOWN LIMITATIONS / TODO LIST
     Should be able to speed things up by performing fewer focus lock / unlocks,
     and by not setting drawing options unless necessary. I don't know how
     far this will get us though...
+    UPDATE - 21.AUG.2004 - performing fewer NSWindow flushes makes no difference
+                           to speed.
 
 2.  When running the Listener (and probably other applications), the resize
     handle is not visible; it's there, but you can't see it. Grab and drag
@@ -162,14 +192,6 @@ KNOWN LIMITATIONS / TODO LIST
 
 3.  There are not yet any aqua look and feel panes. Sorry, I'm trying to
     get everything else working first!
-
--4.-  Pixmap support is not implemented; this means clim-fig drawing doesn't
-    work.
-    This is getting there, although not very efficiently; we are missing a
-    method for (sheet-mirror mirrored-pixmap). This is evident if you run
-    (clim-demo::clim-fig) and actually do some drawing.
-    RESOLVED 08.AUG.04 [NB. this functionality is not too efficient I think
-                       and needs revisiting (like everything else does)]
 
 4.5. Designs (other than colours) aren't implemented - THIS means there are
     no icons in the Listener.
@@ -206,27 +228,9 @@ KNOWN LIMITATIONS / TODO LIST
     pool) but when running in a separate thread lots of warning messages
     are generated.
 
-10. Text sizes aren't calculated correctly; when multiple lines are output
-    together, the bottom of one line can be overwritten by the top of the
-    next line.
-
 11. Line dash patterns haven't been implemented.
 
 12. There's probably some debug output remaining in some corner cases.
-
--13.- Some Apropos cases fail; for example 'Apropos graft' fails (although
-    '(apropos 'graft)' does not). The same problem prevents the address
-    book demo working too I think. [This appears to be caused by treating
-    any 'NIL' which should be output as a literal object. Not sure how
-    this is happening, but it should be possible to track it down].
-    RESOLVED 21.AUG.2004 - it appears MACPTRs are output using the family
-    (for a text style) of :fixed - which didn't exist (only :fix). Not
-    sure if this is a specification violation or not...
-
--14.- Not all foreign objects we keep hold of in the back end are heap-
-    allocated. Some are stack-allocated and cause errors about 'bogus'
-    objects once they go out of scope. At least, I think (and hope) that's
-    the reason 'cause that's easy to fix. RESOLVED 17.JUL.04
 
 15. Popup menus don't work quite the same way as they do in the CLX back
     end. Cocoa doesn't support pointer grabbing so disposing of menus when
@@ -269,6 +273,42 @@ KNOWN LIMITATIONS / TODO LIST
     moves again is the PDP redisplayed correctly, with 's-L: Describe
     Presentation'.
     Need to check CLX implementation to see if this is the same...
+
+-4.-  Pixmap support is not implemented; this means clim-fig drawing doesn't
+    work.
+    This is getting there, although not very efficiently; we are missing a
+    method for (sheet-mirror mirrored-pixmap). This is evident if you run
+    (clim-demo::clim-fig) and actually do some drawing.
+    RESOLVED 08.AUG.04 [NB. this functionality is not too efficient I think
+                       and needs revisiting (like everything else does)]
+
+-10.- Text sizes aren't calculated correctly; when multiple lines are output
+    together, the bottom of one line can be overwritten by the top of the
+    next line.
+    UPDATE 21.AUG.2004 - I think the text sizes *are* calculated correctly.
+                         For some reason commands entered in the listener
+    appear to be thought to be a couple of pixels shorter than output
+    presented in the listener which is weird. If you issue 'help commands'
+    in the listener, then mouse over the middle-top command and move the
+    mouse off that that entry, the 'Help (with) Commands' input is cleared.
+    Perhaps Cocoa thinks the dirty region includes that text or something.
+    It's annoying whatever. Still, I'm going to mark this as fixed for now
+    and maybe will come back to it later.
+
+-13.- Some Apropos cases fail; for example 'Apropos graft' fails (although
+    '(apropos 'graft)' does not). The same problem prevents the address
+    book demo working too I think. [This appears to be caused by treating
+    any 'NIL' which should be output as a literal object. Not sure how
+    this is happening, but it should be possible to track it down].
+    RESOLVED 21.AUG.2004 - it appears MACPTRs are output using the family
+    (for a text style) of :fixed - which didn't exist (only :fix). Not
+    sure if this is a specification violation or not...
+
+-14.- Not all foreign objects we keep hold of in the back end are heap-
+    allocated. Some are stack-allocated and cause errors about 'bogus'
+    objects once they go out of scope. At least, I think (and hope) that's
+    the reason 'cause that's easy to fix. RESOLVED 17.JUL.04
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
