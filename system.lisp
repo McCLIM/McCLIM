@@ -31,20 +31,19 @@
   (unless (fboundp 'stream-read-char)
     (unless (ignore-errors (ext:search-list "gray-streams:"))
       (setf (ext:search-list "gray-streams:")
-	'("target:pcl/" "library:")))
+	'("target:pcl/" "library:subsystems/")))
     (load "gray-streams:gray-streams-library"))
   #+nil
   (load (merge-pathnames "patch-cmu.lisp" *clim-directory*))
 
   #-MK-DEFSYSTEM
-  (load "library:defsystem"))
+  (load "library:subsystems/defsystem"))
 
 (pushnew :CLIM *features*)
-(provide :CLIM)
 
 #+mk-defsystem (use-package "MK")
 
-(defsystem :CLIM #-mk-defsystem ()
+(defsystem :clim #-mk-defsystem ()
   #+mk-defsystem :source-pathname #+mk-defsystem *clim-directory*
   #+mk-defsystem :source-extension #+mk-defsystem "lisp"
   #+mk-defsystem :components
@@ -75,16 +74,30 @@
    "gadgets"
    "menu"
 
+   ))
+   
+(defsystem :clim-clx #-mk-defsystem ()
+  #+mk-defsystem :source-pathname #+mk-defsystem *clim-directory*
+  #+mk-defsystem :source-extension #+mk-defsystem "lisp"
+  #+mk-defsystem :depends-on #+mk-defsystem (:clim)
+  #+mk-defsystem :components
+  (:serial
+   #-mk-defsystem :clim
    "clx-port"
    "clx-medium"
    "clx-graft"
    "clx-frame-manager"
+   ))
    
+(defsystem :clim-examples #-mk-defsystem ()
+  #+mk-defsystem :source-pathname #+mk-defsystem *clim-directory*
+  #+mk-defsystem :source-extension #+mk-defsystem "lisp"
+  #+mk-defsystem :depends-on #+mk-defsystem (:clim-clx)
+  #+mk-defsystem :components
+  (:serial
+   #-mk-defsystem :clim-clx
    "examples/calculator"
    "examples/colorslider"
    "examples/menutest"
+   "examples/address-book"
    ))
-
-#+mk-defsystem
-(defun compile-clim ()
-  (with-compilation-unit ()(compile-system :clim)))
