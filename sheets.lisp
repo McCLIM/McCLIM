@@ -693,18 +693,6 @@ that this might be different from the sheet's native region."
 (defmethod note-sheet-transformation-changed ((sheet mirrored-sheet-mixin))
   (update-mirror-geometry sheet))
 
-(defmethod sheet-native-transformation ((sheet mirrored-sheet-mixin))
-  (with-slots (native-transformation) sheet
-    (unless native-transformation
-      (setf native-transformation
-            (compose-transformations
-             (invert-transformation
-              (%sheet-mirror-transformation sheet))
-             (compose-transformations
-              (sheet-native-transformation (sheet-parent sheet))
-              (sheet-transformation sheet)))))
-      native-transformation))
-
 (defmethod sheet-native-region ((sheet mirrored-sheet-mixin))
   (with-slots (native-region) sheet
     (unless native-region

@@ -62,7 +62,10 @@
 	      :reader event-timestamp)
    ))
 
-(defmethod initialize-instance :after ((event event) &rest initargs)
+(defclass standard-event (event)
+  ())
+
+(defmethod initialize-instance :after ((event standard-event) &rest initargs)
   (declare (ignore initargs))
   (let ((timestamp (event-timestamp event)))
     (with-lock-held (*last-timestamp-lock*)
@@ -81,7 +84,7 @@
 ;	:event
 ;      (intern (subseq type 0 position) :keyword))))
 
-(defclass device-event (event)
+(defclass device-event (standard-event)
   ((sheet :initarg :sheet
 	  :reader event-sheet)
    (modifier-state :initarg :modifier-state
@@ -191,7 +194,7 @@
 (defclass pointer-ungrab-event (pointer-exit-event)
   ())
 
-(defclass window-event (event)
+(defclass window-event (standard-event)
   ((sheet :initarg :sheet
 	  :reader event-sheet)
    (region :initarg :region
@@ -235,14 +238,14 @@
   (
    ))
 
-(defclass window-manager-event (event) ())
+(defclass window-manager-event (standard-event) ())
 
 (defclass window-manager-delete-event (window-manager-event)
   ((sheet :initarg :sheet	; not required by the spec but we need 
 	  :reader event-sheet)	; to know which window to delete - mikemac
    ))
 
-(defclass timer-event (event)
+(defclass timer-event (standard-event)
   ((sheet
      :initarg :sheet
      :reader  event-sheet)

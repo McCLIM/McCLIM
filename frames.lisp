@@ -99,9 +99,6 @@
 			 :initarg :hilited-presentation
 			 :accessor frame-hilited-presentation)))
 
-(defmethod initialize-instance :after ((frame application-frame) &rest args)
-  (declare (ignore args)))
-
 ;;; Generic operations
 ; (defgeneric frame-name (frame))
 ; (defgeneric frame-pretty-name (frame))

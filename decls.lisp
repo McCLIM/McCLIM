@@ -160,7 +160,6 @@
 (defgeneric (setf gadget-max-value) (new-value gadget))
 (defgeneric (setf gadget-min-value) (new-value gadget))
 (defgeneric (setf scroll-bar-thumb-size) (new-value scroll-bar))
-(defgeneric gadget-value (gadget))
 (defgeneric gadget-orientation (gadget))
 (defgeneric gadget-client (gadget))
 

@@ -83,7 +83,7 @@ record operations are forwarded to this record.")
     (values start-x start-y)))
 
 (defmethod* (setf output-record-start-cursor-position)
-    (x y (record basic-output-record))
+    (x y (record updating-output-record-mixin))
   (with-slots (start-x start-y) record
     (setf (values start-x start-y) (values x y))))
 

@@ -3,7 +3,7 @@
 ;;;     Title: Graph Formatting
 ;;;   Created: 2002-08-13
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: graph-formatting.lisp,v 1.4 2002/08/14 12:47:27 gilbert Exp $
+;;;       $Id: graph-formatting.lisp,v 1.5 2002/11/21 03:54:49 mikemac Exp $
 ;;; ---------------------------------------------------------------------------
 
 ;;;  (c) copyright 2002 by Gilbert Baumann
@@ -361,6 +361,7 @@
                                (incf v within-generation-separation)))
                            (graph-root-nodes graph-output-record)))))))))))
 
+#+ignore
 (defmethod layout-graph-edges ((graph-output-record standard-graph-output-record)
                                stream arc-drawer arc-drawing-options)
   (with-slots (root-nodes orientation) graph-output-record

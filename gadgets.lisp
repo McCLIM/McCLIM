@@ -361,8 +361,6 @@
                            :initform nil
                            :reader gadget-value-changed-callback)))
 
-(defgeneric (setf gadget-value) (value gadget &key invoke-callback))
-
 (defmethod (setf gadget-value) (value (gadget value-gadget) &key invoke-callback)
   (setf (slot-value gadget 'value) value)
   (when invoke-callback

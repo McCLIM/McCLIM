@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.108 2002/11/11 01:02:21 moore Exp $
+;;; $Id: panes.lisp,v 1.109 2002/11/21 03:54:49 mikemac Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -1756,6 +1756,7 @@ During realization the child of the spacing will have as cordinates
 ; Well, this is definitely wrong - the second method will overwrite the first...
 ; FIXME
 
+#+ignore
 (defmethod note-space-requirements-changed ((pane viewport-pane) client)
   (declare (ignore client))
   (setf (pane-space-requirement pane) nil)
