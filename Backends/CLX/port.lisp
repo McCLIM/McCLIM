@@ -31,7 +31,8 @@
    (screen :initform nil
 	   :accessor clx-port-screen)
    (window :initform nil
-	   :accessor clx-port-window))
+	   :accessor clx-port-window)
+   (color-table :initform (make-hash-table :test #'eq)))
   )
 
 (setf (get :x11 :port-type) 'clx-port)
@@ -244,10 +245,15 @@
   (xlib:bell (clx-port-display port)))
 
 (defmethod X-pixel ((port clx-port) color)
-  (multiple-value-bind (r g b) (color-rgb color)
-    (xlib:alloc-color (xlib:screen-default-colormap
-		       (first (xlib:display-roots (clx-port-display port))))
-		      (xlib:make-color :red r :green g :blue b))))
+  (let* ((table (slot-value port 'color-table))
+	 (pixel (gethash color table)))
+    (if pixel
+	pixel
+	(setf (gethash color table)
+	      (multiple-value-bind (r g b) (color-rgb color)
+		(xlib:alloc-color (xlib:screen-default-colormap
+				   (first (xlib:display-roots (clx-port-display port))))
+				  (xlib:make-color :red r :green g :blue b)))))))
 
 (defmethod port-allocate-pixmap ((port clx-port) sheet width height)
   (declare (ignore sheet width height))
