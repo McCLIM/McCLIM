@@ -198,7 +198,7 @@
 				       &allow-other-keys)
   (declare (ignore args))
   (setf (slot-value pane 'items) (copy-list (sheet-children pane)))
-  (loop for child in (sheet-children pane)
+  (loop for child in (menu-children pane)
 	do (setf (gadget-client child) pane)))
 
 (defmethod menu-children ((menu-bar menu-bar))
@@ -226,12 +226,14 @@
   (with-slots (menu) (find-command-table command-table)
     (raising ()
       (make-pane-1 *pane-realizer* *application-frame*
-          'menu-bar
-	  :background *3d-normal-color*
-	  :width width :height height
-	  :max-width max-width :max-height max-height
-	  :min-width min-width :min-height min-height
-	  :contents
-	  (loop for item in menu
-		collect 
-		 (make-menu-button-from-menu-item item nil :bottomp t))))))
+                   'menu-bar
+                   :background *3d-normal-color*
+                   :width width :height height
+                   :max-width max-width :max-height max-height
+                   :min-width min-width :min-height min-height
+                   :contents
+                   (append
+                    (loop for item in menu
+                          collect 
+                          (make-menu-button-from-menu-item item nil :bottomp t))
+                    (list +fill+))))))
