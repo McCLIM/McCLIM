@@ -692,8 +692,11 @@
             (let* ((frame (pane-frame sheet))
                    (focus (climi::keyboard-input-focus frame)))
               (when (and focus (sheet-mirror focus))
-                (xlib:set-input-focus (clx-port-display *clx-port*) (sheet-mirror focus) :parent)))
-            nil)))
+                (handler-case (progn (xlib:set-input-focus (clx-port-display *clx-port*)
+                                                           (sheet-mirror focus) :parent time)
+                                     (xlib:display-finish-output (clx-port-display *clx-port*)))
+                  (xlib:match-error () nil))
+                nil)))))
 	(t
 	 (unless (xlib:event-listen (clx-port-display *clx-port*))
 	   (xlib:display-finish-output (clx-port-display *clx-port*)))
