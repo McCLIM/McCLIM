@@ -869,6 +869,15 @@ children.  Thus, we stop calling
 
 In either of those cases, \genfun{allocate-space} is called.
 
+\chapter{Output Protocol}
+
+\section{Protocol Changes}
+
+\defgeneric{line-style-effective-thickness} {line-style medium}
+
+The thickness in device units of the lines rendered on \arg{medium} in
+the line style \arg{line-style}. The default method, assuming normal
+line width to be 1 device unit, is provided.
 
 \chapter{Output Recording}
 
@@ -918,6 +927,15 @@ Sets the parent of all children of \arg{record} to \cl{nil}.
 
 \part{Extensions}
 
+\chapter{Output Protocol}
+
+\defgeneric{medium-miter-limit} {medium}
+
+Returns the minimal value of an angle for which :MITER line joint may
+be used; for smaller angles :MITER is interpreted as :BEVEL.
+% Different calls of the function with the same argument must return
+% values which are COORDINATE=.
+
 \chapter{Output Recording}
 
 % map-over-output-records
@@ -928,21 +946,6 @@ Sets the parent of all children of \arg{record} to \cl{nil}.
 
 This class is mixed into some other stream class to add output
 recording facilities. It is not instantiable.
-
-In order to use it, methods on the following generic functions,
-exported from the package \package{clim-extensions}, must be defined.
-
-\defgeneric{line-style-effective-thickness} {line-style medium}
-
-The thickness in device units of the lines rendered on \arg{medium} in
-the line style \arg{line-style}.
-
-\defgeneric{medium-miter-limit} {medium}
-
-Returns the minimal value of an angle for which :MITER line joint may
-be used; for smaller angles :MITER is interpreted as :BEVEL.
-% Different calls of the function with the same argument must return
-% values which are COORDINATE=.
 
 \chapter{Drawing Two-Dimensional Images}
 
