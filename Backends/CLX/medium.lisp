@@ -94,6 +94,8 @@
       (setf (xlib:gcontext-font gc) (text-style-to-X-font port (medium-text-style medium))
 	    (xlib:gcontext-foreground gc) (X-pixel port ink)
 	    (xlib:gcontext-background gc) (X-pixel port (medium-background medium)))
+      ;; Here is a bug with regard to clipping ... ;-( --GB
+      #+NIL
       (let ((clipping-region (medium-device-region medium)))
         (unless (region-equal clipping-region +nowhere+)
           (setf (xlib:gcontext-clip-mask gc :yx-banded)
