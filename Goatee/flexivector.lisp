@@ -70,7 +70,7 @@
 of size ~S"
 		     (flexivector-bounds-error-pos condition)
 		     (flexivector-bounds-error-flexivector condition)
-		     (size (flexivector condition))))))
+		     (size (flexivector-bounds-error-flexivector condition))))))
 
 (defmethod char-ref ((fv flexivector) pos)
   (when (or (>= pos (size fv))
