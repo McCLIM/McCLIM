@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.76 2002/04/28 07:56:19 gilbert Exp $
+;;; $Id: panes.lisp,v 1.77 2002/04/28 11:17:07 gilbert Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -558,7 +558,8 @@
 
 (defclass basic-pane (;; layout-protocol-mixin
                       standard-space-requirement-options-mixin
-                      sheet-parent-mixin mirrored-sheet-mixin pane)
+                      sheet-parent-mixin mirrored-sheet-mixin
+                      pane)
   ((foreground       :initarg :foreground
                      :initform +black+
                      :reader pane-foreground)
@@ -857,10 +858,10 @@
             (compose-space child)) )))
 
  (defmethod box-layout-mixin/xically-compose-space ((pane box-layout-mixin))
-   (let ((n (length (sheet-children pane))))
+   (let ((n (length (sheet-enabled-children pane))))
      (with-slots (major-spacing) pane
        (loop
-           for child in (sheet-children pane)
+           for child in (sheet-enabled-children pane)
            for sr = (xically-content-sr** pane child)
            sum (space-requirement-major sr) into major
            sum (space-requirement-min-major sr) into min-major
@@ -887,7 +888,7 @@
 
  (defmethod box-layout-mixin/xically-allocate-space-aux* ((box box-layout-mixin) width height)
    (declare (ignorable width height))
-   (let ((children (reverse (sheet-children box))))
+   (let ((children (reverse (sheet-enabled-children box))))
      (with-slots (major-spacing) box
        (let* ((content-srs (mapcar #'(lambda (c) (xically-content-sr** box c)) children))
               (allot       (mapcar #'ceiling (mapcar #'space-requirement-major content-srs)))
@@ -953,7 +954,7 @@
        ;; now actually layout the children
        (let ((x 0))
          (loop
-             for child in (reverse (sheet-children pane))
+             for child in (reverse (sheet-enabled-children pane))
              for major in majors
              for minor in minors
              do
@@ -966,13 +967,13 @@
                (incf x major)
                (incf x major-spacing)))))) )
 
-#+NIL
+;; #+NIL
 (defmethod note-sheet-enabled :before ((pane pane))
   ;; hmmm
   (when (panep (sheet-parent pane))
     (change-space-requirements pane)) )
 
-#+NIL
+;; #+NIL
 (defmethod note-sheet-disabled :before ((pane pane))
   ;; hmmm
   (when (panep (sheet-parent pane))
@@ -1367,18 +1368,7 @@ During realization the child of the spacing will have as cordinates
 (defmacro raising ((&rest options) &body contents)
   `(make-pane 'raised-pane ,@options :contents (list ,@contents)))
 
-#+nil
-(defmethod handle-event ((pane raised-pane) (event window-repaint-event))
-  (repaint-sheet pane (sheet-region pane)))
-
 (defmethod handle-repaint ((pane raised-pane) region)
-  (declare (ignore region))
-  (with-special-choices (pane)
-    (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
-      (draw-edges-lines* pane 0 0 (- x2 x1 1) (- y2 y1 1)))))
-
-#+nil
-(defmethod repaint-sheet ((pane raised-pane) region)
   (declare (ignore region))
   (with-special-choices (pane)
     (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
@@ -1788,7 +1778,7 @@ During realization the child of the spacing will have as cordinates
            (ignorable design))
   )
 
-(defmethod repaint-sheet ((pane label-pane) region)
+(defmethod handle-repaint ((pane label-pane) region)
   (declare (ignore region))
   (let ((m0 2)
         (a (text-style-ascent (pane-text-style pane) pane))
@@ -1824,11 +1814,6 @@ During realization the child of the spacing will have as cordinates
                                            (- x2 bright) (+ y1 btop))
                                           :closed t)
                           (make-rectangle* (- tx m0) (- ty a) (+ tx tw m0) (+ ty d)))) ))))))
-
-
-;;xxx
-(defmethod handle-event ((pane label-pane) (event window-repaint-event))
-  (repaint-sheet pane (sheet-region pane)))
 
 ;;; GENERIC FUNCTIONS
 
@@ -1884,10 +1869,6 @@ During realization the child of the spacing will have as cordinates
   (:documentation
    "This class implements a pane that supports the CLIM graphics,
     extended input and output, and output recording protocols."))
-
-
-(defmethod handle-event ((pane clim-stream-pane) (event window-repaint-event))
-  (repaint-sheet pane (sheet-region pane)))
 
 (defmethod compose-space ((pane clim-stream-pane))
   (make-space-requirement :width 300 :height 300))
@@ -2133,17 +2114,14 @@ During realization the child of the spacing will have as cordinates
     (with-look-and-feel-realization (fm fr))
     fr))
 
-#+NIL
-(defun foofoo ()
-  "Sorry. --GB"
-  (open-window-stream))
-
 ;;; These below were just hot fixes, are there still needed? Are even
 ;;; half-way correct? --GB
 ;;;
 ;;; These are needed, and are correct.  "Implementations should also
 ;;; provide a ``trampoline'' for this generic function for output sheets; the
 ;;; trampoline will simply call the method for the medium. -- moore
+;;;
+;;; Thanks! --GB
 
 (defmethod text-size ((sheet sheet) string &rest more)
   (apply #'text-size (sheet-medium sheet) string more))
@@ -2159,3 +2137,5 @@ During realization the child of the spacing will have as cordinates
 
 (defmethod text-style-width (ts (sheet sheet))
   (text-style-width ts (sheet-medium sheet)))
+
+

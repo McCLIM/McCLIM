@@ -1433,10 +1433,6 @@ and must never be nil."))
 
 ;;; Event handlers
 
-#+NIL
-(defmethod handle-event ((sb scroll-bar-pane) (event window-repaint-event))
-  (dispatch-repaint sb (sheet-region sb)))
-
 #||
 (defmethod handle-event ((sb scroll-bar-pane) (event pointer-enter-event))
   (declare (ignorable event))
@@ -1948,8 +1944,6 @@ and must never be nil."))
       (dispatch-repaint pane +everywhere+)
       )))
 
-(defmethod handle-event ((sheet immediate-repainting-mixin) (event window-repaint-event))
-  (dispatch-repaint sheet (window-event-region event)))
 ||#
 
 ;;; ------------------------------------------------------------------------------------------
@@ -1973,10 +1967,6 @@ and must never be nil."))
   (declare (ignore rest))
   (setf (medium-text-style (sheet-medium pane))
     (slot-value pane 'text-style)))
-
-#+NIL
-(defmethod handle-event ((pane text-field-pane) (event window-repaint-event))
-  (dispatch-repaint pane (sheet-region pane)))
 
 (defmethod handle-repaint ((pane text-field-pane) region)
   (declare (ignore region))

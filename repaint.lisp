@@ -86,14 +86,6 @@
 			 (event window-repaint-event))
   (handle-repaint sheet (window-event-region event)))
 
-#+NIL
-(defmethod handle-repaint ((sheet immediate-repainting-mixin) region)
-  (declare (ignore region))
-  (repaint-sheet sheet (sheet-region sheet))
-  (loop for child in (sheet-children sheet)
-	for region = (sheet-region child)
-	do (repaint-sheet child region)))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; sheet mute repainting mixin

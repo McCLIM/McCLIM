@@ -112,7 +112,6 @@
    "commands"
    "frames"
    "panes"
-;   "exports"
    "gadgets"
    "menu"
    "table-formatting"

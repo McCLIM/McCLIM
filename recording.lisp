@@ -675,11 +675,8 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
   (with-output-recording-options (stream :record nil)
     (call-next-method)))
 
-(defmethod repaint-sheet ((stream output-recording-stream) region)
+(defmethod handle-repaint ((stream output-recording-stream) region)
   (stream-replay stream region))
-
-(defmethod handle-event ((stream output-recording-stream) (event window-repaint-event))
-  (repaint-sheet stream (window-event-region event)))
 
 #|
 (defmethod handle-event :after ((stream output-recording-stream) (event pointer-button-press-event))
