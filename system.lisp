@@ -56,6 +56,7 @@
    "transforms"
    "regions"
    "sheets"
+   "pixmap"
    "ports"
    "grafts"
    "medium"

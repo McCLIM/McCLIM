@@ -58,6 +58,8 @@ returns a list in CLIM X11 format (:x11 :host host-name :display-id display-numb
 		   :reader frame-managers)
    (sheet->mirror :initform (make-hash-table :test #'eq))
    (mirror->sheet :initform (make-hash-table :test #'eq))
+   (pixmap->mirror :initform (make-hash-table :test #'eq))
+   (mirror->pixmap :initform (make-hash-table :test #'eq))
    (keyboard-input-focus :initform nil
 			 :initarg :keyboard-input-focus
 			 :accessor port-keyboard-input-focus)
@@ -175,23 +177,49 @@ returns a list in CLIM X11 format (:x11 :host host-name :display-id display-numb
   (declare (ignore char text-style))
   (error "CHARACTER-WIDTH fell thru to a generic PORT"))
 
+(defmethod port-copy-area ((port port) sheet from-x from-y width height to-x to-y)
+  (declare (ignore sheet from-x from-y width height to-x to-y))
+  (error "COPY-AREA is not implemented for PORTs"))
+
 (defmethod beep ((port port))
   )
 
+;;; Pixmap
+
+(defmethod port-lookup-mirror ((port port) (pixmap pixmap))
+  (gethash pixmap (slot-value port 'pixmap->mirror)))
+
+(defmethod port-lookup-pixmap ((port port) mirror)
+  (gethash mirror (slot-value port 'mirror->pixmap)))
+
+(defmethod port-register-mirror ((port port) (pixmap pixmap) mirror)
+  (setf (gethash pixmap (slot-value port 'pixmap->mirror)) mirror)
+  (setf (gethash mirror (slot-value port 'mirror->pixmap)) pixmap)
+  nil)
+
+(defmethod port-unregister-mirror ((port port) (pixmap pixmap) mirror)
+  (remhash pixmap (slot-value port 'pixmap->mirror))
+  (remhash mirror (slot-value port 'mirror->pixmap))
+  nil)
+
+(defmethod realize-mirror ((port port) (pixmap mirrored-pixmap))
+  (declare (ignorable port pixmap))
+  (error "Don't know how to realize the mirror on a generic port"))
+
+(defmethod unrealize-mirror ((port port) (pixmap mirrored-pixmap))
+  (declare (ignorable port pixmap))
+  (error "Don't know how to unrealize the mirror on a generic port"))
+
 (defmethod port-allocate-pixmap ((port port) sheet width height)
   (declare (ignore sheet width height))
-  (error "ALLOCATE-PIXMAP is not implemented for PORTs"))
+  (error "ALLOCATE-PIXMAP is not implemented for generic PORTs"))
 
 (defmethod port-deallocate-pixmap ((port port) pixmap)
   (declare (ignore pixmap))
-  (error "DEALLOCATE-PIXMAP is not implemented for PORTs"))
+  (error "DEALLOCATE-PIXMAP is not implemented for generic PORTs"))
 
 (defmethod port-copy-to-pixmap ((port port) sheet from-x from-y width height
 				pixmap to-x to-y)
   (declare (ignore sheet from-x from-y width height pixmap to-x to-y))
-  (error "COPY-TO-PIXMAP is not implemented for PORTs"))
-
-(defmethod port-copy-area ((port port) sheet from-x from-y width height to-x to-y)
-  (declare (ignore sheet from-x from-y width height to-x to-y))
-  (error "COPY-AREA is not implemented for PORTs"))
+  (error "COPY-TO-PIXMAP is not implemented for generic PORTs"))
 

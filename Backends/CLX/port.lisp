@@ -1,7 +1,7 @@
 ;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
 
 ;;;  (c) copyright 1998,1999,2000 by Michael McDonald (mikemac@mikemac.com)
-;;;  (c) copyright 2000 by 
+;;;  (c) copyright 2000,2001 by 
 ;;;           Iban Hatchondo (hatchond@emi.u-bordeaux.fr)
 ;;;           Julien Boninfante (boninfan@emi.u-bordeaux.fr)
 ;;;           Robert Strandh (strandh@labri.u-bordeaux.fr)
@@ -294,7 +294,8 @@
     width))
 
 (defmethod port-string-width ((port clx-port) text-style string &key (start 0) end)
-  (xlib:text-width (text-style-to-X-font port text-style) string :start start :end end))
+  (xlib:text-width (text-style-to-X-font port text-style) 
+		   string :start start :end end))
 
 (defmethod beep ((port clx-port))
   (xlib:bell (clx-port-display port)))
@@ -307,19 +308,6 @@
 		(xlib:alloc-color (xlib:screen-default-colormap
 				   (first (xlib:display-roots (clx-port-display port))))
 				  (xlib:make-color :red r :green g :blue b)))))))
-
-(defmethod port-allocate-pixmap ((port clx-port) sheet width height)
-  (declare (ignore sheet width height))
-  (error "ALLOCATE-PIXMAP is not implemented for CLX-PORTs"))
-
-(defmethod port-deallocate-pixmap ((port clx-port) pixmap)
-  (declare (ignore pixmap))
-  (error "DEALLOCATE-PIXMAP is not implemented for CLX-PORTs"))
-
-(defmethod port-copy-to-pixmap ((port clx-port) sheet from-x from-y width height
-				pixmap to-x to-y)
-  (declare (ignore sheet from-x from-y width height pixmap to-x to-y))
-  (error "COPY-TO-PIXMAP is not implemented for CLX-PORTs"))
 
 (defmethod port-copy-area ((port clx-port) sheet from-x from-y width height to-x to-y)
   (let* ((mirror (port-lookup-mirror port sheet))
@@ -337,6 +325,67 @@
 (defmethod graft ((port clx-port))
   (port-grafts port))
 
+;;; Pixmap
+
+(defmethod realize-mirror ((port clx-port) (pixmap pixmap))
+  (when (null (port-lookup-mirror port pixmap))
+    (let* ((window (sheet-direct-mirror (pixmap-sheet pixmap)))
+	   (pix (xlib:create-pixmap 
+		    :width (pixmap-width pixmap)
+		    :height (pixmap-height pixmap)
+		    :depth (xlib:drawable-depth window)
+		    :drawable window)))
+      (port-register-mirror port pixmap pix))
+    (values)))
+
+(defmethod unrealize-mirror ((port clx-port) (pixmap pixmap))
+  (when (port-lookup-mirror port pixmap)
+    (xlib:free-pixmap (port-lookup-mirror port pixmap))
+    (port-unregister-mirror port pixmap (port-lookup-mirror port pixmap))))
+
+(defmethod port-allocate-pixmap ((port clx-port) sheet width height)
+  (let ((pixmap (make-instance 'mirrored-pixmap
+			       :sheet sheet
+			       :width width
+			       :height height
+			       :port port)))
+    (when (sheet-grafted-p sheet)
+      (realize-mirror port pixmap))
+    pixmap))
+
+(defmethod port-deallocate-pixmap ((port clx-port) pixmap)
+  (when (port-lookup-mirror port pixmap)
+    (unrealize-mirror port pixmap)))
+
+(defmethod port-copy-to-pixmap ((port clx-port) (sheet sheet) from-x from-y 
+				width height pixmap to-x to-y)
+  (declare (ignorable port))
+  (xlib:copy-area (sheet-direct-mirror sheet) 
+		  (medium-gcontext (sheet-medium sheet) +background-ink+)
+		  from-x from-y width height
+		  (pixmap-mirror pixmap)
+		  to-x to-y))
+
+(defmethod port-copy-to-pixmap ((port clx-port) (medium medium) from-x from-y 
+				width height pixmap to-x to-y)
+  (port-copy-to-pixmap port (medium-sheet medium) from-x from-y 
+		       width height pixmap to-x to-y))
+  
+(defmethod port-copy-to-pixmap ((port clx-port) (stream stream) from-x from-y 
+				width height pixmap to-x to-y)
+  (declare (ignore from-x from-y width height pixmap to-x to-y))
+  (error "copy-to-pixmap with a stream as source is not implemented."))
+
+(defmethod port-copy-from-pixmap ((port clx-port) pixmap from-x from-y
+				  width height sheet to-x to-y)
+  (declare (ignorable port))
+  (with-sheet-medium (medium sheet)
+    (xlib::copy-area (pixmap-mirror pixmap)
+		     (medium-gcontext medium +background-ink+)
+		     from-x from-y width height
+		     (sheet-direct-mirror sheet)
+		     to-x to-y)))
+
 ;; clim-stream-pane drawings
 
 (defmethod window-clear :before ((sheet mirrored-sheet))
@@ -348,3 +397,16 @@
   
 (defmethod clear-area ((sheet mirrored-sheet))
   (xlib:clear-area (sheet-direct-mirror sheet)))
+
+;; Device-Font-Text-Style
+
+(defmethod port-make-font-text-style ((port clx-port) device-font-name)
+  (let ((text-style (make-instance 'device-font-text-style
+				   :text-family device-font-name
+				   :text-face nil
+				   :text-size nil)))
+    (setf (gethash text-style (slot-value port 'font-table))
+	  (open-font (clx-port-display port) device-font-name))
+    text-style))
+
+

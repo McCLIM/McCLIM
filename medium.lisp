@@ -89,6 +89,20 @@
 	 (setf (sheet-medium ,sheet) ,old-medium)
 	 (setf (medium-sheet ,medium) ,old-sheet)))))
 
+(defmacro with-pixmap-medium ((medium pixmap) &body body)
+  (let ((old-medium (gensym))
+	(old-pixmap (gensym)))
+    `(let* ((,old-medium (pixmap-medium ,pixmap))
+	    (,medium (or ,old-medium (make-medium (port ,pixmap) ,pixmap)))
+	    (,old-pixmap (medium-sheet ,medium)))
+       (setf (pixmap-medium ,pixmap) ,medium)
+       (setf (medium-sheet ,medium) ,pixmap)
+       (unwind-protect
+	   (progn
+	     ,@body)
+	 (setf (pixmap-medium ,pixmap) ,old-medium)
+	 (setf (medium-sheet ,medium) ,old-pixmap)))))
+
 
 ;;; Text-Style class
 
@@ -159,7 +173,7 @@
 			     :text-family family
 			     :text-face face
 			     :text-size size)))))
-)
+) ; end eval-when
 
 (defconstant *default-text-style* (make-text-style :fix :roman :normal))
 
@@ -179,20 +193,37 @@
       (max (round (* size 4/3)) 6)
     (cadr (member size *larger-sizes*))))
 
+
+;;; Device-Font-Text-Style class
+
+(defclass device-font-text-style (text-style)
+  ())
+
+(defun device-font-text-style-p (s)
+  (typep s 'device-font-text-style))
+
+(defun make-device-font-text-style (display-device device-font-name)
+  (port-make-font-text-style (port display-device) device-font-name))
+
+;;; Text-syle utilities
+
 (defun merge-text-styles (s1 s2)
-  (let ((new-style (make-text-style (or (text-style-family s1)
-					(text-style-family s2))
-				    (or (text-style-face s1)
-					(text-style-face s2))
-				    (or (text-style-size s1)
-					(text-style-size s2)))))
-    (with-slots (size) new-style
-      (case size
-	(:smaller
-	 (setq size (find-smaller-size (text-style-size s2))))
-	(:larger
-	 (setq size (find-larger-size (text-style-size s2))))))
-    new-style))
+  (if (and (not (device-font-text-style-p s1))
+	   (not (device-font-text-style-p s2)))
+      (let ((new-style (make-text-style (or (text-style-family s1)
+					    (text-style-family s2))
+					(or (text-style-face s1)
+					    (text-style-face s2))
+					(or (text-style-size s1)
+					    (text-style-size s2)))))
+	(with-slots (size) new-style
+	  (case size
+	    (:smaller
+	     (setq size (find-smaller-size (text-style-size s2))))
+	    (:larger
+	     (setq size (find-larger-size (text-style-size s2))))))
+	new-style)
+      s1))
 
 (defmethod invoke-with-text-style ((sheet sheet) continuation text-style)
   (invoke-with-text-style (sheet-medium sheet) continuation text-style))

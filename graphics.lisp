@@ -31,6 +31,10 @@
   (if sheet
       (funcall func sheet)))
 
+(defmethod do-graphics-with-options ((pixmap pixmap) func &rest options)
+  (with-pixmap-medium (medium pixmap)
+    (apply #'do-graphics-with-options-internal medium medium func options)))
+
 (defmethod do-graphics-with-options-internal ((medium medium) orig-medium func
 				     &rest args
 				     &key ink clipping-region transformation
@@ -317,6 +321,23 @@
 		       align-x align-y
 		       towards-x towards-y transform-glyphs)))
 
+;; This function belong to the extensions package.
+(defun draw-glyph (sheet string x y
+		   &rest args
+		   &key (align-x :left) (align-y :baseline)
+			towards-x towards-y transform-glyphs
+			ink clipping-region transformation
+			text-style text-family text-face text-size)
+" Draws a single character of filled text represented by the given element. 
+  element is a character or other object to be translated into a font index.
+  The given x and y specify the left baseline position for the character."
+  (declare (ignore ink clipping-region transformation
+		   text-style text-family text-face text-size))
+  (with-medium-options (sheet args)
+    (medium-draw-glyph medium string x y
+		       align-x align-y
+		       towards-x towards-y transform-glyphs)))
+
 (defun draw-arrow (sheet point-1 point-2
 		   &rest args
 		   &key ink clipping-region transformation
@@ -361,29 +382,11 @@
 		   line-style line-thickness line-unit line-dashes line-cap-shape))
   (error "DRAW-OVAL* is not implemented"))
 
+(defmethod copy-area ((sheet sheet) from-x from-y width height to-x to-y)
+  (port-copy-area (port sheet) sheet from-x from-y width height to-x to-y))
+
 
 ;;; Pixmap functions
-
-(defclass pixmap ()
-  ((sheet :initarg :sheet
-	  :reader pixmap-sheet)
-   (width :initarg :width
-	  :reader pixmap-width)
-   (height :initarg :height
-	   :reader pixmap-height)
-   ))
-
-(defmethod allocate-pixmap ((sheet sheet) width height)
-  (port-allocate-pixmap (port sheet) sheet width height))
-
-(defmethod allocate-pixmap ((sheet medium) width height)
-  (port-allocate-pixmap (port sheet) sheet width height))
-
-(defmethod allocate-pixmap ((sheet stream) width height)
-  (port-allocate-pixmap (port sheet) sheet width height))
-
-(defmethod deallocate-pixmap ((pixmap pixmap))
-  (port-deallocate-pixmap (port (pixmap-sheet pixmap)) pixmap))
 
 (defmethod copy-to-pixmap ((sheet sheet) sheet-x sheet-y width height
 			   &optional pixmap (pixmap-x 0) (pixmap-y 0))
@@ -409,8 +412,10 @@
 		       pixmap pixmap-x pixmap-y)
   pixmap)
 
-(defmethod copy-area ((sheet sheet) from-x from-y width height to-x to-y)
-  (port-copy-area (port sheet) sheet from-x from-y width height to-x to-y))
+(defmethod copy-from-pixmap ((pixmap pixmap) from-x from-y
+			     width height sheet to-x to-y)
+  (port-copy-from-pixmap (port pixmap) pixmap from-x from-y
+			 width height sheet to-x to-y))
 
 (defmacro with-output-to-pixmap ((medium-var sheet &key width height) &body body)
   `(let* ((pixmap (allocate-pixmap ,sheet ,width ,height))

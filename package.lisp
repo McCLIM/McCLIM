@@ -6,7 +6,8 @@
 (defpackage "CLIM-EXTENSIONS"
   (:use :common-lisp)
   (:export
-   "RAISED-PANE" "RAISING"))
+   "RAISED-PANE" "RAISING" 
+   "DRAW-GLYPH" "DEVICE-FONT-TEXT-STYLE-P"))
 
 (defpackage "CLIM-INTERNALS"
   (:use #+clisp :clos #+excl :stream :lisp)

@@ -185,3 +185,13 @@
 
 (defmethod (setf medium-buffering-output-p) (buffer-p (medium clx-medium))
   buffer-p)
+
+(defmethod medium-draw-glyph ((medium clx-medium) element x y
+			      align-x align-y toward-x toward-y
+			      transform-glyphs)
+  (declare (ignore toward-x toward-y transform-glyphs align-x align-y))
+  (with-CLX-graphics (medium)
+    (multiple-value-bind (tx ty)
+	(medium-transform-position medium x y)
+      (xlib:draw-glyph mirror gc (round tx) (round ty) element))))
+
