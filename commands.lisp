@@ -368,8 +368,11 @@
 
 (defun map-over-command-table-menu-items (function command-table)
   (mapc #'(lambda (item)
-	    (with-slots (name keystroke) item
-	      (funcall function name keystroke item)))
+ 	    (with-slots (menu-name keystroke) item
+ 	      (funcall function
+		       menu-name
+		       (and (slot-boundp item 'keystroke) keystroke)
+		       item)))
 	(slot-value (find-command-table command-table) 'menu)))
 
 (defun %add-keystroke-item (command-table gesture item errorp)
