@@ -43,12 +43,15 @@
 (pushnew :clim *features*)
 (pushnew :mcclim *features*)
 
-#+mk-defsystem (use-package "MK")
++;;; I really didn't have good luck with this on Allegro, because
++;;; Allegro's CL-USER package uses it's EXCL stuff, which has its own
++;;; DEFSYSTEM. [2004/12/21:rpg]
++;;;#+mk-defsystem (use-package "MK")
 
 (defmacro clim-defsystem ((module &key depends-on) &rest components)
   `(progn
      #+mk-defsystem
-     (defsystem ,module
+     (mk:defsystem ,module
        :source-pathname *clim-directory*
        :source-extension "lisp"
        ,@(and depends-on `(:depends-on ,depends-on))
