@@ -110,6 +110,16 @@
   #+openmcl (ccl:method-generic-function method)
   #-(or sbcl openmcl) (error "no MOP"))
 
+(define-presentation-type settable-slot ()
+  :inherit-from t)
+
+(define-presentation-method present (object (type settable-slot) 
+				     stream
+				     (view textual-view)
+				     &key acceptably for-context-type)
+  (declare (ignore acceptably for-context-type))
+  (format stream "~s" (cdr object)))
+
 (defmethod inspect-object ((object standard-object) pane)
   (let ((class (class-of object)))
     (with-output-as-presentation
@@ -127,7 +137,7 @@
 			 (formatting-row (pane)
 			   (formatting-cell (pane :align-x :right)
 			     (with-output-as-presentation
-				 (pane slot (present-type-of slot))
+				 (pane (cons object slot-name) 'settable-slot)
 			       (format pane "~a:" slot-name)))
 			   (formatting-cell (pane)
 			     (inspect-object (slot-value object slot-name) pane))))))))))))
@@ -221,3 +231,8 @@
 (define-inspector-command (com-remove-method :name t)
     ((obj 'method :gesture :delete :prompt "Remove method"))
   (remove-method (method-generic-function obj) obj))
+
+(define-inspector-command (com-set-slot :name t)
+    ((slot 'settable-slot :gesture :select :prompt "Set slot"))
+  (setf (slot-value (car slot) (cdr slot))
+	(accept t :prompt "New slot value")))
