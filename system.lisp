@@ -210,6 +210,7 @@
    "Examples/stream-test"
    "Examples/presentation-test"
    #+clx "Examples/gadget-test"
+   "Examples/method-browser"
    "Goatee/goatee-test"
    "Examples/accepting-values")
 
