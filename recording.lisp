@@ -1516,7 +1516,7 @@ were added."
 	 (eql (length (slot-value record 'strings)) (length strings));XXX
 	 (loop for s1 in (slot-value record 'strings)
 	       for s2 in strings
-	       always (output-record-equal s1 s2))))))
+	       always (output-record-equal s1 s2)))))
 
 (defmethod print-object ((self standard-text-displayed-output-record) stream)
   (print-unreadable-object (self stream :type t :identity t)
