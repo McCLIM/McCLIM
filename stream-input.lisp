@@ -480,7 +480,7 @@
 				   (type (eql :keyboard))
 				   device-name
 				   modifier-state)
-  (and (eql (keyboard-event-key-name event) device-name)
+  (and (eql (keyboard-event-character event) device-name)
        (eql (event-modifier-state event) modifier-state)))
 
 (defmethod %event-matches-gesture ((event pointer-button-press-event)

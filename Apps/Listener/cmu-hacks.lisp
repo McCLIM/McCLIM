@@ -32,7 +32,7 @@
                                   (event-modifier-state gesture))))
 
     (cdr (assoc modifier-state
-                (gethash (keyboard-event-key-name gesture) table nil)))))
+                (gethash (keyboard-event-character gesture) table nil)))))
 
 (in-package "DEBUG")
 

@@ -65,9 +65,9 @@
     #+nil
     (format *trace-output* "lookup-gesture-command: ~S ~S~%"
 	    modifier-state
-	    (keyboard-event-key-name gesture))
+	    (keyboard-event-character gesture))
     (cdr (assoc modifier-state
-		(gethash (keyboard-event-key-name gesture) table nil)))))
+		(gethash (keyboard-event-character gesture) table nil)))))
 
 (defmethod lookup-gesture-command (gesture table)
   (declare (ignore gesture table))
