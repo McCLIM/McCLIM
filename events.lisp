@@ -298,6 +298,8 @@
 (defconstant +pointer-left-button+   #x01)
 (defconstant +pointer-middle-button+ #x02)
 (defconstant +pointer-right-button+  #x04)
+(defconstant +pointer-wheel-up+      #x08)
+(defconstant +pointer-wheel-down+    #x10)
 
 (defconstant +shift-key+             #x0100)
 (defconstant +control-key+           #x0200)

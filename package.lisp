@@ -1623,6 +1623,8 @@
 
   ;;; Vendor extensions which are exported from the CLIM package
   (:export
+   #:+pointer-wheel-up+ 
+   #:+pointer-wheel-down+
    #:sheet-pointer-cursor)
   
    ;;; x11 color names - some are not in the spec - mikemac

@@ -517,3 +517,31 @@
 
 (defclass clim-sheet-input-mixin (#+clim-mp standard-sheet-input-mixin #-clim-mp immediate-sheet-input-mixin)
   ())
+
+;;; Mixin for panes which want the mouse wheel to scroll vertically
+
+(defclass mouse-wheel-scroll-mixin () ())
+
+(defparameter *mouse-scroll-distance* 4
+  "Number of lines by which to scroll the window in response to the scroll wheel")
+
+(defmethod dispatch-event :around ((sheet mouse-wheel-scroll-mixin)
+                                   (event pointer-button-press-event))
+  (let ((viewport (pane-viewport sheet))
+        (button (pointer-event-button event))
+        (dy (* *mouse-scroll-distance*
+               (stream-line-height sheet))))      
+    (if (and viewport
+             (or (eql button +pointer-wheel-up+)
+                 (eql button +pointer-wheel-down+)))
+        (multiple-value-bind (x0 y0 x1 y1)
+            (bounding-rectangle* (pane-viewport-region sheet))
+          (declare (ignore x1))
+          (multiple-value-bind (sx0 sy0 sx1 sy1)
+              (bounding-rectangle* (sheet-region sheet))
+            (declare (ignore sx0 sx1))
+            (let ((height (- y1 y0)))
+              (scroll-extent sheet x0 (if (eql button +pointer-wheel-up+)
+                                          (max sy0 (- y0 dy))
+                                          (- (min sy1 (+ y1 dy)) height))))))
+        (call-next-method))))

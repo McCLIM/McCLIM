@@ -533,8 +533,8 @@
   (aref #.(vector +pointer-left-button+
                   +pointer-middle-button+
                   +pointer-right-button+
-		  nil
-		  nil)
+		  +pointer-wheel-up+
+		  +pointer-wheel-down+)
         (1- code)))
 
 ;; From "Inter-Client Communication Conventions Manual", Version 2.0.xf86.1,

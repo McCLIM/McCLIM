@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.139 2004/02/07 14:05:50 moore Exp $
+;;; $Id: panes.lisp,v 1.140 2004/03/21 21:49:06 hefner1 Exp $
 
 (in-package :clim-internals)
 
@@ -2114,6 +2114,7 @@
                             ;; sheet-leaf-mixin
                             sheet-multiple-child-mixin   ; needed for GADGET-OUTPUT-RECORD
                             basic-pane
+                            mouse-wheel-scroll-mixin
                             )
   ((redisplay-needed :initarg :display-time) 
    (incremental-redisplay :type (member t nil)
