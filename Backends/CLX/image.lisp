@@ -50,7 +50,7 @@
 (defgeneric (setf image-pixel) (x y pixel image))
 (defgeneric image-color (image x y))
 (defgeneric (setf image-color) (x y pixel color image))
-(defgeneric write-pnm ((image image) filename output-format))
+(defgeneric write-pnm (image filename output-format))
 
 (defmethod image-width ((image image))
   (cadr (array-dimensions (image-pixels image))))
