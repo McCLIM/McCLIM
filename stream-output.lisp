@@ -159,6 +159,10 @@
 
 (defmethod setf*-stream-cursor-position (x y (stream extended-output-stream))
   (setf*-cursor-position x y (stream-text-cursor stream)))
+(defmethod direct-setf*-stream-cursor-position (x y (stream extended-output-stream))
+  ;; This method is used for updating cursor position after output to
+  ;; the stream.
+  (setf*-cursor-position x y (stream-text-cursor stream)))
 
 (defmethod stream-increment-cursor-position ((stream extended-output-stream) dx dy)
   (multiple-value-bind (x y) (cursor-position (stream-text-cursor stream))
@@ -191,6 +195,16 @@
 		       :ink +foreground-ink+
 		       :filled t)))
   (stream-write-char stream #\newline))
+
+(defgeneric stream-write-line (stream line)
+  (:documentation
+   "Writes the string LINE to STREAM. This function produces no more
+than one line of output."))
+(defmethod stream-write-line (stream line)
+  (with-slots (baseline vspace) stream
+     (multiple-value-bind (cx cy) (stream-cursor-position stream)
+       (draw-text* (sheet-medium stream) line
+                   cx (+ cy baseline vspace)))))
 
 (defmethod stream-write-char ((stream extended-output-stream) char)
   (let* ((cursor (stream-text-cursor stream))
@@ -242,14 +256,15 @@
 		   (multiple-value-bind (new-cx new-cy) (stream-cursor-position stream)
 		     (setq cx new-cx
 			   cy new-cy
-			   baseline current-baseline))))
+			   baseline current-baseline)
+                     (setf*-stream-cursor-position cx cy stream))))
 		(:scroll
 		 (scroll-horizontal stream width))
 		(:allow
 		 )))
-	    (draw-text* (sheet-medium stream) char cx (+ cy baseline vspace) :text-style text-style)
+	    (stream-write-line stream (string char))
 	    (setq cx (+ cx width))
-	    (setf*-stream-cursor-position cx cy stream))))))
+	    (direct-setf*-stream-cursor-position cx cy stream))))))
     (if visible
 	(setf (cursor-visibility cursor) t))))
 
