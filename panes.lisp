@@ -130,8 +130,10 @@
   `(space-requirement-min-height (pane-space-requirement ,pane)))
 
 (defclass pane (standard-sheet-input-mixin
-		temporary-medium-sheet-output-mixin
-		sheet-transformation-mixin basic-sheet)
+		;;temporary-medium-sheet-output-mixin
+		sheet-transformation-mixin
+                basic-sheet
+                )
   (
    #+ignore(foreground :initarg :foreground
 		       :initform +black+
@@ -323,6 +325,7 @@
 
 ;;; BASIC-PANE
 
+#+NIL
 (defclass basic-pane (window-stream
 		      sheet-parent-mixin
 		      mirrored-sheet-mixin
@@ -330,6 +333,9 @@
 		      pane)
   ()
   )
+
+(defclass basic-pane (sheet-parent-mixin mirrored-sheet-mixin pane)
+  ())
 
 (defmethod initialize-instance :after ((pane basic-pane) &rest args
 				       &key (background nil)
@@ -435,6 +441,9 @@
   (compose-space (first (sheet-children pane))))
 
 (defmethod allocate-space ((pane top-level-sheet-pane) width height)
+  (unless (pane-space-requirement pane)
+    (setf (pane-space-requirement pane)
+      (compose-space pane)))
   (when (first (sheet-children pane))
     (allocate-space 
         (first (sheet-children pane))
@@ -886,7 +895,7 @@ During realization the child of the spacing will have as cordinates
 
 ;;; RAISED PANE
 
-(defclass raised-pane (border-pane) ())
+(defclass raised-pane (border-pane permanent-medium-sheet-output-mixin) ())
 
 (defmacro raising ((&rest options) &body contents)
   `(make-pane 'raised-pane ,@options :contents (list ,@contents)))
@@ -1140,9 +1149,16 @@ During realization the child of the spacing will have as cordinates
 (defgeneric* (setf window-viewport-position) (x y clim-stream-pane))
 
 
-;;; CLIM-STREAM-PANE
+;;;
+;;; 29.4 CLIM Stream Panes
+;;;
 
-(defclass clim-stream-pane (standard-output-recording-stream sheet-leaf-mixin basic-pane)
+(defclass clim-stream-pane (permanent-medium-sheet-output-mixin
+                            standard-extended-input-stream
+                            standard-extended-output-stream
+                            standard-output-recording-stream
+                            ;; sheet-leaf-mixin
+                            basic-pane)
   ((display-time :initform nil
 		 :initarg :display-time
 		 :accessor pane-display-time)
@@ -1173,7 +1189,11 @@ During realization the child of the spacing will have as cordinates
 		       :reader pane-end-of-page-action)
    (output-history :initform (make-instance 'standard-tree-output-history)
 		   :initarg :output-history
-		   :accessor pane-output-history)))
+		   :accessor pane-output-history))
+  (:documentation
+   "This class implements a pane that supports the CLIM graphics,
+    extended input and output, and output recording protocols."))
+
 
 (defmethod handle-event ((pane clim-stream-pane) (event window-repaint-event))
   (dispatch-repaint pane (sheet-region pane)))
@@ -1204,7 +1224,8 @@ During realization the child of the spacing will have as cordinates
   (pane-viewport-region pane))
 
 (defmethod window-erase-viewport ((pane clim-stream-pane))
-  (with-bounding-rectangle* (x1 y1 x2 y2) (pane-viewport-region pane)
+  (with-bounding-rectangle* (x1 y1 x2 y2) (or (pane-viewport-region pane)
+                                              (sheet-region pane))
     (draw-rectangle* (sheet-medium pane) x1 y1 x2 y2 :ink +background-ink+)))
 
 (defmethod window-viewport-position ((pane clim-stream-pane))
@@ -1363,3 +1384,52 @@ During realization the child of the spacing will have as cordinates
 
 (defun make-clim-application-pane (&rest options)
   (apply #'make-clim-stream-pane :type 'application-pane options))
+
+;;; 29.4.5 Creating a Standalone CLIM Window
+
+(define-application-frame a-window-stream () ()
+                          (:panes
+                           (io
+                            (make-pane 'clim-stream-pane)))
+                          (:layouts
+                           (:default io)))
+
+(defun open-window-stream (&key port
+                                left top right bottom width height
+                                foreground background
+                                text-style
+                                (vertical-spacing 2)
+                                end-of-line-action
+                                end-of-page-action
+                                output-record
+                                (draw t)
+                                (record t)
+                                (initial-cursor-visibility :off)
+                                text-margin
+                                save-under
+                                input-buffer
+                                (scroll-bars :vertical)
+                                borders
+                                label)
+  (declare (ignorable left top right bottom width height
+                      foreground background
+                      text-style
+                      vertical-spacing
+                      end-of-line-action
+                      end-of-page-action
+                      output-record
+                      draw
+                      record
+                      initial-cursor-visibility
+                      text-margin
+                      save-under
+                      input-buffer
+                      scroll-bars
+                      borders
+                      label))
+  (setf port (or port (find-port)))
+  (let* ((fm (find-frame-manager :port port))
+         (fr (make-application-frame 'a-window-stream
+                                     :frame-manager fm)))
+    (with-look-and-feel-realization (fm fr))
+    fr))
