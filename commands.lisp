@@ -326,21 +326,22 @@
 ;;; Commands
 
 (defmacro define-command (name-and-options args &body body)
-  (let* ((func (first name-and-options))
-	 (command-table (getf (cdr name-and-options) :command-table nil))
-	 (name (getf (cdr name-and-options) :name (generate-name func)))
-	 (menu (getf (cdr name-and-options) :menu nil))
-	 (keystroke (getf (cdr name-and-options) :keystroke nil))
+  (let* ((func (if (consp name-and-options) (first name-and-options) name-and-options))
+         (options (if (consp name-and-options) (rest name-and-options) nil))
+	 (command-table (getf options :command-table nil))
+	 (name (getf options :name (generate-name func)))
+	 (menu (getf options :menu nil))
+	 (keystroke (getf options :keystroke nil))
 	 )
-  `(progn
-     (defun ,func ,(loop for arg in args
+    `(progn
+       (defun ,func ,(loop for arg in args
 			 collect (first arg))
-       ,@body)
-     ,(if command-table
-	  `(add-command-to-command-table ',func ',command-table
-					 :name ,name :menu ,menu
-					 :keystroke ,keystroke :errorp nil))
-     ',func)))
+         ,@body)
+       ,(if command-table
+            `(add-command-to-command-table ',func ',command-table
+                                           :name ,name :menu ,menu
+                                           :keystroke ,keystroke :errorp nil))
+       ',func)))
 
 (defvar *command-parser* nil)
 (defvar *command-unparser* nil)
