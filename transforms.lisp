@@ -373,6 +373,11 @@
                           :transformation (make-rotation-transformation ,angle ,@(if origin (list origin) nil)))
      ,@body))
 
+(defmacro with-identity-transformation ((medium) &body body)
+  `(with-drawing-options (,medium 
+                          :transformation +identity-transformation+)
+     ,@body))
+
 
 ;;(defmacro with-local-coordinates ((medium &optional x y) &body body)) -- what are local coordinates?
 ;;(defmacro with-first-quadrant-coordinates ((medium &optional x y) &body body))
