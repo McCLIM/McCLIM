@@ -165,6 +165,12 @@
 				:very-large 20
 				:huge 24))
 
+(defun open-font (display font-name)
+  (let ((fonts (xlib:list-font-names display font-name :max-fonts 1)))
+    (if fonts
+	(xlib:open-font display (first fonts))
+      (xlib:open-font display "fixed"))))
+
 (defmethod text-style-to-X-font ((port clx-port) text-style)
   (with-slots (family face size) text-style
     (let* ((family-name (if (stringp family)
@@ -185,8 +191,7 @@
 			      (getf *clx-text-sizes* :normal))))
 	   (font-name (format nil "-~A-~A-*-*-~D-*-*-*-*-*-*-*"
 			      family-name face-name size-number)))
-      (or (xlib:open-font (clx-port-display port) font-name)
-	  (xlib:open-font (clx-port-display port) "fixed")))))
+      (open-font (clx-port-display port) font-name))))
 
 (defmethod text-style-height (text-style (port clx-port))
   (let ((font (text-style-to-X-font port text-style)))
