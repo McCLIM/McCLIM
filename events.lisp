@@ -170,8 +170,8 @@
    ))
 
 (defmethod window-event-region ((event window-event))
-  (transform-region (sheet-native-transformation (event-sheet event))
-		    (window-event-native-region event)))
+  (untransform-region (sheet-native-transformation (event-sheet event))
+                      (window-event-native-region event)))
 
 (defmethod window-event-mirrored-sheet ((event window-event))
   (sheet-mirror (event-sheet event)))
