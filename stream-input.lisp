@@ -26,7 +26,10 @@
 ;;; and #\Delete at the stream-read-char level.  Dunno if this is the
 ;;; right place to do the transformation...
 
-(defconstant +read-char-map+ '((#\Return . #\Newline) (#\Backspace . #\Delete)))
+;;  Why exactly do we want to see #\Delete instead of #\Backspace?
+;;  There is a seperate Delete key, unless your keyboard is strange. --Hefner
+
+(defconstant +read-char-map+ '((#\Return . #\Newline) #+nil (#\Backspace . #\Delete)))
 
 (defvar *abort-gestures* '(:abort))
 
