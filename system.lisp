@@ -57,9 +57,9 @@
    "decls"
 
    #.(OR
-      #+(AND :CMU :MP (NOT :PTHREAD))  "lisp-dep/mp-cmu"
-      #+EXCL                           "lisp-dep/mp-acl"
-      #| fall back |#                  "lisp-dep/mp-nil")
+      #+(AND :CMU :MP (NOT :PTHREAD))  "Lisp-Dep/mp-cmu"
+      #+EXCL                           "Lisp-Dep/mp-acl"
+      #| fall back |#                  "Lisp-Dep/mp-nil")
    "utils"
    "defresource"
    "setf-star"
