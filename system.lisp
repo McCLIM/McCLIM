@@ -74,7 +74,6 @@
 ;   "exports"
    "gadgets"
    "menu"
-   "ppm-manager"
    ))
    
 (defsystem :clim-clx #-mk-defsystem ()
@@ -88,7 +87,6 @@
    "clx-medium"
    "clx-graft"
    "clx-frame-manager"
-   "clx-ppm-manager"
    ))
    
 (defsystem :clim-examples #-mk-defsystem ()
