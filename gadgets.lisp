@@ -56,15 +56,15 @@
 
 (defclass gadget-color-mixin ()
   ((normal :type color
-	   :initform +gray50+
+	   :initform +gray80+
 	   :initarg :normal
 	   :accessor gadget-normal-color)
    (highlighted :type color
-		:initform +gray75+
+		:initform +gray85+
 		:initarg :highlighted
 		:accessor gadget-highlighted-color)
    (pushed-and-highlighted :type color
-			   :initform +gray25+
+			   :initform +gray75+
 			   :initarg :pushed-and-highlighted
 			   :accessor gadget-pushed-and-highlighted-color)
    (current-color :type color
