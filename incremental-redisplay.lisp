@@ -224,9 +224,13 @@ record operations are forwarded to this record.")
 				   (parent-cache nil))
   (funcall continuation stream))
 
+; &key (unique-id (gensym)) was used earlier,
+; changed to (unique-id `',(gensym)) as per gilham's request
+; please CHECKME and delete this comment :]
+
 (defmacro updating-output
     ((stream &rest args
-      &key (unique-id (gensym)) (id-test '#'eql) cache-value (cache-test '#'eql)
+      &key (unique-id `',(gensym)) (id-test '#'eql) cache-value (cache-test '#'eql)
       (fixed-position nil fixed-position-p)
       (all-new nil all-new-p)
       (parent-cache nil parent-cache-p)
