@@ -44,6 +44,7 @@
   (initialize-clx port))
 
 (defun clx-error-handler (display error-name &key &allow-other-keys)
+  (declare (ignore display))
   (format *error-output* "clx-error: ~a~%" error-name))
 
 (defmethod initialize-clx ((port clx-port))
