@@ -122,7 +122,7 @@
 ;;;; 21.2
 (defgeneric invoke-updating-output
     (stream continuation record-type unique-id id-test cache-value cache-test
-	    &key all-new parent-cache))
+	    &key fixed-position all-new parent-cache))
 
 ;;;; 24.4
 (defgeneric presentation-replace-input
