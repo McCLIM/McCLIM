@@ -349,18 +349,19 @@
       (format stream "fill~%"))))
 
 (defmethod medium-draw-points* ((medium postscript-medium) coord-seq)
-  (let ((stream (postscript-medium-file-stream medium)))
+  (let ((stream (postscript-medium-file-stream medium))
+        (radius (/ (line-style-thickness (medium-line-style medium)) 2)))
     (postscript-actualize-graphics-state stream medium :color)
     (with-graphics-state (medium) ; FIXME: this is because of setlinewidth below
       (format stream "0 setlinewidth~%")
-      (loop with radius = (/ (line-style-thickness (medium-line-style medium)) 2)
-	    for (x y) on coord-seq by #'cddr
-	    do (progn
-                 (format stream "newpath~%")
-		 (format stream "~A ~A ~A 0 360 arc~%"
-                         (format-postscript-number x) (format-postscript-number y)
-                         (format-postscript-number radius))
-		 (format stream "fill~%"))))))
+      (map-repeated-sequence 'nil 2
+                             (lambda (x y)
+                               (format stream "newpath~%")
+                               (format stream "~A ~A ~A 0 360 arc~%"
+                                       (format-postscript-number x) (format-postscript-number y)
+                                       (format-postscript-number radius))
+                               (format stream "fill~%"))
+                             coord-seq))))
 
 (defmethod medium-draw-line* ((medium postscript-medium) x1 y1 x2 y2)
   (let ((stream (postscript-medium-file-stream medium)))
@@ -375,28 +376,30 @@
   (let ((stream (postscript-medium-file-stream medium)))
     (postscript-actualize-graphics-state stream medium :line-style :color)
     (format stream "newpath~%")
-    (loop with points = (apply #'vector coord-seq)
-          for i below (length coord-seq) by 4
-          do
-          (format stream "~A ~A moveto ~A ~A lineto~%"
-                  (format-postscript-number (aref points i))
-                  (format-postscript-number (aref points (1+ i)))
-                  (format-postscript-number (aref points (+ i 2)))
-                  (format-postscript-number (aref points (+ i 3))))
-          finally (format stream "stroke~%"))))
+    (map-repeated-sequence 'nil 4
+                           (lambda (x1 y1 x2 y2)
+                             (format stream "~A ~A moveto ~A ~A lineto~%"
+                                     (format-postscript-number x1)
+                                     (format-postscript-number y1)
+                                     (format-postscript-number x2)
+                                     (format-postscript-number y2)))
+                           coord-seq)
+    (format stream "stroke~%")))
 
 (defmethod medium-draw-polygon* ((medium postscript-medium) coord-seq closed filled)
   (assert (evenp (length coord-seq)))
   (let ((stream (postscript-medium-file-stream medium)))
     (postscript-actualize-graphics-state stream medium :line-style :color)
     (format stream "newpath~%")
-    (format stream "~A ~A moveto~%"
-            (format-postscript-number (car coord-seq))
-            (format-postscript-number (cadr coord-seq)))
-    (loop for (x y) on (cddr coord-seq) by #'cddr
-          do (format stream "~A ~A lineto~%"
-                     (format-postscript-number x) (format-postscript-number y))
-          finally (format stream "~%"))
+    (let ((command "moveto"))
+      (map-repeated-sequence 'nil 2
+                             (lambda (x y)
+                               (format stream "~A ~A ~A~%"
+                                       (format-postscript-number x)
+                                       (format-postscript-number y)
+                                       command)
+                               (setq command "lineto"))
+                             coord-seq))
     (when closed
       (format stream "closepath~%"))
     (format stream (if filled
@@ -422,13 +425,15 @@
   (let ((stream (postscript-medium-file-stream medium)))
     (postscript-actualize-graphics-state stream medium :line-style :color)
     (format stream "newpath~%")
-    (loop for (x1 y1 x2 y2) on position-seq by #'cddddr
-          do (format stream "~A ~A moveto ~A ~A lineto ~A ~A lineto ~A ~A lineto~%"
-                     (format-postscript-number x1) (format-postscript-number y1)
-                     (format-postscript-number x2) (format-postscript-number y1)
-                     (format-postscript-number x2) (format-postscript-number y2)
-                     (format-postscript-number x1) (format-postscript-number y2))
-          (format stream "closepath~%"))
+    (map-repeated-sequence 'nil 4
+                           (lambda (x1 y1 x2 y2)
+                             (format stream "~A ~A moveto ~A ~A lineto ~A ~A lineto ~A ~A lineto~%"
+                                     (format-postscript-number x1) (format-postscript-number y1)
+                                     (format-postscript-number x2) (format-postscript-number y1)
+                                     (format-postscript-number x2) (format-postscript-number y2)
+                                     (format-postscript-number x1) (format-postscript-number y2))
+                             (format stream "closepath~%"))
+                           position-seq)
     (format stream (if filled
                        "fill~%"
                        "stroke~%"))))
