@@ -171,6 +171,17 @@ RIGHT, on PANE. This should be used only within INSPECTOR-TABLE."
 	(formatting-cell (,evaluated-pane)
 	  ,right)))))
 
+(defmacro inspector-table-rows ((pane) &body rows)
+  "Output a bunch of rows with INSPECTOR-TABLE-ROW on PANE. Each row
+is a list of a label and a value."
+  (let ((evaluated-pane (gensym "pane")))
+    `(let ((,evaluated-pane ,pane))
+      ,@(loop for row in rows
+	      collect (destructuring-bind (label value) row
+			`(inspector-table-row (,evaluated-pane)
+			  (princ ,label ,evaluated-pane)
+			  (inspect-object ,value ,evaluated-pane)))))))
+
 (defun print-documentation (object pane)
   "Print OBJECT's documentation, if any, to PANE"
   (when (handler-bind ((warning #'muffle-warning))
@@ -559,55 +570,62 @@ them."
       (format pane "Float ~S" object)
     (multiple-value-bind (significand exponent sign)
         (decode-float object)
-      (inspector-table-row (pane)
-	  (princ "sign:" pane)
-        (inspect-object sign pane))
-      (inspector-table-row (pane)
-	  (princ "significand:" pane)
-        (inspect-object significand pane))
-      (inspector-table-row (pane)
-	  (princ "exponent:" pane)
-        (inspect-object exponent pane)))
-    (inspector-table-row (pane)
-	(princ "radix:" pane)
-      (inspect-object (float-radix object) pane))))
+      (inspector-table-rows (pane)
+	("sign:" sign)
+	("significand:" significand)
+	("exponent:" exponent)))
+    (inspector-table-rows (pane)
+      ("radix:" (float-radix object)))))
+
+(defun iso-8601-format (time)
+  "Return the given universal time in ISO 8601 format. This will raise
+an error if the given time is not a decodable universal time."
+  (multiple-value-bind (sec min hour date month year)
+      (decode-universal-time time)
+    (format nil "~4,'0D-~2,'0D-~2,'0DT~2,'0D:~2,'0D:~2,'0DZ"
+	    year month date hour min sec)))
 
 (defmethod inspect-object ((object integer) pane)
-  (inspector-table (object pane)
-      (format pane "Integer ~S" object)
-    (inspector-table-row (pane)
-	(princ "value:" pane)
-      (formatting-table (pane)
-	(formatting-row (pane)
-	  (formatting-cell (pane)
-	    (with-output-as-presentation
-		(pane object (presentation-type-of object))
-	      (princ object pane)))
-	  (formatting-cell (pane)
-	    (princ "=" pane))
-	  (formatting-cell (pane)
-	    (with-output-as-presentation
-		(pane object (presentation-type-of object))
-	      (write object :radix t :base 16 :stream pane)))
-	  (formatting-cell (pane)
-	    (princ "=" pane))
-	  (formatting-cell (pane)
-	    (with-output-as-presentation
-		(pane object (presentation-type-of object))
-	      (write object :radix t :base 8 :stream pane)))
-	  (formatting-cell (pane)
-	    (princ "=" pane))
-	  (formatting-cell (pane)
-	    (with-output-as-presentation
-		(pane object (presentation-type-of object))
-	      (write object :radix t :base 2 :stream pane))))))
-    (when (<= 0 object 255)
+  (flet ((present-in-base (base &key (radix t) (family :fix))
+	   (with-text-family (pane family)
+	     (formatting-cell (pane)
+	       (with-output-as-presentation
+		   (pane object (presentation-type-of object))
+		 (write object :radix radix :base base :stream pane)))))
+	 (print-equals-cell ()
+	   (formatting-cell (pane)
+	     (princ "=" pane))))
+    (inspector-table (object pane)
+	(format pane "Integer ~S" object)
       (inspector-table-row (pane)
-	  (princ "character:" pane)
-	(inspect-object (code-char object) pane)))
-    (inspector-table-row (pane)
-	(princ "length:" pane)
-      (inspect-object (integer-length object) pane))))
+	  (princ "value:" pane)
+	(formatting-table (pane)
+	  (formatting-row (pane)
+	    ;; Base 10 should be displayed normally, without the
+	    ;; fixed-width font and without the radix.
+	    (present-in-base 10 :radix nil :family :sans-serif)
+	    (print-equals-cell)		; =
+	    (present-in-base 16)	; Hexadecimal
+	    (print-equals-cell)		; =
+	    (present-in-base 8)		; Octal
+	    (print-equals-cell)		; =
+	    (present-in-base 2))))	; Binary
+      (when (<= 0 object 255)
+	(inspector-table-row (pane)
+	    (princ "character:" pane)
+	  (inspect-object (code-char object) pane)))
+      (inspector-table-row (pane)
+	  (princ "length:" pane)
+	(inspect-object (integer-length object) pane))
+      ;; Sometimes we get numbers that can't be interpreted as a
+      ;; time. Those throw an error, and this just isn't printed.
+      (ignore-errors
+	(inspector-table-row (pane)
+	    (princ "as time:" pane)
+	  (with-text-family (pane :fix)
+	    (with-output-as-presentation
+		(pane object (presentation-type-of object))
+	      (princ (iso-8601-format object) pane))))))))
 
 (defmethod inspect-object-briefly ((object symbol) pane)
   (with-output-as-presentation
@@ -619,28 +637,28 @@ them."
   (inspector-table (object pane)
       (format pane "Symbol ~S" (symbol-name object))
     (inspector-table-row (pane)
-	(princ "value:")
+	(princ "value:" pane)
       (if (boundp object)
 	  (inspect-object (symbol-value object) pane)
-	  (princ "unbound")))
+	  (princ "unbound" pane)))
     (inspector-table-row (pane)
-	(princ "function:")
+	(princ "function:" pane)
       (if (fboundp object)
 	  (inspect-object (symbol-function object) pane)
-	  (princ "unbound")))
+	  (princ "unbound" pane)))
     ;; This is not, strictly speaking, a property of the
     ;; symbol. However, this is useful enough that I think it's worth
     ;; including here, since it can eliminate some minor annoyances.
     (inspector-table-row (pane)
-	(princ "class:")
+	(princ "class:" pane)
       (if (find-class object nil)
 	  (inspect-object (find-class object) pane)
-	  (princ "unbound")))
+	  (princ "unbound" pane)))
     (inspector-table-row (pane)
-	(princ "package:")
+	(princ "package:" pane)
       (inspect-object (symbol-package object) pane))
     (inspector-table-row (pane)
-	(princ "propery list:")
+	(princ "propery list:" pane)
       (dolist (property (symbol-plist object))
 	(inspect-object property pane)))))
 
@@ -654,15 +672,29 @@ them."
 (defmethod inspect-object ((object character) pane)
   (inspector-table (object pane)
       (format pane "Character ~S" object)
-    (inspector-table-row (pane)
-	(princ "code:" pane)
-      (inspect-object (char-code object) pane))
-    (inspector-table-row (pane)
-	(princ "int:" pane)
-      (inspect-object (char-int object) pane))
-    (inspector-table-row (pane)
-	(princ "name:" pane)
-      (inspect-object (char-name object) pane))))
+    (inspector-table-rows (pane)
+      ("code:" (char-code object))
+      ("int:"  (char-int object))
+      ("name:" (char-name object)))))
+
+(defmethod inspect-object ((object pathname) pane)
+  (inspector-table (object pane)
+      (princ (if (wild-pathname-p object)
+		 "Wild pathname"
+		 "Pathname"))
+    (inspector-table-rows (pane)
+      ("namestring:" (namestring object))
+      ("host:"       (pathname-host object))
+      ("device:"     (pathname-device object))
+      ("directory:"  (pathname-directory object))
+      ("name:"       (pathname-name object))
+      ("type:"       (pathname-type object))
+      ("version:"    (pathname-version object)))
+    (unless (or (wild-pathname-p object)
+		(not (probe-file object)))
+      (inspector-table-row (pane)
+	  (princ "truename:" pane)
+	(inspect-object (truename object) pane)))))
 
 (defun display-app (frame pane)
   "Display the APP frame of the inspector"
