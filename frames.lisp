@@ -170,6 +170,10 @@ FRAME-EXIT condition."))
 ; extension
 (defgeneric frame-schedule-timer-event (frame sheet delay token))
 
+(defgeneric note-input-focus-changed (pane state)
+  (:documentation "Called when a pane receives or loses the keyboard
+input focus. This is a McCLIM extension."))
+
 (defclass standard-application-frame (application-frame)
   ((event-queue :initarg :frame-event-queue
                 :initarg :input-buffer
@@ -384,7 +388,10 @@ FRAME-EXIT condition."))
 				 (setf (pane-needs-redisplay pane) nil)))))
 		       (frame-top-level-sheet frame))
       (when *standard-input*
-	(setf (cursor-visibility (stream-text-cursor *standard-input*)) t)
+        ;; We don't need to turn the cursor on here, as Goatee has its own
+        ;; cursor which will appear. In fact, as a sane interface policy,
+        ;; leave it off by default, and hopefully this doesn't violate the spec.
+	(setf (cursor-visibility (stream-text-cursor *standard-input*)) nil)
 	(when prompt
 	  (with-text-style (*standard-input* prompt-style)
 	    (if (stringp prompt)
@@ -974,5 +981,10 @@ FRAME-EXIT condition."))
   `(let ((,frame *application-frame*))
      ,@body))
 
+
+(defmethod note-input-focus-changed (pane state)
+  (declare (ignore pane state)))
+
 (defmethod (setf keyboard-input-focus) :after (focus frame)
   (set-port-keyboard-focus focus (port frame)))
+

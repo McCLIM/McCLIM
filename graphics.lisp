@@ -39,7 +39,8 @@
 (defmethod do-graphics-with-options-internal ((medium medium) orig-medium func
 				     &rest args
 				     &key ink clipping-region transformation
-					  line-style line-unit line-thickness
+					  line-unit line-thickness
+                                          (line-style nil line-style-p)
 					  (line-dashes nil dashes-p)
 					  line-joint-shape line-cap-shape
 					  (text-style nil text-style-p)
@@ -52,47 +53,62 @@
 	(old-clip (medium-clipping-region medium))
 	(old-transform (medium-transformation medium))
 	(old-line-style (medium-line-style medium))
-	(old-text-style (medium-text-style medium)))
+	(old-text-style (medium-text-style medium))
+        (changed-line-style line-style-p)
+        (changed-text-style text-style-p))
     (unwind-protect
 	(progn
+          (when (eq ink old-ink) (setf ink nil))
+          
 	  (if ink
 	      (setf (medium-ink medium) ink))
 	  (if transformation
 	      (setf (medium-transformation medium)
 		(compose-transformations old-transform transformation)))
-	  (if clipping-region
+
+          (when (and clipping-region old-clip
+                     (region-equal clipping-region old-clip))
+            (setf clipping-region nil))                   
+
+          (if clipping-region
 	      (setf (medium-clipping-region medium)
 		(region-intersection (if transformation
                                          (transform-region transformation old-clip)
                                        old-clip)
 				     clipping-region)))
-	  (if (null line-style)
-	      (setf line-style old-line-style))
-	  (if (or line-unit line-thickness dashes-p line-joint-shape line-cap-shape)
-	      (setf line-style (make-line-style
-				:unit (or line-unit
-					  (line-style-unit line-style))
-				:thickness (or line-thickness
-					       (line-style-thickness line-style))
-				:dashes (or line-dashes
-					    (line-style-dashes line-style))
-				:joint-shape (or line-joint-shape
-						 (line-style-joint-shape line-style))
-				:cap-shape (or line-cap-shape
-					       (line-style-cap-shape line-style)))))
-	  (setf (medium-line-style medium) line-style)
+          (if (null line-style)              
+              (setf line-style old-line-style))
+	  (when (or line-unit line-thickness dashes-p line-joint-shape line-cap-shape)
+            (setf changed-line-style T)
+            (setf line-style (make-line-style
+                              :unit (or line-unit
+                                        (line-style-unit line-style))
+                              :thickness (or line-thickness
+                                             (line-style-thickness line-style))
+                              :dashes (or line-dashes
+                                          (line-style-dashes line-style))
+                              :joint-shape (or line-joint-shape
+                                               (line-style-joint-shape line-style))
+                              :cap-shape (or line-cap-shape
+                                             (line-style-cap-shape line-style)))))
+          (when changed-line-style
+            (setf (medium-line-style medium) line-style))
 	  (if text-style-p
 	      (setf text-style (merge-text-styles text-style
 						  (medium-merged-text-style medium)))
 	    (setf text-style (medium-merged-text-style medium)))
-	  (if (or text-family-p text-face-p text-size-p)
-	      (setf text-style (merge-text-styles (make-text-style text-family
-								   text-face
-								   text-size)
-						  text-style)))
-	  (setf (medium-text-style medium) text-style)
+	  (when (or text-family-p text-face-p text-size-p)
+            (setf changed-text-style T)
+            (setf text-style (merge-text-styles (make-text-style text-family
+                                                                 text-face
+                                                                 text-size)
+                                                text-style)))
+          (when changed-text-style
+            (setf (medium-text-style medium) text-style))
+          
 	  (when orig-medium
 	    (funcall func orig-medium)))
+        
       (when ink
 	(setf (medium-ink medium) old-ink))
       ;; First set transformation, then clipping!
@@ -100,8 +116,10 @@
 	(setf (medium-transformation medium) old-transform))
       (when clipping-region
 	(setf (medium-clipping-region medium) old-clip))
-      (setf (medium-line-style medium) old-line-style)
-      (setf (medium-text-style medium) old-text-style))))
+      (when changed-line-style
+        (setf (medium-line-style medium) old-line-style))
+      (when changed-text-style 
+        (setf (medium-text-style medium) old-text-style)))))
 
 (defmacro with-medium-options ((sheet args)
 			       &body body)

@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.128 2003/08/09 00:35:40 gilbert Exp $
+;;; $Id: panes.lisp,v 1.129 2003/08/09 01:34:01 hefner1 Exp $
 
 (in-package :clim-internals)
 
@@ -1658,6 +1658,9 @@
              (max child-min-width child-width  width)
              (max child-min-height child-height height)))))
 
+(defmethod note-input-focus-changed ((pane viewport-pane) state)
+  (note-input-focus-changed (sheet-child pane) state))
+
 ;;;;
 ;;;; SCROLLER-PANE
 ;;;;
@@ -1941,31 +1944,12 @@
 	parent
       nil)))
 
-
 (defmethod pane-viewport-region ((pane basic-pane))
   (let ((viewport (pane-viewport pane)))
     (and viewport
          (untransform-region
           (sheet-delta-transformation pane viewport)
           (sheet-region viewport)))))
-
-
-;; This should be good to go, will uncomment later.. --Hefner
-#+NIL
-(defmethod pane-viewport-region ((pane basic-pane))
-  (let ((viewport (pane-viewport pane)))
-    (when viewport
-      (multiple-value-bind (width height)
-          (bounding-rectangle-size (sheet-region viewport))
-        (with-slots (viewport hscrollbar vscrollbar)
-            (pane-scroller pane)
-          ;; This is horrible, we ought to have some clear readers
-          ;; defined to retreive the viewport position. Or maybe
-          ;; we do, and I just can't find them. 
-          (let ((x1 (if hscrollbar (gadget-value hscrollbar) 0))
-                (y1 (if vscrollbar (gadget-value vscrollbar) 0)))
-            (make-bounding-rectangle x1 y1 (+ x1 width) (+ y1 height))))))))
-	
 
 (defmethod pane-scroller ((pane basic-pane))
   (let ((viewport (pane-viewport pane)))
@@ -2332,6 +2316,11 @@
 #+ignore  (let ((cursor (stream-text-cursor pane)))
     (setf (cursor-visibility cursor) t)))
 
+;; Will uncomment later, this depends on changes I'm not ready to commit yet.
+#+NIL
+(defmethod note-input-focus-changed ((pane interactor-pane) state)
+  (setf (cursor-shape (stream-text-cursor pane))
+        (if state :block :hollow)))
 
 ;;; APPLICATION PANES
 

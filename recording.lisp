@@ -525,7 +525,7 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
 (defun replay (record stream &optional region)
   (stream-close-text-output-record stream)
   (when (stream-drawing-p stream)
-    (with-cursor-off stream
+    (with-cursor-off stream ;;FIXME?
       (letf (((stream-cursor-position stream) (values 0 0))
              ((stream-recording-p stream) nil)
 	     ;; Is there a better value to bind to baseline?
@@ -687,18 +687,24 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
                          (apply function child function-args)))
        (output-record-children record)))
 
+(defun null-bounding-rectangle-p (bbox)
+  (with-bounding-rectangle* (x1 y1 x2 y2) bbox
+     (and (zerop x1) (zerop y1)
+          (zerop x2) (zerop y2))))                           
+
 ;;; 16.2.3. Output Record Change Notification Protocol
 (defmethod recompute-extent-for-new-child
     ((record compound-output-record) child)
   (with-bounding-rectangle* (old-x1 old-y1 old-x2 old-y2) record
     (with-slots (parent x1 y1 x2 y2) record
-      (if (= 1 (length (output-record-children record)))
+      (if (= 1 (output-record-count record))
 	  (setf (values x1 y1 x2 y2) (bounding-rectangle* child))
-	  (with-bounding-rectangle* (x1-child y1-child x2-child y2-child) child
-	    (minf x1 x1-child)
-	    (minf y1 y1-child)
-	    (maxf x2 x2-child)
-	    (maxf y2 y2-child)))
+          (unless (null-bounding-rectangle-p child)
+            (with-bounding-rectangle* (x1-child y1-child x2-child y2-child) child
+              (minf x1 x1-child)
+              (minf y1 y1-child)
+              (maxf x2 x2-child)
+              (maxf y2 y2-child))))
       (when parent
         (recompute-extent-for-changed-child parent record
 					    old-x1 old-y1 old-x2 old-y2))))
@@ -729,39 +735,42 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
 	  (values x y x y))
 	(values new-x1 new-y1 new-x2 new-y2))))
 
+
+
 (defmethod recompute-extent-for-changed-child
     ((record compound-output-record) changed-child
-     old-min-x old-min-y old-max-x old-max-y)
-  ;; If the child's old and new bbox lies entirely within the record's bbox
-  ;; then no change need be made to the record's bbox.  Otherwise, if some part
-  ;; of the child's bbox was on the record's bbox and is now inside, examine
-  ;; all the children to determine the correct new bbox.
-  (with-slots (x1 y1 x2 y2) record
-    (with-bounding-rectangle* (child-x1 child-y1 child-x2 child-y2)
-	changed-child
-      (unless (and (> x1 old-min-x) (> x1 child-x1)
-		   (> y1 old-min-y) (> y1 child-y1)
-		   (< x2 old-max-x) (< x2 child-x2)
-		   (< y2 old-max-y) (< y2 child-y2))
-	;; Don't know if changed-child has been deleted or what, so go through
-	;; all the children and construct the updated bbox.
-	(setf (values x1 y1 x2 y2) (%tree-recompute-extent* record)))))
+     old-min-x old-min-y old-max-x old-max-y)    
+  (with-bounding-rectangle* (ox1 oy1 ox2 oy2)  record
+    (with-bounding-rectangle* (cx1 cy1 cx2 cy2) changed-child
+      ;; If record is currently empty, use the child's bbox directly. Else..
+      ;; Does the new rectangle of the child contain the original rectangle?
+      ;; If so, we can use min/max to grow record's current rectangle.
+      ;; If not, the child has shrunk, and we need to fully recompute.                              
+      (multiple-value-bind (nx1 ny1 nx2 ny2) 
+          (cond ((null-bounding-rectangle-p record)
+                 (%tree-recompute-extent* record))
+                ((null-bounding-rectangle-p changed-child)
+                 (values ox1 oy1 ox2 oy2))
+                ((or (and (= old-min-x 0.0d0) (= old-min-y 0.0d0)
+                          (= old-max-x 0.0d0) (= old-max-y 0.0d0))
+                     (and (<= cx1 old-min-x) (<= cy1 old-min-y)
+                          (>= cx2 old-max-x) (>= cy2 old-max-y)))
+                 (values (min cx1 ox1) (min cy1 oy1)
+                         (max cx2 ox2) (max cy2 oy2)))
+                (T (%tree-recompute-extent* record)))        
+        
+        (with-slots (x1 y1 x2 y2 parent) record
+          (setf x1 nx1 y1 ny1 x2 nx2 y2 ny2)
+          (unless (or (null parent)
+                      (and (= nx1 ox1) (= ny1 oy1)
+                           (= nx2 ox2) (= nx2 oy2)))
+            (recompute-extent-for-changed-child parent record ox1 oy1 ox2 oy2))))))
   record)
 
-(defmethod recompute-extent-for-changed-child :around
-    ((record compound-output-record) child
-     old-min-x old-min-y old-max-x old-max-y)
-  (declare (ignore child old-min-x old-min-y old-max-x old-max-y))
-  (unless (slot-value record 'in-moving-p)
-    (let ((old-rectangle (multiple-value-call #'make-bounding-rectangle
-                           (bounding-rectangle* record))))
-      (call-next-method)
-      (with-slots (parent x1 y1 x2 y2) record
-        (when (and parent (not (region-equal old-rectangle record)))
-          (multiple-value-call #'recompute-extent-for-changed-child
-            (values parent record)
-            (bounding-rectangle* old-rectangle))))))
-  record)
+;; There was once an :around method on recompute-extent-for-changed-child here,
+;; but I've eliminated it. Its function was to notify the parent OR in case
+;; the bounding rect here changed - I've merged this into the above method.
+;; --Hefner, 8/7/02
 
 (defmethod tree-recompute-extent ((record compound-output-record))
   (with-slots (x1 y1 x2 y2) record
@@ -1928,9 +1937,9 @@ according to the flags RECORD and DRAW."
   ;; FIXME: Use DRAW-DESIGN*, that is fix DRAW-DESIGN*.
   (setf region (bounding-rectangle region))
   (with-bounding-rectangle* (x1 y1 x2 y2) region
-    (with-output-recording-options (stream :record nil) 
-	(draw-rectangle* stream x1 y1 x2 y2 :filled T :ink +background-ink+)))  
-  (stream-replay stream region))
+    (with-output-recording-options (stream :record nil)
+      (draw-rectangle* stream x1 y1 x2 y2 :filled T :ink +background-ink+)))
+   (stream-replay stream region))
 
 (defmethod scroll-extent :around ((stream output-recording-stream) x y)
   (when (stream-drawing-p stream)
