@@ -1449,7 +1449,9 @@
 		     +dark-cyan+ +DarkCyan+ +dark-magenta+ +DarkMagenta+ 
 		     +dark-red+ +DarkRed+ +light-green+ +LightGreen+ 
             
-		     )))
+		     ))
+	(extensions '(raised-pane raising)))
     (export externals)
-    (export externals :clim)))
-
+    (export externals :clim)
+    (export extensions)
+    (export extensions :clim-extensions)))
