@@ -301,21 +301,11 @@ record is stored.")
     (setf (values (old-min-x record) (old-min-y record)
 		  (old-max-x record) (old-max-y record))
 	  (bounding-rectangle* record))
-    ;;
-    ;; Moore:
-    ;;
-    ;;   I added the delete-output-record record. If ommited the
-    ;;   record is sometimes added needlessly. When that happens the
-    ;;   output history winds up with multiple (identical?) copies of
-    ;;   this output record. This can be observered in e.g. weird-irc.
-    ;;
-    ;;   Please look into this.
-    ;;
-    ;;                                          --GB 2003-05-15
-    (delete-output-record record (output-record-parent record) nil)
-    (setf (output-record-parent record) nil)
-    (add-output-record record (stream-current-output-record stream))
-    
+    ;; Don't add this record repeatedly to a parent updating-output-record.
+    (unless (eq (output-record-parent record)
+		(stream-current-output-record stream))
+      (setf (output-record-parent record) nil)
+      (add-output-record record (stream-current-output-record stream)))
     (setf (sub-record record) (make-instance 'updating-output-children-record
 					     :x-position x :y-position y
 					     :parent record)))
@@ -445,13 +435,13 @@ record is stored.")
 
 (defmethod invoke-updating-output ((stream updating-output-stream-mixin)
 				   continuation
-				   (record-type
-				    (eql 'standard-updating-output-record))
+				   record-type
 				   unique-id id-test cache-value cache-test
 				   &key (fixed-position nil) (all-new nil)
 				   (parent-cache nil))
   (unless *enable-updating-output*
     (return-from invoke-updating-output (funcall continuation stream)))
+  ()
   (let ((parent-cache (or parent-cache *current-updating-output* stream)))
     (with-accessors ((id-map id-map))
         parent-cache
@@ -460,7 +450,7 @@ record is stored.")
 	(cond ((or all-new (null record))
 	       ;; This case covers the outermost updating-output too.
 	       (with-new-output-record (stream
-					'standard-updating-output-record
+					record-type
 					*current-updating-output*
 					:unique-id unique-id
 					:id-test id-test
@@ -591,7 +581,7 @@ record is stored.")
 	   (setf (id-map pcache)
 		 (delete r (id-map pcache)
 			 :key #'car
-			 :test output-record-id-test r)))))
+			 :test (output-record-id-test r))))))
    record
    t))
 
