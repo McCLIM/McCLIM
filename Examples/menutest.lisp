@@ -23,42 +23,43 @@
 (in-package :menutest)
 
 (defun menutest ()
-  (loop for port in climi::*all-ports*
-      do (destroy-port port))
-  (setq climi::*all-ports* nil)
   (let ((frame (make-application-frame 'menutest)))
     (run-frame-top-level frame)
     frame))
-
-(define-command com-file ()
-  (format *error-output* "you pressed the File button~%")
-  (finish-output *error-output*))
-
-(define-command com-hello ()
-  (format *error-output* "you pressed the Hello button~%")
-  (finish-output *error-output*))
-
-(define-command com-hi ()
-  (format *error-output* "you pressed the Hi button~%")
-  (finish-output *error-output*))
-
-(make-command-table 'buffer-command-table
-		    :errorp nil
-		    :menu '(("Hello there" :command com-hello)
-			    ("Hi there" :command com-hi)))
-
-(make-command-table 'menubar-command-table
-		    :errorp nil
-		    :menu '(("Buffer" :menu buffer-command-table)
-			    ("File" :command com-file)))
 
 (define-application-frame menutest ()
   ()
   (:menu-bar menubar-command-table)
   (:panes
-   (screen :application))
+   (screen :application
+           :display-time nil
+           :text-style (make-text-style :sans-serif :roman :normal)))
   (:layouts
    (defaults (vertically () screen)))
   #+nil
   (:top-level (menutest-frame-top-level)))
+
+(define-menutest-command com-file ()
+  (format *standard-output* "You pressed the File button.~%")
+  (finish-output *standard-output*))
+
+(define-menutest-command com-hello ()
+  (format *standard-output* "You pressed the Hello button.~%")
+  (finish-output *standard-output*))
+
+(define-menutest-command com-hi ()
+  (format *standard-output* "You pressed the Hi button.~%")
+  (finish-output *standard-output*))
+
+(make-command-table 'buffer-command-table
+		    :errorp nil
+		    :menu '(("Hello there" :command com-hello)
+			    ("Hi there"    :command com-hi)))
+
+(make-command-table 'menubar-command-table
+		    :errorp nil
+		    :menu '(("Buffer" :menu buffer-command-table)
+			    ("File"   :command com-file)))
+
+
 
