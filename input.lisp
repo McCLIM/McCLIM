@@ -29,7 +29,9 @@
    ))
 
 (defmethod dispatch-event ((sheet standard-sheet-input-mixin) event)
-  (queue-event sheet event))
+  (if (typep event 'device-event)
+      (queue-event sheet event)
+    (handle-event sheet event)))
 
 (defmethod queue-event ((sheet standard-sheet-input-mixin) event)
   (with-slots (queue) sheet
