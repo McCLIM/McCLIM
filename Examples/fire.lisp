@@ -52,7 +52,6 @@
 
 (defmethod handle-event :after ((pane clim-internals::fire-pane) (event pointer-event))
   (declare (ignorable event))
-  (hef:debugf pane event)
   #+nil
   (let ((label (clim-internals::gadget-label (clim-internals::radio-box-current-selection
 					      (find-pane-named *application-frame* 'radio-box)))))
