@@ -7,7 +7,7 @@ McCLIM has been tested with CMUCL 18e.
 
    - CLX
    - Gray streams
-   - mk:defsystem
+   - mk:defsystem or ASDF
 
    If you don't, check the section "How to create a Lisp core file". 
 
@@ -17,6 +17,9 @@ McCLIM has been tested with CMUCL 18e.
    variables pcl::*defclass-times*, pcl::*defmethod-times*, and
    pcl::*defgeneric-times* have the value '(load eval).
 
+   *Note*: Either ASDF or mk:defsystem may be used. If both are present,
+   McCLIM will default to defining the system within ASDF.       
+
 2. Start Lisp
 
 3. Load the system definition file:
@@ -24,17 +27,36 @@ McCLIM has been tested with CMUCL 18e.
    (load "system.lisp")
 
 4. Compile and load the system:
-   (operate-on-system :clim :compile)  ;; Build CLIM
-   (operate-on-system :clim-clx :compile) ;; Build a backend
-   (operate-on-system :clim-examples :compile)
+  
+     Using mk:defsystem:       
+       (operate-on-system :clim :compile)          ;; Build CLIM
+       (operate-on-system :clim-clx :compile)      ;; Build a backend
+       (operate-on-system :clim-examples :compile) ;; Build examples
+
+     Using ASDF:
+       (asdf:oos 'asdf:compile-op :clim)
+       (asdf:oos 'asdf:compile-op :clim-clx)
+       (asdf:oos 'asdf:compile-op :clim-examples)
 
 The first two steps can be done in one step with the :clim-clx-user target:
-   (operate-on-system :clim-clx-user :compile)
 
-7. At a later date, after everything is compiled, load the compiled system:
+    mk:defsystem  (operate-on-system :clim-clx-user :compile)
+    ASDF          (asdf:oos 'asdf:compile-op :clim-clx-user)
 
-   (operate-on-system :clim-clx-user :load)
-   (operate-on-system :clim-examples :load)
+5. At a later date, after everything is compiled, load the compiled system:
+
+     Using mk:defsystem:
+       (operate-on-system :clim-clx-user :load)
+       (operate-on-system :clim-examples :load)
+
+     Using ASDF:
+       (asdf:oos 'asdf:load-op :clim-clx-user)
+       (asdf:oos 'asdf:load-op :clim-examples)
+
+     Note that when using ASDF, compiling the systems in stage 4 can be
+     omitted, as 'asdf:load-op will compile the systems automatically
+     if necessary.
+
 
 Running the demos
 -----------------
@@ -45,24 +67,18 @@ Running the demos
 
    This demo is self-explanatory.
 	
-   when you get tired of it, hit ^C in the Lisp listener.
-
 2. Run the menu demo
 
    (menutest::menutest)
 
    This demo is self-explanatory.
 	
-   when you get tired of it, hit ^C in the Lisp listener.
-
 3. Run the slider demo
 
    (clim-demo::colorslider)
 
    You should see three sliders on the left and a color area on the right. 
    Use the three sliders to adjust RGB values to obtain a color.
-
-   when you get tired of it, hit ^C in the Lisp listener.
 
 4. Some of the demos should be run using the function clim-demo::run-test:
    (clim-demo::run-test 'clim-demo::address-book)
@@ -72,7 +88,10 @@ Running the demos
    (run-frame-top-level (make-application-frame 'clim-demo::address-book)
    Any problems that result should be reported as bugs.]
 
-5. You will get much better performance after executing this form:
+5. Instructions for loading the McCLIM Listener are contained in 
+   McCLIM/Apps/Listener/README.
+
+6. You will get much better performance after executing this form:
    (setf mp::*idle-process* mp::*initial-process*)
 
 How to create a Lisp core file
