@@ -304,8 +304,8 @@
   (declare (type image image)
 	   (type (unsigned-byte 16) depth))
   (if (= depth 24)
-      (symbol-function (intern (format nil "COMPUTE-PIXEL-VALUE-~a-~a" (type-of image) depth) :clim-extensions))
-      (symbol-function (intern (format nil "COMPUTE-PIXEL-VALUE-~a" (type-of image)) :clim-extensions))))
+      (symbol-function (intern (format nil "COMPUTE-PIXEL-VALUE-~a-~a" (type-of image) depth) :clim-internals))
+      (symbol-function (intern (format nil "COMPUTE-PIXEL-VALUE-~a" (type-of image)) :clim-internals))))
 
 (defmacro medium-draw-translation-image (medium image transformation clipping-region)
   `(multiple-value-bind (mxx mxy myx myy tx ty) (climi::get-transformation ,transformation)
