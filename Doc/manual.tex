@@ -1650,10 +1650,10 @@ sample"))
 Finally, to be really fancy, we'll throw in a function to compute the
 standard deviation. You don't need to understand this, but the
 standard deviation is a measurement of how spread out or bunched
-together the numbers in the sample are. It's written as $\sigma$, and
+together the numbers in the sample are. It's called $s$, and
 it's computed like this:
 
-$$ \sigma = \sqrt{\frac{1}{N} \sum_{i=1}^N (x_i - \overline{x})^2} $$
+$$ s = \sqrt{\frac{1}{N-1} \sum_{i=1}^N (x_i - \overline{x})^2} $$
 
 \begin{alltt}
 (defgeneric standard-deviation (sample)
@@ -1664,7 +1664,7 @@ sample. This measures how spread out they are."))
   (let ((mean (mean sample)))
     (sqrt (/ (loop for x in (data sample)
                    sum (expt (- x mean) 2))
-             (sample-size sample)))))
+             (1- (sample-size sample))))))
 \end{alltt}
 
 This is all very nice, but when we inspect \cl{*my-sample*} all we see
@@ -1748,8 +1748,8 @@ to \cl{x=y} and we're done. Have a look and see. %It looks like this:
 % FIXME: SCREENSHOT
 
 Finally, for our amusement and further practice, we'll try to get some
-mathematical symbols. We could get $\sigma$ most easily by using a
-Lisp that supports Unicode, but we'll just use the letter S instead.
+mathematical symbols---in this case we'll just need $\overline{x}$. We
+can get this by printing an italic $x$ and drawing a line over it:
 
 \begin{alltt}
 (defun xbar (stream)
