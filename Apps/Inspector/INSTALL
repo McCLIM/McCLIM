@@ -1,0 +1,13 @@
+1. Start your Lisp system and make sure you have ASDF and McCLIM in
+   your core file.
+
+2. (asdf:operate 'asdf:load-op :inspector)
+
+3. Try something like:
+
+   (inspector::inspector (clim:make-application-frame 'inspector::inspector :obj 20))
+
+   in order to inspect the inspector pane.
+
+4. Lef-click on occurrences of objects or of "...".
+
