@@ -551,7 +551,7 @@
     (error "COPY-AREA on a stream is not implemented")))
 
 (defmacro with-output-to-pixmap ((medium-var sheet &key width height) &body body)
-  `(let* ((pixmap (allocate-pixmap ,sheet ,width ,height))
+  `(let* ((pixmap (allocate-pixmap ,sheet ,width ,height)) ; XXX size might be unspecified -- APD
 	  (,medium-var (make-medium (port ,sheet) pixmap))
 	  (old-medium (sheet-medium ,sheet)))
      (setf (slot-value pixmap 'medium) ,medium-var) ; hmm, [seems to work] -- BTS

@@ -546,9 +546,9 @@
 
 ;;;;
 
-(defmethod invoke-with-special-choices (continuation (sheet clx-medium))
-  ;; CLX-MEDIUM right here? --GB
-  (with-double-buffering (sheet)
-    (funcall continuation sheet)))
+(defmethod invoke-with-special-choices (continuation (medium clx-medium))
+  (let ((sheet (medium-sheet medium)))
+    (with-double-buffering (sheet)
+      (funcall continuation (sheet-medium sheet)))))
 
 ;;;;

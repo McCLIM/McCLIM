@@ -221,6 +221,7 @@
 
 (defmethod realize-mirror ((port clx-port) (sheet top-level-sheet-pane))
   (let ((q (compose-space sheet)))
+    #+nil ; SHEET and its descendants are grafted, but unmirrored :-( -- APD
     (allocate-space sheet
                     (space-requirement-width q)
                     (space-requirement-height q))

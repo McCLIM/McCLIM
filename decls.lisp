@@ -240,23 +240,6 @@ rendered on MEDIUM with the style LINE-STYLE."))
 
 ;;;
 
-(defmacro with-special-choices ((sheet) &body body)
-  "Macro for optimizing drawing with graphical system dependant mechanisms."
-  (let ((fn (gensym "FN.")))
-    `(labels ((,fn (,sheet)
-               ,@body))
-      (declare (dynamic-extent #',fn))
-      (invoke-with-special-choices #',fn ,sheet))))
-
-(defgeneric invoke-with-special-choices (continuation sheet))
-
-;; fall back, where to put this?
-
-(defmethod invoke-with-special-choices (continuation (sheet T))
-  (funcall continuation sheet))
-
-;;;
-
 ;; Used in stream-input.lisp, defined in frames.lisp
 (defgeneric frame-event-queue (frame))
 
