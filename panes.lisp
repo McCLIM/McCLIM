@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.100 2002/09/14 02:53:10 brian Exp $
+;;; $Id: panes.lisp,v 1.101 2002/09/14 04:02:36 brian Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -1577,14 +1577,10 @@ During realization the child of the spacing will have as cordinates
     (if viewport
         (let ((req
                ; v-- where does this requirement come from?
-               #+nil
                (make-space-requirement
-                :width 300 :height 300 :max-width +fill+ :max-height +fill+
+                :width 200 :height 200 :max-width +fill+ :max-height +fill+
                 :min-width 30
-                :max-height 30)
-               #-nil
-               (make-space-requirement :min-height 0 :max-height +fill+
-                                       :min-width  0 :max-width  +fill+)))
+                :min-height 30)))
           (when vscrollbar
             (setq req (space-requirement+ req
                         (space-requirement+* (compose-space vscrollbar)
