@@ -137,14 +137,27 @@
 	(medium-transform-position medium left top)
       (multiple-value-bind (x2 y2)
 	  (medium-transform-position medium right bottom)
-	(if (< x2 x1)
-	    (rotatef x1 x2))
-	(if (< y2 y1)
-	    (rotatef y1 y2))
-	(xlib:draw-rectangle mirror gc
-			     (round x1) (round y1)
-			     (round (- x2 x1)) (round (- y2 y1))
-			     filled)))))
+        (if (rectilinear-transformation-p (medium-transformation medium))
+            (progn
+              (if (< x2 x1)
+                  (rotatef x1 x2))
+              (if (< y2 y1)
+                  (rotatef y1 y2))
+              (xlib:draw-rectangle mirror gc
+                                   (round x1) (round y1)
+                                   (round (- x2 x1)) (round (- y2 y1))
+                                   filled))
+            (multiple-value-bind (x1* y1*)
+                (medium-transform-position medium right top)
+              (multiple-value-bind (x2* y2*)
+                  (medium-transform-position medium left bottom)
+                (xlib:draw-lines mirror gc
+                                 (list (round x1) (round y1)
+                                       (round x1*) (round y1*)
+                                       (round x2) (round y2)
+                                       (round x2*) (round y2*)
+                                       (round x1) (round y1))
+                                 :fill-p filled))))))))
 
 (defmethod medium-draw-ellipse* ((medium clx-medium) center-x center-y
 				 radius-1-dx radius-1-dy radius-2-dx radius-2-dy
@@ -158,12 +171,12 @@
           (medium-transform-distance medium radius-1-dx radius-1-dy)
         (multiple-value-bind (dx2 dy2)
             (medium-transform-distance medium radius-2-dx radius-2-dy)
-          (let ((d1 (+ dx1 dy1))
-                (d2 (+ dx2 dy2)))
+          (let ((dx (abs (+ dx1 dx2)))
+                (dy (abs (+ dy1 dy2))))
             (xlib:draw-arc mirror gc
-                           (round (- x d1)) (round (- y d2))
-                           (round (* d1 2)) (round (* d2 2))
-                           start-angle end-angle
+                           (round (- x dx)) (round (- y dy))
+                           (round (* dx 2)) (round (* dy 2))
+                           start-angle (- end-angle start-angle)
                            filled)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
