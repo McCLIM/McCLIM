@@ -24,6 +24,7 @@
 		#:port-motion-hints
                 #:port-force-output
                 #:set-port-keyboard-focus
+                #:set-sheet-pointer-cursor
                 ;;
                 #:port-set-mirror-region
                 #:port-set-mirror-transformation

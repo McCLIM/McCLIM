@@ -309,11 +309,16 @@
 (defgeneric port-ungrab-pointer (port pointer sheet)
   (:documentation "Ungrab the specified pointer, for implementing TRACKING-POINTER."))
 
-(defmethod port-grab-pointer (port pointer sheet)
+(defmethod port-grab-pointer ((port basic-port) pointer sheet)
   (declare (ignorable port pointer sheet))
   (warn "Port ~A has not implemented pointer grabbing." port))
 
-(defmethod port-ungrab-pointer (port pointer sheet)
+(defmethod port-ungrab-pointer ((port basic-port) pointer sheet)
   (declare (ignorable port pointer sheet))
   (warn "Port ~A  has not implemented pointer grabbing." port))
 
+(defgeneric set-sheet-pointer-cursor (port sheet cursor)
+  (:documentation "Sets the cursor associated with SHEET. CURSOR is a symbol, as described in the Franz user's guide."))
+
+(defmethod set-sheet-pointer-cursor ((port basic-port) sheet cursor)
+  (warn "Port ~A has not implemented sheet pointer cursors." port))

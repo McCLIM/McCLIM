@@ -1621,6 +1621,9 @@
   ;; stream-redisplayable-p
   ;; stream-restore-input-focus
 
+  ;;; Vendor extensions which are exported from the CLIM package
+  (:export
+   #:sheet-pointer-cursor)
   
    ;;; x11 color names - some are not in the spec - mikemac
   (:export

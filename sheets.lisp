@@ -161,6 +161,9 @@ sheet-supports-only-one-child error to be signalled."))
 			  :initform nil)
    (device-region :type (or null region)
 		  :initform nil)
+   (pointer-cursor :accessor sheet-pointer-cursor
+                   :initarg  :pointer-cursor
+                   :initform :default)                   
    (enabled-p :type boolean
 	      :initarg :enabled-p
               :initform t
@@ -467,6 +470,9 @@ sheet-supports-only-one-child error to be signalled."))
   (declare (ignore region))
   (note-sheet-region-changed sheet)
   (invalidate-cached-regions sheet))
+
+(defmethod (setf sheet-pointer-cursor) :after (cursor (sheet basic-sheet))
+  (set-sheet-pointer-cursor (port sheet) sheet cursor))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
