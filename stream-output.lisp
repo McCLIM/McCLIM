@@ -349,22 +349,14 @@ than one line of output."))
 
 (defmethod stream-string-width ((stream standard-extended-output-stream) string
 				&key (start 0) (end nil) (text-style nil))
-  (if (null text-style)
-      (setq text-style (medium-text-style (sheet-medium stream))))
-  (cond
-   ((stringp string)
-    (if (null end)
-	(setq end (length string)))
-    (loop for i from start below end
-	  for char = (aref string i)
-	  sum (or (stream-character-width stream char :text-style text-style)
-		  0) into line-width
-	  if (eql char #\Newline)
-	  maximize line-width into max-line-width
-	  finally (return (values line-width max-line-width))))
-   (t
-    (let ((width (stream-character-width stream string :text-style text-style)))
-      (values width width)))))
+  (with-sheet-medium (medium stream)
+    (if (null text-style)
+        (setq text-style (medium-text-style (sheet-medium stream))))
+    (multiple-value-bind (total-width total-height final-x final-y baseline)
+        (text-size medium string :text-style text-style
+                   :start start :end end)
+      (declare (ignore total-height final-y baseline))
+      (values final-x total-width))))
 
 (defmethod stream-text-margin ((stream standard-extended-output-stream))
   (with-slots (margin) stream
