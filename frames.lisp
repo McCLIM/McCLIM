@@ -100,27 +100,9 @@
    (hilited-presentation :initform nil
 			 :initarg :hilited-presentation
 			 :accessor frame-hilited-presentation)
-   ;; For context-sensitive input
-   (intercept-events :initform nil)
-   (intercept-event-queue :initform (make-instance 'standard-event-queue)
+   (event-queue :initform (make-instance 'standard-event-queue)
 			  :initarg :intercept-event-queue
-			  :accessor frame-intercept-event-queue)))
-
-(defmethod frame-intercept-events ((frame application-frame))
-  (without-scheduling
-    (slot-value frame 'intercept-events)))
-
-(defmethod (setf frame-intercept-events) (newval (frame application-frame))
-  (without-scheduling
-    (setf (slot-value frame 'intercept-events) newval)))
-
-;;; XXX Should this check that the frame isn't intercepting events, so
-;;; it will terminate?
-(defmethod cleanup-frame-events ((frame application-frame))
-  (loop with queue = (frame-intercept-event-queue frame)
-	for event = (event-queue-read-no-hang queue)
-	while event
-	do nil #+ignore (dispatch-event frame event)))
+			  :accessor frame-event-queue)))
 
 (defun application-frame-p (x)
   (typep x 'application-frame))
@@ -250,6 +232,15 @@ FRAME-EXIT condition."))
     (if (funcall predicate pane)
  	(return pane)
       (setq panes (nconc panes (copy-list (sheet-children pane)))))))
+
+(defun find-pane-if (predicate panes)
+  "Returns a pane satisfying PREDICATE in the forest growing from PANES"
+  (loop for pane in panes
+	do (map-over-sheets #'(lambda (p)
+				(when (funcall predicate p)
+				  (return-from find-pane-if p)))
+			    pane)
+	finally (return nil)))
 
 (defun find-pane-of-type (panes type)
   (find-pane-if #'(lambda (pane) (typep pane type)) panes))
@@ -588,7 +579,7 @@ FRAME-EXIT condition."))
 
 (defmethod frame-input-context-button-press-handler
     ((frame standard-application-frame) stream button-press-event)
-  (distribute-event (port stream) button-press-event))
+  nil)
 
 (defmethod frame-input-context-track-pointer
     ((frame standard-application-frame)
@@ -600,7 +591,7 @@ FRAME-EXIT condition."))
 (defmethod frame-input-context-track-pointer
     ((frame standard-application-frame) input-context stream event)
   (declare (ignore input-context))
-  (distribute-event (port stream) event))
+  nil)
 
 (defmethod frame-input-context-track-pointer :before
     ((frame standard-application-frame) input-context stream event)
@@ -623,3 +614,14 @@ FRAME-EXIT condition."))
 	    (highlight-presentation-1 presentation
 				      stream
 				      :highlight)))))
+
+(defun simple-event-loop ()
+  "An simple event loop for applications that want all events to be handled by
+ handle-event methods"
+  (if *multiprocessing-p*
+      (let ((queue (frame-event-queue *application-frame*)))
+	(loop for event = (event-queue-read queue)
+	      do (handle-event (event-sheet event) event)))
+      (let ((port (port *application-frame*)))
+	(loop
+	 (process-next-event port)))))

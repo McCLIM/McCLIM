@@ -40,6 +40,12 @@
   (declare (ignore region))
   nil)
 
+(defmethod repaint-sheet ((sheet basic-sheet) region)
+  (map-over-sheets-overlapping-region #'(lambda (s)
+					  (handle-repaint s region))
+				      sheet
+				      region))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; repaint protocol classes
@@ -50,10 +56,18 @@
 
 (defclass standard-repainting-mixin () ())
 
+(defmethod dispatch-event
+    ((sheet standard-repainting-mixin) (event window-repaint-event)) 
+  (queue-repaint sheet event))
+
 (defmethod dispatch-repaint ((sheet standard-repainting-mixin) region)
   (queue-repaint sheet (make-instance 'window-repaint-event
                                       :sheet sheet
                                       :region region)))
+
+(defmethod handle-event ((sheet standard-repainting-mixin)
+			 (event window-repaint-event))
+  (handle-repaint sheet (window-event-region event)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -61,8 +75,16 @@
 
 (defclass immediate-repainting-mixin () ())
 
+(defmethod dispatch-event
+    ((sheet immediate-repainting-mixin) (event window-repaint-event))
+  (handle-repaint sheet (window-event-region event)))
+
 (defmethod dispatch-repaint ((sheet immediate-repainting-mixin) region)
   (handle-repaint sheet region))
+
+(defmethod handle-event ((sheet immediate-repainting-mixin)
+			 (event window-repaint-event))
+  (handle-repaint sheet (window-event-region event)))
 
 #+NIL
 (defmethod handle-repaint ((sheet immediate-repainting-mixin) region)
@@ -83,14 +105,21 @@
                                       :sheet sheet
                                       :region region)))
 
+;;; I know what the spec says about sheet-mute-repainting-mixin, but I don't
+;;; think it's right; "repaint-sheet that does nothing" makes no sense.
+;;; -- moore
+#+nil
 (defmethod repaint-sheet ((sheet sheet-mute-repainting-mixin) region)
   (declare (ignorable sheet region))
   (format *debug-io* "repaint ~S~%" sheet)
   (values))
 
+(defmethod handle-repaint ((sheet sheet-mute-repainting-mixin) region)
+  (declare (ignore region))
+  nil)
 
-(defmethod dispatch-event :around ((sheet immediate-repainting-mixin) (event window-repaint-event))
-  (dispatch-repaint sheet (window-event-region event)))
-
-
-
+(defclass clim-repainting-mixin
+    (#+clim-mp standard-repainting-mixin #-clim-mp immediate-repainting-mixin)
+  ()
+  (:documentation "Internal class that implements repainting protocol based on
+  whether or not multiprocessing is supported."))

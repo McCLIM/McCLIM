@@ -114,26 +114,25 @@ of size ~S"
   (incf (gap buf) len)
   (decf (gap-size buf) len))
 
-(defgeneric insert (vector thing &optional position &key))
+(defgeneric insert (vector thing &key position))
 
-(defmethod insert ((buf flexivector) (c character) &optional (position 0)
-		    &key)
+(defmethod insert ((buf flexivector) (c character) &key (position 0))
   (ensure-point-gap buf position 1)
   (setf (schar (store buf) position) c)
   (update-flexivector-for-insertion buf 1)
   buf)
 
-(defmethod insert ((buf flexivector) (str string) &optional (position 0)
-		    &key (start 0) (end (length str)))
+(defmethod insert ((buf flexivector) (str string)
+		    &key (position 0) (start 0) (end (length str)))
   (let ((len (length str)))
     (ensure-point-gap buf position len)
     (replace (store buf) str :start1 position :start2 start :end2 end)
     (update-flexivector-for-insertion buf len))
   buf)
 
-(defgeneric delete-char (buf &optional n position))
+(defgeneric delete-char (buf &optional n &key position))
 
-(defmethod delete-char ((buf flexivector)  &optional (n 1) (position 0))
+(defmethod delete-char ((buf flexivector)  &optional (n 1) &key (position 0))
   (ensure-point-gap buf position 0)
   (if (> n 0)
       (progn
@@ -174,10 +173,10 @@ of size ~S"
 	       :end2 (+ end2 (gap-size buf))))
     string)
 
-(defgeneric position-forward (buffer char position &optional bound))
+(defgeneric position-forward (buffer char &key position bound))
 
-(defmethod position-forward ((buf flexivector) char position
-			     &optional(bound (size buf)))
+(defmethod position-forward ((buf flexivector) char
+			     &key (position 0) (bound (size buf)))
   (loop for pos from position below (min bound (gap buf))
 	do (when (eql char (schar (store buf) pos))
 	     (return-from position-forward pos)))
@@ -190,11 +189,11 @@ of size ~S"
 	     (return-from position-forward (- pos (gap-size buf)))))
   nil)
 
-(defgeneric position-backward (buffer char position &optional bound))
+(defgeneric position-backward (buffer char &key position bound))
 
 
-(defmethod position-backward ((buf flexivector) char position
-			      &optional (bound 0))
+(defmethod position-backward ((buf flexivector) char
+			      &key (position (1- (size buf))) (bound 0))
   ;; First loop only happens when (> position gap)
   (loop for pos from (1- (+ position (gap-size buf))) downto (+ (gap buf)
 								(gap-size buf))

@@ -39,7 +39,7 @@
     'command-line-read-remaining-arguments-for-partial-command)
    (prompt "Command: "))
   (declare (ignore command-parser command-unparser partial-command-parser prompt))
-  (loop (event-read (climi::frame-pane frame))))
+  (clim-extensions:simple-event-loop))
      
 (define-command com-file ()
   (format *error-output* "you pressed the File button~%")

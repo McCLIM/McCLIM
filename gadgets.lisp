@@ -159,7 +159,7 @@
 
    ;; These are directly borrowed from BASIC-PANE I am still not sure
    ;; about the exact class hierarchy to implement. --GB
-
+#|
    (foreground       :initarg :foreground
                      :initform +black+
                      :reader pane-foreground)
@@ -177,7 +177,8 @@
    (align-y          :initarg :align-y
                      :type (member :top :center :bottom)
                      :initform :top     ;??
-                     :reader pane-align-y) )
+                     :reader pane-align-y)|# )
+
   )
 
 ;;;
@@ -267,18 +268,20 @@
 ||#
 
 (defclass basic-gadget (permanent-medium-sheet-output-mixin
-                        sheet-parent-mixin
                         sheet-leaf-mixin
-                        ;; I am also not that lucky with mirrored-sheet-mixin here.
-                        ;; What about backends that do have mirrors? --GB
-                        mirrored-sheet-mixin
                         gadget-color-mixin
-                        immediate-sheet-input-mixin
-                        immediate-repainting-mixin
+			;; These are inherited from pane, via
+			;; clim-sheet-input-mixin and clim-repainting-mixin 
+                        ;; immediate-sheet-input-mixin
+                        ;; immediate-repainting-mixin
+			basic-pane
                         gadget
                         )
-  ;; Half-baked attempt to be compatible with Lispworks.
-  ())
+  ;; Half-baked attempt to be compatible with Lispworks. ??? -moore
+  ;; Inherited from basic-pane with different defaults.
+  ((foreground  :initform +black+)
+   (background :initform +white+)))
+
 
 ;; Where is this standard-gadget from? --GB
 (defclass standard-gadget (basic-gadget)
@@ -1103,7 +1106,6 @@ and must never be nil."))
                              changing-label-invokes-layout-protocol-mixin
                              arm/disarm-repaint-mixin
                              enter/exit-arms/disarms-mixin
-                             standard-space-requirement-options-mixin
                              standard-gadget-pane)
   ((pressedp          :initform nil)
    (show-as-default-p :type boolean
@@ -1171,7 +1173,6 @@ and must never be nil."))
                               ;; event handling:
                               enter/exit-arms/disarms-mixin
                               ;; other
-                              standard-space-requirement-options-mixin
                               standard-gadget-pane)
   ((indicator-type :type (member '(:one-of :some-of))
 		   :initarg :indicator-type
@@ -1257,8 +1258,7 @@ and must never be nil."))
 ;;;  30.4.3 The concrete menu-button Gadget
 
 (defclass menu-button-pane (menu-button
-			    standard-gadget-pane
-			    standard-space-requirement-options-mixin)
+			    standard-gadget-pane)
   ()
   (:default-initargs
     :background *3d-normal-color*
@@ -1297,7 +1297,7 @@ and must never be nil."))
 ;;; ------------------------------------------------------------------------------------------
 ;;;  30.4.4 The concrete scroll-bar Gadget
 
-(defclass scroll-bar-pane (basic-pane scroll-bar 3D-border-mixin)
+(defclass scroll-bar-pane (3D-border-mixin scroll-bar)
   ((event-state :initform nil)
    (drag-dy :initform nil))
   (:default-initargs :value 0

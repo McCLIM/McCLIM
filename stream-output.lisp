@@ -68,45 +68,59 @@
 (defun cursorp (x)
   (typep x 'cursor))
 
-(defmethod print-object ((cursor cursor) stream)
+(defclass cursor-mixin ()
+  ((sheet :initarg :sheet
+	  :reader cursor-sheet)
+   (x :initform 0)
+   (y :initform 0)
+   (width :initform 8)
+   (visibility :initform nil
+	       :accessor cursor-visibility)))
+
+;;; Must be implemented by subclasses of cursor-mixin
+
+(defgeneric cursor-height (cursor))
+
+(defmethod print-object ((cursor cursor-mixin) stream)
   (with-slots (x y) cursor
     (print-unreadable-object (cursor stream :type t :identity t)
       (format stream "~D ~D " x y))))
 
-(defmethod (setf cursor-visibility) :around (nv (cursor cursor))
+(defmethod (setf cursor-visibility) :around (nv (cursor cursor-mixin))
   (let ((ov (slot-value cursor 'visibility)))
     (prog1
 	(call-next-method)
       (when (not (eq ov nv))
 	(flip-screen-cursor cursor)))))
 
-(defmethod cursor-position ((cursor cursor))
+(defmethod cursor-position ((cursor cursor-mixin))
   (with-slots (x y) cursor
     (values x y)))
 
 (defgeneric* (setf cursor-position) (nx ny cursor))
 
-(defmethod* (setf cursor-position) (nx ny (cursor cursor))
+(defmethod* (setf cursor-position) (nx ny (cursor cursor-mixin))
   (with-slots (x y visibility) cursor
     (if visibility
 	(flip-screen-cursor cursor))
-    (setq x nx
-	  y ny)
+    (multiple-value-prog1
+	(setf (values x y) (values nx ny)))
     (if visibility
 	(flip-screen-cursor cursor))))
 
-(defmethod flip-screen-cursor ((cursor cursor))
+(defmethod flip-screen-cursor ((cursor cursor-mixin))
   (with-slots (x y sheet width) cursor
-    (with-slots (height) sheet
+    (let ((height (cursor-height cursor)))
       (draw-rectangle* (sheet-medium (cursor-sheet cursor))
 				x y
 				(+ x width) (+ y height)
 				:filled t
 				:ink +flipping-ink+))))
 
-(defmethod display-cursor ((cursor cursor) state)
+
+(defmethod display-cursor ((cursor cursor-mixin) state)
   (with-slots (x y sheet width) cursor
-    (with-slots (height) sheet
+    (let ((height (cursor-height cursor)))
       (case state
 	(:draw (draw-rectangle* (sheet-medium (cursor-sheet cursor))
 				x y
@@ -122,10 +136,11 @@
 
 ;;; Standard-Text-Cursor class
 
-(defclass standard-text-cursor (cursor)
-  (
-   )
-  )
+(defclass standard-text-cursor (cursor-mixin cursor)
+  ())
+
+(defmethod cursor-height ((cursor standard-text-cursor))
+  (slot-value (cursor-sheet cursor) 'height))
 
 
 

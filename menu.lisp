@@ -100,9 +100,6 @@
 (defmethod handle-event ((pane menu-button-pane) (event pointer-button-press-event))
   (arm-branch pane))
 
-(defmethod handle-event ((pane menu-button-pane) (event window-repaint-event))
-  (dispatch-repaint pane (sheet-region pane)))
-
 (defmethod handle-event ((pane menu-button-pane) (event pointer-ungrab-event))
   (destroy-substructure (menu-root pane)))
 

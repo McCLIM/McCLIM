@@ -79,7 +79,7 @@
 					'command-line-read-remaining-arguments-for-partial-command)
 				       (prompt "Command: "))
   (declare (ignore command-parser command-unparser partial-command-parser prompt))
-  (loop (event-read (climi::frame-pane frame))))
+  (clim-extensions:simple-event-loop))
 
 (define-application-frame colorslider () ()
   (:panes

@@ -146,18 +146,11 @@
     (cond
      ((null event) nil)
      ((eq event :timeout) (values nil :timeout))
-
      (t
-      (let* ((focus-sheet (port-keyboard-input-focus port))
-	     (sheet-frame (and focus-sheet (pane-frame focus-sheet))))
-	(if (and (typep event 'device-event)
-		 sheet-frame 
-		 (frame-intercept-events sheet-frame))
-	    (event-queue-append (frame-intercept-event-queue sheet-frame)
-				event)
-	    (distribute-event port event)))
+      (distribute-event port event)
       t))))
 
+;;; Called in the application frame process.
 (defmethod port-wait-on-event-processing ((port basic-port) &key wait-function timeout
 					  ((:event-count old-count) nil))
   (declare (ignorable wait-function))
@@ -165,20 +158,27 @@
       (with-slots (event-count) port
 	(let ((old-event-count (or old-count event-count))
 	      (flag nil))
-	  (process-wait-with-timeout "Wait for event" timeout
-				     #'(lambda ()
-					 (when (not (= old-event-count event-count))
-					   (setq flag t))))
-	  (if flag
-	      event-count
-	    (values nil :timeout))))
-    (process-next-event port :wait-function wait-function :timeout timeout)))
+	  (flet ((wait-fn ()
+		   (when (not (eql old-event-count event-count))
+		     (setq flag t))))
+	    (if timeout
+		(process-wait-with-timeout "Wait for event" timeout #'wait-fn)
+		(process-wait "Wait for event" #'wait-fn))
+	    (if flag
+		event-count
+		(values nil :timeout)))))
+      (multiple-value-bind (result reason)
+	  (process-next-event port
+			      :wait-function wait-function
+			      :timeout timeout)
+	(values (and result event-count) reason))))
+
   
 (defmethod distribute-event ((port basic-port) event)
   (cond
    ((typep event 'keyboard-event)
-    (dispatch-event (or (port-keyboard-input-focus port)
-			(event-sheet event)) event))
+    (dispatch-event (or (port-keyboard-input-focus port) (event-sheet event))
+		    event))
    ((typep event 'window-event)
 ;    (dispatch-event (window-event-mirrored-sheet event) event))
     (dispatch-event (event-sheet event) event))
@@ -186,7 +186,8 @@
     (dispatch-event (event-sheet event) event))
    ((typep event 'window-manager-delete-event)
     ;; not sure where this type of event should get sent - mikemac
-    (queue-event (frame-standard-input (pane-frame (event-sheet event))) event))
+    ;; This seems fine; will be handled by the top-level-sheet-pane - moore
+    (dispatch-event (event-sheet event) event))
    ((typep event 'timer-event)
     (error "Where do we send timer-events?"))
    (t

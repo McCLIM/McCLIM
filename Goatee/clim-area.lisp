@@ -22,8 +22,21 @@
 ;;; to have the idea of incremental redisplay (update screen directly) and
 ;;; start over from scratch.
 
+;;; cheat and use this McCLIM internal class :)
+(defclass screen-area-cursor (clim-internals::cursor-mixin)
+  ((screen-line :accessor screen-line :initarg :screen-line)))
 
-(defclass screen-line (editable-area-line displayed-output-record)
+(defmethod* (setf cursor-position) (nx ny (cursor screen-area-cursor))
+  (when (cursor-visibility cursor)
+    (error "screen-area-cursor ~S must not be visible when position is
+  set"
+	   cursor))
+  (call-next-method))
+
+(defmethod cursor-height ((cursor screen-area-cursor))
+  (ascent (screen-line cursor)))
+
+(defclass screen-line (editable-area-line displayed-output-record rectangle)
   ((current-contents :accessor current-contents :initarg :current-contents
 		     :initform (make-array '(1)
 					   :adjustable t
@@ -36,7 +49,8 @@ be, on the screen")
    (x :initarg :x-position :initform 0)
    (y :initarg :y-position :initform 0)
    (parent :initarg :parent :initform nil :reader output-record-parent)
-   (width :accessor width :initarg :width)))
+   (width :accessor width :initarg :width)
+   (cursor :accessor cursor :initarg :cursor :initform nil)))
 
 (defmethod output-record-position ((record screen-line))
   (values (slot-value record 'x) (slot-value record 'y)))
@@ -51,8 +65,17 @@ be, on the screen")
     (values x
 	    y
 	    (+ x (slot-value record 'width))
-	    (+ y (slot-value record 'ascent) (slot-value record
-							 'decent)))))
+	    (+ y (slot-value record 'ascent) (slot-value record 'decent)))))
+
+;;; Implement the rectangle protocol; now region stuff should work.
+(defmethod rectange-edges* ((record screen-line))
+  (bounding-rectange* record))
+
+(defmethod map-over-output-records (function (record screen-line)
+				    &optional (x-offset 0) (y-offset 0)
+				    &rest function-args)
+  (declare (ignore function x-offset y-offset function-args))
+  nil)
 
 (defmethod map-over-output-records-overlapping-region
 	   (function (line screen-line) region
@@ -73,15 +96,24 @@ be, on the screen")
 	    (text-style (output-record-parent record)))
 	   ((medium-transformation medium)
 	    (make-translation-transformation x-offset y-offset)))
+      (when (and (cursor record)
+		 (cursor-visibility (cursor record))
+	(climi::display-cursor cursor :erase)))
       (multiple-value-bind (x y) (output-record-position record)
 	(declare (ignore y))
 	;; Is this necessary?
 	(with-output-recording-options (stream :record nil)
-	  (draw-text* stream (current-contents record) x baseline))))))
+	  (draw-text* stream (current-contents record)
+		      x (slot-value record 'baseline))))
+      (when (and (cursor record)
+		 (cursor-visibility (cursor record))
+	(climi::flip-screen-cursor cursor))))))
 
 (defclass simple-screen-area (editable-area output-record)
   ((text-style :accessor text-style :initarg :text-style)
-   (vertical-spacing :accessor vertical-spacing :initarg :vertical-spacing)))
+   (vertical-spacing :accessor vertical-spacing :initarg :vertical-spacing)
+   (cursor :accessor cursor)
+   (stream :accessor stream :initarg :stream)))
 
 (defmethod initialize-instance :after ((area simple-screen-area)
 				       &key stream)
@@ -99,12 +131,14 @@ be, on the screen")
   (loop for line = (lines area) then (next line)
 	while line
 	collect line))
-(defmethod map-over-output-records-containing-position
-    (fn (area simple-screen-area) x y &optional (x-offset 0) (y-offset 0)
-	&rest fn-args)
-  (loop for line = (lines area)
+
+(defmethod map-over-output-records (function (record simple-screen-area)
+				    &optional (x-offset 0) (y-offset 0)
+				    &rest function-args)
+  (declare (ignore x-offset y-offset))
+  (loop for line = (lines area) then (next line)
 	while line
-	do (when region-contains-position-p)))
+	do (apply function record function-args)))
 
 (defmethod initialize-area-from-buffer ((area simple-screen-area) buffer)
   ;; XXX Stupid, but eventually will be different per line.
@@ -132,15 +166,16 @@ be, on the screen")
 		  do (dbl-insert-after area-line prev-area-line))))))
   area)
 
-(defmethod redisplay ((area clim-area) stream)
-  (loop for line = (lines area) then (next line)
-	do (multiple-value-bind (line-changed dimensions-changed)
-	       (maybe-update-line-dimensions line)
-	     (declare (ignore dimensions-changed)) ;XXX
-	     (when line-changed
-	       (redisplay-line line stream)))))
+(defmethod redisplay ((area clim-area))
+  (let ((stream (stream area)))
+    (loop for line = (lines area) then (next line)
+	  do (multiple-value-bind (line-changed dimensions-changed)
+		 (maybe-update-line-dimensions line)
+	       (declare (ignore dimensions-changed)) ;XXX
+	       (when line-changed
+		 (redisplay-line line stream))))))
 
-(defmethod compare-contents ((line screen-line))
+(defmethod get-line-differences ((line screen-line))
   (with-slots (current-contents
 	       buffer-line)
       line
@@ -156,7 +191,7 @@ be, on the screen")
 					     (eql i min-length))
 					i)))
 	(when unchanged
-	  (return-from compare-contents
+	  (return-from get-line-differences
 	    (values t current-length 0 line-length 0)))
 	;; Determine the common string at the line end
 	(loop for i downfrom (1- current-length) to 0
@@ -187,66 +222,95 @@ be, on the screen")
 ;;; position, then erase and display the middle text.
 (defmethod redisplay-line ((line screen-line) stream)
   (let* ((medium (sheet-medium stream))
-	 (style (text-style (output-record-parent line))))
-    (with-slots (current-contents ascent descent baseline)
+	 (style (text-style (output-record-parent line)))
+	 (cursor-visible nil))
+    (with-slots (current-contents ascent descent baseline cursor)
 	line
       (multiple-value-bind (unchanged
 			    current-unchanged-from-start
 			    current-unchanged-from-end
 			    line-unchanged-from-start
 			    line-unchanged-from-end)
-	  (compare-contents line)
-	(when unchanged
-	  (return-from redisplay-line nil))
-	(let* ((start-width (if (> current-unchanged-from-start 0)
-				(text-size medium current-contents
-					   :text-style style
-					   :end current-unchanged-from-start)
-				0))
-	       (line-end (text-size medium current-contents))
-	       (current-unchanged-left
-		(if (< current-unchanged-from-end
-		       (length current-contents))
-		    (text-size medium current-contents
-			       :text-style style
-			       :end current-unchanged-from-end)
-		    line-end))
-	       (new-line-size (size line)))
-	  ;; Having all we need from the old contents of the line, update
-	  ;; with the new contents
-	  (when (> new-line-size (car (array-dimensions current-contents)))
-	    (adjust-array current-contents (list new-line-size)))
-	  (setf (fill-pointer current-contents) new-line-size)
-	  (flexivector-string-into line current-contents)
-	  (let* ((new-line-end (text-size medium current-contents))
-		 (new-unchanged-left
-		  (if (< line-unchanged-from-end (length current-contents))
+	  (get-line-differences line)
+	(when (and cursor (setq cursor-visible (cursor-visibility cursor)))
+	  (setf (cursor-visibility cursor) nil))
+	(unless unchanged
+	  (let* ((start-width (if (> current-unchanged-from-start 0)
+				  (text-size medium current-contents
+					     :text-style style
+					     :end current-unchanged-from-start)
+				  0))
+		 (line-end (text-size medium current-contents))
+		 (current-unchanged-left
+		  (if (< current-unchanged-from-end (length current-contents))
 		      (text-size medium current-contents
 				 :text-style style
-				 :end line-unchanged-from-end)
-		      new-line-end)))
-	    (multiple-value-bind (x y)
-		(output-record-position line)
-	      (when (and (not (eql line-unchanged-from-end new-line-size ))
-			 (not (eql current-unchanged-left new-unchanged-left)))
-		(copy-area medium
-			   (+ current-unchanged-left x)
-			   y
-			   (- line-end current-unchanged-left)
-			   (- descent ascent)
-			   (+ new-unchanged-left x)
-			   y)
-		;; If the line is now shorter, erase the old end of line.
-		(erase-line line medium new-line-end line-end)
-		;; Erase the changed middle
-		(erase-line line medium start-width new-unchanged-left)
-		;; Draw the middle
-		(when (< line-unchanged-from-start line-unchanged-from-end)
-		  (draw-text* medium current-contents
-			      (+ x start-width) baseline
-			      :start line-unchanged-from-start
-			      :end line-unchanged-from-end))))))))))
+				 :end current-unchanged-from-end)
+		      line-end))
+		 (new-line-size (size line)))
+	    ;; Having all we need from the old contents of the line, update
+	    ;; with the new contents
+	    (when (> new-line-size (car (array-dimensions current-contents)))
+	      (adjust-array current-contents (list new-line-size)))
+	    (setf (fill-pointer current-contents) new-line-size)
+	    (flexivector-string-into line current-contents)
+	    (let* ((new-line-end (text-size medium current-contents))
+		   (new-unchanged-left
+		    (if (< line-unchanged-from-end (length current-contents))
+			(text-size medium current-contents
+				   :text-style style
+				   :end line-unchanged-from-end)
+			new-line-end)))
+	      (multiple-value-bind (x y)
+		  (output-record-position line)
+		(when (and (not (eql line-unchanged-from-end new-line-size ))
+			   (not (eql current-unchanged-left
+				     new-unchanged-left)))
+		  (copy-area medium
+			     (+ current-unchanged-left x)
+			     y
+			     (- line-end current-unchanged-left)
+			     (- descent ascent)
+			     (+ new-unchanged-left x)
+			     y)
+		  ;; If the line is now shorter, erase the old end of line.
+		  (erase-line line medium new-line-end line-end)
+		  ;; Erase the changed middle
+		  (erase-line line medium start-width new-unchanged-left)
+		  ;; Draw the middle
+		  (when (< line-unchanged-from-start line-unchanged-from-end)
+		    (draw-text* medium current-contents
+				(+ x start-width) baseline
+				:start line-unchanged-from-start
+				:end line-unchanged-from-end))))
+	      ;; Old, wrong, bounding rectangle
+	      (with-bounding-rectangle* (old-min-x old-min-y old-max-x old-max-y)
+		  line
+		(setf (width line) new-line-end)
+		(recompute-extent-for-changed-child parent line
+						    old-min-x old-min-y
+						    old-max-x old-max-y)))))
+	;; Now deal with the cursor
+	(line-update-cursor line stream)
+	(when cursor
+	  (setf (cursor-visibility t)))))))
 
+(defmethod line-update-cursor ((line screen-line) stream)
+  (multiple-value-bind (point-line point-pos)
+      (point* (buffer (editable-area line)))
+    (with-slots (cursor baseline ascent) line
+      (if (eq point-line (buffer-line line))
+	  (setf cursor (cursor (editable-area line)))
+	  (setf cursor nil))
+      (when cursor
+	(let ((cursor-x (stream-string-width
+			 stream
+			 (flexivector-string line :end point-pos)
+			 :text-style (text-style (editable-area line)))))
+	  (setf (screen-line cursor) line)
+	  (setf (cursor-position cursor)
+		(values cursor-x
+			(- baseline ascent))))))))
 
 (defmethod erase-line ((line screen-line) medium left right)
   "Erase line from left to right (which are relative to the line

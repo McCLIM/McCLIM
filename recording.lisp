@@ -307,10 +307,7 @@ Only those records that overlap REGION are displayed."))
   (when (null (output-record-children record))
     (with-bounding-rectangle* (min-x min-y max-x max-y) child
     (with-slots (x1 y1 x2 y2) record
-      (setq x1 min-x
-            y1 min-y
-            x2 max-x
-            y2 max-y)))))
+      (setf (values x1 y1 x2 y2) (bounding-rectangle* child))))))
 
 (defmethod add-output-record :after (child (record output-record))
   (recompute-extent-for-new-child record child))
@@ -338,6 +335,14 @@ Only those records that overlap REGION are displayed."))
 (defmethod output-record-count ((record output-record-mixin))
   (length (output-record-children record)))
 
+(defmethod output-record-count ((record output-record))
+  (let ((count 0))
+    (map-over-output-records #'(lambda (record)
+				 (declare (ignore record))
+				 (incf count))
+			     record)
+    count))
+
 (defmethod map-over-output-records (function (record output-record-mixin)
 				    &optional (x-offset 0) (y-offset 0)
 				    &rest function-args)
@@ -346,9 +351,27 @@ Only those records that overlap REGION are displayed."))
   (loop for child in (output-record-children record)
 	do (apply function child function-args)))
 
-(defmethod map-over-output-records-containing-position (function (record output-record) x y
-							&optional (x-offset 0) (y-offset 0)
-                                                        &rest function-args)
+;; Applies if there isn't a more specific method
+(defmethod map-over-output-records-containing-position
+    (function (record output-record) x y
+     &optional (x-offset 0) (y-offset 0)
+     &rest function-args)
+  (declare (ignore x-offset y-offset))
+  (flet ((mapper (child)
+	   (multiple-value-bind (min-x min-y max-x max-y)
+	       (output-record-hit-detection-rectangle* child)
+	     (when (and (<= min-x x max-x)
+			(<= min-y y max-y)
+			(output-record-refined-sensitivity-test child
+								x y))
+	       (apply function child function-args)))))
+    (declare (dynamic-extent mapper))
+    (map-over-output-records #'mapper record)))
+
+(defmethod map-over-output-records-containing-position
+    (function (record output-record-mixin) x y
+     &optional (x-offset 0) (y-offset 0)
+     &rest function-args)
   (declare (dynamic-extent function)
 	   (ignore x-offset y-offset))
   (loop for child in (output-record-children record)
@@ -357,6 +380,17 @@ Only those records that overlap REGION are displayed."))
 		    (and (<= min-x x max-x) (<= min-y y max-y)))
                   (output-record-refined-sensitivity-test child x y))
         do (apply function child function-args)))
+
+(defmethod map-over-output-records-overlapping-region
+    (function (record output-record) region
+     &optional (x-offset 0) (y-offset 0)
+     &rest function-args)
+  (declare (ignore x-offset y-offset))
+  (flet ((mapper (child)
+	   (when (region-intersects-region-p region child)
+	       (apply function child function-args))))
+    (declare (dynamic-extent mapper))
+    (map-over-output-records #'mapper record)))
 
 (defmethod map-over-output-records-overlapping-region (function (record output-record) region
 						      &optional (x-offset 0) (y-offset 0)
@@ -652,12 +686,6 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
 
 (defmethod handle-event ((stream output-recording-stream) (event window-repaint-event))
   (repaint-sheet stream (window-event-region event)))
-
-#+nil
-(defmethod handle-event ((stream output-recording-stream) (event pointer-button-press-event))
-  (with-slots (button x y) event
-    (format *debug-io* "button ~D pressed at ~D,~D in sheet ~S~%"
-	    button x y (event-sheet event))))
 
 #|
 (defmethod handle-event :after ((stream output-recording-stream) (event pointer-button-press-event))

@@ -27,6 +27,9 @@
 
 (defconstant *multiprocessing-p* t)
 
+(eval-when (:load-toplevel :compile-toplevel :execute)
+  (pushnew :clim-mp *features*))
+
 (defun make-process (function &key name)
   (mp:process-run-function name function))
 

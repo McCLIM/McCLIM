@@ -32,14 +32,16 @@
 ;; example gadget definition
 (defclass light-pane (standard-gadget) ())
 
+#+nil
 (defmethod dispatch-repaint ((pane light-pane) region)
   (repaint-sheet pane region))
 
-(defmethod repaint-sheet ((pane light-pane) region)
+(defmethod handle-repaint ((pane light-pane) region)
   (declare (ignore region))
   (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
     (display-gadget-background pane (gadget-current-color pane) 0 0 (- x2 x1) (- y2 y1))))
 
+#+nil
 (defmethod handle-event ((pane light-pane) (event window-repaint-event))
   (declare (ignorable event))
   (dispatch-repaint pane (sheet-region pane)))
@@ -101,7 +103,8 @@
 	 (first (frame-panes *application-frame*))
 	 (second (frame-panes *application-frame*))
 	 (radio-box-current-selection (third (frame-panes *application-frame*)))))
-  (loop (event-read (frame-pane frame))))
+  (clim-extensions:simple-event-loop))
+
 
 (define-application-frame traffic-lights ()
   ((radio-box :initform nil)

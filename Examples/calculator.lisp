@@ -81,7 +81,7 @@
 					'command-line-read-remaining-arguments-for-partial-command)
 				       (prompt "Command: "))
   (declare (ignore command-parser command-unparser partial-command-parser prompt))
-  (loop (event-read (climi::frame-pane frame))))
+  (clim-extensions:simple-event-loop))
      
 (defun make-button (label operator &key width height
                                         (max-width +fill+) min-width

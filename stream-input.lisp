@@ -3,7 +3,7 @@
 ;;;  (c) copyright 1998,1999,2000 by Michael McDonald (mikemac@mikemac.com)
 ;;;  (c) copyright 2000 by 
 ;;;           Robert Strandh (strandh@labri.u-bordeaux.fr)
-;;;  (c) copyright 2001 by Tim Moore (moore@bricoworks.com)
+;;;  (c) copyright 2001,2002 by Tim Moore (moore@bricoworks.com)
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -22,27 +22,55 @@
 
 (in-package :CLIM-INTERNALS)
 
-(defclass standard-input-stream (fundamental-character-input-stream)
+;;; X returns #\Return and #\Backspace where we want to see #\Newline
+;;; and #\Delete at the stream-read-char level.  Dunno if this is the
+;;; right place to do the transformation...
+
+(defconstant +read-char-map+ '((#\Return . #\Newline) (#\Backspace . #\Delete)))
+
+(defun char-for-read (char)
+  (let ((new-char (cdr (assoc char +read-char-map+))))
+    (or new-char char)))
+
+(defun unmap-char-for-read (char)
+  (let ((new-char (car (rassoc char +read-char-map+))))
+    (or new-char char)))
+
+;;; Streams are subclasses of standard-sheet-input-mixin regardless of
+;;; whether or not we are multiprocessing.  In single-process mode the
+;;; blocking calls to stream-read-char, stream-read-gesture are what
+;;; cause process-next-event to be called.  It's most convenient to
+;;; let process-next-event queue up events for the stream and then see
+;;; what we've got after it returns.
+
+(defclass standard-input-stream (fundamental-character-input-stream
+				 standard-sheet-input-mixin)
   ((unread-chars :initform nil
-		 :accessor stream-unread-chars)
-   )
-  )
+		 :accessor stream-unread-chars)))
 
 (defmethod stream-read-char ((pane standard-input-stream))
   (if (stream-unread-chars pane)
       (pop (stream-unread-chars pane))
-    (loop for event = (event-read pane)
-	if (and (typep event 'key-press-event)
-		(characterp (keyboard-event-key-name event)))
-	return (let ((char (keyboard-event-key-name event)))
-		 (case char
-		   (#\Return
-		    (setq char #\Newline))
-		   (#\Backspace
-		    (setq char #\Delete)))
-		 (stream-write-char pane char)
-		 char)
-	  else do (handle-event pane event))))
+      ;XXX
+      (flet ((do-one-event (event)
+	       (if (and (typep event 'key-press-event)
+			(characterp (keyboard-event-key-name event)))
+		   (let ((char (char-for-read (keyboard-event-key-name event))))
+		     (stream-write-char pane char)
+		     (return-from stream-read-char char))
+		   (handle-event pane event))))
+	(let* ((port (port pane))
+	       (queue (frame-event-queue *application-frame*))
+	       (old-count (slot-value port 'event-count)))
+	  (loop
+	   (let ((event (event-queue-read-no-hang pane)))
+	     (if event
+		 (do-one-event event)
+		 (setq old-count
+		       (port-wait-on-event-processing
+			port
+			:event-count old-count)))))))))
+
 
 (defmethod stream-unread-char ((pane standard-input-stream) char)
   (push char (stream-unread-chars pane)))
@@ -55,11 +83,11 @@
 	   return nil
 	if (and (typep event 'key-release-event)
 		(characterp (keyboard-event-key-name event)))
-	return (keyboard-event-key-name event))))
+	return (char-for-read (keyboard-event-key-name event)))))
 
-(defclass extended-input-stream (fundamental-character-input-stream)
-  ((pointer)
-   (cursor :initarg :text-cursor)))
+(defclass extended-input-stream (fundamental-character-input-stream
+				 standard-sheet-input-mixin)
+  ())
 
 (defgeneric extended-input-stream-p (object)
   (:method ((object extended-input-stream))
@@ -68,7 +96,10 @@
     nil))
 
 (defclass standard-extended-input-stream (extended-input-stream)
-  ())
+  ((pointer)
+   (cursor :initarg :text-cursor)
+   (input-buffer :accessor stream-input-buffer :initarg :input-buffer
+		 :initform (make-array 1 :adjustable t :fill-pointer 0))))
 
 (defvar *input-wait-test* nil)
 (defvar *input-wait-handler* nil)
@@ -87,29 +118,6 @@
 	 (if ,old-stream
 	     (stream-set-input-focus ,old-stream)
 	     (setf (port-keyboard-input-focus (port ,stream)) nil))))))
-
-
-;;; XXX Do there need to be locks around access to the buffer?
-
-(defmethod handle-event ((stream standard-extended-input-stream)
-			 (event key-press-event))
-  (let ((char (keyboard-event-key-name event))
-	(buffer (stream-input-buffer stream)))
-    (if (characterp char)
-	(progn
-	  (case char
-	    (#\Return
-	     (setq char #\Newline))
-	    (#\Backspace
-	     (setq char #\Delete)))
-	  (event-queue-append buffer char))
-	(event-queue-append buffer event))))
-
-
-#+nil ; Default for standard-sheet-input-mixin should be fine.
-(defmethod handle-event ((stream standard-extended-input-stream)
-			 (event pointer-button-press-event))
-  (vector-push-extend event (stream-input-buffer stream)))
 
 
 (defun read-gesture (&key
@@ -135,12 +143,21 @@
 				 pointer-button-press-handler))
 
 (defun pop-gesture (buffer peek-p)
-  (if peek-p
-      (event-queue-peek buffer)
-    (event-queue-read buffer)))
+  (prog1
+      (aref buffer 0)
+    (unless peek-p
+      (when (> (length buffer) 1)
+	(replace buffer buffer :start2 1))
+      (decf (fill-pointer buffer)))))
+
 
 (defun repush-gesture (gesture buffer)
-  (event-queue-prepend buffer gesture))
+  (let ((old-fill (fill-pointer buffer)))
+    (incf (fill-pointer buffer))
+    (when (> old-fill 0)
+      (replace buffer buffer :start1 1 :start2 0 :end2 old-fill))
+    (setf (aref buffer 0) gesture)))
+
 
 (defmethod convert-to-gesture ((ev event))
   nil)
@@ -155,7 +172,28 @@
   (frame-exit (pane-frame (event-sheet ev))))
 
 (defmethod convert-to-gesture ((ev key-press-event))
-  (keyboard-event-key-name ev))
+  (let ((modifiers (event-modifier-state ev)))
+    (if (or (zerop modifiers)
+	    (eql modifiers +shift-key+))
+	(keyboard-event-key-name ev)
+	ev)))
+
+(defmethod convert-to-gesture ((ev pointer-button-press-event))
+  ev)
+
+(defmethod handle-event ((stream standard-extended-input-stream) event)
+  (let ((buffer (stream-input-buffer stream))
+	(gesture (convert-to-gesture event)))
+    (cond ((characterp gesture)
+	   (case gesture
+	     (#\Return
+	      (setq gesture #\Newline))
+	     (#\Backspace
+	      (setq gesture #\Delete)))
+	   (vector-push-extend gesture buffer))
+	  (gesture
+	   (vector-push-extend gesture buffer))
+	  (t nil))))
 
 (defmethod stream-read-gesture ((stream standard-extended-input-stream)
 				&key timeout peek-p
@@ -167,9 +205,11 @@
     (let ((*input-wait-test* input-wait-test)
 	  (*input-wait-handler* input-wait-handler)
 	  (*pointer-button-press-handler* pointer-button-press-handler)
-	  (buffer (stream-input-buffer stream)))
+	  (buffer (stream-input-buffer stream))
+	  (queue (frame-event-queue *application-frame*)))
       (loop
        ;; Wait for input... or not
+       ;; XXX decay timeout.
        (multiple-value-bind (available reason)
 	   (stream-input-wait estream
 			      :timeout timeout
@@ -180,48 +220,58 @@
 	      (return-from stream-read-gesture (values nil
 						       :timeout)))
 	     (:input-wait-test
-	      (and input-wait-handler
-		   (funcall input-wait-handler stream)))
-	     ;; Should we always call input-wait-handler?
+	      ;; input-wait-handler might leave the event for us.
+	      (let ((event (event-queue-peek queue)))
+		(and input-wait-handler
+		     (funcall input-wait-handler stream))
+		(let ((current-event (event-queue-peek queue)))
+		  (when (and event (eq event current-event))
+		    (event-queue-read queue)
+		    (handle-event (event-sheet event) event)))))
 	     (t nil))))
-       ;; input-wait-handler may have left something in the event queue.
-       (when (event-queue-listen buffer)
+       ;; Something might be in the stream buffer.
+       (when (> (length buffer) 0)
 	 (let ((gesture (pop-gesture buffer peek-p)))
-	   (when (and pointer-button-press-handler
-		      (typep gesture 'pointer-button-press-event))
-	     (funcall pointer-button-press-handler stream gesture))
-	   (when (setq gesture (convert-to-gesture gesture))
-	     (return-from stream-read-gesture gesture))))))))
+	   (if (and pointer-button-press-handler
+		    (typep gesture 'pointer-button-press-event))
+	       (funcall pointer-button-press-handler stream gesture)
+	       (return-from stream-read-gesture gesture))))))))
 
 
-
-;;; XXX If input-wait-test is supplied, we're counting on it to
-;;; block.  Is that correct?
 (defgeneric stream-input-wait (stream &key timeout input-wait-test))
 
 (defmethod stream-input-wait ((stream standard-extended-input-stream)
 			      &key timeout input-wait-test)
-  (let ((buffer (stream-input-buffer stream)))
-    ;; Loop if not multiprocessing or if input-wait-test returns nil
-    ;; XXX need to decay timeout on multiple trips through the loop
-    (loop
-     (if (event-queue-listen buffer)
-	 (return-from stream-input-wait t)
-	 (if input-wait-test
-	     (and (funcall input-wait-test stream)
-		  (return-from stream-input-wait
-		    (values nil :input-wait-test)))
-	     (if *multiprocessing-p*
-		 (return-from stream-input-wait
-		   (if (event-queue-listen-or-wait buffer timeout)
-		       t
-		       (values nil :timeout)))
-		 (multiple-value-bind (result reason)
-		     (process-next-event (port stream) :timeout timeout)
-		   (when (and (not result) (eq reason :timeout))
-		     (return-from stream-input-wait
-		       (values nil :timeout))))))))))
-
+  (block exit
+    (let* ((buffer (stream-input-buffer stream))
+	   (port (port stream))
+	   (queue (frame-event-queue *application-frame*))
+	   (old-count (slot-value port 'event-count))
+	   reason)
+      ;; Loop if not multiprocessing or if input-wait-test returns nil
+      ;; XXX need to decay timeout on multiple trips through the loop
+      (tagbody
+       check-buffer
+	 (when (> (length buffer) 0)
+	   (return-from exit t))
+	 (let ((event (event-queue-peek queue)))
+	   (if (and input-wait-test (funcall input-wait-test stream))
+	       (return-from exit (values nil :input-wait-test))
+	       (when event
+		 (event-queue-read queue) ;event better still be there...
+		 (handle-event (event-sheet event) event)
+		 (go check-buffer))))
+	 ;; Event queue has been drained, time to block waiting for new events.
+	 ;; If new events have appeared on the queue since our last time
+	 ;; through the loop, our stale value of old-count causes
+	 ;; port-wait-on-event-processing to return immediately.
+	 (setf (values old-count reason)
+	       (port-wait-on-event-processing port
+					      :event-count old-count
+					      :timeout timeout))
+	 (if (not old-count)
+	     (return-from exit (values nil reason))
+	     (go check-buffer))))))
 
 
 (defun unread-gesture (gesture &key (stream *standard-input*))
@@ -241,19 +291,19 @@
   (with-encapsulating-stream (estream stream)
     (loop for char = (stream-read-gesture estream)
 	  until (characterp char)
-	  finally (return char))))
+	  finally (return (char-for-read char)))))
 
 (defmethod stream-read-char-no-hang ((stream standard-extended-input-stream))
   (with-encapsulating-stream (estream stream)
     (loop for char = (stream-read-gesture estream :timeout 0)
 	  do (when (or (null char) (characterp char))
 	       (loop-finish))
-	  finally (return char))))
+	  finally (return (char-for-read char)))))
 
 (defmethod stream-unread-char ((stream standard-extended-input-stream)
 			       char)
   (with-encapsulating-stream (estream stream)
-    (stream-unread-gesture estream char)))
+    (stream-unread-gesture estream (unmap-char-for-read char))))
 
 (defmethod stream-peek-char ((stream standard-extended-input-stream))
   (with-encapsulating-stream (estream stream)
@@ -261,7 +311,7 @@
 	  do (if (characterp char)
 		 (loop-finish)
 		 (stream-read-gesture estream)) ; consume pointer gesture
-	  finally (return char))))
+	  finally (return (char-for-read char)))))
 
 (defmethod stream-listen ((stream standard-extended-input-stream))
   (with-encapsulating-stream (estream stream)
@@ -336,14 +386,14 @@
 (defmethod %event-matches-gesture ((event key-press-event)
 				   (type (eql :keyboard))
 				   device-name
-				   modifer-state)
+				   modifier-state)
   (and (eql (keyboard-event-key-name event) device-name)
        (eql (event-modifier-state event) modifer-state)))
 
 (defmethod %event-matches-gesture ((event pointer-button-press-event)
 				   type
 				   device-name
-				   modifer-state)
+				   modifier-state)
   (and (or (eql type :pointer-button-press)
 	   (eql type :pointer-button))
        (eql (pointer-event-button event) device-name)
@@ -352,7 +402,7 @@
 (defmethod %event-matches-gesture ((event pointer-button-release-event)
 				   type
 				   device-name
-				   modifer-state)
+				   modifier-state)
   (and (or (eql type :pointer-button-release)
 	   (eql type :pointer-button))
        (eql (pointer-event-button event) device-name)
@@ -361,7 +411,7 @@
 (defmethod %event-matches-gesture ((event pointer-button-event)
 				   type
 				   device-name
-				   modifer-state)
+				   modifier-state)
   (and (or (eql type :pointer-button-press)
 	   (eql type :pointer-button-release)
 	   (eql type :pointer-button))
@@ -391,7 +441,7 @@
 (defun modifier-state-matches-gesture-name-p (modifier-state gesture-name)
   (loop for (type device-name gesture-state) in (gethash gesture-name
 							 *gesture-names*)
-	do (when (eql gesture-state modifer-state)
+	do (when (eql gesture-state modifier-state)
 	     (return-from modifier-state-matches-gesture-name-p t))
 	finally (return nil)))
 

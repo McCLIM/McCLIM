@@ -31,12 +31,15 @@
   (setf (gadget-value (slot-value *application-frame* 'clim-demo::status))
 	string))
 
+#+nil
+(progn
 (defmethod handle-event :around ((pane t) (event t))
   (let ((*application-frame* (pane-frame pane)))
     (call-next-method pane event)))
 
 (defmethod dispatch-event ((pane canvas-pane) event)
   (handle-event pane event))
+)
 
 (defmethod handle-event ((pane canvas-pane) (event pointer-button-press-event))
   (when (= (pointer-event-button event) +pointer-left-button+)
@@ -406,7 +409,10 @@
           (stream-current-output-record *standard-output*)
           (slot-value frame 'status)
           (find-if #'(lambda (pane) (typep pane 'text-field-pane))
-                   (frame-panes frame)))))
+                   (frame-panes frame)))
+    (catch 'exit
+      (clim-extensions:simple-event-loop))
+    (frame-exit frame)))
 
 ; (defmethod clim-fig-frame-top-level ((frame application-frame) &key)
 ;   (let ((*standard-input* (frame-standard-input frame))

@@ -113,7 +113,7 @@
 ;    (handle-event sheet event)))
 
 (defmethod dispatch-event ((sheet standard-sheet-input-mixin) event)
-  (handle-event sheet event))
+  (queue-event sheet event))
 
 (defmethod dispatch-event ((sheet standard-sheet-input-mixin) (event device-event))
   (queue-event sheet event))
@@ -160,9 +160,8 @@
 
 ;;;;
 
-(defclass immediate-sheet-input-mixin (standard-sheet-input-mixin)
-  (
-   ))
+(defclass immediate-sheet-input-mixin ()
+  ())
 
 (defmethod dispatch-event ((sheet immediate-sheet-input-mixin) event)
   (handle-event sheet event))
@@ -244,4 +243,28 @@
 
 (defmethod event-listen ((sheet delegate-sheet-input-mixin))
   (event-listen (delegate-sheet-delegate sheet)))
+
+;;; Class actually used by panes.
+
+(defclass clim-sheet-input-mixin (#+clim-mp standard-sheet-input-mixin #-clim-mp immediate-sheet-input-mixin)
+  ())
+
+;;; Utility for handling all the events on queues of child sheets
+
+(defun handle-events-over-sheets (sheet exclude)
+  "Utility for handling all the events on queues of child sheets.  The
+  EXCLUDE argument is either nil, a sheet or a list of sheets to
+  ignore.  This avoids various race conditions in event processing."
+  (flet ((handler (s)
+	   (when (and exclude
+		      (or (and (consp exclude)
+			       (member s exclude :test #'eq))
+			  (eq exclude s)))
+	     (return-from handler nil))
+	   (when (typep s 'standard-sheet-input-mixin)
+	     (loop for event = (event-read-no-hang s)
+		   while event
+		   do (handle-event s event)))))
+    (declare (dynamic-extent handler))
+    (map-over-sheets #'handler sheet)))
 

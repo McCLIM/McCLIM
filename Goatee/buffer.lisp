@@ -1,16 +1,40 @@
+;;; -*- Mode: Lisp; Package: GOATEE -*-
+
+;;;  (c) copyright 2002 by Tim Moore (moore@bricoworks.com)
+;;; This library is free software; you can redistribute it and/or
+;;; modify it under the terms of the GNU Library General Public
+;;; License as published by the Free Software Foundation; either
+;;; version 2 of the License, or (at your option) any later version.
+;;;
+;;; This library is distributed in the hope that it will be useful,
+;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;;; Library General Public License for more details.
+;;;
+;;; You should have received a copy of the GNU Library General Public
+;;; License along with this library; if not, write to the 
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; Boston, MA  02111-1307  USA.
+
 (in-package :goatee)
 
-(defclass location ()
+(defclass buffer-pointer ()
   ((line :accessor line :initarg :line)
-   (pos :accessor pos :initarg :pos)))
+   (pos :accessor pos :initarg :pos))
+  (:documentation "A location in a buffer."))
+
+(defmethod location* ((bp buffer-pointer))
+  (values (line bp) (pos bp)))
+
+(defgeneric* (setf location*) (line pos (bp buffer-pointer))
+  (setf (values (line bp) (pos bp)) (values line pos)))
 
 (defclass basic-buffer ()
   ((lines :accessor lines :initarg :lines
 	  :initform (make-instance 'dbl-list-head))
    (tick :accessor tick :initarg :tick :initform 0)
-   (point :documentation "A location that maintains the current
-insertion point.  Clients are given copies of the point and are not
-allowed to manipulate it directly.")
+   (point :accessor point :documentation "A buffer-pointer that
+maintains the current insertion point.")
    (size :reader size :initform 0)))
 
 (define-condition buffer-bounds-error (error)
@@ -25,22 +49,27 @@ out of bounds"
 		     (buffer-bounds-error-line condition)
 		     (buffer-bounds-error-pos condition)))))
 
-(defmethod point ((buf basic-buffer))
-  (let ((point (slot-value buf 'point)))
-    (make-instance 'location :line (line point) :pos (pos point))))
 
-(defmethod (setf point) (new-val (buf basic-buffer))
+;;; A moment of convenience, a lifetime of regret...
+
+(defmethod point* (buf basic-buffer)
+  (let ((point (point buf)))
+    (values (line point) (pos point))))
+
+(defgeneric* (setf point*) (line pos buffer))
+
+(defmethod* (setf point*) (line pos (buf basic-buffer))
   (let ((point (slot-value buf 'point)))
     ;; If there's a next line, the point can't be moved past the
     ;; newline at the end of the line.
-    (with-slots (line pos) new-val
-      (when (and (next line)
-		 (>= pos (1- (size line))))
-	(error 'buffer-bounds-error :buffer buf :line line :pos pos))
-      (setf (line point) line)
-      (setf (pos point) pos)
-      ;; XXX Is this right for the semantics of SETF?
-      new-val)))
+    (when (and (next line)
+	       (>= pos (1- (size line))))
+      (error 'buffer-bounds-error :buffer buf :line line :pos pos))
+    (when (not (eq (line point) line))
+      (setf (tick line) (incf (tick buf))))
+    (setf (location* point) (values line pos))
+    (setf (tick (line point)) (incf (tick buf)))
+    (values line pos)))
 
 
 (defclass buffer-line (flexivector dbl-list)
@@ -87,14 +116,17 @@ out of bounds"
 	  (setf (slot-value obj 'size) (length initial-contents)))
 	(dbl-insert-after (make-buffer-line obj :tick (incf (tick obj)))
 			  (lines obj)))
-    (setf (slot-value obj 'point) (make-instance 'location
-						 :line (dbl-head (lines obj))
-						 :pos 0)))
+    (setf (point obj) (make-instance 'location
+				     :line (dbl-head (lines obj))
+				     :pos 0)))
 
 (defgeneric char-ref (buffer position))
 
 (defmethod char-ref ((buf basic-buffer) position)
-  (fref (line position) (pos position)))
+  (char-ref (line position) (pos position)))
+
+(defmethod char-ref* ((buf basic-buffer) line pos)
+  (char-ref line pos))
 
 (defgeneric open-line (line pos)
   (:documentation "Insert a newline at POS in LINE, creating a new line that
@@ -109,33 +141,36 @@ contains LINEs contents from POS to the end of LINE.  Returns the new line."))
 			 :buffer buf
 			 :initial-store (flexivector-string line :start pos)
 			 :tick (incf (tick buf)))))
-	  (delete-char line (- (size line) pos) pos) ;delete to end of line
-	  (insert line pos #\newline)
+	  ;; delete to end of line
+	  (delete-char line (- (size line) pos) :position pos)
+	  (insert line  #\newline :position pos)
 	  (setf (tick line) (incf (tick buf)))
 	  (dbl-insert-after line new-line)))))
 
 (defmethod insert ((buffer basic-buffer) (c character)
-		   &optional position &key)
-  (when position
-    (setf (point buffer) position))
+		   &key position line (pos 0))
+  (cond (position
+	 (setf (point buffer) position))
+	(line
+	 (setf (point* buffer) (values line pos))))
   (let* ((pt (slot-value buffer 'point))
 	 (line (line pt))
 	 (pos (pos pt)))
     (if (eql c #\Newline)
+	(setf (location* pt) (values (open-line line pos) 0))
 	(progn
-	  (setf (line pt) (open-line line pos))
-	  (setf (pos pt) 0))
-	(progn
-	  (insert line c pos)
+	  (insert line c :postion pos)
 	  (incf (pos pt))))
     (incf (slot-value buffer 'size))
     (setf (tick line) (incf (tick buffer)))
     nil))
 
 (defmethod insert ((buffer basic-buffer) (s string) &optional position
-		   &key (start 0) (end (length s)))
-  (when position
-    (setf (point buffer) position))
+		   &key position line (pos 0) (start 0) (end (length s)))
+  (cond (position
+	 (setf (point buffer) position))
+	(line
+	 (setf (point* buffer) (values line pos))))
   (with-slots (line pos) (slot-value buffer 'point)
     (loop for search-start = start then (1+ found-newline)
 	  for found-newline = (position #\Newline s
@@ -143,13 +178,14 @@ contains LINEs contents from POS to the end of LINE.  Returns the new line."))
 					:end end)
 	  while found-newline
 	  do (progn
-	       (insert line s pos :start search-start :end found-newline)
+	       (insert line s
+		       :position pos :start search-start :end found-newline)
 	       ;; open-line increments the line tick.
 	       (setf line (open-line line (+ pos
 					     (- found-newline search-start))))
 	       (setf pos 0))
 	  finally (progn
-		    (insert line s pos :start search-start :end end)
+		    (insert line s :position pos :start search-start :end end)
 		    (incf pos (- end search-start))
 		    (setf (tick line) (incf (tick buffer)))))
     (incf (slot-value buffer 'size) (length s))
@@ -163,19 +199,20 @@ following line's contents onto line, and delete the following line"))
   (let ((next-line (next line))
 	(line-size (size line)))
     (when (eql (char-ref line (1- line-size)) #\Newline)
-      (delete-char line (1- (size line)))
+      (delete-char line 1 :position (1- (size line)))
       (decf (slot-value buffer 'size)))
     (when next-line
       (loop for i from 0 below (size next-line)
 	    for j from (size line)
-	    do (insert line (fref next-line i) j))
+	    do (insert line (char-ref next-line i) :position j))
       (dbl-remove next-line))))
 
-(defgeneric delete-char (buf &optional n position))
-
-(defmethod delete-char ((buf basic-buffer) &optional (n 1) position)
-  (when position
-    (setf (point buf) position))
+(defmethod delete-char ((buf basic-buffer) &optional (n 1)
+			&key position line (pos 0))
+  (cond (position
+	 (setf (point buf) position))
+	(line
+	 (setf (point* buf) (values line pos))))
   (with-slots (point) buf
     (if (> n 0)
 	(with-slots (line pos) point
@@ -183,7 +220,7 @@ following line's contents onto line, and delete the following line"))
 		repeat n
 		do (if (eql pos (1- (size line)))
 		       (close-line line)
-		       (delete-char line pos)))
+		       (delete-char line 1 :position pos)))
 	  (setf (tick line) (incf (tick buf))))
 	(with-slots (line pos) point
 	  (loop repeat n
@@ -195,7 +232,7 @@ following line's contents onto line, and delete the following line"))
 			 (setf pos (1- (size line)))
 			 (close-line line))
 		       (progn
-			 (delete-char line pos -1)
+			 (delete-char line -1 :position pos)
 			 (decf pos))))
 	  (setf (tick line) (incf (tick buf))))))
   (decf (slot-value buf 'size) (abs n))
@@ -211,3 +248,39 @@ following line's contents onto line, and delete the following line"))
 	  while line
 	  do (flexivector-string-into line result :start1 line-in-string))
     result))
+
+(defmethod forward-char* ((buf basic-buffer) n
+			  &key (position (point buf)) line (pos 0))
+  (multiple-value-bind (line pos)
+      (if line
+	  (values line pos)
+	  (location* position))
+    (if (>= n 0)
+	(loop for current-line = line then (next current-line)
+	      for current-pos = pos then 0
+	      for current-line-size = (or (and current-line (size current-line))
+					  0)
+	      for chars-to-eol = (- current-line-size current-pos)
+	      ;; point goes before #\newline, then to the next line.
+	      for remaining = n then (- remaining chars-to-eol)
+	      until (or (null current-line) (< remaining (- chars-to-eol 1)))
+	      finally (if (null current-line)
+			  (error 'buffer-bounds-error :buffer buf)
+			  (return (values current-line
+					  (+ current-pos remaining)))))
+	(loop for current-line = line then (prev current-line)
+	      for current-line-size = (or (and current-line (size current-line))
+					  0)
+	      for current-pos = pos then (1- current-line-size)
+	      for remaining = n then (- remaining current-pos)
+	      until (< remaining current-pos)
+	      finally (if (null current-line)
+			  (error 'buffer-bounds-error :buffer buf)
+			  (return (values current-line
+					  (- current-pos remaining))))))))
+
+(defmethod forward-char ((buf basic-buffer) n &rest key-args)
+  (multiple-value-bind (new-line new-pos)
+      (apply #'forward-char* buf n key-args)
+    (make-instance 'buffer-pointer :line new-line :pos new-pos)))
+

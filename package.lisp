@@ -905,6 +905,7 @@
    "MAP-OVER-FRAMES"                    ;function
    "MAP-OVER-GRAFTS"                    ;function
    "MAP-OVER-ITEM-LIST-CELLS"           ;generic function
+   "MAP-OVER-OUTPUT-RECORDS"		;generic function
    "MAP-OVER-OUTPUT-RECORDS-CONTAINING-POSITION" ;generic function
    "MAP-OVER-OUTPUT-RECORDS-OVERLAPPING-REGION" ;generic function
    "MAP-OVER-POLYGON-COORDINATES"       ;generic function
@@ -1876,7 +1877,8 @@
    "DRAW-IMAGE"
    "IMAGE-PANE"
    "DRAW-LABEL"
-   "COMPOSE-SPACE-AUX"))
+   "COMPOSE-SPACE-AUX"
+   "SIMPLE-EVENT-LOOP"))
 
 (defpackage "CLIM-INTERNALS"
   (:use #:clim #:clim-sys #:clim-extensions #:clim-lisp)

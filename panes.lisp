@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.67 2002/03/12 21:05:06 moore Exp $
+;;; $Id: panes.lisp,v 1.68 2002/04/19 22:27:09 moore Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -244,7 +244,8 @@
    (current-height    :accessor pane-current-height
                       :initform nil) ))
 
-(defclass pane (standard-sheet-input-mixin
+(defclass pane (clim-repainting-mixin
+		clim-sheet-input-mixin
 		sheet-transformation-mixin
                 layout-protocol-mixin
                 basic-sheet)
@@ -267,6 +268,11 @@
    (new-height :initform nil)
    )
   (:documentation ""))
+
+;;; This is a big departure from the spec, but apparently "real" CLIM
+;;; only has one event queue per frame too.  Sure makes things easier.
+(defmethod queue-event ((sheet pane) event)
+  (event-queue-append (frame-event-queue (pane-frame sheet)) event))
 
 (defmethod print-object ((pane pane) sink)
   (print-unreadable-object (pane sink :type t :identity t)
@@ -683,9 +689,6 @@
 	(clamp width (sr-min-width pane) (sr-max-width pane))
 	(clamp height (sr-min-height pane) (sr-max-height pane)))))
 
-(defmethod dispatch-event ((pane top-level-sheet-pane) event)
-  (handle-event pane event))
-
 (defmethod handle-event ((pane top-level-sheet-pane)
 			 (event window-configuration-event))
   (let ((x (window-configuration-event-x event))
@@ -699,6 +702,10 @@
     (setf (slot-value pane 'region)
 	  (make-bounding-rectangle 0 0 width height))
     (allocate-space pane width height)))
+
+(defmethod handle-event ((pane top-level-sheet-pane)
+			 (event window-manager-delete-event))
+  (frame-exit (pane-frame (event-sheet event))))
 
 (defclass unmanaged-top-level-sheet-pane (top-level-sheet-pane)
   ()
@@ -1327,11 +1334,9 @@ During realization the child of the spacing will have as cordinates
 (defmacro raising ((&rest options) &body contents)
   `(make-pane 'raised-pane ,@options :contents (list ,@contents)))
 
-(defmethod dispatch-repaint ((raised-pane raised-pane) region)
-  (repaint-sheet raised-pane region))
 
 (defmethod handle-event ((pane raised-pane) (event window-repaint-event))
-  (dispatch-repaint pane (sheet-region pane)))
+  (repaint-sheet pane (sheet-region pane)))
 
 (defmethod repaint-sheet ((pane raised-pane) region)
   (declare (ignore region))
@@ -1775,13 +1780,10 @@ During realization the child of the spacing will have as cordinates
                                           :closed t)
                           (make-rectangle* (- tx m0) (- ty a) (+ tx tw m0) (+ ty d)))) ))))))
 
-;;xxx
-(defmethod dispatch-repaint ((label-pane label-pane) region)
-  (repaint-sheet label-pane region))
 
 ;;xxx
 (defmethod handle-event ((pane label-pane) (event window-repaint-event))
-  (dispatch-repaint pane (sheet-region pane)))
+  (repaint-sheet pane (sheet-region pane)))
 
 ;;; GENERIC FUNCTIONS
 
@@ -1840,13 +1842,10 @@ During realization the child of the spacing will have as cordinates
 
 
 (defmethod handle-event ((pane clim-stream-pane) (event window-repaint-event))
-  (dispatch-repaint pane (sheet-region pane)))
+  (repaint-sheet pane (sheet-region pane)))
 
 (defmethod compose-space ((pane clim-stream-pane))
   (make-space-requirement :width 300 :height 300))
-
-(defmethod dispatch-repaint ((pane clim-stream-pane) region)
-  (repaint-sheet pane region))
 
 (defmethod window-clear ((pane clim-stream-pane))
   (let ((output-history (pane-output-history pane)))
