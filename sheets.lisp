@@ -132,7 +132,9 @@ sheet-supports-only-one-child error to be signalled."))
 ;;;; sheet protocol class
 
 (defclass sheet ()
-  ((region :initarg :region :accessor sheet-region)
+  ((region :initarg :region
+	   :initform (make-bounding-rectangle 0 0 100 100)
+	   :accessor sheet-region)
    (enabled-p :initform nil :accessor sheet-enabled-p)))
 
 (defun sheetp (x)
@@ -153,13 +155,8 @@ sheet-supports-only-one-child error to be signalled."))
 (define-condition sheet-is-not-child (error) ())
 
 (defmethod sheet-disown-child ((sheet sheet) (child sheet) &key (errorp t))
-  (cond
-   ((eq (sheet-parent child) sheet)
-    (set-sheets-parent child nil)
-    (setf (sheet-children sheet) (remove child (sheet-children sheet))))
-   (errorp
+  (when errorp
     (error 'sheet-is-not-child)))
-  child)
 
 (defmethod sheet-siblings ((sheet sheet))
   (remove sheet (sheet-children (sheet-parent sheet))))
@@ -249,7 +246,7 @@ sheet-supports-only-one-child error to be signalled."))
 	 (compose-transformations (sheet-transformation sheet)
 				  (sheet-delta-transformation
 				   (sheet-parent sheet) ancestor)))
-	(t (sheet-transformation sheet))))
+	(t +identity-transformation+)))
   
 (define-condition sheet-is-not-ancestor (error) ())
 
@@ -297,8 +294,7 @@ sheet-supports-only-one-child error to be signalled."))
     (note-sheet-grafted sheet)))
 
 (defmethod note-sheet-disowned ((sheet sheet))
-;  (when (sheet-grafted-p sheet)
-  (note-sheet-degrafted sheet))
+  nil)
 
 (defmethod note-sheet-region-changed ((sheet sheet))
   nil) ;have to change
@@ -337,8 +333,11 @@ sheet-supports-only-one-child error to be signalled."))
 (defmethod sheet-disown-child :after (sheet
 				      (child sheet-parent-mixin)
 				      &key (errorp t))
-  (declare (ignore sheet errorp))
-  (setf (sheet-parent child) nil))
+  (declare (ignore errorp))
+  (setf (sheet-parent child) nil)
+  (note-sheet-disowned child)
+  (when (sheet-grafted-p sheet)
+    (note-sheet-degrafted child)))
 
 (defmethod sheet-siblings ((sheet sheet-parent-mixin))
   (when (not (sheet-parent sheet))
@@ -406,8 +405,6 @@ sheet-supports-only-one-child error to be signalled."))
 
 (define-condition sheet-supports-only-one-child (error) ())
 
-(define-condition sheet-already-has-parent (error) ())
-
 (defmethod sheet-adopt-child :before ((sheet sheet-single-child-mixin)
 				      child)
   (declare (ignorable child))
@@ -426,14 +423,8 @@ sheet-supports-only-one-child error to be signalled."))
 (defmethod sheet-disown-child ((sheet sheet-single-child-mixin)
 			       (child sheet-parent-mixin)
 			       &key (errorp t))
-  (declare (ignorable errorp))
+  (declare (ignore errorp))
   (setf (sheet-children sheet) nil))
-
-(defmethod sheet-disown-child :after ((sheet sheet-single-child-mixin)
-				      (child sheet-parent-mixin)
-				      &key (errorp t))
-  (declare (ignorable sheet errorp))
-  (note-sheet-disowned child))
 
 (defmethod reorder-sheets ((sheet sheet-single-child-mixin) new-order)
   (declare (ignorable sheet new-order))
@@ -475,14 +466,8 @@ sheet-supports-only-one-child error to be signalled."))
 (defmethod sheet-disown-child ((sheet sheet-multiple-child-mixin)
 			       (child sheet-parent-mixin)
 			       &key (errorp t))
-  (declare (ignorable errorp))
+  (declare (ignore errorp))
   (setf (sheet-children sheet) (delete child (sheet-children sheet))))
-
-(defmethod sheet-disown-child :after ((sheet sheet-multiple-child-mixin)
-				     (child sheet-parent-mixin)
-				     &key (errorp t))
-  (declare (ignorable sheet errorp))
-  (note-sheet-disowned child))
 
 (defmethod raise-sheet-internal (sheet (parent sheet-multiple-child-mixin))
   (setf (sheet-children parent)
