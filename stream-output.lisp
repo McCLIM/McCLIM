@@ -106,7 +106,10 @@
     (multiple-value-prog1
 	(setf (values x y) (values nx ny)))
     (if visibility
-	(flip-screen-cursor cursor))))
+	(flip-screen-cursor cursor)))
+  (when (output-recording-stream-p (cursor-sheet cursor))
+    (stream-close-text-output-record (cursor-sheet cursor))))
+  
 
 (defmethod flip-screen-cursor ((cursor cursor-mixin))
   (with-slots (x y sheet width) cursor
@@ -248,6 +251,8 @@
     (let ((dx (or dx 0))
 	  (dy (or dy 0)))
     (setf (cursor-position (stream-text-cursor stream)) (values (+ x dx) (+ y dy))))))
+
+
 
 ;;;
 

@@ -1813,9 +1813,6 @@ were added."
 #+nil
 (defmethod stream-write-string :around ((stream standard-output-recording-stream) string
                                         &optional (start 0) end)
-  ;; Problem: it is necessary to check for line wrapping. Now the
-  ;; default method for STREAM-WRITE-STRING do char-by-char output,
-  ;; therefore STREAM-WRITE-CHAR can do the right thing.
   (when (and (stream-recording-p stream)
              (slot-value stream 'local-record-p))
     (let* ((medium (sheet-medium stream))
