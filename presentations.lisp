@@ -13,8 +13,8 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
 (in-package :CLIM-INTERNALS)
@@ -41,7 +41,7 @@
 		 :initform *allow-sensitive-inferiors*)))
 
 
-(defclass standard-presentation 
+(defclass standard-presentation
     (presentation-mixin standard-sequence-output-record)
   ())
 
@@ -49,9 +49,9 @@
   (:documentation "The specializer to use for this type in a presentation
 method lambda list"))
 
-;;; Metaclass for presentation types.  For presentation types not associated 
+;;; Metaclass for presentation types.  For presentation types not associated
 ;;; with CLOS classes, objects with this metaclass are used as a proxy for the
-;;; type during presentation method dispatch.  
+;;; type during presentation method dispatch.
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defclass presentation-type ()
@@ -81,7 +81,7 @@ altered for use in destructuring bind")
      (description :accessor description :initarg :description)
      (history :accessor history :initarg :history :initform nil
 	      :documentation "Who knows?")
-     (parameters-are-types :accessor parameters-are-types 
+     (parameters-are-types :accessor parameters-are-types
 			   :initarg :parameters-are-types
 			   :initform nil)
      (expansion-function :accessor expansion-function
@@ -1000,7 +1000,10 @@ function lambda list"))
 	  for (arg) = arglist
 	  while (atom arg)
 	  collect arg into qualifiers
-	  finally (if (eq (caadr arglist) 'declare)
+	  finally (if (and (consp arglist)
+                           (consp (cdr arglist))
+                           (consp (cadr arglist))
+                           (eq (caadr arglist) 'declare))
 		      (return (values qualifiers
 				      arg
 				      (cadr arglist)
@@ -1429,7 +1432,7 @@ function lambda list"))
    record
    x y)
   (when (and (presentationp record)
-	     (multiple-value-bind (min-x min-y max-x max-y)
+             (multiple-value-bind (min-x min-y max-x max-y)
 		 (output-record-hit-detection-rectangle* record)
 	       (and (<= min-x x max-x) (<= min-y y max-y)))
 	     (output-record-refined-position-test record x y))
@@ -1438,29 +1441,39 @@ function lambda list"))
 (defun map-applicable-translators (func
 				   presentation input-context frame window x y
 				   &key event (modifier-state 0) for-menu)
-  (loop for context in input-context
-	for (context-ptype) = context
-	do (map-over-presentations-containing-position
-	    #'(lambda (p)
-		(let ((maybe-translators
-		       (find-presentation-translators (presentation-type p)
-						      context-ptype
-						      (frame-command-table
-						       frame))))
-		  (loop for translator in maybe-translators
-			if (test-presentation-translator translator
-							 p
-							 context-ptype
-							 frame
-							 window
-							 x y
-							 :event event
-							 :modifier-state
-							 modifier-state
-							 :for-menu for-menu)
-			do (funcall func translator p context))))
-	    presentation
-	    x y)))
+  (let ((found nil))
+    (flet ((process-presentation (context context-ptype presentation)
+             (let ((maybe-translators
+                    (find-presentation-translators (presentation-type presentation)
+                                                   context-ptype
+                                                   (frame-command-table
+                                                    frame))))
+               (loop for translator in maybe-translators
+                     when (test-presentation-translator translator
+                                                        presentation
+                                                        context-ptype
+                                                        frame
+                                                        window
+                                                        x y
+                                                        :event event
+                                                        :modifier-state
+                                                        modifier-state
+                                                        :for-menu for-menu)
+                     do (funcall func translator presentation context)
+                        (setq found t)))))
+      (loop for context in input-context
+            for (context-ptype) = context
+            do (map-over-presentations-containing-position
+                #'(lambda (p)
+                    (process-presentation context context-ptype p))
+                presentation
+                x y)
+            finally (unless found
+                      (loop for context in input-context
+                            for (context-ptype) = context
+                            do (process-presentation context
+                                                     context-ptype
+                                                     *null-presentation*)))))))
 
 (defun find-applicable-translators
     (presentation input-context frame window x y
@@ -1491,7 +1504,7 @@ function lambda list"))
     (loop for translator in translators
 	  if (test-presentation-translator translator
 					   presentation
-					   ctype 
+					   ctype
 					   frame
 					   window
 					   x y
@@ -1513,7 +1526,7 @@ function lambda list"))
 	(result-size nil))
     (map-applicable-translators
      #'(lambda (translator presentation context)
-	 (if (and result-context (not (eq result-context context)))
+         (if (and result-context (not (eq result-context context)))
 	     ;; Return inner presentation
 	     (return-from find-innermost-presentation-match
 	       (values result result-translator result-context))
@@ -1538,12 +1551,12 @@ function lambda list"))
     (input-context window x y
      &key (frame *application-frame*) modifier-state event)
   (values (find-innermost-presentation-match input-context
-					     (stream-output-history window)
-					     frame
-					     window
-					     x y
-					     event
-					     modifier-state)))
+                                             (stream-output-history window)
+                                             frame
+                                             window
+                                             x y
+                                             event
+                                             modifier-state)))
 
 (defun throw-highlighted-presentation (presentation input-context event)
   (let ((x (pointer-event-x event))
