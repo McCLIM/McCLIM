@@ -240,6 +240,7 @@
   (let ((editing-stream (make-instance class
 				       :stream stream
 				       :initial-contents initial-contents)))
+    (goatee::redisplay-area (goatee::area editing-stream))
     (unwind-protect
 	 (loop
 	  (block rescan

@@ -324,13 +324,15 @@ skips intervening non-table output record structures."))
 	(with-output-recording-options (stream :record t :draw nil)
 	  (funcall continuation stream)
 	  (finish-output stream))
-	(adjust-table-cells table stream)
-	(when multiple-columns (adjust-multiple-columns table stream))
-	(setq *table-suppress-update* nil)
-	(tree-recompute-extent table))
+	(with-output-recording-options (stream :record nil :draw nil)
+	  (adjust-table-cells table stream)
+	  (when multiple-columns (adjust-multiple-columns table stream))
+	  (setq *table-suppress-update* nil)
+	  (tree-recompute-extent table)))
       #+NIL
       (setf (output-record-position table)
 	    (values cursor-old-x cursor-old-y))
+      (replay table stream)
       (if move-cursor
 	  ;; FIXME!!!
 	  ;; Yeah, fix me -- what is wrong with that?
@@ -338,8 +340,7 @@ skips intervening non-table output record structures."))
 		(values (bounding-rectangle-max-x table)
 			(bounding-rectangle-max-y table)))
 	  (setf (stream-cursor-position stream)
-		(values cursor-old-x cursor-old-y)))
-      (replay table stream))))
+		(values cursor-old-x cursor-old-y))))))
 
 ;;; Think about rewriting this using a common superclass for row and
 ;;; column records.

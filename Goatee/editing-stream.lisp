@@ -55,31 +55,37 @@
 				       &key stream (initial-contents "")
 				       (cursor-visibility t)
 				       (background-ink
-					(medium-background stream)))
+					(medium-background stream))
+				       single-line)
   (multiple-value-bind (cx cy)
       (stream-cursor-position stream)
     (let ((max-width (- (stream-text-margin stream) cx)))
       ;; XXX hack to give area a fixed size rectangle that can be highlighted
-      (with-output-recording-options (stream :draw t :record t)
+      (with-output-recording-options (stream :record t)
 	(draw-rectangle* stream cx cy
 			 (+ cx max-width) (+ cy (stream-line-height stream))
 			 :ink background-ink
 			 :filled t))
-      (climi::with-keywords-removed (args (:initial-contents))
+      (climi::with-keywords-removed (args (:initial-contents :single-line))
 	(setf (area obj)
 	      (apply #'make-instance
 		     'simple-screen-area
 		     :area-stream stream
 		     :buffer (make-instance 'editable-buffer
-					    :initial-contents initial-contents)
+					    :initial-contents
+					    initial-contents
+					    :newline-character (if single-line
+								   nil
+								   #\Newline))
 		     :x-position cx
 		     :y-position cy
 		     :cursor-visibility cursor-visibility
 		     :max-width max-width
 		     :allow-other-keys t
 		     args)))
+      ;; XXX Really add it here?
       (stream-add-output-record stream (area obj))
-      (redisplay-area (area obj))
+      #+nil (redisplay-area (area obj))
       ;; initialize input-editing-stream state to conform to our reality
       (make-input-editing-stream-snapshot obj (area obj)))))
 

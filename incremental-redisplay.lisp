@@ -1113,7 +1113,8 @@ records. "))
 	(call-next-method)
       ;; coordinate= here instead?
       (unless (and (= x nx) (= y ny))
-	(let ((stream (slot-value  record 'stream))
+	(let ((stream (and (slot-exists-p record 'stream)
+			   (slot-value  record 'stream)))
 	      (parent (output-record-parent record)))
 	  (when (and stream parent)
 	    (note-output-record-child-changed

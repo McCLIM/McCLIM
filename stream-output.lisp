@@ -78,7 +78,11 @@
    (x :initform 0 :initarg :x-position)
    (y :initform 0 :initarg :y-position)
    (width :initform 8)
-   (cursor-active :initform T  ;; XXX what does "cursor is active" mean?                  
+   ;; XXX what does "cursor is active" mean?
+   ;; It means that the sheet (stream) updates the cursor, though
+   ;; currently the cursor appears to be always updated after stream
+   ;; text operations. -- moore
+   (cursor-active :initform nil
                   :accessor cursor-active)
    (cursor-state :initform nil
                  :accessor cursor-state)))
@@ -89,6 +93,9 @@
   (with-slots (x y) cursor
     (print-unreadable-object (cursor stream :type t :identity t)
       (format stream "~D ~D " x y))))
+
+;;; XXX What to do when we can't draw the cursor immediately (like,
+;;; we're not drawing?) The whole flip-screen-cursor idea breaks down.
 
 (defmethod (setf cursor-state) :around (state (cursor cursor-mixin))
   (unless (eq state (slot-value cursor 'cursor-state))
@@ -124,20 +131,23 @@
     (letf (((cursor-state cursor) nil))
       (multiple-value-prog1
 	  (setf (values x y) (values nx ny))))
-    (when (output-recording-stream-p (cursor-sheet cursor))
-    (stream-close-text-output-record (cursor-sheet cursor)))))
+    (when (and (cursor-active cursor)
+	       (output-recording-stream-p (cursor-sheet cursor)))
+      (stream-close-text-output-record (cursor-sheet cursor)))))
 
 (defmethod flip-screen-cursor ((cursor cursor-mixin))
-  (with-slots (x y sheet width) cursor
-    (let ((height (cursor-height cursor)))
-      (draw-rectangle* (sheet-medium (cursor-sheet cursor))
-                       x y
-                       (+ x width) (+ y height)
-                       :filled t
-                       :ink +flipping-ink+))))
-
+  (when (stream-drawing-p (cursor-sheet cursor))
+    (with-slots (x y sheet width) cursor
+      (let ((height (cursor-height cursor)))
+	(draw-rectangle* (sheet-medium (cursor-sheet cursor))
+			 x y
+			 (+ x width) (+ y height)
+			 :filled t
+			 :ink +flipping-ink+)))))
 
 (defmethod display-cursor ((cursor cursor-mixin) state)
+  (unless (stream-drawing-p (cursor-sheet cursor))
+    (return-from display-cursor nil))
   (with-slots (x y sheet width) cursor
     (let ((height (cursor-height cursor)))
       (case state
@@ -245,9 +255,13 @@
     (make-space-requirement :width seos-current-width
                             :height seos-current-height)))
 
-(defmethod initialize-instance :after ((stream standard-extended-output-stream) &rest args)
+(defmethod initialize-instance :after
+    ((stream standard-extended-output-stream) &rest args)
   (declare (ignore args))
-  (setf (stream-text-cursor stream) (make-instance 'standard-text-cursor :sheet stream)))
+  (setf (stream-text-cursor stream)
+	(make-instance 'standard-text-cursor :sheet stream))
+  (setf (cursor-active (stream-text-cursor stream)) t))
+
 
 (defmethod stream-cursor-position ((stream standard-extended-output-stream))
   (cursor-position (stream-text-cursor stream)))

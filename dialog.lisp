@@ -67,7 +67,9 @@ accept of this query")))
 
 (defclass accepting-values-stream (standard-encapsulating-stream)
   ((queries :accessor queries :initform nil)
-   (selected-query :accessor selected-query :initform nil)))
+   (selected-query :accessor selected-query :initform nil)
+   (align-prompts :accessor align-prompts :initarg :align-prompts
+		  :initform nil)))
 
 (defmethod stream-default-view ((stream accepting-values-stream))
   +textual-dialog-view+)
@@ -127,13 +129,18 @@ accept of this query")))
      (command-table 'accepting-values)
      (frame-class 'accept-values))
   (declare (ignore own-window exit-boxes modify-initial-query
-    resize-frame align-prompts label scroll-bars x-position y-position
+    resize-frame label scroll-bars x-position y-position
     width height frame-class))
-  (let* ((*accepting-values-stream* (make-instance 'accepting-values-stream
-						  :stream stream))
+  (let* ((*accepting-values-stream*
+	  (make-instance 'accepting-values-stream
+			 :stream stream
+			 :align-prompts align-prompts))
 	 (arecord (updating-output (stream
 				    :record-type 'accepting-values-record)
-		    (funcall body *accepting-values-stream*)
+		    (if align-prompts
+			(formatting-table (stream)
+			  (funcall body *accepting-values-stream*))
+			(funcall body *accepting-values-stream*))
 		    (display-exit-boxes *application-frame*
 					stream
 					(stream-default-view
@@ -205,7 +212,8 @@ accept of this query")))
   (declare (ignore activation-gestures additional-activation-gestures
 		   delimiter-gestures additional-delimiter-gestures))
   (let ((query (find query-identifier (queries stream)
-		     :key #'query-identifier :test #'equal)))
+		     :key #'query-identifier :test #'equal))
+	(align (align-prompts stream)))
     (unless query
       (setq query (make-instance 'query
 				 :query-identifier query-identifier
@@ -220,20 +228,33 @@ accept of this query")))
     (unless (equal default (default query)) 
       (setf (default query) default)
       (setf (value query) default))
-    (let ((query-record (funcall-presentation-generic-function
-			 accept-present-default
-			 type (encapsulating-stream-stream stream) view
-			 (value query)
-			 default-supplied-p
-			 nil query-identifier)))
-      (setf (record query) query-record)
-      (when (accept-condition query)
-	(signal (accept-condition query)))
-      (multiple-value-prog1
-	  (values (value query) (ptype query) (changedp query))
-	(setf (default query) default)
-	(setf (ptype query) type)
-	(setf (changedp query) nil)))))
+    (flet ((do-prompt ()
+	     (apply #'prompt-for-accept stream type view rest-args))
+	   (do-accept-present-default ()
+	     (funcall-presentation-generic-function
+	      accept-present-default
+	      type (encapsulating-stream-stream stream) view
+	      (value query)
+	      default-supplied-p nil query-identifier)))
+      (let ((query-record nil))
+	(if align
+	    (formatting-row (stream)
+	      (formatting-cell (stream :align-x align)
+		(do-prompt))
+	      (formatting-cell (stream)
+		(setq query-record (do-accept-present-default))))
+	    (progn
+	      (do-prompt)
+	      (setq query-record (do-accept-present-default))))
+	(setf (record query) query-record)
+	(when (accept-condition query)
+	  (signal (accept-condition query)))
+	(multiple-value-prog1
+	    (values (value query) (ptype query) (changedp query))
+	  (setf (default query) default)
+	  (setf (ptype query) type)
+	  (setf (changedp query) nil))))))
+
 
 (defmethod prompt-for-accept ((stream accepting-values-stream)
 			      type view
@@ -339,7 +360,8 @@ is called. Used to determine if any editing has been done by user")))
 			     (make-instance 'standard-input-editing-stream
 					    :stream stream
 					    :cursor-visibility nil
-					    :background-ink +grey90+))))
+					    :background-ink +grey90+
+					    :single-line t))))
 		   (when default-supplied-p
 		     (input-editing-rescan-loop ;XXX probably not needed
 		      editing-stream
@@ -403,12 +425,16 @@ is called. Used to determine if any editing has been done by user")))
 			   :rescan t)))
 	(setf (cursor-visibility estream) t)
 	(setf (snapshot record) (copy-seq stream-input-buffer))
-	(handler-case
-	    (av-do-accept query record)
-	  (condition (c)
-	    (format *trace-output* "accepting-values accept condition: ~A~%"
-		    c)
-	    (setf (accept-condition query) c)))))))
+	(block accept-condition-handler
+	  (handler-bind ((condition #'(lambda (c)
+					(format *trace-output*
+						"accepting-values accept condition: ~A~%"
+						c)
+					(setf (accept-condition query) c)
+					(return-from accept-condition-handler
+					  c))))
+	    (av-do-accept query record)))))))
+
 
 
 (defmethod deselect-query (stream query (record av-text-record))

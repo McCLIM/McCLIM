@@ -91,7 +91,7 @@
 	 (line (line pt))
 	 (pos (pos pt)))
     ;; point is updated by bp-buffer-mixin methods.
-    (if (eql c #\Newline)
+    (if (eql c (newline-character buffer))
 	      (buffer-open-line* buffer line pos)
 	      (buffer-insert* buffer c line pos))))
 
@@ -103,20 +103,21 @@
 	 (setf (point* buffer) (values line pos))))
   (multiple-value-bind (line pos)
       (point* buffer)
-    (loop for search-start = start then (1+ found-newline)
-	  for found-newline = (position #\Newline s
-					:start search-start
-					:end end)
-	  while found-newline
-	  do (progn
-	       (setf (values line pos)
-		     (buffer-insert* buffer s line pos
+    (loop
+       with newline-character = (newline-character buffer)
+       for search-start = start then (1+ found-newline)
+       for found-newline = (position newline-character s
 				     :start search-start
-				     :end found-newline))
-	       (setf (values line pos)
-		     (buffer-open-line* buffer line pos)))
-	  finally (return (buffer-insert* buffer s line pos
-					  :start search-start :end end)))))
+				     :end end)
+       while found-newline
+       do (progn
+	    (setf (values line pos)
+		  (buffer-insert* buffer s line pos
+				  :start search-start
+				  :end found-newline))
+	    (setf (values line pos) (buffer-open-line* buffer line pos)))
+       finally (return (buffer-insert* buffer s line pos
+				       :start search-start :end end)))))
 
 (defmethod delete-char ((buf editable-buffer) &optional (n 1)
 			&key position line (pos 0))

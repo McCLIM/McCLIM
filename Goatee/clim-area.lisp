@@ -30,7 +30,8 @@
 
 (defmethod* (setf cursor-position) (nx ny (cursor screen-area-cursor))
   (declare (ignore nx ny))
-  (when (cursor-state cursor)
+  (when (and (cursor-state cursor)
+	     (stream-drawing-p (cursor-sheet cursor)))
     (error "screen-area-cursor ~S must not be visible when position is
   set"
 	   cursor))
@@ -108,6 +109,19 @@
 	  for char = (char-ref line i)
 	  sum (text-size stream char :text-style text-style))))
 
+(defmethod* (setf output-record-position) :around
+  (nx ny (record simple-screen-area))
+  (multiple-value-bind (x y)
+      (output-record-position record)
+    (multiple-value-prog1
+	(call-next-method)
+      (let ((cursor (cursor record)))
+	(multiple-value-bind (cx cy)
+	    (cursor-position cursor)
+	  (setf (cursor-position cursor)
+		(values (+ cx (- nx x))
+			(+ cy (- ny y)))))))))
+
 (defclass screen-line (editable-area-line displayed-output-record
 					  climi::basic-output-record)
   ((current-contents :accessor current-contents :initarg :current-contents
@@ -119,7 +133,9 @@
    be, on the screen.  This does not include the buffer line's newline")
    (ascent :accessor ascent :initarg :ascent)
    (descent :accessor descent :initarg :descent)
-   (baseline :accessor baseline :initarg :baseline)
+   (baseline :accessor baseline :initarg :baseline
+	     :documentation "The y coordinate of the line's
+ baseline. This is an absolute coordinate, not relative to the output record.")
    (width :accessor width :initarg :width)
    (cursor :accessor cursor :initarg :cursor :initform nil)
    (line-breaks :accessor line-breaks :initform nil)))
@@ -130,6 +146,16 @@
 	obj
       (format stream "X ~S:~S Y ~S:~S " x1 x2 y1 y2)
       (write (current-contents obj) :stream stream))))
+
+(defmethod (setf output-record-position) :around
+    (nx ny (record screen-line))
+  (declare (ignore nx))
+  (multiple-value-bind (x y)
+      (output-record-position record)
+    (declare (ignore x))
+    (multiple-value-prog1
+	(call-next-method)
+      (incf (baseline record) (- ny y)))))
 
 (defmethod (setf width) :after (width (line screen-line))
   (setf (slot-value line 'climi::x2) (+ (slot-value line 'climi::x1) width)))
@@ -142,6 +168,10 @@
 
 (defun line-contents-sans-newline (buffer-line &key destination)
   (let* ((contents-size (line-last-point buffer-line)))
+    ;; XXX Should check entire string for "non-printable" characters
+    (when (and (> contents-size 0)
+	       (eql (char-ref buffer-line (1- contents-size)) #\Newline))
+      (decf contents-size))
     (if (zerop contents-size)
 	(if destination
 	    (progn

@@ -56,11 +56,16 @@
   and delete operations on a buffer of text (generally)."))
 
 (defclass basic-buffer-mixin (basic-buffer)
-  ((lines :accessor lines :initarg :lines
-	  :initform (make-instance 'dbl-list-head))
-   (tick :accessor tick :initarg :tick :initform 0)
-   
-   (size :reader size :initform 0)))
+  ((lines :accessor lines :initarg :lines)
+   (tick :accessor tick :initarg :tick)
+   (size :reader size :initform 0)
+   (newline-character :accessor newline-character :initarg :newline-character
+		      :documentation "The character that ends a line. NIL means
+   that the buffer will only have one line."))
+  (:default-initargs
+    :lines (make-instance 'dbl-list-head)
+    :tick 0
+    :newline-character #\Newline))
 
 (define-condition buffer-bounds-error (goatee-error)
   ((buffer :reader buffer-bounds-error-buffer :initarg :buffer :initform nil)
@@ -124,7 +129,7 @@
 			 :tick (incf (tick buf)))))
 	  ;; delete to end of line
 	  (delete-char line (- (size line) pos) :position pos)
-	  (insert line #\newline :position pos)
+	  (insert line (newline-character buf) :position pos)
 	  (setf (tick line) (incf (tick buf)))
 	  (dbl-insert-after new-line line)
 	  (incf (slot-value buf 'size))
@@ -170,8 +175,9 @@
 	  (values (prev line) line))
     (unless (typep this-line 'dbl-list)
       (error 'buffer-bounds-error :buffer buffer :line nil :pos 0))
-    (let ((line-size (size this-line)))
-      (if (eql (char-ref this-line (1- line-size)) #\Newline)
+    (let ((line-size (size this-line))
+	  (newline-character (newline-character buffer)))
+      (if (eql (char-ref this-line (1- line-size)) newline-character)
 	  (progn
 	    (delete-char this-line 1 :position (1- line-size))
 	    (decf (slot-value buffer 'size))
@@ -387,7 +393,7 @@
   be kept in \"display\" order." )))
 
 (defmethod make-buffer-line ((buffer extent-buffer-mixin) &rest initargs)
-  (apply #'make-instance 'extent-buffer-line initargs))
+  (apply #'make-instance 'extent-buffer-line :buffer buffer initargs))
 
 (defmethod record-extent-lines ((extent extent))
   (loop for line = (line (bp-start extent)) then (next line)
@@ -474,8 +480,9 @@
   (let* ((size (size line))
 	 (last-char (if (> size 0)
 			(char-ref line (1- size))
-			nil)))
-    (cond ((and last-char (char= last-char #\Newline))
+			nil))
+	 (newline-char (newline-character (buffer line))))
+    (cond ((and last-char newline-char (char= last-char newline-char))
 	   (1- size))
 	  (t size))))
 

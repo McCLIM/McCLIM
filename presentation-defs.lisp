@@ -670,7 +670,6 @@ call-next-method to get the \"real\" answer based on the stream type."))
       ;; behavior of temporarily putting the default on the history
       ;; stack so the user can conveniently suck it in.
       (flet ((do-accept (args)
-	       (apply #'prompt-for-accept stream real-type view args)
 	       (apply #'stream-accept stream real-type args))
 	     (get-history ()
 	       (when real-history-type
@@ -727,14 +726,16 @@ call-next-method to get the \"real\" answer based on the stream type."))
 
 (defmethod stream-accept ((stream standard-extended-input-stream) type
 			  &rest args
-			  &key
+			  &key (view (stream-default-view stream))
 			  &allow-other-keys)
+  (apply #'prompt-for-accept stream type view args)
   (apply #'accept-1 stream type args))
 
 (defmethod stream-accept ((stream standard-input-editing-stream) type
 			  &rest args
-			  &key
+			  &key (view (stream-default-view stream))
 			  &allow-other-keys)
+  (apply #'prompt-for-accept stream type view args)
   (apply #'accept-1 stream type args))
 
 (defmethod stream-accept ((stream #.*string-input-stream-class*) type
