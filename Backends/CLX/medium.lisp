@@ -93,11 +93,7 @@
       (setf (xlib:gcontext-font gc) (text-style-to-X-font port (medium-text-style medium))
 	    (xlib:gcontext-foreground gc) (X-pixel port ink)
 	    (xlib:gcontext-background gc) (X-pixel port (medium-background medium)))
-      ;; the right method to use is the medium-device-region, but
-      ;; as the device-transformation, in the case of the back-end CLX, is 
-      ;; the identity transformation, a short path is used for optimizing
-      ;; the drawing operations.
-      (let ((clipping-region (medium-clipping-region medium))) ;(medium-device-region medium)))
+      (let ((clipping-region (medium-device-region medium)))
 	(unless (eq clipping-region +everywhere+)
           (setf (xlib:gcontext-clip-mask gc :yx-banded)
                 (clipping-region->rect-seq medium clipping-region))))
@@ -352,7 +348,7 @@
       (xlib:draw-glyphs mirror gc (round x) (round y) string
                         :start start :end end
                         :translate #'translate))))
-)
+
 (defmethod medium-buffering-output-p ((medium clx-medium))
   t)
 
