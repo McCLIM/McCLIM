@@ -71,6 +71,7 @@
 
    #.(OR
       #+(AND :CMU :MP (NOT :PTHREAD))  "Lisp-Dep/mp-cmu"
+      #+(AND :SBCL :MP (NOT :PTHREAD)) "Lisp-Dep/mp-sbcl"
       #+:EXCL                          "Lisp-Dep/mp-acl"
       #| fall back |#                  "Lisp-Dep/mp-nil")
    "utils"
@@ -126,24 +127,35 @@
    "Backends/CLX/frame-manager"
    "Backends/CLX/image"
    ))
+
+(defsystem :clim-looks #-mk-defsystem ()
+  #+mk-defsystem :source-pathname #+mk-defsystem *clim-directory*
+  #+mk-defsystem :source-extension #+mk-defsystem "lisp"
+  #+mk-defsystem :depends-on #+mk-defsystem (:clim)
+  #+mk-defsystem :components
+  (:serial
+   #-mk-defsystem :clim
+  "looks/pixie"
+  ))
    
 (defsystem :clim-examples #-mk-defsystem ()
   #+mk-defsystem :source-pathname #+mk-defsystem *clim-directory*
   #+mk-defsystem :source-extension #+mk-defsystem "lisp"
-  #+mk-defsystem :depends-on #+mk-defsystem (:clim-clx)
+  #+mk-defsystem :depends-on #+mk-defsystem (:clim-clx :clim-looks)
   #+mk-defsystem :components
   (:serial
    #-mk-defsystem :clim-clx
    "Examples/calculator"
    "Examples/colorslider"
    "Examples/menutest"
-   "Examples/address-book"
+  ;"Examples/address-book"
    "Examples/traffic-lights"
    "Examples/clim-fig"
    "Examples/postscript-test"
    "Examples/transformations-test"
    "Examples/stream-test"
    "Examples/presentation-test"
+   "Examples/gadget-test"
    ))
 
 (defsystem :goatee #-mk-defsystem ()

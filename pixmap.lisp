@@ -42,6 +42,18 @@
    (region :initform nil :accessor sheet-region)
    ))
 
+; added this. CHECKME -- BTS
+(defmethod (setf %sheet-medium) (value (pixmap mirrored-pixmap))
+  (setf (slot-value pixmap 'medium) value))
+
+(defmethod invalidate-cached-transformations ((sheet mirrored-pixmap))
+  (values))
+
+(defmethod invalidate-cached-regions ((sheet mirrored-pixmap))
+  (values))
+
+; BTS stopped adding. ^-- CHECKME
+
 (defmethod initialize-instance :after ((pixmap mirrored-pixmap) &rest args)
   (declare (ignore args))
   (with-slots (width height region) pixmap
@@ -54,7 +66,7 @@
   (port-allocate-pixmap (port sheet) sheet width height))
 
 (defmethod deallocate-pixmap ((pixmap pixmap))
-  (port-deallocate-pixmap (port (pixmap-sheet pixmap)) pixmap))
+  (port-deallocate-pixmap (port (medium-sheet pixmap)) pixmap))
 
 (defmethod sheet-native-transformation ((pixmap mirrored-pixmap))
   +identity-transformation+)

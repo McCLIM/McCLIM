@@ -92,24 +92,26 @@
 	(errorp (error 'command-table-not-found))
 	(t nil)))
 
+; adjusted to allow anonymous command-tables for menu-bars
 (defun make-command-table (name &key inherit-from menu (errorp t))
-  (if (and errorp (gethash name *command-tables*))
+  (if (and name errorp (gethash name *command-tables*))
       (error 'command-table-already-exists)
-      (setf (gethash name *command-tables*)
-	    (make-instance 'standard-command-table
-	      :name name
-	      :inherit-from inherit-from
-	      :menu (mapcar
-		     #'(lambda (item)
-			 (destructuring-bind
-			  (name type value &key keystroke documentation text-style)
-			  item
-			  (make-instance 'menu-item
-			    :name name :type type :value value
-			    :documentation documentation
-			    :text-style text-style
-			    :keystroke keystroke)))
-		     menu)))))
+      (let ((result (make-instance 'standard-command-table :name name
+	                 :inherit-from inherit-from
+	                 :menu (mapcar
+		                #'(lambda (item)
+			            (destructuring-bind
+			             (name type value &key keystroke documentation text-style)
+			             item
+			             (make-instance 'menu-item
+			               :name name :type type :value value
+			               :documentation documentation
+			               :text-style text-style
+			               :keystroke keystroke)))
+		                menu))))
+        (when name
+          (setf (gethash name *command-tables*) result))
+        result)))
 
 (make-command-table 'global-command-table)
 (make-command-table 'user-command-table)
@@ -124,7 +126,7 @@
 	     (setq inherit-from ',inherit
 		   menu ',menu-items)
 	     old-table)
-	 (make-command-table ',name
+           (make-command-table ',name
 			     :inherit-from ',inherit
 			     :menu ',menu
 			     :errorp nil)))))

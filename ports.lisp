@@ -158,6 +158,16 @@
       (with-slots (event-count) port
 	(let ((old-event-count (or old-count event-count))
 	      (flag nil))
+#|
+	  (process-wait-with-timeout "Wait for event" timeout
+				     #'(lambda ()
+					 (when (not (= old-event-count event-count))
+					   (setq flag t))))
+	  (if flag
+	      event-count
+	    (values nil :timeout))
+        (process-next-event port :wait-function wait-function :timeout timeout)
+|#
 	  (flet ((wait-fn ()
 		   (when (not (eql old-event-count event-count))
 		     (setq flag t))))
@@ -172,7 +182,6 @@
 			      :wait-function wait-function
 			      :timeout timeout)
 	(values (and result event-count) reason))))
-
   
 (defmethod distribute-event ((port basic-port) event)
   (cond
@@ -180,7 +189,7 @@
     (dispatch-event (or (port-keyboard-input-focus port) (event-sheet event))
 		    event))
    ((typep event 'window-event)
-;    (dispatch-event (window-event-mirrored-sheet event) event))
+;   (dispatch-event (window-event-mirrored-sheet event) event)
     (dispatch-event (event-sheet event) event))
    ((typep event 'pointer-event)
     (dispatch-event (event-sheet event) event))

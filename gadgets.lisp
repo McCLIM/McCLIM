@@ -26,6 +26,13 @@
 
 (in-package :CLIM-INTERNALS)
 
+; copied to here to avoid a stupid sbcl forward class problem
+#+sbcl
+(defclass value-changed-repaint-mixin ()
+  ()
+  (:documentation
+   "Mixin class for gadgets, whose appearence depends on its value."))
+
 ;;;; Notes
 
 ;; There is STANDARD-GADGET in this file but not in the spec, where
@@ -268,7 +275,7 @@
 ||#
 
 (defclass basic-gadget (permanent-medium-sheet-output-mixin
-                        sheet-leaf-mixin
+                        ;; sheet-leaf-mixin ; <- this cannot go here...
                         gadget-color-mixin
 			;; These are inherited from pane, via
 			;; clim-sheet-input-mixin and clim-repainting-mixin 
@@ -725,6 +732,7 @@ and must never be nil."))
 (defclass standard-gadget-pane (;;permanent-medium-sheet-output-mixin
                                 ;;immediate-sheet-input-mixin
                                 ;;immediate-repainting-mixin
+                                sheet-leaf-mixin
                                 standard-gadget)
   ()
   (:documentation
@@ -798,13 +806,14 @@ and must never be nil."))
 
 ;;
 
-(defmethod compose-label-space ((gadget labelled-gadget-mixin))
+(defmethod compose-label-space ((gadget labelled-gadget-mixin) &key (wider 0) (higher 0))
   (with-slots (label align-x align-y) gadget
-    (let ((as (text-style-ascent (pane-text-style gadget) gadget))
-          (ds (text-style-descent (pane-text-style gadget) gadget))
-          (w  (text-size gadget label :text-style (pane-text-style gadget))))
-      (make-space-requirement :width w :min-width w :max-width w
-                              :height (+ as ds) :min-height (+ as ds) :max-height (+ as ds)))))
+    (let* ((as (text-style-ascent (pane-text-style gadget) gadget))
+           (ds (text-style-descent (pane-text-style gadget) gadget))
+           (w  (+ (text-size gadget label :text-style (pane-text-style gadget)) wider))
+           (h  (+ as ds higher)))
+      (make-space-requirement :width w  :min-width w  :max-width  w
+                              :height h :min-height h :max-height h))))
 
 (defmethod draw-label* ((pane labelled-gadget-mixin) x1 y1 x2 y2
                         &key (ink +foreground-ink+))
@@ -936,7 +945,7 @@ and must never be nil."))
 
   (defun draw-bordered-polygon (medium point-seq
                                        &key (border-width 2)
-                                       (style :inset))
+                                            (style        :inset))
     (labels ((draw-pieces (outer-points inner-points dark light)
                (let ((n (length outer-points)))
                  (dotimes (i n)
@@ -1567,13 +1576,13 @@ and must never be nil."))
 (defparameter slider-button-short-dim 10)
 
 (defclass slider-pane (slider-gadget basic-pane)
-  ((drag-callback :initform nil
-		  :initarg :drag-callback
-		  :reader slider-drag-callback)
-   (show-value-p :type boolean
-		 :initform nil
-		 :initarg :show-value-p
-		 :accessor gadget-show-value-p)
+  ((drag-callback  :initform nil
+		   :initarg :drag-callback
+		   :reader slider-drag-callback)
+   (show-value-p   :type boolean
+		   :initform nil
+		   :initarg :show-value-p
+		   :accessor gadget-show-value-p)
    (decimal-places :initform 0
                    :initarg :decimal-places
                    :reader slider-decimal-places)))
@@ -1653,6 +1662,74 @@ and must never be nil."))
   (with-special-choices (pane)
     (let ((position (convert-value-to-position pane))
 	  (slider-button-half-short-dim (ash slider-button-short-dim -1))
+	  (slider-button-half-long-dim  (ash slider-button-long-dim -1))
+          (background-color (gadget-current-color pane)))
+      (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
+	(display-gadget-background pane background-color 0 0 (- x2 x1) (- y2 y1))
+        (case (gadget-orientation pane)
+          ((:vertical)
+	    (let ((middle (round (- x2 x1) 2)))
+              (draw-bordered-polygon pane
+                                     (polygon-points
+                                       (make-rectangle*
+			                 (- middle 2) (+ y1 slider-button-half-short-dim)
+			                 (+ middle 2) (- y2 slider-button-half-short-dim)))
+                                     :style :inset
+                                     :border-width 2)
+	      (draw-circle* pane middle (- position slider-button-half-short-dim) 8.0
+                                   :filled t :ink background-color)
+	      (draw-circle* pane middle (- position slider-button-half-short-dim) 8.0
+                                   :filled nil :ink +black+)
+	      (draw-circle* pane middle (- position slider-button-half-short-dim) 7.0
+                                   :filled nil
+                                   :start-angle (* 0.25 pi)
+                                   :end-angle   (* 1.25 pi)
+                                   :ink +white+)
+	      (draw-circle* pane middle (- position slider-button-half-short-dim) 7.0
+                                   :filled nil
+                                   :start-angle (* 1.25 pi)
+                                   :end-angle   (* 2.25 pi)
+                                   :ink +black+)
+              (when (gadget-show-value-p pane)
+	        (draw-text* pane (format-value (gadget-value pane)
+                                               (slider-decimal-places pane))
+			         5 ;(- position slider-button-half-short-dim)
+			         (- middle slider-button-half-long-dim)))))
+          ((:horizontal)
+	    (let ((middle (round (- y2 y1) 2)))
+              (draw-bordered-polygon pane
+                                     (polygon-points
+                                       (make-rectangle*
+			                 (+ x1 slider-button-half-short-dim) (- middle 2)
+			                 (- x2 slider-button-half-short-dim) (+ middle 2)))
+                                     :style :inset
+                                     :border-width 2)
+	      (draw-circle* pane (- position slider-button-half-short-dim) middle 8.0
+                                   :filled t :ink background-color)
+	      (draw-circle* pane (- position slider-button-half-short-dim) middle 8.0
+                                   :filled nil :ink +black+)
+	      (draw-circle* pane (- position slider-button-half-short-dim) middle 7.0
+                                   :filled nil
+                                   :start-angle (* 0.25 pi)
+                                   :end-angle   (* 1.25 pi)
+                                   :ink +white+)
+	      (draw-circle* pane (- position slider-button-half-short-dim) middle 7.0
+                                   :filled nil
+                                   :start-angle (* 1.25 pi)
+                                   :end-angle   (* 2.25 pi)
+                                   :ink +black+)
+              (when (gadget-show-value-p pane)
+	        (draw-text* pane (format-value (gadget-value pane)
+                                               (slider-decimal-places pane))
+			         5 ;(- position slider-button-half-short-dim)
+			         (- middle slider-button-half-long-dim))))))))))
+
+#|
+(defmethod handle-repaint ((pane slider-pane) region)
+  (declare (ignore region))
+  (with-special-choices (pane)
+    (let ((position (convert-value-to-position pane))
+	  (slider-button-half-short-dim (ash slider-button-short-dim -1))
 	  (slider-button-half-long-dim (ash slider-button-long-dim -1)))
       (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
 	(display-gadget-background pane (gadget-current-color pane) 0 0 (- x2 x1) (- y2 y1))
@@ -1662,7 +1739,7 @@ and must never be nil."))
 	      (draw-line* pane
 			  middle (+ y1 slider-button-half-short-dim)
 			  middle (- y2 slider-button-half-short-dim)
-			  :ink +black+)
+			  :ink +black+
 	      (draw-rectangle* pane
 			       (- middle slider-button-half-long-dim) (- position slider-button-half-short-dim)
 			       (+ middle slider-button-half-long-dim) (+ position slider-button-half-short-dim)
@@ -1674,7 +1751,7 @@ and must never be nil."))
 		(draw-text* pane (format-value (gadget-value pane)
                                                (slider-decimal-places pane))
 			    5 ;(- middle slider-button-half-short-dim)
-			    10))) ;(- position slider-button-half-long-dim))))
+			    10))) ;(- position slider-button-half-long-dim)
 	    ; horizontal case
 	    (let ((middle (round (- y2 y1) 2)))
 	      (draw-line* pane
@@ -1693,21 +1770,24 @@ and must never be nil."))
                                                (slider-decimal-places pane))
 			    5 ;(- position slider-button-half-short-dim)
 			    (- middle slider-button-half-long-dim)))))))))
+|#
 
 
 (defmethod convert-value-to-position ((pane slider-pane))
   (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
-    (multiple-value-bind (good-dim1 good-dim2)
-	(if (eq (gadget-orientation pane) :vertical)
-	    ; vertical orientation
-	    (values (+ y1 (ash slider-button-short-dim -1))
-		    (- y2 (ash slider-button-short-dim -1)))
-	    ; horizontal orientation
-	    (values (+ x1 (ash slider-button-short-dim -1))
-		    (- x2 (ash slider-button-short-dim -1))))
-      (+ good-dim1 (/ (* (- (gadget-value pane) (gadget-min-value pane))
-			 (- good-dim2 good-dim1))
-		      (gadget-range pane))))))
+    (let ((x1 (+ x1 8.0)) ; replace this with some rectangle-inset transform or something
+          (y1 (+ y1 8.0)))
+      (multiple-value-bind (good-dim1 good-dim2)
+	  (if (eq (gadget-orientation pane) :vertical)
+	      ; vertical orientation
+	      (values (+ y1 (ash slider-button-short-dim -1))
+		      (- y2 (ash slider-button-short-dim -1)))
+	      ; horizontal orientation
+	      (values (+ x1 (ash slider-button-short-dim -1))
+		      (- x2 (ash slider-button-short-dim -1))))
+        (+ good-dim1 (/ (* (- (gadget-value pane) (gadget-min-value pane))
+			   (- good-dim2 good-dim1))
+		        (gadget-range pane)))))))
 
 ;;; ------------------------------------------------------------------------------------------
 ;;;  30.4.6 The concrete radio-box and check-box Gadgets

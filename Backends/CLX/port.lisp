@@ -65,7 +65,10 @@
 (defmethod initialize-clx ((port clx-port))
   (let ((options (cdr (port-server-path port))))
     (setf (clx-port-display port)
-      (xlib:open-display (getf options :host "") :display (getf options :display-id 0)))
+      #-sbcl
+      (xlib:open-display (getf options :host "") :display (getf options :display-id 0))
+      #+sbcl
+      (xlib:open-display "localhost" :display (getf options :display-id 0)))
 
     (progn
       #+NIL
@@ -133,11 +136,19 @@
 					      :button-press :button-release
 					      :enter-window :leave-window
 					      :structure-notify
-					      :pointer-motion)))
+					     ;:pointer-motion
+                                              :button-motion)))
   (when (null (port-lookup-mirror port sheet))
-    (let* ((desired-color (if (typep sheet 'sheet-with-medium-mixin)
-                              (medium-background sheet)
-                            +white+))
+    (let* ((desired-color (typecase sheet
+                            (sheet-with-medium-mixin
+                              (medium-background sheet))
+                            (basic-pane ; CHECKME [is this sensible?] seems to be
+                              (let ((background (pane-background sheet)))
+                                (if (typep background 'color)
+                                    background
+                                    +white+)))
+                            (t
+                              +white+)))
            (color (multiple-value-bind (r g b)
                       (color-rgb desired-color)
                     (xlib:make-color :red r :green g :blue b)))
@@ -184,7 +195,8 @@
   (realize-mirror-aux port sheet
 		      :override-redirect :on
 		      :map nil
-		      :event-mask '(:structure-notify)))
+		      :event-mask '(:structure-notify
+                                    )))
 
 (defmethod realize-mirror ((port clx-port) (sheet menu-button-pane))
   (realize-mirror-aux port sheet
@@ -193,7 +205,19 @@
 				    :button-press :button-release
 				    :enter-window :leave-window
 				    :structure-notify
+				   ;:pointer-motion
+				    :button-motion
+				    :owner-grab-button)))
+
+(defmethod realize-mirror ((port clx-port) (sheet interactor-pane))
+  (realize-mirror-aux port sheet
+		      :event-mask '(:exposure
+				    :key-press :key-release
+				    :button-press :button-release
+				    :enter-window :leave-window
+				    :structure-notify
 				    :pointer-motion
+				    :button-motion
 				    :owner-grab-button)))
 
 (defmethod destroy-mirror ((port clx-port) (sheet mirrored-sheet-mixin))
@@ -260,8 +284,13 @@
 (defmethod destroy-port :before ((port clx-port))
   (xlib:close-display (clx-port-display port)))
 
+(defun peek-event (display)
+  (xlib:process-event display :timeout 0 :peek-p t :handler
+    #'(lambda (&key event-key &allow-other-keys)
+        event-key)))
+
 (defun event-handler (&rest event-slots
-                      &key display window event-key code state mode time width height x y data
+                      &key display window event-key code state mode time width height x y data count
                       &allow-other-keys)
   (let ((sheet (and window
 		    (port-lookup-sheet *clx-port* window))))
@@ -297,13 +326,17 @@
 	(:destroy-notify
 	 (make-instance 'window-destroy-event :sheet sheet))
 	(:motion-notify
-	 (make-instance 'pointer-motion-event :pointer 0 :button code :x x :y y
-			:sheet sheet :modifier-state state :timestamp time))
-	((:exposure :display)
-         (make-instance 'window-repaint-event
-           :sheet sheet
-           :region (untransform-region (sheet-native-transformation sheet)
-                                       (make-rectangle* x y (+ x width) (+ y height)))))
+         (unless (eq :motion-notify (peek-event display))
+           ; consolidate motion notifications
+	   (make-instance 'pointer-motion-event :pointer 0 :button code :x x :y y
+			  :sheet sheet :modifier-state state :timestamp time)))
+	((:exposure :display) ; what is a :display event?
+         (when (eq count 0)
+           ; this should also consolidate the areas, but try this for now
+           (make-instance 'window-repaint-event
+             :sheet sheet
+             :region (untransform-region (sheet-native-transformation sheet)
+                                         (make-rectangle* x y (+ x width) (+ y height))))))
 	(:client-message
 	 (when (eq (xlib:atom-name display (aref data 0)) :wm_delete_window)
 	   (destroy-mirror (port sheet) sheet)
@@ -315,10 +348,11 @@
 
 (defmethod get-next-event ((port clx-port) &key wait-function (timeout nil))
   (declare (ignore wait-function))
-  (let ((*clx-port* port))
+  (let* ((*clx-port* port)
+         (display    (clx-port-display port)))
     (declare (special *clx-port*))
-    (xlib:display-finish-output (clx-port-display port))
-;    (xlib:process-event (clx-port-display port) :timeout timeout :handler #'event-handler :discard-p t)))
+    (unless (xlib:event-listen display)
+      (xlib:display-finish-output (clx-port-display port)))
     ; temporary solution
     (or (xlib:process-event (clx-port-display port) :timeout timeout :handler #'event-handler :discard-p t)
 	:timeout)))

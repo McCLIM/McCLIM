@@ -892,9 +892,9 @@
 		     scroll-bar-scroll-to-top-callback
 		     scroll-down-line-callback
 		     scroll-down-page-callback
-		     scroller-pane
+		    ;scroller-pane
 		     scroll-extent
-		     scrolling
+		    ;scrolling
 		     scroll-to-bottom-callback
 		     scroll-to-top-callback
 		     scroll-up-line-callback
@@ -1397,7 +1397,10 @@
 		     +dark-red+ +DarkRed+ +light-green+ +LightGreen+ 
             
 		     ))
-	(extensions '(raised-pane raising)))
+	(extensions '(raised-pane raising
+                      spacing-pane spacing
+                      scroller-pane scrolling
+                      viewport-pane)))
     (export externals)
     (export externals :clim)
     (export extensions)

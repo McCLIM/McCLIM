@@ -199,7 +199,16 @@
   (loop for port in climi::*all-ports*
       do (destroy-port port))
   (setq climi::*all-ports* nil)
-  (run-frame-top-level (make-application-frame 'clim-fig)))
+ ;(run-frame-top-level (make-application-frame 'clim-fig))
+  (setq frame (make-application-frame 'clim-fig))
+  (setq fm (frame-manager frame))
+  (setq port (climi::frame-manager-port fm))
+  (setq pane (first (frame-panes frame)))
+  (setq medium (sheet-medium pane))
+  (setq graft (graft frame))
+  (setq vbox (climi::frame-pane frame))
+  (unless clim-sys:*multiprocessing-p*
+    (run-frame-top-level frame)))
 
 (defun make-colored-button (color &key width height)
   (make-pane 'push-button-pane
@@ -345,25 +354,25 @@
                          (setf (clim-fig-constrict-mode *application-frame*) value)))
 
    ;; Drawing modes
-   (point-button (make-drawing-mode-button "Point" :point))
-   (line-button (make-drawing-mode-button "Line" :line))
-   (arrow-button (make-drawing-mode-button "Arrow" :arrow))
+   (point-button     (make-drawing-mode-button "Point" :point))
+   (line-button      (make-drawing-mode-button "Line" :line))
+   (arrow-button     (make-drawing-mode-button "Arrow" :arrow))
    (rectangle-button (make-drawing-mode-button "Rectangle" :rectangle))
-   (ellipse-button (make-drawing-mode-button "Ellipse" :ellipse))
+   (ellipse-button   (make-drawing-mode-button "Ellipse" :ellipse))
 
    ;; Colors
-   (black-button (make-colored-button +black+))
-   (blue-button (make-colored-button +blue+))
-   (green-button (make-colored-button +green+))
-   (cyan-button (make-colored-button +cyan+))
-   (red-button (make-colored-button +red+))
-   (magenta-button (make-colored-button +magenta+))
-   (yellow-button (make-colored-button +yellow+))
-   (white-button (make-colored-button +white+))
+   (black-button     (make-colored-button +black+))
+   (blue-button      (make-colored-button +blue+))
+   (green-button     (make-colored-button +green+))
+   (cyan-button      (make-colored-button +cyan+))
+   (red-button       (make-colored-button +red+))
+   (magenta-button   (make-colored-button +magenta+))
+   (yellow-button    (make-colored-button +yellow+))
+   (white-button     (make-colored-button +white+))
    (turquoise-button (make-colored-button +turquoise+))
-   (grey-button (make-colored-button +grey+))
-   (brown-button (make-colored-button +brown+))
-   (orange-button (make-colored-button +orange+))
+   (grey-button      (make-colored-button +grey+))
+   (brown-button     (make-colored-button +brown+))
+   (orange-button    (make-colored-button +orange+))
 
    (undo :push-button
          :label "Undo"
@@ -413,17 +422,3 @@
     (catch 'exit
       (clim-extensions:simple-event-loop))
     (frame-exit frame)))
-
-; (defmethod clim-fig-frame-top-level ((frame application-frame) &key)
-;   (let ((*standard-input* (frame-standard-input frame))
-; 	(*standard-output* (frame-standard-output frame))
-; 	(*query-io* (frame-query-io frame)))
-;     (setf (slot-value frame 'output-record)
-;           (stream-current-output-record *standard-output*)
-;           (slot-value frame 'status)
-;           (find-if #'(lambda (pane) (typep pane 'text-field-pane))
-;                    (frame-panes frame)))
-;     (catch 'exit
-;       (loop (read-command (climi::frame-pane frame))))
-;     (destroy-port (port frame))))
-

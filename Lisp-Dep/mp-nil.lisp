@@ -35,7 +35,7 @@
 
 (defun destroy-process (process)
   (declare (ignore process))
-  (error "Hugh?"))
+  (error "Huh?"))
 
 (defun current-process ()
   nil)
@@ -78,18 +78,18 @@
 
 (defun disable-process (process)
   (declare (ignore process))
-  (error "Hugh?!"))
+  (error "Huh?!"))
 
 (defun enable-process (process)
   (declare (ignore process))
-  (error "Hugh?!"))
+  (error "Huh?!"))
 
 (defun restart-process (process)
   (declare (ignore process))
-  (error "Hugh?!"))
+  (error "Huh?!"))
 
 (defmacro without-scheduling (&body body)
-  `(progn .,body))
+  `(progn ,@body))
 
 (defmacro atomic-incf (place)
   `(incf (the fixnum ,place)))
@@ -105,7 +105,7 @@
 
 (defmacro with-lock-held ((place &optional state) &body body)
   (declare (ignore place state))
-  `(progn .,body))
+  `(progn ,@body))
 
 (defun make-recursive-lock (&optional name)
   (declare (ignore name))
@@ -113,4 +113,4 @@
 
 (defmacro with-recursive-lock-held ((place &optional state) &body body)
   (declare (ignore place state))
-  `(progn .,body))
+  `(progn ,@body))

@@ -36,7 +36,7 @@
 
 (defclass clx-medium (basic-medium)
   ((gc :initform nil)
-   ) )
+   ))
 
 
 ;;; secondary methods for changing text styles and line styles
@@ -102,7 +102,7 @@
       (setf (xlib:gcontext-font gc) (text-style-to-X-font port (medium-text-style medium))
 	    (xlib:gcontext-foreground gc) (X-pixel port ink)
 	    (xlib:gcontext-background gc) (X-pixel port (medium-background medium)))
-      ;; Here is a bug with regard to clipping ... ;-( --GB
+      ;; Here is a bug with regard to clipping ... ;-( --GB )
       #+NIL
       (let ((clipping-region (medium-device-region medium)))
         (unless (region-equal clipping-region +nowhere+)
@@ -326,6 +326,27 @@
                        start-angle (- end-angle start-angle)
                        filled)))))
 
+(defmethod medium-draw-oval* ((medium clx-medium) center-x center-y radius-x radius-y filled)
+  (with-transformed-position ((sheet-native-transformation (medium-sheet medium))
+                              center-x center-y)
+    (with-CLX-graphics (medium)
+      (xlib:draw-arc mirror gc
+                     (round (- center-x radius-x)) (round (- center-y radius-y))
+                     (round (* radius-x 2)) (round (* radius-y 2))
+                     0.0 (* 2 pi)
+                     filled))))
+
+(defmethod medium-draw-circle* ((medium clx-medium) center-x center-y radius start-angle end-angle filled)
+  (with-transformed-position ((sheet-native-transformation (medium-sheet medium))
+                              center-x center-y)
+    (with-CLX-graphics (medium)
+      (xlib:draw-arc mirror gc
+                     (round (- center-x radius-dx)) (round (- center-y radius-dy))
+                     radius radius
+                     start-angle (- end-angle start-angle)
+                     filled))))
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Methods for text styles
@@ -494,4 +515,3 @@
     (funcall continuation sheet)))
 
 ;;;;
-

@@ -89,6 +89,8 @@
 (defgeneric medium-draw-ellipse* (medium center-x center-y
 				  radius-1-dx radius-1-dy radius-2-dx radius-2-dy
 				  start-angle end-angle filled))
+(defgeneric medium-draw-oval* (medium center-x center-y radius-x radius-y filled))
+(defgeneric medium-draw-circle* (medium center-x center-y radius start-angle end-angle filled))
 (defgeneric medium-draw-text* (medium string x y
 			       start end
 			       align-x align-y

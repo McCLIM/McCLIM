@@ -1228,8 +1228,8 @@
    "SCROLL-TO-TOP-CALLBACK"             ;callback
    "SCROLL-UP-LINE-CALLBACK"            ;callback
    "SCROLL-UP-PAGE-CALLBACK"            ;callback
-   "SCROLLER-PANE"                      ;pane
-   "SCROLLING"                          ;macro
+  ;"SCROLLER-PANE"                      ;pane
+  ;"SCROLLING"                          ;macro
    "SEQUENCE"                           ;presentation type
    "SEQUENCE-ENUMERATED"                ;presentation type
    "SET-HIGHLIGHTED-PRESENTATION"       ;function
@@ -1290,8 +1290,8 @@
    "SPACE-REQUIREMENT-MIN-HEIGHT"       ;generic function
    "SPACE-REQUIREMENT-MIN-WIDTH"        ;generic function
    "SPACE-REQUIREMENT-WIDTH"            ;generic function
-   "SPACING"                            ;macro
-   "SPACING-PANE"                       ;pane
+;  "SPACING"                            ;macro
+;  "SPACING-PANE"                       ;pane
    "STANDARD-APPLICATION-FRAME"         ;class
    "STANDARD-BOUNDING-RECTANGLE"        ;class
    "STANDARD-CELL-OUTPUT-RECORD"        ;class
@@ -1861,7 +1861,10 @@
 (defpackage "CLIM-EXTENSIONS"
   (:use)
   (:export
+   "SPACING-PANE" "SPACING" 
    "RAISED-PANE" "RAISING" 
+   "VIEWPORT-PANE"
+   "SCROLLER-PANE" "SCROLLING" 
    "DRAW-GLYPH" "DEVICE-FONT-TEXT-STYLE-P"
    "READ-IMAGE-FILE"
    "IMAGE" "IMAGE-COLOR" "IMAGE-GADGET" "IMAGE-HEIGHT"
@@ -1913,4 +1916,3 @@
 
 (defpackage :GOATEE
   (:use :clim :clim-lisp))
-

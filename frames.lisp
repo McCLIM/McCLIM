@@ -104,12 +104,31 @@
 			  :initarg :intercept-event-queue
 			  :accessor frame-event-queue)))
 
+;<<<<<<< frames.lisp
+;(defmethod frame-intercept-events ((frame application-frame))
+;  (without-scheduling
+;    (slot-value frame 'intercept-events)))
+;
+;(defmethod (setf frame-intercept-events) (newval (frame application-frame))
+;  (without-scheduling
+;    (setf (slot-value frame 'intercept-events) newval)))
+;
+;;;; XXX Should this check that the frame isn't intercepting events, so
+;;;; it will terminate?
+;(defmethod cleanup-frame-events ((frame application-frame))
+;  (loop with queue = (frame-intercept-event-queue frame)
+;	for event = (event-queue-read-no-hang queue)
+;	while event
+;	;do nil #+ignore (dispatch-event frame event)
+;        ))
+;
+;=======
+;>>>>>>> 1.27
 (defun application-frame-p (x)
   (typep x 'application-frame))
 
 (defmethod initialize-instance :after ((frame application-frame) &rest args)
   (declare (ignore args)))
-
 
 ;;; Generic operations
 ; (defgeneric frame-name (frame))
@@ -319,7 +338,8 @@ FRAME-EXIT condition."))
 	  (partial-command-parser
 	   'command-line-read-remaining-arguments-for-partial-command)
 	  (prompt nil))
-  (sleep 4) ; wait for the panes to be finalized - KLUDGE!!! - mikemac
+  (when *multiprocesing-p*
+    (sleep 4)) ; wait for the panes to be finalized - KLUDGE!!! - mikemac
   (loop
     (let ((*standard-input* (frame-standard-input frame))
 	  (*standard-output* (frame-standard-output frame))
@@ -371,7 +391,7 @@ FRAME-EXIT condition."))
 			     :name 'top-level-sheet)))
     (setf (slot-value frame 'top-level-sheet) t-l-s)
     (generate-panes fm frame)))
-  
+
 (defmethod disown-frame ((fm frame-manager) (frame application-frame))
   (setf (slot-value fm 'frames) (remove frame (slot-value fm 'frames)))
   (sheet-disown-child (graft frame) (frame-top-level-sheet frame))
@@ -385,13 +405,37 @@ FRAME-EXIT condition."))
      (progn
        ,@body)))
 
-(defun make-single-pane-generate-panes-form (class-name pane)
+; The menu-bar code in the following two functions is incorrect.
+; it needs to be moved to somewhere after the backend, since
+; it depends on the backend chosen.
+;
+; This hack slaps a menu-bar into the start of the application-frame,
+; in such a way that it is hard to find.
+;
+; FIXME
+(defun make-single-pane-generate-panes-form (class-name menu-bar pane)
   `(defmethod generate-panes ((fm frame-manager) (frame ,class-name))
+     ; v-- hey, how can this be?
      (with-look-and-feel-realization (fm frame)
-       (let ((pane ,pane))
-	 (setf (slot-value frame 'pane) pane)))))
+       (let ((pane ,(cond
+                      ((eq menu-bar t)
+                       `(vertically () (clim-internals::make-menu-bar
+                                         ',class-name)
+                                       ,pane))
+                      ((listp menu-bar)
+                       `(vertically () (clim-internals::make-menu-bar
+                                         (make-command-table nil
+                                              :menu ',menu-bar))
+                                       ,pane))
+                      (menu-bar
+                       `(vertically () (clim-internals::make-menu-bar
+                                        ',menu-bar)
+                                      ,pane))
+                      (t pane))))
+         (setf (slot-value frame 'pane) pane)))))
 
-(defun make-panes-generate-panes-form (class-name panes layouts)
+; could do with some refactoring [BTS] FIXME
+(defun make-panes-generate-panes-form (class-name menu-bar panes layouts)
   `(defmethod generate-panes ((fm frame-manager) (frame ,class-name))
      (let ((*application-frame* frame))
        (with-look-and-feel-realization (fm frame)
@@ -417,10 +461,31 @@ FRAME-EXIT condition."))
                                            ;;
 					   (push pane (slot-value frame 'panes))
 					   pane))))
-	   (setf (slot-value frame 'pane)
-	     (ecase (frame-current-layout frame)
-	       ,@layouts)))
-	 ))))
+           ; [BTS] added this, but is not sure that this is correct for adding
+           ; a menu-bar transparently, should also only be done where the
+           ; exterior window system does not support menus
+          ,(if menu-bar
+	      `(setf (slot-value frame 'pane)
+	         (ecase (frame-current-layout frame)
+	           ,@(mapcar (lambda (layout)
+                               `(,(first layout) (vertically ()
+                                                  ,(cond
+                                                    ((eq menu-bar t)
+                                                     `(clim-internals::make-menu-bar
+                                                        ',class-name))
+                                                    ((listp menu-bar)
+                                                     `(raising (:border-width 2 :background +Gray83+)
+                                                        (clim-internals::make-menu-bar
+                                                           (make-command-table nil
+                                                             :menu ',menu-bar))))
+                                                    (menu-bar
+                                                     `(clim-internals::make-menu-bar
+                                                        ',menu-bar)))
+                                                   ,@(rest layout))))
+                             layouts)))
+	      `(setf (slot-value frame 'pane)
+	         (ecase (frame-current-layout frame)
+	           ,@layouts))))))))
 
 (defmacro define-application-frame (name superclasses slots &rest options)
   (if (null superclasses)
@@ -442,7 +507,9 @@ FRAME-EXIT condition."))
 	     (:panes (setq panes values))
 	     (:layouts (setq layouts values))
 	     (:command-table (setq command-table (first values)))
-	     (:menu-bar (setq menu-bar (first values)))
+	     (:menu-bar (setq menu-bar (if (listp values)
+                                           (first values)
+                                           values)))
 	     (:disabled-commands (setq disabled-commands values))
 	     (:command-definer (setq command-definer (first values)))
 	     (:top-level (setq top-level (first values)))
@@ -462,15 +529,15 @@ FRAME-EXIT condition."))
 	   :pretty-name ,(string-capitalize name)
 	   :command-table (find-command-table ',(first command-table))
 	   :disabled-commands ',disabled-commands
-	   :menu-bar ,menu-bar
+	   :menu-bar ',menu-bar
 	   :current-layout ',current-layout
 	   :layouts ',layouts
 	   :top-level ',top-level
 	     )
 	 ,@others)
        ,(if pane
-	    (make-single-pane-generate-panes-form name pane)
-	  (make-panes-generate-panes-form name panes layouts))
+	    (make-single-pane-generate-panes-form name menu-bar pane)
+            (make-panes-generate-panes-form name menu-bar panes layouts))
        ,@(if command-table
 	     `((define-command-table ,@command-table)))
        ,@(if command-definer

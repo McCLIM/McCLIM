@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.68 2002/04/19 22:27:09 moore Exp $
+;;; $Id: panes.lisp,v 1.69 2002/04/21 12:41:14 brian Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -268,6 +268,12 @@
    (new-height :initform nil)
    )
   (:documentation ""))
+
+; BTS added this [CHECKME]
+; because events were propagating to vracks and not being
+; handled... this may be completely wrong
+(defmethod handle-event ((pane pane) (event t))
+  (values))
 
 ;;; This is a big departure from the spec, but apparently "real" CLIM
 ;;; only has one event queue per frame too.  Sure makes things easier.
@@ -974,7 +980,7 @@
                                                  (t
                                                   content)))
                                          contents))))
-
+ ; here is where they are created
  (defclass xbox-pane (box-layout-mixin
                       composite-pane
                       permanent-medium-sheet-output-mixin ;arg!

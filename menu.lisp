@@ -40,18 +40,18 @@
       (dispatch-repaint button (sheet-region button)))))
 
 #|
-(defun menu-draw-highlighted (gadget)
-  (with-slots (label) gadget
-    (multiple-value-bind (x1 y1 x2 y2) 
-	(bounding-rectangle* (sheet-region gadget))
-      (let ((w (- x2 x1))
-	    (h (- y2 y1)))
-	(draw-rectangle* gadget -1 -1 x2 y2
-			 :ink (gadget-highlighted-color gadget)
-			 :filled t)
-	(draw-edges-lines* gadget 1 1 (- w 2) (- h 2))
-	(draw-text* gadget label (round w 2) (round h 2)
-		    :align-x :center :align-y :center)))))
+  (defun menu-draw-highlighted (gadget)
+    (with-slots (label) gadget
+      (multiple-value-bind (x1 y1 x2 y2) 
+	  (bounding-rectangle* (sheet-region gadget))
+        (let ((w (- x2 x1))
+	      (h (- y2 y1)))
+	  (draw-rectangle* gadget -1 -1 x2 y2
+			   :ink (gadget-highlighted-color gadget)
+			   :filled t)
+	  (draw-edges-lines* gadget 1 1 (- w 2) (- h 2))
+	  (draw-text* gadget label (round w 2) (round h 2)
+		      :align-x :center :align-y :center)))))
 |#
 
 (defun menu-draw-highlighted (gadget)
@@ -63,22 +63,22 @@
 	  (draw-rectangle* gadget -1 -1 x2 y2
 			   :ink (gadget-highlighted-color gadget)
 			   :filled t)
-	  (draw-edges-lines* gadget 0 0 (1- w) (1- h)) ;(- w 2) (- h 2))
+	  (draw-edges-lines* gadget 0 0 (1- w) (1- h)) ;(- w 2) (- h 2)
 	  (draw-text* gadget label (round w 2) (round h 2)
 		      :align-x :center :align-y :center))))))
 
 #|
-(defun menu-draw-unhighlighted (gadget)
-  (with-slots (label) gadget
-    (multiple-value-bind (x1 y1 x2 y2)
-	(bounding-rectangle* (sheet-region gadget))
-      (let ((w (- x2 x1))
-	    (h (- y2 y1)))
-	(draw-rectangle* gadget -1 -1 x2 y2
-			 :ink (gadget-normal-color gadget)
-			 :filled t)
-	(draw-text* gadget label (round w 2) (round h 2)
-		    :align-x :center :align-y :center)))))
+  (defun menu-draw-unhighlighted (gadget)
+    (with-slots (label) gadget
+      (multiple-value-bind (x1 y1 x2 y2)
+	  (bounding-rectangle* (sheet-region gadget))
+        (let ((w (- x2 x1))
+	      (h (- y2 y1)))
+	  (draw-rectangle* gadget -1 -1 x2 y2
+			   :ink (gadget-normal-color gadget)
+			   :filled t)
+	  (draw-text* gadget label (round w 2) (round h 2)
+		      :align-x :center :align-y :center)))))
 |#
 
 (defun menu-draw-unhighlighted (gadget)
@@ -160,7 +160,8 @@
 			(slot-value (find-command-table (slot-value sub-menu 'command-table)) 'menu)))
 	 (rack (make-pane-1 manager frame 'vrack-pane
 			    :background +grey80+ :contents items))
-	 (raised (make-pane-1 manager frame 'raised-pane :contents (list rack))))
+	;(raised (make-pane-1 manager frame 'raised-pane :contents (list rack)))
+	 (raised (make-pane-1 manager frame 'raised-pane :border-width 2 :background +gray80+ :contents (list rack))))
     (with-slots (bottomp) sub-menu
       (multiple-value-bind (xmin ymin xmax ymax)
 	  (bounding-rectangle* (sheet-region sub-menu))
@@ -229,8 +230,9 @@
 ;;
 ;; MENU-BAR
 ;;
+(defclass menu-button-hrack-pane (hrack-pane) ())
 
-(defclass menu-bar (hrack-pane
+(defclass menu-bar (menu-button-hrack-pane
                     permanent-medium-sheet-output-mixin)
   ((items :initform nil)
    (armed :initform nil)))
@@ -268,7 +270,7 @@
 			   min-width min-height)
   (with-slots (menu) (find-command-table command-table)
     (progn ;;raising () ;; XXX temporary medicine as RAISED is borken --GB
-      (make-pane 
+      (make-pane-1 *pane-realizer* *application-frame*
           'menu-bar
 	  :background +grey80+						
 	  :width width :height height

@@ -243,7 +243,7 @@
                          &key clipping-region transformation)
   (declare (ignorable args))
   (with-sheet-medium (medium sheet)
-    (setf (medium-transformation medium) (or transformation +identity-transformation+)
+    (setf (medium-transformation medium)  (or transformation +identity-transformation+)
 	  (medium-clipping-region medium) (or clipping-region +everywhere+))
     (medium-draw-image* medium image)))
 

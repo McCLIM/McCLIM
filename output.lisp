@@ -62,6 +62,10 @@
 (defmethod invoke-with-sheet-medium-bound (continuation (medium null) (sheet permanent-medium-sheet-output-mixin))
   (funcall continuation (sheet-medium sheet)))
 
+; BTS added this. CHECKME
+(defmethod invoke-with-sheet-medium-bound (continuation (medium null) (sheet mirrored-pixmap))
+  (funcall continuation (pixmap-medium sheet)))
+
 (defmethod invoke-with-sheet-medium-bound (continuation (medium null) (sheet temporary-medium-sheet-output-mixin))
   (let ((old-medium (sheet-medium sheet))
         (new-medium (allocate-medium (port sheet) sheet)))

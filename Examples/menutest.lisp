@@ -63,6 +63,14 @@
 		    :menu '(("Buffer" :menu buffer-command-table)
 			    ("File" :command com-file)))
 
+#-old
+(define-application-frame menutest () ()
+  (:menu-bar menubar-command-table)
+  (:pane
+   (make-pane 'text-field :value "stuff" :height 200))
+  (:top-level (menutest-frame-top-level)))
+
+#+old
 (define-application-frame menutest ()
   ()
   (:panes

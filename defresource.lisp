@@ -59,10 +59,10 @@
 
 ;; Also I tried to define all this in a way, that the no assumptions
 ;; about random user code is made. Specifically: no locks are held,
-;; scheduling is _not_ disabled¹, any of the resource API can be
+;; scheduling is _not_ disabled, any of the resource API can be
 ;; called.
 
-;; ¹) unlike under Genera it seems.
+;; ) unlike under Genera it seems.
 
 (defvar *resource-table*
     (make-hash-table :test #'eq)

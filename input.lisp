@@ -48,9 +48,16 @@
       (let ((res (event-queue-read-no-hang eq)))
         (when res
           (return res))
-        (process-wait  "Waiting for event"
-                       (lambda ()
-                         (not (null (event-queue-head eq))))))))
+        (if *multiprocessing-p*
+            (process-wait  "Waiting for event"
+                           (lambda ()
+                             (not (null (event-queue-head eq)))))
+            (process-wait  "Waiting for event"
+                           (lambda ()
+                             (loop for port in climi::*all-ports*
+                                ; this is dubious
+                                do (process-next-event port))
+                             (not (null (event-queue-head eq)))))))))
 
 (defmethod event-queue-append ((eq standard-event-queue) item)
   "Append the item at the end of the queue."

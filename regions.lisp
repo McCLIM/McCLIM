@@ -4,7 +4,7 @@
 ;;;   Created: 1998-12-02 19:26
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: regions.lisp,v 1.15 2002/02/21 03:22:44 gilbert Exp $
+;;;       $Id: regions.lisp,v 1.16 2002/04/21 12:41:14 brian Exp $
 ;;; --------------------------------------------------------------------------------------
 ;;;  (c) copyright 1998,1999,2001 by Gilbert Baumann
 ;;;  (c) copyright 2001 by Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
@@ -1526,7 +1526,7 @@
                                  y)
     res))
 
-;; Diese CLIM dimensionality rule ist in hoechsten maﬂe inkonsistent
+;; Diese CLIM dimensionality rule ist in hoechsten ma?e inkonsistent
 ;; und bringt mehr probleme als sie beseitigt.
 
 
