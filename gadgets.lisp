@@ -1262,7 +1262,7 @@ and must never be nil."))
                            :ink (effective-gadget-background pane)
                            :filled t)
 	  (cond ((slot-value pane 'armed)
-		 (draw-edges-lines* pane (- w 2) (- h 2) 1 1))
+		 (draw-edges-lines* pane +white+ (- w 2) (- h 2) +black+ 1 1))
 		(t))
           (draw-label* pane x1 y1 x2 y2 :ink (effective-gadget-foreground pane)))))))
 
@@ -1840,7 +1840,9 @@ and must never be nil."))
 			       (+ middle slider-button-half-long-dim) (+ position slider-button-half-short-dim)
 			       :ink +gray85+ :filled t)
 	      (draw-edges-lines* pane
+                                 +white+
 				 (- middle slider-button-half-long-dim) (- position slider-button-half-short-dim)
+                                 +black+
 				 (+ middle slider-button-half-long-dim) (+ position slider-button-half-short-dim))
 	      (when (gadget-show-value-p pane)
 		(draw-text* pane (format-value (gadget-value pane)
@@ -1858,7 +1860,9 @@ and must never be nil."))
 			       (+ position slider-button-half-short-dim) (+ middle slider-button-half-long-dim)
 			       :ink +gray85+ :filled t)
 	      (draw-edges-lines* pane
+                                 +white+
 				 (- position slider-button-half-short-dim) (- middle slider-button-half-long-dim)
+                                 +black+
 				 (+ position slider-button-half-short-dim) (+ middle slider-button-half-long-dim))
 	      (when (gadget-show-value-p pane)
 		(draw-text* pane (format-value (gadget-value pane)

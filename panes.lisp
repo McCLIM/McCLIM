@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.97 2002/09/06 02:47:16 moore Exp $
+;;; $Id: panes.lisp,v 1.98 2002/09/07 15:57:40 brian Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -147,11 +147,11 @@
 (defun display-gadget-background (gadget color x1 y1 x2 y2)
   (draw-rectangle* gadget x1 y1 x2 y2 :ink color :filled t))
 
-(defun draw-edges-lines* (pane x1 y1 x2 y2)
-  (draw-line* pane x1 y1 x2 y1 :ink +white+)
-  (draw-line* pane x1 y1 x1 y2 :ink +white+)
-  (draw-line* pane x1 y2 x2 y2 :ink +black+)
-  (draw-line* pane x2 y1 x2 y2 :ink +black+))
+(defun draw-edges-lines* (pane ink1 x1 y1 ink2 x2 y2)
+  (draw-line* pane x1 y1 x2 y1 :ink ink1)
+  (draw-line* pane x1 y1 x1 y2 :ink ink1)
+  (draw-line* pane x1 y2 x2 y2 :ink ink2)
+  (draw-line* pane x2 y1 x2 y2 :ink ink2))
 
 
 ;;; Space Requirements
@@ -668,14 +668,14 @@
     (sheet-adopt-child pane (first contents))))
 
 (defmethod compose-space ((pane single-child-composite-pane) &key width height)
-  (if (sheet-children pane)
-      (compose-space (first (sheet-children pane))
+  (if (sheet-child pane)
+      (compose-space (sheet-child pane)
                      :width width :height height)
       (make-space-requirement)))
 
 (defmethod allocate-space ((pane single-child-composite-pane) width height)
-  (when (first (sheet-children pane))
-    (allocate-space (first (sheet-children pane)) width height)))
+  (when (sheet-child pane)
+    (allocate-space (sheet-child pane) width height)))
 
 ;;; TOP-LEVEL-SHEET
 
@@ -1412,7 +1412,36 @@ During realization the child of the spacing will have as cordinates
   (declare (ignore region))
   (with-special-choices (pane)
     (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
-      (draw-edges-lines* pane 0 0 (- x2 x1 1) (- y2 y1 1)))))
+      (draw-edges-lines* pane +white+ 0 0 +black+ (- x2 x1 1) (- y2 y1 1))
+      ; this also needs to draw the background
+      ; should use an inset-rectangle thingy
+      (let ((x1 (+ x1 1))
+            (y1 (+ y1 1))
+            (x2 (- x2 1))
+            (y2 (- y2 1)))
+        ; if we were really clever, we'd clip the contents out of our fill
+        ; to avoid flicker
+        (draw-rectangle* pane x1 y1 x2 y2 :filled t :ink (pane-background pane))))))
+
+;;; LOWERED PANE
+
+(defclass lowered-pane (border-pane permanent-medium-sheet-output-mixin) ())
+
+(defmacro lowering ((&rest options) &body contents)
+  `(make-pane 'lowered-pane ,@options :contents (list ,@contents)))
+
+(defmethod handle-repaint ((pane lowered-pane) region)
+  (declare (ignore region))
+  (with-special-choices (pane)
+    (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
+      (draw-edges-lines* pane +black+ 0 0 +white+ (- x2 x1 1) (- y2 y1 1))
+      (let ((x1 (+ x1 1))
+            (y1 (+ y1 1))
+            (x2 (- x2 1))
+            (y2 (- y2 1)))
+        ; if we were really clever, we'd clip the contents out of our fill
+        ; to avoid flicker
+        (draw-rectangle* pane x1 y1 x2 y2 :filled t :ink (pane-background pane))))))
 
 ;;; RESTRAINING PANE
 
@@ -1438,13 +1467,21 @@ During realization the child of the spacing will have as cordinates
 
 (defmethod allocate-space ((pane viewport-pane) width height)
   (with-slots (hscrollbar vscrollbar) (sheet-parent pane)
-    (move-and-resize-sheet (first (sheet-children pane))
-                           (if hscrollbar (- (gadget-value hscrollbar)) 0)
-                           (if vscrollbar (- (gadget-value vscrollbar)) 0)
-                           (max (space-requirement-width (compose-space (first (sheet-children pane))))
-                                width)
-                           (max (space-requirement-height (compose-space (first (sheet-children pane))))
-                                height)) ))
+    (move-and-resize-sheet
+      (sheet-child pane)
+      (if hscrollbar (- (gadget-value hscrollbar)) 0)
+      (if vscrollbar (- (gadget-value vscrollbar)) 0)
+      (max (space-requirement-width (compose-space (sheet-child pane)))
+           width)
+      (max (space-requirement-height (compose-space (sheet-child pane)))
+           height))
+    ; move-and-resize-sheet does not allocate space for the sheet...
+    ; so we do it manually for this case, which may be wrong - CHECKME
+    ; if this is the right place, reusing the above calculation might be a good idea
+    (allocate-space
+             (sheet-child pane)
+             (max (space-requirement-width (compose-space (sheet-child pane))) width)
+             (max (space-requirement-height (compose-space (sheet-child pane))) height))))
 
 ;;;;
 ;;;; SCROLLER-PANE
@@ -1467,7 +1504,7 @@ During realization the child of the spacing will have as cordinates
 
 ;; 
 
-(defparameter *scrollbar-thickness* 15)
+(defparameter *scrollbar-thickness* 17)
 
 (defclass scroller-pane (composite-pane)
   ((scroll-bar :type (member '(t :vertical :horizontal))
@@ -1700,14 +1737,14 @@ During realization the child of the spacing will have as cordinates
   (let ((client (gadget-client scroll-bar)))
     (setf (gadget-value scroll-bar :invoke-callback t)
           (clamp
-           (- (gadget-value scroll-bar)
-              (* direction
-                 (funcall (if (eq (gadget-orientation scroll-bar) :vertical)
-                              #'bounding-rectangle-height
-                              #'bounding-rectangle-width)
-                          (pane-viewport-region client))))
-           (gadget-min-value scroll-bar)
-           (gadget-max-value scroll-bar)))))
+            (- (gadget-value scroll-bar)
+               (* direction
+                  (funcall (if (eq (gadget-orientation scroll-bar) :vertical)
+                               #'bounding-rectangle-height
+                               #'bounding-rectangle-width)
+                           (pane-viewport-region client))))
+            (gadget-min-value scroll-bar)
+            (gadget-max-value scroll-bar)))))
 
 (defun scroll-line-callback (scroll-bar direction)
   (let ((client (gadget-client scroll-bar)))
@@ -1958,6 +1995,8 @@ During realization the child of the spacing will have as cordinates
 (defmethod* (setf window-viewport-position) (x y (pane clim-stream-pane))
   (scroll-extent pane x y))
 
+;; v-- does this handle scrolling with occlusion? ie, if another thing is overlapping
+;; the area being scrolled, will we copy junk off the top? -- BTS
 (defun scroll-area (pane dx dy)
   (let ((transform (sheet-transformation pane)))
     ;; Region has been "scrolled" already.

@@ -163,7 +163,7 @@
 
 ;;; CLIM-Examples depends on having at least one backend loaded.
 ;;; Which backend is the user's choice.
-(clim-defsystem (:clim-examples :depends-on (:clim))
+(clim-defsystem (:clim-examples :depends-on (:clim #+nil :clim-looks))
    "Examples/calculator"
    "Examples/colorslider"
    "Examples/menutest"
