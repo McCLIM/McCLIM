@@ -4,7 +4,7 @@
 ;;;   Created: 1998-12-02 19:26
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: regions.lisp,v 1.19 2002/06/04 07:50:20 adejneka Exp $
+;;;       $Id: regions.lisp,v 1.20 2002/06/12 03:43:41 adejneka Exp $
 ;;; --------------------------------------------------------------------------------------
 ;;;  (c) copyright 1998,1999,2001 by Gilbert Baumann
 ;;;  (c) copyright 2001 by Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
@@ -477,6 +477,14 @@
   ((start-angle :initarg :start-angle)
    (end-angle   :initarg :end-angle)
    (tr          :initarg :tr)))         ;a transformation from the unit circle to get the elliptical object
+
+(defmethod print-object ((ell elliptical-thing) stream)
+  (with-slots (start-angle end-angle tr) ell
+    (format stream "#<~A [~A ~A] ~A>"
+            (type-of ell)
+            (and start-angle (* (/ 180 pi) start-angle))
+            (and end-angle (* (/ 180 pi) end-angle))
+            tr)))
 
 (defclass standard-ellipse (ellipse elliptical-thing) ())
 (defclass standard-elliptical-arc (elliptical-arc elliptical-thing) ())
@@ -1471,6 +1479,9 @@
 (defmethod region-intersection ((a standard-region-intersection) (b region))
   (region-intersection b a))
 
+(defmethod region-intersection ((a region) (b region))
+  (make-instance 'standard-region-intersection :regions (list a b)))
+
 
 (defmethod region-intersection ((x region) (y standard-region-difference))
   (with-slots (a b) y
@@ -1764,6 +1775,9 @@
   (assert (not (eq a +nowhere+)))
   (make-instance 'standard-region-union 
     :regions (append (standard-region-set-regions a) (standard-region-set-regions b))))
+
+(defmethod region-union ((a region) (b region))
+  (make-instance 'standard-region-union :regions (list a b)))
 
 (defmethod region-union ((a standard-rectangle-set) (b path)) a)
 (defmethod region-union ((b path) (a standard-rectangle-set)) a)
