@@ -551,7 +551,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; image as label
-
+#||
 (defmethod compose-space-aux ((pane labelled-gadget) (label image))
   (let ((width (image-width label))
 	(height (image-height label)))
@@ -577,3 +577,4 @@
       (draw-image pane label
 		  :clipping-region (sheet-region pane)
 		  :transformation (make-translation-transformation tx ty)))))
+||#
