@@ -1,3 +1,12 @@
+TBM:20040123:204400
+    rescanning buffers with accept extents doesn't work reliably,
+    especially in accepting-values.
+
+    The default present methods, and those for Lisp types, should be
+    more careful about :acceptably. In the same vein,
+    command-line-command-unparser should be prepared to emit
+    accept-extents (how?) if the arguments aren't acceptable as text.
+
 TBM:20031112:002300
     These are TODO's from the 0.9 release notes. The listed functions
     are unimplemented unless otherwise noted.

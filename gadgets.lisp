@@ -1153,7 +1153,7 @@ and must never be nil."))
                               enter/exit-arms/disarms-mixin
                               ;; other
                               standard-gadget-pane)
-  ((indicator-type :type (member '(:one-of :some-of))
+  ((indicator-type :type (member :one-of :some-of)
 		   :initarg :indicator-type
 		   :reader toggle-button-indicator-type
                    :initform :some-of) )

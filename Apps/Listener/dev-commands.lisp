@@ -910,3 +910,25 @@
     (display-evalues values)
     (fresh-line)))
 
+;;; Some CLIM developer commands
+
+(define-command (com-show-command-table :name t :command-table dev-commands)
+    ((table 'clim:command-table :prompt "command table")
+     &key
+     (locally 'boolean :default nil :mentioned-default t)
+     (show-commands 'boolean :default t))
+  (let ((our-tables nil)
+	(processed-commands (make-hash-table :test #'eq)))
+    (do-command-table-inheritance (ct table)
+      (let ((commands nil))
+	(map-over-command-table-names
+	 #'(lambda (name command)
+	     (unless (gethash command processed-commands)
+	       (push name commands)
+	       (setf (gethash command processed-commands) t)))
+	 ct
+	 :inherited nil)
+	(push (cons ct (sort commands #'string-lessp)) our-tables)))
+    (setq our-tables (nreverse our-tables))
+    )
+  )

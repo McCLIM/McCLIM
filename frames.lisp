@@ -52,6 +52,83 @@
 ;;; XXX All these slots should move to a mixin or to standard-application-frame.
 ;;; -- moore
 
+;;; Generic operations
+(defgeneric frame-name (frame))
+(defgeneric frame-pretty-name (frame))
+(defgeneric (setf frame-pretty-name) (name frame))
+(defgeneric frame-command-table (frame))
+(defgeneric (setf frame-command-table) (command-table frame))
+(defgeneric frame-standard-output (frame)
+  (:documentation
+   "Returns the stream that will be used for *standard-output* for the FRAME."))
+(defgeneric frame-standard-input (frame)
+  (:documentation
+   "Returns the stream that will be used for *standard-input* for the FRAME."))
+(defgeneric frame-query-io (frame)
+  (:documentation
+   "Returns the stream that will be used for *query-io* for the FRAME."))
+(defgeneric frame-error-output (frame)
+  (:documentation
+   "Returns the stream that will be used for *error-output* for the FRAME."))
+(defgeneric frame-pointer-documentation-output (frame)
+  (:documentation
+   "Returns the stream that will be used for *pointer-documentation-output*
+for the FRAME."))
+(defgeneric frame-calling-frame (frame)
+  (:documentation
+   "Returns the application frame that invoked the FRAME."))
+(defgeneric frame-parent (frame)
+  (:documentation
+   "Returns the object that acts as the parent for the FRAME."))
+(defgeneric frame-panes (frame)
+  (:documentation
+   "Returns the pane that is the top-level pane in the current layout
+of the FRAME's named panes."))
+(defgeneric frame-top-level-sheet (frame)
+  (:documentation
+   "Returns the shhet that is the top-level sheet for the FRAME. This
+is the sheet that has as its descendants all of the panes of the FRAME."))
+(defgeneric frame-current-panes (frame)
+  (:documentation
+   "Returns a list of those named panes in the FRAME's current layout.
+If there are no named panes, only the single, top level pane is returned."))
+(defgeneric get-frame-pane (frame pane-name)
+  (:documentation
+   "Returns the named CLIM stream pane in the FRAME whose name is PANE-NAME."))
+(defgeneric find-pane-named (frame pane-name)
+  (:documentation
+   "Returns the pane in the FRAME whose name is PANE-NAME."))
+(defgeneric frame-current-layout (frame))
+(defgeneric (setf frame-current-layout) (layout frame))
+(defgeneric frame-all-layouts (frame))
+(defgeneric layout-frame (frame &optional width height))
+(defgeneric frame-exit-frame (condition)
+  (:documentation
+   "Returns the frame that is being exited from associated with the
+FRAME-EXIT condition."))
+(defgeneric frame-exit (frame)
+  (:documentation
+   "Exits from the FRAME."))
+(defgeneric pane-needs-redisplay (pane))
+(defgeneric (setf pane-needs-redisplay) (value pane))
+(defgeneric redisplay-frame-pane (frame pane &key force-p))
+(defgeneric redisplay-frame-panes (frame &key force-p))
+(defgeneric frame-replay (frame stream &optional region))
+(defgeneric notify-user (frame message &key associated-window title
+                         documentation exit-boxes name style text-style))
+(defgeneric frame-properties (frame property))
+(defgeneric (setf frame-properties) (value frame property))
+(defgeneric (setf client-setting) (value frame setting))
+(defgeneric reset-frame (frame &rest client-settings))
+(defgeneric frame-maintain-presentation-histories (frame))
+
+; extension
+(defgeneric frame-schedule-timer-event (frame sheet delay token))
+
+(defgeneric note-input-focus-changed (pane state)
+  (:documentation "Called when a pane receives or loses the keyboard
+input focus. This is a McCLIM extension."))
+
 (define-protocol-class  application-frame ()
   ((port :initform nil
 	 :initarg :port
@@ -69,15 +146,17 @@
    (disabled-commands :initarg :disabled-commands
 		      :initform nil
 		      :accessor frame-disabled-commands)
-   (pane :reader frame-pane)
-   (panes :initform nil
-	  :reader frame-panes)
+   (named-panes :accessor frame-named-panes :initform nil)
+   (panes :initform nil :reader frame-panes
+	  :documentation "The tree of panes in the current layout.")
    (layouts :initform nil
 	    :initarg :layouts
 	    :reader frame-layouts)
    (current-layout :initform nil
 		   :initarg :current-layout
-		   :reader frame-current-layout)
+		   :accessor frame-current-layout)
+   (panes-for-layout :initform nil :accessor frame-panes-for-layout
+		     :documentation "alist of names and panes (as returned by make-pane)")
    (top-level-sheet :initform nil
 		    :reader frame-top-level-sheet)
    (menu-bar :initarg :menu-bar
@@ -107,82 +186,6 @@
 			   :initarg :user-supplied-geometry)
    (process :reader frame-process :initform (current-process))
    (client-settings :accessor client-settings :initform nil)))
-
-;;; Generic operations
-; (defgeneric frame-name (frame))
-; (defgeneric frame-pretty-name (frame))
-; (defgeneric (setf frame-pretty-name) (name frame))
-; (defgeneric frame-command-table (frame))
-; (defgeneric (setf frame-command-table) (command-table frame))
-(defgeneric frame-standard-output (frame)
-  (:documentation
-   "Returns the stream that will be used for *standard-output* for the FRAME."))
-(defgeneric frame-standard-input (frame)
-  (:documentation
-   "Returns the stream that will be used for *standard-input* for the FRAME."))
-(defgeneric frame-query-io (frame)
-  (:documentation
-   "Returns the stream that will be used for *query-io* for the FRAME."))
-(defgeneric frame-error-output (frame)
-  (:documentation
-   "Returns the stream that will be used for *error-output* for the FRAME."))
-(defgeneric frame-pointer-documentation-output (frame)
-  (:documentation
-   "Returns the stream that will be used for *pointer-documentation-output*
-for the FRAME."))
-(defgeneric frame-calling-frame (frame)
-  (:documentation
-   "Returns the application frame that invoked the FRAME."))
-(defgeneric frame-parent (frame)
-  (:documentation
-   "Returns the object that acts as the parent for the FRAME."))
-;(defgeneric frame-pane (frame) ; XXX Is it in Spec?
-;  (:documentation
-;   "Returns the pane that is the top-level pane in the current layout
-;of the FRAME's named panes."))
-(defgeneric frame-top-level-sheet (frame)
-  (:documentation
-   "Returns the shhet that is the top-level sheet for the FRAME. This
-is the sheet that has as its descendants all of the panes of the FRAME."))
-(defgeneric frame-current-panes (frame)
-  (:documentation
-   "Returns a list of those named panes in the FRAME's current layout.
-If there are no named panes, only the single, top level pane is returned."))
-(defgeneric get-frame-pane (frame pane-name)
-  (:documentation
-   "Returns the named CLIM stream pane in the FRAME whose name is PANE-NAME."))
-(defgeneric find-pane-named (frame pane-name)
-  (:documentation
-   "Returns the pane in the FRAME whose name is PANE-NAME."))
-;(defgeneric frame-current-layout (frame))
-;(defgeneric frame-all-layouts (frame)) ; XXX Is it in Spec?
-(defgeneric layout-frame (frame &optional width height))
-(defgeneric frame-exit-frame (condition)
-  (:documentation
-   "Returns the frame that is being exited from associated with the
-FRAME-EXIT condition."))
-(defgeneric frame-exit (frame) ; XXX Is it in Spec?
-  (:documentation
-   "Exits from the FRAME."))
-(defgeneric pane-needs-redisplay (pane))
-(defgeneric (setf pane-needs-redisplay) (value pane))
-(defgeneric redisplay-frame-pane (frame pane &key force-p))
-(defgeneric redisplay-frame-panes (frame &key force-p))
-(defgeneric frame-replay (frame stream &optional region))
-(defgeneric notify-user (frame message &key associated-window title
-                         documentation exit-boxes name style text-style))
-(defgeneric frame-properties (frame property))
-(defgeneric (setf frame-properties) (value frame property))
-(defgeneric (setf client-setting) (value frame setting))
-(defgeneric reset-frame (frame &rest client-settings))
-(defgeneric frame-maintain-presentation-histories (frame))
-
-; extension
-(defgeneric frame-schedule-timer-event (frame sheet delay token))
-
-(defgeneric note-input-focus-changed (pane state)
-  (:documentation "Called when a pane receives or loses the keyboard
-input focus. This is a McCLIM extension."))
 
 (defclass standard-application-frame (application-frame
 				      presentation-history-mixin)
@@ -223,20 +226,29 @@ frame, if any")))
       (setf (slot-value frame 'layouts) nil))
     (setf (%frame-manager frame) fm)))
 
-(defmethod (setf frame-current-layout) (name (frame application-frame))
+(define-condition frame-layout-changed (condition)
+  ((frame :initarg :frame :reader frame-layout-changed-frame)))
+
+(defmethod (setf frame-current-layout) :after (name (frame application-frame))
   (declare (ignore name))
-  (generate-panes (frame-manager frame) frame))
+  (generate-panes (frame-manager frame) frame)
+  (signal 'frame-layout-changed :frame frame))
 
 (defmethod generate-panes :before (fm  (frame application-frame))
   (declare (ignore fm))
-  (when (and (slot-boundp frame 'pane)
-	     (frame-pane frame))
-    (sheet-disown-child (frame-top-level-sheet frame) (frame-pane frame))))
+  (when (frame-panes frame)
+    (sheet-disown-child (frame-top-level-sheet frame) (frame-panes frame)))
+  (loop
+     for (nil . pane) in (frame-panes-for-layout frame)
+     for parent = (sheet-parent pane)
+     if  parent
+     do (sheet-disown-child parent pane)))
 
 (defmethod generate-panes :after (fm  (frame application-frame))
   (declare (ignore fm))
-  (sheet-adopt-child (frame-top-level-sheet frame) (frame-pane frame))
-  (sheet-adopt-child (graft frame) (frame-top-level-sheet frame))
+  (sheet-adopt-child (frame-top-level-sheet frame) (frame-panes frame))
+  (unless (sheet-parent (frame-top-level-sheet frame))
+    (sheet-adopt-child (graft frame) (frame-top-level-sheet frame)))
   (let* ((space (compose-space (frame-top-level-sheet frame)))
 	 (bbox (or (slot-value frame 'user-supplied-geometry)
 		   (make-bounding-rectangle 0 0
@@ -256,7 +268,7 @@ frame, if any")))
     ))
 
 (defmethod layout-frame ((frame application-frame) &optional width height)
-  (let ((pane (frame-pane frame)))
+  (let ((pane (frame-panes frame)))
     (if (and  width (not height))
 	(error "LAYOUT-FRAME must be called with both WIDTH and HEIGHT or neither"))
     (if (and (null width) (null height))
@@ -271,32 +283,35 @@ frame, if any")))
 
 (defun find-pane-if (predicate panes)
   "Returns a pane satisfying PREDICATE in the forest growing from PANES"
-  (loop for pane in panes
-	do (map-over-sheets #'(lambda (p)
-				(when (funcall predicate p)
-				  (return-from find-pane-if p)))
-			    pane)
-	finally (return nil)))
+  (map-over-sheets #'(lambda (p)
+		       (when (funcall predicate p)
+			 (return-from find-pane-if p)))
+		   panes)
+  nil)
 
 (defun find-pane-of-type (panes type)
   (find-pane-if #'(lambda (pane) (typep pane type)) panes))
 
+;;; There are several ways to do this; this isn't particularly efficient, but
+;;; it shouldn't matter much.  If it does, it might be better to map over the
+;;; panes in frame-named-panes looking for panes with parents.
 (defmethod frame-current-panes ((frame application-frame))
-  (find-pane-if #'(lambda (pane) (pane-name pane))
-                (frame-current-layout frame)))
+  (let ((panes nil)
+	(named-panes (frame-named-panes frame)))
+    (map-over-sheets #'(lambda (p)
+			 (when (member p named-panes)
+			   (push p panes)))
+		     (frame-panes frame))
+    panes))
 
 (defmethod get-frame-pane ((frame application-frame) pane-name)
-  (find-pane-if #'(lambda (pane)
-                    (and (typep pane 'clim-stream-pane)
-                         (eq pane-name
-                             (pane-name pane))))
-                (frame-panes frame)))
+  (let ((pane (find-pane-named frame pane-name)))
+    (if (typep pane 'clim-stream-pane)
+	pane
+	nil)))
 
 (defmethod find-pane-named ((frame application-frame) pane-name)
-  (find-pane-if #'(lambda (pane)
-                    (eq pane-name
-                        (pane-name pane)))
-                (frame-panes frame)))
+  (find pane-name (frame-named-panes frame) :key #'pane-name))
 
 (defmethod frame-standard-output ((frame application-frame))
   (or (find-pane-of-type (frame-panes frame) 'application-pane)
@@ -365,11 +380,12 @@ frame, if any")))
   (declare (ignore pane force-p))
   nil)
 
-(defmethod run-frame-top-level ((frame application-frame) &key &allow-other-keys)
-  (handler-bind ((frame-exit #'(lambda (condition)
-                                 (declare (ignore condition))
-				 (return-from run-frame-top-level nil))))
-    (funcall (frame-top-level-lambda frame) frame)))
+(defmethod run-frame-top-level ((frame application-frame)
+				&key &allow-other-keys)
+  (handler-case
+      (funcall (frame-top-level-lambda frame) frame)
+    (frame-exit ()
+      nil)))
 
 (defmethod run-frame-top-level :around ((frame application-frame) &key)
   (let ((*application-frame* frame)
@@ -386,20 +402,22 @@ frame, if any")))
     (unless (or (eq (frame-state frame) :enabled)
 		(eq (frame-state frame) :shrunk))
       (enable-frame frame))
-    (let ((query-io (frame-query-io frame))
-          (*default-frame-manager* (frame-manager frame)))
-      (unwind-protect
-           (if query-io
-               (with-input-focus (query-io)
-                 (call-next-method))
-               (call-next-method))
-        (progn
-          (let ((fm (frame-manager frame)))
-            (case original-state
-              (:disabled
-               (disable-frame frame))
-              (:disowned
-               (disown-frame fm frame)))))))))
+    (unwind-protect
+	 (loop
+	    for query-io = (frame-query-io frame)
+	    for *default-frame-manager* = (frame-manager frame)
+	    do (handler-case
+		   (return (if query-io
+			       (with-input-focus (query-io)
+				 (call-next-method))
+			       (call-next-method)))
+		 (frame-layout-changed () nil)))
+      (let ((fm (frame-manager frame)))
+	(case original-state
+	  (:disabled
+	   (disable-frame frame))
+	  (:disowned
+	   (disown-frame fm frame)))))))
 
 ;;; Defined in incremental-redisplay.lisp
 (defvar *enable-updating-output*)
@@ -493,20 +511,21 @@ frame, if any")))
 (defmethod execute-frame-command ((frame application-frame) command)
   (apply (command-name command) (command-arguments command)))
 
-(defmethod make-pane-1 ((fm frame-manager) (frame application-frame) type &rest args)
-  `(make-pane-1 ,fm ,frame ',type ,@args))
-
 (defmethod make-pane-1 :around (fm (frame standard-application-frame) type
 				&rest args
 				&key (input-buffer nil input-buffer-p)
+				(name nil namep)
 				&allow-other-keys)
-  (declare (ignore input-buffer))
+  (declare (ignore name input-buffer))
   "Default input-buffer to the frame event queue."
-  (if input-buffer-p
-      (call-next-method)
-      (apply #'call-next-method fm frame type
-	     :input-buffer (frame-event-queue frame)
-	     args)))
+  (let ((pane (if input-buffer-p
+		  (call-next-method)
+		  (apply #'call-next-method fm frame type
+			 :input-buffer (frame-event-queue frame)
+			 args))))
+    (when namep
+      (push pane (frame-named-panes frame)))
+    pane)))
 
 (defmethod adopt-frame ((fm frame-manager) (frame application-frame))
   (setf (slot-value fm 'frames) (cons frame (slot-value fm 'frames)))
@@ -582,91 +601,104 @@ frame, if any")))
 ;
 ; FIXME
 (defun make-single-pane-generate-panes-form (class-name menu-bar pane)
-  `(defmethod generate-panes ((fm frame-manager) (frame ,class-name))
-     ; v-- hey, how can this be?
-     (with-look-and-feel-realization (fm frame)
-       (let ((pane ,(cond
-                      ((eq menu-bar t)
-                       `(vertically () (clim-internals::make-menu-bar
+  `(progn
+     (defmethod generate-panes ((fm frame-manager) (frame ,class-name))
+       ;; v-- hey, how can this be?
+       (with-look-and-feel-realization (fm frame)
+	 (let ((pane ,(cond
+		       ((eq menu-bar t)
+			`(vertically () (clim-internals::make-menu-bar
                                          ',class-name)
-                                       ,pane))
-                      ((consp menu-bar)
-                       `(vertically () (clim-internals::make-menu-bar
+				     ,pane))
+		       ((consp menu-bar)
+			`(vertically () (clim-internals::make-menu-bar
                                          (make-command-table nil
-                                              :menu ',menu-bar))
-                                       ,pane))
-                      (menu-bar
-                       `(vertically () (clim-internals::make-menu-bar
-                                        ',menu-bar)
-                                      ,pane))
-                      ;; The form below is unreachable with (listp
-                      ;; menu-bar) instead of (consp menu-bar) above
-                      ;; --GB
-                      (t pane))))
-         (setf (slot-value frame 'pane) pane)))))
+							     :menu ',menu-bar))
+				     ,pane))
+		       (menu-bar
+			`(vertically () (clim-internals::make-menu-bar
+					 ',menu-bar)
+				     ,pane))
+		       ;; The form below is unreachable with (listp
+		       ;; menu-bar) instead of (consp menu-bar) above
+		       ;; --GB
+		       (t pane))))
+	   (setf (slot-value frame 'panes) pane))))
+     (defmethod frame-all-layouts ((frame ,class-name))
+       nil)))
 
-; could do with some refactoring [BTS] FIXME
+(defun find-pane-for-layout (name frame)
+  (cdr (assoc name (frame-panes-for-layout frame) :test #'eq)))
+
+(defun save-pane-for-layout (name pane frame)
+  (push (cons name pane) (frame-panes-for-layout frame))
+  pane)
+
+(defun do-pane-creation-form (name form)
+  (cond
+    ((and (= (length form) 1)
+	  (listp (first form)))
+     (first form))
+    ((keywordp (first form))
+     (let ((maker (intern (concatenate 'string
+				       (symbol-name '#:make-clim-)
+				       (symbol-name (first form))
+				       (symbol-name '#:-pane))
+			  :clim)))
+       (if (fboundp maker)
+	   `(,maker :name ',name ,@(cdr form))
+	   `(make-pane ',(first form)
+		       :name ',name ,@(cdr form)))))
+    (t `(make-pane ',(first form) :name ',name ,@(cdr form)))))
+
 (defun make-panes-generate-panes-form (class-name menu-bar panes layouts
 				       pointer-documentation)
   (when pointer-documentation
     (setf panes (append panes
 			'((%pointer-documentation%
 			   pointer-documentation-pane)))))
-  `(defmethod generate-panes ((fm frame-manager) (frame ,class-name))
-     (let ((*application-frame* frame))
-       (with-look-and-feel-realization (fm frame)
-	 (let ,(loop for (name . form) in panes
-		     collect `(,name (or (find-pane-named frame ',name)
-					 (let ((pane
-						,(cond
-						  ((and (= (length form) 1)
-							(listp (first form)))
-						   (first form))
-						  ((keywordp (first form))
-						   (let ((maker (intern (concatenate 'string
-									  (symbol-name '#:make-clim-)
-									  (symbol-name (first form))
-									  (symbol-name '#:-pane))
-									:clim)))
-						     (if (fboundp maker)
-							 `(,maker :name ',name ,@(cdr form))
-						       `(make-pane ',(first form)
-								   :name ',name ,@(cdr form)))))
-						  (t `(make-pane ',(first form) :name ',name ,@(cdr form))))))
-                                           ;; hmm?! --GB
-                                           (setf (slot-value pane 'name) ',name)
-                                           ;;
-					   (push pane (slot-value frame 'panes))
-					   pane))))
-           ; [BTS] added this, but is not sure that this is correct for adding
-           ; a menu-bar transparently, should also only be done where the
-           ; exterior window system does not support menus
-          ,(if (or menu-bar pointer-documentation)
-	      `(setf (slot-value frame 'pane)
-	         (ecase (frame-current-layout frame)
-	           ,@(mapcar (lambda (layout)
-                               `(,(first layout)
-				 (vertically ()
-				  ,@(cond
-				     ((eq menu-bar t)
-				      `((clim-internals::make-menu-bar
-					',class-name)))
-				     ((consp menu-bar)
-				      `((clim-internals::make-menu-bar
-					  (make-command-table
-					   nil
-					   :menu ',menu-bar))))
-				     (menu-bar
-				      `((clim-internals::make-menu-bar
-					 ',menu-bar)))
-				     (t nil))
-				  ,@(rest layout)
-				  ,@(when pointer-documentation
-					  '(%pointer-documentation%)))))
-                             layouts)))
-	      `(setf (slot-value frame 'pane)
-	         (ecase (frame-current-layout frame)
-	           ,@layouts))))))))
+  `(progn
+     (defmethod generate-panes ((fm frame-manager) (frame ,class-name))
+       (let ((*application-frame* frame))
+	 (with-look-and-feel-realization (fm frame)
+	   (let ,(loop
+		    for (name . form) in panes
+		    collect `(,name (or (find-pane-for-layout ',name frame)
+					(save-pane-for-layout
+					 ',name
+					 ,(do-pane-creation-form name form)
+					 frame))))
+	     ;; [BTS] added this, but is not sure that this is correct for
+	     ;; adding a menu-bar transparently, should also only be done
+	     ;; where the exterior window system does not support menus
+	     ,(if (or menu-bar pointer-documentation)
+		  `(setf (slot-value frame 'panes)
+			 (ecase (frame-current-layout frame)
+			   ,@(mapcar (lambda (layout)
+				       `(,(first layout)
+					  (vertically ()
+					    ,@(cond
+					       ((eq menu-bar t)
+						`((clim-internals::make-menu-bar
+						   ',class-name)))
+					       ((consp menu-bar)
+						`((clim-internals::make-menu-bar
+						   (make-command-table
+						    nil
+						    :menu ',menu-bar))))
+					       (menu-bar
+						`((clim-internals::make-menu-bar
+						   ',menu-bar)))
+					       (t nil))
+					    ,@(rest layout)
+					    ,@(when pointer-documentation
+						'(%pointer-documentation%)))))
+				     layouts)))
+		  `(setf (slot-value frame 'panes)
+			 (ecase (frame-current-layout frame)
+			   ,@layouts)))))))
+     (defmethod frame-all-layouts ((frame ,class-name))
+       ',(mapcar #'car layouts))))
 
 (defmacro define-application-frame (name superclasses slots &rest options)
   (if (null superclasses)
@@ -807,7 +839,7 @@ frame, if any")))
   ((left :initform 0 :initarg :left)
    (top :initform 0 :initarg :top)
    (top-level-sheet :initform nil :reader frame-top-level-sheet)
-   (pane :reader frame-pane :initarg :pane)
+   (panes :reader frame-panes :initarg :panes)
    (graft :initform nil :accessor graft)
    (manager :initform nil :accessor frame-manager)))
 
@@ -818,12 +850,12 @@ frame, if any")))
                              'unmanaged-top-level-sheet-pane
 			     :name 'top-level-sheet)))
     (setf (slot-value frame 'top-level-sheet) t-l-s)
-    (sheet-adopt-child t-l-s (frame-pane frame))
+    (sheet-adopt-child t-l-s (frame-panes frame))
     (let ((graft (find-graft :port (frame-manager-port fm))))
       (sheet-adopt-child graft t-l-s)
       (setf (graft frame) graft))
     (let ((space (compose-space t-l-s)))
-      (allocate-space (frame-pane frame)
+      (allocate-space (frame-panes frame)
 		      (space-requirement-width space)
 		      (space-requirement-height space))
       (setf (sheet-region t-l-s)
@@ -840,7 +872,7 @@ frame, if any")))
   (setf (frame-manager frame) nil))
 
 (defun make-menu-frame (pane &key (left 0) (top 0))
-  (make-instance 'menu-frame :pane pane :left left :top top))
+  (make-instance 'menu-frame :panes pane :left left :top top))
 
 ;;; Frames and presentations
 (defmethod frame-maintain-presentation-histories

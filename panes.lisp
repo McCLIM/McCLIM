@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.138 2004/01/22 20:14:59 moore Exp $
+;;; $Id: panes.lisp,v 1.139 2004/02/07 14:05:50 moore Exp $
 
 (in-package :clim-internals)
 
@@ -686,15 +686,14 @@
   (setf (pane-current-height pane) nil) )
 
 (defmethod change-space-requirements ((pane layout-protocol-mixin)
-                                      &rest space-req-keys
                                       &key resize-frame &allow-other-keys)
-  (declare (ignore resize-frame))
-  (change-space-requirements (sheet-parent pane) :resize-frame resize-frame))
+  (when (sheet-parent pane)
+    (change-space-requirements (sheet-parent pane)
+			       :resize-frame resize-frame)))
 
 (defmethod change-space-requirements :after ((pane layout-protocol-mixin)
-                                             &rest space-req-keys
                                              &key resize-frame &allow-other-keys)
-  (declare (ignore resize-frame space-req-keys))
+  (declare (ignore resize-frame))
   (note-space-requirements-changed (sheet-parent pane) pane))
 
 (defmethod note-space-requirements-changed (pane client)

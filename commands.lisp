@@ -115,6 +115,29 @@
 	(errorp (error 'command-table-not-found))
 	(t nil)))
 
+(define-presentation-method present (object (type command-table) stream
+				     (view textual-view)
+				     &key acceptably for-context-type)
+  (declare (ignore for-context-type))
+  (let ((name (command-table-name object)))
+    (if acceptably
+	(prin1 name stream)
+	(princ name stream))))
+
+
+(define-presentation-method accept ((type command-table) stream
+				    (view textual-view)
+				    &key (default nil defaultp) default-type)
+  (multiple-value-bind (table success string)
+      (completing-from-suggestions (stream)
+	(loop
+	   for name being the hash-key of *command-tables*
+	     using (hash-value table)
+	   do (suggest (symbol-name name) table)))
+    (if success
+	table
+	(simple-parse-error "~A is not the name of a command table" string))))
+
 ; adjusted to allow anonymous command-tables for menu-bars
 (defun make-command-table (name &key inherit-from menu (errorp t))
   (if (and name errorp (gethash name *command-tables*))
@@ -266,11 +289,10 @@
 (defun find-command-from-command-line-name (name command-table &key (errorp t))
   (apply-with-command-table-inheritance
    #'(lambda (table)
-       (maphash #'(lambda (key value)
-		    (when (string-equal key name)
-		      (return-from find-command-from-command-line-name
-				   (values value table))))
-		(slot-value table 'command-line-names)))
+       (let ((value (gethash name (command-line-names table))))
+	 (when value
+	   (return-from find-command-from-command-line-name
+	     (values value table)))))
    (find-command-table command-table))
   (if errorp
       (error 'command-not-accessible)))

@@ -1,4 +1,4 @@
-;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
+1;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
 
 ;;;  (c) copyright 2000 by 
 ;;;           Robert Strandh (strandh@labri.u-bordeaux.fr)
@@ -116,7 +116,7 @@
 (defmethod menu-children ((submenu menu-button-submenu-pane))
   (with-slots (submenu-frame) submenu
     (if submenu-frame
-	(sheet-children (first (sheet-children (frame-pane submenu-frame))))
+	(sheet-children (first (sheet-children (frame-panes submenu-frame))))
 	'())))
 
 (defun create-substructure (sub-menu client)

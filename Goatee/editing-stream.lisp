@@ -337,9 +337,9 @@
       (apply #'%replace-input stream printed-rep
 	     0 (length printed-rep) buffer-start rescan rescan-supplied-p 
 	     (if accept-object
-		 '(nil)
 		 `(accept-result-extent :object ,accept-object
-		                        :result-type ,type)))))
+		                        :result-type ,type)
+		 '(nil)))))
 
 
 ;;; There used to be complicated logic here to support output when

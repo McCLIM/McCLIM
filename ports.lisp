@@ -174,29 +174,6 @@
       (distribute-event port event)
       t))))
 
-;;; Called in the application frame process.
-(defmethod port-wait-on-event-processing ((port basic-port) &key wait-function timeout
-					  ((:event-count old-count) nil))
-  (declare (ignorable wait-function))
-  (with-slots (event-count) port
-    (if *multiprocessing-p*
-	(let ((old-event-count (or old-count event-count))
-	      (flag nil))
-	  (flet ((wait-fn ()
-		   (when (not (eql old-event-count event-count))
-		     (setq flag t))))
-	    (if timeout
-		(process-wait-with-timeout "Wait for event" timeout #'wait-fn)
-		(process-wait "Wait for event" #'wait-fn))
-	    (if flag
-		event-count
-		(values nil :timeout))))
-	(multiple-value-bind (result reason)
-	    (process-next-event port
-				:wait-function wait-function
-				:timeout timeout)
-	  (values (and result event-count) reason)))))
-  
 (defmethod distribute-event ((port basic-port) event)
   (cond
    ((typep event 'keyboard-event)

@@ -192,6 +192,7 @@
   (:menu-bar menubar-command-table)
   (:panes
    (canvas (make-pane 'canvas-pane
+		      :name 'canvas
                       :display-time nil))
    (line-width-slider :slider
 		      :label "Line Width"
@@ -295,8 +296,7 @@
          (scrolling (:width 600 :height 400) canvas))
        (horizontally (:height 30) clear undo redo)
        status)))
-  (:top-level (default-frame-top-level .
-                  (:prompt clim-fig-prompt))))
+  (:top-level (default-frame-top-level :prompt 'clim-fig-prompt)))
 
 (define-presentation-to-command-translator add-figure
     (blank-area com-add-figure clim-fig
