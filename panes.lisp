@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.99 2002/09/12 18:18:57 brian Exp $
+;;; $Id: panes.lisp,v 1.100 2002/09/14 02:53:10 brian Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -221,20 +221,26 @@
 (defun space-requirement-combine (function sr1 sr2)
   (multiple-value-bind (width min-width max-width height min-height max-height)
       (space-requirement-components sr2)
-    (space-requirement-combine* function
-                                sr1
-                                :width width :min-width min-width :max-width max-width
-                                :height height :min-height min-height :max-height max-height)))
+    (space-requirement-combine* function sr1
+                                :width      width
+                                :min-width  min-width
+                                :max-width  max-width
+                                :height     height
+                                :min-height min-height
+                                :max-height max-height)))
 
 (defun space-requirement+ (sr1 sr2)
   (space-requirement-combine #'+ sr1 sr2))
 
 (defun space-requirement+* (space-req &key (width 0) (min-width 0) (max-width 0)
-                                      (height 0) (min-height 0) (max-height 0))
-  (space-requirement-combine* #'+
-                              space-req
-                              :width width :min-width min-width :max-width max-width
-                              :height height :min-height min-height :max-height max-height))
+                                           (height 0) (min-height 0) (max-height 0))
+  (space-requirement-combine* #'+ space-req
+                              :width      width
+                              :min-width  min-width
+                              :max-width  max-width
+                              :height     height
+                              :min-height min-height
+                              :max-height max-height))
 
 (deftype spacing-value ()
   ;; just for documentation
@@ -402,8 +408,12 @@
    options."
   (let* ((sr           (compose-space child))
          ;; The child's dimension is clamped within its min/max space requirement
-         (child-width  (clamp width  (space-requirement-min-width sr)  (space-requirement-max-width sr)))
-         (child-height (clamp height (space-requirement-min-height sr) (space-requirement-max-height sr)))
+         (child-width  (clamp width
+                              (space-requirement-min-width sr)
+                              (space-requirement-max-width sr)))
+         (child-height (clamp height
+                              (space-requirement-min-height sr)
+                              (space-requirement-max-height sr)))
          ;; Align the child within the available area
          (child-x      (ecase align-x
                          ((:left)   x)
@@ -488,8 +498,6 @@
 
       (dada ((foo width height))
             ;; the user wins on the "primary" dimensions
-            ;; ^- this can't be true...
-            ;;    the user should only be able to win within the pane's min-max
             (when user-foo
               (setf foo (spacing-value-to-device-units pane user-foo)))
             ;;
@@ -512,12 +520,12 @@
                          (t
                           max-foo))))))
     (make-space-requirement
-     :width width
-     :min-width min-width
-     :max-width max-width
-     :height height
-     :min-height min-height
-     :max-height max-height) ))
+      :width      width
+      :min-width  min-width
+      :max-width  max-width
+      :height     height
+      :min-height min-height
+      :max-height max-height)))
 
 ; new version
 (defmethod merge-user-specified-options ((pane space-requirement-options-mixin)
@@ -532,7 +540,9 @@
             ;; ^- this can't be true...
             ;;    the user should only be able to win within the pane's min-max
             (when user-foo
-              (setf foo (spacing-value-to-device-units pane user-foo)))
+              (setf foo
+                (clamp (spacing-value-to-device-units pane user-foo)
+                       min-foo max-foo)))
             ;;
             (setf min-foo
               (clamp
@@ -554,23 +564,27 @@
                       (t
                        max-foo))))))
     (make-space-requirement
-     :width width
-     :min-width min-width
-     :max-width max-width
-     :height height
-     :min-height min-height
-     :max-height max-height)))
+      :width      width
+      :min-width  min-width
+      :max-width  max-width
+      :height     height
+      :min-height min-height
+      :max-height max-height)))
 
 (defmethod merge-user-specified-options ((pane border-space-requirement-options-mixin) sr)
   (with-slots (user-width user-min-width user-max-width
                user-height user-min-height user-max-height) pane
-    (space-requirement+* sr
-                         :width (or user-width 2)
-                         :min-width (or user-min-width user-width 2)
-                         :max-width (or user-max-width user-width 2)
-                         :height (or user-height 2)
-                         :min-height (or user-min-height user-height 2)
-                         :max-height (or user-max-height user-height 2))))
+    (let* ((min-width  (or user-min-width  2))
+           (max-width  (or user-max-width  +fill+))
+           (min-height (or user-min-height 2))
+           (max-height (or user-max-height +fill+)))
+      (space-requirement+* sr
+                           :width      (clamp (or user-width 2) min-width max-width)
+                           :min-width  min-width
+                           :max-width  max-width
+                           :height     (clamp (or user-height 2) min-height max-height)
+                           :min-height min-height
+                           :max-height max-height))))
 
 (defmethod compose-space :around ((pane space-requirement-options-mixin)
                                   &key width height)
@@ -599,7 +613,7 @@
   (declare (ignore width height))
   (or (pane-space-requirement pane)
       (setf (pane-space-requirement pane)
-        (call-next-method))))
+            (call-next-method))))
 
 (defmethod change-space-requirements ((pane layout-protocol-mixin)
                                       &rest space-req-keys &key resize-frame
@@ -749,20 +763,12 @@
     (setf (pane-space-requirement pane)
       (compose-space pane)))
   (when (first (sheet-children pane))
-    #+nil
     (allocate-space
         (first (sheet-children pane))
-	(clamp width (sr-min-width pane) (sr-max-width pane))
-	(clamp height (sr-min-height pane) (sr-max-height pane)))
-    #-nil ; this works, but may not be correct... see why the clamp is so restrictive
-          ; with [vh]racks, etc
-          ; I'll leave this in for now, since it helps in testing allocate-space - BTS
-    (allocate-space
-        (first (sheet-children pane))
-	width
-	height)))
+	(clamp width  (sr-min-width pane)  (sr-max-width pane))
+	(clamp height (sr-min-height pane) (sr-max-height pane)))))
 
-#+nil ; retired while debugging the following - but this code should work
+#+nil ; old
 (defmethod handle-event ((pane top-level-sheet-pane)
 			 (event window-configuration-event))
   (let ((x (window-configuration-event-x event))
@@ -779,7 +785,6 @@
     (invalidate-cached-regions pane)
     (allocate-space pane width height)))
 
-#-nil
 (defmethod handle-event ((pane top-level-sheet-pane)
 			 (event window-configuration-event))
   (let ((x (window-configuration-event-x event))
@@ -796,13 +801,9 @@
         ;; avoid going into an infinite loop by not using (setf sheet-region)
         (setf (slot-value pane 'region)
 	      (make-bounding-rectangle 0 0 width height))
-        (invalidate-cached-regions pane)
-        #+nil
-        (allocate-space pane width height)
         (when (or (/= width  old-width)
                   (/= height old-height))
-          ; is what is called, so we need to check the top level sheet's requirements...
-          ; (compose-space (first (sheet-children pane)))
+          (invalidate-cached-regions pane)
           (allocate-space pane width height))))))
 
 (defmethod handle-event ((pane top-level-sheet-pane)
@@ -835,7 +836,7 @@
 
 (defmethod compose-space ((pane null-pane) &key width height)
   (declare (ignore width height))
-  (make-space-requirement :width 0 :min-width 0 :max-width 0
+  (make-space-requirement :width  0 :min-width  0 :max-width  0
                           :height 0 :min-height 0 :max-height 0))
 
 (defmethod allocate-space ((pane null-pane) width height)
@@ -943,19 +944,19 @@
            finally
              (return
                (space-requirement+*
-                (make-space-requirement
-                 :major major
-                 :min-major (min min-major major)
-                 :max-major (max max-major major)
-                 :minor minor
-                 :min-minor (min min-minor minor)
-                 :max-minor (max max-minor minor))
-                :min-major (* (1- n) major-spacing)
-                :max-major (* (1- n) major-spacing) ; +fill+ ?
-                :major (* (1- n) major-spacing)
-                :min-minor 0
-                :max-minor 0 ; +fill+ ?
-                :minor 0))))))
+                 (make-space-requirement
+                   :major     major
+                   :min-major (min min-major major)
+                   :max-major (max max-major major)
+                   :minor     minor
+                   :min-minor (min min-minor minor)
+                   :max-minor (max max-minor minor))
+                 :min-major (* (1- n) major-spacing)
+                 :max-major (* (1- n) major-spacing)
+                 :major     (* (1- n) major-spacing)
+                 :min-minor 0
+                 :max-minor 0
+                 :minor     0))))))
 
  (defmethod box-layout-mixin/xically-allocate-space-aux* ((box box-layout-mixin) width height)
    (declare (ignorable width height))
@@ -1255,6 +1256,7 @@
 (defmethod compose-space ((pane table-pane) &key width height)
   (declare (ignore width height))
   (with-slots (array) pane
+    ; ---v our problem is here.
     (let ((rsrs (loop for i from 0 below (array-dimension array 0) 
                     collect (table-pane-row-space-requirement pane i)))
           (csrs (loop for j from 0 below (array-dimension array 1) 
@@ -1263,10 +1265,10 @@
             (c (stack-space-requirements-horizontally csrs)))
         (let ((res
                (make-space-requirement
-                :width (space-requirement-width r)
-                :min-width (space-requirement-min-width r)
-                :max-width (space-requirement-max-width r)
-                :height (space-requirement-height c)
+                :width      (space-requirement-width r)
+                :min-width  (space-requirement-min-width r)
+                :max-width  (space-requirement-max-width r)
+                :height     (space-requirement-height c)
                 :min-height (space-requirement-min-height c)
                 :max-height (space-requirement-max-height c))))
           #+NIL
