@@ -136,11 +136,11 @@ information is present."))
 could be boldface, or a different style, or even another font."
   `(with-text-face (,stream :bold)
      ,@body))
-;; FIXMEFIXME!!!!!
+
 (defmacro inspector-table ((object pane) header &body body)
-  "Present OBJECT in tabular form on PANE, with
-HEADER printed in a box at the top. BODY should output the rows of the
-table using INSPECTOR-TABLE-ROW."
+  "Present OBJECT in tabular form on PANE, with HEADER evaluated to
+print a label in a box at the top. BODY should output the rows of the
+table, possibly using INSPECTOR-TABLE-ROW."
   (let ((evaluated-pane (gensym "pane"))
 	(evaluated-object (gensym "object")))
     `(let ((,evaluated-pane ,pane)
@@ -160,8 +160,8 @@ table using INSPECTOR-TABLE-ROW."
 	(print-documentation ,evaluated-object ,evaluated-pane)))))
 
 (defmacro inspector-table-row ((pane) left right)
-  "Output a table row with two items, LEFT and RIGHT, on PANE. This
-should be used only within INSPECTOR-TABLE."
+  "Output a table row with two items, produced by evaluating LEFT and
+RIGHT, on PANE. This should be used only within INSPECTOR-TABLE."
   (let ((evaluated-pane (gensym "pane")))
     `(let ((,evaluated-pane ,pane))
       (formatting-row (,evaluated-pane)
