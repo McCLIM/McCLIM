@@ -1070,8 +1070,9 @@
     (144 238 144 "LightGreen")))
 
 (defun xpm-find-named-color (name)
-  (let ((q (find name *xpm-x11-colors* :key #'fourth :test #'string-equal)))
-    (and q
-         (clim:make-rgb-color (/ (first q) 255) (/ (second q) 255) (/ (third q) 255)))))
+  (if (string-equal name "None") clim:+transparent-ink+
+    (let ((q (find name *xpm-x11-colors* :key #'fourth :test #'string-equal)))
+      (and q
+           (clim:make-rgb-color (/ (first q) 255) (/ (second q) 255) (/ (third q) 255))))))
 
 
