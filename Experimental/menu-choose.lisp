@@ -266,24 +266,16 @@
                                  :width x2
                                  :height y2
                                  :resize-frame t)))
-  ;; Eat pointer release event so it isn't fed spuriously to another
-  ;; command entering its own tracking-pointer loop. 
-  (let ((*pointer-documentation-output* pointer-documentation)
-	(exit-menu nil))
+  (let ((*pointer-documentation-output* pointer-documentation))	
     (tracking-pointer (menu :context-type presentation-type
 			    :multiple-window t :highlight t)
-      (:presentation (&key presentation)
-       (setq exit-menu t))
-      (:pointer-button-release (&key event x y) ; Pointer clicked outside menu?
-					; Close the menu.
-	(when exit-menu
-	  (unless (and (sheet-ancestor-p (event-sheet event) menu)
-		       (region-contains-position-p (sheet-region menu) x y))
-	    (return-from menu-choose-from-drawer (values nil)))))
+      (:pointer-button-press (&key event x y) ; Close if pointer clicked outside menu.
+         (unless (and (sheet-ancestor-p (event-sheet event) menu)
+                      (region-contains-position-p (sheet-region menu) x y))
+           (return-from menu-choose-from-drawer (values nil))))
       (:presentation-button-release (&key event presentation x y)
         (if (and (sheet-ancestor-p (event-sheet event) menu)
                  (region-contains-position-p (sheet-region menu) x y))
             (return-from menu-choose-from-drawer
               (values (presentation-object presentation) event))
             (return-from menu-choose-from-drawer (values nil)))))))
-
