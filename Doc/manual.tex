@@ -172,12 +172,19 @@ colors and such.
 
 CLIM generalizes the concept of a hierarchy of window in a windowing
 system in several different ways.  A window in a windowing system
-generalizes to a \gloss{sheet} in CLIM.  
+generalizes to a \gloss{sheet} in CLIM.  More precisely, a window in a
+windowing system generalizes to the \gloss{sheet region} of a sheet.
+A CLIM sheet in an abstract concept with an infinite \gloss{drawing
+plane} and the \gloss{region} of the sheet is the potentially visible
+part of that drawing plane. 
 
-CLIM sheets don't have to be rectangular the way windows in most
-windowing systems have to be.  Thus, the width and the height of a
-window in a windowing system generalizes to a \gloss{region} in CLIM.
-A CLIM region is simply a set of mathematical points in a plane.
+CLIM \gloss{sheet region}s don't have to be rectangular the way
+windows in most windowing systems have to be.  Thus, the width and the
+height of a window in a windowing system generalizes to an arbitrary
+\gloss{region} in CLIM.  A CLIM region is simply a set of mathematical
+points in a plane.  CLIM allows this set to be described as a
+combination (union, intersection, difference) of elementary regions
+made up of rectangles, polygons and ellipses. 
 
 Even rectangular regions in CLIM are generalizations of the
 width+height concept of windows in most windowing systems.  While the
@@ -190,7 +197,11 @@ a rectangular region with x+y+width+height.  Don't confuse the x and y
 here with the position of a window within its parent, they are
 different.  Instead, imagine that the rectangular region is a hole
 into the (infinite) drawing plane defined by all possible coordinates
-that can be given to drawing functions.  
+that can be given to drawing functions.  If graphical objects appear
+in the window with respect to the origin of some coordinate system,
+and the upper-left corner of the window has coordinates (x,y) in that
+coordinate system, then changing x and y will have the effect of
+scrolling. 
 
 CLIM sheets also generalize windows in that a window typically has
 pixels with integer-value coordinates.  CLIM sheets, on the other
@@ -232,13 +243,13 @@ functions to transform coordinates to \gloss{native coordinates},
 i.e., those required by the windowing system.  In this section, we
 examine how that computation is made.
 
-To get an idea of the complexity involved, let us imagine a mirrored
-sheet (one that actually \emph{has} a mirror) $s$, which has a nontrivial
-native transformation, for instance one that is used to draw
-PostScript commands.  The coordinate system of such a sheet has an
-$x$ axis that grows to the right, and a $y$ axis that grows upwards. 
-Let us further imagine that the region of $s$ is some kind of oval
-shape as shown in figure \ref{fignative}.
+To get an idea of the complexity involved, let us imagine a
+\gloss{mirrored sheet} $s$, which has a nontrivial native
+transformation, for instance one that is used to draw PostScript
+commands.  The coordinate system of such a sheet has an $x$ axis that
+grows to the right, and a $y$ axis that grows upwards.  Let us further
+imagine that the region of $s$ is some kind of oval shape as shown in
+figure \ref{fignative}.
 
 \begin{figure}
 \begin{center}
@@ -268,7 +279,7 @@ window (let us call it $wp$.  In figure \ref{fignative}, the origin of
 the coordinate system of $wp$ is marked with a $+$.  
 
 Let us say that the origin of $w$ in the coordinate system of $wp$ is
-$(x_w,y_w$.  That is the same as the \emph{window position} of $w$
+$(x_w,y_w)$.  That is the same as the \emph{window position} of $w$
 with respect to its parent, as maintained by X11.
 
 Now, the parent of $s$ (let us call it $sp$) is a sheet which
@@ -288,14 +299,19 @@ coordinates of $s$, transform them by $NTP(S)$ and then subtract $(x_w,y_w)$.
 Therefore, you can compute $NT(s)$ as the composition of $NTP(s)$ and the
 translation transformation $(-x_w,-y_w)$.
 
-Now we have an algorithm for computing native transformations:
+Now we have an algorithm for computing native transformations.  To
+simplify that algorithm, let us define the native transformation for a
+\gloss{mute} sheet as well (it will have the same definition as that
+for a non-mirrored sheet). 
 
 \begin{enumerate0}
 
 \item The native transformation of the graft is decided by the frame
-manager.
+manager.  It may be the \gloss{identity transformation} or a
+transformation from millimeters to pixels, or whatever the frame
+manager decides. 
 
-\item The native transformation of any sheet with a mirror other than
+\item The native transformation of any mirrored sheet other than
 the graft is the composition of its transformation, the native
 transformation of its parent, and the negation of the transformation
 defined as the position of its mirror with respect to the parent of
@@ -306,6 +322,162 @@ composition of its transformation and the native transformation of its
 parent.
 \end{enumerate0}
 
+\section{Moving and resizing sheets and regions}
+\label{secmoving}
+
+In this section, we discuss moving and resizing.  In particular, we
+determine the sharing of responsibilities for moving and resizing
+sheets and regions between a sheet and its parent. 
+
+A common operation necessary in CLIM is to move a sheet or
+its region.  There are many variants of moving a sheet and its
+region:
+
+\begin{itemize0}
+\item The origin of the coordinate system of a sheet may be moved with
+respect to that of its parent.  The position of the \gloss{sheet
+region} then also changes in the coordinate system of the parent of
+the sheet;
+\item The region of a sheet may be moved with respect to the origin of
+the coordinate system of that sheet.  The position of the \gloss{sheet
+region} then also changes in the coordinate system of the parent of
+the sheet;
+\item The two previous operations can occur simultaneously with
+opposite moves.  This gives the effect of scrolling, i.e. the region
+of the sheet remains in the same place in the coordinate system of the
+parent of the sheet.
+\end{itemize0}
+
+Let us first examine the responsibilities of a \gloss{layout pane}.
+Such a pane is in charge of moving and resizing regions of its
+children.  Several questions must be answered:
+
+\begin{itemize0}
+\item When moving a region of a child, should the layout pane move
+the sheet transformation of its child, the sheet region of its child
+within the coordinate system of its child, or a combination of the
+two?
+\item When resizing a region of a child, how should the layout pane
+align the new region with respect to the old one (this would influence
+what part of the old region is still visible in the resized one)?
+\end{itemize0}
+
+To answer the first question, we simply observe that we would like the
+visible contents of the child to remain unchanged whenever its region
+is moved by the layout pane.  This behavior implies that the position
+of the region of the child in the coordinate system of that child
+remain unchanged.  Thus, when a layout pane must move the region of
+its child in its own coordinate system, it must do so by only moving
+the \gloss{sheet transformation} of the child.
+
+Conversely, if a sheet needs to move its region with respect to its
+own coordinate system, for instance to obtain the effect of scrolling,
+it must make sure that its region does not move in the coordinate
+system of its parent.  Every such move must therefore be compensated
+by a simultaneous opposite move of the \gloss{sheet transformation}.
+Moving only the position of the region without changing the sheet
+transformation would defeat the work of a potential \gloss{layout
+pane} parent. 
+
+To answer the second question, we imagine several different types of
+children.  An ordinary stream pane would probably like to align the
+lower-left corner of the old and the new region so that the first
+column of the last line of text is still visible.  A stream pane for
+arabic or hebrew would prefer to align the lower-right corner.  And a
+stream for an asian language written from top to bottom, right to
+left, would like to preserve the upper-left corner.  In other words,
+the layout pane cannot make this decision, as it depends on the exact
+type of the child.  The layout pane must therefore delegate this
+decision to the child.  
+
+\section{Scrolling}
+
+Scrolling generally means moving the origin of the coordinate system
+of a sheet with respect to the visible part of its region, thus making
+some different part of the drawing plane of the sheet visible. 
+
+There are two types of scrolling, conceptually completely different:
+
+\begin{itemize0}
+\item the scrolling of a pane not contained in (the viewport of) a
+scroller pane, 
+\item the scrolling of a pane contained in (the viewport of) a
+scroller pane. 
+\end{itemize0}
+
+In particular, we need to know how a stream pane should behave when a
+new line of text needs to be displayed, and that new line is outside
+the current region of the stream pane.
+
+When a pane is \emph{not} contained in a scroller pane, scrolling must
+preserve the size of its region and the position of its region in the
+coordinate system of its parent (see section \ref{secmoving}).  The
+normal scrolling action for a stream pane not contained in a scroller
+pane would therefore be to translate its region in the positive y
+direction by an amount that corresponds to the hight of a line, and to
+translate itself (i.e. to alter its sheet transformation) in the
+negative y direction by the same amount.
+
+When a pane \emph{is} contained in a scroller pane, the situation is
+completely different.  The viewport of the scroller pane does not
+behave like an ordinary layout pane (see section \ref{secmoving}) in
+that it does not have an opinion about the size and position of the
+region of its child.  The scroller pane \emph{itself} is a layout pane
+that controls the size and position of the region of the
+\gloss{viewport pane} which is one of its children (the others are the
+scroll bars), but the viewport pane does not control the size and
+position of the region of \emph{its} child.  Instead, the scroller
+pane simply alters the appearance of the scroll bars to reflect the
+size and position of region of the child of the viewport with respect
+to the size and position of the region of the viewport itself.
+
+A stream pane contained in a scroller pane should therefore behave
+differently from a stream pane not contained in a scroller pane in
+order for the scroller pane to serve any purpose.  But exactly how
+should it behave?  First, with respect to the size of its region, its
+normal scrolling action should probably make its region bigger (at
+least up to a certain point) so that its previous contents could be
+viewed by moving the scroll bars.  
+
+But what about the \emph{position} of the region?  This question is in
+fact two different questions:
+
+\begin{itemize0}
+\item How should the position of the region in the coordinate system of the
+stream pane be altered (if at all)?
+\item How should the position of the region in the coordinate system of the
+viewport pane be altered (if at all)?
+\end{itemize0}
+
+To answer the first question, the most reasonable thing to do when the
+region is made bigger would probably be to maintain the upper edge of
+the region and extend the region downwards (or rather, in the
+direction of the positive y axis).  When the region is not made bigger
+(perhaps because some limit has been set), the region should simply
+be translated in the direction of positive y axis. 
+
+The second question is harder, and the answer is ``it depends''.  Let
+us study the behavior of something similar, namely the X11 application
+\texttt{xterm}.  Whenever any output whatsoever is made in the window
+of an \texttt{xterm} with scroll bars, the line where the output takes
+place is put on display.  To see that, start an \texttt{xterm} with
+scroll bars; make sure the scroll bar is smaller than the size of the
+window; scroll up; then type a character.  To obtain this behavior for
+a CLIM stream pane, any output to the stream pane should align the
+bottom of the stream pane region with the bottom of the viewport
+region.  But this must be done by moving only the sheet transformation
+of the stream pane.  
+
+Another possibility is, of course, would be to always maintain the
+position of the bottom of the region of the stream pane with respect
+to the bottom of the region of the viewport pane.  That way, special
+action would only need to be taken by the stream pane as a result of
+the desire to scroll, and not as a result of \emph{any} output.  New
+lines of output might not become immediately visible if the scroll bar
+is not in its bottom position.  To obtain this effect, the stream pane
+could simply translate its sheet transformation in the negative y
+direction to compensate for the increased size.  This solution is
+probably the simplest one. 
 
 \chapter{Sheet hierarchy}
 
@@ -625,13 +797,35 @@ the \gloss{sheet} that receives the drawing commands.
 \glossentry{Mirrored sheet}
 
 A \gloss{sheet} in the CLIM \gloss{sheet hiearchy} that has a direct
-parallel (called the \gloss{mirror}) in the host windowing system. 
+parallel (called the \gloss{mirror}) in the host windowing system.  A
+mirrored sheet is always an instance of the class
+\class{mirrored-sheet-mixin}, but instances of that class are not
+necessarily mirrored sheets.  The sheet is called a mirrored sheet
+only if it currently has a mirror.  There may be several reasons for
+an instance of that class not to currently have a mirror.  One is that
+the sheet is not \gloss{grafted}.  Only grafted sheets can have
+mirrors.  Another one is that the \gloss{frame manager} responsible
+for the look and feel of the sheet hierarchy may decide that it is
+inappropriate for the sheet to have a mirror, for instance if the
+underlying windowing system does not allow nested windows inside an
+application, or that it would simply be a better use of resources not
+to create a mirror for the sheet.  An example of the last example
+would be a stream pane inside a the \gloss{viewport} of a
+\gloss{scroller pane}.  The graphics objects (usually text) that
+appear in a stream pane can have very large coordinate values, simply
+because there are many lines of text.  Should the stream pane be
+mirrored, the coordinate values used on the mirror may easily go
+beyond what the underlying windowing system accepts.  X11, for
+instance, can not handle coordinates greater than 64k (16 bit unsigned
+integer).  By not having a mirror for the stream pane, the coordinates
+will be translated to those of the mirror of the \gloss{viewport}
+before being submitted to the windowing system, which gives more
+reasonable coordinate values. 
 
 \glossentry{Potentially visible area}
 
 A bounded area of an otherwise infinte drawing plane that is visible
-unless ...
-
+unless it is covered by other visible areas. 
 
 \glossentry{Sheet coordinates}
 
@@ -816,3 +1010,4 @@ work on ??? [hasn't been decided yet as of this writing].
 Rôle of Arthur Lemmens, and others?
 
 \end{document}
+% LocalWords:  viewport scroller mixin} PostScript
