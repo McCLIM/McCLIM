@@ -409,6 +409,11 @@ filled in."
       (clim-mop:finalize-inheritance ptype-meta))
     (or (clim-mop:class-prototype ptype-meta)
       (error "Couldn't find a prototype for ~S" name))))
+
+(defun safe-cpl (class)
+  (unless (clim-mop:class-finalized-p class)
+    (clim-mop:finalize-inheritance class))
+  (clim-mop:class-precedence-list class))
   
 (defun get-ptype (name)
   (or (gethash name *presentation-type-table*)
@@ -432,7 +437,7 @@ supertypes of TYPE that are presentation types"))
 		(presentation-type
 		 (list class))
 		(standard-class
-		 (let ((clos-ptype (gethash (clim-mop:class-name class)
+		 (let ((clos-ptype (gethash (class-name class)
 					    *presentation-type-table*)))
 		   (if clos-ptype
 		       (list clos-ptype)
@@ -452,7 +457,7 @@ supertypes of TYPE that are presentation types"))
 	  (ptype-specializer (find-class type)))))
 
   (defmethod ptype-specializer ((type standard-class))
-    (clim-mop:class-name type)))
+    (class-name type)))
 
 ;;; XXX This is total bullshit, but works with our patched definition of
 ;;; defclass in CMUCL.  I think we need to patch defclass in every
@@ -766,7 +771,7 @@ suitable for SUPER-NAME"))
 ;;; types 'form and 'expression should apply to CLOS class presentation
 ;;; types, even though those types can't be in the cpl of CLOS types
 ;;; (because they're not standard-class, duh).  This is handled through our
-;;; own clim-mop:compute-applicable-methods method on our own generic
+;;; own compute-applicable-methods method on our own generic
 ;;; function metaclass. 
 ;;;
 ;;; The second major complication is the whole raison d'etre of presentation
@@ -800,7 +805,7 @@ suitable for SUPER-NAME"))
 (defun subclassp (class1 class2)
   "Like subtypep, but takes class objects and just uses the cpls of the
   classes.  Also, CLOS types are subtypes of form and expression."
-  (or (member class2 (clim-mop:class-precedence-list class1) :test #'eq)
+  (or (member class2 (safe-cpl class1) :test #'eq)
       (and (not (typep class1 'presentation-type-class))
 	   (or (eq class2 *ptype-form-class*)
 	       (eq class2 *ptype-expression-class*)))))
@@ -856,17 +861,13 @@ suitable for SUPER-NAME"))
 		    (return-from exit t))
 		   ;; The default CLOS algorithm
 		   (t (return-from exit
-			(find spec2
-			      (member spec1
-				      (clim-mop:class-precedence-list
-				       arg-class))))))
+			(find spec2 (member spec1 (safe-cpl arg-class))))))
 	  ;; All specializers are eql.
 	  finally (return nil))))
 
 (defmethod clim-mop:compute-applicable-methods-using-classes
     ((gf presentation-generic-function) classes)
   (loop for method in (clim-mop:generic-function-methods gf)
-	for specializers = (clim-mop:method-specializers method)
 	append (multiple-value-bind (applicable fer-sure)
 		   (method-applicable-to-classes method classes)
 		 (unless fer-sure
@@ -897,12 +898,11 @@ suitable for SUPER-NAME"))
 		      t)
 		     (t nil))))
 
-(defmethod clim-mop:compute-applicable-methods
+(defmethod compute-applicable-methods
     ((gf presentation-generic-function) arguments)
   (when (typep (class-of (car arguments)) 'presentation-type-class)
-    (return-from clim-mop:compute-applicable-methods (call-next-method)))
+    (return-from compute-applicable-methods (call-next-method)))
   (loop for method in (clim-mop:generic-function-methods gf)
-	for specializers = (clim-mop:method-specializers method)
 	if (method-applicable method arguments)
 	collect method into methods
 	finally (let ((gf-arg-classes (mapcar #'class-of arguments)))
@@ -918,7 +918,7 @@ suitable for SUPER-NAME"))
 ;;;
 
 (defmethod type-name ((type standard-class))
-  (clim-mop:class-name type))
+  (class-name type))
 
 (defmethod expansion-function ((type standard-class))
   #'(lambda (typespec)
@@ -928,7 +928,7 @@ suitable for SUPER-NAME"))
 
 (defmethod presentation-ptype-supers ((type standard-class))
   (mapcan #'(lambda (class)
-	      (let ((ptype (gethash (clim-mop:class-name class)
+	      (let ((ptype (gethash (class-name class)
 				    *presentation-type-table*)))
 		(and ptype (list ptype))))
 	  (clim-mop:class-direct-superclasses type)))
@@ -1246,7 +1246,7 @@ function lambda list"))
 	 (type-meta (get-ptype-metaclass type-name)))
     (unless type-meta
       (return-from map-over-ptype-superclasses nil))
-    (loop for super-meta in (clim-mop:class-precedence-list type-meta)
+    (loop for super-meta in (safe-cpl type-meta)
 	  ;; For non-CLOS types, stop when we see T so we don't include
 	  ;; STANDARD-OBJECT.
 	  until (eq super-meta *ptype-t-class*)

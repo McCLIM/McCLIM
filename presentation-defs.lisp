@@ -66,7 +66,7 @@
   'expression)
 
 (defmethod presentation-type-of ((object standard-object))
-  (let* ((name (clim-mop:class-name (class-of object)))
+  (let* ((name (class-name (class-of object)))
 	 (ptype-entry (gethash name *presentation-type-table*)))
     (unless ptype-entry
       (return-from presentation-type-of name))
@@ -183,7 +183,7 @@
 ;;; presentation type.
 
 (defmethod description ((class standard-class))
-  (let* ((name (clim-mop:class-name class))
+  (let* ((name (class-name class))
 	 (ptype-entry (gethash name *presentation-type-table*)))
     (if ptype-entry
 	(description ptype-entry)
