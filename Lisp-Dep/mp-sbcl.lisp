@@ -45,21 +45,30 @@
 (defvar *current-process*
   (%make-process :name "initial process" :function nil :id (sb-thread:current-thread-id)))
 
+(defvar *all-processes* (list *current-process*))
+
+(defvar *permanent-queue*
+  (sb-thread:make-mutex :name "Lock for disabled threads"
+			:data :permanently-queued))
+
 (defun make-process (function &key name)
   (let ((p (%make-process :name name
 			  :function function)))
+    (pushnew p *all-processes*)
     (restart-process p)))
 
 (defun restart-process (p)
   (labels ((boing ()
 	     (let ((*current-process* p))
 	       (funcall (process-function p) ))))
-    (when (process-id p) (sb-thread:destroy-thread p))
+    (when (process-id p) (sb-thread:terminate-thread p))
     (when (setf (process-id p) (sb-thread:make-thread #'boing))
       p)))
 
 (defun destroy-process (process)
-  (sb-thread:destroy-thread (process-id process)))
+  ;;; ew threadsafety
+  (setf *all-processes* (delete process *all-processes*))
+  (sb-thread:terminate-thread (process-id process)))
 
 (defun current-process ()
   *current-process*)
@@ -107,10 +116,14 @@
   (sb-thread:interrupt-thread (process-id process) function))
 
 (defun disable-process (process)
-  (sb-thread::suspend-thread (process-id process)))
+  (sb-thread:interrupt-thread
+   (process-id process)
+   (lambda ()
+     (catch 'interrupted-wait (sb-thread:get-mutex *permanent-queue*)))))
 
 (defun enable-process (process)
-  (sb-thread::resume-thread (process-id process)))
+  (sb-thread:interrupt-thread
+   (process-id process) (lambda () (throw 'interrupted-wait nil))))
 
 (defun process-yield ()
   (sleep .1))
