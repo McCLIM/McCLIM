@@ -381,7 +381,8 @@ FRAME-EXIT condition."))
 
 (defmethod make-pane-1 :around (fm (frame standard-application-frame) type
 				&rest args
-				&key (input-buffer nil input-buffer-p))
+				&key (input-buffer nil input-buffer-p)
+				&allow-other-keys)
   "Default input-buffer to the frame event queue."
   (if input-buffer-p
       (call-next-method)

@@ -25,6 +25,12 @@
 
 ;;; CLX-PORT class
 
+(defclass clx-pointer (pointer)
+  ((cursor :accessor pointer-cursor :initform :upper-left)))
+
+(defclass standard-pointer (clx-pointer)
+  ())
+
 (defclass clx-port (basic-port)
   ((display :initform nil
 	    :accessor clx-port-display)
@@ -34,7 +40,8 @@
 	   :accessor clx-port-window)
    (color-table :initform (make-hash-table :test #'eq))
    (modifier-cache :initform nil
-		   :accessor clx-port-modifier-cache)))
+		   :accessor clx-port-modifier-cache)
+   (pointer :reader port-pointer)))
 
 (defun parse-clx-server-path (path)
   (pop path)
@@ -57,6 +64,8 @@
 (defmethod initialize-instance :after ((port clx-port) &rest args)
   (declare (ignore args))
   (push (make-instance 'clx-frame-manager :port port) (slot-value port 'frame-managers))
+  (setf (slot-value port 'pointer)
+	(make-instance 'standard-pointer :port port))
   (initialize-clx port))
 
 (defmethod print-object ((object clx-port) stream)
@@ -742,3 +751,35 @@
              :min-height (round (space-requirement-min-height space-requirement)))))))
 
 
+(defmethod pointer-position ((pointer clx-pointer))
+  (let* ((port (port pointer))
+	 (sheet (port-pointer-sheet port)))
+    (when sheet
+      (multiple-value-bind (x y same-screen-p)
+	  (xlib:query-pointer (sheet-direct-mirror sheet))
+	(when same-screen-p
+	  (untransform-position (sheet-native-transformation sheet) x y))))))
+
+;;; pointer button bits in the state mask
+
+(defconstant +right-button-mask+ #x100)
+(defconstant +middle-button-mask+ #x200)
+(defconstant +left-button-mask+ #x400)
+
+(defmethod pointer-button-state ((pointer clx-pointer))
+  (multiple-value-bind (x y same-screen-p child mask)
+      (xlib:query-pointer (clx-port-window (port pointer)))
+    (declare (ignore x y same-screen-p child))
+    (cond ((logtest +right-button-mask+ mask)
+	   +pointer-right-button+)
+	  ((logtest +middle-button-mask+ mask)
+	   +pointer-middle-button+)
+	  ((logtest +left-button-mask+ mask)
+	   +pointer-left-button+)
+	  (t 0))))
+
+(defmethod pointer-modifier-state ((pointer clx-pointer))
+  (multiple-value-bind (x y same-screen-p child mask)
+      (xlib:query-pointer (clx-port-window (port pointer)))
+    (declare (ignore x y same-screen-p child))
+    (x-event-state-modifiers (port pointer) mask)))

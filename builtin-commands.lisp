@@ -120,3 +120,18 @@
   (call-presentation-menu presentation *input-context*
                           frame window x y
                           :for-menu t))
+
+;;; Action for possibilities menu of complete-input
+
+(define-presentation-action possibilities-menu
+    (blank-area nil global-command-table
+     :documentation "Possibilities menu for completion"
+     :pointer-documentation "Possibilities"
+     :menu nil
+     :gesture :menu
+     :tester (()
+	      *completion-possibilities-continuation*))
+  ()
+  (funcall *completion-possibilities-continuation*))
+
+

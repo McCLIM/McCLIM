@@ -70,6 +70,8 @@
    (event-count :initform 0)
    (text-style-mappings :initform (make-hash-table :test #'eq)
                         :reader port-text-style-mappings)
+   (pointer-sheet :initform nil :accessor port-pointer-sheet
+		  :documentation "The sheet the pointer is over, if any")
    ))
 
 (defun find-port (&key (server-path *default-server-path*))

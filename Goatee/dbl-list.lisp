@@ -87,7 +87,7 @@
 
 (defun insert-obj-before (obj dbl-list)
   (let ((cell (make-instance 'dbl-list-cell :contents obj)))
-    (dbl-insert-after cell dbl-list)))
+    (dbl-insert-before cell dbl-list)))
 
 (defun insert-obj-after (obj dbl-list)
   (let ((cell (make-instance 'dbl-list-cell :contents obj)))

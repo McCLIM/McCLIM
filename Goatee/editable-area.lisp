@@ -22,7 +22,9 @@
 		  :documentation "buffer pointer to line in buffer
   that's at the bottom of the area.  The bp is not necessarily at the
   beginning of the line.")
-   (last-line :accessor last-line :initarg :last-line :initform nil)))
+   (last-line :accessor last-line :initarg :last-line :initform nil))
+  (:documentation "An abstract superclass for the on-screen area
+  devoted to Goatee editing.  Roughly equivalent to a window in GNU Emacs."))
 
 (defmethod initialize-instance :after ((obj editable-area)
 				       &key initial-contents)

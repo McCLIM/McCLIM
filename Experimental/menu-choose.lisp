@@ -148,8 +148,12 @@
                                (pane-frame associated-window)
                                *application-frame*))
          (fm (frame-manager associated-frame))
-         (stream (make-pane-1 fm associated-frame 'command-menu-pane))
-         (frame (make-menu-frame stream
+         (stream (make-pane-1 fm associated-frame 'command-menu-pane
+			      :background +gray80+))
+	 (raised (make-pane-1 fm associated-frame 'raised-pane
+			      :border-width 2 :background +gray80+
+			      :contents (list stream)))
+         (frame (make-menu-frame #+nil stream raised
                                  :left nil
                                  :top nil)))
     (adopt-frame fm frame)

@@ -1543,46 +1543,47 @@ function lambda list"))
 	     (output-record-refined-position-test record x y))
     (funcall func record)))
 
+(defvar *null-presentation*)
+
 (defun map-applicable-translators (func
 				   presentation input-context frame window x y
 				   &key event (modifier-state 0)
-				   for-menu
-				   button)
-  (let ((found nil))
-    (flet ((process-presentation (context context-ptype presentation)
-             (let ((maybe-translators
-                    (find-presentation-translators (presentation-type presentation)
-                                                   context-ptype
-                                                   (frame-command-table
-                                                    frame))))
-               (loop for translator in maybe-translators
-                     when (and (or (not for-menu) (eql for-menu (menu translator)))
-                               (test-presentation-translator translator
-                                                             presentation
-                                                             context-ptype
-                                                             frame
-                                                             window
-                                                             x y
-                                                             :event event
-                                                             :modifier-state
-                                                             modifier-state
-                                                             :for-menu for-menu
-                                                             :button button))
-                     do (funcall func translator presentation context)
-                        (setq found t)))))
-      (loop for context in input-context
-            for (context-ptype) = context
-            do (map-over-presentations-containing-position
-                #'(lambda (p)
-                    (process-presentation context context-ptype p))
-                presentation
-                x y)
-            finally (unless found
-                      (loop for context in input-context
-                            for (context-ptype) = context
-                            do (process-presentation context
-                                                     context-ptype
-                                                     *null-presentation*)))))))
+					for-menu
+					button)
+  (flet ((process-presentation (context context-ptype presentation)
+	   (let ((maybe-translators
+		  (find-presentation-translators (presentation-type 
+						  presentation)
+						 context-ptype
+						 (frame-command-table
+						  frame))))
+	     (loop for translator in maybe-translators
+		 when (and (or (not for-menu) (eql for-menu (menu translator)))
+			   (test-presentation-translator translator
+							 presentation
+							 context-ptype
+							 frame
+							 window
+							 x y
+							 :event event
+							 :modifier-state
+							 modifier-state
+							 :for-menu for-menu
+							 :button button))
+		 do (funcall func translator presentation context)))))
+    (if (and (presentationp presentation)
+	     (presentation-subtypep (presentation-type presentation) 
+				    'blank-area))
+	(loop for context in input-context
+	      for (context-ptype) = context
+	      do (process-presentation context context-ptype presentation))
+	(loop for context in input-context
+	      for (context-ptype) = context
+	      do (map-over-presentations-containing-position
+		  #'(lambda (p)
+		      (process-presentation context context-ptype p))
+		  presentation
+		  x y)))))
 
 (defun find-applicable-translators
     (presentation input-context frame window x y
@@ -1655,7 +1656,22 @@ function lambda list"))
      :event event
      :modifier-state modifier-state
      :button button)
-    (values result result-translator result-context)))
+    (when result
+      (return-from find-innermost-presentation-match
+	(values result result-translator result-context)))
+    (map-applicable-translators
+     #'(lambda (translator presentation context)
+	 (return-from find-innermost-presentation-match
+	   (values presentation translator context)))
+     *null-presentation*
+     input-context
+     frame
+     window
+     x y
+     :event event
+     :modifier-state modifier-state
+     :button button))
+  nil)
 
 (defun find-innermost-applicable-presentation
     (input-context window x y

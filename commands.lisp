@@ -116,7 +116,7 @@
         result)))
 
 (make-command-table 'global-command-table)
-(make-command-table 'user-command-table)
+(make-command-table 'user-command-table :inherit-from '(global-command-table))
 
 (defmacro define-command-table (name &key 
 				(inherit-from '(global-command-table))
@@ -327,16 +327,80 @@
 (defparameter *command-parser-table* (make-hash-table)
   "Mapping from command names to argument parsing functions.")
 
+
 (defvar *unsupplied-argument-marker* (cons nil nil))
 
 (defvar *command-name-delimiters* '(command-delimiter))
 
 (defvar *command-argument-delimiters* '(command-delimiter))
 
+(defun accept-form-for-argument (stream arg)
+  (let ((accept-keys '(:default :default-type :display-default
+		       :prompt :documentation)))
+    (destructuring-bind (name ptype &rest key-args
+			 &key (mentioned-default nil mentioned-default-p)
+			 &allow-other-keys)
+	arg
+      (declare (ignore name))
+      `(accept ,ptype :stream ,stream
+	       ,@(loop for (key val) on key-args by #'cddr
+		       when (member key accept-keys)
+		       append `(,key ,val) into args
+		       finally (return (if mentioned-default-p
+					   `(:default ,mentioned-default
+					     ,@args)
+					   args)))))))
+
+(defun make-key-acceptors (stream keyword-args)
+  ;; We don't use the name as a variable, and we do want a symbol in the
+  ;; keyword package.
+  (when (null keyword-args)
+    (return-from make-key-acceptors nil))
+  (setq keyword-args (mapcar #'(lambda (arg)
+				 (cons (intern (symbol-name (car arg))
+					       :keyword)
+				       (cdr arg)))
+			     keyword-args))
+  (let ((key-possibilities (gensym "KEY-POSSIBILITIES"))
+	(member-ptype (gensym "MEMBER-PTYPE"))
+	(key-results (gensym "KEY-RESULTS"))
+	(key-result (gensym "KEY-RESULT"))
+	(val-result (gensym "VAL-RESULT")))
+    `(let ((,key-possibilities nil)
+	   (,key-results nil))
+       ,@(mapcar #'(lambda (key-arg)
+		     (destructuring-bind (name ptype
+					  &key (when t) &allow-other-keys)
+			 key-arg
+		       (declare (ignore ptype))
+		       `(when ,when
+			  (push ,name ,key-possibilities))))
+		 keyword-args)
+       (setq ,key-possibilities (nreverse ,key-possibilities))
+       (when ,key-possibilities
+	 (let ((,member-ptype (cons 'member ,key-possibilities)))
+	   (loop
+	     (let* ((,key-result (accept ,member-ptype
+					 :stream ,stream
+					 :prompt "keywords"))
+		    (,val-result
+		     (case ,key-result
+		       ,@(mapcar
+			  #'(lambda (key-arg)
+			      `(,(car key-arg)
+				,(accept-form-for-argument stream
+							   key-arg)))
+			  keyword-args))))
+	       (setq ,key-results (list* ,key-result
+					 ,val-result
+					 ,key-results)))
+	     (eat-delimiter-or-activator))))
+       ,key-results)))
+
 (defun make-argument-accept-fun (name required-args keyword-args)
-  (declare (ignore keyword-args))
   (let ((stream-var (gensym "STREAM"))
-	(required-arg-names (mapcar #'car required-args)))
+	(required-arg-names (mapcar #'car required-args))
+	(key-results (gensym "KEY-RESULTS")))
     (flet ((make-accept (arg-clause)
 	     (let ((arg (car arg-clause))
 		   (ptype (cadr arg-clause))
@@ -354,28 +418,34 @@
 				       `(,key ,val))))
 			       accept-keys))))))
       `(defun ,name (,stream-var)
-	(let ,(mapcar #'(lambda (arg)
-			  `(,arg *unsupplied-argument-marker*))
-		      required-arg-names)
+	(let (,@(mapcar #'(lambda (arg)
+			    `(,arg *unsupplied-argument-marker*))
+			required-arg-names)
+	      (,key-results nil))
 	  (block activated
-	    (let ((gesture (read-gesture :stream ,stream-var
-					 :timeout 0
-					 :peek-p t)))
-	      (cond ((and gesture (activation-gesture-p gesture))
-		     (return-from activated nil))
-		    (gesture
-		     (unread-gesture gesture :stream ,stream-var)))
-	      ,@(mapcan #'(lambda (arg)
-			    `(,(make-accept arg)
-			      (setq gesture (read-gesture :stream ,stream-var))
-			      (when (or (null gesture)
-					(activation-gesture-p gesture))
-				(return-from activated nil))
+	    (flet ((eat-delimiter-or-activator ()
+		     (let ((gesture (read-gesture :stream ,stream-var)))
+		       (when (or (null gesture)
+				 (activation-gesture-p gesture))
+			 (return-from activated nil))
 			      (unless (delimiter-gesture-p gesture)
 				(unread-gesture gesture
-						:stream ,stream-var))))
-			required-args)))
-	  (list ,@required-arg-names))))))
+						:stream ,stream-var)))))
+	      (let ((gesture (read-gesture :stream ,stream-var
+					   :timeout 0
+					   :peek-p t)))
+		(cond ((and gesture (activation-gesture-p gesture))
+		       (return-from activated nil)))
+		,@(mapcan #'(lambda (arg)
+			      (copy-list
+			       `((setq ,(car arg)
+				       ,(accept-form-for-argument stream-var
+								  arg))
+				(eat-delimiter-or-activator))))
+			  required-args)
+		(setq ,key-results ,(make-key-acceptors stream-var
+							keyword-args)))))
+	  (list* ,@required-arg-names ,key-results))))))
 
 (defun make-command-translators (command-name command-table args)
   "Helper function to create command presentation translators for a command."
@@ -433,7 +503,7 @@
     (multiple-value-bind (required-args keyword-args)
 	(loop for arg-tail on args
 	      for (arg) = arg-tail
-	      unless (eq arg '&key)
+	      until (eq arg '&key)
 	      collect arg into required
 	      finally (return (values required (cdr arg-tail))))
       (let* ((command-func-args

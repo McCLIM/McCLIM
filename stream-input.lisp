@@ -514,6 +514,7 @@
 (define-gesture-name :clear-input :keyboard (#\u :control))
 (define-gesture-name :complete :keyboard (:tab))
 (define-gesture-name :help :keyboard (#\/ :control))
+(define-gesture-name :possibilities :keyboard (#\? :control))
 
 (define-gesture-name :select :pointer-button-press (:left))
 (define-gesture-name :describe :pointer-button-press (:middle))
@@ -559,4 +560,43 @@
      (nil ()
        :report (lambda (s) (format s ,@format-args))
        :test (lambda (c) (typep c 'abort-gesture))
-      nil)))
+       nil)))
+
+;;; 22.4 The Pointer Protocol
+;;;
+;;; Implemented by the back end.  Sort of.
+
+(define-protocol-class pointer ()
+  ((port :reader port :initarg :port)))
+
+(defgeneric pointer-sheet (pointer))
+
+(defmethod pointer-sheet ((pointer pointer))
+  (port-pointer-sheet (port pointer)))
+
+(defgeneric (setf pointer-sheet) (sheet pointer))
+
+(defgeneric pointer-button-state (pointer))
+
+(defgeneric pointer-modifier-state (pointer))
+
+(defgeneric pointer-position (pointer))
+
+(defgeneric* (setf pointer-position) (x y pointer))
+
+(defgeneric pointer-cursor (pointer))
+
+(defgeneric (setf pointer-cursor) (cursor pointer))
+
+;;; Should this go in sheets.lisp?  That comes before events and ports...
+
+(defmethod handle-event :before ((sheet mirrored-sheet-mixin)
+				 (event pointer-enter-event))
+  (setf (port-pointer-sheet (port sheet)) sheet))
+
+(defmethod handle-event :before ((sheet mirrored-sheet-mixin)
+				 (event pointer-exit-event))
+  (with-accessors ((port-pointer-sheet port-pointer-sheet))
+      (port sheet)
+    (when (eq port-pointer-sheet sheet)
+      (setq port-pointer-sheet nil))))

@@ -1088,6 +1088,7 @@
    "POINTER-EVENT-X"                    ;generic function
    "POINTER-EVENT-Y"                    ;generic function
    "POINTER-EXIT-EVENT"                 ;class
+   "POINTER-MODIFIER-STATE"		;generic function (In Franz user guide)
    "POINTER-MOTION-EVENT"               ;class
    "POINTER-POSITION"                   ;generic function
    "POINTER-SHEET"                      ;generic function
@@ -1103,6 +1104,7 @@
    "PORT"                               ;generic function
    "PORT-KEYBOARD-INPUT-FOCUS"          ;generic function
    "PORT-NAME"                          ;generic function
+   "PORT-POINTER"			;generic function (In Franz user guide)
    "PORT-PROPERTIES"                    ;generic function
    "PORT-SERVER-PATH"                   ;generic function
    "PORT-TYPE"                          ;generic function

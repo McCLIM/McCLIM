@@ -827,6 +827,13 @@
 (define-presentation-type blank-area ()
   :inherit-from t)
 
+(define-presentation-method highlight-presentation ((type blank-area)
+						    record
+						    stream
+						    state)
+  (declare (ignore record stream state))
+  nil)
+
 ;;; Do other slots of this have to be bound in order for this to be useful?
 ;;; Guess we'll see.
 (defparameter *null-presentation* (make-instance 'standard-presentation
@@ -1295,11 +1302,11 @@
 
 (define-presentation-type-abbreviation subset-sequence (sequence
 							&key (test 'eql testp))
-(make-presentation-type-specifier
-     `(subset-completion ,sequence ,@(and testp `(:test ,test)))
-     :name-key name-key
-     :documentation-key documentation-key
-     :partial-completers partial-completers)
+  (make-presentation-type-specifier
+   `(subset-completion ,sequence ,@(and testp `(:test ,test)))
+   :name-key name-key
+   :documentation-key documentation-key
+   :partial-completers partial-completers)
   :options #.+completion-options+)
 
 (define-presentation-type-abbreviation subset-alist (alist
@@ -1350,7 +1357,7 @@
 				     stream
 				     (view textual-view)
 				     &key acceptably for-context-type)
-  (declare (ignore for-context-type))
+  (declare (ignore acceptably for-context-type))
   (loop for tail on object
 	for (obj) = tail
 	do (progn
@@ -1359,9 +1366,7 @@
 			:acceptably acceptably
 			:sensitive nil)
 	     (when (cdr tail)
-	       (if acceptably
-		   (princ separator stream)
-		   (terpri stream))))))
+	       (write-char separator stream)))))
 
 (define-presentation-method present ((object vector) (type sequence)
 				     stream
@@ -1376,9 +1381,33 @@
 			:acceptably acceptably
 			:sensitive nil)
 	     (when (< i (1- (length object)))
-	       (if acceptably
-		   (princ separator stream)
-		   (terpri stream))))))
+	       (write-char separator stream)))))
+
+
+(define-presentation-method accept ((type sequence)
+				    stream
+				    (view textual-view)
+				    &key (default nil defaultp) default-type)
+  (let ((initial-char (peek-char stream)))
+    (when (or (delimiter-gesture-p initial-char)
+	      (activation-gesture-p initial-char))
+      (return-from accept (if defaultp
+			      (values default default-type)
+			      nil))))
+  (loop for element = (accept type	; i.e., the type parameter
+			      :stream stream
+			      :view view
+			      :prompt nil
+			      :additional-delimiter-gestures (list
+							      separator))
+	collect element
+	do (progn
+	     (when (not (eql (peek-char stream) seperator))
+	       (loop-finish))
+	     (read-char stream)
+	     (when echo-space
+	       ;; Make the space a noise string
+	       (input-editor-format stream " ")))))
 
 (define-presentation-type sequence-enumerated (&rest types)
   :options ((separator #\,) (echo-space t))

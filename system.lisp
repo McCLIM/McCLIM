@@ -146,7 +146,7 @@
    "builtin-commands"
    "dialog" ; depends on table formatting
    "describe"
-   ;; "Experimental/menu-choose" ; depends on table formatting, presentations
+   "Experimental/menu-choose" ; depends on table formatting, presentations
    )
 
 (load (merge-pathnames "Backends/CLX/system" *clim-directory*))

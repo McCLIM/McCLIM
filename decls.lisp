@@ -242,6 +242,7 @@ rendered on MEDIUM with the style LINE-STYLE."))
 (defgeneric port-mirror-height (port sheet))
 (defgeneric port-enable-sheet (port sheet))
 (defgeneric port-disable-sheet (port sheet))
+(defgeneric port-pointer (port))
 
 ;;;
 

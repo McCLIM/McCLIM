@@ -34,6 +34,7 @@
                 #:port-grafts
                 #:port-lookup-sheet
                 #:port-unregister-mirror
+		#:port-pointer-sheet
                 #:MAP-REPEATED-SEQUENCE
                 #:PIXMAP-MIRROR
                 #:WITH-DOUBLE-BUFFERING 

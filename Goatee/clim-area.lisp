@@ -22,6 +22,7 @@
 ;;; to have the idea of incremental redisplay (update screen directly) and
 ;;; start over from scratch.  We won't hook into the CLIM idea of
 ;;; incremental redisplay just yet as it isn't implemented in McCLIM.
+;;; (Actually, we probably won't even when it is implemented.)
 
 ;;; cheat and use this McCLIM internal class :)
 (defclass screen-area-cursor (clim-internals::cursor-mixin cursor)
@@ -39,6 +40,54 @@
   (let ((line (screen-line cursor)))
     (+ (ascent line) (descent line))))
 
+(defgeneric line-text-width (area line &key start end)
+  (:documentation "The width text in line's current-contents from START to END,
+  NOT including line wrap."))
+
+(defclass simple-screen-area (editable-area standard-sequence-output-record)
+  ((text-style :accessor text-style :initarg :text-style)
+   (vertical-spacing :accessor vertical-spacing :initarg :vertical-spacing)
+   (cursor :accessor cursor)
+   (area-stream :accessor area-stream :initarg :area-stream)
+   (max-width :accessor max-width :initarg :max-width :initform nil
+	      :documentation "Maximum available width for area.")
+   (gutter-width :accessor gutter-width :initarg :gutter-width :initform 12
+		 :documentation "Width of gutter at end of line"))
+  (:documentation "A Goatee editable area implemented inside of an output
+  record."))
+
+(defmethod initialize-instance :after ((area simple-screen-area)
+				       &key area-stream)
+  (when (not (slot-boundp area 'text-style))
+    (if area-stream
+	(setf (text-style area) (medium-text-style area-stream))
+	(error "One of :text-style or :area-stream must be specified.")))
+  (when (not (slot-boundp area 'vertical-spacing))
+    (if area-stream
+	(setf (vertical-spacing area) (stream-vertical-spacing area-stream))
+	(error "One of :vertical-spacing or :stream must be specified.")))
+  (when (not (slot-boundp area 'cursor))
+    (multiple-value-bind (x y)
+	(output-record-position area)
+      (setf (cursor area)
+	  (make-instance 'screen-area-cursor
+			 :sheet (area-stream area)
+			 :x-position x
+			 :y-position y))))
+  (initialize-area-from-buffer area (buffer area))
+  (setf (cursor-visibility (cursor area)) t)
+  (tree-recompute-extent area))
+
+(defmethod line-text-width ((area simple-screen-area)
+			    ;; XXX need a less implementation-dependent class
+			    (line extent-buffer-line) 
+			    &key (start 0) (end (line-last-point line)))
+  "Compute the width of a buffer line if it were to be displayed."
+  (let ((stream (area-stream area))
+	(text-style (text-style area)))
+    (loop for i from start below end
+	  for char = (char-ref line i)
+	  sum (text-size stream char :text-style text-style))))
 
 (defclass screen-line (editable-area-line displayed-output-record rectangle)
   ((current-contents :accessor current-contents :initarg :current-contents
@@ -55,7 +104,8 @@
    (y :initarg :y-position :initform 0)
    (parent :initarg :parent :initform nil :reader output-record-parent)
    (width :accessor width :initarg :width)
-   (cursor :accessor cursor :initarg :cursor :initform nil)))
+   (cursor :accessor cursor :initarg :cursor :initform nil)
+   (line-breaks :accessor line-breaks :initform nil)))
 
 (defun line-contents-sans-newline (buffer-line &key destination)
   (let* ((contents-size (line-last-point buffer-line)))
@@ -73,6 +123,12 @@
 				       :end2 contents-size))
 	    (flexivector-string buffer-line :end contents-size)))))
 
+(defmethod line-text-width ((area simple-screen-area) (line screen-line)
+			    &key (start 0)
+			    (end (length (current-contents line))))
+  (text-size (area-stream area) (current-contents line)
+	     :start start
+	     :end end))
 
 (defmethod initialize-instance :after
     ((obj screen-line) &key (current-contents nil current-contents-p))
@@ -82,7 +138,7 @@
 				:destination (current-contents obj)))
   (unless (slot-boundp obj 'width)
     (let ((stream (area-stream (output-record-parent obj))))
-     (setf (width obj) (text-size stream (current-contents obj)))))
+     (setf (width obj) (line-text-width (editable-area obj) obj))))
   (unless (slot-boundp obj 'baseline)
     (multiple-value-bind (x y)
 	(output-record-position obj)
@@ -150,33 +206,11 @@
   (declare (ignore x y))
   t)
 
-(defclass simple-screen-area (editable-area standard-sequence-output-record)
-  ((text-style :accessor text-style :initarg :text-style)
-   (vertical-spacing :accessor vertical-spacing :initarg :vertical-spacing)
-   (cursor :accessor cursor)
-   (area-stream :accessor area-stream :initarg :area-stream)))
+(defgeneric max-text-width (area)
+  (:documentation "The width available for text in an area."))
 
-(defmethod initialize-instance :after ((area simple-screen-area)
-				       &key area-stream)
-  (when (not (slot-boundp area 'text-style))
-    (if area-stream
-	(setf (text-style area) (medium-text-style area-stream))
-	(error "One of :text-style or :area-stream must be specified.")))
-  (when (not (slot-boundp area 'vertical-spacing))
-    (if area-stream
-	(setf (vertical-spacing area) (stream-vertical-spacing area-stream))
-	(error "One of :vertical-spacing or :stream must be specified.")))
-  (when (not (slot-boundp area 'cursor))
-    (multiple-value-bind (x y)
-	(output-record-position area)
-      (setf (cursor area)
-	  (make-instance 'screen-area-cursor
-			 :sheet (area-stream area)
-			 :x-position x
-			 :y-position y))))
-  (initialize-area-from-buffer area (buffer area))
-  (setf (cursor-visibility (cursor area)) t)
-  (tree-recompute-extent area))
+(defmethod max-text-width ((area simple-screen-area))
+  (- (max-width area) (gutter-width area)))
 
 (defmethod output-record-children ((area simple-screen-area))
   (loop for line = (area-first-line area) then (next line)
@@ -391,6 +425,22 @@
 					common-beginning
 					(1+ j))))))))
 
+(defgeneric compute-line-breaks (area line))
+
+(defmethod compute-line-breaks ((area simple-screen-area) line)
+  (let ((max-text-width (max-text-width area)))
+    (when (<= (line-text-width area line) max-text-width)
+      (return-from compute-line-breaks nil))
+    (loop with line-width = 0
+	  for i from 0 below (length current-contents)
+	  for char-width = (line-text-width area line :start i :end (1+ i))
+	  if (> (+ line-width char-width) max-text-width)
+	    collect i
+	    and do (setq line-width 0)
+	  else
+	   do (incf line-width char-width)
+	  end))
+  )
 
 ;;; Two steps to redisplaying a line: figure out if the
 ;;; ascent/descent/baseline have changed, then render the line, incrementally
@@ -422,31 +472,30 @@
 	(when (and cursor (cursor-visibility cursor))
 	  (setf (cursor-visibility cursor) nil))
 	(unless unchanged
-	  (let* ((start-width (if (> current-unchanged-from-start 0)
-				  (text-size medium current-contents
-					     :text-style style
-					     :end current-unchanged-from-start)
+	  (let* ((area (editable-area line))
+		 (start-width (if (> current-unchanged-from-start 0)
+				  (line-text-width
+				   area line
+				   :end current-unchanged-from-start)
 				  0))
-		 (line-end (text-size medium current-contents))
+		 (line-end (line-text-width area line))
 		 (current-unchanged-left
 		  (if (< current-unchanged-from-end (length current-contents))
-		      (text-size medium current-contents
-				 :text-style style
-				 :end current-unchanged-from-end)
+		      (line-text-width area line
+				       :end current-unchanged-from-end)
 		      line-end))
 		 (new-line-size (line-last-point buffer-line)))
 	    ;; Having all we need from the old contents of the line, update
 	    ;; with the new contents
 	    (when (> new-line-size (car (array-dimensions current-contents)))
-	      (adjust-array current-contents (list new-line-size)))
+	      (adjust-array current-contents  new-line-size))
 	    (setf (fill-pointer current-contents) new-line-size)
 	    (flexivector-string-into buffer-line current-contents)
-	    (let* ((new-line-end (text-size medium current-contents))
+	    (let* ((new-line-end (line-text-width area line))
 		   (new-unchanged-left
 		    (if (< line-unchanged-from-end (length current-contents))
-			(text-size medium current-contents
-				   :text-style style
-				   :end line-unchanged-from-end)
+			(line-text-width area line
+					 :end line-unchanged-from-end)
 			new-line-end)))
 	      (multiple-value-bind (x y)
 		  (output-record-position line)
