@@ -550,16 +550,10 @@
 (defmethod realize-mirror ((port clx-port) (pane image-pane))
   (realize-mirror-aux port pane :backing-store :always))
 
-(defmethod handle-event ((pane image-pane) (event window-repaint-event))
-  (dispatch-repaint pane (window-event-region event)))
-
-(defmethod handle-repaint ((sheet image-pane) region)
-  (repaint-sheet sheet region))
-
 ;; [Julien] As drawing-image mostly doesn't work, except drawaing everything (sigh !..)
 ;;          the region provided by graphical server is ignored, and the entire pane 
 ;;          region is redrawn. Bugs must be fixed before doing the right thing.
-(defmethod repaint-sheet ((pane image-pane) region)
+(defmethod handle-repaint ((pane image-pane) region)
   (declare (ignore region))
   (with-slots (image) pane
     (when image
