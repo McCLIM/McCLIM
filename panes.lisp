@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.96 2002/08/03 08:28:47 moore Exp $
+;;; $Id: panes.lisp,v 1.97 2002/09/06 02:47:16 moore Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -1973,6 +1973,17 @@ During realization the child of the spacing will have as cordinates
     (prog1
 	(port-keyboard-input-focus port)
       (setf (port-keyboard-input-focus port) stream))))
+
+;;; output any buffered stuff before input
+
+(defmethod stream-read-gesture :before ((stream clim-stream-pane)
+					&key timeout peek-p
+					input-wait-test
+					input-wait-handler
+					pointer-button-press-handler)
+  (declare (ignore timeout peek-p input-wait-test input-wait-handler
+		   pointer-button-press-handler))
+  (force-output stream))
 
 ;;; INTERACTOR PANES
 

@@ -1,0 +1,69 @@
+Install instructions for OpenMCL on Mac OS X
+--------------------------------------------
+
+These instructions are for using McCLIM, with its CLX backend, with
+OpenMCL.
+
+1. Make sure you have a Lisp core file that includes 
+
+   - CLX
+   - mk:defsystem
+
+   If you don't, check the section "How to create a Lisp core file". 
+
+2. Start Lisp
+
+3. Load the system definition file:
+
+   (load "system.lisp")
+
+4. Compile and load the system:
+   (operate-on-system :clim :compile)  ;; Build CLIM
+   (operate-on-system :clim-clx :compile) ;; Build a backend
+   (operate-on-system :clim-examples :compile)
+
+The first two steps can be done in one step with the :clim-clx-user target:
+   (operate-on-system :clim-clx-user :compile)
+
+7. At a later date, after everything is compiled, load the compiled system:
+
+   (operate-on-system :clim-clx-user :load)
+   (operate-on-system :clim-examples :load)
+
+How to create a Lisp core file
+------------------------------
+
+In order to run McCLIM on OpenMCL, you need a Lisp core file that
+contains:
+
+   - CLX, the Common Lisp interface to the X Window System
+   - mk:defsystem, the portable, free defsystem facility
+
+1. John Wiseman, who contributed the openmcl McCLIM patches, writes:
+"I used the CLOCC version of CLX, patched to work with OpenMCL (see 
+<http://sourceforge.net/mailarchive/forum.php?thread_id=910707&forum_id=6765>)."
+
+2. Get defsystem from CLOCC.  I (Tim Moore) applied the following
+patch to my copy:
+
+diff -d -u -r1.48 defsystem.lisp
+--- defsystem.lisp	17 Jun 2002 20:47:06 -0000	1.48
++++ defsystem.lisp	6 Sep 2002 01:54:36 -0000
+@@ -1362,12 +1362,13 @@
+          #+TI ("lisp" . #.(string (si::local-binary-file-type)))
+          #+:gclisp                            ("LSP"  . "F2S")
+          #+pyramid                            ("clisp" . "o")
+-         #+:coral                             ("lisp" . "pfsl")
+ 	 ;; Harlequin LispWorks
+ 	 #+:lispworks 	      ("lisp" . ,COMPILER:*FASL-EXTENSION-STRING*)
+ ;        #+(and :sun4 :lispworks)             ("lisp" . "wfasl")
+ ;        #+(and :mips :lispworks)             ("lisp" . "mfasl")
+-         #+:mcl                               ("lisp" . "pfsl")
++         #+(and (or :coral :mcl) (not :darwinppc-target))
++	 				      ("lisp" . "pfsl")
++	 #+(and :openmcl :darwinppc-target)  ("lisp" . "dfsl")
+ 
+          ;; Otherwise,
+          ("lisp" . ,(pathname-type (compile-file-pathname "foo.lisp")))))
+
+3. Dump an image. (ccl::save-application "clx-defsystem.image")

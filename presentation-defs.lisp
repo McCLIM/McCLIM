@@ -624,11 +624,12 @@
 	;; Just to make it clear that we're returning values
 	(values sensitizer-object sensitizer-type)))))
 
-(defgeneric prompt-for-accept (stream type view &key))
+(defgeneric prompt-for-accept (stream type view &rest accept-args &key))
 
 (defmethod prompt-for-accept ((stream t)
 			      type view
-			      &rest accept-args)
+			      &rest accept-args
+			      &key &allow-other-keys)
   (declare (ignore view))
   (apply #'prompt-for-accept-1 stream type accept-args))
 

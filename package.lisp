@@ -220,6 +220,7 @@
         (gray-packages
          `(#+:CLISP                 ,@'("LISP")
            #+:CMU                   ,@'("EXT")
+	   #+:MCL                   ,@'("CCL")
            #+:ALLEGRO               ,@'("COMMON-LISP" "EXCL" "STREAM")
            #+:HARLEQUIN-COMMON-LISP ,@'("STREAM")
            #+:SBCL                  ,@'("SB-GRAY"))) )

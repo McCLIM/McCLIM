@@ -23,13 +23,25 @@
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (setf (excl:package-definition-lock (find-package :common-lisp)) nil))
 
-(defun describe (thing &optional stream)
-  (if (null stream)
-      (setq stream *standard-output*)
-    (if  (eq stream t)
-	(setq stream *terminal-io*)))
-  (describe-object thing stream)
-  (values))
+#+openmcl
+(defmacro with-system-redefinition-allowed (&body body)
+  `(let ((ccl::*warn-if-redefine-kernel* nil))
+     ,@body))
+
+#-openmcl
+(defmacro with-system-redefinition-allowed (&body body)
+  `(progn
+     ,@body))
+
+(with-system-redefinition-allowed
+  (defun describe (thing &optional stream)
+    (if (null stream)
+	(setq stream *standard-output*)
+	(if  (eq stream t)
+	     (setq stream *terminal-io*)))
+    (describe-object thing stream)
+    (values))
+)
 
 (defgeneric describe-object (thing stream))
 
@@ -37,14 +49,16 @@
 ;;; (or EXTENDED-OUTPUT-STREAM OUTPUT-RECORDING-STREAM)
 ;;; but CLIM-STREAM-PANE is used instead.
 
-(defmethod describe-object ((thing t) stream)
-  (let ((*print-array* nil))
-    (clim:present thing (clim:presentation-type-of thing)
-		  :acceptably t :stream stream)
-    (format stream " is of type ")
-    (clim:present (type-of thing) (clim:presentation-type-of (type-of thing))
-		  :stream stream)
-    (terpri stream)))
+(with-system-redefinition-allowed
+  (defmethod describe-object ((thing t) stream)
+    (let ((*print-array* nil))
+      (clim:present thing (clim:presentation-type-of thing)
+		    :acceptably t :stream stream)
+      (format stream " is of type ")
+      (clim:present (type-of thing) (clim:presentation-type-of (type-of thing))
+		    :stream stream)
+      (terpri stream)))
+)
 
 (defmethod describe-object ((thing symbol) stream)
   (clim:present thing (clim:presentation-type-of thing)

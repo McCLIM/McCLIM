@@ -63,6 +63,7 @@
   #+:CMU       "Lisp-Dep/fix-cmu"
   #+:EXCL      "Lisp-Dep/fix-acl"
   #+:SBCL      "Lisp-Dep/fix-sbcl"
+  #+:OPENMCL   "Lisp-Dep/fix-openmcl"
   "package")
 
 (clim-defsystem (:clim-core :depends-on (:clim-lisp))
@@ -72,6 +73,7 @@
       #+(AND :CMU :MP (NOT :PTHREAD))  "Lisp-Dep/mp-cmu"
       #+(AND :SBCL :MP (NOT :PTHREAD)) "Lisp-Dep/mp-sbcl"
       #+:EXCL                          "Lisp-Dep/mp-acl"
+      #+:OPENMCL                       "Lisp-Dep/mp-openmcl"
       #| fall back |#                  "Lisp-Dep/mp-nil")
    "utils"
    "defresource"

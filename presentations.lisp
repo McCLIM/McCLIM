@@ -465,13 +465,13 @@ supertypes of TYPE that are presentation types"))
 ;;; I think we can assume that if a CLOS class exists at compile time, it will
 ;;; exist at load/run time too.
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  #-(or excl cmu sbcl)
+  #-(or excl cmu sbcl openmcl)
   (defun compile-time-clos-p (name)
     (let ((meta (find-class name nil)))
       (and meta
 	   (typep meta 'standard-class))))
 
-  #+(or excl cmu sbcl)
+  #+(or excl cmu sbcl openmcl)
   (defun compile-time-clos-p (name)
     (let ((metaclass (find-class name nil)))
       (or (and metaclass

@@ -24,7 +24,8 @@
   #+cmu (cdr (assoc string ext:*environment-list* :test #'string=))
   #+clisp (sys::getenv (string string))
   #+sbcl (sb-ext::posix-getenv string)
-  #-(or excl cmu clisp sbcl) (error "GET-ENVIRONMENT-VARIABLE not implemented"))
+  #+openmcl (ccl::getenv string)
+  #-(or excl cmu clisp sbcl openmcl) (error "GET-ENVIRONMENT-VARIABLE not implemented"))
 
 (defun last1 (list)
   "Last element of LIST."

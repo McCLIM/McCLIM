@@ -126,7 +126,8 @@
 (defmethod invoke-with-drawing-options ((medium medium) continuation
                                         &rest drawing-options
                                         &key ink transformation clipping-region
-                                        line-style text-style)
+                                        line-style text-style
+					&allow-other-keys)
   (declare (ignore ink transformation clipping-region line-style text-style))
   (with-medium-options (medium drawing-options)
     (funcall continuation medium)))
