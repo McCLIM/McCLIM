@@ -461,6 +461,9 @@
   (declare (ignore medium))
   (line-style-thickness line-style))
 
+(defmethod medium-miter-limit ((medium medium))
+  #.(* 2 single-float-epsilon))
+
 
 ;;; Misc ops
 
