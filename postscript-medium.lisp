@@ -218,6 +218,7 @@
         ;; every drawing function depends on clipping region
         do (postscript-set-graphics-state stream medium state)))
 
+;;; Line style
 (defconstant +postscript-line-joints+ '(:miter 0
                                         :round 1
                                         :bevel 2
@@ -246,6 +247,7 @@
                     +postscript-default-line-dashes+
                     dashes))))))
 
+;;; Color
 (defmethod medium-color-rgb (medium (ink (eql +foreground-ink+)))
   (medium-color-rgb medium (medium-foreground medium)))
 
@@ -261,10 +263,7 @@
       (medium-color-rgb medium (medium-ink medium))
     (format stream "~,3F ~,3F ~,3F setrgbcolor~%" r g b)))
 
-(defun postscript-line-style-and-color (stream medium)
-  (postscript-line-style stream medium)
-  (postscript-color stream medium))
-
+;;; Clipping region
 (defgeneric postscript-set-clipping-region (stream region))
 
 (defmethod postscript-set-clipping-region (stream region)
@@ -277,12 +276,7 @@
 
 (defmethod postscript-set-clipping-region (stream (region (eql +nowhere+)))
   (declare (ignore region))
-  (format stream "~@
-newpath
-0 0 moveto
-closepath
-clip
-"))
+  (format stream "newpath 0 0 moveto closepath clip~%"))
 
 (defmethod postscript-set-graphics-state (stream medium
                                           (kind (eql :clipping-region)))
@@ -458,7 +452,7 @@ clip
                                        :huge 24))
 
 (defun text-style->postscript-font (text-style)
-  (with-slots (family face size) text-style
+  (multiple-value-bind (family face size) (text-style-components text-style)
     (let* ((family-fonts (or (getf +postscript-fonts+ family)
                              (getf +postscript-fonts+ :fix)))
            (font-name (or (getf family-fonts face)
