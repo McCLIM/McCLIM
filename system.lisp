@@ -56,6 +56,7 @@
 
 (clim-defsystem (:clim-lisp)
   ;; First possible patches
+  "patch"
   #+:CMU       "Lisp-Dep/fix-cmu"
   #+:EXCL      "Lisp-Dep/fix-acl"
   #+:SBCL      "Lisp-Dep/fix-sbcl"
@@ -161,6 +162,7 @@
    "Examples/traffic-lights"
    "Examples/clim-fig"
    "Examples/postscript-test"
+   ;; "Examples/puzzle"
    "Examples/transformations-test"
    "Examples/stream-test"
    "Examples/presentation-test"

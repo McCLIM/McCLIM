@@ -19,7 +19,7 @@
 ;;; Boston, MA  02111-1307  USA.
 
 (defpackage "CLIM-TRANSFORMATIONS-TEST"
-  (:use :clim :cl))
+  (:use :clim :clim-lisp))
 
 (in-package :CLIM-TRANSFORMATIONS-TEST)
 

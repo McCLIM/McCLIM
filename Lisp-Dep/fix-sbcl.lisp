@@ -16,20 +16,15 @@
 ;;; wrappers which the MOP can't grok, so use the PCL versions
 ;;; instead.
 
-(defpackage #:clim-lisp-patch
-    (:use)
-    (:import-from #:sb-pcl
-                  #:class-name
-		  #:class-of
-		  #:find-class
-		  #:standard-class)
-    (:export
-     #:class-name
-     #:class-of
-     #:defclass
-     #:defconstant
-     #:find-class
-     #:standard-class))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (flet ((reexport (symbols)
+           (import symbols :clim-lisp-patch)
+           (export symbols :clim-lisp-patch)))
+    (reexport '(sb-pcl:class-name sb-pcl:class-of
+                sb-pcl:find-class sb-pcl::standard-class)))
+  (export '(clim-lisp-patch::defconstant
+            clim-lisp-patch::defclass)
+          :clim-lisp-patch))
 
 (defmacro clim-lisp-patch:defconstant (symbol value &optional docu)
   `(defparameter ,symbol ,value ,@(and docu (list docu))))

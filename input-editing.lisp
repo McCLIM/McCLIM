@@ -25,6 +25,10 @@
 
 (defvar *delimiter-gestures* nil)
 
+(defgeneric interactive-stream-p (stream)
+  (:method (stream)
+    (cl:interactive-stream-p stream)))
+
 (defclass input-editing-stream ()
   ())
 

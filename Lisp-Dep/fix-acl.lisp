@@ -15,9 +15,9 @@
   (do-external-symbols (sym :clos)
 	(export sym :clim-mop)))
 
-(defpackage #:clim-lisp-patch
-  (:use)
-  (:export #:defclass))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (export '(clim-lisp-patch::defclass)
+          :clim-lisp-patch))
 
 (defvar clim-lisp-patch::*compile-time-clos-names* (make-hash-table))
 

@@ -18,7 +18,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-(defpackage :MENUTEST (:USE :CLIM :CLIM-EXTENSIONS :COMMON-LISP))
+(defpackage :MENUTEST (:USE :CLIM :CLIM-EXTENSIONS :CLIM-LISP))
 
 (in-package :MENUTEST)
 
