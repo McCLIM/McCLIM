@@ -300,6 +300,16 @@ input focus. This is a McCLIM extension."))
 (defmethod frame-pointer-documentation-output ((frame application-frame))
   (find-pane-of-type (frame-panes frame) 'pointer-documentation-pane))
 
+(defmethod redisplay-frame-panes ((frame application-frame) &key force-p)
+  (map-over-sheets
+   (lambda (sheet)
+     (when (typep sheet 'pane)
+       (when (and (typep sheet 'clim-stream-pane)
+                  (not (eq :no-clear (pane-redisplay-needed sheet))))        
+         (window-clear sheet))
+       (redisplay-frame-pane frame sheet :force-p force-p)))
+   (frame-top-level-sheet frame)))
+
 ;;; Command loop interface
 
 (define-condition frame-exit (condition)
