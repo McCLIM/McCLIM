@@ -76,12 +76,7 @@
 	    (gadget-value *text-field*) (princ-to-string 0)))))
       
 (defun print-screen (gadget)
-  (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region gadget))
-    (draw-text* gadget (gadget-value gadget)
-		(round (- x2 x1))
-		(round (- y2 y1) 2)
-		:align-x :right
-		:align-y :center)))
+  (declare (ignore gadget)))
 
 (defun find-text-field (frame)
   (first (member-if #'(lambda (gadget) (typep gadget 'text-field-pane))
@@ -95,8 +90,7 @@
 				       (prompt "Command: "))
   (declare (ignore command-parser command-unparser partial-command-parser prompt))
   (setf *text-field* (find-text-field frame))
-  (read *text-field*)
-  (loop))
+  (loop (event-read (frame-pane frame))))
      
 (define-application-frame calculator () ()
   (:panes
@@ -162,9 +156,7 @@
 		     :activate-callback (queue-number 0))
   (screen            :text-field
 		     :value "0"
-		     :space-requirement (make-space-requirement :width 200 :height 50)
-		     :display-function #'print-screen
-		     :incremental-redisplay t)
+		     :space-requirement (make-space-requirement :width 200 :height 50))
   (ac                :push-button
 		     :space-requirement (make-space-requirement :width 50 :height 50)		     
 		     :label "AC"
@@ -176,12 +168,13 @@
   
   (:layouts
    (defaults (vertically ()
-		screen
-		(horizontally () ac ce)
-		(tabling ()
-		   (list one two plus)
-		   (list three four dash)
-		   (list five six multiplicate)
-		   (list seven eight divide)
-		   (list nine zero result)))))
+	       screen
+	       (horizontally () ac ce)
+	       (tabling ()
+		 (list one two plus)
+		 (list three four dash)
+		 (list five six multiplicate)
+		 (list seven eight divide)
+		 (list nine zero result)))))
   (:top-level (calculator-frame-top-level . nil)))
+
