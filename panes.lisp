@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.103 2002/10/31 12:58:14 brian Exp $
+;;; $Id: panes.lisp,v 1.104 2002/11/10 14:42:36 gilbert Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -797,59 +797,63 @@
   (values))
 
 
-;;;; The NULL-PANE
-
-(defclass null-pane (layout-protocol-mixin
-                     sheet-parent-mixin
-                     sheet-transformation-mixin
-                     null-sheet)
-  ;; Caution! A null-pane does not implement all of the pane protocol,
-  ;; although it should. --GB
-  ())
-
-(defmethod compose-space ((pane null-pane) &key width height)
-  (declare (ignore width height))
-  (make-space-requirement :width  0 :min-width  0 :max-width  0
-                          :height 0 :min-height 0 :max-height 0))
-
-(defmethod allocate-space ((pane null-pane) width height)
-  (declare (ignore width height))
-  nil)
-
-;;;; Constraint Resources
-
-(defclass constraint-slots-mixin ()
-  ((constraint-slots :initform (make-hash-table :test #'equal)))
-  (:documentation
-   "A mixin class for layout panes, which want to maintain constraint
-    slots on its children."))
-
-(defmethod constraint-slot ((pane constraint-slots-mixin) child slot &optional default)
-  (with-slots (constraint-slots) pane
-    (gethash (cons child slot) constraint-slots default)))
-
-(defmethod (setf constraint-slot) (new-value
-                                   (pane constraint-slots-mixin) child slot &optional default)
-  (declare (ignore default))
-  (with-slots (constraint-slots) pane
-    (setf (gethash (cons child slot) constraint-slots) new-value)))
-
 ;;;; box-layout-mixin
 
-;; The box layout mixin classes use the following constraint slots:
-;;   FILL-P             whether this child can stretch infinitly
-;;   FIXED-SIZE         possible fixed size of a child
-;;   PROPORTION         proportion child should get of excess space
-;;
+;; Now each child (client) of a box-layout pane is described by the
+;; following class:
 
-(defclass box-layout-mixin (constraint-slots-mixin)
+(defclass box-client ()
+  ((fillp
+    :initarg       :fillp
+    :initform      nil
+    :reader        box-client-fillp
+    :documentation "Whether this child can stretch infinitly.")
+   (fixed-size
+    :initarg       :fixed-size
+    :initform      nil
+    :reader        box-client-fixed-size
+    :documentation "Possible fixed size of a child.")
+   (proportion
+    :initarg       :proportion
+    :initform      nil
+    :reader        box-client-proportion
+    :documentation "Proportion child should get of excess space.")
+   (pane
+    :initarg       :pane
+    :reader        box-client-pane
+    :documentation "Either the child pane or NIL.")))
+
+(defclass box-layout-mixin ()
   ((box-layout-orientation
     :initarg :box-layout-orientation
     :initform :vertical
     :type     (member :vertical :horizontal)
-    :accessor box-layout-orientation))
+    :accessor box-layout-orientation)
+   (clients
+    :accessor box-layout-mixin-clients)
+   )
   (:documentation
    "Mixin class for layout panes, which want to behave like a HBOX/VBOX."))
+
+;; First we need to make sure that the list of clients and the list of
+;; children agree with each other.
+
+(defmethod sheet-adopt-child :after ((sheet box-layout-mixin) child)
+  ;; When the child is already known in the client list we add no new
+  ;; client object.
+  (unless (find child (box-layout-mixin-clients sheet) :key #'box-client-pane)
+    (setf (box-layout-mixin-clients sheet)
+          (append (box-layout-mixin-clients sheet)
+                  (list (make-instance 'box-client
+                                       :pane child))))))
+
+(defmethod sheet-disown-child :after ((sheet box-layout-mixin) (child sheet) &key errorp)
+  (declare (ignore errorp))
+  (setf (box-layout-mixin-clients sheet)
+        (remove-if (lambda (client)
+                     (eq (box-client-pane client) child))
+                   (box-layout-mixin-clients sheet))))
+
 
 (defclass rack-layout-mixin (box-layout-mixin)
   ((box-layout-orientation
@@ -879,35 +883,37 @@
   (major-spacing x-spacing y-spacing)
   (minor-spacing x-spacing y-spacing)  )
 
- (defmethod xically-content-sr** ((pane box-layout-mixin) child)
+ (defmethod xically-content-sr** ((pane box-layout-mixin) client)
    (let (p)
-     (cond ((constraint-slot pane child 'fill-p)
-            (let ((child-space (compose-space child)))
+     (let ((sr (if (box-client-pane client)
+                   (compose-space (box-client-pane client))
+                   (make-space-requirement :width 0 :min-width 0 :max-width 0
+                                           :height 0 :min-height 0 :max-height 0))))
+       (cond ((box-client-fillp client)
               (make-space-requirement
-               :major     (space-requirement-major child-space)
-               :min-major (space-requirement-min-major child-space)
+               :major     (space-requirement-major sr)
+               :min-major (space-requirement-min-major sr)
                :max-major +fill+
-               :minor     (space-requirement-minor child-space)
-               :min-minor (space-requirement-min-minor child-space)
-               :max-minor (space-requirement-max-minor child-space))))
-           ((setq p (constraint-slot pane child 'fixed-size))
-            (let ((sr (compose-space child)))
+               :minor     (space-requirement-minor sr)
+               :min-minor (space-requirement-min-minor sr)
+               :max-minor (space-requirement-max-minor sr)))
+             ((setq p (box-client-fixed-size client))
               (make-space-requirement
                :major     p
                :min-major p
                :max-major p
                :minor     (if sr (space-requirement-minor sr) 0)
                :min-minor (if sr (space-requirement-min-minor sr) 0)
-               :max-minor (if sr (space-requirement-max-minor sr) 0))))
-           (t
-            (compose-space child)) )))
+               :max-minor (if sr (space-requirement-max-minor sr) 0)))
+             (t
+              sr) ))))
 
  (defmethod box-layout-mixin/xically-compose-space ((pane box-layout-mixin))
    (let ((n (length (sheet-enabled-children pane))))
      (with-slots (major-spacing) pane
        (loop
-           for child in (sheet-enabled-children pane)
-           for sr = (xically-content-sr** pane child)
+           for client in (box-layout-mixin-clients pane)
+           for sr = (xically-content-sr** pane client)
            sum (space-requirement-major sr) into major
            sum (space-requirement-min-major sr) into min-major
            sum (space-requirement-max-major sr) into max-major
@@ -935,7 +941,8 @@
    (declare (ignorable width height))
    (let ((children (reverse (sheet-enabled-children box))))
      (with-slots (major-spacing) box
-       (let* ((content-srs (mapcar #'(lambda (c) (xically-content-sr** box c)) children))
+       (let* ((content-srs (mapcar #'(lambda (c) (xically-content-sr** box c))
+                                   (box-layout-mixin-clients box)))
               (allot       (mapcar #'ceiling (mapcar #'space-requirement-major content-srs)))
               (wanted      (reduce #'+ allot))
               (excess      (- major wanted
@@ -948,22 +955,22 @@
 
          (let ((qvector
                 (mapcar
-                  (lambda (c &aux p)
-                    (cond
-                      ((constraint-slot box c 'fill-p)
-                       (vector 1 0 0))
-                      ((setq p (constraint-slot box c 'proportion))
-                       (vector 0 p 0))
-                      (t
-                       (vector 0 0
-                               (abs (- (if (> excess 0)
-                                           (space-requirement-max-major
-                                                 (xically-content-sr** box c))
-                                           (space-requirement-min-major
-                                                 (xically-content-sr** box c)))
-                                    (space-requirement-major
-                                          (xically-content-sr** box c))))))))
-                  children)))
+                 (lambda (c &aux p)
+                   (cond
+                     ((box-client-fillp c)
+                      (vector 1 0 0))
+                     ((setq p (box-client-proportion c))
+                      (vector 0 p 0))
+                     (t
+                      (vector 0 0
+                              (abs (- (if (> excess 0)
+                                          (space-requirement-max-major
+                                           (xically-content-sr** box c))
+                                          (space-requirement-min-major
+                                           (xically-content-sr** box c)))
+                                      (space-requirement-major
+                                       (xically-content-sr** box c))))))))
+                 (box-layout-mixin-clients box))))
            ;;
            #+NIL
            (progn
@@ -976,13 +983,13 @@
              (let ((sum (reduce #'+ (mapcar (lambda (x) (elt x j)) qvector))))
                (unless (zerop sum)
                  (setf allot
-                   (mapcar (lambda (allot q)
-                             (let ((q (elt q j)))
-                               (let ((delta (ceiling (if (zerop sum) 0 (/ (* excess q) sum)))))
-                                 (decf excess delta)
-                                 (decf sum q)
-                                 (+ allot delta))))
-                           allot qvector))
+                       (mapcar (lambda (allot q)
+                                 (let ((q (elt q j)))
+                                   (let ((delta (ceiling (if (zerop sum) 0 (/ (* excess q) sum)))))
+                                     (decf excess delta)
+                                     (decf sum q)
+                                     (+ allot delta))))
+                               allot qvector))
                  #+NIL
                  (format *debug-io* "~&;;   new excess = ~F, allotment = ~S.~%" excess allot)
                  )))
@@ -1005,16 +1012,17 @@
        ;; now actually layout the children
        (let ((x 0))
          (loop
-             for child in (reverse (sheet-enabled-children pane))
+             for child in (box-layout-mixin-clients pane)
              for major in majors
              for minor in minors
              do
                #+NIL (format *debug-io* "~&;;   child ~S at 0, ~D ~D x ~D~%" child x width height)
-               (move-sheet child
-                           ((lambda (major minor) height width) x 0)
-                           ((lambda (major minor) width height) x 0))
-               (allocate-space child
-                               width height)
+               (when (box-client-pane child)
+                 (move-sheet (box-client-pane child)
+                             ((lambda (major minor) height width) x 0)
+                             ((lambda (major minor) width height) x 0))
+                 (allocate-space (box-client-pane child)
+                                 width height))
                (incf x major)
                (incf x major-spacing)))))))
 
@@ -1071,51 +1079,63 @@
        :box-layout-orientation :xical))
 
  (defmethod initialize-instance :after ((pane xbox-pane) &key contents &allow-other-keys)
-   (let ((children (mapcar (lambda (content)
-                             ;; Note: if you extend the allowed
-                             ;; "syntax" also update the XICALLY macro
-                             ;; also. --GB
-                             (cond ((panep content)
-                                    content)
-                                   ;;
-                                   ((or (eql content +fill+) (eql content '+fill+))
-                                    (let ((child (make-instance 'null-pane)))
-                                      (setf (constraint-slot pane child 'fill-p) t)
-                                      child))
-                                   ;;
-                                   ((and (consp content)
-                                         (or (member (car content) '(+fill+ :fill))
-                                             (eql (car content) +fill+)))
-                                    (let ((child  (cadr content)))
-                                      (setf (constraint-slot pane child 'fill-p) t)
-                                      child))
-                                   ;;
-                                   ;; what about something like (30 :mm) ?
-                                   ;;
-                                   ((and (realp content) (>= content 0))
-                                    (let ((child (make-instance 'null-pane)))
-                                      (setf (constraint-slot pane child 'fixed-size) content)
-                                      child))
-                                   ;;
-                                   ;; match (<n> <pane>)
-                                   ;;
-                                   ((and (consp content)
-                                         (realp (car content))
-                                         (>= (car content) 0)
-                                         (consp (cdr content))
-                                         (panep (cadr content))
-                                         (null (cddr content)))
-                                    (let ((number (car content))
-                                          (child  (cadr content)))
-                                      (if (< number 1)
-                                          (setf (constraint-slot pane child 'proportion) number)
-                                          (setf (constraint-slot pane child 'fixed-size) number))
-                                      child))
-                                   (t
-                                    (error "~S is not a valid element in the ~S option of ~S."
-                                           content :contents pane)) ))
-                           contents)))
-     (mapc (curry #'sheet-adopt-child pane) children)))
+   ;;
+   (labels ((parse-box-content (content)
+              "Parses a box/rack content and returns a BOX-CLIENT instance."
+              ;; ### we need to parse more
+              (cond
+                ;; <pane>
+                ((panep content)
+                 (make-instance 'box-client :pane content))
+                ;; +fill+
+                ((or (eql content +fill+)
+                     (eql content '+fill+)
+                     (eql content :fill))
+                 (make-instance 'box-client
+                                :pane nil
+                                :fillp t))
+                ;; (+fill+ <pane>)
+                ((and (consp content)
+                      (or (member (car content) '(+fill+ :fill))
+                          (eql (car content) +fill+)))
+                 (make-instance 'box-client
+                                :pane nil
+                                :fillp t))
+                ;; <n>
+                ;;
+                ;; what about something like (30 :mm) ?
+                ;;
+                ((and (realp content) (>= content 0))
+                 (make-instance 'box-client
+                                :pane nil
+                                :fixed-size content))
+
+                ;; (<n> pane)
+                ((and (consp content)
+                      (realp (car content))
+                      (>= (car content) 0)
+                      (consp (cdr content))
+                      (panep (cadr content))
+                      (null (cddr content)))
+                 (let ((number (car content))
+                       (child  (cadr content)))
+                   (if (< number 1)
+                       (make-instance 'box-client
+                                      :pane pane
+                                      :proportion number)
+                       (make-instance 'box-client
+                                      :pane pane
+                                      :fixed-size number))))
+
+                (t
+                 (error "~S is not a valid element in the ~S option of ~S."
+                        content :contents pane)) )))
+
+     (let* ((clients  (mapcar #'parse-box-content contents))
+            (children (remove nil (mapcar #'box-client-pane clients))))
+       ;;
+       (setf (box-layout-mixin-clients pane) clients)
+       (mapc (curry #'sheet-adopt-child pane) children))))
 
  (defclass xrack-pane (rack-layout-mixin xbox-pane)
    ()
@@ -1424,25 +1444,20 @@ During realization the child of the spacing will have as cordinates
 
 ;;; RAISED PANE
 
-(defclass raised-pane (border-pane permanent-medium-sheet-output-mixin) ())
+(defclass raised-pane (border-pane permanent-medium-sheet-output-mixin)
+  ()
+  (:default-initargs
+   :border-width 2))
 
 (defmacro raising ((&rest options) &body contents)
   `(make-pane 'raised-pane ,@options :contents (list ,@contents)))
 
 (defmethod handle-repaint ((pane raised-pane) region)
   (declare (ignore region))
-  (with-special-choices (pane)
-    (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
-      (draw-edges-lines* pane +white+ 0 0 +black+ (- x2 x1 1) (- y2 y1 1))
-      ; this also needs to draw the background
-      ; should use an inset-rectangle thingy
-      (let ((x1 (+ x1 1))
-            (y1 (+ y1 1))
-            (x2 (- x2 1))
-            (y2 (- y2 1)))
-        ; if we were really clever, we'd clip the contents out of our fill
-        ; to avoid flicker
-        (draw-rectangle* pane x1 y1 x2 y2 :filled t :ink (pane-background pane))))))
+  (with-slots (border-width) pane
+    (multiple-value-call #'draw-bordered-rectangle* pane (bounding-rectangle* (sheet-region pane))
+                         :style :outset
+                         :border-width border-width)))
 
 ;;; LOWERED PANE
 
@@ -1453,16 +1468,10 @@ During realization the child of the spacing will have as cordinates
 
 (defmethod handle-repaint ((pane lowered-pane) region)
   (declare (ignore region))
-  (with-special-choices (pane)
-    (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
-      (draw-edges-lines* pane +black+ 0 0 +white+ (- x2 x1 1) (- y2 y1 1))
-      (let ((x1 (+ x1 1))
-            (y1 (+ y1 1))
-            (x2 (- x2 1))
-            (y2 (- y2 1)))
-        ; if we were really clever, we'd clip the contents out of our fill
-        ; to avoid flicker
-        (draw-rectangle* pane x1 y1 x2 y2 :filled t :ink (pane-background pane))))))
+  (with-slots (border-width) pane
+    (multiple-value-call #'draw-bordered-rectangle* pane (bounding-rectangle* (sheet-region pane))
+                         :style :inset
+                         :border-width border-width)))
 
 ;;; RESTRAINING PANE
 
@@ -1820,7 +1829,7 @@ During realization the child of the spacing will have as cordinates
 
 ;;; LABEL PANE
 
-(defclass label-pane (single-child-composite-pane permanent-medium-sheet-output-mixin)
+(defclass label-pane (single-child-composite-pane  permanent-medium-sheet-output-mixin)
   ((label :type string :initarg :label :accessor label-pane-label)
    (alignment :type (member :bottom :top)
               :initform :top
@@ -1828,6 +1837,8 @@ During realization the child of the spacing will have as cordinates
               :reader label-pane-label-alignment)
    (background :initform *3d-normal-color*)
    )
+  (:default-initargs
+   :text-style (make-text-style :sans-serif nil nil))
   (:documentation ""))
 
 (defmacro labelling ((&rest options) &body contents)
@@ -1861,7 +1872,11 @@ During realization the child of the spacing will have as cordinates
          (d (text-style-descent (pane-text-style pane) pane))
          (m0 2)
          (h (+ a d m0 m0)))
-    (cond ((sheet-children pane)
+    (cond ((and (sheet-children pane)
+                ;; ### this other test below seems to be neccessary since
+                ;;     somebody decided that (NIL) is a valid return value
+                ;;     from sheet-children. --GB 2002-11-10
+                (first (sheet-children pane)))
            (let ((sr2 (compose-space (first (sheet-children pane)))))
              (multiple-value-bind (right top left bottom) (label-pane-margins pane)
                (make-space-requirement
