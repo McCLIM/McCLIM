@@ -36,7 +36,7 @@
 
 ;;; PANES
 
-(defconstant +fill+ most-positive-fixnum)
+(defconstant +fill+ (expt 10 (floor (log most-positive-fixnum 10))))
 
 (defclass space-requirement ()
   ((width :initform 1
