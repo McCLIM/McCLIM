@@ -1,5 +1,17 @@
 (in-package :CLIM-INTERNALS)
 
+;;;
+;
+; This file is in transition, please don't fix it :]
+;
+; Much is left purposefully un-refactored until enough is reworked that it can be
+; refactored into sensible subcomponents, without becoming a hodge-podge of random
+; mixins (as opposed to a hodge-podge of sensible mixins :]) - BTS
+;
+; This especially applies to colour and event management :\
+;
+;;;
+
 (export '(pixie-look pixie/clx-look))
 
 (defclass pixie-look (frame-manager) ())
@@ -145,7 +157,8 @@
     (when dragging
       (unless (eq dragging :inside)
         (setf armed nil
-              value bounce-value)
+            ; value bounce-value ; this bouncing is more annoying than anything for sliders
+            )
         (disarmed-callback pane (gadget-client pane) (gadget-id pane)))
       (setf dragging nil)
       (dispatch-repaint pane (sheet-region pane)))))
@@ -195,14 +208,22 @@
     (let ((tr (vertical-gadget-orientation-transformation pane)))
       (with-bounding-rectangle* (minx miny maxx maxy) (transform-region tr (sheet-region pane))
         (with-drawing-options (pane :transformation tr)
-          (draw-rectangle* pane minx miny maxx maxy :filled t :ink *3d-normal-color*)
+          (with-drawing-options (pane :clipping-region  (region-difference
+                                                          (sheet-region pane)
+                                                          (gadget-bed-region pane)))
+            (draw-rectangle* pane minx miny maxx maxy :filled t :ink *3d-normal-color*))
           ;; draw bed
           (with-bounding-rectangle* (x1 y1 x2 y2) (gadget-bed-region pane)
-            (draw-rectangle* pane x1 y1 x2 y2 :ink (pane-background pane))
-            (draw-bordered-polygon pane
-                                   (polygon-points (make-rectangle* x1 y1 x2 y2))
-                                   :style :inset
-                                   :border-width 1))
+            (with-drawing-options (pane :clipping-region  (region-difference
+                                                            (sheet-region pane)
+                                                            (gadget-thumb-region pane)))
+              (multiple-value-bind (x1 y1 x2 y2) (values (+ x1 1) (+ y1 1)
+                                                         (- x2 1) (- y2 1))
+                (draw-rectangle* pane x1 y1 x2 y2 :ink (pane-background pane)))
+              (draw-bordered-polygon pane
+                                     (polygon-points (make-rectangle* x1 y1 x2 y2))
+                                     :style :inset
+                                     :border-width 1)))
           ;; draw thumb
           (with-bounding-rectangle* (x1 y1 x2 y2) (gadget-thumb-region pane)
             (let ((x2 (- x2 1)))

@@ -103,11 +103,12 @@
 	    (xlib:gcontext-foreground gc) (X-pixel port ink)
 	    (xlib:gcontext-background gc) (X-pixel port (medium-background medium)))
       ;; Here is a bug with regard to clipping ... ;-( --GB )
-      #+NIL
+      #-NIL
       (let ((clipping-region (medium-device-region medium)))
         (unless (region-equal clipping-region +nowhere+)
-          (setf (xlib:gcontext-clip-mask gc :yx-banded)
-                (clipping-region->rect-seq clipping-region))))
+          (let ((rect-seq (clipping-region->rect-seq clipping-region)))
+            (when rect-seq
+              (setf (xlib:gcontext-clip-mask gc :yx-banded) rect-seq)))))
       gc)))
 
 (defmethod medium-gcontext ((medium clx-medium) (ink (eql +foreground-ink+)))
@@ -128,9 +129,23 @@
     (setf (xlib:gcontext-background gc) flipper)
     gc))
 
+#+nil
 (defun clipping-region->rect-seq (clipping-region)
   (loop for region in (nreverse (region-set-regions clipping-region
                                                     :normalize :x-banding))
+        as rectangle = (bounding-rectangle region)
+        nconcing (list (round (rectangle-min-x rectangle))
+                       (round (rectangle-min-y rectangle))
+                       (round (rectangle-width rectangle))
+                       (round (rectangle-height rectangle)))))
+
+; this seems to work, but find out why all of these +nowhere+s are coming from
+; and kill them at the source...
+(defun clipping-region->rect-seq (clipping-region)
+  (loop for region in (nreverse (mapcan
+                                  (lambda (v) (unless (eq v +nowhere+) (list v)))
+                                  (region-set-regions clipping-region
+                                                      :normalize :x-banding)))
         as rectangle = (bounding-rectangle region)
         nconcing (list (round (rectangle-min-x rectangle))
                        (round (rectangle-min-y rectangle))
