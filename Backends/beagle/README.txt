@@ -49,6 +49,9 @@ Optional:
 
 1.  Create a symbolic link from .../McCLIM/Backends/beagle/load-clim.lisp
     to your home directory.
+2.  Ditto for load-clx.lisp (if you intend to run the clx backend too... there
+    are other ways to do this, but this is how I'm doing it at the moment)
+3.  Ditto for load-beagle.lisp
 
 Then:
 
@@ -59,6 +62,7 @@ The following are evaluated from the 'OpenMCL Listener' that opens:
 
 4.  Evaluate '(require "ASDF")'
 5.  Evaluate '(load "home:load-clim")' [See note #1]
+6.  Evaluate '(load "home:load-beagle")' [See note #4]
 
 The McCLIM Listener should now be able to be started from the OpenMCL
 Listener by evaluating '(clim-listener:run-listener)'. See the McCLIM
@@ -84,6 +88,11 @@ Note #3: Yes, this is a little silly. For a while the Beagle back end could
          OpenMCL Cocoa examples use in order to convince Cocoa that the
          currently-executing (non-graphical) application can have an event
          loop.
+
+Note #4: If you'd rather run with the CLX back end, do a load-clx instead
+         here. Hopefully it will (soon?) be possible to run with multiple
+         ports simultaneously so that both a CLX and a Beagle Listener can
+         be run side by side for comparative purposes.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -139,7 +148,7 @@ need to make the following modifications to
 
 KNOWN LIMITATIONS / TODO LIST
 
-1.  Speed! The current implementation is slow, especially when there is a
+1.  Speed! The current implementation is __slow__, especially when there is a
     large output history. Paolo's speed test takes 26 seconds and conses
     16MB on my (admittedly slow) iMac compared to 1.5 seconds on a 2.4GHz
     Pentium IV and unknown (to me) consing.
@@ -167,6 +176,8 @@ KNOWN LIMITATIONS / TODO LIST
 
 5.  Mouse down / up on buttons appears not to work very well unless the frame
     containing the buttons is the only active frame.
+    Actually, this ^^^ seems to work fine, but the highlighting for button
+    gadgets looks screwy under OS X.
 
 6.  Swapping between key windows (the window accepting the keyboard input)
     is a little flakey; as an example, if a second Listener is started from
@@ -205,7 +216,9 @@ KNOWN LIMITATIONS / TODO LIST
 
 13. Some Apropos cases fail; for example 'Apropos graft' fails (although
     '(apropos 'graft)' does not). The same problem prevents the address
-    book demo working too I think.
+    book demo working too I think. [This appears to be caused by treating
+    any 'NIL' which should be output as a literal object. Not sure how
+    this is happening, but it should be possible to track it down].
 
 -14.- Not all foreign objects we keep hold of in the back end are heap-
     allocated. Some are stack-allocated and cause errors about 'bogus'
@@ -230,7 +243,9 @@ KNOWN LIMITATIONS / TODO LIST
 18. The back end doesn't clear up after itself very well. You might find it
     necessary to force-quit OpenMCL after you've finished.
 
-19. Menus don't work in CLIM-FIG. No idea why not...
+19. Menus don't work in CLIM-FIG (or any else!). No idea why not...
+    This is because the way pointer tracking is done in clim-internals has
+    been changed, so another work-around needs to be implemented.
 
 20. Bounding rectangles are slightly off (this can be seen in CLIM-FIG again).
     It's only a matter of a pixel, maybe 2 in the worst case I've seen.
@@ -241,6 +256,16 @@ KNOWN LIMITATIONS / TODO LIST
 21. Highlighting on mouse overs isn't quite right; artefacts are left on the
     display after the mouse has moved out of the target object bounding
     rectangle (most easily visible in CLIM-FIG again).
+
+22. Sending key-down / key-up events for modifiers-changed events doesn't
+    look to help get the pointer documentation pane to show the correct
+    prompt. For example, in the Listener, issue a 'help commands' and
+    mouse over one of the elements. The PDP says 'R: Menu / To see other
+    commands, press Super'. If super is pressed, the highlighting on the
+    presentation is lost, and the PDP is blanked out. Only when the mouse
+    moves again is the PDP redisplayed correctly, with 's-L: Describe
+    Presentation'.
+    Need to check CLX implementation to see if this is the same...
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -266,7 +291,9 @@ WISH LIST
 
 7.  Documentation
 
-8.  Code tidying, and lots of it! Refactoring.
+8.  Code tidying, and lots of it! Refactoring. Need to implement many
+    abstractions (which should also help in the Cocoa -> Carbon move,
+    when it happens).
 
 9.  Release resources on exit.
 
