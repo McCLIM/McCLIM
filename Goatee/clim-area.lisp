@@ -133,21 +133,20 @@
 
 (defmethod replay-output-record ((record screen-line) stream
 				 &optional region (x-offset 0) (y-offset 0))
-  (declare (ignore region))
+  (declare (ignore region x-offset y-offset))
   (let ((medium (sheet-medium stream))
 	(cursor (cursor record)))
     (letf (((medium-text-style medium)
 	    (text-style (output-record-parent record)))
 	   ((medium-transformation medium)
-	    (make-translation-transformation x-offset y-offset)))
+            +identity-transformation+) ; Is it necessary?
+           )
       (when (and cursor (cursor-visibility cursor))
 	(climi::display-cursor cursor :erase))
       (multiple-value-bind (x y) (output-record-position record)
 	(declare (ignore y))
-	;; Is this necessary?
-	(with-output-recording-options (stream :record nil)
-	  (draw-text* stream (current-contents record)
-		      x (slot-value record 'baseline))))
+	(draw-text* stream (current-contents record)
+                    x (slot-value record 'baseline)))
       (when (and cursor (cursor-visibility cursor))
 	(climi::flip-screen-cursor cursor)))))
 
