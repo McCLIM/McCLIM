@@ -2,8 +2,8 @@ McCLIM 0.9 "Armistice"
 
 This is McCLIM, an implementation of the "Common Lisp Interface
 Manager CLIM II Specification." It currently works on X Windows using
-CLX. It works with CMUCL, SBCL, OpenMCL, Allegro CL and LispWorks. The
-INSTALL files in this directory give instructions for each Lisp
+CLX. It works with CMUCL, SBCL, CLISP, OpenMCL, Allegro CL and LispWorks.
+The INSTALL files in this directory give instructions for each Lisp
 implementation. Release notes for each release of McCLIM are in the
 ReleaseNotes directory.
 
