@@ -202,6 +202,7 @@
 	  ;; cursor, whether or not the next-method erases the location of the
 	  ;; cursor.
 	  ;; XXX clip to region?  No one else seems to...
+          ;; Sure clip to region! --GB
 	  (display-cursor cursor :erase)
 	  (call-next-method)
 	  (flip-screen-cursor cursor))
