@@ -5,6 +5,7 @@
 ;;;  (c) copyright 2000 by 
 ;;;           Iban Hatchondo (hatchond@emi.u-bordeaux.fr)
 ;;;           Julien Boninfante (boninfan@emi.u-bordeaux.fr)
+;;;	      Robert Strandh (strandh@labri.u-bordeaux.fr)
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -23,65 +24,54 @@
 
 (in-package :CLIM-DEMO)
 
-(defparameter calc '(0))
-(defvar *text-field* nil)
-
 (defun calculator ()
   (loop for port in climi::*all-ports*
       do (destroy-port port))
   (setq climi::*all-ports* nil)
-  (setq frame (make-application-frame 'calculator))
-  (setq fm (frame-manager frame))
-  (setq port (climi::frame-manager-port fm))
-  (setq pane (third (frame-panes frame)))
-  (setq medium (sheet-medium pane))
-  (setq graft (graft frame))
-  (setq vbox (frame-pane frame))
-  (run-frame-top-level frame))
+  (run-frame-top-level (make-application-frame 'calculator)))
 
-(defmacro queue-number(int)
-  `(lambda (gadget)
-     (declare (ignore gadget))
-     (let ((last-item (first (last calc))))
-       (if (numberp last-item)
-	   (setf (car (last calc)) (+ (* 10 last-item) ,int))
-	   (setf calc (nconc calc (list ,int))))
-       (setf (gadget-value *text-field*) (princ-to-string (first (last calc)))))))
+(defun show (number)
+  (setf (gadget-value (slot-value *application-frame* 'text-field))
+	(princ-to-string number)))
 
-(defmacro queue-operator (operator)
-  `(lambda (gadget)
-     (declare (ignore gadget))
-     (do-operation t)
-     (if (functionp (first (last calc))) 
-	 (setf (first (last calc)) ,operator)
-       	 (setf calc (nconc calc (list ,operator))))))	 
+(defun queue-number (number)
+  (lambda (gadget)
+    (declare (ignore gadget))
+    (with-slots (state) *application-frame*
+      (if (numberp (first state))
+	  (setf (first state) (+ (* 10 (first state)) number))
+	  (push number state))
+      (show (first state)))))
+
+(defun queue-operator (operator)
+  (lambda (gadget)
+    (declare (ignore gadget))
+    (do-operation t)
+    (with-slots (state) *application-frame*
+      (if (functionp (first state))
+	  (setf (first state) operator)
+	  (push operator state)))))
 
 (defun do-operation (gadget)
   (declare (ignore gadget))
-  (when (= 3 (length calc))
-    (setf (car calc) (apply (second calc) (list (first calc) (third calc)))
-	  (cdr calc) nil)
-    (setf (gadget-value *text-field*) (princ-to-string (first calc)))))
+  (with-slots (state) *application-frame*
+    (when (= 3 (length state))
+      (setf state (list (funcall (second state) (third state) (first state))))
+      (show (first state)))))
 
 (defun initac (gadget)
   (declare (ignore gadget))
-  (setf calc (list 0)
-	(gadget-value *text-field*) (princ-to-string 0)))
+  (with-slots (state) *application-frame*
+    (setf state (list 0)))
+  (show 0)))
 
 (defun initce (gadget)
   (declare (ignore gadget))
-  (let ((last-item (first (last calc))))
-    (unless (or (null calc) (not (numberp last-item)))
-      (setf calc (butlast calc)
-	    (gadget-value *text-field*) (princ-to-string 0)))))
+  (when (numberp (first state))
+    (with-slots (state) *application-frame*
+      (pop state))
+    (show 0)))
       
-(defun print-screen (gadget)
-  (declare (ignore gadget)))
-
-(defun find-text-field (frame)
-  (first (member-if #'(lambda (gadget) (typep gadget 'text-field-pane))
-		    (frame-panes frame))))
-
 (defmethod calculator-frame-top-level ((frame application-frame)
 				       &key (command-parser 'command-line-command-parser)
 				       (command-unparser 'command-line-command-unparser)
@@ -89,10 +79,14 @@
 					'command-line-read-remaining-arguments-for-partial-command)
 				       (prompt "Command: "))
   (declare (ignore command-parser command-unparser partial-command-parser prompt))
-  (setf *text-field* (find-text-field frame))
+  (setf (slot-value frame 'text-field)
+	(find-if #'(lambda (gadget) (typep gadget 'text-field-pane))
+		 (frame-panes frame)))
   (loop (event-read (frame-pane frame))))
      
-(define-application-frame calculator () ()
+(define-application-frame calculator ()
+  ((text-field :initform nil)
+   (state :initform (list 0)))
   (:panes
    (plus             :push-button
 		     :space-requirement (make-space-requirement :width 50 :height 50)		     
