@@ -171,6 +171,7 @@
 (defgeneric medium-line-style (medium))
 (defgeneric medium-text-style (medium))
 (defgeneric medium-default-text-style (medium))
+(defgeneric text-size (medium string &key text-style start end))
 
 (defgeneric (setf medium-foreground) (new-value medium))
 (defgeneric (setf medium-background) (new-value medium))
@@ -189,6 +190,9 @@
 (defgeneric graft-units (graft))
 
 (defgeneric text-style-character-width (text-style medium char))
+;; fall back, where to put this?
+(defmethod text-style-character-width (text-style medium char)
+  (text-size medium char :text-style text-style))
 
 (declaim (ftype (function (t t t
                              &key (:filled t) (:ink t) (:clipping-region t) (:transformation t)
@@ -258,7 +262,6 @@ Further undeclared functions
   (SETF GADGET-MAX-VALUE) (SETF GADGET-MIN-VALUE) (SETF SCROLL-BAR-THUMB-SIZE) 
   SLOT-ACCESSOR-NAME::|CLIM-INTERNALS CLIENT slot READER| DRAW-EDGES-LINES* 
   FORMAT-CHILDREN GADGET-VALUE MAKE-MENU-BAR TABLE-PANE-NUMBER 
-  TEXT-STYLE-CHARACTER-WIDTH
   MEDIUM WITH-GRAPHICS-STATE
   PORT-MIRROR-HEIGHT PORT-MIRROR-WIDTH TEXT-STYLE-CHARACTER-WIDTH
   FIND-INNERMOST-APPLICABLE-PRESENTATION HIGHLIGHT-PRESENTATION-1 
@@ -273,6 +276,5 @@ Further undeclared functions
   (SETF GADGET-MAX-VALUE) (SETF GADGET-MIN-VALUE) (SETF SCROLL-BAR-THUMB-SIZE) 
   SLOT-ACCESSOR-NAME::|CLIM-INTERNALS CLIENT slot READER| DRAW-EDGES-LINES* 
   FORMAT-CHILDREN GADGET-VALUE MAKE-MENU-BAR TABLE-PANE-NUMBER 
-  TEXT-STYLE-CHARACTER-WIDTH
 
 ||#
