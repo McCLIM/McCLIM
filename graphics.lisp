@@ -595,3 +595,88 @@
 			       start end
 			       align-x align-y
 			       toward-x toward-y transform-glyphs))
+
+;;;;
+;;;; DRAW-DESIGN
+;;;;
+
+(defmethod draw-design (medium (design point) &rest options &key &allow-other-keys)
+  (apply #'draw-point* medium (point-x design) (point-y design) options))
+
+(defmethod draw-design (medium (design polyline) &rest options &key &allow-other-keys)
+  (apply #'draw-polygon medium (polygon-points design)
+         :closed (polyline-closed design)
+         :filled nil
+         options))
+
+(defmethod draw-design (medium (design polygon) &rest options &key &allow-other-keys)
+  (apply #'draw-polygon medium (polygon-points design)
+         :closed (polyline-closed design)
+         :filled t
+         options))
+
+(defmethod draw-design (medium (design line) &rest options &key &allow-other-keys)
+  (multiple-value-bind (x1 y1) (line-start-point* design)
+    (multiple-value-bind (x2 y2) (line-end-point* design)
+      (apply #'draw-line medium x1 y1 x2 y2 options))))
+
+(defmethod draw-design (medium (design rectangle) &rest options &key &allow-other-keys)
+  (multiple-value-bind (x1 y1 x2 y2) (rectangle-edges* design)
+    (apply #'draw-rectangle* medium x1 y1 x2 y2 options)))
+
+(defmethod draw-design (medium (design ellipse) &rest options &key &allow-other-keys)
+  (multiple-value-bind (cx cy) (ellipse-center-point* design)
+    (multiple-value-bind (r1x r1y r2x r2y) (ellipse-radii design)
+      (multiple-value-call #'draw-ellipse* medium
+                           cx cy r1x r1y r2x r2y
+                           :start-angle (ellipse-start-angle design)
+                           :end-angle (ellipse-end-angle design)
+                           options))))
+
+(defmethod draw-design (medium (design elliptical-arc) &rest options &key &allow-other-keys)
+  (multiple-value-bind (cx cy) (ellipse-center-point* design)
+    (multiple-value-bind (r1x r1y r2x r2y) (ellipse-radii design)
+      (multiple-value-call #'draw-ellipse* medium
+                           cx cy r1x r1y r2x r2y
+                           :start-angle (ellipse-start-angle design)
+                           :end-angle (ellipse-end-angle design)
+                           :filled nil
+                           options))))
+
+(defmethod draw-design (medium (design standard-region-union) &rest options &key &allow-other-keys)
+  (map-over-region-set-regions (lambda (region)
+                                 (apply #'draw-design medium region options))
+                               design))
+
+#+NYI
+(defmethod draw-design (medium (design standard-region-intersection) &rest options &key &allow-other-keys)
+  )
+
+#+NYI
+(defmethod draw-design (medium (design standard-region-difference) &rest options &key &allow-other-keys)
+  )
+
+(defmethod draw-design (medium (design (eql +nowhere+)) &rest options &key &allow-other-keys)
+  (declare (ignore medium options)
+           (ignorable design))
+  nil)
+
+(defmethod draw-design ((medium sheet) (design (eql +everywhere+)) &rest options &key &allow-other-keys)
+  (apply #'draw-design (sheet-region medium) design options))
+
+(defmethod draw-design ((medium medium) (design (eql +everywhere+)) &rest options &key &allow-other-keys)
+  (apply #'draw-design (sheet-region (medium-sheet medium)) design options))
+
+;;;
+
+(defmethod draw-design (medium (color color) &rest options &key &allow-other-keys)
+  (apply #'draw-design medium +everywhere+ :ink color options))
+
+(defmethod draw-design (medium (color opacity) &rest options &key &allow-other-keys)
+  (apply #'draw-design medium +everywhere+ :ink color options))
+
+(defmethod draw-design (medium (color standard-flipping-ink) &rest options &key &allow-other-keys)
+  (apply #'draw-design medium +everywhere+ :ink color options))
+
+(defmethod draw-design (medium (color indirect-ink) &rest options &key &allow-other-keys)
+  (apply #'draw-design medium +everywhere+ :ink color options))

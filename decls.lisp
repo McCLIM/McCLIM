@@ -24,12 +24,9 @@
 
 (in-package :CLIM-INTERNALS)
 
-;;;; Changes
+;;;; Early special variables
 
-;;;  When        Who    What
-;;; --------------------------------------------------------------------------------------
-;;;  2001-08-12  GB     created
-;;;
+(defvar *application-frame* nil)
 
 ;; This is just an ad hoc list. Would it be a good idea to include all
 ;; (exported) generic functions here? --GB
@@ -155,6 +152,15 @@
 (defgeneric window-viewport-position (window))
 ;; (defgeneric (setf* window-viewport-position) (x y window))
 
+;;;;
+
+(defgeneric (setf gadget-max-value) (new-value gadget))
+(defgeneric (setf gadget-min-value) (new-value gadget))
+(defgeneric (setf scroll-bar-thumb-size) (new-value scroll-bar))
+(defgeneric gadget-value (gadget))
+(defgeneric gadget-orientation (gadget))
+(defgeneric gadget-client (gadget))
+
 ;;;
 
 (defgeneric medium-foreground (medium))
@@ -229,6 +235,11 @@
 
 (defmethod invoke-with-special-choices (continuation (sheet T))
   (funcall continuation sheet))
+
+;;;
+
+;; Used in stream-input.lisp, defined in frames.lisp
+(defgeneric frame-event-queue (frame))
 
 
 #||

@@ -23,7 +23,7 @@
 
 (in-package :CLIM-INTERNALS)
 
-(defvar *application-frame* nil)
+;; *application-frame* is in decls.lisp
 (defvar *default-frame-manager* nil)
 
 ;;; Frame-Manager class

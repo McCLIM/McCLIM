@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.77 2002/04/28 11:17:07 gilbert Exp $
+;;; $Id: panes.lisp,v 1.78 2002/04/30 09:49:01 gilbert Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -119,6 +119,40 @@
 ;;   reverse: The first element of children should come last.
 
 ;;--GB 2002-02-27
+
+;;; Default Color Scheme Options
+
+#||
+;; Motif-ish
+(defparameter *3d-dark-color*   (make-gray-color .45))
+(defparameter *3d-normal-color* (make-gray-color .75))
+(defparameter *3d-light-color*  (make-gray-color .92))
+(defparameter *3d-inner-color*  (make-gray-color .65))
+||#
+
+;; Gtk-ish
+
+(defparameter *3d-dark-color*   (make-gray-color .59))
+(defparameter *3d-normal-color* (make-gray-color .84))
+(defparameter *3d-light-color*  (make-gray-color 1.0))
+(defparameter *3d-inner-color*  (make-gray-color .75))
+
+;;;
+;;; gadgets look
+;;;
+
+;; Only used by some gadgets, I suggest using my more flexible and
+;; general DRAW-BORDERED-POLYGON.
+
+(defun display-gadget-background (gadget color x1 y1 x2 y2)
+  (draw-rectangle* gadget x1 y1 x2 y2 :ink color :filled t))
+
+(defun draw-edges-lines* (pane x1 y1 x2 y2)
+  (draw-line* pane x1 y1 x2 y1 :ink +white+)
+  (draw-line* pane x1 y1 x1 y2 :ink +white+)
+  (draw-line* pane x1 y2 x2 y2 :ink +black+)
+  (draw-line* pane x2 y1 x2 y2 :ink +black+))
+
 
 ;;; GENERIC FUNCTIONS
 
@@ -547,6 +581,7 @@
   )
 
 (defmethod note-space-requirements-changed ((pane pane) client)
+  (declare (ignore client))
   (setf (pane-space-requirement pane) nil)
   (setf (pane-current-width pane) nil)
   (setf (pane-current-height pane) nil)
@@ -1488,19 +1523,17 @@ During realization the child of the spacing will have as cordinates
   "Callback for the vertical scroll-bar of a scroller-pane."
   (with-slots (viewport hscrollbar vscrollbar) pane
     (let ((scrollee (first (sheet-children viewport))))
-      (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region scrollee)
-        (scroll-extent (first (sheet-children viewport))
-                       (gadget-value hscrollbar)
-                       new-value)))))
+      (scroll-extent scrollee
+                     (gadget-value hscrollbar)
+                     new-value))))
 
 (defmethod scroller-pane/horizontal-drag-callback ((pane scroller-pane) new-value)
   "Callback for the vertical scroll-bar of a scroller-pane."
   (with-slots (viewport hscrollbar vscrollbar) pane
     (let ((scrollee (first (sheet-children viewport))))
-      (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region scrollee)
-        (scroll-extent (first (sheet-children viewport))
-                       new-value
-                       (gadget-value vscrollbar))))))
+      (scroll-extent scrollee
+                     new-value
+                     (gadget-value vscrollbar)))))
 
 (defmethod scroller-pane/update-scroll-bars ((pane scroller-pane))
   (with-slots (viewport hscrollbar vscrollbar) pane
@@ -1586,11 +1619,11 @@ During realization the child of the spacing will have as cordinates
 ;;;; 
 
 (defun scroll-page-callback (scroll-bar direction)
-  (with-slots (client orientation) scroll-bar
+  (let ((client (gadget-client scroll-bar)))
     (multiple-value-bind (old-x old-y)
         (untransform-position (sheet-transformation client)
                               0 0)
-      (if (eq orientation :vertical)
+      (if (eq (gadget-orientation scroll-bar) :vertical)
           (scroll-extent client
                          old-x
                          (- old-y
@@ -1605,11 +1638,11 @@ During realization the child of the spacing will have as cordinates
                          old-y)))))
 
 (defun scroll-line-callback (scroll-bar direction)
-  (with-slots (client orientation) scroll-bar
+  (let ((client (gadget-client scroll-bar)))
     (multiple-value-bind (old-x old-y)
         (untransform-position (sheet-transformation client)
                               0 0)
-      (if (eq orientation :vertical)
+      (if (eq (gadget-orientation scroll-bar) :vertical)
           (scroll-extent client
                          old-x
                          (- old-y
@@ -1756,27 +1789,6 @@ During realization the child of the spacing will have as cordinates
         (allocate-space (first (sheet-children pane))
                         (- (- x2 right) (+ x1 left))
                         (- (- y2 bottom) (+ y1 top)))))))
-
-(defmethod draw-design (medium (design rectangle))
-  (multiple-value-call #'draw-rectangle* medium (rectangle-edges* design)))
-
-(defmethod draw-design (medium (design standard-region-union))
-  (map-over-region-set-regions (curry #'draw-design medium)
-                               design))
-
-(defmethod draw-design (medium (design standard-line))
-  (multiple-value-call #'draw-line* medium
-                       (line-start-point* design)
-                       (line-end-point* design)))
-
-(defmethod draw-design (medium (design standard-polyline))
-  (map-over-polygon-segments (curry #'draw-line* medium)
-                             design))
-
-(defmethod draw-design (medium (design (eql +nowhere+)))
-  (declare (ignore medium)
-           (ignorable design))
-  )
 
 (defmethod handle-repaint ((pane label-pane) region)
   (declare (ignore region))

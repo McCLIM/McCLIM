@@ -228,19 +228,6 @@
   (declare (ignore color))
   (dispatch-repaint gadget (sheet-region gadget)))
 
-;;;
-;;; gadgets look
-;;;
-
-(defun display-gadget-background (gadget color x1 y1 x2 y2)
-  (draw-rectangle* gadget x1 y1 x2 y2 :ink color :filled t))
-
-(defun draw-edges-lines* (pane x1 y1 x2 y2)
-  (draw-line* pane x1 y1 x2 y1 :ink +white+)
-  (draw-line* pane x1 y1 x1 y2 :ink +white+)
-  (draw-line* pane x1 y2 x2 y2 :ink +black+)
-  (draw-line* pane x2 y1 x2 y2 :ink +black+))
-
 #||
 ;; Labelled-gadget
 
@@ -1041,21 +1028,6 @@ and must never be nil."))
 ;;
 ;; --GB
 
-#||
-;; Motif-ish
-(defparameter *3d-dark-color*   (make-gray-color .45))
-(defparameter *3d-normal-color* (make-gray-color .75))
-(defparameter *3d-light-color*  (make-gray-color .92))
-(defparameter *3d-inner-color*  (make-gray-color .65))
-||#
-
-;; Gtk-ish
-
-(defparameter *3d-dark-color*   (make-gray-color .59))
-(defparameter *3d-normal-color* (make-gray-color .84))
-(defparameter *3d-light-color*  (make-gray-color 1.0))
-(defparameter *3d-inner-color*  (make-gray-color .75))
-
 (defclass 3D-border-mixin ()
   ((border-width :initarg :border-width :initform 2)
    (border-style :initarg :border-style :initform :outset)
@@ -1213,22 +1185,6 @@ and must never be nil."))
 
 (defmethod draw-toggle-button-indicator ((gadget standard-gadget-pane) (type (eql :one-of)) value x1 y1 x2 y2)
   (multiple-value-bind (cx cy) (values (/ (+ x1 x2) 2) (/ (+ y1 y2) 2))
-#|
-    (multiple-value-bind (rx ry) (values (/ (- y2 y1) 2) (/ (- x2 x1) 2))
-      (draw-ellipse* gadget cx cy 0 ry rx 0
-                     :start-angle (* 1/4 pi)
-                     :end-angle (* 5/4 pi)
-                     :ink *3d-dark-color*)
-      (draw-ellipse* gadget cx cy 0 ry rx 0
-                     :start-angle (* 5/4 pi)
-                     :end-angle (* 9/4 pi)
-                     :ink *3d-light-color*)
-      (draw-ellipse* gadget cx cy 0 (max 1 (- ry 2)) (max 1 (- rx 2)) 0
-                     :ink (effective-gadget-input-area-color gadget))
-      (when value
-        (draw-ellipse* gadget cx cy 0 (max 1 (- ry 4)) (max 1 (- rx 4)) 0
-                       :ink (effective-gadget-foreground gadget))))
-|#
     (let ((radius (/ (- y2 y1) 2)))
       (draw-circle* gadget cx cy radius
                      :start-angle (* 1/4 pi)
@@ -1242,7 +1198,7 @@ and must never be nil."))
                      :ink (effective-gadget-input-area-color gadget))
       (when value
         (draw-circle* gadget cx cy (max 1 (- radius 4))
-                       :ink (effective-gadget-foreground gadget))))))
+                      :ink (effective-gadget-foreground gadget))))))
 
 (defmethod draw-toggle-button-indicator ((pane standard-gadget-pane) (type (eql :some-of)) value
                                          x1 y1 x2 y2)
