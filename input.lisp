@@ -1,6 +1,7 @@
 ;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
 
 ;;;  (c) copyright 1998,1999,2000 by Michael McDonald (mikemac@mikemac.com)
+;;;  (c) copyright 2002 by Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -21,8 +22,69 @@
 
 ;;; Input Protocol Classes
 
+;; Event queues
+
+(defclass standard-event-queue ()
+  ((lock :initform (make-lock "event queue")
+         :reader event-queue-lock)
+   (head :initform nil
+         :accessor event-queue-head
+         :documentation "Head pointer of event queue.")
+   (tail :initform nil
+         :accessor event-queue-tail
+         :documentation "Tail pointer of event queue.") ))
+
+(defmethod event-queue-read-no-hang ((eq standard-event-queue))
+  "Reads one event from the queue, if there is no event just return NIL."
+  (with-lock-held ((event-queue-lock eq))
+    (let ((res (pop (event-queue-head eq))))
+      (when (null (event-queue-head eq))
+        (setf (event-queue-tail eq) nil))
+      res)))
+
+(defmethod event-queue-read ((eq standard-event-queue))
+  "Reads one event from the queue, if there is no event, hang until here is one."
+  (loop
+      (let ((res (event-queue-read-no-hang eq)))
+        (when res
+          (return res))
+        (process-wait  "Waiting for event"
+                       (lambda ()
+                         (not (null (event-queue-head eq))))))))
+
+(defmethod event-queue-append ((eq standard-event-queue) item)
+  "Append the item at the end of the queue."
+  (with-lock-held ((event-queue-lock eq))
+    (cond ((null (event-queue-tail eq))
+           (setf (event-queue-head eq) (cons item nil)
+                 (event-queue-tail eq) (event-queue-head eq)))
+          (t
+           (setf (event-queue-tail eq)
+                 (setf (cdr (event-queue-tail eq)) (cons item nil)))))))
+
+(defmethod event-queue-prepend ((eq standard-event-queue) item)
+  "Prepend the item to the beginning of the queue."
+  (with-lock-held ((event-queue-lock eq))
+    (cond ((null (event-queue-tail eq))
+           (setf (event-queue-head eq) (cons item nil)
+                 (event-queue-tail eq) (event-queue-head eq)))
+          (t
+           (push item (event-queue-head eq))))))
+
+(defmethod event-queue-peek-if (predicate (eq standard-event-queue))
+  "Goes thru the whole event queue an returns the first event, which
+   satisfies 'predicate' and leaves the event in the queue.
+   Returns NIL, if there is no such event."
+  (with-lock-held ((event-queue-lock eq))
+    (find-if predicate (event-queue-head eq))))
+
+(defmethod event-queue-listen ((eq standard-event-queue))
+  (not (null (event-queue-head eq))))
+
+;; STANDARD-SHEET-INPUT-MIXIN
+
 (defclass standard-sheet-input-mixin ()
-  ((queue :initform nil)
+  ((queue :initform (make-instance 'standard-event-queue))
    (port :initform nil
 	 :initarg :port
 	 :reader port)
@@ -35,7 +97,7 @@
 
 (defmethod queue-event ((sheet standard-sheet-input-mixin) event)
   (with-slots (queue) sheet
-    (setq queue (nconc queue (list event)))))
+    (event-queue-append queue event)))
   
 (defmethod handle-event ((sheet standard-sheet-input-mixin) event)
   ;; Standard practice is too ignore events
@@ -44,39 +106,36 @@
 
 (defmethod event-read ((sheet standard-sheet-input-mixin))
   (with-slots (queue) sheet
-    (loop while (null queue)
-	  do (process-next-event (port sheet)))
-    (pop queue)))
+    (event-queue-read queue)))
 
 (defmethod event-read-with-timeout ((sheet standard-sheet-input-mixin)
 				    &key (timeout nil) (wait-function nil))
+  ;; This one is not in the spec ;-( --GB
   (with-slots (queue) sheet
-    (loop while (null queue)
-	  do (process-next-event (port sheet) :timeout timeout :wait-function wait-function))
-    (pop queue)))
+    (event-queue-read queue)))
 
 (defmethod event-read-no-hang ((sheet standard-sheet-input-mixin))
   (with-slots (queue) sheet
-    (if (null queue)
-	   nil
-      (pop queue))))
+    (event-queue-read-no-hang queue)))
 
 (defmethod event-peek ((sheet standard-sheet-input-mixin) &optional event-type)
   (with-slots (queue) sheet
     (if event-type
-	(loop while (and queue (not (typep (first queue) event-type)))
-	    do (pop queue)))
-    (if (null queue)
-	nil
-      (first queue))))
+        (event-queue-peek-if (lambda (x)
+                               (typep x event-type))
+                             queue)
+        (event-queue-peek-if (lambda (x) (declare (ignore x)) t)
+                             queue))))
 
 (defmethod event-unread ((sheet standard-sheet-input-mixin) event)
   (with-slots (queue) sheet
-    (push event queue)))
+    (event-queue-prepend queue event)))
 
 (defmethod event-listen ((sheet standard-sheet-input-mixin))
   (with-slots (queue) sheet
-    (not (null queue))))
+    (event-queue-listen queue)))
+
+;;;;
 
 (defclass immediate-sheet-input-mixin (standard-sheet-input-mixin)
   (
@@ -127,11 +186,12 @@
 (defmethod event-listen ((sheet sheet-mute-input-mixin))
   (error 'sheet-is-mute-for-input))
 
+;;;;
+
 (defclass delegate-sheet-input-mixin ()
   ((delegate :initform nil
 	     :initarg :delegate
-	     :accessor delegate-sheet-delegate)
-   ))
+	     :accessor delegate-sheet-delegate) ))
 
 (defmethod dispatch-event ((sheet delegate-sheet-input-mixin) event)
   (dispatch-event (delegate-sheet-delegate sheet) event))
