@@ -105,7 +105,7 @@ state ~S lambda list ~S"
 			(apply #',name ,@required-params ,apply-list)))))
       `(defmethod ,name ,ll
 	 (let ((*original-stream* stream)
-	       (stream (slot-value stream 'stream)))
+	       (stream (slot-value stream 'stream)))	   
 	   ,body)))))
 
 ;;; The basic input and output stream protocols, as specified by the Gray
@@ -611,12 +611,12 @@ state ~S lambda list ~S"
 (defmethod invoke-with-output-recording-options
     ((stream standard-encapsulating-stream) continuation record draw)
   (invoke-with-output-recording-options
-    (slot-value stream 'stream)
-    #'(lambda (old-stream)
-	(declare (ignore old-stream))
-	(funcall continuation stream))
-    record
-    draw))
+   (slot-value stream 'stream)
+   #'(lambda (old-stream)
+       (declare (ignore old-stream))
+       (funcall continuation stream))
+   record
+   draw))
   
 #+nil
 (def-stream-method invoke-with-new-output-record
@@ -648,13 +648,13 @@ state ~S lambda list ~S"
      &rest initargs
      &key
      &allow-other-keys)
-  (invoke-with-output-to-output-record
-     (slot-value stream 'stream)
-     #'(lambda (inner-stream record)
-	 (declare (ignore inner-stream))
-	 (funcall continuation stream record))
-     record-type
-     initargs))
+  (apply #'invoke-with-output-to-output-record
+	 (slot-value stream 'stream)
+	 #'(lambda (inner-stream record)
+	     (declare (ignore inner-stream))
+	     (funcall continuation stream record))
+	 record-type
+	 initargs))
 
 						    
 
