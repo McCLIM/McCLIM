@@ -72,7 +72,7 @@
    (for :initarg :for)
    (orientation :initarg :orientation)
    (paper :initarg :paper)
-   (native-region :initarg region
+   (native-region :initarg :native-region
                   :reader sheet-native-region)
    (transformation :initarg :transformation
                    :reader sheet-native-transformation)
