@@ -25,12 +25,12 @@
    "COMPOSE-SPACE-AUX"))
 
 (defpackage "CLIM-INTERNALS"
-  (:use #+clisp :clos #+excl :stream :lisp)
+  (:use #+clisp :clos #+excl :stream :common-lisp)
   (:use "CLIM-EXTENSIONS")
   (:nicknames :climi)
   #+excl(:import-from :excl compile-system load-system)
-  #+cmu
-  (:import-from "EXTENSIONS"
+  #+(or cmu sbcl)
+  (:import-from #+cmu "EXTENSIONS" #+sbcl "SB-GRAY"
    "FUNDAMENTAL-BINARY-INPUT-STREAM"
    "FUNDAMENTAL-BINARY-OUTPUT-STREAM"
    "FUNDAMENTAL-BINARY-STREAM"
