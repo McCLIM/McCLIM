@@ -90,8 +90,8 @@
 (defun sbcl-frob-to-pathname (pathname string)
   "This just keeps getting more disgusting."
   (let* ((parent (strip-filespec pathname))
-         (pn (merge-pathnames (make-pathname :name (subseq string 0 (position #\. string :from-end T))
-                                             :type (let ((x (position #\. string :from-end T)))
+        (pn (merge-pathnames (make-pathname :name (subseq string 0 (position #\. string :start 1 :from-end T))
+                                            :type (let ((x (position #\. string :start 1 :from-end T)))
                                                      (if x (subseq string (1+ x)) nil)))
                               parent))
          (dir (ignore-errors (sb-posix:opendir (namestring pn)))))    
