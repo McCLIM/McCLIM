@@ -88,14 +88,13 @@
   ((command :initform nil :initarg :command)))
 
 (defmethod arm-branch ((button menu-button-leaf-pane))
-  (unless (slot-value button 'destroyed)
-    (with-slots (client) button
-      (arm-menu client)
-      (mapc #'destroy-substructure (menu-children client))
-      (arm-menu button))))
+  (with-slots (client) button
+    (arm-menu client)
+    (mapc #'destroy-substructure (menu-children client))
+    (arm-menu button)))
 
 (defmethod destroy-substructure ((button menu-button-leaf-pane))
-  (with-slots (armed destroyed) button
+  (with-slots (armed) button
       (setf armed nil)))
 
 (defmethod handle-event ((pane menu-button-leaf-pane) (event pointer-button-release-event))
@@ -106,8 +105,7 @@
       (destroy-substructure (menu-root pane)))))
 
 (defmethod handle-event ((pane menu-button-leaf-pane) (event pointer-exit-event))
-  (unless (slot-value pane 'destroyed)
-    (disarm-menu pane)))
+  (disarm-menu pane))
 
 (defmethod handle-event ((pane menu-button-leaf-pane) (event pointer-ungrab-event))
   (destroy-substructure (menu-root pane)))
@@ -156,23 +154,19 @@
   (with-slots (frame-manager submenu-frame) sub-menu
     (when submenu-frame
       (mapc #'destroy-substructure (menu-children sub-menu))
-      (mapc #'(lambda (child)
-		(setf (slot-value child 'destroyed) t))
-	    (menu-children sub-menu))
       (disown-frame frame-manager submenu-frame)
       (setf submenu-frame nil))))
 
 (defmethod arm-branch ((sub-menu menu-button-submenu-pane))
-  (unless (slot-value sub-menu 'destroyed)
-    (with-slots (client frame-manager submenu-frame) sub-menu
-      (arm-menu client)
-      (if submenu-frame
-	  (progn (mapc #'destroy-substructure (menu-children sub-menu))
-		 (mapc #'disarm-menu (menu-children sub-menu)))
-	  (progn
-	    (mapc #'destroy-substructure (menu-children client))
-	    (create-substructure sub-menu sub-menu)))
-      (arm-menu sub-menu))))
+  (with-slots (client frame-manager submenu-frame) sub-menu
+    (arm-menu client)
+    (if submenu-frame
+	(progn (mapc #'destroy-substructure (menu-children sub-menu))
+	       (mapc #'disarm-menu (menu-children sub-menu)))
+	(progn
+	  (mapc #'destroy-substructure (menu-children client))
+	  (create-substructure sub-menu sub-menu)))
+    (arm-menu sub-menu)))
 	      
 (defmethod handle-event ((pane menu-button-submenu-pane) (event pointer-button-release-event))
   (destroy-substructure (menu-root pane)))
