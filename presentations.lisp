@@ -371,7 +371,6 @@ filled in."
 		,options
 	      ,options-form)))))))
 
-
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defvar *presentation-type-table* (make-hash-table :test #'eq)))
 
@@ -389,6 +388,15 @@ filled in."
 (defmethod get-ptype-metaclass ((type clos-presentation-type))
   (clos-class type))
 
+(defun prototype-or-error (name)
+  (let ((ptype-meta (get-ptype-metaclass name)))
+    (unless ptype-meta
+      (error "~S is an unknown presentation type" name))
+    (unless (clim-mop:class-finalized-p ptype-meta)
+      (clim-mop:finalize-inheritance ptype-meta))
+    (or (clim-mop:class-prototype ptype-meta)
+      (error "Couldn't find a prototype for ~S" name))))
+  
 (defun get-ptype (name)
   (or (gethash name *presentation-type-table*)
       (let ((meta (find-class name nil)))
@@ -893,12 +901,9 @@ function lambda list"))
 					       &rest args)
   (declare (ignore name))
   (let* ((type-spec (nth (1- type-arg-position) args))
-	 (ptype-name (presentation-type-name type-spec))
-	 (ptype-meta (get-ptype-metaclass ptype-name)))
-    (unless ptype-meta
-      (error "~S contains an unknown presentation type" type-spec))
-    (let ((prototype (clim-mop:class-prototype ptype-meta)))
-      (apply gf prototype args))))
+	 (ptype-name (presentation-type-name type-spec)))
+    (apply gf (prototype-or-error ptype-name) args)))
+
 
 (defmacro funcall-presentation-generic-function (name &rest args)
   (let ((gf (gethash name *presentation-gf-table*)))
@@ -991,15 +996,6 @@ function lambda list"))
 ;;; weird; method combination is in effect disabled.  So, the methods have to
 ;;; be eql methods.
 
-(defun prototype-or-error (name)
-  (let ((ptype-meta (get-ptype-metaclass name)))
-    (unless ptype-meta
-      (error "~S is an unknown presentation type" name))
-    (unless (clim-mop:class-finalized-p ptype-meta)
-      (clim-mop:finalize-inheritance ptype-meta))
-    (or (clim-mop:class-prototype ptype-meta)
-      (error "Couldn't find a prototype for ~S" name))))
-  
 (defmacro define-subtypep-method (&rest args)
   (let ((gf (gethash 'presentation-subtypep *presentation-gf-table*)))
     (multiple-value-bind (qualifiers lambda-list decls body)
@@ -2265,6 +2261,10 @@ function lambda list"))
 
 (define-presentation-type expression ())
 
+(define-presentation-method presentation-typep (object (type expression))
+  (declare (ignore object))
+  t)
+
 (define-presentation-method present (object (type expression)
 				     stream
 				     (view textual-view)
@@ -2272,6 +2272,12 @@ function lambda list"))
   (declare (ignore for-context-type))
   (let ((*print-readably* acceptably))
     (princ object stream)))
+
+(define-presentation-method accept ((type expression) stream
+				    (view textual-view)
+				    &key default default-type)
+  (declare (ignore default default-type))
+  (accept-using-read stream type))
 
 (define-presentation-type form ()
   :inherit-from `expression)
