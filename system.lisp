@@ -250,3 +250,14 @@
   "Apps/Scigraph/scigraph/frame"
   "Apps/Scigraph/scigraph/export"
   "Apps/Scigraph/scigraph/demo-frame")
+
+(clim-defsystem (:clim-listener :depends-on (:clim #+clx :clim-looks #+sbcl :sb-posix))
+  "Experimental/xpm"
+  "Apps/Listener/package"
+  "Apps/Listener/hotfixes"
+  "Apps/Listener/util"
+  "Apps/Listener/icons.lisp"
+  "Apps/Listener/file-types"
+  "Apps/Listener/dev-commands"
+  "Apps/Listener/listener"
+  #+CMU "Apps/Listener/cmu-hacks")
