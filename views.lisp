@@ -62,3 +62,7 @@
 
 (defparameter +pointer-documentation-view+
   (make-instance 'pointer-documentation-view))
+
+(defmethod stream-default-view (stream)
+  +textual-view+)
+
