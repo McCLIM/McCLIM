@@ -34,6 +34,9 @@
   (:use :clim-internals :common-lisp)
   )
 
+(defpackage :CLIM-EXTENSIONS
+  (:use :clim-internals))
+
 (defpackage :CLIM-DEMO
   (:use :clim :common-lisp)
   #+excl(:import-from :excl compile-system load-system exit)
