@@ -1,7 +1,5 @@
 ;;; -*- Mode: Lisp; Syntax: ANSI-Common-Lisp; Package: CLIM-DEMO; Base: 10; Lowercase: Yes -*-
 
-;; $fiHeader: calcuator.lisp,v 1.0 22/08/200 $
-
 ;;;  (c) copyright 2000 by 
 ;;;           Iban Hatchondo (hatchond@emi.u-bordeaux.fr)
 ;;;           Julien Boninfante (boninfan@emi.u-bordeaux.fr)
@@ -35,8 +33,7 @@
     frame))
 
 (defun show (number)
-  (setf (gadget-value (find-if #'(lambda (gadget) (typep gadget 'text-field-pane))
-                               (frame-panes *application-frame*)))
+  (setf (gadget-value (slot-value *application-frame* 'text-field))
 	(princ-to-string number)))
 
 (defun queue-number (number)
@@ -84,25 +81,17 @@
 					'command-line-read-remaining-arguments-for-partial-command)
 				       (prompt "Command: "))
   (declare (ignore command-parser command-unparser partial-command-parser prompt))
-  (setf (slot-value frame 'text-field)
-	(find-if #'(lambda (gadget) (typep gadget 'text-field-pane))
-		 (frame-panes frame)))
   (loop (event-read (climi::frame-pane frame))))
      
-(defmacro make-button (label operator 
-                       &key width height
-                            max-width min-width
-                            max-height min-height)
-  `(make-pane 'push-button-pane
-              :label ,label
-              :name ,label
-              :activate-callback (let ((ap *application-frame*))
-                                   (lambda (&rest xs)
-                                     (let ((*application-frame* ap))
-                                       (apply ,operator xs))))
-              :width ,width :height ,height
-              :max-width ,max-width :min-width ,min-width
-              :max-height ,max-height :min-height ,min-height) )
+(defun make-button (label operator &key width height
+                                        (max-width +fill+) min-width
+                                        (max-height +fill+) min-height)
+  (make-pane 'push-button-pane
+	     :label label
+	     :activate-callback operator
+	     :width width :height height
+	     :max-width  max-width :min-width min-width
+	     :max-height max-height :min-height min-height))
 
 (define-application-frame calculator ()
   ((text-field :initform nil)
@@ -123,37 +112,16 @@
    (eight    (make-button "8" (queue-number 8)))
    (nine     (make-button "9" (queue-number 9)))
    (zero     (make-button "0" (queue-number 0)))
-   (screen   :text-field :value "0"
-             ;:background +black+
-             ;:foreground +white+
-             )
+   (screen   :text-field :value "0")
    (ac       (make-button "AC" #'initac :max-width 150))
    (ce       (make-button "CE" #'initce :max-width 150)))
 
   (:layouts
-   #+NIL
-   (defaults 
-       (spacing (:thickness 10)
-         (vertically (:width '(16 :character) :equalize-width t);; (:width 150 :height 310)
-           screen
-           (horizontally (#|:height 50|#) ac ce)
-           (horizontally (:equalize-height t :background +green+)
-             (tabling (:background +red+)
-               (list one two three)
-               (list four five six )
-               (list seven eight nine)))
-           (vertically (:background +blue+)
-             plus dash multiply divide result))
-         (horizontally ()
-           (1/2 zero))))
-             
-
-   (defaults 
-       (progn 
-         (vertically (:width 140 :equalize-width t);; (:width 150 :height 310)
-           (labelling (:label "screen")
-             screen)
-           (horizontally (#|:height 50|# :name "ACCE" :equalize-height t) ac ce)
+   (default
+       (with-slots (text-field) *application-frame*
+         (vertically (:width 150)
+           (setf text-field screen)
+           (horizontally (:height 50) ac ce)
            (tabling ()
              (list one two plus)
              (list three four dash)
