@@ -38,7 +38,8 @@ returns a list in CLIM X11 format (:x11 :host host-name :display-id display-numb
 (defun get-environment-variable (string)
   #+excl (sys:getenv string)
   #+cmu (cdr (assoc string ext:*environment-list* :test #'string=))
-  #-(or excl cmu) (error "GET-ENVIRONMENT-VARIABLE not implemented")))
+  #+clisp (sys::getenv (string string))
+  #-(or excl cmu clisp) (error "GET-ENVIRONMENT-VARIABLE not implemented")))
 		
 (defvar *default-server-path*
     #+unix (parse-display-variable (get-environment-variable "DISPLAY")))
