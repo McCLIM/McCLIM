@@ -9,7 +9,7 @@
 ;;;  (c) copyright 2001 by
 ;;;           Lionel Salabartan (salabart@emi.u-bordeaux.fr)
 ;;;           Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
-;;;  (c) copyright 2002 by
+;;;  (c) copyright 2002, 2003 by
 ;;;           Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 
 ;;; This library is free software; you can redistribute it and/or
@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.113 2003/03/16 17:21:29 gilbert Exp $
+;;; $Id: panes.lisp,v 1.114 2003/03/19 02:53:35 gilbert Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -416,42 +416,42 @@
     :initarg  :width
     :initform nil
     :reader   pane-user-width
-    :type     spacing-value)
+    :type     (or null spacing-value))
    (user-min-width 
     :initarg :min-width
     :initform nil
     :reader   pane-user-min-width
-    :type     spacing-value)
+    :type     (or null spacing-value))
    (user-max-width
     :initarg :max-width
     :initform nil
     :reader   pane-user-max-width
-    :type     spacing-value)
+    :type     (or null spacing-value))
    (user-height
     :initarg :height
     :initform nil
     :reader   pane-user-height
-    :type     spacing-value)
+    :type     (or null spacing-value))
    (user-min-height
     :initarg :min-height
     :initform nil
     :reader   pane-user-min-height
-    :type     spacing-value)
+    :type     (or null spacing-value))
    (user-max-height
     :initarg :max-height
     :initform nil
     :reader   pane-user-max-height
-    :type     spacing-value)
+    :type     (or null spacing-value))
    (x-spacing
     :initarg :x-spacing
     :initform 0
     :reader   pane-x-spacing
-    :type     spacing-value)
+    :type     (or null spacing-value))
    (y-spacing
     :initarg :y-spacing
     :initform 0
     :reader   pane-y-spacing
-    :type     spacing-value))
+    :type     (or null spacing-value))
   (:documentation
    "Mixin class for panes which offer the standard user space requirements options."))
 
@@ -1912,7 +1912,10 @@
 ;;; LABEL PANE
 
 (defclass label-pane (composite-pane  permanent-medium-sheet-output-mixin)
-  ((label :type string :initarg :label :accessor label-pane-label)
+  ((label :type string
+          :initarg :label
+          :accessor label-pane-label
+          :initform "")
    (alignment :type (member :bottom :top)
               :initform :top
               :initarg :label-alignment
@@ -2067,7 +2070,8 @@
 		     :initarg :display-function
 		     :accessor pane-display-function)
    ; Should inherit from label-pane for this one ??
-   (label :type string :initform nil
+   (label :type string
+          :initform ""
 	  :initarg :label
 	  :reader pane-label)
    (text-margin :initarg :text-margin
