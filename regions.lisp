@@ -4,7 +4,7 @@
 ;;;   Created: 1998-12-02 19:26
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: regions.lisp,v 1.16 2002/04/21 12:41:14 brian Exp $
+;;;       $Id: regions.lisp,v 1.17 2002/04/25 19:55:06 moore Exp $
 ;;; --------------------------------------------------------------------------------------
 ;;;  (c) copyright 1998,1999,2001 by Gilbert Baumann
 ;;;  (c) copyright 2001 by Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
@@ -1022,6 +1022,9 @@
 (defmethod region-intersection ((xs standard-rectangle) (ys standard-rectangle))
   (region-intersection (rectangle->standard-rectangle-set xs) (rectangle->standard-rectangle-set ys)))
 
+(defmethod region-intersection ((xr rectangle) (yr rectangle))
+  (region-intersection (rectangle->standard-rectangle-set xr)
+		       (rectangle->standard-rectangle-set yr)))
 
 ;;;
 

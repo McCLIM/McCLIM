@@ -28,8 +28,7 @@
         do (destroy-port port))
     (setq climi::*all-ports* nil))
   (let ((frame (make-application-frame 'calculator)))
-    (unless clim-sys:*multiprocessing-p*
-      (run-frame-top-level frame))
+    (run-frame-top-level frame)
     frame))
 
 (defun show (number)

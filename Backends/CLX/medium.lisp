@@ -439,7 +439,7 @@
                                                 font-ascent font-descent direction
                                                 first-not-done)
                         (xlib:text-extents xfont string
-                                   :start start :end (length string)
+                                   :start start :end end
                                    :translate #'translate)
                       (declare (ignorable left right
                                           font-ascent font-descent

@@ -45,17 +45,13 @@
       (let ((len (if initial-store
 		     (length initial-store)
 		     (- end start)) ))
-	(cond ((and initial-contents (eql start 0) (eql end len))
+	(cond (initial-contents
 	       (setf (store obj) (make-array len
-					     :initial-contents initial-contents
-					     :element-type 'character)))
+					     :element-type 'character))
+	       (replace (store obj) initial-contents :start2 start :end2 end))
 	      (initial-store
-	       (setf (store obj) initial-store))
-	      (t (setf (store obj)
-		       (make-array len
-				   :initial-contents initial-contents
-				   :element-type 'character))))
-	(setf (size obj) 0)
+	       (setf (store obj) initial-store)))
+	(setf (size obj) len)
 	(setf (gap obj) len)
 	(setf (gap-size obj) 0))
       (progn
@@ -112,7 +108,8 @@ of size ~S"
 	   (new-store (make-array new-store-size :element-type 'character)))
       (replace new-store (store buf) :end2 (gap buf))
       (replace new-store (store buf)
-	       :start1 (gap buf) :start2 (+ (gap buf) (gap-size buf)))
+	       :start1 (+ (gap buf) new-gap-size)
+	       :start2 (+ (gap buf) (gap-size buf)))
       (setf (store buf) new-store)
       (setf (gap-size buf) new-gap-size))))
 

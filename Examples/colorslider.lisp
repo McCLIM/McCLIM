@@ -69,8 +69,7 @@
   (setq medium (sheet-medium pane))
   (setq graft (graft frame))
   (setq vbox (climi::frame-pane frame))
-  (unless clim-sys:*multiprocessing-p*
-    (run-frame-top-level frame)))
+  (run-frame-top-level frame))
 
 (defmethod slidertest-frame-top-level ((frame application-frame)
 				       &key (command-parser 'command-line-command-parser)

@@ -27,8 +27,7 @@
       do (destroy-port port))
   (setq climi::*all-ports* nil)
   (let ((frame (make-application-frame 'menutest)))
-    (unless clim-sys:*multiprocessing-p*
-      (run-frame-top-level frame))
+    (run-frame-top-level frame)
     frame))
 
 (defmethod menutest-frame-top-level

@@ -225,7 +225,7 @@
 		       (delete-char line 1 :position pos)))
 	  (setf (tick line) (incf (tick buf))))
 	(with-slots (line pos) point
-	  (loop repeat n
+	  (loop repeat (- n)
 		do (if (zerop pos)
 		       (progn
 			 (unless (prev line)
@@ -251,6 +251,17 @@
 	  do (flexivector-string-into line result :start1 line-in-string))
     result))
 
+(defun line-last-point (line)
+  "Returns the last legal value for a position on a line, which is either
+  before the newline, if there is one, or after the last character."
+  (let* ((size (size line))
+	 (last-char (if (> size 0)
+			(char-ref line (1- size))
+			nil)))
+    (cond ((and last-char (char= last-char #\Newline))
+	   (1- size))
+	  (t size))))
+
 (defmethod forward-char* ((buf basic-buffer) n
 			  &key (position (point buf)) line (pos 0))
   (multiple-value-bind (line pos)
@@ -262,10 +273,17 @@
 	      for current-pos = pos then 0
 	      for current-line-size = (or (and current-line (size current-line))
 					  0)
-	      for chars-to-eol = (- current-line-size current-pos)
+	      for ends-in-nl = (and current-line
+				    (char= (char-ref current-line
+						     (1-
+						      current-line-size))
+					   #\Newline))
+	      for chars-to-eol = (- current-line-size
+				    (if ends-in-nl 1 0)
+				    current-pos)
 	      ;; point goes before #\newline, then to the next line.
 	      for remaining = n then (- remaining chars-to-eol)
-	      until (or (null current-line) (< remaining (- chars-to-eol 1)))
+	      until (or (null current-line) (<= remaining chars-to-eol))
 	      finally (if (null current-line)
 			  (error 'buffer-bounds-error :buffer buf)
 			  (return (values current-line
@@ -274,8 +292,8 @@
 	      for current-line-size = (or (and current-line (size current-line))
 					  0)
 	      for current-pos = pos then (1- current-line-size)
-	      for remaining = n then (- remaining current-pos)
-	      until (< remaining current-pos)
+	      for remaining = (- n) then (- remaining current-pos)
+	      until (<= remaining current-pos)
 	      finally (if (null current-line)
 			  (error 'buffer-bounds-error :buffer buf)
 			  (return (values current-line
@@ -285,4 +303,31 @@
   (multiple-value-bind (new-line new-pos)
       (apply #'forward-char* buf n key-args)
     (make-instance 'buffer-pointer :line new-line :pos new-pos)))
+
+(defgeneric end-of-line* (buffer &key position line pos))
+
+(defgeneric end-of-line (buffer &rest key-args))
+
+(defmethod end-of-line* ((buf basic-buffer)
+			 &key (position (point buf)) line (pos 0))
+  (multiple-value-bind (line pos)
+      (if line
+	  (values line pos)
+	  (location* position))
+    (values line (line-last-point line))))
+
+(defmethod end-of-line ((buf basic-buffer) &rest key-args)
+  (multiple-value-bind (new-line new-pos)
+      (apply #'end-of-line* buf key-args)
+    (make-instance 'buffer-pointer :line new-line :pos new-pos)))
+
+(defgeneric beginning-of-line* (buffer &key position line pos))
+
+(defmethod beginning-of-line* ((buf basic-buffer)
+			       &key (position (point buf)) line (pos 0))
+  (multiple-value-bind (line pos)
+      (if line
+	  (values line pos)
+	  (location* position))
+    (values line 0)))
 

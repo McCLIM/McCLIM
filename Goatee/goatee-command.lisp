@@ -41,8 +41,14 @@
   (cdr (assoc 0 (gethash gesture table nil))))
 
 (defmethod lookup-gesture-command ((gesture key-press-event) table)
-  (cdr (assoc (modifier-state gesture)
-	      (gethash (key-name gesture) table nil))))
+  (let ((modifier-state (logandc1 climi::+alt-key+
+				  (event-modifier-state gesture))))
+				
+    (format *debug-io* "lookup-gesture-command: ~S ~S~%"
+	    modifier-state
+	    (keyboard-event-key-name gesture))
+    (cdr (assoc modifier-state
+		(gethash (keyboard-event-key-name gesture) table nil)))))
 
 (defmethod lookup-gesture-command (gesture table)
   nil)
@@ -74,13 +80,23 @@
 (defun backward-character (&key &allow-other-keys)
   (setf (point* *buffer*) (forward-char* *buffer* -1)))
 
+(defun end-line (&key &allow-other-keys)
+  (setf (point* *buffer*) (end-of-line* *buffer*)))
+
+(defun beginning-line (&key &allow-other-keys)
+  (setf (point* *buffer*) (beginning-of-line* *buffer*)))
+
 (loop for i from (char-code #\space) to (char-code #\~)
       do (add-gesture-command-to-table (code-char i)
 				       'insert-character
 				       *simple-area-gesture-table*))
 
-(add-gesture-command-to-table #\backspace
+(add-gesture-command-to-table #\rubout
 			      'backwards-delete-character
+			      *simple-area-gesture-table*)
+
+(add-gesture-command-to-table '(#\d :control)
+			      'delete-character
 			      *simple-area-gesture-table*)
 
 (add-gesture-command-to-table '(#\f :control)
@@ -89,4 +105,20 @@
 
 (add-gesture-command-to-table '(#\b :control)
 			      'backward-character
+			      *simple-area-gesture-table*)
+
+(add-gesture-command-to-table '(#\a :control)
+			      'beginning-line
+			      *simple-area-gesture-table*)
+
+(add-gesture-command-to-table '(#\e :control)
+			      'end-line
+			      *simple-area-gesture-table*)
+;;; Debugging fun
+
+(defun goatee-break (&key &allow-other-keys)
+  (break))
+
+(add-gesture-command-to-table '(#\b :control :meta)
+			      'goatee-break
 			      *simple-area-gesture-table*)
