@@ -50,8 +50,15 @@
   (let ((options (cdr (port-server-path port))))
     (setf (clx-port-display port)
       (xlib:open-display (getf options :host "") :display (getf options :display-id 0)))
-    (setf (xlib:display-error-handler (clx-port-display port))
-      #'clx-error-handler)
+
+    (progn
+      #+NIL
+      (setf (xlib:display-error-handler (clx-port-display port))
+        #'clx-error-handler)
+    
+      #-NIL
+      (setf (xlib:display-after-function (clx-port-display port)) #'xlib:display-finish-output))
+    
     (setf (clx-port-screen port) (nth (getf options :screen-id 0)
 				      (xlib:display-roots (clx-port-display port))))
     (setf (clx-port-window port) (xlib:screen-root (clx-port-screen port)))
@@ -69,6 +76,36 @@
          :name (format nil "~S's event process." port))))
     ))
 
+#+NIL
+(defmethod (setf sheet-mirror-transformation) :after (new-value (sheet mirrored-sheet-mixin))
+  )
+
+(defun invent-sheet-mirror-transformation-and-region (sheet)
+  ;; -> tr region
+  (let* ((r (sheet-region sheet))
+         (r* (transform-region
+              (sheet-native-transformation (sheet-parent sheet))
+              (transform-region (sheet-transformation sheet) r)))
+         #+NIL
+         (r*
+          (bounding-rectangle
+           (region-intersection r*
+                                (make-rectangle* 0 0
+                                                 (port-mirror-width (port sheet) (sheet-parent sheet))
+                                                 (port-mirror-height (port sheet) (sheet-parent sheet))))))
+         (mirror-transformation
+          (if (region-equal r* +nowhere+)
+              (make-translation-transformation 0 0)
+            (make-translation-transformation 
+             (bounding-rectangle-min-x r*)
+             (bounding-rectangle-min-y r*))))
+         (mirror-region
+          (untransform-region mirror-transformation r*)))
+    (values
+     mirror-transformation
+     mirror-region)))
+   
+
 (defun realize-mirror-aux (port sheet
 				&key (width 100) (height 100) (x 0) (y 0)
 				(border-width 0) (border 0)
@@ -82,7 +119,9 @@
 					      :structure-notify
 					      :pointer-motion)))
   (when (null (port-lookup-mirror port sheet))
-    (let* ((desired-color +white+ #+NIL (medium-background sheet))
+    (let* ((desired-color (if (typep sheet 'sheet-with-medium-mixin)
+                              (medium-background sheet)
+                            +white+))
            (color (multiple-value-bind (r g b)
                       (color-rgb desired-color)
                     (xlib:make-color :red r :green g :blue b)))
@@ -149,33 +188,53 @@
   (make-translation-transformation (xlib:drawable-x mirror)
                                    (xlib:drawable-y mirror)))
 
+
+
 (defmethod port-set-sheet-region ((port clx-port) (graft graft) region)
   (declare (ignore region))
   nil)
-
-(defmethod port-set-sheet-region ((port clx-port) (sheet mirrored-sheet-mixin) region)
-  (let ((mirror (sheet-direct-mirror sheet)))
-    (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* region)
-      (setf (xlib:drawable-width mirror) (round (- x2 x1))
-	    (xlib:drawable-height mirror) (round (- y2 y1))))))
 
 (defmethod port-set-sheet-transformation ((port clx-port) (graft graft) transformation)
   (declare (ignore transformation))
   nil)
 
+#+NIL
 (defmethod port-set-sheet-transformation ((port clx-port) (pane application-pane) transformation)
   (declare (ignore transformation))
   nil)
 
+#+NIL
 (defmethod port-set-sheet-transformation ((port clx-port) (pane interactor-pane) transformation)
   (declare (ignore transformation))
   nil)
 
 (defmethod port-set-sheet-transformation ((port clx-port) (sheet mirrored-sheet-mixin) transformation)
   (let ((mirror (sheet-direct-mirror sheet)))
-    (multiple-value-bind (x y) (transform-position transformation 0 0)
-      (setf (xlib:drawable-x mirror) (round x)
-	    (xlib:drawable-y mirror) (round y)))))
+    (multiple-value-bind (tr rg) (invent-sheet-mirror-transformation-and-region sheet)
+      (multiple-value-bind (x y) (transform-position tr 0 0)
+        (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* rg)
+          (setf (xlib:drawable-x mirror) (round x)
+                (xlib:drawable-y mirror) (round y))
+          (setf (xlib:drawable-width mirror)  (clamp 1 (round x2) #xFFFF)
+                (xlib:drawable-height mirror) (clamp 1 (round y2) #xFFFF))
+          ;;(xlib:clear-area mirror :exposures-p t)
+          (invalidate-cached-transformations sheet)
+          )))))
+
+(defmethod port-set-sheet-region ((port clx-port) (sheet mirrored-sheet-mixin) region)
+  (let ((mirror (sheet-direct-mirror sheet)))
+    (multiple-value-bind (tr rg) (invent-sheet-mirror-transformation-and-region sheet)
+      (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* rg)
+        (setf x2 (round x2))
+        (setf y2 (round y2))
+        (cond ((or (<= x2 0) (<= y2 0))
+               ;; XXX
+               ;; now X does not allow for a zero width/height window,
+               ;; we should unmap instead ...
+               ;; Nevertheless we simply clamp
+               ))
+        (setf (xlib:drawable-width mirror)  (clamp x2 1 #xFFFF)
+              (xlib:drawable-height mirror) (clamp y2 1 #xFFFF))))))
 
 (defmethod destroy-port :before ((port clx-port))
   (xlib:close-display (clx-port-display port)))
@@ -220,9 +279,10 @@
 	 (make-instance 'pointer-motion-event :pointer 0 :button code :x x :y y
 			:sheet sheet :modifier-state state :timestamp time))
 	((:exposure :display)
-	 (make-instance 'window-repaint-event
+         (make-instance 'window-repaint-event
            :sheet sheet
-           :region (make-rectangle* x y (+ x width) (+ y height))))
+           :region (untransform-region (sheet-native-transformation sheet)
+                                       (make-rectangle* x y (+ x width) (+ y height)))))
 	(t
 	 nil)))))
 
@@ -378,6 +438,7 @@
 
 ;; Top-level-sheet
 
+;; this is evil.
 (defmethod compute-extremum :after ((pane top-level-sheet-pane))
   (with-slots (space-requirement) pane
     (setf (xlib:wm-normal-hints (sheet-direct-mirror pane))
