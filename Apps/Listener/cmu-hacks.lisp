@@ -2,6 +2,11 @@
 
 (in-package :climi)
 
+#+cmu19a
+(progn (setf (ext:package-definition-lock (find-package "DEBUG")) nil)
+       (setf (ext:package-definition-lock (find-package "COMMON-LISP")) nil)
+       (setf (ext:package-definition-lock (find-package "EXT")) nil))
+
 ;; a patch
 (defmethod stream-listen ((stream standard-extended-input-stream))
   (with-encapsulating-stream (estream stream)
