@@ -53,54 +53,57 @@
 
 (defmethod realize-mirror ((port clx-port) (sheet sheet))
   (when (null (port-lookup-mirror port sheet))
-    (let* ((space (sheet-region sheet))
-	   (desired-color (medium-background (sheet-medium sheet)))
-	   (color (multiple-value-bind (r g b)
-		      (color-rgb desired-color)
-		    (xlib:make-color :red r :green g :blue b)))
-	   (pixel (xlib:alloc-color (xlib:screen-default-colormap (clx-port-screen port))
-				    color))
-	   (window (xlib:create-window
-		    :parent (sheet-mirror (sheet-parent sheet))
-		    :width  (round (bounding-rectangle-width space))
-		    :height (round (bounding-rectangle-height space))
-		    :x      (round (bounding-rectangle-min-x space))
-		    :y      (round (bounding-rectangle-min-y space))
-		    :border-width 1
-		    :border 0
-		    :background pixel
-		    :event-mask (xlib:make-event-mask
-				 :exposure :key-press :key-release
-				 :button-press :button-release
-				 :enter-window :leave-window
-				 :structure-notify))))
-      (port-register-mirror (port sheet) sheet window)
-      (xlib:map-window window))))
+    (with-sheet-medium (medium sheet)
+      (let* ((space (sheet-region sheet))
+	     (desired-color (medium-background (sheet-medium sheet)))
+	     (color (multiple-value-bind (r g b)
+			(color-rgb desired-color)
+		      (xlib:make-color :red r :green g :blue b)))
+	     (pixel (xlib:alloc-color (xlib:screen-default-colormap (clx-port-screen port))
+				      color))
+	     (window (xlib:create-window
+		      :parent (sheet-mirror (sheet-parent sheet))
+		      :width  (round (bounding-rectangle-width space))
+		      :height (round (bounding-rectangle-height space))
+		      :x      (round (bounding-rectangle-min-x space))
+		      :y      (round (bounding-rectangle-min-y space))
+		      :border-width 1
+		      :border 0
+		      :background pixel
+		      :event-mask (xlib:make-event-mask
+				   :exposure :key-press :key-release
+				   :button-press :button-release
+				   :enter-window :leave-window
+				   :structure-notify
+				   :pointer-motion))))
+	(port-register-mirror (port sheet) sheet window)
+	(xlib:map-window window)))))
 
 (defmethod realize-mirror ((port clx-port) (sheet border-pane))
   (when (null (port-lookup-mirror port sheet))
-    (let* ((space (sheet-region sheet))
-	   (desired-color (medium-background (sheet-medium sheet)))
-	   (color (multiple-value-bind (r g b)
-		      (color-rgb desired-color)
-		    (xlib:make-color :red r :green g :blue b)))
-	   (pixel (xlib:alloc-color (xlib:screen-default-colormap (clx-port-screen port))
-				    color))
-	   (window (xlib:create-window
-		    :parent (sheet-mirror (sheet-parent sheet))
-		    :width (bounding-rectangle-width space)
-		    :height (bounding-rectangle-height space)
-		    :x (bounding-rectangle-min-x space)
-		    :y (bounding-rectangle-min-y space)
-		    :border-width (border-pane-width sheet)
-		    :border 0
-		    :background pixel
-		    :event-mask (xlib:make-event-mask
-				 :exposure :key-press :key-release
-				 :button-press :button-release
-				 :structure-notify))))
-      (port-register-mirror (port sheet) sheet window)
-      (xlib:map-window window))))
+    (with-sheet-medium (medium sheet)
+      (let* ((space (sheet-region sheet))
+	     (desired-color (medium-background (sheet-medium sheet)))
+	     (color (multiple-value-bind (r g b)
+			(color-rgb desired-color)
+		      (xlib:make-color :red r :green g :blue b)))
+	     (pixel (xlib:alloc-color (xlib:screen-default-colormap (clx-port-screen port))
+				      color))
+	     (window (xlib:create-window
+		      :parent (sheet-mirror (sheet-parent sheet))
+		      :width (bounding-rectangle-width space)
+		      :height (bounding-rectangle-height space)
+		      :x (bounding-rectangle-min-x space)
+		      :y (bounding-rectangle-min-y space)
+		      :border-width (border-pane-width sheet)
+		      :border 0
+		      :background pixel
+		      :event-mask (xlib:make-event-mask
+				   :exposure :key-press :key-release
+				   :button-press :button-release
+				   :structure-notify))))
+	(port-register-mirror (port sheet) sheet window)
+	(xlib:map-window window)))))
 
 (defmethod unrealize-mirror ((port clx-port) (sheet sheet))
   (when (port-lookup-mirror port sheet)
@@ -139,6 +142,9 @@
       (:configure-notify
        (make-instance 'window-configuration-event :sheet sheet
 		      :width width :height height :modifier-state state))
+      (:motion-notify
+       (make-instance 'pointer-motion-event :pointer 0 :button code :x x :y y
+                     :sheet sheet :modifier-state state :timestamp time))
       (:exposure
        (make-instance 'window-repaint-event :sheet sheet :modifier-state state))
       (t
@@ -295,6 +301,11 @@
 
 ;; clim-stream-pane drawings
 
-(defmethod window-clear :before ((pane clim-stream-pane))
-  (xlib:clear-area (sheet-direct-mirror pane)))
+(defmethod window-clear :before ((sheet mirrored-sheet))
+  (xlib:clear-area (sheet-direct-mirror sheet)))
+
+(defmethod window-clear ((sheet mirrored-sheet))
+  (declare (ignorable sheet))
+  nil)
+  
 
