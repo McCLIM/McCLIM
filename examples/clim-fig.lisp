@@ -122,16 +122,16 @@
 		 (draw-line* pane first-point-x first-point-y x y
 			     :ink clim-demo::current-color
                              :line-style clim-demo::line-style))
-                ;; FIXME: arrows should be undone/redone as a whole.
 		(:arrow
                  (when clim-demo::constrict-mode
                    (if (= (- (pointer-event-x event) first-point-x) radius-x)
                        (setf y first-point-y)
                        (setf x first-point-x)))
-		 (draw-arrow* pane first-point-x first-point-y x y
-			     :ink clim-demo::current-color
-                             :line-style clim-demo::line-style
-                             :to-head t :head-width 20 :head-length 20))
+                 (with-new-output-record (pane)
+                   (draw-arrow* pane first-point-x first-point-y x y
+                                :ink clim-demo::current-color
+                                :line-style clim-demo::line-style
+                                :to-head t :head-width 20 :head-length 20)))
 		(:rectangle
 		 (draw-rectangle* pane first-point-x first-point-y x y :filled clim-demo::fill-mode
 				  :ink clim-demo::current-color
