@@ -3,7 +3,7 @@
 ;;;     Title: Graph Formatting
 ;;;   Created: 2002-08-13
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: graph-formatting.lisp,v 1.5 2002/11/21 03:54:49 mikemac Exp $
+;;;       $Id: graph-formatting.lisp,v 1.6 2002/11/28 19:56:56 mikemac Exp $
 ;;; ---------------------------------------------------------------------------
 
 ;;;  (c) copyright 2002 by Gilbert Baumann
@@ -170,6 +170,9 @@
               (values (bounding-rectangle-max-x graph-output-record)
                       (bounding-rectangle-max-y graph-output-record))))
       graph-output-record)))
+
+(defun format-graph-from-root (root &rest rest)
+  (apply #'format-graph-from-roots (list root) rest))
 
 ;;;; Graph Output Records
 
