@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.118 2003/04/12 06:00:47 hefner1 Exp $
+;;; $Id: panes.lisp,v 1.119 2003/04/12 22:10:46 hefner1 Exp $
 
 (in-package :clim-internals)
 
@@ -2233,6 +2233,13 @@
 		    (invoke-display)))
 	    (redisplay (clim-stream-pane-updating-record pane) pane))
 	(invoke-display))))
+
+(defmethod redisplay-frame-pane ((frame application-frame)
+				 (pane symbol)
+				 &key force-p)
+  (let ((actual-pane (get-frame-pane frame pane)))
+    (when actual-pane
+      (redisplay-frame-pane frame actual-pane :force-p force-p))))
 
 
 ;;; INTERACTOR PANES
