@@ -323,8 +323,7 @@ record is stored.")
     ;; Don't add this record repeatedly to a parent updating-output-record.
     (unless (eq (output-record-parent record)
 		(stream-current-output-record stream))
-      (when (output-record-parent record)
-       (delete-output-record record (output-record-parent record)))
+      (setf (output-record-parent record) nil)
       (add-output-record record (stream-current-output-record stream)))
     (setf (sub-record record) (make-instance 'updating-output-children-record
 					     :x-position x :y-position y
@@ -502,8 +501,7 @@ record is stored.")
 	       ;; It doesn't need to be updated, but it does go into the
 	       ;; parent's sequence of records
 	       (setf (output-record-dirty record) :clean)
-               (when (output-record-parent record)
-                 (delete-output-record record (output-record-parent record)))
+	       (setf (output-record-parent record) nil)
 	       (map-over-updating-output #'(lambda (r)
 					     (setf (output-record-dirty r)
 						   :clean))
