@@ -22,14 +22,20 @@ Install instructions for CMU Common Lisp
 5. Load the source code of the system:
 
    (operate-on-system :clim :load :load-source-instead-of-binary t)
+   (operate-on-system :clim-clx :load :load-source-instead-of-binary t)
+   (operate-on-system :clim-examples :load :load-source-instead-of-binary t)
 
-6. Compile the system:
+6. Compile and load the system:
 
    (operate-on-system :clim :compile)
+   (operate-on-system :clim-clx :compile)
+   (operate-on-system :clim-examples :compile)
 
 7. Load the compiled system:
 
    (operate-on-system :clim :load)
+   (operate-on-system :clim-clx :load)
+   (operate-on-system :clim-examples :load)
 
 Running the demos
 -----------------
