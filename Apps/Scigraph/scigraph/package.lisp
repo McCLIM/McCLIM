@@ -39,8 +39,8 @@ advised of the possiblity of such damages.
 
 (eval-when (compile load eval)
   (defpackage GRAPH
-    #-allegro (:nicknames gr)		; "GR" names something already.
-    #+allegro (:shadow variable) 	; shouldn't be inherited but is
+    #-allegro (:nicknames gr)           ; "GR" names something already.
+    (:shadow variable)                  ; shouldn't be inherited but is
     #+MCL     (:shadow copy)
     (:use dwim-lisp tool statistics)))
 
