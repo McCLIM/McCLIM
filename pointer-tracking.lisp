@@ -147,7 +147,7 @@
 
 (defmethod tracking-pointer-loop-step
     ((state tracking-pointer-state) (event pointer-motion-event) x y)
-  (funcall (motion-handler state) :window (event-sheet event) :x x :y y))
+  (funcall (motion-handler state) :event event :window (event-sheet event) :x x :y y))
 
 (defmethod tracking-pointer-loop-step
     ((state tracking-pointer-state) (event pointer-button-press-event) x y)
