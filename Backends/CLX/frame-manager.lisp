@@ -32,9 +32,14 @@
 ;;; instead.
 (defmethod make-pane-1 ((fm clx-frame-manager) (frame application-frame) type &rest args)
   (apply #'make-instance
-	 (or (find-symbol (concatenate 'string "CLX-" (symbol-name type)) :climi)
-	     (find-symbol (concatenate 'string "CLX-" (symbol-name type) "-PANE") :climi)
-	     (find-symbol (concatenate 'string (symbol-name type) "-PANE") :climi)
+	 (or (find-symbol (concatenate 'string
+			    (symbol-name #:clx-) (symbol-name type))
+			  :climi)
+	     (find-symbol (concatenate 'string
+			    (symbol-name #:clx-) (symbol-name type) (symbol-name #:-pane))
+			  :climi)
+	     (find-symbol (concatenate 'string (symbol-name type) (symbol-name #:-pane))
+			  :climi)
 	     type)
 	 :frame frame
 	 :manager fm
@@ -43,7 +48,7 @@
 
 (defmethod adopt-frame :before ((fm clx-frame-manager) (frame menu-frame))
   ;; Temporary kludge.
-  (when (eq (slot-value frame 'climi::top) NIL)
+  (when (eq (slot-value frame 'climi::top) nil)
     (multiple-value-bind (x y)
         (xlib:query-pointer (clx-port-window (climi::frame-manager-port fm)))
       (incf x 10)

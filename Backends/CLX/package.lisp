@@ -35,43 +35,43 @@
                 #:port-lookup-sheet
                 #:port-unregister-mirror
 		#:port-pointer-sheet
-                #:MAP-REPEATED-SEQUENCE
-                #:PIXMAP-MIRROR
+                #:map-repeated-sequence
+                #:pixmap-mirror
 		#:do-sequence
-                #:WITH-DOUBLE-BUFFERING 
-                #:WITH-TRANSFORMED-POSITION
-                #:WITH-TRANSFORMED-POSITIONS
-                #:WITH-MEDIUM-OPTIONS
+                #:with-double-buffering 
+                #:with-transformed-position
+                #:with-transformed-positions
+                #:with-medium-options
                 ;;
-                #:BORDER-PANE
-                #:PIXMAP
-                #:TOP-LEVEL-SHEET-PANE
-                #:UNMANAGED-TOP-LEVEL-SHEET-PANE
-                #:MENU-FRAME
+                #:border-pane
+                #:pixmap
+                #:top-level-sheet-pane
+                #:unmanaged-top-level-sheet-pane
+                #:menu-frame
                 #:get-next-event
                 ;;
                 #:frame-managers        ;used as slot
                 #:top-level-sheet       ;used as slot
                 ;; #:space-requirement     ;used as slot, very bogus
                 ;; fbound
-                #:MEDIUM-DEVICE-REGION
-                #:MEDIUM-DRAW-CIRCLE*
-                #:DRAW-IMAGE
-                #:TEXT-STYLE-CHARACTER-WIDTH
-                #:HEIGHT                ;this seems bogus
-                #:WIDTH                 ;dito
-                #:COORDINATE=
-                #:GET-TRANSFORMATION
+                #:medium-device-region
+                #:medium-draw-circle*
+                #:draw-image
+                #:text-style-character-width
+                #:height                ;this seems bogus
+                #:width                 ;dito
+                #:coordinate=
+                #:get-transformation
                 ;;
-                #:INVOKE-WITH-SPECIAL-CHOICES
-                #:MEDIUM-DRAW-GLYPH
-                #:MEDIUM-MITER-LIMIT
-                #:MAKE-GRAFT
+                #:invoke-with-special-choices
+                #:medium-draw-glyph
+                #:medium-miter-limit
+                #:make-graft
                 ;; classes:
-                #:MIRRORED-PIXMAP
-                #:WINDOW-DESTROY-EVENT
-                #:POINTER-UNGRAB-EVENT
-		#:POINTER-MOTION-HINT-EVENT
-                #:DEVICE-FONT-TEXT-STYLE
+                #:mirrored-pixmap
+                #:window-destroy-event
+                #:pointer-ungrab-event
+		#:pointer-motion-hint-event
+                #:device-font-text-style
                 ;;
                 ) )

@@ -215,7 +215,7 @@
                        (round (rectangle-width rectangle))
                        (round (rectangle-height rectangle)))))
 
-(defmacro with-CLX-graphics ((medium) &body body)
+(defmacro with-clx-graphics ((medium) &body body)
   `(let* ((port (port ,medium))
           (mirror (port-lookup-mirror port (medium-sheet ,medium))))
     (when mirror
@@ -280,7 +280,7 @@
 (defmethod medium-draw-point* ((medium clx-medium) x y)
   (with-transformed-position ((sheet-native-transformation (medium-sheet medium))
                               x y)
-    (with-CLX-graphics (medium)
+    (with-clx-graphics (medium)
       (if (< (line-style-thickness line-style) 2)
           (xlib:draw-point mirror gc (round x) (round y))
           (let* ((radius (round (line-style-thickness line-style) 2))
@@ -297,7 +297,7 @@
 				  (medium-sheet medium))
 				 coord-seq)
       (setq coord-seq (mapcar #'round coord-seq))
-      (with-CLX-graphics (medium)
+      (with-clx-graphics (medium)
 	(if (< (line-style-thickness line-style) 2)
 	    (xlib:draw-points mirror gc coord-seq)
 	    (loop with radius = (round (line-style-thickness line-style) 2)
@@ -326,7 +326,7 @@
   (let ((tr (sheet-native-transformation (medium-sheet medium))))
     (with-transformed-position (tr x1 y1)
       (with-transformed-position (tr x2 y2)
-        (with-CLX-graphics (medium)
+        (with-clx-graphics (medium)
           (let ((x1 (round-coordinate x1))
                 (y1 (round-coordinate y1))
                 (x2 (round-coordinate x2))
@@ -357,7 +357,7 @@
 				  (medium-sheet medium))
 				 coord-seq)
       (setq coord-seq (mapcar #'round-coordinate coord-seq))
-      (with-CLX-graphics (medium)
+      (with-clx-graphics (medium)
 	(xlib:draw-lines mirror gc
 			 (if closed
 			     (append coord-seq (list (first coord-seq)
@@ -369,7 +369,7 @@
   (let ((tr (sheet-native-transformation (medium-sheet medium))))
     (with-transformed-position (tr left top)
       (with-transformed-position (tr right bottom)
-        (with-CLX-graphics (medium)
+        (with-clx-graphics (medium)
           (if (< right left)
               (rotatef left right))
           (if (< bottom top)
@@ -390,7 +390,7 @@
   (assert (evenp (length position-seq)))
   (with-transformed-positions ((sheet-native-transformation (medium-sheet medium))
                                position-seq)
-    (with-CLX-graphics (medium)
+    (with-clx-graphics (medium)
       (loop for (left top right bottom) on position-seq by #'cddddr
             nconcing (list (round left) (round top)
                            (round (- right left)) (round (- bottom top))) into points
@@ -407,7 +407,7 @@
            (arc-angle (if (< end-angle 0)
                           (+ (* pi 2) arc-angle)
                           arc-angle)))
-      (with-CLX-graphics (medium)
+      (with-clx-graphics (medium)
         (let ((radius-dx (abs (+ radius-1-dx radius-2-dx)))
               (radius-dy (abs (+ radius-1-dy radius-2-dy))))
           (xlib:draw-arc mirror gc
@@ -423,7 +423,7 @@
            (arc-angle (if (< end-angle 0)
                           (+ (* pi 2) arc-angle)
                           arc-angle)))
-      (with-CLX-graphics (medium)
+      (with-clx-graphics (medium)
         (xlib:draw-arc mirror gc
                        (round (- center-x radius)) (round (- center-y radius))
                        radius radius
@@ -685,7 +685,7 @@
   (declare (ignore toward-x toward-y transform-glyphs))
   (with-transformed-position ((sheet-native-transformation (medium-sheet medium))
                               x y)
-    (with-CLX-graphics (medium)
+    (with-clx-graphics (medium)
       (when (characterp string)
         (setq string (make-string 1 :initial-element string)))
       (when (null end) (setq end (length string)))
@@ -719,7 +719,7 @@
   (declare (ignore toward-x toward-y transform-glyphs))
   (with-transformed-position ((sheet-native-transformation (medium-sheet medium))
                               x y)
-    (with-CLX-graphics (medium)
+    (with-clx-graphics (medium)
       (when (characterp string)
         (setq string (make-string 1 :initial-element string)))
       (when (null end) (setq end (length string)))
@@ -758,7 +758,7 @@
   (declare (ignore toward-x toward-y transform-glyphs align-x align-y))
   (with-transformed-position ((sheet-native-transformation (medium-sheet medium))
                               x y)
-    (with-CLX-graphics (medium)
+    (with-clx-graphics (medium)
       (xlib:draw-glyph mirror gc (round x) (round y) element
                        :size 16
                        :translate #'translate))))

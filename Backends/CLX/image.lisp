@@ -20,20 +20,20 @@
 
 (defpackage "IMAGE"
 ; (:use #:clim-lisp)
-  (:use #:clim-clx #:common-lisp)
+  (:use :clim-clx :common-lisp)
   (:export
-   "WRITE-PNM" "READ-IMAGE-FILE"
-   "IMAGE" "IMAGE-COLOR" "IMAGE-GADGET" "IMAGE-HEIGHT"
-   "IMAGE-PIXEL" "IMAGE-PIXELS" "IMAGE-WIDTH"
-   "RGB-IMAGE"
-   "GRAY-LEVEL-IMAGE" "256-GRAY-LEVEL-IMAGE" "MAKE-256-GRAY-LEVEL-IMAGE"
-   "GRAY-IMAGE-MIN-LEVEL" "GRAY-IMAGE-MIN-LEVEL"
-   "TRUECOLOR-IMAGE" "MAKE-TRUECOLOR-IMAGE" "MAKE-3X256-COLOR-IMAGE"
-   "COLOR-IMAGE-MIN-LEVEL" "COLOR-IMAGE-MAX-LEVEL"
-   "BINARY-IMAGE" "MAKE-BINARY-IMAGE"
-   "RED-COMPONENT" "GREEN-COMPONENT" "BLUE-COMPONENT"
-   "COLORMAP-IMAGE"
-   "SPECTRAL-IMAGE"))
+   #:write-pnm #:read-image-file
+   #:image #:image-color #:image-gadget #:image-height
+   #:image-pixel #:image-pixels #:image-width
+   #:rgb-image
+   #:gray-level-image #:256-gray-level-image #:make-256-gray-level-image
+   #:gray-image-min-level #:gray-image-min-level
+   #:truecolor-image #:make-truecolor-image #:make-3x256-color-image
+   #:color-image-min-level #:color-image-max-level
+   #:binary-image #:make-binary-image
+   #:red-component #:green-component #:blue-component
+   #:colormap-image
+   #:spectral-image))
 
 (in-package :image)
 
