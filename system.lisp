@@ -101,4 +101,5 @@
    "examples/colorslider"
    "examples/menutest"
    "examples/address-book"
+   "examples/fire"
    ))
