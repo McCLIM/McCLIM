@@ -277,9 +277,7 @@
           :activate-callback #'(lambda (x)
                                  (declare (ignore x))
                                  (com-clear)))
-   (status :text-field :value "CLIM Fig")
-   (command :interactor :height 20
-            :scroll-bar :vertical))
+   (status :text-field :value "CLIM Fig"))
   (:layouts
    (default
      (vertically ()
@@ -296,8 +294,9 @@
            ellipse-button rectangle-button)
          (scrolling (:width 600 :height 400) canvas))
        (horizontally (:height 30) clear undo redo)
-       command
-       status))))
+       status)))
+  (:top-level (default-frame-top-level .
+                  (:prompt clim-fig-prompt))))
 
 (define-presentation-to-command-translator add-figure
     (blank-area com-add-figure clim-fig
@@ -323,6 +322,15 @@
           (clim-fig-status frame)
           (find-pane-named frame 'status))
     (call-next-method)))
+
+(defmethod read-frame-command ((frame clim-fig) &key (stream *standard-input*))
+  (with-input-context ('command)
+        (command)
+      (loop (read-gesture :stream stream))
+    (command command)))
+
+(defun clim-fig-prompt (stream frame)
+  (declare (ignore stream frame)))
 
 (define-clim-fig-command com-exit ()
   (frame-exit *application-frame*))
