@@ -1,6 +1,7 @@
 ;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
 
 ;;;  (c) copyright 1998,1999,2000 by Michael McDonald (mikemac@mikemac.com)
+;;;  (c) copyright 2000 by Robert Strandh (strandh@labri.u-bordeaux.fr)
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -64,8 +65,36 @@
 (defun make-named-color (name red green blue)
   (make-instance 'named-color :name name :red red :green green :blue blue))
 
-(defun make-ihs-color (intensity hue saturation)
-  (make-instance 'color :red red :green green :blue blue))
+;;; For ihs to rgb conversion, we use the formula 
+;;;  i = (r+g+b)/3
+;;;  s = 1-min(r,g,b)/i
+;;;  h =     60(g-b)/(max(r,g,b)-min(r,g,b)) if r >= g,b
+;;;      120+60(b-r)/(max(r,g,b)-min(r,g,b)) if g >= r,b
+;;;      240+60(r-g)/(max(r,g,b)-min(r,g,b)) if b >= r,g
+;;; First, we introduce colors x, y, z such that x >= y >= z
+;;; We compute x, y, and z and then determine the correspondance
+;;; between x, y, and z on the one hand and r, g, and b on the other. 
+(defun make-ihs-color (i h s)
+  (assert (and (<= 0 i 1)
+	       (<= 0 s 1)
+	       (<= 0 h 360)))
+  (let ((ah (/ (abs (cond ((<= h 60) h)
+			  ((<= h 180) (- h 120))
+			  ((<= h 300) (- h 240))
+			  (t (- h 360))))
+	       60)))
+    (let* ((z (* i (- 1 s)))
+	   (y (/ (+ (* ah (- (* 3 i) (* 2 z))) z) (+ 1 ah)))
+	   (x (- (* 3 i) y z)))
+      (assert (and (<= 0 x 1)
+		   (<= 0 y 1)
+		   (<= 0 z 1)))
+      (cond ((<= h 60) (make-rgb-color x y z))
+	    ((<= h 120) (make-rgb-color y x z))
+	    ((<= h 180) (make-rgb-color z x y))
+	    ((<= h 240) (make-rgb-color z y x))
+	    ((<= h 300) (make-rgb-color y z x))
+	    (t (make-rgb-color x z y))))))
 
 (defun make-gray-color (intensity)
   (make-instance 'color :red intensity :green intensity :blue intensity))
@@ -75,8 +104,20 @@
     (values red green blue)))
 
 (defmethod color-ihs ((color color))
-  (multiple-value-bind (red green blue) (color-rgb color)
-    (values intensity hue saturation)))
+  (multiple-value-bind (r g b) (color-rgb color)
+    (let ((max (max r g b))
+	  (min (min r g b))
+	  (intensity (/ (+ r g b) 3)))
+      (if (= max min)
+	  (values intensity 0 0)
+	  (let* ((saturation (- 1 (/ min intensity)))
+		 (diff (- max min))
+		 (hue (* 60 (cond ((= max r) (/ (- g b) diff))
+				  ((= max g) (+ 2 (/ (- b r) diff)))
+				  (t (+ 4 (/ (- r g) diff)))))))
+	    (when (< hue 0)
+	      (incf hue 360))
+	    (values intensity hue saturation))))))
 
 (defun make-contrasting-inks (n &optional k)
   (declare (special +contrasting-colors+))
