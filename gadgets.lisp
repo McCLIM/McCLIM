@@ -375,7 +375,7 @@
 
 (defmethod repaint-sheet ((pane push-button-pane) region)
   (declare (ignore region))
-  (with-double-buffering (pane)
+  (with-special-choices (pane)
     (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
       (declare (type coordinate x1 y1 x2 y2))
       (let ((w (- x2 x1)) 
@@ -456,7 +456,7 @@
 
 (defmethod repaint-sheet ((pane toggle-button-pane) region)
   (declare (ignore region))
-  (with-double-buffering (pane)
+  (with-special-choices (pane)
     (let ((region (sheet-region pane))
 	  (armed (slot-value pane 'armed)))
       (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* region)
@@ -484,7 +484,7 @@
 
 (defmethod repaint-sheet ((pane menu-button-pane) region)
   (declare (ignore region))
-  (with-double-buffering (pane)
+  (with-special-choices (pane)
     (let ((region (sheet-region pane)))
       (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* region)
 	(let ((w (- x2 x1))
@@ -610,7 +610,7 @@
 
 (defmethod window-refresh ((sb scroll-bar-pane))
   (with-bounding-rectangle* (minx miny maxx maxy) (sheet-region sb)
-    (with-double-buffering (sb)
+    (with-special-choices (sb)
       (draw-rectangle* sb minx miny maxx maxy :filled t :ink (medium-background sb))
       (let ((width (- maxx minx))
 	    (height (- maxy miny)))
@@ -731,7 +731,7 @@
 
 (defmethod repaint-sheet ((pane slider-pane) region)
   (declare (ignore region))
-  (with-double-buffering (pane)
+  (with-special-choices (pane)
     (let ((position (convert-value-to-position pane))
 	  (slider-button-half-short-dim (ash slider-button-short-dim -1))
 	  (slider-button-half-long-dim (ash slider-button-long-dim -1)))
@@ -855,7 +855,7 @@
 
 (defmethod repaint-sheet ((pane text-field-pane) region)
   (declare (ignore region))
-  (with-double-buffering (pane)
+  (with-special-choices (pane)
     (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
       (display-gadget-background pane (gadget-current-color pane) 0 0 (- x2 x1) (- y2 y1))
       (draw-text* pane (gadget-value pane)

@@ -886,7 +886,7 @@ During realization the child of the spacer will have as cordinates
 
 (defmethod repaint-sheet ((pane raised-pane) region)
   (declare (ignore region))
-  (with-double-buffering (pane)
+  (with-special-choices (pane)
     (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
       (draw-edges-lines* pane 0 0 (- x2 x1 1) (- y2 y1 1)))))
 
