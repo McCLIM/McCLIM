@@ -195,8 +195,7 @@ input focus. This is a McCLIM extension."))
                                        &key &allow-other-keys)  
   (unless (frame-event-queue obj)
     (setf (frame-event-queue obj)
-          (make-instance 'port-event-queue :port (port obj)))))
-
+          (make-instance 'port-event-queue))))
 
 (defmethod (setf frame-manager) (fm (frame application-frame))
   (let ((old-manager (frame-manager frame)))
@@ -373,8 +372,7 @@ input focus. This is a McCLIM extension."))
               (:disabled
                (disable-frame frame))
               (:disowned
-               (disown-frame (frame-manager frame) frame)))          
-            (port-force-output (frame-manager-port fm))))))))
+               (disown-frame fm frame)))))))))
 
 ;;; Defined in incremental-redisplay.lisp
 (defvar *enable-updating-output*)
@@ -477,17 +475,26 @@ input focus. This is a McCLIM extension."))
 	 (t-l-s (make-pane-1 fm frame 'top-level-sheet-pane
 			     :name 'top-level-sheet
 			     ;; enabling should be left to enable-frame
-			     :enabled-p nil)))
+			     :enabled-p nil))
+         (event-queue (sheet-event-queue t-l-s)))
     (setf (slot-value frame 'top-level-sheet) t-l-s)
     (generate-panes fm frame)
     (setf (slot-value frame 'state)  :disabled)
+    (when (typep event-queue 'port-event-queue)
+      (setf (event-queue-port event-queue)
+            (frame-manager-port fm)))
     frame))
 
 (defmethod disown-frame ((fm frame-manager) (frame application-frame))
+  (let* ((t-l-s (frame-top-level-sheet frame))
+         (queue (sheet-event-queue t-l-s)))
+    (when (typep queue 'port-event-queue)
+      (setf (event-queue-port queue) nil)))
   (setf (slot-value fm 'frames) (remove frame (slot-value fm 'frames)))
   (sheet-disown-child (graft frame) (frame-top-level-sheet frame))
   (setf (%frame-manager frame) nil)
   (setf (slot-value frame 'state) :disowned)
+  (port-force-output (frame-manager-port fm))
   frame)
 
 (defgeneric enable-frame (frame))

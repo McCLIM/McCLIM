@@ -313,31 +313,35 @@
 
 ;; PORT-EVENT-QUEUE methods
 
+(defun do-port-force-output (port-event-queue)
+  (let ((port (event-queue-port port-event-queue)))
+    (when port (port-force-output port))))
+
 (defmethod event-queue-read :before ((eq port-event-queue))
-  (port-force-output (event-queue-port eq)))
+  (do-port-force-output eq))
 
 (defmethod event-queue-read-no-hang :before ((eq port-event-queue))
-  (port-force-output (event-queue-port eq)))
+  (do-port-force-output eq))
 
 (defmethod event-queue-read-with-timeout :before ((eq port-event-queue)
                                                   timeout wait-function)
   (declare (ignore timeout wait-function))
-  (port-force-output (event-queue-port eq)))
+  (do-port-force-output eq))
 
 (defmethod event-queue-listen :before ((eq port-event-queue))
-  (port-force-output (event-queue-port eq)))
+  (do-port-force-output eq))
 
 (defmethod event-queue-listen-or-wait :before ((eq standard-event-queue)
                                                &key timeout)
   (declare (ignore timeout))
-  (port-force-output (event-queue-port eq)))
+  (do-port-force-output eq))
 
 (defmethod event-queue-peek :before ((eq port-event-queue))
-  (port-force-output (event-queue-port eq)))  
+  (do-port-force-output eq))  
 
 (defmethod event-queue-peek-if :before (predicate (eq port-event-queue))
   (declare (ignore predicate))
-  (port-force-output (event-queue-port eq)))
+  (do-port-force-output eq))
 
 ;; STANDARD-SHEET-INPUT-MIXIN
 
