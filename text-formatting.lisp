@@ -134,6 +134,22 @@ SUPPRESS-SPACE-AFTER-CONJUNCTION are non-standard."
     (call-next-method)))
 
 (defmethod stream-write-string :around ((stream indenting-output-stream)
+				string &optional (start 0) end)
+  (let ((under-stream (encapsulating-stream-stream stream))
+	(end (or end (length string))))
+    (flet ((foo (start end)
+	     (when (stream-start-line-p under-stream)
+	       (stream-increment-cursor-position under-stream (indentation stream) nil))
+	     (stream-write-string under-stream string start end)))
+      (let ((seg-start start))
+	(loop for i from start below end do
+	  (when (char= #\Newline
+		       (char string i))
+	    (foo seg-start (1+ i))
+	    (setq seg-start (1+ i))))
+	(foo seg-start end)))))
+  
+(defmethod stream-write-string :around ((stream indenting-output-stream)
 					string &optional (start 0) end)
   (loop for i from start below end 
     do (stream-write-char stream (aref string i))))
