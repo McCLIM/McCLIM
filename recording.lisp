@@ -613,12 +613,17 @@ the associated sheet can be determined."
 
 (defmethod add-output-record :before (child (record compound-output-record))
   (let ((parent (output-record-parent child)))    
-    (when parent
-      (restart-case
-          (error "~S already has a parent ~S." child parent)
-        (delete ()
-          :report "Delete from the old parent."
-          (delete-output-record child parent))))))
+    (cond (parent
+	   (restart-case
+	       (error "~S already has a parent ~S." child parent)
+	     (delete ()
+	       :report "Delete from the old parent."
+	       (delete-output-record child parent))))
+	  ((eq record child)
+	   (error "~S is being added to itself" record))
+	  ((eq (output-record-parent record) child)
+	   (error "child ~S is being added to its own child ~S"
+		  child record)))))
 
 (defmethod add-output-record :after (child (record compound-output-record))
   (recompute-extent-for-new-child record child)
