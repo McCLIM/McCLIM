@@ -569,6 +569,26 @@
                         align-x align-y toward-x toward-y
                         transform-glyphs))))
 
+;;; Fall-through Methods For Multiple Objects Drawing Functions
+
+(defmethod medium-draw-points* ((medium basic-medium) coord-seq)
+  (let ((tr (invert-transformation (medium-transformation medium))))
+    (with-transformed-positions (tr coord-seq)
+      (loop for (x y) on coord-seq by #'cddr
+            do (medium-draw-point* medium x y)))))
+
+(defmethod medium-draw-lines* ((medium basic-medium) position-seq)
+  (let ((tr (invert-transformation (medium-transformation medium))))
+    (with-transformed-positions (tr position-seq)
+      (loop for (x1 y1 x2 y2) on position-seq by #'cddddr
+            do (medium-draw-line* medium x1 y1 x2 y2)))))
+
+(defmethod medium-draw-rectangles* ((medium basic-medium) coord-seq filled)
+  (let ((tr (invert-transformation (medium-transformation medium))))
+    (with-transformed-positions (tr coord-seq)
+      (loop for (x1 y1 x2 y2) on coord-seq by #'cddddr
+            do (medium-draw-rectangle* medium x1 y1 x2 y2 filled)))))
+
 
 ;;; Other Medium-specific Output Functions
 
