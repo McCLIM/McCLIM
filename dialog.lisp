@@ -55,8 +55,9 @@ entry to this accept")
 		       :documentation "Binding of *delimeter-gestures* on entry
 to this accept")
    (accept-arguments :accessor accept-arguments :initarg :accept-arguments)
-   (condition :accessor condition :initarg :condition :initform nil
-	      :documentation "Condition signalled, if any, during
+   (accept-condition :accessor accept-condition :initarg :accept-condition
+		     :initform nil
+		     :documentation "Condition signalled, if any, during
 accept of this query")))
 
 (defclass accepting-values-record (standard-updating-output-record)
@@ -219,8 +220,8 @@ accept of this query")))
 			 default-supplied-p
 			 nil query-identifier)))
       (setf (record query) query-record)
-      (when (condition query)
-	(signal (condition query)))
+      (when (accept-condition query)
+	(signal (accept-condition query)))
       (multiple-value-prog1
 	  (values (value query) (ptype query) (changedp query))
 	(setf (default query) default)
@@ -365,7 +366,7 @@ is called. Used to determine if any editing has been done by user")))
 	(handler-case
 	    (av-do-accept query record)
 	  (condition (c)
-	    (setf (condition query) c)))))))
+	    (setf (accept-condition query) c)))))))
 
 
 (defmethod deselect-query (stream query (record av-text-record))
