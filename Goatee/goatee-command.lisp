@@ -79,7 +79,8 @@
 					       (print c *debug-io*)
 					       (beep)
 					       (return-from error-out nil)))))
-	      (funcall command :input-gesture gesture)))
+	      (funcall command :input-gesture gesture)
+	      (setf (last-command area) command)))
 	  (redisplay-area area)))))
 
 (defun insert-character (&key input-gesture &allow-other-keys)
@@ -118,6 +119,24 @@
       (if (eql pos last-point)
 	  (delete-char *buffer*)
 	  (delete-char *buffer* (- last-point pos))))))
+
+;; Line motion
+
+(defun up-line (&key &allow-other-keys)
+  (move-lines -1))
+
+(defun down-line (&key &allow-other-keys)
+  (move-lines 1))
+
+(defun move-lines (n)
+  (unless (goal-column-preserving-p (last-command *area*))
+    (setf (goal-column *area*) (pos (point *buffer*))))
+  (setf (point* *buffer*)
+	(next-line *buffer* n :pos (goal-column *area*))))
+
+(defun goal-column-preserving-p (cmd)
+  (member cmd '(up-line down-line)))
+
 
 (loop for i from (char-code #\space) to (char-code #\~)
       do (add-gesture-command-to-table (code-char i)
@@ -163,6 +182,15 @@
 (add-gesture-command-to-table '(#\u :control)
 			      'clear-input-buffer
 			      *simple-area-gesture-table*)
+
+(add-gesture-command-to-table '(#\p :control)
+			      'up-line
+			      *simple-area-gesture-table*)
+
+(add-gesture-command-to-table '(#\n :control)
+			      'down-line
+			      *simple-area-gesture-table*)
+
 ;;; Debugging fun
 
 (defun goatee-break (&key &allow-other-keys)

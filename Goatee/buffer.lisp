@@ -85,6 +85,18 @@
   (dbl-insert-after (make-buffer-line obj :tick (incf (tick obj))) (lines
 								    obj)))
 
+(defgeneric first-line-p (line)
+  (:documentation "Returns true if line is the first line in a buffer"))
+
+(defmethod first-line-p ((line buffer-line))
+  (not (typep (prev line) 'buffer-line)))
+
+(defgeneric last-line-p (line)
+  (:documentation "Returns true if line is the last line in a buffer"))
+
+(defmethod last-line-p ((line buffer-line))
+  (null (next line)))
+
 (defgeneric char-ref (buffer position))
 
 (defmethod char-ref ((buf basic-buffer) position)

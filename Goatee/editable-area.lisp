@@ -22,7 +22,11 @@
 		  :documentation "buffer pointer to line in buffer
   that's at the bottom of the area.  The bp is not necessarily at the
   beginning of the line.")
-   (last-line :accessor last-line :initarg :last-line :initform nil))
+   (last-line :accessor last-line :initarg :last-line :initform nil)
+   (last-command :accessor last-command :initform nil)
+   (goal-column :accessor goal-column :initform nil
+		:documentation "Goal column for next-line command when
+  moving over a short line"))
   (:documentation "An abstract superclass for the on-screen area
   devoted to Goatee editing.  Roughly equivalent to a window in GNU Emacs."))
 

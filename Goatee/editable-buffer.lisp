@@ -242,6 +242,25 @@
 (defmethod end-of-buffer* ((buf editable-buffer))
   (location* (buffer-end buf)))
 
+(defgeneric next-line (buffer &optional n &key position line pos)
+  (:documentation "Return the line N places from LINE, and a POS in it.
+If LINE is not given, uses the BUFFER's current line.
+If N is negative, goes backwards.
+POS is the position in the line to return as the second value (trimmed
+if beyond the actual line's maximum)."))
+
+(defmethod next-line ((buf editable-buffer) &optional (n 1)
+		      &key (position (point buf)) line (pos 0))
+  (let ((line (or line (location* position)))
+	(forward (> n 0))
+	(times (abs n)))
+    (loop for i upto times
+	  for cur-line = line then (if forward (next line) (prev line))
+	  when (or (not (typep cur-line 'buffer-line)) (null cur-line))
+	    do (error 'buffer-bounds-error :buffer buf :line line)
+	  finally
+	  (return (values cur-line (min pos (line-last-point cur-line)))))))
+
 ;;; These iteration constructs need a bit more thought.
 ;;; map-over-region in its current state may not do the right thing if
 ;;; the buffer is modified in the region, but what is the right thing?
