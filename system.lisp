@@ -128,6 +128,7 @@
    )
 
 (clim-defsystem (:clim :depends-on (:clim-core :goatee-core :clim-postscript))
+   "text-formatting"
    "input-editing"
    "presentations"
    "presentation-defs"
@@ -141,7 +142,7 @@
    "table-formatting"
    "bordered-output"
    "builtin-commands"
-   "dialog" ; depends on table-formatting
+   "dialog" ; depends on table formatting
    )
 
 (load (merge-pathnames "Backends/CLX/system" *clim-directory*))
