@@ -175,16 +175,16 @@
 (defmethod climi::finalize ((stream goatee-input-editing-mixin)
 			    input-sensitizer)
   (setf (cursor-visibility (cursor (area stream))) nil)
-  (when input-sensitizer
-    (let ((real-stream (encapsulating-stream-stream stream)))
+  (let ((real-stream (encapsulating-stream-stream stream)))  
+    (when input-sensitizer
       (funcall input-sensitizer
 	       real-stream
 	       #'(lambda ()
 		   (let ((record (area stream)))
 		     (delete-output-record record
 					   (output-record-parent record))
-		     (stream-add-output-record real-stream record))))
-      (reposition-stream-cursor real-stream) )))
+		     (stream-add-output-record real-stream record)))))
+    (reposition-stream-cursor real-stream)))
 
 ;;; Hopefully only used on small buffers.
 
