@@ -1324,7 +1324,7 @@ and used to ensure that presentation-translators-caches are up to date.")
        for super-meta in (safe-cpl type-meta)
        ;; structure classes?
        when (and (or (typep super-meta 'standard-class)
-		     (typep super-meta 'built-in-class))
+		     (eq super-meta *builtin-t-class*))
 		 (not (and type-is-ptype
 			   (eq super-meta *standard-object-class*))))
        do (funcall function super-meta))))
