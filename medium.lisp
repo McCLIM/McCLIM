@@ -40,7 +40,7 @@
 		   :accessor medium-transformation)
    (clipping-region :initarg :clipping-region
 		    :initform +everywhere+
-		    :accessor medium-clipping-region)
+                    :documentation "Clipping region in the SHEET coordinates.")
    (line-style :initarg :line-style
 	       :initform (make-line-style)
 	       :accessor medium-line-style)
@@ -56,6 +56,21 @@
 
 (defun mediump (x)
   (typep x 'medium))
+
+(defmethod initialize-instance :after ((medium medium) &rest args)
+  ;; Initial CLIPPING-REGION is in coordinates, given by initial
+  ;; TRANSFORMATION, but we store it in SHEET's coords.
+  (setf (medium-clipping-region medium)
+        (slot-value medium 'clipping-region)))
+
+(defmethod medium-clipping-region ((medium medium))
+  (untransform-region (medium-transformation medium)
+                    (slot-value medium 'clipping-region)))
+
+(defmethod (setf medium-clipping-region) (region (medium medium))
+  (setf (slot-value medium 'clipping-region)
+        (transform-region (medium-transformation medium)
+                            region)))
 
 (defmethod medium-merged-text-style ((medium medium))
   (merge-text-styles (medium-text-style medium) (medium-default-text-style medium)))
