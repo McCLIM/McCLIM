@@ -30,6 +30,8 @@
       (setf (ext:search-list "gray-streams:")
 	'("target:pcl/" "library:subsystems/")))
     (load "gray-streams:gray-streams-library"))
+  #-CLX
+  (require :clx)
   #-MK-DEFSYSTEM
   (load "library:subsystems/defsystem"))
 
@@ -98,7 +100,7 @@
    "stream-output"
    "recording"
    "encapsulate"
-   "stream-input" ; depends on WITH-ENCAPSULATING-STREAM
+   "stream-input"			; depends on WITH-ENCAPSULATING-STREAM
 )
 
 (clim-defsystem (:goatee-core :depends-on (:clim-core))
@@ -143,6 +145,7 @@
    "bordered-output"
    "builtin-commands"
    "dialog" ; depends on table formatting
+   "describe"
    ;; "Experimental/menu-choose" ; depends on table formatting, presentations
    )
 
