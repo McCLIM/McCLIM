@@ -144,6 +144,7 @@
    "gadgets"
    "menu"
    "table-formatting"
+   "graph-formatting"
    "bordered-output"
    "builtin-commands"
    "dialog" ; depends on table formatting
@@ -173,6 +174,7 @@
    "Examples/postscript-test"
    ;; "Examples/puzzle"
    "Examples/transformations-test"
+   "Examples/sliderdemo"
    "Examples/stream-test"
    "Examples/presentation-test"
    "Examples/gadget-test"

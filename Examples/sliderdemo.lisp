@@ -1,6 +1,6 @@
 ;;; -*- Mode: Lisp; Syntax: ANSI-Common-Lisp; Package: CLIM-DEMO; Base: 10; Lowercase: Yes -*-
 
-;;;  (c) copyright 2000 by 
+;;;  (c) copyright 2000 by
 ;;;           Iban Hatchondo (hatchond@emi.u-bordeaux.fr)
 ;;;           Julien Boninfante (boninfan@emi.u-bordeaux.fr)
 
@@ -15,8 +15,8 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
 (in-package :CLIM-DEMO)
@@ -28,14 +28,8 @@
   (loop for port in climi::*all-ports*
       do (destroy-port port))
   (setq climi::*all-ports* nil)
-  (setq frame (make-application-frame 'sliderdemo))
-  (setq fm (frame-manager frame))
-  (setq port (climi::frame-manager-port fm))
-  (setq pane (third (frame-panes frame)))
-  (setq medium (sheet-medium pane))
-  (setq graft (graft frame))
-  (setq vbox (frame-pane frame))
-  (run-frame-top-level frame))
+  (let ((frame (make-application-frame 'sliderdemo)))
+    (run-frame-top-level frame)))
 
 (defmacro queue-number(int)
   `(lambda (gadget)
@@ -50,9 +44,9 @@
   `(lambda (gadget)
      (declare (ignore gadget))
      (do-operation t)
-     (if (functionp (first (last calc))) 
+     (if (functionp (first (last calc)))
 	 (setf (first (last calc)) ,operator)
-       	 (setf calc (nconc calc (list ,operator))))))	 
+       	 (setf calc (nconc calc (list ,operator))))))
 
 (defun do-operation (gadget)
   (declare (ignore gadget))
@@ -72,7 +66,7 @@
     (unless (or (null calc) (not (numberp last-item)))
       (setf calc (butlast calc)
 	    (gadget-value *text-field*) (princ-to-string 0)))))
-      
+
 (defun print-screen (gadget)
   (declare (ignore gadget)))
 
@@ -92,12 +86,12 @@
 				       (prompt "Command: "))
   (declare (ignore command-parser command-unparser partial-command-parser prompt))
   (setf *text-field* (find-text-field frame))
-  (loop (event-read (frame-pane frame))))
-     
+  (clim-extensions:simple-event-loop))
+
 (define-application-frame sliderdemo () ()
   (:panes
    (plus             :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)		     
+		     :space-requirement (make-space-requirement :width 50 :height 50)
 		     :label "+"
 		     :activate-callback (queue-operator #'+))
    (dash             :push-button
@@ -105,66 +99,66 @@
 		     :label "-"
 		     :activate-callback (queue-operator #'-))
    (multiplicate     :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)		     
+		     :space-requirement (make-space-requirement :width 50 :height 50)
 		     :label "*"
 		     :activate-callback (queue-operator #'*))
    (divide           :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)		     
+		     :space-requirement (make-space-requirement :width 50 :height 50)
 		     :label "/"
 		     :activate-callback (queue-operator #'round))
    (result           :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)		     
+		     :space-requirement (make-space-requirement :width 50 :height 50)
 		     :label "="
 		     :activate-callback #'do-operation)
    (one              :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)		     
+		     :space-requirement (make-space-requirement :width 50 :height 50)
 		     :label "1"
 		     :activate-callback (queue-number 1))
    (two              :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)		     
+		     :space-requirement (make-space-requirement :width 50 :height 50)
 		     :label "2"
 		     :activate-callback (queue-number 2))
    (three            :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)		     
+		     :space-requirement (make-space-requirement :width 50 :height 50)
 		     :label "3"
 		     :activate-callback (queue-number 3))
    (four             :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)		     
+		     :space-requirement (make-space-requirement :width 50 :height 50)
 		     :label "4"
 		     :activate-callback (queue-number 4))
    (five             :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)		     
+		     :space-requirement (make-space-requirement :width 50 :height 50)
 		     :label "5"
 		     :activate-callback (queue-number 5))
    (six              :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)		     
+		     :space-requirement (make-space-requirement :width 50 :height 50)
 		     :label "6"
 		     :activate-callback (queue-number 6))
    (seven            :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)		     
+		     :space-requirement (make-space-requirement :width 50 :height 50)
 		     :label "7"
 		     :activate-callback (queue-number 7))
    (eight            :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)		     
+		     :space-requirement (make-space-requirement :width 50 :height 50)
 		     :label "8"
 		     :activate-callback (queue-number 8))
    (nine             :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)		     
+		     :space-requirement (make-space-requirement :width 50 :height 50)
 		     :label "9"
 		     :activate-callback (queue-number 9))
    (zero             :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)		     
+		     :space-requirement (make-space-requirement :width 50 :height 50)
 		     :label "0"
 		     :activate-callback (queue-number 0))
   (screen            :text-field
 		     :value "0"
 		     :space-requirement (make-space-requirement :width 200 :height 50))
   (ac                :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)		     
+		     :space-requirement (make-space-requirement :width 50 :height 50)
 		     :label "AC"
 		     :activate-callback #'initac)
   (ce                :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)		     
+		     :space-requirement (make-space-requirement :width 50 :height 50)
 		     :label "CE"
 		     :activate-callback #'initce)
   (slider            :slider
@@ -175,7 +169,7 @@
 		     :normal +white+
 		     :highlighted +cyan+
 		     :pushed-and-highlighted +blue+))
-  
+
   (:layouts
    (defaults (horizontally ()
 	        (vertically ()
