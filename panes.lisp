@@ -435,6 +435,9 @@
   ()
   (:documentation "Top-level sheet without window manager intervention"))
 
+(defmethod sheet-native-transformation ((sheet top-level-sheet-pane))
+  +identity-transformation+)
+
 ;;; SHEET 
 
 ;; FIXME: Should it exists ???
