@@ -163,7 +163,8 @@
                                      :left nil
                                      :top  nil)))
           (adopt-frame fm frame)
-          (change-space-requirements stream :width 1 :height 1)
+          (change-space-requirements stream :width 1 :height 1) ;What is that supposed to do? --GB 2003-03-16
+                                                                ; Shadow bug somewhere else?
           (unwind-protect
                (progn
                  (setf (stream-end-of-line-action stream) :allow
