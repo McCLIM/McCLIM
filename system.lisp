@@ -96,8 +96,8 @@
    "graphics"
    "views"
    "stream-output"
-   "encapsulate" ; depends on (SETF STREAM-CURSOR-POSITION)
    "recording"
+   "encapsulate"
    "stream-input" ; depends on WITH-ENCAPSULATING-STREAM
 )
 
