@@ -45,7 +45,14 @@
 (defmethod event-read ((sheet standard-sheet-input-mixin))
   (with-slots (queue) sheet
     (loop while (null queue)
-	do (process-next-event (port sheet)))
+	  do (process-next-event (port sheet)))
+    (pop queue)))
+
+(defmethod event-read-with-timeout ((sheet standard-sheet-input-mixin)
+				    &key (timeout nil) (wait-function nil))
+  (with-slots (queue) sheet
+    (loop while (null queue)
+	  do (process-next-event (port sheet) :timeout timeout :wait-function wait-function))
     (pop queue)))
 
 (defmethod event-read-no-hang ((sheet standard-sheet-input-mixin))
@@ -101,6 +108,11 @@
 (defmethod event-read ((sheet mute-sheet-input-mixin))
   (error 'sheet-is-mute-for-input))
 
+(defmethod event-read-with-timeout ((sheet mute-sheet-input-mixin)
+				    &key (timeout nil) (wait-function nil))
+  (declare (ignore timeout wait-function))
+  (error 'sheet-is-mute-for-input))
+
 (defmethod event-read-no-hang ((sheet mute-sheet-input-mixin))
   (error 'sheet-is-mute-for-input))
 
@@ -132,6 +144,11 @@
 
 (defmethod event-read ((sheet delegate-sheet-input-mixin))
   (event-read (delegate-sheet-delegate sheet)))
+
+(defmethod event-read-with-timeout ((sheet delegate-sheet-input-mixin)
+				    &key (timeout nil) (wait-function nil))
+  (event-read-with-timeout (delegate-sheet-delegate sheet)
+			   :timeout timeout :wait-function wait-function))
 
 (defmethod event-read-no-hang ((sheet delegate-sheet-input-mixin))
   (event-read-no-hang (delegate-sheet-delegate sheet)))
