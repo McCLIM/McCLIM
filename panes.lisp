@@ -4,7 +4,8 @@
 ;;;           Iban Hatchondo (hatchond@emi.u-bordeaux.fr)
 ;;;           Julien Boninfante (boninfan@emi.u-bordeaux.fr)
 ;;;           Robert Strandh (strandh@labri.u-bordeaux.fr)
-
+;;;  (c) copyright 2001 by
+;;;           Lionel Salabartan (salabart@emi.u-bordeaux.fr)
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -71,6 +72,33 @@
     :max-height max-height
     :min-height min-height))
 
+(defmethod space-requirement-components ((space-req space-requirement))
+  (with-slots (width min-width max-width height min-height max-height) space-req
+    (values width min-width max-width height min-height max-height)))
+
+(defun space-requirement-combine* (function sr1 list-sr2)
+  (apply #'make-space-requirement
+         (mapcan #'(lambda (c1 c2 keyword)
+                     (list keyword (funcall function c1 c2)))
+                 (multiple-value-list (space-requirement-components sr1))
+                 list-sr2
+                 '(:width :min-width :max-width :height :min-height :max-height))))
+
+(defun space-requirement-combine (function sr1 sr2)
+  (space-requirement-combine* function
+                              sr1
+                              (multiple-value-list
+                               (space-requirement-components sr2))))
+
+(defun space-requirement+ (sr1 sr2)
+  (space-requirement-combine #'+ sr1 sr2))
+
+(defun space-requirement+* (space-req &key (width 0) (min-width 0) (max-width 0)
+                                      (height 0) (min-height 0) (max-height 0))
+  (space-requirement-combine* #'+
+                              space-req
+                              (list width min-width max-width height min-height max-height)))
+  
 ;; Set of macro for accessing quickly to the space-requirement slots.
 (defmacro get-width (pane)
   `(space-requirement-width (pane-space-requirement ,pane)))

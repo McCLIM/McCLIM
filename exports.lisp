@@ -968,6 +968,10 @@
 		     slider
 		     slider-drag-callback
 		     slider-pane
+		     space-requirement+
+		     space-requirement+*
+		     space-requirement-combine
+		     space-requirement-components
 		     space-requirement-height
 		     space-requirement-height
 		     space-requirement-max-height
