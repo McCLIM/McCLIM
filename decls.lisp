@@ -102,7 +102,6 @@
 (defgeneric medium-transformation (medium))
 (defgeneric medium-clipping-region (medium))
 (defgeneric medium-line-style (medium))
-(defgeneric medium-line-style (medium))
 (defgeneric medium-text-style (medium))
 (defgeneric medium-default-text-style (medium))
 
@@ -111,7 +110,6 @@
 (defgeneric (setf medium-ink) (new-value medium))
 (defgeneric (setf medium-transformation) (new-value medium))
 (defgeneric (setf medium-clipping-region) (new-value medium))
-(defgeneric (setf medium-line-style) (new-value medium))
 (defgeneric (setf medium-line-style) (new-value medium))
 (defgeneric (setf medium-text-style) (new-value medium))
 (defgeneric (setf medium-default-text-style) (new-value medium))
