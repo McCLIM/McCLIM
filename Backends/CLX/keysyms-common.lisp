@@ -62,6 +62,7 @@
   "event-key is :key-press or :key-release"
   (multiple-value-bind (clim-modifiers shift-lock? caps-lock? mode-switch?)
       (x-event-state-modifiers port state)
+    (declare (ignore shift-lock? caps-lock? mode-switch?))
     (values keychar (if (characterp keychar)
 			clim-modifiers	;; ?? true?
 			(modify-modifiers event-key
@@ -134,9 +135,9 @@
 	      (logtest +caps-lock+ other-modifiers)
 	      (logtest +mode-switch+ other-modifiers)))))
 
-(defun modify-modifiers (event-key keysym modifiers)
+(defun modify-modifiers (event-key keysym-keyword modifiers)
   (let ((keysym-modifier (loop for (keysyms modifier) in +clim-modifiers+
-			       if (member keysym keysyms)
+			       if (member keysym-keyword keysyms)
 			       return modifier)))
     (cond ((and keysym-modifier (eq event-key :key-press))
 	   (logior modifiers keysym-modifier))
