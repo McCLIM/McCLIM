@@ -4,7 +4,7 @@
 ;;;   Created: 1998-12-02 19:26
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: regions.lisp,v 1.26 2003/03/21 22:07:06 mikemac Exp $
+;;;       $Id: regions.lisp,v 1.27 2004/03/01 12:52:29 hefner1 Exp $
 ;;; --------------------------------------------------------------------------------------
 ;;;  (c) copyright 1998,1999,2001 by Gilbert Baumann
 ;;;  (c) copyright 2001 by Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
@@ -529,8 +529,11 @@
 
 (defmethod transform-region (transformation (self elliptical-thing))
   (with-slots (start-angle end-angle tr) self
-    (let ((start-angle* (and start-angle (transform-angle transformation start-angle)))
-          (end-angle* (and end-angle (transform-angle transformation end-angle))))
+    ;; I think this should be untransform-angle below, as the ellipse angles
+    ;; go counter-clockwise in screen coordinates, whereas our transformations
+    ;; rotate clockwise..  -Hefner
+    (let ((start-angle* (and start-angle (untransform-angle transformation start-angle)))
+          (end-angle*   (and end-angle   (untransform-angle transformation end-angle))))      
       (when (reflection-transformation-p transformation)
         (rotatef start-angle* end-angle*))
       (make-instance (type-of self)

@@ -1489,8 +1489,11 @@ were added."
 	  (transform-distance transform radius-1-dx radius-1-dy))
     (setf (values radius-2-dx radius-2-dy)
 	  (transform-distance transform radius-2-dx radius-2-dy))
-    (setf start-angle (transform-angle transform start-angle))
-    (setf end-angle (transform-angle transform end-angle))
+    ;; I think this should be untransform-angle below, as the ellipse angles
+    ;; go counter-clockwise in screen coordinates, whereas our transformations
+    ;; rotate clockwise..  -Hefner
+    (setf start-angle (untransform-angle transform start-angle))
+    (setf end-angle   (untransform-angle transform end-angle))
     (multiple-value-bind (min-x min-y max-x max-y)
 	(bounding-rectangle* (make-ellipse* center-x center-y
 					    radius-1-dx radius-1-dy

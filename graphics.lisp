@@ -601,15 +601,15 @@
                   (y1 (- center-y y-radius)) (y2 (+ center-y y-radius)))              
               (if filled
                   (draw-rectangle* sheet x1 y1 x2 y2)
-                  (draw-lines* sheet (list x1 y1 x2 y1 x2 y2 x1 y2)))              
+                  (draw-lines* sheet (list x1 y1 x2 y1 x1 y2 x2 y2)))              
               (draw-circle* sheet x1 center-y y-radius
                             :filled filled
-                            :start-angle (* pi 1.5)
-                            :end-angle (* pi 2.5))
+                            :start-angle (* pi 0.5)
+                            :end-angle (* pi 1.5))
               (draw-circle* sheet x2 center-y y-radius
                             :filled filled
-                            :start-angle (* pi 0.5)
-                            :end-angle (* pi 1.5)))
+                            :start-angle (* pi 1.5)
+                            :end-angle (* pi 2.5)))
             (with-rotation (sheet (/ pi 2) (make-point center-x center-y))
               (draw-oval* sheet center-x center-y y-radius x-radius
                           :filled filled)) ))))
