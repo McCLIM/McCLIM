@@ -1,4 +1,4 @@
-;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
+;;; -*- Mode: Lisp; Package: CLIM-POSTSCRIPT -*-
 
 ;;;  (c) copyright 2001 by
 ;;;           Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
@@ -27,115 +27,23 @@
 ;;; - - more regions to draw
 ;;; - (?) blending
 ;;; - check MEDIUM-DRAW-TEXT*
-;;; - (?) WITH-OUTPUT-TO-POSTSCRIPT-STREAM should bind its first argument
-;;;   to stream, not to medium.
 ;;;
 ;;; - POSTSCRIPT-ACTUALIZE-GRAPHICS-STATE: fix CLIPPING-REGION reusing logic
-;;; - NEWPAGE should do smth with GS
 ;;; - MEDIUM-DRAW-... should not duplicate code from POSTSCRIPT-ADD-PATH
 ;;; - structure this file
 
 ;;; Also missing IMO:
 ;;;
-;;; - WITH-OUTPUT-TO-POSTSCRIPT-STREAM should offer a :PAPER-SIZE option.
-;;; - How can one ask for the dimensions of a postscript device (aka paper-size)?
-;;; - NEW-PAGE should also offer to specify the page name.
 ;;; - device fonts are missing
-;;; - font metrics are missing
 ;;;
 ;;;--GB
 
-(in-package :CLIM-INTERNALS)
+(in-package :CLIM-POSTSCRIPT)
 
-(defvar *default-postscript-title* "")
-
-(defvar *default-postscript-for*
-  #+unix (or (get-environment-variable "USER")
-             "Unknown")
-  #-unix "")
-
-(defclass postscript-medium (basic-medium)
-  ((file-stream :initarg :file-stream :reader postscript-medium-file-stream)
-   (title :initarg :title)
-   (for :initarg :for)
-   (orientation :initarg :orientation)
-   (current-page :initform 1)
-   (document-fonts :initform '())
-   (graphics-state-stack :initform '())))
-
-(defmacro postscript-medium-graphics-state (medium)
-  `(car (slot-value ,medium 'graphics-state-stack)))
-
+;;; Postscript output utilities
 (defmacro with-graphics-state ((medium) &body body)
   `(invoke-with-graphics-state ,medium
     (lambda () ,@body)))
-
-(defun make-postscript-medium (file-stream device-type
-                               multi-page scale-to-fit
-                               orientation header-comments)
-  (declare (ignore device-type multi-page scale-to-fit))
-  (let ((title (or (getf header-comments :title)
-                   *default-postscript-title*))
-        (for (or (getf header-comments :for)
-                 *default-postscript-for*)))
-    (make-instance 'postscript-medium
-                   :sheet (make-postscript-graft)
-                   :file-stream file-stream
-                   :title title :for for
-                   :orientation orientation)))
-
-(defmacro with-output-to-postscript-stream ((stream-var file-stream
-                                             &rest options)
-                                            &body body)
-  (let ((cont (gensym)))
-    `(labels ((,cont (,stream-var)
-               ,@body))
-      (declare (dynamic-extent #',cont))
-      (invoke-with-output-to-postscript-stream #',cont ,file-stream ,@options))))
-
-(defun invoke-with-output-to-postscript-stream (continuation
-                                                file-stream &key device-type
-                                                multi-page scale-to-fit
-                                                (orientation :portrait)
-                                                header-comments)
-  (let ((medium (make-postscript-medium file-stream device-type
-                                        multi-page scale-to-fit
-                                        orientation header-comments)))
-    (prog2
-        (with-slots (file-stream title for orientation) medium
-          (format file-stream "%!PS-Adobe-3.0~%")
-          (format file-stream "%%Title: ~A~%" title)
-          (format file-stream "%%For: ~A~%" for)
-          (format file-stream "%%Orientation: ~A~%"
-                  (ecase orientation
-                    (:portrait "Portrait")
-                    (:landscape "Landscape")))
-          (format file-stream "%%Pages: (atend)~%")
-          (format file-stream "%%DocumentNeededResources: (atend)~%")
-          (format file-stream "%%EndComments~%~%")
-          (format file-stream "%%Page: 1 1~%")
-          (format file-stream "newpath~%"))
-        (with-graphics-state (medium)
-          ;; we need at least one level of saving -- APD, 2002-02-11
-          (funcall continuation medium))
-      (with-slots (file-stream current-page document-fonts) medium
-        (format file-stream "showpage~%~%")
-        (format file-stream "%%Trailer~%")
-        (format file-stream "%%Pages: ~D~%" current-page)
-        (format file-stream "%%DocumentNeededResources: ~{font ~A~%~^%%+ ~}~%" (reverse document-fonts))
-        (format file-stream "%%EOF~%")
-        (finish-output file-stream)))))
-
-(defun new-page (stream)
-  ;; FIXME: it is necessary to do smth with GS -- APD, 2002-02-11
-  (postscript-restore-graphics-state stream)
-  (with-slots (file-stream current-page) stream
-    (format file-stream "showpage~%")
-    (format file-stream "%%Page: ~D ~:*~D~%" (incf current-page)))
-  (postscript-save-graphics-state stream))
-
-
-;;; Postscript output utilities
 
 (defun postscript-save-graphics-state (medium)
   (push (copy-alist (postscript-medium-graphics-state medium))
@@ -358,7 +266,8 @@
                              (lambda (x y)
                                (format stream "newpath~%")
                                (format stream "~A ~A ~A 0 360 arc~%"
-                                       (format-postscript-number x) (format-postscript-number y)
+                                       (format-postscript-number x)
+                                       (format-postscript-number y)
                                        (format-postscript-number radius))
                                (format stream "fill~%"))
                              coord-seq))))
@@ -386,7 +295,8 @@
                            coord-seq)
     (format stream "stroke~%")))
 
-(defmethod medium-draw-polygon* ((medium postscript-medium) coord-seq closed filled)
+(defmethod medium-draw-polygon*
+    ((medium postscript-medium) coord-seq closed filled)
   (assert (evenp (length coord-seq)))
   (let ((stream (postscript-medium-file-stream medium)))
     (postscript-actualize-graphics-state stream medium :line-style :color)
@@ -406,7 +316,8 @@
                        "fill~%"
                        "stroke~%"))))
 
-(defmethod medium-draw-rectangle* ((medium postscript-medium) x1 y1 x2 y2 filled)
+(defmethod medium-draw-rectangle*
+    ((medium postscript-medium) x1 y1 x2 y2 filled)
   (let ((stream (postscript-medium-file-stream medium)))
     (postscript-actualize-graphics-state stream medium :line-style :color)
     (format stream "newpath~%")
@@ -420,20 +331,21 @@
                        "fill~%"
                        "stroke~%"))))
 
-(defmethod medium-draw-rectangles* ((medium postscript-medium) position-seq filled)
+(defmethod medium-draw-rectangles*
+    ((medium postscript-medium) position-seq filled)
   (assert (evenp (length position-seq)))
   (let ((stream (postscript-medium-file-stream medium)))
     (postscript-actualize-graphics-state stream medium :line-style :color)
     (format stream "newpath~%")
     (map-repeated-sequence 'nil 4
-                           (lambda (x1 y1 x2 y2)
-                             (format stream "~A ~A moveto ~A ~A lineto ~A ~A lineto ~A ~A lineto~%"
-                                     (format-postscript-number x1) (format-postscript-number y1)
-                                     (format-postscript-number x2) (format-postscript-number y1)
-                                     (format-postscript-number x2) (format-postscript-number y2)
-                                     (format-postscript-number x1) (format-postscript-number y2))
-                             (format stream "closepath~%"))
-                           position-seq)
+        (lambda (x1 y1 x2 y2)
+          (format stream "~A ~A moveto ~A ~A lineto ~A ~A lineto ~A ~A lineto~%"
+                  (format-postscript-number x1) (format-postscript-number y1)
+                  (format-postscript-number x2) (format-postscript-number y1)
+                  (format-postscript-number x2) (format-postscript-number y2)
+                  (format-postscript-number x1) (format-postscript-number y2))
+          (format stream "closepath~%"))
+         position-seq)
     (format stream (if filled
                        "fill~%"
                        "stroke~%"))))
@@ -475,29 +387,31 @@
                            "fill~%"
                            "stroke~%"))))))
 
-(defconstant +postscript-fonts+ '(:fix (:roman "Courier"
-                                        :bold "Courier-Bold"
-                                        :italic "Courier-Oblique"
-                                        :bold-italic "Courier-BoldOblique"
-                                        :italic-bold "Courier-BoldOblique")
-                                  :serif (:roman "Times-Roman"
-                                          :bold "Times-Bold"
-                                          :italic "Times-Italic"
-                                          :bold-italic "Times-BoldItalic"
-                                          :italic-bold "Times-BoldItalic")
-                                  :sans-serif (:roman "Helvetica"
-                                               :bold "Helvetica-Bold"
-                                               :italic "Helvetica-Oblique"
-                                               :bold-italic "Helvetica-BoldOblique"
-                                               :italic-bold "Helvetica-BoldOblique")))
+(defconstant +postscript-fonts+
+  '(:fix (:roman "Courier"
+          :bold "Courier-Bold"
+          :italic "Courier-Oblique"
+          :bold-italic "Courier-BoldOblique"
+          :italic-bold "Courier-BoldOblique")
+    :serif (:roman "Times-Roman"
+            :bold "Times-Bold"
+            :italic "Times-Italic"
+            :bold-italic "Times-BoldItalic"
+            :italic-bold "Times-BoldItalic")
+    :sans-serif (:roman "Helvetica"
+                 :bold "Helvetica-Bold"
+                 :italic "Helvetica-Oblique"
+                 :bold-italic "Helvetica-BoldOblique"
+                 :italic-bold "Helvetica-BoldOblique")))
 
-(defconstant +postscript-font-sizes+ '(:normal 14
-                                       :tiny 8
-                                       :very-small 10
-                                       :small 12
-                                       :large 18
-                                       :very-large 20
-                                       :huge 24))
+(defconstant +postscript-font-sizes+
+  '(:normal 14
+    :tiny 8
+    :very-small 10
+    :small 12
+    :large 18
+    :very-large 20
+    :huge 24))
 
 (defun text-style->postscript-font (text-style)
   (multiple-value-bind (family face size) (text-style-components text-style)
@@ -532,7 +446,7 @@
 (defmethod medium-draw-text* ((medium postscript-medium) string x y
                               start end
                               align-x align-y
-                              toward-x toward-y transform-glyphs) 
+                              toward-x toward-y transform-glyphs)
   (declare (ignore align-x align-y toward-x toward-y))
   (setq string (if (characterp string)
                    (make-string 1 :initial-element string)
@@ -547,8 +461,10 @@
         ;; untransform them again and simply tell the postscript interpreter
         ;; our transformation matrix. --GB
         ;;
-        (multiple-value-setq (x y) (untransform-position (medium-transformation medium) x y))
-        (multiple-value-bind (mxx mxy myx myy tx ty) (get-transformation (medium-transformation medium))
+        (multiple-value-setq (x y)
+          (untransform-position (medium-transformation medium) x y))
+        (multiple-value-bind (mxx mxy myx myy tx ty)
+            (get-transformation (medium-transformation medium))
           (format file-stream "initmatrix [~A ~A ~A ~A ~A ~A] concat~%"
                   (format-postscript-number mxx)
                   (format-postscript-number mxy)
@@ -563,44 +479,3 @@
         (format file-stream "~A ~A moveto~%"
                 (format-postscript-number x) (format-postscript-number y))
         (format file-stream "(~A) show~%" (postscript-escape-string string))))))
-
-;;;;
-;;;; POSTSCRIPT-GRAFT
-;;;;
-
-(defclass postscript-graft (basic-sheet sheet-leaf-mixin)
-  ((width  :initform 210 :reader postscript-graft-width)
-   (height :initform 297 :reader postscript-graft-height)))
-
-(defmethod graft-orientation ((graft postscript-graft))
-  :graphics)
-
-(defmethod graft-units ((graft postscript-graft))
-  :device)
-
-(defmethod graft-width ((graft postscript-graft) &key (units :device))
-  (* (postscript-graft-width graft)
-     (ecase units
-       (:device         (/ 720 254))
-       (:inches         (/ 10 254))
-       (:millimeters    1)
-       (:screen-sized   (/ (postscript-graft-width graft))))))
-
-(defmethod graft-height ((graft postscript-graft) &key (units :device))
-  (* (postscript-graft-height graft)
-     (ecase units
-       (:device         (/ 720 254))
-       (:inches         (/ 10 254))
-       (:millimeters    1)
-       (:screen-sized   (/ (postscript-graft-height graft))))))
-
-(defun make-postscript-graft ()
-  (make-instance 'postscript-graft))
-
-(defmethod sheet-region ((sheet postscript-graft))
-  (make-rectangle* 0 0
-                   (graft-width sheet :units (graft-units sheet))
-                   (graft-height sheet :units (graft-units sheet))))
-
-(defmethod graft ((sheet postscript-graft))
-  sheet)

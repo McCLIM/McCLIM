@@ -121,7 +121,14 @@
   "Goatee/editing-stream"
   )
 
-(clim-defsystem (:clim :depends-on (:clim-core :goatee-core))
+(clim-defsystem (:clim-postscript :depends-on (:clim-core))
+   "Backends/postscript/package"
+   "Backends/postscript/class"
+   "Backends/postscript/graphics"
+   "Backends/postscript/sheet"
+   )
+
+(clim-defsystem (:clim :depends-on (:clim-core :goatee-core :clim-postscript))
    "input-editing"
    "presentations"
    "commands"
@@ -130,7 +137,6 @@
    "gadgets"
    "menu"
    "table-formatting"
-   "postscript-medium"
    "incremental-redisplay"
    "builtin-commands"
    )
