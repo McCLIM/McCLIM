@@ -1868,11 +1868,11 @@ according to the flags RECORD and DRAW."
 					  &allow-other-keys)
   (stream-close-text-output-record stream)
   (let ((new-record (apply #'make-instance record-type initargs)))
+    (stream-add-output-record stream new-record)
     (letf (((stream-current-output-record stream) new-record))
       ;; Should we switch on recording? -- APD
       (funcall continuation stream new-record)
       (finish-output stream))
-    (stream-add-output-record stream new-record)
     new-record))
 
 (defmethod invoke-with-output-to-output-record
