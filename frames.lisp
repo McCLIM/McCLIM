@@ -343,7 +343,7 @@ FRAME-EXIT condition."))
 				    (eq (pane-display-time pane) :command-loop)
 				    (pane-display-function pane))
 			       (let ((func (pane-display-function pane)))
-				 (window-erase-viewport pane)
+				 (window-clear pane)
 				 (funcall func frame pane) ; XXX other arguments
                                         ; XXX incremental redisplay
                                  )))
