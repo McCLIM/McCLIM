@@ -19,7 +19,24 @@
 
 (in-package :CLIM-INTERNALS)
 
-(defvar *default-server-path* #+unix '(:x11 :host "" :display-id 0 :screen-id 0))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+(defun parse-display-variable (s)
+  "Given a string in standard X11 display format host-name:display-number:screen-number,
+returns a list in CLIM X11 format (:x11 :host host-name :display-id display-number
+:screen-id screen-number)."
+  (let* ((colon (position #\: s))
+	 (dot (position #\. s :start colon))
+	 (host-name (if (zerop colon) "" (subseq s 0 colon)))
+	 (display-number (parse-integer s :start (1+ colon) :end dot))
+	 (screen-number (if dot (parse-integer s :start (1+ dot)) 0)))
+    (list :x11 :host host-name :display-id display-number :screen-id screen-number)))
+
+(defun get-environment-variable (string)
+  #+excl (sys:getenv string)
+  #-(or excl) (error "GET-ENVIRONMENT-VARIABLE not implemented")))
+		
+(defvar *default-server-path*
+    #+unix (parse-display-variable (get-environment-variable "DISPLAY")))
 
 (defvar *all-ports* nil)
 
