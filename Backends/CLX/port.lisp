@@ -328,8 +328,27 @@
         (1- code)))
 
 (defun event-handler (&rest event-slots
-                      &key display window event-key code state mode time width height x y data count
+                      &key display window event-key code state mode time width height x y data
                       &allow-other-keys)
+  ;; NOTE: Although it might be tempting to compress (consolidate)
+  ;; events here, this is the wrong place. In our current architecture
+  ;; the process calling this function (the port's event handler
+  ;; process) just reads the events from the X server, and does it
+  ;; with almost no lack behind the reality. While the application
+  ;; frame's event top level loop does the actual processing of events
+  ;; and thus may produce lack. So the events have to be compressed in
+  ;; the frame's event queue.
+  ;;
+  ;; So event compression is implement in EVENT-QUEUE-APPEND.
+  ;;
+  ;; This changes for possible _real_ immediate repainting sheets,
+  ;; here a possible solution for the port's event handler loop can be
+  ;; to read all available events off into a temponary queue (and
+  ;; event compression for immediate events is done there) and then
+  ;; dispatch all events from there as usual.
+  ;;
+  ;;--GB
+  
   ;; XXX :button code -> :button (decode-x-button-code code)
   (declare (ignorable event-slots))
   (declare (special *clx-port*))
@@ -370,10 +389,8 @@
 	(:destroy-notify
 	 (make-instance 'window-destroy-event :sheet sheet))
 	(:motion-notify
-         (unless (eq :motion-notify (peek-event (display event-key) event-key))
-           ; consolidate motion notifications
-	   (make-instance 'pointer-motion-event :pointer 0 :button code :x x :y y
-			  :sheet sheet :modifier-state state :timestamp time)))
+         (make-instance 'pointer-motion-event :pointer 0 :button code :x x :y y
+                        :sheet sheet :modifier-state state :timestamp time))
         ;;
 	((:exposure :display)
          ;; Notes:
@@ -385,14 +402,13 @@
          ;;   (think about changing a sheet's native transformation).
          ;;--GB
          ;;
-         ;; this should still consolidate the areas
-         ;;
          ;; Mike says:
          ;;   One of the lisps is bogusly sending a :display event instead of an
          ;; :exposure event. I don't remember if it's CMUCL or SBCL. So the
          ;; :display event should be left in.
          ;;
          (make-instance 'window-repaint-event
+           :timestamp time
            :sheet sheet
            :region (make-rectangle* x y (+ x width) (+ y height))))
         ;;
