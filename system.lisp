@@ -81,6 +81,7 @@
   #+sbcl      "Lisp-Dep/fix-sbcl"
   #+openmcl   "Lisp-Dep/fix-openmcl"
   #+lispworks "Lisp-Dep/fix-lispworks"
+  #+clisp     "Lisp-Dep/fix-clisp"
   "package")
 
 (clim-defsystem (:clim-core :depends-on (:clim-lisp))
