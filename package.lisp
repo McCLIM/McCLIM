@@ -1885,6 +1885,7 @@
    #:draw-image
    #:image-pane
    #:draw-label
+   #:box-adjuster-gadget
    #:compose-space-aux
    #:simple-event-loop
    #:pointer-motion-hint-event))
