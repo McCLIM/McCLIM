@@ -390,7 +390,7 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
   `(invoke-with-new-output-record
     ,stream
     #'(lambda (,stream ,record)
-        ,(unless record-supplied-p `(declare (ignore ,record)))
+        ,@(unless record-supplied-p `((declare (ignore ,record))))
         ,@body)
     ',record-type
     ,@initargs))
@@ -517,7 +517,6 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
                                                     (region-intersection clip
                                                                          (untransform-region transformation region))
                                                     transformation line-style text-style)))
-               (finish-output *error-output*)
                (unwind-protect
                     (progn
                       (setf (sheet-medium stream) ,new-medium)
