@@ -1,9 +1,16 @@
 (defpackage #:clim-mop
-  (:use #:sb-pcl))
+  (:use #:sb-pcl)
+  (:shadowing-import-from #:sb-pcl #:eql-specializer-object))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (loop for sym being the external-symbols of :sb-pcl
-	do (export sym :clim-mop)))
+  (loop for sym being the symbols of :clim-mop
+     do (export sym :clim-mop))
+  (loop for other-symbol in '("EQL-SPECIALIZER" "FUNCALLABLE-STANDARD-CLASS")
+     unless (find-symbol other-symbol :clim-mop)
+     do (let ((sym (intern other-symbol :sb-pcl)))
+          (import sym :clim-mop)
+          (export sym :clim-mop))))
+
 
 ;;; In SBCL the Common Lisp versions of CLASS-OF and FIND-CLASS return
 ;;; wrappers which the MOP can't grok, so use the PCL versions
