@@ -6,6 +6,7 @@
 ;;;           Robert Strandh (strandh@labri.u-bordeaux.fr)
 ;;;  (c) copyright 2001 by
 ;;;           Lionel Salabartan (salabart@emi.u-bordeaux.fr)
+;;;           Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -167,12 +168,6 @@
 	(if (or (not width) (zerop width)) (get-width pane) width)
         (if (or (not height) (zerop height)) (get-height pane) height))))
 
-(defun set-width-and-height (rectangular-sheet width height)
-  (multiple-value-bind (x1 y1)
-      (rectangle-edges* (sheet-region rectangular-sheet))
-    (setf (sheet-region rectangular-sheet)
-	  (make-bounding-rectangle x1 y1 (+ x1 width) (+ y1 height)))))
-
 (defun make-extremums-children-ratio (pane children &key (width t) (height t))
   (with-slots (sorted-max-w-r sorted-max-h-r sorted-min-w-r sorted-min-h-r) pane
     (loop for child in children
@@ -271,7 +266,7 @@
     space-requirement))
 
 (defmethod allocate-space ((pane pane) width height)
-  (set-width-and-height pane width height))
+  (resize-sheet pane width height))
 
 (defmethod compute-extremum ((pane pane))
   (declare (ignorable pane))
@@ -397,7 +392,7 @@
 
 (defmethod allocate-space ((pane single-child-composite-pane) width height)
   (when (first (sheet-children pane))
-    (set-width-and-height pane width height)
+    (resize-sheet pane width height)
     (allocate-space (first (sheet-children pane)) width height)))
 
 ;;; TOP-LEVEL-SHEET
@@ -482,16 +477,13 @@
   (make-extremums-children-ratio box (sheet-children box) :height nil))
 
 (defmethod allocate-space ((box hbox-pane) width height)
-  (set-width-and-height box width height)
+  (resize-sheet box width height)
   (allocate-space-internal box width)
   (loop for child in (sheet-children box)
 	for nw = (slot-value child 'new-width)
 	and x = 0 then (+ x nw)
 	and nh = (/ (* height (get-size child nil)) (get-size box nil))
-	do (multiple-value-bind (x1 y1)
-	       (bounding-rectangle* (sheet-region child))
-	     (setf (sheet-transformation child)
-		   (make-translation-transformation (- x x1) (- y1))))
+        do (move-sheet child x 0)
 	   (setf nh (do-in nh (get-min-height child) (get-max-height child)))
 	   (allocate-space child nw (round nh))))
 
@@ -530,16 +522,13 @@
   (make-extremums-children-ratio box (sheet-children box) :width nil))
 
 (defmethod allocate-space ((box vbox-pane) width height)
-  (set-width-and-height box width height)
+  (resize-sheet box width height)
   (allocate-space-internal box height nil)
   (loop for child in (sheet-children box)
 	  for nh = (slot-value child 'new-height)
 	  and y = 0 then (+ y nh)
 	  and nw = (/ (* width (get-size child)) (get-size box))
-	  do (multiple-value-bind (x1 y1)
-	         (bounding-rectangle* (sheet-region child))
-	       (setf (sheet-transformation child)
-		     (make-translation-transformation (- x1) (- y y1))))
+	  do (move-sheet child 0 y)
 	     (setf nw (do-in nw (get-min-width child) (get-max-width child)))
 	     (allocate-space child (round nw) nh)))
   
@@ -579,15 +568,12 @@
   (make-extremums-children-ratio rack (sheet-children rack) :height nil))
 
 (defmethod allocate-space ((rack hrack-pane) width height)
-  (set-width-and-height rack width height)
+  (resize-sheet rack width height)
   (allocate-space-internal rack width)
   (loop for child in (sheet-children rack)
 	for nw = (slot-value child 'new-width)
 	and x = 0 then (+ x (round nw))
-	do (multiple-value-bind (x1 y1)
-	       (bounding-rectangle* (sheet-region child))
-	     (setf (sheet-transformation child)
-		   (make-translation-transformation (- x x1) (- y1))))
+        do (move-sheet child x 0)
 	   (allocate-space child nw height)))
 
 ;;; VRACK-PANE
@@ -626,15 +612,12 @@
   (make-extremums-children-ratio rack (sheet-children rack) :width nil))
   
 (defmethod allocate-space ((rack vrack-pane) width height)
-  (set-width-and-height rack width height)
+  (resize-sheet rack width height)
   (allocate-space-internal rack height nil)
   (loop for child in (sheet-children rack)
 	for nh = (slot-value child 'new-height)
 	and y = 0 then (+ y nh)
-	do (multiple-value-bind (x1 y1)
-	       (bounding-rectangle* (sheet-region child))
-	     (setf (sheet-transformation child)
-		   (make-translation-transformation (- x1) (- y y1))))
+        do (move-sheet child 0 y)
 	   (allocate-space child width nh)))
 
 ;;; TABLE PANE
@@ -723,7 +706,7 @@
        table (car (format-children table)) :height nil))
 
 (defmethod allocate-space ((table table-pane) width height)
-  (set-width-and-height table width height)
+  (resize-sheet table width height)
   (allocate-space-internal table height nil)
   (allocate-space-internal table width)
   (loop for children in (format-children table)
@@ -734,10 +717,7 @@
 		 for ref in (car (format-children table))
 		 for new-width = (slot-value ref 'new-width)
 		 and x = 0 then (+ x new-width)
-		 do (multiple-value-bind (x1 y1)
-			(bounding-rectangle* (sheet-region child))
-		      (setf (sheet-transformation child)
-			    (make-translation-transformation (- x x1) (- y y1))))
+                 do (move-sheet child x y)
 		    (allocate-space child new-width new-height))))
 
 ;(defmethod sheet-adopt-child :before ((table table-pane) child)
@@ -786,7 +766,7 @@
 		  :min-height (* min-height nb-children-pc)))))
      
 (defmethod allocate-space ((grid grid-pane) width height)
-  (set-width-and-height grid width height)
+  (resize-sheet grid width height)
   (loop with nb-kids-p-l = (table-pane-number grid)
 	with nb-kids-p-c = (/ (length (sheet-children grid)) nb-kids-p-l)
 	for children in (format-children grid) 
@@ -799,10 +779,7 @@
 		 for tmp-width = width then (decf tmp-width new-width)
 		 for new-width = (/ tmp-width l)
 		 for x = 0 then (+ x new-width)
-		 do (multiple-value-bind (x1 y1)
-			(bounding-rectangle* (sheet-region child))
-		      (setf (sheet-transformation child)
-			    (make-translation-transformation (- x x1) (- y y1))))
+		 do (move-sheet child x y)
 		    (allocate-space child (round new-width) (round new-height)))))
 
 ;;; SPACING PANE
@@ -841,7 +818,7 @@ During realization the child of the spacing will have as cordinates
   (compose-space (first (sheet-children spacing))))
 
 (defmethod allocate-space ((spacing spacing-pane) width height)
-  (set-width-and-height spacing width height)
+  (resize-sheet spacing width height)
   (let* ((child (first (sheet-children spacing)))
 	 (margin-width (- (get-width spacing) (get-width child)))
 	 (margin-height (- (get-height spacing) (get-height child))))
@@ -880,7 +857,7 @@ During realization the child of the spacing will have as cordinates
   `(make-pane 'border-pane ,@options :contents (list ,@contents)))
 
 (defmethod allocate-space ((bp border-pane) width height)
-  (set-width-and-height bp width height)
+  (resize-sheet bp width height)
   (when (first (sheet-children bp))
     (let ((border-width (border-pane-width bp)))
       (setf (sheet-transformation (first (sheet-children bp)))
@@ -1011,7 +988,7 @@ During realization the child of the spacing will have as cordinates
         (make-space-requirement))))
 
 (defmethod allocate-space ((pane scroller-pane) width height)
-  (set-width-and-height pane width height)
+  (resize-sheet pane width height)
   (with-slots (viewport vscrollbar hscrollbar) pane
     (when viewport
       (setf (sheet-transformation viewport)
@@ -1073,12 +1050,7 @@ During realization the child of the spacing will have as cordinates
 
 (defmethod scroll-extent ((pane basic-pane) x y)
   (when (is-in-scroller-pane pane)
-    (let ((transform (sheet-transformation pane)))
-      (multiple-value-bind (old-x old-y)
-          (transform-position transform 0 0)
-        (setf (sheet-transformation pane)
-              (compose-translation-with-transformation
-               transform (- x old-x) (- y old-y)))))
+    (move-sheet pane x y)
     (update-scroll-bars pane (sheet-region pane) x y)
     (dispatch-repaint pane (sheet-region pane))))
 
