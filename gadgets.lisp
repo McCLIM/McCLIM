@@ -2511,12 +2511,9 @@ Returns two values, the item itself, and the index within the item list."
                        (handle-event (event-sheet event) event)))))))
         ;; Cleanup and exit
         (when retain-value
-          (setf (gadget-value parent)
+          (setf (gadget-value parent :invoke-callback t)
                 (gadget-value list-pane)))
         (disown-frame manager menu-frame)))))
-
-
-         
 
 (defmethod handle-event ((pane generic-option-pane) (event pointer-button-press-event))
   (popup-list-box pane)
