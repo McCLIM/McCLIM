@@ -28,7 +28,7 @@
              "Unknown")
   #-unix "")
 
-(defclass postscript-medium (medium)
+(defclass postscript-medium (basic-medium)
   ((file-stream :initarg :file-stream :reader postscript-medium-file-stream)
    (title :initarg :title)
    (for :initarg :for)
