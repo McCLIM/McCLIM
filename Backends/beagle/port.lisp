@@ -185,6 +185,9 @@ not initialised, we'll just get \":screen NIL\" in that case."
 	 :name (format nil "~S's event process." port))))
 
 
+;;;(defmethod %beagle-pixel ((port beagle-port) (clim-internals::transformed-design color) &key (alpha 1.0))
+;;;  (send (send (@class ns-color) :color-with-calibrated-red 0 :green 0 :blue 0 :alpha alpha) 'retain))
+
 ;;; From CLX/port.lisp
 (defmethod %beagle-pixel ((port beagle-port) color &key (alpha 1.0))
   (let ((table (slot-value port 'color-table)))
@@ -218,6 +221,22 @@ not initialised, we'll just get \":screen NIL\" in that case."
 (defmethod port-lookup-sheet-for-view ((port beagle-port) view)
   (let ((table (slot-value port 'view-table)))
     (gethash view table)))
+
+;;; The following are direct copies of the ones in CLX/port.lisp.
+;;; They should be suitable for our purposes.
+(defmethod port-allocate-pixmap ((port beagle-port) sheet width height)
+  (let ((pixmap (make-instance 'mirrored-pixmap
+			       :sheet sheet
+			       :width width
+			       :height height
+			       :port port)))
+    (when (sheet-grafted-p sheet)
+      (realize-mirror port pixmap))
+    pixmap))
+
+(defmethod port-deallocate-pixmap ((port beagle-port) pixmap)
+  (when (port-lookup-mirror port pixmap)
+    (destroy-mirror port pixmap)))
 
 ;;; Currently we just use the default "cursor" (pointer pixmap), unless we do something like
 ;;; press the "help" key in which case cocoa gives us a '?' pointer. Varied pointers are not

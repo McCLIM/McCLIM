@@ -305,14 +305,53 @@ This is equal to the length of the provided line-dash pattern."
 ;;; This is intended to specialize on both the from-drawable and to-drawable arguments. from-drawable and
 ;;; to-drawable may be either mediums or pixmaps.
 
+(defun medium-copy-area-aux (from from-x from-y width height to to-x to-y)
+  "Helper method for copying areas. ``from'' and ``to'' must both be 'mirror' objects. From and To coordinates
+must already be transformed as appropriate."
+  (format *debug-io* "Entered medium-copy-area-aux with from = ~S and to = ~S~%" from to)
+  (let* ((source-region (ccl::make-ns-rect (+ (round-coordinate from-x) 0.5)
+					   (+ (round-coordinate from-y) 0.5)
+					   (round-coordinate width)
+					   (round-coordinate height)))
+	 (target-point  (ccl::make-ns-point (+ (round-coordinate to-x) 0.5)
+					    (+ (round-coordinate to-y) 0.5)))
+	 (bitmap-image  (send from :copy-bitmap-from-region source-region)))
+    (format *debug-io* "Set source-region = ~S, target-point = ~S, bitmap image = ~S~%"
+	    source-region target-point (if (eql bitmap-image (%null-ptr))
+					   "nil"
+					 bitmap-image))
+    (when (eql bitmap-image (%null-ptr))
+      (warn "medium.lisp -> medium-copy-area: failed to copy specified region (null bitmap)~%")
+      (return-from medium-copy-area-aux nil))
+    (format *debug-io* "Got a non-null bitmap image~%")
+    (debug-log 3 "medium.lisp: got bitmap-image ~S~%" (ccl::description bitmap-image))
+    (debug-log 3 "pasting bitmap image to: ~A ~A~%" to-x to-y)
+    (format *debug-io* "Doing the biz...~%")
+    (send to :paste-bitmap bitmap-image :to-point target-point)
+    (format *debug-io* "releasing the bitmap image")
+    (send bitmap-image 'release)))
+  
 (defmethod medium-copy-area ((from-drawable beagle-medium) from-x from-y width height
                              (to-drawable beagle-medium) to-x to-y)
+  (format *debug-io* "medium.lisp -> medium-copy-area (medium medium)~%")
   (debug-log 2 "medium.lisp -> medium-copy-area (drawable drawable)~%")
   (debug-log 3 "               fromx=~A fromy=~A width=~A height=~A tox=~A toy=~A~%" from-x from-y width height to-x to-y)
   ;; width + height *are* a width + a height. from-x, from-y and to-x, to-y specify the UPPER-LEFT of the region;
   ;; for us they need to specify the LOWER-LEFT. Remember that these will be flipped in the NSView, but I'm not
   ;; convinced this is quite correct! ::FIXME::
 
+  ;; We appear to COPY the area correctly, but then PASTE it in the wrong place which is a little
+  ;; weird. Output looks like:
+  ;;
+  ;;                m
+  ;; Help (with) com ands
+  ;;
+  ;; with the 2nd 'm' being copied but put in the wrong place. Need to move it down some (i.e. increase y in the
+  ;; mcclim coord system). Hence to "to-y" massaging.
+  ;; Additionally, the paste is a couple of pixels off (slightly too low, and slightly too far to the right).
+  ;; Probably caused by the way we do rounding (note the cursor rectangle is also off slightly when it's moved).
+  ;; Probably want to "round" everything before adding the 0.5 offset.
+  
   ;; Apparently there's no need to do this for the "from" coordinates... strange.
 ;;;  (setf from-y (+ from-y height))
   (setf to-y   (+ to-y   height))
@@ -330,73 +369,56 @@ This is equal to the length of the provided line-dash pattern."
                               from-x from-y)
     (with-transformed-position ((sheet-native-transformation (medium-sheet to-drawable))
                                 to-x to-y)
-	;; We appear to COPY the area correctly, but then PASTE it in the wrong place which is a little
-	;; weird. Output looks like:
-	;;
-        ;;                m
-	;; Help (with) com ands
-	;;
-        ;; with the 2nd 'm' being copied but put in the wrong place. Need to move it down some (i.e. increase y in the
-	;; mcclim coord system). Hence to "to-y" massaging above.
-	;; Additionally, the paste is a couple of pixels off (slightly too low, and slightly too far to the right). Probably
-	;; caused by the way we do rounding (note the cursor rectangle is also off slightly when it's moved).
-	;; Probably want to "round" everything before adding the 0.5 offset.
-        (let* ((source-region (ccl::make-ns-rect (+ (round-coordinate from-x) 0.5)
-						 (+ (round-coordinate from-y) 0.5)
-						 (round-coordinate width)
-						 (round-coordinate height)))
-	       (target-point  (ccl::make-ns-point (+ (round-coordinate to-x) 0.5)
-						  (+ (round-coordinate to-y) 0.5)))
-	       (bitmap-image  (send (sheet-direct-mirror (medium-sheet from-drawable)) :copy-bitmap-from-region source-region)))
-	  (when (eql bitmap-image (%null-ptr))
-	    (warn "medium.lisp -> medium-copy-area: failed to copy specified region (null bitmap)~%")
-	    nil)
-	  (debug-log 3 "medium.lisp: got bitmap-image ~S~%" (ccl::description bitmap-image))
-	  (debug-log 3 "pasting bitmap image to: ~A ~A~%" to-x to-y)
-	  (send (sheet-direct-mirror (medium-sheet to-drawable)) :paste-bitmap bitmap-image :to-point target-point)
-	  (send bitmap-image 'release)))))
-  
+	(medium-copy-area-aux (sheet-direct-mirror (medium-sheet from-drawable)) from-x from-y
+			      width height
+			      (sheet-direct-mirror (medium-sheet to-drawable)) to-x to-y))))
+
+;;;        (let* ((source-region (ccl::make-ns-rect (+ (round-coordinate from-x) 0.5)
+;;;                                                 (+ (round-coordinate from-y) 0.5)
+;;;                                                 (round-coordinate width)
+;;;                                                 (round-coordinate height)))
+;;;               (target-point  (ccl::make-ns-point (+ (round-coordinate to-x) 0.5)
+;;;                                                  (+ (round-coordinate to-y) 0.5)))
+;;;               (bitmap-image  (send (sheet-direct-mirror (medium-sheet from-drawable)) :copy-bitmap-from-region source-region)))
+;;;          (when (eql bitmap-image (%null-ptr))
+;;;            (warn "medium.lisp -> medium-copy-area: failed to copy specified region (null bitmap)~%")
+;;;            nil)
+;;;          (debug-log 3 "medium.lisp: got bitmap-image ~S~%" (ccl::description bitmap-image))
+;;;          (debug-log 3 "pasting bitmap image to: ~A ~A~%" to-x to-y)
+;;;          (send (sheet-direct-mirror (medium-sheet to-drawable)) :paste-bitmap bitmap-image :to-point target-point)
+;;;          (send bitmap-image 'release)))))
+
 (defmethod medium-copy-area ((from-drawable beagle-medium) from-x from-y width height
                              (to-drawable pixmap) to-x to-y)
-  (declare (ignore from-drawable from-x from-y
-		   width height
-		   to-drawable to-x to-y))
+  (format *debug-io* "medium.lisp -> medium-copy-area (medium pixmap)~%")
   (debug-log 2 "medium.lisp -> medium-copy-area (drawable pixmap)~%")
-  (error "medium-copy-area (drawable -> pixmap) not implemented"))
-
-;;; Don't forget to round-coordinate!
-
-;;;  (with-transformed-position ((sheet-native-transformation (medium-sheet from-drawable))
-;;;                              from-x from-y)
-;;;    (xlib:copy-area (sheet-direct-mirror (medium-sheet from-drawable))
-;;;                    (medium-gcontext from-drawable +background-ink+)
-;;;                    (round from-x) (round from-y) (round width) (round height)
-;;;                    (pixmap-mirror to-drawable)
-;;;                    (round to-x) (round to-y))))
+;;;  (setf to-y (+ to-y height))
+  (with-transformed-position ((sheet-native-transformation (medium-sheet from-drawable))
+			      from-x from-y)
+    (medium-copy-area-aux (sheet-direct-mirror (medium-sheet from-drawable)) from-x from-y
+			  width height
+			  (pixmap-mirror to-drawable) to-x to-y)))
 
 (defmethod medium-copy-area ((from-drawable pixmap) from-x from-y width height
                              (to-drawable beagle-medium) to-x to-y)
-  (declare (ignore from-drawable from-x from-y
-		   width height
-		   to-drawable to-x to-y))
+  (format *debug-io* "medium.lisp -> medium-copy-area (pixmap medium)~%")
   (debug-log 2 "medium.lisp -> medium-copy-area (pixmap drawable)~%")
-  (error "medium-copy-area (pixmap -> drawable) not implemented"))
+  (setf to-y (+ to-y height))
+  (with-transformed-position ((sheet-native-transformation (medium-sheet to-drawable))
+			      to-x to-y)
+    (medium-copy-area-aux (pixmap-mirror from-drawable) from-x from-y
+			  width height
+			  (sheet-direct-mirror (medium-sheet to-drawable)) to-x to-y)))
 
-;;;  (with-transformed-position ((sheet-native-transformation (medium-sheet to-drawable))
-;;;                              to-x to-y)
-;;;    (xlib:copy-area (pixmap-mirror from-drawable)
-;;;                    (medium-gcontext to-drawable +background-ink+)
-;;;                    (round from-x) (round from-y) (round width) (round height)
-;;;                    (sheet-direct-mirror (medium-sheet to-drawable))
-;;;                    (round to-x) (round to-y))))
 
 (defmethod medium-copy-area ((from-drawable pixmap) from-x from-y width height
                              (to-drawable pixmap) to-x to-y)
-  (declare (ignore from-drawable from-x from-y
-		   width height
-		   to-drawable to-x to-y))
+  (format *debug-io* "medium.lisp -> medium-copy-area (pixmap pixmap)~%")
   (debug-log 2 "medium.lisp -> medium-copy-area (pixmap pixmap)~%")
-  (error "medium-copy-area (pixmap -> pixmap) not implemented"))
+  (medium-copy-area-aux (pixmap-mirror from-drawable) from-x from-y
+			width height
+			(pixmap-mirror to-drawable) to-x to-y))
+  
 
 ;;;  (xlib:copy-area (pixmap-mirror from-drawable)
 ;;;                  (medium-gcontext from-drawable +background-ink+)

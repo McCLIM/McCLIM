@@ -367,6 +367,44 @@ object wraps the ObjC object,rather than it being a direct MAPCPTR reference.
 								   #$NSOtherMouseDraggedMask
 								   #$NSScrollWheelMask))))
 
+(defmethod realize-mirror ((port beagle-port) (pixmap pixmap))
+  (debug-log 2 "mirror.lisp -> realize-mirror ~S~%" pixmap)
+  (when (null (port-lookup-mirror port pixmap))
+    ;; Ignore direct mirror of (pixmap-sheet pixmap) - appears to be CLX specific...
+    ;; -> [[NSImage alloc] initWithSize: <NSS>ize]
+;;;    (rlet ((size :<NSS>ize :width  (coerce (pixmap-width pixmap) 'short-float)
+;;;		           :height (coerce (pixmap-height pixmap) 'short-float)))
+;;;      (let ((pix (send (make-instance 'ns::ns-image :init-with-size size) 'retain)))
+;;;	(port-register-mirror port pixmap pix)))
+;;;    (values)))
+
+    (let* (;;(desired-color +white+)
+	   ;; Take the width / height from the mirror-region if there's one set, otherwise from the
+	   ;; space requirement.
+	   (width (coerce (pixmap-width pixmap) 'short-float))
+	   (height (coerce (pixmap-height pixmap) 'short-float))
+	   (mirror (make-instance 'lisp-image))) ;; :with-frame rect)))
+      (send mirror 'retain)
+      (slet ((size (ccl::ns-make-size width height)))
+        (send mirror :set-size size))
+      ;; Don't need a tracking rect since pixmaps are never 'on screen' and therefore the
+      ;; mouse can't move into / out of them.
+;;;      (send mirror 'establish-tracking-rect)
+      ;; There's a specific method in NSImage to set the background colour; use that if we
+      ;; need to set one. Note that cached NSImages always have background colour = white,
+      ;; apparently.
+      ;; See NSImage setBackgroundColor:
+;;;      (setf (view-background-colour mirror) (%beagle-pixel port desired-color))
+      (debug-log 3 "realize-mirror-aux, about to register mirror ~S for sheet ~S~%" mirror pixmap)
+      (port-register-mirror port pixmap mirror)
+      (debug-log 3 "realize-mirror-aux, done registering mirror~%"))
+      ;; We don't record the view against the sheet; McCLIM keeps track of pixmaps for us
+      ;; already.
+;;;      ;; Also record the view against the (McCLIM) sheet - used to look the sheet up when we get
+;;;      ;; events which identify the view.
+;;;      (let ((vtable (slot-value port 'view-table)))
+;;;        (setf (gethash mirror vtable) sheet))))
+    (port-lookup-mirror port pixmap)))
 
 (defmethod destroy-mirror ((port beagle-port) (sheet mirrored-sheet-mixin))
 ;;;  (format *debug-io* "mirror.lisp -> destroy-mirror ~S~%" sheet)
@@ -382,6 +420,12 @@ object wraps the ObjC object,rather than it being a direct MAPCPTR reference.
 	  (when (typep sheet 'top-level-sheet-pane)
 	    (send (send mirror 'window) 'close))
 	  (send mirror 'release))))
+
+(defmethod destroy-mirror ((port beagle-port) (pixmap pixmap))
+  (let ((mirror (port-lookup-mirror port pixmap)))
+    (when mirror
+      (port-unregister-mirror port pixmap mirror)  ;;(sheet-mirror pixmap))
+      (send mirror 'release))))
 
 ;; The transformation and region stuff has come from CLX/port.lisp - it seemed to make sense to me
 ;; that it should be here instead.

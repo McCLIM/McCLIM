@@ -28,7 +28,7 @@
 
 #||
 
-$Id: events.lisp,v 1.2 2004/07/13 17:39:38 duncan Exp $
+$Id: events.lisp,v 1.3 2004/08/08 16:09:13 duncan Exp $
 
 All these are copied pretty much from CLX/port.lisp
 
@@ -92,9 +92,14 @@ press / release) is handled.")
   (warn "events:port-motion-hints:Motion hints not supported in Beagle backend")
   nil)
 
-(defmethod (setf port-motion-hints) (hint)
-  (declare (ignore hint))
-  (warn "events:setf port-motion-hints:Motion hints not supported in Cocoa backend")
+;;;(defmethod (setf port-motion-hints) (hint)
+;;;  (declare (ignore hint))
+;;;  (warn "events:setf port-motion-hints:Motion hints not supported in Cocoa backend")
+;;;  nil)
+;;;
+(defmethod (setf port-motion-hints) (val (port beagle-port) (sheet mirrored-sheet-mixin))
+;;;  (declare (ignore val port sheet))
+  (warn "events:setf port-motion-hints:Motion hints (2) not supported in Cocoa backend")
   nil)
 
 ;; peek-event from CLX/port.lisp?

@@ -113,13 +113,17 @@
 	     (pref rect :<NSR>ect.origin.y)
 	     (pref rect :<NSR>ect.size.width)
 	     (pref rect :<NSR>ect.size.height))
-  (when (send self 'lock-focus-if-can-draw)
-    (debug-log 1 "focus is locked~%")
-    (let ((bitmap (send (send (@class ns-bitmap-image-rep) 'alloc) :init-with-focused-view-rect rect)))
-      (debug-log 1 "Got bitmap ~S = ~S~%" bitmap (ccl::description bitmap))
-      (send bitmap 'retain)
-      (send self 'unlock-focus)
-      bitmap)))
+  (if (send self 'lock-focus-if-can-draw)
+      (progn
+	(debug-log 1 "focus is locked~%")
+	(let ((bitmap (send (send (@class ns-bitmap-image-rep) 'alloc) :init-with-focused-view-rect rect)))
+	  (debug-log 1 "Got bitmap ~S = ~S~%" bitmap (ccl::description bitmap))
+	  (send bitmap 'retain)
+	  (send self 'unlock-focus)
+	  bitmap))
+    (progn
+      (format *debug-io* "(copy-bitmap...) - FAILED TO LOCK FOCUS ON VIEW ~S!!!~%" self)
+      nil)))
 
 (define-objc-method ((:void :paste-bitmap bitmap :to-point (:<NSP>oint point)) lisp-view)
   (debug-log 1 "lisp-view -> paste-bitmap entered~%")
@@ -130,11 +134,13 @@
 ;  [image dissolveToPoint:point fraction:1.0];
 ;  [image release];
 
-  (when (send self 'lock-focus-if-can-draw)
-    (let ((image (send (send (@class ns-image) 'alloc) :init-with-data (send bitmap "TIFFRepresentation"))))
-      (send image :dissolve-to-point point :fraction 1.0))
-      (send (send self 'window) 'flush-window)
-      (send self 'unlock-focus)))
+  (if (send self 'lock-focus-if-can-draw)
+      (progn
+	(let ((image (send (send (@class ns-image) 'alloc) :init-with-data (send bitmap "TIFFRepresentation"))))
+	  (send image :dissolve-to-point point :fraction 1.0))
+	(send (send self 'window) 'flush-window)
+	(send self 'unlock-focus))
+    (format *debug-io* "(paste-bitmap...) - FAILED TO LOCK FOCUS ON VIEW ~S!!!~%" self)))
 
 ;;; ----------------------------------------------------------------------------
 

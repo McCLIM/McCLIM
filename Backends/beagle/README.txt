@@ -143,18 +143,29 @@ KNOWN LIMITATIONS / TODO LIST
     large output history. Paolo's speed test takes 26 seconds and conses
     16MB on my (admittedly slow) iMac compared to 1.5 seconds on a 2.4GHz
     Pentium IV and unknown (to me) consing.
+    Should be able to speed things up by performing fewer focus lock / unlocks,
+    and by not setting drawing options unless necessary. I don't know how
+    far this will get us though...
 
 2.  When running the Listener (and probably other applications), the resize
     handle is not visible; it's there, but you can't see it. Grab and drag
     with faith and it should work anyway.
 
-3.  There are not yet any aqua look and feel sheets. Sorry, I'm trying to
+3.  There are not yet any aqua look and feel panes. Sorry, I'm trying to
     get everything else working first!
 
-4.  Pixmap support is not implemented; this means there are no icons in the
-    McCLIM Listener, and clim-fig drawing doesn't work.
+-4.-  Pixmap support is not implemented; this means clim-fig drawing doesn't
+    work.
+    This is getting there, although not very efficiently; we are missing a
+    method for (sheet-mirror mirrored-pixmap). This is evident if you run
+    (clim-demo::clim-fig) and actually do some drawing.
+    RESOLVED 08.AUG.04 [NB. this functionality is not too efficient I think
+                       and needs revisiting (like everything else does)]
 
-5.  Mouse down / up appears not to work very well unless the frame
+4.5. Designs (other than colours) aren't implemented - THIS means there are
+    no icons in the Listener.
+
+5.  Mouse down / up on buttons appears not to work very well unless the frame
     containing the buttons is the only active frame.
 
 6.  Swapping between key windows (the window accepting the keyboard input)
@@ -164,6 +175,10 @@ KNOWN LIMITATIONS / TODO LIST
     get the key focus until some other (non-McCLIM) window has been given
     the keyboard focus first (i.e. click on the OpenMCL Listener window,
     then back on the McCLIM Listener window).
+    Additionally, clicking on a scroll-bar (for example) makes the window
+    key, so clicking on a view that accepts keyboard input (interactor)
+    won't then allow keyboard input.
+    We should stop scroll-bars being able to get keyboard input...
 
 7.  Keyboard events are not handled "properly" as far as any OS X user will
     be concerned; only the ASCII characters are recognised, along with
@@ -205,7 +220,7 @@ KNOWN LIMITATIONS / TODO LIST
     is rather intermittent, although the correct menu item appears to always
     be chosen on mouse-click.
 
-16. Windows are put on screen very earlier in the realization process which
+16. Windows are put on screen very early in the realization process which
     wasn't a bad thing during early development (could see how far through
     things got before blowing up) but now it just looks messy.
 
@@ -215,17 +230,29 @@ KNOWN LIMITATIONS / TODO LIST
 18. The back end doesn't clear up after itself very well. You might find it
     necessary to force-quit OpenMCL after you've finished.
 
+19. Menus don't work in CLIM-FIG. No idea why not...
+
+20. Bounding rectangles are slightly off (this can be seen in CLIM-FIG again).
+    It's only a matter of a pixel, maybe 2 in the worst case I've seen.
+    Probably caused by rounding errors in Beagle (we do quite a lot of
+    int -> float conversion and ordinate manipulation (in cocoa 0.0, 0.0 falls
+    'between pixels' - 0.5, 0.5 is 'center of pixel').
+
+21. Highlighting on mouse overs isn't quite right; artefacts are left on the
+    display after the mouse has moved out of the target object bounding
+    rectangle (most easily visible in CLIM-FIG again).
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 WISH LIST
 
 1.  Bring Beagle back end into line with CLX back end in terms of supported
-    McCLIM functionality (basically - pixmap support, flipping ink and line
+    McCLIM functionality (basically - -pixmap-support-,- flipping ink and line
     dashes)
 
 2.  Implement native look and feel
 
-3.  Integrate the OpenMCL debugger into the McCLIM Listener; at the moment
+3.  Integrate the OpenMCL break-loop into the McCLIM Listener; at the moment
     you end up dumped either in the OpenMCL Listener or the terminal window,
     depending (on what I haven't quite worked out) - generally the former.
 
@@ -250,6 +277,11 @@ WISH LIST
 
 12. Look again at sheet hierarchy stuff; I'm pretty sure this only works
     when the graft is in the default orientation.
+
+13. I'd like to see the silica functionality in a separate package; I
+    think (need to check!) that silica + back-end implementation should
+    permit a 'stupid' (i.e. not presentation based) GUI to be written.
+    Some people might find this useful.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
