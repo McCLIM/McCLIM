@@ -156,7 +156,7 @@
      ,@body))
 
 (defmacro bordering ((stream shape) &body body)
-  `(surrounding-output-with-border (,stream :shape ,shape)
+  `(surrounding-output-with-border (,stream :shape ,shape :move-cursor nil)
      ,@body))
 
 (defmacro underlining ((stream) &body body)
@@ -169,10 +169,11 @@
 
 (defun invoke-as-heading (cont &optional ink)
   (with-drawing-options (T :ink (or ink +royal-blue+) :text-style (make-text-style :sans-serif :bold nil))
-     (bordering (T :underline)                        
+    (fresh-line)
+    (bordering (T :underline)                        
       (funcall cont))
-     (terpri)
-     (vertical-gap T)))
+    (fresh-line)
+    (vertical-gap T)))
 
 ;;; Pathname evil
 ;;; Fixme: Invent some more useful operators for manipulating pathnames, add a

@@ -553,10 +553,10 @@
                      pathname))
          (dir (list-directory (gen-wild-pathname pathname))))
 
-    (with-text-family (T :sans-serif)
+    (with-text-family (T :sans-serif)      
       (invoke-as-heading
         (lambda ()
-          (format T "~&Directory contents of ")
+          (format T "Directory contents of ")
           (present pathname)))
     
       (when (parent-directory pathname)
@@ -571,13 +571,14 @@
           (items (abbreviating-format-items group :row-wise nil :x-spacing "  " :y-spacing 1
                                             :printer (lambda (x stream)
                                                        (declare (ignore stream))
-                                                       (pretty-pretty-pathname x *standard-output* :long-name full-names)))
+                                                       (pretty-pretty-pathname x *standard-output*
+                                                                               :long-name full-names)))
                  #+NIL
                  (format-items group :row-wise nil :x-spacing "  " :y-spacing 1
                                :printer (lambda (x stream)
                                           (declare (ignore stream))
                                           (pretty-pretty-pathname x *standard-output* :long-name full-names)))
-                 (goatee::reposition-stream-cursor *standard-output*)
+                 (goatee::reposition-stream-cursor *standard-output*)                 
                  (vertical-gap T))
           (list (dolist (ent group)
                   (let ((ent (merge-pathnames ent pathname))) ; This is for CMUCL, see above. (fixme!)
@@ -832,8 +833,7 @@
 ;;; Eval
 
 (defun hackish-present (object)
-  "Hack of the day.. let McCLIM determine presentation type to use, except for lists, because the
-list presentation method is inappropriate for lisp return values."
+  "Hack of the day.. let McCLIM determine presentation type to use, except for lists, because the list presentation method is inappropriate for lisp return values."
   (typecase object
     (sequence (present object 'expression))
     (T (present object))))
