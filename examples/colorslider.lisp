@@ -87,7 +87,6 @@
 	    :value "Pick a color"
 	    :height 50)
    (slider-r  :slider
-;	      :orientation :horizontal
 	      :drag-callback callback-red
 	      :value-changed-callback callback-red
 	      :min-value 0
