@@ -81,6 +81,7 @@
 ;   "exports"
    "gadgets"
    "menu"
+   "postscript-medium"
    ))
    
 (defsystem :clim-clx #-mk-defsystem ()
@@ -110,4 +111,5 @@
    "examples/address-book"
    "examples/traffic-lights"
    "examples/clim-fig"
+   "examples/postscript-test"
    ))
