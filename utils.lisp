@@ -49,6 +49,7 @@ evaluated."
           for (store-var) = store-vars
           for old-value-name = (gensym)
           nconc (mapcar #'list vars vals) into temp-init-let-form
+	  collect store-var into temp-save-old-values-let-form
           collect (list old-value-name reader-form) into temp-save-old-values-let-form
           nconc (list store-var new-value) into temp-new-values-set-form
           nconc (list store-var old-value-name) into temp-old-values-set-form
