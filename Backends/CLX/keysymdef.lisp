@@ -49,7 +49,7 @@
 ;; * programming, but could have been arbitrary (at the cost of lookup
 ;; * tables in client code.
 ;; */
-(define-keysym :BACK-SPACE #xff08)
+(define-keysym :BACKSPACE #xff08)
 (define-keysym :TAB #xff09)
 (define-keysym :LINEFEED #xff0a)
 (define-keysym :CLEAR #xff0b)
