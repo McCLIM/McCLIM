@@ -6,6 +6,7 @@
 ;;;  (c) copyright 2001 by 
 ;;;           Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
 ;;;           Lionel Salabartan (salabart@emi.u-bordeaux.fr)
+;;;           Alexey Dejneka (adejneka@comail.ru)
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -320,7 +321,10 @@
    (drawing-p :initform t :accessor stream-drawing-p)
    (output-history :initform (make-instance 'standard-tree-output-history)
                    :reader stream-output-history)
-   (current-output-record :accessor stream-current-output-record)))
+   (current-output-record :accessor stream-current-output-record)
+   (current-text-output-record :initform nil :accessor stream-current-text-output-record)
+   (local-record-p :initform t
+                   :documentation "This flag is used for dealing with streams outputting strings char-by-char.")))
 
 (defun output-recording-stream-p (x)
   (typep x 'output-recording-stream))
@@ -358,6 +362,8 @@ according to the flags RECORD and DRAW."
   (with-slots (recording-p drawing-p) stream
     (let ((old-record recording-p)
           (old-draw drawing-p))
+      (unless (eq old-record record)
+        (stream-close-text-output-record stream))
       (unwind-protect
            (progn
              (setq recording-p record
@@ -399,6 +405,7 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
                                           continuation record-type
                                           &rest initargs
                                           &key parent)
+  (stream-close-text-output-record stream)
   (unless parent
     (setq parent (stream-current-output-record stream)))
   (let ((new-record (apply #'make-instance record-type :parent parent initargs))
@@ -620,7 +627,8 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
    (end-x)
    (end-y)
    (wrapped :initform nil
-	    :accessor text-record-wrapped)))
+	    :accessor text-record-wrapped)
+   ))
 
 (defun text-displayed-output-record-p (x)
   (typep x 'text-displayed-output-record))
@@ -634,11 +642,19 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
 
 (defmethod tree-recompute-extent ((text-record text-displayed-output-record))
   (with-slots (parent start-x start-y end-x end-y x1 y1 x2 y2) text-record
-    (setq x1 start-x
-	  x2 end-x
-	  y1 start-y
-	  y2 end-y)
-    (recompute-extent-for-changed-child parent text-record start-x start-y end-x end-y)))
+              (setq x1 start-x
+                    x2 end-x
+                    y1 start-y
+                    y2 end-y)
+              (when parent 
+                (recompute-extent-for-changed-child parent text-record start-x start-y end-x end-y))))
+
+(defmethod setf*-output-record-position :after (nx ny (record text-displayed-output-record))
+  (with-slots (x1 y1 x2 y2 start-x start-y end-x end-y) record
+                  (setq start-x x1
+                        start-y y1)
+                        end-x x2
+                        end-y y2))
 
 (defmethod add-character-output-to-text-record ((text-record text-displayed-output-record)
 						character text-style width height
@@ -658,29 +674,38 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
 (defmethod add-string-output-to-text-record ((text-record text-displayed-output-record)
 					     string start end text-style width height
 					     new-baseline)
-  (setq string (subseq string start end))
-  (with-slots (strings baseline max-height end-x) text-record
-    (setq baseline (max baseline new-baseline)
-	  strings (nconc strings (list (list end-x text-style (make-array (length string) :initial-contents string :element-type 'character :adjustable t :fill-pointer t))))
-	  end-x (+ end-x width)
-	  max-height (max max-height height)
-	  )))
+  (if end
+      (setq end (min end (length string)))
+      (setq end (1- (length string))))
+  (let ((length (max 0 (- (1+ end) start))))
+    (setq string (make-array length :displaced-to string :displaced-index-offset start))
+    (with-slots (strings baseline max-height start-y end-x end-y) text-record
+                (setq baseline (max baseline new-baseline)
+                      strings (nconc strings (list (list end-x text-style (make-array (length string) :initial-contents string :element-type 'character :adjustable t :fill-pointer t))))
+                      end-x (+ end-x width)
+                      max-height (max max-height height)
+                      end-y (max end-y (+ start-y max-height))
+                      )))
+  (tree-recompute-extent text-record))
 
 (defmethod replay-output-record ((record text-displayed-output-record) stream
 				 &optional region x-offset y-offset)
-  (declare (ignore x-offset y-offset))
-  (with-slots (strings baseline max-height start-x start-y wrapped) record
+  (with-slots (strings baseline max-height start-x start-y wrapped
+               x y initial-x1 initial-y1) record
     (let ((old-medium (sheet-medium stream))
 	  (new-medium (make-medium (port stream) stream)))
       (unwind-protect
 	  (progn
 	    (setf (sheet-medium stream) new-medium)
 	    (setf (medium-sheet new-medium) stream)
+            (setf (medium-transformation new-medium)
+                   (make-translation-transformation
+                    x-offset y-offset))
 	    (loop for y = (+ start-y baseline)
 		  for (x text-style string) in strings
 		  do (setf (medium-text-style new-medium) text-style)
 		     (draw-text* (sheet-medium stream) string x y
-				 :text-style text-style :clipping-region region))
+				 :text-style text-style :clipping-region #-nil +everywhere+ #+nil(untransform-region (medium-transformation new-medium) region)))
 	    (if wrapped
 		(draw-rectangle* (sheet-medium stream)
 				 (+ wrapped 0) start-y (+ wrapped 4) (+ start-y max-height)
@@ -705,13 +730,13 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
 
 
 
-(defmethod get-text-record ((stream output-recording-stream))
-  (let ((trec (stream-current-output-record stream)))
-    (unless (text-displayed-output-record-p trec)
-      (setq trec (make-instance 'text-displayed-output-record))
-      (add-output-record trec (stream-output-history stream))
-      (setf (stream-current-output-record stream) trec)
-      (with-slots (start-x start-y end-x end-y x1 y1 x2 y2) trec
+(defmethod stream-text-output-record (stream text-style)
+  (let ((record (stream-current-text-output-record stream)))
+    (unless record
+      (setf (stream-current-text-output-record stream)
+            (setq record (make-instance 'text-displayed-output-record)))
+      (with-slots (start-x start-y end-x end-y x1 y1 x2 y2
+                   initial-x1 initial-y1) record
 	  (multiple-value-bind (cx cy) (stream-cursor-position stream)
 	    (setq start-x cx
 		  start-y (+ cy (stream-vertical-spacing stream))
@@ -720,41 +745,89 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
 		  x1 start-x
 		  x2 end-x
 		  y1 start-y
-		  y2 end-y))))
-    trec))
+		  y2 end-y
+                  initial-x1 x1
+                  initial-y1 start-y
+                  ))))
+    record))
+
+(defmethod stream-close-text-output-record ((stream output-recording-stream))
+  (let ((record (stream-current-text-output-record stream)))
+    (when record
+      (setf (stream-current-text-output-record stream) nil)
+      #|record stream-current-cursor-position to (end-x record) - already done|#
+      (stream-add-output-record stream record))))
+
+(defmethod stream-add-character-output ((stream output-recording-stream)
+                                        character text-style
+                                        width height baseline)
+  (add-character-output-to-text-record (stream-text-output-record stream text-style)
+                                       character text-style width height baseline))
+
+(defmethod stream-add-string-output ((stream output-recording-stream)
+                                     string start end text-style
+                                     width height baseline)
+  (add-string-output-to-text-record (stream-text-output-record stream text-style)
+                                    string start end text-style
+                                    width height baseline))
+
+(defmacro without-local-recording (stream &body body)
+  (let ((old-local-record-p (gensym)))
+    `(with-slots (local-record-p) ,stream
+                 (let ((,old-local-record-p local-record-p))
+                   (setq local-record-p nil)
+                   (unwind-protect
+                       (progn
+                         ,@body)
+                     (setq local-record-p ,old-local-record-p))))))
 
 (defmethod stream-write-char :around ((stream output-recording-stream) char)
-  (when (stream-recording-p stream)
-    (get-text-record stream))
-  (call-next-method)
-  (when (stream-recording-p stream)
-    (cond
-     ((not (or (eql char #\return)
-	       (eql char #\newline)))
+  (when (and (stream-recording-p stream)
+             (slot-value stream 'local-record-p))
+    (if (or (eql char #\return)
+            (eql char #\newline))
+        (stream-close-text-output-record stream)
       (let* ((medium (sheet-medium stream))
-	     (text-style (medium-text-style medium))
-	     (trec (get-text-record stream))
-	     (port (port stream)))
-	(add-character-output-to-text-record
-	 trec char text-style
-	 (stream-character-width stream char :text-style text-style)
-	 (text-style-height text-style port)
-	 (text-style-ascent text-style port))))
-     (t
-      (let ((trec (make-instance 'text-displayed-output-record)))
-	(add-output-record trec (stream-output-history stream))
-	(setf (stream-current-output-record stream) trec)
-	(with-slots (start-x start-y end-x end-y x1 y1 x2 y2) trec
-	  (multiple-value-bind (cx cy) (stream-cursor-position stream)
-	    (setq start-x cx
-		  start-y (+ cy (stream-vertical-spacing stream))
-		  end-x start-x
-		  end-y start-y
-		  x1 start-x
-		  x2 end-x
-		  y1 start-y
-		  y2 end-y))))))))
+             (text-style (medium-text-style medium))
+             (port (port stream)))
+        (stream-add-character-output stream char text-style
+                                     (stream-character-width stream char :text-style text-style)
+                                     (text-style-height text-style port)
+                                     (text-style-ascent text-style port)))))
+  (without-local-recording stream
+                           (call-next-method)))
+
+(defmethod stream-write-string :around ((stream output-recording-stream) string
+                                        &optional (start 0) end)
+  
+  (when (and (stream-recording-p stream)
+             (slot-value stream 'local-record-p))
+    (let* ((medium (sheet-medium stream))
+           (text-style (medium-text-style medium))
+           (port (port stream)))
+      (stream-add-string-output stream string start end text-style
+                                (stream-string-width stream string
+                                                     :start start :end end
+                                                     :text-style text-style)
+                                (text-style-height text-style port)
+                                (text-style-ascent text-style port))))
+  (without-local-recording stream
+                           (call-next-method)))
+  
+
+(defmethod stream-finish-output :after ((stream output-recording-stream))
+  (stream-close-text-output-record stream))
+
+(defmethod stream-force-output :after ((stream output-recording-stream))
+  (stream-close-text-output-record stream))
+
+(defmethod stream-terpri :after ((stream output-recording-stream))
+  (stream-close-text-output-record stream))
+
+;(defmethod stream-set-cursor-position :after ((stream output-recording-stream))
+;  (stream-close-text-output-record stream))
 
 (defmethod stream-wrap-line :before ((stream output-recording-stream))
   (when (stream-recording-p stream)
-    (setf (text-record-wrapped (get-text-record stream)) (stream-text-margin stream))))
+    (setf (text-record-wrapped (stream-text-output-record stream nil)) ; FIXME!
+          (stream-text-margin stream))))
