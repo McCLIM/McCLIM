@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.78 2002/04/30 09:49:01 gilbert Exp $
+;;; $Id: panes.lisp,v 1.79 2002/05/05 03:41:03 adejneka Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -156,7 +156,7 @@
 
 ;;; GENERIC FUNCTIONS
 
-(defgeneric compose-space (pane))
+(defgeneric compose-space (pane &key width height))
 (defgeneric allocate-space (pane width height))
 (defgeneric change-space-requirements (pane &rest rest))
 (defgeneric note-space-requirements-changed (sheet pane))
@@ -330,9 +330,9 @@
 (defmethod (setf medium-background) (ink (pane pane))
   (setf (medium-background (sheet-medium pane)) ink))
 
-(defmethod compose-space ((pane pane))
-  (make-space-requirement :width 200
-			  :height 200))
+(defmethod compose-space ((pane pane) &key width height)
+  (make-space-requirement :width (or width 200)
+			  :height (or height 200)))
 
 ;;???
 (defmethod allocate-space :before ((pane pane) width height)
@@ -544,7 +544,9 @@
                          :min-height (or user-min-height user-height 2)
                          :max-height (or user-max-height user-height 2))))
 
-(defmethod compose-space :around ((pane space-requirement-options-mixin))
+(defmethod compose-space :around ((pane space-requirement-options-mixin)
+                                  &key width height)
+  (declare (ignore width height))
   ;; merge user specified options.
   (let ((sr (call-next-method)))
     (unless sr
@@ -565,7 +567,8 @@
       (resize-sheet pane width height))
     (call-next-method)))
 
-(defmethod compose-space :around ((pane layout-protocol-mixin))
+(defmethod compose-space :around ((pane layout-protocol-mixin) &key width height)
+  (declare (ignore width height))
   (or (pane-space-requirement pane)
       (setf (pane-space-requirement pane)
         (call-next-method))))
@@ -686,9 +689,10 @@
   (when contents
     (sheet-adopt-child pane (first contents))))
 
-(defmethod compose-space ((pane single-child-composite-pane))
+(defmethod compose-space ((pane single-child-composite-pane) &key width height)
   (if (sheet-children pane)
-      (compose-space (first (sheet-children pane)))
+      (compose-space (first (sheet-children pane))
+                     :width width :height height)
       (make-space-requirement)))
 
 (defmethod allocate-space ((pane single-child-composite-pane) width height)
@@ -711,8 +715,9 @@
       ;; #+NIL
       (allocate-space pane (space-requirement-width sr) (space-requirement-height sr))
       nil)))
-  
-(defmethod compose-space ((pane top-level-sheet-pane))
+
+(defmethod compose-space ((pane top-level-sheet-pane) &key width height)
+  (declare (ignore width height))
   (compose-space (first (sheet-children pane))))
 
 (defmethod allocate-space ((pane top-level-sheet-pane) width height)
@@ -800,7 +805,8 @@
   ;; although it should. --GB
   ())
 
-(defmethod compose-space ((pane null-pane))
+(defmethod compose-space ((pane null-pane) &key width height)
+  (declare (ignore width height))
   (make-space-requirement :width 0 :min-width 0 :max-width 0
                           :height 0 :min-height 0 :max-height 0))
 
@@ -851,7 +857,8 @@
   (:documentation
    "Mixin class for layout panes, which want to behave like a HRACK/VRACK."))
 
-(defmethod compose-space ((pane box-layout-mixin))
+(defmethod compose-space ((pane box-layout-mixin) &key width height)
+  (declare (ignore width height))
   (if (eq (box-layout-orientation pane) :vertical)
       (box-layout-mixin/vertically-compose-space pane)
       (box-layout-mixin/horizontally-compose-space pane)))
@@ -1199,7 +1206,8 @@
      (loop for i from 0 below (array-dimension array 0)
          collect (compose-space (aref array i j))))))
 
-(defmethod compose-space ((pane table-pane))
+(defmethod compose-space ((pane table-pane) &key width height)
+  (declare (ignore width height))
   (with-slots (array) pane
     (let ((rsrs (loop for i from 0 below (array-dimension array 0) 
                     collect (table-pane-row-space-requirement pane i)))
@@ -1287,7 +1295,8 @@
 (defun grid-p (pane)
   (typep pane 'grid-pane))
 
-(defmethod compose-space ((grid grid-pane))
+(defmethod compose-space ((grid grid-pane) &key width height)
+  (declare (ignore width height))
   (mapc #'compose-space (sheet-children grid))
   (loop with nb-children-pl = (table-pane-number grid)
 	with nb-children-pc = (/ (length (sheet-children grid)) nb-children-pl)
@@ -1354,7 +1363,8 @@ During realization the child of the spacing will have as cordinates
              :contents spacing contents))
     (sheet-adopt-child spacing (first contents))))
 
-(defmethod compose-space ((spacing spacing-pane))
+(defmethod compose-space ((spacing spacing-pane) &key width height)
+  (declare (ignore width height))
   (compose-space (first (sheet-children spacing))))
 
 (defmethod allocate-space ((spacing spacing-pane) width height)
@@ -1423,7 +1433,8 @@ During realization the child of the spacing will have as cordinates
 
 (defclass bboard-pane (composite-pane) ())
 
-(defmethod compose-space ((bboard bboard-pane))
+(defmethod compose-space ((bboard bboard-pane) &key width height)
+  (declare (ignore width height))
   (make-space-requirement :width 300 :height 300))
 
 ;;; VIEWPORT
@@ -1473,7 +1484,8 @@ During realization the child of the spacing will have as cordinates
 
 ;;; Layout
 
-(defmethod compose-space ((pane scroller-pane))
+(defmethod compose-space ((pane scroller-pane) &key width height)
+  (declare (ignore width height))
   (with-slots (viewport vscrollbar hscrollbar) pane
     (if viewport
         (let ((req (compose-space viewport)))
@@ -1745,7 +1757,8 @@ During realization the child of the spacing will have as cordinates
              0))
      (+ m0 a))))
 
-(defmethod compose-space ((pane label-pane))
+(defmethod compose-space ((pane label-pane) &key width height)
+  (declare (ignore width height))
   (let* ((w (text-size pane (label-pane-label pane)))
          (a (text-style-ascent (pane-text-style pane) pane))
          (d (text-style-descent (pane-text-style pane) pane))
@@ -1882,7 +1895,8 @@ During realization the child of the spacing will have as cordinates
    "This class implements a pane that supports the CLIM graphics,
     extended input and output, and output recording protocols."))
 
-(defmethod compose-space ((pane clim-stream-pane))
+(defmethod compose-space ((pane clim-stream-pane) &key width height)
+  (declare (ignore width height))
   (make-space-requirement :width 300 :height 300))
 
 (defmethod window-clear ((pane clim-stream-pane))

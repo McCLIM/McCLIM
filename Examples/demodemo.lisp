@@ -160,7 +160,8 @@
 
 (defclass foo-pane (basic-pane permanent-medium-sheet-output-mixin) ())
 
-(defmethod compose-space ((pane foo-pane))
+(defmethod compose-space ((pane foo-pane) &key width height)
+  (declare (ignore width height))
   (make-space-requirement :width 800
                           :height 1e3))
 

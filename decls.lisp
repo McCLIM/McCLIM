@@ -137,7 +137,7 @@
 ;; space-requirement+ sr1 sr2 [Function]
 ;; space-requirement+* space-req &key width min-width max-width height min-height max-height [Function]
 
-(defgeneric compose-space (pane)) ;; &key width height
+(defgeneric compose-space (pane &key width height))
 (defgeneric allocate-space (pane width height))
 (defgeneric change-space-requirements (pane &key resize-frame &rest space-req-keys))
 (defgeneric note-space-requirements-changed (sheet pane))

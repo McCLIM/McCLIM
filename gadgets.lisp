@@ -233,7 +233,8 @@
 
 (defgeneric draw-label (gadget label x y))
 
-(defmethod compose-space ((pane labelled-gadget))
+(defmethod compose-space ((pane labelled-gadget) &key width height)
+  (declare (ignore width height))
   (compose-space-aux pane (gadget-label pane)))
 
 (defmethod compose-space-aux ((pane labelled-gadget) (label string))
@@ -1100,7 +1101,8 @@ and must never be nil."))
     :x-spacing 4
     :y-spacing 4))
 
-(defmethod compose-space ((gadget push-button-pane))
+(defmethod compose-space ((gadget push-button-pane) &key width height)
+  (declare (ignore width height))
   (space-requirement+* (space-requirement+* (compose-label-space gadget)
                                             :min-width (* 2 (pane-x-spacing gadget))
                                             :width (* 2 (pane-x-spacing gadget))
@@ -1166,7 +1168,8 @@ and must never be nil."))
     :y-spacing 3
     :background *3d-normal-color*))
 
-(defmethod compose-space ((pane toggle-button-pane))
+(defmethod compose-space ((pane toggle-button-pane) &key width height)
+  (declare (ignore width height))
   (let ((sr (compose-label-space pane)))
     (space-requirement+*
      (space-requirement+* sr
@@ -1260,7 +1263,8 @@ and must never be nil."))
 		(t))
           (draw-label* pane x1 y1 x2 y2 :ink (effective-gadget-foreground pane)))))))
 
-(defmethod compose-space ((gadget menu-button-pane))
+(defmethod compose-space ((gadget menu-button-pane) &key width height)
+  (declare (ignore width height))
   (space-requirement+* (space-requirement+* (compose-label-space gadget)
                                             :min-width (* 2 (pane-x-spacing gadget))
                                             :width (* 2 (pane-x-spacing gadget))
@@ -1287,7 +1291,8 @@ and must never be nil."))
                      :border-width 2
                      :border-style :inset))
 
-(defmethod compose-space ((sb scroll-bar-pane))
+(defmethod compose-space ((sb scroll-bar-pane) &key width height)
+  (declare (ignore width height))
   (if (eq (gadget-orientation sb) :vertical)
       (make-space-requirement :min-width 1
 			      :width *scrollbar-thickness*
@@ -1857,7 +1862,8 @@ and must never be nil."))
                              (princ-to-string s)))) ;defensive programming!
                (list-pane-items pane))))))
 
-(defmethod compose-space ((pane generic-list-pane))
+(defmethod compose-space ((pane generic-list-pane) &key width height)
+  (declare (ignore width height))
   (let* ((n (length (generic-list-pane-item-strings pane)))
          (w (reduce #'max (map 'vector (lambda (item-string)
                                          (text-size pane item-string))
@@ -1942,7 +1948,8 @@ and must never be nil."))
   (handle-repaint pane (sheet-region pane))
   )
 
-(defmethod compose-space ((pane text-field-pane))
+(defmethod compose-space ((pane text-field-pane) &key width height)
+  (declare (ignore width height))
   (with-sheet-medium (medium pane)
     (let ((as (text-style-ascent (medium-text-style medium) medium))
           (ds (text-style-descent (medium-text-style medium) medium))
@@ -1969,7 +1976,8 @@ and must never be nil."))
 	   :initform 300
 	   :reader text-editor-height)))
 
-(defmethod compose-space ((pane text-editor-pane))
+(defmethod compose-space ((pane text-editor-pane) &key width height)
+  (declare (ignore width height))
   (let ((width (text-editor-width pane))
 	(height (text-editor-height pane)))
   (make-space-requirement :width width

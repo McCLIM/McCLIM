@@ -547,7 +547,8 @@
            (draw-polygon pane frame :filled t :ink (effective-gadget-foreground pane))))
         (draw-label* pane x1 y1 x2 y2 :ink (pane-inking-color pane))))))
 
-(defmethod compose-space ((gadget pixie-menu-button-pane))
+(defmethod compose-space ((gadget pixie-menu-button-pane) &key width height)
+  (declare (ignore width height))
   (space-requirement+* (space-requirement+* (compose-label-space gadget :wider 15 :higher 10)
                                             :min-width (* 2 (pane-x-spacing gadget))
                                             :width (* 2 (pane-x-spacing gadget))
@@ -627,7 +628,8 @@
                             :clipping-region (make-rectangle* 0 0 image-width image-height))))))
     (copy-from-pixmap image-pixmap 0 0 image-width image-height pane 0 0)))
 
-(defmethod compose-space ((pane pixie-image-pane))
+(defmethod compose-space ((pane pixie-image-pane) &key width height)
+  (declare (ignore width height))
   (with-slots (image-width image-height) pane
     (let ((w image-width)
           (h image-height))
