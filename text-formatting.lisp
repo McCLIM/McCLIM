@@ -148,11 +148,6 @@ SUPPRESS-SPACE-AFTER-CONJUNCTION are non-standard."
 	    (foo seg-start (1+ i))
 	    (setq seg-start (1+ i))))
 	(foo seg-start end)))))
-  
-(defmethod stream-write-string :around ((stream indenting-output-stream)
-					string &optional (start 0) end)
-  (loop for i from start below end 
-    do (stream-write-char stream (aref string i))))
 		     
 (defmacro indenting-output ((stream indent &key (move-cursor T)) &body body)
   (when (eq stream T)
