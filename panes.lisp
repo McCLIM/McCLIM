@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.104 2002/11/10 14:42:36 gilbert Exp $
+;;; $Id: panes.lisp,v 1.105 2002/11/10 15:10:40 gilbert Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -453,11 +453,11 @@
                                                           (slot-value pane 'y-spacing))
                                                      0))
         (slot-value pane 'user-width)      width
-        (slot-value pane 'user-min-width)  (or min-width 0)
-        (slot-value pane 'user-max-width)  (or max-width +fill+)
+        (slot-value pane 'user-min-width)  min-width
+        (slot-value pane 'user-max-width)  max-width
         (slot-value pane 'user-height)     height
-        (slot-value pane 'user-min-height) (or min-height 0)
-        (slot-value pane 'user-max-height) (or max-height +fill+)))
+        (slot-value pane 'user-min-height) min-height
+        (slot-value pane 'user-max-height) max-height))
 
 (defmethod initialize-instance :after ((pane space-requirement-options-mixin)
                                        &rest space-req-keys)
@@ -509,7 +509,6 @@
       (space-requirement-components sr)
     (with-slots (user-width user-min-width user-max-width
                  user-height user-min-height user-max-height) pane
-
       (dada ((foo width height))
             ;; the user wins on the "primary" dimensions
             ;; ^- this can't be true...
