@@ -159,7 +159,9 @@ sheet-supports-only-one-child error to be signalled."))
 			  :initform nil)
    (device-region :type region
 		  :initform nil)
-   (enabled-p :type boolean :initform nil :accessor sheet-enabled-p)))
+   (enabled-p :type boolean
+              :initform t
+              :accessor sheet-enabled-p)))
 ; Native region is volatile, and is only computed at the first request when it's equal to nil.
 ; Invalidate-cached-region method sets the native-region to nil.
 
@@ -366,16 +368,20 @@ sheet-supports-only-one-child error to be signalled."))
   (mapc #'note-sheet-degrafted (sheet-children sheet)))
 
 (defmethod note-sheet-adopted ((sheet basic-sheet))
+  (declare (ignorable sheet))
   nil)
 
 (defmethod note-sheet-disowned ((sheet basic-sheet))
+  (declare (ignorable sheet))
   nil)
 
 (defmethod note-sheet-enabled ((sheet basic-sheet))
-  (mapc #'note-sheet-enabled (sheet-children sheet)))
+  (declare (ignorable sheet))
+  nil)
 
 (defmethod note-sheet-disabled ((sheet basic-sheet))
-  (mapc #'note-sheet-disabled (sheet-children sheet)))
+  (declare (ignorable sheet))
+  nil)
 
 (defmethod note-sheet-region-changed ((sheet basic-sheet))
   nil) ;have to change
@@ -631,8 +637,7 @@ sheet-supports-only-one-child error to be signalled."))
   ((port :initform nil :initarg :port :accessor port)
    (mirror-transformation
     :initform nil
-    :accessor sheet-mirror-transformation
-    )))
+    :accessor sheet-mirror-transformation)))
 
 (defmethod sheet-direct-mirror ((sheet mirrored-sheet-mixin))
   (port-lookup-mirror (port sheet) sheet))
@@ -687,6 +692,12 @@ sheet-supports-only-one-child error to be signalled."))
                                       (sheet-direct-mirror sheet)))
               (sheet-native-region (sheet-parent sheet))))))
     native-region))
+
+(defmethod (setf sheet-enabled-p) :after (new-value (sheet mirrored-sheet-mixin))
+  (when (sheet-direct-mirror sheet)     ;only do this if the sheet actually has a mirror
+    (if new-value
+        (port-enable-sheet (port sheet) sheet)
+        (port-disable-sheet (port sheet) sheet))))
 
 ;;; Sheets as bounding rectangles
 
