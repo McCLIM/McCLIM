@@ -24,8 +24,11 @@
 
 (in-package :clouseau)
 
+(define-modify-macro togglef () not)
+
 (define-application-frame inspector ()
   ((dico :initform (make-hash-table) :reader dico)
+   (cons-cell-dico :initform (make-hash-table) :reader cons-cell-dico)
    (obj :initarg :obj :reader obj))
   (:pointer-documentation t)
   (:panes
@@ -55,16 +58,23 @@
     (run-frame-top-level
      (make-application-frame 'inspector :obj obj))))
 
-(defparameter *inspected-objects* '())
+(defparameter *inspected-objects* '()
+  "A list of objects which are currently being inspected with
+INSPECT-OBJECT")
 
-(defgeneric inspect-object-briefly (object pane))
-(defgeneric inspect-object (object pane))
+(defgeneric inspect-object-briefly (object pane)
+  (:documentation "Inspect an object in a short form, displaying this
+on PANE. For example, rather than displaying all the slots of a class,
+only the class name would be shown."))
+
+(defgeneric inspect-object (object pane)
+  (:documentation "Inspect an object, displaying it on PANE"))
 
 (defmethod inspect-object :around (object pane)
   (cond ((member object *inspected-objects*)
          (with-output-as-presentation
              (pane object (presentation-type-of object)) 
-           (princ "===")))
+           (princ "===")))		; Prevent infinite loops
         ((not (gethash object (dico *application-frame*)))
          (inspect-object-briefly object pane))
         (t
@@ -84,6 +94,8 @@
 
 (define-presentation-type settable-slot ()
   :inherit-from t)
+(define-presentation-type cons ()
+  :inherit-from t)
 
 (define-presentation-method present (object (type settable-slot) 
 				     stream
@@ -93,6 +105,11 @@
   (format stream "~s" (cdr object)))
 
 (defmacro inspector-table (header &body body)
+  "Present OBJECT (captured from environment) in tabular form, with
+HEADER printed in a box at the top. BODY should output the rows of the
+table using INSPECTOR-TABLE-ROW. Also capured from the macro's
+environment is PANE, which is the pane on which the table will be
+drawn."
   `(with-output-as-presentation
        (pane object (presentation-type-of object))
      (formatting-table (pane)
@@ -102,32 +119,54 @@
              ,header))
          (formatting-cell (pane)
            (formatting-table (pane)
-             ,@body))))))
+             ,@body))))
+    (print-documentation object pane)))
 
 (defmacro inspector-table-row (left right)
+  "Output a table row with two items, LEFT and RIGHT, in the
+environment created by INSPECTOR-TABLE."
   `(formatting-row (pane)
      (formatting-cell (pane :align-x :right)
        ,left)
      (formatting-cell (pane)
        ,right)))
 
+(defun print-documentation (object pane)
+  "Print OBJECT's documentation, if any, to PANE"
+  (when (handler-bind ((warning #'muffle-warning))
+	  (documentation object t))
+    (format pane "~&Documentation: ~A" (documentation object t))))
+
+(defun inspect-structure-or-object (object pane)
+  "Inspect a structure or an object. Since both can be inspected in
+roughly the same way, the common code is in this function, which is
+called by the INSPECT-OBJECT methods for both standard objects and
+structure objects."
+  (let ((class (class-of object)))
+    (inspector-table
+     (print (class-name class) pane)
+     (loop for slot in (reverse (clim-mop:class-slots class))
+	   do (let ((slot-name (clim-mop:slot-definition-name slot)))
+		(inspector-table-row
+		 (with-output-as-presentation
+		     (pane (cons object slot-name) 'settable-slot)
+		   (format pane "~a:" slot-name))
+		 (inspect-object (slot-value object slot-name) pane)))))))
+
 (defmethod inspect-object-briefly ((object standard-object) pane)
   (with-output-as-presentation
       (pane object (presentation-type-of object))
     (format pane "instance of ~S" (class-name (class-of object)))))
 (defmethod inspect-object ((object standard-object) pane)
-  (let ((class (class-of object)))
-    (inspector-table
-        (print (class-name class) pane)
-      (loop for slot in (reverse (clim-mop:class-slots class))
-            do (let ((slot-name (clim-mop:slot-definition-name slot)))
-		  (inspector-table-row
-                    (with-output-as-presentation
-                        (pane (cons object slot-name) 'settable-slot)
-                      (format pane "~a:" slot-name))
-                    (inspect-object (slot-value object slot-name) pane)))))))
+  (inspect-structure-or-object object pane))
 
-(defmethod inspect-object ((object cons) pane)
+(defmethod inspect-object ((object structure-object) pane)
+  (inspect-structure-or-object object pane))
+
+(defun inspect-cons-as-cells (object pane)
+  "Inspect a cons cell in a fancy graphical way. The inconvenient part
+is that this necessarily involves quite a bit of clicking to show a
+moderately-sized list."
   (if (null (cdr object))
       (formatting-table (pane)
 	(formatting-column (pane)
@@ -157,6 +196,44 @@
 	  (formatting-cell (pane)
 	    (inspect-object (cdr object) pane))))))
 
+(defun inspect-cons-as-list (object pane)
+  "Inspect a cons cell in a traditional, plain-text format. The only
+difference between this and simply using the Lisp printer is that this
+code takes advantage of CLIM's tables and presentations to make the
+list as interactive as you would expect."
+  (with-output-as-presentation
+    (pane object 'cons)
+    (formatting-table (pane)
+      (formatting-row (pane)
+        (formatting-cell (pane)
+          (princ "(" pane))
+        (do
+          ((length 0 (1+ length))
+           (cdr (cdr object) (cdr cdr))
+           (car (car object) (car cdr)))
+          ((cond ((eq nil cdr)
+                  (formatting-cell (pane) (inspect-object car pane))
+                  (formatting-cell (pane) (princ ")" pane))
+                  t)
+                 ((not (consp cdr))
+                  (formatting-cell (pane) (inspect-object car pane))
+                  (formatting-cell (pane) (princ "." pane))
+                  (formatting-cell (pane) (inspect-object cdr pane))
+                  (formatting-cell (pane) (princ ")" pane))
+                  t)
+                 ((>= length *print-length*)
+                  (formatting-cell (pane) (inspect-object car pane))
+                  (formatting-cell (pane) (princ "..." pane))
+                  t)
+                 (t nil)))
+          (formatting-cell (pane) (inspect-object car pane)))))))
+
+(defmethod inspect-object ((object cons) pane)
+  (if (gethash object (cons-cell-dico *application-frame*))
+        (inspect-cons-as-cells object pane)
+        (inspect-cons-as-list object pane)))
+
+
 (defmethod inspect-object-briefly ((object hash-table) pane)
   (with-output-as-presentation
       (pane object (presentation-type-of object))
@@ -184,6 +261,33 @@
                  (loop for specializer in (clim-mop:method-specializers method)
                     do (formatting-cell (pane)
                          (format pane "~s " (class-name specializer)))))))))
+
+(defun pretty-print-function (fun)
+  "Print a function in a readable way, returning a string. On most
+implementations this just uses the standard Lisp printer, but it can
+use implementation-specific functions to be more informative."
+  (flet ((generic-print (fun)
+	   (with-output-to-string (string)
+	     (prin1 fun string))))
+    ;; If we have SBCL, try to do fancy formatting. If anything goes
+    ;; wrong with that, fall back on ugly standard PRIN1.
+    #+sbcl (handler-case (format nil "~A ~S"
+				 (sb-impl::%simple-fun-name fun)
+				 (sb-impl::%simple-fun-arglist fun))
+	     (error () (generic-print fun)))
+    ;; FIXME: Other Lisp implementations have ways of getting this
+    ;; information. If you want a better inspector on a non-SBCL Lisp,
+    ;; please add code for it and send patches.
+    #-sbcl (generic-print fun)))
+
+(defmethod inspect-object ((object function) pane)
+  (with-output-as-presentation
+       (pane object (presentation-type-of object))
+    (format pane "Function: ~A"
+	    (pretty-print-function object))
+    #+sbcl (format pane "~&Type: ~A"
+		   (sb-impl::%simple-fun-type object))
+    (print-documentation object pane)))
 
 (defmethod inspect-object-briefly ((object package) pane)
   (with-output-as-presentation
@@ -231,7 +335,10 @@
       (pane object (presentation-type-of object))
     (print object)))
 
-(defmethod inspect-object ((object complex) pane)
+(defun inspect-complex (object pane)
+  "Inspect a complex number. Since complex numbers should be inspected
+the same way briefly and fully, this function can be called by both of
+them."
   (with-output-as-presentation
       (pane object (presentation-type-of object))
     (formatting-table (pane)
@@ -244,6 +351,12 @@
           (inspect-object (imagpart object) pane))
         (formatting-cell (pane)
           (princ ")" pane))))))
+
+(defmethod inspect-object-briefly ((object complex) pane)
+  (inspect-complex object pane))
+
+(defmethod inspect-object ((object complex) pane)
+  (inspect-complex object pane))
 
 (defmethod inspect-object ((object float) pane)
   (inspector-table
@@ -267,6 +380,7 @@
   (with-output-as-presentation
       (pane object (presentation-type-of object))
     (print object)))
+
 (defmethod inspect-object ((object symbol) pane)
   (inspector-table
     (format pane "Symbol ~S" (symbol-name object))
@@ -287,8 +401,17 @@
        (princ "propery list:")
        (dolist (property (symbol-plist object))
          (inspect-object property pane)))))
+(make-instance 'packrat)
+;; Characters are so short that displaying them as "..."  takes almost
+;; as much space as just showing them, and this way is more
+;; informative.
+(defmethod inspect-object-briefly ((object character) pane)
+  (with-output-as-presentation
+      (pane object (presentation-type-of object))
+    (print object pane)))
 
 (defun display-app (frame pane)
+  "Display the APP frame of the inspector"
   (inspect-object (obj frame) pane))
 
 (define-inspector-command (com-quit :name t) ()
@@ -297,13 +420,16 @@
 (define-inspector-command (com-inspect :name t) ()
   (let ((obj (accept t :prompt "Select an object")))
     (clim-sys:make-process #'(lambda () (inspector obj))
-			   :name "inspector")))
+			   :name "Inspector Clouseau")))
+
+(define-inspector-command (com-toggle-show-list-cells :name t)
+  ((obj 'cons :gesture :select :prompt "Select a cons or list"))
+  (togglef (gethash obj (cons-cell-dico *application-frame*))))
 
 (define-inspector-command (com-toggle-inspect :name t)
     ((obj t :gesture :select :prompt "Select an object"))
   (unless (eq obj (obj *application-frame*))
-  (setf (gethash obj (dico *application-frame*))
-        (not (gethash obj (dico *application-frame*))))))
+  (togglef (gethash obj (dico *application-frame*)))))
 
 (define-inspector-command (com-remove-method :name t)
     ((obj 'method :gesture :delete :prompt "Remove method"))
@@ -313,3 +439,33 @@
     ((slot 'settable-slot :gesture :select :prompt "Set slot"))
   (setf (slot-value (car slot) (cdr slot))
 	(accept t :prompt "New slot value")))
+
+(defun slot-documentation (class slot)
+  "Returns the documentation of a slot of a class, or nil. There is,
+unfortunately, no portable way to do this, but the MOP is
+semi-portable and we can use it. To complicate things even more, some
+implementations have unpleasant oddities in the way they store slot
+documentation. For example, in SBCL slot documentation is only
+available in direct slots."
+  (let ((slot-object (find slot (clim-mop:class-direct-slots class)
+			   :key #'clim-mop:slot-definition-name)))
+    (if slot-object
+	(documentation slot-object t)
+	(when (clim-mop:class-direct-superclasses class)
+	  (find-if #'identity
+		   (mapcar #'(lambda (class)
+			       (slot-documentation class slot))
+			   (clim-mop:class-direct-superclasses class)))))))
+
+(define-inspector-command (com-describe-slot :name t)
+    ((slot 'settable-slot :gesture :describe :prompt "Describe slot"))
+  (destructuring-bind (object . slot-name) slot
+    (let* ((stream (get-frame-pane *application-frame* 'int))
+	   (class (class-of object))
+	   (documentation (slot-documentation class slot-name))
+	   (slot-object (find slot-name (clim-mop:class-slots class)
+			      :key #'clim-mop:slot-definition-name)))
+      (when documentation
+	(format stream "~&Documentation: ~A~%" documentation))
+      (format stream "~&Type: ~S~%"
+	      (clim-mop:slot-definition-type slot-object)))))
