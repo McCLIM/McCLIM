@@ -532,12 +532,14 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
              ((slot-value stream 'baseline) (slot-value stream 'baseline)))
 	(with-sheet-medium (medium stream)
 	  (let ((medium-state (make-instance 'complete-medium-state
-					     :medium medium)))
+					     :medium medium))
+		(transformation (medium-transformation medium)))
 	    (unwind-protect
 		 (progn
 		   (setf (medium-transformation medium)
 			 +identity-transformation+)
 		   (replay-output-record record stream region))
+	      (setf (medium-transformation medium) transformation)
 	      (set-medium-graphics-state medium-state medium))))))))
 
 
