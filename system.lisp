@@ -28,14 +28,11 @@
 
 #+cmu
 (progn
-  (unless (fboundp 'stream-read-char)
+  (unless (fboundp 'ext:stream-read-char)
     (unless (ignore-errors (ext:search-list "gray-streams:"))
       (setf (ext:search-list "gray-streams:")
 	'("target:pcl/" "library:subsystems/")))
     (load "gray-streams:gray-streams-library"))
-  #+nil
-  (load (merge-pathnames "patch-cmu.lisp" *clim-directory*))
-
   #-MK-DEFSYSTEM
   (load "library:subsystems/defsystem"))
 
@@ -91,13 +88,17 @@
    "coordinates"
    "transforms"
    "regions"
+
    "sheets"
    "pixmap"
-   "ports"
+   
+   "events"
+
+   "ports" ; depends on events
    "grafts"
    "medium"
    "output"
-   "events"
+
    "input"
    "repaint"
    "graphics"
@@ -120,14 +121,16 @@
    )
 
 (clim-defsystem (:clim-clx :depends-on (:clim-frontend))
+  "Backends/CLX/package"
   "Backends/CLX/keysyms"
   "Backends/CLX/keysymdef"
   "Backends/CLX/port"
   "Backends/CLX/medium"
   "Backends/CLX/graft"
   "Backends/CLX/frame-manager"
-  "Backends/CLX/image"
-  "Backends/CLX/clim-extensions")
+  ;;"Backends/CLX/image"
+  ;;"Backends/CLX/clim-extensions"
+  )
 
 (clim-defsystem (:clim-looks :depends-on (:clim-frontend))
   "looks/pixie")
