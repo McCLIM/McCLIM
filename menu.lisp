@@ -306,8 +306,8 @@
                          ;; function, but value-changed-callback doesn't provide
                          ;; one, so we pass NIL for now.
                          ;; FIXME: We don't have a numeric argument, either.
-                         (let ((command (funcall item nil nil)))
-                           (throw-object-ptype command presentation-type)))))
+                         (let ((command (funcall value nil nil)))
+                           (throw-object-ptype command 'command)))))
       (:divider
        (make-pane-1 manager frame 'menu-divider-leaf-pane
                     :label name
