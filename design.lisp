@@ -120,7 +120,9 @@
       (format stream "~S" name))))
 
 (defmethod make-load-form ((color named-color) &optional env)
-  (make-load-form-saving-slots color :environment env))
+  (declare (ignore env))
+  (with-slots (name red green blue) color
+    `(make-named-color ',name ,red ,green ,blue)))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defvar *color-hash-table* (make-hash-table :test #'eql)))

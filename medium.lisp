@@ -98,7 +98,9 @@
 	   :reader text-style-size)))
 
 (defmethod make-load-form ((obj standard-text-style) &optional env)
-  (make-load-form-saving-slots obj :environment env))
+  (declare (ignore env))
+  (with-slots (family face size) obj
+    `(make-text-style ',family ',face ',size)))
 
 (defun family-key (family)
   (ecase family
