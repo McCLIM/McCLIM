@@ -118,6 +118,12 @@
 ;; - It seems that 3D-BORDER-MIXIN is only used for the scroll-bar, so
 ;;   remove it
 
+;; - Somehow engrafting the push button's medium does not work. The
+;;   text-style initarg does not make it to the sheets medium.
+
+;; - make NIL a valid label, and take it into account when applying
+;;   spacing.
+
 ;;;; ------------------------------------------------------------------------------------------
 ;;;;
 ;;;;  30.3 Basic Gadget Classes
@@ -408,12 +414,15 @@
 
 (defclass labelled-gadget ()
   ((label       :initarg :label
-                :initform "No label"
+                :initform ""
                 :accessor gadget-label)
+   #+NIL
    (align-x     :initarg :align-x
                 :accessor gadget-label-align-x)
+   #+NIL
    (align-y     :initarg :align-y
                 :accessor gadget-label-align-y)
+   #+NIL
    (text-style  :initform *default-text-style*
 		:initarg :text-style
                 :accessor gadget-text-style)))
@@ -810,7 +819,10 @@ and must never be nil."))
                     ((:top) (+ y1 as))
                     ((:center) (/ (+ y1 y2 (- as ds)) 2))
                     ((:bottom) (- y2 ds))
-                    (otherwise (/ (+ y1 y2 (- as ds)) 2))))))) ;defensive programming
+                    (otherwise (/ (+ y1 y2 (- as ds)) 2))) ;defensive programming
+                  ;; Giving the text-style here shouldn't be neccessary --GB
+                  :text-style (pane-text-style pane)
+                  :ink ink))))
 
 ;;;; ------------------------------------------------------------------------------------------
 ;;;;
@@ -1087,6 +1099,7 @@ and must never be nil."))
 ;;; 30.4.1 The concrete push-button Gadget
 
 (defclass push-button-pane  (push-button
+                             labelled-gadget-mixin
                              changing-label-invokes-layout-protocol-mixin
                              arm/disarm-repaint-mixin
                              enter/exit-arms/disarms-mixin
@@ -1597,9 +1610,6 @@ and must never be nil."))
 					   (pointer-event-x event))))
       (dispatch-repaint pane (sheet-region pane)))))
 
-#+NIL
-(defmethod handle-event ((pane slider-pane) (event window-repaint-event))
-  (dispatch-repaint pane (sheet-region pane)))
 
 (defmethod convert-position-to-value ((pane slider-pane) dim)
   (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
@@ -1705,8 +1715,7 @@ and must never be nil."))
                      (setf (gadget-client c) pane)
                      c))
                  choices)))
-    (mapc (curry #'sheet-adopt-child pane) children)
-    (reorder-sheets pane children)))
+    (mapc (curry #'sheet-adopt-child pane) children)))
 
 (defmethod (setf gadget-value) :after (button (radio-box radio-box-pane) &key invoke-callback)
   ;; this is silly, but works ...
@@ -1735,8 +1744,7 @@ and must never be nil."))
                      (setf (gadget-client c) pane)
                      c))
                  choices)))
-    (mapc (curry #'sheet-adopt-child pane) children)
-    (reorder-sheets pane children) ))
+    (mapc (curry #'sheet-adopt-child pane) children) ))
 
 ;;; ------------------------------------------------------------------------------------------
 ;;;  30.4.7 The concrete list-pane and option-pane Gadgets
