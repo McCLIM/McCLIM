@@ -39,8 +39,9 @@
  (defun fix-tracking-pointer-args (args)
    (unless (member '&allow-other-keys args)
      (setq args (append args '(&allow-other-keys))))
-   (unless (eq (car args) '&key)
-     (cons '&key args))))
+   (if (eq (car args) '&key)
+       args
+       (cons '&key args))))
 
 
 (defmacro tracking-pointer
