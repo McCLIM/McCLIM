@@ -103,12 +103,19 @@
 	    (xlib:gcontext-foreground gc) (X-pixel port ink)
 	    (xlib:gcontext-background gc) (X-pixel port (medium-background medium)))
       ;; Here is a bug with regard to clipping ... ;-( --GB )
-      #-NIL
+      #-NIL ; being fixed at the moment, a bit twitchy though -- BTS
       (let ((clipping-region (medium-device-region medium)))
         (unless (region-equal clipping-region +nowhere+)
-          (let ((rect-seq (clipping-region->rect-seq clipping-region)))
-            (when rect-seq
-              (setf (xlib:gcontext-clip-mask gc :yx-banded) rect-seq)))))
+          (let ((tr (sheet-native-transformation (medium-sheet medium))))
+            (let ((rect-seq (clipping-region->rect-seq (transform-region tr clipping-region))))
+              (when rect-seq
+                #+nil ; ok, what McCLIM is generating is not :yx-banded... (currently at least)
+                (setf (xlib:gcontext-clip-mask gc :yx-banded) rect-seq)
+                #-nil ; the region code doesn't support yx-banding...
+                      ; or does it? what does y-banding mean in this implementation?
+                      ; well, apparantly it doesn't mean what y-sorted means
+                      ; to clx :] we stick with :unsorted until that can be sorted out
+                (setf (xlib:gcontext-clip-mask gc :unsorted) rect-seq))))))
       gc)))
 
 (defmethod medium-gcontext ((medium clx-medium) (ink (eql +foreground-ink+)))
@@ -141,11 +148,12 @@
 
 ; this seems to work, but find out why all of these +nowhere+s are coming from
 ; and kill them at the source...
+#-nil
 (defun clipping-region->rect-seq (clipping-region)
   (loop for region in (nreverse (mapcan
                                   (lambda (v) (unless (eq v +nowhere+) (list v)))
                                   (region-set-regions clipping-region
-                                                      :normalize :x-banding)))
+                                                      :normalize :y-banding)))
         as rectangle = (bounding-rectangle region)
         nconcing (list (round (rectangle-min-x rectangle))
                        (round (rectangle-min-y rectangle))

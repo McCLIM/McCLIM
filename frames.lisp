@@ -403,7 +403,7 @@ FRAME-EXIT condition."))
                        `(vertically () (clim-internals::make-menu-bar
                                          ',class-name)
                                        ,pane))
-                      ((consp menu-bar) ;; was: (listp menu-bar) --GB
+                      ((consp menu-bar)
                        `(vertically () (clim-internals::make-menu-bar
                                          (make-command-table nil
                                               :menu ',menu-bar))
@@ -457,7 +457,7 @@ FRAME-EXIT condition."))
                                                     ((eq menu-bar t)
                                                      `(clim-internals::make-menu-bar
                                                         ',class-name))
-                                                    ((listp menu-bar)
+                                                    ((consp menu-bar)
                                                      `(raising (:border-width 2 :background +Gray83+)
                                                         (clim-internals::make-menu-bar
                                                            (make-command-table nil

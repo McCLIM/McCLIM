@@ -4,7 +4,7 @@
 ;;;   Created: 1998-12-02 19:26
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: regions.lisp,v 1.17 2002/04/25 19:55:06 moore Exp $
+;;;       $Id: regions.lisp,v 1.18 2002/04/29 05:00:33 brian Exp $
 ;;; --------------------------------------------------------------------------------------
 ;;;  (c) copyright 1998,1999,2001 by Gilbert Baumann
 ;;;  (c) copyright 2001 by Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
@@ -1191,6 +1191,7 @@
   (multiple-value-bind (x1 y1 x2 y2) (rectangle-edges* rect)
     (make-instance 'standard-rectangle-set :bands (rectangle->xy-bands* x1 y1 x2 y2))))
 
+; Is this completely broken? - BTS
 (defmethod transform-region (tr (self standard-rectangle-set))
   (cond ((rectilinear-transformation-p tr)
          ;; When we have a rectilinear transformation, the result will

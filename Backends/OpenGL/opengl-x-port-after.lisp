@@ -23,7 +23,7 @@
 (defparameter *x-visual* nil)
 (defparameter *opengl-glx-context* nil)
 
-(setf (get :x11 :port-type) 'opengl-port)
+; (setf (get :x11 :port-type) 'opengl-port)
 
 (defmethod initialize-instance :after ((port opengl-port) &rest rest)
   (declare (ignore rest))
@@ -37,101 +37,101 @@
 	 (host (if (string= hostname "localhost") "" hostname))
 	 (screen-id (getf options :screen-id 0)))
     (with-slots (display screen root) port
-      (setf display (xlib:XOpenDisplay host)
-	    screen (xlib:XScreenOfDisplay display screen-id)
-	    root (xlib:XRootWindow display screen-id)))
+      (setf display (xlib-gl:XOpenDisplay host)
+	    screen (xlib-gl:XScreenOfDisplay display screen-id)
+	    root (xlib-gl:XRootWindow display screen-id)))
     (make-graft port)))
 
 (defmethod destroy-port :before ((port opengl-port))
   (let ((display (opengl-port-display port)))
     (when *opengl-glx-context*
-      (gl:glXMakeCurrent display xlib:None xlib:Null)
-      (xlib:free-xvisualinfo *x-visual*)
+      (gl:glXMakeCurrent display xlib-gl:None xlib-gl:Null)
+      (xlib-gl:free-xvisualinfo *x-visual*)
       (gl:glXDestroyContext display *opengl-glx-context*)
       (setf *opengl-glx-context* nil
 	    *x-visual* nil
 	    *current-sheet-signature* 0))
-    (xlib:XCloseDisplay display)))
+    (xlib-gl:XCloseDisplay display)))
 
 
 (defmethod bell ((port opengl-port))
-  (xlib:XBell (opengl-port-display port) 100))
+  (xlib-gl:XBell (opengl-port-display port) 100))
 
 
 ;; Events
 
 (defun event-not-present-p (port)
-  (= (xlib:XPending (opengl-port-display port)) 0))
+  (= (xlib-gl:XPending (opengl-port-display port)) 0))
 
 ; The philosophy is to send the pointer button number, ignoring
 ; the key masks, and returning the higher button corresponding
 ; to the mask
 (defun find-button (mask)
-  (cond ((< mask xlib:Button1MotionMask) 0)
-	((< mask xlib:Button2MotionMask) 1)
-	((< mask xlib:Button3MotionMask) 2)
-	((< mask xlib:Button4MotionMask) 3)
-	((< mask xlib:Button5MotionMask) 4)
+  (cond ((< mask xlib-gl:Button1MotionMask) 0)
+	((< mask xlib-gl:Button2MotionMask) 1)
+	((< mask xlib-gl:Button3MotionMask) 2)
+	((< mask xlib-gl:Button4MotionMask) 3)
+	((< mask xlib-gl:Button5MotionMask) 4)
 	(t 5)))
 
 ; There is a hierarchy in modifier. BUTTON1MOTIONMASK is just
 ; above the key modifier.
 (defmacro key-mod (mask)
-  `(mod ,mask xlib:Button1MotionMask))
+  `(mod ,mask xlib-gl:Button1MotionMask))
 
 (defun get-next-event-aux (port)
-  (let ((event (xlib:make-xevent)))
-    (xlib:XNextEvent (opengl-port-display port) event)
-    (let ((event-type (xlib:xanyevent-type event)))
+  (let ((event (xlib-gl:make-xevent)))
+    (xlib-gl:XNextEvent (opengl-port-display port) event)
+    (let ((event-type (xlib-gl:xanyevent-type event)))
       (prog1
-	  (cond ((eq event-type xlib:keypress)
+	  (cond ((eq event-type xlib-gl:keypress)
 		 (let ((str (make-string 1)))
 		   (declare (type string str))
 		   (make-instance 'key-press-event
-		     :key-name (xlib:XLookupString event str 1
+		     :key-name (xlib-gl:XLookupString event str 1
 						   (make-array 1 :element-type '(unsigned-byte 32))
 						   NULL)
 		     :sheet (find-related-sheet port)
-		     :modifier-state (key-mod (xlib:xkeypressedevent-state event))
-		     :timestamp (xlib:xkeypressedevent-time event))))
+		     :modifier-state (key-mod (xlib-gl:xkeypressedevent-state event))
+		     :timestamp (xlib-gl:xkeypressedevent-time event))))
 		
-		((eq event-type xlib:keyrelease)
+		((eq event-type xlib-gl:keyrelease)
 		 (let ((str (make-string 1)))
 		   (declare (type string str))
 		   (make-instance 'key-release-event
-		     :key-name (xlib:XLookupString event str 1
+		     :key-name (xlib-gl:XLookupString event str 1
 						   (make-array 1 :element-type '(unsigned-byte 32))
-						   xlib:NULL)
+						   xlib-gl:NULL)
 		     :sheet (find-related-sheet port)
-		     :modifier-state (key-mod (xlib:xkeyreleasedevent-state event))
-		     :timestamp (xlib:xkeyreleasedevent-time event))))
+		     :modifier-state (key-mod (xlib-gl:xkeyreleasedevent-state event))
+		     :timestamp (xlib-gl:xkeyreleasedevent-time event))))
 		
-		((eq event-type xlib:buttonpress)
+		((eq event-type xlib-gl:buttonpress)
 		 (make-instance 'pointer-button-press-event
 		   :pointer 0 
-		   :button (xlib:xbuttonpressedevent-button event)
-		   :x (xlib:xbuttonpressedevent-x event)
-		   :y (xlib:xbuttonpressedevent-y event)
+		   :button (xlib-gl:xbuttonpressedevent-button event)
+		   :x (xlib-gl:xbuttonpressedevent-x event)
+		   :y (xlib-gl:xbuttonpressedevent-y event)
 		   :sheet (find-related-sheet port)
-		   :modifier-state (key-mod (xlib:xbuttonpressedevent-state event))
-		   :timestamp (xlib:xbuttonpressedevent-time event)))
+		   :modifier-state (key-mod (xlib-gl:xbuttonpressedevent-state event))
+		   :timestamp (xlib-gl:xbuttonpressedevent-time event)))
 		  
-		((eq event-type xlib:buttonrelease)
+		((eq event-type xlib-gl:buttonrelease)
 		 (make-instance 'pointer-button-release-event
 		   :pointer 0
-		   :button (xlib:xbuttonreleasedevent-button event)
-		   :x (xlib:xbuttonreleasedevent-x event)
-		   :y (xlib:xbuttonreleasedevent-y event)
+		   :button (xlib-gl:xbuttonreleasedevent-button event)
+		   :x (xlib-gl:xbuttonreleasedevent-x event)
+		   :y (xlib-gl:xbuttonreleasedevent-y event)
 		   :sheet (find-related-sheet port)
-		   :modifier-state (key-mod (xlib:xbuttonreleasedevent-state event))
-		   :timestamp (xlib:xbuttonreleasedevent-time event)))
+		   :modifier-state (key-mod (xlib-gl:xbuttonreleasedevent-state event))
+		   :timestamp (xlib-gl:xbuttonreleasedevent-time event)))
 		  
-		((eq event-type xlib:enternotify)
-		 (let ((sheet (port-lookup-sheet port (xlib:xenterwindowevent-window event))))
+		((eq event-type xlib-gl:enternotify)
+		 (let ((sheet (port-lookup-sheet port (xlib-gl:xenterwindowevent-window event))))
 		   (when sheet
-		     (let* ((x (xlib:xenterwindowevent-x event))
-			    (y (xlib:xenterwindowevent-y event))
-			    (modifier (xlib:xenterwindowevent-state event)))
+		     (let* ((x (xlib-gl:xenterwindowevent-x event))
+			    (y (xlib-gl:xenterwindowevent-y event))
+			    (modifier (xlib-gl:xenterwindowevent-state event)))
 		       (declare (type fixnum x y modifier))
 		       (make-instance 'pointer-enter-event
 			 :pointer 0
@@ -140,36 +140,36 @@
 			 :y y
 			 :sheet sheet
 			 :modifier-state (key-mod modifier)
-			 :timestamp (xlib:xenterwindowevent-time event))))))
+			 :timestamp (xlib-gl:xenterwindowevent-time event))))))
 		
-		((eq event-type xlib:leavenotify)
-		 (let ((modifier (xlib:xleavewindowevent-state event)))
+		((eq event-type xlib-gl:leavenotify)
+		 (let ((modifier (xlib-gl:xleavewindowevent-state event)))
 		   (declare (type fixnum modifier))
 		   (prog1
-		       (make-instance (if (eq (xlib:xleavewindowevent-mode event)
-					      xlib:NotifyGrab)
+		       (make-instance (if (eq (xlib-gl:xleavewindowevent-mode event)
+					      xlib-gl:NotifyGrab)
 					  'pointer-ungrab-event
 					  'pointer-exit-event)
 			 :pointer 0
 			 :button (find-button modifier)
-			 :x (xlib:xleavewindowevent-x event)
-			 :y (xlib:xleavewindowevent-y event)
+			 :x (xlib-gl:xleavewindowevent-x event)
+			 :y (xlib-gl:xleavewindowevent-y event)
 			 :sheet (find-related-sheet port)
 			 :modifier-state (key-mod modifier)
-			 :timestamp (xlib:xleavewindowevent-time event))
+			 :timestamp (xlib-gl:xleavewindowevent-time event))
 		     (setf *current-sheet-signature* 0))))
 		  
-		((eq event-type xlib:motionnotify)
-		 (let* ((x (xlib:xmotionevent-x event))
-			(y (xlib:xmotionevent-y event))
-			(modifier (xlib:xmotionevent-state event))
-			(time (xlib:xmotionevent-time event))
+		((eq event-type xlib-gl:motionnotify)
+		 (let* ((x (xlib-gl:xmotionevent-x event))
+			(y (xlib-gl:xmotionevent-y event))
+			(modifier (xlib-gl:xmotionevent-state event))
+			(time (xlib-gl:xmotionevent-time event))
 			(sheet-signature (find-sheet-signature port x y))
 			(sheet (recognize-sheet port sheet-signature)))
 		   (declare (type fixnum x y modifier)
 			    (type (unsigned-byte 24) sheet-signature)
 			    (type bignum  time))
-		   (when (eq (xlib:xmotionevent-window event) (sheet-direct-mirror (opengl-port-top-level port)))
+		   (when (eq (xlib-gl:xmotionevent-window event) (sheet-direct-mirror (opengl-port-top-level port)))
 		   (if (= sheet-signature *current-sheet-signature*)
 		       ;; pointer is in the same sheet as for the previous event
 		       (make-instance 'pointer-motion-event
@@ -221,37 +221,37 @@
 			       :modifier-state modifier
 			       :timestamp time))))))))
 			 
-		((eq event-type xlib:configurenotify)
+		((eq event-type xlib-gl:configurenotify)
 		 ; the configure notification will be only send to the top-level-sheet
 		 (make-instance 'window-configuration-event
-		   :sheet (port-lookup-sheet port (xlib:xconfigureevent-window event))
-		   :x (xlib:xconfigureevent-x event)
-		   :y (xlib:xconfigureevent-y event)
-		   :width (xlib:xconfigureevent-width event)
-		   :height (xlib:xconfigureevent-height event)))
+		   :sheet (port-lookup-sheet port (xlib-gl:xconfigureevent-window event))
+		   :x (xlib-gl:xconfigureevent-x event)
+		   :y (xlib-gl:xconfigureevent-y event)
+		   :width (xlib-gl:xconfigureevent-width event)
+		   :height (xlib-gl:xconfigureevent-height event)))
 
-		((eq event-type xlib:mapnotify)
+		((eq event-type xlib-gl:mapnotify)
 		 ; the mapping notification will be only send to the top-level-sheet
-		 (make-instance 'window-map-event :sheet (port-lookup-sheet port (xlib:xmapevent-window event))))
+		 (make-instance 'window-map-event :sheet (port-lookup-sheet port (xlib-gl:xmapevent-window event))))
 
-		((eq event-type xlib:destroynotify)
+		((eq event-type xlib-gl:destroynotify)
 		 (let ((top-level-sheet (opengl-port-top-level port)))
 		   (opengl-reshape (port-mirror-width port top-level-sheet)
 				   (port-mirror-height port top-level-sheet))
 		   (draw-the-entire-scene port)))
                 
-		((eq event-type xlib:expose)
+		((eq event-type xlib-gl:expose)
 		 ; the exposure notification will be only send to the top-level-sheet
-		 (let ((x (xlib:xexposeevent-x event))
-		       (y (xlib:xexposeevent-y event)))
+		 (let ((x (xlib-gl:xexposeevent-x event))
+		       (y (xlib-gl:xexposeevent-y event)))
 		   (make-instance 'window-repaint-event
-		     :sheet (port-lookup-sheet port (xlib:xexposeevent-window event))
+		     :sheet (port-lookup-sheet port (xlib-gl:xexposeevent-window event))
 		     :region (make-bounding-rectangle x y
-						      (+ x (xlib:xexposeevent-width event))
-						      (+ y (xlib:xexposeevent-height event))))))
+						      (+ x (xlib-gl:xexposeevent-width event))
+						      (+ y (xlib-gl:xexposeevent-height event))))))
 		
 		(t nil))
-	(xlib:free-xevent event)))))
+	(xlib-gl:free-xevent event)))))
 
 
 ;; OpenGL graft
@@ -264,7 +264,7 @@
 	(border-width (make-array 1 :element-type '(unsigned-byte 32)))
 	(depth (make-array 1 :element-type '(unsigned-byte 32)))
 	(root (make-array 1 :element-type '(unsigned-byte 32))))
-    (xlib:XGetGeometry (opengl-port-display port) mirror
+    (xlib-gl:XGetGeometry (opengl-port-display port) mirror
 		       root x y width height border-width depth)
     (values (aref x 0) (aref y 0) (aref width 0) (aref height 0) (aref border-width 0) (aref depth 0))))
 
@@ -302,25 +302,25 @@
     (setf *x-visual*
 	  (gl:glXChooseVisual display screen-id
 			      (make-array 3 :element-type '(signed-byte 32)
-					  :initial-contents (list gl:GLX_RGBA gl:GLX_DOUBLEBUFFER xlib:None))))
+					  :initial-contents (list gl:GLX_RGBA gl:GLX_DOUBLEBUFFER xlib-gl:None))))
     (when (zerop *x-visual*)
       (error "Error with X-Windows : couldn't get an RGB, double-buffered visual."))
-    (let ((attributes (xlib:make-xsetwindowattributes)))
-      (xlib:set-xsetwindowattributes-bit_gravity! attributes xlib:NorthWestGravity)
-      (xlib:set-xsetwindowattributes-colormap! attributes
-					       (xlib:XcreateColormap display root
-								     (xlib:XVisualInfo-visual *x-visual*)
-								     xlib:AllocNone))
-      (xlib:set-xsetwindowattributes-event_mask! attributes
-						 (+ xlib:ExposureMask xlib:KeyPressMask xlib:KeyReleaseMask
-						    xlib:ButtonPressMask xlib:ButtonReleaseMask
-						    xlib:PointerMotionMask
-						    xlib:EnterWindowMask xlib:LeaveWindowMask
-						    xlib:StructureNotifyMask))
-      (let ((window (xlib:XCreateWindow display root 0 0 100 100 0
-					(xlib:XVisualInfo-depth *x-visual*) xlib:InputOutput
-					(xlib:XVisualInfo-visual *x-visual*)
-					(+ xlib:CWBitGravity xlib:CWColormap xlib:CWEventMask)
+    (let ((attributes (xlib-gl:make-xsetwindowattributes)))
+      (xlib-gl:set-xsetwindowattributes-bit_gravity! attributes xlib-gl:NorthWestGravity)
+      (xlib-gl:set-xsetwindowattributes-colormap! attributes
+					       (xlib-gl:XcreateColormap display root
+								     (xlib-gl:XVisualInfo-visual *x-visual*)
+								     xlib-gl:AllocNone))
+      (xlib-gl:set-xsetwindowattributes-event_mask! attributes
+						 (+ xlib-gl:ExposureMask xlib-gl:KeyPressMask xlib-gl:KeyReleaseMask
+						    xlib-gl:ButtonPressMask xlib-gl:ButtonReleaseMask
+						    xlib-gl:PointerMotionMask
+						    xlib-gl:EnterWindowMask xlib-gl:LeaveWindowMask
+						    xlib-gl:StructureNotifyMask))
+      (let ((window (xlib-gl:XCreateWindow display root 0 0 100 100 0
+					(xlib-gl:XVisualInfo-depth *x-visual*) xlib-gl:InputOutput
+					(xlib-gl:XVisualInfo-visual *x-visual*)
+					(+ xlib-gl:CWBitGravity xlib-gl:CWColormap xlib-gl:CWEventMask)
 					attributes))
 	    (pretty-name (frame-pretty-name (pane-frame sheet))))
 	(setf *opengl-glx-context* (gl:glXCreateContext display *x-visual* NULL 1))
@@ -330,10 +330,10 @@
 	(with-slots (signature->sheet) port
 	  (setf (gethash 0 signature->sheet) sheet))
 	(setf (opengl-port-top-level port) sheet)
-	(xlib:XStoreName display window pretty-name)
-	(xlib:XSetIconName display window pretty-name)
+	(xlib-gl:XStoreName display window pretty-name)
+	(xlib-gl:XSetIconName display window pretty-name)
 	(gl:glXMakeCurrent display window *opengl-glx-context*)
-	(xlib:free-xsetwindowattributes attributes)))))
+	(xlib-gl:free-xsetwindowattributes attributes)))))
 
 (defmethod port-mirror-width ((port opengl-port) (sheet top-level-sheet-pane))
   (multiple-value-bind (x y width) (get-geometry port (sheet-direct-mirror sheet))
@@ -349,19 +349,19 @@
 
 (defmethod unrealize-mirror ((port opengl-port) (sheet top-level-sheet-pane))
   (let ((mirror (sheet-direct-mirror sheet)))
-    (xlib:XDestroyWindow (opengl-port-display port) mirror)
+    (xlib-gl:XDestroyWindow (opengl-port-display port) mirror)
     (with-slots (signature->sheet) port
       (remhash 0 signature->sheet))
     (port-unregister-mirror port sheet mirror)))
 
 (defmethod port-set-sheet-region ((port opengl-port) (sheet top-level-sheet-pane) region)
   (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* region)
-    (xlib:XResizeWindow (opengl-port-display port) (sheet-direct-mirror sheet)
+    (xlib-gl:XResizeWindow (opengl-port-display port) (sheet-direct-mirror sheet)
 			(round (- x2 x1)) (round (- y2 y1)))))
 
 (defmethod port-set-sheet-transformation ((port opengl-port) (sheet top-level-sheet-pane) transformation)
   (multiple-value-bind (x y) (transform-position transformation 0 0)
-    (xlib:XMoveWindow (opengl-port-display port) (sheet-direct-mirror sheet)
+    (xlib-gl:XMoveWindow (opengl-port-display port) (sheet-direct-mirror sheet)
 		      (round x) (round y))))
 
 (defmethod port-compute-native-region ((port opengl-port) (sheet top-level-sheet-pane))
@@ -370,49 +370,49 @@
 
 (defmethod compute-extremum :after ((pane top-level-sheet-pane))
   (with-slots (space-requirement) pane
-    (let ((size-hints (xlib:make-xsizehints)))
-      (xlib:set-xsizehints-width! size-hints (round (space-requirement-width space-requirement)))
-      (xlib:set-xsizehints-height! size-hints (round (space-requirement-height space-requirement)))
-      (xlib:set-xsizehints-max_width! size-hints (round (space-requirement-max-width space-requirement)))
-      (xlib:set-xsizehints-max_height! size-hints (round (space-requirement-max-height space-requirement)))
-      (xlib:set-xsizehints-min_width! size-hints (round (space-requirement-min-width space-requirement)))
-      (xlib:set-xsizehints-min_height! size-hints (round (space-requirement-min-height space-requirement)))
-      (xlib:XSetWMNormalHints (opengl-port-display (port pane)) (sheet-direct-mirror pane) size-hints)
-      (xlib:free-xsizehints size-hints))))
+    (let ((size-hints (xlib-gl:make-xsizehints)))
+      (xlib-gl:set-xsizehints-width! size-hints (round (space-requirement-width space-requirement)))
+      (xlib-gl:set-xsizehints-height! size-hints (round (space-requirement-height space-requirement)))
+      (xlib-gl:set-xsizehints-max_width! size-hints (round (space-requirement-max-width space-requirement)))
+      (xlib-gl:set-xsizehints-max_height! size-hints (round (space-requirement-max-height space-requirement)))
+      (xlib-gl:set-xsizehints-min_width! size-hints (round (space-requirement-min-width space-requirement)))
+      (xlib-gl:set-xsizehints-min_height! size-hints (round (space-requirement-min-height space-requirement)))
+      (xlib-gl:XSetWMNormalHints (opengl-port-display (port pane)) (sheet-direct-mirror pane) size-hints)
+      (xlib-gl:free-xsizehints size-hints))))
 
 ;; unmanaged-top-level-sheet-pane
 
 (defmethod realize-mirror ((port opengl-port) (sheet unmanaged-top-level-sheet-pane))
   (let ((display (opengl-port-display port))
 	(root (opengl-port-root port))
-	(attributes (xlib:make-xsetwindowattributes)))
-    (xlib:set-xsetwindowattributes-bit_gravity! attributes xlib:NorthWestgravity)
-    (xlib:set-xsetwindowattributes-override_redirect! attributes 1)
-    (xlib:set-xsetwindowattributes-colormap! attributes (xlib:XcreateColormap display root
-									      (xlib:XVisualInfo-visual *x-visual*)
-									      xlib:AllocNone))
-    (xlib:set-xsetwindowattributes-event_mask! attributes
-					       (+ xlib:ExposureMask xlib:KeyPressMask xlib:KeyReleaseMask
-						  xlib:ButtonPressMask xlib:ButtonReleaseMask
-						  xlib:PointerMotionMask
-						  xlib:EnterWindowMask xlib:LeaveWindowMask
-						  xlib:StructureNotifyMask xlib:OwnerGrabButtonMask))
-    (let ((window (xlib:XCreateWindow display root 0 0 100 100 1
-				      (xlib:XVisualInfo-depth *x-visual*) xlib:InputOutput
-				      (xlib:XVisualInfo-visual *x-visual*)
-				      (+ xlib:CWBitGravity xlib:CWOverrideRedirect
-					 xlib:CWColormap xlib:CWEventMask)
+	(attributes (xlib-gl:make-xsetwindowattributes)))
+    (xlib-gl:set-xsetwindowattributes-bit_gravity! attributes xlib-gl:NorthWestgravity)
+    (xlib-gl:set-xsetwindowattributes-override_redirect! attributes 1)
+    (xlib-gl:set-xsetwindowattributes-colormap! attributes (xlib-gl:XcreateColormap display root
+									      (xlib-gl:XVisualInfo-visual *x-visual*)
+									      xlib-gl:AllocNone))
+    (xlib-gl:set-xsetwindowattributes-event_mask! attributes
+					       (+ xlib-gl:ExposureMask xlib-gl:KeyPressMask xlib-gl:KeyReleaseMask
+						  xlib-gl:ButtonPressMask xlib-gl:ButtonReleaseMask
+						  xlib-gl:PointerMotionMask
+						  xlib-gl:EnterWindowMask xlib-gl:LeaveWindowMask
+						  xlib-gl:StructureNotifyMask xlib-gl:OwnerGrabButtonMask))
+    (let ((window (xlib-gl:XCreateWindow display root 0 0 100 100 1
+				      (xlib-gl:XVisualInfo-depth *x-visual*) xlib-gl:InputOutput
+				      (xlib-gl:XVisualInfo-visual *x-visual*)
+				      (+ xlib-gl:CWBitGravity xlib-gl:CWOverrideRedirect
+					 xlib-gl:CWColormap xlib-gl:CWEventMask)
 				      attributes)))
       (port-register-mirror port sheet window)
       (setf (opengl-port-top-level port) sheet)
       (with-slots (signature->sheet) port
 	  (setf (gethash 0 signature->sheet) sheet))
       (gl:glXMakeCurrent display window *opengl-glx-context*)
-      (xlib:free-xsetwindowattributes attributes))))
+      (xlib-gl:free-xsetwindowattributes attributes))))
 
 (defmethod unrealize-mirror ((port opengl-port) (sheet unmanaged-top-level-sheet-pane))
   (let ((mirror (sheet-direct-mirror sheet)))
-    (xlib:XDestroyWindow (opengl-port-display port) mirror)
+    (xlib-gl:XDestroyWindow (opengl-port-display port) mirror)
     (port-unregister-mirror port sheet mirror)))
 
 (defmethod unrealize-mirror :after ((port opengl-port) (sheet unmanaged-top-level-sheet-pane))
@@ -446,27 +446,27 @@
 				   :huge 24))
 
 (defun open-font (display font-name)
-  (let* (
+  (let* ((font-name "fixed") ; <- FIXME
 	; this is what should be done, be at this moment, it doesn't work
 	;(number (make-array 1 :element-type '(unsigned-byte 32)))
-	;(fonts (xlib:XListFonts display font-name 1 number))
+	;(fonts (xlib-gl:XListFonts display font-name 1 number))
 	;(font (if fonts
-	;	   (xlib:XLoadFont display (alien:deref fonts 0)) ; problems
-	;	   (xlib:XLoadFont display "fixed")))
-	 (font (xlib:XLoadFont display font-name))
-	 (font-struct (xlib:XQueryFont display font))
-	 (start (+ (* 256 (xlib:xfontstruct-min_byte1 font-struct))
-		   (xlib:xfontstruct-min_char_or_byte2 font-struct)))
-	 (end (+ (* 256 (xlib:xfontstruct-max_byte1 font-struct))
-		 (xlib:xfontstruct-max_char_or_byte2 font-struct)))
+	;	   (xlib-gl:XLoadFont display (alien:deref fonts 0)) ; problems
+	;	   (xlib-gl:XLoadFont display "fixed")))
+	 (font (xlib-gl:XLoadFont display font-name))
+	 (font-struct (xlib-gl:XQueryFont display font))
+	 (start (+ (* 256 (xlib-gl:xfontstruct-min_byte1 font-struct))
+		   (xlib-gl:xfontstruct-min_char_or_byte2 font-struct)))
+	 (end (+ (* 256 (xlib-gl:xfontstruct-max_byte1 font-struct))
+		 (xlib-gl:xfontstruct-max_char_or_byte2 font-struct)))
 	 (number-of-char (- end start))
 	 (font-list (gl:glGenLists number-of-char)))
   (declare (type fixnum start end number-of-char font-list))
   (prog2
       (gl:glXUseXFont font start number-of-char font-list)
       (list font font-list start)
-    (xlib:free-xfontstruct font-struct) )))
-      ;(xlib:XFreeFontNames fonts))))    
+      (xlib-gl:free-xfontstruct font-struct))))
+     ;(xlib-gl:XFreeFontNames fonts)
 
 (defmethod text-style-to-X-font ((port opengl-port) text-style)
   (let ((table (slot-value port 'font-table)))
@@ -498,40 +498,40 @@
 (defmacro with-font-struct ((port text-style font-struct-name) &body body)
   (let ((font (gensym)))
     `(let* ((,font (text-style-to-X-font ,port ,text-style))
-	    (,font-struct-name (xlib:XQueryFont (opengl-port-display ,port) ,font)))
+	    (,font-struct-name (xlib-gl:XQueryFont (opengl-port-display ,port) ,font)))
        (prog1
 	   (unwind-protect
 	       (progn ,@body))
-	 (xlib:free-xfontstruct ,font-struct-name)))))
+	 (xlib-gl:free-xfontstruct ,font-struct-name)))))
 
 (defmethod text-style-height (text-style (port opengl-port))
   (declare (type text-style text-style))
   (with-font-struct (port text-style font-struct)
-    (+ (xlib:xfontstruct-ascent font-struct) (xlib:xfontstruct-descent font-struct))))
+    (+ (xlib-gl:xfontstruct-ascent font-struct) (xlib-gl:xfontstruct-descent font-struct))))
 
 (defmethod text-style-ascent (text-style (port opengl-port))
   (declare (type text-style text-style))
   (with-font-struct (port text-style font-struct)
-    (xlib:xfontstruct-ascent font-struct)))
+    (xlib-gl:xfontstruct-ascent font-struct)))
 
 (defmethod text-style-descent (text-style (port opengl-port))
   (declare (type text-style text-style))
   (with-font-struct (port text-style font-struct)
-    (xlib:xfontstruct-descent font-struct)))
+    (xlib-gl:xfontstruct-descent font-struct)))
 
 ;; The text-style width is the average width between min_bounds and max_bounds
 (defmethod text-style-width (text-style (port opengl-port))
   (declare (type text-style text-style))
   (with-font-struct (port text-style font-struct)
-    (round (+ (xlib:xfontstruct-min_bounds-width font-struct)
-	      (xlib:xfontstruct-max_bounds-width font-struct))
+    (round (+ (xlib-gl:xfontstruct-min_bounds-width font-struct)
+	      (xlib-gl:xfontstruct-max_bounds-width font-struct))
 	   2)))
 
 (defmethod port-character-width ((port opengl-port) text-style char)
   (declare (type standard-char char)
 	   (type text-style text-style))
   (with-font-struct (port text-style font-struct)
-    (xlib:XTextWidth font-struct (make-string 1 :element-type 'standard-char :initial-element char) 1)))
+    (xlib-gl:XTextWidth font-struct (make-string 1 :element-type 'standard-char :initial-element char) 1)))
 
 (defmethod port-string-width ((port opengl-port) text-style string &key (start 0) end)
   (declare (type string string)
@@ -539,7 +539,7 @@
 	   (type fixnum start))
   (let ((s (if end (subseq string start end) (subseq string start))))
     (with-font-struct (port text-style font-struct)
-      (xlib:XTextWidth font-struct s (length s)))))
+      (xlib-gl:XTextWidth font-struct s (length s)))))
 
 #|
 ; [Julien] This is what should be done, but at this moment, it doesn't work
@@ -555,14 +555,14 @@
     (declare (type fixnum string_measures)) ;direction font_ascent font_descent))
     (with-font-struct (port text-style font-struct)
       (prog2
-	  (xlib:XTextExtents font-struct s (length s) direction font_ascent font_descent string_measures)
-	  (values (xlib:xcharstruct-width string_measures)
-		  (xlib:xcharstruct-ascent string_measures)
-		  (xlib:xcharstruct-descent string_measures)
-		  (xlib:xcharstruct-lbearing string_measures)
-		  (xlib:xcharstruct-rbearing string_measures)
+	  (xlib-gl:XTextExtents font-struct s (length s) direction font_ascent font_descent string_measures)
+	  (values (xlib-gl:xcharstruct-width string_measures)
+		  (xlib-gl:xcharstruct-ascent string_measures)
+		  (xlib-gl:xcharstruct-descent string_measures)
+		  (xlib-gl:xcharstruct-lbearing string_measures)
+		  (xlib-gl:xcharstruct-rbearing string_measures)
 		  (aref font_ascent 0) (aref direction 0) nil)
-	(xlib:free-xcharstruct string_measures)))))	      
+	(xlib-gl:free-xcharstruct string_measures)))))	      
 |#
 
 ; In order to patch this problem, informations from the biggest sizes of the font are chosen
@@ -576,21 +576,21 @@
     (declare (type string s)
 	     (type fixnum size))
     (with-font-struct (port text-style font-struct)
-      (let ((direction (xlib:xfontstruct-direction font-struct))
-	    (font_ascent (xlib:xfontstruct-ascent font-struct))
-	    (ascent (xlib:xfontstruct-max_bounds-ascent font-struct))
-	    (descent (xlib:xfontstruct-max_bounds-descent font-struct))
-	    (width (* (xlib:xfontstruct-max_bounds-width font-struct) size))
+      (let ((direction (xlib-gl:xfontstruct-direction font-struct))
+	    (font_ascent (xlib-gl:xfontstruct-ascent font-struct))
+	    (ascent (xlib-gl:xfontstruct-max_bounds-ascent font-struct))
+	    (descent (xlib-gl:xfontstruct-max_bounds-descent font-struct))
+	    (width (* (xlib-gl:xfontstruct-max_bounds-width font-struct) size))
 	    (left 0)
 	    (right 0))
 	(declare (type fixnum direction font_ascent ascent descent width left right))
-	(if (eq direction xlib:FontLeftToRight)
-	    (setf left (xlib:xfontstruct-max_bounds-lbearing font-struct)
-		  right (+ (* (xlib:xfontstruct-max_bounds-width font-struct) (1- size))
-			   (xlib:xfontstruct-max_bounds-rbearing font-struct)))
-	    (setf right (xlib:xfontstruct-max_bounds-rbearing font-struct)
-		  left (+ (* (xlib:xfontstruct-max_bounds-width font-struct) (1- size))
-			  (xlib:xfontstruct-max_bounds-lbearing font-struct))))
+	(if (eq direction xlib-gl:FontLeftToRight)
+	    (setf left (xlib-gl:xfontstruct-max_bounds-lbearing font-struct)
+		  right (+ (* (xlib-gl:xfontstruct-max_bounds-width font-struct) (1- size))
+			   (xlib-gl:xfontstruct-max_bounds-rbearing font-struct)))
+	    (setf right (xlib-gl:xfontstruct-max_bounds-rbearing font-struct)
+		  left (+ (* (xlib-gl:xfontstruct-max_bounds-width font-struct) (1- size))
+			  (xlib-gl:xfontstruct-max_bounds-lbearing font-struct))))
 	(setf result (list width ascent descent left right font_ascent direction nil))))
     (apply #'values result)))
 
@@ -630,7 +630,7 @@
 	  (get-geometry port window)
 	(declare (ignore x y width height border-width)
 		 (type fixnum depth))
-	(let* ((x-pixmap (xlib:XCreatePixmap display window
+	(let* ((x-pixmap (xlib-gl:XCreatePixmap display window
 					     (round (pixmap-width pixmap))
 					     (round (pixmap-height pixmap))
 					     depth))
@@ -641,7 +641,7 @@
 
 (defmethod unrealize-mirror ((port opengl-port) (pixmap opengl-mirrored-pixmap))
   (when (port-lookup-mirror port pixmap)
-    (xlib:XFreePixmap (opengl-port-display port) (port-lookup-mirror port pixmap))
+    (xlib-gl:XFreePixmap (opengl-port-display port) (port-lookup-mirror port pixmap))
     (gl:glXDestroyGLXPixmap (opengl-port-display port) (opengl-mirrored-pixmap-glx-pixmap pixmap))
     (port-unregister-mirror port pixmap (port-lookup-mirror port pixmap))))
 

@@ -19,7 +19,7 @@
 
 (in-package :CLIM-INTERNALS)
 
-(defclass opengl-medium (medium) ())
+(defclass opengl-medium (basic-medium) ())
 
 (defun medium-transform-position (medium x y)
   (declare (type real x y)
@@ -141,7 +141,7 @@
 		(gl:glPolygonMode gl:GL_FRONT gl:GL_LINE)
 		(gl:glBegin gl:GL_POLYGON))
 	      (gl:glBegin gl:GL_LINE_STRIP))))
-    (loop for (x y) of-type list on coord-seq by #'cddr
+    (loop for (x y) on coord-seq by #'cddr
 	  do (multiple-value-bind (tx ty) (medium-transform-position medium x y)
 	       (declare (type coordinate tx ty))
 	       (gl:glVertex2d tx ty)))
@@ -303,7 +303,7 @@
 		       (:baseline ty)
 		       (:bottom (+ ty baseline (- text-height)))))))
 	(let* ((s (subseq string start end))
-	       (tab (map '(simple-array (unsigned-byte 8))
+	       (tab (map '(simple-array (unsigned-byte 8) (*))
 			 #'(lambda (char)
 			     (declare (type standard-char char))
 			     (- (char-code char) text-style-start))
@@ -312,3 +312,34 @@
 	  (gl:glRasterPos2d tx ty)
 	  (gl:glListBase text-style-list)
 	  (gl:glCallLists (length s) gl:GL_UNSIGNED_BYTE (find-array-address tab)))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Methods for text styles
+
+(defmethod text-style-ascent (text-style (medium opengl-medium))
+; (let ((font (text-style-to-X-font (port medium) text-style)))
+;   (xlib-gl:font-ascent font))
+; ^--- FIXME - BTS
+  10)
+
+(defmethod text-style-descent (text-style (medium opengl-medium))
+; (let ((font (text-style-to-X-font (port medium) text-style)))
+;   (xlib-gl:font-descent font))
+; ^-- FIXME - BTS
+  4)
+
+(defmethod text-style-height (text-style (medium opengl-medium))
+; (let ((font (text-style-to-X-font (port medium) text-style)))
+;   (+ (xlib-gl:font-ascent font) (xlib-gl:font-descent font)))
+; ^-- FIXME - BTS
+  14)
+
+(defmethod text-style-character-width (text-style (medium opengl-medium) char)
+; (xlib-gl:char-width (text-style-to-X-font (port medium) text-style) (char-code char))
+; ^-- FIXME - BTS
+  8)
+
+(defmethod text-style-width (text-style (medium opengl-medium))
+  (text-style-character-width text-style medium #\m))
+

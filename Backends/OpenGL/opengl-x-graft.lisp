@@ -28,24 +28,26 @@
 (defmethod graft-width ((graft opengl-graft) &key (units :device))
   (let ((screen (opengl-port-screen (port graft))))
     (ecase units
-      (:device (xlib:screen-width screen))
-      (:inches (/ (xlib:screen-mwidth screen) 25.4s0))
-      (:millimeters (xlib:screen-mwidth screen))
+      (:device (xlib-gl:screen-width screen))
+      (:inches (/ (xlib-gl:screen-mwidth screen) 25.4s0))
+      (:millimeters (xlib-gl:screen-mwidth screen))
       (:screen-sized 1))))
 
 (defmethod graft-height ((graft opengl-graft) &key (units :device))
   (let ((screen (opengl-port-screen (port graft))))
     (ecase units
-      (:device (xlib:screen-height screen))
-      (:inches (/ (xlib:screen-mheight screen) 25.4s0))
-      (:millimeters (xlib:screen-mheight screen))
+      (:device (xlib-gl:screen-height screen))
+      (:inches (/ (xlib-gl:screen-mheight screen) 25.4s0))
+      (:millimeters (xlib-gl:screen-mheight screen))
       (:screen-sized 1))))
 
+#+nil
 (defmethod graft-pixels-per-millimeter ((graft opengl-graft))
   (let ((screen (opengl-port-screen (port graft))))
-    (/ (xlib:screen-width screen)
-       (xlib:screen-mwidth screen))))
+    (/ (xlib-gl:screen-width screen)
+       (xlib-gl:screen-mwidth screen))))
 
+#+nil
 (defmethod graft-pixels-per-inch ((graft opengl-graft))
   (* (graft-pixels-per-millimeter graft) 25.4s0))
 

@@ -27,10 +27,10 @@
 
 (defmethod adopt-frame :after ((fm opengl-graphical-system-frame-manager-mixin) (frame menu-frame))
   (let ((display (opengl-port-display (port frame))))
-    (xlib:XMapWindow display (sheet-direct-mirror (frame-top-level-sheet frame)))
-    (xlib:XFlush display)))
+    (xlib-gl:XMapWindow display (sheet-direct-mirror (frame-top-level-sheet frame)))
+    (xlib-gl:XFlush display)))
 
 (defmethod adopt-frame :after ((fm opengl-graphical-system-frame-manager-mixin) (frame application-frame))
   (let ((display (opengl-port-display (port frame))))
-    (xlib:XMapWindow display (sheet-direct-mirror (frame-top-level-sheet frame)))
-    (xlib:XFlush display)))
+    (xlib-gl:XMapWindow display (sheet-direct-mirror (frame-top-level-sheet frame)))
+    (xlib-gl:XFlush display)))

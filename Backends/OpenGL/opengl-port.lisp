@@ -23,7 +23,7 @@
 
 ;; OpenGL port class
 
-(defclass opengl-port (port opengl-graphical-system-port-mixin)
+(defclass opengl-port (basic-port opengl-graphical-system-port-mixin)
   ((signature->sheet :type hash-table
 		     :initform (make-hash-table))
    (sheet->signature-dl :type hash-table
@@ -72,12 +72,28 @@
 	   (ignore transformation))
   nil)
 
+(defun parse-opengl-server-path (path)
+  (pop path)
+  (let* ((s (get-environment-variable "DISPLAY"))
+	 (colon (position #\: s))
+	 (dot (position #\. s :start colon))
+	 (host-name (subseq s 0 colon))
+	 (display-number (parse-integer s :start (1+ colon) :end dot))
+	 (screen-number (if dot (parse-integer s :start (1+ dot)) 0)))
+    (list :opengl
+	  :host (getf path :host host-name)
+	  :display-id (getf path :display-id display-number)
+	  :screen-id (getf path :screen-id screen-number))))
+
+(setf (get :opengl :port-type) 'opengl-port)
+(setf (get :opengl :server-path-parser) 'parse-opengl-server-path)
+
 ;; opengl medium
 
 (defmethod make-medium ((port opengl-port) sheet)
   (make-instance 'opengl-medium 
-    :port port 
-    :graft (find-graft :port port) 
+  ; :port port 
+  ; :graft (find-graft :port port) 
     :sheet sheet))
 
 ;;; opengl specific functions
@@ -92,7 +108,10 @@
 	   (type boolean mode))
   (when (typep sheet 'immediate-repainting-mixin)
     (if mode
+        #+nil
 	(repaint-sheet sheet (sheet-region sheet))
+        #-nil
+	(handle-repaint sheet (sheet-region sheet))
 	(gl:glCallList (dl port sheet))))
   (loop for child of-type sheet in (sheet-children sheet)
 	do (draw-sheet port child mode)))
@@ -107,14 +126,22 @@
 (defmethod draw-the-entire-scene ((port opengl-port))
   (gl:glDrawBuffer gl:GL_BACK)
   (let ((sheet (opengl-port-top-level port)))
-    (with-sheet-medium (medium sheet)
-      (with-slots (red green blue) (medium-background medium)
-	(declare (type single-float red green blue))
-	(gl:glClearColor red green blue 0.0)))
-    (opengl-draw port sheet t)
-    (flush port sheet)))
+    (when sheet
+;     (with-sheet-medium (medium sheet)
+;       (with-slots (red green blue) (medium-background medium)
+;	  (declare (type single-float red green blue))
+;	  (gl:glClearColor red green blue 0.0)))
+      (opengl-draw port sheet t)
+      (flush port sheet))))
 
+#+nil
 (defmethod repaint-sheet :around ((sheet immediate-repainting-mixin) region)
+  (declare (ignore region))
+  (if *drawing-flag*
+      (call-next-method)
+      (draw-the-entire-scene (port sheet))))
+
+(defmethod handle-repaint :around ((sheet immediate-repainting-mixin) region)
   (declare (ignore region))
   (if *drawing-flag*
       (call-next-method)
@@ -249,6 +276,7 @@
     (declare (type opengl-port port)
 	     (type cons infos)
 	     (type region native-region))
+    #+nil ; what an odd approach
     (case (type-of native-region)
 	; point
       ('standard-point
@@ -328,7 +356,90 @@
 	   (gl:glEndList))))
 
 	; default : region intersection/union/difference are not handled.
-      (t (error "Unknown region type")))))
+      (t (error (format nil "Unknown region type (~A)" native-region))))
+    (etypecase native-region
+      ; point
+      (standard-point
+       (gl:glNewList (cdr infos) gl:GL_COMPILE)
+       (set-color (car infos))
+       (gl:glBegin gl:GL_POINTS)
+       (gl:glVertex2d (point-x native-region) (point-y native-region))
+       (gl:glEnd)
+       (gl:glEndList))
+
+      ; line
+      (line
+       (multiple-value-bind (x1 y1) (line-start-point* native-region)
+	 (declare (type coordinate x1 y1))
+	 (multiple-value-bind (x2 y2) (line-end-point* native-region)
+	   (declare (type coordinate x2 y2))
+	   (gl:glNewList (cdr infos) gl:GL_COMPILE)
+	   (set-color (car infos))
+	   (gl:glBegin gl:GL_LINES)
+	   (gl:glVertex2d x1 y1)
+	   (gl:glVertex2d x2 y2)
+	   (gl:glEnd)
+	   (gl:glEndList))))
+
+      ; polyline
+      (standard-polyline
+       (gl:glNewList (cdr infos) gl:GL_COMPILE)
+       (set-color (car infos))
+       (if (polyline-closed native-region)
+	   (gl:glBegin gl:GL_LINE_LOOP)
+	   (gl:glBegin gl:GL_LINE_STRIP))
+       (map-over-polygon-coordinates #'gl:glVertex2d native-region)
+       (gl:glEnd)
+       (gl:glEndList))
+
+      ; polygon
+      (standard-polyline ; see above duplication - one is wrong - FIXME - BTS
+       (gl:glNewList (cdr infos) gl:GL_COMPILE)
+       (set-color (car infos))
+       (gl:glBegin gl:GL_POLYGON)
+       (map-over-polygon-coordinates #'gl:glVertex2d native-region)
+       (gl:glEnd)
+       (gl:glEndList))
+
+      ; rectangle
+      (standard-rectangle
+       (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* native-region)
+	 (declare (type coordinate x1 y1 x2 y2))
+	 (gl:glNewList (cdr infos) gl:GL_COMPILE)
+	 (set-color (car infos))
+	 (gl:glRectd x1 y1 x2 y2)
+	 (gl:glEndList)))
+      
+      ; ellipse and elliptical-arc
+      ((or standard-ellipse standard-elliptical-arc)
+       (let ((start-angle (ellipse-start-angle native-region))
+	     (end-angle (ellipse-end-angle native-region))
+	     (ellipse-transformation (slot-value native-region 'tr)))
+	 (declare (type double-float start-angle end-angle))
+	 (multiple-value-bind (center-x center-y) (ellipse-center-point* native-region)
+	   (declare (type coordinate center-x center-y))
+	   (gl:glNewList (cdr infos) gl:GL_COMPILE)
+	   (set-color (car infos))
+	   (if (typep native-region 'standard-ellipse)
+	       (gl:glBegin gl:GL_POLYGON)
+	       (gl:glBegin gl:GL_LINE_STRIP))
+	   (gl:glPushMatrix)
+	   (gl:glLoadIdentity)
+	   (gl:glTranslated center-x center-y 0d0)
+	   (loop with dtheta of-type double-float = (/ pi 100) ; half-ellipse is cut in 100 slices
+		 for theta of-type double-float from start-angle to end-angle by dtheta
+		 do (multiple-value-bind (x y) (transform-position ellipse-transformation (cos theta) (sin theta))
+		      (declare (type double-float x y))
+		      (gl:glVertex2d x y)))  
+	   (gl:glPopMatrix)
+	   (gl:glEnd)
+	   (gl:glEndList))))
+      (nowhere-region
+       ; what should I do here? - BTS
+       nil)
+      ; default : region intersection/union/difference are not handled. [yet?]
+      ; error
+        )))
 
 (defmethod note-sheet-region-changed :after ((sheet immediate-repainting-mixin))
   (recompute-recognizing-drawing sheet))
@@ -363,6 +474,7 @@
 
 (defmethod unrealize-mirror ((port opengl-port) (sheet sheet))
   nil)
+
 
 (defmethod note-sheet-grafted :after ((sheet immediate-repainting-mixin))
   (port-register-signature (port sheet) sheet))

@@ -32,9 +32,11 @@
   (loop for port in climi::*all-ports*
       do (destroy-port port))
   (setq climi::*all-ports* nil)
+  #-gl
   (setq frame (make-application-frame 'gadget-test
-                :frame-manager (make-instance 'clim-internals::pixie/clx-look
-                                    :port (find-port))))
+              :frame-manager (make-instance 'clim-internals::pixie/clx-look :port (find-port))))
+  #+gl ; a bit of a hack...
+  (setq frame (make-application-frame 'gadget-test))
   (setq fm (frame-manager frame))
   (setq port (climi::frame-manager-port fm))
   (setq pane (first (frame-panes frame)))
@@ -111,6 +113,7 @@
                  :current-color +black+
                  :width 120
                  :height 30)
+     #-gl
      (image      :image
                 ;:background +Gray83+
                  :background +Red+
@@ -165,6 +168,7 @@
                  :normal +red+
                  :highlighted +red+
                  :pushed-and-highlighted +red+)
+     #-gl
      (scroll    (raising (:border-width 3 :background +Gray83+)
                    (scrolling (:width 240 :height 120 :background +Gray83+)
                      (vertically ()
@@ -195,9 +199,11 @@
              slider-v2)
            slider-v3
            slider-v4
+           #-gl
            image)
          push-btn
          toggle-btn
+         #-gl
          scroll
          radio-box
          check-box

@@ -131,7 +131,18 @@
   "Backends/CLX/clim-extensions"
   )
 
-(clim-defsystem (:clim-looks :depends-on (:clim-clx))
+#+gl
+(clim-defsystem (:clim-opengl :depends-on (:clim))
+   "Backends/OpenGL/opengl-x-frame-manager"
+   "Backends/OpenGL/opengl-frame-manager"
+   "Backends/OpenGL/opengl-x-port-before"
+   "Backends/OpenGL/opengl-port"
+   "Backends/OpenGL/opengl-x-port-after"
+   "Backends/OpenGL/opengl-medium"
+   "Backends/OpenGL/opengl-x-graft"
+   )
+
+(clim-defsystem (:clim-looks :depends-on (:clim-clx #+gl :clim-opengl))
   "Looks/pixie")
 
 ;;; Will depend on :goatee soon...
@@ -142,7 +153,7 @@
    "Examples/calculator"
    "Examples/colorslider"
    "Examples/menutest"
-   "Examples/address-book"
+  ;"Examples/address-book"
    "Examples/traffic-lights"
    "Examples/clim-fig"
    "Examples/postscript-test"
