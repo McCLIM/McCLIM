@@ -64,12 +64,14 @@
    #+sbcl (sb-ext:posix-getenv var)
    #+lispworks (lw:environment-variable var)
    #+openmcl (ccl::getenv var)
+   #+clisp (ext:getenv var)
    nil))
 
 ;; Need to strip filename/type/version from directory?.. FIXME?
 (defun change-directory (pathname)
   "Ensure that the current directory seen by RUN-PROGRAM has changed, and update *default-pathname-defaults*"
   #+CMU (unix:unix-chdir (namestring pathname))
+  #+clisp (ext:cd pathname)
   ; SBCL FIXME?
  (setf *default-pathname-defaults* pathname))
 
@@ -154,8 +156,9 @@
                :shell-type "/bin/sh"
                :output-stream output
                :wait wait)
+  #+clisp (ext:run-program program :arguments args :wait wait)
 
-  #-(or CMU SBCL lispworks)
+  #-(or CMU SBCL lispworks clisp)
   (format T "~&Sorry, don't know how to run programs in your CL.~%"))
 
 ;;;; CLIM/UI utilities
