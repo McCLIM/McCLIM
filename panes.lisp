@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.75 2002/04/27 09:02:59 brian Exp $
+;;; $Id: panes.lisp,v 1.76 2002/04/28 07:56:19 gilbert Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -721,7 +721,7 @@
         (height (window-configuration-event-height event)))
     (with-bounding-rectangle* (old-x1 old-y1 old-x2 old-y2) (sheet-region pane)
       (let ((old-width  (- old-x2 old-x1))
-            (old-height (- old-y2 old-y2)))
+            (old-height (- old-y2 old-y1)))
         ;; avoid going into an infinite loop by not using (setf sheet-transformation)
         (setf (slot-value pane 'transformation)
 	      (make-translation-transformation x y))
@@ -1533,7 +1533,6 @@ During realization the child of the spacing will have as cordinates
               (scroll-bar-thumb-size vscrollbar) (bounding-rectangle-height (sheet-region viewport)))))))
 
 (defmethod initialize-instance :after ((pane scroller-pane) &key contents &allow-other-keys)
-  (declare (ignore args))
   (sheet-adopt-child pane (first contents))
   (with-slots (scroll-bar viewport vscrollbar hscrollbar) pane
     (setq viewport (first (sheet-children pane)))
@@ -1761,7 +1760,7 @@ During realization the child of the spacing will have as cordinates
   (multiple-value-bind (right top left bottom) (label-pane-margins pane)
     (declare (ignorable right top left bottom))
     (when (sheet-children pane)
-      (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane);seems bogus
+      (with-bounding-rectangle* (x1 y1 x2 y2) (values 0 0 width height)
         (move-sheet (first (sheet-children pane))
                     (+ x1 left) (+ y1 top))
         (allocate-space (first (sheet-children pane))
@@ -1785,6 +1784,8 @@ During realization the child of the spacing will have as cordinates
                              design))
 
 (defmethod draw-design (medium (design (eql +nowhere+)))
+  (declare (ignore medium)
+           (ignorable design))
   )
 
 (defmethod repaint-sheet ((pane label-pane) region)
