@@ -292,7 +292,7 @@
 (defmacro peek-event ((display &rest keys) &body body)
   (let ((escape (gensym)))
     `(block ,escape
-       (xlib:process-event display :timeout 0 :peek-p t :handler
+       (xlib:process-event ,display :timeout 0 :peek-p t :handler
          #'(lambda (&key ,@keys &allow-other-keys)
              (return-from ,escape
                (progn
