@@ -432,7 +432,7 @@
     (when (<= (line-text-width area line) max-text-width)
       (return-from compute-line-breaks nil))
     (loop with line-width = 0
-	  for i from 0 below (length current-contents)
+	  for i from 0 below (length (current-contents line))
 	  for char-width = (line-text-width area line :start i :end (1+ i))
 	  if (> (+ line-width char-width) max-text-width)
 	    collect i
