@@ -50,7 +50,21 @@
 	(:serial
 	 ,@components)))
 
-#-mk-defsystem
+#+asdf
+(defmacro clim-defsystem ((module &key depends-on) &rest components)
+  `(asdf:defsystem ,module
+    ,@(and depends-on
+	   `(:depends-on ,depends-on))
+    :serial t
+    :components
+    (,@(loop for c in components
+	     for p = (merge-pathnames
+		      (parse-namestring c)
+		      (make-pathname :type "lisp"
+				     :defaults *clim-directory*))
+	     collect `(:file ,(pathname-name p) :pathname ,p)))))
+
+#-(or mk-defsystem asdf)
 (defmacro clim-defsystem ((module &key depends-on) &rest components)
   `(defsystem ,module ()
      (:serial
@@ -71,7 +85,7 @@
 
    #.(OR
       #+(AND :CMU :MP (NOT :PTHREAD))  "Lisp-Dep/mp-cmu"
-      #+(AND :SBCL :MP (NOT :PTHREAD)) "Lisp-Dep/mp-sbcl"
+      #+:SBCL                          "Lisp-Dep/mp-sbcl"
       #+:EXCL                          "Lisp-Dep/mp-acl"
       #+:OPENMCL                       "Lisp-Dep/mp-openmcl"
       #| fall back |#                  "Lisp-Dep/mp-nil")

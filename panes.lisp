@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.111 2003/03/14 14:01:50 gilbert Exp $
+;;; $Id: panes.lisp,v 1.112 2003/03/14 20:55:12 gilbert Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -2317,4 +2317,3 @@
   (declare (ignorable pane width height))
   (make-space-requirement :width (bounding-rectangle-width (stream-output-history pane))
                           :height (bounding-rectangle-height (stream-output-history pane))))
-           
