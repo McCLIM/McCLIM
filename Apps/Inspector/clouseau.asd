@@ -27,7 +27,8 @@
 	   #:inspect-object-briefly
 	   #:define-inspector-command))
 
-(asdf::defsystem clouseau
+(asdf:defsystem clouseau
     :serial t
     :components
-    ((:file "inspector")))
+    ((:file "disassembly")
+     (:file "inspector")))
