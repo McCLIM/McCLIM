@@ -40,7 +40,7 @@
 (pushnew :CLIM *features*)
 (provide :CLIM)
 
-(defsystem :CLIM (:default-package :CLIM-INTERNALS
+(defsystem :CLIM (;:default-package :CLIM-INTERNALS
 		     :default-pathname "/home/mikemac/src/Lisp/McCLIM/")
   (:serial
    "design"
