@@ -33,7 +33,7 @@
 	       :initform +white+
 	       :accessor medium-background)
    (ink :initarg :ink
-	:initform +black+
+	:initform +foreground-ink+
 	:accessor medium-ink)
    (transformation :initarg :transformation
 		   :initform +identity-transformation+ 
