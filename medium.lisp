@@ -565,10 +565,9 @@
                                       transform-glyphs)
   (let ((tr (medium-transformation medium)))
     (with-transformed-position (tr x y)
-      (call-next-method medium string x y
-                        start end
-                        align-x align-y
-                        toward-x toward-y transform-glyphs))))
+      (call-next-method medium element x y
+                        align-x align-y toward-x toward-y
+                        transform-glyphs))))
 
 
 ;;; Other Medium-specific Output Functions
