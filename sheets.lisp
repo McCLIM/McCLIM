@@ -248,7 +248,7 @@
 ;;; SHEET geometry classes
 
 (defclass sheet-identity-transformation-mixin ()
-  ((transformation :initform (make-instance 'transformation)
+  ((transformation :initform +identity-transformation+
 		   :initarg :transformation
 		   :accessor sheet-transformation)
    ))
@@ -258,7 +258,7 @@
       (error "Attempting to set the SHEET-TRANSFORMATION of a SHEET-IDENTITY-TRANSFORMATION-MIXIN to a non identity transformation")))
 
 (defclass sheet-translation-transformation-mixin ()
-  ((transformation :initform (make-instance 'transformation)
+  ((transformation :initform +identity-transformation+
 		   :initarg :transformation
 		   :accessor sheet-transformation)
    ))
@@ -268,7 +268,7 @@
       (error "Attempting to set the SHEET-TRANSFORMATION of a SHEET-TRANSLATION-TRANSFORMATION-MIXIN to a non translation transformation")))
 
 (defclass sheet-y-inverting-transformation-mixin ()
-  ((transformation :initform (make-instance 'transformation :myy -1.0)
+  ((transformation :initform (make-transformation 0 0 0 -1 0 0)
 		   :initarg :transformation
 		   :accessor sheet-transformation)
    ))
@@ -278,7 +278,7 @@
       (error "Attempting to set the SHEET-TRANSFORMATION of a SHEET-Y-INVERTING-TRANSFORMATION-MIXIN to a non Y inverting transformation")))
 
 (defclass sheet-transformation-mixin ()
-  ((transformation :initform (make-instance 'transformation)
+  ((transformation :initform +identity-transformation+
 		   :initarg :transformation
 		   :accessor sheet-transformation)
    ))
