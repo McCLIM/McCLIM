@@ -218,8 +218,8 @@
 
 (defmethod (setf gadget-current-color) :after (color (gadget gadget-color-mixin))
   (declare (ignore color))
-  '(dispatch-repaint gadget (sheet-region gadget)))
-  
+  (dispatch-repaint gadget (sheet-region gadget)))
+
 ;;;
 ;;; gadgets look
 ;;;
@@ -1256,9 +1256,12 @@ and must never be nil."))
 ;;; ------------------------------------------------------------------------------------------
 ;;;  30.4.3 The concrete menu-button Gadget
 
-(defclass menu-button-pane (menu-button standard-gadget-pane)
+(defclass menu-button-pane (menu-button
+			    standard-gadget-pane
+			    standard-space-requirement-options-mixin)
   ()
   (:default-initargs
+    :background *3d-normal-color*
     :align-x :center
     :align-y :center))
 
@@ -1277,6 +1280,20 @@ and must never be nil."))
 		(t))
           (draw-label* pane x1 y1 x2 y2 :ink (effective-gadget-foreground pane)))))))
 
+(defmethod compose-space ((gadget menu-button-pane))
+  (space-requirement+* (space-requirement+* (compose-label-space gadget)
+                                            :min-width (* 2 (pane-x-spacing gadget))
+                                            :width (* 2 (pane-x-spacing gadget))
+                                            :max-width (* 2 (pane-x-spacing gadget))
+                                            :min-height (* 2 (pane-y-spacing gadget))
+                                            :height (* 2 (pane-y-spacing gadget))
+                                            :max-height (* 2 (pane-y-spacing gadget)))
+                       :min-width (* 2 *3d-border-thickness*)
+                       :width (* 2 *3d-border-thickness*)
+                       :max-width (* 2 *3d-border-thickness*)
+                       :min-height (* 2 *3d-border-thickness*)
+                       :height (* 2 *3d-border-thickness*)
+                       :max-height (* 2 *3d-border-thickness*)))
 ;;; ------------------------------------------------------------------------------------------
 ;;;  30.4.4 The concrete scroll-bar Gadget
 
