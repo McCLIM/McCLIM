@@ -79,7 +79,7 @@
                  (incf upper-baseline (+ ascent descent))
                  (maxf upper-height (+ ascent descent))
                  (setf descent 0) (setf ascent 0))
-                (t (let ((metrics (gethash (aref char-names (char-code char))
+                (t (let ((metrics (gethash (aref *iso-latin-1-symbolic-names* (char-code char))
                                            char-metrics)))
                      (incf width (char-width metrics))
                      (maxf ascent (char-ascent metrics))

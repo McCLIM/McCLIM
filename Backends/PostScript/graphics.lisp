@@ -79,6 +79,7 @@
      and body = (postscript-procedure-body proc)
      do (format stream "/~A { ~A } def~%" name body))
   (format stream "end~%")
+  (dump-reencode stream)
   (format stream "%%EndProlog~%"))
 
 (defmacro define-postscript-procedure
@@ -456,7 +457,7 @@ setmatrix")
       (medium-font medium)
     (pushnew font (slot-value (medium-sheet medium) 'document-fonts)
              :test #'string=)
-    (format stream "/~A findfont ~D scalefont setfont~%" font size)))
+    (format stream "/~A-iso findfont ~D scalefont setfont~%" font size))) ;### evil hack.
 
 (defun postscript-escape-char (char)
   (case char
