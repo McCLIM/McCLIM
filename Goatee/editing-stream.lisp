@@ -140,6 +140,16 @@
 		   :start1 first-mismatch
 		   :start2 first-mismatch)))))))
 
+(defun reposition-stream-cursor (stream)
+  "Moves the cursor somewhere clear of Goatee's editing area."
+  (let ((max-y 0))
+    (map-over-output-records #'(lambda (r)
+                                 (setf max-y (max max-y (bounding-rectangle-max-y r))))
+                             (stream-output-history stream))
+    (setf (stream-cursor-position stream)
+          (values 0 max-y))))
+                                                
+
 (defmethod climi::finalize ((stream goatee-input-editing-mixin)
 			    input-sensitizer)
   (setf (cursor-visibility (cursor (area stream))) nil)
@@ -151,7 +161,8 @@
 		   (let ((record (area stream)))
 		     (delete-output-record record
 					   (output-record-parent record))
-		     (stream-add-output-record real-stream record)))))))
+		     (stream-add-output-record real-stream record))))
+      (reposition-stream-cursor real-stream) )))
 
 ;;; Hopefully only used on small buffers.
 
