@@ -3,6 +3,7 @@
 ;;;     Title: Graph Formatting
 ;;;   Created: 2002-08-13
 ;;;   License: LGPL (See file COPYING for details).
+;;;       $Id: graph-formatting.lisp,v 1.3 2002/08/14 10:31:06 gilbert Exp $
 ;;; ---------------------------------------------------------------------------
 
 ;;;  (c) copyright 2002 by Gilbert Baumann
@@ -38,7 +39,15 @@
 ;;   restricted to the set of hash test functions? --GB 2002-08-13
 
 ;; - What is the purpose of (SETF GRAPH-NODE-CHILDREN) and
-;;   (SETF GRAPH-NODE-PARENTS)?
+;;   (SETF GRAPH-NODE-PARENTS)? --GB 2002-08-14
+
+;; - FORMAT-GRAPH-FROM-ROOTS passes the various options on to the
+;;   instantiation of the graph-output-record class, so that the
+;;   individual classes can choose appropriate defaults. --GB 2002-08-14
+
+;; - In the same spirit, a non given ARC-DRAWER option is passed as it
+;;   is, that is being NIL, to LAYOUT-GRAPH-EDGES so that the concrete
+;;   graph-output-record can choose a default. --GB 2002-08-14
 
 ;;;; Declarations
 
@@ -111,44 +120,50 @@
 ;;;; Entry
 
 (defun format-graph-from-roots (root-objects object-printer inferior-producer
+                                &rest graph-options
                                 &key stream orientation cutoff-depth
                                      merge-duplicates duplicate-key duplicate-test
                                      generation-separation
                                      within-generation-separation
                                      center-nodes arc-drawer arc-drawing-options
-                                     graph-type (move-cursor t))
+                                     graph-type (move-cursor t)
+                                &allow-other-keys)
   ;; Mungle some arguments
   (check-type cutoff-depth (or null integer))
   (setf stream (or stream *standard-output*)
         graph-type (or graph-type (if merge-duplicates :digraph :tree))
         duplicate-key (or duplicate-key #'identity)
-        duplicate-test (or duplicate-test #'eql)
-        orientation (or orientation :horizontal)
-        generation-separation (or generation-separation 30)
-        within-generation-separation (or within-generation-separation 10))
-  ;;
+        duplicate-test (or duplicate-test #'eql) )
+  
+  ;; clean the options
+  (remf :stream graph-options)
+  (remf :duplicate-key graph-options)
+  (remf :duplicate-test graph-options)
+  (remf :arc-drawer graph-options)
+  (remf :arc-drawing-options graph-options)
+  (remf :graph-type graph-options)
+  (remf :move-cursor graph-options)
+  
   (multiple-value-bind (cursor-old-x cursor-old-y)
       (stream-cursor-position stream)
     (let ((graph-output-record
-           (with-new-output-record (stream (find-graph-type graph-type)
-                                           graph-output-record
-                                           :orientation orientation
-                                           :center-nodes center-nodes
-                                           :cutoff-depth cutoff-depth
-                                           :merge-duplicates merge-duplicates
-                                           :generation-separation generation-separation
-                                           :within-generation-separation within-generation-separation
-                                           :hash-table (make-hash-table :test duplicate-test))
-             (with-output-recording-options (stream :draw nil :record t)
-               (generate-graph-nodes graph-output-record stream root-objects
-                                     object-printer inferior-producer
-                                     :duplicate-key duplicate-key
-                                     :duplicate-test duplicate-test)
-               (layout-graph-nodes graph-output-record stream arc-drawer arc-drawing-options)
-               (layout-graph-edges graph-output-record stream arc-drawer arc-drawing-options)))))
+           (labels ((cont (stream graph-output-record)
+                      (with-output-recording-options (stream :draw nil :record t)
+                        (generate-graph-nodes graph-output-record stream root-objects
+                                              object-printer inferior-producer
+                                              :duplicate-key duplicate-key
+                                              :duplicate-test duplicate-test)
+                        (layout-graph-nodes graph-output-record stream arc-drawer arc-drawing-options)
+                        (layout-graph-edges graph-output-record stream arc-drawer arc-drawing-options)) ))
+             (apply #'invoke-with-new-output-record stream
+                    #'cont
+                    (find-graph-type graph-type)
+                    :hash-table (make-hash-table :test duplicate-test)
+                    graph-options))))
       (setf (output-record-position graph-output-record)
             (values cursor-old-x cursor-old-y))
-      (replay graph-output-record stream)
+      (with-output-recording-options (stream :draw t :record nil)
+        (replay-output-record graph-output-record stream))
       (when move-cursor
         (setf (stream-cursor-position stream)
               (values (bounding-rectangle-max-x graph-output-record)
@@ -173,21 +188,22 @@
     :initform nil)
    (generation-separation
     :initarg :generation-separation
-    :initform 10)
+    :initform '(4 :character))
    (within-generation-separation
     :initarg :within-generation-separation
-    :initform 10)
+    :initform '(1/4 :line))
    (hash-table
     :initarg :hash-table
     :initform nil)
    (root-nodes
-    :initform nil
     :accessor graph-root-nodes) ))
 
 (defclass tree-graph-output-record (standard-graph-output-record)
   ())
+
 (defclass dag-graph-output-record (standard-graph-output-record)
   ())
+
 (defclass digraph-graph-output-record (standard-graph-output-record)
   ())
 
@@ -251,85 +267,89 @@
 
 (defmethod layout-graph-nodes ((graph-output-record tree-graph-output-record)
                                stream arc-drawer arc-drawing-options)
-  (declare (ignore arc-drawer arc-drawing-options
-                   stream))
-  ;; flaw: compute the actual generation-separation
-  ;; within-generation-separation from ddp measures.
+  ;; work in progress! --GB 2002-08-14
+  (declare (ignore arc-drawer arc-drawing-options))
   (with-slots (orientation center-nodes generation-separation within-generation-separation root-nodes) graph-output-record
     (check-type orientation (member :horizontal :vertical)) ;xxx move to init.-inst.
     ;; here major dimension is the dimension in which we grow the
     ;; tree.
-    (labels ((node-major-dimension (node)
-               (if (eq orientation :vertical)
-                   (bounding-rectangle-height node)
-                   (bounding-rectangle-width node)))
-             (node-minor-dimension (node)
-               (if (eq orientation :vertical)
-                   (bounding-rectangle-width node)
-                   (bounding-rectangle-height node))))
-      ;; Gather the width of the individual generations
-      (let ((ghash (make-hash-table :test #'eq)))
-        (labels ((generation-sizes (nodes)
-                   ;; Yup! We'd need the same tree traversal here ...
-                   (setf nodes (remove-if (lambda(x)(gethash x ghash)) nodes))
-                   (dolist (n nodes)(setf(gethash n ghash)t))
-                   (progn
-                     (cond ((null nodes)
-                            nil)
-                           (t
-                            (cons (+ generation-separation
-                                     (reduce #'max (mapcar #'node-major-dimension nodes)
-                                             :initial-value 0))
-                                  (generation-sizes (mapcan #'copy-list
-                                                            (mapcar #'graph-node-children nodes)))))))))
+    (let ((within-generation-separation (parse-space stream within-generation-separation
+                                                     (case orientation
+                                                       (:horizontal :vertical)
+                                                       (:vertical :horizontal))))
+          (generation-separation (parse-space stream generation-separation orientation)))
+      (labels ((node-major-dimension (node)
+                 (if (eq orientation :vertical)
+                     (bounding-rectangle-height node)
+                     (bounding-rectangle-width node)))
+               (node-minor-dimension (node)
+                 (if (eq orientation :vertical)
+                     (bounding-rectangle-width node)
+                     (bounding-rectangle-height node))))
+        ;; Gather the width of the individual generations
+        (let ((ghash (make-hash-table :test #'eq)))
+          (labels ((generation-sizes (nodes)
+                     ;; Yup! We'd need the same tree traversal here ...
+                     (setf nodes (remove-if (lambda(x)(gethash x ghash)) nodes))
+                     (dolist (n nodes)(setf(gethash n ghash)t))
+                     (progn
+                       (cond ((null nodes)
+                              nil)
+                             (t
+                              (cons (+ generation-separation
+                                       (reduce #'max (mapcar #'node-major-dimension nodes)
+                                               :initial-value 0))
+                                    (generation-sizes (mapcan #'copy-list
+                                                              (mapcar #'graph-node-children nodes)))))))))
         ;;;;;;;;;;
 
-          (let ((hash (make-hash-table :test #'eq)))
-            (labels ((foo (node majors u0 v0)
-                       (cond ((gethash node hash)
-                              v0)
-                             (t
-                              (setf (gethash node hash) t)
-                              (cond ((null (graph-node-children node))
-                                     (setf (output-record-position node)
-                                           (if (eq orientation :vertical)
-                                               (values v0 u0)
-                                               (values u0 v0)))
-                                     (add-output-record node graph-output-record) ;xxx right time?
-                                     (+ v0 (node-minor-dimension node)))
-                                    (t
-                                     (let ((u (+ u0 (car majors)))
-                                           (v v0))
-                                       (maplist (lambda (rest)
-                                                  (setf v (foo (car rest) (or (cdr majors)
-                                                                              (list 100))
-                                                               u v))
-                                                  (unless (null (cdr rest))
-                                                    (incf v within-generation-separation)))
-                                                (graph-node-children node))
+            (let ((hash (make-hash-table :test #'eq)))
+              (labels ((foo (node majors u0 v0)
+                         (cond ((gethash node hash)
+                                v0)
+                               (t
+                                (setf (gethash node hash) t)
+                                (cond ((null (graph-node-children node))
+                                       (setf (output-record-position node)
+                                             (if (eq orientation :vertical)
+                                                 (values v0 u0)
+                                                 (values u0 v0)))
+                                       (add-output-record node graph-output-record) ;xxx right time?
+                                       (+ v0 (node-minor-dimension node)))
+                                      (t
+                                       (let ((u (+ u0 (car majors)))
+                                             (v v0))
+                                         (maplist (lambda (rest)
+                                                    (setf v (foo (car rest) (or (cdr majors)
+                                                                                (list 100))
+                                                                 u v))
+                                                    (unless (null (cdr rest))
+                                                      (incf v within-generation-separation)))
+                                                  (graph-node-children node))
 
-                                       (let ((v1 (+ v0 (/ (- (- v v0)
-                                                             (node-minor-dimension node))
-                                                          2))))
-                                         (setf (output-record-position node)
-                                               (if (eq orientation :vertical)
-                                                   (values v1 u0)
-                                                   (values u0 v1)))
-                                         (add-output-record node graph-output-record)) ;xxx right time?
-                                       ;; xxx what happens if this node is taller than the children?
-                                       v)))))))
-              ;;
-              (let ((majors (generation-sizes (graph-root-nodes graph-output-record))))
-                (let ((u (+ 0 (car majors)))
-                      (v 0))
-                  (maplist (lambda (rest)
-                             (setf v (foo (car rest) majors u v))
-                             (unless (null rest)
-                               (incf v within-generation-separation)))
-                           (graph-root-nodes graph-output-record)))))))))))
+                                         (let ((v1 (+ v0 (/ (- (- v v0)
+                                                               (node-minor-dimension node))
+                                                            2))))
+                                           (setf (output-record-position node)
+                                                 (if (eq orientation :vertical)
+                                                     (values v1 u0)
+                                                     (values u0 v1)))
+                                           (add-output-record node graph-output-record)) ;xxx right time?
+                                         ;; xxx what happens if this node is taller than the children?
+                                         v)))))))
+                ;;
+                (let ((majors (generation-sizes (graph-root-nodes graph-output-record))))
+                  (let ((u (+ 0 (car majors)))
+                        (v 0))
+                    (maplist (lambda (rest)
+                               (setf v (foo (car rest) majors u v))
+                               (unless (null rest)
+                                 (incf v within-generation-separation)))
+                             (graph-root-nodes graph-output-record))))))))))))
 
 (defmethod layout-graph-edges ((graph-output-record tree-graph-output-record)
                                stream arc-drawer arc-drawing-options)
+  (setf arc-drawer (or arc-drawer #'standard-arc-drawer))
   (with-slots (root-nodes orientation) graph-output-record
     (let ((hash (make-hash-table)))
       (labels ((walk (node)
@@ -338,20 +358,42 @@
                    (dolist (k (graph-node-children node))
                      (with-bounding-rectangle* (x1 y1 x2 y2) node
                        (with-bounding-rectangle* (u1 v1 u2 v2) k
-                         (case orientation
-                           (:horizontal
-                            (draw-line* stream (+ x2 2) (/ (+ y1 y2) 2)
-                             (- u1 2) (/ (+ v1 v2) 2)
-                             :line-thickness 0))
-                           (:vertical
-                            (draw-line* stream (/ (+ x1 x2) 2) y2
-                             (/ (+ u1 u2) 2) v1)))))
-                     ;;
+                         (ecase orientation
+                           ((:horizontal)
+                            (multiple-value-bind (from to) (if (< x1 u1)
+                                                               (values x2 u1)
+                                                               (values x1 u2))
+                              (apply arc-drawer stream node k
+                                     from (/ (+ y1 y2) 2)
+                                     to   (/ (+ v1 v2) 2)
+                                     arc-drawing-options)))
+                           ((:vertical)
+                            (multiple-value-bind (from to) (if (< y1 v1)
+                                                               (values y2 v1)
+                                                               (values y1 v2))
+                              (apply arc-drawer stream node k
+                                     (/ (+ x1 x2) 2) from
+                                     (/ (+ u1 u2) 2) to
+                                     arc-drawing-options)) ))))
                      (walk k)))))
         (map nil #'walk root-nodes)))))
 
+(defun standard-arc-drawer (stream from-node to-node x1 y1 x2 y2
+                            &rest drawing-options
+                            &key &allow-other-keys)
+  (declare (ignore from-node to-node))
+  (apply #'draw-line* stream x1 y1 x2 y2 drawing-options))
+
+(defun arrow-arc-drawer (stream from-node to-node x1 y1 x2 y2
+                            &rest drawing-options
+                            &key &allow-other-keys)
+  (declare (ignore from-node to-node))
+  (apply #'draw-arrow* stream x1 y1 x2 y2 drawing-options))
+
 #||
+
 ;; Experimental version for rectangular graphs
+
 (defmethod layout-graph-edges ((graph-output-record tree-graph-output-record)
                                stream arc-drawer arc-drawing-options)
   (with-slots (root-nodes orientation) graph-output-record
@@ -380,6 +422,9 @@
 ||#
 
 #||
+
+;;; Testing --GB 2002-08-14
+
 (define-application-frame graph-test ()
   ()
   (:panes
@@ -429,17 +474,18 @@
      2))
 
 (define-graph-test-command bar ()
-  (with-text-style (*query-io* (make-text-style :sans-serif nil 12))
+  (with-text-style (*query-io* (make-text-style :sans-serif nil 10))
     (let ((*print-case* :downcase))
       (format-graph-from-roots
        (list (clim-mop:find-class 'climi::basic-output-record))
        #'(lambda (x s)
-           (with-text-style (s (make-text-style nil
-                                                (if (external-symbol-p (class-name x))
-                                                    :bold
-                                                    nil)
-                                                nil))
-             (prin1 (class-name x) s)))
+           (surrounding-output-with-border (s :shape :oval)
+             (with-text-style (s (make-text-style nil
+                                                  (if (external-symbol-p (class-name x))
+                                                      :bold
+                                                      nil)
+                                                  nil))
+               (prin1 (class-name x) s))))
        #'(lambda (x)
            (clim-mop:class-direct-subclasses x))
        :stream *query-io*
@@ -488,6 +534,32 @@
            #'(lambda (node s)
                (write-string (node-name node) s))
            #'node-children
+           :arc-drawer #'arrow-arc-drawer
+           :arc-drawing-options (list :ink +red+ :line-thickness 1)
            :orientation orientation
            :stream stream))))))
+
+(defun make-circ-list (list)
+  (nconc list list))
+
+(define-graph-test-command test2 ()
+  (let ((stream *query-io*)
+        (orientation :vertical))
+    (fresh-line stream)
+    (format-graph-from-roots
+     (list '(defun ncons (x) (cons x nil))
+           (make-circ-list (list 1 2 3)))
+     #'(lambda (node s)
+         (if (consp node)
+             (progn
+               (draw-circle* s 5 5 5 :filled nil))
+             (princ node s)))
+     #'(lambda (x) (if (consp x) (list (car x) (cdr x))))
+     :cutoff-depth nil
+     :graph-type :tree
+     :merge-duplicates t
+     :arc-drawer #'arrow-arc-drawer
+     :arc-drawing-options (list :ink +red+ :line-thickness 1)
+     :orientation orientation
+     :stream stream)))
 ||#
