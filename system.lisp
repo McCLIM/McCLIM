@@ -43,17 +43,8 @@
 (pushnew :clim *features*)
 (pushnew :mcclim *features*)
 
-#+mk-defsystem (use-package "MK")
-
-#+mk-defsystem
-(defmacro clim-defsystem ((module &key depends-on) &rest components)
-  `(defsystem ,module
-       :source-pathname *clim-directory*
-       :source-extension "lisp"
-       ,@(and depends-on `(:depends-on ,depends-on))
-        :components
-	(:serial
-	 ,@components)))
+#+(and mk-defsystem asdf)
+(cerror "OK, just use mk-defsystem" "Both ASDF's and MK's defsystem is loaded and conflict.")
 
 #+asdf
 (defmacro clim-defsystem ((module &key depends-on) &rest components)
@@ -68,6 +59,18 @@
 		      (make-pathname :type "lisp"
 				     :defaults *clim-directory*))
 	     collect `(:file ,(pathname-name p) :pathname ,p)))))
+
+#+mk-defsystem (use-package "MK")
+
+#+mk-defsystem
+(defmacro clim-defsystem ((module &key depends-on) &rest components)
+  `(defsystem ,module
+       :source-pathname *clim-directory*
+       :source-extension "lisp"
+       ,@(and depends-on `(:depends-on ,depends-on))
+        :components
+	(:serial
+	 ,@components)))
 
 #-(or mk-defsystem asdf)
 (defmacro clim-defsystem ((module &key depends-on) &rest components)
