@@ -1,6 +1,6 @@
 (in-package :clim-listener)
 
-;;; Miscellaneous utilities, UI tools, and non-portable bits
+;;; Miscellaneous utilities, UI tools, gross hacks, and non-portable bits.
 
 ;;; (C) Copyright 2003 by Andy Hefner (hefner1@umbc.edu)
 
@@ -18,6 +18,7 @@
 ;;; License along with this library; if not, write to the 
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
+
 
 
 (defun filtermap (list func &optional (filter #'null))
@@ -50,12 +51,7 @@
      (terpri *trace-output*)))
 
 
-; This feels like a kludge, but it works well enough.
-; The problem is if you give it a pathname like #P"/etc", which
-; clearly refers to a directory, but "as a file", if that makes
-; any sense. This is not a problem in itself, but people are prone
-; to typing things like that.
-
+; There has to be a better way..
 (defun directoryp (pathname)
   "Returns pathname when supplied with a directory, otherwise nil"
   (if (or (pathname-name pathname) (pathname-type pathname))
@@ -89,6 +85,7 @@
 (defun list-directory (pathname)
   (directory pathname :truenamep nil))
 
+
 #+SBCL
 (defun sbcl-frob-to-pathname (pathname string)
   "This just keeps getting more disgusting."
@@ -106,6 +103,8 @@
            pn)
           (T (merge-pathnames (parse-namestring (concatenate 'string string "/"))
                               parent)))))
+
+;; FIXME: SB-POSIX now has STAT, so USE IT HERE !!!
 
 #+SBCL
 (defun list-directory (pathname)
@@ -177,10 +176,18 @@
 (defun invoke-as-heading (cont &optional ink)
   (with-drawing-options (T :ink (or ink +royal-blue+) :text-style (make-text-style :sans-serif :bold nil))
     (fresh-line)
-    (bordering (T :underline)                        
+    (bordering (T :underline)
       (funcall cont))
     (fresh-line)
     (vertical-gap T)))
+
+(defun indent-to (stream x &optional (spacing 0) )
+  "Advances cursor horizontally to coordinate X. If the cursor is already past
+this point, increment it by SPACING, which defaults to zero."
+  (stream-increment-cursor-position stream
+				    (if (> (stream-cursor-position stream) x)
+					spacing
+				      (- x (stream-cursor-position stream)))))
 
 ;;; Pathname evil
 ;;; Fixme: Invent some more useful operators for manipulating pathnames, add a

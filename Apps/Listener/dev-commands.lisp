@@ -128,30 +128,52 @@
 (defvar *apropos-list* nil
   "The apropos command stores its output here.")
 
-;; FIXME: Rewrite this.
+(defparameter *apropos-symbol-unbound-family* :fix)
+(defparameter *apropos-symbol-unbound-face* :roman)
+(defparameter *apropos-symbol-bound-family*   :fix)
+(defparameter *apropos-symbol-bound-face*   :roman)
+
+;; FIXME: Make this a present method specialzed on a view?
+
 (defun present-symbol (symbol &optional (stream *standard-output*) show-package)
-  (clim:with-output-as-presentation (stream symbol 'clim:symbol)
-        (let ((style (clim:make-text-style :fix
-					   (if (fboundp symbol)
-					       :bold
-					       (if (boundp symbol)
-						   :roman
-						   :italic))
-					   nil)))
-	  (clim:with-text-style (stream style)
-            (if show-package (let ((*package* (find-package :common-lisp-user)))
+  (with-output-as-presentation (stream symbol 'clim:symbol)
+    (multiple-value-bind (style ink)
+	(values
+	 (if (or (fboundp symbol)
+		 (boundp  symbol)
+		 (find-class symbol nil))
+	     (make-text-style *apropos-symbol-bound-family*
+			      *apropos-symbol-unbound-face*
+			      :normal)
+	     (make-text-style *apropos-symbol-unbound-family*
+			      *apropos-symbol-bound-face*
+			      :normal))
+	 (cond ((eql (symbol-package symbol)
+		     (find-package "KEYWORD"))
+		(make-rgb-color 0.46 0.0 0.0))
+	       ((fboundp symbol)
+		(make-rgb-color 0.0 0.0 0.3))
+	       ((find-class symbol nil)
+		(make-rgb-color 0.03 0.35 0.48))
+	       ((boundp symbol)
+		(make-rgb-color 0.0 0.0 0.0))
+	       (t (make-rgb-color 0.6 0.6 0.6))))
+      (with-drawing-options (stream :ink ink :text-style style)
+	(if show-package (let ((*package* (find-package :common-lisp-user)))
 			       (format stream "~W" symbol))
 	      (princ (symbol-name symbol) stream))
-	    (when (boundp symbol)		  
-	      (clim:with-text-face (stream :roman)
-		 (clim:with-text-size (stream :small)	     
-		    (format stream " = ~A" (symbol-value symbol)))))))))
+	(when (boundp symbol)
+	  (format stream " = ")
+	  (with-drawing-options (stream :ink +olivedrab+ ;; XXX
+					:text-style (make-text-style :fixed :roman :small))
+	    (format  stream "~W" (symbol-value symbol)))) ))))
+	    
 
 (define-command (com-apropos :name "Apropos"
 			     :command-table dev-commands)
     ((string 'clim:string :prompt "string"))
 ; Fix keyword handling in the CP sometime..
-;     &key (package-name 'package-name :prompt "in package" :default nil)     
+;     &key (package-name 'package-name :prompt "in package" :default nil)
   (setf *apropos-list* (apropos-list string #+nil(find-package package-name)))
   (dolist (sym *apropos-list*)
     (present-symbol sym *standard-output* T)
@@ -781,19 +803,15 @@
   () ())
 
 
-
-
-;; Edit File and Show File are both horribly broken right now.
-
 (define-command (com-edit-file :name "Edit File" :command-table dev-commands)
   ((pathname 'pathname  :prompt "pathname"))
   (clim-sys:make-process (lambda () (ed pathname))))
 
-#+nil
 (define-presentation-to-command-translator edit-file
   (clim:pathname com-edit-file dev-commands :gesture :select
 		 :pointer-documentation ((object stream)
 					 (format stream "Edit ~A" object))
+		 :documentation ((stream) (format stream "Edit File"))
 		 :tester ((object)
 			  (and (probe-file object)
 			       (pathname-name object))))
@@ -803,6 +821,24 @@
 (define-command (com-show-file :name "Show File" :command-table dev-commands)
   ((object 'pathname :prompt "pathname"))
   (show-file object))
+
+(define-command (com-edit-definition :name "Edit Definition" :command-table dev-commands)
+  ((symbol 'symbol :prompt "function-name"))
+  (clim-sys:make-process (lambda () (ed symbol))))
+
+(defun editable-definition-p (symbol)
+  (fboundp symbol))
+
+(define-presentation-to-command-translator edit-definition
+  (symbol com-edit-definition dev-commands :gesture :select
+	  :pointer-documentation ((object stream)
+				  (format stream "Edit Definition of ~A" object))
+	  :documentation ((stream) (format stream "Edit Definition"))
+	  :tester ((object)
+		   (editable-definition-p object)))
+  (object)
+  (list object))
+		   
 
 ;; CLIM:OPEN-WINDOW-STREAM seems to be broken.
 ;; Less broken since I hacked on it, but still bad..
