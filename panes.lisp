@@ -32,6 +32,8 @@
 
 ;; Panes
 
+(defconstant +fill+ :fill)
+
 (defclass space-requirement ()
   ((width :initform 0
 	  :initarg :width
@@ -71,10 +73,11 @@
 
 (defclass pane (standard-sheet-input-mixin temporary-medium-sheet-output-mixin
 		sheet-transformation-mixin sheet)
-  ((foreground :initarg :foreground
+  (
+   #+ignore(foreground :initarg :foreground
 	       :initform +black+
 	       :reader pane-foreground)
-   (background :initarg :background
+   #+ignore(background :initarg :background
 	       :initform +white+
 	       :reader pane-background)
    (text-style :initarg :text-style
@@ -97,6 +100,18 @@
 		      :accessor pane-space-requirement)
    )
   )
+
+(defmethod medium-foreground ((pane pane))
+  (medium-foreground (sheet-medium pane)))
+
+(defmethod (setf medium-foreground) (ink (pane pane))
+  (setf (medium-foreground (sheet-medium pane)) ink))
+
+(defmethod medium-background ((pane pane))
+  (medium-background (sheet-medium pane)))
+
+(defmethod (setf medium-background) (ink (pane pane))
+  (setf (medium-background (sheet-medium pane)) ink))
 
 (defmethod compose-space ((pane pane))
   (or (pane-space-requirement pane)
@@ -151,6 +166,16 @@
 		      pane)
   ()
   )
+
+(defmethod initialize-instance :after ((pane basic-pane) &rest args
+				       &key (background nil)
+					    (foreground nil)
+				       &allow-other-keys)
+  (declare (ignore args))
+  (if background
+      (setf (medium-background pane) background))
+  (if foreground
+      (setf (medium-foreground pane) foreground)))
 
 (defmethod compose-space ((basic basic-pane))
   (ask-space-children basic)
@@ -263,8 +288,8 @@
   (set-width-and-height pane width height)
   (let ((child (first (sheet-children pane))))
     (when child
-      (setf (sheet-region child)
-	(make-bounding-rectangle 0 0 width height))
+      (setf (sheet-transformation child)
+	(make-translation-transformation 0 0))
       (allocate-space child width height))))
 
 ;; TOP-LEVEL-SHEET
@@ -716,10 +741,11 @@
   (set-width-and-height bp width height)
   (let ((border-width (border-pane-width bp))
 	(child (first (sheet-children bp))))
-    (setf (sheet-region child)
-      (make-bounding-rectangle border-width border-width
-			       (- width border-width) (- height border-width)))
-    (allocate-space child (- width (* 2 border-width)) (- height (* 2 border-width)))))
+    (when child
+      (setf (sheet-transformation child)
+	(make-translation-transformation border-width border-width))
+      (allocate-space child (- width (* 2 border-width)) (- height (* 2 border-width))))))
+
 
 ;; RESTRAINING PANE
 
@@ -749,30 +775,131 @@
 (defclass viewport-pane (single-child-composite-pane) ())
 
 
+;; SCROLLBAR-PANE
+
+(defparameter *scrollbar-thickness* 12)
+
+(defclass scrollbar-pane (basic-pane)
+  ((orientation :initform :vertical
+		:initarg :orientation
+		:reader scrollbar-orientation)
+   ;;; the offset and length are percentages of the scrollbar's length
+   (offset :initform 0
+	   :type (real 0 1)
+	   :accessor scrollbar-offset)
+   (length :initform 1
+	   :type (real 0 1)
+	   :accessor scrollbar-length)))
+
+(defmethod initialize-instance :after ((sb scrollbar-pane) &rest args)
+  (declare (ignore args))
+  )
+
+(defmethod compose-space ((sb scrollbar-pane))
+  (if (eq (scrollbar-orientation sb) :vertical)
+      (make-space-requirement :min-width 1
+			      :width *scrollbar-thickness*
+			      :min-height (min 10 *scrollbar-thickness*)
+			      :height (* 2 *scrollbar-thickness*))
+    (make-space-requirement :min-height 1
+			    :height *scrollbar-thickness*
+			    :min-width (min 10 *scrollbar-thickness*)
+			    :width (* 2 *scrollbar-thickness*))))
+
+(defmethod allocate-space ((sb scrollbar-pane) width height)
+  (set-width-and-height sb width height))
+
+(defmethod repaint-sheet ((sb scrollbar-pane) region)
+  (declare (ignore region))
+  (window-refresh sb))
+
+(defmethod window-refresh ((sb scrollbar-pane))
+  (with-bounding-rectangle* (minx miny maxx maxy) (sheet-region sb)
+    (draw-rectangle* sb minx miny maxx maxy :filled t :ink (medium-background sb))
+    (let ((width (- maxx minx))
+	  (height (- maxy miny)))
+      (if (eq (scrollbar-orientation sb) :vertical)
+	  (draw-rectangle* sb
+			   minx (+ miny (* height (scrollbar-offset sb)))
+			   maxx (+ miny (* height (scrollbar-offset sb))
+				   (* height (scrollbar-length sb)))
+			   :filled t )
+	(draw-rectangle* sb
+			 (+ minx (* width (scrollbar-offset sb))) miny
+			 (+ minx (* width (scrollbar-offset sb))
+			    (* width (scrollbar-length sb))) maxy
+			    :filled t :ink (medium-foreground sb))))))
+
+(defmethod handle-event ((sb scrollbar-pane) (event window-repaint-event))
+  (repaint-sheet sb nil))
+
 ;; SCROLLER-PANE
 
 (defclass scroller-pane (composite-pane)
   ((scroll-bar :type (member '(t :vertical :horizontal))
 	       :initform t
 	       :initarg :scroll-bar
-	       :accessor scroller-pane-scroll-bar)))
+	       :accessor scroller-pane-scroll-bar)
+   (viewport :initform nil)
+   (vscrollbar :initform nil)
+   (hscrollbar :initform nil)))
 
+(defmethod initialize-instance :after ((pane scroller-pane) &rest args)
+  (declare (ignore args))
+  (with-slots (scroll-bar viewport vscrollbar hscrollbar) pane
+    (setq viewport (first (sheet-children pane)))
+    (when (not (eq scroll-bar :horizontal))
+      (setq vscrollbar (make-pane 'scrollbar-pane
+				  :orientation :vertical
+				  :foreground +grey40+
+				  :background +grey+))
+      (sheet-adopt-child pane vscrollbar))
+    (when (not (eq scroll-bar :vertical))
+      (setq hscrollbar (make-pane 'scrollbar-pane
+				  :orientation :horizontal
+				  :foreground +grey40+
+				  :background +grey+))
+      (sheet-adopt-child pane hscrollbar))))
+    
 (defmacro scrolling ((&rest options) &body contents)
   `(let ((viewport (make-pane 'viewport-pane :contents (list ,@contents))))
      (make-pane 'scroller-pane ,@options :contents (list viewport))))
 
 (defmethod compose-space ((pane scroller-pane))
-  (if (sheet-children pane)
-      (compose-space (first (sheet-children pane)))
-    (make-space-requirement)))
+  (with-slots (viewport) pane
+    (if viewport
+	(let ((req (compose-space viewport)))
+	  (incf (space-requirement-width req) 10)
+	  (incf (space-requirement-min-width req) 10)
+	  (incf (space-requirement-max-width req) 10)
+	  (incf (space-requirement-height req) 10)
+	  (incf (space-requirement-min-height req) 10)
+	  (incf (space-requirement-max-height req) 10)
+	  req)
+      (make-space-requirement))))
 
 (defmethod allocate-space ((pane scroller-pane) width height)
   (set-width-and-height pane width height)
-  (let ((child (first (sheet-children pane))))
-    (when child
-      (setf (sheet-region child)
-	(make-bounding-rectangle 0 0 width height))
-      (allocate-space child width height))))
+  (with-slots (viewport vscrollbar hscrollbar) pane
+    (when viewport
+      (setf (sheet-transformation viewport)
+	(make-translation-transformation (if vscrollbar *scrollbar-thickness* 0) 0))
+      (allocate-space viewport
+		      (if vscrollbar (- width *scrollbar-thickness*) width)
+		      (if hscrollbar (- height *scrollbar-thickness*) height)))
+    (when vscrollbar
+      (setf (sheet-transformation vscrollbar)
+	(make-translation-transformation 0 0))
+      (allocate-space vscrollbar
+		      *scrollbar-thickness*
+		      (if hscrollbar (- height *scrollbar-thickness*) height)))
+    (when hscrollbar
+      (setf (sheet-transformation vscrollbar)
+	(make-translation-transformation (if vscrollbar *scrollbar-thickness* 0)
+					 (- height *scrollbar-thickness*)))
+      (allocate-space hscrollbar
+		      (if vscrollbar (- width *scrollbar-thickness*) width)
+		      *scrollbar-thickness*))))
 
 (defmethod pane-viewport ((scroller scroller-pane))
   (first (sheet-children scroller)))
@@ -787,15 +914,19 @@
   (update-scrollbars (sheet-parent pane)))
 
 (defmethod update-scrollbars ((pane scroller-pane))
-  )
-
-(defmethod scroll-extent ((pane clim-stream-pane) x y)
-  (setf (sheet-transformation pane) (make-translation-transformation (- x) (- y)))
-  (set-bounding-rectangle-position (sheet-region pane) x y)
-  (update-scrollbars (sheet-parent pane))
-  (clear-area pane)
-  (replay (stream-output-history pane) pane)
-  )
+  (with-slots (viewport vscrollbar hscrollbar) pane
+    (with-bounding-rectangle* (hminx hminy hmaxx hmaxy)
+	(stream-output-history (first (sheet-children viewport)))
+      (with-bounding-rectangle* (rminx rminy rmaxx rmaxy)
+	  (sheet-region (first (sheet-children viewport)))
+	(when vscrollbar
+	  (setf (scrollbar-offset vscrollbar) (/ (- rminy hminy) (- hmaxy hminy)))
+	  (setf (scrollbar-length vscrollbar) (/ (- rmaxy rminy) (- hmaxy hminy)))
+	  (window-refresh vscrollbar))
+	(when hscrollbar
+	  (setf (scrollbar-offset hscrollbar) (/ (- rminx hminx) (- hmaxx hminx)))
+	  (setf (scrollbar-length hscrollbar) (/ (- rmaxx rminx) (- hmaxx hminx)))
+	  (window-refresh hscrollbar))))))
 
 
 ;; LABEL PANE
@@ -888,6 +1019,15 @@
   (let ((region (sheet-region pane)))
     (setf (slot-value region 'x1) x
 	  (slot-value region 'y1) y)))
+
+(defmethod scroll-extent ((pane clim-stream-pane) x y)
+;  (setf (sheet-transformation pane) (make-translation-transformation (- x) (- y)))
+  (set-bounding-rectangle-position (sheet-region pane) x y)
+;  (format *debug-io* "set region position ~D,~D for ~S~%" x y (sheet-region pane))
+  (update-scrollbars (sheet-parent pane))
+  (clear-area pane)
+  (replay (stream-output-history pane) pane)
+  )
 
 		    
 
