@@ -68,6 +68,9 @@
 (defmethod deallocate-pixmap ((pixmap pixmap))
   (port-deallocate-pixmap (port (medium-sheet pixmap)) pixmap))
 
+(defmethod deallocate-pixmap ((pixmap mirrored-pixmap))
+  (port-deallocate-pixmap (port pixmap) pixmap))
+
 (defmethod sheet-native-transformation ((pixmap mirrored-pixmap))
   +identity-transformation+)
 

@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.71 2002/04/22 05:25:41 brian Exp $
+;;; $Id: panes.lisp,v 1.72 2002/04/22 07:10:07 moore Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -269,11 +269,21 @@
    )
   (:documentation ""))
 
-; this need to be removed when a sensible solution is found,
-; but not before.
+;;; Original BTS commment:
+;;; this need to be removed when a sensible solution is found,
+;;; but not before.
+;;;
+;;; However we can't shadow window-repaint-events because that's
+;;; handled by clim-repainting-mixin, a superclass of pane!
+#|
 (defmethod handle-event ((pane pane) (event t))
   (format t "FIXME (unhandled event) ~%  ~A~%  ~A~%" pane event)
   nil)
+|#
+
+;;; Let's try this:
+(defmethod no-applicable-method ((gf (eql #'handle-event)) &rest args)
+  (format *debug-io* "FIXME (unhandled event): ~{~A~^ ~}~%" args))
 
 ;;; This is a big departure from the spec, but apparently "real" CLIM
 ;;; only has one event queue per frame too.  Sure makes things easier.
