@@ -1127,13 +1127,14 @@ were added."
 	   (when (stream-recording-p stream)
 	     (let ((record
                     ;; Hack: the coord-seq-mixin makes the assumption that, well
-                    ;; coord-seq is a coord-vector. So me morph a possible
+                    ;; coord-seq is a coord-vector. So we morph a possible
                     ;; coord-seq argument into a vector.
                     (let (,@(when (member 'coord-seq args)
                                   (list `(coord-seq
-                                          (if (vectorp coord-seq)
-                                              coord-seq
-                                              (coerce coord-seq 'vector))))))
+                                          (transform-positions (medium-transformation medium)
+                                                               (if (vectorp coord-seq)
+                                                                   coord-seq
+                                                                 (coerce coord-seq 'vector)))))))
                       (make-instance ',class-name
                                      :stream stream
                                      ,@arg-list))))
