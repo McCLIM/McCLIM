@@ -1,0 +1,101 @@
+Install instructions for CMU Common Lisp
+----------------------------------------
+
+1. Make sure you have a Lisp core file that includes 
+
+   - CLX
+   - Gray streams
+   - mk:defsystem
+
+   If you don't, check the section "How to create a Lisp core file". 
+
+2. Start Lisp
+
+3. Load the system definition file:
+
+   (load "system.lisp")
+
+4. Load the file patch-cmu.lisp
+
+   (load "patch-cmu.lisp")
+
+5. Load the source code of the system:
+
+   (operate-on-system :clim :load :load-source-instead-of-binary t)
+
+6. Compile the system:
+
+   (operate-on-system :clim :compile)
+
+7. Load the compiled system:
+
+   (operate-on-system :clim :load)
+
+Running the demo
+----------------
+
+1. Load the file "test.lisp":
+
+   (load "test.lisp")
+
+2. (in-package :clim-demo)
+
+3. (test)
+
+   You will get quite a few warnings, but eventually, you get the Lisp
+   prompt back.
+
+4. (run-frame-top-level frame)
+
+   You should now see a window with three panes, the lower one of
+   which has a prompt "Command:"
+
+   In this pane, you can now type commands similar to Lisp forms,
+   except that the form must be a function call of a Lisp function and
+   the arguments are not evaluated like this:
+
+   Command: (car (a b c)
+   
+   A
+   Command: (+ 3 4)
+
+   7 
+   Command: 
+
+How to create a Lisp core file
+------------------------------
+
+In order to run Free-CLIM on CMU CL, you need a Lisp core file that
+contains:
+
+   - CLX, the Common Lisp interface to the X Window System
+   - mk:defsystem, the portable, free defsystem facility
+   - The extended streams facility suggested by David Gray (Gray
+     streams) 
+
+1. Get the file "clx-library.x86f" from an appropriate site
+   (Debian, or cons.org, according to the system you are running)
+
+2. Get the mk:defsystem from (say) sourceforge.net (the file is called
+   defsystem.lisp
+
+3. Compile the file defsystem.lisp
+
+4. Get the two files gray-streams-class.lisp and gray-streams.lisp
+   from some source repository of CMU CL
+
+5. Compile the gray-streams files in that order (don't load them
+   first)
+
+6. Run a fresh Lisp
+
+7. Load the files clx-library.x86f, defsystem.x86f,
+   gray-streams-class.x86f, and gray-streams.x86f
+
+8. Save Lisp to a new core file, for instance:
+
+   (save-lisp "lisp+clx+defsystem+gray.core")
+
+9. If you want to make this new core file the one used by default,
+   change the symbolic link, usually in /usr/lib/cmucl, called
+   lisp.core to point to the new core file.
