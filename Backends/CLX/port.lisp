@@ -526,6 +526,13 @@
 ;; size and position, while genuine configure events only state the
 ;; correct size.
 
+(defun safely-set-input-focus (display window revert-to &optional timestamp)
+  "Sets the input focus, binding a handler for BadMatch errors and syncing with
+the server, in case the window is not visible."
+  (handler-case (progn (xlib:set-input-focus display window revert-to timestamp)
+                       (xlib:display-finish-output display))
+    (xlib:match-error () nil)))
+
 (defun event-handler (&rest event-slots
                       &key display window event-key code state mode time
 		      width height x y root-x root-y
@@ -692,10 +699,8 @@
             (let* ((frame (pane-frame sheet))
                    (focus (climi::keyboard-input-focus frame)))
               (when (and focus (sheet-mirror focus))
-                (handler-case (progn (xlib:set-input-focus (clx-port-display *clx-port*)
-                                                           (sheet-mirror focus) :parent time)
-                                     (xlib:display-finish-output (clx-port-display *clx-port*)))
-                  (xlib:match-error () nil))
+                (safely-set-input-focus (clx-port-display *clx-port*)
+                                        (sheet-mirror focus) :parent time)
                 nil)))))
 	(t
 	 (unless (xlib:event-listen (clx-port-display *clx-port*))
@@ -1055,3 +1060,10 @@
     (declare (ignore x y same-screen-p child))
     (x-event-state-modifiers (port pointer) mask)))
 
+;;; set the keyboard input focus for the port
+
+;; Ouch, we lose the timestamp. Does it really matter?
+(defmethod climi::set-port-keyboard-focus (focus (port clx-port))
+  (let ((mirror (sheet-mirror focus)))
+    (when mirror
+      (safely-set-input-focus (clx-port-display port) mirror :parent nil))))

@@ -81,9 +81,18 @@
     (keyboard-input-focus *application-frame*)))
 
 (defmethod (setf port-keyboard-input-focus) (focus port)
-  (declare (ignore port))
-  (when *application-frame*
-    (setf (keyboard-input-focus *application-frame*) focus)))
+  (when focus
+    (if (pane-frame focus)
+        (setf (keyboard-input-focus (pane-frame focus)) focus)
+      (set-port-keyboard-focus focus port))))
+
+;; This is not in the CLIM spec, but since (setf port-keyboard-input-focus)
+;; now calls (setf keyboard-input-focus), we need something concrete the
+;; backend can implement to set the focus.    
+(defmethod set-port-keyboard-focus (focus port)
+  (declare (ignore focus))
+  (warn "SET-PORT-KEYBOARD-FOCUS is not implemented on ~W" port))
+  
 
 (defun find-port (&key (server-path *default-server-path*))
   (if (null server-path)

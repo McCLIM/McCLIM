@@ -973,3 +973,6 @@ FRAME-EXIT condition."))
 (defmacro with-application-frame ((frame) &body body)
   `(let ((,frame *application-frame*))
      ,@body))
+
+(defmethod (setf keyboard-input-focus) :after (focus frame)
+  (set-port-keyboard-focus focus (port frame)))
