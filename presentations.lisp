@@ -1483,6 +1483,7 @@ function lambda list"))
 				(event-modifier-state event)
 				modifier-state)))
 	     (or (eq gesture t)
+		 for-menu
 		 (loop for g in gesture
 		       thereis (and (eql modifiers (caddr g))
 				    (or (and button (eql button (cadr g)))

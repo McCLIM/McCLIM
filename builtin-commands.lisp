@@ -58,6 +58,17 @@
 	  :gesture :describe))
   (describe obj *query-io*))
 
+;;; Another somewhat gratuitous command...
+
+(define-gesture-name :describe-presentation :pointer-button-press
+  (:left :super))
+
+(define-presentation-to-command-translator com-describe-presentation
+    (t com-describe global-command-table
+     :gesture :describe-presentation)
+  (presentation)
+  (list presentation))
+
 ;;; Default presentation translator; translates an object to itself.
 
 (define-presentation-translator default-translator

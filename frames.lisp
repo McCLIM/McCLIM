@@ -673,6 +673,47 @@ FRAME-EXIT condition."))
 				      (#.+pointer-middle-button+ "M")
 				      (#.+pointer-right-button+ "R")))
 
+(defconstant +modifier-documentation+
+  '((#.+shift-key+ "sh" "Shift")
+    (#.+control-key+ "c" "Control")
+    (#.+meta-key+ "m" "Meta")
+    (#.+super-key+ "s" "Super")
+    (#.+hyper-key+ "h" "Hyper")))
+
+;;; Give a coherent order to sets of modifier combinations.  Multi-key combos
+;;; come after single keys.
+
+(defun cmp-modifiers (a b)
+  (let ((cnt-a (logcount a))
+	(cnt-b (logcount b)))
+    (cond ((eql cnt-a cnt-b)
+	   (< a b))
+	  (t (< cnt-a cnt-b)))))
+
+(defun print-modifiers (stream modifiers style)
+  (loop with trailing = nil
+	for (bit short long) in +modifier-documentation+
+	when (logtest bit modifiers)
+	do (progn
+	     (format stream "~:[~;-~]~A" trailing (if (eq style :short)
+						      short
+						      long))
+	     (setq trailing t))))
+
+
+;;; We don't actually want to print out the translator documentation and redraw
+;;; the pointer documentation window on every motion event.  So, we compute a
+;;; state object (basically modifier state and a list of the applicable
+;;; presentation, translator and input context on each mouse button),
+;;; compare it to the previous state object, and only write out documentation
+;;; if they are different.  I suppose it's possible that this state object
+;;; doesn't capture all possible documentation changes -- the doc generator is
+;;; a function, after all -- but that's just tough.
+;;;
+;;; It would be nice to evolve this into a protocol so that elements other than
+;;; presentations -- menu choices, for example -- could influence pointer
+;;; documentation window.
+
 (defmethod frame-update-pointer-documentation
     ((frame standard-application-frame) input-context stream event)
   (when *pointer-documentation-output*
@@ -699,9 +740,17 @@ FRAME-EXIT condition."))
 	    ;; State is different, so print out new documentation
 	    (window-clear *pointer-documentation-output*)
 	    (loop for (button presentation translator context)
-		    in new-translators
+	            in new-translators
 		  for name = (cadr (assoc button +button-documentation+))
+		  for first-one = t then nil
 		  do (progn
+		       (unless first-one
+			 (write-string "; " *pointer-documentation-output*))
+		       (unless (zerop current-modifier)
+			 (print-modifiers *pointer-documentation-output*
+					  current-modifier
+					  :short)
+			 (write-string "-" *pointer-documentation-output*))
 		       (format *pointer-documentation-output* "~A: " name)
 		       (document-presentation-translator
 			translator
@@ -712,8 +761,46 @@ FRAME-EXIT condition."))
 			stream
 			x y
 			:stream *pointer-documentation-output*
-			:documentation-type :pointer)
-		       (write-string " " *pointer-documentation-output*)))
+			:documentation-type :pointer))
+		  finally (when new-translators
+			    (write-char #\. *pointer-documentation-output*)))
+	    ;; Wasteful to do this after doing
+	    ;; find-innnermost-presentation-context above... look at doing this
+	    ;; first and then doing the innermost test.
+	    (let ((all-translators (find-applicable-translators
+				    (stream-output-history stream)
+				    input-context
+				    *application-frame*
+				    stream
+				    x y
+				    :for-menu t))
+		  (other-modifiers nil))
+	      (loop for (translator) in all-translators
+		    for gesture = (gesture translator)
+		    unless (eq gesture t)
+		    do (loop for (name type modifier) in gesture
+			     unless (eql modifier current-modifier)
+			     do (pushnew modifier other-modifiers)))
+	      (when other-modifiers
+		(setf other-modifiers (sort other-modifiers #'cmp-modifiers))
+		(terpri *pointer-documentation-output*)
+		(write-string "To see other commands, press "
+			      *pointer-documentation-output*)
+		(loop for modifier-tail on other-modifiers
+		      for (modifier) = modifier-tail
+		      for first-one = t then nil
+		      do (progn
+			   (when (not first-one)
+			     (write-string ", "
+					   *pointer-documentation-output*))
+			   (when (and (null (cdr modifier-tail))
+				      (not first-one))
+			     (write-string "or "
+					   *pointer-documentation-output*))
+			   (print-modifiers *pointer-documentation-output*
+					    modifier
+					    :long)))
+		(write-char #\. *pointer-documentation-output*)))
 	    (setq frame-documentation-state (list current-modifier
 						  new-translators))))))))
 
