@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.73 2002/04/23 01:50:00 moore Exp $
+;;; $Id: panes.lisp,v 1.74 2002/04/24 16:30:14 brian Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -268,22 +268,6 @@
    (new-height :initform nil)
    )
   (:documentation ""))
-
-;;; Original BTS commment:
-;;; this need to be removed when a sensible solution is found,
-;;; but not before.
-;;;
-;;; However we can't shadow window-repaint-events because that's
-;;; handled by clim-repainting-mixin, a superclass of pane!
-#|
-(defmethod handle-event ((pane pane) (event t))
-  (format t "FIXME (unhandled event) ~%  ~A~%  ~A~%" pane event)
-  nil)
-|#
-
-;;; Let's try this:
-(defmethod no-applicable-method ((gf (eql #'handle-event)) &rest args)
-  (format *debug-io* "FIXME (unhandled event): ~{~A~^ ~}~%" args))
 
 ;;; This is a big departure from the spec, but apparently "real" CLIM
 ;;; only has one event queue per frame too.  Sure makes things easier.
@@ -1608,11 +1592,15 @@ During realization the child of the spacing will have as cordinates
                          old-x
                          (- old-y
                             (* direction
-                               (stream-line-height client))))
+                               (if (extended-output-stream-p client)
+                                   (stream-line-height client)
+                                   10)))) ; picked an arbitrary number - BTS
           (scroll-extent client
                          (- old-x
                             (* direction
-                               (stream-line-height client)))
+                               (if (extended-output-stream-p client)
+                                   (stream-line-height client)
+                                   10))) ; picked an arbitrary number - BTS
                          old-y)))))
 
 (defun is-in-scroller-pane (pane)

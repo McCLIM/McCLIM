@@ -105,7 +105,7 @@
                  :value "Text Editor")
      (slider-h   :slider
                  :min-value 0
-                 :max-value 1000
+                 :max-value 100
                  :value 0
                  :show-value-p t
                  :orientation :horizontal
@@ -118,12 +118,44 @@
                  :pathname "CLIM:images;green-apple.ppm")
      (slider-v   :slider
                  :min-value 0
-                 :max-value 1000
+                 :max-value 100
                  :orientation :vertical
                  :current-color +black+
                  :value 0
                  :width 120
                  :height 90)
+     (slider-v1  :slider
+                 :min-value 0
+                 :max-value 100
+                 :orientation :vertical
+                 :current-color +black+
+                 :value 0
+                 :width 30
+                 :height 30)
+     (slider-v2  :slider
+                 :min-value 0
+                 :max-value 100
+                 :orientation :vertical
+                 :current-color +black+
+                 :value 0
+                 :width 30
+                 :height 60)
+     (slider-v3  :slider
+                 :min-value 0
+                 :max-value 100
+                 :orientation :vertical
+                 :current-color +black+
+                 :value 0
+                 :width 30
+                 :height 90)
+     (slider-v4  :slider
+                 :min-value 0
+                 :max-value 100
+                 :orientation :vertical
+                 :current-color +black+
+                 :value 0
+                 :width 30
+                 :height 120)
      (push-btn   :push-button
                  :label "Push")
      (toggle-btn :toggle-button
@@ -137,19 +169,20 @@
      (scroll    (raising (:border-width 3 :background +Gray83+)
                    (scrolling (:width 240 :height 120 :background +Gray83+)
                      (vertically ()
-                       (make-pane 'check-box :choices '("First" "Second" "Third"
-                                                        "Red" "Blue" "Orange"
-                                                        "Elephant" "Dog" "Cat"))
-                       (make-pane 'check-box :choices '("Fourth" "Fifth" "Sixth"))
-                       (make-pane 'check-box :choices '("Seventh" "Eighth" "Ninth"))
-                       (make-pane 'check-box :choices '("Tenth" "Eleventh" "Twelth"))))))
-     (radio-box  :radio-box
-                 :choices
-                   '("One" "Two" "Three"))
-     (check-box  :check-box
-                 :choices
-                   '("First" "Second" "Third"))
-     )
+                       (with-radio-box (:orientation :horizontal)
+                         (clim:radio-box-current-selection "First") "Second" "Third"
+                         "Red" "Blue" "Orange"
+                         "Elephant" "Dog" "Cat")
+                       (with-radio-box (:orientation :horizontal :type :some-of)
+                         (clim:radio-box-current-selection "Fourth") "Fifth" "Sixth")
+                       (with-radio-box (:orientation :horizontal)
+                         (clim:radio-box-current-selection "Seventh") "Eighth" "Ninth")
+                       (with-radio-box (:orientation :horizontal :type :some-of)
+                         (clim:radio-box-current-selection "Tenth") "Eleventh" "Twelth")))))
+     (radio-box  (with-radio-box (:orientation :horizontal)
+                   (clim:radio-box-current-selection "One") "Two" "Three"))
+     (check-box  (with-radio-box (:type :some-of :orientation :horizontal)
+                   (clim:radio-box-current-selection "First") "Second" "Third")))
     (:layouts
      (default
        (vertically ()
@@ -159,6 +192,9 @@
          slider-h
          (horizontally ()
            slider-v
+           slider-v2
+           slider-v3
+           slider-v4
            image)
          push-btn
          toggle-btn

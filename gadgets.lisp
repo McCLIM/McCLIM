@@ -1211,9 +1211,9 @@ and must never be nil."))
      :max-height 0
      :height 0)))
 
-(defmethod draw-toggle-button-indicator ((gadget standard-gadget-pane) (type (eql :one-of)) value
-                                         x1 y1 x2 y2)
+(defmethod draw-toggle-button-indicator ((gadget standard-gadget-pane) (type (eql :one-of)) value x1 y1 x2 y2)
   (multiple-value-bind (cx cy) (values (/ (+ x1 x2) 2) (/ (+ y1 y2) 2))
+#|
     (multiple-value-bind (rx ry) (values (/ (- y2 y1) 2) (/ (- x2 x1) 2))
       (draw-ellipse* gadget cx cy 0 ry rx 0
                      :start-angle (* 1/4 pi)
@@ -1227,6 +1227,21 @@ and must never be nil."))
                      :ink (effective-gadget-input-area-color gadget))
       (when value
         (draw-ellipse* gadget cx cy 0 (max 1 (- ry 4)) (max 1 (- rx 4)) 0
+                       :ink (effective-gadget-foreground gadget))))
+|#
+    (let ((radius (/ (- y2 y1) 2)))
+      (draw-circle* gadget cx cy radius
+                     :start-angle (* 1/4 pi)
+                     :end-angle (* 5/4 pi)
+                     :ink *3d-dark-color*)
+      (draw-circle* gadget cx cy radius
+                     :start-angle (* 5/4 pi)
+                     :end-angle (* 9/4 pi)
+                     :ink *3d-light-color*)
+      (draw-circle* gadget cx cy (max 1 (- radius 2))
+                     :ink (effective-gadget-input-area-color gadget))
+      (when value
+        (draw-circle* gadget cx cy (max 1 (- radius 4))
                        :ink (effective-gadget-foreground gadget))))))
 
 (defmethod draw-toggle-button-indicator ((pane standard-gadget-pane) (type (eql :some-of)) value

@@ -1397,6 +1397,7 @@
 		     +dark-red+ +DarkRed+ +light-green+ +LightGreen+ 
             
 		     ))
+        ; not sure that these are extensions... - BTS
 	(extensions '(raised-pane raising
                       spacing-pane spacing
                       scroller-pane scrolling
