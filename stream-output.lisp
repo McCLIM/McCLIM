@@ -168,120 +168,115 @@
     (setf*-cursor-position (+ x dx) (+ y dy) (stream-text-cursor stream))))
 
 (defmethod scroll-vertical ((stream extended-output-stream) dy)
-  (let* ((port (port stream))
-	 (medium (sheet-medium stream))
-	 (old-transform (medium-transformation medium))
-	 (width (port-mirror-width port stream))
-	 (height (port-mirror-height port stream)))
-    (setf (medium-transformation medium) +identity-transformation+)
-    (unwind-protect
-	(cond
-	 ((> dy 0)
-	  (copy-area stream 0 dy width height 0 0)
-	  (draw-rectangle* stream 0 (- height dy) width height
-			   :ink +background-ink+
-			   :filled t))
-	 ((< dy 0)
-	  (copy-area stream 0 0 width height 0 dy)
-	  (draw-rectangle* stream 0 0 width dy
-			   :ink +background-ink+
-			   :filled t)))
-      (setf (medium-transformation medium) old-transform))
-    (setf (medium-transformation medium)
-      (compose-transformation-with-translation (medium-transformation medium) 0 (- dy)))))
+  (with-slots (tx ty) (sheet-transformation stream)
+    (setq tx (- tx)
+	  ty (- ty))
+    (scroll-extent stream tx (+ ty dy))))
 
 (defmethod scroll-horizontal ((stream extended-output-stream) dx)
-  )
+  (with-slots (tx ty) (sheet-transformation stream)
+    (setq tx (- tx)
+	  ty (- ty))
+    (scroll-extent stream (+ tx dx) ty)))
 
-(defmacro with-room-for-line (&body body)
-  `(let* ((cursor (stream-text-cursor stream))
-	  (visible (cursor-visibility cursor))
-	  (medium (sheet-medium stream))
-	  (port (port stream))
-	  (text-style (medium-text-style medium))
-	  (new-baseline (text-style-ascent text-style port))
-	  (new-height (text-style-height text-style port))
-	  (margin (stream-text-margin stream))
-	  (view-height (port-mirror-height port stream)))
-     (if visible
-	 (setf (cursor-visibility cursor) nil))
-     (with-slots (baseline height vspace) stream
-       (multiple-value-bind (cx cy) (stream-cursor-position stream)
-	 (when (> new-baseline baseline)
-	   (when (or (> baseline 0)
-		     (> height 0))
-	     (scroll-vertical stream (- new-baseline baseline))
-	     )
-	   (setq baseline new-baseline))
-	 (if (> new-height height)
-	     (setq height new-height))
-	 ,@body))
-     (if visible
-	 (setf (cursor-visibility cursor) t))))
+(defmacro with-cursor-off (stream &body body)
+  `(let* ((cursor (stream-text-cursor ,stream))
+	  (visible (cursor-visibility cursor)))
+     (unwind-protect
+	 (progn
+	   (if visible
+	       (setf (cursor-visibility cursor) nil))
+	   ,@body)
+       (if visible
+	   (setf (cursor-visibility cursor) t)))))
 
-;;; do-char doesn't do scrolling/wrapping correctly - mikemac 12/19/1998
-(defmacro do-char ()
-  `(cond
-    ((eq char #\Newline)
-     (when (> (+ cy height vspace height vspace) view-height)
-       (ecase (stream-end-of-page-action stream)
-	 (:scroll
-	  (scroll-vertical stream (+ height vspace)))
-	 (:wrap
-	  (setq cy (- (+ height vspace))))
-	 (:allow
-	  )))
-     (setq cx 0
-	   cy (+ cy height vspace)
-	   baseline 0
-	   height 0)
-     (draw-rectangle* medium cx cy (+ margin 4) (+ cy new-height)
-		      :ink +background-ink+
-		      :filled t)
-     (setf*-stream-cursor-position cx cy stream))
-    (t
-     (let ((width (stream-character-width stream char :text-style text-style)))
-       (when (> (+ cx width) margin)
-	 (ecase (stream-end-of-line-action stream)
-	   (:wrap
-	    (draw-rectangle* medium margin cy (+ margin 4) (+ cy height)
-			     :ink +foreground-ink+
-			     :filled t)
-	    (when (> (+ cy height vspace height vspace) view-height)
-	      (ecase (stream-end-of-page-action stream)
-		(:scroll
-		 (scroll-vertical stream (+ height vspace)))
-		(:wrap
-		 (setq cy (- (+ height vspace))))
-		(:allow
-		 )))
-	    (setq cx 0
-		  cy (+ cy height vspace)
-		  baseline new-baseline
-		  height new-height)
-	    (draw-rectangle* medium cx cy (+ margin 4) (+ cy new-height)
-			     :ink +background-ink+
-			     :filled t))
-	   (:scroll
-	    (scroll-horizontal stream width))
-	   (:allow
-	    )))
-       (draw-text* stream char cx (+ cy baseline) :text-style text-style)
-       (setq cx (+ cx width))
-       (setf*-stream-cursor-position cx cy stream)))))
+(defmethod stream-wrap-line ((stream extended-output-stream))
+  (let ((margin (stream-text-margin stream)))
+    (multiple-value-bind (cx cy) (stream-cursor-position stream)
+      (declare (ignore cx))
+      (draw-rectangle* (sheet-medium stream) margin cy (+ margin 4) (+ cy (slot-value stream 'height))
+		       :ink +foreground-ink+
+		       :filled t)))
+  (stream-write-char stream #\newline))
 
 (defmethod stream-write-char ((stream extended-output-stream) char)
-  (with-room-for-line
-      (do-char)))
+  (let* ((cursor (stream-text-cursor stream))
+	 (visible (cursor-visibility cursor))
+	 (medium (sheet-medium stream))
+	 (port (port stream))
+	 (text-style (medium-text-style medium))
+	 (new-baseline (text-style-ascent text-style port))
+	 (new-height (text-style-height text-style port))
+	 (margin (stream-text-margin stream))
+	 (view-height (port-mirror-height port stream)))
+    (if visible
+	(setf (cursor-visibility cursor) nil))
+    (with-slots (baseline height vspace) stream
+      (multiple-value-bind (cx cy) (stream-cursor-position stream)
+	(when (> new-baseline baseline)
+	  (when (or (> baseline 0)
+		    (> height 0))
+	    (scroll-vertical stream (- new-baseline baseline))
+	    )
+	  (setq baseline new-baseline))
+	(if (> new-height height)
+	    (setq height new-height))
+	(cond
+	 ((eq char #\Newline)
+	  (setq cx 0
+		cy (+ cy height vspace))
+	  (when (> (+ cy height vspace) view-height)
+	    (ecase (stream-end-of-page-action stream)
+	      (:scroll
+	       (scroll-vertical stream (+ height vspace)))
+	      (:wrap
+	       (setq cy 0))
+	      (:allow
+	       )))
+	  (draw-rectangle* medium cx cy (+ margin 4) (+ cy height)
+			   :ink +background-ink+
+			   :filled t)
+	  (setq baseline 0
+		height 0)
+	  (setf*-stream-cursor-position cx cy stream))
+	 (t
+	  (let ((width (stream-character-width stream char :text-style text-style)))
+	    (when (>= (+ cx width) margin)
+	      (ecase (stream-end-of-line-action stream)
+		(:wrap
+		 (let ((current-baseline baseline))
+		   (stream-wrap-line stream)
+		   (multiple-value-bind (new-cx new-cy) (stream-cursor-position stream)
+		     (setq cx new-cx
+			   cy new-cy
+			   baseline current-baseline))))
+		(:scroll
+		 (scroll-horizontal stream width))
+		(:allow
+		 )))
+	    (draw-text* stream char cx (+ cy baseline vspace) :text-style text-style)
+	    (setq cx (+ cx width))
+	    (setf*-stream-cursor-position cx cy stream))))))
+    (if visible
+	(setf (cursor-visibility cursor) t))))
 
 (defmethod stream-write-string ((stream extended-output-stream) string
 				&optional (start 0) end)
   (if (null end)
       (setq end (length string)))
-  (with-room-for-line
+  (with-cursor-off stream
       (loop for i from start below end
 	    for char = (aref string i)
-	    do (do-char))))
+	    do (stream-write-char stream char))))
+
+;(defmethod stream-write-string ((stream extended-output-stream) string
+;				&optional (start 0) end)
+;  (if (null end)
+;      (setq end (length string)))
+;  (with-room-for-line
+;      (loop for i from start below end
+;	    for char = (aref string i)
+;	    do (do-char))))
 
 (defmethod stream-character-width ((stream extended-output-stream) char &key (text-style nil))
   (port-character-width (port stream)

@@ -74,14 +74,13 @@
 (defun replay (record stream &optional region)
   (let ((old-record-p (stream-recording-p stream))
 	(old-draw-p (stream-drawing-p stream)))
-    (when old-record-p
-      (unwind-protect
-	  (progn
-	    (setf (stream-recording-p stream) nil
-		  (stream-drawing-p stream) t)
-	    (replay-output-record record stream region))
-	(setf (stream-recording-p stream) old-record-p
-	      (stream-drawing-p stream) old-draw-p)))))
+    (unwind-protect
+	(progn
+	  (setf (stream-recording-p stream) nil
+		(stream-drawing-p stream) t)
+	  (replay-output-record record stream region))
+      (setf (stream-recording-p stream) old-record-p
+	    (stream-drawing-p stream) old-draw-p))))
 
 (defmethod replay-output-record ((record output-record) stream
 				 &optional region x-offset y-offset)
@@ -433,11 +432,19 @@
    (start-x :initarg :start-x)
    (start-y :initarg :start-y)
    (end-x)
-   (end-y)))
+   (end-y)
+   (wrapped :initform nil
+	    :accessor text-record-wrapped)))
 
 (defun text-displayed-output-record-p (x)
   (typep x 'text-displayed-output-record))
 
+(defmethod print-object ((self text-displayed-output-record) stream)
+  (print-unreadable-object (self stream :type t :identity t)
+    (if (slot-boundp self 'start-x)
+	(with-slots (start-x start-y strings) self
+	  (format stream "~D,~D ~S" start-x start-y (mapcar #'third strings)))
+      (format stream "empty"))))
 
 (defmethod add-character-output-to-text-record ((text-record text-displayed-output-record)
 						character text-style width height
@@ -467,7 +474,7 @@
 (defmethod replay-output-record ((record text-displayed-output-record) stream
 				 &optional region x-offset y-offset)
   (declare (ignore x-offset y-offset))
-  (with-slots (strings baseline max-height start-x start-y) record
+  (with-slots (strings baseline max-height start-x start-y wrapped) record
     (let ((old-medium (sheet-medium stream))
 	  (new-medium (make-medium (port stream) stream)))
       (unwind-protect
@@ -478,7 +485,12 @@
 		  for (x text-style string) in strings
 		  do (setf (medium-text-style new-medium) text-style)
 		     (draw-text* stream string x y
-				 :text-style text-style :clipping-region region)))
+				 :text-style text-style :clipping-region region))
+	    (if wrapped
+		(draw-rectangle* (sheet-medium stream)
+				 (+ wrapped 0) start-y (+ wrapped 4) (+ start-y max-height)
+				 :ink +foreground-ink+
+				 :filled t)))
 	(setf (sheet-medium stream) old-medium)))))
 
 (defmethod output-record-start-cursor-position ((record text-displayed-output-record))
@@ -503,51 +515,43 @@
     (unless (text-displayed-output-record-p trec)
       (setq trec (make-instance 'text-displayed-output-record))
       (add-output-record trec (stream-output-history stream))
-      (setf (stream-current-output-record stream) trec))
+      (setf (stream-current-output-record stream) trec)
+      (with-slots (start-x start-y end-x end-y) trec
+	  (multiple-value-bind (cx cy) (stream-cursor-position stream)
+	    (setq start-x cx
+		  start-y (+ cy (stream-vertical-spacing stream))
+		  end-x start-x
+		  end-y start-y))))
     trec))
 
 (defmethod stream-write-char :around ((stream output-recording-stream) char)
   (when (stream-recording-p stream)
+    (get-text-record stream))
+  (call-next-method)
+  (when (stream-recording-p stream)
     (cond
-     ((or (eql char #\return)
-	  (eql char #\newline))
+     ((not (or (eql char #\return)
+	       (eql char #\newline)))
+      (let* ((medium (sheet-medium stream))
+	     (text-style (medium-text-style medium))
+	     (trec (get-text-record stream))
+	     (port (port stream)))
+	(add-character-output-to-text-record
+	 trec char text-style
+	 (stream-character-width stream char :text-style text-style)
+	 (text-style-height text-style port)
+	 (text-style-ascent text-style port))))
+     (t
       (let ((trec (make-instance 'text-displayed-output-record)))
 	(add-output-record trec (stream-output-history stream))
-	(setf (stream-current-output-record stream) trec)))
-     (t
-      (let ((medium (sheet-medium stream))
-	    (trec (get-text-record stream)))
-	  (multiple-value-bind (width height ignore1 ignore2 baseline)
-	      (text-size medium (string char))
-	  (declare (ignore ignore1 ignore2))
-	  (if (not (slot-boundp trec 'start-y))
-	      (with-slots (start-x start-y end-x end-y) trec
-		(multiple-value-bind (cx cy) (stream-cursor-position stream)
-		  (setq start-x cx
-			start-y (+ cy (stream-vertical-spacing stream))
-			end-x cx
-			end-y cy))))
-	  (add-character-output-to-text-record trec char
-					       (medium-text-style medium)
-					       width height baseline))))))
-  (call-next-method))
+	(setf (stream-current-output-record stream) trec)
+	(with-slots (start-x start-y end-x end-y) trec
+	  (multiple-value-bind (cx cy) (stream-cursor-position stream)
+	    (setq start-x cx
+		  start-y (+ cy (stream-vertical-spacing stream))
+		  end-x start-x
+		  end-y start-y))))))))
 
-(defmethod stream-write-string :around ((stream output-recording-stream) string
-					&optional (start 0) end)
+(defmethod stream-wrap-line :before ((stream output-recording-stream))
   (when (stream-recording-p stream)
-    (let ((medium (sheet-medium stream))
-	  (trec (get-text-record stream)))
-      (multiple-value-bind (width height ignore1 ignore2 baseline)
-	  (text-size medium string)
-	(declare (ignore ignore1 ignore2))
-	(if (not (slot-boundp trec 'start-y))
-	    (with-slots (start-x start-y end-x end-y) trec
-	      (multiple-value-bind (cx cy) (stream-cursor-position stream)
-		(setq start-x cx
-		      start-y (+ cy (stream-vertical-spacing stream))
-		      end-x cx
-		      end-y cy))))
-	(add-string-output-to-text-record trec string start end
-					  (medium-text-style medium)
-					  width height baseline))))
-  (call-next-method))
+    (setf (text-record-wrapped (get-text-record stream)) (stream-text-margin stream))))
