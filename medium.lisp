@@ -17,140 +17,93 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
+;;;; TODO
+
+;;; Text Styles
+
+;; - *UNDEFINED-TEXT-STYLE* is missing
+;; - Why is (EQ (MAKE-TEXT-STYLE NIL NIL 10) (MAKE-TEXT-STYLE NIL NIL 10.0005)) = T?
+;;   Does it matter?
+;; - Don't we want a weak hash-table for *TEXT-STYLE-HASH-TABLE*
+;; - we need more macro hygiene in WITH-TEXT-STYLE
+;;
+;; --GB 2002-02-26
+
+;;; Media
+
+;; - MEDIUM-DRAW-POINTS*, MEDIUM-DRAW-LINES*, MEDIUM-DRAW-RECTANGLES*
+;; - MEDIUM-DRAW-RECTANGLES*
+;;
+;; --GB 2002-02-26
+
+;;; Notes
+
+;; The text-style protocol is kind of useless for now. How is an
+;; application programmer expected to implement new text-styles? I
+;; think we would need something like:
+;;
+;;  TEXT-STYLE-CHARACTER-METRICS text-style character[1]
+;;    -> width, ascent, descent, left-bearing, right-bearing
+;;
+;;  TEXT-STYLE-DRAW-TEXT text-style medium string x y
+;;  Or even better:
+;;  DESIGN-FROM-TEXT-STYLE-CHARACTER text-style character
+;;
+;;
+;; And when you start to think about it, text-styles are not fonts. So
+;; we need two protocols: A text style protocol and a font protocol. 
+;;
+;; A text style is then something, which maps a sequence of characters
+;; into a couple of drawing commands, while probably using some font.
+;;
+;; While a font is something, which maps a _glyph index_ into a design.
+;;
+;; Example: Underlined with extra word spacing is a text style, while
+;;          Adobe Times Roman 12pt is a font.
+;;
+;; And [it can't be said too often] unicode is not a glyph encoding
+;; but more a kind of text formating.
+;; 
+;; [1] or even a code position
+;; --GB
+
 (in-package :CLIM-INTERNALS)
 
-;;; MEDIUM class
+;; This must come early, because of implementation quirks:
 
-(defclass medium () ())
+(define-protocol-class medium ()
+  ())
 
-(defclass basic-medium (medium)
-  ((foreground :initarg :foreground
-               :initform +black+
-               :accessor medium-foreground)
-   (background :initarg :background
-               :initform +white+
-               :accessor medium-background)
-   (ink :initarg :ink
-        :initform +foreground-ink+
-        :accessor medium-ink)
-   (transformation :type transformation
-                   :initarg :transformation
-                   :initform +identity-transformation+ 
-                   :accessor medium-transformation)
-   (clipping-region :type region
-                    :initarg :clipping-region
-                    :initform +everywhere+
-                    :documentation "Clipping region in the SHEET coordinates.")
-   ;; always use this slot through its accessor, since there may
-   ;; be secondary methods on it -RS 2001-08-23
-   (line-style :initarg :line-style
-               :initform (make-line-style)
-               :accessor medium-line-style)
-   ;; always use this slot through its accessor, since there may
-   ;; be secondary methods on it -RS 2001-08-23
-   (text-style :initarg :text-style
-               :initform (make-text-style :fix :roman :normal)
-               :accessor medium-text-style)
-   (default-text-style :initarg :default-text-style
-     :initform (make-text-style :fix :roman :normal)
-     :accessor medium-default-text-style)
-   (sheet :initarg :sheet
-          :initform nil                 ; this means that medium is not linked to a sheet
-          :reader medium-sheet
-          :writer (setf %medium-sheet) ))
-  (:documentation "The basic class, on which all CLIM mediums are built.") )
-
-(defclass ungrafted-medium (basic-medium) ())
-
-(defmethod mediump ((x medium))
-  t)
-
-(defmethod mediump ((x medium))
-  nil)
-
-(defmethod initialize-instance :after ((medium medium) &rest args)
-  (declare (ignore args))
-  ;; Initial CLIPPING-REGION is in coordinates, given by initial
-  ;; TRANSFORMATION, but we store it in SHEET's coords.
-  (with-slots (clipping-region) medium
-    (setf clipping-region (transform-region (medium-transformation medium)
-                                            clipping-region))))
-
-(defmethod medium-clipping-region ((medium medium))
-  (untransform-region (medium-transformation medium)
-                    (slot-value medium 'clipping-region)))
-
-(defmethod (setf medium-clipping-region) (region (medium medium))
-  (setf (slot-value medium 'clipping-region)
-        (transform-region (medium-transformation medium)
-                            region)))
-
-(defmethod (setf medium-clipping-region) :after (region (medium medium))
-  (declare (ignore region))
-  (let ((sheet (medium-sheet medium)))
-    (when sheet
-      (invalidate-cached-regions sheet))))
-
-(defmethod (setf medium-transformation) :after (transformation (medium medium))
-  (declare (ignore transformation))
-  (let ((sheet (medium-sheet medium)))
-    (when sheet
-      (invalidate-cached-transformations sheet))))
-
-(defmethod medium-merged-text-style ((medium medium))
-  (merge-text-styles (medium-text-style medium) (medium-default-text-style medium)))
-
-;; with-sheet-medium moved to output.lisp. --GB
-;; with-sheet-medium-bound moved to output.lisp. --GB
-
-(defmacro with-pixmap-medium ((medium pixmap) &body body)
-  (let ((old-medium (gensym))
-	(old-pixmap (gensym)))
-    `(let* ((,old-medium (pixmap-medium ,pixmap))
-	    (,medium (or ,old-medium (make-medium (port ,pixmap) ,pixmap)))
-	    (,old-pixmap (medium-sheet ,medium)))
-       (setf (pixmap-medium ,pixmap) ,medium)
-       (setf (%medium-sheet ,medium) ,pixmap) ;is medium a basic medium? --GB
-       (unwind-protect
-	   (progn
-	     ,@body)
-	 (setf (pixmap-medium ,pixmap) ,old-medium)
-	 (setf (medium-sheet ,medium) ,old-pixmap)))))
-
-;;; Medium Device functions
-
-(defmethod medium-device-transformation ((medium medium))
-  (sheet-device-transformation (medium-sheet medium)))
-
-(defmethod medium-device-region ((medium medium))
-  (sheet-device-region (medium-sheet medium)))
-
-
-;;; Text-Style class
+;;;;
+;;;; 11 Text Styles
+;;;;
 
 (eval-when (eval load compile)
 
-(defclass text-style ()
+(define-protocol-class text-style ()
   ())
 
-(defmethod text-style-p ((x text-style))
-  (declare (ignorable x))
-  t)
-
-(defmethod text-style-p ((x t))
-  (declare (ignorable x))
-  nil)
+(defgeneric text-style-components (text-style))
+(defgeneric text-style-family (text-style))
+(defgeneric text-style-face (text-style))
+(defgeneric text-style-size (text-style))
+(defgeneric merge-text-style (text-style-1 text-style-2))
+(defgeneric text-style-ascent (text-style medium))
+(defgeneric text-style-descent (text-style medium))
+(defgeneric text-style-height (text-style medium))
+(defgeneric text-style-width (text-style medium))
+(defgeneric text-style-fixed-width-p (text-style medium))
 
 (defclass standard-text-style (text-style)
   ((family :initarg :text-family
 	   :initform :fix
 	   :reader text-style-family)
-   (face :initarg :text-face
-	 :initform :roman
-	 :reader text-style-face)
-   (size :initarg :text-size
-	 :initform :normal
-	 :reader text-style-size)))
+   (face   :initarg :text-face
+	   :initform :roman
+	   :reader text-style-face)
+   (size   :initarg :text-size
+	   :initform :normal
+	   :reader text-style-size)))
 
 (defun family-key (family)
   (ecase family
@@ -331,6 +284,105 @@
      (invoke-with-text-style ,medium #'continuation (make-text-style nil nil ,size))))
 
 
+;;; MEDIUM class
+
+(defclass basic-medium (medium)
+  ((foreground :initarg :foreground
+               :initform +black+
+               :accessor medium-foreground)
+   (background :initarg :background
+               :initform +white+
+               :accessor medium-background)
+   (ink :initarg :ink
+        :initform +foreground-ink+
+        :accessor medium-ink)
+   (transformation :type transformation
+                   :initarg :transformation
+                   :initform +identity-transformation+ 
+                   :accessor medium-transformation)
+   (clipping-region :type region
+                    :initarg :clipping-region
+                    :initform +everywhere+
+                    :documentation "Clipping region in the SHEET coordinates.")
+   ;; always use this slot through its accessor, since there may
+   ;; be secondary methods on it -RS 2001-08-23
+   (line-style :initarg :line-style
+               :initform (make-line-style)
+               :accessor medium-line-style)
+   ;; always use this slot through its accessor, since there may
+   ;; be secondary methods on it -RS 2001-08-23
+   (text-style :initarg :text-style
+               :initform *default-text-style*
+               :accessor medium-text-style)
+   (default-text-style :initarg :default-text-style
+     :initform *default-text-style*
+     :accessor medium-default-text-style)
+   (sheet :initarg :sheet
+          :initform nil                 ; this means that medium is not linked to a sheet
+          :reader medium-sheet
+          :writer (setf %medium-sheet) ))
+  (:documentation "The basic class, on which all CLIM mediums are built.") )
+
+(defclass ungrafted-medium (basic-medium) ())
+
+(defmethod initialize-instance :after ((medium medium) &rest args)
+  (declare (ignore args))
+  ;; Initial CLIPPING-REGION is in coordinates, given by initial
+  ;; TRANSFORMATION, but we store it in SHEET's coords.
+  (with-slots (clipping-region) medium
+    (setf clipping-region (transform-region (medium-transformation medium)
+                                            clipping-region))))
+
+(defmethod medium-clipping-region ((medium medium))
+  (untransform-region (medium-transformation medium)
+                    (slot-value medium 'clipping-region)))
+
+(defmethod (setf medium-clipping-region) (region (medium medium))
+  (setf (slot-value medium 'clipping-region)
+        (transform-region (medium-transformation medium)
+                            region)))
+
+(defmethod (setf medium-clipping-region) :after (region (medium medium))
+  (declare (ignore region))
+  (let ((sheet (medium-sheet medium)))
+    (when sheet
+      (invalidate-cached-regions sheet))))
+
+(defmethod (setf medium-transformation) :after (transformation (medium medium))
+  (declare (ignore transformation))
+  (let ((sheet (medium-sheet medium)))
+    (when sheet
+      (invalidate-cached-transformations sheet))))
+
+(defmethod medium-merged-text-style ((medium medium))
+  (merge-text-styles (medium-text-style medium) (medium-default-text-style medium)))
+
+;; with-sheet-medium moved to output.lisp. --GB
+;; with-sheet-medium-bound moved to output.lisp. --GB
+
+(defmacro with-pixmap-medium ((medium pixmap) &body body)
+  (let ((old-medium (gensym))
+	(old-pixmap (gensym)))
+    `(let* ((,old-medium (pixmap-medium ,pixmap))
+	    (,medium (or ,old-medium (make-medium (port ,pixmap) ,pixmap)))
+	    (,old-pixmap (medium-sheet ,medium)))
+       (setf (pixmap-medium ,pixmap) ,medium)
+       (setf (%medium-sheet ,medium) ,pixmap) ;is medium a basic medium? --GB
+       (unwind-protect
+	   (progn
+	     ,@body)
+	 (setf (pixmap-medium ,pixmap) ,old-medium)
+	 (setf (%medium-sheet ,medium) ,old-pixmap)))))
+
+;;; Medium Device functions
+
+(defmethod medium-device-transformation ((medium medium))
+  (sheet-device-transformation (medium-sheet medium)))
+
+(defmethod medium-device-region ((medium medium))
+  (sheet-device-region (medium-sheet medium)))
+
+
 ;;; Line-Style class
 
 (defclass line-style ()
@@ -472,6 +524,7 @@
                             t filled))))
 
 (defmethod medium-draw-rectangles* :around ((medium basic-medium) position-seq filled)
+  ;; point-seq can be a vector! --GB
   (let ((tr (medium-transformation medium)))
     (if (rectilinear-transformation-p tr)
         (loop for (left top right bottom) on position-seq by #'cddddr
