@@ -134,6 +134,9 @@
 (defmethod convert-to-gesture ((ev symbol))
   ev)
 
+(defmethod convert-to-gesture ((ev window-manager-delete-event))
+  (frame-exit (pane-frame (event-sheet ev))))
+
 (defmethod convert-to-gesture ((ev key-press-event))
   (keyboard-event-key-name ev))
 

@@ -158,10 +158,10 @@ If there are no named panes, only the single, top level pane is returned."))
 ;(defgeneric frame-current-layout (frame))
 ;(defgeneric frame-all-layouts (frame)) ; XXX Is it in Spec?
 (defgeneric layout-frame (frame &optional width height))
-;(defgeneric frame-exit-frame (condition) ; XXX Is it in Spec?
-;  (:documentation
-;   "Returns the frame that is being exited from associated with the
-;FRAME-EXIT condition."))
+(defgeneric frame-exit-frame (condition)
+  (:documentation
+   "Returns the frame that is being exited from associated with the
+FRAME-EXIT condition."))
 (defgeneric frame-exit (frame) ; XXX Is it in Spec?
   (:documentation
    "Exits from the FRAME."))
@@ -273,8 +273,16 @@ If there are no named panes, only the single, top level pane is returned."))
 
 ;;; Command loop interface
 
+(define-condition frame-exit (condition)
+  ((frame :initarg :frame :reader frame-exit-frame)))
+
+(defmethod frame-exit ((frame standard-application-frame))
+  (signal 'frame-exit :frame frame))
+
 (defmethod run-frame-top-level ((frame application-frame))
-  (apply (first (frame-top-level frame)) frame (rest (frame-top-level frame))))
+  (handler-bind ((frame-exit #'(lambda (condition)
+				 (return-from run-frame-top-level nil))))
+    (apply (first (frame-top-level frame)) frame (rest (frame-top-level frame)))))
 
 (defmethod run-frame-top-level :around ((frame application-frame))
   (let ((*application-frame* frame)
@@ -585,4 +593,3 @@ If there are no named panes, only the single, top level pane is returned."))
 	    (highlight-presentation-1 presentation
 				      stream
 				      :highlight)))))
-
