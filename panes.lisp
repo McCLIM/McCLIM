@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.92 2002/07/30 16:43:16 adejneka Exp $
+;;; $Id: panes.lisp,v 1.93 2002/07/31 11:58:10 adejneka Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -2054,12 +2054,15 @@ During realization the child of the spacing will have as cordinates
 
 ;;; 29.4.5 Creating a Standalone CLIM Window
 
-(define-application-frame a-window-stream ()
-  ((the-io))
+(define-application-frame a-window-stream (standard-encapsulating-stream
+                                           standard-extended-input-stream
+                                           fundamental-character-output-stream
+                                           application-frame)
+  ((stream))
   (:panes
    (io
     (scrolling (:height 400 :width 700)
-      (setf (slot-value *application-frame* 'the-io)
+      (setf (slot-value *application-frame* 'stream)
         (make-pane 'clim-stream-pane
                    :width 700
                    :height 2000)))))
@@ -2105,6 +2108,8 @@ During realization the child of the spacing will have as cordinates
                                      :frame-manager fm)))
     (with-look-and-feel-realization (fm fr))
     fr))
+
+
 
 ;;; These below were just hot fixes, are there still needed? Are even
 ;;; half-way correct? --GB
