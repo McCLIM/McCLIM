@@ -536,7 +536,7 @@
    (cap-shape   :initarg :line-cap-shape
 	        :initform :butt
 	        :reader line-style-cap-shape
-                :type (member :butt :squere :round :no-end-point))
+                :type (member :butt :square :round :no-end-point))
    (dashes      :initarg :line-dashes
 	        :initform nil
 	        :reader line-style-dashes
