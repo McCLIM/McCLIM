@@ -112,4 +112,5 @@
    "examples/traffic-lights"
    "examples/clim-fig"
    "examples/postscript-test"
+   "examples/transformations-test"
    ))
