@@ -28,7 +28,8 @@
 
 (defmethod do-graphics-with-options ((sheet t) func &rest options)
   (declare (ignore options))
-  (funcall func sheet))
+  (if sheet
+      (funcall func sheet)))
 
 (defmethod do-graphics-with-options-internal ((medium medium) orig-medium func
 				     &rest args
@@ -84,7 +85,8 @@
 								   text-size)
 						  text-style)))
 	  (setf (medium-text-style medium) text-style)
-	  (funcall func orig-medium))
+	  (when orig-medium
+	    (funcall func orig-medium)))
       (setf (medium-ink medium) old-ink)
       (setf (medium-clipping-region medium) old-clip)
       (setf (medium-transformation medium) old-transform)
