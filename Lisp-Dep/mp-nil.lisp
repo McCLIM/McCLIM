@@ -119,7 +119,7 @@
 ;;; called from process-next-event. However, I don't feel obligated
 ;;; to put too much work into CLIM-SYS on non-multiprocessing platforms.
 
-(defun make-condition-variable (list nil))
+(defun make-condition-variable () (list nil))
 
 (defun condition-wait (cv lock &optional timeout)
   (declare (ignore lock))
