@@ -1907,6 +1907,9 @@ according to the flags RECORD and DRAW."
     (call-next-method)))
 
 (defmethod handle-repaint ((stream output-recording-stream) region)
+  (with-bounding-rectangle* (x1 y1 x2 y2) region
+    (with-output-recording-options (stream :record nil) 
+	(draw-rectangle* stream x1 y1 x2 y2 :filled T :ink +background-ink+)))  
   (stream-replay stream region))
 
 (defmethod scroll-extent :around ((stream output-recording-stream) x y)
@@ -1952,10 +1955,7 @@ according to the flags RECORD and DRAW."
 
 (defmethod repaint-sheet ((sheet output-recording-stream) region)
   ;; FIXME: Change things so the rectangle below is only drawn in response
-  ;;        to explicit repaint requests from the user, not exposes from X
-  (with-slots (x1 x2 y1 y2) region
-      (with-output-recording-options (sheet :record nil) 
-	(draw-rectangle* sheet x1 y1 x2 y2 :filled T :ink +background-ink+)))
+  ;;        to explicit repaint requests from the user, not exposes from X    
   (map-over-sheets-overlapping-region #'(lambda (s)
 					  (handle-repaint s region))
 				      sheet
