@@ -195,8 +195,7 @@
   (realize-mirror-aux port sheet
 		      :override-redirect :on
 		      :map nil
-		      :event-mask '(:structure-notify
-                                    )))
+		      :event-mask '(:structure-notify)))
 
 (defmethod realize-mirror ((port clx-port) (sheet menu-button-pane))
   (realize-mirror-aux port sheet

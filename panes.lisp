@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.70 2002/04/22 01:28:52 moore Exp $
+;;; $Id: panes.lisp,v 1.71 2002/04/22 05:25:41 brian Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -86,7 +86,7 @@
 ;;     Or: expand them as we did?
 ;;   . adopt/disown/enable/disable
 ;;
-;; - RESTRAINIG-PANE
+;; - RESTRAINING-PANE
 ;;   . ???
 ;;
 ;; - LABEL-PANE
@@ -268,6 +268,12 @@
    (new-height :initform nil)
    )
   (:documentation ""))
+
+; this need to be removed when a sensible solution is found,
+; but not before.
+(defmethod handle-event ((pane pane) (event t))
+  (format t "FIXME (unhandled event) ~%  ~A~%  ~A~%" pane event)
+  nil)
 
 ;;; This is a big departure from the spec, but apparently "real" CLIM
 ;;; only has one event queue per frame too.  Sure makes things easier.
@@ -695,10 +701,10 @@
 	(y (window-configuration-event-y event))
 	(width (window-configuration-event-width event))
         (height (window-configuration-event-height event)))
-    ;; avoid goint into an infinite loop by not using (setf sheet-transformation)
+    ;; avoid going into an infinite loop by not using (setf sheet-transformation)
     (setf (slot-value pane 'transformation)
 	  (make-translation-transformation x y))
-    ;; avoid goint into an infinite loop by not using (setf sheet-region)
+    ;; avoid going into an infinite loop by not using (setf sheet-region)
     (setf (slot-value pane 'region)
 	  (make-bounding-rectangle 0 0 width height))
     (allocate-space pane width height)))
@@ -1334,10 +1340,17 @@ During realization the child of the spacing will have as cordinates
 (defmacro raising ((&rest options) &body contents)
   `(make-pane 'raised-pane ,@options :contents (list ,@contents)))
 
-
+#+nil
 (defmethod handle-event ((pane raised-pane) (event window-repaint-event))
   (repaint-sheet pane (sheet-region pane)))
 
+(defmethod handle-repaint ((pane raised-pane) region)
+  (declare (ignore region))
+  (with-special-choices (pane)
+    (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
+      (draw-edges-lines* pane 0 0 (- x2 x1 1) (- y2 y1 1)))))
+
+#+nil
 (defmethod repaint-sheet ((pane raised-pane) region)
   (declare (ignore region))
   (with-special-choices (pane)
