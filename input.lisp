@@ -118,39 +118,57 @@
 (defmethod event-queue-append ((eq standard-event-queue) item)
   "Append the item at the end of the queue. Does event compression."
   (with-lock-held ((event-queue-lock eq))
-    (cond 
-     ;; Motion Event Compression
-     ;; 
-     ;; . find the (at most one) motion event
-     ;; . delete it
-     ;; . append item to queue
-     ;;
-     ;; But leave enter/exit events.
-     ;;
-     ((and (typep item 'pointer-motion-event)
-           (not (typep item 'pointer-boundary-event)))
-      (let ((sheet (event-sheet item)))
-        (labels ((fun (xs)
-                   (cond ((null xs)
-                          (setf (event-queue-tail eq) (cons item nil)) )
-                         ((and (typep (car xs) 'pointer-motion-event)
-                               (not (typep (car xs) 'pointer-boundary-event))
-                               (eq (event-sheet (car xs)) sheet))
-                          ;; delete this
-                          (fun (cdr xs)))
-                         (t
-                          (setf (cdr xs) (fun (cdr xs)))
-                          xs))))
-          (setf (event-queue-head eq) (fun (event-queue-head eq))))))
-     ;;
-     ;; Repaint event compression
-     ;;
-     ((typep item 'window-repaint-event)
-      (let ((region (window-event-native-region item))
-            (sheet  (event-sheet item))
-            (did-something-p nil))
-        (labels ((fun (xs)
-                   (cond ((null xs)
+    (labels ((append-event ()
+	       (cond ((null (event-queue-tail eq))
+		      (setf (event-queue-head eq) (cons item nil)
+			    (event-queue-tail eq) (event-queue-head eq)))
+		     (t
+		      (setf (event-queue-tail eq)
+			    (setf (cdr (event-queue-tail eq)) (cons item nil))))))
+	     (event-delete-if (predicate)
+	       (when (not (null (event-queue-head eq)))
+		 (setf (event-queue-head eq)
+		       (delete-if predicate (event-queue-head eq))
+		       (event-queue-tail eq)
+		       (last (event-queue-head eq))))))
+      (cond 
+       ;; Motion Event Compression
+       ;; 
+       ;; . find the (at most one) motion event
+       ;; . delete it
+       ;; . append item to queue
+       ;;
+       ;; But leave enter/exit events.
+       ;;
+       ((and (typep item 'pointer-motion-event)
+	     (not (typep item 'pointer-boundary-event)))
+	(let ((sheet (event-sheet item)))
+	  (event-delete-if
+	    #'(lambda (x)
+		(and (typep x 'pointer-motion-event)
+		     (not (typep x 'pointer-boundary-event))
+		     (eq (event-sheet x) sheet))))
+	  (append-event)))
+       ;;
+       ;; Resize event compression
+       ;;
+       ((typep item 'window-configuration-event)
+	(when (typep (event-sheet item) 'top-level-sheet-pane)	
+	  (let ((sheet (event-sheet item)))
+	    (event-delete-if
+	      #'(lambda (ev)
+		   (and (typep ev 'window-configuration-event)
+			(eq (event-sheet ev) sheet)))))
+	  (append-event)))       
+       ;;
+       ;; Repaint event compression
+       ;;
+       ((typep item 'window-repaint-event)
+        (let ((region (window-event-native-region item))
+              (sheet  (event-sheet item))
+              (did-something-p nil))
+          (labels ((fun (xs)
+		     (cond ((null xs)
                           ;; We reached the queue's tail: Append the new event, construct a new
                           ;; one if necessary.
                           (when did-something-p
@@ -187,15 +205,9 @@
                          (t
                           (setf (cdr xs) (fun (cdr xs)))
                           xs))))
-          (setf (event-queue-head eq) (fun (event-queue-head eq))))))
+	    (setf (event-queue-head eq) (fun (event-queue-head eq))))))
      ;; Regular events are just appended:
-     (t
-      (cond ((null (event-queue-tail eq))
-             (setf (event-queue-head eq) (cons item nil)
-                   (event-queue-tail eq) (event-queue-head eq)))
-            (t
-             (setf (event-queue-tail eq)
-               (setf (cdr (event-queue-tail eq)) (cons item nil)))))))))
+       (t (append-event))))))
 
 (defmethod event-queue-prepend ((eq standard-event-queue) item)
   "Prepend the item to the beginning of the queue."
