@@ -120,15 +120,15 @@
   (format stream "   it has the nicknames of ")
   (clim:present (package-nicknames thing) 'clim:expression
 		:stream stream)
-  (terpri)
+  (terpri stream)
   (format stream "   it uses these packages: ")
   (clim:present (package-use-list thing) 'clim:expression
 		:stream stream)
-  (terpri)
+  (terpri stream)
   (format stream "   it is used by the packages: ")
   (clim:present (package-used-by-list thing) 'clim:expression
 		:stream stream)
-  (terpri))
+  (terpri stream))
 
 (defmethod describe-object ((thing structure-object) stream)
   (clim:present thing (clim:presentation-type-of thing)
