@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.147 2005/01/02 05:26:44 ahefner Exp $
+;;; $Id: panes.lisp,v 1.148 2005/01/21 11:01:37 ahefner Exp $
 
 (in-package :clim-internals)
 
@@ -2543,6 +2543,7 @@ order to produce a double-click")
          (frame (make-application-frame 'a-window-stream
                                         :frame-event-queue input-buffer
                                         :frame-manager fm
+                                        :pretty-name (or label "")
 					:left left
 					:top top
 					:right right
@@ -2556,6 +2557,7 @@ order to produce a double-click")
 		(eq (frame-state frame) :shrunk))
       (enable-frame frame))
     ;; Start a new thread to run the event loop, if necessary.
+    #+CLIM-MP
     (unless input-buffer
       (clim-sys:make-process (lambda () (let ((*application-frame* frame))
                                           (standalone-event-loop)))))
