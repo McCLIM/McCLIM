@@ -24,33 +24,32 @@
 #+excl(require :clx)
 #+excl(require :loop)
 
-(defpackage :CLIM-INTERNALS
-  (:use #+clisp :clos #+excl :stream :lisp)
-  (:nicknames :climi)
-  #+excl(:import-from :excl compile-system load-system)
-  )
+(defparameter *clim-directory* (directory-namestring *load-truename*))
 
-(defpackage :CLIM
-  (:use :clim-internals :common-lisp)
-  )
+#+cmu
+(progn
+  (unless (fboundp 'stream-read-char)
+    (unless (ignore-errors (ext:search-list "gray-streams:"))
+      (setf (ext:search-list "gray-streams:")
+	'("target:pcl/" "library:")))
+    (load "gray-streams:gray-streams-library"))
+  #+nil
+  (load (merge-pathnames "patch-cmu.lisp" *clim-directory*))
 
-(defpackage :CLIM-EXTENSIONS
-  (:use :clim-internals))
-
-(defpackage :CLIM-DEMO
-  (:use :clim :common-lisp)
-  #+excl(:import-from :excl compile-system load-system exit)
-  )
+  #-MK-DEFSYSTEM
+  (load "library:defsystem"))
 
 (pushnew :CLIM *features*)
 (provide :CLIM)
 
 #+mk-defsystem (use-package "MK")
 
-(defsystem :CLIM #-(or cmu clisp) ()
-  #+clisp :source-extension #+clisp "lisp"
-  #+(or cmu clisp) :components
+(defsystem :CLIM #-mk-defsystem ()
+  #+mk-defsystem :source-pathname #+mk-defsystem *clim-directory*
+  #+mk-defsystem :source-extension #+mk-defsystem "lisp"
+  #+mk-defsystem :components
   (:serial
+   "package"
    "design"
    "X11-colors"
    ;; "brectangle"
@@ -72,7 +71,7 @@
    "commands"
    "frames"
    "panes"
-   "exports"
+;   "exports"
    "gadgets"
    "menu"
 
@@ -86,3 +85,6 @@
    "examples/menutest"
    ))
 
+#+mk-defsystem
+(defun compile-clim ()
+  (with-compilation-unit ()(compile-system :clim)))
