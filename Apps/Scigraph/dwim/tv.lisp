@@ -45,7 +45,9 @@ advised of the possiblity of such damages.
 
 (defun window-under-mouse ()
   #FEATURE-CASE
-  ((:clim-2 (clim-internals::find-appropriate-window *standard-input*))
+  ((:mcclim (clim:pointer-sheet (clim:port-pointer
+				 (clim:port clim:*application-frame*))))
+   (:clim-2 (clim-internals::find-appropriate-window *standard-input*))
    (:clim-1.0 (clim::find-appropriate-window *standard-input*))
    (:clim-0.9 (ci::find-appropriate-window *standard-input*))
    ((not :clim) (tv:window-under-mouse))))
@@ -56,6 +58,8 @@ advised of the possiblity of such damages.
    (:clim-0.9 (ci::window-clear window))
    ((or :clim-1.0 :clim-2) (clim:window-clear window))))
 
+;;; This doesn't appear to be used at all with CLIM.
+#-mcclim
 (defun change-size (window new-width new-height)
   #FEATURE-CASE
   (((not :clim) (send window :set-size new-width new-height))
@@ -88,13 +92,16 @@ advised of the possiblity of such damages.
   #FEATURE-CASE
   (((not :clim) (send sheet :superior))
    (:clim-0.9 (clim:sheet-parent sheet))
-   ((or :clim-1.0 :clim-2) (clim:window-parent sheet))))
+   ((or :clim-1.0 (and :clim-2 (not :mcclim))) (clim:window-parent sheet))
+   (:mcclim (clim:sheet-parent sheet))))
 
 (defmethod (setf sheet-parent) (new sheet)
   #FEATURE-CASE
   (((not :clim) (send sheet :set-superior new))
    (:clim-0.9 (setf (clim:sheet-parent sheet) new))
-   ((or :clim-1.0 :clim-2) (setf (clim:window-parent sheet) new))))
+   ((or :clim-1.0 (and :clim-2 (not :mcclim)))
+    (setf (clim:window-parent sheet) new))
+   (:mcclim (sheet-adopt-child sheet new))))
 
 (defun stream-current-text-style (STREAM)
   #FEATURE-CASE
@@ -213,13 +220,20 @@ advised of the possiblity of such damages.
 	  (values left top (- right xoff) (- bottom yoff))))))
    (:clim-2
     (cond ((not (clim:extended-output-stream-p stream)))
-	  ((and (type-specifier-p 'postscript-clim::postscript-stream)
-		(typep stream 'postscript-clim::postscript-stream))
+	  ((and (type-specifier-p #-mcclim 'postscript-clim::postscript-stream
+				  #+mcclim 'clim-postscript::postscript-stream)
+		(typep stream
+		       #-mcclim 'postscript-clim::postscript-stream
+		       #+mcclim 'clim-postscript::postscript-stream))
 	   ;; width  = inches x 72
 	   ;; height = inches x 72
 	   (values 0 0 #.(* 72 7) #.(* 72 10)))
 	  (t
-	   (let ((v (and (not (typep stream 'clim-silica:pixmap-stream))
+	   (let ((v (and #-mcclim (not (typep stream
+					      'clim-silica:pixmap-stream))
+			 #+mcclim (not (typep (medium-sheet
+					       (sheet-medium stream))
+					      'climi::pixmap))
 			 (clim:window-viewport stream))))
 	     (if v (clim:rectangle-edges* v)
 	       (values 0 0
@@ -331,10 +345,11 @@ advised of the possiblity of such damages.
 (defmethod frame-top-level-process ((frame t))
   "Access the process associated with this frame."
   #FEATURE-CASE
-  (((or :clim-1.0 :clim-2)
+  (((or :clim-1.0 (and :clim-2 (not :mcclim)))
     (second (car (member frame *activated-frames* :key #'car))))
    (:clim-0.9 (slot-value frame 'ws::top-level-process))
-   ((not :clim) (scl:send frame :process))))
+   ((not :clim) (scl:send frame :process))
+   (:mcclim (climi::frame-process frame))))
 
 (defun frame-manager (frame)
   #FEATURE-CASE
@@ -661,7 +676,9 @@ advised of the possiblity of such damages.
       (force-output window)
       frame))
    (:clim-2
-    (clim-internals::note-frame-deiconified (clim:frame-manager frame) frame)
+    (#+mcclim note-frame-deiconified
+     #-mcclim clim-internals::note-frame-deiconified
+     (clim:frame-manager frame) frame)
     (clim:raise-sheet (clim:frame-top-level-sheet frame))
     frame)))
 
@@ -683,8 +700,13 @@ advised of the possiblity of such damages.
    (:clim-2
     (let ((graft (clim:graft frame-manager)))
       (when graft
+	#-mcclim
 	(setq width (min width (silica::graft-pixel-width graft))
-	      height (min height (silica::graft-pixel-height graft)))))))
+	      height (min height (silica::graft-pixel-height graft)))
+	#+mcclim
+	(setq width (min width (clim:graft-width graft :units :device))
+	      height (min height (clim-graft-height :units :device))))))
+   )
   (values width height))
 
 (defun launch-frame 

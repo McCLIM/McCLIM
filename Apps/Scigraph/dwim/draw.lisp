@@ -76,21 +76,24 @@ advised of the possiblity of such damages.
    (:clim-2
     (and (clim:extended-output-stream-p stream)
 	 (or (and
-	      (type-specifier-p 'postscript-clim::postscript-stream)
-	      (typep stream 'postscript-clim::postscript-stream))
+	      (type-specifier-p #-mcclim 'postscript-clim::postscript-stream
+				#+mcclim 'clim-postscript::postscript-stream)
+	      (typep stream
+		     #-mcclim 'postscript-clim::postscript-stream
+		     #+mcclim 'clim-postscript::postscript-stream))
 	     #+ignore		; disallowed
 	     (clim:palette-color-p 
 	      (clim:medium-palette (clim:sheet-medium stream)))
 	     #+ignore		; currently broken & undocumented
 	     (clim:color-stream-p stream)
-	     #-ignore		; "official" answer.
+	     #-mcclim		; "official" answer.
 	     (clim:palette-color-p
 	      (let ((frame (clim:pane-frame stream)))
 		(if frame
 		    (clim:frame-palette frame)
 		  (clim:port-default-palette
-		   (clim:port (clim:sheet-medium stream)))))
-	      ))))
+		   (clim:port (clim:sheet-medium stream))))))
+	     #+mcclim t)))
    (:clim-0.9
     (if (typep stream 'ci::encapsulating-stream-mixin)
 	(color-stream-p (slot-value stream 'ci::stream))
@@ -156,7 +159,7 @@ advised of the possiblity of such damages.
 
 ;;; Declaring the drawing functions to be inline gets rid of a funcall,
 ;;; and does the keyword processing at compile time (if possible).
-#-MCL
+#-(and MCL (not openmcl))
 (eval-when (compile load eval)
   (proclaim '(inline
 	      draw-point

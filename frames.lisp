@@ -101,7 +101,8 @@
 			 :initarg :hilited-presentation
 			 :accessor frame-hilited-presentation)
    (user-supplied-geometry :initform nil
-			   :initarg :user-supplied-geometry)))
+			   :initarg :user-supplied-geometry)
+   (process :reader frame-process :initform (current-process))))
 
 ;;; Generic operations
 ; (defgeneric frame-name (frame))

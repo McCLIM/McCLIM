@@ -64,6 +64,14 @@ Finally, the old tree is walked.  All updating-output-records in state
   ((redisplaying-p :reader stream-redisplaying-p :initform nil)
    (id-map :accessor id-map :initform nil)))
 
+(defgeneric redisplayable-stream-p (stream))
+
+(defmethod redisplayable-stream-p ((stream t))
+  nil)
+
+(defmethod redisplayable-stream-p ((stream updating-output-stream-mixin))
+  t)
+
 (defclass updating-stream-state (complete-medium-state)
   ((cursor-x :accessor cursor-x :initarg :cursor-x :initform 0)
    (cursor-y :accessor cursor-y :initarg :cursor-y :initform 0)))

@@ -26,12 +26,20 @@ performance of this software, even if BBN Systems and Technologies is
 advised of the possiblity of such damages.
 |#
 
-(in-package :user)
+
+(in-package #-ansi-cl :user #+ansi-cl :common-lisp-user)
 
 #-clim
 (eval-when (compile load eval)
   (when (find-package 'clim) 
     (pushnew :clim *features*))) ; Add a CLIM feature.
+
+;;; McCLIM tries to implement the spec for CLIM 2.0, so :clim-2 should
+;;; generally be appropriate. Except when clim-2 is used to
+;;; conditionalize access to internal CLIM functions...
+#+mcclim
+(eval-when (compile load eval)
+  (pushnew :clim-2 *features*))
 
 (eval-when (compile load eval)
   ;; CLIM 1 doesn't affect the *features*.  Here's a rule of thumb
@@ -74,10 +82,11 @@ advised of the possiblity of such damages.
   ;; The number of different binaries you must have is
   ;; the cross product of the instruction set and the gui.
   (let ((instruction-set
-         #+MCL              "MCL"
+         #+(and :mcl (not :openmcl)) "MCL"
          #+GENERA           "GENERA"
          #+LUCID            "LUCID"
-         #+ALLEGRO          "ALLEGRO")
+         #+ALLEGRO          "ALLEGRO"
+	 #+OPENMCL	    "OPENMCL")
         (GUI
          #+(and mcl (not clim)) "MAC"
          #+(and genera (not clim)) "DW"
@@ -88,7 +97,9 @@ advised of the possiblity of such damages.
     (namestring (make-pathname
                  :directory
                  (append
-                  (if base (pathname-directory base) '(:relative)) 
+                  (if (and base (pathname-directory base))
+		      (pathname-directory base)
+		      '(:relative)) 
                   (list (string-downcase
                          (format nil "~A~A-~A"
                                  prefix 

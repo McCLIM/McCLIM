@@ -25,7 +25,7 @@ performance of this software, even if BBN Systems and Technologies is
 advised of the possiblity of such damages.
 |#
 
-(in-package :user)
+(in-package #+ansi-cl :common-lisp-user #-ansi-cl :user)
 
 (eval-when (compile load eval)
   (#+genera future-common-lisp::defpackage
@@ -93,7 +93,7 @@ advised of the possiblity of such damages.
 
 ;;; Need to load postscript stuff because it defines a package
 ;;; that dwim references.
-#+clim-2
+#+(and clim-2 (not mcclim))
 (eval-when (compile load eval)
   (require :climps))
 

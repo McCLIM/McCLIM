@@ -27,6 +27,7 @@ advised of the possiblity of such damages.
 
 (in-package :dwim)
 
+#+(or genera lucid allegro)
 (defmacro printing-random-object ((object stream . options) &body body)
   #+genera  `(si:printing-random-object (,object ,stream . ,options) ,@body)
   #+lucid   `(system:printing-random-object (,object ,stream . ,options) ,@body)
@@ -40,6 +41,14 @@ advised of the possiblity of such damages.
 		 (write-char #\space ,stream)
 		 (format ,stream " ~X" (excl::pointer-to-fixnum ,object)))
 	       (write-string ">" ,stream)))
+
+#-(or genera lucid allegro)
+(defmacro printing-random-object ((object stream &key typep no-pointer
+				  &allow-other-keys)
+				  &body body)
+  `(print-unreadable-object (,object ,stream
+			     :type ,typep :identity (not ,no-pointer))
+     ,@body))
 
 (defmacro with-stack-list ((var &rest elements) &body body)
   #+Genera
@@ -73,6 +82,7 @@ advised of the possiblity of such damages.
 	     (mapcar #'(lambda (v) (if (symbolp v) v (car v))) let-vars)))
     `(let ,forms (declare (dynamic-extent ,@(get-vars forms))) ,@body)))
 
+#-openmcl-native-threads
 (defmacro without-interrupts (&body body)
   #FEATURE-CASE
   ((:genera  `(scl::without-interrupts ,@body))
@@ -80,19 +90,26 @@ advised of the possiblity of such damages.
    (:allegro `(excl:without-interrupts ,@body))
    (:mcl     `(ccl:without-interrupts ,@body))))
 
+#+openmcl-native-threads
+(progn
+  (defparameter *dwim-giant-lock* (clim-sys:make-lock "dwim giant lock"))
+  (defmacro without-interrupts (&body body)
+    `(with-lock-held (*dwim-giant-lock*)
+       ,@body)))
+
 (defmacro handler-case (form &rest clauses)
   #FEATURE-CASE
   ((:genera `(future-common-lisp:handler-case ,form ,@clauses))
    (:lucid `(lcl:handler-case ,form ,@clauses))
    (:allegro `(lisp:handler-case ,form ,@clauses))
-   (:mcl `(COMMON-LISP:handler-case ,form ,@clauses))))
+   ((or :mcl :ansi-cl) `(COMMON-LISP:handler-case ,form ,@clauses))))
 
 (defmacro handler-bind (bindings &body forms)
   #FEATURE-CASE
   ((:genera `(future-common-lisp:handler-bind ,bindings ,@forms))
    (:lucid `(lcl:handler-bind ,bindings ,@forms))
    (:allegro `(lisp:handler-bind ,bindings ,@forms))
-   (:mcl `(COMMON-LISP:handler-bind ,bindings ,@forms))
+   ((or :mcl :ansi-cl) `(COMMON-LISP:handler-bind ,bindings ,@forms))
    ))
 
 (defmacro condition-case ((&rest varlist) form &rest clauses)
@@ -114,7 +131,8 @@ advised of the possiblity of such damages.
    (:mcl `(COMMON-LISP:ignore-errors ,@body))   
    (:Lucid `(lcl:ignore-errors ,@body))
    (:Xerox `(xcl:ignore-errors ,@body))
-   (:Genera `(future-common-lisp:ignore-errors ,@body))))
+   (:Genera `(future-common-lisp:ignore-errors ,@body))
+   (:ansi-cl `(COMMON-LISP:ignore-errors ,@body))))
 
 (defmacro with-simple-restart ((name format-string &rest format-args) &body body)
   #FEATURE-CASE
@@ -123,7 +141,7 @@ advised of the possiblity of such damages.
    (:genera
     `(future-common-lisp:with-simple-restart (,name ,format-string ,@format-args)
        ,@body))
-   (:mcl `(COMMON-LISP:with-simple-restart (,name ,format-string ,@format-args) ,@body))
+   ((or :mcl :ansi-cl) `(COMMON-LISP:with-simple-restart (,name ,format-string ,@format-args) ,@body))
    ))
 
 (defmacro restart-case (expression &body clauses)
@@ -131,21 +149,21 @@ advised of the possiblity of such damages.
   ((:genera `(future-common-lisp:restart-case ,expression ,@clauses))
    (:lucid `(lcl:restart-case ,expression ,@clauses))
    (:allegro `(lisp:restart-case ,expression ,@clauses))
-   (:mcl `(COMMON-LISP:restart-case ,expression ,@clauses))))
+   ((or :mcl :ansi-cl) `(COMMON-LISP:restart-case ,expression ,@clauses))))
 
 (defun invoke-restart (restart &rest values)
   #FEATURE-CASE
   ((:genera (apply #'future-common-lisp:invoke-restart restart values))
    (:lucid (apply #'lcl:invoke-restart restart values))
    (:allegro (apply #'lisp:invoke-restart restart values))
-   (:mcl (apply #'COMMON-LISP:invoke-restart restart values))))
+   ((or :mcl :ansi-cl) (apply #'COMMON-LISP:invoke-restart restart values))))
 
 (defun find-restart (name &optional condition)
   #FEATURE-CASE
   ((:genera (future-common-lisp:find-restart name condition))
    (:lucid (lcl:find-restart name condition))
    (:allegro (lisp:find-restart name condition))
-   (:mcl (COMMON-LISP:find-restart name condition))))
+   ((or :mcl :ansi-cl) (COMMON-LISP:find-restart name condition))))
 
 (defmacro make-command-table (name &key inherit-from)
   (when (and (consp inherit-from) (eq (car inherit-from) 'quote))

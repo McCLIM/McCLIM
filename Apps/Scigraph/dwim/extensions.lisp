@@ -102,7 +102,8 @@ advised of the possiblity of such damages.
   ((:lucid (lucid::environment-variable string))
    (:allegro (system:getenv string))
    (:genera (let ((symbol (intern string :scl)))
-	      (and (boundp symbol) (symbol-value symbol))))))
+	      (and (boundp symbol) (symbol-value symbol))))
+   (:openmcl (ccl::getenv string))))
 
 #+allegro
 ;;>> Allegro 4.2 supports SYSTEM:GETENV.  How do I set an environment variable?
@@ -117,7 +118,8 @@ advised of the possiblity of such damages.
   #FEATURE-CASE
   ((:allegro `(putenv (ff:string-to-char* (format nil "~A=~A" ,string ,new-value))))
    (:lucid `(setf (lcl:environment-variable ,string) ,(princ-to-string new-value)))
-   (:genera `(setf (symbol-value ,(intern string :scl)) ,new-value))))
+   (:genera `(setf (symbol-value ,(intern string :scl)) ,new-value))
+   (:openmcl `(ccl::setenv string new-value))))
 
 (defun run-shell-command (command &rest args &key input output error-output (wait t)
 						  arguments
@@ -151,9 +153,12 @@ advised of the possiblity of such damages.
 	    (if wait
 		exit-status
 	      (values stream1 stream2 process-id))))))
-     (:mcl    
+     ((and :mcl (not :openmcl))
       (with-rem-keywords (args1 args '(:arguments))
 	(apply #'ccl:run-fred-command command-with-arguments args1)))
+     (:openmcl
+      (with-rem-keywords (args1 args '(:arguments))
+	(apply #'ccl-run-program command arguments args1)))
      (:genera (not-done)))))
 	      
 
@@ -198,7 +203,7 @@ advised of the possiblity of such damages.
 		    :args FNCT-ARGS)))))
 	(apply #'lucid-procees-run-function-hack
 	       name-or-keywords function args)))
-     (:MCL
+     ((and :MCL (not :openmcl))
       ;; No multiprocessing.  Fake it.
       (funcall predicate))
      (:CLIM-1.0
@@ -237,6 +242,9 @@ advised of the possiblity of such damages.
      (mp:with-process-lock (,lock) ,@body))
   #+lucid
   `(lucid::with-process-lock (,lock) ,@body)
+  #+clim-2
+  `(clim-sys:with-lock-held (,lock)
+     ,@body)
   #+genera
   (let ((me (gensym)))
     `(let ((,me scl:*current-process*))
@@ -416,7 +424,9 @@ advised of the possiblity of such damages.
 		     (t form)))))
     (dump-form-to-eval (traverse form) stream)))
 
-(defun dump-objects-to-file (file objects &optional (package :user))
+(defun dump-objects-to-file (file objects
+			     &optional (package #+ansi-cl :common-lisp-user
+						#-ansi-cl :user))
   "Use the MAKE-LOAD-FORM protocol to dump a list of objects to the specified file."
   (or (and (symbolp package) (find-package package))
       (error "Package ~A does not exist" package))
