@@ -1114,7 +1114,7 @@ function lambda list"))
 ;;; 23.7.1 Defining Presentation Translators
 
 (defclass presentation-translator ()
-  ((name :reader name :initarg :name)
+  ((name :reader name :initarg :name)   
    (from-type :reader from-type :initarg :from-type)
    (to-type :reader to-type :initarg :to-type)
    (gesture :reader gesture :initarg :gesture)
@@ -1152,6 +1152,10 @@ function lambda list"))
 
 ;;; This lives in a command table
 
+(defvar *current-translator-cache-generation* 0
+  "This is incremented whenever presentation translators are defined,
+and used to ensure that presentation-translators-caches are up to date.")
+
 (defclass translator-table ()
   ((translators :accessor translators :initarg :translators
 		:initform (make-hash-table :test #'eq)
@@ -1161,9 +1165,23 @@ function lambda list"))
 			    :initform (make-hash-table :test #'eq)
 			    :documentation "Holds transators with a simple
   from-type (i.e. doesn't contain \"or\" or \"and\").")
+   (translator-cache-generation :accessor translator-cache-generation :initform 0)
    (presentation-translators-cache
-    :accessor presentation-translators-cache
+    :writer (setf presentation-translators-cache)
     :initform (make-hash-table :test #'equal))))
+
+(defmethod presentation-translators-cache ((table translator-table))
+  (with-slots ((cache presentation-translators-cache)
+	       (generation translator-cache-generation))
+      table    
+    (unless (or (= generation *current-translator-cache-generation*)
+		(zerop (hash-table-size cache)))      
+      (format *trace-output* "~&New generation is ~A: flushing cache on ~W~%" generation table)
+      (clrhash cache))
+    (setf generation *current-translator-cache-generation*)
+    cache))
+      
+      
 
 ;;; Returns function lambda list, ignore forms
 (defun make-translator-ll (translator-args)
@@ -1194,7 +1212,7 @@ function lambda list"))
 	      (remove old
 		      (gethash (presentation-type-name (from-type old))
 			       simple-type-translators))))
-      (clrhash (presentation-translators-cache table))
+      (incf *current-translator-cache-generation*)
       (setf (gethash (name translator) translators) translator)
       (push translator
 	    (gethash (from-type translator) simple-type-translators)))))
@@ -1339,7 +1357,7 @@ function lambda list"))
 
 
 (defun find-presentation-translators (from-type to-type command-table)
-  (let* ((command-table (find-command-table command-table))
+  (let* ((command-table (find-command-table command-table))	 
 	 (from-name (presentation-type-name from-type))
 	 (to-name (presentation-type-name to-type))
 	 (cached-translators (gethash (cons from-name to-name)
@@ -1411,6 +1429,7 @@ function lambda list"))
 				(return-from translator-lessp nil)))))
 		     ;; Command table inheritance
 		     (< table-num-a table-num-b)))))
+	  ;; Add translators to their caches.
 	  (setf (gethash (cons from-name to-name)
 			 (presentation-translators-cache
 			  (presentation-translators command-table)))
