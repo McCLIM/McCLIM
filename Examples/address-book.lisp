@@ -111,8 +111,6 @@
     (address :application
 	     :incremental-redisplay t
 	     :display-function 'display-current-address)
-    (h-adjuster (make-pane 'clim-extensions:box-adjuster-gadget))
-    (v-adjuster (make-pane 'clim-extensions:box-adjuster-gadget))
     (names :application
 	   :incremental-redisplay t
 	   :display-function 'display-names))
@@ -120,10 +118,7 @@
     (default
       (vertically ()
         (horizontally ()
-	  address
-          h-adjuster
-          names)
-        v-adjuster
+	  address names)
 	interactor))))
 
 ;;; This is the display-function for the upper-left pane, which specified 
