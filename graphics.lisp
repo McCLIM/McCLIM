@@ -626,7 +626,7 @@
 (defmethod draw-design (medium (design line) &rest options &key &allow-other-keys)
   (multiple-value-bind (x1 y1) (line-start-point* design)
     (multiple-value-bind (x2 y2) (line-end-point* design)
-      (apply #'draw-line medium x1 y1 x2 y2 options))))
+      (apply #'draw-line* medium x1 y1 x2 y2 options))))
 
 (defmethod draw-design (medium (design rectangle) &rest options &key &allow-other-keys)
   (multiple-value-bind (x1 y1 x2 y2) (rectangle-edges* design)
