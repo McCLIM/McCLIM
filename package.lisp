@@ -1478,6 +1478,66 @@
 ;  (do-external-symbols (sym ext-package)
 ;    (export sym climi-package)))
 
+(defpackage :clim-sys
+  (:use :common-lisp)
+  
+  #+CMU
+  (:import-from "MP"
+   #:make-process
+   #:destroy-process
+   #:current-process
+   #:all-processes
+   #:processp
+   #:process-name
+   #:process-state
+   #:process-whostate
+   #:process-wait
+   #:process-wait-with-timeout
+   #:process-yield
+   #:process-interrupt
+   #:disable-process
+   #:enable-process
+   #:restart-process
+   #:without-scheduling
+   #:atomic-incf
+   #:atomic-decf )
+  
+  (:export
+   #:defresource
+   #:using-resource
+   #:allocate-resource
+   #:deallocate-resource
+   #:clear-resource
+   #:map-resource
+   ;;
+   #:*multiprocessing-p*
+   #:make-process
+   #:destroy-process
+   #:current-process
+   #:all-processes
+   #:processp
+   #:process-name
+   #:process-state
+   #:process-whostate
+   #:process-wait
+   #:process-wait-with-timeout
+   #:process-yield
+   #:process-interrupt
+   #:disable-process
+   #:enable-process
+   #:restart-process
+   #:without-scheduling
+   #:atomic-incf
+   #:atomic-decf
+   ;;
+   #:make-lock
+   #:with-lock-held
+   #:make-recursive-lock
+   #:with-recursive-lock-held
+   ;;
+   #:defgeneric*
+   #:defmethod* ))
+
 (let ((clim-package  (find-package :clim))
       (climi-package (find-package :climi)))
   (do-external-symbols (sym climi-package)

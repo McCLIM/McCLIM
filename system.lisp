@@ -49,6 +49,13 @@
   #+mk-defsystem :components
   (:serial
    "package"
+
+   #.(OR
+      #+(AND :CMU :MP (NOT :PTHREAD))  "lisp-dep/mp-cmu"
+      #+EXCL                           "lisp-dep/mp-acl"
+      #| fall back |#                  "lisp-dep/mp-nil")
+   "defresource"
+   
    "design"
    "X11-colors"
    ;; "brectangle"
