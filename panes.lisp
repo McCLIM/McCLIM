@@ -717,7 +717,7 @@
 
 ;; VIEWPORT
 
-(defclass viewport-pane (sheet-single-child-mixin basic-pane) ())
+(defclass viewport-pane (sheet-single-child-mixin composite-pane) ())
 
 
 ;; SCROLLER-PANE
@@ -908,17 +908,18 @@
 				         (scroll-bars :vertical)
 				    &allow-other-keys)
   (declare (ignorable scroll-bars))
-  (remf options :type)
-  (apply #'make-pane type options))
+  (loop for key in '(:type :scroll-bars)
+	do (remf options key))
+  (let ((pane (apply #'make-pane type options)))
+    (if scroll-bars
+	(setq pane (make-pane 'scroller-pane :scroll-bar scroll-bars
+			      :contents (list (make-pane 'viewport-pane :contents (list pane))))))
+    pane))
 
 (defun make-clim-interactor-pane (&rest options)
-  (apply #'make-clim-stream-pane 
-	 :type 'interactor-pane 
-	 options))
+  (apply #'make-clim-stream-pane :type 'interactor-pane options))
 
 (defun make-clim-application-pane (&rest options)
-  (apply #'make-clim-stream-pane 
-	 :type 'application-pane 
-	 options))
+  (apply #'make-clim-stream-pane :type 'application-pane options))
 
 
