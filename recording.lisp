@@ -1916,3 +1916,40 @@ according to the flags RECORD and DRAW."
 (defmethod scroll-extent :around ((stream output-recording-stream) x y)
   (when (stream-drawing-p stream)
     (call-next-method)))
+
+;;; ----------------------------------------------------------------------------
+
+(defmethod invoke-with-room-for-graphics (cont stream
+                                               &key (first-quadrant t)
+                                               height
+                                               (move-cursor t)
+                                               (record-type 'standard-sequence-output-record))
+  ;; I am not sure what exactly :height should do.
+  ;; --GB 2003-05-25
+  (multiple-value-bind (cx cy)
+      (stream-cursor-position stream)
+    (let ((record
+           (with-output-recording-options (stream :draw nil :record t)
+             (with-new-output-record (stream record-type)
+               (with-drawing-options
+                   (stream :transformation
+                           (if first-quadrant
+                               (make-scaling-transformation 1 -1)
+                               +identity-transformation+))
+                 (funcall cont stream))))))
+      (cond ((null height)
+             (setf (output-record-position record)
+                   (values cx cy)))
+            (t
+             (setf (output-record-position record)
+                   (values cx (- cy (- (bounding-rectangle-height record) height))))))
+      (with-output-recording-options (stream :draw t :record nil)
+        (replay-output-record record stream))
+      (cond (move-cursor
+             (setf (stream-cursor-position stream)
+                   (values (bounding-rectangle-max-x record)
+                           (bounding-rectangle-max-y record))))
+            (t
+             (setf (stream-cursor-position stream)
+                   (values cx cy)))))))
+
