@@ -43,10 +43,15 @@
   (push (make-instance 'clx-frame-manager :port port) (slot-value port 'frame-managers))
   (initialize-clx port))
 
+(defun clx-error-handler (display error-name &key &allow-other-keys)
+  nil)
+
 (defmethod initialize-clx ((port clx-port))
   (let ((options (cdr (port-server-path port))))
     (setf (clx-port-display port)
-      (xlib:open-display (getf options :host "") :display (getf options :display-id 0)))
+	  (xlib:open-display (getf options :host "") :display (getf options :display-id 0)))
+    (setf (xlib:display-error-handler (clx-port-display port))
+	  #'clx-error-handler)
     (setf (clx-port-screen port) (nth (getf options :screen-id 0)
 				      (xlib:display-roots (clx-port-display port))))
     (setf (clx-port-window port) (xlib:screen-root (clx-port-screen port)))
@@ -54,14 +59,15 @@
     ))
 
 (defun realize-mirror-aux (port sheet
-				&key (width 10) (height 10) (x 0) (y 0)
+				&key (width 100) (height 100) (x 0) (y 0)
 				(border-width 0) (border 0)
+				(override-redirect :off)
+				(map t)
 				(event-mask `(:exposure :key-press :key-release
 							:button-press :button-release
 							:enter-window :leave-window
 							:structure-notify
-							:pointer-motion
-							:owner-grab-button)))
+							:pointer-motion)))
   (when (null (port-lookup-mirror port sheet))
     (with-sheet-medium (medium sheet)
       (let* ((desired-color (medium-background (sheet-medium sheet)))
@@ -75,14 +81,16 @@
 		      :width width :height height :x x :y y
 		      :border-width border-width
 		      :border border
+		      :override-redirect override-redirect
 		      :background pixel
 		      :event-mask (apply #'xlib:make-event-mask
 					 event-mask))))
 	(port-register-mirror (port sheet) sheet window)
-	(xlib:map-window window)))))
+	(when map
+	  (xlib:map-window window))))))
 
 (defmethod realize-mirror ((port clx-port) (sheet sheet))
-  (realize-mirror-aux port sheet))
+  (realize-mirror-aux port sheet :border-width 1))
 
 (defmethod realize-mirror ((port clx-port) (sheet border-pane))
   (realize-mirror-aux port sheet
@@ -92,10 +100,31 @@
 				    :button-press :button-release
 				    :structure-notify)))
 
+(defmethod realize-mirror ((port clx-port) (sheet top-level-sheet-pane))
+  (realize-mirror-aux port sheet
+		      :map nil
+		      :event-mask '(:exposure
+				    :structure-notify)))
+
+(defmethod realize-mirror ((port clx-port) (sheet unmanaged-top-level-sheet-pane))
+  (realize-mirror-aux port sheet
+		      :override-redirect :on
+		      :map nil
+		      :event-mask '(:exposure
+				    :structure-notify)))
+
+(defmethod realize-mirror ((port clx-port) (sheet menu-button-pane))
+  (realize-mirror-aux port sheet
+		      :event-mask '(:exposure
+				    :key-press :key-release
+				    :button-press :button-release
+				    :enter-window :leave-window
+				    :structure-notify
+				    :pointer-motion
+				    :owner-grab-button)))
+
 (defmethod unrealize-mirror ((port clx-port) (sheet sheet))
   (when (port-lookup-mirror port sheet)
-    (format t "unrealize-mirror ~S~&" sheet)
-    (port-unregister-mirror (port sheet) sheet (port-lookup-mirror port sheet))
     (xlib:destroy-window (port-lookup-mirror port sheet))))
 
 (defmethod port-set-sheet-region ((port clx-port) (graft graft) region)
@@ -149,7 +178,9 @@
 		      :sheet sheet :modifier-state state :timestamp time))
       (:configure-notify
        (make-instance 'window-configuration-event :sheet sheet
-		      :width width :height height :modifier-state state))
+		      :x x :y y :width width :height height :modifier-state state))
+      (:destroy-notify
+       (make-instance 'window-destroy-event :sheet sheet))
       (:motion-notify
        (make-instance 'pointer-motion-event :pointer 0 :button code :x x :y y
                      :sheet sheet :modifier-state state :timestamp time))
