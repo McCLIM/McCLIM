@@ -28,7 +28,6 @@
 		     accelerator-gesture-numeric-argument
 		     *accelerator-gestures*
 		     accept
-		     accept
 		     accept-1
 		     accept-from-string
 		     accepting-values
@@ -44,16 +43,17 @@
 		     add-character-output-to-text-record
 		     add-command-to-command-table
 		     add-gesture-name
+		     add-input-editor-command
 		     add-keystroke-to-command-table
 		     add-menu-item-to-command-table
 		     add-output-record
 		     add-presentation-translator-to-command-table
 		     add-string-output-to-text-record
-		     add-watcher
 		     adjust-item-list-cells
 		     adjust-multiple-columns
 		     adjust-table-cells
 		     adopt-frame
+		     allocate-medium
 		     allocate-pixmap
 		     allocate-resource
 		     allocate-space
@@ -69,6 +69,11 @@
 		     armed-callback
 		     augment-draw-set
 		     +background-ink+
+		     basic-gadget
+		     basic-medium
+		     basic-pane
+		     basic-port
+		     basic-sheet
 		     bboard-pane
 		     beep
 		     blank-area
@@ -86,6 +91,8 @@
 		     bounding-rectangle-position
 		     bounding-rectangle-size
 		     bounding-rectangle-width
+		     bury-frame
+		     bury-mirror
 		     bury-sheet
 		     cache-output-record
 		     call-presentation-menu
@@ -99,6 +106,10 @@
 		     change-space-requirements
 		     changing-space-requirements
 		     character
+		     check-box
+		     check-box-current-selection
+		     check-box-pane
+		     check-box-selections
 		     child-containing-position
 		     children-overlapping-rectangle*
 		     children-overlapping-region
@@ -121,7 +132,6 @@
 		     command-arguments
 		     *command-dispatchers*
 		     command-enabled
-		     command-enabled
 		     command-line-command-parser
 		     command-line-command-unparser
 		     command-line-name-for-command
@@ -131,8 +141,8 @@
 		     command-menu-item-value
 		     command-menu-pane
 		     command-name
-		     command-name
 		     *command-name-delimiters*
+		     command-name-from-symbol
 		     command-not-accessible
 		     command-not-present
 		     command-or-form
@@ -176,12 +186,15 @@
 		     copy-to-pixmap
 		     current-process
 		     cursor
+		     cursor-active
+		     cursor-focus
 		     cursorp
 		     cursor-position
 		     cursor-sheet
-		     cursor-visibility
+		     cursor-state
 		     cursor-visibility
 		     deactivate-gadget
+		     deallocate-medium
 		     deallocate-pixmap
 		     deallocate-resource
 		     decache-child-output-record
@@ -208,18 +221,18 @@
 		     define-presentation-type-abbreviation
 		     defmethod*
 		     defresource
-		     delegate-sheet-delegate
+		     degraft-medium
 		     delegate-sheet-delegate
 		     delegate-sheet-input-mixin
 		     delete-gesture-name
 		     delete-output-record
-		     delete-watcher
 		     delimiter-gesture-p
 		     *delimiter-gestures*
 		     describe-presentation-type
-		     describe-presentation-type
 		     design
 		     designp
+		     destroy-frame
+		     destroy-mirror
 		     destroy-port
 		     destroy-process
 		     device-event
@@ -230,14 +243,12 @@
 		     dispatch-repaint
 		     display-command-menu
 		     display-command-table-menu
-		     display-cursor
 		     displayed-output-record
 		     displayed-output-record-p
 		     display-exit-boxes
 		     distribute-event
 		     do-command-table-inheritance
 		     document-presentation-translator
-		     drag-callback
 		     drag-callback
 		     dragging-output
 		     drag-output-record
@@ -261,7 +272,10 @@
 		     draw-points*
 		     draw-polygon
 		     draw-polygon*
+		     draw-rectangle
 		     draw-rectangle*
+		     draw-rectangles
+		     draw-rectangles*
 		     draw-standard-menu
 		     draw-text
 		     draw-text*
@@ -280,6 +294,7 @@
 		     encapsulating-stream
 		     encapsulating-stream-p
 		     encapsulating-stream-stream
+		     engraft-medium
 		     erase-input-buffer
 		     erase-output-record
 		     even-scaling-transformation-p
@@ -336,8 +351,6 @@
 		     formatting-table
 		     frame-calling-frame
 		     frame-command-table
-		     frame-command-table
-		     frame-current-layout
 		     frame-current-layout
 		     frame-current-panes
 		     frame-document-highlighted-presentation
@@ -345,23 +358,21 @@
 		     frame-drag-and-drop-highlighting
 		     frame-error-output
 		     frame-exit
-		     frame-exit
+		     frame-exit-frame
 		     frame-find-innermost-applicable-presentation
 		     frame-input-context-button-press-handler
 		     frame-maintain-presentation-histories
 		     frame-manager
-		     frame-manager
-		     frame-manager
 		     frame-manager-frames
-		     frame-mananger-p
+		     frame-manager-menu-choose
+		     frame-manager-notify-user
+		     frame-manager-p
 		     frame-name
 		     frame-pane
 		     frame-panes
 		     frame-parent
 		     frame-pointer-documentation-output
 		     frame-pretty-name
-		     frame-pretty-name
-		     frame-properties
 		     frame-properties
 		     frame-query-io
 		     frame-replay
@@ -381,46 +392,34 @@
 		     fundamental-stream
 		     gadget
 		     gadget-activate-callback
+		     gadget-active-p
 		     gadget-armed-callback
-		     gadget-client
 		     gadget-client
 		     gadget-dialog-view
 		     +gadget-dialog-view+
 		     gadget-disarmed-callback
 		     gadget-id
-		     gadget-id
-		     gadget-label
 		     gadget-label
 		     gadget-label-align-x
-		     gadget-label-align-x
 		     gadget-label-align-y
-		     gadget-label-align-y
-		     gadget-label-text-style
-		     gadget-label-text-style
-		     gadget-max-value
 		     gadget-max-value
 		     gadget-menu-view
 		     +gadget-menu-view+
 		     gadget-min-value
-		     gadget-min-value
 		     gadget-orientation
 		     gadget-output-record
 		     gadgetp
+		     gadget-range
+		     gadget-range*
 		     gadget-show-value-p
-		     gadget-value
-		     gadget-value
-		     gadget-value
-		     gadget-value
-		     gadget-value
-		     gadget-value
-		     gadget-value
 		     gadget-value
 		     gadget-value-changed-callback
 		     gadget-view
 		     +gadget-view+
 		     generate-graph-nodes
 		     generate-panes
-		     gesture-processing-handler
+		     generic-list-pane
+		     generic-option-pane
 		     gesture-processing-handler
 		     get-frame-pane
 		     global-command-table
@@ -434,15 +433,12 @@
 		     graphics-displayed-output-record
 		     graphics-displayed-output-record-p
 		     graph-node-children
-		     graph-node-children
 		     graph-node-object
 		     graph-node-output-record
 		     graph-node-output-record-p
 		     graph-node-parents
-		     graph-node-parents
 		     graph-output-record
 		     graph-output-record-p
-		     graph-root-nodes
 		     graph-root-nodes
 		     grid-pane
 		     handle-event
@@ -463,9 +459,10 @@
 		     incremental-redisplay
 		     indenting-output
 		     *input-context*
+		     input-context-type
 		     input-editing-stream
 		     input-editing-stream-p
-		     input-not-of-required-type
+		     input-editor-format
 		     input-not-of-required-type
 		     input-stream-p
 		     *input-wait-handler*
@@ -493,8 +490,8 @@
 		     key-press-event
 		     key-release-event
 		     keyword
-		     labelled
-		     labelled-gadget
+		     labelled-gadget-mixin
+		     labelling
 		     label-pane
 		     layout-frame
 		     layout-graph-edges
@@ -512,6 +509,7 @@
 		     line-style-p
 		     line-style-thickness
 		     line-style-unit
+		     list-pane
 		     lookup-keystroke-command-item
 		     lookup-keystroke-item
 		     make-3-point-transformation
@@ -533,9 +531,12 @@
 		     make-flipping-ink
 		     make-gray-color
 		     make-ihs-color
+		     make-line
 		     make-line*
 		     make-line-style
 		     make-lock
+		     make-medium
+		     make-modifier-state
 		     make-opacity
 		     make-pane
 		     make-pane-1
@@ -568,6 +569,7 @@
 		     map-over-command-table-menu-items
 		     map-over-command-table-names
 		     map-over-command-table-translators
+		     map-over-frames
 		     map-over-grafts
 		     map-over-item-list-cells
 		     map-over-output-records-containing-position
@@ -576,10 +578,11 @@
 		     map-over-polygon-segments
 		     map-over-ports
 		     map-over-presentation-type-supertypes
-		     map-over-presentation-type-supertypes
 		     map-over-region-set-regions
 		     map-over-row-cells
-		     map-over-row-cells
+		     map-over-sheets
+		     map-over-sheets-containing-position
+		     map-over-sheets-overlapping-region
 		     map-over-table-elements
 		     map-resource
 		     map-sheet-position-to-child
@@ -589,20 +592,14 @@
 		     match-output-records
 		     medium
 		     medium-background
-		     medium-background
-		     medium-background
-		     medium-background
+		     medium-beep
 		     medium-buffering-output-p
-		     medium-buffering-output-p
+		     medium-clear-area
 		     medium-clipping-region
-		     medium-clipping-region
-		     medium-clipping-region
-		     medium-clipping-region
+		     medium-copy-area
 		     medium-current-text-style
 		     medium-default-text-style
-		     medium-default-text-style
-		     medium-default-text-style
-		     medium-default-text-style
+		     medium-drawable
 		     medium-draw-ellipse*
 		     medium-draw-line*
 		     medium-draw-lines*
@@ -610,28 +607,17 @@
 		     medium-draw-points*
 		     medium-draw-polygon*
 		     medium-draw-rectangle*
+		     medium-draw-rectangles*
 		     medium-draw-text*
-		     medium-foreground
-		     medium-foreground
-		     medium-foreground
+		     medium-finish-output
+		     medium-force-output
 		     medium-foreground
 		     medium-ink
-		     medium-ink
-		     medium-ink
-		     medium-ink
-		     medium-line-style
-		     medium-line-style
-		     medium-line-style
 		     medium-line-style
 		     medium-merged-text-style
 		     mediump
+		     medium-sheet
 		     medium-text-style
-		     medium-text-style
-		     medium-text-style
-		     medium-text-style
-		     medium-transformation
-		     medium-transformation
-		     medium-transformation
 		     medium-transformation
 		     member
 		     member-alist
@@ -648,14 +634,18 @@
 		     menu-read-remaining-arguments-for-partial-command
 		     merge-text-styles
 		     +meta-key+
+		     mirrored-sheet-mixin
 		     modifier-state-matches-gesture-name-p
-		     mute-repainting-mixin
-		     mute-sheet-input-mixin
-		     mute-sheet-output-mixin
+		     move-and-resize-sheet
+		     move-sheet
 		     new-page
 		     nil
 		     note-command-disabled
 		     note-command-enabled
+		     note-frame-deiconified
+		     note-frame-disabled
+		     note-frame-enabled
+		     note-frame-iconified
 		     note-frame-state-changed
 		     note-gadget-activated
 		     note-gadget-deactivated
@@ -680,16 +670,19 @@
 		     opacityp
 		     opacity-value
 		     open-stream-p
+		     open-window-stream
+		     option-pane
 		     or
-		     oriented-gadget
+		     oriented-gadget-mixin
 		     *original-stream*
+		     outlined-pane
+		     outlining
 		     output-record
 		     output-record-cache-value
 		     output-record-children
 		     output-record-contents-ok
 		     output-record-count
 		     output-record-displayer
-		     output-record-end-cursor-position
 		     output-record-end-cursor-position
 		     output-record-fixed-position
 		     output-record-hit-detection-rectangle*
@@ -698,9 +691,7 @@
 		     output-record-p
 		     output-record-parent
 		     output-record-position
-		     output-record-position
 		     output-record-refined-sensitivity-test
-		     output-record-start-cursor-position
 		     output-record-start-cursor-position
 		     output-record-unique-id
 		     output-stream-p
@@ -712,7 +703,7 @@
 		     pane-needs-redisplay
 		     panep
 		     pane-scroller
-		     panes-need-redisplay
+		     pane-text-style
 		     pane-viewport
 		     pane-viewport-region
 		     parse-text-style
@@ -721,12 +712,16 @@
 		     path
 		     pathname
 		     pathp
+		     pattern-height
+		     pattern-width
 		     permanent-medium-sheet-output-mixin
 		     pixmap-depth
 		     pixmap-height
 		     pixmap-width
 		     point
 		     pointer
+		     pointer-boundary-event
+		     pointer-boundary-event-kind
 		     pointer-button-click-and-hold-event
 		     pointer-button-click-event
 		     pointer-button-double-click-event
@@ -735,8 +730,7 @@
 		     pointer-button-press-event
 		     *pointer-button-press-handler*
 		     pointer-button-release-event
-		     pointer-buttons
-		     pointer-cursor
+		     pointer-button-state
 		     pointer-cursor
 		     *pointer-documentation-output*
 		     pointer-documentation-pane
@@ -755,11 +749,8 @@
 		     +pointer-middle-button+
 		     pointer-motion-event
 		     pointerp
-		     pointer-port
-		     pointer-position
 		     pointer-position
 		     +pointer-right-button+
-		     pointer-sheet
 		     pointer-sheet
 		     pointp
 		     point-position
@@ -772,37 +763,24 @@
 		     polyline-closed
 		     polylinep
 		     port
-		     port-draw-character*
-		     port-draw-ellipse*
-		     port-draw-line*
-		     port-draw-lines*
-		     port-draw-point*
-		     port-draw-points*
-		     port-draw-polygon*
-		     port-draw-rectangle*
-		     port-draw-string*
 		     port-keyboard-input-focus
-		     port-keyboard-input-focus
-		     port-properties
+		     port-name
+		     portp
 		     port-properties
 		     port-server-path
+		     port-type
 		     *possibilities-gestures*
-		     present
 		     present
 		     presentation
 		     presentation-default-preprocessor
 		     presentation-matches-context-type
 		     presentation-modifier
 		     presentation-object
-		     presentation-object
 		     presentationp
 		     presentation-refined-position-test
 		     presentation-replace-input
 		     presentation-single-box
-		     presentation-single-box
 		     presentation-subtypep
-		     presentation-subtypep
-		     presentation-type
 		     presentation-type
 		     presentation-type-direct-supertypes
 		     presentation-type-history
@@ -810,9 +788,7 @@
 		     presentation-type-of
 		     presentation-type-options
 		     presentation-typep
-		     presentation-typep
 		     presentation-type-parameters
-		     presentation-type-specifier-p
 		     presentation-type-specifier-p
 		     present-to-string
 		     print-menu-item
@@ -827,14 +803,16 @@
 		     propagate-output-record-changes-p
 		     push-button
 		     push-button-pane
-		     push-button-show-as-default-p
+		     push-button-show-as-default
 		     queue-event
 		     queue-repaint
 		     queue-rescan
 		     radio-box
 		     radio-box-current-selection
-		     radio-box-current-selection
 		     radio-box-pane
+		     radio-box-selections
+		     raise-frame
+		     raise-mirror
 		     raise-sheet
 		     range-gadget-mixin
 		     ratio
@@ -863,6 +841,7 @@
 		     rectangle-width
 		     rectilinear-transformation-p
 		     redisplay
+		     redisplayable-stream-p
 		     redisplay-frame-pane
 		     redisplay-frame-panes
 		     redisplay-output-record
@@ -893,14 +872,13 @@
 		     rescan-if-necessary
 		     reset-frame
 		     reset-scan-pointer
-		     reset-watcher
+		     resize-sheet
 		     restart-port
 		     restraining
 		     restraining-pane
 		     rigid-transformation-p
 		     row-output-record
 		     row-output-record-p
-		     run-frame-top-level
 		     run-frame-top-level
 		     scaling-transformation-p
 		     scroll-bar
@@ -936,7 +914,7 @@
 		     sheet-disown-child
 		     sheet-enabled-children
 		     sheet-enabled-p
-		     sheet-enabled-p
+		     sheet-event-queue
 		     sheet-grafted-p
 		     sheet-identity-transformation-mixin
 		     sheet-leaf-mixin
@@ -944,6 +922,9 @@
 		     sheet-mirror
 		     sheet-mirrored-ancestor
 		     sheet-multiple-child-mixin
+		     sheet-mute-input-mixin
+		     sheet-mute-output-mixin
+		     sheet-mute-repainting-mixin
 		     sheet-native-region
 		     sheet-native-transformation
 		     sheet-occluding-sheets
@@ -951,18 +932,17 @@
 		     sheet-parent
 		     sheet-parent-mixin
 		     sheet-region
-		     sheet-region
 		     sheet-siblings
 		     sheet-single-child-mixin
-		     sheet-transformation
 		     sheet-transformation
 		     sheet-transformation-mixin
 		     sheet-translation-mixin
 		     sheet-viewable-p
+		     sheet-with-medium-mixin
 		     sheet-y-inverting-transformation-mixin
 		     +shift-key+
 		     shrink-frame
-		     simple-parse-error
+		     simple-completion-error
 		     simple-parse-error
 		     singular-transformation
 		     slider
@@ -973,19 +953,13 @@
 		     space-requirement-combine
 		     space-requirement-components
 		     space-requirement-height
-		     space-requirement-height
-		     space-requirement-max-height
 		     space-requirement-max-height
 		     space-requirement-max-width
-		     space-requirement-max-width
-		     space-requirement-min-height
 		     space-requirement-min-height
 		     space-requirement-min-width
-		     space-requirement-min-width
 		     space-requirement-width
-		     space-requirement-width
-		     spacer-pane
 		     spacing
+		     spacing-pane
 		     *standard-activation-gestures*
 		     standard-application-frame
 		     standard-bounding-rectangle
@@ -1032,97 +1006,59 @@
 		     stream-add-output-record
 		     stream-add-string-output
 		     stream-advance-to-column
-		     stream-advance-to-column
 		     stream-baseline
 		     stream-character-width
 		     stream-clear-input
-		     stream-clear-input
-		     stream-clear-output
 		     stream-clear-output
 		     stream-close-text-output-record
 		     stream-current-output-record
-		     stream-current-output-record
-		     stream-cursor-position
 		     stream-cursor-position
 		     stream-default-view
-		     stream-default-view
-		     stream-drawing-p
 		     stream-drawing-p
 		     stream-element-type
 		     stream-end-of-line-action
-		     stream-end-of-line-action
-		     stream-end-of-page-action
 		     stream-end-of-page-action
 		     stream-finish-output
-		     stream-finish-output
 		     stream-force-output
-		     stream-force-output
-		     stream-fresh-line
 		     stream-fresh-line
 		     stream-increment-cursor-position
 		     stream-input-buffer
-		     stream-input-buffer
-		     stream-input-buffer
 		     stream-input-wait
 		     stream-insertion-pointer
-		     stream-insertion-pointer
-		     stream-line-column
 		     stream-line-column
 		     stream-line-height
-		     stream-listen
 		     stream-listen
 		     stream-output-history
 		     stream-output-history-mixin
 		     streamp
 		     stream-pathname
 		     stream-peek-char
-		     stream-peek-char
 		     stream-pointer-position
-		     stream-pointer-position
-		     stream-pointers
 		     stream-present
-		     stream-primary-pointer
-		     stream-primary-pointer
 		     stream-process-gesture
 		     stream-read-byte
 		     stream-read-char
-		     stream-read-char
-		     stream-read-char-no-hang
 		     stream-read-char-no-hang
 		     stream-read-gesture
-		     stream-read-gesture
-		     stream-read-line
 		     stream-read-line
 		     stream-recording-p
-		     stream-recording-p
-		     stream-redisplayable-p
 		     stream-redisplaying-p
 		     stream-replay
 		     stream-rescanning-p
-		     stream-restore-input-focus
-		     stream-scan-pointer
 		     stream-scan-pointer
 		     stream-set-input-focus
 		     stream-start-line-p
-		     stream-start-line-p
 		     stream-string-width
 		     stream-terpri
-		     stream-terpri
 		     stream-text-cursor
-		     stream-text-cursor
-		     stream-text-margin
 		     stream-text-margin
 		     stream-text-output-record
 		     stream-truename
 		     stream-unread-char
-		     stream-unread-char
-		     stream-unread-gesture
 		     stream-unread-gesture
 		     stream-vertical-spacing
 		     stream-write-byte
 		     stream-write-char
-		     stream-write-char
-		     stream-write-string
 		     stream-write-string
 		     string
 		     subset
@@ -1158,7 +1094,6 @@
 		     text-style-fixed-width-p
 		     text-style-height
 		     text-style-mapping
-		     text-style-mapping
 		     text-style-p
 		     text-style-size
 		     text-style-width
@@ -1186,6 +1121,7 @@
 		     transform-rectangle*
 		     transform-region
 		     translation-transformation-p
+		     +transparent-ink+
 		     tree-recompute-extent
 		     type-or-string
 		     *undefined-text-style*
@@ -1215,10 +1151,11 @@
 		     window-event-mirrored-sheet
 		     window-event-native-region
 		     window-event-region
+		     window-manager-delete-event
+		     window-manager-event
 		     window-refresh
 		     window-repaint-event
 		     window-viewport
-		     window-viewport-position
 		     window-viewport-position
 		     with-accept-help
 		     with-activation-gestures
@@ -1232,6 +1169,7 @@
 		     with-first-quadrant-coordinates
 		     with-frame-manager
 		     with-graft-locked
+		     with-identity-transformation
 		     with-input-context
 		     with-input-editing
 		     with-input-editor-typeout
