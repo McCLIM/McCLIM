@@ -93,10 +93,13 @@
 	  (setf (medium-text-style medium) text-style)
 	  (when orig-medium
 	    (funcall func orig-medium)))
-      (setf (medium-ink medium) old-ink)
+      (when ink
+	(setf (medium-ink medium) old-ink))
       ;; First set transformation, then clipping!
-      (setf (medium-transformation medium) old-transform)
-      (setf (medium-clipping-region medium) old-clip)
+      (when transformation
+	(setf (medium-transformation medium) old-transform))
+      (when clipping-region
+	(setf (medium-clipping-region medium) old-clip))
       (setf (medium-line-style medium) old-line-style)
       (setf (medium-text-style medium) old-text-style))))
 
