@@ -123,7 +123,7 @@
   (typep x 'pane))
 
 (defun make-pane (type &rest args)
-  (apply #'make-pane-1 (find-frame-manager) *application-frame* type args))
+  (apply #'make-pane-1 *pane-realizer* *application-frame* type args))
 
 (defmethod compose-space ((pane pane))
   (setf (pane-space-requirement pane)
@@ -710,8 +710,7 @@
 (defclass border-pane (single-child-composite-pane)
   ((border-width :initarg :border-width
 		 :initform 1
-		 :reader border-pane-width)
-   (background :initarg :background :initform nil))
+		 :reader border-pane-width))
   )
 
 (defmacro bordering ((&rest options
@@ -774,64 +773,6 @@
 (defclass viewport-pane (single-child-composite-pane) ())
 
 
-;; SCROLLBAR-PANE
-
-(defparameter *scrollbar-thickness* 12)
-
-(defclass scrollbar-pane (basic-pane)
-  ((orientation :initform :vertical
-		:initarg :orientation
-		:reader scrollbar-orientation)
-   ;;; the offset and length are percentages of the scrollbar's length
-   (offset :initform 0
-	   :type (real 0 1)
-	   :accessor scrollbar-offset)
-   (length :initform 1
-	   :type (real 0 1)
-	   :accessor scrollbar-length)))
-
-(defmethod initialize-instance :after ((sb scrollbar-pane) &rest args)
-  (declare (ignore args))
-  )
-
-(defmethod compose-space ((sb scrollbar-pane))
-  (if (eq (scrollbar-orientation sb) :vertical)
-      (make-space-requirement :min-width 1
-			      :width *scrollbar-thickness*
-			      :min-height (min 10 *scrollbar-thickness*)
-			      :height (* 2 *scrollbar-thickness*))
-    (make-space-requirement :min-height 1
-			    :height *scrollbar-thickness*
-			    :min-width (min 10 *scrollbar-thickness*)
-			    :width (* 2 *scrollbar-thickness*))))
-
-(defmethod allocate-space ((sb scrollbar-pane) width height)
-  (set-width-and-height sb width height))
-
-(defmethod repaint-sheet ((sb scrollbar-pane) region)
-  (declare (ignore region))
-  (window-refresh sb))
-
-(defmethod window-refresh ((sb scrollbar-pane))
-  (with-bounding-rectangle* (minx miny maxx maxy) (sheet-region sb)
-    (draw-rectangle* sb minx miny maxx maxy :filled t :ink (medium-background sb))
-    (let ((width (- maxx minx))
-	  (height (- maxy miny)))
-      (if (eq (scrollbar-orientation sb) :vertical)
-	  (draw-rectangle* sb
-			   minx (+ miny (* height (scrollbar-offset sb)))
-			   maxx (+ miny (* height (scrollbar-offset sb))
-				   (* height (scrollbar-length sb)))
-			   :filled t )
-	(draw-rectangle* sb
-			 (+ minx (* width (scrollbar-offset sb))) miny
-			 (+ minx (* width (scrollbar-offset sb))
-			    (* width (scrollbar-length sb))) maxy
-			    :filled t :ink (medium-foreground sb))))))
-
-(defmethod handle-event ((sb scrollbar-pane) (event window-repaint-event))
-  (repaint-sheet sb nil))
-
 ;; SCROLLER-PANE
 
 (defclass scroller-pane (composite-pane)
@@ -848,13 +789,13 @@
   (with-slots (scroll-bar viewport vscrollbar hscrollbar) pane
     (setq viewport (first (sheet-children pane)))
     (when (not (eq scroll-bar :horizontal))
-      (setq vscrollbar (make-pane 'scrollbar-pane
+      (setq vscrollbar (make-pane 'scroll-bar-pane
 				  :orientation :vertical
 				  :foreground +grey40+
 				  :background +grey+))
       (sheet-adopt-child pane vscrollbar))
     (when (not (eq scroll-bar :vertical))
-      (setq hscrollbar (make-pane 'scrollbar-pane
+      (setq hscrollbar (make-pane 'scroll-bar-pane
 				  :orientation :horizontal
 				  :foreground +grey40+
 				  :background +grey+))
