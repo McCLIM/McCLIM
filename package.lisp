@@ -977,6 +977,7 @@
    "MENU-CHOOSE-COMMAND-FROM-COMMAND-TABLE" ;function
    "MENU-CHOOSE-FROM-DRAWER"            ;generic function
    "MENU-COMMAND-PARSER"                ;function
+   "MENU-ITEM"                          ;presentation type (mentioned in the description of DRAW-STANDARD-MENU)
    "MENU-ITEM-DISPLAY"                  ;function
    "MENU-ITEM-OPTIONS"                  ;function
    "MENU-ITEM-VALUE"                    ;function
