@@ -273,9 +273,6 @@
     (tracking-pointer (menu :context-type presentation-type
 			    :multiple-window t :highlight t)
       (:presentation (&key presentation)
-	(format *trace-output* "type:~S presentation:~S~%"
-		presentation-type
-		presentation)
        (setq exit-menu t))
       (:pointer-button-release (&key event x y) ; Pointer clicked outside menu?
 					; Close the menu.
