@@ -124,6 +124,8 @@ returns a list in CLIM X11 format (:x11 :host host-name :display-id display-numb
    ((typep event 'keyboard-event)
     (dispatch-event (or (port-keyboard-input-focus port)
 			(event-sheet event)) event))
+   ((typep event 'window-unmap-event)
+    (port-destroy-mirror port (sheet-mirror (event-sheet event))))
    ((typep event 'window-destroy-event)
     (port-unregister-mirror port
 			    (event-sheet event)
