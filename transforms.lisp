@@ -398,6 +398,15 @@
 (defmethod untransform-distance ((transformation transformation) dx dy)
   (transform-distance (invert-transformation transformation) dx dy))
 
+(defun transform-positions (transformation coord-seq)
+  (if (null coord-seq)
+      nil
+    (nconc (multiple-value-list (transform-position transformation
+                                                    (first coord-seq)
+                                                    (second coord-seq)))
+           (transform-positions transformation
+                                (cddr coord-seq)))))
+
 (defmethod transform-rectangle* ((transformation transformation) x1 y1 x2 y2)
   (if (rectilinear-transformation-p transformation)
       (multiple-value-bind (x1 y1) (transform-position transformation x1 y1)
