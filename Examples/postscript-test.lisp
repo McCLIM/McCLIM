@@ -45,7 +45,6 @@
     (with-output-to-postscript-stream
         (stream file-stream
                 :header-comments '(:title "PostScript Medium Test Output"))
-      (with-output-recording-options (stream :record nil)
 
         (loop repeat 200
            do (draw-line* stream (random 600) (random 900)
@@ -59,17 +58,31 @@
                            :line-thickness (random 50)))
         (new-page stream)
 
-        (draw-text* stream "(Test Page)" 170 30
-                    :text-style (make-text-style :fix :bold :huge))
-        (loop for a = 70 then (incf a 50)
-           for i from 1 to 15
-           do (progn
-                (draw-point* stream 100 a :line-thickness i)
-                (draw-line* stream 150 a 350 a :line-thickness i
-                            :line-dashes (list (* i 2) (round i 2)))
-                (draw-text* stream (format nil "~D" i) 400 a
-                            :text-style (make-text-style
-                                         :sans-serif :bold :huge))))
+        (formatting-table (stream :x-spacing 50
+                                  :y-spacing 20)
+          (formatting-row (stream)
+            (formatting-cell (stream))
+            (formatting-cell (stream :align-x :center
+                                     :align-y :bottom
+                                     :min-height 100)
+              (draw-text* stream "(Test Page)" 170 30
+                          :text-style (make-text-style :fix :bold :huge))))
+          (loop for i from 1 to 15
+             do (formatting-row (stream)
+                  (formatting-cell (stream :align-x :right
+                                           :align-y :center
+                                           :min-width 100)
+                    (draw-point* stream 0 0 :line-thickness i))
+                  (formatting-cell (stream :align-x :center
+                                           :align-y :center)
+                    (draw-line* stream 0 0 200 0
+                                :line-thickness i
+                                :line-dashes (list (* i 2) (round i 2))))
+                  (formatting-cell (stream :align-x :right
+                                           :align-y :center)
+                    (draw-text* stream (format nil "~D" i) 0 0
+                                :text-style (make-text-style
+                                             :sans-serif :bold :huge))))))
         (new-page stream)
 
         (with-translation (stream 540 75)
@@ -89,4 +102,4 @@
         (draw-rosette stream 300 300 200 18
                       :ink +steel-blue+ :line-thickness 2)
 
-        ))))
+        )))
