@@ -2169,11 +2169,12 @@ according to the flags RECORD and DRAW."
 ;;; FIXME: Use DRAW-DESIGN*, that is fix DRAW-DESIGN*.
 
 (defun %handle-repaint (stream region)
-  (let ((region (bounding-rectangle region)))
-    (with-bounding-rectangle* (x1 y1 x2 y2) region
-      (with-output-recording-options (stream :record nil)
-	(draw-rectangle* stream x1 y1 x2 y2 :filled T :ink +background-ink+)))
-    (stream-replay stream region)))
+  (when (output-recording-stream-p stream)
+    (let ((region (bounding-rectangle region)))
+      (with-bounding-rectangle* (x1 y1 x2 y2) region
+        (with-output-recording-options (stream :record nil)
+          (draw-rectangle* stream x1 y1 x2 y2 :filled T :ink +background-ink+)))
+      (stream-replay stream region))))
 
 (defmethod handle-repaint ((stream output-recording-stream) region)
   (%handle-repaint stream region))
@@ -2192,6 +2193,8 @@ according to the flags RECORD and DRAW."
                                                (record-type 'standard-sequence-output-record))
   ;; I am not sure what exactly :height should do.
   ;; --GB 2003-05-25
+  ;; The current behavior is consistent with 'classic' CLIM
+  ;; --Hefner 2004-06-19
   (multiple-value-bind (cx cy)
       (stream-cursor-position stream)
     (let ((record
@@ -2206,9 +2209,10 @@ according to the flags RECORD and DRAW."
       (cond ((null height)
              (setf (output-record-position record)
                    (values cx cy)))
-            (t
+            (t             
              (setf (output-record-position record)
-                   (values cx (- cy (- (bounding-rectangle-height record) height))))))
+                   (values cx
+                           (- cy (- (bounding-rectangle-height record) height))))))
       (with-output-recording-options (stream :draw t :record nil)
         (replay-output-record record stream))
       (cond (move-cursor
