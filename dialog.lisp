@@ -256,6 +256,13 @@ accept of this query")))
 		     :key #'query-identifier :test #'equal))
 	(align (align-prompts stream)))
     (unless query
+      ;; If there's no default but empty input could return a sensible value,
+      ;; use that as a default.
+      (unless default-supplied-p
+	(setq default
+	      (ignore-errors (accept-from-string type
+						 ""
+						 :view +textual-view+ ))))
       (setq query (make-instance 'query
 				 :query-identifier query-identifier
 				 :ptype type
