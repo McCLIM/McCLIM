@@ -22,7 +22,7 @@
 ;;; Emacs buffer.  It maintains a point, where insertions and
 ;;; deletions take place, and provides functions to move the point around.
 
-(defclass editable-buffer (bp-buffer-mixin basic-buffer-mixin)
+(defclass editable-buffer (extent-buffer-mixin basic-buffer-mixin)
   ((point :accessor point :documentation "A buffer-pointer that
   maintains the current insertion point.")
    (buffer-start :accessor buffer-start
@@ -167,17 +167,6 @@
 	  do (flexivector-string-into line result :start1 line-in-string))
     result))
 
-(defun line-last-point (line)
-  "Returns the last legal value for a position on a line, which is either
-  before the newline, if there is one, or after the last character."
-  (let* ((size (size line))
-	 (last-char (if (> size 0)
-			(char-ref line (1- size))
-			nil)))
-    (cond ((and last-char (char= last-char #\Newline))
-	   (1- size))
-	  (t size))))
-
 (defmethod forward-char* ((buf editable-buffer) n
 			  &key (position (point buf)) line (pos 0))
   (multiple-value-bind (line pos)
@@ -185,22 +174,15 @@
 	  (values line pos)
 	  (location* position))
     (if (>= n 0)
-	(loop for current-line = line then (next current-line)
+	(loop with remaining = n
+	      for current-line = line then (next current-line)
 	      for current-pos = pos then 0
-	      for current-line-size = (or (and current-line
-					       (size current-line))
-					  0)
-	      for ends-in-nl = (and current-line
-				    (char= (char-ref current-line
-						     (1-
-						      current-line-size))
-					   #\Newline))
-	      for chars-to-eol = (- current-line-size
-				    (if ends-in-nl 1 0)
-				    current-pos)
-	      ;; point goes before #\newline, then to the next line.
-	      for remaining = n then (- remaining chars-to-eol)
-	      until (or (null current-line) (<= remaining chars-to-eol))
+	      for last-point = (or (and current-line
+					(line-last-point current-line))
+				   0)
+	      until (or (null current-line)
+			(<= remaining (- last-point current-pos)))
+	      do (decf remaining (max 1 (- last-point current-pos)))
 	      finally (if (null current-line)
 			  (error 'buffer-bounds-error :buffer buf)
 			  (return (values current-line
@@ -258,3 +240,29 @@
 (defmethod end-of-buffer* ((buf editable-buffer))
   (location* (buffer-end buf)))
 
+;;; These iteration constructs need a bit more thought.
+;;; map-over-region in its current state may not do the right thing if
+;;; the buffer is modified in the region, but what is the right thing?
+;;; Behave as if we're moving a point?
+
+(defun map-over-region (func buf start end)
+  (multiple-value-bind (line pos)
+      (location* start)
+    (loop until (and (eq line (line end)) (eql pos (pos end)))
+	  do (progn
+	       (funcall func line pos)
+	       (setf (values line pos) (forward-char* buf 1
+						      :line line :pos pos))))))
+
+;;; This is cheesy, but I don't feel like optimizing the delete right now.
+
+(defun delete-region (buf start end)
+  (with-point (buf)
+    (setf (point* buf) (location* start))
+    (loop until (and (eq (line start) (line end))
+		     (eql (pos start) (pos end)))
+	  do (delete-char buf 1))))
+
+(defmethod clear-buffer ((buf editable-buffer))
+  (delete-region buf (buffer-start buf) (buffer-end buf))
+  (setf (extents (line (buffer-start buf))) nil))

@@ -72,8 +72,7 @@
   (typep x 'output-record))
 
 (defclass output-record-mixin (basic-output-record-mixin output-record)
-  ((children :initform nil
-	     :reader output-record-children))
+  ()
   (:documentation "Implementation class for output records i.e., those records
  that have children."))
 
@@ -200,13 +199,14 @@ Only those records that overlap REGION are displayed."))
     (nx ny (record output-record))
   (let ((*suppress-notify-parent* t))
     (multiple-value-bind (old-x old-y) (output-record-position record)
-      (loop with dx = (- nx old-x)
-	    and dy = (- ny old-y)
-	    for child in (output-record-children record)
-	    do (multiple-value-bind (x y) (output-record-position child)
-		 (setf (output-record-position child)
-		       (values (+ x dx) (+ y dy))))))))
-
+      (let ((dx (- nx old-x))
+	    (dy (- ny old-y)))
+	(map-over-output-records
+	 #'(lambda (child)
+	     (multiple-value-bind (x y) (output-record-position child)
+	       (setf (output-record-position child)
+		     (values (+ x dx) (+ y dy)))))
+	 record)))))
 
 (defmethod* (setf output-record-position) :around
     (nx ny (record basic-output-record))
@@ -265,7 +265,8 @@ Only those records that overlap REGION are displayed."))
     ((record basic-output-record))
   (bounding-rectangle* record))
 
-(defmethod output-record-refined-sensitivity-test ((record basic-output-record) x y)
+(defmethod output-record-refined-position-test ((record basic-output-record)
+						x y)
   (declare (ignore x y))
   t)
 
@@ -280,10 +281,11 @@ Only those records that overlap REGION are displayed."))
        (draw-rectangle* (sheet-medium stream) x1 y1 x2 y2 :filled nil :ink +background-ink+)))))
 
 (defclass standard-sequence-output-record (output-record-mixin)
-  (
-   ))
+  ((children :initform (make-array 8 :adjustable t :fill-pointer 0)
+	     :reader output-record-children)))
 
-(defclass standard-tree-output-record (output-record-mixin)
+;;; XXX bogus for now.
+(defclass standard-tree-output-record (standard-sequence-output-record)
   (
    ))
 
@@ -293,31 +295,32 @@ Only those records that overlap REGION are displayed."))
     (setq x nx
           y ny)))
 
-(defmethod output-record-children ((output-record output-record-mixin))
-  (with-slots (children) output-record
-    (reverse children)))
-
-(defmethod add-output-record (child (record output-record-mixin))
+(defmethod add-output-record (child (record standard-sequence-output-record))
   (with-slots (children) record
-    (push child children))
+    (vector-push-extend child children))
   (with-slots (parent) child
     (setf parent record)))
 
 (defmethod add-output-record :before (child (record output-record-mixin))
-  (when (null (output-record-children record))
+  (when (zerop (output-record-count record)) 
     (with-slots (x1 y1 x2 y2) record
       (setf (values x1 y1 x2 y2) (bounding-rectangle* child)))))
 
 (defmethod add-output-record :after (child (record output-record))
   (recompute-extent-for-new-child record child))
 
-(defmethod delete-output-record (child (record output-record-mixin)
+(defmethod delete-output-record (child (record standard-sequence-output-record)
 				 &optional (errorp t))
   (with-slots (children) record
-    (if (and errorp
-	     (not (member child children)))
-	(error "~S is not a child of ~S" child record))
-    (setq children (delete child children))))
+    (let ((pos (position child children :test #'eq)))
+      (if (null pos)
+	  (when errorp
+	    (error "~S is not a child of ~S" child record))
+	  (progn
+	    (setq children (replace children children
+				    :start1 pos
+				    :start2 (1+ pos)))
+	    (decf (fill-pointer children)))))))
 
 (defmethod delete-output-record :after (child (record output-record-mixin)
 					&optional (errorp t))
@@ -325,84 +328,56 @@ Only those records that overlap REGION are displayed."))
   (with-bounding-rectangle* (x1 y1 x2 y2) child
     (recompute-extent-for-changed-child record child x1 y1 x2 y2)))
 
-(defmethod clear-output-record ((record output-record-mixin))
+(defmethod clear-output-record ((record standard-sequence-output-record))
   (with-slots (children x1 y1 x2 y2) record
-    (setq children nil
-	  x2 x1
+    (fill children nil)
+    (setf (fill-pointer children) 0)
+    (setq x2 x1
 	  y2 y1)))
 
-(defmethod output-record-count ((record output-record-mixin))
+(defmethod output-record-count ((record standard-sequence-output-record))
   (length (output-record-children record)))
 
-(defmethod output-record-count ((record output-record))
-  (let ((count 0))
-    (map-over-output-records #'(lambda (record)
-				 (declare (ignore record))
-				 (incf count))
-			     record)
-    count))
-
-(defmethod map-over-output-records (function (record output-record-mixin)
-				    &optional (x-offset 0) (y-offset 0)
-				    &rest function-args)
+(defmethod map-over-output-records
+    (function (record standard-sequence-output-record)
+     &optional (x-offset 0) (y-offset 0)
+     &rest function-args)
   (declare (ignore x-offset y-offset))
-  (loop for child in (output-record-children record)
+  (loop for child across (output-record-children record)
 	do (apply function child function-args)))
 
-;; Applies if there isn't a more specific method
+;;; This needs to work in "most recently added first" order, which I
+;;; didn't know until recently :) -- moore
 (defmethod map-over-output-records-containing-position
-    (function (record output-record) x y
+    (function (record standard-sequence-output-record) x y
      &optional (x-offset 0) (y-offset 0)
      &rest function-args)
   (declare (ignore x-offset y-offset))
-  (flet ((mapper (child)
-	   (multiple-value-bind (min-x min-y max-x max-y)
-	       (output-record-hit-detection-rectangle* child)
-	     (when (and (<= min-x x max-x)
-			(<= min-y y max-y)
-			(output-record-refined-sensitivity-test child
-								x y))
-	       (apply function child function-args)))))
-    (declare (dynamic-extent #'mapper))
-    (map-over-output-records #'mapper record)))
-
-(defmethod map-over-output-records-containing-position
-    (function (record output-record-mixin) x y
-     &optional (x-offset 0) (y-offset 0)
-     &rest function-args)
-  (declare (ignore x-offset y-offset))
-  (loop for child in (output-record-children record)
-	when (and (multiple-value-bind (min-x min-y max-x max-y)
-		      (output-record-hit-detection-rectangle* child)
-		    (and (<= min-x x max-x) (<= min-y y max-y)))
-                  (output-record-refined-sensitivity-test child x y))
-        do (apply function child function-args)))
+  (with-slots (children) record
+    (loop for i from (1- (length children)) downto 0
+	  for child = (aref children i)
+	  when (and (multiple-value-bind (min-x min-y max-x max-y)
+			(output-record-hit-detection-rectangle* child)
+		      (and (<= min-x x max-x) (<= min-y y max-y)))
+		    (output-record-refined-position-test child x y))
+	  do (apply function child function-args))))
 
 (defmethod map-over-output-records-overlapping-region
-    (function (record output-record) region
+    (function (record standard-sequence-output-record) region
      &optional (x-offset 0) (y-offset 0)
      &rest function-args)
   (declare (ignore x-offset y-offset))
-  (flet ((mapper (child)
-	   (when (region-intersects-region-p region child)
-	       (apply function child function-args))))
-    (declare (dynamic-extent #'mapper))
-    (map-over-output-records #'mapper record)))
-
-(defmethod map-over-output-records-overlapping-region (function (record output-record) region
-						      &optional (x-offset 0) (y-offset 0)
-                                                      &rest function-args)
-  (declare (ignore x-offset y-offset))
-  (loop for child in (output-record-children record)
+  (loop for child across (output-record-children record)
         do (when (region-intersects-region-p region child)
              (apply function child function-args))))
 
 ;;; If the child is the only child of record, the record's bounding rectangle
 ;;; is set to the child's.
-(defmethod recompute-extent-for-new-child ((record output-record-mixin) child)
+(defmethod recompute-extent-for-new-child
+    ((record standard-sequence-output-record) child)
   (with-bounding-rectangle* (old-x1 old-y1 old-x2 old-y2) record
     (with-slots (parent children x1 y1 x2 y2) record
-      (if (null (cdr children))
+      (if (eql 1 (length children))
 	  (setf (values x1 y1 x2 y2) (bounding-rectangle* child))
 	  (with-bounding-rectangle* (x1-child y1-child x2-child y2-child) child
 	    (minf x1 x1-child)

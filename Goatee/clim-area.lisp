@@ -182,6 +182,18 @@
 	while line
 	collect line))
 
+(defmethod add-output-record (child (area simple-screen-area))
+  (declare (ignore child))
+  (error "add-output-record shouldn't be called on simple-screen-area"))
+
+(defmethod delete-output-record (child (record simple-screen-area)
+				 &optional (errorp t))
+  (declare (ignore child errorp))
+  (error "delete-output-record shouldn't be called on simple-screen-area"))
+
+(defmethod clear-output-record ((record simple-screen-area))
+  (error "clear-output-record shouldn't be called on simple-screen-area"))
+
 (defmethod map-over-output-records (function (record simple-screen-area)
 				    &optional (x-offset 0) (y-offset 0)
 				    &rest function-args)
@@ -189,6 +201,37 @@
   (loop for line = (area-first-line record) then (next line)
 	while line
 	do (apply function line function-args)))
+
+;;; Since lines don't overlap, we can use the same order for
+;;; map-over-output-records-containing-position and
+;;; map-over-output-records-overlapping-region.
+
+(defmethod map-over-output-records-containing-position
+    (function (record simple-screen-area) x y
+     &optional (x-offset 0) (y-offset 0)
+     &rest function-args)
+  (declare (ignore x-offset y-offset))
+  (flet ((mapper (child)
+	   (multiple-value-bind (min-x min-y max-x max-y)
+	       (output-record-hit-detection-rectangle* child)
+	     (when (and (<= min-x x max-x)
+			(<= min-y y max-y)
+			(output-record-refined-position-test child
+							     x y))
+	       (apply function child function-args)))))
+    (declare (dynamic-extent #'mapper))
+    (map-over-output-records #'mapper record)))
+
+(defmethod map-over-output-records-overlapping-region
+    (function (record simple-screen-area) region
+     &optional (x-offset 0) (y-offset 0)
+     &rest function-args)
+  (declare (ignore x-offset y-offset))
+  (flet ((mapper (child)
+	   (when (region-intersects-region-p region child)
+	       (apply function child function-args))))
+    (declare (dynamic-extent #'mapper))
+    (map-over-output-records #'mapper record)))
 
 (defmethod initialize-area-from-buffer ((area simple-screen-area) buffer)
   ;; XXX Stupid, but eventually will be different per line.

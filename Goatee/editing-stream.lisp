@@ -31,6 +31,11 @@
    (snapshot :accessor snapshot :initarg :snapshot
 	     :initform (make-instance 'editing-stream-snapshot))))
 
+(defclass noise-extent (extent)
+  ()
+  (:documentation "Characters within the extent are input editor noise
+  strings.  Eventually these should be read-only and atomic."))
+
 ;;; Stream is the encapsulated stream
 (defmethod initialize-instance :after ((obj goatee-input-editing-mixin)
 					&key stream (initial-contents ""))
@@ -50,16 +55,33 @@
     ;; initialize input-editing-stream state to conform to our reality
     (make-input-editing-stream-snapshot obj (area obj))))
   
-
 (defun make-input-editing-stream-snapshot (snapshot area)
-  (let ((buffer (buffer area)))
-    (buffer-string buffer :result (stream-input-buffer snapshot))
-    (multiple-value-bind (point-line pos)
+  (let ((buffer (buffer area))
+	(input-buffer (stream-input-buffer snapshot)))
+    (multiple-value-bind (point-line point-pos)
 	(point* buffer)
-      (loop for line = (dbl-head (lines buffer)) then (next line)
-	    until (eq line point-line)
-	    sum (size line) into ip
-	    finally (setf (stream-insertion-pointer snapshot) (+ ip pos))))))
+      (setf (fill-pointer input-buffer) 0)
+      (map-over-region #'(lambda (line pos)
+			   (let ((noise nil))
+			     (map-over-extents-at-location*
+			      #'(lambda (extent line pos)
+				  (when (typep extent 'noise-extent)
+				    (if (and (eq line (line (bp-start extent)))
+					     (eql pos (pos (bp-start extent))))
+					(setq noise
+					      climi::*noise-string-start*)
+					(setq noise climi::*noise-string*))))
+			      line
+			      pos
+			      :start-state :closed
+			      :end-state :open)
+			     (vector-push-extend (or noise (char-ref line pos))
+						 input-buffer)))
+		       buffer
+		       (buffer-start buffer)
+		       (buffer-end buffer))
+      (setf (stream-insertion-pointer snapshot)
+	    (offset-location* buffer point-line point-pos)))))
 
 (defmethod stream-process-gesture ((stream goatee-input-editing-mixin)
 				   gesture
@@ -137,13 +159,14 @@
   (loop with end-line = (location* (buffer-end buffer))
 	for buf-line = (location* (buffer-start buffer)) then (next buf-line)
 	until (or (eq buf-line line) (eq buf-line end-line))
-	summing (size line) into total-offset
+	summing (size buf-line) into total-offset
 	finally (progn
 		  (unless (eq buf-line line)
 		    (error 'goatee-error
 			   :format "Location line ~S pos ~S isn't in buffer ~S"
 			   :format-arguments (list line pos buffer)))
 		  (return (+ total-offset pos)))))
+
 
 (defmethod replace-input ((stream goatee-input-editing-mixin) new-input
 			  &key
@@ -169,8 +192,8 @@
 		    (location*-offset buf buffer-start)
 		  (when (> del-chars 0)
 		    (delete-char buf del-chars :line line :pos pos))
-		  ;; location should be preserved across the delete-char, but it
-		  ;; would be safest to use a buffer pointer or something...
+		  ;; location should be preserved across the delete-char, but
+		  ;; it would be safest to use a buffer pointer or something...
 		  (insert buf new-input
 			  :line line :pos pos :start start :end end)
 		  (make-input-editing-stream-snapshot stream area)
@@ -184,6 +207,7 @@
 		      (queue-rescan stream)))
 		(when rescan
 		  (queue-rescan stream))))
+	  ;; XXX Redundant with make-input-editing-stream-snapshot?
 	  (setf (stream-insertion-pointer stream)
 		(offset-location* buf (line (point buf)) (pos (point buf))))
 	  (redisplay-area area))
@@ -192,3 +216,35 @@
 	      stream
 	      buffer-start
 	      scan-pointer))))
+
+;;; There used to be complicated logic here to support output when
+;;; rescanning, but it seems to be very hairy to get right in
+;;; combination with read-gesture's behavior upon seeing noise
+;;; strings, especially with respect to peek and unread-gesture.  So, just
+;;; suppress printing the noise string unless we're at the end of the
+;;; buffer and can't screw anything up.
+
+(defmethod input-editor-format ((stream goatee-input-editing-mixin)
+				format-string
+				&rest format-args)
+  (let* ((scan-pointer (stream-scan-pointer stream))
+	 (area (area stream))
+	 (buf (buffer area))
+	 (output (apply #'format nil format-string format-args)))
+    (when (< scan-pointer (fill-pointer (stream-input-buffer stream)))
+      (return-from input-editor-format nil))
+    (multiple-value-bind (line pos)
+	(location*-offset buf scan-pointer)
+      (let ((extent (make-instance 'noise-extent
+		      :start-line line :start-pos pos)))
+	(with-point (buf)
+	  (insert buf output :line line :pos pos))
+	(setf (start-state extent) :open)
+	(setf (end-state extent) :open)
+	(setf (stream-scan-pointer stream)
+	      (offset-location* buf
+				(line (bp-end extent))
+				(pos (bp-end extent))))
+	(make-input-editing-stream-snapshot stream area)
+	(redisplay-area area))))
+  nil)

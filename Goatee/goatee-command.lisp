@@ -103,6 +103,17 @@
   (setf (point* *buffer*) (end-of-buffer* *buffer*))
   (insert *buffer* input-gesture))
 
+(defun clear-input-buffer (&key &allow-other-keys)
+  (clear-buffer *buffer*))
+
+(defun kill-line (&key &allow-other-keys)
+  (multiple-value-bind (line pos)
+      (point* *buffer*)
+    (let ((last-point (line-last-point line)))
+      (if (eql pos last-point)
+	  (delete-char *buffer*)
+	  (delete-char *buffer* (- last-point pos))))))
+
 (loop for i from (char-code #\space) to (char-code #\~)
       do (add-gesture-command-to-table (code-char i)
 				       'insert-character
@@ -134,6 +145,14 @@
 
 (add-gesture-command-to-table '(#\e :control)
 			      'end-line
+			      *simple-area-gesture-table*)
+
+(add-gesture-command-to-table '(#\k :control)
+			      'kill-line
+			      *simple-area-gesture-table*)
+
+(add-gesture-command-to-table '(#\u :control)
+			      'clear-input-buffer
 			      *simple-area-gesture-table*)
 ;;; Debugging fun
 

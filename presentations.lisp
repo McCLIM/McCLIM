@@ -1087,13 +1087,15 @@ function lambda list"))
 (defun default-describe-presentation-type (description stream plural-count)
   (if (symbolp description)
       (setq description (make-default-description (symbol-name description))))
-  (cond ((numberp plural-count)
-	 (format stream "~D ~A~P" plural-count description plural-count))
+  (cond ((eql 1 plural-count)
+	 (format stream "~:[a~;an~] ~A"
+		   (find (char description 0) "aeiouAEIOU")
+		   description)
+	 ((numberp plural-count)
+	  (format stream "~D ~A~P" plural-count description plural-count)))
 	(plural-count
 	 (format stream "~As" description))
-	(t (format stream "~:[a~;an~] ~A"
-		   (find (char description 0) "aeiouAEIOU")
-		   description))))
+	(t (write-string description stream))))
 
 (define-presentation-generic-function %describe-presentation-type
     describe-presentation-type
@@ -1986,14 +1988,15 @@ function lambda list"))
   (princ object stream))
 
 (define-presentation-method accept ((type string) stream (view textual-view)
-				    &key default default-type)
-  (declare (ignore default default-type))
+				    &key (default nil defaultp) default-type)
   (let ((result (read-token stream)))
-    (if (numberp length)
-	(if (eql length (length result))
-	    (values result type)
-	    (input-not-of-required-type result type))
-	(values result type))))
+    (cond ((and (zerop (length result)) defaultp)
+	   (values default default-type))
+	  ((numberp length)
+	   (if (eql length (length result))
+	       (values result type)
+	       (input-not-of-required-type result type)))
+	  (t (values result type)))))
 
 (define-presentation-type pathname ()
   :options ((default-version :newest) default-type (merge-default t)))

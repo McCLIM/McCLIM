@@ -45,15 +45,25 @@
    (rescanning-p :reader stream-rescanning-p :initform nil)
    (activated :accessor stream-activated :initform nil)))
 
-(defclass input-editing-noise-string ()
-  ((noise-string :accessor noise-string :initarg :noise-string)))
+;;; Markers for noise strings in the input buffer.
+
+(defclass noise-string-property ()
+  ())
+
+(defclass noise-string-start-property (noise-string-property)
+  ())
+
+(defparameter *noise-string* (make-instance 'noise-string-property))
+
+(defparameter *noise-string-start*
+  (make-instance 'noise-string-start-property))
 
 ;;; Have to reexamine how many of the keyword arguments to stream-read-gesture
 ;;; should really be passed to the encapsulated stream.
 ;;;
-;;; OK, know I know :)  They should all be passed, except for peek-p.
-;;; However, the loop that calls the encapsulated stream needs to return
-;;; null if we see a :timeout or :eof.
+;;; OK, now I know :)  They should all be passed, except for peek-p.
+;;; However, the loop that calls stream-read-gesture on the
+;;; encapsulated stream needs to return null if we see a :timeout or :eof.
 
 (defmethod stream-read-gesture ((stream standard-input-editing-stream)
 				&rest rest-args &key peek-p
@@ -64,11 +74,13 @@
       stream
     (loop
      (cond ((< scan-pointer insertion-pointer)
-	    (return-from stream-read-gesture
-	      (prog1
-		  (aref buffer scan-pointer)
-		(unless peek-p
-		  (incf scan-pointer)))))
+	    (let ((gesture (aref buffer scan-pointer)))
+	      (if (typep gesture 'noise-string-property)
+		  (incf scan-pointer)
+		  (progn
+		    (unless peek-p
+		      (incf scan-pointer))
+		    (return-from stream-read-gesture gesture)))))
 	   ;; If activated, insertion pointer is at fill pointer
 	   ((stream-activated stream)
 	    (return-from stream-read-gesture (values nil :eof)))
@@ -233,38 +245,6 @@
       (adjust-array buffer (list (+ fill n))))
     (incf (fill-pointer buffer) n)
     (replace buffer buffer :start1 (+ pos n) :start2 pos :end2 fill)))
-
-#+nil
-(defmethod input-editor-format ((stream standard-input-editing-stream)
-				format-string
-				&rest format-args)
-  (let ((noise (make-instance 'input-editing-noise-string
-			      :noise-string (apply #'format
-						   nil
-						   format-string
-						   format-args))))
-    (with-slots (buffer insertion-pointer scan-pointer)
-	stream
-      (if (< scan-pointer (fill-pointer buffer))
-	  (progn
-	    (make-room buffer scan-pointer 1)
-	    (setf (aref buffer scan-pointer) noise))
-	  (vector-push-extend noise buffer))
-      (when (>= insertion-pointer scan-pointer)
-	(incf insertion-pointer))
-      (incf scan-pointer))
-    (when (encapsulating-stream-stream stream)
-      (write-string (noise-string noise)   stream))))
-
-;;; XXX For now...
-(defmethod input-editor-format ((stream standard-input-editing-stream)
-				format-string
-				&rest format-args)
-  (declare (ignore format-string format-args))
-  (fresh-line *debug-io*)
-  (apply #'format *debug-io* format-string format-args)
-  (fresh-line *debug-io*)
-  (force-output *debug-io*))
 
 ;;; Defaults for replace-input and presentation-replace-input.
 
@@ -614,8 +594,8 @@
 (defmacro completing-from-suggestions ((stream &rest args) &body body)
   (when (eq stream t)
     (setq stream '*standard-input*))
-  (let ((generator (gensysm "GENERATOR"))
-	(input-string (gensysm "INPUT-STRING"))
+  (let ((generator (gensym "GENERATOR"))
+	(input-string (gensym "INPUT-STRING"))
 	(suggester (gensym "SUGGESTER")))
      `(flet ((,generator (,input-string ,suggester)
 	      (declare (ignore ,input-string))

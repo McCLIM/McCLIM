@@ -248,7 +248,10 @@
 
 (define-command com-undo ()
   (let* ((output-history (clim-fig-output-record *application-frame*))
-         (record (first (last (output-record-children output-history)))))
+	 (record-count (output-record-count output-history))
+         (record (and (not (zerop record-count))
+		      (elt (output-record-children output-history)
+			   (1- record-count)))))
     (if record
         (with-output-recording-options (*standard-output* :record nil)
           (with-bounding-rectangle* (x1 y1 x2 y2) record
@@ -273,7 +276,9 @@
 
 (define-command com-clear ()
   (setf (clim-demo::clim-fig-redo-list *application-frame*)
-        (append (output-record-children (clim-fig-output-record *application-frame*))
+        (append (coerce (output-record-children (clim-fig-output-record
+						 *application-frame*))
+			'list) 
                 (clim-demo::clim-fig-redo-list *application-frame*)))
   (window-clear *standard-output*))
 

@@ -321,3 +321,171 @@
        (with-buffer-pointer* (,bp-var ,line-var ,pos-var :class ,class)
 	 ,@body))))
 
+(defclass extent ()
+  ((bp-start :reader bp-start)
+   (bp-end :reader bp-end))
+  (:documentation "A delimited region in a buffer.  The concept follows extents
+  in XEmacs, though the interface is more in line with Common Lisp."))
+
+(defmethod initialize-instance :after ((obj extent) 
+				       &key start-line 
+					    start-pos
+					    (end-line start-line) 
+					    (end-pos start-pos)
+					    (start-state :closed)
+					    (end-state :closed))
+
+  (setf (slot-value obj 'bp-start)
+	(make-instance (if (eq start-state :open)
+			   'buffer-pointer
+			   'fixed-buffer-pointer)
+		       :line start-line :pos start-pos))
+  (setf (slot-value obj 'bp-end)
+	(make-instance (if (eq end-state :open)
+			   'fixed-buffer-pointer
+			   'buffer-pointer)
+		       :line end-line :pos end-pos))
+  (when (and start-line end-line)
+    (record-extent-lines obj)))
+
+(defclass extent-buffer-mixin (bp-buffer-mixin)
+  ()
+  (:documentation "Buffer class that maintains extents."))
+
+(defclass extent-buffer-line (bp-buffer-line)
+  ((extents :accessor extents :initarg :extents :initform nil
+	    :documentation "Holds any extents that contain this line, including
+  ones that start and finish on it.  Eventually the extents in this list will
+  be kept in \"display\" order." )))
+
+(defmethod make-buffer-line ((buffer extent-buffer-mixin) &rest initargs)
+  (apply #'make-instance 'extent-buffer-line initargs))
+
+(defmethod record-extent-lines ((extent extent))
+  (loop for line = (line (bp-start extent)) then (next line)
+	until (eq line (line (bp-end extent)))
+	do (push extent (extents line))
+	finally (push extent (extents line))))
+
+(defmethod detach-extent ((extent extent))
+  (loop for line = (line (bp-start extent)) then (next line)
+	until (eq line (lines (bp-end extent)))
+	do (setf (extents line) (delete extent (extents line)))
+	finally (setf (extents line) (delete extent (extents line))))
+  (setf (line (bp-start extent)) nil)
+  (setf (line (bp-end extent)) nil))
+
+(defmethod start-state ((extent extent))
+  (if (typep (bp-start extent) 'fixed-buffer-pointer)
+      :closed
+      :open))
+
+(defmethod (setf start-state) (new-val (extent extent))
+  (with-slots (bp-start)
+      extent
+    (if (eq new-val :open)
+	(when (typep bp-start 'fixed-buffer-pointer)
+	  (setf bp-start
+		(make-instance 'buffer-pointer
+			       :line (line bp-start)
+			       :pos (pos bp-start))))
+	(when (not (typep bp-start 'fixed-buffer-pointer))
+	  (setf bp-start
+		(make-instance 'fixed-buffer-pointer
+			       :line (line bp-start)
+			       :pos (pos bp-start)))))))
+
+(defmethod end-state ((extent extent))
+  (if (typep (bp-end extent) 'fixed-buffer-pointer)
+      :open
+      :closed))
+
+(defmethod (setf end-state) (new-val (extent extent))
+  (with-slots (bp-end)
+      extent
+    (if (eq new-val :open)
+	(when (not (typep bp-end 'fixed-buffer-pointer))
+	  (setf bp-end
+		(make-instance 'fixed-buffer-pointer
+			       :line (line bp-end) :pos (pos bp-end))))
+	(when (typep bp-end 'fixed-buffer-pointer)
+	  (setf bp-end
+		(make-instance 'buffer-pointer
+			       :line (line bp-end) :pos (pos bp-end)))))))
+
+(defmethod buffer-open-line* :around
+    ((buf extent-buffer-mixin) (line extent-buffer-line) pos)
+  (declare (ignore pos))
+  (multiple-value-bind (new-line new-pos)
+      (call-next-method)
+    (loop for extent in (extents line)
+	  for bp-start = (bp-start extent)
+	  for bp-end = (bp-end extent)
+	  if (or (not (eq (line bp-start) line))
+		 (eq (line bp-end) new-line))
+	    collect extent into new-line-extents
+	  end
+	  if (not (eq (line bp-start) new-line))
+	    collect extent into old-line-extents
+	  end
+	  finally (setf (extents line) old-line-extents
+			(extents new-line) new-line-extents))
+    (values new-line new-pos)))
+
+(defmethod buffer-close-line* :around
+    ((buffer extent-buffer-mixin) (line extent-buffer-line) direction)
+  (multiple-value-bind (this-line next-line)
+      (if (< 0 direction)
+	  (values line (next line))
+	  (values (prev line) line))
+      (multiple-value-bind (line new-pos)
+	  (call-next-method)
+	(let ((this-line-extents (extents this-line))
+	      (next-line-extents (extents next-line)))
+	  (loop for extent in next-line-extents
+	      if (not (member extent this-line-extents :test #'eq))
+	      collect extent into new-extents
+	      end
+	      finally (setf (extents line)
+			(nconc this-line-extents new-extents)))
+	  (values line new-pos)))))
+
+(defun line-last-point (line)
+  "Returns the last legal value for a position on a line, which is either
+  before the newline, if there is one, or after the last character."
+  (let* ((size (size line))
+	 (last-char (if (> size 0)
+			(char-ref line (1- size))
+			nil)))
+    (cond ((and last-char (char= last-char #\Newline))
+	   (1- size))
+	  (t size))))
+
+(defmethod map-over-extents-at-location* (func (line extent-buffer-line) pos
+					  &key
+					  (start-state nil start-statep)
+					  (end-state nil end-statep))
+  (loop for extent in (extents line)
+	for bp-start = (bp-start extent)
+	for bp-end = (bp-end extent)
+	for extent-start-state = (or (and start-statep start-state)
+				     (start-state extent))
+	for extent-end-state = (or (and end-statep end-state)
+				   (end-state extent))
+	do (let* ((start-test (if (eq extent-start-state :open)
+				  #'>
+				  #'>=))
+		  (end-test (if (eq extent-end-state :open)
+				  #'<
+				  #'<=))
+		  (do-func (cond ((and (eq (line bp-start) line)
+				       (eq (line bp-end) line))
+				  (and (funcall start-test pos (pos bp-start))
+				       (funcall end-test pos (pos bp-end))))
+				 ((eq (line bp-start) line)
+				  (funcall start-test pos (pos bp-start)))
+				 ((eq (line bp-end) line)
+				  (funcall end-test pos (pos bp-end)))
+				 (t t))))
+	     (when do-func
+	       (funcall func extent line pos)))))
