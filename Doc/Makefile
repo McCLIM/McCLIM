@@ -1,8 +1,8 @@
 NAME=manual
 
-TEXFILES=$(NAME).tex $(shell tex-dependencies $(NAME).tex)
-PSTEX_T=$(shell strip-dependence inputfig $(TEXFILES))
-VERBATIM=$(shell strip-dependence verbatimtabinput $(TEXFILES))
+TEXFILES=$(NAME).tex $(shell ./tex-dependencies $(NAME).tex)
+PSTEX_T=$(shell ./strip-dependence inputfig $(TEXFILES))
+VERBATIM=$(shell ./strip-dependence verbatimtabinput $(TEXFILES))
 PSTEX=$(subst .pstex_t,.pstex,$(PSTEX_T))
 
 all : $(NAME).ps
