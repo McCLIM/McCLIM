@@ -37,7 +37,7 @@
                           :min-height h
                           :max-height h)))
 
-;; This is really horrible.
+;; This is really horrible, but no one has complained or fixed it yet.
 (defmethod handle-repaint ((pane wholine-pane) region)
   (declare (ignore region))
   (window-clear pane)
@@ -99,9 +99,38 @@
                       0))
         (stream-add-output-record pane record)))))))
 
+;; This is a command history.
+;; Should we move this into CLIM-INTERNALS ?
+;; Possibly this should become something integrated with the presentation
+;; histories which I have not played with.
+
+(defclass command-history-mixin ()
+  ((history :initform nil :accessor history)
+   (history-length :initform 25 :initarg :history-length :accessor history-length)))
+
+(defmethod execute-frame-command :after ((frame command-history-mixin) command)
+  (push command (history frame))  
+  (when (> (length (history frame)) (history-length frame))
+    (setf (history frame)
+          (subseq (history frame) 0 (max (length (history frame))
+                                         (history-length frame))))))
+
+(define-command (com-show-command-history :name "Show Command History"
+                                          :command-table listener)
+    ()
+  (formatting-table ()
+     (loop for n from 0 by 1
+           for command in (history *application-frame*)
+           do (formatting-row ()
+                (formatting-cell ()
+                   (princ n))
+                (formatting-cell ()
+                   (present command 'command))))))
+
 
 ;;; Listener application frame
-(define-application-frame listener ()
+(define-application-frame listener (standard-application-frame
+                                    command-history-mixin)
     ((system-command-reader :accessor system-command-reader
 			    :initarg :system-command-reader
 			    :initform t))
@@ -280,7 +309,6 @@
 
 (defmethod frame-standard-output ((frame listener))
   (get-frame-pane frame 'interactor))
-
 
 (defun run-listener (&optional (system-command-reader nil))
    (run-frame-top-level
