@@ -56,3 +56,60 @@ SUPPRESS-SPACE-AFTER-CONJUNCTION are non-standard."
                                             (princ #\space stream)))
                                         (princ separator stream)))))
                            sequence)))
+
+;;; filling-output support
+
+(defclass filling-stream (standard-encapsulating-stream
+			  extended-output-stream
+			  output-recording-stream)
+  ((fill-width :accessor fill-width :initarg :fill-width)
+   (break-characters :accessor break-characters :initarg :break-characters
+		     :initform '(" "))
+   (after-line-break :accessor after-line-break :initarg :after-line-break)))
+
+;;; parse-space is from table-formatting.lisp
+
+(defmethod initialize-instance :after ((obj filling-stream)
+				       &key (fill-width '(80 :character)))
+  (setf (fill-width obj) (parse-space (encapsulating-stream-stream obj)
+				      fill-width
+				      :horizontal)))
+
+(defmethod stream-write-char :around ((stream filling-stream) char)
+  (let ((under-stream (encapsulating-stream-stream stream)))
+    (if (and (member char (break-characters stream) :test #'char=)
+	     (> (stream-cursor-position under-stream) (fill-width stream)))
+	(progn
+	  (stream-write-char under-stream #\newline)
+	  (when (slot-boundp stream 'after-line-break)
+	    (write-string (after-line-break stream)
+			  (encapsulating-stream-stream stream))))
+	(call-next-method))))
+
+;;; All the monkey business with the lambda form has to do with capturing the
+;;; keyword arguments of the macro while preserving the user's evaluation order.
+
+(defmacro filling-output ((stream &rest args &key fill-width break-characters
+				  after-line-break after-line-break-initially)
+			  &body body)
+  (declare (ignore fill-width break-characters after-line-break))
+  (when (eq stream t)
+    (setq stream '*standard-output*))
+  (with-gensyms (fill-var break-var after-var initially-var)
+    `((lambda (&key ((:fill-width ,fill-var))
+	       ((:break-characters ,break-var))
+	       ((:after-line-break ,after-var))
+	       ((:after-line-break-initially ,initially-var)))
+	(let ((,stream (make-instance
+			'filling-stream
+			:stream ,stream
+			,@(and fill-width `((:fill-width ,fill-var)))
+			,@(and break-characters
+			       `((:break-characters ,break-var)))
+			,@(and after-line-break
+			       `((:after-line-break ,after-var))))))
+	  (when ,initially-var
+	    (write-string ,after-var stream))
+	  ,@body))
+      ,@args)))
+

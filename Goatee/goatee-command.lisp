@@ -151,7 +151,7 @@
 			      'insert-character
 			      *simple-area-gesture-table*)
 
-(add-gesture-command-to-table #\rubout
+(add-gesture-command-to-table #\delete
 			      'backwards-delete-character
 			      *simple-area-gesture-table*)
 

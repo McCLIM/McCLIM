@@ -16,6 +16,8 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
+;;; Definitions for the standard presentation types and generic functions
+
 (in-package :CLIM-INTERNALS)
 
 ;;; These types are defined early so the classes will be available for
@@ -554,6 +556,33 @@
 			  &rest args)
   (apply #'accept-1 stream type args))
 
+(defmethod stream-accept ((stream string-stream) type
+			  &key (view (stream-default-view stream))
+			  (default nil defaultp)
+			  (default-type nil default-type-p)
+			  (activation-gestures nil activationsp)
+			  (additional-activation-gestures
+			   nil additional-activations-p)
+			  (delimiter-gestures nil delimitersp)
+			  (additional-delimiter-gestures
+			   nil additional-delimiters-p)
+			  &allow-other-keys)
+  (with-activation-gestures ((if additional-activations-p
+				 additional-activation-gestures
+				 activation-gestures)
+			     :override activationsp)
+    (with-delimiter-gestures ((if additional-delimiters-p
+				  additional-delimiter-gestures
+				  delimiter-gestures)
+			      :override delimitersp)
+      (multiple-value-bind (object object-type)
+	  (apply-presentation-generic-function
+	   accept
+	   type stream view
+	   `(,@(and defaultp `(:default ,default))
+	     ,@(and default-type-p `(:default-type ,default-type))))
+	(values object (or object-type type))))))
+
 (defun accept-1 (stream type &key
 		 (view (stream-default-view stream))
 		 (default nil defaultp)
@@ -569,11 +598,11 @@
 		 query-identifier
 		 (activation-gestures nil activationsp)
 		 (additional-activation-gestures nil additional-activations-p)
-		 delimiter-gestures
-		 additional-delimiter-gestures)
-  (declare (ignore provide-default insert-default history active-p prompt prompt-mode
-		   display-default query-identifier
-		   delimiter-gestures additional-delimiter-gestures))
+		 (delimiter-gestures nil delimitersp)
+		 (additional-delimiter-gestures nil  additional-delimiters-p))
+  (declare (ignore provide-default insert-default history active-p
+		   prompt prompt-mode
+		   display-default query-identifier))
   (when (and defaultp (not default-type-p))
     (error ":default specified without :default-type"))
   (when (and activationsp additional-activations-p)
@@ -597,26 +626,30 @@
 					       additional-activation-gestures
 					       activation-gestures)
 					   :override activationsp)
-		  (multiple-value-bind (object object-type)
-		      (apply-presentation-generic-function
-		       accept
-		       type stream view
-		       `(,@(and defaultp `(:default ,default))
-			 ,@(and default-type-p `(:default-type ,default-type))))
-		    ;; Eat trailing activation gesture
-		    ;; XXX what about pointer gestures?
-		    (unless *recursive-accept-p*
-		      (let ((ag (read-char-no-hang stream nil stream t)))
-			(when (and ag
-				   (not (eq ag stream))
-				   (activation-gesture-p ag)))
-			(unless (or (null ag) (eq ag stream))
-			  (unless (activation-gesture-p ag)
-			    (unread-char ag stream)))))
-		    (values object (or object-type type))))
+		  (with-delimiter-gestures ((if additional-delimiters-p
+						additional-delimiter-gestures
+						delimiter-gestures)
+					    :override delimitersp)
+		    (multiple-value-bind (object object-type)
+			(apply-presentation-generic-function
+			 accept
+			 type stream view
+			 `(,@(and defaultp `(:default ,default))
+			   ,@(and default-type-p
+				  `(:default-type ,default-type))))
+		      ;; Eat trailing activation gesture
+		      ;; XXX what about pointer gestures?
+		      (unless *recursive-accept-p*
+			(let ((ag (read-char-no-hang stream nil stream t)))
+			  (unless (or (null ag) (eq ag stream))
+			    (unless (activation-gesture-p ag)
+			      (unread-char ag stream)))))
+		      (values object (or object-type type)))))
 		;; A presentation was clicked on, or something
 		(t
-		 (when (and replace-input (getf options :echo t))
+		 (when (and replace-input
+			    (getf options :echo t)
+			    (not (stream-rescanning-p stream)))
 		   (presentation-replace-input stream object object-type view
 					       :rescan nil))
 		 (values object object-type))))
@@ -661,6 +694,25 @@
 	  (t
 	   (display-using-mode stream prompt-string default-string))))))
 
+(defmethod prompt-for-accept ((stream string-stream)
+			      type view
+			      &rest other-args
+			      &key &allow-other-keys)
+			      
+  (declare (ignore type view other-args))
+  nil)
+
+(defun accept-from-string (type string
+			   &rest args
+			   &key view
+			   default
+			   default-type
+			   (start 0)
+			   (end (length string)))
+  (declare (ignore view default default-type))
+  (with-input-from-string (stream string :start start :end end)
+    (with-keywords-removed (args (:start :end))
+      (apply #'stream-accept stream type :view +textual-view+ args))))
 
 (define-presentation-generic-function %highlight-presentation
     highlight-presentation
@@ -1388,9 +1440,10 @@
 				    stream
 				    (view textual-view)
 				    &key (default nil defaultp) default-type)
-  (let ((initial-char (peek-char stream)))
+  (let ((initial-char (peek-char nil stream nil nil)))
     (when (or (delimiter-gesture-p initial-char)
-	      (activation-gesture-p initial-char))
+	      (activation-gesture-p initial-char)
+	      (null initial-char))
       (return-from accept (if defaultp
 			      (values default default-type)
 			      nil))))
@@ -1402,7 +1455,7 @@
 							      separator))
 	collect element
 	do (progn
-	     (when (not (eql (peek-char stream) separator))
+	     (when (not (eql (peek-char nil stream nil nil) separator))
 	       (loop-finish))
 	     (read-char stream)
 	     (when echo-space

@@ -57,33 +57,37 @@ STREAM in the direction DIRECTION."
                 (ecase direction
                   (:horizontal (bounding-rectangle-width record))
                   (:vertical (bounding-rectangle-height record)))))
-    ((cons real (cons (member :character) null))
-     (* (car specification) (stream-character-width stream #\M)))
-    ((cons real (cons (member :line) null))
-     (* (car specification) (stream-line-height stream)))
-    ((cons real (cons (member :point :pixel :mm) null))
-     (let* ((value (car specification))
-            (unit  (cadr specification))
-            (graft (graft stream))
-            (gunit (graft-units graft)))
-       ;; mungle specification into what grafts talk about
-       (case unit
-         ((:point)  (setf value (/ value 72) unit :inch))
-         ((:pixels) (setf unit :device))
-         ((:mm)     (setf unit :millimeters)))
-       ;; 
-       (multiple-value-bind (dx dy)
-           (multiple-value-call
-               #'transform-distance (compose-transformation-with-scaling
-                                     (sheet-delta-transformation stream graft)
-                                     (/ (graft-width graft :units unit)
-                                        (graft-width graft :units gunit))
-                                     (/ (graft-height graft :units unit)
-                                        (graft-height graft :units gunit)))
-               (ecase direction
-                 (:horizontal (values 1 0))
-                 (:vertical   (values 0 1))))
-         (/ value (sqrt (+ (* dx dx) (* dy dy)))))))))
+    (cons
+     (destructuring-bind (value unit)
+	 specification
+       (ecase unit
+	 (:character
+	  (* value (stream-character-width stream #\M)))
+	 (:line
+	  (* value (stream-line-height stream)))
+	 ((:point :pixel :mm)
+	  (let* ((graft (graft stream))
+		 (gunit (graft-units graft)))
+	    ;; mungle specification into what grafts talk about
+	    (case unit
+	      ((:point)  (setf value (/ value 72) unit :inch))
+	      ((:pixels) (setf unit :device))
+	      ((:mm)     (setf unit :millimeters)))
+	    ;; 
+	    (multiple-value-bind (dx dy)
+		(multiple-value-call
+		    #'transform-distance
+		  (compose-transformation-with-scaling
+		   (sheet-delta-transformation stream graft)
+		   (/ (graft-width graft :units unit)
+		      (graft-width graft :units gunit))
+		   (/ (graft-height graft :units unit)
+		      (graft-height graft :units gunit)))
+		  (ecase direction
+		    (:horizontal (values 1 0))
+		    (:vertical   (values 0 1))))
+	      (/ value (sqrt (+ (* dx dx) (* dy dy))))))))))))
+
 
 
 
@@ -472,7 +476,7 @@ modifying list BLOCK-INFOS or vector SIZES."))
          (max-block-length (loop :for info :in infos
                               :maximize (block-info-number-of-cells info)))
          (sizes (make-array (list max-block-length)
-                            :element-type 'real
+                            :element-type #-openmcl 'real #+openmcl t
                             :initial-element 0)))
     (loop :for info :in infos
        :for block-sizes = (block-info-cell-sizes info)
@@ -670,6 +674,47 @@ corresponding to a cell in the item list; it has dynamic extent."))
              (t (incf y dy))))
      item-list)))
 
+(defun invoke-format-item-list (continuation stream
+				&key x-spacing y-spacing n-columns n-rows
+				max-width max-height
+				initial-spacing (row-wise t) (move-cursor t)
+				(record-type
+				 'standard-item-list-output-record))
+  (setq x-spacing (parse-space stream (or x-spacing #\Space) :horizontal))
+  (setq y-spacing (parse-space stream (or y-spacing
+                                          (stream-vertical-spacing stream))
+                               :vertical))
+  (with-new-output-record
+      (stream record-type item-list
+	      :x-spacing x-spacing
+	      :y-spacing y-spacing
+	      :initial-spacing initial-spacing
+	      :row-wise row-wise
+	      :n-rows n-rows
+	      :n-columns n-columns
+	      :max-width max-width
+	      :max-height max-height)
+    (multiple-value-bind (cursor-old-x cursor-old-y)
+	(stream-cursor-position stream)
+      (with-output-recording-options (stream :record t :draw nil)
+	(funcall continuation stream)
+	(finish-output stream))
+      (adjust-item-list-cells item-list stream)
+      (setf (output-record-position item-list)
+	    (values cursor-old-x cursor-old-y))
+      (if move-cursor
+	  ;; FIXME!!!
+	  #+ignore
+	  (setf (stream-cursor-position stream)
+		(values cursor-new-x cursor-new-y))
+	  #-ignore
+	  nil
+	  (setf (stream-cursor-position stream)
+		(values cursor-old-x cursor-old-y)))
+      (replay item-list stream)
+      item-list)))
+
+#+nil
 (defun format-items (items
                      &key stream printer presentation-type
                      x-spacing y-spacing n-columns n-rows
@@ -725,12 +770,53 @@ corresponding to a cell in the item list; it has dynamic extent."))
                   (values cursor-old-x cursor-old-y)))
         (replay item-list stream)))))
 
+(defun format-items (items
+		     &rest args
+                     &key (stream *standard-output*)
+		     printer presentation-type
+		     cell-align-x cell-align-y
+                     &allow-other-keys)
+  (let ((printer (if printer
+                     (if presentation-type
+                         #'(lambda (item stream)
+			     (with-output-as-presentation (stream item presentation-type)
+			       (funcall printer item stream)))
+                         printer)
+                     (if presentation-type
+                         #'(lambda (item stream)
+			     (present item presentation-type :stream stream))
+                         #'prin1))))
+    (with-keywords-removed (args (:stream :printer :presentation-type
+				  :cell-align-x :cell-align-y))
+      (apply #'invoke-format-item-list
+	     #'(lambda (stream)
+		 (map nil
+		      #'(lambda (item)
+			  (formatting-cell (stream :align-x cell-align-x
+						   :align-y cell-align-y)
+					   (funcall printer item stream)))
+		      items))
+	     stream
+	     args))))
+
+
 (defmacro formatting-item-list
-    ((&optional stream
+    ((&optional (stream t)
+		&rest args
                 &key x-spacing y-spacing n-columns n-rows
                 stream-width stream-height
                 max-width max-height
                 initial-spacing (row-wise t) (move-cursor t)
                 record-type &allow-other-keys)
      &body body)
-  ())
+  (declare (ignore x-spacing y-spacing n-columns n-rows
+		   stream-width stream-height
+		   max-width max-height
+		   initial-spacing row-wise move-cursor
+		   record-type))
+  (when (eq stream t)
+    (setq stream '*standard-output*))
+  `(invoke-format-item-list #'(lambda (,stream)
+				,@body)
+			    ,stream
+			    ,@args))

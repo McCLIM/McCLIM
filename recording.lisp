@@ -1202,6 +1202,14 @@ were added."
   (declare (ignore args))
   (setf (stream-current-output-record stream) (stream-output-history stream)))
 
+;;; Used in initializing clim-stream-pane
+
+(defmethod reset-output-history ((stream
+				  standard-output-recording-stream))
+  (setf (slot-value stream 'output-history)
+	(make-instance 'standard-tree-output-history))
+  (setf (stream-current-output-record stream) (stream-output-history stream)))
+
 ;;; 16.4.1 The Output Recording Stream Protocol
 (defmethod (setf stream-recording-p)
     (recording-p (stream standard-output-recording-stream))

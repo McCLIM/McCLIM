@@ -251,7 +251,8 @@ by the number of variables in VARS."
 ;;; Move this early so it can be used in presentations.lisp, which
 ;;; comes before commands.lisp.
 
-(defmacro do-command-table-inheritance ((command-table-var command-table) &body body)
+(defmacro do-command-table-inheritance ((command-table-var command-table)
+					&body body)
   `(apply-with-command-table-inheritance
     #'(lambda (,command-table-var)
 	,@body)

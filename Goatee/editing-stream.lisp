@@ -36,6 +36,12 @@
   (:documentation "Characters within the extent are input editor noise
   strings.  Eventually these should be read-only and atomic."))
 
+(defclass accept-result-extent (extent)
+  ((object :accessor object :initarg :object)
+   (type :accessor type :initarg :type))
+  (:documentation "The extent is read with a single read-gesture;
+  result is returned."))
+
 ;;; Stream is the encapsulated stream
 (defmethod initialize-instance :after ((obj goatee-input-editing-mixin)
 					&key stream (initial-contents ""))
@@ -54,34 +60,40 @@
     (stream-add-output-record stream (area obj))
     ;; initialize input-editing-stream state to conform to our reality
     (make-input-editing-stream-snapshot obj (area obj))))
-  
+
+(defvar climi::*noise-string-start*)
+(defvar climi::*noise-string*)
+
 (defun make-input-editing-stream-snapshot (snapshot area)
   (let ((buffer (buffer area))
 	(input-buffer (stream-input-buffer snapshot)))
     (multiple-value-bind (point-line point-pos)
 	(point* buffer)
       (setf (fill-pointer input-buffer) 0)
-      (map-over-region #'(lambda (line pos)
-			   (let ((noise nil))
-			     (map-over-extents-at-location*
-			      #'(lambda (extent line pos)
-				  (declare (special climi::*noise-string-start*
-						    climi::*noise-string*))
-				  (when (typep extent 'noise-extent)
-				    (if (and (eq line (line (bp-start extent)))
-					     (eql pos (pos (bp-start extent))))
-					(setq noise
-					      climi::*noise-string-start*)
-					(setq noise climi::*noise-string*))))
-			      line
-			      pos
-			      :start-state :closed
-			      :end-state :open)
-			     (vector-push-extend (or noise (char-ref line pos))
-						 input-buffer)))
-		       buffer
-		       (buffer-start buffer)
-		       (buffer-end buffer))
+      (map-over-region
+       #'(lambda (line pos)
+	   (let ((noise nil))
+	     (map-over-extents-at-location*
+	      #'(lambda (extent line pos)
+		  (cond ((typep extent 'noise-extent)
+			 (if (and (eq line (line (bp-start extent)))
+				  (eql pos (pos (bp-start extent))))
+			     (setq noise climi::*noise-string-start*)
+			     (setq noise climi::*noise-string*)))
+			((typep extent 'accept-result-extent)
+			 (if (and (eq line (line (bp-start extent)))
+				  (eql pos (pos (bp-start extent))))
+			     (setq noise extent)
+			     (setq noise climi::*noise-string*)))))
+	      line
+	      pos
+	      :start-state :closed
+	      :end-state :open)
+	     (vector-push-extend (or noise (char-ref line pos))
+				 input-buffer)))
+       buffer
+       (buffer-start buffer)
+       (buffer-end buffer))
       (setf (stream-insertion-pointer snapshot)
 	    (offset-location* buffer point-line point-pos)))))
 
@@ -170,18 +182,9 @@
 			   :format-arguments (list line pos buffer)))
 		  (return (+ total-offset pos)))))
 
-
-(defmethod replace-input ((stream goatee-input-editing-mixin) new-input
-			  &key
-			  (start 0)
-			  (end (length new-input))
-			  (buffer-start nil buffer-start-supplied-p)
-			  (rescan nil rescan-supplied-p))
-  (declare (special climi::*current-input-stream* climi::*current-input-position*))
-  (unless buffer-start-supplied-p
-    (if (eq stream climi::*current-input-stream*)
-	(setq buffer-start climi::*current-input-position*)
-	(setq buffer-start 0)))
+(defun %replace-input (stream new-input start end buffer-start
+		       rescan rescan-supplied-p
+		       extent-class &rest extent-args)
   (let* ((scan-pointer (stream-scan-pointer stream))
 	 (area (area stream))
 	 (buf (buffer area))
@@ -189,28 +192,30 @@
     (if (<= 0 del-chars)
 	(progn
 	  (with-point (buf)
-	    (if (mismatch (stream-input-buffer stream) new-input
-			  :start1 buffer-start :end1 scan-pointer
-			  :start2 start :end2 end)
-		(multiple-value-bind (line pos)
-		    (location*-offset buf buffer-start)
-		  (when (> del-chars 0)
-		    (delete-char buf del-chars :line line :pos pos))
-		  ;; location should be preserved across the delete-char, but
-		  ;; it would be safest to use a buffer pointer or something...
-		  (insert buf new-input
-			  :line line :pos pos :start start :end end)
-		  (make-input-editing-stream-snapshot stream area)
-		  ;; If not rescanning, adjust scan pointer to point after new
-		  ;; input
-		  (if (and rescan-supplied-p (null rescan))
-		      (setf (stream-scan-pointer stream)
-			    (offset-location* buf
-					      (line (point buf))
-					      (pos (point buf))))
-		      (queue-rescan stream)))
-		(when rescan
-		  (queue-rescan stream))))
+	    (multiple-value-bind (line pos)
+		(location*-offset buf buffer-start)
+	      (when (> del-chars 0)
+		(delete-char buf del-chars :line line :pos pos))
+	      ;; location should be preserved across the delete-char, but
+	      ;; it would be safest to use a buffer pointer or something...
+	      (let ((extent (and extent-class
+				 (apply #'make-instance extent-class
+					:start-line line :start-pos pos
+					extent-args))))
+		(insert buf new-input
+			:line line :pos pos :start start :end end)
+		(when extent
+		  (setf (start-state extent) :open)
+		  (setf (end-state extent) :open))
+		(make-input-editing-stream-snapshot stream area)
+		;; If not rescanning, adjust scan pointer to point after new
+		;; input
+		(if (and rescan-supplied-p (null rescan))
+		    (setf (stream-scan-pointer stream)
+			  (offset-location* buf
+					    (line (point buf))
+					    (pos (point buf))))
+		    (queue-rescan stream)))))
 	  ;; XXX Redundant with make-input-editing-stream-snapshot?
 	  (setf (stream-insertion-pointer stream)
 		(offset-location* buf (line (point buf)) (pos (point buf))))
@@ -220,6 +225,54 @@
 	      stream
 	      buffer-start
 	      scan-pointer))))
+
+(defvar climi::*current-input-stream*)
+(defvar climi::*current-input-position*)
+
+(defmethod replace-input ((stream goatee-input-editing-mixin) new-input
+			  &key
+			  (start 0)
+			  (end (length new-input))
+			  (buffer-start nil buffer-start-supplied-p)
+			  (rescan nil rescan-supplied-p))
+  (unless buffer-start-supplied-p
+    (if (eq stream climi::*current-input-stream*)
+	(setq buffer-start climi::*current-input-position*)
+	(setq buffer-start 0)))
+  (%replace-input stream new-input
+		  start end buffer-start rescan rescan-supplied-p nil))
+
+(defmethod presentation-replace-input
+    ((stream goatee-input-editing-mixin)
+     object type view
+     &key
+     (buffer-start nil buffer-start-supplied-p)
+     (rescan nil rescan-supplied-p)
+     query-identifier
+     (for-context-type nil for-context-type-p))
+  (declare (ignore query-identifier))
+  (flet ((present-it (acceptably)
+	   (apply #'present-to-string object type
+		     :view view
+		     :acceptably acceptably
+		     (and for-context-type-p
+			  `(:for-context-type ,for-context-type)))))
+    (let* ((acceptably t)
+	   (printed-rep nil))
+      (handler-case
+	  (setq printed-rep (present-it t))
+	(error ()
+	  (setq acceptably nil)
+	  (setq printed-rep (present-it nil))))
+      (unless buffer-start-supplied-p
+	(if (eq stream climi::*current-input-stream*)
+	    (setq buffer-start climi::*current-input-position*)
+	    (setq buffer-start 0)))
+      (apply #'%replace-input stream printed-rep
+	     0 (length printed-rep) buffer-start rescan rescan-supplied-p
+	     (if acceptably
+		 `(accept-result-extent :object ,object :type ,type)
+		 '(nil))))))
 
 ;;; There used to be complicated logic here to support output when
 ;;; rescanning, but it seems to be very hairy to get right in

@@ -372,14 +372,18 @@
 		   &rest args
 		   &key (start 0) (end nil)
 			(align-x :left) (align-y :baseline)
-			towards-point transform-glyphs
+			(towards-point nil towards-point-p)
+		        transform-glyphs
 			ink clipping-region transformation
 			text-style text-family text-face text-size)
   (declare (ignore ink clipping-region transformation
 		   text-style text-family text-face text-size))
   (with-medium-options (sheet args)
     (multiple-value-bind (x y) (point-position point)
-      (multiple-value-bind (towards-x towards-y) (point-position towards-point)
+      (multiple-value-bind (towards-x towards-y)
+	  (if towards-point-p
+	      (point-position towards-point)
+	      (values (1+ x) y))
         (medium-draw-text* medium string x y
                            start end
                            align-x align-y
@@ -389,7 +393,7 @@
 		   &rest args
 		   &key (start 0) (end nil)
 			(align-x :left) (align-y :baseline)
-			towards-x towards-y transform-glyphs
+			(towards-x (1+ x)) (towards-y y) transform-glyphs
 			ink clipping-region transformation
 			text-style text-family text-face text-size)
   (declare (ignore ink clipping-region transformation

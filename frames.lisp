@@ -931,3 +931,8 @@ FRAME-EXIT condition."))
     (loop for event = (event-queue-read queue)
        ;; EVENT-QUEUE-READ in single-process mode calls PROCESS-NEXT-EVENT itself.
        do (handle-event (event-sheet event) event))))
+
+;;; Am I missing something?  Does this need to do more? - moore
+(defmacro with-application-frame ((frame) &body body)
+  `(let ((,frame *application-frame*))
+     ,@body))

@@ -66,36 +66,40 @@
 (defmethod stream-read-gesture ((stream standard-input-editing-stream)
 				&rest rest-args &key peek-p
 				&allow-other-keys)
-  (remf rest-args :peek-p)
-  (rescan-if-necessary stream)
-  (with-slots (buffer insertion-pointer scan-pointer)
-      stream
-    (loop
-     (cond ((< scan-pointer insertion-pointer)
-	    (let ((gesture (aref buffer scan-pointer)))
-	      (if (typep gesture 'noise-string-property)
-		  (incf scan-pointer)
-		  (progn
-		    (unless peek-p
-		      (incf scan-pointer))
-		    (return-from stream-read-gesture gesture)))))
-	   ;; If activated, insertion pointer is at fill pointer
-	   ((stream-activated stream)
-	    (return-from stream-read-gesture (values nil :eof)))
-	   (t (setf (slot-value stream 'rescanning-p) nil)
-	      (loop for result = (multiple-value-bind (gesture type)
-				     (apply #'stream-read-gesture
-					    (encapsulating-stream-stream
-					     stream)
-					    rest-args)
-				   (when (null gesture)
-				     (return-from stream-read-gesture
-				       (values gesture type)))
-				   (stream-process-gesture stream
-							   gesture
-							   type))
-		    until result))))))
-
+  (with-keywords-removed (rest-args (:peek-p))
+    (rescan-if-necessary stream)
+    (with-slots (buffer insertion-pointer scan-pointer)
+	stream
+      (loop
+       (cond ((< scan-pointer insertion-pointer)
+	      (let ((gesture (aref buffer scan-pointer)))
+		(cond ((typep gesture 'noise-string-property)
+		       (incf scan-pointer))
+		      ((and (not peek-p)
+			    (typep gesture 'goatee::accept-result-extent))
+		       (throw-object-ptype (object gesture) (type gesture))))
+		(if (typep gesture 'noise-string-property)
+		    (incf scan-pointer)
+		    (progn
+		      (unless peek-p
+			(incf scan-pointer))
+		      (return-from stream-read-gesture gesture)))))
+	     ;; If activated, insertion pointer is at fill pointer
+	     ((stream-activated stream)
+	      (return-from stream-read-gesture (values nil :eof)))
+	     (t (setf (slot-value stream 'rescanning-p) nil)
+		(loop for result = (multiple-value-bind (gesture type)
+				       (apply #'stream-read-gesture
+					      (encapsulating-stream-stream
+					       stream)
+					      rest-args)
+				     (when (null gesture)
+				       (return-from stream-read-gesture
+					 (values gesture type)))
+				     (stream-process-gesture stream
+							     gesture
+							     type))
+		      until result)))))))
 
 
 (defmethod stream-unread-gesture ((stream standard-input-editing-stream)
@@ -151,13 +155,13 @@
 
 (defun activation-gesture-p (gesture)
   (loop for gesture-name in *activation-gestures*
-	when (event-matches-gesture-name-p gesture gesture-name)
+	when (gesture-matches-spec-p gesture gesture-name)
 	do (return t)
 	finally (return nil)))
 
 (defun delimiter-gesture-p (gesture)
   (loop for gesture-name in *delimiter-gestures*
-	when (event-matches-gesture-name-p gesture gesture-name)
+	when (gesture-matches-spec-p gesture gesture-name)
 	do (return t)
 	finally (return nil)))
 
@@ -235,7 +239,9 @@
 (defgeneric input-editor-format (stream format-string &rest format-args))
 
 (defmethod input-editor-format ((stream t) format-string &rest format-args)
-  (apply #'format stream format-string format-args))
+  (unless (and (typep stream 'string-stream)
+	       (input-stream-p stream))
+    (apply #'format stream format-string format-args)))
 
 (defun make-room (buffer pos n)
   (let ((fill (fill-pointer buffer)))
@@ -299,7 +305,10 @@
 			(vector-push-extend gesture result)))
 		   (t nil))
 	  finally (progn
-		    (unread-gesture gesture :stream stream)
+		    (when gesture
+		      (unread-gesture gesture :stream stream))
+		    ;; Return a simple string.  XXX Would returning an
+		    ;; adjustable string be so bad?
 		    (return (subseq result 0))))))
 
 (defun write-token (token stream &key acceptably)
@@ -372,8 +381,8 @@
 ;;; to read-gesture. 
 (defun complete-input-rescan (stream func partial-completers so-far)
   (when (stream-rescanning-p stream)
-    (loop for gesture = (read-gesture :stream stream)
-	  while (stream-rescanning-p stream)
+    (loop for gesture = (read-gesture :stream stream :timeout 0)
+	  while (stream-rescanning-p stream) ; also nil if no input available
 	  if (complete-gesture-p gesture)
 	    do (let (input success object nmatches)
 		 (when (gesture-match gesture partial-completers)
@@ -395,7 +404,8 @@
 			    :input-so-far so-far ))))
 	  end
 	  do (vector-push-extend gesture so-far)
-	  finally (unread-gesture gesture :stream stream)))
+	  finally (when gesture
+		    (unread-gesture gesture :stream stream))))
   nil)
 
 (defun possibilities-for-menu (possibilities)

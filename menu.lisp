@@ -174,7 +174,11 @@
 		     :value-changed-callback
 		     #'(lambda (gadget val)
 			 (declare (ignore gadget val))
-			 (funcall value)))
+			 (cond ((symbolp value)
+				(funcall value))
+			       ((consp value)
+				;; XXX unsupplied arguments aren't handled
+				(apply (car value) (cdr value))))))
 	(make-pane-1 manager frame 'menu-button-submenu-pane
 		     :label name
 		     :client client

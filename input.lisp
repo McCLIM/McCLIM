@@ -269,7 +269,7 @@
       t)))
 
 ; ugh. FIXME when I work - build a priority queue or something
-(defmethod event-queue-schedule ((eq standard-event-queue) sheet event delay)
+(defmethod schedule-event-queue ((eq standard-event-queue) sheet event delay)
   (with-slots (schedule-time schedule) eq
     (let ((when (+ (now) delay)))
       (if schedule
@@ -324,7 +324,7 @@
 
 (defmethod schedule-event ((sheet standard-sheet-input-mixin) event delay)
   (with-slots (queue) sheet
-    (event-queue-schedule queue sheet event delay)))
+    (schedule-event-queue queue sheet event delay)))
   
 (defmethod handle-event ((sheet standard-sheet-input-mixin) event)
   ;; Standard practice is to ignore events

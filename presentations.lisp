@@ -17,6 +17,10 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
+;;; Implementation of the presentation type system, presentation generic
+;;; functions and methods, presentation translators, finding an applicable
+;;;presentation.
+
 (in-package :CLIM-INTERNALS)
 
 ;;; PRESENTATION class
@@ -1720,6 +1724,20 @@ function lambda list"))
 					  x y)
 	  (when ptype
 	    (funcall (cdr context) object ptype event options)))))))
+
+(defun throw-object-ptype (object type
+			   &key (input-context *input-context*) sheet)
+  "Throw an object and presentation type within input-context without
+a presentation"
+  (throw-highlighted-presentation
+                          (make-instance 'standard-presentation
+                                         :object object :type type)
+			  input-context
+                          (make-instance 'pointer-button-press-event
+                                         :sheet sheet
+                                         :x 0 :y 0
+                                         :modifier-state 0
+                                         :button +pointer-left-button+)))
 
 (defstruct presentation-translator-menu-item
   translator

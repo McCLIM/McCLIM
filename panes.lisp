@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.107 2002/11/10 16:35:43 gilbert Exp $
+;;; $Id: panes.lisp,v 1.108 2002/11/11 01:02:21 moore Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -252,7 +252,9 @@
            (realp (car x))
            (consp (cdr x))
            (member (cadr x) '(:point :pixel :mm :character :line))
-           (null (cddr x)))))
+           (null (cddr x)))
+      ;; For clim-stream-pane
+      (eq x :compute)))
 
 ;;; PANES
 
@@ -1993,10 +1995,53 @@ During realization the child of the spacing will have as cordinates
 		       :reader pane-end-of-page-action)
    (output-history :initform (make-instance 'standard-tree-output-history)
 		   :initarg :output-history
-		   :accessor pane-output-history))
+		   :accessor pane-output-history)
+   ;; Slots of space-requirement-options-mixin defined with accessors for our
+   ;; convenience
+   (user-width :accessor pane-user-width)
+   (user-min-width :accessor pane-user-min-width)
+   (user-max-width :accessor pane-user-max-width)
+   (user-height :accessor pane-user-height)
+   (user-min-height :accessor pane-user-min-height)
+   (user-max-height :accessor pane-user-max-height))
   (:documentation
    "This class implements a pane that supports the CLIM graphics,
     extended input and output, and output recording protocols."))
+
+;;; Handle :compute in the space requirement options
+;;; XXX This should be expanded to handle all the options, not just
+;;; height and width.
+(defmethod compose-space :around ((pane clim-stream-pane)
+                                  &key width height)
+  (declare (ignore width height))
+  (flet ((compute (val default)
+	   (if (eq val :compute) default val)))
+    (if (or (eq (pane-user-width pane) :compute)
+	    (eq (pane-user-height pane) :compute))
+	(progn
+	  (with-output-recording-options (pane :record t :draw nil)
+	    ;; multiple-value-letf anyone?
+	    (multiple-value-bind (x y)
+		(stream-cursor-position pane)
+	      (unwind-protect
+		   (funcall (pane-display-function pane)
+			    *application-frame*
+			    pane)
+		(setf (stream-cursor-position pane) (values x y)))))
+	  (with-bounding-rectangle* (x1 y1 x2 y2)
+	    (stream-output-history pane)
+	    ;; Should we now get rid of the output history?
+	    (reset-output-history pane)
+	    (let ((width (- x2 x1))
+		  (height (- y2 y1)))
+	      (letf (((pane-user-width pane) (compute (pane-user-width pane)
+						      width))
+		     ((pane-user-height pane) (compute (pane-user-height pane)
+						       height)))
+		(prog1
+		    (call-next-method))))))
+	(call-next-method))))
+
 
 (defmethod window-clear ((pane clim-stream-pane))
   (let ((output-history (pane-output-history pane)))
@@ -2122,37 +2167,36 @@ During realization the child of the spacing will have as cordinates
                                     (scroll-bars :vertical)
                                     (border-width 1)
 				    &allow-other-keys)
-  (declare (ignorable scroll-bars))
-  (loop for key in '(:type :scroll-bars :border-width)
-	do (remf options key)) ; XXX
-  ;; The user space requirement options belong to the scroller ..
-  (let ((user-sr
-         (loop for key in '(:width :height :max-width :max-height :min-width :min-height)
-               nconc (let ((value (getf options key nil)))
-                       (remf options key)
-                       (and value
-                            (list key value))))))
-    (let ((pane (apply #'make-pane type (append options
-                                                (unless (or scroll-bars
-                                                            (and border-width (> border-width 0))))))))
-      (when scroll-bars
-        (setq pane (apply #'make-pane 'scroller-pane
-                          :scroll-bar scroll-bars
-                          :contents (list (make-pane 'viewport-pane
-                                                     :contents (list pane)))
-                          (unless (and border-width (> border-width 0))
-                            user-sr))))
-      (when (and border-width (> border-width 0))
-        (setq pane (make-pane 'border-pane
-                              :border-width border-width
-                              :contents (list pane)
-                              ))
-        ;; bright, I begin to hate the border-pane
-        (setf pane (apply #'make-pane 'vrack-pane
-                          :contents (list pane)
-                          user-sr)))
+  (with-keywords-removed (options (:type :scroll-bars :border-width))
+    ;; The user space requirement options belong to the scroller ..
+    (let ((user-sr
+	   (loop for key in '(:width :height :max-width :max-height :min-width :min-height)
+		 nconc (let ((value (getf options key nil)))
+			 (unless (eq value :compute)
+			   (remf options key)
+			   (and value
+				(list key value)))))))
+      (let ((pane (apply #'make-pane type (append options
+						  (unless (or scroll-bars
+							      (and border-width (> border-width 0))))))))
+	(when scroll-bars
+	  (setq pane (apply #'make-pane 'scroller-pane
+			    :scroll-bar scroll-bars
+			    :contents (list (make-pane 'viewport-pane
+						       :contents (list pane)))
+			    (unless (and border-width (> border-width 0))
+			      user-sr))))
+	(when (and border-width (> border-width 0))
+	  (setq pane (make-pane 'border-pane
+				:border-width border-width
+				:contents (list pane)
+				))
+	  ;; bright, I begin to hate the border-pane
+	  (setf pane (apply #'make-pane 'vrack-pane
+			    :contents (list pane)
+			    user-sr)))
 
-      pane)))
+	pane))))
 
 (defun make-clim-interactor-pane (&rest options)
   (apply #'make-clim-stream-pane :type 'interactor-pane options))

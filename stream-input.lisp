@@ -377,6 +377,21 @@
 	    finally (return (values (subseq result 0)
 				    (not (characterp char))))))))
 
+;;; stream-read-gesture on string strings.  Needed so
+;;; accept-from-string "just works"
+
+(defmethod stream-read-gesture ((stream string-stream)
+				&key peek-p
+				&allow-other-keys)
+  (let ((char (if peek-p
+		  (peek-char nil stream nil nil)
+		  (read-char stream nil nil))))
+    (if char
+	char
+	(values nil :eof))))
+
+(defmethod stream-unread-gesture ((stream string-stream) gesture)
+  (unread-char gesture stream))
 ;;; Gestures
 
 (defparameter *gesture-names* (make-hash-table))

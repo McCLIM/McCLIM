@@ -235,11 +235,6 @@
 (defmethod* (setf stream-cursor-position) (x y (stream standard-extended-output-stream))
   (setf (cursor-position (stream-text-cursor stream)) (values x y)))
 
-(defmethod direct-setf*-stream-cursor-position (x y (stream standard-extended-output-stream))
-  ;; This method is used for updating cursor position after output to
-  ;; the stream.
-  (setf (cursor-position (stream-text-cursor stream)) (values x y)))
-
 (defmethod stream-increment-cursor-position ((stream standard-extended-output-stream) dx dy)
   (multiple-value-bind (x y) (cursor-position (stream-text-cursor stream))
     (setf (cursor-position (stream-text-cursor stream)) (values (+ x dx) (+ y dy)))))
@@ -365,7 +360,7 @@ than one line of output."))
 		 )))
 	    (stream-write-line stream (string char))
 	    (setq cx (+ cx width))
-	    (direct-setf*-stream-cursor-position cx cy stream))))))
+	    (setf (stream-cursor-position stream) (values cx cy)))))))
     (if visible
 	(setf (cursor-visibility cursor) t))))
 
