@@ -598,7 +598,7 @@
 			 range-gadget-mixin
 			 gadget-color-mixin)
   ()
-  (:documentation "The value is a real number"))
+  (:documentation "The value is a real number, and default value for orientation is :vertical, and can never be nil."))
   
 (defclass slider-pane (slider-gadget)
   ((drag-callback :initform nil
@@ -608,6 +608,10 @@
 		 :initform nil
 		 :initarg :show-value-p
 		 :accessor gadget-show-value-p)))
+
+(defmethod initialize-instance :before ((pane slider-pane) &rest rest)
+  (declare (ignore rest))
+  (setf (slot-value pane 'orientation) :vertical))
 
 (defmethod drag-callback ((pane slider-pane) client gadget-id value)
   (declare (ignore client gadget-id))
@@ -642,7 +646,10 @@
 (defmethod handle-event ((pane slider-pane) (event pointer-motion-event))
   (with-slots (armed) pane
     (when (eq armed ':button-press)
-      (let ((value (convert-position-to-value pane (pointer-event-y event))))
+      (let ((value (convert-position-to-value pane
+					      (if (eq (gadget-orientation pane) :vertical)
+						  (pointer-event-y event)
+						  (pointer-event-x event)))))
 	(setf (gadget-value pane :invoke-callback nil) value)
 	(drag-callback pane (gadget-client pane) (gadget-id pane) value)
 	(dispatch-repaint pane (sheet-region pane))))))
@@ -652,38 +659,55 @@
     (when armed
       (setf armed t
 	    (gadget-show-value-p pane) t
-	    (gadget-value pane :invoke-callback t) (convert-position-to-value pane (pointer-event-y event)))
+	    (gadget-value pane :invoke-callback t)
+	    (convert-position-to-value pane (if (eq (gadget-orientation pane) :vertical)
+						(pointer-event-y event)
+						(pointer-event-x event))))
       (dispatch-repaint pane (sheet-region pane)))))
 
 (defmethod handle-event ((pane slider-pane) (event window-repaint-event))
   (dispatch-repaint pane (sheet-region pane)))
 
-(defmethod convert-position-to-value ((pane slider-pane) y)
+(defmethod convert-position-to-value ((pane slider-pane) position)
   (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
-    (declare (ignore x1 x2))
-    (round (+ (gadget-min-value pane) (/ (* (gadget-range pane) (- y2 y)) (- y2 y1))))))
+    (if (eq (gadget-orientation pane) :vertical)
+	(round (+ (gadget-min-value pane) (/ (* (gadget-range pane) (- y2 position)) (- y2 y1))))
+	(round (+ (gadget-min-value pane) (/ (* (gadget-range pane) (+ x1 position)) (- x2 x1)))))))
+
+(defun orientation-dependent-draw (pane position x1 x2 y1 y2)
+  (if (eq (slot-value pane 'orientation) :vertical)
+      (let ((middle (round (- x2 x1) 2)))
+	(draw-line* pane middle y1 middle y2 :ink +black+)
+	(draw-rectangle* pane (- middle 15) (- position 5)
+			 (+ middle 15) (+ position 5)
+			 :ink +grey75+ :filled t)
+	(draw-edges-lines* pane (- middle 15) (- position 5) (+ middle 15) (+ position 5))
+	(when (gadget-show-value-p pane)
+	  (draw-text* pane (princ-to-string (gadget-value pane))
+			 (+ middle 20) position)))
+      (let ((middle (round (- y2 y1) 2)))
+	(draw-line* pane x1 middle x2 middle :ink +black+)
+	(draw-rectangle* pane (- position 5) (- middle 15)
+			 (+ position 5) (+ middle 15)
+			 :ink +grey75+ :filled t)
+	(draw-edges-lines* pane (- position 5) (- middle 15) (+ position 5) (+ middle 15))
+	(when (gadget-show-value-p pane)
+	  (draw-text* pane (princ-to-string (gadget-value pane))
+		      position (+ middle 20))))))
 
 (defmethod repaint-sheet ((pane slider-pane) region)
   (declare (ignore region))
   (let ((region (sheet-region pane))
 	(position (convert-value-to-position pane)))
     (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* region)
-      (let ((middle-x (round (- x2 x1) 2)))
-	(display-gadget-background pane 0 0 (- x2 x1) (- y2 y1))
-	(draw-line* pane middle-x y1 middle-x y2 :ink +black+)
-	(draw-rectangle* pane (- middle-x 15) (- position 5)
-		       (+ middle-x 15) (+ position 5)
-		       :ink +grey75+ :filled t)
-	(draw-edges-lines* pane (- middle-x 15) (- position 5) (+ middle-x 15) (+ position 5))
-	(when (gadget-show-value-p pane)
-	  (draw-text* pane (princ-to-string (gadget-value pane))
-		      (+ middle-x 20) position))))))
+      (display-gadget-background pane 0 0 (- x2 x1) (- y2 y1))
+      (orientation-dependent-draw pane position x1 x2 y1 y2))))
 
 (defmethod convert-value-to-position ((pane slider-pane))
   (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
-    (declare (ignore x1 x2))
-    (- y2 (/ (* (- (gadget-value pane) (gadget-min-value pane)) (- y2 y1)) (gadget-range pane)))))
-
+    (if (eq (gadget-orientation pane) :vertical)
+	(- y2 (/ (* (- (gadget-value pane) (gadget-min-value pane)) (- y2 y1)) (gadget-range pane)))
+	(+ x1 (/ (* (- (gadget-value pane) (gadget-min-value pane)) (- x2 x1)) (gadget-range pane))))))
 
 ;;
 ;; RADIO-BOX gadget
@@ -801,7 +825,3 @@
 				    :children (list ,gadget))))
        (stream-add-output-record ,stream ,gadget-output-record)
        ,gadget)))
-
-
-
-
