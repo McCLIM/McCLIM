@@ -380,7 +380,14 @@
 ;;; stream-read-gesture on string strings.  Needed so
 ;;; accept-from-string "just works"
 
-(defmethod stream-read-gesture ((stream string-stream)
+;;; XXX Evil hack because "string-stream" isn't the superclass of
+;;; string streams in CMUCL/SBCL...
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defvar *string-input-stream-class* (with-input-from-string (s "foo")
+					(class-name (class-of s)))))
+
+(defmethod stream-read-gesture ((stream #.*string-input-stream-class*)
 				&key peek-p
 				&allow-other-keys)
   (let ((char (if peek-p

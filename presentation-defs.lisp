@@ -556,7 +556,7 @@
 			  &rest args)
   (apply #'accept-1 stream type args))
 
-(defmethod stream-accept ((stream string-stream) type
+(defmethod stream-accept ((stream #.*string-input-stream-class*) type
 			  &key (view (stream-default-view stream))
 			  (default nil defaultp)
 			  (default-type nil default-type-p)
@@ -694,7 +694,7 @@
 	  (t
 	   (display-using-mode stream prompt-string default-string))))))
 
-(defmethod prompt-for-accept ((stream string-stream)
+(defmethod prompt-for-accept ((stream #.*string-input-stream-class*)
 			      type view
 			      &rest other-args
 			      &key &allow-other-keys)

@@ -240,7 +240,7 @@
 (defgeneric input-editor-format (stream format-string &rest format-args))
 
 (defmethod input-editor-format ((stream t) format-string &rest format-args)
-  (unless (and (typep stream 'string-stream)
+  (unless (and (typep stream '#.*string-input-stream-class*)
 	       (input-stream-p stream))
     (apply #'format stream format-string format-args)))
 
