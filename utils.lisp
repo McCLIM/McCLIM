@@ -117,3 +117,9 @@ Note:
                          (multiple-value-list
                              (apply function (loop for j from 0 below n collect (pop q))))))))
           result-type))))
+
+(defun clamp (value min max)
+  "Clamps the value 'value' into the range [min,max]."
+  (max min (min max value)))
+  
+
