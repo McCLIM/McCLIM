@@ -28,6 +28,9 @@
 ;;; Probably...
 
 (defparameter *simple-area-gesture-table* (make-hash-table))
+(defvar *kill-ring* (make-ring))
+(defvar *last-command* nil)
+(defvar *insert-extent* nil)
 
 (defun add-gesture-command-to-table (gesture-spec command-name table)
   (multiple-value-bind (gesture-name modifier-bits)
@@ -80,6 +83,7 @@
 					       (beep)
 					       (return-from error-out nil)))))
 	      (funcall command :input-gesture gesture)
+	      (setf *last-command* command)
 	      (setf (last-command area) command)))
 	  (redisplay-area area)))))
 
@@ -115,10 +119,46 @@
 (defun kill-line (&key &allow-other-keys)
   (multiple-value-bind (line pos)
       (point* *buffer*)
-    (let ((last-point (line-last-point line)))
-      (if (eql pos last-point)
-	  (delete-char *buffer*)
-	  (delete-char *buffer* (- last-point pos))))))
+      (let* ((last-point (line-last-point line))
+	     (start-location (make-instance 'location :line line :pos pos))
+	     (end-location (make-instance 'location :line line :pos last-point)))
+	(kill-region *kill-ring* *buffer* start-location end-location))))
+
+(defun cmd-yank (&key &allow-other-keys)
+  (multiple-value-bind (line pos)
+      (point* *buffer*)
+    (setf *insert-extent* (make-instance 'extent
+					   :start-line line
+					   :start-pos pos
+					   :end-state :open))
+    (format *debug-io* "cmd-yank: ~S, ~S~%"
+	    (pos (bp-start *insert-extent*))
+	    (pos (bp-end *insert-extent*)))
+    (yank *kill-ring* *buffer* *insert-extent*)
+    (setf (slot-value *insert-extent* 'bp-end) (point *buffer*))
+    (setf (end-state *insert-extent*) :closed)
+    (format *debug-io* "cmd-yank: ~S, ~S~%"
+	    (pos (bp-start *insert-extent*))
+	    (pos (bp-end *insert-extent*)))))
+
+(defun cmd-yank-next (&key &allow-other-keys)
+  (unless (or (eq *last-command* 'cmd-yank)
+	      (eq *last-command* 'cmd-yank-prev)
+	      (eq *last-command* 'cmd-yank-next))
+    ;; maybe do something better than an error?
+    (error "Last operation was not a yank!"))
+  (format *debug-io* "cmd-yank-next: ~S, ~S~%"
+	  (pos (bp-start *insert-extent*))
+	  (pos (bp-end *insert-extent*)))
+  (yank-next *kill-ring* *buffer* *insert-extent*))
+
+(defun cmd-yank-prev (&key &allow-other-keys)
+  (unless (or (eq *last-command* 'cmd-yank)
+	      (eq *last-command* 'cmd-yank-prev)
+	      (eq *last-command* 'cmd-yank-next))
+    ;; maybe do something better than an error?
+    (error "Last operation was not a yank!"))
+  (yank-prev *kill-ring* *buffer* *insert-extent*))
 
 ;; Line motion
 
@@ -191,6 +231,17 @@
 			      'down-line
 			      *simple-area-gesture-table*)
 
+(add-gesture-command-to-table '(#\y :control)
+			      'cmd-yank
+			      *simple-area-gesture-table*)
+
+(add-gesture-command-to-table '(#\y :meta)
+			      'cmd-yank-next
+			      *simple-area-gesture-table*)
+
+(add-gesture-command-to-table '(#\y :control :meta)
+			      'cmd-yank-prev
+			      *simple-area-gesture-table*)
 ;;; Debugging fun
 
 (defun goatee-break (&key &allow-other-keys)

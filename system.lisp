@@ -113,6 +113,7 @@
   "Goatee/editable-buffer"
   "Goatee/editable-area"
   "Goatee/clim-area"
+  "Goatee/kill-ring"
   "Goatee/goatee-command"
   "Goatee/editing-stream"
   )

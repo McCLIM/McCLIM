@@ -272,17 +272,24 @@ if beyond the actual line's maximum)."))
     (loop until (and (eq line (line end)) (eql pos (pos end)))
 	  do (progn
 	       (funcall func line pos)
-	       (setf (values line pos) (forward-char* buf 1
-						      :line line :pos pos))))))
+	       (setf (values line pos)
+		     (forward-char* buf 1 :line line :pos pos))))))
 
 ;;; This is cheesy, but I don't feel like optimizing the delete right now.
 
+;; antifuchs->Moore: is this more optimized? What was the extents
+;; stuff you hinted at?
+
 (defun delete-region (buf start end)
-  (with-point (buf)
-    (setf (point* buf) (location* start))
-    (loop until (and (eq (line start) (line end))
-		     (eql (pos start) (pos end)))
-	  do (delete-char buf 1))))
+  (buffer-delete-char* buf (line start) (pos start) (- (line-last-point (line start)) (pos start)))
+  (unless (eql (line start) (line end))
+    ;; didn't test this piece of code very well...
+    (loop until (eql (line start) (line end))
+	  do (progn
+	       (buffer-close-line* buf (line start) 1)
+	       (buffer-delete-char* buf (line start) (pos start) (- (line-last-point (line start)) (pos start)))))
+    (buffer-delete-char* buf (line start) (pos start) (pos end))))
+	
 
 (defmethod clear-buffer ((buf editable-buffer))
   (delete-region buf (buffer-start buf) (buffer-end buf))

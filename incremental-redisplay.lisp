@@ -78,7 +78,7 @@ region in compute-affected-region.
   ((redisplaying-p :reader stream-redisplaying-p :initform nil)
    (id-map :accessor id-map :initform nil)))
 
-(defclass updating-stream-state (graphics-graphics-state)
+(defclass updating-stream-state (complete-medium-state)
   ((cursor-x :accessor cursor-x :initarg :cursor-x :initform 0)
    (cursor-y :accessor cursor-y :initarg :cursor-y :initform 0)))
 
@@ -88,7 +88,7 @@ region in compute-affected-region.
     (setf (values (slot-value obj 'cursor-x) (slot-value obj 'cursor-y))
 	  (stream-cursor-position stream))))
 
-(defmethod (setf medium-graphics-state) :after
+(defmethod set-medium-graphics-state :after
     ((state updating-stream-state) (stream updating-output-stream-mixin))
   (setf (stream-cursor-position stream)
 	(values (cursor-x state) (cursor-y state))))
@@ -260,7 +260,7 @@ record operations are forwarded to this record.")
 					     :x-position x :y-position y
 					     :parent record)))
   (letf (((stream-current-output-record stream) record))
-    (setf (medium-graphics-state stream) (start-graphics-state record))
+    (set-medium-graphics-state (start-graphics-state record) stream)
     (funcall displayer stream))
   (setf (output-record-dirty record) :updated))
 
@@ -379,8 +379,7 @@ record operations are forwarded to this record.")
 	     (setf (output-record-dirty record) :clean)
 	     (setf (output-record-parent record) nil)
 	     (add-output-record record (stream-current-output-record stream))
-	     (setf (medium-graphics-state stream)
-		   (end-graphics-state record))))
+	     (set-medium-graphics-state(end-graphics-state record) stream)))
       record)))
 
 #+nil

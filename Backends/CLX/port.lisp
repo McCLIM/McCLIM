@@ -186,9 +186,9 @@
 (defmethod initialize-clx ((port clx-port))
   (let ((options (cdr (port-server-path port))))
     (setf (clx-port-display port)
-      #-(or sbcl openmcl)
+      #-sbcl
       (xlib:open-display (getf options :host "") :display (getf options :display-id 0))
-      #+(or sbcl openmcl)
+      #+sbcl
       (xlib:open-display "localhost" :display (getf options :display-id 0)))
 
     (progn
