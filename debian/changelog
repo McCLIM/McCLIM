@@ -1,4 +1,4 @@
-cl-mcclim (0.0-1) unstable; urgency=low
+cl-mcclim (0.0+cvs.2002.12.27) unstable; urgency=low
 
   * Initial release.
 
