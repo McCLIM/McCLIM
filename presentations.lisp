@@ -580,9 +580,13 @@ supertypes of TYPE that are presentation types"))
 		      (apply #'make-instance 'clos-presentation-type
 			     :clos-class clos-meta
 			     ptype-class-args)
-		      (let ((directs (mapcar #'(lambda (super)
-						 (or (get-ptype-metaclass super)
-						     super))
+		      (let ((directs (mapcan
+				      #'(lambda (super)
+					  (if (eq super t)
+					      nil
+					      (list (or (get-ptype-metaclass
+							 super)
+							super))))
 					     supers)))
 			(apply #'clim-mop:ensure-class fake-name
 			       :name fake-name
@@ -1217,19 +1221,19 @@ and used to ensure that presentation-translators-caches are up to date.")
        ,@(and ignore (list ignore))
        ,@body)))
 
-(defun make-documentation-fun (from-type doc-arg)
+(defun make-documentation-fun (doc-arg)
   (cond ((and doc-arg (symbolp doc-arg))
 	 doc-arg)
 	((consp doc-arg)
 	 (make-translator-fun (car doc-arg) (cdr doc-arg)))
 	((stringp doc-arg)
 	 `(lambda (object &key stream &allow-other-keys)
-	   (declare (ignore object))
-	   (write-string ,doc-arg stream)))
+	    (declare (ignore object))
+	    (write-string ,doc-arg stream)))
 	((null doc-arg)
-	 `(lambda (object &key stream &allow-other-keys)
-	   (present object ',from-type
-	    :stream stream :sensitive nil)))
+	 `(lambda (object &key presentation stream &allow-other-keys)
+	    (present object (presentation-type presentation)
+		     :stream stream :sensitive nil)))
 	(t (error "Can't handle doc-arg ~S" doc-arg))))
 
 (defmacro define-presentation-translator
@@ -1260,12 +1264,10 @@ and used to ensure that presentation-translators-caches are up to date.")
 		    `#',(make-translator-fun (car tester)
 					     (cdr tester)))
        :tester-definitive ',tester-definitive
-       :documentation #',(make-documentation-fun from-type
-						 documentation)
+       :documentation #',(make-documentation-fun documentation)
        ,@(when pointer-documentation-p
 	       `(:pointer-documentation
-		 #',(make-documentation-fun from-type
-					    pointer-documentation)))
+		 #',(make-documentation-fun pointer-documentation)))
        :menu ',menu
        :priority ,priority
        :translator-function #',(make-translator-fun arglist
@@ -1297,12 +1299,10 @@ and used to ensure that presentation-translators-caches are up to date.")
 		    `',tester
 		    `#',(make-translator-fun (car tester)
 					     (cdr tester)))
-       :documentation #',(make-documentation-fun from-type
-						 documentation)
+       :documentation #',(make-documentation-fun documentation)
        ,@(when pointer-documentation-p
 	       `(:pointer-documentation
-		 #',(make-documentation-fun from-type
-					    pointer-documentation)))
+		 #',(make-documentation-fun pointer-documentation)))
        :menu ',menu
        :priority ,priority
        :translator-function #',(make-translator-fun arglist
