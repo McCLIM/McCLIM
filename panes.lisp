@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.90 2002/07/07 06:20:52 adejneka Exp $
+;;; $Id: panes.lisp,v 1.91 2002/07/12 06:30:50 adejneka Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -1998,7 +1998,7 @@ During realization the child of the spacing will have as cordinates
   (setf (pane-display-time command-menu) :command-loop
 	(pane-incremental-redisplay command-menu) t
 	(pane-scroll-bars command-menu) t
-	(pane-display-function command-menu) 'diplay-command-menu))
+	(pane-display-function command-menu) 'display-command-menu))
 
 
 ;;; TITLE PANE

@@ -49,10 +49,10 @@
       (first (frame-managers (or port (apply #'find-port options)))))))
 
 (defmacro with-frame-manager ((frame-manager) &body body)
-  `(let (('*frame-manager* ,frame-manager))
+  `(let ((*frame-manager* ,frame-manager))
      (declare (special *frame-manager*))
-     (block ,@body)))
-      
+     (locally ,@body)))
+
 ;;; Application-Frame class
 ;;; XXX All these slots should move to a mixin or to standard-application-frame.
 ;;; -- moore
