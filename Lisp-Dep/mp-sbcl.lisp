@@ -68,6 +68,13 @@
   *all-processes*)
 
 ;;; people should be shot for using these, honestly.  Use a queue!
+(declaim (inline yield))
+(defun yield ()
+  (declare (optimize speed (safety 0)))
+  (sb-alien:alien-funcall
+   (sb-alien:extern-alien "sched_yield" (function sb-alien:int)))
+  (values))
+
 (defun process-wait (reason predicate)
   (let ((old-state (process-whostate *current-process*)))
     (unwind-protect
@@ -77,7 +84,8 @@
 	   (loop 
 	    (let ((it (funcall predicate)))
 	      (when it (return it)))
-	    (sleep .01)))
+	    ;(sleep .01)
+               (yield)))
       (setf (process-whostate *current-process*) old-state))))
 
 (defun process-wait-with-timeout (reason timeout predicate)
@@ -91,7 +99,8 @@
 	    (let ((it (funcall predicate)))
 	      (when (or (> (get-universal-time) end-time) it)
 		(return it)))
-	    (sleep .01)))
+	    ;(sleep .01)))
+               (yield)))
       (setf (process-whostate *current-process*) old-state))))
 
 (defun process-interrupt (process function)
