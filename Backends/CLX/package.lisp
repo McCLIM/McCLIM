@@ -46,6 +46,8 @@
                 #:MEDIUM-DRAW-OVAL*
                 #:HEIGHT                ;this seems bogus
                 #:WIDTH                 ;dito
+                #:COORDINATE=
+                #:GET-TRANSFORMATION
                 ;;
                 #:INVOKE-WITH-SPECIAL-CHOICES
                 #:MEDIUM-DRAW-GLYPH
