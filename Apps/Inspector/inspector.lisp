@@ -475,6 +475,14 @@ them."
        (if (fboundp object)
          (inspect-object (symbol-function object) pane)
          (princ "unbound")))
+    ;; This is not, strictly speaking, a property of the
+    ;; symbol. However, this is useful enough that I think it's worth
+    ;; including here, since it can eliminate some minor annoyances.
+    (inspector-table-row
+       (princ "class:")
+       (if (find-class object nil)
+         (inspect-object (find-class object) pane)
+         (princ "unbound")))
     (inspector-table-row
        (princ "package:")
        (inspect-object (symbol-package object) pane))
