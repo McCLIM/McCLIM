@@ -185,9 +185,8 @@
            #:with-standard-io-syntax #:write #:write-byte #:write-char #:write-line #:write-sequence
            #:write-string #:write-to-string #:y-or-n-p #:yes-or-no-p #:zerop))
         (packages
-         #+clisp  '(:common-lisp :clos)
          #+gcl    '(:lisp :pcl)
-         #-(or clisp gcl) '(:common-lisp))
+         #-(or gcl) '(:common-lisp))
         (gray-symbols
          '(#:fundamental-stream
            #:fundamental-input-stream
@@ -218,7 +217,7 @@
            #:stream-read-byte
            #:stream-write-byte ))
         (gray-packages
-         `(#+clisp                 ,@'(:lisp)
+         `(#+clisp                 ,@'(:gray)
            #+cmu                   ,@'(:ext)
 	   #+mcl                   ,@'(:ccl)
            #+allegro               ,@'(:common-lisp :excl :stream)
