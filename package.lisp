@@ -256,8 +256,7 @@
                                      ;;
                                      (format t "~&;; ~S is patched." sym)
                                      (finish-output)
-                                     (push-import-from nam
-                                                       :clim-lisp-patch))
+                                     (push-import-from nam :clim-lisp-patch))
                                     (t
                                      (setf sym (car sym))
                                      ;; clisp has no (:import ..) arg!
@@ -265,6 +264,15 @@
                                       (symbol-name sym)
                                       (package-name (symbol-package sym))))))))
                             res)))
+                                  ;;
+                 ;; Don't redefine a perfectly working CL:DESCRIBE,
+                 ;; which more often than not has special knowledge
+                 ;; about objects you can't possibly gain though some
+                 ;; portable implementation.
+                 ;; --GB 2004-11-20
+                 (setf all-ansi-symbols (remove '#:describe all-ansi-symbols :test #'string-equal))
+                 (setf all-ansi-symbols (remove '#:describe-object all-ansi-symbols :test #'string-equal))
+                 ;;
                  (setf export-ansi (grok all-ansi-symbols packages))
                  (setf export-gray (grok gray-symbols gray-packages))
                  `(progn
@@ -273,6 +281,8 @@
                                  (destructuring-bind (package . syms) spec
                                    `(:import-from ,package ,@syms)))
                                imports)
+                     (:shadow #:describe #:describe-object)
+                     (:export #:describe #:describe-object)
                      (:export
                       ,@(mapcar #'symbol-name export-ansi)
                       ,@(mapcar #'symbol-name export-gray) )) ))))
@@ -286,9 +296,7 @@
    #:boolean 
    #:character 
    #:close 
-   #:complex
-   #:describe
-   #:describe-object
+   #:complex 
    #:float 
    #:fundamental-binary-input-stream 
    #:fundamental-binary-output-stream 
