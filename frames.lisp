@@ -1,6 +1,10 @@
 ;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
 
 ;;;  (c) copyright 1998,1999,2000 by Michael McDonald (mikemac@mikemac.com)
+;;;  (c) copyright 2000 by 
+;;;           Iban Hatchondo (hatchond@emi.u-bordeaux.fr)
+;;;           Julien Boninfante (boninfan@emi.u-bordeaux.fr)
+;;;           Robert Strandh (strandh@labri.u-bordeaux.fr)
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -246,10 +250,9 @@
   (setf (slot-value fm 'frames) (cons frame (slot-value fm 'frames)))
   (setf (frame-manager frame) fm)
   (let* ((*application-frame* frame)
-	 (t-l-s (make-pane-1 fm frame 'composite-pane
+	 (t-l-s (make-pane-1 fm frame 'top-level-sheet-pane
 			     :name 'top-level-sheet)))
     (setf (slot-value frame 'top-level-sheet) t-l-s)
-;    (sheet-adopt-child (graft frame) t-l-s)
     (generate-panes fm frame)))
   
 (defmethod disown-frame ((fm frame-manager) (frame application-frame))
@@ -372,3 +375,4 @@
 		      :name frame-name :pretty-name pretty-name options)))
     (adopt-frame frame-manager frame)
     frame))
+
