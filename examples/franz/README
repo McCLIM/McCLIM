@@ -1,0 +1,16 @@
+
+;; copyright (c) 1985, 1986 Franz Inc, Alameda, CA  All rights reserved.
+;; copyright (c) 1986-1991 Franz Inc, Berkeley, CA  All rights reserved.
+
+;; $fiHeader: README,v 1.1 1994/12/04 23:59:19 colin Exp $
+
+To run the CLIM demos.
+
+1. Load the demos with:
+
+	(require :clim-demoxm) 
+
+2. To start, evaluate:
+	
+	 (clim-demo:start-demo)
+
