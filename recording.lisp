@@ -994,11 +994,7 @@ were added."
 		      stream ink clipping-region
 		      line-style text-style ,@args)
 	     graphic
-           (let* ((medium (sheet-medium stream))
-                  (border (/ (line-style-effective-thickness
-                              line-style medium)
-                             2)))
-             (declare (ignorable border))
+           (let* ((medium (sheet-medium stream)))
              (multiple-value-setq (x1 y1 x2 y2) (progn ,@body)))))
        (defmethod ,method-name :around ((stream output-recording-stream) ,@args)
          ;; XXX STANDARD-OUTPUT-RECORDING-STREAM ^?
