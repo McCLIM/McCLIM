@@ -1387,9 +1387,20 @@ function lambda list"))
 		 delimiter-gestures
 		 additional-delimiter-gestures)
   (declare (ignore prompt prompt-mode))
+  (when (and defaultp (not default-type-p))
+    (error ":default specified without :default-type"))
   (with-input-context (type)
     (object object-type event options)
     (with-input-editing (stream)
+      (when defaultp
+	;; If the user supplies empty input, return a default.  This my best
+	;; guess as to what "empty" means.
+	(let ((initial-char (read-gesture :stream stream :peek-p t)))
+	  (cond ((activation-gesture-p initial-char)
+		 (read-gesture :stream stream)
+		 (return-from accept-1 (values default default-type)))
+		((and *recursive-accept-p* (delimiter-gesture-p initial-char))
+		 (return-from accept-1 (values default default-type))))))
       (multiple-value-bind (object object-type)
 	  (apply-presentation-generic-function accept
 					       type

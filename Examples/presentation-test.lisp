@@ -38,7 +38,9 @@
     (loop
      (present (summation-total frame) 'real)
      (fresh-line)
-     (let ((new-val (accept 'real)))
+     (let ((new-val (accept 'real
+			    :default (summation-total frame)
+			    :default-type 'real)))
        (fresh-line)
        (incf (summation-total frame) new-val)))))
 
