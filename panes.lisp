@@ -98,6 +98,12 @@
    )
   )
 
+(defmethod compose-space ((pane pane))
+  (or (pane-space-requirement pane)
+      (make-space-requirement :width 300 :max-width 300
+			      :height 300 :max-height 300)))
+
+
 (defun panep (x)
   (typep x 'pane))
 
