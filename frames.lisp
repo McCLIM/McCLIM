@@ -120,7 +120,7 @@
   (loop with queue = (frame-intercept-event-queue frame)
 	for event = (event-queue-read-no-hang queue)
 	while event
-	do (dispatch-event )))
+	do nil #+ignore (dispatch-event frame event)))
 
 (defun application-frame-p (x)
   (typep x 'application-frame))

@@ -1247,7 +1247,7 @@ function lambda list"))
   (if *multiprocessing-p*
       (event-queue-listen-or-wait (frame-intercept-event-queue
 				   *application-frame*)
-				  nil)
+				  :timeout nil)
       (port-wait-on-event-processing (port stream)))
   
   t)
