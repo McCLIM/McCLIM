@@ -406,7 +406,6 @@
 (defun complete-input (stream func &key
 		       partial-completers allow-any-input possibility-printer
 		       (help-displays-possibilities t))
-  (declare (ignore allow-any-input))
   (declare (ignore possibility-printer help-displays-possibilities))
   (let ((so-far (make-array 1 :element-type 'character :adjustable t
 			    :fill-pointer 0)))
@@ -442,7 +441,7 @@
 				   (funcall func (subseq so-far 0) :complete))
 			     (setf mode :complete))
 		       ;; Preserve the delimiter
-		       (when (and success (eq mode :complete))
+		       (when (eq mode :complete)
 			 (unread-gesture gesture :stream stream))
 		       (if (> nmatches 0)
 			   (insert-input input)
@@ -450,10 +449,13 @@
 		       (cond ((and success (eq mode :complete))
 			      (return-from complete-input
 				(values object success input)))
-			     ((activation-gesture-p gesture)
-			      (error 'simple-completion-error
+			     ((eq mode :complete)
+			      (if allow-any-input
+				  (return-from complete-input
+				    (values nil t (subseq so-far 0)))
+				  (error 'simple-completion-error
 				     :format-control "Input ~S does not match"
-				     :format-arguments (list so-far)))))
+				     :format-arguments (list so-far))))))
 		     (vector-push-extend gesture so-far)))))))
 
 ;;; helper function

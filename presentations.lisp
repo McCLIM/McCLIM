@@ -1696,6 +1696,21 @@ function lambda list"))
       (write-string "Yes" stream)
       (write-string "No" stream)))
 
+(define-presentation-method accept ((type boolean) stream (view textual-view)
+				    &key (default nil defaultp) default-type)
+  (multiple-value-bind (object success input)
+      (complete-input stream
+		      #'(lambda (input-string mode)
+			  (complete-from-possibilities
+			   input-string
+			   '(("yes" t) ("no" nil) ("t" t) ("nil" nil))
+			   nil
+			   :action mode)))
+    (if success
+	(values object type)
+	(values nil type))))
+
+
 (define-presentation-type symbol ())
 
 (define-presentation-method presentation-typep (object (type symbol))

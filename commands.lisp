@@ -337,41 +337,42 @@
 
 (defvar *command-argument-delimiters* '(command-delimiter))
 
-(defun make-argument-accept-fun (name required-args keyword-args)
-  (let ((stream-var (gensym "STREAM"))
-	(required-arg-names (mapcar #'car required-args)))
-    (flet ((make-accept (arg-clause)
-	     (let ((arg (car arg-clause))
-		   (ptype (cadr arg-clause))
-		   (key-args (cddr arg-clause))
-		   (accept-keys '(:default :default-type :display-default
-				  :prompt :documentation)))
-	       `(setq ,arg (accept ,ptype
-			    :stream ,stream-var
-			    ,@(mapcan
-			       #'(lambda (key)
-				   (let ((val (getf key-args
-						    key
-						    stream-var)))
-				     (unless (eq val stream-var)
-				       `(,key ,val))))
-			       accept-keys))))))
-      `(defun ,name (,stream-var)
-	 (let ,(mapcar #'(lambda (arg)
-			   `(,arg *unsupplied-argument-maker*))
-		       required-arg-names)
-	   (block activated
-	     (let (gesture)
-	       ,@(mapcan #'(lambda (arg)
-			     `(,(make-accept arg)
-			       (setq gesture (read-gesture :stream ,stream-var))
-			       (when (or (null gesture)
-					 (activation-gesture-p gesture))
-				 (return-from activated nil))
-			       (unless (delimiter-gesture-p gesture)
-				 (unread-gesture gesture :stream ,stream-var))))
-			 required-args)))
-	   (list ,@required-arg-names))))))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun make-argument-accept-fun (name required-args keyword-args)
+    (let ((stream-var (gensym "STREAM"))
+	  (required-arg-names (mapcar #'car required-args)))
+      (flet ((make-accept (arg-clause)
+	       (let ((arg (car arg-clause))
+		     (ptype (cadr arg-clause))
+		     (key-args (cddr arg-clause))
+		     (accept-keys '(:default :default-type :display-default
+				    :prompt :documentation)))
+		 `(setq ,arg (accept ,ptype
+				     :stream ,stream-var
+				     ,@(mapcan
+					#'(lambda (key)
+					    (let ((val (getf key-args
+							     key
+							     stream-var)))
+					      (unless (eq val stream-var)
+						`(,key ,val))))
+					accept-keys))))))
+	`(defun ,name (,stream-var)
+	   (let ,(mapcar #'(lambda (arg)
+			     `(,arg *unsupplied-argument-maker*))
+		  required-arg-names)
+	     (block activated
+	       (let (gesture)
+		 ,@(mapcan #'(lambda (arg)
+			       `(,(make-accept arg)
+				 (setq gesture (read-gesture :stream ,stream-var))
+				 (when (or (null gesture)
+					   (activation-gesture-p gesture))
+				   (return-from activated nil))
+				 (unless (delimiter-gesture-p gesture)
+				   (unread-gesture gesture :stream ,stream-var))))
+			   required-args)))
+	     (list ,@required-arg-names)))))))
 
 ;;; XXX temporarily make name default t so we can debug command line processing
 ;;; with some interesting examples
@@ -533,5 +534,15 @@
        (terpri *query-io*)
        nil))))
 
+;;; Global help command
 
-
+(define-command (com-help :command-table global-command-table :name "Help")
+    ()
+  (let ((command-table (frame-command-table *application-frame*))
+	(command-names nil))
+    (map-over-command-table-names #'(lambda (name command)
+				      (declare (ignore command))
+				      (push name command-names))
+				  command-table)
+    (setf command-names (sort command-names #'string-lessp))
+    (format *query-io* "Available commands:~%~{~A~%~}" command-names)))
