@@ -29,8 +29,6 @@
 ;;; - - more regions to draw
 ;;; - (?) blending
 ;;; - check MEDIUM-DRAW-TEXT*
-;;; - check START,END-ANGLE in M-D-ELLIPSE*
-;;; - check line style
 ;;; - POSTSCRIPT-ACTUALIZE-GRAPHICS-STATE: fix CLIPPING-REGION reusing logic
 ;;; - MEDIUM-DRAW-... should not duplicate code from POSTSCRIPT-ADD-PATH
 ;;; - structure this file
@@ -165,7 +163,8 @@
 (defvar *postscript-graphics-states*
   '((:line-style . medium-line-style)
     (:color . medium-ink)
-    (:clipping-region . medium-clipping-region)))
+    (:clipping-region . medium-clipping-region)
+    (:text-style . medium-text-style)))
 
 (defun postscript-current-state (medium kind)
   (funcall (cdr (assoc kind *postscript-graphics-states*))
@@ -182,8 +181,8 @@
         ;;
         ;; KLUDGE: clipping-region MUST be actualized first due to its
         ;; dirty dealing with graphics state. -- APD, 2002-02-11
-        unless (eq (postscript-current-state medium kind)
-                   (postscript-saved-state medium kind))
+        unless (eql (postscript-current-state medium kind)
+                    (postscript-saved-state medium kind))
         do (postscript-set-graphics-state stream medium kind)
            (setf (postscript-saved-state medium kind)
                  (postscript-current-state medium kind))))
@@ -199,23 +198,41 @@
                                       :square 2 ; extended butt caps
                                       :no-end-point 0))
 
-(defconstant +postscript-default-line-dashes+ '(3 3))
+(defconstant +postscript-default-line-dashes+ '(30 30))
+
+(defconstant +normal-line-width+ (/ 2.0 3.0))
+
+(defun medium-line-scale (medium)
+  (let* ((line-style (medium-line-style medium))
+         (unit (line-style-unit line-style)))
+    (ecase unit
+      (:normal +normal-line-width+)
+      (:point 1)
+      (:coordinate (error ":COORDINATE line unit not implemented.")))))
+
+(defun medium-line-thickness (medium)
+  (* (medium-line-scale medium)
+     (line-style-thickness (medium-line-style medium))))
 
 (defmethod postscript-set-graphics-state (stream medium
                                           (kind (eql :line-style)))
-  (let ((line-style (medium-line-style medium)))
-    (format stream "~A setlinewidth ~A setlinejoin ~A setlinecap~%"
-            (line-style-thickness line-style)
+  (let* ((line-style (medium-line-style medium))
+         (scale (medium-line-scale medium)))
+    (format stream "~D setlinewidth ~A setlinejoin ~A setlinecap~%"
+            (format-postscript-number
+             (* scale (line-style-thickness line-style)))
             (getf +postscript-line-joints+
                   (line-style-joint-shape line-style))
             (getf +postscript-line-caps+
                   (line-style-cap-shape line-style)))
     (let ((dashes (line-style-dashes line-style)))
-      (when dashes
-        (format stream "[~{~D~^ ~}] 0 setdash~%"
-                (if (eq dashes t)
-                    +postscript-default-line-dashes+
-                    dashes))))))
+      (format stream "[")
+      (mapc (lambda (l) (format stream "~D " (format-postscript-number
+                                              (* scale l))))
+            (if (eq dashes 't)
+                +postscript-default-line-dashes+
+                dashes))
+      (format stream "] 0 setdash~%"))))
 
 ;;; Color
 (defmethod medium-color-rgb (medium (ink (eql +foreground-ink+)))
@@ -265,21 +282,20 @@
 
 (defmethod medium-draw-point* ((medium postscript-medium) x y)
   (let ((stream (postscript-medium-file-stream medium))
-        (*transformation* (sheet-native-transformation (medium-sheet medium))))
+        (*transformation* (sheet-native-transformation (medium-sheet medium)))
+        (radius (format-postscript-number (/ (medium-line-thickness medium) 2))))
     (postscript-actualize-graphics-state stream medium :color)
     (with-graphics-state (medium) ; FIXME: this is because of setlinewidth below
       (format stream "newpath~%")
       (write-coordinates stream x y)
-      (format stream "~A 0 360 arc~%"
-              (format-postscript-number
-               (/ (line-style-thickness (medium-line-style medium)) 2)))
+      (format stream "~A 0 360 arc~%" radius)
       (format stream "0 setlinewidth~%")
       (format stream "fill~%"))))
 
 (defmethod medium-draw-points* ((medium postscript-medium) coord-seq)
   (let ((stream (postscript-medium-file-stream medium))
         (*transformation* (sheet-native-transformation (medium-sheet medium)))
-        (radius (/ (line-style-thickness (medium-line-style medium)) 2)))
+        (radius (format-postscript-angle (/ (medium-line-thickness medium) 2))))
     (postscript-actualize-graphics-state stream medium :color)
     (with-graphics-state (medium) ; FIXME: this is because of setlinewidth below
       (format stream "0 setlinewidth~%")
@@ -287,8 +303,7 @@
                              (lambda (x y)
                                (format stream "newpath~%")
                                (write-coordinates stream x y)
-                               (format stream "~A 0 360 arc~%"
-                                       (format-postscript-number radius))
+                               (format stream "~A 0 360 arc~%" radius)
                                (format stream "fill~%"))
                              coord-seq))))
 
@@ -442,6 +457,16 @@
                                 (getf +postscript-font-sizes+ :normal)))))
       (values font-name size-number))))
 
+(defun medium-font (medium)
+  (text-style->postscript-font (medium-text-style medium)))
+
+(defmethod postscript-set-graphics-state (stream medium
+                                          (kind (eql :text-style)))
+  (multiple-value-bind (font size)
+      (medium-font medium)
+    (pushnew font (slot-value medium 'document-fonts) :test #'string=)
+    (format stream "/~A findfont ~D scalefont setfont~%" font size)))
+
 (defun postscript-escape-char (char)
   (case char
     (#\Linefeed "\\n")
@@ -468,8 +493,8 @@
                    (make-string 1 :initial-element string)
                    (subseq string start end)))
   (let ((*transformation* (sheet-native-transformation (medium-sheet medium))))
-    (with-slots (file-stream document-fonts) medium
-      (postscript-actualize-graphics-state file-stream medium :color)
+    (with-slots (file-stream) medium
+      (postscript-actualize-graphics-state file-stream medium :color :text-style)
       (with-graphics-state (medium)
         (when transform-glyphs
           ;;
@@ -491,12 +516,24 @@
                     (format-postscript-number myy)
                     (format-postscript-number tx)
                     (format-postscript-number ty))))
-        (multiple-value-bind (font size)
-            (text-style->postscript-font (medium-text-style medium))
-          (pushnew font document-fonts :test #'string=)
-          (format file-stream "/~A findfont ~D scalefont setfont~%" font size)
-          (moveto file-stream x y)
-          (format file-stream "(~A) show~%" (postscript-escape-string string)))))))
+        (multiple-value-bind (total-width total-height
+                              final-x final-y baseline)
+            (multiple-value-call #'text-size-in-font
+              (medium-font medium) string 0 (length string))
+          (declare (ignore final-x final-y))
+          ;; Only one line?
+          (setq x (ecase align-x
+                    (:left x)
+                    (:center (- x (/ total-width 2)))
+                    (:right (- x total-width))))
+          (setq y (ecase align-y
+                    (:baseline y)
+                    (:top (+ y baseline))
+                    (:center (- y (- (/ total-height 2)
+                                     baseline)))
+                    (:bottom (- y (- total-height baseline)))))
+          (moveto file-stream x y))
+        (format file-stream "(~A) show~%" (postscript-escape-string string))))))
 
 ;; The following four functions should be rewritten: AFM contains all
 ;; needed information
