@@ -241,7 +241,7 @@
 (defclass output-recording-stream (standard-tree-output-history)
   ((current-output-record
     :accessor stream-current-output-record)
-   
+   (drawing-p :initform t :accessor stream-drawing-p)
    ))
 
 (defun output-recording-stream-p (x)
@@ -320,19 +320,19 @@
 		   y2 bt))))
        (defmethod ,method-name :around ((stream stream-output-history-mixin) ,@args)
 	 (with-sheet-medium (medium stream)
-	   (let ((record (make-instance ',class-name
-			   :stream stream
-			   :ink (medium-ink medium)
-			   :clipping-region (medium-clipping-region medium)
-			   :transformation (medium-transformation medium)
-			   :line-style (medium-line-style medium)
-			   :text-style (medium-text-style medium)
-			   ,@(compute-arg-list args))))
-	     (when (stream-recording-p stream)
+	   (when (stream-recording-p stream)
+	     (let ((record (make-instance ',class-name
+			     :stream stream
+			     :ink (medium-ink medium)
+			     :clipping-region (medium-clipping-region medium)
+			     :transformation (medium-transformation medium)
+			     :line-style (medium-line-style medium)
+			     :text-style (medium-text-style medium)
+			     ,@(compute-arg-list args))))
 	       (add-output-record record (stream-output-history stream))
-	       )
-	     (when (stream-drawing-p stream)
-	       (call-next-method)))))
+	       ))
+	   (when (stream-drawing-p stream)
+	     (call-next-method))))
        (defmethod replay-output-record ((record ,class-name) stream
 					&optional region x-offset y-offset)
 	 (declare (ignore region x-offset y-offset))
@@ -384,32 +384,32 @@
 			      start-angle end-angle filled)
   (values center-x center-y center-x center-y))
 
-(def-grecording draw-text (string x y start end
-			   align-x align-y toward-x toward-y transform-glyphs)
-  (let* ((width (stream-string-width stream string
-                                     :start start :end end
-                                     :text-style text-style))
-         (ascent (text-style-ascent text-style (port (sheet-medium stream))))
-         (descent (text-style-descent text-style (port (sheet-medium stream))))
-         (height (+ ascent descent))
-         left top right bottom)
-    (ecase align-x
-      (:left (setq left x
-                   right (+ x width)))
-      (:right (setq left (- x width)
-                    right x))
-      (:center (setq left (- x (round width 2))
-                     right (+ x (round width 2)))))
-    (ecase align-y
-      (:baseline (setq top (- y height)
-                       bottom (+ y descent)))
-      (:top (setq top y
-                  bottom (+ y height)))
-      (:bottom (setq top (- y height)
-                     bottom y))
-      (:center (setq top (- y (floor height 2))
-                     bottom (+ y (ceiling height 2)))))
-    (values left top right bottom)))
+;(def-grecording draw-text (string x y start end
+;			   align-x align-y toward-x toward-y transform-glyphs)
+;  (let* ((width (stream-string-width stream string
+;                                     :start start :end end
+;                                     :text-style text-style))
+;         (ascent (text-style-ascent text-style (port (sheet-medium stream))))
+;         (descent (text-style-descent text-style (port (sheet-medium stream))))
+;         (height (+ ascent descent))
+;         left top right bottom)
+;    (ecase align-x
+;      (:left (setq left x
+;                   right (+ x width)))
+;      (:right (setq left (- x width)
+;                    right x))
+;      (:center (setq left (- x (round width 2))
+;                     right (+ x (round width 2)))))
+;    (ecase align-y
+;      (:baseline (setq top (- y height)
+;                       bottom (+ y descent)))
+;      (:top (setq top y
+;                  bottom (+ y height)))
+;      (:bottom (setq top (- y height)
+;                     bottom y))
+;      (:center (setq top (- y (floor height 2))
+;                     bottom (+ y (ceiling height 2)))))
+;    (values left top right bottom)))
 
 
 ;;; Text recording class
@@ -477,3 +477,38 @@
 	  for s in strings
 	  do (setq result (concatenate 'string result (third s)))
 	     finally (return result))))
+
+
+
+(defmethod get-text-record ((stream output-recording-stream))
+  (let ((trec (stream-current-output-record stream)))
+    (unless (text-displayed-output-record-p trec)
+      (setq trec (make-instance 'text-displayed-output-record))
+      (add-output-record trec (stream-current-output-record stream))
+      (setf (stream-current-output-record stream) trec))
+    trec))
+
+(defmethod stream-write-char :around ((stream output-recording-stream) char)
+  (when (stream-recording-p stream)
+    (let ((medium (sheet-medium stream))
+	  (trec (get-text-record stream)))
+      (multiple-value-bind (width height ignore1 ignore2 baseline)
+	  (text-size medium (string char))
+	(declare (ignore ignore1 ignore2))
+	(add-character-output-to-text-record trec char
+					     (medium-text-style medium)
+					     width height baseline))))
+  (call-next-method))
+
+(defmethod stream-write-string :around ((stream output-recording-stream) string
+					&optional (start 0) end)
+  (when (stream-recording-p stream)
+    (let ((medium (sheet-medium stream))
+	  (trec (get-text-record stream)))
+      (multiple-value-bind (width height ignore1 ignore2 baseline)
+	  (text-size medium string)
+	(declare (ignore ignore1 ignore2))
+	(add-string-output-to-text-record trec string start end
+					  (medium-text-style medium)
+					  width height baseline))))
+  (call-next-method))

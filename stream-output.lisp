@@ -35,6 +35,10 @@
   ()
   )
 
+(defmethod stream-recording-p ((stream t)) nil)
+
+(defmethod stream-drawing-p ((stream t)) t)
+
 #+ignore(defmethod stream-write-char ((stream standard-output-stream) char)
   (multiple-value-bind (cx cy) (stream-cursor-position stream)
     (cond
