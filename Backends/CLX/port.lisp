@@ -293,3 +293,8 @@
 		  (xlib:drawable-width mirror) new-width
 		  (xlib:drawable-height mirror) new-height)))))))
 
+;; clim-stream-pane drawings
+
+(defmethod window-clear :before ((pane clim-stream-pane))
+  (xlib:clear-area (sheet-direct-mirror pane)))
+
