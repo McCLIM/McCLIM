@@ -92,13 +92,14 @@ sheet-supports-only-one-child error to be signalled."))
 (defgeneric sheet-delta-transformation (sheet ancestor))
 (defgeneric sheet-allocated-region (sheet child))
 
-(defgeneric sheet-native-region (sheet))
-(defgeneric sheet-device-region (sheet))
-(defgeneric invalidate-cached-regions (sheet))
+;;these are now in decls.lisp --GB
+;;(defgeneric sheet-native-region (sheet)) 
+;;(defgeneric sheet-device-region (sheet))
+;;(defgeneric invalidate-cached-regions (sheet))
 
-(defgeneric sheet-native-transformation (sheet))
-(defgeneric sheet-device-transformation (sheet))
-(defgeneric invalidate-cached-transformations (sheet))
+;;(defgeneric sheet-native-transformation (sheet))
+;;(defgeneric sheet-device-transformation (sheet))
+;;(defgeneric invalidate-cached-transformations (sheet))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -179,7 +180,7 @@ sheet-supports-only-one-child error to be signalled."))
   nil)
 
 (defmethod sheet-adopt-child ((sheet basic-sheet) (child sheet))
-  (error "SHEET attempting to adopt a child"))
+  (error "~S attempting to adopt a child" sheet))
 
 (defmethod sheet-adopt-child :after ((sheet basic-sheet) (child sheet))
   (note-sheet-adopted child)
