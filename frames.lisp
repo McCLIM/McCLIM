@@ -172,7 +172,7 @@ FRAME-EXIT condition."))
 (defgeneric frame-properties (frame property))
 (defgeneric (setf frame-properties) (value frame property))
 (defgeneric (setf client-setting) (value frame setting))
-(defgeneric reset-frame (frame &rest client settings))
+(defgeneric reset-frame (frame &rest client-settings))
 
 ; extension
 (defgeneric frame-schedule-timer-event (frame sheet delay token))
