@@ -25,7 +25,7 @@
 
 ;;; CLX-PORT class
 
-(defclass clx-port (port)
+(defclass clx-port (basic-port)
   ((display :initform nil
 	    :accessor clx-port-display)
    (screen :initform nil
@@ -33,8 +33,7 @@
    (window :initform nil
 	   :accessor clx-port-window)
    (color-table :initform (make-hash-table :test #'eq))
-   (font-table :initform (make-hash-table :test #'eq)))
-  )
+   (font-table :initform (make-hash-table :test #'eq))) )
 
 (setf (get :x11 :port-type) 'clx-port)
 
@@ -50,13 +49,24 @@
 (defmethod initialize-clx ((port clx-port))
   (let ((options (cdr (port-server-path port))))
     (setf (clx-port-display port)
-	  (xlib:open-display (getf options :host "") :display (getf options :display-id 0)))
+      (xlib:open-display (getf options :host "") :display (getf options :display-id 0)))
     (setf (xlib:display-error-handler (clx-port-display port))
-	  #'clx-error-handler)
+      #'clx-error-handler)
     (setf (clx-port-screen port) (nth (getf options :screen-id 0)
 				      (xlib:display-roots (clx-port-display port))))
     (setf (clx-port-window port) (xlib:screen-root (clx-port-screen port)))
     (make-graft port)
+    (when *multiprocessing-p*
+      (setf (port-event-process port)
+        (clim-sys:make-process
+         (lambda ()
+           (loop
+             (with-simple-restart
+                 (restart-event-loop
+                  "Restart CLIM's event loop.")
+               (loop
+                 (process-next-event port)))))
+         :name (format nil "~S's event process." port))))
     ))
 
 (defun realize-mirror-aux (port sheet
@@ -72,7 +82,7 @@
 					      :structure-notify
 					      :pointer-motion)))
   (when (null (port-lookup-mirror port sheet))
-    (let* ((desired-color (medium-background sheet))
+    (let* ((desired-color +white+ #+NIL (medium-background sheet))
            (color (multiple-value-bind (r g b)
                       (color-rgb desired-color)
                     (xlib:make-color :red r :green g :blue b)))
@@ -100,7 +110,7 @@
   (realize-mirror-aux port sheet :border-width 0))
 
 (defmethod realize-mirror ((port clx-port) (sheet border-pane))
-  (rotatef (medium-background (sheet-medium sheet)) (medium-foreground (sheet-medium sheet)))
+  ;;(rotatef (medium-background (sheet-medium sheet)) (medium-foreground (sheet-medium sheet)))
   (realize-mirror-aux port sheet
 		      :border-width 0 ; (border-pane-width sheet)
 		      :event-mask '(:exposure
@@ -179,11 +189,15 @@
     (when sheet
       (case event-key
 	(:key-press
-	 (make-instance 'key-press-event :key-name (xlib:keycode->character display code state)
-			:sheet sheet :modifier-state state :timestamp time))
+         (multiple-value-bind (keyname modifier-state) (x-event-to-key-name-and-modifiers display code state)
+           (make-instance 'key-press-event 
+             :key-name keyname
+             :sheet sheet :modifier-state modifier-state :timestamp time)))
 	(:key-release
-	 (make-instance 'key-release-event :key-name (xlib:keycode->character display code state)
-			:sheet sheet :modifier-state state :timestamp time))
+         (multiple-value-bind (keyname modifier-state) (x-event-to-key-name-and-modifiers display code state)
+           (make-instance 'key-release-event 
+             :key-name keyname
+             :sheet sheet :modifier-state modifier-state :timestamp time)))
 	(:button-release
 	 (make-instance 'pointer-button-release-event :pointer 0 :button code :x x :y y
 			:sheet sheet :modifier-state state :timestamp time))
@@ -207,8 +221,8 @@
 			:sheet sheet :modifier-state state :timestamp time))
 	((:exposure :display)
 	 (make-instance 'window-repaint-event
-			:sheet sheet
-			:region (make-rectangle* x y (+ x width) (+ y height))))
+           :sheet sheet
+           :region (make-rectangle* x y (+ x width) (+ y height))))
 	(t
 	 nil)))))
 
