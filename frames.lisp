@@ -525,7 +525,7 @@ frame, if any")))
 			 args))))
     (when namep
       (push pane (frame-named-panes frame)))
-    pane)))
+    pane))
 
 (defmethod adopt-frame ((fm frame-manager) (frame application-frame))
   (setf (slot-value fm 'frames) (cons frame (slot-value fm 'frames)))
