@@ -20,10 +20,11 @@
 
 ;;; CLIM inspector application
 
-(defpackage :inspector
-  (:use :clim-lisp :clim))
+(defpackage :clouseau
+  (:use :clim-lisp :clim)
+  (:export #:inspector))
 
-(asdf::defsystem inspector
+(asdf::defsystem clouseau
     :serial t
     :components
     ((:file "inspector")))

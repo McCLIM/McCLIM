@@ -22,7 +22,7 @@
 
 ;;; CLIM inspector application
 
-(in-package :inspector)
+(in-package :clouseau)
 
 (define-application-frame inspector ()
   ((dico :initform (make-hash-table) :reader dico)
