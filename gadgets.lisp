@@ -32,7 +32,7 @@
        :initform (gensym "GADGET")
        :accessor gadget-id)
    (client :initarg :client
-           :initform nil
+           :initform *application-frame*
            :accessor gadget-client)
    (armed-callback :initarg :armed-callback
                    :initform nil
@@ -123,6 +123,28 @@
   (let ((callback (gadget-disarmed-callback gadget)))
     (when callback
       (funcall callback gadget))))
+
+
+;; Client warning
+
+; Warning the gadget's client is useful (and made) when a changement has come
+(defgeneric warn-client (gadget client))
+
+; Default methods does nothing
+; Now, the default client of a gadget is its application-frame (here *application-frame*)
+(defmethod warn-client (gadget (frame application-frame))
+  (declare (ignorable gadget frame))
+  (values))
+
+(defmethod warn-client (gadget (sheet sheet))
+  (declare (ignorable gadget sheet))
+  (values))
+
+; The moment to warn the client
+; [Julien] I'm not sure about this moment, but it works well...
+(defmethod handle-event :after ((gadget standard-gadget) (event pointer-button-press-event))
+  (when (gadget-client gadget)
+    (warn-client gadget (gadget-client gadget))))
 
 
 ;;;
@@ -678,16 +700,37 @@
 (defmethod (setf radio-box-current-selection) :before (button (pane radio-box-pane))
   (declare (ignore button))
   (let ((old-button (radio-box-current-selection pane)))
-    (setf (gadget-value old-button :invoke-callback t) nil)))
+    (setf (gadget-value old-button :invoke-callback t) nil)
+    (dispatch-repaint old-button (sheet-region old-button))))
 
-(defmethod (setf radio-box-current-selection) :after (button (pane radio-box-pane))
-  (declare (ignorable pane))
-  (setf (gadget-value button :invoke-callback t) t))
+(defmethod warn-client ((gadget toggle-button-pane) (client radio-box-pane))
+  (setf (radio-box-current-selection client) gadget))
 
-(defmacro with-radio-box ( (&rest options) &body body)
-  `(make-pane 'radio-box ,@options
-	      :current-selection (first ,body)
-	      ,@body))
+(defun find-current (&rest l)
+    (let (current)
+      (loop for element in l
+	    do (when (equal (first element) 'radio-box-current-selection)
+		 (return (setf current element))))
+      (or current (first l))))
+
+(defmacro with-radio-box ((&rest options) &body body)
+  (let* ((current (apply #'find-current body))
+	 (other-body (remove current body)))
+    (when (eql (first current) 'radio-box-current-selection)
+      (setf current (second current))) ; first case of the or in find-current
+    `(let* ((current-button ,current)
+	    (radio-box (make-pane-1 (slot-value *application-frame* 'manager)
+				    *application-frame*
+				    'radio-box-pane
+				    ,@options
+				    :current-selection current-button)))
+       (mapcar #'(lambda (gadget) (setf (gadget-client gadget) radio-box))
+	       (list ,@other-body))
+       (mapcar #'(lambda (gadget) (setf (gadget-value gadget :invoke-callback t) nil))
+	       (list ,@other-body))
+       (setf (gadget-client current-button) radio-box
+	     (gadget-value current-button :invoke-callback t) t)
+       radio-box)))
 
 
 ;;
