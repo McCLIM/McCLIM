@@ -38,7 +38,7 @@
 
 (defclass accept-result-extent (extent)
   ((object :accessor object :initarg :object)
-   (type :accessor type :initarg :type))
+   (result-type :accessor result-type :initarg :result-type))
   (:documentation "The extent is read with a single read-gesture;
   result is returned."))
 
@@ -271,7 +271,7 @@
       (apply #'%replace-input stream printed-rep
 	     0 (length printed-rep) buffer-start rescan rescan-supplied-p
 	     (if acceptably
-		 `(accept-result-extent :object ,object :type ,type)
+		 `(accept-result-extent :object ,object :result-type ,type)
 		 '(nil))))))
 
 ;;; There used to be complicated logic here to support output when

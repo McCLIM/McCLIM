@@ -77,7 +77,8 @@
 		       (incf scan-pointer))
 		      ((and (not peek-p)
 			    (typep gesture 'goatee::accept-result-extent))
-		       (throw-object-ptype (object gesture) (type gesture))))
+		       (throw-object-ptype (object gesture)
+					   (goatee::result-type gesture))))
 		(if (typep gesture 'noise-string-property)
 		    (incf scan-pointer)
 		    (progn
