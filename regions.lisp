@@ -31,9 +31,9 @@
 (defun regionp (x)
   (typep x 'region))
 
-(defconstant +everywhere+ (make-instance 'region))
+(defvar +everywhere+ (make-instance 'region))
 
-(defconstant +nowhere+ (make-instance 'region))
+(defvar +nowhere+ (make-instance 'region))
 
 (defmethod bounding-rectangle* ((region region))
   (let ((pts (region-points region)))
