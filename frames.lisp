@@ -26,6 +26,33 @@
 (defvar *application-frame* nil)
 (defvar *default-frame-manager* nil)
 
+;;; Frame-Manager class
+
+(defclass frame-manager ()
+  ((port :initarg :port
+	 :reader frame-manager-port)
+   (frames :initform nil
+	   :reader frame-manager-frames)
+   )
+  )
+
+(defun frame-manager-p (x)
+  (typep x 'frame-manager))
+
+(defun find-frame-manager (&rest options &key port &allow-other-keys)
+  (declare (special *frame-manager*))
+  (if (boundp '*frame-manager*)
+      *frame-manager*
+    (if (and *default-frame-manager*
+	     (frame-manager-p *default-frame-manager*))
+	*default-frame-manager*
+      (first (frame-managers (or port (apply #'find-port options)))))))
+
+(defmacro with-frame-manager ((frame-manager) &body body)
+  `(let (('*frame-manager* ,frame-manager))
+     (declare (special *frame-manager*))
+     (block ,@body)))
+      
 ;;; Application-Frame class
 
 (defclass application-frame ()
@@ -91,10 +118,6 @@
       (setf (slot-value frame 'layouts) nil))
     (setf (slot-value frame 'manager) fm)))
 
-(defmethod calculate-standard-panes ((frame application-frame))
-  ;; Should find the panes for 
-  )
-
 (defmethod (setf frame-current-layout) (name (frame application-frame))
   (declare (ignore name))
   (generate-panes (frame-manager frame) frame))
@@ -103,21 +126,21 @@
   (declare (ignore fm))
   (when (and (slot-boundp frame 'pane)
 	     (frame-pane frame))
-    (unrealize-mirror (port frame) (frame-pane frame))
     (sheet-disown-child (frame-top-level-sheet frame) (frame-pane frame))))
 
 (defmethod generate-panes :after (fm  (frame application-frame))
   (declare (ignore fm))
   (sheet-adopt-child (frame-top-level-sheet frame) (frame-pane frame))
+  (sheet-adopt-child (graft frame) (frame-top-level-sheet frame))
+  (setf (sheet-transformation (frame-top-level-sheet frame))
+	(make-translation-transformation 100 100))
   (let ((space (compose-space (frame-top-level-sheet frame))))
+    ;; automatically generates a window-configuation-event
+    ;; which then calls allocate-space
     (setf (sheet-region (frame-top-level-sheet frame))
-      (make-bounding-rectangle 100 100
-			       (+ 100 (space-requirement-width space))
-			       (+ 100 (space-requirement-height space))))
-    (allocate-space (frame-top-level-sheet frame)
-		    (space-requirement-width space) (space-requirement-height space)))
-  (sheet-adopt-child (graft frame) (frame-top-level-sheet frame)))
-;  (calculate-standard-panes frame))
+	  (make-bounding-rectangle 0 0
+				   (space-requirement-width space)
+				   (space-requirement-height space)))))
 
 (defmethod find-pane-named ((frame application-frame) name)
   (loop for pane in (frame-panes frame)
@@ -216,33 +239,6 @@
 (defmethod execute-frame-command ((frame application-frame) command)
   (apply (command-name command) (command-arguments command)))
 
-;;; Frame-Manager class
-
-(defclass frame-manager ()
-  ((port :initarg :port
-	 :reader frame-manager-port)
-   (frames :initform nil
-	   :reader frame-manager-frames)
-   )
-  )
-
-(defun frame-manager-p (x)
-  (typep x 'frame-manager))
-
-(defun find-frame-manager (&rest options &key port &allow-other-keys)
-  (declare (special *frame-manager*))
-  (if (boundp '*frame-manager*)
-      *frame-manager*
-    (if (and *default-frame-manager*
-	     (frame-manager-p *default-frame-manager*))
-	*default-frame-manager*
-      (first (frame-managers (or port (apply #'find-port options)))))))
-
-(defmacro with-frame-manager ((frame-manager) &body body)
-  `(let (('*frame-manager* ,frame-manager))
-     (declare (special *frame-manager*))
-     (block ,@body)))
-      
 (defmethod make-pane-1 ((fm frame-manager) (frame application-frame) type &rest args)
   `(make-pane-1 ,fm ,frame ',type ,@args))
 
