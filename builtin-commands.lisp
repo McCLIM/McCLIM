@@ -93,7 +93,14 @@
     (t nil global-command-table
        :documentation "Menu"
        :menu nil
-       :gesture :menu)
+       :gesture :menu
+       :tester ((presentation frame window x y event)
+                (find-applicable-translators presentation
+                                             *input-context* ; XXX ?
+                                             frame window x y
+                                             :event event ; XXX ?
+                                             :for-menu t
+                                             :fastp t)))
   (presentation frame window x y)
   (call-presentation-menu presentation *input-context*
                           frame window x y
