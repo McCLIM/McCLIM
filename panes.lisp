@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.64 2002/02/27 12:54:35 gilbert Exp $
+;;; $Id: panes.lisp,v 1.65 2002/02/28 09:57:20 gilbert Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -113,6 +113,11 @@
 ;;   . DUIM's default for maxima is not +fill+ but the dimension
 ;;
 ;; - what are the appropriate default values for align?
+;;
+
+;; - for layout purposes the list of children should be considered in
+;;   reverse: The first element of children should come last.
+
 ;;--GB 2002-02-27
 
 ;;; GENERIC FUNCTIONS
@@ -658,9 +663,12 @@
   (typep pane 'top-level-sheet-pane))
 
 (defmethod note-space-requirements-changed ((sheet graft) (pane top-level-sheet-pane))
-  (let ((sr (compose-space pane)))
-    (resize-sheet pane (space-requirement-width sr) (space-requirement-height sr))
-    '(allocate-space pane (space-requirement-width sr) (space-requirement-height sr))))
+  (when (sheet-grafted-p pane)
+    (let ((sr (compose-space pane)))
+      (resize-sheet pane (space-requirement-width sr) (space-requirement-height sr))
+      ;; #+NIL
+      (allocate-space pane (space-requirement-width sr) (space-requirement-height sr))
+      nil)))
   
 (defmethod compose-space ((pane top-level-sheet-pane))
   (compose-space (first (sheet-children pane))))
@@ -809,10 +817,10 @@
             (compose-space child)) )))
 
  (defmethod box-layout-mixin/xically-compose-space ((pane box-layout-mixin))
-   (let ((n (length (sheet-children pane))))
+   (let ((n (length (sheet-enabled-children pane))))
      (with-slots (major-spacing) pane
        (loop
-           for child in (sheet-children pane)
+           for child in (sheet-enabled-children pane)
            for sr = (xically-content-sr** pane child)
            sum (space-requirement-major sr) into major
            sum (space-requirement-min-major sr) into min-major
@@ -839,7 +847,7 @@
 
  (defmethod box-layout-mixin/xically-allocate-space-aux* ((box box-layout-mixin) width height)
    (declare (ignorable width height))
-   (let ((children (sheet-children box)))
+   (let ((children (reverse (sheet-enabled-children box))))
      (with-slots (major-spacing) box
        (let* ((content-srs (mapcar #'(lambda (c) (xically-content-sr** box c)) children))
               (allot       (mapcar #'ceiling (mapcar #'space-requirement-major content-srs)))
@@ -905,22 +913,30 @@
        ;; now actually layout the children
        (let ((x 0))
          (loop
-             for child in (sheet-children pane)
+             for child in (reverse (sheet-enabled-children pane))
              for major in majors
              for minor in minors
              do
-               (let ()
-                 #+NIL
-                 (format T "~&;;   child ~S at 0, ~D ~D x ~D~%"
-                         child x width height)
-                 (move-sheet child
-                             ((lambda (major minor) height width) x 0)
-                             ((lambda (major minor) width height) x 0))
-                 (allocate-space child
-                                 width height)
-                 )
+               #+NIL (format T "~&;;   child ~S at 0, ~D ~D x ~D~%" child x width height)
+               (move-sheet child
+                           ((lambda (major minor) height width) x 0)
+                           ((lambda (major minor) width height) x 0))
+               (allocate-space child
+                               width height)
                (incf x major)
                (incf x major-spacing)))))) )
+
+#+NIL
+(defmethod note-sheet-enabled :before ((pane pane))
+  ;; hmmm
+  (when (panep (sheet-parent pane))
+    (change-space-requirements pane)) )
+
+#+NIL
+(defmethod note-sheet-disabled :before ((pane pane))
+  ;; hmmm
+  (when (panep (sheet-parent pane))
+    (change-space-requirements pane)) )
 
 ;;;;
 
@@ -963,41 +979,40 @@
 
  (defmethod initialize-instance :after ((pane xbox-pane) &key contents &allow-other-keys)
    (let ((children (mapcar (lambda (content)
-                   (cond ((panep content)
-                          content)
-                         ;;
-                         ((or (eql content +fill+) (eql content '+fill+))
-                          (let ((child (make-instance 'null-pane)))
-                            (setf (constraint-slot pane child 'fill-p) t)
-                            child))
-                         ;;
-                         ;; what about something like (30 :mm) ?
-                         ;;
-                         ((and (realp content) (>= content 0))
-                          (let ((child (make-instance 'null-pane)))
-                            (setf (constraint-slot pane child 'fixed-size) content)
-                            child))
-                         ;;
-                         ;; match (<n> <pane>)
-                         ;;
-                         ((and (consp content)
-                               (realp (car content))
-                               (>= (car content) 0)
-                               (consp (cdr content))
-                               (panep (cadr content))
-                               (null (cddr content)))
-                          (let ((number (car content))
-                                (child  (cadr content)))
-                            (if (< number 1)
-                                (setf (constraint-slot pane child 'proportion) number)
-                                (setf (constraint-slot pane child 'fixed-size) number))
-                            child))
-                         (t
-                          (error "~S is not a valid element in the ~S option of ~S."
-                                 content :contents pane)) ))
-                 contents)))
-     (mapc (curry #'sheet-adopt-child pane) children)
-     (reorder-sheets pane children)))
+                             (cond ((panep content)
+                                    content)
+                                   ;;
+                                   ((or (eql content +fill+) (eql content '+fill+))
+                                    (let ((child (make-instance 'null-pane)))
+                                      (setf (constraint-slot pane child 'fill-p) t)
+                                      child))
+                                   ;;
+                                   ;; what about something like (30 :mm) ?
+                                   ;;
+                                   ((and (realp content) (>= content 0))
+                                    (let ((child (make-instance 'null-pane)))
+                                      (setf (constraint-slot pane child 'fixed-size) content)
+                                      child))
+                                   ;;
+                                   ;; match (<n> <pane>)
+                                   ;;
+                                   ((and (consp content)
+                                         (realp (car content))
+                                         (>= (car content) 0)
+                                         (consp (cdr content))
+                                         (panep (cadr content))
+                                         (null (cddr content)))
+                                    (let ((number (car content))
+                                          (child  (cadr content)))
+                                      (if (< number 1)
+                                          (setf (constraint-slot pane child 'proportion) number)
+                                          (setf (constraint-slot pane child 'fixed-size) number))
+                                      child))
+                                   (t
+                                    (error "~S is not a valid element in the ~S option of ~S."
+                                           content :contents pane)) ))
+                           contents)))
+     (mapc (curry #'sheet-adopt-child pane) children)))
 
  (defclass xrack-pane (rack-layout-mixin xbox-pane)
    ()
@@ -1345,10 +1360,10 @@ During realization the child of the spacing will have as cordinates
 
 (defclass viewport-pane (single-child-composite-pane) ())
 
-(defmethod allocate-space ((pane viewport-pane) w h)
-  (allocate-space (first (sheet-children pane))
-                  (space-requirement-width (compose-space (first (sheet-children pane))))
-                  (space-requirement-height (compose-space (first (sheet-children pane))))))
+(defmethod allocate-space ((pane viewport-pane) width height)
+  (layout-child (first (sheet-children pane)) 
+                :left :top
+                0 0 width height))
 
 ;;;;
 ;;;; SCROLLER-PANE
