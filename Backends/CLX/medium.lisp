@@ -94,7 +94,7 @@
 	  ;; this is kind of false, since the :unit should be taken
 	  ;; into account -RS 2001-08-24
 	  (setf (xlib:gcontext-line-width gc)
-		(line-style-thickness line-style)))
+		(round (line-style-thickness line-style))))
 	(unless (eq (line-style-cap-shape line-style)
 		    (line-style-cap-shape old-line-style))
 	  (setf (xlib:gcontext-cap-style gc)
