@@ -143,8 +143,10 @@
   (
    ))
 
-(defclass window-event (device-event)
-  ((region :initarg :region
+(defclass window-event (event)
+  ((sheet :initarg :sheet
+	  :reader event-sheet)
+   (region :initarg :region
 	   :reader window-event-region)
    ))
 
