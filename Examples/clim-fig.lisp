@@ -26,7 +26,8 @@
 (defclass canvas-pane (application-pane)
   ((first-point-x :initform nil)
    (first-point-y :initform nil)
-   (canvas-pixmap :initform nil)))
+   (canvas-pixmap :initform nil)
+   (selected-object :initform nil)))
 
 (defmethod handle-event ((pane canvas-pane) (event pointer-button-press-event))
   (when (= (pointer-event-button event) +pointer-left-button+)
@@ -42,7 +43,22 @@
 			  :ink clim-demo::current-color
                           :line-style clim-demo::line-style))))
 	(setf canvas-pixmap (allocate-pixmap pane pixmap-width pixmap-height))
-	(copy-to-pixmap pane 0 0 pixmap-width pixmap-height canvas-pixmap)))))
+	(copy-to-pixmap pane 0 0 pixmap-width pixmap-height canvas-pixmap))))
+  (when (= (pointer-event-button event) +pointer-right-button+)
+    (with-slots (first-point-x first-point-y selected-object) pane
+      (setq first-point-x (pointer-event-x event)
+            first-point-y (pointer-event-y event))
+      (setf selected-object (search-selected-object (climi::pane-output-history pane)
+                                                    first-point-x
+                                                    first-point-y)))))
+
+(defun search-selected-object (record x y)
+  (let ((selected-objects))
+    (map-over-output-records-containing-position
+     #'(lambda (x)
+         (push x selected-objects))
+     record x y)
+    (first selected-objects)))
 
 (defun signum-1 (value)
   (if (zerop value)
@@ -51,7 +67,7 @@
 
 (defmethod handle-event ((pane canvas-pane) (event pointer-motion-event))
   (with-slots (first-point-x first-point-y canvas-pixmap) pane
-      (when (and first-point-x first-point-y)
+      (when (and first-point-x first-point-y canvas-pixmap)
 	(let* ((x (pointer-event-x event))
 	       (y (pointer-event-y event))
                (radius-x (- x first-point-x))
@@ -95,7 +111,7 @@
     (with-slots (first-point-x first-point-y canvas-pixmap) pane
       (let ((pixmap-width (round (bounding-rectangle-width (sheet-region pane))))
 	    (pixmap-height (round (bounding-rectangle-height (sheet-region pane)))))
-	(when (and first-point-x first-point-y)
+	(when (and first-point-x first-point-y canvas-pixmap)
           (copy-from-pixmap canvas-pixmap 0 0 pixmap-width pixmap-height pane 0 0)
           (deallocate-pixmap canvas-pixmap)
           (setf canvas-pixmap nil)
@@ -142,7 +158,22 @@
 				:ink clim-demo::current-color :line-style clim-demo::line-style))))
 	    (setf (clim-demo::clim-fig-redo-list *application-frame*) nil))
 	  (setf first-point-x nil
-		first-point-y nil))))))
+		first-point-y nil)))))
+  (when (= (pointer-event-button event) +pointer-right-button+)
+    (with-slots (first-point-x first-point-y selected-object) pane
+      (when selected-object
+        (multiple-value-bind (old-x old-y) (climi::output-record-position selected-object)
+          (climi::setf*-output-record-position (+ old-x (- (pointer-event-x event) first-point-x))
+                                               (+ old-y (- (pointer-event-y event) first-point-y))
+                                               selected-object))
+        (with-output-recording-options (*standard-output* :record nil)
+          (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
+            (draw-rectangle* pane x1 y1 x2 y2 :ink +background-ink+))
+          (replay-output-record (stream-current-output-record *standard-output*)
+                                *standard-output*))
+        (setf selected-object nil
+              first-point-x nil
+              first-point-y nil)))))
 
 (in-package :CLIM-DEMO)
 
