@@ -32,11 +32,14 @@
 
 (defmethod initialize-instance :after ((graft graft) &rest args)
   (declare (ignore args))
-  (port-register-mirror (port graft) graft (slot-value graft 'mirror))
-  (setf (graft graft) graft))
+  (port-register-mirror (port graft) graft (slot-value graft 'mirror)))
+;  (setf (graft graft) graft))
 
 (defun graftp (x)
   (typep x 'graft))
+
+(defmethod graft ((graft graft))
+  graft)
 
 (defmethod sheet-grafted-p ((sheet sheet))
   (if (sheet-parent sheet)
