@@ -1,6 +1,7 @@
 ;;; -*- Mode: Lisp; Package: CLIM-CLX -*-
 
 ;;;  (c) copyright 1998,1999,2000,2001 by Michael McDonald (mikemac@mikemac.com)
+;;;  (c) copyright 2004 by Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -61,35 +62,40 @@
 
 (defmethod adopt-frame :after ((fm clx-frame-manager) (frame application-frame))
   (let ((sheet (slot-value frame 'top-level-sheet)))
-    (let ((q (compose-space sheet)))
-      (allocate-space sheet
-                      (space-requirement-width q)
-                      (space-requirement-height q))
-      (let* ((top-level-sheet (frame-top-level-sheet frame))
-             (mirror (sheet-direct-mirror top-level-sheet)))
-        (tell-window-manager-about-space-requirents top-level-sheet)
-        ;; :structure-notify events were not yet turned on, turn them
-        ;; on now, so that we get informed about the windows position
-        ;; (and possibly size), when the window gets maped.
-        (setf (xlib:window-event-mask mirror)
-              (logior (xlib:window-event-mask mirror)
-                      (xlib:make-event-mask :structure-notify)))
-        (when (sheet-enabled-p sheet)
-          (xlib:map-window mirror) )))))
+    (let* ((top-level-sheet (frame-top-level-sheet frame))
+           (mirror (sheet-direct-mirror top-level-sheet)))
+      (multiple-value-bind (w h x y) (climi::frame-geometry* frame)
+        (declare (ignore w h))
+        (when (and x y)
+          (setf (xlib:drawable-x mirror) x
+                (xlib:drawable-y mirror) y))
+        (tell-window-manager-about-space-requirents top-level-sheet))
+      ;; :structure-notify events were not yet turned on, turn them
+      ;; on now, so that we get informed about the windows position
+      ;; (and possibly size), when the window gets maped.
+      (setf (xlib:window-event-mask mirror)
+            (logior (xlib:window-event-mask mirror)
+                    (xlib:make-event-mask :structure-notify)))
+      (when (sheet-enabled-p sheet)
+        (xlib:map-window mirror) ))))
 
 (defmethod tell-window-manager-about-space-requirents ((pane top-level-sheet-pane))
-  (let ((q (compose-space pane)))
-    (let ((mirror (sheet-direct-mirror pane)))
-      (setf (xlib:wm-normal-hints mirror)
-            (xlib:make-wm-size-hints 
-             :width  (round (space-requirement-width q))
-             :height (round (space-requirement-height q))
-             :max-width (min 65535 (round (space-requirement-max-width q)))
-             :max-height (min 65535 (round (space-requirement-max-height q)))
-             :min-width (round (space-requirement-min-width q))
-             :min-height (round (space-requirement-min-height q)))) ) ))
+  (multiple-value-bind (w h x y) (climi::frame-geometry* (pane-frame pane))
+    (declare (ignore w h))
+    (let ((q (compose-space pane)))
+      (let ((mirror (sheet-direct-mirror pane)))
+        (setf (xlib:wm-normal-hints mirror)
+              (xlib:make-wm-size-hints
+               :user-specified-position-p (and x y)
+               :x x :y y
+               :width  (round (space-requirement-width q))
+               :height (round (space-requirement-height q))
+               :max-width (min 65535 (round (space-requirement-max-width q)))
+               :max-height (min 65535 (round (space-requirement-max-height q)))
+               :min-width (round (space-requirement-min-width q))
+               :min-height (round (space-requirement-min-height q)))) ) )))
 
-(defmethod tell-window-manager-about-space-requirents ((pane t))
+(defmethod tell-window-manager-about-space-requirents* ((pane t) &rest more)
   ;; hmm
   nil)
 
