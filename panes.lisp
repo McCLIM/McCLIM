@@ -158,7 +158,7 @@
   (declare (ignore args))
   (if contents
       (unless (typep (first contents) 'list) ;; temporary medecine
-	(loop for child in contents
+	(loop for child in (reverse contents)
 	      do (sheet-adopt-child pane child)))))
 
 
