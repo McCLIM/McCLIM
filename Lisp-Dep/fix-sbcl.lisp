@@ -19,10 +19,12 @@
 (defpackage #:clim-lisp-patch
     (:use)
     (:import-from #:sb-pcl
+                  #:class-name
 		  #:class-of
 		  #:find-class
 		  #:standard-class)
     (:export
+     #:class-name
      #:class-of
      #:defclass
      #:defconstant
