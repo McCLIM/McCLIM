@@ -58,10 +58,10 @@
 				    color))
 	   (window (xlib:create-window
 		    :parent (sheet-mirror (sheet-parent sheet))
-		    :width (bounding-rectangle-width space)
-		    :height (bounding-rectangle-height space)
-		    :x (bounding-rectangle-min-x space)
-		    :y (bounding-rectangle-min-y space)
+		    :width  (round (bounding-rectangle-width space))
+		    :height (round (bounding-rectangle-height space))
+		    :x      (round (bounding-rectangle-min-x space))
+		    :y      (round (bounding-rectangle-min-y space))
 		    :border-width 1
 		    :border 0
 		    :background pixel
