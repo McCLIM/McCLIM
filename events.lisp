@@ -208,7 +208,10 @@
 
 (defclass window-manager-event (event) ())
 
-(defclass window-manager-delete-event (window-manager-event) ())
+(defclass window-manager-delete-event (window-manager-event)
+  ((sheet :initarg :sheet	; not required by the spec but we need 
+	  :reader event-sheet)	; to know which window to delete - mikemac
+   ))
 
 (defclass timer-event (event)
   (

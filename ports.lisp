@@ -151,6 +151,9 @@
     (dispatch-event (event-sheet event) event))
    ((typep event 'pointer-event)
     (dispatch-event (event-sheet event) event))
+   ((typep event 'window-manager-delete-event)
+    ;; not sure where this type of event should get sent - mikemac
+    (dispatch-event (event-sheet event) event))
    ((typep event 'timer-event)
     (error "Where do we send timer-events?"))
    (t

@@ -177,7 +177,8 @@
 				    :map nil
 				    :event-mask '(:structure-notify))))
     (setf (xlib:wm-name window) (frame-pretty-name frame))
-    (setf (xlib:wm-icon-name window) (frame-pretty-name frame))))
+    (setf (xlib:wm-icon-name window) (frame-pretty-name frame))
+    (setf (xlib:wm-protocols window) `(:wm_delete_window))))
 
 (defmethod realize-mirror ((port clx-port) (sheet unmanaged-top-level-sheet-pane))
   (realize-mirror-aux port sheet
@@ -260,7 +261,7 @@
   (xlib:close-display (clx-port-display port)))
 
 (defun event-handler (&rest event-slots
-                      &key display window event-key code state mode time width height x y
+                      &key display window event-key code state mode time width height x y data
                       &allow-other-keys)
   (let ((sheet (and window
 		    (port-lookup-sheet *clx-port* window))))
@@ -303,6 +304,12 @@
            :sheet sheet
            :region (untransform-region (sheet-native-transformation sheet)
                                        (make-rectangle* x y (+ x width) (+ y height)))))
+	(:client-message
+	 (when (eq (xlib:atom-name display (aref data 0)) :wm_delete_window)
+	   (destroy-mirror (port sheet) sheet)
+	   (make-instance 'window-manager-delete-event
+	     :sheet sheet
+	     :timestamp time)))
 	(t
 	 nil)))))
 
