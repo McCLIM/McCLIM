@@ -138,6 +138,12 @@
     (frame &key command-parser command-unparser partial-command-parser prompt))
 (defgeneric read-frame-command (frame &key stream))
 (defgeneric run-frame-top-level (frame &key &allow-other-keys))
+(defgeneric command-enabled (command-name frame))
+(defgeneric (setf command-name) (enabled command-name frame))
+
+;;;; 28.5
+(defgeneric note-command-enabled (frame-manager frame command-name))
+(defgeneric note-command-disabled (frame-manager frame command-name))
 
 ;;;; 29.2
 ;;;;

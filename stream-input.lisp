@@ -95,6 +95,7 @@
 		   (handle-event (event-sheet event) event))))
 	(let* ((port (port pane))
 	       (queue (stream-input-buffer pane)))
+	  (declare (ignorable port))
 	  (loop
 	   (let ((event (event-queue-read-no-hang queue)))
 	     (cond (event
@@ -286,6 +287,7 @@
   (block exit
     (let* ((buffer (stream-input-buffer stream))
 	   (port (port stream)))
+      (declare (ignorable port))
       ;; Loop if not multiprocessing or if input-wait-test returns nil
       ;; XXX need to decay timeout on multiple trips through the loop
       (tagbody

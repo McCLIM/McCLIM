@@ -48,6 +48,17 @@
      (declare (special *frame-manager*))
      (locally ,@body)))
 
+;;; XXX These should force the redisplay of the menu bar. They don't
+;;; yet.
+
+(defmethod note-command-enabled (frame-manager frame command-name)
+  (declare (ignore frame-manager frame command-name))
+  nil)
+
+(defmethod note-command-disabled (frame-manager frame command-name)
+  (declare (ignore frame-manager frame command-name))
+  nil)
+
 ;;; Application-Frame class
 ;;; XXX All these slots should move to a mixin or to standard-application-frame.
 ;;; -- moore
@@ -203,7 +214,11 @@ input focus. This is a McCLIM extension."))
 		  :initarg :calling-frame
 		  :initform nil
 		  :documentation "The frame that is the parent of this
-frame, if any")))
+frame, if any")
+   (disabled-commands :accessor disabled-commands
+		      :initform nil
+		      :documentation "A list of command names that have been
+				      disabled in this frame")))
 
 ;;; Support the :input-buffer initarg for compatibility with "real CLIM"
 
@@ -546,6 +561,33 @@ frame, if any")))
 
 (defmethod execute-frame-command ((frame application-frame) command)
   (apply (command-name command) (command-arguments command)))
+
+(defmethod command-enabled (command-name (frame standard-application-frame))
+  (and (command-accessible-in-command-table-p command-name
+					      (frame-command-table frame))
+       (not (member command-name (disabled-commands frame)))))
+
+(defmethod (setf command-enabled)
+    (enabled command-name (frame standard-application-frame))
+  (unless (command-accessible-in-command-table-p command-name
+						 (frame-command-table frame))
+    (return-from command-enabled nil))
+  (with-accessors ((disabled-commands disabled-commands))
+      frame
+    (if enabled
+	(progn
+	  (setf disabled-commands (delete command-name disabled-commands))
+	  (note-command-enabled (frame-manager frame)
+				frame
+				command-name)
+	  enabled)
+	(progn
+	  (pushnew command-name disabled-commands)
+	  (note-command-disabled (frame-manager frame)
+				 frame
+				 command-name)
+	  nil))))
+
 
 (defmethod make-pane-1 :around (fm (frame standard-application-frame) type
 				&rest args

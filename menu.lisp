@@ -172,6 +172,9 @@
 
 ;; for now, accept only types :command and :menu, and only 
 ;; command names as values of :command
+
+(defparameter *disabled-text-style* (make-text-style :fix :italic :normal))
+
 (defun make-menu-button-from-menu-item (item client
 					&key (bottomp nil)
 					command-table
@@ -183,13 +186,22 @@
 	(frame *application-frame*)
 	(manager (frame-manager *application-frame*)))
     (if (eq type :command)
-	(make-pane-1 manager frame 'menu-button-leaf-pane
-		     :label name
-		     :client client
-		     :value-changed-callback
-		     #'(lambda (gadget val)
-			 (declare (ignore gadget val))
-			 (throw-object-ptype item presentation-type)))
+	(if (command-enabled (car value) frame)
+	    (make-pane-1 manager frame 'menu-button-leaf-pane
+			 :label name
+			 :client client
+			 :value-changed-callback
+			 #'(lambda (gadget val)
+			     (declare (ignore gadget val))
+			     (throw-object-ptype item presentation-type)))
+	    (make-pane-1 manager frame 'menu-button-leaf-pane
+			 :label name
+			 :text-style *disabled-text-style*
+			 :client client
+			 :value-changed-callback
+			 #'(lambda (gadget val)
+			     (declare (ignore gadget val))
+			     nil)))
 	(make-pane-1 manager frame 'menu-button-submenu-pane
 		     :label name
 		     :client client

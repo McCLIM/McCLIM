@@ -1237,41 +1237,50 @@ and used to ensure that presentation-translators-caches are up to date.")
 	(t (error "Can't handle doc-arg ~S" doc-arg))))
 
 (defmacro define-presentation-translator
-    (name (from-type to-type command-table &key
+    (name (from-type to-type command-table &rest translator-options &key
 	   (gesture :select)
 	   (tester 'default-translator-tester testerp)
 	   (tester-definitive (if testerp nil t))
 	   (documentation nil)
 	   (pointer-documentation nil pointer-documentation-p)
 	   (menu t)
-	   (priority 0))
+	   (priority 0)
+	   (translator-class 'presentation-translator)
+	   &allow-other-keys)
      arglist
      &body body)
   (let* ((real-from-type (expand-presentation-type-abbreviation from-type))
 	 (real-to-type (expand-presentation-type-abbreviation to-type)))
-    `(add-translator (presentation-translators (find-command-table
-						',command-table))
-      (make-instance
-       'presentation-translator
-       :name ',name
-       :from-type ',real-from-type
-       :to-type ',real-to-type
-       :gesture ,(if (eq gesture t)
-		     t
-		     `(gethash ',gesture *gesture-names*))
-       :tester ,(if (symbolp tester)
-		    `',tester
-		    `#',(make-translator-fun (car tester)
-					     (cdr tester)))
-       :tester-definitive ',tester-definitive
-       :documentation #',(make-documentation-fun documentation)
-       ,@(when pointer-documentation-p
-	       `(:pointer-documentation
-		 #',(make-documentation-fun pointer-documentation)))
-       :menu ',menu
-       :priority ,priority
-       :translator-function #',(make-translator-fun arglist
-						    body)))))
+    (with-keywords-removed (translator-options
+			    (:gesture :tester :tester-definitive :documentation
+			     :pointer-documentation :menu :priority
+			     :translator-class))
+      `(add-translator (presentation-translators (find-command-table
+						  ',command-table))
+		       (make-instance
+			',translator-class
+			:name ',name
+			:from-type ',real-from-type
+			:to-type ',real-to-type
+			:gesture ,(if (eq gesture t)
+				      t
+				      `(gethash ',gesture *gesture-names*))
+			:tester ,(if (symbolp tester)
+				     `',tester
+				     `#',(make-translator-fun (car tester)
+							      (cdr tester)))
+			:tester-definitive ',tester-definitive
+			:documentation #',(make-documentation-fun
+					   documentation)
+			,@(when pointer-documentation-p
+				`(:pointer-documentation
+				  #',(make-documentation-fun
+				      pointer-documentation)))
+			:menu ',menu
+			:priority ,priority
+			:translator-function #',(make-translator-fun arglist
+								     body)
+			,@translator-options)))))
 
 (defmacro define-presentation-action
     (name (from-type to-type command-table &key

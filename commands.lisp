@@ -1009,7 +1009,8 @@
   :inherit-from t)
 
 (define-presentation-method presentation-typep (object (type command-name))
-  (command-accessible-in-command-table-p object command-table))
+  (and (command-accessible-in-command-table-p object command-table)
+       (command-enabled object *application-frame*)))
 
 (define-presentation-method presentation-subtypep ((type command-name)
 						   maybe-supertype)
@@ -1031,7 +1032,12 @@
 				    (view textual-view)
 				    &key)
   (flet ((generator (string suggester)
-	   (map-over-command-table-names suggester command-table)))
+	   (declare (ignore string))
+	   (map-over-command-table-names
+	    (lambda (cline-name command-name)
+	      (when (command-enabled command-name *application-frame*)
+		(funcall suggester cline-name command-name)))
+	    command-table)))
     (multiple-value-bind (object success string)
 	(complete-input stream
 			#'(lambda (so-far mode)
@@ -1147,7 +1153,20 @@
             (position *unsupplied-argument-marker* command)))
 	  (t (values command type)))))
 
-(defmacro define-presentation-to-command-translator
+(defclass presentation-command-translator (presentation-translator)
+  ()
+  (:documentation "Wraps the tester function with a test that
+  determines if the command is enabled."))
+
+(defmethod initialize-instance :after ((obj presentation-command-translator)
+				       &key tester command-name)
+  (setf (slot-value obj 'tester)
+	#'(lambda (&rest args)
+	    (if (command-enabled command-name *application-frame*)
+		(apply tester args)
+		nil))))
+
+(defmacro define-presentation-to-command-translator 
     (name (from-type command-name command-table &key
 	   (gesture :select)
 	   (tester 'default-translator-tester testerp)
@@ -1167,7 +1186,9 @@
 		     ,@(and documentationp `(:documentation ,documentation))
 		     :pointer-documentation ,pointer-documentation
 		     :menu ,menu
-		     :priority ,priority)
+		     :priority ,priority
+		     :translator-class presentation-command-translator
+		     :command-name ',command-name)
        ,arglist
        (let ((,command-args (progn
 			      ,@body)))
