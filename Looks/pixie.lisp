@@ -52,6 +52,46 @@
                      :initform +gray76+
                      :reader pane-background)))
 
+; Convenience
+
+
+(defun draw-up-box (pane x1 y1 x2 y2 foreground)
+  (let ((x2 (- x2 1)))
+    (draw-rectangle* pane x1 y1 x2 y2 :ink foreground)
+    ;; white outline
+    (draw-line* pane x1 y2 x1 y1 :ink +white+)
+    (draw-line* pane x2 y1 x1 y1 :ink +white+)
+    ;; now for the gray inline
+    (let ((x1 (+ x1 2))
+          (y1 (+ y1 2))
+          (x2 (- x2 1))
+          (y2 (- y2 1)))
+      (draw-line* pane x1 y2 (+ x2 1) y2 :ink +gray54+) ; <- not a typo
+      (draw-line* pane x2 y1 x2 (+ y2 1) :ink +gray54+))
+    ;; now for the black outline
+    (draw-line* pane x1 y2 (+ x2 1) y2 :ink +black+)
+    (draw-line* pane x2 y1 x2 (+ y2 1) :ink +black+)
+    (draw-label* pane x1 y1 x2 y2
+                      :ink (pane-inking-color pane))))
+
+(defun draw-down-box (pane x1 y1 x2 y2 foreground)
+  (draw-rectangle* pane x1 y1 x2 y2 :ink foreground)
+  ;; white outline
+  (draw-line* pane x1 y2 x1 y1 :ink +gray58+)
+  (draw-line* pane x2 y1 x1 y1 :ink +gray58+)
+  ;; now for the black inline
+  (let ((x1 (+ x1 1))
+        (y1 (+ y1 1))
+        (x2 (- x2 2))
+        (y2 (- y2 2)))
+    (draw-line* pane x1 y1 (+ x2 1) y1 :ink +black+)
+    (draw-line* pane x1 y1 x1 (+ y2 1) :ink +black+))
+  ;; now for the black outline
+  (draw-line* pane x1 y2 (+ x2 1) y2 :ink +white+)
+  (draw-line* pane x2 y1 x2 (+ y2 1) :ink +white+)
+  (draw-label* pane x1 y1 x2 y2
+               :ink (pane-inking-color pane)))
+
 ; Highlighting (could the defaults be less horrible?)
 
 (defmethod gadget-highlight-background ((gadget pixie-gadget))
@@ -70,20 +110,27 @@
 (defmethod effective-gadget-input-area-color ((gadget pixie-gadget))
   +white+)
 
-; refactor this into some kind of dragging mixin
-(defclass enter/exit-arms/disarms-unless-dragging-mixin () ())
+(defclass draggable-arming-mixin (arm/disarm-repaint-mixin)
+  ()
+  (:documentation
+   "Mixin class for gadgets, which will be armed, when the mouse enters and 
+    disarmed, when the mouse leaves, and manages dragging."))
 
-(defmethod handle-event :before ((pane enter/exit-arms/disarms-unless-dragging-mixin) (event pointer-enter-event))
+(defmethod handle-event :before ((pane draggable-arming-mixin) (event pointer-enter-event))
   (declare (ignorable event))
-  (with-slots (dragging) pane
-    (unless dragging
-      (arm-gadget pane))))
+  (with-slots (armed dragging) pane
+    (if dragging
+        (setf dragging :inside)
+        (unless armed
+          (arm-gadget pane)))))
 
-(defmethod handle-event :after ((pane enter/exit-arms/disarms-unless-dragging-mixin) (event pointer-exit-event))
+(defmethod handle-event :after ((pane draggable-arming-mixin) (event pointer-exit-event))
   (declare (ignorable event))
-  (with-slots (dragging) pane
-    (unless dragging
-      (disarm-gadget pane))))
+  (with-slots (armed dragging) pane
+    (if dragging
+        (setf dragging :outside)
+        (when armed
+          (disarm-gadget pane)))))
 
 ; Slider (refactor into 'thumbed' gadget?)
 
@@ -92,7 +139,7 @@
 (defconstant +pixie-slider-thumb-height+      34)
 (defconstant +pixie-slider-thumb-half-width+   8)
 
-(defclass pixie-slider-pane (pixie-gadget slider-pane arm/disarm-repaint-mixin enter/exit-arms/disarms-mixin)
+(defclass pixie-slider-pane (pixie-gadget draggable-arming-mixin slider-pane)
   ((dragging
     :initform nil)
    (drag-delta
@@ -122,7 +169,10 @@
             (let ((ya (translate-range-value v minv (+ maxv thumb-size) y1 y2))
                   (yb (translate-range-value (+ v thumb-size) minv
                                              (+ maxv thumb-size) y1 y2)))
-              (make-rectangle* x1 ya x2 yb))))))))
+              #-nil
+              (make-rectangle* x1 ya x2 yb)
+              #+nil
+              (make-rectangle* x1 (- ya 1) x2 (+ yb 1)))))))))
 
 (defmethod gadget-bed-region ((pane pixie-slider-pane))
   (with-bounding-rectangle* (minx miny maxx maxy)
@@ -133,24 +183,6 @@
            (maxx       (+ middle +pixie-slider-thumb-half-width+)))
       (make-rectangle* (+ minx 1) (+ miny 1)
                        (- maxx 1) (- maxy 1)))))
-
-(defmethod handle-event ((pane pixie-slider-pane) (event pointer-enter-event))
-  (with-slots (armed dragging) pane
-    (cond
-     ((not armed)
-      (setf armed t)
-      (armed-callback pane (gadget-client pane) (gadget-id pane)))
-     (dragging
-      (setf dragging :inside)))))
-
-(defmethod handle-event ((pane pixie-slider-pane) (event pointer-exit-event))
-  (with-slots (armed dragging) pane
-    (cond
-     (dragging
-      (setf dragging :outside))
-     (armed
-      (setf armed nil)
-      (disarmed-callback pane (gadget-client pane) (gadget-id pane))))))
 
 (defmethod handle-event ((pane pixie-slider-pane) (event pointer-button-release-event))
   (with-slots (armed dragging value bounce-value) pane
@@ -164,19 +196,32 @@
       (dispatch-repaint pane (sheet-region pane)))))
 
 (defmethod handle-event ((pane pixie-slider-pane) (event pointer-button-press-event))
-  (multiple-value-bind (x y) (transform-position (vertical-gadget-orientation-transformation pane)
-                                                 (pointer-event-x event) (pointer-event-y event))
+  (multiple-value-bind (x y)
+      (transform-position (vertical-gadget-orientation-transformation pane)
+                          (pointer-event-x event) (pointer-event-y event))
     (with-slots (armed dragging drag-delta value bounce-value) pane
-      (cond
-        ((region-contains-position-p (gadget-thumb-region pane) x y)
-         ; Thumb
-         (setf dragging     :inside
-               armed        t
-               bounce-value value
-               drag-delta   (- y (bounding-rectangle-min-y (gadget-thumb-region pane)))))
-        (t
-         ; We only care about the thumb
-         nil)))))
+      (let ((thumb (gadget-thumb-region pane)))
+        (cond
+          ((region-contains-position-p thumb x y)
+           ; Thumb
+           (setf dragging     :inside
+                 armed        t
+                 bounce-value value
+                 drag-delta   (- y (bounding-rectangle-min-y thumb))))
+          ((region-contains-position-p (gadget-bed-region pane) x y)
+           ; well, they clicked in the bed, but not on the thumb
+           ; move up or down one notch
+           (cond
+             ((< y (bounding-rectangle-min-y thumb))
+              ; move toward the min
+              (when (> (gadget-value pane) (gadget-min-value pane))
+                (decf (gadget-value pane))
+                (dispatch-repaint pane (sheet-region pane))))
+             ((> y (bounding-rectangle-max-y thumb))
+              ; move toward the max
+              (when (< (gadget-value pane) (gadget-max-value pane))
+                (incf (gadget-value pane))
+                (dispatch-repaint pane (sheet-region pane)))))))))))
 
 (defmethod handle-event ((pane pixie-slider-pane) (event pointer-motion-event))
   (with-slots (dragging drag-delta) pane
@@ -207,52 +252,58 @@
   (declare (ignore region))
   (with-special-choices (pane)
     (let ((tr (vertical-gadget-orientation-transformation pane)))
-      (with-bounding-rectangle* (minx miny maxx maxy) (transform-region tr (sheet-region pane))
-        (with-drawing-options (pane :transformation tr)
-          (with-drawing-options (pane :clipping-region  (transform-region tr
-                                                          (region-difference
-                                                            (sheet-region pane)
-                                                            (gadget-bed-region pane))))
-            (draw-rectangle* pane minx miny maxx maxy :filled t :ink *3d-normal-color*))
-          ;; draw bed
-          (with-bounding-rectangle* (x1 y1 x2 y2) (gadget-bed-region pane)
-            (with-drawing-options (pane :clipping-region  (transform-region tr
-                                                            (region-difference
-                                                              (sheet-region pane)
-                                                              (gadget-thumb-region pane))))
-              (multiple-value-bind (x1 y1 x2 y2) (values (+ x1 1) (+ y1 1)
-                                                         (- x2 1) (- y2 1))
-                (draw-rectangle* pane x1 y1 x2 y2 :ink (pane-background pane)))
-              (draw-bordered-polygon pane
-                                     (polygon-points (make-rectangle* x1 y1 x2 y2))
-                                     :style :inset
-                                     :border-width 1)))
-          ;; draw thumb
-          (with-bounding-rectangle* (x1 y1 x2 y2) (gadget-thumb-region pane)
-            (let ((x2 (- x2 1)))
-              (draw-rectangle* pane x1 y1 x2 y2 :ink (effective-gadget-foreground pane))
-              ;; white outline
-              (draw-line* pane x1 y2 x1 y1 :ink +white+)
-              (draw-line* pane x2 y1 x1 y1 :ink +white+)
-              ;; now for the gray inline
-              (let ((x1 (+ x1 2))
-                    (y1 (+ y1 2))
-                    (x2 (- x2 1))
-                    (y2 (- y2 1)))
-                (draw-line* pane x1 y2 (+ x2 1) y2 :ink +gray58+)
-                (draw-line* pane x2 y1 x2 (+ y2 1) :ink +gray58+))
-              ;; now for the black outline
-              (draw-line* pane x1 y2 (+ x2 1) y2 :ink +black+)
-              (draw-line* pane x2 y1 x2 (+ y2 1) :ink +black+))
-            ;; draw decoration in the thumb
-            (let* ((middle (/ (+ y1 y2) 2))
-                   (y1     (- middle 1))
-                   (y2     middle)
-                   (x1     (+ x1 2))
-                   (x2     (- x2 3)))
-              (draw-line* pane x1 y1 x2 y1       :ink +gray58+)
-              (draw-line* pane x1 y2 (+ x2 1) y2 :ink +white+)
-              (draw-line* pane x2 y1 x2 (+ y2 1) :ink +white+))))))))
+      (let ((transformed-sheet (transform-region tr (sheet-region pane))))
+        (with-bounding-rectangle* (minx miny maxx maxy)
+            transformed-sheet
+          (with-drawing-options (pane :transformation tr)
+            ; This region-difference is a bit weird
+            ; the gadget-bed-region seems to be being transformed by the with-drawing-options
+            ; but the sheet-region itself not, which I guess makes some kind of sense
+            ; -- CHECKME
+            (with-drawing-options (pane :clipping-region (region-difference
+                                                           transformed-sheet
+                                                           (gadget-bed-region pane)))
+              (draw-rectangle* pane minx miny maxx maxy :filled t :ink *3d-normal-color*))
+            ;; draw bed
+            (with-bounding-rectangle* (x1 y1 x2 y2) (gadget-bed-region pane)
+              (with-drawing-options (pane :clipping-region (region-difference
+                                                             transformed-sheet
+                                                             (gadget-thumb-region pane)))
+                (multiple-value-bind (x1 y1 x2 y2) (values (+ x1 1) (+ y1 1)
+                                                           (- x2 1) (- y2 1))
+                  (draw-rectangle* pane x1 y1 x2 y2 :ink (pane-background pane)))
+                (draw-bordered-polygon pane
+                                       (polygon-points (make-rectangle* x1 y1 x2 y2))
+                                       :style :inset
+                                       :border-width 1)))
+            ;; draw thumb
+            (with-bounding-rectangle* (x1 y1 x2 y2) (gadget-thumb-region pane)
+               (draw-up-box pane x1 y1 x2 y2 (effective-gadget-foreground pane))
+               #+nil
+               (let ((x2 (- x2 1)))
+                  (draw-rectangle* pane x1 y1 x2 y2 :ink (effective-gadget-foreground pane))
+                  ;; white outline
+                  (draw-line* pane x1 y2 x1 y1 :ink +white+)
+                  (draw-line* pane x2 y1 x1 y1 :ink +white+)
+                  ;; now for the gray inline
+                  (let ((x1 (+ x1 2))
+                        (y1 (+ y1 2))
+                        (x2 (- x2 1))
+                        (y2 (- y2 1)))
+                    (draw-line* pane x1 y2 (+ x2 1) y2 :ink +gray58+)
+                    (draw-line* pane x2 y1 x2 (+ y2 1) :ink +gray58+))
+                  ;; now for the black outline
+                  (draw-line* pane x1 y2 (+ x2 1) y2 :ink +black+)
+                  (draw-line* pane x2 y1 x2 (+ y2 1) :ink +black+))
+                ;; draw decoration in the thumb
+                (let* ((middle (/ (+ y1 y2) 2))
+                       (y1     (- middle 1))
+                       (y2     middle)
+                       (x1     (+ x1 2))
+                       (x2     (- x2 3)))
+                  (draw-line* pane x1 y1 x2 y1       :ink +gray58+)
+                  (draw-line* pane x1 y2 (+ x2 1) y2 :ink +white+)
+                  (draw-line* pane x2 y1 x2 (+ y2 1) :ink +white+)))))))))
 
 ; Scrollbar
 
@@ -322,7 +373,6 @@
   (declare (ignore client gadget-id))
   (invoke-callback pane (scroll-bar-scroll-down-page-callback pane)))
 
-
 (defmethod scroll-bar-thumb-size ((pane pixie-scroll-bar-pane))
   (gadget-thumb-size pane))
 
@@ -330,92 +380,95 @@
   (setf (gadget-thumb-size pane) value))
 
 (defmethod gadget-up-region ((pane pixie-scroll-bar-pane))
-  (with-bounding-rectangle* (minx miny maxx maxy)
+  (with-bounding-rectangle* (x1 y1 x2 y2)
       (transform-region (vertical-gadget-orientation-transformation pane)
                         (sheet-region pane))
-    (declare (ignore maxy))
-    (make-rectangle* minx miny
-                     maxx (+ miny (- maxx minx)))))
+    (let ((y1 (+ y1 1))
+          (y2 (- y2 1))
+          (x1 (+ x1 1))
+          (x2 (- x2 1)))
+      (declare (ignore y2))
+      (make-rectangle* x1 y1
+                       x2 (+ y1 (- x2 x1))))))
 
 (defmethod gadget-down-region ((pane pixie-scroll-bar-pane))
-  (with-bounding-rectangle* (minx miny maxx maxy)
+  (with-bounding-rectangle* (x1 y1 x2 y2)
       (transform-region (vertical-gadget-orientation-transformation pane)
                         (sheet-region pane))
-    (declare (ignore miny))
-    (make-rectangle* minx (- maxy (- maxx minx))
-                     maxx maxy)))
+    (let ((y1 (+ y1 1))
+          (y2 (- y2 1))
+          (x1 (+ x1 1))
+          (x2 (- x2 1)))
+      (declare (ignore y1))
+      (make-rectangle* x1 (- y2 (- x2 x1))
+                       x2 y2))))
 
 (defmethod gadget-bed-region ((pane pixie-scroll-bar-pane))
   (with-bounding-rectangle* (minx miny maxx maxy)
       (transform-region (vertical-gadget-orientation-transformation pane)
                         (sheet-region pane))
-    (make-rectangle* minx (+ miny (- maxx minx) 1)
-                     maxx (- maxy (- maxx minx) 1))))
+    (make-rectangle* minx (+ miny (- maxx minx) 0)
+                     maxx (- maxy (- maxx minx) 0))))
 
 (defmethod gadget-thumb-region ((pane pixie-scroll-bar-pane))
   (with-bounding-rectangle* (x1 y1 x2 y2) (gadget-bed-region pane)
-    (multiple-value-bind (minv maxv) (gadget-range* pane)
-      (multiple-value-bind (v) (gadget-value pane)
-        (let ((ts (gadget-thumb-size pane)))
-          (let ((ya (translate-range-value v minv (+ maxv ts) y1 y2))
-                (yb (translate-range-value (+ v ts) minv (+ maxv ts) y1 y2)))
-            (make-rectangle* x1 ya x2 yb)))))))
-
-(defmethod handle-event ((pane pixie-scroll-bar-pane) (event pointer-enter-event))
-  (with-slots (armed dragging) pane
-    (cond
-     ((not armed)
-      (setf armed t)
-      (armed-callback pane (gadget-client pane) (gadget-id pane)))
-     (dragging
-      (setf dragging :inside)))))
-
-(defmethod handle-event ((pane pixie-scroll-bar-pane) (event pointer-exit-event))
-  (with-slots (armed dragging) pane
-    (cond
-     (dragging
-      (setf dragging :outside))
-     (armed
-      (setf armed nil)
-      (disarmed-callback pane (gadget-client pane) (gadget-id pane))))))
+    (let ((y1 (+ y1 1))
+          (y2 (- y2 1))
+          (x1 (+ x1 1))
+          (x2 (- x2 1)))
+      (multiple-value-bind (minv maxv) (gadget-range* pane)
+        (multiple-value-bind (v) (gadget-value pane)
+          (let ((ts (gadget-thumb-size pane)))
+            (let ((ya (translate-range-value v minv (+ maxv ts) y1 y2))
+                  (yb (translate-range-value (+ v ts) minv (+ maxv ts) y1 y2)))
+              (make-rectangle* x1 (- ya 1) x2 (+ yb 1)))))))))
 
 (defmethod handle-event ((pane pixie-scroll-bar-pane) (event pointer-button-release-event))
   (with-slots (armed dragging) pane
-    (when dragging
+    (cond
+     (dragging
       (unless (eq dragging :inside)
         (setf armed nil)
         (disarmed-callback pane (gadget-client pane) (gadget-id pane)))
       (setf dragging nil)
-      (dispatch-repaint pane (sheet-region pane)))))
+      (dispatch-repaint pane (sheet-region pane)))
+     (t ; we were pressing on one of the arrows
+      (when armed
+        ; if we were armed, we're still armed, but not :up or :down
+        (setf armed t)
+        (dispatch-repaint pane (sheet-region pane)))))))
 
 (defmethod handle-event ((pane pixie-scroll-bar-pane) (event pointer-button-press-event))
-  (multiple-value-bind (x y) (transform-position (vertical-gadget-orientation-transformation pane)
-                                                 (pointer-event-x event) (pointer-event-y event))
+  (multiple-value-bind (x y)
+      (transform-position
+                (vertical-gadget-orientation-transformation pane)
+                (pointer-event-x event) (pointer-event-y event))
     (with-slots (armed dragging drag-delta) pane
-      (cond
-        ((region-contains-position-p (gadget-up-region pane) x y)
-         ; Up Arrow
-         (scroll-up-line-callback pane (gadget-client pane) (gadget-id pane))
-         (setf (slot-value pane 'armed) :up)
-         (dispatch-repaint pane +everywhere+))
-        ((region-contains-position-p (gadget-down-region pane) x y)
-         ; Down Arrow
-         (scroll-down-line-callback pane (gadget-client pane) (gadget-id pane))
-         (setf (slot-value pane 'armed) :down)
-         (dispatch-repaint pane +everywhere+))
-        ((region-contains-position-p (gadget-thumb-region pane) x y)
-         ; Thumb
-         (setf dragging :inside
-               armed    t
-               drag-delta (- y (bounding-rectangle-min-y (gadget-thumb-region pane)))))
-        ((region-contains-position-p (gadget-bed-region pane) x y)
-         ; Bed
-         (if (< y (bounding-rectangle-min-y (gadget-bed-region pane)))
-             (scroll-up-page-callback pane (gadget-client pane) (gadget-id pane))
-             (scroll-down-page-callback pane (gadget-client pane) (gadget-id pane))))
-        (t
-         ; Nowhere (!)
-         nil)))))
+      (let ((thumb (gadget-thumb-region pane)))
+        (cond
+          ((region-contains-position-p thumb x y)
+           ; Thumb
+           (setf dragging :inside
+                 armed    t
+                 drag-delta (- y (bounding-rectangle-min-y thumb))))
+          ((region-contains-position-p (gadget-up-region pane) x y)
+           ; Up Arrow
+           (scroll-up-line-callback pane (gadget-client pane) (gadget-id pane))
+           (setf (slot-value pane 'armed) :up)
+           (dispatch-repaint pane +everywhere+))
+          ((region-contains-position-p (gadget-down-region pane) x y)
+           ; Down Arrow
+           (scroll-down-line-callback pane (gadget-client pane) (gadget-id pane))
+           (setf (slot-value pane 'armed) :down)
+           (dispatch-repaint pane +everywhere+))
+          ((region-contains-position-p (gadget-bed-region pane) x y)
+           ; Bed
+           (if (< y (bounding-rectangle-min-y thumb))
+               (scroll-up-page-callback pane (gadget-client pane) (gadget-id pane))
+               (scroll-down-page-callback pane (gadget-client pane) (gadget-id pane))))
+          (t
+           ; Nowhere (!)
+           nil))))))
 
 (defmethod handle-event ((pane pixie-scroll-bar-pane) (event pointer-motion-event))
   (with-slots (dragging drag-delta) pane
@@ -429,10 +482,10 @@
                (value (min (gadget-max-value pane)
                            (max (gadget-min-value pane)
                                 (translate-range-value y-new-thumb-top
-                                              (bounding-rectangle-min-y (gadget-bed-region pane))
-                                              (bounding-rectangle-max-y (gadget-bed-region pane))
-                                              (gadget-min-value pane)
-                                              (+ (gadget-max-value pane) ts))))))
+                                   (bounding-rectangle-min-y (gadget-bed-region pane))
+                                   (bounding-rectangle-max-y (gadget-bed-region pane))
+                                   (gadget-min-value pane)
+                                   (+ (gadget-max-value pane) ts))))))
 	  (setf (gadget-value pane :invoke-callback nil) value)
 	  (drag-callback pane (gadget-client pane) (gadget-id pane) value)
 	  (dispatch-repaint pane (sheet-region pane)))))))
@@ -442,58 +495,76 @@
 (defmethod handle-repaint ((pane pixie-scroll-bar-pane) region)
   (declare (ignore region))
   (with-special-choices (pane)
-    (let ((tr (vertical-gadget-orientation-transformation pane)))
-      (with-bounding-rectangle* (minx miny maxx maxy) (transform-region tr (sheet-region pane))
+    (let* ((tr (vertical-gadget-orientation-transformation pane))
+           (transformed-sheet (transform-region tr (sheet-region pane))))
+      (with-bounding-rectangle* (minx miny maxx maxy)
+          transformed-sheet
+        ; draw the bed?
         (with-drawing-options (pane :transformation tr)
-          (draw-rectangle* pane minx miny maxx maxy :filled t
-                           :ink *3d-normal-color*)
-          ;; draw up arrow
-          (with-bounding-rectangle* (x1 y1 x2 y2) (gadget-up-region pane)
-            (let ((pg (list (make-point (/ (+ x1 x2) 2) y1)
-                            (make-point x1 y2)
-                            (make-point x2 y2))))
-              (case (slot-value pane 'armed)
-                (:up
-                 (draw-polygon pane pg :ink *3d-inner-color*)
-                 (draw-bordered-polygon pane pg :style :inset :border-width 2))
-                (otherwise
-                 (draw-polygon pane pg :ink *3d-normal-color*)
-                 (draw-bordered-polygon pane pg :style :outset :border-width 2) ))))
-
-          ;; draw down arrow
-          (with-bounding-rectangle* (x1 y1 x2 y2) (gadget-down-region pane)
-            (let ((pg (list (make-point (/ (+ x1 x2) 2) y2)
-                            (make-point x1 y1)
-                            (make-point x2 y1))))
-              (case (slot-value pane 'armed)
-                (:down
-                 (draw-polygon pane pg :ink *3d-inner-color*)
-                 (draw-bordered-polygon pane pg :style :inset :border-width 2))
-                (otherwise
-                 (draw-polygon pane pg :ink *3d-normal-color*)
-                 (draw-bordered-polygon pane pg :style :outset :border-width 2)))))
-
-          ;; draw thumb
-          (with-bounding-rectangle* (x1 y1 x2 y2) (gadget-thumb-region pane)
-            (draw-rectangle* pane x1 y1 x2 y2 :ink *3d-normal-color*)
+          (let ((gadget-thumb-region (gadget-thumb-region pane))
+                (gadget-down-region  (gadget-down-region pane))
+                (gadget-up-region    (gadget-up-region pane))
+                (gadget-bed-region   (gadget-bed-region pane)))
+            (with-drawing-options (pane :clipping-region (region-difference
+                                                           gadget-bed-region
+                                                           gadget-thumb-region))
+              (multiple-value-bind (x1 y1 x2 y2) (values (+ minx 1) (+ miny 1)
+                                                         (- maxx 1) (- maxy 1))
+                (draw-rectangle* pane x1 y1 x2 y2 :ink (pane-background pane))))
             (draw-bordered-polygon pane
-                                   (polygon-points (make-rectangle* x1 y1 x2 y2))
-                                   :style :outset
-                                   :border-width 2)
-            (let ((y (/ (+ y1 y2) 2)))
-              (draw-bordered-polygon pane
-                                     (polygon-points (make-rectangle* (+ x1 3) (- y 1) (- x2 3) (+ y 1)))
-                                     :style :inset
-                                     :border-width 1)
-              (draw-bordered-polygon pane
-                                     (polygon-points (make-rectangle* (+ x1 3) (- y 4) (- x2 3) (- y 2)))
-                                     :style :inset
-                                     :border-width 1)
-              (draw-bordered-polygon pane
-                                     (polygon-points (make-rectangle* (+ x1 3) (+ y 4) (- x2 3) (+ y 2)))
-                                     :style :inset
-                                     :border-width 1))) )))))
-
+                                   (polygon-points (make-rectangle* minx miny maxx maxy))
+                                   :style :inset
+                                   :border-width 1)
+            ;; draw up arrow
+            (with-bounding-rectangle* (x1 y1 x2 y2) gadget-up-region
+               (if (eq (slot-value pane 'armed) :up)
+                   (draw-down-box pane x1 y1 x2 y2 +gray83+)
+                   (draw-up-box   pane x1 y1 x2 y2 +gray83+))
+                ;; draw decoration in the region
+                ;; for this, we want to have an odd width and height
+                (flet ((oddify (v) (let ((v (floor v))) (if (oddp v) v (+ v 1)))))
+                  (let* ((width  (oddify (- x2 x1)))
+                         (height (oddify (- y2 y1)))
+                         (arrow (list (make-point (floor (/ (+ x1 x2) 2))
+                                                  (floor (+ y1 (* height 5/13))))
+                                      (make-point (floor (+ x1 (* width 4/13)))
+                                                  (floor (- y2 (* height 6/13))))
+                                      (make-point (floor (+ x1 (* width 4/13)))
+                                                  (floor (- y2 (* height 5/13))))
+                                      (make-point (floor (- x2 (* width 4/13)))
+                                                  (floor (- y2 (* height 5/13))))
+                                      (make-point (floor (- x2 (* width 4/13)))
+                                                  (floor (- y2 (* height 6/13)))))))
+                    (draw-polygon pane arrow :filled t :ink +black+))))
+            ; old
+  
+            ;; draw down arrow
+            (with-bounding-rectangle* (x1 y1 x2 y2) gadget-down-region
+               (if (eq (slot-value pane 'armed) :down)
+                   (draw-down-box pane x1 y1 x2 y2 +gray83+)
+                   (draw-up-box   pane x1 y1 x2 y2 +gray83+))
+                ;; draw decoration in the region
+                (flet ((oddify (v) (let ((v (floor v))) (if (oddp v) v (+ v 1)))))
+                  (let* ((width  (oddify (- x2 x1)))
+                         (height (oddify (- y2 y1)))
+                         (arrow (list (make-point (floor (/ (+ x1 x2) 2))
+                                                  (floor (- y2 (* height 5/13))))
+                                      (make-point (floor (+ x1 (* width 4/13)))
+                                                  (floor (+ y1 (* height 6/13))))
+                                      (make-point (floor (+ x1 (* width 4/13)))
+                                                  (floor (+ y1 (* height 5/13))))
+                                      (make-point (floor (- x2 (* width 4/13)))
+                                                  (floor (+ y1 (* height 5/13))))
+                                      (make-point (floor (- x2 (* width 4/13)))
+                                                  (floor (+ y1 (* height 6/13)))))))
+                    (draw-polygon pane arrow :filled t :ink +black+))))
+  
+            ;; draw thumb
+            (with-bounding-rectangle* (x1 y1 x2 y2) gadget-thumb-region
+               (draw-up-box pane x1 y1 x2 y2 (effective-gadget-foreground pane))
+               ;; no thumb decoration
+               )))))))
+  
 ; Menus
 
 (defclass pixie-menu-bar-pane (pixie-gadget menu-bar) ())
@@ -747,36 +818,6 @@
           (cond
            ((or (not pressedp)
                 (eq dragging :outside))
-            (draw-rectangle* pane x1 y1 x2 y2 :ink (effective-gadget-foreground pane))
-            ;; white outline
-            (draw-line* pane x1 y2 x1 y1 :ink +white+)
-            (draw-line* pane x2 y1 x1 y1 :ink +white+)
-            ;; now for the gray inline
-            (let ((x1 (+ x1 2))
-                  (y1 (+ y1 2))
-                  (x2 (- x2 1))
-                  (y2 (- y2 1)))
-              (draw-line* pane x1 y2 (+ x2 1) y2 :ink +gray54+) ; <- not a typo
-              (draw-line* pane x2 y1 x2 (+ y2 1) :ink +gray54+))
-            ;; now for the black outline
-            (draw-line* pane x1 y2 (+ x2 1) y2 :ink +black+)
-            (draw-line* pane x2 y1 x2 (+ y2 1) :ink +black+)
-            (draw-label* pane x1 y1 x2 y2
-                       :ink (pane-inking-color pane)))
+            (draw-up-box pane x1 y1 x2 y2 (effective-gadget-foreground pane)))
            (pressedp
-            (draw-rectangle* pane x1 y1 x2 y2 :ink (pane-background pane))
-            ;; white outline
-            (draw-line* pane x1 y2 x1 y1 :ink +gray58+)
-            (draw-line* pane x2 y1 x1 y1 :ink +gray58+)
-            ;; now for the black inline
-            (let ((x1 (+ x1 1))
-                  (y1 (+ y1 1))
-                  (x2 (- x2 2))
-                  (y2 (- y2 2)))
-              (draw-line* pane x1 y1 (+ x2 1) y1 :ink +black+)
-              (draw-line* pane x1 y1 x1 (+ y2 1) :ink +black+))
-            ;; now for the black outline
-            (draw-line* pane x1 y2 (+ x2 1) y2 :ink +white+)
-            (draw-line* pane x2 y1 x2 (+ y2 1) :ink +white+)
-            (draw-label* pane x1 y1 x2 y2
-                       :ink (pane-inking-color pane)))))))))
+            (draw-down-box pane x1 y1 x2 y2 (effective-gadget-foreground pane)))))))))
