@@ -410,7 +410,7 @@ the incoming selection."))
       (map nil
            (lambda (m)
              (with-slots (record styled-string start end) m
-               (with-slots (y1 y2) record
+	       (with-standard-rectangle* (:y1 y1 :y2 y2) record
                  (if (and old-y2 (>= y1 old-y2))
                      (progn
                        (setf old-y2 nil)
