@@ -151,6 +151,10 @@
       (when (and cursor (cursor-visibility cursor))
 	(climi::flip-screen-cursor cursor)))))
 
+(defmethod output-record-refined-position-test ((record screen-line) x y)
+  (declare (ignore x y))
+  t)
+
 (defclass simple-screen-area (editable-area standard-sequence-output-record)
   ((text-style :accessor text-style :initarg :text-style)
    (vertical-spacing :accessor vertical-spacing :initarg :vertical-spacing)
