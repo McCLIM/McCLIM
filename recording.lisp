@@ -559,15 +559,19 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
            finally (return (values min-x min-y max-x max-y)))))
 
 (def-grecording draw-rectangle (left top right bottom filled)
-  (bounding-rectangle* (make-rectangle* left top right bottom)))
+  ;; FIXME!!! If the rectangle is a line/point, MAKE-RECTANGLE* gives +NOWHERE+,
+  ;; and BOUNDING-RECTANGLE* signals an error.
+  (bounding-rectangle* (transform-region transform
+                                         (make-rectangle* left top right bottom))))
 
 (def-grecording draw-ellipse (center-x center-y
 			      radius-1-dx radius-1-dy radius-2-dx radius-2-dy
 			      start-angle end-angle filled)
-  (bounding-rectangle* (make-ellipse* center-x center-y
-                                      radius-1-dx radius-1-dy radius-2-dx radius-2-dy
-                                      :start-angle start-angle
-                                      :end-angle end-angle)))
+  (bounding-rectangle* (transform-region transform
+                                         (make-ellipse* center-x center-y
+                                                        radius-1-dx radius-1-dy radius-2-dx radius-2-dy
+                                                        :start-angle start-angle
+                                                        :end-angle end-angle))))
 
 (def-grecording draw-text (string point-x point-y start end
 			   align-x align-y toward-x toward-y transform-glyphs)
