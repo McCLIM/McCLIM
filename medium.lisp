@@ -59,6 +59,7 @@
                        :initform (make-text-style :fix :roman :normal)
 		       :accessor medium-default-text-style)
    (sheet :initarg :sheet
+	  :initform nil ; this means that medium is not linked to a sheet
 	  :accessor medium-sheet)
    ))
 
@@ -133,7 +134,8 @@
 
 (defmethod (setf medium-clipping-region) :after (clipping-region (medium medium))
   (declare (ignore clipping-region))
-  (medium-invalidate-cached-device-region (medium-sheet medium)))
+  (when (medium-sheet medium)
+    (medium-invalidate-cached-device-region (medium-sheet medium))))
 
 (defmethod medium-device-region :before ((medium medium))
   (with-slots (device-region) medium
@@ -163,7 +165,8 @@
 
 (defmethod (setf medium-transformation) :after (transformation (medium medium))
   (declare (ignore transformation))
-  (medium-invalidate-cached-device-transformation (medium-sheet medium)))
+  (when (medium-sheet medium)
+    (medium-invalidate-cached-device-transformation (medium-sheet medium))))
 
 (defmethod medium-device-transformation :before ((medium medium))
   (with-slots (device-transformation) medium
