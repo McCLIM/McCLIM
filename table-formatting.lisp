@@ -29,7 +29,7 @@
 (in-package :CLIM-INTERNALS)
 
 ;;; Space specification parsing
-(deftype space () 'coordinate)
+#+ignore(deftype space () 'coordinate)
 
 (defun parse-space (stream specification direction)
   "Returns the amount of space given by SPECIFICATION relating to the
