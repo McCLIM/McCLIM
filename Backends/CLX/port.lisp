@@ -320,9 +320,17 @@
                (progn
                  ,@body)))))))
 
+(defun decode-x-button-code (code)
+  ;; FIXME: X mouse has 5 buttons.
+  (aref #.(vector +pointer-left-button+
+                  +pointer-middle-button+
+                  +pointer-right-button+)
+        (1- code)))
+
 (defun event-handler (&rest event-slots
                       &key display window event-key code state mode time width height x y data count
                       &allow-other-keys)
+  ;; XXX :button code -> :button (decode-x-button-code code)
   (declare (ignorable event-slots))
   (let ((sheet (and window
 		    (port-lookup-sheet *clx-port* window))))
@@ -331,19 +339,21 @@
       (case event-key
 	(:key-press
          (multiple-value-bind (keyname modifier-state) (x-event-to-key-name-and-modifiers display code state)
-           (make-instance 'key-press-event 
+           (make-instance 'key-press-event
              :key-name keyname
              :sheet sheet :modifier-state modifier-state :timestamp time)))
 	(:key-release
          (multiple-value-bind (keyname modifier-state) (x-event-to-key-name-and-modifiers display code state)
-           (make-instance 'key-release-event 
+           (make-instance 'key-release-event
              :key-name keyname
              :sheet sheet :modifier-state modifier-state :timestamp time)))
 	(:button-release
-	 (make-instance 'pointer-button-release-event :pointer 0 :button code :x x :y y
+	 (make-instance 'pointer-button-release-event :pointer 0
+                        :button (decode-x-button-code code) :x x :y y
 			:sheet sheet :modifier-state state :timestamp time))
 	(:button-press
-	 (make-instance 'pointer-button-press-event :pointer 0 :button code :x x :y y
+	 (make-instance 'pointer-button-press-event :pointer 0
+                        :button (decode-x-button-code code) :x x :y y
 			:sheet sheet :modifier-state state :timestamp time))
 	(:enter-notify
 	 (make-instance 'pointer-enter-event :pointer 0 :button code :x x :y y
