@@ -68,7 +68,7 @@ Running the demos
 How to create a Lisp core file
 ------------------------------
 
-In order to run Free-CLIM on CMU CL, you need a Lisp core file that
+In order to run McCLIM on CMU CL, you need a Lisp core file that
 contains:
 
    - CLX, the Common Lisp interface to the X Window System
