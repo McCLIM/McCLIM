@@ -94,9 +94,9 @@
 	    (xlib:gcontext-foreground gc) (X-pixel port ink)
 	    (xlib:gcontext-background gc) (X-pixel port (medium-background medium)))
       (let ((clipping-region (medium-device-region medium)))
-	(unless (eq clipping-region +everywhere+)
+        (unless (eq clipping-region +nowhere+)
           (setf (xlib:gcontext-clip-mask gc :yx-banded)
-                (clipping-region->rect-seq medium clipping-region))))
+                (clipping-region->rect-seq clipping-region))))
       gc)))
 
 (defmethod medium-gcontext ((medium clx-medium) (ink (eql +foreground-ink+)))
@@ -111,14 +111,13 @@
 	  (X-pixel (port medium) (medium-foreground medium)))
     gc))
 
-(defun clipping-region->rect-seq (medium clipping-region)
+(defun clipping-region->rect-seq (clipping-region)
   (loop for region in (nreverse (region-set-regions clipping-region
                                                     :normalize :x-banding))
-        as rectangle = (bounding-rectangle (transform-region (medium-transformation medium) region))
-        nconcing (list (round (rectangle-min-x rectangle))
-                       (round (rectangle-min-y rectangle))
-                       (round (rectangle-width rectangle))
-                       (round (rectangle-height rectangle)))))
+        nconcing (list (round (rectangle-min-x region))
+                       (round (rectangle-min-y region))
+                       (round (rectangle-width region))
+                       (round (rectangle-height region)))))
 
 (defmacro with-CLX-graphics ((medium) &body body)
   `(let* ((port (port ,medium))
