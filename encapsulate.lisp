@@ -24,7 +24,8 @@
   ((stream :reader encapsulating-stream-stream :initarg :stream)))
 
 (defclass standard-encapsulating-stream (encapsulating-stream
-					 fundamental-character-stream)
+					 fundamental-character-input-stream
+					 fundamental-character-output-stream)
   ())
 
 ;;; Macro used by methods for other stream classes that need to respect the
