@@ -35,7 +35,7 @@
 
 ;;; PANES
 
-(defconstant +fill+ :fill)
+(defconstant +fill+ most-positive-fixnum)
 
 (defclass space-requirement ()
   ((width :initform 1
@@ -64,8 +64,11 @@
     (print-unreadable-object (space stream :type t :identity t)
       (format stream "width: ~S height: ~S" width height))))
 
-(defun make-space-requirement (&key (width 1) (max-width 1) (min-width 1)
-				    (height 1) (max-height 1) (min-height 1))
+(defun make-space-requirement (&key (width 1) (height 1)
+				    (min-width 0) (min-height 0)
+				    (max-width +fill+) (max-height +fill+))
+  (assert (<= 0 min-width width max-width) (min-width width max-width))
+  (assert (<= 0 min-height height max-height) (min-height height max-height))
   (make-instance 'space-requirement
     :width width
     :max-width max-width
@@ -230,9 +233,7 @@
 
 (defmethod compose-space ((pane pane))
   (make-space-requirement :width 200
-			  :max-width 200
-			  :height 200
-			  :max-height 200))
+			  :height 200))
 
 (defmethod compose-space :around ((pane pane))
   (with-slots (sr-width sr-height sr-max-width
@@ -916,8 +917,7 @@ During realization the child of the spacing will have as cordinates
 (defclass bboard-pane (composite-pane) ())
 
 (defmethod compose-space ((bboard bboard-pane))
-  (make-space-requirement :width 300 :max-width 300 :min-width 300
-			  :height 300 :max-height 300 :min-height 300))
+  (make-space-requirement :width 300 :height 300))
 
 ;;; VIEWPORT
 
@@ -1153,8 +1153,7 @@ During realization the child of the spacing will have as cordinates
   (dispatch-repaint pane (sheet-region pane)))
 
 (defmethod compose-space ((pane clim-stream-pane))
-  (make-space-requirement :width 300 :height 300
-			  :max-width 300 :max-height 300))
+  (make-space-requirement :width 300 :height 300))
 
 (defmethod dispatch-repaint ((pane clim-stream-pane) region)
   (repaint-sheet pane region))
