@@ -63,12 +63,12 @@
   (declare (ignore gadget))
   (with-slots (state) *application-frame*
     (setf state (list 0)))
-  (show 0)))
+  (show 0))
 
 (defun initce (gadget)
   (declare (ignore gadget))
-  (when (numberp (first state))
-    (with-slots (state) *application-frame*
+  (with-slots (state) *application-frame*
+    (when (numberp (first state))
       (pop state))
     (show 0)))
       
