@@ -445,7 +445,7 @@ If there are no named panes, only the single, top level pane is returned."))
 		    if (not (member key '(:pretty-name :frame-manager :enable :state
 					  :left :top :right :bottom :width :height :save-under
 					  :frame-class)
-				    :key #'eq))
+				    :test #'eq))
 		       nconc (list key value)))
   (if (null frame-class)
       (setq frame-class frame-name))
