@@ -214,6 +214,20 @@
 	      :accessor stream-drawing-p)
    ))
 
+(defmacro with-output-recording-options ((stream &key (record t) (draw t)) &body body)
+  (let ((old-record (gensym))
+	(old-draw (gensym)))
+    `(with-slots (recording-p drawing-p) ,stream
+       (let ((,old-record recording-p)
+	     (,old-draw drawing-p))
+	 (unwind-protect
+	     (progn
+	       (setq recording-p ,record
+		     drawing-p ,draw)
+	       ,@body)
+	   (setq recording-p ,old-record
+		 drawing-p ,old-draw))))))
+
 (defmethod scroll-vertical :around ((stream stream-output-history-mixin) dy)
   (declare (ignore dy))
   (with-output-recording-options (stream :record nil)
@@ -272,20 +286,6 @@
   (
    ))
 
-(defmacro with-output-recording-options ((stream &key (record t) (draw t)) &body body)
-  (let ((old-record (gensym))
-	(old-draw (gensym)))
-    `(with-slots (recording-p drawing-p) ,stream
-       (let ((,old-record recording-p)
-	     (,old-draw drawing-p))
-	 (unwind-protect
-	     (progn
-	       (setq recording-p ,record
-		     drawing-p ,draw)
-	       ,@body)
-	   (setq recording-p ,old-record
-		 drawing-p ,old-draw))))))
-
 
 ;;; graphics and text recording classes
 
@@ -315,7 +315,7 @@
 	(class-name (intern (format nil "~A-OUTPUT-RECORD" name)))
 	(old-medium (gensym))
 	(new-medium (gensym)))
-    `(eval-when (eval load compile)
+    `(progn
        (defclass ,class-name (graphics-displayed-output-record)
 	 ,(compute-class-vars args))
        (defmethod initialize-instance :after ((graphic ,class-name) &rest args)

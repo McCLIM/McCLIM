@@ -516,8 +516,6 @@
 
 ;; SCROLL-BAR-PANE
 
-(defparameter *scrollbar-thickness* 12)
-
 (defclass scroll-bar-pane (basic-pane scroll-bar)
   ((orientation :initform :vertical
 		:initarg :orientation

@@ -159,11 +159,11 @@
 
 (defun find-pane-of-type (panes type)
   (setq panes (copy-list panes))
-  (loop for pane in panes
-	if (typep pane type)
-	   return pane
-	do (setq panes (nconc panes (copy-list (sheet-children pane))))
-	finally (return nil)))
+  (do ((pane (pop panes)(pop panes)))
+      ((null pane) nil)
+    (if (typep pane type)
+ 	(return pane)
+      (setq panes (nconc panes (copy-list (sheet-children pane)))))))
 	      
 (defmethod frame-standard-output ((frame application-frame))
   (or (find-pane-of-type (frame-panes frame) 'application-pane)
@@ -220,17 +220,18 @@
 	(*partial-command-parser* partial-command-parser)
 	(prompt-style (make-text-style :fixed :italic :normal))
 	results)
-    (setf (cursor-visibility (stream-text-cursor *standard-input*)) t)
-    (loop do
-	  (with-text-style (*standard-input* prompt-style)
-	    (if (stringp prompt)
-		(stream-write-string *standard-input* prompt)
-	      (apply prompt (list *standard-input* frame))))
-	  (setq results (multiple-value-list (execute-frame-command frame (read-frame-command frame *standard-input*))))
-	  (loop for result in results
-		do (print result *standard-input*))
-	  (terpri *standard-input*))
-    ))
+    (when *standard-input*
+      (setf (cursor-visibility (stream-text-cursor *standard-input*)) t)
+      (loop do
+		(with-text-style (*standard-input* prompt-style)
+		  (if (stringp prompt)
+		      (stream-write-string *standard-input* prompt)
+		    (apply prompt (list *standard-input* frame))))
+		(setq results (multiple-value-list (execute-frame-command frame (read-frame-command frame *standard-input*))))
+		(loop for result in results
+		      do (print result *standard-input*))
+		(terpri *standard-input*))
+      )))
 
 (defmethod read-frame-command ((frame application-frame) stream)
   (read-command (frame-command-table frame) :stream stream))

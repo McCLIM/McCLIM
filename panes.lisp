@@ -235,7 +235,7 @@
 
 (defmethod note-space-requirements-changed ((sheet composite-pane) (pane composite-pane))
   (unless (eq sheet (sheet-parent pane))
-    (error sheet-is-not-child))
+    (error 'sheet-is-not-child))
   (note-space-requirements-changed (sheet-parent sheet) pane))
 
 ;;; SINGLE-CHILD-COMPOSITE PANE
@@ -771,6 +771,8 @@
 
 
 ;; SCROLLER-PANE
+
+(defparameter *scrollbar-thickness* 12)
 
 (defclass scroller-pane (composite-pane)
   ((scroll-bar :type (member '(t :vertical :horizontal))
