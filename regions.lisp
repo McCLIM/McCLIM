@@ -4,6 +4,7 @@
 ;;;   Created: 1998-12-02 19:26
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
+;;;       $Id: regions.lisp,v 1.8 2001/01/21 12:01:55 cvs Exp $
 ;;; --------------------------------------------------------------------------------------
 ;;;  (c) copyright 1998,1999 by Gilbert Baumann
 
@@ -21,6 +22,13 @@
 ;;; License along with this library; if not, write to the 
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
+
+;;;; Changes
+
+;;;  When        Who    What
+;;; --------------------------------------------------------------------------------------
+;;;  2001-01-21  GB     fixed bug in (TRANSFORM-REGION T RECTANGLE-SET)
+;;;                     added some documentation
 
 ;;; ---- TODO ----------------------------------------------------------------------------
 
@@ -879,8 +887,32 @@
 ;;; ---- Rectangle Sets ---------------------------------------------------------------------------------
 
 (defclass standard-rectangle-set (region-set bounding-rectangle)
-  ((bands :initarg :bands :reader standard-rectangle-set-bands)
-   (bounding-rectangle :initform nil)))
+  ((bands
+    ;; Represents the set of rectangles. This is list like:
+    ;;
+    ;;  ((<y_1> . <x_band_1>)        
+    ;;   (<y_2> . <x_band_2>) 
+    ;;   :
+    ;;   (<y_n>))
+    ;;
+    ;; <x_band_i> := (x_i_1 u_i_1  x_i_2 u_i_2 ... x_i_m u_i_m)
+    ;;
+    ;; Now a point (x,y) is member of the rectangle set, if there is an
+    ;; i, such that y member of [y_i, y_(i+1)] and x member of x_band_i.
+    ;;
+    ;; An x is member of an band i, if there is an j, such that x
+    ;; member [x_i_j, u_i_j].
+    ;;
+    ;; That is <x_band_i> describes the possible x-coordinates in the
+    ;; y-range [y_i, y_(i+1)].
+    ;;
+    :initarg :bands
+    :reader  standard-rectangle-set-bands)
+   ;;
+   (bounding-rectangle 
+    ;; Caches the regions bounding-rectangle. Is either NIL or the
+    ;; bounding-rectangle, represented by a list (x1 y1 x2 y2).
+    :initform nil)))
 
 (defmethod map-over-region-set-regions (fun (self standard-rectangle-set) &key normalize)
   (with-slots (bands) self
@@ -1124,23 +1156,25 @@
 
 (defmethod transform-region (tr (self standard-rectangle-set))
   (cond ((rectilinear-transformation-p tr)
+         ;; When we have a rectilinear transformation, the result will
+         ;; be another rectangle set; we simply can transform each X
+         ;; and Y coordinate individually.
          (make-standard-rectangle-set
-	  (mapcar (lambda (b)
-		    (multiple-value-bind (x y) (transform-position 0 (car b))
-		      (declare (ignore x))
-		      (cons y (mapcar (lambda (i)
-					(multiple-value-bind (x y)
-					    (transform-position i)
-					  (declare (ignore y))
-					  x))
-				      (cdr b)))))
-		  (standard-rectangle-set-bands self))))
+	  (mapcar (lambda (band)
+                    ;; band = (<y> <x1> <x2> .. <xn>)
+                    (cons (nth-value 1 (transform-position tr 0 (car band)))
+                          (mapcar (lambda (x)
+                                    (nth-value 0 (transform-position tr x 0)))
+                                  (cdr band))))
+                  (standard-rectangle-set-bands self))))
         (t
+         ;; We have insufficient knowledge about the transformation,
+         ;; so we have to take the union of all transformed rectangles.
+         ;; Maybe there is a faster way to do this.
          (let ((res +nowhere+))
-           ;; das kann mach noch optimieren..
            (map-over-region-set-regions
-	    (lambda (r)
-	      (setf res (region-union res (transform-region tr r))))
+	    (lambda (rect)
+	      (setf res (region-union res (transform-region tr rect))))
 	    self)
            res)) ))
 
