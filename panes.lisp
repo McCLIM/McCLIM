@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.144 2004/11/12 06:39:15 hefner1 Exp $
+;;; $Id: panes.lisp,v 1.145 2004/11/21 00:01:21 gilbert Exp $
 
 (in-package :clim-internals)
 
@@ -1006,8 +1006,7 @@ order to produce a double-click")
     :accessor box-layout-orientation)
    (clients
     :accessor box-layout-mixin-clients
-    :initform nil)
-   )
+    :initform nil) )
   (:documentation
    "Mixin class for layout panes, which want to behave like a HBOX/VBOX."))
 
@@ -1221,6 +1220,22 @@ order to produce a double-click")
   ;; hmmm
   (when (panep (sheet-parent pane))
     (change-space-requirements pane)) )
+
+(defmethod reorder-sheets :after ((pane box-layout-mixin) new-order)
+  ;; Bring the order of the clients in sync with the new order of the
+  ;; children.
+  (setf new-order (reverse new-order))
+  (let ((new-bcs
+         (loop for bc in (box-layout-mixin-clients pane)
+               collect
+               (cond ((box-client-pane bc)
+                      (find (pop new-order) (box-layout-mixin-clients pane) :key #'box-client-pane))
+                     (t
+                      bc)))))
+    (assert (null (set-difference new-bcs (box-layout-mixin-clients pane))))
+    (setf (box-layout-mixin-clients pane) new-bcs))
+  ;; finally do a re-layout.
+  (change-space-requirements pane) )
 
 ;;;;
 
