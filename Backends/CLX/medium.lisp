@@ -301,7 +301,8 @@
 	   (setf (xlib:gcontext-ts-x gc) gc-x
                (xlib:gcontext-ts-y gc) gc-y
                (xlib:gcontext-clip-x gc) gc-x
-               (xlib:gcontext-clip-y gc) gc-y))))
+               (xlib:gcontext-clip-y gc) gc-y)
+	   gc)))
       (t
        (error "You lost, we not yet implemented transforming an ~S."
               (type-of ink))))))
@@ -514,8 +515,6 @@
     (with-transformed-position (tr left top)
       (with-transformed-position (tr right bottom)
         (with-clx-graphics (medium)
-	   #+nil (when (typep mirror 'xlib:pixmap)
-		  (break))
           (if (< right left)
               (rotatef left right))
           (if (< bottom top)
@@ -524,14 +523,14 @@
                 (top    (round-coordinate top))
                 (right  (round-coordinate right))
                 (bottom (round-coordinate bottom)))
-            ;; To clip rectangles, we just need to clamp the cooridnates
+            ;; To clip rectangles, we just need to clamp the
+	    ;; coordinates
             (xlib:draw-rectangle mirror gc
                                  (max #x-8000 (min #x7FFF left))
                                  (max #x-8000 (min #x7FFF top))
                                  (max 0 (min #xFFFF (- right left)))
                                  (max 0 (min #xFFFF (- bottom top)))
-                                 filled)
-	    ))))))
+                                 filled)))))))
 
 #+CLX-EXT-RENDER
 (defmethod medium-draw-rectangle-using-ink* ((medium clx-medium) (ink climi::uniform-compositum)
