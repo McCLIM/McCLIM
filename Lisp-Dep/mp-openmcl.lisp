@@ -41,7 +41,10 @@
   ccl:*current-process*)
 
 (defun all-processes ()
-  ccl:*all-processes*)
+  #-openmcl-native-threads
+  ccl:*all-processes*
+  #+openmcl-native-threads
+  (ccl:all-processes))
 
 (defun processp (object)
   (typep object 'ccl::process))
@@ -70,10 +73,17 @@
   (ccl:process-interrupt process function))
 
 (defun disable-process (process)
-  (ccl:process-enable-arrest-reason process 'suspend))
+  #-openmcl-native-threads
+  (ccl:process-enable-arrest-reason process 'suspend)
+  #+openmcl-native-threads
+  (ccl:process-suspend process))
 
 (defun enable-process (process)
-  (ccl:process-disable-arrest-reason process 'suspend))
+  #-openmcl-native-threads
+  (ccl:process-disable-arrest-reason process 'suspend)
+  #+openmcl-native-threads
+  (ccl:process-enable process))
+
 
 (defun restart-process (process)
   (ccl:process-reset process) )
@@ -97,25 +107,30 @@
 
 #+openmcl-native-threads
 (defmacro atomic-incf (place)
-   `(ccl::atomic-incf ,place))
+  `(ccl::atomic-incf ,place))
 
 #+openmcl-native-threads
 (defmacro atomic-decf (place)
-   `(ccl::atomic-decf ,place))
+  `(ccl::atomic-decf ,place))
+      
+
 ;;; 32.3 Locks
 
 (defun make-lock (&optional name)
   (ccl:make-lock name))
 
 (defmacro with-lock-held ((place &optional state) &body body)
+  #-openmcl-native-threads
   `(ccl:with-lock-grabbed (,place 'ccl:*current-process*
 				  ,@(if state (list state) nil))
-			  ,@body))
+			  ,@body)
+  #+openmcl-native-threads
+  `(ccl:with-lock-grabbed (,place  ,@(if state (list state) nil))
+    ,@body))
 
 (defun make-recursive-lock (&optional name)
   (ccl:make-lock name))
 
 (defmacro with-recursive-lock-held ((place &optional state) &body body)
-  `(ccl:with-lock-grabbed (,place 'ccl:*current-process*
-				  ,@(if state (list state) nil))
-			  ,@body))
+  `(with-lock-held (,place   ,@(if state (list state) nil)) ,@body))
+
