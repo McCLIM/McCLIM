@@ -145,6 +145,18 @@ structure objects."
   (let ((class (class-of object)))
     (inspector-table
      (print (class-name class) pane)
+     (when (clim-mop:class-direct-superclasses class)
+       (inspector-table-row
+	(format pane "Superclasses")
+	(dolist (superclass (clim-mop:class-direct-superclasses class))
+	  (inspect-object superclass pane)
+	  (terpri pane))))
+     (when (clim-mop:class-direct-subclasses class)
+       (inspector-table-row
+	(format pane "Subclasses")
+	(dolist (subclass (clim-mop:class-direct-subclasses class))
+	  (inspect-object subclass pane)
+	  (terpri pane))))
      (loop for slot in (reverse (clim-mop:class-slots class))
 	   do (let ((slot-name (clim-mop:slot-definition-name slot)))
 		(inspector-table-row
@@ -153,10 +165,21 @@ structure objects."
 		   (format pane "~a:" slot-name))
 		 (inspect-object (slot-value object slot-name) pane)))))))
 
+(defparameter *object-representation-max-length* 60
+  "Maximum number of characters of an object's textual representation
+that are allowed before abbreviation kicks in")
+
+;; Try to print the normal, textual representation of an object, but
+;; if that's too long, make an abbreviated "instance of ~S" version.
 (defmethod inspect-object-briefly ((object standard-object) pane)
   (with-output-as-presentation
       (pane object (presentation-type-of object))
-    (format pane "instance of ~S" (class-name (class-of object)))))
+    (let ((representation (with-output-to-string (string)
+			    (prin1 object string))))
+      (if (< (length representation) *object-representation-max-length*)
+	  (princ representation pane)
+	  (format pane "instance of ~S" (class-name (class-of object)))))))
+
 (defmethod inspect-object ((object standard-object) pane)
   (inspect-structure-or-object object pane))
 
@@ -172,7 +195,7 @@ moderately-sized list."
 	(formatting-column (pane)
 	  (formatting-cell (pane)
             (with-output-as-presentation
-                (pane object (presentation-type-of object))
+                (pane object 'cons)
               (draw-rectangle* pane 0 0 20 10 :filled nil))
 	    (draw-line* pane 10 0 10 10)
 	    (draw-arrow* pane 5 5 5 30)
@@ -186,7 +209,7 @@ moderately-sized list."
 	      (formatting-column (pane)
 		(formatting-cell (pane)
 		  (with-output-as-presentation
-		      (pane object (presentation-type-of object))
+		      (pane object 'cons)
 		    (draw-rectangle* pane 0 0 20 10 :filled nil))
 		  (draw-line* pane 10 0 10 10)
 		  (draw-arrow* pane 5 5 5 30)
@@ -260,7 +283,11 @@ list as interactive as you would expect."
                    (print (method-qualifiers method)))
                  (loop for specializer in (clim-mop:method-specializers method)
                     do (formatting-cell (pane)
-                         (format pane "~s " (class-name specializer)))))))))
+                         (format pane "~a "
+				 (if (typep specializer
+					    'clim-mop:eql-specializer)
+				     "EQL specializer" ; FIXME: says nothing
+				     (class-name specializer))))))))))
 
 (defun pretty-print-function (fun)
   "Print a function in a readable way, returning a string. On most
@@ -401,7 +428,7 @@ them."
        (princ "propery list:")
        (dolist (property (symbol-plist object))
          (inspect-object property pane)))))
-(make-instance 'packrat)
+
 ;; Characters are so short that displaying them as "..."  takes almost
 ;; as much space as just showing them, and this way is more
 ;; informative.
@@ -437,8 +464,11 @@ them."
 
 (define-inspector-command (com-set-slot :name t)
     ((slot 'settable-slot :gesture :select :prompt "Set slot"))
-  (setf (slot-value (car slot) (cdr slot))
-	(accept t :prompt "New slot value")))
+  (handler-case (setf (slot-value (car slot) (cdr slot))
+		      (accept t :prompt "New slot value"))
+    (simple-parse-error ()
+      (format (get-frame-pane *application-frame* 'int)
+	      "~&Command canceled; slot value not set~%"))))
 
 (defun slot-documentation (class slot)
   "Returns the documentation of a slot of a class, or nil. There is,
@@ -462,7 +492,8 @@ available in direct slots."
   (destructuring-bind (object . slot-name) slot
     (let* ((stream (get-frame-pane *application-frame* 'int))
 	   (class (class-of object))
-	   (documentation (slot-documentation class slot-name))
+	   (documentation (handler-bind ((warning #'muffle-warning))
+			    (slot-documentation class slot-name)))
 	   (slot-object (find slot-name (clim-mop:class-slots class)
 			      :key #'clim-mop:slot-definition-name)))
       (when documentation
