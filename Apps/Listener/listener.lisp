@@ -73,8 +73,9 @@
       (format T "Package ")
       (print-package-name T)
       (stream-increment-cursor-position pane 60 nil)
-      (with-output-as-presentation (T (truename *default-pathname-defaults*) 'pathname)
-        (format T "~A" (frob-pathname *default-pathname-defaults*)))      
+      (when (probe-file *default-pathname-defaults*)
+        (with-output-as-presentation (T (truename *default-pathname-defaults*) 'pathname)
+          (format T "~A" (frob-pathname *default-pathname-defaults*))))
       (when *directory-stack*
         (with-output-as-presentation (T *directory-stack* 'directory-stack)
           (stream-increment-cursor-position pane 16 0)                                
