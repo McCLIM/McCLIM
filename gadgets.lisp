@@ -400,7 +400,7 @@
 	    x1 1
 	    y2 (- y2 y1 1)
 	    y1 1)
-      (define-gadget-color pane)
+      (define-gadget-color pane x1 y1 x2 y2)
       (if (or (gadget-value pane) (eql armed ':button-press))
 	  (progn
 	    (draw-line* pane x1 y1 x2 y1 :ink +black+)
@@ -639,7 +639,6 @@
 				    :children (list ,gadget))))
        (stream-add-output-record ,stream ,gadget-output-record)
        ,gadget)))
-
 
 
 
