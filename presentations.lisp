@@ -41,7 +41,8 @@
 		 :initform *allow-sensitive-inferiors*)))
 
 
-(defclass standard-presentation (presentation-mixin output-record)
+(defclass standard-presentation 
+    (presentation-mixin standard-sequence-output-record)
   ())
 
 (defgeneric ptype-specializer (type)

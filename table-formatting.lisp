@@ -212,7 +212,7 @@ to a table cell within the row."))
 
 (defmethod map-over-row-cells (function
                                (row-record standard-row-output-record))
-  (map-over-output-records-overlaping-region
+  (map-over-output-records-overlapping-region
    #'(lambda (record)
        (when (cell-output-record-p record) (funcall function record)))
    row-record +everywhere+))
@@ -275,7 +275,7 @@ corresponding to a table cell within the column."))
 
 (defmethod map-over-column-cells (function
                                   (column-record standard-column-output-record))
-  (map-over-output-records-overlaping-region
+  (map-over-output-records-overlapping-region
    #'(lambda (record)
        (when (cell-output-record-p record) (funcall function record)))
    column-record +everywhere+))
@@ -366,7 +366,7 @@ list BLOCK-INFOS or vector SIZES."))
 (defmethod map-over-table-elements (function
                                     (table-record standard-table-output-record)
                                     type)
-  (map-over-output-records-overlaping-region
+  (map-over-output-records-overlapping-region
    #'(lambda (record)
        (when (or
               (and (row-output-record-p record)

@@ -178,3 +178,8 @@ Note:
        (lambda (&rest more)
          (declare (ignore more))
          ,g))))
+
+;;; Convenience macros
+
+(define-modify-macro maxf (&rest args) max)
+(define-modify-macro minf (&rest args) min)

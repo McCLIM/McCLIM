@@ -32,8 +32,27 @@
 be, on the screen")
    (ascent :accessor ascent :initarg :ascent)
    (decent :accessor decent :initarg :decent)
-   (baseline :accessor baseline :initarg :baseline)))
+   (baseline :accessor baseline :initarg :baseline)
+   (x :initarg :x-position :initform 0)
+   (y :initarg :y-position :initform 0)
+   (parent :initarg :parent :initform nil :reader output-record-parent)
+   (width :accessor width :initarg :width)))
 
+(defmethod output-record-position ((record screen-line))
+  (values (slot-value record 'x) (slot-value record 'y)))
+
+(defmethod* (setf output-record-position) (nx ny (record screen-line))
+  (setf (values (slot-value record 'x) (slot-values record 'y))
+	(values nx ny)))
+
+(defmethod bounding-rectangle* ((record screen-line))
+  (let ((x (slot-value record 'x))
+	(y (slot-value record 'y)))
+    (values x
+	    y
+	    (+ x (slot-value record 'width))
+	    (+ y (slot-value record 'ascent) (slot-value record
+							 'decent)))))
 
 (defmethod map-over-output-records-overlapping-region
 	   (function (line screen-line) region
@@ -64,6 +83,28 @@ be, on the screen")
   ((text-style :accessor text-style :initarg :text-style)
    (vertical-spacing :accessor vertical-spacing :initarg :vertical-spacing)))
 
+(defmethod initialize-instance :after ((area simple-screen-area)
+				       &key stream)
+  (when (not (slot-boundp area 'text-style))
+    (if stream
+	(setf (text-style area) (medium-text-style stream))
+	(error "One of :text-style or :stream must be specified.")))
+  (when (not (slot-boundp area 'vertical-spacing))
+    (if stream
+	(setf (vertical-spacing area) (stream-vertical-spacing stream))
+	(error "One of :vertical-spacing or :stream must be specified.")))
+  (initialize-area-from-buffer (buffer area)))
+
+(defmethod output-record-children (area simple-screen-area)
+  (loop for line = (lines area) then (next line)
+	while line
+	collect line))
+(defmethod map-over-output-records-containing-position
+    (fn (area simple-screen-area) x y &optional (x-offset 0) (y-offset 0)
+	&rest fn-args)
+  (loop for line = (lines area)
+	while line
+	do (when region-contains-position-p)))
 
 (defmethod initialize-area-from-buffer ((area simple-screen-area) buffer)
   ;; XXX Stupid, but eventually will be different per line.
@@ -90,6 +131,14 @@ be, on the screen")
 		  while buffer-line
 		  do (dbl-insert-after area-line prev-area-line))))))
   area)
+
+(defmethod redisplay ((area clim-area) stream)
+  (loop for line = (lines area) then (next line)
+	do (multiple-value-bind (line-changed dimensions-changed)
+	       (maybe-update-line-dimensions line)
+	     (declare (ignore dimensions-changed)) ;XXX
+	     (when line-changed
+	       (redisplay-line line stream)))))
 
 (defmethod compare-contents ((line screen-line))
   (with-slots (current-contents
@@ -119,7 +168,6 @@ be, on the screen")
 				      i
 				      common-beginning
 				      j)))))))
-
 
 ;;; Two steps to redisplaying a line: figure out if the
 ;;; ascent/decent/baseline have changed, then render the line, incrementally
@@ -212,21 +260,3 @@ origin)"
 			 :ink (medium-background medium)
 			 :filled t)))))
 
-
-(defmethod redisplay-window ((pane goatee-pane) region)
-  (declare (ignore region))
-  (with-sheet-medium (medium pane)
-    (let ((line-dy (+ (text-style-height (text-style pane) medium)
-			     (vertical-spacing pane)))
-	  (region (sheet-region pane)))
-      (multiple-value-bind (x1 y1 x2 y2)
-	  (bounding-rectangle* (sheet-region pane))
-	(draw-rectangle* pane 0 0 (- x2 x1) (- y2 y1)
-			 :ink (gadget-current-color pane) :filled t)
-	(loop for line-dbl = (dbl-head (lines pane)) then (next line-dbl)
-	      while line-dbl
-	      for line = (contents line-dbl)
-	      for y = 0 then (+ y line-dy)
-	      do (draw-text* pane (chars line)
-			     0 y
-			     :align-y :top))))))
