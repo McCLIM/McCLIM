@@ -82,7 +82,7 @@
   (setf (slot-value frame 'text-field)
 	(find-if #'(lambda (gadget) (typep gadget 'text-field-pane))
 		 (frame-panes frame)))
-  (loop (event-read (frame-pane frame))))
+  (loop (event-read (climi::frame-pane frame))))
      
 (defun make-button (label operator 
 		    &key width height

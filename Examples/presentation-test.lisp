@@ -35,6 +35,7 @@
 	(*standard-input* (frame-standard-input frame))
 	(*print-pretty* nil))
     (setf (cursor-visibility (stream-text-cursor *standard-input*)) t)
+    (present "Hallo" 'string)
     (loop
      (present (summation-total frame) 'real)
      (fresh-line)

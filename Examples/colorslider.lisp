@@ -68,7 +68,7 @@
   (setq pane (first (frame-panes frame)))
   (setq medium (sheet-medium pane))
   (setq graft (graft frame))
-  (setq vbox (frame-pane frame))
+  (setq vbox (climi::frame-pane frame))
   (run-frame-top-level frame))
 
 (defmethod slidertest-frame-top-level ((frame application-frame)
@@ -78,13 +78,14 @@
 					'command-line-read-remaining-arguments-for-partial-command)
 				       (prompt "Command: "))
   (declare (ignore command-parser command-unparser partial-command-parser prompt))
-  (loop (event-read (frame-pane frame))))
+  (loop (event-read (climi::frame-pane frame))))
 
 (define-application-frame colorslider () ()
   (:panes
    (text    :text-field
 	    :value "Pick a color"
-	    :height 50)
+	    :height 50
+            :width 100)
    (slider-r  :slider
 	      :drag-callback callback-red
 	      :value-changed-callback callback-red
@@ -92,7 +93,7 @@
 	      :max-value 9999
 	      :value 0
 	      :show-value-p t
-	      :orientation :horizontal
+	      ;;:orientation :horizontal
 	      :width 120)
    (slider-g  :slider
 	      :drag-callback callback-green
@@ -112,5 +113,11 @@
             :normal +black+
             :width 200 :height 90))
   (:layouts
-   (default (vertically () text (horizontally () slider-r slider-g slider-b colored))))
+   (default (vertically ()
+                        text
+                        (horizontally ()
+                                      slider-r
+                                      slider-g
+                                      slider-b
+                                      colored))))
   (:top-level (slidertest-frame-top-level . nil)))

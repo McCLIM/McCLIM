@@ -401,5 +401,5 @@
           (find-if #'(lambda (pane) (typep pane 'text-field-pane))
                    (frame-panes frame)))
     (catch 'exit
-      (loop (read-command (frame-pane frame))))
-    (destroy-port (climi::port frame))))
+      (loop (read-command (climi::frame-pane frame))))
+    (destroy-port (port frame))))
