@@ -171,7 +171,13 @@
 (defgeneric medium-line-style (medium))
 (defgeneric medium-text-style (medium))
 (defgeneric medium-default-text-style (medium))
-(defgeneric text-size (medium string &key text-style start end))
+(defgeneric text-size (medium string &key text-style start end)
+  (:documentation
+   "Computes the \"cursor motion\" in device units that would take
+place if STRING were output to MEDIUM starting at position (0,0).
+
+Returns total width, total height, final x cursor position, final y
+cursor position, baseline."))
 
 (defgeneric (setf medium-foreground) (new-value medium))
 (defgeneric (setf medium-background) (new-value medium))
