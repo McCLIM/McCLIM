@@ -60,3 +60,13 @@
         (stream-cursor-position stream)
       (draw-pattern* stream pattern x y)
       (stream-increment-cursor-position stream (+ (pattern-width pattern) extra-spacing) 0))))
+
+(defun precache-icons ()
+  (let ((pathnames (remove-if #'directoryp
+                              (directory (strip-filespec *icon-path*)))))
+    (dolist (pn pathnames)
+      (standard-icon (namestring (make-pathname :name (pathname-name pn)
+                                                :type (pathname-type pn)))))))
+
+(eval-when (:load-toplevel :execute)
+  (precache-icons))
