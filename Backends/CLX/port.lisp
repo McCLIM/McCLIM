@@ -332,9 +332,9 @@
                       &allow-other-keys)
   ;; XXX :button code -> :button (decode-x-button-code code)
   (declare (ignorable event-slots))
+  (declare (special *clx-port*))
   (let ((sheet (and window
 		    (port-lookup-sheet *clx-port* window))))
-    (declare (special *clx-port*))
     (when sheet
       (case event-key
 	(:key-press
