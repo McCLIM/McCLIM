@@ -95,8 +95,7 @@ or an item list."))
   (check-type stream symbol)
   (when (eq stream 't)
     (setq stream '*standard-output*))
-  (let ((record (gensym "RECORD"))
-        (parent (gensym "PARENT")))
+  (with-gensyms (record parent)
     `(progn
        (let ((,parent (stream-current-output-record ,stream)))
          (assert (or (row-output-record-p ,parent)
@@ -238,7 +237,7 @@ to a table cell within the row."))
   (declare (type symbol stream))
   (when (eq stream 't)
     (setq stream '*standard-output*))
-  (let ((parent (gensym)))
+  (with-gensyms (parent)
     `(progn
        (let ((,parent (stream-current-output-record ,stream)))
          (assert (table-output-record-p ,parent)))
@@ -302,7 +301,7 @@ corresponding to a table cell within the column."))
   (declare (type symbol stream))
   (when (eq stream 't)
     (setq stream '*standard-output*))
-  (let ((parent (gensym)))
+  (with-gensyms (parent)
     `(progn
        (let ((,parent (stream-current-output-record ,stream)))
          (assert (table-output-record-p ,parent)))
@@ -347,9 +346,7 @@ skips intervening non-table output record structures."))
   ;; FIXME!!! Possible recomputation
   (when (eq stream t)
     (setq stream '*standard-output*))
-  (let ((table (gensym "TABLE"))
-        (cursor-old-x (gensym "CURSOR-OLD-X-"))
-        (cursor-old-y (gensym "CURSOR-OLD-Y-")))
+  (with-gensyms (table cursor-old-x cursor-old-y)
     `(with-new-output-record
          (,stream ,record-type ,table
                   :x-spacing (parse-space ,stream ,(or x-spacing #\Space)
@@ -359,6 +356,7 @@ skips intervening non-table output record structures."))
                                                `(stream-vertical-spacing ,stream))
                                           :vertical)
                   :multiple-columns ,multiple-columns
+                  :multiple-columns-x-spacing ,multiple-columns-x-spacing
                   :equalize-column-widths ,equalize-column-widths)
        (multiple-value-bind (,cursor-old-x ,cursor-old-y)
            (stream-cursor-position ,stream)
@@ -368,16 +366,16 @@ skips intervening non-table output record structures."))
          (adjust-table-cells ,table ,stream)
          (setf (output-record-position ,table)
                (values ,cursor-old-x ,cursor-old-y))
-         (replay-output-record ,table ,stream)
          (if ,move-cursor
              ;; FIXME!!!
              #+ignore
-             (setf (cursor-position ,table) (values cursor-new-x cursor-new-y))
+             (setf (stream-cursor-position ,stream)
+                   (values cursor-new-x cursor-new-y))
              #-ignore
              nil
              (setf (stream-cursor-position ,stream)
-                   (values ,cursor-old-x ,cursor-old-y))))
-       ,table)))
+                   (values ,cursor-old-x ,cursor-old-y)))
+         (replay ,table ,stream)))))
 
 ;;; Internal
 (defgeneric table-cell-spacing (table)
