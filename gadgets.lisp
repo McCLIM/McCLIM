@@ -7,6 +7,7 @@
 ;;;  (c) copyright 2001 by
 ;;; Lionel Salabartan (salabart@emi.u-bordeaux.fr)
 ;;;  (c) copyright 2001 by Michael McDonald (mikemac@mikemac.com)
+;;;  (c) copyright 2001 by Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -96,6 +97,233 @@
   (draw-line* pane x1 y2 x2 y2 :ink +black+)
   (draw-line* pane x2 y1 x2 y2 :ink +black+))
 
+;;;;
+;;;; 3D-BORDER-MIXIN Class
+;;;;
+
+;; 3D-BORDER-MIXIN class can be used to add a 3D-ish border to
+;; panes. There are three new options:
+;;
+;;  :border-width       The width of the border
+;;  :border-style       The border's style one of :inset, :outset, :groove, :ridge, :solid,
+;;                      :double, :dotted, :dashed
+;;                      [:dotted and :dashed are not yet implemented]
+;;
+;;  :border-color       The border's color
+;;                      [Not implemented yet]
+;;
+;; [These options are modelled after CSS].
+;;
+;; When using 3D-BORDER-MIXIN, one should query the pane's inner
+;; region, where drawing should take place, by PANE-INNER-REGION.
+;;
+;; --GB
+
+#||
+;; Motif-ish
+(defparameter *3d-dark-color*   (make-gray-color .45))
+(defparameter *3d-normal-color* (make-gray-color .75))
+(defparameter *3d-light-color*  (make-gray-color .92))
+(defparameter *3d-inner-color*  (make-gray-color .65))
+||#
+
+;; Gtk-ish
+
+(defparameter *3d-dark-color*   (make-gray-color .59))
+(defparameter *3d-normal-color* (make-gray-color .84))
+(defparameter *3d-light-color*  (make-gray-color 1.0))
+(defparameter *3d-inner-color*  (make-gray-color .75))
+
+(defclass 3D-border-mixin ()
+  ((border-width :initarg :border-width :initform 2)
+   (border-style :initarg :border-style :initform :outset)
+   (border-color :initarg :border-color :initform "???")))
+
+(defmethod pane-inner-region ((pane 3D-border-mixin))
+  (with-slots (border-width) pane
+    (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
+      (make-rectangle* (+ x1 border-width) (+ y1 border-width)
+                       (- x2 border-width) (- y2 border-width)))))
+
+(defmethod repaint-sheet :after ((pane 3D-border-mixin) region)
+  (declare (ignore region))
+  (with-slots (border-width border-style) pane
+    (draw-bordered-polygon pane (polygon-points (bounding-rectangle (sheet-region pane)))
+                           :border-width border-width
+                           :style border-style)))
+
+;;;;
+;;;; 3D-ish Look
+;;;;
+
+;; DRAW-BORDERED-POLYGON medium point-seq &key border-width style
+;;
+;; -GB
+
+(labels ((line-hnf (x1 y1 x2 y2)
+           (values (- y2 y1) (- x1 x2) (- (* x1 y2) (* y1 x2))))
+         
+         (line-line-intersection (x1 y1 x2 y2 x3 y3 x4 y4)
+           (multiple-value-bind (a1 b1 c1) (line-hnf x1 y1 x2 y2)
+             (multiple-value-bind (a2 b2 c2) (line-hnf x3 y3 x4 y4)
+               (let ((d (- (* a1 b2) (* b1 a2))))
+                 (cond ((< (abs d) 1e-6)
+                        nil)
+                       (t
+                        (values (/ (- (* b2 c1) (* b1 c2)) d)
+                                (/ (- (* a1 c2) (* a2 c1)) d))))))))
+         
+         (polygon-orientation (point-seq)
+           "Determines the polygon's orientation.
+            Returns:  +1 = counter-clock-wise 
+                      -1 = clock-wise
+
+            The polygon should be clean from duplicate points or co-linear points.
+            If the polygon self intersects, the orientation may not be defined, this
+            function does not try to detect this situation and happily returns some
+            value."
+           ;;
+           (let ((n (length point-seq)))
+             (let* ((min-i 0)
+                    (min-val (point-x (elt point-seq min-i))))
+               ;;
+               (loop for i from 1 below n do
+                     (when (< (point-x (elt point-seq i)) min-val)
+                       (setf min-val (point-x (elt point-seq i))
+                             min-i i)))
+               ;;
+               (let ((p0 (elt point-seq (mod (+ min-i -1) n)))
+                     (p1 (elt point-seq (mod (+ min-i 0) n)))
+                     (p2 (elt point-seq (mod (+ min-i +1) n))))
+                 (signum (- (* (- (point-x p2) (point-x p0)) (- (point-y p1) (point-y p0)))
+                            (* (- (point-x p1) (point-x p0)) (- (point-y p2) (point-y p0)))))))))
+         
+         (clean-polygon (point-seq)
+           "Cleans a polygon from duplicate points and co-linear points. Furthermore
+            tries to bring it into counter-clock-wise orientation."
+           ;; first step: remove duplicates
+           (setf point-seq
+                 (let ((n (length point-seq)))
+                   (loop for i from 0 below n 
+                         for p0 = (elt point-seq (mod (+ i -1) n))
+                         for p1 = (elt point-seq (mod (+ i 0) n))
+                         unless (and (< (abs (- (point-x p0) (point-x p1))) 10e-8)
+                                     (< (abs (- (point-y p0) (point-y p1))) 10e-8))
+                         collect p1)))
+           ;; second step: remove colinear points
+           (setf point-seq
+                 (let ((n (length point-seq)))
+                   (loop for i from 0 below n
+                         for p0 = (elt point-seq (mod (+ i -1) n))
+                         for p1 = (elt point-seq (mod (+ i 0) n))
+                         for p2 = (elt point-seq (mod (+ i +1) n))
+                         unless (< (abs (- (* (- (point-x p1) (point-x p0)) (- (point-y p2) (point-y p0)))
+                                           (* (- (point-x p2) (point-x p0)) (- (point-y p1) (point-y p0)))))
+                                   10e-8)
+                         collect p1)))
+           ;; third step: care for the orientation
+           (if (and (not (null point-seq))
+                    (minusp (polygon-orientation point-seq)))
+               (reverse point-seq)
+               point-seq) ))
+  
+  (defun shrink-polygon (point-seq width)
+    (let ((point-seq (clean-polygon point-seq)))
+      (let ((n (length point-seq)))
+        (values
+         point-seq
+         (loop for i from 0 below n
+               for p0 = (elt point-seq (mod (+ i -1) n))
+               for p1 = (elt point-seq (mod (+ i  0) n))
+               for p2 = (elt point-seq (mod (+ i +1) n))
+               collect
+               (let* ((dx1 (- (point-x p1) (point-x p0))) (dy1 (- (point-y p1) (point-y p0)))
+                      (dx2 (- (point-x p2) (point-x p1))) (dy2 (- (point-y p2) (point-y p1)))
+                      ;;
+                      (m1  (/ width (sqrt (+ (* dx1 dx1) (* dy1 dy1)))))
+                      (m2  (/ width (sqrt (+ (* dx2 dx2) (* dy2 dy2)))))
+                      ;;
+                      (q0  (make-point (+ (point-x p0) (* m1 dy1)) (- (point-y p0) (* m1 dx1))))
+                      (q1  (make-point (+ (point-x p1) (* m1 dy1)) (- (point-y p1) (* m1 dx1))))
+                      (q2  (make-point (+ (point-x p1) (* m2 dy2)) (- (point-y p1) (* m2 dx2))))
+                      (q3  (make-point (+ (point-x p2) (* m2 dy2)) (- (point-y p2) (* m2 dx2)))) )
+                 ;;
+                 (multiple-value-bind (x y)
+                     (multiple-value-call #'line-line-intersection
+                       (point-position q0) (point-position q1)
+                       (point-position q2) (point-position q3))
+                   (if x
+                       (make-point x y)
+                       (make-point 0 0)))))))))
+
+  (defun draw-bordered-polygon (medium point-seq
+                                       &key (border-width 2)
+                                       (style :inset))
+    (labels ((draw-pieces (outer-points inner-points dark light)
+               (let ((n (length outer-points)))
+                 (dotimes (i n)
+                   (let* ((p1 (elt outer-points (mod (+ i  0) n)))
+                          (p2 (elt outer-points (mod (+ i +1) n)))
+                          (q1 (elt inner-points (mod (+ i  0) n)))
+                          (q2 (elt inner-points (mod (+ i +1) n)))
+                          (p1* (transform-region +identity-transformation+  p1))
+                          (p2* (transform-region +identity-transformation+  p2))
+                          (a (mod (atan (- (point-y p2*) (point-y p1*))
+                                        (- (point-x p2*) (point-x p1*)))
+                                  (* 2 pi))))
+                     (draw-polygon medium (list p1 q1 q2 p2)
+                                   :ink
+                                   (if (<= (* 1/4 pi) a (* 5/4 pi))
+                                       dark light)))))))
+      (let ((light  *3d-light-color*)
+            (dark   *3d-dark-color*))
+      ;;
+      (ecase style
+        (:solid
+         (multiple-value-call #'draw-pieces (shrink-polygon point-seq border-width)
+                              +black+ +black+))
+        (:inset
+         (multiple-value-call #'draw-pieces (shrink-polygon point-seq border-width)
+                              dark light))
+        (:outset
+         (multiple-value-call #'draw-pieces (shrink-polygon point-seq border-width)
+                              light dark))
+        ;;
+        ;; Mickey Mouse is the trademark of the Walt Disney Company.
+        ;;
+        (:mickey-mouse-outset
+         (multiple-value-bind (outer-points inner-points) (shrink-polygon point-seq border-width)
+           (declare (ignore outer-points))
+           (multiple-value-bind (outer-points middle-points) (shrink-polygon point-seq (/ border-width 2))
+             (draw-pieces outer-points middle-points +white+ +black+)
+             (draw-pieces middle-points inner-points light dark))))
+        (:mickey-mouse-inset
+         (multiple-value-bind (outer-points inner-points) (shrink-polygon point-seq border-width)
+           (declare (ignore outer-points))
+           (multiple-value-bind (outer-points middle-points) (shrink-polygon point-seq (/ border-width 2))
+             (draw-pieces outer-points middle-points dark light)
+             (draw-pieces middle-points inner-points +black+ +white+))))
+        ;;
+        (:ridge
+         (multiple-value-bind (outer-points inner-points) (shrink-polygon point-seq border-width)
+           (declare (ignore outer-points))
+           (multiple-value-bind (outer-points middle-points) (shrink-polygon point-seq (/ border-width 2))
+             (draw-pieces outer-points middle-points light dark)
+             (draw-pieces middle-points inner-points dark light))))
+        (:groove
+         (multiple-value-bind (outer-points inner-points) (shrink-polygon point-seq border-width)
+           (declare (ignore outer-points))
+           (multiple-value-bind (outer-points middle-points) (shrink-polygon point-seq (/ border-width 2))
+             (draw-pieces outer-points middle-points dark light)
+             (draw-pieces middle-points inner-points light dark))))
+        (:double
+         (multiple-value-bind (outer-points inner-points) (shrink-polygon point-seq border-width)
+           (declare (ignore outer-points))
+           (multiple-value-bind (outer-points imiddle-points) (shrink-polygon point-seq (* 2/3 border-width))
+             (declare (ignore outer-points))
+             (multiple-value-bind (outer-points omiddle-points) (shrink-polygon point-seq (* 1/3 border-width))
+               (draw-pieces outer-points omiddle-points +black+ +black+)
+               (draw-pieces imiddle-points inner-points +black+ +black+))))))))) )
 
 ;;
 ;; gadget sub-classes
@@ -500,9 +728,9 @@
 	  (draw-label pane (gadget-label pane) (round w 2) (round h 2)))))))
 
 
-;;
-;; SCROLL-BAR gadget
-;;
+;;;;
+;;;; SCROLL-BAR gadget
+;;;;
 
 (defgeneric drag-callback (pane client gadget-id value))
 (defgeneric scroll-to-top-callback (scroll-bar client gadget-id))
@@ -533,7 +761,10 @@
                               :reader scroll-bar-scroll-down-page-callback)
    (scroll-up-page-callback :initarg :scroll-up-page-callback
                             :initform nil
-                            :reader scroll-bar-scroll-up-page-callback)))
+                            :reader scroll-bar-scroll-up-page-callback)
+   
+   (thumb-size :initarg :thumb-size :initform 1/4
+               :reader scroll-bar-thumb-size) ))
 
 (defmethod drag-callback ((pane scroll-bar) client gadget-id value)
   (declare (ignore client gadget-id))
@@ -570,14 +801,19 @@
   (declare (ignore client gadget-id))
   (invoke-callbacks pane 'scroll-bar-scroll-down-page-callback))
 
-;; SCROLL-BAR-PANE
+;;;;
+;;;; SCROLL-BAR-PANE
+;;;;
 
-(defclass scroll-bar-pane (basic-pane scroll-bar)
-  ((dragged :initform nil))
+(defclass scroll-bar-pane (basic-pane scroll-bar 3D-border-mixin)
+  ((event-state :initform nil)
+   (drag-dy :initform nil))
   (:default-initargs :value 0
                      :min-value 0
                      :max-value 1
-                     :orientation :vertical))
+                     :orientation :vertical
+                     :border-width 2
+                     :border-style :inset))
 
 (defmethod compose-space ((sb scroll-bar-pane))
   (if (eq (gadget-orientation sb) :vertical)
@@ -589,123 +825,91 @@
 			      :height *scrollbar-thickness*
 			      :min-width (* 3 *scrollbar-thickness*)
 			      :width (* 4 *scrollbar-thickness*))))
+;;; Utilities
 
-(defmethod repaint-sheet ((sb scroll-bar-pane) region)
-  (declare (ignore region))
-  (with-bounding-rectangle* (minx miny maxx maxy) (sheet-region sb)
-    (with-special-choices (sb)
-      (draw-rectangle* sb minx miny maxx maxy :filled t :ink (medium-background sb))
-      (let ((width (- maxx minx (* 2 *scrollbar-thickness*)))
-	    (height (- maxy miny (* 2 *scrollbar-thickness*)))
-	    (pos (/ (- (gadget-value sb)
-		       (gadget-min-value sb))
-		    (gadget-range sb)))
-	    (len (/ (if (eq (gadget-orientation sb) :vertical)
-			(- maxy miny)
-		      (- maxx minx))
-		    (gadget-range sb)))
-	    (highlight +white+)
-	    (shadow +black+)
-	    (thickness 2))
-	(cond
-	 ((eq (gadget-orientation sb) :vertical)
-	  (let ((points (list (/ (- maxx minx) 2) miny
-			      (1- maxx) (1- *scrollbar-thickness*)
-			      minx (1- *scrollbar-thickness*))))
-	    (draw-polygon* sb points
-			   :filled t :ink (medium-foreground sb))
-	    (draw-polygon* sb points
-			   :closed nil :filled nil :line-thickness thickness :ink shadow)
-	    (draw-line* sb
-			(first points) (second points)
-			(fifth points) (sixth points)
-			:line-thickness thickness :ink highlight))
-	  (let ((x-min minx)
-		(y-min (+ miny
-			  (* height pos)
-			  *scrollbar-thickness*))
-		(x-max (1- maxx))
-		(y-max (1- (min (+ miny
-				   (* height (+ pos len))
-				   *scrollbar-thickness*)
-				(- maxy *scrollbar-thickness*)))))
-	    (draw-rectangle* sb
-			     x-min y-min x-max y-max
-			     :filled t :ink (medium-foreground sb))
-	    (draw-line* sb
-			x-max y-min x-max y-max
-			:line-thickness thickness :ink shadow)
-	    (draw-line* sb
-			x-min y-max x-max y-max
-			:line-thickness thickness :ink shadow)
-	    (draw-line* sb
-			x-min y-min x-max y-min
-			:line-thickness thickness :ink highlight)
-	    (draw-line* sb
-			x-min y-min x-min y-max
-			:line-thickness thickness :ink highlight))
-	  (let ((points (list (/ (- maxx minx) 2) (1- maxy)
-			      minx (- maxy *scrollbar-thickness*)
-			      (1- maxx) (- maxy *scrollbar-thickness*))))
-	    (draw-polygon* sb points
-			   :filled t :ink (medium-foreground sb))
-	    (draw-line* sb
-			(first points) (second points)
-			(fifth points) (sixth points)
-			:line-thickness thickness :ink shadow)
-	    (draw-polygon* sb points
-			   :closed nil :filled nil :line-thickness thickness :ink highlight)))
-	 (t
-	  (let ((points (list (1- *scrollbar-thickness*) miny
-			      minx (/ (+ miny maxy) 2)
-			      (1- *scrollbar-thickness*) (1- maxy))))
-	    (draw-polygon* sb points
-			   :filled t :ink (medium-foreground sb))
-	    (draw-line* sb
-			(first points) (second points)
-			(fifth points) (sixth points)
-			:line-thickness thickness :ink shadow)
-	    (draw-polygon* sb points
-			   :closed nil :filled nil :line-thickness thickness :ink highlight))
-	  (let ((x-min (+ minx
-			  (* width pos)
-			  *scrollbar-thickness*))
-		(y-min miny)
-		(x-max (1- (min (+ minx
-				   (* width (+ pos len))
-				   *scrollbar-thickness*)
-				(- maxx *scrollbar-thickness*))))
-		(y-max (1- maxy)))
-	    (draw-rectangle* sb
-			     x-min y-min x-max y-max
-			     :filled t :ink (medium-foreground sb))
-	    (draw-line* sb
-			x-max y-min x-max y-max
-			:line-thickness thickness :ink shadow)
-	    (draw-line* sb
-			x-min y-max x-max y-max
-			:line-thickness thickness :ink shadow)
-	    (draw-line* sb
-			x-min y-min x-max y-min
-			:line-thickness thickness :ink highlight)
-	    (draw-line* sb
-			x-min y-min x-min y-max
-			:line-thickness thickness :ink highlight))
-	  (let ((points (list (- maxx *scrollbar-thickness*) miny
-			      (1- maxx) (/ (+ minx maxx) 2)
-			      (- maxx *scrollbar-thickness*) (1- maxy))))
-	    (draw-polygon* sb points
-			   :filled t :ink (medium-foreground sb))
-	    (draw-polygon* sb points
-			   :closed nil :filled nil :line-thickness thickness :ink shadow)
-	    (draw-line* sb
-			(first points) (second points)
-			(fifth points) (sixth points)
-			:line-thickness thickness :ink highlight))))))))
+;; We think all scroll bars as vertically oriented, therefore we have
+;; SCROLL-BAR-TRANSFORMATION, which should make every scroll bar
+;; look like being vertically oriented -- simplifies much code.
+
+(defmethod scroll-bar-transformation ((sb scroll-bar))
+  (ecase (gadget-orientation sb)
+    (:vertical   +identity-transformation+)
+    (:horizontal (make-transformation 0 1 1 0 0 0))))
+
+(defun translate-range-value (a mina maxa mino maxo)
+  "When \arg{a} is some value in the range from \arg{mina} to \arg{maxa},
+   proportionally translate the value into the range \arg{mino} to \arg{maxo}."
+  (+ mino (* (/ (- a mina) (- maxa mina)) (- maxo mino))))
+
+;;; Scroll-bar's sub-regions
+
+(defmethod scroll-bar-up-region ((sb scroll-bar-pane))
+  (with-bounding-rectangle* (minx miny maxx maxy) (transform-region (scroll-bar-transformation sb)
+                                                                    (pane-inner-region sb))
+    (declare (ignore maxy))
+    (make-rectangle* minx miny
+                     maxx (+ miny (- maxx minx)))))
+
+(defmethod scroll-bar-down-region ((sb scroll-bar-pane))
+  (with-bounding-rectangle* (minx miny maxx maxy) (transform-region (scroll-bar-transformation sb)
+                                                                    (pane-inner-region sb))
+    (declare (ignore miny))
+    (make-rectangle* minx (- maxy (- maxx minx))
+                     maxx maxy)))
+
+(defmethod scroll-bar-thumb-bed-region ((sb scroll-bar-pane))
+  (with-bounding-rectangle* (minx miny maxx maxy) (transform-region (scroll-bar-transformation sb)
+                                                                    (pane-inner-region sb))
+    (make-rectangle* minx (+ miny (- maxx minx) 1)
+                     maxx (- maxy (- maxx minx) 1))))
+
+(defmethod scroll-bar-thumb-region ((sb scroll-bar-pane))
+  (with-bounding-rectangle* (x1 y1 x2 y2) (scroll-bar-thumb-bed-region sb)
+    (multiple-value-bind (minv maxv) (gadget-range* sb)
+      (multiple-value-bind (v) (gadget-value sb)
+        (let ((ts (* 1/3 (- maxv minv))))
+          (let ((ya (translate-range-value v minv (+ maxv ts) y1 y2))
+                (yb (translate-range-value (+ v ts) minv (+ maxv ts) y1 y2)))
+            (make-rectangle* x1 ya x2 yb)))))))
+
+#||
+;; alternative:
+
+(defmethod scroll-bar-up-region ((sb scroll-bar-pane))
+  (with-bounding-rectangle* (minx miny maxx maxy) (transform-region (scroll-bar-transformation sb)
+                                                                    (sheet-region sb))
+    (make-rectangle* (+ minx 2) (- (- maxy (* 2 (- maxx minx))) 2)
+                     (- maxx 2) (- (- maxy (- maxx minx)) 2))))
+
+(defmethod scroll-bar-down-region ((sb scroll-bar-pane))
+  (with-bounding-rectangle* (minx miny maxx maxy) (transform-region (scroll-bar-transformation sb)
+                                                                    (sheet-region sb))
+    (make-rectangle* (+ minx 2) (+ (- maxy (- maxx minx)) 2)
+                     (- maxx 2) (-  maxy 2))))
+
+(defmethod scroll-bar-thumb-bed-region ((sb scroll-bar-pane))
+  (with-bounding-rectangle* (minx miny maxx maxy) (transform-region (scroll-bar-transformation sb)
+                                                                    (sheet-region sb))
+    (make-rectangle* (+ minx 2) (+ miny 2 )
+                     (- maxx 2) (- maxy 2 (* 2 (- maxx minx)) 2))))
+
+(defmethod scroll-bar-thumb-region ((sb scroll-bar-pane))
+  (with-bounding-rectangle* (x1 y1 x2 y2) (scroll-bar-thumb-bed-region sb)
+    (multiple-value-bind (minv maxv) (gadget-range* sb)
+      (multiple-value-bind (v) (gadget-value sb)
+        (let ((ts (* 1/3 (- maxv minv))))
+          (let ((ya (translate-range-value v minv (+ maxv ts) y1 y2))
+                (yb (translate-range-value (+ v ts) minv (+ maxv ts) y1 y2)))
+            (make-rectangle* x1 ya x2 yb)))))))
+||#
+
+
+;;; Event handlers
 
 (defmethod handle-event ((sb scroll-bar-pane) (event window-repaint-event))
   (dispatch-repaint sb (sheet-region sb)))
 
+#||
 (defmethod handle-event ((sb scroll-bar-pane) (event pointer-enter-event))
   (declare (ignorable event))
   (with-slots (armed) sb
@@ -719,72 +923,114 @@
      (when armed
        (setf armed nil)
        (disarmed-callback sb (gadget-client sb) (gadget-id sb)))))
-
-(defun get-orientation-dependant-informations (scroll-bar-pane)
-  (if (eq (gadget-orientation scroll-bar-pane) :vertical)
-      (values (- (bounding-rectangle-height (sheet-region scroll-bar-pane))
-		 (* 2 *scrollbar-thickness*))
-              #'pointer-event-y)
-      (values (- (bounding-rectangle-width (sheet-region scroll-bar-pane))
-		 (* 2 *scrollbar-thickness*))
-              #'pointer-event-x)))
-
-(defmethod dispatch-callbacks ((sb scroll-bar-pane) event)
-  (multiple-value-bind (sb-length pos-func)
-      (get-orientation-dependant-informations sb)
-    (with-slots (value min-value max-value) sb
-      (let* ((position (funcall pos-func event))
-	     (value-clicked (/ (- position *scrollbar-thickness*) sb-length)))
-        (cond
-	 ((< position *scrollbar-thickness*)
-	  (scroll-up-line-callback sb (gadget-client sb) (gadget-id sb)))
-	 ((> position (+ sb-length *scrollbar-thickness*))
-	  (scroll-down-line-callback sb (gadget-client sb) (gadget-id sb)))
-	 ((< value-clicked (/ (- value min-value)
-			 (- max-value min-value)))
-	  (scroll-up-page-callback sb (gadget-client sb) (gadget-id sb)))
-	 ((< (+ (/ (- value min-value)
-			 (- max-value min-value))
-		 (/ sb-length
-			  (gadget-range sb)))
-	      value-clicked)
-	  (scroll-down-page-callback sb (gadget-client sb) (gadget-id sb))))))))
+||#
 
 (defmethod handle-event ((sb scroll-bar-pane) (event pointer-button-press-event))
-  (with-slots (armed) sb
-    (unless armed
-      (armed-callback sb (gadget-client sb) (gadget-id sb)))
-    (setf armed ':button-press))
-  (dispatch-callbacks sb event))
-
-(defmethod handle-event ((sb scroll-bar-pane) (event pointer-motion-event))
-  (with-slots (armed dragged) sb
-    (when (eq armed ':button-press)
-      (multiple-value-bind (sb-length pos-func)
-          (get-orientation-dependant-informations sb)
-        (drag-callback sb (gadget-client sb) (gadget-id sb)
-                       (min (max (+ (gadget-min-value sb)
-				    (* (gadget-range sb)
-				       (/ (- (funcall pos-func event) *scrollbar-thickness*)
-					  sb-length)))
-				 0)
-			    (gadget-max-value sb))))
-      (unless dragged
-        (setf dragged t)))))
+  (multiple-value-bind (x y) (transform-position (scroll-bar-transformation sb)
+                                                 (pointer-event-x event) (pointer-event-y event))
+    (with-slots (event-state drag-dy) sb
+      (cond ((region-contains-position-p (scroll-bar-up-region sb) x y)
+             (scroll-up-line-callback sb (gadget-client sb) (gadget-id sb))
+             (setf event-state :up-armed)
+             (repaint-sheet sb +everywhere+))
+            ((region-contains-position-p (scroll-bar-down-region sb) x y)
+             (scroll-down-line-callback sb (gadget-client sb) (gadget-id sb))
+             (setf event-state :dn-armed)
+             (repaint-sheet sb +everywhere+))
+            ((region-contains-position-p (scroll-bar-thumb-region sb) x y)
+             (setf event-state :dragging
+                   drag-dy (- y (bounding-rectangle-min-y (scroll-bar-thumb-region sb)))))
+            ((region-contains-position-p (scroll-bar-thumb-bed-region sb) x y)
+             (if (< y (bounding-rectangle-min-y (scroll-bar-thumb-bed-region sb)))
+                 (scroll-up-page-callback sb (gadget-client sb) (gadget-id sb))
+                 (scroll-down-page-callback sb (gadget-client sb) (gadget-id sb))))
+            (t
+             nil)))))
 
 (defmethod handle-event ((sb scroll-bar-pane) (event pointer-button-release-event))
-  (declare (ignorable event))
-  (with-slots (armed dragged) sb
-     (when (eq armed ':button-press)
-       (setf armed t)
-       (when dragged
-         (setf dragged nil)
-         (multiple-value-bind (sb-length pos-func)
-             (get-orientation-dependant-informations sb)
-           (value-changed-callback sb (gadget-client sb) (gadget-id sb)
-                                   (/ (funcall pos-func event) sb-length)))
-         (disarmed-callback sb (gadget-client sb) (gadget-id sb))))))
+  (with-slots (event-state) sb
+    (case event-state
+      (:up-armed (setf event-state nil))
+      (:dn-armed (setf event-state nil))
+      (otherwise
+       (setf event-state nil) )))
+  (repaint-sheet sb +everywhere+) )
 
+(defmethod handle-event ((sb scroll-bar-pane) (event pointer-motion-event))
+  (multiple-value-bind (x y) (transform-position (scroll-bar-transformation sb)
+                                                 (pointer-event-x event) (pointer-event-y event))
+    (declare (ignore x))
+    (with-slots (event-state drag-dy) sb
+      (case event-state
+        (:dragging
+         (let* ((y-new-thumb-top (- y drag-dy))
+                (ts (* 1/3 (- (gadget-max-value sb) (gadget-min-value sb))))
+                (new-value (translate-range-value y-new-thumb-top
+                                                  (bounding-rectangle-min-y (scroll-bar-thumb-bed-region sb))
+                                                  (bounding-rectangle-max-y (scroll-bar-thumb-bed-region sb))
+                                                  (gadget-min-value sb)
+                                                  (+ (gadget-max-value sb) ts))))
+           (drag-callback sb (gadget-client sb) (gadget-id sb)
+                          (min (gadget-max-value sb)
+                               (max (gadget-min-value sb)
+                                    new-value))) ))))))
+
+;;; Repaint
+
+(defmethod repaint-sheet ((sb scroll-bar-pane) region)
+  (declare (ignore region))
+  (with-special-choices (sb)
+    (let ((tr (scroll-bar-transformation sb)))
+      (with-bounding-rectangle* (minx miny maxx maxy) (transform-region tr (sheet-region sb))
+        (with-drawing-options (sb :transformation tr)
+          (draw-rectangle* sb minx miny maxx maxy :filled t
+                           :ink *3d-normal-color*)
+          ;; draw up arrow
+          (with-bounding-rectangle* (x1 y1 x2 y2) (scroll-bar-up-region sb)
+            (let ((pg (list (make-point (/ (+ x1 x2) 2) y1)
+                            (make-point x1 y2)
+                            (make-point x2 y2))))
+              (case (slot-value sb  'event-state)
+                (:up-armed
+                 (draw-polygon sb pg :ink *3d-inner-color*)
+                 (draw-bordered-polygon sb pg :style :inset :border-width 2))
+                (otherwise
+                 (draw-polygon sb pg :ink *3d-normal-color*)
+                 (draw-bordered-polygon sb pg :style :outset :border-width 2) ))))
+
+          ;; draw down arrow
+          (with-bounding-rectangle* (x1 y1 x2 y2) (scroll-bar-down-region sb)
+            (let ((pg (list (make-point (/ (+ x1 x2) 2) y2)
+                            (make-point x1 y1)
+                            (make-point x2 y1))))
+              (case (slot-value sb 'event-state)
+                (:dn-armed
+                 (draw-polygon sb pg :ink *3d-inner-color*)
+                 (draw-bordered-polygon sb pg :style :inset :border-width 2))
+                (otherwise
+                 (draw-polygon sb pg :ink *3d-normal-color*)
+                 (draw-bordered-polygon sb pg :style :outset :border-width 2)))))
+
+          ;; draw thumb
+          (with-bounding-rectangle* (x1 y1 x2 y2) (scroll-bar-thumb-region sb)
+            (draw-rectangle* sb x1 y1 x2 y2 :ink *3d-normal-color*)
+            (draw-bordered-polygon sb
+                                   (polygon-points (make-rectangle* x1 y1 x2 y2))
+                                   :style :outset
+                                   :border-width 2)
+            (let ((y (/ (+ y1 y2) 2)))
+              (draw-bordered-polygon sb
+                                     (polygon-points (make-rectangle* (+ x1 3) (- y 1) (- x2 3) (+ y 1)))
+                                     :style :inset
+                                     :border-width 1)
+              (draw-bordered-polygon sb
+                                     (polygon-points (make-rectangle* (+ x1 3) (- y 4) (- x2 3) (- y 2)))
+                                     :style :inset
+                                     :border-width 1)
+              (draw-bordered-polygon sb
+                                     (polygon-points (make-rectangle* (+ x1 3) (+ y 4) (- x2 3) (+ y 2)))
+                                     :style :inset
+                                     :border-width 1))) )))))
 
 ;;
 ;; SLIDER gadget
