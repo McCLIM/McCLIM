@@ -92,6 +92,8 @@
 	      :min-value 0
 	      :max-value 9999
 	      :value 0
+	      :show-value-p t
+	      :orientation :horizontal
 	      :width 120)
    (slider-g  :slider
 	      :drag-callback callback-green

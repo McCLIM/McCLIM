@@ -233,7 +233,8 @@
 ;; Oriented-gadget
 
 (defclass oriented-gadget ()
-  ((orientation :initarg :orientation
+  ((orientation :type (member '(:vertical :horizontal))
+		:initarg :orientation
                 :reader gadget-orientation)))
 
 (defclass oriented-gadget-mixin (oriented-gadget)
@@ -632,13 +633,22 @@
 ;; SLIDER gadget
 ;;
 
+;; ----------------------------------------------------------
+;; What should be done for having a better look for sliders
+;;
+;; We should find a way to draw the value, when show-value-p
+;; is true, in a good position, or to dedicate a particular
+;; sheet for this drawing (this sheet would be inside the
+;; slider's sheet, probably his child).
+;; ----------------------------------------------------------
+
 (defclass slider-gadget (labelled-gadget-mixin
 			 value-gadget
 			 oriented-gadget-mixin
 			 range-gadget-mixin
 			 gadget-color-mixin)
   ()
-  (:documentation "The value is a real number, and default value for orientation is :vertical, and can never be nil."))
+  (:documentation "The value is a real number, and default value for orientation is :vertical, and must never be nil."))
   
 (defclass slider-pane (slider-gadget)
   ((drag-callback :initform nil
@@ -651,8 +661,12 @@
 
 ;; This values should be changeable by user. That's
 ;; why they are parameters, and not constants.
-(defparameter slider-button-width 30)
-(defparameter slider-button-height 10)
+(defparameter slider-button-long-dim 30)
+(defparameter slider-button-short-dim 10)
+
+(defmethod initialize-instance :before ((pane slider-pane) &rest rest)
+  (declare (ignore rest))
+  (setf (slot-value pane 'orientation) :vertical))
 
 (defmethod drag-callback ((pane slider-pane) client gadget-id value)
   (declare (ignore client gadget-id))
@@ -679,7 +693,10 @@
 (defmethod handle-event ((pane slider-pane) (event pointer-motion-event))
   (with-slots (armed) pane
     (when (eq armed ':button-press)
-      (let ((value (convert-position-to-value pane (pointer-event-y event))))
+      (let ((value (convert-position-to-value pane
+					      (if (eq (gadget-orientation pane) :vertical)
+						  (pointer-event-y event)
+						  (pointer-event-x event)))))
 	(setf (gadget-value pane :invoke-callback nil) value)
 	(drag-callback pane (gadget-client pane) (gadget-id pane) value)
 	(dispatch-repaint pane (sheet-region pane))))))
@@ -688,55 +705,87 @@
   (with-slots (armed) pane
     (when armed
       (setf armed t
-	    (gadget-value pane :invoke-callback t) (convert-position-to-value pane (pointer-event-y event)))
+	    (gadget-value pane :invoke-callback t)
+	    (convert-position-to-value pane
+				       (if (eq (gadget-orientation pane) :vertical)
+					   (pointer-event-y event)
+					   (pointer-event-x event))))
       (dispatch-repaint pane (sheet-region pane)))))
 
 (defmethod handle-event ((pane slider-pane) (event window-repaint-event))
   (dispatch-repaint pane (sheet-region pane)))
 
-(defmethod convert-position-to-value ((pane slider-pane) y)
+(defmethod convert-position-to-value ((pane slider-pane) dim)
   (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
-    (declare (ignore x1 x2))
-    (let* ((slider-button-half-height (ash slider-button-height -1))
-	   (good-y1 (+ y1 slider-button-half-height))
-	   (good-y2 (- y2 slider-button-half-height))
-	   (good-position (max good-y1 (min y good-y2))))
-      (+ (gadget-min-value pane) (/ (* (gadget-range pane) (- good-position good-y1))
-				    (- good-y2 good-y1))))))
+    (multiple-value-bind (good-dim1 good-dim2)
+	(if (eq (gadget-orientation pane) :vertical)
+	    ; vertical orientation
+	    (values (+ y1 (ash slider-button-short-dim -1))
+		    (- y2 (ash slider-button-short-dim -1)))
+	    ; horizontal orientation
+	    (values (+ x1 (ash slider-button-short-dim -1))
+		    (- x2 (ash slider-button-short-dim -1))))
+      (+ (gadget-min-value pane)
+	 (/ (* (gadget-range pane) (- (max good-dim1 (min dim good-dim2)) good-dim1))
+	    (- good-dim2 good-dim1))))))
 
 (defmethod repaint-sheet ((pane slider-pane) region)
   (declare (ignore region))
   (with-double-buffering (pane)
     (let ((position (convert-value-to-position pane))
-	  (slider-button-half-width (ash slider-button-width -1))
-	  (slider-button-half-height (ash slider-button-height -1)))
+	  (slider-button-half-short-dim (ash slider-button-short-dim -1))
+	  (slider-button-half-long-dim (ash slider-button-long-dim -1)))
       (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
-	(let ((middle-x (round (- x2 x1) 2)))
-	  (display-gadget-background pane (gadget-current-color pane) 0 0 (- x2 x1) (- y2 y1))
-	  (draw-line* pane middle-x (+ y1 slider-button-half-height)
-		      middle-x (- y2 slider-button-half-height)
-		      :ink +black+)
-	  (draw-rectangle* pane
-			   (- middle-x slider-button-half-width) (- position slider-button-half-height)
-			   (+ middle-x slider-button-half-width) (+ position slider-button-half-height)
-			   :ink +gray85+ :filled t)
-	  (draw-edges-lines* pane
-			     (- middle-x slider-button-half-width) (- position slider-button-half-height)
-			     (+ middle-x slider-button-half-width) (+ position slider-button-half-height))
-	  (when (gadget-show-value-p pane)
-	    (draw-text* pane (princ-to-string (gadget-value pane))
-			(- middle-x slider-button-half-width)
-			(- position slider-button-half-height))))))))
+	(display-gadget-background pane (gadget-current-color pane) 0 0 (- x2 x1) (- y2 y1))
+	(if (eq (gadget-orientation pane) :vertical)
+	    ; vertical case
+	    (let ((middle (round (- x2 x1) 2)))
+	      (draw-line* pane
+			  middle (+ y1 slider-button-half-short-dim)
+			  middle (- y2 slider-button-half-short-dim)
+			  :ink +black+)
+	      (draw-rectangle* pane
+			       (- middle slider-button-half-long-dim) (- position slider-button-half-short-dim)
+			       (+ middle slider-button-half-long-dim) (+ position slider-button-half-short-dim)
+			       :ink +gray85+ :filled t)
+	      (draw-edges-lines* pane
+				 (- middle slider-button-half-long-dim) (- position slider-button-half-short-dim)
+				 (+ middle slider-button-half-long-dim) (+ position slider-button-half-short-dim))
+	      (when (gadget-show-value-p pane)
+		(draw-text* pane (princ-to-string (gadget-value pane))
+			    5 ;(- middle slider-button-half-short-dim)
+			    10))) ;(- position slider-button-half-long-dim))))
+	    ; horizontal case
+	    (let ((middle (round (- y2 y1) 2)))
+	      (draw-line* pane
+			  (+ x1 slider-button-half-short-dim) middle
+			  (- x2 slider-button-half-short-dim) middle
+			  :ink +black+)
+	      (draw-rectangle* pane
+			       (- position slider-button-half-short-dim) (- middle slider-button-half-long-dim)
+			       (+ position slider-button-half-short-dim) (+ middle slider-button-half-long-dim)
+			       :ink +gray85+ :filled t)
+	      (draw-edges-lines* pane
+				 (- position slider-button-half-short-dim) (- middle slider-button-half-long-dim)
+				 (+ position slider-button-half-short-dim) (+ middle slider-button-half-long-dim))
+	      (when (gadget-show-value-p pane)
+		(draw-text* pane (princ-to-string (gadget-value pane))
+			    5 ;(- position slider-button-half-short-dim)
+			    (- middle slider-button-half-long-dim)))))))))
 
 (defmethod convert-value-to-position ((pane slider-pane))
   (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
-    (declare (ignore x1 x2))
-    (let* ((slider-button-half-height (ash slider-button-height -1))
-	   (good-y1 (+ y1 slider-button-half-height))
-	   (good-y2 (- y2 slider-button-half-height)))
-      (+ good-y1 (/ (* (- (gadget-value pane) (gadget-min-value pane))
-		       (- good-y2 good-y1))
-		    (gadget-range pane))))))
+    (multiple-value-bind (good-dim1 good-dim2)
+	(if (eq (gadget-orientation pane) :vertical)
+	    ; vertical orientation
+	    (values (+ y1 (ash slider-button-short-dim -1))
+		    (- y2 (ash slider-button-short-dim -1)))
+	    ; horizontal orientation
+	    (values (+ x1 (ash slider-button-short-dim -1))
+		    (- x2 (ash slider-button-short-dim -1))))
+      (+ good-dim1 (/ (* (- (gadget-value pane) (gadget-min-value pane))
+			 (- good-dim2 good-dim1))
+		      (gadget-range pane))))))
 
 
 ;;
