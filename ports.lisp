@@ -92,7 +92,7 @@
   )
 
 (defmethod destroy-port :before ((port basic-port))
-  (when *multiprocessing-p*
+  (when (and *multiprocessing-p* (port-event-process port))
     (destroy-process (port-event-process port))
     (setf (port-event-process port) nil)))
 
