@@ -29,11 +29,16 @@
     (unless (ignore-errors (ext:search-list "gray-streams:"))
       (setf (ext:search-list "gray-streams:")
 	'("target:pcl/" "library:subsystems/")))
-    (load "gray-streams:gray-streams-library"))
+    (if (fboundp 'without-package-locks)
+	(without-package-locks
+	 (load "gray-streams:gray-streams-library"))
+      (load "gray-streams:gray-streams-library")))
   #-clx
   (require :clx)
-  #-mk-defsystem
-  (load "library:subsystems/defsystem"))
+  #-(or mk-defsystem asdf)
+  (load "library:subsystems/defsystem")
+  #+mp (when (eq mp::*initial-process* mp::*current-process*)
+	 (format t "~%~%You need to run (mp::startup-idle-and-top-level-loops) to start up the multiprocessing support.~%~%")))
 
 (pushnew :clim *features*)
 (pushnew :mcclim *features*)
