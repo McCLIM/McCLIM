@@ -19,17 +19,21 @@
 ;;; Boston, MA  02111-1307  USA.
 
 
+;;; Command table and menu definitions
 
-;;; Assorted commands intended for lisp development.
+(define-command-table application-commands)
 
+(define-command-table lisp-dev-commands :inherit-from nil) ;; "Abstract" command table used for defining some translators in
+(define-command-table lisp-commands :inherit-from (lisp-dev-commands))
 
-;; TODO: Split these into several command tables, and eventually
-;; into seperate files. We need seperate command tables for lisp
-;; development, filesystem manipulation, UNIX crap, and whatever
-;; else suggests itself. Mostly to make them layout nicely in a
-;; command menu, if anyone wants such a thing.
+(define-command-table show-commands :inherit-from (lisp-dev-commands))
 
-(define-command-table dev-commands)
+(define-command-table filesystem-commands
+    :inherit-from (directory-stack-commands)
+    :menu (("Directory Stack" :menu directory-stack-commands)))
+
+(define-command-table directory-stack-commands)
+
 
 ;;; Presentation types
 
@@ -152,14 +156,14 @@
 ;;; Presentation translators
 
 (define-presentation-translator class-name-to-class
-  (class-name class dev-commands
+  (class-name class lisp-dev-commands
      :documentation ((object stream) (format stream "Class object ~A" object))
      :gesture T)
   (object)
   (find-class object))
 
 (define-presentation-translator symbol-to-class
-  (symbol class dev-commands
+  (symbol class lisp-dev-commands
      :documentation ((object stream) (format stream "Class object ~A" object))
      :gesture T
      :tester ((object) (not (not (find-class object nil))))
@@ -168,7 +172,7 @@
   (find-class object))
 
 (define-presentation-translator symbol-to-class-name
-  (symbol class-name dev-commands
+  (symbol class-name lisp-dev-commands
      :documentation ((object stream) (format stream "Class ~A" object))
      :gesture T
      :tester ((object) (not (not (find-class object nil))))
@@ -177,35 +181,68 @@
   object)
 
 (define-presentation-translator class-to-class-name
-  (class class-name dev-commands
+  (class class-name lisp-dev-commands
      :documentation ((object stream) (format stream "Class of ~A" object))
      :gesture T)
   (object)
   (clim-mop:class-name object))
 
 (define-presentation-translator symbol-to-function-name
-  (symbol function-name dev-commands
+  (symbol function-name lisp-dev-commands
      :documentation ((object stream) (format stream "Function ~A" object))
      :gesture T
      :tester ((object) (fboundp object))
      :tester-definitive T)
   (object) object)
 
-
-;;; Mundane commands that don't really belong here.
-;;; Arguably, these belong in the standard command table.
+;;; Application commands
 
 (define-command (com-clear-output :name "Clear Output History"
-				  :command-table dev-commands
+				  :command-table application-commands
+                                  :menu t
 				  :provide-output-destination-keyword nil)
     ()
   (window-clear *standard-output*))
 
-(define-command (com-exit :name "Exit"
-			  :command-table dev-commands
+;; You have to seperate command arguments with commas..
+;; Need to find a better way to input these.
+
+;; McCLIM fixme: Shouldn't we be able to activate before the (args) prompt
+;; since defaults are defined?
+;; FIXME: Disabled input, as it usually seems to hang.
+(define-command (com-run :name "Run" :command-table application-commands :menu t
+			 :provide-output-destination-keyword t)
+  ((program 'string :prompt "command")
+   (args '(sequence string) :default nil :prompt "args"))
+  (run-program program args :wait T :input nil))
+
+;; I could replace this command with a keyword to COM-RUN..
+(define-command (com-background-run :name "Background Run"
+                                    :menu t
+				    :command-table application-commands
+				    :provide-output-destination-keyword t)
+  ((program 'string :prompt "command")
+   (args '(sequence string) :default nil :prompt "args"))
+  (run-program program args :wait nil :output nil :input nil))
+
+(define-command (com-reload-mime-database :name "Reload Mime Database"
+                                          :menu t
+                                          :command-table application-commands)
+    ()
+  (progn
+    (load-mime-types)
+    (load-mailcaps)))
+
+
+(add-menu-item-to-command-table (find-command-table 'application-commands) nil :divider nil)
+
+(define-command (com-exit :name "Quit"
+			  :command-table application-commands
+                          :menu t
 			  :provide-output-destination-keyword nil)
     ()
   (frame-exit *application-frame*))
+
 
 
 ;;; Commands related to Lisp development
@@ -274,7 +311,8 @@
 ;  (find-presentation-type-class symbol nil))
 
 (define-command (com-apropos :name "Apropos"
-			     :command-table dev-commands
+			     :command-table lisp-commands
+                             :menu t
 			     :provide-output-destination-keyword t)
     ((string 'clim:string :prompt "string")
      &key
@@ -295,7 +333,8 @@
       (note "Results have been saved to ~W~%" '*APROPOS-LIST*))))
 
 (define-command (com-trace :name "Trace"
-			   :command-table dev-commands
+			   :command-table lisp-commands
+                           :menu t
 			   :provide-output-destination-keyword nil)
     ((fsym 'function-name :prompt "function-name"))
   (if (fboundp fsym)
@@ -305,7 +344,8 @@
     (format T "~&Function ~W is not defined.~%" fsym)))
 
 (define-command (com-untrace :name "Untrace"
-			     :command-table dev-commands
+			     :command-table lisp-commands
+                             :menu t
 			     :provide-output-destination-keyword nil)
     ((fsym 'symbol :prompt "function name"))
   (if (fboundp fsym)
@@ -316,31 +356,35 @@
 
 
 (define-command (com-load-file :name "Load File"
-                               :command-table dev-commands
+                               :command-table lisp-commands
+                               :menu t
 			       :provide-output-destination-keyword t)
   ((pathname 'pathname :prompt "pathname"))
   (load pathname))
 
 (define-command (com-compile-file :name "Compile File"
-                                  :command-table dev-commands
+                                  :command-table lisp-commands
+                                  :menu t
 				  :provide-output-destination-keyword t)
   ((pathname 'pathname :prompt "pathname"))
   (compile-file pathname))
 
 (define-command (com-compile-and-load :name "Compile and load"
-                                      :command-table dev-commands
+                                      :command-table lisp-commands
+                                      :menu t
 				      :provide-output-destination-keyword t)
   ((pathname 'pathname :prompt "pathname"))
   (load (compile-file pathname)))
 
 (define-command (com-room :name "Room"
-                          :command-table dev-commands
+                          :command-table lisp-commands
+                          :menu t
 			  :provide-output-destination-keyword t)
   ()
   (room))
 
 (define-presentation-to-command-translator mem-room-translator
-  (lisp-memory-usage com-room dev-commands :gesture :select)
+  (lisp-memory-usage com-room lisp-commands :gesture :select)
   ())
   
 
@@ -380,7 +424,8 @@
     (find-class spec nil)))
 
 (define-command (com-show-class-superclasses :name "Show Class Superclasses"
-                                             :command-table dev-commands
+                                             :command-table show-commands
+                                             :menu t
 					     :provide-output-destination-keyword t)
     ((class-spec 'class-name :prompt "class"))
   (let ((class (frob-to-class class-spec)))
@@ -389,7 +434,8 @@
         (class-grapher *standard-output* class #'clim-mop:class-direct-superclasses))))
 
 (define-command (com-show-class-subclasses :name "Show Class Subclasses"
-                                           :command-table dev-commands
+                                           :command-table show-commands
+                                           :menu t
 					   :provide-output-destination-keyword t)
     ((class-spec 'class-name :prompt "class"))
   (let ((class (frob-to-class class-spec)))
@@ -539,7 +585,8 @@
                          class))))
 
 (define-command (com-show-class-slots :name "Show Class Slots"
-				      :command-table dev-commands
+				      :command-table show-commands
+                                      :menu t
 				      :provide-output-destination-keyword t)
     ((class-name 'clim:symbol :prompt "class name"))
   (let ((class (find-class class-name nil)))
@@ -603,7 +650,8 @@
 
 (define-command (com-show-class-generic-functions
                  :name "Show Class Generic Functions"
-                 :command-table dev-commands
+                 :command-table show-commands
+                 :menu t
 		 :provide-output-destination-keyword t)
     ((class-spec 'class-name :prompt "class"))
   (let ((class (frob-to-class class-spec)))
@@ -746,7 +794,8 @@
 
 (define-command (com-show-generic-function
 		 :name t
-		 :command-table dev-commands
+		 :command-table show-commands
+                 :menu t
 		 :provide-output-destination-keyword t)
     ((gf 'generic-function :prompt "a generic function")
      &key (classes 'boolean :default nil :mentioned-default t)
@@ -883,7 +932,8 @@
                                    (draw-arrow* stream x1 y1 x2 y2 :ink arrow-ink))))))
 
 (define-command (com-show-used-packages :name "Show Used Packages"
-                                        :command-table dev-commands
+                                        :command-table show-commands
+                                        :menu t
                                         :provide-output-destination-keyword t)
     ((package-spec '(or package-name package) :prompt "package" :default *package*))
   (let ((real-package (when package-spec
@@ -895,7 +945,8 @@
         (note "~A is not a package." package-spec))))
 
 (define-command (com-show-package-users :name "Show Package Users"
-                                        :command-table dev-commands
+                                        :command-table show-commands
+                                        :menu t
                                         :provide-output-destination-keyword t)
     ((package-spec '(or package-name package) :prompt "package" :default *package*))
   (let ((real-package (when package-spec
@@ -958,7 +1009,8 @@
 ;; Change to using an :ICONIC view for pathnames?
 
 (define-command (com-show-directory :name "Show Directory"
-				    :command-table dev-commands
+				    :command-table filesystem-commands
+                                    :menu t
 				    :provide-output-destination-keyword t)
     ((pathname 'pathname #+nil(or 'string 'pathname) :prompt "pathname")
      &key
@@ -1008,7 +1060,7 @@
 
 #+nil   ; OBSOLETE
 (define-presentation-to-command-translator show-directory-translator
-  (clim:pathname com-show-directory dev-commands :gesture :select
+  (clim:pathname com-show-directory filesystem-commands :gesture :select
 		 :pointer-documentation ((object stream)
 					 (format stream "Show directory ~A" object))
                  :tester-definitive T
@@ -1019,7 +1071,8 @@
 
 
 (define-command (com-change-directory :name "Change Directory"
-                                      :command-table dev-commands)
+                                      :menu t
+                                      :command-table filesystem-commands)
   ((pathname 'pathname :prompt "pathname"))
   (let ((pathname (merge-pathnames pathname)))
     (cond ((not (probe-file pathname))
@@ -1029,7 +1082,8 @@
           (T (change-directory (merge-pathnames pathname))) )))
 
 (define-command (com-up-directory :name "Up Directory"
-                                  :command-table dev-commands)
+                                  :menu t
+                                  :command-table filesystem-commands)
   ()
   (let ((parent (parent-directory *default-pathname-defaults*)))
     (when parent
@@ -1043,7 +1097,7 @@
   (:middle))
 
 (define-presentation-to-command-translator change-directory-translator
-  (clim:pathname com-change-directory dev-commands :gesture :change-directory
+  (clim:pathname com-change-directory filesystem-commands :gesture :change-directory
 		 :pointer-documentation ((object stream)  (declare (ignore object))
 					 (format stream "Change to this directory"))
                  :documentation ((object stream)  (declare (ignore object))
@@ -1125,7 +1179,7 @@
                         (format nil "Edit ~A" pathname))) ))))))
 
 (define-presentation-translator automagic-pathname-translator
-  (clim:pathname clim:command dev-commands
+  (clim:pathname clim:command filesystem-commands
                  :gesture :select
                  :priority 2
                  :tester ((object)
@@ -1142,19 +1196,29 @@
 
 ;;; The directory stack.
 
-(defvar *directory-stack* nil)
+(defvar *directory-stack* nil) ;; FIXME: This should probably be a slot of the frame.
+
+(defun compute-dirstack-command-eligibility (frame)
+  (let* ((stack *directory-stack*)
+         (state (if stack t nil)))    
+    (setf (command-enabled 'com-drop-directory frame) state
+          (command-enabled 'com-pop-directory  frame) state
+          (command-enabled 'com-swap-directory frame) state)))
+    
 
 (define-command (com-push-directory :name "Push Directory"
-                                    :command-table dev-commands)
+                                    :menu t
+                                    :command-table directory-stack-commands)
   ((pathname 'pathname :prompt "pathname"))
   (let ((pathname (merge-pathnames pathname)))
     (if (and (probe-file pathname)
-             (directoryp pathname));; hrm.. need smart conversion to directories..
+             (directoryp pathname));; FIXME: Need smart conversion to directories, here and elsewhere.
         (progn (push *default-pathname-defaults* *directory-stack*)
                (com-change-directory pathname))
-      (italic (T)
-        (fresh-line) (present (truename pathname))
-        (format T " does not exist or is not a directory.~%")) )))
+        (italic (T)
+           (fresh-line) (present (truename pathname))
+           (format T " does not exist or is not a directory.~%")) ))
+  (compute-dirstack-command-eligibility *application-frame*))
 
 (defun comment-on-dir-stack ()
   (if *directory-stack*
@@ -1164,27 +1228,32 @@
         (terpri))
     (format T "~&The directory stack is now empty.~%")))
 
-(define-command (com-pop-direcory :name "Pop Directory"
-                                  :command-table dev-commands)
+(define-command (com-pop-directory :name "Pop Directory"
+                                  :menu t
+                                  :command-table directory-stack-commands)
   ()
   (if (null *directory-stack*)
       (note "The directory stack is empty!")
     (progn 
       (com-change-directory (pop *directory-stack*))
-      (italic (T) (comment-on-dir-stack)))))
+      (italic (T) (comment-on-dir-stack))))
+  (compute-dirstack-command-eligibility *application-frame*))
 
 (define-command (com-drop-directory :name "Drop Directory"
-                                    :command-table dev-commands)
+                                    :menu t
+                                    :command-table directory-stack-commands)
   ()
   (italic (T)
     (if (null *directory-stack*)
         (format T "~&The directory stack is empty!~%")
       (progn
         (setf *directory-stack* (rest *directory-stack*))
-        (comment-on-dir-stack)))))
+        (comment-on-dir-stack))))
+  (compute-dirstack-command-eligibility *application-frame*))
 
 (define-command (com-swap-directory :name "Swap Directory"
-                                    :command-table dev-commands)
+                                    :menu t
+                                    :command-table directory-stack-commands)
   ()
   (italic (T)
     (if (null *directory-stack*)
@@ -1192,10 +1261,12 @@
       (progn
         (psetf (first *directory-stack*) *default-pathname-defaults*
                *default-pathname-defaults* (first *directory-stack*))
-        (comment-on-dir-stack)))))
+        (comment-on-dir-stack))))
+  (compute-dirstack-command-eligibility *application-frame*))
 
 (define-command (com-display-directory-stack :name "Display Directory Stack"
-                                          :command-table dev-commands)
+                                             :menu t
+                                             :command-table directory-stack-commands)
   ()
   (if (null *directory-stack*)
       (note "~&The directory stack is empty!~%")
@@ -1204,12 +1275,13 @@
       (pretty-pretty-pathname pathname *standard-output*) )))
 
 (define-presentation-to-command-translator display-dir-stack-translator
-  (directory-stack com-display-directory-stack dev-commands :gesture :select)
+  (directory-stack com-display-directory-stack filesystem-commands :gesture :select)
   () ())
 
 
 (define-command (com-edit-file :name "Edit File"
-			       :command-table dev-commands
+                               :menu t
+			       :command-table filesystem-commands                               
 			       :provide-output-destination-keyword nil)
   ((pathname 'pathname  :prompt "pathname"))
   (clim-sys:make-process (lambda () (ed pathname))))
@@ -1218,7 +1290,7 @@
 ;; com-edit-file where there is not a more specific handler for a text mime type.
 #+IGNORE
 (define-presentation-to-command-translator edit-file
-  (clim:pathname com-edit-file dev-commands :gesture :select
+  (clim:pathname com-edit-file filesystem-commands :gesture :select
 		 :pointer-documentation ((object stream)
 					 (format stream "Edit ~A" object))
 		 :documentation ((stream) (format stream "Edit File"))
@@ -1229,13 +1301,15 @@
   (object)
   (list object))
 
-(define-command (com-show-file :name "Show File" :command-table dev-commands
+(define-command (com-show-file :name "Show File" :command-table filesystem-commands
+                               :menu t
 			       :provide-output-destination-keyword t)
   ((object 'pathname :prompt "pathname"))
   (show-file object))
 
 (define-command (com-edit-definition :name "Edit Definition"
-				     :command-table dev-commands
+				     :command-table lisp-commands
+                                     :menu t
 				     :provide-output-destination-keyword nil)
   ((symbol 'symbol :prompt "function-name"))
   (clim-sys:make-process (lambda () (ed symbol))))
@@ -1244,7 +1318,7 @@
   (fboundp symbol))
 
 (define-presentation-to-command-translator edit-definition
-  (symbol com-edit-definition dev-commands :gesture :select
+  (symbol com-edit-definition lisp-commands :gesture :select
 	  :pointer-documentation ((object stream)
 				  (format stream "Edit Definition of ~A" object))
 	  :documentation ((stream) (format stream "Edit Definition"))
@@ -1263,26 +1337,6 @@
 	while line
 	do (progn (princ line)
 		  (terpri))))))
-
-;; You have to seperate command arguments with commas..
-;; Need to find a better way to input these.
-
-;; McCLIM fixme: Shouldn't we be able to activate before the (args) prompt
-;; since defaults are defined?
-;; FIXME: Disabled input, as it usually seems to hang.
-(define-command (com-run :name "Run" :command-table dev-commands
-			 :provide-output-destination-keyword t)
-  ((program 'string :prompt "command")
-   (args '(sequence string) :default nil :prompt "args"))
-  (run-program program args :wait T :input nil))
-
-;; Replace this command with a keyword to COM-RUN.
-(define-command (com-background-run :name "Background Run"
-				    :command-table dev-commands
-				    :provide-output-destination-keyword t)
-  ((program 'string :prompt "command")
-   (args '(sequence string) :default nil :prompt "args"))
-  (run-program program args :wait nil :output nil :input nil))
 
 ;;; Eval
 
@@ -1319,7 +1373,7 @@
         **  *
         *   (first values)))
 
-(define-command (com-eval :command-table dev-commands)
+(define-command (com-eval :menu t :command-table lisp-commands)
     ((form 'clim:form :prompt "form"))  
   (let ((values (multiple-value-list (eval form))))
     (fresh-line)
@@ -1327,16 +1381,11 @@
     (display-evalues values)
     (fresh-line)))
 
-(define-command (com-reload-mime-database :name "Reload Mime Database"
-                                          :command-table dev-commands)
-    ()
-  (progn
-    (load-mime-types)
-    (load-mailcaps)))
+
 
 ;;; Some CLIM developer commands
 
-(define-command (com-show-command-table :name t :command-table dev-commands)
+(define-command (com-show-command-table :name t :menu t :command-table show-commands)
     ((table 'clim:command-table :prompt "command table")
      &key
      (locally 'boolean :default nil :mentioned-default t)
@@ -1403,7 +1452,8 @@
 	(simple-parse-error "No package"))))
 
 (define-command (com-set-package :name t
-				 :command-table dev-commands
+                                 :menu t
+				 :command-table lisp-commands
 				 :provide-output-destination-keyword nil)
     ((p 'package))
   (setf *package* p))

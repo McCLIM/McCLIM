@@ -20,11 +20,6 @@
 ;;; Boston, MA  02111-1307  USA.
 
 
-;; Preliminaries
-
-(define-command-table listener)
-
-
 ;; Wholine Pane
 
 (defclass wholine-pane (application-pane) ())
@@ -32,7 +27,7 @@
 (defmethod compose-space ((pane wholine-pane) &key width height)
   (declare (ignore width height))  
   (let ((h (+ 3 (text-style-height (medium-text-style pane) pane)))) ; magic padding
-  (make-space-requirement :min-width 500 :width 768
+  (make-space-requirement :min-width 500 :width 768                  ; magic space requirements
                           :height h
                           :min-height h
                           :max-height h)))
@@ -86,23 +81,12 @@
               (when *directory-stack*
                 (with-output-as-presentation (T *directory-stack* 'directory-stack)
                   (format T "  (~D deep)" (length *directory-stack*)))))
-          ;; argh, I really want this on the right. Neither the table nor item
-          ;; formatters want to do it that way, though. So we kludge it below.. =/
           ;; Although the CLIM spec says the item formatter should try to fill
-          ;; the available width..
-            #+NIL
+          ;; the available width, I can't get either the item or table formatters
+          ;; to really do so such that the memory usage appears right justified.            
             (cell (:center)
               (when (numberp memusage)
-                (present memusage 'lisp-memory-usage))))
-
-      ;; Hackishly draw memory usage on this side.
-      (let ((record (with-output-to-output-record (pane)
-                      (present memusage 'lisp-memory-usage))))
-        (setf (output-record-position record)
-              (values (- (bounding-rectangle-width pane)
-                         (bounding-rectangle-width record))
-                      0))
-        (stream-add-output-record pane record)))))))
+                (present memusage 'lisp-memory-usage)))))))))
 
 ;; This is a (very simple) command history.
 ;; Should we move this into CLIM-INTERNALS ?
@@ -121,7 +105,8 @@
                                          (history-length frame))))))
 
 (define-command (com-show-command-history :name "Show Command History"
-                                          :command-table listener)
+                                          :command-table application-commands
+                                          :menu ("Show Command History" :after "Clear Output History"))
     ()
   (formatting-table ()
      (loop for n from 0 by 1
@@ -157,7 +142,14 @@
                      :display-function 'display-wholine :scroll-bars nil
                      :display-time :command-loop :end-of-line-action :allow)))
   (:top-level (default-frame-top-level :prompt 'print-listener-prompt))
-  (:command-table (listener :inherit-from (dev-commands)))
+  (:command-table (listener
+                   :inherit-from (application-commands lisp-commands filesystem-commands show-commands)
+                   :menu (("Application" :menu application-commands)
+                          ("Lisp"        :menu lisp-commands)
+                          ("Filesystem"  :menu filesystem-commands)
+                          ("Show"        :menu show-commands))))
+  (:disabled-commands com-pop-directory com-drop-directory com-swap-directory)
+  (:menu-bar t)
   (:layouts (default
 	      (vertically ()
                 interactor

@@ -70,7 +70,7 @@ Some of these items will be sensitive to pointer gestures.
 Commands
 --------
 
-The command "Help (with) Commands" will show a list of commands available.
+The command "Help (with) Commands" will produce a list of available commands.
 
  General Commands
   - Help
