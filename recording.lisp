@@ -560,7 +560,7 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
 				    stream state)
   ;; XXX DC
   ;; XXX Disable recording?
-  (letf (((medium-transformation stream) +identity-transformation+))
+  (with-identity-transformation (stream)
     (multiple-value-bind (x1 y1 x2 y2)
         (output-record-hit-detection-rectangle* record)
       (ecase state
@@ -1032,6 +1032,7 @@ were added."
    sequences of coordinates."))
 
 (defun coord-seq-bounds (coord-seq border)
+  (setf border (ceiling border))
   (let* ((min-x (elt coord-seq 0))
 	 (min-y (elt coord-seq 1))
 	 (max-x min-x)
@@ -1041,17 +1042,10 @@ were added."
       (minf min-y y)
       (maxf max-x x)
       (maxf max-y y))
-    (values (- min-x border) (- min-y border)
-	    (+ max-x border) (+ max-y border))))
-
-(defmethod initialize-instance :after ((record coord-seq-mixin) &key)
-  (let ((medium (sheet-medium (slot-value record 'stream))))
-    (with-slots (coord-seq)
-	record
-      (setf coord-seq
-	    (transform-position-sequence 'vector
-					 (medium-transformation medium)
-					 coord-seq)))))
+    (values (floor (- min-x border))
+            (floor (- min-y border))
+            (ceiling (+ max-x border))
+            (ceiling (+ max-y border)))))
 
 ;;; x1, y1 slots must exist in class...
 
@@ -1106,11 +1100,12 @@ were added."
 	 (with-sheet-medium (medium stream)
 	   (when (stream-recording-p stream)
 	     (let ((record (make-instance ',class-name
-			     :stream stream
-			     ,@arg-list)))
+                                          :stream stream
+                                          ,@arg-list)))
 	       (stream-add-output-record stream record)))
 	   (when (stream-drawing-p stream)
-	     (call-next-method))))
+             (with-identity-transformation (medium)
+               (,method-name medium ,@args)))))
        (defmethod replay-output-record ((record ,class-name) stream
 					&optional (region +everywhere+)
                                         (x-offset 0) (y-offset 0))
