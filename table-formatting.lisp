@@ -20,8 +20,9 @@
 ;;; TODO:
 ;;;
 ;;; - Check types: RATIONAL, COORDINATE, REAL?
+;;; - Check default values of unsupplied arguments.
 ;;; - Better error detection.
-;;; - Item list formatting.
+;;; - 
 ;;; - Multiple columns:
 ;;; - - all columns are assumed to have the same width;
 ;;; - - all columns have the same number of rows; they should have the
@@ -30,6 +31,7 @@
 ;;; - All types of spacing, widths, heights.
 ;;; - FIXMEs.
 ;;; - Bug: only one option of :X-SPACING and :Y-SPACING works now. (?)
+;;; - Item list formatting: what is :EQUALIZE-COLUMN-WIDTHS?!
 
 (in-package :CLIM-INTERNALS)
 
@@ -85,13 +87,20 @@ or an item list."))
 ;;; STANDARD-CELL-OUTPUT-RECORD class
 (defclass standard-cell-output-record (cell-output-record
                                        standard-sequence-output-record)
-  ((align-x :initarg :align-x :reader cell-align-x)
-   (align-y :initarg :align-y :reader cell-align-y)
-   (min-width :initarg :min-width :reader cell-min-width)
-   (min-height :initarg :min-height :reader cell-min-height)))
+  ((align-x :initform nil :initarg :align-x :reader cell-align-x)
+   (align-y :initform nil :initarg :align-y :reader cell-align-y)
+   (min-width :initform 0 :initarg :min-width :reader cell-min-width)
+   (min-height :initform 0 :initarg :min-height :reader cell-min-height)))
+
+(defmethod initialize-instance :after ((cell standard-cell-output-record)
+                                       &rest args)
+  (declare (ignore args))
+  (with-slots (align-x align-y) cell
+    (orf align-x :left)
+    (orf align-y :bottom))) ; FIXME: :BASELINE
 
 (defmacro formatting-cell ((&optional (stream t)
-                            &key (align-x :left) (align-y :center) ; FIXME!!! It must be :baseline, but it is not yet implemented
+                            &key align-x align-y
                                  min-width min-height
                                  (record-type ''standard-cell-output-record))
                            &body body)
@@ -102,7 +111,8 @@ or an item list."))
     `(progn
        (let ((,parent (stream-current-output-record ,stream)))
          (assert (or (row-output-record-p ,parent)
-                     (column-output-record-p ,parent))))
+                     (column-output-record-p ,parent)
+                     (item-list-output-record-p ,parent))))
        (with-new-output-record (,stream ,record-type ,record
                                 :align-x ,align-x :align-y ,align-y
                                 :min-width (parse-space ,stream
@@ -155,11 +165,11 @@ the individual dimensions of cells in the BLOCK. "))
   (let ((info (make-instance 'block-info)))
     (with-slots (common-size number-of-cells cell-sizes) info
       (map-over-block-cells
-       #'(lambda (cell)
-           (setf common-size
-                 (max (cell-common-size cell block) common-size))
-           (incf number-of-cells)
-           (push (cell-size cell block) cell-sizes))
+       (lambda (cell)
+         (setf common-size
+               (max (cell-common-size cell block) common-size))
+         (incf number-of-cells)
+         (push (cell-size cell block) cell-sizes))
        block)
       (setf cell-sizes (nreverse cell-sizes)))
     info))
@@ -175,13 +185,13 @@ dimension."
   (let ((cell-coordinate 0)
         (cell-number 0))
     (map-over-block-cells
-     #'(lambda (cell)
-         (let ((size (aref sizes cell-number)))
-           (block-adjust-cell* cell block
-                               cell-coordinate common-coordinate
-                               size common-size)
-           (incf cell-coordinate (+ size spacing))
-           (incf cell-number)))
+     (lambda (cell)
+       (let ((size (aref sizes cell-number)))
+         (block-adjust-cell* cell block
+                             cell-coordinate common-coordinate
+                             size common-size)
+         (incf cell-coordinate (+ size spacing))
+         (incf cell-number)))
      block)))
 
 
@@ -231,8 +241,8 @@ to a table cell within the row."))
 (defmethod map-over-row-cells (function
                                (row-record standard-row-output-record))
   (map-over-output-records
-   #'(lambda (record)
-       (when (cell-output-record-p record) (funcall function record)))
+   (lambda (record)
+     (when (cell-output-record-p record) (funcall function record)))
    row-record))
 
 (defmacro formatting-row ((&optional (stream t)
@@ -295,8 +305,8 @@ corresponding to a table cell within the column."))
 (defmethod map-over-column-cells
     (function (column-record standard-column-output-record))
   (map-over-output-records
-   #'(lambda (record)
-       (when (cell-output-record-p record) (funcall function record)))
+   (lambda (record)
+     (when (cell-output-record-p record) (funcall function record)))
    column-record))
 
 (defmacro formatting-column ((&optional (stream t)
@@ -428,20 +438,20 @@ modifying list BLOCK-INFOS or vector SIZES."))
                                     (table-record standard-table-output-record)
                                     type)
   (map-over-output-records
-   #'(lambda (record)
-       (when (or
-              (and (row-output-record-p record)
-                   (member type '(:row :row-or-column)))
-              (and (column-output-record-p record)
-                   (member type '(:column :row-or-column))))
-         (funcall function record)))
+   (lambda (record)
+     (when (or
+            (and (row-output-record-p record)
+                 (member type '(:row :row-or-column)))
+            (and (column-output-record-p record)
+                 (member type '(:column :row-or-column))))
+       (funcall function record)))
    table-record))
 
 (defun collect-block-infos (table)
   "Returns a list of BLOCK-INFOs for blocks in TABLE."
   (let ((infos nil))
     (map-over-table-elements
-     #'(lambda (block) (push (block-info block) infos))
+     (lambda (block) (push (block-info block) infos))
      table
      :row-or-column)
     (nreverse infos)))
@@ -467,11 +477,11 @@ modifying list BLOCK-INFOS or vector SIZES."))
       (table-equalize-column-widths table-record infos sizes))
     (map-over-table-elements
      (let ((common-coordinate 0))
-       #'(lambda (block)
-           (let ((common-size (block-info-common-size (pop infos))))
-             (adjust-block block sizes
-                           cell-spacing common-coordinate common-size)
-             (incf common-coordinate (+ common-size block-spacing)))))
+       (lambda (block)
+         (let ((common-size (block-info-common-size (pop infos))))
+           (adjust-block block sizes
+                         cell-spacing common-coordinate common-size)
+           (incf common-coordinate (+ common-size block-spacing)))))
      table-record
      :row-or-column)))
 
@@ -581,3 +591,139 @@ modifying list BLOCK-INFOS or vector SIZES."))
                                     stream)
   (declare (ignore stream))
   ()) ; Nothing to do (?)
+
+
+;;; Item list formatting
+
+(define-protocol-class item-list-output-record ()
+  ())
+
+(defgeneric map-over-item-cells (function item-list-record)
+  (:documentation "Applies FUNCTION to the cells in ITEM-LIST-RECORD,
+skipping skip over intervening non-table output record
+structure. FUNCTION is a function of one argument, an output record
+corresponding to a cell in the item list; it has dynamic extent."))
+(defgeneric adjust-item-list-cells (item-list-record stream))
+
+(defclass standard-item-list-output-record (item-list-output-record
+                                            standard-sequence-output-record)
+  ((x-spacing :initarg :x-spacing)
+   (y-spacing :initarg :y-spacing)
+   (initial-spacing :initarg :initial-spacing)
+   (row-wise :initarg :row-wise)
+   (n-rows :initarg :n-rows)
+   (n-columns :initarg :n-columns)
+   (max-width :initarg :max-width)
+   (max-height :initarg :max-height)))
+
+(defmethod map-over-item-cells
+    (function (item-list-record standard-item-list-output-record))
+  (map-over-output-records
+   (lambda (record)
+     (when (cell-output-record-p record) (funcall function record)))
+   item-list-record))
+
+(defmethod adjust-item-list-cells
+    ((item-list standard-item-list-output-record) stream)
+  (let ((width 0) (height 0)
+        (n-rows (slot-value item-list 'n-rows))
+        (n-columns (slot-value item-list 'n-columns))
+        x (y 0)
+        dx dy
+        (n-items 0)
+        n-rows-left)
+    (map-over-item-cells
+     (lambda (item)
+       (maxf width (bounding-rectangle-width item))
+       (maxf height (bounding-rectangle-height item))
+       (incf n-items))
+     item-list)
+    (when (and n-rows n-columns (> n-items (* n-rows n-columns)))
+      (setq n-rows nil))
+    (cond ((not (or n-rows n-columns))
+           (setq n-rows n-items
+                 n-columns 1))
+          ((not n-rows)
+           (setq n-rows (ceiling n-items n-columns)))
+          ((not n-columns)
+           (setq n-columns (ceiling n-items n-rows))))
+    (setq x (if (slot-value item-list 'initial-spacing)
+                (/ (slot-value item-list 'x-spacing) 2)
+                0))
+    (setq dx (+ width (slot-value item-list 'x-spacing)))
+    (setq dy (+ height (slot-value item-list 'y-spacing)))
+    (setq n-rows-left n-rows)
+    (map-over-item-cells
+     (lambda (item)
+       (adjust-cell* item x y width height)
+       (cond ((= 0 (decf n-rows-left))
+              (setq x (+ x dx)
+                    y 0
+                    n-rows-left n-rows))
+             (t (incf y dy))))
+     item-list)))
+
+(defun format-items (items
+                     &key stream printer presentation-type
+                     x-spacing y-spacing n-columns n-rows
+                     max-width max-height cell-align-x cell-align-y
+                     initial-spacing (row-wise t) (move-cursor t)
+                     record-type)
+  (orf stream *standard-output*)
+  (setq x-spacing (parse-space stream (or x-spacing #\Space) :horizontal))
+  (setq y-spacing (parse-space stream (or y-spacing
+                                          (stream-vertical-spacing stream))
+                               :vertical))
+  (orf record-type 'standard-item-list-output-record)
+  (let ((printer (if printer
+                     (if presentation-type
+                         (lambda (item stream)
+                           (with-output-as-presentation (stream item presentation-type)
+                             (funcall printer item stream)))
+                         printer)
+                     (if presentation-type
+                         (lambda (item stream)
+                           (present item presentation-type :stream stream))
+                         #'prin1))))
+    (with-new-output-record
+        (stream record-type item-list
+                :x-spacing x-spacing
+                :y-spacing y-spacing
+                :initial-spacing initial-spacing
+                :row-wise row-wise
+                :n-rows n-rows
+                :n-columns n-columns
+                :max-width max-width
+                :max-height max-height)
+      (multiple-value-bind (cursor-old-x cursor-old-y)
+          (stream-cursor-position stream)
+        (with-output-recording-options (stream :record t :draw nil)
+          (mapc (lambda (item)
+                  (formatting-cell (stream :align-x cell-align-x
+                                           :align-y cell-align-y)
+                    (funcall printer item stream)))
+                items)
+          (finish-output stream))
+        (adjust-item-list-cells item-list stream)
+        (setf (output-record-position item-list)
+              (values cursor-old-x cursor-old-y))
+        (if move-cursor
+            ;; FIXME!!!
+            #+ignore
+            (setf (stream-cursor-position stream)
+                  (values cursor-new-x cursor-new-y))
+            #-ignore
+            nil
+            (setf (stream-cursor-position stream)
+                  (values cursor-old-x cursor-old-y)))
+        (replay item-list stream)))))
+
+(defmacro formatting-item-list
+    ((&optional stream
+                &key x-spacing y-spacing n-columns n-rows
+                stream-width stream-height
+                max-width max-height
+                initial-spacing (row-wise t) (move-cursor t)
+                record-type &allow-other-keys)
+     &body body)
+  ())
