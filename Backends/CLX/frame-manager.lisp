@@ -26,6 +26,8 @@
   )
 
 (defmethod make-pane-1 ((fm clx-frame-manager) (frame application-frame) type &rest args)
+  (if (not (find-class type nil))
+      (setq type (intern (format nil "~A-PANE" type):clim)))
   (apply #'make-instance type ; (intern (concatenate 'string "X11-" (symbol-name type)) :clim)
 	 :frame frame
 	 :manager fm
