@@ -76,6 +76,7 @@
    "clx-graft"
    "clx-frame-manager"
    
-   "examples/address-book"
    "examples/calculator"
+   "examples/sliderdemo"
    ))
+
