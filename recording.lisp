@@ -585,15 +585,15 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
 (defgeneric note-output-record-lost-sheet (record sheet))
 (defgeneric note-output-record-got-sheet  (record sheet))
 
-(defmethod note-output-record-lost-sheet ((record basic-output-record) sheet)
-  (declare (ignore sheet))
+(defmethod note-output-record-lost-sheet ((record output-record) sheet)
+  (declare (ignore record sheet))
   (values))
 
 (defmethod note-output-record-lost-sheet :after ((record compound-output-record) sheet)
   (map-over-output-records #'note-output-record-lost-sheet record 0 0 sheet))
 
-(defmethod note-output-record-got-sheet  ((record basic-output-record) sheet)
-  (declare (ignore sheet))
+(defmethod note-output-record-got-sheet  ((record output-record) sheet)
+  (declare (ignore record sheet))
   (values))
 
 (defmethod note-output-record-got-sheet :after ((record compound-output-record) sheet)
