@@ -151,15 +151,15 @@ sheet-supports-only-one-child error to be signalled."))
 	   :initarg :region
 	   :initform (make-bounding-rectangle 0 0 100 100)
 	   :accessor sheet-region)
-   (native-transformation :type transformation
+   (native-transformation :type (or null transformation)
 			  :initform nil
                           :writer %%set-sheet-native-transformation
                           :reader %%sheet-native-transformation)
-   (native-region :type region
+   (native-region :type (or null region)
 		  :initform nil)
-   (device-transformation :type transformation
+   (device-transformation :type (or null transformation)
 			  :initform nil)
-   (device-region :type region
+   (device-region :type (or null region)
 		  :initform nil)
    (enabled-p :type boolean
 	      :initarg :enabled-p
