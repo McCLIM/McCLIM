@@ -82,10 +82,25 @@
 	      (presentation-subtypep (presentation-type presentation)
 				     context-type))
      :tester-definitive t
-     :documentation ((object presentation stream)
-		     (present object (presentation-type presentation)
-			      :stream stream
-			      :sensitive nil)))
+     :menu nil
+     :documentation ((object presentation context-type frame event window x y stream)
+                     (let* ((type (presentation-type presentation))
+                            (options (decode-options type))
+                            (description (getf options :description)))
+                       (if description
+                           (if (stringp description)
+                               (princ description stream)
+                               (funcall description object
+                                        :presentation presentation
+                                        :context-type context-type
+                                        :frame frame
+                                        :event event
+                                        :window window
+                                        :x x :y y
+                                        :stream stream))
+                           (present object (presentation-type presentation)
+                                    :stream stream
+                                    :sensitive nil)))))
   (object)
   object)
 
