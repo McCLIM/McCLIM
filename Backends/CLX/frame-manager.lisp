@@ -69,7 +69,7 @@
         (when (and x y)
           (setf (xlib:drawable-x mirror) x
                 (xlib:drawable-y mirror) y))
-        (tell-window-manager-about-space-requirents top-level-sheet))
+        (tell-window-manager-about-space-requirements top-level-sheet))
       ;; :structure-notify events were not yet turned on, turn them
       ;; on now, so that we get informed about the windows position
       ;; (and possibly size), when the window gets maped.
@@ -79,7 +79,7 @@
       (when (sheet-enabled-p sheet)
         (xlib:map-window mirror) ))))
 
-(defmethod tell-window-manager-about-space-requirents ((pane top-level-sheet-pane))
+(defmethod tell-window-manager-about-space-requirements ((pane top-level-sheet-pane))
   (multiple-value-bind (w h x y) (climi::frame-geometry* (pane-frame pane))
     (declare (ignore w h))
     (let ((q (compose-space pane)))
@@ -95,9 +95,9 @@
                :min-width (round (space-requirement-min-width q))
                :min-height (round (space-requirement-min-height q)))) ) )))
 
-(defmethod tell-window-manager-about-space-requirents* ((pane t) &rest more)
+(defmethod tell-window-manager-about-space-requirements ((pane t))
   ;; hmm
   nil)
 
 (defmethod note-space-requirements-changed :after ((graft clx-graft) pane)
-  (tell-window-manager-about-space-requirents pane))
+  (tell-window-manager-about-space-requirements pane))
