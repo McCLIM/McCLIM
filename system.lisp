@@ -42,10 +42,11 @@
 (pushnew :CLIM *features*)
 (provide :CLIM)
 
-#+(or cmu clisp) (use-package :mk)
+#+mk-defsystem (use-package "MK")
 
 (defsystem :CLIM #-(or cmu clisp) ()
-  #+cmu :components
+  #+clisp :source-extension #+clisp "lisp"
+  #+(or cmu clisp) :components
   (:serial
    "design"
    "X11-colors"
