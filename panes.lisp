@@ -1109,8 +1109,8 @@ During realization the child of the spacing will have as cordinates
       (when hscrollbar
 	(with-slots (value) hscrollbar
 	  (setf value x))
-	(setf (gadget-min-value vscrollbar) min-x
-	      (gadget-max-value vscrollbar) max-x)
+	(setf (gadget-min-value hscrollbar) min-x
+	      (gadget-max-value hscrollbar) max-x)
 	(dispatch-repaint hscrollbar (sheet-region hscrollbar))))))
 
 (defmethod scroll-extent ((pane basic-pane) x y)
