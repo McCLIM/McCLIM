@@ -937,7 +937,7 @@ function lambda list"))
   (with-presentation-type-decoded (name parameters)
     type
     (when (null parameters)
-      (let ((clos-class (find-class name)))
+      (let ((clos-class (find-class name nil)))	; Don't error out.
 	(when (and clos-class (typep clos-class 'standard-class))
 	  (return-from presentation-typep (typep object name)))))
     (funcall-presentation-generic-function presentation-typep object type)))
