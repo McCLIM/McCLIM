@@ -5,7 +5,7 @@
 
 3. Try something like:
 
-   (clouseau::inspector (clim:make-application-frame 'clouseau::inspector :obj 20))
+   (clouseau:inspector (clim:make-application-frame 'clouseau:inspector :obj 20))
 
    in order to inspect the inspector pane.
 

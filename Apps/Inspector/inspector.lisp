@@ -567,23 +567,24 @@ available in direct slots."
 	   (class (class-of object))
 	   (documentation (handler-bind ((warning #'muffle-warning))
 			    (slot-documentation class slot-name)))
-	   (slot-object (find slot-name (clim-mop:class-slots class)
-			      :key #'clim-mop:slot-definition-name)))
+	   (slot-object (or (find slot-name (clim-mop:class-direct-slots class)
+                                  :key #'clim-mop:slot-definition-name)
+                            (find slot-name (clim-mop:class-slots class)
+                                  :key #'clim-mop:slot-definition-name))))
       (when documentation
 	(format stream "~&Documentation: ~A~%" documentation))
       (format stream "~&Type: ~S~%"
 	      (clim-mop:slot-definition-type slot-object))
       (format stream "~&Allocation: ~S~%"
 	      (clim-mop:slot-definition-allocation slot-object))
-      ;; FIXME: This should show readers and writers for object slots
-      ;; (but not structure slots), but it doesn't work on SBCL 0.8.16
-      ;; for me. Is this an SBCL-specific problem?  Is the code
-      ;; broken?
-      (when (clim-mop:slot-definition-readers slot-object)
-	(format stream "~&Readers: ")
-	(format-textual-list (clim-mop:slot-definition-readers slot-object)
-			     #'inspect-object))
-      (when (clim-mop:slot-definition-writers slot-object)
-	(format stream "~&Writers: ")
-	(format-textual-list (clim-mop:slot-definition-writers slot-object)
-			     #'inspect-object)))))
+      ;; slot-definition-{readers,writers} only works for direct slot
+      ;; definitions
+      (let ((readers (clim-mop:slot-definition-readers slot-object)))
+        (when readers
+          (format stream "~&Readers: ")
+          (present readers (presentation-type-of readers) :stream stream)))
+      (let ((writers (clim-mop:slot-definition-writers slot-object)))
+        (when writers
+          (format stream "~&Writers: ")
+          (present writers (presentation-type-of writers) :stream stream))))))
+
