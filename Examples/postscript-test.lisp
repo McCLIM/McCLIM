@@ -43,16 +43,19 @@
   (format t ";; Creating ~S.~%" *postscript-test-file*)
   (with-open-file (file-stream *postscript-test-file* :direction :output)
     (with-output-to-postscript-stream
-        (stream file-stream :header-comments '(:title "PostScript Medium Test Output"))
+        (stream file-stream
+                :header-comments '(:title "PostScript Medium Test Output"))
 
       (loop repeat 200
-            do (draw-line* stream (random 600) (random 900) (random 600) (random 900)
+            do (draw-line* stream (random 600) (random 900)
+                                  (random 600) (random 900)
                            :ink (make-random-color)))
       (new-page stream)
 
       (loop repeat 1000
             do (draw-point* stream (random 600) (random 900)
-                            :ink (make-random-color) :line-thickness (random 50)))
+                            :ink (make-random-color)
+                            :line-thickness (random 50)))
       (new-page stream)
 
       (draw-text* stream "(Test Page)" 170 30
@@ -64,7 +67,8 @@
                  (draw-line* stream 150 a 350 a :line-thickness i
                              :line-dashes (list (* i 2) (round i 2)))
                  (draw-text* stream (format nil "~D" i) 400 a
-                             :text-style (make-text-style :sans-serif :bold :huge))))
+                             :text-style (make-text-style
+                                          :sans-serif :bold :huge))))
       (new-page stream)
 
       (with-translation (stream 540 75)
@@ -81,4 +85,5 @@
             (clim:draw-polygon* stream '(30 90 40 110 20 110)))))
       (new-page stream)
 
-      (draw-rosette stream 300 300 200 18 :ink +steel-blue+ :line-thickness 2))))
+      (draw-rosette stream 300 300 200 18
+                    :ink +steel-blue+ :line-thickness 2))))
