@@ -376,9 +376,9 @@ commands will be available only from menus or by some other mechanism.
 The concept of \emph{presentation types} is central to CLIM.  Client
 code can choose to output graphical or textual representations of
 application objects either as just graphics or text, or to associate
-such output with an arbitrary Common Lisp object a presentation type.
-The presentation type is not necessarily related to the idea the
-Common Lisp might have of the underlying object. 
+such output with an arbitrary Common Lisp object and a presentation
+type.  The presentation type is not necessarily related to the idea
+Common Lisp might have of the underlying object.
 
 When a CLIM command or some other client code requests an object (say
 as an argument) of a certain presentation type, the user of the
@@ -395,10 +395,10 @@ Common Lisp class (except the built-in classes) is automatically a
 presentation type.
 
 A presentation type has a name, but can also have one or more
-\emph{arguments}.  Arguments of presentation types are typically used
+\emph{parameters}.  Parameters of presentation types are typically used
 to restrict the type.  For instance, the presentation type
-\texttt{integer} takes as arguments the low and the high values of an
-interval.  Such arguments allow the application to restrict objects
+\texttt{integer} takes as parameters the low and the high values of an
+interval.  Such parameters allow the application to restrict objects
 that become clickable in certain contexts, for instance if a date in
 the month of March is requested, only integers between 1 and 31 should
 be clickable. 
@@ -409,7 +409,7 @@ Consider the following example:
 
 \verbatimtabinput{ex3.lisp}
 
-In this application, we have two main pains, an application pane and
+In this application, we have two main panes, an application pane and
 an interactor pane.  The application pane is given the option
 \texttt{:display-time t} which means that it will not be erased before
 every iteration of the command loop.  
