@@ -53,7 +53,7 @@
   (defmethod describe-object ((thing t) stream)
     (let ((*print-array* nil))
       (clim:present thing (clim:presentation-type-of thing)
-		    :acceptably t :stream stream)
+		    :stream stream)
       (format stream " is of type ")
       (clim:present (type-of thing) (clim:presentation-type-of (type-of thing))
 		    :stream stream)
