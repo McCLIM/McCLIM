@@ -353,12 +353,6 @@
 	 :initarg :port
 	 :reader port)))
 
-(defmethod initialize-instance :after ((sheet standard-sheet-input-mixin)
-                                       &rest args)  
-  (declare (ignore args))
-  (setf (event-queue-port (sheet-event-queue sheet)) (port sheet)))
-                                       
-
 (defmethod stream-input-buffer ((stream standard-sheet-input-mixin))
   (sheet-event-queue stream))
 

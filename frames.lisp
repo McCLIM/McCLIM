@@ -476,10 +476,11 @@ input focus. This is a McCLIM extension."))
 			     :name 'top-level-sheet
 			     ;; enabling should be left to enable-frame
 			     :enabled-p nil))
-         (event-queue (sheet-event-queue t-l-s)))
+         #+clim-mp (event-queue (sheet-event-queue t-l-s)))
     (setf (slot-value frame 'top-level-sheet) t-l-s)
     (generate-panes fm frame)
     (setf (slot-value frame 'state)  :disabled)
+    #+clim-mp
     (when (typep event-queue 'port-event-queue)
       (setf (event-queue-port event-queue)
             (frame-manager-port fm)))
