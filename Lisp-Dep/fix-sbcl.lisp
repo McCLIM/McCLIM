@@ -1,10 +1,16 @@
+(eval-when (:compile-toplevel :execute)
+  (when (find-package "SB-MOP")
+    (pushnew :sb-mop *features*)))
+
 (defpackage #:clim-mop
-  (:use #:sb-pcl)
+  (:use #+sb-mop #:sb-mop #-sb-mop #:sb-pcl)
+  #-sb-mop
   (:shadowing-import-from #:sb-pcl #:eql-specializer-object))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (loop for sym being the symbols of :clim-mop
      do (export sym :clim-mop))
+  #-sb-mop
   (loop for other-symbol in '("EQL-SPECIALIZER" "FUNCALLABLE-STANDARD-CLASS")
      unless (find-symbol other-symbol :clim-mop)
      do (let ((sym (intern other-symbol :sb-pcl)))
@@ -16,12 +22,15 @@
 ;;; wrappers which the MOP can't grok, so use the PCL versions
 ;;; instead.
 
+#-sb-mop
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (flet ((reexport (symbols)
            (import symbols :clim-lisp-patch)
            (export symbols :clim-lisp-patch)))
     (reexport '(sb-pcl:class-name sb-pcl:class-of
-                sb-pcl:find-class sb-pcl::standard-class)))
+                sb-pcl:find-class sb-pcl::standard-class))))
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
   (export '(clim-lisp-patch::defconstant
             clim-lisp-patch::defclass)
           :clim-lisp-patch))
