@@ -246,11 +246,13 @@ unspecified. "))
 
 (defgeneric invoke-with-new-output-record (stream continuation record-type
                                            &rest initargs
+                                           &key
                                            &allow-other-keys))
 
 (defgeneric invoke-with-output-to-output-record
     (stream continuation record-type
      &rest initargs
+     &key
      &allow-other-keys))
 
 (defgeneric make-design-from-output-record (record))
@@ -333,8 +335,8 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
   (:documentation "Implementation class for the Basic Output Record Protocol."))
 
 (defmethod initialize-instance :after ((record basic-output-record)
-                                       &key (x-position 0) (y-position 0)
-				       &rest args)
+				       &rest args
+                                       &key (x-position 0) (y-position 0))
   (declare (ignore args))
   (with-slots (x1 y1 x2 y2) record
     (setq x1 x-position
@@ -1282,6 +1284,7 @@ according to the flags RECORD and DRAW."
 (defmethod invoke-with-new-output-record ((stream output-recording-stream)
                                           continuation record-type
                                           &rest initargs
+                                          &key
 					  &allow-other-keys)
   (stream-close-text-output-record stream)
   (let ((new-record (apply #'make-instance record-type initargs)))
@@ -1295,6 +1298,7 @@ according to the flags RECORD and DRAW."
 (defmethod invoke-with-output-to-output-record
     ((stream output-recording-stream) continuation record-type
      &rest initargs
+     &key
      &allow-other-keys)
   (stream-close-text-output-record stream)
   (let ((new-record (apply #'make-instance record-type initargs)))

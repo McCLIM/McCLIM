@@ -29,7 +29,7 @@
 (defgeneric allocate-pixmap (sheet width height))
 (defgeneric deallocate-pixmap (pixmap))
 (defgeneric copy-to-pixmap (medium medium-x medium-y width height 
-			    &optional pixmap (pixmap-x 0) (pixmap-y 0)))
+			    &optional pixmap pixmap-x pixmap-y))
 (defgeneric copy-from-pixmap (pixmap from-x from-y width height
                               medium medium-x medium-y))
 (defgeneric copy-area (medium from-x from-y width height to-x to-y))
