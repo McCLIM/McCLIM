@@ -125,6 +125,7 @@
    "recording"
    "encapsulate"
    "stream-input"			; depends on WITH-ENCAPSULATING-STREAM
+   "text-selection"
 )
 
 (clim-defsystem (:goatee-core :depends-on (:clim-core))

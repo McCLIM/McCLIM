@@ -147,7 +147,8 @@
                  :accessor clx-port-cursor-table)
    (design-cache :initform (make-hash-table :test #'eq))
    (pointer :reader port-pointer)
-   (pointer-grab-sheet :accessor pointer-grab-sheet :initform nil)))
+   (pointer-grab-sheet :accessor pointer-grab-sheet :initform nil)
+   (selection-owner :initform nil :accessor selection-owner)))
 
 (defun parse-clx-server-path (path)
   (pop path)
@@ -603,9 +604,9 @@
 
 (defun event-handler (&rest event-slots
                       &key display window event-key code state mode time
-		      width height x y root-x root-y
-		      data override-redirect-p send-event-p
-		      hint-p
+		      type width height x y root-x root-y
+		      data override-redirect-p send-event-p hint-p
+                      target property requestor selection
                       &allow-other-keys)
   (declare (ignorable event-slots))
   (declare (special *clx-port*))
@@ -747,23 +748,63 @@
            :sheet sheet
            :region (make-rectangle* x y (+ x width) (+ y height))))
         ;;
+        (:selection-notify
+         (make-instance 'clx-selection-notify-event
+          :sheet sheet
+          :selection selection
+          :target target
+          :property property))
+        (:selection-clear
+         (make-instance 'selection-clear-event
+          :sheet sheet
+          :selection selection))
+        (:selection-request
+         (make-instance 'clx-selection-request-event
+          :sheet sheet
+          :selection selection
+          :requestor requestor
+          :target target
+          :property property
+          :timestamp time))
 	(:client-message
-         (case (xlib:atom-name display (aref data 0))
-           (:wm_delete_window
-            (make-instance 'window-manager-delete-event
-                           :sheet sheet
-                           :timestamp time))
-           (:wm_take_focus
-            (let* ((frame (pane-frame sheet))
-                   (focus (keyboard-input-focus frame)))
-              (when (and focus (sheet-mirror focus))
-                (xlib:set-input-focus (clx-port-display *clx-port*)
-                                      (sheet-mirror focus) :parent time)
-                nil)))))
-	(t
+         (port-client-message sheet time type data))
+	(t         
 	 (unless (xlib:event-listen (clx-port-display *clx-port*))
 	   (xlib:display-finish-output (clx-port-display *clx-port*)))
 	 nil)))))
+
+
+;; Handling of X client messages
+
+(defmethod port-client-message (sheet time (type (eql :wm_protocols)) data)
+  (port-wm-protocols-message sheet time
+                             (xlib:atom-name (slot-value *clx-port* 'display) (aref data 0))
+                             data))
+
+(defmethod port-client-message (sheet time (type t) data)
+  (warn "Unprocessed client message: ~:_type = ~S;~:_ data = ~S;~_ sheet = ~S."
+        type data sheet))
+
+(defmethod port-wm-protocols-message (sheet time (message (eql :wm_delete_window)) data)
+  (declare (ignore data))
+  (make-instance 'window-manager-delete-event
+                 :sheet sheet
+                 :timestamp time))
+
+(defmethod port-wm-protocols-message (sheet time (message (eql :wm_take_focus)) data)
+  (declare (ignore data))
+  (let* ((frame (pane-frame sheet))
+         (focus (climi::keyboard-input-focus frame)))
+    (when (and focus (sheet-mirror focus))
+      (xlib:set-input-focus (clx-port-display *clx-port*)
+                            (sheet-mirror focus) :parent time)
+      nil)))
+
+(defmethod port-wm-protocols-message (sheet time (message t) data)
+  (warn "Unprocessed WM Protocols message: ~:_message = ~S;~:_ data = ~S;~_ sheet = ~S."
+        message data sheet))
+
+
 
 (defmethod get-next-event ((port clx-port) &key wait-function (timeout nil))
   (declare (ignore wait-function))
@@ -1223,3 +1264,144 @@
 			keycodes)))
     modifier-map))
 
+
+;;;; Backend component of text selection support
+
+;;; Event classes
+
+(defclass clx-selection-notify-event (selection-notify-event)
+  ((target   :initarg :target
+             :reader selection-event-target)
+   (property :initarg :property
+             :reader selection-event-property)))
+
+(defclass clx-selection-request-event (selection-request-event)
+  ((target    :initarg :target
+              :reader selection-event-target)
+   (property  :initarg :property
+              :reader selection-event-property)))
+
+;;; Conversions
+
+;; we at least want to support:
+
+;; :TEXT, :STRING
+;;
+;; :UTF8_STRING
+;;     As seen from xterm [make that the prefered encoding]
+;;
+;; :COMPOUND_TEXT
+;;    Perhaps relatively easy to produce, hard to grok.
+;;
+
+
+;;; Utilities
+
+(defun utf-8-encode (code-points)
+  (let ((res (make-array (length code-points)
+                         :adjustable t
+                         :fill-pointer 0)))
+    (map 'nil
+         (lambda (code-point)
+           (cond ((< code-point (expt 2 7))
+                  (vector-push-extend code-point res))
+                 ((< code-point (expt 2 11))
+                  (vector-push-extend (logior #b11000000 (ldb (byte 5 6) code-point)) res)
+                  (vector-push-extend (logior #b10000000 (ldb (byte 6 0) code-point)) res))
+                 ((< code-point (expt 2 16))
+                  (vector-push-extend (logior #b11100000 (ldb (byte 4 12) code-point)) res)
+                  (vector-push-extend (logior #b10000000 (ldb (byte 6 6) code-point)) res)
+                  (vector-push-extend (logior #b10000000 (ldb (byte 6 0) code-point)) res))
+                 ((< code-point (1- (expt 2 21)))
+                  (vector-push-extend (logior #b11110000 (ldb (byte 3 18) code-point)) res)
+                  (vector-push-extend (logior #b10000000 (ldb (byte 6 12) code-point)) res)
+                  (vector-push-extend (logior #b10000000 (ldb (byte 6 6) code-point)) res)
+                  (vector-push-extend (logior #b10000000 (ldb (byte 6 0) code-point)) res))
+                 ((< code-point (1- (expt 2 26)))
+                  (vector-push-extend (logior #b11110000 (ldb (byte 2 24) code-point)) res)
+                  (vector-push-extend (logior #b10000000 (ldb (byte 6 18) code-point)) res)
+                  (vector-push-extend (logior #b10000000 (ldb (byte 6 12) code-point)) res)
+                  (vector-push-extend (logior #b10000000 (ldb (byte 6 6) code-point)) res)
+                  (vector-push-extend (logior #b10000000 (ldb (byte 6 0) code-point)) res))
+                 ((< code-point (1- (expt 2 31)))
+                  (vector-push-extend (logior #b11110000 (ldb (byte 1 30) code-point)) res)
+                  (vector-push-extend (logior #b10000000 (ldb (byte 6 24) code-point)) res)
+                  (vector-push-extend (logior #b10000000 (ldb (byte 6 18) code-point)) res)
+                  (vector-push-extend (logior #b10000000 (ldb (byte 6 12) code-point)) res)
+                  (vector-push-extend (logior #b10000000 (ldb (byte 6 6) code-point)) res)
+                  (vector-push-extend (logior #b10000000 (ldb (byte 6 0) code-point)) res))
+                 (t
+                  (error "Bad code point: ~D." code-point))))
+         code-points)
+    res))
+
+;;; Protocol functions
+
+(defmethod bind-selection ((port clx-port) window &optional time)
+  (xlib:set-selection-owner
+   (xlib:window-display (sheet-direct-mirror window))
+   :primary (sheet-direct-mirror window)))
+
+(defmethod release-selection ((port clx-port) &optional time)
+  (xlib:set-selection-owner
+   (clim-clx::clx-port-display port)
+   :primary nil
+   time)
+  (setf (selection-owner port) nil))
+
+(defmethod request-selection ((port clx-port) requestor time)
+  (xlib:convert-selection :primary :UTF8_STRING requestor :bounce time))
+
+(defmethod get-selection-from-event ((event clx-selection-notify-event))
+  (map 'string #'code-char
+       (xlib:get-property (sheet-direct-mirror (event-sheet event))
+                          (selection-event-property event)
+                          ;; :type :text
+                          :delete-p t
+                          :result-type 'vector)))
+
+(defmethod send-selection ((event clx-selection-request-event) string)
+  (let ((requestor (selection-event-requestor event))
+        (property  (selection-event-property event))
+        (target    (selection-event-target event))
+        (time      (event-timestamp event)))
+;    (describe event *trace-output*)
+;    (finish-output *trace-output*)
+    (cond ((member target '(:UTF8_STRING :STRING :TEXT))
+           (xlib:change-property requestor property
+                                 (utf-8-encode
+                                  (concatenate 'vector (map 'vector #'char-code string)))
+                                               #|(list #x20AC) (list #x2261)|#
+                                 :UTF8_STRING ;###
+                                 8)            
+           (xlib:send-event requestor
+                            :selection-notify nil
+                            :window requestor
+                            :selection :primary
+                            :target :UTF8_STRING  ;;target   (?)
+                            :property property
+                            :time time))
+          ((member target '(:COMPOUND_TEXT))
+           (xlib:change-property requestor property
+                                 (vector 65 65 67
+                                         #x1B #x24 #x29 #x41
+                                         #xA1 #xD4
+                                         67 65 67)
+                                 :COMPOUND_TEXT
+                                 8)            
+           (xlib:send-event requestor
+                            :selection-notify nil
+                            :window requestor
+                            :selection :primary
+                            :target :COMPOUND_TEXT
+                            :property property
+                            :time time))
+          (t
+           (xlib:send-event requestor
+                            :selection-notify nil
+                            :window requestor
+                            :selection :primary
+                            :target :UTF8_STRING ;;target
+                            :property nil ;;property
+                            :time time)))
+    (xlib:display-force-output (xlib:window-display requestor))))

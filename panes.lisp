@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.145 2004/11/21 00:01:21 gilbert Exp $
+;;; $Id: panes.lisp,v 1.146 2004/12/07 04:49:51 hefner1 Exp $
 
 (in-package :clim-internals)
 
@@ -2195,7 +2195,7 @@ order to produce a double-click")
                             sheet-multiple-child-mixin   ; needed for GADGET-OUTPUT-RECORD
                             basic-pane
                             mouse-wheel-scroll-mixin
-                            )
+                            cut-and-paste-mixin)
   ((redisplay-needed :initarg :display-time) 
    (scroll-bars :type (member t :vertical :horizontal nil)
 		:initform nil
