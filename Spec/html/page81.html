@@ -1,0 +1,143 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page80.html">Page 80</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page82.html">Page 82</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 10. DRAWING OPTIONS </b><br>
+<br>
+ The <tt>:ink </tt><i>ink </i>drawing option temporarily changes the value of <tt>(medium-ink </tt><i>medium</i><tt>) </tt>to <i>ink</i>,<br>
+ replacing the previous ink; the new and old inks are not combined in any way.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>:transformation </tt>[<i>Option</i>]<br>
+ This transforms the coordinates used as arguments to drawing functions to the coordinate system<br>
+ of the drawing plane. The default value is
+    <tt>+identity-transformation+</tt>. See <A HREF="./page35.html">Chapter 5</A> for a<br>
+ complete description of transformations.<br>
+<br>
+ The <tt>:transformation </tt><i>xform </i>drawing option temporarily changes the value of<tt>(medium-transformation<br>
+ </tt><i>medium</i><tt>) </tt>to <tt>(compose-transformations (medium-transformation </tt><i>medium</i><tt>) </tt><i>xform</i><tt>)</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>:clipping-region </tt>[<i>Option</i>]<br>
+ The drawing functions do not affect the drawing plane outside this region. The clipping region<br>
+ must be an <tt>area</tt>. Furthermore, some implementations might signal an error if the clipping<br>
+ region is not a rectangle or a region set composed entirely of rectangles. Rendering is clipped<br>
+ both by this clipping region and by other clipping regions associated with the mapping from the<br>
+ target drawing plane to the viewport that displays a portion of the drawing plane. The default is<br>
+ <tt>+everywhere+</tt>, or in other words, no clipping occurs in the drawing plane, only in the viewport.<br>
+<br>
+ The <tt>:clipping-region </tt><i>region </i>drawing option temporarily changes the value of <tt>(medium-clipping-<br>
+ region </tt><i>medium</i><tt>) </tt>to <tt>(region-intersection (transform-region (medium-transformation </tt><i>medium</i><tt>)<br>
+ </tt><i>region</i><tt>) (medium-clipping-region </tt><i>medium</i><tt>))</tt>. If both a clipping region and a transformation<br>
+ are supplied in the same set of drawing options, the clipping region argument is transformed by<br>
+ the newly composed transformation before calling <tt>region-intersection</tt>.<br>
+<br>
+ <p><b>Minor issue: </b><b>A better explanation is needed. It does the right thing, but it's hard to tell that<br>
+ from this description. That is, the clipping region is expressed in user coordinates. | DCPL<br>
+<br>
+ </b><big><b>&#061&gt  </b></big><tt>:line-style </tt>[<i>Option</i>]<br>
+ The line and arc drawing functions render according to this line style. The line style suboptions<br>
+ and default are defined in <a href="./page83.html">Section 10.3</a>.<br>
+<br>
+ The <tt>:line-style </tt><i>ls </i>drawing option temporarily changes the value of <tt>(medium-line-style<br>
+ </tt><i>medium</i><tt>) </tt>to <i>ls</i>, replacing the previous line style; the new and old line styles are not combined in<br>
+ any way.<br>
+<br>
+ If line style suboptions are supplied, they temporarily change the value of <tt>(medium-line-style<br>
+ </tt><i>medium</i><tt>) </tt>to a line style constructed from the specified suboptions. Components not specified by<br>
+ suboptions are defaulted from the <tt>:line-style </tt>drawing option, if it is supplied, or else from<br>
+ the previous value of <tt>(medium-line-style </tt><i>medium</i><tt>)</tt>. That is, if both the <tt>:line-style </tt>option<br>
+ and line style suboptions are supplied, the suboptions take precedence over the components of<br>
+ the <tt>:line-style </tt>option.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>:text-style </tt>[<i>Option</i>]<br>
+ The text drawing functions, including ordinary stream output, render text as directed by this<br>
+ text style merged against the default text style. The default value has all null components. See
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page80.html">Page 80</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page82.html">Page 82</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

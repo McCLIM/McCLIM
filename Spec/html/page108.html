@@ -1,0 +1,140 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page107.html">Page 107</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page109.html">Page 109</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ </i><b>CHAPTER 12. GRAPHICS </b><br>
+<br>
+ and <i>height </i>is copied. <i>from-x</i>, <i>from-y</i>, <i>to-x</i>, and <i>to-y </i>are specified in user coordinates. (If <i>sheet </i>is<br>
+ a medium or a stream, then <i>sheet-x </i>and <i>sheet-y </i>are transformed by the user transformation.)<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>with-output-to-pixmap </tt><i>(medium-var sheet </i><tt>&key </tt><i>width height) </i><tt>&body </tt><i>body </i>[<i>Macro</i>]<br>
+ Binds <i>medium-var </i>to a "pixmap medium", that is, a medium that does output to a pixmap<br>
+ with the characteristics appropriate to the sheet <i>sheet</i>, and then evaluates <i>body </i>in that context.<br>
+ All the output done to the medium designated by <i>medium-var </i>inside of <i>body </i>is drawn on the<br>
+ pixmap stream. The pixmap medium must support the medium output protocol, including all of<br>
+ the graphics function. CLIM implementations are permitted, but not required, to have pixmap<br>
+ mediums support the stream output protocol (<tt>write-char </tt>and <tt>write-string</tt>).<br>
+<br>
+ <i>width </i>and <i>height </i>are integers that give the width and height of the pixmap. If they are unsupplied,<br>
+ the result pixmap will be large enough to contain all of the output done by <i>body</i>.<br>
+<br>
+ <i>medium-var </i>must be a symbol; it is not evaluated.<br>
+<br>
+ The returned value is a pixmap that can be drawn onto <i>sheet </i>using <tt>copy-from-pixmap</tt>.<br>
+ <br><b>12.7 Graphics Protocols<br><br>
+ </b>Every medium must implement methods for the various graphical drawing generic functions. Fur-<br>
+ thermore, every sheet that supports the standard output protocol must implement these methods<br>
+ as well; often, the sheet methods will trampoline to the methods on the sheet's medium. All of<br>
+ these generic functions take the same arguments as the non-generic spread function equivalents,<br>
+ except the arguments that are keyword arguments in the non-generic functions are positional<br>
+ arguments in the generic functions.<br>
+<br>
+ Every port must implement methods for the various graphical drawing generic functions. All of<br>
+ these generic functions take as (specialized) arguments the port and medium, followed by the<br>
+ drawing function-specific arguments, followed by the ink, line style (or text style), and clipping<br>
+ region.<br>
+<br>
+ The drawing function-specific arguments will either be <i>x </i>and <i>y </i>positions, or a sequence of <i>x<br>
+</i>and <i>y </i>positions. These positions will be in medium coordinates, and must be transformed by<br>
+ applying the medium's device transformation in order to produce device coordinates. Note that<br>
+ the user transformation will have already been applied to the positions when the port-specific<br>
+ drawing function is called.<br>
+<br>
+ The ink, line style (or text style), and clipping regions arguments are optional, and default<br>
+ from the medium (<tt>medium-ink</tt>, <tt>medium-line-style </tt>(or <tt>medium-current-text-style</tt>), and<br>
+ <tt>medium-clipping-region</tt>, respectively). Each port method will decode the ink, line (or text)<br>
+ style, and clipping region in a port-specific way and communicate it to the underlying port.<br>
+<br>
+ <p><b>Minor issue: </b><b>Do we need to specify </b><tt>define-graphics-generic </tt><b>and </b><tt>define-graphics-method</tt><b>,<br>
+ or whatever, so that the graphics protocol is easier to extend? Such things should also help define<br>
+ the hooks into output recording. | SWM</b>
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page107.html">Page 107</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page109.html">Page 109</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

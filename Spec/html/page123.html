@@ -1,0 +1,141 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page122.html">Page 122</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page124.html">Page 124</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 14. GENERAL DESIGNS </b><br>
+<br>
+ <br><b>14.1 The Compositing Protocol<br><br>
+ </b><b>Compositing </b>creates a design whose appearance at each point is a composite of the appearances<br>
+ of two other designs at that point. Three varieties of compositing are provided: <b>composing over</b>,<br>
+ <b>composing in</b>, and <b>composing out</b>.<br>
+<br>
+ The methods for <tt>compose-over</tt>, <tt>compose-in</tt>, and <tt>compose-out </tt>will typically specialize both of<br>
+ the design arguments.<br>
+<br>
+ <b>In Release 2, compositing might only be supported for uniform designs.<br>
+<br>
+ </b><big><b>&#061&gt  </b></big><tt>compose-over </tt><i>design1 design2 </i>[<i>Generic Function</i>]<br>
+ Composes a new design that is equivalent to the <b>design </b><i>design1 </i>on top of the <b>design </b><i>design2</i>.<br>
+ Drawing the resulting design produces the same visual appearance as drawing <i>design2 </i>and then<br>
+ drawing <i>design1</i>, but might be faster and might not allow the intermediate state to be visible<br>
+ on the screen.<br>
+<br>
+ If both arguments are regions, <tt>compose-over </tt>is the same as <tt>region-union</tt>.<br>
+<br>
+ This function is permitted to capture its mutable inputs; the consequences of modifying those<br>
+ objects are unspecified. The result returned by <tt>compose-over </tt>might be freshly constructed or<br>
+ might be an existing object.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>compose-in </tt><i>ink mask </i>[<i>Generic Function</i>]<br>
+ Composes a new design by clipping the <b>design </b><i>ink </i>to the inside of the <b>design </b><i>mask</i>. The first<br>
+ design, <i>ink</i>, supplies the color, while the second design, <i>mask</i>, changes the shape of the design<br>
+ by adjusting the opacity.<br>
+<br>
+ More precisely, at each point in the drawing plane the resulting design specifies a color and an<br>
+ opacity as follows: the color is the same color that <i>ink </i>specifies. The opacity is the opacity that<br>
+ <i>ink </i>specifies, multiplied by the stencil opacity of <i>mask</i>.<br>
+<br>
+ The <b>stencil opacity </b>of a design at a point is defined as the opacity that would result from drawing<br>
+ the design onto a fictitious medium whose drawing plane is initially completely transparent black<br>
+ (opacity and all color components are zero), and whose foreground and background are both<br>
+ opaque black. With this definition, the stencil opacity of a member of class <tt>opacity </tt>is simply<br>
+ its value.<br>
+<br>
+ If <i>mask </i>is a solid design, the effect of <tt>compose-in </tt>is to clip <i>ink </i>to <i>mask</i>. If <i>mask </i>is translucent,<br>
+ the effect is a soft matte.<br>
+<br>
+ If both arguments are regions, <tt>compose-in </tt>is the same as <tt>region-intersection</tt>.<br>
+<br>
+ This function is permitted to capture its mutable inputs; the consequences of modifying those<br>
+ objects are unspecified. The result returned by <tt>compose-in </tt>might be freshly constructed or<br>
+ might be an existing object.
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page122.html">Page 122</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page124.html">Page 124</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

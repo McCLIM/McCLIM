@@ -1,0 +1,132 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page8.html">Page 8</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page10.html">Page 10</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 2. CONVENTIONS </b><br>
+<br>
+ <br><b>2.6 Specialized Arguments to Generic Functions<br><br>
+ </b>Unless otherwise stated, this specification uses the following convention for specifying which<br>
+ arguments to generic functions are specialized:<ul>
+ <li>If the generic function is a <tt>setf </tt>function, the second argument is the one that is intended<br>
+ to be specialized.<br>
+<br>
+ <li>If the generic function is a "mapping" function (such as <tt>map-over-region-set-regions</tt>),<br>
+ the second argument (the object that specifies what is being mapped over) is the one that is<br>
+ specialized. The first argument (the functional argument) is not intended to be specialized.<br>
+<br>
+ <li>Otherwise, the first argument is the one that is intended to be specialized.</ul>
+ <br><b>2.7 Multiple Value </b>setf<br><br>
+ Some functions in CLIM that return multiple values have <tt>setf </tt>functions associated with them.<br>
+ For example, <tt>output-record-position </tt>returns the position of an output record as two values<br>
+ that correspond to the <i>x </i>and <i>y </i>coordinates. In order to change the position of an output record,<br>
+ the programmer would like to invoke <tt>(setf output-record-position)</tt>. Normally however,<br>
+ <tt>setf </tt>only takes a single value with which to modify the specified place. CLIM provides a<br>
+ "multiple value" version of <tt>setf </tt>that allows an expression that returns multiple values to be<br>
+ used in updating the specified place. In this specification, this facility will be referred to as<br>
+ <tt>setf*</tt>.<br>
+<br>
+ For example, the modifying function for <tt>output-record-position </tt>might be called in either of<br>
+ the following two ways:<br>
+<pre><tt>
+ (setf (output-record-position record) (values nx ny))
+
+ (setf (output-record-position record1) (output-record-position record2))
+
+ </pre></tt>The second form works because <tt>output-record-position </tt>itself returns two values.<br>
+ <br><b>2.8 Sheet, Stream, or Medium Arguments to Macros<br><br>
+ </b>There are many macros that take a sheet, stream, or medium as one of the arguments, for<br>
+ example, <tt>with-new-output-record </tt>and <tt>formatting-table</tt>. In CLIM, this argument must be<br>
+ a variable bound to a sheet, stream, or medium; it may not be an arbitrary form that evaluates<br>
+ to a sheet, stream, or medium. <tt>t </tt>and sometimes <tt>nil </tt>are usually allowed as special cases;<br>
+ this causes the variable to be interpreted as a reference to another stream variable (usually<br>
+ <tt>*standard-output* </tt>for output macros, or <tt>*query-io* </tt>for input macros). Note that, while the
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page8.html">Page 8</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page10.html">Page 10</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

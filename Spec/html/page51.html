@@ -1,0 +1,142 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page50.html">Page 50</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page52.html">Page 52</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 7. PROPERTIES OF SHEETS </b><br>
+<br>
+ region is in the sheet's coordinate system. Using <tt>setf </tt>on this accessor modifies the sheet's<br>
+ region.<br>
+<br>
+ When the sheet's region is changed, <tt>note-sheet-region-region </tt>is called to notify the sheet of<br>
+ the change.<br>
+<br>
+ <p><b>Minor issue: </b><b>To reshape and move a region, you generally have to manipulate both of the<br>
+ above. Maybe there should be a single function that takes either or both of a new transformation<br>
+ or region? Maybe region coordinates should be expressed in parents' coordinates, since that's<br>
+ easier to set only one? | RSL<br>
+<br>
+ </b><p><b>Minor issue: </b><b>I'm not convinced I like this business of requesting a change by modifying an<br>
+ accessor. It might be better to have a </b><tt>request- </tt><b>function, so it would be clear that there might be<br>
+ some delay before the region or transformation was modified. Currently, using </b><tt>setf </tt><b>on mirrored<br>
+ sheets requests that the server move or resize the sheet; the accessor will continue to return the<br>
+ old value until the notification comes in from the display server that says that the mirror has<br>
+ been moved. | RSL<br>
+<br>
+ </b><big><b>&#061&gt  </b></big><tt>map-sheet-position-to-parent </tt><i>sheet x y </i>[<i>Generic Function</i>]<br>
+ Applies the <b>sheet </b><i>sheet</i>'s transformation to the point (<i>x;y</i>), returning the coordinates of that<br>
+ point in <i>sheet</i>'s parent's coordinate system.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>map-sheet-position-to-child </tt><i>sheet x y </i>[<i>Generic Function</i>]<br>
+ Applies the inverse of the <b>sheet </b><i>sheet</i>'s transformation to the point (<i>x;y</i>) (represented in <i>sheet</i>'s<br>
+ parent's coordinate system), returning the coordinates of that same point in <i>sheet </i>coordinate<br>
+ system.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>map-sheet-rectangle*-to-parent </tt><i>sheet x1 y1 x2 y2 </i>[<i>Generic Function</i>]<br>
+ Applies the <b>sheet </b><i>sheet</i>'s transformation to the bounding rectangle specified by the corner points<br>
+ (<i>x</i>1<i>;y</i>1) and (<i>x</i>2<i>;y</i>2), returning the bounding rectangle of the transformed region as four values,<br>
+ <i>min-x</i>, <i>min-y</i>, <i>max-x</i>, and <i>max-y</i>. The arguments <i>x1</i>, <i>y1</i>, <i>x2</i>, and <i>y1 </i>are canonicalized in the<br>
+ same way as for <tt>make-bounding-rectangle</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>map-sheet-rectangle*-to-child </tt><i>sheet x1 y1 x2 y2 </i>[<i>Generic Function</i>]<br>
+ Applies the inverse of the <b>sheet </b><i>sheet</i>'s transformation to the bounding rectangle delimited by the<br>
+ corner points (<i>x</i>1<i>;y</i>1) and (<i>x</i>2<i>;y</i>2) (represented in <i>sheet</i>'s parent's coordinate system), returning<br>
+ the bounding rectangle of the transformed region as four values, <i>min-x</i>, <i>min-y</i>, <i>max-x</i>, and <i>max-<br>
+ y</i>. The arguments <i>x1</i>, <i>y1</i>, <i>x2</i>, and <i>y1 </i>are canonicalized in the same way as for <tt>make-bounding-<br>
+ rectangle</tt>.<br>
+<br>
+ <p><b>Minor issue: </b><b>I now think that </b><tt>map- </tt><b>in these names is misleading; maybe </b><tt>convert- </tt><b>is better?<br>
+ | SWM<br>
+<br>
+ </b><big><b>&#061&gt  </b></big><tt>child-containing-position </tt><i>sheet x y </i>[<i>Generic Function</i>]<br>
+ Returns the topmost enabled direct child of the <b>sheet </b><i>sheet </i>whose region contains the position<br>
+ (<i>x;y</i>). The position is expressed in <i>sheet</i>'s coordinate system.
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page50.html">Page 50</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page52.html">Page 52</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

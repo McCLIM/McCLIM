@@ -1,0 +1,138 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page89.html">Page 89</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page91.html">Page 91</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 11. TEXT STYLES </b><br>
+<br>
+ mediums and output sheets; the trampolines will simply call the method for the port.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>text-style-fixed-width-p </tt><i>text-style port </i>[<i>Generic Function</i>]<br>
+ Returns <b>true </b>if the <b>text styles </b><i>text-style </i>will map to a fixed-width font on any medium on the<br>
+ <b>port </b><i>port</i>, otherwise returns <b>false</b>. <i>text-style </i>must be a fully specified text style.<br>
+<br>
+ The methods for this generic function will typically specialize both the <i>text-style </i>and <i>port </i>argu-<br>
+ ments. Implementations should also provide a "trampoline" for this generic function for mediums<br>
+ and output sheets; the trampoline will simply call the method for the port.<br>
+<br>
+ <p><b>Minor issue: </b><b>Discuss baselines? Kerning? | SWM<br>
+<br>
+ </b><big><b>&#061&gt  </b></big><tt>text-size </tt><i>medium string </i><tt>&key </tt><i>text-style (start </i><tt>0</tt><i>) end </i>[<i>Generic Function</i>]<br>
+ Computes the "cursor motion" in device units that would take place if <i>string </i>(which may be<br>
+ either a string or a character) were output to the <b>medium </b><i>medium </i>starting at the position (0<i>;</i>0).<br>
+ Five values are returned: the total width of the string in device units, the total height of the<br>
+ string in device units, the final <i>x </i>cursor position (which is the same as the width if there are no<br>
+ <tt>#\Newline </tt>characters in the string), the final <i>y </i>cursor position (which is 0 if the string has no<br>
+ <tt>#\Newline </tt>characters in it, and is incremented by the line height of <i>medium </i>for each <tt>#\Newline<br>
+ </tt>character in the string), and the string's baseline.<br>
+<br>
+ <i>text-style </i>specifies what text style is to be used when doing the output, and defaults to <tt>medium-<br>
+ merged-text-style </tt>of the medium. <i>text-style </i>must be a fully specified text style. <i>start </i>and <i>end<br>
+ </i>may be used to specify a substring of <i>string</i>.<br>
+<br>
+ If a programmer needs to account for kerning or the ascent or descent of the text style, he should<br>
+ measure the size of the bounding rectangle of the text rendered on <i>medium</i>.<br>
+<br>
+ All mediums and output sheets must implement a method for this generic function.<br>
+ <br><b>11.2 Text Style Binding Forms<br><br>
+ </b><big><b>&#061&gt  </b></big><tt>with-text-style </tt><i>(medium text-style) </i><tt>&body </tt><i>body </i>[<i>Macro</i>]<br>
+ Binds the current text style of the <b>medium </b>designated by <i>medium </i>to correspond to the new text<br>
+ style. <i>text-style </i>may either a text style object or a style spec (that is, a list of the a family, a<br>
+ face code, and a size). <i>body </i>is executed with the new text style in effect.<br>
+<br>
+ The <i>medium </i>argument is not evaluated, and must be a symbol that is bound to a sheet or<br>
+ medium. If <i>medium </i>is <tt>t</tt>, <tt>*standard-output* </tt>is used. <i>body </i>may have zero or more declarations<br>
+ as its first forms.<br>
+<br>
+ <tt>with-text-style </tt>must be implemented by expanding into a call to <tt>invoke-with-text-style</tt>,<br>
+ supplying a function that executes <i>body </i>as the <i>continuation </i>argument to <tt>invoke-with-text-<br>
+ style</tt>.
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page89.html">Page 89</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page91.html">Page 91</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

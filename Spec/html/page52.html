@@ -1,0 +1,136 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page51.html">Page 51</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page53.html">Page 53</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 7. PROPERTIES OF SHEETS </b><br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>children-overlapping-region </tt><i>sheet region </i>[<i>Generic Function</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>children-overlapping-rectangle* </tt><i>sheet x1 y1 x2 y2 </i>[<i>Generic Function</i>]<br>
+ Returns the list of enabled direct children of the <b>sheet </b><i>sheet </i>whose region overlaps the <b>region </b><i>re-<br>
+ gion</i>. <tt>children-overlapping-rectangle* </tt>is a special case of <tt>children-overlapping-region<br>
+ </tt>in which the region is a bounding rectangle whose corner points are (<i>x</i>1<i>;y</i>1) and (<i>x</i>2<i>;y</i>2). The<br>
+ region is expressed in <i>sheet</i>'s coordinate system. This function returns fresh objects that may<br>
+ be modified.<br>
+<br>
+ <p><b>Minor issue: </b><b>The above three functions should really be </b><tt>map-over-... </tt><b>functions to both<br>
+ avoid consing and be consistent with that convention throughout the rest of CLIM. | SWM<br>
+<br>
+ </b><big><b>&#061&gt  </b></big><tt>sheet-delta-transformation </tt><i>sheet ancestor </i>[<i>Generic Function</i>]<br>
+ Returns a transformation that is the composition of all of the sheet transformations between<br>
+ the <b>sheets </b><i>sheet </i>and <i>ancestor</i>. If <i>ancestor </i>is <tt>nil</tt>, <tt>sheet-delta-transformation </tt>will return the<br>
+ transformation to the root of the sheet hierarchy. If <i>ancestor </i>is not an ancestor of sheet, the<br>
+ <tt>sheet-is-not-ancestor </tt>error will be signalled.<br>
+<br>
+ The computation of the delta transformation is likely to be cached.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>sheet-allocated-region </tt><i>sheet child </i>[<i>Generic Function</i>]<br>
+ Returns the visible region of the <b>sheet </b><i>child </i>in the <b>sheet </b><i>sheet</i>'s coordinate system. If <i>child </i>is<br>
+ occluded by any of its siblings, those siblings' regions are subtracted (using <tt>region-difference</tt>)<br>
+ from <i>child</i>'s actual region.<br>
+ <br><b>7.3.2 Sheet Geometry Classes<br><br>
+ </b>Each of the following implements the sheet geometry protocol in a different manner, according<br>
+ to the sheet's requirements.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>sheet-identity-transformation-mixin </tt>[<i>Class</i>]<br>
+ This class is mixed into sheet classes whose coordinate system is identical to that of its parent.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>sheet-translation-mixin </tt>[<i>Class</i>]<br>
+ This class is mixed into sheet classes whose coordinate system is related to that of its parent by<br>
+ a simple translation.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>sheet-y-inverting-transformation-mixin </tt>[<i>Class</i>]<br>
+ This class is mixed into sheet classes whose coordinate system is related to that of its parent by<br>
+ inverting the <i>y </i>coordinate system, and optionally translating by some amount in <i>x </i>and <i>y</i>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>sheet-transformation-mixin </tt>[<i>Class</i>]<br>
+ This class is mixed into sheet classes whose coordinate system is related to that of its parent by
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page51.html">Page 51</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page53.html">Page 53</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

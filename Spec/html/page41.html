@@ -1,0 +1,138 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page40.html">Page 40</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page42.html">Page 42</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ </i><b>CHAPTER 5. AFFINE TRANSFORMATIONS </b><br>
+<br>
+ <i>formation </i>is first, followed by the translation, scaling, or rotation "transformation".<br>
+<br>
+ <i>dx </i>and <i>dy </i>are as for <tt>make-translation-transformation</tt>. <i>sx </i>and <i>sy </i>are as for <tt>make-scaling-<br>
+ transformation</tt>. <i>angle </i>and <i>origin </i>are as for <tt>make-rotation-transformation</tt>.<br>
+<br>
+ Note that these functions could be implemented by using the various constructors and <tt>compose-<br>
+ transformations</tt>. They are provided, because it is common to build up a transformation as a<br>
+ series of simple transformations.<br>
+ <br><b>5.3.3 Applying Transformations<br><br>
+ </b>Transforming a region applies a coordinate transformation to that region, thus moving its po-<br>
+ sition on the drawing plane, rotating it, or scaling it. Note that transforming a region does<br>
+ not side-effect the <i>region </i>argument; it is free to either create a new region or return an existing<br>
+ (cached) region.<br>
+<br>
+ These generic functions must be implemented for all classes of transformations. Furthermore,<br>
+ all subclasses of <tt>region </tt>and <tt>design </tt>must implement methods for <tt>transform-region </tt>and<br>
+ <tt>untransform-region</tt>. That is, methods for the following generic functions will typically spe-<br>
+ cialize both the <i>transformation </i>and <b>region </b>arguments.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>transform-region </tt><i>transformation region </i>[<i>Generic Function</i>]<br>
+ Applies <i>transformation </i>to the <b>region </b><i>region</i>, and returns the transformed region.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>untransform-region </tt><i>transformation region </i>[<i>Generic Function</i>]<br>
+ This is exactly equivalent to<br>
+ <tt>(transform-region (invert-transformation </tt><i>transformation</i><tt>) </tt><i>region</i><tt>) </tt>.<br>
+<br>
+ CLIM provides a default method for <tt>untransform-region </tt>on the <tt>transformation </tt>protocol<br>
+ class that does exactly this.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>transform-position </tt><i>transformation x y </i>[<i>Generic Function</i>]<br>
+ Applies the <b>transformation </b><i>transformation </i>to the point whose coordinates are the real numbers<br>
+ <i>x </i>and <i>y</i>, and returns two values, the transformed <i>x </i>coordinate and the transformed <i>y </i>coordinate.<br>
+<br>
+ <tt>transform-position </tt>is the spread version of <tt>transform-region </tt>in the case where the region<br>
+ is a point.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>untransform-position </tt><i>transformation x y </i>[<i>Generic Function</i>]<br>
+ This is exactly equivalent to<br>
+ <tt>(transform-position (invert-transformation </tt><i>transformation</i><tt>) </tt><i>x y</i><tt>) </tt>.<br>
+<br>
+ CLIM provides a default method for <tt>untransform-position </tt>on the <tt>transformation </tt>protocol<br>
+ class that does exactly this.
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page40.html">Page 40</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page42.html">Page 42</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

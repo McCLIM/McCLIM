@@ -1,0 +1,134 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page177.html">Page 177</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page179.html">Page 179</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 20. TEXT FORMATTING </b><br>
+<br>
+ The <i>stream </i>argument is not evaluated, and must be a symbol that is bound to an output recording<br>
+ stream. If <i>stream </i>is <tt>t</tt>, <tt>*standard-output* </tt>is used. <i>body </i>may have zero or more declarations as<br>
+ its first forms.<br>
+<br>
+ <i>indentation </i>specifies how much whitespace should be inserted at the beginning of each line. It<br>
+ is specified in the same way as the <tt>:x-spacing </tt>option to <tt>formatting-table</tt>.<br>
+<br>
+ If the boolean <i>move-cursor </i>is <b>true </b>(the default), CLIM moves the cursor to the end of the table.<br>
+<br>
+ Programmers using <tt>indenting-output </tt>should begin the body with a call to <i>fresh-line </i>(or some<br>
+ equivalent) to position the stream to the indentation initially. There is a restriction on interac-<br>
+ tions between <tt>indenting-output </tt>and <tt>filling-output </tt>such that a call to <tt>indenting-output<br>
+ </tt>should appear outside of a call to <tt>filling-output</tt>. Implementations are permitted to relax this<br>
+ restriction, but uses of <tt>indenting-output </tt>inside of <tt>filling-output </tt>may not be portable.<br>
+ <br><b>20.3 Filled Output<br><br>
+ </b><big><b>&#061&gt  </b></big><tt>filling-output </tt><i>(stream </i><tt>&key </tt><i>fill-width break-characters after-line-break after-line-break-initially)<br>
+ </i><tt>&body </tt><i>body </i>[<i>Macro</i>]<br>
+ Binds <i>stream </i>to a stream that inserts line breaks into the textual output written to it (by<br>
+ such functions as <tt>write-char </tt>and <tt>write-string</tt>) so that the output is usually no wider then<br>
+ <i>fill-width</i>. The filled output is then written on the original stream.<br>
+<br>
+ The <i>stream </i>argument is not evaluated, and must be a symbol that is bound to a stream. If<br>
+ <i>stream </i>is <tt>t</tt>, <tt>*standard-output* </tt>is used. <i>body </i>may have zero or more declarations as its first<br>
+ forms.<br>
+<br>
+ <i>fill-width </i>specifies the width of filled lines, and defaults to 80 characters. It is specified the same<br>
+ way as the <tt>:x-spacing </tt>option for <tt>formatting-table</tt>.<br>
+<br>
+ "Words" are separated by the characters specified in the list <i>break-characters</i>. When a line<br>
+ is broken to prevent wrapping past the end of a line, the line break is made at one of these<br>
+ separators. That is, <tt>filling-output </tt>does not split "words" across lines, so it might produce<br>
+ output wider than <i>fill-width</i>.<br>
+<br>
+ <i>after-line-break </i>specifies a string to be sent to <i>stream </i>after line breaks; the string appears at the<br>
+ beginning of each new line. The string must not be wider than <i>fill-width</i>.<br>
+<br>
+ If the boolean <i>after-line-break-initially </i>is <b>true</b>, then the <i>after-line-break </i>text is to be written to<br>
+ <i>stream </i>before executing <i>body</i>, that is, at the beginning of the first line. The default is <b>false</b>.
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page177.html">Page 177</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page179.html">Page 179</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

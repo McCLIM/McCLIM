@@ -1,0 +1,143 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page266.html">Page 266</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page268.html">Page 268</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 27. COMMAND PROCESSING </b><br>
+<br>
+ <tt>command </tt>directly, but will instead use a <tt>define-</tt><i>frame</i><tt>-command </tt>form that is automatically gen-<br>
+ erated by <tt>define-application-frame</tt>. <tt>define-</tt><i>frame</i><tt>-command </tt>adds the command to the ap-<br>
+ plication frame's command table. By default, <tt>define-command </tt>does not add the command to<br>
+ any command table.<br>
+<br>
+ <i>name-and-options </i>is either a command name, or a cons of the command name and a list of<br>
+ keyword-value pairs.<br>
+<br>
+ <tt>define-command </tt>defines two functions. The first function has the same name as the command<br>
+ name, and implements the body of the command. It takes as arguments the arguments to the<br>
+ command as specified by the <tt>define-command </tt>form, as required and keyword arguments.<br>
+<br>
+ The name of the other function defined by <tt>define-command </tt>is unspecified. It implements the<br>
+ code used by the command processor for parsing and returning the command's arguments.<br>
+<br>
+ The keywords from <i>name-and-options </i>can be:<ul>
+ <li><tt>:command-table </tt><i>command-table-name</i>, where <i>command-table-name </i>either names a com-<br>
+ mand table to which the command will be added, or is <tt>nil </tt>(the default) to indicate that<br>
+ the command should not be added to any command table. If the command table does<br>
+ not exist, the <tt>command-table-not-found </tt>error will be signalled. This keyword is only<br>
+ accepted by <tt>define-command</tt>, not by <tt>define-</tt><i>frame</i><tt>-command</tt>.<br>
+<br>
+ <li><tt>:name </tt><i>string</i>, where <i>string </i>is a string that will be used as the command-line name for<br>
+ the command for keyboard interactions in the command table specified by the <tt>:command-<br>
+ table </tt>option. The default is <tt>nil</tt>, meaning that the command will not be available via<br>
+ command-line interactions. If <i>string </i>is <tt>t</tt>, then the command-line name will be generated<br>
+ automatically, as described in <tt>add-command-to-command-table</tt>.<br>
+<br>
+ <li><tt>:menu </tt><i>menu-spec</i>, where <i>menu-spec </i>describes an item in the menu of the command table<br>
+ specified by the <tt>:command-table </tt>option. The default is <tt>nil</tt>, meaning that the command<br>
+ will not be available via menu interactions. If <i>menu-spec </i>is a string, then that string will<br>
+ be used as the menu name. If <i>menu-spec </i>is <tt>t</tt>, then if a command-line name was supplied, it<br>
+ will be used as the menu name; otherwise the menu name will be generated automatically,<br>
+ as described in <tt>add-command-to-command-table</tt>. Otherwise, <i>menu-spec </i>must be a cons<br>
+ of the form <tt>(</tt><i>string </i><tt>. </tt><i>menu</i><tt>-</tt><i>options</i><tt>)</tt>, where <i>string </i>is the menu name and <i>menu-options<br>
+ </i>consists of keyword-value pairs. The valid keywords are <tt>:after</tt>, <tt>:documentation</tt>, and<br>
+ <tt>:text-style</tt>, which are interpreted as for <tt>add-menu-item-to-command-table</tt>.<br>
+<br>
+ <li><tt>:keystroke </tt><i>gesture</i>, where <i>gesture </i>is a keyboard gesture name that specifies a keystroke<br>
+ accelerator to use for this command in the command table specified by the <tt>:command-<br>
+ table </tt>option. The default is <tt>nil</tt>, meaning that there is no keystroke accelerator.</ul>
+ The <tt>:name</tt>, <tt>:menu</tt>, and <tt>:keystroke </tt>options are only allowed if the <tt>:command-table </tt>option was<br>
+ supplied explicitly or implicitly, as in <tt>define-</tt><i>frame</i><tt>-command</tt>.<br><br>
+ <i>arguments </i>is a list consisting of argument descriptions. A single occurrence of the symbol <tt>&key<br>
+ </tt>may appear in <i>arguments </i>to separate required command arguments from keyword arguments.<br>
+ Each argument description consists of a parameter variable, followed by a presentation type<br>
+ specifier, followed by keyword-value pairs. The keywords can be:
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page266.html">Page 266</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page268.html">Page 268</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

@@ -1,0 +1,144 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page195.html">Page 195</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page197.html">Page 197</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 22. EXTENDED STREAM INPUT </b><br>
+<br>
+ timestamp, and the modifier key state (a quantity that indicates which modifier keys were held<br>
+ down on the keyboard at the time the event occurred). Pointer button event objects also store<br>
+ the pointer object, the button that was clicked on the pointer, the window the pointer was over<br>
+ and the <i>x </i>and <i>y </i>position within that window. Keyboard gestures store the key name.<br>
+<br>
+ In some contexts, the object used to represent a user gesture is referred to as an <b>gesture object</b>.<br>
+ An gesture object might be exactly the same as an event object, or might contain less information.<br>
+ For example, for a keyboard gesture that corresponds to a standard printing character, it may<br>
+ be enough to represent the gesture object as a character.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>define-gesture-name </tt><i>name type gesture-spec </i>[<i>Macro</i>]<br>
+ Defines a new gesture named by the symbol <i>name</i>. <i>type </i>is the type of gesture being created,<br>
+ and must be one of the symbols described below. <i>gesture-spec </i>specifies the physical gesture that<br>
+ corresponds to the named gesture; its syntax depends on the value of <i>type</i>. <tt>define-gesture-<br>
+ name </tt>must expand into a call to <tt>add-gesture-name</tt>.<br>
+<br>
+ None of the arguments to <tt>define-gesture-name </tt>is evaluated.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>add-gesture-name </tt><i>name type gesture-spec </i><tt>&key </tt><i>unique </i>[<i>Function</i>]<br>
+ Adds a gesture named by the symbol <i>name </i>to the set of gesture names. <i>type </i>is the type of<br>
+ gesture being created, and must be one of the symbols described below. <i>gesture-spec </i>specifies<br>
+ the physical gesture that corresponds to the named gesture; its syntax depends on the value of<br>
+ <i>type</i>.<br>
+<br>
+ If <i>unique </i>is <b>true</b>, all old gestures named by <i>name </i>are first removed. <i>unique </i>defaults to <tt>nil</tt>.<br>
+<br>
+ When <i>type </i>is <tt>:keyboard</tt>, <i>gesture-spec </i>is a list of the form <i>(key-name . modifier-key-names)</i>.<br>
+ <i>key-name </i>is the name of a non-modifier key on the keyboard (see below). <i>modifier-key-names </i>is<br>
+ a (possibly empty) list of modifier key names (<tt>:shift</tt>, <tt>:control</tt>, <tt>:meta</tt>, <tt>:super</tt>, and <tt>:hyper</tt>).<br>
+<br>
+ For the standard Common Lisp characters (the 95 ASCII printing characters including <tt>#\Space</tt>),<br>
+ <i>key-name </i>is the character object itself. For the other "semi-standard" characters, <i>key-name </i>is<br>
+ a keyword symbol naming the character (<tt>:newline</tt>, <tt>:linefeed</tt>, <tt>:return</tt>, <tt>:tab</tt>, <tt>:backspace</tt>,<br>
+ <tt>:page</tt>, and <tt>:rubout</tt>). CLIM implementations may extend the set of key names on a per-port<br>
+ basic, but should choose a port-specific package. For example, the Genera port might such<br>
+ gestures as include <tt>clim-genera:help </tt>and <tt>clim-genera:complete</tt>.<br>
+<br>
+ The names of the modifier keys have been chosen to be uniform across all platforms, even though<br>
+ not all platforms will have keys on the keyboard with these names. The per-port part of a CLIM<br>
+ implementation must simply choose a sensible mapping from the modifier key names to the<br>
+ names of the keys on the keyboard. For example, a CLIM implementation on the Macintosh<br>
+ might map <tt>:meta </tt>to the Command shift key, and <tt>:super </tt>to the Option shift key.<br>
+<br>
+ When <i>type </i>is <tt>:pointer-button</tt>, <tt>:pointer-button-press</tt>, or <tt>:pointer-button-release</tt>, <i>gesture-<br>
+ spec </i>is a list of the form <i>(button-name . modifier-key-names)</i>. <i>button </i>is the name of a pointer<br>
+ button (<tt>:left</tt>, <tt>:middle</tt>, or <tt>:right</tt>), and <i>modifier-key-names </i>is as above.<br>
+<br>
+ CLIM implementations are permitted to have other values of <i>type </i>as an extension, such as
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page195.html">Page 195</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page197.html">Page 197</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

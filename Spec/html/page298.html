@@ -1,0 +1,138 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page297.html">Page 297</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page299.html">Page 299</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 28. APPLICATION FRAMES </b><br>
+<br>
+ <br><b>28.5 Frame Managers<br><br>
+ </b>Frames may be <b>adopted </b>by a frame manager, which involves invoking a protocol for generating<br>
+ the pane hierarchy of the frame. This protocol provides for selecting pane types for abstract<br>
+ gadget panes based on the style requirements imposed by the frame manager. That is, the frame<br>
+ manager is responsible for the "look and feel" of a frame.<br>
+<br>
+ After a frame is adopted it can be in any of the three following states: <b>enabled</b>, <b>disabled</b>, or<br>
+ <b>shrunk</b>. An enabled frame is visible unless it is occluded by other frames or the user is browsing<br>
+ outside of the portion of the frame manager's space that the frame occupies. A shrunken frame<br>
+ provides a cue or handle for the frame, but generally will not show the entire contents of the<br>
+ frame. For example, the frame may be iconified or an item for the frame may be placed in a<br>
+ special suspended frame menu. A disabled frame is not visible, nor is there any user accessible<br>
+ handle for enabling the frame.<br>
+<br>
+ Frames may also be <b>disowned</b>, which involves releasing the frame's panes as well as all associated<br>
+ foreign resources.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>frame-manager </tt>[<i>Protocol Class</i>]<br>
+ The protocol class that corresponds to a frame manager. If you want to create a new class<br>
+ that behaves like a frame manager, it should be a subclass of <tt>frame-manager</tt>. Subclasses of<br>
+ <tt>frame-manager </tt>must obey the frame manager protocol.<br>
+<br>
+ There are no advertised standard frame manager classes. Each port will implement one or more<br>
+ frame managers that correspond to the look and feel for the port.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>frame-mananger-p </tt><i>object </i>[<i>Function</i>]<br>
+ Returns <b>true </b>if <i>object </i>is a <b>frame manager</b>, otherwise returns <b>false</b>.<br>
+ <br><b>28.5.1 Finding Frame Managers<br><br>
+ </b>Most frames need only deal directly with frame managers to the extent that they need to find a<br>
+ frame manager into which they can insert themselves. Since frames will usually be invoked by<br>
+ some user action that is handled by some frame manager, finding an appropriate frame manager<br>
+ is usually straightforward.<br>
+<br>
+ Some frames will support the embedding of other frames within themselves. Such frames would<br>
+ not only use frames but also act as frame managers, so that other frames could insert frames.<br>
+ In this case, the embedded frames are mostly unaware that they are nested within other frames,<br>
+ but only know that they are controlled by a particular frame manager.<br>
+<br>
+ <p><b>Minor issue: </b><b>How does one write a frame that supports an embedded frame, such as an editor<br>
+ frame within a documentation-writing frame? | SWM<br>
+<br>
+ </b>The <tt>find-frame-manager </tt>function provides a flexible means for locating an frame manager to
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page297.html">Page 297</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page299.html">Page 299</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

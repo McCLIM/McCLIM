@@ -1,0 +1,143 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page361.html">Page 361</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page363.html">Page 363</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>APPENDIX E. CHANGES FROM CLIM 1.0 </b><br>
+<br>
+ <p><b>Presentation Types<ul>
+ </b><li>The argument list for <tt>with-output-as-presentation </tt>has been changed to make <i>stream</i>,<br>
+ <i>object</i>, and <i>type </i>be required arguments instead of keyword arguments. This is because it is<br>
+ always necessary to supply those arguments in order for <tt>with-output-as-presentation<br>
+ </tt>to work. Compability code will be provided to support the old syntax.<br>
+<br>
+ <li>The <i>activation-characters</i>, <i>additional-activation-characters</i>, <i>blip-characters</i>, and <i>additional-<br>
+ blip-characters </i>keyword arguments to the <tt>accept </tt>functions have been renamed to <i>activation-<br>
+ gestures</i>, <i>additional-activation-gestures</i>, <i>delimiter-gestures</i>, and <i>additional-delimiter-gestures</i>.<br>
+ Compability code will be provided to support the old keyword arguments.<br>
+<br>
+ <li>The arglists for presentation translators and their documentation and tester components<br>
+ have been changed to take a single position <i>object </i>argument and a list of named (keyword)<br>
+ arguments. Except for translators that omit the <i>object </i>argument or have it in other than<br>
+ the initial position of the arglist, this will not pose a problem. This change can be detected.<br>
+<br>
+ <li>The <i>frame </i>argument to <tt>find-presentation-translators </tt>has been changed to be a<br>
+ <i>command-table </i>argument. A check at run-time can detect when a frame is supplied to<br>
+ <tt>find-presentation-translators </tt>instead of a command table.<br>
+<br>
+ <li>The <i>shift-mask </i>keyword argument to <tt>test-presentation-translator</tt>, <tt>find-applicable-<br>
+ translators</tt>, <tt>presentation-matches-context-type</tt>, and <tt>find-innermost-applicable-<br>
+ presentation </tt>has been renamed to <i>modifier-state </i>in order to be consistent with the device<br>
+ event terminology. Compability code will be provided to support the old keyword.<br>
+<br>
+ <li>The <i>shifts </i>keyword argument to <tt>define-gesture-name </tt>has been renamed to <i>modifiers<br>
+ </i>in order to be consistent with the device event terminology. Compability code will be<br>
+ provided to support the old keyword.<br>
+<br>
+ <li><tt>dialog-view </tt>and <tt>+dialog-view+ </tt>have been renamed to <tt>textual-dialog-view </tt>and <tt>+textual-<br>
+ dialog-view+ </tt>in order to accurately reflect what they are. Likewise, <tt>menu-view </tt>and<br>
+ <tt>+menu-view+ </tt>have been renamed to <tt>textual-menu-view </tt>and <tt>+textual-menu-view+</tt>. Com-<br>
+ patibility classes and constants will be provided.</ul>
+ <p><b>Input Editing and Completion Facilities<ul>
+ </b><li><tt>*activation-characters*</tt>, <tt>*standard-activation-characters*</tt>, <tt>with-activation-characters</tt>,<br>
+ and <tt>activation-character-p </tt>have been renamed to <tt>*activation-gestures*</tt>, <tt>*standard-<br>
+ activation-gestures*</tt>, <tt>with-activation-gestures</tt>, and <tt>activation-gesture-p</tt>. Com-<br>
+ patibility functions will remain for <tt>with-activation-characters </tt>and <tt>activation-character-<br>
+ p</tt>, but since the variables were not previously documented, no compatibility will be pro-<br>
+ vided for them.<br>
+<br>
+ <li><tt>*blip-characters*</tt>, <tt>with-blip-characters</tt>, and <tt>blip-character-p </tt>have been renamed<br>
+ to <tt>*delimiter-gestures*</tt>, <tt>with-delimiter-gestures</tt>, and <tt>delimiter-gesture-p</tt>. Com-<br>
+ patibility functions will remain for <tt>with-blip-characters </tt>and <tt>blip-character-p</tt>, but<br>
+ since <tt>*blip-characters* </tt>was not previously documented, no compatibility will be pro-<br>
+ vided.
+</ul>
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page361.html">Page 361</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page363.html">Page 363</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

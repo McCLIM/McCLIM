@@ -1,0 +1,147 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page94.html">Page 94</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page96.html">Page 96</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 12. GRAPHICS </b><br>
+<br>
+ Coordinates are real numbers in implementation-defined units. Often these units equal the spa-<br>
+ tial resolution of a viewport, so that a line of thickness 1 is equivalent to the thinnest visible line.<br>
+ However, this equivalence is not required and should not be assumed by application programs.<br>
+<br>
+ A valid CLIM implementation can be quite restrictive in the size and resolution of its viewports.<br>
+ For example, the spatial resolution might be only a few dozen points per inch, the maximum size<br>
+ might be only a few hundred points on a side, and there could be as few as two displayable colors<br>
+ (usually black and white). The fully transparent and fully opaque opacity levels must always be<br>
+ supported, but a valid CLIM implementation might support only a few opacity levels in between<br>
+ (or possibly even none). A valid CLIM implementation might implement color blending and<br>
+ unsaturated colors by stippling, although it is preferred, when possible, for a viewport to display<br>
+ a uniform color as a uniform color rather than as a perceptible stipple.<br>
+<br>
+ When CLIM records the output to a sheet, there are no such limitations since CLIM just re-<br>
+ members the drawing operations that were performed, not the results of rendering.<br>
+<br>
+ CLIM provides some ways to ask what resolution limits are in effect
+    for a medium. See <A HREF="./page77.html">Chapter 10</A><br>
+ for their descriptions.<br>
+<br>
+ The application programmer uses the CLIM graphic drawing model as an interface to describe<br>
+ the intended visual appearance. An implementation does its best to approximate that ideal<br>
+ appearance in a viewport, within its limitations of spatial resolution, color resolution, number<br>
+ of simultaneously displayable colors, and drawing speed. This will usually require tradeoffs,<br>
+ for example between speed and accuracy, and each implementation must make these tradeoffs<br>
+ according to its own hardware/software environment and user concerns. For example, if the<br>
+ actual device supports a limited number of colors, the desired color may be approximated by<br>
+ techniques such as dithering or stippling. If the actual device cannot draw curves exactly, they<br>
+ may be approximated, with or without anti-aliasing. If the actual device has limited opacity<br>
+ resolution, color blending may be approximate. A viewport might display colors that don't<br>
+ appear in the drawing plane, both because of color and opacity approximation and because of<br>
+ anti-aliasing at the edges of drawn shapes.<br>
+<br>
+ It is likely that different implementations will produce somewhat different visual appearance<br>
+ when running the same application. If an application requires more detailed control, it must<br>
+ resort to a lower-level interface, and will become less portable as a result. These lower-level<br>
+ interfaces will be documented on a per-platform basis.<br>
+<br>
+ Drawing computations are always carried out "in color", even if the viewport is only capable of<br>
+ displaying black and white. In other words, the CLIM drawing model is always the fully general<br>
+ model, even if an implementation's color resolution is limited enough that full use of the model<br>
+ is not possible. Of course an application that fundamentally depends on color will not work well<br>
+ on a viewport that cannot display color. Other applications will degrade gracefully.<br>
+<br>
+ Whether the implementation uses raster graphics or some other display technique is invisible<br>
+ at this interface. CLIM does not specify the existence of pixels nor the exact details of scan<br>
+ conversion, which will vary from one drawing engine to the next.<br>
+<br>
+ Performance will also vary between implementations. This interface is defined in terms of simple<br>
+ conceptual operations, however an actual implementation may use caching, specialized object<br>
+ representations, and other optimizations to avoid materializing storage-intensive or computation-
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page94.html">Page 94</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page96.html">Page 96</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

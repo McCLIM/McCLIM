@@ -1,0 +1,124 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page19.html">Page 19</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page21.html">Page 21</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 3. REGIONS </b><br>
+<br>
+<br>
+ <center><b>Figure 3.3: The class structure for all regions.</center></b><br><br>
+ number). Points have neither area nor length (that is, they have dimensionality 0).<br>
+<br>
+ Note well that a point is <b>not </b>a pixel; CLIM models a drawing plane with continuous coordinates.<br>
+ This is discussed in more detail in <A HREF="./page93.html">Chapter 12</A>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>point </tt>[<i>Protocol Class</i>]<br>
+ The protocol class that corresponds to a mathematical point. This is a subclass of <tt>region </tt>and<br>
+ <tt>bounding-rectangle</tt>. If you want to create a new class that behaves like a point, it should be<br>
+ a subclass of <tt>point</tt>. Subclasses of <tt>point </tt>must obey the point protocol.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>pointp </tt><i>object </i>[<i>Function</i>]<br>
+ Returns <b>true </b>if <i>object </i>is a <b>point</b>, otherwise returns <b>false</b>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>standard-point </tt>[<i>Class</i>]<br>
+ An instantiable class that implements a point. This is a subclass of <tt>point</tt>. This is the class that<br>
+ <tt>make-point </tt>instantiates. Members of this class are immutable.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>make-point </tt><i>x y </i>[<i>Function</i>]<br>
+ Returns an object of class <tt>standard-point </tt>whose coordinates are <i>x </i>and <i>y</i>. <i>x </i>and <i>y </i>must be real<br>
+ numbers.<br>
+ <p><b>The Point Protocol<br><br>
+ </b>The following generic functions comprise the point API. Only <tt>point-position </tt>is in the point<br>
+ protocol, that is, all classes that are subclasses of <tt>point </tt>must implement methods for <tt>point-<br>
+ position</tt>, but need not implement methods for <tt>point-x </tt>and <tt>point-y</tt>.<br><br>
+ <big><b>&#061&gt  </b></big><tt>point-position </tt><i>point </i>[<i>Generic Function</i>]<br>
+ Returns both the <i>x </i>and <i>y </i>coordinates of the point <i>point </i>as two values.
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page19.html">Page 19</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page21.html">Page 21</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

@@ -1,0 +1,136 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page21.html">Page 21</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page23.html">Page 23</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 3. REGIONS </b><br>
+<br>
+ objects are unspecified.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>polygon </tt>[<i>Protocol Class</i>]<br>
+ The protocol class that corresponds to a mathematical polygon. This is a subclass of <tt>area</tt>. If<br>
+ you want to create a new class that behaves like a polygon, it should be a subclass of <tt>polygon</tt>.<br>
+ Subclasses of <tt>polygon </tt>must obey the polygon protocol.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>polygonp </tt><i>object </i>[<i>Function</i>]<br>
+ Returns <b>true </b>if <i>object </i>is a <b>polygon</b>, otherwise returns <b>false</b>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>standard-polygon </tt>[<i>Class</i>]<br>
+ An instantiable class that implements a polygon. This is a subclass of <tt>polygon</tt>. This is the class<br>
+ that <tt>make-polygon </tt>and <tt>make-polygon* </tt>instantiate. Members of this class are immutable.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>make-polygon </tt><i>point-seq </i>[<i>Function</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>make-polygon* </tt><i>coord-seq </i>[<i>Function</i>]<br>
+ Returns an object of class <tt>standard-polygon </tt>consisting of the area contained in the boundary<br>
+ that is specified by the segments connecting each of the points in <i>point-seq </i>(or the points rep-<br>
+ resented by the coordinate pairs in <i>coord-seq</i>). <i>point-seq </i>is a sequence of <b>points</b>; <i>coord-seq </i>is a<br>
+ sequence of coordinate pairs, which are real numbers. It is an error if <i>coord-seq </i>does not contain<br>
+ an even number of elements.<br>
+<br>
+ This function is permitted to capture its mutable inputs; the consequences of modifying those<br>
+ objects are unspecified.<br>
+ <p><b>The Polygon and Polyline Protocol<br><br>
+ </b>The following generic functions comprise the polygon and polyline protocol. All classes that are<br>
+ subclasses of either <tt>polygon </tt>or <tt>polyline </tt>must implement methods for these generic functions.<br>
+ Some of the functions below take an argument named <i>polygon-or-polyline</i>; this argument may<br>
+ be either a <b>polygon </b>or a <b>polyline</b>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>polygon-points </tt><i>polygon-or-polyline </i>[<i>Generic Function</i>]<br>
+ Returns a sequence of points that specify the segments in <i>polygon-or-polyline</i>. This function<br>
+ returns objects that reveal CLIM's internal state; do not modify those objects.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>map-over-polygon-coordinates </tt><i>function polygon-or-polyline </i>[<i>Generic Function</i>]<br>
+ Applies <i>function </i>to all of the coordinates of the vertices of <i>polygon-or-polyline</i>. <i>function </i>is a<br>
+ function of two arguments, the <i>x </i>and <i>y </i>coordinates of the vertex; it has dynamic extent.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>map-over-polygon-segments </tt><i>function polygon-or-polyline </i>[<i>Generic Function</i>]<br>
+ Applies <i>function </i>to the segments that compose <i>polygon-or-polyline</i>. <i>function </i>is a function of four
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page21.html">Page 21</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page23.html">Page 23</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

@@ -1,0 +1,134 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page44.html">Page 44</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page46.html">Page 46</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 6. OVERVIEW OF WINDOW FACILITIES </b><br>
+<br>
+ make it visible. <b>Ports </b>and <b>grafts </b>provide the functionality for managing this capability. A <b>port<br>
+ </b>is an abstract connection to a display service that is responsible for managing host display server<br>
+ resources and for processing input events received from the host display server. A <b>graft </b>is a<br>
+ special kind of sheet that represents a host window, typically a root window (that is, a screen-<br>
+ level window). A sheet is attached to a display by making it a child of a graft, which represents<br>
+ an appropriate host window. The sheet will then appear to be a child of that host window. So,<br>
+ a sheet is put onto a particular screen by making it a child of an appropriate graft and enabling<br>
+ it. Ports and grafts are described in detail in <A HREF="./page69.html">Chapter 9</A>.<br>
+ <br><b>6.2 Properties of Sheets<br><br>
+ </b>Sheets have the following properties:<br>
+ <p><b>A coordinate system </b>Provides the ability to refer to locations in a sheet's abstract plane.<br>
+<br>
+ <p><b>A region </b>Defines an area within a sheet's coordinate system that indicates the area of interest<br>
+ within the plane, that is, a clipping region for output and input. This typically corresponds<br>
+ to the visible region of the sheet on the display.<br>
+<br>
+ <p><b>A parent </b>A sheet that is the parent in a windowing relationship in which this sheet is a child.<br>
+<br>
+ <p><b>Children </b>An ordered set of sheets that are each a child in a windowing relationship in which<br>
+ this sheet is a parent. The ordering of the set corresponds to the stacking order of the<br>
+ sheets. Not all sheets have children.<br>
+<br>
+ <p><b>A transformation </b>Determines how points in this sheet's coordinate system are mapped into<br>
+ points in its parents.<br>
+<br>
+ <p><b>An enabled flag </b>Indicates whether the sheet is currently actively participating in the window-<br>
+ ing relationship with its parent and siblings.<br>
+<br>
+ <p><b>An event handler </b>A procedure invoked when the display server wishes to inform CLIM of<br>
+ external events.<br>
+<br>
+ <p><b>Output state </b>A set of values used when CLIM causes graphical or textual output to appear<br>
+ on the display. This state is often represented by a medium.<br>
+ <br><b>6.3 Sheet Protocols<br>
+ </b>A sheet is a participant in a number of protocols. Every sheet must provide methods for the<br>
+ generic functions that make up these protocols. These protocols are:<br>
+ <p><b>The windowing protocol </b>Describes the relationships between the sheet and its parent and<br>
+ children (and, by extension, all of its ancestors and descendants).
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page44.html">Page 44</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page46.html">Page 46</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

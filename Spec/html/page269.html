@@ -1,0 +1,141 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page268.html">Page 268</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page270.html">Page 270</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 27. COMMAND PROCESSING </b><br>
+<br>
+ mouse interaction via translators. A <b>command table </b>is an object that serves to mediate between<br>
+ an application frame, a set of commands, and the four interaction styles. Command tables<br>
+ contain the following information:<ul>
+ <li>The name of the command table, which is a symbol.<br>
+<br>
+ <li>An ordered list of command tables to inherit from.<br>
+<br>
+ <li>The set of commands that are present in this command table.<br>
+<br>
+ <li>A table that associates command-line names to command names (used to support command-<br>
+ line processor interactions).<br>
+<br>
+ <li>A set of presentation translators, defined via <tt>define-presentation-translator </tt>and<br>
+ <tt>define-presentation-to-command-translator</tt>.<br>
+<br>
+ <li>A table that associates keyboard gesture names to menu items (used to support keystroke<br>
+ accelerator interactions). The keystroke accelerator table does not contain any items in-<br>
+ herited from superior command tables.<br>
+<br>
+ <li>A menu that associates menu names to command menu items (used to support interaction<br>
+ via command menus). The command menu items can invoke commands or sub-menus.<br>
+ The menu does not contain any command menu items inherited from superior command<br>
+ tables.</ul>
+ We say that a command is <b>present </b>in a command table when it has been added to that command<br>
+ table. We say that a command is <b>accessible </b>in a command table when it is present in that<br>
+ command table or is present in any of the command tables from which that command table<br>
+ inherits.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>command-table </tt>[<i>Protocol Class</i>]<br>
+ The protocol class that corresponds to command tables. If you want to create a new class<br>
+ that behaves like a command table, it should be a subclass of <tt>command-table</tt>. Subclasses of<br>
+ <tt>command-table </tt>must obey the command table protocol. Members of this class are mutable.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>command-table-p </tt><i>object </i>[<i>Function</i>]<br>
+ Returns <b>true </b>if <i>object </i>is a <b>command table</b>, otherwise returns <b>false</b>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>standard-command-table </tt>[<i>Class</i>]<br>
+ The instantiable class that implements command tables, a subclass of <tt>command-table</tt>. <tt>make-<br>
+ command-table </tt>returns objects that are members of this class.<br>
+<br>
+ <p><b>Minor issue: </b><b>Do we really want to advertise these classes, since all the functions below are<br>
+ vanilla functions instead of generic functions? Or should we make those functions be generic<br>
+ functions? | SWM<br>
+<br>
+ </b><big><b>&#061&gt  </b></big><tt>command-table-name </tt><i>command-table </i>[<i>Generic Function</i>]
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page268.html">Page 268</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page270.html">Page 270</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

@@ -1,0 +1,142 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page36.html">Page 36</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page38.html">Page 38</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 5. AFFINE TRANSFORMATIONS </b><br>
+<br>
+ There is no single definition of a scaling transformation. Transformations that preserve all angles<br>
+ and multiply all lengths by the same factor (preserving the "shape" of all entities) are certainly<br>
+ scaling transformations. However, scaling is also used to refer to transformations that scale<br>
+ distances in the <i>x </i>direction by one amount and distances in the <i>y </i>direction by another amount.<br>
+<br>
+ <tt>make-scaling-transformation </tt>returns a transformation that multiplies the <i>x</i>-coordinate dis-<br>
+ tance of every point from <i>origin </i>by <i>scale-x </i>and the <i>y</i>-coordinate distance of every point from<br>
+ <i>origin </i>by <i>scale-y</i>. <i>scale-x </i>and <i>scale-y </i>must be real numbers. If <i>origin </i>is supplied it must be a<br>
+ point; if not supplied it defaults to (0<i>;</i>0). <i>origin-x </i>and <i>origin-y </i>must be real numbers.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>make-reflection-transformation </tt><i>point1 point2 </i>[<i>Function</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>make-reflection-transformation* </tt><i>x1 y1 x2 y2 </i>[<i>Function</i>]<br>
+ A reflection is a transformation that preserves lengths and magnitudes of angles, but changes<br>
+ the sign (or "handedness") of angles. If you think of the drawing plane on a transparent sheet<br>
+ of paper, a reflection is a transformation that "turns the paper over".<br>
+<br>
+ <tt>make-reflection-transformation </tt>returns a transformation that reflects every point through<br>
+ the line passing through the <b>points </b><i>point1 </i>and <i>point2 </i>(or through the positions (<i>x</i>1<i>;y</i>1) and<br>
+ (<i>x</i>2<i>;y</i>2) in the case of the spread version).<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>make-transformation </tt><i>mxx mxy myx myy tx ty </i>[<i>Function</i>]<br>
+ Returns a general transformation whose effect is:<br>
+<br>
+<pre>
+	 <i>x</i><sup>t</sup> = <i>m</i><sub>xx</sub> <i>x </i>+ <i>m</i><sub>xy</sub> <i>y </i>+ <i>t</i><sub>x</sub>
+	 <i>y</i><sup>t</sup> = <i>m</i><sub>yx</sub> <i>x </i>+ <i>m</i><sub>yy</sub> <i>y </i>+ <i>t</i><sub>y</sub>
+</pre>
+ where <i>x </i>and <i>y </i>are the coordinates of a point before the transformation and <i>x</i><sup>t</sup> and <i>y</i><sup>t</sup> are the<br>
+ coordinates of the corresponding point after.<br>
+<br>
+ All of the arguments to <tt>make-transformation </tt>must be real numbers.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>make-3-point-transformation </tt><i>point-1 point-2 point-3 point-1-image point-2-image point-3-<br>
+ image </i>[<i>Function</i>]<br>
+ Returns a transformation that takes <b>points </b><i>point-1 </i>into <i>point-1-image</i>, <i>point-2 </i>into <i>point-2-<br>
+ image </i>and <i>point-3 </i>into <i>point-3-image</i>. Three non-collinear points and their images under the<br>
+ transformation are enough to specify any affine transformation.<br>
+<br>
+ If <i>point-1</i>, <i>point-2 </i>and <i>point-3 </i>are collinear, the <tt>transformation-underspecified </tt>error will be<br>
+ signalled. If <i>point-1-image</i>, <i>point-2-image </i>and <i>point-3-image </i>are collinear, the resulting trans-<br>
+ formation will be singular (that is, will have no inverse) but this is not an error.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>make-3-point-transformation* </tt><i>x1 y1 x2 y2 x3 y3 x1-image y1-image x2-image y2-image x3-<br>
+ image y3-image </i>[<i>Function</i>]<br>
+ Returns a transformation that takes the points at the positions (<i>x1</i>,<i>y1</i>) into (<i>x1-image</i>,<i>y1-image</i>),<br>
+ (<i>x2</i>,<i>y2</i>) into (<i>x2-image</i>,<i>y2-image</i>) and (<i>x3</i>,<i>y3</i>) into (<i>x3-image</i>,<i>y3-image</i>). Three non-collinear
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page36.html">Page 36</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page38.html">Page 38</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

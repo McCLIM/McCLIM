@@ -1,0 +1,124 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page18.html">Page 18</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page20.html">Page 20</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 3. REGIONS </b><br>
+<br>
+<br>
+ <center><b>Figure 3.2: Examples of region union, intersection, and difference.</center></b><br><br>
+ objects are unspecified.<br>
+ <br><b>3.2 Other Region Types<br><br>
+ </b>The other types of regions are points, polylines, polygons, elliptical arcs, and ellipses. All of<br>
+ these region types are closed under affine transformations.<br>
+<br>
+ <p><b>Major issue: </b><b>There is a proposal to remove the </b><tt>polygon</tt><b>, </b><tt>polyline</tt><b>, </b><tt>line</tt><b>, </b><tt>ellipse</tt><b>, and<br>
+ elliptical-arc classes, since they are only of limited utility, and CLIM itself doesn't use the<br>
+ classes at all. The advantage of removing these classes is that both the spec and CLIM itself<br>
+ become a little simpler, and there are fewer cases of the region protocol to implement. However,<br>
+ removing these classes results in a geometric model that is no longer closed (in the mathematical<br>
+ sense). Furthermore, these are intuitive objects that are used by a small, but important, class<br>
+ of applications, and some people feel that CLIM should relieve programmers from having to<br>
+ implement these classes for himself or herself.<br>
+<br>
+ The advocates of of removing these classes also propose removing the design-based drawing<br>
+ model. In this case, a more consistent proposal is to remove all of the geometric classes, including<br>
+ </b><tt>point </tt><b>and </b><tt>rectangle</tt><b>.<br>
+<br>
+ Again, the opposing point of view believes that the power and flexibility of the design-based<br>
+ drawing model does not justify the removal of any of these classes. One counter-proposal is<br>
+ to require CLIM not to use any of the extended region classes internally, and to move the<br>
+ implementation of the extended region classes to a separately loadable module (via </b><tt>provide </tt><b>and<br>
+ </b><tt>require</tt><b>). | SWM, York<br>
+ </b><br><b>3.2.1 Points<br><br>
+ </b>A <b>point </b>is a mathematical point in the plane, designated by its coordinates, which are a pair of<br>
+ real numbers (where a real number is defined as either an integer, a ratio, or a floating point
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page18.html">Page 18</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page20.html">Page 20</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

@@ -1,0 +1,140 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page295.html">Page 295</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page297.html">Page 297</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 28. APPLICATION FRAMES </b><br>
+<ul>
+ application writer, although certain display functions are supplied by CLIM itself. Note<br>
+ that an application frame is free to have no panes.</ul>
+ <p><b>Major issue: </b><b>RWK has a reasonable proposal for breaking down command loops into their<br>
+ component pieces. It should be integrated here. | SWM<br>
+<br>
+ </b>All classes that inherit from <tt>application-frame </tt>must inherit or implement methods for all of<br>
+ the following functions.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>run-frame-top-level </tt><i>frame </i>[<i>Generic Function</i>]<br>
+ Runs the top-level function for the <b>frame </b><i>frame</i>. The default method on <tt>application-frame<br>
+ </tt>simply invokes the top-level function for the frame (which defaults to <tt>default-frame-top-<br>
+ level</tt>).<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>run-frame-top-level </tt><i>(frame </i><tt>application-frame</tt><i>) </i>[<i>:Around Method</i>]<br>
+ The <tt>:around </tt>method of <tt>run-frame-top-level </tt>on the <tt>application-frame </tt>class is responsible<br>
+ for establish the initial dynamic bindings for the application, including (but not limited to)<br>
+ binding <tt>*application-frame* </tt>to <i>frame</i>, binding <tt>*input-context* </tt>to <tt>nil</tt>, resetting the de-<br>
+ limiter and activation gestures, and binding <tt>*input-wait-test*</tt>, <tt>*input-wait-handler*</tt>, and<br>
+ <tt>*pointer-button-press-handler* </tt>to <tt>nil</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>default-frame-top-level </tt><i>frame </i><tt>&key </tt><i>command-parser command-unparser partial-command-<br>
+ parser prompt </i>[<i>Generic Function</i>]<br>
+ The default top-level function for application frames. This function implements a "read-eval-<br>
+ print" loop that displays a prompt, calls <tt>read-frame-command</tt>, then calls <tt>execute-frame-<br>
+ command</tt>, and finally redisplays all of the panes that need to be redisplayed.<br>
+<br>
+ <tt>default-frame-top-level </tt>will also establish a simple restart for <tt>abort</tt>, and bind the standard<br>
+ stream variables as follows. <tt>*standard-input* </tt>will be bound to the value returned by <tt>frame-<br>
+ standard-input</tt>. <tt>*standard-output* </tt>will be bound to the value returned by <tt>frame-standard-<br>
+ output</tt>. <tt>*query-io* </tt>will be bound to the value returned by <tt>frame-query-io</tt>. <tt>*error-output*<br>
+ </tt>will be bound to the value returned by <tt>frame-error-output</tt>. It is unspecified what <tt>*terminal-<br>
+ io*</tt>, <tt>*debug-io*</tt>, and <tt>*trace-output* </tt>will be bound to.<br>
+<br>
+ <i>prompt </i>is either a string to use as the prompt (defaulting to <tt>"Command: "</tt>), or a function of<br>
+ two arguments, a stream and the frame.<br>
+<br>
+ <i>command-parser</i>, <i>command-unparser</i>, and <i>partial-command-parser </i>are the same as for <tt>read-<br>
+ command</tt>. <i>command-parser </i>defaults to <tt>command-line-command-parser </tt>if there is an inter-<br>
+ actor, otherwise it defaults to <tt>menu-only-command-parser</tt>. <i>command-unparser </i>defaults to<br>
+ <tt>command-line-command-unparser</tt>. <i>partial-command-parser </i>defaults to <tt>command-line-read-<br>
+ remaining-arguments-for-partial-command </tt>if there is an interactor, otherwise it defaults to<br>
+ <tt>menu-only-read-remaining-arguments-for-partial-command</tt>. <tt>default-frame-top-level<br>
+ </tt>binds <tt>*command-parser*</tt>, <tt>*command-unparser*</tt>, and <tt>*partial-command-parser* </tt>to the values<br>
+ of <i>command-parser</i>, <i>command-unparser</i>, and <i>partial-command-parser</i>.
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page295.html">Page 295</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page297.html">Page 297</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

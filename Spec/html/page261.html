@@ -1,0 +1,130 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page260.html">Page 260</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page262.html">Page 262</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+<br>
+<br>
+ <b>Chapter 26<br>
+ </b><br><b>Dialog Facilities<br>
+ </b><p><b>Major issue: </b><b>There is a general issue about how these dialogs fit in with the dialogs that<br>
+ might be provided by the underlying toolkit. For example, under what circumstances is CLIM<br>
+ allowed to directly use the dialog facility provided by the host? | SWM<br>
+<br>
+ </b><big><b>&#061&gt  </b></big><tt>accepting-values </tt><i>(</i><tt>&optional </tt><i>stream </i><tt>&key </tt><i>own-window exit-boxes initially-select-query-identifier<br>
+ resynchronize-every-pass label x-position y-position frame-class) </i><tt>&body </tt><i>body </i>[<i>Macro</i>]<br>
+ Builds a dialog for user interaction based on calls to <tt>accept </tt>within <i>body</i>. The user can select<br>
+ the values and change them, or use defaults if they are supplied. The dialog will also contain<br>
+ some sort of "end" and "abort" choices. If "end" is selected, then <tt>accepting-values </tt>returns<br>
+ whatever values the body returns. If "abort" is selected, <tt>accepting-values </tt>will invoke the<br>
+ <tt>abort </tt>restart.<br>
+<br>
+ <i>stream </i>is an interactive stream that <tt>accepting-values </tt>will use to build up the dialog. The<br>
+ <i>stream </i>argument is not evaluated, and must be a symbol that is bound to a stream. If <i>stream </i>is<br>
+ <tt>t </tt>(the default), <tt>*query-io* </tt>is used.<br>
+<br>
+ <i>body </i>is the body of the dialog, which contains calls to <tt>accept </tt>that will be intercepted by<br>
+ <tt>accepting-values </tt>and used to build up the dialog. <i>body </i>may have zero or more declarations<br>
+ as its first forms.<br>
+<br>
+ An <tt>accepting-values </tt>dialog is implemented as a looping structure. First, <i>body </i>is evaluated<br>
+ in order to collect the output. While the body is being evaluated, all calls to <tt>accept </tt>call<br>
+ the <tt>accept-present-default </tt>presentation methods instead of calling the <tt>accept </tt>presentation<br>
+ methods. The output is then displayed (preferably using incremental redisplay in order to avoid<br>
+ unnecessary redisplay of unchanged output). Then <tt>accepting-values </tt>awaits a user gesture,<br>
+ such as clicking on one of the fields of the dialog. When the user clicks on a field, <tt>accepting-<br>
+ values </tt>reads a new value for that field using <tt>accept </tt>and replaces the old value with the new<br>
+ value. Then the loop is started again, until the user either exits or aborts from the dialog.<br>
+<br>
+ Because of this looping structure, <tt>accepting-values </tt>needs to be able to uniquely identify each<br>
+ call to <tt>accept </tt>in the body of the dialog. The <b>query identifier </b>is used to identify the calls to<br>
+
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page260.html">Page 260</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page262.html">Page 262</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

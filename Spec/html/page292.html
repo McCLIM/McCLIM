@@ -1,0 +1,140 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page291.html">Page 291</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page293.html">Page 293</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 28. APPLICATION FRAMES </b><br>
+<br>
+ Returns a list of those named panes in the <b>frame </b><i>frame</i>'s current layout. If there are no named<br>
+ panes (that is, the <tt>:pane </tt>option was used), only the single, top level pane is returned. This<br>
+ function returns objects that reveal CLIM's internal state; do not modify those objects.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>get-frame-pane </tt><i>frame pane-name </i>[<i>Generic Function</i>]<br>
+ Returns the named CLIM stream pane in the <b>frame </b><i>frame </i>whose name is <i>pane-name</i>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>find-pane-named </tt><i>frame pane-name </i>[<i>Generic Function</i>]<br>
+ Returns the pane in the <b>frame </b><i>frame </i>whose name is <i>pane-name</i>. This can return any type of<br>
+ pane, not just CLIM stream panes.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>frame-top-level-sheet </tt><i>frame </i>[<i>Generic Function</i>]<br>
+ Returns the sheet that is the top-level sheet for the <b>frame </b><i>frame</i>. This is the sheet that has as<br>
+ its descendents all of the panes of <i>frame</i>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>frame-pane </tt><i>frame </i>[<i>Generic Function</i>]<br>
+ Returns the pane that is the top level pane of the current layout of the frame.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>frame-current-layout </tt><i>frame </i>[<i>Generic Function</i>]<br>
+ Returns the current layout for the <b>frame </b><i>frame</i>. The layout is named by a symbol.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>(setf frame-current-layout) </tt><i>layout frame </i>[<i>Generic Function</i>]<br>
+ Sets the layout of the <b>frame </b><i>frame </i>to be the new layout specified by <i>new-layout</i>. <i>layout </i>must be<br>
+ a symbol that names one of the possible layouts.<br>
+<br>
+ Changing the layout of the frame must recompute what panes are used for the bindings of the<br>
+ standard stream variables (such as <tt>*standard-input*</tt>). Some implementations of CLIM may<br>
+ cause the application to "throw" all the way back to <tt>run-frame-top-level </tt>in order to do this.<br>
+ After the new layout has been computed, the contents of each of the panes must be displayed to<br>
+ the degree necessary to ensure that all output is visible.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>layout-frame </tt><i>frame </i><tt>&optional </tt><i>width height </i>[<i>Generic Function</i>]<br>
+ Resizes the frame and lays out the current pane hierarchy using the layout specified by <tt>frame-<br>
+ current-layout</tt>, according to the layout protocol. The basics of the layout protocols are de-<br>
+ scribed in <a href="./page311.html">Section 29.3.4</a>. This function is automatically invoked on a frame when it is adopted,<br>
+ after its pane hierarchy has been generated.<br>
+<br>
+ If <i>width </i>and <i>height </i>are provided, then this function resizes the frame to the specified size. It is<br>
+ an error to provide just <i>width</i>.<br>
+<br>
+ If no optional arguments are provided, this function resizes the frame to the preferred size of the<br>
+ top-level pane as determined by the space composition pass of the layout protocol.<br>
+<br>
+ In either case, after the frame is resized, the space allocation pass of the layout protocol is
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page291.html">Page 291</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page293.html">Page 293</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

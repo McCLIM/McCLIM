@@ -1,0 +1,141 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page192.html">Page 192</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page194.html">Page 194</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 22. EXTENDED STREAM INPUT </b><br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>stream-set-input-focus </tt><i>stream </i>[<i>Generic Function</i>]<br>
+ Sets the "input focus" to the <b>extended input stream </b><i>stream </i>and returns the old input focus as<br>
+ its value.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>stream-restore-input-focus </tt><i>stream old-focus </i>[<i>Generic Function</i>]<br>
+ Restores the "input focus" of the <b>extended input stream </b><i>stream </i>to <i>old-focus</i>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>with-input-focus </tt><i>(stream) </i><tt>&body </tt><i>body </i>[<i>Macro</i>]<br>
+ Temporarily gives the keyboard input focus to the <b>extended input stream </b><i>stream</i>. By default,<br>
+ an application frame gives the input focus to the window associated with <tt>frame-query-io</tt>.<br>
+<br>
+ The <i>stream </i>argument is not evaluated, and must be a symbol that is bound to a stream. If<br>
+ <i>stream </i>is <tt>t</tt>, <tt>*standard-input* </tt>is used. <i>body </i>may have zero or more declarations as its first<br>
+ forms.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>*input-wait-test* </tt>[<i>Variable</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>*input-wait-handler* </tt>[<i>Variable</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>*pointer-button-press-handler* </tt>[<i>Variable</i>]<br>
+ These three variables are used to hold the default values for the current input wait test, wait<br>
+ handler, and pointer button press handler. These variables are globally bound to <tt>nil</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>read-gesture &key </tt><i>(stream </i><tt>*standard-input*</tt><i>) timeout peek-p (input-wait-test </i><tt>*input-wait-test*</tt><i>)<br>
+ (input-wait-handler </i><tt>*input-wait-handler*</tt><i>) (pointer-button-press-handler </i><tt>*pointer-button-press-handler*</tt><i>)<br>
+ </i>[<i>Function</i>]<br>
+ Calls <tt>stream-read-gesture </tt>on the <b>extended input stream </b><i>stream </i>and all of the other keyword<br>
+ arguments. These arguments are the same as for <tt>stream-read-gesture</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>stream-read-gesture </tt><i>stream </i><tt>&key </tt><i>timeout peek-p (input-wait-test </i><tt>*input-wait-test*</tt><i>) (input-<br>
+ wait-handler </i><tt>*input-wait-handler*</tt><i>) (pointer-button-press-handler </i><tt>*pointer-button-press-handler*</tt><i>)<br>
+ </i>[<i>Generic Function</i>]<br>
+ Returns the next gesture available in the <b>extended input stream </b><i>stream</i>; the gesture will be either<br>
+ a character or an event (such as a pointer button event). The input is not echoed.<br>
+<br>
+ If the user types an abort gesture (that is, a gesture that matches any of the gesture names in<br>
+ <tt>*abort-gestures*</tt>), then the <tt>abort-gesture </tt>condition will be signalled.<br>
+<br>
+ If the user types an accelerator gesture (that is, a gesture that matches any of the gesture names<br>
+ in <tt>*accelerator-gestures*</tt>), then the <tt>accelerator-gesture </tt>condition will be signalled.<br>
+<br>
+ <tt>stream-read-gesture </tt>works by invoking <tt>stream-input-wait </tt>on <i>stream</i>, <i>input-wait-test</i>, and<br>
+ <i>timeout</i>, and then processing the input, if there is any. <tt>:around </tt>methods on this generic function<br>
+ invoke a gesture preprocessing mechanism on every gesture. For a discussion of this facility, see<br>
+ the <a href="./page202.html">Section 22.6</a>.<br>
+<br>
+ <i>timeout </i>is either <tt>nil </tt>or an integer that specifies the number of seconds that <tt>stream-read-</tt>
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page192.html">Page 192</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page194.html">Page 194</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

@@ -1,0 +1,131 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page186.html">Page 186</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page188.html">Page 188</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 21. INCREMENTAL REDISPLAY </b><br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>propagate-output-record-changes </tt><i>record child mode </i><tt>&optional </tt><i>old-position old-bounding-<br>
+ rectangle erases moves draws erase-overlapping move-overlapping check-overlapping </i>[<i>Generic Function</i>]<br>
+ Called when the changed <i>child </i>output record requires that its parent, <i>record</i>, be redisplayed as<br>
+ well. <tt>propagate-output-record-changes </tt>will update the difference set to reflect the additional<br>
+ changes.<br>
+<br>
+ <i>check-overlapping </i>is as for <tt>compute-difference-set</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>match-output-records </tt><i>record </i><tt>&rest </tt><i>initargs </i>[<i>Generic Function</i>]<br>
+ Returns <b>true </b>if record matches the supplied class initargs <i>initargs</i>, otherwise returns <b>false</b>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>find-child-output-record </tt><i>record use-old-elements record-type </i><tt>&rest </tt><i>initargs </i><tt>&key </tt><i>unique-id<br>
+ unique-id-test </i>[<i>Generic Function</i>]<br>
+ Finds a child of <i>record </i>matching the <i>record-type </i>and the supplied initargs <i>initargs</i>. <i>unique-id </i>and<br>
+ <i>unique-id-test </i>are used to match against the children as well. <i>use-old-elements </i>controls whether<br>
+ the desired record is to be found in the previous (before redisplay) contents of the record.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>output-record-contents-ok </tt><i>record </i>[<i>Generic Function</i>]<br>
+ Returns <b>true </b>if the current state of <i>record </i>are up to date, otherwise returns <b>false</b>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>recompute-contents-ok </tt><i>record </i>[<i>Generic Function</i>]<br>
+ Compares the old (before redisplay) and new contents of <i>record </i>to determine whether or not this<br>
+ record changed in such a way so that the display needs updating.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>cache-output-record </tt><i>record child unique-id </i>[<i>Generic Function</i>]<br>
+ <i>record </i>stores <i>child </i>such that it can be located later using <i>unique-id</i>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>decache-child-output-record </tt><i>record child use-old-elements </i>[<i>Generic Function</i>]<br>
+ Invalidates the redisplay state of <i>record</i>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>find-cached-output-record </tt><i>record use-old-elements record-type </i><tt>&rest </tt><i>initargs </i><tt>&key </tt><i>unique-<br>
+ id unique-id-test </i><tt>&allow-other-keys </tt>[<i>Generic Function</i>]<br>
+ Finds a previously cached child matching <i>record-type</i>, <i>initargs</i>, <i>unique-id</i>, and <i>unique-id-test</i>. <i>use-<br>
+ old-elements </i>controls whether the desired record is to be found in the previous (before redisplay)<br>
+ contents of the record.
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page186.html">Page 186</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page188.html">Page 188</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

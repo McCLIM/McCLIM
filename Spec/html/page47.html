@@ -1,0 +1,120 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page46.html">Page 46</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page48.html">Page 48</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+<br>
+<br>
+ <b>Chapter 7<br>
+ </b><br><b>Properties of Sheets<br>
+ </b><br><b>7.1 Basic Sheet Classes<br><br>
+ </b>Note that there are no standard sheet classes in CLIM, and no pre-packaged way to create sheets<br>
+ in general. If a programmer needs to create an instance of some class of sheet, <tt>make-instance<br>
+ </tt>must be used. For most purposes, calling <tt>make-pane </tt>is how application programmers will make<br>
+ sheets.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>sheet </tt>[<i>Protocol Class</i>]<br>
+ The protocol class that corresponds to a sheet, a subclass of <tt>bounding-rectangle</tt>. This and the<br>
+ next chapter describe all of the sheet protocols. If you want to create a new class that behaves<br>
+ like a sheet, it should be a subclass of <tt>sheet</tt>. Subclasses of <tt>sheet </tt>must obey the sheet protocol.<br>
+<br>
+ All of the subclasses of <tt>sheet </tt>are mutable.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>sheetp </tt><i>object </i>[<i>Function</i>]<br>
+ Returns <b>true </b>if <i>object </i>is a <b>sheet</b>, otherwise returns <b>false</b>.<br>
+ <br><b>7.2 Relationships Between Sheets<br><br>
+ </b>Sheets are arranged in a tree-structured, acyclic, top-down hierarchy. Thus, in general, a sheet<br>
+ has one parent (or no parent) and zero or more children. A sheet may have zero or more siblings<br>
+ (that is, other sheets that share the same parent). In order to describe the relationships between<br>
+ sheets, we need to define some terms.<br>
+ <p><b>Adopted </b>A sheet is said to be <b>adopted </b>if it has a parent. A sheet becomes the parent of another<br>
+ sheet by adopting that sheet.<br>
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page46.html">Page 46</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page48.html">Page 48</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

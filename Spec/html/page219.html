@@ -1,0 +1,140 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page218.html">Page 218</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page220.html">Page 220</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ </i><b>CHAPTER 23. PRESENTATION TYPES </b><br>
+<br>
+ <i>inferiors record-type) </i><tt>&body </tt><i>body </i>[<i>Macro</i>]<br>
+ The output of <i>body </i>to the <b>extended output recording </b><i>stream </i>is used to generate a presentation<br>
+ whose underlying object is <i>object </i>and whose presentation type is <i>type</i>. Each invocation of this<br>
+ macro results in the creation of a presentation object in the stream's output history unless output<br>
+ recording has been disabled or <tt>:allow-sensitive-inferiors nil </tt>was specified at a higher<br>
+ level, in which case the presentation object is not inserted into the history. <tt>with-output-as-<br>
+ presentation </tt>returns the presentation corresponding to the output.<br>
+<br>
+ The <i>stream </i>argument is not evaluated, and must be a symbol that is bound to an extended<br>
+ output stream or output recording stream. If <i>stream </i>is <tt>t</tt>, <tt>*standard-output* </tt>is used. <i>body<br>
+ </i>may have zero or more declarations as its first forms.<br>
+<br>
+ <i>type </i>may be a presentation type abbreviation.<br>
+<br>
+ <i>modifier</i>, which defaults to <tt>nil</tt>, is some sort of object that describes how the presentation object<br>
+ might be modified. For example, it might be a function of one argument (the new value) that can<br>
+ be called in order to store a new value for <i>object </i>after a user somehow "edits" the presentation.<br>
+ <i>modifier </i>must have indefinite extent.<br>
+<br>
+ <i>single-box </i>is used to specify the <tt>presentation-single-box </tt>component of the resulting presen-<br>
+ tation. It can take on the values described under <tt>presentation-single-box</tt>.<br>
+<br>
+ When the boolean <i>allow-sensitive-inferiors </i>is <b>false</b>, nested calls to <tt>present </tt>or <tt>with-output-as-<br>
+ presentation </tt>inside this one will not generate presentations. The default is <b>true</b>.<br>
+<br>
+ <i>record-type </i>specifies the class of the presentation output record to be created. It defaults to<br>
+ <tt>standard-presentation</tt>. This argument should only be supplied by a programmer if there is a<br>
+ new class of output record that supports the updating output record protocol.<br>
+<br>
+ All arguments of this macro are evaluated.<br>
+<br>
+ For example,<pre><tt>
+ (with-output-as-presentation (stream #p"foo" 'pathname)
+   (princ "FOO" stream))
+
+</pre> </tt><big><b>&#061&gt  </b></big><tt>present </tt><i>object </i><tt>&optional </tt><i>type </i><tt>&key </tt><i>stream view modifier acceptably for-context-type single-<br>
+ box allow-sensitive-inferiors sensitive record-type </i>[<i>Function</i>]<br>
+ The <i>object </i>of <b>presentation type </b><i>type </i>is presented to the <b>extended output stream </b><i>stream </i>(which<br>
+ defaults to <tt>*standard-output*</tt>), using the type's <tt>present </tt>method for the supplied <b>view </b><i>view</i>.<br>
+ <i>type </i>is a presentation type specifier, and can be an abbreviation. It defaults to <tt>(presentation-<br>
+ type-of </tt><i>object</i><tt>)</tt>. The other arguments and overall behavior of <tt>present </tt>are as for <tt>stream-<br>
+ present</tt>.<br>
+<br>
+ The returned value of <tt>present </tt>is the presentation object that contains the output corresponding
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page218.html">Page 218</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page220.html">Page 220</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

@@ -1,0 +1,138 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page245.html">Page 245</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page247.html">Page 247</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 24. INPUT EDITING AND COMPLETION FACILITIES </b><br>
+<br>
+ be implemented for all classes that inherit from <tt>input-editing-stream</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>stream-input-buffer </tt><i>(stream </i><tt>input-editing-stream</tt><i>) </i>[<i>Method</i>]<br>
+ Returns the input buffer (that is, the string being edited) associated with the <b>input editing<br>
+ stream </b><i>stream</i>. This must be an unspecialized vector with a fill pointer. The fill pointer of<br>
+ the vector points past the last gesture object in the buffer. During input editing, this buffer is<br>
+ side-effected. The consequences of modifying the input buffer by means other than the specified<br>
+ API (such as <tt>replace-input</tt>) are unspecified.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>stream-insertion-pointer </tt><i>stream </i>[<i>Generic Function</i>]<br>
+ Returns an integer corresponding to the current input position in the <b>input editing stream<br>
+ </b><i>stream</i>'s buffer, that is, the point in the buffer at which the next user input gesture will be<br>
+ inserted. The insertion pointer will always be less than <tt>(fill-pointer (stream-input-buffer<br>
+ </tt><i>stream</i><tt>))</tt>. The insertion pointer can also be thought of as an editing cursor.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>(setf stream-insertion-pointer) </tt><i>pointer stream </i>[<i>Generic Function</i>]<br>
+ Changes the input position of the <b>input editing stream </b><i>stream </i>to <i>pointer</i>. <i>pointer </i>is an integer,<br>
+ and must be less than <tt>(fill-pointer (stream-input-buffer </tt><i>stream</i><tt>))</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>stream-scan-pointer </tt><i>stream </i>[<i>Generic Function</i>]<br>
+ Returns an integer corresponding to the current scan pointer in the <b>input editing stream </b><i>stream</i>'s<br>
+ buffer, that is, the point in the buffer at which calls to <tt>accept </tt>have stopped parsing input. The<br>
+ scan pointer will always be less than or equal to <tt>(stream-insertion-pointer </tt><i>stream</i><tt>)</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>(setf stream-scan-pointer) </tt><i>pointer stream </i>[<i>Generic Function</i>]<br>
+ Changes the scan pointer of the <b>input editing stream </b><i>stream </i>to <i>pointer</i>. <i>pointer </i>is an integer,<br>
+ and must be less than or equal to <tt>(stream-insertion-pointer </tt><i>stream</i><tt>)</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>stream-rescanning-p </tt><i>stream </i>[<i>Generic Function</i>]<br>
+ Returns the state of the <b>input editing stream </b><i>stream</i>'s "rescan in progress" flag, which is <b>true </b>if<br>
+ <i>stream </i>is performing a rescan operation, otherwise it is <b>false</b>. All extended input streams must<br>
+ implement a method for this, but non-input editing streams will always returns <b>false</b>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>reset-scan-pointer </tt><i>stream </i><tt>&optional </tt><i>(scan-pointer </i><tt>0</tt><i>) </i>[<i>Generic Function</i>]<br>
+ Sets the <b>input editing stream </b><i>stream</i>'s scan pointer to <i>scan-pointer</i>, and sets the state of <tt>stream-<br>
+ rescanning-p </tt>to <b>true</b>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>immediate-rescan </tt><i>stream </i>[<i>Generic Function</i>]<br>
+ Invokes a rescan operation immediately by "throwing" out to the most recent invocation of<br>
+ <tt>with-input-editing</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>queue-rescan </tt><i>stream </i>[<i>Generic Function</i>]
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page245.html">Page 245</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page247.html">Page 247</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

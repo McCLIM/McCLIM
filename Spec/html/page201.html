@@ -1,0 +1,145 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page200.html">Page 200</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page202.html">Page 202</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 22. EXTENDED STREAM INPUT </b><br>
+<ul>
+ When both <tt>:presentation </tt>and <tt>:pointer-motion </tt>clauses are provided, the two clauses<br>
+ are mutually exclusive. The <tt>:presentation </tt>clause will run only if the pointer is over an<br>
+ applicable presentation, otherwise the <tt>:pointer-motion </tt>clause will run.<br>
+<br>
+ <li><tt>:pointer-button-press </tt><i>(</i><tt>&key </tt><i>event x y)<br>
+ </i>Defines a clause to run whenever a pointer button is pressed. In the clause, <i>event </i>is bound<br>
+ to the pointer button press event. (The window and the coordinates of the pointer are<br>
+ part of <i>event</i>.)<br><br>
+ <i>x </i>and <i>y </i>are the transformed <i>x </i>and <i>y </i>positions of the pointer. These will be different from<br>
+ <tt>pointer-event-x </tt>and <tt>pointer-event-y </tt>if the user transformation is not the identity<br>
+ transformation.<br>
+<br>
+ <li><tt>:presentation-button-press </tt><i>(</i><tt>&key </tt><i>presentation event x y)<br>
+ </i>Defines a clause to run whenever the pointer button is pressed while the pointer is over a<br>
+ presentation of the desired type. (See the keyword argument <tt>:context-type </tt>below for a<br>
+ description of how to specify the desired type.) In the clause, <i>presentation </i>is bound to the<br>
+ presentation, and <i>event </i>to the pointer button press event. (The window and the stream<br>
+ coordinates of the pointer are part of <i>event</i>.) <i>x </i>and <i>y </i>are as for the <tt>:pointer-button-<br>
+ press </tt>clause.<br><br>
+ When both <tt>:presentation-button-press </tt>and <tt>:pointer-button-press </tt>clauses are pro-<br>
+ vided, the two clauses are mutually exclusive. The <tt>:presentation-button-press </tt>clause<br>
+ will run only if the pointer is over an applicable presentation, otherwise the <tt>:pointer-<br>
+ button-press </tt>clause will run.<br>
+<br>
+ <li><tt>:pointer-button-release </tt><i>(</i><tt>&key </tt><i>event x y)<br>
+ </i>Defines a clause to run whenever a pointer button is released. In the clause, <i>event </i>is bound<br>
+ to the pointer button release event. (The window and the coordinates of the pointer are<br>
+ part of <i>event</i>.)<br><br>
+ <i>x </i>and <i>y </i>are the transformed <i>x </i>and <i>y </i>positions of the pointer. These will be different from<br>
+ <tt>pointer-event-x </tt>and <tt>pointer-event-y </tt>if the user transformation is not the identity<br>
+ transformation.<br>
+<br>
+ <li><tt>:presentation-button-release </tt><i>(</i><tt>&key </tt><i>presentation event x y)<br>
+ </i>Defines a clause to run whenever a pointer button is released while the pointer is over a<br>
+ presentation of the desired type. (See the keyword argument <tt>:context-type </tt>below for a<br>
+ description of how to specify the desired type.) In the clause, <i>presentation </i>is bound to the<br>
+ presentation, and <i>event </i>to the pointer button release event. (The window and the stream<br>
+ coordinates of the pointer are part of <i>event</i>.) <i>x </i>and <i>y </i>are as for the <tt>:pointer-button-<br>
+ release </tt>clause.<br><br>
+ When both <tt>:presentation-button-release </tt>and <tt>:pointer-button-release </tt>clauses are<br>
+ provided, the two clauses are mutually exclusive. The <tt>:presentation-button-release<br>
+ </tt>clause will run only if the pointer is over an applicable presentation, otherwise the <tt>:pointer-<br>
+ button-release </tt>clause will run.<br>
+<br>
+ <li><tt>:keyboard </tt><i>(</i><tt>&key </tt><i>gesture)<br>
+ </i>Defines a clause to run whenever a character is typed on the keyboard. In the clause,<br>
+ <i>gesture </i>is bound to the keyboard gesture corresponding to the character typed.</ul>
+ <big><b>&#061&gt  </b></big><tt>drag-output-record </tt><i>stream output-record </i><tt>&key </tt><i>repaint erase feedback finish-on-release </i>[<i>Generic Function</i>]<br>
+
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page200.html">Page 200</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page202.html">Page 202</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

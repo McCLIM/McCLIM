@@ -1,0 +1,137 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page232.html">Page 232</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page234.html">Page 234</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 23. PRESENTATION TYPES </b><br>
+<br>
+ <i>window</i>, <i>x</i>, <i>y</i>, and <i>event </i>are as for <tt>find-applicable-translators</tt>. <i>for-menu</i>, which defaults<br>
+ to <tt>t</tt>, is used to decide which of the applicable translators will go into the menu; only those<br>
+ translators whose <tt>:menu </tt>option matches <i>menu </i>will be included.<br>
+<br>
+ <i>label </i>is either a string to use as a label for the menu, or is <tt>nil </tt>(the default), meaning the menu<br>
+ will not be labelled.<br>
+ <br><b>23.7.3 Finding Applicable Presentations<br><br>
+ </b><big><b>&#061&gt  </b></big><tt>find-innermost-applicable-presentation </tt><i>input-context window x y </i><tt>&key </tt><i>frame modifier-<br>
+ state event </i>[<i>Function</i>]<br>
+ Given an input context <i>input-context</i>, an output recording window stream <i>window</i>, <i>x </i>and <i>y<br>
+</i>positions <i>x </i>and <i>y</i>, returns the innermost presentation whose sensitivity region contains <i>x </i>and <i>y<br>
+ </i>that matches the innermost input context, using the translator matching algorithm described<br>
+ below. If there is no such presentation, this function will return <tt>nil</tt>.<br>
+<br>
+ <i>event </i>and <i>modifier-state </i>are a pointer button event and modifier state (see <tt>event-modifier-<br>
+ key-state</tt>). <i>event </i>defaults to <tt>nil</tt>, and <i>modifier-state </i>defaults to the current modifier state for<br>
+ <i>window</i>. Only one of <i>event </i>or <i>modifier-state </i>may be supplied; it is unspecified what will happen<br>
+ if both are supplied.<br>
+<br>
+ <i>frame </i>defaults to the current frame, <tt>*application-frame*</tt>.<br>
+<br>
+ The default method for frame-find-innermost-applicable-presentation will call this function.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>throw-highlighted-presentation </tt><i>presentation input-context button-press-event </i>[<i>Function</i>]<br>
+ Given a <b>presentation </b><i>presentation</i>, input context <i>input-context</i>, and a button press event (which<br>
+ contains the window, pointer, <i>x </i>and <i>y </i>position of the pointer within the window, the button<br>
+ pressed, and the modifier state), find the translator that matches the innermost presentation in<br>
+ the innermost input context, then call the translator to produce an object and a presentation<br>
+ type. Finally, the matching input context that was established by <tt>with-input-context </tt>will be<br>
+ terminated.<br>
+<br>
+ Note that it is possible that more than one translator having the same gesture may be applicable<br>
+ to <i>presentation </i>in the specified input context. In this case, the translator having the highest<br>
+ priority will be chosen. If there is more than one having the same priority, it is unspecified what<br>
+ translator will be chosen.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>highlight-applicable-presentation </tt><i>frame stream input-context </i><tt>&optional </tt><i>prefer-pointer-<br>
+ window </i>[<i>Function</i>]<br>
+ This is the core of the "input wait" handler used by <tt>with-input-context </tt>on behalf of the<br>
+ <b>application frame </b><i>frame</i>. It is responsible for locating the innermost applicable presentation<br>
+ on <i>stream </i>in the input context <i>input-context</i>, unhighlighting presentations that are not appli-
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page232.html">Page 232</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page234.html">Page 234</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

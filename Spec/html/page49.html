@@ -1,0 +1,140 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page48.html">Page 48</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page50.html">Page 50</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 7. PROPERTIES OF SHEETS </b><br>
+<br>
+ Returns a list of those children of the <b>sheet </b><i>sheet </i>that are enabled. This function returns fresh<br>
+ objects that may be modified.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>sheet-ancestor-p </tt><i>sheet putative-ancestor </i>[<i>Generic Function</i>]<br>
+ Returns <b>true </b>if the the <b>sheet </b><i>putative-ancestor </i>is in fact an ancestor of the <b>sheet </b><i>sheet</i>, otherwise<br>
+ returns <b>false</b>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>raise-sheet </tt><i>sheet </i>[<i>Generic Function</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>bury-sheet </tt><i>sheet </i>[<i>Generic Function</i>]<br>
+ These functions reorder the children of a sheet by raising the <b>sheet </b><i>sheet </i>to the top or burying<br>
+ it at the bottom. Raising a sheet puts it at the beginning of the ordering; burying it puts it at<br>
+ the end. If sheets overlap, the one that appears "on top" on the display device is earlier in the<br>
+ ordering than the one underneath.<br>
+<br>
+ This may change which parts of which sheets are visible on the display device.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>reorder-sheets </tt><i>sheet new-ordering </i>[<i>Generic Function</i>]<br>
+ Reorders the children of the <b>sheet </b><i>sheet </i>to have the new ordering specified by <i>new-ordering</i>.<br>
+ <i>new-ordering </i>is an ordered list of the child sheets; elements at the front of <i>new-ordering </i>are "on<br>
+ top" of elements at the rear.<br>
+<br>
+ If <i>new-ordering </i>does not contain all of the children of <i>sheet</i>, the <tt>sheet-ordering-underspecified<br>
+ </tt>error will be signalled. If <i>new-ordering </i>contains a sheet that is not a child of <i>sheet</i>, the <tt>sheet-<br>
+ is-not-child </tt>error will be signalled.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>sheet-enabled-p </tt><i>sheet </i>[<i>Generic Function</i>]<br>
+ Returns <b>true </b>if the the <b>sheet </b><i>sheet </i>is enabled by its parent, otherwise returns <b>false</b>. Note that<br>
+ all of a sheet's ancestors must be enabled before the sheet is viewable.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>(setf sheet-enabled-p) </tt><i>enabled-p sheet </i>[<i>Generic Function</i>]<br>
+ When <i>enabled-p </i>is <b>true</b>, this enables the the <b>sheet </b><i>sheet</i>. When <i>enabled-p </i>is <b>false</b>, this disables<br>
+ the sheet.<br>
+<br>
+ Note that a sheet is not visible unless it and all of its ancestors are enabled.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>sheet-viewable-p </tt><i>sheet </i>[<i>Generic Function</i>]<br>
+ Returns <b>true </b>if the <b>sheet </b><i>sheet </i>and all its ancestors are enabled, and if one of its ancestors is a<br>
+ graft. See <A HREF="./page69.html">Chapter 9</A> for further information.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>sheet-occluding-sheets </tt><i>sheet child </i>[<i>Generic Function</i>]<br>
+ Returns a list of the <b>sheet </b><i>child</i>'s siblings that occlude part or all of the region of the <i>child</i>. In<br>
+ general, these are the siblings that are enabled and appear earlier in the <b>sheet </b><i>sheet</i>'s children.<br>
+ If <i>sheet </i>does not permit overlapping among its children, <tt>sheet-occluding-sheets </tt>will return<br>
+ <tt>nil</tt>.
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page48.html">Page 48</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page50.html">Page 50</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

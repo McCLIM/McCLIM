@@ -1,0 +1,125 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page353.html">Page 353</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page355.html">Page 355</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+<br>
+<br>
+ <b>Appendix D<br>
+ </b><br><b>Encapsulating Streams<br><br>
+ </b>An <b>encapsulating stream </b>is a special kind of stream that "closes over" another stream, handling<br>
+ some of the usual stream protocol operations itself, and delegating the remaining operations to<br>
+ the "encapsulated" stream. Encapsulating streams may be used by some CLIM implementations<br>
+ in order to facilitate the implementation of features that require the dynamic modification of a<br>
+ stream's state and operations. For example, <tt>accepting-values </tt>dialogs can be implemented by<br>
+ using an encapsulating stream that tailors calls to <tt>accept </tt>and <tt>prompt-for-accept </tt>in such a<br>
+ way that the output is captured and formatted into a dialog that contains prompts and fields<br>
+ that can be clicked on and modified by the user. Input editing can also be implemented using<br>
+ an encapsulating stream that manages the interaction between <tt>read-gesture </tt>and the input<br>
+ editing commands and rescanning. The form <tt>filling-output </tt>can be implemented by having<br>
+ an encapsulating stream that buffers output and inserts line breaks appropriately.<br>
+<br>
+ CLIM implementations need not use encapsulating streams at all. If encapsulating streams are<br>
+ used, they must adhere to the following protocols. Encapsulating streams are not part of CLIM's<br>
+ API.<br>
+ <br><b>D.1 Encapsulating Stream Classes<br><br>
+ </b><big><b>&#061&gt  </b></big><tt>encapsulating-stream </tt>[<i>Protocol Class</i>]<br>
+ The protocol class that corresponds to an encapsulating stream. If you want to create a new class<br>
+ that behaves like an encapsulating stream, it should be a subclass of <tt>encapsulating-stream</tt>.<br>
+ Subclasses of <tt>encapsulating-stream </tt>must obey the encapsulating stream protocol. Members<br>
+ of this class are mutable.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>encapsulating-stream-p </tt><i>object </i>[<i>Function</i>]<br>
+ Returns <b>true </b>if <i>object </i>is an <b>encapsulating stream</b>, otherwise returns <b>false</b>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>:stream </tt>[<i>Init Arg</i>]<br>
+
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page353.html">Page 353</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page355.html">Page 355</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

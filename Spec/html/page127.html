@@ -1,0 +1,140 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page126.html">Page 126</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page128.html">Page 128</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 14. GENERAL DESIGNS </b><br>
+<br>
+ Since bounded designs obey the region protocol, the functions <tt>transform-region </tt>and <tt>untransform-<br>
+ region </tt>accept any design as their second argument and apply a coordinate transformation to<br>
+ the design. The result is a design that might be freshly constructed or might be an existing<br>
+ object.<br>
+<br>
+ Transforming a uniform design simply returns the argument. Transforming a composite, flip-<br>
+ ping, or indirect design applies the transformation to the component design(s). Transforming a<br>
+ pattern, tile, or output record design is described in the sections on those designs.<br>
+ <br><b>14.5 Arbitrary Designs<br>
+<br>
+ </b><big><b>&#061&gt  </b></big><tt>draw-design </tt><i>sheet design </i><tt>&key </tt><i>ink clipping-region transformation line-style line-thickness line-<br>
+ unit line-dashes line-joint-shape line-cap-shape text-style text-family text-face text-size </i>[<i>Generic Function</i>]<br>
+ Draws the <b>design </b><i>design </i>onto the <b>sheet </b><i>sheet</i>. This is defined to work for all types of regions and<br>
+ designs, although in practice some implementations may be more restrictive. <i>ink</i>, <i>transformation</i>,<br>
+ and <i>clipping-region </i>are used to modify the medium. The other drawing arguments control the<br>
+ drawing of the design, depending on what sort of design is being drawn. For instance, if <i>design<br>
+ </i>is a path, then line style options may be supplied.<br>
+<br>
+ If <i>design </i>is an area, <tt>draw-design </tt>paints the specified region of the drawing plane with current<br>
+ ink of the sheet's medium. If <i>design </i>is a path, <tt>draw-design </tt>strokes the path with medium's<br>
+ current ink under control of the line-style. If <i>design </i>is a point, <tt>draw-design </tt>is the same as<br>
+ <tt>draw-point</tt>.<br>
+<br>
+ If <i>design </i>is a color or an opacity, <tt>draw-design </tt>paints the entire drawing plane (subject to the<br>
+ clipping region of the sheet's medium).<br>
+<br>
+ If <i>design </i>is <tt>+nowhere+</tt>, <tt>draw-design </tt>has no effect.<br>
+<br>
+ If <i>design </i>is a non-uniform design (see <A HREF="./page122.html">Chapter 14</A>), <tt>draw-design </tt>paints the design, positioned<br>
+ at coordinates (0<i>;</i>0).<br>
+<br>
+ CLIM implementations are required to support <tt>draw-design </tt>for
+    the following cases:<br>
+<ul>
+ <li>Designs created by the geometric object constructors, such as <tt>make-line </tt>and <tt>make-<br>
+ ellipse</tt>, in conjunction with drawing arguments that supply the drawing ink.<br>
+<br>
+ <li>Designs created by calling <tt>compose-in </tt>on a color and an object created by a geometric<br>
+ object constructor.<br>
+<br>
+ <li>Designs created by calling <tt>compose-over </tt>on any of the cases above.<br>
+<br>
+ <li>Designs returned by <tt>make-design-from-output-record</tt>.</ul>
+ <big><b>&#061&gt  </b></big><tt>draw-pattern* </tt><i>sheet pattern x y </i><tt>&key </tt><i>clipping-region transformation </i>[<i>Function</i>]
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page126.html">Page 126</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page128.html">Page 128</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

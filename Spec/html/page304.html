@@ -1,0 +1,128 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page303.html">Page 303</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page305.html">Page 305</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+<br>
+<br>
+ </tt><b>Chapter 29<br>
+ </b><br><b>Panes<br>
+ </b><br><b>29.1 Overview of Panes<br><br>
+ </b>CLIM panes are similar to the gadgets or widgets of other toolkits. They can be used by<br>
+ application programmers to compose the top-level user interface of their applications, as well<br>
+ as auxiliary components such as menus and dialogs. The application programmer provides an<br>
+ abstract specification of the pane hierarchy, which CLIM uses in conjunction with user preferences<br>
+ and other factors to select a specific "look and feel" for the application. In many environments<br>
+ a CLIM application can use the facilities of the host window system toolkit via a set of <b>adaptive<br>
+ panes</b>, allowing a portable CLIM application to take on the look and feel of a native application<br>
+ user interface.<br>
+<br>
+ Panes are rectangular objects that are implemented as special sheet classes. An application will<br>
+ typically construct a tree of panes that divide up the screen space allocated to the application<br>
+ frame. The various CLIM pane types can be characterized by whether they have children panes<br>
+ or not: panes that can have other panes as children are called <b>composite panes</b>, and those<br>
+ that don't are called <b>leaf panes</b>. Composite panes are used to provide a mechanism for spatially<br>
+ organizing ("laying out") other panes. Leaf panes implement gadgets that have some appearance<br>
+ and react to user input by invoking application code. Another kind of leaf pane provides an area<br>
+ of the application's screen real estate that can be used by the application to present application<br>
+ specific information. CLIM provides a number of these <b>application pane </b>types that allow the<br>
+ application to use CLIM's graphics and extended stream facilities.<br>
+<br>
+ <b>Abstract panes </b>are panes that are defined only in terms of their programmer interface, or be-<br>
+ havior. The protocol for an abstract pane (that is, the specified set of initialization options,<br>
+ accessors, and callbacks) is designed to specify the pane in terms of its overall purpose, rather<br>
+ then in terms of its specific appearance or particular interactive details. The purpose of this<br>
+ abstract definition is to allow multiple implementations of the abstract pane, each defining its<br>
+ own specific look and feel. CLIM can then select the appropriate pane implementation based<br>
+ on factors outside the control of the application, such as user preferences or the look and feel of<br>
+ the host operating environment. A subset of the abstract panes, the <b>adaptive panes</b>, have been<br>
+
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page303.html">Page 303</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page305.html">Page 305</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

@@ -1,0 +1,138 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page299.html">Page 299</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page301.html">Page 301</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 28. APPLICATION FRAMES </b><br>
+<br>
+ <br><b>28.5.2 Frame Manager Operations<br><br>
+ </b><big><b>&#061&gt  </b></big><tt>frame-manager </tt><i>frame </i>[<i>Generic Function</i>]<br>
+ Returns the current frame manager of <i>frame </i>if it is adopted, otherwise returns <tt>nil</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>(setf frame-manager) </tt><i>frame-manager frame </i>[<i>Generic Function</i>]<br>
+ Changes the frame manager of <i>frame </i>to <i>frame-manager</i>. In effect, the frame is disowned from its<br>
+ old frame manager and is adopted into the new frame manager. Transferring a frame preserves<br>
+ its <tt>frame-state</tt>, for example, if the frame was previously enabled it will be enabled in the new<br>
+ frame manager.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>frame-manager-frames </tt><i>frame-manager </i>[<i>Generic Function</i>]<br>
+ Returns a list of all of the frames being managed by <i>frame-manager</i>. This function returns<br>
+ objects that reveal CLIM's internal state; do not modify those objects.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>adopt-frame </tt><i>frame-manager frame </i>[<i>Generic Function</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>disown-frame </tt><i>frame-manager frame </i>[<i>Generic Function</i>]<br>
+ These functions insert or remove a frame from a frame manager's control. These functions allow<br>
+ a frame manager to allocate and deallocate resources associated with a frame. For example,<br>
+ removing a frame from a frame manager that is talking to a remote server allows it to release<br>
+ all remote resources used by the frame.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>frame-state </tt><i>frame </i>[<i>Generic Function</i>]<br>
+ Returns one of <tt>:disowned</tt>, <tt>:enabled</tt>, <tt>:disabled</tt>, or <tt>:shrunk</tt>, indicating the current state of<br>
+ frame.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>enable-frame </tt><i>frame </i>[<i>Generic Function</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>disable-frame </tt><i>frame </i>[<i>Generic Function</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>shrink-frame </tt><i>frame </i>[<i>Generic Function</i>]<br>
+ These functions force a frame into the enabled, disabled, or shrunken states. A frame in the<br>
+ enabled state may be visible if it is not occluded or placed out of the user's focus of attention.<br>
+ A disabled frame is never visible. A shrunk frame is accessible to the user for re-enabling, but<br>
+ may be represented in some abbreviated form, such as an icon or a menu item.<br>
+<br>
+ These functions call <tt>note-frame-state-changed </tt>to notify the frame manager that the state of<br>
+ the frame changed.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>note-frame-state-changed </tt><i>frame-manager frame new-state </i>[<i>Generic Function</i>]<br>
+ Notifies the frame manager <i>frame-manager </i>that the frame <i>frame </i>has changed its state to <i>state</i>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>generate-panes </tt><i>frame-manager frame </i>[<i>Generic Function</i>]<br>
+ This function is invoked by a standard method of <tt>adopt-frame</tt>. It is the responsibility of the<br>
+ frame implementor to provide a method that invokes <tt>setf </tt>of <tt>frame-pane </tt>on the frame with
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page299.html">Page 299</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page301.html">Page 301</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

@@ -1,0 +1,126 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page41.html">Page 41</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page43.html">Page 43</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 5. AFFINE TRANSFORMATIONS </b><br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>transform-distance </tt><i>transformation dx dy </i>[<i>Generic Function</i>]<br>
+ Applies the <b>transformation </b><i>transformation </i>to the distance represented by the real numbers <i>dx<br>
+ </i>and <i>dy</i>, and returns two values, the transformed <i>dx </i>and the transformed <i>dy</i>.<br>
+<br>
+ A distance represents the difference between two points. It does <b>not </b>transform like a point.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>untransform-distance </tt><i>transformation dx dy </i>[<i>Generic Function</i>]<br>
+ This is exactly equivalent to<br>
+ <tt>(transform-distance (invert-transformation </tt><i>transformation</i><tt>) </tt><i>dx dy</i><tt>) </tt>.<br>
+<br>
+ CLIM provides a default method for <tt>untransform-distance </tt>on the <tt>transformation </tt>protocol<br>
+ class that does exactly this.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>transform-rectangle* </tt><i>transformation x1 y1 x2 y2 </i>[<i>Generic Function</i>]<br>
+ Applies the <b>transformation </b><i>transformation </i>to the rectangle specified by the four coordinate<br>
+ arguments, which are real numbers. The arguments <i>x1</i>, <i>y1</i>, <i>x2</i>, and <i>y1 </i>are canonicalized in the<br>
+ same way as for <tt>make-bounding-rectangle</tt>. Returns four values that specify the minimum and<br>
+ maximum points of the transformed rectangle in the order <i>min-x</i>, <i>min-y</i>, <i>max-x</i>, and <i>max-y</i>.<br>
+<br>
+ It is an error is <i>transformation </i>does not satisfy <tt>rectilinear-transformation-p</tt>.<br>
+<br>
+ <tt>transform-rectangle* </tt>is the spread version of <tt>transform-region </tt>in the case where the trans-<br>
+ formation is rectilinear and the region is a rectangle.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>untransform-rectangle* </tt><i>transformation x1 y1 x2 y2 </i>[<i>Generic Function</i>]<br>
+ This is exactly equivalent to<br>
+ <tt>(transform-rectangle* (invert-transformation </tt><i>transformation</i><tt>) </tt><i>x1 y1 x2 y2</i><tt>) </tt>.<br>
+<br>
+ CLIM provides a default method for <tt>untransform-rectangle* </tt>on the <tt>transformation </tt>protocol<br>
+ class that does exactly this.
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page41.html">Page 41</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page43.html">Page 43</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

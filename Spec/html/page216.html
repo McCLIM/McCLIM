@@ -1,0 +1,139 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page215.html">Page 215</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page217.html">Page 217</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 23. PRESENTATION TYPES </b><br>
+<br>
+ <tt>nil </tt>(meaning that the description should be the singular form of the name), <tt>t </tt>(meaning that<br>
+ the description should the plural form of the name), or an integer greater than zero (the number<br>
+ of items to be described). The default is <tt>1</tt>.<br>
+<br>
+ <i>type </i>can be a presentation type abbreviation.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>presentation-type-parameters </tt><i>type-name </i><tt>&optional </tt><i>env </i>[<i>Function</i>]<br>
+ Returns a lambda-list, the parameters specified when the presentation type or presentation type<br>
+ abbreviation whose name is <i>type-name </i>was defined. <i>type-name </i>is a symbol or a class. <i>env </i>is a<br>
+ macro-expansion environment, as in <tt>find-class</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>presentation-type-options </tt><i>type-name </i><tt>&optional </tt><i>env </i>[<i>Function</i>]<br>
+ Returns the list of options specified when the presentation type or presentation type abbreviation<br>
+ whose name is <i>type-name </i>was defined. This does not include the standard options unless the<br>
+ presentation-type definition mentioned them explicitly. <i>type-name </i>is a symbol or a class. <i>env </i>is<br>
+ a macro-expansion environment, as in <tt>find-class</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>with-presentation-type-decoded </tt><i>(name-var </i><tt>&optional </tt><i>parameters-var options-var) type </i><tt>&body<br>
+ </tt><i>body </i>[<i>Macro</i>]<br>
+ The specified variables are bound to the components of the presentation type specifier produced<br>
+ by evaluating <i>type</i>, the forms in <i>body </i>are executed, and the values of the last form are returned.<br>
+ <i>name-var</i>, if non-<tt>nil</tt>, is bound to the presentation type name. <i>parameters-var</i>, if non-<tt>nil</tt>, is<br>
+ bound to a list of the parameters. <i>options-var</i>, if non-<tt>nil</tt>, is bound to a list of the options.<br>
+ When supplied, <i>name-var</i>, <i>parameters-var</i>, and <i>options-var </i>must be symbols.<br>
+<br>
+ The <i>name-var</i>, <i>parameters-var</i>, and <i>options-var </i>arguments are not evaluated. <i>body </i>may have<br>
+ zero or more declarations as its first forms.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>presentation-type-name </tt><i>type </i>[<i>Function</i>]<br>
+ Returns the presentation type name of the presentation type specifier <i>type</i>. This function is<br>
+ provided as a convenience. It could be implemented with the following code:
+<pre> <tt>
+ (defun presentation-type-name (type)
+   (with-presentation-type-decoded (name) type
+     name))
+</pre> </tt><big><b>&#061&gt  </b></big><tt>with-presentation-type-parameters </tt><i>(type-name type) </i><tt>&body </tt><i>body </i>[<i>Macro</i>]<br>
+ Variables with the same name as each parameter in the definition of the presentation type are<br>
+ bound to the parameter values in <i>type</i>, if present, or else to the defaults specified in the definition<br>
+ of the presentation type. The forms in <i>body </i>are executed in the scope of these variables and the<br>
+ values of the last form are returned.<br><br>
+ The value of the form <i>type </i>must be a presentation type specifier whose name is <i>type-name</i>. The<br>
+ <i>type-name </i>and <i>type </i>arguments are not evaluated. <i>body </i>may have zero or more declarations as<br>
+ its first forms.
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page215.html">Page 215</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page217.html">Page 217</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

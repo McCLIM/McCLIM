@@ -1,0 +1,131 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page96.html">Page 96</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page98.html">Page 98</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 12. GRAPHICS </b><br>
+<br>
+<br>
+ <center><b>Figure 12.1: Pixel assignment with boundary on decision points.</center></b><br>
+ It is important to note that these rules imply that the decision point used for insideness checking<br>
+ is offset from the point used for addressing the pixel by half a device unit in both the <i>x </i>and <i>y<br>
+</i>directions. It is worth considering the motivations for these conventions.<br>
+<br>
+ When two shapes share a common edge, it is important that only one of the shapes own any<br>
+ pixel. The two triangles in <b>Figure 12.1</b> illustrate this. The pixels along the diagonal belong to<br>
+ the lower figure. When the decision point of the pixel (its center) lies to one side of the line or<br>
+ the other, there is no issue. When the boundary passes through a decision point, which side the<br>
+ inside of the figure is on is used to decide. These are the triangles that CLIM implementations<br>
+ should attempt to draw in this case.<br>
+<br>
+ The reason for choosing the decision point half a pixel offset from the address point is to reduce<br>
+ the number of common figures (such as rectilinear lines and rectangles with integral coordinates)<br>
+ that invoke the boundary condition rule. This usually leads to more symmetrical results. For<br>
+ instance, in <b>Figure 12.2</b>, we see a circle drawn when the decision point is the same as the address<br>
+ point. The four lighter points are indeterminate: it is not clear whether they are inside or outside<br>
+ the shape. Since we want to have each boundary case determined according to which side has<br>
+ the figure on it, and since we must apply the same rule uniformly for all figures, we have no<br>
+ choice but to pick only two of the four points, leading to an undesirable lopsided figure.<br>
+<br>
+ If we had instead chosen to take all four boundary points, we would have a nice symmetrical<br>
+ figure. However, since this figure is symmetrical about a whole pixel, it is one pixel wider than<br>
+ it ought to be. The problem with this can be seen clearly in <b>Figure 12.3</b> if we attempt to draw<br>
+ a rectangle and circle overlaid with the following code:<br>
+<br>
+<pre> <tt>
+ (defun draw-test (sheet radius)
+   (draw-circle* sheet 0 0 radius :ink +foreground-ink+)
+   (draw-rectangle* sheet (- radius) (- radius) (+ radius) (+ radius)
+                    :ink +flipping-ink+))
+</pre>
+ </tt>It is for this reason that we choose to have the decision point at the center of the pixel. This<br>
+ draws circles that look like the one in <b>Figure 12.4</b>. It is this shape that CLIM implementations
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page96.html">Page 96</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page98.html">Page 98</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

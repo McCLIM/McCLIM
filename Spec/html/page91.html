@@ -1,0 +1,139 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page90.html">Page 90</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page92.html">Page 92</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 11. TEXT STYLES </b><br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>invoke-with-text-style </tt><i>medium continuation text-style </i>[<i>Generic Function</i>]<br>
+ Binds the current text style of the <b>medium </b><i>medium </i>to correspond to the new text style, and<br>
+ calls the function <i>continuation </i>with the new text style in effect. <i>text-style </i>may either a text style<br>
+ object or a style spec (that is, a list of the a family, a face code, and a size). <i>continuation </i>is a<br>
+ function of one argument, the medium; it has dynamic extent.<br>
+<br>
+ <i>medium </i>can be a medium, a sheet that supports the sheet output protocol, or a stream that<br>
+ outputs to such a sheet. All classes that obey the medium protocol must implement a method<br>
+ for <tt>invoke-with-text-style</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>with-text-family </tt><i>(medium family) </i><tt>&body </tt><i>body </i>[<i>Macro</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>with-text-face </tt><i>(medium face) </i><tt>&body </tt><i>body </i>[<i>Macro</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>with-text-size </tt><i>(medium size) </i><tt>&body </tt><i>body </i>[<i>Macro</i>]<br>
+ Binds the current text style of the <b>medium </b>designated by <i>medium </i>to correspond to a new text<br>
+ style consisting of the current text style with the new family, face, or size (respectively) merged<br>
+ in. <i>face</i>, <i>family</i>, and <i>size </i>are as for <tt>make-text-style</tt>. <i>body </i>is executed with the new text style<br>
+ in effect.<br>
+<br>
+ The <i>medium </i>argument is not evaluated, and must be a symbol that is bound to a sheet or<br>
+ medium. If <i>medium </i>is <tt>t</tt>, <tt>*standard-output* </tt>is used. <i>body </i>may have zero or more declarations<br>
+ as its first forms.<br>
+<br>
+ These macros are "convenience" forms of <tt>with-text-style </tt>that must expand into calls to<br>
+ <tt>invoke-with-text-style</tt>.<br>
+ <br><b>11.3 Controlling Text Style Mappings<br><br>
+ </b>Text styles are mapped to fonts using the <tt>text-style-mapping </tt>function, which takes a port, a<br>
+ character set, and a text style and returns a font object. All ports must implement methods for<br>
+ the following generic functions, for all classes of text style.<br>
+<br>
+ The objects used to represent a font mapping are unspecified and are likely to vary from port to<br>
+ port. For instance, a mapping might be some sort of font object on one type of port, or might<br>
+ simply be the name of a font on another.<br>
+<br>
+ <p><b>Minor issue: </b><b>We still need to describe what a device font is. Ditto, character sets. | SWM<br>
+<br>
+ </b>Part of initializing a port is to define the mappings between text styles and font names for the<br>
+ port's host window system.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>text-style-mapping </tt><i>port text-style </i><tt>&optional </tt><i>character-set </i>[<i>Generic Function</i>]<br>
+ Returns the font mapping that will be used when rendering characters in the character set<br>
+ <i>character-set </i>in the <b>text style </b><i>text-style </i>on any medium on the <b>port </b><i>port</i>. If there is no mapping<br>
+ associated with <i>character-set </i>and <i>text-style </i>on <i>port</i>, then some other object will be returned that<br>
+ corresponds to the "unmapped" text style.
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page90.html">Page 90</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page92.html">Page 92</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

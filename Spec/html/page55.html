@@ -1,0 +1,136 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page54.html">Page 54</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page56.html">Page 56</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 8. SHEET PROTOCOLS </b><br>
+<br>
+ accessor <tt>port-keyboard-input-focus </tt>contains the event client that receives the port's keyboard<br>
+ events.<br>
+ <br><b>8.1.1 Input Protocol Functions<br><br>
+ </b>In the functions below, the <i>client </i>argument is typically a sheet, but it may be another object<br>
+ that supports event distribution, dispatching, and handling.<br>
+<br>
+ <p><b>Minor issue: </b><b>Do we want to advertise </b><tt>sheet-event-queue</tt><b>? It is analogous to the input<br>
+ buffer for a stream. (In fact, sometimes the stream's input buffer and the event queue for the<br>
+ shet are the exact same object.) | SWM<br>
+<br>
+ </b><big><b>&#061&gt  </b></big><tt>process-next-event </tt><i>port </i><tt>&key </tt><i>wait-function timeout </i>[<i>Generic Function</i>]<br>
+ This function provides a standard interface for one pass through a port's event processing loop.<br>
+ <i>wait-function </i>is either <tt>nil </tt>or a function of no arguments that acts as a predicate; it has dynamic<br>
+ extent. The predicate should wait until one of three conditions occurs:<br>
+ <big><b>	 </b></big>If an event if received and processed, the predicate should return <b>true</b>.<br>
+<br>
+ <big><b>	 </b></big>If a timeout occurs, the predicate should return <b>false</b>.<br>
+<br>
+ <big><b>	 </b></big>If the wait function returns <b>true</b>, the predicate should return the two values <b>false </b>and<br>
+ <tt>:timeout</tt>.<br>
+ A port implementation must provide a method for this function that reads the next window<br>
+ server-specific device event, blocking if necessary, and then invokes the event distributor.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>port-keyboard-input-focus </tt><i>port </i>[<i>Generic Function</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>(setf port-keyboard-input-focus) </tt><i>focus port </i>[<i>Generic Function</i>]<br>
+ Returns the client to which keyboard events are to be dispatched.<br>
+<br>
+ <p><b>Minor issue: </b><b>Should this accessor be called </b><tt>keyboard-input-focus</tt><b>? It may be that we want<br>
+ to be able to call it on a frame in order to implement some sort of per-frame input focus. | RSL<br>
+<br>
+ </b><big><b>&#061&gt  </b></big><tt>distribute-event </tt><i>port event </i>[<i>Generic Function</i>]<br>
+ The <i>event </i>is distributed to the <i>port</i>'s proper client. In general, this will be the keyboard input<br>
+ focus for keyboard events, and the lowest sheet under the pointer for pointer events.<br>
+<br>
+ <p><b>Minor issue: </b><b>Do we just want to call this function </b><tt>dispatch-event </tt><b>and have it called on the<br>
+ port first? | RSL<br>
+<br>
+ </b><big><b>&#061&gt  </b></big><tt>dispatch-event </tt><i>client event </i>[<i>Generic Function</i>]<br>
+ This function is called by <tt>process-next-event </tt>to inform a client about an event of interest.<br>
+ It is invoked synchronously by whatever process called <tt>process-next-event</tt>, so many methods
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page54.html">Page 54</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page56.html">Page 56</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

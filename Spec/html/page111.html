@@ -1,0 +1,133 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page110.html">Page 110</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page112.html">Page 112</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 12. GRAPHICS </b><br>
+<br>
+ <br><b>12.7.3 Port-specific Drawing Functions<br><br>
+ </b>The following port-specific functions are required by the drawing functions in the API. If the<br>
+ optional arguments to these functions are not supplied, they are defaulted from the medium.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>port-draw-point* </tt><i>port medium x y </i><tt>&optional </tt><i>ink line-style clipping-region </i>[<i>Generic Function</i>]<br>
+ Draws a point on the <b>medium </b><i>medium </i>on the <b>port </b><i>port</i>. The point is drawn at the position that<br>
+ results from applying the device transformation to (<i>x;y</i>).<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>port-draw-points* </tt><i>port medium coord-seq </i><tt>&optional </tt><i>ink line-style clipping-region </i>[<i>Generic Function</i>]<br>
+ Draws a set of points on the <b>medium </b><i>medium </i>on the <b>port </b><i>port</i>. <i>coord-seq </i>is a sequence of<br>
+ coordinate pairs, which are real numbers. It is an error if <i>coord-seq </i>does not contain an even<br>
+ number of elements. <tt>port-draw-points* </tt>could be implemented by repeatedly calling port-<br>
+ draw-point*, but some ports may support faster primitives to do this.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>port-draw-line* </tt><i>port medium x1 y1 x2 y2 </i><tt>&optional </tt><i>ink line-style clipping-region </i>[<i>Generic Function</i>]<br>
+ Draws a line on the <b>medium </b><i>medium </i>on the <b>port </b><i>port</i>. The device transformation is applied to<br>
+ (<i>x</i>1<i>;y</i>1) to (<i>x</i>2<i>;y</i>2), and the line is drawn from one transformed endpoint to the other.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>port-draw-lines* </tt><i>port medium coord-seq </i><tt>&optional </tt><i>ink line-style clipping-region </i>[<i>Generic Function</i>]<br>
+ Draws a set of disconnected lines on the <b>medium </b><i>medium </i>on the <b>port </b><i>port</i>. <i>coord-seq </i>is a<br>
+ sequence of coordinate pairs, which are real numbers. It is an error if <i>coord-seq </i>does not contain<br>
+ an even number of elements. <tt>port-draw-lines* </tt>could be implemented by repeatedly calling<br>
+ port-draw-line*, but some ports may support faster primitives to do this.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>port-draw-polygon* </tt><i>port medium coord-seq closed </i><tt>&optional </tt><i>ink line-style clipping-region </i>[<i>Generic Function</i>]<br>
+ Draws a polygon or polyline on the <b>medium </b><i>medium </i>on the <b>port </b><i>port</i>. When <i>line-style </i>is <tt>nil</tt>,<br>
+ this draws a filled polygon; otherwise, <i>line-style </i>is the line style to use when drawing a set of<br>
+ connected lines. <i>coord-seq </i>is a sequence of coordinate pairs, which are real numbers. It is an<br>
+ error if <i>coord-seq </i>does not contain an even number of elements. The coordinate sequence specifies<br>
+ the corners of the polygon; the device transformation is applied to each of the coordinates to<br>
+ produce the corners of the rendered polygon.<br>
+<br>
+ When <tt>port-draw-polygon* </tt>is drawing a set of connected lines, then if <i>closed </i>is <b>true</b>, a closed<br>
+ polygon is drawn. If <i>closed </i>is <b>false</b>, the polygon will not be closed.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>port-draw-rectangle* </tt><i>port medium x1 y1 x2 y2 </i><tt>&optional </tt><i>ink line-style clipping-region </i>[<i>Generic Function</i>]<br>
+
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page110.html">Page 110</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page112.html">Page 112</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

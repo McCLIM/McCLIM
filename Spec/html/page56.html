@@ -1,0 +1,135 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page55.html">Page 55</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page57.html">Page 57</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 8. SHEET PROTOCOLS </b><br>
+<br>
+ for this function will simply queue the event for later handling. Certain classes of clients and<br>
+ events may cause this function immediately to call either <tt>queue-event </tt>or <tt>handle-event</tt>, or to<br>
+ ignore the event entirely.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>queue-event </tt><i>client event </i>[<i>Generic Function</i>]<br>
+ Places the event <i>event </i>into the queue of events for the client <i>client</i>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>handle-event </tt><i>client event </i>[<i>Generic Function</i>]<br>
+ Implements the client's policy with respect to the event. For example, if the programmer wishes<br>
+ to highlight a sheet in response to an event that informs it that the pointer has entered its<br>
+ territory, there would be a method to carry out the policy that specializes the appropriate sheet<br>
+ and event classes.<br>
+<br>
+ In addition to <tt>queue-event</tt>, the queued input protocol handles the following generic functions:<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>event-read </tt><i>client </i>[<i>Generic Function</i>]<br>
+ Takes the next event out of the queue of events for this client.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>event-read-no-hang </tt><i>client </i>[<i>Generic Function</i>]<br>
+ Takes the next event out of the queue of events for this client. It returns <tt>nil </tt>if there are no<br>
+ events in the queue.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>event-peek </tt><i>client </i><tt>&optional </tt><i>event-type </i>[<i>Generic Function</i>]<br>
+ Returns the next event in the queue without removing it from the queue. If <i>event-type </i>is supplied,<br>
+ events that are not of that type are first removed and discarded.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>event-unread </tt><i>client event </i>[<i>Generic Function</i>]<br>
+ Places the <i>event </i>at the head of the <i>client</i>'s event queue, so as to be the next event read.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>event-listen </tt><i>client </i>[<i>Generic Function</i>]<br>
+ Returns <b>true </b>if there are any events queued for <i>client</i>, otherwise returns <b>false</b>.<br>
+ <br><b>8.1.2 Input Protocol Classes<br><br>
+ </b>Most classes of sheets will have one of the following input protocol classes mixed in. Of course,<br>
+ a sheet can always have a specialized method for a specific class of event that will override the<br>
+ default. For example, a sheet may need to have only pointer click events dispatched to itself, and<br>
+ may delegate all other events to some other input client. Such a sheet should have <tt>delegate-<br>
+ sheet-input-mixin </tt>as a superclass, and have a more specific method for <tt>dispatch-event </tt>on<br>
+ its class and <tt>pointer-button-click-event</tt>.<br><br>
+ <big><b>&#061&gt  </b></big><tt>standard-sheet-input-mixin </tt>[<i>Class</i>]
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page55.html">Page 55</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page57.html">Page 57</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

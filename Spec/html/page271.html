@@ -1,0 +1,140 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page270.html">Page 270</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page272.html">Page 272</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 27. COMMAND PROCESSING </b><br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>command-table-already-exists </tt>[<i>Error Condition</i>]<br>
+ The error that is signalled when the programmer tries to create a command table that already<br>
+ exists.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>command-not-present </tt>[<i>Error Condition</i>]<br>
+ The error that is signalled when a command is not present in a command table.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>command-not-accessible </tt>[<i>Error Condition</i>]<br>
+ The error that is signalled when a command is not accessible in a command table.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>command-already-present </tt>[<i>Error Condition</i>]<br>
+ The error that is signalled when a function tries to add a command to a command table when<br>
+ it is already present in the command table.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>add-command-to-command-table </tt><i>command-name command-table </i><tt>&key </tt><i>name menu keystroke<br>
+ (errorp t) </i>[<i>Function</i>]<br>
+ Adds the command named by <i>command-name </i>to the command table specified by the <b>command<br>
+ table designator </b><i>command-table</i>.<br>
+<br>
+ <i>name </i>is the command-line name for the command, and can be <tt>nil</tt>, <tt>t</tt>, or a string. When it is<br>
+ <tt>nil</tt>, the command will not be available via command-line interactions. When it is a string, that<br>
+ string is the command-line name for the command. When it is <tt>t</tt>, the command-line name is<br>
+ generated automatically. (The automatically generated name consists of the command's name<br>
+ with the hyphens replaced by spaces, and the words capitalized; furthermore, if there is a prefix<br>
+ of "COM-", the prefix is removed. For example, if the command name is <tt>com-show-file</tt>, the<br>
+ command-line name will be "Show File".) For the purposes of command-line name lookup, the<br>
+ character case of <i>name </i>is ignored.<br>
+<br>
+ <i>menu </i>is a menu item for the command, and can be <tt>nil</tt>, <tt>t</tt>, a string, or a cons. When it is <tt>nil</tt>,<br>
+ the command will not be available via menus. When it is a string, the string will be used as<br>
+ the menu name. When <i>menu </i>is <tt>t </tt>and <i>name </i>is a string, then <i>name </i>will be used as the menu<br>
+ name. When <i>menu </i>is <tt>t </tt>and <i>name </i>is not a string, an automatically generated menu name will be<br>
+ used. When <i>menu </i>is a cons of the form <tt>(</tt><i>string </i><tt>. </tt><i>menu</i><tt>-</tt><i>options</i><tt>)</tt>, <i>string </i>is the menu name and<br>
+ <i>menu-options </i>consists of keyword-value pairs. The valid keywords are <tt>:after</tt>, <tt>:documentation</tt>,<br>
+ and <tt>:text-style</tt>, which are interpreted as for <tt>add-menu-item-to-command-table</tt>.<br>
+<br>
+ The value for <i>keystroke </i>is either keyboard gesture name or <tt>nil</tt>. When it is a gesture name, it<br>
+ is the keystroke accelerator for the command; otherwise the command will not be available via<br>
+ keystroke accelerators.<br>
+<br>
+ If the command is already present in the command table and <i>errorp </i>is <b>true</b>, the <tt>command-<br>
+ already-present </tt>error will be signalled. When the command is already present in the command<br>
+ table and <i>errorp </i>is <b>false</b>, then the old command-line name, menu, and keystroke accelerator will<br>
+ first be removed from the command table.
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page270.html">Page 270</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page272.html">Page 272</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

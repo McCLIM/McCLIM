@@ -1,0 +1,134 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page61.html">Page 61</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page63.html">Page 63</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ </tt><b>CHAPTER 8. SHEET PROTOCOLS </b><br>
+<br>
+ <tt>event-button </tt>will returns one of these three values.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>+shift-key+ </tt>[<i>Constant</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>+control-key+ </tt>[<i>Constant</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>+meta-key+ </tt>[<i>Constant</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>+super-key+ </tt>[<i>Constant</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>+hyper-key+ </tt>[<i>Constant</i>]<br>
+ Constants that correspond to the shift, control, meta, super, and hyper modifier keys being held<br>
+ down on the keyboard. These constants must be powers of 2 so that they can be combined with<br>
+ <tt>logior </tt>and tested with <tt>logtest</tt>. <tt>event-modifier-state </tt>will return some combination of these<br>
+ values.<br>
+<br>
+ Implementations must support at least shift, control, and meta modifiers. Control and meta<br>
+ might correspond to the control and option or command shift keys on a Macintosh keyboard,<br>
+ for example.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>key-modifier-state-match-p </tt><i>button modifier-state </i><tt>&body </tt><i>clauses </i>[<i>Macro</i>]<br>
+ This macro generates code that will check whether the modifier state <i>modifier-state </i>and the<br>
+ pointer button <i>button </i>match all of the clauses. <i>clauses </i>are implicitly grouped by <tt>and</tt>. Matching<br>
+ a button or a modifier means that that the modifier state indicates that the button or modifier<br>
+ is pressed.<br>
+<br>
+ A clause may be one of:<br>
+<ul>
+ <li>A pointer button. One of <tt>:left</tt>, <tt>:middle </tt>or <tt>:right</tt>.
+ <li>A modifier key. One of <tt>:shift</tt>, <tt>:control</tt>, <tt>:meta</tt>, <tt>:super </tt>or <tt>:hyper</tt>.
+ <li><tt>(and [</tt><i>clause</i><tt>]+)
+ <li>(or [</tt><i>clause</i><tt>]+)
+ <li>(not </tt><i>clause</i><tt>)
+</ul>
+ </tt><b>8.3 Output Protocol<br><br>
+ </b>The output protocol is concerned with the appearance of displayed output on the window as-<br>
+ sociated with a sheet. The sheet output protocol is responsible for providing a means of doing<br>
+ output to a sheet, and for delivering repaint requests to the sheet's client.<br>
+<br>
+ Sheets either participate fully in the output protocol or are mute for output. If any functions<br>
+ in the output protocol are called on a sheet that is mute for output, the <tt>sheet-is-mute-for-<br>
+ output </tt>error will be signalled.
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page61.html">Page 61</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page63.html">Page 63</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

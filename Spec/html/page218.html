@@ -1,0 +1,137 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page217.html">Page 217</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page219.html">Page 219</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 23. PRESENTATION TYPES </b><br>
+<br>
+ <i>function </i>is called with two arguments, the name of a type and a presentation type specifier<br>
+ for that type with the parameters and options filled in. <i>function </i>has dynamic extent; its two<br>
+ arguments are permitted to have dynamic extent. The traversal of the type lattice is done in the<br>
+ order specified by the CLOS class precedence rules, and visits each type in the lattice exactly<br>
+ once.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>presentation-type-direct-supertypes </tt><i>type </i>[<i>Function</i>]<br>
+ Returns a sequence consisting of the names of all of the presentation types that are direct super-<br>
+ types of the <b>presentation type specifier </b><i>type</i>, or <tt>nil </tt>if <i>type </i>has no supertypes. The consequences<br>
+ of modifying the returned sequence are unspecified.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>find-presentation-type-class </tt><i>name </i><tt>&optional </tt><i>(errorp </i><tt>t</tt><i>) environment </i>[<i>Function</i>]<br>
+ Returns the class corresponding to the presentation type named <i>name</i>, which must be a symbol<br>
+ or a class object. <i>errorp </i>and <i>environment </i>are as for <tt>find-class</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>class-presentation-type-name </tt><i>class </i><tt>&optional </tt><i>environment </i>[<i>Function</i>]<br>
+ Returns the presentation type name corresponding to the class <i>class</i>. This is essentially the<br>
+ inverse of <tt>find-presentation-type-class</tt>. <i>environment </i>is as for <tt>find-class</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>default-describe-presentation-type </tt><i>description stream plural-count </i>[<i>Function</i>]<br>
+ Performs the default actions for <tt>describe-presentation-type</tt>, notably pluralization and prepend-<br>
+ ing an indefinite article if appropriate. <i>description </i>is a string or a symbol, typically the <tt>:description<br>
+ </tt>presentation type option or the <tt>:description </tt>option to <tt>define-presentation-type</tt>. <i>plural-<br>
+ count </i>is as for <tt>describe-presentation-type</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>make-presentation-type-specifier </tt><i>type-name-and-parameters </i><tt>&rest </tt><i>options </i>[<i>Function</i>]<br>
+ A convenient way to assemble a presentation type specifier with only non-default options in-<br>
+ cluded. This is only useful for abbreviation expanders, not for <tt>:inherit-from</tt>. <i>type-name-and-<br>
+ parameters </i>is a presentation type specifier, which must be in the <tt>(</tt><i>type</i><tt>-</tt><i>name parameters...</i><tt>)<br>
+ </tt>form. <i>options </i>are alternating keywords and values that are added as options to the presentation<br>
+ type specifier, except that if a value is equal to <i>type-name</i>'s default, that option is omitted,<br>
+ producing a more concise presentation type specifier.<br>
+ <br><b>23.4 Typed Output<br><br>
+ </b>An application can specify that all output done within a certain dynamic extent should be<br>
+ associated with a given Lisp object and be declared to be of a specified presentation type.<br>
+ The resulting output is saved in the window's output history as a presentation. Specifically, the<br>
+ presentation remembers the output that was performed (by saving the associated output record),<br>
+ the Lisp object associated with the output, and the presentation type specified at output time.<br>
+ The object can be any Lisp object.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>with-output-as-presentation </tt><i>(stream object type </i><tt>&key </tt><i>modifier single-box allow-sensitive-</i>
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page217.html">Page 217</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page219.html">Page 219</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

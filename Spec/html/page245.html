@@ -1,0 +1,139 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page244.html">Page 244</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page246.html">Page 246</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 24. INPUT EDITING AND COMPLETION FACILITIES </b><br>
+<br>
+ Members of this class are mutable.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>with-input-editing </tt><i>(</i><tt>&optional </tt><i>stream </i><tt>&key </tt><i>input-sensitizer initial-contents) </i><tt>&body </tt><i>body </i>[<i>Macro</i>]<br>
+ Establishes a context in which the user can edit the input typed in on the interactive stream<br>
+ <i>stream</i>. <i>body </i>is then executed in this context, and the values returned by <i>body </i>are returned as<br>
+ the values of <tt>with-input-editing</tt>. <i>body </i>may have zero or more declarations as its first forms.<br>
+<br>
+ The <i>stream </i>argument is not evaluated, and must be a symbol that is bound to an input stream.<br>
+ If <i>stream </i>is <tt>t </tt>(the default), <tt>*query-io* </tt>is used. If <i>stream </i>is a stream that is not an interactive<br>
+ stream, then <tt>with-input-editing </tt>is equivalent to <tt>progn</tt>.<br>
+<br>
+ <i>input-sensitizer</i>, if supplied, is a function of two arguments, a stream and a continuation func-<br>
+ tion; the function has dynamic extent. The continuation, supplied by CLIM, is responsible for<br>
+ displaying output corresponding to the user's input on the stream. The <i>input-sensitizer </i>function<br>
+ will typically call <tt>with-output-as-presentation </tt>in order to make the output produced by the<br>
+ continuation sensitive.<br>
+<br>
+ If <i>initial-contents </i>is supplied, it must be either a string or a list of two elements, an object<br>
+ and a presentation type. If it is a string, the string will be inserted into the input buffer using<br>
+ <tt>replace-input</tt>. If it is a list, the printed representation of the object will be inserted into the<br>
+ input buffer using <tt>presentation-replace-input</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>with-input-editor-typeout </tt><i>(</i><tt>&optional </tt><i>stream) </i><tt>&body </tt><i>body </i>[<i>Macro</i>]<br>
+ Establishes a context inside of <tt>with-input-editing </tt>in which output can be done by <i>body </i>to the<br>
+ input editing stream <i>stream</i>. <tt>with-input-editor-typeout </tt>should call <tt>fresh-line </tt>before and<br>
+ after evaluating the body. <i>body </i>may have zero or more declarations as its first forms.<br>
+<br>
+ The <i>stream </i>argument is not evaluated, and must be a symbol that is bound to a stream. If<br>
+ <i>stream </i>is <tt>t </tt>(the default), <tt>*query-io* </tt>is used. If <i>stream </i>is a stream that is not an input editing<br>
+ stream, then <tt>with-input-editor-typeout </tt>is equivalent to calling <tt>fresh-line</tt>, evaluating the<br>
+ body, and then calling <tt>fresh-line </tt>again.<br>
+ <br><b>24.1.1 The Input Editing Stream Protocol<br><br>
+ </b>Input editing streams obey both the extended input and extended output stream protocols,<br>
+ and must support the generic functions that comprise those protocols. For the most part,<br>
+ this will simply entail "trampolining" those operations to the encapsulated interactive stream.<br>
+ However, some generic functions as <tt>stream-read-gesture </tt>and <tt>stream-unread-gesture </tt>will<br>
+ need methods that observe the use of the input editor's scan pointer.<br>
+<br>
+ Input editing streams will typically also implement methods for <tt>prompt-for-accept </tt>(in order<br>
+ to provide in-line prompting that interacts correctly with input editing) and <tt>stream-accept </tt>(in<br>
+ order to cause <tt>accept </tt>to obey the scan pointer).<br>
+<br>
+ The following generic functions comprise the remainder of the input editing protocol, and must
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page244.html">Page 244</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page246.html">Page 246</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

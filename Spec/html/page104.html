@@ -1,0 +1,143 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page103.html">Page 103</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page105.html">Page 105</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 12. GRAPHICS </b><br>
+<br>
+ Draws either a filled or unfilled rectangle on the <b>sheet </b><i>sheet </i>that has its sides aligned with the<br>
+ coordinate axes of the native coordinate system. One corner of the rectangle is at the position<br>
+ (<i>x1</i>,<i>y1</i>) and the opposite corner is at (<i>x2</i>,<i>y2</i>). The arguments <i>x1</i>, <i>y1</i>, <i>x2</i>, and <i>y1 </i>are real numbers<br>
+ that are canonicalized in the same way as for <tt>make-bounding-rectangle</tt>. <i>filled </i>is as for <tt>draw-<br>
+ polygon*</tt>.<br>
+<br>
+ The current line style (see <A HREF="./page77.html">Chapter 10</A>) affects the drawing of unfilled rectangles in the obvious<br>
+ way, except that the cap shape has no effect.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>draw-ellipse </tt><i>sheet center-pt radius-1-dx radius-1-dy radius-2-dx radius-2-dy </i><tt>&key </tt><i>(filled </i><tt>t</tt><i>)<br>
+ start-angle end-angle ink clipping-region transformation line-style line-thickness line-unit line-<br>
+ dashes line-cap-shape </i>[<i>Function</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>draw-ellipse* </tt><i>sheet center-x center-y radius-1-dx radius-1-dy radius-2-dx radius-2-dy </i><tt>&key<br>
+ </tt><i>(filled </i><tt>t</tt><i>) start-angle end-angle ink clipping-region transformation line-style line-thickness line-<br>
+ unit line-dashes line-cap-shape </i>[<i>Function</i>]<br>
+ These functions (structured and spread arguments, respectively) draw an ellipse (when <i>filled </i>is<br>
+ <b>true</b>, the default) or an elliptical arc (when <i>filled </i>is <b>false</b>) on the <b>sheet </b><i>sheet</i>. The center of the<br>
+ ellipse is the <b>point </b><i>center-pt </i>(or the position (<i>center-x</i>,<i>center-y</i>)).<br>
+<br>
+ Two vectors, (<i>radius-1-dx</i>,<i>radius-1-dy</i>) and (<i>radius-2-dx</i>,<i>radius-2-dy</i>) specify the bounding par-<br>
+ allelogram of the ellipse as explained in <A HREF="./page13.html">Chapter 3</A>. All of the radii are real numbers. If the two<br>
+ vectors are collinear, the ellipse is not well-defined and the <tt>ellipse-not-well-defined </tt>error<br>
+ will be signalled. The special case of an ellipse with its major axes aligned with the coordinate<br>
+ axes can be obtained by setting both <i>radius-1-dy </i>and <i>radius-2-dx </i>to 0.<br>
+<br>
+ <i>start-angle </i>and <i>end-angle </i>are real numbers that specify an arc rather than a complete ellipse.<br>
+ Angles are measured with respect to the positive <i>x </i>axis. The elliptical arc runs positively<br>
+ (counter-clockwise) from <i>start-angle </i>to <i>end-angle</i>. The default for <i>start-angle </i>is 0; the default<br>
+ for <i>end-angle </i>is 2<i></i>.<br>
+<br>
+ In the case of a "filled arc" (that is when <i>filled </i>is <b>true </b>and <i>start-angle </i>or <i>end-angle </i>are supplied<br>
+ and are not 0 and 2<i></i>), the figure drawn is the "pie slice" area swept out by a line from the<br>
+ center of the ellipse to a point on the boundary as the boundary point moves from <i>start-angle<br>
+ </i>to <i>end-angle</i>.<br>
+<br>
+ When drawing unfilled ellipses, the current line style (see <A
+      HREF="./page77.html">Chapter 10</A>) affects the drawing in the<br>
+ obvious way, except that the joint shape has no effect. Dashed elliptical arcs start "dashing" at<br>
+ <i>start-angle</i>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>draw-circle </tt><i>sheet center-pt radius </i><tt>&key </tt><i>(filled </i><tt>t</tt><i>) start-angle end-angle ink clipping-region<br>
+ transformation line-style line-thickness line-unit line-dashes line-cap-shape </i>[<i>Function</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>draw-circle* </tt><i>sheet center-x center-y radius </i><tt>&key </tt><i>(filled </i><tt>t</tt><i>) start-angle end-angle ink clipping-<br>
+ region transformation line-style line-thickness line-unit line-dashes line-cap-shape </i>[<i>Function</i>]<br>
+ These functions (structured and spread arguments, respectively) draw a circle (when <i>filled </i>is<br>
+ <b>true</b>, the default) or a circular arc (when <i>filled </i>is <b>false</b>) on the <b>sheet </b><i>sheet</i>. The center of the<br>
+ circle is <i>center-pt </i>or (<i>center-x</i>,<i>center-y</i>) and the radius is <i>radius</i>. These are just special cases of
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page103.html">Page 103</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page105.html">Page 105</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

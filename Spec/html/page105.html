@@ -1,0 +1,141 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page104.html">Page 104</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page106.html">Page 106</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 12. GRAPHICS </b><br>
+<br>
+ <tt>draw-ellipse </tt>and <tt>draw-ellipse*</tt>. <i>filled </i>is as for <tt>draw-ellipse*</tt>.<br>
+<br>
+ <i>start-angle </i>and <i>end-angle </i>allow the specification of an arc rather than a complete circle in the<br>
+ same manner as that of the ellipse functions, above.<br>
+<br>
+ The "filled arc" behavior is the same as that of an ellipse, above.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>draw-text </tt><i>sheet string-or-char point </i><tt>&key </tt><i>text-style (start </i><tt>0</tt><i>) end (align-x </i><tt>:left</tt><i>) (align-y </i><tt>:baseline</tt><i>)<br>
+ toward-point transform-glyphs ink clipping-region transformation text-style text-family text-face<br>
+ text-size </i>[<i>Function</i>]<br><br>
+ <big><b>&#061&gt  </b></big><tt>draw-text* </tt><i>sheet string-or-char x y </i><tt>&key </tt><i>text-style (start </i><tt>0</tt><i>) end (align-x </i><tt>:left</tt><i>) (align-y </i><tt>:baseline</tt><i>)<br>
+ toward-x toward-y transform-glyphs ink clipping-region transformation text-style text-family text-<br>
+ face text-size </i>[<i>Function</i>]<br>
+<br>
+ The text specified by <i>string-or-char </i>is drawn on the <b>sheet </b><i>sheet </i>starting at the position specified<br>
+ by the <b>point </b><i>point </i>(or the position (<i>x;y</i>)). The exact definition of "starting at" is dependent on<br>
+ <i>align-x </i>and <i>align-y</i>. <i>align-x </i>is one of <tt>:left</tt>, <tt>:center</tt>, or <tt>:right</tt>. <i>align-y </i>is one of <tt>:baseline</tt>,<br>
+ <tt>:top</tt>, <tt>:center</tt>, or <tt>:bottom</tt>. <i>align-x </i>defaults to <tt>:left </tt>and <i>align-y </i>defaults to <tt>:baseline</tt>; with<br>
+ these defaults, the first glyph is drawn with its left edge and its baseline at <i>point</i>.<br>
+<br>
+ <i>text-style </i>defaults to <tt>nil</tt>, meaning that the text will be drawn using the current text style of the<br>
+ sheet's medium.<br>
+<br>
+ <i>start </i>and <i>end </i>specify the start and end of the string, in the case where <i>string-or-char </i>is a string.<br>
+ If <i>start </i>is supplied, it must be an integer that is less than the length of the string. If <i>end </i>is<br>
+ supplied, it must be an integer that is less than the length of the string, but greater than or<br>
+ equal to <i>start</i>.<br>
+<br>
+ Normally, glyphs are drawn from left to right no matter what transformation is in effect. <i>toward-<br>
+ x </i>or <i>toward-y </i>(derived from <i>toward-point </i>in the case of <tt>draw-text</tt>) can be used to change the<br>
+ direction from one glyph to the next one. For example, if <i>toward-x </i>is less than the <i>x </i>position of<br>
+ <i>point</i>, then the glyphs will be drawn from right to left. If <i>toward-y </i>is greater than the <i>y </i>position<br>
+ of <i>point</i>, then the glyphs' baselines will be positioned one above another. More precisely, the<br>
+ reference point in each glyph lies on a line from <i>point </i>to <i>toward-point</i>, and the spacing of each<br>
+ glyph is determined by packing rectangles along that line, where each rectangle is "char-width"<br>
+ wide and "char-height" high.<br>
+<br>
+ If <i>transform-glyphs </i>is <b>true</b>, then each glyph is transformed as an image before it is drawn.<br>
+ That is, if a rotation transformation is in effect, then each glyph will be rotated individually.<br>
+ If <i>transform-glyphs </i>is not supplied, then the individual glyphs are not subject to the current<br>
+ transformation. It is permissible for CLIM implementations to ignore <i>transform-glyphs </i>if it is<br>
+ too expensive to implement.<br>
+ <br><b>12.5.2 Compound Drawing Functions<br><br>
+ </b>CLIM also provides a few compound drawing functions. The compound drawing functions could<br>
+ be composed by a programmer from the basic drawing functions, but are provided by CLIM
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page104.html">Page 104</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page106.html">Page 106</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

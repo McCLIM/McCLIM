@@ -1,0 +1,135 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page24.html">Page 24</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page26.html">Page 26</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 3. REGIONS </b><br>
+<br>
+ This function is permitted to capture its mutable inputs; the consequences of modifying those<br>
+ objects are unspecified.<br>
+ <p><b>The Rectangle Protocol<br><br>
+ </b>The following generic functions comprise the rectangle API. Only <tt>rectangle-edges* </tt>is in the<br>
+ rectangle protocol, that is, all classes that are subclasses of <tt>rectangle </tt>must implement methods<br>
+ for <tt>rectangle-edges*</tt>, but need not implement methods for the remaining functions.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>rectangle-edges* </tt><i>rectangle </i>[<i>Generic Function</i>]<br>
+ Returns the coordinates of the minimum <i>x </i>and <i>y </i>and maximum <i>x </i>and <i>y </i>of the rectangle <i>rectangle<br>
+ </i>as four values, <i>min-x</i>, <i>min-y</i>, <i>max-x</i>, and <i>max-y</i>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>rectangle-min-point </tt><i>rectangle </i>[<i>Generic Function</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>rectangle-max-point </tt><i>rectangle </i>[<i>Generic Function</i>]<br>
+ Returns the min point and max point of the <b>rectangle </b><i>rectangle</i>, respectively. The position of a<br>
+ rectangle is specified by its min point.<br>
+<br>
+ CLIM will supply default methods for <tt>rectangle-min-point </tt>and <tt>rectangle-max-point </tt>on the<br>
+ protocol class <tt>rectangle </tt>that are implemented by calling <tt>rectangle-edges*</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>rectangle-min-x </tt><i>rectangle </i>[<i>Generic Function</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>rectangle-min-y </tt><i>rectangle </i>[<i>Generic Function</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>rectangle-max-x </tt><i>rectangle </i>[<i>Generic Function</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>rectangle-max-y </tt><i>rectangle </i>[<i>Generic Function</i>]<br>
+ Returns (respectively) the minimum <i>x </i>and <i>y </i>coordinate and maximum <i>x </i>and <i>y </i>coordinate of<br>
+ the <b>rectangle </b><i>rectangle</i>.<br>
+<br>
+ CLIM will supply default methods for these four generic functions on the protocol class <tt>rectangle<br>
+ </tt>that are implemented by calling <tt>rectangle-edges*</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>rectangle-width </tt><i>rectangle </i>[<i>Generic Function</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>rectangle-height </tt><i>rectangle </i>[<i>Generic Function</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>rectangle-size </tt><i>rectangle </i>[<i>Generic Function</i>]<br>
+ <tt>rectangle-width </tt>returns the width of the <b>rectangle </b><i>rectangle</i>, which is the difference between the<br>
+ maximum <i>x </i>and its minimum <i>x</i>. <tt>rectangle-height </tt>returns the height, which is the difference<br>
+ between the maximum <i>y </i>and its minimum <i>y</i>. <tt>rectangle-size </tt>returns two values, the width<br>
+ and the height.<br>
+<br>
+ CLIM will supply default methods for these four generic functions on the protocol class <tt>rectangle<br>
+ </tt>that are implemented by calling <tt>rectangle-edges*</tt>.
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page24.html">Page 24</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page26.html">Page 26</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

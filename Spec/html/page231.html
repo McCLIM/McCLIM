@@ -1,0 +1,145 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page230.html">Page 230</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page232.html">Page 232</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 23. PRESENTATION TYPES </b><br>
+<br>
+ <tt>test-presentation-translator </tt>is responsible for matching type parameters and calling the<br>
+ translator's tester. Under some circumstances, <tt>test-presentation-translator </tt>may also call<br>
+ the body of the translator to ensure that its value matches <i>to-type</i>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>find-applicable-translators </tt><i>presentation input-context frame window x y </i><tt>&key </tt><i>event modifier-<br>
+ state for-menu fastp </i>[<i>Function</i>]<br>
+ Returns an object that describes the translators that definitely apply to the <b>presentation </b><i>pre-<br>
+ sentation </i>in the input context <i>input-context</i>. The result is a list whose elements are each of the<br>
+ form<br>
+ <i>(translator the-presentation context-type tag)<br>
+ </i>where <i>translator </i>is a presentation translator, <i>the-presentation </i>is the presentation that the trans-<br>
+ lator applies to (and can be different from <i>presentation </i>due to nesting of presentations), <i>context-<br>
+ type </i>is the context type that in which the translator applies, and <i>tag </i>is a tag used internally by<br>
+ CLIM. <i>translator</i>, <i>the-presentation</i>, and <i>context-type </i>can be passed to such functions as <tt>call-<br>
+ presentation-translator </tt>and <tt>document-presentation-translator</tt>.<br>
+<br>
+ Since input contexts can be nested, <tt>find-applicable-translators </tt>must iterate over all the<br>
+ contexts in <i>input-context</i>. <i>window</i>, <i>x</i>, and <i>y </i>are as for <tt>test-presentation-translator</tt>. <i>event<br>
+ </i>and <i>modifier-state </i>(which default to <tt>nil </tt>and the current modifier state for <i>window</i>, respectively)<br>
+ are used to further restrict the set of applicable translators. (Only one of <i>event </i>or <i>modifier-state<br>
+ </i>may be supplied; it is unspecified what will happen if both are supplied.)<br>
+<br>
+ When <i>for-menu </i>is non-<tt>nil</tt>, this matches the value of <i>for-menu </i>against the presentation's menu<br>
+ specification, and returns only those translators that match. <i>event </i>and <i>modifier-state </i>are disre-<br>
+ garded in this case. <i>for-menu </i>defaults to <tt>nil</tt>.<br>
+<br>
+ When the boolean <i>fastp </i>is <b>true</b>, <tt>find-applicable-translators </tt>will simply return <b>true </b>if there<br>
+ are any translators. <i>fastp </i>defaults to <b>false</b>.<br>
+<br>
+ When <i>fastp </i>is <b>false</b>, the list of translators returned by <tt>find-applicable-translators </tt>must be<br>
+ in order of their "desirability", that is, translators having more specific from-types and/or higher<br>
+ priorities must precede translators having less specific from-types and lower priorities.<br>
+<br>
+ The rules used for ordering the translators returned by <tt>find-applicable-translators </tt>are as<br>
+ follows (in order):<ol>
+ <li> Translators with a higher "high order" priority precede translators with a lower "high<br>
+ order" priority. This allows programmers to set the priority of a translator in such a way<br>
+ that it always precedes all other translators.<br>
+<br>
+ <li> Translators with a more specific "from type" precede translators with a less specific "from<br>
+ type".<br>
+<br>
+ <li> Translators with a higher "low order" priority precede translators with a lower "low order"<br>
+ priority. This allows programmers to break ties between translators that translate from<br>
+ the same type.<br>
+<br>
+ <li> Translators from the current command table precede translators inherited from superior<br>
+ command tables.
+</ol>
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page230.html">Page 230</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page232.html">Page 232</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

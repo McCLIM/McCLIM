@@ -1,0 +1,144 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page161.html">Page 161</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page163.html">Page 163</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 17. TABLE FORMATTING </b><br>
+<br>
+ <i>stream </i>is an output recording stream to which output will be done. The <i>stream </i>argument is<br>
+ not evaluated, and must be a symbol that is bound to a stream. If <i>stream </i>is <tt>t </tt>(the default),<br>
+ <tt>*standard-output* </tt>is used. <i>body </i>may have zero or more declarations as its first forms.<br>
+<br>
+ Once a table has had a column added to it via <tt>formatting-column</tt>, no rows may be added to<br>
+ it.<br>
+<br>
+ <i>record-type </i>specifies the class of output record to create. The default is <tt>standard-column-<br>
+ output-record</tt>. This argument should only be supplied by a programmer if there is a new class<br>
+ of output record that supports the column formatting protocol.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>formatting-cell </tt><i>(</i><tt>&optional </tt><i>stream </i><tt>&key </tt><i>(align-x </i><tt>':left</tt><i>) (align-y </i><tt>':baseline</tt><i>) min-width<br>
+ min-height record-type) </i><tt>&body </tt><i>body </i>[<i>Macro</i>]<br>
+ Controls the output of a single cell inside a table row or column, or of a single item inside<br>
+ <tt>formatting-item-list</tt>. All of the output performed by <i>body </i>becomes the contents of the cell.<br>
+<br>
+ <i>stream </i>is an output recording stream to which output will be done. The <i>stream </i>argument is<br>
+ not evaluated, and must be a symbol that is bound to a stream. If <i>stream </i>is <tt>t </tt>(the default),<br>
+ <tt>*standard-output* </tt>is used. <i>body </i>may have zero or more declarations as its first forms.<br>
+<br>
+ <i>align-x </i>specifies how the output in a cell will be aligned relative to other cells in the same table<br>
+ column. The default, <tt>:left</tt>, causes the cells to be flush-left in the column. The other possible<br>
+ values are <tt>:right </tt>(meaning flush-right in the column) and <tt>:center </tt>(meaning centered in the<br>
+ column). Each cell within a column may have a different alignment; thus it is possible, for<br>
+ example, to have centered legends over flush-right numeric data.<br>
+<br>
+ <i>align-y </i>specifies how the output in a cell will be aligned vertically. The default, <tt>:baseline</tt>,<br>
+ causes textual cells to be aligned along their baselines and graphical cells to be aligned at the<br>
+ bottom. The other possible values are <tt>:bottom </tt>(align at the bottom of the output), <tt>:top </tt>(align<br>
+ at the top of the output), and <tt>:center </tt>(center the output in the cell).<br>
+<br>
+ <i>min-width </i>and <i>min-height </i>are used to specify minimum width or height of the cell. The default,<br>
+ <tt>nil</tt>, causes the cell to be only as wide or high as is necessary to contain the cell's contents.<br>
+ Otherwise, <i>min-width </i>and <i>min-height </i>are specified in the same way as the <tt>:x-spacing </tt>and <tt>:y-<br>
+ spacing </tt>arguments to <tt>formatting-table</tt>.<br>
+<br>
+ <i>record-type </i>specifies the class of output record to create. The default is <tt>standard-cell-output-<br>
+ record</tt>. This argument should only be supplied by a programmer if there is a new class of output<br>
+ record that supports the cell formatting protocol.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>formatting-item-list </tt><i>(</i><tt>&optional </tt><i>stream </i><tt>&key </tt><i>x-spacing y-spacing n-columns n-rows stream-<br>
+ width stream-height max-width max-height initial-spacing (move-cursor </i><tt>t</tt><i>) record-type) </i><tt>&body<br>
+ </tt><i>body </i>[<i>Macro</i>]<br>
+ Binds the local environment in such a way that the output of <i>body </i>will be done in an item<br>
+ list (that is, menu) format. This must be used in conjunction with <tt>formatting-cell</tt>, which<br>
+ delimits each item. The item list is placed so that its upper left corner is at the current text<br>
+ cursor position of <i>stream</i>. If the boolean <i>move-cursor </i>is <b>true </b>(the default), then the text cursor<br>
+ will be moved so that it immediately follows the last cell of the item list.
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page161.html">Page 161</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page163.html">Page 163</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

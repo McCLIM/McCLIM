@@ -1,0 +1,140 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page258.html">Page 258</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page260.html">Page 260</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 25. MENU FACILITIES </b><br>
+<br>
+ <i>drawer </i>is a function that takes two arguments, <i>stream </i>and <i>type</i>, draws the contents of the menu.<br>
+ It has dynamic extent.<br>
+<br>
+ <i>x-position </i>and <i>y-position </i>are the requested <i>x </i>and <i>y </i>positions of the menu. They may be <tt>nil</tt>,<br>
+ meaning that the position is unspecified.<br>
+<br>
+ If <i>leave-menu-visible </i>is <b>true</b>, the window will not be deexposed once the selection has been<br>
+ made. The default is <b>false</b>, meaning that the window will be deexposed once the selection has<br>
+ been made.<br>
+<br>
+ <i>default-presentation </i>is used to identify the presentation that the mouse is pointing to when the<br>
+ menu comes up.<br>
+<br>
+ <i>cache</i>, <i>unique-id</i>, <i>id-test</i>, <i>cache-value</i>, and <i>cache-test </i>are as for <tt>menu-choose</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>draw-standard-menu </tt><i>stream presentation-type items default-item </i><tt>&key </tt><i>item-printer max-width<br>
+ max-height n-rows n-columns inter-column-spacing inter-row-spacing cell-align-x cell-align-y </i>[<i>Function</i>]<br>
+ <tt>draw-standard-menu </tt>is the function used by CLIM to draw the contents of a menu, unless the<br>
+ current frame manager determines that host window toolkit should be used to draw the menu<br>
+ instead. <i>stream </i>is the stream onto which to draw the menu, <i>presentation-type </i>is the presentation<br>
+ type to use for the menu items (usually <tt>menu-item</tt>), and <i>item-printer </i>is a function used to draw<br>
+ each item. <i>item-printer </i>defaults to <tt>print-menu-item</tt>.<br>
+<br>
+ <i>items</i>, <i>default-item</i>, <i>max-width</i>, <i>max-height</i>, <i>n-rows</i>, <i>n-columns</i>, <i>inter-column-spacing</i>, <i>inter-row-<br>
+ spacing</i>, <i>cell-align-x</i>, and <i>cell-align-y </i>are as for <tt>menu-choose<br>
+<br>
+ </tt><big><b>&#061&gt  </b></big><tt>print-menu-item </tt><i>menu-item </i><tt>&optional </tt><i>stream </i>[<i>Function</i>]<br>
+ Given a menu item <i>menu-item</i>, displays it on the stream <i>stream</i>. This is the function that <tt>menu-<br>
+ choose </tt>uses to display menu items if no printer is supplied.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>menu-item-value </tt><i>menu-item </i>[<i>Function</i>]<br>
+ Returns the value of the menu item <i>menu-item</i>, where the format of a menu item is described<br>
+ under <tt>menu-choose</tt>. If <i>menu-item </i>is not a menu item, the result is unspecified.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>menu-item-display </tt><i>menu-item </i>[<i>Function</i>]<br>
+ Returns the display object of the menu item <i>menu-item</i>, where the format of a menu item is<br>
+ described under <tt>menu-choose</tt>. If <i>menu-item </i>is not a menu item, the result is unspecified.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>menu-item-options </tt><i>menu-item </i>[<i>Function</i>]<br>
+ Returns the options of the menu item <i>menu-item</i>, where the format of a menu item is described<br>
+ under <tt>menu-choose</tt>. If <i>menu-item </i>is not a menu item, the result is unspecified.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>with-menu </tt><i>(menu </i><tt>&optional </tt><i>associated-window </i><tt>&key </tt><i>(deexpose t)) </i><tt>&body </tt><i>body </i>[<i>Macro</i>]<br>
+ Binds <i>menu </i>to a "temporary" window, exposes the window on the same screen as the <i>associated-</i>
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page258.html">Page 258</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page260.html">Page 260</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

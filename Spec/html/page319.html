@@ -1,0 +1,124 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page318.html">Page 318</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page320.html">Page 320</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+<br>
+<br>
+ </b><b>Chapter 30<br>
+ </b><br><b>Gadgets<br>
+ </b><br><b>30.1 Overview of Gadgets<br><br>
+ </b><b>Gadgets </b>are panes that implement such common toolkit components as push buttons or scroll<br>
+ bars. Each gadget class has a set of associated generic functions that serve the same role that<br>
+ callbacks serve in traditional toolkits. For example, a push button has an "activate" callback<br>
+ function that is invoked when its button is "pressed"; a scroll bar has a "value changed" callback<br>
+ that is invoked after its indicator has been moved.<br>
+<br>
+ The gadget definitions specified by CLIM are abstract, that is, the gadget definition does not<br>
+ specify the exact user interface of the gadget, but only specifies the semantics that the gadget<br>
+ should provide. For instance, it is not defined whether the user clicks on a push button with<br>
+ the mouse or moves the mouse over the button and then presses some key on the keyboard to<br>
+ invoke the "activate" callback. Each toolkit implementations will specify the "look and feel" of<br>
+ their gadgets. Typically, the look and feel will be derived directly from the underlying toolkit.<br>
+<br>
+ Each of CLIM's abstract gadgets has at least one standard implementation that is written using<br>
+ the facilities provided solely by CLIM itself. The gadgets' appearances are achieved via calls<br>
+ to the CLIM graphics functions, and their interactive behavior is defined in terms of the CLIM<br>
+ input event processing mechanism. Since these gadget implementations are written entirely in<br>
+ terms of CLIM, they are portable across all supported CLIM host window systems. Furthermore,<br>
+ since the specific look and feel of each such gadget is "fixed" in CLIM Lisp code, the gadget<br>
+ implementation will look and behave the same in all environments.<br>
+ <br><b>30.2 Abstract Gadgets<br><br>
+ </b>The push button and slider gadgets alluded to above are <b>abstract gadgets</b>. The callback interface<br>
+ to all of the various implementations of the gadget is defined by the abstract class. In the <tt>:panes<br>
+ </tt>clause of <tt>define-application-frame</tt>, the abbreviation for a gadget is the name of the abstract<br>
+
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page318.html">Page 318</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page320.html">Page 320</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

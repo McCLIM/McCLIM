@@ -1,0 +1,136 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page350.html">Page 350</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page352.html">Page 352</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>APPENDIX C. COMMON LISP STREAMS </b><br>
+<br>
+ <tt>fundamental-character-input-stream </tt>simply calls <tt>stream-read-char</tt>; this is sufficient for<br>
+ file streams, but interactive streams should define their own method.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>stream-peek-char </tt><i>stream </i>[<i>Generic Function</i>]<br>
+ Returns either a character or <tt>:eof </tt>without removing the character from the stream's input<br>
+ buffer. This is used to implement <tt>peek-char</tt>; this corresponds to peek-type of <tt>nil</tt>. The default<br>
+ method calls <tt>stream-read-char </tt>and <tt>stream-unread-char.<br>
+<br>
+ </tt><big><b>&#061&gt  </b></big><tt>stream-listen </tt><i>stream </i>[<i>Generic Function</i>]<br>
+ Returns <b>true </b>if there is any input pending on <i>stream</i>, otherwise it returns <b>false</b>. This is used<br>
+ by <tt>listen</tt>. The default method uses <tt>stream-read-char-no-hang </tt>and <tt>stream-unread-char</tt>.<br>
+ Most streams should define their own method since it will usually be trivial and will generally<br>
+ be more efficient than the default method.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>stream-read-line </tt><i>stream </i>[<i>Generic Function</i>]<br>
+ Returns a string as the first value, and <tt>t </tt>as the second value if the string was terminated by<br>
+ end-of-file instead of the end of a line. This is used by <tt>read-line</tt>. The default method uses<br>
+ repeated calls to <tt>stream-read-char</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>stream-clear-input </tt><i>stream </i>[<i>Generic Function</i>]<br>
+ Clears any buffered input associated with <i>stream</i>, and returns <b>false</b>. This is used to implement<br>
+ <tt>clear-input</tt>. The default method does nothing.<br>
+ <br><b>C.4 Character Output<br>
+<br>
+ </b>A character output stream can be created by defining a class that includes <tt>fundamental-<br>
+ character-output-stream </tt>and defining methods for the generic functions below.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>stream-write-char </tt><i>stream character </i>[<i>Generic Function</i>]<br>
+ Writes <i>character </i>to <i>stream</i>, and returns <i>character </i>as its value. Every subclass of <tt>fundamental-<br>
+ character-output-stream </tt>must have a method defined for this function.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>stream-line-column </tt><i>stream </i>[<i>Generic Function</i>]<br>
+ This function returns the column number where the next character will be written on <i>stream</i>, or<br>
+ <tt>nil </tt>if that is not meaningful. The first column on a line is numbered 0. This function is used<br>
+ in the implementation of <tt>pprint </tt>and the <tt>format ~T </tt>directive. Every character output stream<br>
+ class must define a method for this, although it is permissible for it to always return <tt>nil</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>stream-start-line-p </tt><i>stream </i>[<i>Generic Function</i>]<br>
+ Returns <b>true </b>if <i>stream </i>is positioned at the beginning of a line, otherwise returns <b>false</b>. It is<br>
+ permissible to always return <b>false</b>. This is used in the implementation of <tt>fresh-line</tt>.
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page350.html">Page 350</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page352.html">Page 352</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

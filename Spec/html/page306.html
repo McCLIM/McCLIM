@@ -1,0 +1,136 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page305.html">Page 305</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page307.html">Page 307</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 29. PANES </b><br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>make-pane </tt><i>abstract-class-name </i><tt>&rest </tt><i>initargs </i>[<i>Function</i>]<br>
+ Selects a class that implements the behavior of the abstract pane <i>abstract-class-name </i>and con-<br>
+ structs a pane of that class. <tt>make-pane </tt>must be used either within the dynamic scope of a<br>
+ call to <tt>with-look-and-feel-realization</tt>, or within the <tt>:pane </tt>or <tt>:panes </tt>options of a <tt>define-<br>
+ application-frame </tt>(which implicitly invokes <tt>with-look-and-feel-realization</tt>).<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>make-pane-1 </tt><i>realizer frame abstract-class-name </i><tt>&rest </tt><i>initargs </i>[<i>Generic Function</i>]<br>
+ The generic function that is invoked by a call to <tt>make-pane</tt>. The object that realizes the<br>
+ pane, <i>realizer</i>, is established by <tt>with-look-and-feel-realization</tt>. Usually, <i>realizer </i>is a frame<br>
+ manager, but it could be another object that implements the pane realization protocol. <i>frame<br>
+ </i>is the frame for which the pane will be created, and <i>abstract-class-name </i>is the type of pane to<br>
+ create.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>with-look-and-feel-realization </tt><i>(realizer frame) </i><tt>&body </tt><i>forms </i>[<i>Macro</i>]<br>
+ Establishes a dynamic context that installs <i>realizer </i>as the object responsible for realizing panes.<br>
+ All calls to <tt>make-pane </tt>within the context of <tt>with-look-and-feel-realization </tt>result in <tt>make-<br>
+ pane-1 </tt>being invoked on <i>realizer</i>. This macro can be nested dynamically; inner uses shadow<br>
+ outer uses. <i>body </i>may have zero or more declarations as its first forms.<br>
+<br>
+ Typically <i>realizer </i>is a frame manager, but in some cases <i>realizer </i>may be some other object.<br>
+ For example, within the implementation of pane that is uses its own subpanes to achieve its<br>
+ functionality, this form might be used with <i>realizer </i>being the pane itself.<br>
+ <br><b>29.2.1 Pane Initialization Options<br>
+<br>
+ </b>The following options must be accepted by all pane classes.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>:foreground </tt>[<i>Option</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>:background </tt>[<i>Option</i>]<br>
+ These options specify the default foreground and background inks for a pane. Client code should<br>
+ be cautious about passing values for these two options, since the desktop's look and feel or the<br>
+ user's preferences should usually determine these values.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>:text-style </tt>[<i>Option</i>]<br>
+ This option specifies the default text style that should be used for any sort of pane that supports<br>
+ text output. Panes that do not support text output ignore this option. Client code should be<br>
+ cautious about passing values for this option, since the desktop's look and feel or the user's<br>
+ preferences should usually determine this value.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>:name </tt>[<i>Option</i>]<br>
+ This option specifies the name of the pane. It defaults to <tt>nil</tt>.
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page305.html">Page 305</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page307.html">Page 307</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

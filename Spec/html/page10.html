@@ -1,0 +1,135 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page9.html">Page 9</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page11.html">Page 11</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 2. CONVENTIONS </b><br>
+<br>
+ variable outside the macro form and the variable inside the body share the same name, they<br>
+ cannot be assumed to be the same reference. That is, the macro is free to create a new binding<br>
+ for the variable. Thus, the following code fragment will not necessarily affect the value of <i>stream<br>
+ </i>outside the <tt>formatting-table </tt>form:<br>
+<br>
+<br>
+ <tt><pre>
+ (formatting-table (stream)
+   (setq stream some-other-stream)
+   ...)
+
+</pre> </tt>Furthermore, for the macros that take a sheet, stream, or medium argument, the position of<br>
+ that variable is always before any forms or other "inputs".<br>
+ <br><b>2.9 Macros that Expand into Calls to Advertised Functions<br><br>
+ </b>Some macros that take a "body" argument expand into a call to an advertised function that takes<br>
+ a functional argument. This functional argument will execute the suppled body. For a macro<br>
+ named "<tt>with-</tt><i>environment</i>", the function is generally named "<tt>invoke-with-</tt><i>environment</i>". For<br>
+ example, <tt>with-drawing-options </tt>might be defined as follows:<br>
+<br>
+<br>
+ <pre><tt>
+ (defgeneric invoke-with-drawing-options (medium continuation &key)
+   (declare (dynamic-extent continuation)))
+
+ (defmacro with-drawing-options ((medium &rest drawing-options) &body body)
+   `(flet ((with-drawing-options-body (,medium) ,@body))
+      (declare (dynamic-extent #'with-drawing-options-body))
+      (invoke-with-drawing-options
+        ,medium #'with-drawing-options-body ,@drawing-options)))
+
+ (defmethod invoke-with-drawing-options
+            ((medium clx-display-medium) continuation &rest drawing-options)
+   (with-drawing-options-merged-into-medium (medium drawing-options)
+     (funcall continuation medium)))
+</pre> </tt><br><b>2.10 Terminology Pertaining to Error Conditions<br><br>
+ </b>When this specification specifies that it "is an error" for some situation to occur, this means<br>
+ that:<ul>
+ <li>No valid CLIM program should cause this situation to occur.
+</ul>
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page9.html">Page 9</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page11.html">Page 11</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

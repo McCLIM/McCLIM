@@ -1,0 +1,140 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page106.html">Page 106</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page108.html">Page 108</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 12. GRAPHICS </b><br>
+<br>
+ The resulting pixmap will be <i>width </i>units wide, <i>height </i>units high, and as deep as is necessary to<br>
+ store the information for the sheet. The exact representation of pixmaps is explicitly unspecified.<br>
+<br>
+ The returned value is the pixmap.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>deallocate-pixmap </tt><i>pixmap </i>[<i>Generic Function</i>]<br>
+ Deallocates the pixmap <i>pixmap</i>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>pixmap-width </tt><i>pixmap </i>[<i>Generic Function</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>pixmap-height </tt><i>pixmap </i>[<i>Generic Function</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>pixmap-depth </tt><i>pixmap </i>[<i>Generic Function</i>]<br>
+ These functions return, respectively, the programmer-specified width and height, and the depth<br>
+ of the pixmap <i>pixmap</i>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>copy-to-pixmap </tt><i>sheet sheet-x sheet-y width height </i><tt>&optional </tt><i>pixmap (pixmap-x </i><tt>0</tt><i>) (pixmap-y<br>
+ </i><tt>0</tt><i>) </i>[<i>Generic Function</i>]<br>
+ Copies the pixels from the sheet <i>sheet </i>starting at the position specified by (<i>sheet-x</i>,<i>sheet-y</i>) into<br>
+ the pixmap <i>pixmap </i>at the position specified by (<i>pixmap-x</i>,<i>pixmap-y</i>). A rectangle whose width<br>
+ and height is specified by <i>width </i>and <i>height </i>is copied. <i>sheet-x </i>and <i>sheet-y </i>are specified in user<br>
+ coordinates. (If <i>sheet </i>is a medium or a stream, then <i>sheet-x </i>and <i>sheet-y </i>are transformed by the<br>
+ user transformation.)<br>
+<br>
+ If <i>pixmap </i>is not supplied, a new pixmap will be allocated. Otherwise, <i>pixmap </i>must be an object<br>
+ returned by <tt>allocate-pixmap </tt>that has the appropriate characteristics for <i>sheet</i>.<br>
+<br>
+ The returned value is the pixmap.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>copy-from-pixmap </tt><i>pixmap pixmap-x pixmap-y width height sheet window-x window-y </i>[<i>Generic Function</i>]<br>
+ Copies the pixels from the pixmap <i>pixmap </i>starting at the position specified by (<i>pixmap-x</i>,<i>pixmap-<br>
+ y</i>) into the sheet <i>sheet </i>at the position (<i>sheet-x</i>,<i>sheet-y</i>). A rectangle whose width and height is<br>
+ specified by <i>width </i>and <i>height </i>is copied. <i>sheet-x </i>and <i>sheet-y </i>are specified in user coordinates. (If<br>
+ <i>sheet </i>is a medium or a stream, then <i>sheet-x </i>and <i>sheet-y </i>are transformed by the user transforma-<br>
+ tion.)<br>
+<br>
+ <i>pixmap </i>must be an object returned by <tt>allocate-pixmap </tt>that has the appropriate characteristics<br>
+ for <i>sheet</i>.<br>
+<br>
+ The returned value is the pixmap.<br>
+<br>
+ This is intended to specialize on both the <i>pixmap </i>and <i>sheet </i>arguments.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>copy-area </tt><i>sheet from-x from-y width height to-x to-y </i>[<i>Generic Function</i>]<br>
+ Copies the pixels from the sheet <i>sheet </i>starting at the position specified by (<i>from-x</i>,<i>from-y</i>) to the<br>
+ position (<i>to-x</i>,<i>to-y</i>) on the same sheet. A rectangle whose width and height is specified by <i>width</i>
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page106.html">Page 106</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page108.html">Page 108</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

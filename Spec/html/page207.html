@@ -1,0 +1,141 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page206.html">Page 206</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page208.html">Page 208</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 23. PRESENTATION TYPES </b><br>
+<br>
+<br>
+ <i>name<br>
+ </i><tt>(</tt><i>name parameters...</i><tt>)<br>
+ ((</tt><i>name parameters...</i><tt>) </tt><i>options...</i><tt>)<br><br>
+ </tt>Note that <i>name </i>can be either a symbol that names a presentation type or a CLOS class object<br>
+ (but not a <tt>built-in-class </tt>object), in order to support anonymous CLOS classes.<br>
+<br>
+ The <i>parameters </i>"parameterize" the type, just as in a Common Lisp type specifier. The func-<br>
+ tion <tt>presentation-typep </tt>uses the parameters to check object membership in a type. Adding<br>
+ parameters to a presentation type specifier produces a subtype, which contains some, but not<br>
+ necessarily all, of the objects that are members of the unparameterized type. Thus the parame-<br>
+ ters can turn off the sensitivity of some presentations that would otherwise be sensitive.<br>
+<br>
+ The <i>options </i>are alternating keywords and values that affect the use or appearance of the pre-<br>
+ sentation, but not its semantic meaning. The <i>options </i>have no effect on presentation sensitivity.<br>
+ (A programmer could choose to make a tester in a translator examine options, but this is not<br>
+ standard practice.) The standard option <tt>:description </tt>is accepted by all types; if it is a non-<br>
+ <tt>nil </tt>value, then the value must be a string that describes the type and overrides the description<br>
+ supplied by the type's definition.<br>
+<br>
+ Every presentation type is associated with a CLOS class. If <i>name </i>is a class object or the<br>
+ name of a class, and that class is not a <tt>built-in-class</tt>, that class is the associated class.<br>
+ Otherwise, <tt>define-presentation-type </tt>defines a class with metaclass <tt>presentation-type-<br>
+ class </tt>and superclasses determined by the presentation type definition. This class is not named<br>
+ <i>name</i>, since that could interfere with built-in Common Lisp types such as <tt>and</tt>, <tt>member</tt>, and<br>
+ <tt>integer</tt>. <tt>class-name </tt>of this class returns a list <tt>(presentation-type </tt><i>name</i><tt>)</tt>. <tt>presentation-<br>
+ type-class </tt>is a subclass of <tt>standard-class</tt>.<br>
+<br>
+ Implementations are permitted to require programmers to evaluate the <tt>defclass </tt>form first in<br>
+ the case when the same name is used in both a <tt>defclass </tt>and a <tt>define-presentation-type</tt>.<br>
+<br>
+ Every CLOS class (except for built-in classes) is a presentation type, as is its name. If it has not<br>
+ been defined with <tt>define-presentation-type</tt>, it allows no parameters and no options.<br>
+<br>
+ <b>Presentation type inheritance </b>is used both to inherit methods ("what parser should be used for<br>
+ this type?"), and to establish the semantics for the type ("what objects are sensitive in this<br>
+ input context?"). Inheritance of methods is the same as in CLOS and thus depends only on the<br>
+ type name, not on the parameters and options.<br>
+<br>
+ During presentation method combination, presentation type inheritance arranges to translate<br>
+ the parameters of a subtype into a new set of parameters for its supertype, and translates the<br>
+ options of the subtype into a new set of options for the supertype.<br>
+ <br><b>23.3.1 Defining Presentation Types<br><br>
+ </b><big><b>&#061&gt  </b></big><tt>define-presentation-type </tt><i>name parameters </i><tt>&key </tt><i>options inherit-from description history<br>
+ parameters-are-types </i>[<i>Macro</i>]
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page206.html">Page 206</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page208.html">Page 208</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

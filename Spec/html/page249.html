@@ -1,0 +1,136 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page248.html">Page 248</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page250.html">Page 250</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 24. INPUT EDITING AND COMPLETION FACILITIES </b><br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>*standard-activation-gestures* </tt>[<i>Variable</i>]<br>
+ The default set of activation gestures. The exact set of standard activation is unspecified, but<br>
+ must include the gesture that corresponds to the <tt>#\Newline </tt>character.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>with-activation-gestures </tt><i>(gestures </i><tt>&key </tt><i>override) </i><tt>&body </tt><i>body </i>[<i>Macro</i>]<br>
+ Specifies a list of gestures that terminate input during the execution of <i>body</i>. <i>body </i>may have zero<br>
+ or more declarations as its first forms. <i>gestures </i>must be either a single gesture name or a form<br>
+ that evaluates to a list of gesture names.<br>
+<br>
+ If the boolean <i>override </i>is <b>true</b>, then <i>gestures </i>will override the current activation gestures. If<br>
+ it is <b>false </b>(the default), then <i>gestures </i>will be added to the existing set of activation gestures.<br>
+ <tt>with-activation-gestures </tt>must bind <tt>*activation-gestures* </tt>to the new set of activation<br>
+ gestures.<br>
+<br>
+ See also the <tt>:activation-gestures </tt>and <tt>:additional-activation-gestures </tt>options to <tt>accept</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>activation-gesture-p </tt><i>gesture </i>[<i>Function</i>]<br>
+ Returns <b>true </b>if the gesture object <i>gesture </i>is an activation gesture, otherwise returns <b>false</b>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>*delimiter-gestures* </tt>[<i>Variable</i>]<br>
+ The set of currently active delimiter gestures. The global value of this must be <tt>nil</tt>. The exact<br>
+ format of <tt>*delimiter-gestures* </tt>is unspecified. <tt>*delimiter-gestures* </tt>and the elements in<br>
+ it may have dynamic extent.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>with-delimiter-gestures </tt><i>(gestures </i><tt>&key </tt><i>override) </i><tt>&body </tt><i>body </i>[<i>Macro</i>]<br>
+ Specifies a list of gestures that terminate an individual token, but not the entire input, during<br>
+ the execution of <i>body</i>. <i>body </i>may have zero or more declarations as its first forms. <i>gestures </i>must<br>
+ be either a single gesture name or a form that evaluates to a list of gesture names.<br>
+<br>
+ If the boolean <i>override </i>is <b>true</b>, then <i>gestures </i>will override the current delimiter gestures. If it is<br>
+ <b>false </b>(the default), then <i>gestures </i>will be added to the existing set of delimiter gestures. <tt>with-<br>
+ delimiter-gestures </tt>must bind <tt>*delimiter-gestures* </tt>to the new set of delimiter gestures.<br>
+<br>
+ See also the <tt>:delimiter-gestures </tt>and <tt>:additional-delimiter-gestures </tt>options to <tt>accept</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>delimiter-gesture-p </tt><i>gesture </i>[<i>Function</i>]<br>
+ Returns <b>true </b>if the gesture object <i>gesture </i>is a delimiter gesture, otherwise returns <b>false</b>.<br>
+ <br><b>24.3 Signalling Errors Inside </b>present <br><b>Methods<br>
+<br>
+ </b><big><b>&#061&gt  </b></big><tt>simple-parse-error </tt>[<i>Error Condition</i>]
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page248.html">Page 248</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page250.html">Page 250</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

@@ -1,0 +1,143 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page155.html">Page 155</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page157.html">Page 157</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ </b><b>CHAPTER 16. OUTPUT RECORDING </b><br>
+<br>
+ designated by <i>stream</i>. While <i>body </i>is being evaluated, the current output record for <i>stream </i>will<br>
+ be bound to the new output record.<br>
+<br>
+ If <i>record </i>is supplied, it is the name of a variable that will be lexically bound to the new output<br>
+ record inside of body. <i>init-args </i>are CLOS initialization arguments that are passed to <tt>make-<br>
+ instance </tt>when the new output record is created.<br>
+<br>
+ <tt>with-new-output-record </tt>returns the output record it creates.<br>
+<br>
+ The <i>stream </i>argument is not evaluated, and must be a symbol that is bound to an output recording<br>
+ stream. If <i>stream </i>is <tt>t</tt>, <tt>*standard-output* </tt>is used. <i>body </i>may have zero or more declarations as<br>
+ its first forms.<br>
+<br>
+ <tt>with-new-output-record </tt>must be implemented by expanding into a call to <tt>invoke-with-new-<br>
+ output-record </tt>supplying a function that executes <i>body </i>as the <i>continuation </i>argument to <tt>invoke-<br>
+ with-new-output-record</tt>. The exact behavior of this macro is described under <tt>invoke-with-<br>
+ new-output-record</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>invoke-with-new-output-record </tt><i>stream continuation record-type </i><tt>&rest </tt><i>init-args </i><tt>&key </tt>[<i>Generic Function</i>]<br>
+ Creates a new output record of type <i>record-type</i>. The function <i>continuation </i>is then called, and<br>
+ any output it does to the <b>output recording stream </b><i>stream </i>is captured in the new output record.<br>
+ The new record is then inserted into the current "open" output record associated with <i>stream<br>
+ </i>(or the top-level output record if there is no currently "open" one). While <i>continuation </i>is being<br>
+ executed, the current output record for <i>stream </i>will be bound to the new output record.<br>
+<br>
+ <i>continuation </i>is a function of two arguments, the stream and the output record; it has dynamic<br>
+ extent. <i>init-args </i>are CLOS initialization arguments that are passed to <tt>make-instance </tt>when the<br>
+ new output record is created.<br>
+<br>
+ <tt>invoke-with-new-output-record </tt>returns the output record it creates.<br>
+<br>
+ All output recording streams must implement a method for <tt>invoke-with-new-output-record</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>with-output-to-output-record </tt><i>(stream </i><tt>&optional </tt><i>record-type record </i><tt>&rest </tt><i>init-args)) </i><tt>&body<br>
+ </tt><i>body </i>[<i>Macro</i>]<br>
+ This is identical to <tt>with-new-output-record </tt>except that the new output record is not inserted<br>
+ into the output record hierarchy, and the text cursor position of <i>stream </i>is initially bound to<br>
+ (0<i>;</i>0).<br>
+<br>
+ <i>record-type </i>is the type of output record to create, which defaults to <tt>standard-sequence-output-<br>
+ record</tt>. <i>init-args </i>are CLOS initialization arguments that are passed to <tt>make-instance </tt>when<br>
+ the new output record is created.<br>
+<br>
+ If <i>record </i>is supplied, it is a variable that will be bound to the new output record while body is<br>
+ evaluated.<br>
+<br>
+ <tt>with-output-to-output-record </tt>returns the output record it creates.
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page155.html">Page 155</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page157.html">Page 157</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

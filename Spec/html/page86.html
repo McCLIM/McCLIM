@@ -1,0 +1,135 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page85.html">Page 85</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page87.html">Page 87</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 10. DRAWING OPTIONS </b><br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>:line-dashes </tt>[<i>Option</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>line-style-dashes </tt><i>line-style </i>[<i>Generic Function</i>]<br>
+ Controls whether lines or arcs are drawn as dashed figures, and if so, what the dashing pattern<br>
+ is. Possible values are:<br>
+<ul>
+ <li><tt>nil</tt> - lines are drawn solid, with no dashing. This is the default.<br>
+<br>
+ <li><tt>t</tt> - lines are drawn dashed, with a dash pattern that is unspecified and may vary with<br>
+ the rendering engine. This allows the underlying display substrate to provide a default<br>
+ dashed line for the programmer whose only requirement is to draw a line that is visually<br>
+ distinguishable from the default solid line.<br>
+<br>
+ <li>A sequence - specifies a sequence, usually a vector, controlling the dash pattern of a drawing<br>
+ function. It is an error if the sequence does not contain an even number of elements. The<br>
+ elements of the sequence are lengths (as real numbers) of individual components of the<br>
+ dashed line or arc. The odd elements specify the length of inked components, the even<br>
+ elements specify the gaps. All lengths are expressed in the units described by <tt>line-style-<br>
+ unit</tt>.<br>
+</ul>
+ (See also <tt>make-contrasting-dash-patterns</tt>.)<br>
+ <br><b>10.3.2 Contrasting Dash Patterns<br><br>
+ </b><big><b>&#061&gt  </b></big><tt>make-contrasting-dash-patterns </tt><i>n </i><tt>&optional </tt><i>k </i>[<i>Function</i>]<br>
+ If <i>k </i>is not supplied, this returns a vector of <i>n </i>dash patterns with recognizably different appear-<br>
+ ance. Elements of the vector are guaranteed to be acceptable values for <tt>:dashes</tt>, and do not<br>
+ include <tt>nil</tt>, but their class is not otherwise specified. The vector is a fresh object that may be<br>
+ modified.<br>
+<br>
+ If <i>k </i>is supplied, it must be an integer between 0 and <i>n </i><big><b>+ </b></big>1 (inclusive), in which case <tt>make-<br>
+ contrasting-dash-patterns </tt>returns the <i>k</i>'th dash-pattern rather than returning a vector of<br>
+ dash-patterns.<br>
+<br>
+ If the implementation does not have <i>n </i>different contrasting dash patterns, <tt>make-contrasting-<br>
+ dash-patterns </tt>signals an error. This will not happen unless <i>n </i>is greater than eight.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>contrasting-dash-pattern-limit </tt><i>port </i>[<i>Generic Function</i>]<br>
+ Returns the number of contrasting dash patterns that can be rendered on any medium on the<br>
+ <b>port </b><i>port</i>. Implementations are encouraged to make this as large as possible, but it must be<br>
+ at least 8. All classes that obey the port protocol must implement a method for this generic<br>
+ function.
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page85.html">Page 85</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page87.html">Page 87</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

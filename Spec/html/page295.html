@@ -1,0 +1,142 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page294.html">Page 294</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page296.html">Page 296</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 28. APPLICATION FRAMES </b><br>
+<br>
+ in the input context <i>input-context</i>. <i>presentation</i>, <i>window</i>, <i>x</i>, <i>y</i>, and <i>stream </i>are as for <tt>document-<br>
+ presentation-translator</tt>.<br>
+<br>
+ Typically pointer documentation will consist of a brief description of each translator that is<br>
+ applicable to the specified presentation in the specified input context given the current modifier<br>
+ state for the window. For example, the following documentation might be produced when the<br>
+ pointer is pointing to a Lisp expression when the input context is <tt>form</tt>:<br>
+<br>
+<br>
+ <tt>Left: '(1 2 3); Middle: (DESCRIBE '(1 2 3)); Right: Menu<br>
+<br>
+<br>
+ </tt><big><b>&#061&gt  </b></big><tt>frame-drag-and-drop-feedback </tt><i>frame presentation stream initial-x initial-y new-x new-y state<br>
+ </i>[<i>Generic Function</i>]<br>
+ The default feedback function for translators defined by <tt>define-drag-and-drop-translator</tt>,<br>
+ which provides visual feedback during the dragging phase of such translators on behalf of the<br>
+ <b>frame </b><i>frame</i>. <i>presentation </i>is the presentation being dragged on the stream <i>stream</i>. The pointing<br>
+ device was initially at the position specified by <i>initial-x </i>and <i>initial-y</i>, and is at the position<br>
+ specified by <i>new-x </i>and <i>new-y </i>when <tt>frame-drag-and-drop-feedback </tt>is invoked. (Both positions<br>
+ are supplied for "rubber-banding", if that is the sort of desired feedback.) <i>state </i>will be either<br>
+ <tt>:highlight</tt>, meaning that the feedback should be drawn, or <tt>:unhighlight</tt>, meaning that the<br>
+ feedback should be erased.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>frame-drag-and-drop-highlighting </tt><i>frame presentation stream state </i>[<i>Generic Function</i>]<br>
+ The default highlighting function for translators defined by <tt>define-drag-and-drop-translator</tt>,<br>
+ which is invoked when a "to object" should be highlighted during the dragging phase of such<br>
+ translators on behalf of the <b>frame </b><i>frame</i>. <i>presentation </i>is the presentation over which the pointing<br>
+ device is located on the stream <i>stream</i>. <i>state </i>will be either <tt>:highlight</tt>, meaning that the high-<br>
+ lighting for the presentation should be drawn, or <tt>:unhighlight</tt>, meaning that the highlighting<br>
+ should be erased.<br>
+ <br><b>28.4 The Generic Command Loop<br><br>
+ </b>The default application command loop provided by CLIM performs the following steps:<ol>
+ <li> Prompts the user for input.<br>
+<br>
+ <li> Reads a command. Each application frame has a command table that contains those<br>
+ commands that the author of the application wishes to allow the user to invoke at a given<br>
+ time. Since commands may be read in any number of ways, the generic command loop<br>
+ enforces no particular interface style.<br>
+<br>
+ <li> Executes the command. The definition of each command may refer to (and update) the<br>
+ state variables of the frame, to which <tt>*application-frame* </tt>will be bound.<br>
+<br>
+ <li> Runs the display function for each pane in the frame as necessary. The display function<br>
+ may refer to the frame's state variables. Display functions are
+	usually written by the
+</ol>
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page294.html">Page 294</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page296.html">Page 296</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

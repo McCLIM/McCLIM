@@ -1,0 +1,142 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page199.html">Page 199</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page201.html">Page 201</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 22. EXTENDED STREAM INPUT </b><br>
+<ul>
+ <li>Clicking or releasing a pointer button<br>
+<br>
+ <li>Clicking or releasing a pointer button while the pointer is over a presentation<br>
+<br>
+ <li>Keyboard event (typing a character)</ul>
+ The <i>sheet </i>argument is not evaluated, and must be a symbol that is bound to an input sheet or<br>
+ stream. If <i>sheet </i>is <tt>t</tt>, <tt>*standard-output* </tt>is used. <i>body </i>may have zero or more declarations as<br>
+ its first forms.<br>
+<br>
+ The <i>pointer </i>argument specifies a pointer to track. It defaults to the primary pointer for the<br>
+ sheet, <tt>(stream-primary-pointer </tt><i>sheet</i><tt>)</tt>.<br>
+<br>
+ When the boolean <i>multiple-windows </i>is <b>true</b>, then the pointer will be tracked across multiple<br>
+ windows, otherwise is will be tracked only in the window corresponding to <i>sheet</i>.<br>
+<br>
+ When the boolean <i>transformp </i>is <b>true</b>, then the coordinates supplied to the <tt>:pointer-motion<br>
+ </tt>clause will be in the "user" coordinate system rather than in stream coordinates, that is, the<br>
+ medium's transformation will be applied to the coordinates.<br>
+<br>
+ <i>context-type </i>is used to specify the presentation type of presentations that will be "visible" to the<br>
+ tracking code for purposes of highlighting and for the <tt>:presentation</tt>, <tt>:presentation-button-<br>
+ press</tt>, and <tt>:presentation-button-release </tt>clauses. Supplying <i>context-type </i>is only useful when<br>
+ <i>sheet </i>is an output recording stream. <i>context-type </i>defaults to <tt>t</tt>, meaning that all presentations<br>
+ are visible.<br>
+<br>
+ When <i>highlight </i>is <b>true</b>, <tt>tracking-pointer </tt>will highlight applicable presentations as the pointer is<br>
+ positioned over them. highlight defaults to <b>true </b>when any of the <tt>:presentation</tt>, <tt>:presentation-<br>
+ button-press</tt>, or <tt>:presentation-button-release </tt>clauses is supplied, otherwise it defaults to<br>
+ <b>false</b>.<br>
+<br>
+ The body of <tt>tracking-pointer </tt>consists of a list of clauses. Each clause is of the form<br>
+ <i>(clause-keyword arglist . clause-body)<br>
+ </i>and defines a local function to be run upon occurrence of each type of event. The possible values<br>
+ for <i>clause-keyword </i>and the associated <i>arglist </i>are:<ul>
+ <li><tt>:pointer-motion </tt><i>(</i><tt>&key </tt><i>window x y)<br>
+ </i>Defines a clause to run whenever the pointer moves. In the clause, <i>window </i>is bound to the<br>
+ window in which the motion occurred, and <i>x </i>and <i>y </i>to the coordinates of the pointer. (See<br>
+ the keyword argument <tt>:transformp </tt>below for a description of the coordinate system in<br>
+ which <i>x </i>and <i>y </i>are expressed.)<br><br>
+ <li><tt>:presentation </tt><i>(</i><tt>&key </tt><i>presentation window x y)<br>
+ </i>Defines a clause to run whenever the pointer moves over a presentation of the desired type.<br>
+ (See the keyword argument <tt>:context-type </tt>above for a description of how to specify the<br>
+ desired type.) In the clause, <i>presentation </i>is bound to the presentation, <i>window </i>to the<br>
+ window in which the motion occurred, and <i>x </i>and <i>y </i>to the coordinates of the pointer. (See<br>
+ the keyword argument <tt>:transformp </tt>above for a description of the coordinate system in<br>
+ which <i>x </i>and <i>y </i>are expressed.)</ul>
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page199.html">Page 199</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page201.html">Page 201</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

@@ -1,0 +1,140 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page325.html">Page 325</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page327.html">Page 327</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 30. GADGETS </b><br>
+<br>
+ When this function returns <tt>nil</tt>, that indicates that there is no value activate callback for the<br>
+ gadget.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>activate-callback </tt><i>action-gadget client gadget-id </i>[<i>Callback Generic Function</i>]<br>
+ This callback is invoked when the gadget is activated.<br>
+<br>
+ The default method (on <tt>action-gadget</tt>) calls the function stored in <tt>gadget-activate-callback<br>
+ </tt>with one argument, the gadget.<br>
+<br>
+ CLIM implementations must implement or inherit a method for <tt>activate-callback </tt>for every<br>
+ gadget that is a subclass of <tt>action-gadget</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>oriented-gadget </tt>[<i>Class</i>]<br>
+ The class that is mixed in to a gadget that has an orientation associated with it, for example, a<br>
+ slider.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>:orientation </tt>[<i>Init Arg</i>]<br>
+ All subclasses of <tt>oriented-gadget </tt>must handle this initarg, which is used to specify the orien-<br>
+ tation of the gadget.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>gadget-orientation </tt><i>oriented-gadget </i>[<i>Generic Function</i>]<br>
+ Returns the orientation of the gadget <i>oriented-gadget</i>. Typically, this will be a keyword such as<br>
+ <tt>:horizontal </tt>or <tt>:vertical</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>labelled-gadget </tt>[<i>Class</i>]<br>
+ The class that is mixed in to a gadget that has a label, for example, a push button.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>:label </tt>[<i>Init Arg</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>:align-x </tt>[<i>Init Arg</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>:align-y </tt>[<i>Init Arg</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>:label-text-style </tt>[<i>Init Arg</i>]<br>
+ All subclasses of <tt>labelled-gadget </tt>must handle these initargs, which are used to specify the<br>
+ label, its <i>x </i>and <i>y </i>alignment, and its text style for the gadget.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>gadget-label </tt><i>labelled-gadget </i>[<i>Generic Function</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>(setf gadget-label) </tt><i>label labelled-gadget </i>[<i>Generic Function</i>]<br>
+ Returns (or sets) the label of the gadget <i>labelled-gadget</i>. The label must be a string. Changing<br>
+ the label of a gadget may result in invoking the layout protocol on the gadget and its ancestor<br>
+ sheets.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>gadget-label-align-x </tt><i>labelled-gadget </i>[<i>Generic Function</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>(setf gadget-label-align-x) </tt><i>alignment labelled-gadget </i>[<i>Generic Function</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>gadget-label-align-y </tt><i>labelled-gadget </i>[<i>Generic Function</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>(setf gadget-label-align-y) </tt><i>alignment labelled-gadget </i>[<i>Generic Function</i>]
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page325.html">Page 325</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page327.html">Page 327</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

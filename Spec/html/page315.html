@@ -1,0 +1,137 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page314.html">Page 314</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page316.html">Page 316</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 29. PANES </b><br>
+<br>
+ These options specify the default text margin (that is, how much space is left around the inside<br>
+ edge of the pane) and vertical spacing (that is, how much space is between each text line) for the<br>
+ pane. The default for <tt>:text-margin </tt>is the width of the window, and the default for <tt>:vertical-<br>
+ spacing </tt>is 2.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>:end-of-line-action </tt>[<i>Option</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>:end-of-page-action </tt>[<i>Option</i>]<br>
+ These options specify the end-of-line and end-of-page actions to be used for the pane. The<br>
+ default for these options are <tt>:wrap </tt>and <tt>:scroll</tt>, respectively.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>:output-history </tt>[<i>Option</i>]<br>
+ This option names the class to be used for the output history for the pane. The default is<br>
+ <tt>standard-tree-output-history</tt>.<br>
+ <br><b>29.4.2 Application Pane Classes<br>
+<br>
+ </b><big><b>&#061&gt  </b></big><tt>clim-stream-pane </tt>[<i>Service Pane</i>]<br>
+ This class implements a pane that supports the CLIM graphics, extended input and output, and<br>
+ output recording protocols. Most application panes will be subclasses of this class.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>interactor-pane </tt>[<i>Service Pane</i>]<br>
+ The pane class that is used to implement "interactor" panes. The default method for <tt>frame-<br>
+ standard-input </tt>will return the first pane of this type.<br>
+<br>
+ For <tt>interactor-pane</tt>, the default for <tt>:display-time </tt>is <tt>nil </tt>and the default for <tt>:scroll-bars<br>
+ </tt>is <tt>:vertical</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>application-pane </tt>[<i>Service Pane</i>]<br>
+ The pane class that is used to implement "application" panes. The default method for <tt>frame-<br>
+ standard-output </tt>will return the first pane of this type.<br>
+<br>
+ For <tt>application-pane</tt>, the default for <tt>:display-time </tt>is <tt>:command-loop </tt>and the default for<br>
+ <tt>:scroll-bars </tt>is <tt>t</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>command-menu-pane </tt>[<i>Service Pane</i>]<br>
+ The pane class that is used to implement command menu panes that are not menu bars. The<br>
+ default display function for panes of this type is <tt>display-command-menu</tt>.<br>
+<br>
+ For <tt>command-menu-pane</tt>, the default for <tt>:display-time </tt>is <tt>:command-loop</tt>, the default for<br>
+ <tt>:incremental-redisplay </tt>is <tt>t</tt>, and the default for <tt>:scroll-bars </tt>is <tt>t</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>title-pane </tt>[<i>Service Pane</i>]
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page314.html">Page 314</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page316.html">Page 316</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

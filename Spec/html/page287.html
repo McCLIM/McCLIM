@@ -1,0 +1,143 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page286.html">Page 286</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page288.html">Page 288</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 28. APPLICATION FRAMES </b><br>
+<ul>
+ <a href="./page288.html">Section 28.2.1</a> for a complete description of the <tt>:pane </tt>option.<br>
+<br>
+ <li><tt>:panes </tt><i>form</i>, where <i>form </i>is an alist that specifies names and panes of the application. The<br>
+ default is <tt>nil</tt>, meaning that there are no named panes. The <tt>:panes </tt>and <tt>:pane </tt>options<br>
+ are mutually exclusive. See <a href="./page288.html">Section 28.2.1</a> for a complete description of the <tt>:panes </tt>option.<br>
+<br>
+ <li><tt>:layouts </tt><i>form</i>, where <i>form </i>specifies the layout. The default layout is to lay out all of the<br>
+ named panes in horizontal strips. The <tt>:layouts </tt>and <tt>:pane </tt>options are mutually exclusive.<br>
+ See <a href="./page288.html">Section 28.2.1</a> for a complete description of the <tt>:layouts </tt>option.<br>
+<br>
+ <li><tt>:command-table </tt><i>name-and-options</i>, where <i>name-and-options </i>is a list consisting of the<br>
+ name of the application frame's command table followed by some keyword-value pairs.<br>
+ The keywords can be <tt>:inherit-from </tt>or <tt>:menu </tt>(which are as in <tt>define-command-table</tt>).<br>
+ The default is to create a command table with the same name as the application frame.<br>
+<br>
+ <li><tt>:menu-bar </tt><i>form </i>is used to specify what commands will appear in a "menu bar". It typically<br>
+ specifies the top-level commands of the application. <i>form </i>is either <tt>nil</tt>, meaning there is<br>
+ no menu bar; <tt>t</tt>, meaning that the menu from frame's command table (from the <tt>:command-<br>
+ table </tt>option) should be used; a symbol that names a command table, meaning that that<br>
+ command table's menu should be used; or a list, which is interpreted the same way the<br>
+ <tt>:menu </tt>option to <tt>define-command-table </tt>is interpreted. The default is <tt>t</tt>.<br>
+<br>
+ <li><tt>:disabled-commands </tt><i>commands</i>, where <i>commands </i>is a list of command names that are<br>
+ initially disabled in the application frame.<br>
+<br>
+ <li><tt>:command-definer </tt><i>value</i>, where <i>value </i>either <tt>nil</tt>, <tt>t</tt>, or another symbol. When it is <tt>nil</tt>, no<br>
+ command-defining macro is defined. When it is <tt>t</tt>, a command-defining macro is defined,<br>
+ whose name is of the form <tt>define-</tt><i>name</i><tt>-command</tt>. When it is another symbol, the symbol<br>
+ names the command-defining macro. The default is <tt>t</tt>.<br>
+<br>
+ <li><tt>:top-level </tt><i>form</i>, where <i>form </i>is a list whose first element is the name of a function to be<br>
+ called to execute the top-level loop. The function must take at least one argument, the<br>
+ frame. The rest of the list consists of additional arguments to be passed to the function.<br>
+ The default function is <tt>default-frame-top-level</tt>.</ul>
+ The <i>name</i>, <i>superclasses</i>, and <i>slots </i>arguments are not evaluated. The values of each of the options<br>
+ are evaluated.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>make-application-frame </tt><i>frame-name </i><tt>&rest </tt><i>options </i><tt>&key </tt><i>pretty-name frame-manager enable<br>
+ state left top right bottom width height save-under frame-class </i><tt>&allow-other-keys </tt>[<i>Function</i>]<br>
+ Makes an instance of the application frame of type <i>frame-class</i>. If <i>frame-class </i>is not supplied, it<br>
+ defaults to <i>frame-name</i>.<br>
+<br>
+ The size options <i>left</i>, <i>top</i>, <i>right</i>, <i>bottom</i>, <i>width</i>, and <i>height </i>can be used to specify the size of the<br>
+ frame.<br>
+<br>
+ <i>options </i>are passed as additional arguments to <tt>make-instance</tt>, after the <i>pretty-name</i>, <i>frame-<br>
+ manager</i>, <i>enable</i>, <i>state</i>, <i>save-under</i>, <i>frame-class</i>, and size options have been removed.
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page286.html">Page 286</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page288.html">Page 288</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

@@ -1,0 +1,138 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page164.html">Page 164</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page166.html">Page 166</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 17. TABLE FORMATTING </b><br>
+<br>
+ within a row, a cell within a cell, or a row within a cell. Note that this does not prohibit the<br>
+ nesting of calls to <tt>formatting-table</tt>, it simply requires that programmers include the inner<br>
+ table within one of the cells of the outer table.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>table-output-record </tt>[<i>Protocol Class</i>]<br>
+ The protocol class that represents tabular output records; a subclass of <tt>output-record</tt>. If you<br>
+ want to create a new class that behaves like a table output record, it should be a subclass of<br>
+ <tt>table-output-record</tt>. Subclasses of <tt>table-output-record </tt>must obey the table output record<br>
+ protocol.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>table-output-record-p </tt><i>object </i>[<i>Function</i>]<br>
+ Returns <b>true </b>if <i>object </i>is a <b>table output record</b>, otherwise returns <b>false</b>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>:x-spacing </tt>[<i>Init Arg</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>:y-spacing </tt>[<i>Init Arg</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>:multiple-columns-x-spacing </tt>[<i>Init Arg</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>:equalize-column-widths </tt>[<i>Init Arg</i>]<br>
+ All subclasses of <tt>table-output-record </tt>must handle these initargs, which are used to specify,<br>
+ respectively, the <i>x </i>and <i>y </i>spacing, the multiple column <i>x </i>spacing, and equal-width columns<br>
+ attributes of the table.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>standard-table-output-record </tt>[<i>Class</i>]<br>
+ The instantiable class of output record that represents tabular output. Its children will be a<br>
+ sequence of either rows or columns, with presentation output records possibly intervening. This<br>
+ is a subclass of <tt>table-output-record</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>map-over-table-elements </tt><i>function table-record type </i>[<i>Generic Function</i>]<br>
+ Applies <i>function </i>to all the rows or columns of <i>table-record </i>that are of type <i>type</i>. <i>type </i>is either<br>
+ <tt>:row</tt>, <tt>:column</tt>, or <tt>:row-or-column</tt>. <i>function </i>is a function of one argument, an output record; it<br>
+ has dynamic extent. <tt>map-over-table-elements </tt>is responsible for ensuring that rows, columns,<br>
+ and cells are properly nested. It must skip over intervening non-table output record structure,<br>
+ such as presentations.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>adjust-table-cells </tt><i>table-record stream </i>[<i>Generic Function</i>]<br>
+ This function is called after the tabular output has been collected, but before it has been replayed.<br>
+ The method on <tt>standard-table-output-record </tt>implements the usual table layout constraint<br>
+ solver (described above) by moving the rows or columns of the table output record <i>table-record<br>
+ </i>and the cells within the rows or columns. <i>stream </i>is the stream on which the table is displayed.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>adjust-multiple-columns </tt><i>table-record stream </i>[<i>Generic Function</i>]<br>
+ This is called after <tt>adjust-table-cells </tt>to account for the case where the programmer wants<br>
+ the table to have multiple columns. <i>table-record </i>and <i>stream </i>are as for <tt>adjust-table-cells</tt>.
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page164.html">Page 164</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page166.html">Page 166</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

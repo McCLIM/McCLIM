@@ -1,0 +1,134 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page238.html">Page 238</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page240.html">Page 240</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 23. PRESENTATION TYPES </b><br>
+<br>
+ The <i>test </i>parameter and the options are the same as for <tt>completion </tt>except that <i>value-key </i>and<br>
+ <i>documentation-key </i>default to functions that support the specified alist format.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>subset-completion </tt><i>sequence </i><tt>&key </tt><i>test value-key </i>[<i>Presentation Type</i>]<br>
+ The type that selects one or more from a finite set of possibilities, with "completion" of partial<br>
+ inputs. The parameters and options are the same as for <tt>completion</tt>, plus the additional options<br>
+ <i>separator </i>and <i>echo-space</i>, which are as for the <tt>sequence </tt>type. The subset types below are<br>
+ implemented in terms of the <tt>subset-completion </tt>type.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>subset &rest </tt><i>elements </i>[<i>Presentation Type Abbreviation</i>]<br>
+ The type that specifies a subset of <i>elements</i>. Values of this type are lists of zero or more values<br>
+ chosen from the possibilities in <i>elements</i>. The printed representation is the names of the elements<br>
+ separated by commas. The options are the same as for <tt>completion</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>subset-sequence </tt><i>sequence </i><tt>&key </tt><i>test </i>[<i>Presentation Type Abbreviation</i>]<br>
+ Like <tt>subset</tt>, except that the set of possibilities is the sequence <i>sequence</i>. The parameter <i>test<br>
+ </i>and the options are the same as for <tt>completion</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>subset-alist </tt><i>alist </i><tt>&key </tt><i>test </i>[<i>Presentation Type Abbreviation</i>]<br>
+ Like <tt>subset</tt>, except that the set of possibilities, the parameters, and the options are as for<br>
+ <tt>member-alist</tt>.<br>
+ <br><b>23.8.6 Sequence Presentation Types<br><br>
+ </b><big><b>&#061&gt  </b></big><tt>sequence </tt><i>type </i>[<i>Presentation Type</i>]<br>
+ The type that represents a sequence of elements of type <i>type</i>. <i>type </i>can be a presentation type<br>
+ abbreviation. The printed representation of a <tt>sequence </tt>type is the elements separated by<br>
+ commas. It is unspecified whether <tt>accept </tt>returns a list or a vector.<br>
+<br>
+ The options to this type are <i>separator </i>and <i>echo-space</i>. <i>separator </i>is used to specify a character that<br>
+ will act as the separator between elements of the sequence; the default is the comma character<br>
+ <tt>#\,</tt>. <i>echo-space </i>must be <b>true </b>or <b>false</b>; when it is <b>true </b>(the default) a space will be automatically<br>
+ inserted into the input buffer when the user types a separator character.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>sequence-enumerated &rest </tt><i>types </i>[<i>Presentation Type</i>]<br>
+ <tt>sequence-enumerated </tt>is like <tt>sequence</tt>, except that the type of each element in the sequence<br>
+ is individually specified. The elements of <i>types </i>can be presentation type abbreviations. It is<br>
+ unspecified whether <tt>accept </tt>returns a list or a vector.<br>
+<br>
+ The options to this type are <i>separator </i>and <i>echo-space</i>, which are as for the <tt>sequence </tt>type.
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page238.html">Page 238</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page240.html">Page 240</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

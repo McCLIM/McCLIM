@@ -1,0 +1,141 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page171.html">Page 171</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page173.html">Page 173</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 18. GRAPH FORMATTING </b><br>
+<br>
+ Returns <b>true </b>if <i>object </i>is a <b>graph output record</b>, otherwise returns <b>false</b>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>standard-graph-output-record </tt>[<i>Class</i>]<br>
+ The instantiable class of output record that represents a graph. Its children will be a sequence<br>
+ graph nodes. This is a subclass of <tt>graph-output-record</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>:orientation </tt>[<i>Init Arg</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>:center-nodes </tt>[<i>Init Arg</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>:cutoff-depth </tt>[<i>Init Arg</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>:merge-duplicates </tt>[<i>Init Arg</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>:generation-separation </tt>[<i>Init Arg</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>:within-generation-separation </tt>[<i>Init Arg</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>:hash-table </tt>[<i>Init Arg</i>]<br>
+ All the graph output record must handle these seven initargs, which are used to specify, respec-<br>
+ tively, the orientation, node centering, cutoff depth, merge duplicates, generation and within-<br>
+ generation spacing, and the node hash table of a graph output record.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>define-graph-type </tt><i>graph-type class </i>[<i>Macro</i>]<br>
+ Defines a new graph type named by the symbol <i>graph-type </i>that is implemented by the class<br>
+ <i>class</i>. <i>class </i>must be a subclass of <tt>graph-output-record</tt>. Neither of the arguments is evaluated.<br>
+<br>
+ All CLIM implementations must support graphs of type <tt>:tree</tt>, <tt>:directed-graph </tt>(and its syn-<br>
+ onym <tt>:digraph</tt>), and <tt>:directed-acyclic-graph </tt>(and its synonym <tt>:dag</tt>).<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>graph-root-nodes </tt><i>graph-record </i>[<i>Generic Function</i>]<br>
+ Returns a sequence of the graph node output records corresponding to the root objects for the<br>
+ graph output record <i>graph-record</i>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>(setf graph-root-nodes) </tt><i>roots graph-record </i>[<i>Generic Function</i>]<br>
+ Sets the root nodes of <i>graph-record </i>to <i>roots</i>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>generate-graph-nodes </tt><i>graph-record stream root-objects object-printer inferior-producer </i><tt>&key<br>
+ </tt><i>duplicate-key duplicate-test </i>[<i>Generic Function</i>]<br>
+ This function is responsible for generating all of the graph node output records of the graph.<br>
+ <i>graph-record </i>is the graph output record, and <i>stream </i>is the output stream. The graph node output<br>
+ records are generating by calling the object printer on the root objects, then (recursively) calling<br>
+ the inferior producer on the root objects and calling the object printer on all inferiors. After<br>
+ all of the graph node output records have been generated, the value of <tt>graph-root-nodes </tt>of<br>
+ <i>graph-record </i>must be set to be a sequence of the those graph node output records that correspond<br>
+ to the root objects.<br>
+<br>
+ <i>root-objects</i>, <i>object-printer</i>, <i>inferior-producer</i>, <i>duplicate-key</i>, and <i>duplicate-test </i>are as for <tt>format-<br>
+ graph-from-roots</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>layout-graph-nodes </tt><i>graph-record stream </i>[<i>Generic Function</i>]
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page171.html">Page 171</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page173.html">Page 173</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

@@ -1,0 +1,137 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page281.html">Page 281</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page283.html">Page 283</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 27. COMMAND PROCESSING </b><br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>*command-unparser* </tt>[<i>Variable</i>]<br>
+ Contains the currently active command unparsing function. The default value is the function<br>
+ <tt>command-line-command-unparser</tt>, which is the default command-line unparser.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>*partial-command-parser* </tt>[<i>Variable</i>]<br>
+ Contains the currently active partial command parsing function. The default value is the function<br>
+ <tt>command-line-read-remaining-arguments-for-partial-command</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>*unsupplied-argument-marker* </tt>[<i>Variable</i>]<br>
+ The value of <tt>*unsupplied-argument-marker* </tt>is an object that can be uniquely identified as<br>
+ standing for an unsupplied argument in a command object.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>*numeric-argument-marker* </tt>[<i>Variable</i>]<br>
+ The value of <tt>*numeric-argument-marker* </tt>is an object that can be uniquely identified as stand-<br>
+ ing for a numeric argument in a command object.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>*command-name-delimiters* </tt>[<i>Variable</i>]<br>
+ This is a list of the characters that separate the command name from the command arguments<br>
+ in a command line. The standard set of command name delimiters must include <tt>#\Space</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>*command-argument-delimiters* </tt>[<i>Variable</i>]<br>
+ This is a list of the characters that separate the command arguments from each other in a<br>
+ command line. The standard set of command argument delimiters must include <tt>#\Space</tt>.<br>
+ <br><b>27.6.1 Command Presentation Types<br>
+<br>
+ </b><big><b>&#061&gt  </b></big><tt>command &key </tt><i>command-table </i>[<i>Presentation Type</i>]<br>
+ The presentation type used to represent a command and its arguments; the command must be<br>
+ accessible in <i>command-table </i>and enabled in <tt>*application-frame*</tt>. <i>command-table </i>is a <b>com-<br>
+ mand table designator</b>. If <i>command-table </i>is not supplied, it defaults to the command table for<br>
+ the current application frame, <tt>(frame-command-table *application-frame*)</tt>.<br>
+<br>
+ The object returned by the <tt>accept </tt>presentation method for <tt>command </tt>must be a command object,<br>
+ that is, a cons of the command name and the list of the command's arguments.<br>
+<br>
+ The <tt>accept </tt>presentation method for the <tt>command </tt>type must call the command parser stored<br>
+ in <tt>*command-parser* </tt>to read the command. The parser will recursively call <tt>accept </tt>to read<br>
+ a <tt>command-name </tt>and all of the command's arguments. The parsers themselves must be imple-<br>
+ mented by accepting objects whose presentation type is <tt>command</tt>.<br>
+<br>
+ If the command parser returns a partial command, the <tt>accept </tt>presentation method for the<br>
+ <tt>command </tt>type must call the partial command prser stored in <tt>*partial-command-parser*</tt>.
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page281.html">Page 281</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page283.html">Page 283</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

@@ -1,0 +1,125 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page120.html">Page 120</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page122.html">Page 122</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 13. DRAWING IN COLOR </b><br>
+<br>
+ change the color in the background that would have been drawn by <i>design1 </i>at that point into<br>
+ the color that would have been drawn by <i>design2 </i>at that point, and vice versa. The effect on<br>
+ any color other than the colors determined by those two designs is unspecified; however, drawing<br>
+ the same figure twice using the same flipping ink is guaranteed to be an "identity" operation. If<br>
+ either <i>design1 </i>or <i>design2 </i>is not solid, the consequences are unspecified. The purpose of flipping<br>
+ is to allow the use of "XOR hacks" for temporary changes to the display.<br>
+<br>
+ The opacity of a flipping ink is zero at points where the opacity of either <i>design1 </i>or <i>design2<br>
+ </i>is zero. Otherwise the opacity of a flipping ink is 1. If <i>design1 </i>or <i>design2 </i>is translucent, the<br>
+ consequences are unspecified. If <tt>compose-in </tt>or <tt>compose-out </tt>is used to make a flipping ink<br>
+ translucent, the consequences are unspecified.<br>
+<br>
+ If <i>design1 </i>and <i>design2 </i>are equivalent, the result can be <tt>+nowhere+</tt>.<br>
+<br>
+ In Release 2, <tt>make-flipping-ink </tt>might require <i>design1 </i>and <i>design2 </i>to be colors.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>+flipping-ink+ </tt>[<i>Constant</i>]<br>
+ A flipping ink that flips <tt>+foreground-ink+ </tt>and <tt>+background-ink+</tt>.<br>
+ <br><b>13.8 Examples of Simple Drawing Effects<br><br>
+ </b><p><b>Drawing in the foreground color. </b>Use the default, or specify <tt>:ink +foreground-ink+</tt>.<br>
+<br>
+ <p><b>Erasing. </b>Specify <tt>:ink +background-ink+</tt>.<br>
+<br>
+ <p><b>Drawing in color. </b>Specify <tt>:ink +green+</tt>, <tt>:ink (make-rgb-color 0.6 0.0 0.4)</tt>, and so<br>
+ forth.<br>
+<br>
+ <p><b>Drawing an opaque gray. </b>Specify <tt>:ink (make-gray-color 0.25) </tt>to draw in a shade of<br>
+ gray independent of the window's foreground color. On a non-color, non-grayscale display this<br>
+ will generally turn into a stipple.
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page120.html">Page 120</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page122.html">Page 122</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

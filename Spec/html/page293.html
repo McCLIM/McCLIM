@@ -1,0 +1,139 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page292.html">Page 292</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page294.html">Page 294</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 28. APPLICATION FRAMES </b><br>
+<br>
+ invoked on the top-level pane.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>frame-exit </tt>[<i>Restart</i>]<br>
+ The restart that is invoked when <tt>frame-exit </tt>is called.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>frame-exit </tt><i>frame </i>[<i>Generic Function</i>]<br>
+ Exits from the <b>frame </b><i>frame</i>. The default method (on <tt>standard-application-frame</tt>) invokes<br>
+ the <tt>frame-exit </tt>restart.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>panes-need-redisplay </tt><i>frame </i>[<i>Generic Function</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>pane-needs-redisplay </tt><i>frame pane </i>[<i>Generic Function</i>]<br>
+ <tt>panes-need-redisplay </tt>indicates that all of the panes in the <b>frame </b><i>frame </i>should be redisplayed<br>
+ the next time around the command loop. <tt>pane-needs-redisplay </tt>causes only the pane <i>pane<br>
+ </i>within <i>frame </i>to be redisplayed the next time around the command loop; in this case, <i>pane </i>is<br>
+ either a pane or the name of a named pane.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>redisplay-frame-pane </tt><i>frame pane </i><tt>&key </tt><i>force-p </i>[<i>Generic Function</i>]<br>
+ Causes the pane <i>pane </i>within the <b>frame </b><i>frame </i>to be redisplayed immediately. <i>pane </i>is either a<br>
+ pane or the name of a named pane. When the boolean <i>force-p </i>is <b>true</b>, the maximum level of<br>
+ redisplay is forced (that is, the pane is displayed "from scratch").<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>redisplay-frame-panes </tt><i>frame </i><tt>&key </tt><i>force-p </i>[<i>Generic Function</i>]<br>
+ <tt>redisplay-frame-panes </tt>causes all of the panes in the <b>frame </b><i>frame </i>to be redisplayed immediately<br>
+ by calling <tt>redisplay-frame-pane </tt>on each of the panes in <i>frame </i>that are visible in the current<br>
+ layout. When the boolean <i>force-p </i>is <b>true</b>, the maximum level of redisplay is forced (that is, the<br>
+ pane is displayed "from scratch").<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>frame-replay </tt><i>frame stream </i><tt>&optional </tt><i>region </i>[<i>Generic Function</i>]<br>
+ Replays the contents of <i>stream </i>in the <b>frame </b><i>frame </i>within the region specified by the region<br>
+ <i>region</i>, which defaults to viewport of <i>stream</i>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>notify-user </tt><i>frame format-string </i><tt>&rest </tt><i>format-args </i>[<i>Generic Function</i>]<br>
+ Notifies the user of some event on behalf of the <b>frame </b><i>frame</i>. <i>format-string </i>and <i>format-args </i>are<br>
+ arguments allowable by <tt>format</tt>.<br>
+<br>
+ This function is intended to provide a look and feel independent way for applications to commu-<br>
+ nicate messages to the user. For example, a frame manager might provide a top-level message<br>
+ window or a message window for each frame, or might pop up an alert box.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>frame-properties </tt><i>frame property </i>[<i>Generic Function</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>(setf frame-properties) </tt><i>value frame property </i>[<i>Generic Function</i>]<br>
+ Frame properties can be used to associate frame specific data with frames without adding addi-<br>
+ tional slots to the frame's class. CLIM may use frame properties internally to store information
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page292.html">Page 292</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page294.html">Page 294</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

@@ -1,0 +1,141 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page228.html">Page 228</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page230.html">Page 230</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 23. PRESENTATION TYPES </b><br>
+<br>
+ None of <tt>define-presentation-to-command-translator</tt>'s arguments is evaluated.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>define-presentation-action </tt><i>name (from-type to-type command-table </i><tt>&key </tt><i>gesture tester doc-<br>
+ umentation pointer-documentation menu priority) arglist </i><tt>&body </tt><i>body </i>[<i>Macro</i>]<br>
+ <tt>define-presentation-action </tt>is similar to <tt>define-presentation-translator</tt>, except that<br>
+ the body of the action is not intended to return a value, but should instead side-effect some sort<br>
+ of application state.<br>
+<br>
+ A presentation action does not satisfy a request for input the way an ordinary translator does.<br>
+ Instead, an action is something that happens while waiting for input. After the action has been<br>
+ executed, the program continues to wait for the same input that it was waiting for prior to<br>
+ executing the action.<br>
+<br>
+ The other arguments to <tt>define-presentation-action </tt>are the same as for <tt>define-presentation-<br>
+ translator</tt>. Note that the tester for presentation actions is always assumed to be definitive.<br>
+<br>
+ None of <tt>define-presentation-action</tt>'s arguments is evaluated.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>define-drag-and-drop-translator </tt><i>name (from-type to-type destination-type command-table<br>
+ </i><tt>&key </tt><i>gesture tester documentation pointer-documentation menu priority feedback highlighting)<br>
+ arglist <tt>&body </tt>body </i>[<i>Macro</i>]<br>
+ Defines a "drag and drop" (or "direct manipulation") translator named <i>name </i>that translates<br>
+ from objects of type <i>from-type </i>to objects of type <i>to-type </i>when a "from presentation" is "picked<br>
+ up", "dragged" over, and "dropped" on to a "to presentation" having type <i>destination-type</i>.<br>
+ <i>from-type</i>, <i>to-type</i>, and <i>destination-type </i>are presentation type specifiers, but must not include<br>
+ any presentation type options. <i>from-type</i>, <i>to-type </i>and <i>destination-type </i>may be presentation type<br>
+ abbreviations.<br>
+<br>
+ The interaction style used by these translators is that a user points to a "from presentation"<br>
+ with the pointer, picks it up by pressing a pointer button matching <i>gesture</i>, drags the "from pre-<br>
+ sentation" to a "to presentation" by moving the pointer, and then drops the "from presentation"<br>
+ onto the "to presentation". The dropping might be accomplished by either releasing the pointer<br>
+ button or clicking again, depending on the frame manager. When the pointer button is released,<br>
+ the translator whose <i>destination-type </i>matches the presentation type of the "to presentation" is<br>
+ chosen. For example, dragging a file to the TrashCan on a Macintosh could be implemented by<br>
+ a drag and drop translator.<br>
+<br>
+ While the pointer is being dragged, the function specified by <i>feedback </i>is invoked to provide<br>
+ feedback to the user. The function is called with eight arguments: the application frame object,<br>
+ the "from presentation", the stream, the initial <i>x </i>and <i>y </i>positions of the pointer, the current <i>x<br>
+</i>and <i>y </i>positions of the pointer, and a feedback state (either <tt>:highlight </tt>to draw feedback, or<br>
+ <tt>:unhighlight </tt>to erase it). The feedback function is called to draw some feedback the first time<br>
+ pointer moves, and is then called twice each time the pointer moves thereafter (once to erase<br>
+ the previous feedback, and then to draw the new feedback). It is called a final time to erase the<br>
+ last feedback when the pointer button is released. <i>feedback </i>defaults to <tt>frame-drag-and-drop-</tt>
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page228.html">Page 228</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page230.html">Page 230</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

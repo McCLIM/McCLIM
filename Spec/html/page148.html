@@ -1,0 +1,135 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page147.html">Page 147</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page149.html">Page 149</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ </i><b>CHAPTER 16. OUTPUT RECORDING </b><br>
+<br>
+ <i>offset </i>[<i>Generic Function</i>]<br>
+ Maps over all of the children of the <b>output record </b><i>record </i>that overlap the <b>region </b><i>region</i>, calling<br>
+ <i>function </i>on each one. <i>function </i>is a function of one argument, the record overlapping the region;<br>
+ it has dynamic extent.<br>
+<br>
+ If there are multiple records that overlap the region and that overlap each other, <tt>map-over-<br>
+ output-records-overlapping-region </tt>must hit the bottommost (least recently inserted) record<br>
+ first and the uppermost (most recently inserted) record last. Otherwise, the order in which the<br>
+ records are traversed is unspecified.<br>
+ <br><b>16.2.3 Output Record Change Notification Protocol<br><br>
+ </b>The following functions are called by programmers and by CLIM itself in order to notify a parent<br>
+ output record when the bounding rectangle of one of its child output record changes.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>recompute-extent-for-new-child </tt><i>record child </i>[<i>Generic Function</i>]<br>
+ This function is called whenever a new child is added to an output record. Its contract is to<br>
+ update the bounding rectangle of the <b>output record </b><i>record </i>to be large enough to completely<br>
+ contain the new child <b>output record </b><i>child</i>. The parent of <i>record </i>must be notified by calling<br>
+ <tt>recompute-extent-for-changed-child</tt>.<br>
+<br>
+ <tt>add-output-record </tt>is required to call <tt>recompute-extent-for-new-child</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>recompute-extent-for-changed-child </tt><i>record child old-min-x old-min-y old-max-x old-max-y<br>
+ </i>[<i>Generic Function</i>]<br>
+ This function is called whenever the bounding rectangle of one of the childs of a record has been<br>
+ changed. Its contract is to update the bounding rectangle of the <b>output record </b><i>record </i>to be<br>
+ large enough to completely contain the new bounding rectangle of the child <b>output record </b><i>child</i>.<br>
+ All of the ancestors of <i>record </i>must be notified by recursively calling <tt>recompute-extent-for-<br>
+ changed-child</tt>.<br>
+<br>
+ Whenever the bounding rectangle of an output record is changed or <tt>delete-output-record<br>
+ </tt>is called, <tt>recompute-extent-for-changed-child </tt>must be called to inform the parent of the<br>
+ record that a change has taken place.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>tree-recompute-extent </tt><i>record </i>[<i>Generic Function</i>]<br>
+ This function is called whenever the bounding rectangles of a number of children of a record have<br>
+ been changed, such as happens during table and graph formatting. Its contract is to compute<br>
+ the bounding rectangle large enough to contain all of the children of the output record <i>record</i>,<br>
+ adjust the bounding rectangle of the <b>output record </b><i>record </i>accordingly, and then call <tt>recompute-<br>
+ extent-for-changed-child </tt>on <i>record</i>.
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page147.html">Page 147</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page149.html">Page 149</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

@@ -1,0 +1,143 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page210.html">Page 210</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page212.html">Page 212</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ </tt><b>CHAPTER 23. PRESENTATION TYPES </b><br>
+<br>
+ <pre><tt>
+ (define-presentation-type num ())
+
+ (define-presentation-method presentation-typep (object (type num))
+   (numberp object))
+</pre>
+ </tt>If the user were to evaluate the form <tt>(presentation-typep X '(int 1 5))</tt>, then the type<br>
+ parameters will be <tt>(1 5) </tt>in the <tt>presentation-typep </tt>method for <tt>int</tt>, <tt>(5 1) </tt>in the method for<br>
+ <tt>rrat</tt>, and <tt>nil </tt>in the method for <tt>num</tt>. The value for <i>type </i>will be or <tt>((int 1 5)) </tt>in each of the<br>
+ methods.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>define-presentation-generic-function </tt><i>generic-function-name presentation-function-name lambda-<br>
+ list </i><tt>&rest </tt><i>options </i>[<i>Macro</i>]<br>
+ Defines a generic function that will be used for presentation methods. <i>generic-function-name </i>is<br>
+ a symbol that names the generic function that will be used internally by CLIM for the individual<br>
+ methods, <i>presentation-function-name </i>is a symbol that names the function that programmers will<br>
+ call to invoke the method, and <i>lambda-list </i>and <i>options </i>are as for <tt>defgeneric</tt>.<br>
+<br>
+ There are some "special" arguments in <i>lambda-list </i>that are known about by the presentation<br>
+ type system. The first argument in <i>lambda-list </i>must be either <tt>type-key </tt>or <tt>type-class</tt>; this<br>
+ argument is used by CLIM to implement method dispatching. The second argument may be<br>
+ <tt>parameters</tt>, meaning that, when the method is invoked, the type parameters will be passed to<br>
+ it. The third argument may be <tt>options</tt>, meaning that, when the method is invoked, the type<br>
+ options will be passed to it. Finally, an argument named <tt>type </tt>must be included in <i>lambda-list</i>;<br>
+ when the method is called, <i>type </i>argument will be bound to the presentation type specifier.<br>
+<br>
+ For example, the <tt>accept </tt>presentation generic function might be defined as follows:<br>
+<pre> <tt>
+ (define-presentation-generic-function present-method present
+     (type-key parameters options object type stream view
+      &key acceptably for-context-type))
+</pre>
+ </tt>None of the arguments is evaluated.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>define-presentation-method </tt><i>name qualifiers* specialized-lambda-list </i><tt>&body </tt><i>body </i>[<i>Macro</i>]<br>
+ Defines a presentation method for the function named <i>name </i>on the presentation type named in<br>
+ <i>specialized-lambda-list</i>. <i>specialized-lambda-list </i>is a CLOS specialized lambda list for the method,<br>
+ and its contents varies depending on what <i>name </i>is. <i>qualifiers* </i>is zero or more of the usual<br>
+ CLOS method qualifier symbols. <tt>define-presentation-method </tt>must support at least <tt>standard<br>
+ </tt>method combination (and therefore the <tt>:before</tt>, <tt>:after</tt>, and <tt>:around </tt>method qualifiers). Some<br>
+ CLIM implementations may support other method combination types, but this is not required.<br>
+<br>
+ <i>body </i>defines the body of the method. <i>body </i>may have zero or more declarations as its first forms.<br>
+<br>
+ All presentation methods have an argument named <i>type </i>that must be specialized with the name<br>
+ of a presentation type. The value of <i>type </i>is a presentation type specifier, which can be for a<br>
+ subtype that inherited the method.
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page210.html">Page 210</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page212.html">Page 212</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

@@ -1,0 +1,141 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page77.html">Page 77</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page79.html">Page 79</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 10. DRAWING OPTIONS </b><br>
+<br>
+ Returns the foreground and background inks (which are designs) for the <b>medium </b><i>medium</i>, re-<br>
+ spectively. The foreground ink is the default ink used when drawing. The background ink is the<br>
+ ink used when erasing. See <A HREF="./page113.html">Chapter 13</A> for a more complete description of designs.<br>
+<br>
+ Any indirect inks are resolved against the foreground and background at the time a design is<br>
+ rendered.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>(setf medium-foreground) </tt><i>design medium </i>[<i>Generic Function</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>(setf medium-background) </tt><i>design medium </i>[<i>Generic Function</i>]<br>
+ Sets the foreground and background ink, respectively, for the <b>medium </b><i>medium </i>to <i>design</i>. You<br>
+ may not set <tt>medium-foreground </tt>or <tt>medium-background </tt>to an indirect ink.<br>
+<br>
+ <i>design </i>is an unbounded design. If the background design is not completely opaque at all points,<br>
+ the consequences are unspecified.<br>
+<br>
+ Changing the foreground or background of a sheet that supports output recording causes the<br>
+ contents of the stream's viewport to be erased and redrawn using the new foreground and<br>
+ background.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>medium-ink </tt><i>medium </i>[<i>Generic Function</i>]<br>
+ The current drawing ink for the <b>medium </b><i>medium</i>, which can be any design. The drawing<br>
+ functions draw with the color and pattern that this specifies. 
+See <A HREF="./page113.html">Chapter 13</A> for a more complete<br>
+ description of inks. The <tt>:ink </tt>drawing option temporarily changes the value of <tt>medium-ink</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>(setf medium-ink) </tt><i>design medium </i>[<i>Generic Function</i>]<br>
+ Sets the current drawing ink for the <b>medium </b><i>medium </i>to <i>design</i>. <i>design </i>is as for <tt>medium-<br>
+ foreground</tt>, and may be an indirect ink as well.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>medium-transformation </tt><i>medium </i>[<i>Generic Function</i>]<br>
+ The current user transformation for the <b>medium </b><i>medium</i>. This transformation is used to<br>
+ transform the coordinates supplied as arguments to drawing functions to the coordinate sys-<br>
+ tem of the drawing plane. See <A HREF="./page35.html">Chapter 5</A> for a complete description of transformations. The<br>
+ <tt>:transformation </tt>drawing option temporarily changes the value of <tt>medium-transformation</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>(setf medium-transformation) </tt><i>transformation medium </i>[<i>Generic Function</i>]<br>
+ Sets the current user transformation for the <b>medium </b><i>medium </i>to the <b>transformation </b><i>transforma-<br>
+ tion</i>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>medium-clipping-region </tt><i>medium </i>[<i>Generic Function</i>]<br>
+ The current clipping region for the <b>medium </b><i>medium</i>. The drawing functions do not affect the<br>
+ drawing plane outside this region. The <tt>:clipping-region </tt>drawing option temporarily changes<br>
+ the value of <tt>medium-clipping-region</tt>.<br>
+<br>
+ The clipping region is expressed in user coordinates.
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page77.html">Page 77</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page79.html">Page 79</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

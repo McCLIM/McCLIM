@@ -1,0 +1,137 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page5.html">Page 5</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page7.html">Page 7</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 2. CONVENTIONS </b><br>
+<br>
+ as possible, independent of the conformance of individual vendors. (When all Lisp vendors<br>
+ implement X3J13 Common Lisp, the <tt>clim-lisp </tt>package could be eliminated.) <tt>clim-lisp </tt>is<br>
+ the version of Common Lisp in which CLIM is implemented and which the <tt>clim-user </tt>package<br>
+ uses instead of <tt>common-lisp</tt>. <tt>clim-lisp </tt>contains only exported symbols, and is locked in those<br>
+ implementations that allow package locking.<br>
+<br>
+ <tt>clim </tt>is the package where the symbols specified in this specification live. It contains only<br>
+ exported symbols and is locked in those implementations that allow package locking.<br>
+<br>
+ <tt>clim-sys </tt>is the package where useful "system-like" functionality lives, including such things as<br>
+ resources and multi-processing primitives. It contains functionality that is not part of Common<br>
+ Lisp, but which is not conceptually the province of CLIM itself. It contains only exported<br>
+ symbols and is locked in those implementations that allow package locking.<br>
+<br>
+ No code is written in any of the above packages, but rather code is written for symbols in the<br>
+ above packages. None of the above use any other packages (in the sense of the <tt>:use </tt>option to<br>
+ <tt>defpackage</tt>). A CLIM implementation might define a <tt>clim-internals </tt>package that uses each of<br>
+ the above packages, thus getting the definition of Lisp from <tt>clim-lisp</tt>. It would then implement<br>
+ the functionality of the symbols in <tt>clim </tt>and <tt>clim-sys </tt>in the <tt>clim-internals </tt>package.<br>
+<br>
+ <tt>clim-user </tt>is a package that programmers can use if they don't wish to create their own package.<br>
+ It is the CLIM analog of <tt>common-lisp-user</tt>.<br>
+ <br><b>2.3 "Spread" Point Arguments to Functions<br><br>
+ </b>Many functions that take point arguments come in two forms: <b>structured </b>and <b>spread</b>. Functions<br>
+ that take structured point arguments take the argument as a single <tt>point </tt>object. Functions that<br>
+ take spread point arguments take a pair of arguments that correspond to the <i>x </i>and <i>y </i>coordinates<br>
+ of the point.<br>
+<br>
+ Functions that take spread point arguments, or return spread point values have an asterisk in<br>
+ their name, for example, <tt>draw-line*</tt>.<br>
+ <br><b>2.4 Immutability of Objects<br><br>
+ </b>Most CLIM objects are <b>immutable</b>, that is, at the protocol level none of their components can be<br>
+ modified once the object is created. Examples of immutable objects include all of the members<br>
+ of the <tt>region </tt>classes, colors and opacities, text styles, and line styles. Since immutable objects<br>
+ by definition never change, functions in the CLIM API can safely capture immutable objects<br>
+ without first copying them. This also allows CLIM to cache immutable objects. Constructor<br>
+ functions that return immutable objects are free to either create and return a new object, or<br>
+ return an already existing object.<br>
+<br>
+ A few CLIM objects are <b>mutable</b>. Examples of mutable objects include streams and output<br>
+ records. Some components of mutable objects can be modified once the object has been created,
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page5.html">Page 5</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page7.html">Page 7</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

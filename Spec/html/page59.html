@@ -1,0 +1,141 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page58.html">Page 58</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page60.html">Page 60</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 8. SHEET PROTOCOLS </b><br>
+<br>
+ All subclasses of <tt>device-event </tt>must take the <tt>:sheet </tt>and <tt>:modifier-state </tt>initargs, which are<br>
+ used to specify the sheet and modifier state components for the event.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>event-sheet </tt><i>device-event </i>[<i>Generic Function</i>]<br>
+ Returns the sheet associated with the event <i>device-event</i>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>event-modifier-state </tt><i>device-event </i>[<i>Generic Function</i>]<br>
+ Returns a value that encodes the state of all the modifier keys on the keyboard. This will be<br>
+ a mask consisting of the <tt>logior </tt>of <tt>+shift-key+</tt>, <tt>+control-key+</tt>, <tt>+meta-key+</tt>, <tt>+super-key+</tt>,<br>
+ and <tt>+hyper-key+</tt>.<br>
+<br>
+ All device event classes must implement methods for <tt>event-sheet </tt>and <tt>event-modifier-state</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>keyboard-event </tt>[<i>Class</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>:key-name </tt>[<i>Init Arg</i>]<br>
+ The class that corresponds to any sort of keyboard event. This is a subclass of <tt>device-event</tt>.<br>
+<br>
+ All subclasses of <tt>keyboard-event </tt>must take the <tt>:key-name </tt>initarg, which is used to specify the<br>
+ key name component for the event.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>keyboard-event-key-name </tt><i>keyboard-event </i>[<i>Generic Function</i>]<br>
+ Returns the name of the key that was pressed or released in a keyboard event. This will be a<br>
+ symbol whose value is port-specific. Key names corresponding to the set of "standard" characters<br>
+ (such as the alphanumerics) will be a symbol in the keyword package.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>keyboard-event-character </tt><i>keyboard-event </i>[<i>Generic Function</i>]<br>
+<br>
+ Returns the character associated with the event <i>keyboard-event</i>, if there is any.<br>
+<br>
+ All keyboard event classes must implement methods for <tt>keyboard-event-key-name </tt>and <tt>keyboard-<br>
+ event-character</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>key-press-event </tt>[<i>Class</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>key-release-event </tt>[<i>Class</i>]<br>
+ The classes that correspond to a key press or release event. This is a subclass of <tt>keyboard-<br>
+ event</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>pointer-event </tt>[<i>Class</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>:pointer </tt>[<i>Init Arg</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>:button </tt>[<i>Init Arg</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>:x </tt>[<i>Init Arg</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>:y </tt>[<i>Init Arg</i>]<br>
+ The class that corresponds to any sort of pointer event. This is a subclass of <tt>device-event</tt>.<br>
+<br>
+ All subclasses of <tt>pointer-event </tt>must take the <tt>:pointer</tt>, <tt>:button</tt>, <tt>:x</tt>, and <tt>:y </tt>initargs, which
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page58.html">Page 58</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page60.html">Page 60</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

@@ -1,0 +1,136 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page149.html">Page 149</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page151.html">Page 151</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 16. OUTPUT RECORDING </b><br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>graphics-displayed-output-record </tt>[<i>Protocol Class</i>]<br>
+ The protocol class that corresponds to output records for the graphics functions, such as <tt>draw-<br>
+ line*</tt>. This is a subclass of <tt>displayed-output-record</tt>. If you want to create a new class that<br>
+ behaves like a graphics displayed output record, it should be a subclass of <tt>graphics-displayed-output-record</tt>.<br>
+ Subclasses of <tt>graphics-displayed-output-record </tt>must obey the graphics displayed output<br>
+ record protocol.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>graphics-displayed-output-record-p </tt><i>object </i>[<i>Function</i>]<br>
+ Returns <b>true </b>if <i>object </i>is a <b>graphics displayed output record</b>, otherwise returns <b>false</b>.<br>
+ <br><b>16.3.3 Text Displayed Output Record<br><br>
+ </b>Text displayed output records are used to record the textual output produced by such functions as<br>
+ <tt>stream-write-char </tt>and <tt>stream-write-string</tt>. Each text displayed output record corresponds<br>
+ to no more than one line of textual output (that is, line breaks caused by <tt>terpri </tt>and <tt>fresh-<br>
+ line </tt>create a new text output record, as do certain other stream operations described below).<br>
+ The exact contents of text displayed output records is unspecified, but they must store sufficient<br>
+ information to be able to exactly redraw the original output at replay time. The minimum<br>
+ information that must be captured for all text displayed output records is as follows:<ul>
+ <li>The displayed text strings.<br>
+<br>
+ <li>The starting and ending cursor positions.<br>
+<br>
+ <li>The text style in which the text string was written. Depending on the CLIM implemen-<br>
+ tation, this may be either fully merged against the medium's default or not; in the former<br>
+ case, subsequent changes to the medium's default text style will not affect replaying the<br>
+ record, but in the latter case changing the default text style will affect replaying.<br>
+<br>
+ <li>The programmer-supplied ink at the time the drawing function was called. Indirect inks<br>
+ must not be resolved, so that a user can later change the default foreground and background<br>
+ ink of the medium and have that change affect the already-created output records during<br>
+ replay.<br>
+<br>
+ <li>The programmer-supplied clipping region at the time the drawing function was called.</ul>
+ <big><b>&#061&gt  </b></big><tt>text-displayed-output-record </tt>[<i>Protocol Class</i>]<br>
+ The protocol class that corresponds to text displayed output records. This is a subclass of<br>
+ <tt>displayed-output-record</tt>. If you want to create a new class that behaves like a text dis-<br>
+ played output record, it should be a subclass of <tt>text-displayed-output-record</tt>. Subclasses<br>
+ of <tt>text-displayed-output-record </tt>must obey the text displayed output record protocol.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>text-displayed-output-record-p </tt><i>object </i>[<i>Function</i>]<br>
+ Returns <b>true </b>if <i>object </i>is a <b>text displayed output record</b>, otherwise returns <b>false</b>.
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page149.html">Page 149</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page151.html">Page 151</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

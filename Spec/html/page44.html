@@ -1,0 +1,127 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page43.html">Page 43</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page45.html">Page 45</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+<br>
+<br>
+ <b>Chapter 6<br>
+ </b><br><b>Overview of Window Facilities<br>
+ </b><br><b>6.1 Introduction<br><br>
+ </b>A central notion in organizing user interfaces is allocating screen regions to particular tasks and<br>
+ recursively subdividing these regions into subregions. The windowing layer of CLIM defines<br>
+ an extensible framework for constructing, using, and managing such <b>hierarchies of interactive<br>
+ regions</b>. This framework allows uniform treatment of the following things:<br>
+<br>
+<ul>
+ <li>Window objects like those in X or NeWS.<br><br>
+ <li>Lightweight gadgets typical of toolkit layers, such as Motif or OpenLook.<br><br>
+ <li>Structured graphics like output records and an application's presentation objects.<br><br>
+ <li>Objects that act as Lisp handles for
+	windows or gadgets implemented in a different language<br>
+ (such as OpenLook gadgets implemented in C).
+</ul>
+ From the perspective of most CLIM users, CLIM's windowing layer plays the role of a window<br>
+ system. However, CLIM will usually use the services of a window system platform to provide<br>
+ efficient windowing, input, and output facilities. In this specification, such window system<br>
+ platforms will be referred to as host window systems or as display servers.<br>
+<br>
+ The fundamental window abstraction defined by CLIM is called a <b>sheet</b>. A sheet can partic-<br>
+ ipate in a relationship called a <b>windowing relationship</b>. This relationship is one in which one<br>
+ sheet called the <b>parent </b>provides space to a number of other sheets called <b>children</b>. Support for<br>
+ establishing and maintaining this kind of relationship is the essence of what window systems<br>
+ provide. At any point in time, CLIM allows a sheet to be a child in one relationship called its<br>
+ <b>youth windowing relationship </b>and a parent in another relationship called its <b>adult windowing<br>
+ relationship</b>.<br>
+<br>
+ Programmers can manipulate unrooted hierarchies of sheets (those without a connection to any<br>
+ particular display server). However, a sheet hierarchy must be attached to a display server to<br>
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page43.html">Page 43</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page45.html">Page 45</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

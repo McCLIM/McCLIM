@@ -1,0 +1,137 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page293.html">Page 293</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page295.html">Page 295</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 28. APPLICATION FRAMES </b><br>
+<br>
+ for its own purposes.<br>
+ <br><b>28.3.1 Interface with Presentation Types<br><br>
+ </b>This section describes the functions that connect application frames to the presentation type<br>
+ system. All classes that inherit from <tt>application-frame </tt>must inherit or implement methods<br>
+ for all of these functions.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>frame-maintain-presentation-histories </tt><i>frame </i>[<i>Generic Function</i>]<br>
+ Returns <b>true </b>if the <b>frame </b><i>frame </i>maintains histories for its presentations, otherwise returns <b>false</b>.<br>
+ The default method (on <tt>standard-application-frame</tt>) returns <b>true </b>if and only if the frame<br>
+ has at least one interactor pane.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>frame-find-innermost-applicable-presentation </tt><i>frame input-context stream x y </i><tt>&key </tt><i>event<br>
+ </i>[<i>Generic Function</i>]<br>
+ Locates and returns the innermost applicable presentation on the window <i>stream </i>whose sen-<br>
+ sitivity region contains the point (<i>x;y</i>), on behalf of the <b>frame </b><i>frame </i>in the input context<br>
+ <i>input-context</i>. <i>event </i>defaults to <tt>nil</tt>, and is as for find-innermost-applicable-presentation<br>
+<br>
+ The default method (on <tt>standard-application-frame</tt>) will simply call <tt>find-innermost-applicable-<br>
+ presentation</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>frame-input-context-button-press-handler </tt><i>frame stream button-press-event </i>[<i>Generic Function</i>]<br>
+ This function is responsible for handling user pointer events on behalf of the <b>frame </b><i>frame </i>in the<br>
+ input context <tt>*input-context*</tt>. <i>stream </i>is the window on which <i>button-press-event </i>took place.<br>
+<br>
+ The default implementation (on <tt>standard-application-frame</tt>) unhighlights any highlighted<br>
+ presentations, finds the applicable presentation by calling <tt>frame-find-innermost-applicable-<br>
+ presentation-at-position</tt>, and then calls <tt>throw-highlighted-presentation </tt>to execute the<br>
+ translator on that presentation that corresponds to the user's gesture.<br>
+<br>
+ If <tt>frame-input-context-button-press-handler </tt>is called when the pointer is not over any<br>
+ applicable presentation, <tt>throw-highlighted-presentation </tt>must be called with a presentation<br>
+ of <tt>*null-presentation*</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>frame-document-highlighted-presentation </tt><i>frame presentation input-context window x y stream<br>
+ </i>[<i>Generic Function</i>]<br>
+ This function is responsible for producing pointer documentation on behalf of the <b>frame </b><i>frame </i>in<br>
+ the input context <i>input-context </i>on the window <i>window </i>at the point (<i>x;y</i>). The documentation<br>
+ is displayed on the <b>stream </b><i>stream</i>.<br>
+<br>
+ The default method (on <tt>standard-application-frame</tt>) should produce documentation that<br>
+ corresponds to calling <tt>document-presentation-translator </tt>on all of the applicable translators
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page293.html">Page 293</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page295.html">Page 295</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

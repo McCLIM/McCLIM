@@ -1,0 +1,138 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page137.html">Page 137</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page139.html">Page 139</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 15. EXTENDED STREAM OUTPUT </b><br>
+<br>
+ <i>start </i>and <i>end </i>are integers, and default to 0 and the length of the string, respectively.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>stream-text-margin </tt><i>stream </i>[<i>Generic Function</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>(setf stream-text-margin) </tt><i>margin stream </i>[<i>Generic Function</i>]<br>
+ The <i>x </i>coordinate at which text wraps around on the <b>extended output stream </b><i>stream </i>(see <tt>stream-<br>
+ end-of-line-action</tt>). The default setting is the width of the viewport, which is the right-hand<br>
+ edge of the viewport when it is horizontally scrolled to the "initial position".<br>
+<br>
+ You can use <tt>setf </tt>with <tt>stream-text-margin </tt>to establish a new text margin. If <i>margin </i>is <tt>nil</tt>,<br>
+ then the width of the viewport will be used. If the width of the viewport is later changed, the<br>
+ text margin will change, too.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>stream-line-height </tt><i>stream </i><tt>&key </tt><i>text-style </i>[<i>Generic Function</i>]<br>
+ Returns what the line height of a line on the <b>extended output stream </b><i>stream </i>containing text in<br>
+ the <b>text style </b><i>text-style </i>would be, as a rational number. <i>text-style </i>defaults to the current text<br>
+ style for the stream.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>stream-vertical-spacing </tt><i>stream </i>[<i>Generic Function</i>]<br>
+ Returns the current inter-line spacing (as a rational number) for the <b>extended output stream<br>
+ </b><i>stream</i>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>stream-baseline </tt><i>stream </i>[<i>Generic Function</i>]<br>
+ Returns the current text baseline (as a rational number) for the <b>extended output stream </b><i>stream</i>.<br>
+ <br><b>15.4.1 Mixing Text and Graphics<br><br>
+ </b>The following macro provides a convenient way to mix text and graphics on the same output<br>
+ stream.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>with-room-for-graphics </tt><i>(</i><tt>&optional </tt><i>stream </i><tt>&key </tt><i>(move-cursor </i><tt>t</tt><i>) height record-type) </i><tt>&body<br>
+ </tt><i>body </i>[<i>Macro</i>]<br>
+ Binds the dynamic environment to establish a local Cartesian coordinate system for doing graph-<br>
+ ics output onto the <b>extended output stream </b>designated by <i>stream</i>. The origin (0<i>;</i>0) of the local<br>
+ coordinate system is placed at the current cursor position, and is in the lower left corner of the<br>
+ area created. If the boolean <i>move-cursor </i>is <b>true </b>(the default), then after the graphic output<br>
+ is completed, the cursor is positioned past (immediately below) this origin. The bottom of the<br>
+ vertical block allocated is at this location (that is, just below point (0<i>;</i>0), not necessarily at the<br>
+ bottom of the output done).<br>
+<br>
+ The <i>stream </i>argument is not evaluated, and must be a symbol that is bound to a stream. If<br>
+ <i>stream </i>is <tt>t </tt>(the default), <tt>*standard-output* </tt>is used. <i>body </i>may have zero or more declarations<br>
+ as its first forms.<br>
+<br>
+ If <i>height </i>is supplied, it must be a rational number that specifies the amount of vertical space to
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page137.html">Page 137</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page139.html">Page 139</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

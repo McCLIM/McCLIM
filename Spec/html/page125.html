@@ -1,0 +1,135 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page124.html">Page 124</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page126.html">Page 126</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 14. GENERAL DESIGNS </b><br>
+<br>
+ become diamond-shaped. Applying a coordinate transformation to a pattern does not affect the<br>
+ designs that make up the pattern. It only changes the position, size, and shape of the cells' holes,<br>
+ allowing different portions of the designs in the cells to show through. Consequently, applying<br>
+ <tt>make-rectangular-tile </tt>to a pattern of nonuniform designs can produce a different appearance<br>
+ in each tile. The pattern cells' holes are tiled, but the designs in the cells are not tiled and a<br>
+ different portion of each of those designs shows through in each tile.<br>
+<br>
+ This function is permitted to capture its mutable inputs; the consequences of modifying those<br>
+ objects are unspecified.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>make-stencil </tt><i>array </i>[<i>Function</i>]<br>
+ Returns a pattern design that has <tt>(array-dimension </tt><i>array </i><tt>0) </tt>cells in the vertical direction and<br>
+ <tt>(array-dimension </tt><i>array </i><tt>1) </tt>cells in the horizontal direction. <i>array </i>must be a two-dimensional<br>
+ array of real numbers between 0 and 1 (inclusive) that represent opacities. The design in cell<br>
+ (<i>i;j</i>) of the resulting pattern is the value of <tt>(make-opacity (aref </tt><i>array </i><tt>i j))</tt>.<br>
+<br>
+ This function is permitted to capture its mutable inputs; the consequences of modifying those<br>
+ objects are unspecified.<br>
+ <br><b>14.3 Tiling<br><br>
+ </b><b>Tiling </b>repeats a rectangular portion of a design throughout the drawing plane. This is most<br>
+ commonly used with patterns.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>make-rectangular-tile </tt><i>design width height </i>[<i>Function</i>]<br>
+ Returns a design that, when used as an ink, tiles a rectangular portion of the <b>design </b><i>design<br>
+ </i>across the entire drawing plane. The resulting design repeats with a period of <i>width </i>horizontally<br>
+ and <i>height </i>vertically. <i>width </i>and <i>height </i>must both be integers. The portion of <i>design </i>that<br>
+ appears in each tile is a rectangle whose top-left corner is at (0<i>;</i>0) and whose bottom-right<br>
+ corner is at (<i>width;height</i>). The repetition of <i>design </i>is accomplished by applying a coordinate<br>
+ transformation to shift <i>design </i>into position for each tile, and then extracting a <i>width </i>by <i>height<br>
+ </i>portion of that design.<br>
+<br>
+ Applying a coordinate transformation to a rectangular tile does not change the portion of the<br>
+ argument <i>design </i>that appears in each tile. However, it can change the period, phase, and<br>
+ orientation of the repeated pattern of tiles. This is so that adjacent figures drawn using the<br>
+ same tile have their inks "line up".<br>
+ <br><b>14.4 Regions as Designs<br><br>
+ </b>Any member of the class <tt>region </tt>is a solid, colorless design. The design is opaque at points in<br>
+ the region and transparent elsewhere. Figure 14.1 shows how the design and region classes relate<br>
+ to each other.
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page124.html">Page 124</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page126.html">Page 126</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

@@ -1,0 +1,136 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page312.html">Page 312</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page314.html">Page 314</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 29. PANES </b><br>
+<br>
+ This function is automatically invoked by <tt>change-space-requirements </tt>in the cases that <tt>layout-<br>
+ frame </tt>isn't invoked. In the case that <tt>layout-frame </tt>is invoked, it isn't necessary to call <tt>note-<br>
+ space-requirements-changed </tt>since a complete re-layout of the frame will be executed.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>changing-space-requirements </tt><i>(</i><tt>&key </tt><i>resize-frame) </i><tt>&body </tt><i>body </i>[<i>Macro</i>]<br>
+ This macro supports batching the invocation of the layout protocol by calls to <tt>change-space-<br>
+ requirements</tt>. Within the body, all calls to <tt>change-space-requirements </tt>change the internal<br>
+ structures of the pane and are recorded. When the body is exited, the layout protocol is invoked<br>
+ appropriately. <i>body </i>may have zero or more declarations as its first forms.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>compose-space </tt><i>pane </i>[<i>Generic Function</i>]<br>
+ During the space composition pass, a composite pane will typically ask each of its children how<br>
+ much space it requires by calling <tt>compose-space</tt>. They answer by returning <tt>space-requirement<br>
+ </tt>objects. The composite will then form its own space requirement by composing the space re-<br>
+ quirements of its children according to its own rules for laying out its children.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>allocate-space </tt><i>pane width height </i>[<i>Generic Function</i>]<br>
+ During the space allocation pass, a composite pane will arrange its children within the available<br>
+ space and allocate space to them according to their space requirements and its own composition<br>
+ rules by calling <tt>allocate-space </tt>on each of the child panes. <i>width </i>and <i>height </i>are the width and<br>
+ height of <i>pane </i>in device units.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>make-space-requirement &key </tt><i>(width </i><tt>0</tt><i>) (max-width </i><tt>0</tt><i>) (min-width </i><tt>0</tt><i>) (height </i><tt>0</tt><i>) (max-height<br>
+ </i><tt>0</tt><i>) (min-height </i><tt>0</tt><i>) </i>[<i>Function</i>]<br>
+ Constructs a space requirement object with the given characteristics, <tt>:width</tt>, <tt>:height</tt>, and so<br>
+ on.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>space-requirement-width </tt><i>space-req </i>[<i>Function</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>(setf space-requirement-width) </tt><i>size space-req </i>[<i>Function</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>space-requirement-max-width </tt><i>space-req </i>[<i>Function</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>(setf space-requirement-max-width) </tt><i>size space-req </i>[<i>Function</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>space-requirement-min-width </tt><i>space-req </i>[<i>Function</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>(setf space-requirement-min-width) </tt><i>size space-req </i>[<i>Function</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>space-requirement-height </tt><i>space-req </i>[<i>Function</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>(setf space-requirement-height) </tt><i>size space-req </i>[<i>Function</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>space-requirement-max-height </tt><i>space-req </i>[<i>Function</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>(setf space-requirement-max-height) </tt><i>size space-req </i>[<i>Function</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>space-requirement-min-height </tt><i>space-req </i>[<i>Function</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>(setf space-requirement-min-height) </tt><i>size space-req </i>[<i>Function</i>]<br>
+ These functions read or modify the components of the space requirement <i>space-req</i>.
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page312.html">Page 312</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page314.html">Page 314</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

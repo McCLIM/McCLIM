@@ -1,0 +1,138 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page249.html">Page 249</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page251.html">Page 251</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 24. INPUT EDITING AND COMPLETION FACILITIES </b><br>
+<br>
+ The error that is signalled by <tt>simple-parse-error</tt>. This is a subclass of <tt>parse-error</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>simple-parse-error </tt><i>format-string </i><tt>&rest </tt><i>format-arguments </i>[<i>Function</i>]<br>
+ Signals a <tt>simple-parse-error </tt>error while parsing an input token. Does not return. <i>format-<br>
+ string </i>and <i>format-args </i>are as for <tt>format</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>input-not-of-required-type </tt>[<i>Error Condition</i>]<br>
+ The error that is signalled by <tt>input-not-of-required-type</tt>. This is a subclass of <tt>parse-error</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>input-not-of-required-type </tt><i>object type </i>[<i>Function</i>]<br>
+ Reports that input does not satisfy the specified type by signalling an <tt>input-not-of-required-<br>
+ type </tt>error. <i>object </i>is a parsed object or an unparsed token (a string). <i>type </i>is a presentation type<br>
+ specifier. Does not return.<br>
+ <br><b>24.4 Reading and Writing of Tokens<br>
+<br>
+ </b><big><b>&#061&gt  </b></big><tt>replace-input </tt><i>stream new-input </i><tt>&key </tt><i>start end buffer-start rescan </i>[<i>Generic Function</i>]<br>
+ Replaces the part of the <b>input editing stream </b><i>stream</i>'s input buffer that extends from <i>buffer-start<br>
+ </i>to its scan pointer with the string <i>new-input</i>. <i>buffer-start </i>defaults to the current input position<br>
+ of <i>stream</i>. <i>start </i>and <i>end </i>can be supplied to specify a subsequence of <i>new-input</i>; <i>start </i>defaults to<br>
+ 0 and <i>end </i>defaults to the length of <i>new-input</i>.<br>
+<br>
+ <tt>replace-input </tt>must queue a rescan by calling <tt>queue-rescan </tt>if the new input does not match<br>
+ the old input, or <i>rescan </i>is <b>true</b>.<br>
+<br>
+ The returned value is the position in the input buffer.<br>
+<br>
+ All input editing streams must implement a method for this function.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>presentation-replace-input </tt><i>stream object type view </i><tt>&key </tt><i>buffer-start rescan query-identifier<br>
+ for-context-type </i>[<i>Generic Function</i>]<br>
+ Like <tt>replace-input</tt>, except that the new input to insert into the input buffer is gotten by<br>
+ presenting <i>object </i>with the presentation type <i>type </i>and view <i>view</i>. <i>buffer-start </i>and <i>rescan </i>are as<br>
+ for <tt>replace-input</tt>, and <i>query-identifier </i>and <i>for-context-type </i>as as for <tt>present</tt>.<br>
+<br>
+ All input editing streams must implement a method for this function. Typically, this will be<br>
+ implemented by calling <tt>present-to-string </tt>on <i>object</i>, <i>type</i>, <i>view</i>, and <i>for-context-type</i>, and then<br>
+ calling <tt>replace-input </tt>on the resulting string.<br>
+<br>
+ If the object does not have a readable representation (in the Lisp sense), <tt>presentation-<br>
+ replace-input </tt>may create an "accept result" to represent the object, and insert that into<br>
+ the input buffer. For the purposes of input editing, "accept results" must be treated as a single<br>
+ input gesture.
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page249.html">Page 249</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page251.html">Page 251</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

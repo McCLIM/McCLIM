@@ -1,0 +1,136 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page152.html">Page 152</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page154.html">Page 154</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 16. OUTPUT RECORDING </b><br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>stream-output-history </tt><i>stream </i>[<i>Generic Function</i>]<br>
+ Returns the history (or top-level output record) for the <b>output recording stream </b><i>stream</i>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>stream-current-output-record </tt><i>stream </i>[<i>Generic Function</i>]<br>
+ The current "open" output record for the <b>output recording stream </b><i>stream</i>, the one to which<br>
+ <tt>stream-add-output-record </tt>will add a new child record. Initially, this is the same as <tt>stream-<br>
+ output-history</tt>. As nested output records are created, this acts as a "stack".<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>(setf stream-current-output-record) </tt><i>record stream </i>[<i>Generic Function</i>]<br>
+ Sets the current "open" output record for the <b>output recording stream </b><i>stream </i>to the <b>output<br>
+ record </b><i>record</i>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>stream-add-output-record </tt><i>stream record </i>[<i>Generic Function</i>]<br>
+ Adds the <b>output record </b><i>record </i>to the current output record on the <b>output recording stream<br>
+ </b><i>stream </i>(that is, <tt>stream-current-output-record</tt>).<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>stream-replay </tt><i>stream </i><tt>&optional </tt><i>region </i>[<i>Generic Function</i>]<br>
+ Directs the <b>output recording stream </b><i>stream </i>to invoke <tt>replay </tt>on its output history. Only those<br>
+ records that overlap the <b>region </b><i>region </i>(which defaults to the viewport of the stream) are replayed.<br>
+ <br><b>16.4.2 Graphics Output Recording<br><br>
+ </b>Using <tt>draw-line* </tt>as an example, calling any of the drawing functions specified in <a href="./page101.html">Section 12.5</a><br>
+ and <a href="./page108.html">Section 12.7</a> results in the following series of function calls on an output recording stream:<ul>
+ <li>A program calls <tt>draw-line* </tt>on arguments <i>sheet</i>, <i>x1</i>, <i>y1</i>, <i>x2</i>, and <i>y2</i>, and perhaps some<br>
+ drawing options.<br>
+<br>
+ <li><tt>draw-line* </tt>merges the supplied drawing options into the sheet's medium, and then calls<br>
+ <tt>medium-draw-line* </tt>on the sheet. (Note that a compiler macro could detect the case where<br>
+ there are no drawing options or constant drawing options, and do this at compile time.)<br>
+<br>
+ <li>The <tt>:around </tt>method for <tt>medium-draw-line* </tt>on the output recording stream is called.<br>
+ This creates an output record with all of the information necessary to replay the output<br>
+ record, if <tt>stream-recording-p </tt>is <b>true</b>. If <tt>stream-drawing-p </tt>is <b>true</b>, this then does a<br>
+ <tt>call-next-method</tt>. (Note that the <tt>call-next-method </tt>could be replaced by a call to the<br>
+ <tt>medium-draw-line* </tt>method on the sheet's medium, avoiding the need for a trampolining<br>
+ function call.)<br>
+<br>
+ <li><tt>medium-draw-line* </tt>performs the necessary user transformations by applying the medium<br>
+ transformation to <i>x1</i>, <i>y1</i>, <i>x2</i>, and <i>y2</i>, and to the clipping region. Then <tt>medium-draw-line*<br>
+ </tt>calls <tt>port-draw-line* </tt>to do the actual drawing.
+</ul>
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page152.html">Page 152</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page154.html">Page 154</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

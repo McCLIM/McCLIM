@@ -1,0 +1,125 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page12.html">Page 12</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page14.html">Page 14</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+<br>
+<br>
+ <b>Chapter 3<br>
+ </b><br><b>Regions<br><br>
+ </b>CLIM provides definitions for a variety of geometric objects, including points, lines, elliptical<br>
+ arcs, regions, and transformations. Both the graphics and windowing modules use the same set<br>
+ of geometric objects and functions. In this section, we describe regions, points, and the basic<br>
+ region classes. Transformations will be described in <A HREF="./page35.html">Chapter 5</A>.<br>
+<br>
+ Most of these objects are described as if they are implemented using standard classes. However,<br>
+ this need not be the case. In particular, they may be implemented using structure classes, and<br>
+ some classes may exist only to name a place in the hierarchy|all members of such a class will<br>
+ be instances of that class's subclasses. The most important concern is that these classes must<br>
+ allow specializing generic functions.<br>
+<br>
+ The coordinate system in which the geometric objects reside is an abstract, continuous coordinate<br>
+ system. This abstract coordinate system is converted into "real world" coordinates only during<br>
+ operations such as rendering one of the objects on a display device.<br>
+<br>
+ Angles are measured in radians. Following standard conventions, when an angle is measured<br>
+ relative to a given line, a positive angle indicates an angle counter-clockwise from the line in the<br>
+ plane. When the angle from the positive <i>x </i>axis to the positive <i>y </i>axis is positive (that is, the<br>
+ positive <i>y </i>axis is counter-clockwise from the positive <i>x </i>axis), the coordinate system is said to<br>
+ be <b>right-handed</b>. When this angle is negative, the coordinate system is said to be <b>left-handed</b>.<br>
+ Thus, the cartesian coordinate system with <i>x </i>increasing to the right and <i>y </i>increasing upward is<br>
+ right-handed. A coordinate system with <i>y </i>increasing down is left-handed. (By default, CLIM<br>
+ streams are left handed, but no such default exists for sheets in general.)<br>
+ <br><b>3.1 General Regions<br><br>
+ </b>A <b>region </b>is an object that denotes a set of mathematical points in the plane. Regions include<br>
+ their boundaries, that is, they are closed. Regions have infinite resolution.<br>
+ 
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page12.html">Page 12</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page14.html">Page 14</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

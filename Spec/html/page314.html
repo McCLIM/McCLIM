@@ -1,0 +1,138 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page313.html">Page 313</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page315.html">Page 315</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 29. PANES </b><br>
+<br>
+ <br><b>29.4 Application Panes<br><br>
+ </b>In addition to the various layout panes and gadgets, an application usually needs some space<br>
+ to display application-specific output and receive application-specific input from the user. For<br>
+ example, a paint program needs a "canvas" pane on which to display the picture and handle the<br>
+ "mouse strokes". An application frame can use the basic CLIM input and output services in an<br>
+ application-specific way through use of an <b>application pane</b>.<br>
+<br>
+ This section describes the basic CLIM application pane types. Programmers are free to customize<br>
+ pane behavior by defining subclasses of these pane classes writing methods to change the repaint<br>
+ or event-handling behavior.<br>
+ <br><b>29.4.1 Application Pane Options<br><br>
+ </b>CLIM application frames accept the <tt>:foreground</tt>, <tt>:background</tt>, <tt>:text-style</tt>, and layout pane<br>
+ options. The space requirement options (<tt>:width</tt>, <tt>:height</tt>, and so forth) can also take a size<br>
+ specification of <tt>:compute</tt>, which causes CLIM to run the display function for the pane, and make<br>
+ the pane large enough to hold the output of the display function.<br>
+<br>
+ In addition to the above, CLIM application frames accept the following options:<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>:display-function </tt>[<i>Option</i>]<br>
+ This is used to specify a function to be called in order to display the contents of a CLIM stream<br>
+ pane. CLIM's default top level function, <tt>default-frame-top-level</tt>, function will invoke the<br>
+ pane's display function at the appropriate time (see the <tt>:display-time </tt>option). The value of<br>
+ this option is either the name of a function to invoke, or a cons whose car is the name of a<br>
+ function and whose cdr is additional arguments to the function. The function will be invoked on<br>
+ the frame, the pane, and the additional function arguments, if any. The default for this option<br>
+ is <tt>nil</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>:display-time </tt>[<i>Option</i>]<br>
+ This is used to indicate to CLIM when the pane's display function should be run. If it is<br>
+ <tt>:command-loop</tt>, CLIM will erase the pane's contents and run the display function after each<br>
+ time a frame command is executed. If it is <tt>t</tt>, the pane will be displayed once and not again<br>
+ until <tt>pane-needs-redisplay </tt>is called on the pane. If it is <tt>nil</tt>, CLIM will never run the display<br>
+ function until it is explicitly requested, either via <tt>pane-needs-redisplay </tt>or <tt>redisplay-frame-<br>
+ pane</tt>. The default for this option varies.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>:incremental-redisplay </tt>[<i>Option</i>]<br>
+ When <b>true</b>, the redisplay function will initially be executed inside of an invocation to <tt>updating-<br>
+ output </tt>and the resulting output record will be saved. Subsequent calls to <tt>redisplay-frame-<br>
+ pane </tt>will simply use <tt>redisplay </tt>to redisplay the pane. The default for this option is <tt>nil</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>:text-margin </tt>[<i>Option</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>:vertical-spacing </tt>[<i>Option</i>]
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page313.html">Page 313</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page315.html">Page 315</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

@@ -1,0 +1,138 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page31.html">Page 31</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page33.html">Page 33</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 4. BOUNDING RECTANGLES </b><br>
+<br>
+ The representation of bounding rectangles in CLIM is chosen to be efficient. CLIM will probably<br>
+ represent such rectangles by storing the coordinates of two opposing corners of the rectangle,<br>
+ namely, the "min point" and the "max point". Because this representation is not sufficient<br>
+ to represent the result of arbitrary transformations of arbitrary rectangles, CLIM is allowed<br>
+ to return a polygon as the result of such a transformation. (The most general class of trans-<br>
+ formations that is guaranteed to always turn a rectangle into another rectangle is the class of<br>
+ transformations that satisfy <tt>rectilinear-transformation-p</tt>.)<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>make-bounding-rectangle </tt><i>x1 y1 x2 y2 </i>[<i>Function</i>]<br>
+ Returns an object of the class <tt>standard-bounding-rectangle </tt>with the edges specified by <i>x1</i>,<br>
+ <i>y1</i>, <i>x2</i>, and <i>y2</i>, which must be real numbers.<br>
+<br>
+ <i>x1</i>, <i>y1</i>, <i>x2</i>, and <i>y2 </i>are "canonicalized" in the following way. The min point of the rectangle has<br>
+ an <i>x </i>coordinate that is the smaller of <i>x1 </i>and <i>x2 </i>and a <i>y </i>coordinate that is the smaller of <i>y1 </i>and<br>
+ <i>y2</i>. The max point of the rectangle has an <i>x </i>coordinate that is the larger of <i>x1 </i>and <i>x2 </i>and a <i>y<br>
+</i>coordinate that is the larger of <i>y1 </i>and <i>y2</i>. (Therefore, in a right-handed coordinate system the<br>
+ canonicalized values of <i>x1</i>, <i>y1</i>, <i>x2</i>, and <i>y2 </i>correspond to the left, top, right, and bottom edges of<br>
+ the rectangle, respectively.)<br>
+<br>
+ This function returns fresh objects that may be modified.<br>
+ <br><b>4.1.1 The Bounding Rectangle Protocol<br><br>
+ </b>The following generic function comprises the bounding rectangle protocol. All classes that par-<br>
+ ticipate in this protocol (including all subclasses of <tt>region </tt>that are bounded regions) must<br>
+ implement a method for <tt>bounding-rectangle*</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>bounding-rectangle* </tt><i>region </i>[<i>Generic Function</i>]<br>
+ Returns the bounding rectangle of <i>region </i>as four real numbers specifying the <i>x </i>and <i>y </i>coordinates<br>
+ of the min point and the <i>x </i>and <i>y </i>coordinates of the max point of the rectangle. The argument<br>
+ <i>region </i>must be either a bounded region (such as a line or an ellipse) or some other object that<br>
+ obeys the bounding rectangle protocol, such as a sheet or an output record.<br>
+<br>
+ The four returned values <i>min-x</i>, <i>min-y</i>, <i>max-x</i>, and <i>max-y </i>will satisfy the inequalities<br>
+<pre> 
+	<i>minx </i><big><b>&lt&#061 </b></big><i>maxx
+	miny </i><big><b>&lt&#061 </b></big><i>maxy
+</pre>
+<br>
+</i><big><b>&#061&gt  </b></big><tt>bounding-rectangle </tt><i>region </i>[<i>Generic Function</i>]<br>
+ Returns the bounding rectangle of <i>region </i>as an object that is a subclass of <tt>rectangle </tt>(described<br>
+ in <a href="./page24.html">Section 3.2.4</a>). The argument <i>region </i>must be either a bounded region (such as a line or an<br>
+ ellipse) or some other object that obeys the bounding rectangle protocol, such as a sheet or an<br>
+ output record.
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page31.html">Page 31</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page33.html">Page 33</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

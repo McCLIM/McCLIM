@@ -1,0 +1,140 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page183.html">Page 183</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page185.html">Page 185</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ </b><b>CHAPTER 21. INCREMENTAL REDISPLAY </b><br>
+<br>
+ <b>entirely bogus. The proposal to make "stream relative" coordinates for output records instead<br>
+ of "parent relative" coordinates will eliminate this completely. | SWM<br>
+<br>
+ </b><tt>(redisplay-output-record </tt><i>record stream</i><tt>) </tt>causes the output of <i>record </i>to be recomputed. CLIM<br>
+ redisplays the changes "incrementally", that is, it only displays those parts that have been<br>
+ changed. <i>record </i>must already be part of the output history of the <b>output recording stream<br>
+ </b><i>stream</i>, although it can be anywhere inside the hierarchy.<br>
+<br>
+ When <i>check-overlapping </i>is <b>false</b>, this means that CLIM can assume that no sibling output<br>
+ records overlap each other at any level. Supplying a <b>false </b>value for this argument can improve<br>
+ performance of redisplay.<br>
+<br>
+ <p><b>Implementation note: </b><tt>redisplay-output-record </tt>is implemented by first binding <tt>stream-<br>
+ redisplaying-p </tt>of the stream to <b>true</b>, then creating the new output records by invoking<br>
+ <tt>compute-new-output-records</tt>. Once the new output records have been computed, <tt>compute-<br>
+ difference-set </tt>is called to compute the difference set, which is then passed to <tt>note-child-<br>
+ output-record-changed</tt>.<br>
+<br>
+ The other optional arguments can be used to specify where on the <i>stream </i>the output record<br>
+ should be redisplayed. <i>x </i>and <i>y </i>represent where the cursor should be, relative to (<tt>output-record-<br>
+ parent </tt>record), before we start redisplaying <i>record</i>. <i>parent-x </i>and <i>parent-y </i>can be supplied to<br>
+ say: do the output as if the parent started at positions <i>parent-x </i>and <i>parent-y </i>(which are in<br>
+ absolute coordinates). The default values for <i>x </i>and <i>y </i>are <tt>(output-record-start-position<br>
+ </tt><i>record</i><tt>)</tt>. The default values for <i>parent-x </i>and <i>parent-y </i>are<br>
+<pre> <tt>
+ (convert-from-relative-to-absolute-coordinates
+   stream (output-record-parent record))
+
+</pre>
+ </tt><i>record </i>will usually be an output record created by <tt>updating-output</tt>. If it is not, then <tt>redisplay-<br>
+ output-record </tt>will be equivalent to <tt>replay-output-record</tt>.<br>
+ <br><b>21.3 Incremental Redisplay Protocol<br><br>
+ </b><p><b>Major issue: </b><b>While the description of the API here is accurate, the description of the protocol<br>
+ is a disaster. This is no surprise, since the protocol for increment redisplay is itself a disaster.<br>
+ | SWM<br>
+<br>
+ </b><big><b>&#061&gt  </b></big><tt>updating-output-record </tt>[<i>Protocol Class</i>]<br>
+ The protocol class corresponding to records that support incremental redisplay; a subclass of<br>
+ <tt>output-record</tt>. If you want to create a new class that behaves like an updating output record,<br>
+ it should be a subclass of <tt>updating-output-record</tt>. Subclasses of <tt>updating-output-record<br>
+ </tt>must obey the updating output record protocol.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>updating-output-record-p </tt><i>object </i>[<i>Function</i>]<br>
+ Returns <b>true </b>if <i>object </i>is an <b>updating output record</b>, otherwise returns <b>false</b>.
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page183.html">Page 183</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page185.html">Page 185</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

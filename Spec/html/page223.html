@@ -1,0 +1,144 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page222.html">Page 222</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page224.html">Page 224</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 23. PRESENTATION TYPES </b><br>
+<br>
+ behavior.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>accept-1 </tt><i>stream type </i><tt>&key </tt><i>view default default-type provide-default insert-default replace-input<br>
+ history prompt prompt-mode display-default query-identifier activation-gestures additional-activation-<br>
+ gestures delimiter-gestures additional-delimiter-gestures </i>[<i>Function</i>]<br>
+ Requests input of type <i>type </i>from the <b>stream </b><i>stream</i>. <i>type </i>must be a presentation type speci-<br>
+ fier. <i>view </i>is a view object that defaults to <tt>stream-default-view </tt>of <i>stream</i>. <tt>accept-1 </tt>returns<br>
+ two values, the object representing the input and its presentation type. (If <tt>frame-maintain-<br>
+ presentation-histories </tt>is <b>true </b>for the current frame, then the returned object is also pushed<br>
+ on to the presentation history for that object.)<br>
+<br>
+ <tt>accept-1 </tt>establishes an input context via <tt>with-input-context</tt>, and then calls the <tt>accept<br>
+ </tt>presentation method for <i>type </i>and <i>view</i>. When called on an interactive stream, <tt>accept </tt>must<br>
+ allow input editing; see <A HREF="./page242.html">Chapter 24</A> for a discussion of input editing. The call to <tt>accept </tt>will be<br>
+ terminated when the <tt>accept </tt>method returns, or the user clicks on a sensitive presentation. The<br>
+ typing of an activation and delimiter character is typically one way in which a call to an <tt>accept<br>
+ </tt>method is terminated.<br>
+<br>
+ A top-level <tt>accept </tt>satisfied by keyboard input discards the terminating keyboard gesture (which<br>
+ will be either a delimiter or an activation gesture). A nested call to <tt>accept </tt>leaves the terminating<br>
+ gesture unread.<br>
+<br>
+ If the user clicked on a matching presentation, <tt>accept-1 </tt>will insert the object into the input<br>
+ buffer by calling <tt>presentation-replace-input </tt>on the object and type returned by the presen-<br>
+ tation translator, unless either the boolean <i>replace-input </i>is <b>false </b>or the presentation translator<br>
+ returned an <tt>:echo </tt>option of <b>false</b>. <i>replace-input </i>defaults to <b>true</b>, but this default is overridden<br>
+ by the translator explicitly returning an <tt>:echo </tt>option of <b>false</b>.<br>
+<br>
+ If <i>default </i>is supplied, then it and <i>default-type </i>are returned as values from <tt>accept-1 </tt>when the<br>
+ input is empty. <i>default-type </i>must be a presentation type specifier. If <i>default </i>is not supplied and<br>
+ <i>provide-default </i>is <b>true </b>(the default is <b>false</b>), then the default is determined by taking the most<br>
+ recent item from the presentation type history specified by <i>history</i>. If <i>insert-default </i>is <b>true </b>and<br>
+ there is a default, the default will be inserted into the input stream by calling <tt>presentation-<br>
+ replace-input</tt>.<br>
+<br>
+ <i>history </i>must be either <tt>nil</tt>, meaning that no presentation type history will be used, or a pre-<br>
+ sentation type (or abbreviation) that names a history to be used for the call to <tt>accept</tt>. <i>history<br>
+ </i>defaults to <i>type</i>.<br>
+<br>
+ <i>prompt </i>can be <tt>t</tt>, which prompts by describing the type, <tt>nil</tt>, which suppresses prompting, or<br>
+ a string, which is displayed as a prompt (via <tt>write-string</tt>). The default is <tt>t</tt>, which produces<br>
+ "Enter a <i>type</i>:" in a top-level call to <tt>accept </tt>or "(<i>type</i>)" in a nested call to <tt>accept</tt>.<br>
+<br>
+ If the boolean <i>display-default </i>is <b>true</b>, the default is displayed (if one was supplied). If <i>display-<br>
+ default </i>is <b>false</b>, the default is not displayed. <i>display-default </i>defaults to <b>true </b>if <i>prompt </i>was pro-<br>
+ vided, otherwise it defaults to <b>false</b>.<br>
+<br>
+ <i>prompt-mode </i>can be <tt>:normal </tt>(the default) or <tt>:raw</tt>, which suppresses putting a colon after the
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page222.html">Page 222</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page224.html">Page 224</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

@@ -1,0 +1,134 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page131.html">Page 131</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page133.html">Page 133</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 15. EXTENDED STREAM OUTPUT </b><br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>stream-write-string </tt><i>stream string </i><tt>&optional </tt><i>(start </i><tt>0</tt><i>) end </i>[<i>Generic Function</i>]<br>
+ Writes the string <i>string </i>to the <b>output stream </b><i>stream</i>. If <i>start </i>and <i>end </i>are supplied, they are<br>
+ integers that specify what part of <i>string </i>to output. <i>string </i>is returned as the value.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>stream-terpri </tt><i>stream </i>[<i>Generic Function</i>]<br>
+ Writes an end of line character on the <b>output stream </b><i>stream</i>, and returns <b>false</b>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>stream-fresh-line </tt><i>stream </i>[<i>Generic Function</i>]<br>
+ Writes an end of line character on the <b>output stream </b><i>stream </i>only if the stream is not at the<br>
+ beginning of the line.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>stream-finish-output </tt><i>stream </i>[<i>Generic Function</i>]<br>
+ Ensures that all the output sent to the <b>output stream </b><i>stream </i>has reached its destination, and<br>
+ only then return <b>false</b>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>stream-force-output </tt><i>stream </i>[<i>Generic Function</i>]<br>
+ Like <tt>stream-finish-output</tt>, except that it may immediately return <b>false </b>without waiting for<br>
+ the output to complete.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>stream-clear-output </tt><i>stream </i>[<i>Generic Function</i>]<br>
+ Aborts any outstanding output operation in progress on the <b>output stream </b><i>stream</i>, and returns<br>
+ <b>false</b>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>stream-advance-to-column </tt><i>stream column </i>[<i>Generic Function</i>]<br>
+ Writes enough blank space on the <b>output stream </b><i>stream </i>so that the next character will be written<br>
+ at the position specified by <i>column</i>, which is an integer.<br>
+ <br><b>15.2 Extended Output Streams<br><br>
+ </b>In addition to the basic output stream protocol, CLIM defines an extended output stream<br>
+ protocol. This protocol extends the stream model to maintain the state of a text cursor, margins,<br>
+ text styles, inter-line spacing, and so forth.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>extended-output-stream </tt>[<i>Protocol Class</i>]<br>
+ The protocol class for CLIM extended output streams. This is a subclass of <tt>output-stream</tt>.<br>
+ If you want to create a new class that behaves like an extended output stream, it should be a<br>
+ subclass of <tt>extended-output-stream</tt>. Subclasses of <tt>extended-output-stream </tt>must obey the<br>
+ extended output stream protocol.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>extended-output-stream-p </tt><i>object </i>[<i>Function</i>]
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page131.html">Page 131</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page133.html">Page 133</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

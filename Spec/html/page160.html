@@ -1,0 +1,135 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page159.html">Page 159</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page161.html">Page 161</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 17. TABLE FORMATTING </b><br>
+<ul>
+ within a row all cells have the same height, and within a column all cells have the same<br>
+ width. CLIM may also introduce additional background for other purposes as described<br>
+ below.<br><br>
+ <li>The cells are assembled into rows and columns.<br>
+</ul>
+ Some tables are "multiple column" tables, in which two or more rows of the table are placed side<br>
+ by side (usually with intervening spacing) rather than all rows being aligned vertically. Multiple<br>
+ column tables are generally used to produce a table that is more esthetically pleasing, or to make<br>
+ more efficient use of space on the output device. When a table is a multiple column table, one<br>
+ additional step takes place in the formatting of the table: the rows of the table are rearranged<br>
+ into multiple columns in which some rows are placed side by side.<br>
+ The advice that the programmer gives to CLIM on how to assemble the table consists of the<br>
+ following:<br>
+<br>
+<ul>
+ <li>How to place the contents of the cell within the cell (such as centered vertically, flush-left,<br>
+ and so forth) The possibilities for this advice are described below.<br>
+<br>
+ <li>Optionally, how much additional space to insert between columns and between rows of the<br>
+ table.<br>
+<br>
+ <li>Optionally, whether to make all columns the same size.<br>
+ The advice describing how to place the contents of the cell within the cell consists of two pieces|<br>
+ how to constrain the cell contents in the horizontal direction, and how to constrain them in the<br>
+ vertical direction.</ul>
+ <br><b>17.2 Table Formatting Functions<br><br>
+ </b><big><b>&#061&gt  </b></big><tt>formatting-table </tt><i>(</i><tt>&optional </tt><i>stream </i><tt>&key </tt><i>x-spacing y-spacing multiple-columns multiple-columns-<br>
+ x-spacing equalize-column-widths (move-cursor </i><tt>t</tt><i>) record-type) </i><tt>&body </tt><i>body </i>[<i>Macro</i>]<br>
+ Binds the local environment in such a way the output of <i>body </i>will be done in a tabular for-<br>
+ mat. This must be used in conjunction with <tt>formatting-row </tt>or <tt>formatting-column</tt>, and<br>
+ <tt>formatting-cell</tt>. The table is placed so that its upper left corner is at the current text cursor<br>
+ position of <i>stream</i>. If the boolean <i>move-cursor </i>is <b>true </b>(the default), then the text cursor will be<br>
+ moved so that it immediately follows the last cell of the table.<br>
+<br>
+ The returned value is the output record corresponding to the table.<br>
+<br>
+ <i>stream </i>is an output recording stream to which output will be done. The <i>stream </i>argument is<br>
+ not evaluated, and must be a symbol that is bound to a stream. If <i>stream </i>is <tt>t </tt>(the default),<br>
+ <tt>*standard-output* </tt>is used. <i>body </i>may have zero or more declarations as its first forms.
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page159.html">Page 159</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page161.html">Page 161</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

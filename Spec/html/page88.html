@@ -1,0 +1,139 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page87.html">Page 87</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page89.html">Page 89</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 11. TEXT STYLES </b><br>
+<br>
+ An instantiable class that implements text styles. It is a subclass of <tt>text-style</tt>. This is the<br>
+ class that <tt>make-text-style </tt>instantiates. Members of this class are immutable.<br>
+<br>
+ The interface to text styles is as follows:<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>make-text-style </tt><i>family face size </i>[<i>Function</i>]<br>
+ Returns an object of class <tt>standard-text-style </tt>with a family of <i>family</i>, a face of <i>face</i>, and a<br>
+ size of <i>size</i>.<br>
+<br>
+ <i>family </i>is one of <tt>:fix</tt>, <tt>:serif</tt>, <tt>:sans-serif</tt>, or <tt>nil</tt>.<br>
+<br>
+ <i>face </i>is one of <tt>:roman</tt>, <tt>:bold</tt>, <tt>:italic</tt>, <tt>(:bold :italic)</tt>, or <tt>nil</tt>.<br>
+<br>
+ <i>size </i>is a real number representing the size in printer's points, one of the logical sizes (<tt>:normal</tt>,<br>
+ <tt>:tiny</tt>, <tt>:very-small</tt>, <tt>:small</tt>, <tt>:large</tt>, <tt>:very-large</tt>, <tt>:huge</tt>), a relative size (<tt>:smaller </tt>or <tt>:larger</tt>),<br>
+ or <tt>nil</tt>.<br>
+<br>
+ Implementations are permitted to extend legal values for <i>family</i>, <i>face</i>, and <i>size</i>.<br>
+<br>
+ <p><b>Minor issue: </b><b>Need to describe what family, face, size mean in terms of visual appearance. This<br>
+ should also be reconciled with the ISO description of the attributes of a "text style". | York,<br>
+ SWM<br>
+<br>
+ </b><big><b>&#061&gt  </b></big><tt>*default-text-style* </tt>[<i>Constant</i>]<br>
+ The default text style used on a CLIM medium if no text style it explicitly specified for the<br>
+ medium when it it created. This must be a fully merged text style.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>*undefined-text-style* </tt>[<i>Constant</i>]<br>
+ The text style that is used as a fallback if no mapping exists for some other text style when<br>
+ some text is about to be rendered on a display device (via <tt>write-string </tt>and <tt>draw-string*</tt>, for<br>
+ example). This text style be fully merged, and it must have a mapping for all display devices.<br>
+ <br><b>11.1.1 Text Style Protocol and Text Style Suboptions<br><br>
+ </b>The following generic functions comprise the text style protocol. All subclasses of <tt>text-style<br>
+ </tt>must implement methods for each of these generic functions.<br>
+<br>
+ Each of the suboptions described below has a corresponding reader accessor that can be used to<br>
+ extract a particular component from a text style.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>text-style-components </tt><i>text-style </i>[<i>Generic Function</i>]<br>
+ Returns the components of the <b>text style </b><i>text-style </i>as three values, the family, face, and size.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>:text-family </tt>[<i>Option</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>text-style-family </tt><i>text-style </i>[<i>Generic Function</i>]
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page87.html">Page 87</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page89.html">Page 89</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

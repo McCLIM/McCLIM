@@ -1,0 +1,125 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page347.html">Page 347</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page349.html">Page 349</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+<br>
+<br>
+ </tt><b>Appendix C<br>
+ </b><br><b>Common Lisp Streams<br><br>
+ </b>CLIM performs all of its character-based input and output operations on objects called <b>streams</b>.<br>
+ Streams are divided into two layers, the <b>basic stream protocol</b>, which is character-based and<br>
+ compatible with existing Common Lisp programs, and the <b>extended stream protocol</b>, which<br>
+ introduces extended gestures such as pointer gestures and synchronous window-manager com-<br>
+ munication.<br>
+<br>
+ This appendix describes the basic stream-based input and output protocol used by CLIM. The<br>
+ protocol is taken from the <tt>STREAM-DEFINITION-BY-USER </tt>proposal to the X3J13 committee, made<br>
+ by David Gray of TI. This proposal was not accepted by the X3J13 committee as part of the<br>
+ ANSI Common Lisp language definition, but many Lisp implementations do support it. For<br>
+ those implementations that do not support it, it is implemented as part of CLIM.<br>
+ <br><b>C.1 Stream Classes<br><br>
+ </b>The following classes must be used as superclasses of user-defined stream classes. They are not<br>
+ intended to be directly instantiated; they just provide places to hang default methods.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>fundamental-stream </tt>[<i>Class</i>]<br>
+ This class is the base class for all CLIM streams. It is a subclass of <tt>stream </tt>and of <tt>standard-<br>
+ object</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>streamp </tt><i>object </i>[<i>Generic Function</i>]<br>
+ Returns <b>true </b>if <i>object </i>is a member of the class <tt>fundamental-stream</tt>. It may return <b>true </b>for<br>
+ other objects that are not members of the <tt>fundamental-stream </tt>class, but claim to serve as<br>
+ streams. (It is not sufficient to implement <tt>streamp </tt>as <tt>(typep object 'fundamental-stream)</tt>,<br>
+ because implementations may have additional ways of defining streams.)<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>fundamental-input-stream </tt>[<i>Class</i>]<br>
+
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page347.html">Page 347</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page349.html">Page 349</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

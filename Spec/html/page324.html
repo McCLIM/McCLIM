@@ -1,0 +1,138 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page323.html">Page 323</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page325.html">Page 325</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 30. GADGETS </b><br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>gadget-client </tt><i>gadget </i>[<i>Generic Function</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>(setf gadget-client) </tt><i>client gadget </i>[<i>Generic Function</i>]<br>
+ Returns the client of the gadget <i>gadget</i>. The client is usually an application frame, but it could<br>
+ be another gadget (for example, in the case of a push button that is contained in a radio box).<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>gadget-armed-callback </tt><i>gadget </i>[<i>Generic Function</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>gadget-disarmed-callback </tt><i>gadget </i>[<i>Generic Function</i>]<br>
+ Returns the functions that will be called when the armed or disarmed callback, respectively, are<br>
+ invoked. These functions will be invoked with a single argument, the gadget.<br>
+<br>
+ When these functions return <tt>nil</tt>, that indicates that there is no armed (or disarmed) callback<br>
+ for the gadget.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>armed-callback </tt><i>gadget client gadget-id </i>[<i>Callback Generic Function</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>disarmed-callback </tt><i>gadget client gadget-id </i>[<i>Callback Generic Function</i>]<br>
+ These callbacks are invoked when the gadget <i>gadget </i>is, respectively, armed or disarmed. The<br>
+ exact definition of arming and disarming varies from gadget to gadget, but typically a gadget<br>
+ becomes armed when the pointer is moved into its region, and disarmed when the pointer moves<br>
+ out of its region.<br>
+<br>
+ The default methods (on <tt>standard-gadget</tt>) call the function stored in <tt>gadget-armed-callback<br>
+ </tt>or <tt>gadget-disarmed-callback </tt>with one argument, the gadget.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>activate-gadget </tt><i>gadget </i>[<i>Generic Function</i>]<br>
+ Causes the host gadget to become active, that is, available for input.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>deactivate-gadget </tt><i>gadget </i>[<i>Generic Function</i>]<br>
+ Causes the host gadget to become inactive, that is, unavailable for input. In some environments<br>
+ this may cause the gadget to become grayed over; in others, no visual effect may be detected.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>note-gadget-activated </tt><i>client gadget </i>[<i>Generic Function</i>]<br>
+ This function is invoked after a gadget is made active.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>note-gadget-deactivated </tt><i>client gadget </i>[<i>Generic Function</i>]<br>
+ This function is invoked after a gadget is made inactive.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>value-gadget </tt>[<i>Class</i>]<br>
+ The class used by gadgets that have a value; a subclass of <tt>standard-gadget</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>:value </tt>[<i>Init Arg</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>:value-changed-callback </tt>[<i>Init Arg</i>]<br>
+ All subclasses of <tt>value-gadget </tt>must handle these two initargs, which are used to specify, re-
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page323.html">Page 323</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page325.html">Page 325</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

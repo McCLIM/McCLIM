@@ -1,0 +1,142 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page88.html">Page 88</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page90.html">Page 90</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 11. TEXT STYLES </b><br>
+<br>
+ Specifies the family of the <b>text style </b><i>text-style</i>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>:text-face </tt>[<i>Option</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>text-style-face </tt><i>text-style </i>[<i>Generic Function</i>]<br>
+ Specifies the face of the <b>text style </b><i>text-style</i>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>:text-size </tt>[<i>Option</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>text-style-size </tt><i>text-style </i>[<i>Generic Function</i>]<br>
+ Specifies the size of the <b>text style </b><i>text-style</i>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>parse-text-style </tt><i>style-spec </i>[<i>Function</i>]<br>
+ Returns a text style object. <i>style-spec </i>may be a <tt>text-style </tt>object or a device font, in which<br>
+ case it is returned as is, or it may be a list of the family, face, and size (that is, a "style spec"),<br>
+ in which case it is "parsed" and a <tt>text-style </tt>object is returned. This function is for efficiency,<br>
+ since a number of common functions that take a style object as an argument can also take a<br>
+ style spec, in particular <tt>draw-text</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>merge-text-styles </tt><i>style1 style2 </i>[<i>Generic Function</i>]<br>
+ Merges the <b>text styles </b><i>style1 </i>with <i>style2</i>, that is, returns a new text style that is the same as<br>
+ <i>style1</i>, except that unspecified components in <i>style1 </i>are filled in from <i>style2</i>. For convenience,<br>
+ the two arguments may be also be style specs.<br>
+<br>
+ When merging the sizes of two text styles, if the size from <i>style1 </i>is a relative size, the resulting<br>
+ size is either the next smaller or next larger size than is specified by <i>style2</i>. The ordering of sizes,<br>
+ from smallest to largest, is <tt>:tiny</tt>, <tt>:very-small</tt>, <tt>:small</tt>, <tt>:normal</tt>, <tt>:large</tt>, <tt>:very-large</tt>, and<br>
+ <tt>:huge</tt>.<br>
+<br>
+ <p><b>Minor issue: </b><b>Need to describe face-merging properly. For example, merging a bold face with<br>
+ an italic one can result in a bold-italic face. | SWM<br>
+<br>
+ </b><big><b>&#061&gt  </b></big><tt>text-style-ascent </tt><i>text-style port </i>[<i>Generic Function</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>text-style-descent </tt><i>text-style port </i>[<i>Generic Function</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>text-style-height </tt><i>text-style port </i>[<i>Generic Function</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>text-style-width </tt><i>text-style port </i>[<i>Generic Function</i>]<br>
+ Returns the ascent, descent, height, and width (respectively) of the font corresponding to the<br>
+ <b>text style </b><i>text-style </i>as it would be rendered on any medium on the <b>port </b><i>port</i>. <i>text-style </i>must be<br>
+ a fully specified text style.<br>
+<br>
+ The ascent of a font is the distance between the top of the tallest character in that font and the<br>
+ font's baseline. The descent of a font is the distance between the baseline and the bottom of the<br>
+ lowest descending character (usually "g", "p", "q", or "y"). The height of a font is the sum of<br>
+ the ascent and the descent of the font. The width of a font is the width of some representative<br>
+ character in the font.<br>
+<br>
+ The methods for these generic functions will typically specialize both the <i>text-style </i>and <i>port<br>
+ </i>arguments. Implementations should also provide "trampoline" for these generic function for
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page88.html">Page 88</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page90.html">Page 90</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

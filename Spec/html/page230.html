@@ -1,0 +1,139 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page229.html">Page 229</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page231.html">Page 231</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ </tt><b>CHAPTER 23. PRESENTATION TYPES </b><br>
+<br>
+ <tt>feedback</tt>.<br>
+<br>
+ When the "from presentation" is dragged over any other presentation that has a direct ma-<br>
+ nipulation translator, the function specified by <i>highlighting </i>is invoked to highlight that object.<br>
+ The function is called with four arguments: the application frame object, the "to presentation"<br>
+ to be highlighted or unhighlighted, the stream, and a highlighting state (either <tt>:highlight </tt>or<br>
+ <tt>:unhighlight</tt>). <i>highlighting </i>defaults to <tt>frame-drag-and-drop-highlighting</tt>.<br>
+<br>
+ Note that it is possible for there to be more than one drag and drop translator that applies<br>
+ to the same from-type, to-type, and gesture. In this case, the exact translator that is chosen<br>
+ for use during the dragging phase is unspecified. If these translators have different feedback,<br>
+ highlighting, documentation, or pointer documentation, the exact behavior is unspecified.<br>
+<br>
+ The other arguments to <tt>define-drag-and-drop-translator </tt>are the same as for <tt>define-<br>
+ presentation-translator</tt>.<br>
+ <br><b>23.7.2 Presentation Translator Functions<br><br>
+ </b><big><b>&#061&gt  </b></big><tt>find-presentation-translators </tt><i>from-type to-type command-table </i>[<i>Function</i>]<br>
+ Returns a list of all of the translators in the <b>command table </b><i>command-table </i>that translate from<br>
+ <i>from-type </i>to <i>to-type</i>, without taking into account any type parameters or testers. <i>from-type<br>
+ </i>and <i>to-type </i>are presentation type specifiers, and must not be abbreviations. <i>frame </i>must be an<br>
+ application frame.<br>
+<br>
+ <p><b>Implementation note: </b>Because <tt>find-presentation-translators </tt>is called during pointer<br>
+ sensitivity computations (that is, whenever the user mouses the pointer around in any CLIM<br>
+ pane), it should cache its result in order to avoid consing. Therefore, the resulting list of<br>
+ translators should not be modified; the consequences of doing so are unspecified.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>test-presentation-translator </tt><i>translator presentation context-type frame window x y </i><tt>&key<br>
+ </tt><i>event modifier-state for-menu </i>[<i>Function</i>]<br>
+ Returns <b>true </b>if the translator <i>translator </i>applies to the presentation <i>presentation </i>in input context<br>
+ type <i>context-type</i>, otherwise returns <b>false</b>. (There is no <i>from-type </i>argument because it is derived<br>
+ from <i>presentation</i>.) <i>x </i>and <i>y </i>are the <i>x </i>and <i>y </i>positions of the pointer within the window stream<br>
+ <i>window</i>.<br>
+<br>
+ <i>event </i>and <i>modifier-state </i>are a pointer button event and modifier state (see <tt>event-modifier-<br>
+ key-state</tt>), and are compared against the translator's gesture. <i>event </i>defaults to <tt>nil</tt>, and<br>
+ <i>modifier-state </i>defaults to 0, meaning that no modifier keys are held down. Only one of <i>event </i>or<br>
+ <i>modifier-state </i>may be supplied; it is unspecified what will happen if both are supplied.<br>
+<br>
+ If <i>for-menu </i>is <b>true</b>, the comparison against <i>event </i>and <i>modifier-state </i>is not done.<br>
+<br>
+ <i>presentation</i>, <i>context-type</i>, <i>frame</i>, <i>window</i>, <i>x</i>, <i>y</i>, and <i>event </i>are passed along to the translator's<br>
+ tester if and when the tester is called.
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page229.html">Page 229</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page231.html">Page 231</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

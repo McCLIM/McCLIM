@@ -1,0 +1,139 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page69.html">Page 69</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page71.html">Page 71</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 9. PORTS, GRAFTS, AND MIRRORED SHEETS </b><br>
+<br>
+ On a Unix host, if these values are not supplied, the defaults come from the <tt>DISPLAY </tt>environment<br>
+ variable. Each CLIM implementation must describe how it uses such environment variables.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>:genera &key </tt><i>screen </i>[<i>Server Path</i>]<br>
+ <p><b>Minor issue: </b><b>RSL claims that this is old and obsolete. What is the proposed replacement for<br>
+ it? | SWM<br>
+<br>
+ </b><big><b>&#061&gt  </b></big><tt>*default-server-path* </tt>[<i>Variable</i>]<br>
+ This special variable is used by <tt>find-port </tt>and its callers to default the choice of a display<br>
+ service to locate. Binding this variable in a dynamic context will affect the defaulting of this<br>
+ argument to these functions. This variable will be defaulted according to the environment. In<br>
+ the Unix environment, for example, CLIM will attempt to set this variable based on the value<br>
+ of the <tt>DISPLAY </tt>environment variable.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>port </tt><i>object </i>[<i>Generic Function</i>]<br>
+ Returns the port associated with <i>object</i>. <tt>port </tt>is defined for all sheet classes (including grafts<br>
+ and streams that support the CLIM graphics protocol), mediums, and application frames. For<br>
+ degrafted sheets or other objects that aren't currently associated with particular ports, <tt>port </tt>will<br>
+ return <tt>nil</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>with-port-locked </tt><i>port </i><tt>&body </tt><i>body </i>[<i>Macro</i>]<br>
+ Executes <i>body </i>after grabbing a lock associated with the <b>port </b><i>port</i>, which may be a port or any<br>
+ object on which the function <tt>port </tt>works. If <i>object </i>currently has no port, <i>body </i>will be executed<br>
+ without locking.<br>
+<br>
+ <i>body </i>may have zero or more declarations as its first forms.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>port-server-path </tt><i>port </i>[<i>Generic Function</i>]<br>
+ Returns the server path associated with the <b>port </b><i>port</i>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>port-properties </tt><i>port indicator </i>[<i>Generic Function</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>(setf port-properties) </tt><i>property port indicator </i>[<i>Generic Function</i>]<br>
+ These functions provide a port-based property list. They are primarily intended to support<br>
+ users of CLIM that may need to associate certain information with ports. For example, the<br>
+ implementor of a special graphics package may need to maintain resource tables for each port<br>
+ on which it is used.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>map-over-ports </tt><i>function </i>[<i>Function</i>]<br>
+ Invokes <i>function </i>on each existing port. Function is a function of one argument, the port; it has<br>
+ dynamic extent.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>restart-port </tt><i>port </i>[<i>Generic Function</i>]<br>
+ In a multi-process Lisp, <tt>restart-port </tt>restarts the global input processing loop associated with
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page69.html">Page 69</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page71.html">Page 71</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

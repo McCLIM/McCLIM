@@ -1,0 +1,140 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page117.html">Page 117</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page119.html">Page 119</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 13. DRAWING IN COLOR </b><br>
+<br>
+ If <i>k </i>is supplied, it must be an integer between 0 and <i>n </i><big><b>+ </b></big>1 (inclusive), in which case <tt>make-<br>
+ contrasting-inks </tt>returns the <i>k</i>'th design rather than returning a vector of designs.<br>
+<br>
+ If the implementation does not have <i>n </i>different contrasting inks, <tt>make-contrasting-inks </tt>signals<br>
+ an error. This will not happen unless <i>n </i>is greater than eight.<br>
+<br>
+ The rendering of the design may be a color or a stippled pattern, depending on whether the<br>
+ output medium supports color.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>contrasting-inks-limit </tt><i>port </i>[<i>Generic Function</i>]<br>
+ Returns the number of contrasting colors (or stipple patterns if <i>port </i>is monochrome or grayscale)<br>
+ that can be rendered on any medium on the <b>port </b><i>port</i>. Implementations are encouraged to make<br>
+ this as large as possible, but it must be at least 8. All classes that obey the medium protocol<br>
+ must implement a method for this generic function.<br>
+ <br><b>13.4 Opacity<br>
+<br>
+ </b><big><b>&#061&gt  </b></big><tt>opacity </tt>[<i>Protocol Class</i>]<br>
+ A member of the class <tt>opacity </tt>is a completely colorless design that is typically used as the<br>
+ second argument to <tt>compose-in </tt>to adjust the opacity of
+    another design. See <A HREF="./page122.html">Chapter 14</A> for the<br>
+ details of <tt>compose-in</tt>. The <tt>opacity </tt>class is the protocol class for an opacity, and is a subclass<br>
+ of <tt>design</tt>. If you want to create a new class that behaves like an opacity, it should be a subclass<br>
+ of <tt>opacity</tt>. Subclasses of <tt>opacity </tt>must obey the opacity protocol.<br>
+<br>
+ All of the standard instantiable opacity classes provided by CLIM are immutable.<br>
+<br>
+ Opacity controls how graphical output covers previous output. Opacity can vary from totally<br>
+ opaque to totally transparent. Intermediate opacity values result in color blending so that the<br>
+ earlier picture shows through what is drawn on top of it.<br>
+<br>
+ An opacity may be specified by a real number between 0 and 1 (inclusive). 0 is completely<br>
+ transparent, 1 is completely opaque, fractions are translucent. The opacity of a design is the<br>
+ degree to which it hides the previous contents of the drawing plane when it is drawn.<br>
+<br>
+ The fully transparent and fully opaque opacity levels (that is, opacities 0 and 1) must always be<br>
+ supported, but a valid CLIM implementation might only support a handful of opacity levels in<br>
+ between (including none). A valid CLIM implementation might implement color blending and<br>
+ unsaturated colors by stippling, although it is preferred, when possible, for a viewport to display<br>
+ a uniform color as a uniform color rather than as a perceptible stipple.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>opacityp </tt><i>object </i>[<i>Function</i>]<br>
+ Returns <b>true </b>if <i>object </i>is an <b>opacity</b>, otherwise returns <b>false</b>.<br>
+<br>
+ The following function returns an opacity:
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page117.html">Page 117</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page119.html">Page 119</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

@@ -1,0 +1,135 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page234.html">Page 234</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page236.html">Page 236</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 23. PRESENTATION TYPES </b><br>
+<ol start=5>
+ <li> The translator's tester returned <b>true</b>. If there is no tester, the translator behaves as though<br>
+ there is a tester that always returns <b>true</b>.<br><br>
+ <li> If there are parameters in the input context type and the tester is not declared to be<br>
+ definitive, the value returned by body of the translator must be <tt>presentation-typep </tt>of<br>
+ the context type.<br>
+</ol>
+ Note that the type parameters from the presentation's type have no effect on translator lookup.<br>
+<br>
+ <tt>find-presentation-translator </tt>is responsible for the first two steps of the matching algorithm,<br>
+ and <tt>test-presentation-translator </tt>is responsible for the remaining steps.<br>
+<br>
+ When a single translator is being chosen (such as is done by <tt>throw-highlighted-presentation</tt>),<br>
+ it is possible that more than one translator having the same gesture may be applicable to the<br>
+ presentation in the specified input context. In this case, the translator having the highest pri-<br>
+ ority will be chosen. If there is more than one having the same priority, it is unspecified what<br>
+ translator will be chosen.<br>
+<br>
+ The matching algorithm is somewhat more complicated in face of nested presentations and<br>
+ nested input contexts. In this case, the applicable presentation is the <b>smallest </b>presentation that<br>
+ matches the <b>innermost </b>input context.<br>
+<br>
+ Sometimes there may be nested presentations that have exactly the same bounding rectangle. In<br>
+ this case, it is not possible for a user to unambiguously point to just one of the nested presenta-<br>
+ tions. Therefore, when CLIM has located the innermost applicable presentation in the innermost<br>
+ input context, it must then search for outer presentations having exactly the same bounding rect-<br>
+ angle, checking to see if there are any applicable translators for those presentations. If there are<br>
+ multiple applicable translators, the one having the highest priority is chosen. <tt>find-applicable-<br>
+ translators</tt>, <tt>call-presentation-menu</tt>, <tt>throw-highlighted-presentation</tt>, and the compu-<br>
+ tation of pointer documentation must all take this situation into account.<br>
+<br>
+ The translators are searched in the order that they are returned by <tt>find-presentation-<br>
+ translators</tt>. The rules for the ordering of the translators are described under that function.<br>
+ <br><b>23.8 Standard Presentation Types<br><br>
+ </b>The following sections document the presentation types supplied by CLIM. Any presentation<br>
+ type with the same name as a Common Lisp type accepts the same parameters as the Common<br>
+ Lisp type (and additional parameters in a few cases).<br>
+ <br><b>23.8.1 Basic Presentation Types<br><br>
+ </b><big><b>&#061&gt  </b></big><tt>t </tt>[<i>Presentation Type</i>]<br>
+ The supertype of all other presentation types.
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page234.html">Page 234</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page236.html">Page 236</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

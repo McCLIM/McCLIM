@@ -1,0 +1,126 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page255.html">Page 255</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page257.html">Page 257</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+<br>
+<br>
+ <b>Chapter 25<br>
+ </b><br><b>Menu Facilities<br>
+ </b><p><b>Major issue: </b><b>There is a general issue about how these menus fit in with the menus that<br>
+ might be provided by the underlying toolkit. For example, under what circumstances is CLIM<br>
+ allowed to directly use the menu facilities provided by the host? Should </b><tt>:leave-menu-visible t<br>
+ </tt><b>interact with the "pushpin" facility provided by OpenLook? | SWM<br>
+<br>
+ </b><big><b>&#061&gt  </b></big><tt>menu-choose </tt><i>items </i><tt>&key </tt><i>associated-window printer presentation-type default-item default-style<br>
+ label cache unique-id id-test cache-value cache-test max-width max-height n-rows n-columns x-<br>
+ spacing y-spacing cell-align-x cell-align-y pointer-documentation </i>[<i>Generic Function</i>]<br>
+ Displays a menu whose choices are given by the elements of the sequence <i>items</i>. It returns three<br>
+ values: the value of the chosen item, the item itself, and the pointer button event corresponding<br>
+ to the gesture that the user used to select it. If the user aborts out of the menu, a single value<br>
+ is returned, <tt>nil</tt>.<br>
+<br>
+ <i>items </i>is a sequence of menu items. Each menu item has a visual representation derived from a<br>
+ display object, an internal representation that is a value object, and a set of menu item options.<br>
+ The form of a menu item is one of the following:<ul>
+ <li>An atom. The item is both the display object and the value object.<br>
+<br>
+ <li>A cons. The <tt>car </tt>is the display object and the <tt>cdr </tt>is the value object. The value object<br>
+ must be an atom. If you need to return a list as the value, use the :value option in the list<br>
+ menu item format described below.<br>
+<br>
+ <li>A list. The <tt>car </tt>is the display object and the cdr is a list of alternating option keywords<br>
+ and values. The value object is specified with the keyword <tt>:value </tt>and defaults to the<br>
+ display object if <tt>:value </tt>is not present.</ul>
+ The menu item options are:<ul>
+ <li><tt>:value</tt> - specifies the value object.<br>
+</ul>
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page255.html">Page 255</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page257.html">Page 257</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

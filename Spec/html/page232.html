@@ -1,0 +1,141 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page231.html">Page 231</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page233.html">Page 233</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 23. PRESENTATION TYPES </b><br>
+<br>
+ <p><b>Implementation note: </b><tt>find-applicable-translators </tt>could be implemented by looping over<br>
+ <i>input-context</i>, calling <tt>find-presentation-translators </tt>to generate all the translators, and then<br>
+ calling <tt>test-presentation-translator </tt>to filter out the ones that do not apply. The conse-<br>
+ quences of modifying the returned value are unspecified. Note that the ordering of translators can<br>
+ be done by <tt>find-presentation-translators</tt>, provided that <tt>find-applicable-translators<br>
+ </tt>takes care to preserve this ordering.<br>
+<br>
+ <p><b>Minor issue: </b><b>Describe and implement the </b><tt>class-nondisjoint-classes </tt><b>idea. Be very clear<br>
+ and precise about when the translator body gets run. | SWM<br>
+<br>
+ </b><big><b>&#061&gt  </b></big><tt>presentation-matches-context-type </tt><i>presentation context-type frame window x y </i><tt>&key </tt><i>event<br>
+ modifier-state </i>[<i>Function</i>]<br>
+ Returns <b>true </b>if there are any translators that translate from the <b>presentation </b><i>presentation</i>'s type<br>
+ to the input context type <i>context-type</i>, otherwise returns <b>false</b>. (There is no <i>from-type </i>argument<br>
+ because it is derived from <i>presentation</i>.) <i>frame</i>, <i>window</i>, <i>x</i>, <i>y</i>, <i>event</i>, and <i>modifier-state </i>are as<br>
+ for <tt>test-presentation-translator</tt>.<br>
+<br>
+ If there are no applicable translators, <tt>presentation-matches-context-type </tt>will return <b>false</b>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>call-presentation-translator </tt><i>translator presentation context-type frame event window x y<br>
+ </i>[<i>Function</i>]<br>
+ Calls the function that implements the body of the translator <i>translator </i>on the <b>presentation<br>
+ </b><i>presentation</i>'s object, and passes <i>presentation</i>, <i>context-type</i>, <i>frame</i>, <i>event</i>, <i>window</i>, <i>x</i>, and <i>y </i>to<br>
+ the body of the translator as well.<br>
+<br>
+ The returned values are the same as the values returned by the body of the translator, namely,<br>
+ the translated object and the translated type.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>document-presentation-translator </tt><i>translator presentation context-type frame event window<br>
+ x y </i><tt>&key </tt><i>(stream </i><tt>*standard-output*</tt><i>) documentation-type </i>[<i>Function</i>]<br>
+ Computes the documentation string for the translator <i>translator </i>and outputs it to the stream<br>
+ <i>stream</i>. <i>presentation</i>, <i>context-type</i>, <i>frame</i>, <i>event</i>, <i>window</i>, <i>x</i>, and <i>y </i>are as for <tt>test-presentation-<br>
+ translator</tt>.<br>
+<br>
+ <tt>documentation-type </tt>must be either <tt>:normal </tt>or <tt>:pointer</tt>. If it is <tt>:normal</tt>, the usual translator<br>
+ documentation function is called. If it is <tt>:pointer</tt>, the translator's pointer documentation is<br>
+ called.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>call-presentation-menu </tt><i>presentation input-context frame window x y </i><tt>&key </tt><i>for-menu label<br>
+ </i>[<i>Function</i>]<br>
+ Finds all the applicable translators for the <b>presentation </b><i>presentation </i>in the input context <i>input-<br>
+ context</i>, creates a menu that contains all of the translators, and pops up the menu from which<br>
+ the user can choose a translator. After the translator is chosen, it is called with the arguments<br>
+ supplied to <tt>call-presentation-menu </tt>and the matching input context that was established by<br>
+ <tt>with-input-context </tt>is terminated.
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page231.html">Page 231</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page233.html">Page 233</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

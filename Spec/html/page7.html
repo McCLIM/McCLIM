@@ -1,0 +1,139 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page6.html">Page 6</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page8.html">Page 8</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 2. CONVENTIONS </b><br>
+<br>
+ usually via <tt>setf </tt>accessors.<br>
+<br>
+ In CLIM, object immutability is maintained at the class level. Throughout this specification,<br>
+ the immutability or mutability of a class will be explicitly specified.<br>
+<br>
+ Some immutable classes also allow <b>interning</b>. A class is said to be interning if it guarantees<br>
+ that two instances that are equivalent will always be <tt>eq</tt>. For example, if the class <tt>color </tt>were<br>
+ interning, calling <tt>make-rgb-color </tt>twice with the same arguments would return <tt>eq </tt>values. CLIM<br>
+ does not specify that any class is interning, however all immutable classes are allowed to be<br>
+ interning at the discretion of the implementation.<br>
+<br>
+ In some rare cases, CLIM will modify objects that are members of immutable classes. Such<br>
+ objects are referred to as being <b>volatile</b>. Extreme care must be take with volatile objects. This<br>
+ specification will note whenever some object that is part of the API is volatile.<br>
+ <br><b>2.4.1 Behavior of Interfaces<br><br>
+ </b>In this specification, any interfaces that take or return mutable objects can be classified in a few<br>
+ different ways.<br>
+<br>
+ Most functions <b>do not capture </b>their mutable input objects, that is, these functions will either<br>
+ not store the objects at all, or will copy any mutable objects before storing them, or perhaps<br>
+ store only some of the components of the objects. Later modifications to those objects will not<br>
+ affect the internal state of CLIM.<br>
+<br>
+ Some functions <b>may capture </b>their mutable input objects. That is, it is unspecified as to whether<br>
+ a CLIM implementation will or will not capture the mutable inputs to some function. For such<br>
+ functions, programmers should assume that these objects will be captured and must not modify<br>
+ these objects capriciously. Furthermore, it is unspecifed what will happen if these objects are<br>
+ later modified.<br>
+<br>
+ Some programmers might choose to create a mutable subclass of an immutable class. If CLIM<br>
+ captures an object that is a member of such a class, it is unspecified what will happen if the<br>
+ programmer later modifies that object. If a programmer passes such an object to a CLIM<br>
+ function that may capture its inputs, he is responsible for either first copying the object or<br>
+ ensuring that the object does not change later.<br>
+<br>
+ Some functions that return mutable objects are guaranteed to create <b>fresh outputs</b>. These objects<br>
+ can be modified without affecting the internal state of CLIM.<br>
+<br>
+ Functions that return mutable objects that are not fresh objects fall into two categories: those<br>
+ that return <b>read-only state</b>, and those that return <b>read/write state</b>. If a function returns read-<br>
+ only state, programmers must not modify that object; doing so might corrupt the state of CLIM.<br>
+ If a function returns read/write state, the modification of that object is part of CLIM's interface,<br>
+ and programmers are free to modify the object in ways that "make sense".
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page6.html">Page 6</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page8.html">Page 8</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

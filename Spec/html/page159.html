@@ -1,0 +1,134 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page158.html">Page 158</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page160.html">Page 160</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 17. TABLE FORMATTING </b><br>
+<br>
+<br>
+<br>
+<br>
+ <center><b>Figure 17.1: Example of tabular output.</center></b><br>
+ facilities passes control to CLIM at a higher level. The programmer benefits by being able to<br>
+ specify the appearance of output in more compact abstract terms, and by not having to write<br>
+ the code that constrains the output to appear in proper tabular form.<br>
+<br>
+ Tabular output consists of a rectangular array of pieces of output corresponding to the bounding<br>
+ rectangles of the output. Each piece of output forms the contents of a <b>table cell</b>. There is no<br>
+ restriction on the contents of a table cell; cells may contain text, graphics, even other tables.<br>
+ For purposes of this discussion, we draw a strong distinction between specifying what goes in a<br>
+ cell, and specifying how the cells are arranged to form a table.<br>
+<br>
+ Specifying the contents of a cell is the responsibility of the programmer. A programmer using<br>
+ the table formatting facilities can predict the appearance of any individual cell by simply looking<br>
+ at the code for that cell. A cell's appearance does not depend upon where in the table it lies, for<br>
+ instance. The only thing about a cell's appearance that cannot be predicted from that cell alone<br>
+ is the amount of space the table formatting has to introduce in order to perform the desired<br>
+ alignment.<br>
+<br>
+ Specifying the relative arrangements of cells to form a table is the responsibility of CLIM based<br>
+ on the advice of the programmer. The programmer advises CLIM about extra space to put<br>
+ between rows or columns, for instance, but does not directly control the absolute positioning of<br>
+ a cell's contents.<br>
+<br>
+ For purposes of understanding table formatting, the following model may be used.<ul>
+ <li>The code for a cell draws to a stream that has a "private" (local to that cell) drawing<br>
+ plane.<br>
+<br>
+ <li>After output for a cell has finished, the bounding rectangle of all output on the "private"<br>
+ drawing plane is found. The region within that bounding rectangle forms the contents of<br>
+ a cell.<br>
+<br>
+ <li>Additional rectangular regions, containing only background ink, are attached to the edges<br>
+ of the cell contents. These regions ensure that the cells satisfy the
+	tabular constraints that
+</ul>
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page158.html">Page 158</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page160.html">Page 160</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

@@ -1,0 +1,143 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page311.html">Page 311</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page313.html">Page 313</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 29. PANES </b><br>
+<br>
+ In the second pass (called <b>space allocation</b>), the frame manager attempts to obtain the required<br>
+ amount of space from the host window system. The top-level pane is allocated the space that is<br>
+ actually available. Each pane, in turn, allocates space recursively to each of its descendants in<br>
+ the hierarchy according to the pane's rules of composition.<br>
+<br>
+ <p><b>Minor issue: </b><b>It isn't alway possible to allocate the required space. What is the protocol<br>
+ for handling these space allocation failures? Some kind of error should be signalled when the<br>
+ constraints can't be satisfied, which can be handled by the application. Otherwise the panes<br>
+ will fall where they may. The </b><tt>define-application-frame </tt><b>macro should provide an option that<br>
+ allows programmers to conveniently specify a condition handler. | ILA<br>
+<br>
+ </b>For many types of panes, the application programmer can indicate the space requirements of the<br>
+ pane at creation time by using the space requirement options (described above), as well as by<br>
+ calling the <tt>change-space-requirements </tt>function (described below). For example, application<br>
+ panes are used to display application-specific information, so the application can determine how<br>
+ much space should normally be given to them.<br>
+<br>
+ Other pane types automatically calculate how much space they need based on the information<br>
+ they need to display. For example, label panes automatically calculate their space requirement<br>
+ based on the text they need to display.<br>
+<br>
+ A composite pane calculates its space requirement based on the requirements of its children and<br>
+ its own particular rule for arranging them. For example, a pane that arranges its children in<br>
+ a vertical stack would return as its desired height the sum of the heights of its children. Note<br>
+ however that a composite is not required by the layout protocol to respect the space requests of<br>
+ its children; in fact, composite panes aren't even required to ask their children.<br>
+<br>
+ Space requirements are expressed for each of the two dimensions as a preferred size, a mininum<br>
+ size below which the pane cannot be shrunk, and a maxium size above which the pane cannot<br>
+ be grown. (The minimum and maximum sizes can also be specified as relative amounts.) All<br>
+ sizes are specified as a real number indicating the number of device units (such as pixels).<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>change-space-requirements </tt><i>pane </i><tt>&key </tt><i>resize-frame </i><tt>&rest </tt><i>space-req-keys </i>[<i>Generic Function</i>]<br>
+ This function can be invoked to indicate that the space requirements for <i>pane </i>have changed.<br>
+ Any of the options that applied to the pane at creation time can be passed into this function as<br>
+ well.<br>
+<br>
+ <i>resize-frame </i>determines whether the frame should be resized to accommodate the new space<br>
+ requirement of the hierarchy. If <i>resize-frame </i>is <b>true</b>, then <tt>layout-frame </tt>will be invoked on the<br>
+ frame. If <i>resize-frame </i>is <b>false</b>, then the frame may or may not get resized depending on the pane<br>
+ hierarchy and the <tt>:resize-frame </tt>option that was supplied to <tt>define-application-frame</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>note-space-requirements-changed </tt><i>sheet pane </i>[<i>Generic Function</i>]<br>
+ This function is invoked whenever <i>pane</i>'s space requirements have changed. <i>sheet </i>must be the<br>
+ parent of <i>pane</i>. Invoking this function essentially means that <i>compose-space </i>will be reinvoked on<br>
+ <i>pane</i>, then it will reply with a space requirement that is not equal to the reply that was given<br>
+ on the last call to <i>compose-space</i>.
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page311.html">Page 311</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page313.html">Page 313</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

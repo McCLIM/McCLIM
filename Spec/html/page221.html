@@ -1,0 +1,141 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page220.html">Page 220</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page222.html">Page 222</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 23. PRESENTATION TYPES </b><br>
+<br>
+ <br><b>23.5 Context-dependent (Typed) Input<br><br>
+ </b>Associating semantics with output is only half of the user interface equation. The presentation<br>
+ type system also supports the input side of the user interaction. When an application wishes to<br>
+ solicit from the user input of a particular presentation type, it establishes an <b>input context </b>for<br>
+ that type. CLIM will then automatically allow the user to satisfy the input request by pointing<br>
+ at a visible presentation of the requested type (or a valid subtype) and pressing a pointer button.<br>
+ Only the presentations that "match" the input context will be "sensitive" (that is, highlighted<br>
+ when the pointer is moved over them) and accepted as input, thus the presentation-based input<br>
+ mechanism supports <b>context-dependent input</b>.<br>
+<br>
+ <p><b>Minor issue: </b><b>What exactly is an input context? What does it mean for them to be nested?<br>
+ | SWM<br>
+<br>
+ </b><big><b>&#061&gt  </b></big><tt>*input-context* </tt>[<i>Variable</i>]<br>
+ The current input context. This will be a list, each element of which corresponds to a single<br>
+ call to <tt>with-input-context</tt>. The first element of the list is the context established by the most<br>
+ recent call to <tt>with-input-context</tt>, and the last element is the least recent call to <tt>with-input-<br>
+ context</tt>.<br>
+<br>
+ The exact format of the elements in the list is unspecified, but will typically be a list of a<br>
+ presentation type and a tag that corresponds to the point in the control structure of CLIM<br>
+ at which the input context was establish. <tt>*input-context* </tt>and the elements in it may have<br>
+ dynamic extent.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>with-input-context </tt><i>(type </i><tt>&key </tt><i>override) (</i><tt>&optional </tt><i>object-var type-var event-var options-<br>
+ var) form </i><tt>&body </tt><i>pointer-cases </i>[<i>Macro</i>]<br>
+ Establishes an input context of <b>presentation type </b><i>type</i>; this must be done by binding <tt>*input-<br>
+ context* </tt>to reflect the new input context. When the boolean <i>override </i>is <b>false </b>(the default), this<br>
+ invocation of <tt>with-input-context </tt>adds its context presentation type to the current context.<br>
+ In this way an application can solicit more than one type of input at the same time. When<br>
+ <i>override </i>is <b>true</b>, it overrides the current input context rather than nesting inside the current<br>
+ input context.<br>
+<br>
+ <i>type </i>can be a presentation type abbreviation.<br>
+<br>
+ After establishing the new input context, <i>form </i>is evaluated. If no pointer gestures are made<br>
+ by the user during the evaluation of <i>form</i>, the values of <i>form </i>are returned. Otherwise, one<br>
+ of the <i>pointer-cases </i>is executed (based on the presentation type of the object that was clicked<br>
+ on) and the value of that is returned. (See the descriptions of <tt>call-presentation-menu </tt>and<br>
+ <tt>throw-highlighted-presentation</tt>.) <i>pointer-cases </i>is constructed like a <tt>typecase </tt>statement<br>
+ clause list whose keys are presentation types; the first clause whose key satisfies the condition<br>
+ <tt>(presentation-subtypep </tt><i>type key</i><tt>) </tt>is the one that is chosen.<br>
+<br>
+ During the execution of one of the <i>pointer-cases</i>, <i>object-var </i>is bound to the object that was<br>
+ clicked on (the first returned value from the presentation translator that was invoked), <i>type-var</i>
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page220.html">Page 220</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page222.html">Page 222</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

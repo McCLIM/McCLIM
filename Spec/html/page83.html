@@ -1,0 +1,135 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page82.html">Page 82</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page84.html">Page 84</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 10. DRAWING OPTIONS </b><br>
+<br>
+ <i>sx </i>and <i>sy </i>are as for <tt>make-scaling-transformation</tt>.<br>
+<br>
+ The <i>medium </i>argument is not evaluated, and must be a symbol that is bound to a sheet or<br>
+ medium. If <i>medium </i>is <tt>t</tt>, <tt>*standard-output* </tt>is used. <i>body </i>may have zero or more declarations<br>
+ as its first forms.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>with-rotation </tt><i>(medium angle </i><tt>&optional </tt><i>origin) </i><tt>&body </tt><i>body </i>[<i>Macro</i>]<br>
+ Establishes a rotation on the <b>medium </b>designated by <i>medium </i>that rotates by <i>angle</i>, and then<br>
+ executes <i>body </i>with that transformation in effect. If <i>origin </i>is supplied, the rotation is about that<br>
+ point; if it is not supplied, it defaults to (0<i>;</i>0).<br>
+<br>
+ <i>angle </i>and <i>origin </i>are as for <tt>make-rotation-transformation</tt>.<br>
+<br>
+ The <i>medium </i>argument is not evaluated, and must be a symbol that is bound to a sheet or<br>
+ medium. If <i>medium </i>is <tt>t</tt>, <tt>*standard-output* </tt>is used. <i>body </i>may have zero or more declarations<br>
+ as its first forms.<br>
+ <br><b>10.2.2 Establishing Local Coordinate Systems<br><br>
+ </b><big><b>&#061&gt  </b></big><tt>with-local-coordinates </tt><i>(medium </i><tt>&optional </tt><i>x y) </i><tt>&body </tt><i>body </i>[<i>Macro</i>]<br>
+ Binds the dynamic environment to establish a local coordinate system on the <b>medium </b>designated<br>
+ by <i>medium </i>with the origin of the new coordinate system at the position (<i>x;y</i>). The "direction-<br>
+ ality" of the coordinate system is otherwise unchanged. <i>x </i>and <i>y </i>are real numbers, and both<br>
+ default to 0.<br>
+<br>
+ The <i>medium </i>argument is not evaluated, and must be a symbol that is bound to a sheet or<br>
+ medium. If <i>medium </i>is <tt>t</tt>, <tt>*standard-output* </tt>is used. <i>body </i>may have zero or more declarations<br>
+ as its first forms.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>with-first-quadrant-coordinates </tt><i>(medium </i><tt>&optional </tt><i>x y) </i><tt>&body </tt><i>body </i>[<i>Macro</i>]<br>
+ Binds the dynamic environment to establish a local coordinate system on the <b>medium </b>designated<br>
+ by <i>medium </i>with the positive <i>x </i>axis extending to the right and the positive <i>y </i>axis extending<br>
+ upward, with the origin of the new coordinate system at the position (<i>x;y</i>). <i>x </i>and <i>y </i>are real<br>
+ numbers, and both default to 0.<br>
+<br>
+ The <i>medium </i>argument is not evaluated, and must be a symbol that is bound to a sheet or<br>
+ medium. If <i>medium </i>is <tt>t</tt>, <tt>*standard-output* </tt>is used. <i>body </i>may have zero or more declarations<br>
+ as its first forms.<br>
+ <br><b>10.3 Line Styles<br><br>
+ </b>A line or other path is a one-dimensional object. However in order to be visible, the rendering<br>
+ of a line must occupy some non-zero area on the display hardware. A <b>line style </b>represents the
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page82.html">Page 82</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page84.html">Page 84</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

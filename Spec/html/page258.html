@@ -1,0 +1,144 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page257.html">Page 257</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page259.html">Page 259</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 25. MENU FACILITIES </b><br>
+<br>
+ that is used to compare cache values, which defaults to <tt>equal</tt>. Both <i>cache-value </i>and <i>unique-id<br>
+ </i>have dynamic extent.<br>
+<br>
+ <i>max-width </i>and <i>max-height </i>specify the maximum width and height of the menu, in device units.<br>
+ They can be overridden by <i>n-rows </i>and <i>n-columns</i>.<br>
+<br>
+ <i>n-rows </i>and <i>n-columns </i>specify the number of rows and columns in the menu.<br>
+<br>
+ <i>x-spacing </i>specifies the amount of space to be inserted between columns of the table; the default<br>
+ is the width of a space character. It is specified the same way as the <tt>:x-spacing </tt>option to<br>
+ <tt>formatting-table</tt>.<br>
+<br>
+ <i>y-spacing </i>specifies the amount of blank space inserted between rows of the table; the default is<br>
+ the vertical spacing for the stream. The possible values for this option are the same as for the<br>
+ <i>:y-spacing </i>option to <tt>formatting-table</tt>.<br>
+<br>
+ <i>cell-align-x </i>specifies the horizontal placement of the contents of the cell. Can be one of <tt>:left</tt>,<br>
+ <tt>:right</tt>, or <tt>:center</tt>. The default is <tt>:left</tt>. The semantics are the same as for the <tt>:align-x<br>
+ </tt>option to <tt>formatting-cell</tt>.<br>
+<br>
+ <i>cell-align-y </i>specifies the vertical placement of the contents of the cell. Can be one of <tt>:top</tt>,<br>
+ <tt>:bottom</tt>, or <tt>:center</tt>. The default is <tt>:top</tt>. The semantics are the same as for the <tt>:align-y<br>
+ </tt>option to <tt>formatting-cell</tt>.<br>
+<br>
+ <i>pointer-documentation </i>is either <tt>nil </tt>(the default), meaning that no pointer documentation should<br>
+ be computed, or a stream on which pointer documentation should be displayed.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>menu-choose-from-drawer </tt><i>menu type drawer </i><tt>&key </tt><i>x-position y-position cache unique-id id-test<br>
+ cache-value cache-test default-presentation pointer-documentation </i>[<i>Generic Function</i>]<br>
+ This is a a lower-level routine for displaying menus. It allows the programmer much more<br>
+ flexibility in the menu layout. Unlike <tt>menu-choose</tt>, which automatically creates and lays out the<br>
+ menu, <tt>menu-choose-from-drawer </tt>takes a programmer-provided window and drawing function.<br>
+ The drawing function is responsible for drawing the contents of the menu; generally it will be a<br>
+ lexical closure that closes over the menu items.<br>
+<br>
+ <tt>menu-choose-from-drawer </tt>draws the menu items into that window using the drawing function.<br>
+ The drawing function gets called with two arguments, <i>stream </i>and <i>type</i>. It can use <i>type </i>for its<br>
+ own purposes, such as using it as the type argument in a call to <tt>present</tt>.<br>
+<br>
+ <tt>menu-choose-from-drawer </tt>returns two values: the object the user clicked on, and the pointer<br>
+ button event. If the user aborts out of the menu, a single value is returned, <tt>nil</tt>.<br>
+<br>
+ <i>menu </i>is a CLIM window to use for the menu. This argument may be specialized to provide a<br>
+ different look-and-feel for different host window systems.<br>
+<br>
+ <i>type </i>is a presentation type specifier for each of the mouse-sensitive items in the menu. This is<br>
+ the input context that will be established once the menu is displayed. For programmers who<br>
+ don't need to define their own types, a useful presentation type is <tt>menu-item</tt>.
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page257.html">Page 257</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page259.html">Page 259</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>

@@ -1,0 +1,136 @@
+<table width="100%"><tr>
+<td align=left><A HREF="./page14.html">Page 14</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page16.html">Page 16</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
+<hr>
+<br>
+<br>
+ <b>CHAPTER 3. REGIONS </b><br>
+<br>
+ protocol.<br>
+<br>
+ Note that constructing an <tt>area </tt>object with no area (such as calling <tt>make-rectangle </tt>with two<br>
+ coincident points), for example) canonicalizes it to <tt>+nowhere+</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>areap </tt><i>object </i>[<i>Function</i>]<br>
+ Returns <b>true </b>if <i>object </i>is an <b>area</b>, otherwise returns <b>false</b>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>coordinate </tt>[<i>Type</i>]<br>
+ The type that represents a coordinate. This must be a subtype of <tt>real</tt>, but CLIM implemen-<br>
+ tations may use a more specific subtype (such as <tt>single-float</tt>) for reasons of efficiency.<br>
+<br>
+ All of the specific region classes and subclasses of <tt>bounding-rectangle </tt>will use this type to store<br>
+ their coordinates. However, the constructor functions for the region classes and for bounding<br>
+ rectangles must accept numbers of any type and coerce them to <tt>coordinate</tt>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>+everywhere+ </tt>[<i>Constant</i>]<br>
+ <big><b>&#061&gt  </b></big><tt>+nowhere+ </tt>[<i>Constant</i>]<br>
+ <tt>+everywhere+ </tt>is the region that includes all the points on the two-dimensional infinite drawing<br>
+ plane. <tt>+nowhere+ </tt>is the empty region, the opposite of <tt>+everywhere+</tt>.<br>
+ <br><b>3.1.1 The Region Predicate Protocol<br><br>
+ </b>The following generic functions comprise the region predicate protocol. All classes that are<br>
+ subclasses of <tt>region </tt>must either inherit or implement methods for these generic functions.<br>
+<br>
+ The methods for <tt>region-equal</tt>, <tt>region-contains-region-p</tt>, and <tt>region-intersects-region-<br>
+ p </tt>will typically specialize both the <i>region1 </i>and <i>region2 </i>arguments.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>region-equal </tt><i>region1 region2 </i>[<i>Generic Function</i>]<br>
+ Returns <b>true </b>if the two <b>regions </b><i>region1 </i>and <i>region2 </i>contain exactly the same set of points,<br>
+ otherwise returns <b>false</b>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>region-contains-region-p </tt><i>region1 region2 </i>[<i>Generic Function</i>]<br>
+ Returns <b>true </b>if all points in the <b>region </b><i>region2 </i>are members of the <b>region </b><i>region1</i>, otherwise<br>
+ returns <b>false</b>.<br>
+<br>
+ <big><b>&#061&gt  </b></big><tt>region-contains-position-p </tt><i>region x y </i>[<i>Generic Function</i>]<br>
+ Returns <b>true </b>if the point at (<i>x;y</i>) is contained in the <b>region </b><i>region</i>, otherwise returns <b>false</b>.<br>
+ Since regions in CLIM are closed, this must return <b>true </b>if the point at (<i>x;y</i>) is on the region's<br>
+ boundary. CLIM implementations are permitted to return different non-<tt>nil </tt>values depending<br>
+ on whether the point is completely inside the region or is on the border.
+<p><hr>
+<table width="100%"><tr>
+<td align=left><A HREF="./page14.html">Page 14</A></td>
+<td align=center width="30%"><A HREF="./cover.html">Table of Contents</A></td>
+<td align=center width="30%"><A HREF="./index.html">Index</A></td>
+<td align=right><A HREF="./page16.html">Page 16</A></td>
+</tr>
+<tr><td></td><td align=center colspan=2><b>Chapters</b></td><td></td></tr>
+<tr><td></td><td align=center colspan=2><b>
+<A HREF="./page2.html">1</A>,
+<A HREF="./page5.html">2</A>,
+<A HREF="./page13.html">3</A>,
+<A HREF="./page30.html">4</A>,
+<A HREF="./page35.html">5</A>,
+<A HREF="./page44.html">6</A>,
+<A HREF="./page47.html">7</A>,
+<A HREF="./page54.html">8</A>,
+<A HREF="./page69.html">9</A>,
+<A HREF="./page77.html">10</A>,
+<A HREF="./page87.html">11</A>,
+<A HREF="./page93.html">12</A>,
+<A HREF="./page113.html">13</A>,
+<A HREF="./page122.html">14</A>,
+<A HREF="./page131.html">15</A>,
+<A HREF="./page142.html">16</A>,
+<A HREF="./page158.html">17</A>,
+<A HREF="./page169.html">18</A>,
+<A HREF="./page175.html">19</A>,
+<A HREF="./page177.html">20</A>,
+<A HREF="./page179.html">21</A>,
+<A HREF="./page190.html">22</A>,
+<A HREF="./page204.html">23</A>,
+<A HREF="./page242.html">24</A>,
+<A HREF="./page256.html">25</A>,
+<A HREF="./page261.html">26</A>,
+<A HREF="./page266.html">27</A>,
+<A HREF="./page284.html">28</A>,
+<A HREF="./page304.html">29</A>,
+<A HREF="./page319.html">30</A><br>
+<A HREF="./page336.html">A</A>,
+<A HREF="./page343.html">B</A>,
+<A HREF="./page348.html">C</A>,
+<A HREF="./page354.html">D</A>,
+<A HREF="./page357.html">E</A>
+</b></td><td></td></tr>
+</table>
