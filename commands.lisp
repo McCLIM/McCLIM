@@ -454,11 +454,27 @@
 	  (setf (gethash ',func *command-parser-table*) #',accept-fun-name)
 	  ',func)))))
 
+(defun command-table-inherits-from-p (command-table super-table)
+  (let ((command-table (find-command-table command-table))
+	(super-table (find-command-table super-table)))
+    (do-command-table-inheritance (table command-table)
+      (when (eq table super-table)
+	(return-from command-table-inherits-from-p (values t t))))
+    (values nil t)))
+
 (define-presentation-type command-name
-    (&key (command-table (frame-command-table *application-frame*))))
+    (&key (command-table (frame-command-table *application-frame*)))
+  :inherit-from t)
 
 (define-presentation-method presentation-typep (object (type command-name))
   (command-accessible-in-command-table-p object command-table))
+
+(define-presentation-method presentation-subtypep ((type command-name)
+						   maybe-supertype)
+  (with-presentation-type-parameters (command-name maybe-supertype)
+    (let ((super-table command-table))
+      (with-presentation-type-parameters (command-name type)
+	(command-table-inherits-from-p command-table super-table)))))
 
 (define-presentation-method present (object (type command-name)
 				     stream
@@ -520,12 +536,20 @@
 (defvar *partial-command-parser* nil)
 
 (define-presentation-type command
-    (&key (command-table (frame-command-table *application-frame*))))
+    (&key (command-table (frame-command-table *application-frame*)))
+  :inherit-from t)
 
 (define-presentation-method presentation-typep (object (type command))
   (and (consp object)
        (presentation-typep (car object)
 			   `(command-name :command-table ,command-table))))
+
+(define-presentation-method presentation-subtypep ((type command)
+						   maybe-supertype)
+  (with-presentation-type-parameters (command maybe-supertype)
+    (let ((super-table command-table))
+      (with-presentation-type-parameters (command type)
+	(command-table-inherits-from-p command-table super-table)))))
 
 (define-presentation-method present (object (type command)
 				     stream

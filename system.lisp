@@ -135,6 +135,7 @@
 (clim-defsystem (:clim :depends-on (:clim-core :goatee-core :clim-postscript))
    "input-editing"
    "presentations"
+   "presentation-defs"
    "commands"
    "frames"
    "panes"

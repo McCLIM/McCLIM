@@ -53,7 +53,7 @@
 
 (define-command (com-describe :command-table global-command-table
 		 :name "Describe")
-    ((obj t
+    ((obj 'expression
 	  :prompt "object"
 	  :gesture :describe))
   (describe obj *query-io*))
