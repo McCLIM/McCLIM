@@ -270,7 +270,7 @@
 		           max-width max-height
 			   min-width min-height)
   (with-slots (menu) (find-command-table command-table)
-    (raising () 
+    (progn ;;raising () ;; XXX temporary medicine as RAISED is borken --GB
       (make-pane 
           'menu-bar
 	  :background +grey80+						
