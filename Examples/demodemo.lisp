@@ -28,26 +28,175 @@
   (make-pane 'push-button
              :label title
              :activate-callback
-             (let ((runningp nil)
-                   (frame nil))
+             (let ((frame nil))
                (lambda (&rest ignore)
                  (declare (ignore ignore))
-                 (unless runningp
-                   (make-application-frame demo-frame-class))))))
+                 (cond ((null frame)
+                        (setq frame
+                          (make-application-frame demo-frame-class)))
+                       (t
+                        #+NIL
+                        (destroy-frame frame)))))))
 
 (define-application-frame demodemo 
     () ()
-    (:panes
-     (title :text-field 
-            :value "FreeCLIM Demos"
-            :text-style (make-text-style :sans-serif :roman :huge))
-     
-     (colorslider-btn (make-demo-button "Colorslider" 'colorslider))
-     (calculator-btn (make-demo-button "Calculator"   'calculator)) )
     (:layouts
      (default
-         (vertically ()
-           (spacing (:width 10 :height 10) title)
-           colorslider-btn
-           calculator-btn))))
-           
+         (vertically (:equalize-width t)
+           (progn ;;spacing (:thickness 10)
+             (labelling (:label "FreeCLIM Demos"
+                                :text-style (make-text-style :sans-serif :roman :huge)
+                                :align-x :center)))
+           (progn ;; spacing (:thickness 10)
+             (horizontally ()
+               ;; '+fill+
+               (labelling (:label "Demos")
+                 (vertically (:equalize-width t)
+                   (make-demo-button "Colorslider" 'colorslider)
+                   (make-demo-button "Calculator"  'calculator)))
+               (labelling (:label "Tests")
+                 (vertically (:equalize-width t)
+                   (make-demo-button "Label Test" 'label-test)
+                   (make-demo-button "Table Test" 'table-test)
+                   (make-demo-button "Scroll Test" 'Scroll-test)
+                   (make-demo-button "List Test" 'list-test)
+                   (make-demo-button "HBOX Test"  'hbox-test)))))))))
+
+(defun demodemo ()
+  (loop for port in climi::*all-ports*
+      do (destroy-port port))
+  (make-application-frame 'demodemo))
+
+(define-application-frame hbox-test 
+    () ()
+    (:layouts
+     (default
+         (horizontally (:background climi::*3d-normal-color*)
+           30
+           (make-pane 'push-button-pane :label "Okay"
+                      :width '(50 :mm))
+           '+fill+
+           (make-pane 'push-button-pane :label "Cancel")
+           '+fill+
+           (make-pane 'push-button-pane :label "Help")
+           5
+           ) )))
+
+(define-application-frame table-test 
+    () ()
+    (:layouts
+     (default
+         (tabling (:background +red+)
+           (list (make-pane 'push-button-pane :label "Last Name" :max-height +fill+)
+                 (make-pane 'push-button-pane :label "First Name" #||:max-height +fill+||#))
+           (list (make-pane 'push-button-pane :label "C 1 0")
+                 (make-pane 'push-button-pane :label "C 1 1"))
+           ) )))
+
+(defun make-test-label (ax ay)
+  (labelling (:label "Some Label"
+                     :align-x ax
+                     :label-alignment ay
+                     :foreground +WHITE+
+                     :background +PALETURQUOISE4+
+                     :text-style (make-text-style :sans-serif :roman :normal))
+    (make-pane 'push-button-pane :label (format nil "~S" (list ax ay))
+               :text-style (make-text-style :sans-serif :roman :normal)
+               :max-width 1000
+               :max-height 1000)))
+
+(defun make-test-label2 (ax ay)
+  (labelling (:label (format nil "~(~S~)" (list ax ay))
+                     :align-x ax
+                     :label-alignment ay
+                     :foreground +WHITE+
+                     :background +PALETURQUOISE4+
+                     :text-style (make-text-style :sans-serif :roman :normal))
+    #+NIL
+    (make-pane 'push-button-pane :label 
+               :text-style (make-text-style :sans-serif :roman :normal)
+               :max-width 1000
+               :max-height 1000)))
+
+(define-application-frame label-test
+    () ()
+    (:layouts
+     (default
+                                        ;  (scrolling (:width 400 :height 200
+                                        ; :max-width 1000 :max-height 2000)
+         (vertically (:equalize-width t
+                                      ;;:width 400 ;;:height 800
+                                      :max-width 2000 :max-height 2000)
+           10
+           (labelling (:label "CLIM Label Tests"
+                              :align-x :center
+                              :text-style (make-text-style :sans-serif :roman :huge)))
+           10
+           (9/10
+            (horizontally (:equalize-height t)
+              (1/2
+               (labelling (:label "Labels with content")
+                 (vertically (:equalize-width t)
+                   (make-test-label :left :top)
+                   5 (make-test-label :center :top)
+                   5 (make-test-label :right :top)
+                   5 (make-test-label :left :bottom)
+                   5 (make-test-label :center :bottom)
+                   5 (make-test-label :right :bottom))))
+              (1/2
+               (labelling (:label "Labels w/o content")
+                 (vertically (:equalize-width t)
+                   (make-test-label2 :left :top)
+                   5
+                   (make-test-label2 :center :top)
+                   5
+                   (make-test-label2 :right :top)
+                   5
+                   (make-test-label2 :left :bottom)
+                   5
+                   (make-test-label2 :center :bottom)
+                   5
+                   (make-test-label2 :right :bottom))))))))))
+
+(defclass foo-pane (basic-pane permanent-medium-sheet-output-mixin) ())
+
+(defmethod compose-space ((pane foo-pane))
+  (make-space-requirement :width 800
+                          :height 1e3))
+
+(defmethod repaint-sheet ((pane foo-pane) region)
+  (draw-line* pane 50 50 200 50)
+  (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* region)
+    (let ((k 20))
+      (loop for y from (* k (floor (- y1 10) k)) below (+ y2 10) by k do
+            (draw-text* pane (format nil "~D" y) 20 y)))))
+
+(defmethod dispatch-repaint ((foo-pane foo-pane) region)
+  (repaint-sheet foo-pane region))
+
+(defmethod handle-event ((pane foo-pane) (event window-repaint-event))
+  (repaint-sheet pane (window-event-region event)))
+
+(define-application-frame scroll-test
+    () ()
+    (:layouts
+     (defaults
+         (scrolling (:width 400 :height 400)
+           (make-pane 'foo-pane)))))
+
+(define-application-frame list-test
+    () ()
+    (:layouts
+     (defaults
+         (labelling (:label "Matching symbols"
+                            :text-style (make-text-style :sans-serif :roman :normal))
+           (scrolling (:height 200)
+             (make-pane 'generic-list-pane
+                        :value 'clim:region-intersection
+                        :items (apropos-list "INTER" :clim t)
+                        :name-key (lambda (x) (format nil "~(~S~)" x))
+                        ))))))
+
+
+
+(format T "~&;; try (CLIM-DEMO::DEMODEMO)~%")
