@@ -5,6 +5,7 @@
 \usepackage{color}
 \usepackage{epsfig}
 \usepackage{alltt}
+\usepackage{moreverb}
 
 \setlength{\parskip}{0.3cm}
 \setlength{\parindent}{0cm}
@@ -77,7 +78,9 @@ the CLIM 2.0 specification.
 
 \part{Getting Started}
 
-\chapter{Panes and Gadgets}
+\chapter{The First Application}
+
+\section{Panes and Gadgets}
 
 A CLIM application is made up of a hierarchy of \gloss{panes} and
 \gloss{gadgets} (gadgets are special kinds of panes).  Theses elements
@@ -86,7 +89,7 @@ Frequently used CLIM gadgets are \gadget{button}s, \gadget{slider}s,
 etc, and typical panes are the layout panes such as \pane{hbox},
 \pane{vbox}, \pane{hrack}, etc.
 
-\chapter{Defining Appliction Frames}
+\section{Defining Appliction Frames}
 
 Each CLIM application is defined by an \gloss{application frame}.  An
 application frame is an instance of the class
@@ -102,6 +105,126 @@ The usual way to define an application frame is to use the macro
 \macro{define-application-frame}.  This macro works much like
 \macro{defclass}, but also allows you to specify the hierarchy of
 \gloss{panes} and \gloss{gadgets} to use. 
+
+\section{A First Attempt}
+
+Let us define a very primitive CLIM application.  For that, let us put
+the following code in a file:
+
+\verbatimtabinput{ex1.lisp}
+
+As we can see in this example, we have put our application in a
+separate package, here a package named \texttt{APP}.  While not
+required, putting the application in its own package is good practice.  
+
+The package for the application uses two packages: \texttt{CLIM} and
+\texttt{CLIM-LISP}.  The \texttt{CLIM} package is the one that
+contains all the symbols needed for using CLIM.  The
+\texttt{CLIM-LISP} package replaces the \texttt{COMMON-LISP} package
+for CLIM applications.  It is essentially the same as the
+\texttt{COMMON-LISP} package as far as the user is concerned.
+
+In our example, we export the symbol that corresponds to the main
+function to start our application, here called \texttt{APP-MAIN}. 
+
+The most important part of the code in our example is the definition
+of the application-frame.  In our example, we have defined an
+application frame called \texttt{superapp}, which becomes a CLOS class
+that automatically inherits from some standard CLIM application frame
+class.
+
+The second argument to \texttt{define-application-frame} is a
+list of additional superclasses from which you want your application
+frame to inherit.  In our example, this list is empty, which means
+that our application frame only inherits from the standard CLIM
+application frame.  
+
+The third argument to \texttt{define-application-frame} is a list of
+CLOS slots to be added to any instance if this kind of application
+frame.  These slots are typically used for holding all
+application-specific data.  The current instance if the application
+frame type will always be the value of the special variable
+\texttt{*application-frame*}, so that the values of these slots can be
+accessed.  In our example, we do not initially have any further
+slots. 
+
+The rest of the definition of an application frame contains additional
+elements that CLIM will allow the user to define.  In our example, we
+have two additional (mandatory) elements: \texttt{:panes} and
+\texttt{:layouts}.  
+
+The \texttt{:panes} element defines a collection of CLIM panes that
+each instance of your application may have.  Each pane has a name, a
+type, and perhaps some options that are used to instantiate that
+particular type of pane.  Here, we have a pane called \texttt{int} of
+type \texttt{:interactor} with a height of 400 units and a width of
+600 units.  In McCLIM, the units are initially physical units (number
+of pixels) of the native windowing system.
+
+The \texttt{:layouts} element defines one or more ways of organizing
+the panes in a hierarchy.  Each layout has a name and a description of
+a hierarchy.  In our example, only one layout, named \texttt{default},
+is defined.  The layout called \texttt{default} is the one that is
+used by CLIM at startup.  In our example, the corresponding hierarchy
+is trivial, since it contains only the one element \texttt{int}, which
+is the name of our only pane. 
+
+\section{Executing the Application}
+
+In order to run a CLIM application, you must have a Lisp system that
+contains McCLIM.  If you use CMUCL or SBCL, you either need a
+\texttt{core} file that already has McCLIM in it, or else, you have to
+load the McCLIM compiled files that make up the McCLIM distribution.
+The fist solution is recommended so as to avoid having to load the
+McCLIM files each time you start your CLIM application. 
+
+To execute the application, load the file containing your code
+(possibly after compiling it) into your running Lisp system.  Then
+start the application.  Our example can be started by typing
+\texttt{(app:app-main)}. 
+
+\section{Adding Functionality}
+
+In a serious application, you would probably want some area where your
+application objects are to be displayed.  In CLIM, such an area is
+called an \emph{application pane}, and would be an instance (direct
+or indirect) of the CLIM class \texttt{application-pane}.
+In fact, instances of this class are in reality also \emph{streams}
+which can be used in calls both to ordinary input and output functions
+such as \texttt{format} and \texttt{read} and to CLIM-specific
+functions such as \texttt{draw-line}.
+
+For this example, let us also add a few \emph{commands}.  Such
+commands are defined by the use of a macro called
+\texttt{define-}\textit{name}\texttt{-command}, where \textit{name} is
+the name of the application, in our case \texttt{superapp}. This macro
+is automatically defined by \texttt{define-application-frame}.  
+
+Let us also add a pane that automatically provides documentation for
+different actions on the pointer device. 
+
+Here is our improved example:
+
+\verbatimtabinput{ex2.lisp}
+
+If you execute this example, you will find that you now have three
+different panes, the application pane, the interactor pane and the
+pointer documentation pane.  In the pointer documentation pane, you
+will see the text \texttt{R possibilities} which indicates that if you
+click the right mouse button, you will automatically see a popup menu
+that lets you choose a command.  In our case, you will have the
+default commands that are automatically proposed by McCLIM plus the
+commands that you defined yourself, in this case \texttt{quit} and
+\texttt{parity}. 
+
+Figure \ref{fixex2} shows what ought to be visible on the screen. 
+
+\begin{figure}
+\begin{center}
+\inputfig{ex2.pstex_t}
+\end{center}
+\caption{\label{figex2} View of the improved example}
+\end{figure}
 
 \part{Reference Manual}
 
