@@ -78,6 +78,7 @@
    "output"
    "input"
    "events"
+   "repaint"
    "graphics"
    "stream-output"
    "recording"
