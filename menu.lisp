@@ -109,6 +109,9 @@
   (unless (slot-value pane 'destroyed)
     (disarm-menu pane)))
 
+(defmethod handle-event ((pane menu-button-leaf-pane) (event pointer-ungrab-event))
+  (destroy-substructure (menu-root pane)))
+
 (defmethod repaint-sheet ((pane menu-button-leaf-pane) region)
   (declare (ignore region))
   (with-slots (armed) pane
