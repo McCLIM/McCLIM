@@ -58,9 +58,9 @@
    (default (vertically () tester))))
 
 (defun run-test (name)
-  (loop for port in climi::*all-ports*
-	do (destroy-port port))
-  (setq climi::*all-ports* nil)
+;  (loop for port in climi::*all-ports*
+;	do (destroy-port port)) 
+;  (setq climi::*all-ports* nil)
   (when name
     (run-frame-top-level (make-application-frame name))))
 
