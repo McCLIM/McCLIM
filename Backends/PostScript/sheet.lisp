@@ -99,7 +99,8 @@
     (format (postscript-stream-file-stream stream) "end~%showpage~%")
     (start-page stream)
     (postscript-save-graphics-state medium))
-  (clear-output-record (stream-output-history stream)))
+  (clear-output-record (stream-output-history stream))
+  (setf (stream-cursor-position stream) (values 0 0)))
 
 
 ;;;; Output Protocol
