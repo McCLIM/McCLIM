@@ -297,8 +297,10 @@ advised of the possiblity of such damages.
   (((not :clim) (send stream :set-mouse-position x y))
    ((or :clim-0.9 :clim-1.0)
     (clim:stream-set-pointer-position* stream x y))
-   (:clim-2
-    (clim:stream-set-pointer-position stream x y))))
+   ((and :clim-2 (not :mcclim))
+    (clim:stream-set-pointer-position stream x y))
+   (:mcclim
+    (setf (clim:stream-pointer-position stream) (values x y)))))
 
 (defmethod stream-pointer-position* (stream)
   "Get position of mouse, in stream coordinates."
@@ -505,10 +507,15 @@ advised of the possiblity of such damages.
 		 (top-level-window (clim:frame-top-level-sheet frame)))
 	     (labels ((set-input-buffer (window buffer)
 			(setf (clim:stream-input-buffer window) buffer)
-			(dolist (w (clim:window-children window))
+			(dolist (w (#-mcclim clim:window-children
+				    #+mcclim clim:sheet-children
+				    window))
 			  (set-input-buffer w buffer))))
 	       (set-input-buffer top-level-window b)
+	       #-mcclim
 	       (clim:window-expose top-level-window)
+	       #+mcclim
+	       (clim:enable-frame frame)
 	       (clim:redisplay-frame-panes frame :force-p t)
 	       ;; return the window just created
 	       (values top-level-window))))
@@ -604,6 +611,7 @@ advised of the possiblity of such damages.
 	  (setf (clim:bounding-rectangle-max-y window) (min (+ top height) ymax))
 	  (clim::layout-frame-panes frame window)))))))
 
+#-mcclim
 (defmethod move-frame (frame left bottom)
   #FEATURE-CASE
   (((not :clim) (dw::position-window-near-carefully frame `(:point ,left ,bottom)))
@@ -651,8 +659,10 @@ advised of the possiblity of such damages.
    (:clim-1.0
      (clim:window-set-viewport-position* stream left top)
      (clim::redisplay-decorations stream))
-   (:clim-2
+   ((and :clim-2 (not :mcclim))
     (clim:window-set-viewport-position stream left top))
+   (:mcclim
+    (setf (clim:window-viewport-position stream) (values left top)))
    ((not :clim) (scl:send-if-handles stream :set-viewport-position left top))))
 
 (defmethod window-history-limits (stream)

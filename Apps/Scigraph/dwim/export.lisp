@@ -277,7 +277,9 @@ advised of the possiblity of such damages.
      :restart-case
      :find-restart
      :invoke-restart
-     :handler-bind)
+     :handler-bind
+     :process-wait
+     :process-run-function)
     #+clim-0.9
     (:shadowing-import-from
      "CLIM-LISP" "DESCRIBE-OBJECT" "MAKE-LOAD-FORM-SAVING-SLOTS")

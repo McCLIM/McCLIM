@@ -86,6 +86,10 @@ advised of the possiblity of such damages.
 	       dwim::dynamic-extent
 	       dwim::array-register)))
 
+#+openmcl
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (proclaim '(declaration values)))
+
 #+genera
 (si:enable-who-calls :new)
 #+genera
