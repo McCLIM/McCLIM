@@ -343,7 +343,7 @@ sheet-supports-only-one-child error to be signalled."))
 (defmethod sheet-disown-child :after (sheet
 				      (child sheet-parent-mixin)
 				      &key (errorp t))
-  (declare (ignorable errorp))
+  (declare (ignore sheet errorp))
   (setf (sheet-parent child) nil))
 
 (defmethod sheet-siblings ((sheet sheet-parent-mixin))
