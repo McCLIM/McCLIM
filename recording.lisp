@@ -418,7 +418,7 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
 
 (defmethod initialize-instance :after ((record basic-output-record)
 				       &rest args
-                                       &key (x-position 0.0) (y-position 0.0))
+                                       &key (x-position 0.0d0) (y-position 0.0d0))
   (declare (ignore args))
   (with-slots (x1 y1 x2 y2) record
     (setq x1 x-position
@@ -428,10 +428,10 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
 
 (defclass compound-output-record (basic-output-record)
   ((x :initarg :x-position
-      :initform 0.0
+      :initform 0.0d0
       :documentation "X-position of the empty record.")
    (y :initarg :y-position
-      :initform 0.0
+      :initform 0.0d0
       :documentation "Y-position of the empty record.")
    (in-moving-p :initform nil
                 :documentation "Is set while changing the position."))
