@@ -94,27 +94,72 @@
 
 (eval-when (eval load compile)
 
-  (defclass text-style ()
-    ((family :initarg :text-family
-	     :initform :fix
-	     :reader text-style-family)
-     (face :initarg :text-face
-	   :initform :roman
-	   :reader text-style-face)
-     (size :initarg :text-size
-	   :initform :normal
-	   :reader text-style-size)
-     ))
+(defclass text-style ()
+  ((family :initarg :text-family
+	   :initform :fix
+	   :reader text-style-family)
+   (face :initarg :text-face
+	 :initform :roman
+	 :reader text-style-face)
+   (size :initarg :text-size
+	 :initform :normal
+	 :reader text-style-size)
+   ))
 
-  (defun text-style-p (x)
-    (typep x 'text-style))
+(defun text-style-p (x)
+  (typep x 'text-style))
 
-  (defclass standard-text-style (text-style)
-    ())
+(defclass standard-text-style (text-style)
+  ())
 
-  (defun make-text-style (family face size)
-    (make-instance 'standard-text-style :text-family family :text-face face :text-size size))
-  )
+(defun family-key (family)
+  (ecase family
+    ((nil) 0)
+    ((:fix) 1)
+    ((:serif) 2)
+    ((:sans-serif) 3)))
+
+(defun face-key (face)
+  (if (equal face '(:bold :italic))
+      4
+      (ecase face
+	((nil) 0)
+	((:roman) 1)
+	((:bold) 2)
+	((:italic 3)))))
+
+(defun size-key (size)
+  (if (numberp size)
+      (+ 10 (round (* 256 size)))
+      (ecase size
+	((nil) 0)
+	((:tiny) 1)
+	((:very-small) 2)
+	((:small) 3)
+	((:normal) 4)
+	((:large) 5)
+	((:very-large) 6)
+	((:huge) 7)
+	((:smaller 8))
+	((:larger 9)))))
+
+(defun text-style-key (family face size)
+  (+ (* 256 (size-key size))
+     (* 16 (face-key face))
+     (family-key family)))
+
+(defvar *text-style-hash-table* (make-hash-table :test #'eql))
+
+(defun make-text-style (family face size)
+  (let ((key (text-style-key family face size)))
+    (declare (type fixnum key))
+    (or (gethash key *text-style-hash-table*)
+	(setf (gethash key *text-style-hash-table*)
+	      (make-instance 'standard-text-style
+			     :text-family family
+			     :text-face face
+			     :text-size size)))))
+)
 
 (defconstant *default-text-style* (make-text-style :fix :roman :normal))
 
