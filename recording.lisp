@@ -1908,7 +1908,9 @@ according to the flags RECORD and DRAW."
 
 (defmethod handle-repaint ((stream output-recording-stream) region)
   ;; FIXME: Change things so the rectangle below is only drawn in response
-  ;;        to explicit repaint requests from the user, not exposes from X      
+  ;;        to explicit repaint requests from the user, not exposes from X
+  ;; FIXME: Use DRAW-DESIGN*, that is fix DRAW-DESIGN*.
+  (setf region (bounding-rectangle region))
   (with-bounding-rectangle* (x1 y1 x2 y2) region
     (with-output-recording-options (stream :record nil) 
 	(draw-rectangle* stream x1 y1 x2 y2 :filled T :ink +background-ink+)))  
