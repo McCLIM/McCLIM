@@ -513,6 +513,8 @@
 			 :complete)
 			(t nil))))))))
 
+(defparameter *trace-complete-input* nil)
+
 (defun complete-input (stream func &key
 		       partial-completers allow-any-input possibility-printer
 		       (help-displays-possibilities t))
@@ -554,7 +556,9 @@
 		 (when (and success (eq mode :complete))
 		   (unread-gesture gesture :stream stream))
 		 ;; Get completion from menu
-(format *trace-output* "nmatches = ~A, mode = ~A~%" nmatches mode)
+		 (when *trace-complete-input*
+		   (format *trace-output* "nmatches = ~A, mode = ~A~%"
+			   nmatches mode))
 		 (when (and (> nmatches 0) (eq mode :possibilities))
 		   (multiple-value-bind (menu-object item event)
 		       (menu-choose (possibilities-for-menu possibilities))

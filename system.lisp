@@ -167,8 +167,8 @@
    "table-formatting"
    "graph-formatting"
    "bordered-output"
-   "builtin-commands"
    "dialog" ; depends on table formatting
+   "builtin-commands" ; need dialog before commands are defined
    "describe"
    "Experimental/menu-choose" ; depends on table formatting, presentations
    )

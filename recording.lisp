@@ -542,16 +542,10 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
 	      (setf (medium-transformation medium) transformation)
 	      (set-medium-graphics-state medium-state medium))))))))
 
-
 (defmethod replay-output-record ((record compound-output-record) stream
 				 &optional region (x-offset 0) (y-offset 0))
   (when (null region)
-    (let ((viewport (pane-viewport stream)))
-      (cond ((not (null viewport))
-             (setf region (untransform-region (sheet-delta-transformation stream viewport)
-                                            (pane-viewport-region stream))))
-            (t
-             (setq region +everywhere+)))))
+    (setq region (or (pane-viewport-region stream) +everywhere+)))
   (with-drawing-options (stream :clipping-region region)
     (map-over-output-records-overlapping-region
      #'replay-output-record record region x-offset y-offset
