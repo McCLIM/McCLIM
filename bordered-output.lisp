@@ -30,13 +30,11 @@
                                            &key (shape :rectangle) (move-cursor t))
                                           &body body)
   (declare (ignore shape move-cursor))
-  (orf stream '*standard-output*)
-  (check-type stream symbol)
-  (let ((continuation-name (gensym)))
-    `(flet ((,continuation-name (,stream) ,@body))
-       (invoke-surrounding-output-with-border ,stream
-                                              #',continuation-name
-                                              ,@drawing-options))))
+  (setf stream (stream-designator-symbol stream))
+  (gen-invoke-trampoline 'invoke-surrounding-output-with-border
+                         (list stream)
+                         drawing-options
+                         body))
 
 (defun invoke-surrounding-output-with-border (stream cont
                                               &rest drawing-options
