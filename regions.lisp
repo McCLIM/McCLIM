@@ -4,7 +4,7 @@
 ;;;   Created: 1998-12-02 19:26
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: regions.lisp,v 1.13 2001/12/04 16:19:19 mikemac Exp $
+;;;       $Id: regions.lisp,v 1.14 2002/02/16 02:32:23 gilbert Exp $
 ;;; --------------------------------------------------------------------------------------
 ;;;  (c) copyright 1998,1999,2001 by Gilbert Baumann
 ;;;  (c) copyright 2001 by Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
@@ -1404,7 +1404,6 @@
             (t
              (let ((x (/ (+ (* dx (- (* u1 dv) (* v1 du))) (* du (- (* y1 dx) (* x1 dy)))) q))
                    (y (/ (+ (* dy (- (* u1 dv) (* v1 du))) (* dv (- (* y1 dx) (* x1 dy)))) q)))
-               (print (list x y))
                (if (and (or (<= x1 x x2) (<= x2 x x1))
                         (or (<= u1 x u2) (<= u2 x u1))
                         (or (<= y1 y y2) (<= y2 y y1))
@@ -2259,105 +2258,3 @@
 	(with-slots (x1 y1 x2 y2) self
 	  (format stream "X ~S:~S Y ~S:~S" x1 x2 y1 y2))
       (format stream "X 0:0 Y 0:0"))))
-
-
-;;; exports
-
-;;!EXPORT +everywhere+
-;;!EXPORT +nowhere+
-;;!EXPORT area
-;;!EXPORT areap
-;;!EXPORT bounding-rectangle
-;;!EXPORT bounding-rectangle*
-;;!EXPORT bounding-rectangle-height
-;;!EXPORT bounding-rectangle-max-x
-;;!EXPORT bounding-rectangle-max-y
-;;!EXPORT bounding-rectangle-min-x
-;;!EXPORT bounding-rectangle-min-y
-;;!EXPORT bounding-rectangle-p
-;;!EXPORT bounding-rectangle-position
-;;!EXPORT bounding-rectangle-size
-;;!EXPORT bounding-rectangle-width
-;;!EXPORT ellipse
-;;!EXPORT ellipse-center-point
-;;!EXPORT ellipse-center-point*
-;;!EXPORT ellipse-end-angle
-;;!EXPORT ellipse-radii
-;;!EXPORT ellipse-start-angle
-;;!EXPORT ellipsep
-;;!EXPORT elliptical-arc
-;;!EXPORT elliptical-arc-p
-;;!EXPORT line
-;;!EXPORT line-end-point
-;;!EXPORT line-end-point*
-;;!EXPORT line-start-point
-;;!EXPORT line-start-point*
-;;!EXPORT linep
-;;!EXPORT make-bounding-rectangle
-;;!EXPORT make-ellipse
-;;!EXPORT make-ellipse*
-;;!EXPORT make-elliptical-arc
-;;!EXPORT make-elliptical-arc*
-;;!EXPORT make-line
-;;!EXPORT make-line*
-;;!EXPORT make-point
-;;!EXPORT make-polygon
-;;!EXPORT make-polygon*
-;;!EXPORT make-polyline
-;;!EXPORT make-polyline*
-;;!EXPORT make-rectangle
-;;!EXPORT make-rectangle*
-;;!EXPORT map-over-polygon-coordinates
-;;!EXPORT map-over-polygon-segments
-;;!EXPORT map-over-region-set-regions
-;;!EXPORT path
-;;!EXPORT pathp
-;;!EXPORT point
-;;!EXPORT point-position
-;;!EXPORT point-x
-;;!EXPORT point-y
-;;!EXPORT pointp
-;;!EXPORT polygon
-;;!EXPORT polygon-points
-;;!EXPORT polygonp
-;;!EXPORT polyline
-;;!EXPORT polyline-closed
-;;!EXPORT polylinep
-;;!EXPORT rectangle
-;;!EXPORT rectangle-edges*
-;;!EXPORT rectangle-height
-;;!EXPORT rectangle-max-point
-;;!EXPORT rectangle-max-x
-;;!EXPORT rectangle-max-y
-;;!EXPORT rectangle-min-point
-;;!EXPORT rectangle-min-x
-;;!EXPORT rectangle-min-y
-;;!EXPORT rectangle-size
-;;!EXPORT rectangle-width
-;;!EXPORT rectanglep
-;;!EXPORT region
-;;!EXPORT region-contains-position-p
-;;!EXPORT region-contains-region-p
-;;!EXPORT region-difference
-;;!EXPORT region-equal
-;;!EXPORT region-intersection
-;;!EXPORT region-intersects-region-p
-;;!EXPORT region-set
-;;!EXPORT region-set-p
-;;!EXPORT region-set-regions
-;;!EXPORT region-union
-;;!EXPORT regionp
-;;!EXPORT standard-bounding-rectangle
-;;!EXPORT standard-ellipse
-;;!EXPORT standard-elliptical-arc
-;;!EXPORT standard-line
-;;!EXPORT standard-point
-;;!EXPORT standard-polygon
-;;!EXPORT standard-polyline
-;;!EXPORT standard-rectangle
-;;!EXPORT standard-rectangle-set
-;;!EXPORT standard-region-difference
-;;!EXPORT standard-region-intersection
-;;!EXPORT standard-region-union
-;;!EXPORT transform-region
-;;!EXPORT with-bounding-rectangle*
