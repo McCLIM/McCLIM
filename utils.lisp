@@ -385,8 +385,68 @@ in KEYWORDS removed."
   "Macro helper function, generates the LABELS / INVOKE-WITH-... ideom."
   (let ((cont (gensym ".CONT.")))
     `(labels ((,cont (,@to-bind)
+               #+CMU
+               ;; for some reason CMUCL barfs if we declare a special
+               ;; variable to be ignored. so we take an alternate
+               ;; route.
+               ;; --GB 2003-06-05
+               (progn
+                 ,@to-bind
+                 (locally ,@body))
+               #-CMU
                (declare (ignorable ,@to-bind))
+               #-CMU
                ,@body))
       (declare (dynamic-extent #',cont))
       (,fun ,@to-bind #',cont ,@to-pass))))
 
+;;;; ----------------------------------------------------------------------
+
+(defun parse-space (stream specification direction)
+  "Returns the amount of space given by SPECIFICATION relating to the
+STREAM in the direction DIRECTION."
+  ;; This implementation lives unter the assumption that an
+  ;; extended-output stream is also a sheet and has a graft. 
+  ;; --GB 2002-08-14
+  (etypecase specification
+    (integer specification)
+    ((or string character) (multiple-value-bind (width height)
+                               (text-size stream specification)
+                             (ecase direction
+                               (:horizontal width)
+                               (:vertical height))))
+    (function (let ((record (with-output-to-output-record (stream)
+                              (funcall specification))))
+                (ecase direction
+                  (:horizontal (bounding-rectangle-width record))
+                  (:vertical (bounding-rectangle-height record)))))
+    (cons
+     (destructuring-bind (value unit)
+         specification
+       (ecase unit
+         (:character
+          (* value (stream-character-width stream #\M)))
+         (:line
+          (* value (stream-line-height stream)))
+         ((:point :pixel :mm)
+          (let* ((graft (graft stream))
+                 (gunit (graft-units graft)))
+            ;; mungle specification into what grafts talk about
+            (case unit
+              ((:point)  (setf value (/ value 72) unit :inch))
+              ((:pixels) (setf unit :device))
+              ((:mm)     (setf unit :millimeters)))
+            ;; 
+            (multiple-value-bind (dx dy)
+                (multiple-value-call
+                    #'transform-distance
+                  (compose-transformation-with-scaling
+                   (sheet-delta-transformation stream graft)
+                   (/ (graft-width graft :units unit)
+                      (graft-width graft :units gunit))
+                   (/ (graft-height graft :units unit)
+                      (graft-height graft :units gunit)))
+                  (ecase direction
+                    (:horizontal (values 1 0))
+                    (:vertical   (values 0 1))))
+              (/ value (sqrt (+ (* dx dx) (* dy dy))))))))))))

@@ -299,6 +299,13 @@ rendered on MEDIUM with the style LINE-STYLE."))
 
 (defgeneric stream-default-view (stream))
 
+;;; ----------------------------------------------------------------------
+
+(defgeneric output-record-basline (record)
+  (:documentation
+   "Returns two values: the baseline of an output record and a boolean
+indicating if this baseline is definitive. McCLIM addition."))
+
 #||
 
 Further undeclared functions
