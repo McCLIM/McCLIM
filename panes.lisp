@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.130 2003/08/12 00:01:18 hefner1 Exp $
+;;; $Id: panes.lisp,v 1.131 2003/08/12 23:17:46 gilbert Exp $
 
 (in-package :clim-internals)
 
@@ -278,7 +278,7 @@
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
 (defun spacing-value-p (x)
-  (or (integerp x)
+  (or (and (realp x) (>= x 0))
       (and (consp x)
            (realp (car x))
            (consp (cdr x))
