@@ -80,7 +80,12 @@
 		       (throw-object-ptype (object gesture)
 					   (goatee::result-type gesture))))
 		(if (typep gesture 'noise-string-property)
-		    (incf scan-pointer)
+                    ;; This seems dubious as gesture is already tested
+                    ;; for being a noise string above, we wind up
+                    ;; incrementing the scan-pointer twice.
+                    ;; --GB 2003-05-30
+                    ;; (incf scan-pointer)
+		    nil
 		    (progn
 		      (unless peek-p
 			(incf scan-pointer))
