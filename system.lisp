@@ -123,6 +123,7 @@
 
 (clim-defsystem (:clim-postscript :depends-on (:clim-core))
    "Backends/PostScript/package"
+   "Backends/PostScript/paper"
    "Backends/PostScript/class"
    "Backends/PostScript/graphics"
    "Backends/PostScript/sheet"

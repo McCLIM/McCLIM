@@ -23,13 +23,10 @@
 ;;; Boston, MA  02111-1307  USA.
 
 ;;; TODO:
-;;; - (?) WITH-OUTPUT-TO-POSTSCRIPT-STREAM should bind its first argument
-;;;   to stream, not to medium.
 
 ;;; Also missing IMO:
 ;;;
 ;;; - WITH-OUTPUT-TO-POSTSCRIPT-STREAM should offer a :PAPER-SIZE option.
-;;; - How can one ask for the dimensions of a postscript device (aka paper-size)?
 ;;; - NEW-PAGE should also offer to specify the page name.
 ;;; - device fonts are missing
 ;;; - font metrics are missing
@@ -38,6 +35,23 @@
 
 (in-package :CLIM-POSTSCRIPT)
 
+;;;; Medium
+
+(defclass postscript-medium (basic-medium)
+  ((file-stream :initarg :file-stream :reader postscript-medium-file-stream)
+   (document-fonts :initform '())
+   (graphics-state-stack :initform '())))
+
+(defun make-postscript-medium (file-stream stream)
+  (make-instance 'postscript-medium
+                 :sheet stream
+                 :file-stream file-stream))
+
+(defmacro postscript-medium-graphics-state (medium)
+  `(first (slot-value ,medium 'graphics-state-stack)))
+
+
+;;;; Stream
 (defvar *default-postscript-title* "")
 
 (defvar *default-postscript-for*
@@ -45,28 +59,40 @@
              "Unknown")
   #-unix "")
 
-(defclass postscript-medium (basic-medium)
-  ((file-stream :initarg :file-stream :reader postscript-medium-file-stream)
+(defclass postscript-stream (basic-sheet
+                             sheet-leaf-mixin
+                             sheet-mute-input-mixin
+                             permanent-medium-sheet-output-mixin
+                             sheet-mute-repainting-mixin
+                             mirrored-sheet-mixin ; ?
+                             standard-extended-output-stream
+                             standard-output-recording-stream)
+  ((file-stream :initarg :file-stream :reader postscript-stream-file-stream)
    (title :initarg :title)
    (for :initarg :for)
    (orientation :initarg :orientation)
-   (current-page :initform 1)
-   (document-fonts :initform '())
-   (graphics-state-stack :initform '())))
+   (paper :initarg :paper)
+   (native-region :initarg region
+                  :reader sheet-native-region)
+   (transformation :initarg :transformation
+                   :reader sheet-native-transformation)
+   (current-page :initform 0)))
 
-(defun make-postscript-medium (file-stream device-type
+(defun make-postscript-stream (file-stream device-type
                                multi-page scale-to-fit
                                orientation header-comments)
-  (declare (ignore device-type multi-page scale-to-fit))
+  (declare (ignore multi-page scale-to-fit))
+  (unless device-type (setq device-type :a4))
   (let ((title (or (getf header-comments :title)
                    *default-postscript-title*))
         (for (or (getf header-comments :for)
-                 *default-postscript-for*)))
-    (make-instance 'postscript-medium
-                   :sheet (make-postscript-graft)
+                 *default-postscript-for*))
+        (region (paper-region device-type orientation))
+        (transform (make-postscript-transformation device-type orientation)))
+    (make-instance 'postscript-stream
                    :file-stream file-stream
                    :title title :for for
-                   :orientation orientation)))
-
-(defmacro postscript-medium-graphics-state (medium)
-  `(first (slot-value ,medium 'graphics-state-stack)))
+                   :orientation orientation
+                   :paper device-type
+                   :native-region region
+                   :transformation transform)))

@@ -31,5 +31,6 @@
 
                 "GET-TRANSFORMATION"
                 "UNTRANSFORM-ANGLE"
+                "WITH-TRANSFORMED-POSITION"
   ))
 

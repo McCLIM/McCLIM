@@ -24,14 +24,11 @@
 
 ;;; TODO:
 ;;;
-;;; - (?) WITH-OUTPUT-TO-POSTSCRIPT-STREAM should bind its first argument
-;;;   to stream, not to medium.
+;;; - do smth with POSTSCRIPT-GRAFT.
 
 ;;; Also missing IMO:
 ;;;
 ;;; - WITH-OUTPUT-TO-POSTSCRIPT-STREAM should offer a :PAPER-SIZE option.
-;;; - How can one ask for the dimensions of a postscript device (aka
-;;;   paper-size)?
 ;;; - NEW-PAGE should also offer to specify the page name.
 ;;; - device fonts are missing
 ;;; - font metrics are missing
@@ -55,14 +52,17 @@
                                                 multi-page scale-to-fit
                                                 (orientation :portrait)
                                                 header-comments)
-  (let ((medium (make-postscript-medium file-stream device-type
+  (let ((stream (make-postscript-stream file-stream device-type
                                         multi-page scale-to-fit
                                         orientation header-comments)))
     (prog2
-        (with-slots (file-stream title for orientation) medium
+        (with-slots (file-stream title for orientation paper) stream
           (format file-stream "%!PS-Adobe-3.0~%")
+          (format file-stream "%%Creator: McCLIM~%")
           (format file-stream "%%Title: ~A~%" title)
           (format file-stream "%%For: ~A~%" for)
+          (format file-stream "%%LanguageLevel: 2~%")
+          (format file-stream "%%DocumentMedia: ~A~%" paper)
           (format file-stream "%%Orientation: ~A~%"
                   (ecase orientation
                     (:portrait "Portrait")
@@ -70,27 +70,65 @@
           (format file-stream "%%Pages: (atend)~%")
           (format file-stream "%%DocumentNeededResources: (atend)~%")
           (format file-stream "%%EndComments~%~%")
-          (format file-stream "%%Page: 1 1~%")
-          (format file-stream "newpath~%"))
-        (with-graphics-state (medium)
+          (start-page stream))
+        (with-graphics-state ((sheet-medium stream))
           ;; we need at least one level of saving -- APD, 2002-02-11
-          (funcall continuation medium))
-      (with-slots (file-stream current-page document-fonts) medium
+          (funcall continuation stream))
+      (with-slots (file-stream current-page) stream
         (format file-stream "showpage~%~%")
         (format file-stream "%%Trailer~%")
         (format file-stream "%%Pages: ~D~%" current-page)
         (format file-stream "%%DocumentNeededResources: ~{font ~A~%~^%%+ ~}~%"
-                (reverse document-fonts))
+                (reverse (slot-value (sheet-medium stream) 'document-fonts)))
         (format file-stream "%%EOF~%")
         (finish-output file-stream)))))
 
+(defun start-page (stream)
+  (with-slots (file-stream current-page transformation) stream
+      (format file-stream "%%Page: ~D ~:*~D~%" (incf current-page))))
+
 (defun new-page (stream)
   ;; FIXME: it is necessary to do smth with GS -- APD, 2002-02-11
-  (postscript-restore-graphics-state stream)
-  (with-slots (file-stream current-page) stream
-    (format file-stream "showpage~%")
-    (format file-stream "%%Page: ~D ~:*~D~%" (incf current-page)))
-  (postscript-save-graphics-state stream))
+  (let ((medium (sheet-medium stream)))
+    (postscript-restore-graphics-state medium)
+    (format (postscript-stream-file-stream stream) "showpage~%")
+    (start-page stream)
+    (postscript-save-graphics-state medium))
+  (clear-output-record (stream-output-history stream)))
+
+
+;;;; Output Protocol
+
+(defmethod medium-drawable ((medium postscript-medium))
+  (postscript-medium-file-stream medium))
+
+(defmethod port ((medium postscript-medium))
+  ;; FIXME
+  nil)
+
+(defmethod make-medium (port (sheet postscript-stream))
+  (declare (ignorable port))
+  (make-postscript-medium (postscript-stream-file-stream sheet) sheet))
+
+
+(defmethod sheet-direct-mirror ((sheet postscript-stream))
+  (postscript-stream-file-stream sheet))
+
+(defmethod sheet-mirrored-ancestor ((sheet postscript-stream))
+  sheet)
+
+(defmethod sheet-mirror ((sheet postscript-stream))
+  (sheet-direct-mirror sheet))
+
+(defmethod realize-mirror (port (sheet postscript-stream))
+  (sheet-direct-mirror sheet))
+
+(defmethod destroy-mirror (port (sheet postscript-stream))
+  (error "Can't destroy mirror for the postscript stream ~S." sheet))
+
+(defmethod port ((sheet postscript-stream))
+  ;; FIXME
+  nil)
 
 ;;;;
 ;;;; POSTSCRIPT-GRAFT
