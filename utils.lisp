@@ -67,3 +67,53 @@ evaluated."
                     (progn ,@body))
            (setq ,@old-values-set-form)
            ,update-form)))))
+
+(defun map-repeated-sequence (result-type n function sequence)
+  "Like CL:MAP, but applies \\arg{function} to \\arg{n} consecutive
+elements of \\arg{sequence}. All the function's return values will be
+gathered into the output sequence. \\arg{result-type} can also be NIL,
+in which case the function is only applied for effect.
+
+Examples:
+
+ (map-repeated-sequence 'list 2 #'list '(1 2 3 4 5 6)) => ((1 2) (3 4) (5 6))
+ (map-repeated-sequence 'list 2 #'+ '(1 2 3 4 5 6)) => (3 7 11)
+ (map-repeated-sequence 'vector 3 #'+ '(1 2 3 4 5 6)) => #(6 15)
+
+ (map-repeated-sequence 'list 2 #'floor '(2 1 4 3 6 5))
+ => (2 0 1 1 1 1)
+
+ (map-repeated-sequence 'list 2 #'cons '(color red weight 17 name fred))
+ => ((COLOR . RED) (WEIGHT . 17) (NAME . FRED))
+
+ (map-repeated-sequence 'list 1 #'(lambda (p) (values (car p) (cdr p)))
+                        '((color . red) (weight . 17) (name . fred)))
+ => (COLOR RED WEIGHT 17 NAME FRED)
+
+Note:
+ Be careful, since this function is quite sensible to the number of values
+ returned by \\arg{function}.
+"
+  (assert (>= n 1))
+  (cond ((eq result-type 'nil)
+         ;; just map for effect
+         (cond ((vectorp sequence)
+                (loop for i from 0 below (length sequence) by n do
+                      (apply function (loop for j from 0 below n collect (aref sequence (+ i j))))))
+               ((listp sequence)
+                (let ((q sequence))
+                  (loop until (null q) do
+                        (apply function (loop for j from 0 below n collect (pop q))))))))
+        (t
+         ;; otherwise, we (for now) take the easy route of calling COERCE
+         (coerce
+          (cond ((vectorp sequence)
+                 (loop for i from 0 below (length sequence) by n
+                       nconc (multiple-value-list
+                                 (apply function (loop for j from 0 below n collect (aref sequence (+ i j)))))))
+                ((listp sequence)
+                 (let ((q sequence))
+                   (loop until (null q) nconc
+                         (multiple-value-list
+                             (apply function (loop for j from 0 below n collect (pop q))))))))
+          result-type))))
