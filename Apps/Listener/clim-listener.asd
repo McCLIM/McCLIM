@@ -1,5 +1,8 @@
 ;;; -*- Lisp -*- mode
 
+#+SBCL
+(require :sb-posix)
+
 (defpackage :clim-listener
   (:use :clim :clim-lisp)
   (:export :run-listener :run-listener-process))
@@ -14,7 +17,8 @@
     :depends-on (clim)
     :serial t
     :components
-    ((:file "hotfixes")
+    (;(:file #.(concatenate 'string #.cl-user::*clim-directory* "Experimental/xpm")) ;; OOF.
+     (:file "hotfixes")
      (:file "util")
      (:file "icons")
      (:file "file-types")
