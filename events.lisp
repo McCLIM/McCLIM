@@ -155,8 +155,13 @@
   (sheet-mirror (event-sheet window-event)))
 
 (defclass window-configuration-event (window-event)
-  ((width :initarg :width :reader window-configuration-event-width)
+  ((x :initarg :x :reader window-configuration-event-x)
+   (y :initarg :y :reader window-configuration-event-y)
+   (width :initarg :width :reader window-configuration-event-width)
    (height :initarg :height :reader window-configuration-event-height)))
+
+(defclass window-destroy-event (window-event)
+  ())
 
 (defclass window-repaint-event (window-event)
   (
@@ -185,9 +190,8 @@
 (defmethod event-instance-slots ((self window-event))
   '(timestamp region))
 
-(defmethod print-object ((self event) sink)
- ; (print-object-with-slots self (event-instance-slots self) sink))
-  nil)
+;(defmethod print-object ((self event) sink)
+; (print-object-with-slots self (event-instance-slots self) sink))
 
 (defmethod translate-event ((self pointer-event) dx dy)
   (apply #'make-instance (class-of self)
