@@ -238,8 +238,9 @@
       (setf (xlib:display-error-handler (clx-port-display port))
         #'clx-error-handler)
 
-      #+nil
+      #+nil ;; Uncomment this when debugging CLX backend if asynchronous errors become troublesome..
       (setf (xlib:display-after-function (clx-port-display port)) #'xlib:display-force-output))
+      
     
     (setf (clx-port-screen port) (nth (getf options :screen-id 0)
 				      (xlib:display-roots (clx-port-display port))))
@@ -531,13 +532,16 @@
                (progn
                  ,@body)))))))
 
-(defun decode-x-button-code (code)
-  (aref #.(vector +pointer-left-button+
-                  +pointer-middle-button+
-                  +pointer-right-button+
-		  +pointer-wheel-up+
-		  +pointer-wheel-down+)
-        (1- code)))
+(defun decode-x-button-code (code)  
+  (let ((button-mapping #.(vector +pointer-left-button+
+                                  +pointer-middle-button+
+                                  +pointer-right-button+
+                                  +pointer-wheel-up+
+                                  +pointer-wheel-down+)))
+    (if (and (> code 0)
+             (<= code (1+ (length button-mapping))))
+        (aref button-mapping (1- code))
+        nil)))
 
 ;; From "Inter-Client Communication Conventions Manual", Version 2.0.xf86.1,
 ;; section 4.1.5:
@@ -1063,7 +1067,8 @@
     (or (gethash color table)
 	(setf (gethash color table)
 	      (multiple-value-bind (r g b) (color-rgb color)
-		(xlib:alloc-color (xlib:screen-default-colormap (clx-port-screen port))
+		(xlib:alloc-color (xlib:screen-default-colormap
+                                   (clx-port-screen port))
 				  (xlib:make-color :red r :green g :blue b)))))))
 
 (defmethod port-mirror-width ((port clx-port) sheet)
@@ -1352,6 +1357,8 @@
   (xlib:convert-selection :primary :UTF8_STRING requestor :bounce time))
 
 (defmethod get-selection-from-event ((event clx-selection-notify-event))
+  (when (null (selection-event-property event))
+    (format *trace-output* "~&;; Notify property is null! Why did this happen?~%"))
   (map 'string #'code-char
        (xlib:get-property (sheet-direct-mirror (event-sheet event))
                           (selection-event-property event)
@@ -1364,8 +1371,10 @@
         (property  (selection-event-property event))
         (target    (selection-event-target event))
         (time      (event-timestamp event)))
-;    (describe event *trace-output*)
-;    (finish-output *trace-output*)
+    (when (null property)
+      (format *trace-output* "~&* Requestor property is null! *~%"))
+    (describe event *trace-output*)
+    (finish-output *trace-output*)
     (cond ((member target '(:UTF8_STRING :STRING :TEXT))
            (xlib:change-property requestor property
                                  (utf-8-encode
