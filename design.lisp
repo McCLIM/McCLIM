@@ -306,7 +306,7 @@
          (make-instance 'standard-opacity :value value))))
 
 (defvar +transparent-ink+ 
-    (load-time-value (make-instance 'standard-opacity :value 0)))
+    (make-instance 'standard-opacity :value 0))
 
 ;;;;
 ;;;; 13.6 Indirect Inks
@@ -314,8 +314,8 @@
 
 (defclass indirect-ink (design) ())
 
-(defvar +foreground-ink+ (load-time-value (make-instance 'indirect-ink)))
-(defvar +background-ink+ (load-time-value (make-instance 'indirect-ink)))
+(defvar +foreground-ink+ (make-instance 'indirect-ink))
+(defvar +background-ink+ (make-instance 'indirect-ink))
 
 (defmethod print-object ((ink (eql +foreground-ink+)) stream)
   (format stream "#.~S" '+foreground-ink+))
@@ -333,9 +333,9 @@
    (design2 :initarg :design2
             :type design)))
 
-(defvar +flipping-ink+ (load-time-value   (make-instance 'standard-flipping-ink 
-                                            :design1 +foreground-ink+
-                                            :design2 +background-ink+)))
+(defvar +flipping-ink+ (make-instance 'standard-flipping-ink 
+                         :design1 +foreground-ink+
+                         :design2 +background-ink+))
 
 (defmethod print-object ((ink (eql +flipping-ink+)) stream)
   (format stream "#.~S" '+flipping-ink+))
