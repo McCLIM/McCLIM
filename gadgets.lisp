@@ -45,7 +45,7 @@
     ;; ACTIVATE-GADGET after creating a gadget?
     :initform t
     :reader gadget-active-p)
-   (armed :initform nil) ))
+   (armed :initform nil)))
 
 (defun gadgetp (object)
   (typep object 'gadget))
@@ -282,8 +282,6 @@
 		      :initarg :show-as-default-p
 		      :accessor push-button-show-as-default-p)))
 
-(defclass clx-push-button-pane (push-button-pane) ())
-
 (defmethod handle-event ((pane push-button-pane) (event pointer-enter-event))
   (with-slots (armed) pane
     (unless armed
@@ -321,23 +319,15 @@
 
 (defmethod repaint-sheet ((pane push-button-pane) region)
   (declare (ignore region))
-  (let ((text (gadget-label pane))
-	(region (sheet-region pane)))
-    (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* region)
-      (setf x2 (- x2 x1 1)
-	    x1 1
-	    y2 (- y2 y1 1)
-	    y1 1)
-      (display-gadget-background pane x1 y1 x2 y2)
+  (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
+    (let ((w (- x2 x1))
+	  (h (- y2 y1)))
+      (display-gadget-background pane 1 1 (1- w) (1- h))
       (if (push-button-show-as-default-p pane)
-	  (draw-edges-lines* pane x2 y2 x1 y1)
-	  (draw-edges-lines* pane x1 y1 x2 y2))
-      (draw-text* pane text
-		  (round (- x2 x1) 2)
-		  (round (- y2 y1) 2)
-		  :align-x :center
-		  :align-y :center))))
-
+	  (draw-edges-lines* pane (1- w) (1- h) 1 1)
+	  (draw-edges-lines* pane 1 1 (1- w) (1- h)))
+      (draw-text* pane (gadget-label pane) (round w 2) (round h 2)
+		  :align-x :center :align-y :center))))
 
 ;;
 ;; TOGGLE-BUTTON gadget
@@ -352,8 +342,6 @@
 		   :reader toggle-button-indicator-type)))
 ; We don't have implemented the difference of appearence whether the 
 ; indicator-type is :one-of or :some-of
-
-(defclass clx-toggle-button-pane (toggle-button-pane) ())
 
 (defmethod handle-event ((pane toggle-button-pane) (event pointer-enter-event))
   (with-slots (armed) pane
@@ -422,40 +410,25 @@
 
 (defclass menu-button-pane (menu-button) ())
 
-(defclass clx-menu-button-pane (menu-button-pane) ())
-
-(defmethod compute-space ((pane menu-button-pane))
-  (compute-space (gadget-value pane)))
-
-(defmethod handle-event ((pane menu-button-pane) (event pointer-enter-event))
-  (with-slots (armed) pane
-    (unless armed
-      (setf armed t)
-      (armed-callback pane (gadget-client pane) (gadget-id pane)))))
-
-(defmethod handle-event ((pane menu-button-pane) (event pointer-exit-event))
-  (with-slots (armed) pane
-    (when armed
-      (setf armed nil)
-      (disarmed-callback pane (gadget-client pane) (gadget-id pane)))))
-
-(defmethod handle-event ((pane menu-button-pane) (event pointer-button-press-event))
-  (with-slots (armed) pane
-    (unless armed
-      (armed-callback pane (gadget-client pane) (gadget-id pane)))
-    (setf armed ':button-press)
-    (dispatch-repaint pane (sheet-region pane))))
-
-(defmethod handle-event ((pane menu-button-pane) (event pointer-button-release-event))
-  (with-slots (armed) pane
-    (when (eql armed ':button-press)
-      (value-changed-callback pane (gadget-client pane) (gadget-id pane) t) ;FALSE
-      (setf armed t)
-      (dispatch-repaint pane (sheet-region pane))
-      (disarmed-callback pane (gadget-client pane) (gadget-id pane)))))
-
-(defmethod handle-event ((pane menu-button-pane) (event window-repaint-event))
-  (dispatch-repaint pane (sheet-region pane)))
+(defmethod repaint-sheet ((pane menu-button-pane) region)
+  (declare (ignore region))
+  (let ((text (gadget-label pane))
+	(region (sheet-region pane)))
+    (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* region)
+      (let ((w (- x2 x1))
+	    (h (- y2 y1)))
+	(cond ((slot-value pane 'armed)
+	       (draw-rectangle* pane 0 0 w h
+				:ink (gadget-highlighted-color pane)
+				:filled t)
+	       (draw-edges-lines* pane (1- w) (1- h) 1 1))
+	      (t
+	       (draw-rectangle* pane 0 0 w h
+				:ink (gadget-normal-color pane)
+				:filled t)))
+	(draw-text* pane text (round w 2) (round h 2)
+		    :align-x :center
+		    :align-y :center)))))
 
 ;;
 ;; SCROLL-BAR gadget
@@ -487,8 +460,6 @@
 			    :reader scroll-bar-drag-down-page-callback)
    (drag-up-page-callback :initarg :drag-up-page-callback
 			  :reader scroll-bar-drag-up-page-callback)))
-
-(defclass clx-scroll-bar-pane (scroll-bar-pane) ())
 
 (defmethod drag-callback ((pane scroll-bar-pane) client gadget-id value)
   (declare (ignore client gadget-id))
@@ -546,8 +517,6 @@
 		 :initform nil
 		 :initarg :show-value-p
 		 :accessor gadget-show-value-p)))
-
-(defclass clx-slider-pane (slider-pane) ())
 
 (defmethod drag-callback ((pane slider-pane) client gadget-id value)
   (declare (ignore client gadget-id))
@@ -631,8 +600,6 @@
 		      :initarg :current-selection
 		      :accessor radio-box-current-selection)))
 
-(defclass clx-radio-box-pane (radio-box-pane) ())
-
 (defmethod (setf radio-box-current-selection) :before (button (pane radio-box-pane))
   (declare (ignore button))
   (let ((old-button (radio-box-current-selection pane)))
@@ -674,9 +641,6 @@
   (window-clear pane)
   (dispatch-repaint pane (sheet-region pane)))
 
-(defclass clx-text-field-pane (text-field-pane) ())
-
-
 ;;
 ;; TEXT-EDITOR gadget
 ;;
@@ -691,8 +655,6 @@
    (height :type integer
 	   :initarg :height
 	   :reader text-editor-height)))
-
-(defclass clx-text-editor-pane (text-editor-pane) ())
 
 (defmethod compute-space ((pane text-editor-pane))
   (setf (pane-space-requirement pane)
