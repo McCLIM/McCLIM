@@ -669,7 +669,6 @@ available in direct slots."
 
 (define-inspector-command (com-disassemble :name t)
     ((obj 'inspected-function
-	  :menu "Disassemble"
 	  :prompt "Select a function"))
   (when (typep obj 'function)
     (togglef (gethash obj (disassembly-dico *application-frame*)))))
@@ -677,6 +676,45 @@ available in direct slots."
 (define-presentation-to-command-translator disassemble-function
     (inspected-function com-disassemble inspector
 			:documentation "Toggle Disassembly"
+			:gesture :menu
 			:menu t)
+    (object)
+  (list object))
+
+(defun tracedp (symbol)
+  "Is SYMBOL currently traced?"
+  (member symbol (trace)))
+
+(define-inspector-command (com-trace :name t)
+    ((obj 'symbol
+	  :prompt "Select an fbound symbol"))
+  (when (fboundp obj)
+    (eval `(trace ,obj))))
+
+(define-inspector-command (com-untrace :name t)
+    ((obj 'symbol
+	  :prompt "Select an fbound symbol"))
+  (when (fboundp obj)
+    (eval `(untrace ,obj))))
+
+(define-presentation-to-command-translator trace-symbol
+    (symbol com-trace inspector
+	    :documentation "Trace"
+	    :gesture :menu
+	    :menu t
+	    :tester ((object) (and object
+				   (fboundp object)
+				   (not (tracedp object)))))
+    (object)
+  (list object))
+
+(define-presentation-to-command-translator untrace-symbol
+    (symbol com-untrace inspector
+	    :documentation "Untrace"
+	    :gesture :menu
+	    :menu t
+	    :tester ((object) (and object
+				   (fboundp object)
+				   (tracedp object))))
     (object)
   (list object))
