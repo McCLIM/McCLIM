@@ -173,6 +173,7 @@
    "table-formatting"
    "graph-formatting"
    "bordered-output"
+   "dialog-views"
    "dialog" ; depends on table formatting
    "builtin-commands" ; need dialog before commands are defined
    "describe"
@@ -206,7 +207,8 @@
    "Examples/stream-test"
    "Examples/presentation-test"
    #+clx "Examples/gadget-test"
-   "Goatee/goatee-test")
+   "Goatee/goatee-test"
+   "Examples/accepting-values")
 
 
 (clim-defsystem (:scigraph :depends-on (:clim #+clx :clim-looks))

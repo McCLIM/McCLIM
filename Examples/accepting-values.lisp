@@ -44,3 +44,13 @@
 	     (setq ymin-changed nil
 		   ymax-changed nil)))))
   (values xmin xmax ymin ymax))
+
+;;; Test of McCLIM extension
+
+(defun accept-popup (seq &key (stream *query-io*))
+  (let ((val (elt seq 0))
+	(ptype `(completion ,seq)))
+    (accepting-values (stream)
+      (setq val (accept ptype :stream stream :view climi::+pop-up-menu-view+
+			:prompt "Choose one:" :default val)))
+    val))

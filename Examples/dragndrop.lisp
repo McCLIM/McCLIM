@@ -79,3 +79,6 @@
     (circle com-clone-circle dragndrop)
     (object x y)
   `(,object ,x ,y))
+
+(defun drag-circles ()
+  (run-frame-top-level (make-application-frame 'dragndrop)))

@@ -23,16 +23,49 @@ accept-present-default, as described in the spec.  The output record
 produced by accept-present-default, as well as the current value of
 that query, arguments that were passed to accept, etc. are stored in a
 query object. The stream stores all the query objects for this
-invocation of accepting-values.
-
-The query output records are presentations with command translators
-defined that directly change their value (stored in the query object)
-or select them for further user input, like the default text input.
+invocation of accepting-values. The record created and returned by
+accept-present-default must be a subclass of updating-output-record.
 
 After the initial output records are drawn, invoke-accepting-values
-blocks accepting commands.  When a query's value is changed, the body
-of the call to accepting-values is run, with all the values returned
-by calls to accept coming from the query objects.
+blocks accepting commands. The state of the dialog state machine is changed
+via these commands. The commands currently are:
+
+COM-SELECT-QUERY query-id -- calls the method select-query with the
+corresponding query object and output record object. When select-query returns
+the "next" field, if any, is selected so the user can move from field to field
+easily.
+
+COM-CHANGE-QUERY query-id value -- This command is used to directly change the
+value of a query field that does not need to be selected first for input. For
+example, a user would click directly on a radio button without selecting the
+gadget first.
+
+COM-DESELECT-QUERY -- deselects the currently selected query.
+
+COM-QUERY-EXIT -- Exits accepting-values
+
+COM-QUERY-ABORT -- Aborts accepting-values
+
+These commands are generated in two ways. For query fields that are entirely
+based on CLIM drawing commands and presentations, these are emitted by
+presentation translators. There is a presentation type selectable-query that
+throws com-select-query for the :select gesture. Fields that are based on
+gadgets have to throw presentations from their callbacks. This can be done
+using  the method on p. 305 of the Franz CLIM user guide, or by using  the
+McCLIM function throw-object-ptype.
+
+After a command is executed the body of accepting-values is rerun, calling
+accept-present-default again to update the fields' graphic appearance. [This
+may be calling these methods too often an may change in the future]. The
+values returned by the user's calls to accept are come from the query objects.
+
+
+If a query field is selectable than it should implement the method
+select-query:
+
+SELECT-QUERY stream query record -- Make a query field active and do any
+input. This should change the query object and setf (changedp query). This
+method might be interrupted at any time if the user selects another field.
 
 |#
 
@@ -292,7 +325,8 @@ accept of this query")))
 
 (defgeneric select-query (stream query record)
   (:documentation "Does whatever is needed for input (e.g., calls accept) when
-a query is selected for input." ))
+a query is selected for input. It is responsible for updating the
+  query object when a new value is entered in the query field." ))
 
 (defgeneric deselect-query (stream query record)
   (:documentation "Deselect a query field: turn the cursor off, turn off
