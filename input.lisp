@@ -193,7 +193,9 @@
 	       (not (null (event-queue-head eq)))))
 	(if timeout
 	    (process-wait-with-timeout "Listening for event" timeout #'pred)
-	    (process-wait "Listening for event" #'pred)))))
+	    (progn
+	      (process-wait "Listening for event" #'pred)
+	      t)))))
 
 
 ;; STANDARD-SHEET-INPUT-MIXIN
