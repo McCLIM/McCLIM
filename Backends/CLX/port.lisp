@@ -813,12 +813,16 @@
                  :timestamp time))
 
 (defmethod port-wm-protocols-message (sheet time (message (eql :wm_take_focus)) data)
-  (declare (ignore data))
+  (when time
+    (format *trace-output* "~&;; In :WM_TAKE_FOCUS, TIME is not NIL: ~S" time))
   (let* ((frame (pane-frame sheet))
-         (focus (climi::keyboard-input-focus frame)))
+         (focus (climi::keyboard-input-focus frame))
+	 ;; FIXME: Do I really have to use ELT here?  The CLX manual
+	 ;; says (sequence integer), so I suppose I do.
+	 (timestamp (elt data 1)))
     (when (and focus (sheet-mirror focus))
       (xlib:set-input-focus (clx-port-display *clx-port*)
-                            (sheet-mirror focus) :parent time)
+                            (sheet-mirror focus) :parent timestamp)
       nil)))
 
 (defmethod port-wm-protocols-message (sheet time (message t) data)
@@ -1368,13 +1372,16 @@
 (defmethod bind-selection ((port clx-port) window &optional time)
   (xlib:set-selection-owner
    (xlib:window-display (sheet-direct-mirror window))
-   :primary (sheet-direct-mirror window)))
+   :primary (sheet-direct-mirror window) time)
+  (eq (xlib:selection-owner
+       (xlib:window-display (sheet-direct-mirror window))
+       :primary)
+      (sheet-direct-mirror window)))
 
 (defmethod release-selection ((port clx-port) &optional time)
   (xlib:set-selection-owner
    (clim-clx::clx-port-display port)
-   :primary nil
-   time)
+   :primary nil time)
   (setf (selection-owner port) nil))
 
 (defmethod request-selection ((port clx-port) requestor time)

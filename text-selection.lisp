@@ -243,9 +243,8 @@ the incoming selection."))
                             (make-instance 'selection-clear-event
                                            :sheet owner
                                            :selection :primary))))
-      (bind-selection (port pane) pane (event-timestamp event))
-      ;; FIXME: check that we get it ... (how?)
-      (setf (selection-owner (port pane)) pane)
+      (when (bind-selection (port pane) pane (event-timestamp event))
+	(setf (selection-owner (port pane)) pane))
       ;;
       )))
 
