@@ -169,8 +169,9 @@
 (defun handle-non-stream-event (buffer)
   (let ((event (event-queue-peek buffer)))
     (if (and event
-	     (not (or (typep event 'key-press-event)
-		      (typep event 'pointer-button-press-event))))
+	     (not (and (typep (event-sheet event) 'clim-stream-pane)
+		        (or (typep event 'key-press-event)
+			    (typep event 'pointer-button-press-event)))))
 	(progn
 	  (event-queue-read buffer)	;eat it
 	  (handle-event (event-sheet event) event)
