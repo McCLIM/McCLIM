@@ -153,8 +153,12 @@
   (
    ))
 
-(defun make-point (x y)
-  (make-instance 'standard-point :x (coerce x 'short-float) :y (coerce y 'short-float)))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun make-point (x y)
+    (make-instance 'standard-point :x (coerce x 'short-float) :y (coerce y 'short-float)))
+  )
+
+(defconstant +origin+ (make-point 0.0 0.0))
 
 ;;; LINE region class
 
