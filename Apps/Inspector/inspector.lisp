@@ -446,6 +446,18 @@ them."
   (with-output-as-presentation
       (pane object (presentation-type-of object))
     (print object pane)))
+(defmethod inspect-object ((object character) pane)
+  (inspector-table
+    (format pane "Character ~S" object)
+    (inspector-table-row
+       (princ "code:" pane)
+       (inspect-object (char-code object) pane))
+    (inspector-table-row
+       (princ "int:" pane)
+       (inspect-object (char-int object) pane))
+    (inspector-table-row
+       (princ "name:" pane)
+       (inspect-object (char-name object) pane))))
 
 (defun display-app (frame pane)
   "Display the APP frame of the inspector"
