@@ -329,13 +329,12 @@
 (defun class-sorted-slots (class)
   "Sort the slots in order of definition within the CPL, superclasses first."
   (let ((cpl (clim-mop:class-precedence-list class)))
-    (sort (clim-mop:class-slots class)
+    (sort (copy-list (clim-mop:class-slots class))
           (lambda (a b)
             (< (position (earliest-slot-definer a class) cpl)
                (position (earliest-slot-definer b class) cpl))))))
 
-;; What is going on with this and the table formatter?
-;; This is out of sync with PRESENT-SLOT, presently.
+
 (defun print-slot-table-heading (stream)
   (debugf "Before formatting-row")
   (formatting-row (T)
@@ -438,7 +437,7 @@
   (with-output-as-presentation (T pathname 'clim:pathname)
     (let ((icon (icon-of pathname)))
       (when icon  (draw-icon T icon :extra-spacing 3)))
-    (princ pathname))
+    (princ (namestring pathname)))
   (fresh-line))
 
 ;; Change show-directory to use the format-items at some point,

@@ -112,11 +112,12 @@
       (gethash (pathname-extension pathname) *extension-mapping*)))
 
 (defmacro define-mime-type ((media-type subtype) &rest options)
-  (assert (find-class media-type nil))
   ; XXX Bad, probably I should put all the symbols in one MIME package or something.
+  ; the CLIM-LISTENER package will do for now.
   (let ((full-type (intern (concatenate 'string (symbol-name media-type) "/" (symbol-name subtype))
                            (find-package :clim-listener) )))  ;FIXME
-    `(progn (defclass ,full-type (mime-type ,media-type)
+    `(progn (assert (find-class ',media-type nil))
+            (defclass ,full-type (mime-type ,media-type)
               ((media-subtype :initform ',subtype)))
             ,@(mapcar (lambda (opt)
                         (case (first opt)
@@ -229,7 +230,6 @@
        (not (char= char #\space))))
 
 (defun read-extensions (string &optional (start 0))
-  (declare (optimize (debug 3) (speed 0) (space 0)))
   (setf start (skip-whitespace string start))
   (when start
     (let ((pos (or (position-if-not #'file-char-p string :start start)
@@ -263,7 +263,6 @@
 
 (defun parse-netscrapings (table string &optional (start 0))
   "Recursively parse FOO=BAR pairs, returning the result in a hash table."
-  (declare (optimize (debug 3) (speed 0) (space 0)))
   (setf start (skip-whitespace string start))
   (when start
     (let ((split-pos (position #\= string :start start)))

@@ -21,6 +21,7 @@
 
 
 (defun filtermap (list func &optional (filter #'null))
+  (declare (type (function (t) t) func))
   (delete-if filter (mapcar func list)))
 
 ;(defmacro multiple-value-prog2 (&body body)  `(progn ,(first body) (multiple-value-prog1 ,@(rest body))))
@@ -70,10 +71,9 @@
 ;; This ought to change the current directory to *default-pathname-defaults*..
 
 (defun run-program (program args &key (wait T) (output *standard-output*))
-  ;; Under CMUCL 18d, the PTY option is very broken.
   #+CMU (ext:run-program program args ; :input *standard-input* 
                                        :output output :wait wait)
-  ;; Wonder if they fixed it in SBCL..
+  ;; FIXME: SBCL's run-program doesn't search $PATH !!
   #+SBCL (sb-ext:run-program program args :input *standard-input*
                                          :output output :wait wait)
   #-(or CMU SBCL) (format T "~&Sorry, don't know how to run programs in your CL.~%"))

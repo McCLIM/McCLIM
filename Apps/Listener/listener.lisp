@@ -24,7 +24,7 @@
 ;; Wholine Pane
 ; TODO: Handle resizing in a less ghetto fashion.
 
-(defclass wholine-pane (application-pane))
+(defclass wholine-pane (application-pane) ())
 
 (defmethod compose-space ((pane wholine-pane) &key width height)
   (declare (ignore width height))  
@@ -121,7 +121,9 @@
 ; Now that I have LISTENER-TOP-LEVEL, should I move the binding of the restart
 ; inside there? Or should I move this inside McCLIM?
 (defmethod run-frame-top-level ((frame listener) &key &allow-other-keys)
-  (let ((*debug-io* (get-frame-pane frame 'interactor)))
+  (let (;; Only bind this in CMU for now, as no other lisp is likely to 
+        ;; handle it well without a little tweaking.
+        #+CMU (*debug-io* (get-frame-pane frame 'interactor)))
     (loop while 
       (catch 'return-to-listener
 	(restart-case (call-next-method)
