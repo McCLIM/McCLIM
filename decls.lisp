@@ -5,7 +5,7 @@
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
 ;;; ---------------------------------------------------------------------------
-;;;  (c) copyright 2001 by Gilbert Baumann
+;;;  (c) copyright 2001,2002 by Gilbert Baumann
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -39,7 +39,19 @@
 
 (defgeneric transform-region (transformation region))
 
-;; 8.3.4.1 Grafting and Degrafting of Mediums
+;;;; 8.3.4 Associating a Medium with a Sheet
+
+;;;; 8.3.4.1 Grafting and Degrafting of Mediums
+
+;; with-sheet-medium (medium sheet) &body body [Macro]
+;; with-sheet-medium-bound (sheet medium) &body body [Macro]
+
+(defgeneric sheet-medium (sheet)) 
+(defgeneric medium-sheet (medium)) 
+(defgeneric medium-drawable (medium)) 
+(defgeneric port (medium))
+
+;;;; 8.3.4.1 Grafting and Degrafting of Mediums
 
 (defgeneric allocate-medium (port sheet))
 (defgeneric deallocate-medium (port medium))
@@ -67,7 +79,6 @@
 (defgeneric destroy-mirror (port mirrored-sheet))
 (defgeneric raise-mirror (port sheet))
 (defgeneric bury-mirror (port sheet))
-(defgeneric port (object))
 
 ;; 9.4.2 Internal Interfaces for Native Coordinates
 
@@ -96,6 +107,21 @@
 			       align-x align-y
 			       toward-x toward-y transform-glyphs))
 
+;;;; 29.2.2 Pane Properties
+
+(defgeneric pane-frame (pane))
+(defgeneric pane-name (pane))
+(defgeneric pane-foreground (pane))
+(defgeneric pane-background (pane))
+(defgeneric pane-text-style (pane))
+
+;;;; 29.3.3 Scroller Pane Classes
+
+(defgeneric pane-viewport (pane))
+(defgeneric pane-viewport-region (pane)) 
+(defgeneric pane-scroller (pane)) 
+(defgeneric scroll-extent (pane x y)) 
+
 ;;;
 
 (defgeneric medium-foreground (medium))
@@ -116,7 +142,41 @@
 (defgeneric (setf medium-text-style) (new-value medium))
 (defgeneric (setf medium-default-text-style) (new-value medium))
 
-(defgeneric medium-sheet (medium))
+;;;
+
+(defgeneric sheet-grafted-p (sheet))
+(defgeneric graft-width (graft &key units))
+(defgeneric graft-height (graft &key units))
+(defgeneric graft-units (graft))
+
+(defgeneric text-style-character-width (text-style medium char))
+
+(declaim (ftype (function (t t t
+                             &key (:filled t) (:ink t) (:clipping-region t) (:transformation t)
+                             (:line-style t) (:line-thickness t) (:line-unit t) (:line-dashes t)
+                             (:line-joint-shape t))
+                          t)
+                draw-rectangle))
+
+(declaim (ftype (function (t t t t t
+                             &key (:filled t) (:ink t) (:clipping-region t) (:transformation t)
+                             (:line-style t) (:line-thickness t) (:line-unit t) (:line-dashes t)
+                             (:line-joint-shape t))
+                          t)
+                draw-rectangle*))
+
+;;; "exported" from a port
+
+(defgeneric mirror-transformation (port mirror))
+(defgeneric port-set-sheet-region (port sheet region))
+(defgeneric port-set-sheet-transformation (port sheet region))
+(defgeneric port-make-font-text-style (port device-font-name))
+(defgeneric port-lookup-mirror (port sheet))
+(defgeneric port-register-mirror (port sheet mirror))
+(defgeneric port-allocate-pixmap (port sheet width height))
+(defgeneric port-deallocate-pixmap (port pixmap))
+(defgeneric port-mirror-width (port sheet))
+(defgeneric port-mirror-height (port sheet))
 
 ;;;
 
@@ -136,4 +196,34 @@
   (funcall continuation sheet))
 
 
+#||
 
+Further undeclared functions
+
+  FRAME-EVENT-QUEUE FRAME-EXIT PANE-FRAME
+  ALLOCATE-SPACE COMPOSE-SPACE FIND-INNERMOST-APPLICABLE-PRESENTATION 
+  HIGHLIGHT-PRESENTATION-1 PANE-DISPLAY-FUNCTION PANE-DISPLAY-TIME PANE-NAME 
+  PRESENTATION-OBJECT PRESENTATION-TYPE SPACE-REQUIREMENT-HEIGHT 
+  SPACE-REQUIREMENT-WIDTH THROW-HIGHLIGHTED-PRESENTATION WINDOW-CLEAR
+
+  (SETF GADGET-MAX-VALUE) (SETF GADGET-MIN-VALUE) (SETF SCROLL-BAR-THUMB-SIZE) 
+  SLOT-ACCESSOR-NAME::|CLIM-INTERNALS CLIENT slot READER| DRAW-EDGES-LINES* 
+  FORMAT-CHILDREN GADGET-VALUE MAKE-MENU-BAR TABLE-PANE-NUMBER 
+  TEXT-STYLE-CHARACTER-WIDTH
+  MEDIUM WITH-GRAPHICS-STATE
+  PORT-MIRROR-HEIGHT PORT-MIRROR-WIDTH TEXT-STYLE-CHARACTER-WIDTH
+  FIND-INNERMOST-APPLICABLE-PRESENTATION HIGHLIGHT-PRESENTATION-1 
+  PRESENTATION-OBJECT PRESENTATION-TYPE THROW-HIGHLIGHTED-PRESENTATION
+  FORMAT-CHILDREN TABLE-PANE-NUMBER TEXT-STYLE-CHARACTER-WIDTH
+  PORT-MIRROR-HEIGHT PORT-MIRROR-WIDTH SCROLL-EXTENT TEXT-STYLE-CHARACTER-WIDTH
+  FRAME-EVENT-QUEUE FRAME-EXIT PANE-FRAME
+  ALLOCATE-SPACE COMPOSE-SPACE FIND-INNERMOST-APPLICABLE-PRESENTATION 
+  HIGHLIGHT-PRESENTATION-1 PANE-DISPLAY-FUNCTION PANE-DISPLAY-TIME PANE-NAME 
+  PRESENTATION-OBJECT PRESENTATION-TYPE SPACE-REQUIREMENT-HEIGHT 
+  SPACE-REQUIREMENT-WIDTH THROW-HIGHLIGHTED-PRESENTATION WINDOW-CLEAR
+  (SETF GADGET-MAX-VALUE) (SETF GADGET-MIN-VALUE) (SETF SCROLL-BAR-THUMB-SIZE) 
+  SLOT-ACCESSOR-NAME::|CLIM-INTERNALS CLIENT slot READER| DRAW-EDGES-LINES* 
+  FORMAT-CHILDREN GADGET-VALUE MAKE-MENU-BAR TABLE-PANE-NUMBER 
+  TEXT-STYLE-CHARACTER-WIDTH
+
+||#
