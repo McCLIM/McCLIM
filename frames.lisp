@@ -99,7 +99,9 @@
 	      :reader frame-top-level)
    (hilited-presentation :initform nil
 			 :initarg :hilited-presentation
-			 :accessor frame-hilited-presentation)))
+			 :accessor frame-hilited-presentation)
+   (user-supplied-geometry :initform nil
+			   :initarg :user-supplied-geometry)))
 
 ;;; Generic operations
 ; (defgeneric frame-name (frame))
@@ -217,7 +219,11 @@ input focus. This is a McCLIM extension."))
   (declare (ignore fm))
   (sheet-adopt-child (frame-top-level-sheet frame) (frame-pane frame))
   (sheet-adopt-child (graft frame) (frame-top-level-sheet frame))
-  (let ((space (compose-space (frame-top-level-sheet frame))))
+  (let* ((space (compose-space (frame-top-level-sheet frame)))
+	 (bbox (or (slot-value frame 'user-supplied-geometry)
+		   (make-bounding-rectangle 0 0
+					    (space-requirement-width space)
+					    (space-requirement-height space)))))
     ;; automatically generates a window-configuation-event
     ;; which then calls allocate-space
     ;;
@@ -225,12 +231,11 @@ input focus. This is a McCLIM extension."))
     ;; window is mapped and do the space allocation now, so that all
     ;; sheets will have their correct geometry at once. --GB
     (setf (sheet-region (frame-top-level-sheet frame))
-	  (make-bounding-rectangle 0 0
-				   (space-requirement-width space)
-				   (space-requirement-height space)))
+	  bbox)
     (allocate-space (frame-top-level-sheet frame)
-                    (space-requirement-width space)
-                    (space-requirement-height space)) ))
+		    (bounding-rectangle-width bbox)
+		    (bounding-rectangle-height bbox))
+    ))
 
 (defmethod layout-frame ((frame application-frame) &optional width height)
   (let ((pane (frame-pane frame)))
@@ -603,7 +608,8 @@ input focus. This is a McCLIM extension."))
 				(symbol-name '#:define-)
 				(symbol-name name)
 				(symbol-name '#:-command))))
-	(pointer-documentation nil))
+	(pointer-documentation nil)
+	(geometry nil))
     (loop for (prop . values) in options
 	do (case prop
 	     (:pane (setq pane (first values)))
@@ -617,6 +623,7 @@ input focus. This is a McCLIM extension."))
 	     (:command-definer (setq command-definer (first values)))
 	     (:top-level (setq top-level (first values)))
 	     (:pointer-documentation (setq pointer-documentation (car values)))
+	     (:geometry (setq geometry values))
 	     (t (push (cons prop values) others))))
     (if (or (and pane panes)
 	    (and pane layouts))
@@ -639,6 +646,8 @@ input focus. This is a McCLIM extension."))
 	   :top-level ',top-level
 	     )
 	 ,@others)
+       ,@(if geometry
+	     `((setf (get ',name 'application-frame-geometry) ',geometry)))
        ,(if pane
 	    (make-single-pane-generate-panes-form name menu-bar pane)
             (make-panes-generate-panes-form name menu-bar panes layouts
@@ -652,6 +661,28 @@ input focus. This is a McCLIM extension."))
 		       (command-table ',(first command-table)))
 		   `(define-command (,name :command-table ,command-table ,@options) ,arguements ,@body))))))))
 
+(defun get-application-frame-geometry (name indicator)
+  (let ((geometry (get name 'application-frame-geometry)))
+    (if geometry
+	(getf geometry indicator nil))))
+
+(defun compose-user-supplied-geometry (left top right bottom width height)
+  (flet ((compute-range (min max diff)
+	   (cond
+	    ((and min max)
+	     (values min max))
+	    ((and min diff)
+	     (values min (+ min diff)))
+	    ((and max diff)
+	     (values (- max diff) max))
+	    (t
+	     (values nil nil)))))
+    (multiple-value-bind (x1 x2) (compute-range left right width)
+      (multiple-value-bind (y1 y2) (compute-range top bottom height)
+	(if (and x1 x2 y1 y2)
+	    (make-bounding-rectangle x1 y1 x2 y2)
+	  nil)))))
+
 (defun make-application-frame (frame-name
 			       &rest options
 			       &key (pretty-name
@@ -659,15 +690,24 @@ input focus. This is a McCLIM extension."))
 			            (frame-manager nil frame-manager-p)
 			            enable
 			            (state nil state-supplied-p)
-				    left top right bottom width height
+				    (left (get-application-frame-geometry frame-name :left))
+				    (top (get-application-frame-geometry frame-name :top))
+				    (right (get-application-frame-geometry frame-name :right))
+				    (bottom (get-application-frame-geometry frame-name :bottom))
+				    (width (get-application-frame-geometry frame-name :width))
+				    (height  (get-application-frame-geometry frame-name :height))
 			            save-under (frame-class frame-name)
 			       &allow-other-keys)
-  (declare (ignore left top right bottom width height save-under))
+  (declare (ignore save-under))
   (with-keywords-removed (options (:pretty-name :frame-manager :enable :state
 				   :left :top :right :bottom :width :height
 				   :save-under :frame-class))
     (let ((frame (apply #'make-instance frame-class
-			:name frame-name :pretty-name pretty-name options)))
+			:name frame-name
+			:pretty-name pretty-name
+			:user-supplied-geometry (compose-user-supplied-geometry
+						 left top right bottom width height)
+			options)))
       (when frame-manager-p
 	(adopt-frame frame-manager frame))
       (cond ((or enable (eq state :enabled))
