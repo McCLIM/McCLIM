@@ -353,18 +353,19 @@ input focus. This is a McCLIM extension."))
 	(original-state (frame-state frame)))
     (declare (special *input-context* *input-wait-test* *input-wait-handler*
 		      *pointer-button-press-handler*))
-    (when (eq (frame-state frame) :disowned)
+    (when (eq (frame-state frame) :disowned) ; Adopt frame into frame manager
       (adopt-frame (or (frame-manager frame) (find-frame-manager))
 		   frame))
     (unless (or (eq (frame-state frame) :enabled)
 		(eq (frame-state frame) :shrunk))
       (enable-frame frame))
-    (let ((query-io (frame-query-io frame)))
+    (let ((query-io (frame-query-io frame))
+          (*default-frame-manager* (frame-manager frame)))
       (unwind-protect
-	   (if query-io
-	       (with-input-focus (query-io)
-		 (call-next-method))
-	       (call-next-method))
+           (if query-io
+               (with-input-focus (query-io)
+                 (call-next-method))
+               (call-next-method))
         (progn
           (let ((fm (frame-manager frame)))
             (case original-state
