@@ -90,7 +90,7 @@
 
 (define-border-type :drop-shadow (stream left top right bottom)
   (let* ((gap 3) ; FIXME?
-	 (offset 4)
+	 (offset 3)
 	 (left-edge (- left gap))
 	 (bottom-edge (+ bottom gap))
 	 (top-edge (- top gap))
@@ -108,13 +108,29 @@
 		     :filled T)))
 
 (define-border-type :underline (stream record)
-  (labels ((fn (record)                 
+  (labels ((fn (record)
              (loop for child across (output-record-children record) do
                (typecase child
                  (text-displayed-output-record
                   (with-bounding-rectangle* (left top right bottom) child
                      (declare (ignore top))
                      (draw-line* stream left bottom right bottom)))
-                 (updating-output-record  nil)                 
+                 (updating-output-record  nil)
                  (compound-output-record  (fn child))))))
     (fn record)))
+
+(define-border-type :inset (stream left top right bottom)
+  (let* ((gap 3)
+	 (left-edge (- left gap))
+	 (bottom-edge (+ bottom gap))
+	 (top-edge (- top gap))
+	 (right-edge (+ right gap))
+         (dark  *3d-dark-color*)
+         (light *3d-light-color*))
+    (flet ((draw (left-edge right-edge bottom-edge top-edge light dark)
+             (draw-line* stream left-edge bottom-edge left-edge top-edge :ink dark)
+             (draw-line* stream left-edge top-edge right-edge top-edge :ink dark)
+             (draw-line* stream right-edge bottom-edge right-edge top-edge :ink light)
+             (draw-line* stream left-edge bottom-edge right-edge bottom-edge :ink light)))
+      (draw left-edge right-edge bottom-edge top-edge light dark)
+      (draw (1+ left-edge) (1- right-edge) (1- bottom-edge) (1+ top-edge) light dark))))

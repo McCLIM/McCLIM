@@ -130,50 +130,53 @@ accept of this query")))
      (frame-class 'accept-values))
   (declare (ignore own-window exit-boxes modify-initial-query
     resize-frame label scroll-bars x-position y-position
-    width height frame-class))
-  (let* ((*accepting-values-stream*
-	  (make-instance 'accepting-values-stream
-			 :stream stream
-			 :align-prompts align-prompts))
-	 (arecord (updating-output (stream
-				    :record-type 'accepting-values-record)
-		    (if align-prompts
-			(formatting-table (stream)
-			  (funcall body *accepting-values-stream*))
-			(funcall body *accepting-values-stream*))
-		    (display-exit-boxes *application-frame*
-					stream
-					(stream-default-view
-					 *accepting-values-stream*))))
-	 (first-time t)
-	 (current-command (if initially-select-p
-			      `(com-select-query
-				,initially-select-query-identifier)
-			      *default-command*)))
-    (letf (((frame-command-table *application-frame*)
-	    (find-command-table command-table)))
-      (unwind-protect
-	   (handler-case
-	       (loop
-		(if first-time
-		    (setq first-time nil)
-		    (when resynchronize-every-pass
-		      (redisplay arecord stream)))
-		(with-input-context
-		    ('(command :command-table accepting-values))
-		  (object)
-		  (progn
-		    (apply (command-name current-command)
-			   (command-arguments current-command))
-		    ;; If current command returns without throwing a
-		    ;; command, go back to the default command
-		    (setq current-command *default-command*))
-		  (t (setq current-command object)))
-		(redisplay arecord stream))
-	     (av-exit ()
-	       (finalize-query-records *accepting-values-stream*)
-	       (redisplay arecord stream)))
-	(erase-output-record arecord stream)))))
+    width height frame-class))  
+  (multiple-value-bind (cx cy) (stream-cursor-position stream)
+    (let* ((*accepting-values-stream*
+            (make-instance 'accepting-values-stream
+                           :stream stream
+                           :align-prompts align-prompts))
+           (arecord (updating-output (stream
+                                      :record-type 'accepting-values-record)
+                      (if align-prompts
+                          (formatting-table (stream)
+                            (funcall body *accepting-values-stream*))
+                          (funcall body *accepting-values-stream*))
+                      (display-exit-boxes *application-frame*
+                                          stream
+                                          (stream-default-view
+                                           *accepting-values-stream*))))
+           (first-time t)
+           (current-command (if initially-select-p
+                                `(com-select-query
+                                  ,initially-select-query-identifier)
+                                *default-command*)))
+      (letf (((frame-command-table *application-frame*)
+              (find-command-table command-table)))
+        (unwind-protect
+             (handler-case
+                 (loop
+                    (if first-time
+                        (setq first-time nil)
+                        (when resynchronize-every-pass
+                          (redisplay arecord stream)))
+                    (with-input-context
+                        ('(command :command-table accepting-values))
+                      (object)
+                      (progn
+                        (apply (command-name current-command)
+                               (command-arguments current-command))
+                        ;; If current command returns without throwing a
+                        ;; command, go back to the default command
+                        (setq current-command *default-command*))
+                      (t (setq current-command object)))
+                    (redisplay arecord stream))
+               (av-exit ()
+                 (finalize-query-records *accepting-values-stream*)
+                 (redisplay arecord stream)))
+          (erase-output-record arecord stream)
+          (setf (stream-cursor-position stream)
+                (values cx cy)))))))
 
 (defgeneric display-exit-boxes (frame stream view))
 
@@ -355,7 +358,7 @@ is called. Used to determine if any editing has been done by user")))
 		   (with-output-as-presentation
 		       (stream query-identifier 'selectable-query)
 		     (surrounding-output-with-border
-		         (stream :shape :drop-shadow :move-cursor t)
+		         (stream :shape :inset :move-cursor t)
 		       (setq editing-stream
 			     (make-instance 'standard-input-editing-stream
 					    :stream stream
