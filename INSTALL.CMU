@@ -44,10 +44,10 @@ Running the demos
 
 2. Run the slider demo
 
-   (clim-demo::sliderdemo)
+   (clim-demo::colorslider)
 
-   You should see a slider next to the calculator.  We are working on
-   improving this demo.
+   You should see three sliders on the left and a color area on the right. 
+   Use the three sliders to adjust RGB values to obtain a color.
 
    when you get tired of it, hit ^C in the Lisp listener.
 
