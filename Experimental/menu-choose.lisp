@@ -149,7 +149,9 @@
                                *application-frame*))
          (fm (frame-manager associated-frame))
          (stream (make-pane-1 fm associated-frame 'command-menu-pane))
-         (frame (make-menu-frame stream)))
+         (frame (make-menu-frame stream
+                                 :left nil
+                                 :top nil)))
     (adopt-frame fm frame)
     (change-space-requirements stream :width 1 :height 1)
     (unwind-protect

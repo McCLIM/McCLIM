@@ -41,6 +41,15 @@
 	 :port (port frame)
 	 args))
 
+(defmethod adopt-frame :before ((fm clx-frame-manager) (frame menu-frame))
+  ;; Temporary kludge.
+  (when (eq (slot-value frame 'climi::top) NIL)
+    (multiple-value-bind (x y)
+        (xlib:query-pointer (clx-port-window (climi::frame-manager-port fm)))
+      (incf x 10)
+      (setf (slot-value frame 'climi::left) x
+            (slot-value frame 'climi::top) y))))
+
 (defmethod adopt-frame :after ((fm clx-frame-manager) (frame menu-frame))
   (xlib:map-window (sheet-direct-mirror (slot-value frame 'top-level-sheet))))
 
