@@ -88,7 +88,7 @@
 (defgeneric text-style-family (text-style))
 (defgeneric text-style-face (text-style))
 (defgeneric text-style-size (text-style))
-(defgeneric merge-text-style (text-style-1 text-style-2))
+(defgeneric merge-text-styles (text-style-1 text-style-2))
 (defgeneric text-style-ascent (text-style medium))
 (defgeneric text-style-descent (text-style medium))
 (defgeneric text-style-height (text-style medium))
@@ -199,7 +199,9 @@
 
 ;;; Text-style utilities
 
-(defun merge-text-styles (s1 s2)
+(defmethod merge-text-styles (s1 s2)
+  (setq s1 (parse-text-style s1))
+  (setq s2 (parse-text-style s2))
   (if (and (not (device-font-text-style-p s1))
 	   (not (device-font-text-style-p s2)))
       (let ((new-style (make-text-style (or (text-style-family s1)
@@ -209,7 +211,7 @@
 					(or (text-style-size s1)
 					    (text-style-size s2)))))
 	(with-slots (size) new-style
-	  (case size
+	  (case (text-style-size s1)
 	    (:smaller
 	     (setq size (find-smaller-size (text-style-size s2))))
 	    (:larger
