@@ -63,6 +63,7 @@
                 ;;
                 #:INVOKE-WITH-SPECIAL-CHOICES
                 #:MEDIUM-DRAW-GLYPH
+                #:MEDIUM-MITER-LIMIT
                 #:MAKE-GRAFT
                 ;; classes:
                 #:MIRRORED-PIXMAP

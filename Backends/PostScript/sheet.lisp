@@ -109,6 +109,9 @@
 (defmethod make-medium ((port postscript-port) (sheet postscript-stream))
   (make-instance 'postscript-medium :sheet sheet :port port))
 
+(defmethod medium-miter-limit ((medium postscript-medium))
+  #.(* pi (/ 11 180))) ; ?
+
 
 (defmethod sheet-direct-mirror ((sheet postscript-stream))
   (postscript-stream-file-stream sheet))

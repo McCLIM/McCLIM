@@ -929,7 +929,20 @@ Sets the parent of all children of \arg{record} to \cl{nil}.
 This class is mixed into some other stream class to add output
 recording facilities. It is not instantiable.
 
-% what methods must be implemented on the original stream?
+In order to use it, methods on the following generic functions,
+exported from the package \package{clim-extensions}, must be defined.
+
+\defgeneric{line-style-effective-thickness} {line-style medium}
+
+The thickness in device units of the lines rendered on \arg{medium} in
+the line style \arg{line-style}.
+
+\defgeneric{medium-miter-limit} {medium}
+
+Returns the minimal value of an angle for which :MITER line joint may
+be used; for smaller angles :MITER is interpreted as :BEVEL.
+% Different calls of the function with the same argument must return
+% values which are COORDINATE=.
 
 \chapter{Drawing Two-Dimensional Images}
 
@@ -938,10 +951,10 @@ recording facilities. It is not instantiable.
 \subsection{Images}
 
 Images are all rectangular arrangements of pixels.  The type of a
-pixel depends on the exact type of the image.  In addition, a pixel 
+pixel depends on the exact type of the image.  In addition, a pixel
 has a color which also depends on the exact type of the image.  You
 can think of the color as an interpretation of the pixel value by the
-type of image. 
+type of image.
 
 The coordinate system of an image has (0,0) in its upper-left corner.
 The x coordinate grows to the right and the y coordinate downwards.  
@@ -1313,10 +1326,10 @@ In early 2000, Robert got in touch with Mike and eventually convinced him
 to distribute his code, also according to the LGPL.  This was a major
 turning point for the project, as the code base was now sufficiently
 large that a number of small demos were actually running.  Robert
-then spent a few months merging his code into that produced by Mike.  
+then spent a few months merging his code into that produced by Mike.
 
 Arthur Lemmens wrote the initial version of the code for the gadgets
-in june of 2000. 
+in june of 2000.
 
 Bordeaux students Iban Hatchondo and Julien Boninfante were hired by
 Robert for a 3-month summer project during the summer of 2000.  Their
@@ -1334,7 +1347,7 @@ merge his code for regions and transformations into the main code base
 written by Mike, Robert, Iban, and Julien.  This was also a major step
 towards a final system.  We now had one common code base, with a
 near-complete implementation of regions, transformations, sheet
-protocols, ports, grafts, graphics, mediums, panes, and gadgets. 
+protocols, ports, grafts, graphics, mediums, panes, and gadgets.
 
 Meanwhile, Mike was again able to work on the project, and during 2000
 added much of the missing code for handling text interaction and
@@ -1342,7 +1355,7 @@ scrolling.  In particular, output recording could now be used to
 redisplay the contents of an interactor pane.  Mike and Robert also
 worked together to make sure the manipulation of sheet transformations
 and sheet regions as part of scrolling and space-allocation respected
-the specification. 
+the specification.
 
 Robert had initially planned for Iban and Julien to work on McCLIM for
 their fifth-year student project starting late 2000 and continuing
@@ -1359,7 +1372,7 @@ was a complete rewrite of the space-allocation and space-composition
 protocols, and many minor code snippets.
 
 As part of the Gsharp project, Robert wrote the code for menu bars and
-for a large part of chapter 27 (Command Processing).  
+for a large part of chapter 27 (Command Processing).
 
 Julien was hired for six months (April to September of 2001) by Robert
 to make major progress on McCLIM.  Julien's first task was to create a
@@ -1398,7 +1411,7 @@ Arnaud and Lionel were hired by Robert for the summer of 2001 to work
 on several things.  In particular, they worked on getting output
 recording to work and wrote CLIM-fig, a demo that shows how output
 recording is used.  They also worked on various sheet protocols, and
-wrote the first version of the PostScript backend. 
+wrote the first version of the PostScript backend.
 
 Alexey Dejneka joined the project in the summer of 2001. He wrote the
 code for table formatting, bordered output and continued to develop

@@ -552,3 +552,6 @@
       (funcall continuation (sheet-medium sheet)))))
 
 ;;;;
+
+(defmethod medium-miter-limit ((medium clx-medium))
+  #.(* pi (/ 11 180)))

@@ -21,7 +21,7 @@
 (in-package :COMMON-LISP-USER)
 
 (defpackage "CLIM-POSTSCRIPT"
-  (:use "CLIM" "CLIM-LISP")
+  (:use "CLIM" "CLIM-EXTENSIONS" "CLIM-LISP")
   (:export "LOAD-AFM-FILE")
   (:import-from "CLIM-INTERNALS"
                 "GET-ENVIRONMENT-VARIABLE"
@@ -33,8 +33,6 @@
                 "GET-TRANSFORMATION"
                 "UNTRANSFORM-ANGLE"
                 "WITH-TRANSFORMED-POSITION"
-
-                "LINE-STYLE-EFFECTIVE-THICKNESS"
 
                 "MAXF"
 

@@ -35,6 +35,7 @@
 ;;; - POSTSCRIPT-ACTUALIZE-GRAPHICS-STATE: fix CLIPPING-REGION reusing logic
 ;;; - MEDIUM-DRAW-... should not duplicate code from POSTSCRIPT-ADD-PATH
 ;;; - structure this file
+;;; - set miter limit?
 
 (in-package :CLIM-POSTSCRIPT)
 

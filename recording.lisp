@@ -48,6 +48,14 @@
 ;;;
 ;;; - Computation of the bounding rectangle of lines ignores
 ;;; LINE-STYLE-CAP-SHAPE.
+;;;
+;;; - Computation of the bounding rectangle of polygons knows nothing
+;;; about :BEVEL.
+;;;
+;;; - Rounding of coordinates.
+;;;
+;;; - Document carefully the interface of
+;;; STANDARD-OUTPUT-RECORDING-STREAM.
 
 ;;; Bug: (SETF OUTPUT-RECORD-POSITION) returns the record instead of
 ;;; the position. It is useful for debugging, but it is wrong.
@@ -453,10 +461,10 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
       (ecase state
         (:highlight
          (draw-rectangle* (sheet-medium stream) x1 y1 x2 y2
-                          :filled nil :ink +foreground-ink+))
+                          :filled nil :ink +foreground-ink+)) ; XXX +FLIPPING-INK+?
         (:unhighlight
          (draw-rectangle* (sheet-medium stream) x1 y1 x2 y2
-                          :filled nil :ink +background-ink+))))))
+                          :filled nil :ink +background-ink+)))))) ; XXX +FLIPPING-INK+?
 
 ;;; 16.2.2. The Output Record "Database" Protocol
 (defmethod output-record-children ((record basic-output-record))
@@ -749,7 +757,6 @@ were added."
   (let ((method-name (intern (format nil "MEDIUM-~A*" name)))
 	(class-name (intern (format nil "~A-OUTPUT-RECORD" name)))
 	(medium (gensym "MEDIUM"))
-        (border 'border)
         (class-vars `((stream :initarg :stream)
                       ,@(loop for arg in args
                            collect `(,arg
@@ -766,10 +773,11 @@ were added."
 		      stream ink clipping-region transform
 		      line-style text-style
 		      ,@args) graphic
-           (let ((,border (/ (line-style-effective-thickness
-                              line-style (sheet-medium stream))
+           (let* ((medium (sheet-medium stream))
+                  (border (/ (line-style-effective-thickness
+                              line-style medium)
                              2)))
-             (declare (ignorable ,border))
+             (declare (ignorable border))
              (multiple-value-setq (x1 y1 x2 y2) (progn ,@body)))
            (setf initial-x1 x1
                  initial-y1 y1)))
@@ -850,10 +858,12 @@ were added."
                                    (+ max-x border)
                                    (+ max-y border))))))
 
-(def-grecording draw-polygon (coord-seq closed filled)
+(defun polygon-record-bounding-rectangle
+    (coord-seq transform closed filled line-style border miter-limit)
   (with-transformed-positions (transform coord-seq)
     (if (or filled
             (not (eq (line-style-joint-shape line-style) :miter)))
+        ;; XXX The following is for :ROUND. What about :BEVEL and :NONE?
         (loop for (x y) on coord-seq by #'cddr
            minimize x into min-x
            minimize y into min-y
@@ -875,40 +885,43 @@ were added."
                  (y1 (second coord-seq))
                  (min-x (- x1 border)) (min-y (- y1 border))
                  (max-x (+ x1 border)) (max-y (+ y1 border)))
-            (loop for (xp yp x y xn yn) on (if closed
-                                               `(,@(last coord-seq 2)
-                                                 ,@coord-seq
-                                                 ,(first coord-seq) ,(second coord-seq))
-                                               coord-seq)
-                 by #'cddr
+            ;; FIXME: Remove zero-length segments
+            (loop with sin-limit = (sin (* 0.5 miter-limit))
+               for (xp yp x y xn yn) on (if closed
+                                            `(,@(last coord-seq 2)
+                                                ,@coord-seq
+                                                ,(first coord-seq) ,(second coord-seq))
+                                            coord-seq)
+               by #'cddr
                unless yn do (minf min-x (- x border)) (minf min-y (- y border))
                             (maxf max-x (+ x border)) (maxf max-y (+ y border))
                             (return)
                do (multiple-value-bind (nx1 ny1) (normalize (- x xp) (- y yp))
                     (multiple-value-bind (nx2 ny2) (normalize (- x xn) (- y yn))
-                      (let* ((cos (+ (* nx1 nx2) (* ny1 ny2)))
-                             (sin (sqrt (* 0.5 (- 1.0 cos))))
-                             (length (/ border sin))) ; XXX MITER-LIMIT
-                        (multiple-value-bind (dx dy)
-                            (normalize (+ nx1 nx2) (+ ny1 ny2) length)
-                          (let ((adx (abs dx)) (ady (abs dy)))
-                            (minf min-x (- x adx)) (minf min-y (- y ady))
-                            (maxf max-x (+ x adx)) (maxf max-y (+ y ady))))))))
+                      (let* ((cos-a (+ (* nx1 nx2) (* ny1 ny2)))
+                             (sin-a/2 (sqrt (* 0.5 (- 1.0 cos-a)))))
+                        (if (< sin-a/2 sin-limit)
+                            (progn ; FIXME! This is for :ROUND, not for :BEVEL.
+                              (minf min-x (- x border)) (minf min-y (- y border))
+                              (maxf max-x (+ x border)) (maxf max-y (+ y border)))
+                            (let ((length (/ border sin-a/2)))
+                              (multiple-value-bind (dx dy)
+                                  (normalize (+ nx1 nx2) (+ ny1 ny2) length)
+                                (let ((adx (abs dx)) (ady (abs dy)))
+                                  (minf min-x (- x adx)) (minf min-y (- y ady))
+                                  (maxf max-x (+ x adx)) (maxf max-y (+ y ady))))))))))
             (values min-x min-y max-x max-y))))))
 
+(def-grecording draw-polygon (coord-seq closed filled)
+  (polygon-record-bounding-rectangle
+   coord-seq transform closed filled line-style border
+   (medium-miter-limit medium)))
+
 (def-grecording draw-rectangle (left top right bottom filled)
-  ;; FIXME!!! If the rectangle is a line/point, MAKE-RECTANGLE* gives +NOWHERE+,
-  ;; and BOUNDING-RECTANGLE* signals an error.
-  (multiple-value-bind (min-x min-y max-x max-y)
-      (bounding-rectangle* (transform-region transform
-                                             (make-rectangle*
-                                              left top right bottom)))
-    (if filled
-        (values min-x min-y max-x max-y)
-        (values (- min-x border)
-                (- min-y border)
-                (+ max-x border)
-                (+ max-y border)))))
+  (polygon-record-bounding-rectangle
+   (list left top  left bottom  right bottom  right top)
+   transform t filled line-style border
+   (medium-miter-limit medium)))
 
 (def-grecording draw-ellipse (center-x center-y
 			      radius-1-dx radius-1-dy radius-2-dx radius-2-dy
@@ -1012,7 +1025,11 @@ were added."
              ((medium-clipping-region medium) +everywhere+)
              ((medium-transformation medium) +identity-transformation+)
              ((stream-cursor-position stream) (values 0 0))
-             ((slot-value stream 'baseline) baseline)) ; FIXME
+             ((slot-value stream 'baseline) baseline)
+                                        ; FIXME:
+                                        ; 1. SLOT-VALUE...
+                                        ; 2. It should also save a "current line".
+             )
         (loop with offset =  (- x1 initial-x1)
            for substring in strings
            do (with-slots (start-x text-style ink clipping-region string)
