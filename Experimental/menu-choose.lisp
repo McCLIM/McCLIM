@@ -115,14 +115,16 @@
                            (let ((activep (menu-item-option item :active t)))
                              (with-presentation-type-decoded (name params options)
                                  presentation-type
-                               (let ((*allow-sensitive-inferiors* activep))
-                                 (with-output-as-presentation
-                                     (stream
-                                      item
-                                      `((,name ,@params)
-                                        :description ,(getf (menu-item-options item) :documentation)
-                                        ,@options))
-                                   (funcall item-printer item stream))))))
+                               (let ((*allow-sensitive-inferiors* activep))                                 
+                                 (with-text-style (stream (or (getf (menu-item-options item) :style)
+                                                              '(:sans-serif nil nil)))
+                                   (with-output-as-presentation                                     
+                                       (stream
+                                        item
+                                        `((,name ,@params)
+                                          :description ,(getf (menu-item-options item) :documentation)
+                                          ,@options))
+                                     (funcall item-printer item stream)))))))
                 :presentation-type nil
                 :x-spacing x-spacing
                 :y-spacing y-spacing
@@ -229,6 +231,7 @@
                    frame-manager subitems
                    options))))))
 
+#+NIL
 (defmethod menu-choose-from-drawer
     (menu presentation-type drawer
      &key x-position y-position cache unique-id id-test cache-value cache-test
@@ -246,7 +249,28 @@
     (handler-case
         (with-input-context (presentation-type :override t)
               (object type event)
-            (loop
-               (read-gesture :stream menu))
+          (loop (read-gesture :stream menu))
           (t (values object event)))
       (abort-gesture () (values nil)))))
+
+(defmethod menu-choose-from-drawer
+    (menu presentation-type drawer
+     &key x-position y-position cache unique-id id-test cache-value cache-test
+     default-presentation pointer-documentation)
+  (funcall drawer menu presentation-type)
+  (when (typep menu 'command-menu-pane)
+    (with-bounding-rectangle* (x1 y1 x2 y2)
+        (stream-output-history menu)
+      (declare (ignorable x1 y1 x2 y2))
+      (change-space-requirements menu
+                                 :width x2
+                                 :height y2
+                                 :resize-frame t)))
+  (let ((*pointer-documentation-output* pointer-documentation))
+    (tracking-pointer (menu :context-type presentation-type :multiple-window t :highlight t) 
+      (:pointer-button-press (&key event x y) ; Pointer clicked outside menu? Close the menu.
+       (unless (sheet-ancestor-p (event-sheet event) menu)          
+          (return-from menu-choose-from-drawer (values nil))))
+      (:presentation-button-press (&key presentation event x y)
+        (return-from menu-choose-from-drawer
+          (values (presentation-object presentation) event))))))
