@@ -45,7 +45,7 @@ TBM:20031112:002300
 
     frame-drag-and-drop-feedback, frame-drag-and-drop-highlighting 
 
-    command-enable, display-command-menu
+    display-command-menu
 
     restraining-pane
 
@@ -70,6 +70,9 @@ RS:20030805:101708
     each pane to decide when it wants the input focus. 
 
 ======================  Resolved issues ======================
+TBM:20040524:100000
+    command-enable
+
 TBM:20040121:150000
     presentation type histories, frame-maintain-presentation-histories
     [This has been implemented but needs some work]

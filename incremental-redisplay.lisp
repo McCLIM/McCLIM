@@ -64,8 +64,7 @@ Finally, the old tree is walked.  All updating-output-records in state
   ((redisplaying-p :reader stream-redisplaying-p :initform nil)
    (do-note-output-record :accessor do-note-output-record :initform t)
    (id-map :accessor id-map :initform nil)
-   (incremental-redisplay :type (member t nil)
-			  :initform nil
+   (incremental-redisplay :initform nil
 			  :initarg :incremental-redisplay
 			  :accessor pane-incremental-redisplay)
    (updating-record :accessor updating-record
@@ -732,7 +731,6 @@ record is stored.")
 (defmethod redisplay-output-record ((record updating-output-record)
 				    (stream updating-output-stream-mixin)
 				    &optional (check-overlapping t))
-  (declare (ignore check-overlapping))
   (letf (((slot-value stream 'redisplaying-p) t))
     (let ((*current-updating-output* record)
 	  (current-graphics-state (medium-graphics-state stream)))
@@ -744,19 +742,25 @@ record is stored.")
 	       (when *dump-updating-output*
 		 (dump-updating record :both *trace-output*)))
 	     (multiple-value-bind (erases moves draws)
-		 (compute-difference-set record)
+		 (compute-difference-set record check-overlapping)
 	       (declare (ignore moves))
 	       (with-output-recording-options (stream :record nil :draw t)
 		 (loop for r in erases
-		       do (redisplay-delete-output-record r stream))
+		    do (redisplay-delete-output-record r stream))
 		 (loop for r in draws
-		       do (redisplay-add-output-record r stream)))
+		    do (redisplay-add-output-record r stream)))
 	       ;; Redraw all the regions that have been erased.
-	       ;; This takes care of all random records that might overlap.
-	       (loop for r in erases
-		     do (replay record stream r))
-	       (loop for r in draws
-		     do (replay record stream r))))
+	       ;; This takes care of all random records that might
+	       ;; overlap.
+	       (if check-overlapping
+		   (progn
+		     (loop for r in erases
+			do (replay record stream r))
+		     (loop for r in draws
+			do (replay record stream r)))
+		   (progn
+		     (loop for r in draws
+			do (replay r stream))))))
 	(delete-stale-updating-output record)
 	(set-medium-graphics-state current-graphics-state stream)))))
 
@@ -901,13 +905,19 @@ record is stored.")
 
 (defmethod redisplay-frame-pane :around
     (frame (pane updating-output-stream-mixin) &key force-p)
-  (cond ((or (not (pane-incremental-redisplay pane))
-	     (not *enable-updating-output*))
-	 (call-next-method))
-	((or (null (updating-record pane))
-	     force-p)
-	 (setf (updating-record pane)(updating-output (pane)
-				       (call-next-method frame pane
-							 :force-p force-p))))
-	(t (redisplay (updating-record pane) pane))))
+  (let ((incremental-redisplay (pane-incremental-redisplay pane)))
+    (cond ((or (not incremental-redisplay) (not *enable-updating-output*))
+	   (call-next-method))
+	  ((or (null (updating-record pane))
+	       force-p)
+	   (setf (updating-record pane)(updating-output (pane)
+					 (call-next-method frame pane
+							   :force-p force-p))))
+	  ;; Implements the extension to the :incremental-redisplay
+	  ;; pane argument found in the Franz User Guide.
+	  (t (let ((record (updating-record pane)))
+	       (if (consp incremental-redisplay)
+		   (apply #'redisplay record pane incremental-redisplay)
+		   (redisplay record pane))) ))))
+
 

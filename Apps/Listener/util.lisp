@@ -94,15 +94,21 @@
                                             :type (let ((x (position #\. string :start 1 :from-end T)))
                                                      (if x (subseq string (1+ x)) nil)))
                               parent))
-         (dir (ignore-errors (sb-posix:opendir (namestring pn)))))    
+         (dir (ignore-errors (sb-posix:opendir (namestring pn)))))
+
+	 
     (cond ((or (string= string ".")
                (string= string ".."))
+	   (unless (or (null dir) (sb-alien:null-alien dir))
+	     (sb-posix:closedir dir))
            nil)
           ((or (null dir)
                (sb-alien:null-alien dir))
            pn)
-          (T (merge-pathnames (parse-namestring (concatenate 'string string "/"))
-                              parent)))))
+          (T
+	   (sb-posix:closedir dir)
+	   (merge-pathnames (parse-namestring (concatenate 'string string "/"))
+			    parent)))))
 
 ;; FIXME: SB-POSIX now has STAT, so USE IT HERE !!!
 
@@ -119,6 +125,7 @@
                   (nreverse list))
               (let ((pn (sbcl-frob-to-pathname pathname (sb-posix::dirent-name dirent))))
                 (when pn (push pn list))))
+	  #+nil ; dirents should not be freed, they belong to the DIR.
           (sb-posix::free-dirent dirent))))))
 
 #+openmcl

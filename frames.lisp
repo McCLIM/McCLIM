@@ -1206,15 +1206,19 @@ frame, if any")
   (declare (ignore input-context stream event))
   nil)
 
-(defun frame-highlight-at-position (frame stream x y &optional (modifier 0)
-                                          (input-context *input-context*))
+(defun frame-highlight-at-position (frame stream x y modifier input-context
+				    &key (highlight t))
+  "Given stream x,y; key modifiers; input-context, find the applicable
+   presentation and maybe highlight it."
   (flet ((maybe-unhighlight (presentation)
 	   (when (and (frame-hilited-presentation frame)
-		      (not (eq presentation
-			       (car (frame-hilited-presentation frame)))))
+		      (or (not highlight)
+			  (not (eq presentation
+			       (car (frame-hilited-presentation frame))))))
 	     (highlight-presentation-1 (car (frame-hilited-presentation frame))
 				       (cdr (frame-hilited-presentation frame))
-				       :unhighlight))))
+				       :unhighlight)
+	     (setf (frame-hilited-presentation frame) nil))))
     (if (output-recording-stream-p stream)
 	(let ((presentation (find-innermost-applicable-presentation
 			     input-context
@@ -1223,16 +1227,17 @@ frame, if any")
 			     :frame frame
 			     :modifier-state modifier)))
 	  (maybe-unhighlight presentation)
-	  (if presentation
-	      (when (not (eq presentation
-			     (car (frame-hilited-presentation frame))))
-		(setf (frame-hilited-presentation frame)
-		      (cons presentation stream))
-		(highlight-presentation-1 presentation stream :highlight))
-	      (setf (frame-hilited-presentation frame) nil)))
+	  (when (and presentation
+		     highlight
+		     (not (eq presentation
+			      (car (frame-hilited-presentation frame)))))
+	    (setf (frame-hilited-presentation frame)
+		  (cons presentation stream))
+	    (highlight-presentation-1 presentation stream :highlight))
+	  presentation)
 	(progn
 	  (maybe-unhighlight nil)
-	  (setf (frame-hilited-presentation frame) nil)))))
+	  nil))))
 
 (defmethod frame-input-context-track-pointer :before
     ((frame standard-application-frame) input-context
@@ -1270,3 +1275,107 @@ frame, if any")
 (defmethod reset-frame (frame &rest client-settings)
   (loop for (setting value) on client-settings by #'cddr
 	do (setf (client-setting frame setting) value)))
+
+;;; tracking-pointer stuff related to presentations
+
+(defclass frame-tracking-pointer-state (tracking-pointer-state)
+  ((presentation-handler :reader presentation-handler :initarg :presentation)
+   (presentation-button-release-handler
+    :reader presentation-button-release-handler
+    :initarg :presentation-button-release)
+   (presentation-button-press-handler :reader presentation-button-press-handler
+				      :initarg :presentation-button-press)
+   (applicable-presentation :accessor applicable-presentation :initform nil)
+   (input-context :reader input-context)
+   (highlight :reader highlight))
+  (:default-initargs :presentation nil
+                     :presentation-button-press nil
+		     :presentation-button-release nil
+		     :context-type t))
+
+(defmethod initialize-instance :after
+    ((obj frame-tracking-pointer-state)
+     &key presentation presentation-button-press presentation-button-release
+     (highlight nil highlightp) context-type)
+  (setf (slot-value obj 'highlight) (if highlightp
+					highlight
+					(or presentation
+					    presentation-button-press
+					    presentation-button-release)))
+  (setf (slot-value obj 'input-context)
+	(make-fake-input-context context-type)))
+
+(defmethod make-tracking-pointer-state
+    ((frame standard-application-frame)	sheet args)
+  (declare (ignore sheet))
+  (apply #'make-instance 'frame-tracking-pointer-state
+	 :allow-other-keys t
+	 args))
+
+(defmethod tracking-pointer-loop :before
+    ((state frame-tracking-pointer-state) frame sheet &rest args)
+  (declare (ignore args))
+  (if (highlight state)
+      (highlight-current-presentation frame (input-context state))
+      (let ((hilited (frame-hilited-presentation frame)))
+	(when hilited
+	  (highlight-presentation-1 (car hilited)
+				    (cdr hilited)
+				    :unhighlight)))))
+
+(defmethod tracking-pointer-loop-step :before
+    ((state frame-tracking-pointer-state) (event pointer-event) x y)
+  (declare (ignore x y))
+  (when (highlight state)
+    (let ((stream (event-sheet event)))
+      (setf (applicable-presentation state)
+	    (frame-highlight-at-position *application-frame* stream
+					 (device-event-x event)
+					 (device-event-y event)
+					 (event-modifier-state event)
+					 (input-context state)
+					 :highlight (highlight state)))
+      ;;; Hmmm, probably don't want to do this
+      #+nil (frame-update-pointer-documentation frame
+					  (input-context state)
+					  stream
+					  event))))
+
+(macrolet ((frob (event handler)
+	     `(defmethod tracking-pointer-loop-step
+		  ((state frame-tracking-pointer-state) (event ,event)  x y)
+		(let ((handler (,handler state))
+		      (presentation (applicable-presentation state)))
+		  (if (and handler presentation)
+		      (funcall handler :presentation presentation
+			       :window (event-sheet event)
+			       :x x :y y)
+		      (call-next-method))))))
+  (frob pointer-motion-event presentation-handler)
+  (frob pointer-button-press-event presentation-button-press-handler)
+  (frob pointer-button-release-event presentation-button-release-handler))
+
+
+(defun frame-drag (translator-name command-table object presentation
+		   context-type frame event window x y)
+  (let* ((translator (gethash translator-name
+			      (translators (presentation-translators
+					    (find-command-table
+					     command-table)))))
+	 (tester (tester translator))
+	 (drag-type (from-type translator))
+	 (feedback-fn (feedback translator))
+	 (hilite-fn (highlighting translator))
+	 (drag-c-type `(drag-over ))
+	 (drag-context (make-fake-input-context drag-c-type))
+	 (*dragged-object* object)
+	 (destination-object nil))
+    (multiple-value-bind (x0 y0)
+	(stream-pointer-position window)
+      (funcall feedback-fn *application-frame* object window
+	       x0 y0 x0 y0 :highlight)
+      (tracking-pointer (window :context-type drag-c-type :highlight nil)
+       (:pointer-motion (&key event x y)
+	 (multiple-value-bind (presentation translator)
+	     (find-innermost-presentation-context drag-context window
+		   x y :event event)))))))

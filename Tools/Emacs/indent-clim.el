@@ -65,6 +65,11 @@
 (put 'with-delimiter-gestures 'lisp-indent-function 1)  
 (put 'completing-from-suggestions 'lisp-indent-function 1)
 
+;;; Some forms indent much better using the
+;;common-lisp-indent-function stuff.
+
+(put 'tracking-pointer 'common-lisp-indent-function
+     '((&whole 4 &rest 1) &rest (&whole 1 &lambda &body)))
 ;;
 ;;(DEFMACRO CLIM:DEFINE-COMMAND-TABLE
 ;;          (NAME &KEY (INHERIT-FROM '(GLOBAL-COMMAND-TABLE)) MENU))             

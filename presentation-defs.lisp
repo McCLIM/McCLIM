@@ -270,6 +270,7 @@
 			   ,allow-sensitive-inferiors
 			   nil)))
 		  ,@with-body)))
+	 (declare (dynamic-extent #'continuation))
 	 (if (output-recording-stream-p ,stream)
 	     (invoke-with-new-output-record
 	      ,stream #'continuation ,record-type
@@ -511,6 +512,16 @@ call-next-method to get the \"real\" answer based on the stream type."))
 (defun input-context-type (context-entry)
   (car context-entry))
 
+;;; Many presentation functions, internal and external, take an input
+;;; context as an argument, but they really only need to look at one
+;;; presentation type.
+(defun make-fake-input-context (ptype)
+  (list (cons (expand-presentation-type-abbreviation ptype)
+	      #'(lambda (object type event options)
+		  (declare (ignore event options))
+		  (error "Fake input context called with object ~S type ~S. ~
+                          This shouldn't happen!"
+			 object type)))))
 
 (defun input-context-wait-test (stream)
   (let* ((queue (stream-input-buffer stream))
@@ -538,12 +549,18 @@ call-next-method to get the \"real\" answer based on the stream type."))
       ;; passed through?  If there's no presentation, maybe?
       (unless (typep event 'keyboard-event)
 	(event-queue-read queue))
-      (frame-input-context-track-pointer frame
-					 input-context
-					 (event-sheet event)
-					 event)
-      (when (typep event 'pointer-button-press-event)
-	(funcall *pointer-button-press-handler* stream event)))))
+      (progn
+	(frame-input-context-track-pointer frame
+					   input-context
+					   (event-sheet event)
+					   event)
+	(when (typep event 'pointer-button-press-event)
+	  (funcall *pointer-button-press-handler* stream event)))
+      #+nil
+      (if (and (typep event 'pointer-motion-event)
+	       (pointer-event-button event))
+	  (frame-drag frame input-context (event-sheet event) event)
+	  ))))
 
 (defun input-context-event-handler (stream)
   (highlight-applicable-presentation *application-frame*
@@ -1848,4 +1865,84 @@ call-next-method to get the \"real\" answer based on the stream type."))
    stream view default default-supplied-p present-p query-identifier))
 
 ;;; All the expression and form reading stuff is in builtin-commands.lisp
+
+;;; drag-n-drop fun
+
+(defclass drag-n-drop-translator (presentation-translator)
+  ((feedback :reader feedback :initarg :feedback)
+   (highlighting :reader highlighting :initarg :highlighting)))
+
+(defvar *dragged-object* nil
+  "Bound to the object dragged in a drag-and-drop context")
+
+;;; According to the Franz User's guide, the destination object is
+;;; available in the tester, documentation, and translator function
+;;; as destination-object. Therefore OBJECT is the dragged object. In
+;;; our scheme the tester function, translator function etc. is
+;;; really called on the destination object. So, we do a little
+;;; shuffling of arguments here.
+
+(defmethod initialize-instance :after ((obj drag-n-drop-translator)
+				       &key tester documentation
+				       pointer-documentation
+				       translator-function)
+  (flet ((make-adapter (func)
+	   (lambda (object &rest args)
+	     (apply func *dragged-object* :destination-object object args))))
+    (setf (slot-value obj 'tester) (make-adapter tester))
+    (setf (slot-value obj 'documentation) (make-adapter documentation))
+    (when pointer-documentation
+      (setf (slot-value obj 'pointer-documentation)
+	    (make-adapter pointer-documentation)))
+    (setf (slot-value obj 'translator-function)
+	  (make-adapter translator-function))))
+
+(define-presentation-type drag-over (over context)
+  :inherit-from t
+  :parameters-are-types t)
+
+(define-presentation-method presentation-subtypep ((type drag-over)
+						   maybe-supertype)
+  (with-presentation-type-parameters (drag-over type)
+    (let ((subtype-over under)
+	  (subtype-context context))
+      (with-presentation-type-parameters (drag-over maybe-supertype)
+	(and (presentation-subtypep subtype-over over)
+	     (presentation-subtypep subtype-over over))))))
+
+(defmacro define-drag-and-drop-translator
+    (name
+     (from-type to-type destination-type command-table
+      &rest args
+      &key (gesture :select) tester documentation
+      pointer-documentation menu priority
+      (feedback 'frame-drag-and-drop-feedback)
+      (highlighting 'frame-drag-and-drop-highlighting))
+     arglist
+     &body body)
+  (declare (ignore tester documentation pointer-documentation menu
+		   priority))
+  (let* ((real-from-type (expand-presentation-type-abbreviation from-type))
+	 (real-dest-type (expand-presentation-type-abbreviation
+			  destination-type))
+	 (real-to-type (expand-presentation-type-abbreviation to-type))
+	 (action-name (gensym (format nil "~S-~S-DRAG-ACTION"
+				      from-type to-type))))
+    (with-keywords-removed (args (:feedback :highlighting))
+      `(progn
+	 (define-presentation-translator ,name
+	     (,real-dest-type (drag-over ,real-from-type ,real-to-type)
+	      ,@args
+	      :feedback #',feedback :highlighting #',highlighting
+	      :translator-class drag-n-drop-translator)
+	   ,arglist
+	   ,@body)
+	 (define-presentation-action ,action-name
+	     (,from-type ,to-type ,command-table :gesture ,gesture
+			 :priority -1)
+	   (object presentation context-type frame event window x y)
+	   (frame-drag ',name ',command-table object presentation context-type
+		       frame event window x y))))))
+
+
 

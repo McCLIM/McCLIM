@@ -151,10 +151,11 @@ table cell as argument."
   (labels ((foo (row-record)
              (map-over-output-records
               (lambda (record)
-                (foo record)
-                (when (cell-output-record-p record)
-                  (funcall function record)))
+                (if (cell-output-record-p record)
+		    (funcall function record)
+		    (foo record)))
               row-record)))
+    (declare (dynamic-extent #'foo))
     (foo block)))
 
 
@@ -186,7 +187,11 @@ to a table cell within the row."))
 (defgeneric invoke-formatting-row (stream cont record-type &rest initargs))
 
 (defmethod invoke-formatting-row (stream cont record-type &rest initargs)
-  (apply #'invoke-with-new-output-record stream (lambda (s r) r (funcall cont s)) record-type initargs))
+  (apply #'invoke-with-new-output-record stream
+	 (lambda (s r)
+	   (declare (ignore r))
+	   (funcall cont s))
+	 record-type initargs))
 
 
 ;;; Column formatting
@@ -244,8 +249,7 @@ skips intervening non-table output record structures."))
    ;; adjust-multiple-columns
    (widths)
    (heights)                            ;needed?
-   (rows)
-   ))
+   (rows)))
 
 (defmethod initialize-instance :after ((table standard-table-output-record)
                                        &rest initargs)
@@ -296,7 +300,7 @@ skips intervening non-table output record structures."))
               :multiple-columns-x-spacing multiple-columns-x-spacing
               :equalize-column-widths equalize-column-widths)
     (multiple-value-bind (cursor-old-x cursor-old-y)
-        (stream-cursor-position stream)
+	(stream-cursor-position stream)
       (let ((*table-suppress-update* t))
 	(with-output-recording-options (stream :record t :draw nil)
 	  (funcall continuation stream)
@@ -307,33 +311,57 @@ skips intervening non-table output record structures."))
 	(tree-recompute-extent table))
       #+NIL
       (setf (output-record-position table)
-            (values cursor-old-x cursor-old-y))
+	    (values cursor-old-x cursor-old-y))
       (if move-cursor
-          ;; FIXME!!!
-          ;; Yeah, fix me -- what is wrong with that?
-          (setf (stream-cursor-position stream)
-                (values (bounding-rectangle-max-x table)
-                        (bounding-rectangle-max-y table)))
-          (setf (stream-cursor-position stream)
-                (values cursor-old-x cursor-old-y)))
+	  ;; FIXME!!!
+	  ;; Yeah, fix me -- what is wrong with that?
+	  (setf (stream-cursor-position stream)
+		(values (bounding-rectangle-max-x table)
+			(bounding-rectangle-max-y table)))
+	  (setf (stream-cursor-position stream)
+		(values cursor-old-x cursor-old-y)))
       (replay table stream))))
 
-(defmethod map-over-table-elements (function
-                                    (table-record standard-table-output-record)
-                                    type)
-  (labels ((foo (table-record)
+;;; Think about rewriting this using a common superclass for row and
+;;; column records.
+
+(defmethod map-over-table-elements
+    (function (table-record standard-table-output-record) (type (eql :row)))
+  (labels ((row-mapper (table-record)
              (map-over-output-records
               (lambda (record)
-                (foo record)
-                (when (or
-                       (and (row-output-record-p record)
-                            (member type '(:row :row-or-column)))
-                       (and (column-output-record-p record)
-                            (member type '(:column :row-or-column))))
-                  (funcall function record))
-                )
+                (if (row-output-record-p record)
+		    (funcall function record)
+		    (row-mapper record)))
               table-record)))
-    (foo table-record)))
+    (declare (dynamic-extent #'row-mapper))
+    (row-mapper table-record)))
+
+(defmethod map-over-table-elements
+    (function (table-record standard-table-output-record) (type (eql :column)))
+  (labels ((col-mapper (table-record)
+             (map-over-output-records
+              (lambda (record)
+                (if (column-output-record-p record)
+		    (funcall function record)
+		    (col-mapper record)))
+              table-record)))
+    (declare (dynamic-extent #'col-mapper))
+    (col-mapper table-record)))
+
+(defmethod map-over-table-elements (function
+				    (table-record standard-table-output-record)
+				    (type (eql :row-or-column)))
+  (labels ((row-and-col-mapper (table-record)
+             (map-over-output-records
+              (lambda (record)
+                (if (or (row-output-record-p record)
+			(column-output-record-p record)) 
+		    (funcall function record)
+		    (row-and-col-mapper record)))
+              table-record)))
+    (declare (dynamic-extent #'row-and-col-mapper))
+    (row-and-col-mapper table-record)))
 
 
 ;;; Item list formatting
@@ -446,101 +474,130 @@ skips intervening non-table output record structures."))
                          args
                          body))
 
+;;; Helper function
+
+(defun make-table-array (table-record)
+  "Given a table record, creates an array of arrays of cells in row major
+  order. Returns (array-of-cells number-of-rows number-of-columns)"
+  (let* ((row-based (block
+			find-table-type
+		      (map-over-table-elements
+		       (lambda (thing)
+			 (cond ((row-output-record-p thing)
+				(return-from find-table-type t))
+			       ((column-output-record-p thing)
+				(return-from find-table-type nil))
+			       (t
+				(error "Something is wrong."))))
+		       table-record
+		       :row-or-column)
+		      ;; It's empty
+		      (return-from make-table-array (values nil 0 0))))
+	 (rows (make-array 1
+			   :adjustable t
+			   :fill-pointer (if row-based
+					     0
+					     nil)
+			   :initial-element nil))
+	 (number-of-columns 0))
+    (if row-based
+	(map-over-table-elements
+	 (lambda (row)
+	   (let ((row-array (make-array 4 :adjustable t :fill-pointer 0)))
+	     (map-over-row-cells (lambda (cell)
+				   (vector-push-extend cell row-array))
+				 row)
+	     (vector-push-extend row-array rows)
+	     (maxf number-of-columns (length row-array))))
+	 table-record
+	 :row)
+	(let ((col-index 0))
+	  (map-over-table-elements
+	   (lambda (col)
+	     (let ((row-index 0))
+	       (map-over-column-cells
+		(lambda (cell)
+		  (when (>= row-index (length rows))
+		    (adjust-array rows (1+ row-index) :initial-element nil))
+		  (let ((row-array (aref rows row-index)))
+		    (cond ((null row-array)
+			   (setf row-array
+				 (make-array (1+ col-index)
+					     :adjustable t
+					     :initial-element nil))
+			   (setf (aref rows row-index) row-array))
+			  ((>= col-index (length row-array))
+			   (adjust-array row-array (1+ col-index)
+					 :initial-element nil))
+			  (t nil))
+		    (setf (aref row-array col-index) cell))
+		  (incf row-index))
+		col))
+	     (incf col-index))
+	   table-record
+	   :column)
+	  (setq number-of-columns col-index)))
+    (values rows (length rows) number-of-columns)))
+  
 (defmethod adjust-table-cells ((table-record standard-table-output-record)
-                               stream)
+			       stream)
   (with-slots (x-spacing y-spacing equalize-column-widths) table-record
     ;; Note: for the purpose of layout it is pretty much irrelevant if
     ;;       this is a table by rows or a table by columns
+    ;;
+    ;; Since we have :baseline vertical alignment (and no :char
+    ;; horizontal alignment like in HTML), we always work from rows.
+    (multiple-value-bind (rows nrows ncols)
+	(make-table-array table-record)
+      (unless rows
+	(return-from adjust-table-cells nil))
 
-    (let (rows columns)
-      (map-over-table-elements (lambda (thing)
-                                 (cond ((row-output-record-p thing)
-                                        (push thing rows))
-                                       ((column-output-record-p thing)
-                                        (push thing columns))
-                                       (t
-                                        (error "Something is wrong."))))
-                               table-record
-                               :row-or-column)
-      ;;
-      (when (and rows columns)
-        (error "Make up your mind: Either a table of rows or a table of columns."))
-      ;;
-      ;; A table is, well, a table.
-      ;;
-      (setf rows
-            (reverse
-             (mapcar #'(lambda (row &aux res)
-                         (map-over-row-cells (lambda (cell) (push cell res))
-                                             row)
-                         (reverse res))
-                     rows)))
-      (setf columns
-            (reverse
-             (mapcar #'(lambda (column &aux res)
-                         (map-over-column-cells (lambda (cell) (push cell res))
-                                                column)
-                         (reverse res))
-                     columns)))
-      ;; Since we have :baseline vertical alignment (and no :char
-      ;; horizontal alignment like in HTML), we always work from rows.
-      (when columns
-        ;; rework this into rows, humble but effective.
-        (loop for col in columns do
-              (labels ((foo (col rows)
-                         (cond ((null col) rows)
-                               ((cons (cons (car col) (car rows))
-                                      (foo (cdr col) (cdr rows)))))))
-                (setf rows (foo col rows)))))
+      (let ((widthen  (make-array ncols :initial-element 0))
+	    (heights  (make-array nrows :initial-element 0))
+	    (ascents  (make-array nrows :initial-element 0))
+	    (descents (make-array nrows :initial-element 0)))
+	;; collect widthen, heights
+	(loop for row across rows
+	   for i from 0 do
+	   (loop for cell across row
+	      for j from 0 do
+	      ;; we have cell at row i col j at hand.
+	      ;; width:
+	      (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* cell)
+		(maxf (aref widthen j)
+		      (max (- x2 x1) (cell-min-width cell)))
+		(maxf (aref heights i)
+		      (max (- y2 y1) (cell-min-height cell)))
+		(when (eq (cell-align-y cell) :baseline)
+		  (multiple-value-bind (baseline) (output-record-baseline cell)
+		    (maxf (aref ascents i) (- baseline y1))
+		    (maxf (aref descents i) (- y2 baseline)))))))
 
-      (let ((nrows (length rows))
-            (ncols (reduce #'max (mapcar #'length rows) :initial-value 0)))
-        (let ((widthen  (make-array ncols :initial-element 0))
-              (heights  (make-array nrows :initial-element 0))
-              (ascents  (make-array nrows :initial-element 0))
-              (descents (make-array nrows :initial-element 0)))
+	;; baseline aligned cells can force the row to be taller.
+	(loop for i from 0 below nrows do
+	     (maxf (aref heights i) (+ (aref ascents i) (aref descents i))))
 
-          ;; collect widthen, heights
-          (loop for row in rows
-                for i from 0 do
-                (loop for cell in row
-                      for j from 0 do
-                      ;; we have cell at row i col j at hand.
-                      ;; witdh:
-                      (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* cell)
-                        (maxf (aref widthen j)
-                              (max (- x2 x1) (cell-min-width cell)))
-                        (maxf (aref heights i)
-                              (max (- y2 y1) (cell-min-height cell)))
-                          
-                        (when (eq (cell-align-y cell) :baseline)
-                          (multiple-value-bind (baseline) (output-record-baseline cell)
-                            (maxf (aref ascents i) (- baseline y1))
-                            (maxf (aref descents i) (- y2 baseline)))))))
+	(when (slot-value table-record 'equalize-column-widths)
+	  (setf widthen (make-array ncols :initial-element (reduce #'max widthen :initial-value 0))))
 
-          ;; baseline aligned cells can force the row to be taller.
-          (loop for i from 0 below nrows do
-                (maxf (aref heights i) (+ (aref ascents i) (aref descents i))))
-
-          (when (slot-value table-record 'equalize-column-widths)
-            (setf widthen (make-array ncols :initial-element (reduce #'max widthen :initial-value 0))))
-
-          (setf (slot-value table-record 'widths) widthen
-                (slot-value table-record 'heights) heights
-                (slot-value table-record 'rows) rows)
+	(setf (slot-value table-record 'widths) widthen
+	      (slot-value table-record 'heights) heights
+	      (slot-value table-record 'rows) rows)
           
-          ;; Finally just put the cells where they belong.
+	;; Finally just put the cells where they belong.
 
-          (multiple-value-bind (cx cy) (stream-cursor-position stream)
-            (loop for row in rows
-                  for y = cy then (+ y h y-spacing)
-                  for h across heights
-                  for ascent across ascents
-                  do
-                  (loop for cell in row
-                        for x = cx then (+ x w x-spacing) 
-                        for w across widthen do
-                        (adjust-cell* cell x y w h ascent)))))))))
+	(multiple-value-bind (cx cy) (stream-cursor-position stream)
+	  (loop for row across rows
+	     for y = cy then (+ y h y-spacing)
+	     for h across heights
+	     for ascent across ascents
+	     do
+	     (loop for cell across row
+		for x = cx then (+ x w x-spacing) 
+		for w across widthen do
+		(adjust-cell* cell x y w h ascent))))))))
+
+
 
 (defmethod adjust-multiple-columns ((table standard-table-output-record) stream)
   (with-slots (widths heights rows
@@ -561,7 +618,7 @@ skips intervening non-table output record structures."))
                      multiple-columns)))
            (column-size (ceiling (length rows) n-columns)) )
       (let ((y 0) (dy 0))
-        (loop for row in rows
+        (loop for row across rows
               for h across heights
               for i from 0
               do
@@ -569,7 +626,7 @@ skips intervening non-table output record structures."))
                 (when (zerop ri)
                     (setf dy (- y)))
                 (let ((dx (* ci mcolumn-width)))
-                  (loop for cell in row do
+                  (loop for cell across row do
                         (multiple-value-bind (x y) (output-record-position cell)
                           (setf (output-record-position cell)
                                 (values (+ x dx) (+ y dy))))))

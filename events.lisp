@@ -143,6 +143,10 @@
 (defmethod pointer-event-y ((event pointer-event))
   (get-pointer-position ((event-sheet event) event) y))
 
+(defmethod pointer-event-position* ((event pointer-event))
+  (get-pointer-position ((event-sheet event) event)
+    (values x y)))
+
 (defmethod device-event-x ((event device-event))
   (get-pointer-position ((event-sheet event) event) x))
 

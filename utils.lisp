@@ -72,7 +72,25 @@
   #-clim-internals::package-locks
   `(progn ,@body))
 
-#-(or excl openmcl cmu)
+#+sbcl
+(eval-when (:compile-toplevel :execute)
+  (when (find-symbol "UNLOCK-PACKAGE" :sb-ext)
+    (pushnew 'clim-internals::package-locks *features*)))
+
+#+sbcl
+(defmacro with-system-redefinition-allowed (&body body)
+  #+clim-internals::package-locks
+  `(progn
+    (eval-when (:compile-toplevel :load-toplevel :execute)      
+      (sb-ext:unlock-package :common-lisp))
+    ,@body
+    (eval-when (:compile-toplevel :load-toplevel :execute)
+      (sb-ext:lock-package :common-lisp)))
+  #-clim-internals::package-locks
+  `(progn
+    ,@body))
+
+#-(or excl openmcl cmu sbcl)
 (defmacro with-system-redefinition-allowed (&body body)
   `(progn
      ,@body))

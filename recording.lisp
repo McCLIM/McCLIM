@@ -255,7 +255,6 @@ unspecified. "))
     (stream continuation record draw))
 
 (defgeneric invoke-with-new-output-record (stream continuation record-type
-                                           &rest initargs
                                            &key
                                            &allow-other-keys))
 
@@ -2065,15 +2064,17 @@ according to the flags RECORD and DRAW."
 (defmethod invoke-with-new-output-record ((stream output-recording-stream)
                                           continuation record-type
                                           &rest initargs
-                                          &key
+                                          &key parent
 					  &allow-other-keys)
   (stream-close-text-output-record stream)
   (let ((new-record (apply #'make-instance record-type initargs)))
-    (stream-add-output-record stream new-record)
     (letf (((stream-current-output-record stream) new-record))
       ;; Should we switch on recording? -- APD
       (funcall continuation stream new-record)
       (finish-output stream))
+    (if parent
+	(add-output-record new-record parent)
+	(stream-add-output-record stream new-record))
     new-record))
 
 (defmethod invoke-with-output-to-output-record

@@ -375,6 +375,8 @@ filled in."
 
 
 ;;; External function
+(declaim (inline presentation-type-name))
+
 (defun presentation-type-name (type)
   (cond ((atom type)
 	 type)
@@ -1083,6 +1085,7 @@ function lambda list"))
 		  ,@(cdr decls))
 	 ,@body))))
 
+;;; Somewhat obsolete, but keep it around for apply-presentation-generic-function.
 (defun %funcall-presentation-generic-function (name gf type-arg-position
 					       &rest args)
   (declare (ignore name))
@@ -1090,7 +1093,7 @@ function lambda list"))
 	 (ptype-name (presentation-type-name type-spec)))
     (apply gf (prototype-or-error ptype-name) args)))
 
-
+#+nil
 (defmacro funcall-presentation-generic-function (name &rest args)
   (let ((gf (gethash name *presentation-gf-table*)))
     (unless gf
@@ -1099,6 +1102,23 @@ function lambda list"))
 					     #',(generic-function-name gf)
 					     ,(type-arg-position gf)
 					     ,@args)))
+
+;;; I wonder if this pattern for preserving order of evaluation is
+;;; has a more general use...
+
+(defmacro funcall-presentation-generic-function (name &rest args)
+  (let ((gf (gethash name *presentation-gf-table*)))
+    (unless gf
+      (error "~S is not a presentation generic function" name))
+    (let* ((rebound-args (mapcar (lambda (arg)
+				   `(,(gensym "ARG") ,arg))
+				 args))
+	   (gf-name (generic-function-name gf))
+	   (type-spec-var (car (nth (1- (type-arg-position gf)) rebound-args))))
+      `(let ,rebound-args
+	 (,gf-name (prototype-or-error (presentation-type-name
+					,type-spec-var))
+		   ,@(mapcar #'car rebound-args))))))
 
 (defmacro apply-presentation-generic-function (name &rest args)
   (let ((gf (gethash name *presentation-gf-table*)))
