@@ -1052,7 +1052,7 @@ and must never be nil."))
 ;;; Common colors:
 
 (defmethod gadget-highlight-background ((gadget basic-gadget))
-  (compose-over (compose-in +paleturquoise+ (make-opacity .5))
+  (compose-over (compose-in #|+paleturquoise+|# +white+ (make-opacity .5))
                 (pane-background gadget)))
 
 (defmethod effective-gadget-foreground ((gadget basic-gadget))
@@ -1781,7 +1781,7 @@ and must never be nil."))
                (draw-circle* pane x y 7.0
                              :filled nil :ink +white+
                              :start-angle (* 0.25 pi)
-                             :end-angle   (* 1.25 pi))                             
+                             :end-angle   (* 1.25 pi))
                (draw-circle* pane x y 7.0
                              :filled nil :ink +black+
                              :start-angle (* 1.25 pi)
@@ -1960,7 +1960,7 @@ and must never be nil."))
 
 (define-abstract-pane-mapping 'list-pane 'generic-list-pane)
 
-(defclass meta-list-pane (list-pane)
+(defclass meta-list-pane ()
   ((mode        :initarg :mode
                 :initform :some-of
                 :reader list-pane-mode
@@ -1983,7 +1983,9 @@ and must never be nil."))
                 :reader list-pane-test
                 :documentation "A function to compare two items for equality.")))
 
-(defclass generic-list-pane (meta-list-pane value-changed-repaint-mixin mouse-wheel-scroll-mixin)
+(defclass generic-list-pane (list-pane meta-list-pane
+                                       value-changed-repaint-mixin
+                                       mouse-wheel-scroll-mixin)
   ((highlight-ink :initform +royalblue4+
                   :initarg :highlight-ink
                   :reader list-pane-highlight-ink)
@@ -2011,11 +2013,11 @@ selection via the control modifier.")
   (when (and (not (list-pane-exclusive-p gadget))
              (not (listp (gadget-value gadget))))
     (error "A :nonexclusive list-pane cannot be initialized with a value which is not a list."))
+  (when (not (list-pane-exclusive-p gadget))
+    (with-slots (value) gadget
+      (setf value (copy-list value))))
   #+IGNORE
-  (with-slots (items value) gadget
-    (setf value (copy-list value)))
-  #+IGNORE
-  (when (and (list-pane-exclusive-p gadget) ; (Lispworks compatibililty)
+  (when (and (list-pane-exclusive-p gadget)
              (> (length (gadget-value gadget)) 1))
     (error "An 'exclusive' list-pane cannot be initialized with more than one item selected.")))
 
@@ -2079,7 +2081,7 @@ selection via the control modifier.")
          (h (* n (generic-list-pane-item-height pane))))
     (make-space-requirement :width w     :height h
                             :min-width w :min-height h
-                            :max-width w :max-height h)))
+                            :max-width +fill+ :max-height h)))
 
 (defmethod allocate-space ((pane generic-list-pane) w h)
   (resize-sheet pane w h))
@@ -2092,8 +2094,8 @@ selection via the control modifier.")
     (declare (ignore sx1 sy1))
     (with-bounding-rectangle* (rx0 ry0 rx1 ry1)
       (if (bounding-rectangle-p region)
-              region
-              (sheet-region pane))  ; workaround for non-rectangular regions (such as +everywhere+)
+          region
+          (sheet-region pane))  ; workaround for non-rectangular regions (such as +everywhere+)
       (let ((item-height (generic-list-pane-item-height pane))
             (highlight-ink (list-pane-highlight-ink pane)))
         (do ((index (floor (- ry0 sy0) item-height) (1+ index)))
@@ -2154,13 +2156,12 @@ Returns :select or :deselect, depending on what action was performed."
                                       :test (list-pane-test pane))))))
             (fun item-values (gadget-value pane))))))
 
-(defun generic-list-pane-item-from-event (pane event)
+(defun generic-list-pane-item-from-x-y (pane mx my)
   "Given a pointer event, determine what item in the pane it has fallen upon. 
 Returns two values, the item itself, and the index within the item list."
+  (declare (ignore mx))
   (with-bounding-rectangle* (sx0 sy0 sx1 sy1)  (sheet-region pane)
-    (declare (ignorable sx0 sx1 sy1))                            
-    (multiple-value-bind (mx my) (values (pointer-event-x event) (pointer-event-y event))
-      (declare (ignore mx))
+    (declare (ignorable sx0 sx1 sy1))
       (with-slots (items) pane
         (let* ((item-height (generic-list-pane-item-height pane))
                (number-of-items (generic-list-pane-items-length pane))
@@ -2169,54 +2170,369 @@ Returns two values, the item itself, and the index within the item list."
                            (< n number-of-items)
                            n))
                (item-value (and index (elt (generic-list-pane-item-values pane) index))))
-          (values item-value index))))))
+          (values item-value index)))))
+
+(defun generic-list-pane-handle-click (pane x y modifier)
+  (multiple-value-bind (item-value index)
+      (generic-list-pane-item-from-x-y pane x y)
+    (if (list-pane-exclusive-p pane)
+        ;; Exclusive mode
+        (when index
+          (setf (slot-value pane 'last-action)
+                (generic-list-pane-select-item pane item-value)))
+        ;; Nonexclusive mode
+        (when index
+          (with-slots (last-index last-action items prefer-single-selection) pane
+            (cond
+              ;; Add single selection
+              ((not (zerop (logand modifier +control-key+)))
+               (setf last-action (generic-list-pane-select-item pane item-value)))
+              ;; Maybe extend selection
+              ((not (zerop (logand modifier +shift-key+)))
+               (if (and (numberp last-index)
+                        (not (null last-action)))
+                   ;; Extend last selection
+                   (funcall (if (eql last-action :select)
+                                #'generic-list-pane-add-selected-items
+                                #'generic-list-pane-deselect-items)
+                            pane
+                            (coerce (subseq (generic-list-pane-item-values pane)
+                                            (min last-index index)
+                                            (1+ (max last-index index))) 'list))
+                   (setf last-action (generic-list-pane-select-item pane item-value))))
+              ;; Toggle single item
+              (t (if prefer-single-selection
+                     (setf (gadget-value pane :invoke-callback t) (list item-value)
+                           last-action :select)
+                     (setf last-action (generic-list-pane-select-item pane item-value)))))
+            (setf last-index index))))))
+
+(defun generic-list-pane-handle-click-from-event (pane event)
+  (multiple-value-bind (x y) (values (pointer-event-x event) (pointer-event-y event))
+    (generic-list-pane-handle-click pane x y (event-modifier-state event))))
 
 (defmethod handle-event ((pane generic-list-pane) (event pointer-button-press-event))
-  (if (eql (pointer-event-button event) +pointer-left-button+)
-      (let ((modifier (event-modifier-state event)))
-        (multiple-value-bind (item-value index)
-            (generic-list-pane-item-from-event pane event)
-          (if (list-pane-exclusive-p pane)
-              ;; Exclusive mode
-              (when index
-                (setf (slot-value pane 'last-action)
-                      (generic-list-pane-select-item pane item-value)))
-              ;; Nonexclusive mode
-              (when index
-                (with-slots (last-index last-action items prefer-single-selection) pane
-                  (cond
-                    ;; Add single selection
-                    ((not (zerop (logand modifier +control-key+)))
-                     (setf last-action (generic-list-pane-select-item pane item-value)))
-                    ;; Maybe extend selection
-                    ((not (zerop (logand modifier +shift-key+)))                     
-                     (if (and (numberp last-index)
-                              (not (null last-action)))
-                         ;; Extend last selection
-                         (funcall (if (eql last-action :select)
-                                      #'generic-list-pane-add-selected-items
-                                      #'generic-list-pane-deselect-items)
-                                  pane
-                                  (coerce (subseq (generic-list-pane-item-values pane)
-                                                  (min last-index index)
-                                                  (1+ (max last-index index))) 'list))
-                         (setf last-action (generic-list-pane-select-item pane item-value))))
-                    ;; Toggle single item
-                    (t (if prefer-single-selection
-                           (setf (gadget-value pane :invoke-callback t) (list item-value)
-                                 last-action :select)
-                           (setf last-action (generic-list-pane-select-item pane item-value)))))
-                  (setf last-index index))))))
+  (if (eql (pointer-event-button event) +pointer-left-button+)      
+      (progn (generic-list-pane-handle-click-from-event pane event)
+             (setf (slot-value pane 'armed) nil))
       (when (next-method-p) (call-next-method))))
-                 
+
+(defmethod handle-event ((pane generic-list-pane) (event pointer-button-release-event))
+  (if (eql (pointer-event-button event) +pointer-left-button+)
+      (and (slot-value pane 'armed)
+           (generic-list-pane-handle-click-from-event pane event))
+      (when (next-method-p) (call-next-method))))
+
 ;;; OPTION-PANE
 
 (define-abstract-pane-mapping 'option-pane 'generic-option-pane)
 
-;; Oops! Where is the implementation?
+(defclass generic-option-pane (option-pane
+                               meta-list-pane
+                               value-changed-repaint-mixin
+                               3d-border-mixin
+                               arm/disarm-repaint-mixin
+                               enter/exit-arms/disarms-mixin)
+  ((current-label :initform "" :accessor generic-option-pane-label))
+  (:default-initargs :text-style (make-text-style :sans-serif :roman :normal)))
+
+(defun option-pane-evil-backward-map (pane value)
+  (let ((key-fn (list-pane-value-key pane)))
+    (if (eql key-fn #'identity)            ;; SANE CASE
+        value        
+        (find value (list-pane-items pane) ;; INSANE CASE
+              :key key-fn :test (list-pane-test pane)))))
+
+(defun generic-option-pane-compute-label-from-value (pane value)
+  (flet ((label (value) (funcall (list-pane-name-key pane) (option-pane-evil-backward-map pane value))))
+    (if (list-pane-exclusive-p pane)
+        (if (or value
+              (member nil (list-pane-items pane) ;; Kludge in case NIL is part of the item set..
+                      :key (list-pane-value-key pane)
+                      :test (list-pane-test pane)))
+            (label value)
+            "")
+        (cond ((= 0 (length value)) "")
+              ((= 1 (length value)) (label (first value)))
+              (t "...")))))
+  
+(defun generic-option-pane-compute-label-from-item (pane item)
+  (funcall (list-pane-name-key pane) item))
+
+(defun generic-option-pane-compute-label (pane)
+  (generic-option-pane-compute-label-from-value pane (gadget-value pane)))
+
+(defmethod initialize-instance :after ((object generic-option-pane) &rest rest)
+  (setf (slot-value object 'current-label)
+        (generic-option-pane-compute-label object)))
+
+(defmethod (setf gadget-value) :after (new-value (gadget generic-option-pane) &key &allow-other-keys)
+  (setf (slot-value gadget 'current-label)
+        (generic-option-pane-compute-label-from-value gadget new-value)))
+
+(defmethod generic-option-pane-widget-size (pane)
+  (declare (ignore pane))
+  (values 22 16))
+
+(defun draw-engraved-vertical-separator (pane x y0 y1 highlight-color shadow-color)
+  (draw-line* pane (1+ x) (1+ y0) (1+ x) (1- y1) :ink highlight-color)
+  (draw-line* pane x y1 (1+ x) y1 :ink highlight-color)
+  (draw-line* pane x (1+ y0) x (1- y1) :ink shadow-color)
+  (draw-line* pane x y0 (1+ x) y0 :ink shadow-color))
+
+(defun generic-option-pane-text-size (pane)
+  (text-size (sheet-medium pane) (slot-value pane 'current-label)
+             :text-style (pane-text-style pane)))
+
+(defun draw-vertical-arrow (sheet x0 y0 direction)
+  (assert (or (eq direction :up)
+              (eq direction :down)))
+  (let* ((dx -4)
+         (dy 4)
+         (shape
+          (if (eq direction :up)  ;; Hack-p?
+              (list x0 y0
+                    (+ x0 dx) (+ 1 y0 dy)
+                    (- x0 dx) (+ 1 y0 dy))
+              (list x0 y0
+                    (+ 1 x0 dx) (+ y0 (- dy))
+                    (- x0 dx)   (+ y0 (- dy))))))
+    (draw-polygon* sheet shape :ink +black+)))
+
+(defun generic-option-pane-compute-max-label-width (pane)
+  (max
+   (reduce #'max
+           (mapcar #'(lambda (value)
+                       (text-size (sheet-medium pane)
+                                  (generic-option-pane-compute-label-from-item pane value)
+                                  :text-style (pane-text-style pane)))
+                   (list-pane-items pane)))
+   (text-size (sheet-medium pane) "..." :text-style (pane-text-style pane))))
+
+(defmethod compose-space ((pane generic-option-pane) &key width height)
+  (declare (ignore width height))
+  (multiple-value-bind (w-width w-height)
+      (generic-option-pane-widget-size pane)
+    (let* ((horizontal-padding 20)
+           (vertical-padding   10)
+           (l-width  (generic-option-pane-compute-max-label-width pane))
+           (l-height (text-style-height (pane-text-style pane) (sheet-medium pane)))
+           (total-width (+ horizontal-padding l-width w-width))
+           (total-height (+ vertical-padding (max l-height w-height))))
+      (make-space-requirement :min-width total-width
+                              :width total-width
+                              :max-width +fill+
+                              :min-height total-height
+                              :height total-height
+                              :max-height total-height))))
+
+(defmethod generic-option-pane-draw-widget (pane)
+  (with-bounding-rectangle* (x0 y0 x1 y1) pane
+    (declare (ignore x0))                            
+    (multiple-value-bind (widget-width widget-height)
+        (generic-option-pane-widget-size pane)
+      (let ((center (floor (/ (- y1 y0) 2)))
+            (height/2 (/ widget-height 2))
+            (highlight-color (compose-over (compose-in +white+ (make-opacity 0.85))
+                                        (pane-background pane)))
+            (shadow-color (compose-over (compose-in +black+ (make-opacity 0.3))
+                                        (pane-background pane))))
+        (draw-engraved-vertical-separator pane
+                                          (- x1 widget-width -1)
+                                          (- center height/2)
+                                          (+ center height/2)
+                                          highlight-color shadow-color)
+        (let* ((x (+ (- x1 widget-width) (/ widget-width 2)))
+               (frob-x (+ (floor x) 0)))
+          (draw-vertical-arrow pane frob-x (- center 6) :up)
+          (draw-vertical-arrow pane frob-x (+ center 6) :down))))))
+
+(defun rewrite-event-for-grab (grabber event)
+  (multiple-value-bind (nx ny)
+      (multiple-value-call #'untransform-position
+        (sheet-delta-transformation grabber nil) ;; assumes this is the graft's coordinate system..
+        (values (pointer-event-native-graft-x event)
+                (pointer-event-native-graft-y event)))
+    (with-slots (sheet x y) event
+      (setf sheet grabber
+            x nx
+            y ny)))
+  event)
+
+(defun popup-compute-spaces (pane graft)
+  (with-bounding-rectangle* (x0 top x1 bottom) (sheet-region pane)
+    (multiple-value-call #'(lambda (x0 top x1 bottom)
+                             (declare (ignore x0 x1))
+                             (values (max 0 (1- top))
+                                     (max 0 (- (graft-height graft) bottom))
+                                     top
+                                     bottom))
+      (transform-position (sheet-delta-transformation pane nil) x0 top)  ;; XXX (see above)
+      (transform-position (sheet-delta-transformation pane nil) x1 bottom))))
+
+(defun popup-compute-height (parent-pane child-pane)
+  "Decides whether to place the child-pane above or below the parent-pane, and
+ how to do so. Returns three values: First T if the pane is too large to fit on
+ the screen, otherwise NIL. Second, whether to place the child-pane above or
+ below parent-pane. Third, the height which the popup should be constrained to
+ if the first value is true."
+  (let* ((sr (compose-space child-pane))
+         (height (space-requirement-min-height sr)))
+    (multiple-value-bind (top-space bottom-space)
+        (popup-compute-spaces parent-pane (graft parent-pane))
+      (let ((polite-ts (* 0.8 top-space))
+            (polite-bs (* 0.8 bottom-space)))
+        (cond ((and (<= polite-ts height)
+                    (<= polite-bs height))
+               (multiple-value-call #'values t
+                                    (if (> top-space bottom-space)
+                                        (values :above (* 0.7 top-space))
+                                        (values :below (* 0.7 bottom-space)))))
+              ((> polite-bs height) (values nil :below height))
+              (t (values nil :above height)))))))
+
+(defun popup-init (parent manager frame)
+  (let ((list-pane (make-pane-1 manager frame 'generic-list-pane
+                                :items (list-pane-items parent)
+                                :mode  (list-pane-mode parent)
+                                :value (gadget-value parent)
+                                :name-key (list-pane-name-key parent)
+                                :value-key (list-pane-value-key parent)
+                                :test (list-pane-test parent))))
+    (multiple-value-bind (scroll-p position height)
+        (popup-compute-height parent list-pane)
+      (with-bounding-rectangle* (cx0 cy0 cx1 cy1) parent
+        (multiple-value-bind (x0 y0 x1 y1)
+            (multiple-value-call #'values
+              (transform-position (sheet-delta-transformation parent nil) cx0 cy0)
+              (transform-position (sheet-delta-transformation parent nil) cx1 cy1))          
+          (let* ((topmost-pane (if scroll-p
+                                  ;list-pane
+                                  (scrolling (:scroll-bar :vertical
+                                              :suggest-height height   ;; Doesn't appear to be working..
+                                              :suggest-width (if scroll-p (+ 30 (bounding-rectangle-width list-pane))))
+                                     list-pane)
+                                  list-pane))
+                 (topmost-pane (outlining (:thickness 1) topmost-pane))
+                 (composed-height (space-requirement-height (compose-space topmost-pane :width (- x1 x0) :height height)))
+                 (menu-frame (make-menu-frame topmost-pane
+                                              :min-width (bounding-rectangle-width parent)
+                                              :left x0
+                                              :top (if (eq position :below)
+                                                       y1
+                                                       (- y0 composed-height 1)))))
+            (values list-pane topmost-pane menu-frame)))))))
+
+(defun popup-list-box (parent)
+  (let* ((frame *application-frame*)
+         (manager (frame-manager frame))
+         ;; Popup state
+         (ready-to-exit nil)
+         (inner-grab nil)    ;; Gadget 'grabbing' the pointer, used to simulate the
+                             ;; implicit pointer grabbing of X for the scrollbar
+         (retain-value nil)
+         (all-done nil)
+         (last-click-time nil)
+         (last-item-index nil))
+    (with-look-and-feel-realization (manager *application-frame*)
+      (multiple-value-bind (list-pane topmost-pane menu-frame)
+          (popup-init parent manager frame)
+        (setf (slot-value list-pane 'armed) t)
+        (adopt-frame manager menu-frame)
+        
+        (labels ((in-window (window child x y)
+                   (and window
+                        (sheet-ancestor-p child window)
+                        (multiple-value-call #'region-contains-position-p
+                          (sheet-region window)
+                          (transform-position (sheet-delta-transformation child window) x y))))
+                 (in-list (window x y)
+                   (in-window list-pane window x y))
+                 (in-menu (window x y)
+                   (in-window topmost-pane window x y))
+                 (compute-double-clicked ()
+                   (let* ((now (get-internal-real-time)))
+                     (prog1 (and last-click-time
+                                 (< (/ (- now last-click-time) internal-time-units-per-second) *double-click-delay*))
+                       (setf last-click-time now))))
+                 (end-it ()
+                   (unless all-done
+                     (setf all-done t)
+                     (throw 'popup-list-box-done nil))))
+          
+          (catch 'popup-list-box-done
+            (setf (slot-value list-pane 'value-changed-callback)
+                  (lambda (pane value)
+                    (declare (ignore pane value))
+                    (when ready-to-exit (end-it))))
+            
+            (tracking-pointer (list-pane :multiple-window t :highlight nil)
+              (:pointer-motion (&key event window x y)
+                 (cond (inner-grab (handle-event inner-grab (rewrite-event-for-grab inner-grab event)))
+                       ((and (list-pane-exclusive-p parent)
+                             (in-list window x y))
+                        (generic-list-pane-handle-click list-pane x y 0))
+                       ((in-menu window x y)
+                        (handle-event window event))))
+              
+              (:pointer-button-press (&key event x y)
+                 (if inner-grab
+                     (handle-event inner-grab event)
+                     (cond ((in-list (event-sheet event) x y)
+                            (multiple-value-bind (item current-index)
+                                (generic-list-pane-item-from-x-y list-pane x y)
+                              (declare (ignore item))
+                              (setf retain-value t)
+                              (let ((double-clicked (and (compute-double-clicked)
+                                                         (= (or last-item-index -1)
+                                                            (or current-index -2))))
+                                    (exclusive (list-pane-exclusive-p parent)))
+                                (setf ready-to-exit (or exclusive double-clicked)
+                                      last-item-index current-index)
+                                (if (and (not exclusive)
+                                         double-clicked)
+                                    (end-it)
+                                    (handle-event list-pane event)))))
+                           ((in-menu (event-sheet event) x  y)
+                            (handle-event (event-sheet event) event)
+                            (setf inner-grab (event-sheet event)))
+                           (t (end-it)))))
+              
+              (:pointer-button-release (&key event x y)
+                (cond (inner-grab
+                       (handle-event inner-grab event)
+                       (setf inner-grab nil))
+                      ((in-list (event-sheet event) x y)
+                       (when (list-pane-exclusive-p parent)
+                         (setf ready-to-exit t
+                               retain-value t)
+                         (handle-event list-pane event)))
+                      ((in-menu (event-sheet event) x y)
+                       (handle-event (event-sheet event) event)))))))
+        ;; Cleanup and exit
+        (when retain-value
+          (setf (gadget-value parent)
+                (gadget-value list-pane)))
+        (disown-frame manager menu-frame)))))
 
 
+         
 
+(defmethod handle-event ((pane generic-option-pane) (event pointer-button-press-event))
+  (popup-list-box pane)
+  (disarm-gadget pane))
+
+(defmethod handle-repaint ((pane generic-option-pane) region)
+  (with-bounding-rectangle* (x0 y0 x1 y1) (sheet-region pane)
+    (multiple-value-bind (widget-width widget-height)
+        (generic-option-pane-widget-size pane)
+      (declare (ignore widget-height))
+      (draw-rectangle* pane x0 y0 x1 y1 :ink (effective-gadget-background pane))
+      (let* ((tx1 (- x1 widget-width)))
+        (draw-text* pane (slot-value pane 'current-label) (/ (- tx1 x0) 2) (/ (- y1 y0) 2)
+                    :align-x :center :align-y :center))
+      (generic-option-pane-draw-widget pane))))
+        
 
 ;;; ------------------------------------------------------------------------------------------
 ;;;  30.4.8 The concrete text-field Gadget
