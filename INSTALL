@@ -1,78 +1,63 @@
+Install instructions for Franz Allegro Common Lisp
+--------------------------------------------------
 
-  To do the initial build:
+1. Start Lisp
 
-Mercury=>acl
-Allegro CL 4.3 [Linux/X86; R1] (12/11/96 1:33)
-Copyright (C) 1985-1996, Franz Inc., Berkeley, CA, USA.  All Rights Reserved.
-;; Optimization settings: safety 1, space 1, speed 1, debug 2.
-;; For a complete description of all compiler switches given the
-;; current optimization settings evaluate (EXPLAIN-COMPILER-SETTINGS).
-USER(1): (load "system")
-; Loading ./system.lisp
-;   Fast loading sys:;code;clx.fasl (/usr/ACL4.3/home/code/clx.fasl)
-;   Fast loading from bundle code/loop.fasl.
-T
-USER(2): (load-system :clim :interpreted t)
-; Loading system: "CLIM".
-;   Loading source for module: "design".
+2. Load the system definition file:
 
-  ...
+   (load "system")
 
-; Loading /home/mikemac/src/Lisp/McCLIM/clx-frame-manager.lisp
-;   Loading source for module: "examples/address-book".
-; Loading /home/mikemac/src/Lisp/McCLIM/examples/address-book.lisp
-Warning: ADDRESS is defined more than once as a type in the file
-         /home/mikemac/src/Lisp/McCLIM/examples/address-book.lisp.
-T
-USER(3): (compile-system :clim)
-; Compiling system: "CLIM".
-;   Compiling module "design" because the product file does not exist.
-;;; Compiling file /home/mikemac/src/Lisp/McCLIM/design.lisp
-; Compiling COLORP
+3. Load the source code of the system:
 
-  ...
+   (load-system :clim :interpreted t)
+   (load-system :clim-clx :interpreted t)
+   (load-system :clim-examples :interpreted t)
 
-         CLIM-INTERNALS:WITH-OUTPUT-AS-PRESENTATION, STREAM,
-         CLIM-INTERNALS:HANDLE-REPAINT, CLIM-INTERNALS:QUEUE-REPAINT,
-         CLIM-INTERNALS:REGION-DIFFERENCE.
-T
-USER(4): (exit)
-; Exiting Lisp
+4. Compile and load the system:
 
+   (compile-system :clim)
+   (compile-system :clim-clx)
+   (compile-system :clim-examples)
 
-  Then to run the system:
+5. Load the compiled system:
 
-Mercury=>xhost localhost
-localhost being added to access control list
-Mercury=>acl
-Allegro CL 4.3 [Linux/X86; R1] (12/11/96 1:33)
-Copyright (C) 1985-1996, Franz Inc., Berkeley, CA, USA.  All Rights Reserved.
-;; Optimization settings: safety 1, space 1, speed 1, debug 2.
-;; For a complete description of all compiler switches given the
-;; current optimization settings evaluate (EXPLAIN-COMPILER-SETTINGS).
-USER(1): (load "system")
-; Loading ./system.lisp
-;   Fast loading sys:;code;clx.fasl (/usr/ACL4.3/home/code/clx.fasl)
-;   Fast loading from bundle code/loop.fasl.
-T
-USER(2): (load-system :clim)
-; Loading system: "CLIM".
-;   Loading product for module: "design".
-; Fast loading /home/mikemac/src/Lisp/McCLIM/design.fasl
+   (load-system :clim)
+   (load-system :clim-clx)
+   (load-system :clim-examples)
 
-  ...
+Running the demos
+-----------------
 
-; Fast loading /home/mikemac/src/Lisp/McCLIM/examples/address-book.fasl
-Warning: ADDRESS is defined more than once as a type in the file
-         /home/mikemac/src/Lisp/McCLIM/examples/address-book.lisp.
-T
+1. Run the calculator demo
+
+   (clim-demo::calculator)
+
+   This demo is self-explanatory.
+	
+   when you get tired of it, hit ^C in the Lisp listener.
+
+2. Run the menu demo
+
+   (menutest::menutest)
+
+   This demo is self-explanatory.
+	
+   when you get tired of it, hit ^C in the Lisp listener.
+
+3. Run the slider demo
+
+   (clim-demo::colorslider)
+
+   You should see three sliders on the left and a color area on the right. 
+   Use the three sliders to adjust RGB values to obtain a color.
+
+   when you get tired of it, hit ^C in the Lisp listener.
 
 
-  To run the demos:
+Note:
 
-USER(3): (clim-demo::calculator)
+   Before running any McCLIM application, it may be necessary for you
+   to enable host based access to the X server. This can be
+   accomplished by executing the following command at a shell prompt:
 
-  or
-
-USER(3): (clim-demo::colorslider)
-
+	xhost localhost
