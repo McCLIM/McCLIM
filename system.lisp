@@ -40,14 +40,17 @@
 (pushnew :CLIM *features*)
 (provide :CLIM)
 
-(defsystem :CLIM (;:default-package :CLIM-INTERNALS
-		     :default-pathname "/home/mikemac/src/Lisp/McCLIM/")
+#+cmu (use-package :mk)
+
+(defsystem :CLIM #-cmu ()
+  #+cmu :components
   (:serial
    "design"
    "X11-colors"
-   "brectangle"
-   "regions"
+   ;; "brectangle"
+   "coordinates"
    "transforms"
+   "regions"
    "sheets"
    "ports"
    "grafts"
