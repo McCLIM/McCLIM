@@ -3,30 +3,8 @@
 (in-package :common-lisp-user)
 
 
-(defpackage "CLIM-EXTENSIONS"
-  (:use :common-lisp)
-  (:export
-   "RAISED-PANE" "RAISING" 
-   "DRAW-GLYPH" "DEVICE-FONT-TEXT-STYLE-P"
-   "READ-IMAGE-FILE"
-   "IMAGE" "IMAGE-COLOR" "IMAGE-GADGET" "IMAGE-HEIGHT"
-   "IMAGE-PIXEL" "IMAGE-PIXELS" "IMAGE-WIDTH"
-   "RGB-IMAGE"
-   "GRAY-LEVEL-IMAGE" "256-GRAY-LEVEL-IMAGE" "MAKE-256-GRAY-LEVEL-IMAGE"
-   "GRAY-IMAGE-MIN-LEVEL" "GRAY-IMAGE-MIN-LEVEL"
-   "TRUECOLOR-IMAGE" "MAKE-TRUECOLOR-IMAGE" "MAKE-3X256-COLOR-IMAGE"
-   "COLOR-IMAGE-MIN-LEVEL" "COLOR-IMAGE-MAX-LEVEL"
-   "BINARY-IMAGE" "MAKE-BINARY-IMAGE" 
-   "COLORMAP-IMAGE"
-   "SPECTRAL-IMAGE"
-   "DRAW-IMAGE"
-   "IMAGE-PANE"
-   "DRAW-LABEL"
-   "COMPOSE-SPACE-AUX"))
-
 (defpackage "CLIM-INTERNALS"
   (:use #+clisp :clos #+excl :stream :common-lisp)
-  (:use "CLIM-EXTENSIONS")
   (:nicknames :climi)
   #+excl(:import-from :excl compile-system load-system)
   #+(or cmu sbcl)
@@ -1561,6 +1539,27 @@
       (climi-package (find-package :climi)))
   (do-external-symbols (sym climi-package)
     (export sym clim-package)))
+
+(defpackage "CLIM-EXTENSIONS"
+  (:use :clim :common-lisp)
+  (:export
+   "RAISED-PANE" "RAISING" 
+   "DRAW-GLYPH" "DEVICE-FONT-TEXT-STYLE-P"
+   "READ-IMAGE-FILE"
+   "IMAGE" "IMAGE-COLOR" "IMAGE-GADGET" "IMAGE-HEIGHT"
+   "IMAGE-PIXEL" "IMAGE-PIXELS" "IMAGE-WIDTH"
+   "RGB-IMAGE"
+   "GRAY-LEVEL-IMAGE" "256-GRAY-LEVEL-IMAGE" "MAKE-256-GRAY-LEVEL-IMAGE"
+   "GRAY-IMAGE-MIN-LEVEL" "GRAY-IMAGE-MIN-LEVEL"
+   "TRUECOLOR-IMAGE" "MAKE-TRUECOLOR-IMAGE" "MAKE-3X256-COLOR-IMAGE"
+   "COLOR-IMAGE-MIN-LEVEL" "COLOR-IMAGE-MAX-LEVEL"
+   "BINARY-IMAGE" "MAKE-BINARY-IMAGE" 
+   "COLORMAP-IMAGE"
+   "SPECTRAL-IMAGE"
+   "DRAW-IMAGE"
+   "IMAGE-PANE"
+   "DRAW-LABEL"
+   "COMPOSE-SPACE-AUX"))
 
 (defpackage :CLIM-DEMO
   (:use :clim-extensions :clim :common-lisp)
