@@ -50,9 +50,29 @@
      (eval-when (:compile-toplevel :load-toplevel :execute)
        (setq ccl::*warn-if-redefine-kernel* t))))
 
-;;; XXX Should do something for recent CMUCL with package locks.
+#+cmu
+(eval-when (:compile-toplevel :execute)
+  (when (find-symbol "PACKAGE-LOCK" :ext)
+    (pushnew 'clim-internals::package-locks *features*)))
+ 
+#+(and cmu clim-internals::package-locks)
+(eval-when (:load-toplevel)
+  (unless (find-symbol "PACKAGE-LOCK" :ext)
+    (error "Binary incompatibility: your CMUCL does not have package locks")))
 
-#-(or excl openmcl)
+#+cmu
+(defmacro with-system-redefinition-allowed (&body body)
+  #+clim-internals::package-locks
+  `(progn
+     (eval-when (:compile-toplevel :load-toplevel :execute)
+       (setf (ext:package-definition-lock (find-package :common-lisp)) nil))
+     ,@body
+     (eval-when (:compile-toplevel :load-toplevel :execute)
+       (setf (ext:package-definition-lock (find-package :common-lisp)) t)))
+  #-clim-internals::package-locks
+  `(progn ,@body))
+
+#-(or excl openmcl cmu)
 (defmacro with-system-redefinition-allowed (&body body)
   `(progn
      ,@body))
