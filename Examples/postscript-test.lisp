@@ -132,4 +132,38 @@
           (draw-text* stream "Baseline: pQ" 410 200
                       :align-y :baseline)
           (draw-line* stream 50 200 535 200
-                      :ink +red+)))))
+                      :ink +red+))
+
+        (new-page stream)
+
+        (formatting-table (stream)
+          (flet ((draw (angle line-joint-shape)
+                   (let ((record
+                          (with-output-to-output-record (stream)
+                            (draw-polygon* stream (list 20 0 100 0 50 (* 50 (tan angle)))
+                                           :closed nil
+                                           :filled nil
+                                           :line-thickness 40
+                                           :line-joint-shape line-joint-shape
+                                           :line-cap-shape :round)
+                            (draw-polygon* stream (list 20 0 100 0 50 (* 50 (tan angle)))
+                                           :closed nil
+                                           :filled nil
+                                           :line-thickness 0.01
+                                           :ink +green+))))
+                     (multiple-value-call #'draw-rectangle*
+                       stream (bounding-rectangle* record)
+                       :filled nil
+                       :ink +red+ :line-thickness 0.01)
+                     (stream-add-output-record stream record)
+                     (replay record stream))))
+            (loop with dag = 2
+               with da = (* pi (/ dag 180))
+               for i from -10 to 10
+               for a = (* i da)
+               unless (= i 0)
+               do (formatting-row (stream)
+                    (formatting-cell (stream) (print (* i dag) stream))
+                    (formatting-cell (stream) (draw a :miter))
+                    (formatting-cell (stream) (draw a :bevel))
+                    (formatting-cell (stream) (draw a :round)))))))))
