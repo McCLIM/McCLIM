@@ -122,6 +122,39 @@
 (defgeneric pane-scroller (pane)) 
 (defgeneric scroll-extent (pane x y)) 
 
+;;;; 29.3.4 The Layout Protocol
+
+;; (define-protocol-class space-requirement ()) 
+
+;; make-space-requirement &key (width 0) (max-width 0) (min-width 0) (height 0) (max-height 0) (min-height 0) [Function]
+
+(defgeneric space-requirement-width (space-req))
+(defgeneric space-requirement-min-width (space-req))
+(defgeneric space-requirement-max-width (space-req))
+(defgeneric space-requirement-height (space-req))
+(defgeneric space-requirement-min-height (space-req))
+(defgeneric space-requirement-max-height (space-req))
+(defgeneric space-requirement-components (space-req))
+
+;; space-requirement-combine function sr1 sr2 [Function]
+;; space-requirement+ sr1 sr2 [Function]
+;; space-requirement+* space-req &key width min-width max-width height min-height max-height [Function]
+
+(defgeneric compose-space (pane)) ;; &key width height
+(defgeneric allocate-space (pane width height))
+(defgeneric change-space-requirements (pane &key resize-frame &rest space-req-keys))
+(defgeneric note-space-requirements-changed (sheet pane))
+;; changing-space-requirements (&key resize-frame layout) &body body [Macro]
+
+;;;; 29.4.4 CLIM Stream Pane Functions
+
+(defgeneric window-clear (window))
+(defgeneric window-refresh (window))
+(defgeneric window-viewport (window))
+(defgeneric window-erase-viewport (window))
+(defgeneric window-viewport-position (window))
+;; (defgeneric (setf* window-viewport-position) (x y window))
+
 ;;;
 
 (defgeneric medium-foreground (medium))
