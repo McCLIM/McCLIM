@@ -127,6 +127,7 @@
    "Examples/postscript-test"
    "Examples/transformations-test"
    "Examples/stream-test"
+   "Examples/presentation-test"
    ))
 
 #+mk-defsystem

@@ -570,9 +570,11 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
 (defmethod handle-event ((stream output-recording-stream) (event window-repaint-event))
   (repaint-sheet stream (window-event-region event)))
 
+#+nil
 (defmethod handle-event ((stream output-recording-stream) (event pointer-button-press-event))
   (with-slots (button x y) event
-    (format *debug-io* "button ~D pressed at ~D,~D~%" button x y)))
+    (format *debug-io* "button ~D pressed at ~D,~D in sheet ~S~%"
+	    button x y (event-sheet event))))
 
 #|
 (defmethod handle-event :after ((stream output-recording-stream) (event pointer-button-press-event))

@@ -1,7 +1,7 @@
 ;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
 
 ;;;  (c) copyright 1998,1999,2000 by Michael McDonald (mikemac@mikemac.com)
-;;;  (c) copyright 2001 by Tim Moore (moore@bricoworks.com)
+;;;  (c) copyright 2001,2002 by Tim Moore (moore@bricoworks.com)
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
 ;;; License as published by the Free Software Foundation; either
@@ -1218,6 +1218,41 @@ function lambda list"))
 (defun input-context-type (context-entry)
   (car context-entry))
 
+(defun highlight-applicable-presentation (frame stream input-context
+					  &optional prefer-pointer-window)
+  
+  (let ((port (port stream)))
+    ;; XXX should query pointer, check highlighting here
+    (loop for event = (get-next-event port) ;timeout?
+	  for event-stream = (event-sheet event)
+	  do (if (and (or (not prefer-pointer-window)
+			  (eq stream event-stream))
+		      (typep event 'pointer-event))
+		 (progn
+		   (frame-input-context-track-pointer frame
+						      input-context
+						      (event-sheet event)
+						      event)
+		   (when (typep event 'pointer-button-press-event)
+		     (funcall *pointer-button-press-handler* stream event)))
+		 (progn
+		   (distribute-event port event)
+		   (when (eq stream event-stream)
+		     ;; Let stream-read-gesture get a crack at the event.
+		     (return-from highlight-applicable-presentation t)))))))
+
+
+(defun input-context-event-loop (stream)
+  (highlight-applicable-presentation *application-frame*
+				     stream
+				     *input-context*))
+
+(defun input-context-button-press-handler (stream button-event)
+  (declare (ignore stream))
+  (frame-input-context-button-press-handler *application-frame*
+					    (event-sheet button-event)
+					    button-event))
+
 (defmacro with-input-context ((type &key override) 
 			      (&optional (object-var (gensym))
 					 (type-var (gensym))
@@ -1239,7 +1274,11 @@ function lambda list"))
 				#'(lambda (object type event options)
 				    (return-from ,context-block
 				      (values object type event options))))
-			  ,(if override nil '*input-context*))))
+			  ,(if override nil '*input-context*)))
+		   (*pointer-button-press-handler*
+		    #'input-context-button-press-handler)
+		   (*input-wait-test* #'input-context-event-loop)
+		   (*input-wait-handler* #'input-context-event-loop))
 	       (return-from ,return-block ,form )))
 	 (cond ,@(mapcar #'(lambda (pointer-case)
 			     (destructuring-bind (case-type &body case-body)
@@ -1292,7 +1331,7 @@ function lambda list"))
 				  default-type)))
 	 (real-history-type (and historyp
 				 (expand-presentation-type-abbreviation
-				  history-type)))
+				  history)))
 	 (new-rest-args (if (or streamp default-type-p historyp)
 			    (copy-list rest-args)
 			    rest-args))
@@ -1390,7 +1429,7 @@ function lambda list"))
 	      (input-editor-format stream "~A" prompt)))))
     (let ((prompt-string (if (eq prompt t)
 			     (format nil "Enter ~A"
-				     (describe-presentation-type type nil))
+				     (describe-presentation-type type nil nil))
 			     prompt))
 	  (default-string (if (and defaultp display-default)
 			      (present-to-string default default-type)
@@ -1399,6 +1438,63 @@ function lambda list"))
 	   nil)
 	  (t
 	   (display-using-mode stream prompt-string default-string))))))
+
+;;; XXX obviously need to do something (a lot) with presentation translators
+;;; when  they happen.
+;;; XXX This needs to recurse beyond the top record...
+(defun find-innermost-applicable-presentation
+    (input-context window
+     x y
+     &key (frame *application-frame*) modifier-state event)
+  (declare (ignore frame modifier-state event))
+  (let ((top-record (stream-output-history window))
+	(result nil)
+	(result-size 0))
+    (loop for (context-ptype . continuation) in input-context
+	  do (progn
+	       (map-over-output-records-containing-position
+		#'(lambda (record)
+		    (when (and (presentationp record)
+			       (presentation-subtypep
+				(presentation-type record)
+				context-ptype))
+		      (multiple-value-bind (min-x min-y max-x max-y)
+			  (output-record-hit-detection-rectangle* record)
+			(let ((size (* (- max-x min-x) (- max-y min-y))))
+			  (when (or (not result)
+				    (< size result-size))
+			    (setq result record)
+			    (setq result-size size))))))
+		top-record x y)
+	       (when result
+		 (return-from find-innermost-applicable-presentation
+		   result))))))
+
+;;; XXX Need to search for applicable translator and call it, duh.
+(defun throw-highlighted-presentation (presentation input-context event)
+  (let ((ptype (presentation-type presentation)))
+    (loop for (context-ptype . continuation) in input-context
+	  when (presentation-subtypep ptype context-ptype)
+	  do (funcall continuation (presentation-object presentation) ptype
+		      event nil))))
+
+(define-presentation-generic-function %highlight-presentation
+    highlight-presentation
+  (type-key parameters options type record stream state))
+
+;;; Internal function to highlight just one presentation
+
+(defun highlight-presentation-1 (presentation stream state)
+  (funcall-presentation-generic-function highlight-presentation
+					 (presentation-type presentation)
+					 presentation
+					 stream
+					 state))
+
+(define-default-presentation-method highlight-presentation
+    (type record stream state)
+  (highlight-output-record record stream state))
+
 
 
 ;;; The presentation types

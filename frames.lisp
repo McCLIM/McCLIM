@@ -97,6 +97,9 @@
    (top-level :initform '(default-frame-top-level)
 	      :initarg :top-level
 	      :reader frame-top-level)
+   (hilited-presentation :initform nil
+			 :initarg :hilited-presentation
+			 :accessor frame-hilited-presentation)
    ))
 
 (defun application-frame-p (x)
@@ -500,4 +503,73 @@ If there are no named panes, only the single, top level pane is returned."))
 
 (defun make-menu-frame (pane &key (left 0) (top 0))
   (make-instance 'menu-frame :pane pane :left left :top top))
+
+;;; Frames and presentations
+
+(defmethod frame-find-innermost-applicable-presentation
+    ((frame standard-application-frame) input-context stream x y
+     &key event)
+  (find-innermost-applicable-presentation input-context stream
+					  x y
+					  :frame frame :event event))
+
+(defmethod frame-input-context-button-press-handler 
+    ((frame standard-application-frame)
+     (stream output-recording-stream)
+     button-press-event)
+  (format *debug-io* "frame button press event: ~D ~D in ~S~%"
+	  (pointer-event-x button-press-event)
+	  (pointer-event-y button-press-event)
+	  stream)
+  (let ((presentation (find-innermost-applicable-presentation
+		       *input-context*
+		       stream
+		       (pointer-event-x button-press-event)
+		       (pointer-event-y button-press-event)
+		       :frame frame)))
+    (when presentation
+      (format *debug-io* "presentation: ~S of type ~S~%"
+	      (presentation-object presentation)
+	      (presentation-type presentation))
+      (throw-highlighted-presentation presentation
+				      *input-context*
+				      button-press-event))))
+
+(defmethod frame-input-context-button-press-handler
+    ((frame standard-application-frame) stream button-press-event)
+  (distribute-event (port stream) button-press-event))
+
+(defmethod frame-input-context-track-pointer
+    ((frame standard-application-frame)
+     input-context
+     (stream output-recording-stream) event)
+  (declare (ignore input-context event))
+  nil)
+
+(defmethod frame-input-context-track-pointer
+    ((frame standard-application-frame) input-context stream event)
+  (declare (ignore input-context))
+  (distribute-event (port stream) event))
+
+(defmethod frame-input-context-track-pointer :before
+    ((frame standard-application-frame) input-context stream event)
+    (if (output-recording-stream-p stream)
+	(let ((presentation (find-innermost-applicable-presentation
+			     input-context
+			     stream
+			     (pointer-event-x event)
+			     (pointer-event-y event)
+			     :frame frame)))
+	  (when (and (frame-hilited-presentation frame)
+		     (not (eq presentation
+			      (car (frame-hilited-presentation frame)))))
+	    (highlight-presentation-1 (car (frame-hilited-presentation frame))
+				      (cdr (frame-hilited-presentation frame))
+				      :unhighlight))
+	  (when presentation
+	    (setf (frame-hilited-presentation frame)
+		  (cons presentation stream))
+	    (highlight-presentation-1 presentation
+				      stream
+				      :highlight)))))
 

@@ -105,8 +105,9 @@
 
 (defmacro get-pointer-position ((sheet event) &body body)
   `(multiple-value-bind (x y)
-       (transform-position (sheet-native-transformation ,sheet)
-			   (pointer-event-native-x ,event) (pointer-event-native-y ,event))
+       (untransform-position (sheet-native-transformation ,sheet)
+			     (pointer-event-native-x ,event)
+			     (pointer-event-native-y ,event))
      (declare (ignorable x y))
      ,@body))
   

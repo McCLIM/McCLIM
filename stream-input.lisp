@@ -3,6 +3,7 @@
 ;;;  (c) copyright 1998,1999,2000 by Michael McDonald (mikemac@mikemac.com)
 ;;;  (c) copyright 2000 by 
 ;;;           Robert Strandh (strandh@labri.u-bordeaux.fr)
+;;;  (c) copyright 2001 by Tim Moore (moore@bricoworks.com)
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -156,10 +157,13 @@
 				 :timeout timeout
 				 :input-wait-test input-wait-test)
 	    (unless available
-	      (if (eq reason :timeout)
-		  (return-from stream-read-gesture (values nil :timeout))
-		(funcall input-wait-handler stream))))))))
-  )
+	      (case reason
+		(:timeout
+		 (return-from stream-read-gesture (values nil
+							  :timeout)))
+		(:input-wait-test
+		 nil)
+		(t (funcall input-wait-handler stream))))))))))
 
 
 (defgeneric stream-input-wait (stream &key timeout input-wait-test))
