@@ -103,9 +103,10 @@
 	(medium-transform-position medium x y)
       (if (< (line-style-thickness line-style) 2)
 	  (xlib:draw-point mirror gc (round tx) (round ty))
-	(let ((diameter (round (line-style-thickness line-style))))
+	(let* ((radius (round (line-style-thickness line-style) 2))
+               (diameter (* radius 2)))
 	  (xlib:draw-arc mirror gc
-			 (round tx) (round ty)
+			 (round (- tx radius)) (round (- ty radius))
 			 diameter diameter
 			 0 (* 2 pi)
 			 t))))))
