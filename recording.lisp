@@ -27,6 +27,7 @@
 ;;;
 ;;; - Scrolling does not work correctly. Region is given in "window"
 ;;; coordinates, without bounding-rectangle-position transformation.
+;;; (Is it still valid?)
 ;;;
 ;;; - Redo setf*-output-record-position, extent recomputation for
 ;;; compound records
@@ -38,6 +39,15 @@
 ;;; - (SETF OUTPUT-RECORD-START-CURSOR-POSITION) does not affect the
 ;;; bounding rectangle. What does it affect?
 ;;;
+;;; - How should (SETF OUTPUT-RECORD-POSITION) affect the bounding
+;;; rectangle of the parent? Now its bounding rectangle is accurately
+;;; recomputed, but it is very inefficient for table formatting. It
+;;; seems that CLIM is supposed to keep a "large enougn" rectangle and
+;;; to shrink it to the correct size only when the layout is complete
+;;; by calling TREE-RECOMPUTE-EXTENT.
+;;;
+;;; - Computation of the bounding rectangle of lines ignores
+;;; LINE-STYLE-CAP-SHAPE.
 
 ;;; Bug: (SETF OUTPUT-RECORD-POSITION) returns the record instead of
 ;;; the position. It is useful for debugging, but it is wrong.
@@ -841,12 +851,10 @@ were added."
                                    (+ max-y border))))))
 
 (def-grecording draw-polygon (coord-seq closed filled)
-  ;; FIXME !!!
-  ;; If LINE-STYLE-JOINT-SHAPE is :MITTER, then the bb is larger than
-  ;; these numbers by (LINE-THICKNESS / (sin (angle / 2))),
-  ;; which is larger than LINE-THICKNESS
   (with-transformed-positions (transform coord-seq)
-     (loop for (x y) on coord-seq by #'cddr
+    (if (or filled
+            (not (eq (line-style-joint-shape line-style) :miter)))
+        (loop for (x y) on coord-seq by #'cddr
            minimize x into min-x
            minimize y into min-y
            maximize x into max-x
@@ -856,7 +864,37 @@ were added."
                                (values (- min-x border)
                                        (- min-y border)
                                        (+ max-x border)
-                                       (+ max-y border)))))))
+                                       (+ max-y border)))))
+        (flet ((normalize (dx dy &optional unit)
+                 (let ((norm (sqrt (+ (* dx dx) (* dy dy)))))
+                   (if unit
+                       (let ((scale (/ unit norm)))
+                         (values (* dx scale) (* dy scale)))
+                       (values (/ dx norm) (/ dy norm))))))
+          (let* ((x1 (first coord-seq))
+                 (y1 (second coord-seq))
+                 (min-x (- x1 border)) (min-y (- y1 border))
+                 (max-x (+ x1 border)) (max-y (+ y1 border)))
+            (loop for (xp yp x y xn yn) on (if closed
+                                               `(,@(last coord-seq 2)
+                                                 ,@coord-seq
+                                                 ,(first coord-seq) ,(second coord-seq))
+                                               coord-seq)
+                 by #'cddr
+               unless yn do (minf min-x (- x border)) (minf min-y (- y border))
+                            (maxf max-x (+ x border)) (maxf max-y (+ y border))
+                            (return)
+               do (multiple-value-bind (nx1 ny1) (normalize (- x xp) (- y yp))
+                    (multiple-value-bind (nx2 ny2) (normalize (- x xn) (- y yn))
+                      (let* ((cos (+ (* nx1 nx2) (* ny1 ny2)))
+                             (sin (sqrt (* 0.5 (- 1.0 cos))))
+                             (length (/ border sin))) ; XXX MITER-LIMIT
+                        (multiple-value-bind (dx dy)
+                            (normalize (+ nx1 nx2) (+ ny1 ny2) length)
+                          (let ((adx (abs dx)) (ady (abs dy)))
+                            (minf min-x (- x adx)) (minf min-y (- y ady))
+                            (maxf max-x (+ x adx)) (maxf max-y (+ y ady))))))))
+            (values min-x min-y max-x max-y))))))
 
 (def-grecording draw-rectangle (left top right bottom filled)
   ;; FIXME!!! If the rectangle is a line/point, MAKE-RECTANGLE* gives +NOWHERE+,
