@@ -5,11 +5,13 @@
 ;;; Needed to keep ACL from issuing warnings about toplevel (shadow ...) forms
 (setq comp:*cltl1-compile-file-toplevel-compatibility-p* nil)
 
+(require :loop)
+
 (defpackage :clim-mop
   (:use :clos)
   (:import-from :common-lisp
-		#:class-name)
-  (:export #:class-name))
+		#:class-name #:compute-applicable-methods)
+  (:export #:class-name #:compute-applicable-methods))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (do-external-symbols (sym :clos)
