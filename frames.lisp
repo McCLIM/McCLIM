@@ -411,7 +411,7 @@ FRAME-EXIT condition."))
 	(panes nil)
 	(layouts nil)
 	(current-layout nil)
-	(command-table nil)
+	(command-table (list name))
 	(menu-bar t)
 	(disabled-commands nil)
 	(command-definer t)
@@ -442,7 +442,7 @@ FRAME-EXIT condition."))
 	 (:default-initargs
 	   :name ',name
 	   :pretty-name ,(string-capitalize name)
-	   :command-table ,command-table
+	   :command-table (find-command-table ',(first command-table))
 	   :disabled-commands ',disabled-commands
 	   :menu-bar ,menu-bar
 	   :current-layout ',current-layout
@@ -453,11 +453,14 @@ FRAME-EXIT condition."))
        ,(if pane
 	    (make-single-pane-generate-panes-form name pane)
 	  (make-panes-generate-panes-form name panes layouts))
+       ,@(if command-table
+	     `((define-command-table ,@command-table)))
        ,@(if command-definer
 	     `((defmacro ,command-name (name-and-options arguements &rest body)
 		 (let ((name (if (listp name-and-options) (first name-and-options) name-and-options))
-		       (options (if (listp name-and-options) (cdr name-and-options) nil)))
-		   `(define-command ,name ,arguements ,@body))))))))
+		       (options (if (listp name-and-options) (cdr name-and-options) nil))
+		       (command-table ',(first command-table)))
+		   `(define-command (,name :command-table ,command-table ,@options) ,arguements ,@body))))))))
 
 (defun make-application-frame (frame-name
 			       &rest options

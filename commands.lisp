@@ -37,6 +37,10 @@
    (text-style :initarg :text-style :initform nil)
    (keystroke :initarg :keystroke :initform nil)))
 
+(defmethod print-object ((item menu-item) stream)
+  (print-unreadable-object (item stream :identity t :type t)
+    (format stream "~S" (command-menu-item-name item))))
+
 (defun command-menu-item-options (menu-item)
   (with-slots (documentation text-style) menu-item
     (list ':documentation documentation ':text-style text-style)))
@@ -54,6 +58,10 @@
 
 (defun command-table-p (object)
   (typep object 'command-table))
+
+(defmethod print-object ((table command-table) stream)
+  (print-unreadable-object (table stream :identity t :type t)
+    (format stream "~S" (command-table-name table))))
 
 (defclass standard-command-table (command-table)
   ())
@@ -108,11 +116,18 @@
 
 (defmacro define-command-table (name &key inherit-from menu)
   (let ((inherit (cond (inherit-from)
-		       (t '(clim-global-command-table)))))
-    `(make-command-table ',name
-			 :inherit-from ',inherit
-			 :menu ',menu
-			 :errorp nil)))
+		       (t '(clim-global-command-table))))
+	(menu-items menu))
+    `(let ((old-table (gethash ',name *command-tables* nil)))
+       (if old-table
+	   (with-slots (inherit-from menu) old-table
+	     (setq inherit-from ',inherit
+		   menu ',menu-items)
+	     old-table)
+	 (make-command-table ',name
+			     :inherit-from ',inherit
+			     :menu ',menu
+			     :errorp nil)))))
 
 (defun generate-name (symbol)
   (let ((name (symbol-name symbol)))
@@ -150,9 +165,8 @@
 (defun add-command-to-command-table (command-name
 				     command-table
 				     &key name menu keystroke (errorp t))
-  (declare (ignore menu))
   (let ((table (find-command-table command-table)))
-    (with-slots (commands command-line-names keystroke-accelerators menu) table
+    (with-slots (commands command-line-names keystroke-accelerators) table
       (if (and errorp (gethash command-name commands))
 	  (error 'command-already-present)
 	  (progn (remove-command-from-command-table command-name command-table
@@ -298,7 +312,7 @@
 					 :key #'command-menu-item-name
 					 :test #'string-equal))))))
 	       (when keystroke
-		 (add-keystroke-to-command-table command-table keystroke
+		 #+ignore(add-keystroke-to-command-table command-table keystroke
 						 type value)))))))
 
 (defun map-over-command-table-menu-items (function command-table)
@@ -311,10 +325,22 @@
 ;;;
 ;;; Commands
 
-(defmacro define-command (name args &body body)
-  `(defun ,name ,(loop for arg in args
-		     collect (first arg))
-     ,@body))
+(defmacro define-command (name-and-options args &body body)
+  (let* ((func (first name-and-options))
+	 (command-table (getf (cdr name-and-options) :command-table nil))
+	 (name (getf (cdr name-and-options) :name (generate-name func)))
+	 (menu (getf (cdr name-and-options) :menu nil))
+	 (keystroke (getf (cdr name-and-options) :keystroke nil))
+	 )
+  `(progn
+     (defun ,func ,(loop for arg in args
+			 collect (first arg))
+       ,@body)
+     ,(if command-table
+	  `(add-command-to-command-table ',func ',command-table
+					 :name ,name :menu ,menu
+					 :keystroke ,keystroke :errorp nil))
+     ',func)))
 
 (defvar *command-parser* nil)
 (defvar *command-unparser* nil)
@@ -333,5 +359,6 @@
 			  (partial-command-parser *partial-command-parser*)
 			  use-keystrokes)
   (declare (ignore command-table command-parser command-unparser partial-command-parser use-keystrokes))
-  (read-preserving-whitespace stream))
+#+ignore  (read-preserving-whitespace stream)
+  (accept 'expression :stream stream))
 
