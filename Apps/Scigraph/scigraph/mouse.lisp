@@ -60,7 +60,7 @@ advised of the possiblity of such damages.
       ,@(if right
 	    `(((clim::button-press-event-matches-gesture-name ,button :menu)
 	       ,right)))))
-   (:clim-2
+   ((and :clim-2 (not :mcclim))
     `(cond
       ,@(if left
 	    `(((clim-internals::button-press-event-matches-gesture-name-p ,button :select)
@@ -70,7 +70,18 @@ advised of the possiblity of such damages.
 	       ,middle)))
       ,@(if right
 	    `(((clim-internals::button-press-event-matches-gesture-name-p ,button :menu)
-	       ,right)))))))
+	       ,right)))))
+   (:mcclim
+    `(cond
+       ,@(when left
+	  `(((event-matches-gesture-name-p ,button :select)
+	     ,left)))
+       ,@(when middle
+	  `(((event-matches-gesture-name-p ,button :describe)
+	     ,middle)))
+       ,@(when right
+	  `(((event-matches-gesture-name-p ,button :menu)
+	     ,right)))))))
 
 (defmethod post-mouse-documentation (stream string)
   #FEATURE-CASE
