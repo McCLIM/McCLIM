@@ -1248,23 +1248,29 @@ and must never be nil."))
   ()
   (:default-initargs
     :background *3d-normal-color*
-    :align-x :center
+    :x-spacing 3
+    :y-spacing 2
+    :align-x :left
     :align-y :center))
 
 (defmethod handle-repaint ((pane menu-button-pane) region)
   (declare (ignore region))
-  (with-special-choices (pane)
-    (let ((region (sheet-region pane)))
-      (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* region)
-	(let ((w (- x2 x1))
-	      (h (- y2 y1)))
+  (with-slots (x-spacing y-spacing) pane
+    (with-special-choices (pane)
+      (let ((region (sheet-region pane)))
+        (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* region)
           (draw-rectangle* pane x1 y1 x2 y2
                            :ink (effective-gadget-background pane)
                            :filled t)
-	  (cond ((slot-value pane 'armed)
-		 (draw-edges-lines* pane +white+ (- w 2) (- h 2) +black+ 1 1))
-		(t))
-          (draw-label* pane x1 y1 x2 y2 :ink (effective-gadget-foreground pane)))))))
+          (cond ((slot-value pane 'armed)
+                 (draw-bordered-rectangle* pane x1 y1 x2 y2 :style :outset :border-width *3d-border-thickness*))
+                (t))
+          (draw-label* pane
+                       (+ x1 x-spacing)
+                       (+ y1 y-spacing)
+                       (- x2 x-spacing)
+                       (- y2 y-spacing)
+                       :ink (effective-gadget-foreground pane)))))))
 
 (defmethod compose-space ((gadget menu-button-pane) &key width height)
   (declare (ignore width height))
@@ -2197,3 +2203,6 @@ and must never be nil."))
 				    :children (list ,gadget))))
        (stream-add-output-record ,stream ,gadget-output-record)
        ,gadget)))
+
+
+
