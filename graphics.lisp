@@ -508,17 +508,6 @@
     (multiple-value-bind (x2 y2) (point-position point-2)
       (apply #'draw-arrow* sheet x1 y1 x2 y2 args))))
 
-(defun draw-arrow-head (sheet x1 y1 x2 y2 length width)
-  (with-translation (sheet x2 y2)
-                    (with-rotation (sheet (atan* (- x1 x2)
-                                                 (- y1 y2)))
-                                   (draw-polygon* sheet
-                                                  (list length (- (/ width 2))
-                                                        0 0
-                                                        length (/ width 2))
-                                                  :filled nil
-                                                  :closed nil))))
-
 (defun draw-arrow* (sheet x1 y1 x2 y2
 		   &rest args
 		   &key ink clipping-region transformation
@@ -529,11 +518,60 @@
 		   line-style line-thickness
 		   line-unit line-dashes line-cap-shape))
   (with-medium-options (sheet args)
-                       (draw-line* sheet x1 y1 x2 y2)
-                       (when to-head
-                         (draw-arrow-head sheet x1 y1 x2 y2 head-length head-width))
-                       (when from-head
-                         (draw-arrow-head sheet x2 y2 x1 y1 head-length head-width))))
+    (with-translation (sheet x2 y2)
+      (with-rotation (sheet (atan* (- x1 x2)
+                                   (- y1 y2)))
+        (let* ((end      0.0)
+               (start    (sqrt (+ (expt (- x2 x1) 2)
+                                  (expt (- y2 y1) 2))))
+               (p end)
+               (q start)                                  
+
+               (medium     (sheet-medium sheet))
+               (line-style (medium-line-style medium))
+               (thickness  (line-style-thickness line-style))
+               (width/2    (/ head-width 2))
+
+               (a (atan (/ width/2 head-length)))
+               (offset     (if (and head-length (not (zerop head-length)))
+                               (/ thickness (* 2 (sin a )))
+                               0.0))               
+               (tip-to-peak (+ head-length offset (- (* thickness 0.5 (sin a)))))) ;; okay, a guess..
+         (when to-head   (incf p offset))
+         (when from-head (decf q offset))
+         (if (and to-head
+                  from-head
+                  (< (abs (- start end)) (* 2 tip-to-peak)))
+             
+             (let ((width (* 0.5 (+ head-width thickness)
+                             (/ (abs (- start end))
+                                (* 2 tip-to-peak)) )))
+               (draw-polygon* sheet
+                              (list end 0
+                                    (/ start 2) width
+                                    start 0
+                                     (/ start 2) (- width))
+                              :filled t
+                              :line-thickness 0 ))
+             (progn
+               (when to-head
+                 (draw-polygon* sheet
+                                (list (+ p head-length) (- width/2)
+                                      p 0
+                                      (+ p head-length) width/2)
+                                :filled nil
+                                :closed nil))
+               (when from-head
+                 (draw-polygon* sheet
+                                (list (- q head-length) (- width/2)
+                                      q 0
+                                      (- q head-length) width/2)
+                                :filled nil
+                                :closed nil))
+               
+               (unless (< q p)
+                 (draw-line* sheet q 0 p 0)))) )))))
+
 
 (defun draw-oval (sheet center-pt x-radius y-radius
 		  &rest args
