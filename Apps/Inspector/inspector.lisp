@@ -157,7 +157,11 @@ table, possibly using INSPECTOR-TABLE-ROW."
 	    (formatting-cell (,evaluated-pane)
 	      (formatting-table (,evaluated-pane)
 		,@body))))
-	(print-documentation ,evaluated-object ,evaluated-pane)))))
+	(print-documentation (if (eql (class-of ,evaluated-object)
+				      (find-class 'standard-class))
+				 ,evaluated-object
+				 (class-of ,evaluated-object))
+			     ,evaluated-pane)))))
 
 (defmacro inspector-table-row ((pane) left right)
   "Output a table row with two items, produced by evaluating LEFT and
@@ -182,10 +186,15 @@ is a list of a label and a value."
 			  (princ ,label ,evaluated-pane)
 			  (inspect-object ,value ,evaluated-pane)))))))
 
+;; The error handler shouldn't be necessary, but it works around an
+;; ACL bug and shouldn't mess anything up on other lisps. The warning
+;; handler is there in case DOCUMENTATION raises a warning, to tell
+;; lisp that we don't care and it shouldn't go alarming the user.
 (defun print-documentation (object pane)
   "Print OBJECT's documentation, if any, to PANE"
-  (when (handler-bind ((warning #'muffle-warning))
-	  (documentation object t))
+  (when (handler-case (documentation object t)
+	  (error ())
+	  (warning ()))
     (with-heading-style (pane)
       (format pane "~&Documentation: "))
     (princ (documentation object t) pane)))
