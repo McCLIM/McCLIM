@@ -228,12 +228,12 @@
 		     (transformation-error-rect self)
 		     (transformation-error-transformation self)))))
 
-(defmethod transformation-equal ((transformation1 standard-transformation) 
+(defmethod transformation-equal ((transformation1 standard-transformation)
                                  (transformation2 standard-transformation))
   (every #'coordinate=
          (multiple-value-list (get-transformation transformation1))
          (multiple-value-list (get-transformation transformation2))))
-  
+
 (defmethod identity-transformation-p ((transformation standard-transformation))
   (transformation-equal transformation +identity-transformation+))
 
@@ -244,12 +244,12 @@
          (coordinate= myx 0)
          (coordinate= myy 1))))
 
-(defmethod invertible-transformation-p ((transformation standard-transformation))
-  (coordinate/= 0 (transformation-determinant transformation)))
-
 (defun transformation-determinant (tr)
   (multiple-value-bind (mxx mxy myx myy) (get-transformation tr)
     (- (* mxx myy) (* mxy myx))))
+
+(defmethod invertible-transformation-p ((transformation standard-transformation))
+  (coordinate/= 0 (transformation-determinant transformation)))
 
 (defmethod reflection-transformation-p ((transformation standard-transformation))
   (< (transformation-determinant transformation) 0))
@@ -269,20 +269,19 @@
 (defmethod scaling-transformation-p ((transformation standard-transformation))
   ;; Q: was ist mit dem translationsanteil?
   ;; what gives (scaling-transformation-p (make-translation-transformation 17 42))
+  ;; I think it would be strange if (s-t-p (make-s-t* 2 1 1 0)) is not T. -- APD
   (multiple-value-bind (mxx mxy myx myy tx ty) (get-transformation transformation)
-    (and (coordinate= 0 tx) (coordinate= 0 ty)
-         (coordinate= 0 mxy) (coordinate= 0 myx)
-         (coordinate/= 0 mxx) (coordinate/= 0 myy))))
+    (and (coordinate= 0 mxy) (coordinate= 0 myx)
+         (coordinate/= 0 mxx) (coordinate/= 0 myy)))) ; ?
 
 (defmethod rectilinear-transformation-p ((transformation standard-transformation))
   ;; Das testen wir einfach ganz brutal
   ;;; ist das auch richtig?
-  (multiple-value-bind (dx1 dy1) (transform-distance transformation 1 0)
-    (multiple-value-bind (dx2 dy2) (transform-distance transformation 0 1)
-      (or (and (coordinate= dx1 0) (coordinate/= dy1 0)
-               (coordinate/= dx2 0) (coordinate= dy2 0))
-          (and (coordinate/= dx1 0) (coordinate= dy1 0)
-               (coordinate= dx2 0) (coordinate/= dy2 0))))))
+  (multiple-value-bind (mxx mxy myx myy) (get-transformation transformation)
+    (or (and (coordinate= mxx 0) (coordinate/= mxy 0)
+             (coordinate/= myx 0) (coordinate= myy 0))
+        (and (coordinate/= mxx 0) (coordinate= mxy 0)
+             (coordinate= myx 0) (coordinate/= myy 0)))))
 
 (defmethod y-inverting-transformation-p ((transformation standard-transformation))
   (multiple-value-bind (mxx mxy myx myy) (get-transformation transformation)
