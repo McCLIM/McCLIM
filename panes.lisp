@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.149 2005/02/01 03:08:27 ahefner Exp $
+;;; $Id: panes.lisp,v 1.150 2005/02/22 03:09:18 ahefner Exp $
 
 (in-package :clim-internals)
 
@@ -1679,13 +1679,16 @@ order to produce a double-click")
 
 ;;; RESTRAINING PANE
 
-(defclass restraining-pane (composite-pane) ())
+(defclass restraining-pane (single-child-composite-pane) ())
 
 (defun restraining-pane-p (pane)
   (typep pane 'restraining-pane))
 
 (defmacro restraining ((&rest options) &body contents)
   `(make-pane 'restraining-pane ,@options :contents (list ,@contents)))
+
+(defmethod note-space-requirements-changed ((pane restraining-pane) child)
+  (declare (ignore pane child)))
 
 ;;; BBOARD PANE
 
