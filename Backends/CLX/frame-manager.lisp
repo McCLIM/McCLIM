@@ -59,8 +59,10 @@
                :max-height (min 65535 (round (space-requirement-max-height q)))
                :min-width (round (space-requirement-min-width q))
                :min-height (round (space-requirement-min-height q))))
-        (xlib:map-window mirror)
+        ;; :structure-notify events were not yet turned on, turn them
+        ;; on now, so that we get informed about the windows position
+        ;; (and possibly size), when the window gets maped.
         (setf (xlib:window-event-mask mirror)
               (logior (xlib:window-event-mask mirror)
                       (xlib:make-event-mask :structure-notify)))
-        ))))
+        (xlib:map-window mirror) ))))
