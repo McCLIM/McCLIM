@@ -924,7 +924,7 @@ function lambda list"))
       (return-from presentation-type-of name))
     ;; Does the type have required parameters?  If so, we can't use it...
     (let ((parameter-ll (parameters-lambda-list ptype-entry)))
-      (when (eq (car parameter-ll) &whole)
+      (when (eq (car parameter-ll) '&whole)
 	(setq parameter-ll (cddr parameter-ll)))
       (if (member (car parameter-ll) lambda-list-keywords)
 	  name
@@ -1316,7 +1316,7 @@ function lambda list"))
   (keywordp object))
 
 (defmethod presentation-type-of ((object symbol))
-  (if (eq (symbol-package symbol) (find-package :keyword))
+  (if (eq (symbol-package object) (find-package :keyword))
       'keyword
       'symbol))
 
