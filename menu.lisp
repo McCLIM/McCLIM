@@ -40,29 +40,31 @@
       (dispatch-repaint button (sheet-region button)))))
 
 (defun menu-draw-highlighted (gadget)
-  (with-slots (label) gadget
-    (multiple-value-bind (x1 y1 x2 y2) 
-	(bounding-rectangle* (sheet-region gadget))
-      (let ((w (- x2 x1))
-	    (h (- y2 y1)))
-	(draw-rectangle* gadget -1 -1 x2 y2
-			 :ink (gadget-highlighted-color gadget)
-			 :filled t)
-	(draw-edges-lines* gadget 1 1 (- w 2) (- h 2))
-	(draw-text* gadget label (round w 2) (round h 2)
-		    :align-x :center :align-y :center)))))
+  (with-double-buffering (gadget)
+    (with-slots (label) gadget
+      (multiple-value-bind (x1 y1 x2 y2) 
+	  (bounding-rectangle* (sheet-region gadget))
+	(let ((w (- x2 x1))
+	      (h (- y2 y1)))
+	  (draw-rectangle* gadget -1 -1 x2 y2
+			   :ink (gadget-highlighted-color gadget)
+			   :filled t)
+	  (draw-edges-lines* gadget 0 0 (1- w) (1- h)) ;(- w 2) (- h 2))
+	  (draw-text* gadget label (round w 2) (round h 2)
+		      :align-x :center :align-y :center))))))
 
 (defun menu-draw-unhighlighted (gadget)
-  (with-slots (label) gadget
-    (multiple-value-bind (x1 y1 x2 y2)
-	(bounding-rectangle* (sheet-region gadget))
-      (let ((w (- x2 x1))
-	    (h (- y2 y1)))
-	(draw-rectangle* gadget -1 -1 x2 y2
-			 :ink (gadget-normal-color gadget)
-			 :filled t)
-	(draw-text* gadget label (round w 2) (round h 2)
-		    :align-x :center :align-y :center)))))
+  (with-double-buffering (gadget)
+    (with-slots (label) gadget
+      (multiple-value-bind (x1 y1 x2 y2)
+	  (bounding-rectangle* (sheet-region gadget))
+	(let ((w (- x2 x1))
+	      (h (- y2 y1)))
+	  (draw-rectangle* gadget -1 -1 (1- w) h
+			   :ink (gadget-normal-color gadget)
+			   :filled t)
+	  (draw-text* gadget label (round w 2) (round h 2)
+		      :align-x :center :align-y :center))))))
 
 (defmethod handle-event ((pane menu-button-pane) (event pointer-enter-event))
   (when (slot-value (slot-value pane 'client) 'armed)

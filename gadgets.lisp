@@ -351,15 +351,17 @@
 
 (defmethod repaint-sheet ((pane push-button-pane) region)
   (declare (ignore region))
-  (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
-    (let ((w (- x2 x1))
-	  (h (- y2 y1)))
-      (display-gadget-background pane 1 1 (1- w) (1- h))
-      (if (push-button-show-as-default-p pane)
-	  (draw-edges-lines* pane (1- w) (1- h) 1 1)
-	  (draw-edges-lines* pane 1 1 (1- w) (1- h)))
-      (draw-text* pane (gadget-label pane) (round w 2) (round h 2)
-		  :align-x :center :align-y :center))))
+  (with-double-buffering (pane)
+    (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
+      (let ((w (- x2 x1)) 
+	    (h (- y2 y1)))
+	(display-gadget-background pane (gadget-current-color pane) 0 0 w h)
+	(if (push-button-show-as-default-p pane)
+	    (draw-edges-lines* pane (1- w) (1- h) 0 0)
+	    (draw-edges-lines* pane 0 0 (1- w) (1- h)))
+	(draw-text* pane (gadget-label pane) (round w 2) (round h 2)
+		    :align-x :center :align-y :center)))))
+
 
 ;;
 ;; TOGGLE-BUTTON gadget
@@ -414,23 +416,19 @@
 
 (defmethod repaint-sheet ((pane toggle-button-pane) region)
   (declare (ignore region))
-  (let ((text (gadget-label pane))
-	(region (sheet-region pane))
-	(armed (slot-value pane 'armed)))
-    (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* region)
-      (setf x2 (- x2 x1 1)
-	    x1 1
-	    y2 (- y2 y1 1)
-	    y1 1)
-      (display-gadget-background pane x1 y1 x2 y2)
-      (if (or (gadget-value pane) (eql armed ':button-press))
-	  (draw-edges-lines* pane x2 y2 x1 y1)
-	  (draw-edges-lines* pane x1 y1 x2 y2))
-      (draw-text* pane text
-		     (round (- x2 x1) 2)
-		     (round (- y2 y1) 2)
-		     :align-x :center
-		     :align-y :center))))
+  (with-double-buffering (pane)
+    (let ((region (sheet-region pane))
+	  (armed (slot-value pane 'armed)))
+      (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* region)
+	(display-gadget-background pane (gadget-current-color pane) x1 y1 x2 y2)
+	(if (or (gadget-value pane) (eql armed ':button-press))
+	    (draw-edges-lines* pane (1- x2) (1- y2) x1 y1)
+	    (draw-edges-lines* pane x1 y1 (1- x2) (1- y2)))
+	(draw-text* pixmap (gadget-label pane)
+		    (round (- x2 x1) 2)
+		    (round (- y2 y1) 2)
+		    :align-x :center
+		    :align-y :center)))))
 
 
 ;;
@@ -445,23 +443,25 @@
 
 (defmethod repaint-sheet ((pane menu-button-pane) region)
   (declare (ignore region))
-  (let ((text (gadget-label pane))
-	(region (sheet-region pane)))
-    (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* region)
-      (let ((w (- x2 x1))
-	    (h (- y2 y1)))
-	(cond ((slot-value pane 'armed)
-	       (draw-rectangle* pane 0 0 w h
-				:ink (gadget-highlighted-color pane)
-				:filled t)
-	       (draw-edges-lines* pane (- w 2) (- h 2) 1 1))
-	      (t
-	       (draw-rectangle* pane 0 0 w h
-				:ink (gadget-normal-color pane)
-				:filled t)))
-	(draw-text* pane text (round w 2) (round h 2)
-		    :align-x :center
-		    :align-y :center)))))
+  (with-double-buffering (pane)
+    (let ((text (gadget-label pane))
+	  (region (sheet-region pane)))
+      (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* region)
+	(let ((w (- x2 x1))
+	      (h (- y2 y1)))
+	  (cond ((slot-value pane 'armed)
+		 (draw-rectangle* pane 0 0 w h
+				  :ink (gadget-highlighted-color pane)
+				  :filled t)
+		 (draw-edges-lines* pane (- w 2) (- h 2) 1 1))
+		(t
+		 (draw-rectangle* pane 0 0 w h
+				  :ink (gadget-normal-color pane)
+				  :filled t)))
+	  (draw-text* pane text (round w 2) (round h 2)
+		      :align-x :center
+		      :align-y :center))))))
+
 
 ;;
 ;; SCROLL-BAR gadget
@@ -570,20 +570,21 @@
 
 (defmethod window-refresh ((sb scroll-bar-pane))
   (with-bounding-rectangle* (minx miny maxx maxy) (sheet-region sb)
-    (draw-rectangle* sb minx miny maxx maxy :filled t :ink (medium-background sb))
-    (let ((width (- maxx minx))
-	  (height (- maxy miny)))
-      (if (eq (scrollbar-orientation sb) :vertical)
-	  (draw-rectangle* sb
-			   minx (+ miny (* height (scrollbar-offset sb)))
-			   maxx (+ miny (* height (scrollbar-offset sb))
-				   (* height (scrollbar-length sb)))
-			   :filled t )
-	(draw-rectangle* sb
-			 (+ minx (* width (scrollbar-offset sb))) miny
-			 (+ minx (* width (scrollbar-offset sb))
-			    (* width (scrollbar-length sb))) maxy
-			    :filled t :ink (medium-foreground sb))))))
+    (with-double-buffering (sb)
+      (draw-rectangle* sb minx miny maxx maxy :filled t :ink (medium-background sb))
+      (let ((width (- maxx minx))
+	    (height (- maxy miny)))
+	(if (eq (scrollbar-orientation sb) :vertical)
+	    (draw-rectangle* sb
+			     minx (+ miny (* height (scrollbar-offset sb)))
+			     maxx (+ miny (* height (scrollbar-offset sb))
+				     (* height (scrollbar-length sb)))
+			     :filled t )
+	    (draw-rectangle* sb
+			     (+ minx (* width (scrollbar-offset sb))) miny
+			     (+ minx (* width (scrollbar-offset sb))
+				(* width (scrollbar-length sb))) maxy
+				:filled t :ink (medium-foreground sb)))))))
 
 (defmethod handle-event ((sb scroll-bar-pane) (event window-repaint-event))
   (repaint-sheet sb nil))
@@ -700,8 +701,9 @@
   (let ((region (sheet-region pane))
 	(position (convert-value-to-position pane)))
     (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* region)
-      (display-gadget-background pane 0 0 (- x2 x1) (- y2 y1))
-      (orientation-dependent-draw pane position x1 x2 y1 y2))))
+      (with-double-buffering (pane)
+        (display-gadget-background pane 0 0 (- x2 x1) (- y2 y1))
+	(orientation-dependent-draw pane position x1 x2 y1 y2)))))
 
 (defmethod convert-value-to-position ((pane slider-pane))
   (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
@@ -771,12 +773,14 @@
 
 (defmethod repaint-sheet ((pane text-field-pane) region)
   (declare (ignore region))
-  (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
-    (draw-text* pane (gadget-value pane)
-		(round (- x2 x1))
-		(round (- y2 y1) 2)
-		:align-x :right
-		:align-y :center)))
+  (with-double-buffering (pane)
+    (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
+      (display-gadget-background pane (gadget-current-color pane) 0 0 (- x2 x1) (- y2 y1))
+      (draw-text* pane (gadget-value pane)
+		  (round (- x2 x1))
+		  (round (- y2 y1) 2)
+		  :align-x :right
+		  :align-y :center))))
 
 (defmethod (setf gadget-value) :after (value (pane text-field-pane) &key invoke-callback)
   (declare (ignore value invoke-callback))

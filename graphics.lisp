@@ -451,6 +451,23 @@
        (setf (sheet-medium sheet) old-medium))
      pixmap))
 
+(defmacro with-double-buffering ((sheet) &body body)
+  (let ((width (gensym))
+	(height (gensym))
+	(pixmap (gensym))
+	(sheet-mirror (gensym)))
+    `(let* ((,width (round (bounding-rectangle-width (sheet-region ,sheet))))
+	    (,height (round (bounding-rectangle-height (sheet-region ,sheet))))
+	    (,pixmap (allocate-pixmap ,sheet ,width ,height))
+	    (,sheet-mirror (sheet-direct-mirror ,sheet)))
+       (unwind-protect
+	   (progn
+	     (setf (sheet-direct-mirror ,sheet) (pixmap-mirror ,pixmap))
+	     ,@body
+	     (setf (sheet-direct-mirror ,sheet) ,sheet-mirror)
+	     (copy-from-pixmap ,pixmap 0 0 ,width ,height ,sheet 0 0))
+	 (deallocate-pixmap ,pixmap)))))
+
 
 ;;; Generic graphic operation methods
 

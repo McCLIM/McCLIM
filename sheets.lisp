@@ -528,6 +528,9 @@ sheet-supports-only-one-child error to be signalled."))
 (defmethod sheet-direct-mirror ((sheet mirrored-sheet))
   (port-lookup-mirror (port sheet) sheet))
 
+(defmethod (setf sheet-direct-mirror) (mirror (sheet mirrored-sheet))
+  (port-register-mirror (port sheet) sheet mirror))
+
 (defmethod sheet-mirrored-ancestor ((sheet mirrored-sheet))
   sheet)
 
