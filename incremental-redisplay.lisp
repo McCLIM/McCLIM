@@ -134,6 +134,15 @@ spatially organized data structure.
     (explode-map-hash map)
     (setf (tester-function map) :mismatch)))
 
+(defgeneric clear-map (map))
+
+(defmethod clear-map ((map updating-output-map-mixin))
+  (setf (id-map map) nil)
+  (setf (id-counter map) 0)
+  (setf (element-count map) 0))
+
+;;; Perhaps these should be generic functions, but in the name of premature
+;;; optimization they're not :)
 (defun get-from-map (map value test)
   (when (eq (tester-function map) 'none)
     (return-from get-from-map nil))
@@ -203,6 +212,9 @@ spatially organized data structure.
     (when deleted
       (decf (element-count map)))))
 
+;;; Reset the ID counter so that updating output records without explicit IDs
+;;; can be assigned one during a run of the code. I'm not sure about using
+;;; reinitialize-instance for this...
 (defmethod shared-initialize :after ((obj updating-output-map-mixin) slot-names
 				     &key)
   (declare (ignore slot-names))
@@ -235,6 +247,11 @@ spatially organized data structure.
     (values redisplayp (and (not (eq redisplayp :no-clear))
 			    (or (not (pane-incremental-redisplay pane))
 				(not *enable-updating-output*))))))
+
+(defmethod window-clear :after ((pane updating-output-stream-mixin))
+  "Get rid of any updating output records stored in the stream; they're gone
+  from the screen."
+  (clear-map pane))
 
 ;;; INCREMENTAL-DISPLAY takes as input the difference set computed by
 ;;; COMPUTE-DIFFERENCE-SET and updates the screen. The 5 kinds of updates are
@@ -385,6 +402,10 @@ that are children (but not necessarily direct) of this record.")
 updating-output-parent above this one in the tree.")
    ;; Results of (setf output-record-position) while updating
    (explicit-moves :accessor explicit-moves)
+   (old-bounds :accessor old-bounds
+	       :initform (make-bounding-rectangle 0.0d0 0.0d0 0.0d0 0.0d0)
+	       :documentation "Holds the old bounds of an updating output
+ record if that can no longer be determined from the old-children.")
    ;; on-screen state?
    ))
 
@@ -502,11 +523,14 @@ updating-output-parent above this one in the tree.")
 (defmethod compute-new-output-records ((record standard-updating-output-record)
 				       stream)
   (with-output-recording-options (stream :record t :draw nil)
-    (map-over-updating-output #'(lambda (r)
-				  (setf (old-children r) (sub-record r))
-				  (setf (output-record-dirty r) :updating))
-			      record
-			      nil)
+    (map-over-updating-output
+     #'(lambda (r)
+	 (setf (old-children r) (sub-record r))
+	 (setf (output-record-dirty r) :updating)
+	 (setf (rectangle-edges* (old-bounds r))
+	       (rectangle-edges* (sub-record r))))
+     record
+     nil)
     (finish-output stream)
     ;; Why is this binding here? We need the "environment" in this call that
     ;; computes the new records of an outer updating output record to resemble
@@ -542,45 +566,6 @@ updating-output-parent above this one in the tree.")
 (defgeneric find-child-output-record (record use-old-elements record-type
 				      &rest initargs
 				      &key unique-id unique-id-test))
-
-(defgeneric find-equal-display-record (root use-old-elements record))
-
-(defmethod find-equal-display-record ((root standard-updating-output-record)
-				      use-old-elements
-				      record)
-  (cond ((eq (output-record-dirty root) :clean)
-	 nil)
-	(use-old-elements
-	 (when (slot-boundp root 'old-children)
-	   (find-equal-display-record (old-children root)
-				      use-old-elements
-				      record)))
-	(t (find-equal-display-record (sub-record root)
-				      use-old-elements
-				      record))))
-
-(defmethod find-equal-display-record ((root compound-output-record)
-				      use-old-elements
-				      record)
-  (when (region-intersects-region-p root record)
-    (flet ((mapper (r)
-	     (let ((result (find-equal-display-record r
-						      use-old-elements
-						      record)))
-	       (when result
-		 (return-from find-equal-display-record result)))))
-      (declare (dynamic-extent #'mapper))
-      (map-over-output-records-overlapping-region #'mapper root record)))
-  nil)
-
-
-(defmethod find-equal-display-record ((root displayed-output-record)
-				      use-old-elements
-				      record)
-  (declare (ignore use-old-elements))
-  (if (output-record-equal root record)
-      root
-      nil))
 
 (defgeneric map-over-displayed-output-records
     (function root use-old-elements clean clip-region)
@@ -771,11 +756,12 @@ records. "))
 	 (visible-region (pane-viewport-region stream))
 	 (old-children (if (slot-boundp record 'old-children)
 			   (old-children record)
-			   nil)))
+			   nil))
+	 (old-bounds (old-bounds record)))
     (unless (or (null visible-region)
 		(region-intersects-region-p visible-region record)
 		(and old-children
-		     (region-intersects-region-p visible-region old-children)))
+		     (region-intersects-region-p visible-region old-bounds)))
       (return-from compute-difference-set (values nil nil nil nil nil)))
     ;; XXX This means that compute-difference-set can't be called repeatedly on
     ;; the same tree; ugh. On the other hand, if we don't clear explicit-moves,
