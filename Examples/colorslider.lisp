@@ -26,11 +26,12 @@
 ;; example gadget definition
 (defclass slider-test-pane (standard-gadget) ())
 
-(defmethod repaint-sheet ((pane slider-test-pane) region)
+(defmethod handle-repaint ((pane slider-test-pane) region)
   (declare (ignore region))
   (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
     (display-gadget-background pane (gadget-current-color pane) 0 0 (- x2 x1) (- y2 y1))))
 
+#+NIL
 (defmethod handle-event ((pane slider-test-pane) (event window-repaint-event))
   (declare (ignorable event))
   (dispatch-repaint pane (sheet-region pane)))
@@ -45,12 +46,14 @@
 
 (defmacro define-slider-callback (name position)
   `(defun ,(make-symbol name) (gadget value)
-     (let ((colored (third (sheet-siblings gadget))))
+     (let ((colored (find-if (lambda (x) (typep x 'climi::slider-test-pane))
+                             (sheet-siblings gadget))))
        (setf ,(case position (1 `(car *rgb*)) (2 `(cadr *rgb*)) (3 `(caddr *rgb*)))
 	     (/ value 10000)
 	     (clim-internals::gadget-current-color colored)
+             (print
 	       (apply #'clim-internals::make-named-color "our-color"
-		      (mapcar #'(lambda (color) (coerce color 'single-float)) *rgb*))))))
+		      (mapcar #'(lambda (color) (coerce color 'single-float)) *rgb*)))))))
 
 (defvar callback-red (define-slider-callback "SLIDER-R" 1))
 (defvar callback-green (define-slider-callback "SLIDER-G" 2))
@@ -123,3 +126,57 @@
                                       slider-b
                                       colored))))
   (:top-level (slidertest-frame-top-level . nil)))
+
+(define-application-frame colorslider
+    () ()
+    (:panes
+     (text    :text-field
+              :value "Pick a color"
+              ;;:height 50
+              ;;:width 100
+              )
+     (slider-r  :slider
+                :drag-callback callback-red
+                :value-changed-callback callback-red
+                :min-value 0
+                :max-value 9999
+                :value 0
+                :show-value-p t
+                :orientation :horizontal
+                :width 120)
+     (slider-g  :slider
+                :drag-callback callback-green
+                :value-changed-callback callback-green
+                :min-value 0
+                :max-value 9999
+                :orientation :horizontal
+                :value 0
+                :width 120)
+     (slider-b  :slider
+                :drag-callback callback-blue
+                :value-changed-callback callback-blue
+                :min-value 0
+                :max-value 9999
+                :orientation :horizontal
+                :value 0
+                :width 120)
+     (colored :slider-test
+              :normal +black+
+              :width 200 :height 90))
+    (:layouts
+     #+NIL
+     (default (vertically ()
+                text
+                (horizontally ()
+                  (vertically (:equalize-width t)
+                    (horizontally () (make-pane 'push-button :label "Red:") slider-r)
+                    (horizontally () (make-pane 'push-button :label "Green:") slider-g)
+                    (horizontally () (make-pane 'push-button :label "Blue:") slider-b))
+                  colored)))
+     (default (vertically ()
+                text
+                slider-r
+                slider-g
+                slider-b
+                colored)))
+    (:top-level (slidertest-frame-top-level . nil)))

@@ -31,6 +31,10 @@
   (setf (gadget-value (slot-value *application-frame* 'clim-demo::status))
 	string))
 
+(defmethod handle-event :around ((pane t) (event t))
+  (let ((*application-frame* (pane-frame pane)))
+    (call-next-method pane event)))
+
 (defmethod handle-event ((pane canvas-pane) (event pointer-button-press-event))
   (when (= (pointer-event-button event) +pointer-left-button+)
     (with-slots (first-point-x first-point-y canvas-pixmap) pane
@@ -45,7 +49,7 @@
 			  :ink clim-demo::current-color
                           :line-style clim-demo::line-style))))
 	(setf canvas-pixmap (allocate-pixmap pane pixmap-width pixmap-height))
-	(copy-to-pixmap pane 0 0 pixmap-width pixmap-height canvas-pixmap))))
+        (copy-to-pixmap pane 0 0 pixmap-width pixmap-height canvas-pixmap))))
   (when (= (pointer-event-button event) +pointer-right-button+)
     (with-slots (first-point-x first-point-y selected-object) pane
       (setq first-point-x (pointer-event-x event)

@@ -95,6 +95,7 @@
                             max-height min-height)
   `(make-pane 'push-button-pane
               :label ,label
+              :name ,label
               :activate-callback (let ((ap *application-frame*))
                                    (lambda (&rest xs)
                                      (let ((*application-frame* ap))
@@ -122,19 +123,42 @@
    (eight    (make-button "8" (queue-number 8)))
    (nine     (make-button "9" (queue-number 9)))
    (zero     (make-button "0" (queue-number 0)))
-   (screen   :text-field :value "0")
+   (screen   :text-field :value "0"
+             ;:background +black+
+             ;:foreground +white+
+             )
    (ac       (make-button "AC" #'initac :max-width 150))
    (ce       (make-button "CE" #'initce :max-width 150)))
 
   (:layouts
-   (defaults (vertically (:width 150 :height 310)
-	       screen
-	       (horizontally (:height 50) ac ce)
-	       (tabling ()
-		 (list one two plus)
-		 (list three four dash)
-		 (list five six multiply)
-		 (list seven eight divide)
-		 (list nine zero result)))))
+   #+NIL
+   (defaults 
+       (spacing (:thickness 10)
+         (vertically (:width '(16 :character) :equalize-width t);; (:width 150 :height 310)
+           screen
+           (horizontally (#|:height 50|#) ac ce)
+           (horizontally (:equalize-height t :background +green+)
+             (tabling (:background +red+)
+               (list one two three)
+               (list four five six )
+               (list seven eight nine)))
+           (vertically (:background +blue+)
+             plus dash multiply divide result))
+         (horizontally ()
+           (1/2 zero))))
+             
+
+   (defaults 
+       (progn 
+         (vertically (:width 140 :equalize-width t);; (:width 150 :height 310)
+           (labelling (:label "screen")
+             screen)
+           (horizontally (#|:height 50|# :name "ACCE" :equalize-height t) ac ce)
+           (tabling ()
+             (list one two plus)
+             (list three four dash)
+             (list five six multiply)
+             (list seven eight divide)
+             (list nine zero result))))))
   (:top-level (calculator-frame-top-level . nil)))
 
