@@ -117,9 +117,15 @@
 			    :height 200
 			    :max-height 200)))
 
+(defun set-width-and-height (rectangular-sheet width height)
+  (multiple-value-bind (x1 y1)
+      (rectangle-edges* (sheet-region rectangular-sheet))
+    (setf (sheet-region rectangular-sheet)
+	  (make-rectangle* x1 y1 (+ x1 width) (+ y1 height)))))
+
+;;; FIXME: this should be done for each type of pane
 (defmethod allocate-space ((pane pane) width height)
-  (setf (sheet-region pane)
-	(make-bounding-rectangle 0 0 width height)))
+  (set-width-and-height pane width height))
 
 (defmethod change-space-requirements ((pane pane) &rest rest)
   (declare (ignore rest))
@@ -174,6 +180,7 @@
 (defmethod ask-space-children ((composite composite-pane))
   (mapcar #'compose-space (sheet-children composite)))
 
+;;; FIXME: this one shoud be removed
 (defmethod compute-space ((composite composite-pane))
   (let ((space (make-space-requirement)))
     (loop for child in (sheet-children composite)
@@ -192,20 +199,6 @@
 			  (space-requirement-min-height request))))
     (setf (pane-space-requirement composite) space)
     space))
-
-(defmethod allocate-space ((box composite-pane) width height)
-  (let ((h-percent (/ width (space-requirement-width (pane-space-requirement box))))
-	(v-percent (/ height (space-requirement-height (pane-space-requirement box))))
-	(y 0))
-    (loop for child in (sheet-children box)
-	for request = (pane-space-requirement child)
-	for new-width = (floor (* h-percent (space-requirement-width request)))
-	for new-height = (floor (* v-percent (space-requirement-height request)))
-	do (progn (setf (sheet-region child)
-			(make-bounding-rectangle 0 y new-width (+ y new-height)))
-		  (allocate-space child new-width new-height)
-		  (incf y new-height)))))
-
 
 (defmacro changing-space-requirement (&body body &key resize-frame)
   `(progn
@@ -250,9 +243,8 @@
   ()
   (:documentation "For the first pane in the architecture"))
 
-(defclass unmanaged-top-level-sheet-pane (top-level-sheet-pane)
-  ()
-  (:documentation "Top-level sheet without window manager intervention"))
+(defmethod allocate-space ((pane top-level-sheet-pane) width height)
+  (allocate-space (car (sheet-children pane)) width height))
 
 (defmethod dispatch-event ((pane top-level-sheet-pane) event)
   (handle-event pane event))
@@ -262,12 +254,17 @@
 	(y (window-configuration-event-y event))
 	(width (window-configuration-event-width event))
         (height (window-configuration-event-height event)))
-    ;; avoid goint into an infinite loop by not using (setf sheet-region)
+    ;; avoid goint into an infinite loop by not using (setf sheet-transformation)
     (setf (slot-value pane 'transformation)
 	  (make-translation-transformation x y))
+    ;; avoid goint into an infinite loop by not using (setf sheet-region)
     (setf (slot-value pane 'region)
 	  (make-bounding-rectangle 0 0 width height))
     (allocate-space pane width height)))
+
+(defclass unmanaged-top-level-sheet-pane (top-level-sheet-pane)
+  ()
+  (:documentation "Top-level sheet without window manager intervention"))
 
 ;; SHEET 
 
@@ -312,7 +309,7 @@
     space))
 
 (defmethod allocate-space ((box hbox-pane) width height)
-  (setf (sheet-region box) (make-bounding-rectangle 0 0 width height))
+  (set-width-and-height box width height)
   (let ((h-percent (/ width (space-requirement-width (pane-space-requirement box))))
 	(v-percent (/ height (space-requirement-height (pane-space-requirement box))))
 	(x 0))
@@ -365,7 +362,7 @@
     space))
 
 (defmethod allocate-space ((box vbox-pane) width height)
-  (setf (sheet-region box) (make-bounding-rectangle 0 0 width height))
+  (set-width-and-height box width height)
   (let ((h-percent (/ width (space-requirement-width (pane-space-requirement box))))
 	(v-percent (/ height (space-requirement-height (pane-space-requirement box))))
 	(y 0))
@@ -410,7 +407,7 @@
     space))
 
 (defmethod allocate-space ((rack hrack-pane) width height)
-  (setf (sheet-region rack) (make-bounding-rectangle 0 0 width height))
+  (set-width-and-height rack width height)
   (let ((h-percent (/ width (space-requirement-width (pane-space-requirement rack))))
 	(x 0))
     (loop for child in (sheet-children rack)
@@ -453,7 +450,7 @@
     space))
 
 (defmethod allocate-space ((rack vrack-pane) width height)
-  (setf (sheet-region rack) (make-bounding-rectangle 0 0 width height))
+  (set-width-and-height rack width height)
   (let ((v-percent (/ height (space-requirement-height (pane-space-requirement rack))))
 	(y 0))
     (loop for child in (sheet-children rack)
@@ -539,7 +536,7 @@
      (mapcar #'(lambda (l) (reduce #'max l)) height-requests))))
 
 (defmethod allocate-space ((table table-pane) width height)
-  (setf (sheet-region table) (make-bounding-rectangle 0 0 width height))
+  (set-width-and-height table width height)
   (let ((h-percent (/ width (space-requirement-width (pane-space-requirement table))))
         (v-percent (/ height (space-requirement-height (pane-space-requirement table))))
         (table-cell-sizes (find-collums-and-rows-size table))
@@ -587,7 +584,7 @@
 
 
 (defmethod allocate-space ((grid grid-pane) width height)
-  (setf (sheet-region grid) (make-bounding-rectangle 0 0 width height))
+  (set-width-and-height grid width height)
   (let* ((new-height (/ height (/ (length (sheet-children grid)) (table-pane-number grid))))
 	 (new-width (/ width (table-pane-number grid)))
 	 (contents (format-children (sheet-children grid) (table-pane-number grid)))
@@ -639,7 +636,7 @@
 
 ;;; FIXME: I don't see how this one could possibly work
 (defmethod allocate-space ((spacer spacer-pane) width height)
-  (setf (sheet-region spacer) (make-bounding-rectangle 0 0 width height))
+  (set-width-and-height spacer width height)
   (let* ((h-percent (/ width (space-requirement-width (pane-space-requirement spacer))))
 	 (v-percent (/ height (space-requirement-height (pane-space-requirement spacer))))
 	 (child (first (sheet-children spacer)))
