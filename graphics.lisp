@@ -446,7 +446,7 @@
 		   &rest args
 		   &key (start 0) (end nil)
 			(align-x :left) (align-y :baseline)
-			(towards-point nil towards-point-p)
+			(toward-point nil toward-point-p)
 		        transform-glyphs
 			ink clipping-region transformation
 			text-style text-family text-face text-size)
@@ -454,20 +454,20 @@
 		   text-style text-family text-face text-size))
   (with-medium-options (sheet args)
     (multiple-value-bind (x y) (point-position point)
-      (multiple-value-bind (towards-x towards-y)
-	  (if towards-point-p
-	      (point-position towards-point)
+      (multiple-value-bind (toward-x toward-y)
+	  (if toward-point-p
+	      (point-position toward-point)
 	      (values (1+ x) y))
         (medium-draw-text* medium string x y
                            start end
                            align-x align-y
-                           towards-x towards-y transform-glyphs)))))
+                           toward-x toward-y transform-glyphs)))))
 
 (defun draw-text* (sheet string x y
 		   &rest args
 		   &key (start 0) (end nil)
 			(align-x :left) (align-y :baseline)
-			(towards-x (1+ x)) (towards-y y) transform-glyphs
+			(toward-x (1+ x)) (toward-y y) transform-glyphs
 			ink clipping-region transformation
 			text-style text-family text-face text-size)
   (declare (ignore ink clipping-region transformation
@@ -476,13 +476,13 @@
     (medium-draw-text* medium string x y
 		       start end
 		       align-x align-y
-		       towards-x towards-y transform-glyphs)))
+		       toward-x toward-y transform-glyphs)))
 
 ;; This function belong to the extensions package.
 (defun draw-glyph (sheet string x y
 		   &rest args
 		   &key (align-x :left) (align-y :baseline)
-			towards-x towards-y transform-glyphs
+			toward-x toward-y transform-glyphs
 			ink clipping-region transformation
 			text-style text-family text-face text-size)
 " Draws a single character of filled text represented by the given element. 
@@ -493,7 +493,7 @@
   (with-medium-options (sheet args)
     (medium-draw-glyph medium string x y
 		       align-x align-y
-		       towards-x towards-y transform-glyphs)))
+		       toward-x toward-y transform-glyphs)))
 
 (defun draw-arrow (sheet point-1 point-2
 		   &rest args
