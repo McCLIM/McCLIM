@@ -32,8 +32,26 @@
 ;;; (exported) generic functions here? --GB
 ;;;
 ;;; YES!  -- CSR
+;;; We'll get right on it :) -- moore
+;;; Whose numbers are we using here?
+
+;;; 3.2.1
 (defgeneric point-x (point))
 (defgeneric point-y (point))
+
+;;; 3.2.4.1
+
+(defgeneric rectangle-edges* (rectangle))
+(defgeneric rectangle-min-point (rectangle))
+(defgeneric rectangle-max-point (rectangle))
+(defgeneric rectangle-min-x (rectangle))
+(defgeneric rectangle-min-y (rectangle))
+(defgeneric rectangle-max-x (rectangle))
+(defgeneric rectangle-max-y (rectangle))
+(defgeneric rectangle-width (rectangle))
+(defgeneric rectangle-height (rectangle))
+(defgeneric rectangle-size (rectangle))
+
 
 (defgeneric transform-region (transformation region))
 

@@ -158,13 +158,19 @@
       (incf (baseline record) (- ny y)))))
 
 (defmethod (setf width) :after (width (line screen-line))
-  (setf (slot-value line 'climi::x2) (+ (slot-value line 'climi::x1) width)))
+  (climi::with-standard-rectangle* (:x1 x1 :y1 y1 :y2 y2)
+      line
+    (setf (rectangle-edges* line) (values x1 y1 (+ x1 width) y2))))
 
 (defmethod (setf ascent) :after (ascent (line screen-line))
-  (setf (slot-value line 'climi::y2) (+ (slot-value line 'climi::y1) ascent)))
+    (climi::with-standard-rectangle* (:x1 x1 :y1 y1 :x2 x2)
+	line
+      (setf (rectangle-edges* line) (values x1 y1 x2 (+ y1 ascent)))))
 
 (defmethod (setf descent) :after (descent (line screen-line))
-  (setf (slot-value line 'climi::y2) (+ (slot-value line 'climi::y1) descent)))
+  (climi::with-standard-rectangle* (:x1 x1 :y1 y1 :x2 x2)
+      line
+    (setf (rectangle-edges* line) (values x1 y1 x2 (+ y1 descent)))))
 
 (defun line-contents-sans-newline (buffer-line &key destination)
   (let* ((contents-size (line-last-point buffer-line)))
@@ -208,10 +214,9 @@
       (setf (slot-value obj 'climi::y2) (+ y (ascent obj) (descent obj)))
       (setf (baseline obj) (+ y (ascent obj))))))
 
-(defmethod map-over-output-records (function (record screen-line)
-				    &optional (x-offset 0) (y-offset 0)
-				    &rest function-args)
-  (declare (ignore function x-offset y-offset function-args))
+(defmethod climi::map-over-output-records-1 (function (record screen-line)
+				      function-args)
+  (declare (ignore function function-args))
   nil)
 
 (defmethod map-over-output-records-overlapping-region
@@ -279,13 +284,16 @@
 (defmethod clear-output-record ((record simple-screen-area))
   (error "clear-output-record shouldn't be called on simple-screen-area"))
 
-(defmethod map-over-output-records (function (record simple-screen-area)
-				    &optional (x-offset 0) (y-offset 0)
-				    &rest function-args)
+(defmethod climi::map-over-output-records-1 (function (record simple-screen-area)
+				      function-args)
   (declare (ignore x-offset y-offset))
-  (loop for line = (area-first-line record) then (next line)
+  (if function-args
+      (loop for line = (area-first-line record) then (next line)
+	 while line
+	 do (apply function line function-args))
+      (loop for line = (area-first-line record) then (next line)
 	while line
-	do (apply function line function-args)))
+	do (funcall function line))))
 
 ;;; Since lines don't overlap, we can use the same order for
 ;;; map-over-output-records-containing-position and

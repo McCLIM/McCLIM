@@ -4,7 +4,7 @@
 ;;;   Created: 1998-12-02 19:26
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: regions.lisp,v 1.28 2004/03/24 09:30:29 moore Exp $
+;;;       $Id: regions.lisp,v 1.29 2005/02/11 09:10:37 tmoore Exp $
 ;;; --------------------------------------------------------------------------------------
 ;;;  (c) copyright 1998,1999,2001 by Gilbert Baumann
 ;;;  (c) copyright 2001 by Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
@@ -366,10 +366,42 @@
 ;;     rectangle-edges*
 
 (defclass standard-rectangle (rectangle)
-  ((x1 :type coordinate :initarg :x1)
-   (y1 :type coordinate :initarg :y1)
-   (x2 :type coordinate :initarg :x2)
-   (y2 :type coordinate :initarg :y2)))
+  ((coordinates :initform (make-array 4 :element-type 'coordinate))))
+
+(defmethod initialize-instance :after ((obj standard-rectangle)
+				       &key (x1 0.0d0) (y1 0.0d0)
+				       (x2 0.0d0) (y2 0.0d0))
+  (let ((coords (slot-value obj 'coordinates)))
+    (setf (aref coords 0) x1)
+    (setf (aref coords 1) y1)
+    (setf (aref coords 2) x2)
+    (setf (aref coords 3) y2)))
+
+(defmacro with-standard-rectangle ((x1 y1 x2 y2) rectangle &body body)
+  (with-gensyms (coords)
+    `(let ((,coords (slot-value ,rectangle 'coordinates)))
+       (declare (type (array coordinate 4) ,coords))
+       (let ((,x1 (aref ,coords 0))
+	     (,y1 (aref ,coords 1))
+	     (,x2 (aref ,coords 2))
+	     (,y2 (aref ,coords 3)))
+	 (declare (type coordinate ,x1 ,y1 ,x2 ,y2))
+	 ,@body))))
+
+(defmacro with-standard-rectangle* ((&key x1 y1 x2 y2) rectangle &body body)
+  (with-gensyms (coords)
+    `(let ((,coords (slot-value ,rectangle 'coordinates)))
+       (declare (type (array coordinate 4) ,coords))
+       (let (,@(and x1 `((,x1 (aref ,coords 0))))
+	     ,@(and y1 `((,y1 (aref ,coords 1))))
+	     ,@(and x2 `((,x2 (aref ,coords 2))))
+	     ,@(and y2 `((,y2 (aref ,coords 3)))))
+	 (declare (type coordinate
+			,@(and x1 `(,x1))
+			,@(and y1 `(,y1))
+			,@(and x2 `(,x2))
+			,@(and y2 `(,y2))))
+	 ,@body))))
 
 (defun make-rectangle (point1 point2)
   (make-rectangle* (point-x point1) (point-y point1) (point-x point2) (point-y point2)))
@@ -378,19 +410,39 @@
   (psetq x1 (coerce (min x1 x2) 'coordinate)
          x2 (coerce (max x1 x2) 'coordinate)
          y1 (coerce (min y1 y2) 'coordinate)
-         y2 (coerce (max y1 y2) 'coordinate))
+	 y2 (coerce (max y1 y2) 'coordinate))
   (if (or (coordinate= x1 x2)
           (coordinate= y1 y2))
       +nowhere+
     (make-instance 'standard-rectangle :x1 x1 :x2 x2 :y1 y1 :y2 y2)))
 
 (defmethod rectangle-edges* ((rect standard-rectangle))
-  (with-slots (x1 y1 x2 y2) rect
+  (with-standard-rectangle (x1 y1 x2 y2)
+      rect
     (values x1 y1 x2 y2)))
+
+;;; standard-rectangles are immutable and all that, but we still need to set
+;;; their positions and dimensions (in output recording)
+(defgeneric* (setf rectangle-edges*) (x1 y1 x2 y2 rectangle))
+
+(defmethod* (setf rectangle-edges*)
+  (x1 y1 x2 y2 (rectangle standard-rectangle))
+  (let ((coords (slot-value rectangle 'coordinates)))
+    (declare (type (array coordinate 4) coords))
+    (setf (aref coords 0) x1)
+    (setf (aref coords 1) y1)
+    (setf (aref coords 2) x2)
+    (setf (aref coords 3) y2))
+  (values x1 y1 x2 y2))
 
 (defmethod rectangle-min-point ((rect rectangle))
   (multiple-value-bind (x1 y1 x2 y2) (rectangle-edges* rect)
     (declare (ignore x2 y2))
+    (make-point x1 y1)))
+
+(defmethod rectangle-min-point ((rect standard-rectangle))
+  (with-standard-rectangle* (:x1 x1 :y1 y1)
+      rect
     (make-point x1 y1)))
 
 (defmethod rectangle-max-point ((rect rectangle))
@@ -398,21 +450,52 @@
     (declare (ignore x1 y1))
     (make-point x2 y2)))
 
+(defmethod rectangle-max-point ((rect standard-rectangle))
+  (with-standard-rectangle* (:x2 x2 :y2 y2)
+      rect
+    (make-point x2 y2)))
+
 (defmethod rectangle-min-x ((rect rectangle))
   (nth-value 0 (rectangle-edges* rect)))
+
+(defmethod rectangle-min-x ((rect standard-rectangle))
+  (with-standard-rectangle* (:x1 x1)
+      rect
+    x1))
 
 (defmethod rectangle-min-y ((rect rectangle))
   (nth-value 1 (rectangle-edges* rect)))
 
+(defmethod rectangle-min-y ((rect standard-rectangle))
+  (with-standard-rectangle* (:y1 y1)
+      rect
+    y1))
+
+
 (defmethod rectangle-max-x ((rect rectangle))
   (nth-value 2 (rectangle-edges* rect)))
+
+(defmethod rectangle-max-x ((rect standard-rectangle))
+  (with-standard-rectangle* (:x2 x2)
+      rect
+    x2))
 
 (defmethod rectangle-max-y ((rect rectangle))
   (nth-value 3 (rectangle-edges* rect)))
 
+(defmethod rectangle-max-y ((rect standard-rectangle))
+  (with-standard-rectangle* (:y2 y2)
+      rect
+    y2))
+
 (defmethod rectangle-width ((rect rectangle))
   (multiple-value-bind (x1 y1 x2 y2) (rectangle-edges* rect)
     (declare (ignore y1 y2))
+    (- x2 x1)))
+
+(defmethod rectangle-width ((rect standard-rectangle))
+  (with-standard-rectangle* (:x1 x1 :x2 x2)
+      rect
     (- x2 x1)))
 
 (defmethod rectangle-height ((rect rectangle))
@@ -420,28 +503,42 @@
     (declare (ignore x1 x2))
     (- y2 y1)))
 
+(defmethod rectangle-height ((rect standard-rectangle))
+  (with-standard-rectangle* (:y1 y1 :y2 y2)
+      rect
+    (- y2 y1)))
+
 (defmethod rectangle-size ((rect rectangle))
   (multiple-value-bind (x1 y1 x2 y2) (rectangle-edges* rect)
+    (values (- x2 x1) (- y2 y1))))
+
+(defmethod rectangle-size ((rect standard-rectangle))
+  (with-standard-rectangle (x1 y1 x2 y2)
+      rect
     (values (- x2 x1) (- y2 y1))))
 
 ;; polyline/polygon protocol for standard-rectangle's
 
 (defmethod polygon-points ((rect standard-rectangle))
-  (with-slots (x1 y1 x2 y2) rect
+  (with-standard-rectangle (x1 y1 x2 y2)
+      rect
     (list (make-point x1 y1)
           (make-point x1 y2)
           (make-point x2 y2)
           (make-point x2 y1))))
 
+
 (defmethod map-over-polygon-coordinates (fun (rect standard-rectangle))
-  (with-slots (x1 y1 x2 y2) rect
+  (with-standard-rectangle (x1 y1 x2 y2)
+      rect
     (funcall fun x1 y1)
     (funcall fun x1 y2)
     (funcall fun x2 y2)
     (funcall fun x2 y1)))
 
 (defmethod map-over-polygon-segments (fun (rect standard-rectangle))
-  (with-slots (x1 y1 x2 y2) rect
+  (with-standard-rectangle (x1 y1 x2 y2)
+      rect
     (funcall fun x1 y1 x1 y2)
     (funcall fun x1 y2 x2 y2)
     (funcall fun x2 y2 x2 y1)
@@ -449,7 +546,8 @@
 
 (defmethod transform-region (transformation (rect standard-rectangle))
   (cond ((rectilinear-transformation-p transformation)
-         (with-slots (x1 y1 x2 y2) rect
+	 (with-standard-rectangle (x1 y1 x2 y2)
+	       rect
            (multiple-value-bind (x1* y1*) (transform-position transformation x1 y1)
              (multiple-value-bind (x2* y2*) (transform-position transformation x2 y2)
                (make-rectangle* x1* y1* x2* y2*)))))
@@ -458,7 +556,8 @@
                                (polygon-points rect)))) ))
 
 (defmethod region-contains-position-p ((self standard-rectangle) x y)
-  (multiple-value-bind (x1 y1 x2 y2) (rectangle-edges* self)
+  (with-standard-rectangle (x1 y1 x2 y2)
+      self
     (and (<= x1 (coerce x 'coordinate) x2)
          (<= y1 (coerce y 'coordinate) y2))))
 
@@ -2142,7 +2241,8 @@
     (values (min x1 x2) (min y1 y2) (max x1 x2) (max y1 y2))))
 
 (defmethod bounding-rectangle* ((a standard-rectangle))
-  (with-slots (x1 y1 x2 y2) a
+  (with-standard-rectangle (x1 y1 x2 y2)
+      a
     (values x1 y1 x2 y2)))
 
 (defmethod bounding-rectangle* ((self standard-rectangle-set))
@@ -2235,11 +2335,11 @@
 
 (defmethod set-bounding-rectangle-position ((self standard-rectangle) x y)
   ;;(error "DO NOT CALL ME")
-  (with-slots (x1 y1 x2 y2) self
-    (setq x2 (+ x (- x2 x1))
-	  y2 (+ y (- y2 y1))
-	  x1 x
-	  y1 y)))
+  ;;Yes, but... output records are based on rectangles
+  (with-standard-rectangle (x1 y1 x2 y2)
+      self
+    (setf (rectangle-edges* self)
+	  (values x y (+ x (- x2 x1)) (+ y (- y2 y1))))))
 
 (defmethod bounding-rectangle-min-x ((self bounding-rectangle)) 
   (nth-value 0 (bounding-rectangle* self)))
@@ -2271,11 +2371,9 @@
 
 (defmethod print-object ((self standard-rectangle) stream)
   (print-unreadable-object (self stream :type t :identity t)
-    (if (slot-boundp self 'x1)
-	(with-slots (x1 y1 x2 y2) self
-	  (format stream "X ~S:~S Y ~S:~S" x1 x2 y1 y2))
-      (format stream "X 0:0 Y 0:0"))))
-
+    (with-standard-rectangle (x1 y1 x2 y2)
+      self
+      (format stream "X ~S:~S Y ~S:~S" x1 x2 y1 y2))))
 
 ;;;;
 
