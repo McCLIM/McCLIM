@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.122 2003/06/22 00:07:20 hefner1 Exp $
+;;; $Id: panes.lisp,v 1.123 2003/07/15 04:16:18 hefner1 Exp $
 
 (in-package :clim-internals)
 
@@ -1853,7 +1853,7 @@
 ;;;; Accounting for changed space requirements
 
 (defmethod change-space-requirements ((pane clim-extensions:viewport-pane) &rest ignore)
-  (declare (ignore client))
+  (declare (ignore ignore))  
   (let ((client (first (sheet-children pane))))
     (resize-sheet client (max (bounding-rectangle-width pane)
                               (space-requirement-width (compose-space client)))
@@ -2364,7 +2364,7 @@
 (define-application-frame a-window-stream (standard-encapsulating-stream
                                            standard-extended-input-stream
                                            fundamental-character-output-stream
-                                           application-frame)
+                                           standard-application-frame)
   ((stream))
   (:panes
    (io
@@ -2405,18 +2405,36 @@
                       initial-cursor-visibility
                       text-margin
                       save-under
-                      input-buffer
                       scroll-bars
                       borders
                       label))
   (setf port (or port (find-port)))
   (let* ((fm (find-frame-manager :port port))
-         (fr (make-application-frame 'a-window-stream
-                                     :frame-manager fm)))
-    (with-look-and-feel-realization (fm fr))
-    fr))
+         (frame (make-application-frame 'a-window-stream
+                                        :frame-event-queue input-buffer
+                                        :frame-manager fm)))
+    ;; Adopt and enable the pane
+    (when (eq (frame-state frame) :disowned)
+      (adopt-frame fm frame))
+    (unless (or (eq (frame-state frame) :enabled)
+		(eq (frame-state frame) :shrunk))
+      (enable-frame frame))
+    ;; Start a new thread to run the event loop, if necessary.
+    (unless input-buffer
+      (clim-sys:make-process (lambda () (let ((*application-frame* frame))
+                                          (standalone-event-loop)))))
+    frame))
 
-
+(defun standalone-event-loop ()
+  "An simple event loop for applications that want all events to be handled by
+ handle-event methods, which also handles FRAME-EXIT."
+  (let ((frame *application-frame*))
+    (handler-case 
+        (let ((queue (frame-event-queue frame)))
+          (loop for event = (event-queue-read queue)
+            ;; EVENT-QUEUE-READ in single-process mode calls PROCESS-NEXT-EVENT itself.
+            do (handle-event (event-sheet event) event)))
+      (frame-exit () (disown-frame (frame-manager frame) frame)))))
 
 ;;; These below were just hot fixes, are there still needed? Are even
 ;;; half-way correct? --GB

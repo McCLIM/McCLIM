@@ -172,6 +172,8 @@ FRAME-EXIT condition."))
 
 (defclass standard-application-frame (application-frame)
   ((event-queue :initarg :frame-event-queue
+                :initarg :input-buffer
+                :initform nil
 		:accessor frame-event-queue
 		:documentation "The event queue that, by default, will be
   shared by all panes in the stream")
@@ -183,12 +185,9 @@ FRAME-EXIT condition."))
 ;;; Support the :input-buffer initarg for compatibility with "real CLIM"
 
 (defmethod initialize-instance :after ((obj standard-application-frame)
-				       &key (input-buffer nil input-buffer-p))
-  (cond (input-buffer-p
-	 (setf (frame-event-queue obj) input-buffer))
-	((not (slot-boundp obj 'event-queue))
-	 (setf (frame-event-queue obj) (make-instance 'standard-event-queue)))
-	(t nil)))
+                                       &key &allow-other-keys)  
+  (unless (frame-event-queue obj)
+    (setf (frame-event-queue obj) (make-instance 'standard-event-queue))))
 
 
 (defmethod (setf frame-manager) (fm (frame application-frame))
@@ -297,8 +296,20 @@ FRAME-EXIT condition."))
 (define-condition frame-exit (condition)
   ((frame :initarg :frame :reader %frame-exit-frame)))
 
+;; I make the assumption here that the contents of *application-frame* is
+;; the frame the top-level loop is running. With the introduction of
+;; window-stream frames that may be sharing the event queue with the main
+;; application frame, we need to discriminate between them here to avoid
+;; shutting down the application at the wrong time.
+;; ...
+;; A better way to do this would be to make the handler bound in
+;; run-frame-top-level check whether the frame signalled is the one
+;; it was invoked on..                    -- Hefner
+
 (defmethod frame-exit ((frame standard-application-frame))
-  (signal 'frame-exit :frame frame))
+  (if (eq *application-frame* frame)
+      (signal 'frame-exit :frame frame)
+    (disown-frame (frame-manager frame) frame)))
 
 (defmethod frame-exit-frame ((c frame-exit))
   (%frame-exit-frame c))
@@ -331,7 +342,7 @@ FRAME-EXIT condition."))
     (let ((query-io (frame-query-io frame)))
       (unwind-protect
 	   (if query-io
-	       (with-input-focus (query-io)
+	       (with-input-focus (query-io)                                 
 		 (call-next-method))
 	       (call-next-method))
 	(case original-state
