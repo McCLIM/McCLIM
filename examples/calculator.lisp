@@ -84,82 +84,35 @@
 		 (frame-panes frame)))
   (loop (event-read (frame-pane frame))))
      
+(defun make-button (label operator)
+  (make-pane 'push-button-pane
+	     :label label
+	     :activate-callback operator
+	     :width 50 :height 50))
+
 (define-application-frame calculator ()
   ((text-field :initform nil)
    (state :initform (list 0)))
   (:panes
-   (plus             :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)
-		     :label "+"
-		     :activate-callback (queue-operator #'+))
-   (dash             :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)
-		     :label "-"
-		     :activate-callback (queue-operator #'-))
-   (multiplicate     :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)
-		     :label "*"
-		     :activate-callback (queue-operator #'*))
-   (divide           :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)
-		     :label "/"
-		     :activate-callback (queue-operator #'round))
-   (result           :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)
-		     :label "="
-		     :activate-callback #'do-operation)
-   (one              :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)
-		     :label "1"
-		     :activate-callback (queue-number 1))
-   (two              :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)
-		     :label "2"
-		     :activate-callback (queue-number 2))
-   (three            :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)
-		     :label "3"
-		     :activate-callback (queue-number 3))
-   (four             :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)
-		     :label "4"
-		     :activate-callback (queue-number 4))
-   (five             :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)
-		     :label "5"
-		     :activate-callback (queue-number 5))
-   (six              :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)
-		     :label "6"
-		     :activate-callback (queue-number 6))
-   (seven            :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)
-		     :label "7"
-		     :activate-callback (queue-number 7))
-   (eight            :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)
-		     :label "8"
-		     :activate-callback (queue-number 8))
-   (nine             :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)
-		     :label "9"
-		     :activate-callback (queue-number 9))
-   (zero             :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)
-		     :label "0"
-		     :activate-callback (queue-number 0))
-  (screen            :text-field
-		     :value "0"
-		     :space-requirement (make-space-requirement :width 200 :height 50))
-  (ac                :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)
-		     :label "AC"
-		     :activate-callback #'initac)
-  (ce                :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)
-		     :label "CE"
-		     :activate-callback #'initce))
-  
+   (plus     (make-button "+" (queue-operator #'+)))
+   (dash     (make-button "-" (queue-operator #'-)))
+   (multiply (make-button "*" (queue-operator #'*)))
+   (divide   (make-button "/" (queue-operator #'round)))
+   (result   (make-button "=" #'do-operation))
+   (one      (make-button "1" (queue-number 1)))
+   (two      (make-button "2" (queue-number  2)))
+   (three    (make-button "3" (queue-number  3)))
+   (four     (make-button "4" (queue-number  4)))
+   (five     (make-button "5" (queue-number  5)))
+   (six      (make-button "6" (queue-number  6)))
+   (seven    (make-button "7" (queue-number  7)))
+   (eight    (make-button "8" (queue-number  8)))
+   (nine     (make-button "9" (queue-number  9)))
+   (zero     (make-button "0" (queue-number  0)))
+   (screen   :text-field :value "0" :width 200 :height 50)
+   (ac       (make-button "AC" #'initac))
+   (ce       (make-button "CE" #'initce)))
+
   (:layouts
    (defaults (vertically ()
 	       screen
@@ -167,7 +120,7 @@
 	       (tabling ()
 		 (list one two plus)
 		 (list three four dash)
-		 (list five six multiplicate)
+		 (list five six multiply)
 		 (list seven eight divide)
 		 (list nine zero result)))))
   (:top-level (calculator-frame-top-level . nil)))
