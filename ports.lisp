@@ -39,7 +39,7 @@ returns a list in CLIM X11 format (:x11 :host host-name :display-id display-numb
   #+excl (sys:getenv string)
   #+cmu (cdr (assoc string ext:*environment-list* :test #'string=))
   #+clisp (sys::getenv (string string))
-  #+sbcl (sb-ext::getenv string)
+  #+sbcl (sb-ext::posix-getenv string)
   #-(or excl cmu clisp sbcl) (error "GET-ENVIRONMENT-VARIABLE not implemented")))
 		
 (defvar *default-server-path*
