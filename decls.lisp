@@ -139,7 +139,8 @@
 (defgeneric compose-space (pane &key width height))
 (defgeneric allocate-space (pane width height))
 (defgeneric change-space-requirements
-    (pane &rest space-req-keys &key resize-frame))
+    (pane &rest space-req-keys &key resize-frame width height
+          min-width min-height max-width max-height))
 (defgeneric note-space-requirements-changed (sheet pane))
 ;; changing-space-requirements (&key resize-frame layout) &body body [Macro]
 
