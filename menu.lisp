@@ -233,7 +233,8 @@
 ;; MENU-BAR
 ;;
 
-(defclass menu-bar (hrack-pane)
+(defclass menu-bar (hrack-pane
+                    permanent-medium-sheet-output-mixin)
   ((items :initform nil)
    (armed :initform nil)))
 
