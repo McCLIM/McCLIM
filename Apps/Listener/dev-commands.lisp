@@ -428,7 +428,9 @@
 (defun x-specializer-direct-generic-functions (specializer)
   #+PCL (pcl::specializer-direct-generic-functions specializer)
   #+SBCL (sb-pcl::specializer-direct-generic-functions specializer)
-  #-(or PCL SBCL)
+  #+openmcl-partial-mop
+  (openmcl-mop:specializer-direct-generic-functions specializer)
+  #-(or PCL SBCL openmcl-partial-mop)
   (error "Sorry, not supported in your CL implementation. See the function X-SPECIALIZER-DIRECT-GENERIC-FUNCTION if you're interested in fixing this."))
 
 (defun class-funcs (class)

@@ -52,7 +52,7 @@
 ;;; helper functions in order to avoid putting all of presentations.lisp
 ;;; inside a (eval-when (compile) ...).
 
-(define-presentation-generic-function  %presentation-typep presentation-typep
+(define-presentation-generic-function %presentation-typep presentation-typep
   (type-key parameters object type))
 
 (define-default-presentation-method presentation-typep (object type)
@@ -1209,7 +1209,7 @@
 (define-presentation-method presentation-typep (object (type completion))
   (map nil #'(lambda (obj)
 	       (when (funcall test object (funcall value-key obj))
-		 (return-from %presentation-typep t)))
+		 (return-from presentation-typep t)))
        sequence)
   nil)
 
@@ -1322,7 +1322,7 @@
 						(type subset-completion))
   (map nil #'(lambda (obj)
 	       (unless (find obj sequence :test test :key value-key)
-		 (return-from %presentation-typep nil)))
+		 (return-from presentation-typep nil)))
        object)
   t)
 
@@ -1499,11 +1499,11 @@
 (define-presentation-method presentation-typep (object
 						(type sequence-enumerated))
   (unless (or (listp object) (vectorp object))
-    (return-from %presentation-typep nil))
+    (return-from presentation-typep nil))
   (map nil #'(lambda (obj type)
 	       (let ((real-type (expand-presentation-type-abbreviation type)))
 		 (unless (presentation-typep obj real-type)
-		   (return-from %presentation-typep nil))))
+		   (return-from presentation-typep nil))))
        object
        types)
   t)
@@ -1577,7 +1577,7 @@
   (loop for type in types
 	for real-type = (expand-presentation-type-abbreviation type)
 	do (when (presentation-typep object real-type)
-	     (return-from %presentation-typep t)))
+	     (return-from presentation-typep t)))
   nil)
 
 (define-presentation-method present (object (type or)
@@ -1621,12 +1621,12 @@
 	     real-type
 	     (cond ((eq name 'satisfies)
 		    (unless (funcall (car parameters) object)
-		      (return-from %presentation-typep nil)))
+		      (return-from presentation-typep nil)))
 		   ((eq name 'not)
 		    (unless (not (presentation-typep object (car parameters)))
-		      (return-from %presentation-typep nil)))
+		      (return-from presentation-typep nil)))
 		   (t (unless (presentation-typep object real-type)
-			(return-from %presentation-typep nil))))))
+			(return-from presentation-typep nil))))))
   t)
 
 (define-presentation-method present (object (type and)
