@@ -508,7 +508,7 @@ skips intervening non-table output record structures."))
                 (maxf (aref heights i) (+ (aref ascents i) (aref descents i))))
 
           (when (slot-value table-record 'equalize-column-widths)
-            (setf widthen (make-array ncols :initial-element (reduce #'max ncols :initial-value 0))))
+            (setf widthen (make-array ncols :initial-element (reduce #'max widthen :initial-value 0))))
 
           (setf (slot-value table-record 'widths) widthen
                 (slot-value table-record 'heights) heights
