@@ -234,13 +234,13 @@ Common Lisp system for more information.
 \section{Panes and Gadgets}
 
 A CLIM application is made up of a hierarchy of \gloss{panes} and
-\gloss{gadgets} (gadgets are special kinds of panes).  Theses elements
-correspond to what other toolkits may call \emph{widgets}.
+\gloss{gadgets} (gadgets are special kinds of panes).  These elements
+correspond to what other toolkits call \emph{widgets}.
 Frequently used CLIM gadgets are \gadget{button}s, \gadget{slider}s,
 etc, and typical panes are the layout panes such as \pane{hbox},
 \pane{vbox}, \pane{hrack}, etc.
 
-\section{Defining Appliction Frames}
+\section{Defining Application Frames}
 
 Each CLIM application is defined by an \gloss{application frame}.  An
 application frame is an instance of the class
@@ -291,7 +291,7 @@ that our application frame only inherits from the standard CLIM
 application frame.  
 
 The third argument to \texttt{define-application-frame} is a list of
-CLOS slots to be added to any instance if this kind of application
+CLOS slots to be added to any instance of this kind of application
 frame.  These slots are typically used for holding all
 application-specific data.  The current instance if the application
 frame type will always be the value of the special variable
