@@ -4,7 +4,7 @@
 ;;;   Created: 2001-07-14
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: pixel-format.lisp,v 1.1 2002/02/10 02:01:42 gilbert Exp $
+;;;       $Id: pixel-format.lisp,v 1.2 2002/02/21 03:38:24 gilbert Exp $
 ;;; --------------------------------------------------------------------------------------
 ;;;  (c) copyright 2001 by Gilbert Baumann
 
@@ -25,9 +25,7 @@
 
 ;;;; Changes
 
-;;;  When        Who    What
-;;; --------------------------------------------------------------------------------------
-;;;  2001-07-14  GB     created
+;; $Log:$
 
 ;;;;
 
@@ -72,32 +70,26 @@
 ;; OUTPUT-PIXEL-FORMAT                                          [class]
 ;; IO-PIXEL-FORMAT                                              [class]
 
-(defclass pixel-format ()
+(define-protocol-class pixel-format ()
+  ((composer :initform nil)))
+
+(define-protocol-class input-pixel-format (pixel-format) 
   ())
 
-(defclass input-pixel-format (pixel-format) ())
-
-(defclass output-pixel-format (pixel-format)
+(define-protocol-class output-pixel-format (pixel-format)
   ())
 
-(defclass io-pixel-format (input-pixel-format output-pixel-format) ())
+(define-protocol-class io-pixel-format (input-pixel-format output-pixel-format) ())
 
-(defclass uniform-pixel-format () ()
+(define-protocol-class uniform-pixel-format () ()
   ;; Mixin class for uniform pixel formats
   )
 
-(defclass non-uniform-pixel-format () ()
+(define-protocol-class non-uniform-pixel-format () ()
   ;; Mixin class for non-uniform pixel formats
   )
 
 ;; and their predicates
-
-(defmethod pixel-format-p ((object pixel-format)) t)
-(defmethod input-pixel-format-p ((object input-pixel-format)) t)
-(defmethod output-pixel-format-p ((object output-pixel-format)) t)
-(defmethod io-pixel-format-p ((object io-pixel-format)) t)
-(defmethod uniform-pixel-format ((object uniform-pixel-format)) t)
-(defmethod non-uniform-pixel-format ((object non-uniform-pixel-format)) t)
 
 ;; The protocol
 
@@ -670,7 +662,7 @@
                             nil nil sample x y)) ))))
 
 (defmethod pixels-translator (input-pixel-format output-pixel-format)
-  (or ;; (gethash (list input-pixel-format output-pixel-format) *pixels-translator-cache*)
+  (or (gethash (list input-pixel-format output-pixel-format) *pixels-translator-cache*)
       (setf (gethash (list input-pixel-format output-pixel-format) *pixels-translator-cache*)
             (compile
              nil
@@ -702,3 +694,10 @@
            (array-dimension input-array 0)
            x0 y0))
   
+;;;;;
+
+(defmethod compose-pixel ((pixel-format pixel-format) red green blue opacity x y)
+  (funcall (or (slot-value pixel-format 'composer)
+               (setf (slot-value pixel-format 'composer)
+                 (compile nil (pixel-composing-code pixel-format))))
+           nil red green blue opacity x y))
