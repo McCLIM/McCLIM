@@ -98,10 +98,22 @@
    (button :initarg :button
 	   :reader pointer-event-button)
    (x :initarg :x
-      :reader pointer-event-x)
+      :reader pointer-event-native-x)
    (y :initarg :y
-      :reader pointer-event-y)
+      :reader pointer-event-native-y)
    ))
+
+(defmacro get-pointer-position ((sheet event) &body body)
+  `(multiple-value-bind (x y)
+       (transform-position (sheet-native-transformation ,sheet) (pointer-event-native-x ,event) (pointer-event-native-y ,event))
+     ,@body))
+  
+(defmethod pointer-event-x ((event pointer-event))
+  (get-pointer-position ((event-sheet event) event) x))
+
+(defmethod pointer-event-y ((event pointer-event))
+  (get-pointer-position ((event-sheet event) event) y))
+
 
 (defclass pointer-button-event (pointer-event)
   (
@@ -143,6 +155,7 @@
   (
    ))
 
+
 (defclass pointer-ungrab-event (pointer-exit-event)
   ())
 
@@ -150,20 +163,32 @@
   ((sheet :initarg :sheet
 	  :reader event-sheet)
    (region :initarg :region
-	   :reader window-event-region)
+	   :reader window-event-native-region)
    ))
 
-(defmethod window-event-native-region ((window-event window-event))
-  (window-event-region window-event))
+(defmethod window-event-region ((event window-event))
+  (transform-region (sheet-native-transformation (event-sheet event))
+		    (window-event-native-region event)))
 
-(defmethod window-event-mirrored-sheet ((window-event window-event))
-  (sheet-mirror (event-sheet window-event)))
+(defmethod window-event-mirrored-sheet ((event window-event))
+  (sheet-mirror (event-sheet event)))
 
 (defclass window-configuration-event (window-event)
-  ((x :initarg :x :reader window-configuration-event-x)
-   (y :initarg :y :reader window-configuration-event-y)
+  ((x :initarg :x :reader window-configuration-event-native-x)
+   (y :initarg :y :reader window-configuration-event-native-y)
    (width :initarg :width :reader window-configuration-event-width)
    (height :initarg :height :reader window-configuration-event-height)))
+
+(defmacro get-window-position ((sheet event) &body body)
+  `(multiple-value-bind (x y)
+       (transform-position (sheet-native-transformation ,sheet) (window-configuration-event-native-x ,event) (window-configuration-event-native-y ,event))
+     ,@body))
+
+(defmethod window-configuration-event-x ((event window-configuration-event))
+  (get-window-position ((event-sheet event) event) x))
+
+(defmethod window-configuration-event-y ((event window-configuration-event))
+  (get-window-position ((event-sheet event) event) y))
 
 (defclass window-unmap-event (window-event)
   ())
