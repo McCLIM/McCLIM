@@ -1,4 +1,4 @@
-;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: CLIMB; -*-
+;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: CLIM-INTERNALS; -*-
 ;;; --------------------------------------------------------------------------------------
 ;;;     Title: The coordinate Datatype
 ;;;   Created: 1998-12-05 18:06

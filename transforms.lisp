@@ -1,6 +1,6 @@
-;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: CLIMB; -*-
+;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: CLIM-INTERNALS; -*-
 ;;; --------------------------------------------------------------------------------------
-;;;     Title: The CLIMB Transformations
+;;;     Title: The CLIM Transformations
 ;;;   Created: 1998-09-29 20:23
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
