@@ -364,7 +364,7 @@
   (declare (ignore event))
   nil)
 
-(defmethod event-read ((sheet standard-sheet-input-mixin))
+(defmethod event-read ((sheet standard-sheet-input-mixin))  
   (with-slots (queue) sheet
     (event-queue-read queue)))
 
@@ -391,7 +391,7 @@
   (with-slots (queue) sheet
     (event-queue-prepend queue event)))
 
-(defmethod event-listen ((sheet standard-sheet-input-mixin))
+(defmethod event-listen ((sheet standard-sheet-input-mixin))  
   (with-slots (queue) sheet
     (event-queue-listen queue)))
 
@@ -497,7 +497,7 @@
 (defmethod handle-event ((sheet delegate-sheet-input-mixin) event)
   (handle-event (delegate-sheet-delegate sheet) event))
 
-(defmethod event-read ((sheet delegate-sheet-input-mixin))
+(defmethod event-read ((sheet delegate-sheet-input-mixin))  
   (event-read (delegate-sheet-delegate sheet)))
 
 (defmethod event-read-with-timeout ((sheet delegate-sheet-input-mixin)
@@ -529,12 +529,18 @@
 (defparameter *mouse-scroll-distance* 4
   "Number of lines by which to scroll the window in response to the scroll wheel")
 
+(defgeneric scroll-quantum (pane)
+  (:documentation "Returns the number of pixels respresenting a 'line', used
+to computed distance to scroll in response to mouse wheel events."))
+
+(defmethod scroll-quantum (pane) 10)
+
 (defmethod dispatch-event :around ((sheet mouse-wheel-scroll-mixin)
                                    (event pointer-button-press-event))
   (let ((viewport (pane-viewport sheet))
         (button (pointer-event-button event))
         (dy (* *mouse-scroll-distance*
-               (stream-line-height sheet))))      
+               (scroll-quantum sheet))))
     (if (and viewport
              (or (eql button +pointer-wheel-up+)
                  (eql button +pointer-wheel-down+)))

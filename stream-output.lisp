@@ -541,3 +541,6 @@ STREAM-STRING-WIDTH will be called."))
   (when (null medium)
     (setq medium (sheet-medium *standard-output*)))
   (medium-beep medium))
+
+(defmethod scroll-quantum ((sheet standard-extended-output-stream))
+  (stream-line-height sheet))

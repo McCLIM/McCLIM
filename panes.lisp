@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.142 2004/09/26 15:57:38 moore Exp $
+;;; $Id: panes.lisp,v 1.143 2004/10/31 01:46:31 hefner1 Exp $
 
 (in-package :clim-internals)
 
@@ -154,6 +154,30 @@
 ;;   hierarchy.
 ;;
 ;; --GB 2003-08-06
+
+;; For each of the builtin CLIM gadgets there is an abstract gadget class
+;; and at least one "concrete" subclass which can be chosen by the
+;; frame manager. The CLIM 2.0 spec names one concrete class for each
+;; abstract class. Frame managers need a mechanism to look up these
+;; concrete classes. The current practice of the CLX backend is to
+;; search for classes of various names based on the name of the abstract
+;; class. This mostly works as all but two of the specified concrete
+;; class names can be produced by appending "-PANE" to the abstract class
+;; name. The classes GENERIC-LIST-PANE and GENERIC-OPTION-PANE break this
+;; convention.
+
+;; I've extended the CLX frame manager to additionally search the property
+;; list of the pane class name when searching for a concrete pane class. The
+;; function below can be used where needed to place the concrete class name
+;; where it needs to go.
+
+;; This could be easily extended to allow mappings for specific backends..
+
+(defun define-abstract-pane-mapping (abstract-class-name concrete-class-name)
+  (setf (get abstract-class-name 'concrete-pane-class-name)
+        concrete-class-name))
+
+
 
 ;;; Default Color Scheme Options
 

@@ -26,6 +26,52 @@
   ()
   )
 
+;; Abstract pane lookup logic
+
+(defun find-first-defined-class (types)
+  (first
+   (remove-if #'null 
+              (mapcar (lambda (class-name)
+                        (find-class class-name nil))
+                      types))))
+
+(defun find-symbol-from-spec (package-spec name-components)
+  (flet ((coerce-name-element (name-elt)
+           (typecase name-elt
+             (symbol (symbol-name name-elt))
+             (sequence (coerce name-elt 'string))
+             (t (princ-to-string name-elt)))))    
+  (find-symbol
+   (apply #'concatenate 'string (mapcar #'coerce-name-element name-components))
+   package-spec)))
+
+(defun find-symbols (name-specs)
+  (remove-if #'null (mapcar #'(lambda (x) (find-symbol-from-spec (first x) (rest x))) name-specs)))
+
+(defun generate-standard-pane-specs (type)
+  `((:climi ,(get type 'climi::concrete-pane-class-name))
+    (:climi ,type #:-pane)
+    (:climi ,type)))
+
+(defun generate-clx-pane-specs (type)
+  (append 
+   `((:clim-clx #:clx- ,type #:-pane)
+     (:clim-clx #:clx- ,type)
+     (:climi #:clx- ,type #:-pane)
+     (:climi #:clx- ,type))
+   (generate-standard-pane-specs type)))
+
+(defun find-concrete-pane-class (type)
+  (if (or (eql (symbol-package type)
+               (find-package '#:clim))
+          (eql (symbol-package type)
+               (find-package '#:climi))
+          (eql (symbol-package type)
+               (find-package '#:keyword)))
+      (find-first-defined-class (find-symbols (generate-clx-pane-specs type)))
+      type))
+  
+  
 ;;; This is an example of how make-pane-1 might create specialized
 ;;; instances of the generic pane types based upon the type of the
 ;;; frame-manager. However, in the CLX case, we don't expect there to
@@ -33,15 +79,7 @@
 ;;; instead.
 (defmethod make-pane-1 ((fm clx-frame-manager) (frame application-frame) type &rest args)
   (apply #'make-instance
-	 (or (find-symbol (concatenate 'string
-			    (symbol-name '#:clx-) (symbol-name type))
-			  :climi)
-	     (find-symbol (concatenate 'string
-			    (symbol-name '#:clx-) (symbol-name type) (symbol-name '#:-pane))
-			  :climi)
-	     (find-symbol (concatenate 'string (symbol-name type) (symbol-name '#:-pane))
-			  :climi)
-	     type)
+	 (find-concrete-pane-class type)
 	 :frame frame
 	 :manager fm
 	 :port (port frame)

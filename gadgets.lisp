@@ -103,8 +103,6 @@
 
 ;; - the slider needs a total overhaul
 
-;; - LIST-PANE must move from panes.lisp here.
-
 ;; - OPTION-PANE needs an implmentation
 
 ;; - TEXT-FILED, TEXT-AREA dito
@@ -741,7 +739,7 @@ and must never be nil."))
   (:documentation
    "Mixin class for gadgets, whose appearence depends on its value."))
 
-(defmethod (setf gadget-value) :after (new-value (gadget value-changed-repaint-mixin) 
+(defmethod (setf gadget-value) :after (new-value (gadget value-changed-repaint-mixin)
                                        &key &allow-other-keys)
   (declare (ignore new-value))
   (dispatch-repaint gadget +everywhere+))
@@ -1951,8 +1949,18 @@ and must never be nil."))
 ;;; ------------------------------------------------------------------------------------------
 ;;;  30.4.7 The concrete list-pane and option-pane Gadgets
 
-#||
-(defclass list-pane (value-gadget)
+
+;;; LIST-PANE
+
+;; Note: According to the LispWorks CLIM User's Guide, they do some peculiar
+;; things in their list pane. Instead of :exclusive and :nonexclusive modes,
+;; they call them :one-of and :some-of. I've supported these aliases for
+;; compatibility. They also state the default mode is :some-of, which
+;; contradicts the CLIM 2.0 Spec. Our default does not.
+
+(define-abstract-pane-mapping 'list-pane 'generic-list-pane)
+
+(defclass meta-list-pane (list-pane)
   ((mode        :initarg :mode
                 :initform :some-of
                 :reader list-pane-mode
@@ -1969,18 +1977,64 @@ and must never be nil."))
                 :initform #'identity
                 :reader list-pane-value-key
                 :documentation "A function to be applied to items to gain its value
-                                for the purpose of GADGET-VALUE.")
+                                for the purpose of GADGET-VALUE.")   
    (test        :initarg :test
                 :initform #'eql
                 :reader list-pane-test
-                :documentation "A function to compare two items for equality.") ))
+                :documentation "A function to compare two items for equality.")))
 
-(defclass generic-list-pane (basic-pane list-pane #|permanent-medium-sheet-output-mixin|# )
-  ((item-strings :initform nil
-                 :documentation "Vector of item strings.")
-   (selected-items :initform nil
-                   :documentation "List of indexes of selected items.")
-   ))
+(defclass generic-list-pane (meta-list-pane value-changed-repaint-mixin mouse-wheel-scroll-mixin)
+  ((highlight-ink :initform +royalblue4+
+                  :initarg :highlight-ink
+                  :reader list-pane-highlight-ink)
+   (item-strings :initform nil
+     :documentation "Vector of item strings.")
+   (item-values :initform nil
+     :documentation "Vector of item values.")
+   (items-width  :initform nil
+     :documentation "Width sufficient to contain all items")
+   (last-action  :initform nil
+     :documentation "Last action performed on items in the pane, either
+:select, :deselect, or NIL if none has been performed yet.")
+   (last-index   :initform nil
+     :documentation "Index of last item clicked, for extending selections.")
+   (prefer-single-selection :initform nil :initarg :prefer-single-selection
+     :documentation "For nonexclusive menus, emulate the common behavior of 
+preferring selection of a single item, but allowing extension of the 
+selection via the control modifier.")
+   (items-length :initform nil :documentation "Number of items"))
+  (:default-initargs :text-style (make-text-style :sans-serif :roman :normal)
+                     :background +white+ :foreground +black+))
+
+(defmethod initialize-instance :after ((gadget meta-list-pane) &rest rest)
+  (declare (ignorable rest))
+  (when (and (not (list-pane-exclusive-p gadget))
+             (not (listp (gadget-value gadget))))
+    (error "A :nonexclusive list-pane cannot be initialized with a value which is not a list."))
+  #+IGNORE
+  (with-slots (items value) gadget
+    (setf value (copy-list value)))
+  #+IGNORE
+  (when (and (list-pane-exclusive-p gadget) ; (Lispworks compatibililty)
+             (> (length (gadget-value gadget)) 1))
+    (error "An 'exclusive' list-pane cannot be initialized with more than one item selected.")))
+
+(defun list-pane-exclusive-p (pane)
+  (or (eql (list-pane-mode pane) :exclusive)
+      (eql (list-pane-mode pane) :one-of)))
+
+(defmethod initialize-instance :after ((gadget generic-list-pane) &rest rest)
+  (declare (ignorable rest))
+  ;; For a nonexclusive list-pane, compute some reasonable default for the last
+  ;; selected item to make shift-click do something useful.
+  (when (not (list-pane-exclusive-p gadget))
+    (with-slots (test last-action last-index) gadget
+      (when (not (zerop (length (gadget-value gadget))))
+        (setf last-action :select
+              last-index
+              (reduce #'max
+                      (mapcar #'(lambda (item) (position item (generic-list-pane-item-values gadget) :test test))
+                              (gadget-value gadget))))))))
 
 (defmethod generic-list-pane-item-strings ((pane generic-list-pane))
   (with-slots (item-strings) pane
@@ -1991,53 +2045,178 @@ and must never be nil."))
                            (if (stringp s)
                                s
                              (princ-to-string s)))) ;defensive programming!
-               (list-pane-items pane))))))
+                (list-pane-items pane))))))
+
+(defmethod generic-list-pane-item-values ((pane generic-list-pane))
+  (with-slots (item-values) pane
+    (or item-values
+        (setf item-values
+          (map 'vector (list-pane-value-key pane) (list-pane-items pane))))))
+
+(defmethod generic-list-pane-items-width ((pane generic-list-pane))
+  (with-slots (items-width) pane
+    (or items-width
+        (setf items-width
+              (reduce #'max (map 'vector (lambda (item-string)
+                                           (text-size pane item-string))
+                                 (generic-list-pane-item-strings pane))
+                      :initial-value 0)))))
+
+(defmethod generic-list-pane-items-length ((pane generic-list-pane))
+  (with-slots (items-length) pane
+    (or items-length
+        (setf items-length
+              (length (generic-list-pane-item-strings pane))))))
+
+(defmethod generic-list-pane-item-height ((pane generic-list-pane))
+  (+ (text-style-ascent  (pane-text-style pane) pane)
+     (text-style-descent (pane-text-style pane) pane)))
 
 (defmethod compose-space ((pane generic-list-pane) &key width height)
   (declare (ignore width height))
-  (let* ((n (length (generic-list-pane-item-strings pane)))
-         (w (reduce #'max (map 'vector (lambda (item-string)
-                                         (text-size pane item-string))
-                               (generic-list-pane-item-strings pane))
-                    :initial-value 0))
-         (h (* n (+ (text-style-ascent (pane-text-style pane) pane)
-                    (text-style-descent (pane-text-style pane) pane)))))
-    (make-space-requirement :width w :height h
+  (let* ((n (generic-list-pane-items-length pane))
+         (w (generic-list-pane-items-width pane))
+         (h (* n (generic-list-pane-item-height pane))))
+    (make-space-requirement :width w     :height h
                             :min-width w :min-height h
                             :max-width w :max-height h)))
 
-#+nil
-(defmethod allocate-space ((pane generic-list-pane) width height)
-  )
+(defmethod allocate-space ((pane generic-list-pane) w h)
+  (resize-sheet pane w h))
+
+(defmethod scroll-quantum ((pane generic-list-pane))
+  (generic-list-pane-item-height pane))
 
 (defmethod handle-repaint ((pane generic-list-pane) region)
-  (with-slots (selected-items) pane
-    (let* ((a (text-style-ascent (pane-text-style pane) pane))
-           (d (text-style-descent (pane-text-style pane) pane)))
-      (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
-        (loop
-            for i from 0
-            for x across (generic-list-pane-item-strings pane) do
-              (let ((y (+ a (* i (+ a d)))))
-                (cond ((member i selected-items)
-                       (draw-rectangle* pane x1 (- y a) x2 (+ y d))
-                       (draw-text* pane x 0 y :ink +background-ink+))
-                      (t
-                       (draw-rectangle* pane x1 (- y a) x2 (+ y d) :ink +background-ink+)
-                       (draw-text* pane x 0 y)))))))))
+  (with-bounding-rectangle* (sx0 sy0 sx1 sy1) (sheet-region pane)
+    (declare (ignore sx1 sy1))
+    (with-bounding-rectangle* (rx0 ry0 rx1 ry1)
+      (if (bounding-rectangle-p region)
+              region
+              (sheet-region pane))  ; workaround for non-rectangular regions (such as +everywhere+)
+      (let ((item-height (generic-list-pane-item-height pane))
+            (highlight-ink (list-pane-highlight-ink pane)))
+        (do ((index (floor (- ry0 sy0) item-height) (1+ index)))
+            ((or (> (+ sy0 (* item-height index)) ry1)
+                 (>= index (generic-list-pane-items-length pane))))
+          (let ((y0 (+ sy0 (* index item-height)))
+                (y1 (+ sy0 (* (1+ index) item-height))))
+            (multiple-value-bind (background foreground)
+                (if (if (list-pane-exclusive-p pane)
+                        (funcall (list-pane-test pane)
+                                 (elt (generic-list-pane-item-values pane) index)
+                                 (gadget-value pane))
+                        (member (elt (generic-list-pane-item-values pane) index) (gadget-value pane)
+                                :test (list-pane-test pane)))
+                    (values highlight-ink (pane-background pane))
+                    (values (pane-background pane) (pane-foreground pane)))
+              (draw-rectangle* pane rx0 y0 rx1 y1 :filled t :ink background)
+              (draw-text* pane (elt (generic-list-pane-item-strings pane) index)
+                          sx0
+                          (+ y0 (text-style-ascent (pane-text-style pane) pane))
+                          :ink foreground
+                          :text-style (pane-text-style pane)))))))))
+
+(defun generic-list-pane-select-item (pane item-value)
+  "Toggle selection  of a single item in the generic-list-pane.
+Returns :select or :deselect, depending on what action was performed."
+  (if (list-pane-exclusive-p pane)
+      (progn
+        (setf (gadget-value pane :invoke-callback t) item-value)
+        :select)
+      (let ((member (member item-value (gadget-value pane) :test (list-pane-test pane))))
+        (setf (gadget-value pane :invoke-callback t)
+              (cond ((list-pane-exclusive-p pane)
+                     (list item-value))
+                    (member
+                     (remove item-value (gadget-value pane)
+                             :test (list-pane-test pane)))
+                    ((not member) (cons item-value (gadget-value pane)))))
+        (if member :deselect :select))))
+
+(defun generic-list-pane-add-selected-items (pane item-values)
+  "Add a set of items to the current selection"
+  (when (not (list-pane-exclusive-p pane))
+    (setf (gadget-value pane :invoke-callback t)
+          (remove-duplicates (append item-values
+                                     (gadget-value pane))
+                             :test (list-pane-test pane)))))
+
+(defun generic-list-pane-deselect-items (pane item-values)
+  "Remove a set of items from the current selection"
+  (when (not (list-pane-exclusive-p pane))
+    (setf (gadget-value pane :invoke-calback t)
+          (labels ((fun (item-values result)
+                     (if (null item-values)
+                         result
+                         (fun (rest item-values)
+                              (delete (first item-values) result
+                                      :test (list-pane-test pane))))))
+            (fun item-values (gadget-value pane))))))
+
+(defun generic-list-pane-item-from-event (pane event)
+  "Given a pointer event, determine what item in the pane it has fallen upon. 
+Returns two values, the item itself, and the index within the item list."
+  (with-bounding-rectangle* (sx0 sy0 sx1 sy1)  (sheet-region pane)
+    (declare (ignorable sx0 sx1 sy1))                            
+    (multiple-value-bind (mx my) (values (pointer-event-x event) (pointer-event-y event))
+      (declare (ignore mx))
+      (with-slots (items) pane
+        (let* ((item-height (generic-list-pane-item-height pane))
+               (number-of-items (generic-list-pane-items-length pane))
+               (n (floor (- my sy0) item-height))
+               (index (and (>= n 0)
+                           (< n number-of-items)
+                           n))
+               (item-value (and index (elt (generic-list-pane-item-values pane) index))))
+          (values item-value index))))))
 
 (defmethod handle-event ((pane generic-list-pane) (event pointer-button-press-event))
-  (multiple-value-bind (mx my) (values (pointer-event-x event) (pointer-event-y event))
-    (let ((k (floor my (+ (text-style-ascent (pane-text-style pane) pane)
-                          (text-style-descent (pane-text-style pane) pane))))
-          (n (length (generic-list-pane-item-strings pane))))
-      (if (member k (slot-value pane 'selected-items))
-          (setf (slot-value pane 'selected-items) (delete k (slot-value pane 'selected-items)))
-        (pushnew k (slot-value pane 'selected-items)))
-      (dispatch-repaint pane +everywhere+)
-      )))
+  (if (eql (pointer-event-button event) +pointer-left-button+)
+      (let ((modifier (event-modifier-state event)))
+        (multiple-value-bind (item-value index)
+            (generic-list-pane-item-from-event pane event)
+          (if (list-pane-exclusive-p pane)
+              ;; Exclusive mode
+              (when index
+                (setf (slot-value pane 'last-action)
+                      (generic-list-pane-select-item pane item-value)))
+              ;; Nonexclusive mode
+              (when index
+                (with-slots (last-index last-action items prefer-single-selection) pane
+                  (cond
+                    ;; Add single selection
+                    ((not (zerop (logand modifier +control-key+)))
+                     (setf last-action (generic-list-pane-select-item pane item-value)))
+                    ;; Maybe extend selection
+                    ((not (zerop (logand modifier +shift-key+)))                     
+                     (if (and (numberp last-index)
+                              (not (null last-action)))
+                         ;; Extend last selection
+                         (funcall (if (eql last-action :select)
+                                      #'generic-list-pane-add-selected-items
+                                      #'generic-list-pane-deselect-items)
+                                  pane
+                                  (coerce (subseq (generic-list-pane-item-values pane)
+                                                  (min last-index index)
+                                                  (1+ (max last-index index))) 'list))
+                         (setf last-action (generic-list-pane-select-item pane item-value))))
+                    ;; Toggle single item
+                    (t (if prefer-single-selection
+                           (setf (gadget-value pane :invoke-callback t) (list item-value)
+                                 last-action :select)
+                           (setf last-action (generic-list-pane-select-item pane item-value)))))
+                  (setf last-index index))))))
+      (when (next-method-p) (call-next-method))))
+                 
+;;; OPTION-PANE
 
-||#
+(define-abstract-pane-mapping 'option-pane 'generic-option-pane)
+
+;; Oops! Where is the implementation?
+
+
+
 
 ;;; ------------------------------------------------------------------------------------------
 ;;;  30.4.8 The concrete text-field Gadget

@@ -1351,6 +1351,7 @@ frame, if any")
 		      (presentation (applicable-presentation state)))
 		  (if (and handler presentation)
 		      (funcall handler :presentation presentation
+                               :event event
 			       :window (event-sheet event)
 			       :x x :y y)
 		      (call-next-method))))))
