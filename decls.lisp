@@ -28,13 +28,17 @@
 
 (defvar *application-frame* nil)
 
-;; This is just an ad hoc list. Would it be a good idea to include all
-;; (exported) generic functions here? --GB
-
+;;; This is just an ad hoc list. Would it be a good idea to include all
+;;; (exported) generic functions here? --GB
+;;;
+;;; YES!  -- CSR
 (defgeneric point-x (point))
 (defgeneric point-y (point))
 
 (defgeneric transform-region (transformation region))
+
+;;;; 8.1
+(defgeneric process-next-event (port &key wait-function timeout))
 
 ;;;; 8.3.4 Associating a Medium with a Sheet
 
@@ -102,6 +106,44 @@
 			       start end
 			       align-x align-y
 			       toward-x toward-y transform-glyphs))
+
+;;;; 10.2
+(defgeneric invoke-with-drawing-options
+    (medium continuation &rest drawing-options &key &allow-other-keys))
+
+
+;;;; 14.5
+(defgeneric draw-design
+    (medium design
+	    &key ink clipping-region transformation line-style line-thickness
+	    line-unit line-dashes line-joint-shape line-cap-shape text-style
+	    text-family text-face text-size))
+
+;;;; 21.2
+(defgeneric invoke-updating-output
+    (stream continuation record-type unique-id id-test cache-value cache-test
+	    &key all-new parent-cache))
+
+;;;; 24.4
+(defgeneric presentation-replace-input
+    (stream object type view
+	    &key buffer-start rescan query-identifier for-context-type))
+
+;;;; 28.3
+(defgeneric frame-find-innermost-applicable-presentation
+    (frame input-context stream x y &key event))
+
+;;;; 28.4
+(defgeneric default-frame-top-level
+    (frame &key command-parser command-unparser partial-command-parser prompt))
+(defgeneric read-frame-command (frame &key stream))
+(defgeneric run-frame-top-level (frame &key &allow-other-keys))
+
+;;;; 29.2
+;;;;
+;;;; FIXME: should we have &key &allow-other-keys here, to cause
+;;;; initarg checking?  Probably.
+(defgeneric make-pane-1 (realizer frame abstract-class-name &rest initargs))
 
 ;;;; 29.2.2 Pane Properties
 

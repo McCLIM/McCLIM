@@ -495,6 +495,11 @@
 ;;;
 ;;; Commands
 
+(defclass command-parsers ()
+  ((parser :accessor parser :initarg :parser)
+   (partial-parser :accessor partial-parser :initarg :partial-parser))
+  (:documentation "A container for a command's parsing functions"))
+
 (defparameter *command-parser-table* (make-hash-table)
   "Mapping from command names to argument parsing functions.")
 
@@ -523,6 +528,31 @@
 					   `(:default ,mentioned-default
 					     ,@args)
 					   args)))))))
+
+;;;accept for the partial command reader.  Can this be refactored to share code
+;;;with accept-form-for-argument?
+(defun accept-form-for-argument-partial (stream ptype-arg command-arg)
+  (let ((accept-keys '(:default :default-type :display-default
+		       :prompt :documentation)))
+    (destructuring-bind (name ptype &rest key-args
+			 &key (mentioned-default nil mentioned-default-p)
+			 &allow-other-keys)
+	ptype-arg
+      (declare (ignore name))
+      (let ((accept-args-var (gensym "ACCEPT-ARGS")))
+	`(let ((,accept-args-var
+		(list ,@(loop for (key val) on key-args by #'cddr
+			      when (member key accept-keys)
+			      append `(,key ,val) into args
+			      finally (return (if mentioned-default-p
+						  `(:default ,mentioned-default
+						    ,@args)
+						  args))))))
+	   (apply #'accept ,ptype :stream ,stream
+		  (if (eq ,command-arg *unsupplied-argument-marker*)
+		      ,accept-args-var
+		      (list* :default ,command-arg ,accept-args-var))))))))
+
 
 (defun make-key-acceptors (stream keyword-args key-results)
   ;; We don't use the name as a variable, and we do want a symbol in the
@@ -604,6 +634,31 @@
 	       ,(make-key-acceptors stream-var keyword-args key-results))))
 	 (list* ,@required-arg-names ,key-results)))))
 
+(defun make-partial-parser-fun (name required-args)
+  (with-gensyms (command-table stream partial-command
+		 command-name command-line-name)
+    (let ((required-arg-names (mapcar #'car required-args)))
+      `(defun ,name (,command-table ,stream ,partial-command)
+	 (destructuring-bind (,command-name ,@required-arg-names)
+	     ,partial-command
+	   (let ((,command-line-name (command-line-name-for-command
+				      ,command-name
+				      ,command-table
+				      :errorp nil)))
+	     (accepting-values (,stream)
+	       (format ,stream
+		       "You are being prompted for arguments to ~S~%"
+		       ,command-line-name)
+	       ,@(loop for var in required-arg-names
+		       for parameter in required-args
+		       append `((setq ,var
+				 ,(accept-form-for-argument-partial stream
+								    parameter
+								    var))
+				(terpri ,stream)))))
+	   (list ,command-name ,@required-arg-names))))))
+
+
 (defun make-command-translators (command-name command-table args)
   "Helper function to create command presentation translators for a command."
   (loop with readable-command-name = (command-name-from-symbol command-name) ; XXX or :NAME
@@ -676,9 +731,12 @@
 					  `(,arg-name ,default)))
 				    keyword-args)))))
 	     (accept-fun-name (gentemp (format nil "~A%ACCEPTOR%"
-					       (symbol-name func)
-					       (symbol-package func)) )))
-	
+					       (symbol-name func))
+				       (symbol-package func)))
+	     (partial-parser-fun-name (gentemp (format nil "~A%PARTIAL%"
+						       (symbol-name func))
+					       
+					       (symbol-package func))))
 	`(progn
 	  (defun ,func ,command-func-args
 	    ,@body)
@@ -695,9 +753,13 @@
 	  ,(make-argument-accept-fun accept-fun-name
 				     required-args
 				     keyword-args)
+	  ,(make-partial-parser-fun partial-parser-fun-name required-args)
 	  ,(and command-table
 		(make-command-translators func command-table required-args))
-	  (setf (gethash ',func *command-parser-table*) #',accept-fun-name)
+	  (setf (gethash ',func *command-parser-table*)
+	        (make-instance 'command-parsers
+		               :parser #',accept-fun-name
+		               :partial-parser #',partial-parser-fun-name))
 	  ',func)))))
 
 ;;; Note that command table inheritance is the opposite of Common Lisp
@@ -763,7 +825,8 @@
 	(when (and delimiter (delimiter-gesture-p delimiter))
 	  (read-gesture :stream stream))))
     (with-delimiter-gestures (*command-argument-delimiters* :override t)
-      (setq command-args (funcall (gethash command-name *command-parser-table*)
+      (setq command-args (funcall (parser (gethash command-name
+						   *command-parser-table*))
 				  stream)))
     (cons command-name command-args)))
 
@@ -783,8 +846,11 @@
 
 (defun command-line-read-remaining-arguments-for-partial-command
     (command-table stream partial-command start-position)
-  (declare (ignore command-table stream start-position))
-  partial-command)
+  (declare (ignore start-position))
+  ;; FIXME error checking needed here? -- moore
+  (funcall (partial-parser (gethash (command-name partial-command)
+				    *command-parser-table*))
+	   command-table stream partial-command))
 
 (defparameter *command-parser* #'command-line-command-parser)
 

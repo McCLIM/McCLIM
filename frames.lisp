@@ -375,6 +375,9 @@ input focus. This is a McCLIM extension."))
                (disown-frame (frame-manager frame) frame)))          
             (port-force-output (frame-manager-port fm))))))))
 
+;;; Defined in incremental-redisplay.lisp
+(defvar *enable-updating-output*)
+
 (defun redisplay-changed-panes (frame)
   (map-over-sheets #'(lambda (pane)
                        (multiple-value-bind (redisplayp clearp)
@@ -411,7 +414,7 @@ input focus. This is a McCLIM extension."))
 	  (prompt-style (make-text-style :fix :italic :normal)))
       (redisplay-changed-panes frame)
       (if *standard-input*
-          ;; We don't need to turn the cursor on here, as Goatee bhas its own
+          ;; We don't need to turn the cursor on here, as Goatee has its own
           ;; cursor which will appear. In fact, as a sane interface policy,
           ;; leave it off by default, and hopefully this doesn't violate the spec.
           (progn
@@ -456,6 +459,7 @@ input focus. This is a McCLIM extension."))
 				&rest args
 				&key (input-buffer nil input-buffer-p)
 				&allow-other-keys)
+  (declare (ignore input-buffer))
   "Default input-buffer to the frame event queue."
   (if input-buffer-p
       (call-next-method)
@@ -506,6 +510,7 @@ input focus. This is a McCLIM extension."))
   t)
 
 (defmethod note-frame-disabled ((fm frame-manager) frame)
+  (declare (ignore frame))
   t)
 
 (defvar *pane-realizer* nil)
@@ -868,6 +873,7 @@ input focus. This is a McCLIM extension."))
 
 (defmethod frame-compute-pointer-documentation-state
     ((frame standard-application-frame) input-context stream event)
+  (declare (ignore input-context))
   (let* ((current-modifier (event-modifier-state event))
 	 (x (device-event-x event))
 	 (y (device-event-y event))

@@ -26,13 +26,6 @@
 
 (in-package :clim-internals)
 
-; copied to here to avoid a stupid sbcl forward class problem
-#+sbcl
-(defclass value-changed-repaint-mixin ()
-  ()
-  (:documentation
-   "Mixin class for gadgets, whose appearence depends on its value."))
-
 ;;;; Notes
 
 ;; There is STANDARD-GADGET in this file but not in the spec, where
