@@ -685,25 +685,30 @@
 (defclass border-pane (single-child-composite-pane)
   ((border-width :initarg :border-width
 		 :initform 1
-		 :reader border-pane-width))
+		 :reader border-pane-width)
+   (background :initarg :background :initform nil))
   )
+
+(defmacro bordering ((&rest options
+		      &key background &allow-other-keys) contents)
+  `(make-pane 'border-pane ,@options :contents (list ,contents)))
 
 (defmethod compose-space ((bp border-pane))
   (let ((space (make-space-requirement))
 	(request (compose-space (first (sheet-children bp))))
 	(border-width*2 (* 2 (border-pane-width bp))))
     (setf (space-requirement-width space)
-      (+ border-width*2 (space-requirement-width request)))
+	  (+ border-width*2 (space-requirement-width request)))
     (setf (space-requirement-max-width space)
-      (+ border-width*2 (space-requirement-max-width request)))
+	  (+ border-width*2 (space-requirement-max-width request)))
     (setf (space-requirement-min-width space)
-      (+ border-width*2 (space-requirement-min-width request)))
+	  (+ border-width*2 (space-requirement-min-width request)))
     (setf (space-requirement-height space)
-      (+ border-width*2 (space-requirement-height request)))
+	  (+ border-width*2 (space-requirement-height request)))
     (setf (space-requirement-max-height space)
-      (+ border-width*2 (space-requirement-max-height request)))
+	  (+ border-width*2 (space-requirement-max-height request)))
     (setf (space-requirement-min-height space)
-      (+ border-width*2 (space-requirement-min-height request)))
+	  (+ border-width*2 (space-requirement-min-height request)))
     (setf (pane-space-requirement bp) space)
     space))
 
@@ -715,7 +720,6 @@
       (make-bounding-rectangle border-width border-width
 			       (- width border-width) (- height border-width)))
     (allocate-space child (- width (* 2 border-width)) (- height (* 2 border-width)))))
-
 
 ;; RESTRAINING PANE
 
