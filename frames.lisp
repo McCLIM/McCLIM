@@ -143,9 +143,7 @@
 				   (space-requirement-height space)))))
 
 (defmethod find-pane-named ((frame application-frame) name)
-  (loop for pane in (frame-panes frame)
-      if (eq (pane-name pane) name)
-      return pane))
+  (find name (frame-panes frame) :test #'eq :key #'pane-name))
 
 (defmethod layout-frame ((frame application-frame) &optional width height)
   (let ((pane (frame-pane frame)))
@@ -227,13 +225,13 @@
 		  (if (stringp prompt)
 		      (stream-write-string *standard-input* prompt)
 		    (apply prompt (list *standard-input* frame))))
-		(setq results (multiple-value-list (execute-frame-command frame (read-frame-command frame *standard-input*))))
+		(setq results (multiple-value-list (execute-frame-command frame (read-frame-command frame))))
 		(loop for result in results
 		      do (print result *standard-input*))
 		(terpri *standard-input*))
       )))
 
-(defmethod read-frame-command ((frame application-frame) stream)
+(defmethod read-frame-command ((frame application-frame) &key (stream *standard-input*))
   (read-command (frame-command-table frame) :stream stream))
 
 (defmethod execute-frame-command ((frame application-frame) command)
