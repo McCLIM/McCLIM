@@ -24,7 +24,7 @@
 ;;; incremental redisplay just yet as it isn't implemented in McCLIM.
 
 ;;; cheat and use this McCLIM internal class :)
-(defclass screen-area-cursor (clim-internals::cursor-mixin)
+(defclass screen-area-cursor (clim-internals::cursor-mixin cursor)
   ((screen-line :accessor screen-line :initarg :screen-line)))
 
 (defmethod* (setf cursor-position) (nx ny (cursor screen-area-cursor))
