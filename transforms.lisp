@@ -4,7 +4,7 @@
 ;;;   Created: 1998-09-29
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: transforms.lisp,v 1.23 2003/08/09 00:55:40 gilbert Exp $
+;;;       $Id: transforms.lisp,v 1.24 2003/08/10 07:29:55 gilbert Exp $
 ;;; --------------------------------------------------------------------------------------
 ;;;  (c) copyright 1998,1999,2003 by Gilbert Baumann
 ;;;  (c) copyright 2000 by 
@@ -129,8 +129,9 @@ transformation protocol."))
   (with-slots (mxx mxy myx myy tx ty) transformation
     (values mxx mxy myx myy tx ty)))
 
-(defun make-translation-transformation (translation-x translation-y)
-  (make-instance 'standard-translation :dx translation-x :dy translation-y))
+(defun make-translation-transformation (dx dy)
+  (make-instance 'standard-translation
+                 :dx (coordinate dx) :dy (coordinate dy)))
 
 (defun make-rotation-transformation (angle &optional origin)
   (if origin
@@ -692,10 +693,6 @@ transformation protocol."))
 (defmethod transform-region ((transformation standard-identity-transformation) region)
   region)
 
-(defun make-translation-transformation (dx dy)
-  (make-instance 'standard-translation
-                 :dx (coordinate dx) :dy (coordinate dy)))
-
 (defmethod rectilinear-transformation-p ((tr standard-identity-transformation))
   t)
 
@@ -735,4 +732,8 @@ transformation protocol."))
                                  (t1 standard-translation))
   nil)
 
-;; $Log: $
+;; $Log: transforms.lisp,v $
+;; Revision 1.23  2003/08/09 00:55:40  gilbert
+;; Introduced special classes for the identity and translations for both
+;; less consing and less cycles spend.
+;;
