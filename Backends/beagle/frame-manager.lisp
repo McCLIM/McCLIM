@@ -124,86 +124,119 @@ and feel for McCLIM. If any pane types are not implemented for Beagle / Aqua, th
 ;;; Override 'pointer-tracking.lisp' method of the same name since we *don't* do pointer tracking;
 ;;; should fix this properly in the future at which time we should be able to remove this.
 
+;;; Remove it now, this isn't the way pointer-tracking is implemented any more - this breaks menus
+;;; in Beagle, unfortunately, now.
+
+;;;(in-package :clim-internals)
+;;;
+;;;(defun invoke-tracking-pointer
+;;;    (sheet
+;;;     pointer-motion-handler presentation-handler
+;;;     pointer-button-press-handler presentation-button-press-handler
+;;;     pointer-button-release-handler presentation-button-release-handler
+;;;     keyboard-handler
+;;;     &key pointer multiple-window transformp (context-type t)
+;;;     (highlight nil highlight-p))
+;;;  ;; (setq pointer (port-pointer (port sheet))) ; FIXME
+;;;  (let ((port (port sheet))        
+;;;        (presentations-p (or presentation-handler
+;;;                             presentation-button-press-handler
+;;;                             presentation-button-release-handler)))
+;;;    (unless highlight-p (setq highlight presentations-p))
+;;;    (with-sheet-medium (medium sheet)
+;;;      (flet ((do-tracking ()
+;;;               (with-input-context (context-type :override t)
+;;;                 ()
+;;;                 (loop
+;;;                  (let ((event (event-read sheet)))
+;;;                    (when (and (eq sheet (event-sheet event))
+;;;                               (typep event 'pointer-motion-event))
+;;;                      (queue-event sheet event)
+;;;                      (highlight-applicable-presentation
+;;;                       (pane-frame sheet) sheet *input-context*))
+;;;                    (cond ((and (typep event 'pointer-event)
+;;;                                #+nil
+;;;                                (eq (pointer-event-pointer event)
+;;;                                    pointer))                     
+;;;                           (let* ((x (pointer-event-x event))
+;;;                                  (y (pointer-event-y event))
+;;;                                  (window (event-sheet event))
+;;;                                  (presentation
+;;;                                   (and presentations-p
+;;;                                        (find-innermost-applicable-presentation
+;;;                                         *input-context*
+;;;                                         sheet ; XXX
+;;;                                         x y
+;;;                                         :modifier-state (event-modifier-state event)))))
+;;;                             (when (and highlight presentation)
+;;;                               (frame-highlight-at-position
+;;;                                (pane-frame sheet) window x y))
+;;;                             ;; FIXME Convert X,Y to SHEET coordinates; user
+;;;                             ;; coordinates
+;;;                             (typecase event
+;;;                               (pointer-motion-event
+;;;                                (if (and presentation presentation-handler)
+;;;                                    (funcall presentation-handler
+;;;                                             :presentation presentation
+;;;                                             :window window :x x :y y)
+;;;                                    (maybe-funcall
+;;;                                     pointer-motion-handler
+;;;                                     :window window :x x :y y)))
+;;;                               (pointer-button-press-event
+;;;                                (if (and presentation
+;;;                                         presentation-button-press-handler)
+;;;                                    (funcall
+;;;                                     presentation-button-press-handler
+;;;                                     :presentation presentation
+;;;                                     :event event :x x :y y)
+;;;                                    (maybe-funcall
+;;;                                     pointer-button-press-handler
+;;;                                     :event event :x x :y y)))
+;;;                               (pointer-button-release-event
+;;;                                (if (and presentation
+;;;                                         presentation-button-release-handler)
+;;;                                    (funcall
+;;;                                     presentation-button-release-handler
+;;;                                     :presentation presentation
+;;;                                     :event event :x x :y y)
+;;;                                    (maybe-funcall
+;;;                                     pointer-button-release-handler
+;;;                                     :event event :x x :y y))))))
+;;;                          ((typep event
+;;;                                  '(or keyboard-event character symbol))
+;;;                           (maybe-funcall keyboard-handler
+;;;                                          :gesture event #|XXX|#))
+;;;                          (t (handle-event #|XXX|# (event-sheet event)
+;;;                                                   event))))))))
+;;;        (do-tracking)))))
+
+;;; Now we change tracking-pointer-loop instead. I think we *REALLY* should get
+;;; rid of pointer grabbing!
+
 (in-package :clim-internals)
 
-(defun invoke-tracking-pointer
-    (sheet
-     pointer-motion-handler presentation-handler
-     pointer-button-press-handler presentation-button-press-handler
-     pointer-button-release-handler presentation-button-release-handler
-     keyboard-handler
-     &key pointer multiple-window transformp (context-type t)
-     (highlight nil highlight-p))
-  ;; (setq pointer (port-pointer (port sheet))) ; FIXME
-  (let ((port (port sheet))        
-        (presentations-p (or presentation-handler
-                             presentation-button-press-handler
-                             presentation-button-release-handler)))
-    (unless highlight-p (setq highlight presentations-p))
-    (with-sheet-medium (medium sheet)
-      (flet ((do-tracking ()
-	       (with-input-context (context-type :override t)
-		 ()
-		 (loop
-		  (let ((event (event-read sheet)))
-		    (when (and (eq sheet (event-sheet event))
-			       (typep event 'pointer-motion-event))
-		      (queue-event sheet event)
-		      (highlight-applicable-presentation
-		       (pane-frame sheet) sheet *input-context*))
-		    (cond ((and (typep event 'pointer-event)
-				#+nil
-				(eq (pointer-event-pointer event)
-				    pointer))                     
-			   (let* ((x (pointer-event-x event))
-				  (y (pointer-event-y event))
-				  (window (event-sheet event))
-				  (presentation
-				   (and presentations-p
-					(find-innermost-applicable-presentation
-					 *input-context*
-					 sheet ; XXX
-					 x y
-					 :modifier-state (event-modifier-state event)))))
-			     (when (and highlight presentation)
-			       (frame-highlight-at-position
-				(pane-frame sheet) window x y))
-			     ;; FIXME Convert X,Y to SHEET coordinates; user
-			     ;; coordinates
-			     (typecase event
-			       (pointer-motion-event
-				(if (and presentation presentation-handler)
-				    (funcall presentation-handler
-					     :presentation presentation
-					     :window window :x x :y y)
-				    (maybe-funcall
-				     pointer-motion-handler
-				     :window window :x x :y y)))
-			       (pointer-button-press-event
-				(if (and presentation
-					 presentation-button-press-handler)
-				    (funcall
-				     presentation-button-press-handler
-				     :presentation presentation
-				     :event event :x x :y y)
-				    (maybe-funcall
-				     pointer-button-press-handler
-				     :event event :x x :y y)))
-			       (pointer-button-release-event
-				(if (and presentation
-					 presentation-button-release-handler)
-				    (funcall
-				     presentation-button-release-handler
-				     :presentation presentation
-				     :event event :x x :y y)
-				    (maybe-funcall
-				     pointer-button-release-handler
-				     :event event :x x :y y))))))
-			  ((typep event
-				  '(or keyboard-event character symbol))
-			   (maybe-funcall keyboard-handler
-					  :gesture event #|XXX|#))
-			  (t (handle-event #|XXX|# (event-sheet event)
-						   event))))))))
-	(do-tracking)))))
-
+(defmethod tracking-pointer-loop
+    ((state tracking-pointer-state) frame sheet &rest args
+     &key pointer multiple-window transformp context-type highlight)
+  (declare (ignore pointer context-type highlight frame))
+  (with-sheet-medium (medium sheet)
+    (flet ((do-tracking ()
+	     (loop
+		for event = (event-read sheet)
+		do (if (typep event 'pointer-event)
+		       (multiple-value-bind (sheet-x sheet-y)
+			   (pointer-event-position* event)
+			 (multiple-value-bind (x y)
+			     (if transformp
+				 (transform-position
+				  (medium-transformation medium)
+				  sheet-x
+				  sheet-y)
+				 (values sheet-x sheet-y))
+			   (tracking-pointer-loop-step state event x y)))
+		       (tracking-pointer-loop-step state event 0 0)))))
+      (do-tracking))))
+;;;      (if multiple-window
+;;;	  (with-pointer-grabbed ((port medium) sheet)
+;;;	    (do-tracking))
+;;;	  (do-tracking)))))
