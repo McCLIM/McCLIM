@@ -53,8 +53,8 @@
 
 (defun %release-lock (lock) ; copied from with-lock-held in multiproc.lisp
   #+i486 (kernel:%instance-set-conditional
-	  lock 2 *current-process* nil)
-  #-i486 (when (eq (lock-process lock) *current-process*)
+	  lock 2 mp:*current-process* nil)
+  #-i486 (when (eq (lock-process lock) mp:*current-process*)
 	   (setf (lock-process lock) nil)))
 
 (defun condition-wait (cv lock &optional timeout)
@@ -69,7 +69,7 @@
 	       (nconc (condition-variable-process-queue cv)
 		      (list mp:*current-process*)))
 	 (%release-lock lock))
-       (mp:process-add-arrest-reason *current-process* cv)
+       (mp:process-add-arrest-reason mp:*current-process* cv)
        (let ((cv-val nil))
 	 (with-lock-held (cv-lock)
 	   (setq cv-val (condition-variable-value cv))
@@ -84,12 +84,13 @@
     (let ((proc (pop (condition-variable-process-queue cv))))
       ;; The waiting process may have released the CV lock but not
       ;; suspended itself yet
-      (loop
+      (when proc
+	(loop
 	 for activep = (mp:process-active-p proc)
 	 while activep
-	   do (mp:process-yield))
-      (setf (condition-variable-value cv) t)
-      (mp:process-revoke-arrest-reason proc cv)))
+	 do (mp:process-yield))
+	(setf (condition-variable-value cv) t)
+	(mp:process-revoke-arrest-reason proc cv))))
   ;; Give the other process a chance
   (mp:process-yield))
 
