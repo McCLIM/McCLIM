@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.148 2005/01/21 11:01:37 ahefner Exp $
+;;; $Id: panes.lisp,v 1.149 2005/02/01 03:08:27 ahefner Exp $
 
 (in-package :clim-internals)
 
@@ -1371,7 +1371,7 @@ order to produce a double-click")
     (with-slots (array) pane
       (setf array (make-array (list nrows ncols)
                               :initial-element nil))
-      (loop for row in contents 
+      (loop for row in contents
             for i from 0 do
          (loop for cell in row
                for j from 0 do
@@ -1542,39 +1542,43 @@ order to produce a double-click")
 (defmethod compose-space ((grid grid-pane) &key width height)
   (declare (ignore width height))
   (mapc #'compose-space (sheet-children grid))
-  (loop with nb-children-pl = (table-pane-number grid)
-	with nb-children-pc = (/ (length (sheet-children grid)) nb-children-pl)
-	for child in (sheet-children grid)
-	and width = 0 then (max width (sr-width child))
-	and height = 0 then (max height (sr-height child))
-	and max-width = 5000000 then (min max-width (sr-min-width child))
-	and max-height = 5000000 then (min max-height (sr-max-height child))
-	and min-width = 0 then (max min-width (sr-min-width child))
-	and min-height = 0 then (max min-height (sr-min-height child))
-	finally (return
-		 (make-space-requirement
-		  :width (* width nb-children-pl)
-		  :height (* height nb-children-pc)
-		  :max-width (* width nb-children-pl)
-		  :max-height (* max-height nb-children-pc)
-		  :min-width (* min-width nb-children-pl)
-		  :min-height (* min-height nb-children-pc)))))
+  (with-slots (array) grid
+    (loop with nb-children-pl = (array-dimension array 1) ;(table-pane-number grid)
+          with nb-children-pc = (array-dimension array 0) ;(/ (length (sheet-children grid)) nb-children-pl)
+          for child in (sheet-children grid)
+          and width = 0 then (max width (sr-width child))
+          and height = 0 then (max height (sr-height child))
+          and max-width = 5000000 then (min max-width (sr-min-width child))
+          and max-height = 5000000 then (min max-height (sr-max-height child))
+          and min-width = 0 then (max min-width (sr-min-width child))
+          and min-height = 0 then (max min-height (sr-min-height child))
+          finally (return
+                    (make-space-requirement
+                     :width (* width nb-children-pl)
+                     :height (* height nb-children-pc)
+                     :max-width (* width nb-children-pl)
+                     :max-height (* max-height nb-children-pc)
+                     :min-width (* min-width nb-children-pl)
+                     :min-height (* min-height nb-children-pc))))))
 
 (defmethod allocate-space ((grid grid-pane) width height)
-  (loop with nb-kids-p-l = (table-pane-number grid)
-	with nb-kids-p-c = (/ (length (sheet-children grid)) nb-kids-p-l)
-	for children in (format-children grid)
-	for c from nb-kids-p-c downto 1
-	for tmp-height = height then (decf tmp-height new-height)
-	for new-height = (/ tmp-height c)
-	for y = 0 then (+ y new-height)
-	do (loop for child in children
-		 for l from nb-kids-p-l downto 1
-		 for tmp-width = width then (decf tmp-width new-width)
-		 for new-width = (/ tmp-width l)
-		 for x = 0 then (+ x new-width)
-		 do (move-sheet child x y)
-		    (allocate-space child (round new-width) (round new-height)))))
+  (with-slots (array) grid
+    (loop with nb-kids-p-l = (array-dimension array 1) ;(table-pane-number grid)
+          with nb-kids-p-c = (array-dimension array 0) ;(/ (length (sheet-children grid)) nb-kids-p-l)
+          for c from nb-kids-p-c downto 1
+          for row-index from 0 by 1
+          for tmp-height = height then (decf tmp-height new-height)
+          for new-height = (/ tmp-height c)
+          for y = 0 then (+ y new-height)
+          do (loop
+                for col-index from 0 by 1
+                for l from nb-kids-p-l downto 1                  
+                for child = (aref array row-index col-index)
+                for tmp-width = width then (decf tmp-width new-width)
+                for new-width = (/ tmp-width l)
+                for x = 0 then (+ x new-width)
+                do (move-sheet child x y)                  
+                  (allocate-space child (round new-width) (round new-height))))))
 
 ;;; SPACING PANE
 
@@ -2557,7 +2561,7 @@ order to produce a double-click")
 		(eq (frame-state frame) :shrunk))
       (enable-frame frame))
     ;; Start a new thread to run the event loop, if necessary.
-    #+CLIM-MP
+    #+clim-mp
     (unless input-buffer
       (clim-sys:make-process (lambda () (let ((*application-frame* frame))
                                           (standalone-event-loop)))))
