@@ -43,41 +43,35 @@
 (pushnew :clim *features*)
 (pushnew :mcclim *features*)
 
-#+(and mk-defsystem asdf)
-(cerror "OK, just use mk-defsystem" "Both ASDF's and MK's defsystem is loaded and conflict.")
-
-#+asdf
-(defmacro clim-defsystem ((module &key depends-on) &rest components)
-  `(asdf:defsystem ,module
-    ,@(and depends-on
-	   `(:depends-on ,depends-on))
-    :serial t
-    :components
-    (,@(loop for c in components
-	     for p = (merge-pathnames
-		      (parse-namestring c)
-		      (make-pathname :type "lisp"
-				     :defaults *clim-directory*))
-	     collect `(:file ,(pathname-name p) :pathname ,p)))))
-
 #+mk-defsystem (use-package "MK")
 
-#+mk-defsystem
 (defmacro clim-defsystem ((module &key depends-on) &rest components)
-  `(defsystem ,module
+  `(progn
+     #+mk-defsystem
+     (defsystem ,module
        :source-pathname *clim-directory*
        :source-extension "lisp"
        ,@(and depends-on `(:depends-on ,depends-on))
         :components
 	(:serial
-	 ,@components)))
-
-#-(or mk-defsystem asdf)
-(defmacro clim-defsystem ((module &key depends-on) &rest components)
-  `(defsystem ,module ()
-     (:serial
-      ,@depends-on
-      ,@components)))
+	 ,@components))
+     #+asdf
+     (asdf:defsystem ,module
+	 ,@(and depends-on
+		`(:depends-on ,depends-on))
+	 :serial t
+	 :components
+	 (,@(loop for c in components
+		  for p = (merge-pathnames
+			   (parse-namestring c)
+			   (make-pathname :type "lisp"
+					  :defaults *clim-directory*))
+		  collect `(:file ,(pathname-name p) :pathname ,p))))
+     #-(or mk-defsystem asdf)
+     (defsystem ,module ()
+       (:serial
+	,@depends-on
+	,@components))))
 
 (clim-defsystem (:clim-lisp)
   ;; First possible patches
