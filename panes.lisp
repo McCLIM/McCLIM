@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.106 2002/11/10 15:48:56 gilbert Exp $
+;;; $Id: panes.lisp,v 1.107 2002/11/10 16:35:43 gilbert Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -1095,7 +1095,7 @@
                       (or (member (car content) '(+fill+ :fill))
                           (eql (car content) +fill+)))
                  (make-instance 'box-client
-                                :pane nil
+                                :pane (cadr content)
                                 :fillp t))
                 ;; <n>
                 ;;
@@ -1117,10 +1117,10 @@
                        (child  (cadr content)))
                    (if (< number 1)
                        (make-instance 'box-client
-                                      :pane pane
+                                      :pane child
                                       :proportion number)
                        (make-instance 'box-client
-                                      :pane pane
+                                      :pane child
                                       :fixed-size number))))
 
                 (t
