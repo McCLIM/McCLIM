@@ -418,6 +418,21 @@
 
 ;;;
 
+(defclass transformed-design (design)
+  ((transformation
+    :initarg :transformation
+    :reader transformed-design-transformation)
+   (design
+    :initarg :design
+    :reader transformed-design-design)))
+
+(defmethod transform-region (transformation (design design))
+  (make-instance 'transformed-design
+                 :transformation transformation
+                 :design design))
+
+;;;
+
 (defclass rectangular-tile (design)
   ((width  :initarg :width      :reader rectangular-tile-width)
    (height :initarg :height     :reader rectangular-tile-height)

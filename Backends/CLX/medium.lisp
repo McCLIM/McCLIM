@@ -114,6 +114,15 @@
 
 (defgeneric medium-gcontext (medium ink))
 
+(defmethod medium-gcontext :before ((medium clx-medium) ink)
+  (let* ((port (port medium))
+	 (mirror (port-lookup-mirror port (medium-sheet medium))))
+    (with-slots (gc) medium
+      (unless gc
+        (setq gc (xlib:create-gcontext :drawable mirror))
+        (and gc
+             (setf (xlib:gcontext-fill-style gc) :solid))))))
+
 (defmethod medium-gcontext ((medium clx-medium) (ink color))
   (let* ((port (port medium))
 	 (mirror (port-lookup-mirror port (medium-sheet medium)))
@@ -189,7 +198,82 @@
     (setf (xlib:gcontext-foreground gc) flipper)
     (setf (xlib:gcontext-background gc) flipper)
     gc))
-			    
+
+(defmethod medium-gcontext ((medium clx-medium) (ink climi::indexed-pattern))
+  (design-gcontext medium ink))
+
+(defmethod medium-gcontext ((medium clx-medium) (ink climi::rectangular-tile))
+  (design-gcontext medium ink))
+
+;;;;
+
+(defmethod design-gcontext :around ((medium clx-medium) (ink climi::indexed-pattern))
+  (let ((design-cache (slot-value (port medium) 'design-cache)))
+    (let ((cached (gethash ink design-cache)))
+      (or cached
+          (setf (gethash ink design-cache)
+                (call-next-method))))))
+
+(defmethod design-gcontext ((medium clx-medium) (ink climi::indexed-pattern))
+  (let* ((array (slot-value ink 'climi::array))
+         (inks  (slot-value ink 'climi::designs))
+         (w     (array-dimension array 1))
+         (h     (array-dimension array 0)))
+    (let ((pm (allocate-pixmap (first (port-grafts (port medium))) w h))) ;errr
+      (dotimes (y h)
+        (dotimes (x w)
+          (draw-point* pm x y :ink (elt inks (aref array y x)))))
+      (let ((gc (xlib:create-gcontext :drawable (port-lookup-mirror (port medium) (medium-sheet medium)))))
+        (setf (xlib:gcontext-fill-style gc) :tiled
+              (xlib:gcontext-tile gc) (port-lookup-mirror (port pm) pm)
+              (xlib:gcontext-clip-x gc) 0
+              (xlib:gcontext-clip-y gc) 0
+              (xlib:gcontext-ts-x gc) 0
+              (xlib:gcontext-ts-y gc) 0
+              (xlib:gcontext-clip-mask gc) (list 0 0 w h))
+        gc))))
+
+(defmethod design-gcontext ((medium clx-medium) (ink climi::rectangular-tile))
+  (let* ((design (slot-value ink 'climi::design))
+         (w      (slot-value ink 'climi::width))
+         (h      (slot-value ink 'climi::height)))
+    (let ((pm (allocate-pixmap (first (port-grafts (port medium))) w h))) ;dito
+      (draw-rectangle* pm 0 0 w h :ink design)
+      (let ((gc (xlib:create-gcontext :drawable (port-lookup-mirror (port medium) (medium-sheet medium)))))
+        (setf (xlib:gcontext-fill-style gc) :tiled
+              (xlib:gcontext-tile gc) (port-lookup-mirror (port pm) pm)
+              (xlib:gcontext-clip-x gc) 0
+              (xlib:gcontext-clip-y gc) 0
+              (xlib:gcontext-ts-x gc) 0
+              (xlib:gcontext-ts-y gc) 0)
+        gc))))
+
+(defmethod medium-gcontext ((medium clx-medium) (ink climi::transformed-design))
+  (let ((transformation (climi::transformed-design-transformation ink))
+        (design (climi::transformed-design-design ink)))
+    (unless (translation-transformation-p transformation)
+      (error "Sorry, not yet implemented."))
+    ;; Bah!
+    (typecase design
+      (climi::indexed-pattern
+       (let ((gc (design-gcontext medium design)))
+         (setf (xlib:gcontext-ts-x gc) (round (nth-value 0 (transform-position transformation 0 0)))
+               (xlib:gcontext-ts-y gc) (round (nth-value 1 (transform-position transformation 0 0)))
+               (xlib:gcontext-clip-x gc)(round (nth-value 0 (transform-position transformation 0 0)))
+               (xlib:gcontext-clip-y gc)(round (nth-value 1 (transform-position transformation 0 0))))
+         gc))
+      (climi::rectangular-tile
+       (let ((gc (design-gcontext medium design)))
+         (setf (xlib:gcontext-ts-x gc) (round (nth-value 0 (transform-position transformation 0 0)))
+               (xlib:gcontext-ts-y gc) (round (nth-value 1 (transform-position transformation 0 0)))
+               (xlib:gcontext-clip-x gc)(round (nth-value 0 (transform-position transformation 0 0)))
+               (xlib:gcontext-clip-y gc)(round (nth-value 1 (transform-position transformation 0 0))))
+         gc))
+      (t
+       (error "You lost, we not yet implemented transforming an ~S."
+              (type-of ink))))))
+
+;;;;
 
 #+nil
 (defun clipping-region->rect-seq (clipping-region)

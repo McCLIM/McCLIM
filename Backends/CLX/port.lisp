@@ -145,6 +145,7 @@
    (color-table :initform (make-hash-table :test #'eq))
    (modifier-cache :initform nil
 		   :accessor clx-port-modifier-cache)
+   (design-cache :initform (make-hash-table :test #'eq))
    (pointer :reader port-pointer)))
 
 (defun parse-clx-server-path (path)
