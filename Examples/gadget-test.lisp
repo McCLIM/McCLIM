@@ -114,7 +114,7 @@
      (image      :image
                 ;:background +Gray83+
                  :background +Red+
-                 :pathname "CLIM:images;green-apple.ppm")
+                 :pathname "CLIM:IMAGES;GREEN-APPLE.PPM")
      (slider-v   :slider
                  :min-value 0
                  :max-value 100

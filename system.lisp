@@ -132,7 +132,7 @@
   )
 
 (clim-defsystem (:clim-looks :depends-on (:clim))
-  "looks/pixie")
+  "Looks/pixie")
 
 ;;; Will depend on :goatee soon...
 ;;; name of :clim-clx-user chosen by mikemac for no good reason
