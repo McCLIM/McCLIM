@@ -34,6 +34,8 @@
 ;;; - Documentation.
 ;;;
 ;;; - Menu position.
+;;;
+;;; - Empty menu.
 
 ;;; TODO:
 ;;;
@@ -82,10 +84,18 @@
       (cdr menu-item) ; XXX Remove :VALUE?
       nil))
 
+(defun menu-item-option (menu-item option &optional default)
+  (getf (menu-item-options menu-item) option default))
+
 (defun print-menu-item (menu-item &optional (stream *standard-output*))
   (let ((style (getf (menu-item-options menu-item) :style '(nil nil nil))))
     (with-text-style (stream style)
-      (princ (menu-item-display menu-item) stream))))
+      (if (menu-item-option menu-item :active t)
+          (princ (menu-item-display menu-item) stream)
+          (with-drawing-options (stream :ink (compose-over (compose-in (medium-foreground stream) ; XXX it should be (MEDIUM-INK), but CLX backend is too stupid. -- APD, 2002-08-07
+                                                                       (make-opacity 0.5))
+                                                           (medium-background stream)))
+            (princ (menu-item-display menu-item) stream))))))
 
 (defun draw-standard-menu
     (stream presentation-type items default-item
@@ -96,8 +106,19 @@
   (orf item-printer #'print-menu-item)
   (format-items items
                 :stream stream
-                :printer item-printer
-                :presentation-type presentation-type
+                :printer (lambda (item stream)
+                           (let ((activep (menu-item-option item :active t)))
+                             (with-presentation-type-decoded (name params options)
+                                 presentation-type
+                               (let ((*allow-sensitive-inferiors* activep))
+                                 (with-output-as-presentation
+                                     (stream
+                                      item
+                                      `((,name ,@params)
+                                        :description ,(getf (menu-item-options item) :documentation)
+                                        ,@options))
+                                   (funcall item-printer item stream))))))
+                :presentation-type nil
                 :x-spacing x-spacing
                 :y-spacing y-spacing
                 :n-columns n-columns
@@ -177,17 +198,18 @@
     (with-menu (menu associated-window)
       (when text-style
         (setf (medium-text-style menu) text-style))
-      (multiple-value-bind (object event)
-          (menu-choose-from-drawer menu (or presentation-type 'menu-item)
-                                   #'drawer
-                                   :cache cache
-                                   :unique-id unique-id
-                                   :id-test id-test
-                                   :cache-value cache-value
-                                   :cache-test cache-test
-                                   :pointer-documentation pointer-documentation)
-        ;; What is OBJECT? Assuming it is a menu item... - APD, 2002-08-03.
-        (values (menu-item-value object) object event)))))
+      (letf (((stream-default-view menu) +textual-menu-view+))
+        (multiple-value-bind (object event)
+            (menu-choose-from-drawer menu (or presentation-type 'menu-item)
+                                     #'drawer
+                                     :cache cache
+                                     :unique-id unique-id
+                                     :id-test id-test
+                                     :cache-value cache-value
+                                     :cache-test cache-test
+                                     :pointer-documentation pointer-documentation)
+          ;; What is OBJECT? Assuming it is a menu item... - APD, 2002-08-03.
+          (values (menu-item-value object) object event))))))
 
 (defmethod menu-choose-from-drawer
     (menu presentation-type drawer
