@@ -29,7 +29,7 @@
 ;;; Gadget
 ;;;
 
-(defclass gadget (immediate-sheet-input-mixin pane immediate-repaint-mixin)
+(defclass gadget (immediate-sheet-input-mixin pane immediate-repainting-mixin)
   ((id :initarg :id
        :initform (gensym "GADGET")
        :accessor gadget-id)
@@ -373,10 +373,6 @@
 
 (defmethod handle-event ((pane push-button-pane) (event window-repaint-event))
   (dispatch-repaint pane (sheet-region pane)))
-
-(defun 2- (x)
-  (declare (type coordinate x))
-  (- x 2))
 
 (defmethod repaint-sheet ((pane push-button-pane) region)
   (declare (ignore region))

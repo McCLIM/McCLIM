@@ -638,23 +638,23 @@ sheet-supports-only-one-child error to be signalled."))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; standard repaint mixin
+;;; standard repainting mixin
 
-(defclass standard-repaint-mixin () ())
+(defclass standard-repainting-mixin () ())
 
-(defmethod dispatch-repaint ((sheet standard-repaint-mixin) region)
+(defmethod dispatch-repaint ((sheet standard-repainting-mixin) region)
   (queue-repaint sheet region))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; immediate repaint mixin
+;;; immediate repainting mixin
 
-(defclass immediate-repaint-mixin () ())
+(defclass immediate-repainting-mixin () ())
 
-(defmethod dispatch-repaint ((sheet immediate-repaint-mixin) region)
+(defmethod dispatch-repaint ((sheet immediate-repainting-mixin) region)
   (handle-repaint sheet nil region))
 
-(defmethod handle-repaint ((sheet immediate-repaint-mixin) medium region)
+(defmethod handle-repaint ((sheet immediate-repainting-mixin) medium region)
   (declare (ignore medium region))
   (repaint-sheet sheet (sheet-region sheet))
   (loop for child in (sheet-children sheet)
@@ -663,14 +663,14 @@ sheet-supports-only-one-child error to be signalled."))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; mute repaint mixin
+;;; sheet mute repainting mixin
 
-(defclass mute-repaint-mixin () ())
+(defclass sheet-mute-repainting-mixin () ())
 
-(defmethod dispatch-repaint ((sheet mute-repaint-mixin) region)
+(defmethod dispatch-repaint ((sheet sheet-mute-repainting-mixin) region)
   (handle-repaint sheet nil region))
 
-(defmethod repaint-sheet ((sheet mute-repaint-mixin) region)
+(defmethod repaint-sheet ((sheet sheet-mute-repainting-mixin) region)
   (declare (ignorable sheet region))
   (format *debug-io* "repaint ~S~%" sheet)
   (values))
