@@ -3,7 +3,7 @@
 (in-package :common-lisp-user)
 
 (defpackage :clim-clx
-  (:use :clim :clim-lisp)
+    (:use :clim :clim-lisp)
   (:import-from :climi
                 #:+alt-key+
                 ;;
@@ -21,6 +21,12 @@
                 #:port-grafts
                 #:port-enable-sheet
                 #:port-disable-sheet
+                ;;
+                #:port-set-mirror-region
+                #:port-set-mirror-transformation
+                #:update-mirror-geometry
+                #:%sheet-mirror-region
+                #:%sheet-mirror-transformation
                 ;;
                 #:clamp
                 #:get-environment-variable
