@@ -31,21 +31,16 @@ Install instructions for CMU Common Lisp
 
    (operate-on-system :clim :load)
 
-Running the demo
-----------------
+Running the demos
+-----------------
 
 1. Load the file "test.lisp":
 
    (load "test.lisp")
 
-2. (in-package :clim-demo)
+2. Run the address-book demo
 
-3. (test)
-
-   You will get quite a few warnings, but eventually, you get the Lisp
-   prompt back.
-
-4. (run-frame-top-level frame)
+   (clim-demo::address-book)
 
    You should now see a window with three panes, the lower one of
    which has a prompt "Command:"
@@ -61,6 +56,16 @@ Running the demo
 
    7 
    Command: 
+
+   when you get tired of it, hit ^C in the Lisp listener.
+
+3. Run the calculator demo
+
+   (clim-demo::calculator)
+
+   This demo is self-explanatory.  Note, the calculator currently does not calculate.
+	
+   when you get tired of it, hit ^C in the Lisp listener.
 
 How to create a Lisp core file
 ------------------------------
