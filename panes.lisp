@@ -303,7 +303,7 @@
 
 ;;; WINDOW STREAM
 
-(defclass window-stream (extended-output-stream standard-input-stream)
+(defclass window-stream (standard-extended-output-stream standard-input-stream)
   (
    )
   )
@@ -956,6 +956,23 @@ During realization the child of the spacing will have as cordinates
                                 (pane-viewport-region client))))
                          old-y)))))
 
+(defun scroll-line-callback (scroll-bar direction)
+  (with-slots (client orientation) scroll-bar
+    (multiple-value-bind (old-x old-y)
+        (untransform-position (sheet-transformation client)
+                              0 0)
+      (if (eq orientation :vertical)
+          (scroll-extent client
+                         old-x
+                         (- old-y
+                            (* direction
+                               (stream-line-height client))))
+          (scroll-extent client
+                         (- old-x
+                            (* direction
+                               (stream-line-height client)))
+                         old-y)))))
+
 (defmethod initialize-instance :after ((pane scroller-pane) &rest args)
   (declare (ignore args))
   (with-slots (scroll-bar viewport vscrollbar hscrollbar) pane
@@ -971,13 +988,19 @@ During realization the child of the spacing will have as cordinates
                                          (pane-viewport-region
                                           (gadget-client gadget)))))
                              (scroll-extent (gadget-client gadget)
-                                            old-x (* new-value (scroll-bar-length gadget)))))
+                                            old-x new-value)))
                        :scroll-up-page-callback
                        #'(lambda (scroll-bar)
                            (scroll-page-callback scroll-bar 1))
                        :scroll-down-page-callback
                        #'(lambda (scroll-bar)
                            (scroll-page-callback scroll-bar -1))
+                       :scroll-up-line-callback
+                       #'(lambda (scroll-bar)
+                           (scroll-line-callback scroll-bar 1))
+                       :scroll-down-line-callback
+                       #'(lambda (scroll-bar)
+                           (scroll-line-callback scroll-bar -1))
                        :foreground +grey+
                        :background +grey40+))
       (sheet-adopt-child pane vscrollbar))
@@ -1068,23 +1091,20 @@ During realization the child of the spacing will have as cordinates
     (sheet-parent (sheet-parent pane))))
 
 (defun update-scroll-bars (pane entire-region x y)
-  (with-slots (vscrollbar hscrollbar viewport) (pane-scroller pane)
-    (when vscrollbar
-      (let* ((viewport-height (bounding-rectangle-height (sheet-region viewport)))
-             (max-height (max (bounding-rectangle-height entire-region)
-                              viewport-height)))
-        (with-slots (value length) vscrollbar
-          (setf length max-height
-                value (/ y max-height))))
-      (dispatch-repaint vscrollbar (sheet-region vscrollbar))
-    (when hscrollbar
-      (let* ((viewport-width (bounding-rectangle-width (sheet-region viewport)))
-             (max-width (max (bounding-rectangle-width entire-region)
-                             viewport-width)))
-        (with-slots (value length) hscrollbar
-          (setf length max-width
-                value (/ x max-width))))
-      (dispatch-repaint hscrollbar (sheet-region hscrollbar))))))
+  (multiple-value-bind (min-x min-y max-x max-y) (bounding-rectangle* entire-region)
+    (with-slots (vscrollbar hscrollbar viewport) (pane-scroller pane)
+      (when vscrollbar
+	(with-slots (value) vscrollbar
+	  (setf value y))
+	(setf (gadget-min-value vscrollbar) min-y
+	      (gadget-max-value vscrollbar) max-y)
+	(dispatch-repaint vscrollbar (sheet-region vscrollbar)))
+      (when hscrollbar
+	(with-slots (value) hscrollbar
+	  (setf value x))
+	(setf (gadget-min-value vscrollbar) min-x
+	      (gadget-max-value vscrollbar) max-x)
+	(dispatch-repaint hscrollbar (sheet-region hscrollbar))))))
 
 (defmethod scroll-extent ((pane basic-pane) x y)
   (when (is-in-scroller-pane pane)
@@ -1198,6 +1218,8 @@ During realization the child of the spacing will have as cordinates
                                          (bounding-rectangle-max-y output-history))))
           (with-bounding-rectangle* (left top right bottom) entire-region
             (medium-clear-area (sheet-medium pane) left top right bottom))
+	  (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
+	    (draw-rectangle* (sheet-medium pane) x1 y1 x2 y2 :ink +background-ink+))
           (set-bounding-rectangle-position (sheet-region pane) new-x new-y)
 	  ;; find out the coordinates, in the coordinates system of
 	  ;; pane, of the upper-left corner, i.e. the one with

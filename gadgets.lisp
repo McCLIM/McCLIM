@@ -305,9 +305,6 @@
   ;; Try to be compatible with Lispworks' CLIM.
   ())
 
-;; GADGET-RANGE and GADGET-RANGE* are from Lispworks' CLIM 2.0 User Guide. 
-;; They're not defined in the spec.
-
 (defgeneric gadget-range (range-gadget)
   (:documentation
    "Returns the difference of the maximum and minimum value of RANGE-GADGET."))
@@ -724,20 +721,33 @@
 
 (defun get-orientation-dependant-informations (scroll-bar-pane)
   (if (eq (gadget-orientation scroll-bar-pane) :vertical)
-      (values (bounding-rectangle-height (sheet-region scroll-bar-pane))
+      (values (- (bounding-rectangle-height (sheet-region scroll-bar-pane))
+		 (* 2 *scrollbar-thickness*))
               #'pointer-event-y)
-      (values (bounding-rectangle-width (sheet-region scroll-bar-pane))
+      (values (- (bounding-rectangle-width (sheet-region scroll-bar-pane))
+		 (* 2 *scrollbar-thickness*))
               #'pointer-event-x)))
 
 (defmethod dispatch-callbacks ((sb scroll-bar-pane) event)
   (multiple-value-bind (sb-length pos-func)
       (get-orientation-dependant-informations sb)
-    (with-slots (value length min-value max-value) sb
-      (let ((value-clicked (/ (funcall pos-func event) sb-length)))
-        (cond ((<= min-value value-clicked value)
-               (scroll-up-page-callback sb (gadget-client sb) (gadget-id sb)))
-              ((<= (+ value (/ sb-length length)) value-clicked max-value)
-               (scroll-down-page-callback sb (gadget-client sb) (gadget-id sb))))))))
+    (with-slots (value min-value max-value) sb
+      (let* ((position (funcall pos-func event))
+	     (value-clicked (/ (- position *scrollbar-thickness*) sb-length)))
+        (cond
+	 ((< position *scrollbar-thickness*)
+	  (scroll-up-line-callback sb (gadget-client sb) (gadget-id sb)))
+	 ((> position (+ sb-length *scrollbar-thickness*))
+	  (scroll-down-line-callback sb (gadget-client sb) (gadget-id sb)))
+	 ((< value-clicked (/ (- value min-value)
+			 (- max-value min-value)))
+	  (scroll-up-page-callback sb (gadget-client sb) (gadget-id sb)))
+	 ((< (+ (/ (- value min-value)
+			 (- max-value min-value))
+		 (/ sb-length
+			  (gadget-range sb)))
+	      value-clicked)
+	  (scroll-down-page-callback sb (gadget-client sb) (gadget-id sb))))))))
 
 (defmethod handle-event ((sb scroll-bar-pane) (event pointer-button-press-event))
   (with-slots (armed) sb
@@ -752,7 +762,12 @@
       (multiple-value-bind (sb-length pos-func)
           (get-orientation-dependant-informations sb)
         (drag-callback sb (gadget-client sb) (gadget-id sb)
-                       (/ (funcall pos-func event) sb-length)))
+                       (min (max (+ (gadget-min-value sb)
+				    (* (gadget-range sb)
+				       (/ (- (funcall pos-func event) *scrollbar-thickness*)
+					  sb-length)))
+				 0)
+			    (gadget-max-value sb))))
       (unless dragged
         (setf dragged t)))))
 
