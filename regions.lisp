@@ -4,7 +4,7 @@
 ;;;   Created: 1998-12-02 19:26
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: regions.lisp,v 1.25 2002/11/10 15:48:56 gilbert Exp $
+;;;       $Id: regions.lisp,v 1.26 2003/03/21 22:07:06 mikemac Exp $
 ;;; --------------------------------------------------------------------------------------
 ;;;  (c) copyright 1998,1999,2001 by Gilbert Baumann
 ;;;  (c) copyright 2001 by Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
@@ -721,34 +721,34 @@
 	     #+:excl(declare (ignore y))
              (values
               ;; Solution number  1 
-              (SETQ X (- (/ C (SQRT (+ (- (* (* C C) (SQRT (+ (* C C) (* B B) (- (* 2 A B)) (* A A)))))
-                                       (- (* 2 (* B B) (SQRT (+ (* C C) (* B B) (- (* 2 A B)) (* A A)))))
-                                       (* 2 A B (SQRT (+ (* C C) (* B B) (- (* 2 A B)) (* A A))))
-                                       (* 2 B (* C C)) (* 2 (EXPT B 3)) (- (* 4 A (* B B))) (* 2 (* A A) B)))))) 
-              (SETQ Y (- (/ (+ (* (SQRT (+ (* C C) (* B B) (- (* 2 A B)) (* A A))) X) (- (* B X)) (* A X)) 
-                            C))) 
-              ;; ;; Solution number  2 
-              ;; (SETQ X (/ C (SQRT (+ (- (* (* C C) (SQRT (+ (* C C) (* B B) (- (* 2 A B)) (* A A)))))
-              ;;                       (- (* 2 (* B B) (SQRT (+ (* C C) (* B B) (- (* 2 A B)) (* A A)))))
-              ;;                       (* 2 A B (SQRT (+ (* C C) (* B B) (- (* 2 A B)) (* A A))))
-              ;;                       (* 2 B (* C C)) (* 2 (EXPT B 3)) (- (* 4 A (* B B))) (* 2 (* A A) B))))) 
-              ;; (SETQ Y (- (/ (+ (* (SQRT (+ (* C C) (* B B) (- (* 2 A B)) (* A A))) X)
-              ;;                  (- (* B X)) (* A X)) C))) 
+              (setq x (- (/ c (sqrt (+ (- (* (* c c) (sqrt (+ (* c c) (* b b) (- (* 2 a b)) (* a a)))))
+                                       (- (* 2 (* b b) (sqrt (+ (* c c) (* b b) (- (* 2 a b)) (* a a)))))
+                                       (* 2 a b (sqrt (+ (* c c) (* b b) (- (* 2 a b)) (* a a))))
+                                       (* 2 b (* c c)) (* 2 (expt b 3)) (- (* 4 a (* b b))) (* 2 (* a a) b)))))) 
+              (setq y (- (/ (+ (* (sqrt (+ (* c c) (* b b) (- (* 2 a b)) (* a a))) x) (- (* b x)) (* a x)) 
+                            c))) 
+              ;; ;; solution number  2 
+              ;; (setq x (/ c (sqrt (+ (- (* (* c c) (sqrt (+ (* c c) (* b b) (- (* 2 a b)) (* a a)))))
+              ;;                       (- (* 2 (* b b) (sqrt (+ (* c c) (* b b) (- (* 2 a b)) (* a a)))))
+              ;;                       (* 2 a b (sqrt (+ (* c c) (* b b) (- (* 2 a b)) (* a a))))
+              ;;                       (* 2 b (* c c)) (* 2 (expt b 3)) (- (* 4 a (* b b))) (* 2 (* a a) b))))) 
+              ;; (setq y (- (/ (+ (* (sqrt (+ (* c c) (* b b) (- (* 2 a b)) (* a a))) x)
+              ;;                  (- (* b x)) (* a x)) c))) 
        
-              ;; Solution number  3 
-              (SETQ X (- (/ C (SQRT (+ (* (* C C) (SQRT (+ (* C C) (* B B) (- (* 2 A B)) (* A A))))
-                                       (* 2 (* B B) (SQRT (+ (* C C) (* B B) (- (* 2 A B)) (* A A))))
-                                       (- (* 2 A B (SQRT (+ (* C C) (* B B) (- (* 2 A B)) (* A A)))))
-                                       (* 2 B (* C C)) (* 2 (EXPT B 3)) (- (* 4 A (* B B))) (* 2 (* A A) B)))))) 
-              (SETQ Y (- (/ (+ (- (* (SQRT (+ (* C C) (* B B) (- (* 2 A B)) (* A A))) X)) (- (* B X)) (* A X))
-                            C))) 
+              ;; solution number  3 
+              (setq x (- (/ c (sqrt (+ (* (* c c) (sqrt (+ (* c c) (* b b) (- (* 2 a b)) (* a a))))
+                                       (* 2 (* b b) (sqrt (+ (* c c) (* b b) (- (* 2 a b)) (* a a))))
+                                       (- (* 2 a b (sqrt (+ (* c c) (* b b) (- (* 2 a b)) (* a a)))))
+                                       (* 2 b (* c c)) (* 2 (expt b 3)) (- (* 4 a (* b b))) (* 2 (* a a) b)))))) 
+              (setq y (- (/ (+ (- (* (sqrt (+ (* c c) (* b b) (- (* 2 a b)) (* a a))) x)) (- (* b x)) (* a x))
+                            c))) 
 
-              ;; ;; Solution number  4 
-              ;; (SETQ X (/ C (SQRT (+ (* (* C C) (SQRT (+ (* C C) (* B B) (- (* 2 A B)) (* A A))))
-              ;;                       (* 2 (* B B) (SQRT (+ (* C C) (* B B) (- (* 2 A B)) (* A A))))
-              ;;                       (- (* 2 A B (SQRT (+ (* C C) (* B B) (- (* 2 A B)) (* A A)))))
-              ;;                       (* 2 B (* C C)) (* 2 (EXPT B 3)) (- (* 4 A (* B B))) (* 2 (* A A) B))))) 
-              ;; (SETQ Y (- (/ (+ (- (* (SQRT (+ (* C C) (* B B) (- (* 2 A B)) (* A A))) X)) (- (* B X)) (* A X)) C))) 
+              ;; ;; solution number  4 
+              ;; (setq x (/ c (sqrt (+ (* (* c c) (sqrt (+ (* c c) (* b b) (- (* 2 a b)) (* a a))))
+              ;;                       (* 2 (* b b) (sqrt (+ (* c c) (* b b) (- (* 2 a b)) (* a a))))
+              ;;                       (- (* 2 a b (sqrt (+ (* c c) (* b b) (- (* 2 a b)) (* a a)))))
+              ;;                       (* 2 b (* c c)) (* 2 (expt b 3)) (- (* 4 a (* b b))) (* 2 (* a a) b))))) 
+              ;; (setq y (- (/ (+ (- (* (sqrt (+ (* c c) (* b b) (- (* 2 a b)) (* a a))) x)) (- (* b x)) (* a x)) c))) 
               
               ))) )))
 

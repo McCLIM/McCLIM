@@ -1025,7 +1025,7 @@ were added."
 
 (defmacro def-grecording (name ((&rest mixins) &rest args) &body body)
   (let ((method-name (symbol-concat '#:medium- name '*))
-	(class-name (symbol-concat name '#:-OUTPUT-RECORD))
+	(class-name (symbol-concat name '#:-output-record))
 	(medium (gensym "MEDIUM"))
         (class-vars `((stream :initarg :stream)
                       ,@(loop for arg in args

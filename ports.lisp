@@ -23,7 +23,7 @@
 
 (in-package :clim-internals)
 
-(defvar *default-server-path* NIL)
+(defvar *default-server-path* nil)
 
 (defvar *server-path-search-order* '(:genera :ms-windows :gtk :clx :x11 :opengl))
 

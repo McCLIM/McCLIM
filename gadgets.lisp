@@ -1078,8 +1078,8 @@ and must never be nil."))
 
 (defmethod effective-gadget-input-area-color ((gadget basic-gadget))
   (if (gadget-active-p gadget)
-      +LEMONCHIFFON+
-      (compose-over (compose-in +LEMONCHIFFON+ (make-opacity .5))
+      +lemonchiffon+
+      (compose-over (compose-in +lemonchiffon+ (make-opacity .5))
                     (pane-background gadget))))
 
 ;;; ------------------------------------------------------------------------------------------

@@ -3,7 +3,7 @@
 ;;;     Title: Graph Formatting
 ;;;   Created: 2002-08-13
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: graph-formatting.lisp,v 1.7 2003/03/21 21:36:59 mikemac Exp $
+;;;       $Id: graph-formatting.lisp,v 1.8 2003/03/21 22:07:05 mikemac Exp $
 ;;; ---------------------------------------------------------------------------
 
 ;;;  (c) copyright 2002 by Gilbert Baumann
@@ -556,13 +556,13 @@
 (define-graph-test-command bar ()
   (with-text-style (*query-io* (make-text-style :sans-serif nil 10))
     (format-graph-from-roots
-     (list '(:FOO
-             (:BAR)
-             (:BAAAAAAAAAAAAAAZ
-              (:A)
-              (:B))
-             (:Q
-              (:X) (:Y)))
+     (list '(:foo
+             (:bar)
+             (:baaaaaaaaaaaaaaz
+              (:a)
+              (:b))
+             (:q
+              (:x) (:y)))
            )
      #'(lambda (x s)
          (prin1 (first x) s))
