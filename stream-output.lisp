@@ -21,9 +21,6 @@
 
 (in-package :CLIM-INTERNALS)
 
-;;; for gray streams
-#+cmu(progn (shadow 'collect) (use-package :ext))
-
 ;;; Note: in the methods defined on output streams, I often use
 ;;;	  the sheet's medium as the argument to the draw-* routines.
 ;;;	  This is so that they don't get recorded if the stream also

@@ -21,9 +21,6 @@
 
 (in-package :CLIM-INTERNALS)
 
-;;; for gray streams
-#+cmu(progn (shadow 'collect) (use-package :ext))
-
 (defclass standard-input-stream (fundamental-character-input-stream)
   ((unread-chars :initform nil
 		 :accessor stream-unread-chars)
