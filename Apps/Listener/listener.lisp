@@ -20,9 +20,12 @@
 ;;; Boston, MA  02111-1307  USA.
 
 
+;; Preliminaries
+
+(define-command-table listener)
+
 
 ;; Wholine Pane
-; TODO: Handle resizing in a less ghetto fashion.
 
 (defclass wholine-pane (application-pane) ())
 
@@ -34,6 +37,7 @@
                           :min-height h
                           :max-height h)))
 
+;; This is really horrible.
 (defmethod handle-repaint ((pane wholine-pane) region)
   (declare (ignore region))
   (window-clear pane)
@@ -42,50 +46,56 @@
 (defun print-package-name (stream)
   (let ((foo (package-name *package*)))
     (with-drawing-options (stream :ink +royalblue+)
-      (format stream "~A" (reduce #'(lambda (&optional (a foo) (b foo))
-                                      (if (< (length a) (length b)) a b))
+      (format stream "~A" (reduce (lambda (&optional (a foo) (b foo))
+                                    (if (< (length a) (length b)) a b))
                                   (package-nicknames *package*))))))
 
 (defun frob-pathname (pathname)
   (namestring (truename pathname)))
 
-
-
-
-;; Ought to try using table formatting here, see how well it works
-(defun really-display-wholine (frame pane)
-  (declare (ignore frame))
+(defun really-display-wholine (pane)
   (let* ((*standard-output* pane)
          (username (or #+cmu (cdr (assoc :user ext:*environment-list*))
                        #+sbcl (sb-ext:posix-getenv "USER")
                        #+lispworks (lw:environment-variable "USER")
                        "luser"))  ; sorry..
          (sitename (machine-instance))
-         (memusage #+cmu (common-lisp::dynamic-usage)
+         (memusage #+cmu (lisp::dynamic-usage)
                    #+sbcl  (sb-kernel:dynamic-usage)
                    #+lispworks (getf (system:room-values) :total-allocated)
-                   #-(or cmu sbcl lispworks) nil)
-         (memstring (if (numberp memusage)
-                        (format nil "~,1F MB" (/ memusage (expt 1024 2)))
-                      "")))
+                   #-(or cmu sbcl lispworks) nil))         
     (with-text-family (T :serif)
-      (stream-increment-cursor-position pane 7 nil)
-      (format T "~A@~A" username sitename)
-      (stream-increment-cursor-position pane 33 nil)
-      (format T "Package ")
-      (print-package-name T)
-      (stream-increment-cursor-position pane 60 nil)
-      (when (probe-file *default-pathname-defaults*)
-        (with-output-as-presentation (T (truename *default-pathname-defaults*) 'pathname)
-          (format T "~A" (frob-pathname *default-pathname-defaults*))))
-      (when *directory-stack*
-        (with-output-as-presentation (T *directory-stack* 'directory-stack)
-          (stream-increment-cursor-position pane 16 0)                                
-          (format T "(~D deep)" (length *directory-stack*))))
-      
-      (setf (stream-cursor-position pane)
-            (values (- (bounding-rectangle-width pane) (text-size pane memstring)) 0))
-      (princ memstring pane))))
+      (formatting-table (T :x-spacing '(3 :character))
+        (formatting-row (T)                        
+          (macrolet ((cell ((align-x) &body body)                         
+                       `(formatting-cell (T :align-x ,align-x) ,@body)))
+            (cell (:left)   (format T "~A@~A" username sitename))
+            (cell (:center)
+              (format T "Package ")
+              (print-package-name T))
+            (cell (:center)
+              (when (probe-file *default-pathname-defaults*)
+                (with-output-as-presentation (T (truename *default-pathname-defaults*) 'pathname)
+                  (format T "~A" (frob-pathname *default-pathname-defaults*))))
+              (when *directory-stack*
+                (with-output-as-presentation (T *directory-stack* 'directory-stack)
+                  (format T "  (~D deep)" (length *directory-stack*)))))
+          ;; argh, I really want this on the right. Neither the table nor item
+          ;; formatters want to do it that way, though. So we kludge it below.. =/
+            #+NIL
+            (cell (:center)
+              (when (numberp memusage)
+                (present memusage 'lisp-memory-usage))))
+
+      ;; Hackishly draw memory usage on this side.
+      (let ((record (with-output-to-output-record (pane)
+                      (present memusage 'lisp-memory-usage))))
+        (setf (output-record-position record)
+              (values (- (bounding-rectangle-width pane)
+                         (bounding-rectangle-width record))
+                      0))
+        (stream-add-output-record pane record)))))))
+
 
 ;; Why am I doing this?
 ;; The display function get stored in the application frame. If I happen to
@@ -93,7 +103,7 @@
 ;; I restart the app, and that's no good at all.
 
 (defun display-wholine (frame pane)
-  (really-display-wholine frame pane))
+  (really-display-wholine pane))
     
 
 
@@ -113,19 +123,23 @@
                 doc
                 wholine))))
 
-
 ;;; Lisp listener command loop
 
 ;; * Moore says that ACCEPT '(OR COMMAND FORM) is supposed to work, so I need
-;;   to experiment with that at somepoint. that would save me from having to 
-;;   reimplement half of accept as part of this toplevel.
+;;   to experiment with that at some point. It could save me from having to 
+;;   reimplement half of accept as part of the toplevel.
 
 ; Now that I have LISTENER-TOP-LEVEL, should I move the binding of the restart
 ; inside there? Or should I move this inside McCLIM?
+
+;; Only bind this in CMU for now, as no other lisp is likely to 
+;; handle it well without a little tweaking.
+(defparameter *listener-debug-io*
+  #+CMU18d nil
+  #-CMU18d *debug-io*)
+
 (defmethod run-frame-top-level ((frame listener) &key &allow-other-keys)
-  (let (;; Only bind this in CMU for now, as no other lisp is likely to 
-        ;; handle it well without a little tweaking.
-        #+CMU (*debug-io* (get-frame-pane frame 'interactor)))
+  (let ((*debug-io* (or *listener-debug-io* (get-frame-pane frame 'interactor))))
     (loop while 
       (catch 'return-to-listener
 	(restart-case (call-next-method)
@@ -158,9 +172,9 @@
                   (if (member c *form-opening-characters*)
                       (prog2
                         (when (char= c #\,)
-                          (read-gesture :stream stream))  ; lispm behavior                          
+                          (read-gesture :stream stream))  ; lispm behavior 
              #| ---> |# (list 'com-eval (accept 'form :stream stream :prompt nil))
-                        (setf type 'command #|'form|# )) ; FIXME?                          
+                        (setf type 'command #|'form|# )) ; FIXME? 
                     (prog1
                       (accept '(command :command-table listener)  :stream stream
                               :prompt nil)
@@ -187,9 +201,8 @@
                   :stream stream)
          object))))
 
-
 (defun update-panes (frame)
-  "Updates any panes that require redisplay."
+  "Updates any panes that require redisplay."  
   (map-over-sheets #'(lambda (pane)
                        (multiple-value-bind (redisplayp clearp)
                            (pane-needs-redisplay pane)
@@ -198,7 +211,7 @@
                                       (or (not (climi::pane-incremental-redisplay
                                                 pane))
                                           (not climi::*enable-updating-output*)))
-                             (window-clear pane))
+                             (window-clear pane))                           
                            (redisplay-frame-pane frame pane)
                            (unless (eq redisplayp :command-loop)
                              (setf (pane-needs-redisplay pane) nil)))))
@@ -209,13 +222,6 @@
     (print-package-name stream)
     (princ "> " stream)))
 
-(defun print-banner (stream)
-  (let ((*standard-output* stream))
-    (with-text-style (T (make-text-style :serif :bold nil))
-      (format T "McCLIM Listener, ~A ~A~%"
-              (lisp-implementation-type)
-              (lisp-implementation-version)))))
-
 (defun listener-top-level
     (frame
      &key (command-parser 'command-line-command-parser)
@@ -223,8 +229,7 @@
 	  (partial-command-parser
 	   'command-line-read-remaining-arguments-for-partial-command)
           &allow-other-keys)
-    ;; Can't print a banner here without moving the return-to-listener restart.
-    ;(print-banner (frame-standard-output frame))
+    ;; Can't print a herald here without moving the return-to-listener restart.
     (loop	  
       (let ((*standard-input* (frame-standard-input frame))
             (*standard-output* (frame-standard-output frame))
@@ -239,7 +244,7 @@
             (interactor (get-frame-pane frame 'interactor)))       
         (update-panes frame)
         (print-listener-prompt interactor)
-        (setf (cursor-visibility (stream-text-cursor *standard-input*)) :on)
+        (setf (cursor-visibility (stream-text-cursor *standard-input*)) nil)
         (let ((command (listener-read frame interactor)))
           (fresh-line)
           (cond ((partial-command-p command)

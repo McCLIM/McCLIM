@@ -54,7 +54,7 @@
   (letf () ;(((medium-foreground stream) +green+))
   (let ((*activation-gestures* nil))    
   (labels ((kludge-read ()
-             (read stream nil))                        
+             (read-preserving-whitespace stream nil))                        
            (read-it ()
              (loop	             
                (handler-case (return-from read-it (values (kludge-read) ptype))
@@ -69,7 +69,7 @@
                    #+nil(read-gesture :stream stream :input-wait-handler *input-wait-handler*)		 
                    (stream-read-char stream)		 
                    (immediate-rescan stream))))))
-    (let ((result (read-it)))
+    (let ((result (read-it)))      
       (if (presentation-typep result ptype)
 	  (values result ptype)
         (input-not-of-required-type result ptype)))))))

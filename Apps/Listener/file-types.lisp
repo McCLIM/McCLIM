@@ -52,7 +52,7 @@
   *document-icon*)
 
 (defmethod icon-of ((obj text))
-  (standard-icon "text.xpm"))
+  *document-icon*)
 
 (defmethod icon-of ((obj audio))
   (standard-icon "audio.xpm"))
@@ -102,9 +102,10 @@
 (defun lookup-magic-name (pathname)
   (let* ((type (pathname-type pathname))
          (name (pathname-name pathname))
-         (key (if type (concatenate 'string name "." type)
-                (concatenate 'string name)))                              
+         (key (if type (concatenate 'string name "." type) ; Why did I do it this way?
+                name))
          (item (gethash key *magic-name-mappings*)))
+;    (when item (hef:debugf item pathname))
     item))
 
 (defun pathname-mime-type (pathname)
@@ -128,20 +129,24 @@
                       options)
             (clim-mop:finalize-inheritance (find-class ',full-type))
 )))
- 
+
+;; ICON-OF is measurably slow here in CMUCL. Interesting..
+
 (defmethod icon-of ((pathname pathname))
-;  (debugf "ICON-OF (pathname) " pathname)
   (cond ((not (probe-file pathname)) (standard-icon "invalid.xpm"))
-        ((directoryp pathname) *folder-icon*) ;; FIXME: use inode mime types
-        ((find-class (pathname-mime-type pathname) nil)
-         (icon-of (clim-mop:class-prototype (find-class (pathname-mime-type pathname) nil))))
-        (T *document-icon*)))
+        ((directoryp pathname) *folder-icon*) ;; FIXME: use inode mime types                              
+        (T (let ((mime-class (find-class (pathname-mime-type pathname) nil)))
+             (if mime-class
+                 (or (gethash (class-name mime-class) *icon-mapping*)
+                     (icon-of (clim-mop:class-prototype (find-class (pathname-mime-type pathname) nil))))
+               *document-icon*)))))
 
 (defmethod icon-of ((obj mime-type))
-;  (debugf "ICON-OF (mime-type) "  obj)
+;  (or (gethash (class-name (class-of obj)) *icon-mapping*)
+;      (call-next-method)))
   (let ((cpl (clim-mop:class-precedence-list (class-of obj))))
     (dolist (class cpl)
-;      (debugf "   " class)
+;       (debugf "   " class)
       (let ((icon (gethash (class-name class) *icon-mapping*)))
         (when icon (return-from icon-of icon)))))
   (call-next-method))
@@ -152,11 +157,7 @@
 
 (define-mime-type (text plain)
   (:extensions "txt" "text")
-  (:icon *document-icon*))
-
-(define-mime-type (text plain)
-  (:extensions "txt" "text")
-  (:icon *document-icon*))
+  (:icon (standard-icon "text.xpm")))
 
 (define-mime-type (text x-makefile)
   (:names "Makefile"))
@@ -192,7 +193,6 @@
 ;; to match patterns like Makefile*, INSTALL*, README*, etc.
 
 (defmagic text/plain "readme" "read.me" "copying" "copyright" "install")
-
 
 ;;; /etc/mime.types parser
 

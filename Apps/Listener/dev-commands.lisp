@@ -40,20 +40,43 @@
 (define-presentation-type slot-definition () :inherit-from 'expression)
 (define-presentation-type function-name () :inherit-from 'symbol)
 (define-presentation-type process () :inherit-from 'expression)
+(define-presentation-type generic-function () :inherit-from 'expression)
+
 (define-presentation-type directory-stack () :inherit-from 'expression)
+(define-presentation-type bytes () :inherit-from 'integer)
+(define-presentation-type lisp-memory-usage () :inherit-from 'bytes)
+
+;;; Presentation methods
+
+(define-presentation-method present (object (type generic-function)
+                                     stream (view textual-view)
+                                     &key &allow-other-keys)
+  (princ (clim-mop:generic-function-name object)))
+
+(define-presentation-method present (object (type bytes)
+                                     stream (view textual-view)
+                                     &key &allow-other-keys)
+  (if (zerop object)
+      (princ "0" stream)
+    (let* ((suffixes '(" bytes" " KB" " MB" " GB" " TB" " PB"))
+           (x (floor (realpart (log object 1000))))
+           (idx (min x (1- (length suffixes)))))
+      (if (zerop idx)
+          (format stream "~A bytes" object)
+        (format stream "~,1F~A" (/ object (expt 1000 idx)) (nth idx suffixes))))))
 
 ;;; Presentation translators
 
 (define-presentation-translator class-name-to-class
   (class-name class dev-commands
-     :documentation ((name stream) (format stream "Class object ~A" name ))
+     :documentation ((object stream) (format stream "Class object ~A" object))
      :gesture T)
   (object)
   (find-class object))
 
 (define-presentation-translator symbol-to-class
   (symbol class dev-commands
-     :documentation ((name stream) (format stream "Class object ~A" name))
+     :documentation ((object stream) (format stream "Class object ~A" object))
      :gesture T
      :tester ((object) (not (not (find-class object nil))))
      :tester-definitive T)
@@ -62,7 +85,7 @@
 
 (define-presentation-translator symbol-to-class-name
   (symbol class-name dev-commands
-     :documentation ((name stream) (format stream "Class ~A" name))
+     :documentation ((object stream) (format stream "Class ~A" object))
      :gesture T
      :tester ((object) (not (not (find-class object nil))))
      :tester-definitive T)
@@ -71,7 +94,7 @@
 
 (define-presentation-translator class-to-class-name
   (class class-name dev-commands
-     :documentation ((class stream) (format stream "Class of ~A" class))
+     :documentation ((object stream) (format stream "Class of ~A" object))
      :gesture T)
   (object)
   (clim-mop:class-name object))
@@ -105,6 +128,7 @@
 (defvar *apropos-list* nil
   "The apropos command stores its output here.")
 
+;; FIXME: Rewrite this.
 (defun present-symbol (symbol &optional (stream *standard-output*) show-package)
   (clim:with-output-as-presentation (stream symbol 'clim:symbol)
         (let ((style (clim:make-text-style :fix
@@ -120,7 +144,7 @@
 	      (princ (symbol-name symbol) stream))
 	    (when (boundp symbol)		  
 	      (clim:with-text-face (stream :roman)
-		 (clim:with-text-size (stream :small)		     
+		 (clim:with-text-size (stream :small)	     
 		    (format stream " = ~A" (symbol-value symbol)))))))))
 
 (define-command (com-apropos :name "Apropos"
@@ -133,7 +157,7 @@
     (present-symbol sym *standard-output* T)
       (terpri))
   (clim:with-text-face (T :italic)
-       (format T "Results have been saved to *APROPOS-LIST*~%")))
+       (format T "Results have been saved to ~A~%" '*APROPOS-LIST*)))
 
 (define-command (com-trace :name "Trace"
 			   :command-table dev-commands)
@@ -169,55 +193,40 @@
   ((pathname 'pathname :prompt "pathname"))
   (load (compile-file pathname)))
 
+(define-command (com-room :name "Room"
+                          :command-table dev-commands)
+  ()
+  (room))
+
+(define-presentation-to-command-translator mem-room-translator
+  (lisp-memory-usage com-room dev-commands :gesture :select)
+  ())
+  
+
 ;;; CLOS introspection commands
 
-;; Merge these.. due to (whatever) the use of normal/shaded ink here is screwy, and
-;; out to be ripped out or rethought.
-(defun graph-superclasses (stream class)
+(defun class-grapher (stream class inferior-fun)
   "Displays a class and its superclasses on stream using graph formatting."
-  (let ((cpl (clim-mop:class-precedence-list class)) 
-	(normal-ink +foreground-ink+)
-	(shaded-ink (make-rgb-color 0.60 0.66 0.77))
-	(text-style (make-text-style :serif :roman :small)))
+  (let ((normal-ink +foreground-ink+)
+        (arrow-ink  (make-rgb-color 0.72 0.72 0.72))	
+	(text-style (make-text-style :fixed :roman :normal)))
+    (with-drawing-options (stream :text-style text-style)
     (format-graph-from-roots (list class)
-			     #'(lambda (class stream)
-				 (with-drawing-options (stream :ink (if (find class cpl)
-									normal-ink
-								      shaded-ink)
-							       :text-style text-style)						       
-				   (surrounding-output-with-border (stream :shape :drop-shadow)
-				     (present (clim-mop:class-name class) 'class-name))))
-			     #'(lambda (class)
-				 (if (find class cpl)
-				     (prog1 (clim-mop:class-direct-superclasses class)
-				       (setf cpl (delete class cpl))) ; FIXME?
-				   nil))
-			     :stream stream
-			     :orientation :horizontal
-			     :arc-drawer
-			     #'(lambda (stream foo bar x1 y1 x2 y2)
-				 (declare (ignore foo bar))
-				 (draw-arrow* stream x1 y1 x2 y2)))))
-
-(defun graph-subclasses (stream class)
-  "Displays a class and its subclasses on stream using graph formatting."
-  (let ((normal-ink +foreground-ink+)	
-	(text-style (make-text-style :serif :roman :small)))
-    (format-graph-from-roots (list class)
-			     #'(lambda (class stream)
-				 (with-drawing-options (stream :ink normal-ink
+			     #'(lambda (class stream)                                 
+                                 (with-drawing-options (stream :ink normal-ink
 							       :text-style text-style)
-				   (with-output-as-presentation (stream class 'clim-mop:class-name)
-				    (surrounding-output-with-border (stream :shape :drop-shadow)
- 					 (present (clim-mop:class-name class))))  ))
-			     #'(lambda (class)
-				   (clim-mop:class-direct-subclasses class))
+                                   (with-output-as-presentation (stream (clim-mop:class-name class) 'class-name)
+                                     (surrounding-output-with-border (stream :shape :drop-shadow)
+				       (princ (clim-mop:class-name class))))))
+			     inferior-fun
 			     :stream stream
+                             :merge-duplicates T
+                             :graph-type :tree
 			     :orientation :horizontal
 			     :arc-drawer
 			     #'(lambda (stream foo bar x1 y1 x2 y2)
 				 (declare (ignore foo bar))
-				 (draw-arrow* stream x1 y1 x2 y2)))))
+				 (draw-arrow* stream x1 y1 x2 y2 :ink arrow-ink))))))
 
 (defun frob-to-class (spec)
   (if (typep spec 'class)
@@ -229,16 +238,17 @@
     ((class-spec 'class-name :prompt "class"))
   (let ((class (frob-to-class class-spec)))
     (if (null class)
-	(format T "~&~A is not a defined class.~%" class-spec)
-      (graph-superclasses *standard-output* class))))
+	(italic (T) (format T "~&~A is not a defined class.~%" class-spec))
+      (class-grapher *standard-output* class #'clim-mop:class-direct-superclasses))))
 
 (define-command (com-show-class-subclasses :name "Show Class Subclasses"
                                            :command-table dev-commands)
     ((class-spec 'class-name :prompt "class"))
   (let ((class (frob-to-class class-spec)))
     (if (not (null class))
-	(graph-subclasses *standard-output* class)
-      (format T "~&~A is not a defined class.~%" class-spec))))
+        (class-grapher *standard-output* class #'clim-mop:class-direct-subclasses)
+      (italic (T)
+        (format T "~&~A is not a defined class.~%" class-spec)))))
 
 
 ; Lookup direct slots from along the CPL given a class and a slot name.
@@ -281,36 +291,52 @@
          (writers (reduce #'append (filtermap direct-slots #'clim-mop:slot-definition-writers)))
          (documentation (first (filtermap direct-slots (lambda (x) (documentation x T))))))
 
-  (macrolet ((fcell ((var align-x &rest cell-opts) &body body)
+  (macrolet ((with-ink ((var) &body body)
+               `(with-drawing-options (T :ink ,(intern (concatenate 'string "*SLOT-" (symbol-name var) "-INK*")))
+                     ,@body))
+             (fcell ((var align-x &rest cell-opts) &body body)
                 `(formatting-cell (T :align-x ,align-x ,@cell-opts)
-                   (with-drawing-options (T :ink ,(intern (concatenate 'string "*SLOT-" (symbol-name var) "-INK*")))
-                    ,@body))))
+                   (with-ink (,var) ,@body) )))
     
-    (fcell (name :left)    
+    (fcell (name :left)
      (with-output-as-presentation (stream slot 'slot-definition)
-       (princ name)))
-
-    (fcell (type :center :min-width (text-size (sheet-medium *standard-output*) "integer"))
-      (princ type))
+       (princ name))
+     (unless (eq type T)
+       (fresh-line)
+       (with-ink (type) (princ type))))
 
     (fcell (initargs :right)
       (dolist (x initargs)
         (format T "~W~%" x)))
 
     (fcell (initform :left)
-      (if initfunc                          
+      (if initfunc
           (format T "~W" initform)
         (italisansf "No initform")))
 
-    (fcell (readers :center)
-      (if readers
-          (dolist (reader readers)  (format T "~A~%" reader))
-        (italisansf " No readers")))
+    #+NIL   ; argh, shouldn't this work?
+    (formatting-cell ()
+      (formatting-table ()
+        (formatting-column ()
+          (fcell (readers :center)
+                 (if readers
+                     (dolist (reader readers)  (format T "~A~%" reader))
+                   (italisansf " No readers")))
+          (fcell (writers :center)
+                 (if writers
+                     (dolist (writer writers)  (format T "~A~%" writer))
+                   (italisansf "No writers"))))))
 
-    (fcell (writers :center)
-      (if writers
-          (dolist (writer writers)  (format T "~A~%" writer))
-        (italisansf "No writers")))
+    (formatting-cell (T :align-x :left)
+      (if (not (or readers writers))
+          (italisansf "No accessors")
+        (progn
+          (with-ink (readers)
+            (if readers (dolist (reader readers)  (format T "~A~%" reader))
+              (italisansf "No readers~%")))
+          (with-ink (writers)
+            (if writers (dolist (writer writers)  (format T "~A~%" writer))
+              (italisansf "No writers"))))))
 
     (fcell (documentation :left)
       (when documentation (with-text-family (T :serif) (princ documentation))))
@@ -335,25 +361,20 @@
                (position (earliest-slot-definer b class) cpl))))))
 
 
-(defun print-slot-table-heading (stream)
-  (debugf "Before formatting-row")
+(defun print-slot-table-heading ()
   (formatting-row (T)
-    (debugf "Inside formatting-row")
-    (dolist (name '("Slot name" "Type" "Initargs" "Initform"))
-      (debugf name)
-      (formatting-cell (stream :align-x :center)
-        (debugf "inside the cell")
-        (princ name stream)
-        #+nil(underlining (stream) (princ name stream))))))
+    (dolist (name '("Slot name" "Initargs" "Initform" "Accessors"))
+      (formatting-cell (T :align-x :center)        
+        (underlining (T)
+          (with-text-family (T :sans-serif)
+            (princ name)))))))
 
 (defun present-slot-list (slots class)
   (formatting-table (T)
-    ;(debugf "before header")
-    ;(print-slot-table-heading T)
-    ;(debugf "after header")
-      (dolist (slot slots)
-        (formatting-row (T)
-          (present-slot slot class)))))
+    (print-slot-table-heading)
+    (dolist (slot slots)
+      (formatting-row (T)
+        (present-slot slot class)))))
 
 (defun friendly-slot-allocation-type (allocation)
   (if (typep allocation 'standard-class)
@@ -394,92 +415,168 @@
                 (lambda ()
                   (format T "~&Slots for ")
                   (with-output-as-presentation (T (clim-mop:class-name class) 'class-name)
-                    (princ (clim-mop:class-name class)))))         
-              (terpri)
+                    (princ (clim-mop:class-name class)))))
               (present-the-slots class) ))))))
+
+(defparameter *ignorable-internal-class-names*
+  '(standard-object))
+
+(defun remove-ignorable-classes (classes)
+  (remove-if (lambda (c)
+               (or (member (class-name c) *ignorable-internal-class-names*)
+                   (not (typep c 'standard-class))))
+             classes))
+
+(defun x-specializer-direct-generic-functions (specializer)
+  #+PCL (pcl::specializer-direct-generic-functions specializer)
+  #+SBCL (sb-pcl::specializer-direct-generic-functions specializer)
+  #-(or PCL SBCL)
+  (error "Sorry, not supported in your CL implementation. See the function X-SPECIALIZER-DIRECT-GENERIC-FUNCTION if you're interested in fixing this."))
+
+(defun class-funcs (class)
+  (let ((classes (remove-ignorable-classes (copy-list (clim-mop:class-precedence-list class))))
+        (gfs nil))
+    (dolist (x classes)
+      (setf gfs (append gfs (x-specializer-direct-generic-functions x))))
+    (remove-duplicates gfs)))
+
+;; Oops, guess this isn't really comparing symbols anymore.
+(defun symbol< (a b)
+  (when (and (consp a)
+             (second a)
+             (symbolp (second a)))
+    (setf a (second a)))
+  (when (and (consp b)
+             (second b)
+             (symbolp (second b)))
+    (setf b (second b)))
+  (unless (and (symbolp a) (symbolp b))
+    (return-from symbol< (string< (princ-to-string a)
+                                  (princ-to-string b))))
+  (cond ((not (eq (symbol-package a)
+                  (symbol-package b)))
+         (string< (package-name (symbol-package a))
+                  (package-name (symbol-package b))))
+        (T (string< (symbol-name a) (symbol-name b)))))
+
+(define-command (com-show-class-generic-functions
+                 :name "Show Class Generic Functions"
+                 :command-table dev-commands)
+    ((class-spec 'class-name :prompt "class"))
+  (let ((class (frob-to-class class-spec)))
+    (if (null class)
+        (italic (T) (format T "~&~A is not a defined class.~%" class-spec))
+      (let ((funcs (sort (class-funcs class) (lambda (a b)
+                                               (symbol< (clim-mop:generic-function-name a)
+                                                        (clim-mop:generic-function-name b))))))
+        (with-text-size (T :small)
+          (format-items funcs :printer (lambda (item stream)
+                                         (present item 'generic-function :stream stream))
+                        :move-cursor T))))))
+
+
+
 
 
 
 ;;; Filesystem Commands
 ;;; -------------------
 
-(defun gen-wild-pathname (pathname)
-  "Build a pathname with appropriate :wild components for the directory listing."
-  (make-pathname :host   (pathname-host pathname)
-                 :device (pathname-device pathname)
-                 :directory (pathname-directory pathname)
-                 :name (or (pathname-name pathname) :wild)
-                 :type (or (pathname-type pathname) :wild)
-                 :version (or #+nil(pathname-version pathname) :newest #+nil :wild)))
+(defun pathname-printing-name (pathname long-name)
+  (if long-name
+      (princ-to-string (namestring pathname))
+    (if (directoryp pathname)
+        (format nil "~A/" (first (last (pathname-directory pathname))))
+      (namestring (make-pathname :name (pathname-name pathname)
+                                 :type (pathname-type pathname)
+                                 :version (pathname-version pathname))))))
 
-(defun strip-filespec (pathname)
-  "Removes file, directory, and version spcs from a pathname."
-  (make-pathname :host   (pathname-host pathname)
-                 :device (pathname-device pathname)
-                 :directory (pathname-directory pathname)
-                 :name nil
-                 :type nil
-                 :version nil))
-
-(defun parent-directory (pathname)
-  "Returns a pathname designating the directory 'up' from PATHNAME"
-  (let ((dir (pathname-directory (truename (strip-filespec pathname)))))
-    (when (and (eq (first dir) :absolute)
-               (not (zerop (length (rest dir)))))
-      (make-pathname :host   (pathname-host pathname)
-                     :device (pathname-device pathname)
-                     :directory `(:absolute ,@(nreverse (rest (reverse (rest dir)))))
-                     :name (pathname-name pathname)
-                     :type (pathname-type pathname)
-                     :version (pathname-version pathname)))))
-
-(defun pretty-pretty-pathname (pathname)
-  (with-output-as-presentation (T pathname 'clim:pathname)
+(defun pretty-pretty-pathname (pathname stream &key (long-name T))
+  (with-output-as-presentation (stream pathname 'clim:pathname)
     (let ((icon (icon-of pathname)))
-      (when icon  (draw-icon T icon :extra-spacing 3)))
-    (princ (namestring pathname)))
-  (fresh-line))
+      (when icon  (draw-icon stream icon :extra-spacing 3)))
+    (princ (pathname-printing-name pathname long-name) stream))
+  (terpri stream))
 
-;; Change show-directory to use the format-items at some point,
-;; but presently it doesn't seem to work. (for me, at least)
-#+nil
-(defparameter *show-dir-table-min-items* 10
-  "The minimum number of items in a directory listing required to invoke table formatting.")
-#+nil
-(defparameter *show-dir-table-max-items* T
-  "The maximum number of items in a directory listing for which table formatting should be used.
-Presumably you would set this if you decided table formatting on your 600 line home directory
-just took too long.")
+(defun sort-pathnames (list sort-by)
+  list)                 ; <--- FIXME
+
+(defun split-sort-pathnames (list group-dirs sort-by)
+  (mapcar (lambda (x) (sort-pathnames x sort-by))
+          (multiple-value-list
+           (if (not group-dirs) (values list)
+             (values (remove-if-not #'directoryp list)
+                     (remove-if #'directoryp list))))))
+
+(defun garbage-name-p (name)
+  (when (> (length name) 2)
+    (let ((first (elt name 0))
+          (last  (elt name (1- (length name)))))
+      (or (char= last #\~)
+          (and (char= first #\#)
+               (char= last  #\#))))))
+
+(defun hidden-name-p (name)
+  (when (> (length name) 1)
+    (char= (elt name 0) #\.)))
+
+(defun filter-garbage-pathnames (seq show-hidden hide-garbage)
+  (delete-if (lambda (p)
+               (let ((name (pathname-printing-name p nil)))
+                 (or (and (not show-hidden) (hidden-name-p name))
+                     (and hide-garbage (garbage-name-p name)))))
+             seq))
 
 ;; Change to using an :ICONIC view for pathnames?
-;; I'm not certain views work in McCLIM right now, so put it off..
+
 (define-command (com-show-directory :name "Show Directory"
 				    :command-table dev-commands)
-    ((pathname 'pathname #+nil(or 'string 'pathname) :prompt "pathname"))  
-  (let* ((pathname (if (wild-pathname-p pathname) ;; WHAT THE HELL
-                      (merge-pathnames pathname)  ;; AM I DOING ??
-                    pathname))
-         (dir (directory (gen-wild-pathname pathname) #+cmu :truenamep #+cmu nil)))
+    ((pathname 'pathname #+nil(or 'string 'pathname) :prompt "pathname")
+     &key
+     #+NIL (sort-by '(member name size modify none) :default 'name)
+     (show-hidden  'boolean :default nil :prompt "show hidden")
+     (hide-garbage 'boolean :default T   :prompt "hide garbage")
+     (show-all     'boolean :default nil :prompt "show all")
+     (style '(member items list) :default 'items :prompt "listing style")
+     (group-directories 'boolean :default T :prompt "group directories?")
+     (full-names 'boolean :default nil :prompt "show full name?"))
+
+  (let* ((pathname (if (wild-pathname-p pathname) ; Forgot why I did this..
+                       (merge-pathnames pathname)
+                     pathname))
+         (dir (list-directory (gen-wild-pathname pathname))))
+
     (with-text-family (T :sans-serif)
       (invoke-as-heading
-       (lambda ()
-         (format T "~&Directory contents of ")
-         (present pathname)))
-    (format T "~%")
-    (stream-increment-cursor-position *standard-output* 0 3)
+        (lambda ()
+          (format T "~&Directory contents of ")
+          (present pathname)))
     
-    (when (parent-directory pathname)
-      (with-output-as-presentation (T (parent-directory pathname) 'clim:pathname)
-        (draw-icon T (standard-icon "up-folder.xpm") :extra-spacing 3)
-        (format T "Parent Directory~%")))
+      (when (parent-directory pathname)
+        (with-output-as-presentation (T (parent-directory pathname) 'clim:pathname)
+          (draw-icon T (standard-icon "up-folder.xpm") :extra-spacing 3)
+          (format T "Parent Directory~%")))
 
-;    (format-items dir))))
-    
-    (dolist (ent dir)
-      (let ((ent (merge-pathnames ent pathname))) ; This is for CMUCL, see above.
-        (pretty-pretty-pathname ent))))))
+      (dolist (group (split-sort-pathnames dir group-directories :none #+NIL sort-by))
+        (unless show-all
+          (setf group (filter-garbage-pathnames group show-hidden hide-garbage)))
+        (ecase style
+          (items (abbreviating-format-items group :row-wise nil :x-spacing "  " :y-spacing 1
+                                            :printer (lambda (x stream)
+                                                       (declare (ignore stream))
+                                                       (pretty-pretty-pathname x *standard-output* :long-name full-names)))
+                 #+NIL
+                 (format-items group :row-wise nil :x-spacing "  " :y-spacing 1
+                               :printer (lambda (x stream)
+                                          (declare (ignore stream))
+                                          (pretty-pretty-pathname x *standard-output* :long-name full-names)))
+                 (goatee::reposition-stream-cursor *standard-output*)
+                 (vertical-gap T))
+          (list (dolist (ent group)
+                  (let ((ent (merge-pathnames ent pathname))) ; This is for CMUCL, see above. (fixme!)
+                    (pretty-pretty-pathname ent *standard-output* :long-name full-names)))))))))
 
-#+nil
+#+nil   ; OBSOLETE
 (define-presentation-to-command-translator show-directory-translator
   (clim:pathname com-show-directory dev-commands :gesture :select
 		 :pointer-documentation ((object stream)
@@ -499,14 +596,14 @@ just took too long.")
            (italic (T) (format T "~&~A does not exist.~%" pathname)))
           ((not (directoryp pathname))
            (format T "~&~A is not a directory.~%" pathname))
-          (T (setf *default-pathname-defaults* pathname)) )))
+          (T (change-directory pathname)) )))
 
 (define-command (com-up-directory :name "Up Directory"
                                   :command-table dev-commands)
   ()
   (let ((parent (parent-directory *default-pathname-defaults*)))
     (when parent
-      (setf *default-pathname-defaults* parent)
+      (change-directory parent)
       (italic (T) (format T "~&The current directory is now ")
               (present (truename parent))
               (terpri)))))
@@ -658,8 +755,7 @@ just took too long.")
       (italic (T) (format T "~&The directory stack is empty!~%"))
     (dolist (pathname *directory-stack*)
       (fresh-line)
-      ;(present (truename pathname))
-      (pretty-pretty-pathname (truename pathname)) )))
+      (pretty-pretty-pathname pathname *standard-output*) )))
 
 (define-presentation-to-command-translator display-dir-stack-translator
   (directory-stack com-display-directory-stack dev-commands :gesture :select)
