@@ -43,7 +43,7 @@
   id)
 
 (defvar *current-process*
-  (%make-process :name "initial process" :function nil))
+  (%make-process :name "initial process" :function nil :id (sb-thread:current-thread-id)))
 
 (defun make-process (function &key name)
   (let ((p (%make-process :name name
@@ -104,7 +104,7 @@
       (setf (process-whostate *current-process*) old-state))))
 
 (defun process-interrupt (process function)
-  (error "Sorry Dave, I'm afraid I can't do that"))
+  (sb-thread:interrupt-thread (process-id process) function))
 
 (defun disable-process (process)
   (sb-thread::suspend-thread (process-id process)))
