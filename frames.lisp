@@ -408,23 +408,25 @@ input focus. This is a McCLIM extension."))
 	  (*command-unparser* command-unparser)
 	  (*partial-command-parser* partial-command-parser)
 	  (prompt-style (make-text-style :fix :italic :normal)))
-      (redisplay-changed-panes frame)      
-      (when *standard-input*
-        ;; We don't need to turn the cursor on here, as Goatee has its own
-        ;; cursor which will appear. In fact, as a sane interface policy,
-        ;; leave it off by default, and hopefully this doesn't violate the spec.
-	(setf (cursor-visibility (stream-text-cursor *standard-input*)) nil)
-	(when prompt
-	  (with-text-style (*standard-input* prompt-style)
-	    (if (stringp prompt)
-		(write-string prompt *standard-input*)
-	      (funcall prompt *standard-input* frame))
-	    (finish-output *standard-input*)))
-	(let ((command (read-frame-command frame)))
-	  (fresh-line *standard-input*)
-	  (when command
-	    (execute-frame-command frame command))
-	  (fresh-line *standard-input*))))))
+      (redisplay-changed-panes frame)
+      (if *standard-input*
+          ;; We don't need to turn the cursor on here, as Goatee bhas its own
+          ;; cursor which will appear. In fact, as a sane interface policy,
+          ;; leave it off by default, and hopefully this doesn't violate the spec.
+          (progn
+            (setf (cursor-visibility (stream-text-cursor *standard-input*)) nil)
+            (when prompt
+              (with-text-style (*standard-input* prompt-style)
+                (if (stringp prompt)
+                    (write-string prompt *standard-input*)
+                  (funcall prompt *standard-input* frame))
+                (finish-output *standard-input*)))
+            (let ((command (read-frame-command frame)))
+              (fresh-line *standard-input*)
+              (when command
+                (execute-frame-command frame command))
+              (fresh-line *standard-input*)))
+        (simple-event-loop)))))          
 
 
 (defmethod read-frame-command ((frame application-frame)
