@@ -452,9 +452,12 @@ supertypes of TYPE that are presentation types"))
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defmethod ptype-specializer ((type symbol))
     (let ((ptype (gethash type *presentation-type-table*)))
-      (if ptype
-	  (ptype-specializer ptype)
-	  (ptype-specializer (find-class type)))))
+      (cond (ptype
+	     (ptype-specializer ptype))
+	    ((find-class type nil)
+	     (ptype-specializer (find-class type)))
+	    ;; Assume it's a forward referenced CLOS class.
+	    (t type))))
 
   (defmethod ptype-specializer ((type standard-class))
     (class-name type)))
@@ -638,8 +641,8 @@ suitable for SUPER-NAME"))
 
 (defmacro with-presentation-type-parameters ((type-name type) &body body)
   (let ((ptype (get-ptype type-name)))
-    (unless ptype
-      (error "~S is not a presentation type name." type-name))
+    (unless (or ptype (compile-time-clos-p type-name))
+      (warn "~S is not a presentation type name." type-name))
     (if (typep ptype 'presentation-type)
 	(let* ((params-ll (parameters-lambda-list ptype))
 	       (params (gensym "PARAMS"))
@@ -661,8 +664,8 @@ suitable for SUPER-NAME"))
 
 (defmacro with-presentation-type-options ((type-name type) &body body)
   (let ((ptype (get-ptype type-name)))
-    (unless ptype
-      (error "~S is not a presentation type name." type-name))
+    (unless (or ptype (compile-time-clos-p type-name))
+      (warn "~S is not a presentation type name." type-name))
     (if (typep ptype 'presentation-type)
 	(let* ((options-ll (options-lambda-list ptype))
 	       (options (gensym "OPTIONS"))

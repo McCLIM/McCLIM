@@ -1165,8 +1165,9 @@
 
 (define-presentation-method accept 
     ((type pathname) stream (view textual-view)
-     &key (default *default-pathname-defaults* defaultp)
+     &key (default *default-pathname-defaults*)
      default-type)
+  (declare (ignore default-type))
   (let* ((namestring (read-token stream))
 	 (path (parse-namestring namestring)))
     (if merge-default

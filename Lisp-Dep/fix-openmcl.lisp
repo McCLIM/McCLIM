@@ -192,11 +192,7 @@
   `(progn
      (eval-when (:compile-toplevel)
        (setf (gethash ',name clim-lisp-patch::*compile-time-clos-names*) t))
-     (eval-when (:compile-toplevel :load-toplevel :execute)
-       (cl:defclass ,name ,@args))))
-
-	 
-  
+     (cl:defclass ,name ,@args)))
   
 (in-package :ccl)
 
