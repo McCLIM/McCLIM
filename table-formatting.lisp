@@ -443,11 +443,9 @@ skips intervening non-table output record structures."))
             (values cursor-old-x cursor-old-y))
       (if move-cursor
           ;; FIXME!!!
-          #+ignore
           (setf (stream-cursor-position stream)
-                (values cursor-new-x cursor-new-y))
-          #-ignore
-          nil
+                (values (bounding-rectangle-max-x table)
+                        (bounding-rectangle-max-y table)))
           (setf (stream-cursor-position stream)
                 (values cursor-old-x cursor-old-y)))
       (replay table stream))))
