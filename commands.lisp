@@ -129,7 +129,7 @@
 			     :menu ',menu
 			     :errorp nil)))))
 
-(defun generate-name (symbol)
+(defun command-name-from-symbol (symbol)
   (let ((name (symbol-name symbol)))
     (string-capitalize
      (substitute
@@ -176,7 +176,7 @@
 		   (let ((command-line-name
 			  (if (stringp name)
 			      name
-			      (generate-name command-name))))
+			      (command-name-from-symbol command-name))))
 		     (setf (gethash command-name commands) command-line-name)
 		     (setf (gethash command-line-name command-line-names)
 			   command-name)))
@@ -184,7 +184,7 @@
 		   (let ((menu-item-name
 			  (cond ((stringp menu) menu)
 				((and (eq menu t) (stringp name)) name)
-				((eq menu t) (generate-name command-name))
+				((eq menu t) (command-name-from-symbol command-name))
 				((consp menu) (car menu)))))
 		     (apply #'add-menu-item-to-command-table
 			    command-table
@@ -264,7 +264,7 @@
     (let ((command-line-name (gethash command-name (slot-value table 'commands))))
       (when (stringp command-line-name)
 	(return-from command-line-name-for-command command-line-name))))
-  (cond ((eq errorp :create) (generate-name command-name))
+  (cond ((eq errorp :create) (command-name-from-symbol command-name))
 	(errorp (error 'command-not-accessible))
 	(t nil)))
 
@@ -329,7 +329,7 @@
   (let* ((func (if (consp name-and-options) (first name-and-options) name-and-options))
          (options (if (consp name-and-options) (rest name-and-options) nil))
 	 (command-table (getf options :command-table nil))
-	 (name (getf options :name (generate-name func)))
+	 (name (getf options :name (command-name-from-symbol func)))
 	 (menu (getf options :menu nil))
 	 (keystroke (getf options :keystroke nil))
 	 )
