@@ -377,3 +377,43 @@
     (adopt-frame frame-manager frame)
     frame))
 
+;;; Menu frame class
+
+(defclass menu-frame ()
+  ((left :initform 0 :initarg :left)
+   (top :initform 0 :initarg :top)
+   (top-level-sheet :initform nil :reader frame-top-level-sheet)
+   (pane :reader frame-pane :initarg :pane)
+   (graft :initform nil :accessor graft)
+   (manager :initform nil :accessor frame-manager)))
+  
+(defmethod adopt-frame ((fm frame-manager) (frame menu-frame))
+  (setf (slot-value fm 'frames) (cons frame (slot-value fm 'frames)))
+  (setf (slot-value frame 'manager) fm)
+  (let* ((t-l-s (make-pane-1 fm *application-frame* 'unmanaged-top-level-sheet-pane
+			     :name 'top-level-sheet)))
+    (setf (slot-value frame 'top-level-sheet) t-l-s)
+    (sheet-adopt-child t-l-s (frame-pane frame))
+    (let ((graft (find-graft :port (frame-manager-port fm))))
+      (sheet-adopt-child graft t-l-s)
+      (setf (graft frame) graft))
+    (let ((space (compose-space t-l-s)))
+      (allocate-space (frame-pane frame)
+		      (space-requirement-width space)
+		      (space-requirement-height space))
+      (setf (sheet-region t-l-s)
+	    (make-bounding-rectangle 0 0
+				     (space-requirement-width space)
+				     (space-requirement-height space))))
+    (setf (sheet-transformation t-l-s)
+	  (make-translation-transformation (slot-value frame 'left)
+					   (slot-value frame 'top)))))
+
+(defmethod disown-frame ((fm frame-manager) (frame menu-frame))
+  (setf (slot-value fm 'frames) (remove frame (slot-value fm 'frames)))
+  (sheet-disown-child (graft frame) (frame-top-level-sheet frame))
+  (setf (frame-manager frame) nil))
+
+(defun make-menu-frame (pane &key (left 0) (top 0))
+  (make-instance 'menu-frame :pane pane :left left :top top))
+
