@@ -210,3 +210,38 @@ Note:
   `(let ,(mapcar (lambda (symbol) `(,symbol (gensym ,(symbol-name symbol))))
                  syms)
      ,@ body))
+
+(defun parse-method (description)
+  (loop
+     for (qualifier-or-ll . body) on description
+     until (listp qualifier-or-ll)
+     collect qualifier-or-ll into qualifiers
+     finally (return
+               (values qualifiers
+                       (clim-mop:extract-specializer-names qualifier-or-ll)
+                       (clim-mop:extract-lambda-list qualifier-or-ll)
+                       body))))
+
+(defun decode-specializer (specializer-name)
+  (if (atom specializer-name)
+      (find-class specializer-name)
+      (clim-mop:intern-eql-specializer (second specializer-name))))
+
+(defmacro with-method ((name &rest description) &body body)
+  "Executes BODY installing the specified method on the generic
+  function named NAME."
+  (multiple-value-bind (qualifiers specializers)
+      (parse-method description)
+    (with-gensyms (old-method decoded-specializers new-method)
+      `(let* ((,decoded-specializers
+               (mapcar #'decode-specializer ',specializers))
+              (,old-method (find-method #',name
+                                        ',qualifiers
+                                        ,decoded-specializers
+                                        nil))
+              (,new-method
+               (defmethod ,name ,@description)))
+         (unwind-protect
+              (locally ,@body)
+           (remove-method #',name ,new-method)
+           (when ,old-method (add-method #',name ,old-method)))))))
