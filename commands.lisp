@@ -696,6 +696,10 @@
 	  (setf (gethash ',func *command-parser-table*) #',accept-fun-name)
 	  ',func)))))
 
+;;; Note that command table inheritance is the opposite of Common Lisp
+;;; subclassing / subtyping: the inheriting table defines a superset
+;;; of the commands of its ancestor, so therefore it's command
+;;; presentation type is a supertype of its ancestor's!
 (defun command-table-inherits-from-p (command-table super-table)
   (let ((command-table (find-command-table command-table))
 	(super-table (find-command-table super-table)))
@@ -716,7 +720,7 @@
   (with-presentation-type-parameters (command-name maybe-supertype)
     (let ((super-table command-table))
       (with-presentation-type-parameters (command-name type)
-	(command-table-inherits-from-p command-table super-table)))))
+	(command-table-inherits-from-p super-table command-table)))))
 
 (define-presentation-method present (object (type command-name)
 				     stream
@@ -799,7 +803,7 @@
   (with-presentation-type-parameters (command maybe-supertype)
     (let ((super-table command-table))
       (with-presentation-type-parameters (command type)
-	(command-table-inherits-from-p command-table super-table)))))
+	(command-table-inherits-from-p super-table command-table)))))
 
 (define-presentation-method present (object (type command)
 				     stream

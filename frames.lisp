@@ -385,8 +385,21 @@ FRAME-EXIT condition."))
 	  (fresh-line *standard-input*))))))
 
 
-(defmethod read-frame-command ((frame application-frame) &key (stream *standard-input*))
-  (read-command (frame-command-table frame) :stream stream))
+(defmethod read-frame-command ((frame application-frame)
+			       &key (stream *standard-input*))
+  (with-input-context ('menu-item)
+    (object)
+    ;; Is this the intended behavior of interactor-panes
+    ;; (vs. application panes)?
+    (if (typep stream 'interactor-pane)
+	(read-command (frame-command-table frame) :stream stream)
+	(loop (read-gesture :stream stream)))
+    (menu-item
+     (let ((command (command-menu-item-value object)))
+       (if (listp command)
+	   command
+	   (list command))))))
+
 
 (defmethod execute-frame-command ((frame application-frame) command)
   (apply (command-name command) (command-arguments command)))

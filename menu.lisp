@@ -20,6 +20,10 @@
 
 (in-package :clim-internals)
 
+(defmethod stream-force-output ((pane menu-button-pane))
+  (with-sheet-medium (medium pane)
+    (medium-force-output medium)))
+
 (defmethod menu-root ((button menu-button-pane))
   (menu-root (gadget-client button)))
 
@@ -35,7 +39,8 @@
   (with-slots (client armed id) button
     (when armed
       (disarm-gadget button)
-      (dispatch-repaint button (sheet-region button)))))
+      (dispatch-repaint button (sheet-region button))
+      (stream-force-output button))))
 
 (defun menu-draw-highlighted (gadget)
   (when (sheet-mirror gadget)           ;XXX only do this when the gadget is realized.
@@ -89,9 +94,10 @@
 (defmethod handle-event ((pane menu-button-leaf-pane) (event pointer-button-release-event))
   (with-slots (armed label client id) pane
     (when armed
-      (value-changed-callback pane client id label)
-      (disarm-menu pane)
-      (destroy-substructure (menu-root pane)))))
+      (unwind-protect
+	   (value-changed-callback pane client id label)
+	(disarm-menu pane)
+	(destroy-substructure (menu-root pane))))))
 
 (defmethod handle-event ((pane menu-button-leaf-pane) (event pointer-exit-event))
   (disarm-menu pane))
@@ -135,7 +141,9 @@
 	  (with-slots (frame-manager submenu-frame) sub-menu
 	    (setf frame-manager manager
 		  submenu-frame (make-menu-frame raised :left x :top y))
-	    (adopt-frame manager submenu-frame)))))))
+	    (adopt-frame manager submenu-frame)
+	    (with-sheet-medium (medium raised)
+	      (medium-force-output medium))))))))
 
 (defmethod destroy-substructure ((sub-menu menu-button-submenu-pane))
   (with-slots (frame-manager submenu-frame) sub-menu
@@ -165,26 +173,23 @@
 ;; for now, accept only types :command and :menu, and only 
 ;; command names as values of :command
 (defun make-menu-button-from-menu-item (item client
-					&key (bottomp nil) command-table)
+					&key (bottomp nil)
+					command-table
+					(presentation-type 'menu-item))
+  (declare (ignore command-table))
   (let ((name (command-menu-item-name item))
 	(type (command-menu-item-type item))
 	(value (command-menu-item-value item))
 	(frame *application-frame*)
 	(manager (frame-manager *application-frame*)))
     (if (eq type :command)
-	(let ((value (if (consp value)
-			 value
-			 (list value)))
-	      (ptype (if command-table
-			 `(command :command-table ,command-table)
-			 '(command))))
-	  (make-pane-1 manager frame 'menu-button-leaf-pane
-		       :label name
-		       :client client
-		       :value-changed-callback
-		       #'(lambda (gadget val)
-			   (declare (ignore gadget val))
-			   (throw-object-ptype value ptype))))
+	(make-pane-1 manager frame 'menu-button-leaf-pane
+		     :label name
+		     :client client
+		     :value-changed-callback
+		     #'(lambda (gadget val)
+			 (declare (ignore gadget val))
+			 (throw-object-ptype item presentation-type)))
 	(make-pane-1 manager frame 'menu-button-submenu-pane
 		     :label name
 		     :client client
