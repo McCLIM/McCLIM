@@ -116,19 +116,31 @@ called the \gloss{user coordinate system}, and coordinate values
 expressed in the user coordinate system are known as \gloss{user
 coordinates}.
 
-User coordinates are translated to \gloss{sheet coordinates} by means
-of the \gloss{user transformation} also called the \gloss{medium
+Each sheet has its own coordinate system called the \gloss{sheet
+coordinate system}, and positions expressed in this coordinate system
+are said to be expressed in \gloss{sheet coordinates}.  User
+coordinates are translated to \gloss{sheet coordinates} by means of
+the \gloss{user transformation} also called the \gloss{medium
 transformation}.  This transformation is stored in the \gloss{medium}
 used for drawing.  The medium transformation can be composed
 temporarily with a transformation given as an explicit argument to a
 drawing function.  In that case, the user transformation is
-temporarily modified for the duration of the drawing. 
+temporarily modified for the duration of the drawing.
 
 Before drawing can occur, coordinates in the sheet coordinate system
 must be transformed to \gloss{native coordinates}, which are
 coordinates of the coordinate system of the native windowing system.
 The transformation responsible for computing native coordinates from
-sheet coordinates is called the \gloss{native transformation}.  
+sheet coordinates is called the \gloss{native transformation}.  Notice
+that each sheet potentially has its own native coordinate system, so
+that the native transformation is specific for each sheet.  Another
+way of putting it is that each sheet has a mirror, which is a window
+in the underlying windowing system.  If the sheet has its own mirror,
+it is the \emph{direct mirror} of the sheet.  Otherwise its mirror is
+the direct mirror of one of its ancestors.  In any case, the native
+transformation of the sheet determines how sheet coordinates are to be
+translated to the coordinates of that mirror, and the native
+coordinate system of the sheet is that of its mirror. 
 
 The composition of the user transformation and the native
 transformation is called the \gloss{device transformation}.  It allows
@@ -235,6 +247,34 @@ sheet to its parent and to its grandparent, etc., until a
 is to have a windowing system with more general shapes of, and
 relationships between windows.
 
+
+\chapter{Sheet hierarchy}
+
+CLIM sheets are organized into a hierarchy.  Each sheet has a sheet
+transformation and a sheet region.  The sheet tranformation determines
+how coordinates in the sheet's own coordinate system get translated
+into coordinates in the coordinate system of its parent.  The sheet
+region determines the \gloss{potentially visible area} of the
+otherwise infinite drawing plane of the sheet.  The sheet region is
+given in the coordinate system of the sheet. 
+
+In McCLIM, every grafted sheet has a \gloss{native transformation}.
+The native transformation is used by drawing functions to translate
+sheet coordinates to native coordinates, so that drawing can occur on
+the (not necessarily immediate) mirror of the sheet.  It would
+therefore be enough for sheets that support the \gloss{output
+  protocol} to have a native transformation.  However, it is easier to
+generalize it to all sheets, in order to simplify the programming of
+the computation of the native transformation. 
+Thus, in McCLIM, even sheets that are mute for output have a native
+transformation. 
+
+In McCIM, every grafted sheet also has a \gloss{native region}.  The
+native region is intersection the sheet region and the region of all
+of its ancestors, except that the native region is given in
+\gloss{native coordinates}, i.e. the coordinates obtained after the
+application of the \gloss{native transformation} of the sheet.
+
 \section{Computing the native transformation}
 
 CLIM maintains, for each sheet that supports output, a \gloss{native
@@ -243,13 +283,15 @@ functions to transform coordinates to \gloss{native coordinates},
 i.e., those required by the windowing system.  In this section, we
 examine how that computation is made.
 
-To get an idea of the complexity involved, let us imagine a
-\gloss{mirrored sheet} $s$, which has a nontrivial native
-transformation, for instance one that is used to draw PostScript
-commands.  The coordinate system of such a sheet has an $x$ axis that
-grows to the right, and a $y$ axis that grows upwards.  Let us further
-imagine that the region of $s$ is some kind of oval shape as shown in
-figure \ref{fignative}.
+To get an idea of the complexity involved, let us imagine a hierarchy
+of three sheets: A, B, and C as shown in figure \ref{fignative}.  The
+name of each sheet is placed close to the origin of its own coordinate
+system.  The region of B is marked with rb and is some arbitrary
+shape.  The region of C is marked rc and has the shape of an ellipse.
+We do not need the region of A for our example.  In the example, A and
+C are mirrored, but B is not.  The origin of the mirror of A is marked
+with a lower-case a and the origin of C is marked with a lower-case
+c.  Mirrors are outlined with dotted rectangles. 
 
 \begin{figure}
 \begin{center}
@@ -258,46 +300,185 @@ figure \ref{fignative}.
 \caption{\label{fignative} A sheet with a nontrivial transformation}
 \end{figure}
 
-We have to assume that the origin of the X window (let us call it $w$)
-is known with respect to the region of $s$.  Since we can control
-that, let us make the very reasonable assumption that $w$ is the
-smallest window that covers the region so that the dot in figure
-\ref{fignative} is the origin of $w$.  Let us say that point is
-$(10,40)$ in the coordinate system of $s$.
+In our example, the sheet transformations are nontrivial.  Notice that
+the x-axis in the coordinate system of C grows downward and that the
+y-axis in the coordinate system of B grows upward.  
 
-In the coordinate system of $s$, the region is $30$ units tall and
-$20$ units wide.  But let us say that there is a discrepancy between
-the units of $s$ and those of $w$ such that in reality $w$ is only
-$15$ pixels tall and $10$ pixels wide.  This can happen as a result of
-zooming, or simply that $s$ was designed with a different scaling in
-mind.  The native transformation of $s$ must therefore transform the
-point $(0,0$ to $(-5,20)$ and $(10,40)$ to $(0,0)$.  We now have to
-determine how this transformation can be computed from other, existing
-transformations.  Since we are working with X11, we know that the
-coordinate system of $w$ is just a translation of that of its parent
-window (let us call it $wp$.  In figure \ref{fignative}, the origin of
-the coordinate system of $wp$ is marked with a $+$.  
+As defined in the specification, a transformation hffas six components:
+$m_{xx}$, $m_{xy}$, $m_{yx}$, $m_{yy}$, $t_x$, and $t_y$ such that 
 
-Let us say that the origin of $w$ in the coordinate system of $wp$ is
-$(x_w,y_w)$.  That is the same as the \emph{window position} of $w$
-with respect to its parent, as maintained by X11.
+$$x' = m_{xx} x + m_{xy} y + t_x$$ and $$y' = m_{yx} x + m_{yy} y + t_y$$
 
-Now, the parent of $s$ (let us call it $sp$) is a sheet which
-(according to the CLIM specification) must parallel $wp$ in that
-drawings on $sp$ must end up on $wp$.  If $sp$ has a direct mirror, it
-must be $wp$.  Otherwise $wp$ must be the direct mirror of the first
-ancestor of $sp$ having a direct mirror.  Now, $sp$ has \emph{its}
-native transformation, making it possible for any drawing function
-applied to $sp$ to appear correctly on $wp$.  Let us call that
-transformation $NT(sp$).  Assume for a moment that $w$ did not exist.
-Drawings on $s$ would have to end up on $wp$.  Obtaining that is
-fairly easy.  Just compose the transformation of $s$ (which gives
-coordinates in $sp$ from coordinates in $s$) with $NT(sp$).  Let us
-call that transformation $NTP(s)$. Now, let's go back to $w$.  To get
-coordinates in $w$ from coordinates in $s$, you must then take the
-coordinates of $s$, transform them by $NTP(S)$ and then subtract $(x_w,y_w)$.
-Therefore, you can compute $NT(s)$ as the composition of $NTP(s)$ and the
-translation transformation $(-x_w,-y_w)$.
+Let us first establish the sheet transformations of B and C in the
+example.  By transforming the point (0,0) of B to the coordinate
+system of A we get:
+
+$$45 = m_{xx} \cdot 0 + m_{xy} \cdot 0 + t_x$$
+$$5 = m_{yx} \cdot 0 + m_{yy} \cdot 0 + t_y$$
+
+so $t_x = 45$ and $t_y = 5$. For the point (0,10) we then get:
+
+$$40 = m_{xx} \cdot 0 + m_{xy} \cdot 10 + 45$$
+$$5 = m_{yx} \cdot 0 + m_{yy} \cdot 10 + 5$$
+
+which gives $m_{xy} = -0.5$ and $m_{yy} = 0$.  Finally, for the point
+(10,0) we get:
+
+$$45 = m_{xx} \cdot 10 - 0.5  \cdot 0 + 45$$
+$$15 = m_{yx} \cdot 10 + 0 \cdot 0 + 5$$
+
+which gives $m_{xx} = 0$ and $m_{yx} = 1$.
+
+Using the notation:
+
+\[ \left[ \begin{array}{ccc}
+m_{xx} & m_{xy} & t_x\\
+m_{yx} & m_{yy} & t_y 
+\end{array} \right] \]
+
+we get 
+
+\[ T_B = \left[ \begin{array}{ccc}
+0 & -0.5 & 45\\
+1 & 0 & 5 
+\end{array} \right] \]
+
+where $T_s$ means the sheet transformation of the sheet $s$. 
+
+Let us now attack the sheet transformation of C.  For the point (0,0)
+in the coordinate system of C we get (30,70) in the coordinate system
+of B, giving $t_x = 30$ and $t_y = 70$.  Transforming (0,10) gives
+(25,70) so that:
+
+$$25 = m_{xx} \cdot 0 + m_{xy} \cdot 10 + 30$$
+
+and 
+
+$$70 = m_{yx} \cdot 0 + m_{yy} \cdot 10 + 70$$
+
+Giving $m_{xy} = -0.5$ and $m_{yy} = 0$
+Finally, transforming (10,0) gives (30,60) so that
+
+$$30 = m_{xx} \cdot 10 + m_{xy} \cdot 0 + 30$$
+
+and
+
+$$60 = m_{yx} \cdot 10 + m_{yy} \cdot 0 + 70$$
+
+which gives $m_{xx} = 0$ and $m_{yx} = -1$
+
+Thus
+
+\[ T_C = \left[ \begin{array}{ccc}
+0 & -0.5 & 25\\
+-1 & 0 & 70 
+\end{array} \right] \]
+
+Let us now attack the native transformations (written $N_s$).  For
+that, we need to know the native transformation of A, i.e., $N_A$.
+Let us for the moment assume that the native transformation of A is a
+simple translation with $t_x = 0$ and $t_y = -10$.  This implies that
+the \emph{scale} of the coordinate system of A is directly in pixels,
+so that the mirror c is about 15 pixels tall and 10 pixels wide.
+
+Thus we have that 
+
+\[ N_A = \left[ \begin{array}{ccc}
+1 & 0 & 0\\
+0 & 1 & -10 
+\end{array} \right] \]
+
+To compute the native transformation of B, we observe that drawing on
+B must end up on the mirror a of A.  Let us first see whether we can
+figure it out manually the same way we did for the sheet
+transformations.  We get the system of equations:
+
+\[ \begin{array}{ccccccc}
+45 & = & m_{xx} \cdot 0 & + & m_{xy} \cdot 0 & + & t_x \\
+-5 & = & m_{yx} \cdot 0 & + & m_{yy} \cdot 0 & + & t_y \\
+40 & = & m_{xx} \cdot 0 & + & m_{xy} \cdot 10 & + & t_x \\
+-5 & = & m_{yx} \cdot 0 & + & m_{yy} \cdot 10 & + & t_y \\
+45 & = & m_{xx} \cdot 10 & + & m_{xy} \cdot 0 & + & t_x \\
+5 & = & m_{yx} \cdot 10 & + & m_{yy} \cdot 0 & + & t_y \\
+\end{array} \]
+
+which gives
+
+\[ N_B = \left[ \begin{array}{ccc}
+0 & -0.5 & 45\\
+1 & 0 & -5 
+\end{array} \right] \]
+
+Similarly, to compute $N_C$, we solve the system:
+
+\[ \begin{array}{ccccccc}
+10 & = & m_{xx} \cdot 0 & + & m_{xy} \cdot 0 & + & t_x \\
+25 & = & m_{yx} \cdot 0 & + & m_{yy} \cdot 0 & + & t_y \\
+10 & = & m_{xx} \cdot 0 & + & m_{xy} \cdot 10 & + & t_x \\
+20 & = & m_{yx} \cdot 0 & + & m_{yy} \cdot 10 & + & t_y \\
+15 & = & m_{xx} \cdot 10 & + & m_{xy} \cdot 0 & + & t_x \\
+25 & = & m_{yx} \cdot 10 & + & m_{yy} \cdot 0 & + & t_y \\
+\end{array} \]
+
+Which gives
+
+\[ N_C = \left[ \begin{array}{ccc}
+0.5 & 0 & 10\\
+0 & -0.5 & 25 
+\end{array} \right] \]
+
+Now, let us try to find a way to compute $N_B$ from $N_A$ and $T_B$.
+Drawing on B must end up on the mirror a of A, so it seems reasonable
+to think that you should first apply $T_B$ and then $N_A$ to the
+control points of the figure drawn.  But this is the composition of
+$N_A$ and $T_B$, written $N_A \circ T_B$.  The composition of two
+transformations $m' \circ m$ is computed as follows:
+
+\[ \left[ \begin{array}{ccc}
+{m'}_{xx} m_{xx} + {m'}_{xy} m_{yx} & {m'}_{xx} m_{xy} + {m'}_{xy}
+m_{yy} & {m'}_{xx} t_x + {m'}_{xy} t_y + {t'}_x\\
+{m'}_{yx} m_{xx} + {m'}_{yy} m_{yx} & {m'}_{yx} m_{xy} + {m'}_{yy}
+m_{yy} & {m'}_{yx} t_x + {m'}_{yy} t_y + {t'}_y
+\end{array} \right] \]
+
+Using that formula, we get
+
+\[ N_A \circ T_B = \left[ \begin{array}{ccc}
+1 \cdot 0 + 0 \cdot 1 & 1 \cdot -0.5 + 0
+\cdot 0 & 1 \cdot 45 + 0 \cdot 5 + 0\\
+0 \cdot 0 + 1 \cdot 1 & 0 \cdot -0.5 + 1
+\cdot 0 & 0 \cdot 45 + 1 \cdot 5 - 10
+\end{array} \right] \]
+
+which gives
+
+\[ N_A \circ T_B = \left[ \begin{array}{ccc}
+0 & -0.5 & 45\\
+1 & 0 & -5
+\end{array} \right] \]
+
+which corresponds exactly to our manual calculation of $N_B$ above. 
+
+Computing the native transformation of C is more complicated, since C
+is mirrored.  First, let us introduce the notion of a \gloss{mirror
+transformation}.  The mirror transformation is similar to the sheet
+transformation, in that it transforms coordinates of a mirror to
+coordinates of its parent mirror.  We use $M_x$ to denote the mirror
+transformation of the mirror of the sheet $x$.  The mirror
+transformation is obviously port specific.  With most windowing
+systems (and certainly with X) this transformation will be a simple
+translation. 
+
+Drawing on C should have the same effect as drawing on B with $T_C$
+applied to the control points, and that should have the same effect as
+drawing on the mirror of B with first $N_C$ and then $M_C$ applied 
+to the control points.  In other words $N_B \circ T_C = M_C \circ
+N_C$.  Applying the inverse of $M_C$ to both sides gives $M_C^{-1}
+\circ N_B \circ T_C = M_C^{-1} \circ M_C \circ N_C = N_C$ 
+
+We now have a way of computing $NC$, namely the inverse of the mirror
+transformation of C composed with the native transformation of B
+composed with the sheet transformation of C. 
 
 Now we have an algorithm for computing native transformations.  To
 simplify that algorithm, let us define the native transformation for a
@@ -311,15 +492,49 @@ manager.  It may be the \gloss{identity transformation} or a
 transformation from millimeters to pixels, or whatever the frame
 manager decides. 
 
-\item The native transformation of any mirrored sheet other than
-the graft is the composition of its transformation, the native
-transformation of its parent, and the negation of the transformation
-defined as the position of its mirror with respect to the parent of
-the mirror.
+\item The native transformation of any mirrored sheet other than the
+graft is the composition of the inverse of its mirror transformation,
+the native transformation of its parent, and its own sheet
+transformation. 
 
 \item The native transformation of any sheet without a mirror is the
-composition of its transformation and the native transformation of its
-parent.
+composition of the native transformation of its parent and its own
+sheet transformation.
+\end{enumerate0}
+
+\section{Computing the native region}
+
+Given the definition above of native region, we must now find an
+algorithm for computing it.  
+
+For a sheet without a mirror, the native coordinate system is the same
+as that of its parent.  Thus, the native region of such a sheet is the
+sheet transformation of the sheet transformed by the native
+transformation of the sheet and then intersected with the native
+region of its parent. 
+
+For a mirrored sheet $S$, things are slightly more complicated,
+because the native coordinate system of such a sheet and of its parent
+are not the same.  They differ by an application of the \gloss{mirror
+transformation}.  The native region of its parent is expressed in the
+native coordinate system of its parent, whereas transforming the sheet
+region of $S$ by the sheet transformation $T_S$ of $S$ yields a region
+in the native coordinate system of $S$.  We need to intersect that
+region with the native region of its parent expressed in the native
+coordinate system of $S$.  We must therefore apply the inverse of the
+mirror transformation $M_S$ of $S$ to the native region of the parent
+of $S$ before intersecting the two.   We get the following algorithm,
+which assumes that the native transformation of $S$ has already been
+computed: 
+
+\begin{enumerate0}
+\item if $S$ is not mirrored, compute its native region as its sheet
+region transformed by its native transformation and then intersected
+with the native region of its parent.
+\item if $S$ is mirrored, compute its native region as its sheet
+region transformed by its native transformation and then intersected
+with the native region of its parent transformed by the inverse of the
+mirror transformation of $S$.
 \end{enumerate0}
 
 \section{Moving and resizing sheets and regions}
@@ -479,19 +694,60 @@ could simply translate its sheet transformation in the negative y
 direction to compensate for the increased size.  This solution is
 probably the simplest one. 
 
-\chapter{Sheet hierarchy}
 
-CLIM sheets are organized into a hierarchy.  Each sheet has a sheet
-transformation and a sheet region.  The sheet tranformation determines
-how coordinates in the sheet's own coordinate system get translated
-into coordinates in the coordinate system of its parent.  The sheet
-region determines the \gloss{potentially visible area} of the
-otherwise infinite drawing plane of the sheet.
+\chapter{Panes}
 
 Panes are subclasses of sheets.  Some panes are \gloss{layout panes}
 that determine the size and position its children according to rules
 specific to each particular type of layout pane.  Examples of layout
 panes are vertical and horizontal boxes, tables etc.
+
+According to the CLIM specification, all CLIM panes are
+\emph{rectangular objects}.  For McCLIM, we interpret that phrase to
+mean that:
+
+\begin{itemize0}
+\item CLIM panes appear rectangular in the native windowing system;
+\item CLIM panes have a native transformation that does not have a
+  rotation component, only translation and scaling.
+\end{itemize0}
+
+Of course, the specification is unclear hear.  Panes are subclasses of
+sheets, and sheets don't have a shape per-se.  Their \emph{regions}
+may have a shape, but the sheet itself certainly does not.  
+
+The phrase in the specification \emph{could} mean that the
+\gloss{sheet-region} of a pane is a subclass of the region class
+\gloss{rectangle}.  But that would not exclude the possibility that
+the region of a pane would be some non-rectangular shape in the
+\gloss{native coordinate system}.  For that to happen, it would be
+enough that the \gloss{sheet-transformation} of some ancestor of the
+pane contain a rotation component.  In that case, the layout protocol
+would be insufficient in its current version.
+
+McCLIM panes have the following additional restrictions:
+
+\begin{itemize0}
+\item McCLIM panes have a coordinate system that is only a translation
+  compared to that of the frame manager;
+\item The parent of a pane is either nil or another pane. 
+\end{itemize0}
+
+Thus, the panes form a \emph{prefix} in the hierarchy of sheets.  It
+is an error for a non-pane to adopt a pane. 
+
+Notice that the native transformation of a pane need not be the
+identity transformation.  If the pane is not mirrored, then its native
+transformation is probably a translation of that of its parent. 
+
+Notice also that the native transformation of a pane need not be the
+composition of the identity transformation and a translation.  That
+would be the case only of the native transformation of the graft is
+the identity transformation, but that need not be the case.  It is
+possible for the frame manager to impose a coordinate system in (say)
+millimeters as opposed to pixels.  The native transformation of the
+graft of such a frame manager is a scaling with coefficients other
+than 1. 
 
 \section{Layout protocol}
 
@@ -821,6 +1077,35 @@ integer).  By not having a mirror for the stream pane, the coordinates
 will be translated to those of the mirror of the \gloss{viewport}
 before being submitted to the windowing system, which gives more
 reasonable coordinate values. 
+
+\glossentry{Mirror transformation}
+
+The transformation that transforms coordinates in the coordinate
+system of a mirror (i.e. the native coordinates of the mirror) to
+native coordinates of its parent in the underlying windowing system.
+On most systems, including X, this transformation will be a simple
+translation. 
+
+\glossentry{Native coordinates}
+
+Each mirror has a coordinate system called the native coordinate
+system.  Usually, the native coordinate system of a mirror has its
+origin in the upper-left corner of the mirror, the x-axis grows to the
+right and the y-axis downwards.  The unit is usually pixels, but the
+frame manager can impose a native coordinate system with other units,
+such as millimeters. 
+
+The native coordinate system of a sheet is the native coordinate
+system of its mirror (direct or not).  Thus, a sheet without a mirror
+has the same native coordinate system as its parent.  To obtain native
+coordinates of the parent of a mirror, use the \gloss{mirror
+transformation}. 
+
+\glossentry{Native region}
+
+The native region of a sheet is the intersection of its region and the
+sheet region of all of its parents, expressed in the \gloss{native
+coordinates} of the sheet. 
 
 \glossentry{Potentially visible area}
 
