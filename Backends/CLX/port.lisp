@@ -375,7 +375,7 @@
 	   (make-instance 'pointer-motion-event :pointer 0 :button code :x x :y y
 			  :sheet sheet :modifier-state state :timestamp time)))
         ;;
-	((:exposure)
+	((:exposure :display)
          ;; Notes:
          ;; . Do not compare count with 0 here, last rectangle in an
          ;;   :exposure event sequence does not cover the whole region. 
@@ -386,6 +386,12 @@
          ;;--GB
          ;;
          ;; this should still consolidate the areas
+         ;;
+         ;; Mike says:
+         ;;   One of the lisps is bogusly sending a :display event instead of an
+         ;; :exposure event. I don't remember if it's CMUCL or SBCL. So the
+         ;; :display event should be left in.
+         ;;
          (make-instance 'window-repaint-event
            :sheet sheet
            :region (make-rectangle* x y (+ x width) (+ y height))))
