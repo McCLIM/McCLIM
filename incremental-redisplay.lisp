@@ -353,9 +353,6 @@ spatially organized data structure.
    (fixed-position :reader output-record-fixed-position
 		   :initarg :fixed-position :initform nil)
    (displayer :reader output-record-displayer :initarg :displayer)
-   (sub-record :accessor sub-record
-	       :documentation "The actual contents of this record.  All output
-record operations are forwarded to this record.")
    ;; Start and end cursor
    (start-graphics-state :accessor start-graphics-state
 			 :initarg :start-graphics-state
@@ -511,12 +508,18 @@ updating-output-parent above this one in the tree.")
 				  (setf (output-record-dirty r) :updating))
 			      record
 			      nil)
+    (finish-output stream)
+    ;; Why is this binding here? We need the "environment" in this call that
+    ;; computes the new records of an outer updating output record to resemble
+    ;; that when a record's contents are computed in invoke-updating-output. 
     (letf (((stream-current-output-record stream)
 	    (output-record-parent record)))
       (compute-new-output-records-1 record 
 				    stream
 				    (output-record-displayer record)))))
 
+;;; Create the sub-record that holds the new contents of the updating output
+;;; record.
 (defun %invoke-updating (record stream displayer)
   (letf (((stream-current-output-record stream) record))
     (with-new-output-record (stream)
@@ -838,6 +841,7 @@ records. "))
 				   (parent-cache nil))
   (unless *enable-updating-output*
     (return-from invoke-updating-output (funcall continuation stream)))
+  (finish-output stream)
   (let ((parent-cache (or parent-cache *current-updating-output* stream)))
     (when (eq unique-id *no-unique-id*)
       (setq unique-id (incf (id-counter parent-cache))))
