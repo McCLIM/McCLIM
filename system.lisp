@@ -131,7 +131,7 @@
   "Backends/CLX/clim-extensions"
   )
 
-(clim-defsystem (:clim-looks :depends-on (:clim))
+(clim-defsystem (:clim-looks :depends-on (:clim-clx))
   "Looks/pixie")
 
 ;;; Will depend on :goatee soon...
