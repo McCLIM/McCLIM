@@ -106,6 +106,73 @@
   (declare (ignore args))
   )
 
+;;; Generic operations
+; (defgeneric frame-name (frame))
+; (defgeneric frame-pretty-name (frame))
+; (defgeneric (setf frame-pretty-name) (name frame))
+; (defgeneric frame-command-table (frame))
+; (defgeneric (setf frame-command-table) (command-table frame))
+(defgeneric frame-standard-output (frame)
+  (:documentation
+   "Returns the stream that will be used for *standard-output* for the FRAME."))
+(defgeneric frame-standard-input (frame)
+  (:documentation
+   "Returns the stream that will be used for *standard-input* for the FRAME."))
+(defgeneric frame-query-io (frame)
+  (:documentation
+   "Returns the stream that will be used for *query-io* for the FRAME."))
+(defgeneric frame-error-output (frame)
+  (:documentation
+   "Returns the stream that will be used for *error-output* for the FRAME."))
+(defgeneric frame-pointer-documentation-output (frame)
+  (:documentation
+   "Returns the stream that will be used for *pointer-documentation-output*
+for the FRAME."))
+(defgeneric frame-calling-frame (frame)
+  (:documentation
+   "Returns the application frame that invoked the FRAME."))
+(defgeneric frame-parent (frame)
+  (:documentation
+   "Returns the object that acts as the parent for the FRAME."))
+;(defgeneric frame-pane (frame) ; XXX Is it in Spec?
+;  (:documentation
+;   "Returns the pane that is the top-level pane in the current layout
+;of the FRAME's named panes."))
+(defgeneric frame-top-level-sheet (frame)
+  (:documentation
+   "Returns the shhet that is the top-level sheet for the FRAME. This
+is the sheet that has as its descendants all of the panes of the FRAME."))
+(defgeneric frame-current-panes (frame)
+  (:documentation
+   "Returns a list of those named panes in the FRAME's current layout.
+If there are no named panes, only the single, top level pane is returned."))
+(defgeneric get-frame-pane (frame pane-name)
+  (:documentation
+   "Returns the named CLIM stream pane in the FRAME whose name is PANE-NAME."))
+(defgeneric find-pane-named (frame pane-name)
+  (:documentation
+   "Returns the pane in the FRAME whose name is PANE-NAME."))
+;(defgeneric frame-current-layout (frame))
+;(defgeneric frame-all-layouts (frame)) ; XXX Is it in Spec?
+(defgeneric layout-frame (frame &optional width height))
+;(defgeneric frame-exit-frame (condition) ; XXX Is it in Spec?
+;  (:documentation
+;   "Returns the frame that is being exited from associated with the
+;FRAME-EXIT condition."))
+(defgeneric frame-exit (frame) ; XXX Is it in Spec?
+  (:documentation
+   "Exits from the FRAME."))
+(defgeneric pane-needs-redisplay (pane))
+(defgeneric (setf pane-needs-redisplay) (value pane))
+(defgeneric redisplay-frame-pane (frame pane &key force-p))
+(defgeneric redisplay-frame-panes (frame &key force-p))
+(defgeneric frame-replay (frame stream &optional region))
+(defgeneric notify-user (frame message &key associated-window title
+                         documentation exit-boxes name style text-style))
+;(defgeneric frame-properties (frame property))
+;(defgeneric (setf frame-properties) (value frame property))
+
+
 (defclass standard-application-frame (application-frame)
   ())
 
@@ -142,9 +209,6 @@
 				   (space-requirement-width space)
 				   (space-requirement-height space)))))
 
-(defmethod find-pane-named ((frame application-frame) name)
-  (find name (frame-panes frame) :test #'eq :key #'pane-name))
-
 (defmethod layout-frame ((frame application-frame) &optional width height)
   (let ((pane (frame-pane frame)))
     (if (and  width (not height))
@@ -155,14 +219,35 @@
 	  (setq height (space-requirement-height space))))
     (allocate-space pane width height)))
 
-(defun find-pane-of-type (panes type)
+(defun find-pane-if (predicate panes)
+  "Returns a pane satisfying PREDICATE in the forest growing from PANES"
   (setq panes (copy-list panes))
   (do ((pane (pop panes)(pop panes)))
       ((null pane) nil)
-    (if (typep pane type)
+    (if (funcall predicate pane)
  	(return pane)
       (setq panes (nconc panes (copy-list (sheet-children pane)))))))
+
+(defun find-pane-of-type (panes type)
+  (find-pane-if #'(lambda (pane) (typep pane type)) panes))
 	      
+(defmethod frame-current-panes ((frame application-frame))
+  (find-pane-if #'(lambda (pane) (pane-name pane))
+                (frame-current-layout frame)))
+
+(defmethod get-frame-pane ((frame application-frame) pane-name)
+  (find-pane-if #'(lambda (pane)
+                    (and (typep pane 'clim-stream-pane)
+                         (eq pane-name
+                             (pane-name pane))))
+                (frame-panes frame)))
+
+(defmethod find-pane-named ((frame application-frame) pane-name)
+  (find-pane-if #'(lambda (pane)
+                    (eq pane-name
+                        (pane-name pane)))
+                (frame-panes frame)))
+
 (defmethod frame-standard-output ((frame application-frame))
   (or (find-pane-of-type (frame-panes frame) 'application-pane)
       (find-pane-of-type (frame-panes frame) 'interactor-pane)))
@@ -181,10 +266,7 @@
 (defvar *pointer-documentation-output* nil)
 
 (defmethod frame-pointer-documentation-output ((frame application-frame))
-  (loop for pane in (frame-panes frame)
-      if (typep pane 'pointer-documentation-pane)
-      return pane
-      finally (return nil)))
+  (find-pane-of-type (frame-panes frame) 'pointer-documentation-pane))
 
 ;;; Command loop interface
 
