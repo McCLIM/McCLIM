@@ -41,6 +41,7 @@
 \newcommand{\longref}[1]{(See \ref{#1})}
 \newcommand{\var}[1]{\textit{#1}}
 
+\newcommand{\nil}[0]{\cl{nil}}
 \title{McCLIM 0.01 user's manual}
 \author{Robert Strandh \\ strandh@labri.fr}
 
@@ -73,8 +74,20 @@ description of the protocols of the upper layer, but also of all
 protocols, classes, functions, macros, etc. that are part of the
 specification.
 
-This manual documents McCLIM 0.01 which is a partial implementation of
-the CLIM 2.0 specification.
+\section{Standards}
+This manual documents McCLIM 0.01 which is a mostly complete implementation of
+the CLIM~2.0 specification and its revision~2.2. To our knowledge
+version~2.2 of the CLIM specification is only documented in the ``CLIM~2
+User's Guide'' by Franz. While that document is not a formal
+specification, it does contain many cleanups and is often clearer than
+the official specification; on the other hand, the original
+specification is a useful reference. This manual will note where
+McCLIM has followed the 2.2 API.
+
+Also, some protocols mentioned in the 2.0 specification, such as parts
+of the incremental redisplay protocol, are clearly internal to CLIM
+and not well described.  It will be noted here when they are partially
+implemented in McCLIM or not implemented at all.
 
 \part{Getting Started}
 
@@ -169,7 +182,6 @@ processor that echoes its input.  Run with:
 
 The following programs are currently \textbf{known not to work}:
 \begin{itemize}
-\item \texttt{Apps/Scigraph}
 \item \texttt{Examples/fire.lisp}
 \item \texttt{Examples/gadget-test-kr.lisp}
 \item \texttt{Examples/gadget-test.lisp}
@@ -1261,6 +1273,19 @@ Sets the parent of all children of \arg{record} to \cl{nil}.
 
 \arg{record-type} is evaluated.
 
+\chapter{Command Processing}
+
+\defmacro {define-command-table} {name \key inherit-from menu
+  inherit-menu}
+\defun {make-command-table} {name \key inherit-from inherit-menu
+  (errorp t)}
+
+By default command tables inherit from
+\cl{global-command-table}. According to the CLIM~2.0 specification, a
+command table inherits from no command table if  \nil\ is passed as an
+explicit argument to \arg{inherit-from}. In revision~2.2 all command
+tables must inherit from \cl{global-command-table}. McCLIM treats a
+\nil\ value of \arg{inherit-from} as specifying \cl{'(global-command-table)}.
 
 \part{Extensions}
 

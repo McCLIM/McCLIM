@@ -148,8 +148,16 @@
                 args)))
    menu))
 
+(setf (gethash 'global-command-table *command-tables*)
+      (make-instance 'standard-command-table
+		     :name 'global-command-table
+		     :inherit-from nil
+		     :menu nil))
+
 ; adjusted to allow anonymous command-tables for menu-bars
 (defun make-command-table (name &key inherit-from menu (errorp t))
+  (unless inherit-from
+    (setq inherit-from '(global-command-table)))
   (if (and name errorp (gethash name *command-tables*))
       (error 'command-table-already-exists)
       (let ((result (make-instance 'standard-command-table :name name
@@ -159,20 +167,18 @@
           (setf (gethash name *command-tables*) result))
         result)))
 
-(make-command-table 'global-command-table)
-(make-command-table 'user-command-table :inherit-from '(global-command-table))
+(make-command-table 'user-command-table)
 
-(defmacro define-command-table (name &key 
-				(inherit-from '(global-command-table))
-				menu)
-  `(let ((old-table (gethash ',name *command-tables* nil)))
+(defmacro define-command-table (name &key inherit-from menu)
+  `(let ((old-table (gethash ',name *command-tables* nil))
+	 (inherit-from-arg (or ',inherit-from '(global-command-table))))
      (if old-table
 	 (with-slots (inherit-from menu) old-table
-	   (setq inherit-from ',inherit-from
+	   (setq inherit-from inherit-from-arg
 		 menu (menu-items-from-list ',menu))
 	   old-table)
 	 (make-command-table ',name
-			     :inherit-from ',inherit-from
+			     :inherit-from inherit-from-arg
 			     :menu ',menu
 			     :errorp nil))))
 
@@ -231,7 +237,8 @@
 	      ((consp menu)
 	       (values (car menu) (cdr menu))))
       (when keystroke
-        (add-keystroke-to-command-table command-table keystroke :command command-name :errorp nil))
+        (add-keystroke-to-command-table table keystroke
+					:command command-name :errorp nil))
       (let* ((item (if menu
 		       (apply #'make-menu-item
 			      menu-name :command menu-command
@@ -243,10 +250,9 @@
 				      :command-name command-name
 				      :command-line-name name)))
 	     (after (getf menu-options :after)))
-	(when (and errorp (gethash command-name (commands command-table)))
+	(when (and errorp (gethash command-name (commands table)))
 	  (error 'command-already-present))
-	(remove-command-from-command-table command-name command-table
-					   :errorp nil)
+	(remove-command-from-command-table command-name table :errorp nil)
 	(setf (gethash command-name (commands table)) item)
 	(when name
 	  (setf (gethash name (command-line-names table)) command-name))
