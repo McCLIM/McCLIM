@@ -147,9 +147,6 @@ upper-left corner of the stream."))
    "Returns the output record that is the parent of RECORD, or nil if
 RECORD has no parent."))
 
-(defgeneric replay (record stream &optional region)
-  (:documentation ""))
-
 (defgeneric replay-output-record (record stream
                                   &optional region x-offset y-offset)
   (:documentation "Displays the output captured by RECORD on the
@@ -246,7 +243,7 @@ Only those records that overlap REGION are displayed."))
   (declare (ignore x y))
   nil)
 
-(defmethod replay (record stream &optional region)
+(defun replay (record stream &optional region)
   (stream-close-text-output-record stream)
   (when (stream-drawing-p stream)
     (with-cursor-off stream
