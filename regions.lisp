@@ -2091,6 +2091,13 @@
     (declare (ignore x2 y2))
     (values x1 y1)))
 
+(defmethod set-bounding-rectangle-position ((self standard-rectangle) x y)
+  (with-slots (x1 y1 x2 y2) self
+    (setq x2 (+ x (- x2 x1))
+	  y2 (+ y (- y2 y1))
+	  x1 x
+	  y1 y)))
+
 (defmethod bounding-rectangle-min-x ((self bounding-rectangle)) 
   (nth-value 0 (bounding-rectangle* self)))
 
@@ -2123,7 +2130,7 @@
   (print-unreadable-object (self stream :type t :identity t)
     (if (slot-boundp self 'x1)
 	(with-slots (x1 y1 x2 y2) self
-	  (format stream "X ~S:~S Y ~S:~S" x1 y1 x2 y2))
+	  (format stream "X ~S:~S Y ~S:~S" x1 x2 y1 y2))
       (format stream "X 0:0 Y 0:0"))))
 
 
