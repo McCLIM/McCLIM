@@ -105,7 +105,9 @@ spatially organized data structure.
    (id-counter :accessor id-counter
 	       :documentation "The counter used to assign unique ids to
 		updating output records without one.")
-   (tester-function :accessor tester-function :initform 'none)
+   (tester-function :accessor tester-function :initform 'none
+		    :documentation "The function used to lookup
+  updating output records in this map if unique; otherwise, :mismatch.")
    (element-count :accessor element-count :initform 0)))
 
 ;;; Complete guess...
@@ -113,6 +115,8 @@ spatially organized data structure.
   "The limit at which the id map in an updating output record switches to a
   hash table.")
 
+;;; ((eq map-test-func :mismatch)
+;;;   nil)
 (defun function-matches-p (map func)
   (let ((map-test-func (tester-function map)))
     (cond ((eq map-test-func func)
@@ -125,19 +129,25 @@ spatially organized data structure.
 	   (eq map-test-func (symbol-value func)))
 	  (t nil))))
 
+(defun ensure-test (map test)
+  (unless (function-matches-p map test)
+    (explode-map-hash map)
+    (setf (tester-function map) :mismatch)))
+
 (defun get-from-map (map value test)
   (when (eq (tester-function map) 'none)
     (return-from get-from-map nil))
-  (if (function-matches-p map test)
-      (let ((map (id-map map)))
-	(if (hash-table-p map)
-	    (gethash value map)
-	    (cdr (assoc value map :test test))))
-      (error "Test function ~S doesn't match ~S" test (tester-function map))))
+  (ensure-test map test)
+  (let ((map (id-map map)))
+    (if (hash-table-p map)
+	(gethash value map)
+	(cdr (assoc value map :test test)))))
+
 
 (defun maybe-convert-to-hash (map)
   (let ((test (tester-function map)))
-    (when (and (> (element-count map) *updating-map-threshold*)
+    (when (and (not (eq test :mismatch))
+	       (> (element-count map) *updating-map-threshold*)
 	       (or (case test
 		     ((eq eql equal equalp) t))
 		   (eq test #'eq)
@@ -150,42 +160,48 @@ spatially organized data structure.
 	   do (setf (gethash key new-map) value))
 	(setf (id-map map) new-map)))))
 
+(defun explode-map-hash (map)
+  (let ((hash-map (id-map map)))
+    (when (hash-table-p hash-map)
+      (loop
+	 for key being each hash-key of hash-map using (hash-value record)
+	 collect (cons key record) into alist
+	 finally (setf (id-map map) alist)))))
+
 (defun add-to-map (map record value test replace)
-  (when (eq (tester-function map) 'none)
-    (setf (tester-function map) test))
-  (if (function-matches-p map test)
-      (let ((val-map (id-map map)))
-	(if (hash-table-p val-map)
-	    (multiple-value-bind (existing-value in-table)
-		(if replace
-		    (gethash value val-map)
-		    (values nil nil))
-	      (declare (ignore existing-value))
-	      (setf (gethash value val-map) record)
-	      (unless in-table
-		(incf (element-count map))))
-	    (let ((val-cons (if replace
-				(assoc value val-map :test test)
-				nil)))
-	      (if val-cons
-		  (setf (cdr val-cons) record)
-		  (progn
-		    (setf (id-map map) (acons value record val-map))
-		    (incf (element-count map))
-		    (maybe-convert-to-hash map))))))
-      (error "Test function ~S doesn't match ~S" test (tester-function map))))
+  (if (eq (tester-function map) 'none)
+      (setf (tester-function map) test)
+      (ensure-test map test))
+  (let ((val-map (id-map map)))
+    (if (hash-table-p val-map)
+	(multiple-value-bind (existing-value in-table)
+	    (if replace
+		(gethash value val-map)
+		(values nil nil))
+	  (declare (ignore existing-value))
+	  (setf (gethash value val-map) record)
+	  (unless in-table
+	    (incf (element-count map))))
+	(let ((val-cons (if replace
+			    (assoc value val-map :test test)
+			    nil)))
+	  (if val-cons
+	      (setf (cdr val-cons) record)
+	      (progn
+		(setf (id-map map) (acons value record val-map))
+		(incf (element-count map))
+		(maybe-convert-to-hash map)))))))
 
 (defun delete-from-map (map value test)
-  (if (function-matches-p map test)
-      (let ((val-map (id-map map))
-	    (deleted nil))
-	(if (hash-table-p val-map)
-	    (setf deleted (remhash value val-map))
-	    (setf (values (id-map map) deleted)
-		  (delete-1 value val-map :test test :key #'car)))
-	(when deleted
-	  (decf (element-count map))))
-      (error "Test function ~S doesn't match ~S" test (tester-function map))))
+  (ensure-test map test)
+  (let ((val-map (id-map map))
+	(deleted nil))
+    (if (hash-table-p val-map)
+	(setf deleted (remhash value val-map))
+	(setf (values (id-map map) deleted)
+	      (delete-1 value val-map :test test :key #'car)))
+    (when deleted
+      (decf (element-count map)))))
 
 (defmethod shared-initialize :after ((obj updating-output-map-mixin) slot-names
 				     &key)
@@ -887,10 +903,6 @@ records. "))
 	     (setf (parent-cache record) parent-cache)))
       record)))
 
-;;; &key (unique-id (gensym)) was used earlier,
-;;; changed to (unique-id `',(gensym)) as per gilham's request
-;;; please CHECKME and delete this comment :]
-;;;
 ;;; The Franz user guide says that updating-output does
 ;;; &allow-other-keys, and some code I've encountered does mention
 ;;; other magical arguments, so we'll do the same. -- moore

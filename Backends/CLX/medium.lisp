@@ -31,7 +31,6 @@
 ;; cache.
 ;; --GB
 
-
 ;;; CLX-MEDIUM class
 
 (defclass clx-medium (basic-medium)
@@ -293,20 +292,16 @@
       (error "Sorry, not yet implemented."))
     ;; Bah!
     (typecase design
-      (climi::indexed-pattern
-       (let ((gc (design-gcontext medium design)))
-         (setf (xlib:gcontext-ts-x gc) (round (nth-value 0 (transform-position transformation 0 0)))
-               (xlib:gcontext-ts-y gc) (round (nth-value 1 (transform-position transformation 0 0)))
-               (xlib:gcontext-clip-x gc)(round (nth-value 0 (transform-position transformation 0 0)))
-               (xlib:gcontext-clip-y gc)(round (nth-value 1 (transform-position transformation 0 0))))
-         gc))
-      (climi::rectangular-tile
-       (let ((gc (design-gcontext medium design)))
-         (setf (xlib:gcontext-ts-x gc) (round (nth-value 0 (transform-position transformation 0 0)))
-               (xlib:gcontext-ts-y gc) (round (nth-value 1 (transform-position transformation 0 0)))
-               (xlib:gcontext-clip-x gc)(round (nth-value 0 (transform-position transformation 0 0)))
-               (xlib:gcontext-clip-y gc)(round (nth-value 1 (transform-position transformation 0 0))))
-         gc))
+      ((or climi::indexed-pattern climi::rectangular-tile)
+       (multiple-value-bind (tx ty)
+	   (transform-position transformation 0 0)
+	 (let ((gc-x (round-coordinate tx))
+	       (gc-y (round-coordinate ty))
+	       (gc (design-gcontext medium design)))
+	   (setf (xlib:gcontext-ts-x gc) gc-x
+               (xlib:gcontext-ts-y gc) gc-y
+               (xlib:gcontext-clip-x gc) gc-x
+               (xlib:gcontext-clip-y gc) gc-y))))
       (t
        (error "You lost, we not yet implemented transforming an ~S."
               (type-of ink))))))
@@ -327,15 +322,18 @@
 ; and kill them at the source...
 #-nil
 (defun clipping-region->rect-seq (clipping-region)
-  (loop for region in (nreverse (mapcan
-                                  (lambda (v) (unless (eq v +nowhere+) (list v)))
-                                  (region-set-regions clipping-region
-                                                      :normalize :y-banding)))
-        as rectangle = (bounding-rectangle region)
-        nconcing (list (round (rectangle-min-x rectangle))
-                       (round (rectangle-min-y rectangle))
-                       (round (rectangle-width rectangle))
-                       (round (rectangle-height rectangle)))))
+  (loop
+     for region in (nreverse (mapcan
+			      (lambda (v) (unless (eq v +nowhere+) (list v)))
+			      (region-set-regions clipping-region
+						  :normalize :y-banding)))
+     as rectangle = (bounding-rectangle region)
+     for clip-x = (round-coordinate (rectangle-min-x rectangle))
+     for clip-y = (round-coordinate (rectangle-min-y rectangle))
+     nconcing (list clip-x
+		    clip-y
+		    (- (round-coordinate (rectangle-max-x rectangle)) clip-x)
+		    (- (round-coordinate (rectangle-max-y rectangle)) clip-y))))
 
 (defmacro with-clx-graphics ((medium) &body body)
   `(let* ((port (port ,medium))
@@ -355,6 +353,8 @@
 
 
 ;;; Pixmaps
+;;; width and height arguments should be integers, but we'll leave the calls
+;;; to round in for now.
 
 (defmethod medium-copy-area ((from-drawable clx-medium) from-x from-y width height
                              (to-drawable clx-medium) to-x to-y)
@@ -364,9 +364,10 @@
                                 to-x to-y)
       (xlib:copy-area (sheet-direct-mirror (medium-sheet from-drawable))
                       (medium-gcontext from-drawable +background-ink+)
-                      (round from-x) (round from-y) (round width) (round height)
+                      (round-coordinate from-x) (round-coordinate from-y)
+		      (round width) (round height)
                       (sheet-direct-mirror (medium-sheet to-drawable))
-                      (round to-x) (round to-y)))))
+                      (round-coordinate to-x) (round-coordinate to-y)))))
 
 (defmethod medium-copy-area ((from-drawable clx-medium) from-x from-y width height
                              (to-drawable pixmap) to-x to-y)
@@ -374,9 +375,10 @@
                               from-x from-y)
     (xlib:copy-area (sheet-direct-mirror (medium-sheet from-drawable))
                     (medium-gcontext from-drawable +background-ink+)
-                    (round from-x) (round from-y) (round width) (round height)
+                    (round-coordinate from-x) (round-coordinate from-y)
+		    (round width) (round height)
                     (pixmap-mirror to-drawable)
-                    (round to-x) (round to-y))))
+                    (round-coordinate to-x) (round-coordinate to-y))))
 
 (defmethod medium-copy-area ((from-drawable pixmap) from-x from-y width height
                              (to-drawable clx-medium) to-x to-y)
@@ -384,17 +386,19 @@
                               to-x to-y)
     (xlib:copy-area (pixmap-mirror from-drawable)
                     (medium-gcontext to-drawable +background-ink+)
-                    (round from-x) (round from-y) (round width) (round height)
+                    (round-coordinate from-x) (round-coordinate from-y)
+		    (round width) (round height)
                     (sheet-direct-mirror (medium-sheet to-drawable))
-                    (round to-x) (round to-y))))
+                    (round-coordinate to-x) (round-coordinate to-y))))
 
 (defmethod medium-copy-area ((from-drawable pixmap) from-x from-y width height
                              (to-drawable pixmap) to-x to-y)
   (xlib:copy-area (pixmap-mirror from-drawable)
                   (medium-gcontext from-drawable +background-ink+)
-                  (round from-x) (round from-y) (round width) (round height)
+                  (round-coordinate from-x) (round-coordinate from-y)
+		  (round width) (round height)
                   (pixmap-mirror to-drawable)
-                  (round to-x) (round to-y)))
+                  (round-coordinate to-x) (round-coordinate to-y)))
 
 
 ;;; Medium-specific Drawing Functions
@@ -405,19 +409,23 @@
                               x y)
     (with-clx-graphics (medium)
       (cond ((< (line-style-thickness line-style) 2)
-             (let ((x (floor x))
-                   (y (floor y)))
+             (let ((x (round-coordinate x))
+                   (y (round-coordinate y)))
                (when (and (typep x '(signed-byte 16))
                           (typep y '(signed-byte 16)))
                  (xlib:draw-point mirror gc x y))))
             (t
-             (let* ((radius (round (line-style-thickness line-style) 2))
-                    (diameter (* radius 2)))
-               (let ((x (floor (- x radius)))
-                     (y (floor (- y radius))))
-                 (when (and (typep x '(signed-byte 16))
-                            (typep y '(signed-byte 16)))
-                   (xlib:draw-arc mirror gc x y diameter diameter 0 (* 2 pi) t))))) ))))
+             (let* ((radius (/ (line-style-thickness line-style) 2))
+		    (min-x (round-coordinate (- x radius)))
+		    (min-y (round-coordinate (- y radius)))
+		    (max-x (round-coordinate (+ x radius)))
+		    (max-y (round-coordinate (+ y radius))))
+	       (when (and (typep min-x '(signed-byte 16))
+			  (typep min-y '(signed-byte 16)))
+                   (xlib:draw-arc mirror gc min-x min-y
+				  (- max-x min-x) (- max-y min-y)
+				  0 (* 2 pi) t))))))))
+
 
 (defmethod medium-draw-points* ((medium clx-medium) coord-seq)
   (with-transformed-positions ((sheet-native-transformation
@@ -426,33 +434,23 @@
     (with-clx-graphics (medium)
       (cond ((< (line-style-thickness line-style) 2)
              (do-sequence ((x y) coord-seq)
-               (let ((x (floor x))
-                     (y (floor y)))
+               (let ((x (round-coordinate x))
+                     (y (round-coordinate y)))
                  (when (and (typep x '(signed-byte 16))
                             (typep y '(signed-byte 16)))
                    (xlib:draw-point mirror gc x y)))))
             (t
-             (let* ((radius (round (line-style-thickness line-style) 2))
-                    (diameter (* radius 2)))
+             (let ((radius (/ (line-style-thickness line-style) 2)))
                (do-sequence ((x y) coord-seq)
-                 (let ((x (floor (- x radius)))
-                       (y (floor (- y radius))))
-                   (when (and (typep x '(signed-byte 16))
-                              (typep y '(signed-byte 16)))
-                     (xlib:draw-arc mirror gc x y diameter diameter 0 (* 2 pi) t)))))) ))))
-
-(declaim (inline round-coordinate))
-(defun round-coordinate (x)
-  "Function used for rounding coordinates."
-  ;; We use "mercantile rounding", instead of the CL round to nearest
-  ;; even number, when in doubt.
-  ;;
-  ;; Reason: As the CLIM drawing model is specified, you quite often
-  ;; want to operate with coordinates, which are multiples of 1/2. 
-  ;; Using CL:ROUND gives you "random" results. Using "mercantile
-  ;; rounding" gives you consistent results.
-  ;;
-  (floor (+ x .5)))
+                 (let ((min-x (round-coordinate (- x radius)))
+		       (min-y (round-coordinate (- y radius)))
+		       (max-x (round-coordinate (+ x radius)))
+		       (max-y (round-coordinate (+ y radius))))
+                   (when (and (typep min-x '(signed-byte 16))
+                              (typep min-y '(signed-byte 16)))
+                     (xlib:draw-arc mirror gc min-x min-y
+				    (- max-x min-x) (- max-y min-y)
+				    0 (* 2 pi) t))))))))))
 
 (defmethod medium-draw-line* ((medium clx-medium) x1 y1 x2 y2)
   (let ((tr (sheet-native-transformation (medium-sheet medium))))
@@ -516,6 +514,8 @@
     (with-transformed-position (tr left top)
       (with-transformed-position (tr right bottom)
         (with-clx-graphics (medium)
+	   #+nil (when (typep mirror 'xlib:pixmap)
+		  (break))
           (if (< right left)
               (rotatef left right))
           (if (< bottom top)
@@ -561,16 +561,23 @@
 
 (defmethod medium-draw-rectangles* ((medium clx-medium) position-seq filled)
   (assert (evenp (length position-seq)))
-  (with-transformed-positions ((sheet-native-transformation (medium-sheet medium))
+  (with-transformed-positions ((sheet-native-transformation
+				(medium-sheet medium))
                                position-seq)
     (with-clx-graphics (medium)
-      (loop for (left top right bottom) on position-seq by #'cddddr
-            nconcing (list (round left) (round top)
-                           (round (- right left)) (round (- bottom top))) into points
-                           finally (xlib:draw-rectangles mirror gc points filled)))))
+      (loop
+	 for (left top right bottom) on position-seq by #'cddddr
+	 for min-x = (round-coordinate left)
+	 for max-x = (round-coordinate right)
+	 for min-y = (round-coordinate top)
+	 for max-y = (round-coordinate bottom)
+	 nconcing (list min-x min-y (- max-x min-x) (- min-y max-y)) into points
+	 finally (xlib:draw-rectangles mirror gc points filled)))))
 
+;;; Round the parameters of the ellipse so that it occupies the expected pixels
 (defmethod medium-draw-ellipse* ((medium clx-medium) center-x center-y
-				 radius-1-dx radius-1-dy radius-2-dx radius-2-dy
+				 radius-1-dx radius-1-dy
+				 radius-2-dx radius-2-dy
 				 start-angle end-angle filled)
   (unless (or (= radius-2-dx radius-1-dy 0) (= radius-1-dx radius-2-dy 0))
     (error "MEDIUM-DRAW-ELLIPSE* not yet implemented for non axis-aligned ellipses."))
@@ -581,25 +588,37 @@
                           (+ (* pi 2) arc-angle)
                           arc-angle)))
       (with-clx-graphics (medium)
-        (let ((radius-dx (abs (+ radius-1-dx radius-2-dx)))
-              (radius-dy (abs (+ radius-1-dy radius-2-dy))))
+        (let* ((radius-dx (abs (+ radius-1-dx radius-2-dx)))
+	       (radius-dy (abs (+ radius-1-dy radius-2-dy)))
+	       (min-x (round-coordinate (- center-x radius-dx)))
+	       (min-y (round-coordinate (- center-y radius-dy)))
+	       (max-x (round-coordinate (+ center-x radius-dx)))
+	       (max-y (round-coordinate (+ center-y radius-dy))))
+	   #+nil (when (typep mirror 'xlib:pixmap)
+		  (break))
           (xlib:draw-arc mirror gc
-                         (round (- center-x radius-dx)) (round (- center-y radius-dy))
-                         (round (* radius-dx 2)) (round (* radius-dy 2))
+                         min-x min-y (- max-x min-x) (- max-y min-y)
                          (mod start-angle (* 2 pi)) arc-angle
                          filled))))))
 
-(defmethod medium-draw-circle* ((medium clx-medium) center-x center-y radius start-angle end-angle filled)
-  (with-transformed-position ((sheet-native-transformation (medium-sheet medium))
+(defmethod medium-draw-circle* ((medium clx-medium)
+				center-x center-y radius start-angle end-angle
+				filled)
+  (with-transformed-position ((sheet-native-transformation (medium-sheet
+							    medium))
                               center-x center-y)
     (let* ((arc-angle (- end-angle start-angle))
            (arc-angle (if (< end-angle 0)
                           (+ (* pi 2) arc-angle)
-                          arc-angle)))
+                          arc-angle))
+	   (min-x (round-coordinate (- center-x radius)))
+	   (min-y (round-coordinate (- center-y radius)))
+	   (max-x (round-coordinate (+ center-x radius)))
+	   (max-y (round-coordinate (+ center-y radius))))
       (with-clx-graphics (medium)
         (xlib:draw-arc mirror gc
-                       (round (- center-x radius)) (round (- center-y radius))
-                       radius radius
+                       min-x min-y
+                       (- max-x min-x) (- min-y max-y)
                        start-angle arc-angle
                        filled)))))
 
@@ -932,7 +951,8 @@
   (with-transformed-position ((sheet-native-transformation (medium-sheet medium))
                               x y)
     (with-clx-graphics (medium)
-      (xlib:draw-glyph mirror gc (round x) (round y) element
+      (xlib:draw-glyph mirror gc (round-coordinate x) (round-coordinate y)
+		       element
                        :size 16
                        :translate #'translate))))
 
@@ -946,9 +966,13 @@
   (xlib:display-force-output (clx-port-display (port medium))))
 
 (defmethod medium-clear-area ((medium clx-medium) left top right bottom)
-  (xlib:clear-area (port-lookup-mirror (port medium) (medium-sheet medium))
-                   :x (round (min left right)) :y (round (min bottom top))
-                   :width (round (abs (- right left))) :height (round (abs (- bottom top)))))
+  (let ((min-x (round-coordinate (min left right)))
+	(min-y (round-coordinate (min top bottom)))
+	(max-x (round-coordinate (max left right)))
+	(max-y (round-coordinate (max top bottom))))
+    (xlib:clear-area (port-lookup-mirror (port medium) (medium-sheet medium))
+		     :x min-x :y min-y
+		     :width (- max-x min-x) :height (- max-y min-y))))
 
 (defmethod medium-beep ((medium clx-medium))
   (xlib:bell (clx-port-display (port medium))))

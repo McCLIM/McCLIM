@@ -413,11 +413,15 @@ sheet-supports-only-one-child error to be signalled."))
 (defmethod sheet-native-region ((sheet basic-sheet))
   (with-slots (native-region) sheet
     (unless native-region
-      (setf native-region (region-intersection
-                           (transform-region
-                            (sheet-native-transformation sheet)
-                            (sheet-region sheet))
-                           (sheet-native-region (sheet-parent sheet)))))
+      (let ((this-native-region (transform-region
+				 (sheet-native-transformation sheet)
+				 (sheet-region sheet)))
+	    (parent (sheet-parent sheet)))
+	(setf native-region (if parent
+				(region-intersection this-native-region
+						     (sheet-native-region
+						      parent))
+				this-native-region))))
     native-region))
 
 (defmethod sheet-device-transformation ((sheet basic-sheet))
@@ -706,15 +710,17 @@ that this might be different from the sheet's native region."
 (defmethod sheet-native-region ((sheet mirrored-sheet-mixin))
   (with-slots (native-region) sheet
     (unless native-region
-      (setf native-region
-            (region-intersection
-             (transform-region
-              (sheet-native-transformation sheet)
-              (sheet-region sheet))
-             (transform-region
-              (invert-transformation
-               (%sheet-mirror-transformation sheet))
-              (sheet-native-region (sheet-parent sheet))))))
+      (let ((this-region (transform-region (sheet-native-transformation sheet)
+					   (sheet-region sheet)))
+	    (parent (sheet-parent sheet)))
+	(setf native-region
+	      (if parent
+		  (region-intersection this-region
+				       (transform-region
+					(invert-transformation
+					 (%sheet-mirror-transformation sheet))
+					(sheet-native-region parent)))
+		  this-region))))
     native-region))
 
 (defmethod (setf sheet-enabled-p) :after (new-value (sheet mirrored-sheet-mixin))

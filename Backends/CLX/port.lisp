@@ -23,6 +23,21 @@
 
 (in-package :clim-clx)
 
+(declaim (inline round-coordinate))
+(defun round-coordinate (x)
+  "Function used for rounding coordinates."
+  ;; We use "mercantile rounding", instead of the CL round to nearest
+  ;; even number, when in doubt.
+  ;;
+  ;; Reason: As the CLIM drawing model is specified, you quite often
+  ;; want to operate with coordinates, which are multiples of 1/2. 
+  ;; Using CL:ROUND gives you "random" results. Using "mercantile
+  ;; rounding" gives you consistent results.
+  ;;
+  ;; For values at .5 we round down in order to be consistant with
+  ;; the CLIM and CLX definitions for pixel coverage of shapes.
+  (ceiling (- x .5)))
+
 ;;; CLX-PORT class
 
 (defclass clx-pointer (pointer)
@@ -1173,11 +1188,18 @@
 	   +pointer-wheel-down+)
 	  (t 0)))
 
+#+nil
 (defmethod pointer-modifier-state ((pointer clx-pointer))
   (multiple-value-bind (x y same-screen-p child mask)
       (xlib:query-pointer (clx-port-window (port pointer)))
     (declare (ignore x y same-screen-p child))
     (clim-xcommon:x-event-state-modifiers (port pointer) mask)))
+
+(defmethod port-modifier-state ((port clx-port))
+  (multiple-value-bind (x y same-screen-p child mask)
+      (xlib:query-pointer (clx-port-window port))
+    (declare (ignore x y same-screen-p child))
+    (clim-xcommon:x-event-state-modifiers port mask)))
 
 ;;; XXX Should we rely on port-pointer-sheet being correct? -- moore
 (defmethod synthesize-pointer-motion-event ((pointer clx-pointer))

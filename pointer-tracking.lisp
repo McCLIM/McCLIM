@@ -173,64 +173,126 @@
 ;;; multiple-window is completely unsupported.
 ;;; window-repaint events while dragging.
 
+(defun bound-rectangles (r1-x1 r1-y1 r1-x2 r1-y2 r2-x1 r2-y1 r2-x2 r2-y2)
+  (values (min r1-x1 r2-x1) (min r1-y1 r2-y1)
+	  (max r1-x2 r2-x2) (max r1-y2 r2-y2)))
+
+
 (defgeneric drag-output-record
     (stream output
      &key repaint erase feedback finish-on-release multiple-window))
+
+;;; Fancy double-buffered feedback function
+(defun make-buffered-feedback-function (record finish-on-release erase-final)
+  (multiple-value-bind (record-x record-y)
+      (output-record-position record)
+    (lambda (record stream initial-x initial-y x y event)
+      (flet ((simple-erase ()
+	       (when erase-final
+		 (when (output-record-parent record)
+		   (delete-output-record record (output-record-parent record)))
+		 (with-double-buffering
+		     ((stream record) (buffer-rectangle))
+		   (stream-replay stream buffer-rectangle)))))
+	(let ((dx (- record-x initial-x))
+	      (dy (- record-y initial-y)))
+	  (typecase event
+	    (null
+	     (setf (output-record-position record) (values (+ dx x) (+ dy y)))
+	     (stream-add-output-record stream record)
+	     (stream-replay stream record))
+	    (pointer-motion-event
+	     ;; Don't do an explicit erase. Instead, update the position of the
+	     ;; output record and redraw the union of the old and new
+	     ;; positions.
+	     (with-bounding-rectangle* (old-x1 old-y1 old-x2 old-y2)
+	       record
+	       (when (output-record-parent record)
+		 (delete-output-record record (output-record-parent record)))
+	       (setf (output-record-position record)
+		     (values (+ dx x) (+  dy y)))
+	       (stream-add-output-record stream record)
+	       (with-bounding-rectangle* (new-x1 new-y1 new-x2 new-y2)
+		 record
+		 (multiple-value-bind (area-x1 area-y1 area-x2 area-y2)
+		     (bound-rectangles old-x1 old-y1 old-x2 old-y2
+				       new-x1 new-y1 new-x2 new-y2)
+		   (with-double-buffering
+		       ((stream area-x1 area-y1 area-x2 area-y2)
+			(buffer-rectangle))
+		     (stream-replay stream buffer-rectangle))))))
+	    (pointer-button-press-event
+	     (unless finish-on-release
+	       (simple-erase)))
+	    (pointer-button-release-event
+	     (when finish-on-release
+	       (simple-erase)))
+	    (t nil)))))))
+
+;;; If the user supplies a feedback function, create a function to
+;;; call it with the simple :draw / :erase arguments.
+
+(defun make-simple-feedback-function
+    (record feedback finish-on-release erase-final)
+  (declare (ignore record))
+  (lambda (record stream initial-x initial-y x y event)
+    (typecase event
+      (null
+       (funcall feedback record stream initial-x initial-y x y :draw))
+      (pointer-motion-event
+       (funcall feedback record stream initial-x initial-y x y :erase)
+       (funcall feedback record stream initial-x initial-y x y :draw))
+      (pointer-button-press-event
+       (unless finish-on-release
+	 (when erase-final
+	   (funcall feedback record stream initial-x initial-y x y :erase))))
+      (pointer-button-release-event
+       (when (and finish-on-release erase-final)
+	 (funcall feedback record stream initial-x initial-y x y :erase)))
+      (t nil))))
+
 
 (defmethod drag-output-record
     ((stream output-recording-stream) (record output-record)
      &key (repaint t) (erase #'erase-output-record)
      feedback finish-on-release multiple-window
-     feedback-event)
-  (declare (ignore repaint multiple-window))
-  (multiple-value-bind (dx dy)
-      (output-record-position record)
-    (flet ((feedback-fn (record stream initial-x initial-y x y action)
-	     (declare (ignore initial-x initial-y))
-	     (if (eq action :erase)
-		 (funcall erase record stream)
-		 (progn
-		   (setf (output-record-position record)
-			 (values (+ dx x) (+ dy y)))
-		   (stream-add-output-record stream record)
-		   (stream-replay stream record))))
-	   (feedback-event-fn (record stream initial-x initial-y x y
-				      action event)
-	     (declare (ignore event))
-	     (when (or (eq action :draw) (eq action :erase))
-	       (funcall feedback record stream initial-x initial-y x y
-			action))))
-      (declare (dynamic-extent #'feedback-fn #'feedback-event-fn))
-      (unless feedback
-	(setq feedback #'feedback-fn))
-      (unless feedback-event
-	(setq feedback-event #'feedback-event-fn))
-      (setf (stream-current-output-record stream)
-	    (stream-output-history stream))
-      (let* ((pointer (port-pointer (port stream)))
-	     (pointer-state (pointer-button-state pointer)))
-	(multiple-value-bind (x0 y0)
-	    (stream-pointer-position stream)
-	  (funcall feedback-event record stream x0 y0 x0 y0 :draw nil)
-	  (tracking-pointer (stream)
-	   (:pointer-motion (&key event x y)
-	     ;; XXX What about the sheet?
-	     (funcall feedback-event record stream x0 y0 x y :erase event)
-	     (funcall feedback-event record stream x0 y0 x y :draw event))
-	   (:pointer-button-press (&key event x y)
-	     (funcall feedback-event record stream x0 y0 x y
-		      :button-press event)
-	     (unless finish-on-release
-	       (return-from drag-output-record (values x y))))
-	   (:pointer-button-release (&key event x y)
-	     ;; If the button released was one of those held down on entry to
-	     ;; drag-output-record, we're done.
-	     (when (and finish-on-release
-			(not (zerop (logand pointer-state
-					    (pointer-event-button event)))))
-	       (funcall feedback-event record stream x0 y0 x y
-			:button-release event)
-	       (return-from drag-output-record (values x y))))))))))
+     feedback-event erase-final)
+  (declare (ignore erase repaint multiple-window))
+  (let ((feedback-event-fn
+	 (cond (feedback-event
+		feedback-event)
+	       (feedback
+		(make-simple-feedback-function record
+					       feedback
+					       finish-on-release
+					       erase-final))
+	       (t (make-buffered-feedback-function record
+						   finish-on-release
+						   erase-final)))))
+    (setf (stream-current-output-record stream)
+	  (stream-output-history stream))
+    (let* ((pointer (port-pointer (port stream)))
+	   (pointer-state (pointer-button-state pointer)))
+      (multiple-value-bind (x0 y0)
+	  (stream-pointer-position stream)
+	(funcall feedback-event-fn record stream x0 y0 x0 y0 nil)
+	(tracking-pointer (stream)
+	 (:pointer-motion (&key event x y)
+	   ;; XXX What about the sheet?
+	   (funcall feedback-event-fn record stream x0 y0 x y event)
+	   (funcall feedback-event-fn record stream x0 y0 x y event))
+	 (:pointer-button-press (&key event x y)
+	   (unless finish-on-release
+	     (funcall feedback-event-fn record stream x0 y0 x y event)
+	     (return-from drag-output-record (values x y))))
+	 (:pointer-button-release (&key event x y)
+	   ;; If the button released was one of those held down on entry to
+	   ;; drag-output-record, we're done.
+	   (when (and finish-on-release
+		      (not (zerop (logand pointer-state
+					  (pointer-event-button event)))))
+	     (funcall feedback-event-fn record stream x0 y0 x y event)
+	     (return-from drag-output-record (values x y)))))))))
   
 (defmacro dragging-output ((&optional (stream '*standard-output*) &rest args
 			    &key repaint finish-on-release multiple-window)
@@ -240,7 +302,6 @@
   (with-gensyms (record)
     `(let ((,record (with-output-to-output-record (,stream)
 		      ,@body)))
-       (multiple-value-prog1
-	   (drag-output-record ,stream ,record ,@args)
-	 (erase-output-record ,record ,stream)))))
+       (drag-output-record ,stream ,record :erase-final t ,@args))))
+
 

@@ -664,10 +664,12 @@
        (setf (%sheet-medium ,sheet) old-medium));is sheet a sheet-with-medium-mixin? --GB
      pixmap))
 
-; This seems to be incorrect.
-; This presumes that your drawing will completely fill the bounding rectangle of the sheet
-; and will effectively randomise anything that isn't draw, within it.
-; FIXME
+;;; XXX This seems to be incorrect.
+;;; This presumes that your drawing will completely fill the bounding rectangle
+;;; of the sheet and will effectively randomize anything that isn't drawn
+;;; within it.
+;;; FIXME
+#+nil
 (defmacro with-double-buffering ((sheet) &body body)
   (let ((width (gensym))
 	(height (gensym))
@@ -687,6 +689,115 @@
              ; in which case, we shouldn't blit it back
 	     (copy-from-pixmap ,pixmap 0 0 ,width ,height ,sheet 0 0))
 	 (deallocate-pixmap ,pixmap)))))
+
+;;; Another attempt
+
+(defun invoke-with-double-buffering (sheet continuation x1 y1 x2 y2)
+  (let* ((medium (sheet-medium sheet))
+	 (sheet-transform (sheet-native-transformation sheet))
+	 (medium-transform (medium-transformation (sheet-medium sheet)))
+	 (world-transform (compose-transformations sheet-transform
+						   medium-transform)))
+    (multiple-value-bind (sheet-x1 sheet-y1)
+	(transform-position world-transform x1 y1)
+      (multiple-value-bind (sheet-x2 sheet-y2)
+	  (transform-position world-transform x2 y2)
+	;; Be conservative with the size of the pixmap, including all of
+	;; the pixels at the edges.
+	(let* ((pixmap-x1 (floor sheet-x1))
+	       (pixmap-y1 (floor sheet-y1))
+	       (pixmap-x2 (ceiling sheet-x2))
+	       (pixmap-y2 (ceiling sheet-y2))
+	       (pixmap-width (- pixmap-x2 pixmap-x1))
+	       (pixmap-height (- pixmap-y2 pixmap-y1))
+	       (current-sheet-region (sheet-region sheet))
+	       (sheet-native (compose-transformation-with-translation
+			      sheet-transform
+			      (- pixmap-x1)
+			      (- pixmap-y1)))
+	       (pixmap (allocate-pixmap sheet pixmap-width pixmap-height))
+	       )
+	  (unless pixmap
+	    (error "Couldn't allocate pixmap")) 
+	  (multiple-value-bind (user-pixmap-x1 user-pixmap-y1)
+	      (untransform-position world-transform pixmap-x1 pixmap-y1)
+	    (multiple-value-bind (user-pixmap-x2 user-pixmap-y2)
+		(untransform-position world-transform pixmap-x2 pixmap-y2)
+	      (flet ((set-native (transform region sheet)
+		       (%%set-sheet-native-transformation transform sheet)
+		       (setf (slot-value sheet 'region) region)
+		       (invalidate-cached-regions sheet)
+		       (invalidate-cached-transformations sheet)))
+		;; Assume that the scaling for the sheet-native
+		;; transformation for the pixmap will be the same as that of
+		;; the mirror .
+		(unwind-protect
+		     (letf (((sheet-parent sheet) nil)
+			    ((sheet-direct-mirror sheet)
+			     (pixmap-mirror pixmap)))
+		       (unwind-protect
+			    (let ((pixmap-region
+				   (make-bounding-rectangle user-pixmap-x1
+							    user-pixmap-y1
+							    user-pixmap-x2
+							    user-pixmap-y2)))
+			      (set-native sheet-native pixmap-region  sheet)
+			      ;(break)
+			      (with-drawing-options
+				  (medium :ink (medium-background medium))
+				
+				(medium-draw-rectangle* medium
+							user-pixmap-x1
+							user-pixmap-y1
+							user-pixmap-x2
+							user-pixmap-y2
+							t))
+			      (funcall continuation sheet
+				       user-pixmap-x1 user-pixmap-y1
+				       user-pixmap-x2 user-pixmap-y2))
+			 (set-native sheet-transform
+				     current-sheet-region
+				     sheet)))
+		  (copy-from-pixmap pixmap 0 0
+				    pixmap-width pixmap-height sheet
+				    user-pixmap-x1 user-pixmap-y1)
+		  (deallocate-pixmap pixmap))))))))))
+
+(defmacro with-double-buffering (((sheet &rest bounds-args)
+				  (&rest pixmap-args))
+				 &body body)
+  (with-gensyms (continuation)
+    (let ((cont-form
+	   (case (length pixmap-args)
+	     (1
+	      (with-gensyms (pixmap-x1 pixmap-y1 pixmap-x2 pixmap-y2)
+		`(,continuation (,sheet
+				 ,pixmap-x1 ,pixmap-y1 ,pixmap-x2 ,pixmap-y2)
+		   (let ((,(car pixmap-args)
+			  (make-bounding-rectangle ,pixmap-x1 ,pixmap-y1
+						   ,pixmap-x2 ,pixmap-y2)))
+		     ,@body))))
+	     (4
+	      `(,continuation (,sheet ,@pixmap-args)
+		 ,@body))
+	     (otherwise (error "Invalid pixmap-args ~S" pixmap-args)))))
+      (case (length bounds-args)
+	(1
+	 (with-gensyms (x1 y1 x2 y2)
+	   `(flet (,cont-form)
+	      (declare (dynamic-extent #',continuation))
+	      (with-bounding-rectangle* (,x1 ,y1 ,x2 ,y2)
+		  ,(car bounds-args)
+		(invoke-with-double-buffering ,sheet
+					      #',continuation
+					      ,x1 ,y1 ,x2 ,y2)))))
+	(4
+	 `(flet (,cont-form)
+	    (declare (dynamic-extent #',continuation))
+	    (invoke-with-double-buffering ,sheet #',continuation
+					  ,@bounds-args)))
+	(otherwise (error "invalid bounds-args ~S" bounds-args))))))
+
 
 
 ;;; Generic graphic operation methods

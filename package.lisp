@@ -409,6 +409,7 @@
    #:+textual-dialog-view+              ;constant
    #:+textual-menu-view+                ;constant
    #:+textual-view+                     ;constant
+   #:+text-field-view+                  ;constant (Franz User's Guide)
    #:+transparent-ink+                  ;constant
    #:+white+                            ;constant
    #:+yellow+                           ;constant
@@ -1104,7 +1105,6 @@
    #:pointer-event-x                    ;generic function
    #:pointer-event-y                    ;generic function
    #:pointer-exit-event                 ;class
-   #:pointer-modifier-state		;generic function (in franz user guide)
    #:pointer-motion-event               ;class
    #:pointer-position                   ;generic function
    #:pointer-sheet                      ;generic function
@@ -1119,6 +1119,7 @@
    #:port                               ;protocol class
    #:port                               ;generic function
    #:port-keyboard-input-focus          ;generic function
+   #:port-modifier-state		;generic function (in franz user guide)
    #:port-name                          ;generic function
    #:port-pointer			;generic function (in franz user guide)
    #:port-properties                    ;generic function
@@ -1456,6 +1457,7 @@
    #:text-editor-pane                   ;class
    #:text-field                         ;class
    #:text-field-pane                    ;class
+   #:text-field-view                    ;class (Franz User's Guide)
    #:text-size                          ;generic function
    #:text-style                         ;protocol class
    #:text-style-ascent                  ;generic function
