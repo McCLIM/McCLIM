@@ -66,6 +66,10 @@
 (defmacro postscript-medium-graphics-state (medium)
   `(car (slot-value ,medium 'graphics-state-stack)))
 
+(defmacro with-graphics-state ((medium) &body body)
+  `(invoke-with-graphics-state ,medium
+    (lambda () ,@body)))
+
 (defun make-postscript-medium (file-stream device-type
                                multi-page scale-to-fit
                                orientation header-comments)
@@ -146,10 +150,6 @@
   (postscript-save-graphics-state medium)
   (funcall continuation)
   (postscript-restore-graphics-state medium))
-
-(defmacro with-graphics-state ((medium) &body body)
-  `(invoke-with-graphics-state ,medium
-    (lambda () ,@body)))
 
 (defun format-postscript-number (number)
   (if (not (integerp number))
