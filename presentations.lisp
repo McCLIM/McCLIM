@@ -759,6 +759,13 @@ suitable for SUPER-NAME"))
 	typespec
 	name)))
 
+(defmethod presentation-ptype-supers ((type standard-class))
+  (mapcan #'(lambda (class)
+	      (let ((ptype (gethash (clim-mop:class-name class)
+				    *presentation-type-table*)))
+		(and ptype (list ptype))))
+	  (clim-mop:class-direct-superclasses type)))
+
 (defun translate-specifier-for-type (type-name super-name specifier)
   (when (eq type-name super-name)
     (return-from translate-specifier-for-type (values specifier t)))
@@ -1089,7 +1096,7 @@ function lambda list"))
 ;;; of the generic function lambda list...
 (define-presentation-generic-function %present present
     (type-key parameters options object type stream view
-     &key))
+     &key &allow-other-keys))
 
 (defmacro with-output-as-presentation ((stream object type
 				       &rest key-args
