@@ -73,21 +73,27 @@
   `(let ((graft ,graft))
      ,@body))
 
+#-(AND)
 (defmethod graft-width ((graft graft) &key (units :device))
   (if (eq units :device)
       1000
     1))
 
+#-(AND)
 (defmethod graft-height ((graft graft) &key (units :device))
   (if (eq units :device)
       1000
     1))
 
-(defmethod graft-pixels-per-millimeter ((graft graft))
-  2.8346s0)
+(defun graft-pixels-per-millimeter (graft)
+  ;; We assume square pixels here --GB
+  (/ (graft-width graft :units :device)
+     (graft-width graft :units :millimeters)))
 
-(defmethod graft-pixels-per-inch ((graft graft))
-  72.0)
+(defun graft-pixels-per-inch (graft)
+  ;; We assume square pixels here --GB
+  (/ (graft-width graft :units :device)
+     (graft-width graft :units :inches)))
 
 (defmethod sheet-native-transformation ((sheet graft))
   +identity-transformation+)

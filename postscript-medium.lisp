@@ -34,6 +34,16 @@
 ;;; - MEDIUM-DRAW-... should not duplicate code from POSTSCRIPT-ADD-PATH
 ;;; - structure this file
 
+;;; Also missing IMO:
+;;;
+;;; - WITH-OUTPUT-TO-POSTSCRIPT-STREAM should offer a :PAPER-SIZE option.
+;;; - How can one ask for the dimensions of a postscript device (aka paper-size)?
+;;; - NEW-PAGE should also offer to specify the page name.
+;;; - device fonts are missing
+;;; - font metrics are missing
+;;;
+;;;--GB
+
 (in-package :CLIM-INTERNALS)
 
 (defvar *default-postscript-title* "")
@@ -60,6 +70,7 @@
         (for (or (getf header-comments :for)
                  *default-postscript-for*)))
     (make-instance 'postscript-medium
+                   :graft (make-postscript-graft)
                    :file-stream file-stream
                    :title title :for for
                    :orientation orientation)))
@@ -101,7 +112,7 @@
     (format file-stream "showpage~%~%")
     (format file-stream "%%Trailer~%")
     (format file-stream "%%Pages: ~D~%" current-page)
-    (format file-stream "%%DocumentNeededResources: ~{font ~A~%~^%%+ ~}" (reverse document-fonts))
+    (format file-stream "%%DocumentNeededResources: ~{font ~A~%~^%%+ ~}~%" (reverse document-fonts))
     (format file-stream "%%EOF~%")
     (finish-output file-stream)))
 
@@ -480,17 +491,67 @@ clip
 (defmethod medium-draw-text* ((medium postscript-medium) string x y
                               start end
                               align-x align-y
-                              toward-x toward-y transform-glyphs)
-  (declare (ignore align-x align-y toward-x toward-y transform-glyphs))
+                              toward-x toward-y transform-glyphs) 
+  (declare (ignore align-x align-y toward-x toward-y))
   (setq string (if (characterp string)
                    (make-string 1 :initial-element string)
                    (subseq string start end)))
   (with-slots (file-stream document-fonts) medium
-      (with-graphics-state (file-stream)
-        (multiple-value-bind (font size)
-            (text-style->postscript-font (medium-text-style medium))
-          (pushnew font document-fonts :test #'string=)
-          (format file-stream "/~A findfont ~D scalefont setfont~%" font size)
-          (format file-stream "~A ~A moveto~%"
-                  (format-postscript-number x) (format-postscript-number y))
-          (format file-stream "(~A) show~%" (postscript-escape-string string))))))
+    (with-graphics-state (file-stream)
+      (when transform-glyphs
+        ;;
+        ;; Now the harder part is that we also want to transform the glyphs,
+        ;; which is rather painless in Postscript. BUT: the x/y coordinates
+        ;; we get are already transformed coordinates, so what I do is
+        ;; untransform them again and simply tell the postscript interpreter
+        ;; our transformation matrix. --GB
+        ;;
+        (multiple-value-setq (x y) (untransform-position (medium-transformation medium) x y))
+        (multiple-value-bind (mxx mxy myx myy tx ty) (get-transformation (medium-transformation medium))
+          (format file-stream "initmatrix [~A ~A ~A ~A ~A ~A] concat~%"
+                  (format-postscript-number mxx)
+                  (format-postscript-number mxy)
+                  (format-postscript-number myx)
+                  (format-postscript-number myy)
+                  (format-postscript-number tx)
+                  (format-postscript-number ty))))
+      (multiple-value-bind (font size)
+          (text-style->postscript-font (medium-text-style medium))
+        (pushnew font document-fonts :test #'string=)
+        (format file-stream "/~A findfont ~D scalefont setfont~%" font size)
+        (format file-stream "~A ~A moveto~%"
+                (format-postscript-number x) (format-postscript-number y))
+        (format file-stream "(~A) show~%" (postscript-escape-string string))))))
+
+;;;;
+;;;; POSTSCRIPT-GRAFT
+;;;;
+
+(defclass postscript-graft ()
+  ((width  :initform 210 :reader postscript-graft-width)
+   (height :initform 297 :reader postscript-graft-height)))
+
+(defmethod graft-orientation ((graft postscript-graft))
+  :graphics)
+
+(defmethod graft-units ((graft postscript-graft))
+  :device)
+
+(defmethod graft-width ((graft postscript-graft) &key (units :device))
+  (* (postscript-graft-width graft)
+     (ecase units
+       (:device         (/ 720 254))
+       (:inches         (/ 10 254))
+       (:millimeters    1)
+       (:screen-sized   (/ (postscript-graft-width graft))))))
+
+(defmethod graft-height ((graft postscript-graft) &key (units :device))
+  (* (postscript-graft-height graft)
+     (ecase units
+       (:device         (/ 720 254))
+       (:inches         (/ 10 254))
+       (:millimeters    1)
+       (:screen-sized   (/ (postscript-graft-height graft))))))
+
+(defun make-postscript-graft ()
+  (make-instance 'postscript-graft))
