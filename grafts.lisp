@@ -19,7 +19,7 @@
 
 (in-package :CLIM-INTERNALS)
 
-(defclass graft (sheet-multiple-child-mixin mirrored-sheet)
+(defclass graft (sheet-multiple-child-mixin mirrored-sheet-mixin sheet)
   ((orientation :initform :default
 		:initarg :orientation
 		:reader graft-orientation)

@@ -79,27 +79,27 @@ returns a list in CLIM X11 format (:x11 :host host-name :display-id display-numb
 		(push port *all-ports*)
 		(return port))))
 
-(defmethod port-lookup-mirror ((port port) (sheet sheet))
+(defmethod port-lookup-mirror ((port port) (sheet mirrored-sheet-mixin))
   (gethash sheet (slot-value port 'sheet->mirror)))
 
 (defmethod port-lookup-sheet ((port port) mirror)
   (gethash mirror (slot-value port 'mirror->sheet)))
 
-(defmethod port-register-mirror ((port port) (sheet sheet) mirror)
+(defmethod port-register-mirror ((port port) (sheet mirrored-sheet-mixin) mirror)
   (setf (gethash sheet (slot-value port 'sheet->mirror)) mirror)
   (setf (gethash mirror (slot-value port 'mirror->sheet)) sheet)
   nil)
 
-(defmethod port-unregister-mirror ((port port) (sheet sheet) mirror)
+(defmethod port-unregister-mirror ((port port) (sheet mirrored-sheet-mixin) mirror)
   (remhash sheet (slot-value port 'sheet->mirror))
   (remhash mirror (slot-value port 'mirror->sheet))
   nil)
 
-(defmethod realize-mirror ((port port) (sheet mirrored-sheet))
+(defmethod realize-mirror ((port port) (sheet mirrored-sheet-mixin))
   (error "Don't know how to realize the mirror of a generic mirrored-sheet"))
 
-(defmethod unrealize-mirror ((port port) (sheet mirrored-sheet))
-  (error "Don't know how to unrealize the mirror of a generic mirrored-sheet"))
+(defmethod destroy-mirror ((port port) (sheet mirrored-sheet-mixin))
+  (error "Don't know how to destroy the mirror of a generic mirrored-sheet"))
 
 (defmethod port-properties ((port port) indicator)
   (with-slots (properties) port
@@ -204,9 +204,9 @@ returns a list in CLIM X11 format (:x11 :host host-name :display-id display-numb
   (declare (ignorable port pixmap))
   (error "Don't know how to realize the mirror on a generic port"))
 
-(defmethod unrealize-mirror ((port port) (pixmap mirrored-pixmap))
+(defmethod destroy-mirror ((port port) (pixmap mirrored-pixmap))
   (declare (ignorable port pixmap))
-  (error "Don't know how to unrealize the mirror on a generic port"))
+  (error "Don't know how to destroy the mirror on a generic port"))
 
 (defmethod port-allocate-pixmap ((port port) sheet width height)
   (declare (ignore sheet width height))

@@ -100,7 +100,7 @@
 ;; gadget sub-classes
 ;;
 
-(defclass basic-gadget (gadget gadget-color-mixin sheet-parent-mixin sheet-leaf-mixin mirrored-sheet)
+(defclass basic-gadget (sheet-parent-mixin sheet-leaf-mixin mirrored-sheet-mixin gadget-color-mixin gadget)
   ;; Half-baked attempt to be compatible with Lispworks.
   ())
 

@@ -607,28 +607,31 @@ sheet-supports-only-one-child error to be signalled."))
 ;;;
 ;;; mirrored sheet
 
-(defclass mirrored-sheet (sheet)
+(defclass mirrored-sheet-mixin ()
   ((port :initform nil :initarg :port :accessor port)))
 
-(defmethod sheet-direct-mirror ((sheet mirrored-sheet))
+(defmethod sheet-direct-mirror ((sheet mirrored-sheet-mixin))
   (port-lookup-mirror (port sheet) sheet))
 
-(defmethod (setf sheet-direct-mirror) (mirror (sheet mirrored-sheet))
+(defmethod (setf sheet-direct-mirror) (mirror (sheet mirrored-sheet-mixin))
   (port-register-mirror (port sheet) sheet mirror))
 
-(defmethod sheet-mirrored-ancestor ((sheet mirrored-sheet))
+(defmethod sheet-mirrored-ancestor ((sheet mirrored-sheet-mixin))
   sheet)
 
-(defmethod note-sheet-grafted :before ((sheet mirrored-sheet))
+(defmethod sheet-mirror ((sheet mirrored-sheet-mixin))
+  (sheet-direct-mirror sheet))
+
+(defmethod note-sheet-grafted :before ((sheet mirrored-sheet-mixin))
   (realize-mirror (port sheet) sheet))
 
-(defmethod note-sheet-degrafted :after ((sheet mirrored-sheet))
-  (unrealize-mirror (port sheet) sheet))
+(defmethod note-sheet-degrafted :after ((sheet mirrored-sheet-mixin))
+  (destroy-mirror (port sheet) sheet))
 
-(defmethod (setf sheet-region) :after (region (sheet mirrored-sheet))
+(defmethod (setf sheet-region) :after (region (sheet mirrored-sheet-mixin))
   (port-set-sheet-region (port sheet) sheet region))
 
-(defmethod (setf sheet-transformation) :after (transformation (sheet mirrored-sheet))
+(defmethod (setf sheet-transformation) :after (transformation (sheet mirrored-sheet-mixin))
   (port-set-sheet-transformation (port sheet) sheet transformation))
 
 

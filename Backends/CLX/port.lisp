@@ -96,7 +96,7 @@
 	  (xlib:map-window window)))))
   (port-lookup-mirror port sheet))
 
-(defmethod realize-mirror ((port clx-port) (sheet sheet))
+(defmethod realize-mirror ((port clx-port) (sheet mirrored-sheet-mixin))
   (realize-mirror-aux port sheet :border-width 0))
 
 (defmethod realize-mirror ((port clx-port) (sheet border-pane))
@@ -130,7 +130,7 @@
 				    :pointer-motion
 				    :owner-grab-button)))
 
-(defmethod unrealize-mirror ((port clx-port) (sheet sheet))
+(defmethod destroy-mirror ((port clx-port) (sheet mirrored-sheet-mixin))
   (when (port-lookup-mirror port sheet)
     (xlib:destroy-window (port-lookup-mirror port sheet))
     (port-unregister-mirror port sheet (sheet-mirror sheet))))
@@ -157,7 +157,7 @@
   (declare (ignore transformation))
   nil)
 
-(defmethod port-set-sheet-transformation ((port clx-port) (sheet sheet) transformation)
+(defmethod port-set-sheet-transformation ((port clx-port) (sheet mirrored-sheet-mixin) transformation)
   (let ((mirror (sheet-direct-mirror sheet)))
     (multiple-value-bind (x y) (transform-position transformation 0 0)
       (setf (xlib:drawable-x mirror) (round x)
@@ -343,7 +343,7 @@
       (port-register-mirror port pixmap pix))
     (values)))
 
-(defmethod unrealize-mirror ((port clx-port) (pixmap pixmap))
+(defmethod destroy-mirror ((port clx-port) (pixmap pixmap))
   (when (port-lookup-mirror port pixmap)
     (xlib:free-pixmap (port-lookup-mirror port pixmap))
     (port-unregister-mirror port pixmap (port-lookup-mirror port pixmap))))
@@ -360,7 +360,7 @@
 
 (defmethod port-deallocate-pixmap ((port clx-port) pixmap)
   (when (port-lookup-mirror port pixmap)
-    (unrealize-mirror port pixmap)))
+    (destroy-mirror port pixmap)))
 
 (defmethod port-copy-to-pixmap ((port clx-port) (sheet sheet) from-x from-y 
 				width height pixmap to-x to-y)

@@ -303,7 +303,7 @@
 
 (defclass basic-pane (window-stream
 		      sheet-parent-mixin
-		      mirrored-sheet
+		      mirrored-sheet-mixin
 		      permanent-medium-sheet-output-mixin
 		      pane)
   ()
