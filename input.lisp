@@ -40,7 +40,10 @@
          :documentation "The next time an event should be scheduled.")
    (schedule
          :initform nil
-         :accessor event-queue-schedule
+         ;; :accessor event-queue-schedule
+         ;; this accessor conflicts with the method below.
+         ;; noted by mikemac. I recommend renaming the slot.
+         ;; --GB 2002-11-10
          :documentation "Time ordered queue of events to schedule.")))
 
 (defmethod event-queue-read-no-hang ((eq standard-event-queue))
