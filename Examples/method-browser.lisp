@@ -22,7 +22,8 @@
 ;;; --------------------------------------------------------------------
 
 ;;; This is an example of how to write a CLIM application with a
-;;; "normal" GUI. McCLIM can do more than just command lines..
+;;; "normal" GUI, where "normal" is a completely event driven app
+;;; built using gadgets and not using the command-oriented framework.
 
 ;;; Running the method-browser:
 ;;;   (clim-demo::run-test 'clim-demo::method-browser)
@@ -45,7 +46,7 @@
 ;;;   * Portable MOP provided by CLIM-MOP package
 
 ;;; TODO:
-;;;   * EQL specializers (not portable according to AMOP)
+;;;   * EQL specializers on implementations other than SBCL/CMUCL
 ;;;   * Nicer, more clever display of methods than simply listing them in a row.
 ;;;     To do this right really involes some nonportable fun and a codewalker.
 ;;;     You could probably write something that just understood the standard
@@ -66,6 +67,28 @@ specialized on, removing duplicates"
          collect (remove-duplicates (mapcar (lambda (specs) (nth index specs))
                                             specializers)))))
 
+(defun classp (x)
+  (or (typep x 'cl:class)
+      #+CMU (typep x 'pcl::class)))
+
+(defun eql-specializer-p (x)
+  #+SBCL (typep x 'sb-mop:eql-specializer)
+  #+CMU  (typep x 'pcl:eql-specializer))
+
+(defun eql-specializer-object (x)
+  #+SBCL (sb-mop:eql-specializer-object x)
+  #+CMU  (pcl::eql-specializer-object x))
+
+(defun compute-applicable-methods-from-specializers (gf specializers)
+  (clim-mop:compute-applicable-methods gf
+     (mapcar (lambda (spec)
+               (cond ((eql-specializer-p spec)
+                      (eql-specializer-object spec))
+                     ((classp spec)
+                      (clim-mop:class-prototype spec))
+                     (t (error "Can't compute effective methods, specializer ~A is not understood." spec))))
+             specializers)))
+
 ;; FIXME: Support EQL specializers.
 ;; This is hard to do ideally, and I'm not really trying.
 ;; So we just make sure that T ends up at the head of the list.
@@ -77,8 +100,23 @@ specialized on, removing duplicates"
                     (cond
                       ((eql a (find-class t)) t)
                       ((eql b (find-class t)) nil)
-                      (t (string< (class-name a)
-                                  (class-name b)))))))
+                      ((and (classp a)
+                            (classp b))
+                       (string< (class-name a)
+                                (class-name b)))
+                      ((and (eql-specializer-p a)
+                            (not (eql-specializer-p b)))
+                       nil)
+                      ((and (not (eql-specializer-p a))
+                            (eql-specializer-p b))
+                       t)
+                      ((and (eql-specializer-p a)
+                            (eql-specializer-p b))
+                       (string<
+                        (princ-to-string (eql-specializer-object a))
+                        (princ-to-string (eql-specializer-object b))))
+                      (t (warn "Received specializer of unknown type")
+                         nil) ))))
           (compute-gf-specializers gf)))
 
 (defun simple-generic-function-lambda-list (gf)
@@ -95,9 +133,10 @@ specialized on, removing duplicates"
 
 (defun specializer-pretty-name (spec)
   "Pretty print the name of a method specializer"
-  (cond ((or (typep spec 'class)
-             #+CMU (typep spec 'pcl::class))
+  (cond ((classp spec)
          (princ-to-string (class-name spec)))
+        ((eql-specializer-p spec)
+         (format nil "(EQL '~A)" (eql-specializer-object spec)))
         (t (princ-to-string spec))))
 
 (defun maybe-find-gf (name)
@@ -274,10 +313,10 @@ available for that argument."
   "Generates the display of applicable methods in the output-pane"
   (when (gf frame)
     (let* ((gf (gf frame))
-           (methods (clim-mop:compute-applicable-methods-using-classes gf (arg-types frame)))
+           (methods (compute-applicable-methods-from-specializers gf (arg-types frame)))
            (combination (clim-mop:generic-function-method-combination gf))
            (effective-methods (clim-mop:compute-effective-method gf combination methods))
-           (serial-methods (walk-em-form effective-methods)))
+           (serial-methods (walk-em-form effective-methods)))      
       ;; Print the header
       (fresh-line)
       (with-drawing-options (pane :text-style (make-text-style :sans-serif :bold :large)
