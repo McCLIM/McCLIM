@@ -42,7 +42,7 @@
 (defmethod repaint-sheet ((pane fire-pane) region)
   (declare (ignore region))
   (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
-    (display-gadget-background pane 0 0 (- x2 x1) (- y2 y1))))
+    (display-gadget-background pane +white+ 0 0 (- x2 x1) (- y2 y1))))
 
 (defmethod handle-event ((pane fire-pane) (event window-repaint-event))
   (declare (ignorable event))

@@ -25,13 +25,18 @@
 (in-package :CLIM-DEMO)
 
 (defun calculator ()
-  (loop for port in climi::*all-ports*
-      do (destroy-port port))
-  (setq climi::*all-ports* nil)
-  (run-frame-top-level (make-application-frame 'calculator)))
+  (progn
+    (loop for port in climi::*all-ports*
+        do (destroy-port port))
+    (setq climi::*all-ports* nil))
+  (let ((frame (make-application-frame 'calculator)))
+    (unless clim-sys:*multiprocessing-p*
+      (run-frame-top-level frame))
+    frame))
 
 (defun show (number)
-  (setf (gadget-value (slot-value *application-frame* 'text-field))
+  (setf (gadget-value (find-if #'(lambda (gadget) (typep gadget 'text-field-pane))
+                               (frame-panes *application-frame*)))
 	(princ-to-string number)))
 
 (defun queue-number (number)
@@ -71,7 +76,7 @@
     (when (numberp (first state))
       (pop state))
     (show 0)))
-      
+
 (defmethod calculator-frame-top-level ((frame application-frame)
 				       &key (command-parser 'command-line-command-parser)
 				       (command-unparser 'command-line-command-unparser)
@@ -84,16 +89,19 @@
 		 (frame-panes frame)))
   (loop (event-read (climi::frame-pane frame))))
      
-(defun make-button (label operator 
-		    &key width height
-		         max-width min-width
-			 max-height min-height)
-  (make-pane 'push-button-pane
-	     :label label
-	     :activate-callback operator
-	     :width width :height height
-	     :max-width max-width :min-width min-width
-	     :max-height max-height :min-height min-height))
+(defmacro make-button (label operator 
+                       &key width height
+                            max-width min-width
+                            max-height min-height)
+  `(make-pane 'push-button-pane
+              :label ,label
+              :activate-callback (let ((ap *application-frame*))
+                                   (lambda (&rest xs)
+                                     (let ((*application-frame* ap))
+                                       (apply ,operator xs))))
+              :width ,width :height ,height
+              :max-width ,max-width :min-width ,min-width
+              :max-height ,max-height :min-height ,min-height) )
 
 (define-application-frame calculator ()
   ((text-field :initform nil)

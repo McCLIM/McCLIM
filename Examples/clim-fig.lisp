@@ -189,7 +189,7 @@
   (loop for port in climi::*all-ports*
       do (destroy-port port))
   (setq climi::*all-ports* nil)
-  (run-frame-top-level (make-application-frame 'clim-fig)))
+  (progn 'run-frame-top-level (make-application-frame 'clim-fig)))
 
 (defun make-colored-button (color &key width height)
   (make-pane 'push-button-pane

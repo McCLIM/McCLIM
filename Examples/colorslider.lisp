@@ -39,18 +39,18 @@
 
 ;; slider callback and macro
 
-(defvar rgb '(0 0 0))
+(defvar *rgb* '(0 0 0))
 
 ;; Macro defining all the slider-call-back
 
 (defmacro define-slider-callback (name position)
   `(defun ,(make-symbol name) (gadget value)
      (let ((colored (third (sheet-siblings gadget))))
-       (setf ,(case position (1 `(car rgb)) (2 `(cadr rgb)) (3 `(caddr rgb)))
+       (setf ,(case position (1 `(car *rgb*)) (2 `(cadr *rgb*)) (3 `(caddr *rgb*)))
 	     (/ value 10000)
 	     (clim-internals::gadget-current-color colored)
 	       (apply #'clim-internals::make-named-color "our-color"
-		      (mapcar #'(lambda (color) (coerce color 'single-float)) rgb))))))
+		      (mapcar #'(lambda (color) (coerce color 'single-float)) *rgb*))))))
 
 (defvar callback-red (define-slider-callback "SLIDER-R" 1))
 (defvar callback-green (define-slider-callback "SLIDER-G" 2))
@@ -69,7 +69,8 @@
   (setq medium (sheet-medium pane))
   (setq graft (graft frame))
   (setq vbox (climi::frame-pane frame))
-  (run-frame-top-level frame))
+  (unless clim-sys:*multiprocessing-p*
+    (run-frame-top-level frame)))
 
 (defmethod slidertest-frame-top-level ((frame application-frame)
 				       &key (command-parser 'command-line-command-parser)
@@ -84,8 +85,9 @@
   (:panes
    (text    :text-field
 	    :value "Pick a color"
-	    :height 50
-            :width 100)
+	    ;;:height 50
+            ;;:width 100
+            )
    (slider-r  :slider
 	      :drag-callback callback-red
 	      :value-changed-callback callback-red

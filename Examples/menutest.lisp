@@ -28,7 +28,10 @@
   (loop for port in climi::*all-ports*
       do (destroy-port port))
   (setq climi::*all-ports* nil)
-  (run-frame-top-level (make-application-frame 'menutest)))
+  (let ((frame (make-application-frame 'menutest)))
+    (unless clim-sys:*multiprocessing-p*
+      (run-frame-top-level frame))
+    frame))
 
 (defmethod menutest-frame-top-level
   ((frame application-frame)
@@ -38,7 +41,7 @@
     'command-line-read-remaining-arguments-for-partial-command)
    (prompt "Command: "))
   (declare (ignore command-parser command-unparser partial-command-parser prompt))
-  (loop (event-read (frame-pane frame))))
+  (loop (event-read (climi::frame-pane frame))))
      
 (define-command com-file ()
   (format *error-output* "you pressed the File button~%")
