@@ -367,16 +367,96 @@
                           :transformation (make-rotation-transformation ,angle ,@(if origin (list origin) nil)))
      ,@body))
 
-(defmacro with-identity-transformation ((medium) &body body)
-  `(with-drawing-options (,medium 
-                          :transformation +identity-transformation+)
-     ,@body))
-
-
 ;;(defmacro with-local-coordinates ((medium &optional x y) &body body)) -- what are local coordinates?
 ;;(defmacro with-first-quadrant-coordinates ((medium &optional x y) &body body))
 
 ;;(defgeneric transform-region (transformation region))
+
+(defmacro with-identity-transformation ((medium) &body body)
+  ;; I believe this should set the medium transformation to the identity
+  ;; transformation. To use WITH-DRAWING-OPTIONS which concatenates the the
+  ;; transformation given to the existing one we just pass the inverse.
+  ;;
+  ;; Further we don't use LETF since it is a pretty much broken idea in case
+  ;; of multithreading.
+  ;;
+  ;; Q: Do we want a invoke-with-identity-transformation?
+  ;;
+  (let ((medium (stream-designator-symbol medium)))
+    (gen-invoke-trampoline 'invoke-with-identity-transformation
+                           (list medium)
+                           nil
+                           body)))
+
+(defmethod invoke-with-identity-transformation (medium cont)
+  (with-drawing-options
+      (medium 
+       :transformation (invert-transformation (medium-transformation medium)))
+    (funcall cont medium)))
+
+(defmacro with-local-coordinates ((medium &optional x y) &body body)
+  (setf medium (stream-designator-symbol medium))
+  (gen-invoke-trampoline 'invoke-with-local-coordinates
+                         (list medium)
+                         (list x y)
+                         body))
+
+(defmacro with-first-quadrant-coordinates ((medium &optional x y) &body body)
+  (setf medium (stream-designator-symbol medium))
+  (gen-invoke-trampoline 'invoke-with-first-quadrant-coordinates
+                         (list medium)
+                         (list x y)
+                         body))
+
+(defmethod invoke-with-local-coordinates (medium cont x y)
+  ;; For now we do as real CLIM does.
+  ;; Default seems to be the cursor position.
+  ;; Moore suggests we use (0,0) if medium is no stream.
+  ;;
+  ;; Further the specification is vague about possible scalings ...
+  ;;
+  (unless (and x y)
+    (multiple-value-bind (cx cy) (if (extended-output-stream-p medium)
+                                     (stream-cursor-position medium)
+                                     (values 0 0))
+      (setf x (or x cx)
+            y (or y cy))))
+  (multiple-value-bind (mxx mxy myy myx tx ty)
+      (get-transformation (medium-transformation medium))
+    (declare (ignore tx ty))
+    (with-identity-transformation (medium)
+      (with-drawing-options
+          (medium :transformation (make-transformation
+                                   mxx mxy myy myx
+                                   x y))
+        (funcall cont medium)))))
+
+(defmethod invoke-with-first-quadrant-coordinates (medium cont x y)
+  ;; First we do the same as invoke-with-local-coordinates but rotate and
+  ;; deskew it so that it becomes first-quadrant. We do this
+  ;; by simply measuring the length of the transfomed x and y "unit vectors". 
+  ;; [That is (0,0)-(1,0) and (0,0)-(0,1)] and setting up a transformation
+  ;; which features an upward pointing y-axis and a right pointing x-axis with
+  ;; a length equal to above measured vectors.
+  (unless (and x y)
+    (multiple-value-bind (cx cy) (if (extended-output-stream-p medium)
+                                     (stream-cursor-position medium)
+                                     (values 0 0))
+      (setf x (or x cx)
+            y (or y cy))))
+  (let* ((tr (medium-transformation medium))
+         (xlen
+          (multiple-value-bind (dx dy) (transform-distance tr 1 0)
+            (sqrt (+ (expt dx 2) (expt dy 2)))))
+         (ylen
+          (multiple-value-bind (dx dy) (transform-distance tr 0 1)
+            (sqrt (+ (expt dx 2) (expt dy 2))))))
+    (with-identity-transformation (medium)
+      (with-drawing-options
+          (medium :transformation (make-transformation
+                                   xlen 0 0 (- ylen)
+                                   x y))
+        (funcall cont medium)))))
 
 (defmethod untransform-region ((transformation transformation) region)
   (transform-region (invert-transformation transformation) region))
@@ -405,16 +485,89 @@
   (transform-distance (invert-transformation transformation) dx dy))
 
 (defun transform-positions (transformation coord-seq)
-  (map-repeated-sequence (type-of coord-seq)
-                         2 (lambda (x y)
-                             (transform-position transformation x y))
-                         coord-seq))
+  ;; Some appliations (like a function graph plotter) use a large number of
+  ;; coordinates, therefore we bother optimizing this. We do this by testing
+  ;; the individual elements of the transformation matrix for being 0 or +1 or
+  ;; -1 as these are common cases as most transformations are either mere
+  ;; translations or just scalings.
+  ;;
+  ;; Also: For now we always return a vector.
+  ;;
+  (cond ((eql transformation +identity-transformation+)
+         coord-seq)
+        (t
+         (multiple-value-bind (mxx mxy myx myy tx ty) (climi::get-transformation transformation)
+           (declare (type coordinate mxx mxy myx myy tx ty))
+           (macrolet ((do-transform ()
+                        `(progn
+                          (cond ((zerop mxx))
+                                ((= mxx +1)      (for-coord-seq (setf res.x x)))
+                                ((= mxx -1)      (for-coord-seq (setf res.x (- x))))
+                                (t               (for-coord-seq (setf res.x (* mxx x)))))
+                          (cond ((zerop myy))
+                                ((= myy +1)      (for-coord-seq (setf res.y y)))
+                                ((= myy -1)      (for-coord-seq (setf res.y (- y))))
+                                (t               (for-coord-seq (setf res.y (* myy y)))))
+                          (unless (and (zerop mxy) (zerop myx))
+                            (for-coord-seq
+                             (incf res.x (* mxy y))
+                             (incf res.y (* myx x))))
+                          (unless (and (zerop tx) (zerop ty))
+                            (for-coord-seq
+                             (incf res.x tx)
+                             (incf res.y ty))))))
+             (macrolet ((do-on-vector ()
+                          `(let* ((n (length coord-seq))
+                                  (res (make-array n :initial-element 0)))
+                            (declare (type simple-vector res))
+                            (macrolet ((for-coord-seq (&rest body)
+                                         `(loop for i of-type fixnum below n by 2 do
+                                           (let ((x (aref coord-seq i))
+                                                 (y (aref coord-seq (+ i 1))))
+                                             (declare (ignorable x y))
+                                             (symbol-macrolet ((res.x (aref res i))
+                                                               (res.y (aref res (+ i 1))))
+                                               ,@body)))))
+                              (do-transform))
+                            res))
+                        (do-on-list ()
+                          `(let* ((n (length coord-seq))
+                                  (res (make-array n :initial-element 0)))
+                            (declare (type simple-vector res))
+                            (macrolet ((for-coord-seq (&rest body)
+                                         `(loop for i of-type fixnum below n by 2
+                                                for q on coord-seq by #'cddr do
+                                           (let ((x (car q))
+                                                 (y (cadr q)))
+                                             (declare (ignorable x y))
+                                             (symbol-macrolet ((res.x (aref res i))
+                                                               (res.y (aref res (+ i 1))))
+                                               ,@body)))))
+                              (do-transform))
+                            res)))
+               (cond ((typep coord-seq 'simple-vector)
+                      (locally
+                          (declare (type simple-vector coord-seq))
+                        (do-on-vector)))
+                     ((typep coord-seq 'vector)
+                      (locally
+                          (declare (type simple-vector coord-seq))
+                        (do-on-vector)))
+                     ((typep coord-seq 'list)
+                      (locally
+                          (declare (type list coord-seq))
+                        (do-on-list)))
+                     (t
+                      (error "~S is not a sequence." coord-seq)) )))))))
 
 (defun transform-position-sequence (seq-type transformation coord-seq)
-  (map-repeated-sequence seq-type
-                         2 (lambda (x y)
-                             (transform-position transformation x y))
-                         coord-seq))
+  (cond ((subtypep seq-type 'vector)
+         (transform-positions transformation coord-seq))
+        (t
+         (map-repeated-sequence seq-type
+                                2 (lambda (x y)
+                                    (transform-position transformation x y))
+                                coord-seq))))
 
 (defmethod transform-rectangle* ((transformation transformation) x1 y1 x2 y2)
   (if (rectilinear-transformation-p transformation)
