@@ -172,6 +172,7 @@
 
 (defmethod frame-manager-menu-choose
     (frame-manager items    ; XXX specialize on STANDARD-FRAME-MANAGER
+     &rest options
      &key associated-window printer presentation-type
      (default-item nil default-item-p)
      text-style label cache unique-id id-test cache-value cache-test
@@ -195,11 +196,11 @@
                                :row-wise row-wise
                                :cell-align-x cell-align-x
                                :cell-align-y cell-align-y)))
-    (with-menu (menu associated-window)
-      (when text-style
-        (setf (medium-text-style menu) text-style))
-      (letf (((stream-default-view menu) +textual-menu-view+))
-        (multiple-value-bind (object event)
+    (multiple-value-bind (object event)
+        (with-menu (menu associated-window)
+          (when text-style
+            (setf (medium-text-style menu) text-style))
+          (letf (((stream-default-view menu) +textual-menu-view+))
             (menu-choose-from-drawer menu (or presentation-type 'menu-item)
                                      #'drawer
                                      :cache cache
@@ -207,9 +208,13 @@
                                      :id-test id-test
                                      :cache-value cache-value
                                      :cache-test cache-test
-                                     :pointer-documentation pointer-documentation)
-          ;; What is OBJECT? Assuming it is a menu item... - APD, 2002-08-03.
-          (values (menu-item-value object) object event))))))
+                                     :pointer-documentation pointer-documentation)))
+      (let ((subitems (menu-item-option object :items 'menu-item-no-items)))
+        (if (eq subitems 'menu-item-no-items)
+            (values (menu-item-value object) object event)
+            (apply #'frame-manager-menu-choose
+                   frame-manager subitems
+                   options))))))
 
 (defmethod menu-choose-from-drawer
     (menu presentation-type drawer
