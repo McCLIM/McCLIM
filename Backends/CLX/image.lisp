@@ -440,7 +440,7 @@
 							     background-pixel))
 						(incf pos)
 						(incf y incy)))))
-				     
+#||  
 				     ((coordinate= ty1 ty2) ; vertical case
 				      (when (<= 0 ty1 r-image-height)
 					(let ((dx (abs (round (- tx2 tx1))))
@@ -457,6 +457,24 @@
 							     background-pixel))
 						(incf pos)
 						(incf x incx)))))
+||#
+						
+					((coordinate= ty1 ty2) ; vertical case
+				      (when (<= 0 ty1 r-image-height)
+					(let ((dx (abs (round (- x-max x-min))))    ; fix from (- tx2 tx1) 
+					      (incx (/ (- tx2 tx1) (- x-max x-min))); fix from (if (< tx1 tx2) 1 -1)
+					      (x (round tx1))
+					      (y (round ty1))) 					 
+					  (declare (type fixnum dx x y)) ; fix from (type fixnum dx incx x y))
+					  (loop for j of-type fixnum from 0 to dx
+						do (setf (aref flat-data pos)
+							 (if (region-contains-position-p image-region x y)
+							     (funcall computing-pixel-function
+								      (aref pixels y x)
+								      colormap)
+							     background-pixel))
+						(incf pos)
+						(setf x (round (incf tx1 incx)))))))    ; fix from (incf x incx)
 
 				     (t ; other case
 				      (let ((line (region-intersection (make-line* tx1 ty1 tx2 ty2)
