@@ -199,15 +199,14 @@
 	   (incf y new-height))))
 
 
-(defmacro changing-space-requirement (&key resize-frame &body body)
-  (when body
-    `(progn
-       ,@body)))
-;      (change-space-requirements ))))
+(defmacro changing-space-requirement (&body body &key resize-frame)
+  `(progn
+     ,@body))
 
 (defmethod change-space-requirements ((pane composite-pane)
-				      &key resize-frame &rest space-req-keys
-				      &key space-requirement-width
+				      &rest space-req-keys
+				      &key resize-frame
+				      space-requirement-width
 				      space-requirement-min-width
 				      space-requirement-max-width
 				      space-requirement-height
@@ -227,7 +226,7 @@
   (when space-requirement-max-height
     (setf (space-requirement-max-height pane) space-requirement-max-height))
   (if resize-frame
-      (resize-frame (pane-frame pane))
+      (layout-frame (pane-frame pane))
       ; we didn't find the :resize-frame option in define-application-frame
     (note-space-requirements-changed (sheet-parent pane) pane)))
 
