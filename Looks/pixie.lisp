@@ -1002,7 +1002,7 @@
                                             :initial-contents (slot-value pane 'value)))
     (stream-add-output-record pane (area pane))))
 
-(defmethod handle-repaint ((pane text-field-pane) region)
+(defmethod handle-repaint ((pane pixie-text-field-pane) region)
   (declare (ignore region))
   (with-special-choices (pane)
     (with-sheet-medium (medium pane)
