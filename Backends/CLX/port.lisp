@@ -456,14 +456,22 @@
 	 (make-instance 'pointer-enter-event :pointer 0 :button code :x x :y y
                         :graft-x root-x
                         :graft-y root-y
-			:sheet sheet :modifier-state state :timestamp time))
+			:sheet sheet
+			:modifier-state (x-event-state-modifiers *clx-port*
+								 state)
+			:timestamp time))
 	(:leave-notify
-	 (make-instance (if (eq mode :ungrab) 'pointer-ungrab-event 'pointer-exit-event)
-	   :pointer 0 :button code
-           :x x :y y
-           :graft-x root-x
-           :graft-y root-y
-	   :sheet sheet :modifier-state state :timestamp time))
+	 (make-instance (if (eq mode :ungrab)
+			    'pointer-ungrab-event
+			    'pointer-exit-event)
+			:pointer 0 :button code
+			:x x :y y
+			:graft-x root-x
+			:graft-y root-y
+			:sheet sheet
+			:modifier-state (x-event-state-modifiers *clx-port*
+								 state)
+			:timestamp time))
         ;;
 	(:configure-notify
          ;; it would be nice to consolidate these for resizes, but because of the
@@ -500,7 +508,10 @@
                         :x x :y y
                         :graft-x root-x
                         :graft-y root-y
-                        :sheet sheet :modifier-state state :timestamp time))
+                        :sheet sheet
+			:modifier-state (x-event-state-modifiers *clx-port*
+								 state)
+			:timestamp time))
         ;;
 	((:exposure :display)
          ;; Notes:

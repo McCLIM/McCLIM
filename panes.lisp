@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.94 2002/07/31 18:54:48 gilbert Exp $
+;;; $Id: panes.lisp,v 1.95 2002/08/02 08:05:16 moore Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -2016,7 +2016,9 @@ During realization the child of the spacing will have as cordinates
 (defclass pointer-documentation-pane (clim-stream-pane)
   ()
   (:default-initargs :display-time nil
-                     :scroll-bars nil))
+                     :scroll-bars nil
+		     :default-view +pointer-documentation-view+
+		     :height 30))
 
 
 ;;; CONSTRUCTORS
@@ -2063,6 +2065,9 @@ During realization the child of the spacing will have as cordinates
 
 (defun make-clim-application-pane (&rest options)
   (apply #'make-clim-stream-pane :type 'application-pane options))
+
+(defun make-clim-pointer-documentation-pane (&rest options)
+  (apply #'make-clim-stream-pane :type 'pointer-documentation-pane options))
 
 ;;; 29.4.5 Creating a Standalone CLIM Window
 

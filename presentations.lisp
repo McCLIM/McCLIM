@@ -1450,9 +1450,34 @@ function lambda list"))
 	   :y y)
   (values nil nil nil))
 
+(defun document-presentation-translator (translator
+					 presentation
+					 context-type
+					 frame
+					 event
+					 window
+					 x y
+					 &key (stream *standard-output*)
+					 (documentation-type :normal))
+  (funcall (if (eq documentation-type :normal)
+	       (translator-documentation translator)
+	       (pointer-documentation translator))
+	   (presentation-object presentation)
+	   :presentation presentation
+	   :context-type context-type
+	   :frame frame
+	   :event event
+	   :window window
+	   :x x
+	   :y y
+	   :stream stream))
+
+;;; :button is a pointer button state, for performing matches where we want to
+;;; restrict the match to certain gestures but don't have a real event.
+
 (defun test-presentation-translator
     (translator presentation context-type frame window x y
-     &key event (modifier-state 0) for-menu)
+     &key event (modifier-state 0) for-menu button)
   (flet ((match-gesture (gesture event modifier-state)
 	   (let ((modifiers (if event
 				(event-modifier-state event)
@@ -1460,9 +1485,12 @@ function lambda list"))
 	     (or (eq gesture t)
 		 (loop for g in gesture
 		       thereis (and (eql modifiers (caddr g))
-				    (or (eq event nil)
-					(eql (pointer-event-button event)
-					     (cadr g)))))))))
+				    (or (and button (eql button (cadr g)))
+					(and (null button)
+					     (or (null event)
+						 (eql (pointer-event-button
+						       event)
+						      (cadr g)))))))))))
     (let* ((from-type (from-type translator)))
       (unless (match-gesture (gesture translator) event modifier-state)
 	(return-from test-presentation-translator nil))
@@ -1516,7 +1544,9 @@ function lambda list"))
 
 (defun map-applicable-translators (func
 				   presentation input-context frame window x y
-				   &key event (modifier-state 0) for-menu)
+				   &key event (modifier-state 0)
+				   for-menu
+				   button)
   (let ((found nil))
     (flet ((process-presentation (context context-ptype presentation)
              (let ((maybe-translators
@@ -1534,7 +1564,8 @@ function lambda list"))
                                                         :event event
                                                         :modifier-state
                                                         modifier-state
-                                                        :for-menu for-menu)
+                                                        :for-menu for-menu
+							:button button)
                      do (funcall func translator presentation context)
                         (setq found t)))))
       (loop for context in input-context
@@ -1592,7 +1623,7 @@ function lambda list"))
 ;;; 23.7.3 Finding Applicable Presentations
 
 (defun find-innermost-presentation-match
-    (input-context top-record frame window x y  event modifier-state)
+    (input-context top-record frame window x y event modifier-state button)
   "Helper function that implements the \"innermost-smallest\" input-context
   presentation matching algorithm.  Returns presentation, translator, and
   matching input context."
@@ -1620,7 +1651,8 @@ function lambda list"))
      window
      x y
      :event event
-     :modifier-state modifier-state)
+     :modifier-state modifier-state
+     :button button)
     (values result result-translator result-context)))
 
 (defun find-innermost-applicable-presentation
@@ -1632,7 +1664,23 @@ function lambda list"))
                                              window
                                              x y
                                              event
-                                             modifier-state)))
+                                             modifier-state
+					     nil)))
+
+(defun find-innnermost-presentation-context (input-context window x y
+					     &key
+					     (top-record
+					      (stream-output-history window))
+					     (frame *application-frame*)
+					     event modifier-state button)
+  (find-innermost-presentation-match input-context
+				     (stream-output-history window)
+				     frame
+				     window
+				     x y
+				     event
+				     modifier-state
+				     button))
 
 (defun throw-highlighted-presentation (presentation input-context event)
   (let ((x (pointer-event-x event))
@@ -1645,7 +1693,8 @@ function lambda list"))
 					   (event-sheet event)
 					   x y
 					   event
-					   0)
+					   0
+					   nil)
       (when p
 	(multiple-value-bind (object ptype options)
 	    (call-presentation-translator translator

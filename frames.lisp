@@ -181,7 +181,11 @@ FRAME-EXIT condition."))
   ((event-queue :initarg :frame-event-queue
 		:accessor frame-event-queue
 		:documentation "The event queue that, by default, will be
-  shared by all panes in the stream")))
+  shared by all panes in the stream")
+   (documentation-state :accessor frame-documentation-state
+			:initform nil
+			:documentation "Used to keep of track of what
+  needs to be rendered in the pointer documentation frame.")))
 
 ;;; Support the :input-buffer initarg for compatibility with "real CLIM"
 
@@ -333,6 +337,8 @@ FRAME-EXIT condition."))
     (let ((*standard-input* (frame-standard-input frame))
 	  (*standard-output* (frame-standard-output frame))
 	  (*query-io* (frame-query-io frame))
+	  (*pointer-documentation-output* (frame-pointer-documentation-output
+					   frame))
 	  ;; during development, don't alter *error-output*
           ;; (*error-output* (frame-error-output frame))
 	  (*command-parser* command-parser)
@@ -438,7 +444,12 @@ FRAME-EXIT condition."))
          (setf (slot-value frame 'pane) pane)))))
 
 ; could do with some refactoring [BTS] FIXME
-(defun make-panes-generate-panes-form (class-name menu-bar panes layouts)
+(defun make-panes-generate-panes-form (class-name menu-bar panes layouts
+				       pointer-documentation)
+  (when pointer-documentation
+    (setf panes (append panes
+			'((%pointer-documentation%
+			   pointer-documentation-pane)))))
   `(defmethod generate-panes ((fm frame-manager) (frame ,class-name))
      (let ((*application-frame* frame))
        (with-look-and-feel-realization (fm frame)
@@ -467,24 +478,29 @@ FRAME-EXIT condition."))
            ; [BTS] added this, but is not sure that this is correct for adding
            ; a menu-bar transparently, should also only be done where the
            ; exterior window system does not support menus
-          ,(if menu-bar
+          ,(if (or menu-bar pointer-documentation)
 	      `(setf (slot-value frame 'pane)
 	         (ecase (frame-current-layout frame)
 	           ,@(mapcar (lambda (layout)
-                               `(,(first layout) (vertically ()
-                                                  ,(cond
-                                                    ((eq menu-bar t)
-                                                     `(clim-internals::make-menu-bar
-                                                        ',class-name))
-                                                    ((consp menu-bar)
-                                                     `(raising (:border-width 2 :background +Gray83+)
-                                                        (clim-internals::make-menu-bar
-                                                           (make-command-table nil
-                                                             :menu ',menu-bar))))
-                                                    (menu-bar
-                                                     `(clim-internals::make-menu-bar
-                                                        ',menu-bar)))
-                                                   ,@(rest layout))))
+                               `(,(first layout)
+				 (vertically ()
+				  ,@(cond
+				     ((eq menu-bar t)
+				      `((clim-internals::make-menu-bar
+					',class-name)))
+				     ((consp menu-bar)
+				      `((raising (:border-width 2 :background +Gray83+)
+					 (clim-internals::make-menu-bar
+					  (make-command-table
+					   nil
+					   :menu ',menu-bar)))))
+				     (menu-bar
+				      `((clim-internals::make-menu-bar
+					 ',menu-bar)))
+				     (t nil))
+				  ,@(rest layout)
+				  ,@(when pointer-documentation
+					  '(%pointer-documentation%)))))
                              layouts)))
 	      `(setf (slot-value frame 'pane)
 	         (ecase (frame-current-layout frame)
@@ -503,7 +519,9 @@ FRAME-EXIT condition."))
 	(command-definer t)
 	(top-level '(default-frame-top-level))
 	(others nil)
-	(command-name (intern (concatenate 'string "DEFINE-" (symbol-name name) "-COMMAND"))))
+	(command-name (intern (concatenate 'string "DEFINE-" (symbol-name name)
+					   "-COMMAND")))
+	(pointer-documentation nil))
     (loop for (prop . values) in options
 	do (case prop
 	     (:pane (setq pane (first values)))
@@ -516,6 +534,7 @@ FRAME-EXIT condition."))
 	     (:disabled-commands (setq disabled-commands values))
 	     (:command-definer (setq command-definer (first values)))
 	     (:top-level (setq top-level (first values)))
+	     (:pointer-documentation (setq pointer-documentation (car values)))
 	     (t (push (cons prop values) others))))
     (if (or (and pane panes)
 	    (and pane layouts))
@@ -540,7 +559,8 @@ FRAME-EXIT condition."))
 	 ,@others)
        ,(if pane
 	    (make-single-pane-generate-panes-form name menu-bar pane)
-            (make-panes-generate-panes-form name menu-bar panes layouts))
+            (make-panes-generate-panes-form name menu-bar panes layouts
+					    pointer-documentation))
        ,@(if command-table
 	     `((define-command-table ,@command-table)))
        ,@(if command-definer
@@ -629,10 +649,6 @@ FRAME-EXIT condition."))
     ((frame standard-application-frame)
      (stream output-recording-stream)
      button-press-event)
-  (format *debug-io* "frame button press event: ~D ~D in ~S~%"
-	  (pointer-event-x button-press-event)
-	  (pointer-event-y button-press-event)
-	  stream)
   (let ((presentation (find-innermost-applicable-presentation
 		       *input-context*
 		       stream
@@ -641,9 +657,6 @@ FRAME-EXIT condition."))
 		       :frame frame
 		       :event button-press-event)))
     (when presentation
-      (format *debug-io* "presentation: ~S of type ~S~%"
-	      (presentation-object presentation)
-	      (presentation-type presentation))
       (throw-highlighted-presentation presentation
 				      *input-context*
 				      button-press-event))))
@@ -652,6 +665,57 @@ FRAME-EXIT condition."))
     ((frame standard-application-frame) stream button-press-event)
   (declare (ignore stream button-press-event))
   nil)
+
+(defgeneric frame-update-pointer-documentation
+    (frame input-context stream event))
+
+(defconstant +button-documentation+ '((#.+pointer-left-button+ "L")
+				      (#.+pointer-middle-button+ "M")
+				      (#.+pointer-right-button+ "R")))
+
+(defmethod frame-update-pointer-documentation
+    ((frame standard-application-frame) input-context stream event)
+  (when *pointer-documentation-output*
+    (with-accessors ((frame-documentation-state frame-documentation-state))
+	frame
+      (destructuring-bind (&optional modifier-bits translators)
+	  frame-documentation-state
+	(let* ((current-modifier (event-modifier-state event))
+	       (x (pointer-event-x event))
+	       (y (pointer-event-y event))
+	       (new-translators
+		(loop for (button) in +button-documentation+
+		      for context-list = (multiple-value-list
+					  (find-innnermost-presentation-context
+					   input-context
+					   stream
+					   x y
+					   :modifier-state current-modifier
+					   :button button))
+		      when (car context-list)
+		      collect (cons button context-list))))
+	  (unless (and (eql modifier-bits current-modifier)
+		       (equal translators new-translators))
+	    ;; State is different, so print out new documentation
+	    (window-clear *pointer-documentation-output*)
+	    (loop for (button presentation translator context)
+		    in new-translators
+		  for name = (cadr (assoc button +button-documentation+))
+		  do (progn
+		       (format *pointer-documentation-output* "~A: " name)
+		       (document-presentation-translator
+			translator
+			presentation
+			(input-context-type context)
+			*application-frame*
+			event
+			stream
+			x y
+			:stream *pointer-documentation-output*
+			:documentation-type :pointer)
+		       (write-string " " *pointer-documentation-output*)))
+	    (setq frame-documentation-state (list current-modifier
+						  new-translators))))))))
 
 (defmethod frame-input-context-track-pointer
     ((frame standard-application-frame)
@@ -667,6 +731,13 @@ FRAME-EXIT condition."))
 
 (defmethod frame-input-context-track-pointer :before
     ((frame standard-application-frame) input-context stream event)
+  (flet ((maybe-unhighlight (presentation)
+	   (when (and (frame-hilited-presentation frame)
+		      (not (eq presentation
+			       (car (frame-hilited-presentation frame)))))
+	     (highlight-presentation-1 (car (frame-hilited-presentation frame))
+				       (cdr (frame-hilited-presentation frame))
+				       :unhighlight))))
     (if (output-recording-stream-p stream)
 	(let ((presentation (find-innermost-applicable-presentation
 			     input-context
@@ -675,19 +746,18 @@ FRAME-EXIT condition."))
 			     (pointer-event-y event)
 			     :frame frame
 			     :modifier-state (event-modifier-state event))))
-	  (when (and (frame-hilited-presentation frame)
-		     (not (eq presentation
-			      (car (frame-hilited-presentation frame)))))
-	    (highlight-presentation-1 (car (frame-hilited-presentation frame))
-				      (cdr (frame-hilited-presentation frame))
-				      :unhighlight))
+	  (maybe-unhighlight presentation)
 	  (if presentation
 	      (when (not (eq presentation
 			     (car (frame-hilited-presentation frame))))
 		(setf (frame-hilited-presentation frame)
 		      (cons presentation stream))
 		(highlight-presentation-1 presentation stream :highlight))
-	      (setf (frame-hilited-presentation frame) nil)))))
+	      (setf (frame-hilited-presentation frame) nil)))
+	(progn
+	  (maybe-unhighlight nil)
+	  (setf (frame-hilited-presentation frame) nil))))
+  (frame-update-pointer-documentation frame input-context stream event))
 
 
 (defun simple-event-loop ()

@@ -136,6 +136,12 @@
                      (with-medium-options (medium drawing-options)
                                           (funcall continuation sheet))))
 
+;;; Compatibility with real CLIM
+(defmethod invoke-with-drawing-options ((sheet t) continuation
+					&rest drawing-options)
+  (declare (ignore drawing-options))
+  (funcall continuation sheet))
+
 (defun draw-point (sheet point
 		   &rest args
 		   &key ink clipping-region transformation

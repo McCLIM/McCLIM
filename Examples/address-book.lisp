@@ -105,6 +105,7 @@
     ((current-address :initform nil)
      (interaction-pane )
      (name-pane))
+  (:pointer-documentation t)		;Added by moore
   (:panes
     (interactor :interactor)
     (address :application
