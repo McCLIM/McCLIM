@@ -51,6 +51,7 @@
                                                 1 0)
                                             (if mode-switch?
                                                 2 0))))
+	   (keysym-keyword (clim-xcommon:lookup-keysym keysym))
 	   (char (xlib:keysym->character display keysym
 					 (+ (if (if shift-lock? 
                                                     (not shift?) 
@@ -58,12 +59,14 @@
                                                 1 0)
                                             (if mode-switch?
                                                 2 0)))))
-      (clim-xcommon:x-keysym-to-clim-modifiers port
-					       event-key
-					       char
-					       (clim-xcommon:lookup-keysym
-						keysym)
-					       state))))
+      (values char
+	      (clim-xcommon:x-keysym-to-clim-modifiers port
+						       event-key
+						       char
+						       (clim-xcommon:lookup-keysym
+							keysym)
+						       state)
+	      keysym-keyword))))
 
 ;;;;
 

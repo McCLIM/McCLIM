@@ -63,11 +63,11 @@
   (multiple-value-bind (clim-modifiers shift-lock? caps-lock? mode-switch?)
       (x-event-state-modifiers port state)
     (declare (ignore shift-lock? caps-lock? mode-switch?))
-    (values keychar (if (characterp keychar)
-			clim-modifiers	;; ?? true?
-			(modify-modifiers event-key
-					  keysym-keyword
-					  clim-modifiers)))))
+    (if (characterp keychar)
+	clim-modifiers	;; ?? true?
+	(modify-modifiers event-key
+			  keysym-keyword
+			  clim-modifiers))))
 
 ;;; Modifier cache
 ;;;
