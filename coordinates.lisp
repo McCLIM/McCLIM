@@ -4,8 +4,9 @@
 ;;;   Created: 1998-12-05 18:06
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
+;;;       $Id: coordinates.lisp,v 1.6 2003/05/31 18:18:43 gilbert Exp $
 ;;; --------------------------------------------------------------------------------------
-;;;  (c) copyright 1998,1999 by Gilbert Baumann
+;;;  (c) copyright 1998,1999,2003 by Gilbert Baumann
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -22,10 +23,9 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-;;!EXPORT coordinate
-
 (in-package :clim-internals)
 
+#||
 (deftype coordinate () 'double-float)
 
 (defun coordinate (n)
@@ -45,3 +45,27 @@
 
 (defun coordinate/= (x y)
   (not (coordinate= x y)))
+||#
+
+(deftype coordinate () 'real)
+
+(declaim (inline coordinate))
+(defun coordinate (n) n)
+
+(declaim (inline coordinate-epsilon))
+(defun coordinate-epsilon ()
+  0)
+
+(declaim (inline coordinate=))
+(defun coordinate= (x y)
+  (= x y))
+
+(declaim (inline coordinate<=))
+(defun coordinate<= (x y)
+  (<= x y))
+
+(declaim (inline coordinate/=))
+(defun coordinate/= (x y)
+  (/= x y))
+
+;; $Log: $
