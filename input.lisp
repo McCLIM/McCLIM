@@ -83,14 +83,86 @@
                                            (funcall wait-function))))))))
 
 (defmethod event-queue-append ((eq standard-event-queue) item)
-  "Append the item at the end of the queue."
+  "Append the item at the end of the queue. Does event compression."
   (with-lock-held ((event-queue-lock eq))
-    (cond ((null (event-queue-tail eq))
-           (setf (event-queue-head eq) (cons item nil)
-                 (event-queue-tail eq) (event-queue-head eq)))
-          (t
-           (setf (event-queue-tail eq)
-                 (setf (cdr (event-queue-tail eq)) (cons item nil)))))))
+    (cond 
+     ;; Motion Event Compression
+     ;; 
+     ;; . find the (at most one) motion event
+     ;; . delete it
+     ;; . append item to queue
+     ;;
+     ;; But leave enter/exit events.
+     ;;
+     ((and (typep item 'pointer-motion-event)
+           (not (typep item 'pointer-boundary-event)))
+      (let ((sheet (event-sheet item)))
+        (labels ((fun (xs)
+                   (cond ((null xs)
+                          (setf (event-queue-tail eq) (cons item nil)) )
+                         ((and (typep (car xs) 'pointer-motion-event)
+                               (not (typep (car xs) 'pointer-boundary-event))
+                               (eq (event-sheet (car xs)) sheet))
+                          ;; delete this
+                          (fun (cdr xs)))
+                         (t
+                          (setf (cdr xs) (fun (cdr xs)))
+                          xs))))
+          (setf (event-queue-head eq) (fun (event-queue-head eq))))))
+     ;;
+     ;; Repaint event compression
+     ;;
+     ((typep item 'window-repaint-event)
+      (let ((region (window-event-native-region item))
+            (sheet  (event-sheet item))
+            (did-something-p nil))
+        (labels ((fun (xs)
+                   (cond ((null xs)
+                          ;; We reached the queue's tail: Append the new event, construct a new
+                          ;; one if necessary.
+                          (when did-something-p
+                            (setf item
+                              (make-instance 'window-repaint-event
+                                :timestamp (event-timestamp item)
+                                :sheet     (event-sheet item)
+                                :region    region)))
+                          (setf (event-queue-tail eq) (cons item nil)) )
+                         ;;
+                         ((and (typep (car xs) 'window-repaint-event)
+                               (eq (event-sheet (car xs)) sheet))
+                          ;; This is a repaint event for the same sheet, delete it and combine
+                          ;; its region into the new event.
+                          (setf region
+                            (region-union region (window-event-native-region (car xs))))
+                          ;; Here is an alternative, which just takes the bounding rectangle. 
+                          ;; NOTE: When doing this also take care that the new region really
+                          ;; is cleared.
+                          ;; (setf region
+                          ;;   (let ((old-region (window-event-native-region (car xs))))
+                          ;;     (make-rectangle*
+                          ;;      (min (bounding-rectangle-min-x region)
+                          ;;           (bounding-rectangle-min-x old-region))
+                          ;;      (min (bounding-rectangle-min-y region)
+                          ;;           (bounding-rectangle-min-y old-region))
+                          ;;      (max (bounding-rectangle-max-x region)
+                          ;;           (bounding-rectangle-max-x old-region))
+                          ;;      (max (bounding-rectangle-max-y region)
+                          ;;           (bounding-rectangle-max-y old-region)))))
+                          (setf did-something-p t)
+                          (fun (cdr xs)))
+                         ;;
+                         (t
+                          (setf (cdr xs) (fun (cdr xs)))
+                          xs))))
+          (setf (event-queue-head eq) (fun (event-queue-head eq))))))
+     ;; Regular events are just appended:
+     (t
+      (cond ((null (event-queue-tail eq))
+             (setf (event-queue-head eq) (cons item nil)
+                   (event-queue-tail eq) (event-queue-head eq)))
+            (t
+             (setf (event-queue-tail eq)
+               (setf (cdr (event-queue-tail eq)) (cons item nil)))))))))
 
 (defmethod event-queue-prepend ((eq standard-event-queue) item)
   "Prepend the item to the beginning of the queue."
@@ -106,7 +178,7 @@
     (first (event-queue-head eq))))
 
 (defmethod event-queue-peek-if (predicate (eq standard-event-queue))
-  "Goes thru the whole event queue an returns the first event, which
+  "Goes thru the whole event queue and returns the first event, which
    satisfies 'predicate' and leaves the event in the queue.
    Returns NIL, if there is no such event."
   (with-lock-held ((event-queue-lock eq))
