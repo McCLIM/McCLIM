@@ -207,6 +207,7 @@
 		      (text-style-language style2))))
 
 (defconstant *default-text-style* (make-text-style :fix :roman :normal))
+(defconstant *undefined-text-style* *default-text-style*)
 
 (defconstant *smaller-sizes* '(:huge :very-large :large :normal
 			       :small :very-small :tiny :tiny))
