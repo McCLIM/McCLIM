@@ -332,9 +332,9 @@
                       &allow-other-keys)
   ;; XXX :button code -> :button (decode-x-button-code code)
   (declare (ignorable event-slots))
+  (declare (special *clx-port*))
   (let ((sheet (and window
 		    (port-lookup-sheet *clx-port* window))))
-    (declare (special *clx-port*))
     (when sheet
       (case event-key
 	(:key-press
@@ -375,12 +375,13 @@
 	   (make-instance 'pointer-motion-event :pointer 0 :button code :x x :y y
 			  :sheet sheet :modifier-state state :timestamp time)))
 	((:exposure :display) ; what is a :display event?
-         (when (eq count 0)
-           ; this should also consolidate the areas, but try this for now
+         ;;(when (eq count 0)
+         ;;  ; this should also consolidate the areas, but try this for now
            (make-instance 'window-repaint-event
              :sheet sheet
-             :region (untransform-region (sheet-native-transformation sheet)
-                                         (make-rectangle* x y (+ x width) (+ y height))))))
+             :region (make-rectangle* x y (+ x width) (+ y height)))
+           ;;  )
+         )
 	(:client-message
 	 (when (eq (xlib:atom-name display (aref data 0)) :wm_delete_window)
 	   (destroy-mirror (port sheet) sheet)
