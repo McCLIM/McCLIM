@@ -61,8 +61,8 @@
     (print-unreadable-object (space stream :type t :identity t)
       (format stream "width: ~S height: ~S" width height))))
 
-(defun make-space-requirement (&key (width 0) (max-width 0) (min-width 0)
-				    (height 0) (max-height 0) (min-height 0))
+(defun make-space-requirement (&key (width 1) (max-width 1) (min-width 1)
+				    (height 1) (max-height 1) (min-height 1))
   (make-instance 'space-requirement
     :width width
     :max-width max-width
