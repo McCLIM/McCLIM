@@ -486,8 +486,6 @@
                  ,@body)))))))
 
 (defun decode-x-button-code (code)
-  ;; FIXME: CLIM doesn't provide for more then 3 buttons, how should
-  ;; we handle this better?
   (aref #.(vector +pointer-left-button+
                   +pointer-middle-button+
                   +pointer-right-button+
@@ -529,9 +527,10 @@
 (defun safely-set-input-focus (display window revert-to &optional timestamp)
   "Sets the input focus, binding a handler for BadMatch errors and syncing with
 the server, in case the window is not visible."
-  (handler-case (progn (xlib:set-input-focus display window revert-to timestamp)
+  (xlib::with-display (display)
+     (handler-case (progn (xlib:set-input-focus display window revert-to timestamp)
                        (xlib:display-finish-output display))
-    (xlib:match-error () nil)))
+       (xlib:match-error () nil))))
 
 (defun event-handler (&rest event-slots
                       &key display window event-key code state mode time
