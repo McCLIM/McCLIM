@@ -46,9 +46,6 @@
 ;; Why is there GADGET-LABEL-TEXT-STYLE? The spec says, that just the
 ;; pane's text-style should be borrowed.
 
-;; Is "no label" as initarg to labelled gadget really such a good
-;; idea? I would prefer "".
-
 ;; RANGE-GADGET / RANGE-GADGET-MIXIN: same thing as with
 ;; ORIENTED-GADGET-MIXIN.
 
@@ -1965,7 +1962,7 @@ and must never be nil."))
 
 (defclass meta-list-pane ()
   ((mode        :initarg :mode
-                :initform :some-of
+                :initform :exclusive
                 :reader list-pane-mode
                 :type (member :one-of :some-of))
    (items       :initarg :items
@@ -2835,3 +2832,6 @@ Returns two values, the item itself, and the index within the item list."
         (changing-space-requirements (:resize-frame nil)
           (adjust-space-requirement left-peer  left-sr  orientation delta)
           (adjust-space-requirement right-peer right-sr orientation (- delta)))))))
+
+(defmethod note-sheet-grafted ((sheet clim-extensions:box-adjuster-gadget))
+  (setf (sheet-pointer-cursor sheet) :rotate))
