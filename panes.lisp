@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.89 2002/06/30 08:21:43 adejneka Exp $
+;;; $Id: panes.lisp,v 1.90 2002/07/07 06:20:52 adejneka Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -1870,6 +1870,7 @@ During realization the child of the spacing will have as cordinates
 ;;;
 
 (defclass clim-stream-pane (permanent-medium-sheet-output-mixin
+                            #-clim-mp standard-repainting-mixin
                             standard-extended-input-stream
                             standard-extended-output-stream
                             standard-output-recording-stream

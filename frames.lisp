@@ -624,7 +624,7 @@ FRAME-EXIT condition."))
 					  x y
 					  :frame frame :event event))
 
-(defmethod frame-input-context-button-press-handler 
+(defmethod frame-input-context-button-press-handler
     ((frame standard-application-frame)
      (stream output-recording-stream)
      button-press-event)
@@ -692,10 +692,7 @@ FRAME-EXIT condition."))
 (defun simple-event-loop ()
   "An simple event loop for applications that want all events to be handled by
  handle-event methods"
-  (if *multiprocessing-p*
-      (let ((queue (frame-event-queue *application-frame*)))
-	(loop for event = (event-queue-read queue)
-	      do (handle-event (event-sheet event) event)))
-      (let ((port (port *application-frame*)))
-	(loop
-	 (process-next-event port)))))
+  (let ((queue (frame-event-queue *application-frame*)))
+    (loop for event = (event-queue-read queue)
+       ;; EVENT-QUEUE-READ in single-process mode calls PROCESS-NEXT-EVENT itself.
+       do (handle-event (event-sheet event) event))))
