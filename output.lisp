@@ -23,7 +23,7 @@
   (
    ))
 
-(defclass mute-sheet-output-mixin ()
+(defclass sheet-mute-output-mixin ()
   (
    ))
 

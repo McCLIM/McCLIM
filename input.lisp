@@ -89,42 +89,42 @@
     (
      ))
 
-(defclass mute-sheet-input-mixin ()
+(defclass sheet-mute-input-mixin ()
   (
    ))
 
-(defmethod dispatch-event ((sheet mute-sheet-input-mixin) event)
+(defmethod dispatch-event ((sheet sheet-mute-input-mixin) event)
   (declare (ignore event))
   (error 'sheet-is-mute-for-input))
 
-(defmethod queue-event ((sheet mute-sheet-input-mixin) event)
+(defmethod queue-event ((sheet sheet-mute-input-mixin) event)
   (declare (ignore event))
   (error 'sheet-is-mute-for-input))
 
-(defmethod handle-event ((sheet mute-sheet-input-mixin) event)
+(defmethod handle-event ((sheet sheet-mute-input-mixin) event)
   (declare (ignore event))
   (error 'sheet-is-mute-for-input))
 
-(defmethod event-read ((sheet mute-sheet-input-mixin))
+(defmethod event-read ((sheet sheet-mute-input-mixin))
   (error 'sheet-is-mute-for-input))
 
-(defmethod event-read-with-timeout ((sheet mute-sheet-input-mixin)
+(defmethod event-read-with-timeout ((sheet sheet-mute-input-mixin)
 				    &key (timeout nil) (wait-function nil))
   (declare (ignore timeout wait-function))
   (error 'sheet-is-mute-for-input))
 
-(defmethod event-read-no-hang ((sheet mute-sheet-input-mixin))
+(defmethod event-read-no-hang ((sheet sheet-mute-input-mixin))
   (error 'sheet-is-mute-for-input))
 
-(defmethod event-peek ((sheet mute-sheet-input-mixin) &optional event-type)
+(defmethod event-peek ((sheet sheet-mute-input-mixin) &optional event-type)
   (declare (ignore event-type))
   (error 'sheet-is-mute-for-input))
 
-(defmethod event-unread ((sheet mute-sheet-input-mixin) event)
+(defmethod event-unread ((sheet sheet-mute-input-mixin) event)
   (declare (ignore event))
   (error 'sheet-is-mute-for-input))
 
-(defmethod event-listen ((sheet mute-sheet-input-mixin))
+(defmethod event-listen ((sheet sheet-mute-input-mixin))
   (error 'sheet-is-mute-for-input))
 
 (defclass delegate-sheet-input-mixin ()
