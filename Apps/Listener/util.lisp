@@ -392,6 +392,9 @@ function specified by :ABBREVIATOR. Abbreviate is controlled by the variables
 (defmethod transform-program-arg ((arg string))
   arg)
 
+(defmethod transform-program-arg ((arg sequence))
+  (values-list (map 'list #'transform-program-arg arg)))
+
 (defmethod transform-program-arg ((arg symbol))
   (let ((name (string-downcase (symbol-name arg))))
     (if (keywordp arg)
