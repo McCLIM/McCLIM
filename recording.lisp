@@ -157,7 +157,7 @@
 (defmethod recompute-extent-for-changed-child ((record output-record) child
 					       old-min-x old-min-y old-max-x old-max-y)
   (declare (ignore child old-min-x old-min-y old-max-x old-max-y))
-  (error "I don't understand RECOMPUTE-EXTENT-FOR-CHANGED-CHILD - mikemac"))
+  (tree-recompute-extent record))
 
 (defmethod tree-recompute-extent ((record output-record))
   (with-slots (parent children x1 y1 x2 y2) record
@@ -446,19 +446,28 @@
 	  (format stream "~D,~D ~S" start-x start-y (mapcar #'third strings)))
       (format stream "empty"))))
 
+(defmethod tree-recompute-extent ((text-record text-displayed-output-record))
+  (with-slots (parent start-x start-y end-x end-y x1 y1 x2 y2) text-record
+    (setq x1 start-x
+	  x2 end-x
+	  y1 start-y
+	  y2 end-y)
+    (recompute-extent-for-changed-child parent text-record start-x start-y end-x end-y)))
+
 (defmethod add-character-output-to-text-record ((text-record text-displayed-output-record)
 						character text-style width height
 						new-baseline)
-  (with-slots (strings baseline max-height end-x end-y) text-record
+  (with-slots (strings baseline max-height start-y end-x end-y) text-record
     (if (and strings (eq (second (first (last strings))) text-style))
 	(vector-push-extend character (third (first (last strings))))
       (setq strings (nconc strings (list (list end-x text-style (make-array 1 :initial-element character :element-type 'character :adjustable t :fill-pointer t))))))
     (setq baseline (max baseline new-baseline)
 	  end-x (+ end-x width)
-	  end-y (max end-y new-baseline)
 	  max-height (max max-height height)
+	  end-y (max end-y (+ start-y max-height))
 	  )
-      ))
+      )
+  (tree-recompute-extent text-record))
 
 (defmethod add-string-output-to-text-record ((text-record text-displayed-output-record)
 					     string start end text-style width height
@@ -516,12 +525,16 @@
       (setq trec (make-instance 'text-displayed-output-record))
       (add-output-record trec (stream-output-history stream))
       (setf (stream-current-output-record stream) trec)
-      (with-slots (start-x start-y end-x end-y) trec
+      (with-slots (start-x start-y end-x end-y x1 y1 x2 y2) trec
 	  (multiple-value-bind (cx cy) (stream-cursor-position stream)
 	    (setq start-x cx
 		  start-y (+ cy (stream-vertical-spacing stream))
 		  end-x start-x
-		  end-y start-y))))
+		  end-y start-y
+		  x1 start-x
+		  x2 end-x
+		  y1 start-y
+		  y2 end-y))))
     trec))
 
 (defmethod stream-write-char :around ((stream output-recording-stream) char)
@@ -545,12 +558,16 @@
       (let ((trec (make-instance 'text-displayed-output-record)))
 	(add-output-record trec (stream-output-history stream))
 	(setf (stream-current-output-record stream) trec)
-	(with-slots (start-x start-y end-x end-y) trec
+	(with-slots (start-x start-y end-x end-y x1 y1 x2 y2) trec
 	  (multiple-value-bind (cx cy) (stream-cursor-position stream)
 	    (setq start-x cx
 		  start-y (+ cy (stream-vertical-spacing stream))
 		  end-x start-x
-		  end-y start-y))))))))
+		  end-y start-y
+		  x1 start-x
+		  x2 end-x
+		  y1 start-y
+		  y2 end-y))))))))
 
 (defmethod stream-wrap-line :before ((stream output-recording-stream))
   (when (stream-recording-p stream)
