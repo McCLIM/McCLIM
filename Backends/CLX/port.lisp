@@ -366,8 +366,40 @@
                   +pointer-right-button+)
         (1- code)))
 
+;; From "Inter-Client Communication Conventions Manual", Version 2.0.xf86.1,
+;; section 4.1.5:
+;; 
+;; |   Advice to Implementors
+;; |
+;; |   Clients cannot distinguish between the case where a top-level
+;; |   window is resized and moved from the case where the window is
+;; |   resized but not moved, since a real ConfigureNotify event will be
+;; |   received in both cases. Clients that are concerned with keeping
+;; |   track of the absolute position of a top-level window should keep
+;; |   a piece of state indicating whether they are certain of its
+;; |   position. Upon receipt of a real ConfigureNotify event on the
+;; |   top-level window, the client should note that the position is
+;; |   unknown. Upon receipt of a synthetic ConfigureNotify event, the
+;; |   client should note the position as known, using the position in
+;; |   this event. If the client receives a KeyPress, KeyRelease,
+;; |   ButtonPress, ButtonRelease, MotionNotify, EnterNotify, or
+;; |   LeaveNotify event on the window (or on any descendant), the
+;; |   client can deduce the top-level window's position from the
+;; |   difference between the (event-x, event-y) and (root-x, root-y)
+;; |   coordinates in these events. Only when the position is unknown
+;; |   does the client need to use the TranslateCoordinates request to
+;; |   find the position of a top-level window.
+;; |
+
+;; The morale is that we need to distinguish between synthetic and
+;; genuine configure-notify events. We expect that synthetic configure
+;; notify events come from the window manager and state the correct
+;; size and position, while genuine configure events only state the
+;; correct size.
+
 (defun event-handler (&rest event-slots
                       &key display window event-key code state mode time width height x y root-x root-y data
+                           override-redirect-p send-event-p
                       &allow-other-keys)
   ;; NOTE: Although it might be tempting to compress (consolidate)
   ;; events here, this is the wrong place. In our current architecture
@@ -378,7 +410,7 @@
   ;; and thus may produce lack. So the events have to be compressed in
   ;; the frame's event queue.
   ;;
-  ;; So event compression is implement in EVENT-QUEUE-APPEND.
+  ;; So event compression is implemented in EVENT-QUEUE-APPEND.
   ;;
   ;; This changes for possible _real_ immediate repainting sheets,
   ;; here a possible solution for the port's event handler loop can be
@@ -429,12 +461,35 @@
            :graft-x root-x
            :graft-y root-y
 	   :sheet sheet :modifier-state state :timestamp time))
+        ;;
 	(:configure-notify
-         ; it would be nice to consolidate these for resizes, but because of the
-         ; interleaving exposures it becomes a bit tricky to do at this point. - BTS
-	 (make-instance 'window-configuration-event
-                        :sheet sheet
-			:x x :y y :width width :height height))
+         ;; it would be nice to consolidate these for resizes, but because of the
+         ;; interleaving exposures it becomes a bit tricky to do at this point. - BTS
+         (cond ((and (eq (sheet-parent sheet) (graft sheet))
+                     (not override-redirect-p)
+                     (not send-event-p))
+                ;; this is genuine event for a top-level sheet (with
+                ;; override-redirect off)
+                ;;
+                ;; Since the root window is not our real parent, but
+                ;; there the window managers decoration in between,
+                ;; only the size is correct, so we need to deduce the
+                ;; position from our idea of it.
+                (multiple-value-bind (x y) (transform-position
+                                            (compose-transformations
+                                             (sheet-transformation sheet)
+                                             (sheet-native-transformation (graft sheet)))
+                                            0 0)
+                  (make-instance 'window-configuration-event
+                                 :sheet sheet
+                                 :x x
+                                 :y y
+                                 :width width :height height)))
+               (t
+                ;; nothing special here
+                (make-instance 'window-configuration-event
+                               :sheet sheet
+                               :x x :y y :width width :height height))))
 	(:destroy-notify
 	 (make-instance 'window-destroy-event :sheet sheet))
 	(:motion-notify
