@@ -387,7 +387,7 @@
 
 (define-protocol-class pattern (design))
 
-(defclass indexed-pattern (design)
+(defclass indexed-pattern (pattern)
   ((array   :initarg :array)
    (designs :initarg :designs)))
    
