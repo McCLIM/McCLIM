@@ -21,9 +21,6 @@
 
 (in-package :common-lisp-user)
 
-#+:excl(require :clx)
-#+:excl(require :loop)
-
 (defparameter *clim-directory* (directory-namestring *load-truename*))
 
 #+cmu
@@ -64,13 +61,7 @@
   #+:SBCL      "Lisp-Dep/fix-sbcl"
   "package")
 
-(clim-defsystem (:clim-core)
-   ;; First possible patches
-   #+:CMU       "Lisp-Dep/fix-cmu"
-   #+:EXCL	"Lisp-Dep/fix-acl"
-   #+:SBCL      "Lisp-Dep/fix-sbcl"
-   "package"
-
+(clim-defsystem (:clim-core :depends-on (:clim-lisp))
    "decls"
 
    #.(OR
@@ -121,6 +112,9 @@
   "Goatee/editing-stream"
   )
 
+;;; CLIM-PostScript is not a backend in the normal sense.
+;;; It is an extension (Chap. 35.1 of the spec) and is an
+;;; "included" part of McCLIM. Hence the defsystem is here.
 (clim-defsystem (:clim-postscript :depends-on (:clim-core))
    "Backends/PostScript/package"
    "Backends/PostScript/paper"
@@ -147,28 +141,8 @@
    "builtin-commands"
    )
 
-(clim-defsystem (:clim-clx :depends-on (:clim))
-  "Backends/CLX/package"
-  "Backends/CLX/keysyms"
-  "Backends/CLX/keysymdef"
-  "Backends/CLX/port"
-  "Backends/CLX/medium"
-  "Backends/CLX/graft"
-  "Backends/CLX/frame-manager"
-  "Backends/CLX/image"
-  "Backends/CLX/clim-extensions"
-  )
-
-#+gl
-(clim-defsystem (:clim-opengl :depends-on (:clim))
-   "Backends/OpenGL/opengl-x-frame-manager"
-   "Backends/OpenGL/opengl-frame-manager"
-   "Backends/OpenGL/opengl-x-port-before"
-   "Backends/OpenGL/opengl-port"
-   "Backends/OpenGL/opengl-x-port-after"
-   "Backends/OpenGL/opengl-medium"
-   "Backends/OpenGL/opengl-x-graft"
-   )
+(load "Backends/CLX/system")
+#+gl(load "Backends/OpenGL/system")
 
 (clim-defsystem (:clim-looks :depends-on (:clim-clx #+gl :clim-opengl))
   "Looks/pixie")
@@ -177,7 +151,9 @@
 ;;; name of :clim-clx-user chosen by mikemac for no good reason
 (clim-defsystem (:clim-clx-user :depends-on (:clim :clim-clx)))
 
-(clim-defsystem (:clim-examples :depends-on (:clim :clim-looks))
+;;; CLIM-Examples depends on having at least one backend loaded.
+;;; Which backend is the user's choice.
+(clim-defsystem (:clim-examples :depends-on (:clim))
    "Examples/calculator"
    "Examples/colorslider"
    "Examples/menutest"
