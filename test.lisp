@@ -19,7 +19,7 @@
 
 (in-package :CLIM-DEMO)
 
-(defun test ()
+(defun address-book ()
   (loop for port in climi::*all-ports*
       do (destroy-port port))
   (setq climi::*all-ports* nil)
@@ -30,7 +30,7 @@
   (setq medium (sheet-medium pane))
   (setq graft (graft frame))
   (setq vbox (frame-pane frame))
-  frame)
+  (run-frame-top-level frame))
 
 (defun test-define-application-frame ()
   (macroexpand '(define-application-frame address-book ()
