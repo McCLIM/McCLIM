@@ -417,7 +417,7 @@
 		   &key ink clipping-region transformation
 			line-style line-thickness
 			line-unit line-dashes line-cap-shape
-                        to-head from-head (head-length 0) (head-width 0))
+                        (to-head t) from-head (head-length 10) (head-width 5))
   (declare (ignore ink clipping-region transformation
 		   line-style line-thickness
 		   line-unit line-dashes line-cap-shape
@@ -442,7 +442,7 @@
 		   &key ink clipping-region transformation
 			line-style line-thickness
 			line-unit line-dashes line-cap-shape
-                        to-head from-head (head-length 0) (head-width 0))
+                        (to-head t) from-head (head-length 10) (head-width 5))
   (declare (ignore ink clipping-region transformation
 		   line-style line-thickness
 		   line-unit line-dashes line-cap-shape))
