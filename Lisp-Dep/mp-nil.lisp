@@ -124,10 +124,9 @@
 (defun condition-wait (cv lock &optional timeout)
   (declare (ignore lock))
   (flet ((wait-func ()
-	   (lambda ()
-	     (loop for port in climi::*all-ports* ;; this is dubious
-		do (process-next-event port))
-	     (car cv))))
+	   (loop for port in climi::*all-ports*	;; this is dubious
+	      do (process-next-event port))
+	   (car cv)))
     (setf (car cv) nil)
     (if timeout
 	(process-wait-with-timeout "Waiting for event" timeout #'wait-func)
