@@ -43,7 +43,7 @@
                 #:port-disable-sheet
 				#:port-motion-hints
                 #:port-force-output
-                #:set-port-keyboard-focus
+                #:%set-port-keyboard-focus
                 #:set-sheet-pointer-cursor
                 ;;
                 #:port-set-mirror-region
