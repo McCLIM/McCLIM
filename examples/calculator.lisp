@@ -24,8 +24,9 @@
 (in-package :CLIM-DEMO)
 
 (defparameter calc '(0))
+(defvar *text-field* nil)
 
-(defun test ()
+(defun calculator ()
   (loop for port in climi::*all-ports*
       do (destroy-port port))
   (setq climi::*all-ports* nil)
@@ -36,49 +37,55 @@
   (setq medium (sheet-medium pane))
   (setq graft (graft frame))
   (setq vbox (frame-pane frame))
-  frame)
+  (run-frame-top-level frame))
 
 (defmacro queue-number(int)
-  `(lambda (x)
-     (declare (ignore x))
+  `(lambda (gadget)
+     (declare (ignore gadget))
      (let ((last-item (first (last calc))))
        (if (numberp last-item)
 	   (setf (car (last calc)) (+ (* 10 last-item) ,int))
-	 (setf calc (append calc (list ,int))))
-       (format t (princ-to-string ,int)))))
+	   (setf calc (nconc calc (list ,int))))
+       (setf (gadget-value *text-field*) (princ-to-string (first (last calc)))))))
 
 (defmacro queue-operator (operator)
-  `(lambda (x)
-     (declare (ignore x))
+  `(lambda (gadget)
+     (declare (ignore gadget))
      (do-operation t)
      (if (functionp (first (last calc))) 
 	 (setf (first (last calc)) ,operator)
-       (progn 
-	 (setf calc (append calc (list ,operator)))
-	 (format t "~%")))))
+       	 (setf calc (nconc calc (list ,operator))))))	 
 
-(defun do-operation (x)
-  (declare (ignore x))
+(defun do-operation (gadget)
+  (declare (ignore gadget))
   (when (= 3 (length calc))
     (setf (car calc) (apply (second calc) (list (first calc) (third calc)))
 	  (cdr calc) nil)
-    (format t "~%~%~A" (princ-to-string (first calc)))))
+    (setf (gadget-value *text-field*) (princ-to-string (first calc)))))
 
-(defun initac (x)
-  (declare (ignore x))
-  (setf calc (list 0))
-  (format t "~% reset ~%"))
+(defun initac (gadget)
+  (declare (ignore gadget))
+  (setf calc (list 0)
+	(gadget-value *text-field*) (princ-to-string 0)))
 
-(defun initce (x)
-  (declare (ignore x))
+(defun initce (gadget)
+  (declare (ignore gadget))
   (let ((last-item (first (last calc))))
     (unless (or (null calc) (not (numberp last-item)))
-      (setf calc (butlast calc))
-      (format t " <= deleted~%"))))
+      (setf calc (butlast calc)
+	    (gadget-value *text-field*) (princ-to-string 0)))))
+      
+(defun print-screen (gadget)
+  (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region gadget))
+    (draw-text* gadget (gadget-value gadget)
+		(round (- x2 x1))
+		(round (- y2 y1) 2)
+		:align-x :right
+		:align-y :center)))
 
-(defun print-screen (x)
-  (declare (ignore x))
-  )
+(defun find-text-field (frame)
+  (first (member-if #'(lambda (gadget) (typep gadget 'text-field-pane))
+		    (frame-panes frame))))
 
 (defmethod calculator-frame-top-level ((frame application-frame)
 				       &key (command-parser 'command-line-command-parser)
@@ -87,13 +94,10 @@
 					'command-line-read-remaining-arguments-for-partial-command)
 				       (prompt "Command: "))
   (declare (ignore command-parser command-unparser partial-command-parser prompt))
-  (let ((*standard-input* (frame-standard-input frame))
-	(*standard-output* (frame-standard-output frame))
-	(*query-io* (frame-query-io frame)))
-    (setf (cursor-visibility (stream-text-cursor *standard-input*)) nil)
-    (loop
-     (read *standard-input*))))
-
+  (setf *text-field* (find-text-field frame))
+  (read *text-field*)
+  (loop))
+     
 (define-application-frame calculator () ()
   (:panes
    (plus             :push-button
@@ -156,10 +160,11 @@
 		     :space-requirement (make-space-requirement :width 50 :height 50)		     
 		     :label "0"
 		     :activate-callback (queue-number 0))
-  (print-screen      :application
+  (screen            :text-field
+		     :value "0"
 		     :space-requirement (make-space-requirement :width 200 :height 50)
-		     :incremental-redisplay t
-		     :display-function #'print-screen)
+		     :display-function #'print-screen
+		     :incremental-redisplay t)
   (ac                :push-button
 		     :space-requirement (make-space-requirement :width 50 :height 50)		     
 		     :label "AC"
@@ -171,7 +176,7 @@
   
   (:layouts
    (defaults (vertically ()
-		print-screen
+		screen
 		(horizontally () ac ce)
 		(tabling ()
 		   (list one two plus)
@@ -180,4 +185,3 @@
 		   (list seven eight divide)
 		   (list nine zero result)))))
   (:top-level (calculator-frame-top-level . nil)))
-
