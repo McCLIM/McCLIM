@@ -8,6 +8,20 @@
 \setlength{\parskip}{0.3cm}
 \setlength{\parindent}{0cm}
 
+\def\inputfig#1{\input #1}
+
+\newenvironment{itemize0}{
+\begin{itemize}
+\setlength{\parskip}{0cm}%
+}
+{\end{itemize}}
+
+\newenvironment{enumerate0}{
+\begin{enumerate}
+\setlength{\parskip}{0cm}%
+}
+{\end{enumerate}}
+
 \input spec-macros
 
 \newcommand{\gloss}[1]{\textsl{\textcolor{red}{#1}}}
@@ -30,6 +44,9 @@
 
 \begin{document}
 \maketitle
+
+{\setlength{\parskip}{0cm}
+\tableofcontents}
 
 \chapter{Introduction}
 
@@ -89,12 +106,40 @@ The usual way to define an application frame is to use the macro
 
 \chapter{Concepts}
 
+\section{Coordinate systems}
+
 CLIM uses a number of different coordinate systems and transformations
 to transform coordinates between them.
 
 The coordinate system used for the arguments of drawing functions is
-called the ``user coordinate system,'' and coordinate values expressed
-in the user coordinate system are known as ``user coordinates.''
+called the \gloss{user coordinate system}, and coordinate values
+expressed in the user coordinate system are known as \gloss{user
+coordinates}.
+
+User coordinates are translated to \gloss{sheet coordinates} by means
+of the \gloss{user transformation} also called the \gloss{medium
+transformation}.  This transformation is stored in the \gloss{medium}
+used for drawing.  The medium transformation can be composed
+temporarily with a transformation given as an explicit argument to a
+drawing function.  In that case, the user transformation is
+temporarily modified for the duration of the drawing. 
+
+Before drawing can occur, coordinates in the sheet coordinate system
+must be transformed to \gloss{native coordinates}, which are
+coordinates of the coordinate system of the native windowing system.
+The transformation responsible for computing native coordinates from
+sheet coordinates is called the \gloss{native transformation}.  
+
+The composition of the user transformation and the native
+transformation is called the \gloss{device transformation}.  It allows
+drawing functions to transform coordinates only once before obtaining
+native coordinates. 
+
+Sometimes, it is useful to express coordinates of a sheet in the
+coordinate of its parent.  The transformation responsible for that is
+called the \gloss{sheet transformation}.  
+
+\section{Arguments to drawing functions}
 
 Drawing functions are typically called with a sheet as an argument.
 
@@ -173,11 +218,94 @@ drawing on the corresponding window.  CLIM sheets that have associated
 windows in the underlying windowing system are called \gloss{mirrored
 sheets} and the system-dependent window object is called the
 \gloss{mirror}.  When shapes and relationships are more complicated,
-CLIM uses its own transformations to translate coordinates from a
+CLIM uses its own transformations to transform coordinates from a
 sheet to its parent and to its grandparent, etc., until a
 \gloss{mirrored sheet} is found.  To the user of CLIM, the net effect
 is to have a windowing system with more general shapes of, and
 relationships between windows.
+
+\section{Computing the native transformation}
+
+CLIM maintains, for each sheet that supports output, a \gloss{native
+transformation}.  The native transformation is used by drawing
+functions to transform coordinates to \gloss{native coordinates},
+i.e., those required by the windowing system.  In this section, we
+examine how that computation is made.
+
+To get an idea of the complexity involved, let us imagine a mirrored
+sheet (one that actually \emph{has} a mirror) $s$, which has a nontrivial
+native transformation, for instance one that is used to draw
+PostScript commands.  The coordinate system of such a sheet has an
+$x$ axis that grows to the right, and a $y$ axis that grows upwards. 
+Let us further imagine that the region of $s$ is some kind of oval
+shape as shown in figure \ref{fignative}.
+
+\begin{figure}
+\begin{center}
+\inputfig{native.pstex_t}
+\end{center}
+\caption{\label{fignative} A sheet with a nontrivial transformation}
+\end{figure}
+
+We have to assume that the origin of the X window (let us call it $w$)
+is known with respect to the region of $s$.  Since we can control
+that, let us make the very reasonable assumption that $w$ is the
+smallest window that covers the region so that the dot in figure
+\ref{fignative} is the origin of $w$.  Let us say that point is
+$(10,40)$ in the coordinate system of $s$.
+
+In the coordinate system of $s$, the region is $30$ units tall and
+$20$ units wide.  But let us say that there is a discrepancy between
+the units of $s$ and those of $w$ such that in reality $w$ is only
+$15$ pixels tall and $10$ pixels wide.  This can happen as a result of
+zooming, or simply that $s$ was designed with a different scaling in
+mind.  The native transformation of $s$ must therefore transform the
+point $(0,0$ to $(-5,20)$ and $(10,40)$ to $(0,0)$.  We now have to
+determine how this transformation can be computed from other, existing
+transformations.  Since we are working with X11, we know that the
+coordinate system of $w$ is just a translation of that of its parent
+window (let us call it $wp$.  In figure \ref{fignative}, the origin of
+the coordinate system of $wp$ is marked with a $+$.  
+
+Let us say that the origin of $w$ in the coordinate system of $wp$ is
+$(x_w,y_w$.  That is the same as the \emph{window position} of $w$
+with respect to its parent, as maintained by X11.
+
+Now, the parent of $s$ (let us call it $sp$) is a sheet which
+(according to the CLIM specification) must parallel $wp$ in that
+drawings on $sp$ must end up on $wp$.  If $sp$ has a direct mirror, it
+must be $wp$.  Otherwise $wp$ must be the direct mirror of the first
+ancestor of $sp$ having a direct mirror.  Now, $sp$ has \emph{its}
+native transformation, making it possible for any drawing function
+applied to $sp$ to appear correctly on $wp$.  Let us call that
+transformation $NT(sp$).  Assume for a moment that $w$ did not exist.
+Drawings on $s$ would have to end up on $wp$.  Obtaining that is
+fairly easy.  Just compose the transformation of $s$ (which gives
+coordinates in $sp$ from coordinates in $s$) with $NT(sp$).  Let us
+call that transformation $NTP(s)$. Now, let's go back to $w$.  To get
+coordinates in $w$ from coordinates in $s$, you must then take the
+coordinates of $s$, transform them by $NTP(S)$ and then subtract $(x_w,y_w)$.
+Therefore, you can compute $NT(s)$ as the composition of $NTP(s)$ and the
+translation transformation $(-x_w,-y_w)$.
+
+Now we have an algorithm for computing native transformations:
+
+\begin{enumerate0}
+
+\item The native transformation of the graft is decided by the frame
+manager.
+
+\item The native transformation of any sheet with a mirror other than
+the graft is the composition of its transformation, the native
+transformation of its parent, and the negation of the transformation
+defined as the position of its mirror with respect to the parent of
+the mirror.
+
+\item The native transformation of any sheet without a mirror is the
+composition of its transformation and the native transformation of its
+parent.
+\end{enumerate0}
+
 
 \chapter{Sheet hierarchy}
 
