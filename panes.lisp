@@ -25,7 +25,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.58 2002/02/22 14:31:18 gilbert Exp $
+;;; $Id: panes.lisp,v 1.59 2002/02/22 19:11:01 gilbert Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -237,6 +237,7 @@
 
 (defmacro dada ((&rest substs) &body body)
   "This is an evil macro."
+  (setf substs (sort substs #'> :key (lambda (s) (length (symbol-name (first s))))))
   `(progn
      ,@(loop for k from 1 below (length (first substs)) collect
              (labels ((subst-one (new old sym)
@@ -646,7 +647,9 @@
   (minor   height       width)
   (xbox    hbox         vbox)
   (xrack   hrack        vrack)
-  (xically horizontally vertically))
+  (xically horizontally vertically)
+  (major-spacing x-spacing y-spacing)
+  (minor-spacing x-spacing y-spacing)  )
 
  (defmacro xically ((&rest options
                      &key equalize-minor
@@ -703,7 +706,7 @@
    (compose-space (content-pane content)))
  
  (defmethod compose-space ((box xbox-pane))
-   (with-slots (contents) box
+   (with-slots (contents major-spacing) box
      (loop
          for content in contents
          for sr = (content-sr* box content)
@@ -715,20 +718,28 @@
          minimize (space-requirement-max-minor sr) into max-minor
          finally
            (return
-             (make-space-requirement
-              :major major
-              :min-major (min min-major major)
-              :max-major (max max-major major)
-              :minor minor
-              :min-minor (min min-minor minor)
-              :max-minor (max max-minor minor))))))
+             (space-requirement+*
+              (make-space-requirement
+               :major major
+               :min-major (min min-major major)
+               :max-major (max max-major major)
+               :minor minor
+               :min-minor (min min-minor minor)
+               :max-minor (max max-minor minor))
+              :min-major (* (1- (length contents)) major-spacing)
+              :max-major (* (1- (length contents)) major-spacing)
+              :major (* (1- (length contents)) major-spacing)
+              :min-minor 0
+              :max-minor 0
+              :minor 0)))))
 
  (defmethod allocate-space-aux ((box xbox-pane) width height)
-   (with-slots (contents) box
+   (with-slots (contents major-spacing) box
      (let* ((content-srs (mapcar #'(lambda (c) (content-sr* box c)) contents))
             (allot       (mapcar #'ceiling (mapcar #'space-requirement-major content-srs)))
             (wanted      (reduce #'+ allot))
-            (excess      (- major wanted)))
+            (excess      (- major wanted
+                            (* (1- (length contents)) major-spacing))))
        #+NIL
        (progn
          (format T "~&;; ALLOCATE-SPACE-AUX ~S~%" box)
@@ -779,7 +790,7 @@
  
  (defmethod allocate-space ((box xbox-pane) width height)
    (declare (ignore minor))
-   (with-slots (contents) box
+   (with-slots (contents major-spacing) box
      (multiple-value-bind (majors minors) (allocate-space-aux box width height)
        ;; now actually layout the children
        (let ((x 0))
@@ -799,7 +810,8 @@
                    (allocate-space child 
                                    width height)
                    )
-                 (incf x major)))))))
+                 (incf x major)
+                 (incf x major-spacing)))))))
  
  (defclass xrack-pane (xbox-pane) ())
  
@@ -1025,7 +1037,8 @@
 
 ;;; SPACING PANE
 
-(defclass spacing-pane (border-space-requirement-options-mixin composite-pane)
+(defclass spacing-pane (border-space-requirement-options-mixin composite-pane
+                        permanent-medium-sheet-output-mixin)
   ()
   (:documentation "The spacing pane will create a margin for his child.
 The margin sizes (w h) are given with the :width and :height initargs.
@@ -1088,36 +1101,36 @@ During realization the child of the spacing will have as cordinates
                            (- width user-width)
                            (- height user-height))))
    
+;;; OUTLINED-PANE
+
+;; same as SPACING-PANE but a different default background.
+
+(defclass outlined-pane (spacing-pane)
+  ((background :initform +black+)))
+
+(defmacro outlining ((&rest options) &body contents)
+  `(make-pane 'outlined-pane ,@options :contents (list ,@contents)))
+
 ;;; BORDER-PANE
 
-(defclass border-pane (spacing-pane)
-  ((border-width :initarg :border-width :initform 1 :reader border-pane-width)
-   )
-  (:documentation ""))
+;; same as outlined-pane, but thickness is now called border-width.
 
-(defmethod initialize-instance :after ((bp border-pane) &rest ignore)
-  (declare (ignore ignore))
-  #+NIL
-  (with-slots (border-width) bp
-    (let ((2*border-width (* 2 border-width)))
-      (setf (slot-value bp 'margin-width) 2*border-width
-	    (slot-value bp 'margin-height) 2*border-width 
-	    (slot-value bp 'margin-max-width) 2*border-width
-	    (slot-value bp 'margin-max-height) 2*border-width
-	    (slot-value bp 'margin-min-width) 2*border-width
-	    (slot-value bp 'margin-min-height) 2*border-width))))
+(defclass border-pane (outlined-pane)
+  ((border-width :initarg :border-width 
+                 :initform 1 
+                 :reader border-pane-width))
+  (:documentation ""))
 
 (defmacro bordering ((&rest options) &body contents)
   `(make-pane 'border-pane ,@options :contents (list ,@contents)))
 
-(defmethod allocate-space ((bp border-pane) width height)
-  (when (first (sheet-children bp))
-    (let ((border-width (border-pane-width bp)))
-      (setf (sheet-transformation (first (sheet-children bp)))
-	    (make-translation-transformation border-width border-width))
-      (allocate-space (first (sheet-children bp))
-		      (- width (* 2 border-width))
-		      (- height (* 2 border-width))))))
+(defmethod grok-user-space-requirement-options :after ((pane border-pane)
+                                                       &key border-width &allow-other-keys)
+  (with-slots (user-width user-min-width user-max-width
+               user-height user-min-height user-max-height)
+      pane
+    (setf user-width  (max (* 2 (or border-width 0)) (or user-width 0)))
+    (setf user-height (max (* 2 (or border-width 0)) (or user-height 0))) ))
 
 ;;; RAISED PANE
 
@@ -1454,11 +1467,6 @@ During realization the child of the spacing will have as cordinates
                         (- (- x2 right) (+ x1 left))
                         (- (- y2 bottom) (+ y1 top)))))))
              
-
-(defun curry (fun &rest args)
-  #'(lambda (&rest more)
-      (apply fun (append args more))))
-
 (defmethod draw-design (medium (design rectangle))
   (multiple-value-call #'draw-rectangle* medium (rectangle-edges* design)))
 
