@@ -92,16 +92,8 @@ returns a list in CLIM X11 format (:x11 :host host-name :display-id display-numb
   (remhash mirror (slot-value port 'mirror->sheet))
   nil)
 
-;(defmethod realize-first-mirrors ((port port) (sheet sheet)) ;temporary medecine
-;  (loop for child in (sheet-children sheet)
-;      do (realize-mirror port child)))
-
 (defmethod realize-mirror ((port port) (sheet mirrored-sheet))
   (error "Don't know how to realize the mirror of a generic mirrored-sheet"))
-
-;(defmethod unrealize-mirror ((port port) (sheet sheet))
-;  (loop for child in (sheet-children sheet)
-;      do (unrealize-mirror port child)))
 
 (defmethod unrealize-mirror ((port port) (sheet mirrored-sheet))
   (error "Don't know how to unrealize the mirror of a generic mirrored-sheet"))
@@ -132,6 +124,10 @@ returns a list in CLIM X11 format (:x11 :host host-name :display-id display-numb
    ((typep event 'keyboard-event)
     (dispatch-event (or (port-keyboard-input-focus port)
 			(event-sheet event)) event))
+   ((typep event 'window-destroy-event)
+    (port-unregister-mirror port
+			    (event-sheet event)
+			    (sheet-mirror (event-sheet event))))
    ((typep event 'window-event)
 ;    (dispatch-event (window-event-mirrored-sheet event) event))
     (dispatch-event (event-sheet event) event))
