@@ -52,8 +52,10 @@
 
 (defmethod handle-event :after ((pane clim-internals::fire-pane) (event pointer-event))
   (declare (ignorable event))
+  (hef:debugf pane event)
+  #+nil
   (let ((label (clim-internals::gadget-label (clim-internals::radio-box-current-selection
-					      (slot-value *application-frame* 'radio-box)))))
+					      (find-pane-named *application-frame* 'radio-box)))))
     (cond ((string= label "O")
 	   (progn
 	     (sleep 3)
@@ -73,20 +75,20 @@
 (defun callback-red (gadget value)
   (declare (ignorable gadget))
   (when value
-    (setf (clim-internals::gadget-current-color (slot-value *application-frame* 'fire))
-	  (clim-internals::gadget-normal-color (slot-value *application-frame* 'fire)))))
+    (setf (clim-internals::gadget-current-color (find-pane-named *application-frame* 'fire))
+	  (clim-internals::gadget-normal-color (find-pane-named *application-frame* 'fire)))))
 
 (defun callback-orange (gadget value)
   (declare (ignore gadget))
   (when value 
-    (setf (clim-internals::gadget-current-color (slot-value *application-frame* 'fire))
-	  (clim-internals::gadget-highlighted-color (slot-value *application-frame* 'fire)))))
+    (setf (clim-internals::gadget-current-color (find-pane-named *application-frame* 'fire))
+	  (clim-internals::gadget-highlighted-color (find-pane-named *application-frame* 'fire)))))
 
 (defun callback-green (gadget value)
   (declare (ignore gadget))
   (when value
-    (setf (clim-internals::gadget-current-color (slot-value *application-frame* 'fire))
-	  (clim-internals::gadget-pushed-and-highlighted-color (slot-value *application-frame* 'fire)))))
+    (setf (clim-internals::gadget-current-color (find-pane-named *application-frame* 'fire))
+	  (clim-internals::gadget-pushed-and-highlighted-color (find-pane-named *application-frame* 'fire)))))
 
 ;; test functions
 
@@ -97,13 +99,13 @@
   (run-frame-top-level (make-application-frame 'firelights)))
 
 (defmethod fire-frame-top-level ((frame application-frame))
-  (setf (slot-value *application-frame* 'fire) (car (last (frame-panes *application-frame*)))
-	(slot-value *application-frame* 'radio-box)
-	(with-radio-box ()
-	 (first (frame-panes *application-frame*))
-	 (second (frame-panes *application-frame*))
-	 (radio-box-current-selection (third (frame-panes *application-frame*)))))
-  (loop (event-read (frame-pane frame))))
+  (with-look-and-feel-realization ((frame-manager frame) frame)
+    (setf (slot-value *application-frame* 'radio-box)
+          (with-radio-box (:name 'radio-box)
+            (first (frame-panes *application-frame*))
+            (second (frame-panes *application-frame*))
+            (radio-box-current-selection (third (frame-panes *application-frame*)))))
+    (loop (event-read (find-pane-named frame 'fire)))))
 
 (define-application-frame firelights ()
   ((radio-box :initform nil)
@@ -141,4 +143,4 @@
 		 :value-changed-callback 'callback-orange))
    (:layouts
     (default (horizontally () (vertically () red-fire orange-fire green-fire) fire)))
-   (:top-level (fire-frame-top-level . nil)))
+   #+NIL (:top-level (fire-frame-top-level . nil)))

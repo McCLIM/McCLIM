@@ -47,7 +47,7 @@
      (default
          (vertically (:equalize-width t)
            (progn ;;spacing (:thickness 10)
-             (labelling (:label "FreeCLIM Demos"
+             (labelling (:label "McCLIM Demos"
                                 :text-style (make-text-style :sans-serif :roman :huge)
                                 :align-x :center)))
            (progn ;; spacing (:thickness 10)
@@ -55,8 +55,15 @@
                ;; '+fill+
                (labelling (:label "Demos")
                  (vertically (:equalize-width t)
+                   (make-demo-button "CLIM-Fig"  'clim-fig)
+                   (make-demo-button "Calculator"  'calculator)
+                   (make-demo-button "Method Browser" 'method-browser)
+                   (make-demo-button "Address Book"  'address-book)
+                   (make-demo-button "Puzzle"  'puzzle)
+                   (make-demo-button "Gadget Test"  'gadget-test)
+                   (make-demo-button "Drag and Drop" 'dragndrop)
                    (make-demo-button "Colorslider" 'colorslider)
-                   (make-demo-button "Calculator"  'calculator)))
+                   (make-demo-button "Goatee Test" 'goatee::goatee-test)))
                (labelling (:label "Tests")
                  (vertically (:equalize-width t)
                    (make-demo-button "Label Test" 'label-test)
@@ -66,6 +73,7 @@
                    (make-demo-button "HBOX Test"  'hbox-test)))))))))
 
 (defun demodemo ()
+  #+nil
   (loop for port in climi::*all-ports*
       do (destroy-port port))
   (run-frame-top-level (make-application-frame 'demodemo)))
