@@ -51,7 +51,7 @@
 (define-presentation-method present (object (type generic-function)
                                      stream (view textual-view)
                                      &key &allow-other-keys)
-  (princ (clim-mop:generic-function-name object)))
+  (princ (clim-mop:generic-function-name object) stream))
 
 (define-presentation-method present (object (type bytes)
                                      stream (view textual-view)
