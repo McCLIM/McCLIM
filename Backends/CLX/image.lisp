@@ -108,11 +108,12 @@
   `(the (unsigned-byte 8) (logand ,pixel 255)))
 
 (defmethod write-pnm ((image truecolor-image) filename output-format)
-  (with-open-file (stream filename :direction :output :if-exists :supersede)
-      (if (eq output-format :ascii)
-	  (write-ppm-p3 stream (image-pixels image))
+  (with-open-file (stream filename
+		   :direction :output :if-exists :supersede
+		   :element-type '(unsigned-byte 8))
+    (if (eq output-format :ascii)
+	(write-ppm-p3 stream (image-pixels image))
 	(write-ppm-p6 stream (image-pixels image)))))
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -149,9 +150,11 @@
   0)
 
 (defmethod write-pnm ((image 256-gray-level-image) filename output-format)
-  (with-open-file (stream filename :direction :output :if-exists :supersede)
-      (if (eq output-format :ascii)
-	  (write-pgm-p2 stream (image-pixels image))
+  (with-open-file (stream filename
+		   :direction :output :if-exists :supersede
+		   :element-type '(unsigned-byte 8))
+    (if (eq output-format :ascii)
+	(write-pgm-p2 stream (image-pixels image))
 	(write-pgm-p5 stream (image-pixels image)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -167,9 +170,11 @@
   (make-instance 'binary-image :pixels pixels))
 
 (defmethod write-pnm ((image binary-image) filename output-format)
-  (with-open-file (stream filename :direction :output :if-exists :supersede)
-      (if (eq output-format :ascii)
-	  (write-pbm-p1 stream (image-pixels image))
+  (with-open-file (stream filename
+		   :direction :output :if-exists :supersede
+		   :element-type '(unsigned-byte 8))
+    (if (eq output-format :ascii)
+	(write-pbm-p1 stream (image-pixels image))
 	(write-pbm-p4 stream (image-pixels image)))))
 
 
@@ -179,46 +184,48 @@
 
 (defmacro with-write-pnm-loop ((magic-number max-value) &body body)
   `(let ((height (car (array-dimensions picture)))
-	 (width (cadr (array-dimensions picture))))
-     (format stream "P~A~%" ,magic-number)
-     (format stream "~A ~A~%" width height)
-     (when ,max-value
-       (format stream "~A~%" ,max-value))
+         (width (cadr (array-dimensions picture))))
+     (map nil (lambda (x) (write-byte (char-code x) stream))
+          (format nil "P~A~%~A~%~A~%~@[~A~%~]"
+                  ,magic-number width height ,max-value))
      (loop for r from 0 below height do
-	   (loop for c from 0 below width do
-		 ,@body))
+          (loop for c from 0 below width do
+               ,@body))
      nil))
 
 (defun write-pbm-p1 (stream picture)
   (with-write-pnm-loop (1 nil)
-    (format stream "~A~%" (aref picture r c))))
+    (map nil (lambda (x) (write-byte (char-code x) stream))
+	 (format nil "~A~%" (aref picture r c)))))
 
 (defun write-pbm-p4 (stream picture) ; bad!
   (with-write-pnm-loop (4 nil)
-    (write-char (code-char (aref picture r c)) stream)))
+    (write-byte (aref picture r c) stream)))
 
 (defun write-pgm-p2 (stream picture)
   (with-write-pnm-loop (2 255)
-    (format stream "~A~%" (aref picture r c))))
+    (map nil (lambda (x) (write-byte (char-code x) stream))
+	 (format nil "~A~%" (aref picture r c)))))
 
 (defun write-pgm-p5 (stream picture)
   (with-write-pnm-loop (5 255)
-    (write-char (code-char (aref picture r c)) stream)))
+    (write-byte (aref picture r c) stream)))
 
 (defun write-ppm-p3 (stream picture)
   (with-write-pnm-loop (3 255)
     (let ((rgb (aref picture r c)))
-      (format stream "~A ~A ~A~%"
-	      (red-component rgb)
-	      (green-component rgb)
-	      (blue-component rgb)))))
+      (map nil (lambda (x) (write-byte (char-code x) stream))
+	   (format nil "~A ~A ~A~%"
+		   (red-component rgb)
+		   (green-component rgb)
+		   (blue-component rgb))))))
 
 (defun write-ppm-p6 (stream picture)
   (with-write-pnm-loop (6 255)
     (let ((rgb (aref picture r c)))
-      (write-char (code-char (red-component rgb)) stream)
-      (write-char (code-char (green-component rgb)) stream)
-      (write-char (code-char (blue-component rgb)) stream))))
+      (write-byte (red-component rgb) stream)
+      (write-byte (green-component rgb) stream)
+      (write-byte (blue-component rgb) stream))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
