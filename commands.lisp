@@ -379,7 +379,8 @@
 
 (defun make-command-translators (command-name command-table args)
   "Helper function to create command presentation translators for a command."
-  (loop for arg in args
+  (loop with readable-command-name = (command-name-from-symbol command-name) ; XXX or :NAME
+        for arg in args
 	for arg-index from 0
 	append (when (getf (cddr arg) :gesture)
 		 (destructuring-bind (name ptype
@@ -401,13 +402,26 @@
 			 (if (listp gesture)
 			     (values (car gesture) (cdr gesture))
 			     (values gesture nil))
+                       (destructuring-bind (&key (documentation
+                                                  `((object stream)
+                                                    (orf stream *standard-output*)
+                                                    (format stream "~A "
+                                                            ,readable-command-name)
+                                                    (present object (presentation-type-of object) ; type?
+                                                             :stream stream
+                                                             :acceptably nil
+                                                             :sensitive nil))
+                                                  documentationp)
+                                            &allow-other-keys)
+                           translator-options
 		       `(define-presentation-to-command-translator
 			    ,translator-name
 			    (,(eval ptype) ,command-name ,command-table
 			     :gesture ,gesture
+                             ,@(unless documentationp `(:documentation ,documentation))
 			     ,@translator-options)
 			  (object)
-			  (list ,@command-args))))))))
+			  (list ,@command-args)))))))))
 
 ;;; XXX temporarily make name default to t so we can debug command line
 ;;; processing with some interesting examples
