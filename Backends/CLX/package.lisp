@@ -32,7 +32,6 @@
                 #:clamp
                 #:get-environment-variable
                 #:pixmap-sheet
-                #:port-grafts
                 #:port-lookup-sheet
                 #:port-unregister-mirror
 		#:port-pointer-sheet
@@ -76,8 +75,3 @@
                 #:DEVICE-FONT-TEXT-STYLE
                 ;;
                 ) )
-
-
-
-
-
