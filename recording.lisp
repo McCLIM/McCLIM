@@ -329,11 +329,9 @@ unspecified. "))
   (stream-close-text-output-record stream)
   (when (stream-drawing-p stream)
     (with-cursor-off stream
-      (multiple-value-bind (cx cy) (stream-cursor-position stream)
-        (unwind-protect
-             (letf (((stream-recording-p stream) nil))
-               (replay-output-record record stream region))
-          (setf (stream-cursor-position stream) (values cx cy)))))))
+      (letf (((stream-cursor-position stream) (values 0 0))
+             ((stream-recording-p stream) nil))
+        (replay-output-record record stream region)))))
 
 (defmethod replay-output-record ((record compound-output-record) stream
 				 &optional region (x-offset 0) (y-offset 0))
@@ -890,32 +888,28 @@ were added."
                x1 y1 initial-x1 initial-y1) record
     (with-sheet-medium (medium stream) ;is sheet a sheet-with-medium-mixin? --GB
       ;; XXX Disable recording?
-      (multiple-value-bind (cx cy) (stream-cursor-position stream)
-        (letf (((medium-text-style medium) (make-text-style nil nil nil))
-               ((medium-ink medium) +foreground-ink+)
-               ((medium-clipping-region medium) +everywhere+)
-               ((medium-transformation medium) +identity-transformation+))
-          (unwind-protect ; XXX Redo when LETF will work with VALUES.
-               (progn
-                 (letf (((slot-value stream 'baseline) baseline)) ; FIXME
-                   (loop with offset =  (- x1 initial-x1)
-                      for substring in strings
-                      do (with-slots (start-x text-style ink clipping-region
-                                              string)
-                             substring
-                           (setf (stream-cursor-position stream)
-                                 (values (+ start-x offset) start-y))
-                           (setf (medium-text-style medium) text-style
-                                 (medium-ink medium) ink
-                                 (medium-clipping-region medium) clipping-region)
-                           (stream-write-line stream string))))
-                 (when wrapped ; FIXME
-                   (draw-rectangle* medium
-                                    (+ wrapped 0) start-y
-                                    (+ wrapped 4) (+ start-y max-height)
-                                    :ink +foreground-ink+
-                                    :filled t)))
-            (setf (stream-cursor-position stream) (values cx cy))))))))
+      (letf (((medium-text-style medium) (make-text-style nil nil nil))
+             ((medium-ink medium) +foreground-ink+)
+             ((medium-clipping-region medium) +everywhere+)
+             ((medium-transformation medium) +identity-transformation+)
+             ((stream-cursor-position stream) (values 0 0))
+             ((slot-value stream 'baseline) baseline)) ; FIXME
+        (loop with offset =  (- x1 initial-x1)
+           for substring in strings
+           do (with-slots (start-x text-style ink clipping-region string)
+                  substring
+                (setf (stream-cursor-position stream)
+                      (values (+ start-x offset) start-y))
+                (setf (medium-text-style medium) text-style
+                      (medium-ink medium) ink
+                      (medium-clipping-region medium) clipping-region)
+                (stream-write-line stream string)))
+        (when wrapped ; FIXME
+          (draw-rectangle* medium
+                           (+ wrapped 0) start-y
+                           (+ wrapped 4) (+ start-y max-height)
+                           :ink +foreground-ink+
+                           :filled t))))))
 
 (defmethod output-record-start-cursor-position
     ((record standard-text-displayed-output-record))
@@ -1292,14 +1286,10 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
   (stream-close-text-output-record stream)
   (let ((new-record (apply #'make-instance record-type initargs)))
     (with-output-recording-options (stream :record t :draw nil)
-      (multiple-value-bind (cx cy)
-          (stream-cursor-position stream)
-        (unwind-protect
-             (letf (((stream-current-output-record stream) new-record))
-               (setf (stream-cursor-position stream) (values 0 0))
-               (funcall continuation stream new-record)
-               (finish-output stream))
-          (setf (stream-cursor-position stream) (values cx cy)))))
+      (letf (((stream-current-output-record stream) new-record)
+             ((stream-cursor-position stream) (values 0 0)))
+        (funcall continuation stream new-record)
+        (finish-output stream)))
     new-record))
 
 (defmethod make-design-from-output-record (record)
