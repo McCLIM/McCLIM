@@ -871,7 +871,7 @@ that this might be different from the sheet's native region."
 ;;     contains dirty pixels. => oops, redraw error.
 ;;
 ;;  b. Since the above above calculation took the parent's native
-;;     transformation into account, (and even the naïvely wanted mirror
+;;     transformation into account, (and even the naively wanted mirror
 ;;     region depends on the parent's native transformation), we need to
 ;;     redo mirror geometry calculation for any child.
 ;;

@@ -3,7 +3,7 @@
 ;;;     Title: Graph Formatting
 ;;;   Created: 2002-08-13
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: graph-formatting.lisp,v 1.10 2004/07/24 15:07:50 moore Exp $
+;;;       $Id: graph-formatting.lisp,v 1.11 2004/12/05 19:37:52 hefner1 Exp $
 ;;; ---------------------------------------------------------------------------
 
 ;;;  (c) copyright 2002 by Gilbert Baumann
@@ -276,7 +276,7 @@
       (values))))
 
 (defun traverse-graph-nodes (graph continuation)
-  ;; continuation: node × children × cont -> some value
+  ;; continuation: node x children x cont -> some value
   (let ((hash (make-hash-table :test #'eq)))
     (labels ((walk (node)
                (unless (gethash node hash)

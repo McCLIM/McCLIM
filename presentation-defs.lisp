@@ -26,7 +26,7 @@
 
 ;;; auto-activate is described in the Franz user guide; it controls whether an
 ;;; accepting an expression returns immediately after typing the closing
-;;; delimiter -- à la Genera et Mac Lisp -- or if an activation gesture is
+;;; delimiter -- a la Genera et Mac Lisp -- or if an activation gesture is
 ;;; required. 
 ;;; preserve-whitespace controls whether the accept method uses read or
 ;;; read-preserving-whitespace. This is used in our redefinitions of read and
