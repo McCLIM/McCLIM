@@ -15,6 +15,9 @@
                 #:port-mirror-height
                 #:port-event-process
                 #:port-grafts
+                #:port-enable-sheet
+                #:port-disable-sheet
+                ;;
                 #:clamp
                 #:get-environment-variable
                 #:pixmap-sheet

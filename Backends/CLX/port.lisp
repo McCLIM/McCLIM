@@ -123,7 +123,6 @@
     (values
      mirror-transformation
      mirror-region)))
-   
 
 (defun realize-mirror-aux (port sheet
 				&key (width 100) (height 100) (x 0) (y 0)
@@ -173,14 +172,17 @@
   (port-lookup-mirror port sheet))
 
 (defmethod realize-mirror ((port clx-port) (sheet mirrored-sheet-mixin))
-  (realize-mirror-aux port sheet :border-width 0))
+  (realize-mirror-aux port sheet
+                      :border-width 0
+                      :map (sheet-enabled-p sheet)))
 
 (defmethod realize-mirror ((port clx-port) (sheet border-pane))
   ;;(rotatef (medium-background (sheet-medium sheet)) (medium-foreground (sheet-medium sheet)))
   (realize-mirror-aux port sheet
 		      :border-width 0 ; (border-pane-width sheet)
 		      :event-mask '(:exposure
-				    :structure-notify)))
+				    :structure-notify)
+                      :map (sheet-enabled-p sheet)))
 
 (defmethod realize-mirror ((port clx-port) (sheet top-level-sheet-pane))
   (let ((frame (pane-frame sheet))
@@ -206,7 +208,8 @@
 				    :structure-notify
 				   ;:pointer-motion
 				    :button-motion
-				    :owner-grab-button)))
+				    :owner-grab-button)
+                      :map (sheet-enabled-p sheet)))
 
 (defmethod realize-mirror ((port clx-port) (sheet interactor-pane))
   (realize-mirror-aux port sheet
@@ -217,7 +220,8 @@
 				    :structure-notify
 				    :pointer-motion
 				    :button-motion
-				    :owner-grab-button)))
+				    :owner-grab-button)
+                      :map (sheet-enabled-p sheet)))
 
 (defmethod destroy-mirror ((port clx-port) (sheet mirrored-sheet-mixin))
   (when (port-lookup-mirror port sheet)
@@ -284,6 +288,12 @@
                ))
         (setf (xlib:drawable-width mirror)  (clamp x2 1 #xFFFF)
               (xlib:drawable-height mirror) (clamp y2 1 #xFFFF))))))
+
+(defmethod port-enable-sheet ((port clx-port) (mirror mirrored-sheet-mixin))
+  (xlib:map-window (sheet-direct-mirror sheet)) )
+
+(defmethod port-disable-sheet ((port clx-port) (mirror mirrored-sheet-mixin))
+  (xlib:unmap-window (sheet-direct-mirror sheet)) )
 
 (defmethod destroy-port :before ((port clx-port))
   (xlib:close-display (clx-port-display port)))
