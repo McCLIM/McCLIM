@@ -205,7 +205,7 @@
 (defun make-device-font-text-style (display-device device-font-name)
   (port-make-font-text-style (port display-device) device-font-name))
 
-;;; Text-syle utilities
+;;; Text-style utilities
 
 (defun merge-text-styles (s1 s2)
   (if (and (not (device-font-text-style-p s1))
@@ -256,24 +256,37 @@
       (make-text-style family face size))))
 
 (defmacro with-text-style ((medium text-style) &body body)
+  (declare (type symbol medium))
+  (when (eq medium t)
+    (setq medium '*standard-output*))
   `(flet ((continuation ()
 	    ,@body))
      #-clisp (declare (dynamic-extent #'continuation))
      (invoke-with-text-style ,medium #'continuation (parse-text-style ,text-style))))
 
 (defmacro with-text-family ((medium family) &body body)
+  (declare (type symbol medium))
+  (when (eq medium t)
+    (setq medium '*standard-output*))
   `(flet ((continuation ()
 	    ,@body))
      #-clisp (declare (dynamic-extent #'continuation))
      (invoke-with-text-style ,medium #'continuation (make-text-style ,family nil nil))))
 
 (defmacro with-text-face ((medium face) &body body)
+  (declare (type symbol medium))
+  (when (eq medium t)
+    (setq medium '*standard-output*))
   `(flet ((continuation ()
 	    ,@body))
      #-clisp (declare (dynamic-extent #'continuation))
-     (invoke-with-text-style ,medium #'continuation (make-text-style nil ,face nil))))
+     (invoke-with-text-style ,medium
+                             #'continuation (make-text-style nil ,face nil))))
 
 (defmacro with-text-size ((medium size) &body body)
+  (declare (type symbol medium))
+  (when (eq medium t)
+    (setq medium '*standard-output*))
   `(flet ((continuation ()
 	    ,@body))
      #-clisp (declare (dynamic-extent #'continuation))
@@ -337,6 +350,9 @@
 ;;; Misc ops
 
 (defmacro with-output-buffered ((medium &optional (buffer-p t)) &body body)
+  (declare (type symbol medium))
+  (when (eq medium t)
+    (setq medium '*standard-output*))
   (let ((old-buffer (gensym)))
     `(let ((,old-buffer (medium-buffering-output-p ,medium)))
        (setf (medium-buffering-output-p ,medium) ,buffer-p)
