@@ -52,6 +52,7 @@
    ;; First possible patches
    #+:CMU       "Lisp-Dep/fix-cmu"
    #+:EXCL	"Lisp-Dep/fix-acl"
+   #+:SBCL      "Lisp-Dep/fix-sbcl"
    "package"
 
    "decls"
