@@ -102,4 +102,34 @@
         (draw-rosette stream 300 300 200 18
                       :ink +steel-blue+ :line-thickness 2)
 
-        )))
+        (new-page stream)
+
+        (with-text-style (stream '(:face :serif :size :huge))
+          (draw-text* stream "Text alignment test" 170 20
+                      :text-family :sans-serif
+                      :text-face :bold)
+          (with-scaling (stream 50)
+            (loop for align-y in '(:bottom :center :top)
+               and y from 1
+               do (loop for align-x in '(:right :center :left)
+                     and x from 1
+                     do (draw-text* stream (format nil "~A~A"
+                                                   (elt (symbol-name align-x) 0)
+                                                   (elt (symbol-name align-y) 0))
+                                    x y
+                                    :align-x align-x
+                                    :align-y align-y)
+                       (draw-point* stream x y
+                                    :ink +red+
+                                    :line-thickness 3
+                                    :line-unit :point))))
+          (draw-text* stream "Top: pQ" 50 200
+                      :align-y :top)
+          (draw-text* stream "Bottom: pQ" 170 200
+                      :align-y :bottom)
+          (draw-text* stream "Center: pQ" 290 200
+                      :align-y :center)
+          (draw-text* stream "Baseline: pQ" 410 200
+                      :align-y :baseline)
+          (draw-line* stream 50 200 535 200
+                      :ink +red+)))))
