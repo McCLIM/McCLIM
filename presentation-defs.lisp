@@ -82,12 +82,7 @@
       (values name 
               (if (eq (car parameter-ll) '&whole)
                   (cddr parameter-ll)
-                  parameter-ll)))))
-  
-      (if (or (null parameter-ll)
-	      (member (car parameter-ll) lambda-list-keywords))
-	  name
-	  (call-next-method))))
+                  parameter-ll)))))      
 
 (defmethod presentation-type-of ((object standard-object))
   (multiple-value-bind (name lambda-list)
