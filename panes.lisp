@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.143 2004/10/31 01:46:31 hefner1 Exp $
+;;; $Id: panes.lisp,v 1.144 2004/11/12 06:39:15 hefner1 Exp $
 
 (in-package :clim-internals)
 
@@ -195,6 +195,15 @@
 (defparameter *3d-normal-color* (make-gray-color .84))
 (defparameter *3d-light-color*  (make-gray-color 1.0))
 (defparameter *3d-inner-color*  (make-gray-color .75))
+
+;;; Gadget "Feel"
+
+(defparameter *double-click-delay* 0.25
+  "Maximum time in seconds between clicks in order to produce a double-click")
+
+(defparameter *double-click-max-travel* 7
+  "Maximum distance in device units that the cursor may move between clicks in 
+order to produce a double-click")
 
 ;;;
 ;;; gadgets look
@@ -1725,7 +1734,9 @@
 	       :accessor scroller-pane-scroll-bar)
    (viewport   :initform nil)
    (vscrollbar :initform nil)
-   (hscrollbar :initform nil)))
+   (hscrollbar :initform nil)
+   (suggested-width  :initform 300 :initarg :suggested-width)
+   (suggested-height :initform 300 :initarg :suggested-height)))
 
 (defmacro scrolling ((&rest options) &body contents)
   `(let ((viewport (make-pane 'viewport-pane :contents (list ,@contents))))
@@ -1735,13 +1746,13 @@
 
 (defmethod compose-space ((pane scroller-pane) &key width height)
   (declare (ignore width height))
-  (with-slots (viewport vscrollbar hscrollbar) pane
+  (with-slots (viewport vscrollbar hscrollbar suggested-width suggested-height) pane
     (if viewport
         (let ((req
                ; v-- where does this requirement come from?
                ;     a: just an arbitrary default
 		(make-space-requirement
-                :width 300 :height 300 :max-width +fill+ :max-height +fill+
+                :width suggested-width :height suggested-height :max-width +fill+ :max-height +fill+
                 :min-width 30
                 :min-height 30)
 		#+nil
@@ -2573,6 +2584,4 @@
 
 (defmethod schedule-timer-event ((pane pane) token delay)
   (schedule-event pane (make-instance 'timer-event :token token :sheet pane) delay))
-
-
 
