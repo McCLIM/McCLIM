@@ -116,12 +116,12 @@
     (setq children (delete child children))))
 
 (defmethod clear-output-record ((record output-record))
-  (with-slots (children x-min y-min x-max y-max) record
+  (with-slots (children x1 y1 x2 y2) record
     (setq children nil
-	  x-min 0
-	  y-min 0
-	  x-max 0
-	  y-max 0)))
+	  x1 0
+	  y1 0
+	  x2 0
+	  y2 0)))
 
 (defmethod output-record-count ((record output-record))
   (length (output-record-children record)))
@@ -157,12 +157,12 @@
   (error "I don't understand RECOMPUTE-EXTENT-FOR-CHANGED-CHILD - mikemac"))
 
 (defmethod tree-recompute-extent ((record output-record))
-  (with-slots (parent children x-min y-min x-max y-max) record
+  (with-slots (parent children x1 y1 x2 y2) record
     (if (null children)
-	(setq x-min 0
-	      y-min 0
-	      x-max 0
-	      y-max 0)
+	(setq x1 0
+	      y1 0
+	      x2 0
+	      y2 0)
       (with-bounding-rectangle* (left top right bottom) (first children)
 	(loop for child in (rest children)
 	      do (with-bounding-rectangle* (l1 t1 r1 b1) child
@@ -170,12 +170,12 @@
 			 top (min top t1 b1)
 			 right (max right l1 r1)
 			 bottom (max bottom t1 b1))))
-	(setq x-min left
-	      y-min top
-	      x-max right
-	      y-max bottom)))
+	(setq x1 left
+	      y1 top
+	      x2 right
+	      y2 bottom)))
     (if parent
-	(recompute-extent-for-changed-child parent record x-min y-min x-max y-max))))
+	(recompute-extent-for-changed-child parent record x1 y1 x2 y2))))
 
 (defclass standard-sequence-output-record (displayed-output-record)
   (
@@ -307,15 +307,15 @@
 	 ,(compute-class-vars args))
        (defmethod initialize-instance :after ((graphic ,class-name) &rest args)
 	 (declare (ignore args))
-	 (with-slots (x-min y-min x-max y-max
+	 (with-slots (x1 y1 x2 y2
 		      stream ink clipping-region transformation
 		      line-style text-style
 		      ,@args) graphic
 	   (multiple-value-bind (lf tp rt bt) (progn ,@body)
-	     (setq x-min lf
-		   y-min tp
-		   x-max rt
-		   y-max bt))))
+	     (setq x1 lf
+		   y1 tp
+		   x2 rt
+		   y2 bt))))
        (defmethod ,method-name :around ((stream stream-output-history-mixin) ,@args)
 	 (with-sheet-medium (medium stream)
 	   (let ((record (make-instance ',class-name
