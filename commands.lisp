@@ -39,7 +39,7 @@
 
 (defun command-menu-item-options (menu-item)
   (with-slots (documentation text-style) menu-item
-    (list ':documetation documentation ':text-style text-style)))
+    (list ':documentation documentation ':text-style text-style)))
 
 (defclass command-table ()
   ((name :initarg :name :reader command-table-name)
