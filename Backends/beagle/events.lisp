@@ -28,7 +28,7 @@
 
 #||
 
-$Id: events.lisp,v 1.1 2004/07/11 19:48:16 duncan Exp $
+$Id: events.lisp,v 1.2 2004/07/13 17:39:38 duncan Exp $
 
 All these are copied pretty much from CLX/port.lisp
 
@@ -88,14 +88,14 @@ press / release) is handled.")
   (gethash value *reverse-keysym-hash-table*))
 
 (defmethod port-motion-hints ((port beagle-port) (sheet mirrored-sheet-mixin))
+  (declare (ignore port sheet))
   (warn "events:port-motion-hints:Motion hints not supported in Beagle backend")
   nil)
 
-;; WARN in this method causes compilation error (bad lambda list) which is probably
-;; right - think about what we want this for again later. ::FIXME::
-;;;(defmethod (setf port-motion-hints)
-;;;  (warn "events:setf port-motion-hints:Motion hints not supported in Cocoa backend")
-;;;  nil)
+(defmethod (setf port-motion-hints) (hint)
+  (declare (ignore hint))
+  (warn "events:setf port-motion-hints:Motion hints not supported in Cocoa backend")
+  nil)
 
 ;; peek-event from CLX/port.lisp?
 
@@ -175,7 +175,6 @@ not handled) are not added to the queue."
   (let ((clim-event (beagle-event-to-clim-event mirror event)))
     (unless (not clim-event)
       (setf *mcclim-event-queue* (nconc *mcclim-event-queue* (list clim-event)))
-;;;  (format *debug-io* "About to signal-semaphore for: ~S~%" (cocoa-port-event-semaphore *cocoa-port*))
       (ccl:signal-semaphore (beagle-port-event-semaphore *beagle-port*)))))
 
 (defmethod add-notification-to-queue (window notification &optional origin-x origin-y width height)
@@ -187,31 +186,22 @@ when a notification is added to the queue."
   (let ((clim-event (beagle-notification-to-clim-event window notification origin-x origin-y width height)))
     (unless (not clim-event)
       (setf *mcclim-event-queue* (nconc *mcclim-event-queue* (list clim-event)))
-;;;  (format *debug-io* "About to signal-semaphore for: ~S~%" (cocoa-port-event-semaphore *cocoa-port*))
       (ccl:signal-semaphore (beagle-port-event-semaphore *beagle-port*)))))
 
 ;;; timeout = timeout delay in seconds
-;;; If no timeout is specified (nil timeout), this method hangs around until an event arrives. There
-;;; must be an efficient way to do this? Is there a wait-on-semaphore or anything like that we could
-;;; make use of? This is wrong, somewhere... bah.
+;;; If no timeout is specified (nil timeout), this method hangs around until an event arrives.
 (defmethod get-next-event ((port beagle-port) &key wait-function (timeout nil))
   (declare (special *mcclim-event-queue* *beagle-port*)
 	   (ignore wait-function))
-;;;  (format *debug-io* "events.lisp -> GET-NEXT-EVENT timeout: ~S~%" timeout)
   (setf *beagle-port* port)
   ;; When event queue is empty, wait for an event to be posted.
-;;;    (format *debug-io* "Null queue, waiting on semaphore: ~S~%" (cocoa-port-event-semaphore port))
   (if (eq timeout nil)
       (ccl:wait-on-semaphore (beagle-port-event-semaphore port))
     (ccl:timed-wait-on-semaphore (beagle-port-event-semaphore port) timeout))
   ;; Event queue semaphore has been raised (in which case the queue
   ;; should be non-null), or the semaphore timed out.
-;;;  (format *debug-io* "Queue is (hopefully) non-null, popping event~%")
   (let ((event (and *mcclim-event-queue* (pop *mcclim-event-queue*))))
-;;;    (format *debug-io* "Popped event: ~S~%" event)
     (if (not event)
-;;;	(if (eq timeout nil)
-;;;	    nil               ; should never get this - we should still be waiting on the semaphore...
 	:timeout
       event)))
 
@@ -310,11 +300,7 @@ when a notification is added to the queue."
 ;;; detail members for X11 enter and exit events.
 ;;;
 
-;; I'm not sure this is the best way with dealing with the timestamp... and also, a
-;; fixnum (as mandated by the spec) seems pretty small... on openmcl 0.14,
-;; most-positive-fixnum = 536870911. I'm not sure how long that would allow us to
-;; operate without overflowing, but since we generate many mouse-moved events, my
-;; guess is "not long enough".
+;; I'm not sure this is the best way with dealing with the timestamp...
 
 (let ((timestamp 0))
   (defun beagle-notification-to-clim-event (window notification &optional origin-x origin-y width height)
@@ -334,15 +320,16 @@ when a notification is added to the queue."
        ((send (send notification 'name) :is-equal-to-string #@"NSWindowDidBecomeKeyNotification")
         (setf return-event nil)
 	(when (send window 'is-visible)  ; only do if window is on-screen...
-          (format *debug-io* "Setting focus in *beagle-port* onto sheet: ~S~%" sheet)
+          (debug-log 2 "Setting focus in *beagle-port* onto sheet: ~S~%" sheet)
           ;; NB: this isn't in the right coordinate system! Convert screen -> content view coords.
           (slet ((pointer-loc (send (@class ns-event) 'mouse-location))
 	         (loc-in-window (send window :convert-screen-to-base pointer-loc)))
 	    (let* ((content-view (send window 'content-view))
 	  	   (target-view (send content-view :hit-test loc-in-window))
 		   (target-sheet (port-lookup-sheet-for-view *beagle-port* target-view)))
-	      (format *debug-io* "Setting focus in *beagle-port* onto (hopefully correct) sheet: ~S~%" target-sheet)
-	      (set-port-keyboard-focus target-sheet *beagle-port*)))))
+	      (unless (null target-sheet)
+		(format *debug-io* "Setting focus in *beagle-port* onto (hopefully correct) sheet: ~S~%" target-sheet)
+		(set-port-keyboard-focus target-sheet *beagle-port*))))))
        ((send (send notification 'name) :is-equal-to-string #@"NSWindowDidExposeNotification")
 	(setf return-event
 	      (make-instance 'window-repaint-event :timestamp (incf timestamp)
@@ -384,11 +371,18 @@ when a notification is added to the queue."
 	       (window-bounds (send (send window 'content-view) 'bounds)))
 	      (setf (pref location-in-window-point :<NSP>oint.y) (- (pref window-bounds :<NSR>ect.size.height)
 								    (pref location-in-window-point :<NSP>oint.y)))
+
+	      ;;; *SUSPECT* this will leak; gc won't collect heap-allocated store from make-record will it?
 	      (slet ((location-in-view-point (send mirror :convert-point location-in-window-point
 						   :from-view (send window 'content-view)))
 		     (location-in-screen-point (send window :convert-base-to-screen location-in-window-point)))
-		(setf *-current-pointer-graft-xy-* location-in-screen-point)
-		(setf *-current-pointer-view-xy-* location-in-view-point)
+
+		(setf *-current-pointer-graft-xy-* (ccl::make-record :<NSP>oint
+								     :x (pref location-in-screen-point :<NSP>oint.x)
+								     :y (pref location-in-screen-point :<NSP>oint.y)))
+		(setf *-current-pointer-view-xy-* (ccl::make-record  :<NSP>oint
+								     :x (pref location-in-view-point :<NSP>oint.x)
+								     :y (pref location-in-view-point :<NSP>oint.y)))
 	        (setf return-event
 		      (make-instance (if (or (equal #$NSLeftMouseUp event-type)
 					     (equal #$NSRightMouseUp event-type)
@@ -489,13 +483,19 @@ when a notification is added to the queue."
 	       (window-bounds (send (send window 'content-view) 'bounds)))
 	  ;; Because the location in window is *not* flipped, we need to flip it... (note: we flip by the size
 	  ;; of the window's content view, otherwise we end up out by the size of the window title bar).
+	  ;; *SUSPECT* this will leak; gc won't collect heap-allocated store from make-record will it?
 	  (setf (pref location-in-window-point :<NSP>oint.y) (- (pref window-bounds :<NSR>ect.size.height)
 								(pref location-in-window-point :<NSP>oint.y)))
 	  (slet ((location-in-view-point (send mirror :convert-point location-in-window-point
 					       :from-view (send window 'content-view)))
 		 (location-in-screen-point (send window :convert-base-to-screen location-in-window-point)))
-	    (setf *-current-pointer-graft-xy-* location-in-screen-point)
-	    (setf *-current-pointer-view-xy-* location-in-view-point)
+
+	    (setf *-current-pointer-graft-xy-* (ccl::make-record :<NSP>oint
+								 :x (pref location-in-screen-point :<NSP>oint.x)
+								 :y (pref location-in-screen-point :<NSP>oint.y)))
+	    (setf *-current-pointer-view-xy-* (ccl::make-record :<NSP>oint
+								:x (pref location-in-view-point :<NSP>oint.x)
+								:y (pref location-in-view-point :<NSP>oint.y)))
 	    (setf return-event
 		  (make-instance 'pointer-motion-event
 				 :pointer        0
@@ -554,8 +554,13 @@ when a notification is added to the queue."
 	  (slet ((location-in-view-point (send mirror :convert-point location-in-window-point
 					       :from-view (send window 'content-view)))
 		 (location-in-screen-point (send window :convert-base-to-screen location-in-window-point)))
-	    (setf *-current-pointer-graft-xy-* location-in-screen-point)
-	    (setf *-current-pointer-view-xy-* location-in-view-point)
+
+	    (setf *-current-pointer-graft-xy-* (ccl::make-record :<NSP>oint
+								     :x (pref location-in-screen-point :<NSP>oint.x)
+								     :y (pref location-in-screen-point :<NSP>oint.y)))
+	    (setf *-current-pointer-view-xy-* (ccl::make-record  :<NSP>oint
+								     :x (pref location-in-view-point :<NSP>oint.x)
+								     :y (pref location-in-view-point :<NSP>oint.y)))
 	    ;; This event does not provide button state, but we can use *-current-pointer-button-state-*
 	    ;; to populate button state in the CLIM event. Obviously, we do not need to update this value
 	    ;; (*-current-pointer-button-state-*) for enter / exit events...
@@ -603,17 +608,16 @@ when a notification is added to the queue."
     (when sheet
       (let ((mirror (sheet-direct-mirror sheet)))
 	(when mirror
-	  (slet ((point (send (@class ns-event) 'mouse-location)))
-  	    (make-instance 'pointer-motion-event
-			   :pointer 0
-			   :button *-current-pointer-button-state-*
-			   :x (pref *-current-pointer-view-xy-* :<NSP>oint.x)
-			   :y (pref *-current-pointer-view-xy-* :<NSP>oint.y)
-			   :graft-x (pref *-current-pointer-graft-xy-* :<NSP>oint.x)
-			   :graft-y (pref *-current-pointer-graft-xy-* :<NSP>oint.y)
-			   :sheet sheet
-			   :modifier-state *-current-event-modifier-state-*
-			   :timestamp (incf timestamp))))))))
+	  (make-instance 'pointer-motion-event
+			 :pointer 0
+			 :button *-current-pointer-button-state-*
+			 :x (pref *-current-pointer-view-xy-* :<NSP>oint.x)
+			 :y (pref *-current-pointer-view-xy-* :<NSP>oint.y)
+			 :graft-x (pref *-current-pointer-graft-xy-* :<NSP>oint.x)
+			 :graft-y (pref *-current-pointer-graft-xy-* :<NSP>oint.y)
+			 :sheet sheet
+			 :modifier-state *-current-event-modifier-state-*
+			 :timestamp (incf timestamp)))))))
 
   )  ; end of 'timestamp' closure
 
@@ -646,11 +650,11 @@ when a notification is added to the queue."
 
 (defmethod set-port-keyboard-focus (focus (port beagle-port))
   (let ((mirror (sheet-mirror focus)))
-    (format *debug-io* "events.lisp:set-port-keyboard-focus - got mirror ~S~%" mirror)
+    (debug-log 2 "events.lisp:set-port-keyboard-focus - got mirror ~S~%" mirror)
     (when mirror
       (let ((window (send mirror 'window)))
         (when window
-	  (format *debug-io* "Setting key focus accordingly...~%")
+	  (debug-log 2 "Setting key focus accordingly...~%")
 	  (setf (beagle-port-key-focus port) focus)
 	  (if (send window 'is-key-window)
 	      (send window :order-front nil)

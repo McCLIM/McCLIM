@@ -192,10 +192,10 @@ KNOWN LIMITATIONS / TODO LIST
     '(apropos 'graft)' does not). The same problem prevents the address
     book demo working too I think.
 
-14. Not all foreign objects we keep hold of in the back end are heap-
+-14.- Not all foreign objects we keep hold of in the back end are heap-
     allocated. Some are stack-allocated and cause errors about 'bogus'
     objects once they go out of scope. At least, I think (and hope) that's
-    the reason 'cause that's easy to fix.
+    the reason 'cause that's easy to fix. RESOLVED 17.JUL.04
 
 15. Popup menus don't work quite the same way as they do in the CLX back
     end. Cocoa doesn't support pointer grabbing so disposing of menus when
