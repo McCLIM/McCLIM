@@ -477,10 +477,11 @@
     (loop for child in children
 	  for i from 1
 	  do (push child aux)
-	  (when (= (mod i number-per-line) 0)
-	    (push (nreverse aux) formated)
-	    (setf aux nil)))
+	     (when (= (mod i number-per-line) 0)
+	       (push (nreverse aux) formated)
+		(setf aux nil)))
     (nreverse formated)))
+
 
 (defmethod compute-space ((table table-pane))
   (let* ((space (make-space-requirement))
