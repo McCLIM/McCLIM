@@ -1,3 +1,17 @@
+RS:20030805:111640
+    Changing the sheet-transformation of a pane does not alter its
+    native transformation, despite the fact that calls are made to
+    invalidate-cached-transformations and
+    note-sheet-transformation-changed.  Perhaps this code is
+    responsible:  
+
+    (defmethod invalidate-cached-transformations ((sheet mirrored-sheet-mixin))
+      (with-slots (native-transformation device-transformation) sheet
+	(setf ;; native-transformation nil XXX hm...
+	      device-transformation nil))
+      (loop for child in (sheet-children sheet)
+	    do (invalidate-cached-transformations child)))
+
 RS:20030805:102038
     Output recording is broken for records that inherit from
     coord-seq-mixin.  Contrary to comments in the code, the coordinate
