@@ -2,11 +2,30 @@
 
 ;; $fiHeader: calcuator.lisp,v 1.0 22/08/200 $
 
+;;;  (c) copyright 2000 by 
+;;;           Iban Hatchondo (hatchond@emi.u-bordeaux.fr)
+;;;           Julien Boninfante (boninfan@emi.u-bordeaux.fr)
+
+;;; This library is free software; you can redistribute it and/or
+;;; modify it under the terms of the GNU Library General Public
+;;; License as published by the Free Software Foundation; either
+;;; version 2 of the License, or (at your option) any later version.
+;;;
+;;; This library is distributed in the hope that it will be useful,
+;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;;; Library General Public License for more details.
+;;;
+;;; You should have received a copy of the GNU Library General Public
+;;; License along with this library; if not, write to the 
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; Boston, MA  02111-1307  USA.
+
 (in-package :CLIM-DEMO)
 
 (defparameter calc '(0))
 
-(defun calculator ()
+(defun test ()
   (loop for port in climi::*all-ports*
       do (destroy-port port))
   (setq climi::*all-ports* nil)
@@ -17,37 +36,49 @@
   (setq medium (sheet-medium pane))
   (setq graft (graft frame))
   (setq vbox (frame-pane frame))
-  (run-frame-top-level frame))
+  frame)
 
-(defmacro treat (int)
+(defmacro queue-number(int)
   `(lambda (x)
      (declare (ignore x))
-     (format t (princ-to-string ,int))
-;     (draw-text* ,pane (princ-to-string ,int) 10 10 :align-x left)
-     (append calc (list ,int))))
+     (let ((last-item (first (last calc))))
+       (if (numberp last-item)
+	   (setf (car (last calc)) (+ (* 10 last-item) ,int))
+	 (setf calc (append calc (list ,int))))
+       (format t (princ-to-string ,int)))))
 
-(defmacro conc (char)
+(defmacro queue-operator (operator)
   `(lambda (x)
-     (result x)
-     (format t "~%")
-     (append calc (list ,char))))
+     (declare (ignore x))
+     (do-operation t)
+     (if (functionp (first (last calc))) 
+	 (setf (first (last calc)) ,operator)
+       (progn 
+	 (setf calc (append calc (list ,operator)))
+	 (format t "~%")))))
 
-(defun result (x)
-  (declare (ignore x)))
-
-(defun print-screen (x)
-  (declare (ignore x)))
-
-(defun do-print-result (application)
-  (declare (ignore x)))
+(defun do-operation (x)
+  (declare (ignore x))
+  (when (= 3 (length calc))
+    (setf (car calc) (apply (second calc) (list (first calc) (third calc)))
+	  (cdr calc) nil)
+    (format t "~%~%~A" (princ-to-string (first calc)))))
 
 (defun initac (x)
   (declare (ignore x))
-  (setf calc '(0))
-  (format t "~%0~%"))
+  (setf calc (list 0))
+  (format t "~% reset ~%"))
 
 (defun initce (x)
-  (declare (ignore x)))
+  (declare (ignore x))
+  (let ((last-item (first (last calc))))
+    (unless (or (null calc) (not (numberp last-item)))
+      (setf calc (butlast calc))
+      (format t " <= deleted~%"))))
+
+(defun print-screen (x)
+  (declare (ignore x))
+  )
 
 (defmethod calculator-frame-top-level ((frame application-frame)
 				       &key (command-parser 'command-line-command-parser)
@@ -58,87 +89,86 @@
   (declare (ignore command-parser command-unparser partial-command-parser prompt))
   (let ((*standard-input* (frame-standard-input frame))
 	(*standard-output* (frame-standard-output frame))
-	(*query-io* (frame-query-io frame))
-	(print-screen (last (frame-panes frame))))
+	(*query-io* (frame-query-io frame)))
     (setf (cursor-visibility (stream-text-cursor *standard-input*)) nil)
     (loop
-     ;; don't know why this line is needed
      (read *standard-input*))))
 
 (define-application-frame calculator () ()
   (:panes
-   (print-screen     :application
-		     :space-requirement (make-space-requirement :width 200 :height 50)
-		     :incremental-redisplay t
-		     :display-function #'print-screen)
    (plus             :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)
+		     :space-requirement (make-space-requirement :width 50 :height 50)		     
 		     :label "+"
-		     :activate-callback (conc #\+))
+		     :activate-callback (queue-operator #'+))
    (dash             :push-button
 		     :space-requirement (make-space-requirement :width 50 :height 50)
 		     :label "-"
-		     :activate-callback (conc #\-))
+		     :activate-callback (queue-operator #'-))
    (multiplicate     :push-button
 		     :space-requirement (make-space-requirement :width 50 :height 50)		     
 		     :label "*"
-		     :activate-callback (conc #\*))
+		     :activate-callback (queue-operator #'*))
    (divide           :push-button
 		     :space-requirement (make-space-requirement :width 50 :height 50)		     
 		     :label "/"
-		     :activate-callback (conc #\/))
+		     :activate-callback (queue-operator #'round))
    (result           :push-button
 		     :space-requirement (make-space-requirement :width 50 :height 50)		     
 		     :label "="
-		     :activate-callback #'result)
+		     :activate-callback #'do-operation)
    (one              :push-button
 		     :space-requirement (make-space-requirement :width 50 :height 50)		     
 		     :label "1"
-		     :activate-callback (treat 1))
+		     :activate-callback (queue-number 1))
    (two              :push-button
 		     :space-requirement (make-space-requirement :width 50 :height 50)		     
 		     :label "2"
-		     :activate-callback (treat 2))
+		     :activate-callback (queue-number 2))
    (three            :push-button
 		     :space-requirement (make-space-requirement :width 50 :height 50)		     
 		     :label "3"
-		     :activate-callback (treat 3))
+		     :activate-callback (queue-number 3))
    (four             :push-button
 		     :space-requirement (make-space-requirement :width 50 :height 50)		     
 		     :label "4"
-		     :activate-callback (treat 4))
+		     :activate-callback (queue-number 4))
    (five             :push-button
 		     :space-requirement (make-space-requirement :width 50 :height 50)		     
 		     :label "5"
-		     :activate-callback (treat 5))
+		     :activate-callback (queue-number 5))
    (six              :push-button
 		     :space-requirement (make-space-requirement :width 50 :height 50)		     
 		     :label "6"
-		     :activate-callback (treat 6))
+		     :activate-callback (queue-number 6))
    (seven            :push-button
 		     :space-requirement (make-space-requirement :width 50 :height 50)		     
 		     :label "7"
-		     :activate-callback (treat 7))
+		     :activate-callback (queue-number 7))
    (eight            :push-button
 		     :space-requirement (make-space-requirement :width 50 :height 50)		     
 		     :label "8"
-		     :activate-callback (treat 8))
+		     :activate-callback (queue-number 8))
    (nine             :push-button
 		     :space-requirement (make-space-requirement :width 50 :height 50)		     
 		     :label "9"
-		     :activate-callback (treat 9))
+		     :activate-callback (queue-number 9))
    (zero             :push-button
 		     :space-requirement (make-space-requirement :width 50 :height 50)		     
 		     :label "0"
-		     :activate-callback (treat 0))
-   (ac               :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)     
+		     :activate-callback (queue-number 0))
+  (print-screen      :application
+		     :space-requirement (make-space-requirement :width 200 :height 50)
+		     :incremental-redisplay t
+		     :display-function #'print-screen)
+  (ac                :push-button
+		     :space-requirement (make-space-requirement :width 50 :height 50)		     
 		     :label "AC"
 		     :activate-callback #'initac)
-   (ce               :push-button
+  (ce                :push-button
 		     :space-requirement (make-space-requirement :width 50 :height 50)		     
 		     :label "CE"
 		     :activate-callback #'initce))
+  
   (:layouts
    (defaults (vertically ()
 		print-screen
@@ -150,3 +180,4 @@
 		   (list seven eight divide)
 		   (list nine zero result)))))
   (:top-level (calculator-frame-top-level . nil)))
+
