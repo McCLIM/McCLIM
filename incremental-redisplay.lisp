@@ -453,10 +453,9 @@ updating-output-parent above this one in the tree.")
 
 (defmethod print-object ((obj standard-updating-output-record) stream)
   (print-unreadable-object (obj stream :type t :identity t)
-    (when (slot-boundp obj 'x1)
-      (with-slots (x1 y1 x2 y2) obj
-	(format stream "X ~S:~S Y ~S:~S " x1 x2 y1 y2))
-      (format stream "~S" (output-record-dirty obj)))
+    (with-standard-rectangle (x1 y1 x2 y2)
+	obj
+      (format stream "X ~S:~S Y ~S:~S " x1 x2 y1 y2))
     (when (slot-boundp obj 'unique-id)
       (let ((*print-length* 10)
 	    (*print-level* 3))
@@ -726,6 +725,7 @@ records. "))
       rect
     (make-bounding-rectangle min-x min-y max-x max-y)))
 
+;;; work in progress
 (defvar *existing-output-records* nil)
 
 (defmethod compute-difference-set ((record standard-updating-output-record)
@@ -746,7 +746,8 @@ records. "))
 	 (old-children (if (slot-boundp record 'old-children)
 			   (old-children record)
 			   nil)))
-    (unless (or (region-intersects-region-p visible-region record)
+    (unless (or (null visible-region)
+		(region-intersects-region-p visible-region record)
 		(and old-children
 		     (region-intersects-region-p visible-region old-children)))
       (return-from compute-difference-set (values nil nil nil nil nil)))
