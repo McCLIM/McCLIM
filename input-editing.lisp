@@ -439,20 +439,20 @@
 		 (when (gesture-match gesture partial-completers)
 		   (setf (values input success object nmatches)
 			 (funcall func (subseq so-far 0) :complete-limited)))
-		 (unless (> nmatches 0)
-		   ;; Not a partial match; better be a total match
-		   (setf (values input success object)
-			 (funcall func (subseq so-far 0) :complete))
-		   (if success
-		     (progn
-		       (unread-gesture gesture :stream stream)
-		       (return-from complete-input-rescan
-			 (values object success input)))
-		     (error 'simple-completion-error
-			    :format-control "complete-input: While rescanning,~
+                 (unless (and (numberp nmatches) (> nmatches 0))
+                   ;; Not a partial match; better be a total match
+                   (setf (values input success object)
+                         (funcall func (subseq so-far 0) :complete))
+                   (if success
+                       (progn
+                         (unread-gesture gesture :stream stream)
+                         (return-from complete-input-rescan
+                           (values object success input)))
+                     (error 'simple-completion-error
+                            :format-control "complete-input: While rescanning,~
                                              can't match ~A~A"
-			    :format-arguments (list so-far gesture)
-			    :input-so-far so-far ))))
+                            :format-arguments (list so-far gesture)
+                            :input-so-far so-far))))
 	  end
 	  do (vector-push-extend gesture so-far)
 	  finally (when gesture
