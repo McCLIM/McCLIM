@@ -47,8 +47,6 @@
 ;;
 ;; --GB
 
-;;;; What we may want to have
-
 ;; It might be handy to have the equivalent of parent-relative
 ;; backgrounds. We can specify new indirect inks:
 ;;
@@ -213,6 +211,7 @@
          (x (* +ihs-rgb-c1+ s3 cos-hh intensity))
          (y (* +ihs-rgb-c2+ s3 sin-hh intensity))
          (z (* +ihs-rgb-c3+ c3 intensity)))
+    (declare (type (real #.(- pi) #.pi) hh))
     (values (max 0 (min 1 (+ x x z)))
             (max 0 (min 1 (+ y z (- x))))
             (max 0 (min 1 (- z x y))))))
@@ -280,6 +279,21 @@
 ||#
 
 ;;;;
+;;;; 13.6 Indirect Inks
+;;;;
+
+(defclass indirect-ink (design) ())
+
+(defvar +foreground-ink+ (make-instance 'indirect-ink))
+(defvar +background-ink+ (make-instance 'indirect-ink))
+
+(defmethod print-object ((ink (eql +foreground-ink+)) stream)
+  (format stream "#.~S" '+foreground-ink+))
+
+(defmethod print-object ((ink (eql +background-ink+)) stream)
+  (format stream "#.~S" '+background-ink+))
+
+;;;;
 ;;;; 13.4 Opacity
 ;;;;
 
@@ -296,6 +310,9 @@
           :type (real 0 1)
           :reader opacity-value)))
 
+(defvar +transparent-ink+ 
+    (make-instance 'standard-opacity :value 0))
+
 (defun make-opacity (value)
   (setf value (clamp value 0 1))        ;defensive programming
   (cond ((= value 0)
@@ -304,24 +321,6 @@
          +foreground-ink+)
         (t
          (make-instance 'standard-opacity :value value))))
-
-(defvar +transparent-ink+ 
-    (make-instance 'standard-opacity :value 0))
-
-;;;;
-;;;; 13.6 Indirect Inks
-;;;;
-
-(defclass indirect-ink (design) ())
-
-(defvar +foreground-ink+ (make-instance 'indirect-ink))
-(defvar +background-ink+ (make-instance 'indirect-ink))
-
-(defmethod print-object ((ink (eql +foreground-ink+)) stream)
-  (format stream "#.~S" '+foreground-ink+))
-
-(defmethod print-object ((ink (eql +background-ink+)) stream)
-  (format stream "#.~S" '+background-ink+))
 
 ;;;;
 ;;;; 13.7 Flipping Ink
@@ -373,21 +372,43 @@
 (defgeneric compose-in (ink mask))
 (defgeneric compose-out (ink mask))
 
-(defclass pattern (design)
-  ((array :initarg :array)
+;; PATTERN is just the an abstract class of all pattern-like design. 
+
+;; For performance might consider to sort out pattern, which consists
+;; of uniform designs only and convert them to an RGBA-image.
+
+(define-protocol-class pattern (design))
+
+(defclass indexed-pattern (design)
+  ((array   :initarg :array)
    (designs :initarg :designs)))
    
 (defun make-pattern (array designs)
-  (make-instance 'pattern :array array :designs designs))
+  (make-instance 'indexed-pattern :array array :designs designs))
 
-(defun pattern-width (pattern)
-  (nyi))
+(defmethod pattern-width ((pattern indexed-pattern))
+  (with-slots (array) pattern
+    (array-dimension array 1)))
 
-(defun pattern-height (pattern)
-  (nyi))
+(defmethod pattern-height ((pattern indexed-pattern))
+  (with-slots (array) pattern
+    (array-dimension array 0)))
+
+(defclass stencil (pattern)
+  ((array :initarg :array)))
 
 (defun make-stencil (array)
-  (nyi))
+  (make-instance 'stencll :array array))
+
+(defmethod pattern-width ((pattern stencil))
+  (with-slots (array) pattern
+    (array-dimension array 1)))
+
+(defmethod pattern-height ((pattern stencil))
+  (with-slots (array) pattern
+    (array-dimension array 0)))
+
+;;;
 
 (defclass rectangular-tile (design)
   ((width  :initarg :width      :reader rectangular-tile-width)
@@ -396,15 +417,14 @@
 
 (defun make-rectangular-tile (design width height)
   (make-instance 'rectangular-tile
-    :width width
+    :width  width
     :height height
     :design design))
-
 
 ;;;
 
 (defclass in-compositum (design)
-  ((ink :initarg :ink :reader compositum-ink)
+  ((ink  :initarg :ink  :reader compositum-ink)
    (mask :initarg :mask :reader compositum-mask)))
 
 (defmethod print-object ((object in-compositum) stream)
