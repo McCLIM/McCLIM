@@ -130,6 +130,21 @@
   ;; FIXME
   nil)
 
+;;; Internal methods
+(defmethod climi::port-mirror-width (port (stream postscript-stream))
+  (let ((region (sheet-native-region stream)))
+    (with-bounding-rectangle* (min-x min-y max-x max-y)
+        region
+      (declare (ignore min-y max-y))
+      (- max-x min-x))))
+
+(defmethod climi::port-mirror-height (port (stream postscript-stream))
+  (let ((region (sheet-native-region stream)))
+    (with-bounding-rectangle* (min-x min-y max-x max-y)
+        region
+      (declare (ignore min-x max-x))
+      (- max-y min-y))))
+
 ;;;;
 ;;;; POSTSCRIPT-GRAFT
 ;;;;
