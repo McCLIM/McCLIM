@@ -142,7 +142,8 @@ advised of the possiblity of such damages.
 	(clim:stream-line-height stream (stream-current-text-style stream))))
    ((or :CLIM-1.0 :clim-2)
     (if TEXT-STYLE
-	(truncate (clim:stream-line-height stream TEXT-STYLE))
+	(truncate (clim:stream-line-height stream
+					   #+mcclim :text-style TEXT-STYLE))
         (truncate (clim:stream-line-height stream))))))
 
 (defun stream-character-width (stream &optional (char #\m))
@@ -232,8 +233,8 @@ advised of the possiblity of such damages.
 	  (t
 	   (let ((v (and #-mcclim (not (typep stream
 					      'clim-silica:pixmap-stream))
-			 #+mcclim (not (typep (medium-sheet
-					       (sheet-medium stream))
+			 #+mcclim (not (typep (clim:medium-sheet
+					       (clim:sheet-medium stream))
 					      'climi::pixmap))
 			 (clim:window-viewport stream))))
 	     (if v (clim:rectangle-edges* v)
@@ -581,7 +582,7 @@ advised of the possiblity of such damages.
      :left left :top top :right (+ left width) :bottom (+ top height)))
    (:clim-2
     ;; what parent does this get?
-    (ignore parent)
+    #-mcclim (ignore parent)
     (let ((frame (clim:make-application-frame
 		  type
 		  :pretty-name title
@@ -592,7 +593,8 @@ advised of the possiblity of such damages.
 		  :calling-frame
 		  #+allegro
 		  clim:*application-frame*
-		  )))
+		  #+mcclim :frame-manager
+		  #+mcclim parent)))
       frame))))
 
 (defmethod size-frame (frame width height)
@@ -611,7 +613,6 @@ advised of the possiblity of such damages.
 	  (setf (clim:bounding-rectangle-max-y window) (min (+ top height) ymax))
 	  (clim::layout-frame-panes frame window)))))))
 
-#-mcclim
 (defmethod move-frame (frame left bottom)
   #FEATURE-CASE
   (((not :clim) (dw::position-window-near-carefully frame `(:point ,left ,bottom)))
@@ -619,9 +620,11 @@ advised of the possiblity of such damages.
    (:clim-1.0 (clim::position-window-near-carefully
 	       (clim:frame-top-level-window frame)
 	       left bottom))
-   (:clim-2 (clim:position-sheet-carefully
-	       (clim:frame-top-level-sheet frame)
-	       left bottom))))
+   ((and :clim-2 (not :mcclim)) (clim:position-sheet-carefully
+				 (clim:frame-top-level-sheet frame)
+				 left bottom))
+   (:mcclim
+     nil)))
 
 (defmethod get-frame-pane (frame pane-name)
   #FEATURE-CASE
@@ -709,14 +712,16 @@ advised of the possiblity of such damages.
       (setq width (min width w)
 	    height (min height h))))
    (:clim-2
-    (let ((graft (clim:graft frame-manager)))
+    (let ((graft #-mcclim (clim:graft frame-manager)
+		 #+mcclim (clim:graft (climi::frame-manager-port
+				       frame-manager))))
       (when graft
 	#-mcclim
 	(setq width (min width (silica::graft-pixel-width graft))
 	      height (min height (silica::graft-pixel-height graft)))
 	#+mcclim
 	(setq width (min width (clim:graft-width graft :units :device))
-	      height (min height (clim-graft-height :units :device))))))
+	      height (min height (clim:graft-height graft :units :device))))))
    )
   (values width height))
 

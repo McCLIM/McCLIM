@@ -169,7 +169,8 @@ advised of the possiblity of such damages.
       ;; Seem to need to know the stream under the presentation.
       ;; Take a wild guess.
       (multiple-value-bind (xoff yoff)
-	  (clim::convert-from-relative-to-absolute-coordinates
+	  (#-mcclim clim::convert-from-relative-to-absolute-coordinates
+	   #+mcclim climi::convert-from-relative-to-absolute-coordinates
 	   stream
 	   (clim::output-record-parent presentation))
 	(clim:with-bounding-rectangle*

@@ -617,6 +617,10 @@ record is stored.")
     (if record (multiple-value-setq (ory orx) (output-record-position record)))
     (values (+ scy ory) (+ scx orx))))
 
+(defun convert-from-relative-to-absolute-coordinates (stream record)
+  (declare (ignore stream))
+  (output-record-position record))
+
 (defun dump-updating (record old-records &optional (stream *standard-output*))
   (let ((*print-circle* t)
 	(*print-pretty* t))

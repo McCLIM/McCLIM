@@ -418,17 +418,19 @@ input focus. This is a McCLIM extension."))
           ;; leave it off by default, and hopefully this doesn't violate the spec.
           (progn            
             (setf (cursor-visibility (stream-text-cursor *standard-input*)) nil)
-            (when prompt
+            (when (and prompt (typep *standard-input* 'interactor-pane))
               (with-text-style (*standard-input* prompt-style)
                 (if (stringp prompt)
                     (write-string prompt *standard-input*)
                   (funcall prompt *standard-input* frame))
                 (finish-output *standard-input*)))
             (let ((command (read-frame-command frame)))
-              (fresh-line *standard-input*)
+	      (when (typep *standard-input* 'interactor-pane)
+		(fresh-line *standard-input*))
               (when command
                 (execute-frame-command frame command))
-              (fresh-line *standard-input*)))
+	      (when (typep *standard-input* 'interactor-pane)
+		(fresh-line *standard-input*))))
         (simple-event-loop)))))
 
 
@@ -436,11 +438,7 @@ input focus. This is a McCLIM extension."))
 			       &key (stream *standard-input*))
   (with-input-context ('menu-item)
     (object)
-    ;; Is this the intended behavior of interactor-panes
-    ;; (vs. application panes)?
-    (if (typep stream 'interactor-pane)
-	(read-command (frame-command-table frame) :stream stream)
-	(loop (read-gesture :stream stream)))
+    (read-command (frame-command-table frame) :stream stream)
     (menu-item
      (let ((command (command-menu-item-value object)))
        (if (listp command)
@@ -1090,3 +1088,10 @@ input focus. This is a McCLIM extension."))
 (defmethod (setf keyboard-input-focus) :after (focus frame)
   (set-port-keyboard-focus focus (port frame)))
 
+;;; This might do something more useful someday.
+
+(defgeneric reset-frame (frame &rest args))
+
+(defmethod reset-frame ((frame t) &rest args)
+  (declare (ignore args))
+  nil)

@@ -961,32 +961,39 @@
   (let ((*command-parser* command-parser)
 	(*command-unparser* command-unparser)
 	(*partial-command-parser* partial-command-parser))
-    (if use-keystrokes
-	(let ((stroke-result
-	       (with-command-table-keystrokes (strokes command-table)
-		 (read-command-using-keystrokes command-table
-						strokes
-						:stream stream))))
-	  (if (consp stroke-result)
-	      stroke-result
-	      nil))
-	(handler-case
-	    (let ((command (accept `(command :command-table ,command-table)
-				   :stream stream
-				   :prompt nil)))
-	      (if (partial-command-p command)
-		  (progn
-		    (beep)
-		    (format *query-io* "~&Argument ~D not supplied.~&"
-			    (position *unsupplied-argument-marker* command))
-		    nil)
-		  command))
-	  ((or simple-parse-error input-not-of-required-type)  (c)
-	    (beep)
-	    (fresh-line *query-io*)
-	    (princ c *query-io*)
-	    (terpri *query-io*)
-	    nil)))))
+    (cond (use-keystrokes
+	   (let ((stroke-result
+		  (with-command-table-keystrokes (strokes command-table)
+		    (read-command-using-keystrokes command-table
+						   strokes
+						   :stream stream))))
+	     (if (consp stroke-result)
+		 stroke-result
+		 nil)))
+	  ((or (typep stream 'interactor-pane)
+	       (typep stream 'input-editing-stream))
+	   (handler-case
+	       (let ((command (accept `(command :command-table ,command-table)
+				      :stream stream
+				      :prompt nil)))
+		 (if (partial-command-p command)
+		     (progn
+		       (beep)
+		       (format *query-io* "~&Argument ~D not supplied.~&"
+			       (position *unsupplied-argument-marker* command))
+		       nil)
+		     command))
+	     ((or simple-parse-error input-not-of-required-type)  (c)
+	       (beep)
+	       (fresh-line *query-io*)
+	       (princ c *query-io*)
+	       (terpri *query-io*)
+	       nil)))
+	  (t (with-input-context (`(command :command-table ,command-table))
+	       (object)
+	       (loop (read-gesture :stream stream))
+	       (t object))))))
+
 
 (defun read-command-using-keystrokes (command-table keystrokes
 				      &key (stream *standard-input*)

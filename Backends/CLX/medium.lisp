@@ -71,6 +71,20 @@
       (unless (eq text-style old-text-style)
         (setf fontset (text-style-to-X-fontset (port medium) (medium-text-style medium)))))))
 
+;;; Translate from CLIM styles to CLX styles.
+(defconstant +cap-shape-map+ '((:butt . :butt)
+			       (:square . :projecting)
+			       (:round . :round)
+			       (:no-end-point . :not-last)))
+
+(defun translate-cap-shape (clim-shape)
+  (let ((clx-shape (cdr (assoc clim-shape +cap-shape-map+))))
+    (if clx-shape
+	clx-shape
+	(progn
+	  (warn "Unknown cap style ~S, using :round" clim-shape)
+	  :round))))
+
 (defmethod (setf medium-line-style) :before (line-style (medium clx-medium))
   (with-slots (gc) medium
     (when gc
@@ -84,7 +98,7 @@
 	(unless (eq (line-style-cap-shape line-style)
 		    (line-style-cap-shape old-line-style))
 	  (setf (xlib:gcontext-cap-style gc)
-		(line-style-cap-shape line-style)))
+		(translate-cap-shape (line-style-cap-shape line-style))))
 	(unless (eq (line-style-joint-shape line-style)
 		    (line-style-joint-shape old-line-style))
 	  (setf (xlib:gcontext-join-style gc)
@@ -142,7 +156,8 @@
 	;; this is kind of false, since the :unit should be taken
 	;; into account -RS 2001-08-24
 	(setf (xlib:gcontext-line-width gc) (line-style-thickness line-style)
-	      (xlib:gcontext-cap-style gc) (line-style-cap-shape line-style)
+	      (xlib:gcontext-cap-style gc) (translate-cap-shape
+					    (line-style-cap-shape line-style))
 	      (xlib:gcontext-join-style gc) (line-style-joint-shape line-style))
 	(let ((dashes (line-style-dashes line-style)))
 	  (unless (null dashes)

@@ -31,6 +31,18 @@
 
 (in-package :clim-internals)
 
+;;; The Spec specifies the tracking-pointer clause arguments as, e.g.,
+;;; (&key presentation event x y), implying that the user must write
+;;; the &key keyword, but real code doesn't do that. Check if &key is in
+;;; the arg list and add it if it is not.
+(eval-when (:compile-toplevel :load-toplevel :execute)
+ (defun fix-tracking-pointer-args (args)
+   (unless (member '&allow-other-keys args)
+     (setq args (append args '(&allow-other-keys))))
+   (unless (eq (car args) '&key)
+     (cons '&key args))))
+
+
 (defmacro tracking-pointer
     ((sheet &rest args
             &key pointer multiple-window transformp context-type
@@ -49,11 +61,13 @@
                          :pointer-button-release
                          :presentation-button-release
                          :keyboard)
-     for handler-body = (cdr (assoc event-name body))
+     for (handler-args . handler-body) = (cdr (assoc event-name body))
      for handler-name = (if handler-body
                             (gensym (symbol-name event-name))
                             nil)
-     when handler-body collect `(,handler-name ,@handler-body) into bindings
+     when handler-body collect `(,handler-name ,(fix-tracking-pointer-args
+						 handler-args)
+				 ,@handler-body) into bindings
      and collect `#',handler-name into handler-names
      collect (if handler-name `#',handler-name nil) into handlers
      finally

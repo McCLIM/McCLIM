@@ -118,7 +118,7 @@ class.  So you should do the following (in the ws package, 'natch):
      (documentation :pointer-documentation
 		    :stream-background +black+
 		    :stream-foreground +white+)))
-  #+clim-2
+  #+(and clim-2 (not :mcclim))
   (:panes
    (display 
     (scrolling
@@ -134,11 +134,21 @@ class.  So you should do the following (in the ws package, 'natch):
 		;; in combination with a coordinate sorted set output history.  In
 		;; our case, graph annotations sometimes get put into the history wrong.
 		;; At that point, they lose their mouse sensitivity.
-		#-mcclim
 		:OUTPUT-RECORD
-		#-mcclim
 		(MAKE-INSTANCE 'CLIM:R-TREE-OUTPUT-HISTORY)
 		))))
+  ;; In McCLIM, the name of the pane goes with the top level pane in the
+  ;; definition, which seems to follow the spec. But we want the name
+  ;; to go with the application pane...
+  #+mcclim
+  (:panes
+   (display :application
+	    :display-function 'redisplay-graphs
+	    :display-time t
+	    :text-style 
+	    (parse-text-style '(:fix :roman :normal))
+	    :initial-cursor-visibility nil
+	    :scroll-bars t))
   #+clim-2
   (:pointer-documentation t)
   #+clim-2

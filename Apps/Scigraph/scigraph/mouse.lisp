@@ -97,12 +97,12 @@ advised of the possiblity of such damages.
        (frame-manager *application-frame*)
        *application-frame*
        clim:*pointer-documentation-output*
-       string))
+       string)))
    (:mcclim
     (progn
       (ignore stream)
       (clim-extensions:frame-display-pointer-documentation-string
-       *application-frame* clim:*pointer-documentation-output* string))))
+       *application-frame* clim:*pointer-documentation-output* string)))
    ((not :clim) nil)))
 
 (defmacro with-mouse-documentation ((window string) &body body)
@@ -111,9 +111,10 @@ advised of the possiblity of such damages.
      (post-mouse-documentation ,window " ")))
 
 (defmacro with-pointer-cursor ((sheet cursor) &body body)
-  #-clim-2
+  ;; XXX McCLIM will get pointer-cursors soon... -- moore
+  #+(or (not clim-2) mcclim)
   `(progn ,@body)
-  #+clim-2
+  #+(and clim-2 (not mcclim))
   `(let ((.old. (sheet-pointer-cursor ,sheet)))
      (unwind-protect
 	 (progn (setf (sheet-pointer-cursor ,sheet) ,cursor)

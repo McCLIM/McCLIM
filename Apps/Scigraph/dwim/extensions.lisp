@@ -217,7 +217,8 @@ advised of the possiblity of such damages.
      (:CLIM-1.0
       (clim-utils::make-process predicate :name name-or-keywords))
      (:CLIM-2
-      (CLIM-SYS:make-process predicate name-or-keywords)))))
+      ;; The Spec says that make-process takes a keyword arg... -- moore
+      (CLIM-SYS:make-process predicate #+mcclim :name name-or-keywords)))))
 
 (defun activate-process (p)
   #FEATURE-CASE
