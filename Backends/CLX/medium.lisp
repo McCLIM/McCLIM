@@ -31,6 +31,47 @@
    )
   )
 
+
+;;; secondary methods for changing text styles and line styles
+
+(defmethod (setf medium-text-style) :before (text-style (medium clx-medium))
+  (with-slots (gc) medium
+    (when gc
+      (let ((old-text-style (medium-text-style medium)))
+	(unless (eq text-style old-text-style)
+	  (setf (xlib:gcontext-font gc)
+		(text-style-to-X-font (port medium) (medium-text-style medium))))))))
+
+(defmethod (setf medium-line-style) :before (line-style (medium clx-medium))
+  (with-slots (gc) medium
+    (when gc
+      (let ((old-line-style (medium-line-style medium)))
+	(unless (eql (line-style-thickness line-style)
+		     (line-style-thickness old-line-style))
+	  ;; this is kind of false, since the :unit should be taken
+	  ;; into account -RS 2001-08-24
+	  (setf (xlib:gcontext-line-width gc)
+		(line-style-thickness line-style)))
+	(unless (eq (line-style-cap-shape line-style)
+		    (line-style-cap-shape old-line-style))
+	  (setf (xlib:gcontext-cap-style gc)
+		(line-style-cap-shape line-style)))
+	(unless (eq (line-style-joint-shape line-style)
+		    (line-style-joint-shape old-line-style))
+	  (setf (xlib:gcontext-join-style gc)
+		(line-style-joint-shape line-style)))
+	;; we could do better here by comparing elements of the vector
+	;; -RS 2001-08-24
+	(unless (eq (line-style-dashes line-style)
+		    (line-style-dashes old-line-style))
+	  (setf (xlib:gcontext-line-style gc)
+		(if (line-style-dashes line-style) :dash :solid)
+		(xlib:gcontext-dashes gc)
+		(case (line-style-dashes line-style)
+		  ((t nil) 3)
+		  (otherwise (line-style-dashes line-style)))))))))
+  
+
 (defgeneric medium-gcontext (medium ink))
 
 (defmethod medium-gcontext ((medium clx-medium) (ink color))
@@ -38,22 +79,24 @@
 	 (mirror (port-lookup-mirror port (medium-sheet medium)))
 	 (line-style (medium-line-style medium)))
     (with-slots (gc) medium
-      (if (null gc)
-	  (setq gc (xlib:create-gcontext :drawable mirror)))
+      (unless gc
+	(setq gc (xlib:create-gcontext :drawable mirror))
+	;; this is kind of false, since the :unit should be taken
+	;; into account -RS 2001-08-24
+	(setf (xlib:gcontext-line-width gc) (line-style-thickness line-style)
+	      (xlib:gcontext-cap-style gc) (line-style-cap-shape line-style)
+	      (xlib:gcontext-join-style gc) (line-style-joint-shape line-style))
+	(let ((dashes (line-style-dashes line-style)))
+	  (unless (null dashes)
+	    (setf (xlib:gcontext-line-style gc) :dash
+		  (xlib:gcontext-dashes gc) (if (eq dashes t) 3 dashes)))))
       (setf (xlib:gcontext-font gc) (text-style-to-X-font port (medium-text-style medium))
 	    (xlib:gcontext-foreground gc) (X-pixel port ink)
-	    (xlib:gcontext-background gc) (X-pixel port (medium-background medium))
-            (xlib:gcontext-line-width gc) (line-style-thickness line-style)
-            (xlib:gcontext-cap-style gc) (line-style-cap-shape line-style)
-            (xlib:gcontext-join-style gc) (line-style-joint-shape line-style))
-      (let ((dashes (line-style-dashes line-style)))
-        (unless (null dashes)
-          (setf (xlib:gcontext-line-style gc) :dash
-                (xlib:gcontext-dashes gc) (if (eq dashes t) 3 dashes))))
-    ; the right method to use is the medium-device-region, but
-    ; as the device-transformation, in the case of the back-end CLX, is 
-    ; the identity transformation, a short path is used for optimizing
-    ; the drawing operations.
+	    (xlib:gcontext-background gc) (X-pixel port (medium-background medium)))
+      ;; the right method to use is the medium-device-region, but
+      ;; as the device-transformation, in the case of the back-end CLX, is 
+      ;; the identity transformation, a short path is used for optimizing
+      ;; the drawing operations.
       (let ((clipping-region (medium-clipping-region medium))) ;(medium-device-region medium)))
 	(unless (eq clipping-region +everywhere+)
           (setf (xlib:gcontext-clip-mask gc :yx-banded)

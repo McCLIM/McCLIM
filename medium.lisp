@@ -49,13 +49,13 @@
    (device-region :type region
 		  :initform nil
 		  :accessor medium-device-region)
-   ;; always use this slot through its accessor, since ther may
-   ;; be an :after method on it
+   ;; always use this slot through its accessor, since there may
+   ;; be secondary methods on it -RS 2001-08-23
    (line-style :initarg :line-style
 	       :initform (make-line-style)
 	       :accessor medium-line-style)
-   ;; always use this slot through its accessor, since ther may
-   ;; be an :after method on it
+   ;; always use this slot through its accessor, since there may
+   ;; be secondary methods on it -RS 2001-08-23
    (text-style :initarg :text-style
 	       :initform (make-text-style :fix :roman :normal)
 	       :accessor medium-text-style)
