@@ -46,16 +46,15 @@
 ;;; to shrink it to the correct size only when the layout is complete
 ;;; by calling TREE-RECOMPUTE-EXTENT.
 ;;;
-;;; - Computation of the bounding rectangle of lines ignores
+;;; - Computation of the bounding rectangle of lines/polygons ignores
 ;;; LINE-STYLE-CAP-SHAPE.
-;;;
-;;; - Computation of the bounding rectangle of polygons knows nothing
-;;; about :BEVEL.
 ;;;
 ;;; - Rounding of coordinates.
 ;;;
 ;;; - Document carefully the interface of
 ;;; STANDARD-OUTPUT-RECORDING-STREAM.
+;;;
+;;; - COORD-SEQ is a sequence, not a list.
 
 ;;; Bug: (SETF OUTPUT-RECORD-POSITION) returns the record instead of
 ;;; the position. It is useful for debugging, but it is wrong.
@@ -862,8 +861,7 @@ were added."
     (coord-seq transform closed filled line-style border miter-limit)
   (with-transformed-positions (transform coord-seq)
     (if (or filled
-            (not (eq (line-style-joint-shape line-style) :miter)))
-        ;; XXX The following is for :ROUND. What about :BEVEL and :NONE?
+            (eq (line-style-joint-shape line-style) :round))
         (loop for (x y) on coord-seq by #'cddr
            minimize x into min-x
            minimize y into min-y
@@ -883,33 +881,60 @@ were added."
                        (values (/ dx norm) (/ dy norm))))))
           (let* ((x1 (first coord-seq))
                  (y1 (second coord-seq))
-                 (min-x (- x1 border)) (min-y (- y1 border))
-                 (max-x (+ x1 border)) (max-y (+ y1 border)))
-            ;; FIXME: Remove zero-length segments
-            (loop with sin-limit = (sin (* 0.5 miter-limit))
-               for (xp yp x y xn yn) on (if closed
-                                            `(,@(last coord-seq 2)
-                                                ,@coord-seq
-                                                ,(first coord-seq) ,(second coord-seq))
-                                            coord-seq)
-               by #'cddr
-               unless yn do (minf min-x (- x border)) (minf min-y (- y border))
-                            (maxf max-x (+ x border)) (maxf max-y (+ y border))
-                            (return)
-               do (multiple-value-bind (nx1 ny1) (normalize (- x xp) (- y yp))
-                    (multiple-value-bind (nx2 ny2) (normalize (- x xn) (- y yn))
-                      (let* ((cos-a (+ (* nx1 nx2) (* ny1 ny2)))
-                             (sin-a/2 (sqrt (* 0.5 (- 1.0 cos-a)))))
-                        (if (< sin-a/2 sin-limit)
-                            (progn ; FIXME! This is for :ROUND, not for :BEVEL.
-                              (minf min-x (- x border)) (minf min-y (- y border))
-                              (maxf max-x (+ x border)) (maxf max-y (+ y border)))
-                            (let ((length (/ border sin-a/2)))
-                              (multiple-value-bind (dx dy)
-                                  (normalize (+ nx1 nx2) (+ ny1 ny2) length)
-                                (let ((adx (abs dx)) (ady (abs dy)))
-                                  (minf min-x (- x adx)) (minf min-y (- y ady))
-                                  (maxf max-x (+ x adx)) (maxf max-y (+ y ady))))))))))
+                 (min-x x1) (min-y y1)
+                 (max-x x1) (max-y y1))
+            (unless closed
+              (setq min-x (- x1 border)  min-y (- y1 border)
+                    max-x (+ x1 border)  max-y (+ y1 border)))
+            (ecase (line-style-joint-shape line-style)
+              (:miter
+               ;; FIXME: Remove successive positively proportional segments
+               (loop with sin-limit = (sin (* 0.5 miter-limit))
+                  for (xp yp x y xn yn) on (if closed
+                                               `(,@(last coord-seq 2)
+                                                   ,@coord-seq
+                                                   ,x1 ,y1)
+                                               coord-seq)
+                  by #'cddr
+                  unless yn do (unless closed
+                                 (minf min-x (- x border)) (minf min-y (- y border))
+                                 (maxf max-x (+ x border)) (maxf max-y (+ y border)))
+                               (return)
+                  do (multiple-value-bind (ex1 ey1) (normalize (- x xp) (- y yp))
+                       (multiple-value-bind (ex2 ey2) (normalize (- x xn) (- y yn))
+                         (let* ((cos-a (+ (* ex1 ex2) (* ey1 ey2)))
+                                (sin-a/2 (sqrt (* 0.5 (- 1.0 cos-a)))))
+                           (if (< sin-a/2 sin-limit)
+                               (let ((nx (* border (max (abs ey1) (abs ey2))))
+                                     (ny (* border (max (abs ex1) (abs ex2)))))
+                                 (minf min-x (- x nx))
+                                 (minf min-y (- y ny))
+                                 (maxf max-x (+ x nx))
+                                 (maxf max-y (+ y ny)))
+                               (let ((length (/ border sin-a/2)))
+                                 (multiple-value-bind (dx dy)
+                                     (normalize (+ ex1 ex2) (+ ey1 ey2) length)
+                                   (minf min-x (+ x dx)) (minf min-y (+ y dy))
+                                   (maxf max-x (+ x dx)) (maxf max-y (+ y dy))))))))))
+              ((:bevel :none)
+               (loop for (xp yp x y xn yn) on (if closed
+                                                  `(,@(last coord-seq 2)
+                                                      ,@coord-seq
+                                                      ,x1 ,y1)
+                                                  coord-seq)
+                  by #'cddr
+                  unless yn do (unless closed
+                                 (minf min-x (- x border)) (minf min-y (- y border))
+                                 (maxf max-x (+ x border)) (maxf max-y (+ y border)))
+                    (return)
+                  do (multiple-value-bind (ex1 ey1) (normalize (- x xp) (- y yp))
+                       (multiple-value-bind (ex2 ey2) (normalize (- x xn) (- y yn))
+                         (let ((nx (* border (max (abs ey1) (abs ey2))))
+                               (ny (* border (max (abs ex1) (abs ex2)))))
+                           (minf min-x (- x nx))
+                           (minf min-y (- y ny))
+                           (maxf max-x (+ x nx))
+                           (maxf max-y (+ y ny))))))))
             (values min-x min-y max-x max-y))))))
 
 (def-grecording draw-polygon (coord-seq closed filled)
