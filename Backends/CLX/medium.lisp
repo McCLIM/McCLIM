@@ -24,6 +24,14 @@
 
 (in-package :CLIM-INTERNALS)
 
+;;; Needed changes:
+
+;; The gc slot in clx-medium must be either thread local, or
+;; [preferred] we should have a unified drawing options -> gcontext
+;; cache.
+;; --GB
+
+
 ;;; CLX-MEDIUM class
 
 (defclass clx-medium (basic-medium)
@@ -215,6 +223,7 @@
                                0 (* 2 pi)) into arcs
                 finally (xlib:draw-arcs mirror gc arcs t))))))
 
+(declaim (inline round-coordinate))
 (defun round-coordinate (x)
   "Function used for rounding coordinates."
   ;; We use "mercantile rounding", instead of the CL round to nearest
@@ -225,7 +234,7 @@
   ;; Using CL:ROUND gives you "random" results. Using "mercantile
   ;; rounding" gives you consistent results.
   ;;
-  (floor (+ x 1/2)))
+  (floor (+ x .5)))
 
 (defmethod medium-draw-line* ((medium clx-medium) x1 y1 x2 y2)
   (let ((tr (sheet-native-transformation (medium-sheet medium))))
