@@ -4,9 +4,10 @@
 ;;;   Created: 1998-12-02 19:26
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: regions.lisp,v 1.8 2001/01/21 12:01:55 cvs Exp $
+;;;       $Id: regions.lisp,v 1.9 2001/03/12 12:00:24 rouanet Exp $
 ;;; --------------------------------------------------------------------------------------
 ;;;  (c) copyright 1998,1999 by Gilbert Baumann
+;;;  (c) copyright 2001 by Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -29,6 +30,10 @@
 ;;; --------------------------------------------------------------------------------------
 ;;;  2001-01-21  GB     fixed bug in (TRANSFORM-REGION T RECTANGLE-SET)
 ;;;                     added some documentation
+;;;  2001-03-06  AR     fixed bug in (REGION-EQUAL STANDARD-RECTANGLE STANDARD-RECTANGLE)
+;;;                     REGION is now a subclass of DESIGN.
+;;;  2001-03-09  AR     fixed a bug in MAKE-ELLIPICAL-THING
+;;;                     fixed STANDARD-ELLIPTICAL-ARC defclass
 
 ;;; ---- TODO ----------------------------------------------------------------------------
 
@@ -67,7 +72,7 @@
 
 (defclass bounding-rectangle () ())
 
-(defclass region (#|ink|#) ())
+(defclass region (design) ())
 (defclass path (region bounding-rectangle) ())
 (defclass area (region bounding-rectangle) ())
 (defclass region-set  (region bounding-rectangle) ())
@@ -489,7 +494,7 @@
    (tr          :initarg :tr)))         ;a transformation from the unit circle to get the elliptical object
 
 (defclass standard-ellipse (ellipse elliptical-thing) ())
-(defclass standard-elliptical-arc (ellipse elliptical-thing) ())
+(defclass standard-elliptical-arc (elliptical-arc elliptical-thing) ())
 
 (defun ellipsep (object)
   (typep object 'ellipse))
@@ -533,7 +538,7 @@
         radius-2-dx (coerce radius-2-dx 'coordinate)
         radius-2-dy (coerce radius-2-dy 'coordinate)
         start-angle (and start-angle (coerce start-angle 'coordinate))
-        end-angle (and start-angle (coerce start-angle 'coordinate)) )
+        end-angle (and end-angle (coerce end-angle 'coordinate)) )
 
   (let ((tr (make-3-point-transformation* 0 0 1 0 0 1
                                           center-x center-y
@@ -1202,7 +1207,7 @@
 
 (defmethod region-equal ((a standard-rectangle) (b standard-rectangle))
   (multiple-value-bind (x1 y1 x2 y2) (rectangle-edges* a)
-    (multiple-value-bind (u1 v1 u2 v2) (rectangle-edges* a)
+    (multiple-value-bind (u1 v1 u2 v2) (rectangle-edges* b)
       (and (coordinate= x1 u1)
            (coordinate= y1 v1)
            (coordinate= x2 u2)
