@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.79 2002/05/05 03:41:03 adejneka Exp $
+;;; $Id: panes.lisp,v 1.80 2002/05/20 02:11:18 mikemac Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -1688,8 +1688,7 @@ During realization the child of the spacing will have as cordinates
     (sheet-parent (sheet-parent pane))))
 
 (defun update-scroll-bars (pane entire-region x y)
-  #+NIL
-  (multiple-value-bind (min-x min-y max-x max-y) (bounding-rectangle* entire-region)
+  #+ignore(multiple-value-bind (min-x min-y max-x max-y) (bounding-rectangle* entire-region)
     (with-slots (vscrollbar hscrollbar viewport) (pane-scroller pane)
       (when vscrollbar
 	(with-slots (value) vscrollbar
@@ -1930,20 +1929,16 @@ During realization the child of the spacing will have as cordinates
 (defmethod* (setf window-viewport-position) (x y (pane clim-stream-pane))
   (scroll-extent pane x y))
 
-#+NIL
 (defun scroll-area (pane dx dy)
   (let ((transform (sheet-transformation pane)))
     ;; Region has been "scrolled" already.
     (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
-      (multiple-value-bind (destx desty)
-	  (transform-position transform x1 y1)
-	(multiple-value-bind (srcx srcy)
-	    (transform-position transform (- x1 dx) (- y1 dy))
-	  (format *debug-io* "dx ~S dy ~S srcx ~S srcy ~S destx ~S desty ~S~%"
-		  dx dy srcx srcy destx desty)
+      (multiple-value-bind (srcx srcy)
+	  (untransform-position transform 0 0)
+	(multiple-value-bind (destx desty)
+	    (untransform-position transform dx dy)
 	  (copy-area pane  srcx srcy (- x2 x1) (- y2 y1) destx desty))))))
 
-#+NIL
 (defmethod scroll-extent ((pane clim-stream-pane) x y)
   (when (is-in-scroller-pane pane)
     (let ((new-x (max x 0))
@@ -1964,37 +1959,32 @@ During realization the child of the spacing will have as cordinates
 		dy (- y0 new-y))
 	  ;; alter the sheet transformation to reflect the new position
 	  (setf (sheet-transformation pane)
-	    (compose-translation-with-transformation
-	     (sheet-transformation pane) dx dy))
+	    (make-translation-transformation (- x) (- y)))
           (update-scroll-bars pane entire-region new-x new-y)
 	  (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
 	    (cond
 	     ((and (zerop dx)
 		   (< (abs dy) (- y2 y1)))
-	      (copy-area pane 0 0 (- x2 x1) (- y2 y1) 0 dy)
-	      #+nil
 	      (scroll-area pane 0 dy)
 	      (cond
 	       ((< dy 0)
-		(draw-rectangle* (sheet-medium pane) x1 (+ y2 dy) x2 y2 :ink +background-ink+)
+		(medium-clear-area (sheet-medium pane) 0 (+ y2 dy) (- x2 x1) (- y2 y1))
 		(stream-replay pane (make-bounding-rectangle x1 (+ y2 dy) x2 y2)))
 	       (t
-		(draw-rectangle* (sheet-medium pane) x1 y1 x2 (+ y1 dy) :ink +background-ink+)
-		(stream-replay pane (make-bounding-rectangle x1 y1 x2 (+ y1 dy))))) )
+		(medium-clear-area (sheet-medium pane) 0 0 (- x2 x1) dy)
+		(stream-replay pane (make-bounding-rectangle x1 y1 x2 (+ y1 dy))))))
 	     ((and (zerop dy)
 		   (< (abs dx) (- x2 x1)))
-	      (copy-area pane 0 0 (- x2 x1) (- y2 y1) dx 0)
-	      #+nil
 	      (scroll-area pane dx 0)
 	      (cond
 	       ((< dx 0)
-		(draw-rectangle* (sheet-medium pane) (+ x2 dx) y1 x2 y2 :ink +background-ink+)
+		(medium-clear-area (sheet-medium pane) (+ x2 dx) 0 (- x2 x1) (- y2 y1))
 		(stream-replay pane (make-bounding-rectangle (+ x2 dx) y1 x2 y2)))
 	       (t
-		(draw-rectangle* (sheet-medium pane) x1 y1 (+ x1 dx) y2 :ink +background-ink+)
-		(stream-replay pane (make-bounding-rectangle x1 y1 (+ x1 dx) y2)))) )
+		(medium-clear-area (sheet-medium pane) 0 0 dx (- y2 y1))
+		(stream-replay pane (make-bounding-rectangle x1 y1 (+ x1 dx) y2)))))
 	     (t
-	      (draw-rectangle* (sheet-medium pane) x1 y1 x2 y2 :ink +background-ink+)
+	      (medium-clear-area (sheet-medium pane) 0 0 (- x2 x1) (- y2 y1))
 	      (stream-replay pane (sheet-region pane))))))))))
 
 (defmethod stream-set-input-focus ((stream clim-stream-pane))
