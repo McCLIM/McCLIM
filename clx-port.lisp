@@ -94,8 +94,9 @@
   (realize-mirror-aux port sheet :border-width 0))
 
 (defmethod realize-mirror ((port clx-port) (sheet border-pane))
+  (rotatef (medium-background (sheet-medium sheet)) (medium-foreground (sheet-medium sheet)))
   (realize-mirror-aux port sheet
-		      :border-width (border-pane-width sheet)
+		      :border-width 0 ; (border-pane-width sheet)
 		      :event-mask '(:exposure
 				    :key-press :key-release
 				    :button-press :button-release
