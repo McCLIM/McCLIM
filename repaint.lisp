@@ -36,14 +36,10 @@
 (defmethod queue-repaint ((sheet basic-sheet) (event window-repaint-event))
   (queue-event sheet event))
 
-(defmethod handle-repaint ((sheet basic-sheet) region)  
-  (with-bounding-rectangle* (x1 y1 x2 y2) region
-    (draw-rectangle* sheet x1 y1 x2 y2 :filled T :ink +background-ink+))
+(defmethod handle-repaint ((sheet basic-sheet) region)    
   nil)
 
 (defmethod repaint-sheet ((sheet basic-sheet) region)
-  ;; FIXME: Change things so the rectangle below is only drawn in response
-  ;;        to explicit repaint requests from the user, not exposes from X  
   (map-over-sheets-overlapping-region #'(lambda (s)
 					  (handle-repaint s region))
 				      sheet
