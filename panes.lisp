@@ -237,6 +237,36 @@
       (compute-space sheet))
   (note-space-requirements-changed (sheet-parent sheet) pane))
 
+;;; SINGLE-CHILD-COMPOSITE PANE
+
+(defclass single-child-composite-pane (sheet-single-child-mixin
+				       basic-pane)
+  (
+   )
+  )
+
+
+(defmethod initialize-instance :after ((pane single-child-composite-pane)
+				       &rest args
+				       &key contents
+				       &allow-other-keys)
+  (declare (ignore args))
+  (if contents
+      (sheet-adopt-child pane (first contents))))
+
+(defmethod compose-space ((pane single-child-composite-pane))
+  (if (sheet-children pane)
+      (compose-space (first (sheet-children pane)))
+    (make-space-requirement)))
+
+(defmethod allocate-space ((pane single-child-composite-pane) width height)
+  (set-width-and-height pane width height)
+  (let ((child (first (sheet-children pane))))
+    (when child
+      (setf (sheet-region child)
+	(make-bounding-rectangle 0 0 width height))
+      (allocate-space child width height))))
+
 ;; TOP-LEVEL-SHEET
 
 (defclass top-level-sheet-pane (composite-pane)
@@ -652,7 +682,7 @@
 
 ;;; BORDER-PANE class
 
-(defclass border-pane (composite-pane)
+(defclass border-pane (single-child-composite-pane)
   ((border-width :initarg :border-width
 		 :initform 1
 		 :reader border-pane-width))
@@ -677,19 +707,14 @@
     (setf (pane-space-requirement bp) space)
     space))
 
-;;; FIXME: I don't see how this one could possibly work
 (defmethod allocate-space ((bp border-pane) width height)
-  (let ((h-percent (/ width (space-requirement-width (pane-space-requirement bp))))
-	(v-percent (/ height (space-requirement-height (pane-space-requirement bp))))
-	(y 0))
-    (loop for child = (first (sheet-children bp))
-	for request = (pane-space-requirement child)
-	for new-width = (floor (* h-percent (space-requirement-width request)))
-	for new-height = (floor (* v-percent (space-requirement-height request)))
-	do (progn (setf (sheet-region child)
-			(make-bounding-rectangle 0 y width (+ y new-height)))
-		  (allocate-space child new-width new-height)
-		  (incf y new-height)))))
+  (set-width-and-height bp width height)
+  (let ((border-width (border-pane-width bp))
+	(child (first (sheet-children bp))))
+    (setf (sheet-region child)
+      (make-bounding-rectangle border-width border-width
+			       (- width border-width) (- height border-width)))
+    (allocate-space child (- width (* 2 border-width)) (- height (* 2 border-width)))))
 
 
 ;; RESTRAINING PANE
@@ -717,7 +742,7 @@
 
 ;; VIEWPORT
 
-(defclass viewport-pane (sheet-single-child-mixin composite-pane) ())
+(defclass viewport-pane (single-child-composite-pane) ())
 
 
 ;; SCROLLER-PANE
@@ -731,6 +756,19 @@
 (defmacro scrolling ((&rest options) &body contents)
   `(let ((viewport (make-pane 'viewport-pane :contents (list ,@contents))))
      (make-pane 'scroller-pane ,@options :contents (list viewport))))
+
+(defmethod compose-space ((pane scroller-pane))
+  (if (sheet-children pane)
+      (compose-space (first (sheet-children pane)))
+    (make-space-requirement)))
+
+(defmethod allocate-space ((pane scroller-pane) width height)
+  (set-width-and-height pane width height)
+  (let ((child (first (sheet-children pane))))
+    (when child
+      (setf (sheet-region child)
+	(make-bounding-rectangle 0 0 width height))
+      (allocate-space child width height))))
 
 (defmethod pane-viewport ((scroller scroller-pane))
   (first (sheet-children scroller)))
@@ -906,14 +944,18 @@
 (defun make-clim-stream-pane (&rest options 
 				    &key (type 'clim-stream-pane)
 				         (scroll-bars :vertical)
+					 (border-width 1)
 				    &allow-other-keys)
   (declare (ignorable scroll-bars))
-  (loop for key in '(:type :scroll-bars)
+  (loop for key in '(:type :scroll-bars :border-width)
 	do (remf options key))
   (let ((pane (apply #'make-pane type options)))
     (if scroll-bars
 	(setq pane (make-pane 'scroller-pane :scroll-bar scroll-bars
 			      :contents (list (make-pane 'viewport-pane :contents (list pane))))))
+    (if (and border-width
+	     (> border-width 0))
+	(setq pane (make-pane 'border-pane :border-width border-width :contents (list pane))))
     pane))
 
 (defun make-clim-interactor-pane (&rest options)
