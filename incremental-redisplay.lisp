@@ -726,6 +726,8 @@ records. "))
       rect
     (make-bounding-rectangle min-x min-y max-x max-y)))
 
+(defvar *existing-output-records* nil)
+
 (defmethod compute-difference-set ((record standard-updating-output-record)
 				   &optional (check-overlapping t)
 				   offset-x offset-y
@@ -733,7 +735,7 @@ records. "))
   (declare (ignore offset-x offset-y old-offset-x old-offset-y))
   (when (eq (output-record-dirty record) :clean)
     (return-from compute-difference-set (values nil nil nil nil nil)))
-  (let* ((existing-output-records (make-hash-table :test #'eq))
+  (let* ((existing-output-records nil)
 	 (draws nil)
 	 (moves (explicit-moves record))
 	 (erases nil)
@@ -744,6 +746,13 @@ records. "))
 	 (old-children (if (slot-boundp record 'old-children)
 			   (old-children record)
 			   nil)))
+    (unless (or (region-intersects-region-p visible-region record)
+		(and old-children
+		     (region-intersects-region-p visible-region old-children)))
+      (return-from compute-difference-set (values nil nil nil nil nil)))
+    ;; I don't feel like adding another let and indenting this huge function
+    ;; some more....
+    (setq existing-output-records (make-hash-table :test #'eq))
     ;; XXX This means that compute-difference-set can't be called repeatedly on
     ;; the same tree; ugh. On the other hand, if we don't clear explicit-moves,
     ;; they can hang around in the tree for later passes and cause trouble.
