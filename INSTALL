@@ -1,0 +1,85 @@
+
+  To do the initial build:
+
+Mercury=>acl
+Allegro CL 4.3 [Linux/X86; R1] (12/11/96 1:33)
+Copyright (C) 1985-1996, Franz Inc., Berkeley, CA, USA.  All Rights Reserved.
+;; Optimization settings: safety 1, space 1, speed 1, debug 2.
+;; For a complete description of all compiler switches given the
+;; current optimization settings evaluate (EXPLAIN-COMPILER-SETTINGS).
+USER(1): (load "system")
+; Loading ./system.lisp
+;   Fast loading sys:;code;clx.fasl (/usr/ACL4.3/home/code/clx.fasl)
+;   Fast loading from bundle code/loop.fasl.
+T
+USER(2): (load-system :clim :interpreted t)
+; Loading system: "CLIM".
+;   Loading source for module: "design".
+
+  ...
+
+; Loading /home/mikemac/src/Lisp/McCLIM/clx-frame-manager.lisp
+;   Loading source for module: "examples/address-book".
+; Loading /home/mikemac/src/Lisp/McCLIM/examples/address-book.lisp
+Warning: ADDRESS is defined more than once as a type in the file
+         /home/mikemac/src/Lisp/McCLIM/examples/address-book.lisp.
+T
+USER(3): (compile-system :clim)
+; Compiling system: "CLIM".
+;   Compiling module "design" because the product file does not exist.
+;;; Compiling file /home/mikemac/src/Lisp/McCLIM/design.lisp
+; Compiling COLORP
+
+  ...
+
+         CLIM-INTERNALS:WITH-OUTPUT-AS-PRESENTATION, STREAM,
+         CLIM-INTERNALS:HANDLE-REPAINT, CLIM-INTERNALS:QUEUE-REPAINT,
+         CLIM-INTERNALS:REGION-DIFFERENCE.
+T
+USER(4): (exit)
+; Exiting Lisp
+
+
+  Then to run the system:
+
+Mercury=>xhost localhost
+localhost being added to access control list
+Mercury=>acl
+Allegro CL 4.3 [Linux/X86; R1] (12/11/96 1:33)
+Copyright (C) 1985-1996, Franz Inc., Berkeley, CA, USA.  All Rights Reserved.
+;; Optimization settings: safety 1, space 1, speed 1, debug 2.
+;; For a complete description of all compiler switches given the
+;; current optimization settings evaluate (EXPLAIN-COMPILER-SETTINGS).
+USER(1): (load "system")
+; Loading ./system.lisp
+;   Fast loading sys:;code;clx.fasl (/usr/ACL4.3/home/code/clx.fasl)
+;   Fast loading from bundle code/loop.fasl.
+T
+USER(2): (load-system :clim)
+; Loading system: "CLIM".
+;   Loading product for module: "design".
+; Fast loading /home/mikemac/src/Lisp/McCLIM/design.fasl
+
+  ...
+
+; Fast loading /home/mikemac/src/Lisp/McCLIM/examples/address-book.fasl
+Warning: ADDRESS is defined more than once as a type in the file
+         /home/mikemac/src/Lisp/McCLIM/examples/address-book.lisp.
+T
+USER(3): (load "test")
+; Loading ./test.lisp
+T
+USER(4): (in-package :clim-demo)
+#<The CLIM-DEMO package>
+CLIM-DEMO(5): (test)
+#<ADDRESS-BOOK @ #x8678c52>
+CLIM-DEMO(6): (run-frame-top-level frame)
+Error: Received signal number 2 (Keyboard interrupt)
+  [condition type: INTERRUPT-SIGNAL]
+
+Restart actions (select using :continue):
+ 0: continue computation
+[1c] CLIM-DEMO(7): :pop
+CLIM-DEMO(7): (exit)
+; Exiting Lisp
+
