@@ -20,7 +20,7 @@
 
 (defpackage "IMAGE"
 ; (:use #:clim-lisp)
-  (:use #:common-lisp)
+  (:use #:clim-clx #:common-lisp)
   (:export    
    "WRITE-PNM" "READ-IMAGE-FILE"
    "IMAGE" "IMAGE-COLOR" "IMAGE-GADGET" "IMAGE-HEIGHT"

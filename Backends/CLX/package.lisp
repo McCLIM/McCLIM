@@ -1,5 +1,5 @@
 (defpackage :clim-clx
-    (:use :clim :clim-lisp)
+  (:use :clim :clim-lisp)
   (:import-from :climi
                 #:+alt-key+
                 ;;
@@ -26,6 +26,7 @@
                 #:WITH-DOUBLE-BUFFERING 
                 #:WITH-TRANSFORMED-POSITION
                 #:WITH-TRANSFORMED-POSITIONS
+                #:WITH-MEDIUM-OPTIONS
                 ;;
                 #:BORDER-PANE
                 #:PIXMAP
@@ -38,7 +39,9 @@
                 #:top-level-sheet       ;used as slot
                 ;; #:space-requirement     ;used as slot, very bogus
                 ;; fbound
+                #:MEDIUM-DEVICE-REGION
                 #:MEDIUM-DRAW-CIRCLE*
+                #:DRAW-IMAGE
                 #:TEXT-STYLE-CHARACTER-WIDTH
                 #:MEDIUM-DRAW-OVAL*
                 #:HEIGHT                ;this seems bogus

@@ -15,7 +15,7 @@
 (export '(pixie-look pixie/clx-look))
 
 (defclass pixie-look (frame-manager) ())
-(defclass pixie/clx-look (pixie-look clim-internals::clx-frame-manager) ())
+(defclass pixie/clx-look (pixie-look clim-clx::clx-frame-manager) ())
 
 ; our stub inside clim proper
 (defmethod make-pane-1 ((fm pixie-look) (frame application-frame) type &rest args)
@@ -208,15 +208,17 @@
     (let ((tr (vertical-gadget-orientation-transformation pane)))
       (with-bounding-rectangle* (minx miny maxx maxy) (transform-region tr (sheet-region pane))
         (with-drawing-options (pane :transformation tr)
-          (with-drawing-options (pane :clipping-region  (region-difference
-                                                          (sheet-region pane)
-                                                          (gadget-bed-region pane)))
+          (with-drawing-options (pane :clipping-region  (transform-region tr
+                                                          (region-difference
+                                                            (sheet-region pane)
+                                                            (gadget-bed-region pane))))
             (draw-rectangle* pane minx miny maxx maxy :filled t :ink *3d-normal-color*))
           ;; draw bed
           (with-bounding-rectangle* (x1 y1 x2 y2) (gadget-bed-region pane)
-            (with-drawing-options (pane :clipping-region  (region-difference
-                                                            (sheet-region pane)
-                                                            (gadget-thumb-region pane)))
+            (with-drawing-options (pane :clipping-region  (transform-region tr
+                                                            (region-difference
+                                                              (sheet-region pane)
+                                                              (gadget-thumb-region pane))))
               (multiple-value-bind (x1 y1 x2 y2) (values (+ x1 1) (+ y1 1)
                                                          (- x2 1) (- y2 1))
                 (draw-rectangle* pane x1 y1 x2 y2 :ink (pane-background pane)))
@@ -595,15 +597,15 @@
 (defmethod initialize-instance :after ((pane pixie-image-pane) &rest args)
   (declare (ignore args))
   (with-slots (image-pathname image-image image-width image-height) pane
-    (let* ((data (read-image-file image-pathname))
-           (image (make-truecolor-image data 255)))
+    (let* ((data (image:read-image-file image-pathname))
+           (image (image:make-truecolor-image data 255)))
       (destructuring-bind (width height) (array-dimensions data)
         (setf image-width  width
               image-height height
               image-image  image))))
   (with-slots (image-mask-pathname image-stencil) pane
     (when image-mask-pathname
-      (let* ((data (read-image-file image-mask-pathname)))
+      (let* ((data (image:read-image-file image-mask-pathname)))
         (setf image-stencil (make-stencil data))))))
 
 (defmethod handle-repaint ((pane pixie-image-pane) region)

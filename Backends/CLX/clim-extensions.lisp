@@ -23,7 +23,7 @@
   ; but while it is, it needs to ensure that the use-package'ing
   ; happens before the rest of the file is read.
 
-  (in-package :CLIM-INTERNALS)
+  (in-package :CLIM-CLX)
   (use-package :IMAGE))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -37,7 +37,7 @@
   (with-medium-options (sheet args)
     (medium-draw-image* medium image)))
 
-(def-graphic-op draw-image (image))
+(clim-internals::def-graphic-op draw-image (image))
 
 (defun compute-pixel-value-truecolor-image-24 (pixel colormap)
   (declare (ignore colormap)
@@ -91,8 +91,8 @@
   (declare (type image image)
 	   (type (unsigned-byte 16) depth))
   (if (= depth 24)
-      (symbol-function (intern (format nil "COMPUTE-PIXEL-VALUE-~a-~a" (type-of image) depth) :clim-internals))
-      (symbol-function (intern (format nil "COMPUTE-PIXEL-VALUE-~a" (type-of image)) :clim-internals))))
+      (symbol-function (intern (format nil "COMPUTE-PIXEL-VALUE-~a-~a" (type-of image) depth) :clim-clx))
+      (symbol-function (intern (format nil "COMPUTE-PIXEL-VALUE-~a" (type-of image)) :clim-clx))))
 
 (defmacro medium-draw-translation-image (medium image transformation clipping-region)
   `(multiple-value-bind (mxx mxy myx myy tx ty) (get-transformation ,transformation)

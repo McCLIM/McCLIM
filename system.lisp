@@ -128,8 +128,8 @@
   "Backends/CLX/medium"
   "Backends/CLX/graft"
   "Backends/CLX/frame-manager"
-  ;;"Backends/CLX/image"
-  ;;"Backends/CLX/clim-extensions"
+  "Backends/CLX/image"
+  "Backends/CLX/clim-extensions"
   )
 
 (clim-defsystem (:clim-looks :depends-on (:clim-frontend))

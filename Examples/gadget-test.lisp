@@ -33,8 +33,8 @@
       do (destroy-port port))
   (setq climi::*all-ports* nil)
   (setq frame (make-application-frame 'gadget-test
-                :frame-manager (make-instance 'clim-internals::pixie/clx-look :port (find-port))
-              ))
+                :frame-manager (make-instance 'clim-internals::pixie/clx-look
+                                    :port (find-port))))
   (setq fm (frame-manager frame))
   (setq port (climi::frame-manager-port fm))
   (setq pane (first (frame-panes frame)))
