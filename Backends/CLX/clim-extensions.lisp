@@ -24,7 +24,8 @@
   ; happens before the rest of the file is read.
 
 (in-package :clim-clx)
-  (use-package :IMAGE))
+  (use-package :IMAGE)
+(use-package :clim-extensions))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -41,7 +42,7 @@
 
 (defun compute-pixel-value-truecolor-image-24 (pixel colormap)
   (declare (ignore colormap)
-	   (type (unsigned-byte 24) pixel))
+           (type (unsigned-byte 24) pixel))
   pixel)
 
 (defun compute-pixel-value-truecolor-image (pixel colormap)
@@ -117,6 +118,14 @@
 	(with-CLX-graphics (medium)
 	  (let* ((colormap (xlib:screen-default-colormap (clx-port-screen port)))
 		 (depth (xlib:drawable-depth mirror))
+                 ;;pdm: see below
+                 (pixmap-format (find depth
+                                      (xlib:display-pixmap-formats
+                                       (clx-port-display port))
+                                      :key #'xlib:pixmap-format-depth))
+                 (bits-per-pixel (and pixmap-format
+                                      (xlib:pixmap-format-bits-per-pixel
+                                       pixmap-format)))
 		 (computing-pixel-function (choose-computing-pixel image depth))
 		 (pixels (image-pixels image))
 		 (x-min* (round (max x-min 0)))
@@ -127,12 +136,20 @@
 		 (height (1+ (max 0 (- y-max* y-min*))))
 		 (start-x (+ print-x x-min*))
 		 (start-y (+ print-y y-min*))
-		 (data (make-array `(,height ,width) :element-type `(unsigned-byte ,depth)))
-		 (server-image (xlib:create-image :data data :depth depth)))
+                 ;;pdm: the bits-per-pixel value needn't be the same as the
+                 ;; depth.  If they don't match, XLIB signals an error.  So we
+                 ;; have to get the right bits-per-pixel value corresponding to
+                 ;; the given depth from XLIB and use it here.
+		 (data (make-array `(,height ,width) :element-type `(unsigned-byte ,bits-per-pixel)))
+		 (server-image (xlib:create-image :data data :depth depth :bits-per-pixel bits-per-pixel)))
 	    (declare (type xlib::colormap colormap)
 		     (type (unsigned-byte 16) depth)
 		     (type fixnum width height start-x start-y x-min* y-min* x-max* y-max*)
 		     (type xlib::image server-image))
+            ;;pdm: If this is not called here, the clipping is wrong.  I don't
+            ;; know what I'm doing here, it just works...
+            (setf (xlib:gcontext-clip-mask gc :unsorted)
+                  (list start-x start-y width height))
 	    (loop for i of-type fixnum from y-min* to y-max*
 		  do (loop for j of-type fixnum from x-min* to x-max*
 			   do (setf (aref data (- i y-min*) (- j x-min*))
@@ -175,6 +192,14 @@
 	      (declare (type coordinate x-min y-min x-max y-max))
 	      (let* ((colormap (xlib:screen-default-colormap (clx-port-screen port)))
 		     (depth (xlib:drawable-depth mirror))
+                     ;;pdm: The same bits-per-pixel vs. depth issue as above.
+                     (pixmap-format (find depth
+                                          (xlib:display-pixmap-formats
+                                           (clx-port-display port))
+                                          :key #'xlib:pixmap-format-depth))
+                     (bits-per-pixel (and pixmap-format
+                                          (xlib:pixmap-format-bits-per-pixel
+                                           pixmap-format)))
 		     (computing-pixel-function (choose-computing-pixel image depth))
 		     (background-pixel (X-pixel (port medium) (medium-background medium)))
 		     (inverse-transformation (invert-transformation transformation))
@@ -183,12 +208,12 @@
 		     (flat-pixels (make-array (* image-width image-height) :element-type `(unsigned-byte ,depth)
 					      :displaced-to pixels))
 		     (data-width (1+ (ceiling (- x-max x-min))))
-		     (data (make-array `(1 ,data-width) :element-type `(unsigned-byte ,depth)))
-		     (flat-data (make-array data-width :element-type `(unsigned-byte ,depth)
+		     (data (make-array `(1 ,data-width) :element-type `(unsigned-byte ,bits-per-pixel)))
+		     (flat-data (make-array data-width :element-type `(unsigned-byte ,bits-per-pixel)
 					    :displaced-to data))
 		     (r-image-width (1- image-width))
 		     (r-image-height (1- image-height))
-		     (server-image (xlib:create-image :data data :depth depth)))
+		     (server-image (xlib:create-image :data data :depth depth :bits-per-pixel bits-per-pixel)))
 		(declare (type xlib::colormap colormap)
 			 (type (unsigned-byte 16) depth)
 			 ;; (type standard-transformation inverse-transformation)
@@ -215,6 +240,14 @@
 			     (declare (type coordinate tx2 ty2))
 			     (let ((pos 0))
 			       (declare (type fixnum pos))
+                               ;;pdm: region-contains-position-p that used to
+                               ;; be called below makes the whole drawing about
+                               ;; three times slower.  So we have to perform an
+                               ;; expanded check to speed the things that are
+                               ;; enough slow already.
+                               (flet ((image-contains-position-p (x y)
+                                        (and (<= 0 x) (< x image-width)
+                                             (<= 0 y) (< y image-height))))
 			       (cond ((coordinate= tx1 tx2) ; horizontal case
 				      (when (<= 0 tx1 r-image-width)
 					(let ((dy (abs (round (- ty2 ty1))))
@@ -224,7 +257,7 @@
 					  (declare (type fixnum dy incy x y))
 					  (loop for j of-type fixnum from 0 to dy
 						do (setf (aref flat-data pos)
-							 (if (region-contains-position-p image-region x y)
+							 (if (image-contains-position-p x y)
 							     (funcall computing-pixel-function
 								      (aref pixels y x)
 								      colormap)
@@ -234,14 +267,14 @@
 				
 				     ((coordinate= ty1 ty2) ; vertical case
 				      (when (<= 0 ty1 r-image-height)
-					(let* ((dx (abs (ceiling (- x-max x-min))))    
+					(let* ((dx (abs (ceiling (- x-max x-min))))
 					       (incx (/ (- tx2 tx1) dx))
 					       (x (floor tx1))
-					       (y (floor ty1))) 					 
+					       (y (floor ty1)))
 					  (declare (type fixnum dx x y)) 
 					  (loop for j of-type fixnum from 0 to dx
 						do (setf (aref flat-data pos)
-							 (if (region-contains-position-p image-region x y)
+							 (if (image-contains-position-p x y)
 							     (funcall computing-pixel-function
 								      (aref pixels y x)
 								      colormap)
@@ -300,7 +333,7 @@
                                                         (incf fraction dx)
                                                         (setf (aref flat-data pos)
                                                               (aref flat-pixels (+ x1* y1*)))
-                                                        (incf pos)))))))))))
+                                                        (incf pos))))))))))))
 
 			       (xlib:put-image mirror gc server-image
 					       :width pos
@@ -327,11 +360,14 @@
 ;; [Julien] As drawing-image mostly doesn't work, except drawaing everything (sigh !..)
 ;;          the region provided by graphical server is ignored, and the entire pane 
 ;;          region is redrawn. Bugs must be fixed before doing the right thing.
+;;pdm: No, don't ignore the region, otherwise the pane becomes completely
+;; unusable, spending all the time redrawing, redrawing, redrawing, ...
+;; There's no reason to ignore the region, everything works fine with it
+;; AFAIK.
 (defmethod handle-repaint ((pane image-pane) region)
-  (declare (ignore region))
   (with-slots (image) pane
     (when image
-      (draw-image pane image :clipping-region (sheet-region pane)))))
+      (draw-image pane image :clipping-region region))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
