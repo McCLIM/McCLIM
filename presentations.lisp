@@ -270,12 +270,26 @@ filled in."
 
 (defun transform-options-lambda-list (ll)
   "Return a legal lambda list given an options specification"
-   (loop for spec in ll
-	 collect (if (atom spec)
-		     spec
-		     (ldiff spec (cdddr spec)))
-	 into specs
-	 finally (return (cons '&key specs))))
+  (let ((descriptionp nil))
+    (loop for spec in ll
+	  collect (if (atom spec)
+		      (progn
+			(when (eq (make-keyword spec) :description)
+			  (setq descriptionp t))
+			spec)
+		      (progn
+			(let ((key (if (atom (car spec))
+				       (make-keyword (car spec))
+				       (caar spec))))
+			  (when (eq key :description)
+			    (setq descriptionp t)))
+			(ldiff spec (cdddr spec))))
+	  into specs
+	  finally (return `(&key
+			    ,@specs
+			    ,@(unless descriptionp
+			        `(((:description ,(gensym))))))))))
+
 
 ;;; External function
 (defun presentation-type-name (type)
@@ -402,6 +416,14 @@ supertypes of TYPE that are presentation types"))
     (and meta
 	 (typep meta 'standard-class))))
 
+(defun make-default-description (name)
+  "Create a description string from the type name"
+  (let ((downcase-name (string-downcase name)))
+    (setq downcase-name (nsubstitute-if-not #\Space
+					    #'alphanumericp
+					    downcase-name))
+    (string-trim " " downcase-name)))
+
 (defun record-presentation-type (name parameters params-ll options options-ll
 				 inherit-from-func description history
 				 parameters-are-types
@@ -501,9 +523,11 @@ suitable for SUPER-NAME"))
 	       (t nil)))))
 
 (defmacro define-presentation-type (name parameters
-                                         &key options inherit-from
-                                         description (history t)
-                                         parameters-are-types)
+				    &key options inherit-from
+				    (description
+				     (make-default-description name))
+				    (history t)
+				    parameters-are-types)
   (let* ((params-ll (transform-parameters-lambda-list parameters))
 	 (options-ll (transform-options-lambda-list options))
 	 (inherit-from-func (make-inherit-from-lambda params-ll
@@ -520,8 +544,8 @@ suitable for SUPER-NAME"))
 	 (%define-presentation-type ,name ,parameters ,params-ll
 				    ,options ,options-ll
 				    ,inherit-from ,inherit-from-func
-				    ',description ',history
-				    ',parameters-are-types)))))
+				    ,description ,history
+				    ,parameters-are-types)))))
 
 
 (defun presentation-type-parameters (type-name &optional env)
@@ -617,9 +641,24 @@ suitable for SUPER-NAME"))
 	       (values (make-type-spec name expansion options) t)
 	       (values type nil))))
 	(t (let* ((expander (gethash name *presentation-type-abbreviations*)))
-	     (if expander
-		 (values (funcall expander type) t)
-		 (values type nil))))))))
+	     (flet ((copy-description (expanded-typespec)
+		      (with-presentation-type-decoded (expand-name
+						       expand-params
+						       expand-options)
+			expanded-typespec
+			(let ((description (getf options :description))
+			      (expand-desc (getf expand-options :description)))
+			  (if (and description
+				   (null expand-desc))
+			      (make-type-spec expand-name
+					      expand-params
+					      `(:description ,description
+						,@expand-options))
+			      expanded-typespec)))))
+	       (if expander
+		 (values (copy-description (funcall expander type)) t)
+		 (values type nil)))))))))
+
 
 (defun expand-presentation-type-abbreviation (type &optional env)
   (let ((expand-any-p nil))
@@ -941,6 +980,46 @@ function lambda list"))
       (if (equal params super-params)
 	  (values t t)
 	  (values nil nil)))))
+
+(defun default-describe-presentation-type (description stream plural-count)
+  (if (symbolp description)
+      (setq description (make-default-description (symbol-name description))))
+  (cond ((numberp plural-count)
+	 (format stream "~D ~A~P" plural-count description plural-count))
+	(plural-count
+	 (format stream "~As" description))
+	(t (format stream "~:[a~;an~] ~A"
+		   (find (char description 0) "aeiouAEIOU")
+		   description))))
+
+(define-presentation-generic-function %describe-presentation-type
+    describe-presentation-type
+  (type-key parameters options type stream plural-count ))
+
+(define-default-presentation-method describe-presentation-type
+    (type stream plural-count)
+  (with-presentation-type-decoded (name parameters options)
+    type
+    (declare (ignore name parameters))
+    (let ((description (or (getf options :description)
+			   (description (class-of type-key)))))
+      (default-describe-presentation-type description
+	                                  stream
+	                                  plural-count))))
+
+(defun describe-presentation-type (type
+				   &optional
+				   (stream *standard-output*)
+				   (plural-count 1))
+  (flet ((describe (stream)
+	   (funcall-presentation-generic-function describe-presentation-type
+						  type
+						  stream
+						  plural-count)))
+    (if stream
+	(describe stream)
+	(with-output-to-string (s)
+	  (describe s)))))
 
 ;;; The presentation types
 
