@@ -593,20 +593,26 @@
     (funcall (slider-drag-callback pane) pane value)))
 
 (defmethod handle-event ((pane slider-pane) (event pointer-enter-event))
-  (setf (gadget-current-color pane) (gadget-highlighted-color pane)))
+  (with-slots (armed) pane
+    (unless armed
+      (setf armed t
+	    (gadget-current-color pane) (gadget-highlighted-color pane))
+      (armed-callback pane (gadget-client pane) (gadget-id pane)))))
 
 (defmethod handle-event ((pane slider-pane) (event pointer-exit-event))
   (with-slots (armed) pane
     (when armed
-      (setf armed nil)
+      (setf armed nil
+	    (gadget-current-color pane) (gadget-normal-color pane))
       (when (gadget-show-value-p pane)
 	(setf (gadget-show-value-p pane) nil)))
-    (setf (gadget-current-color pane) (gadget-normal-color pane))))
+    (disarmed-callback pane (gadget-client pane) (gadget-id pane))))
+
 
 (defmethod handle-event ((pane slider-pane) (event pointer-button-press-event))
   (with-slots (armed) pane
      (unless armed
-       (setf armed t)
+       (setf armed ':button-press)
        (when (gadget-show-value-p pane)
 	 (setf (gadget-show-value-p pane) nil)))))
        
@@ -622,7 +628,7 @@
 (defmethod handle-event ((pane slider-pane) (event pointer-button-release-event))
   (with-slots (armed) pane
     (when armed
-      (setf armed nil
+      (setf armed t
 	    (gadget-show-value-p pane) t
 	    (gadget-value pane :invoke-callback t) (convert-position-to-value pane (pointer-event-y event)))
       (dispatch-repaint pane (sheet-region pane)))))
