@@ -236,7 +236,8 @@
   (read-command (frame-command-table frame) :stream stream))
 
 (defmethod execute-frame-command ((frame application-frame) command)
-  (apply (command-name command) (command-arguments command)))
+  #+ignore (apply (command-name command) (command-arguments command))
+  (eval command))
 
 (defmethod make-pane-1 ((fm frame-manager) (frame application-frame) type &rest args)
   `(make-pane-1 ,fm ,frame ',type ,@args))
@@ -255,10 +256,13 @@
   (sheet-disown-child (graft frame) (frame-top-level-sheet frame))
   (setf (frame-manager frame) nil))
 
+(defvar *pane-realizer* nil)
+
 (defmacro with-look-and-feel-realization ((frame-manager frame) &body body)
-  (declare (ignore frame-manager frame))
-  `(progn
-     ,@body))
+  `(let ((*pane-realizer* ,frame-manager)
+	 (*application-frame* ,frame))
+     (progn
+       ,@body)))
 
 (defun make-single-pane-generate-panes-form (class-name pane)
   `(defmethod generate-panes ((fm frame-manager) (frame ,class-name))
@@ -269,30 +273,27 @@
 (defun make-panes-generate-panes-form (class-name panes layouts)
   `(defmethod generate-panes ((fm frame-manager) (frame ,class-name))
      (let ((*application-frame* frame))
-       (let ,(loop for (name . form) in panes
-		   collect `(,name (or (find-pane-named frame ',name)
-				       (let ((pane
-					      ,(cond
-						((and (= (length form) 1)
-						      (listp (first form)))
-						 (first form))
-						((keywordp (first form))
-						 (let ((maker (intern (concatenate 'string
-									"MAKE-CLIM-"
-									(symbol-name (first form))
-									"-PANE") :clim)))
-						   (if (fboundp maker)
-						       `(,maker :name ',name ,@(cdr form))
-						     `(make-pane ',(intern (concatenate 'string
-									     (symbol-name (first form))
-									     "-PANE")
-									   :clim)
-								 :name ',name ,@(cdr form)))))
-						(t `(make-pane ',(first form) :name ',name ,@(cdr form))))))
-					 (push pane (slot-value frame 'panes))
-					 pane))))
-	 (setf (slot-value frame 'pane)
-	   (with-look-and-feel-realization (fm frame)
+       (with-look-and-feel-realization (fm frame)
+	 (let ,(loop for (name . form) in panes
+		     collect `(,name (or (find-pane-named frame ',name)
+					 (let ((pane
+						,(cond
+						  ((and (= (length form) 1)
+							(listp (first form)))
+						   (first form))
+						  ((keywordp (first form))
+						   (let ((maker (intern (concatenate 'string
+									  "MAKE-CLIM-"
+									  (symbol-name (first form))
+									  "-PANE") :clim)))
+						     (if (fboundp maker)
+							 `(,maker :name ',name ,@(cdr form))
+						       `(make-pane ',(first form)
+								   :name ',name ,@(cdr form)))))
+						  (t `(make-pane ',(first form) :name ',name ,@(cdr form))))))
+					   (push pane (slot-value frame 'panes))
+					   pane))))
+	   (setf (slot-value frame 'pane)
 	     (ecase (frame-current-layout frame)
 	       ,@layouts)))
 	 ))))
