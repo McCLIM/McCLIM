@@ -31,6 +31,8 @@
 ;;; - How to deal with mixing of positioning/modifying?
 ;;; - When DRAWING-P is NIL, should stream cursor move?
 ;;; - OUTPUT-RECORD is a protocol class, it should not have any slots/methods.
+;;; - TEXT-DISPLAYED-OUTPUT-RECORD-MIXIN does not store current ink.
+;;; - There are glitches with O-R-POSITION.
 
 (in-package :CLIM-INTERNALS)
 
@@ -274,6 +276,7 @@ Only those records that overlap REGION are displayed."))
 ;;; XXX Should this only be defined on recording streams?
 (defmethod highlight-output-record ((record basic-output-record-mixin)
 				    stream state)
+  ;; FIXME!!! WITH-IDENTITY-TRANSFORMATION
   (multiple-value-bind (x1 y1 x2 y2)
       (output-record-hit-detection-rectangle* record)
     (ecase state
