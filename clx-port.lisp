@@ -308,11 +308,6 @@
 				   (first (xlib:display-roots (clx-port-display port))))
 				  (xlib:make-color :red r :green g :blue b)))))))
 
-(defmethod port-copy-area ((port clx-port) sheet from-x from-y width height to-x to-y)
-  (let* ((mirror (port-lookup-mirror port sheet))
-	 (gc (medium-gcontext (sheet-medium sheet) +background-ink+)))
-    (xlib:copy-area mirror gc from-x from-y width height mirror to-x to-y)))
-
 (defmethod port-mirror-width ((port clx-port) sheet)
   (let ((mirror (port-lookup-mirror port sheet)))
     (xlib:drawable-width mirror)))
@@ -355,35 +350,6 @@
 (defmethod port-deallocate-pixmap ((port clx-port) pixmap)
   (when (port-lookup-mirror port pixmap)
     (destroy-mirror port pixmap)))
-
-(defmethod port-copy-to-pixmap ((port clx-port) (sheet sheet) from-x from-y 
-				width height pixmap to-x to-y)
-  (declare (ignorable port))
-  (xlib:copy-area (sheet-direct-mirror sheet) 
-		  (medium-gcontext (sheet-medium sheet) +background-ink+)
-		  from-x from-y width height
-		  (pixmap-mirror pixmap)
-		  to-x to-y))
-
-(defmethod port-copy-to-pixmap ((port clx-port) (medium medium) from-x from-y 
-				width height pixmap to-x to-y)
-  (port-copy-to-pixmap port (medium-sheet medium) from-x from-y 
-		       width height pixmap to-x to-y))
-  
-(defmethod port-copy-to-pixmap ((port clx-port) (stream stream) from-x from-y 
-				width height pixmap to-x to-y)
-  (declare (ignore from-x from-y width height pixmap to-x to-y))
-  (error "copy-to-pixmap with a stream as source is not implemented."))
-
-(defmethod port-copy-from-pixmap ((port clx-port) pixmap from-x from-y
-				  width height sheet to-x to-y)
-  (declare (ignorable port))
-  (with-sheet-medium (medium sheet)
-    (xlib::copy-area (pixmap-mirror pixmap)
-		     (medium-gcontext medium +background-ink+)
-		     from-x from-y width height
-		     (sheet-direct-mirror sheet)
-		     to-x to-y)))
 
 ;; Device-Font-Text-Style
 

@@ -94,7 +94,7 @@
 	    (xlib:gcontext-foreground gc) (X-pixel port ink)
 	    (xlib:gcontext-background gc) (X-pixel port (medium-background medium)))
       (let ((clipping-region (medium-device-region medium)))
-        (unless (eq clipping-region +nowhere+)
+        (unless (region-equal clipping-region +nowhere+)
           (setf (xlib:gcontext-clip-mask gc :yx-banded)
                 (clipping-region->rect-seq clipping-region))))
       gc)))
@@ -114,10 +114,11 @@
 (defun clipping-region->rect-seq (clipping-region)
   (loop for region in (nreverse (region-set-regions clipping-region
                                                     :normalize :x-banding))
-        nconcing (list (round (rectangle-min-x region))
-                       (round (rectangle-min-y region))
-                       (round (rectangle-width region))
-                       (round (rectangle-height region)))))
+        as rectangle = (bounding-rectangle region)
+        nconcing (list (round (rectangle-min-x rectangle))
+                       (round (rectangle-min-y rectangle))
+                       (round (rectangle-width rectangle))
+                       (round (rectangle-height rectangle)))))
 
 (defmacro with-CLX-graphics ((medium) &body body)
   `(let* ((port (port ,medium))
@@ -129,6 +130,44 @@
      (unwind-protect
 	 (progn ,@body)
        #+ignore(xlib:free-gcontext gc))))
+
+
+;;; Pixmaps
+
+(defmethod medium-copy-area ((from-drawable clx-medium) from-x from-y width height
+                             (to-drawable clx-medium) to-x to-y)
+  (xlib:copy-area (sheet-direct-mirror (medium-sheet from-drawable))
+                  (medium-gcontext from-drawable +background-ink+)
+                  from-x from-y width height
+                  (sheet-direct-mirror (medium-sheet to-drawable))
+                  to-x to-y))
+
+(defmethod medium-copy-area ((from-drawable clx-medium) from-x from-y width height
+                             (to-drawable pixmap) to-x to-y)
+  (xlib:copy-area (sheet-direct-mirror (medium-sheet from-drawable))
+                  (medium-gcontext from-drawable +background-ink+)
+                  from-x from-y width height
+                  (pixmap-mirror to-drawable)
+                  to-x to-y))
+
+(defmethod medium-copy-area ((from-drawable pixmap) from-x from-y width height
+                             (to-drawable clx-medium) to-x to-y)
+  (xlib:copy-area (pixmap-mirror from-drawable)
+                  (medium-gcontext to-drawable +background-ink+)
+                  from-x from-y width height
+                  (sheet-direct-mirror (medium-sheet to-drawable))
+                  to-x to-y))
+
+(defmethod medium-copy-area ((from-drawable pixmap) from-x from-y width height
+                             (to-drawable pixmap) to-x to-y)
+  (xlib:copy-area (pixmap-mirror from-drawable)
+                  (medium-gcontext from-drawable +background-ink+) ; FIXME!!!!!
+                  from-x from-y width height
+                  (pixmap-mirror to-drawable)
+                  to-x to-y))
+
+
+;;; Medium-specific Drawing Functions
 
 (defmethod medium-draw-point* ((medium clx-medium) x y)
   (with-transformed-position ((sheet-native-transformation (medium-sheet medium))

@@ -182,10 +182,6 @@ returns a list in CLIM X11 format (:x11 :host host-name :display-id display-numb
   (declare (ignore text-style char))
   (error "PORT-CHARACTER-WIDTH fell thru to a generic PORT"))
 
-(defmethod port-copy-area ((port port) sheet from-x from-y width height to-x to-y)
-  (declare (ignore sheet from-x from-y width height to-x to-y))
-  (error "COPY-AREA is not implemented for PORTs"))
-
 ;;; Pixmap
 
 (defmethod port-lookup-mirror ((port port) (pixmap pixmap))
@@ -219,9 +215,3 @@ returns a list in CLIM X11 format (:x11 :host host-name :display-id display-numb
 (defmethod port-deallocate-pixmap ((port port) pixmap)
   (declare (ignore pixmap))
   (error "DEALLOCATE-PIXMAP is not implemented for generic PORTs"))
-
-(defmethod port-copy-to-pixmap ((port port) sheet from-x from-y width height
-				pixmap to-x to-y)
-  (declare (ignore sheet from-x from-y width height pixmap to-x to-y))
-  (error "COPY-TO-PIXMAP is not implemented for generic PORTs"))
-

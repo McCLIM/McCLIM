@@ -28,10 +28,13 @@
 (defgeneric pixmap-mirror (mirrored-pixmap))
 (defgeneric allocate-pixmap (sheet width height))
 (defgeneric deallocate-pixmap (pixmap))
-(defgeneric copy-to-pixmap (sheet sheet-x sheet-y width height 
+(defgeneric copy-to-pixmap (medium medium-x medium-y width height 
 			    &optional pixmap (pixmap-x 0) (pixmap-y 0)))
-(defgeneric copy-from-pixmap (pixmap from-x from-y width height sheet to-x to-y))
-(defgeneric copy-area (sheet from-x from-y width height to-x to-y))
+(defgeneric copy-from-pixmap (pixmap from-x from-y width height
+                              medium medium-x medium-y))
+(defgeneric copy-area (medium from-x from-y width height to-x to-y))
+(defgeneric medium-copy-area (from-drawable from-x from-y width height
+                              to-drawable to-x to-y))
 
 (defclass mirrored-pixmap (pixmap)
   ((port :initform nil :initarg :port :accessor port)

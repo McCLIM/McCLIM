@@ -465,40 +465,53 @@
 		   line-style line-thickness line-unit line-dashes line-cap-shape))
   (error "DRAW-OVAL* is not implemented"))
 
-(defmethod copy-area ((sheet sheet) from-x from-y width height to-x to-y)
-  (port-copy-area (port sheet) sheet from-x from-y width height to-x to-y))
-
 
 ;;; Pixmap functions
 
+(defmethod copy-to-pixmap ((medium medium) medium-x medium-y width height
+                           &optional pixmap (pixmap-x 0) (pixmap-y 0))
+  (unless pixmap
+    (setq pixmap (allocate-pixmap medium (+ pixmap-x width) (+ pixmap-y height))))
+  (medium-copy-area medium medium-x medium-y width height
+                    pixmap pixmap-x pixmap-y)
+  pixmap)
+
 (defmethod copy-to-pixmap ((sheet sheet) sheet-x sheet-y width height
-			   &optional pixmap (pixmap-x 0) (pixmap-y 0))
-  (if (null pixmap)
-      (setq pixmap (allocate-pixmap sheet (+ pixmap-x width) (+ pixmap-y height))))
-  (port-copy-to-pixmap (port sheet) sheet sheet-x sheet-y width height
-		       pixmap pixmap-x pixmap-y)
+                           &optional pixmap (pixmap-x 0) (pixmap-y 0))
+  (copy-to-pixmap (sheet-medium sheet) sheet-x sheet-y width height
+                  pixmap pixmap-x pixmap-y))
+
+(defmethod copy-to-pixmap ((stream stream) stream-x stream-y width height
+                           &optional pixmap (pixmap-x 0) (pixmap-y 0))
+  (declare (ignore stream-x stream-y width height pixmap pixmap-x pixmap-y))
+  (error "COPY-TO-PIXMAP from a stream is not implemented"))
+
+(defmethod copy-from-pixmap (pixmap pixmap-x pixmap-y width height
+                             (medium medium) medium-x medium-y)
+  (medium-copy-area pixmap pixmap-x pixmap-y width height
+                    medium medium-x medium-y)
   pixmap)
 
-(defmethod copy-to-pixmap ((sheet medium) sheet-x sheet-y width height
-			   &optional pixmap (pixmap-x 0) (pixmap-y 0))
-  (if (null pixmap)
-      (setq pixmap (allocate-pixmap sheet (+ pixmap-x width) (+ pixmap-y height))))
-  (port-copy-to-pixmap (port sheet) sheet sheet-x sheet-y width height
-		       pixmap pixmap-x pixmap-y)
-  pixmap)
+(defmethod copy-from-pixmap (pixmap pixmap-x pixmap-y width height
+                             (sheet sheet) sheet-x sheet-y)
+  (medium-copy-area pixmap pixmap-x pixmap-y width height
+                    (sheet-medium sheet) sheet-x sheet-y))
 
-(defmethod copy-to-pixmap ((sheet stream) sheet-x sheet-y width height
-			   &optional pixmap (pixmap-x 0) (pixmap-y 0))
-  (if (null pixmap)
-      (setq pixmap (allocate-pixmap sheet (+ pixmap-x width) (+ pixmap-y height))))
-  (port-copy-to-pixmap (port sheet) sheet sheet-x sheet-y width height
-		       pixmap pixmap-x pixmap-y)
-  pixmap)
+(defmethod copy-from-pixmap (pixmap pixmap-x pixmap-y width height
+                             (stream stream) stream-x stream-y)
+  (declare (ignore pixmap pixmap-x pixmap-y width height stream-x stream-y))
+  (error "COPY-FROM-PIXMAP into a stream is not implemented"))
 
-(defmethod copy-from-pixmap ((pixmap pixmap) from-x from-y
-			     width height sheet to-x to-y)
-  (port-copy-from-pixmap (port pixmap) pixmap from-x from-y
-			 width height sheet to-x to-y))
+(defmethod copy-area ((medium medium) from-x from-y width height to-x to-y)
+  (medium-copy-area medium from-x from-y width height
+                    medium to-x to-y))
+
+(defmethod copy-area ((sheet sheet) from-x from-y width height to-x to-y)
+  (copy-area (sheet-medium sheet) from-x from-y width height to-x to-y))
+
+(defmethod copy-area ((stream stream) from-x from-y width height to-x to-y)
+  (declare (ignore from-x from-y width height to-x to-y))
+  (error "COPY-AREA on a stream is not implemented"))
 
 (defmacro with-output-to-pixmap ((medium-var sheet &key width height) &body body)
   `(let* ((pixmap (allocate-pixmap ,sheet ,width ,height))

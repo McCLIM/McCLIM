@@ -424,6 +424,21 @@
   `(let ((,coord-seq (transform-positions ,transformation ,coord-seq)))
      ,@body))
 
+
+;;; Pixmaps
+
+(defmethod medium-copy-area ((from-drawable basic-medium) from-x from-y width height
+                             to-drawable to-x to-y)
+  (declare (ignore from-x from-y width height to-drawable to-x to-y))
+  (error "MEDIUM-COPY-AREA is not implemented for generic PORTs"))
+
+(defmethod medium-copy-area (from-drawable from-x from-y width height
+                             (to-drawable basic-medium) to-x to-y)
+  (declare (ignore from-drawable from-x from-y width height to-x to-y))
+  (error "MEDIUM-COPY-AREA is not implemented for generic PORTs"))
+
+
+;;; Medium-specific Drawing Functions
 
 (defmethod medium-draw-point* :around ((medium basic-medium) x y)
   (let ((tr (medium-transformation medium)))
