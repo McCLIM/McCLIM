@@ -50,7 +50,7 @@
   (:serial
 
    ;; First possible patches
-   #+:CMU       "lisp-dep/fix-cmu"
+   #+:CMU       "Lisp-Dep/fix-cmu"
 
    "package"
 
