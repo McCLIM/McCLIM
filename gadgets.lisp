@@ -238,7 +238,7 @@
       (let ((tw (* 1.3 width))
 	    (th (* 2.5 height)))
 	(make-space-requirement :width tw :height th
-				:max-width tw :max-height th
+				:max-width 400 :max-height 400
 				:min-width tw :min-height th)))))
 
 (defclass labelled-gadget-mixin (labelled-gadget)
@@ -432,7 +432,7 @@
 	       (draw-rectangle* pane 0 0 w h
 				:ink (gadget-highlighted-color pane)
 				:filled t)
-	       (draw-edges-lines* pane (1- w) (1- h) 1 1))
+	       (draw-edges-lines* pane (- w 2) (- h 2) 1 1))
 	      (t
 	       (draw-rectangle* pane 0 0 w h
 				:ink (gadget-normal-color pane)
