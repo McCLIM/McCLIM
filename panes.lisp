@@ -779,16 +779,19 @@
 (defmethod pane-scroller ((scroller scroller-pane))
   (scroller-pane-scroll-bar scroller))
 
-(defmethod scroll-extent ((scroller scroller-pane) x y)
-  (let* ((child (first (sheet-children (first (sheet-children scroller)))))
-	 (region (sheet-region child))
-	 (child-region-type (type-of region)))
-    (multiple-value-bind (x-min y-min x-max y-max) (bounding-rectangle* region)
-      (setf (sheet-region child) (make-instance child-region-type
-						:min-x x
-						:min-y y
-						:max-x (+ x (- x-max x-min))
-						:max-y (+ y (- y-max y-min)))))))
+(defmethod update-scrollbars ((pane basic-pane))
+  (update-scrollbars (sheet-parent pane)))
+
+(defmethod update-scrollbars ((pane scroller-pane))
+  )
+
+(defmethod scroll-extent ((pane clim-stream-pane) x y)
+  (setf (sheet-transformation pane) (make-translation-transformation (- x) (- y)))
+  (set-bounding-rectangle-position (sheet-region pane) x y)
+  (update-scrollbars (sheet-parent pane))
+  (clear-area pane)
+  (replay (stream-output-history pane) pane)
+  )
 
 
 ;; LABEL PANE
