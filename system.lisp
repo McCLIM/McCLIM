@@ -94,10 +94,10 @@
    "repaint"
    "graphics"
    "views"
-   "encapsulate"
    "stream-output"
+   "encapsulate" ; depends on (SETF STREAM-CURSOR-POSITION)
    "recording"
-   "stream-input"
+   "stream-input" ; depends on WITH-ENCAPSULATING-STREAM
 )
 
 (clim-defsystem (:goatee-core :depends-on (:clim-core))
