@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.65 2002/02/28 09:57:20 gilbert Exp $
+;;; $Id: panes.lisp,v 1.66 2002/02/28 19:27:08 gilbert Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -817,10 +817,10 @@
             (compose-space child)) )))
 
  (defmethod box-layout-mixin/xically-compose-space ((pane box-layout-mixin))
-   (let ((n (length (sheet-enabled-children pane))))
+   (let ((n (length (sheet-children pane))))
      (with-slots (major-spacing) pane
        (loop
-           for child in (sheet-enabled-children pane)
+           for child in (sheet-children pane)
            for sr = (xically-content-sr** pane child)
            sum (space-requirement-major sr) into major
            sum (space-requirement-min-major sr) into min-major
@@ -847,7 +847,7 @@
 
  (defmethod box-layout-mixin/xically-allocate-space-aux* ((box box-layout-mixin) width height)
    (declare (ignorable width height))
-   (let ((children (reverse (sheet-enabled-children box))))
+   (let ((children (reverse (sheet-children box))))
      (with-slots (major-spacing) box
        (let* ((content-srs (mapcar #'(lambda (c) (xically-content-sr** box c)) children))
               (allot       (mapcar #'ceiling (mapcar #'space-requirement-major content-srs)))
@@ -913,7 +913,7 @@
        ;; now actually layout the children
        (let ((x 0))
          (loop
-             for child in (reverse (sheet-enabled-children pane))
+             for child in (reverse (sheet-children pane))
              for major in majors
              for minor in minors
              do
