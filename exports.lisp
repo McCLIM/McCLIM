@@ -265,6 +265,8 @@
 		     draw-standard-menu
 		     draw-text
 		     draw-text*
+		     draw-triangle
+		     draw-triangle*
 		     ellipse
 		     ellipse-center-point
 		     ellipse-center-point*

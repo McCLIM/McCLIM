@@ -253,6 +253,24 @@
   (with-medium-options (sheet args)
     (medium-draw-rectangle* medium x1 y1 x2 y2 filled)))
 
+(defun draw-triangle (sheet point1 point2 point3
+                      &rest args
+                      &key (filled t)
+                      ink clipping-region transformation line-style line-thickness
+                      line-unit line-dashes line-joint-shape)
+  (declare (ignore ink clipping-region transformation line-style line-thickness
+                   line-unit line-dashes line-joint-shape))
+  (apply #'draw-polygon sheet (list point1 point2 point3) :filled filled :closed t args))
+
+(defun draw-triangle* (sheet x1 y1 x2 y2 x3 y3
+                       &rest args
+                       &key (filled t)
+                       ink clipping-region transformation line-style line-thickness
+                       line-unit line-dashes line-joint-shape)
+  (declare (ignore ink clipping-region transformation line-style line-thickness
+                   line-unit line-dashes line-joint-shape))
+  (apply #'draw-polygon* sheet (list x1 y1 x2 y2 x3 y3) :filled filled :closed t args))
+
 (defun draw-ellipse (sheet
 		     center-point
 		     radius-1-dx radius-1-dy radius-2-dx radius-2-dy
