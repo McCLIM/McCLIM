@@ -50,8 +50,12 @@
         (unless (null dashes)
           (setf (xlib:gcontext-line-style gc) :dash
                 (xlib:gcontext-dashes gc) (if (eq dashes t) 3 dashes))))
-      (let ((clipping-region (medium-clipping-region medium)))
-        (unless (eq clipping-region +everywhere+)
+    ; the right method to use is the medium-device-region, but
+    ; as the device-transformation, in the case of the back-end CLX, is 
+    ; the identity transformation, a short path is used for optimizing
+    ; the drawing operations.
+      (let ((clipping-region (medium-clipping-region medium))) ;(medium-device-region medium)))
+	(unless (eq clipping-region +everywhere+)
           (setf (xlib:gcontext-clip-mask gc :yx-banded)
                 (clipping-region->rect-seq medium clipping-region))))
       gc)))
@@ -90,11 +94,19 @@
 (defun medium-transform-position (medium x y)
   (multiple-value-bind (xr yr) (bounding-rectangle* 
 				(sheet-region (medium-sheet medium)))
-    (transform-position (medium-transformation medium)
+    ; the right method to use is the medium-device-transformation, but
+    ; as the device-transformation, in the case of the back-end CLX, is 
+    ; the identity transformation, a short path is used for optimizing
+    ; the drawing operations.
+    (transform-position (medium-transformation medium) ;(medium-device-transformation medium)
 			(- x xr) (- y yr))))
 
 (defun medium-transform-distance (medium dx dy)
-  (transform-distance (medium-transformation medium)
+  ; the right method to use is the medium-device-transformation, but
+  ; as the device-transformation, in the case of the back-end CLX, is 
+  ; the identity transformation, a short path is used for optimizing
+  ; the drawing operations.
+  (transform-distance (medium-transformation medium) ;(medium-device-transformation medium)
                       dx dy))
 
 (defmethod medium-draw-point* ((medium clx-medium) x y)

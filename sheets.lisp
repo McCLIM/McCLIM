@@ -89,6 +89,16 @@ sheet-supports-only-one-child error to be signalled."))
 (defgeneric sheet-delta-transformation (sheet ancestor))
 (defgeneric sheet-allocated-region (sheet child))
 
+(defgeneric sheet-native-region (sheet))
+(defgeneric sheet-device-region (sheet))
+(defgeneric compute-native-region (sheet))
+(defgeneric invalidate-cached-regions (sheet))
+
+(defgeneric sheet-native-transformation (sheet))
+(defgeneric sheet-device-transformation (sheet))
+(defgeneric compute-native-transformation (sheet))
+(defgeneric invalidate-cached-transformations (sheet))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; input protocol
@@ -132,10 +142,16 @@ sheet-supports-only-one-child error to be signalled."))
 ;;;; sheet protocol class
 
 (defclass sheet ()
-  ((region :initarg :region
+  ((region :type region
+	   :initarg :region
 	   :initform (make-bounding-rectangle 0 0 100 100)
 	   :accessor sheet-region)
-   (enabled-p :initform nil :accessor sheet-enabled-p)))
+   (native-region :type region
+		  :initform nil
+		  :accessor sheet-native-region)
+   (enabled-p :type boolean :initform nil :accessor sheet-enabled-p)))
+; Native region is volatile, and is only computed at the first request when it's equal to nil.
+; Invalidate-cached-region method sets the native-region to nil.
 
 (defun sheetp (x)
   (typep x 'sheet))
@@ -301,6 +317,43 @@ sheet-supports-only-one-child error to be signalled."))
 
 (defmethod note-sheet-transformation-changed ((sheet sheet))
   nil)
+
+(defmethod sheet-native-region :before ((sheet sheet))
+  (with-slots (native-region) sheet
+    (unless native-region
+      (setf native-region (compute-native-region sheet)))))
+
+(defmethod sheet-device-region ((sheet sheet))
+  (get-medium-device-region sheet))
+
+(defmethod compute-native-region ((sheet sheet))
+  (port-compute-native-region (port sheet) sheet))
+
+(defmethod invalidate-cached-regions ((sheet sheet))
+  (with-slots (native-region) sheet
+    (when native-region
+      (setf native-region nil)
+      (medium-invalidate-cached-device-region sheet))
+    (loop for child of-type sheet in (sheet-children sheet)
+	  do (invalidate-cached-regions child))))
+
+(defmethod (setf sheet-region) :after (region (sheet sheet))
+  (declare (ignore region))
+  ; when sheet-region changes, native-region and device-region change too. So, the old-values are false.
+  (invalidate-cached-regions sheet))
+
+(defmethod sheet-native-transformation ((sheet sheet))
+  (error "Attempting to get the native-transformation of a generic sheet"))
+
+(defmethod sheet-device-transformation ((sheet sheet))
+  (error "Attempting to get the device-transformation of a generic sheet"))
+
+(defmethod compute-native-transformation ((sheet sheet))
+  (error "Attempting to compute the native-transformation of a generic sheet"))
+
+(defmethod invalidate-cached-transformations ((sheet sheet))
+  (error "Attempting to invalidate native- and device-transformation of a generic sheet"))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -488,11 +541,42 @@ sheet-supports-only-one-child error to be signalled."))
 ;;;
 ;;; sheet geometry classes
 
-(defclass sheet-identity-transformation-mixin ()
+(defclass sheet-native-transformation-mixin ()
+  ((native-transformation :type transformation
+			  :initform nil
+			  :accessor sheet-native-transformation))
+  (:documentation "This class is a mixin for all sheet-*-tranformation-mixin with the purpose to managed sheet-native-region"))
+
+(defmethod (setf sheet-transformation) :after (transformation (sheet sheet-native-transformation-mixin))
+  (declare (ignore transformation))
+  ; when sheet-trfansformation changes, native-transformation and device-transformation change too. So, the old-values are false.
+  (invalidate-cached-transformations sheet))
+
+
+(defmethod sheet-native-transformation :before ((sheet sheet-native-transformation-mixin))
+  (with-slots (native-transformation) sheet
+    (unless native-transformation
+      (setf native-transformation (compute-native-transformation sheet)))))
+
+(defmethod sheet-device-transformation ((sheet sheet-native-transformation-mixin))
+  (get-medium-device-transformation sheet))
+
+(defmethod compute-native-transformation ((sheet sheet-native-transformation-mixin))
+  (port-compute-native-transformation (port sheet) sheet))
+
+(defmethod invalidate-cached-transformations ((sheet sheet-native-transformation-mixin))
+  (with-slots (native-transformation) sheet
+    (when native-transformation
+      (setf native-transformation nil)
+      (medium-invalidate-cached-device-transformation sheet))
+    (loop for child of-type sheet in (sheet-children sheet)
+	  do (invalidate-cached-transformations child))))
+
+(defclass sheet-identity-transformation-mixin (sheet-native-transformation-mixin)
   ((transformation :initform +identity-transformation+
 		   :reader sheet-transformation)))
 
-(defclass sheet-translation-transformation-mixin ()
+(defclass sheet-translation-transformation-mixin (sheet-native-transformation-mixin)
   ((transformation :initform +identity-transformation+
 		   :initarg :transformation
 		   :accessor sheet-transformation)))
@@ -502,7 +586,7 @@ sheet-supports-only-one-child error to be signalled."))
   (if (not (translation-transformation-p transformation))
       (error "Attempting to set the SHEET-TRANSFORMATION of a SHEET-TRANSLATION-TRANSFORMATION-MIXIN to a non translation transformation")))
 
-(defclass sheet-y-inverting-transformation-mixin ()
+(defclass sheet-y-inverting-transformation-mixin (sheet-native-transformation-mixin)
   ((transformation :initform (make-transformation 0 0 0 -1 0 0)
 		   :initarg :transformation
 		   :accessor sheet-transformation)))
@@ -512,7 +596,7 @@ sheet-supports-only-one-child error to be signalled."))
   (if (not (y-inverting-transformation-p transformation))
       (error "Attempting to set the SHEET-TRANSFORMATION of a SHEET-Y-INVERTING-TRANSFORMATION-MIXIN to a non Y inverting transformation")))
 
-(defclass sheet-transformation-mixin ()
+(defclass sheet-transformation-mixin (sheet-native-transformation-mixin)
   ((transformation :initform +identity-transformation+
 		   :initarg :transformation
 		   :accessor sheet-transformation)))
@@ -545,6 +629,7 @@ sheet-supports-only-one-child error to be signalled."))
 
 (defmethod (setf sheet-transformation) :after (transformation (sheet mirrored-sheet))
   (port-set-sheet-transformation (port sheet) sheet transformation))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

@@ -35,12 +35,20 @@
    (ink :initarg :ink
 	:initform +foreground-ink+
 	:accessor medium-ink)
-   (transformation :initarg :transformation
+   (transformation :type transformation
+		   :initarg :transformation
 		   :initform +identity-transformation+ 
 		   :accessor medium-transformation)
-   (clipping-region :initarg :clipping-region
+   (device-transformation :type transformation
+			  :initform nil
+			  :accessor medium-device-transformation)
+   (clipping-region :type region
+		    :initarg :clipping-region
 		    :initform +everywhere+
-                    :documentation "Clipping region in the SHEET coordinates.")
+		    :documentation "Clipping region in the SHEET coordinates.")
+   (device-region :type region
+		  :initform nil
+		  :accessor medium-device-region)
    (line-style :initarg :line-style
 	       :initform (make-line-style)
 	       :accessor medium-line-style)
@@ -117,6 +125,69 @@
 	     ,@body)
 	 (setf (pixmap-medium ,pixmap) ,old-medium)
 	 (setf (medium-sheet ,medium) ,old-pixmap)))))
+
+
+;; medium-device-region and medium-device-transformation
+
+; medium-device-region 
+
+(defmethod (setf medium-clipping-region) :after (clipping-region (medium medium))
+  (declare (ignore clipping-region))
+  (medium-invalidate-cached-device-region (medium-sheet medium)))
+
+(defmethod medium-device-region :before ((medium medium))
+  (with-slots (device-region) medium
+    (unless device-region
+      (region-intersection (transform-region (medium-device-transformation medium)
+					     (medium-clipping-region medium))
+			   (sheet-native-region (medium-sheet medium))))))
+
+(defun get-medium-device-region (sheet)
+  (medium-device-region (sheet-medium sheet)))
+; (with-sheet-medium (medium sheet)
+;   (medium-device-region medium)))
+; [Julien] For the moment, i don't know which of the two solutions is the right one.
+
+(defun medium-invalidate-cached-device-region (sheet)
+;  (with-sheet-medium (medium sheet)
+;    (with-slots (device-region) medium
+; [Julien] For the moment, i don't know which of the two solutions is the right one.
+  (let ((medium (sheet-medium sheet)))
+    (when medium
+      (with-slots (device-region) (sheet-medium sheet)
+	(when device-region
+	  (setf device-region nil)))))) ;)
+
+
+; medium-device-transformation
+
+(defmethod (setf medium-transformation) :after (transformation (medium medium))
+  (declare (ignore transformation))
+  (medium-invalidate-cached-device-transformation (medium-sheet medium)))
+
+(defmethod medium-device-transformation :before ((medium medium))
+  (with-slots (device-transformation) medium
+    (unless device-transformation
+      (setf device-transformation (compose-transformations (medium-transformation medium)
+							   (sheet-native-transformation (medium-sheet medium)))))))
+
+(defun get-medium-device-transformation (sheet)
+  (medium-device-transformation (sheet-medium sheet)))
+; (with-sheet-medium (medium sheet)
+;   (medium-device-transformation medium)))
+; [Julien] For the moment, i don't know which of the two solutions is the right one.
+
+(defun medium-invalidate-cached-device-transformation (sheet)
+;  (with-sheet-medium (medium sheet)
+;    (with-slots (device-transformation) medium
+; [Julien] For the moment, i don't know which of the two solutions is the right one.
+  (let ((medium (sheet-medium sheet)))
+    (when medium
+      (with-slots (device-transformation) (sheet-medium sheet)
+	(when device-transformation
+	  (setf device-transformation nil)))))) ; )
+
+
 
 
 ;;; Text-Style class

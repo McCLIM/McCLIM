@@ -163,6 +163,15 @@
       (setf (xlib:drawable-x mirror) (round x)
 	    (xlib:drawable-y mirror) (round y)))))
 
+(defmethod port-compute-native-region ((port clx-port) (sheet sheet))
+  ; With CLX-backend, native-coordinates and sheet-coordinates are the same,
+  ; so are native-region and sheet-region.
+  (sheet-region sheet))
+
+(defmethod port-compute-native-transformation ((port clx-port) (sheet sheet-native-transformation-mixin))
+  ; With CLX-backend, native-coordinates and sheet-coordinates are the same,
+  ; so native-transformation is the identity transformation.
+  +identity-transformation+)
 
 (defmethod destroy-port :before ((port clx-port))
   (xlib:close-display (clx-port-display port)))
