@@ -57,7 +57,8 @@
   (frob (setf medium-default-text-style) text-style medium)
   (frob medium-text-style medium)
   (frob (setf medium-text-style) text-style medium)
-  (frob medium-current-text-style medium))
+  (frob medium-current-text-style medium)
+  (frob medium-beep medium))
   
 (defclass temporary-medium-sheet-output-mixin (sheet-with-medium-mixin)
   ())
