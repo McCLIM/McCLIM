@@ -69,17 +69,4 @@ T
 USER(3): (load "test")
 ; Loading ./test.lisp
 T
-USER(4): (in-package :clim-demo)
-#<The CLIM-DEMO package>
-CLIM-DEMO(5): (test)
-#<ADDRESS-BOOK @ #x8678c52>
-CLIM-DEMO(6): (run-frame-top-level frame)
-Error: Received signal number 2 (Keyboard interrupt)
-  [condition type: INTERRUPT-SIGNAL]
-
-Restart actions (select using :continue):
- 0: continue computation
-[1c] CLIM-DEMO(7): :pop
-CLIM-DEMO(7): (exit)
-; Exiting Lisp
-
+USER(4): (clim-demo::address-book)
