@@ -339,6 +339,7 @@ sheet-supports-only-one-child error to be signalled."))
 
 (defmethod (setf sheet-region) :after (region (sheet sheet))
   (declare (ignore region))
+  (note-sheet-region-changed sheet)
   ; when sheet-region changes, native-region and device-region change too. So, the old-values are false.
   (invalidate-cached-regions sheet))
 
