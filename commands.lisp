@@ -138,20 +138,23 @@
 	table
 	(simple-parse-error "~A is not the name of a command table" string))))
 
+(defun menu-items-from-list (menu)
+  (mapcar
+   #'(lambda (item)
+       (destructuring-bind (name type value
+                                 &rest args)
+           item
+         (apply #'make-menu-item name type value
+                args)))
+   menu))
+
 ; adjusted to allow anonymous command-tables for menu-bars
 (defun make-command-table (name &key inherit-from menu (errorp t))
   (if (and name errorp (gethash name *command-tables*))
       (error 'command-table-already-exists)
       (let ((result (make-instance 'standard-command-table :name name
 	                 :inherit-from inherit-from
-	                 :menu (mapcar
-		                #'(lambda (item)
-			            (destructuring-bind (name type value
-							 &rest args)
-					item
-				      (apply #'make-menu-item name type value
-					     args)))
-		                menu))))
+	                 :menu (menu-items-from-list menu))))
         (when name
           (setf (gethash name *command-tables*) result))
         result)))
@@ -166,7 +169,7 @@
      (if old-table
 	 (with-slots (inherit-from menu) old-table
 	   (setq inherit-from ',inherit-from
-		 menu ',menu)
+		 menu (menu-items-from-list ',menu))
 	   old-table)
 	 (make-command-table ',name
 			     :inherit-from ',inherit-from
