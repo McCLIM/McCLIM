@@ -575,7 +575,7 @@
   "Mapping from command names to argument parsing functions.")
 
 
-(defvar *unsupplied-argument-marker* (cons nil nil))
+(defvar *unsupplied-argument-marker* (gensym "UNSUPPLIED-ARGUMENT-MARKER"))
 
 (defvar *command-name-delimiters* '(command-delimiter))
 
@@ -614,29 +614,40 @@
 					     ,@args)
 					   args)))))))
 
-;;;accept for the partial command reader.  Can this be refactored to share code
-;;;with accept-form-for-argument?
-(defun accept-form-for-argument-partial (stream ptype-arg command-arg)
+;;; In the partial command reader accepting-values dialog, default
+;;; values come either from the input command arguments, if a value
+;;; was supplied, or from the default option for the command argument.
+;;;
+;;; accept for the partial command reader.  Can this be refactored to
+;;; share code with accept-form-for-argument? Probably not.
+;;;
+;;; original-command-arg is value entered by the user, or
+;;; *unsupplied-argument-marker*. command-arg is the current value for the
+;;; argument, originally bound to original-command-arg and now possibly
+;;; changed by the user.
+(defun accept-form-for-argument-partial (stream ptype-arg command-arg
+					 original-command-arg )
   (let ((accept-keys '(:default :default-type :display-default
 		       :prompt :documentation)))
-    (destructuring-bind (name ptype &rest key-args
-			 &key (mentioned-default nil mentioned-default-p)
-			 &allow-other-keys)
+    (destructuring-bind (name ptype &rest key-args)
 	ptype-arg
       (declare (ignore name))
-      (let ((accept-args-var (gensym "ACCEPT-ARGS")))
-	`(let ((,accept-args-var
-		(list ,@(loop for (key val) on key-args by #'cddr
-			      when (member key accept-keys)
-			      append `(,key ,val) into args
-			      finally (return (if mentioned-default-p
-						  `(:default ,mentioned-default
-						    ,@args)
-						  args))))))
-	   (apply #'accept ,ptype :stream ,stream
-		  (if (eq ,command-arg *unsupplied-argument-marker*)
-		      ,accept-args-var
-		      (list* :default ,command-arg ,accept-args-var))))))))
+      (let ((args (loop
+		     for (key val) on key-args by #'cddr
+		     if (eq key :default)
+		       append `(:default (if (eq ,command-arg
+						 *unsupplied-argument-marker*)
+					     ,val
+					     ,command-arg))
+		     else if (member key accept-keys :test #'eq)
+		       append `(,key ,val))))
+	(if (member :default args :test #'eq)
+	    `(accept ,ptype :stream ,stream ,@args)
+	    `(if (eq ,original-command-arg *unsupplied-argument-marker*)
+		 (accept ,ptype :stream ,stream ,@args)
+		 (accept ,ptype :stream ,stream :default ,command-arg
+			 ,@args)))))))
+
 
 (defun make-keyword (sym)
   (intern (symbol-name sym) :keyword))
@@ -730,26 +741,38 @@
 (defun make-partial-parser-fun (name required-args)
   (with-gensyms (command-table stream partial-command
 		 command-name command-line-name)
-    (let ((required-arg-names (mapcar #'car required-args)))
-      `(defun ,name (,command-table ,stream ,partial-command)
-	 (destructuring-bind (,command-name ,@required-arg-names)
-	     ,partial-command
-	   (let ((,command-line-name (command-line-name-for-command
-				      ,command-name
-				      ,command-table
-				      :errorp nil)))
-	     (accepting-values (,stream)
-	       (format ,stream
-		       "You are being prompted for arguments to ~S~%"
-		       ,command-line-name)
-	       ,@(loop for var in required-arg-names
-		       for parameter in required-args
-		       append `((setq ,var
-				 ,(accept-form-for-argument-partial stream
-								    parameter
-								    var))
-				(terpri ,stream)))))
-	   (list ,command-name ,@required-arg-names))))))
+    (let* ((required-arg-names (mapcar #'car required-args))
+	   (original-args (mapcar #'(lambda (arg)
+				      (gensym (format nil "~A-ORIGINAL"
+						      (symbol-name arg))))
+				  required-arg-names)))
+      ;; We don't need fresh gensyms of these variables for each accept form.
+      (with-gensyms (value ptype changedp)
+	`(defun ,name (,command-table ,stream ,partial-command)
+	   (destructuring-bind (,command-name ,@original-args)
+	       ,partial-command
+	     (let ((,command-line-name (command-line-name-for-command
+					,command-name
+					,command-table
+					:errorp nil))
+		   ,@(mapcar #'list required-arg-names original-args))
+	       (accepting-values (,stream)
+		 (format ,stream
+			 "You are being prompted for arguments to ~S~%"
+			 ,command-line-name)
+		 ,@(loop
+		      for var in required-arg-names
+		      for original-var in original-args
+		      for parameter in required-args
+		      append `((multiple-value-bind (,value ,ptype ,changedp)
+				   ,(accept-form-for-argument-partial
+				     stream parameter var original-var)
+				 (declare (ignore ,ptype))
+				 (terpri ,stream)
+				 (when ,changedp
+				   (setq ,var ,value))))))
+	       (list ,command-name ,@required-arg-names))))))))
+
 
 ;;; XXX What do to about :acceptably? Probably need to wait for Goatee "buffer
 ;;; streams" so we can insert an accept-result-extent in the buffer for
