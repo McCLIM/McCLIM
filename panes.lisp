@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.120 2003/05/25 10:36:39 gilbert Exp $
+;;; $Id: panes.lisp,v 1.121 2003/05/31 21:43:15 gilbert Exp $
 
 (in-package :clim-internals)
 
@@ -939,14 +939,20 @@
     (setf (box-layout-mixin-clients sheet)
           (append (box-layout-mixin-clients sheet)
                   (list (make-instance 'box-client
-                                       :pane child))))))
+                                       :pane child))))
+    (when (and (sheet-enabled-p sheet)
+               (sheet-parent sheet))
+      (change-space-requirements sheet))))
 
 (defmethod sheet-disown-child :after ((sheet box-layout-mixin) (child sheet) &key errorp)
   (declare (ignore errorp))
   (setf (box-layout-mixin-clients sheet)
         (remove-if (lambda (client)
                      (eq (box-client-pane client) child))
-                   (box-layout-mixin-clients sheet))))
+                   (box-layout-mixin-clients sheet)))
+  (when (and (sheet-enabled-p sheet)
+             (sheet-parent sheet))
+    (change-space-requirements sheet)))
 
 
 (defclass rack-layout-mixin (box-layout-mixin)
@@ -1634,7 +1640,7 @@
 (defparameter *scrollbar-thickness* 17)
 
 (defclass scroller-pane (composite-pane)
-  ((scroll-bar :type (member '(t :vertical :horizontal))
+  ((scroll-bar :type (member t :vertical :horizontal)
 	       :initform t
 	       :initarg :scroll-bar
 	       :accessor scroller-pane-scroll-bar)
