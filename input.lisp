@@ -85,6 +85,15 @@
 (defmethod event-queue-listen ((eq standard-event-queue))
   (not (null (event-queue-head eq))))
 
+(defmethod event-queue-listen-or-wait ((eq standard-event-queue) &key timeout)
+  (or (not (null (event-queue-peek eq)))
+      (flet ((pred ()
+	       (not (null (event-queue-head eq)))))
+	(if timeout
+	    (process-wait-with-timeout "Listening for event" timeout #'pred)
+	    (process-wait "Listening for event" #'pred)))))
+
+
 ;; STANDARD-SHEET-INPUT-MIXIN
 
 (defclass standard-sheet-input-mixin ()

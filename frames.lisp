@@ -100,14 +100,34 @@
    (hilited-presentation :initform nil
 			 :initarg :hilited-presentation
 			 :accessor frame-hilited-presentation)
-   ))
+   ;; For context-sensitive input
+   (intercept-events :initform nil)
+   (intercept-event-queue :initform (make-instance 'standard-event-queue)
+			  :initarg :intercept-event-queue
+			  :accessor frame-intercept-event-queue)))
+
+(defmethod frame-intercept-events ((frame application-frame))
+  (without-scheduling
+    (slot-value frame 'intercept-events)))
+
+(defmethod (setf frame-intercept-events) (newval (frame application-frame))
+  (without-scheduling
+    (setf (slot-value frame 'intercept-events) newval)))
+
+;;; XXX Should this check that the frame isn't intercepting events, so
+;;; it will terminate?
+(defmethod cleanup-frame-events ((frame application-frame))
+  (loop with queue = (frame-intercept-event-queue frame)
+	for event = (event-queue-read-no-hang queue)
+	while event
+	do (dispatch-event )))
 
 (defun application-frame-p (x)
   (typep x 'application-frame))
 
 (defmethod initialize-instance :after ((frame application-frame) &rest args)
-  (declare (ignore args))
-  )
+  (declare (ignore args)))
+
 
 ;;; Generic operations
 ; (defgeneric frame-name (frame))
@@ -292,7 +312,11 @@ FRAME-EXIT condition."))
 	(*pointer-button-press-handler* nil))
     (declare (special *input-context* *input-wait-test* *input-wait-handler*
 		      *pointer-button-press-handler*))
-    (call-next-method)))
+    (let ((query-io (frame-query-io frame)))
+      (if query-io
+	  (with-input-focus (query-io)
+	    (call-next-method))
+	  (call-next-method)))))
 
 (defmethod default-frame-top-level
     ((frame application-frame)

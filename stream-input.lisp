@@ -74,6 +74,21 @@
 (defvar *input-wait-handler* nil)
 (defvar *pointer-button-press-handler* nil)
 
+(defgeneric stream-set-input-focus (stream))
+
+;;; XXX deal with body declarations
+(defmacro with-input-focus ((stream) &body body)
+  (when (eq stream t)
+    (setq stream '*standard-input*))
+  (let ((old-stream (gensym "OLD-STREAM")))
+    `(let ((,old-stream (stream-set-input-focus ,stream)))
+       (unwind-protect (progn
+			 ,@body)
+	 (if ,old-stream
+	     (stream-set-input-focus ,old-stream)
+	     (setf (port-keyboard-input-focus (port ,stream)) nil))))))
+
+
 ;;; XXX Do there need to be locks around access to the buffer?
 
 (defmethod handle-event ((stream standard-extended-input-stream)
@@ -91,9 +106,11 @@
 	(event-queue-append buffer event))))
 
 
+#+nil ; Default for standard-sheet-input-mixin should be fine.
 (defmethod handle-event ((stream standard-extended-input-stream)
 			 (event pointer-button-press-event))
   (vector-push-extend event (stream-input-buffer stream)))
+
 
 (defun read-gesture (&key
 		     (stream *standard-input*)
@@ -152,46 +169,59 @@
 	  (*pointer-button-press-handler* pointer-button-press-handler)
 	  (buffer (stream-input-buffer stream)))
       (loop
-	(if (event-queue-listen buffer)
-	    (let ((gesture (pop-gesture buffer peek-p)))
-	      (when (and pointer-button-press-handler
-			 (typep gesture 'pointer-button-press-event))
-		(funcall pointer-button-press-handler stream gesture))
-	      (setq gesture (convert-to-gesture gesture))
-	      (if gesture
-		  (return-from stream-read-gesture gesture)))
-	  ;; Wait for input... or not
-	  (multiple-value-bind (available reason)
-	      (stream-input-wait estream
-				 :timeout timeout
-				 :input-wait-test input-wait-test)
-	    (unless available
-	      (case reason
-		(:timeout
-		 (return-from stream-read-gesture (values nil
-							  :timeout)))
-		(:input-wait-test
-		 nil)
-		(t (funcall input-wait-handler stream))))))))))
+       ;; Wait for input... or not
+       (multiple-value-bind (available reason)
+	   (stream-input-wait estream
+			      :timeout timeout
+			      :input-wait-test input-wait-test)
+	 (unless available
+	   (case reason
+	     (:timeout
+	      (return-from stream-read-gesture (values nil
+						       :timeout)))
+	     (:input-wait-test
+	      (and input-wait-handler
+		   (funcall input-wait-handler stream)))
+	     ;; Should we always call input-wait-handler?
+	     (t nil))))
+       ;; input-wait-handler may have left something in the event queue.
+       (when (event-queue-listen buffer)
+	 (let ((gesture (pop-gesture buffer peek-p)))
+	   (when (and pointer-button-press-handler
+		      (typep gesture 'pointer-button-press-event))
+	     (funcall pointer-button-press-handler stream gesture))
+	   (when (setq gesture (convert-to-gesture gesture))
+	     (return-from stream-read-gesture gesture))))))))
 
 
+
+;;; XXX If input-wait-test is supplied, we're counting on it to
+;;; block.  Is that correct?
 (defgeneric stream-input-wait (stream &key timeout input-wait-test))
 
 (defmethod stream-input-wait ((stream standard-extended-input-stream)
 			      &key timeout input-wait-test)
   (let ((buffer (stream-input-buffer stream)))
+    ;; Loop if not multiprocessing or if input-wait-test returns nil
+    ;; XXX need to decay timeout on multiple trips through the loop
     (loop
      (if (event-queue-listen buffer)
-	 (progn
-	   (return-from stream-input-wait t))
-	 (progn
-	   (when (and input-wait-test (funcall input-wait-test stream))
-	     (return-from stream-input-wait (values nil :input-wait-test)))
-	   (multiple-value-bind (result reason)
-	       ;; XXX need to decay timeout on multiple trips through the loop
-	       (port-wait-on-event-processing (port stream) :timeout timeout)
-	     (when (and (not result) (eq reason :timeout))
-	       (return-from stream-input-wait (values nil :timeout)))))))))
+	 (return-from stream-input-wait t)
+	 (if input-wait-test
+	     (and (funcall input-wait-test stream)
+		  (return-from stream-input-wait
+		    (values nil :input-wait-test)))
+	     (if *multiprocessing-p*
+		 (return-from stream-input-wait
+		   (if (event-queue-listen-or-wait buffer timeout)
+		       t
+		       (values nil :timeout)))
+		 (multiple-value-bind (result reason)
+		     (process-next-event (port stream) :timeout timeout)
+		   (when (and (not result) (eq reason :timeout))
+		     (return-from stream-input-wait
+		       (values nil :timeout))))))))))
+
 
 
 (defun unread-gesture (gesture &key (stream *standard-input*))

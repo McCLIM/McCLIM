@@ -140,26 +140,37 @@
     (incf event-count)))
 
 (defmethod process-next-event ((port basic-port) &key wait-function timeout)
-  (let ((event (get-next-event port :wait-function wait-function :timeout timeout)))
+  (let ((event (get-next-event port
+			       :wait-function wait-function
+			       :timeout timeout)))
     (cond
      ((null event) nil)
      ((eq event :timeout) (values nil :timeout))
+
      (t
-      (distribute-event port event)
+      (let* ((focus-sheet (port-keyboard-input-focus port))
+	     (sheet-frame (and focus-sheet (pane-frame focus-sheet))))
+	(if (and (typep event 'device-event)
+		 sheet-frame 
+		 (frame-intercept-events sheet-frame))
+	    (event-queue-append (frame-intercept-event-queue sheet-frame)
+				event)
+	    (distribute-event port event)))
       t))))
 
-(defmethod port-wait-on-event-processing ((port basic-port) &key wait-function timeout)
+(defmethod port-wait-on-event-processing ((port basic-port) &key wait-function timeout
+					  ((:event-count old-count) nil))
   (declare (ignorable wait-function))
   (if *multiprocessing-p*
       (with-slots (event-count) port
-	(let ((old-event-count event-count)
+	(let ((old-event-count (or old-count event-count))
 	      (flag nil))
 	  (process-wait-with-timeout "Wait for event" timeout
 				     #'(lambda ()
 					 (when (not (= old-event-count event-count))
 					   (setq flag t))))
 	  (if flag
-	      t
+	      event-count
 	    (values nil :timeout))))
     (process-next-event port :wait-function wait-function :timeout timeout)))
   

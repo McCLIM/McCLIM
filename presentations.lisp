@@ -431,6 +431,13 @@ supertypes of TYPE that are presentation types"))
 (defmethod presentation-ptype-supers ((type clos-presentation-type))
   (presentation-ptype-supers (clos-class type)))
 
+(defmethod presentation-ptype-supers ((type standard-class))
+  (mapcan #'(lambda (class)
+              (let ((ptype (gethash (clim-mop:class-name class)
+                                    *presentation-type-table*)))
+                (and ptype (list ptype))))
+          (clim-mop:class-direct-superclasses type)))
+
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defmethod ptype-specializer ((type symbol))
     (let ((ptype (gethash type *presentation-type-table*)))
@@ -1236,6 +1243,37 @@ function lambda list"))
 (defun input-context-type (context-entry)
   (car context-entry))
 
+(defun input-context-wait-test (stream)
+  (if *multiprocessing-p*
+      (event-queue-listen-or-wait (frame-intercept-event-queue
+				   *application-frame*)
+				  nil)
+      (port-wait-on-event-processing (port stream)))
+  
+  t)
+
+(defun highlight-applicable-presentation (frame stream input-context
+					  &optional prefer-pointer-window)
+  (let* ((port (port stream))
+	 (event (if *multiprocessing-p*
+		    (event-queue-read-no-hang (frame-intercept-event-queue
+					       frame))
+		    (get-next-event port)))
+	 (event-stream (and (typep event 'device-event)
+			    (event-sheet event))))
+    (if (and (or (not prefer-pointer-window) (eq stream event-stream))
+	     (typep event 'pointer-event))
+	(progn
+	  (frame-input-context-track-pointer frame
+					     input-context
+					     event-stream
+					     event)
+	  (when (typep event 'pointer-button-press-event)
+	    (funcall *pointer-button-press-handler* stream event)))
+	(distribute-event port event))))
+
+
+#+nil
 (defun highlight-applicable-presentation (frame stream input-context
 					  &optional prefer-pointer-window)
   
@@ -1260,7 +1298,7 @@ function lambda list"))
 		     (return-from highlight-applicable-presentation t)))))))
 
 
-(defun input-context-event-loop (stream)
+(defun input-context-event-handler (stream)
   (highlight-applicable-presentation *application-frame*
 				     stream
 				     *input-context*))
@@ -1270,6 +1308,22 @@ function lambda list"))
   (frame-input-context-button-press-handler *application-frame*
 					    (event-sheet button-event)
 					    button-event))
+
+;;; This should really be in frames.lisp, but I don't want to reorder the 
+;;; system file :P
+
+(defmacro with-intercepted-events ((&optional (the-frame '*application-frame*))
+				   &body body)
+  (let ((old-intercepted (gensym "OLD-INTERCEPTED"))
+	(frame (gensym "FRAME")))
+    `(let* ((,frame ,the-frame)
+	    (,old-intercepted (frame-intercept-events ,frame)))
+       (unwind-protect (progn
+			 (setf (frame-intercept-events ,frame) t)
+			 ,@body)
+	 (setf (frame-intercept-events ,frame) ,old-intercepted)
+	 (unless ,old-intercepted
+	   (cleanup-frame-events ,frame))))))
 
 (defmacro with-input-context ((type &key override) 
 			      (&optional (object-var (gensym))
@@ -1295,9 +1349,10 @@ function lambda list"))
 			  ,(if override nil '*input-context*)))
 		   (*pointer-button-press-handler*
 		    #'input-context-button-press-handler)
-		   (*input-wait-test* #'input-context-event-loop)
-		   (*input-wait-handler* #'input-context-event-loop))
-	       (return-from ,return-block ,form )))
+		   (*input-wait-test* #'input-context-wait-test)
+		   (*input-wait-handler* #'input-context-event-handler))
+	       (with-intercepted-events ()
+		 (return-from ,return-block ,form ))))
 	 (cond ,@(mapcar #'(lambda (pointer-case)
 			     (destructuring-bind (case-type &body case-body)
 				 pointer-case

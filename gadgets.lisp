@@ -1422,7 +1422,7 @@ and must never be nil."))
             ((region-contains-position-p (scroll-bar-down-region sb) x y)
              (scroll-down-line-callback sb (gadget-client sb) (gadget-id sb))
              (setf event-state :dn-armed)
-             (disptach-repaint sb +everywhere+))
+             (dispatch-repaint sb +everywhere+))
             ((region-contains-position-p (scroll-bar-thumb-region sb) x y)
              (setf event-state :dragging
                    drag-dy (- y (bounding-rectangle-min-y (scroll-bar-thumb-region sb)))))

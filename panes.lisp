@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.66 2002/02/28 19:27:08 gilbert Exp $
+;;; $Id: panes.lisp,v 1.67 2002/03/12 21:05:06 moore Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -1945,6 +1945,12 @@ During realization the child of the spacing will have as cordinates
 	     (t
 	      (draw-rectangle* (sheet-medium pane) x1 y1 x2 y2 :ink +background-ink+)
 	      (stream-replay pane (sheet-region pane))))))))))
+
+(defmethod stream-set-input-focus ((stream clim-stream-pane))
+  (with-slots (port) stream
+    (prog1
+	(port-keyboard-input-focus port)
+      (setf (port-keyboard-input-focus port) stream))))
 
 ;;; INTERACTOR PANES
 

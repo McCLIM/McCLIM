@@ -89,7 +89,10 @@
   (if (characterp gesture)
       (progn
 	(when (encapsulating-stream-stream stream)
-	  (write-char gesture stream))
+	  (write-char (if (eql gesture #\Return)
+			  #\Newline
+			   gesture)
+		      stream))
 	gesture)))
 
 (defmacro with-activation-gestures ((gestures &key override) &body body)
