@@ -112,10 +112,19 @@
 ;;; menu-button-submenu-pane
 
 (defclass menu-button-submenu-pane (menu-button-pane)
-  ((frame-manager :initform nil :initarg :frame-manager)
-   (submenu-frame :initform nil)
-   (bottomp :initform nil :initarg :bottomp)
-   (command-table :initform nil :initarg :command-table)))
+  ((frame-manager
+     :initform nil
+     :initarg :frame-manager)
+   (submenu-frame
+     :initform nil)
+   (bottomp
+     :initform nil
+     :initarg :bottomp)
+   (command-table
+     :initform nil
+     :initarg :command-table)
+   (dissolving ; nasty hack to prevent menus from leaking
+     :initform nil)))
 
 (defmethod menu-children ((submenu menu-button-submenu-pane))
   (with-slots (submenu-frame) submenu
@@ -125,25 +134,27 @@
 
 (defun create-substructure (sub-menu client)
   (let* ((frame *application-frame*)
-	 (manager (frame-manager frame))
-	 (items (mapcar #'(lambda (item)
-			    (make-menu-button-from-menu-item item client))
-			(slot-value (find-command-table (slot-value sub-menu 'command-table)) 'menu)))
-	 (rack (make-pane-1 manager frame 'vrack-pane
-			    :background +grey80+ :contents items))
-	;(raised (make-pane-1 manager frame 'raised-pane :contents (list rack)))
-	 (raised (make-pane-1 manager frame 'raised-pane :border-width 2 :background +gray80+ :contents (list rack))))
-    (with-slots (bottomp) sub-menu
-      (multiple-value-bind (xmin ymin xmax ymax)
-	  (bounding-rectangle* (sheet-region sub-menu))
-	(multiple-value-bind (x y)
-	    (transform-position (sheet-delta-transformation sub-menu nil)
-				(if bottomp xmin xmax)
-				(if bottomp ymax ymin))
-	  (with-slots (frame-manager submenu-frame) sub-menu
-	    (setf frame-manager manager
-		  submenu-frame (make-menu-frame raised :left x :top y))
-	    (adopt-frame manager submenu-frame)))))))
+	 (manager (frame-manager frame)))
+    (with-look-and-feel-realization (manager frame)
+      (let* ((frame *application-frame*)
+	     (items (mapcar #'(lambda (item)
+			        (make-menu-button-from-menu-item item client))
+			    (slot-value (find-command-table (slot-value sub-menu 'command-table)) 'menu)))
+	     (rack (make-pane-1 manager frame 'vrack-pane
+			        :background +grey80+ :contents items))
+	    ;(raised (make-pane-1 manager frame 'raised-pane :contents (list rack)))
+	     (raised (make-pane-1 manager frame 'raised-pane :border-width 2 :background +gray80+ :contents (list rack))))
+      (with-slots (bottomp) sub-menu
+        (multiple-value-bind (xmin ymin xmax ymax)
+	    (bounding-rectangle* (sheet-region sub-menu))
+	  (multiple-value-bind (x y)
+	      (transform-position (sheet-delta-transformation sub-menu nil)
+				  (if bottomp xmin xmax)
+				  (if bottomp ymax ymin))
+	    (with-slots (frame-manager submenu-frame) sub-menu
+	      (setf frame-manager manager
+		    submenu-frame (make-menu-frame raised :left x :top y))
+	      (adopt-frame manager submenu-frame)))))))))
 
 (defmethod destroy-substructure ((sub-menu menu-button-submenu-pane))
   (with-slots (frame-manager submenu-frame) sub-menu
@@ -153,18 +164,25 @@
       (setf submenu-frame nil))))
 
 (defmethod arm-branch ((sub-menu menu-button-submenu-pane))
-  (with-slots (client frame-manager submenu-frame) sub-menu
+  (with-slots (client frame-manager submenu-frame dissolving) sub-menu
     (arm-menu client)
-    (if submenu-frame
-	(progn (mapc #'destroy-substructure (menu-children sub-menu))
-	       (mapc #'disarm-menu (menu-children sub-menu)))
-	(progn
-	  (mapc #'destroy-substructure (menu-children client))
-	  (create-substructure sub-menu sub-menu)))
+    (cond
+     (submenu-frame
+      (mapc #'destroy-substructure (menu-children sub-menu))
+      (mapc #'disarm-menu (menu-children sub-menu)))
+     (t
+      (mapc #'destroy-substructure (menu-children client))
+      (if dissolving
+          (progn
+            (setf dissolving nil)
+            (disarm-menu client))
+          (create-substructure sub-menu sub-menu))))
     (arm-menu sub-menu)))
 
 (defmethod handle-event ((pane menu-button-submenu-pane) (event pointer-button-release-event))
-  (destroy-substructure (menu-root pane)))
+  (destroy-substructure (menu-root pane))
+  (with-slots (dissolving client) pane
+    (setf dissolving t)))
 
 (defmethod handle-repaint ((pane menu-button-submenu-pane) region)
   (declare (ignore region))
@@ -185,6 +203,7 @@
 	(manager (frame-manager *application-frame*)))
     (if (eq type :command)
 	(make-pane-1 manager frame 'menu-button-leaf-pane
+		     :name name
 		     :label name
 		     :client client
 		     :value-changed-callback
@@ -203,6 +222,7 @@
                                          :modifier-state 0
                                          :button +pointer-left-button+))))
 	(make-pane-1 manager frame 'menu-button-submenu-pane
+		     :name name
 		     :label name
 		     :client client
 		     :frame-manager manager
