@@ -510,8 +510,9 @@
   (copy-area (sheet-medium sheet) from-x from-y width height to-x to-y))
 
 (defmethod copy-area ((stream stream) from-x from-y width height to-x to-y)
-  (declare (ignore from-x from-y width height to-x to-y))
-  (error "COPY-AREA on a stream is not implemented"))
+  (if (sheetp stream)
+      (copy-area (sheet-medium stream) from-x from-y width height to-x to-y)
+    (error "COPY-AREA on a stream is not implemented")))
 
 (defmacro with-output-to-pixmap ((medium-var sheet &key width height) &body body)
   `(let* ((pixmap (allocate-pixmap ,sheet ,width ,height))
