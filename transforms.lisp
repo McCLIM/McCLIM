@@ -459,13 +459,30 @@
   (let ((r (atan y x)))
     (if (< r 0) (+ r (* 2 pi)) r)))
 
+(defun correct-angle (a phi)
+  (if (< a phi)
+      (+ a (* 2 pi))
+    a))
+
 (defun transform-angle (transformation phi)
-  (multiple-value-bind (ix iy) (transform-distance transformation (cos phi) (sin phi))
-    (atan* ix iy)))
+  (multiple-value-bind (rotations remainder) (ffloor phi (* 2 pi))
+    (when (reflection-transformation-p transformation)
+      (setq rotations  (ffloor (- 1 phi) (* 2 pi))))
+    (multiple-value-bind (ix iy) (transform-distance transformation (cos remainder) (sin remainder))
+      (multiple-value-bind (x0 y0) (transform-distance transformation 1 0)
+        (let ((my-angle (atan* ix iy))
+              (null-angle (atan* x0 y0)))
+          (+ (* rotations 2 pi) (correct-angle my-angle null-angle)))))))
 
 (defun untransform-angle (transformation phi)
-  (multiple-value-bind (ix iy) (untransform-distance transformation (cos phi) (sin phi))
-    (atan* ix iy)))
+  (multiple-value-bind (rotations remainder) (ffloor phi (* 2 pi))
+    (when (reflection-transformation-p transformation)
+      (setq rotations  (ffloor (- 1 phi) (* 2 pi))))
+    (multiple-value-bind (ix iy) (untransform-distance transformation (cos remainder) (sin remainder))
+      (multiple-value-bind (x0 y0) (untransform-distance transformation 1 0)
+        (let ((my-angle (atan* ix iy))
+              (null-angle (atan* x0 y0)))
+          (+ (* rotations 2 pi) (correct-angle my-angle null-angle)))))))
 
 ;;; Exports
 
