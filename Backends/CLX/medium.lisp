@@ -37,11 +37,20 @@
 (defclass clx-medium (basic-medium)
   ((gc
       :initform nil)
+   (picture
+    :initform nil)
    #+unicode
    (fontset
       :initform nil
       :accessor medium-fontset)
    ))
+
+#+CLX-EXT-RENDER
+(defun clx-medium-picture (clx-medium)
+  (with-slots (picture) clx-medium
+    (or picture
+        (setf picture
+              (xlib:render-create-picture (port-lookup-mirror (port clx-medium) (medium-sheet clx-medium)))))))
 
 
 ;;; secondary methods for changing text styles and line styles
@@ -219,10 +228,24 @@
          (inks  (slot-value ink 'climi::designs))
          (w     (array-dimension array 1))
          (h     (array-dimension array 0)))
-    (let ((pm (allocate-pixmap (first (port-grafts (port medium))) w h))) ;errr
+    (let* ((pm   (allocate-pixmap (first (port-grafts (port medium))) w h))
+           (mask (xlib:create-pixmap :drawable (port-lookup-mirror
+                                                (port medium)
+                                                (first (port-grafts (port medium))))
+                                     :depth 1
+                                     :width w
+                                     :height h))
+           (mask-gc (xlib:create-gcontext :drawable mask :foreground 1)))
+      (xlib:draw-rectangle mask mask-gc 0 0 w h t)
+      (setf (xlib:gcontext-foreground mask-gc) 0)
       (dotimes (y h)
         (dotimes (x w)
-          (draw-point* pm x y :ink (elt inks (aref array y x)))))
+          (let ((ink (elt inks (aref array y x))))
+            (cond ((eq ink +transparent-ink+)
+                   (xlib:draw-point mask mask-gc x y))
+                  (t
+                   (draw-point* pm x y :ink ink))))))
+      (xlib:free-gcontext mask-gc)
       (let ((gc (xlib:create-gcontext :drawable (port-lookup-mirror (port medium) (medium-sheet medium)))))
         (setf (xlib:gcontext-fill-style gc) :tiled
               (xlib:gcontext-tile gc) (port-lookup-mirror (port pm) pm)
@@ -230,7 +253,7 @@
               (xlib:gcontext-clip-y gc) 0
               (xlib:gcontext-ts-x gc) 0
               (xlib:gcontext-ts-y gc) 0
-              (xlib:gcontext-clip-mask gc) (list 0 0 w h))
+              (xlib:gcontext-clip-mask gc) mask)
         gc))))
 
 (defmethod design-gcontext ((medium clx-medium) (ink climi::rectangular-tile))
@@ -362,36 +385,46 @@
 ;;; Medium-specific Drawing Functions
 
 (defmethod medium-draw-point* ((medium clx-medium) x y)
-  (with-transformed-position ((sheet-native-transformation (medium-sheet medium))
+  (with-transformed-position ((sheet-native-transformation
+                               (medium-sheet medium))
                               x y)
     (with-clx-graphics (medium)
-      (if (< (line-style-thickness line-style) 2)
-          (xlib:draw-point mirror gc (round x) (round y))
-          (let* ((radius (round (line-style-thickness line-style) 2))
-                 (diameter (* radius 2)))
-            (xlib:draw-arc mirror gc
-                           (round (- x radius)) (round (- y radius))
-                           diameter diameter
-                           0 (* 2 pi)
-                           t))))))
+      (cond ((< (line-style-thickness line-style) 2)
+             (let ((x (floor x))
+                   (y (floor y)))
+               (when (and (typep x '(signed-byte 16))
+                          (typep y '(signed-byte 16)))
+                 (xlib:draw-point mirror gc x y))))
+            (t
+             (let* ((radius (round (line-style-thickness line-style) 2))
+                    (diameter (* radius 2)))
+               (let ((x (floor x))
+                     (y (floor y)))
+                 (when (and (typep x '(signed-byte 16))
+                            (typep y '(signed-byte 16)))
+                   (xlib:draw-arc mirror gc x y diameter diameter 0 (* 2 pi) t))))) ))))
 
 (defmethod medium-draw-points* ((medium clx-medium) coord-seq)
-  (let ((coord-seq (coerce coord-seq 'list))) ; XXX Optimize this
-    (with-transformed-positions ((sheet-native-transformation
-				  (medium-sheet medium))
-				 coord-seq)
-      (setq coord-seq (mapcar #'round coord-seq))
-      (with-clx-graphics (medium)
-	(if (< (line-style-thickness line-style) 2)
-	    (xlib:draw-points mirror gc coord-seq)
-	    (loop with radius = (round (line-style-thickness line-style) 2)
-		  with diameter = (* radius 2)
-		  for (x y) on coord-seq by #'cddr
-		  nconcing (list (round (- x radius)) (round (- y radius))
-				 diameter diameter
-				 0 (* 2 pi)) into arcs
-		  finally (xlib:draw-arcs mirror gc arcs t))))))
-  )
+  (with-transformed-positions ((sheet-native-transformation
+                                (medium-sheet medium))
+                               coord-seq)
+    (with-clx-graphics (medium)
+      (cond ((< (line-style-thickness line-style) 2)
+             (do-sequence ((x y) coord-seq)
+               (let ((x (floor x))
+                     (y (floor y)))
+                 (when (and (typep x '(signed-byte 16))
+                            (typep y '(signed-byte 16)))
+                   (xlib:draw-point mirror gc x y)))))
+            (t
+             (let* ((radius (round (line-style-thickness line-style) 2))
+                    (diameter (* radius 2)))
+               (do-sequence ((x y) coord-seq)
+                 (let ((x (floor x))
+                       (y (floor y)))
+                   (when (and (typep x '(signed-byte 16))
+                              (typep y '(signed-byte 16)))
+                     (xlib:draw-arc mirror gc x y diameter diameter 0 (* 2 pi) t)))))) ))))
 
 (declaim (inline round-coordinate))
 (defun round-coordinate (x)
@@ -435,21 +468,29 @@
     (medium-draw-line* medium x1 y1 x2 y2)))
 
 (defmethod medium-draw-polygon* ((medium clx-medium) coord-seq closed filled)
+  ;; TODO:
+  ;; . cons less
+  ;; . clip
   (assert (evenp (length coord-seq)))
-  (let ((coord-seq (coerce coord-seq 'list))) ;XXX optimize this
-    (with-transformed-positions ((sheet-native-transformation
-				  (medium-sheet medium))
-				 coord-seq)
-      (setq coord-seq (mapcar #'round-coordinate coord-seq))
-      (with-clx-graphics (medium)
-	(xlib:draw-lines mirror gc
-			 (if closed
-			     (append coord-seq (list (first coord-seq)
-						     (second coord-seq)))
-			     coord-seq)
-			 :fill-p filled)))))
+  (with-transformed-positions ((sheet-native-transformation
+                                (medium-sheet medium))
+                               coord-seq)
+    (setq coord-seq (map 'vector #'round-coordinate coord-seq))
+    (with-clx-graphics (medium)
+      (xlib:draw-lines mirror gc
+                       (if closed
+                           (concatenate 'vector
+                                        coord-seq
+                                        (vector (first coord-seq)
+                                                (second coord-seq)))
+                           coord-seq)
+                       :fill-p filled))))
 
 (defmethod medium-draw-rectangle* ((medium clx-medium) left top right bottom filled)
+  (medium-draw-rectangle-using-ink* medium (medium-ink medium)
+                                    left top right bottom filled))
+
+(defmethod medium-draw-rectangle-using-ink* ((medium clx-medium) (ink t) left top right bottom filled)
   (let ((tr (sheet-native-transformation (medium-sheet medium))))
     (with-transformed-position (tr left top)
       (with-transformed-position (tr right bottom)
@@ -464,11 +505,37 @@
                 (bottom (round-coordinate bottom)))
             ;; To clip rectangles, we just need to clamp the cooridnates
             (xlib:draw-rectangle mirror gc
-                                        (max #x-8000 (min #x7FFF left))
-                                        (max #x-8000 (min #x7FFF top))
-                                        (max 0 (min #xFFFF (- right left)))
-                                        (max 0 (min #xFFFF (- bottom top)))
-                                        filled) ))))))
+                                 (max #x-8000 (min #x7FFF left))
+                                 (max #x-8000 (min #x7FFF top))
+                                 (max 0 (min #xFFFF (- right left)))
+                                 (max 0 (min #xFFFF (- bottom top)))
+                                 filled) ))))))
+
+#+CLX-EXT-RENDER
+(defmethod medium-draw-rectangle-using-ink* ((medium clx-medium) (ink climi::uniform-compositum)
+                                             x1 y1 x2 y2 filled)
+  (let ((tr (sheet-native-transformation (medium-sheet medium)))
+        (port (port medium)))
+    (with-transformed-position (tr x1 y1)
+      (with-transformed-position (tr x2 y2)
+        (let ((x1 (round-coordinate x1))
+              (y1 (round-coordinate y1))
+              (x2 (round-coordinate x2))
+              (y2 (round-coordinate y2)))
+          (multiple-value-bind (r g b) (color-rgb (slot-value ink 'climi::ink))
+            (let ((a (opacity-value (slot-value ink 'climi::mask))))
+              ;; Hmm, XRender uses pre-multiplied alpha, how useful!
+              (setf r (min #xffff (max 0 (round (* #xffff a r))))
+                    g (min #xffff (max 0 (round (* #xffff a g))))
+                    b (min #xffff (max 0 (round (* #xffff a b))))
+                    a (min #xffff (max 0 (round (* #xffff a)))))
+              (let ((picture (clx-medium-picture medium)))
+                (xlib:render-fill-rectangle picture :over (list r g b a)
+                                            (max #x-8000 (min #x7FFF x1))
+                                            (max #x-8000 (min #x7FFF y1))
+                                            (max 0 (min #xFFFF (- x2 x1)))
+                                            (max 0 (min #xFFFF (- y2 y1))))))))))))
+
 
 (defmethod medium-draw-rectangles* ((medium clx-medium) position-seq filled)
   (assert (evenp (length position-seq)))
