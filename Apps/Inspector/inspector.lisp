@@ -91,7 +91,7 @@ information is present."))
   (cond ((member object *inspected-objects*)
          (with-output-as-presentation
              (pane object (presentation-type-of object)) 
-           (princ "===")))		; Prevent infinite loops
+           (princ "===" pane)))		; Prevent infinite loops
         ((not (gethash object (dico *application-frame*)))
          (inspect-object-briefly object pane))
         (t
@@ -109,7 +109,7 @@ information is present."))
 (defmethod inspect-object-briefly (object pane)
   (with-output-as-presentation
       (pane object (presentation-type-of object))
-    (princ "...")))
+    (princ "..." pane)))
 
 (defmethod inspect-object (object pane)
   (with-output-as-presentation
@@ -125,9 +125,9 @@ information is present."))
   :inherit-from t)
 
 (define-presentation-method present (object (type settable-slot) 
-				     stream
-				     (view textual-view)
-				     &key acceptably for-context-type)
+					    stream
+					    (view textual-view)
+					    &key acceptably for-context-type)
   (declare (ignore acceptably for-context-type))
   (format stream "~s" (cdr object)))
 
@@ -135,7 +135,7 @@ information is present."))
   "Cause text output from BODY to be formatted in a heading font. This
 could be boldface, or a different style, or even another font."
   `(with-text-face (,stream :bold)
-     ,@body))
+    ,@body))
 
 (defmacro inspector-table ((object pane) header &body body)
   "Present OBJECT in tabular form on PANE, with HEADER evaluated to
@@ -179,6 +179,41 @@ RIGHT, on PANE. This should be used only within INSPECTOR-TABLE."
       (format pane "~&Documentation: "))
     (princ (documentation object t) pane)))
 
+(defun display-class-superclasses (class pane)
+  "Display the superclasses of CLASS with an INSPECTOR-TABLE-ROW"
+  (when (clim-mop:class-direct-superclasses class)
+    (inspector-table-row (pane)
+	(princ "Superclasses" pane)
+      (inspect-vertical-list (clim-mop:class-direct-superclasses class)
+			     pane))))
+
+(defun display-class-subclasses (class pane)
+  "Display the subclasses of CLASS with an INSPECTOR-TABLE-ROW"
+  (when (clim-mop:class-direct-subclasses class)
+    (inspector-table-row (pane)
+	(princ "Subclasses" pane)
+      (inspect-vertical-list (clim-mop:class-direct-subclasses class)
+			     pane))))
+
+(defun display-object-slot (object slot pane &key display-lists-vertically)
+  "Display a slot of OBJECT onto PANE in the way normally used when
+inspecting standard objects. SLOT must be a MOP SLOT-DEFINITION
+object. If DISPLAY-LISTS-VERTICALLY is t and the slot value is a list,
+it will be displayed with INSPECT-VERTICAL-LIST."
+  (let ((slot-name (clim-mop:slot-definition-name slot)))
+    (inspector-table-row (pane)
+	(with-output-as-presentation
+	    (pane (cons object slot-name) 'settable-slot)
+	  (format pane "~a:" slot-name))
+      (if (slot-boundp object slot-name)
+	  (let ((slot-value (slot-value object slot-name)))
+	    (if (and display-lists-vertically
+		     (listp slot-value))
+		(inspect-vertical-list slot-value pane
+				       :honor-dico t)
+		(inspect-object slot-value pane)))
+	  (format pane "#<unbound slot>")))))
+
 (defun inspect-structure-or-object (object pane)
   "Inspect a structure or an object. Since both can be inspected in
 roughly the same way, the common code is in this function, which is
@@ -186,26 +221,26 @@ called by the INSPECT-OBJECT methods for both standard objects and
 structure objects."
   (let ((class (class-of object)))
     (inspector-table (object pane)
-      (print (class-name class) pane)
-      (when (clim-mop:class-direct-superclasses class)
-	(inspector-table-row (pane)
-	  (princ "Superclasses" pane)
-	  (inspect-vertical-list (clim-mop:class-direct-superclasses class)
-				 pane)))
-      (when (clim-mop:class-direct-subclasses class)
-	(inspector-table-row (pane)
-	  (princ "Subclasses" pane)
-	  (inspect-vertical-list (clim-mop:class-direct-subclasses class)
-				 pane)))
-      (loop for slot in (reverse (clim-mop:class-slots class))
-	    do (let ((slot-name (clim-mop:slot-definition-name slot)))
-		 (inspector-table-row (pane)
-		   (with-output-as-presentation
-		       (pane (cons object slot-name) 'settable-slot)
-		     (format pane "~a:" slot-name))
-		   (if (slot-boundp object slot-name)
-		       (inspect-object (slot-value object slot-name) pane)
-		       (format pane "#<unbound slot>"))))))))
+	(print (class-name class) pane)
+      ;; Display superclasses and subclasses
+      (display-class-superclasses class pane)
+      (display-class-subclasses class pane)
+      (dolist (slot (reverse (clim-mop:class-slots class)))
+	(display-object-slot object slot pane)))))
+
+(defun inspect-standard-class (object pane)
+  "Inspect a STANDARD-CLASS. This works almost the same way as
+inspecting a standard object, but with a few differences. This should
+also be used to inspect BUILD-IN-CLASSes."
+  (let ((class (class-of object)))
+    (inspector-table (object pane)
+	(print (class-name class) pane)
+      ;; Display superclasses and subclasses
+      (display-class-superclasses class pane)
+      (display-class-subclasses class pane)
+      (dolist (slot (reverse (clim-mop:class-slots class)))
+	(display-object-slot object slot pane
+			     :display-lists-vertically t)))))
 
 ;; Try to print the normal, textual representation of an object, but
 ;; if that's too long, make an abbreviated "instance of ~S" version.
@@ -241,6 +276,12 @@ that are allowed before abbreviation kicks in")
 
 (defmethod inspect-object ((object structure-object) pane)
   (inspect-structure-or-object object pane))
+
+(defmethod inspect-object ((object standard-class) pane)
+  (inspect-standard-class object pane))
+
+(defmethod inspect-object ((object built-in-class) pane)
+  (inspect-standard-class object pane))
 
 (defmethod inspect-object ((object condition) pane)
   (inspect-structure-or-object object pane))
@@ -278,11 +319,12 @@ moderately-sized list."
 	  (formatting-cell (pane)
 	    (inspect-object (cdr object) pane))))))
 
-(defun inspect-vertical-list (object pane)
+(defun inspect-vertical-list (object pane &key honor-dico)
   "Inspect a list without the parentheses, putting each element on a
 new line. This is useful for showing things like direct class
 subclasses, since displaying those as a plain list looks ugly and is
-inconvenient to use."
+inconvenient to use. If HONOR-DICO is t, this will respect DICO and
+display '...' if OBJECT is not in DICO."
   ;; Ordinarily this would be taken care of in the :around method for
   ;; INSPECT-OBJECT, but since this is not a normal inspection view,
   ;; we need to do it ourselves. Yes, it would be better if we could
@@ -290,28 +332,32 @@ inconvenient to use."
   (let ((*print-length* (or (gethash object (print-length
 					     *application-frame*))
 			    *print-length*)))
-    (with-output-as-presentation
-	(pane object 'cons)
-      (formatting-table (pane)
-	(formatting-column (pane)
-	  (do
-	   ((length 0 (1+ length))
-	    (cdr (cdr object) (cdr cdr))
-	    (car (car object) (car cdr)))
-	   ((cond ((eq nil cdr)
-		   (formatting-cell (pane) (inspect-object car pane))
-		   t)
-		  ((not (consp cdr))
-		   (formatting-cell (pane) (inspect-object car pane))
-		   (formatting-cell (pane) (princ "." pane))
-		   (formatting-cell (pane) (inspect-object cdr pane))
-		   t)
-		  ((and *print-length* (>= length *print-length*))
-		   (with-output-as-presentation (pane object 'long-list-tail)
-		     (formatting-cell (pane) (princ "..." pane)))
-		   t)
-		  (t nil)))
-	    (formatting-cell (pane) (inspect-object car pane))))))))
+    (if (and honor-dico
+	     (not (gethash object (dico *application-frame*))))
+	(inspect-object-briefly object pane)
+	(with-output-as-presentation
+	    (pane object 'cons)
+	  (formatting-table (pane)
+	    (formatting-column (pane)
+	      (do
+	       ((length 0 (1+ length))
+		(cdr (cdr object) (cdr cdr))
+		(car (car object) (car cdr)))
+	       ((cond ((eq nil cdr)
+		       (formatting-cell (pane) (inspect-object car pane))
+		       t)
+		      ((not (consp cdr))
+		       (formatting-cell (pane) (inspect-object car pane))
+		       (formatting-cell (pane) (princ "." pane))
+		       (formatting-cell (pane) (inspect-object cdr pane))
+		       t)
+		      ((and *print-length* (>= length *print-length*))
+		       (with-output-as-presentation
+			   (pane object 'long-list-tail)
+			 (formatting-cell (pane) (princ "..." pane)))
+		       t)
+		      (t nil)))
+		(formatting-cell (pane) (inspect-object car pane)))))))))
 
 (defun inspect-cons-as-list (object pane)
   "Inspect a cons cell in a traditional, plain-text format. The only
@@ -325,24 +371,24 @@ list as interactive as you would expect."
         (formatting-cell (pane)
           (princ "(" pane))
         (do
-          ((length 0 (1+ length))
-           (cdr (cdr object) (cdr cdr))
-           (car (car object) (car cdr)))
-          ((cond ((eq nil cdr)
-                  (formatting-cell (pane) (inspect-object car pane))
-                  (formatting-cell (pane) (princ ")" pane))
-                  t)
-                 ((not (consp cdr))
-                  (formatting-cell (pane) (inspect-object car pane))
-                  (formatting-cell (pane) (princ "." pane))
-                  (formatting-cell (pane) (inspect-object cdr pane))
-                  (formatting-cell (pane) (princ ")" pane))
-                  t)
-		 ((and *print-length* (>= length *print-length*))
-                  (with-output-as-presentation (pane object 'long-list-tail)
-                    (formatting-cell (pane) (princ "...)" pane)))
-                  t)
-                 (t nil)))
+	 ((length 0 (1+ length))
+	  (cdr (cdr object) (cdr cdr))
+	  (car (car object) (car cdr)))
+	 ((cond ((eq nil cdr)
+		 (formatting-cell (pane) (inspect-object car pane))
+		 (formatting-cell (pane) (princ ")" pane))
+		 t)
+		((not (consp cdr))
+		 (formatting-cell (pane) (inspect-object car pane))
+		 (formatting-cell (pane) (princ "." pane))
+		 (formatting-cell (pane) (inspect-object cdr pane))
+		 (formatting-cell (pane) (princ ")" pane))
+		 t)
+		((and *print-length* (>= length *print-length*))
+		 (with-output-as-presentation (pane object 'long-list-tail)
+		   (formatting-cell (pane) (princ "...)" pane)))
+		 t)
+		(t nil)))
           (formatting-cell (pane) (inspect-object car pane)))))))
 
 (defmethod inspect-object ((object cons) pane)
@@ -358,7 +404,7 @@ list as interactive as you would expect."
     (princ 'hash-table pane)))
 (defmethod inspect-object ((object hash-table) pane)
   (inspector-table (object pane)
-    (format pane "~A (test: ~A)" 'hash-table (hash-table-test object))
+      (format pane "~A (test: ~A)" 'hash-table (hash-table-test object))
     (loop for key being the hash-keys of object
           do (formatting-row (pane)
 	       (formatting-cell (pane :align-x :right)
@@ -369,8 +415,8 @@ list as interactive as you would expect."
 
 (defmethod inspect-object ((object generic-function) pane)
   (inspector-table (object pane)
-    (format pane "Generic Function: ~s"
-	    (clim-mop:generic-function-name object))
+      (format pane "Generic Function: ~s"
+	      (clim-mop:generic-function-name object))
     (dolist (method (clim-mop:generic-function-methods object))
       (with-output-as-presentation
 	  (pane method (presentation-type-of method))
@@ -420,7 +466,7 @@ use implementation-specific functions to be more informative."
 
 (defmethod inspect-object ((object function) pane)
   (with-output-as-presentation
-       (pane object 'inspected-function)
+      (pane object 'inspected-function)
     (with-heading-style (pane)
       (princ "Function: " pane))
     (with-text-family (pane :fix)
@@ -448,18 +494,18 @@ use implementation-specific functions to be more informative."
 
 (defmethod inspect-object ((object package) pane)
   (inspector-table (object pane)
-    (format pane "Package: ~S" (package-name object))
+      (format pane "Package: ~S" (package-name object))
     (inspector-table-row (pane)
-      (princ "Name:" pane)
+	(princ "Name:" pane)
       (inspect-object (package-name object) pane))
     (inspector-table-row (pane)
-      (princ "Nicknames:" pane)
+	(princ "Nicknames:" pane)
       (inspect-vertical-list (package-nicknames object) pane))
     (inspector-table-row (pane)
-      (princ "Used by:")
+	(princ "Used by:")
       (inspect-vertical-list (package-used-by-list object) pane))
     (inspector-table-row (pane)
-      (princ "Uses:")
+	(princ "Uses:")
       (inspect-vertical-list (package-use-list object) pane))))
 
 (defmethod inspect-object ((object vector) pane)
@@ -510,21 +556,58 @@ them."
 
 (defmethod inspect-object ((object float) pane)
   (inspector-table (object pane)
-    (format pane "float ~S" object)
+      (format pane "Float ~S" object)
     (multiple-value-bind (significand exponent sign)
         (decode-float object)
       (inspector-table-row (pane)
-        (princ "sign:")
+	  (princ "sign:" pane)
         (inspect-object sign pane))
       (inspector-table-row (pane)
-        (princ "significand:")
+	  (princ "significand:" pane)
         (inspect-object significand pane))
       (inspector-table-row (pane)
-        (princ "exponent:")
+	  (princ "exponent:" pane)
         (inspect-object exponent pane)))
     (inspector-table-row (pane)
-      (princ "radix:")
+	(princ "radix:" pane)
       (inspect-object (float-radix object) pane))))
+
+(defmethod inspect-object ((object integer) pane)
+  (inspector-table (object pane)
+      (format pane "Integer ~S" object)
+    (inspector-table-row (pane)
+	(princ "value:" pane)
+      (formatting-table (pane)
+	(formatting-row (pane)
+	  (formatting-cell (pane)
+	    (with-output-as-presentation
+		(pane object (presentation-type-of object))
+	      (princ object pane)))
+	  (formatting-cell (pane)
+	    (princ "=" pane))
+	  (formatting-cell (pane)
+	    (with-output-as-presentation
+		(pane object (presentation-type-of object))
+	      (write object :radix t :base 16 :stream pane)))
+	  (formatting-cell (pane)
+	    (princ "=" pane))
+	  (formatting-cell (pane)
+	    (with-output-as-presentation
+		(pane object (presentation-type-of object))
+	      (write object :radix t :base 8 :stream pane)))
+	  (formatting-cell (pane)
+	    (princ "=" pane))
+	  (formatting-cell (pane)
+	    (with-output-as-presentation
+		(pane object (presentation-type-of object))
+	      (write object :radix t :base 2 :stream pane))))))
+    (when (<= 0 object 255)
+      (inspector-table-row (pane)
+	  (princ "character:" pane)
+	(inspect-object (code-char object) pane)))
+    (inspector-table-row (pane)
+	(princ "length:" pane)
+      (inspect-object (integer-length object) pane))))
 
 (defmethod inspect-object-briefly ((object symbol) pane)
   (with-output-as-presentation
@@ -534,14 +617,14 @@ them."
 
 (defmethod inspect-object ((object symbol) pane)
   (inspector-table (object pane)
-    (format pane "Symbol ~S" (symbol-name object))
+      (format pane "Symbol ~S" (symbol-name object))
     (inspector-table-row (pane)
-      (princ "value:")
+	(princ "value:")
       (if (boundp object)
 	  (inspect-object (symbol-value object) pane)
 	  (princ "unbound")))
     (inspector-table-row (pane)
-      (princ "function:")
+	(princ "function:")
       (if (fboundp object)
 	  (inspect-object (symbol-function object) pane)
 	  (princ "unbound")))
@@ -549,15 +632,15 @@ them."
     ;; symbol. However, this is useful enough that I think it's worth
     ;; including here, since it can eliminate some minor annoyances.
     (inspector-table-row (pane)
-      (princ "class:")
+	(princ "class:")
       (if (find-class object nil)
 	  (inspect-object (find-class object) pane)
 	  (princ "unbound")))
     (inspector-table-row (pane)
-      (princ "package:")
+	(princ "package:")
       (inspect-object (symbol-package object) pane))
     (inspector-table-row (pane)
-      (princ "propery list:")
+	(princ "propery list:")
       (dolist (property (symbol-plist object))
 	(inspect-object property pane)))))
 
@@ -570,15 +653,15 @@ them."
     (print object pane)))
 (defmethod inspect-object ((object character) pane)
   (inspector-table (object pane)
-    (format pane "Character ~S" object)
+      (format pane "Character ~S" object)
     (inspector-table-row (pane)
-      (princ "code:" pane)
+	(princ "code:" pane)
       (inspect-object (char-code object) pane))
     (inspector-table-row (pane)
-      (princ "int:" pane)
+	(princ "int:" pane)
       (inspect-object (char-int object) pane))
     (inspector-table-row (pane)
-      (princ "name:" pane)
+	(princ "name:" pane)
       (inspect-object (char-name object) pane))))
 
 (defun display-app (frame pane)
