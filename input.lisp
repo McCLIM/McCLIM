@@ -95,6 +95,12 @@
       (queue-event sheet event)
     (handle-event sheet event)))
 
+(defmethod dispatch-event ((sheet standard-sheet-input-mixin) (event device-event))
+  (queue-event sheet event))
+
+(defmethod dispatch-event ((sheet standard-sheet-input-mixin) event)
+  (handle-event sheet event))
+
 (defmethod queue-event ((sheet standard-sheet-input-mixin) event)
   (with-slots (queue) sheet
     (event-queue-append queue event)))
