@@ -44,7 +44,7 @@
   (if (or initial-store initial-contents)
       (let ((len (if initial-store
 		     (length initial-store)
-		     (- start end)) ))
+		     (- end start)) ))
 	(cond ((and initial-contents (eql start 0) (eql end len))
 	       (setf (store obj) (make-array len
 					     :initial-contents initial-contents

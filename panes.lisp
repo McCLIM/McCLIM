@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.72 2002/04/22 07:10:07 moore Exp $
+;;; $Id: panes.lisp,v 1.73 2002/04/23 01:50:00 moore Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -2118,6 +2118,10 @@ During realization the child of the spacing will have as cordinates
 
 ;;; These below were just hot fixes, are there still needed? Are even
 ;;; half-way correct? --GB
+;;;
+;;; These are needed, and are correct.  "Implementations should also
+;;; provide a ``trampoline'' for this generic function for output sheets; the
+;;; trampoline will simply call the method for the medium. -- moore
 
 (defmethod text-size ((sheet sheet) string &rest more)
   (apply #'text-size (sheet-medium sheet) string more))
@@ -2128,5 +2132,8 @@ During realization the child of the spacing will have as cordinates
 (defmethod text-style-descent (ts (sheet sheet))
   (text-style-descent ts (sheet-medium sheet)))
 
+(defmethod text-style-height (ts (sheet sheet))
+  (text-style-height ts (sheet-medium sheet)))
 
-
+(defmethod text-style-width (ts (sheet sheet))
+  (text-style-width ts (sheet-medium sheet)))

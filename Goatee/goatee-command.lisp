@@ -56,7 +56,7 @@
 	(let ((*area* area)
 	      (*buffer* (buffer area)))
 	  (funcall command :input-gesture gesture)
-	  (redisplay area (stream area))))))
+	  (redisplay-area area)))))
 
 (defun insert-character (&key input-gesture &allow-other-keys)
   (insert *buffer* input-gesture))

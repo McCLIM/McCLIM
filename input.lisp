@@ -173,6 +173,10 @@
 (defmethod dispatch-event ((sheet immediate-sheet-input-mixin) event)
   (handle-event sheet event))
 
+(defmethod handle-event ((sheet immediate-sheet-input-mixin) event)
+  (declare (ignore event))
+  nil)
+
 (define-condition sheet-is-mute-for-input (error)
     (
      ))

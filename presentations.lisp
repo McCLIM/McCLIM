@@ -344,6 +344,7 @@ filled in."
 	    ,form)))))
 ) ; eval-when
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
 (defmacro with-presentation-type-decoded ((name
 					   &optional (params nil params-p)
 					             (options nil options-p))
@@ -354,6 +355,7 @@ filled in."
 	    ,@(and params-p `((,params (decode-parameters ,type-var))))
 	    ,@(and options-p `((,options (decode-options ,type-var)))))
        ,@body)))
+)
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defun make-expansion-lambda (params-ll options-ll)

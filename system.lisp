@@ -43,24 +43,31 @@
 
 #+mk-defsystem (use-package "MK")
 
-(defsystem :clim-lisp #-mk-defsystem ()
-  #+mk-defsystem :source-pathname #+mk-defsystem *clim-directory*
-  #+mk-defsystem :source-extension #+mk-defsystem "lisp"
-  #+mk-defsystem :components
-  (:serial
-   ;; First possible patches
-   #+:CMU       "Lisp-Dep/fix-cmu"
-   #+:EXCL	"Lisp-Dep/fix-acl"
-   #+:SBCL      "Lisp-Dep/fix-sbcl"
-   "package"
-   ))  
+#+mk-defsystem
+(defmacro clim-defsystem ((module &key depends-on) &rest components)
+  `(defsystem ,module
+       :source-pathname *clim-directory*
+       :source-extension "lisp"
+       ,@(and depends-on `(:depends-on ,depends-on))
+        :components
+	(:serial
+	 ,@components)))
 
-(defsystem :clim #-mk-defsystem ()
-  #+mk-defsystem :source-pathname #+mk-defsystem *clim-directory*
-  #+mk-defsystem :source-extension #+mk-defsystem "lisp"
-  #+mk-defsystem :components
-  (:serial
+#-mk-defsystem
+(defmacro clim-defsystem ((module &key depends-on) &rest components)
+  `(defsystem ,module ()
+     (:serial
+      ,@depends-on
+      ,@components)))
 
+(clim-defsystem (:clim-lisp)
+  ;; First possible patches
+  #+:CMU       "Lisp-Dep/fix-cmu"
+  #+:EXCL	"Lisp-Dep/fix-acl"
+  #+:SBCL      "Lisp-Dep/fix-sbcl"
+  "package")
+
+(clim-defsystem (:clim-frontend)
    ;; First possible patches
    #+:CMU       "Lisp-Dep/fix-cmu"
    #+:EXCL	"Lisp-Dep/fix-acl"
@@ -110,41 +117,24 @@
    "table-formatting"
    "postscript-medium"
    "incremental-redisplay"
-   ))
-   
-(defsystem :clim-clx #-mk-defsystem ()
-  #+mk-defsystem :source-pathname #+mk-defsystem *clim-directory*
-  #+mk-defsystem :source-extension #+mk-defsystem "lisp"
-  #+mk-defsystem :depends-on #+mk-defsystem (:clim)
-  #+mk-defsystem :components
-  (:serial
-   #-mk-defsystem :clim
-   "Backends/CLX/keysyms"
-   "Backends/CLX/keysymdef"
-   "Backends/CLX/port"
-   "Backends/CLX/medium"
-   "Backends/CLX/graft"
-   "Backends/CLX/frame-manager"
-   "Backends/CLX/image"
-   ))
+   )
 
-(defsystem :clim-looks #-mk-defsystem ()
-  #+mk-defsystem :source-pathname #+mk-defsystem *clim-directory*
-  #+mk-defsystem :source-extension #+mk-defsystem "lisp"
-  #+mk-defsystem :depends-on #+mk-defsystem (:clim)
-  #+mk-defsystem :components
-  (:serial
-   #-mk-defsystem :clim
-  "looks/pixie"
-  ))
-   
-(defsystem :clim-examples #-mk-defsystem ()
-  #+mk-defsystem :source-pathname #+mk-defsystem *clim-directory*
-  #+mk-defsystem :source-extension #+mk-defsystem "lisp"
-  #+mk-defsystem :depends-on #+mk-defsystem (:clim-clx :clim-looks)
-  #+mk-defsystem :components
-  (:serial
-   #-mk-defsystem :clim-clx
+(clim-defsystem (:clim-clx :depends-on (:clim-frontend))
+  "Backends/CLX/keysyms"
+  "Backends/CLX/keysymdef"
+  "Backends/CLX/port"
+  "Backends/CLX/medium"
+  "Backends/CLX/graft"
+  "Backends/CLX/frame-manager"
+  "Backends/CLX/image")
+
+(clim-defsystem (:clim-looks :depends-on (:clim-frontend))
+  "looks/pixie")
+
+;;; Will depend on :goatee soon...
+(clim-defsystem (:clim :depends-on (:clim-frontend :clim-clx)))
+
+(clim-defsystem (:clim-examples :depends-on (:clim :clim-looks))
    "Examples/calculator"
    "Examples/colorslider"
    "Examples/menutest"
@@ -155,23 +145,16 @@
    "Examples/transformations-test"
    "Examples/stream-test"
    "Examples/presentation-test"
-   "Examples/gadget-test"
-   ))
+   "Examples/gadget-test")
 
-(defsystem :goatee #-mk-defsystem ()
-  #+mk-defsystem :source-pathname #+mk-defsystem *clim-directory*
-  #+mk-defsystem :source-extension #+mk-defsystem "lisp"
-  #+mk-defsystem :depends-on #+mk-defsystem (:clim)
-  #+mk-defsystem :components
-  (:serial
-   #-mk-defsystem :clim
-   "Goatee/dbl-list"
-   "Goatee/flexivector"
-   "Goatee/buffer"
-   "Goatee/editable-area"
-   "Goatee/clim-area"
-   "Goatee/goatee-command"
-   "Goatee/goatee-test"))
+(clim-defsystem (:goatee :depends-on (:clim-frontend))
+  "Goatee/dbl-list"
+  "Goatee/flexivector"
+  "Goatee/buffer"
+  "Goatee/editable-area"
+  "Goatee/clim-area"
+  "Goatee/goatee-command"
+  "Goatee/goatee-test")
 
 #+mk-defsystem
 (defun build-everything ()

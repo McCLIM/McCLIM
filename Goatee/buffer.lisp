@@ -117,7 +117,7 @@
 	  (setf (slot-value obj 'size) (length initial-contents)))
 	(dbl-insert-after (make-buffer-line obj :tick (incf (tick obj)))
 			  (lines obj)))
-    (setf (point obj) (make-instance 'location
+    (setf (point obj) (make-instance 'buffer-pointer
 				     :line (dbl-head (lines obj))
 				     :pos 0)))
 

@@ -20,7 +20,8 @@
 
 ;;; Need to support replay and redisplay (buffer has changed).  Redisplay needs
 ;;; to have the idea of incremental redisplay (update screen directly) and
-;;; start over from scratch.
+;;; start over from scratch.  We won't hook into the CLIM idea of
+;;; incremental redisplay just yet as it isn't implemented in McCLIM.
 
 ;;; cheat and use this McCLIM internal class :)
 (defclass screen-area-cursor (clim-internals::cursor-mixin)
@@ -56,7 +57,7 @@
   (values (slot-value record 'x) (slot-value record 'y)))
 
 (defmethod* (setf output-record-position) (nx ny (record screen-line))
-  (setf (values (slot-value record 'x) (slot-values record 'y))
+  (setf (values (slot-value record 'x) (slot-value record 'y))
 	(values nx ny)))
 
 (defmethod bounding-rectangle* ((record screen-line))
@@ -109,7 +110,7 @@
 		 (cursor-visibility (cursor record))
 	(climi::flip-screen-cursor cursor))))))
 
-(defclass simple-screen-area (editable-area output-record)
+(defclass simple-screen-area (editable-area standard-sequence-output-record)
   ((text-style :accessor text-style :initarg :text-style)
    (vertical-spacing :accessor vertical-spacing :initarg :vertical-spacing)
    (cursor :accessor cursor)
@@ -125,10 +126,10 @@
     (if stream
 	(setf (vertical-spacing area) (stream-vertical-spacing stream))
 	(error "One of :vertical-spacing or :stream must be specified.")))
-  (initialize-area-from-buffer (buffer area)))
+  (initialize-area-from-buffer area (buffer area)))
 
 (defmethod output-record-children ((area simple-screen-area))
-  (loop for line = (lines area) then (next line)
+  (loop for line = (area-first-line area) then (next line)
 	while line
 	collect line))
 
@@ -136,7 +137,7 @@
 				    &optional (x-offset 0) (y-offset 0)
 				    &rest function-args)
   (declare (ignore x-offset y-offset))
-  (loop for line = (lines area) then (next line)
+  (loop for line = (area-first-line area) then (next line)
 	while line
 	do (apply function record function-args)))
 
@@ -146,16 +147,17 @@
       area
     (multiple-value-bind (parent-x parent-y)
 	(output-record-position area)
-      (let ((ascent (text-style-ascent (text-style area)))
-	    (descent (text-style-descent (text-style area))))
-	 (loop for buffer-line = (next (lines buffer))
+      (let* ((stream (stream area))
+	     (ascent (text-style-ascent (text-style area) stream))
+	     (descent (text-style-descent (text-style area) stream)))
+	 (loop for buffer-line = (dbl-head (lines buffer))
 	       then (and buffer-line (next buffer-line))
-	       for prev-area-line = (lines area) then area-line
+	       for prev-area-line = (area-first-line area) then area-line
 	       for y = parent-y then (+ y ascent descent vertical-spacing)
 	       for area-line = (and buffer-line
 				    (make-instance 'screen-line
-						   :x parent-x
-						   :y y
+						   :x-position parent-x
+						   :y-position y
 						   :parent area
 						   :buffer-line buffer-line
 						   :last-tick -1
@@ -166,9 +168,11 @@
 	       do (dbl-insert-after area-line prev-area-line)))))
   area)
 
-(defmethod redisplay ((area simple-screen-area))
+(defgeneric redisplay-area (area))
+
+(defmethod redisplay-area ((area simple-screen-area))
   (let ((stream (stream area)))
-    (loop for line = (lines area) then (next line)
+    (loop for line = (area-first-line area) then (next line)
 	  do (multiple-value-bind (line-changed dimensions-changed)
 		 (maybe-update-line-dimensions line)
 	       (declare (ignore dimensions-changed)) ;XXX
@@ -208,7 +212,7 @@
 ;;; ascent/decent/baseline have changed, then render the line, incrementally
 ;;; or not.
 
-(defmethod maybe-update-line-dimensions ((line screen-line) stream)
+(defmethod maybe-update-line-dimensions ((line screen-line))
   "returns 2 values: contents changed, dimensions changed"
   (if (eql (last-tick line) (tick (buffer-line line)))
       (values nil nil)

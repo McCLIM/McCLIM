@@ -6,12 +6,17 @@
 
 
 (defclass editable-area ()
-  ((buffer :reader buffer :initarg buffer)
+  ((buffer :reader buffer :initarg :buffer)
    (frame-begin-mark :accessor frame-begin-mark)
    (last-tick :accessor last-tick :initarg :last-tick
 	      :documentation "buffer tick")
    (lines :accessor lines :initarg :lines
 	  :initform (make-instance 'dbl-list-head))))
+
+(defgeneric area-first-line (area))
+
+(defmethod area-first-line ((area editable-area))
+  (dbl-head (lines area)))
 
 #+nil(progn
 (defmethod (setf buffer) ((new-buf displayable-buffer) (win editable-area))
