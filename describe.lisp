@@ -17,17 +17,16 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-(in-package :common-lisp)
+(in-package :clim-lisp)
 
-(clim-internals::with-system-redefinition-allowed
-  (defun describe (thing &optional stream)
-    (if (null stream)
-	(setq stream *standard-output*)
-	(if  (eq stream t)
-	     (setq stream *terminal-io*)))
-    (describe-object thing stream)
-    (values))
-)
+(defun describe (thing &optional stream)
+  (if (null stream)
+      (setq stream *standard-output*)
+      (if  (eq stream t)
+           (setq stream *terminal-io*)))
+  (describe-object thing stream)
+  (values))
+
 
 (defgeneric describe-object (thing stream))
 

@@ -2,5 +2,5 @@
 
 (defpackage :clim-lisp-patch
     (:use)
-    (:export #:interactive-stream-p))
+    (:export #:describe #:describe-object #:interactive-stream-p))
 

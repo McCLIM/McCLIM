@@ -286,7 +286,9 @@
    #:boolean 
    #:character 
    #:close 
-   #:complex 
+   #:complex
+   #:describe
+   #:describe-object
    #:float 
    #:fundamental-binary-input-stream 
    #:fundamental-binary-output-stream 
