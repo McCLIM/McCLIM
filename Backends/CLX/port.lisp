@@ -145,6 +145,14 @@
   (declare (ignore transformation))
   nil)
 
+(defmethod port-set-sheet-transformation ((port clx-port) (pane application-pane) transformation)
+  (declare (ignore transformation))
+  nil)
+
+(defmethod port-set-sheet-transformation ((port clx-port) (pane interactor-pane) transformation)
+  (declare (ignore transformation))
+  nil)
+
 (defmethod port-set-sheet-transformation ((port clx-port) (sheet sheet) transformation)
   (let ((mirror (sheet-direct-mirror sheet)))
     (multiple-value-bind (x y) (transform-position transformation 0 0)
@@ -338,4 +346,5 @@
   (declare (ignorable sheet))
   nil)
   
-
+(defmethod clear-area ((sheet mirrored-sheet))
+  (xlib:clear-area (sheet-direct-mirror sheet)))
