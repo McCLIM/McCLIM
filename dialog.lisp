@@ -317,7 +317,14 @@ is called. Used to determine if any editing has been done by user")))
 			     (make-instance 'standard-input-editing-stream
 					    :stream stream
 					    :cursor-visibility nil
-					    :background-ink +grey90+)))))))
+					    :background-ink +grey90+))))
+		   (when default-supplied-p
+		     (input-editing-rescan-loop ;XXX probably not needed
+		      editing-stream
+		      (lambda (s)
+			(presentation-replace-input s default type view
+						    :rescan t)
+			(goatee::update-input-editing-stream s)))))))
     (when editing-stream
       (setf (editing-stream record) editing-stream))
     record))
@@ -368,6 +375,8 @@ is called. Used to determine if any editing has been done by user")))
 	(handler-case
 	    (av-do-accept query record)
 	  (condition (c)
+	    (format *trace-output* "accepting-values accept condition: ~A~%"
+		    c)
 	    (setf (accept-condition query) c)))))))
 
 

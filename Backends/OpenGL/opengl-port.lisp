@@ -21,6 +21,11 @@
 
 (defparameter *drawing-flag* (the boolean nil))
 
+(defmacro to-gl (val)
+  "Coerce VAL to the type expected by the OpenGL backend (currently 
+  double-float)"
+  `(coerce ,val 'double-float))
+
 ;; OpenGL port class
 
 (defclass opengl-port (basic-port opengl-graphical-system-port-mixin)
@@ -250,32 +255,31 @@ until then, feel free to adjust the numbers, etc - BTS
 
 ; this does the drawing
 (defun find-sheet-signature (port x y)
-  (let ((pixel (make-array 3 :element-type '(unsigned-byte 8)))
-	(sx (coerce x 'double-float))
-	(sy (coerce y 'double-float)))
-    (declare (type double-float sx sy))
-    (gl:glReadBuffer gl:GL_BACK)
-    (gl:glMatrixMode gl:GL_PROJECTION)
-    (gl:glPushMatrix)
-    (gl:glLoadIdentity)
-    (gl:glOrtho sx (1+ sx) (1+ sy) sy -1d0 1d0)
-    (gl:glMatrixMode gl:GL_MODELVIEW)
-    (gl:glViewport 0 0 1 1)
-    (opengl-draw port (opengl-port-top-level port) nil)
-    (gl:glReadPixels 0 0 1 1 gl:GL_RGB gl:GL_UNSIGNED_BYTE (find-array-address pixel))
-    (gl:glViewport (aref viewport-infos 0) (aref viewport-infos 1)
-                   (aref viewport-infos 2) (aref viewport-infos 3))
-    (gl:glMatrixMode gl:GL_PROJECTION)
-    (gl:glPopMatrix)
-    (gl:glMatrixMode gl:GL_MODELVIEW)
+  (clim-ffi:with-c-data ((pixel (array unsigned-char 3)))
+    (let ((sx (to-gl x))
+	  (sy (to-gl y)))
+      (declare (type double-float sx sy))
+      (gl:glReadBuffer gl:GL_BACK)
+      (gl:glMatrixMode gl:GL_PROJECTION)
+      (gl:glPushMatrix)
+      (gl:glLoadIdentity)
+      (gl:glOrtho sx (1+ sx) (1+ sy) sy -1d0 1d0)
+      (gl:glMatrixMode gl:GL_MODELVIEW)
+      (gl:glViewport 0 0 1 1)
+      (opengl-draw port (opengl-port-top-level port) nil)
+      (gl:glReadPixels 0 0 1 1 gl:GL_RGB gl:GL_UNSIGNED_BYTE pixel)
+      (gl:glViewport (aref viewport-infos 0) (aref viewport-infos 1)
+		     (aref viewport-infos 2) (aref viewport-infos 3))
+      (gl:glMatrixMode gl:GL_PROJECTION)
+      (gl:glPopMatrix)
+      (gl:glMatrixMode gl:GL_MODELVIEW)
 
-    #+nil
-    (progn ; debugging - to see the fields
-       (opengl-draw port (opengl-port-top-level port) nil)
-       (format *debug-io* "pixel = ~A~%" (color-to-signature (pixel-to-color pixel)))
-       (flush port (opengl-port-top-level port))) ; to see what's happening
-
-    (color-to-signature (pixel-to-color pixel))))
+      #+nil
+      (progn			       ; debugging - to see the fields
+	(opengl-draw port (opengl-port-top-level port) nil)
+	(format *debug-io* "pixel = ~A~%" (color-to-signature (pixel-to-color pixel)))
+	(flush port (opengl-port-top-level port))) ; to see what's happening
+      (color-to-signature (pixel-to-color pixel)))))
 
   
 ;; Event
@@ -325,94 +329,14 @@ until then, feel free to adjust the numbers, etc - BTS
     (declare (type opengl-port port)
 	     (type cons infos)
 	     (type region native-region))
-    #+nil ; what an odd approach
-    (case (type-of native-region)
-	; point
-      ('standard-point
-       (gl:glNewList (cdr infos) gl:GL_COMPILE)
-       (set-color (car infos))
-       (gl:glBegin gl:GL_POINTS)
-       (gl:glVertex2d (point-x native-region) (point-y native-region))
-       (gl:glEnd)
-       (gl:glEndList))
-
-	; line
-      ('line
-       (multiple-value-bind (x1 y1) (line-start-point* native-region)
-	 (declare (type coordinate x1 y1))
-	 (multiple-value-bind (x2 y2) (line-end-point* native-region)
-	   (declare (type coordinate x2 y2))
-	   (gl:glNewList (cdr infos) gl:GL_COMPILE)
-	   (set-color (car infos))
-	   (gl:glBegin gl:GL_LINES)
-	   (gl:glVertex2d x1 y1)
-	   (gl:glVertex2d x2 y2)
-	   (gl:glEnd)
-	   (gl:glEndList))))
-
-	; polyline
-      ('standard-polyline
-       (gl:glNewList (cdr infos) gl:GL_COMPILE)
-       (set-color (car infos))
-       (if (polyline-closed native-region)
-	   (gl:glBegin gl:GL_LINE_LOOP)
-	   (gl:glBegin gl:GL_LINE_STRIP))
-       (map-over-polygon-coordinates #'gl:glVertex2d native-region)
-       (gl:glEnd)
-       (gl:glEndList))
-
-	; polygon
-      ('standard-polyline
-       (gl:glNewList (cdr infos) gl:GL_COMPILE)
-       (set-color (car infos))
-       (gl:glBegin gl:GL_POLYGON)
-       (map-over-polygon-coordinates #'gl:glVertex2d native-region)
-       (gl:glEnd)
-       (gl:glEndList))
-
-	; rectangle
-      ('standard-rectangle
-       (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* native-region)
-	 (declare (type coordinate x1 y1 x2 y2))
-	 (gl:glNewList (cdr infos) gl:GL_COMPILE)
-	 (set-color (car infos))
-	 (gl:glRectd x1 y1 x2 y2)
-	 (gl:glEndList)))
-      
-	; ellipse and elliptical-arc
-      (('standard-ellipse 'standard-elliptical-arc)
-       (let ((start-angle (ellipse-start-angle native-region))
-	     (end-angle (ellipse-end-angle native-region))
-	     (ellipse-transformation (slot-value native-region 'tr)))
-	 (declare (type double-float start-angle end-angle))
-	 (multiple-value-bind (center-x center-y) (ellipse-center-point* native-region)
-	   (declare (type coordinate center-x center-y))
-	   (gl:glNewList (cdr infos) gl:GL_COMPILE)
-	   (set-color (car infos))
-	   (if (typep native-region 'standard-ellipse)
-	       (gl:glBegin gl:GL_POLYGON)
-	       (gl:glBegin gl:GL_LINE_STRIP))
-	   (gl:glPushMatrix)
-	   (gl:glLoadIdentity)
-	   (gl:glTranslated center-x center-y 0d0)
-	   (loop with dtheta of-type double-float = (/ pi 100) ; half-ellipse is cut in 100 slices
-		 for theta of-type double-float from start-angle to end-angle by dtheta
-		 do (multiple-value-bind (x y) (transform-position ellipse-transformation (cos theta) (sin theta))
-		      (declare (type double-float x y))
-		      (gl:glVertex2d x y)))  
-	   (gl:glPopMatrix)
-	   (gl:glEnd)
-	   (gl:glEndList))))
-
-	; default : region intersection/union/difference are not handled.
-      (t (error (format nil "Unknown region type (~A)" native-region))))
     (etypecase native-region
       ; point
       (standard-point
        (gl:glNewList (cdr infos) gl:GL_COMPILE)
        (set-color (car infos))
        (gl:glBegin gl:GL_POINTS)
-       (gl:glVertex2d (point-x native-region) (point-y native-region))
+       (gl:glVertex2d (to-gl (point-x native-region))
+		      (to-gl (point-y native-region)))
        (gl:glEnd)
        (gl:glEndList))
 
@@ -425,8 +349,8 @@ until then, feel free to adjust the numbers, etc - BTS
 	   (gl:glNewList (cdr infos) gl:GL_COMPILE)
 	   (set-color (car infos))
 	   (gl:glBegin gl:GL_LINES)
-	   (gl:glVertex2d x1 y1)
-	   (gl:glVertex2d x2 y2)
+	   (gl:glVertex2d (to-gl x1) (to-gl y1))
+	   (gl:glVertex2d (to-gl x2) (to-gl y2))
 	   (gl:glEnd)
 	   (gl:glEndList))))
 
@@ -437,11 +361,15 @@ until then, feel free to adjust the numbers, etc - BTS
        (if (polyline-closed native-region)
 	   (gl:glBegin gl:GL_LINE_LOOP)
 	   (gl:glBegin gl:GL_LINE_STRIP))
-       (map-over-polygon-coordinates #'gl:glVertex2d native-region)
+       (map-over-polygon-coordinates (lambda (p)
+				       (gl:glVertex2d (to-gl (point-x p))
+						      (to-gl (point-y p))))
+				     native-region)
        (gl:glEnd)
        (gl:glEndList))
 
       ; polygon
+      #+nil
       (standard-polyline ; see above duplication - one is wrong - FIXME - BTS
        (gl:glNewList (cdr infos) gl:GL_COMPILE)
        (set-color (car infos))
@@ -456,7 +384,7 @@ until then, feel free to adjust the numbers, etc - BTS
 	 (declare (type coordinate x1 y1 x2 y2))
 	 (gl:glNewList (cdr infos) gl:GL_COMPILE)
 	 (set-color (car infos))
-	 (gl:glRectd x1 y1 x2 y2)
+	 (gl:glRectd (to-gl x1) (to-gl y1) (to-gl x2) (to-gl y2))
 	 (gl:glEndList)))
       
       ; ellipse and elliptical-arc
@@ -509,7 +437,7 @@ until then, feel free to adjust the numbers, etc - BTS
 	  (declare (type coordinate to-tx to-ty))
 	  (multiple-value-bind (twidth theight) (transform-position native-transformation width height)
 	    (declare (type coordinate twidth theight))
-	    (gl:glRasterPos2D to-tx to-ty)
+	    (gl:glRasterPos2D (to-gl to-tx) (to-gl to-ty))
 	    (gl:glCopyPixels (round from-tx) (round from-ty) (round twidth) (round theight) gl:GL_COLOR)))))))
 
 ;; Repaint protocol

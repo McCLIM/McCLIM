@@ -442,7 +442,8 @@
 ;;;
 ;;; funky logic; we don't know if we're still rescanning until after the call
 ;;; to read-gesture. 
-(defun complete-input-rescan (stream func partial-completers so-far)
+(defun complete-input-rescan (stream func partial-completers so-far
+			      allow-any-input)
   (when (stream-rescanning-p stream)
     (loop for gesture = (read-gesture :stream stream :timeout 0)
 	  while (stream-rescanning-p stream) ; also nil if no input available
@@ -455,11 +456,11 @@
                    ;; Not a partial match; better be a total match
                    (setf (values input success object)
                          (funcall func (subseq so-far 0) :complete))
-                   (if success
+                   (if (or success allow-any-input)
                        (progn
                          (unread-gesture gesture :stream stream)
                          (return-from complete-input-rescan
-                           (values object success input)))
+                           (values object t input)))
                      (error 'simple-completion-error
                             :format-control "complete-input: While rescanning,~
                                              can't match ~A~A"
@@ -531,7 +532,8 @@
 	       (replace so-far input)
 	       (replace-input stream input :rescan nil)))
  	(multiple-value-bind (object success input)
-	    (complete-input-rescan stream func partial-completers so-far)
+	    (complete-input-rescan stream func partial-completers
+				   so-far allow-any-input)
 	  (when success
 	    (return-from complete-input (values object success input))))
 	(loop
@@ -718,10 +720,10 @@
 				    (value-key #'cadr))
   (flet ((generator (input-string suggester)
 	   (declare (ignore input-string))
-	   (loop for possibility in completions
-		 do (funcall suggester
-			     (funcall name-key possibility)
-			     (funcall value-key possibility)))))
+	   (do-sequence (possibility completions)
+	     (funcall suggester
+		      (funcall name-key possibility)
+		      (funcall value-key possibility)))))
     (complete-from-generator initial-string #'generator delimiters
 			     :action action
 			     :predicate predicate)))

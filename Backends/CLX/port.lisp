@@ -135,7 +135,7 @@
     (assoc point ranges :test (lambda (point range)
                                 (<= (car range) point (cdr range))))))
 
-(defclass clx-port (basic-port)
+(defclass clx-port (clim-xcommon:keysym-port-mixin basic-port)
   ((display :initform nil
 	    :accessor clx-port-display)
    (screen :initform nil
@@ -145,8 +145,6 @@
    (color-table :initform (make-hash-table :test #'eq))
    (cursor-table :initform (make-hash-table :test #'eq)
                  :accessor clx-port-cursor-table)
-   (modifier-cache :initform nil
-		   :accessor clx-port-modifier-cache)
    (design-cache :initform (make-hash-table :test #'eq))
    (pointer :reader port-pointer)))
 
@@ -616,7 +614,8 @@
 	     :graft-y root-y
              :sheet sheet :modifier-state modifier-state :timestamp time)))
 	((:button-press :button-release)
-	 (let ((modifier-state (x-event-state-modifiers *clx-port* state)))
+	 (let ((modifier-state (clim-xcommon:x-event-state-modifiers *clx-port*
+								     state)))
 	   (make-instance (if (eq event-key :button-press)
 			      'pointer-button-press-event
 			      'pointer-button-release-event)
@@ -631,8 +630,8 @@
                         :graft-x root-x
                         :graft-y root-y
 			:sheet sheet
-			:modifier-state (x-event-state-modifiers *clx-port*
-								 state)
+			:modifier-state (clim-xcommon:x-event-state-modifiers
+					 *clx-port* state)
 			:timestamp time))
 	(:leave-notify
 	 (make-instance (if (eq mode :ungrab)
@@ -643,8 +642,8 @@
 			:graft-x root-x
 			:graft-y root-y
 			:sheet sheet
-			:modifier-state (x-event-state-modifiers *clx-port*
-								 state)
+			:modifier-state (clim-xcommon:x-event-state-modifiers
+					 *clx-port* state)
 			:timestamp time))
         ;;
 	(:configure-notify
@@ -678,8 +677,8 @@
 	(:destroy-notify
 	 (make-instance 'window-destroy-event :sheet sheet))
 	(:motion-notify
-	 (let ((modifier-state (x-event-state-modifiers *clx-port*
-							state)))
+	 (let ((modifier-state (clim-xcommon:x-event-state-modifiers *clx-port*
+								     state)))
 	   (if hint-p
 	       (multiple-value-bind (x y same-screen-p child mask
 				     root-x root-y)
@@ -1095,7 +1094,7 @@
   (multiple-value-bind (x y same-screen-p child mask)
       (xlib:query-pointer (clx-port-window (port pointer)))
     (declare (ignore x y same-screen-p child))
-    (x-event-state-modifiers (port pointer) mask)))
+    (clim-xcommon:x-event-state-modifiers (port pointer) mask)))
 
 ;;; Set the keyboard input focus for the port.
 ;;; (oops, we lose the timestamp here.)
@@ -1129,4 +1128,19 @@
     (when cursor
       (setf (xlib:window-cursor (sheet-mirror sheet)) cursor))))
         
+
+;;; Modifier cache support
+
+(defmethod clim-xcommon:modifier-mapping ((port clx-port))
+  (let* ((display (clx-port-display port))
+	 (x-modifiers (multiple-value-list (xlib:modifier-mapping display)))
+	 (modifier-map (make-array (length x-modifiers) :initial-element nil)))
+    (loop
+       for keycodes in x-modifiers
+       for i from 0
+       do (setf (aref modifier-map i)
+		(mapcan (lambda (keycode)
+			  (modifier-keycode->keysyms display keycode))
+			keycodes)))
+    modifier-map))
 

@@ -25,8 +25,6 @@
 ; perhaps not this one
 (defparameter *opengl-glx-context* nil)
 
-; (setf (get :x11 :port-type) 'opengl-port)
-
 (defmethod initialize-instance :after ((port opengl-port) &rest rest)
   (declare (ignore rest))
   (push (make-instance 'opengl-frame-manager :port port) (slot-value port 'frame-managers))
@@ -36,13 +34,15 @@
 (defmethod initialize-opengl-port ((port opengl-port))
   (let* ((options (cdr (port-server-path port)))
 	 (hostname (getf options :host ""))
-	 (host (if (string= hostname "localhost") "" hostname))
 	 (screen-id (getf options :screen-id 0)))
-    (with-slots (display screen root) port
-      (setf display (xlib-gl:XOpenDisplay host)
-	    screen (xlib-gl:XScreenOfDisplay display screen-id)
-	    root (xlib-gl:XRootWindow display screen-id)))
-    (make-graft port)))
+    (clim-ffi:with-c-strings ((host (if (string= hostname "localhost")
+					""
+					hostname)))
+      (with-slots (display screen root) port
+	(setf display (xlib-gl:XOpenDisplay host)
+	      screen (xlib-gl:XScreenOfDisplay display screen-id)
+	      root (xlib-gl:XRootWindow display screen-id)))
+      (make-graft port))))
 
 (defmethod destroy-port :before ((port opengl-port))
   (let ((display (opengl-port-display port)))
@@ -88,186 +88,222 @@
                     last (child-containing-position (frame x y)))
         finally (return last)))
 
+;;; This still needs a lot of work, particularly in the handling of
+;;; modifiers.
+
+(defun event-to-keysym-and-modifiers (port event)
+  (clim-ffi:with-c-data ((str (array char 16))
+			 (sym (array long 1)))
+    (let* ((num-chars (xlib-gl:XLookupString
+		       event str 16 sym (clim-ffi:null-pointer)))
+	   (event-char (when (< 0 num-chars)
+			 (code-char (clim-ffi:cref str char))))
+	   (event-keysym (clim-xcommon:lookup-keysym (clim-ffi:cref sym
+								    long)))
+	   (event-type (xlib-gl:xkeyevent-type event)))
+      (clim-xcommon:x-keysym-to-clim-modifiers port
+					       (if (eql event-type
+							xlib-gl:keypress)
+						   :key-press
+						   :key-release)
+					       (or event-char event-keysym)
+					       event-keysym
+					       (xlib-gl:xkeyevent-state
+						event)))))
+
+;;; Relieve some of the tedium of getting values out of events
+(defmacro with-event-slots ((event-type &rest vars) event-form  &body body)
+  (with-gensyms (event-form-var)
+    (let* ((event-name (symbol-name event-type))
+	   (var-forms (mapcar (lambda (var)
+				(let ((accessor-name
+				       (format nil "~A-~A"
+					       event-name
+					       (symbol-name var))))
+				  (multiple-value-bind (accessor status)
+				      (find-symbol accessor-name :xlib-gl)
+				    (unless (eq status :external)
+				      (error "~A is not a known event slot")))
+				  `(,var (,accessor ,event-form-var)))))))
+      `(let ((,event-form-var ,event-form))
+	 (let ,var-forms
+	   ,@body)))))
+
 (defun get-next-event-aux (port)
   (let ((event   (opengl-port-xevent port))
         (display (opengl-port-display port)))
     (xlib-gl:XNextEvent (opengl-port-display port) event)
     (let ((event-type (xlib-gl:xanyevent-type event)))
-      (prog1
-	  (cond ((eq event-type xlib-gl:keypress)
-		 (let ((str (make-string 1)))
-		   (declare (type string str))
-		   (make-instance 'key-press-event
-		     :key-name (xlib-gl:XLookupString event str 1
-						   (make-array 1 :element-type '(unsigned-byte 32))
-						   NULL)
-		     :sheet (find-related-sheet port)
-		     :modifier-state (key-mod (xlib-gl:xkeypressedevent-state event))
-		     :timestamp (xlib-gl:xkeypressedevent-time event))))
-		
-		((eq event-type xlib-gl:keyrelease)
-		 (let ((str (make-string 1)))
-		   (declare (type string str))
-		   (make-instance 'key-release-event
-		     :key-name (xlib-gl:XLookupString event str 1
-						   (make-array 1 :element-type '(unsigned-byte 32))
-						   xlib-gl:NULL)
-		     :sheet (find-related-sheet port)
-		     :modifier-state (key-mod (xlib-gl:xkeyreleasedevent-state event))
-		     :timestamp (xlib-gl:xkeyreleasedevent-time event))))
-		
-		((eq event-type xlib-gl:buttonpress)
-		 (make-instance 'pointer-button-press-event
-		   :pointer 0 
-		   :button (xlib-gl:xbuttonpressedevent-button event)
-		   :x (xlib-gl:xbuttonpressedevent-x event)
-		   :y (xlib-gl:xbuttonpressedevent-y event)
-		   :sheet (find-related-sheet port)
-		   :modifier-state (key-mod (xlib-gl:xbuttonpressedevent-state event))
-		   :timestamp (xlib-gl:xbuttonpressedevent-time event)))
+      (cond ((or (eql event-type xlib-gl:keypress)
+		 (eql event-type xlib-gl:keyrelease))
+	     (multiple-value-bind (keyname modifier-state)
+		 (event-to-keysym-and-modifiers port event)
+	       (with-event-slots (:xkeyevent x y x_root y_root time)
+		 event
+		 (make-instance (if (eql event-type xlib-gl:keypress)
+				    'key-press-event
+				    'key-release-event)
+				:keyname keyname
+				:key-character (and (characterp keyname)
+						    keyname)
+				:x x :y y
+				:graft-x x_root	:graft-y y_root
+				:sheet (find-related-sheet port)
+				:modifier-state modifier-state
+				:timestamp time))))
+	    
+	    ((eq event-type xlib-gl:buttonpress)
+	     (make-instance 'pointer-button-press-event
+			    :pointer 0 
+			    :button (xlib-gl:xbuttonpressedevent-button event)
+			    :x (xlib-gl:xbuttonpressedevent-x event)
+			    :y (xlib-gl:xbuttonpressedevent-y event)
+			    :sheet (find-related-sheet port)
+			    :modifier-state (key-mod (xlib-gl:xbuttonpressedevent-state event))
+			    :timestamp (xlib-gl:xbuttonpressedevent-time event)))
 		  
-		((eq event-type xlib-gl:buttonrelease)
-		 (make-instance 'pointer-button-release-event
-		   :pointer 0
-		   :button (xlib-gl:xbuttonreleasedevent-button event)
-		   :x (xlib-gl:xbuttonreleasedevent-x event)
-		   :y (xlib-gl:xbuttonreleasedevent-y event)
-		   :sheet (find-related-sheet port)
-		   :modifier-state (key-mod (xlib-gl:xbuttonreleasedevent-state event))
-		   :timestamp (xlib-gl:xbuttonreleasedevent-time event)))
+	    ((eq event-type xlib-gl:buttonrelease)
+	     (make-instance 'pointer-button-release-event
+			    :pointer 0
+			    :button (xlib-gl:xbuttonreleasedevent-button event)
+			    :x (xlib-gl:xbuttonreleasedevent-x event)
+			    :y (xlib-gl:xbuttonreleasedevent-y event)
+			    :sheet (find-related-sheet port)
+			    :modifier-state (key-mod (xlib-gl:xbuttonreleasedevent-state event))
+			    :timestamp (xlib-gl:xbuttonreleasedevent-time event)))
 		  
-		((eq event-type xlib-gl:enternotify)
-		 (let ((sheet (port-lookup-sheet port (xlib-gl:xenterwindowevent-window event))))
-		   (when sheet
-		     (let* ((x (xlib-gl:xenterwindowevent-x event))
-			    (y (xlib-gl:xenterwindowevent-y event))
-			    (modifier (xlib-gl:xenterwindowevent-state event)))
-		       (declare (type fixnum x y modifier))
-		       (make-instance 'pointer-enter-event
-			 :pointer 0
-			 :button (find-button modifier)
-			 :x x
-			 :y y
-			 :sheet sheet
-			 :modifier-state (key-mod modifier)
-			 :timestamp (xlib-gl:xenterwindowevent-time event))))))
+	    ((eq event-type xlib-gl:enternotify)
+	     (let ((sheet (port-lookup-sheet port (xlib-gl:xenterwindowevent-window event))))
+	       (when sheet
+		 (let* ((x (xlib-gl:xenterwindowevent-x event))
+			(y (xlib-gl:xenterwindowevent-y event))
+			(modifier (xlib-gl:xenterwindowevent-state event)))
+		   (declare (type fixnum x y modifier))
+		   (make-instance 'pointer-enter-event
+				  :pointer 0
+				  :button (find-button modifier)
+				  :x x
+				  :y y
+				  :sheet sheet
+				  :modifier-state (key-mod modifier)
+				  :timestamp (xlib-gl:xenterwindowevent-time event))))))
 		
-		((eq event-type xlib-gl:leavenotify)
-		 (let ((modifier (xlib-gl:xleavewindowevent-state event)))
-		   (declare (type fixnum modifier))
-		   (prog1
-		       (make-instance (if (eq (xlib-gl:xleavewindowevent-mode event)
-					      xlib-gl:NotifyGrab)
-					  'pointer-ungrab-event
-					  'pointer-exit-event)
-			 :pointer 0
-			 :button (find-button modifier)
-			 :x (xlib-gl:xleavewindowevent-x event)
-			 :y (xlib-gl:xleavewindowevent-y event)
-			 :sheet (find-related-sheet port)
-			 :modifier-state (key-mod modifier)
-			 :timestamp (xlib-gl:xleavewindowevent-time event))
-		     (setf *current-sheet-signature* 0))))
+	    ((eq event-type xlib-gl:leavenotify)
+	     (let ((modifier (xlib-gl:xleavewindowevent-state event)))
+	       (declare (type fixnum modifier))
+	       (prog1
+		   (make-instance (if (eq (xlib-gl:xleavewindowevent-mode event)
+					  xlib-gl:NotifyGrab)
+				      'pointer-ungrab-event
+				      'pointer-exit-event)
+				  :pointer 0
+				  :button (find-button modifier)
+				  :x (xlib-gl:xleavewindowevent-x event)
+				  :y (xlib-gl:xleavewindowevent-y event)
+				  :sheet (find-related-sheet port)
+				  :modifier-state (key-mod modifier)
+				  :timestamp (xlib-gl:xleavewindowevent-time event))
+		 (setf *current-sheet-signature* 0))))
 		  
-		((eq event-type xlib-gl:motionnotify)
-		 (let* ((x (xlib-gl:xmotionevent-x event))
-			(y (xlib-gl:xmotionevent-y event))
-			(modifier (xlib-gl:xmotionevent-state event))
-			(time (xlib-gl:xmotionevent-time event))
-			(sheet-signature (find-sheet-signature port x y))
-			(sheet (recognize-sheet port sheet-signature)))
-		   (declare (type fixnum x y modifier)
-			    (type (unsigned-byte 24) sheet-signature)
-			    (type bignum  time))
-		   (when (eq (xlib-gl:xmotionevent-window event)
-                             (sheet-direct-mirror (opengl-port-top-level port)))
-		     (if (= sheet-signature *current-sheet-signature*)
-		         ;; pointer is in the same sheet as for the previous event
-                         (let ((peek    (opengl-port-xpeek  port)))
-                           (unless (and (when (> (xlib-gl:XPending display) 0)
-                                          (xlib-gl:XPeekEvent display peek)
-                                          t)
-                                         (eq (xlib-gl:XAnyEvent-Type peek)
-                                            xlib-gl:MotionNotify))
-		             (make-instance 'pointer-motion-event
-			       :pointer 0
-			       :button (find-button modifier)
-			       :x x
-			       :y y
-			       :sheet sheet
-			       :modifier-state (key-mod modifier)
-			       :timestamp time)))
+	    ((eq event-type xlib-gl:motionnotify)
+	     (let* ((x (xlib-gl:xmotionevent-x event))
+		    (y (xlib-gl:xmotionevent-y event))
+		    (modifier (xlib-gl:xmotionevent-state event))
+		    (time (xlib-gl:xmotionevent-time event))
+		    (sheet-signature (find-sheet-signature port x y))
+		    (sheet (recognize-sheet port sheet-signature)))
+	       (declare (type fixnum x y modifier)
+			(type (unsigned-byte 24) sheet-signature)
+			(type bignum  time))
+	       (when (eq (xlib-gl:xmotionevent-window event)
+			 (sheet-direct-mirror (opengl-port-top-level port)))
+		 (if (= sheet-signature *current-sheet-signature*)
+		     ;; pointer is in the same sheet as for the previous event
+		     (let ((peek    (opengl-port-xpeek  port)))
+		       (unless (and (when (> (xlib-gl:XPending display) 0)
+				      (xlib-gl:XPeekEvent display peek)
+				      t)
+				    (eq (xlib-gl:XAnyEvent-Type peek)
+					xlib-gl:MotionNotify))
+			 (make-instance 'pointer-motion-event
+					:pointer 0
+					:button (find-button modifier)
+					:x x
+					:y y
+					:sheet sheet
+					:modifier-state (key-mod modifier)
+					:timestamp time)))
 
-		         ;; not in same sheet
-		         (when sheet
-			   (let ((button (find-button modifier))
-			         (modifier (key-mod modifier))
-			         (last-sheet (find-related-sheet port)))
-			     (declare (type fixnum button modifier)
-				      (type sheet last-sheet))
-			     (progn
-			       (unless (= *current-sheet-signature* 0)
-			         (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-native-region last-sheet)
-				   (declare (type coordinate x1 y1 x2 y2))
-				   (dispatch-event last-sheet
-						   (make-instance 'pointer-exit-event
-						     :pointer 0
-						     :button button
-						     :x (max x1 (min x x2))
-						     :y (max y1 (min y y2))
-						     :sheet last-sheet
-						     :modifier-state modifier
-						     :timestamp (- time 2)))))
-					  ; change the current-sheet
-			       (setf *current-sheet-signature* sheet-signature)
-			       (dispatch-event sheet
-					       (make-instance 'pointer-enter-event
-					         :pointer 0
-					         :button button
-					         :x x
-					         :y y
-					         :sheet sheet
-					         :modifier-state modifier
-					         :timestamp (1- time)))
-			         (make-instance 'pointer-motion-event
-			           :pointer 0
-			           :button button
-			           :x x
-			           :y y
-			           :sheet sheet
-			           :modifier-state modifier
-			           :timestamp time))))))))
+		     ;; not in same sheet
+		     (when sheet
+		       (let ((button (find-button modifier))
+			     (modifier (key-mod modifier))
+			     (last-sheet (find-related-sheet port)))
+			 (declare (type fixnum button modifier)
+				  (type sheet last-sheet))
+			 (progn
+			   (unless (= *current-sheet-signature* 0)
+			     (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-native-region last-sheet)
+						       (declare (type coordinate x1 y1 x2 y2))
+						       (dispatch-event last-sheet
+								       (make-instance 'pointer-exit-event
+										      :pointer 0
+										      :button button
+										      :x (max x1 (min x x2))
+										      :y (max y1 (min y y2))
+										      :sheet last-sheet
+										      :modifier-state modifier
+										      :timestamp (- time 2)))))
+					; change the current-sheet
+			   (setf *current-sheet-signature* sheet-signature)
+			   (dispatch-event sheet
+					   (make-instance 'pointer-enter-event
+							  :pointer 0
+							  :button button
+							  :x x
+							  :y y
+							  :sheet sheet
+							  :modifier-state modifier
+							  :timestamp (1- time)))
+			   (make-instance 'pointer-motion-event
+					  :pointer 0
+					  :button button
+					  :x x
+					  :y y
+					  :sheet sheet
+					  :modifier-state modifier
+					  :timestamp time))))))))
 			 
-		((eq event-type xlib-gl:configurenotify)
-		 ; the configure notification will be only send to the top-level-sheet
-		 (make-instance 'window-configuration-event
-		   :sheet (port-lookup-sheet port (xlib-gl:xconfigureevent-window event))
-		   :x (xlib-gl:xconfigureevent-x event)
-		   :y (xlib-gl:xconfigureevent-y event)
-		   :width (xlib-gl:xconfigureevent-width event)
-		   :height (xlib-gl:xconfigureevent-height event)))
+	    ((eq event-type xlib-gl:configurenotify)
+					; the configure notification will be only send to the top-level-sheet
+	     (make-instance 'window-configuration-event
+			    :sheet (port-lookup-sheet port (xlib-gl:xconfigureevent-window event))
+			    :x (xlib-gl:xconfigureevent-x event)
+			    :y (xlib-gl:xconfigureevent-y event)
+			    :width (xlib-gl:xconfigureevent-width event)
+			    :height (xlib-gl:xconfigureevent-height event)))
 
-		((eq event-type xlib-gl:mapnotify)
-		 ; the mapping notification will be only send to the top-level-sheet
-		 (make-instance 'window-map-event :sheet (port-lookup-sheet port (xlib-gl:xmapevent-window event))))
+	    ((eq event-type xlib-gl:mapnotify)
+					; the mapping notification will be only send to the top-level-sheet
+	     (make-instance 'window-map-event :sheet (port-lookup-sheet port (xlib-gl:xmapevent-window event))))
 
-		((eq event-type xlib-gl:destroynotify)
-		 (let ((top-level-sheet (opengl-port-top-level port)))
-		   (opengl-reshape (port-mirror-width port top-level-sheet)
-				   (port-mirror-height port top-level-sheet))
-		   (draw-the-entire-scene port)))
+	    ((eq event-type xlib-gl:destroynotify)
+	     (let ((top-level-sheet (opengl-port-top-level port)))
+	       (opengl-reshape (port-mirror-width port top-level-sheet)
+			       (port-mirror-height port top-level-sheet))
+	       (draw-the-entire-scene port)))
                 
-		((eq event-type xlib-gl:expose)
-		 ; the exposure notification will be only send to the top-level-sheet
-		 (let ((x (xlib-gl:xexposeevent-x event))
-		       (y (xlib-gl:xexposeevent-y event)))
-		   (make-instance 'window-repaint-event
-		     :sheet (port-lookup-sheet port (xlib-gl:xexposeevent-window event))
-		     :region (make-bounding-rectangle x y
-						      (+ x (xlib-gl:xexposeevent-width event))
-						      (+ y (xlib-gl:xexposeevent-height event))))))
+	    ((eq event-type xlib-gl:expose)
+					; the exposure notification will be only send to the top-level-sheet
+	     (let ((x (xlib-gl:xexposeevent-x event))
+		   (y (xlib-gl:xexposeevent-y event)))
+	       (make-instance 'window-repaint-event
+			      :sheet (port-lookup-sheet port (xlib-gl:xexposeevent-window event))
+			      :region (make-bounding-rectangle x y
+							       (+ x (xlib-gl:xexposeevent-width event))
+							       (+ y (xlib-gl:xexposeevent-height event))))))
 		
-		(t nil))))))
+	    (t nil)))))
 
 
 ;; OpenGL graft

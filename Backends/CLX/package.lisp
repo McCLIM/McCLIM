@@ -2,6 +2,14 @@
 
 (in-package :common-lisp-user)
 
+(defpackage :clim-xcommon
+  (:use :clim :clim-lisp)
+  (:export #:keysym-port-mixin
+	   #:lookup-keysym
+	   #:modifier-mapping
+	   #:x-event-state-modifiers
+	   #:x-keysym-to-clim-modifiers))
+
 (defpackage :clim-clx
     (:use :clim :clim-lisp)
   (:import-from :climi

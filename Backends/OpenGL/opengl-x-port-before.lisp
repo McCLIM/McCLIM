@@ -39,6 +39,7 @@
   `(gl:glXSwapBuffers (opengl-port-display ,port) (sheet-direct-mirror ,sheet)))
 
 (defun find-array-address (array)
+  (error "Don't call find-array-address!")
   #+cmu
   (alien::sap-int (cmucl-interface:array-data-address array))
   #+sbcl ; I wonder if this will work...

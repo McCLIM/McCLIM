@@ -119,6 +119,27 @@
       (setf (stream-insertion-pointer snapshot)
 	    (offset-location* buffer point-line point-pos)))))
 
+(defmethod update-input-editing-stream ((stream goatee-input-editing-mixin))
+  (let ((area (area stream))
+	(snapshot (snapshot stream)))
+    (make-input-editing-stream-snapshot snapshot area)
+    (let ((first-mismatch (mismatch (stream-input-buffer snapshot)
+				    (stream-input-buffer stream)))
+	  (snapshot-buffer (stream-input-buffer snapshot))
+	  (stream-buffer (stream-input-buffer stream)))
+      (setf (stream-insertion-pointer stream)
+	    (stream-insertion-pointer snapshot))
+      (when (< (car (array-dimensions stream-buffer))
+	       (fill-pointer snapshot-buffer))
+	(adjust-array stream-buffer (fill-pointer snapshot-buffer)))
+      (setf (fill-pointer stream-buffer) (fill-pointer snapshot-buffer))
+      (when (and first-mismatch
+		 (>= (fill-pointer snapshot-buffer) first-mismatch))
+	(replace stream-buffer snapshot-buffer
+		 :start1 first-mismatch
+		 :start2 first-mismatch))
+      first-mismatch)))
+
 (defmethod stream-process-gesture ((stream goatee-input-editing-mixin)
 				   gesture
 				   type)
@@ -308,8 +329,8 @@
       (apply #'%replace-input stream printed-rep
 	     0 (length printed-rep) buffer-start rescan rescan-supplied-p
 	     (if acceptably
-		 `(accept-result-extent :object ,object :result-type ,type)
-		 '(nil))))))
+		 '(nil)
+		 `(accept-result-extent :object ,object :result-type ,type))))))
 
 ;;; There used to be complicated logic here to support output when
 ;;; rescanning, but it seems to be very hairy to get right in

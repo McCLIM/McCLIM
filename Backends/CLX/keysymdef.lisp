@@ -1,6 +1,6 @@
-;;; -*- Mode: Lisp; Package: CLIM-CLX; -*-
+;;; -*- Mode: Lisp; Package: CLIM-XCOMMON; -*-
 
-(in-package :clim-clx)
+(in-package :clim-xcommon)
 
 ;;/***********************************************************
 ;;Copyright 1987, 1994, 1998  The Open Group

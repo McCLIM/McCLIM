@@ -1934,3 +1934,39 @@
    #:goatee-input-editing-mixin
    #:simple-screen-area))
 
+;;; Macros and definitions for interfacing with a host Lisp's FFI.
+(defpackage :clim-ffi
+  (:use :clim-lisp)
+  (:export
+   #:cref
+   #:make-record
+   #:null-pointer
+   #:with-c-strings
+   #:with-c-data
+   ;; Types
+   #:signed-char
+   #:signed-byte
+   #:short
+   #:signed-halfword
+   #:int
+   #:signed-fullword
+   #:long
+   #:signed-short
+   #:signed-int
+   #:signed-long
+   #:signed-doubleword
+   #:char
+   #:unsigned-char
+   #:unsigned-byte
+   #:unsigned-short
+   #:unsigned-halfword
+   #:unsigned-int
+   #:unsigned-fullword
+   #:unsigned-long
+   #:unsigned-doubleword
+   #:float
+   #:double
+   #:void
+   #:address
+
+   ))

@@ -22,6 +22,7 @@
 
 (clim-defsystem (:clim-clx :depends-on (:clim #+(and sbcl asdf) :clx))
   "Backends/CLX/package"
+  "Backends/CLX/keysyms-common"
   "Backends/CLX/keysyms"
   "Backends/CLX/keysymdef"
   "Backends/CLX/port"
