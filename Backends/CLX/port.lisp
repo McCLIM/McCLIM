@@ -182,7 +182,8 @@
 
 (defun clx-error-handler (display error-name &key &allow-other-keys)
   (declare (ignore display))
-  (format *error-output* "clx-error: ~a~%" error-name))
+  (format *error-output* "Received clx-error in ~a: ~a~%"
+          (clim-sys:current-process) error-name))
 
 (defmethod initialize-clx ((port clx-port))
   (let ((options (cdr (port-server-path port))))
@@ -209,9 +210,10 @@
              (with-simple-restart
                  (restart-event-loop
                   "Restart CLIM's event loop.")
-               (loop
-                 (process-next-event port)))))
-         :name (format nil "~S's event process." port)))) ))
+                 (loop
+                   (process-next-event port)) )))
+         :name (format nil "~S's event process." port)))
+      #+nil(format *trace-output* "~&Started CLX event loop process ~A~%" (port-event-process port))) ))
 
 #+nil
 (defmethod (setf sheet-mirror-transformation) :after (new-value (sheet mirrored-sheet-mixin))
@@ -527,10 +529,13 @@
 (defun safely-set-input-focus (display window revert-to &optional timestamp)
   "Sets the input focus, binding a handler for BadMatch errors and syncing with
 the server, in case the window is not visible."
-  (xlib::with-display (display)
+  #+nil(format *trace-output* "~&Process ~W changed the input focus.~%" (clim-sys:current-process))
+  (xlib:with-display (display)
+     (xlib:display-finish-output display) ; don't laugh, it works.
      (handler-case (progn (xlib:set-input-focus display window revert-to timestamp)
                        (xlib:display-finish-output display))
-       (xlib:match-error () nil))))
+       (xlib:match-error ()
+          #+nil(format *trace-output* "~&Safely handled the BadMatch.~%" )))))
 
 (defun event-handler (&rest event-slots
                       &key display window event-key code state mode time
