@@ -157,21 +157,20 @@
 	  (setq height (space-requirement-height space))))
     (allocate-space pane width height)))
 
+(defun find-pane-of-type (panes type)
+  (setq panes (copy-list panes))
+  (loop for pane in panes
+	if (typep pane type)
+	   return pane
+	do (setq panes (nconc panes (copy-list (sheet-children pane))))
+	finally (return nil)))
+	      
 (defmethod frame-standard-output ((frame application-frame))
-  (or (loop for pane in (frame-panes frame)
-	  if (typep pane 'application-pane)
-	  return pane
-	  finally (return nil))
-      (loop for pane in (frame-panes frame)
-	  if (typep pane 'interactor-pane)
-	  return pane
-	  finally (return nil))))
+  (or (find-pane-of-type (frame-panes frame) 'application-pane)
+      (find-pane-of-type (frame-panes frame) 'interactor-pane)))
 
 (defmethod frame-standard-input ((frame application-frame))
-  (or (loop for pane in (frame-panes frame)
-	  if (typep pane 'interactor-pane)
-	  return pane
-	  finally (return nil))
+  (or (find-pane-of-type (frame-panes frame) 'interactor-pane)
       (frame-standard-output frame)))
 
 (defmethod frame-query-io ((frame application-frame))
@@ -271,21 +270,27 @@
   `(defmethod generate-panes ((fm frame-manager) (frame ,class-name))
      (let ((*application-frame* frame))
        (let ,(loop for (name . form) in panes
-		 collect `(,name (or (find-pane-named frame ',name)
-				     (let ((pane
-					    ,(cond
-					      ((and (= (length form) 1)
-						    (listp (first form)))
-					       (first form))
-					      ((keywordp (first form))
-					       `(make-pane ',(intern (concatenate 'string
-								       (symbol-name (first form))
-								       "-PANE")
-								     :clim)
-							   :name ',name ,@(cdr form)))
+		   collect `(,name (or (find-pane-named frame ',name)
+				       (let ((pane
+					      ,(cond
+						((and (= (length form) 1)
+						      (listp (first form)))
+						 (first form))
+						((keywordp (first form))
+						 (let ((maker (intern (concatenate 'string
+									"MAKE-CLIM-"
+									(symbol-name (first form))
+									"-PANE") :clim)))
+						   (if (fboundp maker)
+						       `(,maker :name ',name ,@(cdr form))
+						     `(make-pane ',(intern (concatenate 'string
+									     (symbol-name (first form))
+									     "-PANE")
+									   :clim)
+								 :name ',name ,@(cdr form)))))
 						(t `(make-pane ',(first form) :name ',name ,@(cdr form))))))
-				       (push pane (slot-value frame 'panes))
-				       pane))))
+					 (push pane (slot-value frame 'panes))
+					 pane))))
 	 (setf (slot-value frame 'pane)
 	   (with-look-and-feel-realization (fm frame)
 	     (ecase (frame-current-layout frame)
