@@ -280,16 +280,21 @@ if beyond the actual line's maximum)."))
 ;; antifuchs->Moore: is this more optimized? What was the extents
 ;; stuff you hinted at?
 
-(defun delete-region (buf start end)
-  (buffer-delete-char* buf (line start) (pos start) (- (line-last-point (line start)) (pos start)))
-  (unless (eql (line start) (line end))
-    ;; didn't test this piece of code very well...
-    (loop until (eql (line start) (line end))
-	  do (progn
-	       (buffer-close-line* buf (line start) 1)
-	       (buffer-delete-char* buf (line start) (pos start) (- (line-last-point (line start)) (pos start)))))
-    (buffer-delete-char* buf (line start) (pos start) (pos end))))
-	
+;; Had to fix a bug here - would always delete to the end of line, even if
+;; start/end was a region within one line. Hopefully didn't screw anything up.
+;;                                                           --Hefner
+
+(defun delete-region (buf start end)  
+  (if (eql (line start) (line end))
+      (buffer-delete-char* buf (line start) (pos start) (- (pos end) (pos start)))
+    (progn
+      (buffer-delete-char* buf (line start) (pos start) (- (line-last-point (line start)) (pos start)))
+      ;; didn't test this piece of code very well...
+      (loop until (eql (line start) (line end))
+        do (progn
+             (buffer-close-line* buf (line start) 1)
+             (buffer-delete-char* buf (line start) (pos start) (- (line-last-point (line start)) (pos start)))))
+      (buffer-delete-char* buf (line start) (pos start) (pos end)))))
 
 (defmethod clear-buffer ((buf editable-buffer))
   (delete-region buf (buffer-start buf) (buffer-end buf))
