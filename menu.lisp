@@ -125,7 +125,7 @@
 	 (command-table-name (slot-value sub-menu 'command-table))
 	 (items (mapcar #'(lambda (item)
 			    (make-menu-button-from-menu-item
-			     item client :command-table command-table-name))
+			     item client :command-table command-table-name :vertical t))
 			(slot-value (find-command-table command-table-name)
 				    'menu)))
 	 (rack (make-pane-1 manager frame 'vrack-pane
@@ -164,19 +164,106 @@
 	  (mapc #'destroy-substructure (menu-children client))
 	  (create-substructure sub-menu sub-menu)))
     (arm-menu sub-menu)))
-	      
+
 (defmethod handle-event ((pane menu-button-submenu-pane) (event pointer-button-release-event))
   (destroy-substructure (menu-root pane)))
 
-;; Menu creation from command tables
+;;; menu-button-vertical-submenu-pane
+(defclass menu-button-vertical-submenu-pane (menu-button-submenu-pane) ())
+
+(let* ((left-padding 10)
+       (widget-size  5)
+       (right-padding 4)
+       (widget-width widget-size)
+       (widget-height (* 2 widget-size))
+       (total-width (+ left-padding widget-width right-padding))
+       (total-height widget-height))
+
+  (defmethod compose-space ((gadget menu-button-vertical-submenu-pane) &key width height)
+    (declare (ignorable width height))
+    (multiple-value-bind (width min-width max-width height min-height max-height)
+        (space-requirement-components (call-next-method))
+      (declare (ignorable max-width))
+      (make-space-requirement :min-width (+ min-width total-width)
+                              :width (+ width total-width)
+                              :max-width +fill+
+                              :min-height (max min-height total-height)
+                              :height (max height total-height)
+                              :max-height (if (zerop max-height) ; make-space-requirements default maximums are zero..
+                                              0
+                                              (max max-height total-height)))))
+
+  (defmethod handle-repaint ((pane menu-button-vertical-submenu-pane) region)
+    (call-next-method)
+    (multiple-value-bind (x1 y1 x2 y2)
+        (bounding-rectangle* (sheet-region pane))
+      (when (and (> (- x2 x1) total-width)
+                 (> (- y2 y1) total-height))
+        (let* ((center (/ (+ y1 y2) 2))
+               (vbase (- center (/ widget-height 2)))
+               (hbase (+ (- x2 total-width) left-padding))
+               (shape (list hbase vbase
+                            (+ hbase widget-size) (+ vbase widget-size)
+                            hbase (+ vbase (* 2 widget-size)))))
+          (draw-polygon* pane shape :ink +black+))))))
+
+;;; menu-divider-leaf-pane
+
+(defclass menu-divider-leaf-pane (standard-gadget)
+  ((label :initform nil :initarg :label)))
+
+(defparameter *labelled-divider-text-style* (make-text-style :sans-serif :roman :small))
+
+(defmethod destroy-substructure ((object menu-divider-leaf-pane)))
+(defmethod arm-menu ((object menu-divider-leaf-pane)))
+(defmethod disarm-menu ((object menu-divider-leaf-pane)))
+
+(defmethod compose-space ((gadget menu-divider-leaf-pane) &key width height)
+  (declare (ignorable width height))
+  (flet ((make-sr (w h)
+           (make-space-requirement :min-width w   :width w
+                                   :min-height h  :height h :max-height h)))
+    (let ((label (slot-value gadget 'label)))
+      (if label
+          (multiple-value-bind (width height fx fy baseline)
+              (text-size gadget label :text-style *labelled-divider-text-style*)
+            (declare (ignore fx fy height baseline))
+            (make-sr width (+ 0
+                              (text-style-ascent *labelled-divider-text-style* gadget)
+                              (text-style-descent *labelled-divider-text-style* gadget))))
+          (make-sr 0 4)))))
+
+
+(defmethod handle-repaint ((pane menu-divider-leaf-pane) region)
+  (let ((label (slot-value pane 'label)))   
+    (multiple-value-bind (x1 y1 x2 y2)
+        (bounding-rectangle* (sheet-region pane))
+      (declare (ignore y2))
+      (if label
+          (multiple-value-bind (width height fx fy baseline)
+              (text-size pane label :text-style *labelled-divider-text-style*)
+            (declare (ignore height fx fy))
+            (let ((tx0 (+ x1 (/ (- (- x2 x1) width) 2)))
+                  (ty0 (+ 1 y1 baseline)))
+            (draw-line* pane tx0 (1+ ty0) (+ tx0 width) (1+ ty0) :ink *3d-dark-color*)
+            (draw-text* pane label tx0 ty0
+                        :text-style *labelled-divider-text-style*)))
+          (progn
+            (draw-line* pane x1 (1+ y1) x2 (1+ y1) :ink *3d-dark-color*)
+            (draw-line* pane x1 (+ 2 y1) x2 (+ 2 y1) :ink *3d-light-color*))))))
+
+
+;;; Menu creation from command tables
 
 ;; for now, accept only types :command and :menu, and only 
 ;; command names as values of :command
 
-(defparameter *disabled-text-style* (make-text-style :fix :italic :normal))
+(defparameter *enabled-text-style*  (make-text-style :sans-serif :roman :normal))
+(defparameter *disabled-text-style* (make-text-style :sans-serif :roman :normal))
 
 (defun make-menu-button-from-menu-item (item client
 					&key (bottomp nil)
+                                        (vertical nil)
 					command-table
 					(presentation-type 'menu-item))
   (declare (ignore command-table))
@@ -185,29 +272,56 @@
 	(value (command-menu-item-value item))
 	(frame *application-frame*)
 	(manager (frame-manager *application-frame*)))
-    (if (eq type :command)
-	(if (command-enabled (if (consp value) (car value) value) frame)
-	    (make-pane-1 manager frame 'menu-button-leaf-pane
-			 :label name
-			 :client client
-			 :value-changed-callback
-			 #'(lambda (gadget val)
-			     (declare (ignore gadget val))
-			     (throw-object-ptype item presentation-type)))
-	    (make-pane-1 manager frame 'menu-button-leaf-pane
-			 :label name
-			 :text-style *disabled-text-style*
-			 :client client
-			 :value-changed-callback
-			 #'(lambda (gadget val)
-			     (declare (ignore gadget val))
-			     nil)))
-	(make-pane-1 manager frame 'menu-button-submenu-pane
+    (case type
+      (:command
+       (let ((command-name (if (consp value) (car value) value)))
+         (if (command-enabled command-name frame)
+             (make-pane-1 manager frame 'menu-button-leaf-pane
+                          :label name
+                          :text-style *enabled-text-style*
+                          :client client
+                          :value-changed-callback
+                          #'(lambda (gadget val)
+                              (declare (ignore gadget val))
+                              (throw-object-ptype item presentation-type)))
+             (let ((pane (make-pane-1 manager frame 'menu-button-leaf-pane
+                            :label name
+                            :text-style *disabled-text-style*
+                            :client client
+                            :value-changed-callback
+                            #'(lambda (gadget val)
+                                (declare (ignore gadget val))
+                                nil))))
+               (deactivate-gadget pane)
+               pane))))
+      (:function
+        (make-pane-1 manager frame 'menu-button-leaf-pane
+                     :label name
+                     :text-style *enabled-text-style*
+                     :client client
+                     :value-changed-callback
+                     #'(lambda (gadget val)
+                         (declare (ignore gadget val))
+                         ;; FIXME: the spec requires us to pass a gesture to the
+                         ;; function, but value-changed-callback doesn't provide
+                         ;; one, so we pass NIL for now.
+                         ;; FIXME: We don't have a numeric argument, either.
+                         (let ((command (funcall item nil nil)))
+                           (throw-object-ptype command presentation-type)))))
+      (:divider
+       (make-pane-1 manager frame 'menu-divider-leaf-pane
+                    :label name
+                    :client client))
+      (:menu
+        (make-pane-1 manager frame (if vertical
+                                       'menu-button-vertical-submenu-pane
+                                       'menu-button-submenu-pane)
 		     :label name
 		     :client client
 		     :frame-manager manager
 		     :command-table value
-		     :bottomp bottomp))))
+		     :bottomp bottomp))
+      (otherwise (error "Don't know how to create a menu button for ~W" type)))))
 
 ;;
 ;; MENU-BAR
@@ -265,5 +379,6 @@
                           (make-menu-button-from-menu-item
 			   item nil
 			   :bottomp t
+                           :vertical nil
 			   :command-table command-table))
                     (list +fill+))))))

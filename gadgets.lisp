@@ -1126,6 +1126,10 @@ and must never be nil."))
       (setf pressedp nil)
       (dispatch-repaint pane +everywhere+))))
 
+(defun draw-engraved-label* (pane x1 y1 x2 y2)
+  (draw-label* pane (1+ x1) (1+ y1) (1+ x2) (1+ y2) :ink *3d-light-color*)
+  (draw-label* pane x1 y1 x2 y2 :ink *3d-dark-color*))
+
 (defmethod handle-repaint ((pane push-button-pane) region)
   (declare (ignore region))
   (with-slots (armed pressedp) pane
@@ -1137,8 +1141,9 @@ and must never be nil."))
                                                  (+ y1 *3d-border-thickness* (pane-y-spacing pane))
                                                  (- x2 *3d-border-thickness* (pane-x-spacing pane))
                                                  (- y2 *3d-border-thickness* (pane-y-spacing pane)))
-        (draw-label* pane x1 y1 x2 y2
-                     :ink (effective-gadget-foreground pane))))))
+        (if (gadget-active-p pane)
+            (draw-label* pane x1 y1 x2 y2 :ink (effective-gadget-foreground pane))
+            (draw-engraved-label* pane x1 y1 x2 y2))))))
 
 ;;; ------------------------------------------------------------------------------------------
 ;;;  30.4.2 The concrete toggle-button Gadget
@@ -1260,12 +1265,12 @@ and must never be nil."))
           (cond ((slot-value pane 'armed)
                  (draw-bordered-rectangle* pane x1 y1 x2 y2 :style :outset :border-width *3d-border-thickness*))
                 (t))
-          (draw-label* pane
-                       (+ x1 x-spacing)
-                       (+ y1 y-spacing)
-                       (- x2 x-spacing)
-                       (- y2 y-spacing)
-                       :ink (effective-gadget-foreground pane)))))))
+          (multiple-value-bind (x1 y1 x2 y2)
+              (values (+ x1 x-spacing) (+ y1 y-spacing)
+                      (- x2 x-spacing) (- y2 y-spacing))
+            (if (gadget-active-p pane)
+                (draw-label* pane x1 y1 x2 y2 :ink (effective-gadget-foreground pane))
+                (draw-engraved-label* pane x1 y1 x2 y2))))))))
 
 (defmethod compose-space ((gadget menu-button-pane) &key width height)
   (declare (ignore width height))
