@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.114 2003/03/19 02:53:35 gilbert Exp $
+;;; $Id: panes.lisp,v 1.115 2003/03/19 03:02:20 gilbert Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -451,7 +451,7 @@
     :initarg :y-spacing
     :initform 0
     :reader   pane-y-spacing
-    :type     (or null spacing-value))
+    :type     (or null spacing-value)))
   (:documentation
    "Mixin class for panes which offer the standard user space requirements options."))
 
