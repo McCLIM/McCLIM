@@ -301,8 +301,11 @@ sheet-supports-only-one-child error to be signalled."))
   (map-over-sheets #'(lambda (child)
                        (when (region-intersects-region-p
                               region
-                              (transform-region (sheet-transformation child)
-                                                (sheet-region child)))
+                              (transform-region
+                               (if (eq child sheet)
+                                   +identity-transformation+
+                                   (sheet-transformation child))
+                               (sheet-region child)))
                          (funcall function child)))
                    sheet))
 
