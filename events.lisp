@@ -19,6 +19,37 @@
 
 (in-package :CLIM-INTERNALS)
 
+;;; ------------------------------------------------------------------------------------------
+;;;  Events
+;;;
+
+;; The event objects are defined similar to the CLIM event hierarchy.
+;;
+;; Class hierarchy as in CLIM:
+;; 
+;;   event
+;;     device-event
+;;       keyboard-event
+;;         key-press-event
+;;         key-release-event
+;;       pointer-event
+;;         pointer-button-event
+;;           pointer-button-press-event
+;;           pointer-button-release-event
+;;           pointer-button-hold-event
+;;         pointer-motion-event
+;;           pointer-boundary-event
+;;             pointer-enter-event
+;;             pointer-exit-event
+;;     window-event
+;;       window-configuration-event
+;;       window-repaint-event
+;;     window-manager-event
+;;       window-manager-delete-event
+;;     timer-event
+;;
+
+
 (defclass event ()
   ((timestamp :initarg :timestamp
 	      :reader event-timestamp)
@@ -72,6 +103,14 @@
   (
    ))
 
+
+(defclass pointer-button-press-event (pointer-button-event) ())
+
+(defclass pointer-button-release-event (pointer-button-event) ())
+
+(defclass pointer-button-hold-event (pointer-button-event) ())
+
+
 (defclass pointer-button-click-event (pointer-button-event)
   (
    ))
@@ -88,11 +127,15 @@
   (
    ))
 
-(defclass pointer-enter-event (pointer-motion-event)
+(defclass pointer-boundary-event (pointer-motion-event)
   (
    ))
 
-(defclass pointer-exit-event (pointer-motion-event)
+(defclass pointer-enter-event (pointer-boundary-event)
+  (
+   ))
+
+(defclass pointer-exit-event (pointer-boundary-event)
   (
    ))
 
@@ -115,9 +158,47 @@
   (
    ))
 
+(defclass window-manager-event (event) ())
+
+(defclass window-manager-delete-event (window-manager-event) ())
+
 (defclass timer-event (event)
   (
    ))
+
+(defmethod event-instance-slots ((self event))
+  '(timestamp))
+
+(defmethod event-instance-slots ((self device-event))
+  '(timestamp modifier-state sheet))
+
+(defmethod event-instance-slots ((self keyboard-event))
+   '(timestamp modifier-state sheet key-name))
+
+(defmethod event-instance-slots ((self pointer-event))
+  '(timestamp modifier-state sheet pointer button x y root-x root-y))
+
+(defmethod event-instance-slots ((self window-event))
+  '(timestamp region))
+
+(defmethod print-object ((self event) sink)
+ ; (print-object-with-slots self (event-instance-slots self) sink))
+  nil)
+
+(defmethod translate-event ((self pointer-event) dx dy)
+  (apply #'make-instance (class-of self)
+         :x (+ dx (pointer-event-x self))
+         :y (+ dy (pointer-event-y self))
+         (fetch-slots-as-kwlist self (event-instance-slots self))))
+
+(defmethod translate-event ((self window-event) dx dy)
+  (apply #'make-instance (class-of self)
+         :region (translate-region (window-event-region self) dx dy)
+         (fetch-slots-as-kwlist self (event-instance-slots self))))
+
+(defmethod translate-event ((self event) dx dy)
+  (declare (ignore dx dy))
+  self)
 
 ;;; Constants dealing with events
 
@@ -157,3 +238,34 @@
       `(flet ((check-button (,b) (= ,button ,b))
 	      (check-modifier (,m) (not (zerop (logand ,m ,modifier-state)))))
 	 (and ,@(do-substitutes clauses))))))
+
+(defmethod event-type ((event device-event)) :device)
+(defmethod event-type ((event keyboard-event)) :keyboard)
+(defmethod event-type ((event key-press-event)) :key-press)
+(defmethod event-type ((event key-release-event)) :key-release)
+(defmethod event-type ((event pointer-event)) :pointer)
+(defmethod event-type ((event pointer-button-event)) :pointer-button)
+(defmethod event-type ((event pointer-button-press-event)) :pointer-button-press)
+(defmethod event-type ((event pointer-button-release-event)) :pointer-button-release)
+(defmethod event-type ((event pointer-button-hold-event)) :pointer-button-hold)
+(defmethod event-type ((event pointer-motion-event)) :pointer-motion)
+(defmethod event-type ((event pointer-boundary-event)) :pointer-boundary)
+(defmethod event-type ((event pointer-enter-event)) :pointer-enter)
+(defmethod event-type ((event pointer-exit-event)) :pointer-exit)
+(defmethod event-type ((event window-event)) :window)
+(defmethod event-type ((event window-configuration-event)) :window-configuration)
+(defmethod event-type ((event window-repaint-event)) :window-repaint)
+(defmethod event-type ((event window-manager-event)) :window-manager)
+(defmethod event-type ((event window-manager-delete-event)) :window-manager-delete)
+(defmethod event-type ((event timer-event)) :timer)
+
+;; keyboard-event-character keyboard-event 
+;; pointer-event-native-x pointer-event
+;; pointer-event-native-y pointer-event
+;; window-event-native-region window-event
+;; window-event-mirrored-sheet window-event
+
+;; Key names are a symbol whose value is port-specific. Key names
+;; corresponding to the set of standard characters (such as the
+;; alphanumerics) will be a symbol in the keyword package.
+;; ???!
