@@ -108,9 +108,9 @@
 	      :max-value 9999
 	      :value 0
 	      :width 120)
-   (colored (make-pane 'climi::slider-test-pane
-                       :normal +black+
-                       :width 200 :height 90)))
+   (colored :slider-test
+            :normal +black+
+            :width 200 :height 90))
   (:layouts
    (default (vertically () text (horizontally () slider-r slider-g slider-b colored))))
   (:top-level (slidertest-frame-top-level . nil)))

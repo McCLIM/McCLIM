@@ -31,8 +31,6 @@
 
 (in-package :clim-internals)
 
-(export 'clim::light-pane '#:clim)      ;Hugh?! --GB
-
 ;; example gadget definition
 (defclass light-pane (standard-gadget) ())
 

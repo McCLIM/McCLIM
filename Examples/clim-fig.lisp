@@ -284,7 +284,7 @@
    (constrict-mode :initform nil :accessor clim-fig-constrict-mode)
    (status :initform nil :accessor clim-fig-status))
   (:panes
-   (canvas (make-pane 'climi::canvas-pane))
+   (canvas :canvas)
    (menu-bar (climi::make-menu-bar 'menubar-command-table :height 25))
    (line-width-slider :slider
 		      :label "Line Width"
