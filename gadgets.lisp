@@ -278,8 +278,11 @@
 (defclass standard-gadget (basic-gadget)
   ())
 
-(defgeneric armed-callback (gadget client gadget-id))
-(defgeneric disarmed-callback (gadget client gadget-id))
+(defgeneric armed-callback (gadget client gadget-id)
+  (:argument-precedence-order client gadget-id gadget))
+
+(defgeneric disarmed-callback (gadget client gadget-id)
+  (:argument-precedence-order client gadget-id gadget))
 
 ;; "The default methods (on standard-gadget) call the function stored
 ;; in gadget-armed-callback or gadget-disarmed-callback with one argument,
@@ -363,7 +366,8 @@
                             (gadget-id gadget)
                             value)))
 
-(defgeneric value-changed-callback (value-gadget client gadget-id value))
+(defgeneric value-changed-callback (gadget client gadget-id value)
+  (:argument-precedence-order client gadget-id value gadget))
 
 (defmethod value-changed-callback ((gadget value-gadget) client gadget-id value)
   (declare (ignore client gadget-id))
@@ -378,7 +382,8 @@
                       :initform nil
                       :reader gadget-activate-callback)))
 
-(defgeneric activate-callback (action-gadget client gadget-id))
+(defgeneric activate-callback (action-gadget client gadget-id)
+  (:argument-precedence-order client gadget-id action-gadget))
 
 (defmethod activate-callback ((gadget action-gadget) client gadget-id)
   (declare (ignore client gadget-id))
@@ -472,13 +477,26 @@
 
 ;;; 30.4.4 The abstract scroll-bar Gadget
 
-(defgeneric drag-callback (pane client gadget-id value))
-(defgeneric scroll-to-top-callback (scroll-bar client gadget-id))
-(defgeneric scroll-to-bottom-callback (scroll-bar client gadget-id))
-(defgeneric scroll-up-line-callback (scroll-bar client gadget-id))
-(defgeneric scroll-up-page-callback (scroll-bar client gadget-id))
-(defgeneric scroll-down-line-callback (scroll-bar client gadget-id))
-(defgeneric scroll-down-page-callback (scroll-bar client gadget-id))
+(defgeneric drag-callback (pane client gadget-id value)
+  (:argument-precedence-order client gadget-id value pane))
+
+(defgeneric scroll-to-top-callback (scroll-bar client gadget-id)
+  (:argument-precedence-order client gadget-id scroll-bar))
+
+(defgeneric scroll-to-bottom-callback (scroll-bar client gadget-id)
+  (:argument-precedence-order client gadget-id scroll-bar))
+
+(defgeneric scroll-up-line-callback (scroll-bar client gadget-id)
+  (:argument-precedence-order client gadget-id scroll-bar))
+
+(defgeneric scroll-up-page-callback (scroll-bar client gadget-id)
+  (:argument-precedence-order client gadget-id scroll-bar))
+
+(defgeneric scroll-down-line-callback (scroll-bar client gadget-id)
+  (:argument-precedence-order client gadget-id scroll-bar))
+
+(defgeneric scroll-down-page-callback (scroll-bar client gadget-id)
+  (:argument-precedence-order client gadget-id scroll-bar))
 
 (defclass scroll-bar (value-gadget oriented-gadget-mixin range-gadget-mixin)
   ((drag-callback :initarg :drag-callback
