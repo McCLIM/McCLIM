@@ -84,7 +84,7 @@
     (format stream "      which has the argument list ")
     (let ((arglist #+excl (excl:arglist (symbol-function thing))
                    #+cmu (kernel:%function-arglist (symbol-function thing))
-                   #+sbcl (sb-kernel:%simple-function-arglist (symbol-function thing))
+                   #+sbcl (sb-kernel:%simple-fun-arglist (symbol-function thing))
                    #-(or excl cmu sbcl) "( ??? )"))
       (when arglist
         (clim:present arglist
