@@ -351,6 +351,7 @@
 
 (defmethod initialize-instance :after ((sheet standard-sheet-input-mixin)
                                        &rest args)  
+  (declare (ignore args))
   (setf (event-queue-port (sheet-event-queue sheet)) (port sheet)))
                                        
 

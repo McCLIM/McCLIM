@@ -60,5 +60,6 @@
   (make-instance 'pointer-documentation-view))
 
 (defmethod stream-default-view (stream)
+  (declare (ignore stream))
   +textual-view+)
 

@@ -689,6 +689,7 @@ that this might be different from the sheet's native region."
   (destroy-mirror (port sheet) sheet))
 
 (defmethod (setf sheet-region) :after (region (sheet mirrored-sheet-mixin))
+  (declare (ignore region))
   #+nil(port-set-sheet-region (port sheet) sheet region)
   (update-mirror-geometry sheet)
   )

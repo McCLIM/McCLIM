@@ -37,6 +37,7 @@
   (queue-event sheet event))
 
 (defmethod handle-repaint ((sheet basic-sheet) region)    
+  (declare (ignore region))
   nil)
 
 (defmethod repaint-sheet ((sheet basic-sheet) region)

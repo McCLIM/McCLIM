@@ -586,12 +586,14 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
 (defgeneric note-output-record-got-sheet  (record sheet))
 
 (defmethod note-output-record-lost-sheet ((record basic-output-record) sheet)
+  (declare (ignore sheet))
   (values))
 
 (defmethod note-output-record-lost-sheet :after ((record compound-output-record) sheet)
   (map-over-output-records #'note-output-record-lost-sheet record 0 0 sheet))
 
 (defmethod note-output-record-got-sheet  ((record basic-output-record) sheet)
+  (declare (ignore sheet))
   (values))
 
 (defmethod note-output-record-got-sheet :after ((record compound-output-record) sheet)
@@ -994,6 +996,7 @@ were added."
   ;; up? Should handle-repaint do so?
   ;;
   ;; --GB 2003-03-14
+  (declare (ignore medium))
   #+nil
   (setf (medium-clipping-region medium) (graphics-state-clip state)))
 
