@@ -321,7 +321,7 @@
 		      center-x center-y
 		      radius-1-dx radius-1-dy radius-2-dx radius-2-dy
 		      &rest args
-		      &key (filled t) (start-angle 0.0) (end-angle 2.0)
+		      &key (filled t) (start-angle 0.0) (end-angle (* 2.0 pi))
 			   ink clipping-region transformation
 			   line-style line-thickness line-unit line-dashes line-cap-shape)
   (declare (ignore ink clipping-region transformation line-style line-thickness
