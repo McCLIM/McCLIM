@@ -2,7 +2,7 @@
 
 ;; $fiHeader: puzzle.lisp,v 1.23 1993/07/27 01:46:05 colin Exp $
 
-(in-package :clim)
+(in-package :clim-demo)
 
 "Copyright (c) 1989, 1990, 1991, 1992 Symbolics, Inc.  All rights reserved."
 
@@ -46,7 +46,8 @@
 (define-presentation-method highlight-presentation ((type puzzle-cell) record stream state)
   state
   (multiple-value-bind (xoff yoff)
-      (convert-from-relative-to-absolute-coordinates 
+      (#+mcclim climi::convert-from-relative-to-absolute-coordinates ;; Legacy CLIM 1.0 function..
+       #-mcclim clim:convert-from-relative-to-absolute-coordinates
 	stream (output-record-parent record))
     (with-bounding-rectangle* (left top right bottom) record
       (draw-rectangle* stream
