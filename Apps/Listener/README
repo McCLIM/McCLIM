@@ -40,7 +40,7 @@ thread, thereby leaving your main REPL available:
 Compatibility
 -------------
 
-The Listener is developed primary on CMUCL 18e, and tested periodically on SBCL
+The Listener is developed primarily on CMUCL 18e, and tested periodically on SBCL
 and possibly OpenMCL. On SBCL, the SB-POSIX package is used for filesystem 
 access, so you will need a fairly recent version of SBCL (minimum 0.8.2.44).
 

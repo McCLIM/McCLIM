@@ -688,7 +688,7 @@
 
 ;; I've taken to doing translator documentation exactly opposite of how the CLIM
 ;; spec seems to intend. The spec says that the pointer-documentation should be
-;; short and quickly computer, and the documentation should be longer and more
+;; short and quickly computed, and the documentation should be longer and more
 ;; descriptive. Personally, I like seeing the full the command with the arguments
 ;; in the pointer-doc window, and something short in right-button menus.
 ;; So.. yeah.
@@ -712,11 +712,16 @@
              (mv-or
               (when mime-type (mime-type-to-command mime-type pathname))
               (when command
-                (values command doc pointer-doc))))))))
+                (values command doc pointer-doc))
+              (when (and mime-type (subtypep mime-type 'text))
+                (values `(com-edit-file ,pathname)
+                        "Edit File"
+                        (format nil "Edit ~A" pathname))) ))))))
 
 (define-presentation-translator automagic-pathname-translator
   (clim:pathname clim:command dev-commands
                  :gesture :select
+                 :priority 2
                  :tester ((object)
                           (automagic-translator object))
                  :documentation ((object stream)
@@ -801,14 +806,18 @@
   ((pathname 'pathname  :prompt "pathname"))
   (clim-sys:make-process (lambda () (ed pathname))))
 
+;; Leave this translator disabled for now, the automagic translator will now produce
+;; com-edit-file where there is not a more specific handler for a text mime type.
+#+IGNORE
 (define-presentation-to-command-translator edit-file
   (clim:pathname com-edit-file dev-commands :gesture :select
 		 :pointer-documentation ((object stream)
 					 (format stream "Edit ~A" object))
 		 :documentation ((stream) (format stream "Edit File"))
 		 :tester ((object)
-			  (and (probe-file object)
-			       (pathname-name object))))
+			  (and (not (wild-pathname-p object))
+                               (probe-file object)
+                               (pathname-name object))))
   (object)
   (list object))
 
