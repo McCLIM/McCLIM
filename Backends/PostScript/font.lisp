@@ -27,7 +27,7 @@
 (defclass font-info ()
   ((name :type string :initarg :name :reader font-info-name)
    (ascent :initarg :ascent :reader font-info-ascent)
-   (descent :initarg :descent :reader font-info-ascent)
+   (descent :initarg :descent :reader font-info-descent)
    (italic-angle :initarg :italic-angle :reader font-info-italic-angle)
    (char-names :initform (make-array 256 :initial-element nil)
                :reader font-info-char-names)
