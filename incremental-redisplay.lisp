@@ -609,6 +609,7 @@ record is stored.")
    t))
 
 
+#+ignore
 (defun convert-from-relative-to-absolute-coordinates (stream record)
   (let ((scy (if stream (bounding-rectangle-height stream) 0.0d0))
         (scx (if stream (bounding-rectangle-width stream) 0.0d0))
