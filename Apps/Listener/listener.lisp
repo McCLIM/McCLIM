@@ -266,8 +266,7 @@
 	    nil)
           (accelerator-gesture (c)
             (let ((command (lookup-keystroke-command-item (accelerator-gesture-event c)
-                                                          command-table)))
-              (hef:debugf *partial-command-parser* *unsupplied-argument-marker*)
+                                                          command-table)))              
               (setf ;type 'command
                     object (if (partial-command-p command)
                                (funcall *partial-command-parser*
