@@ -19,40 +19,36 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-;;; Copied from colorslider
-
-(in-package :clim-internals)
-
-;; example gadget definition
-(defclass gadget-test-pane (standard-gadget) ())
-
 (in-package :clim-demo)
 
-(defun gadget-test ()
-  (loop for port in climi::*all-ports*
-      do (destroy-port port))
-  (setq climi::*all-ports* nil)
-  (setq frame (make-application-frame 'gadget-test
-                   :frame-manager (make-instance 'clim-internals::pixie/clx-look
-                                                      :port (find-port))))
-; (setq frame (make-application-frame 'gadget-test))
-  (setq fm (frame-manager frame))
-  (setq port (climi::frame-manager-port fm))
-  (setq pane (frame-panes frame))
-  (setq medium (sheet-medium pane))
-  (setq graft (graft frame))
-  ;(setq vbox (climi::frame-pane frame))
-  (run-frame-top-level frame))
+;; Gadget Test/Demo
+
+;; To run the gadget test:   (clim-demo:gadget-test)
+
+;; McCLIM contains an alternate look and feel entitled "pixie" which is
+;; not the default. It can by used by creating your application using an
+;; alternate frame manager, clim-internals::pixie/clx-look.
+
+;; To run the gadget test using the pixie frame manager:
+;; (gadget-test 'clim-internals::pixie/clx-look)
+;; This may require you to load the clim-looks system.
+
+(defun gadget-test (&optional frame-manager-name)
+  (run-frame-top-level
+   (if frame-manager-name 
+       (make-application-frame 'gadget-test
+                               :frame-manager (make-instance frame-manager-name
+                                                             :port (find-port)))
+       (make-application-frame 'gadget-test))))
+
+(export 'gadget-test)
 
 (defun run-pixie-test (name)
-  (loop for port in climi::*all-ports*
-	do (destroy-port port))
-  (setq climi::*all-ports* nil)
   (when name
     (run-frame-top-level
-      (make-application-frame name
-           :frame-manager (make-instance 'clim-internals:pixie/clx-look
-                               :port (find-port))))))
+     (make-application-frame name
+                             :frame-manager (make-instance 'clim-internals::pixie/clx-look
+                                                           :port (find-port))))))
 
 (defmethod gadget-test-frame-top-level ((frame application-frame)
 				       &key (command-parser 'command-line-command-parser)
@@ -232,7 +228,10 @@
     (:top-level (gadget-test-frame-top-level . nil)))
 
 (defmethod run-frame-top-level :around ((frame gadget-test) &key &allow-other-keys)
-  (clim-internals::schedule-timer-event (find-pane-named frame 'radar) 'radiate 0.1)
+  ;; FIXME: Timer events appear to have rotted.
+  ;; Also, the following won't work because the frame has not really been realized yet,
+  ;; so you can't get at its panes. Yet it has worked, and recently. Odd.
+  ;; (clim-internals::schedule-timer-event (find-pane-named frame 'radar) 'radiate 0.1)
   (call-next-method))
 
 (defclass radar-pane (basic-gadget) (
