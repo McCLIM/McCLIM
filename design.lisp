@@ -426,7 +426,16 @@
     :initarg :design
     :reader transformed-design-design)))
 
+#+NIL
+;; Commeted out because CLOS bites here. Ellipises will be transformed
+;; by this method. No idea why.
+;; --GB 2003-05-28
 (defmethod transform-region (transformation (design design))
+  (make-instance 'transformed-design
+                 :transformation transformation
+                 :design design))
+
+(defmethod transform-region (transformation (design pattern))
   (make-instance 'transformed-design
                  :transformation transformation
                  :design design))
