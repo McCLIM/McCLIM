@@ -1215,29 +1215,54 @@ During realization the child of the spacing will have as cordinates
 
 (defmethod scroll-extent ((pane clim-stream-pane) x y)
   (when (is-in-scroller-pane pane)
-      (let ((new-x (max x 0))
-            (new-y (max y 0))
-            (output-history (pane-output-history pane)))
-        (let* ((entire-region
-                (make-bounding-rectangle 0 0
-                                         (bounding-rectangle-max-x output-history)
-                                         (bounding-rectangle-max-y output-history))))
-          (with-bounding-rectangle* (left top right bottom) entire-region
-            (medium-clear-area (sheet-medium pane) left top right bottom))
-	  (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
-	    (draw-rectangle* (sheet-medium pane) x1 y1 x2 y2 :ink +background-ink+))
-          (set-bounding-rectangle-position (sheet-region pane) new-x new-y)
-	  ;; find out the coordinates, in the coordinates system of
-	  ;; pane, of the upper-left corner, i.e. the one with
-	  ;; coordinates (0,0) in the viewport
-	  (multiple-value-bind (x0 y0)
-	      (untransform-position (sheet-transformation pane) 0 0)
-	    ;; alter the sheet transformation to reflect the new position
-	    (setf (sheet-transformation pane)
-		  (compose-translation-with-transformation
-		   (sheet-transformation pane) (- x0 new-x) (- y0 new-y))))
+    (let ((new-x (max x 0))
+	  (new-y (max y 0))
+	  (output-history (pane-output-history pane)))
+      (let ((entire-region
+	     (make-bounding-rectangle 0 0
+				      (bounding-rectangle-max-x output-history)
+				      (bounding-rectangle-max-y output-history)))
+	    dx dy)
+	(set-bounding-rectangle-position (sheet-region pane) new-x new-y)
+	;; find out the coordinates, in the coordinates system of
+	;; pane, of the upper-left corner, i.e. the one with
+	;; coordinates (0,0) in the viewport
+	(multiple-value-bind (x0 y0)
+	    (untransform-position (sheet-transformation pane) 0 0)
+	  (setq dx (- x0 new-x)
+		dy (- y0 new-y))
+	  ;; alter the sheet transformation to reflect the new position
+	  (setf (sheet-transformation pane)
+	    (compose-translation-with-transformation
+	     (sheet-transformation pane) dx dy))
           (update-scroll-bars pane entire-region new-x new-y)
-          (stream-replay pane (sheet-region pane))))))
+	  (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
+	    (cond
+	     ((and (zerop dx)
+		   (< (abs dy) (- y2 y1)))
+	      (copy-area pane 0 0 (- x2 x1) (- y2 y1) 0 dy)
+	      (cond
+	       ((< dy 0)
+		(draw-rectangle* (sheet-medium pane) x1 (+ y2 dy) x2 y2 :ink +background-ink+)
+		(stream-replay pane (make-bounding-rectangle x1 (+ y2 dy) x2 y2)))
+	       (t
+		(draw-rectangle* (sheet-medium pane) x1 y1 x2 (+ y1 dy) :ink +background-ink+)
+		(stream-replay pane (make-bounding-rectangle x1 y1 x2 (+ y1 dy)))))
+	      )
+	     ((and (zerop dy)
+		   (< (abs dx) (- x2 x1)))
+	      (copy-area pane 0 0 (- x2 x1) (- y2 y1) dx 0)
+	      (cond
+	       ((< dx 0)
+		(draw-rectangle* (sheet-medium pane) (+ x2 dx) y1 x2 y2 :ink +background-ink+)
+		(stream-replay pane (make-bounding-rectangle (+ x2 dx) y1 x2 y2)))
+	       (t
+		(draw-rectangle* (sheet-medium pane) x1 y1 (+ x1 dx) y2 :ink +background-ink+)
+		(stream-replay pane (make-bounding-rectangle x1 y1 (+ x1 dx) y2))))
+	      )
+	     (t
+	      (draw-rectangle* (sheet-medium pane) x1 y1 x2 y2 :ink +background-ink+)
+	      (stream-replay pane (sheet-region pane))))))))))
 
 ;;; INTERACTOR PANES 
 
