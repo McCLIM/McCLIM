@@ -171,7 +171,7 @@
   (multiple-value-bind (x1 y1)
       (rectangle-edges* (sheet-region rectangular-sheet))
     (setf (sheet-region rectangular-sheet)
-	  (make-rectangle* x1 y1 (+ x1 width) (+ y1 height)))))
+	  (make-bounding-rectangle x1 y1 (+ x1 width) (+ y1 height)))))
 
 (defun make-extremums-children-ratio (pane children &key (width t) (height t))
   (with-slots (sorted-max-w-r sorted-max-h-r sorted-min-w-r sorted-min-h-r) pane
@@ -949,16 +949,44 @@ During realization the child of the spacer will have as cordinates
   (with-slots (scroll-bar viewport vscrollbar hscrollbar) pane
     (setq viewport (first (sheet-children pane)))
     (when (not (eq scroll-bar :horizontal))
-      (setq vscrollbar (make-pane 'scroll-bar-pane
-				  :orientation :vertical
-				  :foreground +grey40+
-				  :background +grey+))
+      (setq vscrollbar
+            (make-pane 'scroll-bar-pane
+                       :orientation :vertical
+                       :length (bounding-rectangle-height (sheet-region viewport))
+                       :client (first (sheet-children viewport))
+                       :drag-callback
+                       #'(lambda (gadget new-value)
+                           (let ((old-x (bounding-rectangle-min-x
+                                         (pane-viewport-region
+                                          (gadget-client gadget)))))
+                             (scroll-extent (gadget-client gadget)
+                                            old-x (* new-value (scroll-bar-length gadget)))))
+                       :scroll-up-page-callback
+                       #'(lambda (scroll-bar)
+                           (declare (ignore scroll-bar))
+                           (format *debug-io* "To the top!~%"))
+                       :scroll-down-page-callback
+                       #'(lambda (scroll-bar)
+                           (declare (ignore scroll-bar))
+                           (format *debug-io* "To the bottom!~%"))
+                       :foreground +grey40+
+                       :background +grey+))
       (sheet-adopt-child pane vscrollbar))
     (when (not (eq scroll-bar :vertical))
-      (setq hscrollbar (make-pane 'scroll-bar-pane
-				  :orientation :horizontal
-				  :foreground +grey40+
-				  :background +grey+))
+      (setq hscrollbar
+            (make-pane 'scroll-bar-pane
+                       :orientation :horizontal
+                       :length (bounding-rectangle-width (sheet-region viewport))
+                       :client (first (sheet-children viewport))
+                       :drag-callback
+                       #'(lambda (gadget new-value)
+                           (let ((old-y (bounding-rectangle-min-y
+                                         (pane-viewport-region
+                                          (gadget-client gadget)))))
+                             (scroll-extent (gadget-client gadget)
+                                            (* new-value (scroll-bar-length gadget)) old-y)))
+                       :foreground +grey40+
+                       :background +grey+))
       (sheet-adopt-child pane hscrollbar))))
     
 (defmacro scrolling ((&rest options) &body contents)
@@ -966,16 +994,20 @@ During realization the child of the spacer will have as cordinates
      (make-pane 'scroller-pane ,@options :contents (list viewport))))
 
 (defmethod compose-space ((pane scroller-pane))
-  (with-slots (viewport) pane
+  (with-slots (viewport vscrollbar hscrollbar) pane
     (if viewport
-	(let ((req (compose-space viewport)))
-	  (incf (space-requirement-width req) 10)
-	  (incf (space-requirement-min-width req) 10)
-	  (incf (space-requirement-max-width req) 10)
-	  (incf (space-requirement-height req) 10)
-	  (incf (space-requirement-min-height req) 10)
-	  (incf (space-requirement-max-height req) 10)
-	  req)
+        (let ((req (compose-space viewport)))
+          (when vscrollbar
+            (setq req (space-requirement+* req
+                                           :height *scrollbar-thickness*
+                                           :min-height *scrollbar-thickness*
+                                           :max-height *scrollbar-thickness*)))
+          (when hscrollbar
+            (setq req (space-requirement+* req
+                                           :width *scrollbar-thickness*
+                                           :min-width *scrollbar-thickness*
+                                           :max-width *scrollbar-thickness*)))
+          req)
         (make-space-requirement))))
 
 (defmethod allocate-space ((pane scroller-pane) width height)
@@ -994,42 +1026,61 @@ During realization the child of the spacer will have as cordinates
 		      *scrollbar-thickness*
 		      (if hscrollbar (- height *scrollbar-thickness*) height)))
     (when hscrollbar
-      (setf (sheet-transformation vscrollbar)
-	(make-translation-transformation (if vscrollbar *scrollbar-thickness* 0)
-					 (- height *scrollbar-thickness*)))
+      (setf (sheet-transformation hscrollbar)
+	(make-translation-transformation (if vscrollbar
+                                             *scrollbar-thickness*
+                                             0)
+                                         (- height *scrollbar-thickness*)))
       (allocate-space hscrollbar
 		      (if vscrollbar (- width *scrollbar-thickness*) width)
 		      *scrollbar-thickness*))))
 
-(defmethod pane-viewport ((scroller scroller-pane))
-  (first (sheet-children scroller)))
+(defun is-in-scroller-pane (pane)
+  (let ((parent (sheet-parent pane)))
+    (and (typep parent 'viewport-pane)
+         (typep (sheet-parent parent) 'scroller-pane))))
 
-(defmethod pane-viewport-region ((scroller scroller-pane))
-  (sheet-region (pane-viewport scroller)))
+(defmethod pane-viewport ((pane basic-pane))
+  (when (is-in-scroller-pane pane)
+    (sheet-parent pane)))
 
-(defmethod pane-scroller ((scroller scroller-pane))
-  (scroller-pane-scroll-bar scroller))
+(defmethod pane-viewport-region ((pane basic-pane))
+  (when (is-in-scroller-pane pane)
+    (sheet-region pane)))
 
-(defmethod update-scrollbars ((pane basic-pane))
-  (update-scrollbars (sheet-parent pane)))
+(defmethod pane-scroller ((pane basic-pane))
+  (when (is-in-scroller-pane pane)
+    (sheet-parent (sheet-parent pane))))
 
-(defmethod update-scrollbars ((pane scroller-pane))
-  (with-slots (viewport vscrollbar hscrollbar) pane
-    (with-bounding-rectangle* (hminx hminy hmaxx hmaxy)
-	(stream-output-history (first (sheet-children viewport)))
-      (with-bounding-rectangle* (rminx rminy rmaxx rmaxy)
-	  (sheet-region (first (sheet-children viewport)))
-	(when vscrollbar
-          (let ((delta-y (max (- hmaxy hminy) 1)))
-            (setf (scrollbar-offset vscrollbar) (/ (- rminy hminy) delta-y))
-            (setf (scrollbar-length vscrollbar) (/ (- rmaxy rminy) delta-y)))
-	  (window-refresh vscrollbar))
-	(when hscrollbar
-          (let ((delta-x (max (- hmaxx hminx) 1)))
-            (setf (scrollbar-offset hscrollbar) (/ (- rminx hminx) delta-x))
-            (setf (scrollbar-length hscrollbar) (/ (- rmaxx rminx) delta-x)))
-	  (window-refresh hscrollbar))))))
+(defun update-scroll-bars (pane entire-region x y)
+  (with-slots (vscrollbar hscrollbar viewport) (pane-scroller pane)
+    (when vscrollbar
+      (let* ((viewport-height (bounding-rectangle-height (sheet-region viewport)))
+             (max-height (max (bounding-rectangle-height entire-region)
+                              viewport-height)))
+        (with-slots (value length) vscrollbar
+          (setf length max-height
+                value (/ y max-height))))
+      (dispatch-repaint vscrollbar (sheet-region vscrollbar))
+    (when hscrollbar
+      (let* ((viewport-width (bounding-rectangle-width (sheet-region viewport)))
+             (max-width (max (bounding-rectangle-width entire-region)
+                             viewport-width)))
+        (with-slots (value length) hscrollbar
+          (setf length max-width
+                value (/ x max-width))))
+      (dispatch-repaint hscrollbar (sheet-region hscrollbar))))))
 
+(defmethod scroll-extent ((pane basic-pane) x y)
+  (when (is-in-scroller-pane pane)
+    (let ((transform (sheet-transformation pane)))
+      (multiple-value-bind (old-x old-y)
+          (transform-position transform 0 0)
+        (setf (sheet-transformation pane)
+              (compose-translation-with-transformation
+               transform (- x old-x) (- y old-y)))))
+    (update-scroll-bars pane (sheet-region pane) x y)
+    (dispatch-repaint pane (sheet-region pane))))
 
 ;;; LABEL PANE
 
@@ -1049,7 +1100,7 @@ During realization the child of the spacer will have as cordinates
 (defgeneric window-viewport (clim-stream-pane))
 (defgeneric window-erase-viewport (clim-stream-pane))
 (defgeneric window-viewport-position (clim-stream-pane))
-;(defgeneric (setf window-viewport-position) (x y clim-stream-pane))
+(defgeneric* (setf window-viewport-position) (x y clim-stream-pane))
 
 
 ;;; CLIM-STREAM-PANE
@@ -1087,54 +1138,59 @@ During realization the child of the spacer will have as cordinates
 		   :initarg :output-history
 		   :accessor pane-output-history)))
 
+(defmethod handle-event ((pane clim-stream-pane) (event window-repaint-event))
+  (dispatch-repaint pane (sheet-region pane)))
+
 (defmethod compose-space ((pane clim-stream-pane))
   (make-space-requirement :width 300 :height 300
 			  :max-width 300 :max-height 300))
+
+(defmethod dispatch-repaint ((pane clim-stream-pane) region)
+  (repaint-sheet pane region))
 
 (defmethod window-clear ((pane clim-stream-pane))
   (let ((output-history (pane-output-history pane)))
     (with-bounding-rectangle* (x1 y1 x2 y2) output-history
       (draw-rectangle* (sheet-medium pane) x1 y1 x2 y2 :ink +background-ink+))
     (clear-output-record output-history))
+  (window-erase-viewport pane)
   (let ((cursor (stream-text-cursor pane)))
     (when cursor
       (setf (cursor-position cursor) (values 0 0))))
   (scroll-extent pane 0 0))
 
 (defmethod window-refresh ((pane clim-stream-pane))
-  (window-clear pane)
+  (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
+    (draw-rectangle* (sheet-medium pane) x1 y1 x2 y2 :ink +background-ink+))
   (stream-replay pane))
 
 (defmethod window-viewport ((pane clim-stream-pane))
-  (sheet-region pane))
+  (pane-viewport-region pane))
 
 (defmethod window-erase-viewport ((pane clim-stream-pane))
-  (window-clear pane)
-  (dispatch-repaint pane (sheet-region pane)))
+  (with-bounding-rectangle* (x1 y1 x2 y2) (pane-viewport-region pane)
+    (draw-rectangle* (sheet-medium pane) x1 y1 x2 y2 :ink +background-ink+)))
 
 (defmethod window-viewport-position ((pane clim-stream-pane))
-  (multiple-value-bind (x1 y1)
-      (bounding-rectangle* (sheet-region pane))
-    (values x1 y1)))
+  (multiple-value-bind (x y) (bounding-rectangle* (pane-output-history pane))
+    (values x y)))
 
-(defmethod (setf window-viewport-position) (x y (pane clim-stream-pane))
-  (let ((region (sheet-region pane)))
-    (setf (slot-value region 'x1) x
-	  (slot-value region 'y1) y)))
+(defmethod* (setf window-viewport-position) (x y (pane clim-stream-pane))
+  (scroll-extent pane x y))
 
 (defmethod scroll-extent ((pane clim-stream-pane) x y)
-; (setf (sheet-transformation pane)
-;	(make-translation-transformation (- x) (- y)))
-  (set-bounding-rectangle-position (sheet-region pane) x y)
-; (format *debug-io*
-;	  "set region position ~D,~D for ~S~%"
-;	  x y (sheet-region pane))
-  (update-scrollbars (sheet-parent pane))
-  (clear-area pane)
-  (replay (stream-output-history pane) pane)
-  )
-
-		    
+  (when (is-in-scroller-pane pane)
+      (let ((new-x (max x 0))
+            (new-y (max y 0))
+            (output-history (pane-output-history pane)))
+        (let* ((entire-region
+                (make-bounding-rectangle 0 0
+                                         (bounding-rectangle-max-x output-history)
+                                         (bounding-rectangle-max-y output-history))))
+          (set-bounding-rectangle-position (sheet-region pane) new-x new-y)
+          (update-scroll-bars pane entire-region new-x new-y)
+          (clear-area pane)
+          (stream-replay pane (sheet-region pane))))))
 
 ;;; INTERACTOR PANES 
 

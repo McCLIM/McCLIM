@@ -4,6 +4,8 @@
 ;;; Arthur Lemmens (lemmens@simplex.nl),
 ;;; Iban Hatchondo (hatchond@emi.u-bordeaux.fr)
 ;;; and Julien Boninfante (boninfan@emi.u-bordeaux.fr)
+;;;  (c) copyright 2001 by
+;;; Lionel Salabartan (salabart@emi.u-bordeaux.fr)
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -290,6 +292,9 @@
 ;; ancestor sheets." (And similarly for changing the alignment or
 ;; the label text style of a gadget.)
 
+
+;; Range-gadget
+
 (defclass range-gadget ()
   ((min-value :initarg :min-value
               :accessor gadget-min-value)
@@ -523,32 +528,27 @@
    (scroll-to-top-callback :initarg :scroll-to-top-callback
 			   :initform nil
 			   :reader scroll-bar-scroll-to-top-callback)
-   (drag-down-line-callback :initarg :drag-down-line-callback
-			    :initform nil
-			    :reader scroll-bar-drag-down-line-callback)
-   (drag-up-line-callback :initarg :drag-up-line-callback
-			  :initform nil
-			  :reader scroll-bar-drag-up-line-callback)
-   (drag-down-page-callback :initarg :drag-down-page-callback
-			    :initform nil
-			    :reader scroll-bar-drag-down-page-callback)
-   (drag-up-page-callback :initarg :drag-up-page-callback
-			  :initform nil
-			  :reader scroll-bar-drag-up-page-callback)))
+   (scroll-down-line-callback :initarg :scroll-down-line-callback
+                              :initform nil
+                              :reader scroll-bar-scroll-down-line-callback)
+   (scroll-up-line-callback :initarg :scroll-up-line-callback
+                            :initform nil
+                            :reader scroll-bar-scroll-up-line-callback)
+   (scroll-down-page-callback :initarg :scroll-down-page-callback
+                              :initform nil
+                              :reader scroll-bar-scroll-down-page-callback)
+   (scroll-up-page-callback :initarg :scroll-up-page-callback
+                            :initform nil
+                            :reader scroll-bar-scroll-up-page-callback)))
 
 (defmethod drag-callback ((pane scroll-bar) client gadget-id value)
   (declare (ignore client gadget-id))
   (when (scroll-bar-drag-callback pane)
     (funcall (scroll-bar-drag-callback pane) pane value)))
 
-(defmethod drag-callback :after ((pane scroll-bar) client gadget-id value)
-  (declare (ignore client gadget-id))
-  (when (scroll-bar-drag-callback pane)
-    (setf (gadget-value pane :invoke-callback t) value)))
-
 (defmacro invoke-callbacks (pane callback)
   (let ((call (gensym)))
-    `(let ((,call (symbol-function ,callback)))
+    `(let ((,call (funcall (symbol-function ,callback) ,pane)))
        (when ,call
 	 (funcall ,call ,pane)))))
 
@@ -562,36 +562,33 @@
 
 (defmethod scroll-up-line-callback ((pane scroll-bar) client gadget-id)
   (declare (ignore client gadget-id))
-  (invoke-callbacks pane 'scroll-bar-drag-up-line-callback))
+  (invoke-callbacks pane 'scroll-bar-scroll-up-line-callback))
 
 (defmethod scroll-up-page-callback ((pane scroll-bar) client gadget-id)
   (declare (ignore client gadget-id))
-  (invoke-callbacks pane 'scroll-bar-drag-up-page-callback))
+  (invoke-callbacks pane 'scroll-bar-scroll-up-page-callback))
 
 (defmethod scroll-down-line-callback ((pane scroll-bar) client gadget-id)
   (declare (ignore client gadget-id))
-  (invoke-callbacks pane 'scroll-bar-drag-down-line-callback))
+  (invoke-callbacks pane 'scroll-bar-scroll-down-line-callback))
 
 (defmethod scroll-down-page-callback ((pane scroll-bar) client gadget-id)
   (declare (ignore client gadget-id))
-  (invoke-callbacks pane 'scroll-bar-drag-down-page-callback))
+  (invoke-callbacks pane 'scroll-bar-scroll-down-page-callback))
 
 ;; SCROLL-BAR-PANE
 
 (defclass scroll-bar-pane (basic-pane scroll-bar)
-  ((orientation :initform :vertical
-		:initarg :orientation
-		:reader scrollbar-orientation)
-   ;;; the offset and length are percentages of the scrollbar's length
-   (offset :initform 0
-	   :type (real 0 1)
-	   :accessor scrollbar-offset)
-   (length :initform 1
-	   :type (real 0 1)
-	   :accessor scrollbar-length)))
+  ((length :initarg :length
+           :accessor scroll-bar-length)
+   (dragged :initform nil))
+  (:default-initargs :value 0
+                     :min-value 0
+                     :max-value 1
+                     :orientation :vertical))
 
 (defmethod compose-space ((sb scroll-bar-pane))
-  (if (eq (scrollbar-orientation sb) :vertical)
+  (if (eq (gadget-orientation sb) :vertical)
       (make-space-requirement :min-width 1
 			      :width *scrollbar-thickness*
 			      :min-height (min 10 *scrollbar-thickness*)
@@ -606,28 +603,89 @@
 
 (defmethod repaint-sheet ((sb scroll-bar-pane) region)
   (declare (ignore region))
-  (window-refresh sb))
-
-(defmethod window-refresh ((sb scroll-bar-pane))
   (with-bounding-rectangle* (minx miny maxx maxy) (sheet-region sb)
     (with-special-choices (sb)
       (draw-rectangle* sb minx miny maxx maxy :filled t :ink (medium-background sb))
       (let ((width (- maxx minx))
 	    (height (- maxy miny)))
-	(if (eq (scrollbar-orientation sb) :vertical)
+	(if (eq (gadget-orientation sb) :vertical)
 	    (draw-rectangle* sb
-			     minx (+ miny (* height (scrollbar-offset sb)))
-			     maxx (+ miny (* height (scrollbar-offset sb))
-				     (* height (scrollbar-length sb)))
-			     :filled t )
+			     minx (+ miny (* height (gadget-value sb)))
+			     maxx (+ miny (* height (+ (gadget-value sb)
+                                                       (/ height (scroll-bar-length sb)))))
+			     :filled t :ink (medium-foreground sb))
 	    (draw-rectangle* sb
-			     (+ minx (* width (scrollbar-offset sb))) miny
-			     (+ minx (* width (scrollbar-offset sb))
-				(* width (scrollbar-length sb))) maxy
-				:filled t :ink (medium-foreground sb)))))))
+			     (+ minx (* width (gadget-value sb)))
+                             miny
+			     (+ minx (* width (+ (gadget-value sb)
+                                                 (/ width (scroll-bar-length sb)))))
+                             maxy
+                             :filled t :ink (medium-foreground sb)))))))
 
 (defmethod handle-event ((sb scroll-bar-pane) (event window-repaint-event))
-  (repaint-sheet sb nil))
+  (dispatch-repaint sb (sheet-region sb)))
+
+(defmethod handle-event ((sb scroll-bar-pane) (event pointer-enter-event))
+  (declare (ignorable event))
+  (with-slots (armed) sb
+     (unless armed
+       (setf armed t)
+       (armed-callback sb (gadget-client sb) (gadget-id sb)))))
+
+(defmethod handle-event ((sb scroll-bar-pane) (event pointer-exit-event))
+  (declare (ignorable event))
+  (with-slots (armed) sb
+     (when armed
+       (setf armed nil)
+       (disarmed-callback sb (gadget-client sb) (gadget-id sb)))))
+
+(defun get-orientation-dependant-informations (scroll-bar-pane)
+  (if (eq (gadget-orientation scroll-bar-pane) :vertical)
+      (values (bounding-rectangle-height (sheet-region scroll-bar-pane))
+              #'pointer-event-y)
+      (values (bounding-rectangle-width (sheet-region scroll-bar-pane))
+              #'pointer-event-x)))
+
+(defmethod dispatch-callbacks ((sb scroll-bar-pane) event)
+  (multiple-value-bind (sb-length pos-func)
+      (get-orientation-dependant-informations sb)
+    (with-slots (value length min-value max-value) sb
+      (let ((value-clicked (/ (funcall pos-func event) sb-length)))
+        (cond ((<= min-value value-clicked value)
+               (scroll-up-page-callback sb (gadget-client sb) (gadget-id sb)))
+              ((<= (+ value (/ sb-length length)) value-clicked max-value)
+               (scroll-down-page-callback sb (gadget-client sb) (gadget-id sb))))))))
+
+(defmethod handle-event ((sb scroll-bar-pane) (event pointer-button-press-event))
+  (with-slots (armed) sb
+    (unless armed
+      (armed-callback sb (gadget-client sb) (gadget-id sb)))
+    (setf armed ':button-press))
+  (dispatch-callbacks sb event))
+
+(defmethod handle-event ((sb scroll-bar-pane) (event pointer-motion-event))
+  (with-slots (armed dragged) sb
+    (when (eq armed ':button-press)
+      (multiple-value-bind (sb-length pos-func)
+          (get-orientation-dependant-informations sb)
+        (drag-callback sb (gadget-client sb) (gadget-id sb)
+                       (/ (funcall pos-func event) sb-length)))
+      (unless dragged
+        (setf dragged t)))))
+
+(defmethod handle-event ((sb scroll-bar-pane) (event pointer-button-release-event))
+  (declare (ignorable event))
+  (with-slots (armed dragged) sb
+     (when (eq armed ':button-press)
+       (setf armed t)
+       (when dragged
+         (setf dragged nil)
+         (multiple-value-bind (sb-length pos-func)
+             (get-orientation-dependant-informations sb)
+           (value-changed-callback sb (gadget-client sb) (gadget-id sb)
+                                   (/ (funcall pos-func event) sb-length)))
+         (disarmed-callback sb (gadget-client sb) (gadget-id sb))))))
+
 
 ;;
 ;; SLIDER gadget
