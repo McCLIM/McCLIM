@@ -431,6 +431,11 @@ more than one line of output i.e., doesn't wrap."))
        (seos-write-newline stream)
      (seos-write-string stream (string char)))))
 
+;;; I added the (subseq string seg-start ...) forms. Under ACL, there is some
+;;; wierd interaction with FORMAT. This shows up as overwritten text in the
+;;; pointer documentation and in menus. It acts like a shared buffer is being corrupted
+;;; but I can't narrow it down. Using SUBSEQ does fix this interaction that's been
+;;; here since 4/16/03 - Mikemac 12/6/2003
 (defmethod stream-write-string ((stream standard-extended-output-stream) string
 				&optional (start 0) end)
   (let ((seg-start start)
@@ -439,10 +444,10 @@ more than one line of output i.e., doesn't wrap."))
      (loop for i from start below end do
        (when (char= #\Newline
 		    (char string i))
-	 (seos-write-string stream string seg-start i)
+	 (seos-write-string stream (subseq string seg-start i))
 	 (seos-write-newline stream)
 	 (setq seg-start (1+ i))))
-     (seos-write-string stream string seg-start end))))
+     (seos-write-string stream (subseq string seg-start end)))))
 
 ;(defmethod stream-write-string ((stream standard-extended-output-stream) string
 ;				&optional (start 0) end)
