@@ -1789,3 +1789,10 @@ a presentation"
                                             x y)
             (when ptype
               (funcall (cdr (presentation-translator-menu-item-context item)) object ptype event options))))))))
+
+(defmethod highlight-output-record ((record standard-presentation)
+				    stream state)
+  (map-over-output-records
+   (lambda (child)
+     (highlight-output-record child stream state))
+   record))

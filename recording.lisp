@@ -564,11 +564,12 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
     (multiple-value-bind (x1 y1 x2 y2)
         (output-record-hit-detection-rectangle* record)
       (ecase state
-        (:highlight
-         (draw-rectangle* (sheet-medium stream) x1 y1 x2 y2
-                          :filled nil :ink +foreground-ink+)) ; XXX +FLIPPING-INK+?
+        (:highlight	 
+         (draw-rectangle* (sheet-medium stream) x1 y1 (1- x2) (1- y2)
+                          :filled nil :ink +flipping-ink+)) ; XXX +FOREGROUND-INK+? ;)
         (:unhighlight
-         (draw-rectangle* (sheet-medium stream) x1 y1 x2 y2
+	 (repaint-sheet stream record)
+         #+nil(draw-rectangle* (sheet-medium stream) x1 y1 (1- x2) (1- y2)
                           :filled nil :ink +background-ink+)))))) ; XXX +FLIPPING-INK+?
 
 ;;; 16.2.2. The Output Record "Database" Protocol
@@ -1948,3 +1949,14 @@ according to the flags RECORD and DRAW."
              (setf (stream-cursor-position stream)
                    (values cx cy)))))))
 
+
+(defmethod repaint-sheet ((sheet output-recording-stream) region)
+  ;; FIXME: Change things so the rectangle below is only drawn in response
+  ;;        to explicit repaint requests from the user, not exposes from X
+  (with-slots (x1 x2 y1 y2) region
+      (with-output-recording-options (sheet :record nil) 
+	(draw-rectangle* sheet x1 y1 x2 y2 :filled T :ink +background-ink+)))
+  (map-over-sheets-overlapping-region #'(lambda (s)
+					  (handle-repaint s region))
+				      sheet
+				      region))

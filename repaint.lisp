@@ -41,6 +41,10 @@
   nil)
 
 (defmethod repaint-sheet ((sheet basic-sheet) region)
+  ;; FIXME: Change things so the rectangle below is only drawn in response
+  ;;        to explicit repaint requests from the user, not exposes from X
+  (with-slots (x1 x2 y1 y2) region
+    (draw-rectangle* sheet x1 y1 x2 y2 :filled T :ink +background-ink+))
   (map-over-sheets-overlapping-region #'(lambda (s)
 					  (handle-repaint s region))
 				      sheet
