@@ -666,9 +666,8 @@ skips intervening non-table output record structures."))
            (:top    y)
            (:bottom (- (+ y h) (bounding-rectangle-height cell)))
            (:center (+ y (/ (- h (bounding-rectangle-height cell)) 2)))
-           (:baseline
+           ((nil :baseline)
             (multiple-value-bind (baseline) (output-record-baseline cell)
               ;; make (+ y ascents) line up with (+ y1 b)
               ;; that is y+a = y1+b -> y1= y+a-b
               (+ y (- ascent baseline))))))))
-
