@@ -32,6 +32,8 @@
 ;;; --------------------------------------------------------------------------------------
 ;;;  2001-07-16  GB     added a cache for the inverse transformation
 
+;;; nobody bothers to use the log above ;-(
+
 ;; The CLIM 2 spec says:
 ;;    "Implementations are encouraged to allow transformations that are not
 ;;    numerically equal due to floating-point roundoff errors to be
@@ -411,13 +413,10 @@
   (transform-distance (invert-transformation transformation) dx dy))
 
 (defun transform-positions (transformation coord-seq)
-  (if (null coord-seq)
-      nil
-    (nconc (multiple-value-list (transform-position transformation
-                                                    (first coord-seq)
-                                                    (second coord-seq)))
-           (transform-positions transformation
-                                (cddr coord-seq)))))
+  (map-repeated-sequence (type-of coord-seq)
+                         2 (lambda (x y)
+                             (transform-position transformation x y))
+                         coord-seq))
 
 (defmethod transform-rectangle* ((transformation transformation) x1 y1 x2 y2)
   (if (rectilinear-transformation-p transformation)
