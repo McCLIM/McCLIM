@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.60 2002/02/22 21:10:02 gilbert Exp $
+;;; $Id: panes.lisp,v 1.61 2002/02/23 23:22:24 mikemac Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -440,11 +440,6 @@
   (change-space-requirements pane)
   )
 
-(defmethod note-space-requirements-changed ((sheet graft) (pane top-level-sheet-pane))
-  (let ((sr (compose-space pane)))
-    (resize-sheet pane (space-requirement-width sr) (space-requirement-height sr))
-    '(allocate-space pane (space-requirement-width sr) (space-requirement-height sr))))
-  
   
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -606,6 +601,11 @@
 (defun top-level-sheet-pane-p (pane)
   (typep pane 'top-level-sheet-pane))
 
+(defmethod note-space-requirements-changed ((sheet graft) (pane top-level-sheet-pane))
+  (let ((sr (compose-space pane)))
+    (resize-sheet pane (space-requirement-width sr) (space-requirement-height sr))
+    '(allocate-space pane (space-requirement-width sr) (space-requirement-height sr))))
+  
 (defmethod compose-space ((pane top-level-sheet-pane))
   (compose-space (first (sheet-children pane))))
 
