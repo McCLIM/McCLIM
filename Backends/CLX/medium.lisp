@@ -348,35 +348,37 @@
     (setf string (make-string 1 :initial-element string)))
   (unless end (setf end (length string)))
   (unless text-style (setf text-style (medium-text-style medium)))
-  (if (= start end)
-      (values 0 0 0 0 0)
-      (let ((gctxt (medium-gcontext medium (medium-ink medium)))
-            (position-newline (position #\newline string :start start)))
-        (if position-newline
-            (multiple-value-bind (width ascent descent left right
-                                        font-ascent font-descent direction
-                                        first-not-done)
-                (xlib:text-extents gctxt string
-                                   :start start :end position-newline
+  (let ((xfont (text-style-to-X-font (port medium) text-style)))
+    (cond ((= start end)
+           (values 0 0 0 0 0))
+          (t
+           (let ((position-newline (position #\newline string :start start)))
+             (cond ((not (null position-newline))
+                    (multiple-value-bind (width ascent descent left right
+                                                font-ascent font-descent direction
+                                                first-not-done)
+                        (xlib:text-extents xfont string
+                                           :start start :end position-newline
+                                           :translate #'translate)
+                      (declare (ignorable left right
+                                          font-ascent font-descent
+                                          direction first-not-done))
+                      (multiple-value-bind (w h x y baseline)
+                          (text-size medium string :text-style text-style
+                                     :start (1+ position-newline) :end end)
+                        (values (max w width) (+ ascent descent h)
+                                x (+ ascent descent y) (+ ascent descent baseline)))))
+                   (t
+                    (multiple-value-bind (width ascent descent left right
+                                                font-ascent font-descent direction
+                                                first-not-done)
+                        (xlib:text-extents xfont string
+                                   :start start :end (length string)
                                    :translate #'translate)
-              (declare (ignorable left right
-				  font-ascent font-descent
-				  direction first-not-done))
-              (multiple-value-bind (w h x y baseline)
-                  (text-size medium string :text-style text-style
-                             :start (1+ position-newline) :end end)
-                (values (max w width) (+ ascent descent h)
-                        x (+ ascent descent y) (+ ascent descent baseline))))
-            (multiple-value-bind (width ascent descent left right
-                                        font-ascent font-descent direction
-                                        first-not-done)
-                (xlib:text-extents gctxt string
-                                   :start start :end position-newline
-                                   :translate #'translate)
-              (declare (ignorable left right
-				  font-ascent font-descent
-				  direction first-not-done))
-              (values width (+ ascent descent) width 0 ascent))))))
+                      (declare (ignorable left right
+                                          font-ascent font-descent
+                                          direction first-not-done))
+                      (values width (+ ascent descent) width 0 ascent)) )))))) )
 
 (defmethod medium-draw-text* ((medium clx-medium) string x y
                               start end
