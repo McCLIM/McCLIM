@@ -1,6 +1,11 @@
-;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
-
-;;;  (c) copyright 1998,1999,2000 by Michael McDonald (mikemac@mikemac.com)
+;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: CLIMB; -*-
+;;; --------------------------------------------------------------------------------------
+;;;     Title: The CLIMB Transformations
+;;;   Created: 1998-09-29 20:23
+;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
+;;;   License: LGPL (See file COPYING for details).
+;;; --------------------------------------------------------------------------------------
+;;;  (c) copyright 1998,1999 by Gilbert Baumann
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -19,52 +24,166 @@
 
 (in-package :CLIM-INTERNALS)
 
-;;; TRANSFORMATION class
+;; The CLIM 2 spec says:
+;;    "Implementations are encouraged to allow transformations that are not
+;;    numerically equal due to floating-point roundoff errors to be
+;;    TRANSFORMATION-EQUAL. An appropriae level of 'fuzziness' is
+;;    single-float-epsilon, or some small multiple of single-float-epsilon."
 
-;;; Transformation's implement the following pair of equations:
-;;;	x1 = mxx * x + mxy * y + tx
-;;;	y1 = myx * x + myy * y + ty
-;;; The transformation class uses a homogeneous coordinate system to implement these equations.
+;; Note: All the predicates like RIGID-TRANSFORMATION-P,
+;; RECTILINEAR-TRANSFORMATION-P etc. inherit the "fuzziness" defined by
+;; COORDINATE-EPSILON. An implementation of a medium probably invoke these
+;; predicates to decide, whether the graphics primitives provided by the
+;; underlying windowing system could be used; or if they have to use an own
+;; implementation, which may be much slower, since individual pixels may have to
+;; be transferred. So I trade speed for precision here.
 
-(eval-when (eval load compile)
+;; Of course it would be better to assume some resomable maximal device
+;; coordinate for instance 40" * 2400dpi. Now two transformations could be said
+;; to be practically equal, if the (rounded) images of any point within that
+;; range are equal.
 
-  (defclass transformation ()
-    ((matrix :initform (make-array '(3 3)
-				   :element-type 'short-float
-				   :initial-contents '((1.0 0.0 0.0)
-						       (0.0 1.0 0.0)
-						       (0.0 0.0 1.0)))
-	     :initarg :matrix
-	     :reader transformation-matrix)
-     ))
-  )
+;;;; ----------------------------------------------------------------------------------------------------
+;;;;  Transformations
+;;;;
 
-(defmethod initialize-instance :after ((transformation transformation) &rest args
-				       &key mxx mxy myx myy tx ty
-				       &allow-other-keys)
-  (declare (ignore args))
-  (let ((matrix (transformation-matrix transformation)))
-    (if mxx
-	(setf (aref matrix 0 0) mxx))
-    (if mxy
-	(setf (aref matrix 0 1) mxy))
-    (if tx
-	(setf (aref matrix 0 2) tx))
-    (if myx
-	(setf (aref matrix 1 0) myx))
-    (if myy
-	(setf (aref matrix 1 1) myy))
-    (if ty
-	(setf (aref matrix 1 2) ty))
-    transformation))
-    
-(defun transformationp (x)
-  (typep x 'transformation))
+(defclass transformation () ())         ;Protocol class
 
-(defconstant +identity-transformation+
-    (make-instance 'transformation))
+#+:DEBUG
+(defmethod initialize-instance :after ((self transformation) &rest args)
+  (declare (ignorable self args))
+  (error "You are a fool; you are not supposed to create an instance of ~S."
+	 'transformation))
 
-;;; TRANSFORMATION error conditions
+(defun transformationp (object)
+  (typep object 'transformation))
+
+(defclass standard-transformation (transformation)
+  ((mxx :type coordinate)
+   (mxy :type coordinate)
+   (myx :type coordinate)
+   (myy :type coordinate)
+   (tx  :type coordinate)
+   (ty  :type coordinate)))
+
+
+#+:DEBUG
+(defmethod initialize-instance :after ((self standard-transformation) args)
+  (declare (ignorable self args)) )
+
+(defmethod print-object ((self standard-transformation) sink)
+  ;; printer
+  (apply #'format sink "#<~S ~S ~S ~S ~S ~S ~S>"
+         (type-of self)
+         (multiple-value-list (get-transformation self))))
+
+(defun make-transformation (mxx mxy myx myy tx ty)
+  ;; Make a transformation, which will map a point (x,y) into
+  ;;  x' = mxx*x + mxy*y + tx
+  ;;  y' = myx*x + myy*y + ty
+  (let ((res (make-instance 'standard-transformation)))
+    (setf (slot-value res 'mxx) (coerce mxx 'coordinate)
+          (slot-value res 'mxy) (coerce mxy 'coordinate)
+          (slot-value res 'myx) (coerce myx 'coordinate)
+          (slot-value res 'myy) (coerce myy 'coordinate)
+          (slot-value res 'tx)  (coerce tx 'coordinate)
+          (slot-value res 'ty)  (coerce ty 'coordinate))
+    res))
+
+(defmethod get-transformation ((self standard-transformation))
+  ;; Get the values of the transformation matrix as multiple values.
+  ;; This is not an exported function!
+  (with-slots (mxx mxy myx myy tx ty) self
+    (values mxx mxy myx myy tx ty)))
+
+(defun make-translation-transformation (translation-x translation-y)
+  (make-transformation 1 0 0 1 translation-x translation-y))
+
+(defun make-rotation-transformation (angle &optional origin)
+  (if origin
+      (make-rotation-transformation* angle (point-x origin) (point-y origin))
+    (make-rotation-transformation* angle 0 0)))
+
+(defun make-rotation-transformation* (angle &optional origin-x origin-y)
+  (let ((origin-x (or origin-x 0))
+        (origin-y (or origin-y 0)))
+    (let ((s (coerce (sin angle) 'coordinate))
+          (c (coerce (cos angle) 'coordinate)))
+      ;; This clamping should be done more sensible -- And: is this actually a good thing?
+      (when (coordinate= s 0) (setq s 0))
+      (when (coordinate= c 0) (setq c 0))
+      (when (coordinate= s 1) (setq s 1))
+      (when (coordinate= c 1) (setq c 1))
+      (when (coordinate= s -1) (setq s -1))
+      (when (coordinate= c -1) (setq c -1))
+      ;; Wir stellen uns hier mal ganz dumm:
+      (make-3-point-transformation* origin-x origin-y  (+ origin-x 1) origin-y        origin-x (+ origin-y 1)
+                                    origin-x origin-y  (+ origin-x c) (+ origin-y s)  (- origin-x s) (+ origin-y c)) )))
+
+(defun make-scaling-transformation (scale-x scale-y &optional origin)
+  (make-scaling-transformation* scale-x scale-y 
+                                (if origin (point-x origin) 0)
+                                (if origin (point-y origin) 0)))
+
+(defun make-scaling-transformation* (scale-x scale-y &optional origin-x origin-y)
+  (let ((origin-x (or origin-x 0))
+        (origin-y (or origin-y 0)))
+    (make-transformation scale-x 0 0 scale-y (- origin-x (* scale-x origin-x)) (- origin-y (* scale-y origin-y)))) )
+
+(defun make-reflection-transformation (point1 point2)
+  (make-reflection-transformation* (point-x point1) (point-y point1) (point-x point2) (point-y point2)))
+
+(defun make-reflection-transformation* (x1 y1 x2 y2)
+  (let ((dx (- x2 x1))
+        (dy (- y2 y1)))
+    (handler-case (make-3-point-transformation* x1 y1  x2 y2  (- x1 dy) (+ y1 dx)
+                                                x1 y1  x2 y2  (+ x1 dy) (- y1 dx))
+      (transformation-underspecified (c)
+        (error 'reflection-underspecified :why c :coords (list x1 y1 x2 y2))))))
+
+(defun make-3-point-transformation (point-1 point-2 point-3 point-1-image point-2-image point-3-image)
+  (make-3-point-transformation* (point-x point-1) (point-y point-1)
+                                (point-x point-2) (point-y point-2)
+                                (point-x point-3) (point-y point-3)
+                                (point-x point-1-image) (point-y point-1-image)
+                                (point-x point-2-image) (point-y point-2-image)
+                                (point-x point-3-image) (point-y point-3-image)))
+
+(defun make-3-point-transformation* (x1 y1 x2 y2 x3 y3 x1-image y1-image x2-image y2-image x3-image y3-image)
+  ;; Find a transformation matrix, which transforms each of the three
+  ;; points (x_i, y_i) to its image (y_i_image, y_i_image)
+  ;; 
+  ;; Therefore, we have to solve these two linear equations:
+  ;; 
+  ;;      / x1 y1 1 \        / mxx \   / x1-image \          / myx \   / y1-image \
+  ;;  A:= | x2 y2 1 | ;   A  | mxy | = | x2-image |   and A  | myy | = | y2-image |  ;
+  ;;      \ x3 y3 1 /        \ tx  /   \ x3-image /          \ ty  /   \ y3-image /
+  ;;
+  ;; These matrices are small enough to simply calculate A^-1 = |A|^-1 (adj A).
+  ;; 
+  (let ((det (+ (* x1 y2) (* y1 x3) (* x2 y3) (- (* y2 x3)) (- (* y1 x2)) (- (* x1 y3)))))
+    (if (coordinate/= 0 det)
+        (let* ((/det (/ det))
+               ;; a thru' i is (adj A) 
+               (a (- y2 y3))                (b (- y3 y1))               (c (- y1 y2))               
+               (d (- x3 x2))                (e (- x1 x3))               (f (- x2 x1))               
+               (g (- (* x2 y3) (* x3 y2)))  (h (- (* x3 y1) (* x1 y3))) (i (- (* x1 y2) (* x2 y1)))
+               ;; calculate 1/|A| * (adj A) * (x1-image x2-image x3-image)^t 
+               (mxx (* /det (+ (* a x1-image) (* b x2-image) (* c x3-image))))
+               (mxy (* /det (+ (* d x1-image) (* e x2-image) (* f x3-image))))
+               (tx  (* /det (+ (* g x1-image) (* h x2-image) (* i x3-image))))
+               ;; finally 1/|A| * (adj A) * (y1-image y2-image y3-image)^t 
+               (myx (* /det (+ (* a y1-image) (* b y2-image) (* c y3-image))))
+               (myy (* /det (+ (* d y1-image) (* e y2-image) (* f y3-image))))
+               (ty  (* /det (+ (* g y1-image) (* h y2-image) (* i y3-image)))))
+          ;; we're done
+          (make-transformation mxx mxy myx myy tx ty) )
+      ;; determinant was zero, so signal error
+      (error 'transformation-underspecified
+             :coords (list x1 y1 x2 y2 x3 y3 x1-image y1-image x2-image y2-image x3-image y3-image)) )))
+
+(defparameter +identity-transformation+
+  (make-transformation 1 0 0 1 0 0))
 
 (define-condition transformation-error (error)
   ())
@@ -77,271 +196,292 @@
                       (subseq coords 0 6))))))
 
 (define-condition reflection-underspecified (transformation-error)
-  ((coords :initarg :coords))
+  ((coords :initarg :coords)
+   (why :initarg :why :initform nil))
   (:report (lambda (self sink)
-             (with-slots (coords) self
+             (with-slots (coords why) self
                (apply #'format sink "The two points (~D,~D) and (~D,~D) are coincident."
-                      coords)))))
+                      coords)
+               (when why
+                 (format sink " (That was determined by the following error:~%~A)"
+                         why))))))
 
 (define-condition singular-transformation (transformation-error) 
-  ((transformation :initarg :transformation))
+  ((transformation :initarg :transformation)
+   (why :initarg :why :initform nil))
   (:report (lambda (self sink)
              (with-slots (transformation why) self
                  (format sink "Attempt to invert the probably singular transformation ~S."
-                         transformation)))))
+                         transformation)
+                 (when why
+                   (format sink "~%Another error occurred while computing the inverse:~%    ~A" why))))))
 
-;;; TRANSFORMATION constructors
+(define-condition rectangle-transformation-error (transformation-error)
+  ((transformation :initarg :transformation)
+   (rect :initarg :rect))
+  (:report (lambda (self sink)
+             (with-slots (transformation rect) self
+               (format sink "Attempt to transform the rectangle ~S through the non-rectilinear transformation ~S."
+                       rect transformation)))))
 
-(defun make-translation-transformation (translation-x translation-y)
-  (make-instance 'transformation :tx (coerce translation-x 'short-float) :ty (coerce translation-y 'short-float)))
+(defmethod transformation-equal ((transformation1 standard-transformation) (transformation2 standard-transformation))
+  (every #'coordinate=
+         (multiple-value-list (get-transformation transformation1))
+         (multiple-value-list (get-transformation transformation2))))
+  
+(defmethod identity-transformation-p ((transformation standard-transformation))
+  (transformation-equal transformation +identity-transformation+))
 
-(defun make-rotation-transformation (angle &optional (origin +origin+))
-  "Returns a rotation by the given angle around the given origin."
-  (make-rotation-transformation* angle (point-x origin) (point-y origin)))
+(defmethod translation-transformation-p ((transformation standard-transformation))
+  (multiple-value-bind (mxx mxy myx myy) (get-transformation transformation)
+    (and (coordinate= mxx 1)
+         (coordinate= mxy 0)
+         (coordinate= myx 0)
+         (coordinate= myy 1))))
 
-(defun make-rotation-transformation* (angle &optional (origin-x 0.0)
-                                                      (origin-y 0.0))
-  "Returns a rotation by the given angle around the given coordinates."
-  (let* ((cos (cos angle))
-         (sin (sin angle))
-         (xsin (* origin-x sin))
-         (xcos (* origin-x cos))
-         (ysin (* origin-y sin))
-         (ycos (* origin-y cos)))
-    (make-instance 'transformation
-      :mxx cos :mxy (- sin) :tx (- xcos    ysin    origin-x)
-      :myx sin :myy    cos  :ty (+ xsin    ycos (- origin-y)))))
+(defmethod invertible-transformation-p ((transformation standard-transformation))
+  (coordinate/= 0 (transformation-determinant transformation)))
 
-(defun make-scaling-transformation (scale-x scale-y &optional (origin +origin+))
-  (check-type origin point)
-  (make-scaling-transformation* scale-x scale-y (point-x origin) (point-y origin)))
+(defun transformation-determinant (tr)
+  (multiple-value-bind (mxx mxy myx myy) (get-transformation tr)
+    (- (* mxx myy) (* mxy myx))))
 
-(defun make-scaling-transformation* (scale-x scale-y &optional (origin-x 0.0) (origin-y 0.0))
-  (check-type origin-x real)
-  (check-type origin-y real)
-  (make-instance 'transformation
-    :mxx (coerce scale-x 'short-float) :tx (* origin-x (1- scale-x))
-    :myy (coerce scale-y 'short-float) :ty (* origin-y (1- scale-y))))
+(defmethod reflection-transformation-p ((transformation standard-transformation))
+  (< (transformation-determinant transformation) 0))
 
-(defun make-reflection-transformation (point1 point2)
-  (make-reflection-transformation* (point-x point1) (point-y point1)
-				   (point-x point2) (point-y point2)))
+(defmethod rigid-transformation-p ((transformation standard-transformation))
+  (multiple-value-bind (a b c d) (get-transformation transformation)
+    (and (coordinate= 1 (+ (* a a) (* c c)))            ; |A(1,0)| = 1
+         (coordinate= 1 (+ (* b b) (* d d)))            ; |A(0,1)| = 1
+         (coordinate= 0 (+ (* a b) (* c d))))))         ; (A(1,0))(A(0,1)) = 0
 
-(defun make-reflection-transformation* (x1 y1 x2 y2)
-  (check-type x1 real)
-  (check-type y1 real)
-  (check-type x2 real)
-  (check-type y2 real)
-  (when (and (= x1 x2) (= y1 y2))
-    (error 'reflection-underspecified :coords (list x1 y1 x2 y2)))
-  (let* ((dx (- x1 x2))
-         (dy (- y1 y2))
-         (dx2 (* dx dx))
-         (dy2 (* dy dy))
-         (pxy1 (* x1 y2))
-         (pxy2 (* x2 y1))
-         (sum (+ dx2 dy2)))
-    (make-instance 'transformation :mxx (/ (- dx2 dy2) sum)
-		                   :mxy (/ (* 2 dx dy) sum)
-				   :tx  (/ (* 2 dy (- pxy2 pxy1)) sum)
-				   :myx (/ (* 2 dx dy) sum)
-				   :myy (/ (- dy2 dx2) sum)
-				   :ty  (/ (* 2 dx (- pxy1 pxy2)) sum))))
-    
-(defun make-transformation (mxx mxy myx myy tx ty)
-  (make-instance 'transformation :mxx (coerce mxx 'short-float) :mxy (coerce mxy 'short-float) :tx (coerce tx 'short-float) :myx (coerce myx 'short-float) :myy (coerce myy 'short-float) :ty (coerce ty 'short-float)))
+(defmethod even-scaling-transformation-p ((transformation standard-transformation))
+  (and (scaling-transformation-p transformation)
+       (multiple-value-bind (mxx myx mxy myy) (get-transformation transformation)
+         (declare (ignore mxy myx))
+         (coordinate= (abs mxx) (abs myy)))))
 
-(defun make-3-point-transformation (point-1 point-2 point-3
-                                    point-1-image point-2-image point-3-image)
-  (make-3-point-transformation* (point-x point-1) (point-y point-1)
-                                (point-x point-2) (point-y point-2)
-                                (point-x point-3) (point-y point-3)
-                                (point-x point-1-image) (point-y point-1-image)
-                                (point-x point-2-image) (point-y point-2-image)
-                                (point-x point-3-image) (point-y point-3-image)))
+(defmethod scaling-transformation-p ((transformation standard-transformation))
+  ;; Q: was ist mit dem translationsanteil?
+  ;; what gives (scaling-transformation-p (make-translation-transformation 17 42))
+  (multiple-value-bind (mxx mxy myx myy tx ty) (get-transformation transformation)
+    (and (coordinate= 0 tx) (coordinate= 0 ty)
+         (coordinate= 0 mxy) (coordinate= 0 myx)
+         (coordinate/= 0 mxx) (coordinate/= 0 myy))))
 
-(defun make-3-point-transformation* (x1 y1 x2 y2 x3 y3
-                                     x1-image y1-image x2-image y2-image
-                                     x3-image y3-image)
-  (let ((determinant (determinant x1 y1 x2 y2 x3 y3)))
-    (when (= determinant 0.0)
-      (error 'transformation-underspecified :coords (list x1 y1 x2 y2 x3 y3)))
-    (let ((dx1 (- x1 x3))
-          (dx2 (- x2 x1))
-          (dx3 (- x3 x2))
-          (dy1 (- y1 y2))
-          (dy2 (- y2 y3))
-          (dy3 (- y3 y1))
-          (dxy1 (- (* x1 y2) (* x2 y1)))
-          (dxy2 (- (* x2 y3) (* x3 y2)))
-          (dxy3 (- (* x3 y1) (* x1 y3))))
-      (make-transformation (+ (* x1-image dy2) (* x2-image dy3)
-			      (* x3-image dy1))
-			   (+ (* x1-image dx3) (* x2-image dx1)
-			      (* x3-image dx2))
-			   (+ (* y1-image dy2) (* y2-image dy3)
-			      (* y3-image dy1))
-			   (+ (* y1-image dx3) (* y2-image dx1)
-			      (* y3-image dx2))
-			   (+ (* x1-image dxy2) (* x2-image dxy3)
-			      (* x3-image dxy1))
-			   (+ (* y1-image dxy2) (* y2-image dxy3)
-			      (* y3-image dxy1))))))
-        
-(defun determinant (a0 a1 b0 b1 c0 c1)
-  (- (+ (* a0 b1) (* b0 c1) (* c0 a1))
-     (+ (* b1 c0) (* c1 a0) (* a1 b0))))
+(defmethod rectilinear-transformation-p ((transformation standard-transformation))
+  ;; Das testen wir einfach ganz brutal
+  ;;; ist das auch richtig?
+  (multiple-value-bind (dx1 dy1) (transform-distance transformation 1 0)
+    (multiple-value-bind (dx2 dy2) (transform-distance transformation 0 1)
+      (or (and (coordinate= dx1 0) (coordinate/= dy1 0)
+               (coordinate/= dx2 0) (coordinate= dy2 0))
+          (and (coordinate/= dx1 0) (coordinate= dy1 0)
+               (coordinate= dx2 0) (coordinate/= dy2 0))))))
 
+(defmethod compose-transformations ((transformation2 standard-transformation) (transformation1 standard-transformation))
+  ;; (compose-transformations A B)x = (A o B)x = ABx
+  (multiple-value-bind (a1 b1 d1 e1 c1 f1) (get-transformation transformation1)
+    (multiple-value-bind (a2 b2 d2 e2 c2 f2) (get-transformation transformation2)
+      (make-transformation (+ (* a2 a1) (* b2 d1))
+                           (+ (* a2 b1) (* b2 e1))
+                           (+ (* d2 a1) (* e2 d1))
+                           (+ (* d2 b1) (* e2 e1))
+                           (+ (* a2 c1) (* b2 f1) c2)
+                           (+ (* d2 c1) (* e2 f1) f2) ))))
 
-;;; TRANSFORMATION operations
+(defmethod invert-transformation ((transformation standard-transformation))
+  (restart-case
+      (or
+       (handler-case (multiple-value-bind (mxx mxy myx myy tx ty) (get-transformation transformation)
+                       (let ((det (- (* mxx myy) (* myx mxy))))
+                         (if (coordinate= 0 det)
+                             nil
+                           (let ((/det (/ det)))
+                             (let ((mxx (* /det myy))
+                                   (mxy (* /det (- mxy)))
+                                   (myx (* /det (- myx)))
+                                   (myy (* /det mxx)))
+                               (make-transformation mxx mxy myx myy
+                                                    (+ (* -1 mxx tx) (* -1 mxy ty))
+                                                    (+ (* -1 myx tx) (* -1 myy ty))))))))
+         (error (c)
+           (error 'singular-transformation :why c :transformation transformation)))
+       (error 'singular-transformation :transformation transformation))
+    (use-value (value)
+        :report (lambda (sink)
+                  (format sink "Supply a transformation to use instead of the inverse."))
+      value)))       
 
-(defun fuzzy-equal (&rest pairs)
-  (loop for sublist on pairs by #'cddr
-        sum (abs (- (car sublist) (cadr sublist))) into differences
-        count 1 into number-of-pairs
-        finally (return (<= differences (* 2 number-of-pairs single-float-epsilon)))))
-
-(defmethod transformation-equal ((transformation-1 transformation) (transformation-2 transformation))
-  (let ((matrix-1 (transformation-matrix transformation-1))
-	(matrix-2 (transformation-matrix transformation-2)))
-    (fuzzy-equal (aref matrix-1 0 0) (aref matrix-2 0 0)
-                 (aref matrix-1 0 1) (aref matrix-2 0 1)
-                 (aref matrix-1 0 2) (aref matrix-2 0 2)
-                 (aref matrix-1 1 0) (aref matrix-2 1 0)
-                 (aref matrix-1 1 1) (aref matrix-2 1 1)
-                 (aref matrix-1 1 2) (aref matrix-2 1 2))))
-
-(defmethod identity-transformation-p ((transformation transformation))
-  (or (eq transformation +identity-transformation+)
-      (transformation-equal transformation +identity-transformation+)))
-
-(defun invert-matrix (m)
-  (let* ((a0 (aref m 0 0))
-         (a1 (aref m 0 1))
-         (a2 (aref m 0 2))
-         (b0 (aref m 1 0))
-         (b1 (aref m 1 1))
-         (b2 (aref m 1 2))
-         (det (- (* a0 b1) (* a1 b0))))
-    (if (= det 0.0)
-	nil
-      (make-array '(2 3)
-                  :element-type 'single-float
-                  :initial-contents (list (list (/ b1 det)
-                                                (- (/ a1 det))
-                                                (/ (- (* a1 b2) (* a2 b1)) det))
-                                          (list (- (/ b0 det))
-                                                (/ a0 det)
-                                                (/ (- (* a2 b0) (* a0 b2)) det)))))))
-
-(defmethod invertible-transformation-p ((transformation transformation))
-  (invert-matrix (transformation-matrix transformation)))
-
-(defmethod translation-transformation-p ((transformation transformation))
-  (let ((matrix (transformation-matrix transformation)))
-    (fuzzy-equal (aref matrix 0 0) 1.0
-		 (aref matrix 0 1) 0.0
-		 (aref matrix 1 0) 0.0
-		 (aref matrix 1 1) 1.0)))
-
-(defmethod y-inverting-transformation-p ((transformation transformation))
-  (let ((matrix (transformation-matrix transformation)))
-    (and (= (aref matrix 0 0) 1.0)
-	 (= (aref matrix 0 1) 0.0)
-	 (= (aref matrix 1 0) 0.0)
-	 (= (aref matrix 1 1) -1.0))))
-
-(defmethod reflection-transformation-p ((transformation transformation))
-  (let ((matrix (transformation-matrix transformation)))
-    (< (- (* (aref matrix 0 0) (aref matrix 1 1))
-          (* (aref matrix 0 1) (aref matrix 1 0))) 0.0)))
-
-(defmethod rigid-transformation-p ((transformation transformation))
-  (let ((matrix (transformation-matrix transformation)))
-    (fuzzy-equal (abs (- (* (aref matrix 0 0) (aref matrix 1 1))
-                         (* (aref matrix 0 1) (aref matrix 1 0)))) 1.0)))
-
-(defmethod even-scaling-transformation-p ((transformation transformation))
-  (let ((matrix (transformation-matrix transformation)))
-    (fuzzy-equal (aref matrix 0 1) 0.0
-                 (aref matrix 1 0) 0.0
-                 (- (aref matrix 0 0) (aref matrix 1 1)) 0.0)))
-
-(defmethod scaling-transformation-p ((transformation transformation))
-  (let ((matrix (transformation-matrix transformation)))
-    (fuzzy-equal (aref matrix 0 1) 0.0
-                 (aref matrix 1 0) 0.0)))
-
-(defmethod rectilinear-transformation-p ((transformation transformation))
-  (let ((matrix (transformation-matrix transformation)))
-    (or (scaling-transformation-p transformation)
-        (fuzzy-equal (aref matrix 0 0) 0.0
-                     (aref matrix 1 1) 0.0))))
-
-(defmethod compose-transformations ((transformation1 transformation) (transformation2 transformation))
-  (flet ((matrix-multiply (m1 m2)
-	   (let ((result (make-array '(3 3) :element-type 'short-float)))
-	     (dotimes (i 3)
-	       (dotimes (j 3)
-		 (setf (aref result i j) 0.0)
-		 (dotimes (k 3)
-		   (incf (aref result i j) (* (aref m1 i k) (aref m2 k j))))))
-;	     (print result)
-	     result)))
-    (make-instance 'transformation :matrix (matrix-multiply (transformation-matrix transformation1)
-							    (transformation-matrix transformation2)))))
-
-(defmethod invert-transformation ((transformation transformation))
-  (if (not (invertible-transformation-p transformation))
-      (error 'singular-transformation))
-  (make-instance 'transformation :matrix (invert-matrix (transformation-matrix transformation))))
-
-(defmethod compose-translation-with-transformation ((transformation transformation) dx dy)
+(defun compose-translation-with-transformation (transformation dx dy)
   (compose-transformations (make-translation-transformation dx dy) transformation))
 
-(defmethod compose-scaling-with-transformation ((transformation transformation) sx sy &optional (origin (make-point 0.0 0.0)))
+(defun compose-scaling-with-transformation (transformation sx sy &optional origin)
   (compose-transformations (make-scaling-transformation sx sy origin) transformation))
 
-(defmethod compose-rotation-with-transformation ((transformation transformation) angle &optional (origin (make-point 0.0 0.0)))
+(defun compose-rotation-with-transformation (transformation angle &optional origin)
   (compose-transformations (make-rotation-transformation angle origin) transformation))
 
-(defmethod compose-transformation-with-translation ((transformation transformation) dx dy)
+(defun compose-transformation-with-translation (transformation dx dy)
   (compose-transformations transformation (make-translation-transformation dx dy)))
 
-(defmethod compose-transformation-with-scaling ((transformation transformation) sx sy &optional (origin (make-point 0.0 0.0)))
+(defun compose-transformation-with-scaling (transformation sx sy &optional origin)
   (compose-transformations transformation (make-scaling-transformation sx sy origin)))
 
-(defmethod compose-transformation-with-rotation ((transformation transformation) angle &optional (origin (make-point 0.0 0.0)))
+(defun compose-transformation-with-rotation (transformation angle &optional origin)
   (compose-transformations transformation (make-rotation-transformation angle origin)))
 
-(defmethod transform-region ((transformation transformation) (region region))
-  (make-instance (type-of region) :points (loop for (x y) on (region-points region) by #'cddr
-					      nconcing (multiple-value-list (transform-position transformation x y)))))
+(defmacro with-translation ((medium dx dy) &body body)
+  `(with-drawing-options (,medium :transformation (make-translation-transformation ,dx ,dy))
+     ,@body))
 
-(defmethod untransform-region ((transformation transformation) (region region))
+(defmacro with-scaling ((medium sx &optional sy origin) &body body)
+  (if sy
+      `(with-drawing-options (,medium :transformation (make-scaling-transformation ,sx ,sy ,@(if origin (list origin) nil)))
+         ,@body)
+    (let ((sx-var (make-symbol "SX")))
+      `(let* ((,sx-var ,sx))
+         (with-drawing-options (,medium 
+                                :transformation (make-scaling-transformation ,sx-var ,sx-var))
+           ,@body)) )))
+
+(defmacro with-rotation ((medium angle &optional origin) &body body)
+  `(with-drawing-options (,medium 
+                          :transformation (make-rotation-transformation ,angle ,@(if origin (list origin) nil)))
+     ,@body))
+
+
+;;(defmacro with-local-coordinates ((medium &optional x y) &body body)) -- what are local coordinates?
+;;(defmacro with-first-quadrant-coordinates ((medium &optional x y) &body body))
+
+;;(defgeneric transform-region (transformation region))
+
+(defmethod untransform-region ((transformation transformation) region)
   (transform-region (invert-transformation transformation) region))
-
-(defmethod transform-position ((transformation transformation) x y)
-  (let ((matrix (transformation-matrix transformation)))
-    (values (+ (* (aref matrix 0 0) (coerce x 'short-float)) (* (aref matrix 0 1) (coerce y 'short-float)) (aref matrix 0 2))
-	    (+ (* (aref matrix 1 0) (coerce x 'short-float)) (* (aref matrix 1 1) (coerce y 'short-float)) (aref matrix 1 2)))))
+  
+(defmethod transform-position ((transformation standard-transformation) x y)
+  (multiple-value-bind (mxx mxy myx myy tx ty) (get-transformation transformation)
+    (values (+ (* mxx x) (* mxy y) tx)
+            (+ (* myx x) (* myy y) ty))))
 
 (defmethod untransform-position ((transformation transformation) x y)
   (transform-position (invert-transformation transformation) x y))
 
-(defmethod transform-distance ((transformation transformation) dx dy)
-  (declare (ignore dx dy))
-  (error "Transform-Distance is not implemented"))
+(defmethod transform-distance ((transformation standard-transformation) dx dy)
+  (multiple-value-bind (mxx mxy myx myy) (get-transformation transformation)
+    (values (+ (* mxx dx) (* mxy dy))
+            (+ (* myx dx) (* myy dy)))))
 
 (defmethod untransform-distance ((transformation transformation) dx dy)
   (transform-distance (invert-transformation transformation) dx dy))
 
 (defmethod transform-rectangle* ((transformation transformation) x1 y1 x2 y2)
-  (if (not (rectilinear-transformation-p transformation))
-      (error 'transformation-error))
-  (multiple-value-bind (nx1 ny1) (transform-position transformation x1 y1)
-    (multiple-value-bind (nx2 ny2) (transform-position transformation x2 y2)
-      (values (min nx1 nx2) (min ny1 ny2) (max nx1 nx2) (max ny1 ny2)))))
+  (if (rectilinear-transformation-p transformation)
+      (multiple-value-bind (x1 y1) (transform-position transformation x1 y1)
+        (multiple-value-bind (x2 y2) (transform-position transformation x2 y2)
+          (values (min x1 x2) (min y1 y2) (max x1 x2) (max y1 y2))))
+    (error 'rectangle-transformation-error
+           :transformation transformation
+           :rect (list x1 y2 x2 y2))))
 
 (defmethod untransform-rectangle* ((transformation transformation) x1 y1 x2 y2)
   (transform-rectangle* (invert-transformation transformation) x1 y1 x2 y2))
+
+(defmethod transformation-transformator ((transformation standard-transformation)
+                                         &optional (input-type 'real))
+  ;; returns a function, which transforms its arguments
+  (multiple-value-bind (mxx mxy myx myy tx ty) (get-transformation transformation)
+    (labels ((s* (x y)
+               (cond ((coordinate= 0 x) nil)
+                     ((coordinate= 1 x) (list y))
+                     ((coordinate= -1 x) (list `(- ,y)))
+                     ((list `(* ,x ,y)))))
+             (s+ (args)
+               (cond ((null args)
+                      (coerce 0 'coordinate))
+                     ((null (cdr args))
+                      (car args))
+                     (t
+                      `(+ .,args)))))
+      (compile nil
+               `(lambda (x y)
+                  (declare (ignorable x y)
+                           (type ,input-type x y)
+                           (optimize (speed 3) (space 0) (safety 0)))
+                  (values
+                   ,(s+ (nconc (s* mxx 'x)
+                               (s* mxy 'y)
+                               (if (coordinate/= 0 tx) (list tx) nil)))
+                   ,(s+ (nconc (s* myx 'x)
+                               (s* myy 'y)
+                               (if (coordinate/= 0 ty) (list ty) nil))))) ))))
+
+(defmethod transformation-transformator ((transformation transformation) &optional (input-type 'real))
+  (declare (ignore input-type))
+  #'(lambda (x y)
+      (transform-position transformation x y)))
+
+(defun atan* (x y)
+  ;; atan so, wie wir es brauchen.
+  ;; Bei uns ist phi=0 entlang der x-axis und Winkel sind immer zwischen 0 und 2pi.
+  (let ((r (atan y x)))
+    (if (< r 0) (+ r (* 2 pi)) r)))
+
+(defun transform-angle (transformation phi)
+  (multiple-value-bind (ix iy) (transform-distance transformation (cos phi) (sin phi))
+    (atan* ix iy)))
+
+(defun untransform-angle (transformation phi)
+  (multiple-value-bind (ix iy) (untransform-distance transformation (cos phi) (sin phi))
+    (atan* ix iy)))
+
+;;; Exports
+
+;;!EXPORT transformation
+;;!EXPORT transformationp
+;;!EXPORT make-transformation
+;;!EXPORT make-translation-transformation
+;;!EXPORT make-rotation-transformation
+;;!EXPORT make-rotation-transformation*
+;;!EXPORT make-scaling-transformation
+;;!EXPORT make-scaling-transformation*
+;;!EXPORT make-reflection-transformation
+;;!EXPORT make-reflection-transformation*
+;;!EXPORT make-3-point-transformation
+;;!EXPORT make-3-point-transformation*
+;;!EXPORT +identity-transformation+
+;;!EXPORT transformation-error
+;;!EXPORT transformation-underspecified
+;;!EXPORT reflection-underspecified
+;;!EXPORT singular-transformation
+;;!EXPORT transformation-equal
+;;!EXPORT identity-transformation-p
+;;!EXPORT translation-transformation-p
+;;!EXPORT invertible-transformation-p
+;;!EXPORT reflection-transformation-p
+;;!EXPORT rigid-transformation-p
+;;!EXPORT even-scaling-transformation-p
+;;!EXPORT scaling-transformation-p
+;;!EXPORT rectilinear-transformation-p
+;;!EXPORT compose-transformations
+;;!EXPORT invert-transformation
+;;!EXPORT compose-translation-with-transformation
+;;!EXPORT compose-scaling-with-transformation
+;;!EXPORT compose-rotation-with-transformation
+;;!EXPORT compose-transformation-with-translation
+;;!EXPORT compose-transformation-with-scaling
+;;!EXPORT compose-transformation-with-rotation
+;;!EXPORT with-translation
+;;!EXPORT with-scaling
+;;!EXPORT with-rotation
+;;!EXPORT with-local-coordinates
+;;!EXPORT with-first-quadrant-coordinates
+;;!EXPORT transform-region
+;;!EXPORT untransform-region
+;;!EXPORT transform-position
+;;!EXPORT untransform-position
+;;!EXPORT transform-distance
+;;!EXPORT untransform-distance
+;;!EXPORT transform-rectangle*
+;;!EXPORT untransform-rectangle*
+
