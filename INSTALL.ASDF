@@ -5,13 +5,13 @@ To tell ASDF about the wherabouts of McCLIM and to compile it for the
 first time, perform these steps:
 
  1. Symlink mcclim.asd to a directory in your
-    asdf:*central-repository* list. E.g., for SBCL, that would be:
+    asdf:*central-registry* list. E.g., for SBCL, that would be:
 
       $ ln -sf /path/to/mcclim.asd ~/.sbcl/systems/
 
  2. If you are using a Lisp implementation that requires a separate
     CLX to be installed, do this now and symlink the clx's .asd file
-    to your asdf:*central-repository*, as above. If your
+    to your asdf:*central-registry*, as above. If your
     implementation's CLX doesn't come with a clx.asd file, you will
     have to load CLX via (require :clx) or a similar mechanism
     yourself.
@@ -30,7 +30,7 @@ load McCLIM again.
 Installing mcclim.asd if you were using ASDF & system.lisp before
 =================================================================
 
-Make sure to remove all symlinks in your asdf:*central-repository* to
+Make sure to remove all symlinks in your asdf:*central-registry* to
 system.lisp and replace them with symlinks to mcclim.asd. Keeping the
 old links around will break loading the McCLIM system in subtle ways.
 
