@@ -191,3 +191,10 @@ Note:
     #'(lambda (,command-table-var)
 	,@body)
     (find-command-table ,command-table)))
+
+;;;
+
+(defmacro with-gensyms (syms &body body)
+  `(let ,(mapcar (lambda (symbol) `(,symbol (gensym ,(symbol-name symbol))))
+                 syms)
+     ,@ body))
