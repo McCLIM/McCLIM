@@ -174,7 +174,7 @@
    "Examples/postscript-test"
    ;; "Examples/puzzle"
    "Examples/transformations-test"
-   "Examples/sliderdemo"
+   ;; "Examples/sliderdemo"
    "Examples/stream-test"
    "Examples/presentation-test"
    "Examples/gadget-test"
