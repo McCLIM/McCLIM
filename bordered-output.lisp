@@ -31,9 +31,8 @@
                                            &key (shape :rectangle) (move-cursor t))
                                           &body body)
   (declare (ignore shape move-cursor))
+  (orf stream '*standard-output*)
   (check-type stream symbol)
-  (unless stream
-    (setq stream *standard-output*))
   (let ((continuation-name (gensym)))
     `(flet ((,continuation-name (,stream) ,@body))
        (invoke-surrounding-output-with-border ,stream
