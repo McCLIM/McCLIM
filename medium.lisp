@@ -565,14 +565,12 @@
                                         radius-x 0
                                         0 radius-y))
          (transformed-ellipse (transform-region (medium-transformation medium)
-                                                ellipse))
-         (start-angle (ellipse-start-angle transformed-ellipse))
-         (end-angle (ellipse-end-angle transformed-ellipse)))
+                                                ellipse)))
     (multiple-value-bind (center-x center-y) (ellipse-center-point* transformed-ellipse)
       (call-next-method medium center-x center-y radius-x radius-y filled))))
 
 (defmethod medium-draw-circle* :around ((medium basic-medium) center-x center-y
-                                         radius start-angle end-angle fill)
+                                         radius start-angle end-angle filled)
   (let* ((ellipse (make-elliptical-arc* center-x center-y
                                         radius 0
                                         0 radius
@@ -663,6 +661,7 @@
 ;;;;;;;;;
 
 (defmethod engraft-medium ((medium basic-medium) port sheet)
+  (declare (ignore port))
   (setf (%medium-sheet medium) sheet)
   #||
   (medium-foreground medium) (medium-foreground sheet)
@@ -676,6 +675,7 @@
   )
 
 (defmethod degraft-medium ((medium basic-medium) port sheet)
+  (declare (ignore port sheet))
   (setf (%medium-sheet medium) nil))
 
 (defmethod allocate-medium ((port port) sheet)
