@@ -3,6 +3,7 @@
 ;;;  (c) copyright 2000 by
 ;;;           Iban Hatchondo (hatchond@emi.u-bordeaux.fr)
 ;;;           Julien Boninfante (boninfan@emi.u-bordeaux.fr)
+;;;  (c) copyright 2000, 2001 by
 ;;;           Robert Strandh (strandh@labri.u-bordeaux.fr)
 ;;;  (c) copyright 2001 by
 ;;;           Lionel Salabartan (salabart@emi.u-bordeaux.fr)
@@ -104,23 +105,19 @@
                               :width width :min-width min-width :max-width max-width
                               :height height :min-height min-height :max-height max-height))
   
-;; Set of macro for accessing quickly to the space-requirement slots.
-(defmacro get-width (pane)
+;; Macros for quick access to space-requirement slots.
+(defmacro sr-width (pane)
   `(space-requirement-width (pane-space-requirement ,pane)))
-(defmacro get-height (pane)
+(defmacro sr-height (pane)
   `(space-requirement-height (pane-space-requirement ,pane)))
-(defmacro get-max-width (pane)
+(defmacro sr-max-width (pane)
   `(space-requirement-max-width (pane-space-requirement ,pane)))
-(defmacro get-max-height (pane)
+(defmacro sr-max-height (pane)
   `(space-requirement-max-height (pane-space-requirement ,pane)))
-(defmacro get-min-width (pane)
+(defmacro sr-min-width (pane)
   `(space-requirement-min-width (pane-space-requirement ,pane)))
-(defmacro get-min-height (pane)
+(defmacro sr-min-height (pane)
   `(space-requirement-min-height (pane-space-requirement ,pane)))
-(defmacro get-max (pane &optional (width-p t))
-  `(if ,width-p (get-max-width ,pane) (get-max-height ,pane)))
-(defmacro get-min (pane &optional (width-p t))
-  `(if ,width-p (get-min-width ,pane) (get-min-height ,pane)))
 
 (defclass pane (standard-sheet-input-mixin
 		temporary-medium-sheet-output-mixin
@@ -161,47 +158,63 @@
 (defmacro do-in (size min max)
   `(max ,min (min ,max ,size)))
 
-(defun get-size (pane &optional (width-p t))
+(defun get-pane-width (pane)
   ;; Give the region size if already set, otherwise, give the space-requirement
-  (multiple-value-bind (width height) (rectangle-size (sheet-region pane))
-    (if width-p
-	(if (or (not width) (zerop width)) (get-width pane) width)
-        (if (or (not height) (zerop height)) (get-height pane) height))))
+  (let ((width (rectangle-width (sheet-region pane))))
+    (if (or (not width) (zerop width)) (sr-width pane) width)))
 
-(defun make-extremums-children-ratio (pane children &key (width t) (height t))
-  (with-slots (sorted-max-w-r sorted-max-h-r sorted-min-w-r sorted-min-h-r) pane
+(defun get-pane-height (pane)
+  ;; Give the region size if already set, otherwise, give the space-requirement
+  (let ((height (rectangle-height (sheet-region pane))))
+    (if (or (not height) (zerop height)) (sr-height pane) height)))
+
+(defun make-extremums-children-ratio-width (pane children)
+  (with-slots (sorted-max-w-r sorted-min-w-r) pane
     (loop for child in children
-	  for max-width-ratio = (/ (get-width child) (get-max-width child))
-	  for min-width-ratio = (/ (get-width child) (get-min-width child))
-	  for max-height-ratio = (/ (get-height child) (get-max-height child))
-	  for min-height-ratio = (/ (get-height child) (get-min-height child))
+	  for max-width-ratio = (/ (sr-width child) (sr-max-width child))
+	  for min-width-ratio = (/ (sr-width child) (sr-min-width child))
 	  collect (cons max-width-ratio child) into max-w-ratios
 	  collect (cons min-width-ratio child) into min-w-ratios
+	  finally (setf sorted-max-w-r (sort max-w-ratios #'> :key #'car)
+			sorted-min-w-r (sort min-w-ratios #'< :key #'car)))))
+
+(defun make-extremums-children-ratio-height (pane children)
+  (with-slots (sorted-max-h-r sorted-min-h-r) pane
+    (loop for child in children
+	  for max-height-ratio = (/ (sr-height child) (sr-max-height child))
+	  for min-height-ratio = (/ (sr-height child) (sr-min-height child))
 	  collect (cons max-height-ratio child) into max-h-ratios
 	  collect (cons min-height-ratio child) into min-h-ratios
-	  finally 
-	    (flet ((test1 (c1 c2) (> (car c1) (car c2)))
-		   (test2 (c1 c2) (< (car c1) (car c2))))
-	      (when width
-		(setf sorted-max-w-r (sort max-w-ratios #'test1)
-		      sorted-min-w-r (sort min-w-ratios #'test2)))
-	      (when height
-		(setf sorted-max-h-r (sort max-h-ratios #'test1)
-		      sorted-min-h-r (sort min-h-ratios #'test2)))))))
+	  finally (setf sorted-max-h-r (sort max-h-ratios #'> :key #'car)
+			sorted-min-h-r (sort min-h-ratios #'< :key #'car)))))
 
-(defun allocate-space-internal (pane size &optional (w-p t))
-  (loop with sum = (slot-value pane (if w-p 'sum-width 'sum-height)) 
-	and maxs = (slot-value pane (if w-p 'sorted-max-w-r 'sorted-max-h-r))
-	and mins = (slot-value pane (if w-p 'sorted-min-w-r 'sorted-min-h-r))
+(defun allocate-space-internal-width (pane size)
+  (loop with sum = (slot-value pane 'sum-width)
+	and maxs = (slot-value pane 'sorted-max-w-r)
+	and mins = (slot-value pane 'sorted-min-w-r)
 	for (r . child) in (if (>= size sum) maxs mins)
-	and box-size = sum then (- box-size (get-size child w-p))
-	for tmp = (round (/ (* size (get-size child w-p)) box-size))
-	for new-size = (do-in tmp (get-min child w-p) (get-max child w-p))
+	and box-size = sum then (- box-size (get-pane-width child))
+	for tmp = (round (/ (* size (get-pane-width child)) box-size))
+	for new-size = (do-in tmp (sr-min-width child) (sr-max-width child))
 	for new-sum = new-size then (+ new-sum new-size)
 	do (decf size new-size)
-	   (setf (slot-value child (if w-p 'new-width 'new-height)) new-size)
+	   (setf (slot-value child 'new-width) new-size)
 	finally
-	   (setf (slot-value pane (if w-p 'sum-width 'sum-height)) new-sum)))
+	   (setf (slot-value pane 'sum-width) new-sum)))
+
+(defun allocate-space-internal-height (pane size)
+  (loop with sum = (slot-value pane 'sum-height) 
+	and maxs = (slot-value pane 'sorted-max-h-r)
+	and mins = (slot-value pane 'sorted-min-h-r)
+	for (r . child) in (if (>= size sum) maxs mins)
+	and box-size = sum then (- box-size (get-pane-height child))
+	for tmp = (round (/ (* size (get-pane-height child)) box-size))
+	for new-size = (do-in tmp (sr-min-height child) (sr-max-height child))
+	for new-sum = new-size then (+ new-sum new-size)
+	do (decf size new-size)
+	   (setf (slot-value child 'new-height) new-size)
+	finally
+	   (setf (slot-value pane 'sum-height) new-sum)))
 
 (defmethod medium-foreground ((pane pane))
   (medium-foreground (sheet-medium pane)))
@@ -232,12 +245,12 @@
 		       margin-max-width margin-max-height
 		       margin-min-width margin-min-height) pane
 	    (let ((child (first (sheet-children pane))))
-	      (setf sr-width (+ margin-width (get-width child))
-		    sr-height (+ margin-height (get-height child))
-		    sr-max-width (+ margin-max-width (get-max-width child))
-		    sr-max-height (+ margin-max-height (get-max-height child))
-		    sr-min-width (+ margin-min-width (get-min-width child))
-		    sr-min-height (+ margin-min-height (get-min-height child))
+	      (setf sr-width (+ margin-width (sr-width child))
+		    sr-height (+ margin-height (sr-height child))
+		    sr-max-width (+ margin-max-width (sr-max-width child))
+		    sr-max-height (+ margin-max-height (sr-max-height child))
+		    sr-min-width (+ margin-min-width (sr-min-width child))
+		    sr-min-height (+ margin-min-height (sr-min-height child))
 		    ))))
 	(setf space-requirement (make-space-requirement))
 	(with-slots (width height max-width max-height min-width min-height)
@@ -284,7 +297,7 @@
 	  (restraining-pane-p pane)
 	  (and (slot-value pane 'sr-width) 
 	       (slot-value pane 'sr-height)))
-      (allocate-space pane (get-width pane) (get-height pane))
+      (allocate-space pane (sr-width pane) (sr-height pane))
       (note-space-requirements-changed (sheet-parent pane) pane)))
 
 ;;; WINDOW STREAM
@@ -411,8 +424,8 @@
   (when (first (sheet-children pane))
     (allocate-space 
         (first (sheet-children pane))
-	(do-in width (get-min-width pane) (get-max-width pane))
-	(do-in height (get-min-height pane) (get-max-height pane)))))
+	(do-in width (sr-min-width pane) (sr-max-width pane))
+	(do-in height (sr-min-height pane) (sr-max-height pane)))))
 
 (defmethod dispatch-event ((pane top-level-sheet-pane) event)
   (handle-event pane event))
@@ -463,7 +476,7 @@
   (loop with space = (make-space-requirement)
 	for child in (sheet-children box)	
 	for request = (compose-space child)
-	sum (get-size child) into sum-width
+	sum (get-pane-width child) into sum-width
 	do (setq space (space-requirement+* space
                          :width (space-requirement-width request)
                          :max-width (space-requirement-max-width request)
@@ -477,17 +490,17 @@
 		  (return space))))
 
 (defmethod compute-extremum ((box hbox-pane))
-  (make-extremums-children-ratio box (sheet-children box) :height nil))
+  (make-extremums-children-ratio-width box (sheet-children box)))
 
 (defmethod allocate-space ((box hbox-pane) width height)
   (resize-sheet box width height)
-  (allocate-space-internal box width)
+  (allocate-space-internal-width box width)
   (loop for child in (sheet-children box)
 	for nw = (slot-value child 'new-width)
 	and x = 0 then (+ x nw)
-	and nh = (/ (* height (get-size child nil)) (get-size box nil))
+	and nh = (/ (* height (get-pane-height child)) (get-pane-height box))
         do (move-sheet child x 0)
-	   (setf nh (do-in nh (get-min-height child) (get-max-height child)))
+	   (setf nh (do-in nh (sr-min-height child) (sr-max-height child)))
 	   (allocate-space child nw (round nh))))
 
 ;;; VBOX-PANE
@@ -508,7 +521,7 @@
   (loop with space = (make-space-requirement)
 	for child in (sheet-children box)
 	for request = (compose-space child)
-	sum (get-size child nil) into sum-height
+	sum (get-pane-height child) into sum-height
 	do (setq space (space-requirement-combine* #'max space
                          :width (space-requirement-width request)
                          :max-width (space-requirement-max-width request)
@@ -522,17 +535,17 @@
 		  (return space))))
 	   
 (defmethod compute-extremum ((box vbox-pane))
-  (make-extremums-children-ratio box (sheet-children box) :width nil))
+  (make-extremums-children-ratio-height box (sheet-children box)))
 
 (defmethod allocate-space ((box vbox-pane) width height)
   (resize-sheet box width height)
-  (allocate-space-internal box height nil)
+  (allocate-space-internal-height box height)
   (loop for child in (sheet-children box)
 	  for nh = (slot-value child 'new-height)
 	  and y = 0 then (+ y nh)
-	  and nw = (/ (* width (get-size child)) (get-size box))
+	  and nw = (/ (* width (get-pane-width child)) (get-pane-width box))
 	  do (move-sheet child 0 y)
-	     (setf nw (do-in nw (get-min-width child) (get-max-width child)))
+	     (setf nw (do-in nw (sr-min-width child) (sr-max-width child)))
 	     (allocate-space child (round nw) nh)))
   
 ;;; HRACK-PANE
@@ -544,10 +557,10 @@
 (defmethod compose-space ((rack hrack-pane))
   (mapc #'compose-space (sheet-children rack))
   (loop with space = (make-space-requirement
-		      :max-height (get-max-height (car (sheet-children rack))))
+		      :max-height (sr-max-height (car (sheet-children rack))))
 	for child in (sheet-children rack)
 	for request = (pane-space-requirement child)
-	sum (get-size child) into sum-width
+	sum (get-pane-width child) into sum-width
 	do (incf (space-requirement-width space)
 		 (space-requirement-width request))
 	   (incf (space-requirement-max-width space)
@@ -568,11 +581,11 @@
 		  (return space))))
 
 (defmethod compute-extremum ((rack hrack-pane))
-  (make-extremums-children-ratio rack (sheet-children rack) :height nil))
+  (make-extremums-children-ratio-width rack (sheet-children rack)))
 
 (defmethod allocate-space ((rack hrack-pane) width height)
   (resize-sheet rack width height)
-  (allocate-space-internal rack width)
+  (allocate-space-internal-width rack width)
   (loop for child in (sheet-children rack)
 	for nw = (slot-value child 'new-width)
 	and x = 0 then (+ x (round nw))
@@ -588,10 +601,10 @@
 (defmethod compose-space ((rack vrack-pane))
   (mapc #'compose-space (sheet-children rack))
   (loop with space = (make-space-requirement 
-		      :max-width (get-max-width (car (sheet-children rack))))
+		      :max-width (sr-max-width (car (sheet-children rack))))
 	for child in (sheet-children rack)
 	for request = (pane-space-requirement child)
-	sum (get-size child nil) into sum-height
+	sum (get-pane-height child) into sum-height
 	do (setf (space-requirement-width space)
 		 (max (space-requirement-width space)
 		      (space-requirement-width request)))
@@ -612,11 +625,11 @@
 		  (return space))))
 
 (defmethod compute-extremum ((rack vrack-pane))
-  (make-extremums-children-ratio rack (sheet-children rack) :width nil))
+  (make-extremums-children-ratio-height rack (sheet-children rack)))
   
 (defmethod allocate-space ((rack vrack-pane) width height)
   (resize-sheet rack width height)
-  (allocate-space-internal rack height nil)
+  (allocate-space-internal-height rack height)
   (loop for child in (sheet-children rack)
 	for nh = (slot-value child 'new-height)
 	and y = 0 then (+ y nh)
@@ -673,20 +686,20 @@
     (loop for child in (sheet-children table) and i from 0
 	  for c = (mod i nb-children-p-l)
 	  and l = 0 then (incf l (if (zerop c) 1 0)) 
-	  when (and (zerop i) (zerop l)) sum (get-size child) into sum-width
-	  when (zerop c) sum (get-size child nil) into sum-height 
+	  when (and (zerop i) (zerop l)) sum (get-pane-width child) into sum-width
+	  when (zerop c) sum (get-pane-height child) into sum-height 
 	  do (setf (aref space-vec 0 c)
-		   (max (get-width child) (aref space-vec 0 c))
+		   (max (sr-width child) (aref space-vec 0 c))
 		   (aref space-vec 2 c)
-		   (min (get-max-width child) (aref space-vec 2 c))
+		   (min (sr-max-width child) (aref space-vec 2 c))
 		   (aref space-vec 4 c)
-		   (max (get-min-width child) (aref space-vec 4 c))
+		   (max (sr-min-width child) (aref space-vec 4 c))
 		   (aref space-vec 1 l)
-		   (max (get-height child) (aref space-vec 1 l))
+		   (max (sr-height child) (aref space-vec 1 l))
 		   (aref space-vec 3 l)
-		   (min (get-max-height child) (aref space-vec 3 l))
+		   (min (sr-max-height child) (aref space-vec 3 l))
 		   (aref space-vec 5 l)
-		   (max (get-min-height child) (aref space-vec 5 l)))
+		   (max (sr-min-height child) (aref space-vec 5 l)))
 	  finally (setf (slot-value table 'sum-width) sum-width
 			(slot-value table 'sum-height) sum-height))
     (loop for i from 0 below (second (array-dimensions space-vec))
@@ -700,18 +713,18 @@
 
 (defmethod compute-extremum ((table table-pane))
   ;; Because in a table-pane each columns cells has the same width
-  ;; and each lines cells has the same height, will make a line-refernce
+  ;; and each lines cells has the same height, will make a line-reference
   ;; and a column reference. (first line and column of the table.
   ;; (ie. They will represent the size reference for lines and columns)
-  (make-extremums-children-ratio 
-       table (mapcar #'car (format-children table)) :width nil)
-  (make-extremums-children-ratio
-       table (car (format-children table)) :height nil))
+  (make-extremums-children-ratio-height
+       table (mapcar #'car (format-children table)))
+  (make-extremums-children-ratio-width
+       table (car (format-children table))))
 
 (defmethod allocate-space ((table table-pane) width height)
   (resize-sheet table width height)
-  (allocate-space-internal table height nil)
-  (allocate-space-internal table width)
+  (allocate-space-internal-height table height)
+  (allocate-space-internal-width table width)
   (loop for children in (format-children table)
 	for line-ref in (mapcar #'car (format-children table))
 	for new-height = (slot-value line-ref 'new-height)
@@ -753,12 +766,12 @@
   (loop with nb-children-pl = (table-pane-number grid)
 	with nb-children-pc = (/ (length (sheet-children grid)) nb-children-pl)
 	for child in (sheet-children grid)
-	and width = 0 then (max width (get-width child))
-	and height = 0 then (max height (get-height child))
-	and max-width = 5000000 then (min max-width (get-min-width child))
-	and max-height = 5000000 then (min max-height (get-max-height child))
-	and min-width = 0 then (max min-width (get-min-width child))
-	and min-height = 0 then (max min-height (get-min-height child))
+	and width = 0 then (max width (sr-width child))
+	and height = 0 then (max height (sr-height child))
+	and max-width = 5000000 then (min max-width (sr-min-width child))
+	and max-height = 5000000 then (min max-height (sr-max-height child))
+	and min-width = 0 then (max min-width (sr-min-width child))
+	and min-height = 0 then (max min-height (sr-min-height child))
 	finally (return 
 		 (make-space-requirement
 		  :width (* width nb-children-pl)
@@ -823,14 +836,14 @@ During realization the child of the spacing will have as cordinates
 (defmethod allocate-space ((spacing spacing-pane) width height)
   (resize-sheet spacing width height)
   (let* ((child (first (sheet-children spacing)))
-	 (margin-width (- (get-width spacing) (get-width child)))
-	 (margin-height (- (get-height spacing) (get-height child))))
+	 (margin-width (- (sr-width spacing) (sr-width child)))
+	 (margin-height (- (sr-height spacing) (sr-height child))))
     (setf margin-width
-	  (do-in (round (/ (* width margin-width) (get-size spacing)))
+	  (do-in (round (/ (* width margin-width) (get-pane-width spacing)))
 		 (slot-value spacing 'margin-min-width)
 		 (slot-value spacing 'margin-max-width))
 	  margin-height
-	  (do-in (round (/ (* height margin-height) (get-size spacing nil)))
+	  (do-in (round (/ (* height margin-height) (get-pane-height spacing)))
 		 (slot-value spacing 'margin-min-height)
 		 (slot-value spacing 'margin-max-height))
 	  (sheet-transformation child)
