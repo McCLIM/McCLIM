@@ -1063,8 +1063,7 @@
     (or (gethash color table)
 	(setf (gethash color table)
 	      (multiple-value-bind (r g b) (color-rgb color)
-		(xlib:alloc-color (xlib:screen-default-colormap
-				   (first (xlib:display-roots (clx-port-display port))))
+		(xlib:alloc-color (xlib:screen-default-colormap (clx-port-screen port))
 				  (xlib:make-color :red r :green g :blue b)))))))
 
 (defmethod port-mirror-width ((port clx-port) sheet)
