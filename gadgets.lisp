@@ -100,8 +100,6 @@
 
 ;; - the slider needs a total overhaul
 
-;; - OPTION-PANE needs an implmentation
-
 ;; - TEXT-FILED, TEXT-AREA dito
 
 ;; - GADGET-COLOR-MIXIN is currently kind of dangling, we should reuse
@@ -1984,6 +1982,7 @@ and must never be nil."))
                 :documentation "A function to compare two items for equality.")))
 
 (defclass generic-list-pane (list-pane meta-list-pane
+                                       standard-sheet-input-mixin ;; Hmm..
                                        value-changed-repaint-mixin
                                        mouse-wheel-scroll-mixin)
   ((highlight-ink :initform +royalblue4+
@@ -2405,22 +2404,25 @@ Returns two values, the item itself, and the index within the item list."
         (multiple-value-bind (x0 y0 x1 y1)
             (multiple-value-call #'values
               (transform-position (sheet-delta-transformation parent nil) cx0 cy0)
-              (transform-position (sheet-delta-transformation parent nil) cx1 cy1))          
-          (let* ((topmost-pane (if scroll-p
+              (transform-position (sheet-delta-transformation parent nil) cx1 cy1))
+          ;; Note: This :suggested-width/height business is really a silly hack
+          ;;       which I could have easily worked around without adding kludges
+          ;;       to the scroller-pane..
+          (let* ((topmost-pane (if scroll-p 
                                   ;list-pane
                                   (scrolling (:scroll-bar :vertical
                                               :suggest-height height   ;; Doesn't appear to be working..
                                               :suggest-width (if scroll-p (+ 30 (bounding-rectangle-width list-pane))))
                                      list-pane)
                                   list-pane))
-                 (topmost-pane (outlining (:thickness 1) topmost-pane))
+                 (topmost-pane    (outlining (:thickness 1) topmost-pane))
                  (composed-height (space-requirement-height (compose-space topmost-pane :width (- x1 x0) :height height)))
-                 (menu-frame (make-menu-frame topmost-pane
-                                              :min-width (bounding-rectangle-width parent)
-                                              :left x0
-                                              :top (if (eq position :below)
-                                                       y1
-                                                       (- y0 composed-height 1)))))
+                 (menu-frame      (make-menu-frame topmost-pane
+                                                   :min-width (bounding-rectangle-width parent)
+                                                   :left x0
+                                                   :top (if (eq position :below)
+                                                            y1
+                                                            (- y0 composed-height 1)))))
             (values list-pane topmost-pane menu-frame)))))))
 
 (defun popup-list-box (parent)
