@@ -1,4 +1,4 @@
-;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: CLIM-INTERNALS; -*-
+;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: CLIM-DEMO; -*-
 ;;; --------------------------------------------------------------------------------------
 ;;;     Title: The demo demo
 ;;;   Created: 2002-02-11
@@ -31,9 +31,9 @@
              (let ((frame nil))
                (lambda (&rest ignore)
                  (declare (ignore ignore))
-                 (cond ((null frame)
+                 (cond ((null frame)    ;; I broke this logic, sorry.. -Hefner
                         (setq frame
-                          (make-application-frame demo-frame-class)))
+                          (run-frame-top-level (make-application-frame demo-frame-class))))
                        (t
                         #+nil
                         (destroy-frame frame)))))))
@@ -65,7 +65,7 @@
 (defun demodemo ()
   (loop for port in climi::*all-ports*
       do (destroy-port port))
-  (make-application-frame 'demodemo))
+  (run-frame-top-level (make-application-frame 'demodemo)))
 
 (define-application-frame hbox-test 
     () ()
@@ -192,7 +192,7 @@
          (labelling (:label "Matching symbols"
                             :text-style (make-text-style :sans-serif :roman :normal))
            (scrolling (:height 200)
-             (make-pane 'generic-list-pane
+             (make-pane 'list-pane
                         :value 'clim:region-intersection
                         :items (apropos-list "INTER" :clim t)
                         :name-key (lambda (x) (format nil "~(~S~)" x))
