@@ -1061,3 +1061,8 @@
   (let ((mirror (sheet-mirror focus)))
     (when mirror
       (xlib:set-input-focus (clx-port-display port) mirror :parent nil))))
+
+(defmethod port-force-output ((port clx-port))
+  (xlib:display-force-output (clx-port-display port)))
+
+

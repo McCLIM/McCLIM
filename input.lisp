@@ -46,6 +46,12 @@
          ;; --GB 2002-11-10
          :documentation "Time ordered queue of events to schedule.")))
 
+(defclass port-event-queue (standard-event-queue)
+  ((port :initform nil
+         :initarg  :port
+         :accessor event-queue-port
+         :documentation "The port which will be generating events for the queue.")))
+
 (defmethod event-queue-read-no-hang ((eq standard-event-queue))
   "Reads one event from the queue, if there is no event just return NIL."
   (with-lock-held ((event-queue-lock eq))
@@ -305,15 +311,48 @@
             (push sheet schedule)
             (push event schedule))))))
 
+;; PORT-EVENT-QUEUE methods
+
+(defmethod event-queue-read :before ((eq port-event-queue))
+  (port-force-output (event-queue-port eq)))
+
+(defmethod event-queue-read-no-hang :before ((eq port-event-queue))
+  (port-force-output (event-queue-port eq)))
+
+(defmethod event-queue-read-with-timeout :before ((eq port-event-queue)
+                                                  timeout wait-function)
+  (declare (ignore timeout wait-function))
+  (port-force-output (event-queue-port eq)))
+
+(defmethod event-queue-listen :before ((eq port-event-queue))
+  (port-force-output (event-queue-port eq)))
+
+(defmethod event-queue-listen-or-wait :before ((eq standard-event-queue)
+                                               &key timeout)
+  (declare (ignore timeout))
+  (port-force-output (event-queue-port eq)))
+
+(defmethod event-queue-peek :before ((eq port-event-queue))
+  (port-force-output (event-queue-port eq)))  
+
+(defmethod event-queue-peek-if :before (predicate (eq port-event-queue))
+  (declare (ignore predicate))
+  (port-force-output (event-queue-port eq)))
+
 ;; STANDARD-SHEET-INPUT-MIXIN
 
 (defclass standard-sheet-input-mixin ()
-  ((queue :initform (make-instance 'standard-event-queue)
+  ((queue :initform (make-instance 'port-event-queue)
 	  :reader sheet-event-queue
 	  :initarg :input-buffer)
    (port :initform nil
 	 :initarg :port
 	 :reader port)))
+
+(defmethod initialize-instance :after ((sheet standard-sheet-input-mixin)
+                                       &rest args)  
+  (setf (event-queue-port (sheet-event-queue sheet)) (port sheet)))
+                                       
 
 (defmethod stream-input-buffer ((stream standard-sheet-input-mixin))
   (sheet-event-queue stream))

@@ -362,8 +362,8 @@
 		 ((#.(char-code #\5)) (read-pgm-p5 stream))
 		 ((#.(char-code #\3)) (read-ppm-p3 stream)) ; ASCII
 		 ((#.(char-code #\6)) (read-ppm-p6 stream)) ; Binary
-		 (t (error "unknown file format" byte1 byte2)))))
-	    (t (error "unknown file format" byte1))))))
+		 (t (error "unknown file format ~A ~A" byte1 byte2)))))
+	    (t (error "unknown file format ~A" byte1))))))
 
 (defun read-image-file (filename &key (format :pnm))
   (declare (ignore format))

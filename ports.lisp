@@ -295,3 +295,9 @@
 (defmethod port-deallocate-pixmap ((port basic-port) pixmap)
   (declare (ignore pixmap))
   (error "DEALLOCATE-PIXMAP is not implemented for generic PORTs"))
+
+
+(defgeneric port-force-output (port))
+
+(defmethod port-force-output ((port basic-port))
+  (values))

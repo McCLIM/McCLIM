@@ -193,7 +193,8 @@ input focus. This is a McCLIM extension."))
 (defmethod initialize-instance :after ((obj standard-application-frame)
                                        &key &allow-other-keys)  
   (unless (frame-event-queue obj)
-    (setf (frame-event-queue obj) (make-instance 'standard-event-queue))))
+    (setf (frame-event-queue obj)
+          (make-instance 'port-event-queue :port (port obj)))))
 
 
 (defmethod (setf frame-manager) (fm (frame application-frame))
@@ -361,14 +362,17 @@ input focus. This is a McCLIM extension."))
     (let ((query-io (frame-query-io frame)))
       (unwind-protect
 	   (if query-io
-	       (with-input-focus (query-io)                                 
+	       (with-input-focus (query-io)
 		 (call-next-method))
 	       (call-next-method))
-	(case original-state
-	  (:disabled
-	   (disable-frame frame))
-	  (:disowned
-	   (disown-frame (frame-manager frame) frame)))))))
+        (progn
+          (let ((fm (frame-manager frame)))
+            (case original-state
+              (:disabled
+               (disable-frame frame))
+              (:disowned
+               (disown-frame (frame-manager frame) frame)))          
+            (port-force-output (frame-manager-port fm))))))))
 
 (defun redisplay-changed-panes (frame)
   (map-over-sheets #'(lambda (pane)
