@@ -92,21 +92,18 @@
 
 ;;;
 (defconstant +postscript-fonts+
-  '(:fix (:roman "Courier"
-          :bold "Courier-Bold"
-          :italic "Courier-Oblique"
-          :bold-italic "Courier-BoldOblique"
-          :italic-bold "Courier-BoldOblique")
-    :serif (:roman "Times-Roman"
-            :bold "Times-Bold"
-            :italic "Times-Italic"
-            :bold-italic "Times-BoldItalic"
-            :italic-bold "Times-BoldItalic")
-    :sans-serif (:roman "Helvetica"
-                 :bold "Helvetica-Bold"
-                 :italic "Helvetica-Oblique"
-                 :bold-italic "Helvetica-BoldOblique"
-                 :italic-bold "Helvetica-BoldOblique")))
+  '(:fix ((:roman . "Courier")
+          (:bold . "Courier-Bold")
+          (:italic . "Courier-Oblique")
+          ((:bold :italic) . "Courier-BoldOblique"))
+    :serif ((:roman . "Times-Roman")
+            (:bold . "Times-Bold")
+            (:italic . "Times-Italic")
+            ((:bold :italic) . "Times-BoldItalic"))
+    :sans-serif ((:roman . "Helvetica")
+                 (:bold . "Helvetica-Bold")
+                 (:italic . "Helvetica-Oblique")
+                 ((:bold :italic) . "Helvetica-BoldOblique"))))
 
 (defconstant +postscript-font-sizes+
   '(:normal 14
@@ -124,8 +121,8 @@
       (multiple-value-bind (family face size) (text-style-components text-style)
         (let* ((family-fonts (or (getf +postscript-fonts+ family)
                                  (getf +postscript-fonts+ :fix)))
-               (font-name (or (getf family-fonts face)
-                              (getf family-fonts :roman)))
+               (font-name (cdr (or (assoc face family-fonts :test #'equal)
+                                   (assoc :roman family-fonts))))
                (size-number (if (numberp size)
                                 (round size)
                                 (or (getf +postscript-font-sizes+ size)
