@@ -1932,6 +1932,7 @@
    #:port-ungrab-pointer
    #:set-port-keyboard-focus
    #:set-sheet-pointer-cursor
+   #:synthesize-pointer-motion-event
    #:text-style-character-width
    ;; From CLIM (mentioned in the spec)
    #:adopt-frame

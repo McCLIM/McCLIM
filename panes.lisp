@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.140 2004/03/21 21:49:06 hefner1 Exp $
+;;; $Id: panes.lisp,v 1.141 2004/04/23 19:29:49 moore Exp $
 
 (in-package :clim-internals)
 
@@ -371,6 +371,9 @@
 
 (defmethod (setf pane-needs-redisplay) (value (pane pane))
   (setf (pane-redisplay-needed pane) value))
+
+(defmethod window-clear ((pane pane))
+  nil)
 
 ;;; WINDOW STREAM
 
@@ -750,23 +753,27 @@
                       sheet-parent-mixin mirrored-sheet-mixin
                       pane)
   ((foreground       :initarg :foreground
-                     :initform +black+
                      :reader pane-foreground)
    (background       :initarg :background
-                     :initform *3d-normal-color* ;;+white+
                      :reader pane-background)
    (text-style       :initarg :text-style
-                     :initform *default-text-style*
                      :reader pane-text-style)
-
    (align-x          :initarg :align-x
                      :type (member :left :center :right)
-                     :initform :left          ;??
                      :reader pane-align-x)
    (align-y          :initarg :align-y
                      :type (member :top :center :bottom)
-                     :initform :top           ;??
-                     :reader pane-align-y) ))
+                     :reader pane-align-y))
+  (:default-initargs
+   :foreground +black+
+    :background *3d-normal-color*
+    :text-style *default-text-style*
+    :align-x :left
+    :align-y :top))
+
+(defmethod initialize-instance :after ((obj basic-pane) &key text-style)
+  (when (consp text-style)
+    (setf (slot-value obj 'text-style) (apply #'make-text-style text-style))))
 
 (defmethod engraft-medium :after (medium port (pane basic-pane))
   (declare (ignore port))
@@ -1016,6 +1023,8 @@
       (box-layout-mixin/vertically-allocate-space pane width height)
       (box-layout-mixin/horizontally-allocate-space pane width height)))
 
+(defvar *dump-allocate-space* nil)
+
 (dada
  ((major   width        height)
   (minor   height       width)
@@ -1079,7 +1088,7 @@
                  :max-minor 0
                  :minor     0))))))
 
- (defmethod box-layout-mixin/xically-allocate-space-aux* ((box box-layout-mixin) width height)
+  (defmethod box-layout-mixin/xically-allocate-space-aux* ((box box-layout-mixin) width height)
    (declare (ignorable width height))
    (let ((children (reverse (sheet-enabled-children box))))
      (with-slots (major-spacing) box
@@ -1089,9 +1098,10 @@
               (wanted      (reduce #'+ allot))
               (excess      (- major wanted
                               (* (1- (length children)) major-spacing))))
-         #+nil (progn
-           (format *trace-output* "~&;; ALLOCATE-SPACE-AUX ~S~%" box)
-           (format *trace-output* "~&;;   major = ~D, wanted = ~D, excess = ~D, allot = ~D.~%"
+          (when *dump-allocate-space*
+	    (format *trace-output* "~&;; ~S ~S~%"
+		    'box-layout-mixin/xically-allocate-space-aux* box)
+	    (format *trace-output* "~&;;   major = ~D, wanted = ~D, excess = ~D, allot = ~D.~%"
                    major wanted excess allot))
 
          (let ((qvector
@@ -1113,7 +1123,7 @@
                                        (xically-content-sr** box c))))))))
                  (box-layout-mixin-clients box))))
            ;;
-           #+nil(progn
+           (when *dump-allocate-space*
              (format *trace-output* "~&;;   old allotment = ~S.~%" allot)
              (format *trace-output* "~&;;   qvector 0 = ~S.~%" (mapcar #'(lambda (x) (elt x 0)) qvector))
              (format *trace-output* "~&;;   qvector 1 = ~S.~%" (mapcar #'(lambda (x) (elt x 1)) qvector))
@@ -1130,12 +1140,13 @@
                                      (decf sum q)
                                      (+ allot delta))))
                                allot qvector))
-                 #+nil
-                 (format *trace-output* "~&;;   new excess = ~F, allotment = ~S.~%" excess allot)
+		 (when *dump-allocate-space*
+		   (format *trace-output* "~&;;   new excess = ~F, allotment = ~S.~%" excess allot))
                  )))
            ;;
-	   #+nil (format *trace-output* "~&;;   excess = ~F.~%" excess)
-	   #+nil (format *trace-output* "~&;;   new allotment = ~S.~%" allot)
+	   (when *dump-allocate-space*
+	     (format *trace-output* "~&;;   excess = ~F.~%" excess)
+	     (format *trace-output* "~&;;   new allotment = ~S.~%" allot))
 
            (values allot
                    (mapcar #'ceiling (mapcar #'space-requirement-minor content-srs))) )))))
@@ -1561,7 +1572,8 @@
 ;; same as SPACING-PANE but a different default background.
 
 (defclass outlined-pane (spacing-pane)
-  ((background :initform +black+)))
+  ()
+  (:default-initargs :background +black+))
 
 (defmacro outlining ((&rest options) &body contents)
   `(make-pane 'outlined-pane ,@options :contents (list ,@contents)))
@@ -1704,10 +1716,12 @@
         (let ((req
                ; v-- where does this requirement come from?
                ;     a: just an arbitrary default
-               (make-space-requirement
+		(make-space-requirement
                 :width 300 :height 300 :max-width +fill+ :max-height +fill+
                 :min-width 30
-                :min-height 30)))
+                :min-height 30)
+		#+nil
+		(make-space-requirement :height +fill+ :width +fill+)))
           (when vscrollbar
             (setq req (space-requirement+*
                         (space-requirement-combine #'max
@@ -2117,10 +2131,6 @@
                             mouse-wheel-scroll-mixin
                             )
   ((redisplay-needed :initarg :display-time) 
-   (incremental-redisplay :type (member t nil)
-			  :initform nil
-			  :initarg :incremental-redisplay
-			  :accessor pane-incremental-redisplay)
    (scroll-bars :type (member t :vertical :horizontal nil)
 		:initform nil
 		:initarg :scroll-bars
@@ -2150,11 +2160,8 @@
    (user-max-width :accessor pane-user-max-width)
    (user-height :accessor pane-user-height)
    (user-min-height :accessor pane-user-min-height)
-   (user-max-height :accessor pane-user-max-height)
-   (updating-record :accessor clim-stream-pane-updating-record
-		    :initarg :updating-record :initform nil
-		    :documentation "For incremental output, holds the
-   top level updating-output-record."))
+   (user-max-height :accessor pane-user-max-height))
+  
   (:documentation
    "This class implements a pane that supports the CLIM graphics,
     extended input and output, and output recording protocols."))
@@ -2272,23 +2279,14 @@
 (defmethod redisplay-frame-pane ((frame application-frame)
 				 (pane clim-stream-pane)
 				 &key force-p)
-  (flet ((invoke-display ()
-	   (let ((display-function (pane-display-function pane)))
-	     (cond ((consp display-function)
-		    (apply (car display-function)
-			   frame pane (cdr display-function)))
-		   (display-function
-		    (funcall display-function frame pane))
-		   (t nil)))))
-    (if (and (pane-incremental-redisplay pane)
-	     *enable-updating-output*)	;XXX
-	(if (or (null (clim-stream-pane-updating-record pane))
-		force-p)
-	    (setf (clim-stream-pane-updating-record pane)
-		  (updating-output (pane)
-		    (invoke-display)))
-	    (redisplay (clim-stream-pane-updating-record pane) pane))
-	(invoke-display))))
+  (declare (ignore force-p))
+  (let ((display-function (pane-display-function pane)))
+    (cond ((consp display-function)
+	   (apply (car display-function)
+		  frame pane (cdr display-function)))
+	  (display-function
+	   (funcall display-function frame pane))
+	  (t nil))))
 
 (defmethod redisplay-frame-pane ((frame application-frame)
 				 (pane symbol)

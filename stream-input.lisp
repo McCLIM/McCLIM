@@ -625,6 +625,10 @@
 
 (defgeneric* (setf pointer-position) (x y pointer))
 
+(defgeneric synthesize-pointer-motion-event (pointer)
+  (:documentation "Create a CLIM pointer motion event based on the
+  current pointer state."))
+
 (defgeneric pointer-cursor (pointer))
 
 (defgeneric (setf pointer-cursor) (cursor pointer))

@@ -568,32 +568,44 @@
 ;; size and position, while genuine configure events only state the
 ;; correct size.
 
+;; NOTE: Although it might be tempting to compress (consolidate)
+;; events here, this is the wrong place. In our current architecture
+;; the process calling this function (the port's event handler
+;; process) just reads the events from the X server, and does it
+;; with almost no lack behind the reality. While the application
+;; frame's event top level loop does the actual processing of events
+;; and thus may produce lack. So the events have to be compressed in
+;; the frame's event queue.
+;;
+;; So event compression is implemented in EVENT-QUEUE-APPEND.
+;;
+;; This changes for possible _real_ immediate repainting sheets,
+;; here a possible solution for the port's event handler loop can be
+;; to read all available events off into a temponary queue (and
+;; event compression for immediate events is done there) and then
+;; dispatch all events from there as usual.
+;;
+;;--GB
+  
+;; XXX :button code -> :button (decode-x-button-code code)
+;;
+;; Only button and keypress events get a :code keyword argument! For mouse
+;; button events, one should use decode-x-button-code; otherwise one needs to
+;; look at the state argument to get the current button state. The CLIM spec
+;; says that pointer motion events are a subclass of pointer-event, which is
+;; reasonable, but unfortunately they use the same button slot, whose value
+;; should only be a single button. Yet pointer-button-state can return the
+;; logical or of the button values... aaargh. For now I'll canonicalize the
+;; value going into the button slot and think about adding a
+;; pointer-event-buttons slot to pointer events. -- moore
+;; 
+
 (defun event-handler (&rest event-slots
                       &key display window event-key code state mode time
 		      width height x y root-x root-y
 		      data override-redirect-p send-event-p
 		      hint-p
                       &allow-other-keys)
-  ;; NOTE: Although it might be tempting to compress (consolidate)
-  ;; events here, this is the wrong place. In our current architecture
-  ;; the process calling this function (the port's event handler
-  ;; process) just reads the events from the X server, and does it
-  ;; with almost no lack behind the reality. While the application
-  ;; frame's event top level loop does the actual processing of events
-  ;; and thus may produce lack. So the events have to be compressed in
-  ;; the frame's event queue.
-  ;;
-  ;; So event compression is implemented in EVENT-QUEUE-APPEND.
-  ;;
-  ;; This changes for possible _real_ immediate repainting sheets,
-  ;; here a possible solution for the port's event handler loop can be
-  ;; to read all available events off into a temponary queue (and
-  ;; event compression for immediate events is done there) and then
-  ;; dispatch all events from there as usual.
-  ;;
-  ;;--GB
-  
-  ;; XXX :button code -> :button (decode-x-button-code code)
   (declare (ignorable event-slots))
   (declare (special *clx-port*))
   (let ((sheet (and window
@@ -1074,27 +1086,69 @@
 
 ;;; pointer button bits in the state mask
 
+;;; Happily, The McCLIM pointer constants correspond directly to the X
+;;; constants.
+
 (defconstant +right-button-mask+ #x100)
 (defconstant +middle-button-mask+ #x200)
 (defconstant +left-button-mask+ #x400)
+(defconstant +wheel-up-mask+ #x800)
+(defconstant +wheel-down-mask+ #x1000)
 
 (defmethod pointer-button-state ((pointer clx-pointer))
   (multiple-value-bind (x y same-screen-p child mask)
       (xlib:query-pointer (clx-port-window (port pointer)))
     (declare (ignore x y same-screen-p child))
-    (cond ((logtest +right-button-mask+ mask)
+    (ldb (byte 5 8) mask)))
+
+;;; In button events we don't want to see more than one button, according to
+;;; the spec, so pick a canonical ordering. :P The mask is that state mask
+;;; from an X event.
+
+(defun button-from-state (mask)
+  (cond ((logtest +right-button-mask+ mask)
 	   +pointer-right-button+)
 	  ((logtest +middle-button-mask+ mask)
 	   +pointer-middle-button+)
 	  ((logtest +left-button-mask+ mask)
 	   +pointer-left-button+)
-	  (t 0))))
+	  ((logtest +wheel-up-mask+ mask)
+	   +pointer-wheel-up+)
+	  ((logtest +wheel-down-mask+ mask)
+	   +pointer-wheel-down+)
+	  (t 0)))
 
 (defmethod pointer-modifier-state ((pointer clx-pointer))
   (multiple-value-bind (x y same-screen-p child mask)
       (xlib:query-pointer (clx-port-window (port pointer)))
     (declare (ignore x y same-screen-p child))
     (clim-xcommon:x-event-state-modifiers (port pointer) mask)))
+
+;;; XXX Should we rely on port-pointer-sheet being correct? -- moore
+(defmethod synthesize-pointer-motion-event ((pointer clx-pointer))
+  (let* ((port (port pointer))
+	 (sheet (port-pointer-sheet port)))
+    (when sheet
+      (let ((mirror (sheet-direct-mirror sheet)))
+	(when mirror
+	  (multiple-value-bind (x y same-screen-p child mask root-x root-y)
+	      (xlib:query-pointer mirror)
+	    (declare (ignore child))
+	    (when same-screen-p
+	      (make-instance
+	       'pointer-motion-event
+	       :pointer 0 :button (button-from-state mask)
+	       :x x :y y
+	       :graft-x root-x
+	       :graft-y root-y
+	       :sheet sheet
+	       :modifier-state (clim-xcommon:x-event-state-modifiers port mask)
+	       ;; The event initialization code will give us a
+	       ;; reasonable timestamp.
+	       :timestamp 0))))))))
+  
+  
+  
 
 ;;; Set the keyboard input focus for the port.
 ;;; (oops, we lose the timestamp here.)

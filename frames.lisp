@@ -333,6 +333,7 @@ frame, if any")))
 (defmethod frame-pointer-documentation-output ((frame application-frame))
   (find-pane-of-type (frame-panes frame) 'pointer-documentation-pane))
 
+#+nil
 (defmethod redisplay-frame-panes ((frame application-frame) &key force-p)
   (map-over-sheets
    (lambda (sheet)
@@ -342,6 +343,12 @@ frame, if any")))
          (window-clear sheet))
        (redisplay-frame-pane frame sheet :force-p force-p)))
    (frame-top-level-sheet frame)))
+
+(defmethod redisplay-frame-panes ((frame application-frame) &key force-p)
+  (map-over-sheets (lambda (sheet)
+		     (redisplay-frame-pane frame sheet :force-p force-p))
+		   (frame-top-level-sheet frame)))
+
 
 (defmethod frame-replay (frame stream &optional region)
   (declare (ignore frame))
@@ -379,6 +386,25 @@ frame, if any")))
 (defmethod redisplay-frame-pane ((frame application-frame) pane &key force-p)
   (declare (ignore pane force-p))
   nil)
+
+(defmethod redisplay-frame-pane :around ((frame application-frame) pane
+					 &key force-p)
+  
+  (multiple-value-bind (redisplayp clearp)
+      (pane-needs-redisplay pane)
+    (when force-p
+      (setq redisplayp (or redisplayp t)
+	    clearp t))
+    (when redisplayp
+      (let ((hilited (frame-hilited-presentation frame)))
+	(when hilited
+	  (highlight-presentation-1 (car hilited) (cdr hilited) :unhighlight)
+	  (setf (frame-hilited-presentation frame) nil)))
+      (when clearp
+	(window-clear pane))
+      (call-next-method)
+      (unless (eq redisplayp :command-loop)
+	(setf (pane-needs-redisplay pane) nil)))))
 
 (defmethod run-frame-top-level ((frame application-frame)
 				&key &allow-other-keys)
@@ -422,6 +448,7 @@ frame, if any")))
 ;;; Defined in incremental-redisplay.lisp
 (defvar *enable-updating-output*)
 
+#+nil
 (defun redisplay-changed-panes (frame)
   (map-over-sheets #'(lambda (pane)
                        (multiple-value-bind (redisplayp clearp)
@@ -446,51 +473,57 @@ frame, if any")))
 	  (partial-command-parser
 	   'command-line-read-remaining-arguments-for-partial-command)
 	  (prompt "Command: "))
-  (loop
-   (let* ((*standard-input*  (or (frame-standard-input frame)
-				 *standard-input*))
-	  (*standard-output* (or (frame-standard-output frame)
-				 *standard-output*))
-	  (query-io  (frame-query-io frame))
-	  (*query-io* (or query-io *query-io*))
-	  (*pointer-documentation-output* (frame-pointer-documentation-output
-					   frame))
-	  ;; during development, don't alter *error-output*
-	  ;; (*error-output* (frame-error-output frame))
-	  (*command-parser* command-parser)
-	  (*command-unparser* command-unparser)
-	  (*partial-command-parser* partial-command-parser)
-	  (interactorp (typep *query-io* 'interactor-pane)))
-     (restart-case
-	 (progn
-	   (redisplay-changed-panes frame)
-	   (if query-io
-	       ;; We don't need to turn the cursor on here, as Goatee has its own
-	       ;; cursor which will appear. In fact, as a sane interface policy,
-	       ;; leave it off by default, and hopefully this doesn't violate the
-	       ;; spec.  
-	       (progn            
-		 (setf (cursor-visibility (stream-text-cursor *query-io*))
-		       nil)
-		 (when (and prompt interactorp)
-		   (with-text-style (*query-io* +default-prompt-style+)
-		     (if (stringp prompt)
-			 (write-string prompt *query-io*)
-			 (funcall prompt *query-io* frame))
-		     (finish-output *query-io*)))
-		 (let ((command (read-frame-command frame :stream *query-io*)))
-		   (when interactorp
-		     (fresh-line *query-io*))
-		   (when command
-		     (execute-frame-command frame command))
-		   (when interactorp
-		     (fresh-line *query-io*))))
-	       (simple-event-loop)))
-       (abort ()
-	 :report "Return to application command loop"
-	 (if interactorp
-	     (format *query-io* "~&Command aborted.~&")
-	     (beep)))))))
+  ;; Give each pane a fresh start first time through.
+  (let ((first-time t))
+    (loop
+       ;; The variables are rebound each time through the loop because the
+       ;; values of frame-standard-input et al. might be changed by a command.
+       (let* ((*standard-input*  (or (frame-standard-input frame)
+				     *standard-input*))
+	      (*standard-output* (or (frame-standard-output frame)
+				     *standard-output*))
+	      (query-io  (frame-query-io frame))
+	      (*query-io* (or query-io *query-io*))
+	      (*pointer-documentation-output*
+	       (frame-pointer-documentation-output frame))
+	      ;; during development, don't alter *error-output*
+	      ;; (*error-output* (frame-error-output frame))
+	      (*command-parser* command-parser)
+	      (*command-unparser* command-unparser)
+	      (*partial-command-parser* partial-command-parser)
+	      (interactorp (typep *query-io* 'interactor-pane)))
+	 (restart-case
+	     (progn
+	       (redisplay-frame-panes frame :force-p first-time)
+	       (setq first-time nil)
+	       (if query-io
+		   ;; We don't need to turn the cursor on here, as Goatee has
+		   ;; its own cursor which will appear. In fact, as a sane
+		   ;; interface policy, leave it off by default, and hopefully
+		   ;; this doesn't violate the spec.
+		   (progn            
+		     (setf (cursor-visibility (stream-text-cursor *query-io*))
+			   nil)
+		     (when (and prompt interactorp)
+		       (with-text-style (*query-io* +default-prompt-style+)
+			 (if (stringp prompt)
+			     (write-string prompt *query-io*)
+			     (funcall prompt *query-io* frame))
+			 (finish-output *query-io*)))
+		     (let ((command (read-frame-command frame
+							:stream *query-io*)))
+		       (when interactorp
+			 (fresh-line *query-io*))
+		       (when command
+			 (execute-frame-command frame command))
+		       (when interactorp
+			 (fresh-line *query-io*))))
+		   (simple-event-loop)))
+	   (abort ()
+	     :report "Return to application command loop"
+	     (if interactorp
+		 (format *query-io* "~&Command aborted.~&")
+		 (beep))))))))
 
 (defmethod read-frame-command :around ((frame application-frame)
 				       &key (stream *standard-input*))

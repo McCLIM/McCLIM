@@ -544,9 +544,6 @@ call-next-method to get the \"real\" answer based on the stream type."))
 					 event)
       (when (typep event 'pointer-button-press-event)
 	(funcall *pointer-button-press-handler* stream event)))))
-  
-
-
 
 (defun input-context-event-handler (stream)
   (highlight-applicable-presentation *application-frame*
@@ -558,6 +555,16 @@ call-next-method to get the \"real\" answer based on the stream type."))
   (frame-input-context-button-press-handler *application-frame*
 					    (event-sheet button-event)
 					    button-event))
+
+(defun highlight-current-presentation (frame input-context)
+  (let ((event (synthesize-pointer-motion-event (port-pointer
+						 (port
+						  *application-frame*)))))
+    (when event
+      (frame-input-context-track-pointer *application-frame*
+				       *input-context*
+				       (event-sheet event)
+				       event))))
 
 (defmacro with-input-context ((type &key override)
 			      (&optional (object-var (gensym))
@@ -587,6 +594,7 @@ call-next-method to get the \"real\" answer based on the stream type."))
 		   (*input-wait-handler* #'input-context-event-handler))
 	       (return-from ,return-block ,form )))
          (declare (ignorable ,object-var ,type-var ,event-var))
+	 (highlight-current-presentation *application-frame* *input-context*)
 	 (cond ,@(mapcar #'(lambda (pointer-case)
 			     (destructuring-bind (case-type &body case-body)
 				 pointer-case
@@ -896,14 +904,15 @@ call-next-method to get the \"real\" answer based on the stream type."))
 ;;; Internal function to highlight just one presentation
 
 (defun highlight-presentation-1 (presentation stream state)
-  (if (or (eq (presentation-single-box presentation) t)
-	  (eq (presentation-single-box presentation) :highlighting))
-      (highlight-output-record-rectangle presentation stream state)
-      (funcall-presentation-generic-function highlight-presentation
-					     (presentation-type presentation)
-					     presentation
-					     stream
-					     state)))
+  (with-output-recording-options (stream :record nil)
+    (if (or (eq (presentation-single-box presentation) t)
+	    (eq (presentation-single-box presentation) :highlighting))
+	(highlight-output-record-rectangle presentation stream state)
+	(funcall-presentation-generic-function highlight-presentation
+					       (presentation-type presentation)
+					       presentation
+					       stream
+					       state))))
 
 (define-default-presentation-method highlight-presentation
     (type record stream state)

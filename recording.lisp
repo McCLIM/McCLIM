@@ -1338,10 +1338,12 @@ were added."
 ;;; Helper function
 (defun normalize-coords (dx dy &optional unit)
   (let ((norm (sqrt (+ (* dx dx) (* dy dy)))))
-    (if unit
-	(let ((scale (/ unit norm)))
-	  (values (* dx scale) (* dy scale)))
-	(values (/ dx norm) (/ dy norm)))))
+    (cond ((= norm 0.0d0)
+	   (values 0.0d0 0.0d0))
+	  (unit
+	   (let ((scale (/ unit norm)))
+	     (values (* dx scale) (* dy scale))))
+	  (t (values (/ dx norm) (/ dy norm))))))
 
 (defun polygon-record-bounding-rectangle
     (coord-seq closed filled line-style border miter-limit)
@@ -1475,10 +1477,13 @@ were added."
 (defmethod medium-draw-rectangle* :around ((stream output-recording-stream) left top right bottom filled)
   (let ((tr (medium-transformation stream)))
     (if (rectilinear-transformation-p tr)
-        (generate-medium-recording-body draw-rectangle-output-record medium-draw-rectangle*
-                                        (left top right bottom filled)))
-        (medium-draw-polygon* stream (expand-rectangle-coords left top right bottom)
-                              t filled)))
+        (generate-medium-recording-body draw-rectangle-output-record
+					medium-draw-rectangle*
+                                        (left top right bottom filled))
+	(medium-draw-polygon* stream
+			      (expand-rectangle-coords left top right bottom)
+                              t
+			      filled))))
 
 (defmethod* (setf output-record-position) :around
     (nx ny (record draw-rectangle-output-record))
@@ -2113,6 +2118,7 @@ according to the flags RECORD and DRAW."
    (stream-replay stream region))
 
 (defmethod scroll-extent :around ((stream output-recording-stream) x y)
+  (declare (ignore x y))
   (when (stream-drawing-p stream)
     (call-next-method)))
 
@@ -2234,6 +2240,7 @@ according to the flags RECORD and DRAW."
 ;;; Debugging hacks
 
 (defmethod count-records (r)
+  (declare (ignore r))
   1)
 
 (defmethod count-records ((r compound-output-record))

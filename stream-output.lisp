@@ -213,39 +213,25 @@
 (defclass standard-extended-output-stream (extended-output-stream
                                            standard-output-stream)
   ((cursor :accessor stream-text-cursor)
-   (foreground :initarg :foreground
-	       :initform +black+
-	       :reader stream-foreground)
-   (background :initarg :background
-	       :initform +white+
-	       :reader stream-background)
-   (text-style :initarg :text-style
-	       :initform *default-text-style*
-	       :reader stream-text-style)
-   (vspace :initarg :vertical-spacing
-	   :initform 2
-	   :reader stream-vertical-spacing)
-   (margin :initarg :text-margin
-	   :initform nil
-	   :writer (setf stream-text-margin))
-   (eol :initarg :end-of-line-action
-	:initform :wrap
-	:accessor stream-end-of-line-action)
-   (eop :initarg :end-of-page-action
-	:initform :scroll
-	:accessor stream-end-of-page-action)
-   (view :initarg :default-view
-	 :initform +textual-view+
-	 :accessor stream-default-view)
-   (baseline :initform 0
-	     :reader stream-baseline)
+   (foreground :initarg :foreground :reader stream-foreground)
+   (background :initarg :background :reader stream-background)
+   (text-style :initarg :text-style :reader stream-text-style)
+   (vspace :initarg :vertical-spacing :reader stream-vertical-spacing)
+   (margin :initarg :text-margin :writer (setf stream-text-margin))
+   (eol :initarg :end-of-line-action :accessor stream-end-of-line-action)
+   (eop :initarg :end-of-page-action :accessor stream-end-of-page-action)
+   (view :initarg :default-view :accessor stream-default-view)
+   (baseline :initform 0 :reader stream-baseline)
    ;; What is this? --GB
    (height :initform 0)
-
    ;; When the stream takes part in the space alloction protocol, this
    ;; remembers our demand:
    (seos-current-width  :initform 0)
-   (seos-current-height :initform 0) ))
+   (seos-current-height :initform 0))
+  (:default-initargs
+   :foreground +black+ :background +white+ :text-style *default-text-style*
+   :vertical-spacing 2 :text-margin nil :end-of-line-action :wrap
+   :end-of-page-action :scroll :default-view +textual-view+))
 
 (defmethod stream-force-output :after ((stream
 					standard-extended-output-stream))

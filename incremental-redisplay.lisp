@@ -63,7 +63,15 @@ Finally, the old tree is walked.  All updating-output-records in state
 (defclass updating-output-stream-mixin (extended-output-stream)
   ((redisplaying-p :reader stream-redisplaying-p :initform nil)
    (do-note-output-record :accessor do-note-output-record :initform t)
-   (id-map :accessor id-map :initform nil)))
+   (id-map :accessor id-map :initform nil)
+   (incremental-redisplay :type (member t nil)
+			  :initform nil
+			  :initarg :incremental-redisplay
+			  :accessor pane-incremental-redisplay)
+   (updating-record :accessor updating-record
+		    :initarg :updating-record :initform nil
+		    :documentation "For incremental output, holds the
+   top level updating-output-record.")))
 
 (defgeneric redisplayable-stream-p (stream))
 
@@ -72,6 +80,11 @@ Finally, the old tree is walked.  All updating-output-records in state
 
 (defmethod redisplayable-stream-p ((stream updating-output-stream-mixin))
   t)
+
+(defmethod pane-needs-redisplay :around ((pane updating-output-stream-mixin))
+  (let ((redisplayp (call-next-method)))
+    (values redisplayp (or (not (pane-incremental-redisplay pane))
+			   (not *enable-updating-output*)))))
 
 (defclass updating-stream-state (complete-medium-state)
   ((cursor-x :accessor cursor-x :initarg :cursor-x :initform 0)
@@ -793,8 +806,12 @@ record is stored.")
    t))
 
 (defun convert-from-relative-to-absolute-coordinates (stream record)
-  (declare (ignore stream))
-  (output-record-position record))
+  (declare (ignore stream record))
+  "This compatibility function returns offsets that are suitable for
+  drawing records that are the children of `record'. In McCLIM this is
+  a noop because output records are kept in stream coordinates."
+  (values 0 0))
+
 
 ;;; Support for explicitly changing output records
 
@@ -880,3 +897,16 @@ record is stored.")
 
 (defmethod dump-updating-aux (record old-records stream)
   (write record :stream stream))
+
+(defmethod redisplay-frame-pane :around
+    (frame (pane updating-output-stream-mixin) &key force-p)
+  (cond ((or (not (pane-incremental-redisplay pane))
+	     (not *enable-updating-output*))
+	 (call-next-method))
+	((or (null (updating-record pane))
+	     force-p)
+	 (setf (updating-record pane)(updating-output (pane)
+				       (call-next-method frame pane
+							 :force-p force-p))))
+	(t (redisplay (updating-record pane) pane))))
+

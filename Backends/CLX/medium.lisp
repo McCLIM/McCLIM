@@ -530,7 +530,8 @@
                                  (max #x-8000 (min #x7FFF top))
                                  (max 0 (min #xFFFF (- right left)))
                                  (max 0 (min #xFFFF (- bottom top)))
-                                 filled) ))))))
+                                 filled)
+	    ))))))
 
 #+CLX-EXT-RENDER
 (defmethod medium-draw-rectangle-using-ink* ((medium clx-medium) (ink climi::uniform-compositum)
