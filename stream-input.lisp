@@ -436,7 +436,7 @@
 		      (:left +pointer-left-button+)
 		      (:middle +pointer-middle-button+)
 		      (:right +pointer-right-button+)
-		      (t (error "~S is not a known button")))))
+		      (t (error "~S is not a known button" device-name)))))
 	       (setq device-name real-device-name))))
       (let ((gesture-entry (list type device-name modifier-state)))
 	(if unique
@@ -520,7 +520,7 @@
 				      (:meta +meta-key+)
 				      (:super +super-key+)
 				      (:hyper +hyper-key+)
-				      (t (error "~S is not a known modifier")))
+				      (t (error "~S is not a known modifier" modifier)))
 				    result)
 	for modifier in modifiers
 	finally (return result)))
