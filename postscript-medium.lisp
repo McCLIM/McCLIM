@@ -152,6 +152,9 @@
       (coerce number 'single-float)
       number))
 
+(defun format-postscript-angle (angle)
+  (format-postscript-number (* angle (/ 180 pi))))
+
 (defmethod medium-draw-point* ((medium postscript-medium) x y)
   (let ((stream (postscript-medium-file-stream medium)))
     (with-graphics-state (stream)
@@ -241,26 +244,33 @@
                                 :start-angle start-angle
                                 :end-angle end-angle)))
     (multiple-value-bind (ndx1 ndy1 ndx2 ndy2) (ellipse-normal-radii* ellipse)
-      (let ((angle (atan* ndx1 ndy1))
-            (s1 (sqrt (+ (* ndx1 ndx1) (* ndy1 ndy1))))
-            (s2 (sqrt (+ (* ndx2 ndx2) (* ndy2 ndy2)))))
+      (let* ((angle (atan* ndx1 ndy1))
+             (s1 (sqrt (+ (* ndx1 ndx1) (* ndy1 ndy1))))
+             (s2 (sqrt (+ (* ndx2 ndx2) (* ndy2 ndy2))))
+             (tr (compose-transformation-with-scaling
+                  (make-rotation-transformation angle)
+                  s1 s2))
+             (start-angle (untransform-angle tr start-angle))
+             (end-angle (untransform-angle tr end-angle)))
         (with-graphics-state (stream)
           (format stream "matrix currentmatrix~%")
           (format stream "~A ~A translate~%"
                   (format-postscript-number center-x)
                   (format-postscript-number center-y))
           (format stream "~A rotate~%"
-                  (format-postscript-number (* 180 (/ angle pi))))
+                  (format-postscript-angle angle))
           (format stream "~A ~A scale~%"
                   (format-postscript-number s1) (format-postscript-number s2))
           (format stream "0 0 1 ~A ~A arc~%"
-                  (format-postscript-number (* 180 (/ (- start-angle angle) pi)))
-                  (format-postscript-number (* 180 (/ (- end-angle angle) pi))))
+                  (format-postscript-angle start-angle)
+                  (format-postscript-angle end-angle))
+          (when filled
+            (format stream "0 0 lineto~%"))
           (format stream "setmatrix~%")
           (postscript-line-style-and-color stream medium)
           (format stream (if filled
                              "fill~%"
-                             "stroke~%")))))))
+                           "stroke~%")))))))
 
 (defconstant +postscript-fonts+ '(:fix (:roman "Courier"
                                         :bold "Courier-Bold"
