@@ -1,6 +1,6 @@
 ;;; -*- Mode: Lisp; Syntax: ANSI-Common-Lisp; Package: CLIM-DEMO; Base: 10; Lowercase: Yes -*-
 
-;;;  (c) copyright 2001 by 
+;;;  (c) copyright 2001 by
 ;;;           Julien Boninfante (boninfan@emi.u-bordeaux.fr)
 
 ;;; This library is free software; you can redistribute it and/or
@@ -14,8 +14,8 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
 
@@ -52,23 +52,30 @@
 
 (defmethod handle-event :after ((pane clim-internals::light-pane) (event pointer-event))
   (declare (ignorable event))
-  (let ((label (clim-internals::gadget-label (clim-internals::radio-box-current-selection
-					      (slot-value *application-frame* 'radio-box)))))
+  (let ((label (gadget-label (radio-box-current-selection
+                              (slot-value *application-frame* 'radio-box)))))
     (cond ((string= label "O")
-	   (progn
-	     (sleep 3)
-	     (simulate-user-action (third (frame-panes *application-frame*)))))
+           (traffic-pause 3)
+           (simulate-user-action (find-pane-named *application-frame*
+                                                  'red)))
 	  ((string= label "G")
-	   (progn
-	     (sleep 5)
-	     (simulate-user-action (first (frame-panes *application-frame*)))))
+           (traffic-pause 5)
+           (simulate-user-action (find-pane-named *application-frame*
+                                                  'orange)))
 	  (t nil))))
 
+(defun traffic-pause (time)
+  (let ((time-left-window (find-pane-named *application-frame* 'time-left)))
+    (flet ((show-time (left)
+             (setf (gadget-value time-left-window)
+                   (format nil "~D" left))))
+      (loop for left from time downto 1
+         do (show-time left)
+            (sleep 1))
+      (show-time 0))))
+
 (defmethod simulate-user-action ((pane toggle-button))
-  (handle-event pane
-		(make-instance 'pointer-button-press-event))
-  (handle-event pane
-		(make-instance 'pointer-button-release-event)))
+  (setf (gadget-value pane :invoke-callback t) (not (gadget-value pane))))
 
 (defun callback-red (gadget value)
   (declare (ignorable gadget))
@@ -78,7 +85,7 @@
 
 (defun callback-orange (gadget value)
   (declare (ignore gadget))
-  (when value 
+  (when value
     (setf (clim-internals::gadget-current-color (slot-value *application-frame* 'light))
 	  (clim-internals::gadget-highlighted-color (slot-value *application-frame* 'light)))))
 
@@ -97,14 +104,24 @@
   (run-frame-top-level (make-application-frame 'traffic-lights)))
 
 (defmethod traffic-lights-frame-top-level ((frame application-frame))
-  (setf (slot-value *application-frame* 'light) (car (last (frame-panes *application-frame*)))
-	(slot-value *application-frame* 'radio-box)
-	(with-radio-box ()
-	 (first (frame-panes *application-frame*))
-	 (second (frame-panes *application-frame*))
-	 (radio-box-current-selection (third (frame-panes *application-frame*)))))
+  (setf (slot-value frame 'light) (find-pane-named frame 'light)
+        (slot-value frame 'radio-box) (find-pane-named frame 'radio-box))
   (clim-extensions:simple-event-loop))
 
+
+(defmacro make-color-chooser-toggle-button (name color label callback)
+  (let ((color-name (gensym "COLOR")))
+    `(let ((,color-name ,color))
+       (make-pane 'toggle-button
+                  :name ,name
+                  :label ,label
+                  :indicator-type :one-of
+                  :width 30
+                  :height 30
+                  :normal ,color-name
+                  :highlighted ,color-name
+                  :pushed-and-highlighted ,color-name
+                  :value-changed-callback ,callback))))
 
 (define-application-frame traffic-lights ()
   ((radio-box :initform nil)
@@ -115,31 +132,14 @@
 	      :normal +red+
 	      :highlighted +orange+
 	      :pushed-and-highlighted +green+)
-   (red-light :toggle-button
-	      :label "R"
-	      :value t
-	      :width 30
-	      :height 30
-	      :normal +red+
-	      :highlighted +red+
-	      :pushed-and-highlighted +red+
-	      :value-changed-callback 'callback-red)
-   (green-light :toggle-button
-		:label "G"
-		:value nil
-		:height 30
-		:normal +green+
-		:highlighted +green+
-		:pushed-and-highlighted +green+
-	        :value-changed-callback 'callback-green)
-   (orange-light :toggle-button
-		 :label "O"
-		 :value nil
-		 :height 30
-		 :normal +orange+
-		 :highlighted +orange+
-		 :pushed-and-highlighted +orange+
-		 :value-changed-callback 'callback-orange))
-   (:layouts
-    (default (horizontally () (vertically () red-light orange-light green-light) light)))
-   (:top-level (traffic-lights-frame-top-level . nil)))
+   (radio-box (with-radio-box ()
+                (radio-box-current-selection
+                 (make-color-chooser-toggle-button 'red +red+ "R" 'callback-red))
+                (make-color-chooser-toggle-button 'orange +orange+ "O" 'callback-orange)
+                (make-color-chooser-toggle-button 'green +green+ "G" 'callback-green)))
+   (time-left text-field
+              :editable-p nil
+              :value "0"))
+  (:layouts
+   (default (horizontally () (vertically (:spacing 10) radio-box time-left) light)))
+  (:top-level (traffic-lights-frame-top-level . nil)))
