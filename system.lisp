@@ -71,6 +71,7 @@
    "panes"
    "exports"
    "gadgets"
+   "menu"
 
    "clx-port"
    "clx-medium"
@@ -79,5 +80,6 @@
    
    "examples/calculator"
    "examples/colorslider"
+   "examples/menutest"
    ))
 
