@@ -56,9 +56,20 @@
 (defmethod deallocate-pixmap ((pixmap pixmap))
   (port-deallocate-pixmap (port (pixmap-sheet pixmap)) pixmap))
 
+(defmethod sheet-native-transformation ((pixmap mirrored-pixmap))
+  +identity-transformation+)
 
+(defmethod sheet-native-region ((pixmap mirrored-pixmap))
+  (make-rectangle* 0 0
+                   (pixmap-width pixmap)
+                   (pixmap-height pixmap)))
 
+(defmethod sheet-device-transformation ((pixmap mirrored-pixmap))
+  (medium-transformation (pixmap-medium pixmap)))
 
-
-
-
+(defmethod sheet-device-region ((pixmap mirrored-pixmap))
+  (region-intersection
+   (sheet-native-region pixmap)
+   (transform-region
+    (sheet-device-transformation pixmap)
+    (medium-clipping-region (pixmap-medium pixmap)))))
