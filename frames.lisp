@@ -534,11 +534,10 @@ FRAME-EXIT condition."))
 				      `((clim-internals::make-menu-bar
 					',class-name)))
 				     ((consp menu-bar)
-				      `((raising (:border-width 2 :background +Gray83+)
-					 (clim-internals::make-menu-bar
+				      `((clim-internals::make-menu-bar
 					  (make-command-table
 					   nil
-					   :menu ',menu-bar)))))
+					   :menu ',menu-bar))))
 				     (menu-bar
 				      `((clim-internals::make-menu-bar
 					 ',menu-bar)))
