@@ -4,7 +4,7 @@
 ;;;   Created: 1998-12-02 19:26
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: regions.lisp,v 1.14 2002/02/16 02:32:23 gilbert Exp $
+;;;       $Id: regions.lisp,v 1.15 2002/02/21 03:22:44 gilbert Exp $
 ;;; --------------------------------------------------------------------------------------
 ;;;  (c) copyright 1998,1999,2001 by Gilbert Baumann
 ;;;  (c) copyright 2001 by Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
@@ -80,31 +80,22 @@
 
 ;;; ---- Class Hierarchy -----------------------------------------------------------------
 
-(defclass bounding-rectangle () ())
+(define-protocol-class bounding-rectangle () ())
 
-(defclass region (design) ())
-(defclass path (region bounding-rectangle) ())
-(defclass area (region bounding-rectangle) ())
-(defclass region-set  (region bounding-rectangle) ())
-(defclass point (region bounding-rectangle) ())
-(defclass polyline (path) ())
-(defclass polygon (area) ())
-(defclass line (polyline) ())
-(defclass rectangle (polygon) ())
-(defclass ellipse (area) ())
-(defclass elliptical-arc (path) ())
+(define-protocol-class region (design) ())
+(define-protocol-class path (region bounding-rectangle) ())
+(define-protocol-class area (region bounding-rectangle) ())
+(define-protocol-class region-set  (region bounding-rectangle) ())
+(define-protocol-class point (region bounding-rectangle) ())
+(define-protocol-class polyline (path) ())
+(define-protocol-class polygon (area) ())
+(define-protocol-class line (polyline) ())
+(define-protocol-class rectangle (polygon) ())
+(define-protocol-class ellipse (area) ())
+(define-protocol-class elliptical-arc (path) ())
 
 (defclass nowhere-region (region) ())
 (defclass everywhere-region (region) ())
-
-(defun regionp (object)
-  (typep object 'region))
-
-(defun pathp (object)
-  (typep object 'path))
-
-(defun areap (object)
-  (typep object 'area))
 
 ;; coordinate is defined in coordinates.lisp
 
@@ -119,9 +110,6 @@
 (defgeneric region-intersects-region-p (region1 region2))
 
 ;; 2.5.1.2 Composition of CLIM Regions
-
-(defun region-set-p (object)
-  (typep object 'region-set))
 
 (defclass standard-region-union (region-set) 
   ((regions :initarg :regions :reader standard-region-set-regions)))
@@ -141,9 +129,6 @@
 (defgeneric region-difference (region1 region2))
 
 ;;; ---- 2.5.2 CLIM Point Objects --------------------------------------------------------
-
-(defun pointp (object)
-  (typep object 'point))
 
 (defclass standard-point (point)
   ((x :type coordinate :initarg :x)
@@ -186,12 +171,6 @@
 (defgeneric map-over-polygon-coordinates (fun polygon-or-polyline))
 (defgeneric map-over-polygon-segments (fun polygon-or-polyline))
 (defgeneric polyline-closed (polyline))
-
-(defun polylinep (object)
-  (typep object 'polyline))
-
-(defun polygonp (object)
-  (typep object 'polygon))
 
 (defclass standard-polyline (polyline)
   ((points :initarg :points)
@@ -318,9 +297,6 @@
 
 ;; Line protocol: line-start-point* line-end-point* 
 
-(defun linep (object)
-  (typep object 'line))
-
 (defclass standard-line (line)
   ((x1 :type coordinate :initarg :x1)
    (y1 :type coordinate :initarg :y1)
@@ -396,9 +372,6 @@
 
 ;; protocol:
 ;;     rectangle-edges*
-
-(defun rectanglep (object)
-  (typep object 'rectangle))
 
 (defclass standard-rectangle (rectangle)
   ((x1 :type coordinate :initarg :x1)
@@ -506,12 +479,6 @@
 
 (defclass standard-ellipse (ellipse elliptical-thing) ())
 (defclass standard-elliptical-arc (elliptical-arc elliptical-thing) ())
-
-(defun ellipsep (object)
-  (typep object 'ellipse))
-
-(defun elliptical-arc-p (object)
-  (typep object 'elliptical-arc))
 
 ;;; ---- 2.5.6.1 Constructor Functions for Ellipses and Elliptical Arcs in CLIM  ---------
 
@@ -2189,9 +2156,6 @@
     (values bx1 by1 bx2 by2)))
 
 ;;;; ====================================================================================================
-
-(defun bounding-rectangle-p (object)
-  (typep object 'bounding-rectangle))
 
 (defun make-bounding-rectangle (x1 y1 x2 y2)
   (setf x1 (coerce x1 'coordinate)
