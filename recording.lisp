@@ -1570,6 +1570,8 @@ were added."
     ;; will break other things.  -Hefner
     (setf start-angle (untransform-angle transform start-angle))
     (setf end-angle   (untransform-angle transform end-angle))
+    (when (reflection-transformation-p transform)
+      (rotatef start-angle end-angle))
     (multiple-value-bind (min-x min-y max-x max-y)
 	(bounding-rectangle* (make-ellipse* center-x center-y
 					    radius-1-dx radius-1-dy
