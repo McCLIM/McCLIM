@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.112 2003/03/14 20:55:12 gilbert Exp $
+;;; $Id: panes.lisp,v 1.113 2003/03/16 17:21:29 gilbert Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -93,8 +93,6 @@
 ;;
 ;; - SCROLLER-PANE
 ;;   . much!
-;;
-;; - CHANGE-SPACE-REQUIREMENTS et al
 ;;
 ;; - we still need to think about what should happen when children
 ;;   get disabled or adopted or disowned.
@@ -270,7 +268,8 @@
 
 (defclass layout-protocol-mixin ()
   ((space-requirement :accessor pane-space-requirement
-                      :initform nil)
+                      :initform nil
+                      :documentation "The cache of the space requirements of the pane. NIL means: need to recompute.")
    (current-width     :accessor pane-current-width
                       :initform nil)
    (current-height    :accessor pane-current-height
@@ -545,9 +544,47 @@
       (setf sr (make-space-requirement :width 100 :height 100)))
     (merge-user-specified-options pane sr)))
 
-;;
+(defmethod change-space-requirements :before ((pane space-requirement-options-mixin)
+                                              &key (width :nochange) (min-width :nochange) (max-width :nochange)
+                                                   (height :nochange) (min-height :nochange) (max-height :nochange)
+                                                   (x-spacing :nochange) (y-spacing :nochange)
+                                              &allow-other-keys)
+  (with-slots (user-width user-min-width user-max-width
+               user-height user-min-height user-max-height
+               (user-x-spacing x-spacing)
+               (user-y-spacing y-spacing))
+      pane
+    (unless (eq width      :nochange) (setf user-width      width))
+    (unless (eq min-width  :nochange) (setf user-min-width  min-width))
+    (unless (eq max-width  :nochange) (setf user-max-width  max-width))
+    (unless (eq height     :nochange) (setf user-height     height))
+    (unless (eq min-height :nochange) (setf user-min-height min-height))
+    (unless (eq max-height :nochange) (setf user-max-height max-height))
+    (unless (eq x-spacing  :nochange) (setf user-x-spacing  x-spacing))
+    (unless (eq y-spacing  :nochange) (setf user-y-spacing  y-spacing)) ))
 
-;;; LAYOUT-PROTOCOL-MIXIN
+;;;; LAYOUT-PROTOCOL-MIXIN
+
+;;; Note
+
+;; This is how I read the relevant section of the specification:
+;;
+;; - space is only allocated / composed when the space allocation
+;;   protocol is invoked, that is when layout-frame is called.
+;;
+;; - CHANGE-SPACE-REQUIREMENTS is only for
+;;   . reparsing the user space options
+;;   . flushing the space requirement cache of that pane.
+;;
+;; - when within CHANGING-SPACE-REQUIREMENTS, the method for
+;;   CHANGING-SPACE-REQUIREMENTS on the top level sheet should not
+;;   invoke the layout protocol but remember that the SR of the frame
+;;   LAYOUT-FRAME then is then called when leaving
+;;   CHANGING-SPACE-REQUIREMENTS.
+;;
+;; - NOTE-SPACE-REQUIREMENTS-CHANGED is solely for the user.
+;;
+;; --GB 2003-03-16
 
 (defmethod allocate-space :around ((pane layout-protocol-mixin) width height)
   (unless (and (eql (pane-current-width pane) width)
@@ -564,23 +601,104 @@
       (setf (pane-space-requirement pane)
             (call-next-method))))
 
-(defmethod change-space-requirements ((pane layout-protocol-mixin)
-                                      &rest space-req-keys &key resize-frame
-				      &allow-other-keys)
-  (declare (ignore resize-frame))
-  (setf (pane-space-requirement pane) nil)
-  (note-space-requirements-changed (sheet-parent pane) pane))
+;;; changing space requirements
 
-(defmethod note-space-requirements-changed :before ((sheet layout-protocol-mixin)
-                                                    (pane layout-protocol-mixin))
-  )
+;; Here is what we do:
+;;
+;; change-space-requirements (pane) :=
+;;   clear space requirements cache
+;;   call change-space-requirements on parent pane
+;;   call note-space-requirements-changed
+;;
+;; This is splitted into :before, primary and :after method to allow
+;; for easy overriding of change-space-requirements without needing to
+;; know the details of the space requirement cache and the
+;; note-space-requirements-changed notifications.
+;;
+;; The calls to change-space-requirements travel all the way up to the
+;; top-level-sheet-pane which then invokes the layout protocol calling
+;; layout-frame.
+;;
+;; In case this happens within changing-space-requirements layout
+;; frame is not called but simply recorded and then called when
+;; changing-space-requirements is left.
+;;
+;; No action is taken in note-space-requirements-changed. We leave
+;; that to the user.
 
-(defmethod note-space-requirements-changed ((pane pane) client)
-  (declare (ignore client))
+(defvar *changing-space-requirements* nil
+  "Bound to non-NIL while within the execution of CHANGING-SPACE-REQUIREMENTS.")
+
+(defvar *changed-space-requirements* nil
+  "A list of (frame pane resize-frame) tuples recording frames and their panes which
+   changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
+   [This is expected to change]")
+
+(defmethod change-space-requirements :before ((pane layout-protocol-mixin)
+                                              &rest space-req-keys
+                                              &key resize-frame &allow-other-keys)
+  (declare (ignore resize-frame space-req-keys))
+  ;; Clear the space requirements cache
   (setf (pane-space-requirement pane) nil)
   (setf (pane-current-width pane) nil)
-  (setf (pane-current-height pane) nil)
-  (change-space-requirements pane))
+  (setf (pane-current-height pane) nil) )
+
+(defmethod change-space-requirements ((pane layout-protocol-mixin)
+                                      &rest space-req-keys
+                                      &key resize-frame &allow-other-keys)
+  (declare (ignore resize-frame))
+  (change-space-requirements (sheet-parent pane) :resize-frame resize-frame))
+
+(defmethod change-space-requirements :after ((pane layout-protocol-mixin)
+                                             &rest space-req-keys
+                                             &key resize-frame &allow-other-keys)
+  (declare (ignore resize-frame space-req-keys))
+  (note-space-requirements-changed (sheet-parent pane) pane))
+
+(defmethod note-space-requirements-changed (pane client)
+  "Just a no-op fallback method."
+  nil)
+
+;;; CHANGING-SPACE-REQUIREMENTS macro
+
+(defmacro changing-space-requirements ((&key resize-frame layout) &body body)
+  `(invoke-while-changing-space-requirements (lambda () ,@body) :resize-frame ,resize-frame :layout layout))
+
+(defun invoke-with-changing-space-requirements (continuation &key resize-frame layout)
+  (cond (*changed-space-requirements*
+         ;; We are already within changing-space-requirements, so just
+         ;; call the body. This might however lead to surprising
+         ;; behavior in case the outer changing-space-requirements has
+         ;; resize-frame = NIL while the inner has resize-frame = T.
+         (funcall continuation))
+        (t
+         (let ((*changed-space-requirements* nil))
+           (let ((*changing-space-requirements* t))
+             (funcall continuation))
+           ;;
+           ;; Note: That 'resize-frame' and especially 'layout' are
+           ;; options to this strongly suggests that the authors of
+           ;; the clim specification may have meant that
+           ;; changing-space-requirements records space requirements
+           ;; of the *application-frame* only.
+           ;;
+           ;; We solve this by recording all frames but applying
+           ;; resize-frame and layout only to *application-frame*.
+           ;;
+           (dolist (q *changed-space-requirements*)
+             (destructuring-bind (frame pane resize-frame-2) q
+               (cond ((eq frame *application-frame*)
+                      (when layout
+                        (setf (frame-current-layout frame) layout))
+                      (cond (resize-frame
+                             (layout-frame frame))
+                            (t
+                             (layout-frame frame (bounding-rectangle-width pane) (bounding-rectangle-height pane)))))
+                     (t
+                      (cond (resize-frame-2
+                             (layout-frame frame))
+                            (t
+                             (layout-frame frame (bounding-rectangle-width pane) (bounding-rectangle-height pane)))))))) ))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -638,39 +756,6 @@
            (:line  (* (car x)
                       (stream-line-height pane)))))))
 
-(defvar *changing-space-requirements* nil
-  "Bound to non-NIL while within the execution of CHANGING-SPACE-REQUIREMENTS.")
-
-(defvar *changed-space-requirements* nil
-  "A list of ?? whose space requirements have changed during the current
-   execution of CHANGING-SPACE-REQUIREMENTS.")
-
-(defmacro changing-space-requirements ((&key resize-frame) &body body)
-  `(invoke-while-changing-space-requirements (lambda () ,@body) :resize-frame ,resize-frame))
-
-(defun invoke-while-changing-space-requirements (continuation &key resize-frame)
-  (let ((*changed-space-requirements* nil))
-    (let ((*changing-space-requirements* t))
-      (funcall continuation))
-    ;; now investiage the list of changed space-requirements ...
-    ))
-
-#+nil ; I don't know what this is supposed to achieve
-(defmethod change-space-requirements ((pane composite-pane)
-				      &key resize-frame
-				      (width nil width-p)
-				      (min-width nil min-width-p)
-				      (max-width nil max-width-p)
-				      (height nil height-p)
-				      (min-height nil min-height-p)
-				      (max-height nil max-height-p))
-  (declare (ignore width width-p min-width min-width-p max-width max-width-p
-		   height height-p min-height min-height-p max-height max-height-p))
-  (if resize-frame
-      ;; we didn't find the :resize-frame option in define-application-frame
-      (layout-frame (pane-frame pane))
-      (note-space-requirements-changed (sheet-parent pane) pane)))
-
 ;;; SINGLE-CHILD-COMPOSITE PANE
 
 (defclass single-child-composite-pane (sheet-single-child-mixin basic-pane) ())
@@ -694,7 +779,7 @@
   (when (sheet-child pane)
     (allocate-space (sheet-child pane) width height)))
 
-;;; TOP-LEVEL-SHEET
+;;;; TOP-LEVEL-SHEET
 
 (defclass top-level-sheet-pane (composite-pane)
   ()
@@ -703,12 +788,21 @@
 (defun top-level-sheet-pane-p (pane)
   (typep pane 'top-level-sheet-pane))
 
-(defmethod note-space-requirements-changed ((sheet graft) (pane top-level-sheet-pane))
-  (when (sheet-grafted-p pane)
-    (let ((sr (compose-space pane)))
-      (resize-sheet pane (space-requirement-width sr) (space-requirement-height sr))
-      (allocate-space pane (space-requirement-width sr) (space-requirement-height sr))
-      nil)))
+(defmethod change-space-requirements ((pane top-level-sheet-pane)
+                                      &rest space-req-keys
+                                      &key resize-frame &allow-other-keys)
+  (cond (*changing-space-requirements*
+         ;; just record what we have
+         (unless (find pane *changed-space-requirements* :key #'second)
+           (push (list (pane-frame pane) pane resize-frame)
+                 *changed-space-requirements*)))
+        (t
+         (let ((frame (pane-frame pane)))
+           ;; ### we miss the :resize-frame option
+           (cond (resize-frame
+                  (layout-frame frame))
+                 (t
+                  (layout-frame frame (bounding-rectangle-width pane) (bounding-rectangle-height pane))))))))
 
 (defmethod compose-space ((pane top-level-sheet-pane) &key width height)
   (declare (ignore width height))
@@ -766,6 +860,8 @@
 			 (event window-manager-delete-event))
   (frame-exit (pane-frame (event-sheet event))))
 
+;;;; UNMANAGED-TOP-LEVEL-SHEET-PANE
+
 (defclass unmanaged-top-level-sheet-pane (top-level-sheet-pane)
   ()
   (:documentation "Top-level sheet without window manager intervention"))
@@ -773,13 +869,27 @@
 (defmethod sheet-native-transformation ((sheet top-level-sheet-pane))
   +identity-transformation+)
 
-;;; SHEET
-
-;; FIXME: Should it exist ??? - I don't think so...
-#+nil
-(defmethod note-space-requirements-changed ((sheet sheet) (pane composite-pane))
-  (values))
-
+(defmethod change-space-requirements ((pane unmanaged-top-level-sheet-pane)
+                                      &rest space-req-keys
+                                      &key resize-frame &allow-other-keys)
+  ;; Special variant for unmanaged-top-level-sheet-pane. Since the
+  ;; pane is unmanaged there is no window manager which can offer the
+  ;; user options to resize this top level pane.
+  ;;
+  ;; This should however be changed by turning on the :resize-frame
+  ;; option of the frame of the unmanaged-top-level-sheet-pane and
+  ;; handle it in the method on top-level-sheet.
+  ;;
+  ;; This is currently not done, since:
+  ;; . we obviously lack the :resize-frame option
+  ;; . of some reason the frame of e.g. a command-menu is the
+  ;;   application-frame. I am not sure if this is totally right.
+  ;;
+  ;; --GB 2003-03-16
+  (let ((w (space-requirement-width (compose-space pane)))
+        (h (space-requirement-height (compose-space pane))))
+    (resize-sheet pane w h)
+    (allocate-space pane w h) ))
 
 ;;;; box-layout-mixin
 
@@ -1736,28 +1846,19 @@
 
 ;;;; Accounting for changed space requirements
 
-; Well, this is definitely wrong - the second method will overwrite the first...
-; FIXME
-
-(defmethod note-space-requirements-changed ((pane viewport-pane) client)
+(defmethod change-space-requirements ((pane clim-extensions:viewport-pane) &rest ignore)
   (declare (ignore client))
-  (setf (pane-space-requirement pane) nil)
-  (setf (pane-current-width pane) nil)
-  (setf (pane-current-height pane) nil)
-  (change-space-requirements pane))
-
-(defmethod note-space-requirements-changed ((pane viewport-pane) scrollee)
-  ;; hmmm
-  (allocate-space scrollee
-                  (max (bounding-rectangle-width pane)
-                       (space-requirement-width (compose-space scrollee)))
+  (let ((client (first (sheet-children pane))))
+    (resize-sheet client (max (bounding-rectangle-width pane)
+                              (space-requirement-width (compose-space client)))
                   (max (bounding-rectangle-height pane)
-                       (space-requirement-height (compose-space scrollee)))) )
-
-(defmethod note-space-requirements-changed :after ((pane viewport-pane) scrollee)
-  ;; hmmm
-  (scroller-pane/update-scroll-bars (sheet-parent pane))
-  )
+                       (space-requirement-height (compose-space client))))
+    (allocate-space client
+                    (max (bounding-rectangle-width pane)
+                         (space-requirement-width (compose-space client)))
+                    (max (bounding-rectangle-height pane)
+                         (space-requirement-height (compose-space client))))
+    (scroller-pane/update-scroll-bars (sheet-parent pane))))
 
 ;;;; 
 
@@ -2021,6 +2122,7 @@
 	  (with-bounding-rectangle* (x1 y1 x2 y2)
 	    (stream-output-history pane)
 	    ;; Should we now get rid of the output history?
+            ;; Why should we? --GB 2003-03-16
 	    (reset-output-history pane)
 	    (let ((width (- x2 x1))
 		  (height (- y2 y1)))
@@ -2033,6 +2135,11 @@
 		    (call-next-method))))))
 	(call-next-method))))
 
+(defmethod compose-space ((pane clim-stream-pane) &key width height)
+  (let ((w (bounding-rectangle-width (stream-output-history pane)))
+        (h (bounding-rectangle-height (stream-output-history pane))))
+    (make-space-requirement :width  w :min-width  w :max-width +fill+
+                            :height h :min-height h :max-height +fill+)))
 
 (defmethod window-clear ((pane clim-stream-pane))
   (let ((output-history (pane-output-history pane)))
@@ -2167,7 +2274,9 @@
    :display-time nil
    :scroll-bars nil
    :default-view +pointer-documentation-view+
-   :height '(2 :line)
+   :height     '(2 :line)
+   :min-height '(2 :line)
+   :max-height '(2 :line)
    :text-style (make-text-style :sans-serif :roman :normal)
    :foreground +white+
    :background +black+
@@ -2311,9 +2420,3 @@
 (defmethod schedule-timer-event ((pane pane) token delay)
   (schedule-event pane (make-instance 'timer-event :token token :sheet pane) delay))
 
-;;;
-
-(defmethod compose-space :around ((pane command-menu-pane) &key width height)
-  (declare (ignorable pane width height))
-  (make-space-requirement :width (bounding-rectangle-width (stream-output-history pane))
-                          :height (bounding-rectangle-height (stream-output-history pane))))
