@@ -51,8 +51,7 @@
        ;(unless (eq clipping-region +everywhere+) 
        ; nil 
        (gl:glLoadIdentity)
-       (unwind-protect
-	   (progn ,@body)))))
+       (progn ,@body))))
 
 (defmacro activate-dash ()
   (let ((dashes (gensym)))
@@ -72,8 +71,7 @@
   `(with-OpenGL-graphics (,medium)
      (gl:glPointSize (coerce (line-style-thickness line-style) 'single-float))
      (gl:glBegin gl:GL_POINTS)
-     (unwind-protect
-	 (progn ,@body))
+     (progn ,@body)
      (gl:glEnd)))
 
 (defmethod medium-draw-point* ((medium opengl-medium) x y)
@@ -265,7 +263,8 @@
 	    ; no newline inside the string
 	      (multiple-value-bind (width ascent descent left right
 					  font-ascent direction first-not-done)
-		  (port-text-extents port text-style string :start start :end position-newline)
+		  (port-text-extents port text-style string
+				     :start start :end end)
 		(declare (type real width ascent descent)
 			 (ignorable left right font-ascent direction first-not-done))
 		(values width (+ ascent descent) width 0 ascent)))))))

@@ -530,10 +530,10 @@
   (let ((font (gensym)))
     `(let* ((,font (text-style-to-X-font ,port ,text-style))
 	    (,font-struct-name (xlib-gl:XQueryFont (opengl-port-display ,port) ,font)))
-       (prog1
-	   (unwind-protect
-	       (progn ,@body))
+       (unwind-protect
+	    (progn ,@body)
 	 (xlib-gl:free-xfontstruct ,font-struct-name)))))
+
 
 (defmethod text-style-height (text-style (port opengl-port))
   (declare (type text-style text-style))
@@ -617,13 +617,16 @@
 	(declare (type fixnum direction font_ascent ascent descent width left right))
 	(if (eq direction xlib-gl:FontLeftToRight)
 	    (setf left (xlib-gl:xfontstruct-max_bounds-lbearing font-struct)
-		  right (+ (* (xlib-gl:xfontstruct-max_bounds-width font-struct) (1- size))
-			   (xlib-gl:xfontstruct-max_bounds-rbearing font-struct)))
+		  right (+ (* (xlib-gl:xfontstruct-max_bounds-width font-struct)
+			      (1- size))
+			   (xlib-gl:xfontstruct-max_bounds-rbearing
+			    font-struct)))
 	    (setf right (xlib-gl:xfontstruct-max_bounds-rbearing font-struct)
-		  left (+ (* (xlib-gl:xfontstruct-max_bounds-width font-struct) (1- size))
-			  (xlib-gl:xfontstruct-max_bounds-lbearing font-struct))))
-	(setf result (list width ascent descent left right font_ascent direction nil))))
-    (apply #'values result)))
+		  left (+ (* (xlib-gl:xfontstruct-max_bounds-width font-struct)
+			     (1- size))
+			  (xlib-gl:xfontstruct-max_bounds-lbearing
+			   font-struct))))
+	(values width ascent descent left right font_ascent direction nil)))))
 
 
 (defmethod text-style-list-and-start ((port opengl-port) text-style)

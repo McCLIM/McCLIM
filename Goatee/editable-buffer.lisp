@@ -243,7 +243,7 @@
   (location* (buffer-end buf)))
 
 (defgeneric next-line (buffer &optional n &key position line pos)
-  (:documentation "Return the line N places from LINE, and a POS in it.
+  (:documentation "Return the line N lines from LINE, and a POS in it.
 If LINE is not given, uses the BUFFER's current line.
 If N is negative, goes backwards.
 POS is the position in the line to return as the second value (trimmed
@@ -286,14 +286,18 @@ if beyond the actual line's maximum)."))
 
 (defun delete-region (buf start end)  
   (if (eql (line start) (line end))
-      (buffer-delete-char* buf (line start) (pos start) (- (pos end) (pos start)))
+      (buffer-delete-char* buf (line start) (pos start)
+			   (- (pos end) (pos start)))
     (progn
-      (buffer-delete-char* buf (line start) (pos start) (- (line-last-point (line start)) (pos start)))
+      (buffer-delete-char* buf (line start) (pos start)
+			   (- (line-last-point (line start)) (pos start)))
       ;; didn't test this piece of code very well...
       (loop until (eql (line start) (line end))
         do (progn
              (buffer-close-line* buf (line start) 1)
-             (buffer-delete-char* buf (line start) (pos start) (- (line-last-point (line start)) (pos start)))))
+             (buffer-delete-char* buf (line start) (pos start)
+				  (- (line-last-point (line start))
+				     (pos start)))))
       (buffer-delete-char* buf (line start) (pos start) (pos end)))))
 
 (defmethod clear-buffer ((buf editable-buffer))

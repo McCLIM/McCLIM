@@ -55,7 +55,7 @@
 
 (defmethod port-register-signature ((port opengl-port) sheet)
  ;(declare (type immediate-repainting-mixin sheet))
-  (declare (type clim-repainting-mixing sheet))
+  (declare (type clim-repainting-mixin sheet))
   (let ((signature (get-signature)))
     (declare (type (unsigned-byte 24) signature))
     (with-slots (sheet->signature-dl signature->sheet) port
@@ -64,7 +64,7 @@
 
 (defmethod port-unregister-signature ((port opengl-port) sheet)
  ;(declare (type immediate-repainting-mixin sheet))
-  (declare (type clim-repainting-mixing sheet))
+  (declare (type clim-repainting-mixin sheet))
   (with-slots (sheet->signature-dl signature->sheet) port
     (let ((signature-and-dl (gethash sheet sheet->signature-dl)))
       (declare (type cons signature-and-dl))

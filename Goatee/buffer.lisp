@@ -39,8 +39,8 @@
   (make-instance (class-of loc) :line (line loc) :pos (pos loc)))
 
 ;;; basic-buffer must implement:
-;;; lines
-;;; tick
+;;; lines - returns the lines of a buffer
+;;; tick - a counter incremented after *any* change to a buffer
 ;;; size
 ;;; buffer-insert*
 ;;; buffer-delete-char*
@@ -131,7 +131,8 @@
 	  (values new-line 0))
 	(error 'buffer-bounds-error :buffer buf :line line :pos pos))))
 
-(defgeneric buffer-insert* (buffer thing line pos &key))
+(defgeneric buffer-insert* (buffer thing line pos &key)
+  (:documentation "Insert a THING (character or string) into BUFFER."))
 
 (defmethod buffer-insert* ((buffer basic-buffer-mixin) (c character) line pos
 			   &key)
@@ -353,22 +354,25 @@
 
 (defmethod initialize-instance :after ((obj extent) 
 				       &key start-line 
-					    start-pos
-					    (end-line start-line) 
-					    (end-pos start-pos)
-					    (start-state :closed)
-					    (end-state :closed))
-
-  (setf (slot-value obj 'bp-start)
-	(make-instance (if (eq start-state :open)
-			   'buffer-pointer
-			   'fixed-buffer-pointer)
-		       :line start-line :pos start-pos))
-  (setf (slot-value obj 'bp-end)
-	(make-instance (if (eq end-state :open)
-			   'fixed-buffer-pointer
-			   'buffer-pointer)
-		       :line end-line :pos end-pos))
+				       start-pos
+				       (end-line start-line) 
+				       (end-pos start-pos)
+				       (start-state :closed)
+				       (end-state :closed))
+  ;; Subclasses could provide values for bp-start and bp-end through
+  ;; initargs.
+  (unless (slot-boundp obj 'bp-start)
+    (setf (slot-value obj 'bp-start)
+	  (make-instance (if (eq start-state :open)
+			     'buffer-pointer
+			     'fixed-buffer-pointer)
+			 :line start-line :pos start-pos)))
+  (unless (slot-boundp obj 'bp-end)
+    (setf (slot-value obj 'bp-end)
+	  (make-instance (if (eq end-state :open)
+			     'fixed-buffer-pointer
+			     'buffer-pointer)
+			 :line end-line :pos end-pos)))
   (when (and start-line end-line)
     (record-extent-lines obj)))
 

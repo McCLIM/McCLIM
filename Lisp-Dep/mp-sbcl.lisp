@@ -120,12 +120,16 @@
 (defmacro without-scheduling (&body body)
   `(progn ,@body))
 
+(defparameter *atomic-queue*
+  #+xlib xlib::*conditional-store-queue*
+  #-xlib (sb-thread:make-waitqueue :name "atomic incf/decf"))
+
 (defmacro atomic-incf (place)
-  `(sb-thread::with-spinlock (xlib::*conditional-store-queue*)
+  `(sb-thread::with-spinlock (*atomic-queue*)
     (incf ,place)))
 
 (defmacro atomic-decf (place) 
-  `(sb-thread::with-spinlock (xlib::*conditional-store-queue*)
+  `(sb-thread::with-spinlock (*atomic-queue*)
     (decf ,place)))
 
 ;;; 32.3 Locks
