@@ -598,28 +598,21 @@
       (with-medium-options (sheet args)
         (if (coordinate<= y-radius x-radius)
             (let ((x1 (- center-x x-radius)) (x2 (+ center-x x-radius))
-                  (y1 (- center-y y-radius)) (y2 (+ center-y y-radius)))
+                  (y1 (- center-y y-radius)) (y2 (+ center-y y-radius)))              
               (if filled
-                  (progn (draw-rectangle* sheet x1 y1 x2 y2)
-                         (draw-circle* sheet x1 center-y y-radius
-                                       :start-angle (/ pi 2)
-                                       :end-angle (* pi 1.5))
-                         (draw-circle* sheet x2 center-y y-radius
-                                       :start-angle (* pi 1.5)
-                                       :end-angle (/ pi 2)))
-                  (progn (draw-lines* sheet (list x1 y1 x2 y1
-                                                  x1 y2 x2 y2))
-                         (draw-circle* sheet x1 center-y y-radius
-                                       :filled nil
-                                       :start-angle (* pi 0.5)
-                                       :end-angle   (* pi 1.5))
-                         (draw-circle* sheet x2 center-y y-radius
-                                       :filled nil
-                                       :start-angle (* pi 1.5)
-                                       :end-angle   (* pi 0.5)))))
+                  (draw-rectangle* sheet x1 y1 x2 y2)
+                  (draw-lines* sheet (list x1 y1 x2 y1 x2 y2 x1 y2)))              
+              (draw-circle* sheet x1 center-y y-radius
+                            :filled filled
+                            :start-angle (* pi 1.5)
+                            :end-angle (* pi 2.5))
+              (draw-circle* sheet x2 center-y y-radius
+                            :filled filled
+                            :start-angle (* pi 0.5)
+                            :end-angle (* pi 1.5)))
             (with-rotation (sheet (/ pi 2) (make-point center-x center-y))
               (draw-oval* sheet center-x center-y y-radius x-radius
-                          :filled filled))))))
+                          :filled filled)) ))))
 
 
 ;;; Pixmap functions

@@ -569,7 +569,9 @@
     (error "MEDIUM-DRAW-ELLIPSE* not yet implemented for non axis-aligned ellipses."))
   (with-transformed-position ((sheet-native-transformation (medium-sheet medium))
                               center-x center-y)
-    (let* ((arc-angle (- end-angle start-angle))
+    (let* ((start-angle (- start-angle))
+           (end-angle   (- end-angle))
+           (arc-angle (- end-angle start-angle))
            (arc-angle (if (< end-angle 0)
                           (+ (* pi 2) arc-angle)
                           arc-angle)))
@@ -579,7 +581,7 @@
           (xlib:draw-arc mirror gc
                          (round (- center-x radius-dx)) (round (- center-y radius-dy))
                          (round (* radius-dx 2)) (round (* radius-dy 2))
-                         start-angle arc-angle
+                         (mod start-angle (* 2 pi)) arc-angle
                          filled))))))
 
 (defmethod medium-draw-circle* ((medium clx-medium) center-x center-y radius start-angle end-angle filled)
