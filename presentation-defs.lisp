@@ -29,12 +29,14 @@
 (defparameter *ptype-t-class* (get-ptype-metaclass 't))
 
 (define-presentation-type expression ()
+  :options (auto-activate)
   :inherit-from t)
 
 (defparameter *ptype-expression-class* (get-ptype-metaclass 'expression))
 
 (define-presentation-type form ()
-  :inherit-from `expression)
+  :options (auto-activate)
+  :inherit-from `((expression) :auto-activate ,auto-activate))
 
 (defparameter *ptype-form-class* (get-ptype-metaclass 'form))
 
@@ -1645,3 +1647,14 @@
   (type-key parameters options type
    stream view default default-supplied-p present-p query-identifier))
 
+(define-presentation-method accept ((type form) stream (view textual-view)
+				    &key (default nil defaultp) default-type)
+  (let* ((object (funcall *sys-read-preserving-whitespace* stream))
+	 (ptype (presentation-type-of object)))
+    (unless (presentation-subtypep ptype 'form)
+      (setq ptype 'form))
+    (if auto-activate
+	(values object ptype)
+	(loop for c = (read-char stream)
+	      until (activation-gesture-p c)
+	      finally (return (values object ptype))))))

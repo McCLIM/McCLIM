@@ -29,6 +29,34 @@
   #-(or excl cmu clisp sbcl openmcl lispworks)
   (error "GET-ENVIRONMENT-VARIABLE not implemented"))
 
+;;; It would be nice to define this macro in terms of letf, but that
+;;; would change the top-levelness of the enclosed forms.
+
+#+excl
+(defmacro with-system-redefinition-allowed (&body body)
+  `(progn
+     (eval-when (:compile-toplevel :load-toplevel :execute)
+       (setf (excl:package-definition-lock (find-package :common-lisp)) nil))
+     ,@body
+     (eval-when (:compile-toplevel :load-toplevel :execute)
+       (setf (excl:package-definition-lock (find-package :common-lisp)) t))))
+
+#+openmcl
+(defmacro with-system-redefinition-allowed (&body body)
+  `(progn
+     (eval-when (:compile-toplevel :load-toplevel :execute)
+       (setq ccl::*warn-if-redefine-kernel* nil))
+     ,@body
+     (eval-when (:compile-toplevel :load-toplevel :execute)
+       (setq ccl::*warn-if-redefine-kernel* t))))
+
+;;; XXX Should do something for recent CMUCL with package locks.
+
+#-(or excl openmcl)
+(defmacro with-system-redefinition-allowed (&body body)
+  `(progn
+     ,@body))
+
 (defun last1 (list)
   "Last element of LIST."
   (first (last list)))

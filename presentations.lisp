@@ -1067,7 +1067,8 @@ function lambda list"))
 			  ,@real-body))))
 	      (setf (nth (type-arg-position gf) method-ll) type-var)
 	      `(defmethod ,(generic-function-name gf) ,@qualifiers ,method-ll
-		 ,decls
+		 ,@(when decls
+		     (list decls))
 		 (block ,name
 		   ,@real-body)))))))))
 
@@ -1243,7 +1244,7 @@ and used to ensure that presentation-translators-caches are up to date.")
 	   (gesture :select)
 	   (tester 'default-translator-tester testerp)
 	   (tester-definitive (if testerp nil t))
-	   (documentation nil documentationp)
+	   (documentation nil)
 	   (pointer-documentation nil pointer-documentation-p)
 	   (menu t)
 	   (priority 0))
@@ -1280,8 +1281,8 @@ and used to ensure that presentation-translators-caches are up to date.")
 (defmacro define-presentation-action
     (name (from-type to-type command-table &key
 	   (gesture :select)
-	   (tester 'default-translator-tester testerp)
-	   (documentation nil documentationp)
+	   (tester 'default-translator-tester)
+	   (documentation nil)
 	   (pointer-documentation nil pointer-documentation-p)
 	   (menu t)
 	   (priority 0))

@@ -134,4 +134,62 @@
   ()
   (funcall *completion-possibilities-continuation*))
 
+;;; Support for accepting subforms of a form.
 
+(define-presentation-type subform ()
+  :inherit-from 'form)
+
+(define-presentation-type list-terminator ()
+  :inherit-from 't)
+
+(define-presentation-translator subform-reader
+    (form subform global-command-table
+     :gesture :select
+     :pointer-documentation "subform")
+  (object)
+  object)
+
+#+openmcl
+(defvar *sys-%read-list-expression* #'ccl::%read-list-expression)
+
+;;; For passing arguments to the call to %read-list-expression.
+;;; Gross, but not as gross as using presentation type options.
+
+(defvar *dot-ok*)
+(defvar *termch*)
+
+(defun whitespacep (char)
+  (or (char= char #\Space)
+      (char= char #\Newline)
+      (char= char #\Return)
+      (char= char #\Tab)))
+
+#+openmcl
+(with-system-redefinition-allowed
+(define-presentation-method accept ((type subform) stream (view textual-view)
+				    &key default default-type)
+  (declare (ignore default default-type))
+  (multiple-value-bind (val valid)
+      (funcall *sys-%read-list-expression* stream *dot-ok* *termch*)
+    (if valid
+	(values val 'subform)
+	(values nil 'list-terminator))))
+
+(defun ccl::%read-list-expression (stream *dot-ok* &optional (*termch* #\)))
+  (if (typep stream 'input-editing-stream)
+      (progn
+	;; Eat "whitespace" so it is not deleted by presentation-replace-input
+	(let ((gesture (read-gesture :stream stream :timeout 0 :peek-p t)))
+	  (when (and gesture
+		     (or (activation-gesture-p gesture)
+			 (delimiter-gesture-p gesture)
+			 (and (characterp gesture)
+			      (whitespacep gesture))))  
+	    (read-gesture :stream stream)))
+	(multiple-value-bind (object type)
+	    (accept 'subform :stream stream :prompt nil)
+	  (values object (if (presentation-subtypep type 'list-terminator)
+			     nil
+			     t))))
+      (funcall *sys-%read-list-expression* stream *dot-ok* *termch*)))
+) 					; with-system-redefinition-allowed

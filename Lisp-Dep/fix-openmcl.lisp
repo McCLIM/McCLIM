@@ -23,7 +23,10 @@
   (:import-from :ccl #:class-prototype #:class-precedence-list
 		#:class-direct-superclasses #:generic-function-methods
 		#:method-specializers #:compute-applicable-methods
-		#:funcallable-standard-class #:slot-definition-name)
+		#:funcallable-standard-class
+		#:class-name
+		
+		#:class-direct-subclasses)
   (:export #:validate-superclass #:class-finalized-p
 	   #:finalize-inheritance ccl::class-prototype
 	   ccl::class-precedence-list ccl::class-direct-superclasses
@@ -37,7 +40,18 @@
 	   ccl::ensure-class
 	   #:compute-applicable-methods-using-classes
 	   #:extract-specializer-names #:extract-lambda-list
-	   #:class-slots))
+	   #:class-slots
+	   ccl::class-name
+	   #:class-direct-slots
+	   #:slot-definition-type
+	   #:slot-definition-allocation
+	   #:slot-definition-initargs
+	   #:slot-definition-initfunction
+	   #:slot-definition-initform
+	   #:slot-definition-readers
+	   #:slot-definition-writers
+	   #:generic-function-name
+	   #:class-direct-subclasses))
 
 
 (in-package :clim-mop)
@@ -99,8 +113,71 @@
 	into required
 	finally (return (nconc required tail))))
 
+;;; Fake slot definition metaobject protocol, for describe and
+;;; listener
+
+(defclass slot-definition ()
+  ((slot-class :reader slot-class :initarg :slot-class)
+   (allocation :reader slot-definition-allocation :initarg :allocation)
+   (ccl-slot :reader ccl-slot :initarg :ccl-slot)))
+
+(defclass direct-slot-definition (slot-definition)
+  ())
+
+(defclass effective-slot-definition (slot-definition)
+  ())
+
 (defmethod class-slots ((class standard-class))
-  (append (ccl::class-instance-slots class) (ccl::class-class-slots class)))
+  (nconc (mapcar #'(lambda (slot)
+		     (make-instance 'effective-slot-definition
+				    :slot-class class
+				    :allocation :instance
+				    :ccl-slot slot))
+		 (ccl::class-instance-slots class))
+	 (mapcar #'(lambda (slot)
+		     (make-instance 'effective-slot-definition
+				    :slot-class class
+				    :allocation :class
+				    :ccl-slot slot))
+		 (ccl::class-class-slots class))))
+
+(defmethod class-slots ((class standard-class))
+  (nconc (mapcar #'(lambda (slot)
+		     (make-instance 'direct-slot-definition
+				    :slot-class class
+				    :allocation :instance
+				    :ccl-slot slot))
+		 (ccl::class-direct-instance-slots class))
+	 (mapcar #'(lambda (slot)
+		     (make-instance 'direct-slot-definition
+				    :slot-class class
+				    :allocation :class
+				    :ccl-slot slot))
+		 (ccl::class-direct-class-slots class))))
+
+(defmethod slot-definition-name ((slot-definition slot-definition))
+  (ccl:slot-definition-name (ccl-slot slot-definition)))
+  
+(defmethod slot-definition-type ((slot-definition slot-definition))
+  (ccl:slot-definition-type (ccl-slot slot-definition)))
+
+(defmethod slot-definition-initargs ((slot-definition slot-definition))
+  (ccl:slot-definition-initargs (ccl-slot slot-definition)))
+
+(defmethod slot-definition-initfunction ((slot-definition slot-definition))
+  (ccl:slot-definition-initfunction (ccl-slot slot-definition)))
+
+(defmethod slot-definition-initform ((slot-definition slot-definition))
+  (ccl:slot-definition-initform (ccl-slot slot-definition)))
+
+(defmethod slot-definition-readers ((slot direct-slot-definition))
+  (ccl:slot-readers (slot-class slot) (slot-definition-name slot)))
+
+(defmethod slot-definition-writers ((slot direct-slot-definition))
+  (ccl:slot-writers (slot-class slot) (slot-definition-name slot)))
+
+(defmethod generic-function-name (gf)
+  (ccl::function-name gf))
 
 (defpackage :clim-lisp-patch
   (:use)

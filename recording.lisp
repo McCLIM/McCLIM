@@ -1137,11 +1137,10 @@ were added."
                     ;; coord-seq is a coord-vector. So we morph a possible
                     ;; coord-seq argument into a vector.
                     (let (,@(when (member 'coord-seq args)
-                                  (list `(coord-seq
-                                          (transform-positions (medium-transformation medium)
-                                                               (if (vectorp coord-seq)
-                                                                   coord-seq
-                                                                 (coerce coord-seq 'vector)))))))
+                                  `((coord-seq
+				     (if (vectorp coord-seq)
+					 coord-seq
+					 (coerce coord-seq 'vector))))))
                       (make-instance ',class-name
                                      :stream stream
                                      ,@arg-list))))
@@ -1187,9 +1186,10 @@ were added."
 	 (coordinate= (slot-value record 'point-y) point-y))))
 
 (def-grecording draw-points ((coord-seq-mixin gs-line-style-mixin) coord-seq)
-  ;; coord-seq has already been transformed
-  (let ((border (graphics-state-line-style-border graphic medium)))
-    (coord-seq-bounds coord-seq border)))
+  (let ((transformed-coord-seq (transform-positions coord-seq))
+	(border (graphics-state-line-style-border graphic medium)))
+    (setf (slot-value graphic 'coord-seq) transformed-coord-seq)
+    (coord-seq-bounds transformed-coord-seq border)))
 
 (def-grecording draw-line ((gs-line-style-mixin)
 			   point-x1 point-y1 point-x2 point-y2)
@@ -1232,8 +1232,10 @@ were added."
 	 (coordinate= (slot-value record 'point-y2) point-y2))))
 
 (def-grecording draw-lines ((coord-seq-mixin gs-line-style-mixin) coord-seq)
-  (let ((border (graphics-state-line-style-border graphic medium)))
-    (coord-seq-bounds coord-seq border)))
+  (let ((transformed-coord-seq (transform-positions coord-seq))
+	(border (graphics-state-line-style-border graphic medium)))
+    (setf coord-seq transformed-coord-seq)
+    (coord-seq-bounds transformed-coord-seq border)))
 
 ;;; (setf output-record-position) and predicates for draw-lines-output-record
 ;;; are taken care of by methods on superclasses.
@@ -1351,9 +1353,12 @@ were added."
 
 (def-grecording draw-polygon ((coord-seq-mixin gs-line-style-mixin)
 			      coord-seq closed filled)
-  (let ((border (graphics-state-line-style-border graphic medium)))
-    (polygon-record-bounding-rectangle
-     coord-seq closed filled line-style border (medium-miter-limit medium))))
+  (let ((transformed-coord-seq (transform-positions coord-seq))
+	(border (graphics-state-line-style-border graphic medium)))
+    (setf coord-seq transformed-coord-seq)
+    (polygon-record-bounding-rectangle transformed-coord-seq
+				       closed filled line-style border
+				       (medium-miter-limit medium))))
 
 (defrecord-predicate draw-polygon-output-record (closed filled)
   (and (if-supplied (closed)

@@ -19,21 +19,7 @@
 
 (in-package :common-lisp)
 
-#+excl
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (setf (excl:package-definition-lock (find-package :common-lisp)) nil))
-
-#+openmcl
-(defmacro with-system-redefinition-allowed (&body body)
-  `(let ((ccl::*warn-if-redefine-kernel* nil))
-     ,@body))
-
-#-openmcl
-(defmacro with-system-redefinition-allowed (&body body)
-  `(progn
-     ,@body))
-
-(with-system-redefinition-allowed
+(clim-internals::with-system-redefinition-allowed
   (defun describe (thing &optional stream)
     (if (null stream)
 	(setq stream *standard-output*)
@@ -49,7 +35,7 @@
 ;;; (or EXTENDED-OUTPUT-STREAM OUTPUT-RECORDING-STREAM)
 ;;; but CLIM-STREAM-PANE is used instead.
 
-(with-system-redefinition-allowed
+(clim-internals::with-system-redefinition-allowed
   (defmethod describe-object ((thing t) stream)
     (let ((*print-array* nil))
       (clim:present thing (clim:presentation-type-of thing)
@@ -180,7 +166,4 @@
 	       (format stream "      ~v@A: <unbound>~%" width
 		       (clim-mop:slot-definition-name slot)))))))
 
-#+excl
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (setf (excl:package-definition-lock (find-package :common-lisp)) t))
 

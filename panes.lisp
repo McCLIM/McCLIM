@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.131 2003/08/12 23:17:46 gilbert Exp $
+;;; $Id: panes.lisp,v 1.132 2003/10/01 21:35:27 moore Exp $
 
 (in-package :clim-internals)
 
@@ -2371,33 +2371,40 @@
 				    &allow-other-keys)
   (with-keywords-removed (options (:type :scroll-bars :border-width))
     ;; The user space requirement options belong to the scroller ..
-    (let ((user-sr
-	   (loop for key in '(:width :height :max-width :max-height :min-width :min-height)
-		 nconc (let ((value (getf options key nil)))
-			 (unless (eq value :compute)
-			   (remf options key)
-			   (and value
-				(list key value)))))))
-      (let ((pane (apply #'make-pane type (append options
+    (let* ((space-keys '(:width :height :max-width :max-height
+			 :min-width :min-height))
+	   (user-sr nil)
+	   (pane-options nil)
+	   (borderp (and border-width (> border-width 0))))
+      (loop  for (key value) on options by #'cddr
+	     if (and (member key space-keys :test #'eq)
+		     (not (eq value :compute)))
+	      nconc (list key value) into space-options
+	     else
+	      nconc (list key value) into other-options
+	     end
+	     finally (progn
+		       (setq user-sr space-options)
+		       (setq pane-options other-options)))
+      (let ((pane (apply #'make-pane type (append pane-options
 						  (unless (or scroll-bars
-							      (and border-width (> border-width 0))))))))
+							      borderp)
+						    user-sr)))))
 	(when scroll-bars
 	  (setq pane (apply #'make-pane 'scroller-pane
 			    :scroll-bar scroll-bars
 			    :contents (list (make-pane 'viewport-pane
 						       :contents (list pane)))
-			    (unless (and border-width (> border-width 0))
+			    (unless borderp
 			      user-sr))))
-	(when (and border-width (> border-width 0))
+	(when borderp
 	  (setq pane (make-pane 'border-pane
 				:border-width border-width
-				:contents (list pane)
-				))
+				:contents (list pane)))
 	  ;; bright, I begin to hate the border-pane
 	  (setf pane (apply #'make-pane 'vrack-pane
 			    :contents (list pane)
 			    user-sr)))
-
 	pane))))
 
 (defun make-clim-interactor-pane (&rest options)
