@@ -19,8 +19,8 @@
 
 ;;; TODO:
 ;;; - Use DRAWING-OPTIONS, MOVE-CURSOR in I-S-O-W-B
-;;; - Gap computation in :RECTANGLE
-;;; - Implement :OVAL, :DROP-SHADOW, :UNDERLINE
+;;; - Gap computation
+;;; - Implement :DROP-SHADOW, :UNDERLINE
 
 (in-package :CLIM-INTERNALS)
 
@@ -73,3 +73,10 @@
                      (- left gap) (- top gap)
                      (+ right gap) (+ bottom gap)
                      :filled nil)))
+
+(define-border-type :oval (&key stream left top right bottom)
+  (let ((gap 3)) ; FIXME
+    (draw-oval* stream
+                (/ (+ left right) 2) (/ (+ top bottom) 2)
+                (+ (/ (- right left) 2) gap) (+ (/ (- bottom top) 2) gap)
+                :filled nil)))
