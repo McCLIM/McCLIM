@@ -78,10 +78,10 @@
     (with-slots (first-point-x first-point-y canvas-pixmap) pane
       (let ((pixmap-width (round (bounding-rectangle-width (sheet-region pane))))
 	    (pixmap-height (round (bounding-rectangle-height (sheet-region pane)))))
-	(copy-from-pixmap canvas-pixmap 0 0 pixmap-width pixmap-height pane 0 0)
-	(deallocate-pixmap canvas-pixmap)
-	(setf canvas-pixmap nil)
 	(when (and first-point-x first-point-y)
+          (copy-from-pixmap canvas-pixmap 0 0 pixmap-width pixmap-height pane 0 0)
+          (deallocate-pixmap canvas-pixmap)
+          (setf canvas-pixmap nil)
 	  (with-slots (clim-demo::line-width clim-demo::current-color) *application-frame*
 	    (let* ((x (pointer-event-x event))
 		   (y (pointer-event-y event))
@@ -139,6 +139,57 @@
                        mode))
 	     :width width :height height))
 
+(define-command com-exit ()
+  (throw 'exit nil))
+
+(define-command com-undo ()
+  (let* ((output-history (stream-current-output-record *standard-output*))
+         (record (first (last (output-record-children output-history)))))
+    (unless (null record)
+      (with-output-recording-options (*standard-output* :record nil)
+        (with-bounding-rectangle* (x1 y1 x2 y2) record
+                                  (draw-rectangle* *standard-output* x1 y1 x2 y2 :ink +background-ink+)
+                                  (delete-output-record record output-history)
+                                  (push record (clim-fig-redo-list *application-frame*))
+                                  (replay-output-record output-history *standard-output*
+                                                        (make-rectangle* x1 y1 x2 y2)))))))
+
+(define-command com-redo ()
+  (let* ((output-history (stream-current-output-record *standard-output*))
+         (record (pop (clim-fig-redo-list *application-frame*))))
+    (when record
+      (with-output-recording-options (*standard-output* :record nil)
+        (with-bounding-rectangle* (x1 y1 x2 y2) record
+          (draw-rectangle* *standard-output* x1 y1 x2 y2 :ink +background-ink+)
+          (add-output-record record output-history)
+          (replay-output-record output-history *standard-output*
+                                (make-rectangle* x1 y1 x2 y2)))))))
+
+(define-command com-clear ()
+  (let ((output-history (stream-current-output-record *standard-output*)))
+    (with-output-recording-options (*standard-output* :record nil)
+      (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region *standard-output*)
+                                (draw-rectangle* *standard-output* x1 y1 x2 y2 :ink +background-ink+)))
+    (setf (clim-demo::clim-fig-redo-list *application-frame*)
+          (append (output-record-children output-history)
+                  (clim-demo::clim-fig-redo-list *application-frame*)))
+    (clear-output-record output-history)))
+
+(make-command-table 'file-command-table
+		    :errorp nil
+		    :menu '(("Exit" :command com-exit)))
+
+(make-command-table 'edit-command-table
+		    :errorp nil
+		    :menu '(("Undo" :command com-undo)
+			    ("Redo" :command com-redo)
+                            ("Clear" :command com-clear)))
+
+(make-command-table 'menubar-command-table
+		    :errorp nil
+		    :menu '(("File" :menu file-command-table)
+                            ("Edit" :menu edit-command-table)))
+
 (define-application-frame clim-fig ()
   ((drawing-mode :initform :point :accessor clim-fig-drawing-mode)
    (redo-list :initform nil :accessor clim-fig-redo-list)
@@ -146,6 +197,7 @@
    (line-width :initform 1 :accessor clim-fig-line-width))
   (:panes
    (canvas :canvas)
+   (menu-bar (climi::make-menu-bar 'menubar-command-table :height 25))
    (line-width-slider :slider
 		      :label "Line Width"
 		      :value 1
@@ -182,51 +234,25 @@
    (brown-button (make-colored-button +brown+))
    (orange-button (make-colored-button +orange+))
 
-   (clear :push-button
-         :label "Clear"
-         :activate-callback
-         #'(lambda (x)
-             (declare (ignore x))
-             (let ((output-history (stream-current-output-record *standard-output*)))
-               (with-output-recording-options (*standard-output* :record nil)
-                 (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region *standard-output*)
-                   (draw-rectangle* *standard-output* x1 y1 x2 y2 :ink +background-ink+)))
-               (setf (clim-demo::clim-fig-redo-list *application-frame*)
-                     (append (output-record-children output-history)
-                             (clim-demo::clim-fig-redo-list *application-frame*)))
-               (clear-output-record output-history))))
    (undo :push-button
          :label "Undo"
-         :activate-callback
-         #'(lambda (x)
-             (declare (ignore x))
-             (let* ((output-history (stream-current-output-record *standard-output*))
-                    (record (first (last (output-record-children output-history)))))
-                 (unless (null record)
-                   (with-output-recording-options (*standard-output* :record nil)
-                     (with-bounding-rectangle* (x1 y1 x2 y2) record
-                       (draw-rectangle* *standard-output* x1 y1 x2 y2 :ink +background-ink+)
-                       (delete-output-record record output-history)
-		       (push record (clim-fig-redo-list *application-frame*))
-                       (replay-output-record output-history *standard-output*
-                                             (make-rectangle* x1 y1 x2 y2))))))))
+         :activate-callback #'(lambda (x)
+                                (declare (ignore x))
+                                (com-undo)))
    (redo :push-button
          :label "Redo"
-         :activate-callback
-         #'(lambda (x)
-             (declare (ignore x))
-             (let* ((output-history (stream-current-output-record *standard-output*))
-                    (record (pop (clim-fig-redo-list *application-frame*))))
-	       (when record
-		 (with-output-recording-options (*standard-output* :record nil)
-                   (with-bounding-rectangle* (x1 y1 x2 y2) record
-                     (draw-rectangle* *standard-output* x1 y1 x2 y2 :ink +background-ink+)
-		     (add-output-record record output-history)
-		     (replay-output-record output-history *standard-output*
-					   (make-rectangle* x1 y1 x2 y2)))))))))
+         :activate-callback #'(lambda (x)
+                                (declare (ignore x))
+                                (com-redo)))
+   (clear :push-button
+          :label "Clear"
+          :activate-callback #'(lambda (x)
+                                 (declare (ignore x))
+                                 (com-clear))))
    (:layouts
     (default
       (vertically ()
+        menu-bar
         (horizontally ()
           (vertically (:width 150)
             (tabling (:height 60)
@@ -245,4 +271,6 @@
   (let ((*standard-input* (frame-standard-input frame))
 	(*standard-output* (frame-standard-output frame))
 	(*query-io* (frame-query-io frame)))
-    (loop (read-command (frame-pane frame)))))
+    (catch 'exit
+      (loop (read-command (frame-pane frame))))
+    (destroy-port (climi::port frame))))
