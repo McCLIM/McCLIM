@@ -33,7 +33,10 @@
                  (declare (ignore ignore))
                  (cond ((null frame)    ;; I broke this logic, sorry.. -Hefner
                         (setq frame
-                          (run-frame-top-level (make-application-frame demo-frame-class))))
+                          (run-frame-top-level
+			   (make-application-frame
+			    demo-frame-class
+			    :calling-frame *application-frame*))))
                        (t
                         #+nil
                         (destroy-frame frame)))))))

@@ -52,7 +52,7 @@
 ;;; XXX All these slots should move to a mixin or to standard-application-frame.
 ;;; -- moore
 
-(define-protocol-class  application-frame (presentation-history-mixin)
+(define-protocol-class  application-frame ()
   ((port :initform nil
 	 :initarg :port
 	 :accessor port)
@@ -184,7 +184,8 @@ FRAME-EXIT condition."))
   (:documentation "Called when a pane receives or loses the keyboard
 input focus. This is a McCLIM extension."))
 
-(defclass standard-application-frame (application-frame)
+(defclass standard-application-frame (application-frame
+				      presentation-history-mixin)
   ((event-queue :initarg :frame-event-queue
                 :initarg :input-buffer
                 :initform nil
@@ -194,12 +195,21 @@ input focus. This is a McCLIM extension."))
    (documentation-state :accessor frame-documentation-state
 			:initform nil
 			:documentation "Used to keep of track of what
-  needs to be rendered in the pointer documentation frame.")))
+  needs to be rendered in the pointer documentation frame.")
+   (calling-frame :reader frame-calling-frame
+		  :initarg :calling-frame
+		  :initform nil
+		  :documentation "The frame that is the parent of this
+frame, if any")))
 
 ;;; Support the :input-buffer initarg for compatibility with "real CLIM"
 
 (defmethod initialize-instance :after ((obj standard-application-frame)
-                                       &key &allow-other-keys)  
+                                       &key &allow-other-keys)
+  (when (and (frame-calling-frame obj)
+	   (null (frame-event-queue obj)))
+    (setf (frame-event-queue obj)
+	  (frame-event-queue (frame-calling-frame obj))))
   (unless (frame-event-queue obj)
     (setf (frame-event-queue obj)
           (make-instance 'port-event-queue))))
@@ -419,9 +429,12 @@ input focus. This is a McCLIM extension."))
 	   'command-line-read-remaining-arguments-for-partial-command)
 	  (prompt "Command: "))
   (loop
-   (let* ((*standard-input*  (frame-standard-input frame))
-	  (*standard-output* (frame-standard-output frame))
-	  (*query-io* (frame-query-io frame))
+   (let* ((*standard-input*  (or (frame-standard-input frame)
+				 *standard-input*))
+	  (*standard-output* (or (frame-standard-output frame)
+				 *standard-output*))
+	  (query-io  (frame-query-io frame))
+	  (*query-io* (or query-io *query-io*))
 	  (*pointer-documentation-output* (frame-pointer-documentation-output
 					   frame))
 	  ;; during development, don't alter *error-output*
@@ -433,7 +446,7 @@ input focus. This is a McCLIM extension."))
      (restart-case
 	 (progn
 	   (redisplay-changed-panes frame)
-	   (if *query-io*
+	   (if query-io
 	       ;; We don't need to turn the cursor on here, as Goatee has its own
 	       ;; cursor which will appear. In fact, as a sane interface policy,
 	       ;; leave it off by default, and hopefully this doesn't violate the
