@@ -585,3 +585,13 @@ STREAM in the direction DIRECTION."
        and collect var into new-arg-list
      end
      finally (return (values bindings new-arg-list))))
+
+(defun make-keyword (obj)
+  "Turn OBJ into a keyword"
+  (etypecase obj
+    (keyword
+     obj)
+    (symbol
+     (intern (symbol-name obj) :keyword))
+    (string
+     (intern (string-upcase obj) :keyword))))

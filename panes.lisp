@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.151 2005/02/22 07:02:18 ahefner Exp $
+;;; $Id: panes.lisp,v 1.152 2005/03/14 22:03:05 tmoore Exp $
 
 (in-package :clim-internals)
 
@@ -536,6 +536,66 @@ order to produce a double-click")
 (defclass standard-space-requirement-options-mixin (space-requirement-options-mixin)
   ())
 
+(defun merge-one-option
+    (pane foo user-foo user-min-foo user-max-foo min-foo max-foo)
+  
+
+  ;; NOTE: The defaulting for :min-foo and :max-foo is different from MAKE-SPACE-REQUIREMENT.
+  ;;       MAKE-SPACE-REQUIREMENT has kind of &key foo (min-foo 0) (max-foo +fill+)
+  ;;       While user space requirements has &key foo (min-foo foo) (max-foo foo).
+  ;;       I as a user would pretty much expect the same behavior, therefore I'll take the
+  ;;       following route:
+  ;;       When the :foo option is given, I'll let MAKE-SPACE-REQUIREMENT decide.
+  ;;   
+  ;; old code:
+  ;;
+  ;; ;; Then we resolve defaulting. sec 29.3.1 says:
+  ;; ;; | If either of the :max-width or :min-width options is not
+  ;; ;; | supplied, it defaults to the value of the :width option. If
+  ;; ;; | either of the :max-height or :min-height options is not
+  ;; ;; | supplied, it defaults to the value of the :height option.
+  ;; (setf user-max-foo  (or user-max-foo user-foo)
+  ;;       user-min-foo  (or user-min-foo user-foo))
+  ;;       --GB 2003-01-23
+
+  (when (and (null user-max-foo) (not (null user-foo)))
+    (setf user-max-foo (space-requirement-max-width
+			(make-space-requirement
+			 :width (spacing-value-to-device-units pane foo)))))
+  (when (and (null user-min-foo) (not (null user-foo)))
+    (setf user-min-foo (space-requirement-min-width
+			(make-space-requirement
+			 :width (spacing-value-to-device-units pane foo)))))
+	    
+  ;; when the user has no idea about the preferred size just take the
+  ;; panes preferred size.
+  (setf user-foo (or user-foo foo))
+  (setf user-foo (spacing-value-to-device-units pane user-foo))
+
+  ;; dito for min/max
+  (setf user-min-foo (or user-min-foo min-foo)
+	user-max-foo (or user-max-foo max-foo))
+	    
+  ;; | :max-width, :min-width, :max-height, and :min-height can
+  ;; | also be specified as a relative size by supplying a list of
+  ;; | the form (number :relative). In this case, the number
+  ;; | indicates the number of device units that the pane is
+  ;; | willing to stretch or shrink.
+  (labels ((resolve-relative (dimension sign base)
+	     (if (and (consp dimension) (eq (car dimension) :relative))
+		 (+ base (* sign (cadr dimension)))
+		 (spacing-value-to-device-units pane dimension))))
+    (setf user-min-foo (and user-min-foo
+			    (resolve-relative user-min-foo  -1 user-foo))
+	  user-max-foo (and user-max-foo
+			    (resolve-relative user-max-foo  +1 user-foo))))
+	    
+  ;; Now we have two space requirements which need to be 'merged'.
+  (setf min-foo (clamp user-min-foo min-foo max-foo)
+	max-foo (clamp user-max-foo min-foo max-foo)
+	foo     (clamp user-foo     min-foo max-foo))
+  (values foo min-foo max-foo))
+
 (defmethod merge-user-specified-options ((pane space-requirement-options-mixin)
 					 sr)
   ;; ### I want proper error checking and in case there is an error we 
@@ -543,74 +603,30 @@ order to produce a double-click")
   ;;     garbage passed in here.
   (multiple-value-bind (width min-width max-width height min-height max-height)
 		       (space-requirement-components sr)
-    
-    (dada ((foo width height))
-	  (let ((user-foo     (pane-user-foo pane))
-		(user-min-foo (pane-user-min-foo pane))
-		(user-max-foo (pane-user-max-foo pane)))
+    (multiple-value-bind (new-width new-min-width new-max-width)
+	(merge-one-option pane
+			  width
+			  (pane-user-width pane)
+			  (pane-user-min-width pane)
+			  (pane-user-max-width pane)
+			  min-width
+			  max-width)
+      (multiple-value-bind (new-height new-min-height new-max-height)
+	  (merge-one-option pane
+			    height
+			    (pane-user-height pane)
+			    (pane-user-min-height pane)
+			    (pane-user-max-height pane)
+			    min-height
+			    max-height)
+	(make-space-requirement
+	 :width      new-width
+	 :min-width  new-min-width
+	 :max-width  new-max-width
+	 :height     new-height
+	 :min-height new-min-height
+	 :max-height new-max-height)))))
 
-	    '(format *trace-output*
-		    "~&~S: ~S: [~S ~S ~S]" pane 'user-foo user-min-foo user-foo user-max-foo)
-
-            ;; NOTE: The defaulting for :min-foo and :max-foo is different from MAKE-SPACE-REQUIREMENT.
-            ;;       MAKE-SPACE-REQUIREMENT has kind of &key foo (min-foo 0) (max-foo +fill+)
-            ;;       While user space requirements has &key foo (min-foo foo) (max-foo foo).
-            ;;       I as a user would pretty much expect the same behavior, therefore I'll take the
-            ;;       following route:
-            ;;       When the :foo option is given, I'll let MAKE-SPACE-REQUIREMENT decide.
-            ;;   
-            ;; old code:
-            ;;
-	    ;; ;; Then we resolve defaulting. sec 29.3.1 says:
-	    ;; ;; | If either of the :max-width or :min-width options is not
-	    ;; ;; | supplied, it defaults to the value of the :width option. If
-	    ;; ;; | either of the :max-height or :min-height options is not
-	    ;; ;; | supplied, it defaults to the value of the :height option.
-	    ;; (setf user-max-foo  (or user-max-foo user-foo)
-            ;;       user-min-foo  (or user-min-foo user-foo))
-            ;;       --GB 2003-01-23
-
-            (when (and (null user-max-foo) (not (null user-foo)))
-              (setf user-max-foo (space-requirement-max-width
-                                  (make-space-requirement :width (spacing-value-to-device-units pane foo)))))
-            (when (and (null user-min-foo) (not (null user-foo)))
-              (setf user-min-foo (space-requirement-min-width
-                                  (make-space-requirement :width (spacing-value-to-device-units pane foo)))))
-	    
-	    ;; when the user has no idea about the preferred size just take the
-	    ;; panes preferred size.
-	    (setf user-foo (or user-foo foo))
-	    (setf user-foo (spacing-value-to-device-units pane user-foo))
-
-	    ;; dito for min/max
-	    (setf user-min-foo (or user-min-foo min-foo)
-		  user-max-foo (or user-max-foo max-foo))
-	    
-	    ;; | :max-width, :min-width, :max-height, and :min-height can
-	    ;; | also be specified as a relative size by supplying a list of
-	    ;; | the form (number :relative). In this case, the number
-	    ;; | indicates the number of device units that the pane is
-	    ;; | willing to stretch or shrink.
-	    (labels ((resolve-relative (dimension sign base)
-		       (if (and (consp dimension) (eq (car dimension) :relative))
-			   (+ base (* sign (cadr dimension)))
-			   (spacing-value-to-device-units pane dimension))))
-	      (setf user-min-foo  (and user-min-foo  (resolve-relative user-min-foo  -1 user-foo))
-		    user-max-foo  (and user-max-foo  (resolve-relative user-max-foo  +1 user-foo))))
-	    
-	    ;; Now we have two space requirements which need to be 'merged'.
-	    (setf min-foo (clamp user-min-foo min-foo max-foo)
-		  max-foo (clamp user-max-foo min-foo max-foo)
-		  foo     (clamp user-foo     min-foo max-foo))))
-    
-    ;; done!
-    (make-space-requirement
-     :width      width
-     :min-width  min-width
-     :max-width  max-width
-     :height     height
-     :min-height min-height
-     :max-height max-height) ))
 
 (defmethod compose-space :around ((pane space-requirement-options-mixin)
                                   &key width height)
@@ -1239,108 +1255,113 @@ order to produce a double-click")
 
 ;;;;
 
-(dada
- ((major   width        height)
-  (minor   height       width)
-  (xbox    hbox         vbox)
-  (xrack   hrack        vrack)
-  (xically horizontally vertically)
-  (xical   horizontal   vertical)
-  (major-spacing x-spacing y-spacing)
-  (minor-spacing x-spacing y-spacing)  )
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun make-box-macro-contents (contents)
+    (loop
+       for content in contents
+       collect (if (and (consp content)
+			(or (realp (car content))
+			    (member (car content) '(+fill+ :fill))))
+		   `(list ',(car content) ,(cadr content))
+		   content))))
 
- (defmacro xically ((&rest options
-                     &key (equalize-minor t)
-                     &allow-other-keys)
-                    &body contents)
-   (remf options :equalize-minor)
-   `(make-pane ',(if equalize-minor
-                     'xrack-pane
-                   'xbox-pane)
-               ,@options
-               :contents (list ,@(mapcar (lambda (content)
-                                           (cond ((and (consp content)
-                                                       (or (realp (first content))
-                                                           (member (first content) '(+fill+ :fill))))
-                                                  `(list ',(first content)
-                                                         ,(second content)))
-                                                 (t
-                                                  content)))
-                                         contents))))
- ; here is where they are created
- (defclass xbox-pane (box-layout-mixin
-                      composite-pane
-                      permanent-medium-sheet-output-mixin ;arg!
-                      )
+(macrolet ((frob (macro-name box rack equalize-arg equalize-key)
+	     (let ((equalize-key (make-keyword equalize-arg)))
+	       `(defmacro ,macro-name ((&rest options
+					      &key (,equalize-arg t)
+					      &allow-other-keys)
+				       &body contents)
+		  (with-keywords-removed (options (,equalize-key))
+		    `(make-pane (if ,,equalize-arg
+				    ',',rack
+				    ',',box)
+				,@options
+				:contents (list ,@(make-box-macro-contents
+						   contents))))))))
+  (frob horizontally hbox-pane hrack-pane equalize-height :equalize-height)
+  (frob vertically vbox-pane vrack-pane equalize-width :equalize-width))
+
+(defclass box-pane (box-layout-mixin
+		    composite-pane
+		    permanent-medium-sheet-output-mixin ;arg!
+		    )
+  ()
+  (:documentation "Superclass for hbox-pane and vbox-pane that provides the
+		    initialization common to both."))
+
+(defmethod initialize-instance :after ((pane box-pane) &key contents)
+  (labels ((parse-box-content (content)
+	     "Parses a box/rack content and returns a BOX-CLIENT instance."
+	     ;; ### we need to parse more
+	     (cond
+	       ;; <pane>
+	       ((panep content)
+		(make-instance 'box-client :pane content))
+	       ;; +fill+
+	       ((or (eql content +fill+)
+		    (eql content '+fill+)
+		    (eql content :fill))
+		(make-instance 'box-client
+			       :pane nil
+			       :fillp t))
+	       ;; (+fill+ <pane>)
+	       ((and (consp content)
+		     (or (member (car content) '(+fill+ :fill))
+			 (eql (car content) +fill+)))
+		(make-instance 'box-client
+			       :pane (cadr content)
+			       :fillp t))
+	       ;; <n>
+	       ;;
+	       ;; what about something like (30 :mm) ?
+	       ;;
+	       ((and (realp content) (>= content 0))
+		(make-instance 'box-client
+			       :pane nil
+			       :fixed-size content))
+
+	       ;; (<n> pane)
+	       ((and (consp content)
+		     (realp (car content))
+		     (>= (car content) 0)
+		     (consp (cdr content))
+		     (panep (cadr content))
+		     (null (cddr content)))
+		(let ((number (car content))
+		      (child  (cadr content)))
+		  (if (< number 1)
+		      (make-instance 'box-client
+				     :pane child
+				     :proportion number)
+		      (make-instance 'box-client
+				     :pane child
+				     :fixed-size number))))
+
+	       (t
+		(error "~S is not a valid element in the ~S option of ~S."
+		       content :contents pane)) )))
+
+    (let* ((clients  (mapcar #'parse-box-content contents))
+	   (children (remove nil (mapcar #'box-client-pane clients))))
+      ;;
+      (setf (box-layout-mixin-clients pane) clients)
+      (mapc (curry #'sheet-adopt-child pane) children))))
+
+(defclass hbox-pane (box-pane)
    ()
-   (:documentation "")
-   (:default-initargs
-       :box-layout-orientation :xical))
+  (:default-initargs :box-layout-orientation :horizontal))
 
- (defmethod initialize-instance :after ((pane xbox-pane) &key contents &allow-other-keys)
-   ;;
-   (labels ((parse-box-content (content)
-              "Parses a box/rack content and returns a BOX-CLIENT instance."
-              ;; ### we need to parse more
-              (cond
-                ;; <pane>
-                ((panep content)
-                 (make-instance 'box-client :pane content))
-                ;; +fill+
-                ((or (eql content +fill+)
-                     (eql content '+fill+)
-                     (eql content :fill))
-                 (make-instance 'box-client
-                                :pane nil
-                                :fillp t))
-                ;; (+fill+ <pane>)
-                ((and (consp content)
-                      (or (member (car content) '(+fill+ :fill))
-                          (eql (car content) +fill+)))
-                 (make-instance 'box-client
-                                :pane (cadr content)
-                                :fillp t))
-                ;; <n>
-                ;;
-                ;; what about something like (30 :mm) ?
-                ;;
-                ((and (realp content) (>= content 0))
-                 (make-instance 'box-client
-                                :pane nil
-                                :fixed-size content))
+(defclass vbox-pane (box-pane)
+  ()
+  (:default-initargs :box-layout-orientation :vertical))
 
-                ;; (<n> pane)
-                ((and (consp content)
-                      (realp (car content))
-                      (>= (car content) 0)
-                      (consp (cdr content))
-                      (panep (cadr content))
-                      (null (cddr content)))
-                 (let ((number (car content))
-                       (child  (cadr content)))
-                   (if (< number 1)
-                       (make-instance 'box-client
-                                      :pane child
-                                      :proportion number)
-                       (make-instance 'box-client
-                                      :pane child
-                                      :fixed-size number))))
-
-                (t
-                 (error "~S is not a valid element in the ~S option of ~S."
-                        content :contents pane)) )))
-
-     (let* ((clients  (mapcar #'parse-box-content contents))
-            (children (remove nil (mapcar #'box-client-pane clients))))
-       ;;
-       (setf (box-layout-mixin-clients pane) clients)
-       (mapc (curry #'sheet-adopt-child pane) children))))
-
- (defclass xrack-pane (rack-layout-mixin xbox-pane)
+(defclass hrack-pane (rack-layout-mixin hbox-pane)
    ()
-   (:default-initargs
-       :box-layout-orientation :xical))
- )
+   (:default-initargs :box-layout-orientation :horizontal))
+
+(defclass vrack-pane (rack-layout-mixin vbox-pane)
+   ()
+   (:default-initargs :box-layout-orientation :vertical))
 
 ;;; TABLE PANE
 
