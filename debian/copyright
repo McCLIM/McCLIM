@@ -1,0 +1,26 @@
+This package was debianized by Kevin M. Rosenberg <kmr@debian.org>
+in Nov 2002.
+
+Upstream Download: http://www.mikemac.com/mikemac/McCLIM/
+Upstream Author: Michael McDonald and contributors
+
+	
+Upstream Copyright Statement
+============================
+  Copyright (c) 1998-2002 Micheal McDonald,
+  Copyright (c) 2000 Iban Hatchondo
+  Copyright (c) 2000 Julien Boninfante
+  Copyright (c) 2000-2001 Robert Strandh
+  Copyright (c) 2001-2002 Gilbert Baumann, 
+  Copyright (c) 2001 Lionel Salabartan
+  Copyright (c) 2001 Arnaud Baumann
+  Copyright (c) 2002 Tim Moore
+  Copyright (c) 2002 Alexey Dejneka
+
+McCLIM is licensed under the terms of the Lesser GNU Public License,
+known as the LGPL.  The LGPL.1 is stored on a Debian system in the
+file /usr/share/common-licenses/LGPL.
+
+McCLIM is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+FITNESS FOR A PARTICULAR PURPOSE.

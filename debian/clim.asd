@@ -1,0 +1,182 @@
+;;; -*- Mode: Lisp; Package: User -*-
+
+;;;  (c) copyright 1998,1999,2000 by Michael McDonald (mikemac@mikemac.com)
+;;;  (c) copyright 2000 by 
+;;;           Robert Strandh (strandh@labri.u-bordeaux.fr)
+;;;  (c) copyright 2002 by Kevin Rosenberg <kevin@rosenberg.net>
+
+;;; This library is free software; you can redistribute it and/or
+;;; modify it under the terms of the GNU Library General Public
+;;; License as published by the Free Software Foundation; either
+;;; version 2 of the License, or (at your option) any later version.
+;;;
+;;; This library is distributed in the hope that it will be useful,
+;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;;; Library General Public License for more details.
+;;;
+;;; You should have received a copy of the GNU Library General Public
+;;; License along with this library; if not, write to the 
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; Boston, MA  02111-1307  USA.
+
+(in-package :common-lisp-user)
+
+#-asdf
+(error "This system definition requires ASDF")
+
+#+cmu
+(progn
+  (unless (fboundp 'ext:stream-read-char)
+    (unless (ignore-errors (ext:search-list "gray-streams:"))
+      (setf (ext:search-list "gray-streams:")
+	'("target:pcl/" "library:subsystems/")))
+    (load "gray-streams:gray-streams-library"))
+  #-CLX
+  (require :clx))
+
+(pushnew :CLIM *features*)
+(pushnew :MCCLIM *features*)
+
+#+asdf (use-package #:asdf)
+
+#+asdf
+(defmacro clim-defsystem ((module &key depends-on) &rest components)
+  `(defsystem ,module
+    ,@(and depends-on `(:depends-on ,depends-on))
+    :components
+    (,@(let ((previous nil))
+	    (mapcar
+	     #'(lambda (pkg)
+		 (prog1
+		     (if previous
+			 `(:file ,pkg :depends-on (,previous))
+			 `(:file ,pkg))
+		   (setq previous pkg)))
+	     ,components)))))
+
+(clim-defsystem (:clim-lisp)
+  ;; First possible patches
+  "patch"
+  #+:CMU       "Lisp-Dep/fix-cmu"
+  #+:EXCL      "Lisp-Dep/fix-acl"
+  #+:SBCL      "Lisp-Dep/fix-sbcl"
+  #+:OPENMCL   "Lisp-Dep/fix-openmcl"
+  "package")
+
+(clim-defsystem (:clim-core :depends-on (:clim-lisp))
+   "decls"
+
+   #.(OR
+      #+(AND :CMU :MP (NOT :PTHREAD))  "Lisp-Dep/mp-cmu"
+      #+(AND :SBCL :MP (NOT :PTHREAD)) "Lisp-Dep/mp-sbcl"
+      #+:EXCL                          "Lisp-Dep/mp-acl"
+      #+:OPENMCL                       "Lisp-Dep/mp-openmcl"
+      #| fall back |#                  "Lisp-Dep/mp-nil")
+   "utils"
+   "defresource"
+   "setf-star"
+   
+   "design"
+   "X11-colors"
+   "coordinates"
+   "transforms"
+   "regions"
+
+   "sheets"
+   "pixmap"
+   
+   "events"
+
+   "ports" ; depends on events
+   "grafts"
+   "medium"
+   "output"
+
+   "input"
+   "repaint"
+   "graphics"
+   "views"
+   "stream-output"
+   "recording"
+   "encapsulate"
+   "stream-input"			; depends on WITH-ENCAPSULATING-STREAM
+)
+
+(clim-defsystem (:goatee-core :depends-on (:clim-core))
+  "Goatee/conditions"
+  "Goatee/dbl-list"
+  "Goatee/flexivector"
+  "Goatee/buffer"
+  "Goatee/editable-buffer"
+  "Goatee/editable-area"
+  "Goatee/clim-area"
+  "Goatee/goatee-command"
+  "Goatee/editing-stream"
+  )
+
+;;; CLIM-PostScript is not a backend in the normal sense.
+;;; It is an extension (Chap. 35.1 of the spec) and is an
+;;; "included" part of McCLIM. Hence the defsystem is here.
+(clim-defsystem (:clim-postscript :depends-on (:clim-core))
+   "Backends/PostScript/package"
+   "Backends/PostScript/paper"
+   "Backends/PostScript/class"
+   "Backends/PostScript/font"
+   "Backends/PostScript/graphics"
+   "Backends/PostScript/sheet"
+   "Backends/PostScript/afm"
+   "Backends/PostScript/standard-metrics"
+   )
+
+(clim-defsystem (:clim :depends-on (:clim-core :goatee-core :clim-postscript))
+   "text-formatting"
+   "input-editing"
+   "presentations"
+   "presentation-defs"
+   "pointer-tracking" ; depends on WITH-INPUT-CONTEXT
+   "commands"
+   "frames"
+   "incremental-redisplay"
+   "panes"
+   "gadgets"
+   "menu"
+   "table-formatting"
+   "graph-formatting"
+   "bordered-output"
+   "builtin-commands"
+   "dialog" ; depends on table formatting
+   "describe"
+   "Experimental/menu-choose" ; depends on table formatting, presentations
+   )
+
+(load (merge-pathnames "Backends/CLX/system" *clim-directory*))
+#+gl(load (merge-pathnames "Backends/OpenGL/system" *clim-directory*))
+
+(clim-defsystem (:clim-looks :depends-on (:clim-clx #+gl :clim-opengl))
+  "Looks/pixie")
+
+;;; Will depend on :goatee soon...
+;;; name of :clim-clx-user chosen by mikemac for no good reason
+(clim-defsystem (:clim-clx-user :depends-on (:clim :clim-clx)))
+
+;;; CLIM-Examples depends on having at least one backend loaded.
+;;; Which backend is the user's choice.
+(clim-defsystem (:clim-examples :depends-on (:clim :clim-looks))
+   "Examples/calculator"
+   "Examples/colorslider"
+   "Examples/menutest"
+   "Examples/address-book"
+   "Examples/traffic-lights"
+   "Examples/clim-fig"
+   "Examples/postscript-test"
+   ;; "Examples/puzzle"
+   "Examples/transformations-test"
+   ;; "Examples/sliderdemo"
+   "Examples/stream-test"
+   "Examples/presentation-test"
+   "Examples/gadget-test"
+   "Goatee/goatee-test")
+
+
+

@@ -1,0 +1,5 @@
+cl-mcclim (0.0-1) unstable; urgency=low
+
+  * Initial release.
+
+ -- Kevin M. Rosenberg <kmr@debian.org>  Fri,  8 Nov 2002 09:46:00 -0700
