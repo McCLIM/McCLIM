@@ -611,7 +611,7 @@
 
 (defmethod handle-event ((pane slider-pane) (event pointer-button-press-event))
   (with-slots (armed) pane
-     (unless armed
+     (when armed
        (setf armed ':button-press)
        (when (gadget-show-value-p pane)
 	 (setf (gadget-show-value-p pane) nil)))))
@@ -619,7 +619,7 @@
 
 (defmethod handle-event ((pane slider-pane) (event pointer-motion-event))
   (with-slots (armed) pane
-    (when armed
+    (when (eq armed ':button-press)
       (let ((value (convert-position-to-value pane (pointer-event-y event))))
 	(setf (gadget-value pane :invoke-callback nil) value)
 	(drag-callback pane (gadget-client pane) (gadget-id pane) value)
