@@ -45,6 +45,16 @@
     (presentation-mixin standard-sequence-output-record)
   ())
 
+(defvar *print-presentation-verbose* nil)
+
+(defmethod print-object ((self standard-presentation) stream)
+  (print-unreadable-object (self stream :type t :identity t)
+    (with-bounding-rectangle* (x1 y1 x2 y2)
+	self
+      (format stream "~D:~D,~D:~D ~S" x1 x2 y1 y2 (presentation-type self))
+      (when *print-presentation-verbose*
+	(format stream " ~S" (presentation-object self))))))
+
 (defgeneric ptype-specializer (type)
   (:documentation "The specializer to use for this type in a presentation
 method lambda list"))
@@ -1757,7 +1767,7 @@ and used to ensure that presentation-translators-caches are up to date.")
 					    (frame *application-frame*)
 					    event modifier-state button)
   (find-innermost-presentation-match input-context
-				     (stream-output-history window)
+				     top-record
 				     frame
 				     window
 				     x y
@@ -1789,6 +1799,8 @@ and used to ensure that presentation-translators-caches are up to date.")
 					  x y)
 	  (when ptype
 	    (funcall (cdr context) object ptype event options)))))))
+
+(defvar *input-context*)
 
 (defun throw-object-ptype (object type
 			   &key (input-context *input-context*) sheet)
