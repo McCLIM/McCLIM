@@ -251,7 +251,7 @@
   (if (> n (length +contrasting-colors+))
       (error "The argument N is out of range [1-~D]" (length +contrasting-colors+)))
   (if (null k)
-      (subseq +contrasting-colors+ n)
+      (subseq +contrasting-colors+ 0 n)
     (aref +contrasting-colors+ k)))
 
 #||
