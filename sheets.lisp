@@ -71,12 +71,6 @@ sheet-supports-only-one-child error to be signalled."))
 (defgeneric sheet-viewable-p (sheet))
 (defgeneric sheet-occluding-sheets (sheet child))
 
-;;; not for external use
-(defgeneric realize-hierarchy (sheet port))
-(defgeneric realize-sheet (sheet port))
-(defgeneric unrealize-hierarchy (sheet))
-(defgeneric unrealize-sheet (sheet))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Sheet geometry
@@ -558,6 +552,11 @@ sheet-supports-only-one-child error to be signalled."))
 (defmethod note-sheet-degrafted :after ((sheet mirrored-sheet))
   (unrealize-mirror (port sheet) sheet))
 
+(defmethod (setf sheet-region) :after (region (sheet mirrored-sheet))
+  (port-set-sheet-region (port sheet) sheet region))
+
+(defmethod (setf sheet-transformation) :after (transformation (sheet mirrored-sheet))
+  (port-set-sheet-transformation (port sheet) sheet transformation))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
