@@ -3,7 +3,7 @@
 ;;;     Title: Graph Formatting
 ;;;   Created: 2002-08-13
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: graph-formatting.lisp,v 1.9 2003/08/11 01:42:19 hefner1 Exp $
+;;;       $Id: graph-formatting.lisp,v 1.10 2004/07/24 15:07:50 moore Exp $
 ;;; ---------------------------------------------------------------------------
 
 ;;;  (c) copyright 2002 by Gilbert Baumann
@@ -159,6 +159,7 @@
              (apply #'invoke-with-new-output-record stream
                     #'cont
                     (find-graph-type graph-type)
+		    nil
                     :hash-table (make-hash-table :test duplicate-test)
                     graph-options))))
       (setf (output-record-position graph-output-record)

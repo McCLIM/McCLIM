@@ -63,10 +63,12 @@
 ;;; STANDARD-CELL-OUTPUT-RECORD class
 (defclass standard-cell-output-record (cell-output-record
                                        standard-sequence-output-record)
-  ((align-x    :initform :left :initarg :align-x    :reader cell-align-x)
-   (align-y    :initform :baseline :initarg :align-y    :reader cell-align-y)
-   (min-width  :initform 0   :initarg :min-width  :reader cell-min-width)
-   (min-height :initform 0   :initarg :min-height :reader cell-min-height)))
+  ((align-x    :initarg :align-x    :reader cell-align-x)
+   (align-y    :initarg :align-y    :reader cell-align-y)
+   (min-width  :initarg :min-width  :reader cell-min-width)
+   (min-height :initarg :min-height :reader cell-min-height))
+  (:default-initargs
+   :align-x :left :align-y :baseline :min-width 0 :min-height 0))
 
 ;;; If this were a primary method it wouldn't override the default
 ;;; behavior for the parent being a compound-output-record because of
@@ -125,17 +127,21 @@ table cell as argument."
                                     &allow-other-keys))
 
 (defmacro formatting-cell ((&optional (stream t)
-                            &rest more
-                            &key align-x align-y
-                                 min-width min-height
-                                 (record-type ''standard-cell-output-record))
+				      &rest more
+				      &key align-x align-y
+				      (min-width 0) (min-height 0)
+				      (record-type ''standard-cell-output-record))
                            &body body)
-  (declare (ignore align-x align-y min-width min-height record-type))
-  (setf stream (stream-designator-symbol stream))
-  (gen-invoke-trampoline 'invoke-formatting-cell
-                         (list stream)
-                         more
-                         body))
+  (setq stream (stream-designator-symbol stream))
+  (with-keywords-removed (more (:record-type :min-width :min-height))
+    (with-gensyms (record)
+      ;; Blow off order-of-evaluation issues for the moment...
+      `(with-new-output-record
+	   (,stream ,record-type ,record ,@more
+		    :min-width (parse-space ,stream ,min-width :horizontal)
+		    :min-height (parse-space ,stream ,min-height :vertical))
+	 (letf (((stream-cursor-position ,stream) (values 0 0)))
+	   ,@body)))))
 
 
 ;;; Generic block formatting
@@ -179,10 +185,14 @@ to a table cell within the row."))
   (map-over-block-cells function row-record))
 
 (defmacro formatting-row ((&optional (stream t)
-                           &key (record-type ''standard-row-output-record))
-                           &body body)
+			  &rest more
+			  &key (record-type ''standard-row-output-record))
+			  &body body)
   (setf stream (stream-designator-symbol stream))
-  (gen-invoke-trampoline 'invoke-formatting-row (list stream) (list record-type) body))
+  (with-gensyms (record)
+    (with-keywords-removed (more (:record-type))
+      `(with-new-output-record (,stream ,record-type ,record ,@more)
+	 ,@body))))
 
 (defgeneric invoke-formatting-row (stream cont record-type &rest initargs))
 
@@ -213,14 +223,21 @@ corresponding to a table cell within the column."))
   (map-over-block-cells function column-record))
 
 (defmacro formatting-column ((&optional (stream t)
-                                        &key (record-type ''standard-column-output-record))
+					&rest more
+                                        &key (record-type
+                                        ''standard-column-output-record))
+			     
                              &body body)
   (setf stream (stream-designator-symbol stream))
-  (gen-invoke-trampoline 'invoke-formatting-column (list stream) (list record-type) body))
+  (with-gensyms (record)
+    (with-keywords-removed (more (:record-type))
+      `(with-new-output-record (,stream ,record-type ,record ,@more)
+	 ,@body))))
 
 (defgeneric invoke-formatting-column (stream cont record-type &rest initargs))
 
 (defmethod invoke-formatting-column (stream cont record-type &rest initargs)
+
   (apply #'invoke-with-new-output-record stream (lambda (s r) r (funcall cont s)) record-type initargs))
 
 

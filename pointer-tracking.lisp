@@ -100,7 +100,7 @@
 (defun invoke-tracking-pointer-loop (frame sheet &rest args)
   (apply #'tracking-pointer-loop
 	 (make-tracking-pointer-state frame sheet args)
-	 frame sheet args)))
+	 frame sheet args))
 
 (defun default-tracking-handler (&rest args)
   (declare (ignore args))

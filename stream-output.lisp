@@ -342,7 +342,12 @@
 		 (scroll-horizontal stream width))
 		(:allow)))
 	    (unless (= start split)
-	      (stream-write-output stream string start split)
+	      (stream-write-output stream
+				   string
+				   (if (eql end split)
+				       width
+				       nil)
+				   start split)
 	      (setq cx (+ cx width))	      
           (with-slots (x y) (stream-text-cursor stream)
                 (setf x cx y cy)))
@@ -400,11 +405,16 @@
 
 
 
-(defgeneric stream-write-output (stream line &optional start end)
+(defgeneric stream-write-output (stream line string-width &optional start end)
   (:documentation
    "Writes the character or string LINE to STREAM. This function produces no
-more than one line of output i.e., doesn't wrap."))
-(defmethod stream-write-output (stream line &optional (start 0) end)
+more than one line of output i.e., doesn't wrap. If STRING-WIDTH is
+non-nil, that is used as the width where needed; otherwise
+STREAM-STRING-WIDTH will be called."))
+
+(defmethod stream-write-output (stream line string-width
+				&optional (start 0) end)
+  (declare (ignore string-width))
   (with-slots (baseline vspace) stream
      (multiple-value-bind (cx cy) (stream-cursor-position stream)
        (draw-text* (sheet-medium stream) line

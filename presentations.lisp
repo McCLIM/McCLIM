@@ -1093,16 +1093,6 @@ function lambda list"))
 	 (ptype-name (presentation-type-name type-spec)))
     (apply gf (prototype-or-error ptype-name) args)))
 
-#+nil
-(defmacro funcall-presentation-generic-function (name &rest args)
-  (let ((gf (gethash name *presentation-gf-table*)))
-    (unless gf
-      (error "~S is not a presentation generic function" name))
-    `(%funcall-presentation-generic-function ',name
-					     #',(generic-function-name gf)
-					     ,(type-arg-position gf)
-					     ,@args)))
-
 ;;; I wonder if this pattern for preserving order of evaluation is
 ;;; has a more general use...
 

@@ -254,12 +254,12 @@ unspecified. "))
 (defgeneric invoke-with-output-recording-options
     (stream continuation record draw))
 
-(defgeneric invoke-with-new-output-record (stream continuation record-type
-                                           &key
-                                           &allow-other-keys))
+(defgeneric invoke-with-new-output-record
+    (stream continuation record-type constructor
+     &key &allow-other-keys))
 
 (defgeneric invoke-with-output-to-output-record
-    (stream continuation record-type
+    (stream continuation record-type constructor
      &rest initargs
      &key
      &allow-other-keys))
@@ -361,12 +361,32 @@ unspecified. "))
         ,(if record-supplied-p record `(stream-recording-p ,stream))
         ,(if draw-supplied-p draw `(stream-drawing-p ,stream))))))
 
-(defmacro with-new-output-record ((stream
-                                   &optional
-                                   (record-type ''standard-sequence-output-record)
-                                   (record nil record-supplied-p)
-                                   &rest initargs)
-                                  &body body)
+;;; Macro masturbation...
+
+(defmacro define-invoke-with (macro-name func-name record-type doc-string)
+  `(defmacro ,macro-name ((stream
+			   &optional
+			   (record-type '',record-type)
+			   (record (gensym))
+			   &rest initargs)
+			  &body body)
+     ,doc-string
+     (setq stream (stream-designator-symbol stream))
+     (with-gensyms (constructor continuation)
+       (multiple-value-bind (bindings m-i-args)
+	   (rebind-arguments initargs)
+	 `(let ,bindings
+	    (flet ((,constructor ()
+		     (make-instance ,record-type ,@m-i-args))
+		   (,continuation (,stream ,record)
+		     (declare (ignorable ,stream ,record))
+		     ,@body))
+	      (declare (dynamic-extent #'constructor #'continuation))
+	      (,',func-name ,stream #',continuation ,record-type #',constructor
+			    ,@m-i-args)))))))
+
+(define-invoke-with with-new-output-record invoke-with-new-output-record
+  standard-sequence-output-record
   "Creates a new output record of type RECORD-TYPE and then captures
 the output of BODY into the new output record, and inserts the new
 record into the current \"open\" output record assotiated with STREAM.
@@ -376,23 +396,11 @@ CLOS initargs that are passed to MAKE-INSTANCE when the new output
 record is created.
     It returns the created output record.
     The STREAM argument is a symbol that is bound to an output
-recording stream. If it is T, *STANDARD-OUTPUT* is used."
-  (when (eq stream 't) (setq stream '*standard-output*))
-  (check-type stream symbol)
-  (unless record-supplied-p (setq record (gensym)))
-  `(invoke-with-new-output-record ,stream
-                                  #'(lambda (,stream ,record)
-                                      (declare (ignorable ,stream ,record))
-                                      ,@body)
-                                  ,record-type
-                                  ,@initargs))
+recording stream. If it is T, *STANDARD-OUTPUT* is used.")
 
-(defmacro with-output-to-output-record
-    ((stream
-      &optional (record-type ''standard-sequence-output-record)
-                (record nil record-supplied-p)
-      &rest initargs)
-     &body body)
+(define-invoke-with with-output-to-output-record
+    invoke-with-output-to-output-record
+  standard-sequence-output-record
   "Creates a new output record of type RECORD-TYPE and then captures
 the output of BODY into the new output record. The cursor position of
 STREAM is initially bound to (0,0)
@@ -402,17 +410,7 @@ CLOS initargs that are passed to MAKE-INSTANCE when the new output
 record is created.
     It returns the created output record.
     The STREAM argument is a symbol that is bound to an output
-recording stream. If it is T, *STANDARD-OUTPUT* is used."
-  (when (eq stream 't) (setq stream '*standard-output*))
-  (check-type stream symbol)
-  (unless record-supplied-p (setq record (gensym "RECORD")))
-  `(invoke-with-output-to-output-record
-    ,stream
-    #'(lambda (,stream ,record)
-        (declare (ignorable ,stream ,record))
-        ,@body)
-    ,record-type
-    ,@initargs))
+recording stream. If it is T, *STANDARD-OUTPUT* is used.")
 
 
 ;;;; Implementation
@@ -1756,7 +1754,7 @@ were added."
 		 (setf (stream-cursor-position stream)
 		       (values start-x start-y))
 		 (set-medium-graphics-state substring medium)
-		 (stream-write-output stream string)))
+		 (stream-write-output stream string nil)))
       (when wrapped			; FIXME
 	(draw-rectangle* medium
 			 (+ wrapped 0) start-y
@@ -1972,7 +1970,9 @@ were added."
      ,@body))
 
 (defmethod stream-write-output :around
-    ((stream standard-output-recording-stream) line
+    ((stream standard-output-recording-stream)
+     line
+     string-width
      &optional (start 0) end)
   (when (and (stream-recording-p stream)
              (slot-value stream 'local-record-p))
@@ -1987,10 +1987,10 @@ were added."
 				       height
 				       ascent)
 	  (stream-add-string-output stream line start end text-style
-				    (stream-string-width stream line
+				    (or string-width
+					(stream-string-width stream line
 							 :start start :end end
-							 :text-style text-style)
-							 
+							 :text-style text-style))
 				    height
 				    ascent))))
   (when (stream-drawing-p stream)
@@ -2063,11 +2063,11 @@ according to the flags RECORD and DRAW."
 
 (defmethod invoke-with-new-output-record ((stream output-recording-stream)
                                           continuation record-type
-                                          &rest initargs
-                                          &key parent
-					  &allow-other-keys)
+					  constructor
+                                          &key parent)
+  (declare (ignore record-type))
   (stream-close-text-output-record stream)
-  (let ((new-record (apply #'make-instance record-type initargs)))
+  (let ((new-record (funcall constructor)))
     (letf (((stream-current-output-record stream) new-record))
       ;; Should we switch on recording? -- APD
       (funcall continuation stream new-record)
@@ -2077,11 +2077,38 @@ according to the flags RECORD and DRAW."
 	(stream-add-output-record stream new-record))
     new-record))
 
+(defmethod invoke-with-new-output-record ((stream output-recording-stream)
+                                          continuation record-type
+					  (constructor null)
+					  &rest initargs
+                                          &key parent)
+  (with-keywords-removed (initargs (:parent))
+    (stream-close-text-output-record stream)
+    (let ((new-record (apply #'make-instance record-type initargs)))
+      (letf (((stream-current-output-record stream) new-record))
+	;; Should we switch on recording? -- APD
+	(funcall continuation stream new-record)
+	(finish-output stream))
+      (if parent
+	  (add-output-record new-record parent)
+	  (stream-add-output-record stream new-record))
+      new-record)))
+
 (defmethod invoke-with-output-to-output-record
-    ((stream output-recording-stream) continuation record-type
-     &rest initargs
-     &key
-     &allow-other-keys)
+    ((stream output-recording-stream) continuation record-type constructor
+     &key)
+  (stream-close-text-output-record stream)
+  (let ((new-record (funcall constructor)))
+    (with-output-recording-options (stream :record t :draw nil)
+      (letf (((stream-current-output-record stream) new-record)
+             ((stream-cursor-position stream) (values 0 0)))
+        (funcall continuation stream new-record)
+        (finish-output stream)))
+    new-record))
+
+(defmethod invoke-with-output-to-output-record
+    ((stream output-recording-stream) continuation record-type (constructor null)
+     &rest initargs)
   (stream-close-text-output-record stream)
   (let ((new-record (apply #'make-instance record-type initargs)))
     (with-output-recording-options (stream :record t :draw nil)

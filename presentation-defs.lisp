@@ -246,40 +246,39 @@
      &key &allow-other-keys))
 
 (defmacro with-output-as-presentation ((stream object type
-				       &rest key-args
-				       &key modifier single-box
-				       (allow-sensitive-inferiors t)
-				       parent
-				       (record-type ''standard-presentation)
-				       &allow-other-keys)
+					       &rest key-args
+					       &key modifier single-box
+					       (allow-sensitive-inferiors t)
+					       parent
+					       (record-type
+						''standard-presentation)
+					       &allow-other-keys)
 				       &body body)
   (declare (ignore parent single-box modifier))
   (setq stream (stream-designator-symbol stream))
   (multiple-value-bind (decls with-body)
       (get-body-declarations body)
-    (let ((output-record (gensym))
-	  (invoke-key-args (cull-keywords '(:record-type
-					    :allow-sensitive-inferiors)
-					  key-args)))
-      (declare (ignore invoke-key-args))
-      `(flet ((continuation (,stream ,output-record)
-		(declare (ignore ,output-record))
-	        ,@decls
-		(let ((*allow-sensitive-inferiors*
-		       (if *allow-sensitive-inferiors*
-			   ,allow-sensitive-inferiors
-			   nil)))
-		  ,@with-body)))
-	 (declare (dynamic-extent #'continuation))
-	 (if (output-recording-stream-p ,stream)
-	     (invoke-with-new-output-record
-	      ,stream #'continuation ,record-type
-	      :object ,object
-	      :type (expand-presentation-type-abbreviation ,type)
-	      ,@key-args)
-	     (funcall #'continuation ,stream nil))))))
-
-
+    (with-gensyms (record-arg continuation)
+      (with-keywords-removed (key-args (:record-type
+					:allow-sensitive-inferiors))
+	`(let ((*allow-sensitive-inferiors*
+		(if *allow-sensitive-inferiors*
+		    ,allow-sensitive-inferiors
+		    nil)))
+	   (flet ((,continuation ()
+		    ,@decls
+		    ,@with-body))
+	     (declare (dynamic-extent #'continuation))
+	     (if (and (output-recording-stream-p ,stream)
+		      *allow-sensitive-inferiors*)
+		 (with-new-output-record
+		     (,stream ,record-type ,record-arg
+			      :object ,object
+			      :type (expand-presentation-type-abbreviation
+				     ,type)
+			      ,@key-args)
+		   (,continuation))
+		 (,continuation))))))))
 
 (defun present (object &optional (type (presentation-type-of object))
 		&key

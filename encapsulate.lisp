@@ -617,10 +617,6 @@ state ~S lambda list ~S"
   ((stream standard-encapsulating-stream)
    string start end text-style width height baseline))
 
-#+nil
-(def-stream-method invoke-with-output-recording-options
-    ((stream standard-encapsulating-stream) continuation record draw))
-
 (defmethod invoke-with-output-recording-options
     ((stream standard-encapsulating-stream) continuation record draw)
   (invoke-with-output-recording-options
@@ -631,15 +627,8 @@ state ~S lambda list ~S"
    record
    draw))
   
-#+nil
-(def-stream-method invoke-with-new-output-record
-    ((stream standard-encapsulating-stream) continuation record-type
-     &rest initargs
-     &key
-     &allow-other-keys))
-
 (defmethod invoke-with-new-output-record ((stream standard-encapsulating-stream)
-					  continuation record-type
+					  continuation record-type constructor
 					  &rest initargs &key &allow-other-keys)
   (apply #'invoke-with-new-output-record
 	 (slot-value stream 'stream)
@@ -647,17 +636,11 @@ state ~S lambda list ~S"
 	     (declare (ignore inner-stream))
 	     (funcall continuation stream output-record))
 	 record-type
+	 constructor
 	 initargs))
 
-#+nil
-(def-stream-method invoke-with-output-to-output-record
-    ((stream standard-encapsulating-stream) continuation record-type
-     &rest initargs
-     &key
-     &allow-other-keys))
-
 (defmethod invoke-with-output-to-output-record
-    ((stream standard-encapsulating-stream) continuation record-type
+    ((stream standard-encapsulating-stream) continuation record-type constructor
      &rest initargs
      &key
      &allow-other-keys)
@@ -667,6 +650,7 @@ state ~S lambda list ~S"
 	     (declare (ignore inner-stream))
 	     (funcall continuation stream record))
 	 record-type
+	 constructor
 	 initargs))
 
 						    

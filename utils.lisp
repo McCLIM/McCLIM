@@ -570,3 +570,18 @@ STREAM in the direction DIRECTION."
          collect var into key
        end
        finally (return (values required optional rest key (eq state '&key)))))
+
+(defun rebind-arguments (arg-list)
+  "Create temporary variables for non keywords in a list of
+  arguments. Returns two values: a binding list for let, and a new
+  argument list with the temporaries substituted in."
+  (loop
+     for arg in arg-list
+     for var = (gensym)
+     if (keywordp arg)
+       collect arg into new-arg-list
+     else
+       collect `(,var ,arg) into bindings
+       and collect var into new-arg-list
+     end
+     finally (return (values bindings new-arg-list))))
