@@ -90,7 +90,7 @@ or an item list."))
 (defmacro formatting-cell ((&optional (stream t)
                             &key (align-x :left) (align-y :center) ; FIXME!!! It must be :baseline, but it is not yet implemented
                                  min-width min-height
-                                 (record-type 'standard-cell-output-record))
+                                 (record-type ''standard-cell-output-record))
                            &body body)
   (check-type stream symbol)
   (when (eq stream 't)
@@ -132,7 +132,7 @@ the individual dimensions of cells in the BLOCK. "))
 (defgeneric block-adjust-cell* (cell block
                                 cell-coordinate common-coordinate
                                 size common-size)
-  (:documentation "Fits the CELL of the BLOCK in the retangle."))
+  (:documentation "Fits the CELL of the BLOCK in the rectangle."))
 
 (defclass block-info ()
   ((common-size :type real
@@ -232,7 +232,7 @@ to a table cell within the row."))
    row-record))
 
 (defmacro formatting-row ((&optional (stream t)
-                           &key (record-type 'standard-row-output-record))
+                           &key (record-type ''standard-row-output-record))
                            &body body)
   (declare (type symbol stream))
   (when (eq stream 't)
@@ -296,7 +296,7 @@ corresponding to a table cell within the column."))
    column-record))
 
 (defmacro formatting-column ((&optional (stream t)
-                              &key (record-type 'standard-column-output-record))
+                              &key (record-type ''standard-column-output-record))
                              &body body)
   (declare (type symbol stream))
   (when (eq stream 't)
@@ -334,48 +334,74 @@ skips intervening non-table output record structures."))
    (multiple-columns-x-spacing :initarg :multiple-columns-x-spacing)
    (equalize-column-widths :initarg :equalize-column-widths)))
 
+(defmethod initialize-instance :after ((table standard-table-output-record)
+                                       &rest initargs)
+  (declare (ignore initargs))
+  (unless (slot-boundp table 'multiple-columns-x-spacing)
+    (setf (slot-value table 'multiple-columns-x-spacing)
+          (slot-value table 'x-spacing))))
+
 (defmacro formatting-table
     ((&optional (stream t)
+      &rest args
       &key x-spacing y-spacing
       multiple-columns
-      (multiple-columns-x-spacing nil multiple-columns-x-spacing-supplied-p)
+      multiple-columns-x-spacing
       equalize-column-widths (move-cursor t)
-      (record-type 'empty-standard-table-output-record)
+      (record-type ''empty-standard-table-output-record)
       &allow-other-keys)
      &body body)
-  ;; FIXME!!! Possible recomputation
+  (declare (ignore x-spacing y-spacing multiple-columns
+                   multiple-columns-x-spacing
+                   equalize-column-widths move-cursor record-type))
   (when (eq stream t)
     (setq stream '*standard-output*))
-  (with-gensyms (table cursor-old-x cursor-old-y)
-    `(with-new-output-record
-         (,stream ,record-type ,table
-                  :x-spacing (parse-space ,stream ,(or x-spacing #\Space)
-                                          :horizontal)
-                  :y-spacing (parse-space ,stream
-                                          ,(or y-spacing
-                                               `(stream-vertical-spacing ,stream))
-                                          :vertical)
-                  :multiple-columns ,multiple-columns
-                  :multiple-columns-x-spacing ,multiple-columns-x-spacing
-                  :equalize-column-widths ,equalize-column-widths)
-       (multiple-value-bind (,cursor-old-x ,cursor-old-y)
-           (stream-cursor-position ,stream)
-         (with-output-recording-options (,stream :record t :draw nil)
-           ,@body
-           (finish-output ,stream))
-         (adjust-table-cells ,table ,stream)
-         (setf (output-record-position ,table)
-               (values ,cursor-old-x ,cursor-old-y))
-         (if ,move-cursor
-             ;; FIXME!!!
-             #+ignore
-             (setf (stream-cursor-position ,stream)
-                   (values cursor-new-x cursor-new-y))
-             #-ignore
-             nil
-             (setf (stream-cursor-position ,stream)
-                   (values ,cursor-old-x ,cursor-old-y)))
-         (replay ,table ,stream)))))
+  (with-gensyms (cont)
+    `(flet ((,cont (,stream) ,@body))
+       (declare (dynamic-extent #',cont))
+       (invoke-formatting-table ,stream #',cont
+                                ,@args))))
+
+(defun invoke-formatting-table
+    (stream continuation
+     &key x-spacing y-spacing
+     multiple-columns
+     multiple-columns-x-spacing
+     equalize-column-widths
+     (move-cursor t)
+     (record-type 'empty-standard-table-output-record)
+     &allow-other-keys)
+  (setq x-spacing (parse-space stream (or x-spacing #\Space) :horizontal))
+  (setq y-spacing (parse-space stream (or y-spacing
+                                          (stream-vertical-spacing stream))
+                               :vertical))
+  (unless multiple-columns-x-spacing
+    (setq multiple-columns-x-spacing x-spacing))
+  (with-new-output-record
+      (stream record-type table
+              :x-spacing x-spacing
+              :y-spacing y-spacing
+              :multiple-columns-x-spacing multiple-columns-x-spacing
+              :equalize-column-widths equalize-column-widths)
+    (multiple-value-bind (cursor-old-x cursor-old-y)
+        (stream-cursor-position stream)
+      (with-output-recording-options (stream :record t :draw nil)
+        (funcall continuation stream)
+        (finish-output stream))
+      (adjust-table-cells table stream)
+      (when multiple-columns (adjust-multiple-columns table stream))
+      (setf (output-record-position table)
+            (values cursor-old-x cursor-old-y))
+      (if move-cursor
+          ;; FIXME!!!
+          #+ignore
+          (setf (stream-cursor-position stream)
+                (values cursor-new-x cursor-new-y))
+          #-ignore
+          nil
+          (setf (stream-cursor-position stream)
+                (values cursor-old-x cursor-old-y)))
+      (replay table stream))))
 
 ;;; Internal
 (defgeneric table-cell-spacing (table)
