@@ -28,14 +28,21 @@
 
 (defparameter *ptype-t-class* (get-ptype-metaclass 't))
 
+;;; auto-activate is described in the Franz user guide; it controls whether an
+;;; accepting an expression returns immediately after typing the closing
+;;; delimiter -- à la Genera et Mac Lisp -- or if an activation gesture is
+;;; required. 
 (define-presentation-type expression ()
   :options (auto-activate)
   :inherit-from t)
 
 (defparameter *ptype-expression-class* (get-ptype-metaclass 'expression))
 
+;;; preserve-whitespace controls whether the accept method uses read or
+;;; read-preserving-whitespace. This is used in our redefinitions of read and
+;;; read-preserving-whitespace that accept forms.
 (define-presentation-type form ()
-  :options (auto-activate)
+  :options (auto-activate (preserve-whitespace t))
   :inherit-from `((expression) :auto-activate ,auto-activate))
 
 (defparameter *ptype-form-class* (get-ptype-metaclass 'form))
@@ -479,8 +486,8 @@
 ;;; in what we accept.
 
 (defun accept (type &rest rest-args &key
-	       (stream *standard-input* streamp)
-	       (view (stream-default-view stream))
+	       (stream *standard-input*)
+	       view
 	       (default nil defaultp)
 	       (default-type nil default-type-p)
 	       provide-default
@@ -496,7 +503,7 @@
 	       additional-activation-gestures
 	       delimiter-gestures
 	       additional-delimiter-gestures)
-  (declare (ignore provide-default
+  (declare (ignore view provide-default
 		   insert-default
 		   replace-input
 		   active-p
@@ -1647,9 +1654,21 @@
   (type-key parameters options type
    stream view default default-supplied-p present-p query-identifier))
 
+(defvar *sys-read* #'read)
+(defvar *sys-read-preserving-whitespace* #'read-preserving-whitespace)
+
+;;; Arguments for read
+(defvar *eof-error-p* t)
+(defvar *eof-value* nil)
+(defvar *recursivep* nil)
+
 (define-presentation-method accept ((type form) stream (view textual-view)
 				    &key (default nil defaultp) default-type)
-  (let* ((object (funcall *sys-read-preserving-whitespace* stream))
+  (declare (ignore default defaultp default-type))
+  (let* ((object (funcall (if preserve-whitespace
+			      *sys-read-preserving-whitespace*
+			      *sys-read*)
+			  stream *eof-error-p* *eof-value* *recursivep*))
 	 (ptype (presentation-type-of object)))
     (unless (presentation-subtypep ptype 'form)
       (setq ptype 'form))
@@ -1658,3 +1677,31 @@
 	(loop for c = (read-char stream)
 	      until (activation-gesture-p c)
 	      finally (return (values object ptype))))))
+
+(with-system-redefinition-allowed
+(defun read (&optional (stream *standard-input*)
+	     (eof-error-p t)
+	     (eof-value nil)
+	     (recursivep nil))
+  (if (typep stream 'input-editing-stream)
+      (let ((*eof-error-p* eof-error-p)
+	    (*eof-value* eof-value)
+	    (*recursivep* recursivep))
+	(accept '((form) :auto-activate t :preserve-whitespace nil)
+		:stream stream :prompt nil))
+      (funcall *sys-read* stream eof-error-p eof-value recursivep)))
+
+(defun read-preserving-whitespace (&optional (stream *standard-input*)
+	     (eof-error-p t)
+	     (eof-value nil)
+	     (recursivep nil))
+  (if (typep stream 'input-editing-stream)
+      (let ((*eof-error-p* eof-error-p)
+	    (*eof-value* eof-value)
+	    (*recursivep* recursivep))
+	(accept '((form) :auto-activate t :preserve-whitespace t)
+		:stream stream :prompt nil))
+      (funcall *sys-read-preserving-whitespace*
+	       stream eof-error-p eof-value recursivep)))
+) ; with-system-redefinition-allowed
+

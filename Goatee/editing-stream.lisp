@@ -222,6 +222,8 @@
 	 (area (area stream))
 	 (buf (buffer area))
 	 (del-chars (- scan-pointer buffer-start)))
+    (when (< scan-pointer (fill-pointer (stream-input-buffer stream)))
+      (return-from %replace-input nil))
     (if (<= 0 del-chars)
 	(progn
 	  (with-point (buf)
