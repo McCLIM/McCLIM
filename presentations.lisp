@@ -1107,7 +1107,8 @@ function lambda list"))
 							    ,@lambda-list)
 	 (declare (ignorable ,(type-key-arg gf))
 		  ,@(cdr decls))
-	 ,@body))))
+	 (block ,name
+	   ,@body)))))
 
 ;;; Somewhat obsolete, but keep it around for apply-presentation-generic-function.
 (defun %funcall-presentation-generic-function (name gf type-arg-position
@@ -1283,6 +1284,10 @@ and used to ensure that presentation-translators-caches are up to date.")
 	   &allow-other-keys)
      arglist
      &body body)
+  ;; null tester should be the same as no tester
+  (unless tester
+    (setq tester 'default-translator-tester)
+    (setq tester-definitive t))
   (let* ((real-from-type (expand-presentation-type-abbreviation from-type))
 	 (real-to-type (expand-presentation-type-abbreviation to-type)))
     (with-keywords-removed (translator-options
@@ -1586,15 +1591,7 @@ and used to ensure that presentation-translators-caches are up to date.")
   
   t)
 
-(defun presentation-contains-position (record x y)
-  (let ((single-box (presentation-single-box record)))
-    (multiple-value-bind (min-x min-y max-x max-y)
-	(output-record-hit-detection-rectangle* record)
-      (if (and (<= min-x x max-x) (<= min-y y max-y))
-	  (if (or (null single-box) (eq single-box :higlighting))
-	      (output-record-refined-position-test record x y)
-	      t)
-	  nil))))
+;;; presentation-contains-position moved to presentation-defs.lisp
 
 (defun map-over-presentations-containing-position (func record x y)
   "maps recursively over all presentations in record, including record."
@@ -1799,7 +1796,8 @@ and used to ensure that presentation-translators-caches are up to date.")
 a presentation"
   (throw-highlighted-presentation
                           (make-instance 'standard-presentation
-                                         :object object :type type)
+                                         :object object :type type
+					 :single-box t)
 			  input-context
                           (make-instance 'pointer-button-press-event
                                          :sheet sheet

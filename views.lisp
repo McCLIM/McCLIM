@@ -44,6 +44,11 @@
 (defclass pointer-documentation-view (textual-view)
   ())
 
+;;; Views described in the Franz User manual...
+
+(defclass text-field-view (gadget-dialog-view)
+  ((width :accessor width :initarg :width :initform nil)))
+
 (defparameter +textual-view+ (make-instance 'textual-view))
 
 (defparameter +textual-menu-view+ (make-instance 'textual-menu-view))
@@ -58,6 +63,8 @@
 
 (defparameter +pointer-documentation-view+
   (make-instance 'pointer-documentation-view))
+
+(defparameter +text-field-view+ (make-instance 'text-field-view))
 
 (defmethod stream-default-view (stream)
   (declare (ignore stream))

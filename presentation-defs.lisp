@@ -647,7 +647,7 @@ call-next-method to get the \"real\" answer based on the stream type."))
 
 (defun accept (type &rest rest-args &key
 	       (stream *standard-input*)
-	       view
+	       (view nil viewp)
 	       (default nil defaultp)
 	       (default-type nil default-type-p)
 	       provide-default insert-default replace-input
@@ -680,6 +680,12 @@ call-next-method to get the \"real\" answer based on the stream type."))
 	      (list* :default-type real-default-type rest-args)))
       (when historyp
 	(setf rest-args (list* :history real-history-type rest-args)))
+      (cond ((and viewp (symbolp view))
+	     (setf rest-args
+		   (list* :view (funcall #'make-instance view) rest-args)))
+	    ((consp view)
+	     (setf rest-args
+		   (list* :view (apply #'make-instance view) rest-args))))
       ;; Presentation type history interaction. According to the spec,
       ;; if provide-default is true, we take the default from the
       ;; presentation history. In addition, we'll implement the Genera
@@ -929,6 +935,40 @@ call-next-method to get the \"real\" answer based on the stream type."))
   (with-input-from-string (stream string :start start :end end)
     (with-keywords-removed (args (:start :end))
       (apply #'stream-accept stream type :view +textual-view+ args))))
+
+(define-presentation-generic-function %presentation-refined-position-test
+    presentation-refined-position-test
+  (type-key parameters options type record x y))
+
+(define-default-presentation-method presentation-refined-position-test
+    (type record x y)
+  (declare (ignore type))
+  ;;; output-record-hit-detection-rectangle* has already been called
+  (let ((single-box (presentation-single-box record)))
+    (if (or (eq single-box t) (eq single-box :position))
+	t
+	(labels ((tester (record)
+		   (typecase record
+		     (displayed-output-record
+		      (return-from presentation-refined-position-test t))
+		     (compound-output-record
+		      (map-over-output-records-containing-position
+		       #'tester record x y))
+		     (t nil))))
+	  (tester record)
+	  nil))))
+
+(defun presentation-contains-position (record x y)
+  (let ((single-box (presentation-single-box record)))
+    (multiple-value-bind (min-x min-y max-x max-y)
+	(output-record-hit-detection-rectangle* record)
+      (if (and (<= min-x x max-x) (<= min-y y max-y))
+	  (if (or (null single-box) (eq single-box :higlighting))
+	      (funcall-presentation-generic-function
+	       presentation-refined-position-test
+	       (presentation-type record) record x y)
+	      t)
+	  nil))))
 
 (define-presentation-generic-function %highlight-presentation
     highlight-presentation

@@ -318,11 +318,12 @@ highlighting, etc." ))
 	(when query
 	  (setf selected-query query)
 	  (select-query *accepting-values-stream* query (record query))
-	  (if (cdr query-list)
-	      (throw-object-ptype (query-identifier (cadr query-list))
-				  'selectable-query)
-	      (throw-object-ptype '(com-deselect-query)
-				  '(command :command-table accepting-values))))))))
+	  (let ((command-ptype '(command :command-table accepting-values)))
+	    (if (cdr query-list)
+	      (throw-object-ptype `(com-select-query ,(query-identifier
+						       (cadr query-list)))
+				  command-ptype)
+	      (throw-object-ptype '(com-deselect-query) command-ptype))))))))
 
 (define-command (com-deselect-query :command-table accepting-values
 				    :name nil
@@ -344,6 +345,24 @@ highlighting, etc." ))
 is called. Used to determine if any editing has been done by user")))
 
 (defparameter *no-default-cache-value* (cons nil nil))
+
+;;; Hack until more views / dialog gadgets are defined.
+
+(define-default-presentation-method accept-present-default
+    (type stream (view text-field-view) default default-supplied-p
+     present-p query-identifier)
+  (if (width view)
+      (multiple-value-bind (cx cy)
+	  (stream-cursor-position stream)
+	(declare (ignore cy))
+	(letf (((stream-text-margin stream) (+ cx (width view))))
+	  (funcall-presentation-generic-function accept-present-default
+						 type
+						 stream
+						 +textual-dialog-view+
+						 default default-supplied-p
+						 present-p
+						 query-identifier)))))
 
 (define-default-presentation-method accept-present-default
     (type stream (view textual-dialog-view) default default-supplied-p
