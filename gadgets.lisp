@@ -2699,12 +2699,8 @@ Returns two values, the item itself, and the index within the item list."
          (width  (space-requirement-width sr))
          (height (space-requirement-height sr)))
     (allocate-space child width height)
-    (setf (gadget record) child)
-    (with-slots (x1 x2 y1 y2) record
-      (setf x1 x
-            y1 y
-            x2 (+ x width)
-            y2 (+ y height)))))
+    (setf (gadget record) child
+          (rectangle-edges* record) (values x y (+ x width) (+ y height)))))
 
 (defmethod note-output-record-got-sheet ((record gadget-output-record) sheet)
   (multiple-value-bind (x y)  (output-record-position record)
