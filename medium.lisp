@@ -110,7 +110,7 @@
 	    (,medium (or ,old-medium (make-medium (port ,pixmap) ,pixmap)))
 	    (,old-pixmap (medium-sheet ,medium)))
        (setf (pixmap-medium ,pixmap) ,medium)
-       (setf (medium-sheet ,medium) ,pixmap)
+       (setf (%medium-sheet ,medium) ,pixmap) ;is medium a basic medium? --GB
        (unwind-protect
 	   (progn
 	     ,@body)
@@ -610,3 +610,4 @@
 (defmethod graft ((medium basic-medium))
   (and (medium-sheet medium)
        (graft (medium-sheet medium))))
+
