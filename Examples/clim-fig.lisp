@@ -35,6 +35,9 @@
   (let ((*application-frame* (pane-frame pane)))
     (call-next-method pane event)))
 
+(defmethod dispatch-event ((pane canvas-pane) event)
+  (handle-event pane event))
+
 (defmethod handle-event ((pane canvas-pane) (event pointer-button-press-event))
   (when (= (pointer-event-button event) +pointer-left-button+)
     (with-slots (first-point-x first-point-y canvas-pixmap) pane
@@ -193,7 +196,7 @@
   (loop for port in climi::*all-ports*
       do (destroy-port port))
   (setq climi::*all-ports* nil)
-  (progn 'run-frame-top-level (make-application-frame 'clim-fig)))
+  (run-frame-top-level (make-application-frame 'clim-fig)))
 
 (defun make-colored-button (color &key width height)
   (make-pane 'push-button-pane
@@ -403,7 +406,18 @@
           (stream-current-output-record *standard-output*)
           (slot-value frame 'status)
           (find-if #'(lambda (pane) (typep pane 'text-field-pane))
-                   (frame-panes frame)))
-    (catch 'exit
-      (loop (read-command (climi::frame-pane frame))))
-    (destroy-port (port frame))))
+                   (frame-panes frame)))))
+
+; (defmethod clim-fig-frame-top-level ((frame application-frame) &key)
+;   (let ((*standard-input* (frame-standard-input frame))
+; 	(*standard-output* (frame-standard-output frame))
+; 	(*query-io* (frame-query-io frame)))
+;     (setf (slot-value frame 'output-record)
+;           (stream-current-output-record *standard-output*)
+;           (slot-value frame 'status)
+;           (find-if #'(lambda (pane) (typep pane 'text-field-pane))
+;                    (frame-panes frame)))
+;     (catch 'exit
+;       (loop (read-command (climi::frame-pane frame))))
+;     (destroy-port (port frame))))
+
