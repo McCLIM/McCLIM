@@ -1844,8 +1844,7 @@ were added."
 
 (defmethod* (setf stream-cursor-position) :after (x y (stream standard-output-recording-stream))
   (declare (ignore x y))
-  (unless *inhibit-record-closing*
-    (stream-close-text-output-record stream)))
+  (stream-close-text-output-record stream))
 
 ;(defmethod stream-set-cursor-position :after ((stream standard-output-recording-stream))
 ;  (stream-close-text-output-record stream))
