@@ -85,21 +85,15 @@
 
    #.(or
       #+(and :cmu :mp (not :pthread))  "Lisp-Dep/mp-cmu"
-      ;;
-      ;; This is perhaps a poor attempt of mine to conditionalize on
-      ;; the actual presence of the SB-THREAD package which I guess
-      ;; should only be available on multithreading SBCL.
-      ;;
-      ;; If this breaks, blame me.
-      ;;
-      ;; --GB 2003-03-14
-      #+sbcl
-      (if (find-package "SB-THREAD")
-          "Lisp-Dep/mp-sbcl"
-          "Lisp-Dep/mp-nil")
-      #+excl                          "Lisp-Dep/mp-acl"
-      #+openmcl                       "Lisp-Dep/mp-openmcl"
-      #| fall back |#                  "Lisp-Dep/mp-nil")
+
+      ;; Rumor is that SB-THREAD is a feature test for the presence of
+      ;; multithreading in SBCL.
+
+      #+sbcl #+sb-thread        "Lisp-Dep/mp-sbcl"
+             #-sb-thread        "Lisp-Dep/mp-nil"
+      #+excl                    "Lisp-Dep/mp-acl"
+      #+openmcl                 "Lisp-Dep/mp-openmcl"
+      #| fall back |#           "Lisp-Dep/mp-nil")
    "utils"
    "defresource"
    "setf-star"
