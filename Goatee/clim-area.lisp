@@ -28,6 +28,7 @@
   ((screen-line :accessor screen-line :initarg :screen-line)))
 
 (defmethod* (setf cursor-position) (nx ny (cursor screen-area-cursor))
+  (declare (ignore nx ny))
   (when (cursor-visibility cursor)
     (error "screen-area-cursor ~S must not be visible when position is
   set"
@@ -132,6 +133,7 @@
 
 (defmethod replay-output-record ((record screen-line) stream
 				 &optional region (x-offset 0) (y-offset 0))
+  (declare (ignore region))
   (let ((medium (sheet-medium stream))
 	(cursor (cursor record)))
     (letf (((medium-text-style medium)
@@ -322,8 +324,7 @@
 ;;; position, then erase and display the middle text.
 (defmethod redisplay-line ((line screen-line) stream)
   (let* ((medium (sheet-medium stream))
-	 (style (text-style (output-record-parent line)))
-	 (cursor-visible nil))
+	 (style (text-style (output-record-parent line))))
     (with-slots (current-contents ascent descent baseline cursor buffer-line)
 	line
       (multiple-value-bind (unchanged
@@ -332,7 +333,7 @@
 			    line-unchanged-from-start
 			    line-unchanged-from-end)
 	  (get-line-differences line)
-	(when (and cursor (setq cursor-visible (cursor-visibility cursor)))
+	(when (and cursor (cursor-visibility cursor))
 	  (setf (cursor-visibility cursor) nil))
 	(unless unchanged
 	  (let* ((start-width (if (> current-unchanged-from-start 0)

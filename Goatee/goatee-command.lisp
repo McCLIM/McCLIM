@@ -38,6 +38,7 @@
 (defgeneric lookup-gesture-command (gesture table))
 
 (defmethod lookup-gesture-command :around (gesture table)
+  (declare (ignore table))
   (if (activation-gesture-p gesture)
       #'insert-activation-gesture
       (call-next-method)))
@@ -56,6 +57,7 @@
 		(gethash (keyboard-event-key-name gesture) table nil)))))
 
 (defmethod lookup-gesture-command (gesture table)
+  (declare (ignore gesture table))
   nil)
 
 (defvar *area*)

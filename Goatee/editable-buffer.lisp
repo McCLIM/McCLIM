@@ -216,6 +216,7 @@
       (if line
 	  (values line pos)
 	  (location* position))
+    (declare (ignore pos))
     (values line (line-last-point line))))
 
 (defmethod end-of-line ((buf editable-buffer) &rest key-args)

@@ -65,6 +65,8 @@
 			   (let ((noise nil))
 			     (map-over-extents-at-location*
 			      #'(lambda (extent line pos)
+				  (declare (special climi::*noise-string-start*
+						    climi::*noise-string*))
 				  (when (typep extent 'noise-extent)
 				    (if (and (eq line (line (bp-start extent)))
 					     (eql pos (pos (bp-start extent))))
@@ -86,6 +88,7 @@
 (defmethod stream-process-gesture ((stream goatee-input-editing-mixin)
 				   gesture
 				   type)
+  (declare (ignore type))
   (let ((area (area stream))
 	(snapshot (snapshot stream)))
     (execute-gesture-command gesture area *simple-area-gesture-table*)
@@ -174,6 +177,7 @@
 			  (end (length new-input))
 			  (buffer-start nil buffer-start-supplied-p)
 			  (rescan nil rescan-supplied-p))
+  (declare (special climi::*current-input-stream* climi::*current-input-position*))
   (unless buffer-start-supplied-p
     (if (eq stream climi::*current-input-stream*)
 	(setq buffer-start climi::*current-input-position*)
