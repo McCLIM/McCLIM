@@ -30,16 +30,6 @@
     (run-frame-top-level frame)
     frame))
 
-(defmethod menutest-frame-top-level
-  ((frame application-frame)
-   &key (command-parser 'command-line-command-parser)
-   (command-unparser 'command-line-command-unparser)
-   (partial-command-parser
-    'command-line-read-remaining-arguments-for-partial-command)
-   (prompt "Command: "))
-  (declare (ignore command-parser command-unparser partial-command-parser prompt))
-  (clim-extensions:simple-event-loop))
-     
 (define-command com-file ()
   (format *error-output* "you pressed the File button~%")
   (finish-output *error-output*))
@@ -62,21 +52,13 @@
 		    :menu '(("Buffer" :menu buffer-command-table)
 			    ("File" :command com-file)))
 
-#-old
-(define-application-frame menutest () ()
-  (:menu-bar menubar-command-table)
-  (:pane
-   (make-pane 'text-field :value "stuff" :height 200))
-  (:top-level (menutest-frame-top-level)))
-
-#+old
 (define-application-frame menutest ()
   ()
+  (:menu-bar menubar-command-table)
   (:panes
-   (screen :text-field :value "stuff" :height 200)
-   (menu-bar
-    (clim-internals::make-menu-bar 'menubar-command-table)))
+   (screen :application))
   (:layouts
-   (defaults (vertically () menu-bar screen)))
+   (defaults (vertically () screen)))
+  #+nil
   (:top-level (menutest-frame-top-level)))
 
