@@ -304,9 +304,10 @@ list as interactive as you would expect."
           (formatting-cell (pane) (inspect-object car pane)))))))
 
 (defmethod inspect-object ((object cons) pane)
+  ;; Decide how to display the cons by looking in cons-cell-dico
   (if (gethash object (cons-cell-dico *application-frame*))
-        (inspect-cons-as-cells object pane)
-        (inspect-cons-as-list object pane)))
+      (inspect-cons-as-cells object pane)
+      (inspect-cons-as-list object pane)))
 
 
 (defmethod inspect-object-briefly ((object hash-table) pane)
@@ -383,9 +384,13 @@ use implementation-specific functions to be more informative."
     (print-documentation object pane)))
 
 (defmethod inspect-object-briefly ((object package) pane)
+  ;; Display as 'Package: "PACKAGE-NAME"'. We're doing something a
+  ;; little unusual here by not bolding the "Package:" part. This may
+  ;; be a tad inconsistent, but the other way looks very odd.
   (with-output-as-presentation
       (pane object (presentation-type-of object))
     (format pane "Package: ~S" (package-name object))))
+
 (defmethod inspect-object ((object package) pane)
   (inspector-table
     (format pane "Package: ~S" (package-name object))
@@ -408,7 +413,8 @@ use implementation-specific functions to be more informative."
     (inspector-table-row
       (princ "Uses:")
       (dolist (uses (package-use-list object))
-          (inspect-object uses pane)))))
+	(fresh-line pane)
+	(inspect-object uses pane)))))
 
 (defmethod inspect-object ((object vector) pane)
   (with-output-as-presentation
@@ -423,15 +429,27 @@ use implementation-specific functions to be more informative."
         (formatting-cell (pane)
           (princ ")" pane))))))
 
+;; For some strange reason, objects that are displayed with PRINT are
+;; slightly wider than those displayed with PRIN1. Generally, PRIN1 is
+;; what you want, and to prevent strings and numbers from getting
+;; slightly wider when they're toggled to full inspection, the
+;; INSPECT-OBJECT methods for them call the INSPECT-OBJECT-BRIEFLY
+;; methods which do the right thing.
 (defmethod inspect-object-briefly ((object string) pane)
   (with-output-as-presentation
       (pane object (presentation-type-of object))
-    (print object)))
+    (prin1 object)))
+
+(defmethod inspect-object ((object string) pane)
+  (inspect-object-briefly object pane))
 
 (defmethod inspect-object-briefly ((object number) pane)
   (with-output-as-presentation
       (pane object (presentation-type-of object))
-    (print object)))
+    (prin1 object)))
+
+(defmethod inspect-object ((object number) pane)
+  (inspect-object-briefly object pane))
 
 (defun inspect-complex (object pane)
   "Inspect a complex number. Since complex numbers should be inspected
