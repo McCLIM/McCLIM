@@ -114,8 +114,10 @@
 (defmacro with-drawing-options ((medium &rest drawing-options) &body body)
   (when (eq medium t)
     (setq medium '*standard-output*))
+  (check-type medium symbol)
   (let ((gcontinuation (gensym)))
     `(flet ((,gcontinuation (,medium)
+              (declare (ignorable ,medium))
              ,@body))
       #-clisp (declare (dynamic-extent #',gcontinuation))
       (apply #'invoke-with-drawing-options
@@ -668,10 +670,10 @@
   nil)
 
 (defmethod draw-design ((medium sheet) (design (eql +everywhere+)) &rest options &key &allow-other-keys)
-  (apply #'draw-design (sheet-region medium) design options))
+  (apply #'draw-design medium (bounding-rectangle (sheet-region medium)) options))
 
 (defmethod draw-design ((medium medium) (design (eql +everywhere+)) &rest options &key &allow-other-keys)
-  (apply #'draw-design (sheet-region (medium-sheet medium)) design options))
+  (apply #'draw-design medium (bounding-rectangle (sheet-region (medium-sheet medium))) options))
 
 ;;;
 
