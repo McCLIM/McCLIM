@@ -20,7 +20,7 @@
 #+:excl(require :clx)
 #+:excl(require :loop)
 
-(clim-defsystem (:clim-clx :depends-on (:clim))
+(clim-defsystem (:clim-clx :depends-on (:clim #+(and sbcl asdf) :clx))
   "Backends/CLX/package"
   "Backends/CLX/keysyms"
   "Backends/CLX/keysymdef"
