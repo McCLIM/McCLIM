@@ -26,7 +26,7 @@
 
 (defgeneric compose-space (pane))
 (defgeneric allocate-space (pane width height))
-(defgeneric change-space-requirements (pane &rest rest &allow-other-keys))
+(defgeneric change-space-requirements (pane &rest res))
 (defgeneric note-space-requirements-changed (sheet pane))
 
 ;; Panes
