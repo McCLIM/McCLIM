@@ -43,42 +43,29 @@ of OpenMCL will be ok; unfortunately older versions will not work due to
 changes in the OpenMCL Cocoa Bridge.
 
 Compiling and running the back end currently is a straight-forward (if
-rather limiting [see note #3]) task:
+rather limiting [see note #2]) task:
 
-Optional:
-
-1.  Create a symbolic link from .../McCLIM/Backends/beagle/load-clim.lisp
-    to your home directory.
-2.  Ditto for load-clx.lisp (if you intend to run the clx backend too... there
-    are other ways to do this, but this is how I'm doing it at the moment)
-3.  Ditto for load-beagle.lisp
-
-Then:
-
+1.  Install McCLIM according to INSTALL.ASDF in the McCLIM root
+    directory.
 2.  Start OpenMCL
 3.  Evaluate '(require "COCOA")'
 
 The following are evaluated from the 'OpenMCL Listener' that opens:
 
 4.  Evaluate '(require "ASDF")'
-5.  Evaluate '(load "home:load-clim")' [See note #1]
-6.  Evaluate '(load "home:load-beagle")' [See note #4]
+5.  Evaluate '(asdf:oos 'asdf:load-op :clim-beagle)'
+6.  Evaluate '(asdf:oos 'asdf:load-op :mcclim)' [See note #3]
 
 The McCLIM Listener should now be able to be started from the OpenMCL
 Listener by evaluating '(clim-listener:run-listener)'. See the McCLIM
-installation notes for other things you might want to do. [See note #2]
+installation notes for other things you might want to do. [See note #1]
 
-Note #1: If you did not create the symbolic link in (1), load the
-         "load-clim.lisp" file from whereever it is; for example,
-
-         '(load "/Users/me/McCLIM/Backends/beagle/load-clim")'
-
-Note #2: Some of the examples provided with McCLIM do not execute when using
+Note #1: Some of the examples provided with McCLIM do not execute when using
          the Beagle back end, either because of unimplemented features in
          the back end or because of lossage in the back end. Reports and
          patches would be appreciated!
 
-Note #3: Yes, this is a little silly. For a while the Beagle back end could
+Note #2: Yes, this is a little silly. For a while the Beagle back end could
          be built into its own bundle by making use of Mikel Evins'
          Bosco framework. This framework is currently undergoing some change
          in any case so I decided to make the initial CVS version available
@@ -89,10 +76,11 @@ Note #3: Yes, this is a little silly. For a while the Beagle back end could
          currently-executing (non-graphical) application can have an event
          loop.
 
-Note #4: If you'd rather run with the CLX back end, do a load-clx instead
-         here. Hopefully it will (soon?) be possible to run with multiple
-         ports simultaneously so that both a CLX and a Beagle Listener can
-         be run side by side for comparative purposes.
+Note #3: If you'd rather run with the CLX back end, load CLX
+         instead here. Hopefully it will (soon?) be possible to run
+         with multiple ports simultaneously so that both a CLX and a
+         Beagle Listener can be run side by side for comparative
+         purposes.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

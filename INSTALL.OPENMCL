@@ -1,6 +1,12 @@
 Install instructions for OpenMCL on Mac OS X
 --------------------------------------------
 
+:::NOTE:::
+These install instructions refer to the "system.lisp" installation
+approach. If you have ASDF available, we recommend you follow the
+install instructions in INSTALL.ASDF.
+:::NOTE:::
+
 McCLIM has been tested with OpenMCL 0.13.6 and OpenMCL 0.14.1-p1
 (which is recommended).
 

@@ -1,7 +1,13 @@
 Install instructions for CMU Common Lisp
 ----------------------------------------
 
-McCLIM has been tested with CMUCL 18e.
+:::NOTE:::
+These install instructions refer to the "system.lisp" installation
+approach. If you have ASDF available, we recommend you follow the
+install instructions in INSTALL.ASDF.
+:::NOTE:::
+
+McCLIM has been tested with CMUCL 19a.
 
 1. Make sure you have a Lisp core file that includes 
 

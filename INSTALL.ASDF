@@ -1,0 +1,53 @@
+Installing McCLIM using mcclim.asd
+==================================
+
+To tell ASDF about the wherabouts of McCLIM and to compile it for the
+first time, perform these steps:
+
+ 1. Symlink mcclim.asd to a directory in your
+    asdf:*central-repository* list. E.g., for SBCL, that would be:
+
+      $ ln -sf /path/to/mcclim.asd ~/.sbcl/systems/
+
+ 2. If you are using a Lisp implementation that requires a separate
+    CLX to be installed, do this now and symlink the clx's .asd file
+    to your asdf:*central-repository*, as above. If your
+    implementation's CLX doesn't come with a clx.asd file, you will
+    have to load CLX via (require :clx) or a similar mechanism
+    yourself.
+
+ 3. On your Lisp's REPL (with ASDF loaded), type
+
+     (asdf:oos 'asdf:load-op :mcclim)
+     ; compilation messages should zip past
+
+After step 3, McCLIM and a suitable backend should be loaded and
+you are good to go.
+
+When you restart your lisp image, you will need to perform step 3 to
+load McCLIM again.
+
+Installing mcclim.asd if you were using ASDF & system.lisp before
+=================================================================
+
+Make sure to remove all symlinks in your asdf:*central-repository* to
+system.lisp and replace them with symlinks to mcclim.asd. Keeping the
+old links around will break loading the McCLIM system in subtle ways.
+
+After replacing the symlinks, follow the "Installing McCLIM..."
+section above, beginning at step 1 - the symlink mcclim.asd itself is
+required, too.
+
+Writing a system that depends on McCLIM
+=======================================
+
+In an ASDF system that depends on a loaded CLIM, use the following
+code to declare a dependency on McCLIM:
+
+(defsystem :your-clim-using-system
+           :depends-on (:mcclim #| other dependencies |#)
+           :components (#| components |#)
+           )
+
+The dependency on the McCLIM system will also load a suitable display
+backend on implementations where it can determine one.

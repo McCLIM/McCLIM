@@ -1,6 +1,12 @@
 Install instructions for GNU CLISP
 ----------------------------------
 
+:::NOTE:::
+These install instructions refer to the "system.lisp" installation
+approach. If you have ASDF available, we recommend you follow the
+install instructions in INSTALL.ASDF.
+:::NOTE:::
+
 1. Get clisp-20041218 or newer. Build it with option --with-module=clx/mit-clx.
 
 2. Get a copy of the ASDF package. Compile it:
