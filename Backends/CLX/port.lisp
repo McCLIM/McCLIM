@@ -91,7 +91,7 @@
   (port-lookup-mirror port sheet))
 
 (defmethod realize-mirror ((port clx-port) (sheet sheet))
-  (realize-mirror-aux port sheet :border-width 1))
+  (realize-mirror-aux port sheet :border-width 0))
 
 (defmethod realize-mirror ((port clx-port) (sheet border-pane))
   (realize-mirror-aux port sheet
