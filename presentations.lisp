@@ -1090,9 +1090,9 @@ function lambda list"))
   (cond ((eql 1 plural-count)
 	 (format stream "~:[a~;an~] ~A"
 		   (find (char description 0) "aeiouAEIOU")
-		   description)
-	 ((numberp plural-count)
-	  (format stream "~D ~A~P" plural-count description plural-count)))
+		   description))
+	((numberp plural-count)
+	 (format stream "~D ~A~P" plural-count description plural-count))
 	(plural-count
 	 (format stream "~As" description))
 	(t (write-string description stream))))
