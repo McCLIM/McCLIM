@@ -43,6 +43,18 @@
 
 #+mk-defsystem (use-package "MK")
 
+(defsystem :clim-lisp #-mk-defsystem ()
+  #+mk-defsystem :source-pathname #+mk-defsystem *clim-directory*
+  #+mk-defsystem :source-extension #+mk-defsystem "lisp"
+  #+mk-defsystem :components
+  (:serial
+   ;; First possible patches
+   #+:CMU       "Lisp-Dep/fix-cmu"
+   #+:EXCL	"Lisp-Dep/fix-acl"
+   #+:SBCL      "Lisp-Dep/fix-sbcl"
+   "package"
+   ))  
+
 (defsystem :clim #-mk-defsystem ()
   #+mk-defsystem :source-pathname #+mk-defsystem *clim-directory*
   #+mk-defsystem :source-extension #+mk-defsystem "lisp"
@@ -87,7 +99,7 @@
    "recording"
    "stream-input"
    "input-editing"
-   "presentations"
+   ;; "presentations"
    "commands"
    "frames"
    "panes"
@@ -105,6 +117,8 @@
   #+mk-defsystem :components
   (:serial
    #-mk-defsystem :clim
+   "Backends/CLX/keysyms"
+   "Backends/CLX/keysymdef"
    "Backends/CLX/port"
    "Backends/CLX/medium"
    "Backends/CLX/graft"
@@ -122,7 +136,7 @@
    "Examples/calculator"
    "Examples/colorslider"
    "Examples/menutest"
-   "Examples/address-book"
+   ;; "Examples/address-book"
    "Examples/traffic-lights"
    "Examples/clim-fig"
    "Examples/postscript-test"
