@@ -1,7 +1,7 @@
 ;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
 
 ;;;  (c) copyright 1998,1999,2000,2001 by Michael McDonald (mikemac@mikemac.com)
-;;;  (c) copyright 2000 by 
+;;;  (c) copyright 2000 by
 ;;;           Robert Strandh (strandh@labri.u-bordeaux.fr)
 
 ;;; This library is free software; you can redistribute it and/or
@@ -15,8 +15,8 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
 (in-package :CLIM-INTERNALS)
@@ -51,23 +51,28 @@
             (values (+ cx (stream-character-width stream char)) cy))))))
 
 
-
 ;;; Cursor class
+(define-protocol-class cursor ()
+  ())
 
-(defclass cursor ()
-  ((sheet :initarg :sheet
-	  :reader cursor-sheet)
-   (x :initform 0)
-   (y :initform 0)
-   (width :initform 8)
-   (visibility :initform nil
-	       :accessor cursor-visibility)
-   )
-  )
+(defgeneric cursor-sheet (cursor))
 
-(defun cursorp (x)
-  (typep x 'cursor))
+(defgeneric cursor-position (cursor))
 
+(defgeneric* (setf cursor-position) (x y cursor))
+
+(defgeneric cursor-active (cursor))
+(defgeneric (setf cursor-active) (value cursor))
+
+(defgeneric cursor-state (cursor))
+(defgeneric (setf cursor-state) (value cursor))
+
+(defgeneric cursor-focus (cursor))
+
+(defgeneric cursor-visibility (cursor))
+(defgeneric (setf cursor-visibility) (visibility cursor))
+
+;;; Cursor-Mixin class
 (defclass cursor-mixin ()
   ((sheet :initarg :sheet
 	  :reader cursor-sheet)
@@ -76,8 +81,6 @@
    (width :initform 8)
    (visibility :initform nil
 	       :accessor cursor-visibility)))
-
-;;; Must be implemented by subclasses of cursor-mixin
 
 (defgeneric cursor-height (cursor))
 
@@ -97,8 +100,6 @@
   (with-slots (x y) cursor
     (values x y)))
 
-(defgeneric* (setf cursor-position) (nx ny cursor))
-
 (defmethod* (setf cursor-position) (nx ny (cursor cursor-mixin))
   (with-slots (x y visibility) cursor
     (if visibility
@@ -112,10 +113,10 @@
   (with-slots (x y sheet width) cursor
     (let ((height (cursor-height cursor)))
       (draw-rectangle* (sheet-medium (cursor-sheet cursor))
-				x y
-				(+ x width) (+ y height)
-				:filled t
-				:ink +flipping-ink+))))
+                       x y
+                       (+ x width) (+ y height)
+                       :filled t
+                       :ink +flipping-ink+))))
 
 
 (defmethod display-cursor ((cursor cursor-mixin) state)
@@ -143,10 +144,48 @@
   (slot-value (cursor-sheet cursor) 'height))
 
 
-
 ;;; Extended-Output-Stream class
 
-(defclass extended-output-stream (standard-output-stream)
+(define-protocol-class extended-output-stream
+    (fundamental-character-output-stream)
+  ;; CLIM Specification says that E-O-S is a subclass of
+  ;; OUTPUT-STREAM, but it does not says what is it.
+  ()
+  )
+
+;;; Stream text cursor protocol
+(defgeneric stream-text-cursor (stream))
+(defgeneric (setf stream-text-cursor) (cursor stream))
+
+(defgeneric stream-cursor-position (stream))
+(defgeneric* (setf stream-cursor-position) (x y stream))
+
+(defgeneric stream-increment-cursor-position (stream dx dy))
+
+;;; Text protocol
+(defgeneric stream-character-width (stream character &key text-style))
+
+(defgeneric stream-string-width (stream character &key start end text-style))
+
+(defgeneric stream-text-margin (stream))
+(defgeneric (setf stream-text-margin) (margin stream))
+
+(defgeneric stream-line-height (stream &key text-style))
+
+(defgeneric stream-vertical-spacing (stream))
+
+(defgeneric stream-baseline (stream))
+
+(defgeneric stream-end-of-line-action (stream))
+(defgeneric (setf stream-end-of-line-action) (action stream))
+
+(defgeneric stream-end-of-page-action (stream))
+(defgeneric (setf stream-end-of-page-action) (action stream))
+
+;;; Standard-Extended-Output-Stream class
+
+(defclass standard-extended-output-stream (extended-output-stream
+                                           standard-output-stream)
   ((cursor :accessor stream-text-cursor)
    (foreground :initarg :foreground
 	       :initform +black+
@@ -155,7 +194,7 @@
 	       :initform +white+
 	       :reader stream-background)
    (text-style :initarg :text-style
-	       :initform (make-text-style :fix :roman :normal)
+	       :initform *default-text-style*
 	       :reader stream-text-style)
    (vspace :initarg :vertical-spacing
 	   :initform 2
@@ -178,21 +217,12 @@
    )
   )
 
-(defun extended-output-stream-p (x)
-  (typep x 'extended-output-stream))
-
-(defclass standard-extended-output-stream (extended-output-stream)
-  ()
-  )
-
 (defmethod initialize-instance :after ((stream standard-extended-output-stream) &rest args)
   (declare (ignore args))
   (setf (stream-text-cursor stream) (make-instance 'standard-text-cursor :sheet stream)))
 
 (defmethod stream-cursor-position ((stream standard-extended-output-stream))
   (cursor-position (stream-text-cursor stream)))
-
-(defgeneric* (setf stream-cursor-position) (x y stream))
 
 (defmethod* (setf stream-cursor-position) (x y (stream standard-extended-output-stream))
   (setf (cursor-position (stream-text-cursor stream)) (values x y)))
@@ -233,15 +263,8 @@
     (scroll-extent stream (+ tx dx) ty)))
 
 (defmacro with-cursor-off (stream &body body)
-  `(let* ((cursor (stream-text-cursor ,stream))
-	  (visible (cursor-visibility cursor)))
-     (unwind-protect
-	 (progn
-	   (if visible
-	       (setf (cursor-visibility cursor) nil))
-	   ,@body)
-       (if visible
-	   (setf (cursor-visibility cursor) t)))))
+  `(letf (((cursor-visibility (stream-text-cursor ,stream)) nil))
+     ,@body))
 
 (defmethod stream-wrap-line ((stream standard-extended-output-stream))
   (let ((margin (stream-text-margin stream)))
@@ -277,10 +300,10 @@ than one line of output."))
     (with-slots (baseline height vspace) stream
       (multiple-value-bind (cx cy) (stream-cursor-position stream)
 	(when (> new-baseline baseline)
-	  (when (or (> baseline 0)
-		    (> height 0))
-	    (scroll-vertical stream (- new-baseline baseline))
-	    )
+          ;;(when (or (> baseline 0)
+          ;;          (> height 0))
+          ;;  (scroll-vertical stream (- new-baseline baseline))
+          ;;  ) ; the beginning of the line should be moved down, but not the whole stream -- APD, 2002-06-18
 	  (setq baseline new-baseline))
 	(if (> new-height height)
 	    (setq height new-height))
@@ -343,9 +366,10 @@ than one line of output."))
 ;	    do (do-char))))
 
 (defmethod stream-character-width ((stream standard-extended-output-stream) char &key (text-style nil))
-  (text-style-character-width (or text-style (medium-text-style (sheet-medium stream)))
-			      (sheet-medium stream)
-			      char))
+  (with-sheet-medium (medium stream)
+    (text-style-character-width (or text-style (medium-text-style medium))
+                                medium
+                                char)))
 
 (defmethod stream-string-width ((stream standard-extended-output-stream) string
 				&key (start 0) (end nil) (text-style nil))
@@ -389,26 +413,18 @@ than one line of output."))
   '(error "WITH-ROOM-FOR-GRAPHICS not implemented!"))
 
 (defmacro with-end-of-line-action ((stream action) &body body)
-  (declare (type symbol stream))
   (when (eq stream t)
     (setq stream '*standard-output*))
-  (let ((sym (gensym)))
-    `(let ((,sym (stream-end-of-line-action ,stream)))
-       (setf (stream-end-of-line-action ,stream) ,action)
-       (unwind-protect
-	   (progn ,@body)
-	 (setf (stream-end-of-line-action ,stream) ,sym)))))
+  (check-type stream symbol)
+  `(letf (((stream-end-of-line-action ,stream) ,action))
+     ,@body))
 
 (defmacro with-end-of-page-action ((stream action) &body body)
-  (declare (type symbol stream))
   (when (eq stream t)
     (setq stream '*standard-output*))
-  (let ((sym (gensym)))
-    `(let ((,sym (stream-end-of-page-action ,stream)))
-       (setf (stream-end-of-page-action ,stream) ,action)
-       (prog1
-	   (block ,@body)
-	 (setf (stream-end-of-page-action ,stream) ,sym)))))
+  (check-type stream symbol)
+  `(letf (((stream-end-of-page-action ,stream) ,action))
+     ,@body))
 
 (defmethod beep (&optional medium)
   (when (null medium)
