@@ -371,6 +371,8 @@ skips intervening non-table output record structures."))
         (funcall continuation stream)
         (finish-output stream))
       (adjust-item-list-cells item-list stream)
+      (setf (output-record-position item-list)
+            (stream-cursor-position stream))
       (if move-cursor
           ;; FIXME!!!
           #+ignore
