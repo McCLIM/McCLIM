@@ -652,6 +652,7 @@
 		     mute-repainting-mixin
 		     mute-sheet-input-mixin
 		     mute-sheet-output-mixin
+		     new-page
 		     nil
 		     note-command-disabled
 		     note-command-enabled
@@ -1242,6 +1243,7 @@
 		     with-output-recording-options
 		     with-output-to-output-record
 		     with-output-to-pixmap
+		     with-output-to-postscript-stream
 		     without-scheduling
 		     with-port-locked
 		     with-presentation-type-decoded
