@@ -196,7 +196,7 @@
 	      ;; previous current-pos
 	      for remaining = (- n) then (- remaining current-pos 1)
 	      for current-pos = pos then last-point
-	      until (and current-line (<= remaining current-pos))
+	      until (or (null current-line) (<= remaining current-pos))
 	      finally (if (null current-line)
 			  (error 'buffer-bounds-error :buffer buf)
 			  (return (values current-line
