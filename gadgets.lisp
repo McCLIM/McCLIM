@@ -434,7 +434,7 @@
 ;; SCROLL-BAR gadget
 ;;
 
-(defgeneric drag-callback (scroll-bar client gadget-id value))
+(defgeneric drag-callback (pane client gadget-id value))
 (defgeneric scroll-to-top-callback (scroll-bar client gadget-id))
 (defgeneric scroll-to-bottom-callback (scroll-bar client gadget-id))
 (defgeneric scroll-up-line-callback (scroll-bar client gadget-id))
@@ -502,8 +502,6 @@
 ;;
 ;; SLIDER gadget
 ;;
-
-(defgeneric drag-callback (slider client gadget-id value))
 
 (defclass slider-gadget (value-gadget oriented-gadget-mixin range-gadget-mixin
 				      labelled-gadget-mixin gadget-color-mixin) ()
