@@ -35,12 +35,12 @@
 	    (pixmap-height (round (bounding-rectangle-height (sheet-region pane)))))
 	(setq first-point-x (pointer-event-x event))
 	(setq first-point-y (pointer-event-y event))
-	(with-slots (clim-demo::line-width clim-demo::current-color) *application-frame*
+	(with-slots (clim-demo::line-style clim-demo::current-color) *application-frame*
 	  (case (clim-demo::clim-fig-drawing-mode *application-frame*)
 	    (:point
 	     (draw-point* pane first-point-x first-point-y
 			  :ink clim-demo::current-color
-                          :line-thickness clim-demo::line-width))))
+                          :line-style clim-demo::line-style))))
 	(setf canvas-pixmap (allocate-pixmap pane pixmap-width pixmap-height))
 	(copy-to-pixmap pane 0 0 pixmap-width pixmap-height canvas-pixmap)))))
 
@@ -56,7 +56,6 @@
 	    (with-output-recording-options (pane :record nil)
 	      (copy-from-pixmap canvas-pixmap 0 0 pixmap-width pixmap-height pane 0 0)
 	      (case (clim-demo::clim-fig-drawing-mode *application-frame*)
-		(:point nil)
 		(:line
 		 (draw-line* pane first-point-x first-point-y x y
 			     :ink clim-demo::current-color :line-thickness 1))
@@ -82,7 +81,7 @@
           (copy-from-pixmap canvas-pixmap 0 0 pixmap-width pixmap-height pane 0 0)
           (deallocate-pixmap canvas-pixmap)
           (setf canvas-pixmap nil)
-	  (with-slots (clim-demo::line-width clim-demo::current-color) *application-frame*
+	  (with-slots (clim-demo::line-style clim-demo::current-color) *application-frame*
 	    (let* ((x (pointer-event-x event))
 		   (y (pointer-event-y event))
 		   (radius (distance first-point-x first-point-y x y)))
@@ -90,23 +89,23 @@
 		(:line
 		 (draw-line* pane first-point-x first-point-y x y
 			     :ink clim-demo::current-color
-                             :line-thickness clim-demo::line-width))
+                             :line-style clim-demo::line-style))
 		(:rectangle
 		 (draw-rectangle* pane first-point-x first-point-y x y :filled nil
 				  :ink clim-demo::current-color
-                                  :line-thickness clim-demo::line-width))
+                                  :line-style clim-demo::line-style))
 		(:filled-rectangle
 		 (draw-rectangle* pane first-point-x first-point-y x y
 				  :ink clim-demo::current-color
-                                  :line-thickness clim-demo::line-width))
-		(:circle
+                                  :line-style clim-demo::line-style))
+                (:circle
 		 (draw-circle* pane first-point-x first-point-y radius :filled nil
 			       :ink clim-demo::current-color
-                               :line-thickness clim-demo::line-width))
+                               :line-style clim-demo::line-style))
 		(:filled-circle
 		 (draw-circle* pane first-point-x first-point-y radius
 			       :ink clim-demo::current-color
-                               :line-thickness clim-demo::line-width))))
+                               :line-style clim-demo::line-style))))
 	    (setf (clim-demo::clim-fig-redo-list *application-frame*) nil))
 	  (setf first-point-x nil
 		first-point-y nil))))))
@@ -139,6 +138,20 @@
                        mode))
 	     :width width :height height))
 
+(defun make-merged-line-style (line-style &key unit thickness joint-shape cap-shape
+                               (dashes nil dashes-p))
+  (make-line-style :unit (or unit
+                             (line-style-unit line-style))
+                   :thickness (or thickness
+                                 (line-style-thickness line-style))
+                   :joint-shape (or joint-shape
+                                    (line-style-joint-shape line-style))
+                   :cap-shape (or cap-shape
+                                  (line-style-cap-shape line-style))
+                   :dashes (if dashes-p
+                               dashes
+                               (line-style-dashes line-style))))
+
 (define-command com-exit ()
   (throw 'exit nil))
 
@@ -148,11 +161,11 @@
     (unless (null record)
       (with-output-recording-options (*standard-output* :record nil)
         (with-bounding-rectangle* (x1 y1 x2 y2) record
-                                  (draw-rectangle* *standard-output* x1 y1 x2 y2 :ink +background-ink+)
-                                  (delete-output-record record output-history)
-                                  (push record (clim-fig-redo-list *application-frame*))
-                                  (replay-output-record output-history *standard-output*
-                                                        (make-rectangle* x1 y1 x2 y2)))))))
+          (draw-rectangle* *standard-output* x1 y1 x2 y2 :ink +background-ink+)
+          (delete-output-record record output-history)
+          (push record (clim-fig-redo-list *application-frame*))
+          (replay-output-record output-history *standard-output*
+                                (make-rectangle* x1 y1 x2 y2)))))))
 
 (define-command com-redo ()
   (let* ((output-history (stream-current-output-record *standard-output*))
@@ -169,7 +182,7 @@
   (let ((output-history (stream-current-output-record *standard-output*)))
     (with-output-recording-options (*standard-output* :record nil)
       (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region *standard-output*)
-                                (draw-rectangle* *standard-output* x1 y1 x2 y2 :ink +background-ink+)))
+        (draw-rectangle* *standard-output* x1 y1 x2 y2 :ink +background-ink+)))
     (setf (clim-demo::clim-fig-redo-list *application-frame*)
           (append (output-record-children output-history)
                   (clim-demo::clim-fig-redo-list *application-frame*)))
@@ -191,10 +204,10 @@
                             ("Edit" :menu edit-command-table)))
 
 (define-application-frame clim-fig ()
-  ((drawing-mode :initform :point :accessor clim-fig-drawing-mode)
+  ((drawing-mode :initform :line :accessor clim-fig-drawing-mode)
    (redo-list :initform nil :accessor clim-fig-redo-list)
    (current-color :initform +black+ :accessor clim-fig-current-color)
-   (line-width :initform 1 :accessor clim-fig-line-width))
+   (line-style :initform (make-line-style) :accessor clim-fig-line-style))
   (:panes
    (canvas :canvas)
    (menu-bar (climi::make-menu-bar 'menubar-command-table :height 25))
@@ -206,12 +219,31 @@
 		      :value-changed-callback
                       #'(lambda (gadget value)
                           (declare (ignore gadget))
-                          (setf (clim-fig-line-width *application-frame*)
-                                (round value)))
+                          (with-slots (line-style) *application-frame*
+                            (setf line-style
+                                  (make-merged-line-style line-style
+                                                          :thickness (round value)))))
 		      :show-value-p nil
 		      :height 50
 		      :orientation :horizontal)
-
+   (round-shape-toggle :toggle-button
+                       :label "Round Cap/Joint"
+                       :value nil
+                       :value-changed-callback
+                       #'(lambda (gadget value)
+                           (declare (ignore gadget))
+                           (with-slots (line-style) *application-frame*
+                             (let ((cap-shape (if value
+                                                  :round
+                                                  :butt))
+                                   (joint-shape (if value
+                                                    :round
+                                                    :miter)))
+                               (setf line-style
+                                     (make-merged-line-style line-style
+                                                             :cap-shape cap-shape
+                                                             :joint-shape joint-shape))))))
+                       
    ;; Drawing modes
    (point-button (make-drawing-mode-button "Point" :point))
    (line-button (make-drawing-mode-button "Line" :line))
@@ -260,6 +292,7 @@
               (list red-button magenta-button yellow-button white-button)
               (list turquoise-button grey-button brown-button orange-button))
             line-width-slider
+            round-shape-toggle
             point-button line-button
             circle-button filled-circle-button
             rectangle-button filled-rectangle-button)
