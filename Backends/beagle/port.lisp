@@ -63,7 +63,7 @@ some more before we start pulling McCLIM to bits!
           ^
           |
 +---------------+
-|  BEAGLE-PORT   |
+|  BEAGLE-PORT  |
 +---------------+
 |screen         |
 |color-table    |
