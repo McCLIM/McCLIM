@@ -36,7 +36,7 @@
   ;;
   ;; Note that CLIM defines pixel coordinates to be at the corners,
   ;; while in X11 they are at the centers. We don't do much about the
-  ;; discrepancy, but rounding down at half pixel boundaries seems to
+  ;; discrepancy, but rounding up at half pixel boundaries seems to
   ;; work well.
   (floor (+ x .5)))
 
