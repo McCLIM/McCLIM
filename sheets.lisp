@@ -413,7 +413,7 @@ sheet-supports-only-one-child error to be signalled."))
 
 (defmethod sheet-adopt-child ((sheet sheet-single-child-mixin)
 			      (child sheet-parent-mixin))
-  (setf (sheet-children sheet) child))
+  (setf (sheet-children sheet) (list child)))
 
 (defmethod sheet-adopt-child :after ((sheet sheet-single-child-mixin)
 				     (child sheet-parent-mixin))
@@ -583,5 +583,6 @@ sheet-supports-only-one-child error to be signalled."))
 
 (defmethod repaint-sheet ((sheet mute-repaint-mixin) region)
   (declare (ignorable sheet region))
+  (format *debug-io* "repaint ~S~%" sheet)
   (values))
 
