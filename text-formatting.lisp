@@ -64,7 +64,7 @@ SUPPRESS-SPACE-AFTER-CONJUNCTION are non-standard."
 			  output-recording-stream)
   ((fill-width :accessor fill-width :initarg :fill-width)
    (break-characters :accessor break-characters :initarg :break-characters
-		     :initform '(" "))
+		     :initform '(#\Space))
    (after-line-break :accessor after-line-break :initarg :after-line-break)))
 
 ;;; parse-space is from table-formatting.lisp
@@ -92,7 +92,7 @@ SUPPRESS-SPACE-AFTER-CONJUNCTION are non-standard."
 (defmacro filling-output ((stream &rest args &key fill-width break-characters
 				  after-line-break after-line-break-initially)
 			  &body body)
-  (declare (ignore fill-width break-characters after-line-break))
+  (declare (ignore after-line-break-initially))
   (when (eq stream t)
     (setq stream '*standard-output*))
   (with-gensyms (fill-var break-var after-var initially-var)
@@ -100,16 +100,17 @@ SUPPRESS-SPACE-AFTER-CONJUNCTION are non-standard."
 	       ((:break-characters ,break-var))
 	       ((:after-line-break ,after-var))
 	       ((:after-line-break-initially ,initially-var)))
+        (declare (ignorable ,fill-var ,break-var ,after-var))
 	(let ((,stream (make-instance
 			'filling-stream
 			:stream ,stream
-			,@(and fill-width `((:fill-width ,fill-var)))
+			,@(and fill-width `(:fill-width ,fill-var))
 			,@(and break-characters
-			       `((:break-characters ,break-var)))
+			       `(:break-characters ,break-var))
 			,@(and after-line-break
-			       `((:after-line-break ,after-var))))))
+			       `(:after-line-break ,after-var)))))
 	  (when ,initially-var
-	    (write-string ,after-var stream))
+	    (write-string ,after-var ,stream))
 	  ,@body))
       ,@args)))
 
