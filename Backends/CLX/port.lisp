@@ -79,6 +79,8 @@
 				   :structure-notify
 				   :pointer-motion))))
 	(port-register-mirror (port sheet) sheet window)
+	(if (eq (sheet-mirror (sheet-parent sheet)) (clx-port-window port))
+	    (setf (xlib:wm-name window) (frame-pretty-name *application-frame*)))
 	(xlib:map-window window)))))
 
 (defmethod realize-mirror ((port clx-port) (sheet border-pane))
