@@ -20,7 +20,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-(defpackage :MENUTEST (:USE :CLIM :COMMON-LISP))
+(defpackage :MENUTEST (:USE :CLIM :CLIM-EXTENSIONS :COMMON-LISP))
 
 (in-package :MENUTEST)
 
@@ -65,9 +65,7 @@
 (define-application-frame menutest ()
   ()
   (:panes
-   (screen :text-field
-	   :value "stuff"
-	   :space-requirement (make-space-requirement :width 200 :height 50))
+   (screen :text-field :value "stuff" :height 200)
    (menu-bar
     (clim-internals::make-menu-bar 'menubar-command-table)))
   (:layouts
