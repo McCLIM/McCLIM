@@ -1371,14 +1371,14 @@
            (xlib:change-property requestor property
                                  (utf-8-encode
                                   (concatenate 'vector (map 'vector #'char-code string)))
-                                               #|(list #x20AC) (list #x2261)|#
-                                 :UTF8_STRING ;###
+                                 ;;:UTF8_STRING ;###
+                                 target
                                  8)            
            (xlib:send-event requestor
                             :selection-notify nil
                             :window requestor
                             :selection :primary
-                            :target :UTF8_STRING  ;;target   (?)
+                            :target target ;; :UTF8_STRING 
                             :property property
                             :time time))
           ((member target '(:COMPOUND_TEXT))
