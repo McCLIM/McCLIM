@@ -58,6 +58,13 @@
   (push (make-instance 'clx-frame-manager :port port) (slot-value port 'frame-managers))
   (initialize-clx port))
 
+(defmethod print-object ((object clx-port) stream)
+  (print-unreadable-object (object stream :identity t :type t)
+    (when (slot-boundp object 'display)
+      (format stream "~S ~S ~S ~S"
+              :host (xlib:display-host (slot-value object 'display))
+              :display-id (xlib:display-display (slot-value object 'display))))))
+
 (defun clx-error-handler (display error-name &key &allow-other-keys)
   (declare (ignore display))
   (format *error-output* "clx-error: ~a~%" error-name))
@@ -92,8 +99,7 @@
                   "Restart CLIM's event loop.")
                (loop
                  (process-next-event port)))))
-         :name (format nil "~S's event process." port))))
-    ))
+         :name (format nil "~S's event process." port)))) ))
 
 #+NIL
 (defmethod (setf sheet-mirror-transformation) :after (new-value (sheet mirrored-sheet-mixin))
@@ -224,9 +230,7 @@
                                       :map nil
                                       :width (round-coordinate (space-requirement-width q))
                                       :height (round-coordinate (space-requirement-height q))
-                                      :event-mask nil
-                                      ;;GB
-                                      #+NIL '(:structure-notify))))
+                                      :event-mask nil)))
       (setf (xlib:wm-name window) (frame-pretty-name frame))
       (setf (xlib:wm-icon-name window) (frame-pretty-name frame))
       (setf (xlib:wm-protocols window) `(:wm_delete_window)))))
@@ -604,15 +608,6 @@
       :italic              "medium-i"
       :bold-italic         "bold-i"
       :italic-bold         "bold-i")) ))
-
-(defparameter *clx-text-sizes*
-  '(:tiny 8
-    :very-small 8
-    :small 10
-    :normal 12
-    :large 14
-    :very-large 18
-    :huge 24))
 
 (defun open-font (display font-name)
   (let ((fonts (xlib:list-font-names display font-name :max-fonts 1)))
