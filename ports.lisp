@@ -48,6 +48,11 @@ returns a list in CLIM X11 format (:x11 :host host-name :display-id display-numb
 (defvar *all-ports* nil)
 
 (defclass port ()
+  ()
+  (:documentation
+   "The protocol class that corresponds to a port."))
+
+(defclass basic-port (port)
   ((server-path :initform nil
 		:initarg :server-path
 		:reader port-server-path)
@@ -64,8 +69,16 @@ returns a list in CLIM X11 format (:x11 :host host-name :display-id display-numb
    (keyboard-input-focus :initform nil
 			 :initarg :keyboard-input-focus
 			 :accessor port-keyboard-input-focus)
-   )
-  )
+   (event-process
+    :initform nil
+    :initarg  :event-process
+    :accessor port-event-process
+    :documentation "In a multiprocessing environment, the particular process
+                    reponsible for calling PROCESS-NEXT-EVENT in a loop.")
+   
+   (lock
+    :initform (make-recursive-lock "port lock")
+    :accessor port-lock) ))
 
 (defun find-port (&key (server-path *default-server-path*))
   (loop for port in *all-ports*
@@ -79,45 +92,54 @@ returns a list in CLIM X11 format (:x11 :host host-name :display-id display-numb
 		(push port *all-ports*)
 		(return port))))
 
-(defmethod port-lookup-mirror ((port port) (sheet mirrored-sheet-mixin))
+(defmethod initialize-instance :after ((port basic-port) &rest args)
+  (declare (ignorable args))
+  )
+
+(defmethod destroy-port :before ((port basic-port))
+  (when *multiprocessing-p*
+    (destroy-process (port-event-process port))
+    (setf (port-event-process port) nil)))
+
+(defmethod port-lookup-mirror ((port basic-port) (sheet mirrored-sheet-mixin))
   (gethash sheet (slot-value port 'sheet->mirror)))
 
-(defmethod port-lookup-sheet ((port port) mirror)
+(defmethod port-lookup-sheet ((port basic-port) mirror)
   (gethash mirror (slot-value port 'mirror->sheet)))
 
-(defmethod port-register-mirror ((port port) (sheet mirrored-sheet-mixin) mirror)
+(defmethod port-register-mirror ((port basic-port) (sheet mirrored-sheet-mixin) mirror)
   (setf (gethash sheet (slot-value port 'sheet->mirror)) mirror)
   (setf (gethash mirror (slot-value port 'mirror->sheet)) sheet)
   nil)
 
-(defmethod port-unregister-mirror ((port port) (sheet mirrored-sheet-mixin) mirror)
+(defmethod port-unregister-mirror ((port basic-port) (sheet mirrored-sheet-mixin) mirror)
   (remhash sheet (slot-value port 'sheet->mirror))
   (remhash mirror (slot-value port 'mirror->sheet))
   nil)
 
-(defmethod realize-mirror ((port port) (sheet mirrored-sheet-mixin))
+(defmethod realize-mirror ((port basic-port) (sheet mirrored-sheet-mixin))
   (error "Don't know how to realize the mirror of a generic mirrored-sheet"))
 
-(defmethod destroy-mirror ((port port) (sheet mirrored-sheet-mixin))
+(defmethod destroy-mirror ((port basic-port) (sheet mirrored-sheet-mixin))
   (error "Don't know how to destroy the mirror of a generic mirrored-sheet"))
 
-(defmethod mirror-transformation ((port port) mirror)
+(defmethod mirror-transformation ((port basic-port) mirror)
   (declare (ignore mirror))
   (error "MIRROR-TRANSFORMATION is not implemented for generic ports"))
 
-(defmethod port-properties ((port port) indicator)
+(defmethod port-properties ((port basic-port) indicator)
   (with-slots (properties) port
     (getf properties indicator)))
 
-(defmethod (setf port-properties) (value (port port) indicator)
+(defmethod (setf port-properties) (value (port basic-port) indicator)
   (with-slots (properties) port
     (setf (getf properties indicator) value)))
 
-(defmethod get-next-event ((port port) &key wait-function timeout)
+(defmethod get-next-event ((port basic-port) &key wait-function timeout)
   (declare (ignore wait-function timeout))
   (error "Calling GET-NEXT-EVENT on a PORT protocol class"))
 
-(defmethod process-next-event ((port port) &key wait-function timeout)
+(defmethod process-next-event ((port basic-port) &key wait-function timeout)
   (let ((event (get-next-event port :wait-function wait-function :timeout timeout)))
     (cond
      ((null event) nil)
@@ -126,7 +148,7 @@ returns a list in CLIM X11 format (:x11 :host host-name :display-id display-numb
       (distribute-event port event)
       t))))
 
-(defmethod distribute-event ((port port) event)
+(defmethod distribute-event ((port basic-port) event)
   (cond
    ((typep event 'keyboard-event)
     (dispatch-event (or (port-keyboard-input-focus port)
@@ -141,69 +163,82 @@ returns a list in CLIM X11 format (:x11 :host host-name :display-id display-numb
    (t
     (error "Unknown event ~S received in DISTRIBUTE-EVENT" event))))
 
+(defmacro with-port-locked ((port) &body body)
+  (let ((fn (gensym "CONT.")))
+    `(labels ((,fn ()
+               ,@body))
+      (declare (dynamic-extent #',fn))
+      `(invoke-with-port-locked ,port #',fn))))
+
+(defmethod invoke-with-port-locked ((port basic-port) continuation)
+  (with-recursive-lock-held ((port-lock port))
+    (funcall continuation)))
+
 (defun map-over-ports (function)
   (mapc function *all-ports*))
 
-(defmethod restart-port ((port port))
+(defmethod restart-port ((port basic-port))
   (reset-watcher port :restart)
   nil)
 
-(defmethod destroy-port ((port port))
+(defmethod destroy-port ((port basic-port))
   (reset-watcher port :destroy)
   (setf *all-ports* (remove port *all-ports*)))
 
-(defmethod add-watcher ((port port) watcher)
+(defmethod add-watcher ((port basic-port) watcher)
   (declare (ignore watcher))
   nil)
 
-(defmethod delete-watcher ((port port) watcher)
+(defmethod delete-watcher ((port basic-port) watcher)
   (declare (ignore watcher))
   nil)
 
-(defmethod reset-watcher ((port port) how)
+(defmethod reset-watcher ((port basic-port) how)
   (declare (ignore how))
   nil)
 
-(defmethod make-graft ((port port) &key (orientation :default) (units :device))
+(defmethod make-graft ((port basic-port) &key (orientation :default) (units :device))
   (let ((graft (make-instance 'graft
 		 :port port :mirror nil
 		 :orientation orientation :units units)))
     (push graft (port-grafts port))
     graft))
 
-(defmethod make-medium ((port port) sheet)
+#||
+(defmethod make-medium ((port basic-port) sheet)
   (make-instance 'basic-medium :port port :graft (graft sheet) :sheet sheet))
+||#
 
 ;;; Pixmap
 
-(defmethod port-lookup-mirror ((port port) (pixmap pixmap))
+(defmethod port-lookup-mirror ((port basic-port) (pixmap pixmap))
   (gethash pixmap (slot-value port 'pixmap->mirror)))
 
-(defmethod port-lookup-pixmap ((port port) mirror)
+(defmethod port-lookup-pixmap ((port basic-port) mirror)
   (gethash mirror (slot-value port 'mirror->pixmap)))
 
-(defmethod port-register-mirror ((port port) (pixmap pixmap) mirror)
+(defmethod port-register-mirror ((port basic-port) (pixmap pixmap) mirror)
   (setf (gethash pixmap (slot-value port 'pixmap->mirror)) mirror)
   (setf (gethash mirror (slot-value port 'mirror->pixmap)) pixmap)
   nil)
 
-(defmethod port-unregister-mirror ((port port) (pixmap pixmap) mirror)
+(defmethod port-unregister-mirror ((port basic-port) (pixmap pixmap) mirror)
   (remhash pixmap (slot-value port 'pixmap->mirror))
   (remhash mirror (slot-value port 'mirror->pixmap))
   nil)
 
-(defmethod realize-mirror ((port port) (pixmap mirrored-pixmap))
+(defmethod realize-mirror ((port basic-port) (pixmap mirrored-pixmap))
   (declare (ignorable port pixmap))
   (error "Don't know how to realize the mirror on a generic port"))
 
-(defmethod destroy-mirror ((port port) (pixmap mirrored-pixmap))
+(defmethod destroy-mirror ((port basic-port) (pixmap mirrored-pixmap))
   (declare (ignorable port pixmap))
   (error "Don't know how to destroy the mirror on a generic port"))
 
-(defmethod port-allocate-pixmap ((port port) sheet width height)
+(defmethod port-allocate-pixmap ((port basic-port) sheet width height)
   (declare (ignore sheet width height))
   (error "ALLOCATE-PIXMAP is not implemented for generic PORTs"))
 
-(defmethod port-deallocate-pixmap ((port port) pixmap)
+(defmethod port-deallocate-pixmap ((port basic-port) pixmap)
   (declare (ignore pixmap))
   (error "DEALLOCATE-PIXMAP is not implemented for generic PORTs"))
