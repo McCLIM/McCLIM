@@ -292,7 +292,8 @@ If there are no named panes, only the single, top level pane is returned."))
 	  (command-unparser 'command-line-command-unparser)
 	  (partial-command-parser
 	   'command-line-read-remaining-arguments-for-partial-command)
-	  (prompt "Command: "))
+	  (prompt nil))
+  (sleep 4) ; wait for the panes to be finalized - KLUDGE!!! - mikemac
   (loop
     (let ((*standard-input* (frame-standard-input frame))
 	  (*standard-output* (frame-standard-output frame))
@@ -314,11 +315,12 @@ If there are no named panes, only the single, top level pane is returned."))
 		       (frame-top-level-sheet frame))
       (when *standard-input*
 	(setf (cursor-visibility (stream-text-cursor *standard-input*)) t)
-	(with-text-style (*standard-input* prompt-style)
-	  (if (stringp prompt)
-	      (stream-write-string *standard-input* prompt)
-	    (apply prompt (list *standard-input* frame)))
-	  (stream-finish-output *standard-input*))
+	(when prompt
+	  (with-text-style (*standard-input* prompt-style)
+	    (if (stringp prompt)
+		(stream-write-string *standard-input* prompt)
+	      (apply prompt (list *standard-input* frame)))
+	    (stream-finish-output *standard-input*)))
 	(setq results (multiple-value-list (execute-frame-command frame (read-frame-command frame))))
 	(loop for result in results
 	      do (print result *standard-input*))
