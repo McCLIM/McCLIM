@@ -384,9 +384,50 @@
   (room))
 
 (define-presentation-to-command-translator mem-room-translator
-  (lisp-memory-usage com-room lisp-commands :gesture :select)
+  (lisp-memory-usage com-room lisp-commands
+                     :gesture :select
+                     :documentation "Room"
+                     :pointer-documentation "Room")
   ())
   
+
+(define-presentation-to-command-translator com-show-class-subclasses-translator
+  (class-name com-show-class-subclasses lisp-commands
+              :menu t
+              :documentation "Show Class Subclasses"
+              :pointer-documentation "Show Class Subclasses")
+  (presentation)
+  (list (presentation-object presentation)))
+
+
+(define-presentation-to-command-translator com-show-class-superclasses-translator
+  (class-name com-show-class-superclasses lisp-commands
+              :menu t
+              :tester ((presentation)
+                       (not (eq t (presentation-object presentation))))
+              :documentation "Show Class Superclasses"
+              :pointer-documentation "Show Class Superclasses")
+  (presentation)
+  (list (presentation-object presentation)))
+
+
+(define-presentation-to-command-translator com-show-class-generic-functions-translator
+  (class-name com-show-class-generic-functions lisp-commands
+              :menu t
+              :documentation "Show Class Generic Functions"
+              :pointer-documentation "Show Class Generic Functions")
+  (presentation)
+  (list (presentation-object presentation)))
+
+
+(define-presentation-to-command-translator com-show-class-slots-translator
+  (class-name com-show-class-slots lisp-commands
+              :menu t
+              :documentation "Show Class Slots"
+              :pointer-documentation "Show Class Slots")
+  (presentation)
+  (list (presentation-object presentation)))
+
 
 ;;; CLOS introspection commands
 
@@ -407,7 +448,7 @@
                                      ;; class object itself is rather long and freaks out the pointer doc pane.
                                      (with-output-as-presentation (stream (clim-mop:class-name class) 'class-name)
                                         ; (surrounding-output-with-border (stream :shape :drop-shadow)
-				       (princ (clim-mop:class-name class))))) ;)
+				       (princ (clim-mop:class-name class) stream)))) ;)
                                inferior-fun
                                :stream stream
                                :merge-duplicates T
@@ -425,7 +466,7 @@
 
 (define-command (com-show-class-superclasses :name "Show Class Superclasses"
                                              :command-table show-commands
-                                             :menu t
+                                             :menu "Class Superclasses"
 					     :provide-output-destination-keyword t)
     ((class-spec 'class-name :prompt "class"))
   (let ((class (frob-to-class class-spec)))
@@ -435,7 +476,7 @@
 
 (define-command (com-show-class-subclasses :name "Show Class Subclasses"
                                            :command-table show-commands
-                                           :menu t
+                                           :menu "Class Subclasses"
 					   :provide-output-destination-keyword t)
     ((class-spec 'class-name :prompt "class"))
   (let ((class (frob-to-class class-spec)))
@@ -551,7 +592,7 @@
 (defun print-slot-table-heading ()
   (formatting-row (T)
     (dolist (name '("Slot name" "Initargs" "Initform" "Accessors"))
-      (formatting-cell (T :align-x :center)        
+      (formatting-cell (T :align-x :center)
         (underlining (T)
           (with-text-family (T :sans-serif)
             (princ name)))))))
@@ -586,7 +627,7 @@
 
 (define-command (com-show-class-slots :name "Show Class Slots"
 				      :command-table show-commands
-                                      :menu t
+                                      :menu "Class Slots"
 				      :provide-output-destination-keyword t)
     ((class-name 'clim:symbol :prompt "class name"))
   (let ((class (find-class class-name nil)))
@@ -652,7 +693,7 @@
 (define-command (com-show-class-generic-functions
                  :name "Show Class Generic Functions"
                  :command-table show-commands
-                 :menu t
+                 :menu "Class Generic Functions"
 		 :provide-output-destination-keyword t)
     ((class-spec 'class-name :prompt "class"))
   (let ((class (frob-to-class class-spec)))
@@ -796,7 +837,7 @@
 (define-command (com-show-generic-function
 		 :name t
 		 :command-table show-commands
-                 :menu t
+                 :menu "Generic Function"
 		 :provide-output-destination-keyword t)
     ((gf 'generic-function :prompt "a generic function")
      &key (classes 'boolean :default nil :mentioned-default t)
@@ -936,7 +977,7 @@
 
 (define-command (com-show-used-packages :name "Show Used Packages"
                                         :command-table show-commands
-                                        :menu t
+                                        :menu "Used Packages"
                                         :provide-output-destination-keyword t)
     ((package-spec '(or package-name package) :prompt "package" :default *package*))
   (let ((real-package (when package-spec
@@ -949,7 +990,7 @@
 
 (define-command (com-show-package-users :name "Show Package Users"
                                         :command-table show-commands
-                                        :menu t
+                                        :menu "Package Users"
                                         :provide-output-destination-keyword t)
     ((package-spec '(or package-name package) :prompt "package" :default *package*))
   (let ((real-package (when package-spec
@@ -1388,7 +1429,9 @@
 
 ;;; Some CLIM developer commands
 
-(define-command (com-show-command-table :name t :menu t :command-table show-commands)
+(define-command (com-show-command-table :name t
+                                        :menu "Command Table"
+                                        :command-table show-commands)
     ((table 'clim:command-table :prompt "command table")
      &key
      (locally 'boolean :default nil :mentioned-default t)
@@ -1407,7 +1450,8 @@
 	(push (cons ct (sort commands
                              (lambda (x y)
                                (string-lessp (command-line-name-for-command x ct :errorp :create)
-                                             (command-line-name-for-command y ct :errorp :create))))) our-tables)))
+                                             (command-line-name-for-command y ct :errorp :create)))))
+              our-tables)))
     (setq our-tables (nreverse our-tables))
 
     (when show-commands ;; sure, why not?

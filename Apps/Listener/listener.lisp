@@ -22,26 +22,21 @@
 
 ;; Wholine Pane
 
-(defclass wholine-pane (application-pane) ())
+(defclass wholine-pane (application-pane) ()
+  (:default-initargs :background +gray90+))
 
 (defmethod compose-space ((pane wholine-pane) &key width height)
   (declare (ignore width height))  
-  (let ((h (+ 3 (text-style-height (medium-text-style pane) pane)))) ; magic padding
-  (make-space-requirement :min-width 500 :width 768                  ; magic space requirements
-                          :height h
-                          :min-height h
-                          :max-height h)))
+  (let ((h (* 1.5 (text-style-height (medium-text-style pane) pane)))) ; magic padding
+    (make-space-requirement :height h
+                            :min-height h
+                            :max-height h)))
 
-(defvar *reconfiguring-wholine* nil)
-
-(defmethod allocate-space ((pane wholine-pane) width height)
-  (unless *reconfiguring-wholine*
-    (let ((*reconfiguring-wholine* t))
-      (call-next-method)
-      (window-clear pane)
-      (redisplay-frame-pane (pane-frame pane) pane))))
-
-
+;; When the pane is grown, we must repaint more than just the newly exposed
+;; regions, because the decoration within the previous region must move.
+;; Likewise, shrinking the pane requires repainting some of the interior.
+(defmethod allocate-space :after ((pane wholine-pane) width height)
+  (repaint-sheet pane (sheet-region pane)))
 
 (defun print-package-name (stream)
   (let ((foo (package-name *package*)))
@@ -53,7 +48,27 @@
 (defun frob-pathname (pathname)
   (namestring (truename pathname)))
 
-(defun display-wholine (frame pane)
+;; How to add repaint-time decoration underneath the contents of a
+;; stream pane: Write your own handle-repaint that draws the
+;; decoration then replays the recorded output, and define a
+;; window-clear method which calls the next window-clear method,
+;; then calls handle-repaint to redraw the decoration.
+
+(defmethod handle-repaint ((pane wholine-pane) region)
+  (declare (ignore region))
+  (with-output-recording-options (pane :draw t :record nil)
+    (with-bounding-rectangle* (x0 y0 x1 y1) (sheet-region pane)
+      (climi::draw-bordered-rectangle* (sheet-medium pane)
+                                       x0 y0 x1 y1
+                                       :style :mickey-mouse-inset)
+      #+NIL (draw-rectangle* (sheet-medium pane) x0 y0 x1 y1 :ink +red+))
+    (replay-output-record (stream-output-history pane) pane)))
+
+(defmethod window-clear ((pane wholine-pane))
+  (call-next-method)
+  (handle-repaint pane (sheet-region pane)))
+
+(defun generate-wholine-contents (frame pane)
   (declare (ignore frame))
   (let* ((*standard-output* pane)
          (username (or #+cmu (cdr (assoc :user ext:*environment-list*))
@@ -84,15 +99,19 @@
                   (format T "  (~D deep)" (length *directory-stack*)))))
           ;; Although the CLIM spec says the item formatter should try to fill
           ;; the available width, I can't get either the item or table formatters
-          ;; to really do so such that the memory usage appears right justified.            
+          ;; to really do so such that the memory usage appears right justified.
             (cell (:center)
               (when (numberp memusage)
                 (present memusage 'lisp-memory-usage)))))))))
 
-;; This is a (very simple) command history.
-;; Should we move this into CLIM-INTERNALS ?
+(defun display-wholine (frame pane)
+  (invoke-and-center-output pane
+    (lambda () (generate-wholine-contents frame pane))
+    :horizontally nil :hpad 5))    
+
+;; This is a toy command history.
 ;; Possibly this should become something integrated with the presentation
-;; histories which I have not played with.
+;; histories, which I have not played with.
 
 (defclass command-history-mixin ()
   ((history :initform nil :accessor history)
@@ -224,8 +243,6 @@
   '(#\( #\) #\[ #\] #\# #\; #\: #\' #\" #\* #\, #\` #\- 
     #\+ #\/ #\0 #\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9))
 
-
-
 (defmethod read-frame-command ((frame listener) &key (stream *standard-input*))  
   "Specialized for the listener, read a lisp form to eval, or a command."
   (if (system-command-reader frame)
@@ -302,11 +319,15 @@
 
 (defun run-listener (&key (system-command-reader nil)
                           (new-process nil)
+                          (width 800)
+                          (height 800)
                           (process-name "Listener")
                           (eval nil))
   (flet ((run ()
            (run-frame-top-level
             (make-application-frame 'listener
+                                    :width width
+                                    :height height
                                     :system-command-reader system-command-reader)
             :listener-funcall (cond ((null eval) nil)
                                     ((functionp eval) eval)

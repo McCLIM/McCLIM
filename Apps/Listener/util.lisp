@@ -209,6 +209,26 @@ this point, increment it by SPACING, which defaults to zero."
                                         (- x (stream-cursor-position stream)))
                                     0))
 
+(defun invoke-and-center-output (stream-pane continuation
+                                 &key (horizontally t) (vertically t) (hpad 0) (vpad 0))
+  (let ((record (with-output-to-output-record (stream-pane)
+                  (funcall continuation))))
+    (with-bounding-rectangle* (sx0 sy0 sx1 sy1) (sheet-region stream-pane)
+      (with-bounding-rectangle* (rx0 ry0 rx1 ry1) (bounding-rectangle record)
+        (setf (output-record-position record)
+              (values (if horizontally
+                          (+ rx0 (/ (- (- sx1 sx0)
+                                       (- rx1 rx0))
+                                    2))
+                          (+ rx0 hpad))
+                      (if vertically
+                          (+ ry0 (/ (- (- sy1 sy0)
+                                       (- ry1 ry0))
+                                    2))
+                          (+ ry0 vpad))))))
+    (add-output-record record (stream-output-history stream-pane))
+    (repaint-sheet stream-pane record)))
+
 ;;; Pathname evil
 ;;; Fixme: Invent some more useful operators for manipulating pathnames, add a
 ;;;        pinch of syntactic sugar, and cut the LOC here down to a fraction.

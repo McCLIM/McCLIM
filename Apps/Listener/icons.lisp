@@ -33,7 +33,8 @@
 ;(defparameter *icon-path* (merge-pathnames #P"icons/" #.*compile-file-truename*))
 
 (defmacro deficon (var pathname)
-  `(defparameter ,var (climi::xpm-parse-file ,(merge-pathnames pathname *icon-path*))))
+  `(eval-when (:load-toplevel :execute)
+     (defparameter ,var (climi::xpm-parse-file ,(merge-pathnames pathname *icon-path*)))))
 
 (defvar *icon-cache* (make-hash-table  :test #'equal))
 
