@@ -183,10 +183,13 @@ state ~S lambda list ~S"
 				      integer))
 
 ;; stream-line-length is a CMUCL extension to Gray Streams which the pretty
-;; printer relies on. There's a default method which works for most CLIM
+;; printer seems to use. There's a default method which works for most CLIM
 ;; streams. For several dumb reasons it doesn't work on encapsulating streams.
 #+CMU
 (defmethod ext:stream-line-length ((stream standard-encapsulating-stream))
+  nil)
+#+SBCL
+(defmethod sb-gray:stream-line-length ((stream standard-encapsulating-stream))
   nil)
 
 ;;;The sheet protocols, as specified in Chapters Properties of Sheets and Sheet
