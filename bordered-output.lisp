@@ -1,7 +1,6 @@
 ;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
 
 ;;;  (c) copyright 2002 by Alexey Dejneka (adejneka@comail.ru)
-
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
 ;;; License as published by the Free Software Foundation; either
@@ -98,9 +97,13 @@
 		     :filled T)))
 
 (define-border-type :underline (&key stream record)
-  (let ((children (output-record-children record)))
-    (loop for child across children do
-      (when (text-displayed-output-record-p child)
-	(with-bounding-rectangle* (left top right bottom) child
-	  (declare (ignore top))
-	  (draw-line* stream left bottom right bottom))))))
+  (labels ((fn (record)                 
+             (loop for child across (output-record-children record) do
+               (typecase child
+                 (text-displayed-output-record
+                  (with-bounding-rectangle* (left top right bottom) child
+                     (declare (ignore top))
+                     (draw-line* stream left bottom right bottom)))
+                 (updating-output-record  nil)                 
+                 (compound-output-record  (fn child))))))
+    (fn record)))
