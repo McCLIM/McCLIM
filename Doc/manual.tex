@@ -1573,6 +1573,12 @@ as \texttt{(1 3 (4 . 6) "Hello" 42)}) or a more graphical cons-cell
 diagram format. The default is the classic format, but this can be
 toggled with the \texttt{Toggle Show List Cells} command.
 
+The new cons cell diagram format looks like this:
+
+\begin{center}
+\includegraphics{inspect-as-cells.eps}
+\end{center}
+
 \section{Extending Clouseau}
 
 Sometimes Clouseau's built-in inspection abilities aren't enough, and
@@ -1657,8 +1663,8 @@ $$ s = \sqrt{\frac{1}{N-1} \sum_{i=1}^N (x_i - \overline{x})^2} $$
 
 \begin{alltt}
 (defgeneric standard-deviation (sample)
-  (:documentation "Find the standard deviation of the numbers in a
-sample. This measures how spread out they are."))
+  (:documentation "Find the standard deviation of the numbers
+in a sample. This measures how spread out they are."))
 
 (defmethod standard-deviation ((sample sample))
   (let ((mean (mean sample)))
@@ -1709,9 +1715,11 @@ helps ensure consistency.
 
 The second macro, \macro{inspector-table-row}, creates a row with the
 output of one form bolded on the left and the output of the other on
-the right. This gives us a reasonable output; try it yourself and see.
+the right. This gives us some reasonably nice-looking output:
 
-% FIXME: SCREENSHOT, and remove ``;try it yourself...''
+\begin{center}
+\includegraphics{inspect-object-1.eps}
+\end{center}
 
 But what we really want is something more closely adapted to our
 needs. It would be nice if we could just have a table of things like
@@ -1743,9 +1751,11 @@ print the value with \genfun{inspect-object}. This makes the value
 inspectable, as it should be.
 
 Then, in the \macro{inspector-table} body, we insert a couple of calls
-to \cl{x=y} and we're done. Have a look and see. %It looks like this:
+to \cl{x=y} and we're done. It looks like this:
 
-% FIXME: SCREENSHOT
+\begin{center}
+\includegraphics{inspect-object-2.eps}
+\end{center}
 
 Finally, for our amusement and further practice, we'll try to get some
 mathematical symbols---in this case we'll just need $\overline{x}$. We
@@ -1782,7 +1792,7 @@ can get this by printing an italic $x$ and drawing a line over it:
 \end{alltt}
 
 Finally, to illustrate the proper use of
-\genfun{inspect-object-briefly}, suppose that we want the "n=9" (or
+\genfun{inspect-object-briefly}, suppose that we want the ``n=9'' (or
 whatever the sample size $n$ equals) part to have an itlicised $n$. We
 can fix this easily:
 
@@ -1802,6 +1812,12 @@ representation to a stream, like \genfun{inspect-object} but shorter.
 It should wrap its output in \macro{with-output-as-presentation}.
 \genfun{inspect-object} does this too, but it's hidden in the
 \macro{inspector-table} macro.
+
+Our final version looks like this:
+
+\begin{center}
+\includegraphics{inspect-object-3.eps}
+\end{center}
 
 For more examples of how to extend the inspector, you can look at
 \texttt{inspector.lisp}.
