@@ -118,9 +118,12 @@
        (if timeout
 	   (mp:process-wait-with-timeout "Waiting on condition variable"
 					 timeout
-					 #'mp:gate-open-p)
+					 #'mp:gate-open-p
+					 cv)
 	   (progn
-	     (mp:process-wait "Waiting on condition variable" #'mp:gate-open-p)
+	     (mp:process-wait "Waiting on condition variable"
+			      #'mp:gate-open-p
+			      cv)
 	     t))
     (mp:process-lock lock)))
 
