@@ -232,7 +232,7 @@
 	       space-requirement) pane
     (unless space-requirement
       (let ((request (call-next-method)))
-	(when (spacer-p pane)
+	(when (spacing-p pane)
 	  (with-slots (margin-width margin-height
 		       margin-max-width margin-max-height
 		       margin-min-width margin-min-height) pane
@@ -805,25 +805,25 @@
 			    (make-translation-transformation (- x x1) (- y y1))))
 		    (allocate-space child (round new-width) (round new-height)))))
 
-;;; SPACER PANE
+;;; SPACING PANE
 
-(defclass spacer-pane (composite-pane)
+(defclass spacing-pane (composite-pane)
   ((margin-width :initform nil :initarg :width)
    (margin-height :initform nil :initarg :height)
    (margin-max-width :initform nil :initarg :max-width)
    (margin-max-height :initform nil :initarg :max-height)
    (margin-min-width :initform nil :initarg :min-width)
    (margin-min-height :initform nil :initarg :min-height))
-  (:documentation "The spacer pane will create a margin for his child.
+  (:documentation "The spacing pane will create a margin for his child.
 The margin sizes (w h) are given with the :width and :height initargs.
-During realization the child of the spacer will have as cordinates
+During realization the child of the spacing will have as cordinates
  x = w/2 , y = h/2."))
 
-(defmethod initialize-instance :after ((spacer spacer-pane) &rest ignore)
+(defmethod initialize-instance :after ((spacing spacing-pane) &rest ignore)
   (declare (ignore ignore))
   (with-slots (margin-width margin-height
 	       margin-max-width margin-max-height
-	       margin-min-width margin-min-height) spacer
+	       margin-min-width margin-min-height) spacing
     (setf margin-width (or margin-width 0)
 	  margin-height (or margin-height 0)
 	  margin-max-width (or margin-max-width margin-width)
@@ -831,28 +831,28 @@ During realization the child of the spacer will have as cordinates
 	  margin-min-width (or margin-min-width margin-width)
 	  margin-min-height (or margin-min-height margin-height))))
 
-(defun spacer-p (pane)
-  (typep pane 'spacer-pane))
+(defun spacing-p (pane)
+  (typep pane 'spacing-pane))
 
 (defmacro spacing ((&rest options) &body contents)
-  `(make-pane 'spacer-pane ,@options :contents (list ,@contents)))
+  `(make-pane 'spacing-pane ,@options :contents (list ,@contents)))
 
-(defmethod compose-space ((spacer spacer-pane))
-  (compose-space (first (sheet-children spacer))))
+(defmethod compose-space ((spacing spacing-pane))
+  (compose-space (first (sheet-children spacing))))
 
-(defmethod allocate-space ((spacer spacer-pane) width height)
-  (set-width-and-height spacer width height)
-  (let* ((child (first (sheet-children spacer)))
-	 (margin-width (- (get-width spacer) (get-width child)))
-	 (margin-height (- (get-height spacer) (get-height child))))
+(defmethod allocate-space ((spacing spacing-pane) width height)
+  (set-width-and-height spacing width height)
+  (let* ((child (first (sheet-children spacing)))
+	 (margin-width (- (get-width spacing) (get-width child)))
+	 (margin-height (- (get-height spacing) (get-height child))))
     (setf margin-width
-	  (do-in (round (/ (* width margin-width) (get-size spacer)))
-		 (slot-value spacer 'margin-min-width)
-		 (slot-value spacer 'margin-max-width))
+	  (do-in (round (/ (* width margin-width) (get-size spacing)))
+		 (slot-value spacing 'margin-min-width)
+		 (slot-value spacing 'margin-max-width))
 	  margin-height
-	  (do-in (round (/ (* height margin-height) (get-size spacer nil)))
-		 (slot-value spacer 'margin-min-height)
-		 (slot-value spacer 'margin-max-height))
+	  (do-in (round (/ (* height margin-height) (get-size spacing nil)))
+		 (slot-value spacing 'margin-min-height)
+		 (slot-value spacing 'margin-max-height))
 	  (sheet-transformation child)
 	  (make-translation-transformation (/ margin-width 2)
 					   (/ margin-height 2)))
@@ -860,7 +860,7 @@ During realization the child of the spacer will have as cordinates
 
 ;;; BORDER-PANE
 
-(defclass border-pane (spacer-pane)
+(defclass border-pane (spacing-pane)
   ((border-width :initarg :border-width :initform 1 :reader border-pane-width)
    )
   (:documentation ""))
