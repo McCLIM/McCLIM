@@ -76,7 +76,7 @@
         #'clx-error-handler)
     
       #-NIL
-      (setf (xlib:display-after-function (clx-port-display port)) #'xlib:display-finish-output))
+      (setf (xlib:display-after-function (clx-port-display port)) #'xlib:display-force-output))
     
     (setf (clx-port-screen port) (nth (getf options :screen-id 0)
 				      (xlib:display-roots (clx-port-display port))))
@@ -98,6 +98,16 @@
 #+NIL
 (defmethod (setf sheet-mirror-transformation) :after (new-value (sheet mirrored-sheet-mixin))
   )
+
+(defmethod port-set-mirror-region ((port clx-port) mirror mirror-region)
+  (setf (xlib:drawable-width mirror) (floor (bounding-rectangle-max-x mirror-region))
+        (xlib:drawable-height mirror) (floor (bounding-rectangle-max-y mirror-region))))
+                                   
+(defmethod port-set-mirror-transformation ((port clx-port) mirror mirror-transformation)
+  (setf (xlib:drawable-x mirror) (floor (nth-value 0 (transform-position mirror-transformation 0 0)))
+        (xlib:drawable-y mirror) (floor (nth-value 1 (transform-position mirror-transformation 0 0)))))
+
+
 
 (defun invent-sheet-mirror-transformation-and-region (sheet)
   ;; -> tr region
@@ -138,6 +148,7 @@
 					     ;:pointer-motion
                                               :button-motion)))
   (when (null (port-lookup-mirror port sheet))
+    (update-mirror-geometry sheet)
     (let* ((desired-color (typecase sheet
                             (sheet-with-medium-mixin
                               (medium-background sheet))
@@ -151,14 +162,26 @@
            (color (multiple-value-bind (r g b)
                       (color-rgb desired-color)
                     (xlib:make-color :red r :green g :blue b)))
-           (pixel (xlib:alloc-color (xlib:screen-default-colormap (clx-port-screen port))
-                                    color))
+           (pixel (xlib:alloc-color (xlib:screen-default-colormap (clx-port-screen port)) color))
            (window (xlib:create-window
                     :parent (sheet-mirror (sheet-parent sheet))
-                    :width width 
-                    :height height
-                    :x x :y y
-                    :border-width border-width
+                    :width (if (%sheet-mirror-region sheet)
+                               (round-coordinate (bounding-rectangle-width (%sheet-mirror-region sheet)))
+                               width)
+                    :height (if (%sheet-mirror-region sheet)
+                               (round-coordinate (bounding-rectangle-height (%sheet-mirror-region sheet)))
+                               height)
+                    :x (if (%sheet-mirror-transformation sheet)
+                               (round-coordinate (nth-value 0 (transform-position
+                                                               (%sheet-mirror-transformation sheet)
+                                                               0 0)))
+                               x)
+                    :y (if (%sheet-mirror-transformation sheet)
+                           (round-coordinate (nth-value 1 (transform-position
+                                                           (%sheet-mirror-transformation sheet)
+                                                           0 0)))
+                           y)
+                    :border-width 0 ;;border-width
                     :border border
                     :override-redirect override-redirect
                     :backing-store backing-store
@@ -168,7 +191,8 @@
                                        event-mask))))
       (port-register-mirror (port sheet) sheet window)
       (when map
-        (xlib:map-window window))))
+        (xlib:map-window window)
+        )))
   (port-lookup-mirror port sheet))
 
 (defmethod realize-mirror ((port clx-port) (sheet mirrored-sheet-mixin))
@@ -185,13 +209,21 @@
                       :map (sheet-enabled-p sheet)))
 
 (defmethod realize-mirror ((port clx-port) (sheet top-level-sheet-pane))
-  (let ((frame (pane-frame sheet))
-	(window (realize-mirror-aux port sheet
-				    :map nil
-				    :event-mask '(:structure-notify))))
-    (setf (xlib:wm-name window) (frame-pretty-name frame))
-    (setf (xlib:wm-icon-name window) (frame-pretty-name frame))
-    (setf (xlib:wm-protocols window) `(:wm_delete_window))))
+  (let ((q (compose-space sheet)))
+    (allocate-space sheet
+                    (space-requirement-width q)
+                    (space-requirement-height q))
+    (let ((frame (pane-frame sheet))
+          (window (realize-mirror-aux port sheet
+                                      :map nil
+                                      :width (round-coordinate (space-requirement-width q))
+                                      :height (round-coordinate (space-requirement-height q))
+                                      :event-mask nil
+                                      ;;GB
+                                      #+NIL '(:structure-notify))))
+      (setf (xlib:wm-name window) (frame-pretty-name frame))
+      (setf (xlib:wm-icon-name window) (frame-pretty-name frame))
+      (setf (xlib:wm-protocols window) `(:wm_delete_window)))))
 
 (defmethod realize-mirror ((port clx-port) (sheet unmanaged-top-level-sheet-pane))
   (realize-mirror-aux port sheet
@@ -266,6 +298,7 @@
 
 (defmethod port-set-sheet-transformation ((port clx-port) (sheet mirrored-sheet-mixin) transformation)
   (declare (ignore transformation)) ;; why?
+  (break)                               ;obsolete now
   (let ((mirror (sheet-direct-mirror sheet)))
     (multiple-value-bind (tr rg) (invent-sheet-mirror-transformation-and-region sheet)
       (multiple-value-bind (x y) (transform-position tr 0 0)
@@ -328,7 +361,7 @@
         (1- code)))
 
 (defun event-handler (&rest event-slots
-                      &key display window event-key code state mode time width height x y data
+                      &key display window event-key code state mode time width height x y root-x root-y data
                       &allow-other-keys)
   ;; NOTE: Although it might be tempting to compress (consolidate)
   ;; events here, this is the wrong place. In our current architecture
@@ -369,27 +402,40 @@
 	(:button-release
 	 (make-instance 'pointer-button-release-event :pointer 0
                         :button (decode-x-button-code code) :x x :y y
+                        :graft-x root-x
+                        :graft-y root-y
 			:sheet sheet :modifier-state state :timestamp time))
 	(:button-press
 	 (make-instance 'pointer-button-press-event :pointer 0
                         :button (decode-x-button-code code) :x x :y y
+                        :graft-x root-x
+                        :graft-y root-y
 			:sheet sheet :modifier-state state :timestamp time))
 	(:enter-notify
 	 (make-instance 'pointer-enter-event :pointer 0 :button code :x x :y y
+                        :graft-x root-x
+                        :graft-y root-y
 			:sheet sheet :modifier-state state :timestamp time))
 	(:leave-notify
 	 (make-instance (if (eq mode :ungrab) 'pointer-ungrab-event 'pointer-exit-event)
-	   :pointer 0 :button code :x x :y y
+	   :pointer 0 :button code
+           :x x :y y
+           :graft-x root-x
+           :graft-y root-y
 	   :sheet sheet :modifier-state state :timestamp time))
 	(:configure-notify
          ; it would be nice to consolidate these for resizes, but because of the
          ; interleaving exposures it becomes a bit tricky to do at this point. - BTS
-	 (make-instance 'window-configuration-event :sheet sheet
+	 (make-instance 'window-configuration-event
+                        :sheet sheet
 			:x x :y y :width width :height height))
 	(:destroy-notify
 	 (make-instance 'window-destroy-event :sheet sheet))
 	(:motion-notify
-         (make-instance 'pointer-motion-event :pointer 0 :button code :x x :y y
+         (make-instance 'pointer-motion-event :pointer 0 :button code
+                        :x x :y y
+                        :graft-x root-x
+                        :graft-y root-y
                         :sheet sheet :modifier-state state :timestamp time))
         ;;
 	((:exposure :display)
@@ -467,6 +513,46 @@
 				:very-large 20
 				:huge 24))
 
+(defparameter *clx-text-family+face-map*
+  '(:fix
+    #-NIL
+    ("adobe-courier"
+     (:roman               "medium-r"
+      :bold                "bold-r"
+      :italic              "medium-o"
+      :bold-italic         "bold-o"
+      :italic-bold         "bold-o"))
+    #+NIL
+    ("*-lucidatypewriter"
+     (:roman               "medium-r"
+      :bold                "bold-r"
+      :italic              "medium-r"
+      :bold-italic         "bold-r"
+      :italic-bold         "bold-r"))
+    :sans-serif
+    ("adobe-helvetica"
+     (:roman               "medium-r"
+      :bold                "bold-r"
+      :italic              "medium-o"
+      :bold-italic         "bold-o"
+      :italic-bold         "bold-o"))
+    :serif
+    ("adobe-times"
+     (:roman               "medium-r"
+      :bold                "bold-r"
+      :italic              "medium-i"
+      :bold-italic         "bold-i"
+      :italic-bold         "bold-i")) ))
+
+(defparameter *clx-text-sizes*
+  '(:tiny 8
+    :very-small 8
+    :small 10
+    :normal 12
+    :large 14
+    :very-large 18
+    :huge 24))
+
 (defun open-font (display font-name)
   (let ((fonts (xlib:list-font-names display font-name :max-fonts 1)))
     (if fonts
@@ -477,28 +563,29 @@
   (let ((table (slot-value port 'font-table)))
     (or (gethash text-style table)
         (multiple-value-bind (family face size) (text-style-components text-style)
-	  (let* ((family-name (if (stringp family)
-				  family
-				  (or (getf *clx-text-families* family)
-				      (getf *clx-text-families* :fix))))
-		 (face-name (if (stringp face)
-				face
-				(or (getf *clx-text-faces*
-					  (if (listp face)
-					      (intern (format nil "~A-~A"
-							      (first face)
-							      (second face))
-						      :keyword)
-					      face))
-				    (getf *clx-text-faces* :roman))))
-		 (size-number (if (numberp size)
-				  (round size)
-				  (or (getf *clx-text-sizes* size)
-				      (getf *clx-text-sizes* :normal))))
-		 (font-name (format nil "-~A-~A-*-*-~D-*-*-*-*-*-*-*"
-				    family-name face-name size-number)))
-	    (setf (gethash text-style table)
-		  (open-font (clx-port-display port) font-name)))))))
+          (destructuring-bind (family-name face-table)
+              (if (stringp family)
+                  (list family *clx-text-faces*)
+                  (or (getf *clx-text-family+face-map* family)
+                      (getf *clx-text-family+face-map* :fix)))
+            (let* ((face-name (if (stringp face)
+                                  face
+                                  (or (getf face-table
+                                            (if (listp face)
+                                                (intern (format nil "~A-~A"
+                                                                (first face)
+                                                                (second face))
+                                                        :keyword)
+                                                face))
+                                      (getf *clx-text-faces* :roman))))
+                   (size-number (if (numberp size)
+                                    (round size)
+                                    (or (getf *clx-text-sizes* size)
+                                        (getf *clx-text-sizes* :normal))))
+                   (font-name (format nil "-~A-~A-*-*-~D-*-*-*-*-*-*-*"
+                                      family-name face-name size-number)))
+              (setf (gethash text-style table)
+                    (open-font (clx-port-display port) font-name))))))))
 
 (defmethod port-character-width ((port clx-port) text-style char)
   (let* ((font (text-style-to-X-font port text-style))
@@ -575,15 +662,16 @@
 ;; Top-level-sheet
 
 ;; this is evil.
-(defmethod compute-extremum :after ((pane top-level-sheet-pane))
-  (with-slots (space-requirement) pane
-    (setf (xlib:wm-normal-hints (sheet-direct-mirror pane))
-	  (xlib:make-wm-size-hints 
-	   :width (round (space-requirement-width space-requirement))
-	   :height (round (space-requirement-height space-requirement))
-	   :max-width (min 65535 (round (space-requirement-max-width space-requirement)))
-	   :max-height (min 65535 (round (space-requirement-max-height space-requirement)))
-	   :min-width (round (space-requirement-min-width space-requirement))
-	   :min-height (round (space-requirement-min-height space-requirement))))))
+(defmethod allocate-space :after ((pane top-level-sheet-pane) width height)
+  (when (sheet-direct-mirror pane)
+    (with-slots (space-requirement) pane
+      '(setf (xlib:wm-normal-hints (sheet-direct-mirror pane))
+            (xlib:make-wm-size-hints 
+             :width (round width)
+             :height (round height)
+             :max-width (min 65535 (round (space-requirement-max-width space-requirement)))
+             :max-height (min 65535 (round (space-requirement-max-height space-requirement)))
+             :min-width (round (space-requirement-min-width space-requirement))
+             :min-height (round (space-requirement-min-height space-requirement)))))))
 
 
