@@ -59,6 +59,29 @@
                                 do (process-next-event port))
                              (not (null (event-queue-head eq)))))))))
 
+(defmethod event-queue-read-with-timeout ((eq standard-event-queue)
+                                          timeout wait-function)
+  (loop
+      (let ((res (event-queue-read-no-hang eq)))
+        (when res
+          (return res))
+        (if *multiprocessing-p*
+            (process-wait-with-timeout  "Waiting for event"
+                                        timeout
+                                        (lambda ()
+                                          (or
+                                           (not (null (event-queue-head eq)))
+                                           (funcall wait-function))))
+            (process-wait-with-timeout  "Waiting for event"
+                                        timeout
+                                        (lambda ()
+                                          (loop for port in climi::*all-ports*
+                                                ;; this is dubious
+                                                do (process-next-event port))
+                                          (or
+                                           (not (null (event-queue-head eq)))
+                                           (funcall wait-function))))))))
+
 (defmethod event-queue-append ((eq standard-event-queue) item)
   "Append the item at the end of the queue."
   (with-lock-held ((event-queue-lock eq))
@@ -142,7 +165,7 @@
 				    &key (timeout nil) (wait-function nil))
   ;; This one is not in the spec ;-( --GB
   (with-slots (queue) sheet
-    (event-queue-read queue)))
+    (event-queue-read-with-timeout queue timeout wait-function)))
 
 (defmethod event-read-no-hang ((sheet standard-sheet-input-mixin))
   (with-slots (queue) sheet
