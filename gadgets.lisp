@@ -2050,9 +2050,14 @@ and must never be nil."))
 	 :documentation "The Goatee area used for text editing.")
    (previous-focus :accessor previous-focus :initform nil
 		   :documentation
-		   "The pane that previously had keyboard focus"))
+		   "The pane that previously had keyboard focus")
+   (activation-gestures :accessor activation-gestures
+			:initarg :activation-gestures
+			:documentation "gestures that cause the
+			   activate callback to be called"))
   (:default-initargs
-    :text-style *default-text-field-text-style*))
+    :text-style *default-text-field-text-style*
+    :activation-gestures *standard-activation-gestures*))
 
 (defmethod initialize-instance :after ((gadget text-field) &rest rest)
   (unless (getf rest :normal)
@@ -2098,7 +2103,7 @@ and must never be nil."))
 
 (defmethod handle-event ((gadget text-field-pane) (event key-press-event))
   (let ((gesture (convert-to-gesture event))
-	(*activation-gestures* *standard-activation-gestures*))
+	(*activation-gestures* (activation-gestures gadget)))
     (when (activation-gesture-p gesture)
       (activate-callback gadget (gadget-client gadget) (gadget-id gadget))
       (return-from handle-event t))
@@ -2156,7 +2161,7 @@ and must never be nil."))
 ;;; ------------------------------------------------------------------------------------------
 ;;;  30.4.9 The concrete text-editor Gadget
 
-(defclass text-editor-pane (text-editor)
+(defclass text-editor-pane (text-field-pane)
   ((width :type integer
 	  :initarg :width
 	  :initform 300
@@ -2164,7 +2169,8 @@ and must never be nil."))
    (height :type integer
 	   :initarg :height
 	   :initform 300
-	   :reader text-editor-height)))
+	   :reader text-editor-height))
+  (:default-initargs :activation-gestures nil))
 
 (defmethod compose-space ((pane text-editor-pane) &key width height)
   (declare (ignore width height))

@@ -38,10 +38,10 @@
 ; (setq frame (make-application-frame 'gadget-test))
   (setq fm (frame-manager frame))
   (setq port (climi::frame-manager-port fm))
-  (setq pane (first (frame-panes frame)))
+  (setq pane (frame-panes frame))
   (setq medium (sheet-medium pane))
   (setq graft (graft frame))
-  (setq vbox (climi::frame-pane frame))
+  ;(setq vbox (climi::frame-pane frame))
   (run-frame-top-level frame))
 
 (defun run-pixie-test (name)
@@ -130,8 +130,8 @@
      (tf4        :push-button
                  :text-style (make-text-style :sans-serif '(:bold :italic) 24)
                  :label "Text Field")
-;    (text-edit  :text-editor
-;                :value "Text Editor")
+    (text-edit  :text-editor
+                :value "Text Editor")
      (slider-h   :slider
                  :min-value 0
                  :max-value 100
@@ -163,7 +163,7 @@
                  :orientation :vertical
                  :current-color +black+
                  :value 0)
-     (radar      (make-pane 'radar-pane))
+     (radar      (make-pane 'radar-pane :name 'radar))
      (push-btn   (lowering (:border-width 3 :background +Gray83+)
                    (horizontally ()
                      (push-button
@@ -221,6 +221,7 @@
                slider-v2)
              slider-v3
              radar)
+	   text-edit
            push-btn
            table
            toggle-btn
