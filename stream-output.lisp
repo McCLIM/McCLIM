@@ -283,106 +283,135 @@
 		       :filled t)))
   (stream-write-char stream #\newline))
 
-(defgeneric stream-write-output (stream line)
-  (:documentation
-   "Writes the character or string LINE to STREAM. This function produces no
-more than one line of output i.e., doesn't wrap."))
-(defmethod stream-write-output (stream line)
-  (with-slots (baseline vspace) stream
-     (multiple-value-bind (cx cy) (stream-cursor-position stream)
-       (draw-text* (sheet-medium stream) line
-                   cx (+ cy baseline)))))
 
-(defmethod stream-write-char ((stream standard-extended-output-stream) char)
-  (let* ((cursor       (stream-text-cursor stream))
-	 (visible      (cursor-visibility cursor))
-	 (medium       (sheet-medium stream))
+
+(defun seos-write-string (stream string &optional (start 0) end)
+  (let* ((medium       (sheet-medium stream))
 	 (text-style   (medium-text-style medium))
 	 (new-baseline (text-style-ascent text-style medium))
 	 (new-height   (text-style-height text-style medium))
 	 (margin       (stream-text-margin stream))
-         (%view-height (bounding-rectangle-height
-                        (or (pane-viewport stream)
-                            stream)))
-	 (view-height  (bounding-rectangle-height
-                        stream)))
-    (if visible
-	(setf (cursor-visibility cursor) nil))
-    (with-slots (baseline height vspace) stream
-      (multiple-value-bind (cx cy) (stream-cursor-position stream)
-	(when (> new-baseline baseline)
-          ;;(when (or (> baseline 0)
-          ;;          (> height 0))
-          ;;  (scroll-vertical stream (- new-baseline baseline))
-          ;;  ) ; the beginning of the line should be moved down, but not the whole stream -- APD, 2002-06-18
-	  (setq baseline new-baseline))
-	(if (> new-height height)
-	    (setq height new-height))
-	(cond
-	 ((eq char #\Newline)
-	  (setq cx 0
-		cy (+ cy height vspace))
-	  (when (> (+ cy height) view-height)
-	    (ecase (stream-end-of-page-action stream)
-	      ((:scroll :allow)
-               (let ((jump 0))
-                 (with-slots (seos-current-width seos-current-height) stream
-                   (setf seos-current-width  (max (bounding-rectangle-width stream))
-                         seos-current-height (max (+ cy height)))
-                   (change-space-requirements stream
-                                              :width seos-current-width
-                                              :height seos-current-height))
-                 )
-	       ;;(scroll-vertical stream (+ height vspace))
-               )
-	      (:wrap
-	       (setq cy 0))))
-          (unless (eq :allow (stream-end-of-page-action stream))
-	      (scroll-extent stream 0 (max 0 (- (+ cy height) %view-height))))
-	  ;; mikemac says that this "erase the new line" behavior is
-	  ;; required by the stream text protocol, but I don't see
-	  ;; it.  I'm happy to put this back in again, but in the
-	  ;; meantime it makes debugging of updating-output a bit easier
-	  ;; not to have "extra" records laying around.  If/When it goes
-	  ;; back in, the draw-rectangle has to happen on the stream,
-	  ;; not the medium. -- moore
-	  #+nil(draw-rectangle* medium cx cy (+ margin 4) (+ cy height)
-			   :ink +background-ink+
-			   :filled t)
-	  (setq baseline 0
-		height 0)
-	  (setf (stream-cursor-position stream) (values cx cy)))
-	 (t
-	  (let ((width (stream-character-width stream char :text-style text-style)))
+	 (end          (or end (length string))))
+    (flet ((find-split (delta)  ;; FIXME: This can be done smarter.
+	     (loop for i from (1+ start) upto end
+	       as sub-width = (stream-string-width stream string
+						   :start start :end i
+						   :text-style text-style)
+	       while (<= sub-width delta)
+	       finally (return (1- i)))))
+  
+      (with-slots (baseline height vspace) stream
+	(multiple-value-bind (cx cy) (stream-cursor-position stream)
+	  (when (> new-baseline baseline)
+	    ;;(when (or (> baseline 0)
+	    ;;          (> height 0))
+	    ;;  (scroll-vertical stream (- new-baseline baseline))
+	    ;;  ) ; the beginning of the line should be moved down, but not the whole stream -- APD, 2002-06-18
+	    (setq baseline new-baseline))
+	  (if (> new-height height)
+	      (setq height new-height))
+	  (let ((width (stream-string-width stream string
+					    :start start :end end
+					    :text-style text-style))
+		(split end))
 	    (when (>= (+ cx width) margin)
 	      (ecase (stream-end-of-line-action stream)
 		(:wrap
-		 (let ((current-baseline baseline))
-		   (stream-wrap-line stream)
-		   (multiple-value-bind (new-cx new-cy) (stream-cursor-position stream)
-		     (setq cx new-cx
-			   cy new-cy
-			   baseline current-baseline)
-                     (setf (stream-cursor-position stream) (values cx cy)))))
+		 (setq split (find-split (- margin cx))))
 		(:scroll
 		 (scroll-horizontal stream width))
-		(:allow
-		 )))
-	    (stream-write-output stream char)
-	    (setq cx (+ cx width))
-	    (setf (cursor-position (stream-text-cursor stream))
-		  (values cx cy)))))))
-    (if visible
-	(setf (cursor-visibility cursor) t))))
+		(:allow)))
+	    (unless (= start split)
+	      (stream-write-output stream string start split)
+	      (setq cx (+ cx width))
+	      (setf (cursor-position (stream-text-cursor stream))
+  		      (values cx cy)))
+	    (when (/= split end)
+	      (let ((current-baseline baseline))
+		(setf baseline current-baseline))		
+;		(stream-wrap-line stream)
+;		(multiple-value-bind (new-cx new-cy) (stream-cursor-position stream)
+;		  (setf cx new-cx
+;			cy new-cy			
+;			baseline current-baseline)
+;		  (setf (stream-cursor-position stream) (values cx cy))))
+	      (stream-wrap-line stream)
+	      (seos-write-string stream string split end))
+	    ))))))
+
+(defun seos-write-newline (stream)
+  (let ((medium       (sheet-medium stream))
+	(%view-height (bounding-rectangle-height
+		       (or (pane-viewport stream)
+			   stream)))
+	(view-height  (bounding-rectangle-height stream)))    
+    (with-slots (baseline height vspace) stream
+      (multiple-value-bind (cx cy) (stream-cursor-position stream)
+	(setf height (max height (text-style-height (medium-text-style medium) medium)))
+	(setf cx 0
+	      cy (+ cy height vspace))
+	(when (> (+ cy height) view-height)
+	  (ecase (stream-end-of-page-action stream)
+	    ((:scroll :allow)
+	     (with-slots (seos-current-width seos-current-height) stream
+	       (setf seos-current-width  (max (bounding-rectangle-width stream))
+		     seos-current-height (max (+ cy height)))
+	       (change-space-requirements stream
+					  :width seos-current-width
+					  :height seos-current-height))	     
+	     ;;(scroll-vertical stream (+ height vspace))
+	     )
+	    (:wrap
+	     (setq cy 0))))
+	(unless (eq :allow (stream-end-of-page-action stream))
+	  (scroll-extent stream 0 (max 0 (- (+ cy height) %view-height))))
+	
+	;; mikemac says that this "erase the new line" behavior is
+	;; required by the stream text protocol, but I don't see
+	;; it.  I'm happy to put this back in again, but in the
+	;; meantime it makes debugging of updating-output a bit easier
+	;; not to have "extra" records laying around.  If/When it goes
+	;; back in... the draw-rectangle has to happen on the stream,
+	;; not the medium. -- moore
+	#+nil(draw-rectangle* medium cx cy (+ margin 4) (+ cy height)
+			      :ink +background-ink+
+			      :filled t)
+	(setq baseline 0
+	      height 0)
+	(setf (stream-cursor-position stream) (values cx cy))))))
+
+
+
+
+(defgeneric stream-write-output (stream line &optional (start 0) end)
+  (:documentation
+   "Writes the character or string LINE to STREAM. This function produces no
+more than one line of output i.e., doesn't wrap."))
+(defmethod stream-write-output (stream line &optional (start 0) end)
+  (with-slots (baseline vspace) stream
+     (multiple-value-bind (cx cy) (stream-cursor-position stream)
+       (draw-text* (sheet-medium stream) line
+                   cx (+ cy baseline)
+		   :start start :end end))))
+
+(defmethod stream-write-char ((stream standard-extended-output-stream) char)
+  (with-cursor-off stream  
+   (if (char= #\Newline char)
+       (seos-write-newline stream)
+     (seos-write-string stream (string char)))))
 
 (defmethod stream-write-string ((stream standard-extended-output-stream) string
 				&optional (start 0) end)
-  (if (null end)
-      (setq end (length string)))
-  (with-cursor-off stream
-      (loop for i from start below end
-	    for char = (aref string i)
-	    do (stream-write-char stream char))))
+  (let ((seg-start start)
+	(end (or end (length string))))
+    (with-cursor-off stream
+     (loop for i from start below end do
+       (when (char= #\Newline
+		    (char string i))
+	 (seos-write-string stream string seg-start i)
+	 (seos-write-newline stream)
+	 (setq seg-start (1+ i))))
+     (seos-write-string stream string seg-start end))))
 
 ;(defmethod stream-write-string ((stream standard-extended-output-stream) string
 ;				&optional (start 0) end)

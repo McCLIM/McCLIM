@@ -1614,9 +1614,7 @@ were added."
 (defmethod add-string-output-to-text-record
     ((text-record standard-text-displayed-output-record)
      string start end text-style string-width height new-baseline)
-  (if end
-      (setq end (min end (length string)))
-      (setq end (length string)))
+  (setf end (or end (length string)))  
   (let ((length (max 0 (- end start))))
     (cond
       ((eql length 1)
@@ -1632,7 +1630,7 @@ were added."
 				 :start-x end-x
 				 :text-style text-style
 				 :medium medium
-				 :string (make-array (length string)
+				 :string (make-array length
 						     :element-type 'character
 						     :adjustable t
 						     :fill-pointer t))))
@@ -1775,7 +1773,8 @@ were added."
      ,@body))
 
 (defmethod stream-write-output :around
-    ((stream standard-output-recording-stream) line)
+    ((stream standard-output-recording-stream) line
+     &optional (start 0) end)
   (when (and (stream-recording-p stream)
              (slot-value stream 'local-record-p))
     (let* ((medium (sheet-medium stream))
@@ -1788,9 +1787,11 @@ were added."
 					stream line :text-style text-style)
 				       height
 				       ascent)
-	  (stream-add-string-output stream line 0 nil text-style
+	  (stream-add-string-output stream line start end text-style
 				    (stream-string-width stream line
+							 :start start :end end
 							 :text-style text-style)
+							 
 				    height
 				    ascent))))
   (when (stream-drawing-p stream)
