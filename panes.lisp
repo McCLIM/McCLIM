@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.84 2002/06/20 08:33:24 adejneka Exp $
+;;; $Id: panes.lisp,v 1.85 2002/06/25 02:01:41 moore Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -289,11 +289,6 @@
    (new-height :initform nil)
    )
   (:documentation ""))
-
-;;; This is a big departure from the spec, but apparently "real" CLIM
-;;; only has one event queue per frame too.  Sure makes things easier.
-(defmethod queue-event ((sheet pane) event)
-  (event-queue-append (frame-event-queue (pane-frame sheet)) event))
 
 (defmethod print-object ((pane pane) sink)
   (print-unreadable-object (pane sink :type t :identity t)

@@ -54,6 +54,8 @@
      (block ,@body)))
       
 ;;; Application-Frame class
+;;; XXX All these slots should move to a mixin or to standard-application-frame.
+;;; -- moore
 
 (defclass application-frame ()
   ((port :initform nil
@@ -99,10 +101,7 @@
 	      :reader frame-top-level)
    (hilited-presentation :initform nil
 			 :initarg :hilited-presentation
-			 :accessor frame-hilited-presentation)
-   (event-queue :initform (make-instance 'standard-event-queue)
-			  :initarg :intercept-event-queue
-			  :accessor frame-event-queue)))
+			 :accessor frame-hilited-presentation)))
 
 (defun application-frame-p (x)
   (typep x 'application-frame))
@@ -178,7 +177,21 @@ FRAME-EXIT condition."))
 
 
 (defclass standard-application-frame (application-frame)
-  ())
+  ((event-queue :initarg :frame-event-queue
+		:accessor frame-event-queue
+		:documentation "The event queue that, by default, will be
+  shared by all panes in the stream")))
+
+;;; Support the :input-buffer initarg for compatibility with "real CLIM"
+
+(defmethod initialize-instance :after ((obj standard-application-frame)
+				       &key (input-buffer nil input-buffer-p))
+  (cond (input-buffer-p
+	 (setf (frame-event-queue obj) input-buffer))
+	((not (slot-boundp obj 'event-queue))
+	 (setf (frame-event-queue obj) (make-instance 'standard-event-queue)))
+	(t nil)))
+
 
 (defmethod (setf frame-manager) (fm (frame application-frame))
   (let ((old-manager (frame-manager frame)))
@@ -351,9 +364,18 @@ FRAME-EXIT condition."))
 (defmethod execute-frame-command ((frame application-frame) command)
   (apply (command-name command) (command-arguments command)))
 
-
 (defmethod make-pane-1 ((fm frame-manager) (frame application-frame) type &rest args)
   `(make-pane-1 ,fm ,frame ',type ,@args))
+
+(defmethod make-pane-1 :around (fm (frame standard-application-frame) type
+				&rest args
+				&key (input-buffer nil input-buffer-p))
+  "Default input-buffer to the frame event queue."
+  (if input-buffer-p
+      (call-next-method)
+      (apply #'call-next-method fm frame type
+	     :input-buffer (frame-event-queue frame)
+	     args)))
 
 (defmethod adopt-frame ((fm frame-manager) (frame application-frame))
   (setf (slot-value fm 'frames) (cons frame (slot-value fm 'frames)))

@@ -378,7 +378,7 @@
 
 (defun input-context-wait-test (stream)
   (declare (ignore stream))
-  (let* ((queue (frame-event-queue *application-frame*))
+  (let* ((queue (stream-input-buffer stream))
 	 (event (event-queue-peek queue)))
     (when event
       (let ((sheet (event-sheet event)))
@@ -389,7 +389,7 @@
 
 (defun highlight-applicable-presentation (frame stream input-context
 					  &optional (prefer-pointer-window t))
-  (let* ((queue (frame-event-queue frame))
+  (let* ((queue (stream-input-buffer stream))
 	 (event (event-queue-peek queue)))
     (when (and event
 	       (typep event 'pointer-event)

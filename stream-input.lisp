@@ -85,19 +85,16 @@
 		   (let ((char (char-for-read (keyboard-event-key-name event))))
 		     (stream-write-char pane char)
 		     (return-from stream-read-char char))
-		   (handle-event pane event))))
+		   (handle-event (event-sheet event) event))))
 	(let* ((port (port pane))
-	       (queue (frame-event-queue *application-frame*))
-	       (old-count (slot-value port 'event-count)))
+	       (queue (stream-input-buffer pane)))
 	  (loop
 	   (let ((event (event-queue-read-no-hang queue)))
-	     (if event
-		 (do-one-event event)
-		 (setq old-count
-		       (port-wait-on-event-processing
-			port
-			:event-count old-count)))))))))
-
+	     (cond (event
+		    (do-one-event event))
+		   (*multiprocessing-p*
+		    (event-queue-listen-or-wait queue))
+		   (t (process-next-event port)))))))))
 
 (defmethod stream-unread-char ((pane standard-input-stream) char)
   (push char (stream-unread-chars pane)))
@@ -108,11 +105,13 @@
     (loop for event = (event-read-no-hang pane)
 	if (null event)
 	   return nil
-	if (and (typep event 'key-release-event)
+	if (and (typep event 'key-press-event)
 		(characterp (keyboard-event-key-name event)))
-	return (char-for-read (keyboard-event-key-name event)))))
+	  return (char-for-read (keyboard-event-key-name event))
+	else
+	  do (handle-event (event-sheet event) event))))
 
-(defclass extended-input-stream (fundamental-character-input-stream
+(defclass extended-input-stream (fundamental-character-input-stream ;Gray stream
 				 standard-sheet-input-mixin)
   ())
 
@@ -124,9 +123,7 @@
 
 (defclass standard-extended-input-stream (extended-input-stream)
   ((pointer)
-   (cursor :initarg :text-cursor)
-   (input-buffer :accessor stream-input-buffer :initarg :input-buffer
-		 :initform (make-array 1 :adjustable t :fill-pointer 0))))
+   (cursor :initarg :text-cursor)))
 
 (defvar *input-wait-test* nil)
 (defvar *input-wait-handler* nil)
@@ -134,13 +131,12 @@
 
 (defgeneric stream-set-input-focus (stream))
 
-;;; XXX deal with body declarations
 (defmacro with-input-focus ((stream) &body body)
   (when (eq stream t)
     (setq stream '*standard-input*))
   (let ((old-stream (gensym "OLD-STREAM")))
     `(let ((,old-stream (stream-set-input-focus ,stream)))
-       (unwind-protect (progn
+       (unwind-protect (locally
 			 ,@body)
 	 (if ,old-stream
 	     (stream-set-input-focus ,old-stream)
@@ -169,22 +165,26 @@
 				 input-wait-handler
 				 pointer-button-press-handler))
 
+;;; Do streams care about any other events?
+(defun handle-non-stream-event (buffer)
+  (let ((event (event-queue-peek buffer)))
+    (if (and event
+	     (not (or (typep event 'key-press-event)
+		      (typep event 'pointer-button-press-event))))
+	(progn
+	  (event-queue-read buffer)	;eat it
+	  (handle-event (event-sheet event) event)
+	  t)
+	nil)))
+
 (defun pop-gesture (buffer peek-p)
-  (prog1
-      (aref buffer 0)
-    (unless peek-p
-      (when (> (length buffer) 1)
-	(replace buffer buffer :start2 1))
-      (decf (fill-pointer buffer)))))
+  (if peek-p
+      (event-queue-peek buffer)
+      (event-queue-read-no-hang buffer)))
 
 
 (defun repush-gesture (gesture buffer)
-  (let ((old-fill (fill-pointer buffer)))
-    (incf (fill-pointer buffer))
-    (when (> old-fill 0)
-      (replace buffer buffer :start1 1 :start2 0 :end2 old-fill))
-    (setf (aref buffer 0) gesture)))
-
+  (event-queue-prepend buffer gesture))
 
 (defmethod convert-to-gesture ((ev event))
   nil)
@@ -196,34 +196,17 @@
   ev)
 
 (defmethod convert-to-gesture ((ev key-press-event))
-  (let ((modifiers (event-modifier-state ev)))
-    (if (or (zerop modifiers)
-	    (eql modifiers +shift-key+))
-	(keyboard-event-key-name ev)
-	ev)))
+  (let ((modifiers (event-modifier-state ev))
+	(event ev))
+    (when (or (zerop modifiers)
+	      (eql modifiers +shift-key+))
+      (setq event (keyboard-event-key-name ev)))
+    (cond ((characterp event)
+	   (char-for-read event))
+	  (t event))))
 
 (defmethod convert-to-gesture ((ev pointer-button-press-event))
   ev)
-
-(defmethod handle-event ((stream standard-extended-input-stream)
-			 (event key-press-event))
-  (let ((buffer (stream-input-buffer stream))
-	(gesture (convert-to-gesture event)))
-    (cond ((characterp gesture)
-	   (case gesture
-	     (#\Return
-	      (setq gesture #\Newline))
-	     (#\Backspace
-	      (setq gesture #\Delete)))
-	   (vector-push-extend gesture buffer))
-	  (gesture
-	   (vector-push-extend gesture buffer))
-	  (t nil))))
-
-(defmethod handle-event ((stream standard-extended-input-stream)
-			 (event pointer-button-event))
-  (vector-push-extend event (stream-input-buffer stream)))
-
 
 (defmethod stream-read-gesture ((stream standard-extended-input-stream)
 				&key timeout peek-p
@@ -235,11 +218,11 @@
     (let ((*input-wait-test* input-wait-test)
 	  (*input-wait-handler* input-wait-handler)
 	  (*pointer-button-press-handler* pointer-button-press-handler)
-	  (buffer (stream-input-buffer stream))
-	  (queue (frame-event-queue *application-frame*)))
-      (loop
-       ;; Wait for input... or not
-       ;; XXX decay timeout.
+	  (buffer (stream-input-buffer stream)))
+      (tagbody
+	 ;; Wait for input... or not
+	 ;; XXX decay timeout.
+       wait-for-char
        (multiple-value-bind (available reason)
 	   (stream-input-wait estream
 			      :timeout timeout
@@ -250,22 +233,35 @@
 	      (return-from stream-read-gesture (values nil
 						       :timeout)))
 	     (:input-wait-test
-	      ;; input-wait-handler might leave the event for us.
-	      (let ((event (event-queue-peek queue)))
-		(and input-wait-handler
-		     (funcall input-wait-handler stream))
-		(let ((current-event (event-queue-peek queue)))
-		  (when (and event (eq event current-event))
-		    (event-queue-read queue)
-		    (handle-event (event-sheet event) event)))))
-	     (t nil))))
-       ;; Something might be in the stream buffer.
-       (when (> (length buffer) 0)
-	 (let ((gesture (pop-gesture buffer peek-p)))
-	   (cond ((and pointer-button-press-handler
-		    (typep gesture 'pointer-button-press-event))
-		  (funcall pointer-button-press-handler stream
-			   gesture))
+	      ;; input-wait-handler might leave the event for us.  This is
+	      ;; actually quite messy; I'd like to confine handle-event to
+	      ;; stream-input-wait, but we can't loop back to it because the
+	      ;; input handler will continue to decline to read the event :(
+	      (let ((event (event-queue-peek buffer)))
+		(when input-wait-handler
+		  (funcall input-wait-handler stream))
+		(let ((current-event (event-queue-peek buffer)))
+		  (when (or (not current-event)
+			    (not (eq event current-event)))
+		    ;; If there's a new event input-wait-test needs to take a
+		    ;; look at it. 
+		    (go wait-for-char)))))
+	     (t (go wait-for-char)))))
+	 ;; An event should  be in the stream buffer now.
+	 (when (handle-non-stream-event buffer)
+	   (go wait-for-char))
+	 (let ((gesture (convert-to-gesture (pop-gesture buffer peek-p))))
+	   ;; Sometimes key press events get generated with a key code for
+	   ;; which there is no keysym.  This seems to happen on my machine
+	   ;; when keys are hit rapidly in succession.  I'm not sure if this is
+	   ;; a hardware problem with my keyboard, and this case is probably
+	   ;; better handled in the backend, but for now the case below handles
+	   ;; the problem. -- moore
+	   (cond ((null gesture)
+		  (go wait-for-char))
+		 ((and pointer-button-press-handler
+		       (typep gesture 'pointer-button-press-event))
+		  (funcall pointer-button-press-handler stream gesture))
 		 ((loop for gesture-name in *abort-gestures*
 			thereis (event-matches-gesture-name-p gesture
 							      gesture-name))
@@ -274,7 +270,8 @@
 			thereis (event-matches-gesture-name-p gesture
 							      gesture-name))
 		  (signal 'accelerator-gesture :event gesture))
-		 (t (return-from stream-read-gesture gesture)))))))))
+		 (t (return-from stream-read-gesture gesture))))
+	 (go wait-for-char)))))
 
 
 (defgeneric stream-input-wait (stream &key timeout input-wait-test))
@@ -283,34 +280,27 @@
 			      &key timeout input-wait-test)
   (block exit
     (let* ((buffer (stream-input-buffer stream))
-	   (port (port stream))
-	   (queue (frame-event-queue *application-frame*))
-	   (old-count (slot-value port 'event-count))
-	   reason)
+	   (port (port stream)))
       ;; Loop if not multiprocessing or if input-wait-test returns nil
       ;; XXX need to decay timeout on multiple trips through the loop
       (tagbody
        check-buffer
-	 (when (> (length buffer) 0)
-	   (return-from exit t))
-	 (let ((event (event-queue-peek queue)))
-	   (if (and input-wait-test (funcall input-wait-test stream))
-	       (return-from exit (values nil :input-wait-test))
-	       (when event
-		 (event-queue-read queue) ;event better still be there...
-		 (handle-event (event-sheet event) event)
-		 (go check-buffer))))
+	 (let ((event (event-queue-peek buffer)))
+	   (when event
+	     (when (and input-wait-test (funcall input-wait-test stream))
+	       (return-from exit (values nil :input-wait-test)))
+	     (if (handle-non-stream-event buffer)
+		 (go check-buffer)
+		 (return-from exit t))))
 	 ;; Event queue has been drained, time to block waiting for new events.
-	 ;; If new events have appeared on the queue since our last time
-	 ;; through the loop, our stale value of old-count causes
-	 ;; port-wait-on-event-processing to return immediately.
-	 (setf (values old-count reason)
-	       (port-wait-on-event-processing port
-					      :event-count old-count
-					      :timeout timeout))
-	 (if (not old-count)
-	     (return-from exit (values nil reason))
-	     (go check-buffer))))))
+	 (if *multiprocessing-p*
+	     (unless (event-queue-listen-or-wait buffer :timeout timeout)
+	       (return-from exit (values nil :timeout)))
+	     (multiple-value-bind (result reason)
+		 (process-next-event port :timeout timeout)
+	       (unless result
+		 (return-from exit (values nil reason)))))
+	 (go check-buffer)))))
 
 
 (defun unread-gesture (gesture &key (stream *standard-input*))
@@ -351,7 +341,7 @@
 				 :eof)
 				((eq char :timeout)
 				 nil)
-				(t (char-for-read char))) ))))
+				(t (char-for-read char)))))))
 
 (defmethod stream-unread-char ((stream standard-extended-input-stream)
 			       char)
