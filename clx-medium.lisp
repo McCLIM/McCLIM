@@ -345,3 +345,10 @@
 
 (defmethod medium-beep ((medium clx-medium))
   (xlib:bell (clx-port-display (port medium))))
+
+;;;;
+
+(defmethod invoke-with-special-choices (continuation (sheet clx-medium))
+  ;; CLX-MEDIUM right here? --GB
+  (with-double-buffering (sheet)
+    (funcall continuation sheet)))

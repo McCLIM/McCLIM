@@ -19,9 +19,10 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-(in-package :CLIM)
+(in-package :CLIM-INTERNALS)
 
-(export '(canvas-pane))
+;; What is this? --GB
+(export 'clim::canvas-pane "CLIM")
 
 (defclass canvas-pane (application-pane)
   ((first-point-x :initform nil)
@@ -175,7 +176,7 @@
               first-point-x nil
               first-point-y nil)))))
 
-(in-package :CLIM-DEMO)
+(in-package :clim-demo)
 
 (defun clim-fig ()
   (loop for port in climi::*all-ports*

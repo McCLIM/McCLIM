@@ -48,7 +48,13 @@
   #+mk-defsystem :source-extension #+mk-defsystem "lisp"
   #+mk-defsystem :components
   (:serial
+
+   ;; First possible patches
+   #+:CMU       "lisp-dep/fix-cmu"
+
    "package"
+
+   "decls"
 
    #.(OR
       #+(AND :CMU :MP (NOT :PTHREAD))  "lisp-dep/mp-cmu"

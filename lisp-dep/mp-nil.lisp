@@ -1,4 +1,4 @@
-;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: CLIM-SYS; -*-
+;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: CLIM-INTERNALS; -*-
 ;;; ---------------------------------------------------------------------------
 ;;;     Title: CLIM-2, Chapter 32.2 Multi-processing
 ;;;            for single processing Lisps
@@ -23,7 +23,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-(in-package :clim-sys)
+(in-package :clim-internals)
 
 ;;; No multi-processing here
 

@@ -431,8 +431,3 @@
 	   :min-height (round (space-requirement-min-height space-requirement))))))
 
 
-;; Macro for optimizing drawing with graphical system dependant mechanisms
-
-(defmacro with-special-choices ((sheet) &body body)
-  `(with-double-buffering (,sheet)
-     ,@body))

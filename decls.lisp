@@ -1,8 +1,7 @@
 ;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: CLIM-INTERNALS; -*-
 ;;; ---------------------------------------------------------------------------
-;;;     Title: CLIM-2, Chapter 32.2 Multi-processing
-;;;            for CMU
-;;;   Created: 2001-05-22
+;;;     Title: DEFGENERICs and stuff
+;;;   Created: 2001-08-12
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
 ;;; ---------------------------------------------------------------------------
@@ -25,20 +24,37 @@
 
 (in-package :CLIM-INTERNALS)
 
-(defconstant *multiprocessing-p* t)
-    
-(defun make-lock (&optional name)
-  (mp:make-lock name))
+;;;; Changes
 
-(defun make-recursive-lock (&optional name)
-  (mp:make-lock name :kind :recursive))
+;;;  When        Who    What
+;;; --------------------------------------------------------------------------------------
+;;;  2001-08-12  GB     created
+;;;
 
-(defmacro with-lock-held ((place &optional state) &body body)
-  `(mp:with-lock-held (,place ,state)
-     ,@body))
+;; This is just an ad hoc list. Would it be a good idea to include all
+;; (exported) generic functions here? --GB
 
-(defmacro with-recursive-lock-held ((place &optional state) &body body)
-  `(mp:with-lock-held (,place ,state)
-     ,@body))
+(defgeneric point-x (point))
+(defgeneric point-y (point))
 
-;; all other are handled by import in defpack.lisp
+(defgeneric transform-region (transformation region))
+
+;;;
+
+(defmacro with-special-choices ((sheet) &body body)
+  "Macro for optimizing drawing with graphical system dependant mechanisms."
+  (let ((fn (gensym "FN.")))
+    `(labels ((,fn (,sheet)
+               ,@body))
+      (declare (dynamic-extent #',fn))
+      (invoke-with-special-choices #',fn ,sheet))))
+
+(defgeneric invoke-with-special-choices (continuation sheet))
+
+;; fall back, where to put this?
+
+(defmethod invoke-with-special-choices (continuation (sheet T))
+  (funcall continuation sheet))
+
+
+

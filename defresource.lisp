@@ -1,4 +1,4 @@
-;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: CLIM-SYS; -*-
+;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: CLIM-INTERNALS; -*-
 ;;; ---------------------------------------------------------------------------
 ;;;     Title: CLIM-2 Chapter 32.1 Resources
 ;;;   Created: 2001-05-21
@@ -28,7 +28,7 @@
 ;;; --------------------------------------------------------------------------------------
 ;;;  2001-05-21  GB     created
 
-(in-package :CLIM-SYS)
+(in-package :CLIM-INTERNALS)
 
 ;;;; 32.1 Resources
 

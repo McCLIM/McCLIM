@@ -1,4 +1,4 @@
-;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: CLIM-SYS; -*-
+;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: CLIM-INTERNALS; -*-
 ;;; ---------------------------------------------------------------------------
 ;;;     Title: CLIM-2, Chapter 32.2 Multi-processing
 ;;;            for CMU
@@ -23,7 +23,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-(in-package :CLIM-SYS)
+(in-package :CLIM-INTERNALS)
 
 (defconstant *multiprocessing-p* t)
     
