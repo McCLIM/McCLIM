@@ -49,7 +49,7 @@
             (draw-rectangle* gadget -1 -1 x2 y2
                              :ink (gadget-highlighted-color gadget)
                              :filled t)
-            (draw-edges-lines* gadget 0 0 (1- w) (1- h)) ;(- w 2) (- h 2)
+            (draw-edges-lines* gadget +white+ 0 0 +black+ (1- w) (1- h)) ;(- w 2) (- h 2)
             (draw-label* gadget x1 y1 x2 y2)))))))
 
 (defun menu-draw-unhighlighted (gadget)
