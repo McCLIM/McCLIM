@@ -25,9 +25,15 @@
 
 (in-package :beagle)
 
+;; This seems not to work if we don't have "fixed" in the list
+;; (Listener: Apropos graft fails since we need a 'fixed' family).
+;; I don't think there should be a fixed family though, it seems not
+;; to be in the spec (section 11.1).
+
 (defconstant *beagle-text-families* '(:fix         "Courier"
-				     :serif       "Times New Roman"
-				     :sans-serif  "Verdana"))
+				      :fixed       "Courier"
+ 				      :serif       "Times New Roman"
+				      :sans-serif  "Verdana"))
 
 (defparameter *beagle-text-sizes* '(:normal         12.0
 			  	   :tiny            9.0

@@ -214,11 +214,14 @@ KNOWN LIMITATIONS / TODO LIST
 
 12. There's probably some debug output remaining in some corner cases.
 
-13. Some Apropos cases fail; for example 'Apropos graft' fails (although
+-13.- Some Apropos cases fail; for example 'Apropos graft' fails (although
     '(apropos 'graft)' does not). The same problem prevents the address
     book demo working too I think. [This appears to be caused by treating
     any 'NIL' which should be output as a literal object. Not sure how
     this is happening, but it should be possible to track it down].
+    RESOLVED 21.AUG.2004 - it appears MACPTRs are output using the family
+    (for a text style) of :fixed - which didn't exist (only :fix). Not
+    sure if this is a specification violation or not...
 
 -14.- Not all foreign objects we keep hold of in the back end are heap-
     allocated. Some are stack-allocated and cause errors about 'bogus'
