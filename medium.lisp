@@ -49,9 +49,13 @@
    (device-region :type region
 		  :initform nil
 		  :accessor medium-device-region)
+   ;; always use this slot through its accessor, since ther may
+   ;; be an :after method on it
    (line-style :initarg :line-style
 	       :initform (make-line-style)
 	       :accessor medium-line-style)
+   ;; always use this slot through its accessor, since ther may
+   ;; be an :after method on it
    (text-style :initarg :text-style
 	       :initform (make-text-style :fix :roman :normal)
 	       :accessor medium-text-style)
@@ -320,11 +324,11 @@
 
 (defmethod invoke-with-text-style ((medium medium) continuation text-style)
   (let ((old-style (medium-text-style medium)))
-    (setf (slot-value medium 'text-style)
+    (setf (medium-text-style medium)
       (merge-text-styles text-style (medium-merged-text-style medium)))
     (unwind-protect
 	(funcall continuation)
-      (setf (slot-value medium 'text-style) old-style))))
+      (setf (medium-text-style medium) old-style))))
 
 (defun parse-text-style (style)
   (if (text-style-p style)
