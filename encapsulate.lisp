@@ -182,6 +182,13 @@ state ~S lambda list ~S"
 (def-stream-method stream-write-byte ((stream standard-encapsulating-stream)
 				      integer))
 
+;; stream-line-length is a CMUCL extension to Gray Streams which the pretty
+;; printer relies on. There's a default method which works for most CLIM
+;; streams. For several dumb reasons it doesn't work on encapsulating streams.
+#+CMU
+(defmethod ext:stream-line-length ((stream standard-encapsulating-stream))
+  nil)
+
 ;;;The sheet protocols, as specified in Chapters Properties of Sheets and Sheet
 ;;;Protocols .  
 
@@ -545,6 +552,12 @@ state ~S lambda list ~S"
 (def-stream-method stream-unread-gesture
     ((stream standard-encapsulating-stream) gesture))
 
+(def-stream-method stream-accept ((stream standard-encapsulating-stream) type
+			   &key view default default-type provide-default
+			   insert-default replace-input history active-p
+			   prompt prompt-mode display-default query-identifier
+			   activation-gestures additional-activation-gestures
+			   delimiter-gestures additional-delimiter-gestures))
 ;;; Output recording
 
 (def-stream-method stream-recording-p
