@@ -319,8 +319,8 @@
 
 (defun run-listener (&key (system-command-reader nil)
                           (new-process nil)
-                          (width 800)
-                          (height 800)
+                          (width 760)
+                          (height 550)
                           (process-name "Listener")
                           (eval nil))
   (flet ((run ()
