@@ -736,6 +736,12 @@
                                  (apply #'draw-design medium region options))
                                design))
 
+(defmethod draw-design (medium (design standard-rectangle-set) &rest options &key &allow-other-keys)
+  ;; ### we can do better (faster) than this.
+  (map-over-region-set-regions (lambda (region)
+                                 (apply #'draw-design medium region options))
+                               design))
+
 #+nyi
 (defmethod draw-design (medium (design standard-region-intersection) &rest options &key &allow-other-keys)
   )
