@@ -22,6 +22,7 @@
 ;;; - Better error detection.
 ;;; - Item list formatting.
 ;;; - Multiple columns.
+;;; - :MOVE-CURSOR T support.
 ;;; - All types of spacing, widths, heights. 
 ;;; - FIXMEs.
 
@@ -336,24 +337,24 @@ skips intervening non-table output record structures."))
   (unless multiple-columns-x-spacing-supplied-p
     (setq multiple-columns-x-spacing x-spacing)) ; FIXME!!! Possible recomputation
   (let ((table (gensym))
-#|        (cursor-old-x (gensym))
-        (cursor-old-y (gensym))|#)
+        (cursor-old-x (gensym))
+        (cursor-old-y (gensym)))
     `(with-new-output-record (,stream ,record-type ,table
                                       :x-spacing ,x-spacing
                                       :y-spacing ,y-spacing
                                       :multiple-columns ,multiple-columns
                                       :equalize-column-widths ,equalize-column-widths)
-;       (multiple-value-bind (,cursor-old-x ,cursor-old-y) ; !!!
-;           (cursor-position ,stream)
+       (multiple-value-bind (,cursor-old-x ,cursor-old-y)
+           (stream-cursor-position ,stream)
          (with-output-recording-options (,stream :record t :draw nil)
            ,@body
            (finish-output ,stream))
          (adjust-table-cells ,table ,stream)
-;         (setf*-output-record-position ,cursor-old-x ,cursor-old-y ,table) ; !!!
+         (setf*-output-record-position ,cursor-old-x ,cursor-old-y ,table)
          (replay-output-record ,table ,stream)
-         (when ,move-cursor
-           #+nil(setf*-cursor-position cursor-new-x cursor-new-y ,table))
-;) ; FIXME!!! Not yet implemented
+         (if ,move-cursor
+             nil ;(setf*-cursor-position cursor-new-x cursor-new-y ,table) ;FIXME!!!
+           (setf*-stream-cursor-position ,cursor-old-x ,cursor-old-y ,stream)))
        ,table)))
 
 ;;; Internal
