@@ -128,6 +128,12 @@ information is present."))
   (declare (ignore acceptably for-context-type))
   (format stream "~s" (cdr object)))
 
+(defmacro with-heading-style ((stream) &body body)
+  "Cause text output from BODY to be formatted in a heading font. This
+could be boldface, or a different style, or even another font."
+  `(with-text-face (,stream :bold)
+     ,@body))
+
 (defmacro inspector-table (header &body body)
   "Present OBJECT (captured from environment) in tabular form, with
 HEADER printed in a box at the top. BODY should output the rows of the
@@ -140,7 +146,8 @@ drawn."
        (formatting-column (pane)
          (formatting-cell (pane)
            (surrounding-output-with-border (pane)
-             ,header))
+	     (with-heading-style (pane)
+	       ,header)))
          (formatting-cell (pane)
            (formatting-table (pane)
              ,@body))))
@@ -151,7 +158,8 @@ drawn."
 environment created by INSPECTOR-TABLE."
   `(formatting-row (pane)
      (formatting-cell (pane :align-x :right)
-       ,left)
+       (with-heading-style (pane)
+	 ,left))
      (formatting-cell (pane)
        ,right)))
 
@@ -159,7 +167,9 @@ environment created by INSPECTOR-TABLE."
   "Print OBJECT's documentation, if any, to PANE"
   (when (handler-bind ((warning #'muffle-warning))
 	  (documentation object t))
-    (format pane "~&Documentation: ~A" (documentation object t))))
+    (with-heading-style (pane)
+      (format pane "~&Documentation: "))
+    (princ (documentation object t) pane)))
 
 (defun inspect-structure-or-object (object pane)
   "Inspect a structure or an object. Since both can be inspected in
@@ -171,13 +181,13 @@ structure objects."
      (print (class-name class) pane)
      (when (clim-mop:class-direct-superclasses class)
        (inspector-table-row
-	(format pane "Superclasses")
+	(princ "Superclasses" pane)
 	(dolist (superclass (clim-mop:class-direct-superclasses class))
 	  (inspect-object superclass pane)
 	  (terpri pane))))
      (when (clim-mop:class-direct-subclasses class)
        (inspector-table-row
-	(format pane "Subclasses")
+	(princ "Subclasses" pane)
 	(dolist (subclass (clim-mop:class-direct-subclasses class))
 	  (inspect-object subclass pane)
 	  (terpri pane))))
@@ -191,6 +201,8 @@ structure objects."
 		     (inspect-object (slot-value object slot-name) pane)
 		     (format pane "#<unbound slot>"))))))))
 
+;; Try to print the normal, textual representation of an object, but
+;; if that's too long, make an abbreviated "instance of ~S" version.
 ;; FIXME: should this be removed? It's really ugly.
 (defparameter *object-representation-max-length* 300
   "Maximum number of characters of an object's textual representation
@@ -207,9 +219,6 @@ that are allowed before abbreviation kicks in")
 	      (format pane "#<~S ...>" (class-name (class-of object)))))
       (error ()
 	(format pane "#<unprintable ~S>" (class-name (class-of object)))))))
-
-;; Try to print the normal, textual representation of an object, but
-;; if that's too long, make an abbreviated "instance of ~S" version.
 
 (defmethod inspect-object-briefly ((object standard-object) pane)
   (inspect-structure-or-object-briefly object pane))
@@ -319,24 +328,24 @@ list as interactive as you would expect."
   (inspector-table
       (format pane "Generic Function: ~s"
 	      (clim-mop:generic-function-name object))
-    (loop for method in (clim-mop:generic-function-methods object)
-          do (with-output-as-presentation
-                 (pane method (presentation-type-of method))
-               (formatting-row (pane)
-                 (formatting-cell (pane)
-                   (print (method-qualifiers method)))
-                 (loop for specializer in (clim-mop:method-specializers method)
-                    do (formatting-cell (pane)
-			 (if (typep specializer 'clim-mop:eql-specializer)
-			     (progn
-			       (princ "(EQL " pane)
-			       (inspect-object
-				(clim-mop:eql-specializer-object
-				 specializer)
-				pane)
-			       (princ ")" pane))
-			     (inspect-object (class-name specializer)
-					     pane)))))))))
+    (dolist (method (clim-mop:generic-function-methods object))
+      (with-output-as-presentation
+	  (pane method (presentation-type-of method))
+	(formatting-row (pane)
+	  (formatting-cell (pane)
+	    (print (method-qualifiers method)))
+	  (loop for specializer in (clim-mop:method-specializers method)
+		do (formatting-cell (pane)
+		     (if (typep specializer 'clim-mop:eql-specializer)
+			 (progn
+			   (princ "(EQL " pane)
+			   (inspect-object
+			    (clim-mop:eql-specializer-object
+			     specializer)
+			    pane)
+			   (princ ")" pane))
+			 (inspect-object (class-name specializer)
+					 pane)))))))))
 
 (defun pretty-print-function (fun)
   "Print a function in a readable way, returning a string. On most
@@ -362,12 +371,15 @@ use implementation-specific functions to be more informative."
 (defmethod inspect-object ((object function) pane)
   (with-output-as-presentation
        (pane object (presentation-type-of object))
-    (format pane "Function: ~A"
-	    (pretty-print-function object))
+    (with-heading-style (pane)
+      (princ "Function: " pane))
+    (princ (pretty-print-function object) pane)
     #+sbcl
     (unless (typep object 'generic-function)
-      (format pane "~&Type: ~A"
-	      (sb-kernel:%simple-fun-type (sb-kernel:%closure-fun object))))
+      (with-heading-style (pane)
+	(format pane "~&Type: "))
+      (princ (sb-kernel:%simple-fun-type (sb-kernel:%closure-fun object))
+	     pane))
     (print-documentation object pane)))
 
 (defmethod inspect-object-briefly ((object package) pane)
@@ -386,8 +398,13 @@ use implementation-specific functions to be more informative."
         (inspect-object nick pane)))
     (inspector-table-row
       (princ "Used by:")
+      ;; FIXME: This should use some sort of list formatting, so that
+      ;; it can obey conventions about *print-length* and reuse code
+      ;; for modifying it. To support this, list printing should
+      ;; support delimiterless, one-item-per-line display.
       (dolist (used-by (package-used-by-list object))
-          (inspect-object used-by pane)))
+	(fresh-line pane)
+	(inspect-object used-by pane)))
     (inspector-table-row
       (princ "Uses:")
       (dolist (uses (package-use-list object))
@@ -580,19 +597,24 @@ available in direct slots."
                             (find slot-name (clim-mop:class-slots class)
                                   :key #'clim-mop:slot-definition-name))))
       (when documentation
-	(format stream "~&Documentation: ~A~%" documentation))
-      (format stream "~&Type: ~S~%"
-	      (clim-mop:slot-definition-type slot-object))
-      (format stream "~&Allocation: ~S~%"
-	      (clim-mop:slot-definition-allocation slot-object))
+	(with-heading-style (stream)
+	  (format stream "~&Documentation: "))
+	(format stream "~A~%" documentation))
+      (with-heading-style (stream)
+	(format stream "~&Type: "))
+      (format stream "~S~%" (clim-mop:slot-definition-type slot-object))
+      (with-heading-style (stream)
+	(format stream "~&Allocation: "))
+      (format stream "~S~%" (clim-mop:slot-definition-allocation slot-object))
       ;; slot-definition-{readers,writers} only works for direct slot
       ;; definitions
       (let ((readers (clim-mop:slot-definition-readers slot-object)))
         (when readers
-          (format stream "~&Readers: ")
+	  (with-heading-style (stream)
+	    (format stream "~&Readers: "))
           (present readers (presentation-type-of readers) :stream stream)))
       (let ((writers (clim-mop:slot-definition-writers slot-object)))
         (when writers
-          (format stream "~&Writers: ")
+          (with-heading-style (stream)
+	    (format stream "~&Writers: "))
           (present writers (presentation-type-of writers) :stream stream))))))
-
