@@ -32,3 +32,10 @@
 	 :port (port frame)
 	 args))
 
+
+;;; include later for menus
+;(defmethod adopt-frame :after ((fm clx-frame-manager) (frame menu-frame))
+;  (xlib:map-window (sheet-direct-mirror (slot-value frame 'top-level-sheet))))
+
+(defmethod adopt-frame :after ((fm clx-frame-manager) (frame application-frame))
+  (xlib:map-window (sheet-direct-mirror (slot-value frame 'top-level-sheet))))
