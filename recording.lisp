@@ -1398,9 +1398,11 @@ were added."
   ;; FIXME!!! Text direction.
   ;; Multiple lines?
  (let* ((text-style (graphics-state-text-style graphic))
-	(width (stream-string-width stream string
-                                    :start start :end end
-                                    :text-style text-style))
+	(width (if (characterp string)
+		   (stream-character-width stream string :text-style text-style)
+		   (stream-string-width stream string
+					:start start :end end
+					:text-style text-style)) )
         (ascent (text-style-ascent text-style (sheet-medium stream)))
         (descent (text-style-descent text-style (sheet-medium stream)))
         (height (+ ascent descent))
@@ -1554,7 +1556,7 @@ were added."
 		 (setf (stream-cursor-position stream)
 		       (values start-x start-y))
 		 (set-medium-graphics-state substring medium)
-		 (stream-write-line stream string)))
+		 (stream-write-output stream string)))
       (when wrapped			; FIXME
 	(draw-rectangle* medium
 			 (+ wrapped 0) start-y
@@ -1772,17 +1774,25 @@ were added."
   `(letf (((slot-value ,stream 'local-record-p) nil))
      ,@body))
 
-(defmethod stream-write-line :around
+(defmethod stream-write-output :around
     ((stream standard-output-recording-stream) line)
   (when (and (stream-recording-p stream)
              (slot-value stream 'local-record-p))
     (let* ((medium (sheet-medium stream))
-           (text-style (medium-text-style medium)))
-      (stream-add-string-output stream line 0 nil text-style
-                                (stream-string-width stream line
-                                                     :text-style text-style)
-                                (text-style-height text-style medium)
-                                (text-style-ascent text-style medium))))
+           (text-style (medium-text-style medium))
+	   (height (text-style-height text-style medium))
+	   (ascent (text-style-ascent text-style medium)))
+      (if (characterp line)
+	  (stream-add-character-output stream line text-style
+				       (stream-character-width
+					stream line :text-style text-style)
+				       height
+				       ascent)
+	  (stream-add-string-output stream line 0 nil text-style
+				    (stream-string-width stream line
+							 :text-style text-style)
+				    height
+				    ascent))))
   (when (stream-drawing-p stream)
     (without-local-recording stream
                              (call-next-method))))

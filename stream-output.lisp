@@ -283,26 +283,20 @@
 		       :filled t)))
   (stream-write-char stream #\newline))
 
-(defgeneric stream-write-line (stream line)
+(defgeneric stream-write-output (stream line)
   (:documentation
-   "Writes the string LINE to STREAM. This function produces no more
-than one line of output."))
-(defmethod stream-write-line (stream line)
+   "Writes the character or string LINE to STREAM. This function produces no
+more than one line of output i.e., doesn't wrap."))
+(defmethod stream-write-output (stream line)
   (with-slots (baseline vspace) stream
      (multiple-value-bind (cx cy) (stream-cursor-position stream)
        (draw-text* (sheet-medium stream) line
                    cx (+ cy baseline)))))
 
-(defvar *inhibit-record-closing* nil
-  "This is bound by things like stream-write-char to inhibit gratuitous
-calls to stream-close-text-output-record during cursor movement. This is
-necessary to build output records with more than one character in them.") 
-
 (defmethod stream-write-char ((stream standard-extended-output-stream) char)
   (let* ((cursor       (stream-text-cursor stream))
 	 (visible      (cursor-visibility cursor))
 	 (medium       (sheet-medium stream))
-	 (port         (port stream))
 	 (text-style   (medium-text-style medium))
 	 (new-baseline (text-style-ascent text-style medium))
 	 (new-height   (text-style-height text-style medium))
@@ -345,14 +339,12 @@ necessary to build output records with more than one character in them.")
 	       (setq cy 0))))
           (unless (eq :allow (stream-end-of-page-action stream))
 	      (scroll-extent stream 0 (max 0 (- (+ cy height) %view-height))))
-	    
-	  
 	  ;; mikemac says that this "erase the new line" behavior is
 	  ;; required by the stream text protocol, but I don't see
 	  ;; it.  I'm happy to put this back in again, but in the
 	  ;; meantime it makes debugging of updating-output a bit easier
 	  ;; not to have "extra" records laying around.  If/When it goes
-	  ;; back in... the draw-rectangle has to happen on the stream,
+	  ;; back in, the draw-rectangle has to happen on the stream,
 	  ;; not the medium. -- moore
 	  #+nil(draw-rectangle* medium cx cy (+ margin 4) (+ cy height)
 			   :ink +background-ink+
@@ -376,10 +368,10 @@ necessary to build output records with more than one character in them.")
 		 (scroll-horizontal stream width))
 		(:allow
 		 )))
-	    (stream-write-line stream (string char))
+	    (stream-write-output stream char)
 	    (setq cx (+ cx width))
-	    (let ((*inhibit-record-closing* T))
-	      (setf (stream-cursor-position stream) (values cx cy))))))))
+	    (setf (cursor-position (stream-text-cursor stream))
+		  (values cx cy)))))))
     (if visible
 	(setf (cursor-visibility cursor) t))))
 
