@@ -40,7 +40,10 @@
 
 (defmethod initialize-instance :after ((sheet permanent-medium-sheet-output-mixin) &rest args)
   (declare (ignore args))
-  (setf (%sheet-medium sheet) (make-medium (port sheet) sheet)))
+  ;; hmm, 
+  (setf (%sheet-medium sheet) (make-medium (port sheet) sheet))
+  ;; hmm...
+  (engraft-medium (sheet-medium sheet) (port sheet) sheet))
 
 (defmacro with-sheet-medium ((medium sheet) &body body)
   (let ((fn (gensym)))
