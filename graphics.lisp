@@ -63,8 +63,8 @@
 	  (if clipping-region
 	      (setf (medium-clipping-region medium)
 		(region-intersection old-clip
-				     (transform-region clipping-region
-						       (medium-transformation medium)))))
+				     (transform-region (medium-transformation medium)
+						       clipping-region))))
 	  (if (null line-style)
 	      (setf line-style old-line-style))
 	  (if (or line-unit line-thickness dashes-p line-joint-shape line-cap-shape)
