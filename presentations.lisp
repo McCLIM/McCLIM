@@ -459,6 +459,22 @@ filled in."
 (defmethod get-ptype-metaclass ((type (eql *builtin-t-class*)))
   type)
 
+;;; external functions
+(defun find-presentation-type-class (name &optional (errorp t) environment)
+  (declare (ignore environment))
+  (let ((metaclass (get-ptype-metaclass name)))
+    (cond (metaclass
+	   metaclass)
+	  (errorp
+	   (error "~S is not the name of a presentation type" name))
+	  (t nil))))
+
+(defun class-presentation-type-name (class &optional environment)
+  (declare (ignore environment))
+  (cond ((typep class 'presentation-type)
+	 (type-name class))
+	(t (class-name class))))
+
 ;;; For the presentation class T, the stand in object must not be a
 ;;; standard-object. So... why not the symbol T?
 

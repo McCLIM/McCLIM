@@ -119,12 +119,16 @@ accept of this query")))
 
 (defun invoke-accepting-values
     (stream body
-     &key own-window exit-boxes initially-select-query-identifier
+     &key own-window exit-boxes
+     (initially-select-query-identifier nil initially-select-p)
      modify-initial-query resynchronize-every-pass resize-frame
      align-prompts label scroll-bars
      x-position y-position width height
      (command-table 'accepting-values)
      (frame-class 'accept-values))
+  (declare (ignore own-window exit-boxes modify-initial-query
+    resize-frame align-prompts label scroll-bars x-position y-position
+    width height frame-class))
   (let* ((*accepting-values-stream* (make-instance 'accepting-values-stream
 						  :stream stream))
 	 (arecord (updating-output (stream
@@ -135,7 +139,10 @@ accept of this query")))
 					(stream-default-view
 					 *accepting-values-stream*))))
 	 (first-time t)
-	 (current-command *default-command*))
+	 (current-command (if initially-select-p
+			      `(com-select-query
+				,initially-select-query-identifier)
+			      *default-command*)))
     (letf (((frame-command-table *application-frame*)
 	    (find-command-table command-table)))
       (unwind-protect
@@ -312,15 +319,17 @@ highlighting, etc." ))
 	     :documentation "A copy of the stream buffer before accept
 is called. Used to determine if any editing has been done by user")))
 
+(defparameter *no-default-cache-value* (cons nil nil))
+
 (define-default-presentation-method accept-present-default
     (type stream (view textual-dialog-view) default default-supplied-p
      present-p query-identifier)
   (declare (ignore present-p))
   (let* ((editing-stream nil)
-	 ;; XXX Should be :CACHE-VALUE DEFAULT, but Goatee areas
-	 ;; aren't playing nicely with updating-output yet.
 	 (record (updating-output (stream :unique-id query-identifier
-				   :cache-value t
+				   :cache-value (if default-supplied-p
+						    default
+						    *no-default-cache-value*)
 				   :record-type 'av-text-record)
 		   (with-output-as-presentation
 		       (stream query-identifier 'selectable-query)
@@ -357,7 +366,8 @@ is called. Used to determine if any editing has been done by user")))
 		   (accept ptype :stream s :view view :prompt nil
 			   :default default))
 	       #'(lambda (s)
-	       (accept ptype :stream s :view view :prompt nil)))))))
+	       (accept ptype :stream s :view view :prompt nil)))))
+    (setf (changedp query) t)))
 
 
 

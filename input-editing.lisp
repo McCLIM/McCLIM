@@ -724,6 +724,11 @@
 			     :action action
 			     :predicate predicate)))
 
+(defun suggest (completion object)
+  (declare (ignore completion object))
+  (error
+   "SUGGEST called outside of lexical scope of COMPLETING-FROM-SUGGESTIONS" ))
+
 (defmacro completing-from-suggestions ((stream &rest args) &body body)
   (when (eq stream t)
     (setq stream '*standard-input*))

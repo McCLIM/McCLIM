@@ -124,6 +124,13 @@
    (cursor :accessor cursor :initarg :cursor :initform nil)
    (line-breaks :accessor line-breaks :initform nil)))
 
+(defmethod print-object ((obj screen-line) stream)
+  (print-unreadable-object (obj stream :type t :identity t)
+    (with-bounding-rectangle* (x1 y1 x2 y2)
+	obj
+      (format stream "X ~S:~S Y ~S:~S " x1 x2 y1 y2)
+      (write (current-contents obj) :stream stream))))
+
 (defmethod (setf width) :after (width (line screen-line))
   (setf (slot-value line 'climi::x2) (+ (slot-value line 'climi::x1) width)))
 

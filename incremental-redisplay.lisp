@@ -220,6 +220,30 @@ spatially organized data structure.
 			    (or (not (pane-incremental-redisplay pane))
 				(not *enable-updating-output*))))))
 
+;;; INCREMENTAL-DISPLAY takes as input the difference set computed by
+;;; COMPUTE-DIFFERENCE-SET and updates the screen. The 5 kinds of updates are
+;;; not very well defined in the spec. I understand their semantics thus:
+;;;
+;;; Erases, moves, and draws refer to records that don't overlap *with other
+;;; records that survive in the current rendering*. In other words, they don't
+;;; overlap with records that were not considered by COMPUTE-DIFFRENCE-SET,
+;;; either because they are children of a clean updating output node or they
+;;; are in another part of the output history that is not being
+;;; redisplayed. Also, moves and draws can not overlap each other. It is fine
+;;; for erases and draws to overlap. Another way to think about erases, moves
+;;; and draws is in terms of a possible implementation: they could be handled
+;;; using only operations on the screen itself. First all the erase regions
+;;; would be erased, the moves would be blitted, and then the individual draws
+;;; records would be redisplayed.
+;;;
+;;; Records in erase-overlapping and move-overlapping might overlap with any
+;;; other record. They need to be implemented by erasing their region on the
+;;; screen and then replaying the output history for that region. Thus, any
+;;; ordering issues implied by overlapping records is handled correctly. Note
+;;; that draw records that overlap are included in erase-overlapping; the draw
+;;; operation itself occurs when the screen is refreshed from the output
+;;; history. -- moore
+
 (defgeneric incremental-redisplay
     (stream position erases moves draws erase-overlapping move-overlapping))
 
@@ -697,8 +721,6 @@ records. "))
 	 (erase-overlapping nil)
 	 (move-overlapping nil)
 	 (stream (updating-output-stream record))
-	 ;; XXX Performance hack. Need to work out the implications for deleted
-	 ;; gadgets and stuff
 	 (visible-region (pane-viewport-region stream))
 	 (old-children (if (slot-boundp record 'old-children)
 			   (old-children record)
