@@ -125,7 +125,8 @@
 
 (defmethod invoke-with-drawing-options ((sheet sheet) continuation &rest drawing-options)
   (with-sheet-medium (medium sheet)
-    (apply #'invoke-with-drawing-options medium continuation drawing-options)))
+                     (with-medium-options (medium drawing-options)
+                                          (funcall continuation sheet))))
 
 (defun draw-point (sheet point
 		   &rest args
