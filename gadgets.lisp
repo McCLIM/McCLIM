@@ -584,7 +584,7 @@
   (declare (ignorable pane))
   (setf (gadget-value button :invoke-callback t) t))
 
-(defmacro with-radio-box (&rest options &body body)
+(defmacro with-radio-box ( (&rest options) &body body)
   `(make-pane 'radio-box ,@options
 	      :current-selection (first ,body)
 	      ,@body))
