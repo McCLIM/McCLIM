@@ -4,7 +4,7 @@
 ;;;   Created: 1998-12-02 19:26
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: regions.lisp,v 1.9 2001/03/12 12:00:24 rouanet Exp $
+;;;       $Id: regions.lisp,v 1.10 2001/07/09 16:27:50 boninfan Exp $
 ;;; --------------------------------------------------------------------------------------
 ;;;  (c) copyright 1998,1999 by Gilbert Baumann
 ;;;  (c) copyright 2001 by Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
@@ -28,12 +28,13 @@
 
 ;;;  When        Who    What
 ;;; --------------------------------------------------------------------------------------
-;;;  2001-01-21  GB     fixed bug in (TRANSFORM-REGION T RECTANGLE-SET)
-;;;                     added some documentation
-;;;  2001-03-06  AR     fixed bug in (REGION-EQUAL STANDARD-RECTANGLE STANDARD-RECTANGLE)
-;;;                     REGION is now a subclass of DESIGN.
 ;;;  2001-03-09  AR     fixed a bug in MAKE-ELLIPICAL-THING
 ;;;                     fixed STANDARD-ELLIPTICAL-ARC defclass
+;;;  2001-03-06  AR     fixed bug in (REGION-EQUAL STANDARD-RECTANGLE STANDARD-RECTANGLE)
+;;;                     REGION is now a subclass of DESIGN.
+;;;  2001-01-21  GB     fixed bug in (TRANSFORM-REGION T RECTANGLE-SET)
+;;;                     added some documentation
+;;;  2001-07-09  GB     maybe fixed a bug in MAP-OVER-SCHNITT-GERADE/POLYGON.
 
 ;;; ---- TODO ----------------------------------------------------------------------------
 
@@ -1577,7 +1578,7 @@
                                 ((add (lo lu ro ru)
                                    (dolist (s sps
                                              ;; ansonsten
-                                             (push (make-pg-splitter :links (list lu lo) 
+                                             (push (make-pg-splitter :links  (list lu lo) 
                                                                      :rechts (list ru ro))
                                                    sps) )
                                      (when (and (region-equal lo (car (pg-splitter-links s)))
@@ -1738,7 +1739,11 @@
          (- (/ (+ (* DX1 (- Y1 Y2)) (* DY1 X2) (- (* DY1 X1))) quot)))) )) )
 
 (defun geraden-gleichung (x0 y0 x1 y1 px py)
-  (- (* (- py y0) (- x1 x0)) (* (- px x0) (- y1 y0))))
+  ;; ??? This somehow tries to calculate the distance between a point
+  ;; and a line. The sign of the result depends upon the side the point
+  ;; is on wrt to the line. --GB
+  (- (* (- py y0) (- x1 x0))
+     (* (- px x0) (- y1 y0))))
 
 (defun position->geraden-fktn-parameter (x0 y0 x1 y1 px py)
   (let ((dx (- x1 x0)) (dy (- y1 y0)))
@@ -1747,26 +1752,48 @@
         (/ (- py y0) dy))))
 
 (defun map-over-schnitt-gerade/polygon (fun x1 y1 x2 y2 points)
+  ;; This calles 'fun' with the "Geradenfunktionsparameter" of each
+  ;; intersection of the line (x1,y1),(x2,y2) and the polygon denoted
+  ;; by 'points' in a "sensible" way. --GB
   (let ((n (length points)))
     (dotimes (i n)
-      (let ((pv (elt points (mod (- i 1) n)))
-            (po (elt points (mod i n)))
-            (pn (elt points (mod (+ i 1) n))))
-        (cond ((line-contains-point-p** x1 y1 x2 y2 (point-x po) (point-y po))
-               (let ((vz-1 (geraden-gleichung x1 y1 x2 y2 (point-x pn) (point-y pn)))
-                     (vz-2 (geraden-gleichung x1 y1 x2 y2 (point-x pv) (point-y pv))))
-                 (cond ((or (and (> vz-1 0) (< vz-2 0))
-                            (and (< vz-1 0) (> vz-2 0))
-                            (and (= vz-1 0) (> vz-2 0))
-                            (and (> vz-1 0) (= vz-2 0)))
-                        (funcall fun (position->geraden-fktn-parameter x1 y1 x2 y2 (point-x po) (point-y po)) ) ))))
-              ((line-contains-point-p** x1 y1 x2 y2 (point-x pn) (point-y pn))
-               nil)
-              (t
-               (multiple-value-bind (k m) 
-                   (geraden-schnitt/prim x1 y1 x2 y2 (point-x po) (point-y po) (point-x pn) (point-y pn))
-                 (when (and k (<= 0 m 1)) ;moegliche numerische instabilitaet
-                   (funcall fun k)))))))))
+      (let ((pv  (elt points (mod (- i 1) n)))          ;the point before
+            (po  (elt points (mod i n)))                ;the "current" point
+            (pn  (elt points (mod (+ i 1) n)))          ;the point after
+            (pnn (elt points (mod (+ i 2) n))))         ;the point after**2
+        (cond
+         ;; The line goes directly thru' po
+         ((line-contains-point-p** x1 y1 x2 y2 (point-x po) (point-y po))
+           (let ((sign-1 (geraden-gleichung x1 y1 x2 y2 (point-x pn) (point-y pn)))
+                 (sign-2 (geraden-gleichung x1 y1 x2 y2 (point-x pv) (point-y pv))))
+             (cond ((or (and (> sign-1 0) (< sign-2 0))
+                        (and (< sign-1 0) (> sign-2 0)))
+                    ;; clear cases: the line croses the polygon's border
+                    (funcall fun (position->geraden-fktn-parameter x1 y1 x2 y2 (point-x po) (point-y po)) ))
+                   ((= sign-1 0)
+                    ;; more difficult:
+                    ;; The line is coincident with the edge po/pn
+                    (let ((sign-1 (geraden-gleichung x1 y1 x2 y2 (point-x pnn) (point-y pnn))))
+                      (cond ((or (and (> sign-1 0) (< sign-2 0))
+                                 (and (< sign-1 0) (> sign-2 0)))
+                             ;; The line goes through the polygons border, by edge po/pn
+                             (funcall fun (position->geraden-fktn-parameter x1 y1 x2 y2 (point-x po) (point-y po)) ))
+                            (t
+                             ;; otherwise the line touches the polygon at the edge po/pn,
+                             ;; return both points
+                             (funcall fun (position->geraden-fktn-parameter x1 y1 x2 y2 (point-x po) (point-y po)) )
+                             (funcall fun (position->geraden-fktn-parameter x1 y1 x2 y2 (point-x pn) (point-y pn)) ) ))))
+                   (t
+                    ;; all other cases: Line either touches polygon in
+                    ;; a point or in an edge [handled above]. --GB
+                    nil) )))
+         ((line-contains-point-p** x1 y1 x2 y2 (point-x pn) (point-y pn))
+          nil)
+         (t
+          (multiple-value-bind (k m) 
+              (geraden-schnitt/prim x1 y1 x2 y2 (point-x po) (point-y po) (point-x pn) (point-y pn))
+            (when (and k (<= 0 m 1))                    ;Moegliche numerische Instabilitaet
+              (funcall fun k)))))))))
 
 (defun schnitt-gerade/polygon-prim (x1 y1 x2 y2 points)
   (let ((res nil))
