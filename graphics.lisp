@@ -1,6 +1,7 @@
 ;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
 
 ;;;  (c) copyright 1998,1999,2000 by Michael McDonald (mikemac@mikemac.com)
+;;;  (c) copyright 2001 by Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -189,9 +190,9 @@
 		     &rest args
 		     &key (filled t) (closed t)
 			  ink clipping-region transformation line-style line-thickness
-			  line-unit line-dashes line-cap-shape)
+			  line-unit line-dashes line-joint-shape line-cap-shape)
   (declare (ignore ink clipping-region transformation line-style line-thickness
-		   line-unit line-dashes line-cap-shape))
+		   line-unit line-dashes line-joint-shape line-cap-shape))
   (with-medium-options (sheet args)
     (loop for point in point-seq
 	  nconcing (multiple-value-bind (x y) (point-position point)
@@ -202,9 +203,9 @@
 		    &rest args
 		    &key (filled t) (closed t)
 			 ink clipping-region transformation line-style line-thickness
-			 line-unit line-dashes line-cap-shape)
+			 line-unit line-dashes line-joint-shape line-cap-shape)
   (declare (ignore ink clipping-region transformation line-style line-thickness
-		   line-unit line-dashes line-cap-shape))
+		   line-unit line-dashes line-joint-shape line-cap-shape))
   (with-medium-options (sheet args)
     (medium-draw-polygon* medium coord-seq closed filled)))
 
@@ -212,9 +213,9 @@
 			&rest args
 			&key (filled t)
 			     ink clipping-region transformation line-style line-thickness
-			     line-unit line-dashes line-cap-shape)
+			     line-unit line-dashes line-joint-shape)
   (declare (ignore ink clipping-region transformation line-style line-thickness
-		   line-unit line-dashes line-cap-shape))
+		   line-unit line-dashes line-joint-shape))
   (with-medium-options (sheet args)
     (multiple-value-bind (x1 y1) (point-position point1)
       (multiple-value-bind (x2 y2) (point-position point2)
@@ -224,9 +225,9 @@
 			&rest args
 			&key (filled t)
 			     ink clipping-region transformation line-style line-thickness
-			     line-unit line-dashes line-cap-shape)
+			     line-unit line-dashes line-joint-shape)
   (declare (ignore ink clipping-region transformation line-style line-thickness
-		   line-unit line-dashes line-cap-shape))
+		   line-unit line-dashes line-joint-shape))
   (with-medium-options (sheet args)
     (medium-draw-rectangle* medium x1 y1 x2 y2 filled)))
 
@@ -294,17 +295,18 @@
 		   &rest args
 		   &key (start 0) (end nil)
 			(align-x :left) (align-y :baseline)
-			towards-x towards-y transform-glyphs
+			towards-point transform-glyphs
 			ink clipping-region transformation
 			text-style text-family text-face text-size)
   (declare (ignore ink clipping-region transformation
 		   text-style text-family text-face text-size))
   (with-medium-options (sheet args)
     (multiple-value-bind (x y) (point-position point)
-      (medium-draw-text* medium string x y
-			 start end
-			 align-x align-y
-			 towards-x towards-y transform-glyphs))))
+      (multiple-value-bind (towards-x towards-y) (point-position towards-point)
+        (medium-draw-text* medium string x y
+                           start end
+                           align-x align-y
+                           towards-x towards-y transform-glyphs)))))
 
 (defun draw-text* (sheet string x y
 		   &rest args
