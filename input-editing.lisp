@@ -141,13 +141,7 @@
 			(incf scan-pointer)
 			(throw-object-ptype (goatee::object gesture)
 					    (goatee::result-type gesture)))
-		       (t (incf scan-pointer)))
-		 (if (characterp gesture)
-		     (progn
-		       (unless peek-p
-			 (incf scan-pointer))
-		       (return-from stream-read-gesture gesture))
-		     (incf scan-pointer))))
+		       (t (incf scan-pointer)))))
 	 ;; The scan pointer should not be greater than the insertion pointer
 	 ;; because the code that set the insertion pointer should have queued
 	 ;; a rescan.
