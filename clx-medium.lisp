@@ -69,7 +69,11 @@
 
 (defmethod medium-draw-point* ((medium clx-medium) x y)
   (with-CLX-graphics (medium)
-    (multiple-value-bind (tx ty) (transform-position (medium-transformation medium) x y)
+    (multiple-value-bind (tx ty)
+	(transform-position (compose-transformations (sheet-transformation
+						      (medium-sheet medium))
+						     (medium-transformation medium))
+			    x y)
       (if (< (line-style-thickness line-style) 2)
 	  (xlib:draw-point mirror gc (round tx) (round ty))
 	(let ((diameter (round (line-style-thickness line-style))))
@@ -85,8 +89,16 @@
 
 (defmethod medium-draw-line* ((medium clx-medium) x1 y1 x2 y2)
   (with-CLX-graphics (medium)
-    (multiple-value-bind (tx1 ty1) (transform-position (medium-transformation medium) x1 y1)
-      (multiple-value-bind (tx2 ty2) (transform-position (medium-transformation medium) x2 y2)
+    (multiple-value-bind (tx1 ty1)
+	(transform-position (compose-transformations (sheet-transformation
+						      (medium-sheet medium))
+						     (medium-transformation medium))
+			    x1 y1)
+      (multiple-value-bind (tx2 ty2)
+	  (transform-position (compose-transformations (sheet-transformation
+							(medium-sheet medium))
+						       (medium-transformation medium))
+			      x2 y2)
 	(xlib:draw-line mirror gc (round tx1) (round ty1) (round tx2) (round ty2))))))
 
 (defmethod medium-draw-lines* ((medium clx-medium) coord-seq)
@@ -94,7 +106,9 @@
     (loop with points = (apply #'vector coord-seq)
 	  for i below (length coord-seq) by 2
 	  do (multiple-value-bind (tx ty)
-		 (transform-position (medium-transformation medium)
+		 (transform-position (compose-transformations (sheet-transformation
+							       (medium-sheet medium))
+							      (medium-transformation medium))
 				     (aref points i) (aref points (1+ i)))
 	       (setf (aref points i) (round tx)
 		     (aref points (1+ i)) (round ty)))
@@ -103,9 +117,15 @@
 (defmethod medium-draw-rectangle* ((medium clx-medium) left top right bottom filled)
   (with-CLX-graphics (medium)
     (multiple-value-bind (x1 y1)
-	(transform-position (medium-transformation medium) left top)
+	(transform-position (compose-transformations (sheet-transformation
+						      (medium-sheet medium))
+						     (medium-transformation medium))
+			    left top)
       (multiple-value-bind (x2 y2)
-	  (transform-position (medium-transformation medium) right bottom)
+	  (transform-position (compose-transformations (sheet-transformation
+							(medium-sheet medium))
+						       (medium-transformation medium))
+			      right bottom)
 	(if (< x2 x1)
 	    (rotatef x1 x2))
 	(if (< y2 y1)
@@ -155,7 +175,11 @@
     (when (characterp string)
       (setq string (make-string 1 :initial-element string)))
     (when (null end) (setq end (length string)))
-    (multiple-value-bind (tx ty) (transform-position (medium-transformation medium) x y)
+    (multiple-value-bind (tx ty)
+	(transform-position (compose-transformations (sheet-transformation
+						     (medium-sheet medium))
+						    (medium-transformation medium))
+			    x y)
       (multiple-value-bind (text-width text-height x y baseline) 
 	   (text-size medium string :start start :end end)
 	(declare (ignore x y))
