@@ -308,7 +308,7 @@ This is equal to the length of the provided line-dash pattern."
 (defun medium-copy-area-aux (from from-x from-y width height to to-x to-y)
   "Helper method for copying areas. ``from'' and ``to'' must both be 'mirror' objects. From and To coordinates
 must already be transformed as appropriate."
-  (format *debug-io* "Entered medium-copy-area-aux with from = ~S and to = ~S~%" from to)
+;;;  (format *debug-io* "Entered medium-copy-area-aux with from = ~S and to = ~S~%" from to)
   (let* ((source-region (ccl::make-ns-rect (+ (round-coordinate from-x) 0.5)
 					   (+ (round-coordinate from-y) 0.5)
 					   (round-coordinate width)
@@ -316,24 +316,24 @@ must already be transformed as appropriate."
 	 (target-point  (ccl::make-ns-point (+ (round-coordinate to-x) 0.5)
 					    (+ (round-coordinate to-y) 0.5)))
 	 (bitmap-image  (send from :copy-bitmap-from-region source-region)))
-    (format *debug-io* "Set source-region = ~S, target-point = ~S, bitmap image = ~S~%"
-	    source-region target-point (if (eql bitmap-image (%null-ptr))
-					   "nil"
-					 bitmap-image))
+;;;    (format *debug-io* "Set source-region = ~S, target-point = ~S, bitmap image = ~S~%"
+;;;	    source-region target-point (if (eql bitmap-image (%null-ptr))
+;;;					   "nil"
+;;;					 bitmap-image))
     (when (eql bitmap-image (%null-ptr))
       (warn "medium.lisp -> medium-copy-area: failed to copy specified region (null bitmap)~%")
       (return-from medium-copy-area-aux nil))
-    (format *debug-io* "Got a non-null bitmap image~%")
+;;;    (format *debug-io* "Got a non-null bitmap image~%")
     (debug-log 3 "medium.lisp: got bitmap-image ~S~%" (ccl::description bitmap-image))
     (debug-log 3 "pasting bitmap image to: ~A ~A~%" to-x to-y)
-    (format *debug-io* "Doing the biz...~%")
+;;;    (format *debug-io* "Doing the biz...~%")
     (send to :paste-bitmap bitmap-image :to-point target-point)
-    (format *debug-io* "releasing the bitmap image")
+;;;    (format *debug-io* "releasing the bitmap image")
     (send bitmap-image 'release)))
   
 (defmethod medium-copy-area ((from-drawable beagle-medium) from-x from-y width height
                              (to-drawable beagle-medium) to-x to-y)
-  (format *debug-io* "medium.lisp -> medium-copy-area (medium medium)~%")
+;;;  (format *debug-io* "medium.lisp -> medium-copy-area (medium medium)~%")
   (debug-log 2 "medium.lisp -> medium-copy-area (drawable drawable)~%")
   (debug-log 3 "               fromx=~A fromy=~A width=~A height=~A tox=~A toy=~A~%" from-x from-y width height to-x to-y)
   ;; width + height *are* a width + a height. from-x, from-y and to-x, to-y specify the UPPER-LEFT of the region;
@@ -390,7 +390,7 @@ must already be transformed as appropriate."
 
 (defmethod medium-copy-area ((from-drawable beagle-medium) from-x from-y width height
                              (to-drawable pixmap) to-x to-y)
-  (format *debug-io* "medium.lisp -> medium-copy-area (medium pixmap)~%")
+;;;  (format *debug-io* "medium.lisp -> medium-copy-area (medium pixmap)~%")
   (debug-log 2 "medium.lisp -> medium-copy-area (drawable pixmap)~%")
 ;;;  (setf to-y (+ to-y height))
   (with-transformed-position ((sheet-native-transformation (medium-sheet from-drawable))
@@ -401,7 +401,7 @@ must already be transformed as appropriate."
 
 (defmethod medium-copy-area ((from-drawable pixmap) from-x from-y width height
                              (to-drawable beagle-medium) to-x to-y)
-  (format *debug-io* "medium.lisp -> medium-copy-area (pixmap medium)~%")
+;;;  (format *debug-io* "medium.lisp -> medium-copy-area (pixmap medium)~%")
   (debug-log 2 "medium.lisp -> medium-copy-area (pixmap drawable)~%")
   (setf to-y (+ to-y height))
   (with-transformed-position ((sheet-native-transformation (medium-sheet to-drawable))
@@ -413,7 +413,7 @@ must already be transformed as appropriate."
 
 (defmethod medium-copy-area ((from-drawable pixmap) from-x from-y width height
                              (to-drawable pixmap) to-x to-y)
-  (format *debug-io* "medium.lisp -> medium-copy-area (pixmap pixmap)~%")
+;;;  (format *debug-io* "medium.lisp -> medium-copy-area (pixmap pixmap)~%")
   (debug-log 2 "medium.lisp -> medium-copy-area (pixmap pixmap)~%")
   (medium-copy-area-aux (pixmap-mirror from-drawable) from-x from-y
 			width height

@@ -122,7 +122,7 @@
 	  (send self 'unlock-focus)
 	  bitmap))
     (progn
-      (format *debug-io* "(copy-bitmap...) - FAILED TO LOCK FOCUS ON VIEW ~S!!!~%" self)
+;;;      (format *debug-io* "(copy-bitmap...) - FAILED TO LOCK FOCUS ON VIEW ~S!!!~%" self)
       nil)))
 
 (define-objc-method ((:void :paste-bitmap bitmap :to-point (:<NSP>oint point)) lisp-view)
@@ -139,8 +139,8 @@
 	(let ((image (send (send (@class ns-image) 'alloc) :init-with-data (send bitmap "TIFFRepresentation"))))
 	  (send image :dissolve-to-point point :fraction 1.0))
 	(send (send self 'window) 'flush-window)
-	(send self 'unlock-focus))
-    (format *debug-io* "(paste-bitmap...) - FAILED TO LOCK FOCUS ON VIEW ~S!!!~%" self)))
+	(send self 'unlock-focus))))
+;;;    (format *debug-io* "(paste-bitmap...) - FAILED TO LOCK FOCUS ON VIEW ~S!!!~%" self)))
 
 ;;; ----------------------------------------------------------------------------
 

@@ -42,7 +42,7 @@
 				 :with-width (:float width)
 				 :with-cap-style (:int cap)
 				 :with-join-style (:int join)) lisp-image)
-  (format *debug-io* "draw-string: isValid = ~S~%" (send self 'is-valid))
+;;;  (format *debug-io* "draw-string: isValid = ~S~%" (send self 'is-valid))
   ;; Note: lockFocus in NSImage is defined: "- (void)lockFocus". There's
   ;; *no* T/NIL returned like for NSView, so we can't test that we were
   ;; able to lock the focus!
@@ -58,7 +58,7 @@
     (send self 'unlock-focus)))
 
 (define-objc-method ((:void :stroke-path path :in-colour colour) lisp-image)
-  (format *debug-io* "stroke-path: isValid = ~S~%" (send self 'is-valid))
+;;;  (format *debug-io* "stroke-path: isValid = ~S~%" (send self 'is-valid))
   ;; Note: lockFocus in NSImage is defined: "- (void)lockFocus". There's
   ;; *no* T/NIL returned like for NSView, so we can't test that we were
   ;; able to lock the focus!
@@ -71,7 +71,7 @@
     (send self 'unlock-focus)))
 
 (define-objc-method ((:void :fill-path path :in-colour colour) lisp-image)
-  (format *debug-io* "fill-path: isValid = ~S~%" (send self 'is-valid))
+;;;  (format *debug-io* "fill-path: isValid = ~S~%" (send self 'is-valid))
   ;; Note: lockFocus in NSImage is defined: "- (void)lockFocus". There's
   ;; *no* T/NIL returned like for NSView, so we can't test that we were
   ;; able to lock the focus!
@@ -89,9 +89,9 @@
 	     (pref rect :<NSR>ect.origin.y)
 	     (pref rect :<NSR>ect.size.width)
 	     (pref rect :<NSR>ect.size.height))
-  (format *debug-io* "copy-bitmap-from-region: isValid = ~S~%" (send self 'is-valid))
-  (format *debug-io* "best-representation-for-device: ~S~%" (send self :best-representation-for-device nil))
-  (format *debug-io* "sending self (~S) 'lock-focus~%" (description self))
+;;;  (format *debug-io* "copy-bitmap-from-region: isValid = ~S~%" (send self 'is-valid))
+;;;  (format *debug-io* "best-representation-for-device: ~S~%" (send self :best-representation-for-device nil))
+;;;  (format *debug-io* "sending self (~S) 'lock-focus~%" (description self))
   (if (send self 'is-valid) ;;lock-focus) ;;-if-can-draw)
       (progn
 	(send self 'lock-focus)
@@ -102,7 +102,7 @@
 	  (send self 'unlock-focus)
 	  bitmap))
     (progn
-      (format *debug-io* "(copy-bitmap...) - FAILED TO LOCK FOCUS ON VIEW (NOT VALID) ~S!!!~%" self)
+;;;      (format *debug-io* "(copy-bitmap...) - FAILED TO LOCK FOCUS ON VIEW (NOT VALID) ~S!!!~%" self)
       nil)))
 
 #||
@@ -133,17 +133,17 @@ See "http://www.stone.com/porting/dict_walk_and_lockFocus.html"
 ;  [image dissolveToPoint:point fraction:1.0];
 ;  [image release];
 
-  (format *debug-io* "paste-bitmap: isValid = ~S~%" (send self 'is-valid))
-  (format *debug-io* "best-representation-for-device: ~S~%" (send self :best-representation-for-device nil))
-  (format *debug-io* "sending self (~S) 'lock-focus~%" (description self))
+;;;  (format *debug-io* "paste-bitmap: isValid = ~S~%" (send self 'is-valid))
+;;;  (format *debug-io* "best-representation-for-device: ~S~%" (send self :best-representation-for-device nil))
+;;;  (format *debug-io* "sending self (~S) 'lock-focus~%" (description self))
   (if (send self 'is-valid) ;;lock-focus) ;;-if-can-draw)
       (progn
 	(send self 'lock-focus)
 	(let ((image (send (send (@class ns-image) 'alloc) :init-with-data (send bitmap "TIFFRepresentation"))))
 	  (send image :dissolve-to-point point :fraction 1.0))
 ;;;	(send (send self 'window) 'flush-window)
-	(send self 'unlock-focus))
-    (format *debug-io* "(paste-bitmap...) - FAILED TO LOCK FOCUS ON VIEW (NOT VALID) ~S!!!~%" self)))
+	(send self 'unlock-focus))))
+;;;    (format *debug-io* "(paste-bitmap...) - FAILED TO LOCK FOCUS ON VIEW (NOT VALID) ~S!!!~%" self)))
 
 
 
