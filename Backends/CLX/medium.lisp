@@ -77,6 +77,24 @@
 		(case (line-style-dashes line-style)
 		  ((t nil) 3)
 		  (otherwise (line-style-dashes line-style)))))))))
+
+(defmethod (setf medium-clipping-region) :after (region (medium clx-medium))
+  (declare (ignore region))
+  (with-slots (gc) medium
+    (when gc
+      (let ((clipping-region (medium-device-region medium)))
+        (unless (region-equal clipping-region +nowhere+)
+	  (let ((rect-seq (clipping-region->rect-seq clipping-region)))
+	    (when rect-seq
+	      #+nil
+	      ;; ok, what McCLIM is generating is not :yx-banded... (currently at least)
+	      (setf (xlib:gcontext-clip-mask gc :yx-banded) rect-seq)
+	      #-nil
+	      ;; the region code doesn't support yx-banding...
+	      ;; or does it? what does y-banding mean in this implementation?
+	      ;; well, apparantly it doesn't mean what y-sorted means
+	      ;; to clx :] we stick with :unsorted until that can be sorted out
+	      (setf (xlib:gcontext-clip-mask gc :unsorted) rect-seq))))))))
   
 
 (defgeneric medium-gcontext (medium ink))
