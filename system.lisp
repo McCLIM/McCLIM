@@ -170,7 +170,8 @@
    "Goatee/buffer"
    "Goatee/editable-area"
    "Goatee/clim-area"
-   ))
+   "Goatee/goatee-command"
+   "Goatee/goatee-test"))
 
 #+mk-defsystem
 (defun build-everything ()

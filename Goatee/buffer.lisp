@@ -26,7 +26,9 @@
 (defmethod location* ((bp buffer-pointer))
   (values (line bp) (pos bp)))
 
-(defgeneric* (setf location*) (line pos (bp buffer-pointer))
+(defgeneric* (setf location*) (line pos bp))
+
+(defmethod* (setf location*) (line pos (bp buffer-pointer))
   (setf (values (line bp) (pos bp)) (values line pos)))
 
 (defclass basic-buffer ()
@@ -34,7 +36,7 @@
 	  :initform (make-instance 'dbl-list-head))
    (tick :accessor tick :initarg :tick :initform 0)
    (point :accessor point :documentation "A buffer-pointer that
-maintains the current insertion point.")
+  maintains the current insertion point.")
    (size :reader size :initform 0)))
 
 (define-condition buffer-bounds-error (error)
@@ -42,9 +44,8 @@ maintains the current insertion point.")
    (line :reader buffer-bounds-error-line :initarg :line :initform nil)
    (pos :reader buffer-bounds-error-pos :initarg :pos :initform nil))
   (:report (lambda (condition stream)
-	     (declare (ignore condition))
 	     (format stream "In buffer ~S, position line ~S pos ~S is ~
-out of bounds"
+                             out of bounds"
 		     (buffer-bounds-error-buffer condition)
 		     (buffer-bounds-error-line condition)
 		     (buffer-bounds-error-pos condition)))))
@@ -52,7 +53,7 @@ out of bounds"
 
 ;;; A moment of convenience, a lifetime of regret...
 
-(defmethod point* (buf basic-buffer)
+(defmethod point* ((buf basic-buffer))
   (let ((point (point buf)))
     (values (line point) (pos point))))
 
@@ -130,7 +131,7 @@ out of bounds"
 
 (defgeneric open-line (line pos)
   (:documentation "Insert a newline at POS in LINE, creating a new line that
-contains LINEs contents from POS to the end of LINE.  Returns the new line."))
+  contains LINEs contents from POS to the end of LINE.  Returns the new line."))
 
 (defmethod open-line ((line buffer-line) pos)
   (let ((len (size line))
@@ -143,7 +144,7 @@ contains LINEs contents from POS to the end of LINE.  Returns the new line."))
 			 :tick (incf (tick buf)))))
 	  ;; delete to end of line
 	  (delete-char line (- (size line) pos) :position pos)
-	  (insert line  #\newline :position pos)
+	  (insert line #\newline :position pos)
 	  (setf (tick line) (incf (tick buf)))
 	  (dbl-insert-after line new-line)))))
 
@@ -159,13 +160,13 @@ contains LINEs contents from POS to the end of LINE.  Returns the new line."))
     (if (eql c #\Newline)
 	(setf (location* pt) (values (open-line line pos) 0))
 	(progn
-	  (insert line c :postion pos)
+	  (insert line c :position pos)
 	  (incf (pos pt))))
     (incf (slot-value buffer 'size))
     (setf (tick line) (incf (tick buffer)))
     nil))
 
-(defmethod insert ((buffer basic-buffer) (s string) &optional position
+(defmethod insert ((buffer basic-buffer) (s string)
 		   &key position line (pos 0) (start 0) (end (length s)))
   (cond (position
 	 (setf (point buffer) position))
@@ -191,13 +192,14 @@ contains LINEs contents from POS to the end of LINE.  Returns the new line."))
     (incf (slot-value buffer 'size) (length s))
     nil))
 
-(defgeneric close-line (line)
+(defgeneric close-line (line) 
   (:documentation "Delete the newline at the end of line, bring the
-following line's contents onto line, and delete the following line"))
+  following line's contents onto line, and delete the following line"))
 
 (defmethod close-line (line)
   (let ((next-line (next line))
-	(line-size (size line)))
+	(line-size (size line))
+	(buffer (buffer line)))
     (when (eql (char-ref line (1- line-size)) #\Newline)
       (delete-char line 1 :position (1- (size line)))
       (decf (slot-value buffer 'size)))

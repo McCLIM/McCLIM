@@ -6,10 +6,10 @@
 
 
 (defclass editable-area ()
-  (buffer :reader buffer :initarg buffer)
+  ((buffer :reader buffer :initarg buffer)
    (frame-begin-mark :accessor frame-begin-mark)
-   (last-tick :accessor last-tick :initiarg :last-tick
-		:documentation "buffer tick")
+   (last-tick :accessor last-tick :initarg :last-tick
+	      :documentation "buffer tick")
    (lines :accessor lines :initarg :lines
 	  :initform (make-instance 'dbl-list-head))))
 
@@ -52,13 +52,16 @@
 
 (defclass line-mark (fixed-mark)
   ((last-update :accessor last-update :initarg :last-update)))
+)
 
 (defclass editable-area-line (dbl-list)
   ((buffer-line :accessor buffer-line :initarg :buffer-line)
-   (last-tick :accessor last-tick :initiarg :last-tick)
-   (editable-area :accessor editable-area :initiarg :editable-area
+   (last-tick :accessor last-tick :initarg :last-tick)
+   (editable-area :accessor editable-area :initarg :editable-area
 		  :documentation "backpointer")))
 
+;;; XXX mostly garbage at the moment...
+#+nil
 (defmethod add-new-lines ((win window))
   (with-accessors ((buf buffer)
 		   (line-marks line-marks)
@@ -102,4 +105,3 @@
 	       (buffer-string-into buffer chars
 				   :start2 start-line :end2 end-line)
 	       (setf (chars line) chars)))))
-)

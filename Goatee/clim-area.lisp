@@ -42,7 +42,7 @@
 					   :adjustable t
 					   :fill-pointer 0)
 		     :documentation "A representation of what is, or soon will
-be, on the screen")
+   be, on the screen")
    (ascent :accessor ascent :initarg :ascent)
    (decent :accessor decent :initarg :decent)
    (baseline :accessor baseline :initarg :baseline)
@@ -127,7 +127,7 @@ be, on the screen")
 	(error "One of :vertical-spacing or :stream must be specified.")))
   (initialize-area-from-buffer (buffer area)))
 
-(defmethod output-record-children (area simple-screen-area)
+(defmethod output-record-children ((area simple-screen-area))
   (loop for line = (lines area) then (next line)
 	while line
 	collect line))
@@ -147,26 +147,26 @@ be, on the screen")
     (multiple-value-bind (parent-x parent-y)
 	(output-record-position area)
       (let ((ascent (text-style-ascent (text-style area)))
-	    (descent (text-style-descent (text-style area)))
-	    (loop for buffer-line = (next (lines buffer))
-		  then (and buffer-line (next buffer-line))
-		  for prev-area-line = (lines area) then area-line
-		  for y = parent-y then (+ y ascent descent vertical-spacing)
-		  for area-line = (and buffer-line
-				       (make-instance 'screen-line
-						      :x parent-x
-						      :y y
-						      :parent area
-						      :buffer-line buffer-line
-						      :last-tick -1
-						      :editable-area area
-						      :ascent ascent
-						      :descent descent))
-		  while buffer-line
-		  do (dbl-insert-after area-line prev-area-line))))))
+	    (descent (text-style-descent (text-style area))))
+	 (loop for buffer-line = (next (lines buffer))
+	       then (and buffer-line (next buffer-line))
+	       for prev-area-line = (lines area) then area-line
+	       for y = parent-y then (+ y ascent descent vertical-spacing)
+	       for area-line = (and buffer-line
+				    (make-instance 'screen-line
+						   :x parent-x
+						   :y y
+						   :parent area
+						   :buffer-line buffer-line
+						   :last-tick -1
+						   :editable-area area
+						   :ascent ascent
+						   :descent descent))
+	       while buffer-line
+	       do (dbl-insert-after area-line prev-area-line)))))
   area)
 
-(defmethod redisplay ((area clim-area))
+(defmethod redisplay ((area simple-screen-area))
   (let ((stream (stream area)))
     (loop for line = (lines area) then (next line)
 	  do (multiple-value-bind (line-changed dimensions-changed)
@@ -293,7 +293,7 @@ be, on the screen")
 	;; Now deal with the cursor
 	(line-update-cursor line stream)
 	(when cursor
-	  (setf (cursor-visibility t)))))))
+	  (setf (cursor-visibility cursor) t))))))
 
 (defmethod line-update-cursor ((line screen-line) stream)
   (multiple-value-bind (point-line point-pos)

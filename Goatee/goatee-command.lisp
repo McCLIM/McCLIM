@@ -27,7 +27,7 @@
 (defparameter *simple-area-gesture-table* (make-hash-table))
 
 (defun add-gesture-command-to-table (gesture-spec command-name table)
-  (multiple-value-bind (gesture-name modifer-bits)
+  (multiple-value-bind (gesture-name modifier-bits)
       (if (atom gesture-spec)
 	  (values gesture-spec 0)
 	  (values (car gesture-spec)
@@ -44,11 +44,14 @@
   (cdr (assoc (modifier-state gesture)
 	      (gethash (key-name gesture) table nil))))
 
+(defmethod lookup-gesture-command (gesture table)
+  nil)
+
 (defvar *area*)
 (defvar *buffer*)
 
 (defmethod execute-gesture-command (gesture (area editable-area) table)
-  (let ((command ((lookup-gesture-command gesture table))))
+  (let ((command (lookup-gesture-command gesture table)))
     (if command
 	(let ((*area* area)
 	      (*buffer* (buffer area)))

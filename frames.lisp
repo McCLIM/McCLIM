@@ -104,26 +104,6 @@
 			  :initarg :intercept-event-queue
 			  :accessor frame-event-queue)))
 
-;<<<<<<< frames.lisp
-;(defmethod frame-intercept-events ((frame application-frame))
-;  (without-scheduling
-;    (slot-value frame 'intercept-events)))
-;
-;(defmethod (setf frame-intercept-events) (newval (frame application-frame))
-;  (without-scheduling
-;    (setf (slot-value frame 'intercept-events) newval)))
-;
-;;;; XXX Should this check that the frame isn't intercepting events, so
-;;;; it will terminate?
-;(defmethod cleanup-frame-events ((frame application-frame))
-;  (loop with queue = (frame-intercept-event-queue frame)
-;	for event = (event-queue-read-no-hang queue)
-;	while event
-;	;do nil #+ignore (dispatch-event frame event)
-;        ))
-;
-;=======
-;>>>>>>> 1.27
 (defun application-frame-p (x)
   (typep x 'application-frame))
 

@@ -523,7 +523,7 @@ sheet-supports-only-one-child error to be signalled."))
   nil)
 
 (defmethod sheet-adopt-child ((sheet sheet-leaf-mixin) (child sheet))
-  (describe (sb-pcl::class-of sheet))
+  (describe (class-of sheet) *debug-io*)
   (error "Leaf sheet attempting to adopt a child"))
 
 (defmethod sheet-disown-child ((sheet sheet-leaf-mixin) (child sheet) &key (errorp t))

@@ -1887,7 +1887,8 @@
   (:use #:clim #:clim-sys #:clim-extensions #:clim-lisp)
   (:nicknames :climi)
   #+excl
-  (:import-from :excl compile-system load-system) )
+  (:import-from :excl compile-system load-system)
+  (:intern #:letf))
 
 ;(defpackage :CLIM
 ;  (:use #+nil :clim-extensions ; will use it later
@@ -1915,4 +1916,6 @@
   (:use :clim :clim-lisp))
 
 (defpackage :GOATEE
-  (:use :clim :clim-lisp))
+  (:use :clim :clim-lisp :clim-sys)
+  (:import-from #:clim-internals #:letf))
+

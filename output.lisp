@@ -32,6 +32,33 @@
            :reader sheet-medium
            :writer (setf %sheet-medium))))
 
+(macrolet ((frob (fn &rest args)
+	     `(defmethod ,fn ,(substitute '(medium sheet-with-medium-mixin)
+					  'medium
+					  args)
+	        ;; medium arg is really a sheet
+		(let ((medium (sheet-medium medium)))
+		  ,(if (symbolp fn)
+		       `(,fn ,@args)
+		       `(funcall #',fn ,@args))))))
+  (frob medium-foreground medium)
+  (frob medium-background medium)
+  (frob (setf medium-foreground) design medium)
+  (frob (setf medium-background) design medium)
+  (frob medium-ink medium)
+  (frob (setf medium-ink) design medium)
+  (frob medium-transformation medium)
+  (frob (setf medium-transformation) transformation medium)
+  (frob medium-clipping-region medium)
+  (frob (setf medium-clipping-region) region medium)
+  (frob medium-line-style medium)
+  (frob (setf medium-line-style) line-style medium)
+  (frob medium-default-text-style medium)
+  (frob (setf medium-default-text-style) text-style medium)
+  (frob medium-text-style medium)
+  (frob (setf medium-text-style) text-style medium)
+  (frob medium-current-text-style medium))
+  
 (defclass temporary-medium-sheet-output-mixin (sheet-with-medium-mixin)
   ())
 
