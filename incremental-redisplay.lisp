@@ -148,7 +148,7 @@ record operations are forwarded to this record.")
     (setf (values (old-min-x record) (old-min-y record)
 		  (old-max-x record) (old-max-y record))
 	  (bounding-rectangle* record))
-    (delete-output-record record (output-record-parent record))
+    (setf (output-record-parent record) nil)
     (add-output-record record (stream-current-output-record stream))
     (setf (sub-record record) (make-instance 'standard-sequence-output-record
 					     :x-position x :y-position y

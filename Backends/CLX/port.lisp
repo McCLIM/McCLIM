@@ -32,7 +32,9 @@
 	   :accessor clx-port-screen)
    (window :initform nil
 	   :accessor clx-port-window)
-   (color-table :initform (make-hash-table :test #'eq))))
+   (color-table :initform (make-hash-table :test #'eq))
+   (modifier-cache :initform nil
+		   :accessor clx-port-modifier-cache)))
 
 (defun parse-clx-server-path (path)
   (pop path)
@@ -431,28 +433,25 @@
 		    (port-lookup-sheet *clx-port* window))))
     (when sheet
       (case event-key
-	(:key-press
-         (multiple-value-bind (keyname modifier-state) (x-event-to-key-name-and-modifiers display code state)
-           (make-instance 'key-press-event
+	((:key-press :key-release)
+         (multiple-value-bind (keyname modifier-state)
+	     (x-event-to-key-name-and-modifiers *clx-port* code state)
+           (make-instance (if (eq event-key :key-press)
+			      'key-press-event
+			      'key-release-event)
              :key-name keyname
              :sheet sheet :modifier-state modifier-state :timestamp time)))
-	(:key-release
-         (multiple-value-bind (keyname modifier-state) (x-event-to-key-name-and-modifiers display code state)
-           (make-instance 'key-release-event
-             :key-name keyname
-             :sheet sheet :modifier-state modifier-state :timestamp time)))
-	(:button-release
-	 (make-instance 'pointer-button-release-event :pointer 0
-                        :button (decode-x-button-code code) :x x :y y
-                        :graft-x root-x
-                        :graft-y root-y
-			:sheet sheet :modifier-state state :timestamp time))
-	(:button-press
-	 (make-instance 'pointer-button-press-event :pointer 0
-                        :button (decode-x-button-code code) :x x :y y
-                        :graft-x root-x
-                        :graft-y root-y
-			:sheet sheet :modifier-state state :timestamp time))
+	((:button-press :button-release)
+	 (let ((modifier-state (x-event-state-modifiers *clx-port* state)))
+	   (make-instance (if (eq event-key :button-press)
+			      'pointer-button-press-event
+			      'pointer-button-release-event)
+			  :pointer 0
+			  :button (decode-x-button-code code) :x x :y y
+			  :graft-x root-x
+			  :graft-y root-y
+			  :sheet sheet :modifier-state modifier-state
+			  :timestamp time)))
 	(:enter-notify
 	 (make-instance 'pointer-enter-event :pointer 0 :button code :x x :y y
                         :graft-x root-x

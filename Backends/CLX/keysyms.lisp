@@ -40,62 +40,105 @@
 (defun reverse-lookup-keysym (value)
   (gethash value *reverse-keysym-hash-table*))
 
-(defun x-event-to-key-name-and-modifiers (display keycode state)
-  (let* ((modifiers (mapcar (lambda (keycodes)
-                              (mapcar (lambda (keycode)
-                                        (lookup-keysym
-                                         (xlib:keycode->keysym display keycode 0)))
-                                      keycodes))
-                            (multiple-value-list (xlib:modifier-mapping display))))
-         (active-modifiers
-          (loop for i from 0 below 8 
-              when (logbitp i state)
-              append (elt modifiers i))))
-    (let* ((shift?  (or (member :shift-left active-modifiers)
-                        (member :shift-right active-modifiers)))
-           (shift-lock? (member :shift-lock active-modifiers))
-           (caps-lock?  (member :caps-lock active-modifiers))
-           (keysym (xlib:keycode->keysym display keycode 
+(defun modifier-keycode->keysyms (display keycode)
+  (let ((first-x-keysym (xlib:keycode->keysym display keycode 0)))
+    (when (zerop first-x-keysym)
+      (return-from modifier-keycode->keysyms nil))
+    (let ((second-x-keysym (xlib:keycode->keysym display keycode 1)))
+      (cons (lookup-keysym first-x-keysym)
+	    (if (eql first-x-keysym second-x-keysym)
+		nil
+		(list (lookup-keysym second-x-keysym)))))))
+
+(defun x-event-to-key-name-and-modifiers (port keycode state)
+  (multiple-value-bind (clim-modifiers shift-lock? caps-lock? mode-switch?)
+      (x-event-state-modifiers port state)
+    (let* ((display (clx-port-display port))
+	   (shift? (logtest +shift-key+ clim-modifiers))
+	   (keysym (xlib:keycode->keysym display keycode 
                                          (+ (if (if shift-lock? 
                                                     (not shift?) 
                                                     (if caps-lock? t shift?))
                                                 1 0)
-                                            (if (member :mode-switch active-modifiers)
+                                            (if mode-switch?
                                                 2 0))))
 	   (char (xlib:keysym->character display keysym
 					 (+ (if (if shift-lock? 
                                                     (not shift?) 
 						  (if caps-lock? t shift?))
                                                 1 0)
-                                            (if (member :mode-switch active-modifiers)
+                                            (if mode-switch?
                                                 2 0)))))
-                                                   
       (values (or char (lookup-keysym keysym))
-              (+ (if (or (member :meta-left active-modifiers)
-                         (member :meta-right active-modifiers))
-                     +meta-key+
-                   0)
-                 (if (or (member :hyper-left active-modifiers)
-                         (member :hyper-right active-modifiers))
-                     +hyper-key+
-                   0)
-                 (if (or (member :super-left active-modifiers)
-                         (member :super-right active-modifiers))
-                     +super-key+
-                   0)
-                 (if (or (member :shift-left active-modifiers)
-                         (member :shift-right active-modifiers))
-                     +shift-key+
-                   0)
-                 (if (or (member :control-left active-modifiers)
-                         (member :control-right active-modifiers))
-                     +control-key+
-                   0)
-                 (if (or (member :alt-left active-modifiers)
-                         (member :alt-right active-modifiers))
-                     +alt-key+
-                   0))) )))
+	      clim-modifiers))))
 
+;;; Modifier cache
+;;;
+;;; Cache word is cons of two integers, CLIM modifier word and other bits for
+;;; shift-lock, etc.  The defconstants below are for the other word.
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+(defconstant +shift-lock+ 1)
+(defconstant +caps-lock+ 2)
+(defconstant +mode-switch+ 4)
+)
+
+(defconstant +clim-modifiers+ '(((:meta-left :meta-right) #.+meta-key+)
+				((:hyper-left :hyper-right) #.+hyper-key+)
+				((:super-left :super-right) #.+super-key+)
+				((:shift-left :shift-right) #.+shift-key+)
+				((:control-left :control-right)
+				 #.+control-key+)))
+
+(defconstant +other-modifiers+ '((:shift-lock #.+shift-lock+)
+				 (:caps-lock #.+caps-lock+)
+				 (:mode-switch #.+mode-switch+)))
+
+
+(defun make-modifier-cache (port)
+  (let* ((display (clx-port-display port))
+	 (modifiers (mapcar #'(lambda (keycodes)
+				(mapcan #'(lambda (keycode)
+					    (modifier-keycode->keysyms display
+								       keycode))
+					keycodes))
+                            (multiple-value-list
+			     (xlib:modifier-mapping display))))
+	 (modifier-byte-size (length modifiers))
+	 (num-modifiers (ash 1 modifier-byte-size))
+	 (cache (make-array num-modifiers)))
+    (loop for x-modifier from 0 below num-modifiers
+	  for clim-modifier = 0
+	  for other-modifier = 0
+	  do (loop for bit from 0 below modifier-byte-size
+		   for bit-modifiers = (elt modifiers bit)
+		   when (logbitp bit x-modifier)
+		   do (progn
+			(loop for (syms val) in +clim-modifiers+
+			      when (intersection syms bit-modifiers)
+			      do (setf clim-modifier
+				       (logior clim-modifier val)))
+			(loop for (sym val) in +other-modifiers+
+			      when (member sym bit-modifiers)
+			      do (setf other-modifier
+				       (logior other-modifier val))))
+		   finally (setf (aref cache x-modifier)
+				 (cons clim-modifier other-modifier))))
+    (setf (clx-port-modifier-cache port) cache)))
+
+(defun x-event-state-modifiers (port state)
+  (with-accessors ((clx-port-modifier-cache clx-port-modifier-cache))
+      port
+    (unless clx-port-modifier-cache
+      (setf clx-port-modifier-cache (make-modifier-cache port)))
+    (destructuring-bind (clim-modifiers . other-modifiers)
+	;; Mask off the button state bits.
+	(aref clx-port-modifier-cache
+	      (mod state (length clx-port-modifier-cache)))
+      (values clim-modifiers
+	      (logtest +shift-lock+ other-modifiers)
+	      (logtest +caps-lock+ other-modifiers)
+	      (logtest +mode-switch+ other-modifiers)))))
 ;;;;
 
 (defun numeric-keysym-to-character (keysym)
