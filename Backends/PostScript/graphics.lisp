@@ -28,7 +28,10 @@
 ;;; - clipping
 ;;; - - more regions to draw
 ;;; - (?) blending
-;;; - check MEDIUM-DRAW-TEXT*
+;;; - MEDIUM-DRAW-TEXT*
+;;; - - :towards-(x,y)
+;;; - - landscape orientation
+;;; - - (?) :transform-glyphs
 ;;; - POSTSCRIPT-ACTUALIZE-GRAPHICS-STATE: fix CLIPPING-REGION reusing logic
 ;;; - MEDIUM-DRAW-... should not duplicate code from POSTSCRIPT-ADD-PATH
 ;;; - structure this file
@@ -202,22 +205,25 @@
 
 (defconstant +normal-line-width+ (/ 2.0 3.0))
 
-(defun medium-line-scale (medium)
-  (let* ((line-style (medium-line-style medium))
-         (unit (line-style-unit line-style)))
+(defun line-style-scale (line-style)
+  (let ((unit (line-style-unit line-style)))
     (ecase unit
       (:normal +normal-line-width+)
       (:point 1)
       (:coordinate (error ":COORDINATE line unit not implemented.")))))
 
+(defmethod line-style-effective-thickness
+    (line-style (medium postscript-medium))
+  (* (line-style-thickness line-style)
+     (line-style-scale line-style)))
+
 (defun medium-line-thickness (medium)
-  (* (medium-line-scale medium)
-     (line-style-thickness (medium-line-style medium))))
+  (line-style-effective-thickness (medium-line-style medium) medium))
 
 (defmethod postscript-set-graphics-state (stream medium
                                           (kind (eql :line-style)))
   (let* ((line-style (medium-line-style medium))
-         (scale (medium-line-scale medium)))
+         (scale (line-style-scale line-style)))
     (format stream "~D setlinewidth ~A setlinejoin ~A setlinecap~%"
             (format-postscript-number
              (* scale (line-style-thickness line-style)))
@@ -285,27 +291,23 @@
         (*transformation* (sheet-native-transformation (medium-sheet medium)))
         (radius (format-postscript-number (/ (medium-line-thickness medium) 2))))
     (postscript-actualize-graphics-state stream medium :color)
-    (with-graphics-state (medium) ; FIXME: this is because of setlinewidth below
-      (format stream "newpath~%")
-      (write-coordinates stream x y)
-      (format stream "~A 0 360 arc~%" radius)
-      (format stream "0 setlinewidth~%")
-      (format stream "fill~%"))))
+    (format stream "newpath~%")
+    (write-coordinates stream x y)
+    (format stream "~A 0 360 arc~%" radius)
+    (format stream "fill~%")))
 
 (defmethod medium-draw-points* ((medium postscript-medium) coord-seq)
   (let ((stream (postscript-medium-file-stream medium))
         (*transformation* (sheet-native-transformation (medium-sheet medium)))
-        (radius (format-postscript-angle (/ (medium-line-thickness medium) 2))))
+        (radius (format-postscript-number (/ (medium-line-thickness medium) 2))))
     (postscript-actualize-graphics-state stream medium :color)
-    (with-graphics-state (medium) ; FIXME: this is because of setlinewidth below
-      (format stream "0 setlinewidth~%")
-      (map-repeated-sequence 'nil 2
-                             (lambda (x y)
-                               (format stream "newpath~%")
-                               (write-coordinates stream x y)
-                               (format stream "~A 0 360 arc~%" radius)
-                               (format stream "fill~%"))
-                             coord-seq))))
+    (map-repeated-sequence 'nil 2
+                           (lambda (x y)
+                             (format stream "newpath~%")
+                             (write-coordinates stream x y)
+                             (format stream "~A 0 360 arc~%" radius)
+                             (format stream "fill~%"))
+                           coord-seq)))
 
 (defmethod medium-draw-line* ((medium postscript-medium) x1 y1 x2 y2)
   (let ((stream (postscript-medium-file-stream medium))
@@ -496,6 +498,7 @@
     (with-slots (file-stream) medium
       (postscript-actualize-graphics-state file-stream medium :color :text-style)
       (with-graphics-state (medium)
+        #+ignore
         (when transform-glyphs
           ;;
           ;; Now the harder part is that we also want to transform the glyphs,
@@ -504,7 +507,9 @@
           ;; untransform them again and simply tell the postscript interpreter
           ;; our transformation matrix. --GB
           ;;
-          ;; It should be updated. -- APD, 2002-05-27
+          ;; This code changes both the form of glyphs and the
+          ;; direction of the text, which does not conform to the
+          ;; specification. So I've disabled it. -- APD, 2002-06-03.
           (multiple-value-setq (x y)
             (untransform-position (medium-transformation medium) x y))
           (multiple-value-bind (mxx mxy myx myy tx ty)
@@ -568,6 +573,6 @@
   (multiple-value-bind (font size)
       (text-style->postscript-font
        (merge-text-styles text-style
-                          (medium-text-style medium)))
+                          (medium-merged-text-style medium)))
     (text-size-in-font font size
                        string start (or end (length string)))))
