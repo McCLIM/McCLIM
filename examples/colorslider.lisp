@@ -31,7 +31,7 @@
 (defmethod repaint-sheet ((pane slider-test-pane) region)
   (declare (ignore region))
   (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
-    (display-gadget-background pane 0 0 (- x2 x1) (- y2 y1))))
+    (display-gadget-background pane (gadget-current-color pane) 0 0 (- x2 x1) (- y2 y1))))
 
 (defmethod handle-event ((pane slider-test-pane) (event window-repaint-event))
   (declare (ignorable event))
@@ -87,6 +87,7 @@
 	    :value "Pick a color"
 	    :height 50)
    (slider-r  :slider
+;	      :orientation :horizontal
 	      :drag-callback callback-red
 	      :value-changed-callback callback-red
 	      :min-value 0
@@ -109,7 +110,7 @@
 	      :width 120)
    (colored :slider-test
 	    :normal +black+
-	      :width 200 :height 90))
+	    :width 200 :height 90))
   (:layouts
    (default (vertically () text (horizontally () slider-r slider-g slider-b colored))))
   (:top-level (slidertest-frame-top-level . nil)))

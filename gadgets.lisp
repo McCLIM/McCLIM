@@ -75,9 +75,6 @@
   (declare (ignore args))
   (setf (slot-value gadget 'current-color) (gadget-normal-color gadget)))
 
-(defmethod display-gadget-background ((gadget gadget-color-mixin) x1 y1 x2 y2)
-  (draw-rectangle* gadget x1 y1 x2 y2 :ink (gadget-current-color gadget) :filled t))
-
 (defmethod (setf gadget-current-color) :after (color (gadget gadget-color-mixin))
   (declare (ignore color))
   (dispatch-repaint gadget (sheet-region gadget)))
@@ -86,6 +83,9 @@
 ;;;
 ;;; gadgets look
 ;;;
+
+(defun display-gadget-background (gadget color x1 y1 x2 y2)
+  (draw-rectangle* gadget x1 y1 x2 y2 :ink color :filled t))
 
 (defun draw-edges-lines* (pane x1 y1 x2 y2)
   (draw-line* pane x1 y1 x2 y1 :ink +white+)
@@ -424,7 +424,7 @@
 	(if (or (gadget-value pane) (eql armed ':button-press))
 	    (draw-edges-lines* pane (1- x2) (1- y2) x1 y1)
 	    (draw-edges-lines* pane x1 y1 (1- x2) (1- y2)))
-	(draw-text* pixmap (gadget-label pane)
+	(draw-text* pane (gadget-label pane)
 		    (round (- x2 x1) 2)
 		    (round (- y2 y1) 2)
 		    :align-x :center
@@ -702,7 +702,7 @@
 	(position (convert-value-to-position pane)))
     (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* region)
       (with-double-buffering (pane)
-        (display-gadget-background pane 0 0 (- x2 x1) (- y2 y1))
+        (display-gadget-background pane (gadget-current-color pane) 0 0 (- x2 x1) (- y2 y1))
 	(orientation-dependent-draw pane position x1 x2 y1 y2)))))
 
 (defmethod convert-value-to-position ((pane slider-pane))
@@ -767,6 +767,11 @@
   (:documentation "The value is a string"))
 
 (defclass text-field-pane (text-field) ())
+
+(defmethod initialize-instance :after ((gadget text-field) &rest rest)
+  (unless (getf rest :normal)
+    (setf (slot-value gadget 'current-color) +white+
+	  (slot-value gadget 'normal) +white+)))
 
 (defmethod handle-event ((pane text-field-pane) (event window-repaint-event))
   (dispatch-repaint pane (sheet-region pane)))
