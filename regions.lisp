@@ -4,7 +4,7 @@
 ;;;   Created: 1998-12-02 19:26
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: regions.lisp,v 1.21 2002/06/20 07:40:04 adejneka Exp $
+;;;       $Id: regions.lisp,v 1.22 2002/06/21 06:30:41 adejneka Exp $
 ;;; --------------------------------------------------------------------------------------
 ;;;  (c) copyright 1998,1999,2001 by Gilbert Baumann
 ;;;  (c) copyright 2001 by Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
@@ -1218,20 +1218,28 @@
   (multiple-value-bind (x1 y1 x2 y2) (rectangle-edges* rect)
     (make-instance 'standard-rectangle-set :bands (rectangle->xy-bands* x1 y1 x2 y2))))
 
-; Is this completely broken? - BTS
 (defmethod transform-region (tr (self standard-rectangle-set))
-  (cond ((rectilinear-transformation-p tr)
-         ;; When we have a rectilinear transformation, the result will
-         ;; be another rectangle set; we simply can transform each X
-         ;; and Y coordinate individually.
-         (make-standard-rectangle-set
-	  (mapcar (lambda (band)
-                    ;; band = (<y> <x1> <x2> .. <xn>)
-                    (cons (nth-value 1 (transform-position tr 0 (car band)))
-                          (mapcar (lambda (x)
-                                    (nth-value 0 (transform-position tr x 0)))
-                                  (cdr band))))
-                  (standard-rectangle-set-bands self))))
+  (cond ((scaling-transformation-p tr)
+         (multiple-value-bind (mxx mxy myx myy tx ty)
+             (get-transformation tr)
+           (declare (ignore mxy myx))
+           (let ((rev-x-p (< mxx 0))
+                 (rev-y-p (< myy 0)))
+             (flet ((correct (bands)
+                      (loop for ((y . nil) (nil . xs)) on (nreverse bands)
+                         collect `(,y . ,xs))))
+               (make-standard-rectangle-set
+                (loop for band in (standard-rectangle-set-bands self)
+                   for new-band = (loop for x in (cdr band)
+                                     collect (+ (* mxx x) tx) into new-xs
+                                     finally (return (cons (+ (* myy (car band)) ty)
+                                                           (if rev-x-p
+                                                               (nreverse new-xs)
+                                                               new-xs))))
+                   collect new-band into new-bands
+                   finally (return (if rev-y-p
+                                       (correct new-bands)
+                                       new-bands))))))))
         (t
          ;; We have insufficient knowledge about the transformation,
          ;; so we have to take the union of all transformed rectangles.
