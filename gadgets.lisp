@@ -275,7 +275,7 @@
   ;; Half-baked attempt to be compatible with Lispworks. ??? -moore
   ;; Inherited from basic-pane with different defaults.
   ((foreground  :initform +black+)
-   (background :initform +white+)))
+   (background  :initform +white+)))
 
 
 ;; Where is this standard-gadget from? --GB
@@ -2061,7 +2061,7 @@ and must never be nil."))
 
 (defmethod initialize-instance :after ((pane text-field-pane) &rest rest)
   (declare (ignore rest))
-  #+nil (setf (medium-text-style (sheet-medium pane))
+  #-nil (setf (medium-text-style (sheet-medium pane))
 	      (slot-value pane 'text-style)))
 
 (defmethod handle-repaint :after ((pane text-field-pane) region)

@@ -107,6 +107,7 @@ sheet-supports-only-one-child error to be signalled."))
 
 (defgeneric dispatch-event (client event))
 (defgeneric queue-event (client event))
+(defgeneric schedule-event (client event delay))
 (defgeneric handle-event (client event))
 (defgeneric event-read (client))
 (defgeneric event-read-no-hang (client))

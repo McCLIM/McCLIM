@@ -243,8 +243,12 @@
    ))
 
 (defclass timer-event (event)
-  (
-   ))
+  ((sheet
+     :initarg :sheet
+     :reader  event-sheet)
+   (token
+     :initarg :token
+     :reader  event-token)))
 
 (defmethod event-instance-slots ((self event))
   '(timestamp))

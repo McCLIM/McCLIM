@@ -291,6 +291,9 @@ state ~S lambda list ~S"
 (def-stream-method queue-event ((stream standard-encapsulating-stream)
 				event))
 
+(def-stream-method schedule-event ((stream standard-encapsulating-stream)
+				   event delay))
+
 (def-stream-method handle-event ((stream standard-encapsulating-stream)
 				 event))
 

@@ -35,12 +35,18 @@
 ;;; CLX-MEDIUM class
 
 (defclass clx-medium (basic-medium)
-  ((gc :initform nil)
+  ((gc
+      :initform nil)
+   #+unicode
+   (fontset
+      :initform nil
+      :accessor medium-fontset)
    ))
 
 
 ;;; secondary methods for changing text styles and line styles
 
+#-unicode
 (defmethod (setf medium-text-style) :before (text-style (medium clx-medium))
   (with-slots (gc) medium
     (when gc
@@ -48,6 +54,13 @@
 	(unless (eq text-style old-text-style)
 	  (setf (xlib:gcontext-font gc)
 		(text-style-to-X-font (port medium) (medium-text-style medium))))))))
+
+#+unicode
+(defmethod (setf medium-text-style) :before (text-style (medium clx-medium))
+  (with-slots (fontset) medium
+    (let ((old-text-style (medium-text-style medium)))
+      (unless (eq text-style old-text-style)
+        (setf fontset (text-style-to-X-fontset (port medium) (medium-text-style medium)))))))
 
 (defmethod (setf medium-line-style) :before (line-style (medium clx-medium))
   (with-slots (gc) medium
@@ -117,8 +130,11 @@
 		  (xlib:gcontext-dashes gc) (if (eq dashes t) 3
 						dashes)))))
       (setf (xlib:gcontext-function gc) boole-1)
-      (setf (xlib:gcontext-font gc) (text-style-to-X-font port (medium-text-style medium))
-	    (xlib:gcontext-foreground gc) (X-pixel port ink)
+      #-unicode
+      (setf (xlib:gcontext-font gc) (text-style-to-X-font port (medium-text-style medium)))
+      #+unicode
+      (setf (medium-fontset medium) (text-style-to-X-fontset port (medium-text-style medium)))
+      (setf (xlib:gcontext-foreground gc) (X-pixel port ink)
 	    (xlib:gcontext-background gc) (X-pixel port (medium-background medium)))
       ;; Here is a bug with regard to clipping ... ;-( --GB )
       #-NIL ; being fixed at the moment, a bit twitchy though -- BTS
@@ -200,8 +216,12 @@
           (mirror (port-lookup-mirror port (medium-sheet ,medium))))
     (when mirror
       (let* ((line-style (medium-line-style ,medium))
-             (ink (medium-ink ,medium))
-             (gc (medium-gcontext ,medium ink)))
+             (ink        (medium-ink ,medium))
+             (gc         (medium-gcontext ,medium ink))
+             #+unicode
+             (*fontset*  (or (medium-fontset ,medium)
+                             (setf (medium-fontset ,medium)
+                                   (text-style-to-X-fontset (port ,medium) *default-text-style*)))))
         line-style ink
         (unwind-protect
              (progn ,@body)
@@ -379,48 +399,80 @@
     (error "MEDIUM-DRAW-ELLIPSE* not yet implemented for non axis-aligned ellipses."))
   (with-transformed-position ((sheet-native-transformation (medium-sheet medium))
                               center-x center-y)
-    (with-CLX-graphics (medium)
-      (let ((radius-dx (abs (+ radius-1-dx radius-2-dx)))
-            (radius-dy (abs (+ radius-1-dy radius-2-dy))))
-        (xlib:draw-arc mirror gc
-                       (round (- center-x radius-dx)) (round (- center-y radius-dy))
-                       (round (* radius-dx 2)) (round (* radius-dy 2))
-                       start-angle (- end-angle start-angle)
-                       filled)))))
+    (let* ((end-angle (- end-angle start-angle))
+           (end-angle (if (< end-angle start-angle)
+                          (+ (* pi 2) end-angle)
+                          end-angle)))
+      (with-CLX-graphics (medium)
+        (let ((radius-dx (abs (+ radius-1-dx radius-2-dx)))
+              (radius-dy (abs (+ radius-1-dy radius-2-dy))))
+          (xlib:draw-arc mirror gc
+                         (round (- center-x radius-dx)) (round (- center-y radius-dy))
+                         (round (* radius-dx 2)) (round (* radius-dy 2))
+                         start-angle end-angle
+                         filled))))))
 
 (defmethod medium-draw-circle* ((medium clx-medium) center-x center-y radius start-angle end-angle filled)
   (with-transformed-position ((sheet-native-transformation (medium-sheet medium))
                               center-x center-y)
-    (with-CLX-graphics (medium)
-      (xlib:draw-arc mirror gc
-                     (round (- center-x radius)) (round (- center-y radius))
-                     radius radius
-                     start-angle (- end-angle start-angle)
-                     filled))))
+    (let* ((end-angle (- end-angle start-angle))
+           (end-angle (if (< end-angle start-angle)
+                          (+ (* pi 2) end-angle)
+                          end-angle)))
+      (with-CLX-graphics (medium)
+        (xlib:draw-arc mirror gc
+                       (round (- center-x radius)) (round (- center-y radius))
+                       radius radius
+                       start-angle (- end-angle start-angle)
+                       filled)))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Methods for text styles
 
+#-unicode
 (defmethod text-style-ascent (text-style (medium clx-medium))
   (let ((font (text-style-to-X-font (port medium) text-style)))
     (xlib:font-ascent font)))
 
+#+unicode
+(defmethod text-style-ascent (text-style (medium clx-medium))
+  (let ((fontset (text-style-to-X-fontset (port medium) text-style)))
+    (fontset-ascent fontset)))
+
+#-unicode
 (defmethod text-style-descent (text-style (medium clx-medium))
   (let ((font (text-style-to-X-font (port medium) text-style)))
     (xlib:font-descent font)))
 
+#+unicode
+(defmethod text-style-descent (text-style (medium clx-medium))
+  (let ((fontset (text-style-to-X-fontset (port medium) text-style)))
+    (fontset-descent fontset)))
+
+#-unicode
 (defmethod text-style-height (text-style (medium clx-medium))
   (let ((font (text-style-to-X-font (port medium) text-style)))
     (+ (xlib:font-ascent font) (xlib:font-descent font))))
 
+#+unicode
+(defmethod text-style-height (text-style (medium clx-medium))
+  (let ((fontset (text-style-to-X-fontset (port medium) text-style)))
+    (fontset-height fontset)))
+
+#-unicode
 (defmethod text-style-character-width (text-style (medium clx-medium) char)
   (xlib:char-width (text-style-to-X-font (port medium) text-style) (char-code char)))
+
+#+unicode
+(defmethod text-style-character-width (text-style (medium clx-medium) char)
+  (fontset-point-width (char-code char) (text-style-to-X-fontset (port medium) text-style)))
 
 (defmethod text-style-width (text-style (medium clx-medium))
   (text-style-character-width text-style medium #\m))
 
+#-unicode
 (defun translate (src src-start src-end afont dst dst-start)
   ;; This is for replacing the clx-translate-default-function
   ;; who does'nt know about accentated characters because
@@ -461,6 +513,88 @@
 		(return i)
 	        (setf (aref dst j) elt))))))
 
+; Yes, the following is a nasty hack.
+; It's just a proof of concept, I'll try not to commit it :]
+; If it does get committed, it shouldn't affect anyone much...
+
+#+unicode
+(defun translate (source source-start source-end initial-font destination destination-start)
+  ; do the first character especially
+  (let* ((code   (char-code (char source source-start)))
+         (result (fontset-point code)))
+    (if result
+        (destructuring-bind ((range-start . range-stop) font translator) result
+          (if (not (eq font initial-font))
+            ; may need to change fonts immediately:
+            (values source-start font)
+            ; otherwise, lets finish the job...
+            (multiple-value-bind (result success) (funcall translator code)
+              (setf (elt destination destination-start) result)
+              (do ((src  (+ source-start 1)      (+ src 1))
+                   (dst  (+ destination-start 1) (+ dst 1)))
+                  ((>= src source-end)
+                   ; we finished
+                   (values src nil))
+                (let* ((code (char-code (char source src))))
+                  (if (<= range-start code range-stop)
+                      (multiple-value-bind (result success) (funcall translator code)
+                        (setf (elt destination dst) result))
+                      ; wasn't in the range... need to switch
+                      (let ((new (fontset-point code)))
+                        (if new
+                            (destructuring-bind ((range-start . range-stop) font translator) new
+                              (return (values src font)))
+                            (return (values src nil))))))))))
+        (values source-start nil))))
+
+#+unicode
+(in-package :external-format)
+
+#+unicode
+(defun ascii-code-to-font-index (code)
+  (values code (<= #x00 code #x7f)))
+
+#+unicode
+(defun ksc5601-code-to-font-index (wc)
+  (labels ((illegal-sequence ()
+             (error "ksc5601-wctomb"))
+           (summary-of (array index)
+             (values (aref array index 0)
+                     (aref array index 1))))
+
+    (multiple-value-bind (indx used)
+        (cond
+          ((<= #x0000 wc #x045f)
+           (summary-of ksc5601-uni2indx-page00 (ash wc -4)))
+          ((<= #x2000 wc #x266f)
+           (summary-of ksc5601-uni2indx-page20 (- (ash wc -4) #x200)))
+          ((<= #x3000 wc #x33df)
+           (summary-of ksc5601-uni2indx-page30 (- (ash wc -4) #x300)))
+          ((<= #x4e00 wc #x9f9f)
+           (summary-of ksc5601-uni2indx-page4e (- (ash wc -4) #x4e0)))
+          ((<= #xac00 wc #xd79f)
+           (summary-of ksc5601-uni2indx-pageac (- (ash wc -4) #xac0)))
+          ((<= #xf900 wc #xfa0f)
+           (summary-of ksc5601-uni2indx-pagef9 (- (ash wc -4) #xf90)))
+          ((<= #xff00 wc #xffef)
+           (summary-of ksc5601-uni2indx-pageff (- (ash wc -4) #xff0)))
+          (t
+           (illegal-sequence)))
+      (let ((i (logand wc #x0f)))
+        (if (/= 0 (logand used (ash 1 i)))
+            (let* ((used (logand used (- (ash 1 i) 1)))
+                   (used (+ (logand used #x5555) (ash (logand used #xaaaa) -1)))
+                   (used (+ (logand used #x3333) (ash (logand used #xcccc) -2)))
+                   (used (+ (logand used #x0f0f) (ash (logand used #xf0f0) -4)))
+                   (used (+ (logand used #x00ff) (ash used -8)))
+                   (c    (aref ksc5601-2charset (+ indx used))))
+              c)
+            (illegal-sequence))))))
+
+#+unicode
+(in-package :CLIM-CLX)
+
+#-unicode
 (defmethod text-size ((medium clx-medium) string &key text-style (start 0) end)
   (when (characterp string)
     (setf string (make-string 1 :initial-element string)))
@@ -498,6 +632,48 @@
                                           direction first-not-done))
                       (values width (+ ascent descent) width 0 ascent)) )))))) )
 
+#+unicode
+(defmethod text-size ((medium clx-medium) string &key text-style (start 0) end)
+  (when (characterp string)
+    (setf string (make-string 1 :initial-element string)))
+  (unless end (setf end (length string)))
+  (unless text-style (setf text-style (medium-text-style medium)))
+  (let* ((xfontset     (text-style-to-X-fontset (port medium) text-style))
+         (default-font (fontset-default-font xfontset)))
+    (cond ((= start end)
+           (values 0 0 0 0 0))
+          (t
+           (let ((position-newline (position #\newline string :start start)))
+             (cond ((not (null position-newline))
+                    (multiple-value-bind (width ascent descent left right
+                                                font-ascent font-descent direction
+                                                first-not-done)
+                        (let ((*fontset* xfontset))
+                          (xlib:text-extents default-font string
+                                             :start start :end position-newline
+                                             :translate #'translate))
+                      (declare (ignorable left right
+                                          font-ascent font-descent
+                                          direction first-not-done))
+                      (multiple-value-bind (w h x y baseline)
+                          (text-size medium string :text-style text-style
+                                     :start (1+ position-newline) :end end)
+                        (values (max w width) (+ ascent descent h)
+                                x (+ ascent descent y) (+ ascent descent baseline)))))
+                   (t
+                    (multiple-value-bind (width ascent descent left right
+                                                font-ascent font-descent direction
+                                                first-not-done)
+                        (let ((*fontset* xfontset))
+                          (xlib:text-extents default-font string
+                                     :start start :end end
+                                     :translate #'translate))
+                      (declare (ignorable left right
+                                          font-ascent font-descent
+                                          direction first-not-done))
+                      (values width (+ ascent descent) width 0 ascent)) )))))) )
+
+#-unicode
 (defmethod medium-draw-text* ((medium clx-medium) string x y
                               start end
                               align-x align-y
@@ -526,9 +702,45 @@
             (y (round-coordinate y)))
         (when (and (<= #x-8000 x #x7FFF)
                    (<= #x-8000 y #x7FFF))
-          (xlib:draw-glyphs mirror gc x y string
-                            :start start :end end
-                            :translate #'translate))))))
+          (multiple-value-bind (halt width)
+              (xlib:draw-glyphs mirror gc x y string
+                                :start start :end end
+                                :translate #'translate)))))))
+
+#+unicode
+(defmethod medium-draw-text* ((medium clx-medium) string x y
+                              start end
+                              align-x align-y
+                              toward-x toward-y transform-glyphs)
+  (declare (ignore toward-x toward-y transform-glyphs))
+  (with-transformed-position ((sheet-native-transformation (medium-sheet medium))
+                              x y)
+    (with-CLX-graphics (medium)
+      (when (characterp string)
+        (setq string (make-string 1 :initial-element string)))
+      (when (null end) (setq end (length string)))
+      (multiple-value-bind (text-width text-height x-cursor y-cursor baseline) 
+          (text-size medium string :start start :end end)
+        (declare (ignore x-cursor y-cursor))
+        (unless (and (eq align-x :left) (eq align-y :baseline))	    
+          (setq x (- x (ecase align-x
+                         (:left 0)
+                         (:center (round text-width 2))
+                         (:right text-width))))
+          (setq y (ecase align-y
+                    (:top (+ y baseline))
+                    (:center (+ y baseline (- (floor text-height 2))))
+                    (:baseline y)
+                    (:bottom (+ y baseline (- text-height)))))))
+      (let ((x (round-coordinate x))
+            (y (round-coordinate y)))
+        (when (and (<= #x-8000 x #x7FFF)
+                   (<= #x-8000 y #x7FFF))
+          (multiple-value-bind (halt width)
+              (xlib:draw-glyphs mirror gc x y string
+                                :start start :end end
+                                :size 16
+                                :translate #'translate)))))))
 
 (defmethod medium-buffering-output-p ((medium clx-medium))
   t)
@@ -544,6 +756,7 @@
                               x y)
     (with-CLX-graphics (medium)
       (xlib:draw-glyph mirror gc (round x) (round y) element
+                       :size 16
                        :translate #'translate))))
 
 
@@ -565,10 +778,16 @@
 
 ;;;;
 
+; With-double-buffering is broken, so I remove it for now - BTS
+#+nil
 (defmethod invoke-with-special-choices (continuation (medium clx-medium))
   (let ((sheet (medium-sheet medium)))
     (with-double-buffering (sheet)
       (funcall continuation (sheet-medium sheet)))))
+
+(defmethod invoke-with-special-choices (continuation (medium clx-medium))
+  (let ((sheet (medium-sheet medium)))
+    (funcall continuation (sheet-medium sheet))))
 
 ;;;;
 

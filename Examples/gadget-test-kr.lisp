@@ -33,7 +33,8 @@
       do (destroy-port port))
   (setq climi::*all-ports* nil)
   (setq frame (make-application-frame 'gadget-test
-                   :frame-manager (make-instance 'clim-internals::pixie/clx-look :port (find-port))))
+                   :frame-manager (make-instance 'clim-internals::pixie/clx-look
+                                                      :port (find-port))))
 ; (setq frame (make-application-frame 'gadget-test))
   (setq fm (frame-manager frame))
   (setq port (climi::frame-manager-port fm))
@@ -42,6 +43,16 @@
   (setq graft (graft frame))
   (setq vbox (climi::frame-pane frame))
   (run-frame-top-level frame))
+
+(defun run-pixie-test (name)
+  (loop for port in climi::*all-ports*
+	do (destroy-port port))
+  (setq climi::*all-ports* nil)
+  (when name
+    (run-frame-top-level
+      (make-application-frame name
+           :frame-manager (make-instance 'clim-internals:pixie/clx-look
+                               :port (find-port))))))
 
 (defmethod gadget-test-frame-top-level ((frame application-frame)
 				       &key (command-parser 'command-line-command-parser)
@@ -54,50 +65,74 @@
     (clim-extensions:simple-event-loop))
   (frame-exit frame))
 
-(make-command-table 'lisp-menu
-                    :errorp nil
-                    :menu '(("Ã¼°è" :menu lisp-sub-menu)
-                            ("¸®½À" :command test)
-                            ("¸®½À" :command test)))
+(let ((korean (make-text-style :sans-serif nil 12 :korean)))
+  (make-command-table 'lisp-menu
+                      :errorp nil
+                      :menu `(("°è±Þ" :menu lisp-sub-menu
+                                      :text-style ,korean)
+                              ("¸®½À" :command test
+                                      :text-style ,korean)
+                              ("Lisp" :command test)))
 
-(make-command-table 'lisp-sub-menu
-                    :errorp nil
-                    :menu '(("ÀÌ°ÍÀ»"  :command test)
-                            ("¾¨ ¼ö"  :command test)
-                            ("ÀÖ¾î¿ä?" :command test)))
+  (make-command-table 'lisp-sub-menu
+                      :errorp nil
+                      :menu `(("Does"  :command test)
+                              ("This"  :command test)
+                              ("Work?" :command test)))
 
-(make-command-table 'edit-menu
-                    :errorp nil
-                    :menu '(("ÆíÁý" :command test)
-                            ("ÆíÁý" :command test)
-                            ("ÆíÁý" :command test)))
+  (make-command-table 'edit-menu
+                      :errorp nil
+                      :menu `(("Edit" :command test)
+                              ("Edit" :command test)
+                              ("Edit" :command test)))
 
-(make-command-table 'view-menu
-                    :errorp nil
-                    :menu '(("Àü¸Á" :command test)
-                            ("Àü¸Á" :command test)
-                            ("Àü¸Á" :command test)))
+  (make-command-table `view-menu
+                      :errorp nil
+                      :menu '(("View" :command test)
+                              ("View" :command test)
+                              ("View" :command test)))
 
-(make-command-table 'search-menu
-                    :errorp nil
-                    :menu '(("Ã£±â" :command test)
-                            ("Ã£±â" :command test)
-                            ("Ã£±â" :command test)))
+  (make-command-table `search-menu
+                      :errorp nil
+                      :menu '(("Search" :command test)
+                              ("Search" :command test)
+                              ("Search" :command test))))
 
 (define-command test ()
   (format *error-output* "That was just a test~%")
   (finish-output *error-output*))
 
+(macrolet ((make-pane-constructor (class-name)
+             `(defmacro ,class-name (&rest options)
+                `(make-pane ',',class-name ,@options))))
+  (make-pane-constructor text-field)
+  (make-pane-constructor text-edit)
+  (make-pane-constructor slider)
+  (make-pane-constructor push-button)
+  (make-pane-constructor toggle-button))
+
 (define-application-frame gadget-test
     () ()
     (:menu-bar
-     (("¸®½À"   :menu lisp-menu)
-      ("ÆíÁý"   :menu edit-menu)
-      ("Àü¸Á"   :menu view-menu)
-      ("Ã£±â"   :menu search-menu)))
+     (("Lisp"   :menu lisp-menu)
+      ("Edit"   :menu edit-menu)
+      ("View"   :menu view-menu)
+      ("Search" :menu search-menu)))
     (:panes
-     (text-field :text-field
-                 :value "mixed ¹®¼­ here ¬¨")
+;    (raised     (raising (:border-width 3 :background +Gray83+)
+;                  (make-pane 'check-box :choices '("First" "Second" "Third"))))
+     (tf1        :push-button
+                 :text-style (make-text-style :fix :roman 24 :korean)
+                 :label "º»¹®ÀÌ :fix ÀÌ¿ä")
+     (tf2        :push-button
+                 :text-style (make-text-style :serif :roman 24 :korean)
+                 :label "ÜâÙþÀÌ :serif ÀÌ¿ä")
+     (tf3        :push-button
+                 :text-style (make-text-style :serif :italic 24 :korean)
+                 :label "ÀÌÅÅ¸¯ italic ÀÌÅÅ¸¯")
+     (tf4        :push-button
+                 :text-style (make-text-style :sans-serif '(:bold :italic) 24 :korean)
+                 :label "È¹ÀÌ ±½Àº È°ÀÚ°ú ÀÌÅÅ¸¯ bold-italic")
 ;    (text-edit  :text-editor
 ;                :value "Text Editor")
      (slider-h   :slider
@@ -106,93 +141,95 @@
                  :value 0
                  :show-value-p t
                  :orientation :horizontal
-                 :current-color +black+
-                 :width 120
-                 :height 30)
+                 :current-color +black+)
      (slider-v   :slider
                  :min-value 0
                  :max-value 100
                  :orientation :vertical
                  :current-color +black+
-                 :value 0
-                 :width 120
-                 :height 90)
+                 :value 0)
      (slider-v1  :slider
                  :min-value 0
                  :max-value 100
                  :orientation :vertical
                  :current-color +black+
-                 :value 0
-                 :width 30
-                 :height 30)
+                 :value 0)
      (slider-v2  :slider
                  :min-value 0
                  :max-value 100
                  :orientation :vertical
                  :current-color +black+
-                 :value 0
-                 :width 30
-                 :height 60)
+                 :value 0)
      (slider-v3  :slider
                  :min-value 0
                  :max-value 100
                  :orientation :vertical
                  :current-color +black+
-                 :value 0
-                 :width 30
-                 :height 90)
+                 :value 0)
      (slider-v4  :slider
                  :min-value 0
                  :max-value 100
                  :orientation :vertical
                  :current-color +black+
-                 :value 0
-                 :width 30
-                 :height 120)
-     (push-btn   :push-button
-                 :label "Push")
+                 :value 0)
+     (push-btn   (lowering (:border-width 3 :background +Gray83+)
+                   (horizontally ()
+                     (push-button
+                       :label "Push Me")
+                     (push-button
+                       :label "No, Push Me")
+                     (push-button
+                       :label "Me!"))))
+     (table (lowering (:border-width 3 :background +Gray83+)
+              (tabling (:height 50)
+                (list (push-button :label "A") (push-button :label "B"))
+                (list (push-button :label "C") (push-button :label "D"))
+                (list (push-button :label "E") (push-button :label "F")))))
      (toggle-btn :toggle-button
                  :label "Toggle"
                  :value t
-                 :width 120
-                 :height 30
                  :normal +red+
                  :highlighted +red+
                  :pushed-and-highlighted +red+)
-     (scroll    (raising (:border-width 3 :background +Gray83+)
-                   (scrolling (:width 240 :height 120 :background +Gray83+)
-                     (vertically ()
-                       (with-radio-box (:orientation :horizontal)
-                         (clim:radio-box-current-selection "ïá")
-                         "°Ô" "°³"
-                         "ÄÚ³¢¸®" "¹°°í±â" "°í¾çÀÌ")
-                       (with-radio-box (:orientation :horizontal :type :some-of)
-                         (clim:radio-box-current-selection "¾Æ¸¶") "µÑ" "¼Â")
-                       (with-radio-box (:orientation :horizontal)
-                         (clim:radio-box-current-selection "³Ý") "´Ù¼¸" "¿©¼¸")
-                       (with-radio-box (:orientation :horizontal :type :some-of)
-                         (clim:radio-box-current-selection "ÀÏ°ö") "¿©´ü" "¾ÆÈ©")))))
+     (scroll    (raising (:border-width 1 :background +Gray83+)
+                   (scrolling (:background +Gray83+)
+                     (horizontally ()
+                       (vertically ()
+                         (push-button :label "This is a button")
+                         (push-button :label "That is a button")
+                         (push-button :label "This is a button too"))
+                       (with-radio-box (:orientation :vertical)
+                         (clim:radio-box-current-selection "First")
+                         "Second" "Third"
+                         "Red" "Blue" "Orange"
+                         "Elephant" "Dog" "Cat")
+                       (with-radio-box (:orientation :vertical :type :some-of)
+                         (clim:radio-box-current-selection "Fourth") "Fifth" "Sixth")
+                       (with-radio-box (:orientation :vertical)
+                         (clim:radio-box-current-selection "Seventh") "Eighth" "Ninth")
+                       (with-radio-box (:orientation :vertical :type :some-of)
+                         (clim:radio-box-current-selection "Tenth") "Eleventh" "Twelth")))))
      (radio-box  (with-radio-box (:orientation :horizontal)
-                   (clim:radio-box-current-selection "ùÓ") "ñé" "ìí"))
+                   (clim:radio-box-current-selection "One") "Two" "Three"))
      (check-box  (with-radio-box (:type :some-of :orientation :horizontal)
-                   (clim:radio-box-current-selection "ÏÐ") "ÏÑ" "Ñô")))
+                   (clim:radio-box-current-selection "First") "Second" "Third")))
     (:layouts
      (default
-       (vertically ()
-         text-field
-;        text-edit
-         slider-h
-         (horizontally ()
-           (vertically ()
-             slider-v
-             slider-v2)
-           slider-v3
-           slider-v4
-           )
-         push-btn
-         toggle-btn
-         scroll
-         radio-box
-         check-box
-         )))
+       (raising (:border-width 5 :background +Gray83+)
+         (vertically ()
+           tf1 tf2 tf3 tf4
+           slider-h
+           (horizontally ()
+             (vertically ()
+               slider-v
+               slider-v2)
+             slider-v3
+             slider-v4)
+           push-btn
+           table
+           toggle-btn
+           scroll
+           radio-box
+           check-box
+           ))))
     (:top-level (gadget-test-frame-top-level . nil)))

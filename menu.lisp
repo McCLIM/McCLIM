@@ -199,12 +199,14 @@
   (let ((name (command-menu-item-name item))
 	(type (command-menu-item-type item))
 	(value (command-menu-item-value item))
+	(text-style (slot-value item 'text-style))
 	(frame *application-frame*)
 	(manager (frame-manager *application-frame*)))
     (if (eq type :command)
 	(make-pane-1 manager frame 'menu-button-leaf-pane
 		     :name name
 		     :label name
+                     :text-style text-style
 		     :client client
 		     :value-changed-callback
 		     #'(lambda (gadget val)
@@ -224,6 +226,7 @@
 	(make-pane-1 manager frame 'menu-button-submenu-pane
 		     :name name
 		     :label name
+                     :text-style text-style
 		     :client client
 		     :frame-manager manager
 		     :command-table value
@@ -281,4 +284,4 @@
 	  :contents
 	  (loop for item in menu
 		collect 
-		 (make-menu-button-from-menu-item item nil :bottomp t))))))
+		  (make-menu-button-from-menu-item item nil :bottomp t))))))

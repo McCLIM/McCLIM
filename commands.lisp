@@ -108,7 +108,13 @@
 			             (make-instance 'menu-item
 			               :name name :type type :value value
 			               :documentation documentation
-			               :text-style text-style
+                                       ; v-- this may be wrong, we do this to allow
+                                       ; text-style to contain make-text-style calls
+                                       ; so we use a very limited evaluator - FIXME
+			               :text-style (if (and (consp text-style)
+                                                            (eq (first text-style) 'make-text-style))
+                                                       (apply #'make-text-style (rest text-style))
+                                                       (symbol-value text-style))
 			               :keystroke keystroke)))
 		                menu))))
         (when name

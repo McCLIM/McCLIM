@@ -496,12 +496,12 @@
                                                   x1 y2 x2 y2))
                          (draw-circle* sheet x1 center-y y-radius
                                        :filled nil
-                                       :start-angle (/ pi 2)
-                                       :end-angle (* pi 1.5))
+                                       :start-angle (* pi 0.5)
+                                       :end-angle   (* pi 1.5))
                          (draw-circle* sheet x2 center-y y-radius
                                        :filled nil
                                        :start-angle (* pi 1.5)
-                                       :end-angle (/ pi 2)))))
+                                       :end-angle   (* pi 0.5)))))
             (with-rotation (sheet (/ pi 2) (make-point center-x center-y))
               (draw-oval* sheet center-x center-y y-radius x-radius
                           :filled filled))))))
@@ -556,6 +556,10 @@
        (setf (%sheet-medium ,sheet) old-medium));is sheet a sheet-with-medium-mixin? --GB
      pixmap))
 
+; This seems to be incorrect.
+; This presumes that your drawing will completely fill the bounding rectangle of the sheet
+; and will effectively randomise anything that isn't draw, within it.
+; FIXME
 (defmacro with-double-buffering ((sheet) &body body)
   (let ((width (gensym))
 	(height (gensym))
@@ -563,6 +567,7 @@
 	(sheet-mirror (gensym)))
     `(let* ((,width (round (bounding-rectangle-width (sheet-region ,sheet))))
 	    (,height (round (bounding-rectangle-height (sheet-region ,sheet))))
+            (,(gensym) (progn (format *debug-io* "w-d-b ~A ~A~%" ,width ,height) (finish-output *debug-io*) 0))
 	    (,pixmap (allocate-pixmap ,sheet ,width ,height))
 	    (,sheet-mirror (sheet-direct-mirror ,sheet)))
        (unwind-protect
@@ -570,6 +575,8 @@
 	     (setf (sheet-direct-mirror ,sheet) (pixmap-mirror ,pixmap))
 	     ,@body
 	     (setf (sheet-direct-mirror ,sheet) ,sheet-mirror)
+             ; v-- the sheet might have been degrafted while we weren't looking
+             ; in which case, we shouldn't blit it back
 	     (copy-from-pixmap ,pixmap 0 0 ,width ,height ,sheet 0 0))
 	 (deallocate-pixmap ,pixmap)))))
 

@@ -32,11 +32,21 @@
          :documentation "Head pointer of event queue.")
    (tail :initform nil
          :accessor event-queue-tail
-         :documentation "Tail pointer of event queue.") ))
+         :documentation "Tail pointer of event queue.")
+   ; experimental extension for scheduled event insersion
+   (schedule-time
+         :initform nil
+         :accessor event-schedule-time
+         :documentation "The next time an event should be scheduled.")
+   (schedule
+         :initform nil
+         :accessor event-queue-schedule
+         :documentation "Time ordered queue of events to schedule.")))
 
 (defmethod event-queue-read-no-hang ((eq standard-event-queue))
   "Reads one event from the queue, if there is no event just return NIL."
   (with-lock-held ((event-queue-lock eq))
+    (check-schedule eq)
     (let ((res (pop (event-queue-head eq))))
       (when (null (event-queue-head eq))
         (setf (event-queue-tail eq) nil))
@@ -45,23 +55,43 @@
 (defmethod event-queue-read ((eq standard-event-queue))
   "Reads one event from the queue, if there is no event, hang until here is one."
   (loop
+      (check-schedule eq)
       (let ((res (event-queue-read-no-hang eq)))
         (when res
           (return res))
-        (if *multiprocessing-p*
-            (process-wait  "Waiting for event"
-                           (lambda ()
-                             (not (null (event-queue-head eq)))))
-            (process-wait  "Waiting for event"
-                           (lambda ()
-                             (loop for port in climi::*all-ports*
-                                ; this is dubious
-                                do (process-next-event port))
-                             (not (null (event-queue-head eq)))))))))
+        ; is there an event waiting to be scheduled?
+        (with-slots (schedule-time) eq
+          (let* ((now    (now))
+                 (timeout (when schedule-time (- schedule-time now))))
+            (if timeout
+                (if *multiprocessing-p*
+                    (process-wait-with-timeout "Waiting for event"
+                                   timeout
+                                   (lambda ()
+                                     (not (null (event-queue-head eq)))))
+                    (process-wait-with-timeout "Waiting for event"
+                                   timeout
+                                   (lambda ()
+                                     (loop for port in climi::*all-ports*
+                                        ; this is dubious
+                                        do (process-next-event port))
+                                     (not (null (event-queue-head eq))))))
+                ; no timeout
+                (if *multiprocessing-p*
+                    (process-wait  "Waiting for event"
+                                   (lambda ()
+                                     (not (null (event-queue-head eq)))))
+                    (process-wait  "Waiting for event"
+                                   (lambda ()
+                                     (loop for port in climi::*all-ports*
+                                        ; this is dubious
+                                        do (process-next-event port))
+                                     (not (null (event-queue-head eq))))))))))))
 
 (defmethod event-queue-read-with-timeout ((eq standard-event-queue)
                                           timeout wait-function)
   (loop
+      (check-schedule eq)
       (let ((res (event-queue-read-no-hang eq)))
         (when res
           (return res))
@@ -175,6 +205,7 @@
 
 (defmethod event-queue-peek ((eq standard-event-queue))
   (with-lock-held ((event-queue-lock eq))
+    (check-schedule eq)
     (first (event-queue-head eq))))
 
 (defmethod event-queue-peek-if (predicate (eq standard-event-queue))
@@ -185,18 +216,79 @@
     (find-if predicate (event-queue-head eq))))
 
 (defmethod event-queue-listen ((eq standard-event-queue))
+  (check-schedule eq)
   (not (null (event-queue-head eq))))
 
-(defmethod event-queue-listen-or-wait ((eq standard-event-queue) &key timeout)
-  (or (not (null (event-queue-peek eq)))
-      (flet ((pred ()
-	       (not (null (event-queue-head eq)))))
-	(if timeout
-	    (process-wait-with-timeout "Listening for event" timeout #'pred)
-	    (progn
-	      (process-wait "Listening for event" #'pred)
-	      t)))))
+(defun now ()
+  (/ (get-internal-real-time)
+     internal-time-units-per-second))
 
+(defmethod event-queue-listen-or-wait ((eq standard-event-queue) &key timeout)
+  (check-schedule eq)
+  (with-slots (schedule-time) eq
+    (flet ((pred ()
+             (not (null (event-queue-head eq)))))
+      (cond
+        (timeout
+         (loop as    timeout-time = (+ now timeout)
+               with  now = (now)
+               do    (when (pred)
+                       (return t))
+               do    (when (>= now timeout-time)
+                       (return nil))
+               do    (let ((timeout (if schedule-time
+                                        (min (- schedule-time now)
+                                             (- timeout-time now))
+                                        (- timeout-time now))))
+                       (process-wait-with-timeout "Listening for event" timeout #'pred))
+               do    (check-schedule eq)))
+        (schedule-time
+         (loop do (when (pred)
+                    (return t))
+               do (process-wait-with-timeout "Listening for event"
+                          (- schedule-time (now)) #'pred)
+               do (check-schedule eq)))
+        (t
+          (or (pred)
+              (progn
+                (process-wait "Listening for event" #'pred)
+                t)))))))
+
+(defmethod check-schedule ((eq standard-event-queue))
+  ; see if it's time to inject a scheduled event into the queue.
+  (with-slots (schedule-time schedule) eq
+    (when (and schedule-time
+               (> (now) schedule-time))
+      (let* ((event (pop schedule))
+             (sheet (pop schedule)))
+        (setf schedule-time (pop schedule))
+        (dispatch-event sheet event))
+      t)))
+
+; ugh. FIXME when I work - build a priority queue or something
+(defmethod event-queue-schedule ((eq standard-event-queue) sheet event delay)
+  (with-slots (schedule-time schedule) eq
+    (let ((when (+ (now) delay)))
+      (if schedule
+          (cond
+            ((< when schedule-time)
+             (push schedule-time schedule)
+             (push sheet schedule)
+             (push event schedule)
+             (setf schedule-time when))
+            (t
+; (format *debug-io* "queue = ~A~%" schedule)
+             (do* ((prev  (cdr schedule)  (cdddr prev))
+                   (point (cddr schedule) (cdddr point))
+                   (time  (car point)))
+                  ((or (null point)
+                       (< when time))
+                   (setf (cdr prev)
+                         (cons when (cons event (cons sheet (cdr prev)))))))))
+          (progn
+            (setf schedule-time when)
+            (push sheet schedule)
+            (push event schedule))))))
 
 ;; STANDARD-SHEET-INPUT-MIXIN
 
@@ -226,6 +318,10 @@
 (defmethod queue-event ((sheet standard-sheet-input-mixin) event)
   (with-slots (queue) sheet
     (event-queue-append queue event)))
+
+(defmethod schedule-event ((sheet standard-sheet-input-mixin) event delay)
+  (with-slots (queue) sheet
+    (event-queue-schedule queue sheet event delay)))
   
 (defmethod handle-event ((sheet standard-sheet-input-mixin) event)
   ;; Standard practice is to ignore events
@@ -302,6 +398,10 @@
   (declare (ignore event))
   (error 'sheet-is-mute-for-input))
 
+(defmethod schedule-event ((sheet sheet-mute-input-mixin) event delay)
+  (declare (ignore event delay))
+  (error 'sheet-is-mute-for-input))
+
 (defmethod handle-event ((sheet sheet-mute-input-mixin) event)
   (declare (ignore event))
   (error 'sheet-is-mute-for-input))
@@ -354,6 +454,9 @@
 
 (defmethod queue-event ((sheet delegate-sheet-input-mixin) event)
   (queue-event (delegate-sheet-delegate sheet) event))
+
+(defmethod schedule-event ((sheet delegate-sheet-input-mixin) event delay)
+  (schedule-event (delegate-sheet-delegate sheet) event delay))
 
 (defmethod handle-event ((sheet delegate-sheet-input-mixin) event)
   (handle-event (delegate-sheet-delegate sheet) event))

@@ -31,6 +31,110 @@
 (defclass standard-pointer (clx-pointer)
   ())
 
+#|
+ Perhaps this belongs elsewhere
+
+ We have a couple of problems, one is character-sets.
+
+ Unfortunately no-one seems to define what a character-set is, really.
+ So, I define a character-set as being the same as a language, since
+ a language is far more useful.
+
+ This is important, since a given language may include many characters
+ from what might be traditionally considered disparate character-sets.
+ Also it is important, since we cannot simply map a character to a glyph
+ in a language independent fashion, since the style of the character may
+ have some language component.
+
+ In our rendering/translation mechanism we switch fonts when a font fails
+ to supply the glyph that we want. So, to facilitate this we need a given
+ fontset with a set of disjoint ranges mapped to particular font/encoding
+ pairs.
+
+ For the time being, an alist should do here.
+
+ We assume that we're given disjoint ranges for now, which is optimistic.
+ Currently building a fontset will be a tricksy business, think about how
+ to generalise this for the future.
+|#
+
+; this is to inform the text renderer which fontset it should be using.
+; it is a complement to the graphics-context stuff, effectively.
+; the #'translate uses/needs this to switch fonts
+
+(defclass fontset () (
+  ; of the form ((start . stop) font translator)
+  (name
+    :type     simple-string
+    :initform "fontset"
+    :initarg  :name
+    :reader   fontset-name)
+  (default-font
+    :initform nil
+    :reader fontset-default-font)
+  (ranges
+    :type     list
+    :initform nil
+    :initarg  :ranges)
+  (ascent
+    :type     integer
+    :initform 0
+    :initarg  :ascent
+    :reader   fontset-ascent)
+  (descent
+    :type     integer
+    :initform 0
+    :initarg  :ascent
+    :reader   fontset-descent)
+  (height
+    :type     integer
+    :initform 0
+    :initarg  :ascent
+    :reader   fontset-height)
+  (width
+    :type     integer
+    :initform 0
+    :initarg  :ascent
+    :reader   fontset-width)))
+
+(defmethod print-object ((object fontset) stream)
+  (format stream "#<fontset ~A>" (fontset-name object)))
+
+(defmacro make-fontset (name &body entries)
+  (let ((fontset (gensym)))
+    `(let ((,fontset (make-instance 'fontset :name ,name)))
+       ,@(mapcar (lambda (entry)
+                   (destructuring-bind (start finish font translator) entry
+                     `(set-fontset-range ,fontset ,font ,translator ,start ,finish)))
+                 entries)
+       ,fontset)))
+
+(defmethod set-fontset-range ((fontset fontset) font translator start finish)
+  ; should check ordering invariants, disjointity, etc
+  (with-slots (ranges ascent descent height default-font) fontset
+    (unless default-font
+      (setf default-font font))
+    (push (list (cons start finish) font translator) ranges)
+    (setf ascent  (max (xlib:font-ascent font) ascent))
+    (setf descent (max (xlib:font-descent font) descent))
+    (setf height  (+ ascent descent))))
+
+(defun fontset-point-width (point &optional (fontset *fontset*))
+  (let ((entry (fontset-point point fontset)))
+    (if entry
+        (destructuring-bind ((range-start . range-stop) font translator) entry
+          (xlib:char-width font (funcall translator point)))
+        0)))
+
+(defun fontset-point (point &optional (fontset *fontset*))
+  (%fontset-point fontset point))
+
+(defmethod %fontset-point ((fontset fontset) point)
+
+  (with-slots (ranges) fontset
+    (assoc point ranges :test (lambda (point range)
+                                (<= (car range) point (cdr range))))))
+
 (defclass clx-port (basic-port)
   ((display :initform nil
 	    :accessor clx-port-display)
@@ -98,6 +202,7 @@
     (setf (clx-port-screen port) (nth (getf options :screen-id 0)
 				      (xlib:display-roots (clx-port-display port))))
     (setf (clx-port-window port) (xlib:screen-root (clx-port-screen port)))
+
     (make-graft port)
     (when clim-sys:*multiprocessing-p*
       (setf (port-event-process port)
@@ -134,10 +239,11 @@
          #+NIL
          (r*
           (bounding-rectangle
-           (region-intersection r*
-                                (make-rectangle* 0 0
-                                                 (port-mirror-width (port sheet) (sheet-parent sheet))
-                                                 (port-mirror-height (port sheet) (sheet-parent sheet))))))
+           (region-intersection
+                  r*
+                  (make-rectangle* 0 0
+                                   (port-mirror-width (port sheet) (sheet-parent sheet))
+                                   (port-mirror-height (port sheet) (sheet-parent sheet))))))
          (mirror-transformation
           (if (region-equal r* +nowhere+)
               (make-translation-transformation 0 0)
@@ -232,7 +338,7 @@
 
 (defmethod realize-mirror ((port clx-port) (sheet top-level-sheet-pane))
   (let ((q (compose-space sheet)))
-    #+nil ; SHEET and its descendants are grafted, but unmirrored :-( -- APD
+    #+nil ; SHEET and its descendants are grafted, but unmirrored :-\ -- APD
     (allocate-space sheet
                     (space-requirement-width q)
                     (space-requirement-height q))
@@ -413,7 +519,7 @@
 ;; |   find the position of a top-level window.
 ;; |
 
-;; The morale is that we need to distinguish between synthetic and
+;; The moral is that we need to distinguish between synthetic and
 ;; genuine configure-notify events. We expect that synthetic configure
 ;; notify events come from the window manager and state the correct
 ;; size and position, while genuine configure events only state the
@@ -612,23 +718,23 @@
 		 ;; :graft (find-graft :port port) 
 		 :sheet sheet))
 
-(defconstant *clx-text-families* '(:fix "adobe-courier"
-				   :serif "adobe-times"
-				   :sans-serif "adobe-helvetica"))
+(defconstant *clx-text-families* '(:fix         "adobe-courier"
+				   :serif       "adobe-times"
+				   :sans-serif  "adobe-helvetica"))
 
-(defconstant *clx-text-faces* '(:roman "medium-r"
-				:bold "bold-r"
-				:italic "medium-i"
-				:bold-italic "bold-i"
-				:italic-bold "bold-i"))
+(defconstant *clx-text-faces* '(:roman          "medium-r"
+				:bold           "bold-r"
+				:italic         "medium-i"
+				:bold-italic    "bold-i"
+				:italic-bold    "bold-i"))
 
-(defconstant *clx-text-sizes* '(:normal 14
-				:tiny 8
-				:very-small 10
-				:small 12
-				:large 18
-				:very-large 20
-				:huge 24))
+(defconstant *clx-text-sizes* '(:normal         14
+				:tiny            8
+				:very-small     10
+				:small          12
+				:large          18
+				:very-large     20
+				:huge           24))
 
 (defparameter *clx-text-family+face-map*
   '(:fix
@@ -662,14 +768,20 @@
       :italic-bold         "bold-i")) ))
 
 (defun open-font (display font-name)
+
+
   (let ((fonts (xlib:list-font-names display font-name :max-fonts 1)))
     (if fonts
 	(xlib:open-font display (first fonts))
-      (xlib:open-font display "fixed"))))
+        (xlib:open-font display "fixed"))))
 
+(defvar *fontset* nil)
+
+#-unicode
 (defmethod text-style-mapping ((port clx-port) text-style
                                &optional character-set)
   (declare (ignore character-set))
+
   (let ((table (port-text-style-mappings port)))
     (or (car (gethash text-style table))
         (multiple-value-bind (family face size)
@@ -700,6 +812,96 @@
                           (open-font (clx-port-display port) font-name)))
               font-name))))))
 
+#+unicode
+(defun build-english-font-name (text-style)
+  (multiple-value-bind (family face size language)
+      (text-style-components text-style)
+    (destructuring-bind (family-name face-table)
+         (if (stringp family)
+             (list family *clx-text-faces*)
+             (or (getf *clx-text-family+face-map* family)
+                 (getf *clx-text-family+face-map* :fix)))
+       (let* ((face-name (if (stringp face)
+                             face
+                             (or (getf face-table
+                                       (if (listp face)
+                                           (intern (format nil "~A-~A"
+                                                           (first face)
+                                                           (second face))
+                                                   :keyword)
+                                           face))
+                                 (getf *clx-text-faces* :roman))))
+              (size-number (if (numberp size)
+                               (round size)
+                               (or (getf *clx-text-sizes* size)
+                                   (getf *clx-text-sizes* :normal))))
+              (font-name (format nil "-~A-~A-*-*-~D-*-*-*-*-*-*-*"
+                                 family-name face-name size-number)))
+          font-name))))
+
+#+unicode
+(defun build-korean-font-name (text-style)
+  (multiple-value-bind (family face size language)
+      (text-style-components text-style)
+    (let* ((face (if (equal face '(:bold :italic)) :bold-italic face))
+           (font (case family
+                   ((:fix nil)
+                    (case face
+                      ((:roman nil)          "baekmuk-dotum-medium-r")
+                      ((:bold)               "baekmuk-dotum-bold-r")
+                      ((:italic)             "baekmuk-dotum-medium-r")
+                      ((:bold-italic)        "baekmuk-dotum-bold-r")))
+                   ((:serif)
+                    (case face
+                      ((:roman nil)          "baekmuk-batang-medium-r")
+                      ((:bold)               "baekmuk-batang-bold-r")
+                      ((:italic)             "baekmuk-batang-medium-r")
+                      ((:bold-italic)        "baekmuk-batang-bold-r")))
+                   ((:sans-serif)
+                    (case face
+                      ((:roman nil)          "baekmuk-gulim-medium-r")
+                      ((:bold)               "baekmuk-gulim-bold-r")
+                      ((:italic)             "baekmuk-gulim-medium-r")
+                      ((:bold-italic)        "baekmuk-gulim-bold-r")))))
+            (size-number (if (numberp size)
+                             (round size)
+                             (or (getf *clx-text-sizes* size)
+                                 (getf *clx-text-sizes* :normal)))))
+      (format nil "-~A-*-*-~D-*-*-*-*-*-ksx1001.1997-*" font size-number))))
+
+; this needs much refactoring... FIXME
+#+unicode
+(defmethod text-style-mapping ((port clx-port) text-style
+                               &optional character-set)
+  (declare (ignore character-set))
+
+  (let ((table (port-text-style-mappings port)))
+    (or (car (gethash text-style table))
+        (multiple-value-bind (family face size language)
+            (text-style-components text-style)
+          (let* ((display (clx-port-display port))
+                 (fontset (case language
+                            ((nil :english)
+                             (let* ((font-name (build-english-font-name text-style))
+                                    (font      (xlib:open-font display  font-name)))
+                               (make-fontset font-name
+                                 (0 255 font #'external-format::ascii-code-to-font-index))))
+                            ((:korean)
+                             (let* ((english-font-name (build-english-font-name text-style))
+                                    (english-font      (xlib:open-font display  english-font-name))
+                                    (korean-font-name  (build-korean-font-name  text-style))
+                                    (korean-font       (xlib:open-font display  korean-font-name)))
+                               (make-fontset korean-font-name
+                                 (0      255    english-font
+                                                #'external-format::ascii-code-to-font-index)
+                                 (#xAC00 #xD7A3 korean-font
+                                                #'external-format::ksc5601-code-to-font-index)
+                                 (#x4E00 #x9FA5 korean-font
+                                                #'external-format::ksc5601-code-to-font-index)))))))
+            (setf (gethash text-style table)
+                  (cons (fontset-name fontset) fontset))
+            (fontset-name fontset))))))
+
 (defmethod (setf text-style-mapping) (font-name (port clx-port)
                                       (text-style text-style)
                                       &optional character-set)
@@ -708,19 +910,37 @@
         (cons font-name (open-font (clx-port-display port) font-name)))
   font-name)
 
+#-unicode
 (defun text-style-to-X-font (port text-style)
   (let ((text-style (parse-text-style text-style)))
     (text-style-mapping port text-style)
     (cdr (gethash text-style (port-text-style-mappings port)))))
 
+#+unicode
+(defun text-style-to-X-fontset (port text-style)
+  (let ((text-style (parse-text-style text-style)))
+    (text-style-mapping port text-style)
+    (cdr (gethash text-style (port-text-style-mappings port)))))
+
+#-unicode
 (defmethod port-character-width ((port clx-port) text-style char)
   (let* ((font (text-style-to-X-font port text-style))
 	 (width (xlib:char-width font (char-code char))))
     width))
 
+#+unicode
+(defmethod port-character-width ((port clx-port) text-style char)
+  (fontset-point-width (char-code char) (text-style-to-X-fontset port text-style)))
+
+#-unicode
 (defmethod port-string-width ((port clx-port) text-style string &key (start 0) end)
   (xlib:text-width (text-style-to-X-font port text-style)
 		   string :start start :end end))
+
+#+unicode ; this requires a translator and so on.
+(defmethod port-string-width ((port clx-port) text-style string &key (start 0) end)
+  (let ((*fontset* (text-style-to-X-fontset port text-style)))
+    (xlib:text-width nil string :start start :end end :translator #'translate)))
 
 (defmethod X-pixel ((port clx-port) color)
   (let ((table (slot-value port 'color-table)))

@@ -151,7 +151,11 @@
    (thumb-size
      :initarg  :thumb-size
      :initform 1/4
-     :accessor gadget-thumb-size))
+     :accessor gadget-thumb-size)
+   (repeating
+     :initform 0)
+   (was-repeating
+     :initform 0))
   (:default-initargs
     :border-style :inset
     :border-width 1))
@@ -205,7 +209,8 @@
                        (- maxx 1) (- maxy 1)))))
 
 (defmethod handle-event ((pane pixie-slider-pane) (event pointer-button-release-event))
-  (with-slots (armed dragging value bounce-value) pane
+  (with-slots (armed dragging value bounce-value repeating was-repeating) pane
+    (setf was-repeating repeating)
     (when dragging
       (unless (eq dragging :inside)
         (setf armed nil
@@ -215,11 +220,29 @@
       (setf dragging nil)
       (dispatch-repaint pane (sheet-region pane)))))
 
+(defmethod handle-event ((pane pixie-slider-pane) (event timer-event))
+  (let ((token (clim-internals::event-token event)))
+    (with-slots (was-repeating repeating) pane
+      (unless (eql was-repeating repeating)
+        (case token
+          ((up-notch)
+           (when (< (gadget-value pane) (gadget-max-value pane))
+             (clim-internals::schedule-timer-event pane token 0.1)
+             (incf (gadget-value pane))
+             (dispatch-repaint pane (sheet-region pane))))
+          ((down-notch)
+           (when (> (gadget-value pane) (gadget-min-value pane))
+             (clim-internals::schedule-timer-event pane token 0.1)
+             (decf (gadget-value pane))
+             (dispatch-repaint pane (sheet-region pane)))))))))
+
 (defmethod handle-event ((pane pixie-slider-pane) (event pointer-button-press-event))
   (multiple-value-bind (x y)
       (transform-position (vertical-gadget-orientation-transformation pane)
                           (pointer-event-x event) (pointer-event-y event))
-    (with-slots (armed dragging drag-delta value bounce-value) pane
+    
+    (with-slots (armed dragging drag-delta value bounce-value repeating) pane
+      (incf repeating)
       (let ((thumb (gadget-thumb-region pane)))
         (cond
           ((region-contains-position-p thumb x y)
@@ -233,11 +256,13 @@
            ; move up or down one notch
            (cond
              ((< y (bounding-rectangle-min-y thumb))
+              (clim-internals::schedule-timer-event pane 'down-notch 0.1)
               ; move toward the min
               (when (> (gadget-value pane) (gadget-min-value pane))
                 (decf (gadget-value pane))
                 (dispatch-repaint pane (sheet-region pane))))
              ((> y (bounding-rectangle-max-y thumb))
+              (clim-internals::schedule-timer-event pane 'up-notch 0.1)
               ; move toward the max
               (when (< (gadget-value pane) (gadget-max-value pane))
                 (incf (gadget-value pane))
@@ -452,7 +477,8 @@
               (make-rectangle* x1 (- ya 1) x2 (+ yb 1)))))))))
 
 (defmethod handle-event ((pane pixie-scroll-bar-pane) (event pointer-button-release-event))
-  (with-slots (armed dragging) pane
+  (with-slots (armed dragging repeating was-repeating) pane
+    (setf was-repeating repeating)
     (cond
      (dragging
       (unless (eq dragging :inside)
@@ -466,12 +492,28 @@
         (setf armed t)
         (dispatch-repaint pane (sheet-region pane)))))))
 
+(defmethod handle-event ((pane pixie-scroll-bar-pane) (event timer-event))
+  (let ((token (clim-internals::event-token event)))
+    (with-slots (was-repeating repeating) pane
+      (unless (eql was-repeating repeating)
+        (clim-internals::schedule-timer-event pane token 0.1)
+        (case token
+          ((up-line)
+           (scroll-up-line-callback pane (gadget-client pane) (gadget-id pane)))
+          ((down-line)
+           (scroll-down-line-callback pane (gadget-client pane) (gadget-id pane)))
+          ((up-page)
+           (scroll-up-page-callback pane (gadget-client pane) (gadget-id pane)))
+          ((down-page)
+           (scroll-down-page-callback pane (gadget-client pane) (gadget-id pane))))))))
+
 (defmethod handle-event ((pane pixie-scroll-bar-pane) (event pointer-button-press-event))
   (multiple-value-bind (x y)
       (transform-position
                 (vertical-gadget-orientation-transformation pane)
                 (pointer-event-x event) (pointer-event-y event))
-    (with-slots (armed dragging drag-delta) pane
+    (with-slots (armed dragging drag-delta repeating) pane
+      (incf repeating)
       (let ((thumb (gadget-thumb-region pane)))
         (cond
           ((region-contains-position-p thumb x y)
@@ -480,20 +522,26 @@
                  armed    t
                  drag-delta (- y (bounding-rectangle-min-y thumb))))
           ((region-contains-position-p (gadget-up-region pane) x y)
+           (clim-internals::schedule-timer-event pane 'up-line 0.1)
            ; Up Arrow
            (scroll-up-line-callback pane (gadget-client pane) (gadget-id pane))
            (setf (slot-value pane 'armed) :up)
            (dispatch-repaint pane +everywhere+))
           ((region-contains-position-p (gadget-down-region pane) x y)
+           (clim-internals::schedule-timer-event pane 'down-line 0.1)
            ; Down Arrow
            (scroll-down-line-callback pane (gadget-client pane) (gadget-id pane))
            (setf (slot-value pane 'armed) :down)
            (dispatch-repaint pane +everywhere+))
           ((region-contains-position-p (gadget-bed-region pane) x y)
            ; Bed
-           (if (< y (bounding-rectangle-min-y thumb))
-               (scroll-up-page-callback pane (gadget-client pane) (gadget-id pane))
-               (scroll-down-page-callback pane (gadget-client pane) (gadget-id pane))))
+           (cond
+             ((< y (bounding-rectangle-min-y thumb))
+              (clim-internals::schedule-timer-event pane 'up-page 0.1)
+              (scroll-up-page-callback pane (gadget-client pane) (gadget-id pane)))
+             (t
+              (clim-internals::schedule-timer-event pane 'down-page 0.1)
+              (scroll-down-page-callback pane (gadget-client pane) (gadget-id pane)))))
           (t
            ; Nowhere (!)
            nil))))))
@@ -597,6 +645,9 @@
 
 (defclass pixie-menu-bar-pane (pixie-gadget menu-bar) ())
 
+; silly menu-bar isn't named pane, so this catches it
+(defclass pixie-menu-bar (pixie-menu-bar-pane) ())
+
 (defmethod handle-repaint ((pane pixie-menu-bar-pane) region)
   (declare (ignore region))
   (with-special-choices (pane)
@@ -605,7 +656,22 @@
       (draw-polygon pane frame :ink +Blue+ :filled t)
       (draw-bordered-polygon pane frame :style :outset :border-width 1))))
 
-(defclass pixie-menu-button-pane (pixie-gadget menu-button-pane) ())
+(defmethod compose-space ((gadget pixie-menu-bar-pane) &key width height)
+  (declare (ignore width height))
+  (multiple-value-bind (width min-width max-width height min-height max-height)
+      (space-requirement-components (call-next-method))
+    (make-space-requirement
+      :width width
+      :min-width min-width
+      :max-width max-width
+      :height min-height
+      :min-height min-height
+      :max-height min-height)))
+
+(defclass pixie-menu-button-pane (pixie-gadget menu-button-pane) ()
+  (:default-initargs
+    :align-x :left
+    :align-y :center))
 
 (defmethod handle-repaint ((pane pixie-menu-button-pane) region)
   (declare (ignore region))
@@ -624,19 +690,19 @@
                            :border-width 1)))
           (t
            (draw-polygon pane frame :filled t :ink (effective-gadget-foreground pane))))
-        (draw-label* pane x1 y1 x2 y2 :ink (pane-inking-color pane))))))
+        (draw-label* pane (+ x1 5) y1 x2 y2 :ink (pane-inking-color pane))))))
 
 (defmethod compose-space ((gadget pixie-menu-button-pane) &key width height)
   (declare (ignore width height))
-  (space-requirement+* (space-requirement+* (compose-label-space gadget :wider 15 :higher 10)
+  (space-requirement+* (space-requirement+* (compose-label-space gadget :wider 5 :higher 10)
                                             :min-width  (* 2 (pane-x-spacing gadget))
                                             :width      (* 2 (pane-x-spacing gadget))
                                             :max-width  +fill+ 
                                             :min-height (* 2 (pane-y-spacing gadget))
                                             :height     (* 2 (pane-y-spacing gadget))
                                             :max-height (* 2 (pane-y-spacing gadget)))
-                       :min-width  (+ 20 (* 2 *3d-border-thickness*))
-                       :width      (+ 20 (* 2 *3d-border-thickness*))
+                       :min-width  (+ 17 (* 2 *3d-border-thickness*))
+                       :width      (+ 17 (* 2 *3d-border-thickness*))
                        :max-width  +fill+
                        :min-height (* 2 *3d-border-thickness*)
                        :height     (* 2 *3d-border-thickness*)
@@ -659,21 +725,21 @@
                                :filled t)
               (when armed
                 (draw-edges-lines* pane +white+ 0 0 +black+ (1- w) (1- h)))
-              (draw-label* pane x1 y1 (- x2 20) y2 :ink +black+))))))))
+              (draw-label* pane (+ x1 8) y1 (- x2 17) y2 :ink +black+))))))))
 
 (defclass pixie-menu-button-submenu-pane (pixie-menu-button-pane menu-button-submenu-pane) ())
 
 (defmethod compose-space ((gadget pixie-menu-button-submenu-pane) &key width height)
   (declare (ignore width height))
-  (space-requirement+* (space-requirement+* (compose-label-space gadget :wider 15 :higher 10)
+  (space-requirement+* (space-requirement+* (compose-label-space gadget :wider 5 :higher 10)
                                             :min-width  (* 2 (pane-x-spacing gadget))
                                             :width      (* 2 (pane-x-spacing gadget))
                                             :max-width  +fill+ 
                                             :min-height (* 2 (pane-y-spacing gadget))
                                             :height     (* 2 (pane-y-spacing gadget))
                                             :max-height (* 2 (pane-y-spacing gadget)))
-                       :min-width  (+ 20 (* 2 *3d-border-thickness*))
-                       :width      (+ 20 (* 2 *3d-border-thickness*))
+                       :min-width  (+ 17 (* 2 *3d-border-thickness*))
+                       :width      (+ 17 (* 2 *3d-border-thickness*))
                        :max-width  +fill+
                        :min-height (* 2 *3d-border-thickness*)
                        :height     (* 2 *3d-border-thickness*)
@@ -694,13 +760,13 @@
               (when submenu-frame
                 (draw-edges-lines* pane +white+ 0 0 +black+ (1- w) (1- h)))
 
-              (draw-label* pane x1 y1 (- x2 20) y2 :ink +black+)
+              (draw-label* pane (+ x1 8) y1 (- x2 17) y2 :ink +black+)
   
               (when (typep client 'menu-button-pane)
-                (let* ((x1 (- x2 20))
+                (let* ((x1 (- x2 17))
                        (ym (/ (+ y1 y2) 2))
-                       (y1 (- ym 10))
-                       (y2 (+ ym 10)))
+                       (y1 (- ym  8))
+                       (y2 (+ ym  8)))
                   (flet ((oddify (v) (let ((v (floor v))) (if (oddp v) v (+ v 1)))))
                     (let* ((width  (oddify (- x2 x1)))
                            (height (oddify (- y2 y1)))
@@ -788,19 +854,19 @@
     (let ((radius (/ (- y2 y1) 2)))
       (draw-circle* pane cx cy radius
                      :start-angle (* 1/4 pi)
-                     :end-angle (* 5/4 pi)
+                     :end-angle   (* 5/4 pi)
                      :ink *3d-dark-color*)
       (draw-circle* pane cx cy (- radius 1)
                      :start-angle (* 1/4 pi)
-                     :end-angle (* 5/4 pi)
+                     :end-angle   (* 5/4 pi)
                      :ink (pane-inking-color pane))
       (draw-circle* pane cx cy radius
                      :start-angle (* 5/4 pi)
-                     :end-angle (* 9/4 pi)
+                     :end-angle   (* 1/4 pi)
                      :ink *3d-light-color*)
       (draw-circle* pane cx cy (- radius 1)
                      :start-angle (* 5/4 pi)
-                     :end-angle (* 9/4 pi)
+                     :end-angle   (* 1/4 pi)
                      :ink (effective-gadget-foreground pane))
       (draw-circle* pane cx cy (max 1 (- radius 2))
                      :ink (pane-paper-color pane))
@@ -916,3 +982,90 @@
             (draw-up-box pane x1 y1 x2 y2 (effective-gadget-foreground pane)))
            (pressedp
             (draw-down-box pane x1 y1 x2 y2 (effective-gadget-foreground pane)))))))))
+
+; Text Area
+
+(defclass pixie-text-field-pane (text-field-pane) ())
+
+(defmethod initialize-instance :after ((pane pixie-text-field-pane) &rest rest)
+  (unless (getf rest :normal)
+    (setf (slot-value pane 'current-color) +white+
+	  (slot-value pane 'normal)        +white+)))
+
+(defmethod note-sheet-grafted :after ((pane pixie-text-field-pane))
+  (multiple-value-bind (cx cy) (stream-cursor-position pane)
+    (setf (cursor-visibility (stream-text-cursor pane)) nil)
+    (setf (area pane) (make-instance 'goatee:simple-screen-area
+                                            :area-stream pane
+                                            :x-position cx
+                                            :y-position cy
+                                            :initial-contents (slot-value pane 'value)))
+    (stream-add-output-record pane (area pane))))
+
+(defmethod handle-repaint ((pane text-field-pane) region)
+  (declare (ignore region))
+  (with-special-choices (pane)
+    (with-sheet-medium (medium pane)
+      (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
+        (display-gadget-background pane (gadget-current-color pane) 0 0 (- x2 x1) (- y2 y1))
+        (goatee::redisplay-all (area pane))))))
+
+
+;;; Unilaterally declare a "focus follows mouse" policy.  I don't like this
+;;; much; the whole issue of keyboard focus needs a lot more thought,
+;;; especially when multiple application frames per port become possible.
+
+(defmethod armed-callback :after ((gadget pixie-text-field-pane) client id)
+  (declare (ignore client id))
+  (let ((port (port gadget)))
+    (setf (previous-focus gadget) (port-keyboard-input-focus port))
+    (setf (port-keyboard-input-focus port) gadget)))
+
+(defmethod disarmed-callback :after ((gadget pixie-text-field-pane) client id)
+  (declare (ignore client id))
+  (let ((port (port gadget)))
+    (setf (port-keyboard-input-focus port) (previous-focus gadget))
+    (setf (previous-focus gadget) nil)))
+
+(defmethod handle-event ((gadget pixie-text-field-pane) (event key-press-event))
+  (let ((gesture (convert-to-gesture event))
+	(*activation-gestures* *standard-activation-gestures*))
+    (when (activation-gesture-p gesture)
+      (activate-callback gadget (gadget-client gadget) (gadget-id gadget))
+      (return-from handle-event t))
+    (goatee:execute-gesture-command gesture
+				    (area gadget)
+				    goatee::*simple-area-gesture-table*)
+    (let ((new-value (goatee::buffer-string (goatee::buffer (area gadget)))))
+      (unless (string= (gadget-value gadget) new-value)
+	(setf (slot-value gadget 'value) new-value)
+	(value-changed-callback gadget 
+				(gadget-client gadget) 
+				(gadget-id gadget)
+				new-value)))))
+
+(defmethod (setf gadget-value) :after (new-value (gadget pixie-text-field-pane)
+				       &key invoke-callback)
+  (declare (ignore invoke-callback))
+  (let* ((area (area gadget))
+	 (buffer (goatee::buffer area))
+	 (start (goatee::buffer-start buffer))
+	 (end (goatee::buffer-end buffer)))
+    (goatee::clear-buffer buffer)
+    (goatee::insert buffer new-value :position start)
+    (goatee::redisplay-area area)))
+
+(defmethod compose-space ((pane pixie-text-field-pane) &key width height)
+  (declare (ignore width height))
+  (with-sheet-medium (medium pane)
+    (let ((as (text-style-ascent (medium-text-style medium) medium))
+          (ds (text-style-descent (medium-text-style medium) medium))
+          (w  (text-size medium (gadget-value pane))))
+      (let ((width w)
+            (height (+ as ds)))
+        (make-space-requirement :width width :height height
+                                :max-width width :max-height height
+                                :min-width width :min-height height)))))
+
+(defmethod allocate-space ((pane pixie-text-field-pane) w h)
+  (resize-sheet pane w h))

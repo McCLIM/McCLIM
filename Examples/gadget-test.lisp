@@ -33,7 +33,8 @@
       do (destroy-port port))
   (setq climi::*all-ports* nil)
   (setq frame (make-application-frame 'gadget-test
-                   :frame-manager (make-instance 'clim-internals::pixie/clx-look :port (find-port))))
+                   :frame-manager (make-instance 'clim-internals::pixie/clx-look
+                                                      :port (find-port))))
 ; (setq frame (make-application-frame 'gadget-test))
   (setq fm (frame-manager frame))
   (setq port (climi::frame-manager-port fm))
@@ -42,6 +43,16 @@
   (setq graft (graft frame))
   (setq vbox (climi::frame-pane frame))
   (run-frame-top-level frame))
+
+(defun run-pixie-test (name)
+  (loop for port in climi::*all-ports*
+	do (destroy-port port))
+  (setq climi::*all-ports* nil)
+  (when name
+    (run-frame-top-level
+      (make-application-frame name
+           :frame-manager (make-instance 'clim-internals:pixie/clx-look
+                               :port (find-port))))))
 
 (defmethod gadget-test-frame-top-level ((frame application-frame)
 				       &key (command-parser 'command-line-command-parser)
@@ -97,8 +108,8 @@
   (make-pane-constructor push-button)
   (make-pane-constructor toggle-button))
 
-(define-application-frame gadget-test
-    () ()
+(define-application-frame gadget-test ()
+    ()
     (:menu-bar
      (("Lisp"   :menu lisp-menu)
       ("Edit"   :menu edit-menu)
@@ -107,8 +118,18 @@
     (:panes
 ;    (raised     (raising (:border-width 3 :background +Gray83+)
 ;                  (make-pane 'check-box :choices '("First" "Second" "Third"))))
-     (text-field :text-field
-                 :value "Text Field")
+     (tf1        :push-button
+                 :text-style (make-text-style :fix :roman 24)
+                 :label "Text Field")
+     (tf2        :push-button
+                 :text-style (make-text-style :serif :roman 24)
+                 :label "Text Field")
+     (tf3        :push-button
+                 :text-style (make-text-style :serif :italic 24)
+                 :label "Text Field")
+     (tf4        :push-button
+                 :text-style (make-text-style :sans-serif '(:bold :italic) 24)
+                 :label "Text Field")
 ;    (text-edit  :text-editor
 ;                :value "Text Editor")
      (slider-h   :slider
@@ -117,82 +138,72 @@
                  :value 0
                  :show-value-p t
                  :orientation :horizontal
-                 :current-color +black+
-                 :width 120
-                 :height 30)
+                 :current-color +black+)
      (slider-v   :slider
                  :min-value 0
                  :max-value 100
                  :orientation :vertical
                  :current-color +black+
-                 :value 0
-                 :width 120
-                 :height 90)
+                 :value 0)
      (slider-v1  :slider
                  :min-value 0
                  :max-value 100
                  :orientation :vertical
                  :current-color +black+
-                 :value 0
-                 :width 30
-                 :height 30)
+                 :value 0)
      (slider-v2  :slider
                  :min-value 0
                  :max-value 100
                  :orientation :vertical
                  :current-color +black+
-                 :value 0
-                 :width 30
-                 :height 60)
+                 :value 0)
      (slider-v3  :slider
                  :min-value 0
                  :max-value 100
                  :orientation :vertical
                  :current-color +black+
-                 :value 0
-                 :width 30
-                 :height 90)
-     (slider-v4  :slider
-                 :min-value 0
-                 :max-value 100
-                 :orientation :vertical
-                 :current-color +black+
-                 :value 0
-                 :width 30
-                 :height 120)
+                 :value 0)
+     (radar      (make-pane 'radar-pane))
      (push-btn   (lowering (:border-width 3 :background +Gray83+)
                    (horizontally ()
                      (push-button
-                       :label "Push Me")
+                       :name  "Radiate"
+                       :label "Radiate"
+                       :activate-callback
+                         (lambda (pane &rest args)
+                             nil))
                      (push-button
                        :label "No, Push Me")
                      (push-button
                        :label "Me!"))))
+     (table (lowering (:border-width 3 :background +Gray83+)
+              (tabling (:height 50)
+                (list (push-button :label "A") (push-button :label "B"))
+                (list (push-button :label "C") (push-button :label "D"))
+                (list (push-button :label "E") (push-button :label "F")))))
      (toggle-btn :toggle-button
                  :label "Toggle"
                  :value t
-                 :width 120
-                 :height 30
                  :normal +red+
                  :highlighted +red+
                  :pushed-and-highlighted +red+)
      (scroll    (raising (:border-width 1 :background +Gray83+)
-                   (scrolling (:width 240 :height 120 :background +Gray83+)
-                     (vertically ()
-                       (horizontally ()
+                   (scrolling (:background +Gray83+ :width 100 :height 100)
+                     (horizontally ()
+                       (vertically ()
                          (push-button :label "This is a button")
                          (push-button :label "That is a button")
                          (push-button :label "This is a button too"))
-                       (with-radio-box (:orientation :horizontal)
+                       (with-radio-box (:orientation :vertical)
                          (clim:radio-box-current-selection "First")
                          "Second" "Third"
                          "Red" "Blue" "Orange"
                          "Elephant" "Dog" "Cat")
-                       (with-radio-box (:orientation :horizontal :type :some-of)
+                       (with-radio-box (:orientation :vertical :type :some-of)
                          (clim:radio-box-current-selection "Fourth") "Fifth" "Sixth")
-                       (with-radio-box (:orientation :horizontal)
+                       (with-radio-box (:orientation :vertical)
                          (clim:radio-box-current-selection "Seventh") "Eighth" "Ninth")
-                       (with-radio-box (:orientation :horizontal :type :some-of)
+                       (with-radio-box (:orientation :vertical :type :some-of)
                          (clim:radio-box-current-selection "Tenth") "Eleventh" "Twelth")))))
      (radio-box  (with-radio-box (:orientation :horizontal)
                    (clim:radio-box-current-selection "One") "Two" "Three"))
@@ -202,19 +213,76 @@
      (default
        (raising (:border-width 5 :background +Gray83+)
          (vertically ()
-           text-field
+           tf1 tf2 tf3 tf4
            slider-h
            (horizontally ()
              (vertically ()
                slider-v
                slider-v2)
              slider-v3
-             slider-v4
-             )
+             radar)
            push-btn
+           table
            toggle-btn
            scroll
            radio-box
            check-box
            ))))
     (:top-level (gadget-test-frame-top-level . nil)))
+
+(defmethod run-frame-top-level :around ((frame gadget-test) &key &allow-other-keys)
+  (clim-internals::schedule-timer-event (find-pane-named frame 'radar) 'radiate 0.1)
+  (call-next-method))
+
+(defclass radar-pane (basic-gadget) (
+  (points
+    :initform '((0.01 0.01 0.10 0.10)
+                (0.10 0.02 0.70 0.40)
+                (0.20 0.03 0.60 0.30)
+                (0.20 0.04 0.20 0.50)
+                (0.20 0.05 0.60 0.20)
+                (0.20 0.06 0.30 0.40)
+                (0.20 0.07 0.60 0.90)
+                (0.20 0.08 0.80 0.30)
+                (0.20 0.09 0.60 0.20)))))
+
+(defmethod handle-event ((pane radar-pane) (event timer-event))
+  (with-slots (points) pane
+    (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
+      (let ((xf (- x2 x1))
+            (yf (- y2 y1)))
+        (dolist (point points)
+          (destructuring-bind (radius grow x y) point
+            (let ((old-radius radius))
+              (setf radius
+                    (if (< radius 0.3)
+                        (+ radius grow)
+                        (progn
+                          (setf (second point) (random 0.10))
+                          (setf (third point)  (random 1.0))
+                          (setf (fourth point) (random 1.0))
+                          0.01)))
+              (setf (first point) radius)
+              ; v- fix with a transform?
+              (let ((x (+ x1 (* x xf)))
+                    (y (+ y1 (* y yf)))
+                    (rx (* radius xf))
+                    (ry (* radius yf))
+                    (orx (* old-radius xf))
+                    (ory (* old-radius yf)))
+                (when (> radius 0.01)
+                  (draw-ellipse* pane x y
+                                      0 ry
+                                      rx 0
+                                      :ink +black+ :filled nil))
+                (draw-ellipse* pane x y
+                                    0 ory
+                                    orx 0
+                                    :ink +white+ :filled nil))))))))
+  (clim-internals::schedule-timer-event pane 'radiate 0.1))
+
+(defun common-lisp-user::lg ()
+  ; convenience, because I'm lazy
+  (with-open-file (file "Examples/grammar.lisp" :external-format :euc-kr)
+    (load file))
+  (run-pixie-test 'grammar))

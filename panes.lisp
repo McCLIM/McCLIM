@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.102 2002/09/15 19:09:27 brian Exp $
+;;; $Id: panes.lisp,v 1.103 2002/10/31 12:58:14 brian Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -323,36 +323,9 @@
   (make-space-requirement :width (or width 200)
 			  :height (or height 200)))
 
-;;???
-#+nil ; this method is silly, because it does nothing.
-(defmethod allocate-space :before ((pane pane) width height)
-  width height
-  '(unless (typep 'pane 'top-level-sheet-pane)
-    (resize-sheet pane width height)))
-
-
 (defmethod allocate-space ((pane pane) width height)
   (declare (ignorable pane width height))
   )
-
-;;???
-#+NIL
-(defmethod change-space-requirements ((pane pane) &rest rest)
-  (declare (ignore rest))
-  (values))
-
-;;???
-#+NIL
-(defmethod note-space-requirements-changed (sheet (pane pane))
-  (declare (ignore sheet))
-  (setf (pane-space-requirement pane) nil)
-  (compose-space pane)
-  (if (or (top-level-sheet-pane-p pane)
-	  (restraining-pane-p pane)
-	  (and (slot-value pane 'sr-width)
-	       (slot-value pane 'sr-height)))
-      (allocate-space pane (sr-width pane) (sr-height pane))
-      (note-space-requirements-changed (sheet-parent pane) pane)))
 
 ;;; WINDOW STREAM
 
@@ -480,17 +453,17 @@
                                                           (slot-value pane 'y-spacing))
                                                      0))
         (slot-value pane 'user-width)      width
-        (slot-value pane 'user-min-width)  (or min-width 0 #+nil width)
-        (slot-value pane 'user-max-width)  (or max-width +fill+ #+nil width)
+        (slot-value pane 'user-min-width)  (or min-width 0)
+        (slot-value pane 'user-max-width)  (or max-width +fill+)
         (slot-value pane 'user-height)     height
-        (slot-value pane 'user-min-height) (or min-height 0 #+nil height)
-        (slot-value pane 'user-max-height) (or max-height +fill+ #+nil height) ))
+        (slot-value pane 'user-min-height) (or min-height 0)
+        (slot-value pane 'user-max-height) (or max-height +fill+)))
 
 (defmethod initialize-instance :after ((pane space-requirement-options-mixin)
                                        &rest space-req-keys)
   (apply #'grok-user-space-requirement-options pane space-req-keys))
 
-#+nil
+#+nil ; old
 (defmethod merge-user-specified-options ((pane space-requirement-options-mixin)
                                          sr)
   (multiple-value-bind (width min-width max-width height min-height max-height)
@@ -634,7 +607,7 @@
   (setf (pane-space-requirement pane) nil)
   (setf (pane-current-width pane) nil)
   (setf (pane-current-height pane) nil)
-  (change-space-requirements pane) )
+  (change-space-requirements pane))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -697,6 +670,7 @@
   `(progn
      ,@body))
 
+#+nil ; I don't know what this is supposed to achieve
 (defmethod change-space-requirements ((pane composite-pane)
 				      &key resize-frame
 				      (width nil width-p)
@@ -714,11 +688,7 @@
 
 ;;; SINGLE-CHILD-COMPOSITE PANE
 
-(defclass single-child-composite-pane (sheet-single-child-mixin
-				       basic-pane)
-  (
-   )
-  )
+(defclass single-child-composite-pane (sheet-single-child-mixin basic-pane) ())
 
 
 (defmethod initialize-instance :after ((pane single-child-composite-pane)
@@ -821,7 +791,8 @@
 
 ;;; SHEET
 
-;; FIXME: Should it exist ???
+;; FIXME: Should it exist ??? - I don't think so...
+#+nil
 (defmethod note-space-requirements-changed ((sheet sheet) (pane composite-pane))
   (values))
 
@@ -1406,14 +1377,10 @@ During realization the child of the spacing will have as cordinates
     (setf user-width  (max (or thickness 0) (or user-width 0)))
     (setf user-height (max (or thickness 0) (or user-height 0)))))
 
-(defmethod compose-space ((spacing spacing-pane) &key width height)
-  (declare (ignore width height))
-  (compose-space (first (sheet-children spacing))))
-
-(defmethod allocate-space ((spacing spacing-pane) width height)
-  (with-slots (user-width user-height) spacing
-    (let ((child (first (sheet-children spacing))))
-      (layout-child child (pane-align-x spacing) (pane-align-y spacing)
+(defmethod allocate-space ((pane spacing-pane) width height)
+  (with-slots (user-width user-height) pane
+    (let ((child (first (sheet-children pane))))
+      (layout-child child (pane-align-x pane) (pane-align-y pane)
                     (/ user-width 2) (/ user-height 2)
                     (- width user-width)
                     (- height user-height)))))
@@ -1444,14 +1411,16 @@ During realization the child of the spacing will have as cordinates
 (defmethod grok-user-space-requirement-options :after ((pane border-pane)
                                                        &key border-width &allow-other-keys)
   (with-slots (user-width user-min-width user-max-width
-               user-height user-min-height user-max-height)
-      pane
-    (setf user-min-width  (max (* 2 (or border-width 0)) (or user-min-width 0)))
-    (setf user-width      (max (* 2 (or border-width 0)) (or user-width 0)))
-    (setf user-max-width  (max (* 2 (or border-width 0)) (or user-min-width +fill+)))
-    (setf user-min-height (max (* 2 (or border-width 0)) (or user-min-height 0)))
-    (setf user-height     (max (* 2 (or border-width 0)) (or user-height 0)))
-    (setf user-max-height (max (* 2 (or border-width 0)) (or user-min-width +fill+)))))
+               user-height user-min-height user-max-height) pane
+    (let ((border-width (or border-width
+                            (slot-value pane 'border-width)
+                            0)))
+      (setf user-min-width  (max (* 2 border-width) (or user-min-width 0)))
+      (setf user-width      (max (* 2 border-width) (or user-width 0)))
+      (setf user-max-width  (max (* 2 border-width) (or user-min-width +fill+)))
+      (setf user-min-height (max (* 2 border-width) (or user-min-height 0)))
+      (setf user-height     (max (* 2 border-width) (or user-height 0)))
+      (setf user-max-height (max (* 2 border-width) (or user-min-width +fill+))))))
 
 ;;; RAISED PANE
 
@@ -1517,23 +1486,29 @@ During realization the child of the spacing will have as cordinates
 
 (defclass viewport-pane (single-child-composite-pane) ())
 
+(defmethod compose-space ((pane viewport-pane) &key width height)
+  ; I _think_ this is right, it certainly shouldn't be the requirements of the child.
+  (make-space-requirement))
+
 (defmethod allocate-space ((pane viewport-pane) width height)
   (with-slots (hscrollbar vscrollbar) (sheet-parent pane)
-    (move-and-resize-sheet
-      (sheet-child pane)
-      (if hscrollbar (- (gadget-value hscrollbar)) 0)
-      (if vscrollbar (- (gadget-value vscrollbar)) 0)
-      (max (space-requirement-width (compose-space (sheet-child pane)))
-           width)
-      (max (space-requirement-height (compose-space (sheet-child pane)))
-           height))
-    ; move-and-resize-sheet does not allocate space for the sheet...
-    ; so we do it manually for this case, which may be wrong - CHECKME
-    ; if this is the right place, reusing the above calculation might be a good idea
-    (allocate-space
-             (sheet-child pane)
-             (max (space-requirement-width (compose-space (sheet-child pane))) width)
-             (max (space-requirement-height (compose-space (sheet-child pane))) height))))
+    (let* ((child            (sheet-child pane))
+           (child-space      (compose-space child))
+           (child-width      (space-requirement-width child-space))
+           (child-min-width  (space-requirement-min-width child-space))
+           (child-height     (space-requirement-height child-space))
+           (child-min-height (space-requirement-min-height child-space)))
+        (move-and-resize-sheet child
+             (if hscrollbar (- (gadget-value hscrollbar)) 0)
+             (if vscrollbar (- (gadget-value vscrollbar)) 0)
+             (max child-width  width)
+             (max child-height height))
+        ; move-and-resize-sheet does not allocate space for the sheet...
+        ; so we do it manually for this case, which may be wrong - CHECKME
+        ; if this is the right place, reusing the above calculation might be a good idea
+        (allocate-space child
+             (max child-min-width child-width  width)
+             (max child-min-height child-height height)))))
 
 ;;;;
 ;;;; SCROLLER-PANE
@@ -1579,6 +1554,7 @@ During realization the child of the spacing will have as cordinates
     (if viewport
         (let ((req
                ; v-- where does this requirement come from?
+               ;     a: just an arbitrary default
                (make-space-requirement
                 :width 300 :height 300 :max-width +fill+ :max-height +fill+
                 :min-width 30
@@ -1604,7 +1580,7 @@ During realization the child of the spacing will have as cordinates
 
 (defmethod allocate-space ((pane scroller-pane) width height)
   (with-slots (viewport vscrollbar hscrollbar) pane
-    (let ((viewport-width  (if vscrollbar (- width *scrollbar-thickness*) width))
+    (let ((viewport-width  (if vscrollbar (- width  *scrollbar-thickness*) width))
           (viewport-height (if hscrollbar (- height *scrollbar-thickness*) height)))
       
       (when vscrollbar
@@ -1659,10 +1635,11 @@ During realization the child of the spacing will have as cordinates
 
       (when viewport
         (setf (sheet-transformation viewport)
-              (make-translation-transformation (if vscrollbar *scrollbar-thickness* 0) 0))
+              (make-translation-transformation
+                   (if vscrollbar *scrollbar-thickness* 0) 0))
         (allocate-space viewport
                         viewport-width
-                        viewport-height)) )))
+                        viewport-height)))))
 
 ;;;; Initialization
 
@@ -1684,26 +1661,26 @@ During realization the child of the spacing will have as cordinates
 
 (defmethod scroller-pane/update-scroll-bars ((pane scroller-pane))
   (with-slots (viewport hscrollbar vscrollbar) pane
-    (let ((scrollee (first (sheet-children viewport))))
+    (let* ((scrollee (first (sheet-children viewport)))
+           (scrollee-sr (sheet-region scrollee))
+           (viewport-sr (sheet-region viewport)))
       ;;
       (when hscrollbar
-        (setf (gadget-min-value hscrollbar)      (bounding-rectangle-min-x (sheet-region scrollee))
-              (gadget-max-value hscrollbar)      (max
-                                                  (- (bounding-rectangle-max-x (sheet-region scrollee))
-                                                     (bounding-rectangle-width (sheet-region viewport)))
-                                                  (bounding-rectangle-min-x (sheet-region scrollee)))
-              (scroll-bar-thumb-size hscrollbar) (bounding-rectangle-width (sheet-region viewport))
+        (setf (gadget-min-value hscrollbar)      (bounding-rectangle-min-x scrollee-sr)
+              (gadget-max-value hscrollbar)      (max (- (bounding-rectangle-max-x scrollee-sr)
+                                                         (bounding-rectangle-width viewport-sr))
+                                                      (bounding-rectangle-min-x scrollee-sr))
+              (scroll-bar-thumb-size hscrollbar) (bounding-rectangle-width viewport-sr)
               (gadget-value hscrollbar :invoke-callback nil)
               (- (nth-value 0 (transform-position (sheet-transformation scrollee) 0 0)))
               ))
       ;;
       (when vscrollbar
-        (setf (gadget-min-value vscrollbar)      (bounding-rectangle-min-y (sheet-region scrollee))
-              (gadget-max-value vscrollbar)      (max 
-                                                  (- (bounding-rectangle-max-y (sheet-region scrollee))
-                                                     (bounding-rectangle-height (sheet-region viewport)))
-                                                  (bounding-rectangle-min-y (sheet-region scrollee)))
-              (scroll-bar-thumb-size vscrollbar) (bounding-rectangle-height (sheet-region viewport))
+        (setf (gadget-min-value vscrollbar)      (bounding-rectangle-min-y scrollee-sr)
+              (gadget-max-value vscrollbar)      (max (- (bounding-rectangle-max-y scrollee-sr)
+                                                         (bounding-rectangle-height viewport-sr))
+                                                      (bounding-rectangle-min-y scrollee-sr))
+              (scroll-bar-thumb-size vscrollbar) (bounding-rectangle-height viewport-sr)
               (gadget-value vscrollbar :invoke-callback nil)
               (- (nth-value 1 (transform-position (sheet-transformation scrollee) 0 0)))
               )))))
@@ -1769,12 +1746,15 @@ During realization the child of the spacing will have as cordinates
 
 ;;;; Accounting for changed space requirements
 
+; Well, this is definitely wrong - the second method will overwrite the first...
+; FIXME
+
 (defmethod note-space-requirements-changed ((pane viewport-pane) client)
   (declare (ignore client))
   (setf (pane-space-requirement pane) nil)
   (setf (pane-current-width pane) nil)
   (setf (pane-current-height pane) nil)
-  (change-space-requirements pane) )
+  (change-space-requirements pane))
 
 (defmethod note-space-requirements-changed ((pane viewport-pane) scrollee)
   ;; hmmm
@@ -1783,7 +1763,6 @@ During realization the child of the spacing will have as cordinates
                        (space-requirement-width (compose-space scrollee)))
                   (max (bounding-rectangle-height pane)
                        (space-requirement-height (compose-space scrollee)))) )
-  
 
 (defmethod note-space-requirements-changed :after ((pane viewport-pane) scrollee)
   ;; hmmm
@@ -2043,6 +2022,7 @@ During realization the child of the spacing will have as cordinates
 (defmethod* (setf window-viewport-position) (x y (pane clim-stream-pane))
   (scroll-extent pane x y))
 
+;; this function appears to be unused, however...
 ;; v-- does this handle scrolling with occlusion? ie, if another thing is overlapping
 ;; the area being scrolled, will we copy junk off the top? -- BTS
 (defun scroll-area (pane dx dy)
@@ -2257,3 +2237,7 @@ During realization the child of the spacing will have as cordinates
 (defmethod text-style-width (ts (sheet sheet))
   (text-style-width ts (sheet-medium sheet)))
 
+; timer-event convenience
+
+(defmethod schedule-timer-event ((pane pane) token delay)
+  (schedule-event pane (make-instance 'timer-event :token token :sheet pane) delay))

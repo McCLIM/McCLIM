@@ -92,9 +92,14 @@
     (with-text-style (stream style)
       (if (menu-item-option menu-item :active t)
           (princ (menu-item-display menu-item) stream)
-          (with-drawing-options (stream :ink (compose-over (compose-in (medium-foreground stream) ; XXX it should be (MEDIUM-INK), but CLX backend is too stupid. -- APD, 2002-08-07
-                                                                       (make-opacity 0.5))
-                                                           (medium-background stream)))
+          (with-drawing-options (stream :ink (compose-over
+                                                (compose-in
+                                                  ; XXX it should be (MEDIUM-INK),
+                                                  ; but CLX backend is too stupid.
+                                                  ; -- APD, 2002-08-07
+                                                  (medium-foreground stream)
+                                                  (make-opacity 0.5))
+                                                (medium-background stream)))
             (princ (menu-item-display menu-item) stream))))))
 
 (defun draw-standard-menu
@@ -147,23 +152,24 @@
   (let* ((associated-frame (if associated-window
                                (pane-frame associated-window)
                                *application-frame*))
-         (fm (frame-manager associated-frame))
-         (stream (make-pane-1 fm associated-frame 'command-menu-pane
-			      :background +gray80+))
-	 (raised (make-pane-1 fm associated-frame 'raised-pane
-			      :border-width 2 :background +gray80+
-			      :contents (list stream)))
-         (frame (make-menu-frame #+nil stream raised
-                                 :left nil
-                                 :top nil)))
-    (adopt-frame fm frame)
-    (change-space-requirements stream :width 1 :height 1)
-    (unwind-protect
-         (progn
-           (setf (stream-end-of-line-action stream) :allow
-                 (stream-end-of-page-action stream) :allow)
-           (funcall continuation stream))
-      (disown-frame fm frame))))
+         (fm (frame-manager associated-frame)))
+    (with-look-and-feel-realization (fm associated-frame) ; hmm... checkme
+      (let* ((stream (make-pane-1 fm associated-frame 'command-menu-pane
+			          :background +gray80+))
+	     (raised (make-pane-1 fm associated-frame 'raised-pane
+			          :border-width 2 :background +gray80+
+			          :contents (list stream)))
+             (frame (make-menu-frame raised
+                                     :left nil
+                                     :top  nil)))
+          (adopt-frame fm frame)
+          (change-space-requirements stream :width 1 :height 1)
+          (unwind-protect
+               (progn
+                 (setf (stream-end-of-line-action stream) :allow
+                       (stream-end-of-page-action stream) :allow)
+                 (funcall continuation stream))
+            (disown-frame fm frame))))))
 
 (define-presentation-type menu-item ())
 

@@ -487,6 +487,7 @@
 		 (when (and success (eq mode :complete))
 		   (unread-gesture gesture :stream stream))
 		 ;; Get completion from menu
+(format *debug-io* "nmatches = ~A, mode = ~A~%" nmatches mode)
 		 (when (and (> nmatches 0) (eq mode :possibilities))
 		   (multiple-value-bind (menu-object item event)
 		       (menu-choose (possibilities-for-menu possibilities))

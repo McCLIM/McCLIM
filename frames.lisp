@@ -32,9 +32,7 @@
   ((port :initarg :port
 	 :reader frame-manager-port)
    (frames :initform nil
-	   :reader frame-manager-frames)
-   )
-  )
+	   :reader frame-manager-frames)))
 
 (defun frame-manager-p (x)
   (typep x 'frame-manager))
@@ -176,6 +174,8 @@ FRAME-EXIT condition."))
 ;(defgeneric frame-properties (frame property))
 ;(defgeneric (setf frame-properties) (value frame property))
 
+; extension
+(defgeneric frame-schedule-timer-event (frame sheet delay token))
 
 (defclass standard-application-frame (application-frame)
   ((event-queue :initarg :frame-event-queue
@@ -655,7 +655,8 @@ FRAME-EXIT condition."))
 (defmethod adopt-frame ((fm frame-manager) (frame menu-frame))
   (setf (slot-value fm 'frames) (cons frame (slot-value fm 'frames)))
   (setf (frame-manager frame) fm)
-  (let* ((t-l-s (make-pane-1 fm *application-frame* 'unmanaged-top-level-sheet-pane
+  (let* ((t-l-s (make-pane-1 fm *application-frame*
+                             'unmanaged-top-level-sheet-pane
 			     :name 'top-level-sheet)))
     (setf (slot-value frame 'top-level-sheet) t-l-s)
     (sheet-adopt-child t-l-s (frame-pane frame))
@@ -929,7 +930,6 @@ FRAME-EXIT condition."))
 	  (maybe-unhighlight nil)
 	  (setf (frame-hilited-presentation frame) nil))))
   (frame-update-pointer-documentation frame input-context stream event))
-
 
 (defun simple-event-loop ()
   "An simple event loop for applications that want all events to be handled by
