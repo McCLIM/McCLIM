@@ -25,7 +25,7 @@
 
 (defvar *default-server-path* nil)
 
-(defvar *server-path-search-order* '(:genera :ms-windows :gtk :clx :x11 :opengl))
+(defvar *server-path-search-order* '(:genera :ms-windows :gtk :clx :x11 :opengl :beagle))
 
 (defun find-default-server-path ()
   (loop for port in *server-path-search-order*
