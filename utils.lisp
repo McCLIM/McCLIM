@@ -40,7 +40,6 @@
   (assert (and (listp form)
                (= 2 (length form)))))
 
-(shadow 'letf)
 (defmacro letf ((&rest forms) &body body &environment env)
   "LETF ({(Place Value)}*) Declaration* Form* During evaluation of the
 Forms, SETF the Places to the result of evaluating the Value forms.
