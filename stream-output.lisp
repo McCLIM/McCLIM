@@ -73,10 +73,12 @@
     (print-unreadable-object (cursor stream :type t :identity t)
       (format stream "~D ~D " x y))))
 
-(defmethod (setf cursor-visibility) :after (nv (cursor cursor))
-  (if nv
-      (display-cursor cursor :draw)
-    (display-cursor cursor :erase)))
+(defmethod (setf cursor-visibility) :around (nv (cursor cursor))
+  (let ((ov (slot-value cursor 'visibility)))
+    (prog1
+	(call-next-method)
+      (when (not (eq ov nv))
+	(flip-screen-cursor cursor)))))
 
 (defmethod cursor-position ((cursor cursor))
   (with-slots (x y) cursor
@@ -87,11 +89,20 @@
 (defmethod* (setf cursor-position) (nx ny (cursor cursor))
   (with-slots (x y visibility) cursor
     (if visibility
-	(display-cursor cursor :erase))
+	(flip-screen-cursor cursor))
     (setq x nx
 	  y ny)
     (if visibility
-	(display-cursor cursor :draw))))
+	(flip-screen-cursor cursor))))
+
+(defmethod flip-screen-cursor ((cursor cursor))
+  (with-slots (x y sheet width) cursor
+    (with-slots (height) sheet
+      (draw-rectangle* (sheet-medium (cursor-sheet cursor))
+				x y
+				(+ x width) (+ y height)
+				:filled t
+				:ink +flipping-ink+))))
 
 (defmethod display-cursor ((cursor cursor) state)
   (with-slots (x y sheet width) cursor
@@ -179,6 +190,22 @@
 (defmethod stream-increment-cursor-position ((stream standard-extended-output-stream) dx dy)
   (multiple-value-bind (x y) (cursor-position (stream-text-cursor stream))
     (setf (cursor-position (stream-text-cursor stream)) (values (+ x dx) (+ y dy)))))
+
+;;;
+
+(defmethod repaint-sheet :around ((stream standard-extended-output-stream)
+				  region)
+  (let ((cursor (stream-text-cursor stream)))
+    (if (cursor-visibility cursor)
+	(progn
+	  ;; Erase the cursor so that the subsequent flip operation will make a
+	  ;; cursor, whether or not the next-method erases the location of the
+	  ;; cursor.
+	  ;; XXX clip to region?  No one else seems to...
+	  (display-cursor cursor :erase)
+	  (call-next-method)
+	  (flip-screen-cursor cursor))
+	(call-next-method))))
 
 (defmethod scroll-vertical ((stream standard-extended-output-stream) dy)
   (multiple-value-bind (tx ty) (bounding-rectangle-position (sheet-region stream))

@@ -71,7 +71,7 @@
 		    rest-args)
 	   (let ((result (stream-process-gesture stream gesture type)))
 	     (when result
-	       	(vector-push-extend result (stream-input-buffer stream))
+	       	(vector-push-extend result buffer)
 		(incf insertion-pointer))))))))
 
 (defmethod stream-unread-gesture ((stream standard-input-editing-stream)

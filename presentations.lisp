@@ -1393,7 +1393,7 @@ function lambda list"))
     (object object-type event options)
     (with-input-editing (stream)
       (when defaultp
-	;; If the user supplies empty input, return a default.  This my best
+	;; If the user supplies empty input, return a default.  This is my best
 	;; guess as to what "empty" means.
 	(let ((initial-char (read-gesture :stream stream :peek-p t)))
 	  (cond ((activation-gesture-p initial-char)

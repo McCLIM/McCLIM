@@ -89,7 +89,9 @@
 	(let ((dashes (line-style-dashes line-style)))
 	  (unless (null dashes)
 	    (setf (xlib:gcontext-line-style gc) :dash
-		  (xlib:gcontext-dashes gc) (if (eq dashes t) 3 dashes)))))
+		  (xlib:gcontext-dashes gc) (if (eq dashes t) 3
+						dashes)))))
+      (setf (xlib:gcontext-function gc) boole-1)
       (setf (xlib:gcontext-font gc) (text-style-to-X-font port (medium-text-style medium))
 	    (xlib:gcontext-foreground gc) (X-pixel port ink)
 	    (xlib:gcontext-background gc) (X-pixel port (medium-background medium)))
@@ -106,9 +108,15 @@
   (medium-gcontext medium (medium-background medium)))
 
 (defmethod medium-gcontext ((medium clx-medium) (ink (eql +flipping-ink+)))
-  (let ((gc (medium-gcontext medium (medium-background medium))))
-    (setf (xlib:gcontext-background gc)
-	  (X-pixel (port medium) (medium-foreground medium)))
+  (let* ((gc (medium-gcontext medium (medium-background medium)))
+	 (port (port medium))
+	 (flipper (logxor (X-pixel port (medium-foreground medium))
+			  (X-pixel port (medium-background medium)))))
+    ;; Now, (logxor flipper foreground) => background
+    ;; (logxor flipper background) => foreground
+    (setf (xlib:gcontext-function gc) boole-xor)
+    (setf (xlib:gcontext-foreground gc) flipper)
+    (setf (xlib:gcontext-background gc) flipper)
     gc))
 
 (defun clipping-region->rect-seq (clipping-region)

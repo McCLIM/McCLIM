@@ -15,10 +15,6 @@ Install instructions for CMU Common Lisp
 
    (load "system.lisp")
 
-4. Load the file patch-cmu.lisp
-
-   (load "patch-cmu.lisp")
-
 5. Load the source code of the system:
 
    (operate-on-system :clim :load :load-source-instead-of-binary t)
@@ -37,6 +33,8 @@ Install instructions for CMU Common Lisp
    (operate-on-system :clim-clx :load)
    (operate-on-system :clim-examples :load)
 
+Or just do all of the above:
+   (build-everything)
 Running the demos
 -----------------
 
