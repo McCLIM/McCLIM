@@ -61,15 +61,15 @@
 	(setf (gap obj) 0)
 	(setf (gap-size obj) (size-increment obj)))))
 
-(define-condition flexivector-bounds-error (error)
+(define-condition flexivector-bounds-error (goatee-error)
   ((flexivector :reader flexivector-bounds-error-flexivector
 		:initarg :flexivector :initform nil)
    (pos :reader flexivector-bounds-error-pos :initarg :pos :initform nil))
   (:report (lambda (condition stream)
 	     (format stream "Position ~S is out of bounds for flexivector ~S~
 of size ~S"
-		     (pos condition)
-		     (flexivector condition)
+		     (flexivector-bounds-error-pos condition)
+		     (flexivector-bounds-error-flexivector condition)
 		     (size (flexivector condition))))))
 
 (defmethod char-ref ((fv flexivector) pos)

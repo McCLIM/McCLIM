@@ -54,7 +54,7 @@
 	      'simple-screen-area
 	      :stream *standard-output*
 	      :buffer (make-instance
-		       'basic-buffer
+		       'editable-buffer
 		       :initial-contents "The fox jumped over the goatee.")
 	      :x-position cx
 	      :y-position cy))))

@@ -37,7 +37,8 @@
   (:method ((stream t))
     nil))
 
-(defclass standard-input-editing-stream (input-editing-stream
+(defclass standard-input-editing-stream (goatee:goatee-input-editing-mixin
+					 input-editing-stream
 					 standard-encapsulating-stream)
   ((buffer :reader stream-input-buffer
 	   :initform (make-array 16 :adjustable t :fill-pointer 0))
@@ -69,14 +70,13 @@
 	   ;; If activated, insertion pointer is at fill pointer
 	   ((stream-activated stream)
 	    (return-from stream-read-gesture (values nil :eof)))
-	   (t (multiple-value-bind (gesture type)
-		  (apply #'stream-read-gesture
-			 (encapsulating-stream-stream stream)
-			 rest-args)
-		(let ((result (stream-process-gesture stream gesture type)))
-		  (when result
-		    (vector-push-extend result buffer)
-		    (incf insertion-pointer)))))))))
+	   (t (loop for result = (multiple-value-bind (gesture type)
+				     (apply #'stream-read-gesture
+					    (encapsulating-stream-stream stream)
+					    rest-args)
+				   (stream-process-gesture stream gesture type))
+		    until result))))))
+
 
 
 (defmethod stream-unread-gesture ((stream standard-input-editing-stream)
@@ -87,24 +87,17 @@
 
 (defgeneric stream-process-gesture (stream gesture type))
 
-;;; This will get beefed up, obviously
-
-(defmethod stream-process-gesture ((stream standard-input-editing-stream)
-				   gesture type)
-  (declare (ignore type))
+;;; The editing functions of stream-process-gesture are performed by the
+;;; primary method on goatee-input-editing-mixin
+(defmethod stream-process-gesture :after ((stream standard-input-editing-stream)
+					  gesture
+					  type)
   (when (activation-gesture-p gesture)
-    (setf (stream-activated stream) t)
-    (setf (stream-insertion-pointer stream)
-	  (fill-pointer (stream-input-buffer stream))))
-  (if (characterp gesture)
-      (progn
-	;XXX going away shortly.
-	(when (encapsulating-stream-stream stream)
-	  (write-char (if (eql gesture #\Return)
-			  #\Newline
-			   gesture)
-		      stream))
-	gesture)))
+    (unless (eql (stream-insertion-pointer stream)
+		 (fill-pointer (stream-input-buffer stream)))
+      (format *debug-io* "Editing stream activated, but IP is not at FP.~%")
+      (break))
+    (setf (stream-activated stream) t)))
 
 (defmacro with-activation-gestures ((gestures &key override) &body body)
   ;; XXX Guess this implies that gestures need to be defined at compile time.
@@ -135,7 +128,7 @@
 	finally (return nil)))
 
 (defmacro with-input-editing ((&optional (stream t)
-			       &key input-sensitizer initial-contents
+			       &key input-sensitizer (initial-contents "")
 			       (class ''standard-input-editing-stream))
 			      &body body)
   (if (eq stream t)
@@ -152,11 +145,13 @@
 
 (defmethod invoke-with-input-editing ((stream extended-input-stream)
 				      continuation
-				       input-sensitizer
+				      input-sensitizer
 				      initial-contents
 				      class)
-  (declare (ignore input-sensitizer initial-contents))
-  (let ((editing-stream (make-instance class :stream stream)))
+  (declare (ignore input-sensitizer))
+  (let ((editing-stream (make-instance class
+				       :stream stream
+				       :initial-contents initial-contents)))
     (loop
      (block rescan
        (handler-bind ((rescan-condition #'(lambda (c)
@@ -164,8 +159,7 @@
 					    (reset-scan-pointer editing-stream)
 					    (return-from rescan nil))))
 	 (return-from invoke-with-input-editing
-	   (multiple-value-prog1
-	       (funcall continuation editing-stream))))))))
+	   (funcall continuation editing-stream)))))))
 
 (defmethod invoke-with-input-editing
     (stream continuation input-sensitizer initial-contents class)
@@ -211,7 +205,7 @@
     (incf (fill-pointer buffer) n)
     (replace buffer buffer :start1 (+ pos n) :start2 pos :end2 fill)))
 
-
+#+nil
 (defmethod input-editor-format ((stream standard-input-editing-stream)
 				format-string
 				&rest format-args)
@@ -232,6 +226,13 @@
       (incf scan-pointer))
     (when (encapsulating-stream-stream stream)
       (write-string (noise-string noise)   stream))))
+
+;;; XXX For now...
+(defmethod input-editor-format ((stream standard-input-editing-stream)
+				format-string
+				&rest format-args)
+  (declare (ignore format-string format-args))
+  nil)
 
 
 (defun read-token (stream &key

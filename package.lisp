@@ -1906,5 +1906,8 @@
 
 (defpackage :GOATEE
   (:use :clim :clim-lisp :clim-sys)
-  (:import-from #:clim-internals #:letf))
+  (:import-from #:clim-internals #:letf)
+  (:export
+   "GOATEE-INPUT-EDITING-MIXIN"
+   "GOATEE-PROCESS-GESTURE"))
 

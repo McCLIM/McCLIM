@@ -55,18 +55,25 @@
    (cursor :accessor cursor :initarg :cursor :initform nil)))
 
 (defun line-contents-sans-newline (buffer-line &key destination)
-  (let* ((line-size (size buffer-line))
-	 (last-char (char-ref buffer-line (1- line-size)))
-	 (contents-size (if (char= last-char #\Newline )
-			    (1- line-size)
-			    line-size)))
-    (if destination
-	(progn
-	  (adjust-array destination contents-size
-			:fill-pointer contents-size)
-	  (flexivector-string-into buffer-line destination
-				   :end2 contents-size))
-	(flexivector-string buffer-line :end contents-size))))
+  (let* ((line-size (size buffer-line)))
+    (if (zerop line-size)
+	(if destination
+	    (progn
+	      (setf (fill-pointer destination) 0)
+	      destination)
+	    "")
+	(let* ((last-char (char-ref buffer-line (1- line-size)))
+	       (contents-size (if (char= last-char #\Newline )
+				  (1- line-size)
+				  line-size)))
+	  (if destination
+	      (progn
+		(adjust-array destination contents-size
+			      :fill-pointer contents-size)
+		(flexivector-string-into buffer-line destination
+					 :end2 contents-size))
+	      (flexivector-string buffer-line :end contents-size))))))
+
 
 (defmethod initialize-instance :after
     ((obj screen-line) &key (current-contents nil current-contents-p))
@@ -157,9 +164,13 @@
 	(setf (vertical-spacing area) (stream-vertical-spacing stream))
 	(error "One of :vertical-spacing or :stream must be specified.")))
   (when (not (slot-boundp area 'cursor))
-    (setf (cursor area)
+    (multiple-value-bind (x y)
+	(output-record-position area)
+      (setf (cursor area)
 	  (make-instance 'screen-area-cursor
-			 :sheet (stream area))))
+			 :sheet (stream area)
+			 :x-position x
+			 :y-position y))))
   (initialize-area-from-buffer area (buffer area))
   (setf (cursor-visibility (cursor area)) t)
   (tree-recompute-extent area))
@@ -344,16 +355,17 @@
 (defmethod line-update-cursor ((line screen-line) stream)
   (multiple-value-bind (point-line point-pos)
       (point* (buffer (editable-area line)))
-    (with-slots (cursor baseline ascent current-contents) line
+    (with-slots (cursor baseline ascent current-contents x) line
       (if (eq point-line (buffer-line line))
 	  (setf cursor (cursor (editable-area line)))
 	  (setf cursor nil))
       (when cursor
-	(let ((cursor-x (stream-string-width
-			 stream
-			 current-contents
-			 :end point-pos
-			 :text-style (text-style (editable-area line)))))
+	(let ((cursor-x (+ x
+			   (stream-string-width
+			    stream
+			    current-contents
+			    :end point-pos
+			    :text-style (text-style (editable-area line))))))
 	  (setf (screen-line cursor) line)
 	  (setf (cursor-position cursor)
 		(values cursor-x
@@ -372,15 +384,3 @@ origin)"
 			 (+ x right) (+ y ascent descent)
 			 :ink (medium-background medium)
 			 :filled t)))))
-
-;;; Don't know if this is a good place for this...
-
-(defun make-input-editing-stream-snapshot (stream area)
-  (let ((buffer (buffer area)))
-    (buffer-string buffer :result (stream-input-buffer stream))
-    (multiple-value-bind (point-line pos)
-	(point* buffer)
-      (loop for line = (dbl-head (lines buffer))
-	    until (eq line point-line)
-	    accumulating (size line) into ip
-	    finally (setf (insertion-pointer stream) (+ ip pos))))))

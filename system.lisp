@@ -64,7 +64,7 @@
   #+:SBCL      "Lisp-Dep/fix-sbcl"
   "package")
 
-(clim-defsystem (:clim)
+(clim-defsystem (:clim-core)
    ;; First possible patches
    #+:CMU       "Lisp-Dep/fix-cmu"
    #+:EXCL	"Lisp-Dep/fix-acl"
@@ -107,6 +107,20 @@
    "stream-output"
    "recording"
    "stream-input"
+)
+
+(clim-defsystem (:goatee-core :depends-on (:clim-core))
+  "Goatee/conditions"
+  "Goatee/dbl-list"
+  "Goatee/flexivector"
+  "Goatee/buffer"
+  "Goatee/editable-area"
+  "Goatee/clim-area"
+  "Goatee/goatee-command"
+  "Goatee/editing-stream"
+  )
+
+(clim-defsystem (:clim :depends-on (:clim-core :goatee-core))
    "input-editing"
    "presentations"
    "commands"
@@ -160,14 +174,8 @@
    "Examples/transformations-test"
    "Examples/stream-test"
    "Examples/presentation-test"
-   "Examples/gadget-test")
+   "Examples/gadget-test"
+   "Goatee/goatee-test")
 
-(clim-defsystem (:goatee :depends-on (:clim))
-  "Goatee/dbl-list"
-  "Goatee/flexivector"
-  "Goatee/buffer"
-  "Goatee/editable-area"
-  "Goatee/clim-area"
-  "Goatee/goatee-command"
-  "Goatee/goatee-test")
+
 

@@ -71,8 +71,8 @@
 (defclass cursor-mixin ()
   ((sheet :initarg :sheet
 	  :reader cursor-sheet)
-   (x :initform 0)
-   (y :initform 0)
+   (x :initform 0 :initarg :x-position)
+   (y :initform 0 :initarg :y-position)
    (width :initform 8)
    (visibility :initform nil
 	       :accessor cursor-visibility)))

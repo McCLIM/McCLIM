@@ -37,6 +37,11 @@
 
 (defgeneric lookup-gesture-command (gesture table))
 
+(defmethod lookup-gesture-command :around (gesture table)
+  (if (activation-gesture-p gesture)
+      #'insert-activation-gesture
+      (call-next-method)))
+
 (defmethod lookup-gesture-command ((gesture character) table)
   (cdr (assoc 0 (gethash gesture table nil))))
 
@@ -56,12 +61,20 @@
 (defvar *area*)
 (defvar *buffer*)
 
+(defvar *error-fallthrough* nil)
+
 (defmethod execute-gesture-command (gesture (area editable-area) table)
   (let ((command (lookup-gesture-command gesture table)))
     (if command
 	(let ((*area* area)
 	      (*buffer* (buffer area)))
-	  (funcall command :input-gesture gesture)
+	  (block error-out
+	    (handler-bind ((goatee-error #'(lambda (c)
+					     (unless *error-fallthrough*
+					       (print c *debug-io*)
+					       (beep)
+					       (return-from error-out nil)))))
+	      (funcall command :input-gesture gesture)))
 	  (redisplay-area area)))))
 
 (defun insert-character (&key input-gesture &allow-other-keys)
@@ -85,6 +98,10 @@
 
 (defun beginning-line (&key &allow-other-keys)
   (setf (point* *buffer*) (beginning-of-line* *buffer*)))
+
+(defun insert-activation-gesture (&key input-gesture &allow-other-keys)
+  (setf (point* *buffer*) (end-of-buffer* *buffer*))
+  (insert *buffer* input-gesture))
 
 (loop for i from (char-code #\space) to (char-code #\~)
       do (add-gesture-command-to-table (code-char i)
@@ -122,3 +139,4 @@
 (add-gesture-command-to-table '(#\b :control :meta)
 			      'goatee-break
 			      *simple-area-gesture-table*)
+

@@ -30,7 +30,7 @@
 (defclass dbl-list (dbl-super)
   ((prev :accessor prev :initarg :prev :initform nil)))
 
-(defgeneric dbl-insert-after (dbl-list new-element))
+(defgeneric dbl-insert-after (new-element dbl-list))
 
 (defmethod dbl-insert-after ((new-element dbl-list) (dbl-list dbl-super))
   (setf (prev new-element) dbl-list)
@@ -40,7 +40,7 @@
   (setf (next dbl-list) new-element)
   new-element)
 
-(defgeneric dbl-insert-before (dbl-list new-element))
+(defgeneric dbl-insert-before (new-element dbl-list))
 
 (defmethod dbl-insert-before ((new-element dbl-list) (dbl-list dbl-list))
   (setf (next new-element) dbl-list)
