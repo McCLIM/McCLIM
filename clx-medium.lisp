@@ -50,6 +50,10 @@
         (unless (null dashes)
           (setf (xlib:gcontext-line-style gc) :dash
                 (xlib:gcontext-dashes gc) (if (eq dashes t) 3 dashes))))
+      (let ((clipping-region (medium-clipping-region medium)))
+        (unless (eq clipping-region +everywhere+)
+          (setf (xlib:gcontext-clip-mask gc :yx-banded)
+                (clipping-region->rect-seq medium clipping-region))))
       gc)))
 
 (defmethod medium-gcontext ((medium clx-medium) (ink (eql +foreground-ink+)))
@@ -62,6 +66,15 @@
   (let ((gc (medium-gcontext medium (medium-background medium))))
     (setf (xlib:gcontext-background gc) (X-pixel (port medium) (medium-foreground medium)))
     gc))
+
+(defun clipping-region->rect-seq (medium clipping-region)
+  (loop for region in (nreverse (region-set-regions clipping-region
+                                                    :normalize :x-banding))
+        as rectangle = (transform-region (medium-transformation medium) region)
+        nconcing (list (round (rectangle-min-x rectangle))
+                       (round (rectangle-min-y rectangle))
+                       (round (rectangle-width rectangle))
+                       (round (rectangle-height rectangle)))))
 
 (defmacro with-CLX-graphics ((medium) &body body)
   `(let* ((port (port ,medium))
