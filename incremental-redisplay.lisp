@@ -220,6 +220,40 @@ spatially organized data structure.
 			    (or (not (pane-incremental-redisplay pane))
 				(not *enable-updating-output*))))))
 
+(defgeneric incremental-redisplay
+    (stream position erases moves draws erase-overlapping move-overlapping))
+
+(defmethod incremental-redisplay
+    ((stream updating-output-stream-mixin) position
+     erases moves draws erase-overlapping move-overlapping)
+  (declare (ignore position))
+  (let ((history (stream-output-history stream)))
+    (with-output-recording-options (stream :record nil :draw t)
+      (loop
+	 for (nil br) in erases
+	 do (erase-rectangle stream br))
+      (loop
+	 for (nil old-bounding) in moves
+	 do (erase-rectangle stream old-bounding))
+      (loop
+	 for (nil br) in erase-overlapping
+	 do (erase-rectangle stream br))
+      (loop
+	 for (nil old-bounding) in move-overlapping
+	 do (erase-rectangle stream old-bounding)))
+    (loop
+       for (r) in moves
+       do (replay r stream))
+    (loop
+       for (r) in draws
+       do (replay r stream))
+    (loop
+       for (r) in erase-overlapping
+       do (replay history stream r))
+    (loop
+       for (r) in move-overlapping
+	do (replay history stream r) )))
+
 (defclass updating-stream-state (complete-medium-state)
   ((cursor-x :accessor cursor-x :initarg :cursor-x :initform 0)
    (cursor-y :accessor cursor-y :initarg :cursor-y :initform 0)))
@@ -267,11 +301,6 @@ spatially organized data structure.
       (match-output-records state :cursor-x cx :cursor-y cy))))
 
 (define-protocol-class updating-output-record (output-record))
-
-(defgeneric output-record-dirty (record))
-
-(defmethod output-record-dirty ((record output-record))
-  t)
 
 (defclass updating-output-record-mixin (updating-output-map-mixin
 					standard-sequence-output-record)
@@ -332,6 +361,7 @@ updating-output-parent above this one in the tree.")
 (defmethod shared-initialize :after
     ((obj updating-output-record-mixin) slot-names
      &key (x-position 0.0d0) (y-position 0.0d0))
+  (declare (ignore x-position y-position))
   (declare (ignore slot-names))
   (setf (explicit-moves obj) nil))
 
@@ -513,7 +543,9 @@ updating-output-parent above this one in the tree.")
 (defgeneric map-over-displayed-output-records
     (function root use-old-elements clean clip-region)
   (:documentation "Call function on all displayed-output-records in ROOT's
- tree, respecting use-old-elements."))
+ tree. If USE-OLD-ELEMENTS is true, descend the old branch of
+updating output records. If CLEAN is true, descend into clean updating output
+records. "))
 
 (defmethod map-over-displayed-output-records :around
     (function root use-old-elements clean (clip-rectangle bounding-rectangle))
@@ -614,6 +646,28 @@ updating-output-parent above this one in the tree.")
     (when (region-intersects-region-p record clip-rectangle)
       (call-next-method))))
 
+;;; Variation on a theme. Refactor, refactor...
+
+(defgeneric map-over-obsolete-display (function record clip-rectangle)
+  (:method (function (record displayed-output-record) clip-rectangle)
+    (declare (ignore clip-rectangle))
+    (funcall function record))
+  (:method (function (record compound-output-record) clip-rectangle)
+    (flet ((mapper (r)
+	     (map-over-obsolete-display function r clip-rectangle)))
+      (declare (dynamic-extent #'mapper))
+      (map-over-output-records #'mapper record)))
+  (:method (function (record standard-updating-output-record) clip-rectangle)
+    (when (eq (output-record-dirty record) :updating)
+      (map-over-obsolete-display function (sub-record record) clip-rectangle)))
+  (:method (function record clip-rectangle)
+    (declare (ignore function record clip-rectangle))
+    nil)
+  (:method :around (function record (clip-rectangle bounding-rectangle))
+    (declare (ignore function))
+    (when (region-intersects-region-p record clip-rectangle)
+      (call-next-method))))
+
 (defun find-existing-record (display-record root visible-region)
   "Returns a display record that is output-record-equal to display-record
   within visible-region and not under an updating-output record"
@@ -630,37 +684,39 @@ updating-output-parent above this one in the tree.")
     (make-bounding-rectangle min-x min-y max-x max-y)))
 
 (defmethod compute-difference-set ((record standard-updating-output-record)
-				   &optional check-overlapping
+				   &optional (check-overlapping t)
 				   offset-x offset-y
 				   old-offset-x old-offset-y)
-  (declare (ignore check-overlapping offset-x offset-y
-		   old-offset-x old-offset-y))
+  (declare (ignore offset-x offset-y old-offset-x old-offset-y))
   (when (eq (output-record-dirty record) :clean)
     (return-from compute-difference-set (values nil nil nil nil nil)))
-  (let ((existing-output-records (make-hash-table :test #'eq))
-	(draws nil)
-	(moves (explicit-moves record))
-	(erases nil)
-	;; XXX Performance hack. Need to work out the implications for deleted
-	;; gadgets and stuff
-	(visible-region (pane-viewport-region (updating-output-stream
-					       record)))
-	(old-children (if (slot-boundp record 'old-children)
-			  (old-children record)
-			  nil)))
+  (let* ((existing-output-records (make-hash-table :test #'eq))
+	 (draws nil)
+	 (moves (explicit-moves record))
+	 (erases nil)
+	 (erase-overlapping nil)
+	 (move-overlapping nil)
+	 (stream (updating-output-stream record))
+	 ;; XXX Performance hack. Need to work out the implications for deleted
+	 ;; gadgets and stuff
+	 (visible-region (pane-viewport-region stream))
+	 (old-children (if (slot-boundp record 'old-children)
+			   (old-children record)
+			   nil)))
     ;; XXX This means that compute-difference-set can't be called repeatedly on
     ;; the same tree; ugh. On the other hand, if we don't clear explicit-moves,
     ;; they can hang around in the tree for later passes and cause trouble.
     (setf (explicit-moves record) nil)
-    ;; Find which new output records are already on screen
+    ;; Find output records in the new tree that match a record in the old tree
+    ;; i.e., already have a valid display on the screen.
     (map-over-child-display
      (if old-children
 	 #'(lambda (r)
 	     (let ((old (find-existing-record r old-children visible-region)))
 	       (if old
 		   (setf (gethash old existing-output-records) r)
-		   (push  r draws))))
-	 #'(lambda (r) (push r draws)))
+		   (push (list r r) draws))))
+	 #'(lambda (r) (push (list r r) draws)))
      (sub-record record)
      visible-region)
     ;; Find old records that should be erased
@@ -671,40 +727,63 @@ updating-output-parent above this one in the tree.")
 					  erases)))
 			      old-children
 			      visible-region))
-    ;(break)
+    (when check-overlapping
+      (setf erase-overlapping (nconc erases draws))
+      (setf move-overlapping moves)
+      (setf erases nil)
+      (setf moves nil)
+      (setf draws nil))
     ;; Visit this record's updating-output children and merge in the
     ;; difference set. We need to visit all updating-output records, not just
     ;; ones in the visible region, because they might have old records that
     ;; lie in the visible region and that need to be erased.
-    (map-over-child-updating-output #'(lambda (r)
-					(multiple-value-bind (e m d)
-					    (compute-difference-set r)
-					  (setf erases (nconc e erases))
-					  (setf moves (nconc m moves))
-					  (setf draws (nconc d draws))))
-				    (sub-record record)
-				    nil)
-    ;; Finally, look for updating-output children that were not visited. They
-    ;; may have display records equal to ones we already have; otherwise their
-    ;; records need to be erased.
+    (map-over-child-updating-output
+     #'(lambda (r)
+	 (multiple-value-bind (e m d e-o m-o)
+	     (compute-difference-set r check-overlapping)
+	   (setf erases (nconc e erases))
+	   (setf moves (nconc m moves))
+	   (setf draws (nconc d draws))
+	   (setf erase-overlapping (nconc e-o erase-overlapping))
+	   (setf move-overlapping (nconc m-o move-overlapping))))
+     (sub-record record)
+     nil)
+    ;; Look for updating-output children that were not visited. Their
+    ;; display records need to be erased.
     (when old-children
-      (map-over-child-updating-output
-       #'(lambda (r)
-	   (when (eq (output-record-dirty r) :updating)
-	     (map-over-displayed-output-records
-	      #'(lambda (dr)		;All of them
-		  (multiple-value-bind (draws2 found)
-		      (delete-1 dr draws :test #'output-record-equal)
-		    (if found
-			(setq draws draws2)
-			(push (list dr (copy-bounding-rectange dr)) erases))))
-	      r
-	      t
-	      t
-	      visible-region)))
-       old-children
-       visible-region))
-    (values erases moves draws nil nil)))
+      (flet ((erase-obsolete (dr)		;All of them
+	       (let ((erase-chunk (list dr (copy-bounding-rectange dr))))
+		 (if check-overlapping
+		     (push erase-chunk erase-overlapping)
+		     (push erase-chunk erases)))))
+	(declare (dynamic-extent #'erase-obsolete))
+	(map-over-child-updating-output
+	 #'(lambda (r)
+	     (when (eq (output-record-dirty r) :updating)
+	       (map-over-obsolete-display #'erase-obsolete
+					  (sub-record r)
+					  visible-region)))
+	 old-children
+	 visible-region)))
+    ;; Traverse all the display records for this updating output node and do
+    ;; the notes...
+    (flet ((note-got (r)
+	     (note-output-record-got-sheet r stream))
+	   (note-lost (r)
+	     (note-output-record-lost-sheet r stream)))
+      (declare (dynamic-extent #'note-got #'note-lost))
+      (map-over-child-display #'note-got (sub-record record) nil)
+      (when old-children
+	(map-over-child-display #'note-lost old-children nil)
+	(map-over-child-updating-output
+	 #'(lambda (r)
+	     (when (eq (output-record-dirty r) :updating)
+	       (map-over-obsolete-display #'note-lost
+					  (sub-record r)
+					  nil)))
+	 old-children
+	 nil)))
+    (values erases moves draws erase-overlapping move-overlapping)))
 
 (defparameter *enable-updating-output* t
   "Switch to turn on incremental redisplay")
@@ -858,36 +937,19 @@ updating-output-parent above this one in the tree.")
 	       (compute-new-output-records record stream)
 	       (when *dump-updating-output*
 		 (dump-updating record :both *trace-output*)))
-	     (multiple-value-bind (erases moves draws)
+	     (multiple-value-bind
+		   (erases moves draws erase-overlapping move-overlapping)
 		 (compute-difference-set record check-overlapping)
 	       (when *trace-updating-output*
 		 (let ((*print-pretty* t))
-		   (format *trace-output* "erases: ~S~%moves: ~S~%draws: ~S~%"
-			   erases moves draws)))
-	       (with-output-recording-options (stream :record nil :draw t)
-		 (loop for (r br) in erases
-		    do (redisplay-delete-output-record r br stream))
-		 (loop for r in draws
-		    do (redisplay-add-output-record r stream))
-		 (loop for (r old-bounding) in moves
-		    do (clear-moved-record stream r old-bounding)))
-	       ;; Redraw all the regions that have been erased.
-	       ;; This takes care of all random records that might
-	       ;; overlap.
-	       (if check-overlapping
-		   (progn
-		     (loop for (r) in erases
-			do (replay record stream r))
-		     (loop for r in draws
-			do (replay record stream r))
-		     (loop for (r) in moves
-			  do (replay record stream r)))
-		   (progn
-		     (loop for r in draws
-			do (replay r stream))
-		     (loop for (r) in moves
-			do (replay r stream))))))
-	(delete-stale-updating-output record)
+		   (format *trace-output*
+			   "erases: ~S~%moves: ~S~%draws: ~S~%erase ~
+				    overlapping: ~S~%move overlapping: ~S~%"
+			   erases moves draws
+			   erase-overlapping move-overlapping)))
+	       (incremental-redisplay stream nil erases moves draws
+				      erase-overlapping move-overlapping))
+	     (delete-stale-updating-output record))
 	(set-medium-graphics-state current-graphics-state stream)))))
 
 (defmethod redisplay-add-output-record (record
@@ -914,6 +976,11 @@ updating-output-parent above this one in the tree.")
   (declare (ignore bounding-rectangle))
   (note-output-record-lost-sheet record stream))
 
+(defun erase-rectangle (stream bounding)
+  (with-bounding-rectangle* (x1 y1 x2 y2)
+      bounding
+    (draw-rectangle* stream x1 y1 x2 y2 :ink +background-ink+)))
+
 (defun clear-moved-record (stream new-bounding old-bounding)
   (with-bounding-rectangle* (x1 y1 x2 y2)
       new-bounding
@@ -928,11 +995,13 @@ updating-output-parent above this one in the tree.")
 
 (defmethod note-output-record-lost-sheet :around
     (record (sheet updating-output-stream-mixin))
+  (declare (ignore record))
   (when (do-note-output-record sheet)
     (call-next-method)))
 
 (defmethod note-output-record-got-sheet :around
     (record (sheet updating-output-stream-mixin))
+  (declare (ignore record))
   (when (do-note-output-record sheet)
     (call-next-method)))
 
@@ -1087,6 +1156,7 @@ updating-output-parent above this one in the tree.")
 					   stream)))))))
 
 (defmethod dump-updating-aux (record old-records stream)
+  (declare (ignore old-records))
   (write record :stream stream))
 
 (defmethod redisplay-frame-pane
