@@ -188,6 +188,11 @@ cursor position, baseline."))
 (defgeneric (setf medium-text-style) (new-value medium))
 (defgeneric (setf medium-default-text-style) (new-value medium))
 
+(defgeneric line-style-effective-thickness (line-style medium)
+  (:documentation
+   "Returns the thickness in device units of a line,
+rendered on MEDIUM with the style LINE-STYLE."))
+
 ;;;
 
 (defgeneric sheet-grafted-p (sheet))

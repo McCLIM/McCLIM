@@ -442,6 +442,11 @@
                          (slot-value self slot))))
                     '(unit thickness joint-shape cap-shape dashes)))))
 
+(defmethod line-style-effective-thickness (line-style medium)
+  ;; FIXME
+  (declare (ignore medium))
+  (line-style-thickness line-style))
+
 
 ;;; Misc ops
 

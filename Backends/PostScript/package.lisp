@@ -33,6 +33,8 @@
                 "UNTRANSFORM-ANGLE"
                 "WITH-TRANSFORMED-POSITION"
 
+                "LINE-STYLE-EFFECTIVE-THICKNESS"
+
                 "MAXF"
   ))
 
