@@ -22,7 +22,9 @@
 
 (defpackage :clouseau
   (:use :clim-lisp :clim)
-  (:export #:inspector))
+  (:export #:inspector
+	   #:inspect-object
+	   #:inspect-object-briefly))
 
 (asdf::defsystem clouseau
     :serial t

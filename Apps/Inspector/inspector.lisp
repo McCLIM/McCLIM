@@ -52,11 +52,17 @@
    pane
    :height (bounding-rectangle-height (stream-output-history pane))))
 
-(defun inspector (obj)
-  (let ((*print-length* 10)
-	(*print-level* 10))
-    (run-frame-top-level
-     (make-application-frame 'inspector :obj obj))))
+(defun inspector (obj &key (new-process nil))
+  (flet ((run ()
+	   (let ((*print-length* 10)
+		 (*print-level* 10))
+	     (run-frame-top-level
+	      (make-application-frame 'inspector :obj obj)))))
+    (if new-process
+	(clim-sys:make-process #'run
+			       :name (format nil "Inspector Clouseau: ~S"
+					     obj))
+	(run))))
 
 (defparameter *inspected-objects* '()
   "A list of objects which are currently being inspected with
@@ -286,7 +292,9 @@ list as interactive as you would expect."
                          (format pane "~a "
 				 (if (typep specializer
 					    'clim-mop:eql-specializer)
-				     "EQL specializer" ; FIXME: says nothing
+				     (format nil "(EQL ~S)"
+					     (clim-mop:eql-specializer-object
+					      specializer))
 				     (class-name specializer))))))))))
 
 (defun pretty-print-function (fun)
@@ -446,8 +454,7 @@ them."
 
 (define-inspector-command (com-inspect :name t) ()
   (let ((obj (accept t :prompt "Select an object")))
-    (clim-sys:make-process #'(lambda () (inspector obj))
-			   :name "Inspector Clouseau")))
+    (inspector obj :new-process t)))
 
 (define-inspector-command (com-toggle-show-list-cells :name t)
   ((obj 'cons :gesture :select :prompt "Select a cons or list"))
