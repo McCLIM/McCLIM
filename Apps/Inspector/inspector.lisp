@@ -136,35 +136,40 @@ information is present."))
 could be boldface, or a different style, or even another font."
   `(with-text-face (,stream :bold)
      ,@body))
-
-(defmacro inspector-table (header &body body)
-  "Present OBJECT (captured from environment) in tabular form, with
+;; FIXMEFIXME!!!!!
+(defmacro inspector-table ((object pane) header &body body)
+  "Present OBJECT in tabular form on PANE, with
 HEADER printed in a box at the top. BODY should output the rows of the
-table using INSPECTOR-TABLE-ROW. Also capured from the macro's
-environment is PANE, which is the pane on which the table will be
-drawn."
-  `(with-output-as-presentation
-       (pane object (presentation-type-of object))
-     (formatting-table (pane)
-       (formatting-column (pane)
-         (formatting-cell (pane)
-           (surrounding-output-with-border (pane)
-	     (with-heading-style (pane)
-	       ,header)))
-         (formatting-cell (pane)
-           (formatting-table (pane)
-             ,@body))))
-    (print-documentation object pane)))
+table using INSPECTOR-TABLE-ROW."
+  (let ((evaluated-pane (gensym "pane"))
+	(evaluated-object (gensym "object")))
+    `(let ((,evaluated-pane ,pane)
+	   (,evaluated-object ,object))
+      (with-output-as-presentation
+	  (pane ,evaluated-object
+		(presentation-type-of ,evaluated-object))
+	(formatting-table (,evaluated-pane)
+	  (formatting-column (,evaluated-pane)
+	    (formatting-cell (,evaluated-pane)
+	      (surrounding-output-with-border (,evaluated-pane)
+		(with-heading-style (,evaluated-pane)
+		  ,header)))
+	    (formatting-cell (,evaluated-pane)
+	      (formatting-table (,evaluated-pane)
+		,@body))))
+	(print-documentation ,evaluated-object ,evaluated-pane)))))
 
-(defmacro inspector-table-row (left right)
-  "Output a table row with two items, LEFT and RIGHT, in the
-environment created by INSPECTOR-TABLE."
-  `(formatting-row (pane)
-     (formatting-cell (pane :align-x :right)
-       (with-heading-style (pane)
-	 ,left))
-     (formatting-cell (pane)
-       ,right)))
+(defmacro inspector-table-row ((pane) left right)
+  "Output a table row with two items, LEFT and RIGHT, on PANE. This
+should be used only within INSPECTOR-TABLE."
+  (let ((evaluated-pane (gensym "pane")))
+    `(let ((,evaluated-pane ,pane))
+      (formatting-row (,evaluated-pane)
+	(formatting-cell (,evaluated-pane :align-x :right)
+	  (with-heading-style (,evaluated-pane)
+	    ,left))
+	(formatting-cell (,evaluated-pane)
+	  ,right)))))
 
 (defun print-documentation (object pane)
   "Print OBJECT's documentation, if any, to PANE"
@@ -180,27 +185,27 @@ roughly the same way, the common code is in this function, which is
 called by the INSPECT-OBJECT methods for both standard objects and
 structure objects."
   (let ((class (class-of object)))
-    (inspector-table
-     (print (class-name class) pane)
-     (when (clim-mop:class-direct-superclasses class)
-       (inspector-table-row
-	(princ "Superclasses" pane)
-	(inspect-vertical-list (clim-mop:class-direct-superclasses class)
-			       pane)))
-     (when (clim-mop:class-direct-subclasses class)
-       (inspector-table-row
-	(princ "Subclasses" pane)
-	(inspect-vertical-list (clim-mop:class-direct-subclasses class)
-			       pane)))
-     (loop for slot in (reverse (clim-mop:class-slots class))
-	   do (let ((slot-name (clim-mop:slot-definition-name slot)))
-		(inspector-table-row
-		 (with-output-as-presentation
-		     (pane (cons object slot-name) 'settable-slot)
-		   (format pane "~a:" slot-name))
-		 (if (slot-boundp object slot-name)
-		     (inspect-object (slot-value object slot-name) pane)
-		     (format pane "#<unbound slot>"))))))))
+    (inspector-table (object pane)
+      (print (class-name class) pane)
+      (when (clim-mop:class-direct-superclasses class)
+	(inspector-table-row (pane)
+	  (princ "Superclasses" pane)
+	  (inspect-vertical-list (clim-mop:class-direct-superclasses class)
+				 pane)))
+      (when (clim-mop:class-direct-subclasses class)
+	(inspector-table-row (pane)
+	  (princ "Subclasses" pane)
+	  (inspect-vertical-list (clim-mop:class-direct-subclasses class)
+				 pane)))
+      (loop for slot in (reverse (clim-mop:class-slots class))
+	    do (let ((slot-name (clim-mop:slot-definition-name slot)))
+		 (inspector-table-row (pane)
+		   (with-output-as-presentation
+		       (pane (cons object slot-name) 'settable-slot)
+		     (format pane "~a:" slot-name))
+		   (if (slot-boundp object slot-name)
+		       (inspect-object (slot-value object slot-name) pane)
+		       (format pane "#<unbound slot>"))))))))
 
 ;; Try to print the normal, textual representation of an object, but
 ;; if that's too long, make an abbreviated "instance of ~S" version.
@@ -352,8 +357,8 @@ list as interactive as you would expect."
       (pane object (presentation-type-of object))
     (princ 'hash-table pane)))
 (defmethod inspect-object ((object hash-table) pane)
-  (inspector-table
-      (format pane "~A (test: ~A)" 'hash-table (hash-table-test object))
+  (inspector-table (object pane)
+    (format pane "~A (test: ~A)" 'hash-table (hash-table-test object))
     (loop for key being the hash-keys of object
           do (formatting-row (pane)
 	       (formatting-cell (pane :align-x :right)
@@ -363,9 +368,9 @@ list as interactive as you would expect."
 		 (inspect-object (gethash key object) pane))))))
 
 (defmethod inspect-object ((object generic-function) pane)
-  (inspector-table
-      (format pane "Generic Function: ~s"
-	      (clim-mop:generic-function-name object))
+  (inspector-table (object pane)
+    (format pane "Generic Function: ~s"
+	    (clim-mop:generic-function-name object))
     (dolist (method (clim-mop:generic-function-methods object))
       (with-output-as-presentation
 	  (pane method (presentation-type-of method))
@@ -442,18 +447,18 @@ use implementation-specific functions to be more informative."
       (princ (package-name object) pane))))
 
 (defmethod inspect-object ((object package) pane)
-  (inspector-table
+  (inspector-table (object pane)
     (format pane "Package: ~S" (package-name object))
-    (inspector-table-row
+    (inspector-table-row (pane)
       (princ "Name:" pane)
       (inspect-object (package-name object) pane))
-    (inspector-table-row
+    (inspector-table-row (pane)
       (princ "Nicknames:" pane)
       (inspect-vertical-list (package-nicknames object) pane))
-    (inspector-table-row
+    (inspector-table-row (pane)
       (princ "Used by:")
       (inspect-vertical-list (package-used-by-list object) pane))
-    (inspector-table-row
+    (inspector-table-row (pane)
       (princ "Uses:")
       (inspect-vertical-list (package-use-list object) pane))))
 
@@ -504,22 +509,22 @@ them."
   (inspect-complex object pane))
 
 (defmethod inspect-object ((object float) pane)
-  (inspector-table
+  (inspector-table (object pane)
     (format pane "float ~S" object)
     (multiple-value-bind (significand exponent sign)
         (decode-float object)
-      (inspector-table-row
+      (inspector-table-row (pane)
         (princ "sign:")
         (inspect-object sign pane))
-      (inspector-table-row
+      (inspector-table-row (pane)
         (princ "significand:")
         (inspect-object significand pane))
-      (inspector-table-row
+      (inspector-table-row (pane)
         (princ "exponent:")
         (inspect-object exponent pane)))
-    (inspector-table-row
-       (princ "radix:")
-       (inspect-object (float-radix object) pane))))
+    (inspector-table-row (pane)
+      (princ "radix:")
+      (inspect-object (float-radix object) pane))))
 
 (defmethod inspect-object-briefly ((object symbol) pane)
   (with-output-as-presentation
@@ -528,33 +533,33 @@ them."
       (prin1 object))))
 
 (defmethod inspect-object ((object symbol) pane)
-  (inspector-table
+  (inspector-table (object pane)
     (format pane "Symbol ~S" (symbol-name object))
-    (inspector-table-row
-       (princ "value:")
-       (if (boundp object)
-         (inspect-object (symbol-value object) pane)
-         (princ "unbound")))
-    (inspector-table-row
-       (princ "function:")
-       (if (fboundp object)
-         (inspect-object (symbol-function object) pane)
-         (princ "unbound")))
+    (inspector-table-row (pane)
+      (princ "value:")
+      (if (boundp object)
+	  (inspect-object (symbol-value object) pane)
+	  (princ "unbound")))
+    (inspector-table-row (pane)
+      (princ "function:")
+      (if (fboundp object)
+	  (inspect-object (symbol-function object) pane)
+	  (princ "unbound")))
     ;; This is not, strictly speaking, a property of the
     ;; symbol. However, this is useful enough that I think it's worth
     ;; including here, since it can eliminate some minor annoyances.
-    (inspector-table-row
-       (princ "class:")
-       (if (find-class object nil)
-         (inspect-object (find-class object) pane)
-         (princ "unbound")))
-    (inspector-table-row
-       (princ "package:")
-       (inspect-object (symbol-package object) pane))
-    (inspector-table-row
-       (princ "propery list:")
-       (dolist (property (symbol-plist object))
-         (inspect-object property pane)))))
+    (inspector-table-row (pane)
+      (princ "class:")
+      (if (find-class object nil)
+	  (inspect-object (find-class object) pane)
+	  (princ "unbound")))
+    (inspector-table-row (pane)
+      (princ "package:")
+      (inspect-object (symbol-package object) pane))
+    (inspector-table-row (pane)
+      (princ "propery list:")
+      (dolist (property (symbol-plist object))
+	(inspect-object property pane)))))
 
 ;; Characters are so short that displaying them as "..."  takes almost
 ;; as much space as just showing them, and this way is more
@@ -564,17 +569,17 @@ them."
       (pane object (presentation-type-of object))
     (print object pane)))
 (defmethod inspect-object ((object character) pane)
-  (inspector-table
+  (inspector-table (object pane)
     (format pane "Character ~S" object)
-    (inspector-table-row
-       (princ "code:" pane)
-       (inspect-object (char-code object) pane))
-    (inspector-table-row
-       (princ "int:" pane)
-       (inspect-object (char-int object) pane))
-    (inspector-table-row
-       (princ "name:" pane)
-       (inspect-object (char-name object) pane))))
+    (inspector-table-row (pane)
+      (princ "code:" pane)
+      (inspect-object (char-code object) pane))
+    (inspector-table-row (pane)
+      (princ "int:" pane)
+      (inspect-object (char-int object) pane))
+    (inspector-table-row (pane)
+      (princ "name:" pane)
+      (inspect-object (char-name object) pane))))
 
 (defun display-app (frame pane)
   "Display the APP frame of the inspector"
