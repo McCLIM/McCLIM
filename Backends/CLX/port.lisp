@@ -687,6 +687,8 @@
 	     :sheet sheet
 	     :timestamp time)))
 	(t
+	 (unless (xlib:event-listen (clx-port-display *clx-port*))
+	   (xlib:display-finish-output (clx-port-display *clx-port*)))
 	 nil)))))
 
 (defmethod get-next-event ((port clx-port) &key wait-function (timeout nil))
