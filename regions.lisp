@@ -4,7 +4,7 @@
 ;;;   Created: 1998-12-02 19:26
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: regions.lisp,v 1.18 2002/04/29 05:00:33 brian Exp $
+;;;       $Id: regions.lisp,v 1.19 2002/06/04 07:50:20 adejneka Exp $
 ;;; --------------------------------------------------------------------------------------
 ;;;  (c) copyright 1998,1999,2001 by Gilbert Baumann
 ;;;  (c) copyright 2001 by Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
@@ -28,6 +28,7 @@
 
 ;;;  When        Who    What
 ;;; --------------------------------------------------------------------------------------
+;;;  2002-06-04  APD    partially fixed (BOUNDING-RECTANGLE* STANDARD-ELLIPSE)
 ;;;  2001-07-16  GB     added (REGION-CONTAINS-POSITION-P STANDARD-ELLIPSE ..)
 ;;;                     added (BOUNDING-RECTANGLE* STANDARD-ELLIPSE)
 ;;;                     added (REGION-INTERSECTION LINE STANDARD-ELLIPSE) and vice versa
@@ -545,9 +546,25 @@
       (<= (+ (* x x) (* y y)) 1))))
 
 (defmethod bounding-rectangle* ((region standard-ellipse))
-  ;; XXX we can do better than this.
+  ;; XXX start/end angle still missing
   (with-slots (tr) region
-    (bounding-rectangle* (transform-region tr (make-rectangle* -1 -1 1 1)))))
+    (flet ((contact-radius* (x y)
+             "Returns coordinates of the radius of the point, in
+              which the vector field (x y) touches the ellipse."
+             (multiple-value-bind (xc yc) (untransform-distance tr x y)
+               (let* ((d (sqrt (+ (* xc xc) (* yc yc))))
+                      (xn (- (/ yc d)))
+                      (yn (/ xc d)))
+                 (transform-distance tr xn yn)))))
+      (multiple-value-bind (vdx vdy) (contact-radius* 1 0)
+        (declare (ignore vdx))
+        (multiple-value-bind (hdx hdy) (contact-radius* 0 1)
+          (declare (ignore hdy))
+          (multiple-value-bind (cx cy) (ellipse-center-point* region)
+            (let ((rx (abs hdx))
+                  (ry (abs vdy)))
+              (values (- cx rx) (- cy ry)
+                      (+ cx rx) (+ cy ry)))))))))
 
 (defun intersection-line/unit-circle (x1 y1 x2 y2)
   "Computes the intersection of the line from (x1,y1) to (x2,y2) and the unit circle.
