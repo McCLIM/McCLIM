@@ -143,18 +143,8 @@ sheet-supports-only-one-child error to be signalled."))
 ;;;;
 ;;;; sheet protocol class
 
-(defclass sheet ()
+(define-protocol-class sheet (bounding-rectangle)
   ())
-
-(defgeneric sheetp (x))
-
-(defmethod sheetp ((x sheet))
-  (declare (ignorable x))
-  t)
-
-(defmethod sheetp (x)
-  (declare (ignorable x))
-  nil)
 
 (defclass basic-sheet (sheet)
   ((region :type region
@@ -699,3 +689,18 @@ sheet-supports-only-one-child error to be signalled."))
                                       (sheet-direct-mirror sheet)))
               (sheet-native-region (sheet-parent sheet))))))
     native-region))
+
+;;; Sheets as bounding rectangles
+
+;; Somewhat hidden in the spec, we read (section 4.1.1 "The Bounding
+;; Rectangle Protocol")
+;;
+
+;; | bounding-rectangle* region [Generic Function]
+;; | 
+;; |      [...] The argument region must be either a bounded region [...] or
+;; |      some other object that obeys the bounding rectangle protocol, such
+;; |      as a sheet or an output record. [...]
+
+(defmethod bounding-rectangle* ((sheet sheet))
+  (bounding-rectangle* (sheet-region sheet)))
