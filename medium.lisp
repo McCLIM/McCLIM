@@ -182,25 +182,25 @@
 (defmacro with-text-style ((medium text-style) &body body)
   `(flet ((continuation ()
 	    ,@body))
-     (declare (dynamic-extent #'continuation))
+     #-clisp (declare (dynamic-extent #'continuation))
      (invoke-with-text-style ,medium #'continuation (parse-text-style ,text-style))))
 
 (defmacro with-text-family ((medium family) &body body)
   `(flet ((continuation ()
 	    ,@body))
-     (declare (dynamic-extent #'continuation))
+     #-clisp (declare (dynamic-extent #'continuation))
      (invoke-with-text-style ,medium #'continuation (make-text-style ,family nil nil))))
 
 (defmacro with-text-face ((medium face) &body body)
   `(flet ((continuation ()
 	    ,@body))
-     (declare (dynamic-extent #'continuation))
+     #-clisp (declare (dynamic-extent #'continuation))
      (invoke-with-text-style ,medium #'continuation (make-text-style nil ,face nil))))
 
 (defmacro with-text-size ((medium size) &body body)
   `(flet ((continuation ()
 	    ,@body))
-     (declare (dynamic-extent #'continuation))
+     #-clisp (declare (dynamic-extent #'continuation))
      (invoke-with-text-style ,medium #'continuation (make-text-style nil nil ,size))))
 
 
