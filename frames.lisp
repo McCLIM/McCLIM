@@ -90,6 +90,8 @@
    (manager :initform nil
 	    :reader frame-manager
             :accessor %frame-manager)
+   (keyboard-input-focus :initform nil
+                         :accessor keyboard-input-focus)
    (properties :initarg :properties
 	       :initform nil)
    (top-level :initform '(default-frame-top-level)

@@ -51,7 +51,7 @@
    (mirror->sheet :initform (make-hash-table :test #'eq))
    (pixmap->mirror :initform (make-hash-table :test #'eq))
    (mirror->pixmap :initform (make-hash-table :test #'eq))
-   (keyboard-input-focus :initform nil
+   #+ignore (keyboard-input-focus :initform nil ;; nuked this, see below
 			 :initarg :keyboard-input-focus
 			 :accessor port-keyboard-input-focus)
    (event-process
@@ -70,6 +70,20 @@
    (pointer-sheet :initform nil :accessor port-pointer-sheet
 		  :documentation "The sheet the pointer is over, if any")
    ))
+
+;; Keyboard focus is now managed per-frame rather than per-port,
+;; which makes a lot of sense. The CLIM spec suggests this in a
+;; "Minor Issue". So, redirect PORT-KEYBOARD-INPUT-FOCUS to the
+;; current application frame for compatibility.
+(defmethod port-keyboard-input-focus (port)
+  (declare (ignore port))
+  (when *application-frame*
+    (keyboard-input-focus *application-frame*)))
+
+(defmethod (setf port-keyboard-input-focus) (focus port)
+  (declare (ignore port))
+  (when *application-frame*
+    (setf (keyboard-input-focus *application-frame*) focus)))
 
 (defun find-port (&key (server-path *default-server-path*))
   (if (null server-path)
@@ -177,7 +191,7 @@
 (defmethod distribute-event ((port basic-port) event)
   (cond
    ((typep event 'keyboard-event)
-    (dispatch-event (or (port-keyboard-input-focus port) (event-sheet event))
+    (dispatch-event (or #+ignore(port-keyboard-input-focus port) (event-sheet event))
 		    event))
    ((typep event 'window-event)
 ;   (dispatch-event (window-event-mirrored-sheet event) event)

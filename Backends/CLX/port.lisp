@@ -345,9 +345,10 @@
                                       :width (round-coordinate (space-requirement-width q))
                                       :height (round-coordinate (space-requirement-height q))
                                       :event-mask nil)))
+      (setf (xlib:wm-hints window) (xlib:make-wm-hints :input :on))
       (setf (xlib:wm-name window) (frame-pretty-name frame))
       (setf (xlib:wm-icon-name window) (frame-pretty-name frame))
-      (setf (xlib:wm-protocols window) `(:wm_delete_window)))))
+      (setf (xlib:wm-protocols window) `(:wm_delete_window :wm_take_focus)))))
 
 (defmethod realize-mirror ((port clx-port) (sheet unmanaged-top-level-sheet-pane))
   (realize-mirror-aux port sheet
@@ -682,10 +683,17 @@
            :region (make-rectangle* x y (+ x width) (+ y height))))
         ;;
 	(:client-message
-	 (when (eq (xlib:atom-name display (aref data 0)) :wm_delete_window)
-	   (make-instance 'window-manager-delete-event
-	     :sheet sheet
-	     :timestamp time)))
+         (case (xlib:atom-name display (aref data 0))
+           (:wm_delete_window
+            (make-instance 'window-manager-delete-event
+                           :sheet sheet
+                           :timestamp time))
+           (:wm_take_focus
+            (let* ((frame (pane-frame sheet))
+                   (focus (climi::keyboard-input-focus frame)))
+              (when (and focus (sheet-mirror focus))
+                (xlib:set-input-focus (clx-port-display *clx-port*) (sheet-mirror focus) :parent)))
+            nil)))
 	(t
 	 (unless (xlib:event-listen (clx-port-display *clx-port*))
 	   (xlib:display-finish-output (clx-port-display *clx-port*)))
@@ -1043,3 +1051,4 @@
       (xlib:query-pointer (clx-port-window (port pointer)))
     (declare (ignore x y same-screen-p child))
     (x-event-state-modifiers (port pointer) mask)))
+
