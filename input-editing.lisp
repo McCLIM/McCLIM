@@ -667,7 +667,7 @@
        ;; This sucks, but we can't use args to the macro directly because
        ;; we want the partial-delimiters argument and we need to insure its
        ;; proper evaluation order with everything else.
-       (let* ((complete-input-args ',args)
+       (let* ((complete-input-args (list ,@args))
 	      (partial-completers (getf complete-input-args
 					:partial-completers
 					nil)))
