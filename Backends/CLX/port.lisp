@@ -194,8 +194,8 @@
                 (t :internet))))
     (list :clx
 	  :host (getf path :host host)
-	  :display-id (getf path :display-id display)
-	  :screen-id (getf path :screen-id screen)
+	  :display-id (getf path :display-id (or display 0))
+	  :screen-id (getf path :screen-id (or screen 0))
 	  :protocol protocol)))
 
 (setf (get :x11 :port-type) 'clx-port)
@@ -268,7 +268,9 @@
 (defmethod initialize-clx ((port clx-port))
   (let ((options (cdr (port-server-path port))))
     (setf (clx-port-display port)
-	  (xlib:open-display (getf options :host "") :display (getf options :display-id 0) :protocol (getf options :protocol :local)))
+	  (xlib:open-display (getf options :host) 
+			     :display (getf options :display-id) 
+			     :protocol (getf options :protocol)))
     (progn
       (setf (xlib:display-error-handler (clx-port-display port))
         #'clx-error-handler)
@@ -277,7 +279,7 @@
       (setf (xlib:display-after-function (clx-port-display port)) #'xlib:display-force-output))
       
     
-    (setf (clx-port-screen port) (nth (getf options :screen-id 0)
+    (setf (clx-port-screen port) (nth (getf options :screen-id)
 				      (xlib:display-roots (clx-port-display port))))
     (setf (clx-port-window port) (xlib:screen-root (clx-port-screen port)))
     (make-cursor-table port)    
