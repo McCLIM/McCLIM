@@ -920,7 +920,6 @@
 
 (defmethod (setf gadget-value) :after (value (pane text-field-pane) &key invoke-callback)
   (declare (ignore value invoke-callback))
-  (window-clear pane)
   (dispatch-repaint pane (sheet-region pane)))
 
 (defmethod compose-space ((pane text-field-pane))
