@@ -1296,7 +1296,9 @@ frame, if any")
 (defmethod initialize-instance :after
     ((obj frame-tracking-pointer-state)
      &key presentation presentation-button-press presentation-button-release
-     (highlight nil highlightp) context-type)
+     (highlight nil highlightp) context-type
+     multiple-window)
+  (declare (ignore multiple-window))
   (setf (slot-value obj 'highlight) (if highlightp
 					highlight
 					(or presentation
@@ -1309,7 +1311,6 @@ frame, if any")
     ((frame standard-application-frame)	sheet args)
   (declare (ignore sheet))
   (apply #'make-instance 'frame-tracking-pointer-state
-	 :allow-other-keys t
 	 args))
 
 (defmethod tracking-pointer-loop :before

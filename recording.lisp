@@ -2109,6 +2109,7 @@ according to the flags RECORD and DRAW."
 (defmethod invoke-with-output-to-output-record
     ((stream output-recording-stream) continuation record-type (constructor null)
      &rest initargs)
+  (declare (ignore record-type))
   (stream-close-text-output-record stream)
   (let ((new-record (apply #'make-instance record-type initargs)))
     (with-output-recording-options (stream :record t :draw nil)
