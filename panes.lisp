@@ -89,8 +89,8 @@
 	     :initarg :enabledp
 	     :accessor pane-enabledp)
    (space-requirement :initarg :space-requirement
-		      :initform (make-space-requirement :width 100 :max-width 100
-							:height 100 :max-height 100)
+		      :initform (make-space-requirement :width 300 :max-width 300
+							:height 300 :max-height 300)
 		      :accessor pane-space-requirement)
    )
   )
@@ -373,15 +373,13 @@
 
 (defmethod allocate-space ((rack hrack-pane) width height)
   (let ((h-percent (/ width (space-requirement-width (pane-space-requirement rack))))
-	(v-percent (/ height (space-requirement-height (pane-space-requirement rack))))
 	(x 0))
     (loop for child in (sheet-children rack)
 	for request = (pane-space-requirement child)
 	for new-width = (floor (* h-percent (space-requirement-width request)))
-	for new-height = (floor (* v-percent (space-requirement-height request)))
 	do (setf (sheet-region child)
-	     (make-bounding-rectangle x 0 (+ x new-width) new-height))
-	   (allocate-space child new-width new-height)
+	     (make-bounding-rectangle x 0 (+ x new-width) height))
+	   (allocate-space child new-width height)
 	   (incf x new-width))))
 
 
@@ -414,16 +412,14 @@
     space))
 
 (defmethod allocate-space ((rack vrack-pane) width height)
-  (let ((h-percent (/ width (space-requirement-width (pane-space-requirement rack))))
-	(v-percent (/ height (space-requirement-height (pane-space-requirement rack))))
+  (let ((v-percent (/ height (space-requirement-height (pane-space-requirement rack))))
 	(y 0))
     (loop for child in (sheet-children rack)
 	for request = (pane-space-requirement child)
-	for new-width = (floor (* h-percent (space-requirement-width request)))
 	for new-height = (floor (* v-percent (space-requirement-height request)))
 	do (setf (sheet-region child)
 	     (make-bounding-rectangle 0 y width (+ y new-height)))
-	   (allocate-space child new-width new-height)
+	   (allocate-space child width new-height)
 	   (incf y new-height))))
 
 
@@ -437,7 +433,7 @@
 					&key contents
 					&allow-other-keys)
   (declare (ignore args))
-  (unless (reduce #'= (mapcar #'length contents))
+  (unless (apply #'= (mapcar #'length contents))
     (error "The variable contents hasn't the good format")))
 
 (defmethod initialize-instance :after ((table table-pane)
@@ -445,24 +441,10 @@
 				       &key contents
 				       &allow-other-keys)
   (declare (ignore args))
-  (loop for children in contents
-	do (loop for child in children
+  (loop for children in (reverse contents)
+	do (loop for child in (reverse children)
 		 do (sheet-adopt-child table child)))
   (setf (table-pane-number table) (length (first contents))))
-
-;(defmethod initialize-instance :after ((table table-pane)
-;				       &rest args
-;				       &key contents
-;				       &allow-other-keys)
-;  (declare (ignore args))
-;  (when contents
-;    (if (reduce #'= (mapcar #'length contents))
-;	(progn 
-;	  (loop for children in contents
-;		do (loop for child in children
-;			 do (sheet-adopt-child table child)))
-;	  (setf (table-pane-number table) (length (first contents))))
-;	(error "The variable contents hasn't the good format"))))
 
 (defmacro tabling ((&rest options) &body contents)
   `(if (pane-grid-p (list ,@contents))
@@ -871,6 +853,7 @@
 				    &key (type 'clim-stream-pane)
 				         (scroll-bars :vertical)
 				    &allow-other-keys)
+  (declare (ignorable scroll-bars))
   (remf options :type)
   (apply #'make-pane type options))
 
