@@ -103,7 +103,8 @@ advised of the possiblity of such damages.
    (:allegro (system:getenv string))
    (:genera (let ((symbol (intern string :scl)))
 	      (and (boundp symbol) (symbol-value symbol))))
-   (:openmcl (ccl::getenv string))))
+   (:openmcl (ccl::getenv string))
+   (:sbcl (sb-ext:posix-getenv string))))
 
 #+allegro
 ;;>> Allegro 4.2 supports SYSTEM:GETENV.  How do I set an environment variable?
@@ -114,12 +115,17 @@ advised of the possiblity of such damages.
 	 `(,(ff:convert-to-lang "putenv")))
   (ff:defforeign 'putenv :arguments '(integer)))
 
+#+sbcl
+(sb-alien:define-alien-routine ("putenv" putenv) sb-alien:int
+  (name sb-alien:c-string))
+
 (defsetf getenv (string) (new-value)
   #FEATURE-CASE
   ((:allegro `(putenv (ff:string-to-char* (format nil "~A=~A" ,string ,new-value))))
    (:lucid `(setf (lcl:environment-variable ,string) ,(princ-to-string new-value)))
    (:genera `(setf (symbol-value ,(intern string :scl)) ,new-value))
-   (:openmcl `(ccl::setenv string new-value))))
+   (:openmcl `(ccl::setenv string new-value))
+   (:sbcl `(putenv (format nil "~A=~A" ,string ,new-value)))))
 
 (defun run-shell-command (command &rest args &key input output error-output (wait t)
 						  arguments
@@ -156,9 +162,11 @@ advised of the possiblity of such damages.
      ((and :mcl (not :openmcl))
       (with-rem-keywords (args1 args '(:arguments))
 	(apply #'ccl:run-fred-command command-with-arguments args1)))
-     (:openmcl
+     ((or :openmcl :sbcl)
       (with-rem-keywords (args1 args '(:arguments))
-	(apply #'ccl-run-program command arguments args1)))
+	(apply #+sbcl #'sb-ext:run-program
+	       #+openmcl #'ccl:run-program
+	       command arguments args1)))
      (:genera (not-done)))))
 	      
 
@@ -312,7 +320,7 @@ advised of the possiblity of such damages.
 (defun file-type-for-binaries ()
   #FEATURE-CASE
   ((:genera si:*default-binary-file-type*)
-   (:allegro
+   ((or :allegro :sbcl)
     #.(if (fboundp 'compile-file-pathname)
 	  (pathname-type (compile-file-pathname "foo"))
 	"fasl"))

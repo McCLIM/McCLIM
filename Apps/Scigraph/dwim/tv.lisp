@@ -191,7 +191,8 @@ advised of the possiblity of such damages.
   #FEATURE-CASE
   (((not :clim) (send stream :set-cursorpos x y))
    ((or :clim-0.9 :clim-1.0) (clim:stream-set-cursor-position* stream x y))
-   (:clim-2 (clim:stream-set-cursor-position stream x y))))
+   ((and :clim-2 (not :mcclim)) (clim:stream-set-cursor-position stream x y))
+   (:mcclim (setf (clim:stream-cursor-position stream) (values x y)))))
 
 (defmethod stream-increment-cursor-position* (stream x y)
   #FEATURE-CASE

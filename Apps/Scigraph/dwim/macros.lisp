@@ -27,7 +27,7 @@ advised of the possiblity of such damages.
 
 (in-package :dwim)
 
-#+(or genera lucid allegro)
+#+(and (not ansi-cl) (or genera lucid allegro))
 (defmacro printing-random-object ((object stream . options) &body body)
   #+genera  `(si:printing-random-object (,object ,stream . ,options) ,@body)
   #+lucid   `(system:printing-random-object (,object ,stream . ,options) ,@body)
@@ -42,12 +42,12 @@ advised of the possiblity of such damages.
 		 (format ,stream " ~X" (excl::pointer-to-fixnum ,object)))
 	       (write-string ">" ,stream)))
 
-#-(or genera lucid allegro)
-(defmacro printing-random-object ((object stream &key typep no-pointer
-				  &allow-other-keys)
+#+ansi-cl
+(defmacro printing-random-object ((object stream &rest options)
 				  &body body)
   `(print-unreadable-object (,object ,stream
-			     :type ,typep :identity (not ,no-pointer))
+			     :type ,(member :typep options)
+			     :identity (not (member :no-pointer options)))
      ,@body))
 
 (defmacro with-stack-list ((var &rest elements) &body body)
@@ -82,7 +82,7 @@ advised of the possiblity of such damages.
 	     (mapcar #'(lambda (v) (if (symbolp v) v (car v))) let-vars)))
     `(let ,forms (declare (dynamic-extent ,@(get-vars forms))) ,@body)))
 
-#-openmcl-native-threads
+#-(or openmcl-native-threads sb-thread)
 (defmacro without-interrupts (&body body)
   #FEATURE-CASE
   ((:genera  `(scl::without-interrupts ,@body))
@@ -90,11 +90,11 @@ advised of the possiblity of such damages.
    (:allegro `(excl:without-interrupts ,@body))
    (:mcl     `(ccl:without-interrupts ,@body))))
 
-#+openmcl-native-threads
+#+(or openmcl-native-threads sb-thread)
 (progn
   (defparameter *dwim-giant-lock* (clim-sys:make-lock "dwim giant lock"))
   (defmacro without-interrupts (&body body)
-    `(with-lock-held (*dwim-giant-lock*)
+    `(clim-sys:with-lock-held (*dwim-giant-lock*)
        ,@body)))
 
 (defmacro handler-case (form &rest clauses)
@@ -128,11 +128,10 @@ advised of the possiblity of such damages.
 (defmacro ignore-errors (&body body)
   #FEATURE-CASE
   ((:Allegro `(lisp:ignore-errors ,@body))
-   (:mcl `(COMMON-LISP:ignore-errors ,@body))   
+   ((or :mcl :ansi-cl) `(COMMON-LISP:ignore-errors ,@body))   
    (:Lucid `(lcl:ignore-errors ,@body))
    (:Xerox `(xcl:ignore-errors ,@body))
-   (:Genera `(future-common-lisp:ignore-errors ,@body))
-   (:ansi-cl `(COMMON-LISP:ignore-errors ,@body))))
+   (:Genera `(future-common-lisp:ignore-errors ,@body))))
 
 (defmacro with-simple-restart ((name format-string &rest format-args) &body body)
   #FEATURE-CASE
@@ -323,7 +322,10 @@ advised of the possiblity of such damages.
        :menu ,menu
        :pointer-documentation ,pointer-documentation
        :documentation ,documentation)
-      ,arguments
+      ;; Don't know who's right, but my reading of the spec suggests
+      ;; that &key shouldn't be in the argument list. -- moore
+      #-mcclim ,arguments
+      #+mcclim ,(canonicalize-argument-list arguments)
       ,@body))))
 
 (defmacro define-presentation-translator
@@ -492,7 +494,10 @@ advised of the possiblity of such damages.
 				   (list (eval INHERIT-FROM)))
 				  ((find-class name nil)
 				   (mapcar #'class-name
-					   (class-direct-superclasses
+					   (#+mcclim
+					    clim-mop:class-direct-superclasses
+					    #-mcclim
+					    class-direct-superclasses
 					    (find-class name)))))))
 	  (if superclasses
 	      (setq superclasses
@@ -549,7 +554,7 @@ advised of the possiblity of such damages.
 		  (view #+clim-1.0 clim:dialog-view
 			#+clim-2 clim:gadget-dialog-view)
 		  ,default default-supplied-p present-p ,query-identifier
-		  #+clim-2 &key)
+		  #+(and clim-2 (not mcclim)) &key)
 	       (declare (ignore default-supplied-p present-p))
 	       ,@(cdr accept-values-displayer))))
        ,(when highlighter

@@ -25,7 +25,7 @@ performance of this software, even if BBN Systems and Technologies is
 advised of the possiblity of such damages.
 |#
 
-(in-package :user)
+(in-package #-ansi-cl :user #+ansi-cl :common-lisp-user)
 
 (eval-when (compile load eval)
   (defpackage TOOL

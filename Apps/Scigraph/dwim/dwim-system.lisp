@@ -97,14 +97,15 @@ SUBSYSTEMS:  None.
 (defun file-type-for-binaries ()
   #+MCL                      #.(pathname-type *.fasl-pathname*)
   #+genera                   si:*default-binary-file-type*
-  #+allegro                  #.(if (fboundp 'compile-file-pathname)
+  #+(or allegro sbcl)        #.(if (fboundp 'compile-file-pathname)
 				   (pathname-type (compile-file-pathname "foo"))
 				 "fasl")
   #+lucid                    (car lcl:*load-binary-pathname-types*)
   #+(and (not genera)
          (not allegro)
          (not lucid)
-         (not mcl))
+         (not mcl)
+	 (not sbcl))
   (error "Not yet implemented."))
 
 #+genera
@@ -122,7 +123,8 @@ SUBSYSTEMS:  None.
          #+MCL              "MCL"
          #+GENERA           "GENERA"
          #+LUCID            "LUCID"
-         #+ALLEGRO          "ALLEGRO")
+         #+ALLEGRO          "ALLEGRO"
+	 #+SBCL             "SBCL")
         (GUI
          #+(and mcl (not clim)) "MAC"
          #+(and genera (not clim)) "DW"

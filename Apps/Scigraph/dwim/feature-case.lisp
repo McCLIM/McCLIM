@@ -124,7 +124,9 @@ advised of the possiblity of such damages.
 		       (let ((*READ-SUPPRESS* t))
 			 (read-delimited-list #\) STREAM)))))))))))
 
-(eval-when (compile load eval)
+;;; This used to be (eval-when (compile load eval) ...), but
+;;; compile-time definition of the read macro is obviously incorrect.
+(progn
   (set-dispatch-macro-character #\# #\F 'feature-case-macro-function)
   (set-dispatch-macro-character #\# #\f 'feature-case-macro-function)
   )

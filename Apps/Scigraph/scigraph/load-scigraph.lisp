@@ -1,5 +1,6 @@
 ;;; -*- Syntax: Common-lisp; Package: User -*-
-(in-package :user)
+
+(in-package #-ansi-cl :user #+ansi-cl :common-lisp-user)
 
 #|
 Copyright (c) 1987-1993 by BBN Systems and Technologies,

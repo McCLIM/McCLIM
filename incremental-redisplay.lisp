@@ -512,10 +512,13 @@ record is stored.")
 	       (setf (parent-cache record) parent-cache)))
 	record))))
 
-; &key (unique-id (gensym)) was used earlier,
-; changed to (unique-id `',(gensym)) as per gilham's request
-; please CHECKME and delete this comment :]
-
+;;; &key (unique-id (gensym)) was used earlier,
+;;; changed to (unique-id `',(gensym)) as per gilham's request
+;;; please CHECKME and delete this comment :]
+;;;
+;;; The Franz user guide says that updating-output does
+;;; &allow-other-keys, and some code I've encountered does mention
+;;; other magical arguments, so we'll do the same. -- moore
 (defun force-update-cache-test (a b)
   (declare (ignore a b))
   nil)
@@ -528,7 +531,8 @@ record is stored.")
       (fixed-position nil fixed-position-p)
       (all-new nil all-new-p)
       (parent-cache nil parent-cache-p)
-      (record-type ''standard-updating-output-record))
+      (record-type ''standard-updating-output-record)
+      &allow-other-keys)
      &body body)
   (when (eq stream t)
     (setq stream '*standard-output*))

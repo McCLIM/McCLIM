@@ -421,6 +421,9 @@
 			      (:rubout . #\rubout)))
 
 (defun add-gesture-name (name type gesture-spec &key unique)
+  ;; Some CLIM code (scigraph) assumes that gesture-spec can be a symbol.
+  (unless (listp gesture-spec)
+    (setq gesture-spec (list gesture-spec)))
   (destructuring-bind (device-name . modifiers)
       gesture-spec
     (let* ((modifier-state (apply #'make-modifier-state modifiers)))

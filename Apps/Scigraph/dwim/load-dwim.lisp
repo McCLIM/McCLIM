@@ -62,14 +62,15 @@ advised of the possiblity of such damages.
 (defun file-type-for-binaries ()
   #+MCL                      #.(pathname-type *.fasl-pathname*)
   #+genera                   si:*default-binary-file-type*
-  #+allegro                  #.(if (fboundp 'compile-file-pathname)
+  #+(or allegro sbcl)        #.(if (fboundp 'compile-file-pathname)
 				   (pathname-type (compile-file-pathname "foo"))
 				 "fasl")
   #+lucid                    (car lcl:*load-binary-pathname-types*)
   #+(and (not genera)
          (not allegro)
          (not lucid)
-         (not mcl))
+         (not mcl)
+	 (not sbcl))
   (error "Not yet implemented."))
 
 #+genera
@@ -86,7 +87,8 @@ advised of the possiblity of such damages.
          #+GENERA           "GENERA"
          #+LUCID            "LUCID"
          #+ALLEGRO          "ALLEGRO"
-	 #+OPENMCL	    "OPENMCL")
+	 #+OPENMCL	    "OPENMCL"
+	 #+SBCL             "SBCL")
         (GUI
          #+(and mcl (not clim)) "MAC"
          #+(and genera (not clim)) "DW"

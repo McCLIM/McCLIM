@@ -55,7 +55,9 @@ It should setup its slots as appropriate."))
 (defmethod dump-forms append ((SELF dumpable-mixin))
   nil)
 
-(defmethod make-load-form ((SELF dumpable-mixin))  
+(defmethod make-load-form #-ansi-cl ((SELF dumpable-mixin))
+	                  #+ansi-cl ((SELF dumpable-mixin) &optional env)
+  #+ansi-cl (declare (ignore env))
   (values `(make-instance ',(class-name (class-of SELF)))
 	  `(progn
 	     ,@(dump-forms SELF)
@@ -94,6 +96,7 @@ It should setup its slots as appropriate."))
 ;;; JPM.  Until the vendors catch up with the spec, implement here
 ;;; some of the dumpers we need for common lisp things.
 
+#-ansi-cl
 (defmethod make-load-form ((any t))
   (cond ((hash-table-p any)
 	 (let ((entries nil))

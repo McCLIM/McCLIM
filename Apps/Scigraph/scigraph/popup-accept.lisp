@@ -155,7 +155,8 @@ advised of the possiblity of such damages.
   (list object window presentation))
 
 (install-command #+(or clim-0.9 (not clim)) :accept-values
-		 #+(or clim-1.0 clim-2) 'clim::accept-values
+		 #+(or clim-1.0 clim-2 (not mcclim)) 'clim::accept-values
+		 #+mcclim 'climi::accepting-values ; who knows... --moore
 		 'com-pop-edit)
 
 
