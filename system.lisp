@@ -42,9 +42,9 @@
 (pushnew :CLIM *features*)
 (provide :CLIM)
 
-#+cmu (use-package :mk)
+#+(or cmu clisp) (use-package :mk)
 
-(defsystem :CLIM #-cmu ()
+(defsystem :CLIM #-(or cmu clisp) ()
   #+cmu :components
   (:serial
    "design"
