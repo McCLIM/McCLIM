@@ -195,6 +195,7 @@
   (typep s 'device-font-text-style))
 
 (defun make-device-font-text-style (display-device device-font-name)
+  ;; FIXME!!! Non-standard GF.
   (port-make-font-text-style (port display-device) device-font-name))
 
 ;;; Text-style utilities
@@ -204,31 +205,17 @@
   (setq s2 (parse-text-style s2))
   (if (and (not (device-font-text-style-p s1))
 	   (not (device-font-text-style-p s2)))
-      (let ((new-style (make-text-style (or (text-style-family s1)
-					    (text-style-family s2))
-					(or (text-style-face s1)
-					    (text-style-face s2))
-					(or (text-style-size s1)
-					    (text-style-size s2)))))
-	(with-slots (size) new-style
-	  (case (text-style-size s1)
-	    (:smaller
-	     (setq size (find-smaller-size (text-style-size s2))))
-	    (:larger
-	     (setq size (find-larger-size (text-style-size s2))))))
-	new-style)
+      (let* ((family (or (text-style-family s1) (text-style-family s2)))
+             (face (or (text-style-face s1) (text-style-face s2)))
+             (size1 (text-style-size s1))
+             (size2 (text-style-size s2))
+             (size (case size1
+                     ((nil) size2)
+                     (:smaller (find-smaller-size size2))
+                     (:larger (find-larger-size size2))
+                     (t size1))))
+        (make-text-style family face size))
       s1))
-
-(defmethod invoke-with-text-style ((sheet sheet) continuation text-style)
-  (invoke-with-text-style (sheet-medium sheet) continuation text-style))
-
-(defmethod invoke-with-text-style ((medium medium) continuation text-style)
-  (let ((old-style (medium-text-style medium)))
-    (setf (medium-text-style medium)
-      (merge-text-styles text-style (medium-merged-text-style medium)))
-    (unwind-protect
-	(funcall continuation)
-      (setf (medium-text-style medium) old-style))))
 
 (defun parse-text-style (style)
   (if (text-style-p style)
@@ -238,10 +225,10 @@
 	  (size nil))
       (loop for item in style
 	    do (cond
-		((member item '(fix :serif :sans-serif))
+		((member item '(:fix :serif :sans-serif))
 		 (setq family item))
 		((or (member item '(:roman :bold :italic))
-		     (listp item))
+		     (consp item))
 		 (setq face item))
 		((or (member item '(:tiny :very-small :small :normal
 				    :large :very-large :huge))
@@ -250,41 +237,54 @@
       (make-text-style family face size))))
 
 (defmacro with-text-style ((medium text-style) &body body)
-  (declare (type symbol medium))
   (when (eq medium t)
     (setq medium '*standard-output*))
-  `(flet ((continuation ()
+  (check-type medium symbol)
+  `(flet ((continuation (,medium)
+            (declare (ignorable ,medium))
 	    ,@body))
-     #-clisp (declare (dynamic-extent #'continuation))
-     (invoke-with-text-style ,medium #'continuation (parse-text-style ,text-style))))
+     (declare (dynamic-extent #'continuation))
+     (invoke-with-text-style ,medium #'continuation
+                             (parse-text-style ,text-style))))
+
+(defmethod invoke-with-text-style ((sheet sheet) continuation text-style)
+  (let ((medium (sheet-medium sheet))) ; FIXME: WITH-SHEET-MEDIUM
+    (with-text-style (medium text-style)
+      (funcall continuation sheet))))
+
+(defmethod invoke-with-text-style ((medium medium) continuation text-style)
+  (letf (((medium-text-style medium)
+          (merge-text-styles text-style (medium-merged-text-style medium))))
+    (funcall continuation medium)))
 
 (defmacro with-text-family ((medium family) &body body)
   (declare (type symbol medium))
   (when (eq medium t)
     (setq medium '*standard-output*))
-  `(flet ((continuation ()
+  `(flet ((continuation (,medium)
 	    ,@body))
-     #-clisp (declare (dynamic-extent #'continuation))
-     (invoke-with-text-style ,medium #'continuation (make-text-style ,family nil nil))))
+     (declare (dynamic-extent #'continuation))
+     (invoke-with-text-style ,medium #'continuation
+                             (make-text-style ,family nil nil))))
 
 (defmacro with-text-face ((medium face) &body body)
   (declare (type symbol medium))
   (when (eq medium t)
     (setq medium '*standard-output*))
-  `(flet ((continuation ()
+  `(flet ((continuation (,medium)
 	    ,@body))
-     #-clisp (declare (dynamic-extent #'continuation))
-     (invoke-with-text-style ,medium
-                             #'continuation (make-text-style nil ,face nil))))
+     (declare (dynamic-extent #'continuation))
+     (invoke-with-text-style ,medium #'continuation
+                             (make-text-style nil ,face nil))))
 
 (defmacro with-text-size ((medium size) &body body)
   (declare (type symbol medium))
-  (when (eq medium t)
-    (setq medium '*standard-output*))
-  `(flet ((continuation ()
+  (when (eq medium t) (setq medium '*standard-output*))
+  `(flet ((continuation (,medium)
 	    ,@body))
-     #-clisp (declare (dynamic-extent #'continuation))
-     (invoke-with-text-style ,medium #'continuation (make-text-style nil nil ,size))))
+     (declare (dynamic-extent #'continuation))
+     (invoke-with-text-style ,medium #'continuation
+                             (make-text-style nil nil ,size))))
 
 
 ;;; MEDIUM class
@@ -496,28 +496,28 @@
 (defmethod medium-draw-point* :around ((medium basic-medium) x y)
   (let ((tr (medium-transformation medium)))
     (with-transformed-position (tr x y)
-                               (call-next-method medium x y))))
+      (call-next-method medium x y))))
 
 (defmethod medium-draw-points* :around ((medium basic-medium) coord-seq)
   (let ((tr (medium-transformation medium)))
     (with-transformed-positions (tr coord-seq)
-                                (call-next-method medium coord-seq))))
+      (call-next-method medium coord-seq))))
 
 (defmethod medium-draw-line* :around ((medium basic-medium) x1 y1 x2 y2)
   (let ((tr (medium-transformation medium)))
     (with-transformed-position (tr x1 y1)
-                               (with-transformed-position (tr x2 y2)
-                                                          (call-next-method medium x1 y1 x2 y2)))))
+      (with-transformed-position (tr x2 y2)
+        (call-next-method medium x1 y1 x2 y2)))))
 
 (defmethod medium-draw-lines* :around ((medium basic-medium) coord-seq)
   (let ((tr (medium-transformation medium)))
     (with-transformed-positions (tr coord-seq)
-                                (call-next-method medium coord-seq))))
+      (call-next-method medium coord-seq))))
 
 (defmethod medium-draw-polygon* :around ((medium basic-medium) coord-seq closed filled)
   (let ((tr (medium-transformation medium)))
     (with-transformed-positions (tr coord-seq)
-                                (call-next-method medium coord-seq closed filled))))
+      (call-next-method medium coord-seq closed filled))))
 
 (defmethod medium-draw-rectangle* :around ((medium basic-medium) left top right bottom filled)
   (let ((tr (medium-transformation medium)))
