@@ -50,8 +50,7 @@
                              :ink (gadget-highlighted-color gadget)
                              :filled t)
             (draw-edges-lines* gadget 0 0 (1- w) (1- h)) ;(- w 2) (- h 2)
-            (draw-text* gadget label (round w 2) (round h 2)
-                        :align-x :center :align-y :center)))))))
+            (draw-label* gadget x1 y1 x2 y2)))))))
 
 (defun menu-draw-unhighlighted (gadget)
   (when (sheet-mirror gadget)           ;XXX only do this when the gadget is realized.
@@ -63,8 +62,7 @@
             (draw-rectangle* gadget -1 -1 w h ;-1 -1 x2 y2
                              :ink (gadget-normal-color gadget)
                              :filled t)
-            (draw-text* gadget label (round w 2) (round h 2)
-                        :align-x :center :align-y :center)))))))
+            (draw-label* gadget x1 y1 x2 y2)))))))
 
 (defmethod handle-event ((pane menu-button-pane) (event pointer-enter-event))
   (when (slot-value (slot-value pane 'client) 'armed)
