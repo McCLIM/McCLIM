@@ -220,6 +220,11 @@
    (seos-current-width  :initform 0)
    (seos-current-height :initform 0) ))
 
+(defmethod stream-force-output :after ((stream
+					standard-extended-output-stream))
+  (with-sheet-medium (medium stream)
+    (medium-force-output medium)))
+
 (defmethod compose-space ((pane standard-extended-output-stream) &key width height)
   (with-slots (seos-current-width seos-current-height) pane
     (make-space-requirement :width seos-current-width
@@ -439,6 +444,7 @@ more than one line of output i.e., doesn't wrap."))
       (declare (ignore total-height final-y baseline))
       (values final-x total-width))))
 
+;;; XXX where does "6" come from?  Magic fudge factor? -- moore
 (defmethod stream-text-margin ((stream standard-extended-output-stream))
   (with-slots (margin) stream
     (or margin
