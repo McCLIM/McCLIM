@@ -80,7 +80,7 @@ or an item list."))
    (min-width :initarg :min-width :reader cell-min-width)
    (min-height :initarg :min-height :reader cell-min-height)))
 
-(defmacro formatting-cell ((&optional stream
+(defmacro formatting-cell ((&optional (stream t)
                             &key (align-x :left) (align-y :center) ; FIXME!!! It must be :baseline, but it is not yet implemented
                                  (min-width (coordinate 0)) ; ???
                                  (min-height (coordinate 0))
@@ -221,7 +221,7 @@ to a table cell within the row."))
        (when (cell-output-record-p record) (funcall function record)))
    row-record +everywhere+))
 
-(defmacro formatting-row ((&optional stream
+(defmacro formatting-row ((&optional (stream t)
                            &key (record-type 'standard-row-output-record))
                            &body body)
   (declare (type symbol stream))
@@ -285,7 +285,7 @@ corresponding to a table cell within the column."))
        (when (cell-output-record-p record) (funcall function record)))
    column-record +everywhere+))
 
-(defmacro formatting-column ((&optional stream
+(defmacro formatting-column ((&optional (stream t)
                               &key (record-type 'standard-column-output-record))
                              &body body)
   (declare (type symbol stream))
