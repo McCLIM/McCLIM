@@ -127,6 +127,9 @@
    "Backends/PostScript/class"
    "Backends/PostScript/graphics"
    "Backends/PostScript/sheet"
+   "Backends/PostScript/font.lisp"
+   "Backends/PostScript/afm.lisp"
+   "Backends/PostScript/standard-metrics.lisp"
    )
 
 (clim-defsystem (:clim :depends-on (:clim-core :goatee-core :clim-postscript))

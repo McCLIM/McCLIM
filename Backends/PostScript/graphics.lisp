@@ -5,6 +5,8 @@
 ;;;           Lionel Salabartan (salabart@emi.u-bordeaux.fr)
 ;;;  (c) copyright 2002 by
 ;;;           Alexey Dejneka (adejneka@comail.ru)
+;;;           Gilbert Baumann (unk6@rz.uni-karlsruhe.de)
+
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -28,6 +30,7 @@
 ;;; - (?) blending
 ;;; - check MEDIUM-DRAW-TEXT*
 ;;; - check START,END-ANGLE in M-D-ELLIPSE*
+;;; - check line style
 ;;; - POSTSCRIPT-ACTUALIZE-GRAPHICS-STATE: fix CLIPPING-REGION reusing logic
 ;;; - MEDIUM-DRAW-... should not duplicate code from POSTSCRIPT-ADD-PATH
 ;;; - structure this file
@@ -461,7 +464,6 @@
                               start end
                               align-x align-y
                               toward-x toward-y transform-glyphs)
-  (declare (ignore align-x align-y toward-x toward-y))
   (setq string (if (characterp string)
                    (make-string 1 :initial-element string)
                    (subseq string start end)))
@@ -496,21 +498,42 @@
           (moveto file-stream x y)
           (format file-stream "(~A) show~%" (postscript-escape-string string)))))))
 
+;; The following four functions should be rewritten: AFM contains all
+;; needed information
 (defmethod text-style-ascent (text-style (medium postscript-medium))
-  1)
+  (multiple-value-bind (width height final-x final-y baseline)
+      (text-size medium "I" :text-style text-style)
+    (declare (ignore width height final-x final-y))
+    baseline))
 
 (defmethod text-style-descent (text-style (medium postscript-medium))
-  1)
+  (multiple-value-bind (width height final-x final-y baseline)
+      (text-size medium "q" :text-style text-style)
+    (declare (ignore width final-x final-y))
+    (- height baseline)))
 
 (defmethod text-style-height (text-style (medium postscript-medium))
-  1)
+  (multiple-value-bind (width height final-x final-y baseline)
+      (text-size medium "Iq" :text-style text-style)
+    (declare (ignore width final-x final-y baseline))
+    height))
 
 (defmethod text-style-width (text-style (medium postscript-medium))
-  1)
+  (multiple-value-bind (width height final-x final-y baseline)
+      (text-size medium "M" :text-style text-style)
+    (declare (ignore height final-x final-y baseline))
+    width))
 
 (defmethod text-size ((medium postscript-medium) string
                       &key text-style (start 0) end)
-  (values 1 1 1 1 1))
+  (when (characterp string)
+    (setq string (string string)))
+  (multiple-value-bind (font size)
+      (text-style->postscript-font
+       (merge-text-styles text-style
+                          (medium-text-style medium)))
+    (text-size-in-font font size
+                       string start (or end (length string)))))
 
 
 (defmethod climi::text-style-character-width
