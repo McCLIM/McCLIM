@@ -21,7 +21,7 @@
 (defpackage "IMAGE"
 ; (:use #:clim-lisp)
   (:use #:clim-clx #:common-lisp)
-  (:export    
+  (:export
    "WRITE-PNM" "READ-IMAGE-FILE"
    "IMAGE" "IMAGE-COLOR" "IMAGE-GADGET" "IMAGE-HEIGHT"
    "IMAGE-PIXEL" "IMAGE-PIXELS" "IMAGE-WIDTH"
@@ -30,7 +30,7 @@
    "GRAY-IMAGE-MIN-LEVEL" "GRAY-IMAGE-MIN-LEVEL"
    "TRUECOLOR-IMAGE" "MAKE-TRUECOLOR-IMAGE" "MAKE-3X256-COLOR-IMAGE"
    "COLOR-IMAGE-MIN-LEVEL" "COLOR-IMAGE-MAX-LEVEL"
-   "BINARY-IMAGE" "MAKE-BINARY-IMAGE" 
+   "BINARY-IMAGE" "MAKE-BINARY-IMAGE"
    "RED-COMPONENT" "GREEN-COMPONENT" "BLUE-COMPONENT"
    "COLORMAP-IMAGE"
    "SPECTRAL-IMAGE"))
@@ -57,7 +57,7 @@
 
 (defmethod image-height ((image image))
   (car (array-dimensions (image-pixels image))))
-   
+
 (defmethod image-pixel ((image image) x y)
   (aref (image-pixels image) y x))
 
@@ -180,7 +180,7 @@
 (defmacro with-write-pnm-loop ((magic-number max-value) &body body)
   `(let ((height (car (array-dimensions picture)))
 	 (width (cadr (array-dimensions picture))))
-     (format stream "P~A~%" ,magic-number)	    
+     (format stream "P~A~%" ,magic-number)
      (format stream "~A ~A~%" width height)
      (when ,max-value
        (format stream "~A~%" ,max-value))
@@ -208,8 +208,8 @@
 (defun write-ppm-p3 (stream picture)
   (with-write-pnm-loop (3 255)
     (let ((rgb (aref picture r c)))
-      (format stream "~A ~A ~A~%" 
-	      (red-component rgb) 
+      (format stream "~A ~A ~A~%"
+	      (red-component rgb)
 	      (green-component rgb)
 	      (blue-component rgb)))))
 
@@ -253,42 +253,41 @@
      (skip-whitespace-and-comments)
      (read-number height)
      (when ,read-max-value
-       (skip-whitespace-and-comments)       
+       (skip-whitespace-and-comments)
        (read-number max-value))
      ,@body))
 
 (defmacro with-pnm-ascii-reader (read-max-value element-type &body body)
   (let ((result (gensym)))
     `(with-pnm-header ,read-max-value
-       (loop with size of-type fixnum = (* width height) 
+       (loop with size of-type fixnum = (* width height)
 	     with ,result = (make-array `(,height ,width) :element-type ',element-type)
 	     with vec = (make-array `(,size)
 				    :element-type ',element-type
 				    :displaced-to ,result)
-	     with offset of-type fixnum = 0
-	     for offset from 0 below size
+	     for offset of-type fixnum from 0 below size
 	     do ,@body
 	     finally (return ,result)))))
 
 (defun read-pbm-p1 (stream)
   (declare (optimize (speed 3)))
-  (with-pnm-ascii-reader nil 'bit 
+  (with-pnm-ascii-reader nil bit
     (let ((color 0))
       (skip-whitespace-and-comments)
-      (read-number color) 
+      (read-number color)
       (setf (aref vec offset) color))))
 
 (defun read-pgm-p2 (stream)
   (declare (optimize (speed 3)))
-  (with-pnm-ascii-reader nil '(unsigned-byte 8) 
+  (with-pnm-ascii-reader nil (unsigned-byte 8)
     (let ((color 0))
       (skip-whitespace-and-comments)
-      (read-number color) 
+      (read-number color)
       (setf (aref vec offset) color))))
 
 (defun read-ppm-p3 (stream)
   (declare (optimize (speed 3)))
-  (with-pnm-ascii-reader nil '(unsigned-byte 24) 
+  (with-pnm-ascii-reader nil (unsigned-byte 24)
     (let ((r 0)
 	  (g 0)
 	  (b 0))
@@ -317,7 +316,7 @@
 
 (defun read-pgm-p5 (stream)
   (with-pnm-header t
-    (loop with size of-type fixnum = (* width height) 
+    (loop with size of-type fixnum = (* width height)
 	  with result = (make-array `(,height ,width) :element-type '(unsigned-byte 8))
 	  with vec = (make-array `(,size)
 				 :element-type '(unsigned-byte 8)
@@ -358,7 +357,7 @@
 	     (let ((byte2 (read-byte stream)))
 	       (case byte2
 		 ((#.(char-code #\1)) (read-pbm-p1 stream))
-		 ((#.(char-code #\4)) (read-pbm-p4 stream)) 
+		 ((#.(char-code #\4)) (read-pbm-p4 stream))
 		 ((#.(char-code #\2)) (read-pgm-p2 stream))
 		 ((#.(char-code #\5)) (read-pgm-p5 stream))
 		 ((#.(char-code #\3)) (read-ppm-p3 stream)) ; ASCII
