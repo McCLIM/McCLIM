@@ -113,13 +113,13 @@
    (nine     (make-button "9" (queue-number 9)))
    (zero     (make-button "0" (queue-number 0)))
    (screen   :text-field :value "0")
-   (ac       (make-button "AC" #'initac :max-width 150))
-   (ce       (make-button "CE" #'initce :max-width 150)))
+   (ac       (make-button "AC" #'initac))
+   (ce       (make-button "CE" #'initce)))
 
   (:layouts
    (default
        (with-slots (text-field) *application-frame*
-         (vertically (:width 150)
+         (vertically (:width 150 :max-width 500)
            (setf text-field screen)
            (horizontally (:height 50) ac ce)
            (tabling ()
