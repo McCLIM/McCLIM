@@ -370,8 +370,8 @@
 	  (xlib:make-wm-size-hints 
 	   :width (round (space-requirement-width space-requirement))
 	   :height (round (space-requirement-height space-requirement))
-	   :max-width (round (space-requirement-max-width space-requirement))
-	   :max-height (round (space-requirement-max-height space-requirement))
+	   :max-width (min 65535 (round (space-requirement-max-width space-requirement)))
+	   :max-height (min 65535 (round (space-requirement-max-height space-requirement)))
 	   :min-width (round (space-requirement-min-width space-requirement))
 	   :min-height (round (space-requirement-min-height space-requirement))))))
 
