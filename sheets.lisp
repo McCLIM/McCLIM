@@ -148,9 +148,11 @@ sheet-supports-only-one-child error to be signalled."))
 (defgeneric sheetp (x))
 
 (defmethod sheetp ((x sheet))
+  (declare (ignorable x))
   t)
 
 (defmethod sheetp (x)
+  (declare (ignorable x))
   nil)
 
 (defclass basic-sheet (sheet)
