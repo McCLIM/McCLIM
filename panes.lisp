@@ -76,19 +76,22 @@
   (with-slots (width min-width max-width height min-height max-height) space-req
     (values width min-width max-width height min-height max-height)))
 
-(defun space-requirement-combine* (function sr1 list-sr2)
+(defun space-requirement-combine* (function sr1 &key (width 0) (min-width 0) (max-width 0)
+                                                (height 0) (min-height 0) (max-height 0))
   (apply #'make-space-requirement
          (mapcan #'(lambda (c1 c2 keyword)
                      (list keyword (funcall function c1 c2)))
                  (multiple-value-list (space-requirement-components sr1))
-                 list-sr2
+                 (list width min-width max-width height min-height max-height)
                  '(:width :min-width :max-width :height :min-height :max-height))))
 
 (defun space-requirement-combine (function sr1 sr2)
-  (space-requirement-combine* function
-                              sr1
-                              (multiple-value-list
-                               (space-requirement-components sr2))))
+  (multiple-value-bind (width min-width max-width height min-height max-height)
+      (space-requirement-components sr2)
+    (space-requirement-combine* function
+                                sr1
+                                :width width :min-width min-width :max-width max-width
+                                :height height :min-height min-height :max-height max-height)))
 
 (defun space-requirement+ (sr1 sr2)
   (space-requirement-combine #'+ sr1 sr2))
@@ -97,7 +100,8 @@
                                       (height 0) (min-height 0) (max-height 0))
   (space-requirement-combine* #'+
                               space-req
-                              (list width min-width max-width height min-height max-height)))
+                              :width width :min-width min-width :max-width max-width
+                              :height height :min-height min-height :max-height max-height))
   
 ;; Set of macro for accessing quickly to the space-requirement slots.
 (defmacro get-width (pane)
