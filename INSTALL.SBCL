@@ -1,0 +1,73 @@
+Install instructions for SBCL
+-----------------------------
+
+1. Get a recent SBCL, it will be equipped be ASDF, which you will
+   need.
+
+2. If you don't have CLX in your SBCL, check this URL:
+
+   <URL: http://www.cliki.net/CLX >
+
+   Download the SBCL CLX, unpack it in a directory, go to the
+   directory, start SBCL and:
+
+   * (load "clx.asd")
+   * (asdf:oos 'asdf:load-op :clx)
+   * (quit)
+
+   Read the INSTALL.asdf file in the directory on how to hook CLX into
+   asdf so it will be loaded automagically. 
+
+2. Go back to this directory, CLIM, and start sbcl
+
+3. Load the system definition file:
+
+   * (load "system.lisp")
+
+4. Load the system (which will also compile it):
+
+   * (asdf:oos 'asdf:load-op :clim)  ;; Build CLIM
+   * (asdf:oos 'asdf:load-op :clim-clx) ;; Build a backend
+   * (asdf:oos 'asdf:load-op :clim-examples)
+
+The first two steps can be done in one step with the :clim-clx-user target:
+   (asdf:oos 'asdf:load-op :clim-clx-user)
+
+5. At a later date, after everything is compiled, load the compiled system:
+
+   * (asdf:oos 'asdf:load-op :clim)  ;; Load CLIM
+   * (asdf:oos 'asdf:load-op :clim-clx) ;; Load backend
+
+
+Running the demos
+-----------------
+
+1. Run the calculator demo
+
+   (clim-demo::calculator)
+
+   This demo is self-explanatory.
+	
+   when you get tired of it, hit ^C in the Lisp listener.
+
+2. Run the menu demo
+
+   (menutest::menutest)
+
+   This demo is self-explanatory.
+	
+   when you get tired of it, hit ^C in the Lisp listener.
+
+3. Run the slider demo
+
+   (clim-demo::colorslider)
+
+   You should see three sliders on the left and a color area on the right. 
+   Use the three sliders to adjust RGB values to obtain a color.
+
+   when you get tired of it, hit ^C in the Lisp listener.
+
+4. A some of the demos should be run using the function clim-demo::run-test:
+   (clim-demo::run-test 'clim-demo::address-book)
+   (clim-demo::run-test 'goatee::goatee-test)
+
