@@ -643,9 +643,60 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
     (setq parent (stream-current-output-record stream)))
   (let ((new-record (apply #'make-instance record-type :parent parent initargs)))
     (letf (((stream-current-output-record stream) new-record))
+      ;; Should we switch on recording? -- APD
       (funcall continuation stream new-record)
       (finish-output stream))
     (stream-add-output-record stream new-record)
+    new-record))
+
+(defmacro with-output-to-output-record
+    ((stream
+      &optional
+      (record-type 'standard-sequence-output-record)
+      (record nil record-supplied-p)
+      &rest initargs)
+     &body body)
+  "Creates a new output record of type RECORD-TYPE and then captures
+the output of BODY into the new output record. The cursor position of
+STREAM is initially bound to (0,0)
+    If RECORD is supplied, it is the name of a variable that will be
+lexically bound to the new output record inside the body. INITARGS are
+CLOS initargs that are passed to MAKE-INSTANCE when the new output
+record is created.
+    It returns the created output record.
+    The STREAM argument is a symbol that is bound to an output
+recording stream. If it is T, *STANDARD-OUTPUT* is used."
+  (when (eq stream 't)
+    (setq stream '*standard-output*))
+  (check-type stream symbol)
+  (unless record-supplied-p (setq record (gensym "RECORD")))
+  `(invoke-with-output-to-output-record
+    ,stream
+    #'(lambda (,stream ,record)
+        (declare (ignorable ,stream ,record))
+        ,@body)
+    ',record-type
+    ,@initargs))
+
+(defmethod invoke-with-output-to-output-record
+    ((stream output-recording-stream)
+     continuation record-type
+     &rest initargs
+     &key parent
+     &allow-other-keys)
+  (stream-close-text-output-record stream)
+  (unless parent (setq parent (stream-current-output-record stream)))
+  (let ((new-record (apply #'make-instance record-type
+                           :parent parent initargs)))
+    (with-output-recording-options (stream :record t :draw nil)
+      (multiple-value-bind (cx cy)
+          (stream-cursor-position stream)
+        (unwind-protect
+             (letf (((stream-current-output-record stream) new-record))
+               (setf (stream-cursor-position stream) (values 0 0))
+               (funcall continuation stream new-record)
+               (finish-output stream))
+          (setf (stream-cursor-position stream) (values cx cy)))))
     new-record))
 
 (defmethod scroll-vertical :around ((stream output-recording-stream) dy)
@@ -806,6 +857,7 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
 (def-grecording draw-text (string point-x point-y start end
 			   align-x align-y toward-x toward-y transform-glyphs)
   ;; FIXME!!! transformation
+  ;; Multiple lines?
  (let* ((width (stream-string-width stream string
                                     :start start :end end
                                     :text-style text-style))
@@ -821,7 +873,7 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
      (:center (setq left (- point-x (round width 2))
                     right (+ point-x (round width 2)))))
    (ecase align-y
-     (:baseline (setq top (- point-y height)
+     (:baseline (setq top (- point-y ascent)
                       bottom (+ point-y descent)))
      (:top (setq top point-y
                  bottom (+ point-y height)))
