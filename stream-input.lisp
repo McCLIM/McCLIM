@@ -397,7 +397,8 @@
 	char
 	(values nil :eof))))
 
-(defmethod stream-unread-gesture ((stream string-stream) gesture)
+(defmethod stream-unread-gesture ((stream #.*string-input-stream-class*)
+				  gesture)
   (unread-char gesture stream))
 ;;; Gestures
 
