@@ -143,10 +143,9 @@
   (format (postscript-medium-file-stream medium) "grestore~%"))
 
 (defun invoke-with-graphics-state (medium continuation)
-  (let ((stream (postscript-medium-file-stream medium)))
-    (postscript-save-graphics-state medium)
-    (funcall continuation)
-    (postscript-restore-graphics-state medium)))
+  (postscript-save-graphics-state medium)
+  (funcall continuation)
+  (postscript-restore-graphics-state medium))
 
 (defmacro with-graphics-state ((medium) &body body)
   `(invoke-with-graphics-state ,medium
@@ -169,7 +168,7 @@
    to the current path of STREAM."))
 
 (defmethod postscript-add-path (stream (region (eql +nowhere+)))
-  (declare (ignore stream region)))
+  (declare (ignore stream)))
 
 (defmethod postscript-add-path (stream (region standard-region-union))
   (map-over-region-set-regions (lambda (region)
@@ -316,10 +315,9 @@
   (format stream "clip~%"))
 
 (defmethod postscript-set-clipping-region (stream (region (eql +everywhere+)))
-  (declare (ignore stream region)))
+  (declare (ignore stream)))
 
 (defmethod postscript-set-clipping-region (stream (region (eql +nowhere+)))
-  (declare (ignore region))
   (format stream "newpath 0 0 moveto closepath clip~%"))
 
 (defmethod postscript-set-graphics-state (stream medium
