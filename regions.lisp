@@ -4,7 +4,7 @@
 ;;;   Created: 1998-12-02 19:26
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: regions.lisp,v 1.20 2002/06/12 03:43:41 adejneka Exp $
+;;;       $Id: regions.lisp,v 1.21 2002/06/20 07:40:04 adejneka Exp $
 ;;; --------------------------------------------------------------------------------------
 ;;;  (c) copyright 1998,1999,2001 by Gilbert Baumann
 ;;;  (c) copyright 2001 by Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
@@ -999,6 +999,8 @@
               (= (length (cdr (first bands))) 2))
          (make-rectangle* (first (cdar bands)) (caar bands)
                           (second (cdar bands)) (caadr bands)))
+        ((= (length (first bands)) 1)
+         (make-standard-rectangle-set (rest bands)))
         (t
          (make-instance 'standard-rectangle-set :bands bands)) ))
     
