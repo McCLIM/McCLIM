@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.87 2002/06/27 16:45:13 gilbert Exp $
+;;; $Id: panes.lisp,v 1.88 2002/06/27 17:33:04 gilbert Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -2029,7 +2029,6 @@ During realization the child of the spacing will have as cordinates
                        (remf options key)
                        (and value
                             (list key value))))))
-    (format *trace-output* "User-SR = ~S.~%" user-sr)
     (let ((pane (apply #'make-pane type (append options
                                                 (unless (or scroll-bars
                                                             (and border-width (> border-width 0))))))))
