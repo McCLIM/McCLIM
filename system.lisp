@@ -94,6 +94,7 @@
    "clx-medium"
    "clx-graft"
    "clx-frame-manager"
+   "image"
    ))
    
 (defsystem :clim-examples #-mk-defsystem ()
