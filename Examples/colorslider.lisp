@@ -59,18 +59,18 @@
 ;; test functions
 
 (defun colorslider ()
-  (declare (special frame fm port pane medium graft))
-  (loop for port in climi::*all-ports*
-      do (destroy-port port))
-  (setq climi::*all-ports* nil)
-  (setq fm (find-frame-manager))
-  (setq frame (make-application-frame 'colorslider
-                                      :frame-manager fm))
-  (setq port (climi::frame-manager-port fm))
-  (setq pane (frame-panes frame))
-  (setq medium (sheet-medium pane))
-  (setq graft (graft frame))
-  (run-frame-top-level frame))
+;  (declare (special frame fm port pane medium graft))
+;  (loop for port in climi::*all-ports*
+;      do (destroy-port port))
+;  (setq climi::*all-ports* nil)
+;  (setq fm (find-frame-manager))
+;  (setq frame (make-application-frame 'colorslider
+;                                      :frame-manager fm))
+;  (setq port (climi::frame-manager-port fm))
+;  (setq pane (frame-panes frame))
+;  (setq medium (sheet-medium pane))
+;  (setq graft (graft frame))
+  (run-frame-top-level (make-application-frame 'colorslider)))
 
 (defmethod slidertest-frame-top-level
     ((frame application-frame)
