@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.137 2004/01/20 16:07:26 moore Exp $
+;;; $Id: panes.lisp,v 1.138 2004/01/22 20:14:59 moore Exp $
 
 (in-package :clim-internals)
 
@@ -2117,11 +2117,11 @@
                             basic-pane
                             )
   ((redisplay-needed :initarg :display-time) 
-   (incremental-redisplay :type (member '(t nil))
+   (incremental-redisplay :type (member t nil)
 			  :initform nil
 			  :initarg :incremental-redisplay
 			  :accessor pane-incremental-redisplay)
-   (scroll-bars :type (member '(t :vertical :horizontal nil))
+   (scroll-bars :type (member t :vertical :horizontal nil)
 		:initform nil
 		:initarg :scroll-bars
 		:accessor pane-scroll-bars)
