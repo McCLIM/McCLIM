@@ -283,10 +283,15 @@
 (defmethod destroy-port :before ((port clx-port))
   (xlib:close-display (clx-port-display port)))
 
-(defun peek-event (display)
-  (xlib:process-event display :timeout 0 :peek-p t :handler
-    #'(lambda (&key event-key &allow-other-keys)
-        event-key)))
+; think about rewriting this macro to be nicer
+(defmacro peek-event ((display &rest keys) &body body)
+  (let ((escape (gensym)))
+    `(block ,escape
+       (xlib:process-event display :timeout 0 :peek-p t :handler
+         #'(lambda (&key ,@keys &allow-other-keys)
+             (return-from ,escape
+               (progn
+                 ,@body)))))))
 
 (defun event-handler (&rest event-slots
                       &key display window event-key code state mode time width height x y data count
@@ -320,12 +325,14 @@
 	   :pointer 0 :button code :x x :y y
 	   :sheet sheet :modifier-state state :timestamp time))
 	(:configure-notify
+         ; it would be nice to consolidate these for resizes, but because of the
+         ; interleaving exposures it becomes a bit tricky to do at this point. - BTS
 	 (make-instance 'window-configuration-event :sheet sheet
 			:x x :y y :width width :height height))
 	(:destroy-notify
 	 (make-instance 'window-destroy-event :sheet sheet))
 	(:motion-notify
-         (unless (eq :motion-notify (peek-event display))
+         (unless (eq :motion-notify (peek-event (display event-key) event-key))
            ; consolidate motion notifications
 	   (make-instance 'pointer-motion-event :pointer 0 :button code :x x :y y
 			  :sheet sheet :modifier-state state :timestamp time)))

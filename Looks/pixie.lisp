@@ -270,6 +270,35 @@
                      :max-value 1
                      :orientation :vertical))
 
+(defmethod drag-callback ((pane pixie-scroll-bar-pane) client gadget-id value)
+  (declare (ignore client gadget-id))
+  (invoke-callback pane (scroll-bar-drag-callback pane) value))
+
+(defmethod scroll-to-top-callback ((pane pixie-scroll-bar-pane) client gadget-id)
+  (declare (ignore client gadget-id))
+  (invoke-callback pane (scroll-bar-scroll-to-top-callback pane)))
+
+(defmethod scroll-to-bottom-callback ((pane pixie-scroll-bar-pane) client gadget-id)
+  (declare (ignore client gadget-id))
+  (invoke-callback pane (scroll-bar-scroll-to-bottom-callback pane)))
+
+(defmethod scroll-up-line-callback ((pane pixie-scroll-bar-pane) client gadget-id)
+  (declare (ignore client gadget-id))
+  (invoke-callback pane (scroll-bar-scroll-up-line-callback pane)))
+
+(defmethod scroll-up-page-callback ((pane pixie-scroll-bar-pane) client gadget-id)
+  (declare (ignore client gadget-id))
+  (invoke-callback pane (scroll-bar-scroll-up-page-callback pane)))
+
+(defmethod scroll-down-line-callback ((pane pixie-scroll-bar-pane) client gadget-id)
+  (declare (ignore client gadget-id))
+  (invoke-callback pane (scroll-bar-scroll-down-line-callback pane)))
+
+(defmethod scroll-down-page-callback ((pane pixie-scroll-bar-pane) client gadget-id)
+  (declare (ignore client gadget-id))
+  (invoke-callback pane (scroll-bar-scroll-down-page-callback pane)))
+
+
 (defmethod scroll-bar-thumb-size ((pane pixie-scroll-bar-pane))
   (gadget-thumb-size pane))
 

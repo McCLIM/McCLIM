@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.74 2002/04/24 16:30:14 brian Exp $
+;;; $Id: panes.lisp,v 1.75 2002/04/27 09:02:59 brian Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -684,11 +684,20 @@
     (setf (pane-space-requirement pane)
       (compose-space pane)))
   (when (first (sheet-children pane))
+    #+nil
     (allocate-space
         (first (sheet-children pane))
 	(clamp width (sr-min-width pane) (sr-max-width pane))
-	(clamp height (sr-min-height pane) (sr-max-height pane)))))
+	(clamp height (sr-min-height pane) (sr-max-height pane)))
+    #-nil ; this works, but may not be correct... see why the clamp is so restrictive
+          ; with [vh]racks, etc
+          ; I'll leave this in for now, since it helps in testing allocate-space - BTS
+    (allocate-space
+        (first (sheet-children pane))
+	width
+	height)))
 
+#+nil ; retired while debugging the following - but this code should work
 (defmethod handle-event ((pane top-level-sheet-pane)
 			 (event window-configuration-event))
   (let ((x (window-configuration-event-x event))
@@ -702,6 +711,30 @@
     (setf (slot-value pane 'region)
 	  (make-bounding-rectangle 0 0 width height))
     (allocate-space pane width height)))
+
+#-nil
+(defmethod handle-event ((pane top-level-sheet-pane)
+			 (event window-configuration-event))
+  (let ((x (window-configuration-event-x event))
+	(y (window-configuration-event-y event))
+	(width (window-configuration-event-width event))
+        (height (window-configuration-event-height event)))
+    (with-bounding-rectangle* (old-x1 old-y1 old-x2 old-y2) (sheet-region pane)
+      (let ((old-width  (- old-x2 old-x1))
+            (old-height (- old-y2 old-y2)))
+        ;; avoid going into an infinite loop by not using (setf sheet-transformation)
+        (setf (slot-value pane 'transformation)
+	      (make-translation-transformation x y))
+        ;; avoid going into an infinite loop by not using (setf sheet-region)
+        (setf (slot-value pane 'region)
+	      (make-bounding-rectangle 0 0 width height))
+        #+nil
+        (allocate-space pane width height)
+        (when (or (/= width  old-width)
+                  (/= height old-height))
+          ; is what is called, so we need to check the top level sheet's requirements...
+          ; (compose-space (first (sheet-children pane)))
+          (allocate-space pane width height))))))
 
 (defmethod handle-event ((pane top-level-sheet-pane)
 			 (event window-manager-delete-event))
