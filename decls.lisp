@@ -241,6 +241,9 @@
 ;; Used in stream-input.lisp, defined in frames.lisp
 (defgeneric frame-event-queue (frame))
 
+;;; Used in presentations.lisp, defined in commands.lisp
+
+(defgeneric presentation-translators (command-table))
 
 #||
 

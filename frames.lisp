@@ -610,7 +610,8 @@ FRAME-EXIT condition."))
 		       stream
 		       (pointer-event-x button-press-event)
 		       (pointer-event-y button-press-event)
-		       :frame frame)))
+		       :frame frame
+		       :event button-press-event)))
     (when presentation
       (format *debug-io* "presentation: ~S of type ~S~%"
 	      (presentation-object presentation)
@@ -644,7 +645,8 @@ FRAME-EXIT condition."))
 			     stream
 			     (pointer-event-x event)
 			     (pointer-event-y event)
-			     :frame frame)))
+			     :frame frame
+			     :modifier-state (event-modifier-state event))))
 	  (when (and (frame-hilited-presentation frame)
 		     (not (eq presentation
 			      (car (frame-hilited-presentation frame)))))

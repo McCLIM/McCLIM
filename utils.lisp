@@ -183,3 +183,12 @@ Note:
 
 (define-modify-macro maxf (&rest args) max)
 (define-modify-macro minf (&rest args) min)
+
+;;; Move this early so it can be used in presentations.lisp, which
+;;; comes before commands.lisp.
+
+(defmacro do-command-table-inheritance ((command-table-var command-table) &body body)
+  `(apply-with-command-table-inheritance
+    #'(lambda (,command-table-var)
+	,@body)
+    (find-command-table ,command-table)))

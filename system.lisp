@@ -132,6 +132,7 @@
    "table-formatting"
    "postscript-medium"
    "incremental-redisplay"
+   "builtin-commands"
    )
 
 (clim-defsystem (:clim-clx :depends-on (:clim))

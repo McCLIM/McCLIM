@@ -53,7 +53,8 @@
 		 :reader command-table-inherit-from)
    (commands :initarg :commands :initform (make-hash-table :test #'eq))
    (command-line-names :initform (make-hash-table :test #'equal))
-   (presentation-translators :initform '())
+   (presentation-translators :reader presentation-translators
+			     :initform (make-instance 'translator-table))
    (keystroke-accelerators :initform (make-hash-table :test #'equal))
    (menu :initarg :menu :initform '())))
 
@@ -207,11 +208,7 @@
 	     fun (find-command-table inherited-command-table)))
 	(command-table-inherit-from command-table)))
 
-(defmacro do-command-table-inheritance ((command-table-var command-table) &body body)
-  `(apply-with-command-table-inheritance
-    #'(lambda (,command-table-var)
-	,@body)
-    (find-command-table ,command-table)))
+;;; do-command-table-inheritance has been shipped off to utils.lisp.
 
 (defun map-over-command-table-commands (function command-table &key (inherited t))
   (if inherited
@@ -337,54 +334,84 @@
 
 (defvar *command-argument-delimiters* '(command-delimiter))
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (defun make-argument-accept-fun (name required-args keyword-args)
-    (declare (ignore keyword-args))
-    (let ((stream-var (gensym "STREAM"))
-	  (required-arg-names (mapcar #'car required-args)))
-      (flet ((make-accept (arg-clause)
-	       (let ((arg (car arg-clause))
-		     (ptype (cadr arg-clause))
-		     (key-args (cddr arg-clause))
-		     (accept-keys '(:default :default-type :display-default
-				    :prompt :documentation)))
-		 `(setq ,arg (accept ,ptype
-				     :stream ,stream-var
-				     ,@(mapcan
-					#'(lambda (key)
-					    (let ((val (getf key-args
-							     key
-							     stream-var)))
-					      (unless (eq val stream-var)
-						`(,key ,val))))
-					accept-keys))))))
-	`(defun ,name (,stream-var)
-	   (let ,(mapcar #'(lambda (arg)
-			     `(,arg *unsupplied-argument-maker*))
-		  required-arg-names)
-	     (block activated
-	       (let ((gesture (read-gesture :stream ,stream-var
-					    :timeout 0
-					    :peek-p t)))
-		 (cond ((and gesture (activation-gesture-p gesture))
-			(return-from activated nil))
-		       (gesture
-			(unread-gesture gesture :stream ,stream-var)))
-		 ,@(mapcan #'(lambda (arg)
-			       `(,(make-accept arg)
-				 (setq gesture (read-gesture :stream
-							     ,stream-var))
-				 (when (or (null gesture)
-					   (activation-gesture-p gesture))
-				   (return-from activated nil))
-				 (unless (delimiter-gesture-p gesture)
-				   (unread-gesture gesture
-						   :stream ,stream-var))))
-			   required-args)))
-	     (list ,@required-arg-names)))))))
+(defun make-argument-accept-fun (name required-args keyword-args)
+  (declare (ignore keyword-args))
+  (let ((stream-var (gensym "STREAM"))
+	(required-arg-names (mapcar #'car required-args)))
+    (flet ((make-accept (arg-clause)
+	     (let ((arg (car arg-clause))
+		   (ptype (cadr arg-clause))
+		   (key-args (cddr arg-clause))
+		   (accept-keys '(:default :default-type :display-default
+				  :prompt :documentation)))
+	       `(setq ,arg (accept ,ptype
+			    :stream ,stream-var
+			    ,@(mapcan
+			       #'(lambda (key)
+				   (let ((val (getf key-args
+						    key
+						    stream-var)))
+				     (unless (eq val stream-var)
+				       `(,key ,val))))
+			       accept-keys))))))
+      `(defun ,name (,stream-var)
+	(let ,(mapcar #'(lambda (arg)
+			  `(,arg *unsupplied-argument-maker*))
+		      required-arg-names)
+	  (block activated
+	    (let ((gesture (read-gesture :stream ,stream-var
+					 :timeout 0
+					 :peek-p t)))
+	      (cond ((and gesture (activation-gesture-p gesture))
+		     (return-from activated nil))
+		    (gesture
+		     (unread-gesture gesture :stream ,stream-var)))
+	      ,@(mapcan #'(lambda (arg)
+			    `(,(make-accept arg)
+			      (setq gesture (read-gesture :stream ,stream-var))
+			      (when (or (null gesture)
+					(activation-gesture-p gesture))
+				(return-from activated nil))
+			      (unless (delimiter-gesture-p gesture)
+				(unread-gesture gesture
+						:stream ,stream-var))))
+			required-args)))
+	  (list ,@required-arg-names))))))
 
-;;; XXX temporarily make name default t so we can debug command line processing
-;;; with some interesting examples
+(defun make-command-translators (command-name command-table args)
+  "Helper function to create command presentation translators for a command."
+  (loop for arg in args
+	for arg-index from 0
+	append (when (getf (cddr arg) :gesture)
+		 (destructuring-bind (name ptype
+				      &key gesture &allow-other-keys)
+		     arg
+		   (let ((command-args (loop for a in args
+					     for i from 0
+					     if (eql i arg-index)
+					       collect 'object
+					     else
+					       collect (getf (cddr a) :default)
+					     end))
+			 (translator-name (intern (format nil
+							  ".~A-ARG~D."
+							  command-name
+							  arg-index)
+						  (symbol-package name))))
+		     (multiple-value-bind (gesture translator-options)
+			 (if (listp gesture)
+			     (values (car gesture) (cdr gesture))
+			     (values gesture nil))
+		       `(define-presentation-to-command-translator
+			    ,translator-name
+			    (,(eval ptype) ,command-name ,command-table
+			     :gesture ,gesture
+			     ,@translator-options)
+			  (object)
+			  (list ,@command-args))))))))
+
+;;; XXX temporarily make name default to t so we can debug command line
+;;; processing with some interesting examples
 (defmacro define-command (name-and-options args &body body)
   (unless (listp name-and-options)
     (setq name-and-options (list name-and-options)))
@@ -422,6 +449,8 @@
 	  ,(make-argument-accept-fun accept-fun-name
 				     required-args
 				     keyword-args)
+	  ,(and command-table
+		(make-command-translators func command-table required-args))
 	  (setf (gethash ',func *command-parser-table*) #',accept-fun-name)
 	  ',func)))))
 
@@ -515,6 +544,34 @@
 	   (simple-parse-error "Empty command"))
 	  (t (values command type)))))
 
+(defmacro define-presentation-to-command-translator
+    (name (from-type command-name command-table &key
+	   (gesture :select)
+	   (tester 'default-translator-tester testerp)
+	   (documentation nil documentationp)
+	   (pointer-documentation (command-name-from-symbol command-name))
+	   (menu t)
+	   (priority 0)
+	   (echo t))
+     arglist
+     &body body)
+  (let ((command-args (gensym "COMMAND-ARGS")))
+    `(define-presentation-translator ,name
+	 (,from-type (command :command-table ,command-table) ,command-table
+		     :gesture ,gesture
+		     :tester ,tester
+		     :tester-definitive t
+		     ,@(and documentationp `(:documentation ,documentation))
+		     :pointer-documentation ,pointer-documentation
+		     :menu ,menu
+		     :priority ,priority)
+       ,arglist
+       (let ((,command-args (progn
+			      ,@body)))
+	 (values (cons ',command-name ,command-args)
+		 '(command :command-table ,command-table)
+		 '(:echo ,echo))))))
+
 (defun command-name (command)
   (first command))
 
@@ -549,21 +606,5 @@
        (terpri *query-io*)
        nil))))
 
-;;; Global help command
 
-(define-command (com-help :command-table global-command-table :name "Help")
-    ((kind '(completion (("Keyboard" keyboard) ("Commands" commands))
-	                :value-key cadr)
-	   :prompt "with"
-	   :default 'keyboard))
-  (if (eq kind 'keyboard)
-      (format *query-io* "Input editor commands are like Emacs.~%")
-      (let ((command-table (frame-command-table *application-frame*))
-	    (command-names nil))
-	(map-over-command-table-names #'(lambda (name command)
-					  (declare (ignore command))
-					  (push name command-names))
-				      command-table)
-	(setf command-names (sort command-names #'string-lessp))
-	(format *query-io* "Available commands:~%~{~A~%~}" command-names))))
 
