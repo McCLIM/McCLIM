@@ -120,9 +120,6 @@
    (ascent :accessor ascent :initarg :ascent)
    (descent :accessor descent :initarg :descent)
    (baseline :accessor baseline :initarg :baseline)
-   #+nil(x :initarg :x-position :initform 0)
-   #+nil(y :initarg :y-position :initform 0)
-   #+nil(parent :initarg :parent :initform nil :reader output-record-parent)
    (width :accessor width :initarg :width)
    (cursor :accessor cursor :initarg :cursor :initform nil)
    (line-breaks :accessor line-breaks :initform nil)))
@@ -173,28 +170,6 @@
       (declare (ignore x))
       (setf (slot-value obj 'climi::y2) (+ y (ascent obj) (descent obj)))
       (setf (baseline obj) (+ y (ascent obj))))))
-
-#+nil
-(defmethod output-record-position ((record screen-line))
-  (values (slot-value record 'x) (slot-value record 'y)))
-
-#+nil
-(defmethod* (setf output-record-position) (nx ny (record screen-line))
-  (setf (values (slot-value record 'x) (slot-value record 'y))
-	(values nx ny)))
-#+nil
-(defmethod bounding-rectangle* ((record screen-line))
-  (let ((x (slot-value record 'x))
-	(y (slot-value record 'y)))
-    (values x
-	    y
-	    (+ x (slot-value record 'width))
-	    (+ y (slot-value record 'ascent) (slot-value record 'descent)))))
-
-;;; Implement the rectangle protocol; now region stuff should work.
-#+nil
-(defmethod rectangle-edges* ((record screen-line))
-  (bounding-rectangle* record))
 
 (defmethod map-over-output-records (function (record screen-line)
 				    &optional (x-offset 0) (y-offset 0)

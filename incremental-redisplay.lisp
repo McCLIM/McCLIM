@@ -230,6 +230,17 @@ record is stored.")
 				 &optional (errorp t))
   (delete-output-record child (sub-record record) errorp))
 
+;;; Prevent deleted output records from coming back from the dead.
+(defmethod delete-output-record :after ((child updating-output-record-mixin)
+					record
+					&optional errorp)
+  (declare (ignore record errorp))
+  (let ((pcache (parent-cache child)))
+    (setf (id-map pcache)
+	  (delete (output-record-unique-id child) (id-map pcache)
+		  :key #'car
+		  :test (output-record-id-test child)))))
+
 (defmethod clear-output-record ((record updating-output-record-mixin))
   (clear-output-record (sub-record record)))
 

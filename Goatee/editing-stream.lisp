@@ -51,8 +51,11 @@
 
 ;;; Stream is the encapsulated stream
 (defmethod initialize-instance :after ((obj goatee-input-editing-mixin)
+				       &rest args
 				       &key stream (initial-contents "")
-				       (cursor-visibility t))
+				       (cursor-visibility t)
+				       (background-ink
+					(medium-background stream)))
   (multiple-value-bind (cx cy)
       (stream-cursor-position stream)
     (let ((max-width (- (stream-text-margin stream) cx)))
@@ -60,22 +63,25 @@
       (with-output-recording-options (stream :draw nil :record t)
 	(draw-rectangle* stream cx cy
 			 (+ cx max-width) (+ cy (stream-line-height stream))
-			 :ink (medium-background stream)
-			 :filled nil))
-      (setf (area obj)
-	    (make-instance
-	     'simple-screen-area
-	     :area-stream stream
-	     :buffer (make-instance 'editable-buffer
-				    :initial-contents initial-contents)
-	     :x-position cx
-	     :y-position cy
-	     :cursor-visibility cursor-visibility
-	     :max-width max-width))
+			 :ink background-ink
+			 :filled t))
+      (climi::with-keywords-removed (args (:initial-contents))
+	(setf (area obj)
+	      (apply #'make-instance
+		     'simple-screen-area
+		     :area-stream stream
+		     :buffer (make-instance 'editable-buffer
+					    :initial-contents initial-contents)
+		     :x-position cx
+		     :y-position cy
+		     :cursor-visibility cursor-visibility
+		     :max-width max-width
+		     :allow-other-keys t
+		     args)))
+      
       (stream-add-output-record stream (area obj))
       ;; initialize input-editing-stream state to conform to our reality
-      (make-input-editing-stream-snapshot obj (area obj)))
-    ))
+      (make-input-editing-stream-snapshot obj (area obj)))))
 
 (defvar climi::*noise-string-start*)
 (defvar climi::*noise-string*)

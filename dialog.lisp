@@ -313,7 +313,8 @@ is called. Used to determine if any editing has been done by user")))
 		     (setq editing-stream
 			   (make-instance 'standard-input-editing-stream
 					  :stream stream
-					  :cursor-visibility nil))))))
+					  :cursor-visibility nil
+					  :background-ink +grey90+))))))
     (when editing-stream
       (setf (editing-stream record) editing-stream))
     record))
