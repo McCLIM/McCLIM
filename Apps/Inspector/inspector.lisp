@@ -31,8 +31,11 @@
 (define-application-frame inspector ()
   ((dico :initform (make-hash-table) :reader dico)
    (cons-cell-dico :initform (make-hash-table) :reader cons-cell-dico)
-   (print-length :initform (make-hash-table) :reader print-length)
-   (obj :initarg :obj :reader obj))
+   (print-length :initform (make-hash-table) :reader print-length
+		 :documentation "A hash table mapping list objects to
+their specific print lengths, if they have one.")
+   (obj :initarg :obj :reader obj
+	:documentation "The object being inspected"))
   (:pointer-documentation t)
   (:panes
    (app :application :width 600 :height 500
@@ -115,7 +118,8 @@ information is present."))
   :inherit-from t)
 (define-presentation-type cons ()
   :inherit-from t)
-(define-presentation-type long-list-tail () :inherit-from t)
+(define-presentation-type long-list-tail ()
+  :inherit-from t)
 
 (define-presentation-method present (object (type settable-slot) 
 				     stream
@@ -304,11 +308,12 @@ list as interactive as you would expect."
   (inspector-table
       (format pane "~A (test: ~A)" 'hash-table (hash-table-test object))
     (loop for key being the hash-keys of object
-          do (inspector-table-row
-                (formatting-cell (pane)
-                  (inspect-object key pane)
-                  (princ "=" pane))
-                (inspect-object (gethash key object) pane)))))
+          do (formatting-row (pane)
+	       (formatting-cell (pane :align-x :right)
+		 (inspect-object key pane))
+	       (formatting-cell (pane) (princ "=" pane))
+	       (formatting-cell (pane)
+		 (inspect-object (gethash key object) pane))))))
 
 (defmethod inspect-object ((object generic-function) pane)
   (inspector-table
@@ -522,8 +527,9 @@ them."
 
 (define-inspector-command (com-toggle-inspect :name t)
     ((obj t :gesture :select :prompt "Select an object"))
-  (unless (eq obj (obj *application-frame*))
-  (togglef (gethash obj (dico *application-frame*)))))
+  (unless (or (eq obj (obj *application-frame*))
+	      (null obj))
+    (togglef (gethash obj (dico *application-frame*)))))
 
 (define-inspector-command (com-remove-method :name t)
     ((obj 'method :gesture :delete :prompt "Remove method"))
