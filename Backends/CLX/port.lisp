@@ -67,10 +67,9 @@
 		    :background pixel
 		    :event-mask (xlib:make-event-mask
 				 :exposure :key-press :key-release
-				 :button-press :button-release))))
+				 :button-press :button-release
+				 :enter-window :leave-window))))
       (port-register-mirror (port sheet) sheet window)
-      (loop for child in (sheet-children sheet)
-	  do (realize-mirror port child))
       (xlib:map-window window))))
 
 (defmethod realize-mirror ((port clx-port) (sheet border-pane))
@@ -95,13 +94,9 @@
 				 :exposure :key-press :key-release
 				 :button-press :button-release))))
       (port-register-mirror (port sheet) sheet window)
-      (loop for child in (sheet-children sheet)
-	  do (realize-mirror port child))
       (xlib:map-window window))))
 
 (defmethod unrealize-mirror ((port clx-port) (sheet sheet))
-  (loop for child in (sheet-children sheet)
-      do (unrealize-mirror port child))
   (when (port-lookup-mirror port sheet)
     (format t "unrealize-mirror ~S~&" sheet)
     (port-unregister-mirror (port sheet) sheet (port-lookup-mirror port sheet))
@@ -123,9 +118,20 @@
       (:key-release
        (make-instance 'key-release-event :key-name (xlib:keycode->character display code state)
 		      :sheet sheet :modifier-state state))
-      (:button-press
-       (make-instance 'pointer-button-click-event :pointer 0 :button code :x x :y y
+      (:button-release
+       (make-instance 'pointer-button-release-event :pointer 0 :button code :x x :y y
 		      :sheet sheet :modifier-state state))
+      (:button-press
+       (make-instance 'pointer-button-press-event :pointer 0 :button code :x x :y y
+		      :sheet sheet :modifier-state state))
+      (:enter-notify
+       (make-instance 'pointer-enter-event :pointer 0 :button code :x x :y y
+		      :sheet sheet :modifier-state state))
+      (:leave-notify
+       (make-instance 'pointer-exit-event :pointer 0 :button code :x x :y y
+		      :sheet sheet :modifier-state state))
+      (:exposure
+       (make-instance 'window-repaint-event :sheet sheet :modifier-state state))
       (t
        nil))))
 
@@ -145,7 +151,10 @@
     graft))
 
 (defmethod make-medium ((port clx-port) sheet)
-  (make-instance 'clx-medium :port port :graft (graft sheet) :sheet sheet))
+  (make-instance 'clx-medium 
+		 :port port 
+		 :graft (find-graft :port port) 
+		 :sheet sheet))
 
 (defconstant *clx-text-families* '(:fix "adobe-courier"
 				   :serif "adobe-times"
@@ -250,3 +259,6 @@
 (defmethod port-mirror-height ((port clx-port) sheet)
   (let ((mirror (port-lookup-mirror port sheet)))
     (xlib:drawable-height mirror)))
+
+(defmethod graft ((port clx-port))
+  (port-grafts port))
