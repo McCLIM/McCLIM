@@ -584,14 +584,17 @@
 ;;;;;;;;;
 
 (defmethod engraft-medium ((medium basic-medium) port sheet)
-  (setf (%medium-sheet medium) sheet
-        (medium-foreground medium) (medium-foreground sheet)
-        (medium-background medium) (medium-background sheet)
-        (medium-ink medium) (medium-ink sheet)
-        (medium-transformation medium) (medium-transformation sheet)
-        (medium-clipping-region medium) (medium-clipping-region sheet)
-        (medium-line-style medium) (medium-line-style sheet)
-        (medium-text-stle medium) (medium-text-stle sheet)))
+  (setf (%medium-sheet medium) sheet)
+  #||
+  (medium-foreground medium) (medium-foreground sheet)
+  (medium-background medium) (medium-background sheet)
+  (medium-ink medium) (medium-ink sheet)
+  (medium-transformation medium) (medium-transformation sheet)
+  (medium-clipping-region medium) (medium-clipping-region sheet)
+  (medium-line-style medium) (medium-line-style sheet)
+  (medium-text-stle medium) (medium-text-stle sheet)
+  ||#
+  )
 
 (defmethod degraft-medium ((medium basic-medium) port sheet)
   (setf (%medium-sheet medium) nil))
