@@ -122,7 +122,6 @@ Note:
   "Clamps the value 'value' into the range [min,max]."
   (max min (min max value)))
   
-
 ;;;;
 ;;;; Protocol Classes
 ;;;;
@@ -146,3 +145,29 @@ Note:
          t)
 
        ',name)))
+
+;;;;
+;;;; meta functions
+;;;;
+
+;; these are as in Dylan
+
+(defun curry (fun &rest args)
+  #'(lambda (&rest more)
+      (apply fun (append args more))))
+
+(define-compiler-macro curry (fun &rest args)
+  `(lambda (&rest more)
+     (apply ,fun ,@args more)))
+
+(defun always (x)
+  #'(lambda (&rest more)
+      (declare (ignore more))
+      x))
+
+(define-compiler-macro always (x)
+  (let ((g (gensym)))
+    `(let ((,g ,x))
+       (lambda (&rest more)
+         (declare (ignore more))
+         ,g))))
