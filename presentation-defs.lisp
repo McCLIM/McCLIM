@@ -1357,7 +1357,7 @@
 				     stream
 				     (view textual-view)
 				     &key acceptably for-context-type)
-  (declare (ignore acceptably for-context-type))
+  (declare (ignore for-context-type))
   (loop for tail on object
 	for (obj) = tail
 	do (progn
