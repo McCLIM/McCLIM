@@ -1,12 +1,12 @@
 ;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
 
 ;;;  (c) copyright 1998,1999,2000,2001 by Michael McDonald (mikemac@mikemac.com)
-;;;  (c) copyright 2000 by 
+;;;  (c) copyright 2000 by
 ;;;           Robert Strandh (strandh@labri.u-bordeaux.fr)
-;;;  (c) copyright 2001 by 
+;;;  (c) copyright 2001 by
 ;;;           Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
 ;;;           Lionel Salabartan (salabart@emi.u-bordeaux.fr)
-;;;           Alexey Dejneka (adejneka@comail.ru)
+;;;  (c) copyright 2001, 2002 by Alexey Dejneka (adejneka@comail.ru)
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -19,8 +19,8 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
 ;;; TODO:
@@ -29,7 +29,7 @@
 ;;; - Redo setf*-output-record-position, extent recomputation for
 ;;;   compound records
 ;;; - How to deal with mixing of positioning/modifying?
-;;; - When DRAWING-P is NIL, should stream cursor move? 
+;;; - When DRAWING-P is NIL, should stream cursor move?
 ;;; - OUTPUT-RECORD is a protocol class, it should not have any slots/methods.
 
 (in-package :CLIM-INTERNALS)
@@ -257,7 +257,8 @@ Only those records that overlap REGION are displayed."))
 
 ;;; XXX ? should this be defined on output-record at all?
 ;;; Probably not -- moore
-(defmethod erase-output-record ((record output-record) stream &optional (errorp t))
+(defmethod erase-output-record ((record output-record) stream
+                                &optional (errorp t))
   (declare (ignore stream errorp))
   nil)
 
@@ -273,12 +274,15 @@ Only those records that overlap REGION are displayed."))
 ;;; XXX Should this only be defined on recording streams?
 (defmethod highlight-output-record ((record basic-output-record-mixin)
 				    stream state)
-  (multiple-value-bind (x1 y1 x2 y2) (output-record-hit-detection-rectangle* record)
+  (multiple-value-bind (x1 y1 x2 y2)
+      (output-record-hit-detection-rectangle* record)
     (ecase state
       (:highlight
-       (draw-rectangle* (sheet-medium stream) x1 y1 x2 y2 :filled nil :ink +foreground-ink+))
+       (draw-rectangle* (sheet-medium stream) x1 y1 x2 y2
+                        :filled nil :ink +foreground-ink+))
       (:unhighlight
-       (draw-rectangle* (sheet-medium stream) x1 y1 x2 y2 :filled nil :ink +background-ink+)))))
+       (draw-rectangle* (sheet-medium stream) x1 y1 x2 y2
+                        :filled nil :ink +background-ink+)))))
 
 (defclass standard-sequence-output-record (output-record-mixin)
   ((children :initform (make-array 8 :adjustable t :fill-pointer 0)
@@ -290,7 +294,8 @@ Only those records that overlap REGION are displayed."))
    ))
 
 #+nil
-(defmethod* (setf output-record-position) (nx ny (record standard-sequence-output-record))
+(defmethod* (setf output-record-position)
+    (nx ny (record standard-sequence-output-record))
   (with-slots (x y) record
     (setq x nx
           y ny)))
@@ -460,8 +465,8 @@ Only those records that overlap REGION are displayed."))
                          (bounding-rectangle* record))))
     (call-next-method)
     (with-slots (parent x1 y1 x2 y2) record
-                (when (and parent (not (region-equal old-rectangle record)))
-                  (recompute-extent-for-changed-child parent record x1 y1 x2 y2)))))
+      (when (and parent (not (region-equal old-rectangle record)))
+        (recompute-extent-for-changed-child parent record x1 y1 x2 y2)))))
 
 
 ;;; Graphics recording classes
@@ -487,10 +492,12 @@ Only those records that overlap REGION are displayed."))
 (defclass stream-output-history-mixin ()
   ())
 
-(defclass standard-sequence-output-history (standard-sequence-output-record stream-output-history-mixin)
+(defclass standard-sequence-output-history
+    (standard-sequence-output-record stream-output-history-mixin)
   ())
 
-(defclass standard-tree-output-history (standard-tree-output-record stream-output-history-mixin)
+(defclass standard-tree-output-history
+    (standard-tree-output-record stream-output-history-mixin)
   ())
 
 
@@ -508,7 +515,8 @@ Only those records that overlap REGION are displayed."))
    (output-history :initform (make-instance 'standard-tree-output-history)
                    :reader stream-output-history)
    (current-output-record :accessor stream-current-output-record)
-   (current-text-output-record :initform nil :accessor stream-current-text-output-record)
+   (current-text-output-record :initform nil
+                               :accessor stream-current-text-output-record)
    (local-record-p :initform t
                    :documentation "This flag is used for dealing with streams outputting strings char-by-char.")))
 
@@ -667,33 +675,23 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
 ;;; Graphics and text recording classes
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  
+
   (defun compute-class-vars (names)
     (cons (list 'stream :initarg :stream)
 	  (loop for name in names
-		collecting (list name :initarg (intern (symbol-name name) :keyword)))))
+		collecting (list name :initarg (intern (symbol-name name)
+                                                       :keyword)))))
 
   (defun compute-arg-list (names)
     (loop for name in names
 	  nconcing (list (intern (symbol-name name) :keyword) name)))
   )
 
-(defun make-merged-medium (sheet ink clip transform line-style text-style)
-  (let ((medium (make-medium (port sheet) sheet)))
-    (setf (medium-ink medium) ink)
-    ;; First set transformation, then clipping region!
-    (setf (medium-transformation medium) transform)
-    (setf (medium-clipping-region medium) clip)
-    (setf (medium-line-style medium) line-style)
-    (setf (medium-text-style medium) text-style)
-    medium))
-
 (defmacro def-grecording (name (&rest args) &body body)
   (let ((method-name (intern (format nil "MEDIUM-~A*" name)))
 	(class-name (intern (format nil "~A-OUTPUT-RECORD" name)))
-	(old-medium (gensym))
-	(new-medium (gensym))
-	(border (gensym)))
+	(medium (gensym "MEDIUM"))
+	(border (gensym "BORDER")))
     `(progn
        (defclass ,class-name (graphics-displayed-output-record-mixin)
 	 ,(compute-class-vars args))
@@ -735,18 +733,19 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
            (let ((transformation (compose-translation-with-transformation
                                   transform
                                   (+ (- x initial-x1) x-offset)
-                                  (+ (- y initial-y1) y-offset))))
-             (let ((,old-medium (sheet-medium stream))
-                   (,new-medium (make-merged-medium stream ink
-                                                    (region-intersection clip
-                                                                         (untransform-region transformation region))
-                                                    transformation line-style text-style)))
-               (unwind-protect
-                    (progn
-                      (setf (%sheet-medium stream) ,new-medium) ;is sheet a sheet-with-medium-mixin? --GB
-                      (setf (%medium-sheet ,new-medium) stream) ;is medium a basic-medium? --GB
-                      (,method-name ,new-medium ,@args))
-                 (setf (%sheet-medium stream) ,old-medium))))))))) ;is sheet a sheet-with-medium-mixin? --GB
+                                  (+ (- y initial-y1) y-offset)))
+                 (,medium (sheet-medium stream))
+                 ;; is sheet a sheet-with-medium-mixin? --GB
+                 )
+             (letf (((medium-ink ,medium) ink)
+                    ((medium-transformation ,medium) transformation)
+                    ((medium-clipping-region ,medium)
+                     (region-intersection clip
+                                          (untransform-region transformation
+                                                              region)))
+                    ((medium-line-style ,medium) line-style)
+                    ((medium-text-style ,medium) text-style))
+               (,method-name ,medium ,@args))))))))
 
 (def-grecording draw-point (point-x point-y)
   (with-transformed-position (transform point-x point-y)
@@ -946,7 +945,7 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
                    (make-translation-transformation
                     x-offset
                     y-offset))
-             
+
              (setf (stream-cursor-position stream) (values start-x start-y))
              (letf (((slot-value stream 'baseline) baseline))
                (loop for (x text-style string) in strings
@@ -1086,7 +1085,7 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
                                 (text-style-ascent text-style medium))))
   (without-local-recording stream
                            (call-next-method)))
-  
+
 
 (defmethod stream-finish-output :after ((stream standard-output-recording-stream))
   (stream-close-text-output-record stream))
