@@ -308,7 +308,9 @@
       (symbol-function (intern (format nil "COMPUTE-PIXEL-VALUE-~a" (type-of image)) :clim-extensions))))
 
 (defmacro medium-draw-translation-image (medium image transformation clipping-region)
-  `(with-slots (tx ty) ,transformation
+  `(multiple-value-bind (mxx mxy myx myy tx ty) (climi::get-transformation ,transformation)
+     (declare (ignore mxx mxy myx myy)
+	      (type climi::coordinate tx ty))
      (multiple-value-bind (x1 y1 x2 y2) (climi::bounding-rectangle* ,clipping-region)
        (declare (type climi::coordinate x1 y1 x2 y2))
        (medium-draw-linear-image ,medium ,image
