@@ -19,6 +19,94 @@
 
 (in-package :CLIM-INTERNALS)
 
+(defclass updating-output-record (output-record)
+  ())
+
+(defclass updating-output-record-mixin (compound-output-record
+					updating-output-record)
+  ((unique-id :reader output-record-unique-id :initarg :unique-id)
+   (id-test :reader output-record-id-test :initarg :id-test
+	    :initform #'eql)
+   (cache-value :reader output-record-cache-value :initarg :cache-value)
+   (cache-test :reader output-record-cache-test :initarg :cache-test
+	       :initform #'eql)
+   (fixed-position :reader output-record-fixed-position
+		   :initarg :fixed-position :initform nil)
+   (displayer :reader output-record-displayer :initarg :displayer)
+   (sub-record :accessor sub-record
+	       :documentation "The actual contents of this record.  All output
+record operations are forwarded to this record.")
+   ;; Start and end cursor
+   (start-x)
+   (start-y)
+   (end-x)
+   (end-y)
+   ;; XXX Need to capture the "user" transformation, I think; deal with that
+   ;; later.
+   (old-subrecord :accessor old-children
+		 :documentation "Contains the output record tree for the
+  current display.")
+   (id-map :accessor id-map)))
+
+(defmethod initialize-instance :after ((obj updating-output-record-mixin)
+				       &key)
+  (with-slots (id-test)
+      obj
+    (if (or (eq id-test #'eq)
+	    (eq id-test #'eql)
+	    (eq id-test #'equal)
+	    (eq id-test #'equalp))
+	(setf (id-map obj) (make-hash-table :test id-test))
+	(setf (id-map obj) nil)))
+  (multiple-value-bind (x y)
+      (output-record-position obj)
+    (setf (sub-record obj) (make-instance 'standard-sequence-output-record
+					  :x-position x :y-position y
+					  :parent obj))))
+
+(defmethod output-record-children ((record updating-output-record-mixin))
+  (list (sub-record record)))
+
+(defmethod output-record-count ((record updating-output-record-mixin))
+  1)
+
+(defmethod map-over-output-records
+    (function (record updating-output-record-mixin)
+     &optional (x-offset 0) (y-offset 0)
+     &rest function-args)
+  (declare (ignore x-offset y-offset))
+  (apply function (sub-record record) function-args)
+  nil)
+
+(defmethod map-over-output-records-containing-position
+    (function (record updating-output-record-mixin) x y
+     &optional (x-offset 0) (y-offset 0)
+     &rest function-args)
+  (declare (ignore x-offset y-offset))
+  (let ((child (sub-record record)))
+    (when (and (multiple-value-bind (min-x min-y max-x max-y)
+		   (output-record-hit-detection-rectangle* child)
+		 (and (<= min-x x max-x) (<= min-y y max-y)))
+	       (output-record-refined-position-test child x y))
+      (apply function child function-args))
+    nil))
+
+(defmethod map-over-output-records-overlapping-region
+    (function (record updating-output-record-mixin) region
+     &optional (x-offset 0) (y-offset 0)
+     &rest function-args)
+  (declare (ignore x-offset y-offset))
+  (let ((child (sub-record record)))
+    (when (region-intersects-region-p region child)
+      (apply function child function-args))
+    nil))
+
+(defclass standard-updating-output-record (updating-output-record-mixin)
+  ())
+
+(defclass updating-output-stream-mixin ()
+  ((redisplaying-p :reader stream-redisplaying-p :initform nil)))
+
 (defmethod invoke-updating-output
     (stream continuation record-type unique-id id-test cache-value cache-test
      &key all-new parent-cache)

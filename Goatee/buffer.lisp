@@ -31,6 +31,13 @@
 (defmethod* (setf location*) (line pos (bp location))
   (setf (values (line bp) (pos bp)) (values line pos)))
 
+;;; Is this too massive a hack?
+
+(defgeneric copy-location (location))
+
+(defmethod copy-location ((loc location))
+  (make-instance (class-of loc) :line (line loc) :pos (pos loc)))
+
 ;;; basic-buffer must implement:
 ;;; lines
 ;;; tick
@@ -148,9 +155,9 @@
     (unless (typep this-line 'dbl-list)
       (error 'buffer-bounds-error :buffer buffer :line nil :pos 0))
     (let ((line-size (size this-line)))
-      (if (eql (char-ref line (1- line-size)) #\Newline)
+      (if (eql (char-ref this-line (1- line-size)) #\Newline)
 	  (progn
-	    (delete-char line 1 :position (1- line-size))
+	    (delete-char this-line 1 :position (1- line-size))
 	    (decf (slot-value buffer 'size))
 	    (when next-line
 	      (loop for i from 0 below (size next-line)
@@ -160,7 +167,7 @@
 	    (setf (tick this-line) (incf (tick buffer)))
 	    (values this-line (1- line-size)))
 	  (error 'buffer-bounds-error
-		 :buffer buffer :line line :pos line-size)))))
+		 :buffer buffer :line this-line :pos line-size)))))
 
 (defgeneric buffer-delete-char* (buffer line pos n)
   (:documentation "Delete characters from a line.  Can not delete the final
@@ -216,11 +223,14 @@
     (push obj (bps (line obj)))))
 
 (defmethod (setf line) (new-line (bp buffer-pointer))
-  (when (slot-boundp bp 'line)
-    (setf (bps (line bp)) (delete bp (bps (line bp))))
+  (let* ((was-bound (slot-boundp bp 'line))
+	 (old-line (and was-bound (line bp))))
+    (when (and was-bound old-line (not (eq old-line new-line)))
+      (setf (bps old-line) (delete bp (bps old-line))))
     (prog1
 	(call-next-method)
-      (when new-line
+      (when (and new-line
+		 (not (and was-bound (eq old-line new-line))))
 	(push bp (bps (line bp)))))))
 
 (defgeneric update-for-insert (bp pos delta))
@@ -292,8 +302,7 @@
       (loop for bp in (bps next-line)
 	    do (progn
 		 (incf (pos bp) new-pos)
-		 (setf (line bp) this-line)
-		 (push bp (bps this-line))))
+		 (setf (line bp) this-line)))
       (values line new-pos))))
 
 
@@ -385,15 +394,9 @@
       extent
     (if (eq new-val :open)
 	(when (typep bp-start 'fixed-buffer-pointer)
-	  (setf bp-start
-		(make-instance 'buffer-pointer
-			       :line (line bp-start)
-			       :pos (pos bp-start))))
+	  (setf bp-start (change-class bp-start 'buffer-pointer)))
 	(when (not (typep bp-start 'fixed-buffer-pointer))
-	  (setf bp-start
-		(make-instance 'fixed-buffer-pointer
-			       :line (line bp-start)
-			       :pos (pos bp-start)))))))
+	  (setf bp-start (change-class bp-start 'fixed-buffer-pointer))))))
 
 (defmethod end-state ((extent extent))
   (if (typep (bp-end extent) 'fixed-buffer-pointer)
@@ -405,13 +408,9 @@
       extent
     (if (eq new-val :open)
 	(when (not (typep bp-end 'fixed-buffer-pointer))
-	  (setf bp-end
-		(make-instance 'fixed-buffer-pointer
-			       :line (line bp-end) :pos (pos bp-end))))
+	  (setf bp-end (change-class bp-end 'fixed-buffer-pointer)))
 	(when (typep bp-end 'fixed-buffer-pointer)
-	  (setf bp-end
-		(make-instance 'buffer-pointer
-			       :line (line bp-end) :pos (pos bp-end)))))))
+	  (setf bp-end (change-class bp-end 'buffer-pointer))))))
 
 (defmethod buffer-open-line* :around
     ((buf extent-buffer-mixin) (line extent-buffer-line) pos)
@@ -431,7 +430,7 @@
 	  finally (setf (extents line) old-line-extents
 			(extents new-line) new-line-extents))
     (values new-line new-pos)))
-
+ 
 (defmethod buffer-close-line* :around
     ((buffer extent-buffer-mixin) (line extent-buffer-line) direction)
   (multiple-value-bind (this-line next-line)

@@ -59,6 +59,16 @@
     (setf (prev (next element)) (prev element)))
   nil)
 
+(defgeneric dbl-kill-after (element)
+  (:documentation "Remove all elements after element."))
+
+(defmethod dbl-kill-after ((element dbl-super))
+  (let ((next (next element)))
+    (when next
+      (setf (prev next) nil))
+    (setf (next element) nil)
+    element))
+
 (defclass dbl-list-head (dbl-super)
   ())
 

@@ -58,24 +58,20 @@
    (cursor :accessor cursor :initarg :cursor :initform nil)))
 
 (defun line-contents-sans-newline (buffer-line &key destination)
-  (let* ((line-size (size buffer-line)))
-    (if (zerop line-size)
+  (let* ((contents-size (line-last-point buffer-line)))
+    (if (zerop contents-size)
 	(if destination
 	    (progn
 	      (setf (fill-pointer destination) 0)
 	      destination)
 	    "")
-	(let* ((last-char (char-ref buffer-line (1- line-size)))
-	       (contents-size (if (char= last-char #\Newline )
-				  (1- line-size)
-				  line-size)))
-	  (if destination
-	      (progn
-		(adjust-array destination contents-size
-			      :fill-pointer contents-size)
-		(flexivector-string-into buffer-line destination
-					 :end2 contents-size))
-	      (flexivector-string buffer-line :end contents-size))))))
+	(if destination
+	    (progn
+	      (adjust-array destination contents-size
+			    :fill-pointer contents-size)
+	      (flexivector-string-into buffer-line destination
+				       :end2 contents-size))
+	    (flexivector-string buffer-line :end contents-size)))))
 
 
 (defmethod initialize-instance :after
@@ -239,6 +235,8 @@
     (map-over-output-records #'mapper record)))
 
 (defmethod initialize-area-from-buffer ((area simple-screen-area) buffer)
+  (setf (area-bp-start area) (copy-location (buffer-start buffer)))
+  (setf (area-bp-end area) (copy-location (buffer-end buffer)))
   ;; XXX Stupid, but eventually will be different per line.
   (with-slots (vertical-spacing)
       area
@@ -246,31 +244,109 @@
 	(output-record-position area)
       (let* ((stream (area-stream area))
 	     (ascent (text-style-ascent (text-style area) stream))
-	     (descent (text-style-descent (text-style area) stream)))
-	 (loop for buffer-line = (dbl-head (lines buffer))
-	       then (and buffer-line (next buffer-line))
+	     (descent (text-style-descent (text-style area) stream))
+	     (last-buffer-line (line (area-bp-end area))))
+	 (loop for buffer-line = (line (area-bp-start area))
+	         then (next buffer-line)
 	       for prev-area-line = (lines area) then area-line
 	       for y = parent-y then (+ y ascent descent vertical-spacing)
-	       for area-line = (and buffer-line
-				    (make-instance 'screen-line
-						   :x-position parent-x
-						   :y-position y
-						   :parent area
-						   :buffer-line buffer-line
-						   :last-tick -1
-						   :editable-area area
-						   :ascent ascent
-						   :descent descent))
-	       while buffer-line
+	       for area-line = (make-instance 'screen-line
+					      :x-position parent-x
+					      :y-position y
+					      :parent area
+					      :buffer-line buffer-line
+					      :last-tick (tick buffer-line)
+					      :editable-area area
+					      :ascent ascent
+					      :descent descent)
 	       do (progn
 		    (dbl-insert-after area-line prev-area-line)
-		    (line-update-cursor area-line (area-stream area)))))))
+		    (line-update-cursor area-line (area-stream area)))
+	       until (eq buffer-line last-buffer-line)
+	       finally (setf (last-line area) area-line)))))
   area)
+
+;;; Redisplay consists of two parts.  First, the buffer is examined for new
+;;; lines, deleted lines, or scrolling (eventually).  Lines are moved to the
+;;; right location.  Any new lines are rendered.  Then, individual lines are
+;;; examined and incrementally updated.
+;;;
+;;; For these two operations we use a simple strategy.  Divide the thing being
+;;; updated -- area or individual line -- into unchanged stuff at its
+;;; beginning, a changed middle, and unchanged stuff at the end.  Then move the
+;;; unchanged end into its new position, erase the middle and any of the end
+;;; left behind, and draw the new middle.
+
+(defgeneric redisplay-all (area)
+  (:documentation "Reinitialize the area's screen state, clear the area and
+  redraw everything."))
+
+(defmethod redisplay-all ((area simple-screen-area))
+  (dbl-kill-after (lines area))
+  (setf (line (area-bp-start area)) nil)
+  (setf (line (area-bp-end area)) nil)
+  (letf (((cursor-visibility (cursor area)) nil))
+    (initialize-area-from-buffer area (buffer area)))
+  (with-bounding-rectangle* (x1 y1 x2 y2)
+      area
+    (let* ((stream (area-stream area))
+	   (medium (sheet-medium stream)))
+      (draw-rectangle* medium x1 y1 x2 y2
+			 :ink (medium-background medium)
+			 :filled t)))
+  (replay area (area-stream area)))
 
 (defgeneric redisplay-area (area))
 
+(defmethod get-area-differences ((area simple-screen-area))
+  (let ((buf-start (line (area-bp-start area)))
+	(buf-end (line (area-bp-end area))))
+    (multiple-value-bind (unchanged area-beginning-end buffer-beginning-end)
+	(loop for line = (area-first-line area) then (next line)
+	      for prev-line = nil then line
+	      for buffer-line = buf-start then (next buffer-line)
+	      for prev-buffer-line = nil then buffer-line
+	      if (or (null line)
+		     (not (eq (buffer-line line) buffer-line)))
+	        return (values nil prev-line prev-buffer-line)
+	      do nil			;XXX workaround CMUCL bug
+	      until (eq buffer-line buf-end)
+	      ;; If there are still lines in the area list, then there was a
+	      ;; change.
+	      finally (return (values (null (next line)) line buffer-line)))
+      (when unchanged
+	(return-from get-area-differences
+	  (values t
+		  area-beginning-end (area-first-line area)
+		  buffer-beginning-end buf-start)))
+      (loop for line = (last-line area) then (prev line)
+	      for prev-line = nil then line
+	      for buffer-line = buf-end then (prev buffer-line)
+	      for prev-buffer-line = nil then buffer-line
+	      if (or (eq line (lines area))
+		     (not (eq (buffer-line line) buffer-line)))
+	        return (values nil
+			       area-beginning-end prev-line
+			       buffer-beginning-end prev-buffer-line)
+	      do nil			;XXX workaround CMUCL bug
+	      until (eq buffer-line buf-start)
+	      finally (return (values nil
+				      area-beginning-end line
+				      buffer-beginning-end buffer-line))))))
+
 (defmethod redisplay-area ((area simple-screen-area))
   (let ((stream (area-stream area)))
+    (multiple-value-bind (area-unchanged
+			  area-beginning-end area-finish-start
+			  buffer-beginning-end buffer-finish-start)
+	(get-area-differences area)
+      (declare (ignore area-beginning-end area-finish-start
+		       buffer-beginning-end buffer-finish-start))
+      ;; XXX big old hack for now.
+      (unless area-unchanged
+	(tree-recompute-extent area)
+	(redisplay-all area)
+	(return-from redisplay-area t)))
     (loop for line = (area-first-line area) then (next line)
 	  while line
 	  do (multiple-value-bind (line-changed dimensions-changed)
@@ -280,11 +356,16 @@
 		 (redisplay-line line stream))))))
 
 (defmethod get-line-differences ((line screen-line))
+  "Returns: line is different (t or nil)
+    end of current (screen) unchanged beginning
+    start of current unchanged end
+    end of buffer line unchanged beginning
+    start of buffer line unchanged end."
   (with-slots (current-contents
 	       buffer-line)
       line
     (let* ((current-length (length current-contents))
-	   (line-length (size buffer-line))
+	   (line-length (line-last-point buffer-line))
 	   (min-length (min current-length line-length)))
       (multiple-value-bind (unchanged common-beginning)
 	  (loop for i from 0 below min-length
@@ -351,7 +432,7 @@
 				 :text-style style
 				 :end current-unchanged-from-end)
 		      line-end))
-		 (new-line-size (size buffer-line)))
+		 (new-line-size (line-last-point buffer-line)))
 	    ;; Having all we need from the old contents of the line, update
 	    ;; with the new contents
 	    (when (> new-line-size (car (array-dimensions current-contents)))
@@ -415,10 +496,16 @@
 			    current-contents
 			    :end point-pos
 			    :text-style (text-style (editable-area line))))))
-	  (setf (screen-line cursor) line)
-	  (setf (cursor-position cursor)
-		(values cursor-x
-			(- baseline ascent))))))))
+	  (letf (((cursor-visibility cursor) nil))
+	    (when (and (slot-boundp cursor 'screen-line)
+		       (screen-line cursor)
+		       (not (eq line (screen-line cursor))))
+	      (setf (cursor (screen-line cursor)) nil))
+	    (setf (screen-line cursor) line)
+	    (setf (cursor-position cursor)
+		  (values cursor-x
+			  (- baseline ascent)))))))))
+
 
 (defmethod erase-line ((line screen-line) medium left right)
   "Erase line from left to right (which are relative to the line

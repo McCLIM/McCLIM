@@ -132,12 +132,12 @@
    "presentation-defs"
    "commands"
    "frames"
+   "incremental-redisplay"
    "panes"
    "gadgets"
    "menu"
    "table-formatting"
    "bordered-output"
-   "incremental-redisplay"
    "builtin-commands"
    )
 

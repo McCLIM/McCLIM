@@ -118,20 +118,19 @@
 (make-command-table 'global-command-table)
 (make-command-table 'user-command-table)
 
-(defmacro define-command-table (name &key inherit-from menu)
-  (let ((inherit (cond (inherit-from)
-		       (t '(global-command-table))))
-	(menu-items menu))
-    `(let ((old-table (gethash ',name *command-tables* nil)))
-       (if old-table
-	   (with-slots (inherit-from menu) old-table
-	     (setq inherit-from ',inherit
-		   menu ',menu-items)
-	     old-table)
-           (make-command-table ',name
-			     :inherit-from ',inherit
+(defmacro define-command-table (name &key 
+				(inherit-from '(global-command-table))
+				menu)
+  `(let ((old-table (gethash ',name *command-tables* nil)))
+     (if old-table
+	 (with-slots (inherit-from menu) old-table
+	   (setq inherit-from ',inherit-from
+		 menu ',menu)
+	   old-table)
+	 (make-command-table ',name
+			     :inherit-from ',inherit-from
 			     :menu ',menu
-			     :errorp nil)))))
+			     :errorp nil))))
 
 (defun command-name-from-symbol (symbol)
   (let ((name (symbol-name symbol)))

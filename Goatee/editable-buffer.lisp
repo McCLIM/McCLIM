@@ -141,7 +141,7 @@
 	      while (< (- pos remaining) 0)
 	      do (progn
 		   (buffer-delete-char* buf line pos (- pos))
-		   (decf remaining pos)
+		   (decf remaining (1+ pos))
 		   (setf (values line pos)
 			 (buffer-close-line* buf line -1)))
 	      finally (return
@@ -187,14 +187,15 @@
 			  (error 'buffer-bounds-error :buffer buf)
 			  (return (values current-line
 					  (+ current-pos remaining)))))
-	(loop for current-line = line then (and (prev current-line)
-					      (typep (prev current-line)
-						       'dbl-list))
-	      for current-line-size = (or (and current-line
-					       (size current-line))
-					  0)
-	      for current-pos = pos then (1- current-line-size)
-	      for remaining = (- n) then (- remaining current-pos)
+	(loop for current-line = line then (and (typep (prev current-line)
+						       'dbl-list)
+						(prev current-line))
+	      for last-point = (or (and current-line
+					(line-last-point current-line))
+				   0)
+	      ;; previous current-pos
+	      for remaining = (- n) then (- remaining current-pos 1)
+	      for current-pos = pos then last-point
 	      until (and current-line (<= remaining current-pos))
 	      finally (if (null current-line)
 			  (error 'buffer-bounds-error :buffer buf)

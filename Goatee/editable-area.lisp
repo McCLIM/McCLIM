@@ -7,11 +7,22 @@
 
 (defclass editable-area ()
   ((buffer :reader buffer :initarg :buffer)
-   (frame-begin-mark :accessor frame-begin-mark)
+   (frame-begin-mark :accessor frame-begin-mark) ;XXX obsolete
    (last-tick :accessor last-tick :initarg :last-tick
 	      :documentation "buffer tick")
    (lines :accessor lines :initarg :lines
-	  :initform (make-instance 'dbl-list-head))))
+	  :initform (make-instance 'dbl-list-head)
+	  :documentation "Lines in the area, as opposed to the lines
+  in the buffer.")
+   (area-bp-start :accessor area-bp-start :initarg :area-bp-start
+		  :documentation "buffer pointer to line in buffer
+  that's at the top of the area.  The bp is not necessarily at the
+  beginning of the line.")
+   (area-bp-end :accessor area-bp-end :initarg :area-bp-end
+		  :documentation "buffer pointer to line in buffer
+  that's at the bottom of the area.  The bp is not necessarily at the
+  beginning of the line.")
+   (last-line :accessor last-line :initarg :last-line :initform nil)))
 
 (defgeneric area-first-line (area))
 
