@@ -1,6 +1,7 @@
 (in-package :clim-listener)
 
 ;;; (C) Copyright 2003 by Andy Hefner (hefner1@umbc.edu)
+;;; (C) Copyright 2004 by Paolo Amoroso (amoroso@mclink.it)
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -816,7 +817,93 @@
 	    (format *standard-output* "Methods:~%"))
 	  (show-specialized-methods gf *standard-output* meths arg-types))))))
 
+;;; Add to McCLIM's listener the commands "Show Used Packages" and "Show Package
+;;; Users" for displaying package hierarchy graphs.
+;;;
+;;; Paolo Amoroso <amoroso@mclink.it> -- 27 Aug 2004
 
+(defun symbol-status (sym)
+  (nth-value 1 (find-symbol (symbol-name sym)
+                            (symbol-package sym))))
+
+(defun portable-internal-symbol-count (package)
+  (let ((n 0))
+    (do-symbols (symbol package)
+      (when (and #+NIL (eq (symbol-package symbol) package)
+                 (eq :internal (symbol-status symbol)))
+        (incf n)))
+    n))
+
+(defun count-internal-symbols (package)
+  "Return the number of internal symbols in PACKAGE."
+  ;; We take only the first value, the symbol count, and discard the second, the
+  ;; hash table capacity
+  #+cmu  (values (lisp::internal-symbol-count package))
+  #+sbcl (values (sb-int:package-internal-symbol-count package))
+  #-(or cmu sbcl) (portable-internal-symbol-count package))
+
+(defun portable-external-symbol-count (package)
+  (let ((n 0))
+    (do-external-symbols (symbol package)
+      (declare (ignorable symbol))
+      (incf n))
+    n))
+
+(defun count-external-symbols (package)
+  "Return the number of external symbols in PACKAGE."
+  #+cmu  (values (lisp::external-symbol-count package))
+  #+sbcl (values (sb-int:external-symbol-count package))
+  #-(or cmu sbcl) (portable-external-symbol-count package))
+
+(defun package-grapher (stream package inferior-fun)
+  "Draw package hierarchy graphs for `Show Package Users' and `Show Used Packages'."
+  (let ((normal-ink +foreground-ink+)
+        (arrow-ink  (make-rgb-color 0.72 0.72 0.72))
+	(text-style (make-text-style :fix :roman :normal)))
+    (with-drawing-options (stream :text-style text-style)
+      (format-graph-from-roots (list package)
+                               #'(lambda (package stream)
+                                   (let ((internal (count-internal-symbols package))
+                                         (external (count-external-symbols package)))
+                                     (with-drawing-options (stream :ink (if (plusp external)
+                                                                            normal-ink
+                                                                            (make-rgb-color 0.4 0.4 0.4))
+                                                                   :text-style text-style)
+                                       (with-output-as-presentation (stream package 'package)
+                                         (format stream "~A (~D/~D)" (package-name package) internal external)))))
+                               inferior-fun
+                               :stream stream
+                               :merge-duplicates t
+                               :graph-type :tree
+                               :orientation :horizontal
+                               :arc-drawer
+                               #'(lambda (stream foo bar x1 y1 x2 y2)
+                                   (declare (ignore foo bar))
+                                   (draw-arrow* stream x1 y1 x2 y2 :ink arrow-ink))))))
+
+(define-command (com-show-used-packages :name "Show Used Packages"
+                                        :command-table dev-commands
+                                        :provide-output-destination-keyword t)
+    ((package-spec '(or package-name package) :prompt "package" :default *package*))
+  (let ((real-package (when package-spec
+                        (if (typep package-spec 'package)
+                            package-spec
+                            (find-package package-spec)))))
+    (if (packagep real-package)
+        (package-grapher *standard-output* real-package #'package-use-list)
+        (note "~A is not a package." package-spec))))
+
+(define-command (com-show-package-users :name "Show Package Users"
+                                        :command-table dev-commands
+                                        :provide-output-destination-keyword t)
+    ((package-spec '(or package-name package) :prompt "package" :default *package*))
+  (let ((real-package (when package-spec
+                        (if (typep package-spec 'package)
+                            package-spec
+                            (find-package package-spec)))))
+    (if (packagep real-package)
+        (package-grapher *standard-output* real-package #'package-used-by-list)
+        (note "~A is not a package." package-spec))))
 
 
 ;;; Filesystem Commands
