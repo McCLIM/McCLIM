@@ -2,74 +2,97 @@
 <html>
   <head>
     <title>McCLIM</title>
+    <link rel="stylesheet" type="text/css" href="mcclim.css">
   </head>
-
+  
   <body>
     <br>
-    <center><img src="McCLIM-3.png"></center>
-
-    <table width="100%">
-      <tr>
-	<td></td>
-	<td valign="top" width="80%">
-	  <center><h1>Welcome</h1></center>
-	</td>
-      </tr>
-      <tr>
-	<td valign="top">
-	  <a href="images/index.html">Images</a><br><br>
-	  <a href="downloads/index.html">Downloads</a><br><br>
-	  <a href="mail/index.html">Mail Archive</a><br><br>
-	</td>
-	<td valign="top" width="80%">
-	  <h2>What is McCLIM?</h2>
-	  <p>
-	    McCLIM is an open source implementation of the
-	    Common Lisp Interface Manager <a href="spec/clim.html">specification</a>.
-	  </p>
-	  <p>
-	    It is licensed under the <a href="License">GNU Library General Public License</a>.
-	  </p>
-	  <h2>Who's involved?</h2>
-	  <p>
-	    McCLIM is written by a diverse group of individuals from across the world.
-	    The primary developers include:
-	  </p>
-	  <ul>
-	    <li>Gilbert Baumann</li>
-	    <li>Julien Boninfan</li>
-	    <li>Alexey Dejneka</li>
-	    <li>Iban Hatchond</li>
-	    <li>Andy Hefner</li>
-	    <li>Mike McDonald</li>
-	    <li>Timothy Moore</li>
-	    <li>Edena Pixel</li>
-	    <li>Arnaud Rouanet</li>
-	    <li>Lionel Salabartan</li>
-	    <li>Brian Spilsbury</li>
-	    <li>Robert Strandh</li>
-	  </ul>
-	  <h2>Recent News</h2>
-	  <p>
-	    McCLIM CVS hosting moved to <a
-	    href="http://common-lisp.net/">common-lisp.net</a>;
-	    if you're a developer you should already have heard about
-	    this (if not, mail admin@common-lisp.net).  To check out
-	    from the new CVS location, see the <a
-	    href="http://common-lisp.net/faq.shtml" >instructions here</a>
-
-	  <p>
-	    Tim Moore presented a
-	    <a href="./clim-paper.pdf">paper</a>
-	    written by Robert Strandh and himself
-	    at the International Lisp Conference during the last week of October 2002.
-	  </p>
-	</td>
-      </tr>
-    </table>
+    <center>
+      <img src="McCLIM-3.png">
+      <h1>Welcome</h1>
+    </center>
+    
+    <div class="link-sidebar">
+      <ul>
+        <li><a href="#cvs">CVS</a>
+        <li><a href="#downloads">Downloads</a>
+        <li><a href="#mail">Mailing Lists</a>
+        <li><a href="http://mcclim.cliki.net/Screenshot">Screenshots</a>
+        <li><a href="http://mcclim.cliki.net/">Wiki</a>
+      </ul>
+    </div>
+    <div class="main-body">
+      <h2>What is McCLIM?</h2>
+      <p>
+        McCLIM is an open source implementation of the
+        Common Lisp Interface Manager <a href="spec/clim.html">specification</a>.
+      </p>
+      <p>
+        It is licensed under the <a href="License">GNU Library General Public License</a>.
+      </p>
+      <p>
+        The <a href="http://mcclim.cliki.net/">McCLIM Wiki</a>
+        contains quite a bit of information about McCLIM, including a
+        list of applications using it, and many screenshots of these.
+      </p>
+      <h2><a name="cvs">CVS</a></h2>
+      <p>
+	Read only access to the CVS tree is available in the
+	<tt>mcclim</tt> module: see the 
+	<a href="http://common-lisp.net/faq.shtml">common-lisp.net CVS instructions</a>.
+        You can also 
+        <a href="http://common-lisp.net/cgi-bin/viewcvs.cgi/mcclim/?cvsroot=mcclim">browse the repository</a> with CVSWeb.
+      </p>
+      <h2><a name="mail">Mailing lists</a></h2>
+      <ul>
+        <li><a href="http://common-lisp.net/mailman/listinfo/mcclim-devel"
+	       >mcclim-devel</a>: developer discussion; probably the best place to ask for help
+	<li><a href="http://common-lisp.net/mailman/listinfo/mcclim-announce"
+               >mcclim-announce</a>: (announcements only, low traffic)
+        <li><a href="http://common-lisp.net/mailman/listinfo/mcclim-cvs"
+	       >mcclim-cvs</a>: CVS commit messages
+      </ul>
+      <h2><a name="downloads">Releases</a></h2>
+      A compressed tar file of the <a href="http://common-lisp.net/cvs_tarballs/mcclim.tar.gz">sources</a> is made nightly.
+      <p>
+        The most recent release of McCLIM was 0.9, in November
+	2003.  It's probably a better idea to use the CVS version instead, as there have been many bug fixes and performance improvements since then.
+      </p>
+      <h2>Recent News</h2>
+      <p>
+        McCLIM CVS hosting moved to
+        <a href="http://common-lisp.net/">common-lisp.net</a>;
+        if you're a developer you should already have heard about
+        this (if not, mail admin@common-lisp.net).
+      <p>
+        Tim Moore presented a
+        <a href="clim-paper.pdf">paper</a>
+        written by Robert Strandh and himself
+        at the International Lisp Conference during the last week of October 2002.
+      </p>
+      <h2>Who's involved?</h2>
+      <p>
+        McCLIM is written by a diverse group of individuals from across the world.
+        The primary developers include:
+      </p>
+      <ul>
+        <li>Gilbert Baumann</li>
+        <li>Julien Boninfan</li>
+        <li>Alexey Dejneka</li>
+        <li>Iban Hatchond</li>
+        <li>Andy Hefner</li>
+        <li>Mike McDonald</li>
+        <li>Timothy Moore</li>
+        <li>Edena Pixel</li>
+        <li>Arnaud Rouanet</li>
+        <li>Lionel Salabartan</li>
+        <li>Brian Spilsbury</li>
+        <li>Robert Strandh</li>
+      </ul>
+    </div>
     <br>
     <hr>
-$Date: 2004/12/11 20:41:26 $
+$Date: 2004/12/11 22:11:22 $
 <!-- Created: Sat Nov  2 11:00:35 EST 2002 -->
 <!-- hhmts start -->
 <!-- Last modified: Sun Aug 31 11:42:46 EDT 2003 -->
