@@ -353,7 +353,7 @@
       (format stream "~S ~S" design1 design2))))
 
 (defmethod make-flipping-ink ((design1 design) (design2 design))
-  (make-instance 'standard-flipping-ink :design1 design1 :design2 :design2))
+  (make-instance 'standard-flipping-ink :design1 design1 :design2 design2))
 
 (defmethod make-flipping-ink ((design1 (eql +foreground-ink+)) 
                               (design2 (eql +background-ink+)))

@@ -155,6 +155,22 @@
     (setf (xlib:gcontext-background gc) flipper)
     gc))
 
+;;; From Tagore Smith <tagore@tagoresmith.com>
+
+(defmethod medium-gcontext ((medium clx-medium) 
+			    (ink climi::standard-flipping-ink))
+  (let* ((gc (medium-gcontext medium (medium-background medium)))
+	 (port (port medium))
+	 (color1 (slot-value ink 'climi::design1))
+	 (color2 (slot-value ink 'climi::design2))
+	 (flipper (logxor (X-pixel port color1)
+			  (X-pixel port color2))))
+    (setf (xlib:gcontext-function gc) boole-xor)
+    (setf (xlib:gcontext-foreground gc) flipper)
+    (setf (xlib:gcontext-background gc) flipper)
+    gc))
+			    
+
 #+nil
 (defun clipping-region->rect-seq (clipping-region)
   (loop for region in (nreverse (region-set-regions clipping-region

@@ -628,7 +628,7 @@ FRAME-EXIT condition."))
   (declare (ignore left top right bottom width height save-under))
   (with-keywords-removed (options (:pretty-name :frame-manager :enable :state
 				   :left :top :right :bottom :width :height
-				   :save-under:frame-class))
+				   :save-under :frame-class))
     (let ((frame (apply #'make-instance frame-class
 			:name frame-name :pretty-name pretty-name options)))
       (when frame-manager-p
