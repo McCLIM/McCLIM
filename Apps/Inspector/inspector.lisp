@@ -3,7 +3,7 @@
 ;;;  (c) copyright 2005 by
 ;;;           Robert Strandh (strandh@labri.fr)
 ;;;  (c) copyright 2005 by
-;;;           Vincent Arkesteij      
+;;;           Vincent Arkesteijn
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -92,22 +92,22 @@
 
 (defun generic-function-name (generic-function)
   #+sbcl (sb-mop:generic-function-name generic-function)
-  #+openmcl (ccl:generic-function-name slot)
+  #+openmcl (ccl:generic-function-name generic-function)
   #-(or sbcl openmcl) (error "no MOP"))
 
 (defun generic-function-methods (generic-function)
   #+sbcl (sb-mop:generic-function-methods generic-function)
-  #+openmcl (ccl:generic-function-methods slot)
+  #+openmcl (ccl:generic-function-methods generic-function)
   #-(or sbcl openmcl) (error "no MOP"))
 
 (defun method-specializers (method)
   #+sbcl (sb-mop:method-specializers method)
-  #+openmcl (ccl:method-specializers slot)
+  #+openmcl (ccl:method-specializers method)
   #-(or sbcl openmcl) (error "no MOP"))
 
 (defun method-generic-function (method)
   #+sbcl (sb-mop:method-generic-function method)
-  #+openmcl (ccl:method-generic-function slot)
+  #+openmcl (ccl:method-generic-function method)
   #-(or sbcl openmcl) (error "no MOP"))
 
 (defmethod inspect-object ((object standard-object) pane)
