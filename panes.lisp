@@ -1165,6 +1165,15 @@ During realization the child of the spacing will have as cordinates
           (with-bounding-rectangle* (left top right bottom) entire-region
             (medium-clear-area (sheet-medium pane) left top right bottom))
           (set-bounding-rectangle-position (sheet-region pane) new-x new-y)
+	  ;; find out the coordinates, in the coordinates system of
+	  ;; pane, of the upper-left corner, i.e. the one with
+	  ;; coordinates (0,0) in the viewport
+	  (multiple-value-bind (x0 y0)
+	      (untransform-position (sheet-transformation pane) 0 0)
+	    ;; alter the sheet transformation to reflect the new position
+	    (setf (sheet-transformation pane)
+		  (compose-translation-with-transformation
+		   (sheet-transformation pane) (- x0 new-x) (- y0 new-y))))
           (update-scroll-bars pane entire-region new-x new-y)
           (stream-replay pane (sheet-region pane))))))
 
