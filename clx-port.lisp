@@ -63,11 +63,12 @@
 				(border-width 0) (border 0)
 				(override-redirect :off)
 				(map t)
-				(event-mask `(:exposure :key-press :key-release
-							:button-press :button-release
-							:enter-window :leave-window
-							:structure-notify
-							:pointer-motion)))
+				(event-mask `(:exposure 
+					      :key-press :key-release
+					      :button-press :button-release
+					      :enter-window :leave-window
+					      :structure-notify
+					      :pointer-motion)))
   (when (null (port-lookup-mirror port sheet))
     (with-sheet-medium (medium sheet)
       (let* ((desired-color (medium-background (sheet-medium sheet)))
@@ -78,7 +79,9 @@
 				      color))
 	     (window (xlib:create-window
 		      :parent (sheet-mirror (sheet-parent sheet))
-		      :width width :height height :x x :y y
+		      :width width 
+		      :height height
+		      :x x :y y
 		      :border-width border-width
 		      :border border
 		      :override-redirect override-redirect
@@ -197,9 +200,7 @@
 	 (make-instance 'pointer-motion-event :pointer 0 :button code :x x :y y
 			:sheet sheet :modifier-state state :timestamp time))
 	((:exposure :display)
-	 (make-instance 'window-repaint-event
-			:sheet sheet
-			:region (make-rectangle* x y (+ x width) (+ y height))))
+	 (make-instance 'window-repaint-event :sheet sheet))
 	(t
 	 nil)))))
 
@@ -411,4 +412,15 @@
 	  (open-font (clx-port-display port) device-font-name))
     text-style))
 
+;; Top-level-sheet
 
+(defmethod compute-extremum :after ((pane top-level-sheet-pane))
+  (with-slots (space-requirement) pane
+    (setf (xlib:wm-normal-hints (sheet-direct-mirror pane))
+	  (xlib:make-wm-size-hints 
+	   :width (round (space-requirement-width space-requirement))
+	   :height (round (space-requirement-height space-requirement))
+	   :max-width (round (space-requirement-max-width space-requirement))
+	   :max-height (round (space-requirement-max-height space-requirement))
+	   :min-width (round (space-requirement-min-width space-requirement))
+	   :min-height (round (space-requirement-min-height space-requirement))))))
