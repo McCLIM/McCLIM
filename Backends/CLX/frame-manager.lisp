@@ -25,10 +25,17 @@
   ()
   )
 
+;;; This is an example of how make-pane-1 might create specialized
+;;; instances of the generic pane types based upon the type of the
+;;; frame-manager. However, in the CLX case, we don't expect there to
+;;; be any CLX specific panes. CLX uses the default generic panes
+;;; instead.
 (defmethod make-pane-1 ((fm clx-frame-manager) (frame application-frame) type &rest args)
-  (if (not (find-class type nil))
-      (setq type (intern (format nil "~A-PANE" type):clim)))
-  (apply #'make-instance type ; (intern (concatenate 'string "X11-" (symbol-name type)) :clim)
+  (apply #'make-instance
+	 (or (find-symbol (concatenate 'string "CLX-" (symbol-name type)) :clim)
+	     (find-symbol (concatenate 'string "CLX-" (symbol-name type) "-PANE") :clim)
+	     (find-symbol (concatenate 'string (symbol-name type) "-PANE") :clim)
+	     type)
 	 :frame frame
 	 :manager fm
 	 :port (port frame)
