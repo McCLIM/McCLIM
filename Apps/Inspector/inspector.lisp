@@ -25,7 +25,7 @@
 (in-package :inspector)
 
 (define-application-frame inspector ()
-  ((dico :initform (make-hash-table :test #'eq) :reader dico)
+  ((dico :initform (make-hash-table) :reader dico)
    (obj :initarg :obj :reader obj))
   (:pointer-documentation t)
   (:panes
@@ -41,6 +41,14 @@
   (declare (ignore args))
   (setf (gethash (obj frame) (dico frame)) t))
 
+(defmethod redisplay-frame-pane :after ((frame inspector)
+					(pane application-pane)
+					&key force-p)
+  (declare (ignore force-p))
+  (change-space-requirements
+   pane
+   :height (bounding-rectangle-height (stream-output-history pane))))
+
 (defun inspector (obj)
   (let ((*print-length* 10)
 	(*print-level* 10))
@@ -49,31 +57,24 @@
 
 (defparameter *inspected-objects* '())
 
-(defun currently-viewable (obj)
-  (multiple-value-bind (value present)
-      (gethash obj (dico *application-frame*))
-    (if present
-        value
-        (setf (gethash obj
-                       (dico *application-frame*))
-              (or (symbolp obj)
-                  (numberp obj)
-                  (stringp obj))))))
-
+(defgeneric inspect-object-briefly (object pane))
 (defgeneric inspect-object (object pane))
 
 (defmethod inspect-object :around (object pane)
-  (cond ((not (currently-viewable object))
-	 (with-output-as-presentation
-	     (pane object (presentation-type-of object)) 
-	   (princ "...")))
-	((member object *inspected-objects*)
-	 (with-output-as-presentation
-	     (pane object (presentation-type-of object)) 
-	   (princ "===")))
-	(t
-	 (let ((*inspected-objects* (cons object *inspected-objects*)))
-	   (call-next-method)))))
+  (cond ((member object *inspected-objects*)
+         (with-output-as-presentation
+             (pane object (presentation-type-of object)) 
+           (princ "===")))
+        ((not (gethash object (dico *application-frame*)))
+         (inspect-object-briefly object pane))
+        (t
+         (let ((*inspected-objects* (cons object *inspected-objects*)))
+           (call-next-method)))))
+
+(defmethod inspect-object-briefly (object pane)
+  (with-output-as-presentation
+      (pane object (presentation-type-of object))
+    (princ "...")))
 
 (defmethod inspect-object (object pane)
   (with-output-as-presentation
@@ -120,27 +121,40 @@
   (declare (ignore acceptably for-context-type))
   (format stream "~s" (cdr object)))
 
+(defmacro inspector-table (header &body body)
+  `(with-output-as-presentation
+       (pane object (presentation-type-of object))
+     (formatting-table (pane)
+       (formatting-column (pane)
+         (formatting-cell (pane)
+           (surrounding-output-with-border (pane)
+             ,header))
+         (formatting-cell (pane)
+           (formatting-table (pane)
+             ,@body))))))
+
+(defmacro inspector-table-row (left right)
+  `(formatting-row (pane)
+     (formatting-cell (pane :align-x :right)
+       ,left)
+     (formatting-cell (pane)
+       ,right)))
+
+(defmethod inspect-object-briefly ((object standard-object) pane)
+  (with-output-as-presentation
+      (pane object (presentation-type-of object))
+    (format pane "instance of ~S" (class-name (class-of object)))))
 (defmethod inspect-object ((object standard-object) pane)
   (let ((class (class-of object)))
-    (with-output-as-presentation
-	(pane object (presentation-type-of object))  
-      (formatting-table (pane)
-	(formatting-row (pane)
-	  (formatting-cell (pane)
-	    (surrounding-output-with-border (pane)
-	      (print (class-name class) pane))))
-	(formatting-row (pane)
-	  (formatting-cell (pane)
-	    (formatting-table (pane)
-	      (loop for slot in (reverse (class-slots class))
-		    do (let ((slot-name (slot-definition-name slot)))
-			 (formatting-row (pane)
-			   (formatting-cell (pane :align-x :right)
-			     (with-output-as-presentation
-				 (pane (cons object slot-name) 'settable-slot)
-			       (format pane "~a:" slot-name)))
-			   (formatting-cell (pane)
-			     (inspect-object (slot-value object slot-name) pane))))))))))))
+    (inspector-table
+        (print (class-name class) pane)
+      (loop for slot in (reverse (class-slots class))
+            do (let ((slot-name (slot-definition-name slot)))
+		  (inspector-table-row
+                    (with-output-as-presentation
+                        (pane (cons object slot-name) 'settable-slot)
+                      (format pane "~a:" slot-name))
+                    (inspect-object (slot-value object slot-name) pane)))))))
 
 (defmethod inspect-object ((object cons) pane)
   (if (null (cdr object))
@@ -172,44 +186,135 @@
 	  (formatting-cell (pane)
 	    (inspect-object (cdr object) pane))))))
 
-(defmethod inspect-object ((object hash-table) pane)
+(defmethod inspect-object-briefly ((object hash-table) pane)
   (with-output-as-presentation
       (pane object (presentation-type-of object))
-    (formatting-table (pane)
-      (formatting-column (pane)
-        (formatting-cell (pane)
-          (surrounding-output-with-border (pane)
-            (format pane "~A (test: ~A)" 'hash-table (hash-table-test object))))
-        (formatting-cell (pane)
-          (formatting-table (pane)
-            (loop for key being the hash-keys of object
-               do (formatting-row (pane)
-                    (formatting-cell (pane :align-x :right)
-                      (inspect-object key pane)
-                      (princ "=" pane))
-                    (formatting-cell (pane)
-                      (inspect-object (gethash key object) pane))))))))))
+    (princ 'hash-table pane)))
+(defmethod inspect-object ((object hash-table) pane)
+  (inspector-table
+      (format pane "~A (test: ~A)" 'hash-table (hash-table-test object))
+    (loop for key being the hash-keys of object
+          do (inspector-table-row
+                (formatting-cell (pane)
+                  (inspect-object key pane)
+                  (princ "=" pane))
+                (inspect-object (gethash key object) pane)))))
 
 (defmethod inspect-object ((object generic-function) pane)
+  (inspector-table
+      (format pane "Generic Function: ~s" (generic-function-name object))
+    (loop for method in (generic-function-methods object)
+          do (with-output-as-presentation
+                 (pane method (presentation-type-of method))
+               (formatting-row (pane)
+                 (formatting-cell (pane)
+                   (print (method-qualifiers method)))
+                 (loop for specializer in (method-specializers method)
+                    do (formatting-cell (pane)
+                         (format pane "~s " (class-name specializer)))))))))
+
+(defmethod inspect-object-briefly ((object package) pane)
+  (with-output-as-presentation
+      (pane object (presentation-type-of object))
+    (format pane "Package: ~S" (package-name object))))
+(defmethod inspect-object ((object package) pane)
+  (inspector-table
+    (format pane "Package: ~S" (package-name object))
+    (inspector-table-row
+      (princ "Name:" pane)
+      (inspect-object (package-name object) pane))
+    (inspector-table-row
+      (princ "Nicknames:" pane)
+      (dolist (nick (package-nicknames object))
+        (inspect-object nick pane)))
+    (inspector-table-row
+      (princ "Used by:")
+      (dolist (used-by (package-used-by-list object))
+          (inspect-object used-by pane)))
+    (inspector-table-row
+      (princ "Uses:")
+      (dolist (uses (package-use-list object))
+          (inspect-object uses pane)))))
+
+(defmethod inspect-object ((object vector) pane)
   (with-output-as-presentation
       (pane object (presentation-type-of object))
     (formatting-table (pane)
       (formatting-row (pane)
-	(formatting-cell (pane)
-	  (surrounding-output-with-border (pane)
-	    (format pane "Generic Function: ~s" (generic-function-name object)))))
+        (formatting-cell (pane)
+          (princ "#(" pane))
+        (dotimes (i (length object))
+          (formatting-cell (pane)
+            (inspect-object (aref object i) pane)))
+        (formatting-cell (pane)
+          (princ ")" pane))))))
+
+(defmethod inspect-object-briefly ((object string) pane)
+  (with-output-as-presentation
+      (pane object (presentation-type-of object))
+    (print object)))
+
+(defmethod inspect-object-briefly ((object number) pane)
+  (with-output-as-presentation
+      (pane object (presentation-type-of object))
+    (print object)))
+
+(defmethod inspect-object ((object complex) pane)
+  (with-output-as-presentation
+      (pane object (presentation-type-of object))
+    (formatting-table (pane)
       (formatting-row (pane)
-	(formatting-cell (pane)
-	  (formatting-table (pane)
-	    (loop for method in (generic-function-methods object)
-		  do (with-output-as-presentation
-			 (pane method (presentation-type-of method))
-		       (formatting-row (pane)
-			 (formatting-cell (pane)
-			   (print (method-qualifiers method)))
-			 (loop for specializer in (method-specializers method)
-			       do (formatting-cell (pane)
-				    (format pane "~s " (class-name specializer)))))))))))))
+        (formatting-cell (pane)
+          (princ "#C(" pane))
+        (formatting-cell (pane)
+          (inspect-object (realpart object) pane))
+        (formatting-cell (pane)
+          (inspect-object (imagpart object) pane))
+        (formatting-cell (pane)
+          (princ ")" pane))))))
+
+(defmethod inspect-object ((object float) pane)
+  (inspector-table
+    (format pane "float ~S" object)
+    (multiple-value-bind (significand exponent sign)
+        (decode-float object)
+      (inspector-table-row
+        (princ "sign:")
+        (inspect-object sign pane))
+      (inspector-table-row
+        (princ "significand:")
+        (inspect-object significand pane))
+      (inspector-table-row
+        (princ "exponent:")
+        (inspect-object exponent pane)))
+    (inspector-table-row
+       (princ "radix:")
+       (inspect-object (float-radix object) pane))))
+
+(defmethod inspect-object-briefly ((object symbol) pane)
+  (with-output-as-presentation
+      (pane object (presentation-type-of object))
+    (print object)))
+(defmethod inspect-object ((object symbol) pane)
+  (inspector-table
+    (format pane "Symbol ~S" (symbol-name object))
+    (inspector-table-row
+       (princ "value:")
+       (if (boundp object)
+         (inspect-object (symbol-value object) pane)
+         (princ "unbound")))
+    (inspector-table-row
+       (princ "function:")
+       (if (fboundp object)
+         (inspect-object (symbol-function object) pane)
+         (princ "unbound")))
+    (inspector-table-row
+       (princ "package:")
+       (inspect-object (symbol-package object) pane))
+    (inspector-table-row
+       (princ "propery list:")
+       (dolist (property (symbol-plist object))
+         (inspect-object property pane)))))
 
 (defun display-app (frame pane)
   (inspect-object (obj frame) pane))
