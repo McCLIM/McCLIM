@@ -511,22 +511,21 @@
 	 (real-history-type (and historyp
 				 (expand-presentation-type-abbreviation
 				  history)))
-	 (new-rest-args (if (or streamp default-type-p historyp)
-			    (copy-list rest-args)
-			    rest-args))
-	 (*recursive-accept-p* *recursive-accept-1-p*)
+	 	 (*recursive-accept-p* *recursive-accept-1-p*)
 	 (*recursive-accept-1-p* t))
-    (when streamp
-      (remf new-rest-args :stream))
-    (cond (default-type-p
-	   (setf (getf new-rest-args :default-type) real-default-type))
-	  (defaultp
-	   (setf (getf new-rest-args :default-type)
-		 (presentation-type-of default))))
-    (when historyp
-      (setf (getf new-rest-args :history) real-history-type))
-    (apply #'prompt-for-accept stream real-type view new-rest-args)
-    (apply #'stream-accept stream real-type new-rest-args)))
+    (with-keywords-removed (rest-args (:stream))
+      (cond (default-type-p
+	     (setf rest-args
+		   (list* :default-type real-default-type rest-args)))
+	    (defaultp
+	      (setf rest-args (list* :default-type
+				     (presentation-type-of default)
+				     rest-args))))
+      (when historyp
+	(setf rest-args (list* :history real-history-type rest-args)))
+      (apply #'prompt-for-accept stream real-type view rest-args)
+      (apply #'stream-accept stream real-type rest-args))))
+
 
 (defgeneric stream-accept (stream type
 			   &key

@@ -135,6 +135,54 @@ Note:
                              (apply function (loop for j from 0 below n collect (pop q))))))))
           result-type))))
 
+;;; A different way of attacking iteration of sequences
+(defmacro do-sequence ((vars sequence &optional result-form) &body body)
+  "Iterate over SEQUENCE.  VARS is a list of symbols (or a single
+symbol).  At each iteration the variables in VARS are bound to the
+initial elements of the sequence.  The iteration is then \"stepped\"
+by the number of variables in VARS."
+  (flet ((list-accessor (n)
+	   (case n
+	     (0 'car)
+	     (1 'cadr)
+	     (2 'caddr)
+	     (3 'cadddr)
+	     (t `(lambda (list) (nth ,n list)))))
+	 (list-stepper (n)
+	   (case n
+	     (1 'cdr)
+	     (2 'cddr)
+	     (3 'cdddr)
+	     (4 'cddddr)
+	     (t `(lambda (list) (nthcdr ,n list))))))
+    (when (not (listp vars))
+      (setq vars (list vars)))
+    (let* ((body-fun (gensym "BODY-FUN"))
+	   (var-length (length vars))
+	   (seq-var (gensym "SEQ-VAR"))
+	   (tail-var (gensym "TAIL-VAR"))
+	   (i (gensym "I"))
+	   (list-args (loop for j from 0 below var-length
+			    collect `(,(list-accessor j) ,tail-var)))
+	   (vector-args (loop for j from 0 below var-length
+			      collect `(aref ,seq-var (+ ,i ,j)))))
+      `(block nil
+	 (flet ((,body-fun ,vars
+		  (tagbody
+		     ,@body)))
+	   (let ((,seq-var ,sequence))
+	     (etypecase ,seq-var
+	       (list
+		(loop for ,tail-var on ,seq-var by #',(list-stepper var-length)
+		      do (,body-fun ,@list-args)))
+	       (vector
+		(loop for ,i from 0 below (length ,seq-var) by ,var-length
+		      do (,body-fun ,@vector-args))))))
+	 ,@(when result-form
+	     `((let ,vars		;Bind variables to nil
+		 (declare (ignorable ,vars))
+		 ,result-form)))))))
+
 (defun clamp (value min max)
   "Clamps the value 'value' into the range [min,max]."
   (max min (min max value)))
@@ -273,3 +321,31 @@ Note:
 (defun maybe-apply (function &rest args)
   "If FUNCTION is not NIL, apply it."
   (when function (apply #'apply function args)))
+
+;;; Remove keyword pairs from an argument list, consing as little as possible
+
+(defun remove-keywords (arg-list keywords)
+  (let ((clean-tail arg-list))
+    ;; First, determine a tail in which there are no keywords to be removed.
+    (loop for arg-tail on arg-list by #'cddr
+	  for (key) = arg-tail
+	  do (when (member key keywords :test #'eq)
+	       (setq clean-tail (cdr arg-tail))))
+    ;; Cons up the new arg list until we hit the clean-tail, then nconc that on
+    ;; the end.
+    (loop for arg-tail on arg-list by #'cddr
+	  for (key value) = arg-tail
+	  if (eq arg-tail clean-tail)
+	    nconc clean-tail
+	    and do (loop-finish)
+	  else if (not (member key keywords :test #'eq))
+	    nconc (list key value)
+	  end)))
+
+
+(defmacro with-keywords-removed ((var keywords &optional (new-var var))
+				 &body body)
+  "binds NEW-VAR (defaults to VAR) to VAR with the keyword arguments specified
+in KEYWORDS removed."
+  `(let ((,new-var (remove-keywords ,var ',keywords)))
+     ,@body))

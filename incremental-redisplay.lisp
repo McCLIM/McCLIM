@@ -23,6 +23,16 @@
 (defclass updating-output-record (output-record)
   ())
 
+(defclass updating-output-children-record (standard-sequence-output-record)
+  ((last-bounding-box :accessor last-bounding-box
+		      :documentation "When traversing children, holds the
+   bounding box of the last updating-output-record visited.")))
+
+(defmethod initialize-instance :after ((obj updating-output-children-record)
+				       &key)
+  (setf (last-bounding-box obj) (make-instance 'standard-rectangle
+					       :x1 0 :x2 0 :y1 0 :y2 0)))
+
 (defclass updating-output-record-mixin (compound-output-record
 					updating-output-record)
   ((unique-id :reader output-record-unique-id :initarg :unique-id)
@@ -63,9 +73,30 @@ record operations are forwarded to this record.")
 				       &key)
   (multiple-value-bind (x y)
       (output-record-position obj)
-    (setf (sub-record obj) (make-instance 'standard-sequence-output-record
+    (setf (sub-record obj) (make-instance 'updating-output-children-record
 					  :x-position x :y-position y
-					  :parent obj))))
+					  :parent obj)))
+  )
+
+(defmethod output-record-start-cursor-position
+    ((record updating-output-record-mixin))
+  (with-slots (start-x start-y) record
+    (values start-x start-y)))
+
+(defmethod* (setf output-record-start-cursor-position)
+    (x y (record basic-output-record))
+  (with-slots (start-x start-y) record
+    (setf (values start-x start-y) (values x y))))
+
+(defmethod output-record-end-cursor-position
+    ((record updating-output-record-mixin))
+  (with-slots (end-x end-y) record
+    (values end-x end-y)))
+
+(defmethod* (setf output-record-end-cursor-position)
+    (x y (record updating-output-record-mixin))
+  (with-slots (end-x end-y) record
+    (setf (values end-x end-y) (values x y))))
 
 (defmethod output-record-children ((record updating-output-record-mixin))
   (list (sub-record record)))
@@ -131,9 +162,10 @@ record operations are forwarded to this record.")
 
 (defmethod compute-new-output-records ((record standard-updating-output-record)
 				       stream)
-  (compute-new-output-records-1 record 
-				stream
-				(output-record-displayer record)))
+  (with-output-recording-options (stream :record t :draw nil)
+    (compute-new-output-records-1 record 
+				  stream
+				  (output-record-displayer record))))
 
 (defmethod compute-new-output-records-1 
     ((record standard-updating-output-record)
@@ -154,29 +186,53 @@ record operations are forwarded to this record.")
 					     :x-position x :y-position y
 					     :parent record)))
   (letf (((stream-current-output-record stream) record))
+    (restore-graphics-start-state record stream)
     (funcall displayer stream)))
 
-(defgeneric compute-affected-region (record old-p))
+(defgeneric compute-affected-region (record forcep))
 
-(defmethod compute-affected-region ((record output-record) old-p)
-  (let ((result +nowhere+))
+(defmethod compute-affected-region ((record compound-output-record) forcep)
+  (declare (ignore forcep))
+  (let ((clear-region +nowhere+)
+	(draw-region +nowhere+))
     (map-over-output-records
      #'(lambda (r)
-	 (setf result (region-union result 
-				    (compute-affected-region r old-p))))
+	 (multiple-value-bind (sub-clear-region sub-draw-region)
+	     (compute-affected-region r)
+	   (setf clear-region (region-union clear-region sub-clear-region))
+	   (setf draw-region (region-union draw-region sub-draw-region))))
      record)
-    result))
+    (vaules clear-region draw-region)))
 
 (defmethod compute-affected-region ((record standard-updating-output-record)
-				    old-p)
-  (if (dirty record)
-      (progn
-	(setf (dirty record) nil)
-	(compute-affected-region (if old-p
-				     (old-children record)
-				     (sub-record record))
-				 old-p))
-      +nowhere+))
+				    forcep)
+  (let ((child-updating-records nil)
+	(clear-region +nowhere+)
+	(draw-region +nowhere+))
+    (when (dirty record)
+      (map-over-output-records
+       #'(lambda (r)
+	   (multiple-value-bind (sub-clear-region sub-draw-region)
+	       (compute-affected-region r forcep)
+	     (setf clear-region (region-union clear-region sub-clear-region))
+	     (when (typep r 'updating-output-record)
+	       (push (cons r sub-draw-region) child-updating-records))))
+       (old-children record)))
+    (when (or (dirty record) forcep)
+      (map-over-output-records
+       #'(lambda (r)
+	   (let ((cached-region (and (typep r 'updating-output-record)
+				     (cdr (assoc r child-updating-records
+						 :test #'eq)))))
+	     (if cached-region
+		 (setf draw-region (region-union draw-region cached-region))
+		 (multiple-value-bind (sub-clear-region sub-draw-region)
+		     (compute-affected-region r forcep)
+		   (declare (ignore sub-clear-region))
+		   (setf draw-region (region-union draw-region
+						   sub-draw-region))))))
+       (sub-record record)))
+    (values clear-region draw-region)))
 
 ;;; Work in progress
 #+nil
@@ -190,8 +246,10 @@ record operations are forwarded to this record.")
   (with-accessors ((id-map id-map))
       (or parent-cache *current-updating-output* stream)
     (let ((record (find unique-id id-map :test id-test)))
-      (cond ((or all-new (not (stream-redisplaying-p)))
-	     (setf id-map (delete record id-map :test #'eq))
+      (cond ((or all-new (null record))
+	     (when record
+	       (setf id-map (delete record id-map :test #'eq)))
+	     ()
 	     (with-output-to-output-record (stream
 					    'standard-updating-output-record
 					    *current-updating-output*
@@ -201,18 +259,20 @@ record operations are forwarded to this record.")
 					    :cache-test cache-test
 					    :fixed-position fixed-position
 					    :displayer continuation)
+	       (setq record *current-updating-output*)
 	       (push *current-updating-output* id-map)
+	       (record-graphics-start-state *current-updating-output* stream)
 	       (funcall continuation stream)
-	       *current-updating-output*))
+	       (record-graphics-end-state *current-updating-output* stream)))
 	    ((null record)
 	     (error "No output record for updating output!"))
 	    ((not (funcall cache-test
 			   cache-value
 			   (output-record-cache-value record)))
-	     (compute-new-output-records-1 record stream continuation)
-	     record)
-	    (t (maybe-move-output-record record stream)
-	       record)))))
+	     (compute-new-output-records-1 record stream continuation))
+	    (t (maybe-move-output-record record stream)))
+      (update-parent )
+      )))
 
 
 (defmethod invoke-updating-output (stream
@@ -249,3 +309,27 @@ record operations are forwarded to this record.")
 			       ,@(and all-new-p `(:all-new ,all-new))
 			       ,@(and parent-cache-p
 				      `(:parent-cache ,parent-cache))))))
+
+(defun redisplay (record stream &key (check-overlapping t))
+  (redisplay-output-record record stream check-overlapping))
+
+;;; Take the spec at its word that the x/y and parent-x/parent-y arguments are
+;;; "entirely bogus."
+
+(defgeneric redisplay-output-record (record stream
+				     &optional check-overlapping))
+
+(defmethod redisplay-output-record ((record updating-output-record)
+				    (stream updating-output-stream-mixin)
+				    &optional (check-overlapping t))
+  (letf (((stream-redisplaying-p stream) t))
+    (compute-new-output-records record stream)
+    (multiple-value-bind (clear-region draw-region)
+	(compute-affected-region record nil)
+      (with-output-recording-options (stream :record nil :draw t)
+	(with-drawing-options (stream :clipping-region clear-region)
+	  (with-bounding-rectangle* (x1 y1 x2 y2)
+	      record
+	    (draw-rectangle* stream x1 y2 x2 y2 :ink +background-ink+))))
+      (replay record stream (region-union clear-region draw-region)))))
+

@@ -654,28 +654,20 @@
 (defmethod medium-draw-points* ((medium basic-medium) coord-seq)
   (let ((tr (invert-transformation (medium-transformation medium))))
     (with-transformed-positions (tr coord-seq)
-      (map-repeated-sequence nil 2
-                             (lambda (x y)
-                               (medium-draw-point* medium x y))
-                             coord-seq))))
+      (do-sequence ((x y) coord-seq)
+	(medium-draw-point* medium x y)))))
 
 (defmethod medium-draw-lines* ((medium basic-medium) position-seq)
   (let ((tr (invert-transformation (medium-transformation medium))))
     (with-transformed-positions (tr position-seq)
-      (map-repeated-sequence nil 4
-                             (lambda (x1 y1 x2 y2)
-                               (medium-draw-line* medium x1 y1 x2 y2))
-                             position-seq))))
+      (do-sequence ((x1 y1 x2 y2) position-seq)
+	(medium-draw-line* medium x1 y1 x2 y2)))))
 
 (defmethod medium-draw-rectangles* ((medium basic-medium) coord-seq filled)
   (let ((tr (invert-transformation (medium-transformation medium))))
     (with-transformed-positions (tr coord-seq)
-      (map-repeated-sequence nil 4
-                             (lambda (x1 y1 x2 y2)
-                               (medium-draw-rectangle* medium
-                                                       x1 y1 x2 y2
-                                                       filled))
-                             coord-seq))))
+      (do-sequence ((x1 y1 x2 y2) coord-seq)
+	(medium-draw-rectangle* medium x1 y1 x2 y2 filled)))))
 
 
 ;;; Other Medium-specific Output Functions

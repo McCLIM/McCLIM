@@ -162,6 +162,13 @@
   (with-medium-options (sheet args)
     (medium-draw-point* medium x y)))
 
+(defun expand-point-seq (point-seq)
+  (let ((coord-seq nil))
+    (do-sequence (point point-seq)
+      (multiple-value-bind (x y) (point-position point)
+	(setq coord-seq (list* y x coord-seq))))
+    (nreverse coord-seq)))
+
 (defun draw-points (sheet point-seq
 		    &rest args
 		    &key ink clipping-region transformation
@@ -169,10 +176,7 @@
   (declare (ignore ink clipping-region transformation
 		   line-style line-thickness line-unit))
   (with-medium-options (sheet args)
-    (loop for point in point-seq
-	  nconcing (multiple-value-bind (x y) (point-position point)
-		     (list x y)) into coord-seq
-	  finally (medium-draw-points* medium coord-seq))))
+    (medium-draw-points* medium (expand-point-seq point-seq))))
 
 (defun draw-points* (sheet coord-seq
 		     &rest args
@@ -210,10 +214,7 @@
   (declare (ignore ink clipping-region transformation line-style line-thickness
 		   line-unit line-dashes line-cap-shape))
   (with-medium-options (sheet args)
-    (loop for point in point-seq
-	  nconcing (multiple-value-bind (x y) (point-position point)
-		     (list x y)) into coord-seq
-	  finally (medium-draw-lines* medium coord-seq))))
+    (medium-draw-lines* medium (expand-point-seq point-seq))))
 
 (defun draw-lines* (sheet coord-seq
 		    &rest args
@@ -232,10 +233,7 @@
   (declare (ignore ink clipping-region transformation line-style line-thickness
 		   line-unit line-dashes line-joint-shape line-cap-shape))
   (with-medium-options (sheet args)
-    (loop for point in point-seq
-	  nconcing (multiple-value-bind (x y) (point-position point)
-		     (list x y)) into coord-seq
-	  finally (medium-draw-polygon* medium coord-seq closed filled))))
+    (medium-draw-polygon* medium (expand-point-seq point-seq) closed filled)))
 
 (defun draw-polygon* (sheet coord-seq
 		    &rest args
@@ -524,11 +522,6 @@
   (copy-to-pixmap (sheet-medium sheet) sheet-x sheet-y width height
                   pixmap pixmap-x pixmap-y))
 
-(defmethod copy-to-pixmap ((stream stream) stream-x stream-y width height
-                           &optional pixmap (pixmap-x 0) (pixmap-y 0))
-  (declare (ignore stream-x stream-y width height pixmap pixmap-x pixmap-y))
-  (error "COPY-TO-PIXMAP from a stream is not implemented"))
-
 (defmethod copy-from-pixmap (pixmap pixmap-x pixmap-y width height
                              (medium medium) medium-x medium-y)
   (medium-copy-area pixmap pixmap-x pixmap-y width height
@@ -539,11 +532,6 @@
                              (sheet sheet) sheet-x sheet-y)
   (medium-copy-area pixmap pixmap-x pixmap-y width height
                     (sheet-medium sheet) sheet-x sheet-y))
-
-(defmethod copy-from-pixmap (pixmap pixmap-x pixmap-y width height
-                             (stream stream) stream-x stream-y)
-  (declare (ignore pixmap pixmap-x pixmap-y width height stream-x stream-y))
-  (error "COPY-FROM-PIXMAP into a stream is not implemented"))
 
 (defmethod copy-area ((medium medium) from-x from-y width height to-x to-y)
   (medium-copy-area medium from-x from-y width height

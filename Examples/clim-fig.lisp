@@ -313,6 +313,11 @@
   (presentation x y)
   (list presentation x y))
 
+;;; The frame isn't necessarally realized when an around method on
+;;; run-frame-top-level is run, so slots that depend on various panes
+;;; can't be initialized here.  Instead, do it in an after method of
+;;; generate-panes.
+#+nil
 (defmethod run-frame-top-level :around ((frame clim-fig) &key &allow-other-keys)
   (let ((*standard-input* (frame-standard-input frame))
 	(*standard-output* (frame-standard-output frame))
@@ -322,6 +327,13 @@
           (clim-fig-status frame)
           (find-pane-named frame 'status))
     (call-next-method)))
+
+(defmethod generate-panes :after (frame-manager (frame clim-fig))
+  (declare (ignore frame-manager))
+  (setf (clim-fig-output-record frame)
+	(stream-current-output-record (frame-standard-input frame))
+	(clim-fig-status frame)
+	(find-pane-named frame 'status)))
 
 (defmethod read-frame-command ((frame clim-fig) &key (stream *standard-input*))
   (with-input-context ('command)

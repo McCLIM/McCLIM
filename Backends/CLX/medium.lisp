@@ -252,19 +252,22 @@
                            t))))))
 
 (defmethod medium-draw-points* ((medium clx-medium) coord-seq)
-  (with-transformed-positions ((sheet-native-transformation (medium-sheet medium))
-                              coord-seq)
-    (setq coord-seq (mapcar #'round coord-seq))
-    (with-CLX-graphics (medium)
-      (if (< (line-style-thickness line-style) 2)
-          (xlib:draw-points mirror gc coord-seq)
-          (loop with radius = (round (line-style-thickness line-style) 2)
-                with diameter = (* radius 2)
-                for (x y) on coord-seq by #'cddr
-                nconcing (list (round (- x radius)) (round (- y radius))
-                               diameter diameter
-                               0 (* 2 pi)) into arcs
-                finally (xlib:draw-arcs mirror gc arcs t))))))
+  (let ((coord-seq (coerce coord-seq 'list))) ; XXX Optimize this
+    (with-transformed-positions ((sheet-native-transformation
+				  (medium-sheet medium))
+				 coord-seq)
+      (setq coord-seq (mapcar #'round coord-seq))
+      (with-CLX-graphics (medium)
+	(if (< (line-style-thickness line-style) 2)
+	    (xlib:draw-points mirror gc coord-seq)
+	    (loop with radius = (round (line-style-thickness line-style) 2)
+		  with diameter = (* radius 2)
+		  for (x y) on coord-seq by #'cddr
+		  nconcing (list (round (- x radius)) (round (- y radius))
+				 diameter diameter
+				 0 (* 2 pi)) into arcs
+		  finally (xlib:draw-arcs mirror gc arcs t))))))
+  )
 
 (declaim (inline round-coordinate))
 (defun round-coordinate (x)
@@ -304,23 +307,23 @@
                                            (min #x7FFF (max #x-8000 (round-coordinate y2))))))))))))))))
 
 (defmethod medium-draw-lines* ((medium clx-medium) coord-seq)
-  (map-repeated-sequence nil 4
-                         (lambda (x1 y1 x2 y2)
-                           (medium-draw-line* medium x1 y1 x2 y2))
-                         coord-seq))
+  (do-sequence ((x1 y1 x2 y2) coord-seq)
+    (medium-draw-line* medium x1 y1 x2 y2)))
 
 (defmethod medium-draw-polygon* ((medium clx-medium) coord-seq closed filled)
   (assert (evenp (length coord-seq)))
-  (with-transformed-positions ((sheet-native-transformation (medium-sheet medium))
-                               coord-seq)
-    (setq coord-seq (mapcar #'round-coordinate coord-seq))
-    (with-CLX-graphics (medium)
-      (xlib:draw-lines mirror gc
-                       (if closed
-                           (append coord-seq (list (first coord-seq)
-                                                   (second coord-seq)))
-                           coord-seq)
-                       :fill-p filled))))
+  (let ((coord-seq (coerce coord-seq 'list))) ;XXX optimize this
+    (with-transformed-positions ((sheet-native-transformation
+				  (medium-sheet medium))
+				 coord-seq)
+      (setq coord-seq (mapcar #'round-coordinate coord-seq))
+      (with-CLX-graphics (medium)
+	(xlib:draw-lines mirror gc
+			 (if closed
+			     (append coord-seq (list (first coord-seq)
+						     (second coord-seq)))
+			     coord-seq)
+			 :fill-p filled)))))
 
 (defmethod medium-draw-rectangle* ((medium clx-medium) left top right bottom filled)
   (let ((tr (sheet-native-transformation (medium-sheet medium))))

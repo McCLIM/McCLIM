@@ -90,8 +90,8 @@
    (calling-frame :initarg :calling-frame
 		  :initform nil)
    (state :initarg :state
-	  :initform nil
-	  :accessor frame-state)
+	  :initform :disowned
+	  :reader frame-state)
    (manager :initform nil
 	    :reader frame-manager
             :accessor %frame-manager)
@@ -317,14 +317,27 @@ FRAME-EXIT condition."))
 	(*input-context* nil)
 	(*input-wait-test* nil)
 	(*input-wait-handler* nil)
-	(*pointer-button-press-handler* nil))
+	(*pointer-button-press-handler* nil)
+	(original-state (frame-state frame)))
     (declare (special *input-context* *input-wait-test* *input-wait-handler*
 		      *pointer-button-press-handler*))
+    (when (eq (frame-state frame) :disowned)
+      (adopt-frame (or (frame-manager frame) (find-frame-manager))
+		   frame))
+    (unless (or (eq (frame-state frame) :enabled)
+		(eq (frame-state frame) :shrunk))
+      (enable-frame frame))
     (let ((query-io (frame-query-io frame)))
-      (if query-io
-	  (with-input-focus (query-io)
-	    (call-next-method))
-	  (call-next-method)))))
+      (unwind-protect
+	   (if query-io
+	       (with-input-focus (query-io)
+		 (call-next-method))
+	       (call-next-method))
+	(case original-state
+	  (:disabled
+	   (disable-frame frame))
+	  (:disowned
+	   (disown-frame (frame-manager frame) frame)))))))
 
 (defmethod default-frame-top-level
     ((frame application-frame)
@@ -393,16 +406,47 @@ FRAME-EXIT condition."))
 (defmethod adopt-frame ((fm frame-manager) (frame application-frame))
   (setf (slot-value fm 'frames) (cons frame (slot-value fm 'frames)))
   (setf (frame-manager frame) fm)
+  (setf (port frame) (frame-manager-port fm))
+  (setf (graft frame) (find-graft :port (port frame)))
   (let* ((*application-frame* frame)
 	 (t-l-s (make-pane-1 fm frame 'top-level-sheet-pane
-			     :name 'top-level-sheet)))
+			     :name 'top-level-sheet
+			     ;; enabling should be left to enable-frame
+			     :enabled-p nil)))
     (setf (slot-value frame 'top-level-sheet) t-l-s)
-    (generate-panes fm frame)))
+    (generate-panes fm frame)
+    (setf (slot-value frame 'state)  :disabled)
+    frame))
 
 (defmethod disown-frame ((fm frame-manager) (frame application-frame))
   (setf (slot-value fm 'frames) (remove frame (slot-value fm 'frames)))
   (sheet-disown-child (graft frame) (frame-top-level-sheet frame))
-  (setf (%frame-manager frame) nil))
+  (setf (%frame-manager frame) nil)
+  (setf (slot-value frame 'state) :disowned)
+  frame)
+
+(defgeneric enable-frame (frame))
+(defgeneric disable-frame (frame))
+
+(defgeneric note-frame-enabled (frame-manager frame))
+(defgeneric note-frame-disbled (frame-manager frame))
+
+(defmethod enable-frame ((frame application-frame))
+  (setf (sheet-enabled-p (frame-top-level-sheet frame)) t)
+  (setf (slot-value frame 'state) :enabled)
+  (note-frame-enabled (frame-manager frame) frame))
+
+(defmethod disable-frame ((frame application-frame))
+  (setf (sheet-enabled-p (frame-top-level-sheet frame)) nil)
+  (setf (slot-value frame 'state) :disabled)
+  (note-frame-disabled (frame-manager frame) frame))
+
+(defmethod note-frame-enabled ((fm frame-manager) frame)
+  (declare (ignore frame))
+  t)
+
+(defmethod note-frame-disabled ((fm frame-manager) frame)
+  t)
 
 (defvar *pane-realizer* nil)
 
@@ -573,29 +617,30 @@ FRAME-EXIT condition."))
 
 (defun make-application-frame (frame-name
 			       &rest options
-			       &key pretty-name frame-manager enable state
-				    left top right bottom width height save-under
-				    frame-class
+			       &key (pretty-name
+				     (string-capitalize frame-name))
+			            (frame-manager nil frame-manager-p)
+			            enable
+			            (state nil state-supplied-p)
+				    left top right bottom width height
+			            save-under (frame-class frame-name)
 			       &allow-other-keys)
-  (declare (ignore enable state left top right bottom width height save-under))
-  (setq options (loop for (key value) on options by #'cddr
-		    if (not (member key '(:pretty-name :frame-manager :enable :state
-					  :left :top :right :bottom :width :height :save-under
-					  :frame-class)
-				    :test #'eq))
-		       nconc (list key value)))
-  (if (null frame-class)
-      (setq frame-class frame-name))
-  (if (null pretty-name)
-      (setq pretty-name (string-capitalize frame-name)))
-  (if (null frame-manager)
-      (setq frame-manager (find-frame-manager)))
-  (let ((frame (apply #'make-instance frame-class
-		      :port (frame-manager-port frame-manager)
-		      :graft (find-graft :port (frame-manager-port frame-manager))
-		      :name frame-name :pretty-name pretty-name options)))
-    (adopt-frame frame-manager frame)
-    frame))
+  (declare (ignore left top right bottom width height save-under))
+  (with-keywords-removed (options (:pretty-name :frame-manager :enable :state
+				   :left :top :right :bottom :width :height
+				   :save-under:frame-class))
+    (let ((frame (apply #'make-instance frame-class
+			:name frame-name :pretty-name pretty-name options)))
+      (when frame-manager-p
+	(adopt-frame frame-manager frame))
+      (cond ((or enable (eq state :enabled))
+	     (enable-frame frame))
+	    ((and (eq state :disowned)
+		  (not (eq (frame-state frame) :disowned)))
+	     (disown-frame (frame-manager frame) frame))
+	    (state-supplied-p
+	     (warn ":state ~S not supported yet." state)))
+      frame)))
 
 ;;; Menu frame class
 

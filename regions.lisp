@@ -4,7 +4,7 @@
 ;;;   Created: 1998-12-02 19:26
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: regions.lisp,v 1.23 2002/06/27 16:47:00 gilbert Exp $
+;;;       $Id: regions.lisp,v 1.24 2002/09/24 01:56:30 moore Exp $
 ;;; --------------------------------------------------------------------------------------
 ;;;  (c) copyright 1998,1999,2001 by Gilbert Baumann
 ;;;  (c) copyright 2001 by Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
@@ -185,21 +185,10 @@
 ;;; ---- 2.5.3.1 Constructors for CLIM Polygons and Polylines  ---------------------------
 
 (defun coord-seq->point-seq (sequence)
-  (cond ((listp sequence)
-         (let ((res nil))
-           (do ((q sequence (cddr q)))
-               ((endp q)
-                (nreverse res))
-             (push (make-point (car q) (cadr q)) res))))
-        ((vectorp sequence)
-         (assert (evenp (length sequence)))
-         (let ((res nil))
-           (do ((i 0 (+ i 2)))
-               ((= i (length sequence))
-                (nreverse res))
-             (push (make-point (aref sequence i) (aref sequence (+ i 1))) res))))
-        (t
-         (error "~S is not a sequence." sequence)) ))
+  (let ((res nil))
+    (do-sequence ((x y) sequence)
+      (push (make-point x y) res))
+    (nreverse res)))
 
 (defun make-polyline (point-seq &key closed)
   (assert (every #'pointp point-seq))

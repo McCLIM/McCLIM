@@ -162,6 +162,7 @@ sheet-supports-only-one-child error to be signalled."))
    (device-region :type region
 		  :initform nil)
    (enabled-p :type boolean
+	      :initarg :enabled-p
               :initform t
               :accessor sheet-enabled-p)))
 ; Native region is volatile, and is only computed at the first request when it's equal to nil.

@@ -37,6 +37,7 @@
 		#:port-pointer-sheet
                 #:MAP-REPEATED-SEQUENCE
                 #:PIXMAP-MIRROR
+		#:do-sequence
                 #:WITH-DOUBLE-BUFFERING 
                 #:WITH-TRANSFORMED-POSITION
                 #:WITH-TRANSFORMED-POSITIONS
