@@ -282,7 +282,8 @@
 ;;; Graphics recording classes
 
 (defclass graphics-displayed-output-record (displayed-output-record)
-  ((clip :initarg :clipping-region)
+  ((clip :initarg :clipping-region
+         :documentation "Clipping region in user coordinates.")
    (transform :initarg :transformation)
    (line-style :initarg :line-style)
    (text-style :initarg :text-style)
@@ -392,8 +393,9 @@
 (defun make-merged-medium (sheet ink clip transform line-style text-style)
   (let ((medium (make-medium (port sheet) sheet)))
     (setf (medium-ink medium) ink)
-    (setf (medium-clipping-region medium) clip)
+    ;; First set transformation, then clipping region!
     (setf (medium-transformation medium) transform)
+    (setf (medium-clipping-region medium) clip)
     (setf (medium-line-style medium) line-style)
     (setf (medium-text-style medium) text-style)
     medium))
@@ -410,7 +412,7 @@
        (defmethod initialize-instance :after ((graphic ,class-name) &rest args)
 	 (declare (ignore args))
 	 (with-slots (x1 y1 x2 y2
-		      stream ink clipping-region transformation
+		      stream ink clipping-region transform
 		      line-style text-style
 		      ,@args) graphic
            (let ((,border (1+ (/ (line-style-thickness line-style) 2))))
@@ -438,8 +440,10 @@
 	 (declare (ignore x-offset y-offset))
 	 (with-slots (ink clip transform line-style text-style ,@args) record
 	   (let ((,old-medium (sheet-medium stream))
-		 (,new-medium (make-merged-medium stream ink (region-intersection clip region)
+		 (,new-medium (make-merged-medium stream ink (region-intersection clip
+                                                                (untransform-region transform region))
                                                   transform line-style text-style)))
+             (finish-output *error-output*)
 	     (unwind-protect
 		 (progn
 		   (setf (sheet-medium stream) ,new-medium)
@@ -448,42 +452,50 @@
 	       (setf (sheet-medium stream) ,old-medium))))))))
 
 (def-grecording draw-point (point-x point-y)
-  (values point-x point-y point-x point-y))
+  (with-transformed-position (transform point-x point-y)
+     (values point-x point-y point-x point-y)))
 
 (def-grecording draw-points (coord-seq)
-  (loop for (x y) on coord-seq by #'cddr
-	minimize x into min-x
-	minimize y into min-y
-	maximize x into max-x
-	maximize y into max-y
-	finally (return (values min-x min-y max-x max-y))))
+  (with-transformed-positions (transform coord-seq)
+     (loop for (x y) on coord-seq by #'cddr
+           minimize x into min-x
+           minimize y into min-y
+           maximize x into max-x
+           maximize y into max-y
+           finally (return (values min-x min-y max-x max-y)))))
 
 (def-grecording draw-line (point-x1 point-y1 point-x2 point-y2)
-  (values (min point-x1 point-x2) (min point-y1 point-y2)
-          (max point-x1 point-x2) (max point-y1 point-y2)))
+  (with-transformed-position (transform point-x1 point-y1)
+    (with-transformed-position (transform point-x2 point-y2)
+      (values (min point-x1 point-x2) (min point-y1 point-y2)
+              (max point-x1 point-x2) (max point-y1 point-y2)))))
 
 (def-grecording draw-lines (coord-seq)
-  (loop for (x y) on coord-seq by #'cddr
-	minimize x into min-x
-	minimize y into min-y
-	maximize x into max-x
-	maximize y into max-y
-	finally (return (values min-x min-y max-x max-y))))
+  (with-transformed-positions (transform coord-seq)
+     (loop for (x y) on coord-seq by #'cddr
+           minimize x into min-x
+           minimize y into min-y
+           maximize x into max-x
+           maximize y into max-y
+           finally (return (values min-x min-y max-x max-y)))))
 
 (def-grecording draw-polygon (coord-seq closed filled)
-  (loop for (x y) on coord-seq by #'cddr
-	minimize x into min-x
-	minimize y into min-y
-	maximize x into max-x
-	maximize y into max-y
-	finally (return (values min-x min-y max-x max-y))))
+  (with-transformed-positions (transform coord-seq)
+     (loop for (x y) on coord-seq by #'cddr
+           minimize x into min-x
+           minimize y into min-y
+           maximize x into max-x
+           maximize y into max-y
+           finally (return (values min-x min-y max-x max-y)))))
 
 (def-grecording draw-rectangle (left top right bottom filled)
+  ;; XXX transformation!!!
   (values (min left right) (min top bottom) (max left right) (max top bottom)))
 
 (def-grecording draw-ellipse (center-x center-y
 			      radius-1-dx radius-1-dy radius-2-dx radius-2-dy
 			      start-angle end-angle filled)
+  ;; XXX transformation!!!
   (let ((radius-dx (abs (+ radius-1-dx radius-2-dx)))
         (radius-dy (abs (+ radius-1-dy radius-2-dy))))
     (values (- center-x radius-dx) (- center-y radius-dy)
@@ -491,6 +503,7 @@
 
 (def-grecording draw-text (string point-x point-y start end
 			   align-x align-y toward-x toward-y transform-glyphs)
+  ;; XXX transformation!!!
  (let* ((width (stream-string-width stream string
                                     :start start :end end
                                     :text-style text-style))
