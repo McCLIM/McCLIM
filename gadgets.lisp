@@ -31,7 +31,10 @@
 ;;; Gadget
 ;;;
 
-(defclass gadget (permanent-medium-sheet-output-mixin immediate-sheet-input-mixin immediate-repainting-mixin pane)
+(defclass gadget (;;permanent-medium-sheet-output-mixin
+                  immediate-sheet-input-mixin
+                  immediate-repainting-mixin pane
+                  )
   ((id :initarg :id
        :initform (gensym "GADGET")
        :accessor gadget-id)
@@ -53,6 +56,12 @@
 
 (defun gadgetp (object)
   (typep object 'gadget))
+
+(defun invoke-callback (pane callback &rest more-arguments)
+  (when callback
+    (let ((*application-frame* (pane-frame pane)))
+      (apply callback pane more-arguments))))
+  
 
 ;;
 ;; gadget's colors
@@ -145,7 +154,7 @@
       (make-rectangle* (+ x1 border-width) (+ y1 border-width)
                        (- x2 border-width) (- y2 border-width)))))
 
-(defmethod repaint-sheet :after ((pane 3D-border-mixin) region)
+(defmethod handle-repaint :after ((pane 3D-border-mixin) region)
   (declare (ignore region))
   (with-slots (border-width border-style) pane
     (draw-bordered-polygon pane (polygon-points (bounding-rectangle (sheet-region pane)))
@@ -329,7 +338,15 @@
 ;; gadget sub-classes
 ;;
 
-(defclass basic-gadget (sheet-parent-mixin sheet-leaf-mixin mirrored-sheet-mixin gadget-color-mixin gadget)
+(defclass basic-gadget (
+                        permanent-medium-sheet-output-mixin
+                        sheet-parent-mixin 
+                        sheet-leaf-mixin
+                        mirrored-sheet-mixin
+                        gadget-color-mixin
+                        gadget
+                        ;;basic-pane
+                        )
   ;; Half-baked attempt to be compatible with Lispworks.
   ())
 
@@ -422,8 +439,7 @@
 
 (defgeneric (setf gadget-value) (value gadget &key invoke-callback))
 
-(defmethod (setf gadget-value) 
-  (value (gadget value-gadget) &key invoke-callback)
+(defmethod (setf gadget-value) (value (gadget value-gadget) &key invoke-callback)
   (setf (slot-value gadget 'value) value)
   (when invoke-callback
     (value-changed-callback gadget 
@@ -435,9 +451,7 @@
 
 (defmethod value-changed-callback ((gadget value-gadget) client gadget-id value)
   (declare (ignore client gadget-id))
-  (let ((callback (gadget-value-changed-callback gadget)))
-    (when callback
-      (funcall callback gadget value))))
+  (invoke-callback gadget (gadget-value-changed-callback gadget) value))
 
   
 ;;;
@@ -455,7 +469,8 @@
   (declare (ignore client gadget-id))
   (let ((callback (gadget-activate-callback gadget)))
     (when callback
-      (funcall callback gadget))))
+      (let ((*application-frame* (pane-frame gadget)))
+        (funcall callback gadget)))))
 
 ;;;
 ;;; Oriented-gadget, labelled-gadget, range-gadget
@@ -557,7 +572,7 @@
 
 (defclass push-button (labelled-gadget-mixin action-gadget) ())
   
-(defclass push-button-pane  (push-button)
+(defclass push-button-pane  (push-button basic-pane standard-space-requirement-options-mixin )
   ((show-as-default-p :type boolean
 		      :initform nil
 		      :initarg :show-as-default-p
@@ -597,10 +612,11 @@
 	    (gadget-current-color pane) (gadget-highlighted-color pane))
       (disarmed-callback pane (gadget-client pane) (gadget-id pane)))))
 
+#+NIL
 (defmethod handle-event ((pane push-button-pane) (event window-repaint-event))
   (dispatch-repaint pane (sheet-region pane)))
 
-(defmethod repaint-sheet ((pane push-button-pane) region)
+(defmethod handle-repaint ((pane push-button-pane) region)
   (declare (ignore region))
   (with-special-choices (pane)
     (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
@@ -618,6 +634,7 @@
 		(draw-edges-lines* pane 0 0 (2- w) (2- h)))
 	      (draw-edges-lines* pane 0 0 (1- w) (1- h))))
 	(draw-label pane (gadget-label pane) (round w 2) (round h 2))))))
+
 
 
 ;;
@@ -678,10 +695,11 @@
 	(setf (gadget-current-color pane) (gadget-highlighted-color pane)))
       (disarmed-callback pane (gadget-client pane) (gadget-id pane)))))
 
+#+NIL
 (defmethod handle-event ((pane toggle-button-pane) (event window-repaint-event))
   (dispatch-repaint pane (sheet-region pane)))
 
-(defmethod repaint-sheet ((pane toggle-button-pane) region)
+(defmethod handle-repaint ((pane toggle-button-pane) region)
   (declare (ignore region))
   (with-special-choices (pane)
     (let ((region (sheet-region pane))
@@ -692,6 +710,7 @@
 	    (draw-edges-lines* pane (1- x2) (1- y2) x1 y1)
 	    (draw-edges-lines* pane x1 y1 (1- x2) (1- y2)))
 	(draw-label pane (gadget-label pane) (round (- x2 x1) 2) (round (- y2 y1) 2))))))
+
 
 
 ;;
@@ -709,7 +728,7 @@
   (setf (gadget-label-align-x pane) :center
 	(gadget-label-align-y pane) :center))
 
-(defmethod repaint-sheet ((pane menu-button-pane) region)
+(defmethod handle-repaint ((pane menu-button-pane) region)
   (declare (ignore region))
   (with-special-choices (pane)
     (let ((region (sheet-region pane)))
@@ -726,6 +745,7 @@
 				  :ink (gadget-normal-color pane)
 				  :filled t)))
 	  (draw-label pane (gadget-label pane) (round w 2) (round h 2)))))))
+
 
 
 ;;;;
@@ -778,7 +798,8 @@
   (let ((call (gensym)))
     `(let ((,call (funcall (symbol-function ,callback) ,pane)))
        (when ,call
-	 (funcall ,call ,pane)))))
+         (let ((*application-frame* (pane-frame pane)))
+           (funcall ,call ,pane))))))
 
 (defmethod scroll-to-top-callback ((pane scroll-bar) client gadget-id)
   (declare (ignore client gadget-id))
@@ -915,6 +936,7 @@
 
 ;;; Event handlers
 
+#+NIL
 (defmethod handle-event ((sb scroll-bar-pane) (event window-repaint-event))
   (dispatch-repaint sb (sheet-region sb)))
 
@@ -941,11 +963,11 @@
       (cond ((region-contains-position-p (scroll-bar-up-region sb) x y)
              (scroll-up-line-callback sb (gadget-client sb) (gadget-id sb))
              (setf event-state :up-armed)
-             (repaint-sheet sb +everywhere+))
+             (dispatch-repaint sb +everywhere+))
             ((region-contains-position-p (scroll-bar-down-region sb) x y)
              (scroll-down-line-callback sb (gadget-client sb) (gadget-id sb))
              (setf event-state :dn-armed)
-             (repaint-sheet sb +everywhere+))
+             (disptach-repaint sb +everywhere+))
             ((region-contains-position-p (scroll-bar-thumb-region sb) x y)
              (setf event-state :dragging
                    drag-dy (- y (bounding-rectangle-min-y (scroll-bar-thumb-region sb)))))
@@ -963,7 +985,7 @@
       (:dn-armed (setf event-state nil))
       (otherwise
        (setf event-state nil) )))
-  (repaint-sheet sb +everywhere+) )
+  (dispatch-repaint sb +everywhere+) )
 
 (defmethod handle-event ((sb scroll-bar-pane) (event pointer-motion-event))
   (multiple-value-bind (x y) (transform-position (scroll-bar-transformation sb)
@@ -974,19 +996,21 @@
         (:dragging
          (let* ((y-new-thumb-top (- y drag-dy))
                 (ts (scroll-bar-thumb-size sb))
-                (new-value (translate-range-value y-new-thumb-top
+                (new-value (min (gadget-max-value sb)
+                               (max (gadget-min-value sb)
+                                    (translate-range-value y-new-thumb-top
                                                   (bounding-rectangle-min-y (scroll-bar-thumb-bed-region sb))
                                                   (bounding-rectangle-max-y (scroll-bar-thumb-bed-region sb))
                                                   (gadget-min-value sb)
-                                                  (+ (gadget-max-value sb) ts))))
+                                                  (+ (gadget-max-value sb) ts))))))
+           (setf (gadget-value sb) new-value)
+           (dispatch-repaint sb +everywhere+) 
            (drag-callback sb (gadget-client sb) (gadget-id sb)
-                          (min (gadget-max-value sb)
-                               (max (gadget-min-value sb)
-                                    new-value))) ))))))
+                          new-value) ))))))
 
 ;;; Repaint
 
-(defmethod repaint-sheet ((sb scroll-bar-pane) region)
+(defmethod handle-repaint ((sb scroll-bar-pane) region)
   (declare (ignore region))
   (with-special-choices (sb)
     (let ((tr (scroll-bar-transformation sb)))
@@ -1127,6 +1151,7 @@
 					   (pointer-event-x event))))
       (dispatch-repaint pane (sheet-region pane)))))
 
+#+NIL
 (defmethod handle-event ((pane slider-pane) (event window-repaint-event))
   (dispatch-repaint pane (sheet-region pane)))
 
@@ -1150,7 +1175,7 @@
       (let ((control-string (format nil "~~,~DF" decimal-places)))
         (format nil control-string value))))
 
-(defmethod repaint-sheet ((pane slider-pane) region)
+(defmethod handle-repaint ((pane slider-pane) region)
   (declare (ignore region))
   (with-special-choices (pane)
     (let ((position (convert-value-to-position pane))
@@ -1195,6 +1220,7 @@
                                                (slider-decimal-places pane))
 			    5 ;(- position slider-button-half-short-dim)
 			    (- middle slider-button-half-long-dim)))))))))
+
 
 (defmethod convert-value-to-position ((pane slider-pane))
   (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
@@ -1259,45 +1285,79 @@
        radio-box)))
 
 
-;;
-;; TEXT-FIELD gadget
-;;
+;;;
+;;; TEXT-FIELD gadget
+;;;
 
-(defclass text-field (value-gadget action-gadget) ()
+(defparameter *default-text-field-text-style*
+    (make-text-style :fixed :roman :normal))
+
+(defclass text-field (value-gadget action-gadget)
+  ((text-style
+    :initform *default-text-field-text-style*
+    :initarg  :text-style)
+
+   ;;
+   (point       :initform 0)
+   (offset      :initform 0)
+   (mark :initform nil)
+   (region-active-p :initform nil)
+   (drag-mode :initform nil)
+   
+   (prefix      :initform nil
+                ;; The currently typed prefix.
+                )
+   )
+
   (:documentation "The value is a string"))
 
-(defclass text-field-pane (text-field) ())
+(defclass text-field-pane (text-field basic-pane permanent-medium-sheet-output-mixin) ())
 
 (defmethod initialize-instance :after ((gadget text-field) &rest rest)
   (unless (getf rest :normal)
     (setf (slot-value gadget 'current-color) +white+
 	  (slot-value gadget 'normal) +white+)))
 
+(defmethod initialize-instance :after ((pane text-field-pane) &rest rest)
+  (setf (medium-text-style (sheet-medium pane))
+    (slot-value pane 'text-style)))
+
+#+NIL
 (defmethod handle-event ((pane text-field-pane) (event window-repaint-event))
   (dispatch-repaint pane (sheet-region pane)))
 
-(defmethod repaint-sheet ((pane text-field-pane) region)
+(defmethod handle-repaint ((pane text-field-pane) region)
   (declare (ignore region))
   (with-special-choices (pane)
-    (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
-      (display-gadget-background pane (gadget-current-color pane) 0 0 (- x2 x1) (- y2 y1))
-      (draw-text* pane (gadget-value pane)
-		  (round (- x2 x1))
-		  (round (- y2 y1) 2)
-		  :align-x :right
-		  :align-y :center))))
+    (with-sheet-medium (medium pane)
+      (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
+        (display-gadget-background pane (gadget-current-color pane) 0 0 (- x2 x1) (- y2 y1))
+        (draw-text* pane (gadget-value pane)
+                    x1
+                    (+ y1 (text-style-ascent (medium-text-style medium) medium))
+                    :align-x :left
+                    :align-y :baseline)))))
 
 (defmethod (setf gadget-value) :after (value (pane text-field-pane) &key invoke-callback)
   (declare (ignore value invoke-callback))
-  (dispatch-repaint pane (sheet-region pane)))
+  ;;xxx(queue-repaint pane (sheet-region pane))
+  (handle-repaint pane (sheet-region pane))
+  )
 
 (defmethod compose-space ((pane text-field-pane))
   (with-sheet-medium (medium pane)
-    (multiple-value-bind (width height)
-	(text-size medium (gadget-value pane))
-      (make-space-requirement :width width :height height
-			      :max-width width :max-height height
-			      :min-width width :min-height height))))
+    (let ((as (text-style-ascent (medium-text-style medium) medium))
+          (ds (text-style-descent (medium-text-style medium) medium))
+          (w  (text-size medium (gadget-value pane))))
+      (let ((width w)
+            (height (+ as ds)))
+        (make-space-requirement :width width :height height
+                                :max-width width :max-height height
+                                :min-width width :min-height height)))))
+
+(defmethod allocate-space ((pane text-field-pane) w h)
+  (resize-sheet pane w h))
+  
 
 ;;
 ;; TEXT-EDITOR gadget
