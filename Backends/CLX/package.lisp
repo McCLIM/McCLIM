@@ -22,6 +22,8 @@
                 #:port-enable-sheet
                 #:port-disable-sheet
 		#:port-motion-hints
+                #:port-force-output
+                #:set-port-keyboard-focus
                 ;;
                 #:port-set-mirror-region
                 #:port-set-mirror-transformation
@@ -62,6 +64,9 @@
                 #:width                 ;dito
                 #:coordinate=
                 #:get-transformation
+                #:keyboard-input-focus
+                #:port-grab-pointer
+                #:port-ungrab-pointer
                 ;;
                 #:invoke-with-special-choices
                 #:medium-draw-glyph

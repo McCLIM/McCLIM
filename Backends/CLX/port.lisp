@@ -691,7 +691,7 @@
                            :timestamp time))
            (:wm_take_focus
             (let* ((frame (pane-frame sheet))
-                   (focus (climi::keyboard-input-focus frame)))
+                   (focus (keyboard-input-focus frame)))
               (when (and focus (sheet-mirror focus))
                 (xlib:set-input-focus (clx-port-display *clx-port*)
                                       (sheet-mirror focus) :parent time)
@@ -1054,15 +1054,29 @@
     (declare (ignore x y same-screen-p child))
     (x-event-state-modifiers (port pointer) mask)))
 
-;;; set the keyboard input focus for the port
+;;; Set the keyboard input focus for the port.
+;;; (oops, we lose the timestamp here.)
 
-;; Ouch, we lose the timestamp. Does it really matter?
-(defmethod climi::set-port-keyboard-focus (focus (port clx-port))
+(defmethod set-port-keyboard-focus (focus (port clx-port))
   (let ((mirror (sheet-mirror focus)))
     (when mirror
       (xlib:set-input-focus (clx-port-display port) mirror :parent nil))))
 
-(defmethod climi::port-force-output ((port clx-port))
+(defmethod port-force-output ((port clx-port))
   (xlib:display-force-output (clx-port-display port)))
 
+;; FIXME: What happens when CLIM code calls tracking-pointer recursively?
+;; I expect the xlib:grab-pointer call will fail, and so the call to
+;; xlib:ungrab-pointer will ungrab prematurely.
+(defmethod port-grab-pointer ((port clx-port) pointer sheet)
+  ;; FIXME: Use timestamps?
+  (xlib:grab-pointer (sheet-mirror sheet)
+                     '(:button-press :button-release
+                       :leave-window :enter-window
+                       :pointer-motion :pointer-motion-hint)
+                     ; Probably we want to set :cursor here..                     
+                     :owner-p t))
 
+(defmethod port-ungrab-pointer ((port clx-port) pointer sheet)
+  (declare (ignore pointer))
+  (xlib:ungrab-pointer (clx-port-display port)))

@@ -41,13 +41,13 @@
 	(setf command-names (sort command-names #'(lambda (a b)
 						    (string-lessp (car a)
 								  (car b)))))
-	(loop for (nil . command) in command-names
-	      do (progn
-		   (fresh-line *query-io*)
-		   (present command
-			    `(command-name :command-table ,command-table)
-			    :stream *query-io*))))))
-
+        (formatting-item-list (*query-io*)
+          (loop for (nil . command) in command-names
+            do (progn
+                 (formatting-cell (*query-io*)
+                   (present command `(command-name :command-table ,command-table)
+                            :stream *query-io*))))))))
+  
 ;;; Describe command.  I don't know if this should go in the global command
 ;;; table, but we don't exactly have a surplus of commands yet...
 

@@ -297,7 +297,23 @@
   (error "DEALLOCATE-PIXMAP is not implemented for generic PORTs"))
 
 
-(defgeneric port-force-output (port))
+(defgeneric port-force-output (port)
+  (:documentation "Flush the output buffer of PORT, if there is one.")) 
 
 (defmethod port-force-output ((port basic-port))
   (values))
+
+(defgeneric port-grab-pointer (port pointer sheet)
+  (:documentation "Grab the specified pointer, for implementing TRACKING-POINTER."))
+
+(defgeneric port-ungrab-pointer (port pointer sheet)
+  (:documentation "Ungrab the specified pointer, for implementing TRACKING-POINTER."))
+
+(defmethod port-grab-pointer (port pointer sheet)
+  (declare (ignorable port pointer sheet))
+  (warn "Port ~A has not implemented pointer grabbing." port))
+
+(defmethod port-ungrab-pointer (port pointer sheet)
+  (declare (ignorable port pointer sheet))
+  (warn "Port ~A  has not implemented pointer grabbing." port))
+
