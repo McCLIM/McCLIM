@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.127 2003/08/06 20:26:06 gilbert Exp $
+;;; $Id: panes.lisp,v 1.128 2003/08/09 00:35:40 gilbert Exp $
 
 (in-package :clim-internals)
 
@@ -1944,8 +1944,10 @@
 
 (defmethod pane-viewport-region ((pane basic-pane))
   (let ((viewport (pane-viewport pane)))
-    (if viewport
-        (sheet-region viewport))))
+    (and viewport
+         (untransform-region
+          (sheet-delta-transformation pane viewport)
+          (sheet-region viewport)))))
 
 
 ;; This should be good to go, will uncomment later.. --Hefner
