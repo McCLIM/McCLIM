@@ -72,19 +72,39 @@
   (declare (ignore object))
   'expression)
 
-(defmethod presentation-type-of ((object standard-object))
+(defun get-ptype-from-class-of (object)
   (let* ((name (class-name (class-of object)))
 	 (ptype-entry (gethash name *presentation-type-table*)))
     (unless ptype-entry
-      (return-from presentation-type-of name))
+      (return-from get-ptype-from-class-of name))
     ;; Does the type have required parameters?  If so, we can't use it...
     (let ((parameter-ll (parameters-lambda-list ptype-entry)))
-      (when (eq (car parameter-ll) '&whole)
-	(setq parameter-ll (cddr parameter-ll)))
+      (values name 
+              (if (eq (car parameter-ll) '&whole)
+                  (cddr parameter-ll)
+                  parameter-ll)))))
+  
       (if (or (null parameter-ll)
 	      (member (car parameter-ll) lambda-list-keywords))
 	  name
-	  (call-next-method)))))
+	  (call-next-method))))
+
+(defmethod presentation-type-of ((object standard-object))
+  (multiple-value-bind (name lambda-list)
+      (get-ptype-from-class-of object)
+    (if (or (null lambda-list)
+            (member lambda-list lambda-list-keywords))
+        name
+        (call-next-method))))       
+
+(defmethod presentation-type-of ((object structure-object))
+  (multiple-value-bind (name lambda-list)
+      (get-ptype-from-class-of object)
+    (if (or (null lambda-list)
+            (member lambda-list lambda-list-keywords))
+        name
+        (call-next-method))))
+  
 
 (define-presentation-generic-function
     %map-over-presentation-type-supertypes
