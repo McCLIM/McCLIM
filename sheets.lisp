@@ -145,8 +145,13 @@ sheet-supports-only-one-child error to be signalled."))
 (defclass sheet ()
   ())
 
-(defun sheetp (x)
-  (typep x 'sheet))
+(defgeneric sheetp (x))
+
+(defmethod sheetp ((x sheet))
+  t)
+
+(defmethod sheetp (x)
+  nil)
 
 (defclass basic-sheet (sheet)
   ((region :type region
