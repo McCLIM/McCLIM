@@ -57,7 +57,7 @@
 (clim-defsystem (:clim-lisp)
   ;; First possible patches
   #+:CMU       "Lisp-Dep/fix-cmu"
-  #+:EXCL	"Lisp-Dep/fix-acl"
+  #+:EXCL      "Lisp-Dep/fix-acl"
   #+:SBCL      "Lisp-Dep/fix-sbcl"
   "package")
 
@@ -75,7 +75,6 @@
    
    "design"
    "X11-colors"
-   ;; "brectangle"
    "coordinates"
    "transforms"
    "regions"
@@ -141,8 +140,8 @@
    "builtin-commands"
    )
 
-(load "Backends/CLX/system")
-#+gl(load "Backends/OpenGL/system")
+(load (merge-pathnames "Backends/CLX/system" *clim-directory*))
+#+gl(load (merge-pathnames "Backends/OpenGL/system" *clim-directory*))
 
 (clim-defsystem (:clim-looks :depends-on (:clim-clx #+gl :clim-opengl))
   "Looks/pixie")
