@@ -628,7 +628,7 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
   `(invoke-with-new-output-record
     ,stream
     #'(lambda (,stream ,record)
-        ,@(unless record-supplied-p `((declare (ignore ,record))))
+        (declare (ignorable ,stream ,record))
         ,@body)
     ',record-type
     ,@initargs))
