@@ -18,8 +18,8 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
 (in-package :CLIM-INTERNALS)
@@ -43,9 +43,9 @@
 ;; with-sheet-medium (medium sheet) &body body [Macro]
 ;; with-sheet-medium-bound (sheet medium) &body body [Macro]
 
-(defgeneric sheet-medium (sheet)) 
-(defgeneric medium-sheet (medium)) 
-(defgeneric medium-drawable (medium)) 
+(defgeneric sheet-medium (sheet))
+(defgeneric medium-sheet (medium))
+(defgeneric medium-drawable (medium))
 (defgeneric port (medium))
 
 ;;;; 8.3.4.1 Grafting and Degrafting of Mediums
@@ -139,7 +139,8 @@
 
 (defgeneric compose-space (pane &key width height))
 (defgeneric allocate-space (pane width height))
-(defgeneric change-space-requirements (pane &key resize-frame &rest space-req-keys))
+(defgeneric change-space-requirements
+    (pane &rest space-req-keys &key resize-frame))
 (defgeneric note-space-requirements-changed (sheet pane))
 ;; changing-space-requirements (&key resize-frame layout) &body body [Macro]
 
