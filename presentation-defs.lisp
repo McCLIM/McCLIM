@@ -87,11 +87,15 @@
 (defmethod presentation-type-of ((object standard-object))
   (multiple-value-bind (name lambda-list)
       (get-ptype-from-class-of object)
-    (if (and name
-             (or (null lambda-list)
-                 (member (first lambda-list) lambda-list-keywords)))
-        name
-        (call-next-method))))       
+    (cond ((and name
+		(or (null lambda-list)
+		    (member (first lambda-list) lambda-list-keywords)))
+	   name)
+	  (name
+	   'standard-object)
+	  (t (let* ((class (class-of object))
+		    (class-name (class-name class)))
+	       (or class-name class))))))
 
 (defmethod presentation-type-of ((object structure-object))
   (multiple-value-bind (name lambda-list)
@@ -100,7 +104,6 @@
             (member lambda-list lambda-list-keywords))
         name
         (call-next-method))))
-  
 
 (define-presentation-generic-function
     %map-over-presentation-type-supertypes
