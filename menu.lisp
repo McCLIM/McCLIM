@@ -239,7 +239,7 @@
 
 (defun make-menu-bar (command-table 
 		      &key width height
-		           max-width max-height
+		           (max-width +fill+) max-height
 			   min-width min-height)
   (with-slots (menu) (find-command-table command-table)
     (progn ;;raising () ;; XXX temporary medicine as RAISED is borken --GB
