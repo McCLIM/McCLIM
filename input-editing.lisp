@@ -62,7 +62,12 @@
 ;;; OK, now I know :)  They should all be passed, except for peek-p.
 ;;; However, the loop that calls stream-read-gesture on the
 ;;; encapsulated stream needs to return null if we see a :timeout or :eof.
-
+;;;
+;;; Activation gesture handling has been moved out of stream-process-gesture to
+;;; stream-read-gesture and stream-unread-gesture. This allows a gesture to be
+;;; read in while it is not an activation gesture, unread, and then read again
+;;; as an activation gesture. This kind of game seems to be needed for reading
+;;; forms properly. -- moore
 (defmethod stream-read-gesture ((stream standard-input-editing-stream)
 				&rest rest-args &key peek-p
 				&allow-other-keys)
@@ -82,6 +87,8 @@
 		       (throw-object-ptype (goatee::object gesture)
 					   (goatee::result-type gesture)))
 		      (t (unless peek-p
+			   (when (activation-gesture-p gesture)
+			     (setf (stream-activated stream) t))
 			   (incf scan-pointer))
 			 (return-from stream-read-gesture gesture)))))
 	     ;; If activated, insertion pointer is at fill pointer
@@ -106,12 +113,17 @@
 				  gesture)
   (declare (ignore gesture))
   (when (> (stream-scan-pointer stream) 0)
+    (setf (stream-activated stream) nil)
     (decf (stream-scan-pointer stream))))
 
 (defgeneric stream-process-gesture (stream gesture type))
 
 ;;; The editing functions of stream-process-gesture are performed by the
 ;;; primary method on goatee-input-editing-mixin
+;;;
+;;; This is commented out for now because I believe the stream should
+;;; be activated by stream-read-gesture seeing an activation gesture. -- moore
+#+nil
 (defmethod stream-process-gesture :after ((stream standard-input-editing-stream)
 					  gesture
 					  type)

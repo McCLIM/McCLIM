@@ -1163,6 +1163,20 @@
   (declare (ignore acceptably for-context-type))
   (princ object stream))
 
+(define-presentation-method accept 
+    ((type pathname) stream (view textual-view)
+     &key (default *default-pathname-defaults* defaultp)
+     default-type)
+  (let* ((namestring (read-token stream))
+	 (path (parse-namestring namestring)))
+    (if merge-default
+	(merge-pathnames 
+	 path 
+	 (merge-pathnames (make-pathname :type default-type
+					 :version default-version)
+			  default))
+	path)))
+
 (defgeneric default-completion-name-key (item))
 
 (defmethod default-completion-name-key ((item string))
@@ -1665,11 +1679,18 @@
 (define-presentation-method accept ((type form) stream (view textual-view)
 				    &key (default nil defaultp) default-type)
   (declare (ignore default defaultp default-type))
-  (let* ((object (funcall (if preserve-whitespace
-			      *sys-read-preserving-whitespace*
-			      *sys-read*)
-			  stream *eof-error-p* *eof-value* *recursivep*))
-	 (ptype (presentation-type-of object)))
+  (let* ((object nil)
+	 (ptype nil))
+    ;; We don't want activation gestures like :return causing an eof
+    ;; while reading a form, so we turn the activation gestures into
+    ;; delimiter gestures.
+    (with-delimiter-gestures (*activation-gestures*)
+      (with-activation-gestures (nil :override t)
+	(setq object (funcall (if preserve-whitespace
+				  *sys-read-preserving-whitespace*
+				  *sys-read*)
+			      stream *eof-error-p* *eof-value* *recursivep*))
+	(setq ptype (presentation-type-of object))))
     (unless (presentation-subtypep ptype 'form)
       (setq ptype 'form))
     (if auto-activate
