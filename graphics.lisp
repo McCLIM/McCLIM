@@ -368,7 +368,7 @@
    (width :initarg :width
 	  :reader pixmap-width)
    (height :initarg :height
-	   :reader :pixmap-height)
+	   :reader pixmap-height)
    ))
 
 (defmethod allocate-pixmap ((sheet sheet) width height)
