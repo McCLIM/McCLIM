@@ -499,6 +499,7 @@ input focus. This is a McCLIM extension."))
     frame))
 
 (defmethod disown-frame ((fm frame-manager) (frame application-frame))
+  #+CLIM-MP
   (let* ((t-l-s (frame-top-level-sheet frame))
          (queue (sheet-event-queue t-l-s)))
     (when (typep queue 'port-event-queue)
