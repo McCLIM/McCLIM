@@ -89,7 +89,7 @@
    (state :initform (list 0)))
   (:panes
    (plus             :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)		     
+		     :space-requirement (make-space-requirement :width 50 :height 50)
 		     :label "+"
 		     :activate-callback (queue-operator #'+))
    (dash             :push-button
@@ -97,66 +97,66 @@
 		     :label "-"
 		     :activate-callback (queue-operator #'-))
    (multiplicate     :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)		     
+		     :space-requirement (make-space-requirement :width 50 :height 50)
 		     :label "*"
 		     :activate-callback (queue-operator #'*))
    (divide           :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)		     
+		     :space-requirement (make-space-requirement :width 50 :height 50)
 		     :label "/"
 		     :activate-callback (queue-operator #'round))
    (result           :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)		     
+		     :space-requirement (make-space-requirement :width 50 :height 50)
 		     :label "="
 		     :activate-callback #'do-operation)
    (one              :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)		     
+		     :space-requirement (make-space-requirement :width 50 :height 50)
 		     :label "1"
 		     :activate-callback (queue-number 1))
    (two              :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)		     
+		     :space-requirement (make-space-requirement :width 50 :height 50)
 		     :label "2"
 		     :activate-callback (queue-number 2))
    (three            :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)		     
+		     :space-requirement (make-space-requirement :width 50 :height 50)
 		     :label "3"
 		     :activate-callback (queue-number 3))
    (four             :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)		     
+		     :space-requirement (make-space-requirement :width 50 :height 50)
 		     :label "4"
 		     :activate-callback (queue-number 4))
    (five             :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)		     
+		     :space-requirement (make-space-requirement :width 50 :height 50)
 		     :label "5"
 		     :activate-callback (queue-number 5))
    (six              :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)		     
+		     :space-requirement (make-space-requirement :width 50 :height 50)
 		     :label "6"
 		     :activate-callback (queue-number 6))
    (seven            :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)		     
+		     :space-requirement (make-space-requirement :width 50 :height 50)
 		     :label "7"
 		     :activate-callback (queue-number 7))
    (eight            :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)		     
+		     :space-requirement (make-space-requirement :width 50 :height 50)
 		     :label "8"
 		     :activate-callback (queue-number 8))
    (nine             :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)		     
+		     :space-requirement (make-space-requirement :width 50 :height 50)
 		     :label "9"
 		     :activate-callback (queue-number 9))
    (zero             :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)		     
+		     :space-requirement (make-space-requirement :width 50 :height 50)
 		     :label "0"
 		     :activate-callback (queue-number 0))
   (screen            :text-field
 		     :value "0"
 		     :space-requirement (make-space-requirement :width 200 :height 50))
   (ac                :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)		     
+		     :space-requirement (make-space-requirement :width 50 :height 50)
 		     :label "AC"
 		     :activate-callback #'initac)
   (ce                :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)		     
+		     :space-requirement (make-space-requirement :width 50 :height 50)
 		     :label "CE"
 		     :activate-callback #'initce))
   
