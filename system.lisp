@@ -108,6 +108,7 @@
    "menu"
    "table-formatting"
    "postscript-medium"
+   "incremental-redisplay"
    ))
    
 (defsystem :clim-clx #-mk-defsystem ()
