@@ -114,3 +114,41 @@ SUPPRESS-SPACE-AFTER-CONJUNCTION are non-standard."
 	  ,@body))
       ,@args)))
 
+;;; indenting-output
+
+(defclass indenting-output-stream (standard-encapsulating-stream
+				   extended-output-stream
+				   output-recording-stream)
+  ((indentation :accessor indentation)))
+
+(defmethod initialize-instance :after ((obj indenting-output-stream)
+				       &key (indent-spec 0) &allow-other-keys)
+  (setf (indentation obj) (parse-space (encapsulating-stream-stream obj)
+				       indent-spec
+				       :horizontal)))
+
+(defmethod stream-write-char :around ((stream indenting-output-stream) char)
+  (let ((under-stream (encapsulating-stream-stream stream)))
+    (when (stream-start-line-p under-stream)
+      (stream-increment-cursor-position under-stream (indentation stream) nil))
+    (call-next-method)))
+
+(defmethod stream-write-string :around ((stream indenting-output-stream)
+					string &optional (start 0) end)
+  (loop for i from start below end 
+    do (stream-write-char stream (aref string i))))
+		     
+(defmacro indenting-output ((stream indent &key (move-cursor T)) &body body)
+  (when (eq stream T)
+    (setq stream '*standard-output*))
+  (with-gensyms (old-x old-y)
+     `(multiple-value-bind (,old-x ,old-y)
+	  (stream-cursor-position ,stream)	
+	(let ((,stream (make-instance
+		       'indenting-output-stream
+		       :stream ,stream
+		       :indent-spec ,indent)))
+	  ,@body)
+	(unless ,move-cursor
+	  (setf (stream-cursor-position ,stream)
+		(values ,old-x ,old-y))))))

@@ -395,8 +395,17 @@ state ~S lambda list ~S"
 
 ;;; Text Style binding forms
 
+#+nil
 (def-stream-method invoke-with-text-style
     ((stream standard-encapsulating-stream) continuation text-style))
+
+(defmethod invoke-with-text-style ((stream standard-encapsulating-stream)
+				   continuation text-style)
+  (invoke-with-text-style (slot-value stream 'stream)
+			  #'(lambda (medium)
+			      (declare (ignore medium))
+			      (funcall continuation stream))
+			  text-style))
 
 ;;; Drawing functions
 
@@ -582,21 +591,59 @@ state ~S lambda list ~S"
   ((stream standard-encapsulating-stream)
    string start end text-style width height baseline))
 
+#+nil
 (def-stream-method invoke-with-output-recording-options
     ((stream standard-encapsulating-stream) continuation record draw))
 
+(defmethod invoke-with-output-recording-options
+    ((stream standard-encapsulating-stream) continuation record draw)
+  (invoke-with-output-recording-options
+    (slot-value stream 'stream)
+    #'(lambda (old-stream)
+	(declare (ignore old-stream))
+	(funcall continuation stream))
+    record
+    draw))
+  
+#+nil
 (def-stream-method invoke-with-new-output-record
     ((stream standard-encapsulating-stream) continuation record-type
      &rest initargs
      &key
      &allow-other-keys))
 
+(defmethod invoke-with-new-output-record ((stream standard-encapsulating-stream)
+					  continuation record-type
+					  &rest initargs &key &allow-other-keys)
+  (apply #'invoke-with-new-output-record
+	 (slot-value stream 'stream)
+	 #'(lambda (inner-stream output-record)
+	     (declare (ignore inner-stream))
+	     (funcall continuation stream output-record))
+	 record-type
+	 initargs))
+
+#+nil
 (def-stream-method invoke-with-output-to-output-record
     ((stream standard-encapsulating-stream) continuation record-type
      &rest initargs
      &key
      &allow-other-keys))
 
+(defmethod invoke-with-output-to-output-record
+    ((stream standard-encapsulating-stream) continuation record-type
+     &rest initargs
+     &key
+     &allow-other-keys)
+  (invoke-with-output-to-output-record
+     (slot-value stream 'stream)
+     #'(lambda (inner-stream record)
+	 (declare (ignore inner-stream))
+	 (funcall continuation stream record))
+     record-type
+     initargs))
+
+						    
 
 ;;; Presentation type generics
 

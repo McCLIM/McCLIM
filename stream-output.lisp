@@ -240,7 +240,9 @@
 
 (defmethod stream-increment-cursor-position ((stream standard-extended-output-stream) dx dy)
   (multiple-value-bind (x y) (cursor-position (stream-text-cursor stream))
-    (setf (cursor-position (stream-text-cursor stream)) (values (+ x dx) (+ y dy)))))
+    (let ((dx (or dx 0))
+	  (dy (or dy 0)))
+    (setf (cursor-position (stream-text-cursor stream)) (values (+ x dx) (+ y dy))))))
 
 ;;;
 
@@ -323,7 +325,7 @@ than one line of output."))
 		cy (+ cy height vspace))
 	  (when (> (+ cy height) view-height)
 	    (ecase (stream-end-of-page-action stream)
-	      (:scroll
+	      ((:scroll :allow)
                (let ((jump 0))
                  (with-slots (seos-current-width seos-current-height) stream
                    (setf seos-current-width  (max (bounding-rectangle-width stream))
@@ -335,10 +337,11 @@ than one line of output."))
 	       ;;(scroll-vertical stream (+ height vspace))
                )
 	      (:wrap
-	       (setq cy 0))
-	      (:allow
-	       )))
-          (scroll-extent stream 0 (max 0 (- (+ cy height) %view-height)))
+	       (setq cy 0))))
+          (unless (eq :allow (stream-end-of-page-action stream))
+	      (scroll-extent stream 0 (max 0 (- (+ cy height) %view-height))))
+	    
+	  
 	  ;; mikemac says that this "erase the new line" behavior is
 	  ;; required by the stream text protocol, but I don't see
 	  ;; it.  I'm happy to put this back in again, but in the
