@@ -32,7 +32,8 @@
 	   :accessor clx-port-screen)
    (window :initform nil
 	   :accessor clx-port-window)
-   (color-table :initform (make-hash-table :test #'eq)))
+   (color-table :initform (make-hash-table :test #'eq))
+   (font-table :initform (make-hash-table :test #'eq)))
   )
 
 (setf (get :x11 :port-type) 'clx-port)
@@ -197,26 +198,31 @@
       (xlib:open-font display "fixed"))))
 
 (defmethod text-style-to-X-font ((port clx-port) text-style)
-  (with-slots (family face size) text-style
-    (let* ((family-name (if (stringp family)
-			    family
-			  (or (getf *clx-text-families* family)
-			      (getf *clx-text-families* :fix))))
-	   (face-name (if (stringp face)
-			  face
-			(or (getf *clx-text-faces*
-				  (if (listp face)
-				      (intern (format nil "~A-~A" (first face) (second face))
-					      :keyword)
-				    face))
-			    (getf *clx-text-faces* :roman))))
-	   (size-number (if (numberp size)
-			    (round size)
-			  (or (getf *clx-text-sizes* size)
-			      (getf *clx-text-sizes* :normal))))
-	   (font-name (format nil "-~A-~A-*-*-~D-*-*-*-*-*-*-*"
-			      family-name face-name size-number)))
-      (open-font (clx-port-display port) font-name))))
+  (let ((table (slot-value port 'font-table)))
+    (or (gethash text-style table)
+	(with-slots (family face size) text-style
+	  (let* ((family-name (if (stringp family)
+				  family
+				  (or (getf *clx-text-families* family)
+				      (getf *clx-text-families* :fix))))
+		 (face-name (if (stringp face)
+				face
+				(or (getf *clx-text-faces*
+					  (if (listp face)
+					      (intern (format nil "~A-~A"
+							      (first face)
+							      (second face))
+						      :keyword)
+					      face))
+				    (getf *clx-text-faces* :roman))))
+		 (size-number (if (numberp size)
+				  (round size)
+				  (or (getf *clx-text-sizes* size)
+				      (getf *clx-text-sizes* :normal))))
+		 (font-name (format nil "-~A-~A-*-*-~D-*-*-*-*-*-*-*"
+				    family-name face-name size-number)))
+	    (setf (gethash text-style table)
+		  (open-font (clx-port-display port) font-name)))))))
 
 (defmethod text-style-height (text-style (port clx-port))
   (let ((font (text-style-to-X-font port text-style)))
@@ -245,10 +251,8 @@
   (xlib:bell (clx-port-display port)))
 
 (defmethod X-pixel ((port clx-port) color)
-  (let* ((table (slot-value port 'color-table))
-	 (pixel (gethash color table)))
-    (if pixel
-	pixel
+  (let ((table (slot-value port 'color-table)))
+    (or (gethash color table)
 	(setf (gethash color table)
 	      (multiple-value-bind (r g b) (color-rgb color)
 		(xlib:alloc-color (xlib:screen-default-colormap
