@@ -566,8 +566,8 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
       (ecase state
         (:highlight	 
          (draw-rectangle* (sheet-medium stream) x1 y1 (1- x2) (1- y2)
-                          :filled T :ink +flipping-ink+)) ; XXX +FOREGROUND-INK+? ;)
-        (:unhighlight
+                          :filled nil :ink +foreground-ink+)) ; XXX +FLIPPING-INK+? 
+        (:unhighlight	 
 	 (repaint-sheet stream record)
          #+nil(draw-rectangle* (sheet-medium stream) x1 y1 (1- x2) (1- y2)
                           :filled nil :ink +background-ink+)))))) ; XXX +FLIPPING-INK+?

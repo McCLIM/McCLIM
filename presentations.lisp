@@ -1808,6 +1808,7 @@ a presentation"
             (when ptype
               (funcall (cdr (presentation-translator-menu-item-context item)) object ptype event options))))))))
 
+#+nil
 (defmethod highlight-output-record ((record standard-presentation)
 				    stream state)
   (map-over-output-records
