@@ -1485,7 +1485,7 @@
    ))
 
 (defpackage :CLIM
-  (:use :clim-internals :common-lisp)
+  (:use :clim-extensions :clim-internals :common-lisp)
   )
 
 ;(let ((climi-package (find-package :climi))
