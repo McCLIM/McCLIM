@@ -584,6 +584,32 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
                           :filled nil :ink +background-ink+)))))) ; XXX +FLIPPING-INK+?
 
 ;;; 16.2.2. The Output Record "Database" Protocol
+
+;; These two aren't in the spec, but are needed to make indirect adding/deleting
+;; of GADGET-OUTPUT-RECORDs work:
+
+(defgeneric note-output-record-lost-sheet (record sheet))
+(defgeneric note-output-record-got-sheet  (record sheet))
+
+(defmethod note-output-record-lost-sheet ((record basic-output-record) sheet)
+  (values))
+
+(defmethod note-output-record-lost-sheet :after ((record compound-output-record) sheet)
+  (map-over-output-records #'note-output-record-lost-sheet record 0 0 sheet))
+
+(defmethod note-output-record-got-sheet  ((record basic-output-record) sheet)
+  (values))
+
+(defmethod note-output-record-got-sheet :after ((record compound-output-record) sheet)
+  (map-over-output-records #'note-output-record-got-sheet record 0 0 sheet))
+
+(defun find-output-record-sheet (record)
+  "Walks up the parents of RECORD, searching for an output history from which
+the associated sheet can be determined."
+  (typecase record
+    (stream-output-history-mixin (output-history-stream record))
+    (basic-output-record (find-output-record-sheet (output-record-parent record)))))  
+
 (defmethod output-record-children ((record basic-output-record))
   nil)
 
@@ -592,7 +618,10 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
   (error "Cannot add a child to ~S." record))
 
 (defmethod add-output-record :before (child (record compound-output-record))
-  (let ((parent (output-record-parent child)))
+  (let ((sheet (find-output-record-sheet record)))
+    (when sheet
+      (note-output-record-got-sheet child sheet)))       
+  (let ((parent (output-record-parent child)))    
     (when parent
       (restart-case
           (error "~S already has a parent ~S." child parent)
@@ -600,8 +629,15 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
           :report "Delete from the old parent."
           (delete-output-record child parent))))))
 
-(defmethod add-output-record :after (child (record compound-output-record))
+(defmethod add-output-record :after (child (record compound-output-record))                                           
   (recompute-extent-for-new-child record child))
+
+(defmethod delete-output-record :before (child (record basic-output-record)
+                                         &optional (errorp t))
+  (declare (ignore errorp))
+  (let ((sheet (find-output-record-sheet record)))
+    (when sheet
+      (note-output-record-lost-sheet child sheet))))
 
 (defmethod delete-output-record (child (record basic-output-record)
                                  &optional (errorp t))
@@ -610,14 +646,19 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
 
 (defmethod delete-output-record :after (child (record compound-output-record)
                                               &optional (errorp t))
-  (declare (ignore errorp))           
+  (declare (ignore errorp))
   (with-bounding-rectangle* (x1 y1 x2 y2) child
     (recompute-extent-for-changed-child record child x1 y1 x2 y2)))
 
 (defmethod clear-output-record ((record basic-output-record))
   (error "Cannot clear ~S." record))
 
-(defmethod clear-output-record :after ((record compound-output-record))
+(defmethod clear-output-record :before ((record compound-output-record))  
+  (let ((sheet (find-output-record-sheet record)))
+    (when sheet
+      (map-over-output-records #'note-output-record-lost-sheet record 0 0 sheet))))      
+
+(defmethod clear-output-record :after ((record compound-output-record))  
   (with-slots (x y x1 y1 x2 y2) record
     (setf x1 x  y1 y
           x2 x  y2 y)))
@@ -1726,7 +1767,7 @@ were added."
 
 ;;; 16.3.4. Top-Level Output Records
 (defclass stream-output-history-mixin ()
-  ())
+  ((stream :initarg :stream :reader output-history-stream)))
 
 (defclass standard-sequence-output-history
     (standard-sequence-output-record stream-output-history-mixin)
@@ -1751,14 +1792,16 @@ were added."
 (defmethod initialize-instance :after
     ((stream standard-output-recording-stream) &rest args)
   (declare (ignore args))
-  (setf (stream-current-output-record stream) (stream-output-history stream)))
+  (let ((history (make-instance 'standard-tree-output-history :stream stream)))
+    (setf (slot-value stream 'output-history) history
+          (stream-current-output-record stream) history)))
 
 ;;; Used in initializing clim-stream-pane
 
 (defmethod reset-output-history ((stream
 				  standard-output-recording-stream))
   (setf (slot-value stream 'output-history)
-	(make-instance 'standard-tree-output-history))
+	(make-instance 'standard-tree-output-history :stream stream))
   (setf (stream-current-output-record stream) (stream-output-history stream)))
 
 ;;; 16.4.1 The Output Recording Stream Protocol

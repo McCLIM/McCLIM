@@ -275,7 +275,7 @@
   ;; Half-baked attempt to be compatible with Lispworks. ??? -moore
   ;; Inherited from basic-pane with different defaults.
   ((foreground  :initform +black+)
-   (background  :initform +white+)
+   #+IGNORE (background  :initform +white+)  ; This is evil.. -Hefner
    ))
 
 
@@ -1313,7 +1313,7 @@ and must never be nil."))
                      :background *3d-inner-color*))
 
 (defmethod compose-space ((sb scroll-bar-pane) &key width height)
-  (declare (ignore width height))
+  (declare (ignore width height))  
   (if (eq (gadget-orientation sb) :vertical)
       (make-space-requirement :min-width 1
 			      :width *scrollbar-thickness*
@@ -1684,6 +1684,17 @@ and must never be nil."))
                      :initarg :number-of-quanta
                      :reader slider-number-of-quanta)))
 
+(defmethod compose-space ((pane slider-pane) &key width height)
+  (declare (ignore width height))
+  (let ((minor (+ 50 (if (gadget-show-value-p pane) 30 0)))
+        (major 128))
+  (if (eq (gadget-orientation pane) :vertical)
+      (make-space-requirement :min-width  minor :width  minor
+                              :min-height major :height major)
+    (make-space-requirement :min-width  major :width  major
+                            :min-height minor :height minor))))
+                            
+
 
 (defmethod initialize-instance :before ((pane slider-pane) &rest rest)
   (declare (ignore rest))
@@ -1766,66 +1777,52 @@ and must never be nil."))
     (let ((position (convert-value-to-position pane))
 	  (slider-button-half-short-dim (ash slider-button-short-dim -1))
 	  (slider-button-half-long-dim  (ash slider-button-long-dim -1))
-          (background-color (gadget-current-color pane)))
-      (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
-	(display-gadget-background pane background-color 0 0 (- x2 x1) (- y2 y1))
-        (case (gadget-orientation pane)
-          ((:vertical)
-	    (let ((middle (round (- x2 x1) 2)))
-              (draw-bordered-polygon pane
-                                     (polygon-points
+          (background-color (pane-background pane))          
+          (inner-color (gadget-current-color pane)))      
+      (flet ((draw-thingy (x y)
+               (draw-circle* pane x y 8.0 :filled t :ink inner-color)
+               (draw-circle* pane x y 8.0 :filled nil :ink +black+)
+               (draw-circle* pane x y 7.0
+                             :filled nil :ink +white+
+                             :start-angle (* 0.25 pi)
+                             :end-angle   (* 1.25 pi))                             
+               (draw-circle* pane x y 7.0
+                             :filled nil :ink +black+
+                             :start-angle (* 1.25 pi)
+                             :end-angle   (* 2.25 pi))))
+        (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
+          (display-gadget-background pane background-color 0 0 (- x2 x1) (- y2 y1))
+          (case (gadget-orientation pane)
+            ((:vertical)
+             (let ((middle (round (- x2 x1) 2)))
+               (draw-bordered-polygon pane
+                                      (polygon-points
                                        (make-rectangle*
-			                 (- middle 2) (+ y1 slider-button-half-short-dim)
-			                 (+ middle 2) (- y2 slider-button-half-short-dim)))
-                                     :style :inset
-                                     :border-width 2)
-	      (draw-circle* pane middle (- position slider-button-half-short-dim) 8.0
-                                   :filled t :ink background-color)
-	      (draw-circle* pane middle (- position slider-button-half-short-dim) 8.0
-                                   :filled nil :ink +black+)
-	      (draw-circle* pane middle (- position slider-button-half-short-dim) 7.0
-                                   :filled nil
-                                   :start-angle (* 0.25 pi)
-                                   :end-angle   (* 1.25 pi)
-                                   :ink +white+)
-	      (draw-circle* pane middle (- position slider-button-half-short-dim) 7.0
-                                   :filled nil
-                                   :start-angle (* 1.25 pi)
-                                   :end-angle   (* 2.25 pi)
-                                   :ink +black+)
+                                        (- middle 2) (+ y1 slider-button-half-short-dim)
+                                        (+ middle 2) (- y2 slider-button-half-short-dim)))
+                                      :style :inset
+                                      :border-width 2)
+               (draw-thingy middle (- position slider-button-half-short-dim))
+               (when (gadget-show-value-p pane)
+                 (draw-text* pane (format-value (gadget-value pane)
+                                                (slider-decimal-places pane))
+                             5 ;(- position slider-button-half-short-dim)
+                             (- middle slider-button-half-long-dim)))))
+            ((:horizontal)
+             (let ((middle (round (- y2 y1) 2)))
+               (draw-bordered-polygon pane
+                                      (polygon-points
+                                       (make-rectangle*
+                                        (+ x1 slider-button-half-short-dim) (- middle 2)
+                                        (- x2 slider-button-half-short-dim) (+ middle 2)))
+                                      :style :inset
+                                      :border-width 2)
+               (draw-thingy (- position slider-button-half-short-dim) middle)
               (when (gadget-show-value-p pane)
 	        (draw-text* pane (format-value (gadget-value pane)
                                                (slider-decimal-places pane))
 			         5 ;(- position slider-button-half-short-dim)
-			         (- middle slider-button-half-long-dim)))))
-          ((:horizontal)
-	    (let ((middle (round (- y2 y1) 2)))
-              (draw-bordered-polygon pane
-                                     (polygon-points
-                                       (make-rectangle*
-			                 (+ x1 slider-button-half-short-dim) (- middle 2)
-			                 (- x2 slider-button-half-short-dim) (+ middle 2)))
-                                     :style :inset
-                                     :border-width 2)
-	      (draw-circle* pane (- position slider-button-half-short-dim) middle 8.0
-                                   :filled t :ink background-color)
-	      (draw-circle* pane (- position slider-button-half-short-dim) middle 8.0
-                                   :filled nil :ink +black+)
-	      (draw-circle* pane (- position slider-button-half-short-dim) middle 7.0
-                                   :filled nil
-                                   :start-angle (* 0.25 pi)
-                                   :end-angle   (* 1.25 pi)
-                                   :ink +white+)
-	      (draw-circle* pane (- position slider-button-half-short-dim) middle 7.0
-                                   :filled nil
-                                   :start-angle (* 1.25 pi)
-                                   :end-angle   (* 2.25 pi)
-                                   :ink +black+)
-              (when (gadget-show-value-p pane)
-	        (draw-text* pane (format-value (gadget-value pane)
-                                               (slider-decimal-places pane))
-			         5 ;(- position slider-button-half-short-dim)
-			         (- middle slider-button-half-long-dim))))))))))
+			         (- middle slider-button-half-long-dim)))))))))))
 
 #|
 (defmethod handle-repaint ((pane slider-pane) region)
@@ -2096,7 +2093,7 @@ and must never be nil."))
 
 (defmethod armed-callback :after ((gadget text-field-pane) client id)
   (declare (ignore client id))
-  (let ((port (port gadget)))
+  (let ((port (port gadget)))    
     (setf (previous-focus gadget) (port-keyboard-input-focus port))
     (setf (port-keyboard-input-focus port) gadget)))
 
@@ -2196,19 +2193,74 @@ and must never be nil."))
 ;; GADGET-OUTPUT-RECORD
 ;;
 
-(defclass gadget-output-record (output-record) ())
+(defclass gadget-output-record (basic-output-record displayed-output-record)
+  ((gadget :initarg :gadget :accessor gadget)))
 
-(defmacro with-output-as-gadget (stream &body body)
-  (declare (type symbol stream))
+(defmethod initialize-instance :after ((record gadget-output-record) &key child x y)
+  (let* ((sr (compose-space child))
+         (width  (space-requirement-width sr))
+         (height (space-requirement-height sr)))
+    (allocate-space child width height)
+    (setf (gadget record) child)
+    (with-slots (x1 x2 y1 y2) record
+      (setf x1 x
+            y1 y
+            x2 (+ x width)
+            y2 (+ y height)))))
+
+(defmethod note-output-record-got-sheet ((record gadget-output-record) sheet)
+  (multiple-value-bind (x y)  (output-record-position record)
+    (sheet-adopt-child sheet (gadget record))
+    (move-sheet (gadget record) x y)))
+
+(defmethod note-output-record-lost-sheet ((record gadget-output-record) sheet)
+  (sheet-disown-child sheet (gadget record)))
+
+;; This is as good a place as any other to handle moving the position of the
+;; gadget if the output record has moved. This is consistent with other
+;; operations on output records that force you to manage repainting manually.
+(defmethod replay-output-record  ((record gadget-output-record) stream
+                                  &optional region x-offset y-offset)
+  (declare (ignorable record stream region x-offset y-offset))
+  (multiple-value-bind (gx gy)
+      (transform-position (sheet-transformation (gadget record)) 0 0)
+    (multiple-value-bind (ox oy)
+        (output-record-position record)
+      (unless (and (= ox gx)
+                   (= oy gy))
+        (move-sheet (gadget record) ox oy)))))
+
+(defun setup-gadget-record (sheet record x y)
+  ;; Here we modify the height of the current text line. This is necessary so
+  ;; that when the cursor advances to the next line, it does not start writing
+  ;; underneath the gadget. This is probably a less than optimal solution.
+  (with-slots (height) sheet    
+    (setf height (max height (bounding-rectangle-height record))))
+  (setf (stream-cursor-position sheet)
+        (values (+ x (bounding-rectangle-width record))
+                y)))
+
+;; The CLIM 2.0 spec does not really say what this macro should return.
+;; Existing code written for "Real CLIM" assumes it returns the gadget pane
+;; object. I think returning the gadget-output-record would be more useful.
+;; For compatibility I'm having it return (values GADGET GADGET-OUTPUT-RECORD)
+
+(defmacro with-output-as-gadget ((stream &rest options) &body body)
+  (declare (type symbol stream)
+           (ignorable options))
   (when (eq stream t)
     (setq stream '*standard-output*))
   (let ((gadget (gensym))
-	(gadget-output-record (gensym)))
-    `(let* ((,gadget (progn ,@body))
-	    (,gadget-output-record (make-instance 'gadget-output-record 
-				    :children (list ,gadget))))
-       (stream-add-output-record ,stream ,gadget-output-record)
-       ,gadget)))
+	(gadget-output-record (gensym))
+        (x (gensym))
+        (y (gensym)))
+    `(multiple-value-bind (,x ,y)  (stream-cursor-position ,stream)
+       (let* ((,gadget (progn ,@body))
+              (,gadget-output-record (make-instance 'gadget-output-record
+                                                    :child ,gadget :x (round ,x) :y (round ,y))))
+         (stream-add-output-record ,stream ,gadget-output-record)
+         (setup-gadget-record ,stream ,gadget-output-record (round ,x) (round ,y))
+         (values ,gadget ,gadget-output-record)))))
 
 ;;; 
 

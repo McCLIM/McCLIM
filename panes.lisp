@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.132 2003/10/01 21:35:27 moore Exp $
+;;; $Id: panes.lisp,v 1.133 2003/10/20 01:29:05 hefner1 Exp $
 
 (in-package :clim-internals)
 
@@ -2109,6 +2109,7 @@
                             standard-extended-output-stream
                             standard-output-recording-stream
                             ;; sheet-leaf-mixin
+                            sheet-multiple-child-mixin   ; needed for GADGET-OUTPUT-RECORD
                             basic-pane
                             )
   ((redisplay-needed :initarg :display-time) 
@@ -2138,9 +2139,6 @@
    (end-of-page-action :initform :scroll
 		       :initarg :end-of-line-action
 		       :reader pane-end-of-page-action)
-   (output-history :initform (make-instance 'standard-tree-output-history)
-		   :initarg :output-history
-		   :accessor pane-output-history)
    ;; Slots of space-requirement-options-mixin defined with accessors for our
    ;; convenience
    (user-width :accessor pane-user-width)
@@ -2200,7 +2198,7 @@
                             :height h :min-height h :max-height +fill+)))
 
 (defmethod window-clear ((pane clim-stream-pane))
-  (let ((output-history (pane-output-history pane)))
+  (let ((output-history (stream-output-history pane)))
     (with-bounding-rectangle* (left top right bottom) output-history
       (medium-clear-area (sheet-medium pane) left top right bottom))
     (clear-output-record output-history))
@@ -2230,7 +2228,7 @@
     (draw-rectangle* (sheet-medium pane) x1 y1 x2 y2 :ink +background-ink+)))
 
 (defmethod window-viewport-position ((pane clim-stream-pane))
-  (multiple-value-bind (x y) (bounding-rectangle* (pane-output-history pane))
+  (multiple-value-bind (x y) (bounding-rectangle* (stream-output-history pane))
     (values x y)))
 
 (defmethod* (setf window-viewport-position) (x y (pane clim-stream-pane))
@@ -2315,11 +2313,6 @@
   (declare (ignore args))
 #+ignore  (let ((cursor (stream-text-cursor pane)))
     (setf (cursor-visibility cursor) t)))
-
-;; Will uncomment later, this depends on changes I'm not ready to commit yet.
-(defmethod note-input-focus-changed ((pane interactor-pane) state)
-  (setf (cursor-shape (stream-text-cursor pane))
-        (if state :block :hollow)))
 
 ;;; APPLICATION PANES
 
