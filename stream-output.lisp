@@ -78,8 +78,10 @@
    (x :initform 0 :initarg :x-position)
    (y :initform 0 :initarg :y-position)
    (width :initform 8)
-   (visibility :initform nil
-	       :accessor cursor-visibility)))
+   (cursor-active :initform T  ;; XXX what does "cursor is active" mean?                  
+                  :accessor cursor-active)
+   (cursor-state :initform nil
+                 :accessor cursor-state)))
 
 (defgeneric cursor-height (cursor))
 
@@ -88,24 +90,42 @@
     (print-unreadable-object (cursor stream :type t :identity t)
       (format stream "~D ~D " x y))))
 
-(defmethod (setf cursor-visibility) :around (nv (cursor cursor-mixin))
-  (let ((ov (slot-value cursor 'visibility)))
-    (prog1
-	(call-next-method)
-      (when (not (eq ov nv))
-	(flip-screen-cursor cursor)))))
+(defmethod (setf cursor-state) :around (state (cursor cursor-mixin))
+  (unless (eq state (slot-value cursor 'cursor-state))
+    (flip-screen-cursor cursor))
+  (call-next-method))
+
+(defun decode-cursor-visibility (visibility)
+  "Given :on, :off, or nil, returns the needed active and state attributes for the cursor."
+  (ecase visibility
+    ((:on T) (values T T))
+    (:off    (values T nil))
+    ((nil)   (values nil nil))))
+
+(defmethod cursor-visibility ((cursor cursor-mixin))
+  (let ((a (cursor-active cursor))
+        (s (cursor-state cursor)))
+    (cond ((and a s) :on)
+          ((and a (not s)) :off)
+          (T nil))))
+
+(defmethod (setf cursor-visibility) (nv (cursor cursor-mixin))
+  (multiple-value-bind (active state)
+      (decode-cursor-visibility nv)
+    (setf (cursor-state cursor)  state
+          (cursor-active cursor) active)))
 
 (defmethod cursor-position ((cursor cursor-mixin))
   (with-slots (x y) cursor
     (values x y)))
 
 (defmethod* (setf cursor-position) (nx ny (cursor cursor-mixin))
-  (with-slots (x y visibility) cursor
-    (if visibility
+  (with-slots (x y cursor-state) cursor
+    (if cursor-state
 	(flip-screen-cursor cursor))
     (multiple-value-prog1
 	(setf (values x y) (values nx ny)))
-    (if visibility
+    (if cursor-state
 	(flip-screen-cursor cursor)))
   (when (output-recording-stream-p (cursor-sheet cursor))
     (stream-close-text-output-record (cursor-sheet cursor))))
@@ -130,12 +150,20 @@
 				(+ x width) (+ y height)
 				:filled t
 				:ink +foreground-ink+
-				))
-	(:erase (draw-rectangle* (sheet-medium (cursor-sheet cursor))
-				 x y
-				 (+ x width) (+ y height)
-				 :filled t
-				 :ink +background-ink+))))))
+				))       
+        (:erase
+               ;; This is how I'd like this to work, as painting over with the background
+               ;; ink is repugnant. I leave this disabled because I'm concerned about
+               ;; infinite recursion if replay-output-record calls here (which Goatee
+               ;; does currently).  --Hefner
+                #+nil (repaint-sheet (cursor-sheet cursor)
+                                     (make-bounding-rectangle x y (+ 1 x width)
+                                                              (+ 1 y height)))
+                (draw-rectangle* (sheet-medium (cursor-sheet cursor))
+                                 x y
+                                 (+ x width) (+ y height)
+                                 :filled t
+                                 :ink +background-ink+))))))
 
 ;;; Standard-Text-Cursor class
 
@@ -262,7 +290,7 @@
                                    region)
   (declare (ignorable region))
   (let ((cursor (stream-text-cursor stream)))
-    (if (cursor-visibility cursor)
+    (if (cursor-state cursor)
 	(progn
 	  ;; Erase the cursor so that the subsequent flip operation will make a
 	  ;; cursor, whether or not the next-method erases the location of the
