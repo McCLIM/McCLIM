@@ -254,8 +254,8 @@
 (defmethod transform-rectangle* ((transformation transformation) x1 y1 x2 y2)
   (if (not (rectilinear-transformation-p transformation))
       (error 'transformation-error))
-  (multiple-value-bind (nx1 ny1) (transform-position x1 y1)
-    (multiple-value-bind (nx2 ny2) (transform-position x2 y2)
+  (multiple-value-bind (nx1 ny1) (transform-position transformation x1 y1)
+    (multiple-value-bind (nx2 ny2) (transform-position transformation x2 y2)
       (values (min nx1 nx2) (min ny1 ny2) (max nx1 nx2) (max ny1 ny2)))))
 
 (defmethod untransform-rectangle* ((transformation transformation) x1 y1 x2 y2)
