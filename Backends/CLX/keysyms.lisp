@@ -61,9 +61,16 @@
                                                     (if caps-lock? t shift?))
                                                 1 0)
                                             (if (member :mode-switch active-modifiers)
+                                                2 0))))
+	   (char (xlib:keysym->character display keysym
+					 (+ (if (if shift-lock? 
+                                                    (not shift?) 
+						  (if caps-lock? t shift?))
+                                                1 0)
+                                            (if (member :mode-switch active-modifiers)
                                                 2 0)))))
                                                    
-      (values (lookup-keysym keysym)
+      (values (or char (lookup-keysym keysym))
               (+ (if (or (member :meta-left active-modifiers)
                          (member :meta-right active-modifiers))
                      +meta-key+
