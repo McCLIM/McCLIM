@@ -63,7 +63,11 @@ altered for use in destructuring bind")
 	    :documentation "Who knows?")
    (parameters-are-types :accessor parameters-are-types 
 			 :initarg :parameters-are-types
-			 :initform nil)))
+			 :initform nil)
+   (expansion-function :accessor expansion-function
+		       :initarg :expansion-function
+		       :documentation "A function which expands the typespec
+fully, including defaulting parameters and options.")))
 
 (defmethod initialize-instance :after ((obj presentation-type) &key)
   (unless (slot-boundp obj 'ptype-specializer)
@@ -181,6 +185,89 @@ that has no default is supplied with '*"
 			(get-all-params arg))
 		       (t nil)))))
 
+;;; ...And another.  Given a lambda list, return a form that replicates the
+;;; structure of the argument with variables filled in.
+
+(defun map-over-lambda-list (function ll &key (pass-lambda-list-keywords nil))
+  (unless ll
+    (return-from map-over-lambda-list nil))
+  (when (atom ll)
+    (return-from map-over-lambda-list ll))
+  (loop for args-tail = ll then (cdr args-tail))
+  )
+
+(defun make-keyword (sym)
+  (intern (symbol-name sym) :keyword))
+
+(defun cull-keywords (keys prop-list)
+  (let ((plist (copy-list prop-list)))
+    (loop for key in keys
+	  do (remf plist key))
+    plist))
+
+(defun recreate-lambda-list (ll)
+  "Helper function.  Returns a form that, when evaluated inside a
+DESTRUCTURING-BIND using ll, recreates the argument list with all defaults
+filled in."
+  (unless ll
+    (return-from recreate-lambda-list nil))
+  (when (atom ll)
+    (return-from recreate-lambda-list ll))
+  (let ((state 'required)
+	(rest-var nil)
+	(has-keys nil)
+	(keys nil)
+	(allow-other-keys nil))
+    (loop for arg in ll
+	  append (cond ((member arg lambda-list-keywords :test #'eq)
+			(setq state arg)
+			(when (eq arg '&key)
+			  (setq has-keys t))
+			(when (eq arg '&allow-other-keys)
+			  (setq allow-other-keys t))
+			nil)
+		       ((eq state '&whole)
+			nil)
+		       ((eq state 'required)
+			(list (recreate-lambda-list arg)))
+		       ((eq state '&optional)
+			(if (atom arg)
+			    (list arg)
+			    (list (recreate-lambda-list (car arg)))))
+		       ((or (eq state '&rest) (eq state '&body))
+			(setq rest-var arg)
+			nil)
+		       ((eq state '&key)
+			(let ((key nil)
+			      (var nil))
+			  (cond ((atom arg)
+				 (setq key (make-keyword arg)
+				       var arg))
+				((atom (car arg))
+				 (setq key (make-keyword (car arg))
+				       var (car arg)))
+				
+				(t (destructuring-bind
+					 ((keyword pattern) &rest tail)
+				       arg
+				     (declare (ignore tail))
+				     (setq key keyword
+					   var (recreate-lambda-list
+						pattern)))))
+			  (push key keys)
+			  (list key var)))
+		       (t nil))
+	  into result-form
+	  finally (cond ((or (not rest-var)
+			     (and has-keys
+				  (not allow-other-keys)))
+			 (return `(list ,@result-form)))
+			((not has-keys)
+			 (return `(list* ,@result-form ,rest-var)))
+			(t (return `(list* ,@result-form
+				           (cull-keywords ',(nreverse keys)
+					                  ,rest-var))))))))
+
 (defun transform-options-lambda-list (ll)
   "Return a legal lambda list given an options specification"
    (loop for spec in ll
@@ -229,6 +316,22 @@ that has no default is supplied with '*"
 	 (destructuring-bind ,options-ll (decode-options ,type)
 	   (declare (ignorable ,@(get-all-params options-ll)))
 	   ,form)))))
+
+(defun make-expansion-lambda (params-ll options-ll)
+  (let ((params-form (recreate-lambda-list params-ll))
+	(options-form (recreate-lambda-list options-ll))
+	(parameters (gensym))
+	(options (gensym)))
+    `(lambda (typespec)
+       (with-presentation-type-decoded (name ,parameters ,options)
+	 typespec
+	 (make-type-spec name
+			 (destructuring-bind ,params-ll
+			     ,parameters
+			   ,params-form)
+			 (destructuring-bind ,options-ll
+			     ,options
+			   ,options-form))))))
 
 (defvar *presentation-type-table* (make-hash-table :test #'eq))
 
@@ -303,7 +406,7 @@ supertypes of TYPE that are presentation types"))
 				 inherit-from-func description history
 				 parameters-are-types
 				 compile-time-p
-				 supers)
+				 supers expansion-func)
   (let* ((fake-name (make-presentation-type-name name))
 	 (ptype-class-args (list :type-name name
 				 :parameters parameters
@@ -311,7 +414,10 @@ supertypes of TYPE that are presentation types"))
 				 :options options
 				 :options-lambda-list options-ll
 				 :inherit-from-function inherit-from-func
-				 :description description))
+				 :description description
+				 :history history
+				 :parameters-are-types parameters-are-types
+				 :expansion-function expansion-func))
 	 (ptype-meta
 	  (if compile-time-p
 	      (apply #'make-instance
@@ -352,6 +458,7 @@ suitable for SUPER-NAME"))
 				     options options-ll
 				     inherit-from inherit-from-lambda
 				     description history parameters-are-types)
+  (declare (ignore inherit-from))
   (let* ((inherit-from-func (coerce inherit-from-lambda 'function))
 	 (inherit-typespec (funcall inherit-from-func
 				    (cons name (fake-params-args params-ll))))
@@ -362,13 +469,15 @@ suitable for SUPER-NAME"))
 			     (if (eq super-name 'and)
 				 (mapcar #'presentation-type-name super-params)
 				 (list super-name)))
-			   nil)))
+			   nil))
+	 (expansion-lambda (make-expansion-lambda params-ll options-ll)))
     `(progn
        (record-presentation-type ',name ',parameters ',params-ll ',options
 				   ',options-ll #',inherit-from-lambda
 				   ',description ',history
 				   ',parameters-are-types
-				   nil ',superclasses)
+				   nil ',superclasses
+	                           #',expansion-lambda)
        ,@(cond ((eq (presentation-type-name inherit-typespec) 'and)
 		(loop for super in superclasses
 		    for i from 0
@@ -399,18 +508,14 @@ suitable for SUPER-NAME"))
 	 (options-ll (transform-options-lambda-list options))
 	 (inherit-from-func (make-inherit-from-lambda params-ll
 						      options-ll
-						      inherit-from))
-	 (type-meta (gensym "TYPE-META"))
-	 (clos-p (gensym "CLOS-P"))
-	 (presentation-meta (gensym "PRESENTATION-META"))
-	 (fake-name (make-presentation-type-name name)))
+						      inherit-from)))
     `(progn
        (eval-when (:compile-toplevel)
 	 (record-presentation-type ',name ',parameters ',params-ll ',options
 				   ',options-ll #',inherit-from-func
 				   ',description ',history
 				   ',parameters-are-types
-				   t nil))
+				   t nil nil))
        (eval-when (:load-toplevel :execute)
 	 (%define-presentation-type ,name ,parameters ,params-ll
 				    ,options ,options-ll
@@ -419,14 +524,14 @@ suitable for SUPER-NAME"))
 				    ',parameters-are-types)))))
 
 
-(defmethod presentation-type-parameters (type-name &optional env)
+(defun presentation-type-parameters (type-name &optional env)
   (declare (ignore env))
   (let ((ptype (gethash type-name *presentation-type-table*)))
     (unless ptype
       (error "~S is not the name of a presentation type" type-name))
     (parameters ptype)))
 
-(defmethod presentation-type-options (type-name &optional env)
+(defun presentation-type-options (type-name &optional env)
   (declare (ignore env))
   (let ((ptype (gethash type-name *presentation-type-table*)))
     (unless ptype
@@ -527,34 +632,23 @@ suitable for SUPER-NAME"))
 	     (setq type expansion))
 	   (return (values type expand-any-p)))))))
 
-;;; Define a function to do this as part of define-presentation-type?
-
 (defun make-presentation-type-specifier (name-and-params &rest options)
   (with-presentation-type-decoded (name)
     name-and-params
-    (flet ((make-keyword (sym)
-	     (intern (symbol-name sym) :keyword)))
-      (let ((ptype (gethash name *presentation-type-table*)))
-	(unless ptype
-	  (return-from make-presentation-type-specifier name-and-params))
-	(let* ((options-ll (options-lambda-list ptype))
-	       (defaulting-form
-		   (loop for var in (cdr options-ll)
-			 nconc (cond ((atom var)
-				      `(,(make-keyword var) ,var))
-				     ((atom (car var))
-				      `(,(make-keyword (car var)) ,(car var)))
-				     (t `(,(caar var) ,(cadar var))))))
-	       (defaults (eval `(destructuring-bind ,options-ll
-				 nil
-				 (list ,@defaulting-form)))))
-	  (loop for (key val) on options by #'cddr
-		for default = (getf defaults key)
-		unless (equal val default)
-		nconc (list key val) into needed-options
-		finally (return (if needed-options
-				    `(,name-and-params ,@needed-options)
-				    name-and-params))))))))
+    (let ((ptype (gethash name *presentation-type-table*)))
+      (unless ptype
+	(return-from make-presentation-type-specifier name-and-params))
+      (with-presentation-type-decoded (name parameters defaults)
+	(funcall (expansion-function ptype) name-and-params)
+	(declare (ignore name parameters))
+	(loop for (key val) on options by #'cddr
+	      for default = (getf defaults key)
+	      unless (equal val default)
+	      nconc (list key val) into needed-options
+	      finally (return (if needed-options
+				  `(,name-and-params ,@needed-options)
+				  name-and-params)))))))
+
 
 
 ;;; Presentation methods.  The basic dispatch is performed via CLOS
@@ -581,9 +675,15 @@ suitable for SUPER-NAME"))
 (defmethod type-name ((type standard-class))
   (clim-mop:class-name type))
 
+(defmethod expansion-function ((type standard-class))
+  #'(lambda (typespec)
+      (with-presentation-type-decoded (name)
+	typespec
+	name)))
+
 (defun translate-specifier-for-type (type-name super-name specifier)
   (when (eq type-name super-name)
-    (return-from translate-specifier-for-type specifier))
+    (return-from translate-specifier-for-type (values specifier t)))
   (multiple-value-bind (translation found)
       (massage-type-for-super type-name super-name specifier)
     (when found
@@ -599,7 +699,7 @@ suitable for SUPER-NAME"))
 	     (when found
 	       (return-from translate-specifier-for-type (values translation
 								 t)))))
-  (values nil nil))
+  (values super-name nil))
 
 ;;; XXX can options be specified without parameters?  I think not.
 (defmacro define-presentation-generic-function (generic-function-name
@@ -648,6 +748,10 @@ function lambda list"))
 	      finally (return (values qualifiers arg (cdr arglist)))))
 
 (defmacro define-presentation-method (name &rest args)
+  (when (eq name 'presentation-subtypep)
+    ;; I feel so unclean!
+    (return-from define-presentation-method
+      `(define-subtypep-method ,@args)))
   (let ((gf (gethash name *presentation-gf-table*)))
     (unless gf
       (error "~S is not a presentation generic function" name))
@@ -693,8 +797,8 @@ function lambda list"))
 			  ,@real-body))))
 	      (setf (nth (type-arg-position gf) method-ll) type-var)
 	      `(defmethod ,(generic-function-name gf) ,@qualifiers ,method-ll
-		,@real-body))))))
-    ))
+		,@real-body))))))))
+
 
 (defmacro define-default-presentation-method (name &rest args)
   (let ((gf (gethash name *presentation-gf-table*)))
@@ -704,10 +808,12 @@ function lambda list"))
 	(parse-method-body args)
       `(defmethod ,(generic-function-name gf) ,@qualifiers (,(type-key-arg gf)
 							    ,@lambda-list)
+	 (declare (ignorable ,(type-key-arg gf)))
 	 ,@body))))
 
 (defun %funcall-presentation-generic-function (name gf type-arg-position
 					       &rest args)
+  (declare (ignore name))
   (let* ((type-spec (nth (1- type-arg-position) args))
 	 (ptype-name (presentation-type-name type-spec))
 	 (ptype-meta (get-ptype-metaclass ptype-name)))
@@ -746,6 +852,96 @@ function lambda list"))
 	  (return-from presentation-typep (typep object name)))))
     (funcall-presentation-generic-function presentation-typep object type)))
 
+(define-presentation-generic-function
+    %map-over-presentation-type-supertypes
+    map-over-presentation-type-supertypes
+  (type-key function type))
+
+;;; A bit of magic: define the method for presentation and clos types
+
+(defmethod %map-over-presentation-type-supertypes ((type-key standard-object)
+						   function
+						   type)
+    (let ((type-name (presentation-type-name type)))
+    (funcall function type-name (funcall (expansion-function
+					  (class-of type-key))
+					  type))
+    (loop for meta in (cdr (clim-mop:class-precedence-list (class-of
+							    type-key)))
+	  when (typep meta 'standard-class)
+	  do (let* ((super-name (type-name meta))
+		    (supertype (translate-specifier-for-type type-name
+							     super-name
+							     type)))
+	       (funcall function super-name (funcall (expansion-function meta)
+						     supertype))))
+    (funcall function t t))
+  nil)
+
+(defun map-over-presentation-type-supertypes (function type)
+  (funcall-presentation-generic-function map-over-presentation-type-supertypes
+					 function
+					 type))
+
+(define-presentation-generic-function
+    %presentation-subtypep
+    presentation-subtypep
+  (type-key type putative-supertype))
+
+;;; The semantics of the presentation method presentation-subtypep are truly
+;;; weird; method combination is in effect disabled.  So, the methods have to
+;;; be eql methods.
+
+(defun prototype-or-error (name)
+  (or (clim-mop:class-prototype (get-ptype-metaclass name))
+      (error "Couldn't find a prototype for ~S" name)))
+  
+(defmacro define-subtypep-method (&rest args)
+  (let ((gf (gethash 'presentation-subtypep *presentation-gf-table*)))
+    (multiple-value-bind (qualifiers lambda-list body)
+	(parse-method-body args)
+      (let ((type-arg (nth (1- (type-arg-position gf)) lambda-list)))
+	
+	(unless (consp type-arg)
+	  (error "Type argument in presentation method must be specialized"))
+	(unless (eq (car type-arg)  'type)
+	  (error "Type argument mismatch with presentation generic function
+ definition"))
+	(destructuring-bind (type-var type-name) type-arg
+	  (let ((method-ll `((,(type-key-arg gf)
+			      (eql (prototype-or-error ',type-name)))
+			     ,@(copy-list lambda-list))))
+	    (setf (nth (type-arg-position gf) method-ll) type-var)
+	    `(defmethod %presentation-subtypep ,@qualifiers ,method-ll
+	      (declare (ignorable ,(type-key-arg gf)))
+	      ,@body)))))))
+
+(defun presentation-subtypep (type maybe-supertype)
+  (when (equal type maybe-supertype)
+    (return-from presentation-subtypep (values t t)))
+  (let ((super-name (presentation-type-name maybe-supertype)))
+    (map-over-presentation-type-supertypes
+     #'(lambda (name massaged)
+	 (when (eq name super-name)
+	   (return-from presentation-subtypep
+	     (funcall-presentation-generic-function presentation-subtypep
+						    massaged
+						    maybe-supertype))))
+     type))
+  (values nil t))
+
+(define-default-presentation-method presentation-subtypep
+    (type maybe-supertype)
+  (with-presentation-type-decoded (name params)
+    type
+    (declare (ignore name))
+    (with-presentation-type-decoded (super-name super-params)
+      maybe-supertype
+      (declare (ignore super-name))
+      (if (equal params super-params)
+	  (values t t)
+	  (values nil nil)))))
+
 ;;; The presentation types
 
 (define-presentation-type t ())
@@ -783,14 +979,14 @@ function lambda list"))
 (define-presentation-method presentation-typep (object (type number))
   (numberp object))
 
-(define-presentation-type complex (&optional type)
+(define-presentation-type complex (&optional (type 'real))
   :inherit-from 'number)
 
 (define-presentation-method presentation-typep (object (type complex))
   (and (complexp object)
-       (or (eq type '*)
-	   (and (typep (realpart object) type)
-		(typep (imagpart object) type)))))
+       (typep (realpart object) type)
+       (typep (imagpart object) type)))
+
 
 (define-presentation-type real (&optional low high) :options ((base 10) radix)
 			  :inherit-from 'number)
@@ -801,6 +997,23 @@ function lambda list"))
 	   (<= low object))
        (or (eq high *)
 	   (<= object high))))
+
+;;; Define a method that will do the comparision for all real types.  It's
+;;; already determined that that the numeric class of type is a subtype of
+;;;supertype.
+
+(defun number-subtypep (low high super-low super-high)
+  (if (eq low '*)
+      (unless (eq super-low '*)
+	(return-from number-subtypep nil))
+      (unless (or (eq super-low '*) (>= low super-low))
+	(return-from number-subtypep nil)))
+  (if (eq high '*)
+      (unless (eq super-high '*)
+	(return-from number-subtypep nil))
+      (unless (or (eq super-high '*) (<= high super-high))
+	(return-from number-subtypep nil)))
+  t)
 
 (define-presentation-type rational (&optional low high)
   :options ((base 10) radix)
@@ -847,6 +1060,21 @@ function lambda list"))
        (or (eq high '*)
 	   (<= object high))))
 
+(macrolet ((frob (num-type)
+	     `(define-presentation-method presentation-subtypep ((type
+								  ,num-type)
+								 maybe-supertype)
+	        (with-presentation-type-parameters (,num-type maybe-supertype)
+		  (let ((super-low low)
+			(super-high high))
+		    (with-presentation-type-parameters (,num-type type)
+		      (values (number-subtypep low high super-low super-high)
+			      t)))))))
+  (frob real)
+  (frob rational)
+  (frob ratio)
+  (frob float))
+
 (define-presentation-type character ())
 
 (define-presentation-method presentation-typep (object (type character))
@@ -857,6 +1085,16 @@ function lambda list"))
 (define-presentation-method presentation-typep (object (type string))
   (and (stringp object)
        (or (eq length '*) (eql (length object) length))))
+
+(define-presentation-method presentation-subtypep ((type string)
+						   maybe-supertype)
+  (with-presentation-type-parameters (string maybe-supertype)
+    (let ((super-length length))
+      (with-presentation-type-parameters (string type)
+	(values (or (eq super-length '*)
+		    (eql length super-length))
+		t)))))
+
 
 (define-presentation-type pathname ()
   :options ((default-version :newest) default-type (merge-default t)))
@@ -896,6 +1134,34 @@ function lambda list"))
 		 (return-from %presentation-typep t)))
        sequence)
   nil)
+
+;;; Useful for subtype comparisons for several of the "member" style types
+
+(defun sequence-subset-p (seq1 test1 value-key1 seq2 test2 value-key2)
+  (let ((test-fun (if (eq test1 test2)
+		      test1
+		      ;; The object has to pass both type's equality test
+		      #'(lambda (obj1 obj2)
+			  (and (funcall test1 obj1 obj2)
+			       (funcall test2 obj1 obj2))))))
+    (map nil #'(lambda (type-obj)
+		 (unless (find (funcall value-key1 type-obj)
+			       seq2
+			       :test test-fun :key value-key2)
+		   (return-from sequence-subset-p nil)))
+	 seq1)
+    t))
+
+(define-presentation-method presentation-subtypep ((type completion)
+						   maybe-supertype)
+  (with-presentation-type-parameters (completion maybe-supertype)
+    (let ((super-sequence sequence)
+	  (super-test test)
+	  (super-value-key value-key))
+      (with-presentation-type-parameters (completion type)
+	(values (sequence-subset-p sequence test value-key
+				   super-sequence super-test super-value-key)
+		t)))))
 
 (define-presentation-type-abbreviation member (&rest elements)
   (make-presentation-type-specifier `(completion ,elements)
@@ -955,6 +1221,17 @@ function lambda list"))
        object)
   t)
 
+(define-presentation-method presentation-subtypep ((type subset-completion)
+						   maybe-supertype)
+  (with-presentation-type-parameters (subset-completion maybe-supertype)
+    (let ((super-sequence sequence)
+	  (super-test test)
+	  (super-value-key value-key))
+      (with-presentation-type-parameters (subset-completion type)
+	(values (sequence-subset-p sequence test value-key
+				   super-sequence super-test super-value-key)
+		t)))))
+
 ;;; XXX is it a typo in the spec that subset, subset-sequence and subset-alist
 ;;; have the same options as completion, and not subset-completion?
 
@@ -1001,6 +1278,15 @@ function lambda list"))
 	 object)
     t))
 
+(define-presentation-method presentation-subtypep ((type sequence)
+						   maybe-supertype)
+  (with-presentation-type-parameters (sequence type)
+    ;; now TYPE is bound to the parameter TYPE
+    (let ((real-type (expand-presentation-type-abbreviation type)))
+      (with-presentation-type-parameters (sequence maybe-supertype)
+	(let ((real-super-type (expand-presentation-type-abbreviation type)))
+	  (presentation-subtypep real-type real-super-type))))))
+
 (define-presentation-type sequence-enumerated (&rest types)
   :options ((separator #\,) (echo-space t))
   :parameters-are-types t)
@@ -1016,6 +1302,31 @@ function lambda list"))
        object
        types)
   t)
+
+(define-presentation-method presentation-subtypep ((type sequence-enumerated)
+						   maybe-supertype)
+  (with-presentation-type-parameters (sequence-enumerated maybe-supertype)
+    (let ((supertypes types))
+      (with-presentation-type-parameters (sequence-enumerated type)
+	(unless (eql (length supertypes) (length types))
+	  (return-from %presentation-subtypep (values nil t)))
+	(map nil
+	     #'(lambda (element-type element-supertype)
+		 (let ((real-type (expand-presentation-type-abbreviation
+				   element-type))
+		       (real-supertype (expand-presentation-type-abbreviation
+					element-supertype)))
+		   (multiple-value-bind (subtypep determined)
+		       (presentation-subtypep real-type real-supertype)
+		     (cond ((not determined)
+			    (return-from %presentation-subtypep
+			      (values nil nil)))
+			   ((not subtypep)
+			    (return-from %presentation-subtypep
+			      (values nil t)))))))
+	     types
+	     supertypes)
+	(values t t)))))
 
 (define-presentation-type or (&rest types)
   :parameters-are-types t)
@@ -1033,8 +1344,16 @@ function lambda list"))
 (define-presentation-method presentation-typep (object (type and))
   (loop for type in types
 	for real-type = (expand-presentation-type-abbreviation type)
-	do (unless (presentation-typep object real-type)
-	     (return-from %presentation-typep nil)))
+	do (with-presentation-type-decoded (name parameters)
+	     real-type
+	     (cond ((eq name 'satisfies)
+		    (unless (funcall (car parameters) object)
+		      (return-from %presentation-typep nil)))
+		   ((eq name 'not)
+		    (unless (not (presentation-typep object (car parameters)))
+		      (return-from %presentation-typep nil)))
+		   (t (unless (presentation-typep object real-type)
+			(return-from %presentation-typep nil))))))
   t)
 
 (define-presentation-type-abbreviation token-or-type (tokens type)
