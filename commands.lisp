@@ -46,7 +46,7 @@
   (with-slots (documentation text-style) menu-item
     (list ':documentation documentation ':text-style text-style)))
 
-(defclass command-table ()
+(define-protocol-class command-table ()
   ((name :initarg :name :reader command-table-name)
    (inherit-from :initarg :inherit-from
 		 :initform '()
@@ -57,9 +57,6 @@
 			     :initform (make-instance 'translator-table))
    (keystroke-accelerators :initform (make-hash-table :test #'equal))
    (menu :initarg :menu :initform '())))
-
-(defun command-table-p (object)
-  (typep object 'command-table))
 
 (defmethod print-object ((table command-table) stream)
   (print-unreadable-object (table stream :identity t :type t)

@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.105 2002/11/10 15:10:40 gilbert Exp $
+;;; $Id: panes.lisp,v 1.106 2002/11/10 15:48:56 gilbert Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -278,11 +278,11 @@
    (current-height    :accessor pane-current-height
                       :initform nil) ))
 
-(defclass pane (clim-repainting-mixin
-		clim-sheet-input-mixin
-		sheet-transformation-mixin
-                layout-protocol-mixin
-                basic-sheet)
+(define-protocol-class pane (clim-repainting-mixin
+			     clim-sheet-input-mixin
+			     sheet-transformation-mixin
+			     layout-protocol-mixin
+			     basic-sheet)
   (
    (text-style :initarg :text-style :initform nil :reader pane-text-style)
    (name :initarg :name :initform "(Unnamed Pane)" :reader pane-name)
@@ -300,9 +300,6 @@
 (defmethod print-object ((pane pane) sink)
   (print-unreadable-object (pane sink :type t :identity t)
     (prin1 (pane-name pane) sink)))
-
-(defun panep (x)
-  (typep x 'pane))
 
 (defun make-pane (type &rest args)
   (apply #'make-pane-1 *pane-realizer* *application-frame* type args))

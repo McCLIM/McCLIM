@@ -83,7 +83,7 @@
 
 ;; Some internal superclasses:
 
-(define-protocol-class uniform-design () ())
+(define-protocol-class uniform-design ())
 
 ;;; Color class
 

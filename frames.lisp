@@ -28,14 +28,11 @@
 
 ;;; Frame-Manager class
 
-(defclass frame-manager ()
+(define-protocol-class frame-manager ()
   ((port :initarg :port
 	 :reader frame-manager-port)
    (frames :initform nil
 	   :reader frame-manager-frames)))
-
-(defun frame-manager-p (x)
-  (typep x 'frame-manager))
 
 (defun find-frame-manager (&rest options &key port &allow-other-keys)
   (declare (special *frame-manager*))
@@ -55,7 +52,7 @@
 ;;; XXX All these slots should move to a mixin or to standard-application-frame.
 ;;; -- moore
 
-(defclass application-frame ()
+(define-protocol-class  application-frame ()
   ((port :initform nil
 	 :initarg :port
 	 :accessor port)
@@ -101,9 +98,6 @@
    (hilited-presentation :initform nil
 			 :initarg :hilited-presentation
 			 :accessor frame-hilited-presentation)))
-
-(defun application-frame-p (x)
-  (typep x 'application-frame))
 
 (defmethod initialize-instance :after ((frame application-frame) &rest args)
   (declare (ignore args)))

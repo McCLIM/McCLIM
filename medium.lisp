@@ -495,8 +495,7 @@
 
 ;;; Line-Style class
 
-(defclass line-style ()
-  ())
+(define-protocol-class line-style ())
 
 (defclass standard-line-style (line-style)
   ((unit        :initarg :line-unit

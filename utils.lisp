@@ -193,21 +193,24 @@ by the number of variables in VARS."
 
 (defmacro define-protocol-class (name super-classes &optional slots &rest options)
   (let ((protocol-predicate
-         (intern (concatenate 'string (symbol-name name) (if (find #\- (symbol-name name)) "-" "") "P"))))
+         (intern (concatenate 'string (symbol-name name) (if (find #\- (symbol-name name)) "-" "") "P")))
+	(predicate-docstring
+	 (concatenate 'string "Protocol predicate checking for class " (symbol-name name))))
     `(progn
        (defclass ,name ,super-classes ,slots ,@options)
 
        (let ((the-class (find-class ',name)))
+	 (setf (documentation the-class 'type) "CLIM protocol class")
          (defmethod initialize-instance :after ((object ,name) &key &allow-other-keys)
            (when (eq (class-of object) the-class)
-             (error "You are a fool; Since ~S is a protocol class, it is not instantiable."
-                    ',name))))
-     
-       (defmethod ,protocol-predicate ((object t))
-         nil)
-     
-       (defmethod ,protocol-predicate ((object ,name))
-         t)
+             (error "~S is a protocol class and thus can't be instantiated" ',name))))
+
+       (defgeneric ,protocol-predicate (object)
+	 (:method ((object t))
+	   nil)
+	 (:method ((object ,name))
+	   t)
+	 (:documentation ,predicate-docstring))
 
        ',name)))
 

@@ -35,10 +35,7 @@
 
 (defvar *all-ports* nil)
 
-(defclass port ()
-  ()
-  (:documentation
-   "The protocol class that corresponds to a port."))
+(define-protocol-class port ())
 
 (defclass basic-port (port)
   ((server-path :initform nil

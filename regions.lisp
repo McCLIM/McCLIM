@@ -4,7 +4,7 @@
 ;;;   Created: 1998-12-02 19:26
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: regions.lisp,v 1.24 2002/09/24 01:56:30 moore Exp $
+;;;       $Id: regions.lisp,v 1.25 2002/11/10 15:48:56 gilbert Exp $
 ;;; --------------------------------------------------------------------------------------
 ;;;  (c) copyright 1998,1999,2001 by Gilbert Baumann
 ;;;  (c) copyright 2001 by Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
@@ -83,19 +83,19 @@
 
 ;;; ---- Class Hierarchy -----------------------------------------------------------------
 
-(define-protocol-class bounding-rectangle () ())
+(define-protocol-class bounding-rectangle ())
 
-(define-protocol-class region (design) ())
-(define-protocol-class path (region bounding-rectangle) ())
-(define-protocol-class area (region bounding-rectangle) ())
-(define-protocol-class region-set  (region bounding-rectangle) ())
-(define-protocol-class point (region bounding-rectangle) ())
-(define-protocol-class polyline (path) ())
-(define-protocol-class polygon (area) ())
-(define-protocol-class line (polyline) ())
-(define-protocol-class rectangle (polygon) ())
-(define-protocol-class ellipse (area) ())
-(define-protocol-class elliptical-arc (path) ())
+(define-protocol-class region (design))
+(define-protocol-class path (region bounding-rectangle))
+(define-protocol-class area (region bounding-rectangle))
+(define-protocol-class region-set  (region bounding-rectangle))
+(define-protocol-class point (region bounding-rectangle))
+(define-protocol-class polyline (path))
+(define-protocol-class polygon (area))
+(define-protocol-class line (polyline))
+(define-protocol-class rectangle (polygon))
+(define-protocol-class ellipse (area))
+(define-protocol-class elliptical-arc (path))
 
 (defclass nowhere-region (region) ())
 (defclass everywhere-region (region) ())

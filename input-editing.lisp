@@ -29,14 +29,8 @@
   (:method (stream)
     (cl:interactive-stream-p stream)))
 
-(defclass input-editing-stream ()
-  ())
+(define-protocol-class input-editing-stream ())
 
-(defgeneric input-editing-stream-p (stream)
-  (:method ((stream input-editing-stream))
-    t)
-  (:method ((stream t))
-    nil))
 
 (defclass standard-input-editing-stream (goatee:goatee-input-editing-mixin
 					 input-editing-stream

@@ -20,8 +20,7 @@
 
 (in-package :CLIM-INTERNALS)
 
-(defclass updating-output-record (output-record)
-  ())
+(define-protocol-class updating-output-record (output-record))
 
 (defclass updating-output-children-record (standard-sequence-output-record)
   ((last-bounding-box :accessor last-bounding-box

@@ -112,15 +112,9 @@
 	else
 	  do (handle-event (event-sheet event) event))))
 
-(defclass extended-input-stream (fundamental-character-input-stream ;Gray stream
-				 standard-sheet-input-mixin)
+(define-protocol-class extended-input-stream (fundamental-character-input-stream ;Gray stream
+					      standard-sheet-input-mixin)
   ())
-
-(defgeneric extended-input-stream-p (object)
-  (:method ((object extended-input-stream))
-    t)
-  (:method ((object t))
-    nil))
 
 (defclass standard-extended-input-stream (extended-input-stream)
   ((pointer)

@@ -52,8 +52,7 @@
 
 
 ;;; Cursor class
-(define-protocol-class cursor ()
-  ())
+(define-protocol-class cursor ())
 
 (defgeneric cursor-sheet (cursor))
 

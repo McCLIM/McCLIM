@@ -21,12 +21,8 @@
 
 ;;; PRESENTATION class
 
-(defclass presentation ()
-  ()
-  )
+(define-protocol-class presentation ())
 
-(defun presentationp (object)
-  (typep object 'presentation))
 
 (defvar *allow-sensitive-inferiors* t)
 

@@ -20,7 +20,7 @@
 
 (defvar *original-stream* nil)
 
-(defclass encapsulating-stream ()
+(define-protocol-class encapsulating-stream ()
   ((stream :reader encapsulating-stream-stream :initarg :stream)))
 
 (defclass standard-encapsulating-stream (encapsulating-stream

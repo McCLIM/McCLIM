@@ -88,13 +88,7 @@ STREAM in the direction DIRECTION."
 
 
 ;;; Cell formatting
-(defclass cell-output-record (output-record)
-  ()
-  (:documentation "The protocol class representing one cell in a table
-or an item list."))
-
-(defun cell-output-record-p (object)
-  (typep object 'cell-output-record))
+(define-protocol-class cell-output-record (output-record))
 
 (defgeneric adjust-cell* (cell x y width height)
   (:documentation "Fits the cell in the rectangle."))
@@ -227,12 +221,7 @@ dimension."
 
 
 ;;; Row formatting
-(defclass row-output-record (block-output-record)
-  ()
-  (:documentation "The protocol class representing row output records."))
-
-(defun row-output-record-p (object)
-  (typep object 'row-output-record))
+(define-protocol-class row-output-record (block-output-record))
 
 (defgeneric map-over-row-cells (function row-record)
   (:documentation "Applies FUNCTION to all the cells in the row
@@ -291,12 +280,7 @@ to a table cell within the row."))
 
 
 ;;; Column formatting
-(defclass column-output-record (block-output-record)
-  ()
-  (:documentation "The protocol class representing column output records."))
-
-(defun column-output-record-p (object)
-  (typep object 'column-output-record))
+(define-protocol-class column-output-record (block-output-record))
 
 (defgeneric map-over-column-cells (function column-record)
   (:documentation "Applies FUNCTION to all the cells in the column
@@ -355,13 +339,7 @@ corresponding to a table cell within the column."))
 
 ;;; Table formatting
 
-(defclass table-output-record (output-record)
-  ()
-  (:documentation "The protocol class representing tabular output
-records."))
-
-(defun table-output-record-p (object)
-  (typep object 'table-output-record))
+(define-protocol-class table-output-record (output-record))
 
 (defgeneric map-over-table-elements (function table-record type)
   (:documentation "Applies FUNCTION to all the rows or columns of
