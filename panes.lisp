@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.121 2003/05/31 21:43:15 gilbert Exp $
+;;; $Id: panes.lisp,v 1.122 2003/06/22 00:07:20 hefner1 Exp $
 
 (in-package :clim-internals)
 
@@ -2249,6 +2249,14 @@
     (when actual-pane
       (redisplay-frame-pane frame actual-pane :force-p force-p))))
 
+(defmethod change-space-requirements :around ((pane clim-stream-pane)
+                                              &key (width nil)  (max-width nil)
+                                                   (height nil) (max-height nil)
+                                                   &allow-other-keys)  
+  (with-slots (seos-current-width seos-current-height) pane
+    (setf seos-current-width (or max-width width seos-current-width))
+    (setf seos-current-height (or max-height height seos-current-height)))
+  (call-next-method))
 
 ;;; INTERACTOR PANES
 

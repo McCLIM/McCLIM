@@ -533,6 +533,27 @@
 	(when cursor
 	  (setf (cursor-visibility cursor) t))))))
 
+(defun maybe-scroll (cursor)
+  (let ((pane (cursor-sheet cursor))
+        (cwidth (slot-value cursor 'climi::width))
+        (cheight (climi::cursor-height cursor)))
+    (when (and (typep pane 'pane)
+               (pane-viewport-region pane))
+      (multiple-value-bind (x y) (cursor-position cursor)
+        (unless (region-contains-position-p (pane-viewport-region pane)
+                                            (+ x cwidth -1)
+                                            (+ y cheight -1))
+          (multiple-value-bind (vw vh)              
+              (bounding-rectangle-size (pane-viewport-region pane))
+            (let ((max-width  (max (+ x cwidth)
+                                   (bounding-rectangle-width pane)))
+                  (max-height (max (+ y cheight)
+                                   (bounding-rectangle-height pane))))              
+              (change-space-requirements pane :width  max-width
+                                              :height max-height))
+            (scroll-extent pane (max 0 (+ x cwidth (- vw)))
+                           (max 0 (+ y cheight (- vh))))))))))
+
 (defmethod line-update-cursor ((line screen-line) stream)
   (multiple-value-bind (point-line point-pos)
       (point* (buffer (editable-area line)))
@@ -555,7 +576,8 @@
 	    (setf (screen-line cursor) line)
 	    (setf (cursor-position cursor)
 		  (values cursor-x
-			  (- baseline ascent)))))))))
+			  (- baseline ascent)))
+            (maybe-scroll cursor)))))))
 
 
 (defmethod erase-line ((line screen-line) medium left right)

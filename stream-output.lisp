@@ -229,6 +229,8 @@
     (medium-force-output medium)))
 
 (defmethod compose-space ((pane standard-extended-output-stream) &key width height)
+  (declare (ignorable width height))
+  
   (with-slots (seos-current-width seos-current-height) pane
     (make-space-requirement :width seos-current-width
                             :height seos-current-height)))
@@ -363,12 +365,9 @@
 	(when (> (+ cy height) view-height)
 	  (ecase (stream-end-of-page-action stream)
 	    ((:scroll :allow)
-	     (with-slots (seos-current-width seos-current-height) stream
-	       (setf seos-current-width  (max (bounding-rectangle-width stream))
-		     seos-current-height (max (+ cy height)))
-	       (change-space-requirements stream
-					  :width seos-current-width
-					  :height seos-current-height))	     
+             (change-space-requirements stream
+                                        :width  (bounding-rectangle-width stream)
+                                        :height (+ cy height))
 	     ;;(scroll-vertical stream (+ height vspace))
 	     )
 	    (:wrap
@@ -387,7 +386,7 @@
 			      :ink +background-ink+
 			      :filled t)
 	(setq baseline 0
-	      height 0)
+	      height   0)
 	(setf (stream-cursor-position stream) (values cx cy))))))
 
 
