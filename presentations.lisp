@@ -1227,7 +1227,7 @@ function lambda list"))
 	     (stream-present s object real-type
 			     :view view :acceptably acceptably
 			     :for-context-type context-type)))
-      (declare (dynamic-extent do-present))
+      (declare (dynamic-extent #'do-present))
       (let ((result (if stringp
 			 (with-output-to-string (stream string)
 			   (do-present stream))
@@ -1253,7 +1253,7 @@ function lambda list"))
 	 (event (event-queue-peek queue)))
     (when event
       (let ((sheet (event-sheet event)))
-	(when (and (output-recording-stream-p stream)
+	(when (and (output-recording-stream-p sheet)
 		   (typep event 'pointer-event))
 	  (return-from input-context-wait-test t))))
     nil))

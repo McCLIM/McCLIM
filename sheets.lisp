@@ -235,7 +235,6 @@ sheet-supports-only-one-child error to be signalled."))
     (fun (sheet-children sheet))))
 
 (defmethod map-over-sheets (function (sheet basic-sheet))
-  (declare (dynamic-extent function))
   (funcall function sheet)
   (mapc #'(lambda (child) (map-over-sheets function child))
         (sheet-children sheet))
@@ -286,7 +285,6 @@ sheet-supports-only-one-child error to be signalled."))
   (error "Sheet has no parent"))
 
 (defmethod map-over-sheets-containing-position (function (sheet basic-sheet) x y)
-  (declare (dynamic-extent function))
   (map-over-sheets #'(lambda (child)
                        (multiple-value-bind (tx ty) (map-sheet-position-to-child child x y)
                          (when (region-contains-position-p (sheet-region child) tx ty)
@@ -295,7 +293,6 @@ sheet-supports-only-one-child error to be signalled."))
 
 
 (defmethod map-over-sheets-overlapping-region (function (sheet basic-sheet) region)
-  (declare (dynamic-extent function))
   (map-over-sheets #'(lambda (child)
                        (when (region-intersects-region-p
                               region

@@ -154,20 +154,10 @@
 (defmethod port-wait-on-event-processing ((port basic-port) &key wait-function timeout
 					  ((:event-count old-count) nil))
   (declare (ignorable wait-function))
-  (if *multiprocessing-p*
-      (with-slots (event-count) port
+  (with-slots (event-count) port
+    (if *multiprocessing-p*
 	(let ((old-event-count (or old-count event-count))
 	      (flag nil))
-#|
-	  (process-wait-with-timeout "Wait for event" timeout
-				     #'(lambda ()
-					 (when (not (= old-event-count event-count))
-					   (setq flag t))))
-	  (if flag
-	      event-count
-	    (values nil :timeout))
-        (process-next-event port :wait-function wait-function :timeout timeout)
-|#
 	  (flet ((wait-fn ()
 		   (when (not (eql old-event-count event-count))
 		     (setq flag t))))
@@ -176,12 +166,12 @@
 		(process-wait "Wait for event" #'wait-fn))
 	    (if flag
 		event-count
-		(values nil :timeout)))))
-      (multiple-value-bind (result reason)
-	  (process-next-event port
-			      :wait-function wait-function
-			      :timeout timeout)
-	(values (and result event-count) reason))))
+		(values nil :timeout))))
+	(multiple-value-bind (result reason)
+	    (process-next-event port
+				:wait-function wait-function
+				:timeout timeout)
+	  (values (and result event-count) reason)))))
   
 (defmethod distribute-event ((port basic-port) event)
   (cond
@@ -207,7 +197,7 @@
     `(labels ((,fn ()
                ,@body))
       (declare (dynamic-extent #',fn))
-      `(invoke-with-port-locked ,port #',fn))))
+      (invoke-with-port-locked ,port #',fn))))
 
 (defmethod invoke-with-port-locked ((port basic-port) continuation)
   (with-recursive-lock-held ((port-lock port))

@@ -346,8 +346,7 @@ Only those records that overlap REGION are displayed."))
 (defmethod map-over-output-records (function (record output-record-mixin)
 				    &optional (x-offset 0) (y-offset 0)
 				    &rest function-args)
-  (declare (dynamic-extent function)
-	   (ignore x-offset y-offset))
+  (declare (ignore x-offset y-offset))
   (loop for child in (output-record-children record)
 	do (apply function child function-args)))
 
@@ -365,15 +364,14 @@ Only those records that overlap REGION are displayed."))
 			(output-record-refined-sensitivity-test child
 								x y))
 	       (apply function child function-args)))))
-    (declare (dynamic-extent mapper))
+    (declare (dynamic-extent #'mapper))
     (map-over-output-records #'mapper record)))
 
 (defmethod map-over-output-records-containing-position
     (function (record output-record-mixin) x y
      &optional (x-offset 0) (y-offset 0)
      &rest function-args)
-  (declare (dynamic-extent function)
-	   (ignore x-offset y-offset))
+  (declare (ignore x-offset y-offset))
   (loop for child in (output-record-children record)
 	when (and (multiple-value-bind (min-x min-y max-x max-y)
 		      (output-record-hit-detection-rectangle* child)
@@ -389,14 +387,13 @@ Only those records that overlap REGION are displayed."))
   (flet ((mapper (child)
 	   (when (region-intersects-region-p region child)
 	       (apply function child function-args))))
-    (declare (dynamic-extent mapper))
+    (declare (dynamic-extent #'mapper))
     (map-over-output-records #'mapper record)))
 
 (defmethod map-over-output-records-overlapping-region (function (record output-record) region
 						      &optional (x-offset 0) (y-offset 0)
                                                       &rest function-args)
-  (declare (dynamic-extent function)
-	   (ignore x-offset y-offset))
+  (declare (ignore x-offset y-offset))
   (loop for child in (output-record-children record)
         do (when (region-intersects-region-p region child)
              (apply function child function-args))))
@@ -450,7 +447,8 @@ Only those records that overlap REGION are displayed."))
      record)
     ;; If we don't have any children, collapse the bbox to the min point.
     (if first-time
-	(with-bounding-rectangle* (x1 y1 x2 y2) record
+	(multiple-value-bind (x1 y1)
+	    (output-record-position record)
 	  (values x1 y1 x1 y1))
 	(values new-x1 new-y1 new-x2 new-y2))))
 
@@ -603,7 +601,7 @@ Only those records that overlap REGION are displayed."))
     (setq stream '*standard-output*))
   (let ((continuation-name (gensym "WITH-OUTPUT-RECORDING-OPTIONS")))
     `(flet ((,continuation-name  (,stream) ,@body))
-       (declare (dynamic-extent ,continuation-name))
+       (declare (dynamic-extent #',continuation-name))
        (invoke-with-output-recording-options ,stream
                                              #',continuation-name
                                              ,(if record-supplied-p
@@ -620,7 +618,6 @@ Only those records that overlap REGION are displayed."))
   ((stream output-recording-stream) continuation record draw)
   "Calls CONTINUATION on STREAM enabling or disabling recording and drawing
 according to the flags RECORD and DRAW."
-  (declare (dynamic-extent continuation))
   (letf (((stream-recording-p stream) record)
 	 ((stream-drawing-p stream) draw))
     (funcall continuation stream)))

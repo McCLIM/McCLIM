@@ -242,9 +242,11 @@
 
 (defgeneric buffer-string (buffer &key start end))
 
-(defmethod buffer-string ((buf basic-buffer) &key start end)
+(defmethod buffer-string ((buf basic-buffer) &key start end result)
   (declare (ignore start end))
-  (let ((result (make-string (size buf))))
+  (let ((result (if result
+		    (adjust-array result (size buff))
+		    (make-string (size buf)))))
     (loop for line-in-string = 0 then (+ line-in-string (size line))
 	  for line = (dbl-head (lines buf)) then (next line)
 	  while line

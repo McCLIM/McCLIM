@@ -63,7 +63,7 @@
 	       (queue (frame-event-queue *application-frame*))
 	       (old-count (slot-value port 'event-count)))
 	  (loop
-	   (let ((event (event-queue-read-no-hang pane)))
+	   (let ((event (event-queue-read-no-hang queue)))
 	     (if event
 		 (do-one-event event)
 		 (setq old-count

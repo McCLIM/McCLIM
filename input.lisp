@@ -259,23 +259,3 @@
 
 (defclass clim-sheet-input-mixin (#+clim-mp standard-sheet-input-mixin #-clim-mp immediate-sheet-input-mixin)
   ())
-
-;;; Utility for handling all the events on queues of child sheets
-
-(defun handle-events-over-sheets (sheet exclude)
-  "Utility for handling all the events on queues of child sheets.  The
-  EXCLUDE argument is either nil, a sheet or a list of sheets to
-  ignore.  This avoids various race conditions in event processing."
-  (flet ((handler (s)
-	   (when (and exclude
-		      (or (and (consp exclude)
-			       (member s exclude :test #'eq))
-			  (eq exclude s)))
-	     (return-from handler nil))
-	   (when (typep s 'standard-sheet-input-mixin)
-	     (loop for event = (event-read-no-hang s)
-		   while event
-		   do (handle-event s event)))))
-    (declare (dynamic-extent handler))
-    (map-over-sheets #'handler sheet)))
-
