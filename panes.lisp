@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.129 2003/08/09 01:34:01 hefner1 Exp $
+;;; $Id: panes.lisp,v 1.130 2003/08/12 00:01:18 hefner1 Exp $
 
 (in-package :clim-internals)
 
@@ -704,7 +704,7 @@
 ;;; CHANGING-SPACE-REQUIREMENTS macro
 
 (defmacro changing-space-requirements ((&key resize-frame layout) &body body)
-  `(invoke-while-changing-space-requirements (lambda () ,@body) :resize-frame ,resize-frame :layout layout))
+  `(invoke-with-changing-space-requirements (lambda () ,@body) :resize-frame ,resize-frame :layout ,layout))
 
 (defun invoke-with-changing-space-requirements (continuation &key resize-frame layout)
   (cond (*changed-space-requirements*
@@ -2317,7 +2317,6 @@
     (setf (cursor-visibility cursor) t)))
 
 ;; Will uncomment later, this depends on changes I'm not ready to commit yet.
-#+NIL
 (defmethod note-input-focus-changed ((pane interactor-pane) state)
   (setf (cursor-shape (stream-text-cursor pane))
         (if state :block :hollow)))
@@ -2517,4 +2516,6 @@
 
 (defmethod schedule-timer-event ((pane pane) token delay)
   (schedule-event pane (make-instance 'timer-event :token token :sheet pane) delay))
+
+
 
