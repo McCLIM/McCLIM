@@ -474,7 +474,10 @@ supertypes of TYPE that are presentation types"))
 
   #+(or excl cmu sbcl)
   (defun compile-time-clos-p (name)
-    (clim-lisp-patch::compile-time-clos-class-p name))
+    (let ((metaclass (find-class name nil)))
+      (or (and metaclass
+	     (typep metaclass 'standard-class))
+	(clim-lisp-patch::compile-time-clos-class-p name))))
 
   (defun make-default-description (name)
     "Create a description string from the type name"

@@ -114,6 +114,7 @@
   "Goatee/dbl-list"
   "Goatee/flexivector"
   "Goatee/buffer"
+  "Goatee/editable-buffer"
   "Goatee/editable-area"
   "Goatee/clim-area"
   "Goatee/goatee-command"
