@@ -214,7 +214,7 @@
            #:stream-finish-output
            #:stream-force-output
            #:stream-advance-to-column
-           #:stream-clear-input
+           #:stream-clear-output
            #:stream-read-byte
            #:stream-write-byte ))
         (gray-packages
@@ -314,7 +314,8 @@
    #:real 
    #:sequence 
    #:stream-advance-to-column 
-   #:stream-clear-input 
+   #:stream-clear-input
+   #:stream-clear-output
    #:stream-element-type 
    #:stream-finish-output 
    #:stream-force-output 

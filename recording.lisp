@@ -294,9 +294,22 @@ unspecified. "))
   (:method-combination and :most-specific-last))
 
 (defmethod output-record-equal :around (record1 record2)
-  (if (eq (class-of record1) (class-of record2))
-      (call-next-method)
-      nil))
+  (cond ((eq record1 record2)
+	 ;; Some unusual record -- like a Goatee screen line -- might
+	 ;; exist in two trees at once
+	 t)
+	((eq (class-of record1) (class-of record2))
+	 (let ((result (call-next-method)))
+	   (if (eq result 'maybe)
+	       nil
+	       result)))
+	(t nil)))
+
+;;; A fallback method so that something's always applicable.
+
+(defmethod output-record-equal and (record1 record2)
+  (declare (ignore record1 record2))
+  'maybe)
 
 ;;; The code for match-output-records-1 and output-record-equal
 ;;; methods are very similar, hence this macro.  In order to exploit
@@ -1047,8 +1060,10 @@ were added."
 (defclass standard-displayed-output-record (gs-clip-mixin gs-ink-mixin
 					    basic-output-record
                                             displayed-output-record)
-  ((ink :reader displayed-output-record-ink))
-  (:documentation "Implementation class for DISPLAYED-OUTPUT-RECORD."))
+  ((ink :reader displayed-output-record-ink)
+   (stream :initarg :stream))
+  (:documentation "Implementation class for DISPLAYED-OUTPUT-RECORD.")
+  (:default-initargs :stream nil))
 
 (defclass gs-line-style-mixin (graphics-state)
   ((line-style :initarg :line-style :accessor graphics-state-line-style)))
@@ -1730,17 +1745,21 @@ were added."
               start-x start-y
               (mapcar #'styled-string-string strings)))))
 
-(defmethod* (setf output-record-position) :before
+(defmethod* (setf output-record-position) :around
     (nx ny (record standard-text-displayed-output-record))
-  (with-slots (x1 y1 start-x start-y end-x end-y strings) record
+  (with-slots (x1 y1 start-x start-y end-x end-y strings baseline)
+      record
     (let ((dx (- nx x1))
           (dy (- ny y1)))
-      (incf start-x dx)
-      (incf start-y dy)
-      (incf end-x dx)
-      (incf end-y dy)
-      (loop for s in strings
-	    do (incf (slot-value s 'start-x) dx)))))
+      (multiple-value-prog1
+	  (call-next-method)
+	(incf start-x dx)
+	(incf start-y dy)
+	(incf end-x dx)
+	(incf end-y dy)
+	;(incf baseline dy)
+	(loop for s in strings
+	   do (incf (slot-value s 'start-x) dx))))))
 
 (defmethod replay-output-record ((record standard-text-displayed-output-record)
 				 stream
@@ -2102,6 +2121,7 @@ according to the flags RECORD and DRAW."
 (defmethod invoke-with-output-to-output-record
     ((stream output-recording-stream) continuation record-type constructor
      &key)
+  (declare (ignore record-type))
   (stream-close-text-output-record stream)
   (let ((new-record (funcall constructor)))
     (with-output-recording-options (stream :record t :draw nil)
@@ -2114,7 +2134,6 @@ according to the flags RECORD and DRAW."
 (defmethod invoke-with-output-to-output-record
     ((stream output-recording-stream) continuation record-type (constructor null)
      &rest initargs)
-  (declare (ignore record-type))
   (stream-close-text-output-record stream)
   (let ((new-record (apply #'make-instance record-type initargs)))
     (with-output-recording-options (stream :record t :draw nil)
@@ -2213,9 +2232,10 @@ according to the flags RECORD and DRAW."
 
 (defmethod output-record-baseline ((record output-record))
   "Fall back method"
-  (values
-   (bounding-rectangle-max-y record)
-   nil))
+  (with-bounding-rectangle* (x1 y1 x2 y2)
+      record
+    (declare (ignore x1 x2))
+    (values (- y2 y1) nil)))
 
 (defmethod output-record-baseline ((record standard-text-displayed-output-record))
   (with-slots (baseline) record
@@ -2231,7 +2251,7 @@ according to the flags RECORD and DRAW."
                                  (return-from output-record-baseline
                                    (values baseline t)))))
                            record)
-  (values (bounding-rectangle-max-y record) nil))
+  (call-next-method))
 
 ;;; ----------------------------------------------------------------------------
 ;;;  copy-textual-output

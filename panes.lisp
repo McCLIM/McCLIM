@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.141 2004/04/23 19:29:49 moore Exp $
+;;; $Id: panes.lisp,v 1.142 2004/09/26 15:57:38 moore Exp $
 
 (in-package :clim-internals)
 
@@ -2119,7 +2119,23 @@
 ;;; 29.4 CLIM Stream Panes
 ;;;
 
+;;; A class that implements the display function invocation. It's put
+;;; in a super class of clim-stream-pane so that redisplay-frame-pane
+;;; on updating-output-stream-mixin can override that method.
+
+(defclass pane-display-mixin ()
+  ((display-function :initform 'clim-stream-pane-default-display-function
+		     :initarg :display-function
+		     :accessor pane-display-function)))
+
+(defmethod redisplay-frame-pane ((frame application-frame)
+				 (pane pane-display-mixin)
+				 &key force-p)
+  (declare (ignore force-p))
+  (invoke-display-function frame pane))
+
 (defclass clim-stream-pane (updating-output-stream-mixin
+			    pane-display-mixin
 			    permanent-medium-sheet-output-mixin
                             #-clim-mp standard-repainting-mixin
                             standard-extended-input-stream
@@ -2135,9 +2151,7 @@
 		:initform nil
 		:initarg :scroll-bars
 		:accessor pane-scroll-bars)
-   (display-function :initform 'clim-stream-pane-default-display-function
-		     :initarg :display-function
-		     :accessor pane-display-function)
+  
    ; Should inherit from label-pane for this one ??
    (label :type string
           :initform ""
@@ -2166,6 +2180,15 @@
    "This class implements a pane that supports the CLIM graphics,
     extended input and output, and output recording protocols."))
 
+(defun invoke-display-function (frame pane)
+  (let ((display-function (pane-display-function pane)))
+    (cond ((consp display-function)
+	   (apply (car display-function)
+		  frame pane (cdr display-function)))
+	  (display-function
+	   (funcall display-function frame pane))
+	  (t nil))))
+
 ;;; Handle :compute in the space requirement options
 ;;; XXX This should be expanded to handle all the options, not just
 ;;; height and width.
@@ -2182,9 +2205,7 @@
 	    (multiple-value-bind (x y)
 		(stream-cursor-position pane)
 	      (unwind-protect
-		   (funcall (pane-display-function pane)
-			    *application-frame*
-			    pane)
+		   (invoke-display-function *application-frame* pane)
 		(setf (stream-cursor-position pane) (values x y)))))
 	  (with-bounding-rectangle* (x1 y1 x2 y2)
 	    (stream-output-history pane)
@@ -2276,17 +2297,6 @@
 		   pointer-button-press-handler))
   (force-output stream))
 
-(defmethod redisplay-frame-pane ((frame application-frame)
-				 (pane clim-stream-pane)
-				 &key force-p)
-  (declare (ignore force-p))
-  (let ((display-function (pane-display-function pane)))
-    (cond ((consp display-function)
-	   (apply (car display-function)
-		  frame pane (cdr display-function)))
-	  (display-function
-	   (funcall display-function frame pane))
-	  (t nil))))
 
 (defmethod redisplay-frame-pane ((frame application-frame)
 				 (pane symbol)

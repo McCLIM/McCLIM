@@ -1,7 +1,7 @@
 ;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
 
 ;;;  (c) copyright 2002 by Michael McDonald (mikemac@mikemac.com)
-;;;  (c) copyright 2002,2003 by Tim Moore (moore@bricoworks.com)
+;;;  (c) copyright 2002-2004 by Tim Moore (moore@bricoworks.com)
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -28,42 +28,176 @@ calling REDISPLAY and updates those parts of the screen that are different.
 UPDATING-OUTPUT forms in the code create UPDATING-OUTPUT-RECORDs in the record
 tree. These records hold the before and after snapshots of the tree.  When the
 display code is first run, the bodies of all the UPDATING-OUTPUT forms are
-captured as closures.  This isn't optimal because in practice only the closure
-in the top-level output record will ever get called.
+captured as closures.  Usually only the closure in the top-level output record
+will ever get called, but the programmer can call REDISPLAY on any
+updating output record, so we have to be prepared for that.
 
 Redisplay proceeds thus:
 
-All the updating-output-records are visited.  Their state is changed to
-:updating and the old-children slot is set to the current children.
+All the updating output records are visited.  Their state is changed to
+:UPDATING and the OLD-CHILDREN slot is set to the current children.
 
-The closure of the root updating-output-record is called.  As updating-output
-forms are encountered, several things can happen:
+The closure of the root updating output record is called.  None of the
+closures  the child updating output records are called because any free
+variables captured in the UPDATING-OUTPUT forms need to see the fresh bindings
+from this run of the code.As UPDATING-OUTPUT forms are encountered, several
+things can happen: 
 
 * The cache value of the form compares to the value stored in the record.  The
-record, and all the updating-output-records below it, are marked :clean.  The
-body of updating-output isn't run.
+record, and all the updating output records below it, are marked :clean.  The
+body of UPDATING-OUTPUT isn't run.
 
-* The cache value doesn't compare.  The record is marked :updated, and the body
+* The cache value doesn't compare.  The record is marked :UPDATED, and the body
 is run.
 
-* There isn't an exisiting updating-output-record for this updating-output
-form.  One is created in state :updated.  The body is run.
+* There isn't an existing UPDATING-OUTPUT-RECORD for this UPDATING-OUTPUT
+form.  One is created in state :UPDATED.  The body is run.
 
-Next, compute-difference-set compares the old and new trees.  New output
+Before the top level UPDATING-OUTPUT closure returns, various output records
+in the history tree might be mutated e.g., be moved. The most common case of
+this is in table layout, where the records for each cell are first created and
+then assigned a final location based on the dimensions of the table. But these
+nodes may be children of an updating output record that has been marked
+:CLEAN. Therefore, they have to be treated specially so that the rest of
+incremental redisplay will consider them and not leave the screen in a trashed
+state. An around method on (SETF OUTPUT-RECORD-POSITION) for display records
+checks if incremental redisplay is in progress; if so, it stores the mutated
+record in its closest parent UPDATING-OUTPUT record (if any). If that parent
+is :CLEAN then it and any other clean parent updating output records are
+marked as :UPDATED.
+
+
+Next, COMPUTE-DIFFERENCE-SET compares the old and new trees.  New output
 records that aren't in the old tree need to be drawn.  Old records not in the
-new tree need to be erased.
+new tree need to be erased. Display records that were moved need are erased
+and redrawn. COMPUTE-DIFFERENCE-SET only compares display output records that
+are direct descendents (i.e., no intervening UPDATING-OUTPUT record) of an
+updating output record; Compute-difference-set is called recursively on any
+children updating output records.
 
-Finally, the old tree is walked.  All updating-output-records in state
-:updating are deleted from their parent caches.
+As an optimization, COMPUTE-DIFFERENCE-SET ignores records that are outside of
+the pane's visible regin.
+
+Finally, the old tree is walked.  All updating output records in state
+:UPDATING were not visited at all and thus are deleted from their parent
+caches.
+
+
+Problems / Future work
+
+The complete traversals of the output history tree could be avoided by keeping
+a generation number in the updating output record and updating that everytime
+the node is visited.
+
+The search for equal display nodes is expensive in part because we have no
+spatially organized data structure.
 
 |#
 
+;;; The map from unique values to output records. Unfortunately the :ID-TEST
+;;; is specified in the child updating output records, not in the record that
+;;; holds the cache! So, the map lookup code jumps through some hoops to use a
+;;; hash table if the child id tests allow that and if there enough records in
+;;; the map to make that worthwhile.
+
+(defclass updating-output-map-mixin ()
+  ((id-map :accessor id-map :initform nil)
+   (id-counter :accessor id-counter
+	       :documentation "The counter used to assign unique ids to
+		updating output records without one.")
+   (tester-function :accessor tester-function :initform 'none)
+   (element-count :accessor element-count :initform 0)))
+
+;;; Complete guess...
+(defparameter *updating-map-threshold* 10
+  "The limit at which the id map in an updating output record switches to a
+  hash table.")
+
+(defun function-matches-p (map func)
+  (let ((map-test-func (tester-function map)))
+    (cond ((eq map-test-func func)
+	   t)
+	  ((and (symbolp map-test-func) (symbolp func)) ; not eq
+	   nil)
+	  ((and (symbolp map-test-func) (fboundp map-test-func))
+	   (eq (symbol-value map-test-func) func))
+	  ((and (symbolp func) (fboundp func))
+	   (eq map-test-func (symbol-value func)))
+	  (t nil))))
+
+(defun get-from-map (map value test)
+  (when (eq (tester-function map) 'none)
+    (return-from get-from-map nil))
+  (if (function-matches-p map test)
+      (let ((map (id-map map)))
+	(if (hash-table-p map)
+	    (gethash value map)
+	    (cdr (assoc value map :test test))))
+      (error "Test function ~S doesn't match ~S" test (tester-function map))))
+
+(defun maybe-convert-to-hash (map)
+  (let ((test (tester-function map)))
+    (when (and (> (element-count map) *updating-map-threshold*)
+	       (or (case test
+		     ((eq eql equal equalp) t))
+		   (eq test #'eq)
+		   (eq test #'eql)
+		   (eq test #'equal)
+		   (eq test #'equalp)))
+      (let ((new-map (make-hash-table :test test)))
+	(loop
+	   for (key . value) in (id-map map)
+	   do (setf (gethash key new-map) value))
+	(setf (id-map map) new-map)))))
+
+(defun add-to-map (map record value test replace)
+  (when (eq (tester-function map) 'none)
+    (setf (tester-function map) test))
+  (if (function-matches-p map test)
+      (let ((val-map (id-map map)))
+	(if (hash-table-p val-map)
+	    (multiple-value-bind (existing-value in-table)
+		(if replace
+		    (gethash value val-map)
+		    (values nil nil))
+	      (declare (ignore existing-value))
+	      (setf (gethash value val-map) record)
+	      (unless in-table
+		(incf (element-count map))))
+	    (let ((val-cons (if replace
+				(assoc value val-map :test test)
+				nil)))
+	      (if val-cons
+		  (setf (cdr val-cons) record)
+		  (progn
+		    (setf (id-map map) (acons value record val-map))
+		    (incf (element-count map))
+		    (maybe-convert-to-hash map))))))
+      (error "Test function ~S doesn't match ~S" test (tester-function map))))
+
+(defun delete-from-map (map value test)
+  (if (function-matches-p map test)
+      (let ((val-map (id-map map))
+	    (deleted nil))
+	(if (hash-table-p val-map)
+	    (setf deleted (remhash value val-map))
+	    (setf (values (id-map map) deleted)
+		  (delete-1 value val-map :test test :key #'car)))
+	(when deleted
+	  (decf (element-count map))))
+      (error "Test function ~S doesn't match ~S" test (tester-function map))))
+
+(defmethod shared-initialize :after ((obj updating-output-map-mixin) slot-names
+				     &key)
+  (declare (ignore slot-names))
+  (setf (id-counter obj) 0))
+
 ;;; Should this have a more complete CPL, to pull in the fact that it needs a
 ;;; medium for graphics state?
-(defclass updating-output-stream-mixin (extended-output-stream)
+(defclass updating-output-stream-mixin (updating-output-map-mixin
+					extended-output-stream)
   ((redisplaying-p :reader stream-redisplaying-p :initform nil)
    (do-note-output-record :accessor do-note-output-record :initform t)
-   (id-map :accessor id-map :initform nil)
    (incremental-redisplay :initform nil
 			  :initarg :incremental-redisplay
 			  :accessor pane-incremental-redisplay)
@@ -116,6 +250,15 @@ Finally, the old tree is walked.  All updating-output-records in state
       (make-instance 'updating-stream-state :stream stream)))
 
 ;;; XXX Add to values we test, obviously.
+;;;
+;;;Well, maybe not.  The goal is to support output records that have moved
+;;;but that are otherwise clean. I.e., some previous part of the output has
+;;;changed (lines added or deleted, for example). If the stream cursor
+;;;position is different, I'm not sure now that the code for the updating
+;;;output record needs to be rerun; I think we could use only the difference
+;;;in cursor position to move the record. Any other graphics state change --
+;;;like a different foreground color -- should probably be handled by the
+;;;programmer forcing all new output.
 
 (defun state-matches-stream-p (state stream)
   (multiple-value-bind (cx cy)
@@ -125,23 +268,13 @@ Finally, the old tree is walked.  All updating-output-records in state
 
 (define-protocol-class updating-output-record (output-record))
 
-(defclass updating-output-children-record (standard-sequence-output-record)
-  ((last-bounding-box :accessor last-bounding-box
-		      :documentation "When traversing children, holds the
-   bounding box of the last updating-output-record visited.")))
-
-(defmethod initialize-instance :after ((obj updating-output-children-record)
-				       &key)
-  (setf (last-bounding-box obj) (make-instance 'standard-rectangle
-					       :x1 0 :x2 0 :y1 0 :y2 0)))
-
 (defgeneric output-record-dirty (record))
 
 (defmethod output-record-dirty ((record output-record))
   t)
 
-(defclass updating-output-record-mixin (compound-output-record
-					updating-output-record)
+(defclass updating-output-record-mixin (updating-output-map-mixin
+					standard-sequence-output-record)
   ((unique-id :reader output-record-unique-id :initarg :unique-id)
    (id-test :reader output-record-id-test :initarg :id-test
 	    :initform #'eql)
@@ -163,13 +296,9 @@ record operations are forwarded to this record.")
 		       :initarg :end-graphics-state
 		       :documentation "Graphics state after rendering
    record; used to render non updating-output-records that follow")
-   ;; Old record position
-   (old-x :accessor old-x)
-   (old-y :accessor old-y)
    (old-children :accessor old-children
 		 :documentation "Contains the output record tree for the
   current display.")
-   (id-map :accessor id-map :initform nil)
    (output-record-dirty :accessor output-record-dirty :initform :updating
 	  :documentation 
 	  ":updating
@@ -188,21 +317,23 @@ that are children (but not necessarily direct) of this record.")
 			   :initarg :parent-updating-output :initform nil
 			   :documentation "A backlink to the
 updating-output-parent above this one in the tree.")
-   ;; The difference set accumulated while processing child updating-output
-   ;; records.
-   (current-erases :accessor current-erases :initform nil)
-   (current-draws :accessor current-draws :initform nil)
+   ;; Results of (setf output-record-position) while updating
+   (explicit-moves :accessor explicit-moves)
    ;; on-screen state?
    ))
 
-(defmethod initialize-instance :after ((obj updating-output-record-mixin)
-				       &key)
-  (multiple-value-bind (x y)
-      (output-record-position obj)
-    (setf (sub-record obj) (make-instance 'updating-output-children-record
-					  :x-position x :y-position y
-					  :parent obj))))
+(defgeneric sub-record (record)
+  (:method ((record updating-output-record-mixin))
+    (let ((children (output-record-children record)))
+      (if (zerop (length children))
+	  nil
+	  (aref children 0)))))
 
+(defmethod shared-initialize :after
+    ((obj updating-output-record-mixin) slot-names
+     &key (x-position 0.0d0) (y-position 0.0d0))
+  (declare (ignore slot-names))
+  (setf (explicit-moves obj) nil))
 
 (defmethod output-record-start-cursor-position
     ((record updating-output-record-mixin))
@@ -224,45 +355,7 @@ updating-output-parent above this one in the tree.")
   (let ((state (end-graphics-state record)))
     (setf (values (cursor-x state) (cursor-y state)) (values x y))))
 
-(defmethod output-record-children ((record updating-output-record-mixin))
-  (output-record-children (sub-record record)))
-
-(defmethod output-record-count ((record updating-output-record-mixin))
-  (output-record-count (sub-record record)))
-
-(defmethod map-over-output-records
-    (function (record updating-output-record-mixin)
-     &optional (x-offset 0) (y-offset 0)
-     &rest other-args)
-  (apply #'map-over-output-records
-	 function (sub-record record) x-offset y-offset
-	 other-args)
-  nil)
-
-(defmethod map-over-output-records-containing-position
-    (function (record updating-output-record-mixin) x y
-     &optional (x-offset 0) (y-offset 0)
-     &rest other-args)
-  (apply #'map-over-output-records-containing-position
-	 function (sub-record record) x y x-offset y-offset
-	 other-args)
-  nil)
-
-(defmethod map-over-output-records-overlapping-region
-    (function (record updating-output-record-mixin) region
-     &optional (x-offset 0) (y-offset 0)
-     &rest other-args)
-  (apply #'map-over-output-records-overlapping-region
-	 function (sub-record record) region x-offset y-offset
-	 other-args)
-  nil)
-
-;;; Update extents, etc. via add and delete on the subrecord.
-
-(defmethod add-output-record :around
-    (child (record updating-output-record-mixin))
-  (add-output-record child (sub-record record)))
-
+;;; XXX still needed?
 (defmethod add-output-record :after
     ((child updating-output-record-mixin) record)
   (declare (ignore record))
@@ -270,9 +363,6 @@ updating-output-parent above this one in the tree.")
       (push child (children-updating-output (parent-updating-output child)))
       nil))
 
-(defmethod delete-output-record :around
-    (child (record updating-output-record-mixin) &optional (errorp t))
-  (delete-output-record child (sub-record record) errorp))
 
 ;;; Prevent deleted output records from coming back from the dead.
 (defmethod delete-output-record :after ((child updating-output-record-mixin)
@@ -281,20 +371,17 @@ updating-output-parent above this one in the tree.")
   (declare (ignore record errorp))
   (let ((pcache (parent-cache child))
 	(parent-updating (parent-updating-output child)))
-    (setf (id-map pcache)
-	  (delete (output-record-unique-id child) (id-map pcache)
-		  :key #'car
-		  :test (output-record-id-test child)))
+    (delete-from-map pcache
+		     (output-record-unique-id child)
+		     (output-record-id-test child))
     (when parent-updating
       (setf (children-updating-output parent-updating)
 	    (delete child (children-updating-output parent-updating)
 		    :test #'eq)))))
 
 
-(defmethod clear-output-record ((record updating-output-record-mixin))
-  (clear-output-record (sub-record record)))
-
-(defclass standard-updating-output-record (updating-output-record-mixin)
+(defclass standard-updating-output-record (updating-output-record-mixin
+					   updating-output-record)
   ())
 
 (defmethod print-object ((obj standard-updating-output-record) stream)
@@ -316,10 +403,12 @@ updating-output-parent above this one in the tree.")
 				     (record standard-updating-output-record)
 				     use-old-records)
   (funcall function record)
-  (cond ((and use-old-records (slot-boundp record 'old-children))
-	 (map-over-updating-output function
-				   (old-children record)
-				   use-old-records))
+  (cond (use-old-records
+	 (if (slot-boundp record 'old-children)
+	     (map-over-updating-output function
+				       (old-children record)
+				       use-old-records)
+	     nil))
 	(t (map-over-updating-output function
 				     (sub-record record)
 				     use-old-records))))
@@ -358,29 +447,24 @@ updating-output-parent above this one in the tree.")
 				    stream
 				    (output-record-displayer record)))))
 
+(defun %invoke-updating (record stream displayer)
+  (letf (((stream-current-output-record stream) record))
+    (with-new-output-record (stream)
+      (funcall displayer stream))))
 
 (defmethod compute-new-output-records-1
     ((record standard-updating-output-record) stream displayer)
   (multiple-value-bind (x y)
       (output-record-position record)
-    (setf (values (old-x record) (old-y record)) (values x y))
-    #+nil
-    (setf (values (old-min-x record) (old-min-y record)
-		  (old-max-x record) (old-max-y record))
-	  (bounding-rectangle* record))
+    (when (sub-record record)
+      (delete-output-record (sub-record record) record))
     ;; Don't add this record repeatedly to a parent updating-output-record.
     (unless (eq (output-record-parent record)
 		(stream-current-output-record stream))
       (setf (output-record-parent record) nil)
       (add-output-record record (stream-current-output-record stream)))
-    (setf (sub-record record) (make-instance 'updating-output-children-record
-					     :x-position x :y-position y
-					     :parent record)))
-  ;; XXX This binding should be refactored into invoke-updating-output,
-  ;; because that's where the binding associated with with-new-output-record
-  ;; happens.
-  (letf (((stream-current-output-record stream) record))
-    (funcall displayer stream))
+    (reinitialize-instance record :x-position x :y-position y))
+  (%invoke-updating record stream displayer)
   (setf (output-record-dirty record) :updated))
 
 (defgeneric find-child-output-record (record use-old-elements record-type
@@ -407,14 +491,16 @@ updating-output-parent above this one in the tree.")
 				      use-old-elements
 				      record)
   (when (region-intersects-region-p root record)
-    (map-over-output-records-overlapping-region
-     #'(lambda (r)
-	 (let ((result (find-equal-display-record r use-old-elements record)))
-	   (when result
-	     (return-from find-equal-display-record result))))
-     root
-     record))
+    (flet ((mapper (r)
+	     (let ((result (find-equal-display-record r
+						      use-old-elements
+						      record)))
+	       (when result
+		 (return-from find-equal-display-record result)))))
+      (declare (dynamic-extent #'mapper))
+      (map-over-output-records-overlapping-region #'mapper root record)))
   nil)
+
 
 (defmethod find-equal-display-record ((root displayed-output-record)
 				      use-old-elements
@@ -538,6 +624,11 @@ updating-output-parent above this one in the tree.")
 			  visible-region)
   nil)
 
+(defun copy-bounding-rectange (rect)
+  (with-bounding-rectangle* (min-x min-y max-x max-y)
+      rect
+    (make-bounding-rectangle min-x min-y max-x max-y)))
+
 (defmethod compute-difference-set ((record standard-updating-output-record)
 				   &optional check-overlapping
 				   offset-x offset-y
@@ -548,13 +639,19 @@ updating-output-parent above this one in the tree.")
     (return-from compute-difference-set (values nil nil nil nil nil)))
   (let ((existing-output-records (make-hash-table :test #'eq))
 	(draws nil)
+	(moves (explicit-moves record))
 	(erases nil)
-	;; XXX!
+	;; XXX Performance hack. Need to work out the implications for deleted
+	;; gadgets and stuff
 	(visible-region (pane-viewport-region (updating-output-stream
 					       record)))
 	(old-children (if (slot-boundp record 'old-children)
 			  (old-children record)
 			  nil)))
+    ;; XXX This means that compute-difference-set can't be called repeatedly on
+    ;; the same tree; ugh. On the other hand, if we don't clear explicit-moves,
+    ;; they can hang around in the tree for later passes and cause trouble.
+    (setf (explicit-moves record) nil)
     ;; Find which new output records are already on screen
     (map-over-child-display
      (if old-children
@@ -562,7 +659,7 @@ updating-output-parent above this one in the tree.")
 	     (let ((old (find-existing-record r old-children visible-region)))
 	       (if old
 		   (setf (gethash old existing-output-records) r)
-		   (push r draws))))
+		   (push  r draws))))
 	 #'(lambda (r) (push r draws)))
      (sub-record record)
      visible-region)
@@ -570,7 +667,8 @@ updating-output-parent above this one in the tree.")
     (when old-children
       (map-over-child-display #'(lambda (r)
 				  (unless (gethash r existing-output-records)
-				    (push r erases)))
+				    (push (list r (copy-bounding-rectange r))
+					  erases)))
 			      old-children
 			      visible-region))
     ;; Visit this record's updating-output children and merge in the
@@ -580,8 +678,8 @@ updating-output-parent above this one in the tree.")
     (map-over-child-updating-output #'(lambda (r)
 					(multiple-value-bind (e m d)
 					    (compute-difference-set r)
-					  (declare (ignore m))
 					  (setf erases (nconc e erases))
+					  (setf moves (nconc m moves))
 					  (setf draws (nconc d draws))))
 				    (sub-record record)
 				    nil)
@@ -598,19 +696,21 @@ updating-output-parent above this one in the tree.")
 		      (delete-1 dr draws :test #'output-record-equal)
 		    (if found
 			(setq draws draws2)
-			(push dr erases))))
+			(push (list dr (copy-bounding-rectange dr)) erases))))
 	      r
 	      t
 	      t
 	      visible-region)))
        old-children
        visible-region))
-    (values erases nil draws nil nil)))
+    (values erases moves draws nil nil)))
 
 (defparameter *enable-updating-output* t
   "Switch to turn on incremental redisplay")
 
 (defvar *trace-updating-output* nil)
+
+(defvar *no-unique-id* (cons nil nil))
 
 (defmethod invoke-updating-output ((stream updating-output-stream-mixin)
 				   continuation
@@ -621,72 +721,69 @@ updating-output-parent above this one in the tree.")
   (unless *enable-updating-output*
     (return-from invoke-updating-output (funcall continuation stream)))
   (let ((parent-cache (or parent-cache *current-updating-output* stream)))
-    (with-accessors ((id-map id-map))
-        parent-cache
-      (let* ((record-cons (assoc unique-id id-map :test id-test))
-	     (record (cdr record-cons))
-	     ;; For debugging
-	     state-mismatch)
-	(cond ((or all-new (null record))
-	       ;; This case covers the outermost updating-output too.
-	       (with-new-output-record (stream
-					record-type
-					*current-updating-output*
-					:unique-id unique-id
-					:id-test id-test
-					:cache-value cache-value
-					:cache-test cache-test
-					:fixed-position fixed-position
-					:displayer continuation
-					:parent-cache parent-cache
-					:stream stream
-					:parent-updating-output
-					*current-updating-output*)
-		 (setq record *current-updating-output*)
-		 (when *trace-updating-output*
-		   (format *trace-output* "Creating ~S~%" record))
-		 (setf (start-graphics-state record)
-		       (medium-graphics-state stream))
-		 (funcall continuation stream)
-		 (setf (end-graphics-state record)
-		       (medium-graphics-state stream))
-		 (if record-cons
-		     (setf (cdr record-cons) record)
-		     (setf id-map (acons unique-id record id-map)))))
-	      ((or (setq state-mismatch
-			 (not (state-matches-stream-p (start-graphics-state
-						       record)
-						      stream)))
-		   (not (funcall cache-test
-				 cache-value
-				 (output-record-cache-value record))))
+    (when (eq unique-id *no-unique-id*)
+      (setq unique-id (incf (id-counter parent-cache))))
+    (let* ((record (get-from-map parent-cache unique-id id-test))
+	   ;; For debugging
+	   state-mismatch)
+      (cond ((or all-new (null record))
+	     ;; This case covers the outermost updating-output too.
+	     (with-new-output-record (stream
+				      record-type
+				      *current-updating-output*
+				      :unique-id unique-id
+				      :id-test id-test
+				      :cache-value cache-value
+				      :cache-test cache-test
+				      :fixed-position fixed-position
+				      :displayer continuation
+				      :parent-cache parent-cache
+				      :stream stream
+				      :parent-updating-output
+				      *current-updating-output*)
+	       (setq record *current-updating-output*)
 	       (when *trace-updating-output*
-		 (format *trace-output* "~:[cache test~;stream state~] ~S~%"
-			 state-mismatch record))
-	       (let ((*current-updating-output* record))
-		 (setf (start-graphics-state record)
-		       (medium-graphics-state stream))
-		 (compute-new-output-records-1 record stream continuation)
-		 (setf (slot-value record 'cache-value) cache-value)
-		 (setf (end-graphics-state record)
-		       (medium-graphics-state stream))
-		 (setf (parent-cache record) parent-cache)))
-	      (t
-	       ;; It doesn't need to be updated, but it does go into the
-	       ;; parent's sequence of records
-	       (when *trace-updating-output*
-		 (format *trace-output* "clean ~S~%" record))
-	       (setf (output-record-dirty record) :clean)
-	       (setf (output-record-parent record) nil)
-	       (map-over-updating-output #'(lambda (r)
-					     (setf (output-record-dirty r)
-						   :clean))
-					 record
-					 nil)
-	       (add-output-record record (stream-current-output-record stream))
-	       (set-medium-graphics-state (end-graphics-state record) stream)
+		 (format *trace-output* "Creating ~S~%" record))
+	       (setf (start-graphics-state record)
+		     (medium-graphics-state stream))
+	       (funcall continuation stream)
+	       (setf (end-graphics-state record)
+		     (medium-graphics-state stream))
+	       (add-to-map parent-cache record  unique-id id-test all-new)))
+	    ((or (setq state-mismatch
+		       (not (state-matches-stream-p (start-graphics-state
+						     record)
+						    stream)))
+		 (not (funcall cache-test
+			       cache-value
+			       (output-record-cache-value record))))
+	     (when *trace-updating-output*
+	       (format *trace-output* "~:[cache test~;stream state~] ~S~%"
+		       state-mismatch record))
+	     (let ((*current-updating-output* record))
+	       (setf (start-graphics-state record)
+		     (medium-graphics-state stream))
+	       (compute-new-output-records-1 record stream continuation)
+	       (setf (slot-value record 'cache-value) cache-value)
+	       (setf (end-graphics-state record)
+		     (medium-graphics-state stream))
 	       (setf (parent-cache record) parent-cache)))
-	record))))
+	    (t
+	     ;; It doesn't need to be updated, but it does go into the
+	     ;; parent's sequence of records
+	     (when *trace-updating-output*
+	       (format *trace-output* "clean ~S~%" record))
+	     (setf (output-record-dirty record) :clean)
+	     (setf (output-record-parent record) nil)
+	     (map-over-updating-output #'(lambda (r)
+					   (setf (output-record-dirty r)
+						 :clean))
+				       record
+				       nil)
+	     (add-output-record record (stream-current-output-record stream))
+	     (set-medium-graphics-state (end-graphics-state record) stream)
+	     (setf (parent-cache record) parent-cache)))
+      record)))
 
 ;;; &key (unique-id (gensym)) was used earlier,
 ;;; changed to (unique-id `',(gensym)) as per gilham's request
@@ -701,7 +798,7 @@ updating-output-parent above this one in the tree.")
 
 (defmacro updating-output
     ((stream
-      &key (unique-id `',(gensym)) (id-test '#'eql)
+      &key (unique-id '*no-unique-id*) (id-test '#'eql)
       (cache-value ''no-cache-value cache-value-supplied-p)
       (cache-test '#'eql)
       (fixed-position nil fixed-position-p)
@@ -742,7 +839,7 @@ updating-output-parent above this one in the tree.")
   was not in the output history of the stream) during redisplay. The
   record has not been displayed yet."))
 
-(defgeneric redisplay-delete-output-record (record stream))
+(defgeneric redisplay-delete-output-record (record bounding-rectangle stream))
 
 (defgeneric redisplay-output-record (record stream
 				     &optional check-overlapping))
@@ -762,27 +859,32 @@ updating-output-parent above this one in the tree.")
 		 (dump-updating record :both *trace-output*)))
 	     (multiple-value-bind (erases moves draws)
 		 (compute-difference-set record check-overlapping)
-	       (declare (ignore moves))
 	       (when *trace-updating-output*
 		 (let ((*print-pretty* t))
-		   (format *trace-output* "erases: ~S~%draws: ~S~%"
-			   erases draws)))
+		   (format *trace-output* "erases: ~S~%moves: ~S~%draws: ~S~%"
+			   erases moves draws)))
 	       (with-output-recording-options (stream :record nil :draw t)
-		 (loop for r in erases
-		    do (redisplay-delete-output-record r stream))
+		 (loop for (r br) in erases
+		    do (redisplay-delete-output-record r br stream))
 		 (loop for r in draws
-		    do (redisplay-add-output-record r stream)))
+		    do (redisplay-add-output-record r stream))
+		 (loop for (r old-bounding) in moves
+		    do (clear-moved-record stream r old-bounding)))
 	       ;; Redraw all the regions that have been erased.
 	       ;; This takes care of all random records that might
 	       ;; overlap.
 	       (if check-overlapping
 		   (progn
-		     (loop for r in erases
+		     (loop for (r) in erases
 			do (replay record stream r))
 		     (loop for r in draws
-			do (replay record stream r)))
+			do (replay record stream r))
+		     (loop for (r) in moves
+			  do (replay record stream r)))
 		   (progn
 		     (loop for r in draws
+			do (replay r stream))
+		     (loop for (r) in moves
 			do (replay r stream))))))
 	(delete-stale-updating-output record)
 	(set-medium-graphics-state current-graphics-state stream)))))
@@ -799,15 +901,27 @@ updating-output-parent above this one in the tree.")
   (note-output-record-got-sheet record stream))
 
 (defmethod redisplay-delete-output-record
-    (record (stream updating-output-stream-mixin))
+    (record bounding-rectangle (stream updating-output-stream-mixin))
+  (declare (ignore record))
   (with-bounding-rectangle* (x1 y1 x2 y2)
-    record
+    bounding-rectangle
     (draw-rectangle* stream x1 y1 x2 y2
 		     :ink +background-ink+)))
 
 (defmethod redisplay-delete-output-record :after
-    (record (stream updating-output-stream-mixin))
+    (record bounding-rectangle (stream updating-output-stream-mixin))
+  (declare (ignore bounding-rectangle))
   (note-output-record-lost-sheet record stream))
+
+(defun clear-moved-record (stream new-bounding old-bounding)
+  (with-bounding-rectangle* (x1 y1 x2 y2)
+      new-bounding
+    (draw-rectangle* stream x1 y1 x2 y2
+		     :ink +background-ink+))
+  (with-bounding-rectangle* (x1 y1 x2 y2)
+      old-bounding
+    (draw-rectangle* stream x1 y1 x2 y2
+		     :ink +background-ink+)))
 
 ;;; Suppress the got-sheet/lost-sheet notices during redisplay.
 
@@ -825,11 +939,9 @@ updating-output-parent above this one in the tree.")
   (map-over-updating-output
    #'(lambda (r)
        (when (eq (output-record-dirty r) :updating)
-	 (let ((pcache (parent-cache r)))
-	   (setf (id-map pcache)
-		 (delete (output-record-unique-id r) (id-map pcache)
-			 :key #'car
-			 :test (output-record-id-test r))))))
+	 (delete-from-map (parent-cache r)
+			  (output-record-unique-id r)
+			  (output-record-id-test r))))
    record
    t))
 
@@ -843,30 +955,79 @@ updating-output-parent above this one in the tree.")
 
 ;;; Support for explicitly changing output records
 
+(defun mark-updating-output-changed (record)
+  (let ((state (output-record-dirty record)))
+    (cond ((or (eq record *current-updating-output*)
+	       (eq state :updated)
+	       (eq state :updating))
+	   nil)
+	  ((eq state :clean)
+	   (setf (output-record-dirty record) :updated)
+	   (let ((parent (parent-updating-output record)))
+	     (if (null parent)
+		 (error "parent of ~S null" record)
+		 (mark-updating-output-changed parent))))
+	  (t nil))))
+
+(defgeneric propagate-to-updating-output
+    (record child mode old-bounding-rectangle)
+  (:method
+      ((record updating-output-record-mixin) child mode old-bounding-rectangle)
+    (when (eq (output-record-dirty record) :clean)
+      (case mode
+	(:move
+	 (push (list child old-bounding-rectangle nil) (explicit-moves record))
+	 (mark-updating-output-changed record)))))
+  (:method
+      ((record output-record) child mode old-bounding-rectangle)
+    (let ((parent (output-record-parent record)))
+      (when parent
+	(propagate-to-updating-output
+	 parent child mode old-bounding-rectangle)))))
+
 (defgeneric note-output-record-child-changed
     (record child mode old-position old-bounding-rectangle stream
      &optional erases moves draws erase-overlapping move-overlapping
      &key check-overlapping))
 
+;;; The default - do nothing
+
 (defmethod note-output-record-child-changed
-    ((record standard-updating-output-record) child
-     mode old-position old-bounding-rectangle
-     (stream updating-output-stream-mixin)
+    (record child mode old-position old-bounding-rectangle stream
      &optional erases moves draws erase-overlapping move-overlapping
      &key check-overlapping)
-  (declare (ignore old-position old-bounding-rectangle stream
+  (declare (ignore record child mode old-position old-bounding-rectangle stream
 		   erases moves draws erase-overlapping move-overlapping
 		   check-overlapping))
-  (case mode
-    (:delete
-     (push child (explicit-erases record)))
-    (:add
-     (push child (explicit-draws record)))
-    (:move
-     (push old-bounding-rectangle (explicit-erases record))
-     ))
-  (when (or (eq mode :delete) (eq mode :add))
-    nil #+nil (push (make-bounding-rectangle ))))
+  nil)
+
+(defmethod note-output-record-child-changed
+    (record (child displayed-output-record) (mode (eql :move))
+     old-position old-bounding-rectangle
+     (stream updating-output-stream-mixin)
+     &optional erases moves draws erase-overlapping move-overlapping
+     &key (check-overlapping t))
+  (declare (ignore old-position erases moves draws erase-overlapping
+		   move-overlapping
+		   check-overlapping))
+  (when (stream-redisplaying-p stream)
+    (propagate-to-updating-output record child  mode old-bounding-rectangle)))
+
+(defmethod* (setf output-record-position) :around
+    (nx ny (record displayed-output-record))
+  (with-bounding-rectangle* (x y max-x max-y)
+      record
+    (multiple-value-prog1
+	(call-next-method)
+      ;; coordinate= here instead?
+      (unless (and (= x nx) (= y ny))
+	(let ((stream (slot-value  record 'stream))
+	      (parent (output-record-parent record)))
+	  (when (and stream parent)
+	    (note-output-record-child-changed
+	     parent record :move
+	     (make-point x y) (make-bounding-rectangle x y max-x max-y)
+	     stream)))))))
 
 ;;; Debugging hacks
 (defun dump-updating (record old-records &optional (stream *standard-output*))
@@ -927,16 +1088,17 @@ updating-output-parent above this one in the tree.")
 (defmethod dump-updating-aux (record old-records stream)
   (write record :stream stream))
 
-(defmethod redisplay-frame-pane :around
-    (frame (pane updating-output-stream-mixin) &key force-p)
+(defmethod redisplay-frame-pane
+    ((frame application-frame) (pane updating-output-stream-mixin) &key force-p)
+  (setf (id-counter pane) 0)
   (let ((incremental-redisplay (pane-incremental-redisplay pane)))
     (cond ((or (not incremental-redisplay) (not *enable-updating-output*))
 	   (call-next-method))
 	  ((or (null (updating-record pane))
 	       force-p)
-	   (setf (updating-record pane)(updating-output (pane)
-					 (call-next-method frame pane
-							   :force-p force-p))))
+	   (setf (updating-record pane)
+		 (updating-output (pane :unique-id 'top-level)
+		   (call-next-method frame pane :force-p force-p))))
 	  ;; Implements the extension to the :incremental-redisplay
 	  ;; pane argument found in the Franz User Guide.
 	  (t (let ((record (updating-record pane)))

@@ -587,8 +587,8 @@ skips intervening non-table output record structures."))
 		      (max (- y2 y1) (cell-min-height cell)))
 		(when (eq (cell-align-y cell) :baseline)
 		  (multiple-value-bind (baseline) (output-record-baseline cell)
-		    (maxf (aref ascents i) (- baseline y1))
-		    (maxf (aref descents i) (- y2 baseline)))))))
+		    (maxf (aref ascents i) baseline)
+		    (maxf (aref descents i) (- y2 y1 baseline)))))))
 
 	;; baseline aligned cells can force the row to be taller.
 	(loop for i from 0 below nrows do
@@ -613,6 +613,7 @@ skips intervening non-table output record structures."))
 		for x = cx then (+ x w x-spacing) 
 		for w across widthen do
 		(adjust-cell* cell x y w h ascent))))))))
+
 
 
 
