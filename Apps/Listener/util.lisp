@@ -70,12 +70,12 @@
 ;; the CMUCL run-program.
 ;; This ought to change the current directory to *default-pathname-defaults*..
 
-(defun run-program (program args &key (wait T) (output *standard-output*))
-  #+CMU (ext:run-program program args ; :input *standard-input* 
+(defun run-program (program args &key (wait T) (output *standard-output*) (input *standard-input*))
+  #+CMU (ext:run-program program args :input input
                                        :output output :wait wait)
-  ;; FIXME: SBCL's run-program doesn't search $PATH !!
-  #+SBCL (sb-ext:run-program program args :input *standard-input*
-                                         :output output :wait wait)
+
+  #+SBCL (sb-ext:run-program program args :input input :search T
+                                          :output output :wait wait)
   #-(or CMU SBCL) (format T "~&Sorry, don't know how to run programs in your CL.~%"))
 
 

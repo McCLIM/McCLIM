@@ -410,7 +410,7 @@
                  :directory (pathname-directory pathname)
                  :name (or (pathname-name pathname) :wild)
                  :type (or (pathname-type pathname) :wild)
-                 :version (or (pathname-version pathname) :wild)))
+                 :version (or #+nil(pathname-version pathname) :newest #+nil :wild)))
 
 (defun strip-filespec (pathname)
   "Removes file, directory, and version spcs from a pathname."
@@ -582,7 +582,7 @@ just took too long.")
       (mv-or
        (when mime-type (mime-type-to-command mime-type pathname))
        (when viewspec
-         (values `(com-run ,@viewspec)
+         (values `(com-background-run ,@viewspec)
                  (pprint-viewspec viewspec)))))))
 
 (define-presentation-translator automagic-pathname-translator
@@ -700,11 +700,21 @@ just took too long.")
 		  (terpri))))))
 
 ;; You have to seperate command arguments with commas..
+;; Need to find a better way to input these.
+
+;; McCLIM fixme: Shouldn't we be able to activate before the (args) prompt
+;; since defaults are defined?
+;; FIXME: Disabled input, as it usually seems to hang.
 (define-command (com-run :name "Run" :command-table dev-commands)
   ((program 'string :prompt "command")
-   (args '(sequence string) :prompt "args"))
-  (debugf args)
-  (run-program program args :wait nil :output nil))
+   (args '(sequence string) :default nil :prompt "args"))
+  (run-program program args :wait T :input nil))
+
+;; Replace this command with a keyword to COM-RUN.
+(define-command (com-background-run :name "Background Run" :command-table dev-commands)
+  ((program 'string :prompt "command")
+   (args '(sequence string) :default nil :prompt "args"))
+  (run-program program args :wait nil :output nil :input nil))
 
 ;;; Eval
 
