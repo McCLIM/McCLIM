@@ -657,16 +657,17 @@
     (with-transformed-positions (tr coord-seq)
       (call-next-method medium coord-seq closed filled))))
 
+(defun expand-rectangle-coords (left top right bottom)
+  "Expand the two corners of a rectangle into a polygon coord-seq"
+  (vector left top right top right bottom left bottom))
+
 (defmethod medium-draw-rectangle* :around ((medium transform-coordinates-mixin) left top right bottom filled)
   (let ((tr (medium-transformation medium)))
     (if (rectilinear-transformation-p tr)
         (multiple-value-bind (left top right bottom)
             (transform-rectangle* tr left top right bottom)
           (call-next-method medium left top right bottom filled))
-        (medium-draw-polygon* medium (list left top
-                                           left bottom
-                                           right bottom
-                                           right top)
+        (medium-draw-polygon* medium (expand-rectangle-coords left top right bottom)
                               t filled))) )
 
 (defmethod medium-draw-rectangles* :around ((medium transform-coordinates-mixin) position-seq filled)
