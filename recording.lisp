@@ -33,7 +33,8 @@
 	   :initform nil
            :reader output-record-parent)))
 
-(defmethod initialize-instance :after ((record output-record-mixin) &rest)
+(defmethod initialize-instance :after ((record output-record-mixin) &rest args)
+  (declare (ignore args))
   (with-slots (x1 y1 x2 y2) record
     (setq x1 0
 	  y1 0
@@ -122,7 +123,8 @@
   (bounding-rectangle* record))
 
 (defmethod output-record-refined-sensitivity-test ((record output-record-mixin) x y)
-  (region-contains-position-p (output-record-hit-detection-rectangle* record) x y))
+  (declare (ignore x y))
+  t)
 
 (defmethod highlight-output-record ((record output-record-mixin) stream state)
   (multiple-value-bind (x1 y1 x2 y2) (output-record-hit-detection-rectangle* record)
@@ -191,8 +193,12 @@
   (declare (dynamic-extent function)
 	   (ignore x-offset y-offset))
   (loop for child in (output-record-children record)
-	if (region-contains-position-p (output-record-hit-detection-rectangle* child) x y)
-	do (apply function child function-args)))
+	when (and (region-contains-position-p
+                   (multiple-value-call #'make-bounding-rectangle
+                     (output-record-hit-detection-rectangle* child))
+                   x y)
+                  (output-record-refined-sensitivity-test child x y))
+        do (apply function child function-args)))
 
 (defmethod map-over-output-records-overlaping-region (function (record output-record) region
 						      &optional (x-offset 0) (y-offset 0)
