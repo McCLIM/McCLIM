@@ -45,7 +45,7 @@
    (scan-pointer :accessor stream-scan-pointer :initform 0)
    (rescan-queued :accessor rescan-queued :initform nil)
    (rescanning-p :reader stream-rescanning-p :initform nil)
-   (activated :accessor stream-activated :initform nil)))
+   (activation-gesture :accessor activation-gesture :initform nil)))
 
 ;;; Markers for noise strings in the input buffer.
 
@@ -72,6 +72,7 @@
 ;;; read in while it is not an activation gesture, unread, and then read again
 ;;; as an activation gesture. This kind of game seems to be needed for reading
 ;;; forms properly. -- moore
+#-(and)
 (defmethod stream-read-gesture ((stream standard-input-editing-stream)
 				&rest rest-args &key peek-p
 				&allow-other-keys)
@@ -84,7 +85,9 @@
 	      (let ((gesture (aref buffer scan-pointer)))
 		(cond ((typep gesture 'noise-string-property)
 		       (incf scan-pointer))
-		      ; XXX What about if peek-p is true?
+		      ;; XXX What about if peek-p is true?
+		      ;; I'm thinking that accept should look for accept
+		      ;; results explicitly. -- moore
 		      ((and (not peek-p)
 			    (typep gesture 'goatee::accept-result-extent))
 		       (incf scan-pointer)
@@ -95,7 +98,9 @@
 			     (setf (stream-activated stream) t))
 			   (incf scan-pointer))
 			 (return-from stream-read-gesture gesture)))))
-	     ;; If activated, insertion pointer is at fill pointer
+	     ;; If activated, insertion pointer is at fill pointer XXX get rid
+	     ;; of this
+	     #+(or)
 	     ((stream-activated stream)
 	      (return-from stream-read-gesture (values nil :eof)))
 	     (t (when (eql scan-pointer (fill-pointer buffer))
@@ -113,7 +118,64 @@
 							     type))
 		      until result)))))))
 
+(defmethod stream-read-gesture ((stream standard-input-editing-stream)
+				&rest rest-args &key peek-p
+				&allow-other-keys)
+  (with-keywords-removed (rest-args (:peek-p))
+    (rescan-if-necessary stream)
+    (with-slots (buffer insertion-pointer scan-pointer activation-gesture)
+	stream
+      (loop
+	 (loop
+	    while (< scan-pointer insertion-pointer)
+	    do (let ((gesture (aref buffer scan-pointer)))
+		 ;; Skip noise strings.
+		 ;; XXX We should skip accept results too; I think that they
+		 ;; should be consumed by ACCEPT-1. That's not happening yet.
+		 (cond ((characterp gesture)
+			(unless peek-p
+			 (incf scan-pointer))
+			(return-from stream-read-gesture gesture))
+		       ((and (not peek-p)
+			     (typep gesture 'goatee::accept-result-extent))
+			(incf scan-pointer)
+			(throw-object-ptype (goatee::object gesture)
+					    (goatee::result-type gesture)))
+		       (t (incf scan-pointer)))
+		 (if (characterp gesture)
+		     (progn
+		       (unless peek-p
+			 (incf scan-pointer))
+		       (return-from stream-read-gesture gesture))
+		     (incf scan-pointer))))
+	 ;; The scan pointer should not be greater than the insertion pointer
+	 ;; because the code that set the insertion pointer should have queued
+	 ;; a rescan.
+	 (when (> scan-pointer insertion-pointer)
+	   (warn "scan-pointer ~S > insertion-pointer ~S; shouldn't happen"
+		 scan-pointer insertion-pointer)
+	   (immediate-rescan stream))
+	 (when activation-gesture
+	   (return-from stream-read-gesture
+	     (prog1
+		 activation-gesture
+	       (unless peek-p
+		 (setf activation-gesture nil)))))
+	 (setf (slot-value stream 'rescanning-p) nil)
+	 ;; In McCLIM stream-process-gesture is responsible for inserting
+	 ;; characters into the buffer, changing the insertion pointer and
+	 ;; possibly setting up the activation-gesture slot.
+	 (loop
+	    with gesture and type 
+	    do (setf (values gesture type)
+		     (apply #'stream-read-gesture
+			    (encapsulating-stream-stream stream) rest-args))
+	    when (null gesture)
+	      do (return-from stream-read-gesture (values gesture type))
+	    when (stream-process-gesture stream gesture type)
+	      do (loop-finish))))))
 
+#-(and)
 (defmethod stream-unread-gesture ((stream standard-input-editing-stream)
 				  gesture)
   (declare (ignore gesture))
@@ -121,7 +183,33 @@
     (setf (stream-activated stream) nil)
     (decf (stream-scan-pointer stream))))
 
-(defgeneric stream-process-gesture (stream gesture type))
+(defmethod stream-unread-gesture ((stream standard-input-editing-stream)
+				  gesture)
+  (with-slots (buffer scan-pointer activation-gesture)
+      stream
+    (when (> scan-pointer 0)
+      (if (and (eql scan-pointer (fill-pointer buffer))
+	       (activation-gesture-p gesture))
+	  (setf activation-gesture gesture)
+	  (decf scan-pointer)))))
+
+(defgeneric activate-stream (stream gesture)
+  (:documentation "Cause the input editing stream STREAM to be activated with
+  GESTURE"))
+
+(defmethod activate-stream ((stream standard-input-editing-stream) gesture)
+  (setf (activation-gesture stream) gesture)
+  (setf (stream-insertion-pointer stream)
+	(fill-pointer (stream-input-buffer stream)))
+  (goatee::set-editing-stream-insertion-pointer
+   stream
+   (stream-insertion-pointer stream)))
+
+(defgeneric stream-process-gesture (stream gesture type)
+  (:documentation "McCLIM relys on a text editor class (by default
+  GOATEE-INPUT-EDITING-MIXIN) to perform the user interaction and display for
+  input editing. Also, that class must update the stream buffer and the
+  insertion pointer, cause rescans to happen, and handle activation gestures."))
 
 ;;; The editing functions of stream-process-gesture are performed by the
 ;;; primary method on goatee-input-editing-mixin
@@ -768,7 +856,11 @@
   "Invoke the continuation of the empty `accept' before the first non-empty
   accept `gesture' must be a member of that `accept''s activation or continuation
   gestures."
-  (let ((scan-pointer (1- (stream-scan-pointer stream))))
+  (let* ((activationp (activation-gesture-p gesture))
+	 (scan-pointer (if activationp	;activation gestures don't appear in
+					;the bufffer
+			   (stream-scan-pointer stream)
+			   (1- (stream-scan-pointer stream)))))
     (loop
        with active-continuation-function = nil
        for continuation in *empty-input-continuations*
@@ -776,7 +868,8 @@
 	 = continuation
        while (and (eq stream cont-stream)
 		  (eql scan-pointer cont-scan-pointer))
-       when (or (gesture-match gesture activations)
+       when (if activationp
+		(gesture-match gesture activations)
 		(gesture-match gesture delimeters))
          do (setq active-continuation-function func)
        end

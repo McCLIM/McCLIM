@@ -981,18 +981,27 @@ call-next-method to get the \"real\" answer based on the stream type."))
 
 (defun highlight-presentation-1 (presentation stream state)
   (with-output-recording-options (stream :record nil)
-    (if (or (eq (presentation-single-box presentation) t)
-	    (eq (presentation-single-box presentation) :highlighting))
-	(highlight-output-record-rectangle presentation stream state)
-	(funcall-presentation-generic-function highlight-presentation
-					       (presentation-type presentation)
-					       presentation
-					       stream
-					       state))))
+    (funcall-presentation-generic-function highlight-presentation
+					   (presentation-type presentation)
+					   presentation
+					   stream
+					   state)))
 
 (define-default-presentation-method highlight-presentation
     (type record stream state)
-  (highlight-output-record record stream state))
+  (declare (ignore type))
+  (if (or (eq (presentation-single-box record) t)
+	  (eq (presentation-single-box record) :highlighting))
+      (highlight-output-record-rectangle record stream state)
+      (labels ((highlighter (record)
+		 (typecase record
+		   (displayed-output-record
+		    (highlight-output-record record stream state))
+		   (compound-output-record
+		    (map-over-output-records #'highlighter record))
+		   (t nil))))
+	(highlighter record))))
+
 
 (define-default-presentation-method present
     (object type stream (view textual-view) &key acceptably for-context-type)

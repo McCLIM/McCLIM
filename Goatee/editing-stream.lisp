@@ -150,44 +150,54 @@
 				   gesture
 				   type)
   (declare (ignore type))
+  (when (activation-gesture-p gesture)
+    (setf (stream-insertion-pointer stream)
+	  (fill-pointer (stream-input-buffer stream)))
+    (set-editing-stream-insertion-pointer stream
+					  (stream-insertion-pointer stream))
+    (setf (climi::activation-gesture stream) gesture)
+    (rescan-if-necessary stream)
+    (return-from stream-process-gesture gesture))
   (let ((area (area stream))
 	(snapshot (snapshot stream)))
     (execute-gesture-command gesture area *simple-area-gesture-table*)
-  (make-input-editing-stream-snapshot snapshot area)
-  (let ((first-mismatch (mismatch (stream-input-buffer snapshot)
-				  (stream-input-buffer stream))))
-    (unwind-protect
-	 (cond ((null first-mismatch)
-		;; No change actually took place, event though IP may have
-		;; moved. 
-		nil)
-	       ((< first-mismatch (stream-scan-pointer stream))
-		(immediate-rescan stream))
-	       ((and (eql first-mismatch
-			  (1- (stream-insertion-pointer snapshot)))
-		     (eql (aref (stream-input-buffer snapshot) first-mismatch)
-			  gesture))
-		;; As best we can tell an insertion happened: one gesture was
-		;; entered it was inserted in the buffer.  There may be other
-		;; changes above IP, but we don't care.
-		gesture)
-	       (t
-		;; Other random changes, but we want to allow more editing
-		;; before scanning them.
-		nil))
-      (let ((snapshot-buffer (stream-input-buffer snapshot))
-	    (stream-buffer (stream-input-buffer stream)))
-	(setf (stream-insertion-pointer stream)
-	      (stream-insertion-pointer snapshot))
-	(when (< (car (array-dimensions stream-buffer))
-		 (fill-pointer snapshot-buffer))
-	  (adjust-array stream-buffer (fill-pointer snapshot-buffer)))
-	(setf (fill-pointer stream-buffer) (fill-pointer snapshot-buffer))
-	(when (and first-mismatch
-		   (>= (fill-pointer snapshot-buffer) first-mismatch))
-	  (replace stream-buffer snapshot-buffer
-		   :start1 first-mismatch
-		   :start2 first-mismatch)))))))
+    (make-input-editing-stream-snapshot snapshot area)
+    (let ((first-mismatch (mismatch (stream-input-buffer snapshot)
+				    (stream-input-buffer stream))))
+      (unwind-protect
+	   (cond ((null first-mismatch)
+		  ;; No change actually took place, event though IP may have
+		  ;; moved. 
+		  nil)
+		 ((< first-mismatch (stream-scan-pointer stream))
+		  ;; Throw out. Buffer is still updated by protect forms
+		  (immediate-rescan stream))
+		 ((and (eql first-mismatch
+			    (1- (stream-insertion-pointer snapshot)))
+		       (eql (aref (stream-input-buffer snapshot) first-mismatch)
+			    gesture))
+		  ;; As best we can tell an insertion happened: one gesture was
+		  ;; entered it was inserted in the buffer.  There may be other
+		  ;; changes above IP, but we don't care.
+		  gesture)
+		 (t
+		  ;; Other random changes, but we want to allow more editing
+		  ;; before scanning them.
+		  (queue-rescan stream)
+		  nil))
+	(let ((snapshot-buffer (stream-input-buffer snapshot))
+	      (stream-buffer (stream-input-buffer stream)))
+	  (setf (stream-insertion-pointer stream)
+		(stream-insertion-pointer snapshot))
+	  (when (< (car (array-dimensions stream-buffer))
+		   (fill-pointer snapshot-buffer))
+	    (adjust-array stream-buffer (fill-pointer snapshot-buffer)))
+	  (setf (fill-pointer stream-buffer) (fill-pointer snapshot-buffer))
+	  (when (and first-mismatch
+		     (>= (fill-pointer snapshot-buffer) first-mismatch))
+	    (replace stream-buffer snapshot-buffer
+		     :start1 first-mismatch
+		     :start2 first-mismatch)))))))
 
 (defun reposition-stream-cursor (stream)
   "Moves the cursor somewhere clear of Goatee's editing area."
@@ -243,6 +253,16 @@
 			   :format "Location line ~S pos ~S isn't in buffer ~S"
 			   :format-arguments (list line pos buffer)))
 		  (return (+ total-offset pos)))))
+
+(defgeneric set-editing-stream-insertion-pointer (stream pointer))
+
+(defmethod set-editing-stream-insertion-pointer
+    ((stream goatee-input-editing-mixin) pointer)
+  (let* ((area (area stream))
+	 (buffer (buffer area)))
+    (setf (point* buffer) (location*-offset buffer pointer))
+    (redisplay-area area)))
+
 
 (defun %replace-input (stream new-input start end buffer-start
 		       rescan rescan-supplied-p

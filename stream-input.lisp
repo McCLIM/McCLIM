@@ -330,33 +330,30 @@
 
 ;;; Standard stream methods on standard-extended-input-stream.  Ignore any
 ;;; pointer gestures in the input buffer.
-
-
-(defun read-gesture-or-reason (stream &rest args)
-  (multiple-value-bind (result reason)
-      (apply #'stream-read-gesture stream args)
-    (or result reason)))
-
-(defun read-result-p (gesture)
-  (or (characterp gesture)
-      (member gesture '(:eof :timeout) :test #'eq)))
+;;;
+;;; Is stream-read-gesture allowed to return :eof? 
 
 (defmethod stream-read-char ((stream standard-extended-input-stream))
   (with-encapsulating-stream (estream stream)
-    (loop for char = (read-gesture-or-reason estream)
-	  until (read-result-p char)
-	  finally (return (char-for-read char)))))
+    (loop
+	 with char and reason
+	 do (setf (values char reason) (stream-read-gesture estream))
+	 until (or (characterp char) (eq reason :eof))
+	 finally (return (if (eq reason :eof)
+			     reason
+			     (char-for-read char))))))
 
 (defmethod stream-read-char-no-hang ((stream standard-extended-input-stream))
   (with-encapsulating-stream (estream stream)
-    (loop for char = (read-gesture-or-reason estream :timeout 0)
-	  do (when (read-result-p char)
-	       (loop-finish))
-	  finally (return (cond ((eq char :eof)
-				 :eof)
-				((eq char :timeout)
-				 nil)
-				(t (char-for-read char)))))))
+    (loop
+       with char and reason
+       do (setf (values char reason) (stream-read-gesture estream :timeout 0))
+       until (or (characterp char) (eq reason :timeout) (eq reason :eof) )
+       finally (return (cond ((eq reason :timeout)
+			      nil)
+			     ((eq reason :eof)
+			      :eof)
+			     (t (char-for-read char)))))))
 
 (defmethod stream-unread-char ((stream standard-extended-input-stream)
 			       char)
@@ -365,20 +362,25 @@
 
 (defmethod stream-peek-char ((stream standard-extended-input-stream))
   (with-encapsulating-stream (estream stream)
-    (loop for char = (read-gesture-or-reason estream :peek-p t)
-	  do (if (read-result-p char)
-		 (loop-finish)
-		 (stream-read-gesture estream)) ; consume pointer gesture
-	  finally (return (char-for-read char)))))
+    (loop
+       with char and reason
+       do (setf (values char reason) (stream-read-gesture estream :peek-p t))
+       until (or (characterp char) (eq reason :eof))
+       do (stream-read-gesture estream) ; consume pointer gesture
+       finally (return (if (eq reason :eof)
+			   reason
+			   (char-for-read char))))))
 
 (defmethod stream-listen ((stream standard-extended-input-stream))
   (with-encapsulating-stream (estream stream)
-    (loop for char = (read-gesture-or-reason estream :timeout 0 :peek-p t)
-	  do (if (read-result-p char)
-		 (loop-finish)
-		 (stream-read-gesture estream)) ; consume pointer gesture
-	  finally (return (characterp char)))))
-
+    (loop
+       with char and reason
+	 do (setf (values char reason) (stream-read-gesture estream
+							    :timeout 0
+							    :peek-p t))
+	 until (or (characterp char) (eq reason :eof) (eq reason :timeout))
+	 do (stream-read-gesture estream) ; consume pointer gesture
+	 finally (return (characterp char)))))
 
 ;;; stream-read-line returns a second value of t if terminated by eof.
 (defmethod stream-read-line ((stream standard-extended-input-stream))

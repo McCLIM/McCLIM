@@ -102,7 +102,11 @@ accept of this query")))
   ((queries :accessor queries :initform nil)
    (selected-query :accessor selected-query :initform nil)
    (align-prompts :accessor align-prompts :initarg :align-prompts
-		  :initform nil)))
+		  :initform nil)
+   (last-pass :accessor last-pass :initform nil
+	      :documentation "Flag that indicates the last pass through the
+  body of ACCEPTING-VALUES, after the user has chosen to exit. This controls
+  when conditions will be signalled from calls to ACCEPT.")))
 
 (defmethod stream-default-view ((stream accepting-values-stream))
   +textual-dialog-view+)
@@ -206,6 +210,7 @@ accept of this query")))
                     (redisplay arecord stream))
                (av-exit ()
                  (finalize-query-records *accepting-values-stream*)
+		 (setf (last-pass *accepting-values-stream*) t)
                  (redisplay arecord stream)))
           (erase-output-record arecord stream)
           (setf (stream-cursor-position stream)
@@ -283,7 +288,7 @@ accept of this query")))
 	      (do-prompt)
 	      (setq query-record (do-accept-present-default))))
 	(setf (record query) query-record)
-	(when (accept-condition query)
+	(when (and (last-pass stream) (accept-condition query))
 	  (signal (accept-condition query)))
 	(multiple-value-prog1
 	    (values (value query) (ptype query) (changedp query))
@@ -344,8 +349,7 @@ highlighting, etc." ))
 				 :key #'query-identifier :test #'equal))
 	     (query (car query-list)))
 	(when selected-query
-	  (unless (equal query-identifier
-			 (query-identifier selected-query)) 
+	  (unless (equal query-identifier (query-identifier selected-query)) 
 	    (deselect-query *accepting-values-stream*
 			    selected-query
 			    (record selected-query))))
@@ -409,7 +413,8 @@ is called. Used to determine if any editing has been done by user")))
 						    *no-default-cache-value*)
 				   :record-type 'av-text-record)
 		   (with-output-as-presentation
-		       (stream query-identifier 'selectable-query)
+		       (stream query-identifier 'selectable-query
+			       :single-box t)
 		     (surrounding-output-with-border
 		         (stream :shape :inset :move-cursor t)
 		       (setq editing-stream
@@ -429,23 +434,62 @@ is called. Used to determine if any editing has been done by user")))
       (setf (editing-stream record) editing-stream))
     record))
 
-(defun av-do-accept (query record)
-  (let ((estream (editing-stream record))
-	(ptype (ptype query))
-	(view (view query))
-	(default (default query))
-	(default-supplied-p (default-supplied-p query)))
-    (setf (values (value query) (ptype query)) ; Hmm, should ptype be set here?
-	  (input-editing-rescan-loop
-	   estream
-	   (if default-supplied-p
-	       ;; Allow empty input to return a default value
-	       #'(lambda (s)
-		   (accept ptype :stream s :view view :prompt nil
-			   :default default))
-	       #'(lambda (s)
-	       (accept ptype :stream s :view view :prompt nil)))))
-    (setf (changedp query) t)))
+(defun av-do-accept (query record interactive)
+  (let* ((estream (editing-stream record))
+	 (ptype (ptype query))
+	 (view (view query))
+	 (default (default query))
+	 (default-supplied-p (default-supplied-p query))
+	 (accept-args (accept-arguments query))
+	 (*activation-gestures* (apply #'make-activation-gestures
+				       :existing-activation-gestures
+				       (activation-gestures query)
+				       accept-args))
+	 (*delimiter-gestures* (apply #'make-delimiter-gestures
+				      :existing-delimiter-args
+				      (delimiter-gestures query)
+				      accept-args)))
+    ;; If there was an error on a previous pass, set the insertion pointer to
+    ;; 0 so the user has a chance to edit the field without causing another
+    ;; error. Otherwise the insertion pointer should already be at the end of
+    ;; the input (because it was activated); perhaps we should set it anyway.
+    (when (accept-condition query)
+      (setf (stream-insertion-pointer estream) 0))
+    (reset-scan-pointer estream)
+    (setf (accept-condition query) nil)
+    ;; If a condition is thrown, then accept should return the old value and
+    ;; ptype.
+    (block accept-condition-handler
+      (setf (changedp query) nil)
+      (setf (values (value query) (ptype query))
+	    (input-editing-rescan-loop
+	     estream
+	     #'(lambda (s)
+		 (handler-bind
+		     ((error
+		       #'(lambda (c)
+			   (format *trace-output*
+				   "accepting-values accept condition: ~A~%"
+				   c)
+			   (if interactive
+			       (progn
+				 (beep)
+				 (goatee::set-editing-stream-insertion-pointer
+				  estream
+				  (1- (stream-scan-pointer estream)))
+				 (immediate-rescan estream)
+				 (format *trace-output* "Ack!~%"))
+			       (progn
+				 (setf (accept-condition query) c)
+				 (return-from accept-condition-handler
+				   c))))))
+		   (goatee::update-input-editing-stream s)
+		   (if default-supplied-p
+		       (accept ptype :stream s
+			       :view view :prompt nil :default default)
+		       (accept ptype :stream s :view view :prompt nil))))))
+      (setf (changedp query) t))))
+
 
 
 
@@ -454,48 +498,23 @@ is called. Used to determine if any editing has been done by user")))
   (declare (ignore stream))
   (let ((estream (editing-stream record))
 	(ptype (ptype query))
-	(view (view query))
-	(accept-args (accept-arguments query)))
+	(view (view query)))
     (declare (ignore ptype view))	;for now
-    (let* ((*activation-gestures* (apply #'make-activation-gestures
-					 :existing-activation-gestures
-					 (activation-gestures query)
-					 accept-args))
-	   
-	   (*delimiter-gestures* (apply #'make-delimiter-gestures
-					 :existing-delimiter-args
-					 (delimiter-gestures query)
-					 accept-args)))
-      (with-accessors ((stream-activated stream-activated)
-		       (stream-input-buffer stream-input-buffer))
+    (with-accessors ((stream-input-buffer stream-input-buffer))
 	estream
-	;; "deactivate" editing stream if user has previously activated it.
-	(when stream-activated
-	  (setf stream-activated nil)
-	  (when (activation-gesture-p (aref stream-input-buffer
-					    (1- (fill-pointer
-						 stream-input-buffer))))
-	    (replace-input estream ""
-			   :buffer-start (1- (fill-pointer
-					      stream-input-buffer))
-			   :rescan t)))
-	(setf (cursor-visibility estream) t)
-	(setf (snapshot record) (copy-seq stream-input-buffer))
-	(block accept-condition-handler
-	  (handler-bind ((condition #'(lambda (c)
-					(format *trace-output*
-						"accepting-values accept condition: ~A~%"
-						c)
-					(setf (accept-condition query) c)
-					(return-from accept-condition-handler
-					  c))))
-	    (av-do-accept query record)))))))
+      (setf (cursor-visibility estream) t)
+      (setf (snapshot record) (copy-seq stream-input-buffer))
+      (av-do-accept query record t))))
 
 
-
+;;; If the query has not been changed (i.e., ACCEPT didn't return) and there is
+;;; no error, act as if the user activated the query.
 (defmethod deselect-query (stream query (record av-text-record))
   (let ((estream (editing-stream record)))
-    (setf (cursor-visibility estream) nil)))
+    (setf (cursor-visibility estream) nil)
+    (when (not (or (changedp query) (accept-condition query)))
+      (finalize-query-record query record))))
+
 
 (defgeneric finalize-query-record (query record)
   (:documentation "Do any cleanup on a query before the accepting-values body
@@ -513,8 +532,7 @@ is run for the last time"))
 
 (defmethod finalize-query-record (query (record av-text-record))
   (let ((estream (editing-stream record)))
-    (when (and (not (stream-activated estream))
-	       (snapshot record)
+    (when (and (snapshot record)
 	       (not (equal (snapshot record)
 			   (stream-input-buffer estream))))
       (let* ((activation-gestures (apply #'make-activation-gestures
@@ -524,13 +542,9 @@ is run for the last time"))
 	     (gesture (car activation-gestures)))
 	(when gesture
 	  (let ((c (character-gesture-name gesture)))
-	    (replace-input estream (string c)
-			   :buffer-start (fill-pointer (stream-input-buffer
-							estream))
-			   :rescan nil)
-	    (setf (stream-activated estream) t)
+	    (activate-stream estream c)
 	    (reset-scan-pointer estream)
-	    (av-do-accept query record)))))))
+	    (av-do-accept query record nil)))))))
 
 (defun finalize-query-records (av-stream)
   (loop for query in (queries av-stream)

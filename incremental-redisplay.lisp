@@ -728,6 +728,33 @@ records. "))
 ;;; work in progress
 (defvar *existing-output-records* nil)
 
+;;; Helper functions for managing a hash table of records
+
+(defun get-record-hash (record hash)
+  (let ((bucket (gethash (slot-value record 'coordinates) hash)))
+    (if (null bucket)
+	(values nil nil)
+	(let ((rec (find record bucket :test #'output-record-equal)))
+	  (if rec
+	      (values rec t)
+	      (values nil nil))))))
+
+(defun add-record-hash (record hash)
+  (push record (gethash (slot-value record 'coordinates) hash nil)))
+
+(defun delete-record-hash (record hash)
+  (let ((bucket (gethash (slot-value record 'coordinates) hash)))
+    (if bucket
+	(multiple-value-bind (new-bucket deleted)
+	    (delete-1 record bucket :test #'output-record-equal)
+	  (if deleted
+	      (progn
+		(setf (gethash (slot-value record 'coordinates) hash)
+		      new-bucket)
+		t)
+	      nil))
+	nil)))
+
 (defmethod compute-difference-set ((record standard-updating-output-record)
 				   &optional (check-overlapping t)
 				   offset-x offset-y
@@ -735,8 +762,7 @@ records. "))
   (declare (ignore offset-x offset-y old-offset-x old-offset-y))
   (when (eq (output-record-dirty record) :clean)
     (return-from compute-difference-set (values nil nil nil nil nil)))
-  (let* ((existing-output-records nil)
-	 (draws nil)
+  (let* ((draws nil)
 	 (moves (explicit-moves record))
 	 (erases nil)
 	 (erase-overlapping nil)
@@ -751,33 +777,34 @@ records. "))
 		(and old-children
 		     (region-intersects-region-p visible-region old-children)))
       (return-from compute-difference-set (values nil nil nil nil nil)))
-    ;; I don't feel like adding another let and indenting this huge function
-    ;; some more....
-    (setq existing-output-records (make-hash-table :test #'eq))
     ;; XXX This means that compute-difference-set can't be called repeatedly on
     ;; the same tree; ugh. On the other hand, if we don't clear explicit-moves,
     ;; they can hang around in the tree for later passes and cause trouble.
     (setf (explicit-moves record) nil)
-    ;; Find output records in the new tree that match a record in the old tree
-    ;; i.e., already have a valid display on the screen.
-    (map-over-child-display
-     (if old-children
+    (let ((existing-output-records (make-hash-table :test 'equalp)))
+      ;; Find output records in the new tree that match a record in the old
+      ;; tree i.e., already have a valid display on the screen.
+      (map-over-child-display
+       (if old-children
+	   #'(lambda (r)
+	       (add-record-hash r existing-output-records))
+	   #'(lambda (r) (push (list r r) draws)))
+       (sub-record record)
+       visible-region)
+      (when old-children
+	(map-over-child-display
 	 #'(lambda (r)
-	     (let ((old (find-existing-record r old-children visible-region)))
-	       (if old
-		   (setf (gethash old existing-output-records) r)
-		   (push (list r r) draws))))
-	 #'(lambda (r) (push (list r r) draws)))
-     (sub-record record)
-     visible-region)
-    ;; Find old records that should be erased
-    (when old-children
-      (map-over-child-display #'(lambda (r)
-				  (unless (gethash r existing-output-records)
-				    (push (list r (copy-bounding-rectange r))
-					  erases)))
-			      old-children
-			      visible-region))
+	     (unless (delete-record-hash r existing-output-records)
+	       (push (list r (copy-bounding-rectange r)) erases)))
+	 old-children
+	 visible-region)
+	;; Any records left in the hash table do not have a counterpart
+	;; visible on the screen and need to be drawn.
+	(loop
+	   for bucket being the hash-values of existing-output-records
+	   do (loop
+		 for r in bucket
+		 do (push (list r r) draws)))))
     (when check-overlapping
       (setf erase-overlapping (nconc erases draws))
       (setf move-overlapping moves)

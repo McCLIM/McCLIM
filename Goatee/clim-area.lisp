@@ -556,30 +556,31 @@
 			(line-text-width area line
 					 :end line-unchanged-from-end)
 			new-line-end)))
-	      (multiple-value-bind (x y)
-		  (output-record-position line)
-		;; Move unchanged text at the end of line, if needed
-		(when (and (not (eql line-unchanged-from-end new-line-size))
-			   (not (eql current-unchanged-left
-				     new-unchanged-left)))
-		  (copy-area medium
-			     (+ current-unchanged-left x)
-			     y
-			     (- line-end current-unchanged-left)
-			     (+ ascent descent)
-			     (+ new-unchanged-left x)
-			     y))
-		;; If the line is now shorter, erase the old end of line.
-		(erase-line line medium new-line-end line-end)
-		;; Erase the changed middle
-		(erase-line line medium start-width new-unchanged-left)
-		;; Draw the middle
-		(when (< line-unchanged-from-start line-unchanged-from-end)
-		  (draw-text* medium current-contents
-			      (+ x start-width) baseline
-			      :start line-unchanged-from-start
-			      :end line-unchanged-from-end
-			      :ink (foreground-ink line))))
+	      (when (stream-drawing-p stream)
+		(multiple-value-bind (x y)
+		    (output-record-position line)
+		  ;; Move unchanged text at the end of line, if needed
+		  (when (and (not (eql line-unchanged-from-end new-line-size))
+			     (not (eql current-unchanged-left
+				       new-unchanged-left)))
+		    (copy-area medium
+			       (+ current-unchanged-left x)
+			       y
+			       (- line-end current-unchanged-left)
+			       (+ ascent descent)
+			       (+ new-unchanged-left x)
+			       y))
+		  ;; If the line is now shorter, erase the old end of line.
+		  (erase-line line medium new-line-end line-end)
+		  ;; Erase the changed middle
+		  (erase-line line medium start-width new-unchanged-left)
+		  ;; Draw the middle
+		  (when (< line-unchanged-from-start line-unchanged-from-end)
+		    (draw-text* medium current-contents
+				(+ x start-width) baseline
+				:start line-unchanged-from-start
+				:end line-unchanged-from-end
+				:ink (foreground-ink line)))))
 	      ;; Old, wrong, bounding rectangle
 	      (with-bounding-rectangle* (old-min-x old-min-y old-max-x old-max-y)
 		  line
