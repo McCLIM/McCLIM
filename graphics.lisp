@@ -106,6 +106,7 @@
 (defmacro with-medium-options ((sheet args)
 			       &body body)
   `(flet ((graphics-op (medium)
+	    (declare (ignorable medium))
 	    ,@body))
      #-clisp (declare (dynamic-extent #'graphics-op))
      (apply #'do-graphics-with-options ,sheet #'graphics-op ,args)))
@@ -440,6 +441,9 @@
 			line-style line-thickness
 			line-unit line-dashes line-cap-shape
                         to-head from-head (head-length 0) (head-width 0))
+  (declare (ignore ink clipping-region transformation
+		   line-style line-thickness
+		   line-unit line-dashes line-cap-shape))
   (with-medium-options (sheet args)
                        (draw-line* sheet x1 y1 x2 y2)
                        (when to-head

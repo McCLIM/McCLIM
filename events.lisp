@@ -105,7 +105,9 @@
 
 (defmacro get-pointer-position ((sheet event) &body body)
   `(multiple-value-bind (x y)
-       (transform-position (sheet-native-transformation ,sheet) (pointer-event-native-x ,event) (pointer-event-native-y ,event))
+       (transform-position (sheet-native-transformation ,sheet)
+			   (pointer-event-native-x ,event) (pointer-event-native-y ,event))
+     (declare (ignorable x y))
      ,@body))
   
 (defmethod pointer-event-x ((event pointer-event))
@@ -181,7 +183,10 @@
 
 (defmacro get-window-position ((sheet event) &body body)
   `(multiple-value-bind (x y)
-       (transform-position (sheet-native-transformation ,sheet) (window-configuration-event-native-x ,event) (window-configuration-event-native-y ,event))
+       (transform-position (sheet-native-transformation ,sheet)
+			   (window-configuration-event-native-x ,event)
+			   (window-configuration-event-native-y ,event))
+     (declare (ignorable x y))
      ,@body))
 
 (defmethod window-configuration-event-x ((event window-configuration-event))
@@ -226,20 +231,20 @@
 ;(defmethod print-object ((self event) sink)
 ; (print-object-with-slots self (event-instance-slots self) sink))
 
-(defmethod translate-event ((self pointer-event) dx dy)
-  (apply #'make-instance (class-of self)
-         :x (+ dx (pointer-event-x self))
-         :y (+ dy (pointer-event-y self))
-         (fetch-slots-as-kwlist self (event-instance-slots self))))
+;(defmethod translate-event ((self pointer-event) dx dy)
+;  (apply #'make-instance (class-of self)
+;         :x (+ dx (pointer-event-x self))
+;         :y (+ dy (pointer-event-y self))
+;         (fetch-slots-as-kwlist self (event-instance-slots self))))
 
-(defmethod translate-event ((self window-event) dx dy)
-  (apply #'make-instance (class-of self)
-         :region (translate-region (window-event-region self) dx dy)
-         (fetch-slots-as-kwlist self (event-instance-slots self))))
+;(defmethod translate-event ((self window-event) dx dy)
+;  (apply #'make-instance (class-of self)
+;         :region (translate-region (window-event-region self) dx dy)
+;         (fetch-slots-as-kwlist self (event-instance-slots self))))
 
-(defmethod translate-event ((self event) dx dy)
-  (declare (ignore dx dy))
-  self)
+;(defmethod translate-event ((self event) dx dy)
+;  (declare (ignore dx dy))
+;  self)
 
 ;;; Constants dealing with events
 

@@ -150,6 +150,7 @@
 (defun add-command-to-command-table (command-name
 				     command-table
 				     &key name menu keystroke (errorp t))
+  (declare (ignore menu))
   (let ((table (find-command-table command-table)))
     (with-slots (commands command-line-names keystroke-accelerators menu) table
       (if (and errorp (gethash command-name commands))
@@ -331,5 +332,6 @@
 			  (command-unparser *command-unparser*)
 			  (partial-command-parser *partial-command-parser*)
 			  use-keystrokes)
+  (declare (ignore command-table command-parser command-unparser partial-command-parser use-keystrokes))
   (read stream))
 

@@ -70,8 +70,8 @@
   (typep x 'displayed-output-record))
 
 ; 16.2.1. The Basic Output Record Protocol
-(declaim (ftype (function (output-record) (values rational rational))
-                output-record-position))
+#+:cmu(declaim (ftype (function (output-record) (values rational rational))
+		      output-record-position))
 (defgeneric output-record-position (record)
   (:documentation
    "Returns the x and y position of RECORD. The position is the
@@ -81,8 +81,8 @@ upper-left corner of the stream."))
 
 (defgeneric* (setf output-record-position) (x y record))
 
-(declaim (ftype (function (output-record) (values integer integer))
-                output-record-start-cursor-position))
+#+:cmu(declaim (ftype (function (output-record) (values integer integer))
+		      output-record-start-cursor-position))
 (defgeneric output-record-start-cursor-position (record)
   (:documentation
    "Returns the x and y starting cursor position of RECORD. The
@@ -91,8 +91,8 @@ upper-left corner of the stream."))
 
 (defgeneric* (setf output-record-start-cursor-position) (x y record))
 
-(declaim (ftype (function (output-record) (values integer integer))
-                output-record-end-cursor-position))
+#+:cmu(declaim (ftype (function (output-record) (values integer integer))
+		      output-record-end-cursor-position))
 (defgeneric output-record-end-cursor-position (record)
   (:documentation
    "Returns the x and y ending cursor position of RECORD. The
@@ -221,7 +221,7 @@ Only those records that overlap REGION are displayed."))
    stream region x-offset y-offset))
 
 (defmethod erase-output-record ((record output-record) stream &optional (errorp t))
-  (declare (ignore stream))
+  (declare (ignore stream errorp))
   nil)
 
 (defmethod output-record-hit-detection-rectangle* ((record output-record-mixin))
@@ -554,11 +554,13 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
 (defmethod scroll-vertical :around ((stream output-recording-stream) dy)
   (declare (ignore dy))
   (with-output-recording-options (stream :record nil)
+    (declare (ignore stream))
     (call-next-method)))
 
 (defmethod scroll-horizontal :around ((stream output-recording-stream) dx)
   (declare (ignore dx))
   (with-output-recording-options (stream :record nil)
+    (declare (ignore stream))
     (call-next-method)))
 
 (defmethod repaint-sheet ((stream output-recording-stream) region)
@@ -842,6 +844,7 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
 
 (defmethod replay-output-record ((record text-displayed-output-record) stream
 				 &optional region (x-offset 0) (y-offset 0))
+  (declare (ignore region))
   (with-slots (strings baseline max-height start-x start-y wrapped
                x y x1 y1 initial-x1 initial-y1) record
     (let ((old-medium (sheet-medium stream))
@@ -894,6 +897,7 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
 
 ;;; Methods for text output to output recording streams
 (defmethod stream-text-output-record ((stream standard-output-recording-stream) text-style)
+  (declare (ignore text-style))
   (let ((record (stream-current-text-output-record stream)))
     (unless record
       (setf (stream-current-text-output-record stream)
@@ -999,6 +1003,7 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
   (stream-close-text-output-record stream))
 
 (defmethod* (setf stream-cursor-position) :after (x y (stream standard-output-recording-stream))
+	    (declare (ignore x y))
   (stream-close-text-output-record stream))
 
 ;(defmethod stream-set-cursor-position :after ((stream standard-output-recording-stream))

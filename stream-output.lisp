@@ -340,6 +340,7 @@ than one line of output."))
 
 (defmethod stream-start-line-p ((stream standard-extended-output-stream))
   (multiple-value-bind (x y) (stream-cursor-position stream)
+    (declare (ignore y))
     (zerop x)))
 
 (defmacro with-room-for-graphics ((&optional (stream t)

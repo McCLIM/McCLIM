@@ -34,6 +34,7 @@
 (defun parse-space (stream specification direction)
   "Returns the amount of space given by SPECIFICATION relating to the
 STREAM in the direction DIRECTION."
+  (declare (ignore stream direction))
   (etypecase specification
     (number (coordinate specification))
     ((or string character))
@@ -186,22 +187,19 @@ to a table cell within the row."))
   (map-over-row-cells function block))
 
 (defmethod cell-common-size (cell (block row-output-record))
-  (declare #-cmu (ignore block)
-           (type cell-output-record cell))
+  (declare (type cell-output-record cell))
   (max (bounding-rectangle-height cell)
        (cell-min-height cell)))
 
 (defmethod cell-size (cell (block row-output-record))
-  (declare #-cmu (ignore block)
-           (type cell-output-record cell))
+  (declare (type cell-output-record cell))
   (max (bounding-rectangle-width cell)
        (cell-min-width cell)))
 
 (defmethod block-adjust-cell* (cell (block row-output-record)
                                cell-coordinate common-coordinate
                                size common-size)
-  (declare #-cmu (ignore block)
-           (type cell-output-record cell)
+  (declare (type cell-output-record cell)
            (type coordinate cell-coordinate common-coordinate size common-size))
   (adjust-cell* cell
                 cell-coordinate common-coordinate
@@ -252,22 +250,19 @@ corresponding to a table cell within the column."))
   (map-over-column-cells function block))
 
 (defmethod cell-common-size (cell (block column-output-record))
-  (declare #-cmu (ignore block)
-           (type cell-output-record cell))
+  (declare (type cell-output-record cell))
   (max (bounding-rectangle-width cell)
        (cell-min-width cell)))
 
 (defmethod cell-size (cell (block column-output-record))
-  (declare #-cmu (ignore block)
-           (type cell-output-record cell))
+  (declare (type cell-output-record cell))
   (max (bounding-rectangle-height cell)
        (cell-min-height cell)))
 
 (defmethod block-adjust-cell* (cell (block column-output-record)
                                cell-coordinate common-coordinate
                                size common-size)
-  (declare #-cmu (ignore block)
-           (type cell-output-record cell)
+  (declare (type cell-output-record cell)
            (type coordinate cell-coordinate common-coordinate size common-size))
   (adjust-cell* cell
                 common-coordinate cell-coordinate
@@ -332,10 +327,10 @@ skips intervening non-table output record structures."))
                              (record-type 'empty-standard-table-output-record)
                              &allow-other-keys)
                             &body body)
+  (declare (ignore multiple-columns-x-spacing-supplied-p
+		   multiple-columns-x-spacing)) ; FIXME!!! Possible recomputation
   (when (eq stream t)
     (setq stream '*standard-output*))
-  (unless multiple-columns-x-spacing-supplied-p
-    (setq multiple-columns-x-spacing x-spacing)) ; FIXME!!! Possible recomputation
   (let ((table (gensym))
         (cursor-old-x (gensym))
         (cursor-old-y (gensym)))
@@ -432,7 +427,7 @@ list BLOCK-INFOS or vector SIZES."))
 
 (defmethod adjust-table-cells ((table-record empty-standard-table-output-record)
                                stream)
-  (declare (ignore #-cmu table-record stream))
+  (declare (ignore stream))
   ()) ; Nothing to do
 
 ;;; Table of rows
@@ -441,6 +436,7 @@ list BLOCK-INFOS or vector SIZES."))
 
 (defmethod add-output-record :after (child
                                      (record table-of-rows-output-record))
+  (declare (ignore child))
   (when (column-output-record-p record)
     (error "Trying to add a column into a row table.")))
 
@@ -451,7 +447,7 @@ list BLOCK-INFOS or vector SIZES."))
 
 (defmethod table-equalize-column-widths ((table table-of-rows-output-record)
                                          block-infos widths)
-  (declare (ignore #-cmu table block-infos)
+  (declare (ignore block-infos)
            (type (vector coordinate) widths))
   (let ((max-width
          (loop :for w :across widths
@@ -465,6 +461,7 @@ list BLOCK-INFOS or vector SIZES."))
 
 (defmethod add-output-record :after (child
                                      (record table-of-columns-output-record))
+  (declare (ignore child))
   (when (row-output-record-p record)
     (error "Trying to add a column into a row table.")))
 
@@ -475,7 +472,7 @@ list BLOCK-INFOS or vector SIZES."))
 
 (defmethod table-equalize-column-widths ((table table-of-columns-output-record)
                                          block-infos heights)
-  (declare (ignore #-cmu table heights)
+  (declare (ignore heights)
            (type list block-infos))
   (let ((max-width
           (loop :for i :in block-infos

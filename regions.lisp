@@ -4,7 +4,7 @@
 ;;;   Created: 1998-12-02 19:26
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: regions.lisp,v 1.12 2001/07/17 05:50:51 gilbert Exp $
+;;;       $Id: regions.lisp,v 1.13 2001/12/04 16:19:19 mikemac Exp $
 ;;; --------------------------------------------------------------------------------------
 ;;;  (c) copyright 1998,1999,2001 by Gilbert Baumann
 ;;;  (c) copyright 2001 by Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
@@ -735,6 +735,7 @@
                     (sqrt (/ 1 a)) 0))
           (t
            (let (x y)
+	     #+:excl(declare (ignore y))
              (values
               ;; Solution number  1 
               (SETQ X (- (/ C (SQRT (+ (- (* (* C C) (SQRT (+ (* C C) (* B B) (- (* 2 A B)) (* A A)))))

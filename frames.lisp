@@ -441,6 +441,7 @@ If there are no named panes, only the single, top level pane is returned."))
 				    left top right bottom width height save-under
 				    frame-class
 			       &allow-other-keys)
+  (declare (ignore enable state left top right bottom width height save-under))
   (setq options (loop for (key value) on options by #'cddr
 		    if (not (member key '(:pretty-name :frame-manager :enable :state
 					  :left :top :right :bottom :width :height :save-under

@@ -346,7 +346,7 @@
                               start end
                               align-x align-y
                               toward-x toward-y transform-glyphs)
-  (declare (ignore toward-x toward-y transform-glyphs))
+  (declare (ignore align-x align-y toward-x toward-y transform-glyphs))
   (setq string (if (characterp string)
                    (make-string 1 :initial-element string)
                    (subseq string start end)))
