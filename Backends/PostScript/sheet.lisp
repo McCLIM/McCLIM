@@ -64,7 +64,11 @@
              (format file-stream "%%Title: ~A~%" title)
              (format file-stream "%%For: ~A~%" for)
              (format file-stream "%%LanguageLevel: 2~%")
-             (format file-stream "%%DocumentMedia: ~A~%" paper)
+	     (multiple-value-bind (width height)
+		 (paper-size paper)
+	       (format file-stream "%%BoundingBox: 0 0 ~A ~A~%" width height)
+	       (format file-stream "%%DocumentMedia: ~A ~A ~A 0 () ()~%"
+		       paper width height))
              (format file-stream "%%Orientation: ~A~%"
                      (ecase orientation
                        (:portrait "Portrait")
