@@ -472,10 +472,17 @@
                                          (present item 'generic-function :stream stream))
                         :move-cursor T))))))
 
-
-
-
-
+(define-command (com-show-applicable-methods
+		 :command-table dev-commands)
+    ((gf 'generic-function :prompt "a generic function")
+     (arguments '(sequence class-name)))
+  (let* ((gf-object (fdefinition gf))
+	 (arg-classes (map 'list #'find-class arguments)))
+    (multiple-value-bind (result valid)
+	(clim-mop:compute-applicable-methods-using-classes gf-object
+							   arg-classes)
+      (when valid
+	(pprint result)))))
 
 ;;; Filesystem Commands
 ;;; -------------------

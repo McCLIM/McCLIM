@@ -38,9 +38,9 @@
   (:import-from :ccl #:eql-specializer)
   #-openmcl-partial-mop
   (:import-from :ccl #:class-prototype #:class-precedence-list
-				#:class-direct-superclasses #:generic-function-methods
-				#:method-specializers #:compute-applicable-methods
-				#:funcallable-standard-class #:slot-definition-name)
+		#:class-direct-superclasses #:generic-function-methods
+		#:method-specializers #:compute-applicable-methods
+		#:funcallable-standard-class #:slot-definition-name)
   #+openmcl-partial-mop
   (:export #:validate-superclass #:class-finalized-p
 		   #:finalize-inheritance #:class-prototype
@@ -58,19 +58,19 @@
 		   #:class-slots)
   #-openmcl-partial-mop
   (:export #:validate-superclass #:class-finalized-p
-		   #:finalize-inheritance ccl::class-prototype
-		   ccl::class-precedence-list ccl::class-direct-superclasses
-		   ccl::generic-function-methods ccl::method-specializers
-		   ccl::compute-applicable-methods
-		   ccl::funcallable-standard-class
-		   #:slot-definition-name
-		   #:eql-specializer
-		   #:eql-specializer-object
-		   #:intern-eql-specializer
-		   ccl::ensure-class
-		   #:compute-applicable-methods-using-classes
-		   #:extract-specializer-names #:extract-lambda-list
-		   #:class-slots))
+	   #:finalize-inheritance ccl::class-prototype
+	   ccl::class-precedence-list ccl::class-direct-superclasses
+	   ccl::generic-function-methods ccl::method-specializers
+	   ccl::compute-applicable-methods
+	   ccl::funcallable-standard-class
+	   #:slot-definition-name
+	   #:eql-specializer
+	   #:eql-specializer-object
+	   #:intern-eql-specializer
+	   ccl::ensure-class
+	   #:compute-applicable-methods-using-classes
+	   #:extract-specializer-names #:extract-lambda-list
+	   #:class-slots))
 
 
 (in-package :clim-mop)
@@ -156,13 +156,12 @@
 	 
   
 #-openmcl-partial-mop
-(progn
-  (in-package :ccl)
-
-  (let ((*warn-if-redefine-kernel* NIL))
-	(defun %defclass (class-name superclasses instance-slotds class-slotds doc
-								 default-initargs metaclass
-								 &key primary-p metaclass-opts)
+(in-package :ccl)
+#-openmcl-partial-mop
+(let ((*warn-if-redefine-kernel* NIL))
+(defun %defclass (class-name superclasses instance-slotds class-slotds doc
+		  default-initargs metaclass
+		  &key primary-p metaclass-opts)
 	  (if (null superclasses)
 		  (setq superclasses (list 'standard-object))
 		(setq superclasses (copy-list superclasses)))
@@ -206,5 +205,5 @@
 		(when doc (setf (documentation class 'type) doc))
 		(record-source-file class-name 'class)
 		(initialize-class class t)
-		class))))
+		class)))
 

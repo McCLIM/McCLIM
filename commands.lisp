@@ -842,15 +842,23 @@
 					     :acceptably nil)
 			  stream)))))
 
-;;; Placeholder; yuck.
-
+;;; Assume that stream is a goatee-based input editing stream for the moment...
+;;;
 (defun command-line-read-remaining-arguments-for-partial-command
     (command-table stream partial-command start-position)
   (declare (ignore start-position))
-  ;; FIXME error checking needed here? -- moore
-  (funcall (partial-parser (gethash (command-name partial-command)
-				    *command-parser-table*))
-	   command-table stream partial-command))
+  (let ((interactor (encapsulating-stream-stream stream))
+	(editor-record (goatee::area stream)))
+    (multiple-value-bind (x1 y1 x2 y2)
+	(bounding-rectangle* editor-record)
+      ;; Start the dialog below the editor area
+      (letf (((stream-cursor-position interactor) (values x1 y2)))
+	(fresh-line interactor)
+	;; FIXME error checking needed here? -- moore
+	(funcall (partial-parser (gethash (command-name partial-command)
+					  *command-parser-table*))
+		 command-table interactor partial-command)))))
+
 
 (defparameter *command-parser* #'command-line-command-parser)
 
