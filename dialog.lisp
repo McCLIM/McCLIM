@@ -311,11 +311,13 @@ is called. Used to determine if any editing has been done by user")))
 				   :record-type 'av-text-record)
 		   (with-output-as-presentation
 		       (stream query-identifier 'selectable-query)
-		     (setq editing-stream
-			   (make-instance 'standard-input-editing-stream
-					  :stream stream
-					  :cursor-visibility nil
-					  :background-ink +grey90+))))))
+		     (surrounding-output-with-border
+		         (stream :shape :drop-shadow :move-cursor t)
+		       (setq editing-stream
+			     (make-instance 'standard-input-editing-stream
+					    :stream stream
+					    :cursor-visibility nil
+					    :background-ink +grey90+)))))))
     (when editing-stream
       (setf (editing-stream record) editing-stream))
     record))

@@ -80,7 +80,13 @@ contains:
      streams) 
 
 1. Get the file "clx-library.x86f" from an appropriate site
-   (Debian, or cons.org, according to the system you are running)
+   (Debian, or cons.org, according to the system you are running). In
+   recent distributions you should be able to type:
+
+   (load "library:subsystems/gray-streams-library")
+   or
+   (require :gray-streams)
+   Otherwise, folow the directions below.
 
 2. Get the mk:defsystem from (say) sourceforge.net (the file is called
    defsystem.lisp
@@ -90,8 +96,7 @@ contains:
 4. Get the two files gray-streams-class.lisp and gray-streams.lisp
    from some source repository of CMU CL
 
-5. Compile the gray-streams files in that order (don't load them
-   first)
+5. Compile and load the gray-streams files in that order
 
 6. Run a fresh Lisp
 

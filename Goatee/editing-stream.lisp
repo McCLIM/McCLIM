@@ -60,7 +60,7 @@
       (stream-cursor-position stream)
     (let ((max-width (- (stream-text-margin stream) cx)))
       ;; XXX hack to give area a fixed size rectangle that can be highlighted
-      (with-output-recording-options (stream :draw nil :record t)
+      (with-output-recording-options (stream :draw t :record t)
 	(draw-rectangle* stream cx cy
 			 (+ cx max-width) (+ cy (stream-line-height stream))
 			 :ink background-ink
@@ -78,8 +78,8 @@
 		     :max-width max-width
 		     :allow-other-keys t
 		     args)))
-      
       (stream-add-output-record stream (area obj))
+      (redisplay-area (area obj))
       ;; initialize input-editing-stream state to conform to our reality
       (make-input-editing-stream-snapshot obj (area obj)))))
 

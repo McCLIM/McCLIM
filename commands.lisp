@@ -193,7 +193,9 @@
 	      ((stringp menu)
 	       menu)
 	      ((eq menu t)
-	       name)
+	       (if (stringp name)
+		   name
+		   (command-name-from-symbol command-name)))
 	      ((consp menu)
 	       (values (car menu) (cdr menu))))
       (let* ((item (if menu

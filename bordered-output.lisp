@@ -37,21 +37,30 @@
 
 (defun invoke-surrounding-output-with-border (stream cont
                                               &rest drawing-options
-                                              &key (shape :rectangle) (move-cursor t))
+                                              &key (shape :rectangle)
+					      (move-cursor t))
   (with-sheet-medium (medium stream)
-    (let ((record (with-new-output-record (stream)
-                    (funcall cont stream))))
-      (with-bounding-rectangle* (left top right bottom) record
-        (with-identity-transformation (medium)
-	  (with-keywords-removed (drawing-options (:shape :move-cursor))
-	    (apply (or (gethash shape *border-types*)
-		       (error "Border shape ~S not defined." shape))
-		   :stream stream
-		   :record record
-		   :left left :top top
-		   :right right :bottom bottom
-		   :allow-other-keys t
-		   drawing-options)))))))
+    (let ((bbox-record
+	   (with-new-output-record (stream)
+	     (let ((record (with-new-output-record (stream)
+			     (funcall cont stream))))
+	       (with-bounding-rectangle* (left top right bottom) record
+		 (with-identity-transformation (medium)
+		   (with-keywords-removed
+		       (drawing-options (:shape :move-cursor))
+		     (apply (or (gethash shape *border-types*)
+				(error "Border shape ~S not defined." shape))
+			    :stream stream
+			    :record record
+			    :left left :top top
+			    :right right :bottom bottom
+			    :allow-other-keys t
+			    drawing-options))))))))
+      (when move-cursor
+	(with-bounding-rectangle* (left top right bottom) bbox-record
+	  (declare (ignore left top))
+	  (setf (stream-cursor-position stream) (values right bottom))))
+      bbox-record)))
 
 (defmacro define-border-type (shape arglist &body body)
   (check-type arglist list)

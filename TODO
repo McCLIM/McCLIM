@@ -10,8 +10,6 @@ TBM:20031112:002300
 
     make-design-from-output-record
 
-    surrounding-output-with-border - :move-cursor
-
     filling-output - :after-line-break-initially
 
     (setf* pointer-position)
@@ -74,6 +72,9 @@ RS:20030805:101708
     each pane to decide when it wants the input focus. 
 
 ======================  Resolved issues ======================
+TBM:20031113:234700
+    surrounding-output-with-border - :move-cursor
+
 RS:20030805:102038
     Output recording is broken for records that inherit from
     coord-seq-mixin.  Contrary to comments in the code, the coordinate

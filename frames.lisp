@@ -406,6 +406,8 @@ input focus. This is a McCLIM extension."))
                              (setf (pane-needs-redisplay pane) nil)))))
                    (frame-top-level-sheet frame)))
 
+(defparameter +default-prompt-style+ (make-text-style :fix :italic :normal))
+
 (defmethod default-frame-top-level
     ((frame application-frame)
      &key (command-parser 'command-line-command-parser)
@@ -414,38 +416,49 @@ input focus. This is a McCLIM extension."))
 	   'command-line-read-remaining-arguments-for-partial-command)
 	  (prompt "Command: "))
   (loop
-    (let ((*standard-input*  (frame-standard-input frame))
+   (let* ((*standard-input*  (frame-standard-input frame))
 	  (*standard-output* (frame-standard-output frame))
 	  (*query-io* (frame-query-io frame))
 	  (*pointer-documentation-output* (frame-pointer-documentation-output
 					   frame))
 	  ;; during development, don't alter *error-output*
-          ;; (*error-output* (frame-error-output frame))
+	  ;; (*error-output* (frame-error-output frame))
 	  (*command-parser* command-parser)
 	  (*command-unparser* command-unparser)
 	  (*partial-command-parser* partial-command-parser)
-	  (prompt-style (make-text-style :fix :italic :normal)))
-      (redisplay-changed-panes frame)
-      (if *standard-input*
-          ;; We don't need to turn the cursor on here, as Goatee has its own
-          ;; cursor which will appear. In fact, as a sane interface policy,
-          ;; leave it off by default, and hopefully this doesn't violate the spec.
-          (progn            
-            (setf (cursor-visibility (stream-text-cursor *standard-input*)) nil)
-            (when (and prompt (typep *standard-input* 'interactor-pane))
-              (with-text-style (*standard-input* prompt-style)
-                (if (stringp prompt)
-                    (write-string prompt *standard-input*)
-                  (funcall prompt *standard-input* frame))
-                (finish-output *standard-input*)))
-            (let ((command (read-frame-command frame)))
-	      (when (typep *standard-input* 'interactor-pane)
-		(fresh-line *standard-input*))
-              (when command
-                (execute-frame-command frame command))
-	      (when (typep *standard-input* 'interactor-pane)
-		(fresh-line *standard-input*))))
-        (simple-event-loop)))))
+	  (interactorp (typep *query-io* 'interactor-pane)))
+     (restart-case
+	 (progn
+	   (redisplay-changed-panes frame)
+	   (if *query-io*
+	       ;; We don't need to turn the cursor on here, as Goatee has its own
+	       ;; cursor which will appear. In fact, as a sane interface policy,
+	       ;; leave it off by default, and hopefully this doesn't violate the
+	       ;; spec.  
+	       (progn            
+		 (setf (cursor-visibility (stream-text-cursor *query-io*))
+		       nil)
+		 (when (and prompt interactorp)
+		   (with-text-style (*query-io* +default-prompt-style+)
+		     (if (stringp prompt)
+			 (write-string prompt *query-io*)
+			 (funcall prompt *query-io* frame))
+		     (finish-output *query-io*)))
+		 (let ((command (read-frame-command frame :stream *query-io*)))
+		   (when interactorp
+		     (fresh-line *query-io*))
+		   (when command
+		     (execute-frame-command frame command))
+		   (when interactorp
+		     (fresh-line *query-io*))))
+	       (simple-event-loop)))
+       (abort ()
+	 :report "Return to application command loop"
+	 (if interactorp
+	     (format *query-io* "~&Command aborted.~&")
+	     (beep)))))))
+
+
 
 
 (defmethod read-frame-command ((frame application-frame)
