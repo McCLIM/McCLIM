@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.85 2002/06/25 02:01:41 moore Exp $
+;;; $Id: panes.lisp,v 1.86 2002/06/26 02:11:29 gilbert Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -1519,16 +1519,16 @@ During realization the child of the spacing will have as cordinates
   (with-slots (viewport hscrollbar vscrollbar) pane
     (let ((scrollee (first (sheet-children viewport))))
       (scroll-extent scrollee
-                     (gadget-value hscrollbar)
+                     (if hscrollbar (gadget-value hscrollbar) 0)
                      new-value))))
 
 (defmethod scroller-pane/horizontal-drag-callback ((pane scroller-pane) new-value)
-  "Callback for the vertical scroll-bar of a scroller-pane."
+  "Callback for the horizontal scroll-bar of a scroller-pane."
   (with-slots (viewport hscrollbar vscrollbar) pane
     (let ((scrollee (first (sheet-children viewport))))
       (scroll-extent scrollee
                      new-value
-                     (gadget-value vscrollbar)))))
+                     (if vscrollbar (gadget-value vscrollbar) 0)))))
 
 (defmethod scroller-pane/update-scroll-bars ((pane scroller-pane))
   (with-slots (viewport hscrollbar vscrollbar) pane
@@ -1812,9 +1812,8 @@ During realization the child of the spacing will have as cordinates
 
 (defmethod allocate-space ((pane label-pane) width height)
   (multiple-value-bind (right top left bottom) (label-pane-margins pane)
-    (declare (ignorable right top left bottom))
     (when (sheet-children pane)
-      (with-bounding-rectangle* (x1 y1 x2 y2) (values 0 0 width height)
+      (multiple-value-bind (x1 y1 x2 y2) (values 0 0 width height)
         (move-sheet (first (sheet-children pane))
                     (+ x1 left) (+ y1 top))
         (allocate-space (first (sheet-children pane))
