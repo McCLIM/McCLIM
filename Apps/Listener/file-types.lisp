@@ -238,17 +238,19 @@
             (read-extensions string pos)))))
 
 (defun read-mime-type (string &optional (start 0))
+  (declare (optimize (debug 3)))
   (setf start (skip-whitespace string start))
   (let* ((pos-slash (position #\/ string  :test #'char= :start start))
-         (pos-end ;(position #\space string :test #'char= :start (1+ pos-slash))
-                  (position-if (lambda (c) (member c '(#\space #\tab)))
-                               string  :start (1+ pos-slash)))
+         (pos-end (position-if (lambda (c) (member c '(#\space #\tab)))
+                               string  :start (if pos-slash (1+ pos-slash) start)))
          (media-type (string-upcase (subseq string start pos-slash)))
          (media-type-sym (intern media-type (find-package :clim-listener)))
-         (subtype (string-upcase (subseq string (1+ pos-slash) pos-end)))
-         (full-symbol (intern (concatenate 'string media-type "/" subtype)
+         (subtype (when pos-slash (string-upcase (subseq string (1+ pos-slash) pos-end))))
+         (full-symbol (intern (if subtype
+                                  (concatenate 'string media-type "/" subtype)
+                                media-type)
                               (find-package :clim-listener))))
-    (values media-type-sym full-symbol (intern subtype) pos-end)))
+    (values media-type-sym full-symbol (when subtype (intern subtype)) pos-end)))
 
 ;;; PARSE-NETSCAPE-MIME-TYPE and PARSE-STANDARD-MIME-TYPE return the various
 ;;; properties of each type in a hash table. The primary ones of concern are
@@ -331,8 +333,7 @@
               (exts (gethash :exts elt)))
           (eval `(define-mime-type (,media-type ,subtype)
                    (:extensions ,@exts))))
-      #+nil(format T "Ignoring ~W, unknown media type.~%" (gethash :type elt))))
-)
+      #+nil(format T "Ignoring ~W, unknown media type.~%" (gethash :type elt)))))
   
 (defun parse-mime-types-file (pathname)
   (mapcar (lambda (x) (process-mime-type (parse-mt-elt x)))
@@ -376,13 +377,7 @@
 
 ;;; This is not a mail client, so I assume I don't need most of this stuff.
 
-;(defun
-
-(defun remove-surrounding-whitespace (string)
-  (let ((start (position-if (lambda (c) (not (eql c #\space))) string))
-        (end   (position-if (lambda (c) (not (eql c #\space))) string :from-end t)))
-    (when (and start end)
-      (subseq string start (1+ end)))))
+(defparameter *whitespace* '(#\Space #\Tab #\Newline #\Return))
 
 #+nil  ;; Oops, forgot to parse quote characters.
 (defun read-mailcap-field (string &optional (start 0))
@@ -391,7 +386,7 @@
    new position index (or nil if out of input)."
   (if (and start (< start (length string)))
     (let ((end-pos (or (position #\; string :start start) (length string))))
-      (values (remove-surrounding-whitespace (subseq string start end-pos))
+      (values (string-trim *whitespace* (subseq string start end-pos))
               (1+ end-pos)))
     (values nil nil)))
 
@@ -407,7 +402,7 @@
               (T (push c chars)))
         (incf index)))
     (values 
-     (remove-surrounding-whitespace (concatenate 'string (nreverse chars)))
+     (string-trim *whitespace* (concatenate 'string (nreverse chars)))
      (if (>= (1+ index) (length string)) nil (1+ index)))))
 
 (defun parse-mt-field (string)
@@ -455,11 +450,10 @@
                        (parse-mailcap-entry x)))
           (read-the-lines pathname)))
 
-;;; These functions invoke the parsing of the mime.types and mailcap files,
-;;; and bring the data into the system as needed.
+;;; These functions invoke the parsing of the mime.types and mailcap files
 
 ;; Search paths - in addition to these, the user's home directory will
-;; be checked.
+;; be checked. 
 
 (defparameter *mime.types-search-path*
   '(#p"/etc/mime.types" #p"/usr/etc/mime.types" #p"/usr/local/etc/mime.types"))
@@ -486,7 +480,7 @@
 
 
 ;; Running external viewers..
-;; I don't have the quoting for things quite right, I can't
+;; FIXME: I don't have the quoting for things quite right, I can't
 ;; seem to play any mp3s with quotes in their titles. (how embarassing!)
 
 (defun quote-shell-characters (string)

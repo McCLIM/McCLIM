@@ -206,7 +206,7 @@
 ;;; CLOS introspection commands
 
 (defun class-grapher (stream class inferior-fun)
-  "Displays a class and its superclasses on stream using graph formatting."
+  "Does the graphing for Show Class Superclasses and Subclasses commands"
   (let ((normal-ink +foreground-ink+)
         (arrow-ink  (make-rgb-color 0.72 0.72 0.72))	
 	(text-style (make-text-style :fixed :roman :normal)))
@@ -278,7 +278,7 @@
      (with-text-family (T :sans-serif)
        (format T ,@args))))   
 
-;; Oops, I'm ignoring STREAM.
+;; Oops, I'm ignoring STREAM. Fix this.
 (defun present-slot (slot class &key (stream *standard-output*))
   "Formats a slot definition into a table row."
   (let* ((name (clim-mop:slot-definition-name slot))
@@ -360,7 +360,6 @@
             (< (position (earliest-slot-definer a class) cpl)
                (position (earliest-slot-definer b class) cpl))))))
 
-
 (defun print-slot-table-heading ()
   (formatting-row (T)
     (dolist (name '("Slot name" "Initargs" "Initform" "Accessors"))
@@ -383,8 +382,7 @@
 
 (defun present-the-slots (class)  
   (let* ((slots (class-sorted-slots class))
-         (instance-slots (remove-if (lambda (x) (not (eq :instance (clim-mop:slot-definition-allocation x))))
-                                    slots))
+         (instance-slots (remove-if (lambda (x) (not (eq :instance (clim-mop:slot-definition-allocation x)))) slots))
          (other-slots (set-difference slots instance-slots))
          (allocation-types (remove-duplicates (mapcar #'clim-mop:slot-definition-allocation other-slots))))
     (when other-slots
@@ -440,7 +438,7 @@
       (setf gfs (append gfs (x-specializer-direct-generic-functions x))))
     (remove-duplicates gfs)))
 
-;; Oops, guess this isn't really comparing symbols anymore.
+;; Oops, guess this isn't really comparing symbols anymore. What to call it, then?
 (defun symbol< (a b)
   (when (and (consp a)
              (second a)
@@ -596,7 +594,7 @@
            (italic (T) (format T "~&~A does not exist.~%" pathname)))
           ((not (directoryp pathname))
            (format T "~&~A is not a directory.~%" pathname))
-          (T (change-directory pathname)) )))
+          (T (change-directory (merge-pathnames pathname))) )))
 
 (define-command (com-up-directory :name "Up Directory"
                                   :command-table dev-commands)

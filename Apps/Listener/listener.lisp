@@ -63,7 +63,7 @@
          (memusage #+cmu (lisp::dynamic-usage)
                    #+sbcl  (sb-kernel:dynamic-usage)
                    #+lispworks (getf (system:room-values) :total-allocated)
-                   #-(or cmu sbcl lispworks) nil))         
+                   #-(or cmu sbcl lispworks) nil))
     (with-text-family (T :serif)
       (formatting-table (T :x-spacing '(3 :character))
         (formatting-row (T)                        
@@ -82,6 +82,8 @@
                   (format T "  (~D deep)" (length *directory-stack*)))))
           ;; argh, I really want this on the right. Neither the table nor item
           ;; formatters want to do it that way, though. So we kludge it below.. =/
+          ;; Although the CLIM spec says the item formatter should try to fill
+          ;; the available width..
             #+NIL
             (cell (:center)
               (when (numberp memusage)
@@ -100,12 +102,11 @@
 ;; Why am I doing this?
 ;; The display function get stored in the application frame. If I happen to
 ;; change and recompile this display function, it doesn't take effect until
-;; I restart the app, and that's no good at all.
+;; I restart the app, and that's a real pain when hacking.
 
 (defun display-wholine (frame pane)
   (really-display-wholine pane))
     
-
 
 ;;; Listener application frame
 (define-application-frame listener ()
@@ -125,9 +126,11 @@
 
 ;;; Lisp listener command loop
 
-;; * Moore says that ACCEPT '(OR COMMAND FORM) is supposed to work, so I need
-;;   to experiment with that at some point. It could save me from having to 
-;;   reimplement half of accept as part of the toplevel.
+
+;;  ACCEPT '(OR COMMAND FORM) should now work work, so I need to experiment
+;;  with that at some point. It could save me from having to reimplement half
+;;  of accept as part of the toplevel. This should allow command completion to
+;;  work properly again.
 
 ; Now that I have LISTENER-TOP-LEVEL, should I move the binding of the restart
 ; inside there? Or should I move this inside McCLIM?
