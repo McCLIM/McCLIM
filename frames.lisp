@@ -252,7 +252,7 @@ FRAME-EXIT condition."))
 
 (defun find-pane-of-type (panes type)
   (find-pane-if #'(lambda (pane) (typep pane type)) panes))
-	      
+
 (defmethod frame-current-panes ((frame application-frame))
   (find-pane-if #'(lambda (pane) (pane-name pane))
                 (frame-current-layout frame)))
@@ -343,8 +343,10 @@ FRAME-EXIT condition."))
 				    (eq (pane-display-time pane) :command-loop)
 				    (pane-display-function pane))
 			       (let ((func (pane-display-function pane)))
-				 (window-clear pane)
-				 (funcall func frame pane))))
+				 (window-erase-viewport pane)
+				 (funcall func frame pane) ; XXX other arguments
+                                        ; XXX incremental redisplay
+                                 )))
 		       (frame-top-level-sheet frame))
       (when *standard-input*
 	(setf (cursor-visibility (stream-text-cursor *standard-input*)) t)
@@ -353,7 +355,7 @@ FRAME-EXIT condition."))
 	    (if (stringp prompt)
 		(write-string prompt *standard-input*)
 	      (funcall prompt *standard-input* frame))
-	    (finish-output *standard-input*)))	  
+	    (finish-output *standard-input*)))
 	(let ((command (read-frame-command frame)))
 	  (fresh-line *standard-input*)
 	  (when command
