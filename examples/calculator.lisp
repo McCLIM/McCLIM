@@ -84,11 +84,16 @@
 		 (frame-panes frame)))
   (loop (event-read (frame-pane frame))))
      
-(defun make-button (label operator)
+(defun make-button (label operator 
+		    &key width height
+		         max-width min-width
+			 max-height min-height)
   (make-pane 'push-button-pane
 	     :label label
 	     :activate-callback operator
-	     :width 50 :height 50))
+	     :width width :height height
+	     :max-width max-width :min-width min-width
+	     :max-height max-height :min-height min-height))
 
 (define-application-frame calculator ()
   ((text-field :initform nil)
@@ -100,23 +105,23 @@
    (divide   (make-button "/" (queue-operator #'round)))
    (result   (make-button "=" #'do-operation))
    (one      (make-button "1" (queue-number 1)))
-   (two      (make-button "2" (queue-number  2)))
-   (three    (make-button "3" (queue-number  3)))
-   (four     (make-button "4" (queue-number  4)))
-   (five     (make-button "5" (queue-number  5)))
-   (six      (make-button "6" (queue-number  6)))
-   (seven    (make-button "7" (queue-number  7)))
-   (eight    (make-button "8" (queue-number  8)))
-   (nine     (make-button "9" (queue-number  9)))
-   (zero     (make-button "0" (queue-number  0)))
-   (screen   :text-field :value "0" :width 200 :height 50)
-   (ac       (make-button "AC" #'initac))
-   (ce       (make-button "CE" #'initce)))
+   (two      (make-button "2" (queue-number 2)))
+   (three    (make-button "3" (queue-number 3)))
+   (four     (make-button "4" (queue-number 4)))
+   (five     (make-button "5" (queue-number 5)))
+   (six      (make-button "6" (queue-number 6)))
+   (seven    (make-button "7" (queue-number 7)))
+   (eight    (make-button "8" (queue-number 8)))
+   (nine     (make-button "9" (queue-number 9)))
+   (zero     (make-button "0" (queue-number 0)))
+   (screen   :text-field :value "0")
+   (ac       (make-button "AC" #'initac :max-width 150))
+   (ce       (make-button "CE" #'initce :max-width 150)))
 
   (:layouts
-   (defaults (vertically ()
+   (defaults (vertically (:width 150 :height 310)
 	       screen
-	       (horizontally () ac ce)
+	       (horizontally (:height 50) ac ce)
 	       (tabling ()
 		 (list one two plus)
 		 (list three four dash)
