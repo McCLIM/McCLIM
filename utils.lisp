@@ -25,7 +25,9 @@
   #+clisp (sys::getenv (string string))
   #+sbcl (sb-ext::posix-getenv string)
   #+openmcl (ccl::getenv string)
-  #-(or excl cmu clisp sbcl openmcl) (error "GET-ENVIRONMENT-VARIABLE not implemented"))
+  #+lispworks (lw:environment-variable string)
+  #-(or excl cmu clisp sbcl openmcl lispworks)
+  (error "GET-ENVIRONMENT-VARIABLE not implemented"))
 
 (defun last1 (list)
   "Last element of LIST."

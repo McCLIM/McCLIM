@@ -78,6 +78,7 @@
   #+excl      "Lisp-Dep/fix-acl"
   #+sbcl      "Lisp-Dep/fix-sbcl"
   #+openmcl   "Lisp-Dep/fix-openmcl"
+  #+lispworks "Lisp-Dep/fix-lispworks"
   "package")
 
 (clim-defsystem (:clim-core :depends-on (:clim-lisp))
@@ -92,6 +93,7 @@
       #+sb-thread               "Lisp-Dep/mp-sbcl"
       #+excl                    "Lisp-Dep/mp-acl"
       #+openmcl                 "Lisp-Dep/mp-openmcl"
+      #+lispworks               "Lisp-Dep/mp-lw"
       #| fall back |#           "Lisp-Dep/mp-nil")
    "utils"
    "defresource"

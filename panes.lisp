@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.124 2003/07/26 17:37:57 gilbert Exp $
+;;; $Id: panes.lisp,v 1.125 2003/07/31 09:35:29 hefner1 Exp $
 
 (in-package :clim-internals)
 
@@ -236,10 +236,7 @@
                               :min-height min-height
                               :max-height max-height))
 
-(deftype spacing-value ()
-  ;; just for documentation
-  `(satisfies spacing-value-p))
-
+(eval-when (:compile-toplevel :load-toplevel :execute)
 (defun spacing-value-p (x)
   (or (integerp x)
       (and (consp x)
@@ -249,6 +246,11 @@
            (null (cddr x)))
       ;; For clim-stream-pane
       (eq x :compute)))
+)
+
+(deftype spacing-value ()
+  ;; just for documentation
+  `(satisfies spacing-value-p))
 
 ;;; PANES
 
@@ -1872,7 +1874,7 @@
   (let ((client (gadget-client scroll-bar)))
     (setf (gadget-value scroll-bar :invoke-callback t)
           (clamp
-            (- (gadget-value scroll-bar)
+           (- (gadget-value scroll-bar)
                (* direction
                   (funcall (if (eq (gadget-orientation scroll-bar) :vertical)
                                #'bounding-rectangle-height
@@ -1899,10 +1901,29 @@
 	parent
       nil)))
 
+
 (defmethod pane-viewport-region ((pane basic-pane))
   (let ((viewport (pane-viewport pane)))
     (if viewport
-	(sheet-region viewport))))
+        (sheet-region viewport))))
+
+
+;; This should be good to go, will uncomment later.. --Hefner
+#+NIL
+(defmethod pane-viewport-region ((pane basic-pane))
+  (let ((viewport (pane-viewport pane)))
+    (when viewport
+      (multiple-value-bind (width height)
+          (bounding-rectangle-size (sheet-region viewport))
+        (with-slots (viewport hscrollbar vscrollbar)
+            (pane-scroller pane)
+          ;; This is horrible, we ought to have some clear readers
+          ;; defined to retreive the viewport position. Or maybe
+          ;; we do, and I just can't find them. 
+          (let ((x1 (if hscrollbar (gadget-value hscrollbar) 0))
+                (y1 (if vscrollbar (gadget-value vscrollbar) 0)))
+            (make-bounding-rectangle x1 y1 (+ x1 width) (+ y1 height))))))))
+	
 
 (defmethod pane-scroller ((pane basic-pane))
   (let ((viewport (pane-viewport pane)))
@@ -2167,7 +2188,7 @@
   
 
 (defmethod window-refresh ((pane clim-stream-pane))
-  (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
+  (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)    
     (draw-rectangle* (sheet-medium pane) x1 y1 x2 y2 :ink +background-ink+))
   (stream-replay pane))
 
