@@ -72,14 +72,16 @@
   nil)
 
 (defun replay (record stream &optional region)
-  (let ((old-record-p (gensym)))
-    `(let ((,old-record-p (stream-recording-p ,stream)))
-       (when ,old-record-p
-	 (unwind-protect
-	     (progn
-	       (setf (stream-recording-p ,stream) nil)
-	       (replay-output-record ,record ,stream ,region))
-	   (setf (stream-recording-p ,stream) ,old-record-p))))))
+  (let ((old-record-p (stream-recording-p stream))
+	(old-draw-p (stream-drawing-p stream)))
+    (when old-record-p
+      (unwind-protect
+	  (progn
+	    (setf (stream-recording-p stream) nil
+		  (stream-drawing-p stream) t)
+	    (replay-output-record record stream region))
+	(setf (stream-recording-p stream) old-record-p
+	      (stream-drawing-p stream) old-draw-p)))))
 
 (defmethod replay-output-record ((record output-record) stream
 				 &optional region x-offset y-offset)
@@ -222,6 +224,16 @@
   (declare (ignore dx))
   (with-output-recording-options (stream :record nil)
     (call-next-method)))
+
+(defmethod repaint-sheet ((stream stream-output-history-mixin) region)
+  (replay (stream-output-history stream) stream region))
+
+(defmethod handle-event ((stream stream-output-history-mixin) (event window-repaint-event))
+  (repaint-sheet stream nil))
+
+(defmethod handle-event ((stream stream-output-history-mixin) (event pointer-button-press-event))
+  (with-slots (button x y) event
+    (format *debug-io* "button ~D pressed at ~D,~D~%" button x y)))
 
 
 ;;; standard-tree-output-history class
@@ -431,22 +443,23 @@
 						character text-style width height
 						new-baseline)
   (with-slots (strings baseline max-height end-x end-y) text-record
-    (setq baseline new-baseline
+    (if (and strings (eq (second (first (last strings))) text-style))
+	(vector-push-extend character (third (first (last strings))))
+      (setq strings (nconc strings (list (list end-x text-style (make-array 1 :initial-element character :element-type 'character :adjustable t :fill-pointer t))))))
+    (setq baseline (max baseline new-baseline)
 	  end-x (+ end-x width)
 	  end-y (max end-y new-baseline)
 	  max-height (max max-height height)
 	  )
-    (if (and strings (eq (second (first (last strings))) text-style))
-	(vector-push-extend character (third (first (last strings))))
-      (setq strings (nconc strings (list (list end-x text-style (make-array 1 :initial-element character :element-type 'character :adjustable t :fill-pointer t))))))
       ))
 
 (defmethod add-string-output-to-text-record ((text-record text-displayed-output-record)
 					     string start end text-style width height
 					     new-baseline)
+  (setq string (subseq string start end))
   (with-slots (strings baseline max-height end-x) text-record
-    (setq baseline new-baseline
-	  strings (nconc strings (list (list end-x text-style (subseq string start end))))
+    (setq baseline (max baseline new-baseline)
+	  strings (nconc strings (list (list end-x text-style (make-array (length string) :initial-contents string :element-type 'character :adjustable t :fill-pointer t))))
 	  end-x (+ end-x width)
 	  max-height (max max-height height)
 	  )))
@@ -455,9 +468,18 @@
 				 &optional region x-offset y-offset)
   (declare (ignore x-offset y-offset))
   (with-slots (strings baseline max-height start-x start-y) record
-    (loop for y = start-y
-	  for (x text-style string) in strings
-	  do (draw-text* stream string x y :text-style text-style :clipping-region region))))
+    (let ((old-medium (sheet-medium stream))
+	  (new-medium (make-medium (port stream) stream)))
+      (unwind-protect
+	  (progn
+	    (setf (sheet-medium stream) new-medium)
+	    (setf (medium-sheet new-medium) stream)
+	    (loop for y = (+ start-y baseline)
+		  for (x text-style string) in strings
+		  do (setf (medium-text-style new-medium) text-style)
+		     (draw-text* stream string x y
+				 :text-style text-style :clipping-region region)))
+	(setf (sheet-medium stream) old-medium)))))
 
 (defmethod output-record-start-cursor-position ((record text-displayed-output-record))
   (with-slots (start-x start-y) record
@@ -502,7 +524,7 @@
 	      (with-slots (start-x start-y end-x end-y) trec
 		(multiple-value-bind (cx cy) (stream-cursor-position stream)
 		  (setq start-x cx
-			start-y cy
+			start-y (+ cy (stream-vertical-spacing stream))
 			end-x cx
 			end-y cy))))
 	  (add-character-output-to-text-record trec char
@@ -522,7 +544,7 @@
 	    (with-slots (start-x start-y end-x end-y) trec
 	      (multiple-value-bind (cx cy) (stream-cursor-position stream)
 		(setq start-x cx
-		      start-y cy
+		      start-y (+ cy (stream-vertical-spacing stream))
 		      end-x cx
 		      end-y cy))))
 	(add-string-output-to-text-record trec string start end

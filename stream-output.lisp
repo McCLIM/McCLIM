@@ -68,6 +68,11 @@
 (defun cursorp (x)
   (typep x 'cursor))
 
+(defmethod print-object ((cursor cursor) stream)
+  (with-slots (x y) cursor
+    (print-unreadable-object (cursor stream :type t :identity t)
+      (format stream "~D ~D " x y))))
+
 (defmethod (setf cursor-visibility) :after (nv (cursor cursor))
   (if nv
       (display-cursor cursor :draw)

@@ -43,7 +43,8 @@
 		   (#\Backspace
 		    (setq char #\Delete)))
 		 (stream-write-char pane char)
-		 char))))
+		 char)
+	  else do (handle-event pane event))))
 
 (defmethod stream-unread-char ((pane standard-input-stream) char)
   (push char (stream-unread-chars pane)))
