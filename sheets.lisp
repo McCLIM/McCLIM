@@ -386,17 +386,6 @@ sheet-supports-only-one-child error to be signalled."))
 (defmethod map-sheet-rectangle*-to-child ((sheet sheet-parent-mixin) x1 y1 x2 y2)
   (transform-rectangle* (invert-transformation (sheet-transformation sheet)) x1 y1 x2 y2))
 
-(defmethod raise-sheet ((sheet sheet-parent-mixin))
-  (when (not (sheet-parent sheet))
-    (error 'sheet-is-not-child))
-  (raise-sheet-internal sheet (sheet-parent sheet)))
-
-(defmethod bury-sheet ((sheet sheet-parent-mixin))
-  (when (not (sheet-parent sheet))
-    (error 'sheet-is-not-child))
-  (bury-sheet-internal sheet (sheet-parent sheet)))
-
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; sheet leaf mixin
@@ -607,9 +596,6 @@ sheet-supports-only-one-child error to be signalled."))
 
 (defmethod dispatch-repaint ((sheet mute-repaint-mixin) region)
   (handle-repaint sheet nil region))
-
-(defmethod dispatch-repaint ((sheet standard-repaint-mixin) region)
-  (queue-repaint sheet region))
 
 (defmethod repaint-sheet ((sheet mute-repaint-mixin) region)
   (declare (ignorable sheet region))
