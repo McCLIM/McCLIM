@@ -33,12 +33,12 @@
 (defmethod make-pane-1 ((fm clx-frame-manager) (frame application-frame) type &rest args)
   (apply #'make-instance
 	 (or (find-symbol (concatenate 'string
-			    (symbol-name #:clx-) (symbol-name type))
+			    (symbol-name '#:clx-) (symbol-name type))
 			  :climi)
 	     (find-symbol (concatenate 'string
-			    (symbol-name #:clx-) (symbol-name type) (symbol-name #:-pane))
+			    (symbol-name '#:clx-) (symbol-name type) (symbol-name '#:-pane))
 			  :climi)
-	     (find-symbol (concatenate 'string (symbol-name type) (symbol-name #:-pane))
+	     (find-symbol (concatenate 'string (symbol-name type) (symbol-name '#:-pane))
 			  :climi)
 	     type)
 	 :frame frame
