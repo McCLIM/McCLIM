@@ -51,7 +51,8 @@
             (slot-value frame 'climi::top) y))))
 
 (defmethod adopt-frame :after ((fm clx-frame-manager) (frame menu-frame))
-  (xlib:map-window (sheet-direct-mirror (slot-value frame 'top-level-sheet))))
+  (when (sheet-enabled-p (slot-value frame 'top-level-sheet))
+    (xlib:map-window (sheet-direct-mirror (slot-value frame 'top-level-sheet)))))
 
 (defmethod adopt-frame :after ((fm clx-frame-manager) (frame application-frame))
   (let ((sheet (slot-value frame 'top-level-sheet)))
@@ -74,4 +75,5 @@
         (setf (xlib:window-event-mask mirror)
               (logior (xlib:window-event-mask mirror)
                       (xlib:make-event-mask :structure-notify)))
-        (xlib:map-window mirror) ))))
+        (when (sheet-enabled-p sheet)
+          (xlib:map-window mirror) )))))
