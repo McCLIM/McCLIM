@@ -406,7 +406,7 @@
   ((array :initarg :array)))
 
 (defun make-stencil (array)
-  (make-instance 'stencll :array array))
+  (make-instance 'stencil :array array))
 
 (defmethod pattern-width ((pattern stencil))
   (with-slots (array) pattern
