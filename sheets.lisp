@@ -1126,8 +1126,6 @@ very hard)."
           (t
            ;; Full sheet contents need to be redrawn, since transformation is no
            ;; translation.
-           ;; XXX has the sheet a medium? --GB
-           (medium-clear-area (sheet-medium sheet) 0 0 #x7FFF #x7FFF) 
            (dispatch-repaint sheet
                              (untransform-region native-transformation MR)) ))))
 
