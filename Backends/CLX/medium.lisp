@@ -181,14 +181,15 @@
 
 (defmacro with-CLX-graphics ((medium) &body body)
   `(let* ((port (port ,medium))
-	  (mirror (port-lookup-mirror port (medium-sheet ,medium)))
-	  (line-style (medium-line-style ,medium))
-	  (ink (medium-ink ,medium))
-	  (gc (medium-gcontext ,medium ink)))
-     line-style ink
-     (unwind-protect
-	 (progn ,@body)
-       #+ignore(xlib:free-gcontext gc))))
+          (mirror (port-lookup-mirror port (medium-sheet ,medium))))
+    (when mirror
+      (let* ((line-style (medium-line-style ,medium))
+             (ink (medium-ink ,medium))
+             (gc (medium-gcontext ,medium ink)))
+        line-style ink
+        (unwind-protect
+             (progn ,@body)
+          #+ignore(xlib:free-gcontext gc))))))
 
 
 ;;; Pixmaps
@@ -502,9 +503,13 @@
                     (:center (+ y baseline (- (floor text-height 2))))
                     (:baseline y)
                     (:bottom (+ y baseline (- text-height)))))))
-      (xlib:draw-glyphs mirror gc (round-coordinate x) (round-coordinate y) string
-                        :start start :end end
-                        :translate #'translate))))
+      (let ((x (round-coordinate x))
+            (y (round-coordinate y)))
+        (when (and (<= #x-8000 x #x7FFF)
+                   (<= #x-8000 y #x7FFF))
+          (xlib:draw-glyphs mirror gc x y string
+                            :start start :end end
+                            :translate #'translate))))))
 
 (defmethod medium-buffering-output-p ((medium clx-medium))
   t)
