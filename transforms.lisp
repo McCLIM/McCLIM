@@ -26,6 +26,12 @@
 
 (in-package :CLIM-INTERNALS)
 
+;;;; Changes
+
+;;;  When        Who    What
+;;; --------------------------------------------------------------------------------------
+;;;  2001-07-16  GB     added a cache for the inverse transformation
+
 ;; The CLIM 2 spec says:
 ;;    "Implementations are encouraged to allow transformations that are not
 ;;    numerically equal due to floating-point roundoff errors to be
@@ -66,7 +72,10 @@
    (myx :type coordinate)
    (myy :type coordinate)
    (tx  :type coordinate)
-   (ty  :type coordinate)))
+   (ty  :type coordinate)
+   (inverse :type (or nil standard-transformation)
+            :initform nil
+            :documentation "Cached inverse transformation.") ))
 
 
 #+:DEBUG
@@ -299,27 +308,33 @@
                            (+ (* d2 c1) (* e2 f1) f2) ))))
 
 (defmethod invert-transformation ((transformation standard-transformation))
-  (restart-case
-      (or
-       (handler-case (multiple-value-bind (mxx mxy myx myy tx ty) (get-transformation transformation)
-                       (let ((det (- (* mxx myy) (* myx mxy))))
-                         (if (coordinate= 0 det)
-                             nil
-                           (let ((/det (/ det)))
-                             (let ((mxx (* /det myy))
-                                   (mxy (* /det (- mxy)))
-                                   (myx (* /det (- myx)))
-                                   (myy (* /det mxx)))
-                               (make-transformation mxx mxy myx myy
-                                                    (+ (* -1 mxx tx) (* -1 mxy ty))
-                                                    (+ (* -1 myx tx) (* -1 myy ty))))))))
-         (error (c)
-           (error 'singular-transformation :why c :transformation transformation)))
-       (error 'singular-transformation :transformation transformation))
-    (use-value (value)
-        :report (lambda (sink)
-                  (format sink "Supply a transformation to use instead of the inverse."))
-      value)))       
+  (with-slots (inverse) transformation
+    (or inverse
+        (let ((computed-inverse
+               (restart-case
+                (or
+                 (handler-case (multiple-value-bind (mxx mxy myx myy tx ty) (get-transformation transformation)
+                                 (let ((det (- (* mxx myy) (* myx mxy))))
+                                   (if (coordinate= 0 det)
+                                       nil
+                                     (let ((/det (/ det)))
+                                       (let ((mxx (* /det myy))
+                                             (mxy (* /det (- mxy)))
+                                             (myx (* /det (- myx)))
+                                             (myy (* /det mxx)))
+                                         (make-transformation mxx mxy myx myy
+                                                              (+ (* -1 mxx tx) (* -1 mxy ty))
+                                                              (+ (* -1 myx tx) (* -1 myy ty))))))))
+                               (error (c)
+                                      (error 'singular-transformation :why c :transformation transformation)))
+                 (error 'singular-transformation :transformation transformation))
+                (use-value (value)
+                           :report (lambda (sink)
+                                     (format sink "Supply a transformation to use instead of the inverse."))
+                           value))))
+          (setf (slot-value computed-inverse 'inverse) transformation)
+          (setf inverse computed-inverse)
+          computed-inverse))))
 
 (defun compose-translation-with-transformation (transformation dx dy)
   (compose-transformations (make-translation-transformation dx dy) transformation))
