@@ -293,6 +293,11 @@ than one line of output."))
        (draw-text* (sheet-medium stream) line
                    cx (+ cy baseline)))))
 
+(defvar *inhibit-record-closing* nil
+  "This is bound by things like stream-write-char to inhibit gratuitous
+calls to stream-close-text-output-record during cursor movement. This is
+necessary to build output records with more than one character in them.") 
+
 (defmethod stream-write-char ((stream standard-extended-output-stream) char)
   (let* ((cursor       (stream-text-cursor stream))
 	 (visible      (cursor-visibility cursor))
@@ -373,7 +378,8 @@ than one line of output."))
 		 )))
 	    (stream-write-line stream (string char))
 	    (setq cx (+ cx width))
-	    (setf (stream-cursor-position stream) (values cx cy)))))))
+	    (let ((*inhibit-record-closing* T))
+	      (setf (stream-cursor-position stream) (values cx cy))))))))
     (if visible
 	(setf (cursor-visibility cursor) t))))
 
