@@ -17,6 +17,32 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
+;;; Long time TODO (if someone wants to implement them - you are welcome):
+;;;
+;;; - Menu item options: :items, :type.
+;;;
+;;; - VIEW.
+;;;
+;;; - Caching.
+;;;
+;;; - Default item.
+
+;;; Mid time TODO:
+;;;
+;;; - Menu item options: :active.
+;;;
+;;; - Documentation.
+;;;
+;;; - Menu position.
+
+;;; TODO:
+;;;
+;;; aborting
+;;; multiple columns
+;;; returned values
+;;; menu frame size
+;;; layout
+
 (in-package :CLIM-INTERNALS)
 
 (defgeneric menu-choose
@@ -58,24 +84,27 @@
       nil))
 
 (defun print-menu-item (menu-item &optional (stream *standard-output*))
-  (princ (menu-item-display menu-item) stream))
+  (let ((style (getf (menu-item-options menu-item) :style '(nil nil nil))))
+    (with-text-style (stream style)
+      (princ (menu-item-display menu-item) stream))))
 
 (defun draw-standard-menu
     (stream presentation-type items default-item
-     &key (item-printer #'print-menu-item)
+     &key item-printer
      max-width max-height n-rows n-columns x-spacing y-spacing row-wise
-     (cell-align-x :left) (cell-align-y :top))
+     cell-align-x cell-align-y)
   (declare (ignore default-item max-width max-height n-rows n-columns
                    row-wise)) ; FIXME!!!
-  (formatting-table (stream :x-spacing x-spacing
-                            :y-spacing y-spacing)
-    (dolist (item items)
-      (formatting-row (stream)
-        (formatting-cell (stream :align-x cell-align-x
-                                 :align-y cell-align-y)
-          (with-output-as-presentation (stream (menu-item-value item)
-                                               presentation-type)
-            (funcall item-printer item stream)))))))
+  (orf item-printer #'print-menu-item)
+  (format-items items
+                :stream stream
+                :printer item-printer
+                :presentation-type presentation-type
+                :x-spacing x-spacing
+                :y-spacing y-spacing
+                :cell-align-x cell-align-x
+                :cell-align-y (or cell-align-y :top)
+                :row-wise nil))
 
 
 (defmacro with-menu ((menu &optional associated-window
@@ -97,7 +126,7 @@
          (stream (make-pane-1 fm associated-window 'command-menu-pane))
          (frame (make-menu-frame stream)))
     (adopt-frame fm frame)
-    (change-space-requirements stream :width 100 :height 100)
+    (change-space-requirements stream :width 1 :height 1)
     (unwind-protect
          (progn
            (setf (stream-end-of-line-action stream) :allow
@@ -115,20 +144,38 @@
     (apply #'frame-manager-menu-choose frame-manager items args)))
 
 (defmethod frame-manager-menu-choose
-    (frame-manager items                ; XXX STANDARD-FRAME-MANAGER
+    (frame-manager items    ; XXX specialize on STANDARD-FRAME-MANAGER
      &key associated-window printer presentation-type
      (default-item nil default-item-p)
      text-style label cache unique-id id-test cache-value cache-test
      max-width max-height n-rows n-columns x-spacing y-spacing row-wise
      cell-align-x cell-align-y scroll-bars pointer-documentation)
-  (with-menu (menu)
-    (menu-choose-from-drawer menu (or presentation-type 'menu-item)
-                             (lambda (stream type)
-                               (draw-standard-menu stream type items
-                                                   (if default-item-p
-                                                       default-item
-                                                       (first items))))
-                             )))
+  (flet ((drawer (stream type)
+           (draw-standard-menu stream type items
+                               (if default-item-p
+                                   default-item
+                                   (first items))
+                               :item-printer (if printer
+                                                 (lambda (item stream)
+                                                   (funcall printer (menu-item-display item) stream))
+                                                 #'print-menu-item)
+                               :max-width max-width
+                               :max-height max-height
+                               :n-rows n-rows
+                               :n-columns n-columns
+                               :x-spacing x-spacing
+                               :y-spacing y-spacing
+                               :row-wise row-wise
+                               :cell-align-x cell-align-x
+                               :cell-align-y cell-align-y)))
+    (with-menu (menu)
+      (when text-style
+        (setf (medium-text-style menu) text-style))
+      (multiple-value-bind (object event)
+          (menu-choose-from-drawer menu (or presentation-type 'menu-item)
+                                   #'drawer)
+        ;; What is OBJECT? Assuming it is a menu item... - APD, 2002-08-03.
+        (values (menu-item-value object) object event)))))
 
 (defmethod menu-choose-from-drawer
     (menu presentation-type drawer
@@ -143,4 +190,10 @@
                                  :width x2
                                  :height y2
                                  :resize-frame t)))
-  (accept presentation-type :stream menu :prompt nil))
+  (handler-case
+      (with-input-context (presentation-type :override t)
+            (object type event)
+          (loop
+             (read-gesture :stream menu))
+        (t (values object event)))
+    (abort-gesture () (values nil))))
