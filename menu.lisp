@@ -116,9 +116,12 @@
 (defun create-substructure (sub-menu client)
   (let* ((frame *application-frame*)
 	 (manager (frame-manager frame))
+	 (command-table-name (slot-value sub-menu 'command-table))
 	 (items (mapcar #'(lambda (item)
-			    (make-menu-button-from-menu-item item client))
-			(slot-value (find-command-table (slot-value sub-menu 'command-table)) 'menu)))
+			    (make-menu-button-from-menu-item
+			     item client :command-table command-table-name))
+			(slot-value (find-command-table command-table-name)
+				    'menu)))
 	 (rack (make-pane-1 manager frame 'vrack-pane
 			    :background *3d-normal-color* :contents items))
 	 (raised (make-pane-1 manager frame 'raised-pane :border-width 2 :background *3d-normal-color* :contents (list rack))))
@@ -161,24 +164,27 @@
 
 ;; for now, accept only types :command and :menu, and only 
 ;; command names as values of :command
-(defun make-menu-button-from-menu-item (item client &key (bottomp nil))
+(defun make-menu-button-from-menu-item (item client
+					&key (bottomp nil) command-table)
   (let ((name (command-menu-item-name item))
 	(type (command-menu-item-type item))
 	(value (command-menu-item-value item))
 	(frame *application-frame*)
 	(manager (frame-manager *application-frame*)))
     (if (eq type :command)
-	(make-pane-1 manager frame 'menu-button-leaf-pane
-		     :label name
-		     :client client
-		     :value-changed-callback
-		     #'(lambda (gadget val)
-			 (declare (ignore gadget val))
-			 (cond ((symbolp value)
-				(funcall value))
-			       ((consp value)
-				;; XXX unsupplied arguments aren't handled
-				(apply (car value) (cdr value))))))
+	(let ((value (if (consp value)
+			 value
+			 (list value)))
+	      (ptype (if command-table
+			 `(command :command-table ,command-table)
+			 '(command))))
+	  (make-pane-1 manager frame 'menu-button-leaf-pane
+		       :label name
+		       :client client
+		       :value-changed-callback
+		       #'(lambda (gadget val)
+			   (declare (ignore gadget val))
+			   (throw-object-ptype value ptype))))
 	(make-pane-1 manager frame 'menu-button-submenu-pane
 		     :label name
 		     :client client
@@ -239,5 +245,8 @@
                    (append
                     (loop for item in menu
                           collect 
-                          (make-menu-button-from-menu-item item nil :bottomp t))
+                          (make-menu-button-from-menu-item
+			   item nil
+			   :bottomp t
+			   :command-table command-table))
                     (list +fill+))))))

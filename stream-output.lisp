@@ -383,7 +383,7 @@
 
 
 
-(defgeneric stream-write-output (stream line &optional (start 0) end)
+(defgeneric stream-write-output (stream line &optional start end)
   (:documentation
    "Writes the character or string LINE to STREAM. This function produces no
 more than one line of output i.e., doesn't wrap."))
