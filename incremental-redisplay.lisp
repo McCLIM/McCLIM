@@ -83,8 +83,9 @@ Finally, the old tree is walked.  All updating-output-records in state
 
 (defmethod pane-needs-redisplay :around ((pane updating-output-stream-mixin))
   (let ((redisplayp (call-next-method)))
-    (values redisplayp (or (not (pane-incremental-redisplay pane))
-			   (not *enable-updating-output*)))))
+    (values redisplayp (and (not (eq redisplayp :no-clear))
+			    (or (not (pane-incremental-redisplay pane))
+				(not *enable-updating-output*))))))
 
 (defclass updating-stream-state (complete-medium-state)
   ((cursor-x :accessor cursor-x :initarg :cursor-x :initform 0)

@@ -424,7 +424,6 @@ frame, if any")
 
 (defmethod redisplay-frame-pane :around ((frame application-frame) pane
 					 &key force-p)
-  
   (multiple-value-bind (redisplayp clearp)
       (pane-needs-redisplay pane)
     (when force-p
@@ -438,7 +437,7 @@ frame, if any")
       (when clearp
 	(window-clear pane))
       (call-next-method)
-      (unless (eq redisplayp :command-loop)
+      (unless (or (eq redisplayp :command-loop) (eq redisplayp :no-clear))
 	(setf (pane-needs-redisplay pane) nil)))))
 
 (defmethod run-frame-top-level ((frame application-frame)
