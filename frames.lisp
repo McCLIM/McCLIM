@@ -401,8 +401,8 @@ FRAME-EXIT condition."))
 (defmacro with-look-and-feel-realization ((frame-manager frame) &body body)
   `(let ((*pane-realizer* ,frame-manager)
 	 (*application-frame* ,frame))
-     (progn
-       ,@body)))
+     (locally
+         ,@body)))
 
 ; The menu-bar code in the following two functions is incorrect.
 ; it needs to be moved to somewhere after the backend, since
