@@ -2,5 +2,5 @@
 div.link-sidebar { border-top: 0.75pt solid black; border-right: 0.75pt solid black; border-bottom: 0.75pt solid black; margin: 1em 1em 1em 0em; padding: 0.5em; float: left; }
 div.link-sidebar ul { padding: 0 0 0 1em; margin: 0; }
 div.link-sidebar li { display: list-item; list-style: square; line-height: 150%; }
-div.main-body { width: 60%; margin-right: 20%; margin-left: 20%; display: table; }
+div.main-body { width: 60%; margin-right: 20%; margin-left: 20%; display: box; }
 body { padding: 0; margin: 0; font-family: serif; }
