@@ -43,7 +43,7 @@
    (active-p;; [Arthur] I'm not so sure about the value for :initform.
     ;; Maybe T is better? Or maybe we should call
     ;; ACTIVATE-GADGET after creating a gadget?
-    :initform nil 
+    :initform t
     :reader gadget-active-p)
    (armed :initform nil) ))
 
@@ -55,48 +55,28 @@
 ;;
 
 (defclass gadget-color-mixin ()
-  ((normal :initarg :normal :accessor gadget-normal-color)
-   (highlighted :initarg :highlighted :accessor gadget-highlighted-color)
-   (pushed-and-highlighted :initarg :pushed-and-highlighted :accessor gadget-pushed-and-highlighted-color))
-  (:documentation "This class define the gadgets colors. When unspecified, refer to the look-and-feel-realization of the frame manager"))
+  ((normal :type color
+	   :initform +gray50+
+	   :initarg :normal
+	   :accessor gadget-normal-color)
+   (highlighted :type color
+		:initform +gray75+
+		:initarg :highlighted
+		:accessor gadget-highlighted-color)
+   (pushed-and-highlighted :type color
+			   :initform +gray25+
+			   :initarg :pushed-and-highlighted
+			   :accessor gadget-pushed-and-highlighted-color)
+   (current-color :type color
+		  :accessor gadget-current-color))
+  (:documentation "This class define the gadgets colors."))
 
 (defmethod initialize-instance :after ((gadget gadget-color-mixin) &rest args)
-  (unless (member :normal args)
-    ;; see with the look-and-feel-realization of the frame manager
-    )
-  (unless (member :highlighted args)
-    ;; see with the look-and-feel-realization of the frame manager
-    )
-  (unless (member :pushed-and-highlighted args)
-    ;; see with the look-and-feel-realization of the frame manager
-    ))
+  (declare (ignore args))
+  (setf (gadget-current-color gadget) (gadget-normal-color gadget)))
 
-(defmethod (setf gadget-normal-color) :after ((gadget gadget-color-mixin) color)
-  (declare (ignore color))
-  (dispatch-repaint gadget (sheet-region gadget)))
-
-(defmethod (setf gadget-highlighted-color) :after ((gadget gadget-color-mixin) color)
-  (declare (ignore color))
-  (dispatch-repaint gadget (sheet-region gadget)))
-
-(defmethod (setf gadget-pushed-and-highlighted-color) :after ((gadget gadget-color-mixin) color)
-  (declare (ignore color))
-  (dispatch-repaint gadget (sheet-region gadget)))
-
-(defmethod highlight-button ((gadget gadget-color-mixin))
-  (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region gadget))
-    (draw-rectangle* gadget x1 y1 x2 y2 :ink (gadget-highlighted-color gadget) :filled t)
-    (dispatch-repaint gadget (sheet-region gadget))))
-
-(defmethod unhighlight-button ((gadget gadget-color-mixin))
-  (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region gadget))
-    (draw-rectangle* gadget x1 y1 x2 y2 :ink (gadget-normal-color gadget) :filled t)
-    (dispatch-repaint gadget (sheet-region gadget))))
-
-(defmethod push-highlight-button ((gadget gadget-color-mixin))
-  (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region gadget))
-    (draw-rectangle* gadget x1 y1 x2 y2 :ink (gadget-pushed-and-highlighted-color gadget) :filled t)
-    (dispatch-repaint gadget (sheet-region gadget))))
+(defmethod define-gadget-color ((gadget gadget-color-mixin) x1 y1 x2 y2)
+  (draw-rectangle* gadget x1 y1 x2 y2 :ink (gadget-current-color gadget) :filled t))
 
 
 ;;
@@ -291,15 +271,17 @@
   (with-slots (armed) pane
     (unless armed
       (setf armed t)
-      (highlight-button pane)
+      (setf (gadget-current-color pane) (gadget-highlighted-color pane))
+      (dispatch-repaint pane (sheet-region pane))
       (armed-callback pane (gadget-client pane) (gadget-id pane)))))
 
 (defmethod handle-event ((pane push-button-pane) (event pointer-exit-event))
   (with-slots (armed) pane
     (when armed
-
       (setf (push-button-show-as-default-p pane) nil)
-      (unhighlight-button pane)
+      (setf armed nil)
+      (setf (gadget-current-color pane) (gadget-normal-color pane))
+      (dispatch-repaint pane (sheet-region pane))
       (disarmed-callback pane (gadget-client pane) (gadget-id pane)))))
 
 (defmethod handle-event ((pane push-button-pane) (event pointer-button-press-event))
@@ -308,7 +290,8 @@
       (armed-callback pane (gadget-client pane) (gadget-id pane)))
     (setf armed ':button-press)
     (setf (push-button-show-as-default-p pane) t)
-    (push-highlight-button pane)))
+    (setf (gadget-current-color pane) (gadget-pushed-and-highlighted-color pane))
+    (dispatch-repaint pane (sheet-region pane))))
 
 (defmethod handle-event ((pane push-button-pane) (event pointer-button-release-event))
   (with-slots (armed) pane
@@ -316,7 +299,8 @@
       (activate-callback pane (gadget-client pane) (gadget-id pane))
       (setf armed t)
       (setf (push-button-show-as-default-p pane) nil)
-      (highlight-button pane)
+      (setf (gadget-current-color pane) (gadget-highlighted-color pane))
+      (dispatch-repaint pane (sheet-region pane))
       (disarmed-callback pane (gadget-client pane) (gadget-id pane)))))
 
 (defmethod handle-event ((pane push-button-pane) (event window-repaint-event))
@@ -327,10 +311,11 @@
   (let ((text (gadget-label pane))
 	(region (sheet-region pane)))
     (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* region)
-      (setf x1 (+ x1 2)
-	    x2 (- x2 2)
-	    y1 (+ y1 2)
-	    y2 (- y2 2))
+      (setf x2 (- x2 x1 1)
+	    x1 1
+	    y2 (- y2 y1 1)
+	    y1 1)
+      (define-gadget-color pane x1 y1 x2 y2)
       (if (push-button-show-as-default-p pane)
 	  (progn
 	    (draw-line* pane x1 y1 x2 y1 :ink +black+)
@@ -369,7 +354,9 @@
   (with-slots (armed) pane
     (unless armed
       (setf armed t)
-      (highlight-button pane)
+      (unless (gadget-value pane)
+	(setf (gadget-current-color pane) (gadget-highlighted-color pane))
+	(dispatch-repaint pane (sheet-region pane)))
       (armed-callback pane (gadget-client pane) (gadget-id pane)))))
 
 (defmethod handle-event ((pane toggle-button-pane) (event pointer-exit-event))
@@ -377,8 +364,9 @@
     (when armed
       (setf armed nil)
       (if (gadget-value pane)
-	  (push-highlight-button pane)
-	  (unhighlight-button pane))
+	  (setf (gadget-current-color pane) (gadget-pushed-and-highlighted-color pane))
+	  (setf (gadget-current-color pane) (gadget-normal-color pane)))
+      (dispatch-repaint pane (sheet-region pane))
       (disarmed-callback pane (gadget-client pane) (gadget-id pane)))))
 
 (defmethod handle-event ((pane toggle-button-pane) (event pointer-button-press-event))
@@ -386,7 +374,8 @@
     (unless armed
       (armed-callback pane (gadget-client pane) (gadget-id pane)))
     (setf armed ':button-press)
-    (push-highlight-button pane)))      
+    (setf (gadget-current-color pane) (gadget-pushed-and-highlighted-color pane))
+    (dispatch-repaint pane (sheet-region pane))))     
       
 (defmethod handle-event ((pane toggle-button-pane) (event pointer-button-release-event))
   (with-slots (armed) pane
@@ -394,7 +383,8 @@
       (setf (gadget-value pane :invoke-callback t) (not (gadget-value pane)))
       (setf armed t)
       (unless (gadget-value pane)
-	(unhighlight-button pane))
+	(setf (gadget-current-color pane) (gadget-highlighted-color pane))
+	(dispatch-repaint pane (sheet-region pane)))
       (disarmed-callback pane (gadget-client pane) (gadget-id pane)))))
 
 (defmethod handle-event ((pane toggle-button-pane) (event window-repaint-event))
@@ -402,31 +392,31 @@
 
 (defmethod repaint-sheet ((pane toggle-button-pane) region)
   (declare (ignore region))
-  (with-sheet-medium (medium pane)
-     (let ((text (gadget-label pane))
-	   (region (sheet-region pane))
-	   (armed (slot-value pane 'armed)))
-       (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* region)
-	 (setf x1 (+ x1 2)
-	       x2 (- x2 2)
-	       y1 (+ y1 2)
-	       y2 (- y2 2))
-	 (if (or (gadget-value pane) (eql armed ':button-press))
-	     (progn
-	       (draw-line* pane x1 y1 x2 y1 :ink +black+)
-	       (draw-line* pane x1 y1 x1 y2 :ink +black+)
-	       (draw-line* pane x1 y2 x2 y2 :ink +white+)
+  (let ((text (gadget-label pane))
+	(region (sheet-region pane))
+	(armed (slot-value pane 'armed)))
+    (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* region)
+      (setf x2 (- x2 x1 1)
+	    x1 1
+	    y2 (- y2 y1 1)
+	    y1 1)
+      (define-gadget-color pane)
+      (if (or (gadget-value pane) (eql armed ':button-press))
+	  (progn
+	    (draw-line* pane x1 y1 x2 y1 :ink +black+)
+	    (draw-line* pane x1 y1 x1 y2 :ink +black+)
+	    (draw-line* pane x1 y2 x2 y2 :ink +white+)
 	       (draw-line* pane x2 y1 x2 y2 :ink +white+))
-	     (progn
-	       (draw-line* pane x1 y1 x2 y1 :ink +white+)
-	       (draw-line* pane x1 y1 x1 y2 :ink +white+)
-	       (draw-line* pane x1 y2 x2 y2 :ink +black+)
-	       (draw-line* pane x2 y1 x2 y2 :ink +black+)))
-	 (draw-text* pane text
+	  (progn
+	    (draw-line* pane x1 y1 x2 y1 :ink +white+)
+	    (draw-line* pane x1 y1 x1 y2 :ink +white+)
+	    (draw-line* pane x1 y2 x2 y2 :ink +black+)
+	    (draw-line* pane x2 y1 x2 y2 :ink +black+)))
+      (draw-text* pane text
 		     (round (- x2 x1) 2)
 		     (round (- y2 y1) 2)
 		     :align-x :center
-		     :align-y :center)))))
+		     :align-y :center))))
 
 
 ;;
@@ -447,14 +437,12 @@
   (with-slots (armed) pane
     (unless armed
       (setf armed t)
-      (highlight-button pane)
       (armed-callback pane (gadget-client pane) (gadget-id pane)))))
 
 (defmethod handle-event ((pane menu-button-pane) (event pointer-exit-event))
   (with-slots (armed) pane
     (when armed
       (setf armed nil)
-      (unhighlight-button pane)
       (disarmed-callback pane (gadget-client pane) (gadget-id pane)))))
 
 (defmethod handle-event ((pane menu-button-pane) (event pointer-button-press-event))
@@ -550,6 +538,8 @@
 ;; SLIDER gadget
 ;;
 
+(defgeneric drag-callback (slider client gadget-id value))
+
 (defclass slider-gadget (value-gadget oriented-gadget-mixin range-gadget-mixin labelled-gadget-mixin) ()
   (:documentation "The value is a real number"))
   
@@ -594,7 +584,7 @@
   (declare (ignorable pane))
   (setf (gadget-value button :invoke-callback t) t))
 
-(defmacro with-radio-box (&body body &rest options)
+(defmacro with-radio-box (&rest options &body body)
   `(make-pane 'radio-box ,@options
 	      :current-selection (first ,body)
 	      ,@body))
@@ -649,6 +639,7 @@
 				    :children (list ,gadget))))
        (stream-add-output-record ,stream ,gadget-output-record)
        ,gadget)))
+
 
 
 
