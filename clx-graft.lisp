@@ -43,7 +43,7 @@
 
 (defmethod graft-pixels-per-millimeter ((graft clx-graft))
   (let ((screen (clx-port-screen (port graft))))
-    (/ (xlib:screen-height screen)
+    (/ (xlib:screen-width screen)
        (xlib:screen-width-in-millimeters screen))))
 
 (defmethod graft-pixels-per-inch ((graft clx-graft))
