@@ -37,10 +37,14 @@
 
 ;;; Space specification parsing
 #+ignore(deftype space () 'real)
+;; There is spacing-value in panes.lisp now --GB 2002-08-14
 
 (defun parse-space (stream specification direction)
   "Returns the amount of space given by SPECIFICATION relating to the
 STREAM in the direction DIRECTION."
+  ;; This implementation lives unter the assumption that an
+  ;; extended-output stream is also a sheet and has a graft. 
+  ;; --GB 2002-08-14
   (etypecase specification
     (integer specification)
     ((or string character) (multiple-value-bind (width height)
@@ -53,7 +57,34 @@ STREAM in the direction DIRECTION."
                 (ecase direction
                   (:horizontal (bounding-rectangle-width record))
                   (:vertical (bounding-rectangle-height record)))))
-    (list (error "Not implemented."))))
+    ((cons real (cons (member :character) null))
+     (stream-character-width stream #\M))
+    ((cons real (cons (member :line) null))
+     (stream-line-height stream))
+    ((cons real (cons (member :point :pixel :mm) null))
+     (let* ((value (car specification))
+            (unit  (cadr specification))
+            (graft (graft stream))
+            (gunit (graft-units graft)))
+       ;; mungle specification into what grafts talk about
+       (case unit
+         ((:point)  (setf value (/ value 72) unit :inch))
+         ((:pixels) (setf unit :device))
+         ((:mm)     (setf unit :millimeters)))
+       ;; 
+       (multiple-value-bind (dx dy)
+           (multiple-value-call
+               #'transform-distance (compose-transformation-with-scaling
+                                     (sheet-delta-transformation stream graft)
+                                     (/ (graft-width graft :units unit)
+                                        (graft-width graft :units gunit))
+                                     (/ (graft-height graft :units unit)
+                                        (graft-height graft :units gunit)))
+               (ecase direction
+                 (:horizontal (values 1 0))
+                 (:horizontal (values 0 1))))
+         (/ value (sqrt (+ (* dx dx) (* dy dy)))))))))
+
 
 
 ;;; Cell formatting
