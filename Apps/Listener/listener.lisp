@@ -223,10 +223,7 @@
   '(#\( #\) #\[ #\] #\# #\; #\: #\' #\" #\* #\, #\` #\- 
     #\+ #\/ #\0 #\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9))
 
-;; FIXME: Lisp forms are currently translated to invokations of COM-EVAL.
-;; This works fine, but in the future (when there is a proper form reader),
-;; you really might want to click a form and bring it as code into what you're 
-;; typing, allowing you to try things inside-out from the listener.
+
 
 (defmethod read-frame-command ((frame listener) &key (stream *standard-input*))  
   "Specialized for the listener, read a lisp form to eval, or a command."
@@ -236,8 +233,11 @@
 	(if (presentation-subtypep type 'command)
 	    object
 	    `(com-eval ,object)))
-      (let (object type)
-	(handler-case 
+      (let* ((command-table (find-command-table 'listener))
+             (*accelerator-gestures* (climi::compute-inherited-keystrokes command-table))
+            object type)
+	(handler-case
+            ;; Body
 	    (with-input-editing (stream :input-sensitizer
 					(lambda (stream cont)
 					  (if type
@@ -257,12 +257,23 @@
 			      (accept '(command :command-table listener)  :stream stream
 				      :prompt nil)
 			    (setf type 'command))))))
+          ;; Handlers
 	  ((or simple-parse-error input-not-of-required-type)  (c)
 	    (beep)
 	    (fresh-line *query-io*)
 	    (princ c *query-io*)
 	    (terpri *query-io*)
-	    nil))
+	    nil)
+          (accelerator-gesture (c)
+            (let ((command (lookup-keystroke-command-item (accelerator-gesture-event c)
+                                                          command-table)))
+              (hef:debugf *partial-command-parser* *unsupplied-argument-marker*)
+              (setf ;type 'command
+                    object (if (partial-command-p command)
+                               (funcall *partial-command-parser*
+                                        command-table stream command
+                                        (position *unsupplied-argument-marker* command))
+                               command)))))
 	object)))
 
 (defmethod read-frame-command :around ((frame listener)
