@@ -261,7 +261,7 @@
 	     fun (find-command-table inherited-command-table)))
 	(command-table-inherit-from command-table)))
 
-;;; do-command-table-inheritance has been shipped off to utils.lisp.
+ ;;; do-command-table-inheritance has been shipped off to utils.lisp.
 
 (defun map-over-command-table-commands (function command-table
 					&key (inherited t))
@@ -542,7 +542,7 @@
 			 ;; XXX What about the :menu case?
 			 (otherwise nil))))
 	  (if command
-              ; Return a literal command, or create a partial command from a command-name              
+              ; Return a literal command, or create a partial command from a command-name
 	      (substitute-numeric-argument-marker (if (symbolp command)
                                                       (partial-command-from-name command)
                                                       command)
@@ -1247,6 +1247,18 @@
 	    (,keystroke-var (slot-value ,table 'keystroke-accelerators)))
        ,@body)))
 
+;; This is probably wrong - we should walk the menu rather than inheritance
+;; structure to be consistent with lookup-keystroke-item.
+(defun compute-inherited-keystrokes (command-table)
+  "Return a list containing the keyboard gestures of accelerators defined in
+ 'command-table' and all tables it inherits from."
+  (let (accumulated-keystrokes)
+    (do-command-table-inheritance (comtab command-table)
+      (with-command-table-keystrokes (keystrokes comtab)
+        (dolist (keystroke keystrokes)
+          (setf accumulated-keystrokes (adjoin keystroke accumulated-keystrokes :test #'equal)))))
+    accumulated-keystrokes))
+
 (defun read-command (command-table
 		     &key (stream *standard-input*)
 			  (command-parser *command-parser*)
@@ -1258,10 +1270,9 @@
 	(*partial-command-parser* partial-command-parser))
     (cond (use-keystrokes
 	   (let ((stroke-result
-		  (with-command-table-keystrokes (strokes command-table)
-		    (read-command-using-keystrokes command-table
-						   strokes
-						   :stream stream))))
+                  (read-command-using-keystrokes command-table
+                                                 (compute-inherited-keystrokes command-table)
+                                                 :stream stream)))
 	     (if (consp stroke-result)
 		 stroke-result
 		 nil)))
@@ -1294,8 +1305,7 @@
 				      &key (stream *standard-input*)
 				      (command-parser *command-parser*)
 				      (command-unparser *command-unparser*)
-				      (partial-command-parser
-				       *partial-command-parser*))
+				      (partial-command-parser *partial-command-parser*))
   (let ((*command-parser* command-parser)
 	(*command-unparser* command-unparser)
 	(*partial-command-parser* partial-command-parser)
@@ -1304,7 +1314,7 @@
       (accelerator-gesture (c)
         ;; If lookup-keystroke-item below returns a partial command, invoke the
         ;; partial command parser to complete it.
-        (let ((command                            
+        (let ((command
                (lookup-keystroke-command-item (accelerator-gesture-event c)
                                               command-table)))
           (if (partial-command-p command)
