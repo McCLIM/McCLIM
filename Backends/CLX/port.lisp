@@ -193,7 +193,7 @@
       (setf (xlib:display-error-handler (clx-port-display port))
         #'clx-error-handler)
     
-      #-nil
+      #+nil
       (setf (xlib:display-after-function (clx-port-display port)) #'xlib:display-force-output))
     
     (setf (clx-port-screen port) (nth (getf options :screen-id 0)
