@@ -107,7 +107,7 @@
       (let ((clipping-region (medium-device-region medium)))
         (unless (region-equal clipping-region +nowhere+)
           (let ((tr (sheet-native-transformation (medium-sheet medium))))
-            (let ((rect-seq (clipping-region->rect-seq (transform-region tr clipping-region))))
+            (let ((rect-seq (clipping-region->rect-seq clipping-region)))
               (when rect-seq
                 #+nil ; ok, what McCLIM is generating is not :yx-banded... (currently at least)
                 (setf (xlib:gcontext-clip-mask gc :yx-banded) rect-seq)

@@ -40,7 +40,7 @@
     (setf (area obj)
 	  (make-instance
 	   'simple-screen-area
-	   :stream stream
+	   :area-stream stream
 	   :buffer (make-instance
 		    'editable-buffer
 		    :initial-contents initial-contents)

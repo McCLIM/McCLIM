@@ -84,7 +84,7 @@
     (line-contents-sans-newline (buffer-line obj)
 				:destination (current-contents obj)))
   (unless (slot-boundp obj 'width)
-    (let ((stream (stream (output-record-parent obj))))
+    (let ((stream (area-stream (output-record-parent obj))))
      (setf (width obj) (text-size stream (current-contents obj)))))
   (unless (slot-boundp obj 'baseline)
     (multiple-value-bind (x y)
@@ -153,24 +153,24 @@
   ((text-style :accessor text-style :initarg :text-style)
    (vertical-spacing :accessor vertical-spacing :initarg :vertical-spacing)
    (cursor :accessor cursor)
-   (stream :accessor stream :initarg :stream)))
+   (area-stream :accessor area-stream :initarg :area-stream)))
 
 (defmethod initialize-instance :after ((area simple-screen-area)
-				       &key stream)
+				       &key area-stream)
   (when (not (slot-boundp area 'text-style))
-    (if stream
-	(setf (text-style area) (medium-text-style stream))
-	(error "One of :text-style or :stream must be specified.")))
+    (if area-stream
+	(setf (text-style area) (medium-text-style area-stream))
+	(error "One of :text-style or :area-stream must be specified.")))
   (when (not (slot-boundp area 'vertical-spacing))
-    (if stream
-	(setf (vertical-spacing area) (stream-vertical-spacing stream))
+    (if area-stream
+	(setf (vertical-spacing area) (stream-vertical-spacing area-stream))
 	(error "One of :vertical-spacing or :stream must be specified.")))
   (when (not (slot-boundp area 'cursor))
     (multiple-value-bind (x y)
 	(output-record-position area)
       (setf (cursor area)
 	  (make-instance 'screen-area-cursor
-			 :sheet (stream area)
+			 :sheet (area-stream area)
 			 :x-position x
 			 :y-position y))))
   (initialize-area-from-buffer area (buffer area))
@@ -196,7 +196,7 @@
       area
     (multiple-value-bind (parent-x parent-y)
 	(output-record-position area)
-      (let* ((stream (stream area))
+      (let* ((stream (area-stream area))
 	     (ascent (text-style-ascent (text-style area) stream))
 	     (descent (text-style-descent (text-style area) stream)))
 	 (loop for buffer-line = (dbl-head (lines buffer))
@@ -216,13 +216,13 @@
 	       while buffer-line
 	       do (progn
 		    (dbl-insert-after area-line prev-area-line)
-		    (line-update-cursor area-line (stream area)))))))
+		    (line-update-cursor area-line (area-stream area)))))))
   area)
 
 (defgeneric redisplay-area (area))
 
 (defmethod redisplay-area ((area simple-screen-area))
-  (let ((stream (stream area)))
+  (let ((stream (area-stream area)))
     (loop for line = (area-first-line area) then (next line)
 	  while line
 	  do (multiple-value-bind (line-changed dimensions-changed)

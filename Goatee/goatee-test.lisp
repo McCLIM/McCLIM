@@ -52,7 +52,7 @@
        (setf (goatee-area frame)
 	     (make-instance
 	      'simple-screen-area
-	      :stream *standard-output*
+	      :area-stream *standard-output*
 	      :buffer (make-instance
 		       'editable-buffer
 		       :initial-contents "The fox jumped over the goatee.")
