@@ -208,11 +208,11 @@
   (unless (slot-boundp obj 'width)
     (setf (width obj) (line-text-width (editable-area obj) obj)))
   (unless (slot-boundp obj 'baseline)
-    (multiple-value-bind (x y)
-	(output-record-position obj)
-      (declare (ignore x))
-      (setf (slot-value obj 'climi::y2) (+ y (ascent obj) (descent obj)))
-      (setf (baseline obj) (+ y (ascent obj))))))
+    (climi::with-standard-rectangle* (:x1 x1 :y1 y1 :x2 x2)
+	obj
+      (setf (rectangle-edges* obj)
+	    (values x1 y1 x2 (+ y1 (ascent obj) (descent obj))))
+      (setf (baseline obj) (+ y1 (ascent obj))))))
 
 (defmethod climi::map-over-output-records-1 (function (record screen-line)
 				      function-args)
