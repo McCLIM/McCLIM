@@ -89,8 +89,7 @@
       ;; Rumor is that SB-THREAD is a feature test for the presence of
       ;; multithreading in SBCL.
 
-      #+sbcl #+sb-thread        "Lisp-Dep/mp-sbcl"
-             #-sb-thread        "Lisp-Dep/mp-nil"
+      #+sb-thread               "Lisp-Dep/mp-sbcl"
       #+excl                    "Lisp-Dep/mp-acl"
       #+openmcl                 "Lisp-Dep/mp-openmcl"
       #| fall back |#           "Lisp-Dep/mp-nil")
