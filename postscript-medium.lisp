@@ -235,6 +235,22 @@
                          "fill~%"
                          "stroke~%")))))
 
+(defmethod medium-draw-rectangles* ((medium postscript-medium) position-seq filled)
+  (assert (evenp (length position-seq)))
+  (let ((stream (postscript-medium-file-stream medium)))
+    (with-graphics-state (stream)
+      (loop for (x1 y1 x2 y2) on position-seq by #'cddddr
+            do (format stream "~A ~A moveto ~A ~A lineto ~A ~A lineto ~A ~A lineto~%"
+                       (format-postscript-number x1) (format-postscript-number y1)
+                       (format-postscript-number x2) (format-postscript-number y1)
+                       (format-postscript-number x2) (format-postscript-number y2)
+                       (format-postscript-number x1) (format-postscript-number y2))
+            (format stream "closepath~%"))
+      (postscript-line-style-and-color stream medium)
+      (format stream (if filled
+                         "fill~%"
+                         "stroke~%")))))
+
 (defmethod medium-draw-ellipse* ((medium postscript-medium) center-x center-y
 				 radius1-dx radius1-dy radius2-dx radius2-dy
 				 start-angle end-angle filled)
