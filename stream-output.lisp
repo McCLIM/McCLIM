@@ -235,6 +235,9 @@
 (defmethod* (setf stream-cursor-position) (x y (stream standard-extended-output-stream))
   (setf (cursor-position (stream-text-cursor stream)) (values x y)))
 
+(defun stream-set-cursor-position (stream x y)
+  (setf (stream-cursor-position stream) (values x y)))
+
 (defmethod stream-increment-cursor-position ((stream standard-extended-output-stream) dx dy)
   (multiple-value-bind (x y) (cursor-position (stream-text-cursor stream))
     (setf (cursor-position (stream-text-cursor stream)) (values (+ x dx) (+ y dy)))))
