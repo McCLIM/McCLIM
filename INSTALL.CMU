@@ -49,7 +49,7 @@ Running the demos
    except that the form must be a function call of a Lisp function and
    the arguments are not evaluated like this:
 
-   Command: (car (a b c)
+   Command: (car (a b c))
    
    A
    Command: (+ 3 4)
