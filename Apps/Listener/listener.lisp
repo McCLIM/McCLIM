@@ -31,7 +31,7 @@
 
 (defmethod compose-space ((pane wholine-pane) &key width height)
   (declare (ignore width height))  
-  (let ((h (+ 2 (text-style-height (medium-text-style pane) pane)))) ; magic padding
+  (let ((h (+ 3 (text-style-height (medium-text-style pane) pane)))) ; magic padding
   (make-space-requirement :min-width 500 :width 768
                           :height h
                           :min-height h
@@ -238,6 +238,7 @@
       (let ((*standard-input* (frame-standard-input frame))
             (*standard-output* (frame-standard-output frame))
             (*query-io* (frame-query-io frame))
+            (*default-pathname-defaults* *default-pathname-defaults*)
             (*pointer-documentation-output* (frame-pointer-documentation-output
                                              frame))
             ;; during development, don't alter *error-output*
@@ -264,8 +265,8 @@
 
 
 (defun run-listener ()
-   (clim:run-frame-top-level
-    (clim:make-application-frame 'listener)))
+   (run-frame-top-level
+    (make-application-frame 'listener)))
 
 (defun run-listener-process ()
   (clim-sys:make-process #'run-listener))

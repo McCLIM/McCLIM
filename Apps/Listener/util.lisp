@@ -79,7 +79,7 @@
       default
     (or desi default)))
 
-;;; LIST-DIRECTORY is a wrapper for the CL DIRECTORY function, which really
+;;; LIST-DIRECTORY is a wrapper for the CL DIRECTORY function, which really doesn't
 ;;; do what I'd like (resolves symbolic links, tends to be horribly buggy, etc.)
 
 #+CMU
@@ -418,7 +418,7 @@ with some attempt to convert arguments intelligently."
     (run-program name (transform-program-arguments args)
                  :wait *program-wait*
                  :output (resolve-stream-designator *run-output* *standard-output*)
-                 :input  (resolve-stream-designator *run-input* *standard-input*))))
+                 :input  nil #+NIL (resolve-stream-designator *run-input* *standard-input*))))
 
 (defun read-stringlet (stream)
   (with-output-to-string (out)

@@ -28,7 +28,7 @@
 ;; else suggests itself. Mostly to make them layout nice in a
 ;; command menu, if anyone wants such a thing.
 
-;; Some of the presentation translators might be broken, need to look ino that.
+;; Some of the presentation translators might be broken, need to look into that.
 
 (define-command-table dev-commands)
 
