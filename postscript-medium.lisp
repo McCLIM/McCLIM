@@ -70,7 +70,7 @@
         (for (or (getf header-comments :for)
                  *default-postscript-for*)))
     (make-instance 'postscript-medium
-                   :graft (make-postscript-graft)
+                   :sheet (make-postscript-graft)
                    :file-stream file-stream
                    :title title :for for
                    :orientation orientation)))
@@ -559,3 +559,6 @@ clip
   (make-rectangle* 0 0
                    (graft-width sheet :units (graft-units sheet))
                    (graft-height sheet :units (graft-units sheet))))
+
+(defmethod graft ((sheet postscript-graft))
+  sheet)
