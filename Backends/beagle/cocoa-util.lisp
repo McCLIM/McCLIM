@@ -33,27 +33,27 @@
 
 ;; Make an NSColor object that is the desired colour provided as a parameter, and with
 ;; the opacity provided in the key argument (defaults to 1.0 (opaque)).
-(defun make-ns-color (desired-color &key (alpha 1.0))
-  (cl-user::debug-log 1 "cocoa-util.lisp: -> MAKE-NS-COLOR() - TYPE-OF (desired-color): ~A~%"
-	  (type-of desired-color))
-  (cl-user::debug-log 1 "cocoa-util: Entered MAKE-NS-COLOR, desired colour = ~S~%" desired-color)
-  (multiple-value-bind (r g b)
-      (clim:color-rgb desired-color)
-      (send (@class ns-color) :color-with-calibrated-red r
-	                      :green g
-			      :blue b
-			      :alpha alpha)))
+;;;(defun make-ns-color (desired-color &key (alpha 1.0))
+;;;  (cl-user::debug-log 1 "cocoa-util.lisp: -> MAKE-NS-COLOR() - TYPE-OF (desired-color): ~A~%"
+;;;          (type-of desired-color))
+;;;  (cl-user::debug-log 1 "cocoa-util: Entered MAKE-NS-COLOR, desired colour = ~S~%" desired-color)
+;;;  (multiple-value-bind (r g b)
+;;;      (clim:color-rgb desired-color)
+;;;      (send (@class ns-color) :color-with-calibrated-red r
+;;;                              :green g
+;;;                              :blue b
+;;;                              :alpha alpha)))
 
 
 ;; Given a CLIM event-mask, generate a Cocoa event-mask
-(defun clim-event-mask->cocoa-event-mask (event-mask)
-  (cl-user::debug-log 1 "cocoa-util: Entered CLIM-EVENT-MASK->COCOA-EVENT-MASK (stubbed)~%")
-  event-mask)
+;;;(defun clim-event-mask->cocoa-event-mask (event-mask)
+;;;  (cl-user::debug-log 1 "cocoa-util: Entered CLIM-EVENT-MASK->COCOA-EVENT-MASK (stubbed)~%")
+;;;  event-mask)
 
 ;; Tell an NSWindow what events to respond to
-(defun set-ns-window-event-mask (window event-mask)
-  (cl-user::debug-log 1 "cocoa-util: Entered SET-NS-WINDOW-EVENT-MASK~%")
-    (send window :next-event-matching-mask event-mask))
+;;;(defun set-ns-window-event-mask (window event-mask)
+;;;  (cl-user::debug-log 1 "cocoa-util: Entered SET-NS-WINDOW-EVENT-MASK~%")
+;;;    (send window :next-event-matching-mask event-mask))
 
 ;; Make an NSRect structure with the origin at (x, y) and with the width and height
 ;; specified.
@@ -68,12 +68,12 @@
 	                  :y (+ (coerce y 'short-float) 0.5)))
 
 ;; Get the *NSApp* reference
-(defun get-ns-app ()
-  *NSApp*)
+;;;(defun get-ns-app ()
+;;;  *NSApp*)
 
 ;; Send the NSWindow provided a setFrame: message
-(defun window-set-frame (window rect &key (display t))
-    (send window :set-frame rect :display display))
+;;;(defun window-set-frame (window rect &key (display t))
+;;;    (send window :set-frame rect :display display))
 
 ;; Stolen from Bosco "main.lisp"
 (defun description (c)
