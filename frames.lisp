@@ -294,10 +294,13 @@ FRAME-EXIT condition."))
 ;;; Command loop interface
 
 (define-condition frame-exit (condition)
-  ((frame :initarg :frame :reader frame-exit-frame)))
+  ((frame :initarg :frame :reader %frame-exit-frame)))
 
 (defmethod frame-exit ((frame standard-application-frame))
   (signal 'frame-exit :frame frame))
+
+(defmethod frame-exit-frame ((c frame-exit))
+  (%frame-exit-frame c))
 
 (defmethod run-frame-top-level ((frame application-frame))
   (handler-bind ((frame-exit #'(lambda (condition)
