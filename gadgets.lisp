@@ -538,8 +538,6 @@
 ;; SLIDER gadget
 ;;
 
-(defgeneric drag-callback (slider client gadget-id value))
-
 (defclass slider-gadget (value-gadget oriented-gadget-mixin range-gadget-mixin labelled-gadget-mixin) ()
   (:documentation "The value is a real number"))
   
