@@ -318,7 +318,7 @@ FRAME-EXIT condition."))
 	  (partial-command-parser
 	   'command-line-read-remaining-arguments-for-partial-command)
 	  (prompt nil))
-  (when *multiprocesing-p*
+  (when *multiprocessing-p*
     (sleep 4)) ; wait for the panes to be finalized - KLUDGE!!! - mikemac
   (loop
     (let ((*standard-input* (frame-standard-input frame))
