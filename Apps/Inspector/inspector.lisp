@@ -429,27 +429,15 @@ use implementation-specific functions to be more informative."
         (formatting-cell (pane)
           (princ ")" pane))))))
 
-;; For some strange reason, objects that are displayed with PRINT are
-;; slightly wider than those displayed with PRIN1. Generally, PRIN1 is
-;; what you want, and to prevent strings and numbers from getting
-;; slightly wider when they're toggled to full inspection, the
-;; INSPECT-OBJECT methods for them call the INSPECT-OBJECT-BRIEFLY
-;; methods which do the right thing.
 (defmethod inspect-object-briefly ((object string) pane)
   (with-output-as-presentation
       (pane object (presentation-type-of object))
     (prin1 object)))
 
-(defmethod inspect-object ((object string) pane)
-  (inspect-object-briefly object pane))
-
 (defmethod inspect-object-briefly ((object number) pane)
   (with-output-as-presentation
       (pane object (presentation-type-of object))
     (prin1 object)))
-
-(defmethod inspect-object ((object number) pane)
-  (inspect-object-briefly object pane))
 
 (defun inspect-complex (object pane)
   "Inspect a complex number. Since complex numbers should be inspected
