@@ -82,12 +82,14 @@
   (when (fboundp thing)
     (format stream "   it has a function definition of ~S~%" (symbol-function thing))
     (format stream "      which has the argument list ")
-    #+excl (clim:present (excl:arglist (symbol-function thing))
-			 (clim:presentation-type-of (excl:arglist (symbol-function thing)))
-			 :stream stream)
-    #+cmu (clim:present (kernel:%function-arglist (symbol-function thing))
-			  (clim:presentation-type-of (kernel:%function-arglist (symbol-function thing)))
-			  :stream stream)
+    (let ((arglist #+excl (excl:arglist (symbol-function thing))
+                   #+cmu (kernel:%function-arglist (symbol-function thing))
+                   #+sbcl (sb-kernel:%simple-function-arglist (symbol-function thing))
+                   #-(or excl cmu sbcl) "( ??? )"))
+      (when arglist
+        (clim:present arglist
+                      (clim:presentation-type-of arglist)
+                      :stream stream)))
     (terpri))
   (format stream "   it has a property list of ~S~%" (symbol-plist thing)))
 
