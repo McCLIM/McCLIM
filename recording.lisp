@@ -458,10 +458,16 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
 (defmethod replay-output-record ((record compound-output-record) stream
 				 &optional region (x-offset 0) (y-offset 0))
   (when (null region)
-    (setq region +everywhere+))
-  (map-over-output-records-overlapping-region
-   #'replay-output-record record region x-offset y-offset
-   stream region x-offset y-offset))
+    (let ((viewport (pane-viewport stream)))
+      (cond ((not (null viewport))
+             (setf region (untransform-region (sheet-delta-transformation stream viewport)
+                                            (pane-viewport-region stream))))
+            (t
+             (setq region +everywhere+)))))
+  (with-drawing-options (stream :clipping-region region)
+    (map-over-output-records-overlapping-region
+     #'replay-output-record record region x-offset y-offset
+     stream region x-offset y-offset)))
 
 (defmethod output-record-hit-detection-rectangle* ((record output-record))
   ;; XXX DC
@@ -828,6 +834,28 @@ were added."
 				     clip-region))))))
 
 (defmethod set-medium-graphics-state :after ((state gs-clip-mixin) medium)
+  ;;
+  ;; This definition is kind of wrong. When output records are about to
+  ;; be replayed only a certain region of the stream should be affected.[1]
+  ;; Therefore I disabled this code, since this way only breaks the
+  ;; [not very frequent case] that the output record actually contains
+  ;; a clipping region different from +everywhere+, while having it in
+  ;; breaks redisplay of streams in just about every case.
+  ;;
+  ;; Most notably Closure is affected by this, as it does the equivalent of
+  ;; (draw-rectangle* medium 0 0 800 200 :ink +white+ :filled t)
+  ;; (draw-text* medium "Hello" 100 100)
+  ;;
+  ;; Having this code in a redisplay on the region
+  ;; (make-rectangle* 0 0 50 50) fills the drawing pane with a white
+  ;; rectangle obscuring the text.
+  ;;
+  ;; [1] it is of course debatable where this extra clipping because
+  ;; of redisplay should come from. Should replay-output-record set it
+  ;; up? Should handle-repaint do so?
+  ;;
+  ;; --GB 2003-03-14
+  #+NIL
   (setf (medium-clipping-region medium) (graphics-state-clip state)))
 
 (defmethod match-output-records-1 and ((record gs-clip-mixin)
@@ -957,7 +985,7 @@ were added."
 	(loop for i from 0 below (length coords) by 2
 	      do (progn
 		   (incf (aref coords i) dx)
-		   (incf (aref coords (1+ i) dy))))))))
+		   (incf (aref coords (1+ i)) dy)))))))
 
 (defmethod match-output-records-1 and ((record coord-seq-mixin)
 				       &key (coord-seq nil coord-seq-p))
