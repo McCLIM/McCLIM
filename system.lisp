@@ -198,7 +198,7 @@
    ;; "Examples/sliderdemo"
    "Examples/stream-test"
    "Examples/presentation-test"
-   "Examples/gadget-test"
+   #+clx "Examples/gadget-test"
    "Goatee/goatee-test")
 
 
