@@ -20,7 +20,6 @@
 ;;; TODO:
 ;;; - Use DRAWING-OPTIONS, MOVE-CURSOR in I-S-O-W-B
 ;;; - Gap computation
-;;; - Implement :DROP-SHADOW, :UNDERLINE
 
 (in-package :clim-internals)
 
@@ -79,3 +78,30 @@
                 (/ (+ left right) 2) (/ (+ top bottom) 2)
                 (+ (/ (- right left) 2) gap) (+ (/ (- bottom top) 2) gap)
                 :filled nil)))
+
+(define-border-type :drop-shadow (&key stream left top right bottom)
+  (let* ((gap 3) ; FIXME?
+	 (offset 4)
+	 (left-edge (- left gap))
+	 (bottom-edge (+ bottom gap))
+	 (top-edge (- top gap))
+	 (right-edge (+ right gap)))
+    (draw-rectangle* stream
+		     left-edge top-edge
+		     right-edge bottom-edge
+		     :filled nil)
+    (draw-rectangle* stream
+		     right-edge (+ top-edge offset)
+		     (+ right-edge offset) bottom-edge :filled T)
+    (draw-rectangle* stream
+		     (+ left-edge offset) bottom-edge
+		     (+ right-edge offset) (+ bottom-edge offset)
+		     :filled T)))
+
+(define-border-type :underline (&key stream record)
+  (let ((children (output-record-children record)))
+    (loop for child across children do
+      (when (text-displayed-output-record-p child)
+	(with-bounding-rectangle* (left top right bottom) child
+	  (declare (ignore top))
+	  (draw-line* stream left bottom right bottom))))))
