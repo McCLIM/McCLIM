@@ -489,17 +489,15 @@
            finally (return (values min-x min-y max-x max-y)))))
 
 (def-grecording draw-rectangle (left top right bottom filled)
-  ;; XXX transformation!!!
-  (values (min left right) (min top bottom) (max left right) (max top bottom)))
+  (bounding-rectangle* (make-rectangle* left top right bottom)))
 
 (def-grecording draw-ellipse (center-x center-y
 			      radius-1-dx radius-1-dy radius-2-dx radius-2-dy
 			      start-angle end-angle filled)
-  ;; XXX transformation!!!
-  (let ((radius-dx (abs (+ radius-1-dx radius-2-dx)))
-        (radius-dy (abs (+ radius-1-dy radius-2-dy))))
-    (values (- center-x radius-dx) (- center-y radius-dy)
-            (+ center-x radius-dx) (+ center-y radius-dy))))
+  (bounding-rectangle* (make-ellipse* center-x center-y
+                                      radius-1-dx radius-1-dy radius-2-dx radius-2-dy
+                                      :start-angle start-angle
+                                      :end-angle end-angle)))
 
 (def-grecording draw-text (string point-x point-y start end
 			   align-x align-y toward-x toward-y transform-glyphs)
