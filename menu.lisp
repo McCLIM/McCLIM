@@ -20,17 +20,6 @@
 
 (in-package :CLIM-INTERNALS)
 
-(defmethod compose-space ((button menu-button-pane))
-  (pane-space-requirement button))
-
-(defmethod pane-space-requirement ((button menu-button-pane))
-  (or (slot-value button 'space-requirement)
-      (with-sheet-medium (medium button)
-	(multiple-value-bind (width height) (text-size medium (gadget-label button))
-	  (setf width (round (* 1.3 width))
-		height (round (* 2.5 height)))
-	  (make-space-requirement :width width :height height)))))
-
 (defmethod menu-root ((button menu-button-pane))
   (menu-root (gadget-client button)))
 
@@ -128,7 +117,7 @@
 (defmethod menu-children ((submenu menu-button-submenu-pane))
   (with-slots (submenu-frame) submenu
     (if submenu-frame
-	(sheet-children (frame-pane submenu-frame))
+	(sheet-children (first (sheet-children (frame-pane submenu-frame))))
 	'())))
 
 (defun create-substructure (sub-menu client)
@@ -137,7 +126,8 @@
 	 (items (mapcar #'(lambda (item)
 			    (make-menu-button-from-menu-item item client))
 			(slot-value (find-command-table (slot-value sub-menu 'command-table)) 'menu)))
-	 (rack (make-pane-1 manager frame 'vrack-pane :contents items)))
+	 (rack (make-pane-1 manager frame 'vrack-pane :contents items))
+	 (raised (make-pane-1 manager frame 'raised-pane :contents (list rack))))
     (with-slots (bottomp) sub-menu
       (multiple-value-bind (xmin ymin xmax ymax)
 	  (bounding-rectangle* (sheet-region sub-menu))
@@ -147,7 +137,7 @@
 				(if bottomp ymax ymin))
 	  (with-slots (frame-manager submenu-frame) sub-menu
 	    (setf frame-manager manager
-		  submenu-frame (make-menu-frame rack :left x :top y))
+		  submenu-frame (make-menu-frame raised :left x :top y))
 	    (adopt-frame manager submenu-frame)))))))
 
 (defmethod destroy-substructure ((sub-menu menu-button-submenu-pane))
@@ -190,7 +180,6 @@
 	(manager (frame-manager *application-frame*)))
     (if (eq type :command)
 	(make-pane-1 manager frame 'menu-button-leaf-pane
-		     :space-requirement nil
 		     :label name
 		     :client client
 		     :value-changed-callback
@@ -198,7 +187,6 @@
 			 (declare (ignore gadget val))
 			 (funcall value)))
 	(make-pane-1 manager frame 'menu-button-submenu-pane
-		     :space-requirement nil
 		     :label name
 		     :client client
 		     :frame-manager manager
@@ -229,7 +217,7 @@
   object)
 
 (defmethod destroy-substructure ((object menu-bar))
-  (loop for child in (sheet-children object)
+  (loop for child in (menu-children object)
 	do (progn (destroy-substructure child)
 		  (dispatch-repaint child (sheet-region child))))
   (setf (slot-value object 'armed) nil))
@@ -243,8 +231,9 @@
 
 (defun make-menu-bar (command-table)
   (with-slots (menu) (find-command-table command-table)
-    (make-pane 'menu-bar
-	       :contents
-	       (mapcar #'(lambda (item)
-			   (make-menu-button-from-menu-item item nil :bottomp t))
-		       menu))))
+    (raising (:border-width 1) 
+	     (make-pane 'menu-bar
+			:contents
+			(mapcar #'(lambda (item)
+				    (make-menu-button-from-menu-item item nil :bottomp t))
+				menu)))))
