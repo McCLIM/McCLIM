@@ -93,7 +93,8 @@
 	  :initform nil
 	  :accessor frame-state)
    (manager :initform nil
-	    :reader frame-manager)
+	    :reader frame-manager
+            :accessor %frame-manager)
    (properties :initarg :properties
 	       :initform nil)
    (top-level :initform '(default-frame-top-level)
@@ -195,12 +196,12 @@ FRAME-EXIT condition."))
 
 (defmethod (setf frame-manager) (fm (frame application-frame))
   (let ((old-manager (frame-manager frame)))
-    (setf (slot-value frame 'manager) nil)
+    (setf (%frame-manager frame) nil)
     (when old-manager
       (disown-frame old-manager frame)
       (setf (slot-value frame 'panes) nil)
       (setf (slot-value frame 'layouts) nil))
-    (setf (slot-value frame 'manager) fm)))
+    (setf (%frame-manager frame) fm)))
 
 (defmethod (setf frame-current-layout) (name (frame application-frame))
   (declare (ignore name))
@@ -394,7 +395,7 @@ FRAME-EXIT condition."))
 (defmethod disown-frame ((fm frame-manager) (frame application-frame))
   (setf (slot-value fm 'frames) (remove frame (slot-value fm 'frames)))
   (sheet-disown-child (graft frame) (frame-top-level-sheet frame))
-  (setf (frame-manager frame) nil))
+  (setf (%frame-manager frame) nil))
 
 (defvar *pane-realizer* nil)
 
@@ -584,10 +585,10 @@ FRAME-EXIT condition."))
    (pane :reader frame-pane :initarg :pane)
    (graft :initform nil :accessor graft)
    (manager :initform nil :accessor frame-manager)))
-  
+
 (defmethod adopt-frame ((fm frame-manager) (frame menu-frame))
   (setf (slot-value fm 'frames) (cons frame (slot-value fm 'frames)))
-  (setf (slot-value frame 'manager) fm)
+  (setf (frame-manager frame) fm)
   (let* ((t-l-s (make-pane-1 fm *application-frame* 'unmanaged-top-level-sheet-pane
 			     :name 'top-level-sheet)))
     (setf (slot-value frame 'top-level-sheet) t-l-s)
