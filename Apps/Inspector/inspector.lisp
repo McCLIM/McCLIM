@@ -4,6 +4,8 @@
 ;;;           Robert Strandh (strandh@labri.fr)
 ;;;  (c) copyright 2005 by
 ;;;           Vincent Arkesteijn
+;;;  (c) copyright 2005 by
+;;;           Peter Scott (sketerpot@gmail.com)
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -74,7 +76,9 @@ on PANE. For example, rather than displaying all the slots of a class,
 only the class name would be shown."))
 
 (defgeneric inspect-object (object pane)
-  (:documentation "Inspect an object, displaying it on PANE"))
+  (:documentation "Inspect an object, displaying it on PANE. This can
+be as verbose as you like; the important thing is that all the
+information is present."))
 
 (defmethod inspect-object :around (object pane)
   (cond ((member object *inspected-objects*)
@@ -87,6 +91,11 @@ only the class name would be shown."))
          (let ((*inspected-objects* (cons object *inspected-objects*)))
            (call-next-method)))))
 
+;; This behavior should be overridden by methods for specific object
+;; types that have a more informative short representation. For
+;; example, the symbol FOO would be printed as "FOO" instead of "...",
+;; since that's just as short and more informative. When it's clicked
+;; on, it can then go to a more verbose view.
 (defmethod inspect-object-briefly (object pane)
   (with-output-as-presentation
       (pane object (presentation-type-of object))
@@ -290,13 +299,16 @@ list as interactive as you would expect."
                    (print (method-qualifiers method)))
                  (loop for specializer in (clim-mop:method-specializers method)
                     do (formatting-cell (pane)
-                         (format pane "~a "
-				 (if (typep specializer
-					    'clim-mop:eql-specializer)
-				     (format nil "(EQL ~S)"
-					     (clim-mop:eql-specializer-object
-					      specializer))
-				     (class-name specializer))))))))))
+			 (if (typep specializer 'clim-mop:eql-specializer)
+			     (progn
+			       (princ "(EQL " pane)
+			       (inspect-object
+				(clim-mop:eql-specializer-object
+				 specializer)
+				pane)
+			       (princ ")" pane))
+			     (inspect-object (class-name specializer)
+					     pane)))))))))
 
 (defun pretty-print-function (fun)
   "Print a function in a readable way, returning a string. On most
@@ -415,7 +427,7 @@ them."
 (defmethod inspect-object-briefly ((object symbol) pane)
   (with-output-as-presentation
       (pane object (presentation-type-of object))
-    (print object)))
+    (prin1 object)))
 
 (defmethod inspect-object ((object symbol) pane)
   (inspector-table
@@ -519,4 +531,17 @@ available in direct slots."
       (when documentation
 	(format stream "~&Documentation: ~A~%" documentation))
       (format stream "~&Type: ~S~%"
-	      (clim-mop:slot-definition-type slot-object)))))
+	      (clim-mop:slot-definition-type slot-object))
+      (format stream "~&Allocation: ~S~%"
+	      (clim-mop:slot-definition-allocation slot-object))
+      ;; FIXME: This should show readers and writers, but it doesn't
+      ;; work on SBCL 0.8.16 for me. Is this an SBCL-specific problem?
+      ;; Is the code broken?
+      (when (clim-mop:slot-definition-readers slot-object)
+	(format stream "~&Readers: ")
+	(format-textual-list (clim-mop:slot-definition-readers slot-object)
+			     #'inspect-object))
+      (when (clim-mop:slot-definition-writers slot-object)
+	(format stream "~&Writers: ")
+	(format-textual-list (clim-mop:slot-definition-writers slot-object)
+			     #'inspect-object)))))
