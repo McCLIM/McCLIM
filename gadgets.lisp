@@ -233,7 +233,7 @@
 (defmethod compose-space-aux ((pane labelled-gadget) (label string))
   (with-sheet-medium (medium pane)
     (let ((as (text-style-ascent (gadget-label-text-style pane) pane))
-          (ds (text-style-ascent (gadget-label-text-style pane) pane)))
+          (ds (text-style-descent (gadget-label-text-style pane) pane)))
       (multiple-value-bind (width height)
           (text-size medium (gadget-label pane)
                      :text-style (gadget-label-text-style pane))
