@@ -52,7 +52,7 @@ Some sheet classes support only a single child. For such sheets,
 attempting to adopt more than a single child will cause the 
 sheet-supports-only-one-child error to be signalled."))
 
-(defgeneric sheet-disown-child (sheet child &key (errorp t)))
+(defgeneric sheet-disown-child (sheet child &key errorp))
 (defgeneric sheet-enabled-children (sheet))
 (defgeneric sheet-ancestor-p (sheet putative-ancestor))
 (defgeneric raise-sheet (sheet))
