@@ -64,6 +64,7 @@
    "frames"
    "panes"
    "exports"
+   "gadgets"
 
    "clx-port"
    "clx-medium"
