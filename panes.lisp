@@ -3,6 +3,7 @@
 ;;;  (c) copyright 2000 by 
 ;;;           Iban Hatchondo (hatchond@emi.u-bordeaux.fr)
 ;;;           Julien Boninfante (boninfan@emi.u-bordeaux.fr)
+;;;           Robert Strandh (strandh@labri.u-bordeaux.fr)
 
 
 ;;; This library is free software; you can redistribute it and/or
@@ -249,7 +250,8 @@
 (defmethod handle-event ((pane top-level-sheet-pane) (event window-configuration-event))
   (let ((width (window-configuration-event-width event))
         (height (window-configuration-event-height event)))
-    (setf (sheet-region pane) (make-bounding-rectangle 0 0 width height))
+    ;; avoid goint into an infinite loop by not using (setf sheet-region)
+    (setf (slot-value pane 'region) (make-bounding-rectangle 0 0 width height))
     (allocate-space pane width height)))
 
 ;; SHEET 
@@ -299,13 +301,15 @@
 	(v-percent (/ height (space-requirement-height (pane-space-requirement box))))
 	(x 0))
     (loop for child in (sheet-children box)
-	for request = (pane-space-requirement child)
-	for new-width = (floor (* h-percent (space-requirement-width request)))
-	for new-height = (floor (* v-percent (space-requirement-height request)))
-	do (setf (sheet-region child)
-	     (make-bounding-rectangle x 0 (+ x new-width) new-height))
-	   (allocate-space child new-width new-height)
-	   (incf x new-width))))
+	  for request = (pane-space-requirement child)
+	  for new-width = (floor (* h-percent (space-requirement-width request)))
+	  for new-height = (floor (* v-percent (space-requirement-height request)))
+	  do (progn (setf (sheet-region child)
+			  (make-bounding-rectangle 0 0 new-width new-height))
+		    (setf (sheet-transformation child)
+			  (make-translation-transformation x 0))
+		    (allocate-space child new-width new-height)
+		    (incf x new-width)))))
 
 
 ;;; VBOX-PANE class
@@ -349,13 +353,15 @@
 	(v-percent (/ height (space-requirement-height (pane-space-requirement box))))
 	(y 0))
     (loop for child in (sheet-children box)
-	for request = (pane-space-requirement child)
-	for new-width = (floor (* h-percent (space-requirement-width request)))
-	for new-height = (floor (* v-percent (space-requirement-height request)))
-	do (setf (sheet-region child)
-	     (make-bounding-rectangle 0 y new-width (+ y new-height)))
-	   (allocate-space child new-width new-height)
-	   (incf y new-height))))
+	  for request = (pane-space-requirement child)
+	  for new-width = (floor (* h-percent (space-requirement-width request)))
+	  for new-height = (floor (* v-percent (space-requirement-height request)))
+	  do (progn (setf (sheet-region child)
+			  (make-bounding-rectangle 0 0 new-width new-height))
+		    (setf (sheet-transformation child)
+			  (make-translation-transformation 0 y))
+		    (allocate-space child new-width new-height)
+		    (incf y new-height)))))
 
 
 ;;; HRACK-PANE class
@@ -390,12 +396,14 @@
   (let ((h-percent (/ width (space-requirement-width (pane-space-requirement rack))))
 	(x 0))
     (loop for child in (sheet-children rack)
-	for request = (pane-space-requirement child)
-	for new-width = (floor (* h-percent (space-requirement-width request)))
-	do (setf (sheet-region child)
-	     (make-bounding-rectangle x 0 (+ x new-width) height))
-	   (allocate-space child new-width height)
-	   (incf x new-width))))
+	  for request = (pane-space-requirement child)
+	  for new-width = (floor (* h-percent (space-requirement-width request)))
+	  do (progn (setf (sheet-region child)
+			  (make-bounding-rectangle 0 0 new-width height))
+		    (setf (sheet-transformation child)
+			  (make-translation-transformation x 0))
+		    (allocate-space child new-width height)
+		    (incf x new-width)))))
 
 
 ;;; VRACK-PANE class
@@ -430,12 +438,14 @@
   (let ((v-percent (/ height (space-requirement-height (pane-space-requirement rack))))
 	(y 0))
     (loop for child in (sheet-children rack)
-	for request = (pane-space-requirement child)
-	for new-height = (floor (* v-percent (space-requirement-height request)))
-	do (setf (sheet-region child)
-	     (make-bounding-rectangle 0 y width (+ y new-height)))
-	   (allocate-space child width new-height)
-	   (incf y new-height))))
+	  for request = (pane-space-requirement child)
+	  for new-height = (floor (* v-percent (space-requirement-height request)))
+	  do (progn (setf (sheet-region child)
+			  (make-bounding-rectangle 0 0 width new-height))
+		    (setf (sheet-transformation child)
+			  (make-translation-transformation 0 y))
+		    (allocate-space child width new-height)
+		    (incf y new-height)))))
 
 
 ;; TABLE PANE
@@ -519,15 +529,17 @@
     (loop for line-children in contents
           for height in (second table-cell-sizes)
           for new-height = (floor (* h-percent height))
-          do (loop for child in line-children
-                   for width in (first table-cell-sizes)
-                   for new-width = (floor (* v-percent width))
-                   do (setf (sheet-region child)
-                            (make-bounding-rectangle x y (+ x new-width) (+ y new-height)))
-		      (allocate-space child new-width new-height)
-		      (incf x new-width))
-	     (setf x 0)
-	     (incf y new-height))))
+          do (progn (loop for child in line-children
+			  for width in (first table-cell-sizes)
+			  for new-width = (floor (* v-percent width))
+			  do (progn (setf (sheet-region child)
+					  (make-bounding-rectangle 0 0 new-width new-height))
+				    (setf (sheet-transformation child)
+					  (make-translation-transformation x y))
+				    (allocate-space child new-width new-height)
+				    (incf x new-width)))
+		    (setf x 0)
+		    (incf y new-height)))))
 
 ;(defmethod sheet-adopt-child :before ((table table-pane) child)
 ;  (declare (ignore child))
@@ -561,13 +573,15 @@
 	 (x 0)
 	 (y 0))
     (loop for children in contents
-	  do (loop for child in children
-		   do (setf (sheet-region child)
-			    (make-bounding-rectangle x y (+ x new-width) (+ y new-height)))
-		      (allocate-space child new-width new-height)
-		      (incf x new-width))
-        	  (setf x 0)
-		  (incf y new-height))))
+	  do (progn (loop for child in children
+			  do (progn (setf (sheet-region child)
+					  (make-bounding-rectangle 0 0 new-width new-height))
+				    (setf (sheet-transformation child)
+					  (make-translation-transformation x y))
+				    (allocate-space child new-width new-height)
+				    (incf x new-width)))
+		    (setf x 0)
+		    (incf y new-height)))))
 
 
 ;; SPACER PANE
