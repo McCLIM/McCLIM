@@ -192,7 +192,9 @@
 			 (declare (ignore val))
 			 (throw-highlighted-presentation
                           (make-instance 'standard-presentation
-                                         :object (list value)
+                                         :object (if (listp value)
+                                                     value
+                                                     (list value))
                                          :type 'command)
                           *input-context*
                           (make-instance 'pointer-button-press-event
