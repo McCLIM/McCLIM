@@ -64,6 +64,7 @@
 (defmethod dispatch-repaint ((sheet immediate-repainting-mixin) region)
   (handle-repaint sheet region))
 
+#+NIL
 (defmethod handle-repaint ((sheet immediate-repainting-mixin) region)
   (declare (ignore region))
   (repaint-sheet sheet (sheet-region sheet))
@@ -86,3 +87,10 @@
   (declare (ignorable sheet region))
   (format *debug-io* "repaint ~S~%" sheet)
   (values))
+
+
+(defmethod dispatch-event :around ((sheet immediate-repainting-mixin) (event window-repaint-event))
+  (dispatch-repaint sheet (window-event-region event)))
+
+
+
