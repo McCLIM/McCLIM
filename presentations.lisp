@@ -1715,15 +1715,17 @@ function lambda list"))
 
 (defun call-presentation-menu
     (presentation input-context frame window x y
-     &key for-menu label)
+     &key (for-menu t) label)
   (let (items)
     (map-applicable-translators
      #'(lambda (translator presentation context)
-         (push (make-presentation-translator-menu-item :translator translator
-                                                       :presentation presentation
-                                                       :context context)
-               items))
-     presentation input-context frame window x y :for-menu for-menu)
+	 (when (eql (menu translator) for-menu)
+	   (push 
+	    (make-presentation-translator-menu-item :translator translator
+						    :presentation presentation
+						    :context context)
+	    items)))
+     presentation input-context frame window x y :for-menu t)
     (setq items (nreverse items))
     (multiple-value-bind (item object event)
         (menu-choose items
