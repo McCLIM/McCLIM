@@ -186,7 +186,7 @@
 	(frame *application-frame*)
 	(manager (frame-manager *application-frame*)))
     (if (eq type :command)
-	(if (command-enabled (car value) frame)
+	(if (command-enabled (if (consp value) (car value) value) frame)
 	    (make-pane-1 manager frame 'menu-button-leaf-pane
 			 :label name
 			 :client client
