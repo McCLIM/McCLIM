@@ -60,10 +60,10 @@
 
 (defmethod draw (sheet (picture vertical-picture))
   (with-slots (picture1 picture2) picture
-              (with-scaling (sheet 1 0.5)
-                            (draw sheet picture1)
-                            (with-translation (sheet 0 1)
-                                              (draw sheet picture2)))))
+    (with-scaling (sheet 1 0.5)
+      (draw sheet picture1)
+      (with-translation (sheet 0 1)
+        (draw sheet picture2)))))
 
 (defclass horizontal-picture (picture)
   ((picture1 :type picture :initarg :picture1)
@@ -71,10 +71,10 @@
 
 (defmethod draw (sheet (picture horizontal-picture))
   (with-slots (picture1 picture2) picture
-              (with-scaling (sheet 0.5 1)
-                            (draw sheet picture1)
-                            (with-translation (sheet 1 0)
-                                              (draw sheet picture2)))))
+    (with-scaling (sheet 0.5 1)
+      (draw sheet picture1)
+      (with-translation (sheet 1 0)
+        (draw sheet picture2)))))
 
 (defun below (picture1 picture2)
   (make-instance 'vertical-picture :picture1 picture1 :picture2 picture2))
@@ -95,14 +95,14 @@
 
 (defmethod draw :around (sheet (picture vertically-flipped-picture))
   (with-drawing-options (sheet :transformation (make-reflection-transformation* 0 0.5 1 0.5))
-                        (call-next-method sheet picture)))
+    (call-next-method sheet picture)))
 
 (defclass horizontally-flipped-picture (picture-transformer)
   ())
 
 (defmethod draw :around (sheet (picture horizontally-flipped-picture))
   (with-drawing-options (sheet :transformation (make-reflection-transformation* 0.5 0 0.5 1))
-                        (call-next-method sheet picture)))
+    (call-next-method sheet picture)))
 
 (defun flip-vert (picture)
   (make-instance 'vertically-flipped-picture :picture picture))
@@ -117,7 +117,7 @@
 
 (defmethod draw :around (sheet (picture rotated-picture))
   (with-rotation (sheet (* pi 0.5) (make-point 0.5 0.5))
-                 (call-next-method sheet picture)))
+    (call-next-method sheet picture)))
 
 (defun rotate (picture)
   (make-instance 'rotated-picture :picture picture))
@@ -127,8 +127,8 @@
 (defun right-split (picture times)
   (if (= times 0)
       picture
-    (let ((smaller (right-split picture (1- times))))
-      (beside picture (below smaller smaller)))))
+      (let ((smaller (right-split picture (1- times))))
+        (beside picture (below smaller smaller)))))
 
 (defun up-split (picture times)
   (if (= times 0)
@@ -139,13 +139,13 @@
 (defun corner-split (picture times)
   (if (= times 0)
       picture
-    (let ((up (up-split picture (1- times)))
-          (right (right-split picture (1- times))))
-      (let ((top-left (beside up up))
-            (bottom-right (below right right))
-            (corner (corner-split picture (1- times))))
-        (beside (below picture top-left)
-                (below bottom-right corner))))))
+      (let ((up (up-split picture (1- times)))
+            (right (right-split picture (1- times))))
+        (let ((top-left (beside up up))
+              (bottom-right (below right right))
+              (corner (corner-split picture (1- times))))
+          (beside (below picture top-left)
+                  (below bottom-right corner))))))
 
 (defun square-limit (picture n)
   (let* ((quarter (corner-split picture n))
@@ -158,8 +158,8 @@
 
 (defun test-painter (sheet)
   (with-scaling (sheet 300)
-                (with-translation (sheet 0.5 1)
-                                  (draw sheet *my-picture*))))
+    (with-translation (sheet 0.5 1)
+      (draw sheet *my-picture*))))
 
 
 ;;; --- Test 2: Rotation and slanting ---
@@ -170,7 +170,7 @@
 
 (defmacro with-slanting ((medium k) &body body)
   `(with-drawing-options (,medium :transformation (make-slanting-transformation ,k))
-                         ,@body))
+     ,@body))
 
 (defun draw-my-square (sheet)
   (draw-rectangle* sheet -0.5 -0.5 0.5 0.5 :filled nil)
@@ -182,23 +182,23 @@
 (defun draw-slantings (sheet &key (nangles 10) (nslantings 10))
   (let ((da (/ +slanting-full-angle+ nangles))
         (ds (/ +slanting-full-slant+ nslantings)))
-    (dotimes (iangle nangles)
+    (dotimes (iangle (1+ nangles))
       (let ((angle (* da iangle)))
         (dotimes (islant nslantings)
           (let ((slant (* ds islant)))
             (with-translation (sheet (* 1.5 iangle) (* 1.5 islant))
-                              (with-slanting (sheet slant)
-                                             (with-rotation (sheet angle)
-                                                            (draw-my-square sheet)))
-                              (draw-lines* sheet '(
-                                                   -0.5 0 0.5 0
-                                                   0 -0.5 0 0.5)
-                                           :ink +blue+))))))))
+              (with-slanting (sheet slant)
+                (with-rotation (sheet angle)
+                  (draw-my-square sheet)))
+              (draw-lines* sheet '(
+                                   -0.5 0 0.5 0
+                                   0 -0.5 0 0.5)
+                           :ink +blue+))))))))
 
 (defun test-slantings (sheet)
   (with-scaling (sheet 30)
-                (with-translation (sheet 1 1)
-                                  (draw-slantings sheet))))
+    (with-translation (sheet 1 1)
+      (draw-slantings sheet))))
 
 
 ;;; --- Test 3: Continuity ---
@@ -227,16 +227,17 @@
 
 (defun transformations-test ()
   (with-open-file (file *transformations-test-file* :direction :output)
-                  (with-output-to-postscript-stream (stream file)
-                                                    (test-painter stream)
-                                                    (new-page stream)
+    (with-output-to-postscript-stream (stream file)
+      (with-output-recording-options (stream :record nil)
+        (test-painter stream)
+        (new-page stream)
 
-                                                    (test-slantings stream)
-                                                    (new-page stream)
+        (test-slantings stream)
+        (new-page stream)
 
-                                                    (test-continuity stream)
-                                                    (new-page stream)
+        (test-continuity stream)
+        (new-page stream)
 
-                                                    (with-drawing-options (stream :transformation
-                                                                                  (make-reflection-transformation* 0 500 500 0))
-                                                                          (test-continuity stream)))))
+        (with-drawing-options (stream :transformation
+                                      (make-reflection-transformation* 0 500 500 0))
+          (test-continuity stream))))))
