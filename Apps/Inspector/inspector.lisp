@@ -178,28 +178,46 @@ structure objects."
 		 (with-output-as-presentation
 		     (pane (cons object slot-name) 'settable-slot)
 		   (format pane "~a:" slot-name))
-		 (inspect-object (slot-value object slot-name) pane)))))))
+		 (if (slot-boundp object slot-name)
+		     (inspect-object (slot-value object slot-name) pane)
+		     (format pane "#<unbound slot>"))))))))
 
 ;; FIXME: should this be removed? It's really ugly.
 (defparameter *object-representation-max-length* 300
   "Maximum number of characters of an object's textual representation
 that are allowed before abbreviation kicks in")
 
-;; Try to print the normal, textual representation of an object, but
-;; if that's too long, make an abbreviated "instance of ~S" version.
-(defmethod inspect-object-briefly ((object standard-object) pane)
+(defun inspect-structure-or-object-briefly (object pane)
   (with-output-as-presentation
       (pane object (presentation-type-of object))
-    (let ((representation (with-output-to-string (string)
-			    (prin1 object string))))
-      (if (< (length representation) *object-representation-max-length*)
-	  (princ representation pane)
-	  (format pane "#<~S ...>" (class-name (class-of object)))))))
+    (handler-case
+	(let ((representation (with-output-to-string (string)
+				(prin1 object string))))
+	  (if (< (length representation) *object-representation-max-length*)
+	      (princ representation pane)
+	      (format pane "#<~S ...>" (class-name (class-of object)))))
+      (error ()
+	(format pane "#<unprintable ~S>" (class-name (class-of object)))))))
+
+;; Try to print the normal, textual representation of an object, but
+;; if that's too long, make an abbreviated "instance of ~S" version.
+
+(defmethod inspect-object-briefly ((object standard-object) pane)
+  (inspect-structure-or-object-briefly object pane))
+
+(defmethod inspect-object-briefly ((object structure-object) pane)
+  (inspect-structure-or-object-briefly object pane))
+
+(defmethod inspect-object-briefly ((object condition) pane)
+  (inspect-structure-or-object-briefly object pane))
 
 (defmethod inspect-object ((object standard-object) pane)
   (inspect-structure-or-object object pane))
 
 (defmethod inspect-object ((object structure-object) pane)
+  (inspect-structure-or-object object pane))
+
+(defmethod inspect-object ((object condition) pane)
   (inspect-structure-or-object object pane))
 
 (defun inspect-cons-as-cells (object pane)
@@ -319,10 +337,13 @@ use implementation-specific functions to be more informative."
 	     (prin1 fun string))))
     ;; If we have SBCL, try to do fancy formatting. If anything goes
     ;; wrong with that, fall back on ugly standard PRIN1.
-    #+sbcl (handler-case (format nil "~A ~S"
-				 (sb-impl::%simple-fun-name fun)
-				 (sb-impl::%simple-fun-arglist fun))
-	     (error () (generic-print fun)))
+    #+sbcl
+    (unless (typep fun 'generic-function)
+      (let ((fun (sb-kernel:%closure-fun fun)))
+	(handler-case (format nil "~A ~S"
+			      (sb-kernel:%simple-fun-name fun)
+			      (sb-kernel:%simple-fun-arglist fun))
+	  (error () (generic-print fun)))))
     ;; FIXME: Other Lisp implementations have ways of getting this
     ;; information. If you want a better inspector on a non-SBCL Lisp,
     ;; please add code for it and send patches.
@@ -333,8 +354,10 @@ use implementation-specific functions to be more informative."
        (pane object (presentation-type-of object))
     (format pane "Function: ~A"
 	    (pretty-print-function object))
-    #+sbcl (format pane "~&Type: ~A"
-		   (sb-impl::%simple-fun-type object))
+    #+sbcl
+    (unless (typep object 'generic-function)
+      (format pane "~&Type: ~A"
+	      (sb-kernel:%simple-fun-type (sb-kernel:%closure-fun object))))
     (print-documentation object pane)))
 
 (defmethod inspect-object-briefly ((object package) pane)
@@ -534,9 +557,10 @@ available in direct slots."
 	      (clim-mop:slot-definition-type slot-object))
       (format stream "~&Allocation: ~S~%"
 	      (clim-mop:slot-definition-allocation slot-object))
-      ;; FIXME: This should show readers and writers, but it doesn't
-      ;; work on SBCL 0.8.16 for me. Is this an SBCL-specific problem?
-      ;; Is the code broken?
+      ;; FIXME: This should show readers and writers for object slots
+      ;; (but not structure slots), but it doesn't work on SBCL 0.8.16
+      ;; for me. Is this an SBCL-specific problem?  Is the code
+      ;; broken?
       (when (clim-mop:slot-definition-readers slot-object)
 	(format stream "~&Readers: ")
 	(format-textual-list (clim-mop:slot-definition-readers slot-object)
