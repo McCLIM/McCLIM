@@ -292,11 +292,11 @@
 ;; in gadget-armed-callback or gadget-disarmed-callback with one argument,
 ;; the gadget."
 
-(defmethod armed-callback ((gadget standard-gadget) client gadget-id)
+(defmethod armed-callback ((gadget basic-gadget) client gadget-id)
   (declare (ignore client gadget-id))
   (invoke-callback gadget (gadget-armed-callback gadget)))
 
-(defmethod disarmed-callback ((gadget standard-gadget) client gadget-id)
+(defmethod disarmed-callback ((gadget basic-gadget) client gadget-id)
   (declare (ignore client gadget-id))
   (invoke-callback gadget (gadget-disarmed-callback gadget)))
 
@@ -1060,23 +1060,23 @@ and must never be nil."))
 
 ;;; Common colors:
 
-(defmethod gadget-highlight-background ((gadget standard-gadget))
+(defmethod gadget-highlight-background ((gadget basic-gadget))
   (compose-over (compose-in +paleturquoise+ (make-opacity .5))
                 (pane-background gadget)))
 
-(defmethod effective-gadget-foreground ((gadget standard-gadget))
+(defmethod effective-gadget-foreground ((gadget basic-gadget))
   (if (gadget-active-p gadget)
       +foreground-ink+
       (compose-over (compose-in (pane-foreground gadget)
                                 (make-opacity .5))
                     (pane-background gadget))))
 
-(defmethod effective-gadget-background ((gadget standard-gadget))
+(defmethod effective-gadget-background ((gadget basic-gadget))
   (if (slot-value gadget 'armed)
       (gadget-highlight-background gadget)
       (pane-background gadget)))
 
-(defmethod effective-gadget-input-area-color ((gadget standard-gadget))
+(defmethod effective-gadget-input-area-color ((gadget basic-gadget))
   (if (gadget-active-p gadget)
       +LEMONCHIFFON+
       (compose-over (compose-in +LEMONCHIFFON+ (make-opacity .5))
@@ -1280,18 +1280,28 @@ and must never be nil."))
                        :min-height (* 2 *3d-border-thickness*)
                        :height (* 2 *3d-border-thickness*)
                        :max-height (* 2 *3d-border-thickness*)))
+
 ;;; ------------------------------------------------------------------------------------------
 ;;;  30.4.4 The concrete scroll-bar Gadget
 
-(defclass scroll-bar-pane (3D-border-mixin scroll-bar)
+(defclass scroll-bar-pane (sheet-multiple-child-mixin
+                           3D-border-mixin
+                           scroll-bar
+                           )
   ((event-state :initform nil)
-   (drag-dy :initform nil))
+   (drag-dy :initform nil)
+   (inhibit-redraw-p
+    :initform nil
+    :documentation "Hack, when set to non-NIL changing something does not trigger redrawing.")
+   (thumb :initform nil)
+   )
   (:default-initargs :value 0
                      :min-value 0
                      :max-value 1
                      :orientation :vertical
                      :border-width 2
-                     :border-style :inset))
+                     :border-style :inset
+                     :background *3d-inner-color*))
 
 (defmethod compose-space ((sb scroll-bar-pane) &key width height)
   (declare (ignore width height))
@@ -1304,6 +1314,95 @@ and must never be nil."))
 			      :height *scrollbar-thickness*
 			      :min-width (* 3 *scrollbar-thickness*)
 			      :width (* 4 *scrollbar-thickness*))))
+
+;;; The thumb of a scroll bar
+
+;; work in progress --GB
+
+#||
+(defclass scroll-bar-thumb-pane (arm/disarm-repaint-mixin
+                                 basic-gadget)
+  ((tr :initform nil)
+   (allowed-region :initarg :allowed-region))
+  (:default-initargs
+      :background *3d-normal-color*))
+
+(defmethod handle-event ((pane scroll-bar-thumb-pane) (event pointer-enter-event))
+  (declare (ignoreable event))
+  (with-slots (armed) pane
+    (arm-gadget pane (adjoin :have-mouse armed))))
+
+(defmethod handle-event ((pane scroll-bar-thumb-pane) (event pointer-exit-event))
+  (declare (ignoreable event))
+  (with-slots (armed) pane
+    (arm-gadget pane (remove :have-mouse armed))))
+
+(defmethod handle-event ((pane scroll-bar-thumb-pane) (event pointer-button-press-event))
+  (with-slots (tr armed) pane
+    (arm-gadget pane (adjoin :dragging armed))
+    (setf tr (compose-transformations
+              (make-scaling-transformation 1 1)
+              (compose-transformations
+              (compose-transformations
+               (make-translation-transformation (- (pointer-event-x event)) (- (pointer-event-y event)))
+               (invert-transformation (sheet-delta-transformation (sheet-parent pane) (graft pane))))
+              (invert-transformation (sheet-native-transformation (graft pane)))))) ))
+
+(defmethod handle-event ((pane scroll-bar-thumb-pane) (event pointer-button-release-event))
+  (with-slots (tr armed) pane
+    (arm-gadget pane (remove :dragging armed))
+    (setf tr nil)) )
+
+(defmethod handle-event ((pane scroll-bar-thumb-pane) (event pointer-motion-event))
+  (with-slots (tr allowed-region) pane
+    (when tr
+      (multiple-value-bind (nx ny) (transform-position tr
+                                                       (pointer-event-native-graft-x event)
+                                                       (pointer-event-native-graft-y event))
+        (with-bounding-rectangle* (x1 y1 x2 y2) allowed-region
+          (move-sheet pane
+                      (clamp nx x1 x2)
+                      (clamp ny y1 y2)))))))
+
+(defmethod handle-repaint ((pane scroll-bar-thumb-pane) region)
+  (with-bounding-rectangle* (x1 y1 x2 y2) pane
+    (draw-rectangle* pane x1 y1 x2 y2 :ink (effective-gadget-background pane))
+    (draw-bordered-polygon pane
+                           (polygon-points (make-rectangle* x1 y1 x2 y2))
+                           :style :outset
+                           :border-width 2)
+    (let ((y (/ (+ y1 y2) 2)))
+      (draw-bordered-polygon pane
+                             (polygon-points (make-rectangle* (+ x1 3) (- y 1) (- x2 3) (+ y 1)))
+                             :style :inset
+                             :border-width 1)
+      (draw-bordered-polygon pane
+                             (polygon-points (make-rectangle* (+ x1 3) (- y 4) (- x2 3) (- y 2)))
+                             :style :inset
+                             :border-width 1)
+      (draw-bordered-polygon pane
+                             (polygon-points (make-rectangle* (+ x1 3) (+ y 4) (- x2 3) (+ y 2)))
+                             :style :inset
+                             :border-width 1))))
+
+;;;
+
+(defmethod sheet-adopt-child :after (sheet (scroll-bar scroll-bar-pane))
+  ;; create a sheet for the thumb
+  '(with-slots (thumb) scroll-bar
+    (setf thumb (make-pane 'scroll-bar-thumb-pane
+                           :allowed-region (make-rectangle* 2 15 14 340)
+                           ))
+    (setf (sheet-region thumb)
+          (make-rectangle* 0 0 12 50))
+    (setf (sheet-transformation thumb)
+          (compose-transformations
+           (make-transformation 1 0 0 1 0 0)
+           (make-translation-transformation 2 0)))
+    (sheet-adopt-child scroll-bar thumb)))
+
+||#
+
 ;;; Utilities
 
 ;; We think all scroll bars as vertically oriented, therefore we have
@@ -1322,16 +1421,22 @@ and must never be nil."))
 
 ;;; Scroll-bar's sub-regions
 
-#+NIL
-(defmethod scroll-bar-thumb-size ((sb scroll-bar-pane))
-  "Return the size of the scrollbar's thumb."
-  (multiple-value-bind (minv maxv) (gadget-range* sb)
-    (max 1/100000                         ;hack to cope with GADGET-RANGE* being empty
-         (* 1/3 (- maxv minv)))))
-
 (defmethod (setf scroll-bar-thumb-size) :after (new-value (sb scroll-bar-pane))
   (declare (ignore new-value))
-  (handle-repaint sb +everywhere+))     ;arg
+  (with-slots (inhibit-redraw-p thumb) sb
+    #||
+    ;;work in progress
+    (setf (sheet-region thumb)
+          (with-bounding-rectangle* (x1 y1 x2 y2) (scroll-bar-thumb-bed-region sb)
+            (multiple-value-bind (minv maxv) (gadget-range* sb)
+              (multiple-value-bind (v) (gadget-value sb)
+                (let ((ts (scroll-bar-thumb-size sb)))
+                  (let ((ya (translate-range-value v minv (+ maxv ts) y1 y2))
+                        (yb (translate-range-value (+ v ts) minv (+ maxv ts) y1 y2)))
+                    (make-rectangle* 0 0 (- x2 x1) (- yb ya))))))))
+    ||#
+    (unless inhibit-redraw-p
+      (dispatch-repaint sb +everywhere+)))) ;arg...
 
 (defmethod scroll-bar-up-region ((sb scroll-bar-pane))
   (with-bounding-rectangle* (minx miny maxx maxy) (transform-region (scroll-bar-transformation sb)
@@ -1428,7 +1533,7 @@ and must never be nil."))
              (setf event-state :dragging
                    drag-dy (- y (bounding-rectangle-min-y (scroll-bar-thumb-region sb)))))
             ((region-contains-position-p (scroll-bar-thumb-bed-region sb) x y)
-             (if (< y (bounding-rectangle-min-y (scroll-bar-thumb-bed-region sb)))
+             (if (< y (bounding-rectangle-min-y (scroll-bar-thumb-region sb)))
                  (scroll-up-page-callback sb (gadget-client sb) (gadget-id sb))
                  (scroll-down-page-callback sb (gadget-client sb) (gadget-id sb))))
             (t
@@ -1447,18 +1552,18 @@ and must never be nil."))
   (multiple-value-bind (x y) (transform-position (scroll-bar-transformation sb)
                                                  (pointer-event-x event) (pointer-event-y event))
     (declare (ignore x))
-    (with-slots (event-state drag-dy) sb
+    (with-slots (event-state drag-dy inhibit-redraw-p) sb
       (case event-state
         (:dragging
          (let* ((y-new-thumb-top (- y drag-dy))
                 (ts (scroll-bar-thumb-size sb))
                 (new-value (min (gadget-max-value sb)
-                               (max (gadget-min-value sb)
-                                    (translate-range-value y-new-thumb-top
-                                                  (bounding-rectangle-min-y (scroll-bar-thumb-bed-region sb))
-                                                  (bounding-rectangle-max-y (scroll-bar-thumb-bed-region sb))
-                                                  (gadget-min-value sb)
-                                                  (+ (gadget-max-value sb) ts))))))
+                                (max (gadget-min-value sb)
+                                     (translate-range-value y-new-thumb-top
+                                                            (bounding-rectangle-min-y (scroll-bar-thumb-bed-region sb))
+                                                            (bounding-rectangle-max-y (scroll-bar-thumb-bed-region sb))
+                                                            (gadget-min-value sb)
+                                                            (+ (gadget-max-value sb) ts))))))
            ;; Blitter hack:
            #-NIL
            (with-drawing-options (sb :transformation (scroll-bar-transformation sb))
@@ -1469,12 +1574,17 @@ and must never be nil."))
                  (copy-area sb ox1 oy1 (- ox2 ox1) (- oy2 oy1) nx1 ny1)
                  (if (< oy1 ny1)
                      (draw-rectangle* sb ox1 oy1 ox2 ny1 :ink *3d-normal-color*)
-                   (draw-rectangle* sb ox1 oy2 ox2 ny2 :ink *3d-normal-color*)))))
+                     (draw-rectangle* sb ox1 oy2 ox2 ny2 :ink *3d-normal-color*)))))
            #+NIL
            (dispatch-repaint sb +everywhere+)
-           (setf (gadget-value sb) new-value)
-           (drag-callback sb (gadget-client sb) (gadget-id sb)
-                          new-value) ))))))
+           (unwind-protect
+                (progn
+                  (setf inhibit-redraw-p t)
+                  (setf (gadget-value sb) new-value)
+                  (drag-callback sb (gadget-client sb) (gadget-id sb)
+                                 new-value))
+             (setf inhibit-redraw-p nil))
+           ))))))
 
 ;;; Repaint
 
@@ -1511,7 +1621,6 @@ and must never be nil."))
                 (otherwise
                  (draw-polygon sb pg :ink *3d-normal-color*)
                  (draw-bordered-polygon sb pg :style :outset :border-width 2)))))
-
           ;; draw thumb
           (with-bounding-rectangle* (x1 y1 x2 y2) (scroll-bar-thumb-region sb)
             (draw-rectangle* sb x1 y1 x2 y2 :ink *3d-normal-color*)
