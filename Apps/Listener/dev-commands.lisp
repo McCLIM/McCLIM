@@ -25,7 +25,7 @@
 ;; TODO: Split these into several command tables, and eventually
 ;; into seperate files. We need seperate command tables for lisp
 ;; development, filesystem manipulation, UNIX crap, and whatever
-;; else suggests itself. Mostly to make them layout nice in a
+;; else suggests itself. Mostly to make them layout nicely in a
 ;; command menu, if anyone wants such a thing.
 
 (define-command-table dev-commands)
@@ -252,7 +252,7 @@
       (when (boundp symbol)
         (format stream " = ")
         (with-drawing-options (stream :ink +olivedrab+ ;; XXX
-                                      :text-style (make-text-style :fixed :roman :small))
+                                      :text-style (make-text-style :fix :roman :small))
           (let ((object (symbol-value symbol)))
             (present object (presentation-type-of object) :stream stream)))))))
 
@@ -353,7 +353,7 @@
   "Does the graphing for Show Class Superclasses and Subclasses commands"
   (let ((normal-ink +foreground-ink+)
         (arrow-ink  (make-rgb-color 0.72 0.72 0.72))	
-	(text-style (make-text-style :fixed :roman :normal)))
+	(text-style (make-text-style :fix :roman :normal)))
     (with-drawing-options (stream :text-style text-style)
     (format-graph-from-roots (list class)
 			     #'(lambda (class stream)                                 
