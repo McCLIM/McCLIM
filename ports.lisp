@@ -72,9 +72,26 @@
    ))
 
 ;; Keyboard focus is now managed per-frame rather than per-port,
-;; which makes a lot of sense. The CLIM spec suggests this in a
-;; "Minor Issue". So, redirect PORT-KEYBOARD-INPUT-FOCUS to the
-;; current application frame for compatibility.
+;; which makes a lot of sense (less sense in the presense of
+;; multiple top-level windows, but no one does that yet). The CLIM
+;; spec suggests this in a "Minor Issue". So, redirect
+;; PORT-KEYBOARD-INPUT-FOCUS to the current application frame
+;; for compatibility.
+
+;; Note: This would prevent you from using the function the
+;; function to query who currently has the focus. I don't
+;; know if this is an intended use or not.
+
+;; The big picture:
+;;   PORT-KEYBOARD-INPUT-FOCUS is defined by CLIM 2.0
+;;   Our default method on this delegates to KEYBOARD-INPUT-FOCUS
+;;    on the current application frame.
+;;   %SET-PORT-KEYBOARD-FOCUS is the function which
+;;    should be implemented in a McCLIM backend and
+;;    does the work of changing the focus.
+;;   A method on (SETF KEYBOARD-INPUT-FOCUS) brings them together,
+;;    calling %SET-PORT-KEYBOARD-FOCUS.
+
 (defmethod port-keyboard-input-focus (port)
   (declare (ignore port))
   (when *application-frame*
@@ -84,14 +101,14 @@
   (when focus
     (if (pane-frame focus)
         (setf (keyboard-input-focus (pane-frame focus)) focus)
-      (set-port-keyboard-focus focus port))))
+        (%set-port-keyboard-focus port focus))))
 
 ;; This is not in the CLIM spec, but since (setf port-keyboard-input-focus)
 ;; now calls (setf keyboard-input-focus), we need something concrete the
 ;; backend can implement to set the focus.    
-(defmethod set-port-keyboard-focus (focus port)
-  (declare (ignore focus))
-  (warn "SET-PORT-KEYBOARD-FOCUS is not implemented on ~W" port))
+(defmethod %set-port-keyboard-focus (port focus &key timestamp)
+  (declare (ignore focus))  
+  (warn "%SET-PORT-KEYBOARD-FOCUS is not implemented on ~W" port))
   
 
 (defun find-port (&key (server-path *default-server-path*))

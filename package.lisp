@@ -1942,7 +1942,7 @@
    #:port-set-sheet-region
    #:port-set-sheet-transformation
    #:port-ungrab-pointer
-   #:set-port-keyboard-focus
+   #:%set-port-keyboard-focus
    #:set-sheet-pointer-cursor
    #:synthesize-pointer-motion-event
    #:text-style-character-width

@@ -1230,16 +1230,13 @@
 	       ;; reasonable timestamp.
 	       :timestamp 0))))))))
   
-  
-  
 
 ;;; Set the keyboard input focus for the port.
-;;; (oops, we lose the timestamp here.)
 
-(defmethod set-port-keyboard-focus (focus (port clx-port))
+(defmethod %set-port-keyboard-focus ((port clx-port) focus &key timestamp)
   (let ((mirror (sheet-mirror focus)))
     (when mirror
-      (xlib:set-input-focus (clx-port-display port) mirror :parent nil))))
+      (xlib:set-input-focus (clx-port-display port) mirror :parent timestamp))))
 
 (defmethod port-force-output ((port clx-port))
   (xlib:display-force-output (clx-port-display port)))

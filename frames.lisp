@@ -1280,7 +1280,7 @@ frame, if any")
   (declare (ignore pane state)))
 
 (defmethod (setf keyboard-input-focus) :after (focus frame)
-  (set-port-keyboard-focus focus (port frame)))
+  (%set-port-keyboard-focus (port frame) focus))
 
 (defmethod (setf client-setting) (value frame setting)
   (setf (getf (client-settings frame) setting) value))
