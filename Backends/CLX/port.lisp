@@ -255,7 +255,7 @@
 				    :owner-grab-button)
                       :map (sheet-enabled-p sheet)))
 
-(defmethod realize-mirror ((port clx-port) (sheet interactor-pane))
+(defmethod realize-mirror ((port clx-port) (sheet clim-stream-pane))
   (realize-mirror-aux port sheet
 		      :event-mask '(:exposure
 				    :key-press :key-release
@@ -267,17 +267,6 @@
 				    :owner-grab-button)
                       :map (sheet-enabled-p sheet)))
 
-(defmethod realize-mirror ((port clx-port) (sheet application-pane))
-  (realize-mirror-aux port sheet
-		      :event-mask '(:exposure
-				    :key-press :key-release
-				    :button-press :button-release
-				    :enter-window :leave-window
-				    :structure-notify
-				    :pointer-motion
-				    :button-motion
-				    :owner-grab-button)
-                      :map (sheet-enabled-p sheet)))
 
 (defmethod destroy-mirror ((port clx-port) (sheet mirrored-sheet-mixin))
   (when (port-lookup-mirror port sheet)
