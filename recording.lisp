@@ -23,6 +23,15 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
+;;; TODO:
+;;; - Scrolling does not work correctly. Region is given in "window" coordinates,
+;;;   without bounding-rectangle-position transformation.
+;;; - Wrapping
+;;; - Text recording should check for DRAWING-P and block output if necessary
+;;; - Redo setf*-output-record-position, extent recomputation for
+;;;   compound records
+;;; - How to deal with mixing of positioning/modifying?
+
 (in-package :CLIM-INTERNALS)
 
 (defclass output-record-mixin ()
@@ -58,6 +67,40 @@
 (defun displayed-output-record-p (x)
   (typep x 'displayed-output-record))
 
+; 16.2.1. The Basic Output Record Protocol
+(defgeneric output-record-position (record))
+;(defgeneric* output-record-position (x y record))
+(defgeneric output-record-start-cursor-position (record))
+;(defgeneric* output-record-start-cursor-position (x y record))
+(defgeneric output-record-end-cursor-position (record))
+;(defgeneric* output-record-end-cursor-position (x y record))
+(defgeneric output-record-parent (record))
+;(defgeneric replay (record stream &optional region))
+(defgeneric replay-output-record (record stream
+                                  &optional region x-offset y-offset))
+(defgeneric output-record-hit-detection-rectangle* (record))
+(defgeneric output-record-refined-position-test (record x y))
+(defgeneric highlight-output-record (record stream state))
+(defgeneric displayed-output-record-ink (displayed-output-record))
+
+; 16.2.2. Output Record "Database" Protocol
+(defgeneric output-record-children (record))
+(defgeneric add-output-record (child record))
+(defgeneric delete-output-record (child record &optional (errorp t)))
+(defgeneric clear-output-record (record))
+(defgeneric output-record-count (record))
+(defgeneric map-over-output-records-containing-position
+  (function record x y &optional x-offset y-offset &rest function-args))
+(defgeneric map-over-output-records-overlapping-region
+  (function record region &optional x-offset y-offset &rest function-args))
+
+; 16.2.3. Output Record Change Notification Protocol
+(defgeneric recompute-extent-for-new-child (record child))
+(defgeneric recompute-extent-for-changed-child
+  (record child old-min-x old-min-y old-max-x old-max-y))
+(defgeneric tree-recompute-extent (record))
+
+;;; Methods
 (defmethod initialize-instance :after ((record output-record) &rest args
 				       &key size
 				       &allow-other-keys)
@@ -108,6 +151,7 @@
   nil)
 
 (defun replay (record stream &optional region)
+  (stream-close-text-output-record stream)
   (when (stream-drawing-p stream)
     (let ((old-record-p (stream-recording-p stream)))
       (unwind-protect
@@ -124,7 +168,7 @@
    #'replay-output-record record region x-offset y-offset
    stream region x-offset y-offset))
 
-(defmethod erase-output-record ((record output-record) stream)
+(defmethod erase-output-record ((record output-record) stream &optional (errorp t))
   (declare (ignore stream))
   nil)
 
@@ -150,6 +194,11 @@
 (defclass standard-tree-output-record (output-record)
   (
    ))
+
+(defmethod setf*-output-record-position (nx ny (record standard-sequence-output-record))
+  (with-slots (x y) record
+              (setq x nx
+                    y ny)))
 
 (defmethod output-record-children ((output-record output-record))
   (with-slots (children) output-record
@@ -188,10 +237,10 @@
 (defmethod clear-output-record ((record output-record))
   (with-slots (children x1 y1 x2 y2) record
     (setq children nil
-	  x1 0
-	  y1 0
-	  x2 0
-	  y2 0)))
+	  x1 (coordinate 0)
+	  y1 (coordinate 0)
+	  x2 (coordinate 0)
+	  y2 (coordinate 0))))
 
 (defmethod output-record-count ((record output-record))
   (length (output-record-children record)))
@@ -236,8 +285,7 @@
                          (bounding-rectangle* record))))
     (call-next-method)
     (with-slots (parent x1 y1 x2 y2) record
-      (when (and parent
-                 (region-equal old-rectangle record))
+      (when (and parent (not (region-equal old-rectangle record)))
       	(recompute-extent-for-changed-child parent record x1 y1 x2 y2)))))
 
 (defmethod recompute-extent-for-changed-child ((record output-record) changed-child
@@ -269,10 +317,10 @@
 (defmethod tree-recompute-extent ((record output-record))
   (with-slots (parent children x1 y1 x2 y2) record
     (if (null children)
-	(setq x1 0
-	      y1 0
-	      x2 0
-	      y2 0)
+	(setq x1 (coordinate 0)
+	      y1 (coordinate 0)
+	      x2 (coordinate 0)
+	      y2 (coordinate 0))
       (with-bounding-rectangle* (left top right bottom) (first children)
 	(loop for child in (rest children)
 	      do (with-bounding-rectangle* (l1 t1 r1 b1) child
@@ -333,6 +381,28 @@
   (
    ))
 
+;;; 16.4.1 The Output Recording Stream Protocol
+(defgeneric stream-recording-p (stream))
+(defgeneric (setf stream-recording-p) (recording-p stream))
+(defgeneric stream-drawing-p (stream))
+(defgeneric (setf stream-drawing-p) (drawing-p stream))
+(defgeneric stream-output-history (stream))
+(defgeneric stream-current-output-record (stream))
+(defgeneric (setf stream-current-output-record) (record stream))
+(defgeneric stream-add-output-record (stream record))
+(defgeneric stream-replay (stream &optional region))
+(defgeneric erase-output-record (record stream &optional (errorp t)))
+(defgeneric copy-textual-output-history (window stream &optional region record))
+
+;;; 16.4.3 Text Output Recording
+(defgeneric stream-text-output-record (stream text-style))
+(defgeneric stream-close-text-output-record (stream))
+(defgeneric stream-add-character-output
+  (stream character text-style width height baseline))
+(defgeneric stream-add-string-output
+  (stream string start end text-style width height baseline))
+
+;;; Methods
 (defmethod initialize-instance :after ((stream output-recording-stream) &rest args)
   (declare (ignore args))
   (setf (stream-current-output-record stream) (stream-output-history stream)))
@@ -413,7 +483,8 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
     (unwind-protect
         (progn
           (setf (stream-current-output-record stream) new-record)
-          (funcall continuation stream new-record))
+          (funcall continuation stream new-record)
+          (finish-output stream))
       (setf (stream-current-output-record stream) old-record)
       (stream-add-output-record stream new-record))
     new-record))
@@ -447,7 +518,7 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
 |#
 
 
-;;; graphics and text recording classes
+;;; Graphics and text recording classes
 
 (eval-when (compile load eval)
   
@@ -627,8 +698,7 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
    (end-x)
    (end-y)
    (wrapped :initform nil
-	    :accessor text-record-wrapped)
-   ))
+	    :accessor text-record-wrapped)))
 
 (defun text-displayed-output-record-p (x)
   (typep x 'text-displayed-output-record))
@@ -640,6 +710,18 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
 	  (format stream "~D,~D ~S" start-x start-y (mapcar #'third strings)))
       (format stream "empty"))))
 
+(defgeneric add-character-output-to-text-record
+  (text-record character text-style width height baseline))
+(defgeneric add-string-output-to-text-record
+  (text-record string start end text-style width height baseline))
+(defgeneric text-displayed-output-record-string (text-record))
+;;; Internal
+(defgeneric add-character-output-to-text-record
+  (text-record character text-style width height new-baseline))
+(defgeneric add-string-output-to-text-record
+  (text-record string start end text-style width height new-baseline))
+
+;;; Methods
 (defmethod tree-recompute-extent ((text-record text-displayed-output-record))
   (with-slots (parent start-x start-y end-x end-y x1 y1 x2 y2) text-record
               (setq x1 start-x
@@ -675,7 +757,7 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
 					     string start end text-style width height
 					     new-baseline)
   (if end
-      (setq end (min end (length string)))
+      (setq end (min end (1- (length string))))
       (setq end (1- (length string))))
   (let ((length (max 0 (- (1+ end) start))))
     (setq string (make-array length :displaced-to string :displaced-index-offset start))
@@ -689,9 +771,9 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
   (tree-recompute-extent text-record))
 
 (defmethod replay-output-record ((record text-displayed-output-record) stream
-				 &optional region x-offset y-offset)
+				 &optional region (x-offset 0) (y-offset 0))
   (with-slots (strings baseline max-height start-x start-y wrapped
-               x y initial-x1 initial-y1) record
+               x y x1 y1 initial-x1 initial-y1) record
     (let ((old-medium (sheet-medium stream))
 	  (new-medium (make-medium (port stream) stream)))
       (unwind-protect
@@ -700,18 +782,19 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
 	    (setf (medium-sheet new-medium) stream)
             (setf (medium-transformation new-medium)
                    (make-translation-transformation
-                    x-offset y-offset))
+                    (+ x-offset (- x1 initial-x1))
+                    y-offset)))
 	    (loop for y = (+ start-y baseline)
 		  for (x text-style string) in strings
 		  do (setf (medium-text-style new-medium) text-style)
 		     (draw-text* (sheet-medium stream) string x y
-				 :text-style text-style :clipping-region #-nil +everywhere+ #+nil(untransform-region (medium-transformation new-medium) region)))
+				 :text-style text-style :clipping-region (untransform-region (medium-transformation new-medium) region)))
 	    (if wrapped
 		(draw-rectangle* (sheet-medium stream)
 				 (+ wrapped 0) start-y (+ wrapped 4) (+ start-y max-height)
 				 :ink +foreground-ink+
 				 :filled t)))
-	(setf (sheet-medium stream) old-medium)))))
+	(setf (sheet-medium stream) old-medium))))
 
 (defmethod output-record-start-cursor-position ((record text-displayed-output-record))
   (with-slots (start-x start-y) record
@@ -729,8 +812,8 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
 	     finally (return result))))
 
 
-
-(defmethod stream-text-output-record (stream text-style)
+;;; Methods for text output to output recording streams
+(defmethod stream-text-output-record ((stream output-recording-stream) text-style)
   (let ((record (stream-current-text-output-record stream)))
     (unless record
       (setf (stream-current-text-output-record stream)
@@ -738,8 +821,8 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
       (with-slots (start-x start-y end-x end-y x1 y1 x2 y2
                    initial-x1 initial-y1) record
 	  (multiple-value-bind (cx cy) (stream-cursor-position stream)
-	    (setq start-x cx
-		  start-y (+ cy (stream-vertical-spacing stream))
+	    (setq start-x (coordinate cx)
+		  start-y (coordinate (+ cy (stream-vertical-spacing stream)))
 		  end-x start-x
 		  end-y start-y
 		  x1 start-x
@@ -797,9 +880,12 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
   (without-local-recording stream
                            (call-next-method)))
 
+#+nil
 (defmethod stream-write-string :around ((stream output-recording-stream) string
                                         &optional (start 0) end)
-  
+  ;; Problem: it is necessary to check for line wrapping. Now the
+  ;; default method for STREAM-WRITE-STRING do char-by-char output,
+  ;; therefore STREAM-WRITE-CHAR can do the right thing.
   (when (and (stream-recording-p stream)
              (slot-value stream 'local-record-p))
     (let* ((medium (sheet-medium stream))
@@ -822,6 +908,9 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
   (stream-close-text-output-record stream))
 
 (defmethod stream-terpri :after ((stream output-recording-stream))
+  (stream-close-text-output-record stream))
+
+(defmethod setf*-stream-cursor-position :after (x y (stream output-recording-stream))
   (stream-close-text-output-record stream))
 
 ;(defmethod stream-set-cursor-position :after ((stream output-recording-stream))
