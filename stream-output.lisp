@@ -213,9 +213,18 @@
 	 :accessor stream-default-view)
    (baseline :initform 0
 	     :reader stream-baseline)
+   ;; What is this? --GB
    (height :initform 0)
-   )
-  )
+
+   ;; When the stream takes part in the space alloction protocol, this
+   ;; remembers our demand:
+   (seos-current-width  :initform 0)
+   (seos-current-height :initform 0) ))
+
+(defmethod compose-space ((pane standard-extended-output-stream) &key width height)
+  (with-slots (seos-current-width seos-current-height) pane
+    (make-space-requirement :width seos-current-width
+                            :height seos-current-height)))
 
 (defmethod initialize-instance :after ((stream standard-extended-output-stream) &rest args)
   (declare (ignore args))
@@ -238,8 +247,8 @@
 
 ;;;
 
-(defmethod repaint-sheet :around ((stream standard-extended-output-stream)
-				  region)
+(defmethod handle-repaint :around ((stream standard-extended-output-stream)
+                                   region)
   (declare (ignorable region))
   (let ((cursor (stream-text-cursor stream)))
     (if (cursor-visibility cursor)
@@ -286,15 +295,19 @@ than one line of output."))
                    cx (+ cy baseline)))))
 
 (defmethod stream-write-char ((stream standard-extended-output-stream) char)
-  (let* ((cursor (stream-text-cursor stream))
-	 (visible (cursor-visibility cursor))
-	 (medium (sheet-medium stream))
-	 (port (port stream))
-	 (text-style (medium-text-style medium))
+  (let* ((cursor       (stream-text-cursor stream))
+	 (visible      (cursor-visibility cursor))
+	 (medium       (sheet-medium stream))
+	 (port         (port stream))
+	 (text-style   (medium-text-style medium))
 	 (new-baseline (text-style-ascent text-style medium))
-	 (new-height (text-style-height text-style medium))
-	 (margin (stream-text-margin stream))
-	 (view-height (port-mirror-height port stream)))
+	 (new-height   (text-style-height text-style medium))
+	 (margin       (stream-text-margin stream))
+         (%view-height (bounding-rectangle-height
+                        (or (pane-viewport stream)
+                            stream)))
+	 (view-height  (bounding-rectangle-height
+                        stream)))
     (if visible
 	(setf (cursor-visibility cursor) nil))
     (with-slots (baseline height vspace) stream
@@ -311,14 +324,24 @@ than one line of output."))
 	 ((eq char #\Newline)
 	  (setq cx 0
 		cy (+ cy height vspace))
-	  (when (> (+ cy height vspace) view-height)
+	  (when (> (+ cy height) view-height)
 	    (ecase (stream-end-of-page-action stream)
 	      (:scroll
-	       (scroll-vertical stream (+ height vspace)))
+               (let ((jump 0))
+                 (with-slots (seos-current-width seos-current-height) stream
+                   (setf seos-current-width  (max (bounding-rectangle-width stream))
+                         seos-current-height (max (+ cy height)))
+                   (change-space-requirements stream
+                                              :width seos-current-width
+                                              :height seos-current-height))
+                 )
+	       ;;(scroll-vertical stream (+ height vspace))
+               )
 	      (:wrap
 	       (setq cy 0))
 	      (:allow
 	       )))
+          (scroll-extent stream 0 (max 0 (- (+ cy height) %view-height)))
 	  (draw-rectangle* medium cx cy (+ margin 4) (+ cy height)
 			   :ink +background-ink+
 			   :filled t)
@@ -385,7 +408,8 @@ than one line of output."))
 (defmethod stream-text-margin ((stream standard-extended-output-stream))
   (with-slots (margin) stream
     (or margin
-	(- (port-mirror-width (port stream) stream)
+	(- (bounding-rectangle-width (or (pane-viewport stream)
+                                         stream))
 	   6))))
 
 (defmethod stream-line-height ((stream standard-extended-output-stream) &key (text-style nil))
