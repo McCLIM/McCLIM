@@ -48,6 +48,7 @@
   (setf (stream-scan-pointer stream) (stream-insertion-pointer stream))
   (setf (slot-value stream 'rescanning-p) nil))
 
+#+nil
 (defun accept-using-read (stream ptype default default-type defaultp
 			  &key ((:read-eval *read-eval*) nil))
   ;;(format *trace-output* "~&Activation gestures were: ~A~%" *activation-gestures*)
