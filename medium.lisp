@@ -153,6 +153,12 @@
 (eval-when (eval load compile)
 
 (defclass text-style ()
+  ())
+
+(defun text-style-p (x)
+  (typep x 'text-style))
+
+(defclass standard-text-style (text-style)
   ((family :initarg :text-family
 	   :initform :fix
 	   :reader text-style-family)
@@ -161,14 +167,7 @@
 	 :reader text-style-face)
    (size :initarg :text-size
 	 :initform :normal
-	 :reader text-style-size)
-   ))
-
-(defun text-style-p (x)
-  (typep x 'text-style))
-
-(defclass standard-text-style (text-style)
-  ())
+	 :reader text-style-size)))
 
 (defun family-key (family)
   (ecase family
@@ -237,6 +236,10 @@
       (max (round (* size 4/3)) 6)
     (cadr (member size *larger-sizes*))))
 
+(defmethod text-style-components ((text-style standard-text-style))
+  (values (text-style-family text-style)
+          (text-style-face text-style)
+          (text-style-size text-style)))
 
 ;;; Device-Font-Text-Style class
 
