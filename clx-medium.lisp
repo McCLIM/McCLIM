@@ -67,13 +67,16 @@
 	 (progn ,@body)
        #+ignore(xlib:free-gcontext gc))))
 
+(defun medium-transform-position (medium x y)
+  (multiple-value-bind (xr yr) (bounding-rectangle* 
+				(sheet-region (medium-sheet medium)))
+    (transform-position (medium-transformation medium)
+			(- x xr) (- y yr))))
+
 (defmethod medium-draw-point* ((medium clx-medium) x y)
   (with-CLX-graphics (medium)
     (multiple-value-bind (tx ty)
-	(transform-position (compose-transformations (sheet-transformation
-						      (medium-sheet medium))
-						     (medium-transformation medium))
-			    x y)
+	(medium-transform-position medium x y)
       (if (< (line-style-thickness line-style) 2)
 	  (xlib:draw-point mirror gc (round tx) (round ty))
 	(let ((diameter (round (line-style-thickness line-style))))
@@ -90,15 +93,9 @@
 (defmethod medium-draw-line* ((medium clx-medium) x1 y1 x2 y2)
   (with-CLX-graphics (medium)
     (multiple-value-bind (tx1 ty1)
-	(transform-position (compose-transformations (sheet-transformation
-						      (medium-sheet medium))
-						     (medium-transformation medium))
-			    x1 y1)
+	(medium-transform-position medium x1 y1)
       (multiple-value-bind (tx2 ty2)
-	  (transform-position (compose-transformations (sheet-transformation
-							(medium-sheet medium))
-						       (medium-transformation medium))
-			      x2 y2)
+	  (medium-transform-position medium x2 y2)
 	(xlib:draw-line mirror gc (round tx1) (round ty1) (round tx2) (round ty2))))))
 
 (defmethod medium-draw-lines* ((medium clx-medium) coord-seq)
@@ -106,10 +103,7 @@
     (loop with points = (apply #'vector coord-seq)
 	  for i below (length coord-seq) by 2
 	  do (multiple-value-bind (tx ty)
-		 (transform-position (compose-transformations (sheet-transformation
-							       (medium-sheet medium))
-							      (medium-transformation medium))
-				     (aref points i) (aref points (1+ i)))
+		 (medium-transform-position medium (aref points i) (aref points (1+ i)))
 	       (setf (aref points i) (round tx)
 		     (aref points (1+ i)) (round ty)))
 	  finally (xlib:draw-lines mirror gc points))))
@@ -117,15 +111,9 @@
 (defmethod medium-draw-rectangle* ((medium clx-medium) left top right bottom filled)
   (with-CLX-graphics (medium)
     (multiple-value-bind (x1 y1)
-	(transform-position (compose-transformations (sheet-transformation
-						      (medium-sheet medium))
-						     (medium-transformation medium))
-			    left top)
+	(medium-transform-position medium left top)
       (multiple-value-bind (x2 y2)
-	  (transform-position (compose-transformations (sheet-transformation
-							(medium-sheet medium))
-						       (medium-transformation medium))
-			      right bottom)
+	  (medium-transform-position medium right bottom)
 	(if (< x2 x1)
 	    (rotatef x1 x2))
 	(if (< y2 y1)
@@ -176,23 +164,20 @@
       (setq string (make-string 1 :initial-element string)))
     (when (null end) (setq end (length string)))
     (multiple-value-bind (tx ty)
-	(transform-position (compose-transformations (sheet-transformation
-						     (medium-sheet medium))
-						    (medium-transformation medium))
-			    x y)
+	(medium-transform-position medium x y)
       (multiple-value-bind (text-width text-height x y baseline) 
-	   (text-size medium string :start start :end end)
+	  (text-size medium string :start start :end end)
 	(declare (ignore x y))
 	(unless (and (eq align-x :left) (eq align-y :baseline))	    
 	  (setq tx (- tx (ecase align-x
-				(:left 0)
-				(:center (round text-width 2))
-				(:right text-width))))
+			   (:left 0)
+			   (:center (round text-width 2))
+			   (:right text-width))))
 	  (setq ty (ecase align-y
-			  (:top (+ ty baseline))
-			  (:center (+ ty baseline (- (floor text-height 2))))
-			  (:baseline ty)
-			  (:bottom (+ ty baseline (- text-height)))))))
+		     (:top (+ ty baseline))
+		     (:center (+ ty baseline (- (floor text-height 2))))
+		     (:baseline ty)
+		     (:bottom (+ ty baseline (- text-height)))))))
       (xlib:draw-glyphs mirror gc (round tx) (round ty) string :start start :end end))))
 
 (defmethod medium-buffering-output-p ((medium clx-medium))
