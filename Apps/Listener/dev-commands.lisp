@@ -718,20 +718,27 @@ just took too long.")
 
 ;;; Eval
 
+(defun hackish-present (object)
+  "Hack of the day.. let McCLIM determine presentation type to use, except for lists, because the
+list presentation method is inappropriate for lisp return values."
+  (typecase object
+    (sequence (present object 'expression))
+    (T (present object))))
+
 (defun display-evalues (values)
   (with-drawing-options (T :ink +olivedrab+)
     (cond ((null values)
            (format T "No values.~%"))
           ((= 1 (length values))           
-           (present (first values) 'expression)
+           (hackish-present (first values))
            (fresh-line))
           (T (do ((i 0 (1+ i))
                   (item values (rest item)))
-                 ((null item))               
+                 ((null item))           
                (with-drawing-options (T :ink +limegreen+)
                  (with-text-style (T (make-text-style nil :italic :small))
                    (format T "~A  " i)))
-                 (present (first item)  'expression)
+                 (hackish-present (first item))
                  (fresh-line))))))
 
 (defun shuffle-specials (form values)

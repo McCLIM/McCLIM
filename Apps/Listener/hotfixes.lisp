@@ -62,6 +62,7 @@
                    (beep stream)
                    (when *pointer-documentation-output*
                      #+nil(setf (medium-foreground stream) +red+) ; This is silly.
+                     (window-clear *pointer-documentation-output*)
                      (format *pointer-documentation-output* "~&A reader error ~A occured at ~A !~%"
                              nil (stream-scan-pointer stream)))
                    (finish-rescan stream)
