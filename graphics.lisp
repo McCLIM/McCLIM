@@ -522,10 +522,10 @@
   `(let* ((pixmap (allocate-pixmap ,sheet ,width ,height))
 	  (,medium-var (make-medium (port sheet) pixmap))
 	  (old-medium (sheet-medium sheet)))
-     (setf (sheet-medium sheet) ,medium-var)
+     (setf (%sheet-medium sheet) ,medium-var) ;is sheet a sheet-with-medium-mixin? --GB
      (unwind-protect
 	 (progn ,@body)
-       (setf (sheet-medium sheet) old-medium))
+       (setf (%sheet-medium sheet) old-medium));is sheet a sheet-with-medium-mixin? --GB
      pixmap))
 
 (defmacro with-double-buffering ((sheet) &body body)
