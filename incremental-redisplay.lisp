@@ -561,7 +561,7 @@ record is stored.")
 	     (set-medium-graphics-state (start-graphics-state record) stream)
 	     (compute-new-output-records record stream)
 	     (when *dump-updating-output*
-	       (dump-updating record :both *debug-io*))
+	       (dump-updating record :both *trace-output*))
 	     (multiple-value-bind (erases moves draws)
 		 (compute-difference-set record)
 	       (declare (ignore moves))

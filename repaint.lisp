@@ -108,7 +108,7 @@
 #+nil
 (defmethod repaint-sheet ((sheet sheet-mute-repainting-mixin) region)
   (declare (ignorable sheet region))
-  (format *debug-io* "repaint ~S~%" sheet)
+  (format *trace-output* "repaint ~S~%" sheet)
   (values))
 
 (defmethod handle-repaint ((sheet sheet-mute-repainting-mixin) region)

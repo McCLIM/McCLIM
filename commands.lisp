@@ -818,8 +818,8 @@
   (let ((command (funcall *command-parser* command-table stream)))
     #+nil
     (progn
-      (format *debug-io* "~&; Command accepted: ~S.~%" command)
-      (finish-output *debug-io*))
+      (format *trace-output* "~&; Command accepted: ~S.~%" command)
+      (finish-output *trace-output*))
     (cond ((and (null command) defaultp)
 	   (values default default-type))
 	  ((null command)

@@ -99,7 +99,7 @@
                                                 x y
                                                 :modifier-state (event-modifier-state event)))))
                        (when presentation
-                         (print presentation *debug-io*))
+                         (print presentation *trace-output*))
                        (when (and highlight presentation)
                          #+nil ; FIXME
                          (highlight-applicable-presentation

@@ -41,7 +41,7 @@
 	 (gesture (car results)))
     (when (and *debug-echo*
 	       gesture)
-      (print gesture *debug-io*))
+      (print gesture *trace-output*))
     (values-list results)))
 
 #+nil

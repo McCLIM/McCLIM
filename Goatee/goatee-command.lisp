@@ -56,7 +56,7 @@
   (let ((modifier-state (logandc1 climi::+alt-key+
 				  (event-modifier-state gesture))))
 				
-    (format *debug-io* "lookup-gesture-command: ~S ~S~%"
+    (format *trace-output* "lookup-gesture-command: ~S ~S~%"
 	    modifier-state
 	    (keyboard-event-key-name gesture))
     (cdr (assoc modifier-state
@@ -79,7 +79,7 @@
 	  (block error-out
 	    (handler-bind ((goatee-error #'(lambda (c)
 					     (unless *error-fallthrough*
-					       (print c *debug-io*)
+					       (print c *trace-output*)
 					       (beep)
 					       (return-from error-out nil)))))
 	      (funcall command :input-gesture gesture)
@@ -131,13 +131,13 @@
 					   :start-line line
 					   :start-pos pos
 					   :end-state :open))
-    (format *debug-io* "cmd-yank: ~S, ~S~%"
+    (format *trace-output* "cmd-yank: ~S, ~S~%"
 	    (pos (bp-start *insert-extent*))
 	    (pos (bp-end *insert-extent*)))
     (yank *kill-ring* *buffer* *insert-extent*)
     (setf (slot-value *insert-extent* 'bp-end) (point *buffer*))
     (setf (end-state *insert-extent*) :closed)
-    (format *debug-io* "cmd-yank: ~S, ~S~%"
+    (format *trace-output* "cmd-yank: ~S, ~S~%"
 	    (pos (bp-start *insert-extent*))
 	    (pos (bp-end *insert-extent*)))))
 
@@ -147,7 +147,7 @@
 	      (eq *last-command* 'cmd-yank-next))
     ;; maybe do something better than an error?
     (error "Last operation was not a yank!"))
-  (format *debug-io* "cmd-yank-next: ~S, ~S~%"
+  (format *trace-output* "cmd-yank-next: ~S, ~S~%"
 	  (pos (bp-start *insert-extent*))
 	  (pos (bp-end *insert-extent*)))
   (yank-next *kill-ring* *buffer* *insert-extent*))

@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.123 2003/07/15 04:16:18 hefner1 Exp $
+;;; $Id: panes.lisp,v 1.124 2003/07/26 17:37:57 gilbert Exp $
 
 (in-package :clim-internals)
 
@@ -1049,8 +1049,8 @@
                               (* (1- (length children)) major-spacing))))
          #+nil
          (progn
-           (format *debug-io* "~&;; ALLOCATE-SPACE-AUX ~S~%" box)
-           (format *debug-io* "~&;;   major = ~D, wanted = ~D, excess = ~D, allot = ~D.~%"
+           (format *trace-output* "~&;; ALLOCATE-SPACE-AUX ~S~%" box)
+           (format *trace-output* "~&;;   major = ~D, wanted = ~D, excess = ~D, allot = ~D.~%"
                    major wanted excess allot))
 
          (let ((qvector
@@ -1074,10 +1074,10 @@
            ;;
            #+nil
            (progn
-             (format *debug-io* "~&;;   old allotment = ~S.~%" allot)
-             (format *debug-io* "~&;;   qvector 0 = ~S.~%" (mapcar #'(lambda (x) (elt x 0)) qvector))
-             (format *debug-io* "~&;;   qvector 1 = ~S.~%" (mapcar #'(lambda (x) (elt x 1)) qvector))
-             (format *debug-io* "~&;;   qvector 2 = ~S.~%" (mapcar #'(lambda (x) (elt x 2)) qvector)))
+             (format *trace-output* "~&;;   old allotment = ~S.~%" allot)
+             (format *trace-output* "~&;;   qvector 0 = ~S.~%" (mapcar #'(lambda (x) (elt x 0)) qvector))
+             (format *trace-output* "~&;;   qvector 1 = ~S.~%" (mapcar #'(lambda (x) (elt x 1)) qvector))
+             (format *trace-output* "~&;;   qvector 2 = ~S.~%" (mapcar #'(lambda (x) (elt x 2)) qvector)))
            ;;
            (dotimes (j 3)
              (let ((sum (reduce #'+ (mapcar (lambda (x) (elt x j)) qvector))))
@@ -1091,11 +1091,11 @@
                                      (+ allot delta))))
                                allot qvector))
                  #+nil
-                 (format *debug-io* "~&;;   new excess = ~F, allotment = ~S.~%" excess allot)
+                 (format *trace-output* "~&;;   new excess = ~F, allotment = ~S.~%" excess allot)
                  )))
            ;;
-           #+nil (format *debug-io* "~&;;   excess = ~F.~%" excess)
-           #+nil (format *debug-io* "~&;;   new allotment = ~S.~%" allot)
+           #+nil (format *trace-output* "~&;;   excess = ~F.~%" excess)
+           #+nil (format *trace-output* "~&;;   new allotment = ~S.~%" allot)
 
            (values allot
                    (mapcar #'ceiling (mapcar #'space-requirement-minor content-srs))) )))))
@@ -1116,7 +1116,7 @@
              for major in majors
              for minor in minors
              do
-               #+nil (format *debug-io* "~&;;   child ~S at 0, ~D ~D x ~D~%" child x width height)
+               #+nil (format *trace-output* "~&;;   child ~S at 0, ~D ~D x ~D~%" child x width height)
                (when (box-client-pane child)
                  (move-sheet (box-client-pane child)
                              ((lambda (major minor) height width) x 0)
@@ -1365,7 +1365,7 @@
                 :min-height (space-requirement-min-height c)
                 :max-height (space-requirement-max-height c))))
           #+nil
-          (format *debug-io* "~%;;; TABLE-PANE sr = ~S." res)
+          (format *trace-output* "~%;;; TABLE-PANE sr = ~S." res)
           res)))))
 
 (defmethod allocate-space ((pane table-pane) width height &aux rsrs csrs)
