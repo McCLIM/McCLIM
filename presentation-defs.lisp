@@ -829,7 +829,7 @@ call-next-method to get the \"real\" answer based on the stream type."))
       (with-input-position (stream)	; support for calls to replace-input
 	(setf (values sensitizer-object sensitizer-type)
 	      (with-input-context (type)
-		(object object-type event options)
+		  (object object-type event options)
 		(with-activation-gestures ((if additional-activations-p
 					       additional-activation-gestures
 					       activation-gestures)
@@ -996,8 +996,12 @@ call-next-method to get the \"real\" answer based on the stream type."))
 
 (define-default-presentation-method present
     (object type stream (view textual-view) &key acceptably for-context-type)
-  (declare (ignore acceptably for-context-type))
-  (princ object stream))
+  (declare (ignore for-context-type type))
+  (if acceptably
+      (let ((*print-readably* t))
+	(prin1 object stream))
+      (princ object stream)))
+
 
 (defun accept-using-read (stream ptype &key ((:read-eval *read-eval*) nil))
   (let* ((token (read-token stream)))
