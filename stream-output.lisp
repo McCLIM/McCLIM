@@ -128,7 +128,7 @@
    (background :initarg :background
 	       :initform +white+
 	       :reader stream-background)
-   (text-style :initarg :default-text-style
+   (text-style :initarg :text-style
 	       :initform (make-text-style :fix :roman :normal)
 	       :reader stream-text-style)
    (vspace :initarg :vertical-spacing
@@ -337,9 +337,9 @@ than one line of output."))
     (zerop x)))
 
 (defmacro with-room-for-graphics ((&optional (stream t)
-				   &key (move-cursor t) height record-type)
+				   &key (first-quadrant t) height (move-cursor t) record-type)
 				  &body body)
-  (declare (ignore move-cursor height record-type body)
+  (declare (ignore first-quadrant height move-cursor record-type body)
            (type symbol stream))
   (when (eq stream t)
     (setq stream '*standard-output*))
@@ -367,6 +367,7 @@ than one line of output."))
 	   (block ,@body)
 	 (setf (stream-end-of-page-action ,stream) ,sym)))))
 
-(defmethod beep ((stream extended-output-stream))
-  (beep (port stream)))
-
+(defmethod beep (&optional medium)
+  (when (null medium)
+    (setq medium (sheet-medium *standard-output*)))
+  (medium-beep medium))

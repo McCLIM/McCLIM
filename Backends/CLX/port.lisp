@@ -320,9 +320,6 @@
   (xlib:text-width (text-style-to-X-font port text-style) 
 		   string :start start :end end))
 
-(defmethod beep ((port clx-port))
-  (xlib:bell (clx-port-display port)))
-
 (defmethod X-pixel ((port clx-port) color)
   (let ((table (slot-value port 'color-table)))
     (or (gethash color table)
@@ -408,19 +405,6 @@
 		     from-x from-y width height
 		     (sheet-direct-mirror sheet)
 		     to-x to-y)))
-
-
-;; clim-stream-pane drawings
-
-(defmethod window-clear :before ((sheet mirrored-sheet))
-  (xlib:clear-area (sheet-direct-mirror sheet)))
-
-(defmethod window-clear ((sheet mirrored-sheet))
-  (declare (ignorable sheet))
-  nil)
-  
-(defmethod clear-area ((sheet mirrored-sheet))
-  (xlib:clear-area (sheet-direct-mirror sheet)))
 
 ;; Device-Font-Text-Style
 

@@ -1150,8 +1150,8 @@ During realization the child of the spacer will have as cordinates
 
 (defmethod window-clear ((pane clim-stream-pane))
   (let ((output-history (pane-output-history pane)))
-    (with-bounding-rectangle* (x1 y1 x2 y2) output-history
-      (draw-rectangle* (sheet-medium pane) x1 y1 x2 y2 :ink +background-ink+))
+    (with-bounding-rectangle* (left top right bottom) output-history
+      (medium-clear-area (sheet-medium pane) left top right bottom))
     (clear-output-record output-history))
   (window-erase-viewport pane)
   (let ((cursor (stream-text-cursor pane)))
@@ -1189,7 +1189,8 @@ During realization the child of the spacer will have as cordinates
                                          (bounding-rectangle-max-y output-history))))
           (set-bounding-rectangle-position (sheet-region pane) new-x new-y)
           (update-scroll-bars pane entire-region new-x new-y)
-          (clear-area pane)
+          (with-bounding-rectangle* (left top right bottom) (pane-output-history pane)
+            (medium-clear-area (sheet-medium pane) left top right bottom))
           (stream-replay pane (sheet-region pane))))))
 
 ;;; INTERACTOR PANES 

@@ -67,6 +67,7 @@
   (typep x 'medium))
 
 (defmethod initialize-instance :after ((medium medium) &rest args)
+  (declare (ignore args))
   ;; Initial CLIPPING-REGION is in coordinates, given by initial
   ;; TRANSFORMATION, but we store it in SHEET's coords.
   (setf (medium-clipping-region medium)
@@ -537,3 +538,18 @@
                     start end
                     align-x align-y
                     toward-x toward-y transform-glyphs))
+
+
+;;; Other Medium-specific Output Functions
+
+(defmethod medium-finish-output ((medium basic-medium))
+  nil)
+
+(defmethod medium-force-output ((medium basic-medium))
+  nil)
+
+(defmethod medium-clear-area ((medium basic-medium) left top right bottom)
+  (draw-rectangle* medium left top right bottom :ink +background-ink+))
+
+(defmethod medium-beep ((medium basic-medium))
+  nil)

@@ -182,9 +182,6 @@ returns a list in CLIM X11 format (:x11 :host host-name :display-id display-numb
   (declare (ignore sheet from-x from-y width height to-x to-y))
   (error "COPY-AREA is not implemented for PORTs"))
 
-(defmethod beep ((port port))
-  )
-
 ;;; Pixmap
 
 (defmethod port-lookup-mirror ((port port) (pixmap pixmap))

@@ -277,3 +277,19 @@
 	(medium-transform-position medium x y)
       (xlib:draw-glyph mirror gc (round tx) (round ty) element))))
 
+
+;;; Other Medium-specific Output Functions
+
+(defmethod medium-finish-output ((medium clx-medium))
+  (xlib:display-finish-output (clx-port-display (port medium))))
+
+(defmethod medium-force-output ((medium clx-medium))
+  (xlib:display-force-output (clx-port-display (port medium))))
+
+(defmethod medium-clear-area ((medium clx-medium) left top right bottom)
+  (xlib:clear-area (port-lookup-mirror (port medium) (medium-sheet medium))
+                   :x (round left) :y (round top)
+                   :width (round (- right left)) :height (round (- bottom top))))
+
+(defmethod medium-beep ((medium clx-medium))
+  (xlib:bell (clx-port-display (port medium))))
