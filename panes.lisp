@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.150 2005/02/22 03:09:18 ahefner Exp $
+;;; $Id: panes.lisp,v 1.151 2005/02/22 07:02:18 ahefner Exp $
 
 (in-package :clim-internals)
 
@@ -2290,6 +2290,7 @@ order to produce a double-click")
                             :height h :min-height h :max-height +fill+)))
 
 (defmethod window-clear ((pane clim-stream-pane))
+  (stream-close-text-output-record pane)
   (let ((output-history (stream-output-history pane)))
     (with-bounding-rectangle* (left top right bottom) output-history
       (medium-clear-area (sheet-medium pane) left top right bottom))
