@@ -524,8 +524,8 @@
 
 (defmethod medium-clear-area ((medium clx-medium) left top right bottom)
   (xlib:clear-area (port-lookup-mirror (port medium) (medium-sheet medium))
-                   :x (round left) :y (round top)
-                   :width (round (- right left)) :height (round (- bottom top))))
+                   :x (round (min left right)) :y (round (min bottom top))
+                   :width (round (abs (- right left))) :height (round (abs (- bottom top)))))
 
 (defmethod medium-beep ((medium clx-medium))
   (xlib:bell (clx-port-display (port medium))))
