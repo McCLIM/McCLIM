@@ -113,7 +113,10 @@
       :reader pointer-event-native-x)
    (y :initarg :y
       :reader pointer-event-native-y)
-   ))
+   (graft-x :initarg :graft-x
+            :reader pointer-event-native-graft-x)
+   (graft-y :initarg :graft-y
+            :reader pointer-event-native-graft-y) ))
 
 (defmacro get-pointer-position ((sheet event) &body body)
   `(multiple-value-bind (x y)
