@@ -27,6 +27,7 @@
   #-(or excl cmu clisp sbcl) (error "GET-ENVIRONMENT-VARIABLE not implemented"))
 
 (defun last1 (list)
+  "Last element of LIST."
   (first (last list)))
 
 (defun 2+ (x)
@@ -182,6 +183,8 @@ Note:
 
 (define-modify-macro maxf (&rest args) max)
 (define-modify-macro minf (&rest args) min)
+(define-modify-macro nconcf (&rest args) nconc)
+
 
 ;;; Move this early so it can be used in presentations.lisp, which
 ;;; comes before commands.lisp.
