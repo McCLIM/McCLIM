@@ -4,7 +4,7 @@
 ;;;  (c) copyright 2000 by 
 ;;;           Robert Strandh (strandh@labri.u-bordeaux.fr)
 ;;;  (c) copyright 2005 by
-;;;	      Andreas Fuchs (asf@boinkor.net
+;;;	      Andreas Fuchs (asf@boinkor.net)
 ;;;
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -221,7 +221,7 @@
               :pathname #.(make-pathname :directory '(:relative "Backends" "CLX"))
               :components
               ((:file "package")
-               (:file "image")
+               (:file "image" :depends-on ("package"))
                (:file "keysyms-common" :depends-on ("package"))
                (:file "keysyms" :depends-on ("keysyms-common" "package"))
                (:file "keysymdef" :depends-on ("keysyms-common" "package"))
