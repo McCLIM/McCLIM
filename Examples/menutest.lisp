@@ -1,7 +1,5 @@
 ;;; -*- Mode: Lisp; Syntax: ANSI-Common-Lisp; Package: MENUTEST; Base: 10; Lowercase: Yes -*-
 
-;; $fiHeader: calcuator.lisp,v 1.0 22/08/200 $
-
 ;;;  (c) copyright 2000 by 
 ;;;	      Robert Strandh (strandh@labri.u-bordeaux.fr)
 

@@ -1,7 +1,5 @@
 ;;; -*- Mode: Lisp; Syntax: ANSI-Common-Lisp; Package: CLIM-DEMO; Base: 10; Lowercase: Yes -*-
 
-;; $fiHeader: calcuator.lisp,v 1.0 22/08/200 $
-
 ;;;  (c) copyright 2000 by 
 ;;;           Iban Hatchondo (hatchond@emi.u-bordeaux.fr)
 ;;;           Julien Boninfante (boninfan@emi.u-bordeaux.fr)
@@ -51,9 +49,8 @@
        (setf ,(case position (1 `(car *rgb*)) (2 `(cadr *rgb*)) (3 `(caddr *rgb*)))
 	     (/ value 10000)
 	     (clim-internals::gadget-current-color colored)
-             (print
-	       (apply #'clim-internals::make-named-color "our-color"
-		      (mapcar #'(lambda (color) (coerce color 'single-float)) *rgb*)))))))
+	     (apply #'clim-internals::make-named-color "our-color"
+		    (mapcar #'(lambda (color) (coerce color 'single-float)) *rgb*))))))
 
 (defvar callback-red (define-slider-callback "SLIDER-R" 1))
 (defvar callback-green (define-slider-callback "SLIDER-G" 2))
