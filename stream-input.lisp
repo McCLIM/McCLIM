@@ -391,4 +391,5 @@
 ;;; Define so we have a gesture for #\newline that we can use in
 ;;; *standard-activation-gestures*
 
-(define-gesture-name newline :keyboard (#\newline))
+(define-gesture-name :newline :keyboard (#\newline))
+(define-gesture-name :return :keyboard (#\return))

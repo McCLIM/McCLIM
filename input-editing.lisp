@@ -24,7 +24,7 @@
 ;;; progress on ACCEPT
 
 (defvar *activation-gestures* nil)
-(defvar *standard-activation-gestures* '(newline))
+(defvar *standard-activation-gestures* '(:newline :return))
 
 (defvar *delimiter-gestures* nil)
 
