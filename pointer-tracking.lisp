@@ -74,7 +74,7 @@
      &key pointer multiple-window transformp (context-type t)
      (highlight nil highlight-p))
   ;; (setq pointer (port-pointer (port sheet))) ; FIXME
-  (let ((port (port sheet))
+  (let ((port (port sheet))        
         (presentations-p (or presentation-handler
                              presentation-button-press-handler
                              presentation-button-release-handler)))
@@ -83,12 +83,17 @@
                                    ;; XXX specialize on EVENT?
                                    ;; :SUPER-AROUND?
                                    (queue-event sheet event))
-      (with-input-context (context-type :override t) ()
-        (loop for event = (event-read sheet)
-           do (cond ((and (typep event 'pointer-event)
+      (with-input-context (context-type :override t)  ()
+        (loop
+            (let ((event (event-read sheet)))
+              (when (and (eq sheet (event-sheet event))
+                         (typep event 'pointer-motion-event))
+                (queue-event sheet event)
+                (highlight-applicable-presentation (pane-frame sheet) sheet *input-context*))
+              (cond ((and (typep event 'pointer-event)
                           #+nil
                           (eq (pointer-event-pointer event)
-                              pointer))
+                              pointer))                     
                      (let* ((x (pointer-event-x event))
                             (y (pointer-event-y event))
                             (window (event-sheet event))
@@ -98,12 +103,8 @@
                                                 sheet ; XXX
                                                 x y
                                                 :modifier-state (event-modifier-state event)))))
-                       (when presentation
-                         (print presentation *trace-output*))
                        (when (and highlight presentation)
-                         #+nil ; FIXME
-                         (highlight-applicable-presentation
-                          (pane-frame sheet) #|XXX|# sheet #|XXX|# *input-context*))
+                         (frame-highlight-at-position (pane-frame sheet) window x y))
                        ;; FIXME Convert X,Y to SHEET coordinates; user
                        ;; coordinates
                        (typecase event
@@ -131,4 +132,4 @@
                     ((typep event '(or keyboard-event character symbol))
                      (maybe-funcall keyboard-handler
                                     :gesture event #|XXX|#))
-                    (t (handle-event #|XXX|# (event-sheet event) event))))))))
+                    (t (handle-event #|XXX|# (event-sheet event) event)))))))))
