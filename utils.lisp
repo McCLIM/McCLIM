@@ -370,3 +370,13 @@ in KEYWORDS removed."
    The correct answer: listen to the elders and don't use this function or any variant
    of it -- Don't construct symbols, instead let the user specify them."
   (intern (apply #'concatenate 'string (mapcar #'symbol-name symbols))))
+
+(defun stream-designator-symbol (symbol)
+  "Maps T to *standard-output*, barfs if argument does not look good.
+   To be used in the various WITH-... macros."
+  (cond ((eq symbol 't)
+         '*standard-output*)
+        ((symbolp symbol)
+         symbol)
+        (t
+         (error "~S does not look too good as a symbol."))))
