@@ -105,7 +105,7 @@ state ~S lambda list ~S"
 			(apply #',name ,@required-params ,apply-list)))))
       `(defmethod ,name ,ll
 	 (let ((*original-stream* stream)
-	       (stream (slot-value stream 'stream)))	   
+	       (stream (slot-value stream 'stream)))
 	   ,body)))))
 
 ;;; The basic input and output stream protocols, as specified by the Gray
@@ -524,6 +524,15 @@ state ~S lambda list ~S"
 (def-stream-method (setf medium-buffering-output-p)
     (buffered-p (stream standard-encapsulating-stream)))
 
+(defmethod invoke-with-drawing-options ((medium standard-encapsulating-stream)
+                                        continuation &rest drawing-options)
+  (apply #'invoke-with-drawing-options
+         (slot-value medium 'stream)
+         #'(lambda (old-medium)
+             (declare (ignore old-medium))
+             (funcall continuation medium))
+         drawing-options))
+                               
 ;;; Extended Input Streams
 
 (def-stream-method extended-input-stream-p
