@@ -88,3 +88,9 @@
 
 (defmethod graft-pixels-per-inch ((graft graft))
   72.0)
+
+(defmethod sheet-native-transformation ((sheet graft))
+  +identity-transformation+)
+
+(defmethod sheet-native-region ((sheet graft))
+  +everywhere+)

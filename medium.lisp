@@ -39,16 +39,10 @@
 		   :initarg :transformation
 		   :initform +identity-transformation+ 
 		   :accessor medium-transformation)
-   (device-transformation :type transformation
-			  :initform nil
-			  :accessor medium-device-transformation)
    (clipping-region :type region
 		    :initarg :clipping-region
 		    :initform +everywhere+
 		    :documentation "Clipping region in the SHEET coordinates.")
-   (device-region :type region
-		  :initform nil
-		  :accessor medium-device-region)
    ;; always use this slot through its accessor, since there may
    ;; be secondary methods on it -RS 2001-08-23
    (line-style :initarg :line-style
@@ -74,8 +68,9 @@
   (declare (ignore args))
   ;; Initial CLIPPING-REGION is in coordinates, given by initial
   ;; TRANSFORMATION, but we store it in SHEET's coords.
-  (setf (medium-clipping-region medium)
-        (slot-value medium 'clipping-region)))
+  (with-slots (clipping-region) medium
+    (setf clipping-region (transform-region (medium-transformation medium)
+                                            clipping-region))))
 
 (defmethod medium-clipping-region ((medium medium))
   (untransform-region (medium-transformation medium)
@@ -85,6 +80,18 @@
   (setf (slot-value medium 'clipping-region)
         (transform-region (medium-transformation medium)
                             region)))
+
+(defmethod (setf medium-clipping-region) :after (region (medium medium))
+  (declare (ignore region))
+  (let ((sheet (medium-sheet medium)))
+    (when sheet
+      (invalidate-cached-regions sheet))))
+
+(defmethod (setf medium-transformation) :after (transformation (medium medium))
+  (declare (ignore transformation))
+  (let ((sheet (medium-sheet medium)))
+    (when sheet
+      (invalidate-cached-transformations sheet))))
 
 (defmethod medium-merged-text-style ((medium medium))
   (merge-text-styles (medium-text-style medium) (medium-default-text-style medium)))
@@ -132,71 +139,13 @@
 	 (setf (pixmap-medium ,pixmap) ,old-medium)
 	 (setf (medium-sheet ,medium) ,old-pixmap)))))
 
+;;; Medium Device functions
 
-;; medium-device-region and medium-device-transformation
+(defmethod medium-device-transformation ((medium medium))
+  (sheet-device-transformation (medium-sheet medium)))
 
-; medium-device-region 
-
-(defmethod (setf medium-clipping-region) :after (clipping-region (medium medium))
-  (declare (ignore clipping-region))
-  (when (medium-sheet medium)
-    (medium-invalidate-cached-device-region (medium-sheet medium))))
-
-(defmethod medium-device-region :before ((medium medium))
-  (with-slots (device-region) medium
-    (unless device-region
-      (setf device-region
-            (region-intersection (transform-region (medium-device-transformation medium)
-                                                   (medium-clipping-region medium))
-                                 (sheet-native-region (medium-sheet medium)))))))
-
-(defun get-medium-device-region (sheet)
-  (medium-device-region (sheet-medium sheet)))
-; (with-sheet-medium (medium sheet)
-;   (medium-device-region medium)))
-; [Julien] For the moment, i don't know which of the two solutions is the right one.
-
-(defun medium-invalidate-cached-device-region (sheet)
-;  (with-sheet-medium (medium sheet)
-;    (with-slots (device-region) medium
-; [Julien] For the moment, i don't know which of the two solutions is the right one.
-  (let ((medium (sheet-medium sheet)))
-    (when medium
-      (with-slots (device-region) (sheet-medium sheet)
-	(when device-region
-	  (setf device-region nil)))))) ;)
-
-
-; medium-device-transformation
-
-(defmethod (setf medium-transformation) :after (transformation (medium medium))
-  (declare (ignore transformation))
-  (when (medium-sheet medium)
-    (medium-invalidate-cached-device-transformation (medium-sheet medium))))
-
-(defmethod medium-device-transformation :before ((medium medium))
-  (with-slots (device-transformation) medium
-    (unless device-transformation
-      (setf device-transformation (compose-transformations (medium-transformation medium)
-							   (sheet-native-transformation (medium-sheet medium)))))))
-
-(defun get-medium-device-transformation (sheet)
-  (medium-device-transformation (sheet-medium sheet)))
-; (with-sheet-medium (medium sheet)
-;   (medium-device-transformation medium)))
-; [Julien] For the moment, i don't know which of the two solutions is the right one.
-
-(defun medium-invalidate-cached-device-transformation (sheet)
-;  (with-sheet-medium (medium sheet)
-;    (with-slots (device-transformation) medium
-; [Julien] For the moment, i don't know which of the two solutions is the right one.
-  (let ((medium (sheet-medium sheet)))
-    (when medium
-      (with-slots (device-transformation) (sheet-medium sheet)
-	(when device-transformation
-	  (setf device-transformation nil)))))) ; )
-
-
+(defmethod medium-device-region ((medium medium))
+  (sheet-device-region (medium-sheet medium)))
 
 
 ;;; Text-Style class

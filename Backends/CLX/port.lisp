@@ -135,11 +135,15 @@
     (xlib:destroy-window (port-lookup-mirror port sheet))
     (port-unregister-mirror port sheet (sheet-mirror sheet))))
 
+(defmethod mirror-transformation ((port clx-port) mirror)
+  (make-translation-transformation (xlib:drawable-x mirror)
+                                   (xlib:drawable-y mirror)))
+
 (defmethod port-set-sheet-region ((port clx-port) (graft graft) region)
   (declare (ignore region))
   nil)
 
-(defmethod port-set-sheet-region ((port clx-port) (sheet sheet) region)
+(defmethod port-set-sheet-region ((port clx-port) (sheet mirrored-sheet-mixin) region)
   (let ((mirror (sheet-direct-mirror sheet)))
     (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* region)
       (setf (xlib:drawable-width mirror) (round (- x2 x1))
@@ -162,16 +166,6 @@
     (multiple-value-bind (x y) (transform-position transformation 0 0)
       (setf (xlib:drawable-x mirror) (round x)
 	    (xlib:drawable-y mirror) (round y)))))
-
-(defmethod port-compute-native-region ((port clx-port) (sheet sheet))
-  ; With CLX-backend, native-coordinates and sheet-coordinates are the same,
-  ; so are native-region and sheet-region.
-  (sheet-region sheet))
-
-(defmethod port-compute-native-transformation ((port clx-port) (sheet sheet-native-transformation-mixin))
-  ; With CLX-backend, native-coordinates and sheet-coordinates are the same,
-  ; so native-transformation is the identity transformation.
-  +identity-transformation+)
 
 (defmethod destroy-port :before ((port clx-port))
   (xlib:close-display (clx-port-display port)))

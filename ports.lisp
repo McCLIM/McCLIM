@@ -101,6 +101,10 @@ returns a list in CLIM X11 format (:x11 :host host-name :display-id display-numb
 (defmethod destroy-mirror ((port port) (sheet mirrored-sheet-mixin))
   (error "Don't know how to destroy the mirror of a generic mirrored-sheet"))
 
+(defmethod mirror-transformation ((port port) mirror)
+  (declare (ignore mirror))
+  (error "MIRROR-TRANSFORMATION is not implemented for generic ports"))
+
 (defmethod port-properties ((port port) indicator)
   (with-slots (properties) port
     (getf properties indicator)))
@@ -168,7 +172,7 @@ returns a list in CLIM X11 format (:x11 :host host-name :display-id display-numb
     graft))
 
 (defmethod make-medium ((port port) sheet)
-  (make-instance 'medium :port port :graft (graft sheet) :sheet sheet))
+  (make-instance 'basic-medium :port port :graft (graft sheet) :sheet sheet))
 
 (defmethod port-line-height ((port port) text-style)
   (declare (ignore text-style))
