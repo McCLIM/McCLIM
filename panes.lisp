@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.117 2003/03/21 21:36:59 mikemac Exp $
+;;; $Id: panes.lisp,v 1.118 2003/04/12 06:00:47 hefner1 Exp $
 
 (in-package :clim-internals)
 
@@ -2154,7 +2154,9 @@
   (let ((cursor (stream-text-cursor pane)))
     (when cursor
       (setf (cursor-position cursor) (values 0 0))))
-  (scroll-extent pane 0 0))
+  (scroll-extent pane 0 0)  
+  (change-space-requirements pane :width 0 :height 0))
+  
 
 (defmethod window-refresh ((pane clim-stream-pane))
   (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
