@@ -118,52 +118,55 @@
 		:stream stream)
   (terpri stream))
 
-(defmethod describe-object ((thing structure-object) stream)
-  (clim:present thing (clim:presentation-type-of thing)
-		:stream stream)
-  (format stream " is a structure of type ")
-  (clim:present (type-of thing) (clim:presentation-type-of (type-of thing))
-		:stream stream)
-  (terpri stream)
-  (format stream "   it has the following slots:~%")
-  (let* ((slots (clim-mop:class-slots (class-of thing)))
-	 (width (loop for slot in slots
-		      maximizing (length (symbol-name (clim-mop:slot-definition-name slot))))))
-    (loop for slot in slots
-	  do (cond
-	      ((slot-boundp thing (clim-mop:slot-definition-name slot))
-	       (format stream "      ~v@A: " width
-		       (clim-mop:slot-definition-name slot))
-	       (clim:present (slot-value thing (clim-mop:slot-definition-name slot))
-			     'clim:expression
-			     :stream stream)
-	       (terpri stream))
-	      (t
-	       (format stream "      ~v@A: <unbound>~%" width
-		       (clim-mop:slot-definition-name slot)))))))
 
-(defmethod describe-object ((thing standard-object) stream)
-  (clim:present thing (clim:presentation-type-of thing)
-		:stream stream)
-  (format stream " is an instance of type ")
-  (clim:present (type-of thing) (clim:presentation-type-of (type-of thing))
-		:stream stream)
-  (terpri stream)
-  (format stream "   it has the following slots:~%")
-  (let* ((slots (clim-mop:class-slots (class-of thing)))
-	 (width (loop for slot in slots
-		      maximizing (length (symbol-name (clim-mop:slot-definition-name slot))))))
-    (loop for slot in slots
-	  do (cond
-	      ((slot-boundp thing (clim-mop:slot-definition-name slot))
-	       (format stream "      ~v@A: " width
-		       (clim-mop:slot-definition-name slot))
-	       (clim:present (slot-value thing (clim-mop:slot-definition-name slot))
-			     'clim:expression
-			     :stream stream)
-	       (terpri stream))
-	      (t
-	       (format stream "      ~v@A: <unbound>~%" width
-		       (clim-mop:slot-definition-name slot)))))))
-
-
+(labels ((present-instance-slots-text (thing stream)
+           (let* ((slots (clim-mop:class-slots (class-of thing)))
+                  (width (loop for slot in slots
+                               maximizing (length (symbol-name (clim-mop:slot-definition-name slot))))))
+             (loop for slot in slots
+                   do (cond
+                        ((slot-boundp thing (clim-mop:slot-definition-name slot))
+                         (format stream "      ~v@A: " width
+                                 (clim-mop:slot-definition-name slot))
+                         (clim:present (slot-value thing (clim-mop:slot-definition-name slot))
+                                       'clim:expression
+                                       :stream stream)
+                         (terpri stream))
+                        (t
+                         (format stream "      ~v@A: <unbound>~%" width
+                                 (clim-mop:slot-definition-name slot)))))))
+       
+         (present-instance-slots-clim (thing stream)
+           (let ((slots (clim-mop:class-slots (class-of thing))))
+             (clim:formatting-table (stream)
+               (dolist (slot slots)
+                 (clim:formatting-row (stream)
+                   (clim:formatting-cell (stream :align-x :right)
+                     (clim:present (clim-mop:slot-definition-name slot)
+                                   'clim:symbol
+                                   :stream stream)
+                     (write-char #\: stream))
+                   (clim:formatting-cell (stream)
+                     (if (slot-boundp thing (clim-mop:slot-definition-name slot))
+                         (clim:present (slot-value thing (clim-mop:slot-definition-name slot))
+                                       'clim:expression
+                                       :stream stream)
+                         (format stream "<unbound>"))))))))
+         
+         (describe-instance (thing a-what stream)  
+           (clim:present thing (clim:presentation-type-of thing)
+                         :stream stream)
+           (format stream " is ~A of type " a-what)          
+           (clim:present (type-of thing) (clim:presentation-type-of (type-of thing))
+                         :stream stream)
+           (terpri stream)
+           (format stream "   it has the following slots:~%")
+           (if (typep stream 'clim:output-recording-stream)
+               (present-instance-slots-clim thing stream)
+               (present-instance-slots-text thing stream))))
+  
+  (defmethod describe-object ((thing standard-object) stream)
+    (describe-instance thing "an instance" stream))
+  
+  (defmethod describe-object ((thing structure-object) stream)
+    (describe-instance thing "a structure" stream)))
