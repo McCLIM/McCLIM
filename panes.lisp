@@ -25,6 +25,8 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
+;;; $Id: panes.lisp,v 1.58 2002/02/22 14:31:18 gilbert Exp $
+
 (in-package :CLIM-INTERNALS)
 
 ;;; GENERIC FUNCTIONS
@@ -300,12 +302,12 @@
                                                      height max-height min-height
                                                      x-spacing y-spacing spacing
                                                 &allow-other-keys)
-  (setf (slot-value pane 'x-spacing) (spacing-value-to-device-units pane (or x-spacing spacing 0))
-        (slot-value pane 'y-spacing) (spacing-value-to-device-units pane (or y-spacing spacing 0)) 
-        (slot-value pane 'user-width) width
-        (slot-value pane 'user-min-width) (or min-width width)
-        (slot-value pane 'user-max-width) (or max-width width)
-        (slot-value pane 'user-height) height
+  (setf (slot-value pane 'x-spacing)       (spacing-value-to-device-units pane (or x-spacing spacing 0))
+        (slot-value pane 'y-spacing)       (spacing-value-to-device-units pane (or y-spacing spacing 0)) 
+        (slot-value pane 'user-width)      width
+        (slot-value pane 'user-min-width)  (or min-width width)
+        (slot-value pane 'user-max-width)  (or max-width width)
+        (slot-value pane 'user-height)     height
         (slot-value pane 'user-min-height) (or min-height height)
         (slot-value pane 'user-max-height) (or max-height height) ))
 
@@ -313,48 +315,62 @@
                                        &rest space-req-keys)
   (apply #'grok-user-space-requirement-options pane space-req-keys))
 
-(defmethod compose-space :around ((pane standard-space-requirement-options-mixin))
+(defmethod merge-user-specified-options ((pane space-requirement-options-mixin)
+                                         sr)
+  (multiple-value-bind (width min-width max-width height min-height max-height)
+      (space-requirement-components sr)
+    (with-slots (user-width user-min-width user-max-width
+                 user-height user-min-height user-max-height) pane
+
+      (dada ((foo width height))
+            ;; the user wins on the "primary" dimensions
+            (when user-foo
+              (setf foo (spacing-value-to-device-units pane user-foo)))
+            ;; 
+            (setf min-foo 
+              (clamp
+               (cond ((and (consp user-min-foo) (eq (cadr user-min-foo) :relative))
+                      (- foo (car user-min-foo)))
+                     ((not (null user-min-foo))
+                      (spacing-value-to-device-units pane user-min-foo))
+                     (t
+                      min-foo))
+               0 foo))
+            ;;
+            (setf max-foo 
+              (max foo
+                   (cond ((and (consp user-max-foo) (eq (cadr user-max-foo) :relative))
+                          (+ foo (car user-max-foo)))
+                         ((not (null user-max-foo))
+                          (spacing-value-to-device-units pane user-max-foo))
+                         (t
+                          max-foo))))))
+    (make-space-requirement
+     :width width
+     :min-width min-width
+     :max-width max-width
+     :height height
+     :min-height min-height
+     :max-height max-height) ))
+
+(defmethod merge-user-specified-options ((pane border-space-requirement-options-mixin) sr)
+  (with-slots (user-width user-min-width user-max-width
+               user-height user-min-height user-max-height) pane
+    (space-requirement+* sr
+                         :width (or user-width 2)
+                         :min-width (or user-min-width user-width 2)
+                         :max-width (or user-max-width user-width 2)
+                         :height (or user-height 2)
+                         :min-height (or user-min-height user-height 2)
+                         :max-height (or user-max-height user-height 2))))
+
+(defmethod compose-space :around ((pane space-requirement-options-mixin))
   ;; merge user specified options.
   (let ((sr (call-next-method)))
     (unless sr
-      (warn "~S has no idea about its speac-requirements." pane)
+      (warn "~S has no idea about its space-requirements." pane)
       (setf sr (make-space-requirement :width 100 :height 100)))
-    (multiple-value-bind (width min-width max-width height min-height max-height)
-        (space-requirement-components sr)
-      (with-slots (user-width user-min-width user-max-width
-                   user-height user-min-height user-max-height) pane
-
-        (dada ((foo width height))
-              ;; the user wins on the "primary" dimensions
-              (when user-foo
-                (setf foo (spacing-value-to-device-units pane user-foo)))
-              ;; 
-              (setf min-foo 
-                (clamp
-                 (cond ((and (consp user-min-foo) (eq (cadr user-min-foo) :relative))
-                        (- foo (car user-min-foo)))
-                       ((not (null user-min-foo))
-                        (spacing-value-to-device-units pane user-min-foo))
-                       (t
-                        min-foo))
-                 0 foo))
-              ;;
-              (setf max-foo 
-                (max foo
-                     (cond ((and (consp user-max-foo) (eq (cadr user-max-foo) :relative))
-                            (+ foo (car user-max-foo)))
-                           ((not (null user-max-foo))
-                            (spacing-value-to-device-units pane user-max-foo))
-                           (t
-                            max-foo))))))
-      (make-space-requirement
-       :width width
-       :min-width min-width
-       :max-width max-width
-       :height height
-       :min-height min-height
-       :max-height max-height) )))
-
+    (merge-user-specified-options pane sr)))
 
 ;;
 
@@ -380,12 +396,27 @@
       (setf (pane-space-requirement pane)
         (call-next-method))))
 
-(defmethod change-space-requirements ((pane layout-protocol-mixin) &rest space-req-keys &key resize-frame &allow-other-keys)
+(defmethod change-space-requirements ((pane layout-protocol-mixin) 
+                                      &rest space-req-keys &key resize-frame &allow-other-keys)
+  (setf (pane-space-requirement pane) nil)
   (apply #'grok-user-space-requirement-options pane space-req-keys)
   (note-space-requirements-changed (sheet-parent pane) pane))
 
-(defmethod note-space-requirements-changed ((sheet layout-protocol-mixin) (pane layout-protocol-mixin))
-  (setf (pane-space-requirement pane) (compose-space pane)))
+(defmethod note-space-requirements-changed :before ((sheet layout-protocol-mixin)
+                                                    (pane layout-protocol-mixin))
+  )
+
+(defmethod note-space-requirements-changed ((pane pane) client)
+  (setf (pane-space-requirement pane) nil)
+  (change-space-requirements pane)
+  )
+
+(defmethod note-space-requirements-changed ((sheet graft) (pane top-level-sheet-pane))
+  (let ((sr (compose-space pane)))
+    (resize-sheet pane (space-requirement-width sr) (space-requirement-height sr))
+    '(allocate-space pane (space-requirement-width sr) (space-requirement-height sr))))
+  
+  
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -714,7 +745,7 @@
                           (t
                            (vector 0 0 (abs (- (if (> excess 0)
                                                    (space-requirement-max-major (content-sr* box c))
-                                                 (space-requirement-min-major (content-sr* box c)))
+                                                   (space-requirement-min-major (content-sr* box c)))
                                                (space-requirement-major (content-sr* box c))))))))
                       contents)))
          ;;
@@ -994,7 +1025,7 @@
 
 ;;; SPACING PANE
 
-(defclass spacing-pane (composite-pane)
+(defclass spacing-pane (border-space-requirement-options-mixin composite-pane)
   ()
   (:documentation "The spacing pane will create a margin for his child.
 The margin sizes (w h) are given with the :width and :height initargs.
@@ -1025,6 +1056,10 @@ During realization the child of the spacing will have as cordinates
     (setf user-height (max (or thickness 0) (or user-height 0)))
     ;; hmm
     ))
+
+(defmethod compose-space ((spacing spacing-pane))
+  (with-slots (contents) spacing
+    (compose-space (content-pane (first contents)))))
 
 (defmethod compose-space ((spacing spacing-pane))
   (with-slots (contents
