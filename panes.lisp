@@ -1187,10 +1187,10 @@ During realization the child of the spacer will have as cordinates
                 (make-bounding-rectangle 0 0
                                          (bounding-rectangle-max-x output-history)
                                          (bounding-rectangle-max-y output-history))))
+          (with-bounding-rectangle* (left top right bottom) entire-region
+            (medium-clear-area (sheet-medium pane) left top right bottom))
           (set-bounding-rectangle-position (sheet-region pane) new-x new-y)
           (update-scroll-bars pane entire-region new-x new-y)
-          (with-bounding-rectangle* (left top right bottom) (pane-output-history pane)
-            (medium-clear-area (sheet-medium pane) left top right bottom))
           (stream-replay pane (sheet-region pane))))))
 
 ;;; INTERACTOR PANES 
