@@ -174,14 +174,6 @@ returns a list in CLIM X11 format (:x11 :host host-name :display-id display-numb
 (defmethod make-medium ((port port) sheet)
   (make-instance 'basic-medium :port port :graft (graft sheet) :sheet sheet))
 
-(defmethod port-line-height ((port port) text-style)
-  (declare (ignore text-style))
-  (error "LINE-HEIGHT fell thru to a generic PORT"))
-
-(defmethod port-character-width ((port port) text-style char)
-  (declare (ignore text-style char))
-  (error "PORT-CHARACTER-WIDTH fell thru to a generic PORT"))
-
 ;;; Pixmap
 
 (defmethod port-lookup-mirror ((port port) (pixmap pixmap))
