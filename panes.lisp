@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.126 2003/08/05 07:26:03 strandh Exp $
+;;; $Id: panes.lisp,v 1.127 2003/08/06 20:26:06 gilbert Exp $
 
 (in-package :clim-internals)
 
@@ -114,6 +114,46 @@
 ;;   reverse: The first element of children should come last.
 
 ;;--GB 2002-02-27
+
+;;;; CLIM Layout Protocol for Dummies
+
+;; Here is how I interpret the relevant sections of the specification:
+;;
+;; COMPOSE-SPACE
+;;
+;;   This is called by CLIM, when it wants to find out what the pane
+;;   thinks are its space requirements. The result of COMPOSE-SPACE is
+;;   cached by CLIM.
+;;
+;; ALLOCATE-SPACE
+;;
+;;   This method is called by CLIM when a pane is allocate space. It
+;;   should layout its possible children.
+;;
+;; CHANGE-SPACE-REQUIREMENTS
+;;
+;;   This is called by the application programmer to a) indicate that
+;;   COMPOSE-SPACE may now return something different from previous
+;;   invocations and/or b) to update the user space requirements
+;;   options (the :width, :height etc keywords as upon pane creation).
+;;
+;; NOTE-SPACE-REQUIREMENTS-CHANGED
+;;
+;;   Called by CLIM when the space requirements of a pane have
+;;   changed. Not called to layout a pane; This is only a kind of signal.
+;;
+;; LAYOUT-FRAME
+;;
+;;   Maybe called by both CLIM and the application programmer to
+;;   "invoke the space allocation protocol", that is CLIM calls
+;;   ALLOCATE-SPACE on the top level sheet. This in turn will probably
+;;   call COMPOSE-SPACE on its children and layout then accordingly by
+;;   calling ALLOCATE-SPACE again.
+;;
+;;   The effect is that ALLOCATE-SPACE propagate down the sheet
+;;   hierarchy.
+;;
+;; --GB 2003-08-06
 
 ;;; Default Color Scheme Options
 
