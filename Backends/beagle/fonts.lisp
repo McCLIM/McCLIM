@@ -188,6 +188,8 @@
 ;;;       substring whose size is to be determined; the logic below
 ;;;       ignores such possibilities
 
+;;; vvv sort-of working method; use as a fall-back if can't get other one (see after) working...
+
 (defmethod text-size ((medium beagle-medium) string &key text-style (start 0) end)
   (debug-log 2 "fonts.lisp -> text-size~%")
   (when (characterp string)
@@ -197,26 +199,82 @@
   (if (= start end)
       (values 0 0 0 0 0)
     (let (;(position-newline (position #\newline string :start start))
-	  (objc-string (%make-nsstring (subseq string start end)))
-	  (beagle-font  (%text-style->beagle-font (or text-style *default-text-style*))))
+          (objc-string (%make-nsstring (subseq string start end)))
+          (beagle-font  (%text-style->beagle-font (or text-style *default-text-style*))))
       (when (null beagle-font)
-	(debug-log 3 "fonts.lisp:text-size - Oops, cocoa-font is NIL!~%"))
+        (debug-log 3 "fonts.lisp:text-size - Oops, cocoa-font is NIL!~%"))
       ;; Now we actually need to take the font into account!
       (slet ((bsize (send objc-string :size-with-attributes (reuse-attribute-dictionary medium beagle-font))))
-	    (debug-log 3 "fonts.text-size: returning width ~A and height ~A~%"
-		       (pref bsize :<NSS>ize.width) (pref bsize :<NSS>ize.height))
-	    (values (pref bsize :<NSS>ize.width)	   ; width
-		    (pref bsize :<NSS>ize.height)	   ; height
-		    (pref bsize :<NSS>ize.width)	   ; new x
-		    ;; new y
-		    (- (pref bsize :<NSS>ize.height) (send beagle-font 'default-line-height-for-font))
-		    ;; baseline - assume linegap is equal above + below the font...
-		    ;; baseline is at (- height (1/2 linegap) descender)
-		    (- (pref bsize :<NSS>ize.height) (/ (- (send beagle-font 'default-line-height-for-font)
-							   (send beagle-font 'ascender)
-							   (abs (send beagle-font 'descender)))
-							2)
-		       (abs (send beagle-font 'descender))))))))
+            (debug-log 3 "fonts.text-size: returning width ~A and height ~A~%"
+                       (pref bsize :<NSS>ize.width) (pref bsize :<NSS>ize.height))
+            (values (pref bsize :<NSS>ize.width) ; width
+                    (pref bsize :<NSS>ize.height) ; height
+                    (pref bsize :<NSS>ize.width) ; new x
+                    ;; new y
+                    (- (pref bsize :<NSS>ize.height) (send beagle-font 'default-line-height-for-font))
+                    ;; baseline - assume linegap is equal above + below the font...
+                    ;; baseline is at (- height (1/2 linegap) descender)
+                    (- (pref bsize :<NSS>ize.height) (/ (- (send beagle-font 'default-line-height-for-font)
+                                                           (send beagle-font 'ascender)
+                                                           (abs (send beagle-font 'descender)))
+                                                        2)
+                       (abs (send beagle-font 'descender))))))))
+
+;;;(defmethod text-size ((medium beagle-medium) string &key text-style (start 0) end)
+;;;  (when (characterp string)
+;;;    (setf string (make-string 1 :initial-element string)))
+;;;  (unless end (setf end (length string)))
+;;;  (unless text-style (setf text-style (medium-text-style medium)))
+;;;  (let ((beaglefont (%text-style->beagle-font (or text-style *default-text-style*))))
+;;;    (cond ((= start end)
+;;;           (values 0 0 0 0 0))
+;;;          (t
+;;;           (let ((position-newline (position #\newline string :start start)))
+;;;             (cond ((not (null position-newline))
+;;;                    (multiple-value-bind (width ascent descent left right
+;;;                                                font-ascent font-descent direction
+;;;                                                first-not-done)
+;;;                        (beagle-text-extents medium beaglefont string
+;;;                                           :start start :end position-newline)
+;;;                      (declare (ignorable left right
+;;;                                          font-ascent font-descent
+;;;                                          direction first-not-done))
+;;;                      (multiple-value-bind (w h x y baseline)
+;;;                          (text-size medium string :text-style text-style
+;;;                                     :start (1+ position-newline) :end end)
+;;;                        (values (max w width) (+ ascent descent h)
+;;;                                x (+ ascent descent y) (+ ascent descent baseline)))))
+;;;                   (t
+;;;                    (multiple-value-bind (width ascent descent left right
+;;;                                                font-ascent font-descent direction
+;;;                                                first-not-done)
+;;;                        (beagle-text-extents medium beaglefont string
+;;;                                   :start start :end end)
+;;;                      (declare (ignorable left right
+;;;                                          font-ascent font-descent
+;;;                                          direction first-not-done))
+;;;                      ;; Horrible hackery on the baseline; but it appears to work. Weird
+;;;                      (values width (+ ascent descent) width 0 (+ ascent 2))) )))))) )
+;;;;;;                      (values width (+ ascent descent) width 0 ascent)) )))))) )
+;;;
+;;;(defun beagle-text-extents (medium font string &key start end)
+;;;
+;;;  ;; ASSUME: the string passed into the method does NOT contain newlines...
+;;;  ;; ??
+;;;  ;; -> (values width ascent descent left right font-ascent font-descent direction (first-not-done =nil))
+;;;  (let ((objc-string (%make-nsstring (subseq string start end))))
+;;;    (slet ((bsize (send objc-string :size-with-attributes (reuse-attribute-dictionary medium font))))
+;;;      (values (pref bsize :<NSS>ize.width)  ; width
+;;;              (send font 'ascender)         ; ascent
+;;;              (abs (send font 'descender))  ; descent - in Cocoa, -ve. Max +ve for McCLIM
+;;;              0                             ; left
+;;;              (pref bsize :<NSS>ize.width)  ; right bearing of rightmost character
+;;;              (send font 'ascender)         ; font-ascent
+;;;              (abs (send font 'descender))  ; font-descent
+;;;              nil                           ; direction
+;;;              nil))))                       ; first not done
+
+
 
 ;; Note: we DO NOT want to draw the fonts in the medium-foreground colour - we want to draw them in a specific
 ;; colour (unless McCLIM sets the medium foreground colour in order to achieve drawing elements in specific
