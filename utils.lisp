@@ -22,7 +22,7 @@
 (defun get-environment-variable (string)
   #+excl (sys:getenv string)
   #+cmu (cdr (assoc string ext:*environment-list* :test #'string=))
-  #+clisp (sys::getenv (string string))
+  #+clisp (ext:getenv (string string))
   #+sbcl (sb-ext::posix-getenv string)
   #+openmcl (ccl::getenv string)
   #+lispworks (lw:environment-variable string)
