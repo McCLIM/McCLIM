@@ -54,6 +54,8 @@
 ; There has to be a better way..
 (defun directoryp (pathname)
   "Returns pathname when supplied with a directory, otherwise nil"
+  #+allegro (excl:file-directory-p pathname)
+  #-allegro 
   (if (or (pathname-name pathname) (pathname-type pathname))
       nil
       pathname))
