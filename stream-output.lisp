@@ -426,6 +426,7 @@ more than one line of output i.e., doesn't wrap. If STRING-WIDTH is
 non-nil, that is used as the width where needed; otherwise
 STREAM-STRING-WIDTH will be called."))
 
+;;; The cursor is in stream coordinates.
 (defmethod stream-write-output (stream line string-width
 				&optional (start 0) end)
   (declare (ignore string-width))
@@ -433,6 +434,7 @@ STREAM-STRING-WIDTH will be called."))
      (multiple-value-bind (cx cy) (stream-cursor-position stream)
        (draw-text* (sheet-medium stream) line
                    cx (+ cy baseline)
+		   :transformation +identity-transformation+
 		   :start start :end end))))
 
 (defmethod stream-write-char ((stream standard-extended-output-stream) char)

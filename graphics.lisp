@@ -20,6 +20,38 @@
 
 (in-package :clim-internals)
 
+;;; Work in progress that reduces consing of rest arguments and keyword
+;;; processing. 
+(defmacro with-medium-and-options ((sheet
+				    &key ink clipping-region transformation
+				    line-unit line-thickness
+				    line-style line-style-p
+				    line-dashes dashes-p
+				    line-joint-shape line-cap-shape
+				    text-style text-style-p
+				    text-family text-family-p
+				    text-face text-face-p
+				    text-size text-size-p)
+				   (medium)
+				   &body body)
+  (with-gensyms (continuation sheet-medium)
+    `(flet ((,continuation (,medium)
+	      ,@body))
+       (declare (dynamic-extent #',continuation))
+       (with-sheet-medium (,sheet-medium ,sheet)
+	 (do-graphics-with-options-internal-1
+	     ,sheet-medium #'continuation
+	     ,ink ,clipping-region ,transformation
+	     ,line-unit ,line-thickness
+	     ,line-style ,line-style-p
+	     ,line-dashes ,dashes-p
+	     ,line-joint-shape ,line-cap-shape
+	     ,text-style ,text-style-p
+	     ,text-family ,text-family-p
+	     ,text-face ,text-face-p
+	     ,text-size ,text-size-p))))
+  )
+
 (defmethod do-graphics-with-options ((sheet sheet) func &rest options)
   (with-sheet-medium (medium sheet)
     (apply #'do-graphics-with-options-internal medium sheet func options)))
@@ -130,15 +162,15 @@
      (apply #'do-graphics-with-options ,sheet #'graphics-op ,args)))
 
 (defmacro with-drawing-options ((medium &rest drawing-options) &body body)
-  (when (eq medium t)
-    (setq medium '*standard-output*))
-  (check-type medium symbol)
-  (let ((gcontinuation (gensym)))
-    `(flet ((,gcontinuation (,medium)
-             ,@body))
-      #-clisp (declare (dynamic-extent #',gcontinuation))
-      (apply #'invoke-with-drawing-options
-             ,medium #',gcontinuation (list ,@drawing-options)))))
+  (setq medium (stream-designator-symbol medium '*standard-output*))
+  (with-gensyms (gcontinuation cont-arg)
+    `(flet ((,gcontinuation (,cont-arg)
+	      (declare (ignore ,cont-arg))
+	      ,@body))
+       #-clisp (declare (dynamic-extent #',gcontinuation))
+       (apply #'invoke-with-drawing-options
+	      ,medium #',gcontinuation (list ,@drawing-options)))))
+
 
 (defmethod invoke-with-drawing-options ((medium medium) continuation
                                         &rest drawing-options
@@ -151,8 +183,8 @@
 
 (defmethod invoke-with-drawing-options ((sheet sheet) continuation &rest drawing-options)
   (with-sheet-medium (medium sheet)
-                     (with-medium-options (medium drawing-options)
-                                          (funcall continuation sheet))))
+    (with-medium-options (medium drawing-options)
+      (funcall continuation medium))))
 
 ;;; Compatibility with real CLIM
 (defmethod invoke-with-drawing-options ((sheet t) continuation
@@ -160,11 +192,23 @@
   (declare (ignore drawing-options))
   (funcall continuation sheet))
 
-(defmethod invoke-with-identity-transformation (medium cont)
-  (with-drawing-options (medium 
-                         :transformation (invert-transformation
-                                          (medium-transformation medium)))
-    (funcall cont medium)))
+(defmethod invoke-with-identity-transformation
+    ((sheet sheet) continuation)
+  (with-sheet-medium (medium sheet)
+    (letf (((medium-transformation medium) +identity-transformation+))
+      (funcall continuation sheet))))
+
+
+(defmethod invoke-with-identity-transformation
+    ((destination pixmap) continuation)
+  (with-pixmap-medium (medium destination)
+    (letf (((medium-transformation medium) +identity-transformation+))
+      (funcall continuation destination))))
+
+(defmethod invoke-with-identity-transformation
+    ((medium medium) continuation)
+  (letf (((medium-transformation medium) +identity-transformation+))
+    (funcall continuation medium)))
 
 (defmethod invoke-with-local-coordinates (medium cont x y)
   ;; For now we do as real CLIM does.
@@ -653,6 +697,13 @@
       (copy-area (sheet-medium stream) from-x from-y width height to-x to-y)
     (error "COPY-AREA on a stream is not implemented")))
 
+;;; XXX The modification of the sheet argument to hold the pixmap medium seems
+;;; completely incorrect here; the description of the macro in the spec says
+;;; nothing about that. On the other hand, the spec talks about "medium-var"
+;;; when that is clearly meant to be a stream (and an output-recording stream
+;;; at that, if the example in the Franz user guide is to be believed). What a
+;;; mess. I think we need a pixmap output recording stream in order to do this
+;;; right. -- moore
 (defmacro with-output-to-pixmap ((medium-var sheet &key width height) &body body)
   `(let* ((pixmap (allocate-pixmap ,sheet ,width ,height)) ; XXX size might be unspecified -- APD
 	  (,medium-var (make-medium (port ,sheet) pixmap))

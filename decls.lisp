@@ -111,6 +111,13 @@
 (defgeneric invoke-with-drawing-options
     (medium continuation &rest drawing-options &key &allow-other-keys))
 
+;;;; 10.2.1
+(defgeneric invoke-with-identity-transformation (medium continuation))
+
+;;;; 10.2.2
+(defgeneric invoke-with-local-coordinates (medium continuation x y))
+
+(defgeneric invoke-with-first-quadrant-coordinates (medium continuation x y))
 
 ;;;; 14.5
 (defgeneric draw-design

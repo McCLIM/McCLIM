@@ -452,7 +452,7 @@ in KEYWORDS removed."
   (intern (apply #'concatenate 'string (mapcar #'symbol-name symbols))))
 
 (defun stream-designator-symbol (symbol default)
-  "Maps T to *standard-output*, barfs if argument does not look good.
+  "Maps T to DEFAULT, barfs if argument does not look good.
    To be used in the various WITH-... macros."
   (cond ((eq symbol 't)
          default)

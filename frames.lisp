@@ -1394,6 +1394,37 @@ frame, if any")
   (frob pointer-button-press-event presentation-button-press-handler)
   (frob pointer-button-release-event presentation-button-release-handler))
 
+(defun make-drag-bounding (old-highlighting new-highlighting
+			   old-presentation new-presentation)
+  (let (x1 y1 x2 y2)
+    (flet ((union-with-bounds (rect)
+	     (cond ((null rect)
+		    nil)
+		   ((null x1)
+		    (setf (values x1 y1 x2 y2) (bounding-rectangle* rect)))
+		   (t (with-bounding-rectangle* (r-x1 r-y1 r-x2 r-y2)
+			  rect
+			(setf (values x1 y1 x2 y2)
+			      (bound-rectangles x1 y1 x2 y2
+						r-x1 r-y1 r-x2 r-y2)))))))
+      (union-with-bounds old-highlighting)
+      (union-with-bounds new-highlighting)
+      (union-with-bounds old-presentation)
+      (union-with-bounds new-presentation)
+      (values x1 y1 x2 y2))))
+
+(defun make-drag-and-drop-feedback-function (from-presentation)
+  (multiple-value-bind (record-x record-y)
+      (output-record-position from-presentation)
+    (let ((current-to-presentation nil)
+	  (current-from-higlighting nil))
+      (lambda (frame from-presentation to-presentation initial-x initial-y
+	       x y event)
+	(let ((dx (- record-x initial-x))
+	      (dy (- record-y initial-y)))
+	  (typecase event
+	    (null
+	     ())))))))
 
 (defun frame-drag (translator-name command-table object presentation
 		   context-type frame event window x y)
@@ -1416,5 +1447,5 @@ frame, if any")
       (tracking-pointer (window :context-type drag-c-type :highlight nil)
        (:pointer-motion (&key event x y)
 	 (multiple-value-bind (presentation translator)
-	     (find-innermost-presentation-context drag-context window
-		   x y :event event)))))))
+	     (find-innermost-presentation-match drag-context window
+						x y :event event)))))))

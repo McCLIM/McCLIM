@@ -2190,43 +2190,62 @@ according to the flags RECORD and DRAW."
     (call-next-method)))
 
 ;;; ----------------------------------------------------------------------------
-
+;;; Complicated, underspecified...
+;;;
+;;; From examining old Genera documentation, I believe that
+;;; with-room-for-graphics is supposed to set the medium transformation to
+;;; give the desired coordinate system; i.e., it doesn't preserve any
+;;; rotation, scaling or translation in the current medium transformation.
 (defmethod invoke-with-room-for-graphics (cont stream
-                                               &key (first-quadrant t)
-                                               height
-                                               (move-cursor t)
-                                               (record-type 'standard-sequence-output-record))
+					  &key (first-quadrant t)
+					  height
+					  (move-cursor t)
+					  (record-type
+					   'standard-sequence-output-record))
   ;; I am not sure what exactly :height should do.
   ;; --GB 2003-05-25
   ;; The current behavior is consistent with 'classic' CLIM
   ;; --Hefner 2004-06-19
+  ;; Don't know if it still is :)
+  ;; -- Moore 2005-01-26
   (multiple-value-bind (cx cy)
       (stream-cursor-position stream)
-    (let ((record
-           (with-output-recording-options (stream :draw nil :record t)
-             (with-new-output-record (stream record-type)
-               (with-drawing-options
-                   (stream :transformation
-                           (if first-quadrant
-                               (make-scaling-transformation 1 -1)
-                               +identity-transformation+))
-                 (funcall cont stream))))))
-      (cond ((null height)
-             (setf (output-record-position record)
-                   (values cx cy)))
-            (t             
-             (setf (output-record-position record)
-                   (values cx
-                           (- cy (- (bounding-rectangle-height record) height))))))
-      (with-output-recording-options (stream :draw t :record nil)
-        (replay-output-record record stream))
-      (cond (move-cursor
-             (setf (stream-cursor-position stream)
-                   (values (bounding-rectangle-max-x record)
-                           (bounding-rectangle-max-y record))))
-            (t
-             (setf (stream-cursor-position stream)
-                   (values cx cy)))))))
+    (with-sheet-medium (medium stream)
+      (letf (((medium-transformation medium)
+	      (if first-quadrant
+		  (make-scaling-transformation 1 -1)
+		  +identity-transformation+)))
+	(let ((record (with-output-to-output-record (stream record-type)
+			(funcall cont stream))))
+	  ;; Bounding  rectangle is in sheet coordinates!
+	  (with-bounding-rectangle* (x1 y1 x2 y2)
+	      record
+	    (declare (ignore x2))
+	    (if first-quadrant
+		(setf (output-record-position record)
+		      (values (max cx (+ cx x1))
+			      (if height
+				  (max cy (+ cy (- height (- y2 y1))))
+				  cy)))
+		(setf (output-record-position record)
+		      (values (max cx (+ cx x1)) (max cy (+ cy y1)))))
+	    (when (stream-recording-p stream)
+	      (stream-add-output-record stream record))
+	    (when (stream-drawing-p stream)
+	      (replay record stream))
+	    (if move-cursor
+		(let ((record-height (- y2 y1)))
+		  (setf (stream-cursor-position stream)
+			(values cx
+				(if first-quadrant
+				    (+ cy (max (- y1)
+					       (or height 0)
+					       record-height))
+				    (+ cy (max (or height 0)
+					       record-height))))))
+		(setf (stream-cursor-position stream) (values cx cy)))
+	    record))))))
+
 
 
 (defmethod repaint-sheet ((sheet output-recording-stream) region)

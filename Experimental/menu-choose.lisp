@@ -137,7 +137,7 @@
 
 
 (defmacro with-menu ((menu &optional associated-window
-                           &key (deexpose t))
+                           &key (deexpose t) label scroll-bars)
                      &body body)
   (check-type menu symbol)
   (with-gensyms (with-menu-cont)
@@ -146,10 +146,13 @@
        (declare (dynamic-extent #',with-menu-cont))
        (invoke-with-menu #',with-menu-cont
                          ,associated-window ; XXX
-                         ',deexpose)))) ; XXX!!!
+                         ',deexpose ; XXX!!!
+			 ,label
+			 ,scroll-bars)))) 
 
-(defun invoke-with-menu (continuation associated-window deexpose)
-  (declare (ignore deexpose))           ; FIXME!!!
+(defun invoke-with-menu (continuation associated-window deexpose
+			 label scroll-bars)
+  (declare (ignore deexpose label scroll-bars))           ; FIXME!!!
   (let* ((associated-frame (if associated-window
                                (pane-frame associated-window)
                                *application-frame*))
