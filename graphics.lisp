@@ -105,6 +105,28 @@
      #-clisp (declare (dynamic-extent #'graphics-op))
      (apply #'do-graphics-with-options ,sheet #'graphics-op ,args)))
 
+(defmacro with-drawing-options ((medium &rest drawing-options) &body body)
+  (when (eq medium t)
+    (setq medium '*standard-output*))
+  (let ((gcontinuation (gensym)))
+    `(flet ((,gcontinuation (,medium)
+             ,@body))
+      #-clisp (declare (dynamic-extent #',gcontinuation))
+      (apply #'invoke-with-drawing-options
+             ,medium #',gcontinuation (list ,@drawing-options)))))
+
+(defmethod invoke-with-drawing-options ((medium medium) continuation
+                                        &rest drawing-options
+                                        &key ink transformation clipping-region
+                                        line-style text-style)
+  (declare (ignore ink transformation clipping-region line-style text-style))
+  (with-medium-options (medium drawing-options)
+    (funcall continuation medium)))
+
+(defmethod invoke-with-drawing-options ((sheet sheet) continuation &rest drawing-options)
+  (with-sheet-medium (medium sheet)
+    (apply #'invoke-with-drawing-options medium continuation drawing-options)))
+
 (defun draw-point (sheet point
 		   &rest args
 		   &key ink clipping-region transformation
