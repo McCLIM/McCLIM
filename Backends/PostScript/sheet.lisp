@@ -103,7 +103,6 @@
 
 
 ;;;; Output Protocol
-
 (defmethod medium-drawable ((medium postscript-medium))
   (postscript-medium-file-stream medium))
 
@@ -126,27 +125,25 @@
 (defmethod destroy-mirror ((port postscript-port) (sheet postscript-stream))
   (error "Can't destroy mirror for the postscript stream ~S." sheet))
 
-#+nil
-(defmethod port ((sheet postscript-stream))
-  ;; FIXME
-  nil)
-
 ;;; Internal methods
 (defmethod climi::port-mirror-width ((port postscript-port)
                                      (stream postscript-stream))
   (let ((region (sheet-native-region stream)))
-    (with-bounding-rectangle* (min-x min-y max-x max-y)
-        region
-      (declare (ignore min-y max-y))
-      (- max-x min-x))))
+    (bounding-rectangle-width region)))
 
 (defmethod climi::port-mirror-height ((port postscript-port)
                                       (stream postscript-stream))
   (let ((region (sheet-native-region stream)))
-    (with-bounding-rectangle* (min-x min-y max-x max-y)
-        region
-      (declare (ignore min-x max-x))
-      (- max-y min-y))))
+    (bounding-rectangle-height region)))
+
+;;; Some strange functions
+
+(defmethod pane-viewport ((pane postscript-stream))
+  nil)
+
+(defmethod scroll-extent ((pane postscript-stream) x y)
+  (declare (ignore x y))
+  (values))
 
 ;;;;
 ;;;; POSTSCRIPT-GRAFT

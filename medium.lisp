@@ -185,9 +185,33 @@
 (defun device-font-text-style-p (s)
   (typep s 'device-font-text-style))
 
-(defun make-device-font-text-style (display-device device-font-name)
-  ;; FIXME!!! Non-standard GF.
-  (port-make-font-text-style (port display-device) device-font-name))
+(defmethod text-style-mapping ((port basic-port) text-style
+                               &optional character-set)
+  (declare (ignore character-set))
+  (gethash (parse-text-style text-style) (port-text-style-mappings port)))
+
+(defmethod (setf text-style-mapping) (mapping (port basic-port)
+                                      text-style
+                                      &optional character-set)
+  (declare (ignore character-set))
+  (setf (text-style-mapping port (parse-text-style text-style)) mapping))
+
+(defmethod (setf text-style-mapping) (mapping (port basic-port)
+                                      (text-style text-style)
+                                      &optional character-set)
+  (declare (ignore character-set))
+  (when (listp mapping)
+    (error "Delayed mapping is not supported.")) ; FIXME
+  (setf (gethash text-style (port-text-style-mappings port))
+        mapping))
+
+(defun make-device-font-text-style (port font-name)
+  (let ((text-style (make-instance 'device-font-text-style
+                                   :text-family font-name
+                                   :text-face nil
+                                   :text-size nil)))
+    (setf (text-style-mapping port text-style) font-name)
+    text-style))
 
 ;;; Text-style utilities
 

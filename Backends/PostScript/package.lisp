@@ -37,5 +37,7 @@
                 "LINE-STYLE-EFFECTIVE-THICKNESS"
 
                 "MAXF"
+
+                "PORT-TEXT-STYLE-MAPPINGS"
   ))
 

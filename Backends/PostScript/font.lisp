@@ -117,7 +117,7 @@
 (defmethod text-style-mapping ((port postscript-port) text-style
                                &optional character-set)
   (declare (ignore character-set))
-  (or (gethash text-style (postscript-port-font-mapping port))
+  (or (gethash text-style (port-text-style-mappings port))
       (multiple-value-bind (family face size) (text-style-components text-style)
         (let* ((family-fonts (or (getf +postscript-fonts+ family)
                                  (getf +postscript-fonts+ :fix)))
@@ -129,10 +129,10 @@
                                     (getf +postscript-font-sizes+ :normal)))))
           (cons font-name size-number)))))
 
-(defmethod (setf text-style-mapping) (mapping (port postscript-port)
-                                      text-style &optional character-set)
+(defmethod (setf text-style-mapping)
+    (mapping (port postscript-port) (text-style text-style)
+     &optional character-set)
   (declare (ignore character-set))
-  (check-type text-style text-style)
   (unless (and (consp mapping)
                (stringp (car mapping))
                (numberp (cdr mapping)))
@@ -141,7 +141,7 @@
   (when (not (gethash (car mapping) *font-metrics*))
     (cerror "Ignore." "Mapping text style ~S to an unknown font ~S."
             text-style (car mapping)))
-  (setf (gethash text-style (postscript-port-font-mapping port))
+  (setf (gethash text-style (port-text-style-mappings port))
         mapping))
 
 ;; The following four functions should be rewritten: AFM contains all

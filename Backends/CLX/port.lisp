@@ -32,8 +32,7 @@
 	   :accessor clx-port-screen)
    (window :initform nil
 	   :accessor clx-port-window)
-   (color-table :initform (make-hash-table :test #'eq))
-   (font-table :initform (make-hash-table :test #'eq))) )
+   (color-table :initform (make-hash-table :test #'eq))))
 
 (defun parse-clx-server-path (path)
   (pop path)
@@ -615,10 +614,13 @@
 	(xlib:open-font display (first fonts))
       (xlib:open-font display "fixed"))))
 
-(defmethod text-style-to-X-font ((port clx-port) text-style)
-  (let ((table (slot-value port 'font-table)))
-    (or (gethash text-style table)
-        (multiple-value-bind (family face size) (text-style-components text-style)
+(defmethod text-style-mapping ((port clx-port) text-style
+                               &optional character-set)
+  (declare (ignore character-set))
+  (let ((table (port-text-style-mappings port)))
+    (or (car (gethash text-style table))
+        (multiple-value-bind (family face size)
+            (text-style-components text-style)
           (destructuring-bind (family-name face-table)
               (if (stringp family)
                   (list family *clx-text-faces*)
@@ -641,7 +643,22 @@
                    (font-name (format nil "-~A-~A-*-*-~D-*-*-*-*-*-*-*"
                                       family-name face-name size-number)))
               (setf (gethash text-style table)
-                    (open-font (clx-port-display port) font-name))))))))
+                    (cons font-name
+                          (open-font (clx-port-display port) font-name)))
+              font-name))))))
+
+(defmethod (setf text-style-mapping) (font-name (port clx-port)
+                                      (text-style text-style)
+                                      &optional character-set)
+  (declare (ignore character-set))
+  (setf (gethash text-style (port-text-style-mappings port))
+        (cons font-name (open-font (clx-port-display port) font-name)))
+  font-name)
+
+(defun text-style-to-X-font (port text-style)
+  (let ((text-style (parse-text-style text-style)))
+    (text-style-mapping port text-style)
+    (cdr (gethash text-style (port-text-style-mappings port)))))
 
 (defmethod port-character-width ((port clx-port) text-style char)
   (let* ((font (text-style-to-X-font port text-style))
@@ -649,7 +666,7 @@
     width))
 
 (defmethod port-string-width ((port clx-port) text-style string &key (start 0) end)
-  (xlib:text-width (text-style-to-X-font port text-style) 
+  (xlib:text-width (text-style-to-X-font port text-style)
 		   string :start start :end end))
 
 (defmethod X-pixel ((port clx-port) color)
@@ -703,17 +720,6 @@
 (defmethod port-deallocate-pixmap ((port clx-port) pixmap)
   (when (port-lookup-mirror port pixmap)
     (destroy-mirror port pixmap)))
-
-;; Device-Font-Text-Style
-
-(defmethod port-make-font-text-style ((port clx-port) device-font-name)
-  (let ((text-style (make-instance 'device-font-text-style
-				   :text-family device-font-name
-				   :text-face nil
-				   :text-size nil)))
-    (setf (gethash text-style (slot-value port 'font-table))
-	  (open-font (clx-port-display port) device-font-name))
-    text-style))
 
 ;; Top-level-sheet
 

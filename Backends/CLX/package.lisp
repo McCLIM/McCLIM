@@ -10,12 +10,12 @@
                 #:mirror-transformation
                 #:port-set-sheet-region
                 #:port-set-sheet-transformation
-                #:port-make-font-text-style
+                #:port-text-style-mappings
                 #:port-lookup-mirror
                 #:port-register-mirror
                 #:port-allocate-pixmap
                 #:port-deallocate-pixmap
-                #:port-mirror-width 
+                #:port-mirror-width
                 #:port-mirror-height
                 #:port-event-process
                 #:port-grafts

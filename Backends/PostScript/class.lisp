@@ -105,9 +105,7 @@
            ;; I think this is right, but BASIC-PORT accepts only
            ;; :SERVER-PATH initarg. -- APD, 2002-06-06
 
-           :reader postscript-port-stream)
-   (font-mapping :initform (make-hash-table)
-                 :reader postscript-port-font-mapping)))
+           :reader postscript-port-stream)))
 
 ;;; FIXME!!! The following method should be removed. -- APD, 2002-06-06
 (defmethod initialize-instance :after ((port postscript-port)

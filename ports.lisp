@@ -63,11 +63,13 @@
     :accessor port-event-process
     :documentation "In a multiprocessing environment, the particular process
                     reponsible for calling PROCESS-NEXT-EVENT in a loop.")
-   
+
    (lock
     :initform (make-recursive-lock "port lock")
     :accessor port-lock)
    (event-count :initform 0)
+   (text-style-mappings :initform (make-hash-table :test #'eq)
+                        :reader port-text-style-mappings)
    ))
 
 (defun find-port (&key (server-path *default-server-path*))
