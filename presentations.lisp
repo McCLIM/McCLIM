@@ -25,6 +25,25 @@
   ()
   )
 
+(defun presentationp (object)
+  (typep object 'presentation))
+
+(defvar *allow-sensitive-inferiors* t)
+
+(defclass presentation-mixin (presentation)
+  ((object :accessor presentation-object :initarg :object)
+   (type :accessor presentation-type :initarg :type)
+   (view :accessor presentation-view :initarg :view)
+   (single-box :accessor presentation-single-box :initarg :single-box
+	       :initform nil)
+   (modifier :reader presentation-modifier :initarg :modifier :initform nil)
+   (is-sensitive :reader is-sensitive :initarg :is-sensitive
+		 :initform *allow-sensitive-inferiors*)))
+
+
+(defclass standard-presentation (presentation-mixin output-record)
+  ())
+
 (defgeneric ptype-specializer (type)
   (:documentation "The specializer to use for this type in a presentation
 method lambda list"))
@@ -864,7 +883,7 @@ function lambda list"))
 (defmacro funcall-presentation-generic-function (name &rest args)
   (let ((gf (gethash name *presentation-gf-table*)))
     (unless gf
-      (error "~S is not a presentation generic function"))
+      (error "~S is not a presentation generic function" name))
     `(%funcall-presentation-generic-function ',name
 					     #',(generic-function-name gf)
 					     ,(type-arg-position gf)
@@ -873,7 +892,7 @@ function lambda list"))
 (defmacro apply-presentation-generic-function (name &rest args)
   (let ((gf (gethash name *presentation-gf-table*)))
     (unless gf
-      (error "~S is not a presentation generic function"))
+      (error "~S is not a presentation generic function" name))
     `(apply #'%funcall-presentation-generic-function ',name
 	    #',(generic-function-name gf)
 	    ,(type-arg-position gf)
@@ -890,6 +909,26 @@ function lambda list"))
 	(when (and clos-class (typep clos-class 'standard-class))
 	  (return-from presentation-typep (typep object name)))))
     (funcall-presentation-generic-function presentation-typep object type)))
+
+;;; Not defined as a generic function, but what the hell.
+
+(defgeneric presentation-type-of (object))
+
+(defmethod presentation-type-of (object)
+  'expression)
+
+(defmethod presentation-type-of ((object standard-object))
+  (let* ((name (clim-mop:class-name (class-of object)))
+	 (ptype-entry (gethash name *presentation-type-table*)))
+    (unless ptype-entry
+      (return-from presentation-type-of name))
+    ;; Does the type have required parameters?  If so, we can't use it...
+    (let ((parameter-ll (parameters-lambda-list ptype-entry)))
+      (when (eq (car parameter-ll) &whole)
+	(setq parameter-ll (cddr parameter-ll)))
+      (if (member (car parameter-ll) lambda-list-keywords)
+	  name
+	  (call-next-method)))))
 
 (define-presentation-generic-function
     %map-over-presentation-type-supertypes
@@ -932,8 +971,13 @@ function lambda list"))
 ;;; be eql methods.
 
 (defun prototype-or-error (name)
-  (or (clim-mop:class-prototype (get-ptype-metaclass name))
-      (error "Couldn't find a prototype for ~S" name)))
+  (let ((ptype-meta (get-ptype-metaclass name)))
+    (unless ptype-meta
+      (error "~S is an unknown presentation type" name))
+    (unless (clim-mop:class-finalized-p ptype-meta)
+      (clim-mop:finalize-inheritance ptype-meta))
+    (or (clim-mop:class-prototype ptype-meta)
+      (error "Couldn't find a prototype for ~S" name))))
   
 (defmacro define-subtypep-method (&rest args)
   (let ((gf (gethash 'presentation-subtypep *presentation-gf-table*)))
@@ -1021,12 +1065,209 @@ function lambda list"))
 	(with-output-to-string (s)
 	  (describe s)))))
 
+;;; Views...
+
+(defclass view ()
+  ())
+
+(defun viewp (object)
+  (typep object 'view))
+
+(defclass textual-view (view)
+  ())
+
+(defclass textual-menu-view (textual-view)
+  ())
+
+(defclass textual-dialog-view (textual-view)
+  ())
+
+(defclass gadget-view (view)
+  ())
+
+(defclass gadget-menu-view (gadget-view)
+  ())
+
+(defclass gadget-dialog-view (gadget-view)
+  ())
+
+(defclass pointer-documentation-view (textual-view)
+  ())
+
+(defparameter +textual-view+ (make-instance 'textual-view))
+
+(defparameter +textual-menu-view+ (make-instance 'textual-menu-view))
+
+(defparameter +textual-dialog-view+ (make-instance 'textual-dialog-view))
+
+(defparameter +gadget-view+ (make-instance 'gadget-view))
+
+(defparameter +gadget-menu-view+ (make-instance 'gadget-menu-view))
+
+(defparameter +gadget-dialog-view+ (make-instance 'gadget-dialog-view))
+
+(defparameter +pointer-documentation-view+
+  (make-instance 'pointer-documentation-view))
+
+;;; Reasonable defaults, I guess...
+
+(defmethod stream-default-view (stream)
+  +textual-view+)
+
+(defmethod (setf stream-default-view) (view stream)
+  (declare (ignore view stream))
+  view)
+
+;;; XXX The spec calls out that the presentation generic function has keyword
+;;; arguments acceptably and for-context-type, but the examples I've seen don't
+;;; mention them at all in the methods defined for present.  So, leave them out
+;;; of the generic function lambda list...
+(define-presentation-generic-function %present present
+    (type-key parameters options object type stream view
+     &key))
+
+(defmacro with-output-as-presentation ((stream object type
+				       &rest key-args
+				       &key modifier single-box
+				       (allow-sensitive-inferiors t)
+				       parent
+				       (record-type ''standard-presentation)
+				       &allow-other-keys)
+				       &body body)
+  (when (eq stream t)
+    (setq stream '*standard-output*))
+  (let ((output-record (gensym))
+	(invoke-key-args (cull-keywords '(:record-type
+					  :allow-sensitive-inferiors)
+					key-args)))
+     `(flet ((continuation (,stream ,output-record)
+	      (declare (ignore ,output-record))
+	      (let ((*allow-sensitive-inferiors*
+		     (if *allow-sensitive-inferiors*
+			 ,allow-sensitive-inferiors
+			 nil)))
+		,@body)))
+	(if (output-recording-stream-p ,stream)
+	    (invoke-with-new-output-record
+	     ,stream #'continuation ,record-type
+	     :object ,object
+	     :type (expand-presentation-type-abbreviation ,type)
+	     ,@key-args)
+	    (funcall #'continuation ,stream nil)))))
+
+
+(defun present (object &optional (type (presentation-type-of object))
+		&key
+		(stream *standard-output*)
+		(view (stream-default-view stream))
+		modifier
+		acceptably
+		(for-context-type nil for-context-type-p)
+		single-box
+		(allow-sensitive-inferiors t)
+		(sensitive t)
+		(record-type 'standard-presentation))
+  (let* ((real-type (expand-presentation-type-abbreviation type))
+	 (context-type (if for-context-type-p
+			   (expand-presentation-type-abbreviation
+			    for-context-type)
+			   real-type)))
+    (stream-present stream object real-type
+		    :view view :modifier modifier :acceptably acceptably
+		    :for-context-type context-type :single-box single-box
+		    :allow-sensitive-inferiors allow-sensitive-inferiors
+		    :sensitive sensitive
+		    :record-type record-type)))
+
+(defgeneric stream-present (stream object type
+			    &key view modifier acceptably for-context-type
+			    single-box allow-sensitive-inferiors sensitive
+			    record-type))
+
+(defmethod stream-present ((stream output-recording-stream) object type
+			   &key
+			   (view (stream-default-view stream))
+			   modifier
+			   acceptably
+			   (for-context-type type)
+			   single-box
+			   (allow-sensitive-inferiors t)
+			   (sensitive t)
+			   (record-type 'standard-presentation))
+  (let ((*allow-sensitive-inferiors* (if *allow-sensitive-inferiors*
+					 sensitive
+					 nil)))
+    (with-output-as-presentation (stream object type
+				  :view view
+				  :modifier modifier
+				  :single-box single-box
+				  :allow-sensitive-inferiors
+				  allow-sensitive-inferiors
+				  :record-type record-type)
+      (funcall-presentation-generic-function
+       present object type stream view
+       :acceptably acceptably :for-context-type for-context-type))))
+
+;;; Should work well enough on non-CLIM streams...
+(defmethod stream-present (stream object type
+			   &key
+			   (view +textual-view+)
+			   modifier
+			   acceptably
+			   (for-context-type type)
+			   single-box
+			   (allow-sensitive-inferiors t)
+			   (sensitive t)
+			   (record-type 'standard-presentation))
+  (declare (ignore modifier single-box allow-sensitive-inferiors sensitive
+		   record-type))
+  (funcall-presentation-generic-function
+   present object type stream view
+   :acceptably acceptably :for-context-type for-context-type)
+  nil)
+
+(defun present-to-string (object &optional (type (presentation-type-of object))
+			  &key (view +textual-view+)
+			  acceptably
+			  (for-context-type nil for-context-type-p)
+			  (string nil stringp)
+			  (index 0 indexp))
+  (let* ((real-type (expand-presentation-type-abbreviation type))
+	 (context-type (if for-context-type-p
+			   (expand-presentation-type-abbreviation
+			    for-context-type)
+			   real-type)))
+    (when (and stringp indexp)
+      (setf (fill-pointer string) index))
+    (flet ((do-present (s)
+	     (stream-present s object real-type
+			     :view view :acceptably acceptably
+			     :for-context-type context-type)))
+      (declare (dynamic-extent do-present))
+      (let ((result (if stringp
+			 (with-output-to-string (stream string)
+			   (do-present stream))
+			 (with-output-to-string (stream)
+			   (do-present stream)))))
+	(if stringp
+	    (values string (fill-pointer string))
+	    result)))))
+
+
 ;;; The presentation types
 
 (define-presentation-type t ())
 
 (define-presentation-method presentation-typep (object (type t))
   t)
+
+(define-presentation-method present (object (type t)
+				     stream
+				     (view textual-view)
+				     &key acceptably for-context-type)
+  (declare (ignore for-context-type))
+  (let ((*print-readably* acceptably))
+    (princ object stream)))
 
 (define-presentation-type nil ())
 
@@ -1038,25 +1279,54 @@ function lambda list"))
 (define-presentation-method presentation-typep (object (type null))
   (eq object nil))
 
+(define-presentation-method present (object (type null)
+				     stream
+				     (view textual-view)
+				     &key acceptably for-context-type)
+  (declare (ignore acceptably for-context-type))
+  (write-string "None" stream))
+
 (define-presentation-type boolean ())
 
 (define-presentation-method presentation-typep (object (type boolean))
   (or (eq object t) (eq object nil)))
+
+(define-presentation-method present (object (type boolean) stream
+				     (view textual-view)
+				     &key acceptably for-context-type)
+  (declare (ignore view acceptably for-context-type))
+  (if object
+      (write-string "Yes" stream)
+      (write-string "No" stream)))
 
 (define-presentation-type symbol ())
 
 (define-presentation-method presentation-typep (object (type symbol))
   (symbolp object))
 
+(define-presentation-method present (object (type symbol) stream
+				     (view textual-view)
+				     &key acceptably for-context-type)
+  (declare (ignore view acceptably for-context-type))
+  (princ object stream))
+
 (define-presentation-type keyword () :inherit-from 'symbol)
 
 (define-presentation-method presentation-typep (object (type keyword))
   (keywordp object))
 
+(defmethod presentation-type-of ((object symbol))
+  (if (eq (symbol-package symbol) (find-package :keyword))
+      'keyword
+      'symbol))
+
 (define-presentation-type number ())
 
 (define-presentation-method presentation-typep (object (type number))
   (numberp object))
+
+(defmethod presentation-type-of ((object number))
+  'number)
 
 (define-presentation-type complex (&optional (type 'real))
   :inherit-from 'number)
@@ -1066,6 +1336,18 @@ function lambda list"))
        (typep (realpart object) type)
        (typep (imagpart object) type)))
 
+(defmethod presentation-type-of ((object complex))
+  'complex)
+
+(define-presentation-method present (object (type complex) stream
+				     (view textual-view)
+				     &key acceptably for-context-type)
+  (declare (ignore view acceptably for-context-type))
+  (present (realpart object) (presentation-type-of (realpart object))
+	   :stream stream :view view :sensitive nil)
+  (write-char #\Space stream)
+  (present (imagpart object) (presentation-type-of (imagpart object))
+	   :stream stream :view view :sensitive nil))
 
 (define-presentation-type real (&optional low high) :options ((base 10) radix)
 			  :inherit-from 'number)
@@ -1076,6 +1358,17 @@ function lambda list"))
 	   (<= low object))
        (or (eq high *)
 	   (<= object high))))
+
+(defmethod presentation-type-of ((object real))
+  'real)
+
+(define-presentation-method present (object (type real) stream
+				     (view textual-view)
+				     &key acceptably for-context-type)
+  (declare (ignore acceptably for-context-type))
+  (let ((*print-base* base)
+	(*print-radix* radix))
+    (princ object stream)))
 
 ;;; Define a method that will do the comparision for all real types.  It's
 ;;; already determined that that the numeric class of type is a subtype of
@@ -1105,6 +1398,17 @@ function lambda list"))
        (or (eq high '*)
 	   (<= object high))))
 
+(defmethod presentation-type-of ((object rational))
+  'rational)
+
+(define-presentation-method present (object (type rational) stream
+				     (view textual-view)
+				     &key acceptably for-context-type)
+  (declare (ignore acceptably for-context-type))
+  (let ((*print-base* base)
+	(*print-radix* radix))
+    (princ object stream)))
+
 (define-presentation-type integer (&optional low high)
   :options ((base 10) radix)
   :inherit-from `((rational ,low ,high) :base ,base :radix ,radix))
@@ -1115,6 +1419,17 @@ function lambda list"))
 	   (<= low object))
        (or (eq high '*)
 	   (<= object high))))
+
+(defmethod presentation-type-of ((object integer))
+  'integer)
+
+(define-presentation-method present (object (type integer) stream
+				     (view textual-view)
+				     &key acceptably for-context-type)
+  (declare (ignore acceptably for-context-type))
+  (let ((*print-base* base)
+	(*print-radix* radix))
+    (princ object stream)))
 
 (define-presentation-type ratio (&optional low high)
   :options ((base 10) radix)
@@ -1128,6 +1443,17 @@ function lambda list"))
        (or (eq high '*)
 	   (<= object high))))
 
+(defmethod presentation-type-of ((object ratio))
+  'ratio)
+
+(define-presentation-method present (object (type ratio) stream
+				     (view textual-view)
+				     &key acceptably for-context-type)
+  (declare (ignore acceptably for-context-type))
+  (let ((*print-base* base)
+	(*print-radix* radix))
+    (princ object stream)))
+
 (define-presentation-type float (&optional low high)
   :options ((base 10) radix)
   :inherit-from `((real ,low ,high) :base ,base :radix ,radix))
@@ -1138,6 +1464,17 @@ function lambda list"))
 	   (<= low object))
        (or (eq high '*)
 	   (<= object high))))
+
+(defmethod presentation-type-of ((object float))
+  'float)
+
+(define-presentation-method present (object (type float) stream
+				     (view textual-view)
+				     &key acceptably for-context-type)
+  (declare (ignore acceptably for-context-type))
+  (let ((*print-base* base)
+	(*print-radix* radix))
+    (princ object stream)))
 
 (macrolet ((frob (num-type)
 	     `(define-presentation-method presentation-subtypep ((type
@@ -1159,6 +1496,15 @@ function lambda list"))
 (define-presentation-method presentation-typep (object (type character))
   (characterp object))
 
+(defmethod presentation-type-of ((object character))
+  'character)
+
+(define-presentation-method present (object (type character) stream
+				     (view textual-view)
+				     &key acceptably for-context-type)
+  (declare (ignore acceptably for-context-type))
+  (princ object stream))
+
 (define-presentation-type string (&optional length))
 
 (define-presentation-method presentation-typep (object (type string))
@@ -1174,12 +1520,32 @@ function lambda list"))
 		    (eql length super-length))
 		t)))))
 
+(defmethod presentation-type-of ((object string))
+  (if (or (adjustable-array-p object)
+	  (array-has-fill-pointer-p object))
+      'string
+      `(string ,(length object))))
+
+(define-presentation-method present (object (type string) stream
+				     (view textual-view)
+				     &key acceptably for-context-type)
+  (declare (ignore acceptably for-context-type))
+  (princ object stream))
 
 (define-presentation-type pathname ()
   :options ((default-version :newest) default-type (merge-default t)))
 
 (define-presentation-method presentation-typep (object (type pathname))
   (pathnamep object))
+
+(defmethod presentation-type-of ((object pathname))
+  'pathname)
+
+(define-presentation-method present (object (type pathname) stream
+				     (view textual-view)
+				     &key acceptably for-context-type)
+  (declare (ignore acceptably for-context-type))
+  (princ object stream))
 
 (defgeneric default-completion-name-key (item))
 
@@ -1241,6 +1607,13 @@ function lambda list"))
 	(values (sequence-subset-p sequence test value-key
 				   super-sequence super-test super-value-key)
 		t)))))
+
+(define-presentation-method present (object (type completion) stream
+				     (view textual-view)
+				     &key acceptably for-context-type)
+  (declare (ignore acceptably for-context-type))
+  (present object (presentation-type-of object)
+	   :stream stream :view view))
 
 (define-presentation-type-abbreviation member (&rest elements)
   (make-presentation-type-specifier `(completion ,elements)
@@ -1311,6 +1684,40 @@ function lambda list"))
 				   super-sequence super-test super-value-key)
 		t)))))
 
+(define-presentation-method present ((object list) (type subset-completion)
+				     stream
+				     (view textual-view)
+				     &key acceptably for-context-type)
+  (declare (ignore for-context-type))
+  (loop for tail on object
+	for (obj) = tail
+	do (progn
+	     (present obj (presentation-type-of object)
+			:stream stream :view view
+			:acceptably acceptably
+			:sensitive nil)
+	     (when (cdr tail)
+	       (if acceptably
+		   (princ separator stream)
+		   (terpri stream))))))
+
+(define-presentation-method present ((object vector) (type subset-completion)
+				     stream
+				     (view textual-view)
+				     &key acceptably for-context-type)
+  (declare (ignore for-context-type))
+  (loop for i from 0 below (length object)
+	for obj = (aref object i)
+	do (progn
+	     (present obj (presentation-type-of object)
+			:stream stream :view view
+			:acceptably acceptably
+			:sensitive nil)
+	     (when (< i (1- (length object)))
+	       (if acceptably
+		   (princ separator stream)
+		   (terpri stream))))))
+
 ;;; XXX is it a typo in the spec that subset, subset-sequence and subset-alist
 ;;; have the same options as completion, and not subset-completion?
 
@@ -1366,6 +1773,47 @@ function lambda list"))
 	(let ((real-super-type (expand-presentation-type-abbreviation type)))
 	  (presentation-subtypep real-type real-super-type))))))
 
+(defmethod presentation-type-of ((object cons))
+  '(sequence t))
+
+;;; Do something interesting with the array-element-type
+(defmethod presentation-type-of ((object vector))
+  '(sequence t))
+
+(define-presentation-method present ((object list) (type sequence)
+				     stream
+				     (view textual-view)
+				     &key acceptably for-context-type)
+  (declare (ignore for-context-type))
+  (loop for tail on object
+	for (obj) = tail
+	do (progn
+	     (present obj type		; i.e., the type parameter
+			:stream stream :view view
+			:acceptably acceptably
+			:sensitive nil)
+	     (when (cdr tail)
+	       (if acceptably
+		   (princ separator stream)
+		   (terpri stream))))))
+
+(define-presentation-method present ((object vector) (type sequence)
+				     stream
+				     (view textual-view)
+				     &key acceptably for-context-type)
+  (declare (ignore for-context-type))
+  (loop for i from 0 below (length object)
+	for obj = (aref object i)
+	do (progn
+	     (present obj type		; i.e., the type parameter
+			:stream stream :view view
+			:acceptably acceptably
+			:sensitive nil)
+	     (when (< i (1- (length object)))
+	       (if acceptably
+		   (princ separator stream)
+		   (terpri stream))))))
+
 (define-presentation-type sequence-enumerated (&rest types)
   :options ((separator #\,) (echo-space t))
   :parameters-are-types t)
@@ -1407,6 +1855,42 @@ function lambda list"))
 	     supertypes)
 	(values t t)))))
 
+(define-presentation-method present ((object list) (type sequence-enumerated)
+				     stream
+				     (view textual-view)
+				     &key acceptably for-context-type)
+  (declare (ignore for-context-type))
+  (loop for tail on object
+	for (obj) = tail
+	for obj-type in types
+	do (progn
+	     (present obj obj-type
+			:stream stream :view view
+			:acceptably acceptably
+			:sensitive nil)
+	     (when (cdr tail)
+	       (if acceptably
+		   (princ separator stream)
+		   (terpri stream))))))
+
+(define-presentation-method present ((object vector) (type sequence-enumerated)
+				     stream
+				     (view textual-view)
+				     &key acceptably for-context-type)
+  (declare (ignore for-context-type))
+  (loop for i from 0 below (length object)
+	for obj = (aref object i)
+	for obj-type in types
+	do (progn
+	     (present obj obj-type
+			:stream stream :view view
+			:acceptably acceptably
+			:sensitive nil)
+	     (when (< i (1- (length object)))
+	       (if acceptably
+		   (princ separator stream)
+		   (terpri stream))))))
+
 (define-presentation-type or (&rest types)
   :parameters-are-types t)
 
@@ -1416,6 +1900,19 @@ function lambda list"))
 	do (when (presentation-typep object real-type)
 	     (return-from %presentation-typep t)))
   nil)
+
+(define-presentation-method present (object (type or)
+				     stream
+				     (view textual-view)
+				     &key acceptably for-context-type)
+  (loop for or-type in types
+	for expanded-type = (expand-presentation-type-abbreviation or-type)
+	do (when (presentation-typep object expanded-type)
+	     (present object expanded-type
+		      :stream stream :view view
+		      :acceptably acceptably
+		      :for-context-type for-context-type)
+	     (loop-finish))))
 
 (define-presentation-type and (&rest types)
   :parameters-are-types t)
@@ -1435,6 +1932,15 @@ function lambda list"))
 			(return-from %presentation-typep nil))))))
   t)
 
+(define-presentation-method present (object (type and)
+				     stream
+				     (view textual-view)
+				     &key acceptably for-context-type)
+  (present object (expand-presentation-type-abbreviation (car types))
+	   :stream stream :view view
+	   :acceptably acceptably
+	   :for-context-type for-context-type))
+
 (define-presentation-type-abbreviation token-or-type (tokens type)
   `(or (member-alist ,tokens) ,type))
 
@@ -1446,15 +1952,14 @@ function lambda list"))
 
 (define-presentation-type expression ())
 
+(define-presentation-method present (object (type expression)
+				     stream
+				     (view textual-view)
+				     &key acceptably for-context-type)
+  (declare (ignore for-context-type))
+  (let ((*print-readably* acceptably))
+    (princ object stream)))
+
 (define-presentation-type form ()
   :inherit-from `expression)
 
-;;; Keep the examples happy for now...
-;;;
-;;; XXX The spec calls out that the presentation generic function has keyword
-;;; arguments acceptably and for-context-type, but the examples I've seen don't
-;;; mention them at all in the methods defined for present.  So, leave them out
-;;; of the generic function lambd list...
-(define-presentation-generic-function %present present
-    (type-key parameters options object type stream view
-     &key))
