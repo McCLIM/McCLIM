@@ -4,7 +4,7 @@
 ;;;   Created: 1998-12-02 19:26
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: regions.lisp,v 1.29 2005/02/11 09:10:37 tmoore Exp $
+;;;       $Id: regions.lisp,v 1.30 2005/02/11 10:05:57 crhodes Exp $
 ;;; --------------------------------------------------------------------------------------
 ;;;  (c) copyright 1998,1999,2001 by Gilbert Baumann
 ;;;  (c) copyright 2001 by Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
@@ -380,7 +380,7 @@
 (defmacro with-standard-rectangle ((x1 y1 x2 y2) rectangle &body body)
   (with-gensyms (coords)
     `(let ((,coords (slot-value ,rectangle 'coordinates)))
-       (declare (type (array coordinate 4) ,coords))
+       (declare (type (simple-array coordinate (4)) ,coords))
        (let ((,x1 (aref ,coords 0))
 	     (,y1 (aref ,coords 1))
 	     (,x2 (aref ,coords 2))
@@ -391,7 +391,7 @@
 (defmacro with-standard-rectangle* ((&key x1 y1 x2 y2) rectangle &body body)
   (with-gensyms (coords)
     `(let ((,coords (slot-value ,rectangle 'coordinates)))
-       (declare (type (array coordinate 4) ,coords))
+       (declare (type (simple-array coordinate (4)) ,coords))
        (let (,@(and x1 `((,x1 (aref ,coords 0))))
 	     ,@(and y1 `((,y1 (aref ,coords 1))))
 	     ,@(and x2 `((,x2 (aref ,coords 2))))
@@ -428,7 +428,7 @@
 (defmethod* (setf rectangle-edges*)
   (x1 y1 x2 y2 (rectangle standard-rectangle))
   (let ((coords (slot-value rectangle 'coordinates)))
-    (declare (type (array coordinate 4) coords))
+    (declare (type (simple-array coordinate (4)) coords))
     (setf (aref coords 0) x1)
     (setf (aref coords 1) y1)
     (setf (aref coords 2) x2)
