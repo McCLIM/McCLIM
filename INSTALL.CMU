@@ -42,7 +42,15 @@ Running the demos
 	
    when you get tired of it, hit ^C in the Lisp listener.
 
-2. Run the slider demo
+2. Run the menu demo
+
+   (menutest::menutest)
+
+   This demo is self-explanatory.
+	
+   when you get tired of it, hit ^C in the Lisp listener.
+
+3. Run the slider demo
 
    (clim-demo::colorslider)
 
