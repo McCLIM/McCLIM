@@ -1237,6 +1237,20 @@ function lambda list"))
 	    (values string (fill-pointer string))
 	    result)))))
 
+(defmethod presentation-replace-input
+    ((stream input-editing-stream) object type view
+     &key (buffer-start nil buffer-start-supplied-p)
+     (rescan nil rescan-supplied-p)
+     query-identifier for-context-type)
+  (let ((result (present-to-string object type
+				   :view view :acceptably t
+				   :for-context-type for-context-type)))
+    (apply #'replace-input stream result `(,@(and buffer-start-supplied-p
+						  `(:buffer-start
+						    ,buffer-start))
+					   ,@(and rescan-supplied-p
+						  `(:rescan ,rescan))))))
+
 ;;; Context-dependent input
 ;;; An input context is a cons of a presentation type and a continuation to
 ;;; call to return a presentation to that input context.
@@ -1428,38 +1442,49 @@ function lambda list"))
             :additional-activation-gestures may be passed to accept."))
   (unless (or activationsp additional-activations-p *activation-gestures*)
     (setq activation-gestures *standard-activation-gestures*))
-  (with-input-context (type)
-    (object object-type event options)
-    (with-input-editing (stream)
-      (with-activation-gestures ((if additional-activations-p
-				     additional-activation-gestures
-				     activation-gestures)
-				 :override activationsp)
-	(multiple-value-bind (object object-type)
-	    (apply-presentation-generic-function accept
-						 type
-						 stream
-						 view
-						 `(,@(and defaultp
-							  `(:default ,default))
-						   ,@(and default-type-p
-							  `(:default-type
-							    ,default-type))))
-	  ;; Eat trailing activation gesture
-	  ;; XXX what about pointer gestures?
-	  (unless *recursive-accept-p*
-	    (let ((ag (read-char-no-hang stream nil stream t)))
-	      (when (and ag
-			 (not (eq ag stream))
-			 (activation-gesture-p ag)))
-	      (unless (or (null ag)
-			  (eq ag stream))
-		(unless (activation-gesture-p ag)
-		  (unread-char ag stream)))))
-	  (values object (or object-type type)))))
-    ;; A presentation was clicked on, or something
-    (t
-     (values object object-type))))
+  (let ((sensitizer-object nil)
+	(sensitizer-type nil))
+    (with-input-editing
+	(stream
+	 :input-sensitizer #'(lambda (stream cont)
+			       (with-output-as-presentation
+				   (stream sensitizer-object sensitizer-type)
+				 (funcall cont))))
+      (with-input-position (stream)
+	(setf (values sensitizer-object sensitizer-type)
+	      (with-input-context (type)
+		(object object-type event options)
+		(with-activation-gestures ((if additional-activations-p
+					       additional-activation-gestures
+					       activation-gestures)
+					   :override activationsp)
+		  (multiple-value-bind (object object-type)
+		      (apply-presentation-generic-function
+		       accept
+		       type stream view
+		       `(,@(and defaultp `(:default ,default))
+			 ,@(and default-type-p `(:default-type ,default-type))))
+		    ;; Eat trailing activation gesture
+		    ;; XXX what about pointer gestures?
+		    (unless *recursive-accept-p*
+		      (let ((ag (read-char-no-hang stream nil stream t)))
+			(when (and ag
+				   (not (eq ag stream))
+				   (activation-gesture-p ag)))
+			(unless (or (null ag) (eq ag stream))
+			  (unless (activation-gesture-p ag)
+			    (unread-char ag stream)))))
+		    (values object (or object-type type))))
+		;; A presentation was clicked on, or something
+		(t
+		 (when (getf options :echo t)
+		   (presentation-replace-input stream object object-type view
+					       :rescan nil))
+		 (values object object-type))))
+	;; Just to make it clear...
+	(values sensitizer-object sensitizer-type)))))
+
+
 
 (defgeneric prompt-for-accept (stream type view &key))
 

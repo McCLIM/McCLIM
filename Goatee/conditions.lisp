@@ -18,5 +18,5 @@
 
 (in-package :goatee)
 
-(define-condition goatee-error (error)
+(define-condition goatee-error (simple-error)
   ())

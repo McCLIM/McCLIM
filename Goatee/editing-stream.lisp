@@ -102,3 +102,68 @@
 	  (replace stream-buffer snapshot-buffer
 		   :start1 first-mismatch
 		   :start2 first-mismatch)))))))
+
+(defmethod climi::finalize ((stream goatee-input-editing-mixin)
+			    input-sensitizer)
+  (setf (cursor-visibility (cursor (area stream))) nil)
+  (when input-sensitizer
+    (let ((real-stream (encapsulating-stream-stream stream)))
+      (funcall input-sensitizer
+	       real-stream
+	       #'(lambda ()
+		   (let ((record (area stream)))
+		     (delete-output-record record
+					   (output-record-parent record))
+		     (stream-add-output-record real-stream record)))))))
+
+;;; Hopefully only used on small buffers.
+
+(defun offset-location* (buffer offset)
+  (loop for line = (dbl-head (lines buffer)) then (next line)
+	for size = (and line (size line))
+	while line
+	summing size into total-offset
+	do (when (>= total-offset offset)
+	     (let ((pos (- size (- total-offset offset))))
+	       (if (> pos (line-last-point line))
+		   (return (values (next line) 0))
+		   (return (values line pos)))))
+	finally (error 'goatee-error
+		       :format-control "Offset ~S is greater than the ~
+  size of buffer ~S"
+		       :format-arguments (list offset buffer))))
+
+(defmethod replace-input ((stream goatee-input-editing-mixin) new-input
+			  &key
+			  (start 0)
+			  (end (length new-input))
+			  (buffer-start nil buffer-start-supplied-p)
+			  (rescan nil))
+  (unless buffer-start-supplied-p
+    (if (eq stream climi::*current-input-stream*)
+	(setq buffer-start climi::*current-input-position*)
+	(setq buffer-start 0)))
+  (let* ((scan-pointer (stream-scan-pointer stream))
+	 (area (area stream))
+	 (buf (buffer area))
+	 (del-chars (- scan-pointer buffer-start)))
+    (if (<= 0 del-chars)
+	(if (mismatch (stream-input-buffer stream) new-input
+		      :start1 buffer-start :end1 scan-pointer
+		      :start2 start :end2 end)
+	    (multiple-value-bind (line pos)
+		(offset-location* buf buffer-start)
+	      (when (> del-chars 0)
+		(delete-char buf del-chars :line line :pos pos))
+	      ;; location should be preserved across the delete-char, but it
+	      ;; would be safest to use a buffer pointer or something...
+	      (insert buf new-input :line line :pos pos :start start :end end)
+	      (redisplay-area area)
+	      (queue-rescan stream))
+	    (when rescan
+	      (queue-rescan stream)))
+	(warn "replace-input stream ~S: buffer-start ~S is greater than ~
+               scan-pointer ~S.  Don't know how to deal with that."
+	      stream
+	      buffer-start
+	      scan-pointer))))

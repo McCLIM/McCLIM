@@ -659,12 +659,14 @@ FRAME-EXIT condition."))
 	    (highlight-presentation-1 (car (frame-hilited-presentation frame))
 				      (cdr (frame-hilited-presentation frame))
 				      :unhighlight))
-	  (when presentation
-	    (setf (frame-hilited-presentation frame)
-		  (cons presentation stream))
-	    (highlight-presentation-1 presentation
-				      stream
-				      :highlight)))))
+	  (if presentation
+	      (when (not (eq presentation
+			     (car (frame-hilited-presentation frame))))
+		(setf (frame-hilited-presentation frame)
+		      (cons presentation stream))
+		(highlight-presentation-1 presentation stream :highlight))
+	      (setf (frame-hilited-presentation frame) nil)))))
+
 
 (defun simple-event-loop ()
   "An simple event loop for applications that want all events to be handled by

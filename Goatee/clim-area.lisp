@@ -35,7 +35,9 @@
   (call-next-method))
 
 (defmethod climi::cursor-height ((cursor screen-area-cursor))
-  (ascent (screen-line cursor)))
+  (let ((line (screen-line cursor)))
+    (+ (ascent line) (descent line))))
+
 
 (defclass screen-line (editable-area-line displayed-output-record rectangle)
   ((current-contents :accessor current-contents :initarg :current-contents

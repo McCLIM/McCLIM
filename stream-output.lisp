@@ -259,7 +259,7 @@ than one line of output."))
   (with-slots (baseline vspace) stream
      (multiple-value-bind (cx cy) (stream-cursor-position stream)
        (draw-text* (sheet-medium stream) line
-                   cx (+ cy baseline vspace)))))
+                   cx (+ cy baseline)))))
 
 (defmethod stream-write-char ((stream standard-extended-output-stream) char)
   (let* ((cursor (stream-text-cursor stream))

@@ -201,28 +201,33 @@
     (setf (point* buffer) (values line pos)))
   nil)
 
-(defgeneric buffer-close-line* (buffer line)
-  (:documentation "Delete the newline at the end of line, bring the
-  following line's contents onto line, and delete the following line"))
+(defgeneric buffer-close-line* (buffer line direction)
+  (:documentation "If DIRECTION is positive, elete the newline at the
+  end of line, bring the following line's contents onto line, and
+  delete the following line.  If DIRECTION is negative, first move back
+  one line, then do the deletion." ))
 
-(defmethod buffer-close-line* ((buffer basic-buffer-mixin) line)
-  (unless (typep line 'dbl-list)
-    (error 'buffer-bounds-error :buffer buffer :line nil :pos 0))
-  (let ((next-line (next line))
-	(line-size (size line)))
-    (if (eql (char-ref line (1- line-size)) #\Newline)
-	(progn
-	  (delete-char line 1 :position (1- (size line)))
-	  (decf (slot-value buffer 'size))
-	  (when next-line
-	    (loop for i from 0 below (size next-line)
-		  for j from (size line)
-		  do (insert line (char-ref next-line i) :position j))
-	    (dbl-remove next-line))
-	  (setf (tick line) (incf (tick buffer)))
-	  (values line (1- line-size)))
-	(error 'buffer-bounds-error
-	       :buffer buffer :line line :pos line-size))))
+(defmethod buffer-close-line* ((buffer basic-buffer-mixin) line direction)
+  (multiple-value-bind (this-line next-line)
+      (if (> 0 direction)
+	  (values line (next line))
+	  (values (prev line) line))
+    (unless (typep this-line 'dbl-list)
+      (error 'buffer-bounds-error :buffer buffer :line nil :pos 0))
+    (let ((line-size (size this-line)))
+      (if (eql (char-ref line (1- line-size)) #\Newline)
+	  (progn
+	    (delete-char line 1 :position (1- line-size))
+	    (decf (slot-value buffer 'size))
+	    (when next-line
+	      (loop for i from 0 below (size next-line)
+		    for j from (1- line-size)
+		    do (insert this-line (char-ref next-line i) :position j))
+	      (dbl-remove next-line))
+	    (setf (tick this-line) (incf (tick buffer)))
+	    (values this-line (1- line-size)))
+	  (error 'buffer-bounds-error
+		 :buffer buffer :line line :pos line-size)))))
 
 (defgeneric buffer-delete-char* (buffer line pos n)
   (:documentation "Delete characters from a line.  Can not delete the final
@@ -261,7 +266,7 @@
 		   (when (> del-chars 0)
 		     (buffer-delete-char* buf line pos (1- del-chars)))
 		   ;; Up against the end, this should signal an error
-		   (buffer-close-line* buf line)
+		   (buffer-close-line* buf line 1)
 		   (decf remaining del-chars))
 	      finally (buffer-delete-char* buf line pos remaining))
 	(loop with remaining = (- n)
@@ -270,7 +275,7 @@
 		   (buffer-delete-char* buf line pos (- pos))
 		   (decf remaining pos)
 		   (setf (values line pos)
-			 (buffer-close-line* buf (prev line))))
+			 (buffer-close-line* buf line -1)))
 	      finally (setf (values line pos)
 			    (buffer-delete-char* buf line pos (- remaining)))))
     (setf (point* buf) (values line pos)))

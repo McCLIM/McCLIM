@@ -20,9 +20,6 @@
 
 (in-package :CLIM-INTERNALS)
 
-;;; Stub of input editing so we can see what we're doing and make
-;;; progress on ACCEPT
-
 (defvar *activation-gestures* nil)
 (defvar *standard-activation-gestures* '(:newline :return))
 
@@ -140,6 +137,10 @@
 (define-condition rescan-condition (condition)
   ())
 
+(defgeneric finalize (editing-stream input-sensitizer)
+  (:documentation "Do any cleanup on an editing stream, like turning off the
+  cursor, etc."))
+
 (defgeneric invoke-with-input-editing
     (stream continuation input-sensitizer initial-contents class))
 
@@ -148,18 +149,20 @@
 				      input-sensitizer
 				      initial-contents
 				      class)
-  (declare (ignore input-sensitizer))
   (let ((editing-stream (make-instance class
 				       :stream stream
 				       :initial-contents initial-contents)))
-    (loop
-     (block rescan
-       (handler-bind ((rescan-condition #'(lambda (c)
-					    (declare (ignore c))
-					    (reset-scan-pointer editing-stream)
-					    (return-from rescan nil))))
-	 (return-from invoke-with-input-editing
-	   (funcall continuation editing-stream)))))))
+    (unwind-protect
+	 (loop
+	  (block rescan
+	    (handler-bind ((rescan-condition #'(lambda (c)
+						 (declare (ignore c))
+						 (reset-scan-pointer
+						  editing-stream)
+						 (return-from rescan nil))))
+	      (return-from invoke-with-input-editing
+		(funcall continuation editing-stream)))))
+      (finalize editing-stream input-sensitizer))))
 
 (defmethod invoke-with-input-editing
     (stream continuation input-sensitizer initial-contents class)
@@ -234,6 +237,23 @@
   (declare (ignore format-string format-args))
   nil)
 
+;;; Defaults for replace-input and presentation-replace-input.
+
+(defvar *current-input-stream* nil)
+(defvar *current-input-position* 0)
+
+(defmacro with-input-position ((stream) &body body)
+  (let ((stream-var (gensym "STREAM")))
+    `(let* ((,stream-var ,stream)
+	    (*current-input-stream* (and (typep ,stream-var
+						'input-editing-stream)
+					 ,stream-var))
+	    (*current-input-position* (and *current-input-stream*
+					   (stream-scan-pointer ,stream-var))))
+       ,@body)))
+
+(defgeneric replace-input (stream new-input
+			   &key start end buffer-start rescan))
 
 (defun read-token (stream &key
 		   (input-wait-handler *input-wait-handler*)
@@ -272,6 +292,14 @@
 	  finally (progn
 		    (unread-gesture gesture :stream stream)
 		    (return (subseq result 0))))))
+
+(defun write-token (token stream &key acceptably)
+  (let ((put-in-quotes (and acceptably (some #'delimiter-gesture-p token))))
+    (when put-in-quotes
+      (write-char #\" stream))
+    (write-string token stream)
+    (when put-in-quotes
+      (write-char #\" stream))))
 
 ;;; Signalling Errors Inside present (sic)
 
