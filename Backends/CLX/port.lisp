@@ -188,19 +188,19 @@
       (or (xlib:open-font (clx-port-display port) font-name)
 	  (xlib:open-font (clx-port-display port) "fixed")))))
 
-(defmethod text-style-height ((port clx-port) text-style)
+(defmethod text-style-height (text-style (port clx-port))
   (let ((font (text-style-to-X-font port text-style)))
     (+ (xlib:font-ascent font) (xlib:font-descent font))))
 
-(defmethod text-style-ascent ((port clx-port) text-style)
+(defmethod text-style-ascent (text-style (port clx-port))
   (let ((font (text-style-to-X-font port text-style)))
     (xlib:font-ascent font)))
 
-(defmethod text-style-descent ((port clx-port) text-style)
+(defmethod text-style-descent (text-style (port clx-port))
   (let ((font (text-style-to-X-font port text-style)))
     (xlib:font-descent font)))
 
-(defmethod text-style-width ((port clx-port) text-style)
+(defmethod text-style-width (text-style (port clx-port))
   (xlib:char-width (text-style-to-X-font port text-style) (char-code #\m)))
 
 (defmethod port-character-width ((port clx-port) text-style char)
