@@ -13,227 +13,227 @@
 ;; and export it.
 
 #.(let ((all-ansi-symbols
-         '("&ALLOW-OTHER-KEYS" "&AUX" "&BODY" "&ENVIRONMENT" "&KEY" "&OPTIONAL" "&REST" "&WHOLE" "*"
-           "**" "***" "*BREAK-ON-SIGNALS*" "*COMPILE-FILE-PATHNAME*" "*COMPILE-FILE-TRUENAME*"
-           "*COMPILE-PRINT*" "*COMPILE-VERBOSE*" "*DEBUG-IO*" "*DEBUGGER-HOOK*"
-           "*DEFAULT-PATHNAME-DEFAULTS*" "*ERROR-OUTPUT*" "*FEATURES*" "*GENSYM-COUNTER*"
-           "*LOAD-PATHNAME*" "*LOAD-PRINT*" "*LOAD-TRUENAME*" "*LOAD-VERBOSE*" "*MACROEXPAND-HOOK*"
-           "*MODULES*" "*PACKAGE*" "*PRINT-ARRAY*" "*PRINT-BASE*" "*PRINT-CASE*" "*PRINT-CIRCLE*"
-           "*PRINT-ESCAPE*" "*PRINT-GENSYM*" "*PRINT-LENGTH*" "*PRINT-LEVEL*" "*PRINT-LINES*"
-           "*PRINT-MISER-WIDTH*" "*PRINT-PPRINT-DISPATCH*" "*PRINT-PRETTY*" "*PRINT-RADIX*"
-           "*PRINT-READABLY*" "*PRINT-RIGHT-MARGIN*" "*QUERY-IO*" "*RANDOM-STATE*" "*READ-BASE*"
-           "*READ-DEFAULT-FLOAT-FORMAT*" "*READ-EVAL*" "*READ-SUPPRESS*" "*READTABLE*"
-           "*STANDARD-INPUT*" "*STANDARD-OUTPUT*" "*TERMINAL-IO*" "*TRACE-OUTPUT*" "+" "++" "+++" "-"
-           "/" "//" "///" "/=" "1+" "1-" "<" "<=" "=" ">" ">=" "ABORT" "ABS" "ACONS" "ACOS" "ACOSH"
-           "ADD-METHOD" "ADJOIN" "ADJUST-ARRAY" "ADJUSTABLE-ARRAY-P" "ALLOCATE-INSTANCE"
-           "ALPHA-CHAR-P" "ALPHANUMERICP" "AND" "APPEND" "APPLY" "APROPOS" "APROPOS-LIST" "AREF"
-           "ARITHMETIC-ERROR" "ARITHMETIC-ERROR-OPERANDS" "ARITHMETIC-ERROR-OPERATION" "ARRAY"
-           "ARRAY-DIMENSION" "ARRAY-DIMENSION-LIMIT" "ARRAY-DIMENSIONS" "ARRAY-DISPLACEMENT"
-           "ARRAY-ELEMENT-TYPE" "ARRAY-HAS-FILL-POINTER-P" "ARRAY-IN-BOUNDS-P" "ARRAY-RANK"
-           "ARRAY-RANK-LIMIT" "ARRAY-ROW-MAJOR-INDEX" "ARRAY-TOTAL-SIZE" "ARRAY-TOTAL-SIZE-LIMIT"
-           "ARRAYP" "ASH" "ASIN" "ASINH" "ASSERT" "ASSOC" "ASSOC-IF" "ASSOC-IF-NOT" "ATAN" "ATANH"
-           "ATOM" "BASE-CHAR" "BASE-STRING" "BIGNUM" "BIT" "BIT-AND" "BIT-ANDC1" "BIT-ANDC2"
-           "BIT-EQV" "BIT-IOR" "BIT-NAND" "BIT-NOR" "BIT-NOT" "BIT-ORC1" "BIT-ORC2" "BIT-VECTOR"
-           "BIT-VECTOR-P" "BIT-XOR" "BLOCK" "BOOLE" "BOOLE-1" "BOOLE-2" "BOOLE-AND" "BOOLE-ANDC1"
-           "BOOLE-ANDC2" "BOOLE-C1" "BOOLE-C2" "BOOLE-CLR" "BOOLE-EQV" "BOOLE-IOR" "BOOLE-NAND"
-           "BOOLE-NOR" "BOOLE-ORC1" "BOOLE-ORC2" "BOOLE-SET" "BOOLE-XOR" "BOOLEAN" "BOTH-CASE-P"
-           "BOUNDP" "BREAK" "BROADCAST-STREAM" "BROADCAST-STREAM-STREAMS" "BUILT-IN-CLASS" "BUTLAST"
-           "BYTE" "BYTE-POSITION" "BYTE-SIZE" "CAAAAR" "CAAADR" "CAAAR" "CAADAR" "CAADDR" "CAADR"
-           "CAAR" "CADAAR" "CADADR" "CADAR" "CADDAR" "CADDDR" "CADDR" "CADR" "CALL-ARGUMENTS-LIMIT"
-           "CALL-METHOD" "CALL-NEXT-METHOD" "CAR" "CASE" "CATCH" "CCASE" "CDAAAR" "CDAADR" "CDAAR"
-           "CDADAR" "CDADDR" "CDADR" "CDAR" "CDDAAR" "CDDADR" "CDDAR" "CDDDAR" "CDDDDR" "CDDDR"
-           "CDDR" "CDR" "CEILING" "CELL-ERROR" "CELL-ERROR-NAME" "CERROR" "CHANGE-CLASS" "CHAR"
-           "CHAR-CODE" "CHAR-CODE-LIMIT" "CHAR-DOWNCASE" "CHAR-EQUAL" "CHAR-GREATERP" "CHAR-INT"
-           "CHAR-LESSP" "CHAR-NAME" "CHAR-NOT-EQUAL" "CHAR-NOT-GREATERP" "CHAR-NOT-LESSP"
-           "CHAR-UPCASE" "CHAR/=" "CHAR<" "CHAR<=" "CHAR=" "CHAR>" "CHAR>=" "CHARACTER" "CHARACTERP"
-           "CHECK-TYPE" "CIS" "CLASS" "CLASS-NAME" "CLASS-OF" "CLEAR-INPUT" "CLEAR-OUTPUT" "CLOSE"
-           "CLRHASH" "CODE-CHAR" "COERCE" "COMPILATION-SPEED" "COMPILE" "COMPILE-FILE"
-           "COMPILE-FILE-PATHNAME" "COMPILED-FUNCTION" "COMPILED-FUNCTION-P" "COMPILER-MACRO"
-           "COMPILER-MACRO-FUNCTION" "COMPLEMENT" "COMPLEX" "COMPLEXP" "COMPUTE-APPLICABLE-METHODS"
-           "COMPUTE-RESTARTS" "CONCATENATE" "CONCATENATED-STREAM" "CONCATENATED-STREAM-STREAMS"
-           "COND" "CONDITION" "CONJUGATE" "CONS" "CONSP" "CONSTANTLY" "CONSTANTP" "CONTINUE"
-           "CONTROL-ERROR" "COPY-ALIST" "COPY-LIST" "COPY-PPRINT-DISPATCH" "COPY-READTABLE"
-           "COPY-SEQ" "COPY-STRUCTURE" "COPY-SYMBOL" "COPY-TREE" "COS" "COSH" "COUNT" "COUNT-IF"
-           "COUNT-IF-NOT" "CTYPECASE" "DEBUG" "DECF" "DECLAIM" "DECLARATION" "DECLARE" "DECODE-FLOAT"
-           "DECODE-UNIVERSAL-TIME" "DEFCLASS" "DEFCONSTANT" "DEFGENERIC" "DEFINE-COMPILER-MACRO"
-           "DEFINE-CONDITION" "DEFINE-METHOD-COMBINATION" "DEFINE-MODIFY-MACRO"
-           "DEFINE-SETF-EXPANDER" "DEFINE-SYMBOL-MACRO" "DEFMACRO" "DEFMETHOD" "DEFPACKAGE"
-           "DEFPARAMETER" "DEFSETF" "DEFSTRUCT" "DEFTYPE" "DEFUN" "DEFVAR" "DELETE"
-           "DELETE-DUPLICATES" "DELETE-FILE" "DELETE-IF" "DELETE-IF-NOT" "DELETE-PACKAGE"
-           "DENOMINATOR" "DEPOSIT-FIELD" "DESCRIBE" "DESCRIBE-OBJECT" "DESTRUCTURING-BIND"
-           "DIGIT-CHAR" "DIGIT-CHAR-P" "DIRECTORY" "DIRECTORY-NAMESTRING" "DISASSEMBLE"
-           "DIVISION-BY-ZERO" "DO" "DO*" "DO-ALL-SYMBOLS" "DO-EXTERNAL-SYMBOLS" "DO-SYMBOLS"
-           "DOCUMENTATION" "DOLIST" "DOTIMES" "DOUBLE-FLOAT" "DOUBLE-FLOAT-EPSILON"
-           "DOUBLE-FLOAT-NEGATIVE-EPSILON" "DPB" "DRIBBLE" "DYNAMIC-EXTENT" "ECASE" "ECHO-STREAM"
-           "ECHO-STREAM-INPUT-STREAM" "ECHO-STREAM-OUTPUT-STREAM" "ED" "EIGHTH" "ELT"
-           "ENCODE-UNIVERSAL-TIME" "END-OF-FILE" "ENDP" "ENOUGH-NAMESTRING"
-           "ENSURE-DIRECTORIES-EXIST" "ENSURE-GENERIC-FUNCTION" "EQ" "EQL" "EQUAL" "EQUALP" "ERROR"
-           "ETYPECASE" "EVAL" "EVAL-WHEN" "EVENP" "EVERY" "EXP" "EXPORT" "EXPT" "EXTENDED-CHAR"
-           "FBOUNDP" "FCEILING" "FDEFINITION" "FFLOOR" "FIFTH" "FILE-AUTHOR" "FILE-ERROR"
-           "FILE-ERROR-PATHNAME" "FILE-LENGTH" "FILE-NAMESTRING" "FILE-POSITION" "FILE-STREAM"
-           "FILE-STRING-LENGTH" "FILE-WRITE-DATE" "FILL" "FILL-POINTER" "FIND" "FIND-ALL-SYMBOLS"
-           "FIND-CLASS" "FIND-IF" "FIND-IF-NOT" "FIND-METHOD" "FIND-PACKAGE" "FIND-RESTART"
-           "FIND-SYMBOL" "FINISH-OUTPUT" "FIRST" "FIXNUM" "FLET" "FLOAT" "FLOAT-DIGITS"
-           "FLOAT-PRECISION" "FLOAT-RADIX" "FLOAT-SIGN" "FLOATING-POINT-INEXACT"
-           "FLOATING-POINT-INVALID-OPERATION" "FLOATING-POINT-OVERFLOW" "FLOATING-POINT-UNDERFLOW"
-           "FLOATP" "FLOOR" "FMAKUNBOUND" "FORCE-OUTPUT" "FORMAT" "FORMATTER" "FOURTH" "FRESH-LINE"
-           "FROUND" "FTRUNCATE" "FTYPE" "FUNCALL" "FUNCTION" "FUNCTION-KEYWORDS"
-           "FUNCTION-LAMBDA-EXPRESSION" "FUNCTIONP" "GCD" "GENERIC-FUNCTION" "GENSYM" "GENTEMP" "GET"
-           "GET-DECODED-TIME" "GET-DISPATCH-MACRO-CHARACTER" "GET-INTERNAL-REAL-TIME"
-           "GET-INTERNAL-RUN-TIME" "GET-MACRO-CHARACTER" "GET-OUTPUT-STREAM-STRING" "GET-PROPERTIES"
-           "GET-SETF-EXPANSION" "GET-UNIVERSAL-TIME" "GETF" "GETHASH" "GO" "GRAPHIC-CHAR-P"
-           "HANDLER-BIND" "HANDLER-CASE" "HASH-TABLE" "HASH-TABLE-COUNT" "HASH-TABLE-P"
-           "HASH-TABLE-REHASH-SIZE" "HASH-TABLE-REHASH-THRESHOLD" "HASH-TABLE-SIZE" "HASH-TABLE-TEST"
-           "HOST-NAMESTRING" "IDENTITY" "IF" "IGNORABLE" "IGNORE" "IGNORE-ERRORS" "IMAGPART" "IMPORT"
-           "IN-PACKAGE" "INCF" "INITIALIZE-INSTANCE" "INLINE" "INPUT-STREAM-P" "INSPECT" "INTEGER"
-           "INTEGER-DECODE-FLOAT" "INTEGER-LENGTH" "INTEGERP" "INTERACTIVE-STREAM-P" "INTERN"
-           "INTERNAL-TIME-UNITS-PER-SECOND" "INTERSECTION" "INVALID-METHOD-ERROR" "INVOKE-DEBUGGER"
-           "INVOKE-RESTART" "INVOKE-RESTART-INTERACTIVELY" "ISQRT" "KEYWORD" "KEYWORDP" "LABELS"
-           "LAMBDA" "LAMBDA-LIST-KEYWORDS" "LAMBDA-PARAMETERS-LIMIT" "LAST" "LCM" "LDB" "LDB-TEST"
-           "LDIFF" "LEAST-NEGATIVE-DOUBLE-FLOAT" "LEAST-NEGATIVE-LONG-FLOAT"
-           "LEAST-NEGATIVE-NORMALIZED-DOUBLE-FLOAT" "LEAST-NEGATIVE-NORMALIZED-LONG-FLOAT"
-           "LEAST-NEGATIVE-NORMALIZED-SHORT-FLOAT" "LEAST-NEGATIVE-NORMALIZED-SINGLE-FLOAT"
-           "LEAST-NEGATIVE-SHORT-FLOAT" "LEAST-NEGATIVE-SINGLE-FLOAT" "LEAST-POSITIVE-DOUBLE-FLOAT"
-           "LEAST-POSITIVE-LONG-FLOAT" "LEAST-POSITIVE-NORMALIZED-DOUBLE-FLOAT"
-           "LEAST-POSITIVE-NORMALIZED-LONG-FLOAT" "LEAST-POSITIVE-NORMALIZED-SHORT-FLOAT"
-           "LEAST-POSITIVE-NORMALIZED-SINGLE-FLOAT" "LEAST-POSITIVE-SHORT-FLOAT"
-           "LEAST-POSITIVE-SINGLE-FLOAT" "LENGTH" "LET" "LET*" "LISP-IMPLEMENTATION-TYPE"
-           "LISP-IMPLEMENTATION-VERSION" "LIST" "LIST*" "LIST-ALL-PACKAGES" "LIST-LENGTH" "LISTEN"
-           "LISTP" "LOAD" "LOAD-LOGICAL-PATHNAME-TRANSLATIONS" "LOAD-TIME-VALUE" "LOCALLY" "LOG"
-           "LOGAND" "LOGANDC1" "LOGANDC2" "LOGBITP" "LOGCOUNT" "LOGEQV" "LOGICAL-PATHNAME"
-           "LOGICAL-PATHNAME-TRANSLATIONS" "LOGIOR" "LOGNAND" "LOGNOR" "LOGNOT" "LOGORC1" "LOGORC2"
-           "LOGTEST" "LOGXOR" "LONG-FLOAT" "LONG-FLOAT-EPSILON" "LONG-FLOAT-NEGATIVE-EPSILON"
-           "LONG-SITE-NAME" "LOOP" "LOOP-FINISH" "LOWER-CASE-P" "MACHINE-INSTANCE" "MACHINE-TYPE"
-           "MACHINE-VERSION" "MACRO-FUNCTION" "MACROEXPAND" "MACROEXPAND-1" "MACROLET" "MAKE-ARRAY"
-           "MAKE-BROADCAST-STREAM" "MAKE-CONCATENATED-STREAM" "MAKE-CONDITION"
-           "MAKE-DISPATCH-MACRO-CHARACTER" "MAKE-ECHO-STREAM" "MAKE-HASH-TABLE" "MAKE-INSTANCE"
-           "MAKE-INSTANCES-OBSOLETE" "MAKE-LIST" "MAKE-LOAD-FORM" "MAKE-LOAD-FORM-SAVING-SLOTS"
-           "MAKE-METHOD" "MAKE-PACKAGE" "MAKE-PATHNAME" "MAKE-RANDOM-STATE" "MAKE-SEQUENCE"
-           "MAKE-STRING" "MAKE-STRING-INPUT-STREAM" "MAKE-STRING-OUTPUT-STREAM" "MAKE-SYMBOL"
-           "MAKE-SYNONYM-STREAM" "MAKE-TWO-WAY-STREAM" "MAKUNBOUND" "MAP" "MAP-INTO" "MAPC" "MAPCAN"
-           "MAPCAR" "MAPCON" "MAPHASH" "MAPL" "MAPLIST" "MASK-FIELD" "MAX" "MEMBER" "MEMBER-IF"
-           "MEMBER-IF-NOT" "MERGE" "MERGE-PATHNAMES" "METHOD" "METHOD-COMBINATION"
-           "METHOD-COMBINATION-ERROR" "METHOD-QUALIFIERS" "MIN" "MINUSP" "MISMATCH" "MOD"
-           "MOST-NEGATIVE-DOUBLE-FLOAT" "MOST-NEGATIVE-FIXNUM" "MOST-NEGATIVE-LONG-FLOAT"
-           "MOST-NEGATIVE-SHORT-FLOAT" "MOST-NEGATIVE-SINGLE-FLOAT" "MOST-POSITIVE-DOUBLE-FLOAT"
-           "MOST-POSITIVE-FIXNUM" "MOST-POSITIVE-LONG-FLOAT" "MOST-POSITIVE-SHORT-FLOAT"
-           "MOST-POSITIVE-SINGLE-FLOAT" "MUFFLE-WARNING" "MULTIPLE-VALUE-BIND" "MULTIPLE-VALUE-CALL"
-           "MULTIPLE-VALUE-LIST" "MULTIPLE-VALUE-PROG1" "MULTIPLE-VALUE-SETQ" "MULTIPLE-VALUES-LIMIT"
-           "NAME-CHAR" "NAMESTRING" "NBUTLAST" "NCONC" "NEXT-METHOD-P" "NIL" "NINTERSECTION" "NINTH"
-           "NO-APPLICABLE-METHOD" "NO-NEXT-METHOD" "NOT" "NOTANY" "NOTEVERY" "NOTINLINE" "NRECONC"
-           "NREVERSE" "NSET-DIFFERENCE" "NSET-EXCLUSIVE-OR" "NSTRING-CAPITALIZE" "NSTRING-DOWNCASE"
-           "NSTRING-UPCASE" "NSUBLIS" "NSUBST" "NSUBST-IF" "NSUBST-IF-NOT" "NSUBSTITUTE"
-           "NSUBSTITUTE-IF" "NSUBSTITUTE-IF-NOT" "NTH" "NTH-VALUE" "NTHCDR" "NULL" "NUMBER" "NUMBERP"
-           "NUMERATOR" "NUNION" "ODDP" "OPEN" "OPEN-STREAM-P" "OPTIMIZE" "OR" "OTHERWISE"
-           "OUTPUT-STREAM-P" "PACKAGE" "PACKAGE-ERROR" "PACKAGE-ERROR-PACKAGE" "PACKAGE-NAME"
-           "PACKAGE-NICKNAMES" "PACKAGE-SHADOWING-SYMBOLS" "PACKAGE-USE-LIST" "PACKAGE-USED-BY-LIST"
-           "PACKAGEP" "PAIRLIS" "PARSE-ERROR" "PARSE-INTEGER" "PARSE-NAMESTRING" "PATHNAME"
-           "PATHNAME-DEVICE" "PATHNAME-DIRECTORY" "PATHNAME-HOST" "PATHNAME-MATCH-P" "PATHNAME-NAME"
-           "PATHNAME-TYPE" "PATHNAME-VERSION" "PATHNAMEP" "PEEK-CHAR" "PHASE" "PI" "PLUSP" "POP"
-           "POSITION" "POSITION-IF" "POSITION-IF-NOT" "PPRINT" "PPRINT-DISPATCH"
-           "PPRINT-EXIT-IF-LIST-EXHAUSTED" "PPRINT-FILL" "PPRINT-INDENT" "PPRINT-LINEAR"
-           "PPRINT-LOGICAL-BLOCK" "PPRINT-NEWLINE" "PPRINT-POP" "PPRINT-TAB" "PPRINT-TABULAR" "PRIN1"
-           "PRIN1-TO-STRING" "PRINC" "PRINC-TO-STRING" "PRINT" "PRINT-NOT-READABLE"
-           "PRINT-NOT-READABLE-OBJECT" "PRINT-OBJECT" "PRINT-UNREADABLE-OBJECT" "PROBE-FILE"
-           "PROCLAIM" "PROG" "PROG*" "PROG1" "PROG2" "PROGN" "PROGRAM-ERROR" "PROGV" "PROVIDE"
-           "PSETF" "PSETQ" "PUSH" "PUSHNEW" "QUOTE" "RANDOM" "RANDOM-STATE" "RANDOM-STATE-P" "RASSOC"
-           "RASSOC-IF" "RASSOC-IF-NOT" "RATIO" "RATIONAL" "RATIONALIZE" "RATIONALP" "READ"
-           "READ-BYTE" "READ-CHAR" "READ-CHAR-NO-HANG" "READ-DELIMITED-LIST" "READ-FROM-STRING"
-           "READ-LINE" "READ-PRESERVING-WHITESPACE" "READ-SEQUENCE" "READER-ERROR" "READTABLE"
-           "READTABLE-CASE" "READTABLEP" "REAL" "REALP" "REALPART" "REDUCE" "REINITIALIZE-INSTANCE"
-           "REM" "REMF" "REMHASH" "REMOVE" "REMOVE-DUPLICATES" "REMOVE-IF" "REMOVE-IF-NOT"
-           "REMOVE-METHOD" "REMPROP" "RENAME-FILE" "RENAME-PACKAGE" "REPLACE" "REQUIRE" "REST"
-           "RESTART" "RESTART-BIND" "RESTART-CASE" "RESTART-NAME" "RETURN" "RETURN-FROM" "REVAPPEND"
-           "REVERSE" "ROOM" "ROTATEF" "ROUND" "ROW-MAJOR-AREF" "RPLACA" "RPLACD" "SAFETY" "SATISFIES"
-           "SBIT" "SCALE-FLOAT" "SCHAR" "SEARCH" "SECOND" "SEQUENCE" "SERIOUS-CONDITION" "SET"
-           "SET-DIFFERENCE" "SET-DISPATCH-MACRO-CHARACTER" "SET-EXCLUSIVE-OR" "SET-MACRO-CHARACTER"
-           "SET-PPRINT-DISPATCH" "SET-SYNTAX-FROM-CHAR" "SETF" "SETQ" "SEVENTH" "SHADOW"
-           "SHADOWING-IMPORT" "SHARED-INITIALIZE" "SHIFTF" "SHORT-FLOAT" "SHORT-FLOAT-EPSILON"
-           "SHORT-FLOAT-NEGATIVE-EPSILON" "SHORT-SITE-NAME" "SIGNAL" "SIGNED-BYTE" "SIGNUM"
-           "SIMPLE-ARRAY" "SIMPLE-BASE-STRING" "SIMPLE-BIT-VECTOR" "SIMPLE-BIT-VECTOR-P"
-           "SIMPLE-CONDITION" "SIMPLE-CONDITION-FORMAT-ARGUMENTS" "SIMPLE-CONDITION-FORMAT-CONTROL"
-           "SIMPLE-ERROR" "SIMPLE-STRING" "SIMPLE-STRING-P" "SIMPLE-TYPE-ERROR" "SIMPLE-VECTOR"
-           "SIMPLE-VECTOR-P" "SIMPLE-WARNING" "SIN" "SINGLE-FLOAT" "SINGLE-FLOAT-EPSILON"
-           "SINGLE-FLOAT-NEGATIVE-EPSILON" "SINH" "SIXTH" "SLEEP" "SLOT-BOUNDP" "SLOT-EXISTS-P"
-           "SLOT-MAKUNBOUND" "SLOT-MISSING" "SLOT-UNBOUND" "SLOT-VALUE" "SOFTWARE-TYPE"
-           "SOFTWARE-VERSION" "SOME" "SORT" "SPACE" "SPECIAL" "SPECIAL-OPERATOR-P" "SPEED" "SQRT"
-           "STABLE-SORT" "STANDARD" "STANDARD-CHAR" "STANDARD-CHAR-P" "STANDARD-CLASS"
-           "STANDARD-GENERIC-FUNCTION" "STANDARD-METHOD" "STANDARD-OBJECT" "STEP" "STORAGE-CONDITION"
-           "STORE-VALUE" "STREAM" "STREAM-ELEMENT-TYPE" "STREAM-ERROR" "STREAM-ERROR-STREAM"
-           "STREAM-EXTERNAL-FORMAT" "STREAMP" "STRING" "STRING-CAPITALIZE" "STRING-DOWNCASE"
-           "STRING-EQUAL" "STRING-GREATERP" "STRING-LEFT-TRIM" "STRING-LESSP" "STRING-NOT-EQUAL"
-           "STRING-NOT-GREATERP" "STRING-NOT-LESSP" "STRING-RIGHT-TRIM" "STRING-STREAM" "STRING-TRIM"
-           "STRING-UPCASE" "STRING/=" "STRING<" "STRING<=" "STRING=" "STRING>" "STRING>=" "STRINGP"
-           "STRUCTURE" "STRUCTURE-CLASS" "STRUCTURE-OBJECT" "STYLE-WARNING" "SUBLIS" "SUBSEQ"
-           "SUBSETP" "SUBST" "SUBST-IF" "SUBST-IF-NOT" "SUBSTITUTE" "SUBSTITUTE-IF"
-           "SUBSTITUTE-IF-NOT" "SUBTYPEP" "SVREF" "SXHASH" "SYMBOL" "SYMBOL-FUNCTION"
-           "SYMBOL-MACROLET" "SYMBOL-NAME" "SYMBOL-PACKAGE" "SYMBOL-PLIST" "SYMBOL-VALUE" "SYMBOLP"
-           "SYNONYM-STREAM" "SYNONYM-STREAM-SYMBOL" "T" "TAGBODY" "TAILP" "TAN" "TANH" "TENTH"
-           "TERPRI" "THE" "THIRD" "THROW" "TIME" "TRACE" "TRANSLATE-LOGICAL-PATHNAME"
-           "TRANSLATE-PATHNAME" "TREE-EQUAL" "TRUENAME" "TRUNCATE" "TWO-WAY-STREAM"
-           "TWO-WAY-STREAM-INPUT-STREAM" "TWO-WAY-STREAM-OUTPUT-STREAM" "TYPE" "TYPE-ERROR"
-           "TYPE-ERROR-DATUM" "TYPE-ERROR-EXPECTED-TYPE" "TYPE-OF" "TYPECASE" "TYPEP" "UNBOUND-SLOT"
-           "UNBOUND-SLOT-INSTANCE" "UNBOUND-VARIABLE" "UNDEFINED-FUNCTION" "UNEXPORT" "UNINTERN"
-           "UNION" "UNLESS" "UNREAD-CHAR" "UNSIGNED-BYTE" "UNTRACE" "UNUSE-PACKAGE" "UNWIND-PROTECT"
-           "UPDATE-INSTANCE-FOR-DIFFERENT-CLASS" "UPDATE-INSTANCE-FOR-REDEFINED-CLASS"
-           "UPGRADED-ARRAY-ELEMENT-TYPE" "UPGRADED-COMPLEX-PART-TYPE" "UPPER-CASE-P" "USE-PACKAGE"
-           "USE-VALUE" "USER-HOMEDIR-PATHNAME" "VALUES" "VALUES-LIST" "VARIABLE" "VECTOR"
-           "VECTOR-POP" "VECTOR-PUSH" "VECTOR-PUSH-EXTEND" "VECTORP" "WARN" "WARNING" "WHEN"
-           "WILD-PATHNAME-P" "WITH-ACCESSORS" "WITH-COMPILATION-UNIT" "WITH-CONDITION-RESTARTS"
-           "WITH-HASH-TABLE-ITERATOR" "WITH-INPUT-FROM-STRING" "WITH-OPEN-FILE" "WITH-OPEN-STREAM"
-           "WITH-OUTPUT-TO-STRING" "WITH-PACKAGE-ITERATOR" "WITH-SIMPLE-RESTART" "WITH-SLOTS"
-           "WITH-STANDARD-IO-SYNTAX" "WRITE" "WRITE-BYTE" "WRITE-CHAR" "WRITE-LINE" "WRITE-SEQUENCE"
-           "WRITE-STRING" "WRITE-TO-STRING" "Y-OR-N-P" "YES-OR-NO-P" "ZEROP"))
+         '(#:&allow-other-keys #:&aux #:&body #:&environment #:&key #:&optional #:&rest #:&whole #:*
+           #:** #:*** #:*break-on-signals* #:*compile-file-pathname* #:*compile-file-truename*
+           #:*compile-print* #:*compile-verbose* #:*debug-io* #:*debugger-hook*
+           #:*default-pathname-defaults* #:*error-output* #:*features* #:*gensym-counter*
+           #:*load-pathname* #:*load-print* #:*load-truename* #:*load-verbose* #:*macroexpand-hook*
+           #:*modules* #:*package* #:*print-array* #:*print-base* #:*print-case* #:*print-circle*
+           #:*print-escape* #:*print-gensym* #:*print-length* #:*print-level* #:*print-lines*
+           #:*print-miser-width* #:*print-pprint-dispatch* #:*print-pretty* #:*print-radix*
+           #:*print-readably* #:*print-right-margin* #:*query-io* #:*random-state* #:*read-base*
+           #:*read-default-float-format* #:*read-eval* #:*read-suppress* #:*readtable*
+           #:*standard-input* #:*standard-output* #:*terminal-io* #:*trace-output* #:+ #:++ #:+++ #:-
+           #:/ #:// #:/// #:/= #:1+ #:1- #:< #:<= #:= #:> #:>= #:abort #:abs #:acons #:acos #:acosh
+           #:add-method #:adjoin #:adjust-array #:adjustable-array-p #:allocate-instance
+           #:alpha-char-p #:alphanumericp #:and #:append #:apply #:apropos #:apropos-list #:aref
+           #:arithmetic-error #:arithmetic-error-operands #:arithmetic-error-operation #:array
+           #:array-dimension #:array-dimension-limit #:array-dimensions #:array-displacement
+           #:array-element-type #:array-has-fill-pointer-p #:array-in-bounds-p #:array-rank
+           #:array-rank-limit #:array-row-major-index #:array-total-size #:array-total-size-limit
+           #:arrayp #:ash #:asin #:asinh #:assert #:assoc #:assoc-if #:assoc-if-not #:atan #:atanh
+           #:atom #:base-char #:base-string #:bignum #:bit #:bit-and #:bit-andc1 #:bit-andc2
+           #:bit-eqv #:bit-ior #:bit-nand #:bit-nor #:bit-not #:bit-orc1 #:bit-orc2 #:bit-vector
+           #:bit-vector-p #:bit-xor #:block #:boole #:boole-1 #:boole-2 #:boole-and #:boole-andc1
+           #:boole-andc2 #:boole-c1 #:boole-c2 #:boole-clr #:boole-eqv #:boole-ior #:boole-nand
+           #:boole-nor #:boole-orc1 #:boole-orc2 #:boole-set #:boole-xor #:boolean #:both-case-p
+           #:boundp #:break #:broadcast-stream #:broadcast-stream-streams #:built-in-class #:butlast
+           #:byte #:byte-position #:byte-size #:caaaar #:caaadr #:caaar #:caadar #:caaddr #:caadr
+           #:caar #:cadaar #:cadadr #:cadar #:caddar #:cadddr #:caddr #:cadr #:call-arguments-limit
+           #:call-method #:call-next-method #:car #:case #:catch #:ccase #:cdaaar #:cdaadr #:cdaar
+           #:cdadar #:cdaddr #:cdadr #:cdar #:cddaar #:cddadr #:cddar #:cdddar #:cddddr #:cdddr
+           #:cddr #:cdr #:ceiling #:cell-error #:cell-error-name #:cerror #:change-class #:char
+           #:char-code #:char-code-limit #:char-downcase #:char-equal #:char-greaterp #:char-int
+           #:char-lessp #:char-name #:char-not-equal #:char-not-greaterp #:char-not-lessp
+           #:char-upcase #:char/= #:char< #:char<= #:char= #:char> #:char>= #:character #:characterp
+           #:check-type #:cis #:class #:class-name #:class-of #:clear-input #:clear-output #:close
+           #:clrhash #:code-char #:coerce #:compilation-speed #:compile #:compile-file
+           #:compile-file-pathname #:compiled-function #:compiled-function-p #:compiler-macro
+           #:compiler-macro-function #:complement #:complex #:complexp #:compute-applicable-methods
+           #:compute-restarts #:concatenate #:concatenated-stream #:concatenated-stream-streams
+           #:cond #:condition #:conjugate #:cons #:consp #:constantly #:constantp #:continue
+           #:control-error #:copy-alist #:copy-list #:copy-pprint-dispatch #:copy-readtable
+           #:copy-seq #:copy-structure #:copy-symbol #:copy-tree #:cos #:cosh #:count #:count-if
+           #:count-if-not #:ctypecase #:debug #:decf #:declaim #:declaration #:declare #:decode-float
+           #:decode-universal-time #:defclass #:defconstant #:defgeneric #:define-compiler-macro
+           #:define-condition #:define-method-combination #:define-modify-macro
+           #:define-setf-expander #:define-symbol-macro #:defmacro #:defmethod #:defpackage
+           #:defparameter #:defsetf #:defstruct #:deftype #:defun #:defvar #:delete
+           #:delete-duplicates #:delete-file #:delete-if #:delete-if-not #:delete-package
+           #:denominator #:deposit-field #:describe #:describe-object #:destructuring-bind
+           #:digit-char #:digit-char-p #:directory #:directory-namestring #:disassemble
+           #:division-by-zero #:do #:do* #:do-all-symbols #:do-external-symbols #:do-symbols
+           #:documentation #:dolist #:dotimes #:double-float #:double-float-epsilon
+           #:double-float-negative-epsilon #:dpb #:dribble #:dynamic-extent #:ecase #:echo-stream
+           #:echo-stream-input-stream #:echo-stream-output-stream #:ed #:eighth #:elt
+           #:encode-universal-time #:end-of-file #:endp #:enough-namestring
+           #:ensure-directories-exist #:ensure-generic-function #:eq #:eql #:equal #:equalp #:error
+           #:etypecase #:eval #:eval-when #:evenp #:every #:exp #:export #:expt #:extended-char
+           #:fboundp #:fceiling #:fdefinition #:ffloor #:fifth #:file-author #:file-error
+           #:file-error-pathname #:file-length #:file-namestring #:file-position #:file-stream
+           #:file-string-length #:file-write-date #:fill #:fill-pointer #:find #:find-all-symbols
+           #:find-class #:find-if #:find-if-not #:find-method #:find-package #:find-restart
+           #:find-symbol #:finish-output #:first #:fixnum #:flet #:float #:float-digits
+           #:float-precision #:float-radix #:float-sign #:floating-point-inexact
+           #:floating-point-invalid-operation #:floating-point-overflow #:floating-point-underflow
+           #:floatp #:floor #:fmakunbound #:force-output #:format #:formatter #:fourth #:fresh-line
+           #:fround #:ftruncate #:ftype #:funcall #:function #:function-keywords
+           #:function-lambda-expression #:functionp #:gcd #:generic-function #:gensym #:gentemp #:get
+           #:get-decoded-time #:get-dispatch-macro-character #:get-internal-real-time
+           #:get-internal-run-time #:get-macro-character #:get-output-stream-string #:get-properties
+           #:get-setf-expansion #:get-universal-time #:getf #:gethash #:go #:graphic-char-p
+           #:handler-bind #:handler-case #:hash-table #:hash-table-count #:hash-table-p
+           #:hash-table-rehash-size #:hash-table-rehash-threshold #:hash-table-size #:hash-table-test
+           #:host-namestring #:identity #:if #:ignorable #:ignore #:ignore-errors #:imagpart #:import
+           #:in-package #:incf #:initialize-instance #:inline #:input-stream-p #:inspect #:integer
+           #:integer-decode-float #:integer-length #:integerp #:interactive-stream-p #:intern
+           #:internal-time-units-per-second #:intersection #:invalid-method-error #:invoke-debugger
+           #:invoke-restart #:invoke-restart-interactively #:isqrt #:keyword #:keywordp #:labels
+           #:lambda #:lambda-list-keywords #:lambda-parameters-limit #:last #:lcm #:ldb #:ldb-test
+           #:ldiff #:least-negative-double-float #:least-negative-long-float
+           #:least-negative-normalized-double-float #:least-negative-normalized-long-float
+           #:least-negative-normalized-short-float #:least-negative-normalized-single-float
+           #:least-negative-short-float #:least-negative-single-float #:least-positive-double-float
+           #:least-positive-long-float #:least-positive-normalized-double-float
+           #:least-positive-normalized-long-float #:least-positive-normalized-short-float
+           #:least-positive-normalized-single-float #:least-positive-short-float
+           #:least-positive-single-float #:length #:let #:let* #:lisp-implementation-type
+           #:lisp-implementation-version #:list #:list* #:list-all-packages #:list-length #:listen
+           #:listp #:load #:load-logical-pathname-translations #:load-time-value #:locally #:log
+           #:logand #:logandc1 #:logandc2 #:logbitp #:logcount #:logeqv #:logical-pathname
+           #:logical-pathname-translations #:logior #:lognand #:lognor #:lognot #:logorc1 #:logorc2
+           #:logtest #:logxor #:long-float #:long-float-epsilon #:long-float-negative-epsilon
+           #:long-site-name #:loop #:loop-finish #:lower-case-p #:machine-instance #:machine-type
+           #:machine-version #:macro-function #:macroexpand #:macroexpand-1 #:macrolet #:make-array
+           #:make-broadcast-stream #:make-concatenated-stream #:make-condition
+           #:make-dispatch-macro-character #:make-echo-stream #:make-hash-table #:make-instance
+           #:make-instances-obsolete #:make-list #:make-load-form #:make-load-form-saving-slots
+           #:make-method #:make-package #:make-pathname #:make-random-state #:make-sequence
+           #:make-string #:make-string-input-stream #:make-string-output-stream #:make-symbol
+           #:make-synonym-stream #:make-two-way-stream #:makunbound #:map #:map-into #:mapc #:mapcan
+           #:mapcar #:mapcon #:maphash #:mapl #:maplist #:mask-field #:max #:member #:member-if
+           #:member-if-not #:merge #:merge-pathnames #:method #:method-combination
+           #:method-combination-error #:method-qualifiers #:min #:minusp #:mismatch #:mod
+           #:most-negative-double-float #:most-negative-fixnum #:most-negative-long-float
+           #:most-negative-short-float #:most-negative-single-float #:most-positive-double-float
+           #:most-positive-fixnum #:most-positive-long-float #:most-positive-short-float
+           #:most-positive-single-float #:muffle-warning #:multiple-value-bind #:multiple-value-call
+           #:multiple-value-list #:multiple-value-prog1 #:multiple-value-setq #:multiple-values-limit
+           #:name-char #:namestring #:nbutlast #:nconc #:next-method-p #:nil #:nintersection #:ninth
+           #:no-applicable-method #:no-next-method #:not #:notany #:notevery #:notinline #:nreconc
+           #:nreverse #:nset-difference #:nset-exclusive-or #:nstring-capitalize #:nstring-downcase
+           #:nstring-upcase #:nsublis #:nsubst #:nsubst-if #:nsubst-if-not #:nsubstitute
+           #:nsubstitute-if #:nsubstitute-if-not #:nth #:nth-value #:nthcdr #:null #:number #:numberp
+           #:numerator #:nunion #:oddp #:open #:open-stream-p #:optimize #:or #:otherwise
+           #:output-stream-p #:package #:package-error #:package-error-package #:package-name
+           #:package-nicknames #:package-shadowing-symbols #:package-use-list #:package-used-by-list
+           #:packagep #:pairlis #:parse-error #:parse-integer #:parse-namestring #:pathname
+           #:pathname-device #:pathname-directory #:pathname-host #:pathname-match-p #:pathname-name
+           #:pathname-type #:pathname-version #:pathnamep #:peek-char #:phase #:pi #:plusp #:pop
+           #:position #:position-if #:position-if-not #:pprint #:pprint-dispatch
+           #:pprint-exit-if-list-exhausted #:pprint-fill #:pprint-indent #:pprint-linear
+           #:pprint-logical-block #:pprint-newline #:pprint-pop #:pprint-tab #:pprint-tabular #:prin1
+           #:prin1-to-string #:princ #:princ-to-string #:print #:print-not-readable
+           #:print-not-readable-object #:print-object #:print-unreadable-object #:probe-file
+           #:proclaim #:prog #:prog* #:prog1 #:prog2 #:progn #:program-error #:progv #:provide
+           #:psetf #:psetq #:push #:pushnew #:quote #:random #:random-state #:random-state-p #:rassoc
+           #:rassoc-if #:rassoc-if-not #:ratio #:rational #:rationalize #:rationalp #:read
+           #:read-byte #:read-char #:read-char-no-hang #:read-delimited-list #:read-from-string
+           #:read-line #:read-preserving-whitespace #:read-sequence #:reader-error #:readtable
+           #:readtable-case #:readtablep #:real #:realp #:realpart #:reduce #:reinitialize-instance
+           #:rem #:remf #:remhash #:remove #:remove-duplicates #:remove-if #:remove-if-not
+           #:remove-method #:remprop #:rename-file #:rename-package #:replace #:require #:rest
+           #:restart #:restart-bind #:restart-case #:restart-name #:return #:return-from #:revappend
+           #:reverse #:room #:rotatef #:round #:row-major-aref #:rplaca #:rplacd #:safety #:satisfies
+           #:sbit #:scale-float #:schar #:search #:second #:sequence #:serious-condition #:set
+           #:set-difference #:set-dispatch-macro-character #:set-exclusive-or #:set-macro-character
+           #:set-pprint-dispatch #:set-syntax-from-char #:setf #:setq #:seventh #:shadow
+           #:shadowing-import #:shared-initialize #:shiftf #:short-float #:short-float-epsilon
+           #:short-float-negative-epsilon #:short-site-name #:signal #:signed-byte #:signum
+           #:simple-array #:simple-base-string #:simple-bit-vector #:simple-bit-vector-p
+           #:simple-condition #:simple-condition-format-arguments #:simple-condition-format-control
+           #:simple-error #:simple-string #:simple-string-p #:simple-type-error #:simple-vector
+           #:simple-vector-p #:simple-warning #:sin #:single-float #:single-float-epsilon
+           #:single-float-negative-epsilon #:sinh #:sixth #:sleep #:slot-boundp #:slot-exists-p
+           #:slot-makunbound #:slot-missing #:slot-unbound #:slot-value #:software-type
+           #:software-version #:some #:sort #:space #:special #:special-operator-p #:speed #:sqrt
+           #:stable-sort #:standard #:standard-char #:standard-char-p #:standard-class
+           #:standard-generic-function #:standard-method #:standard-object #:step #:storage-condition
+           #:store-value #:stream #:stream-element-type #:stream-error #:stream-error-stream
+           #:stream-external-format #:streamp #:string #:string-capitalize #:string-downcase
+           #:string-equal #:string-greaterp #:string-left-trim #:string-lessp #:string-not-equal
+           #:string-not-greaterp #:string-not-lessp #:string-right-trim #:string-stream #:string-trim
+           #:string-upcase #:string/= #:string< #:string<= #:string= #:string> #:string>= #:stringp
+           #:structure #:structure-class #:structure-object #:style-warning #:sublis #:subseq
+           #:subsetp #:subst #:subst-if #:subst-if-not #:substitute #:substitute-if
+           #:substitute-if-not #:subtypep #:svref #:sxhash #:symbol #:symbol-function
+           #:symbol-macrolet #:symbol-name #:symbol-package #:symbol-plist #:symbol-value #:symbolp
+           #:synonym-stream #:synonym-stream-symbol #:t #:tagbody #:tailp #:tan #:tanh #:tenth
+           #:terpri #:the #:third #:throw #:time #:trace #:translate-logical-pathname
+           #:translate-pathname #:tree-equal #:truename #:truncate #:two-way-stream
+           #:two-way-stream-input-stream #:two-way-stream-output-stream #:type #:type-error
+           #:type-error-datum #:type-error-expected-type #:type-of #:typecase #:typep #:unbound-slot
+           #:unbound-slot-instance #:unbound-variable #:undefined-function #:unexport #:unintern
+           #:union #:unless #:unread-char #:unsigned-byte #:untrace #:unuse-package #:unwind-protect
+           #:update-instance-for-different-class #:update-instance-for-redefined-class
+           #:upgraded-array-element-type #:upgraded-complex-part-type #:upper-case-p #:use-package
+           #:use-value #:user-homedir-pathname #:values #:values-list #:variable #:vector
+           #:vector-pop #:vector-push #:vector-push-extend #:vectorp #:warn #:warning #:when
+           #:wild-pathname-p #:with-accessors #:with-compilation-unit #:with-condition-restarts
+           #:with-hash-table-iterator #:with-input-from-string #:with-open-file #:with-open-stream
+           #:with-output-to-string #:with-package-iterator #:with-simple-restart #:with-slots
+           #:with-standard-io-syntax #:write #:write-byte #:write-char #:write-line #:write-sequence
+           #:write-string #:write-to-string #:y-or-n-p #:yes-or-no-p #:zerop))
         (packages
          #+clisp  '(:common-lisp :clos)
          #+gcl    '(:lisp :pcl)
          #-(or clisp gcl) '(:common-lisp))
         (gray-symbols
-         '("FUNDAMENTAL-STREAM"
-           "FUNDAMENTAL-INPUT-STREAM"
-           "FUNDAMENTAL-OUTPUT-STREAM"
-           "FUNDAMENTAL-CHARACTER-STREAM"
-           "FUNDAMENTAL-BINARY-STREAM"
-           "FUNDAMENTAL-CHARACTER-INPUT-STREAM"
-           "FUNDAMENTAL-CHARACTER-OUTPUT-STREAM"
-           "FUNDAMENTAL-BINARY-INPUT-STREAM"
-           "FUNDAMENTAL-BINARY-OUTPUT-STREAM"
-           "STREAM-READ-CHAR"
-           "STREAM-UNREAD-CHAR"
-           "STREAM-READ-CHAR-NO-HANG"
-           "STREAM-PEEK-CHAR"
-           "STREAM-LISTEN"
-           "STREAM-READ-LINE"
-           "STREAM-CLEAR-INPUT"
-           "STREAM-WRITE-CHAR"
-           "STREAM-LINE-COLUMN"
-           "STREAM-START-LINE-P"
-           "STREAM-WRITE-STRING"
-           "STREAM-TERPRI"
-           "STREAM-FRESH-LINE"
-           "STREAM-FINISH-OUTPUT"
-           "STREAM-FORCE-OUTPUT"
-           "STREAM-ADVANCE-TO-COLUMN"
-           "STREAM-CLEAR-INPUT"
-           "STREAM-READ-BYTE"
-           "STREAM-WRITE-BYTE" ))
+         '(#:fundamental-stream
+           #:fundamental-input-stream
+           #:fundamental-output-stream
+           #:fundamental-character-stream
+           #:fundamental-binary-stream
+           #:fundamental-character-input-stream
+           #:fundamental-character-output-stream
+           #:fundamental-binary-input-stream
+           #:fundamental-binary-output-stream
+           #:stream-read-char
+           #:stream-unread-char
+           #:stream-read-char-no-hang
+           #:stream-peek-char
+           #:stream-listen
+           #:stream-read-line
+           #:stream-clear-input
+           #:stream-write-char
+           #:stream-line-column
+           #:stream-start-line-p
+           #:stream-write-string
+           #:stream-terpri
+           #:stream-fresh-line
+           #:stream-finish-output
+           #:stream-force-output
+           #:stream-advance-to-column
+           #:stream-clear-input
+           #:stream-read-byte
+           #:stream-write-byte ))
         (gray-packages
-         `(#+clisp                 ,@'("LISP")
-           #+cmu                   ,@'("EXT")
-	   #+mcl                   ,@'("CCL")
-           #+allegro               ,@'("COMMON-LISP" "EXCL" "STREAM")
-           #+harlequin-common-lisp ,@'("STREAM")
-           #+sbcl                  ,@'("SB-GRAY"))) )
+         `(#+clisp                 ,@'(:lisp)
+           #+cmu                   ,@'(:ext)
+	   #+mcl                   ,@'(:ccl)
+           #+allegro               ,@'(:common-lisp :excl :stream)
+           #+harlequin-common-lisp ,@'(:stream)
+           #+sbcl                  ,@'(:sb-gray))) )
     ;;
     (labels ((seek-symbol (name packages)
-               ;; Seek the a symbol named 'name' in `packages'
+               ;; seek the a symbol named 'name' in `packages'
                (or (some #'(lambda (p)
-                             (multiple-value-bind (sym res) (find-symbol name p)
+                             (multiple-value-bind (sym res) (find-symbol (symbol-name name) p)
                                (if (eql res :external)
                                    (list sym)
                                    nil)))
                          packages)
-                   (progn (format T "~&There is no ~A." name)
+                   (progn (format t "~&there is no ~A." name)
                           (finish-output)
                           nil)))
              (dump-defpackage (&aux imports export-ansi export-gray)
@@ -251,16 +251,16 @@
                                   (push (car sym) res)
                                   (cond
                                     ((and (find-package :clim-lisp-patch)
-                                          (multiple-value-bind (sym2 res) (find-symbol nam :clim-lisp-patch)
+                                          (multiple-value-bind (sym2 res) (find-symbol (symbol-name nam) :clim-lisp-patch)
                                             (and sym2 (eq res :external))))
                                      ;;
-                                     (format T "~&;; ~S is patched." sym)
+                                     (format t "~&;; ~S is patched." sym)
                                      (finish-output)
                                      (push-import-from nam
                                                        :clim-lisp-patch))
                                     (t
                                      (setf sym (car sym))
-                                     ;; CLISP has no (:import ..) ARG!
+                                     ;; clisp has no (:import ..) arg!
                                      (push-import-from
                                       (symbol-name sym)
                                       (package-name (symbol-package sym))))))))
@@ -268,7 +268,7 @@
                  (setf export-ansi (grok all-ansi-symbols packages))
                  (setf export-gray (grok gray-symbols gray-packages))
                  `(progn
-                   (defpackage "CLIM-LISP" (:use)
+                   (defpackage :clim-lisp (:use)
                      ,@(mapcar (lambda (spec)
                                  (destructuring-bind (package . syms) spec
                                    `(:import-from ,package ,@syms)))
@@ -278,1546 +278,1546 @@
                       ,@(mapcar #'symbol-name export-gray) )) ))))
       (dump-defpackage) ))
 
-(defpackage "CLIM"
+(defpackage :clim
   (:use)
   ;;
-  (:import-from "CLIM-LISP"
-   "AND" 
-   "BOOLEAN" 
-   "CHARACTER" 
-   "CLOSE" 
-   "COMPLEX" 
-   "FLOAT" 
-   "FUNDAMENTAL-BINARY-INPUT-STREAM" 
-   "FUNDAMENTAL-BINARY-OUTPUT-STREAM" 
-   "FUNDAMENTAL-BINARY-STREAM" 
-   "FUNDAMENTAL-CHARACTER-INPUT-STREAM" 
-   "FUNDAMENTAL-CHARACTER-OUTPUT-STREAM" 
-   "FUNDAMENTAL-CHARACTER-STREAM" 
-   "FUNDAMENTAL-INPUT-STREAM" 
-   "FUNDAMENTAL-OUTPUT-STREAM" 
-   "FUNDAMENTAL-STREAM" 
-   "INPUT-STREAM-P" 
-   "INTEGER" 
-   "INTERACTIVE-STREAM-P" 
-   "KEYWORD" 
-   "MEMBER"
-   "NIL"
-   "NULL" 
-   "NUMBER" 
-   "OPEN-STREAM-P" 
-   "OR" 
-   "OUTPUT-STREAM-P" 
-   "PATHNAME" 
-   "RATIO" 
-   "RATIONAL" 
-   "REAL" 
-   "SEQUENCE" 
-   "STREAM-ADVANCE-TO-COLUMN" 
-   "STREAM-CLEAR-INPUT" 
-   "STREAM-ELEMENT-TYPE" 
-   "STREAM-FINISH-OUTPUT" 
-   "STREAM-FORCE-OUTPUT" 
-   "STREAM-FRESH-LINE" 
-   "STREAM-LINE-COLUMN" 
-   "STREAM-LISTEN" 
-   "STREAM-PEEK-CHAR" 
-   "STREAM-READ-BYTE" 
-   "STREAM-READ-CHAR" 
-   "STREAM-READ-CHAR-NO-HANG" 
-   "STREAM-READ-LINE" 
-   "STREAM-START-LINE-P" 
-   "STREAM-TERPRI" 
-   "STREAM-UNREAD-CHAR" 
-   "STREAM-WRITE-BYTE" 
-   "STREAM-WRITE-CHAR" 
-   "STREAM-WRITE-STRING" 
-   "STREAMP" 
-   "STRING" 
-   "SYMBOL" 
-   "T")
+  (:import-from :clim-lisp
+   #:and 
+   #:boolean 
+   #:character 
+   #:close 
+   #:complex 
+   #:float 
+   #:fundamental-binary-input-stream 
+   #:fundamental-binary-output-stream 
+   #:fundamental-binary-stream 
+   #:fundamental-character-input-stream 
+   #:fundamental-character-output-stream 
+   #:fundamental-character-stream 
+   #:fundamental-input-stream 
+   #:fundamental-output-stream 
+   #:fundamental-stream 
+   #:input-stream-p 
+   #:integer 
+   #:interactive-stream-p 
+   #:keyword 
+   #:member
+   #:nil
+   #:null 
+   #:number 
+   #:open-stream-p 
+   #:or 
+   #:output-stream-p 
+   #:pathname 
+   #:ratio 
+   #:rational 
+   #:real 
+   #:sequence 
+   #:stream-advance-to-column 
+   #:stream-clear-input 
+   #:stream-element-type 
+   #:stream-finish-output 
+   #:stream-force-output 
+   #:stream-fresh-line 
+   #:stream-line-column 
+   #:stream-listen 
+   #:stream-peek-char 
+   #:stream-read-byte 
+   #:stream-read-char 
+   #:stream-read-char-no-hang 
+   #:stream-read-line 
+   #:stream-start-line-p 
+   #:stream-terpri 
+   #:stream-unread-char 
+   #:stream-write-byte 
+   #:stream-write-char 
+   #:stream-write-string 
+   #:streamp 
+   #:string 
+   #:symbol 
+   #:t)
   ;;
   (:export
 
-   ;; This list of exported symbols was automatically generated from the
+   ;; this list of exported symbols was automatically generated from the
    ;; specification as of version 1.17 of this very file, please think twice
-   ;; before fiddling with it. Thanks! --GB 2002-11-10
+   ;; before fiddling with it. thanks! --gb 2002-11-10
 
-   "*ABORT-GESTURES*"                   ;variable
-   "*ACCELERATOR-GESTURES*"             ;variable
-   "*ACTIVATION-GESTURES*"              ;variable
-   "*APPLICATION-FRAME*"                ;variable
-   "*COMMAND-ARGUMENT-DELIMITERS*"      ;variable
-   "*COMMAND-DISPATCHERS*"              ;variable
-   "*COMMAND-NAME-DELIMITERS*"          ;variable
-   "*COMMAND-PARSER*"                   ;variable
-   "*COMMAND-UNPARSER*"                 ;variable
-   "*COMPLETION-GESTURES*"              ;variable
-   "*DEFAULT-FRAME-MANAGER*"            ;variable
-   "*DEFAULT-SERVER-PATH*"              ;variable
-   "*DEFAULT-TEXT-STYLE*"               ;constant
-   "*DELIMITER-GESTURES*"               ;variable
-   "*HELP-GESTURES*"                    ;variable
-   "*INPUT-CONTEXT*"                    ;variable
-   "*INPUT-WAIT-HANDLER*"               ;variable
-   "*INPUT-WAIT-TEST*"                  ;variable
-   "*NULL-PRESENTATION*"                ;constant
-   "*NUMERIC-ARGUMENT-MARKER*"          ;variable
-   "*ORIGINAL-STREAM*"                  ;variable
-   "*PARTIAL-COMMAND-PARSER*"           ;variable
-   "*POINTER-BUTTON-PRESS-HANDLER*"     ;variable
-   "*POINTER-DOCUMENTATION-OUTPUT*"     ;variable
-   "*POSSIBILITIES-GESTURES*"           ;variable
-   "*STANDARD-ACTIVATION-GESTURES*"     ;variable
-   "*UNDEFINED-TEXT-STYLE*"             ;constant
-   "*UNSUPPLIED-ARGUMENT-MARKER*"       ;variable
-   "+BACKGROUND-INK+"                   ;constant
-   "+BLACK+"                            ;constant
-   "+BLUE+"                             ;constant
-   "+CONTROL-KEY+"                      ;constant
-   "+CYAN+"                             ;constant
-   "+EVERYWHERE+"                       ;constant
-   "+FILL+"                             ;constant
-   "+FLIPPING-INK+"                     ;constant
-   "+FOREGROUND-INK+"                   ;constant
-   "+GADGET-DIALOG-VIEW+"               ;constant
-   "+GADGET-MENU-VIEW+"                 ;constant
-   "+GADGET-VIEW+"                      ;constant
-   "+GREEN+"                            ;constant
-   "+HYPER-KEY+"                        ;constant
-   "+IDENTITY-TRANSFORMATION+"          ;constant
-   "+MAGENTA+"                          ;constant
-   "+META-KEY+"                         ;constant
-   "+NOWHERE+"                          ;constant
-   "+POINTER-DOCUMENTATION-VIEW+"       ;constant
-   "+POINTER-LEFT-BUTTON+"              ;constant
-   "+POINTER-MIDDLE-BUTTON+"            ;constant
-   "+POINTER-RIGHT-BUTTON+"             ;constant
-   "+RED+"                              ;constant
-   "+SHIFT-KEY+"                        ;constant
-   "+SUPER-KEY+"                        ;constant
-   "+TEXTUAL-DIALOG-VIEW+"              ;constant
-   "+TEXTUAL-MENU-VIEW+"                ;constant
-   "+TEXTUAL-VIEW+"                     ;constant
-   "+TRANSPARENT-INK+"                  ;constant
-   "+WHITE+"                            ;constant
-   "+YELLOW+"                           ;constant
-   "ABORT-GESTURE"                      ;condition
-   "ABORT-GESTURE-EVENT"                ;generic function
-   "ACCELERATOR-GESTURE"                ;condition
-   "ACCELERATOR-GESTURE-EVENT"          ;generic function
-   "ACCELERATOR-GESTURE-NUMERIC-ARGUMENT" ;generic function
-   "ACCEPT"                             ;presentation method
-   "ACCEPT"                             ;function
-   "ACCEPT-1"                           ;function
-   "ACCEPT-FROM-STRING"                 ;function
-   "ACCEPT-PRESENT-DEFAULT"             ;presentation method
-   "ACCEPT-VALUES"                      ;frame
-   "ACCEPT-VALUES-COMMAND-BUTTON"       ;macro
-   "ACCEPT-VALUES-RESYNCHRONIZE"        ;generic function
-   "ACCEPTING-VALUES"                   ;macro
-   "ACTION-GADGET"                      ;class
-   "ACTIVATE-CALLBACK"                  ;callback
-   "ACTIVATE-GADGET"                    ;generic function
-   "ACTIVATION-GESTURE-P"               ;function
-   "ADD-CHARACTER-OUTPUT-TO-TEXT-RECORD" ;generic function
-   "ADD-COMMAND-TO-COMMAND-TABLE"       ;function
-   "ADD-GESTURE-NAME"                   ;function
-   "ADD-INPUT-EDITOR-COMMAND"           ;function
-   "ADD-KEYSTROKE-TO-COMMAND-TABLE"     ;function
-   "ADD-MENU-ITEM-TO-COMMAND-TABLE"     ;function
-   "ADD-OUTPUT-RECORD"                  ;generic function
-   "ADD-PRESENTATION-TRANSLATOR-TO-COMMAND-TABLE" ;function
-   "ADD-STRING-OUTPUT-TO-TEXT-RECORD"   ;generic function
-   "ADJUST-ITEM-LIST-CELLS"             ;generic function
-   "ADJUST-MULTIPLE-COLUMNS"            ;generic function
-   "ADJUST-TABLE-CELLS"                 ;generic function
-   "ADOPT-FRAME"                        ;generic function
-   "ALLOCATE-MEDIUM"                    ;generic function
-   "ALLOCATE-PIXMAP"                    ;generic function
-   "ALLOCATE-SPACE"                     ;generic function
-   "AND"                                ;presentation type
-   "APPLICATION-FRAME"                  ;protocol class
-   "APPLICATION-FRAME-P"                ;predicate
-   "APPLICATION-PANE"                   ;pane
-   "APPLY-PRESENTATION-GENERIC-FUNCTION" ;macro
-   "AREA"                               ;protocol class
-   "AREAP"                              ;predicate
-   "ARMED-CALLBACK"                     ;callback
-   "AUGMENT-DRAW-SET"                   ;generic function
-   "BASIC-GADGET"                       ;class
-   "BASIC-MEDIUM"                       ;class
-   "BASIC-PANE"                         ;class
-   "BASIC-PORT"                         ;class
-   "BASIC-SHEET"                        ;class
-   "BBOARD-PANE"                        ;pane
-   "BEEP"                               ;generic function
-   "BLANK-AREA"                         ;presentation type
-   "BOOLEAN"                            ;presentation type
-   "BOUNDING-RECTANGLE"                 ;protocol class
-   "BOUNDING-RECTANGLE"                 ;generic function
-   "BOUNDING-RECTANGLE*"                ;generic function
-   "BOUNDING-RECTANGLE-HEIGHT"          ;generic function
-   "BOUNDING-RECTANGLE-MAX-X"           ;generic function
-   "BOUNDING-RECTANGLE-MAX-Y"           ;generic function
-   "BOUNDING-RECTANGLE-MIN-X"           ;generic function
-   "BOUNDING-RECTANGLE-MIN-Y"           ;generic function
-   "BOUNDING-RECTANGLE-P"               ;predicate
-   "BOUNDING-RECTANGLE-POSITION"        ;generic function
-   "BOUNDING-RECTANGLE-SIZE"            ;generic function
-   "BOUNDING-RECTANGLE-WIDTH"           ;generic function
-   "BURY-FRAME"                         ;generic function
-   "BURY-MIRROR"                        ;generic function
-   "BURY-SHEET"                         ;generic function
-   "CACHE-OUTPUT-RECORD"                ;generic function
-   "CALL-PRESENTATION-MENU"             ;function
-   "CALL-PRESENTATION-TRANSLATOR"       ;function
-   "CELL-ALIGN-X"                       ;generic function
-   "CELL-ALIGN-Y"                       ;generic function
-   "CELL-MIN-HEIGHT"                    ;generic function
-   "CELL-MIN-WIDTH"                     ;generic function
-   "CELL-OUTPUT-RECORD"                 ;protocol class
-   "CELL-OUTPUT-RECORD-P"               ;predicate
-   "CHANGE-SPACE-REQUIREMENTS"          ;generic function
-   "CHANGING-SPACE-REQUIREMENTS"        ;macro
-   "CHARACTER"                          ;presentation type
-   "CHECK-BOX"                          ;class
-   "CHECK-BOX-CURRENT-SELECTION"        ;generic function
-   "CHECK-BOX-PANE"                     ;class
-   "CHECK-BOX-SELECTIONS"               ;generic function
-   "CHILD-CONTAINING-POSITION"          ;generic function
-   "CHILDREN-OVERLAPPING-RECTANGLE*"    ;generic function
-   "CHILDREN-OVERLAPPING-REGION"        ;generic function
-   "CLASS-PRESENTATION-TYPE-NAME"       ;function
-   "CLEAR-OUTPUT-RECORD"                ;generic function
-   "CLIENT-SETTING"                     ;setf method (through no reader)
-   "CLIM-STREAM-PANE"                   ;pane
-   "CLOSE"                              ;generic function
-   "COLOR"                              ;protocol class
-   "COLOR-IHS"                          ;generic function
-   "COLOR-RGB"                          ;generic function
-   "COLORP"                             ;predicate
-   "COLUMN-OUTPUT-RECORD"               ;protocol class
-   "COLUMN-OUTPUT-RECORD-P"             ;predicate
-   "COMMAND"                            ;presentation type
-   "COMMAND-ACCESSIBLE-IN-COMMAND-TABLE-P" ;function
-   "COMMAND-ALREADY-PRESENT"            ;error
-   "COMMAND-ARGUMENTS"                  ;function
-   "COMMAND-ENABLED"                    ;generic function
-   "COMMAND-LINE-COMMAND-PARSER"        ;function
-   "COMMAND-LINE-COMMAND-UNPARSER"      ;function
-   "COMMAND-LINE-NAME-FOR-COMMAND"      ;function
-   "COMMAND-LINE-READ-REMAINING-ARGUMENTS-FOR-PARTIAL-COMMAND" ;function
-   "COMMAND-MENU-ITEM-OPTIONS"          ;function
-   "COMMAND-MENU-ITEM-TYPE"             ;function
-   "COMMAND-MENU-ITEM-VALUE"            ;function
-   "COMMAND-MENU-PANE"                  ;pane
-   "COMMAND-NAME"                       ;presentation type
-   "COMMAND-NAME"                       ;function
-   "COMMAND-NAME-FROM-SYMBOL"           ;function
-   "COMMAND-NOT-ACCESSIBLE"             ;error
-   "COMMAND-NOT-PRESENT"                ;error
-   "COMMAND-OR-FORM"                    ;presentation type
-   "COMMAND-PRESENT-IN-COMMAND-TABLE-P" ;function
-   "COMMAND-TABLE"                      ;protocol class
-   "COMMAND-TABLE-ALREADY-EXISTS"       ;error
-   "COMMAND-TABLE-COMPLETE-INPUT"       ;function
-   "COMMAND-TABLE-ERROR"                ;error
-   "COMMAND-TABLE-INHERIT-FROM"         ;generic function
-   "COMMAND-TABLE-NAME"                 ;generic function
-   "COMMAND-TABLE-NOT-FOUND"            ;error
-   "COMMAND-TABLE-P"                    ;predicate
-   "COMPLETE-FROM-GENERATOR"            ;function
-   "COMPLETE-FROM-POSSIBILITIES"        ;function
-   "COMPLETE-INPUT"                     ;function
-   "COMPLETING-FROM-SUGGESTIONS"        ;macro
-   "COMPLETION"                         ;presentation type
-   "COMPLEX"                            ;presentation type
-   "COMPOSE-IN"                         ;generic function
-   "COMPOSE-OUT"                        ;generic function
-   "COMPOSE-OVER"                       ;generic function
-   "COMPOSE-ROTATION-WITH-TRANSFORMATION" ;function
-   "COMPOSE-SCALING-WITH-TRANSFORMATION" ;function
-   "COMPOSE-SPACE"                      ;generic function
-   "COMPOSE-TRANSFORMATION-WITH-ROTATION" ;function
-   "COMPOSE-TRANSFORMATION-WITH-SCALING" ;function
-   "COMPOSE-TRANSFORMATION-WITH-TRANSLATION" ;function
-   "COMPOSE-TRANSFORMATIONS"            ;generic function
-   "COMPOSE-TRANSLATION-WITH-TRANSFORMATION" ;function
-   "COMPUTE-DIFFERENCE-SET"             ;generic function
-   "COMPUTE-NEW-OUTPUT-RECORDS"         ;generic function
-   "CONTRASTING-DASH-PATTERN-LIMIT"     ;generic function
-   "CONTRASTING-INKS-LIMIT"             ;generic function
-   "COORDINATE"                         ;type
-   "COORDINATE"                         ;function
-   "COPY-AREA"                          ;generic function
-   "COPY-FROM-PIXMAP"                   ;function
-   "COPY-TEXTUAL-OUTPUT-HISTORY"        ;function
-   "COPY-TO-PIXMAP"                     ;function
-   "CURSOR"                             ;protocol class
-   "CURSOR-ACTIVE"                      ;generic function
-   "CURSOR-FOCUS"                       ;generic function
-   "CURSOR-POSITION"                    ;generic function
-   "CURSOR-SHEET"                       ;generic function
-   "CURSOR-STATE"                       ;generic function
-   "CURSOR-VISIBILITY"                  ;generic function
-   "CURSORP"                            ;predicate
-   "DEACTIVATE-GADGET"                  ;generic function
-   "DEALLOCATE-MEDIUM"                  ;generic function
-   "DEALLOCATE-PIXMAP"                  ;generic function
-   "DECACHE-CHILD-OUTPUT-RECORD"        ;generic function
-   "DEFAULT-DESCRIBE-PRESENTATION-TYPE" ;function
-   "DEFAULT-FRAME-TOP-LEVEL"            ;generic function
-   "DEFINE-APPLICATION-FRAME"           ;macro
-   "DEFINE-BORDER-TYPE"                 ;macro
-   "DEFINE-COMMAND"                     ;macro
-   "DEFINE-COMMAND-TABLE"               ;macro
-   "DEFINE-DEFAULT-PRESENTATION-METHOD" ;macro
-   "DEFINE-DRAG-AND-DROP-TRANSLATOR"    ;macro
-   "DEFINE-GESTURE-NAME"                ;macro
-   "DEFINE-GRAPH-TYPE"                  ;macro
-   "DEFINE-PRESENTATION-ACTION"         ;macro
-   "DEFINE-PRESENTATION-GENERIC-FUNCTION" ;macro
-   "DEFINE-PRESENTATION-METHOD"         ;macro
-   "DEFINE-PRESENTATION-TO-COMMAND-TRANSLATOR" ;macro
-   "DEFINE-PRESENTATION-TRANSLATOR"     ;macro
-   "DEFINE-PRESENTATION-TYPE"           ;macro
-   "DEFINE-PRESENTATION-TYPE-ABBREVIATION" ;macro
-   "DEGRAFT-MEDIUM"                     ;generic function
-   "DELEGATE-SHEET-DELEGATE"            ;generic function
-   "DELEGATE-SHEET-INPUT-MIXIN"         ;class
-   "DELETE-GESTURE-NAME"                ;function
-   "DELETE-OUTPUT-RECORD"               ;generic function
-   "DELIMITER-GESTURE-P"                ;function
-   "DESCRIBE-PRESENTATION-TYPE"         ;presentation method
-   "DESCRIBE-PRESENTATION-TYPE"         ;function
-   "DESIGN"                             ;protocol class
-   "DESIGNP"                            ;predicate
-   "DESTROY-FRAME"                      ;generic function
-   "DESTROY-MIRROR"                     ;generic function
-   "DESTROY-PORT"                       ;generic function
-   "DEVICE-EVENT"                       ;class
-   "DISABLE-FRAME"                      ;generic function
-   "DISARMED-CALLBACK"                  ;callback
-   "DISOWN-FRAME"                       ;generic function
-   "DISPATCH-EVENT"                     ;generic function
-   "DISPLAY-COMMAND-MENU"               ;generic function
-   "DISPLAY-COMMAND-TABLE-MENU"         ;generic function
-   "DISPLAY-EXIT-BOXES"                 ;generic function
-   "DISPLAYED-OUTPUT-RECORD"            ;protocol class
-   "DISPLAYED-OUTPUT-RECORD-INK"        ;generic function
-   "DISPLAYED-OUTPUT-RECORD-P"          ;predicate
-   "DISTRIBUTE-EVENT"                   ;generic function
-   "DO-COMMAND-TABLE-INHERITANCE"       ;macro
-   "DOCUMENT-PRESENTATION-TRANSLATOR"   ;function
-   "DRAG-CALLBACK"                      ;callback
-   "DRAG-CALLBACK"                      ;callback
-   "DRAG-OUTPUT-RECORD"                 ;generic function
-   "DRAGGING-OUTPUT"                    ;macro
-   "DRAW-ARROW"                         ;function
-   "DRAW-ARROW*"                        ;function
-   "DRAW-CIRCLE"                        ;function
-   "DRAW-CIRCLE*"                       ;function
-   "DRAW-DESIGN"                        ;generic function
-   "DRAW-ELLIPSE"                       ;function
-   "DRAW-ELLIPSE*"                      ;function
-   "DRAW-LINE"                          ;function
-   "DRAW-LINE*"                         ;function
-   "DRAW-LINES"                         ;function
-   "DRAW-LINES*"                        ;function
-   "DRAW-OVAL"                          ;function
-   "DRAW-OVAL*"                         ;function
-   "DRAW-PATTERN*"                      ;function
-   "DRAW-POINT"                         ;function
-   "DRAW-POINT*"                        ;function
-   "DRAW-POINTS"                        ;function
-   "DRAW-POINTS*"                       ;function
-   "DRAW-POLYGON"                       ;function
-   "DRAW-POLYGON*"                      ;function
-   "DRAW-RECTANGLE"                     ;function
-   "DRAW-RECTANGLE*"                    ;function
-   "DRAW-RECTANGLES"                    ;function
-   "DRAW-RECTANGLES*"                   ;function
-   "DRAW-STANDARD-MENU"                 ;function
-   "DRAW-TEXT"                          ;function
-   "DRAW-TEXT*"                         ;function
-   "ELLIPSE"                            ;protocol class
-   "ELLIPSE-CENTER-POINT"               ;generic function
-   "ELLIPSE-CENTER-POINT*"              ;generic function
-   "ELLIPSE-END-ANGLE"                  ;generic function
-   "ELLIPSE-RADII"                      ;generic function
-   "ELLIPSE-START-ANGLE"                ;generic function
-   "ELLIPSEP"                           ;predicate
-   "ELLIPTICAL-ARC"                     ;protocol class
-   "ELLIPTICAL-ARC-P"                   ;predicate
-   "ENABLE-FRAME"                       ;generic function
-   "ENCAPSULATING-STREAM"               ;protocol class
-   "ENCAPSULATING-STREAM-P"             ;predicate
-   "ENCAPSULATING-STREAM-STREAM"        ;generic function
-   "ENGRAFT-MEDIUM"                     ;generic function
-   "ERASE-INPUT-BUFFER"                 ;generic function
-   "ERASE-OUTPUT-RECORD"                ;generic function
-   "EVEN-SCALING-TRANSFORMATION-P"      ;generic function
-   "EVENT"                              ;protocol class
-   "EVENT-LISTEN"                       ;generic function
-   "EVENT-MATCHES-GESTURE-NAME-P"       ;function
-   "EVENT-MODIFIER-STATE"               ;generic function
-   "EVENT-PEEK"                         ;generic function
-   "EVENT-READ"                         ;generic function
-   "EVENT-READ-NO-HANG"                 ;generic function
-   "EVENT-SHEET"                        ;generic function
-   "EVENT-TIMESTAMP"                    ;generic function
-   "EVENT-TYPE"                         ;generic function
-   "EVENT-UNREAD"                       ;generic function
-   "EVENTP"                             ;predicate
-   "EXECUTE-FRAME-COMMAND"              ;generic function
-   "EXPAND-PRESENTATION-TYPE-ABBREVIATION" ;function
-   "EXPAND-PRESENTATION-TYPE-ABBREVIATION-1" ;function
-   "EXPRESSION"                         ;presentation type
-   "EXTENDED-INPUT-STREAM"              ;protocol class
-   "EXTENDED-INPUT-STREAM-P"            ;predicate
-   "EXTENDED-OUTPUT-STREAM"             ;protocol class
-   "EXTENDED-OUTPUT-STREAM-P"           ;predicate
-   "FILLING-OUTPUT"                     ;macro
-   "FIND-APPLICABLE-TRANSLATORS"        ;function
-   "FIND-CACHED-OUTPUT-RECORD"          ;generic function
-   "FIND-CHILD-OUTPUT-RECORD"           ;generic function
-   "FIND-COMMAND-FROM-COMMAND-LINE-NAME" ;function
-   "FIND-COMMAND-TABLE"                 ;function
-   "FIND-FRAME-MANAGER"                 ;function
-   "FIND-GRAFT"                         ;function
-   "FIND-INNERMOST-APPLICABLE-PRESENTATION" ;function
-   "FIND-KEYSTROKE-ITEM"                ;function
-   "FIND-MENU-ITEM"                     ;function
-   "FIND-PANE-FOR-FRAME"                ;generic function
-   "FIND-PANE-NAMED"                    ;generic function
-   "FIND-PORT"                          ;function
-   "FIND-PRESENTATION-TRANSLATOR"       ;function
-   "FIND-PRESENTATION-TRANSLATORS"      ;function
-   "FIND-PRESENTATION-TYPE-CLASS"       ;function
-   "FLOAT"                              ;presentation type
-   "FORM"                               ;presentation type
-   "FORMAT-GRAPH-FROM-ROOTS"            ;function
-   "FORMAT-ITEMS"                       ;function
-   "FORMAT-TEXTUAL-LIST"                ;function
-   "FORMATTING-CELL"                    ;macro
-   "FORMATTING-COLUMN"                  ;macro
-   "FORMATTING-ITEM-LIST"               ;macro
-   "FORMATTING-ROW"                     ;macro
-   "FORMATTING-TABLE"                   ;macro
-   "FRAME-ALL-LAYOUTS"                  ;generic function
-   "FRAME-CALLING-FRAME"                ;generic function
-   "FRAME-COMMAND-TABLE"                ;generic function
-   "FRAME-CURRENT-LAYOUT"               ;generic function
-   "FRAME-CURRENT-PANES"                ;generic function
-   "FRAME-DOCUMENT-HIGHLIGHTED-PRESENTATION" ;generic function
-   "FRAME-DRAG-AND-DROP-FEEDBACK"       ;generic function
-   "FRAME-DRAG-AND-DROP-HIGHLIGHTING"   ;generic function
-   "FRAME-ERROR-OUTPUT"                 ;generic function
-   "FRAME-EXIT"                         ;condition
-   "FRAME-EXIT"                         ;generic function
-   "FRAME-EXIT-FRAME"                   ;generic function
-   "FRAME-FIND-INNERMOST-APPLICABLE-PRESENTATION" ;generic function
-   "FRAME-INPUT-CONTEXT-BUTTON-PRESS-HANDLER" ;generic function
-   "FRAME-MAINTAIN-PRESENTATION-HISTORIES" ;generic function
-   "FRAME-MANAGER"                      ;protocol class
-   "FRAME-MANAGER"                      ;generic function
-   "FRAME-MANAGER-FRAMES"               ;generic function
-   "FRAME-MANAGER-MENU-CHOOSE"          ;generic function
-   "FRAME-MANAGER-NOTIFY-USER"          ;generic function
-   "FRAME-MANANGER-P"                   ;predicate
-   "FRAME-NAME"                         ;generic function
-   "FRAME-PANES"                        ;generic function
-   "FRAME-PARENT"                       ;generic function
-   "FRAME-POINTER-DOCUMENTATION-OUTPUT" ;generic function
-   "FRAME-PRETTY-NAME"                  ;generic function
-   "FRAME-PROPERTIES"                   ;generic function
-   "FRAME-QUERY-IO"                     ;generic function
-   "FRAME-REPLAY"                       ;generic function
-   "FRAME-STANDARD-INPUT"               ;generic function
-   "FRAME-STANDARD-OUTPUT"              ;generic function
-   "FRAME-STATE"                        ;generic function
-   "FRAME-TOP-LEVEL-SHEET"              ;generic function
-   "FUNCALL-PRESENTATION-GENERIC-FUNCTION" ;macro
-   "FUNDAMENTAL-BINARY-INPUT-STREAM"    ;class
-   "FUNDAMENTAL-BINARY-OUTPUT-STREAM"   ;class
-   "FUNDAMENTAL-BINARY-STREAM"          ;class
-   "FUNDAMENTAL-CHARACTER-INPUT-STREAM" ;class
-   "FUNDAMENTAL-CHARACTER-OUTPUT-STREAM" ;class
-   "FUNDAMENTAL-CHARACTER-STREAM"       ;class
-   "FUNDAMENTAL-INPUT-STREAM"           ;class
-   "FUNDAMENTAL-OUTPUT-STREAM"          ;class
-   "FUNDAMENTAL-STREAM"                 ;class
-   "GADGET"                             ;protocol class
-   "GADGET-ACTIVATE-CALLBACK"           ;generic function
-   "GADGET-ACTIVE-P"                    ;generic function
-   "GADGET-ARMED-CALLBACK"              ;generic function
-   "GADGET-CLIENT"                      ;generic function
-   "GADGET-DIALOG-VIEW"                 ;class
-   "GADGET-DISARMED-CALLBACK"           ;generic function
-   "GADGET-ID"                          ;generic function
-   "GADGET-LABEL"                       ;generic function
-   "GADGET-LABEL-ALIGN-X"               ;generic function
-   "GADGET-LABEL-ALIGN-Y"               ;generic function
-   "GADGET-MAX-VALUE"                   ;generic function
-   "GADGET-MENU-VIEW"                   ;class
-   "GADGET-MIN-VALUE"                   ;generic function
-   "GADGET-ORIENTATION"                 ;generic function
-   "GADGET-OUTPUT-RECORD"               ;class
-   "GADGET-RANGE"                       ;generic function
-   "GADGET-RANGE*"                      ;generic function
-   "GADGET-SHOW-VALUE-P"                ;generic function
-   "GADGET-VALUE"                       ;generic function
-   "GADGET-VALUE-CHANGED-CALLBACK"      ;generic function
-   "GADGET-VIEW"                        ;class
-   "GADGETP"                            ;predicate
-   "GENERATE-GRAPH-NODES"               ;generic function
-   "GENERATE-PANES"                     ;generic function
-   "GENERIC-LIST-PANE"                  ;class
-   "GENERIC-OPTION-PANE"                ;class
-   "GET-FRAME-PANE"                     ;generic function
-   "GLOBAL-COMMAND-TABLE"               ;command table
-   "GRAFT"                              ;generic function
-   "GRAFT-HEIGHT"                       ;generic function
-   "GRAFT-ORIENTATION"                  ;generic function
-   "GRAFT-PIXELS-PER-INCH"              ;function
-   "GRAFT-PIXELS-PER-MILLIMETER"        ;function
-   "GRAFT-UNITS"                        ;generic function
-   "GRAFT-WIDTH"                        ;generic function
-   "GRAPH-NODE-CHILDREN"                ;generic function
-   "GRAPH-NODE-OBJECT"                  ;generic function
-   "GRAPH-NODE-OUTPUT-RECORD"           ;protocol class
-   "GRAPH-NODE-OUTPUT-RECORD-P"         ;predicate
-   "GRAPH-NODE-PARENTS"                 ;generic function
-   "GRAPH-OUTPUT-RECORD"                ;protocol class
-   "GRAPH-OUTPUT-RECORD-P"              ;predicate
-   "GRAPH-ROOT-NODES"                   ;generic function
-   "GRAPHICS-DISPLAYED-OUTPUT-RECORD"   ;protocol class
-   "GRAPHICS-DISPLAYED-OUTPUT-RECORD-P" ;predicate
-   "GRID-PANE"                          ;pane
-   "HANDLE-EVENT"                       ;generic function
-   "HANDLE-REPAINT"                     ;generic function
-   "HBOX-PANE"                          ;pane
-   "HIGHLIGHT-APPLICABLE-PRESENTATION"  ;function
-   "HIGHLIGHT-OUTPUT-RECORD"            ;generic function
-   "HIGHLIGHT-PRESENTATION"             ;presentation method
-   "HORIZONTALLY"                       ;macro
-   "HRACK-PANE"                         ;pane
-   "IDENTITY-TRANSFORMATION-P"          ;generic function
-   "IMMEDIATE-REPAINTING-MIXIN"         ;class
-   "IMMEDIATE-RESCAN"                   ;generic function
-   "IMMEDIATE-SHEET-INPUT-MIXIN"        ;class
-   "INCREMENTAL-REDISPLAY"              ;generic function
-   "INDENTING-OUTPUT"                   ;macro
-   "INPUT-CONTEXT-TYPE"                 ;function
-   "INPUT-EDITING-STREAM"               ;protocol class
-   "INPUT-EDITING-STREAM-P"             ;predicate
-   "INPUT-EDITOR-FORMAT"                ;generic function
-   "INPUT-NOT-OF-REQUIRED-TYPE"         ;error
-   "INPUT-NOT-OF-REQUIRED-TYPE"         ;function
-   "INPUT-STREAM-P"                     ;generic function
-   "INTEGER"                            ;presentation type
-   "INTERACTIVE-STREAM-P"               ;predicate
-   "INTERACTOR-PANE"                    ;pane
-   "INVALIDATE-CACHED-REGIONS"          ;generic function
-   "INVALIDATE-CACHED-TRANSFORMATIONS"  ;generic function
-   "INVERT-TRANSFORMATION"              ;generic function
-   "INVERTIBLE-TRANSFORMATION-P"        ;generic function
-   "INVOKE-UPDATING-OUTPUT"             ;generic function
-   "INVOKE-WITH-DRAWING-OPTIONS"        ;generic function
-   "INVOKE-WITH-NEW-OUTPUT-RECORD"      ;generic function
-   "INVOKE-WITH-OUTPUT-RECORDING-OPTIONS" ;generic function
-   "INVOKE-WITH-OUTPUT-TO-OUTPUT-RECORD" ;generic function
-   "INVOKE-WITH-TEXT-STYLE"             ;generic function
-   "ITEM-LIST-OUTPUT-RECORD"            ;protocol class
-   "ITEM-LIST-OUTPUT-RECORD-P"          ;predicate
-   "KEY-PRESS-EVENT"                    ;class
-   "KEY-RELEASE-EVENT"                  ;class
-   "KEYBOARD-EVENT"                     ;class
-   "KEYBOARD-EVENT-CHARACTER"           ;generic function
-   "KEYBOARD-EVENT-KEY-NAME"            ;generic function
-   "KEYWORD"                            ;presentation type
-   "LABEL-PANE"                         ;pane
-   "LABELLED-GADGET-MIXIN"              ;class
-   "LABELLING"                          ;macro
-   "LAYOUT-FRAME"                       ;generic function
-   "LAYOUT-GRAPH-EDGES"                 ;generic function
-   "LAYOUT-GRAPH-NODES"                 ;generic function
-   "LINE"                               ;protocol class
-   "LINE-END-POINT"                     ;generic function
-   "LINE-END-POINT*"                    ;generic function
-   "LINE-START-POINT"                   ;generic function
-   "LINE-START-POINT*"                  ;generic function
-   "LINE-STYLE"                         ;protocol class
-   "LINE-STYLE-CAP-SHAPE"               ;generic function
-   "LINE-STYLE-DASHES"                  ;generic function
-   "LINE-STYLE-JOINT-SHAPE"             ;generic function
-   "LINE-STYLE-P"                       ;predicate
-   "LINE-STYLE-THICKNESS"               ;generic function
-   "LINE-STYLE-UNIT"                    ;generic function
-   "LINEP"                              ;predicate
-   "LIST-PANE"                          ;class
-   "LOOKUP-KEYSTROKE-COMMAND-ITEM"      ;function
-   "LOOKUP-KEYSTROKE-ITEM"              ;function
-   "MAKE-3-POINT-TRANSFORMATION"        ;function
-   "MAKE-3-POINT-TRANSFORMATION*"       ;function
-   "MAKE-APPLICATION-FRAME"             ;function
-   "MAKE-BOUNDING-RECTANGLE"            ;function
-   "MAKE-CLIM-APPLICATION-PANE"         ;function
-   "MAKE-CLIM-INTERACTOR-PANE"          ;function
-   "MAKE-CLIM-STREAM-PANE"              ;function
-   "MAKE-COMMAND-TABLE"                 ;function
-   "MAKE-CONTRASTING-DASH-PATTERNS"     ;function
-   "MAKE-CONTRASTING-INKS"              ;function
-   "MAKE-DESIGN-FROM-OUTPUT-RECORD"     ;generic function
-   "MAKE-DEVICE-FONT-TEXT-STYLE"        ;function
-   "MAKE-ELLIPSE"                       ;function
-   "MAKE-ELLIPSE*"                      ;function
-   "MAKE-ELLIPTICAL-ARC"                ;function
-   "MAKE-ELLIPTICAL-ARC*"               ;function
-   "MAKE-FLIPPING-INK"                  ;function
-   "MAKE-GRAY-COLOR"                    ;function
-   "MAKE-IHS-COLOR"                     ;function
-   "MAKE-LINE"                          ;function
-   "MAKE-LINE*"                         ;function
-   "MAKE-LINE-STYLE"                    ;function
-   "MAKE-MEDIUM"                        ;generic function
-   "MAKE-MODIFIER-STATE"                ;function
-   "MAKE-OPACITY"                       ;function
-   "MAKE-PANE"                          ;function
-   "MAKE-PANE-1"                        ;generic function
-   "MAKE-PATTERN"                       ;function
-   "MAKE-PATTERN-FROM-BITMAP-FILE"      ;function
-   "MAKE-POINT"                         ;function
-   "MAKE-POLYGON"                       ;function
-   "MAKE-POLYGON*"                      ;function
-   "MAKE-POLYLINE"                      ;function
-   "MAKE-POLYLINE*"                     ;function
-   "MAKE-PRESENTATION-TYPE-SPECIFIER"   ;function
-   "MAKE-RECTANGLE"                     ;function
-   "MAKE-RECTANGLE*"                    ;function
-   "MAKE-RECTANGULAR-TILE"              ;function
-   "MAKE-REFLECTION-TRANSFORMATION"     ;function
-   "MAKE-REFLECTION-TRANSFORMATION*"    ;function
-   "MAKE-RGB-COLOR"                     ;function
-   "MAKE-ROTATION-TRANSFORMATION"       ;function
-   "MAKE-ROTATION-TRANSFORMATION*"      ;function
-   "MAKE-SCALING-TRANSFORMATION"        ;function
-   "MAKE-SCALING-TRANSFORMATION*"       ;function
-   "MAKE-SPACE-REQUIREMENT"             ;function
-   "MAKE-STENCIL"                       ;function
-   "MAKE-TEXT-STYLE"                    ;function
-   "MAKE-TRANSFORMATION"                ;function
-   "MAKE-TRANSLATION-TRANSFORMATION"    ;function
-   "MAP-OVER-COMMAND-TABLE-COMMANDS"    ;function
-   "MAP-OVER-COMMAND-TABLE-KEYSTROKES"  ;function
-   "MAP-OVER-COMMAND-TABLE-MENU-ITEMS"  ;function
-   "MAP-OVER-COMMAND-TABLE-NAMES"       ;function
-   "MAP-OVER-COMMAND-TABLE-TRANSLATORS" ;function
-   "MAP-OVER-FRAMES"                    ;function
-   "MAP-OVER-GRAFTS"                    ;function
-   "MAP-OVER-ITEM-LIST-CELLS"           ;generic function
-   "MAP-OVER-OUTPUT-RECORDS"		;generic function
-   "MAP-OVER-OUTPUT-RECORDS-CONTAINING-POSITION" ;generic function
-   "MAP-OVER-OUTPUT-RECORDS-OVERLAPPING-REGION" ;generic function
-   "MAP-OVER-POLYGON-COORDINATES"       ;generic function
-   "MAP-OVER-POLYGON-SEGMENTS"          ;generic function
-   "MAP-OVER-PORTS"                     ;function
-   "MAP-OVER-PRESENTATION-TYPE-SUPERTYPES" ;presentation method
-   "MAP-OVER-PRESENTATION-TYPE-SUPERTYPES" ;function
-   "MAP-OVER-REGION-SET-REGIONS"        ;generic function
-   "MAP-OVER-ROW-CELLS"                 ;generic function
-   "MAP-OVER-ROW-CELLS"                 ;generic function
-   "MAP-OVER-SHEETS"                    ;generic function
-   "MAP-OVER-SHEETS-CONTAINING-POSITION" ;generic function
-   "MAP-OVER-SHEETS-OVERLAPPING-REGION" ;generic function
-   "MAP-OVER-TABLE-ELEMENTS"            ;generic function
-   "MAP-SHEET-POSITION-TO-CHILD"        ;generic function
-   "MAP-SHEET-POSITION-TO-PARENT"       ;generic function
-   "MAP-SHEET-RECTANGLE*-TO-CHILD"      ;generic function
-   "MAP-SHEET-RECTANGLE*-TO-PARENT"     ;generic function
-   "MATCH-OUTPUT-RECORDS"               ;generic function
-   "MEDIUM"                             ;protocol class
-   "MEDIUM-BACKGROUND"                  ;generic function
-   "MEDIUM-BACKGROUND"                  ;generic function
-   "MEDIUM-BEEP"                        ;generic function
-   "MEDIUM-BUFFERING-OUTPUT-P"          ;generic function
-   "MEDIUM-CLEAR-AREA"                  ;generic function
-   "MEDIUM-CLIPPING-REGION"             ;generic function
-   "MEDIUM-CLIPPING-REGION"             ;generic function
-   "MEDIUM-COPY-AREA"                   ;generic function
-   "MEDIUM-CURRENT-TEXT-STYLE"          ;generic function
-   "MEDIUM-DEFAULT-TEXT-STYLE"          ;generic function
-   "MEDIUM-DEFAULT-TEXT-STYLE"          ;generic function
-   "MEDIUM-DRAW-ELLIPSE*"               ;generic function
-   "MEDIUM-DRAW-LINE*"                  ;generic function
-   "MEDIUM-DRAW-LINES*"                 ;generic function
-   "MEDIUM-DRAW-POINT*"                 ;generic function
-   "MEDIUM-DRAW-POINTS*"                ;generic function
-   "MEDIUM-DRAW-POLYGON*"               ;generic function
-   "MEDIUM-DRAW-RECTANGLE*"             ;generic function
-   "MEDIUM-DRAW-RECTANGLES*"            ;generic function
-   "MEDIUM-DRAW-TEXT*"                  ;generic function
-   "MEDIUM-DRAWABLE"                    ;generic function
-   "MEDIUM-FINISH-OUTPUT"               ;generic function
-   "MEDIUM-FORCE-OUTPUT"                ;generic function
-   "MEDIUM-FOREGROUND"                  ;generic function
-   "MEDIUM-FOREGROUND"                  ;generic function
-   "MEDIUM-INK"                         ;generic function
-   "MEDIUM-INK"                         ;generic function
-   "MEDIUM-LINE-STYLE"                  ;generic function
-   "MEDIUM-LINE-STYLE"                  ;generic function
-   "MEDIUM-MERGED-TEXT-STYLE"           ;generic function
-   "MEDIUM-SHEET"                       ;generic function
-   "MEDIUM-TEXT-STYLE"                  ;generic function
-   "MEDIUM-TEXT-STYLE"                  ;generic function
-   "MEDIUM-TRANSFORMATION"              ;generic function
-   "MEDIUM-TRANSFORMATION"              ;generic function
-   "MEDIUMP"                            ;predicate
-   "MEMBER"                             ;presentation type abbrev
-   "MEMBER-ALIST"                       ;presentation type abbrev
-   "MEMBER-SEQUENCE"                    ;presentation type abbrev
-   "MENU-BUTTON"                        ;class
-   "MENU-BUTTON-PANE"                   ;class
-   "MENU-CHOOSE"                        ;generic function
-   "MENU-CHOOSE-COMMAND-FROM-COMMAND-TABLE" ;function
-   "MENU-CHOOSE-FROM-DRAWER"            ;generic function
-   "MENU-COMMAND-PARSER"                ;function
-   "MENU-ITEM"                          ;presentation type (mentioned in the description of DRAW-STANDARD-MENU)
-   "MENU-ITEM-DISPLAY"                  ;function
-   "MENU-ITEM-OPTIONS"                  ;function
-   "MENU-ITEM-VALUE"                    ;function
-   "MENU-READ-REMAINING-ARGUMENTS-FOR-PARTIAL-COMMAND" ;function
-   "MERGE-TEXT-STYLES"                  ;generic function
-   "MIRRORED-SHEET-MIXIN"               ;class
-   "MODIFIER-STATE-MATCHES-GESTURE-NAME-P" ;function
-   "MOVE-AND-RESIZE-SHEET"              ;generic function
-   "MOVE-SHEET"                         ;generic function
-   "NEW-PAGE"                           ;function
-   "NIL"                                ;presentation type
-   "NOTE-COMMAND-DISABLED"              ;generic function
-   "NOTE-COMMAND-ENABLED"               ;generic function
-   "NOTE-FRAME-DEICONIFIED"             ;generic function
-   "NOTE-FRAME-DISABLED"                ;generic function
-   "NOTE-FRAME-ENABLED"                 ;generic function
-   "NOTE-FRAME-ICONIFIED"               ;generic function
-   "NOTE-GADGET-ACTIVATED"              ;generic function
-   "NOTE-GADGET-DEACTIVATED"            ;generic function
-   "NOTE-OUTPUT-RECORD-CHILD-CHANGED"   ;generic function
-   "NOTE-SHEET-ADOPTED"                 ;generic function
-   "NOTE-SHEET-DEGRAFTED"               ;generic function
-   "NOTE-SHEET-DISABLED"                ;generic function
-   "NOTE-SHEET-DISOWNED"                ;generic function
-   "NOTE-SHEET-ENABLED"                 ;generic function
-   "NOTE-SHEET-GRAFTED"                 ;generic function
-   "NOTE-SHEET-REGION-CHANGED"          ;generic function
-   "NOTE-SHEET-TRANSFORMATION-CHANGED"  ;generic function
-   "NOTE-SPACE-REQUIREMENTS-CHANGED"    ;generic function
-   "NOTIFY-USER"                        ;generic function
-   "NULL"                               ;presentation type
-   "NULL-OR-TYPE"                       ;presentation type abbrev
-   "NUMBER"                             ;presentation type
-   "OPACITY"                            ;protocol class
-   "OPACITY-VALUE"                      ;generic function
-   "OPACITYP"                           ;predicate
-   "OPEN-STREAM-P"                      ;generic function
-   "OPEN-WINDOW-STREAM"                 ;function
-   "OPTION-PANE"                        ;class
-   "OR"                                 ;presentation type
-   "ORIENTED-GADGET-MIXIN"              ;class
-   "OUTLINED-PANE"                      ;pane
-   "OUTLINING"                          ;macro
-   "OUTPUT-RECORD"                      ;protocol class
-   "OUTPUT-RECORD-CACHE-VALUE"          ;generic function
-   "OUTPUT-RECORD-CHILDREN"             ;generic function
-   "OUTPUT-RECORD-CONTENTS-OK"          ;generic function
-   "OUTPUT-RECORD-COUNT"                ;generic function
-   "OUTPUT-RECORD-DISPLAYER"            ;generic function
-   "OUTPUT-RECORD-END-CURSOR-POSITION"  ;generic function
-   "OUTPUT-RECORD-FIXED-POSITION"       ;generic function
-   "OUTPUT-RECORD-HIT-DETECTION-RECTANGLE*" ;generic function
-   "OUTPUT-RECORD-P"                    ;predicate
-   "OUTPUT-RECORD-PARENT"               ;generic function
-   "OUTPUT-RECORD-POSITION"             ;generic function
-   "OUTPUT-RECORD-REFINED-POSITION-TEST" ;generic function
-   "OUTPUT-RECORD-START-CURSOR-POSITION" ;generic function
-   "OUTPUT-RECORD-UNIQUE-ID"            ;generic function
-   "OUTPUT-RECORDING-STREAM"            ;protocol class
-   "OUTPUT-RECORDING-STREAM-P"          ;predicate
-   "OUTPUT-STREAM-P"                    ;generic function
-   "PANE"                               ;protocol class
-   "PANE-BACKGROUND"                    ;generic function
-   "PANE-FOREGROUND"                    ;generic function
-   "PANE-FRAME"                         ;generic function
-   "PANE-NAME"                          ;generic function
-   "PANE-NEEDS-REDISPLAY"               ;generic function
-   "PANE-SCROLLER"                      ;generic function
-   "PANE-TEXT-STYLE"                    ;generic function
-   "PANE-VIEWPORT"                      ;generic function
-   "PANE-VIEWPORT-REGION"               ;generic function
-   "PANEP"                              ;predicate
-   "PARSE-TEXT-STYLE"                   ;function
-   "PARTIAL-COMMAND-P"                  ;function
-   "PATH"                               ;protocol class
-   "PATHNAME"                           ;presentation type
-   "PATHP"                              ;predicate
-   "PATTERN-HEIGHT"                     ;generic function
-   "PATTERN-WIDTH"                      ;generic function
-   "PERMANENT-MEDIUM-SHEET-OUTPUT-MIXIN" ;class
-   "PIXMAP-DEPTH"                       ;generic function
-   "PIXMAP-HEIGHT"                      ;generic function
-   "PIXMAP-WIDTH"                       ;generic function
-   "POINT"                              ;protocol class
-   "POINT-POSITION"                     ;generic function
-   "POINT-X"                            ;generic function
-   "POINT-Y"                            ;generic function
-   "POINTER"                            ;protocol class
-   "POINTER-BOUNDARY-EVENT"             ;class
-   "POINTER-BOUNDARY-EVENT-KIND"        ;generic function
-   "POINTER-BUTTON-EVENT"               ;class
-   "POINTER-BUTTON-HOLD-EVENT"          ;class
-   "POINTER-BUTTON-PRESS-EVENT"         ;class
-   "POINTER-BUTTON-RELEASE-EVENT"       ;class
-   "POINTER-BUTTON-STATE"               ;generic function
-   "POINTER-CLICK-AND-HOLD-EVENT"       ;class
-   "POINTER-CLICK-EVENT"                ;class
-   "POINTER-CURSOR"                     ;generic function
-   "POINTER-DOCUMENTATION-PANE"         ;pane
-   "POINTER-DOCUMENTATION-VIEW"         ;class
-   "POINTER-DOUBLE-CLICK-EVENT"         ;class
-   "POINTER-ENTER-EVENT"                ;class
-   "POINTER-EVENT"                      ;class
-   "POINTER-EVENT-BUTTON"               ;generic function
-   "POINTER-EVENT-NATIVE-X"             ;generic function
-   "POINTER-EVENT-NATIVE-Y"             ;generic function
-   "POINTER-EVENT-POINTER"              ;generic function
-   "POINTER-EVENT-X"                    ;generic function
-   "POINTER-EVENT-Y"                    ;generic function
-   "POINTER-EXIT-EVENT"                 ;class
-   "POINTER-MODIFIER-STATE"		;generic function (In Franz user guide)
-   "POINTER-MOTION-EVENT"               ;class
-   "POINTER-POSITION"                   ;generic function
-   "POINTER-SHEET"                      ;generic function
-   "POINTERP"                           ;predicate
-   "POINTP"                             ;predicate
-   "POLYGON"                            ;protocol class
-   "POLYGON-POINTS"                     ;generic function
-   "POLYGONP"                           ;predicate
-   "POLYLINE"                           ;protocol class
-   "POLYLINE-CLOSED"                    ;generic function
-   "POLYLINEP"                          ;predicate
-   "PORT"                               ;protocol class
-   "PORT"                               ;generic function
-   "PORT-KEYBOARD-INPUT-FOCUS"          ;generic function
-   "PORT-NAME"                          ;generic function
-   "PORT-POINTER"			;generic function (In Franz user guide)
-   "PORT-PROPERTIES"                    ;generic function
-   "PORT-SERVER-PATH"                   ;generic function
-   "PORT-TYPE"                          ;generic function
-   "PORTP"                              ;predicate
-   "PRESENT"                            ;presentation method
-   "PRESENT"                            ;function
-   "PRESENT-TO-STRING"                  ;function
-   "PRESENTATION"                       ;protocol class
-   "PRESENTATION-DEFAULT-PREPROCESSOR"  ;presentation method
-   "PRESENTATION-MATCHES-CONTEXT-TYPE"  ;function
-   "PRESENTATION-MODIFIER"              ;generic function
-   "PRESENTATION-OBJECT"                ;generic function
-   "PRESENTATION-REFINED-POSITION-TEST" ;presentation method
-   "PRESENTATION-REPLACE-INPUT"         ;generic function
-   "PRESENTATION-SINGLE-BOX"            ;generic function
-   "PRESENTATION-SUBTYPEP"              ;presentation method
-   "PRESENTATION-SUBTYPEP"              ;function
-   "PRESENTATION-TYPE"                  ;generic function
-   "PRESENTATION-TYPE-DIRECT-SUPERTYPES" ;function
-   "PRESENTATION-TYPE-HISTORY"          ;presentation method
-   "PRESENTATION-TYPE-NAME"             ;function
-   "PRESENTATION-TYPE-OF"               ;function
-   "PRESENTATION-TYPE-OPTIONS"          ;function
-   "PRESENTATION-TYPE-PARAMETERS"       ;function
-   "PRESENTATION-TYPE-SPECIFIER-P"      ;presentation method
-   "PRESENTATION-TYPE-SPECIFIER-P"      ;function
-   "PRESENTATION-TYPEP"                 ;presentation method
-   "PRESENTATION-TYPEP"                 ;function
-   "PRESENTATIONP"                      ;predicate
-   "PRINT-MENU-ITEM"                    ;function
-   "PROCESS-NEXT-EVENT"                 ;generic function
-   "PROMPT-FOR-ACCEPT"                  ;generic function
-   "PROMPT-FOR-ACCEPT-1"                ;function
-   "PROPAGATE-OUTPUT-RECORD-CHANGES"    ;generic function
-   "PROPAGATE-OUTPUT-RECORD-CHANGES-P"  ;generic function
-   "PUSH-BUTTON"                        ;class
-   "PUSH-BUTTON-PANE"                   ;class
-   "PUSH-BUTTON-SHOW-AS-DEFAULT"        ;generic function
-   "QUEUE-EVENT"                        ;generic function
-   "QUEUE-REPAINT"                      ;generic function
-   "QUEUE-RESCAN"                       ;generic function
-   "RADIO-BOX"                          ;class
-   "RADIO-BOX-CURRENT-SELECTION"        ;generic function
-   "RADIO-BOX-PANE"                     ;class
-   "RADIO-BOX-SELECTIONS"               ;generic function
-   "RAISE-FRAME"                        ;generic function
-   "RAISE-MIRROR"                       ;generic function
-   "RAISE-SHEET"                        ;generic function
-   "RANGE-GADGET-MIXIN"                 ;class
-   "RATIO"                              ;presentation type
-   "RATIONAL"                           ;presentation type
-   "READ-BITMAP-FILE"                   ;generic function
-   "READ-COMMAND"                       ;function
-   "READ-COMMAND-USING-KEYSTROKES"      ;function
-   "READ-FRAME-COMMAND"                 ;generic function
-   "READ-GESTURE"                       ;function
-   "READ-TOKEN"                         ;function
-   "REAL"                               ;presentation type
-   "REALIZE-MIRROR"                     ;generic function
-   "RECOMPUTE-CONTENTS-OK"              ;generic function
-   "RECOMPUTE-EXTENT-FOR-CHANGED-CHILD" ;generic function
-   "RECOMPUTE-EXTENT-FOR-NEW-CHILD"     ;generic function
-   "RECTANGLE"                          ;protocol class
-   "RECTANGLE-EDGES*"                   ;generic function
-   "RECTANGLE-HEIGHT"                   ;generic function
-   "RECTANGLE-MAX-POINT"                ;generic function
-   "RECTANGLE-MAX-X"                    ;generic function
-   "RECTANGLE-MAX-Y"                    ;generic function
-   "RECTANGLE-MIN-POINT"                ;generic function
-   "RECTANGLE-MIN-X"                    ;generic function
-   "RECTANGLE-MIN-Y"                    ;generic function
-   "RECTANGLE-SIZE"                     ;generic function
-   "RECTANGLE-WIDTH"                    ;generic function
-   "RECTANGLEP"                         ;predicate
-   "RECTILINEAR-TRANSFORMATION-P"       ;generic function
-   "REDISPLAY"                          ;function
-   "REDISPLAY-FRAME-PANE"               ;generic function
-   "REDISPLAY-FRAME-PANES"              ;generic function
-   "REDISPLAY-OUTPUT-RECORD"            ;generic function
-   "REDISPLAYABLE-STREAM-P"             ;generic function
-   "REDRAW-INPUT-BUFFER"                ;generic function
-   "REFLECTION-TRANSFORMATION-P"        ;generic function
-   "REFLECTION-UNDERSPECIFIED"          ;error
-   "REGION"                             ;protocol class
-   "REGION-CONTAINS-POSITION-P"         ;generic function
-   "REGION-CONTAINS-REGION-P"           ;generic function
-   "REGION-DIFFERENCE"                  ;generic function
-   "REGION-EQUAL"                       ;generic function
-   "REGION-INTERSECTION"                ;generic function
-   "REGION-INTERSECTS-REGION-P"         ;generic function
-   "REGION-SET"                         ;protocol class
-   "REGION-SET-P"                       ;predicate
-   "REGION-SET-REGIONS"                 ;generic function
-   "REGION-UNION"                       ;generic function
-   "REGIONP"                            ;predicate
-   "REMOVE-COMMAND-FROM-COMMAND-TABLE"  ;function
-   "REMOVE-KEYSTROKE-FROM-COMMAND-TABLE" ;function
-   "REMOVE-MENU-ITEM-FROM-COMMAND-TABLE" ;function
-   "REMOVE-PRESENTATION-TRANSLATOR-FROM-COMMAND-TABLE" ;function
-   "REORDER-SHEETS"                     ;generic function
-   "REPAINT-SHEET"                      ;generic function
-   "REPLACE-INPUT"                      ;generic function
-   "REPLAY"                             ;function
-   "REPLAY-OUTPUT-RECORD"               ;generic function
-   "RESCAN-IF-NECESSARY"                ;generic function
-   "RESET-FRAME"                        ;generic function
-   "RESET-SCAN-POINTER"                 ;generic function
-   "RESIZE-SHEET"                       ;generic function
-   "RESTART-PORT"                       ;generic function
-   "RESTRAINING"                        ;macro
-   "RESTRAINING-PANE"                   ;pane
-   "RIGID-TRANSFORMATION-P"             ;generic function
-   "ROW-OUTPUT-RECORD"                  ;protocol class
-   "ROW-OUTPUT-RECORD-P"                ;predicate
-   "RUN-FRAME-TOP-LEVEL"                ;generic function
-   "SCALING-TRANSFORMATION-P"           ;generic function
-   "SCROLL-BAR"                         ;class
-   "SCROLL-BAR-DRAG-CALLBACK"           ;generic function
-   "SCROLL-BAR-PANE"                    ;class
-   "SCROLL-BAR-SCROLL-DOWN-LINE-CALLBACK" ;generic function
-   "SCROLL-BAR-SCROLL-DOWN-PAGE-CALLBACK" ;generic function
-   "SCROLL-BAR-SCROLL-TO-BOTTOM-CALLBACK" ;generic function
-   "SCROLL-BAR-SCROLL-TO-TOP-CALLBACK"  ;generic function
-   "SCROLL-BAR-SCROLL-UP-LINE-CALLBACK" ;generic function
-   "SCROLL-BAR-SCROLL-UP-PAGE-CALLBACK" ;generic function
-   "SCROLL-DOWN-LINE-CALLBACK"          ;callback
-   "SCROLL-DOWN-PAGE-CALLBACK"          ;callback
-   "SCROLL-EXTENT"                      ;generic function
-   "SCROLL-TO-BOTTOM-CALLBACK"          ;callback
-   "SCROLL-TO-TOP-CALLBACK"             ;callback
-   "SCROLL-UP-LINE-CALLBACK"            ;callback
-   "SCROLL-UP-PAGE-CALLBACK"            ;callback
-   "SCROLLER-PANE"                      ;pane
-   "SCROLLING"                          ;macro
-   "SEQUENCE"                           ;presentation type
-   "SEQUENCE-ENUMERATED"                ;presentation type
-   "SET-HIGHLIGHTED-PRESENTATION"       ;function
-   "SHEET"                              ;protocol class
-   "SHEET-ADOPT-CHILD"                  ;generic function
-   "SHEET-ALLOCATED-REGION"             ;generic function
-   "SHEET-ANCESTOR-P"                   ;generic function
-   "SHEET-CHILDREN"                     ;generic function
-   "SHEET-DELTA-TRANSFORMATION"         ;generic function
-   "SHEET-DEVICE-REGION"                ;generic function
-   "SHEET-DEVICE-TRANSFORMATION"        ;generic function
-   "SHEET-DIRECT-MIRROR"                ;generic function
-   "SHEET-DISOWN-CHILD"                 ;generic function
-   "SHEET-ENABLED-CHILDREN"             ;generic function
-   "SHEET-ENABLED-P"                    ;generic function
-   "SHEET-EVENT-QUEUE"                  ;generic function
-   "SHEET-GRAFTED-P"                    ;generic function
-   "SHEET-IDENTITY-TRANSFORMATION-MIXIN" ;class
-   "SHEET-LEAF-MIXIN"                   ;class
-   "SHEET-MEDIUM"                       ;generic function
-   "SHEET-MIRROR"                       ;generic function
-   "SHEET-MIRRORED-ANCESTOR"            ;generic function
-   "SHEET-MULTIPLE-CHILD-MIXIN"         ;class
-   "SHEET-MUTE-INPUT-MIXIN"             ;class
-   "SHEET-MUTE-OUTPUT-MIXIN"            ;class
-   "SHEET-MUTE-REPAINTING-MIXIN"        ;class
-   "SHEET-NATIVE-REGION"                ;generic function
-   "SHEET-NATIVE-TRANSFORMATION"        ;generic function
-   "SHEET-OCCLUDING-SHEETS"             ;generic function
-   "SHEET-PARENT"                       ;generic function
-   "SHEET-PARENT-MIXIN"                 ;class
-   "SHEET-REGION"                       ;generic function
-   "SHEET-SIBLINGS"                     ;generic function
-   "SHEET-SINGLE-CHILD-MIXIN"           ;class
-   "SHEET-TRANSFORMATION"               ;generic function
-   "SHEET-TRANSFORMATION-MIXIN"         ;class
-   "SHEET-TRANSLATION-MIXIN"            ;class
-   "SHEET-VIEWABLE-P"                   ;generic function
-   "SHEET-WITH-MEDIUM-MIXIN"            ;class
-   "SHEET-Y-INVERTING-TRANSFORMATION-MIXIN" ;class
-   "SHEETP"                             ;predicate
-   "SHRINK-FRAME"                       ;generic function
-   "SIMPLE-COMPLETION-ERROR"            ;condition
-   "SIMPLE-PARSE-ERROR"                 ;error
-   "SIMPLE-PARSE-ERROR"                 ;function
-   "SINGULAR-TRANSFORMATION"            ;error
-   "SLIDER"                             ;class
-   "SLIDER-DRAG-CALLBACK"               ;generic function
-   "SLIDER-PANE"                        ;class
-   "SPACE-REQUIREMENT"                  ;class
-   "SPACE-REQUIREMENT+"                 ;function
-   "SPACE-REQUIREMENT+*"                ;function
-   "SPACE-REQUIREMENT-COMBINE"          ;function
-   "SPACE-REQUIREMENT-COMPONENTS"       ;generic function
-   "SPACE-REQUIREMENT-HEIGHT"           ;generic function
-   "SPACE-REQUIREMENT-MAX-HEIGHT"       ;generic function
-   "SPACE-REQUIREMENT-MAX-WIDTH"        ;generic function
-   "SPACE-REQUIREMENT-MIN-HEIGHT"       ;generic function
-   "SPACE-REQUIREMENT-MIN-WIDTH"        ;generic function
-   "SPACE-REQUIREMENT-WIDTH"            ;generic function
-   "SPACING"                            ;macro
-   "SPACING-PANE"                       ;pane
-   "STANDARD-APPLICATION-FRAME"         ;class
-   "STANDARD-BOUNDING-RECTANGLE"        ;class
-   "STANDARD-CELL-OUTPUT-RECORD"        ;class
-   "STANDARD-COLUMN-OUTPUT-RECORD"      ;class
-   "STANDARD-COMMAND-TABLE"             ;class
-   "STANDARD-ELLIPSE"                   ;class
-   "STANDARD-ELLIPTICAL-ARC"            ;class
-   "STANDARD-ENCAPSULATING-STREAM"      ;class
-   "STANDARD-EXTENDED-INPUT-STREAM"     ;class
-   "STANDARD-EXTENDED-OUTPUT-STREAM"    ;class
-   "STANDARD-GRAPH-NODE-OUTPUT-RECORD"  ;class
-   "STANDARD-GRAPH-OUTPUT-RECORD"       ;class
-   "STANDARD-INPUT-EDITING-STREAM"      ;class
-   "STANDARD-INPUT-STREAM"              ;class
-   "STANDARD-ITEM-LIST-OUTPUT-RECORD"   ;class
-   "STANDARD-LINE"                      ;class
-   "STANDARD-LINE-STYLE"                ;class
-   "STANDARD-OUTPUT-RECORDING-STREAM"   ;class
-   "STANDARD-OUTPUT-STREAM"             ;class
-   "STANDARD-POINT"                     ;class
-   "STANDARD-POINTER"                   ;class
-   "STANDARD-POLYGON"                   ;class
-   "STANDARD-POLYLINE"                  ;class
-   "STANDARD-PRESENTATION"              ;class
-   "STANDARD-RECTANGLE"                 ;class
-   "STANDARD-REGION-DIFFERENCE"         ;class
-   "STANDARD-REGION-INTERSECTION"       ;class
-   "STANDARD-REGION-UNION"              ;class
-   "STANDARD-REPAINTING-MIXIN"          ;class
-   "STANDARD-ROW-OUTPUT-RECORD"         ;class
-   "STANDARD-SEQUENCE-OUTPUT-HISTORY"   ;class
-   "STANDARD-SEQUENCE-OUTPUT-RECORD"    ;class
-   "STANDARD-SHEET-INPUT-MIXIN"         ;class
-   "STANDARD-SHEET-OUTPUT-MIXIN"        ;class
-   "STANDARD-TABLE-OUTPUT-RECORD"       ;class
-   "STANDARD-TEXT-CURSOR"               ;class
-   "STANDARD-TEXT-STYLE"                ;class
-   "STANDARD-TREE-OUTPUT-HISTORY"       ;class
-   "STANDARD-TREE-OUTPUT-RECORD"        ;class
-   "STANDARD-UPDATING-OUTPUT-RECORD"    ;class
-   "STREAM-ACCEPT"                      ;generic function
-   "STREAM-ADD-CHARACTER-OUTPUT"        ;generic function
-   "STREAM-ADD-OUTPUT-RECORD"           ;generic function
-   "STREAM-ADD-STRING-OUTPUT"           ;generic function
-   "STREAM-ADVANCE-TO-COLUMN"           ;generic function
-   "STREAM-ADVANCE-TO-COLUMN"           ;generic function
-   "STREAM-BASELINE"                    ;generic function
-   "STREAM-CHARACTER-WIDTH"             ;generic function
-   "STREAM-CLEAR-INPUT"                 ;generic function
-   "STREAM-CLEAR-INPUT"                 ;generic function
-   "STREAM-CLEAR-OUTPUT"                ;generic function
-   "STREAM-CLEAR-OUTPUT"                ;generic function
-   "STREAM-CLOSE-TEXT-OUTPUT-RECORD"    ;generic function
-   "STREAM-CURRENT-OUTPUT-RECORD"       ;generic function
-   "STREAM-CURSOR-POSITION"             ;generic function
-   "STREAM-DEFAULT-VIEW"                ;generic function
-   "STREAM-DRAWING-P"                   ;generic function
-   "STREAM-ELEMENT-TYPE"                ;generic function
-   "STREAM-END-OF-LINE-ACTION"          ;generic function
-   "STREAM-END-OF-PAGE-ACTION"          ;generic function
-   "STREAM-FINISH-OUTPUT"               ;generic function
-   "STREAM-FINISH-OUTPUT"               ;generic function
-   "STREAM-FORCE-OUTPUT"                ;generic function
-   "STREAM-FORCE-OUTPUT"                ;generic function
-   "STREAM-FRESH-LINE"                  ;generic function
-   "STREAM-FRESH-LINE"                  ;generic function
-   "STREAM-INCREMENT-CURSOR-POSITION"   ;generic function
-   "STREAM-INPUT-BUFFER"                ;generic function
-   "STREAM-INPUT-WAIT"                  ;generic function
-   "STREAM-INSERTION-POINTER"           ;generic function
-   "STREAM-LINE-COLUMN"                 ;generic function
-   "STREAM-LINE-COLUMN"                 ;generic function
-   "STREAM-LINE-HEIGHT"                 ;generic function
-   "STREAM-LISTEN"                      ;generic function
-   "STREAM-LISTEN"                      ;generic function
-   "STREAM-OUTPUT-HISTORY"              ;generic function
-   "STREAM-OUTPUT-HISTORY-MIXIN"        ;class
-   "STREAM-PATHNAME"                    ;generic function
-   "STREAM-PEEK-CHAR"                   ;generic function
-   "STREAM-PEEK-CHAR"                   ;generic function
-   "STREAM-POINTER-POSITION"            ;generic function
-   "STREAM-PRESENT"                     ;generic function
-   "STREAM-PROCESS-GESTURE"             ;generic function
-   "STREAM-READ-BYTE"                   ;generic function
-   "STREAM-READ-CHAR"                   ;generic function
-   "STREAM-READ-CHAR"                   ;generic function
-   "STREAM-READ-CHAR-NO-HANG"           ;generic function
-   "STREAM-READ-CHAR-NO-HANG"           ;generic function
-   "STREAM-READ-GESTURE"                ;generic function
-   "STREAM-READ-LINE"                   ;generic function
-   "STREAM-READ-LINE"                   ;generic function
-   "STREAM-RECORDING-P"                 ;generic function
-   "STREAM-REDISPLAYING-P"              ;generic function
-   "STREAM-REPLAY"                      ;generic function
-   "STREAM-RESCANNING-P"                ;generic function
-   "STREAM-SCAN-POINTER"                ;generic function
-   "STREAM-SET-INPUT-FOCUS"             ;generic function
-   "STREAM-START-LINE-P"                ;generic function
-   "STREAM-START-LINE-P"                ;generic function
-   "STREAM-STRING-WIDTH"                ;generic function
-   "STREAM-TERPRI"                      ;generic function
-   "STREAM-TERPRI"                      ;generic function
-   "STREAM-TEXT-CURSOR"                 ;generic function
-   "STREAM-TEXT-MARGIN"                 ;generic function
-   "STREAM-TEXT-OUTPUT-RECORD"          ;generic function
-   "STREAM-TRUENAME"                    ;generic function
-   "STREAM-UNREAD-CHAR"                 ;generic function
-   "STREAM-UNREAD-CHAR"                 ;generic function
-   "STREAM-UNREAD-GESTURE"              ;generic function
-   "STREAM-VERTICAL-SPACING"            ;generic function
-   "STREAM-WRITE-BYTE"                  ;generic function
-   "STREAM-WRITE-CHAR"                  ;generic function
-   "STREAM-WRITE-CHAR"                  ;generic function
-   "STREAM-WRITE-STRING"                ;generic function
-   "STREAM-WRITE-STRING"                ;generic function
-   "STREAMP"                            ;generic function
-   "STRING"                             ;presentation type
-   "SUBSET"                             ;presentation type abbrev
-   "SUBSET-ALIST"                       ;presentation type abbrev
-   "SUBSET-COMPLETION"                  ;presentation type
-   "SUBSET-SEQUENCE"                    ;presentation type abbrev
-   "SUBSTITUTE-NUMERIC-ARGUMENT-MARKER" ;function
-   "SUGGEST"                            ;function
-   "SURROUNDING-OUTPUT-WITH-BORDER"     ;macro
-   "SYMBOL"                             ;presentation type
-   "T"                                  ;presentation type
-   "TABLE-OUTPUT-RECORD"                ;protocol class
-   "TABLE-OUTPUT-RECORD-P"              ;predicate
-   "TABLE-PANE"                         ;pane
-   "TABLING"                            ;macro
-   "TEMPORARY-MEDIUM-SHEET-OUTPUT-MIXIN" ;class
-   "TEST-PRESENTATION-TRANSLATOR"       ;function
-   "TEXT-DISPLAYED-OUTPUT-RECORD"       ;protocol class
-   "TEXT-DISPLAYED-OUTPUT-RECORD-P"     ;predicate
-   "TEXT-DISPLAYED-OUTPUT-RECORD-STRING" ;generic function
-   "TEXT-EDITOR"                        ;class
-   "TEXT-EDITOR-PANE"                   ;class
-   "TEXT-FIELD"                         ;class
-   "TEXT-FIELD-PANE"                    ;class
-   "TEXT-SIZE"                          ;generic function
-   "TEXT-STYLE"                         ;protocol class
-   "TEXT-STYLE-ASCENT"                  ;generic function
-   "TEXT-STYLE-COMPONENTS"              ;generic function
-   "TEXT-STYLE-DESCENT"                 ;generic function
-   "TEXT-STYLE-FACE"                    ;generic function
-   "TEXT-STYLE-FAMILY"                  ;generic function
-   "TEXT-STYLE-FIXED-WIDTH-P"           ;generic function
-   "TEXT-STYLE-HEIGHT"                  ;generic function
-   "TEXT-STYLE-MAPPING"                 ;generic function
-   "TEXT-STYLE-P"                       ;predicate
-   "TEXT-STYLE-SIZE"                    ;generic function
-   "TEXT-STYLE-WIDTH"                   ;generic function
-   "TEXTUAL-DIALOG-VIEW"                ;class
-   "TEXTUAL-MENU-VIEW"                  ;class
-   "TEXTUAL-VIEW"                       ;class
-   "THROW-HIGHLIGHTED-PRESENTATION"     ;function
-   "TIMER-EVENT"                        ;class
-   "TITLE-PANE"                         ;pane
-   "TOGGLE-BUTTON"                      ;class
-   "TOGGLE-BUTTON-INDICATOR-TYPE"       ;generic function
-   "TOGGLE-BUTTON-PANE"                 ;class
-   "TOKEN-OR-TYPE"                      ;presentation type abbrev
-   "TRACKING-POINTER"                   ;macro
-   "TRANSFORM-DISTANCE"                 ;generic function
-   "TRANSFORM-POSITION"                 ;generic function
-   "TRANSFORM-RECTANGLE*"               ;generic function
-   "TRANSFORM-REGION"                   ;generic function
-   "TRANSFORMATION"                     ;protocol class
-   "TRANSFORMATION-EQUAL"               ;generic function
-   "TRANSFORMATION-ERROR"               ;error
-   "TRANSFORMATION-UNDERSPECIFIED"      ;error
-   "TRANSFORMATIONP"                    ;predicate
-   "TRANSLATION-TRANSFORMATION-P"       ;generic function
-   "TREE-RECOMPUTE-EXTENT"              ;generic function
-   "TYPE-OR-STRING"                     ;presentation type abbrev
-   "UNHIGHLIGHT-HIGHLIGHTED-PRESENTATION" ;function
-   "UNREAD-GESTURE"                     ;function
-   "UNTRANSFORM-DISTANCE"               ;generic function
-   "UNTRANSFORM-POSITION"               ;generic function
-   "UNTRANSFORM-RECTANGLE*"             ;generic function
-   "UNTRANSFORM-REGION"                 ;generic function
-   "UPDATING-OUTPUT"                    ;macro
-   "UPDATING-OUTPUT-RECORD"             ;protocol class
-   "UPDATING-OUTPUT-RECORD-P"           ;predicate
-   "USER-COMMAND-TABLE"                 ;command table
-   "VALUE-CHANGED-CALLBACK"             ;callback
-   "VALUE-GADGET"                       ;class
-   "VBOX-PANE"                          ;pane
-   "VERTICALLY"                         ;macro
-   "VIEW"                               ;protocol class
-   "VIEWP"                              ;predicate
-   "VRACK-PANE"                         ;pane
-   "WINDOW-CLEAR"                       ;generic function
-   "WINDOW-CONFIGURATION-EVENT"         ;class
-   "WINDOW-ERASE-VIEWPORT"              ;generic function
-   "WINDOW-EVENT"                       ;class
-   "WINDOW-EVENT-MIRRORED-SHEET"        ;generic function
-   "WINDOW-EVENT-NATIVE-REGION"         ;generic function
-   "WINDOW-EVENT-REGION"                ;generic function
-   "WINDOW-MANAGER-DELETE-EVENT"        ;class
-   "WINDOW-MANAGER-EVENT"               ;class
-   "WINDOW-REFRESH"                     ;generic function
-   "WINDOW-REPAINT-EVENT"               ;class
-   "WINDOW-VIEWPORT"                    ;generic function
-   "WINDOW-VIEWPORT-POSITION"           ;generic function
-   "WITH-ACCEPT-HELP"                   ;macro
-   "WITH-ACTIVATION-GESTURES"           ;macro
-   "WITH-APPLICATION-FRAME"             ;macro
-   "WITH-BOUNDING-RECTANGLE*"           ;macro
-   "WITH-COMMAND-TABLE-KEYSTROKES"      ;macro
-   "WITH-DELIMITER-GESTURES"            ;macro
-   "WITH-DRAWING-OPTIONS"               ;macro
-   "WITH-END-OF-LINE-ACTION"            ;macro
-   "WITH-END-OF-PAGE-ACTION"            ;macro
-   "WITH-FIRST-QUADRANT-COORDINATES"    ;macro
-   "WITH-FRAME-MANAGER"                 ;macro
-   "WITH-GRAFT-LOCKED"                  ;macro
-   "WITH-IDENTITY-TRANSFORMATION"       ;macro
-   "WITH-INPUT-CONTEXT"                 ;macro
-   "WITH-INPUT-EDITING"                 ;macro
-   "WITH-INPUT-EDITOR-TYPEOUT"          ;macro
-   "WITH-INPUT-FOCUS"                   ;macro
-   "WITH-LOCAL-COORDINATES"             ;macro
-   "WITH-LOOK-AND-FEEL-REALIZATION"     ;macro
-   "WITH-MENU"                          ;macro
-   "WITH-NEW-OUTPUT-RECORD"             ;macro
-   "WITH-OUTPUT-AS-GADGET"              ;macro
-   "WITH-OUTPUT-AS-PRESENTATION"        ;macro
-   "WITH-OUTPUT-BUFFERED"               ;macro
-   "WITH-OUTPUT-RECORDING-OPTIONS"      ;macro
-   "WITH-OUTPUT-TO-OUTPUT-RECORD"       ;macro
-   "WITH-OUTPUT-TO-PIXMAP"              ;macro
-   "WITH-OUTPUT-TO-POSTSCRIPT-STREAM"   ;macro
-   "WITH-PORT-LOCKED"                   ;macro
-   "WITH-PRESENTATION-TYPE-DECODED"     ;macro
-   "WITH-PRESENTATION-TYPE-OPTIONS"     ;macro
-   "WITH-PRESENTATION-TYPE-PARAMETERS"  ;macro
-   "WITH-RADIO-BOX"                     ;macro
-   "WITH-ROOM-FOR-GRAPHICS"             ;macro
-   "WITH-ROTATION"                      ;macro
-   "WITH-SCALING"                       ;macro
-   "WITH-SHEET-MEDIUM"                  ;macro
-   "WITH-SHEET-MEDIUM-BOUND"            ;macro
-   "WITH-TEXT-FACE"                     ;macro
-   "WITH-TEXT-FAMILY"                   ;macro
-   "WITH-TEXT-SIZE"                     ;macro
-   "WITH-TEXT-STYLE"                    ;macro
-   "WITH-TRANSLATION"                   ;macro
-   "WRITE-TOKEN"                        ;function
+   #:*abort-gestures*                   ;variable
+   #:*accelerator-gestures*             ;variable
+   #:*activation-gestures*              ;variable
+   #:*application-frame*                ;variable
+   #:*command-argument-delimiters*      ;variable
+   #:*command-dispatchers*              ;variable
+   #:*command-name-delimiters*          ;variable
+   #:*command-parser*                   ;variable
+   #:*command-unparser*                 ;variable
+   #:*completion-gestures*              ;variable
+   #:*default-frame-manager*            ;variable
+   #:*default-server-path*              ;variable
+   #:*default-text-style*               ;constant
+   #:*delimiter-gestures*               ;variable
+   #:*help-gestures*                    ;variable
+   #:*input-context*                    ;variable
+   #:*input-wait-handler*               ;variable
+   #:*input-wait-test*                  ;variable
+   #:*null-presentation*                ;constant
+   #:*numeric-argument-marker*          ;variable
+   #:*original-stream*                  ;variable
+   #:*partial-command-parser*           ;variable
+   #:*pointer-button-press-handler*     ;variable
+   #:*pointer-documentation-output*     ;variable
+   #:*possibilities-gestures*           ;variable
+   #:*standard-activation-gestures*     ;variable
+   #:*undefined-text-style*             ;constant
+   #:*unsupplied-argument-marker*       ;variable
+   #:+background-ink+                   ;constant
+   #:+black+                            ;constant
+   #:+blue+                             ;constant
+   #:+control-key+                      ;constant
+   #:+cyan+                             ;constant
+   #:+everywhere+                       ;constant
+   #:+fill+                             ;constant
+   #:+flipping-ink+                     ;constant
+   #:+foreground-ink+                   ;constant
+   #:+gadget-dialog-view+               ;constant
+   #:+gadget-menu-view+                 ;constant
+   #:+gadget-view+                      ;constant
+   #:+green+                            ;constant
+   #:+hyper-key+                        ;constant
+   #:+identity-transformation+          ;constant
+   #:+magenta+                          ;constant
+   #:+meta-key+                         ;constant
+   #:+nowhere+                          ;constant
+   #:+pointer-documentation-view+       ;constant
+   #:+pointer-left-button+              ;constant
+   #:+pointer-middle-button+            ;constant
+   #:+pointer-right-button+             ;constant
+   #:+red+                              ;constant
+   #:+shift-key+                        ;constant
+   #:+super-key+                        ;constant
+   #:+textual-dialog-view+              ;constant
+   #:+textual-menu-view+                ;constant
+   #:+textual-view+                     ;constant
+   #:+transparent-ink+                  ;constant
+   #:+white+                            ;constant
+   #:+yellow+                           ;constant
+   #:abort-gesture                      ;condition
+   #:abort-gesture-event                ;generic function
+   #:accelerator-gesture                ;condition
+   #:accelerator-gesture-event          ;generic function
+   #:accelerator-gesture-numeric-argument ;generic function
+   #:accept                             ;presentation method
+   #:accept                             ;function
+   #:accept-1                           ;function
+   #:accept-from-string                 ;function
+   #:accept-present-default             ;presentation method
+   #:accept-values                      ;frame
+   #:accept-values-command-button       ;macro
+   #:accept-values-resynchronize        ;generic function
+   #:accepting-values                   ;macro
+   #:action-gadget                      ;class
+   #:activate-callback                  ;callback
+   #:activate-gadget                    ;generic function
+   #:activation-gesture-p               ;function
+   #:add-character-output-to-text-record ;generic function
+   #:add-command-to-command-table       ;function
+   #:add-gesture-name                   ;function
+   #:add-input-editor-command           ;function
+   #:add-keystroke-to-command-table     ;function
+   #:add-menu-item-to-command-table     ;function
+   #:add-output-record                  ;generic function
+   #:add-presentation-translator-to-command-table ;function
+   #:add-string-output-to-text-record   ;generic function
+   #:adjust-item-list-cells             ;generic function
+   #:adjust-multiple-columns            ;generic function
+   #:adjust-table-cells                 ;generic function
+   #:adopt-frame                        ;generic function
+   #:allocate-medium                    ;generic function
+   #:allocate-pixmap                    ;generic function
+   #:allocate-space                     ;generic function
+   #:and                                ;presentation type
+   #:application-frame                  ;protocol class
+   #:application-frame-p                ;predicate
+   #:application-pane                   ;pane
+   #:apply-presentation-generic-function ;macro
+   #:area                               ;protocol class
+   #:areap                              ;predicate
+   #:armed-callback                     ;callback
+   #:augment-draw-set                   ;generic function
+   #:basic-gadget                       ;class
+   #:basic-medium                       ;class
+   #:basic-pane                         ;class
+   #:basic-port                         ;class
+   #:basic-sheet                        ;class
+   #:bboard-pane                        ;pane
+   #:beep                               ;generic function
+   #:blank-area                         ;presentation type
+   #:boolean                            ;presentation type
+   #:bounding-rectangle                 ;protocol class
+   #:bounding-rectangle                 ;generic function
+   #:bounding-rectangle*                ;generic function
+   #:bounding-rectangle-height          ;generic function
+   #:bounding-rectangle-max-x           ;generic function
+   #:bounding-rectangle-max-y           ;generic function
+   #:bounding-rectangle-min-x           ;generic function
+   #:bounding-rectangle-min-y           ;generic function
+   #:bounding-rectangle-p               ;predicate
+   #:bounding-rectangle-position        ;generic function
+   #:bounding-rectangle-size            ;generic function
+   #:bounding-rectangle-width           ;generic function
+   #:bury-frame                         ;generic function
+   #:bury-mirror                        ;generic function
+   #:bury-sheet                         ;generic function
+   #:cache-output-record                ;generic function
+   #:call-presentation-menu             ;function
+   #:call-presentation-translator       ;function
+   #:cell-align-x                       ;generic function
+   #:cell-align-y                       ;generic function
+   #:cell-min-height                    ;generic function
+   #:cell-min-width                     ;generic function
+   #:cell-output-record                 ;protocol class
+   #:cell-output-record-p               ;predicate
+   #:change-space-requirements          ;generic function
+   #:changing-space-requirements        ;macro
+   #:character                          ;presentation type
+   #:check-box                          ;class
+   #:check-box-current-selection        ;generic function
+   #:check-box-pane                     ;class
+   #:check-box-selections               ;generic function
+   #:child-containing-position          ;generic function
+   #:children-overlapping-rectangle*    ;generic function
+   #:children-overlapping-region        ;generic function
+   #:class-presentation-type-name       ;function
+   #:clear-output-record                ;generic function
+   #:client-setting                     ;setf method (through no reader)
+   #:clim-stream-pane                   ;pane
+   #:close                              ;generic function
+   #:color                              ;protocol class
+   #:color-ihs                          ;generic function
+   #:color-rgb                          ;generic function
+   #:colorp                             ;predicate
+   #:column-output-record               ;protocol class
+   #:column-output-record-p             ;predicate
+   #:command                            ;presentation type
+   #:command-accessible-in-command-table-p ;function
+   #:command-already-present            ;error
+   #:command-arguments                  ;function
+   #:command-enabled                    ;generic function
+   #:command-line-command-parser        ;function
+   #:command-line-command-unparser      ;function
+   #:command-line-name-for-command      ;function
+   #:command-line-read-remaining-arguments-for-partial-command ;function
+   #:command-menu-item-options          ;function
+   #:command-menu-item-type             ;function
+   #:command-menu-item-value            ;function
+   #:command-menu-pane                  ;pane
+   #:command-name                       ;presentation type
+   #:command-name                       ;function
+   #:command-name-from-symbol           ;function
+   #:command-not-accessible             ;error
+   #:command-not-present                ;error
+   #:command-or-form                    ;presentation type
+   #:command-present-in-command-table-p ;function
+   #:command-table                      ;protocol class
+   #:command-table-already-exists       ;error
+   #:command-table-complete-input       ;function
+   #:command-table-error                ;error
+   #:command-table-inherit-from         ;generic function
+   #:command-table-name                 ;generic function
+   #:command-table-not-found            ;error
+   #:command-table-p                    ;predicate
+   #:complete-from-generator            ;function
+   #:complete-from-possibilities        ;function
+   #:complete-input                     ;function
+   #:completing-from-suggestions        ;macro
+   #:completion                         ;presentation type
+   #:complex                            ;presentation type
+   #:compose-in                         ;generic function
+   #:compose-out                        ;generic function
+   #:compose-over                       ;generic function
+   #:compose-rotation-with-transformation ;function
+   #:compose-scaling-with-transformation ;function
+   #:compose-space                      ;generic function
+   #:compose-transformation-with-rotation ;function
+   #:compose-transformation-with-scaling ;function
+   #:compose-transformation-with-translation ;function
+   #:compose-transformations            ;generic function
+   #:compose-translation-with-transformation ;function
+   #:compute-difference-set             ;generic function
+   #:compute-new-output-records         ;generic function
+   #:contrasting-dash-pattern-limit     ;generic function
+   #:contrasting-inks-limit             ;generic function
+   #:coordinate                         ;type
+   #:coordinate                         ;function
+   #:copy-area                          ;generic function
+   #:copy-from-pixmap                   ;function
+   #:copy-textual-output-history        ;function
+   #:copy-to-pixmap                     ;function
+   #:cursor                             ;protocol class
+   #:cursor-active                      ;generic function
+   #:cursor-focus                       ;generic function
+   #:cursor-position                    ;generic function
+   #:cursor-sheet                       ;generic function
+   #:cursor-state                       ;generic function
+   #:cursor-visibility                  ;generic function
+   #:cursorp                            ;predicate
+   #:deactivate-gadget                  ;generic function
+   #:deallocate-medium                  ;generic function
+   #:deallocate-pixmap                  ;generic function
+   #:decache-child-output-record        ;generic function
+   #:default-describe-presentation-type ;function
+   #:default-frame-top-level            ;generic function
+   #:define-application-frame           ;macro
+   #:define-border-type                 ;macro
+   #:define-command                     ;macro
+   #:define-command-table               ;macro
+   #:define-default-presentation-method ;macro
+   #:define-drag-and-drop-translator    ;macro
+   #:define-gesture-name                ;macro
+   #:define-graph-type                  ;macro
+   #:define-presentation-action         ;macro
+   #:define-presentation-generic-function ;macro
+   #:define-presentation-method         ;macro
+   #:define-presentation-to-command-translator ;macro
+   #:define-presentation-translator     ;macro
+   #:define-presentation-type           ;macro
+   #:define-presentation-type-abbreviation ;macro
+   #:degraft-medium                     ;generic function
+   #:delegate-sheet-delegate            ;generic function
+   #:delegate-sheet-input-mixin         ;class
+   #:delete-gesture-name                ;function
+   #:delete-output-record               ;generic function
+   #:delimiter-gesture-p                ;function
+   #:describe-presentation-type         ;presentation method
+   #:describe-presentation-type         ;function
+   #:design                             ;protocol class
+   #:designp                            ;predicate
+   #:destroy-frame                      ;generic function
+   #:destroy-mirror                     ;generic function
+   #:destroy-port                       ;generic function
+   #:device-event                       ;class
+   #:disable-frame                      ;generic function
+   #:disarmed-callback                  ;callback
+   #:disown-frame                       ;generic function
+   #:dispatch-event                     ;generic function
+   #:display-command-menu               ;generic function
+   #:display-command-table-menu         ;generic function
+   #:display-exit-boxes                 ;generic function
+   #:displayed-output-record            ;protocol class
+   #:displayed-output-record-ink        ;generic function
+   #:displayed-output-record-p          ;predicate
+   #:distribute-event                   ;generic function
+   #:do-command-table-inheritance       ;macro
+   #:document-presentation-translator   ;function
+   #:drag-callback                      ;callback
+   #:drag-callback                      ;callback
+   #:drag-output-record                 ;generic function
+   #:dragging-output                    ;macro
+   #:draw-arrow                         ;function
+   #:draw-arrow*                        ;function
+   #:draw-circle                        ;function
+   #:draw-circle*                       ;function
+   #:draw-design                        ;generic function
+   #:draw-ellipse                       ;function
+   #:draw-ellipse*                      ;function
+   #:draw-line                          ;function
+   #:draw-line*                         ;function
+   #:draw-lines                         ;function
+   #:draw-lines*                        ;function
+   #:draw-oval                          ;function
+   #:draw-oval*                         ;function
+   #:draw-pattern*                      ;function
+   #:draw-point                         ;function
+   #:draw-point*                        ;function
+   #:draw-points                        ;function
+   #:draw-points*                       ;function
+   #:draw-polygon                       ;function
+   #:draw-polygon*                      ;function
+   #:draw-rectangle                     ;function
+   #:draw-rectangle*                    ;function
+   #:draw-rectangles                    ;function
+   #:draw-rectangles*                   ;function
+   #:draw-standard-menu                 ;function
+   #:draw-text                          ;function
+   #:draw-text*                         ;function
+   #:ellipse                            ;protocol class
+   #:ellipse-center-point               ;generic function
+   #:ellipse-center-point*              ;generic function
+   #:ellipse-end-angle                  ;generic function
+   #:ellipse-radii                      ;generic function
+   #:ellipse-start-angle                ;generic function
+   #:ellipsep                           ;predicate
+   #:elliptical-arc                     ;protocol class
+   #:elliptical-arc-p                   ;predicate
+   #:enable-frame                       ;generic function
+   #:encapsulating-stream               ;protocol class
+   #:encapsulating-stream-p             ;predicate
+   #:encapsulating-stream-stream        ;generic function
+   #:engraft-medium                     ;generic function
+   #:erase-input-buffer                 ;generic function
+   #:erase-output-record                ;generic function
+   #:even-scaling-transformation-p      ;generic function
+   #:event                              ;protocol class
+   #:event-listen                       ;generic function
+   #:event-matches-gesture-name-p       ;function
+   #:event-modifier-state               ;generic function
+   #:event-peek                         ;generic function
+   #:event-read                         ;generic function
+   #:event-read-no-hang                 ;generic function
+   #:event-sheet                        ;generic function
+   #:event-timestamp                    ;generic function
+   #:event-type                         ;generic function
+   #:event-unread                       ;generic function
+   #:eventp                             ;predicate
+   #:execute-frame-command              ;generic function
+   #:expand-presentation-type-abbreviation ;function
+   #:expand-presentation-type-abbreviation-1 ;function
+   #:expression                         ;presentation type
+   #:extended-input-stream              ;protocol class
+   #:extended-input-stream-p            ;predicate
+   #:extended-output-stream             ;protocol class
+   #:extended-output-stream-p           ;predicate
+   #:filling-output                     ;macro
+   #:find-applicable-translators        ;function
+   #:find-cached-output-record          ;generic function
+   #:find-child-output-record           ;generic function
+   #:find-command-from-command-line-name ;function
+   #:find-command-table                 ;function
+   #:find-frame-manager                 ;function
+   #:find-graft                         ;function
+   #:find-innermost-applicable-presentation ;function
+   #:find-keystroke-item                ;function
+   #:find-menu-item                     ;function
+   #:find-pane-for-frame                ;generic function
+   #:find-pane-named                    ;generic function
+   #:find-port                          ;function
+   #:find-presentation-translator       ;function
+   #:find-presentation-translators      ;function
+   #:find-presentation-type-class       ;function
+   #:float                              ;presentation type
+   #:form                               ;presentation type
+   #:format-graph-from-roots            ;function
+   #:format-items                       ;function
+   #:format-textual-list                ;function
+   #:formatting-cell                    ;macro
+   #:formatting-column                  ;macro
+   #:formatting-item-list               ;macro
+   #:formatting-row                     ;macro
+   #:formatting-table                   ;macro
+   #:frame-all-layouts                  ;generic function
+   #:frame-calling-frame                ;generic function
+   #:frame-command-table                ;generic function
+   #:frame-current-layout               ;generic function
+   #:frame-current-panes                ;generic function
+   #:frame-document-highlighted-presentation ;generic function
+   #:frame-drag-and-drop-feedback       ;generic function
+   #:frame-drag-and-drop-highlighting   ;generic function
+   #:frame-error-output                 ;generic function
+   #:frame-exit                         ;condition
+   #:frame-exit                         ;generic function
+   #:frame-exit-frame                   ;generic function
+   #:frame-find-innermost-applicable-presentation ;generic function
+   #:frame-input-context-button-press-handler ;generic function
+   #:frame-maintain-presentation-histories ;generic function
+   #:frame-manager                      ;protocol class
+   #:frame-manager                      ;generic function
+   #:frame-manager-frames               ;generic function
+   #:frame-manager-menu-choose          ;generic function
+   #:frame-manager-notify-user          ;generic function
+   #:frame-mananger-p                   ;predicate
+   #:frame-name                         ;generic function
+   #:frame-panes                        ;generic function
+   #:frame-parent                       ;generic function
+   #:frame-pointer-documentation-output ;generic function
+   #:frame-pretty-name                  ;generic function
+   #:frame-properties                   ;generic function
+   #:frame-query-io                     ;generic function
+   #:frame-replay                       ;generic function
+   #:frame-standard-input               ;generic function
+   #:frame-standard-output              ;generic function
+   #:frame-state                        ;generic function
+   #:frame-top-level-sheet              ;generic function
+   #:funcall-presentation-generic-function ;macro
+   #:fundamental-binary-input-stream    ;class
+   #:fundamental-binary-output-stream   ;class
+   #:fundamental-binary-stream          ;class
+   #:fundamental-character-input-stream ;class
+   #:fundamental-character-output-stream ;class
+   #:fundamental-character-stream       ;class
+   #:fundamental-input-stream           ;class
+   #:fundamental-output-stream          ;class
+   #:fundamental-stream                 ;class
+   #:gadget                             ;protocol class
+   #:gadget-activate-callback           ;generic function
+   #:gadget-active-p                    ;generic function
+   #:gadget-armed-callback              ;generic function
+   #:gadget-client                      ;generic function
+   #:gadget-dialog-view                 ;class
+   #:gadget-disarmed-callback           ;generic function
+   #:gadget-id                          ;generic function
+   #:gadget-label                       ;generic function
+   #:gadget-label-align-x               ;generic function
+   #:gadget-label-align-y               ;generic function
+   #:gadget-max-value                   ;generic function
+   #:gadget-menu-view                   ;class
+   #:gadget-min-value                   ;generic function
+   #:gadget-orientation                 ;generic function
+   #:gadget-output-record               ;class
+   #:gadget-range                       ;generic function
+   #:gadget-range*                      ;generic function
+   #:gadget-show-value-p                ;generic function
+   #:gadget-value                       ;generic function
+   #:gadget-value-changed-callback      ;generic function
+   #:gadget-view                        ;class
+   #:gadgetp                            ;predicate
+   #:generate-graph-nodes               ;generic function
+   #:generate-panes                     ;generic function
+   #:generic-list-pane                  ;class
+   #:generic-option-pane                ;class
+   #:get-frame-pane                     ;generic function
+   #:global-command-table               ;command table
+   #:graft                              ;generic function
+   #:graft-height                       ;generic function
+   #:graft-orientation                  ;generic function
+   #:graft-pixels-per-inch              ;function
+   #:graft-pixels-per-millimeter        ;function
+   #:graft-units                        ;generic function
+   #:graft-width                        ;generic function
+   #:graph-node-children                ;generic function
+   #:graph-node-object                  ;generic function
+   #:graph-node-output-record           ;protocol class
+   #:graph-node-output-record-p         ;predicate
+   #:graph-node-parents                 ;generic function
+   #:graph-output-record                ;protocol class
+   #:graph-output-record-p              ;predicate
+   #:graph-root-nodes                   ;generic function
+   #:graphics-displayed-output-record   ;protocol class
+   #:graphics-displayed-output-record-p ;predicate
+   #:grid-pane                          ;pane
+   #:handle-event                       ;generic function
+   #:handle-repaint                     ;generic function
+   #:hbox-pane                          ;pane
+   #:highlight-applicable-presentation  ;function
+   #:highlight-output-record            ;generic function
+   #:highlight-presentation             ;presentation method
+   #:horizontally                       ;macro
+   #:hrack-pane                         ;pane
+   #:identity-transformation-p          ;generic function
+   #:immediate-repainting-mixin         ;class
+   #:immediate-rescan                   ;generic function
+   #:immediate-sheet-input-mixin        ;class
+   #:incremental-redisplay              ;generic function
+   #:indenting-output                   ;macro
+   #:input-context-type                 ;function
+   #:input-editing-stream               ;protocol class
+   #:input-editing-stream-p             ;predicate
+   #:input-editor-format                ;generic function
+   #:input-not-of-required-type         ;error
+   #:input-not-of-required-type         ;function
+   #:input-stream-p                     ;generic function
+   #:integer                            ;presentation type
+   #:interactive-stream-p               ;predicate
+   #:interactor-pane                    ;pane
+   #:invalidate-cached-regions          ;generic function
+   #:invalidate-cached-transformations  ;generic function
+   #:invert-transformation              ;generic function
+   #:invertible-transformation-p        ;generic function
+   #:invoke-updating-output             ;generic function
+   #:invoke-with-drawing-options        ;generic function
+   #:invoke-with-new-output-record      ;generic function
+   #:invoke-with-output-recording-options ;generic function
+   #:invoke-with-output-to-output-record ;generic function
+   #:invoke-with-text-style             ;generic function
+   #:item-list-output-record            ;protocol class
+   #:item-list-output-record-p          ;predicate
+   #:key-press-event                    ;class
+   #:key-release-event                  ;class
+   #:keyboard-event                     ;class
+   #:keyboard-event-character           ;generic function
+   #:keyboard-event-key-name            ;generic function
+   #:keyword                            ;presentation type
+   #:label-pane                         ;pane
+   #:labelled-gadget-mixin              ;class
+   #:labelling                          ;macro
+   #:layout-frame                       ;generic function
+   #:layout-graph-edges                 ;generic function
+   #:layout-graph-nodes                 ;generic function
+   #:line                               ;protocol class
+   #:line-end-point                     ;generic function
+   #:line-end-point*                    ;generic function
+   #:line-start-point                   ;generic function
+   #:line-start-point*                  ;generic function
+   #:line-style                         ;protocol class
+   #:line-style-cap-shape               ;generic function
+   #:line-style-dashes                  ;generic function
+   #:line-style-joint-shape             ;generic function
+   #:line-style-p                       ;predicate
+   #:line-style-thickness               ;generic function
+   #:line-style-unit                    ;generic function
+   #:linep                              ;predicate
+   #:list-pane                          ;class
+   #:lookup-keystroke-command-item      ;function
+   #:lookup-keystroke-item              ;function
+   #:make-3-point-transformation        ;function
+   #:make-3-point-transformation*       ;function
+   #:make-application-frame             ;function
+   #:make-bounding-rectangle            ;function
+   #:make-clim-application-pane         ;function
+   #:make-clim-interactor-pane          ;function
+   #:make-clim-stream-pane              ;function
+   #:make-command-table                 ;function
+   #:make-contrasting-dash-patterns     ;function
+   #:make-contrasting-inks              ;function
+   #:make-design-from-output-record     ;generic function
+   #:make-device-font-text-style        ;function
+   #:make-ellipse                       ;function
+   #:make-ellipse*                      ;function
+   #:make-elliptical-arc                ;function
+   #:make-elliptical-arc*               ;function
+   #:make-flipping-ink                  ;function
+   #:make-gray-color                    ;function
+   #:make-ihs-color                     ;function
+   #:make-line                          ;function
+   #:make-line*                         ;function
+   #:make-line-style                    ;function
+   #:make-medium                        ;generic function
+   #:make-modifier-state                ;function
+   #:make-opacity                       ;function
+   #:make-pane                          ;function
+   #:make-pane-1                        ;generic function
+   #:make-pattern                       ;function
+   #:make-pattern-from-bitmap-file      ;function
+   #:make-point                         ;function
+   #:make-polygon                       ;function
+   #:make-polygon*                      ;function
+   #:make-polyline                      ;function
+   #:make-polyline*                     ;function
+   #:make-presentation-type-specifier   ;function
+   #:make-rectangle                     ;function
+   #:make-rectangle*                    ;function
+   #:make-rectangular-tile              ;function
+   #:make-reflection-transformation     ;function
+   #:make-reflection-transformation*    ;function
+   #:make-rgb-color                     ;function
+   #:make-rotation-transformation       ;function
+   #:make-rotation-transformation*      ;function
+   #:make-scaling-transformation        ;function
+   #:make-scaling-transformation*       ;function
+   #:make-space-requirement             ;function
+   #:make-stencil                       ;function
+   #:make-text-style                    ;function
+   #:make-transformation                ;function
+   #:make-translation-transformation    ;function
+   #:map-over-command-table-commands    ;function
+   #:map-over-command-table-keystrokes  ;function
+   #:map-over-command-table-menu-items  ;function
+   #:map-over-command-table-names       ;function
+   #:map-over-command-table-translators ;function
+   #:map-over-frames                    ;function
+   #:map-over-grafts                    ;function
+   #:map-over-item-list-cells           ;generic function
+   #:map-over-output-records		;generic function
+   #:map-over-output-records-containing-position ;generic function
+   #:map-over-output-records-overlapping-region ;generic function
+   #:map-over-polygon-coordinates       ;generic function
+   #:map-over-polygon-segments          ;generic function
+   #:map-over-ports                     ;function
+   #:map-over-presentation-type-supertypes ;presentation method
+   #:map-over-presentation-type-supertypes ;function
+   #:map-over-region-set-regions        ;generic function
+   #:map-over-row-cells                 ;generic function
+   #:map-over-row-cells                 ;generic function
+   #:map-over-sheets                    ;generic function
+   #:map-over-sheets-containing-position ;generic function
+   #:map-over-sheets-overlapping-region ;generic function
+   #:map-over-table-elements            ;generic function
+   #:map-sheet-position-to-child        ;generic function
+   #:map-sheet-position-to-parent       ;generic function
+   #:map-sheet-rectangle*-to-child      ;generic function
+   #:map-sheet-rectangle*-to-parent     ;generic function
+   #:match-output-records               ;generic function
+   #:medium                             ;protocol class
+   #:medium-background                  ;generic function
+   #:medium-background                  ;generic function
+   #:medium-beep                        ;generic function
+   #:medium-buffering-output-p          ;generic function
+   #:medium-clear-area                  ;generic function
+   #:medium-clipping-region             ;generic function
+   #:medium-clipping-region             ;generic function
+   #:medium-copy-area                   ;generic function
+   #:medium-current-text-style          ;generic function
+   #:medium-default-text-style          ;generic function
+   #:medium-default-text-style          ;generic function
+   #:medium-draw-ellipse*               ;generic function
+   #:medium-draw-line*                  ;generic function
+   #:medium-draw-lines*                 ;generic function
+   #:medium-draw-point*                 ;generic function
+   #:medium-draw-points*                ;generic function
+   #:medium-draw-polygon*               ;generic function
+   #:medium-draw-rectangle*             ;generic function
+   #:medium-draw-rectangles*            ;generic function
+   #:medium-draw-text*                  ;generic function
+   #:medium-drawable                    ;generic function
+   #:medium-finish-output               ;generic function
+   #:medium-force-output                ;generic function
+   #:medium-foreground                  ;generic function
+   #:medium-foreground                  ;generic function
+   #:medium-ink                         ;generic function
+   #:medium-ink                         ;generic function
+   #:medium-line-style                  ;generic function
+   #:medium-line-style                  ;generic function
+   #:medium-merged-text-style           ;generic function
+   #:medium-sheet                       ;generic function
+   #:medium-text-style                  ;generic function
+   #:medium-text-style                  ;generic function
+   #:medium-transformation              ;generic function
+   #:medium-transformation              ;generic function
+   #:mediump                            ;predicate
+   #:member                             ;presentation type abbrev
+   #:member-alist                       ;presentation type abbrev
+   #:member-sequence                    ;presentation type abbrev
+   #:menu-button                        ;class
+   #:menu-button-pane                   ;class
+   #:menu-choose                        ;generic function
+   #:menu-choose-command-from-command-table ;function
+   #:menu-choose-from-drawer            ;generic function
+   #:menu-command-parser                ;function
+   #:menu-item                          ;presentation type (mentioned in the description of draw-standard-menu)
+   #:menu-item-display                  ;function
+   #:menu-item-options                  ;function
+   #:menu-item-value                    ;function
+   #:menu-read-remaining-arguments-for-partial-command ;function
+   #:merge-text-styles                  ;generic function
+   #:mirrored-sheet-mixin               ;class
+   #:modifier-state-matches-gesture-name-p ;function
+   #:move-and-resize-sheet              ;generic function
+   #:move-sheet                         ;generic function
+   #:new-page                           ;function
+   #:nil                                ;presentation type
+   #:note-command-disabled              ;generic function
+   #:note-command-enabled               ;generic function
+   #:note-frame-deiconified             ;generic function
+   #:note-frame-disabled                ;generic function
+   #:note-frame-enabled                 ;generic function
+   #:note-frame-iconified               ;generic function
+   #:note-gadget-activated              ;generic function
+   #:note-gadget-deactivated            ;generic function
+   #:note-output-record-child-changed   ;generic function
+   #:note-sheet-adopted                 ;generic function
+   #:note-sheet-degrafted               ;generic function
+   #:note-sheet-disabled                ;generic function
+   #:note-sheet-disowned                ;generic function
+   #:note-sheet-enabled                 ;generic function
+   #:note-sheet-grafted                 ;generic function
+   #:note-sheet-region-changed          ;generic function
+   #:note-sheet-transformation-changed  ;generic function
+   #:note-space-requirements-changed    ;generic function
+   #:notify-user                        ;generic function
+   #:null                               ;presentation type
+   #:null-or-type                       ;presentation type abbrev
+   #:number                             ;presentation type
+   #:opacity                            ;protocol class
+   #:opacity-value                      ;generic function
+   #:opacityp                           ;predicate
+   #:open-stream-p                      ;generic function
+   #:open-window-stream                 ;function
+   #:option-pane                        ;class
+   #:or                                 ;presentation type
+   #:oriented-gadget-mixin              ;class
+   #:outlined-pane                      ;pane
+   #:outlining                          ;macro
+   #:output-record                      ;protocol class
+   #:output-record-cache-value          ;generic function
+   #:output-record-children             ;generic function
+   #:output-record-contents-ok          ;generic function
+   #:output-record-count                ;generic function
+   #:output-record-displayer            ;generic function
+   #:output-record-end-cursor-position  ;generic function
+   #:output-record-fixed-position       ;generic function
+   #:output-record-hit-detection-rectangle* ;generic function
+   #:output-record-p                    ;predicate
+   #:output-record-parent               ;generic function
+   #:output-record-position             ;generic function
+   #:output-record-refined-position-test ;generic function
+   #:output-record-start-cursor-position ;generic function
+   #:output-record-unique-id            ;generic function
+   #:output-recording-stream            ;protocol class
+   #:output-recording-stream-p          ;predicate
+   #:output-stream-p                    ;generic function
+   #:pane                               ;protocol class
+   #:pane-background                    ;generic function
+   #:pane-foreground                    ;generic function
+   #:pane-frame                         ;generic function
+   #:pane-name                          ;generic function
+   #:pane-needs-redisplay               ;generic function
+   #:pane-scroller                      ;generic function
+   #:pane-text-style                    ;generic function
+   #:pane-viewport                      ;generic function
+   #:pane-viewport-region               ;generic function
+   #:panep                              ;predicate
+   #:parse-text-style                   ;function
+   #:partial-command-p                  ;function
+   #:path                               ;protocol class
+   #:pathname                           ;presentation type
+   #:pathp                              ;predicate
+   #:pattern-height                     ;generic function
+   #:pattern-width                      ;generic function
+   #:permanent-medium-sheet-output-mixin ;class
+   #:pixmap-depth                       ;generic function
+   #:pixmap-height                      ;generic function
+   #:pixmap-width                       ;generic function
+   #:point                              ;protocol class
+   #:point-position                     ;generic function
+   #:point-x                            ;generic function
+   #:point-y                            ;generic function
+   #:pointer                            ;protocol class
+   #:pointer-boundary-event             ;class
+   #:pointer-boundary-event-kind        ;generic function
+   #:pointer-button-event               ;class
+   #:pointer-button-hold-event          ;class
+   #:pointer-button-press-event         ;class
+   #:pointer-button-release-event       ;class
+   #:pointer-button-state               ;generic function
+   #:pointer-click-and-hold-event       ;class
+   #:pointer-click-event                ;class
+   #:pointer-cursor                     ;generic function
+   #:pointer-documentation-pane         ;pane
+   #:pointer-documentation-view         ;class
+   #:pointer-double-click-event         ;class
+   #:pointer-enter-event                ;class
+   #:pointer-event                      ;class
+   #:pointer-event-button               ;generic function
+   #:pointer-event-native-x             ;generic function
+   #:pointer-event-native-y             ;generic function
+   #:pointer-event-pointer              ;generic function
+   #:pointer-event-x                    ;generic function
+   #:pointer-event-y                    ;generic function
+   #:pointer-exit-event                 ;class
+   #:pointer-modifier-state		;generic function (in franz user guide)
+   #:pointer-motion-event               ;class
+   #:pointer-position                   ;generic function
+   #:pointer-sheet                      ;generic function
+   #:pointerp                           ;predicate
+   #:pointp                             ;predicate
+   #:polygon                            ;protocol class
+   #:polygon-points                     ;generic function
+   #:polygonp                           ;predicate
+   #:polyline                           ;protocol class
+   #:polyline-closed                    ;generic function
+   #:polylinep                          ;predicate
+   #:port                               ;protocol class
+   #:port                               ;generic function
+   #:port-keyboard-input-focus          ;generic function
+   #:port-name                          ;generic function
+   #:port-pointer			;generic function (in franz user guide)
+   #:port-properties                    ;generic function
+   #:port-server-path                   ;generic function
+   #:port-type                          ;generic function
+   #:portp                              ;predicate
+   #:present                            ;presentation method
+   #:present                            ;function
+   #:present-to-string                  ;function
+   #:presentation                       ;protocol class
+   #:presentation-default-preprocessor  ;presentation method
+   #:presentation-matches-context-type  ;function
+   #:presentation-modifier              ;generic function
+   #:presentation-object                ;generic function
+   #:presentation-refined-position-test ;presentation method
+   #:presentation-replace-input         ;generic function
+   #:presentation-single-box            ;generic function
+   #:presentation-subtypep              ;presentation method
+   #:presentation-subtypep              ;function
+   #:presentation-type                  ;generic function
+   #:presentation-type-direct-supertypes ;function
+   #:presentation-type-history          ;presentation method
+   #:presentation-type-name             ;function
+   #:presentation-type-of               ;function
+   #:presentation-type-options          ;function
+   #:presentation-type-parameters       ;function
+   #:presentation-type-specifier-p      ;presentation method
+   #:presentation-type-specifier-p      ;function
+   #:presentation-typep                 ;presentation method
+   #:presentation-typep                 ;function
+   #:presentationp                      ;predicate
+   #:print-menu-item                    ;function
+   #:process-next-event                 ;generic function
+   #:prompt-for-accept                  ;generic function
+   #:prompt-for-accept-1                ;function
+   #:propagate-output-record-changes    ;generic function
+   #:propagate-output-record-changes-p  ;generic function
+   #:push-button                        ;class
+   #:push-button-pane                   ;class
+   #:push-button-show-as-default        ;generic function
+   #:queue-event                        ;generic function
+   #:queue-repaint                      ;generic function
+   #:queue-rescan                       ;generic function
+   #:radio-box                          ;class
+   #:radio-box-current-selection        ;generic function
+   #:radio-box-pane                     ;class
+   #:radio-box-selections               ;generic function
+   #:raise-frame                        ;generic function
+   #:raise-mirror                       ;generic function
+   #:raise-sheet                        ;generic function
+   #:range-gadget-mixin                 ;class
+   #:ratio                              ;presentation type
+   #:rational                           ;presentation type
+   #:read-bitmap-file                   ;generic function
+   #:read-command                       ;function
+   #:read-command-using-keystrokes      ;function
+   #:read-frame-command                 ;generic function
+   #:read-gesture                       ;function
+   #:read-token                         ;function
+   #:real                               ;presentation type
+   #:realize-mirror                     ;generic function
+   #:recompute-contents-ok              ;generic function
+   #:recompute-extent-for-changed-child ;generic function
+   #:recompute-extent-for-new-child     ;generic function
+   #:rectangle                          ;protocol class
+   #:rectangle-edges*                   ;generic function
+   #:rectangle-height                   ;generic function
+   #:rectangle-max-point                ;generic function
+   #:rectangle-max-x                    ;generic function
+   #:rectangle-max-y                    ;generic function
+   #:rectangle-min-point                ;generic function
+   #:rectangle-min-x                    ;generic function
+   #:rectangle-min-y                    ;generic function
+   #:rectangle-size                     ;generic function
+   #:rectangle-width                    ;generic function
+   #:rectanglep                         ;predicate
+   #:rectilinear-transformation-p       ;generic function
+   #:redisplay                          ;function
+   #:redisplay-frame-pane               ;generic function
+   #:redisplay-frame-panes              ;generic function
+   #:redisplay-output-record            ;generic function
+   #:redisplayable-stream-p             ;generic function
+   #:redraw-input-buffer                ;generic function
+   #:reflection-transformation-p        ;generic function
+   #:reflection-underspecified          ;error
+   #:region                             ;protocol class
+   #:region-contains-position-p         ;generic function
+   #:region-contains-region-p           ;generic function
+   #:region-difference                  ;generic function
+   #:region-equal                       ;generic function
+   #:region-intersection                ;generic function
+   #:region-intersects-region-p         ;generic function
+   #:region-set                         ;protocol class
+   #:region-set-p                       ;predicate
+   #:region-set-regions                 ;generic function
+   #:region-union                       ;generic function
+   #:regionp                            ;predicate
+   #:remove-command-from-command-table  ;function
+   #:remove-keystroke-from-command-table ;function
+   #:remove-menu-item-from-command-table ;function
+   #:remove-presentation-translator-from-command-table ;function
+   #:reorder-sheets                     ;generic function
+   #:repaint-sheet                      ;generic function
+   #:replace-input                      ;generic function
+   #:replay                             ;function
+   #:replay-output-record               ;generic function
+   #:rescan-if-necessary                ;generic function
+   #:reset-frame                        ;generic function
+   #:reset-scan-pointer                 ;generic function
+   #:resize-sheet                       ;generic function
+   #:restart-port                       ;generic function
+   #:restraining                        ;macro
+   #:restraining-pane                   ;pane
+   #:rigid-transformation-p             ;generic function
+   #:row-output-record                  ;protocol class
+   #:row-output-record-p                ;predicate
+   #:run-frame-top-level                ;generic function
+   #:scaling-transformation-p           ;generic function
+   #:scroll-bar                         ;class
+   #:scroll-bar-drag-callback           ;generic function
+   #:scroll-bar-pane                    ;class
+   #:scroll-bar-scroll-down-line-callback ;generic function
+   #:scroll-bar-scroll-down-page-callback ;generic function
+   #:scroll-bar-scroll-to-bottom-callback ;generic function
+   #:scroll-bar-scroll-to-top-callback  ;generic function
+   #:scroll-bar-scroll-up-line-callback ;generic function
+   #:scroll-bar-scroll-up-page-callback ;generic function
+   #:scroll-down-line-callback          ;callback
+   #:scroll-down-page-callback          ;callback
+   #:scroll-extent                      ;generic function
+   #:scroll-to-bottom-callback          ;callback
+   #:scroll-to-top-callback             ;callback
+   #:scroll-up-line-callback            ;callback
+   #:scroll-up-page-callback            ;callback
+   #:scroller-pane                      ;pane
+   #:scrolling                          ;macro
+   #:sequence                           ;presentation type
+   #:sequence-enumerated                ;presentation type
+   #:set-highlighted-presentation       ;function
+   #:sheet                              ;protocol class
+   #:sheet-adopt-child                  ;generic function
+   #:sheet-allocated-region             ;generic function
+   #:sheet-ancestor-p                   ;generic function
+   #:sheet-children                     ;generic function
+   #:sheet-delta-transformation         ;generic function
+   #:sheet-device-region                ;generic function
+   #:sheet-device-transformation        ;generic function
+   #:sheet-direct-mirror                ;generic function
+   #:sheet-disown-child                 ;generic function
+   #:sheet-enabled-children             ;generic function
+   #:sheet-enabled-p                    ;generic function
+   #:sheet-event-queue                  ;generic function
+   #:sheet-grafted-p                    ;generic function
+   #:sheet-identity-transformation-mixin ;class
+   #:sheet-leaf-mixin                   ;class
+   #:sheet-medium                       ;generic function
+   #:sheet-mirror                       ;generic function
+   #:sheet-mirrored-ancestor            ;generic function
+   #:sheet-multiple-child-mixin         ;class
+   #:sheet-mute-input-mixin             ;class
+   #:sheet-mute-output-mixin            ;class
+   #:sheet-mute-repainting-mixin        ;class
+   #:sheet-native-region                ;generic function
+   #:sheet-native-transformation        ;generic function
+   #:sheet-occluding-sheets             ;generic function
+   #:sheet-parent                       ;generic function
+   #:sheet-parent-mixin                 ;class
+   #:sheet-region                       ;generic function
+   #:sheet-siblings                     ;generic function
+   #:sheet-single-child-mixin           ;class
+   #:sheet-transformation               ;generic function
+   #:sheet-transformation-mixin         ;class
+   #:sheet-translation-mixin            ;class
+   #:sheet-viewable-p                   ;generic function
+   #:sheet-with-medium-mixin            ;class
+   #:sheet-y-inverting-transformation-mixin ;class
+   #:sheetp                             ;predicate
+   #:shrink-frame                       ;generic function
+   #:simple-completion-error            ;condition
+   #:simple-parse-error                 ;error
+   #:simple-parse-error                 ;function
+   #:singular-transformation            ;error
+   #:slider                             ;class
+   #:slider-drag-callback               ;generic function
+   #:slider-pane                        ;class
+   #:space-requirement                  ;class
+   #:space-requirement+                 ;function
+   #:space-requirement+*                ;function
+   #:space-requirement-combine          ;function
+   #:space-requirement-components       ;generic function
+   #:space-requirement-height           ;generic function
+   #:space-requirement-max-height       ;generic function
+   #:space-requirement-max-width        ;generic function
+   #:space-requirement-min-height       ;generic function
+   #:space-requirement-min-width        ;generic function
+   #:space-requirement-width            ;generic function
+   #:spacing                            ;macro
+   #:spacing-pane                       ;pane
+   #:standard-application-frame         ;class
+   #:standard-bounding-rectangle        ;class
+   #:standard-cell-output-record        ;class
+   #:standard-column-output-record      ;class
+   #:standard-command-table             ;class
+   #:standard-ellipse                   ;class
+   #:standard-elliptical-arc            ;class
+   #:standard-encapsulating-stream      ;class
+   #:standard-extended-input-stream     ;class
+   #:standard-extended-output-stream    ;class
+   #:standard-graph-node-output-record  ;class
+   #:standard-graph-output-record       ;class
+   #:standard-input-editing-stream      ;class
+   #:standard-input-stream              ;class
+   #:standard-item-list-output-record   ;class
+   #:standard-line                      ;class
+   #:standard-line-style                ;class
+   #:standard-output-recording-stream   ;class
+   #:standard-output-stream             ;class
+   #:standard-point                     ;class
+   #:standard-pointer                   ;class
+   #:standard-polygon                   ;class
+   #:standard-polyline                  ;class
+   #:standard-presentation              ;class
+   #:standard-rectangle                 ;class
+   #:standard-region-difference         ;class
+   #:standard-region-intersection       ;class
+   #:standard-region-union              ;class
+   #:standard-repainting-mixin          ;class
+   #:standard-row-output-record         ;class
+   #:standard-sequence-output-history   ;class
+   #:standard-sequence-output-record    ;class
+   #:standard-sheet-input-mixin         ;class
+   #:standard-sheet-output-mixin        ;class
+   #:standard-table-output-record       ;class
+   #:standard-text-cursor               ;class
+   #:standard-text-style                ;class
+   #:standard-tree-output-history       ;class
+   #:standard-tree-output-record        ;class
+   #:standard-updating-output-record    ;class
+   #:stream-accept                      ;generic function
+   #:stream-add-character-output        ;generic function
+   #:stream-add-output-record           ;generic function
+   #:stream-add-string-output           ;generic function
+   #:stream-advance-to-column           ;generic function
+   #:stream-advance-to-column           ;generic function
+   #:stream-baseline                    ;generic function
+   #:stream-character-width             ;generic function
+   #:stream-clear-input                 ;generic function
+   #:stream-clear-input                 ;generic function
+   #:stream-clear-output                ;generic function
+   #:stream-clear-output                ;generic function
+   #:stream-close-text-output-record    ;generic function
+   #:stream-current-output-record       ;generic function
+   #:stream-cursor-position             ;generic function
+   #:stream-default-view                ;generic function
+   #:stream-drawing-p                   ;generic function
+   #:stream-element-type                ;generic function
+   #:stream-end-of-line-action          ;generic function
+   #:stream-end-of-page-action          ;generic function
+   #:stream-finish-output               ;generic function
+   #:stream-finish-output               ;generic function
+   #:stream-force-output                ;generic function
+   #:stream-force-output                ;generic function
+   #:stream-fresh-line                  ;generic function
+   #:stream-fresh-line                  ;generic function
+   #:stream-increment-cursor-position   ;generic function
+   #:stream-input-buffer                ;generic function
+   #:stream-input-wait                  ;generic function
+   #:stream-insertion-pointer           ;generic function
+   #:stream-line-column                 ;generic function
+   #:stream-line-column                 ;generic function
+   #:stream-line-height                 ;generic function
+   #:stream-listen                      ;generic function
+   #:stream-listen                      ;generic function
+   #:stream-output-history              ;generic function
+   #:stream-output-history-mixin        ;class
+   #:stream-pathname                    ;generic function
+   #:stream-peek-char                   ;generic function
+   #:stream-peek-char                   ;generic function
+   #:stream-pointer-position            ;generic function
+   #:stream-present                     ;generic function
+   #:stream-process-gesture             ;generic function
+   #:stream-read-byte                   ;generic function
+   #:stream-read-char                   ;generic function
+   #:stream-read-char                   ;generic function
+   #:stream-read-char-no-hang           ;generic function
+   #:stream-read-char-no-hang           ;generic function
+   #:stream-read-gesture                ;generic function
+   #:stream-read-line                   ;generic function
+   #:stream-read-line                   ;generic function
+   #:stream-recording-p                 ;generic function
+   #:stream-redisplaying-p              ;generic function
+   #:stream-replay                      ;generic function
+   #:stream-rescanning-p                ;generic function
+   #:stream-scan-pointer                ;generic function
+   #:stream-set-input-focus             ;generic function
+   #:stream-start-line-p                ;generic function
+   #:stream-start-line-p                ;generic function
+   #:stream-string-width                ;generic function
+   #:stream-terpri                      ;generic function
+   #:stream-terpri                      ;generic function
+   #:stream-text-cursor                 ;generic function
+   #:stream-text-margin                 ;generic function
+   #:stream-text-output-record          ;generic function
+   #:stream-truename                    ;generic function
+   #:stream-unread-char                 ;generic function
+   #:stream-unread-char                 ;generic function
+   #:stream-unread-gesture              ;generic function
+   #:stream-vertical-spacing            ;generic function
+   #:stream-write-byte                  ;generic function
+   #:stream-write-char                  ;generic function
+   #:stream-write-char                  ;generic function
+   #:stream-write-string                ;generic function
+   #:stream-write-string                ;generic function
+   #:streamp                            ;generic function
+   #:string                             ;presentation type
+   #:subset                             ;presentation type abbrev
+   #:subset-alist                       ;presentation type abbrev
+   #:subset-completion                  ;presentation type
+   #:subset-sequence                    ;presentation type abbrev
+   #:substitute-numeric-argument-marker ;function
+   #:suggest                            ;function
+   #:surrounding-output-with-border     ;macro
+   #:symbol                             ;presentation type
+   #:t                                  ;presentation type
+   #:table-output-record                ;protocol class
+   #:table-output-record-p              ;predicate
+   #:table-pane                         ;pane
+   #:tabling                            ;macro
+   #:temporary-medium-sheet-output-mixin ;class
+   #:test-presentation-translator       ;function
+   #:text-displayed-output-record       ;protocol class
+   #:text-displayed-output-record-p     ;predicate
+   #:text-displayed-output-record-string ;generic function
+   #:text-editor                        ;class
+   #:text-editor-pane                   ;class
+   #:text-field                         ;class
+   #:text-field-pane                    ;class
+   #:text-size                          ;generic function
+   #:text-style                         ;protocol class
+   #:text-style-ascent                  ;generic function
+   #:text-style-components              ;generic function
+   #:text-style-descent                 ;generic function
+   #:text-style-face                    ;generic function
+   #:text-style-family                  ;generic function
+   #:text-style-fixed-width-p           ;generic function
+   #:text-style-height                  ;generic function
+   #:text-style-mapping                 ;generic function
+   #:text-style-p                       ;predicate
+   #:text-style-size                    ;generic function
+   #:text-style-width                   ;generic function
+   #:textual-dialog-view                ;class
+   #:textual-menu-view                  ;class
+   #:textual-view                       ;class
+   #:throw-highlighted-presentation     ;function
+   #:timer-event                        ;class
+   #:title-pane                         ;pane
+   #:toggle-button                      ;class
+   #:toggle-button-indicator-type       ;generic function
+   #:toggle-button-pane                 ;class
+   #:token-or-type                      ;presentation type abbrev
+   #:tracking-pointer                   ;macro
+   #:transform-distance                 ;generic function
+   #:transform-position                 ;generic function
+   #:transform-rectangle*               ;generic function
+   #:transform-region                   ;generic function
+   #:transformation                     ;protocol class
+   #:transformation-equal               ;generic function
+   #:transformation-error               ;error
+   #:transformation-underspecified      ;error
+   #:transformationp                    ;predicate
+   #:translation-transformation-p       ;generic function
+   #:tree-recompute-extent              ;generic function
+   #:type-or-string                     ;presentation type abbrev
+   #:unhighlight-highlighted-presentation ;function
+   #:unread-gesture                     ;function
+   #:untransform-distance               ;generic function
+   #:untransform-position               ;generic function
+   #:untransform-rectangle*             ;generic function
+   #:untransform-region                 ;generic function
+   #:updating-output                    ;macro
+   #:updating-output-record             ;protocol class
+   #:updating-output-record-p           ;predicate
+   #:user-command-table                 ;command table
+   #:value-changed-callback             ;callback
+   #:value-gadget                       ;class
+   #:vbox-pane                          ;pane
+   #:vertically                         ;macro
+   #:view                               ;protocol class
+   #:viewp                              ;predicate
+   #:vrack-pane                         ;pane
+   #:window-clear                       ;generic function
+   #:window-configuration-event         ;class
+   #:window-erase-viewport              ;generic function
+   #:window-event                       ;class
+   #:window-event-mirrored-sheet        ;generic function
+   #:window-event-native-region         ;generic function
+   #:window-event-region                ;generic function
+   #:window-manager-delete-event        ;class
+   #:window-manager-event               ;class
+   #:window-refresh                     ;generic function
+   #:window-repaint-event               ;class
+   #:window-viewport                    ;generic function
+   #:window-viewport-position           ;generic function
+   #:with-accept-help                   ;macro
+   #:with-activation-gestures           ;macro
+   #:with-application-frame             ;macro
+   #:with-bounding-rectangle*           ;macro
+   #:with-command-table-keystrokes      ;macro
+   #:with-delimiter-gestures            ;macro
+   #:with-drawing-options               ;macro
+   #:with-end-of-line-action            ;macro
+   #:with-end-of-page-action            ;macro
+   #:with-first-quadrant-coordinates    ;macro
+   #:with-frame-manager                 ;macro
+   #:with-graft-locked                  ;macro
+   #:with-identity-transformation       ;macro
+   #:with-input-context                 ;macro
+   #:with-input-editing                 ;macro
+   #:with-input-editor-typeout          ;macro
+   #:with-input-focus                   ;macro
+   #:with-local-coordinates             ;macro
+   #:with-look-and-feel-realization     ;macro
+   #:with-menu                          ;macro
+   #:with-new-output-record             ;macro
+   #:with-output-as-gadget              ;macro
+   #:with-output-as-presentation        ;macro
+   #:with-output-buffered               ;macro
+   #:with-output-recording-options      ;macro
+   #:with-output-to-output-record       ;macro
+   #:with-output-to-pixmap              ;macro
+   #:with-output-to-postscript-stream   ;macro
+   #:with-port-locked                   ;macro
+   #:with-presentation-type-decoded     ;macro
+   #:with-presentation-type-options     ;macro
+   #:with-presentation-type-parameters  ;macro
+   #:with-radio-box                     ;macro
+   #:with-room-for-graphics             ;macro
+   #:with-rotation                      ;macro
+   #:with-scaling                       ;macro
+   #:with-sheet-medium                  ;macro
+   #:with-sheet-medium-bound            ;macro
+   #:with-text-face                     ;macro
+   #:with-text-family                   ;macro
+   #:with-text-size                     ;macro
+   #:with-text-style                    ;macro
+   #:with-translation                   ;macro
+   #:write-token                        ;function
    )
 
   ;;;; symbols, which were exported as of 2002-02-09, but no longer are.
 
-  ;; DISPATCH-REPAINT:
+  ;; dispatch-repaint:
   ;; several mentions in silica.tex.
 
-  ;; INVOKE-ACCEPT-VALUES-COMMAND-BUTTON
+  ;; invoke-accept-values-command-button
   ;; mentioned in dialogs.tex.
 
-  ;; LABELLED
+  ;; labelled
 
-  ;; LABELLED-GADGET, through there is a LABELLED-GADGET-MIXIN
-  ;; MUTE-REPAINTING-MIXIN, through there is a SHEET-MUTE-REPAINTING-MIXIN
-  ;; ORIENTED-GADGET, through there is a ORIENTED-GADGET-MIXIN
+  ;; labelled-gadget, through there is a labelled-gadget-mixin
+  ;; mute-repainting-mixin, through there is a sheet-mute-repainting-mixin
+  ;; oriented-gadget, through there is a oriented-gadget-mixin
 
-  ;; OUTPUT-RECORD-REFINED-SENSITIVITY-TEST:
-  ;; There is mention of this symbol in output-recording.tex. Spelling error?
+  ;; output-record-refined-sensitivity-test:
+  ;; there is mention of this symbol in output-recording.tex. spelling error?
 
-  ;; POINTER-BUTTON-CLICK-EVENT
-  ;; This is mentioned in silica.tex. Spelling error?
+  ;; pointer-button-click-event
+  ;; this is mentioned in silica.tex. spelling error?
 
   ;;;; absolutly no mention of the following in the spec:
   
-  ;; ADD-WATCHER
-  ;; BORDERING
-  ;; BORDER-PANE
-  ;; DELETE-WATCHER
-  ;; DISPLAY-CURSOR
-  ;; DRAW-TRIANGLE
-  ;; DRAW-TRIANGLE*
-  ;; FRAME-PANE
-  ;; GADGET-LABEL-TEXT-STYLE
-  ;; GESTURE-PROCESSING-HANDLER
-  ;; KEY-MODIFIER-STATE-MATCH-P
-  ;; MUTE-SHEET-INPUT-MIXIN
-  ;; MUTE-SHEET-OUTPUT-MIXIN
-  ;; NOTE-FRAME-STATE-CHANGED
-  ;; PANES-NEED-REDISPLAY
-  ;; POINTER-BUTTON-CLICK-AND-HOLD-EVENT
-  ;; POINTER-BUTTON-DOUBLE-CLICK-EVENT
-  ;; POINTER-BUTTONS
-  ;; POINTER-PORT
-  ;; PORT-DRAW-CHARACTER*
-  ;; PORT-DRAW-ELLIPSE*
-  ;; PORT-DRAW-LINE*
-  ;; PORT-DRAW-LINES*
-  ;; PORT-DRAW-POINT*
-  ;; PORT-DRAW-POINTS*
-  ;; PORT-DRAW-POLYGON*
-  ;; PORT-DRAW-RECTANGLE*
-  ;; PORT-DRAW-STRING*
-  ;; PUSH-BUTTON-SHOW-AS-DEFAULT-P
-  ;; RESET-WATCHER
-  ;; SCROLL-BAR-DRAG-DOWN-LINE-CALLBACK
-  ;; SCROLL-BAR-DRAG-DOWN-PAGE-CALLBACK
-  ;; SCROLL-BAR-DRAG-UP-LINE-CALLBACK
-  ;; SCROLL-BAR-DRAG-UP-PAGE-CALLBACK
-  ;; SPACER-PANE
-  ;; STANDARD-GADGET
-  ;; STREAM-POINTERS
-  ;; STREAM-PRIMARY-POINTER
-  ;; STREAM-REDISPLAYABLE-P
-  ;; STREAM-RESTORE-INPUT-FOCUS
+  ;; add-watcher
+  ;; bordering
+  ;; border-pane
+  ;; delete-watcher
+  ;; display-cursor
+  ;; draw-triangle
+  ;; draw-triangle*
+  ;; frame-pane
+  ;; gadget-label-text-style
+  ;; gesture-processing-handler
+  ;; key-modifier-state-match-p
+  ;; mute-sheet-input-mixin
+  ;; mute-sheet-output-mixin
+  ;; note-frame-state-changed
+  ;; panes-need-redisplay
+  ;; pointer-button-click-and-hold-event
+  ;; pointer-button-double-click-event
+  ;; pointer-buttons
+  ;; pointer-port
+  ;; port-draw-character*
+  ;; port-draw-ellipse*
+  ;; port-draw-line*
+  ;; port-draw-lines*
+  ;; port-draw-point*
+  ;; port-draw-points*
+  ;; port-draw-polygon*
+  ;; port-draw-rectangle*
+  ;; port-draw-string*
+  ;; push-button-show-as-default-p
+  ;; reset-watcher
+  ;; scroll-bar-drag-down-line-callback
+  ;; scroll-bar-drag-down-page-callback
+  ;; scroll-bar-drag-up-line-callback
+  ;; scroll-bar-drag-up-page-callback
+  ;; spacer-pane
+  ;; standard-gadget
+  ;; stream-pointers
+  ;; stream-primary-pointer
+  ;; stream-redisplayable-p
+  ;; stream-restore-input-focus
 
   
-   ;;; X11 COLOR NAMES - SOME ARE NOT IN THE SPEC - MIKEMAC
+   ;;; x11 color names - some are not in the spec - mikemac
   (:export
-   "+SNOW+" "+GHOST-WHITE+" "+GHOSTWHITE+" "+WHITE-SMOKE+"
-   "+WHITESMOKE+" "+GAINSBORO+" "+FLORAL-WHITE+" "+FLORALWHITE+"
-   "+OLD-LACE+" "+OLDLACE+" "+LINEN+" "+ANTIQUE-WHITE+"
-   "+ANTIQUEWHITE+" "+PAPAYA-WHIP+" "+PAPAYAWHIP+" "+BLANCHED-ALMOND+"
-   "+BLANCHEDALMOND+" "+BISQUE+" "+PEACH-PUFF+" "+PEACHPUFF+"
-   "+NAVAJO-WHITE+" "+NAVAJOWHITE+" "+MOCCASIN+" "+CORNSILK+"
-   "+IVORY+" "+LEMON-CHIFFON+" "+LEMONCHIFFON+" "+SEASHELL+"
-   "+HONEYDEW+" "+MINT-CREAM+" "+MINTCREAM+" "+AZURE+"
-   "+ALICE-BLUE+" "+ALICEBLUE+" "+LAVENDER+" "+LAVENDER-BLUSH+"
-   "+LAVENDERBLUSH+" "+MISTY-ROSE+" "+MISTYROSE+" "+WHITE+"
-   "+BLACK+" "+DARK-SLATE-GRAY+" "+DARKSLATEGRAY+" "+DARK-SLATE-GREY+"
-   "+DARKSLATEGREY+" "+DIM-GRAY+" "+DIMGRAY+" "+DIM-GREY+"
-   "+DIMGREY+" "+SLATE-GRAY+" "+SLATEGRAY+" "+SLATE-GREY+"
-   "+SLATEGREY+" "+LIGHT-SLATE-GRAY+" "+LIGHTSLATEGRAY+" "+LIGHT-SLATE-GREY+"
-   "+LIGHTSLATEGREY+" "+GRAY+" "+GREY+" "+LIGHT-GREY+"
-   "+LIGHTGREY+" "+LIGHT-GRAY+" "+LIGHTGRAY+" "+MIDNIGHT-BLUE+"
-   "+MIDNIGHTBLUE+" "+NAVY+" "+NAVY-BLUE+" "+NAVYBLUE+"
-   "+CORNFLOWER-BLUE+" "+CORNFLOWERBLUE+" "+DARK-SLATE-BLUE+" "+DARKSLATEBLUE+"
-   "+SLATE-BLUE+" "+SLATEBLUE+" "+MEDIUM-SLATE-BLUE+" "+MEDIUMSLATEBLUE+"
-   "+LIGHT-SLATE-BLUE+" "+LIGHTSLATEBLUE+" "+MEDIUM-BLUE+" "+MEDIUMBLUE+"
-   "+ROYAL-BLUE+" "+ROYALBLUE+" "+BLUE+" "+DODGER-BLUE+"
-   "+DODGERBLUE+" "+DEEP-SKY-BLUE+" "+DEEPSKYBLUE+" "+SKY-BLUE+"
-   "+SKYBLUE+" "+LIGHT-SKY-BLUE+" "+LIGHTSKYBLUE+" "+STEEL-BLUE+"
-   "+STEELBLUE+" "+LIGHT-STEEL-BLUE+" "+LIGHTSTEELBLUE+" "+LIGHT-BLUE+"
-   "+LIGHTBLUE+" "+POWDER-BLUE+" "+POWDERBLUE+" "+PALE-TURQUOISE+"
-   "+PALETURQUOISE+" "+DARK-TURQUOISE+" "+DARKTURQUOISE+" "+MEDIUM-TURQUOISE+"
-   "+MEDIUMTURQUOISE+" "+TURQUOISE+" "+CYAN+" "+LIGHT-CYAN+"
-   "+LIGHTCYAN+" "+CADET-BLUE+" "+CADETBLUE+" "+MEDIUM-AQUAMARINE+"
-   "+MEDIUMAQUAMARINE+" "+AQUAMARINE+" "+DARK-GREEN+" "+DARKGREEN+"
-   "+DARK-OLIVE-GREEN+" "+DARKOLIVEGREEN+" "+DARK-SEA-GREEN+" "+DARKSEAGREEN+"
-   "+SEA-GREEN+" "+SEAGREEN+" "+MEDIUM-SEA-GREEN+" "+MEDIUMSEAGREEN+"
-   "+LIGHT-SEA-GREEN+" "+LIGHTSEAGREEN+" "+PALE-GREEN+" "+PALEGREEN+"
-   "+SPRING-GREEN+" "+SPRINGGREEN+" "+LAWN-GREEN+" "+LAWNGREEN+"
-   "+GREEN+" "+CHARTREUSE+" "+MEDIUM-SPRING-GREEN+" "+MEDIUMSPRINGGREEN+"
-   "+GREEN-YELLOW+" "+GREENYELLOW+" "+LIME-GREEN+" "+LIMEGREEN+"
-   "+YELLOW-GREEN+" "+YELLOWGREEN+" "+FOREST-GREEN+" "+FORESTGREEN+"
-   "+OLIVE-DRAB+" "+OLIVEDRAB+" "+DARK-KHAKI+" "+DARKKHAKI+"
-   "+KHAKI+" "+PALE-GOLDENROD+" "+PALEGOLDENROD+" "+LIGHT-GOLDENROD-YELLOW+"
-   "+LIGHTGOLDENRODYELLOW+" "+LIGHT-YELLOW+" "+LIGHTYELLOW+" "+YELLOW+"
-   "+GOLD+" "+LIGHT-GOLDENROD+" "+LIGHTGOLDENROD+" "+GOLDENROD+"
-   "+DARK-GOLDENROD+" "+DARKGOLDENROD+" "+ROSY-BROWN+" "+ROSYBROWN+"
-   "+INDIAN-RED+" "+INDIANRED+" "+SADDLE-BROWN+" "+SADDLEBROWN+"
-   "+SIENNA+" "+PERU+" "+BURLYWOOD+" "+BEIGE+"
-   "+WHEAT+" "+SANDY-BROWN+" "+SANDYBROWN+" "+TAN+"
-   "+CHOCOLATE+" "+FIREBRICK+" "+BROWN+" "+DARK-SALMON+"
-   "+DARKSALMON+" "+SALMON+" "+LIGHT-SALMON+" "+LIGHTSALMON+"
-   "+ORANGE+" "+DARK-ORANGE+" "+DARKORANGE+" "+CORAL+"
-   "+LIGHT-CORAL+" "+LIGHTCORAL+" "+TOMATO+" "+ORANGE-RED+"
-   "+ORANGERED+" "+RED+" "+HOT-PINK+" "+HOTPINK+"
-   "+DEEP-PINK+" "+DEEPPINK+" "+PINK+" "+LIGHT-PINK+"
-   "+LIGHTPINK+" "+PALE-VIOLET-RED+" "+PALEVIOLETRED+" "+MAROON+"
-   "+MEDIUM-VIOLET-RED+" "+MEDIUMVIOLETRED+" "+VIOLET-RED+" "+VIOLETRED+"
-   "+MAGENTA+" "+VIOLET+" "+PLUM+" "+ORCHID+"
-   "+MEDIUM-ORCHID+" "+MEDIUMORCHID+" "+DARK-ORCHID+" "+DARKORCHID+"
-   "+DARK-VIOLET+" "+DARKVIOLET+" "+BLUE-VIOLET+" "+BLUEVIOLET+"
-   "+PURPLE+" "+MEDIUM-PURPLE+" "+MEDIUMPURPLE+" "+THISTLE+"
-   "+SNOW1+" "+SNOW2+" "+SNOW3+" "+SNOW4+"
-   "+SEASHELL1+" "+SEASHELL2+" "+SEASHELL3+" "+SEASHELL4+"
-   "+ANTIQUEWHITE1+" "+ANTIQUEWHITE2+" "+ANTIQUEWHITE3+" "+ANTIQUEWHITE4+"
-   "+BISQUE1+" "+BISQUE2+" "+BISQUE3+" "+BISQUE4+"
-   "+PEACHPUFF1+" "+PEACHPUFF2+" "+PEACHPUFF3+" "+PEACHPUFF4+"
-   "+NAVAJOWHITE1+" "+NAVAJOWHITE2+" "+NAVAJOWHITE3+" "+NAVAJOWHITE4+"
-   "+LEMONCHIFFON1+" "+LEMONCHIFFON2+" "+LEMONCHIFFON3+" "+LEMONCHIFFON4+"
-   "+CORNSILK1+" "+CORNSILK2+" "+CORNSILK3+" "+CORNSILK4+"
-   "+IVORY1+" "+IVORY2+" "+IVORY3+" "+IVORY4+"
-   "+HONEYDEW1+" "+HONEYDEW2+" "+HONEYDEW3+" "+HONEYDEW4+"
-   "+LAVENDERBLUSH1+" "+LAVENDERBLUSH2+" "+LAVENDERBLUSH3+" "+LAVENDERBLUSH4+"
-   "+MISTYROSE1+" "+MISTYROSE2+" "+MISTYROSE3+" "+MISTYROSE4+"
-   "+AZURE1+" "+AZURE2+" "+AZURE3+" "+AZURE4+"
-   "+SLATEBLUE1+" "+SLATEBLUE2+" "+SLATEBLUE3+" "+SLATEBLUE4+"
-   "+ROYALBLUE1+" "+ROYALBLUE2+" "+ROYALBLUE3+" "+ROYALBLUE4+"
-   "+BLUE1+" "+BLUE2+" "+BLUE3+" "+BLUE4+"
-   "+DODGERBLUE1+" "+DODGERBLUE2+" "+DODGERBLUE3+" "+DODGERBLUE4+"
-   "+STEELBLUE1+" "+STEELBLUE2+" "+STEELBLUE3+" "+STEELBLUE4+"
-   "+DEEPSKYBLUE1+" "+DEEPSKYBLUE2+" "+DEEPSKYBLUE3+" "+DEEPSKYBLUE4+"
-   "+SKYBLUE1+" "+SKYBLUE2+" "+SKYBLUE3+" "+SKYBLUE4+"
-   "+LIGHTSKYBLUE1+" "+LIGHTSKYBLUE2+" "+LIGHTSKYBLUE3+" "+LIGHTSKYBLUE4+"
-   "+SLATEGRAY1+" "+SLATEGRAY2+" "+SLATEGRAY3+" "+SLATEGRAY4+"
-   "+LIGHTSTEELBLUE1+" "+LIGHTSTEELBLUE2+" "+LIGHTSTEELBLUE3+" "+LIGHTSTEELBLUE4+"
-   "+LIGHTBLUE1+" "+LIGHTBLUE2+" "+LIGHTBLUE3+" "+LIGHTBLUE4+"
-   "+LIGHTCYAN1+" "+LIGHTCYAN2+" "+LIGHTCYAN3+" "+LIGHTCYAN4+"
-   "+PALETURQUOISE1+" "+PALETURQUOISE2+" "+PALETURQUOISE3+" "+PALETURQUOISE4+"
-   "+CADETBLUE1+" "+CADETBLUE2+" "+CADETBLUE3+" "+CADETBLUE4+"
-   "+TURQUOISE1+" "+TURQUOISE2+" "+TURQUOISE3+" "+TURQUOISE4+"
-   "+CYAN1+" "+CYAN2+" "+CYAN3+" "+CYAN4+"
-   "+DARKSLATEGRAY1+" "+DARKSLATEGRAY2+" "+DARKSLATEGRAY3+" "+DARKSLATEGRAY4+"
-   "+AQUAMARINE1+" "+AQUAMARINE2+" "+AQUAMARINE3+" "+AQUAMARINE4+"
-   "+DARKSEAGREEN1+" "+DARKSEAGREEN2+" "+DARKSEAGREEN3+" "+DARKSEAGREEN4+"
-   "+SEAGREEN1+" "+SEAGREEN2+" "+SEAGREEN3+" "+SEAGREEN4+"
-   "+PALEGREEN1+" "+PALEGREEN2+" "+PALEGREEN3+" "+PALEGREEN4+"
-   "+SPRINGGREEN1+" "+SPRINGGREEN2+" "+SPRINGGREEN3+" "+SPRINGGREEN4+"
-   "+GREEN1+" "+GREEN2+" "+GREEN3+" "+GREEN4+"
-   "+CHARTREUSE1+" "+CHARTREUSE2+" "+CHARTREUSE3+" "+CHARTREUSE4+"
-   "+OLIVEDRAB1+" "+OLIVEDRAB2+" "+OLIVEDRAB3+" "+OLIVEDRAB4+"
-   "+DARKOLIVEGREEN1+" "+DARKOLIVEGREEN2+" "+DARKOLIVEGREEN3+" "+DARKOLIVEGREEN4+"
-   "+KHAKI1+" "+KHAKI2+" "+KHAKI3+" "+KHAKI4+"
-   "+LIGHTGOLDENROD1+" "+LIGHTGOLDENROD2+" "+LIGHTGOLDENROD3+" "+LIGHTGOLDENROD4+"
-   "+LIGHTYELLOW1+" "+LIGHTYELLOW2+" "+LIGHTYELLOW3+" "+LIGHTYELLOW4+"
-   "+YELLOW1+" "+YELLOW2+" "+YELLOW3+" "+YELLOW4+"
-   "+GOLD1+" "+GOLD2+" "+GOLD3+" "+GOLD4+"
-   "+GOLDENROD1+" "+GOLDENROD2+" "+GOLDENROD3+" "+GOLDENROD4+"
-   "+DARKGOLDENROD1+" "+DARKGOLDENROD2+" "+DARKGOLDENROD3+" "+DARKGOLDENROD4+"
-   "+ROSYBROWN1+" "+ROSYBROWN2+" "+ROSYBROWN3+" "+ROSYBROWN4+"
-   "+INDIANRED1+" "+INDIANRED2+" "+INDIANRED3+" "+INDIANRED4+"
-   "+SIENNA1+" "+SIENNA2+" "+SIENNA3+" "+SIENNA4+"
-   "+BURLYWOOD1+" "+BURLYWOOD2+" "+BURLYWOOD3+" "+BURLYWOOD4+"
-   "+WHEAT1+" "+WHEAT2+" "+WHEAT3+" "+WHEAT4+"
-   "+TAN1+" "+TAN2+" "+TAN3+" "+TAN4+"
-   "+CHOCOLATE1+" "+CHOCOLATE2+" "+CHOCOLATE3+" "+CHOCOLATE4+"
-   "+FIREBRICK1+" "+FIREBRICK2+" "+FIREBRICK3+" "+FIREBRICK4+"
-   "+BROWN1+" "+BROWN2+" "+BROWN3+" "+BROWN4+"
-   "+SALMON1+" "+SALMON2+" "+SALMON3+" "+SALMON4+"
-   "+LIGHTSALMON1+" "+LIGHTSALMON2+" "+LIGHTSALMON3+" "+LIGHTSALMON4+"
-   "+ORANGE1+" "+ORANGE2+" "+ORANGE3+" "+ORANGE4+"
-   "+DARKORANGE1+" "+DARKORANGE2+" "+DARKORANGE3+" "+DARKORANGE4+"
-   "+CORAL1+" "+CORAL2+" "+CORAL3+" "+CORAL4+"
-   "+TOMATO1+" "+TOMATO2+" "+TOMATO3+" "+TOMATO4+"
-   "+ORANGERED1+" "+ORANGERED2+" "+ORANGERED3+" "+ORANGERED4+"
-   "+RED1+" "+RED2+" "+RED3+" "+RED4+"
-   "+DEEPPINK1+" "+DEEPPINK2+" "+DEEPPINK3+" "+DEEPPINK4+"
-   "+HOTPINK1+" "+HOTPINK2+" "+HOTPINK3+" "+HOTPINK4+"
-   "+PINK1+" "+PINK2+" "+PINK3+" "+PINK4+"
-   "+LIGHTPINK1+" "+LIGHTPINK2+" "+LIGHTPINK3+" "+LIGHTPINK4+"
-   "+PALEVIOLETRED1+" "+PALEVIOLETRED2+" "+PALEVIOLETRED3+" "+PALEVIOLETRED4+"
-   "+MAROON1+" "+MAROON2+" "+MAROON3+" "+MAROON4+"
-   "+VIOLETRED1+" "+VIOLETRED2+" "+VIOLETRED3+" "+VIOLETRED4+"
-   "+MAGENTA1+" "+MAGENTA2+" "+MAGENTA3+" "+MAGENTA4+"
-   "+ORCHID1+" "+ORCHID2+" "+ORCHID3+" "+ORCHID4+"
-   "+PLUM1+" "+PLUM2+" "+PLUM3+" "+PLUM4+"
-   "+MEDIUMORCHID1+" "+MEDIUMORCHID2+" "+MEDIUMORCHID3+" "+MEDIUMORCHID4+"
-   "+DARKORCHID1+" "+DARKORCHID2+" "+DARKORCHID3+" "+DARKORCHID4+"
-   "+PURPLE1+" "+PURPLE2+" "+PURPLE3+" "+PURPLE4+"
-   "+MEDIUMPURPLE1+" "+MEDIUMPURPLE2+" "+MEDIUMPURPLE3+" "+MEDIUMPURPLE4+"
-   "+THISTLE1+" "+THISTLE2+" "+THISTLE3+" "+THISTLE4+"
-   "+GRAY0+" "+GREY0+" "+GRAY1+" "+GREY1+"
-   "+GRAY2+" "+GREY2+" "+GRAY3+" "+GREY3+"
-   "+GRAY4+" "+GREY4+" "+GRAY5+" "+GREY5+"
-   "+GRAY6+" "+GREY6+" "+GRAY7+" "+GREY7+"
-   "+GRAY8+" "+GREY8+" "+GRAY9+" "+GREY9+"
-   "+GRAY10+" "+GREY10+" "+GRAY11+" "+GREY11+"
-   "+GRAY12+" "+GREY12+" "+GRAY13+" "+GREY13+"
-   "+GRAY14+" "+GREY14+" "+GRAY15+" "+GREY15+"
-   "+GRAY16+" "+GREY16+" "+GRAY17+" "+GREY17+"
-   "+GRAY18+" "+GREY18+" "+GRAY19+" "+GREY19+"
-   "+GRAY20+" "+GREY20+" "+GRAY21+" "+GREY21+"
-   "+GRAY22+" "+GREY22+" "+GRAY23+" "+GREY23+"
-   "+GRAY24+" "+GREY24+" "+GRAY25+" "+GREY25+"
-   "+GRAY26+" "+GREY26+" "+GRAY27+" "+GREY27+"
-   "+GRAY28+" "+GREY28+" "+GRAY29+" "+GREY29+"
-   "+GRAY30+" "+GREY30+" "+GRAY31+" "+GREY31+"
-   "+GRAY32+" "+GREY32+" "+GRAY33+" "+GREY33+"
-   "+GRAY34+" "+GREY34+" "+GRAY35+" "+GREY35+"
-   "+GRAY36+" "+GREY36+" "+GRAY37+" "+GREY37+"
-   "+GRAY38+" "+GREY38+" "+GRAY39+" "+GREY39+"
-   "+GRAY40+" "+GREY40+" "+GRAY41+" "+GREY41+"
-   "+GRAY42+" "+GREY42+" "+GRAY43+" "+GREY43+"
-   "+GRAY44+" "+GREY44+" "+GRAY45+" "+GREY45+"
-   "+GRAY46+" "+GREY46+" "+GRAY47+" "+GREY47+"
-   "+GRAY48+" "+GREY48+" "+GRAY49+" "+GREY49+"
-   "+GRAY50+" "+GREY50+" "+GRAY51+" "+GREY51+"
-   "+GRAY52+" "+GREY52+" "+GRAY53+" "+GREY53+"
-   "+GRAY54+" "+GREY54+" "+GRAY55+" "+GREY55+"
-   "+GRAY56+" "+GREY56+" "+GRAY57+" "+GREY57+"
-   "+GRAY58+" "+GREY58+" "+GRAY59+" "+GREY59+"
-   "+GRAY60+" "+GREY60+" "+GRAY61+" "+GREY61+"
-   "+GRAY62+" "+GREY62+" "+GRAY63+" "+GREY63+"
-   "+GRAY64+" "+GREY64+" "+GRAY65+" "+GREY65+"
-   "+GRAY66+" "+GREY66+" "+GRAY67+" "+GREY67+"
-   "+GRAY68+" "+GREY68+" "+GRAY69+" "+GREY69+"
-   "+GRAY70+" "+GREY70+" "+GRAY71+" "+GREY71+"
-   "+GRAY72+" "+GREY72+" "+GRAY73+" "+GREY73+"
-   "+GRAY74+" "+GREY74+" "+GRAY75+" "+GREY75+"
-   "+GRAY76+" "+GREY76+" "+GRAY77+" "+GREY77+"
-   "+GRAY78+" "+GREY78+" "+GRAY79+" "+GREY79+"
-   "+GRAY80+" "+GREY80+" "+GRAY81+" "+GREY81+"
-   "+GRAY82+" "+GREY82+" "+GRAY83+" "+GREY83+"
-   "+GRAY84+" "+GREY84+" "+GRAY85+" "+GREY85+"
-   "+GRAY86+" "+GREY86+" "+GRAY87+" "+GREY87+"
-   "+GRAY88+" "+GREY88+" "+GRAY89+" "+GREY89+"
-   "+GRAY90+" "+GREY90+" "+GRAY91+" "+GREY91+"
-   "+GRAY92+" "+GREY92+" "+GRAY93+" "+GREY93+"
-   "+GRAY94+" "+GREY94+" "+GRAY95+" "+GREY95+"
-   "+GRAY96+" "+GREY96+" "+GRAY97+" "+GREY97+"
-   "+GRAY98+" "+GREY98+" "+GRAY99+" "+GREY99+"
-   "+GRAY100+" "+GREY100+" "+DARK-GREY+" "+DARKGREY+"
-   "+DARK-GRAY+" "+DARKGRAY+" "+DARK-BLUE+" "+DARKBLUE+"
-   "+DARK-CYAN+" "+DARKCYAN+" "+DARK-MAGENTA+" "+DARKMAGENTA+"
-   "+DARK-RED+" "+DARKRED+" "+LIGHT-GREEN+" "+LIGHTGREEN+" ))
+   #:+snow+ #:+ghost-white+ #:+ghostwhite+ #:+white-smoke+
+   #:+whitesmoke+ #:+gainsboro+ #:+floral-white+ #:+floralwhite+
+   #:+old-lace+ #:+oldlace+ #:+linen+ #:+antique-white+
+   #:+antiquewhite+ #:+papaya-whip+ #:+papayawhip+ #:+blanched-almond+
+   #:+blanchedalmond+ #:+bisque+ #:+peach-puff+ #:+peachpuff+
+   #:+navajo-white+ #:+navajowhite+ #:+moccasin+ #:+cornsilk+
+   #:+ivory+ #:+lemon-chiffon+ #:+lemonchiffon+ #:+seashell+
+   #:+honeydew+ #:+mint-cream+ #:+mintcream+ #:+azure+
+   #:+alice-blue+ #:+aliceblue+ #:+lavender+ #:+lavender-blush+
+   #:+lavenderblush+ #:+misty-rose+ #:+mistyrose+ #:+white+
+   #:+black+ #:+dark-slate-gray+ #:+darkslategray+ #:+dark-slate-grey+
+   #:+darkslategrey+ #:+dim-gray+ #:+dimgray+ #:+dim-grey+
+   #:+dimgrey+ #:+slate-gray+ #:+slategray+ #:+slate-grey+
+   #:+slategrey+ #:+light-slate-gray+ #:+lightslategray+ #:+light-slate-grey+
+   #:+lightslategrey+ #:+gray+ #:+grey+ #:+light-grey+
+   #:+lightgrey+ #:+light-gray+ #:+lightgray+ #:+midnight-blue+
+   #:+midnightblue+ #:+navy+ #:+navy-blue+ #:+navyblue+
+   #:+cornflower-blue+ #:+cornflowerblue+ #:+dark-slate-blue+ #:+darkslateblue+
+   #:+slate-blue+ #:+slateblue+ #:+medium-slate-blue+ #:+mediumslateblue+
+   #:+light-slate-blue+ #:+lightslateblue+ #:+medium-blue+ #:+mediumblue+
+   #:+royal-blue+ #:+royalblue+ #:+blue+ #:+dodger-blue+
+   #:+dodgerblue+ #:+deep-sky-blue+ #:+deepskyblue+ #:+sky-blue+
+   #:+skyblue+ #:+light-sky-blue+ #:+lightskyblue+ #:+steel-blue+
+   #:+steelblue+ #:+light-steel-blue+ #:+lightsteelblue+ #:+light-blue+
+   #:+lightblue+ #:+powder-blue+ #:+powderblue+ #:+pale-turquoise+
+   #:+paleturquoise+ #:+dark-turquoise+ #:+darkturquoise+ #:+medium-turquoise+
+   #:+mediumturquoise+ #:+turquoise+ #:+cyan+ #:+light-cyan+
+   #:+lightcyan+ #:+cadet-blue+ #:+cadetblue+ #:+medium-aquamarine+
+   #:+mediumaquamarine+ #:+aquamarine+ #:+dark-green+ #:+darkgreen+
+   #:+dark-olive-green+ #:+darkolivegreen+ #:+dark-sea-green+ #:+darkseagreen+
+   #:+sea-green+ #:+seagreen+ #:+medium-sea-green+ #:+mediumseagreen+
+   #:+light-sea-green+ #:+lightseagreen+ #:+pale-green+ #:+palegreen+
+   #:+spring-green+ #:+springgreen+ #:+lawn-green+ #:+lawngreen+
+   #:+green+ #:+chartreuse+ #:+medium-spring-green+ #:+mediumspringgreen+
+   #:+green-yellow+ #:+greenyellow+ #:+lime-green+ #:+limegreen+
+   #:+yellow-green+ #:+yellowgreen+ #:+forest-green+ #:+forestgreen+
+   #:+olive-drab+ #:+olivedrab+ #:+dark-khaki+ #:+darkkhaki+
+   #:+khaki+ #:+pale-goldenrod+ #:+palegoldenrod+ #:+light-goldenrod-yellow+
+   #:+lightgoldenrodyellow+ #:+light-yellow+ #:+lightyellow+ #:+yellow+
+   #:+gold+ #:+light-goldenrod+ #:+lightgoldenrod+ #:+goldenrod+
+   #:+dark-goldenrod+ #:+darkgoldenrod+ #:+rosy-brown+ #:+rosybrown+
+   #:+indian-red+ #:+indianred+ #:+saddle-brown+ #:+saddlebrown+
+   #:+sienna+ #:+peru+ #:+burlywood+ #:+beige+
+   #:+wheat+ #:+sandy-brown+ #:+sandybrown+ #:+tan+
+   #:+chocolate+ #:+firebrick+ #:+brown+ #:+dark-salmon+
+   #:+darksalmon+ #:+salmon+ #:+light-salmon+ #:+lightsalmon+
+   #:+orange+ #:+dark-orange+ #:+darkorange+ #:+coral+
+   #:+light-coral+ #:+lightcoral+ #:+tomato+ #:+orange-red+
+   #:+orangered+ #:+red+ #:+hot-pink+ #:+hotpink+
+   #:+deep-pink+ #:+deeppink+ #:+pink+ #:+light-pink+
+   #:+lightpink+ #:+pale-violet-red+ #:+palevioletred+ #:+maroon+
+   #:+medium-violet-red+ #:+mediumvioletred+ #:+violet-red+ #:+violetred+
+   #:+magenta+ #:+violet+ #:+plum+ #:+orchid+
+   #:+medium-orchid+ #:+mediumorchid+ #:+dark-orchid+ #:+darkorchid+
+   #:+dark-violet+ #:+darkviolet+ #:+blue-violet+ #:+blueviolet+
+   #:+purple+ #:+medium-purple+ #:+mediumpurple+ #:+thistle+
+   #:+snow1+ #:+snow2+ #:+snow3+ #:+snow4+
+   #:+seashell1+ #:+seashell2+ #:+seashell3+ #:+seashell4+
+   #:+antiquewhite1+ #:+antiquewhite2+ #:+antiquewhite3+ #:+antiquewhite4+
+   #:+bisque1+ #:+bisque2+ #:+bisque3+ #:+bisque4+
+   #:+peachpuff1+ #:+peachpuff2+ #:+peachpuff3+ #:+peachpuff4+
+   #:+navajowhite1+ #:+navajowhite2+ #:+navajowhite3+ #:+navajowhite4+
+   #:+lemonchiffon1+ #:+lemonchiffon2+ #:+lemonchiffon3+ #:+lemonchiffon4+
+   #:+cornsilk1+ #:+cornsilk2+ #:+cornsilk3+ #:+cornsilk4+
+   #:+ivory1+ #:+ivory2+ #:+ivory3+ #:+ivory4+
+   #:+honeydew1+ #:+honeydew2+ #:+honeydew3+ #:+honeydew4+
+   #:+lavenderblush1+ #:+lavenderblush2+ #:+lavenderblush3+ #:+lavenderblush4+
+   #:+mistyrose1+ #:+mistyrose2+ #:+mistyrose3+ #:+mistyrose4+
+   #:+azure1+ #:+azure2+ #:+azure3+ #:+azure4+
+   #:+slateblue1+ #:+slateblue2+ #:+slateblue3+ #:+slateblue4+
+   #:+royalblue1+ #:+royalblue2+ #:+royalblue3+ #:+royalblue4+
+   #:+blue1+ #:+blue2+ #:+blue3+ #:+blue4+
+   #:+dodgerblue1+ #:+dodgerblue2+ #:+dodgerblue3+ #:+dodgerblue4+
+   #:+steelblue1+ #:+steelblue2+ #:+steelblue3+ #:+steelblue4+
+   #:+deepskyblue1+ #:+deepskyblue2+ #:+deepskyblue3+ #:+deepskyblue4+
+   #:+skyblue1+ #:+skyblue2+ #:+skyblue3+ #:+skyblue4+
+   #:+lightskyblue1+ #:+lightskyblue2+ #:+lightskyblue3+ #:+lightskyblue4+
+   #:+slategray1+ #:+slategray2+ #:+slategray3+ #:+slategray4+
+   #:+lightsteelblue1+ #:+lightsteelblue2+ #:+lightsteelblue3+ #:+lightsteelblue4+
+   #:+lightblue1+ #:+lightblue2+ #:+lightblue3+ #:+lightblue4+
+   #:+lightcyan1+ #:+lightcyan2+ #:+lightcyan3+ #:+lightcyan4+
+   #:+paleturquoise1+ #:+paleturquoise2+ #:+paleturquoise3+ #:+paleturquoise4+
+   #:+cadetblue1+ #:+cadetblue2+ #:+cadetblue3+ #:+cadetblue4+
+   #:+turquoise1+ #:+turquoise2+ #:+turquoise3+ #:+turquoise4+
+   #:+cyan1+ #:+cyan2+ #:+cyan3+ #:+cyan4+
+   #:+darkslategray1+ #:+darkslategray2+ #:+darkslategray3+ #:+darkslategray4+
+   #:+aquamarine1+ #:+aquamarine2+ #:+aquamarine3+ #:+aquamarine4+
+   #:+darkseagreen1+ #:+darkseagreen2+ #:+darkseagreen3+ #:+darkseagreen4+
+   #:+seagreen1+ #:+seagreen2+ #:+seagreen3+ #:+seagreen4+
+   #:+palegreen1+ #:+palegreen2+ #:+palegreen3+ #:+palegreen4+
+   #:+springgreen1+ #:+springgreen2+ #:+springgreen3+ #:+springgreen4+
+   #:+green1+ #:+green2+ #:+green3+ #:+green4+
+   #:+chartreuse1+ #:+chartreuse2+ #:+chartreuse3+ #:+chartreuse4+
+   #:+olivedrab1+ #:+olivedrab2+ #:+olivedrab3+ #:+olivedrab4+
+   #:+darkolivegreen1+ #:+darkolivegreen2+ #:+darkolivegreen3+ #:+darkolivegreen4+
+   #:+khaki1+ #:+khaki2+ #:+khaki3+ #:+khaki4+
+   #:+lightgoldenrod1+ #:+lightgoldenrod2+ #:+lightgoldenrod3+ #:+lightgoldenrod4+
+   #:+lightyellow1+ #:+lightyellow2+ #:+lightyellow3+ #:+lightyellow4+
+   #:+yellow1+ #:+yellow2+ #:+yellow3+ #:+yellow4+
+   #:+gold1+ #:+gold2+ #:+gold3+ #:+gold4+
+   #:+goldenrod1+ #:+goldenrod2+ #:+goldenrod3+ #:+goldenrod4+
+   #:+darkgoldenrod1+ #:+darkgoldenrod2+ #:+darkgoldenrod3+ #:+darkgoldenrod4+
+   #:+rosybrown1+ #:+rosybrown2+ #:+rosybrown3+ #:+rosybrown4+
+   #:+indianred1+ #:+indianred2+ #:+indianred3+ #:+indianred4+
+   #:+sienna1+ #:+sienna2+ #:+sienna3+ #:+sienna4+
+   #:+burlywood1+ #:+burlywood2+ #:+burlywood3+ #:+burlywood4+
+   #:+wheat1+ #:+wheat2+ #:+wheat3+ #:+wheat4+
+   #:+tan1+ #:+tan2+ #:+tan3+ #:+tan4+
+   #:+chocolate1+ #:+chocolate2+ #:+chocolate3+ #:+chocolate4+
+   #:+firebrick1+ #:+firebrick2+ #:+firebrick3+ #:+firebrick4+
+   #:+brown1+ #:+brown2+ #:+brown3+ #:+brown4+
+   #:+salmon1+ #:+salmon2+ #:+salmon3+ #:+salmon4+
+   #:+lightsalmon1+ #:+lightsalmon2+ #:+lightsalmon3+ #:+lightsalmon4+
+   #:+orange1+ #:+orange2+ #:+orange3+ #:+orange4+
+   #:+darkorange1+ #:+darkorange2+ #:+darkorange3+ #:+darkorange4+
+   #:+coral1+ #:+coral2+ #:+coral3+ #:+coral4+
+   #:+tomato1+ #:+tomato2+ #:+tomato3+ #:+tomato4+
+   #:+orangered1+ #:+orangered2+ #:+orangered3+ #:+orangered4+
+   #:+red1+ #:+red2+ #:+red3+ #:+red4+
+   #:+deeppink1+ #:+deeppink2+ #:+deeppink3+ #:+deeppink4+
+   #:+hotpink1+ #:+hotpink2+ #:+hotpink3+ #:+hotpink4+
+   #:+pink1+ #:+pink2+ #:+pink3+ #:+pink4+
+   #:+lightpink1+ #:+lightpink2+ #:+lightpink3+ #:+lightpink4+
+   #:+palevioletred1+ #:+palevioletred2+ #:+palevioletred3+ #:+palevioletred4+
+   #:+maroon1+ #:+maroon2+ #:+maroon3+ #:+maroon4+
+   #:+violetred1+ #:+violetred2+ #:+violetred3+ #:+violetred4+
+   #:+magenta1+ #:+magenta2+ #:+magenta3+ #:+magenta4+
+   #:+orchid1+ #:+orchid2+ #:+orchid3+ #:+orchid4+
+   #:+plum1+ #:+plum2+ #:+plum3+ #:+plum4+
+   #:+mediumorchid1+ #:+mediumorchid2+ #:+mediumorchid3+ #:+mediumorchid4+
+   #:+darkorchid1+ #:+darkorchid2+ #:+darkorchid3+ #:+darkorchid4+
+   #:+purple1+ #:+purple2+ #:+purple3+ #:+purple4+
+   #:+mediumpurple1+ #:+mediumpurple2+ #:+mediumpurple3+ #:+mediumpurple4+
+   #:+thistle1+ #:+thistle2+ #:+thistle3+ #:+thistle4+
+   #:+gray0+ #:+grey0+ #:+gray1+ #:+grey1+
+   #:+gray2+ #:+grey2+ #:+gray3+ #:+grey3+
+   #:+gray4+ #:+grey4+ #:+gray5+ #:+grey5+
+   #:+gray6+ #:+grey6+ #:+gray7+ #:+grey7+
+   #:+gray8+ #:+grey8+ #:+gray9+ #:+grey9+
+   #:+gray10+ #:+grey10+ #:+gray11+ #:+grey11+
+   #:+gray12+ #:+grey12+ #:+gray13+ #:+grey13+
+   #:+gray14+ #:+grey14+ #:+gray15+ #:+grey15+
+   #:+gray16+ #:+grey16+ #:+gray17+ #:+grey17+
+   #:+gray18+ #:+grey18+ #:+gray19+ #:+grey19+
+   #:+gray20+ #:+grey20+ #:+gray21+ #:+grey21+
+   #:+gray22+ #:+grey22+ #:+gray23+ #:+grey23+
+   #:+gray24+ #:+grey24+ #:+gray25+ #:+grey25+
+   #:+gray26+ #:+grey26+ #:+gray27+ #:+grey27+
+   #:+gray28+ #:+grey28+ #:+gray29+ #:+grey29+
+   #:+gray30+ #:+grey30+ #:+gray31+ #:+grey31+
+   #:+gray32+ #:+grey32+ #:+gray33+ #:+grey33+
+   #:+gray34+ #:+grey34+ #:+gray35+ #:+grey35+
+   #:+gray36+ #:+grey36+ #:+gray37+ #:+grey37+
+   #:+gray38+ #:+grey38+ #:+gray39+ #:+grey39+
+   #:+gray40+ #:+grey40+ #:+gray41+ #:+grey41+
+   #:+gray42+ #:+grey42+ #:+gray43+ #:+grey43+
+   #:+gray44+ #:+grey44+ #:+gray45+ #:+grey45+
+   #:+gray46+ #:+grey46+ #:+gray47+ #:+grey47+
+   #:+gray48+ #:+grey48+ #:+gray49+ #:+grey49+
+   #:+gray50+ #:+grey50+ #:+gray51+ #:+grey51+
+   #:+gray52+ #:+grey52+ #:+gray53+ #:+grey53+
+   #:+gray54+ #:+grey54+ #:+gray55+ #:+grey55+
+   #:+gray56+ #:+grey56+ #:+gray57+ #:+grey57+
+   #:+gray58+ #:+grey58+ #:+gray59+ #:+grey59+
+   #:+gray60+ #:+grey60+ #:+gray61+ #:+grey61+
+   #:+gray62+ #:+grey62+ #:+gray63+ #:+grey63+
+   #:+gray64+ #:+grey64+ #:+gray65+ #:+grey65+
+   #:+gray66+ #:+grey66+ #:+gray67+ #:+grey67+
+   #:+gray68+ #:+grey68+ #:+gray69+ #:+grey69+
+   #:+gray70+ #:+grey70+ #:+gray71+ #:+grey71+
+   #:+gray72+ #:+grey72+ #:+gray73+ #:+grey73+
+   #:+gray74+ #:+grey74+ #:+gray75+ #:+grey75+
+   #:+gray76+ #:+grey76+ #:+gray77+ #:+grey77+
+   #:+gray78+ #:+grey78+ #:+gray79+ #:+grey79+
+   #:+gray80+ #:+grey80+ #:+gray81+ #:+grey81+
+   #:+gray82+ #:+grey82+ #:+gray83+ #:+grey83+
+   #:+gray84+ #:+grey84+ #:+gray85+ #:+grey85+
+   #:+gray86+ #:+grey86+ #:+gray87+ #:+grey87+
+   #:+gray88+ #:+grey88+ #:+gray89+ #:+grey89+
+   #:+gray90+ #:+grey90+ #:+gray91+ #:+grey91+
+   #:+gray92+ #:+grey92+ #:+gray93+ #:+grey93+
+   #:+gray94+ #:+grey94+ #:+gray95+ #:+grey95+
+   #:+gray96+ #:+grey96+ #:+gray97+ #:+grey97+
+   #:+gray98+ #:+grey98+ #:+gray99+ #:+grey99+
+   #:+gray100+ #:+grey100+ #:+dark-grey+ #:+darkgrey+
+   #:+dark-gray+ #:+darkgray+ #:+dark-blue+ #:+darkblue+
+   #:+dark-cyan+ #:+darkcyan+ #:+dark-magenta+ #:+darkmagenta+
+   #:+dark-red+ #:+darkred+ #:+light-green+ #:+lightgreen+ ))
 
 (defpackage :clim-sys
   (:use)
   ;;
   #+cmu
-  (:import-from "MP"
+  (:import-from :mp
    #:make-process
    #:destroy-process
    #:current-process
@@ -1873,24 +1873,24 @@
    #:defgeneric*
    #:defmethod* ) )
 
-(defpackage "CLIM-EXTENSIONS"
+(defpackage :clim-extensions
   (:use)
   (:export
-   "LINE-STYLE-EFFECTIVE-THICKNESS"
-   "MEDIUM-MITER-LIMIT"
-   "RAISED-PANE" "RAISING"
-   "LOWERED-PANE" "LOWERING"
-   "VIEWPORT-PANE"
-   "DRAW-GLYPH" "DEVICE-FONT-TEXT-STYLE-P"
-   "DRAW-IMAGE"
-   "IMAGE-PANE"
-   "DRAW-LABEL"
-   "COMPOSE-SPACE-AUX"
-   "SIMPLE-EVENT-LOOP"
-   "POINTER-MOTION-HINT-EVENT"))
+   #:line-style-effective-thickness
+   #:medium-miter-limit
+   #:raised-pane #:raising
+   #:lowered-pane #:lowering
+   #:viewport-pane
+   #:draw-glyph #:device-font-text-style-p
+   #:draw-image
+   #:image-pane
+   #:draw-label
+   #:compose-space-aux
+   #:simple-event-loop
+   #:pointer-motion-hint-event))
 
-(defpackage "CLIM-INTERNALS"
-  (:use #:clim #:clim-sys #:clim-extensions #:clim-lisp)
+(defpackage :clim-internals
+  (:use :clim :clim-sys :clim-extensions :clim-lisp)
   (:nicknames :climi)
   #+excl
   (:import-from :excl compile-system load-system)
@@ -1913,19 +1913,19 @@
 
 ;(use-package :clim-extensions :clim)
 
-(defpackage :CLIM-DEMO
+(defpackage :clim-demo
   (:use :clim-extensions :clim :clim-lisp)
   #+excl(:import-from :excl compile-system load-system exit)
   )
 
-(defpackage :CLIM-USER
+(defpackage :clim-user
   (:use :clim :clim-lisp))
 
-(defpackage :GOATEE
+(defpackage :goatee
   (:use :clim :clim-lisp :clim-sys)
-  (:import-from #:clim-internals #:letf)
+  (:import-from :clim-internals #:letf)
   (:export
-   "EXECUTE-GESTURE-COMMAND"
-   "GOATEE-INPUT-EDITING-MIXIN"
-   "SIMPLE-SCREEN-AREA"))
+   #:execute-gesture-command
+   #:goatee-input-editing-mixin
+   #:simple-screen-area))
 
