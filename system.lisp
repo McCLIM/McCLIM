@@ -146,6 +146,7 @@
 ;;; "included" part of McCLIM. Hence the defsystem is here.
 (clim-defsystem (:clim-postscript :depends-on (:clim-core))
    "Backends/PostScript/package"
+   "Backends/PostScript/encoding"
    "Backends/PostScript/paper"
    "Backends/PostScript/class"
    "Backends/PostScript/font"
