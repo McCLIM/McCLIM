@@ -143,6 +143,9 @@
   (
    ))
 
+(defclass pointer-ungrab-event (pointer-exit-event)
+  ())
+
 (defclass window-event (event)
   ((sheet :initarg :sheet
 	  :reader event-sheet)
@@ -161,6 +164,9 @@
    (y :initarg :y :reader window-configuration-event-y)
    (width :initarg :width :reader window-configuration-event-width)
    (height :initarg :height :reader window-configuration-event-height)))
+
+(defclass window-unmap-event (window-event)
+  ())
 
 (defclass window-destroy-event (window-event)
   ())
