@@ -762,9 +762,12 @@
    (scroll-up-page-callback :initarg :scroll-up-page-callback
                             :initform nil
                             :reader scroll-bar-scroll-up-page-callback)
-   
+
+   #||
    (thumb-size :initarg :thumb-size :initform 1/4
-               :reader scroll-bar-thumb-size) ))
+               :reader scroll-bar-thumb-size)
+   ||#
+   ))
 
 (defmethod drag-callback ((pane scroll-bar) client gadget-id value)
   (declare (ignore client gadget-id))
@@ -843,6 +846,12 @@
 
 ;;; Scroll-bar's sub-regions
 
+(defmethod scroll-bar-thumb-size ((sb scroll-bar-pane))
+  "Return the size of the scrollbar's thumb."
+  (multiple-value-bind (minv maxv) (gadget-range* sb)
+    (max 1/100000                         ;hack to cope with GADGET-RANGE* being empty
+         (* 1/3 (- maxv minv)))))
+
 (defmethod scroll-bar-up-region ((sb scroll-bar-pane))
   (with-bounding-rectangle* (minx miny maxx maxy) (transform-region (scroll-bar-transformation sb)
                                                                     (pane-inner-region sb))
@@ -867,7 +876,7 @@
   (with-bounding-rectangle* (x1 y1 x2 y2) (scroll-bar-thumb-bed-region sb)
     (multiple-value-bind (minv maxv) (gadget-range* sb)
       (multiple-value-bind (v) (gadget-value sb)
-        (let ((ts (* 1/3 (- maxv minv))))
+        (let ((ts (scroll-bar-thumb-size sb)))
           (let ((ya (translate-range-value v minv (+ maxv ts) y1 y2))
                 (yb (translate-range-value (+ v ts) minv (+ maxv ts) y1 y2)))
             (make-rectangle* x1 ya x2 yb)))))))
@@ -897,7 +906,7 @@
   (with-bounding-rectangle* (x1 y1 x2 y2) (scroll-bar-thumb-bed-region sb)
     (multiple-value-bind (minv maxv) (gadget-range* sb)
       (multiple-value-bind (v) (gadget-value sb)
-        (let ((ts (* 1/3 (- maxv minv))))
+        (let ((ts (scroll-bar-thumb-size sb)))
           (let ((ya (translate-range-value v minv (+ maxv ts) y1 y2))
                 (yb (translate-range-value (+ v ts) minv (+ maxv ts) y1 y2)))
             (make-rectangle* x1 ya x2 yb)))))))
@@ -964,7 +973,7 @@
       (case event-state
         (:dragging
          (let* ((y-new-thumb-top (- y drag-dy))
-                (ts (* 1/3 (- (gadget-max-value sb) (gadget-min-value sb))))
+                (ts (scroll-bar-thumb-size sb))
                 (new-value (translate-range-value y-new-thumb-top
                                                   (bounding-rectangle-min-y (scroll-bar-thumb-bed-region sb))
                                                   (bounding-rectangle-max-y (scroll-bar-thumb-bed-region sb))
