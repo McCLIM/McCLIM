@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.91 2002/07/12 06:30:50 adejneka Exp $
+;;; $Id: panes.lisp,v 1.92 2002/07/30 16:43:16 adejneka Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -1965,11 +1965,9 @@ During realization the child of the spacing will have as cordinates
 ;;; INTERACTOR PANES
 
 (defclass interactor-pane (clim-stream-pane)
-  ())
-
-(defmethod initialize-instance :before ((interactor interactor-pane) &rest args)
-  (declare (ignore args))
-  (setf (pane-scroll-bars interactor) :vertical))
+  ()
+  (:default-initargs :display-time nil
+                     :scroll-bars :vertical))
 
 (defmethod initialize-instance :after ((pane interactor-pane) &rest args)
   (declare (ignore args))
@@ -1980,41 +1978,33 @@ During realization the child of the spacing will have as cordinates
 ;;; APPLICATION PANES
 
 (defclass application-pane (clim-stream-pane)
-  ())
-
-(defmethod initialize-instance :before ((application application-pane) &rest args)
-  (declare (ignore args))
-  (setf (pane-display-time application) :command-loop
-	(pane-scroll-bars application) t))
-
+  ()
+  (:default-initargs :display-time :command-loop
+                     :scroll-bars t))
 
 ;;; COMMAND-MENU PANE
 
 (defclass command-menu-pane (clim-stream-pane)
-  ())
-
-(defmethod initialize-instance :before ((command-menu command-menu-pane) &rest ignore)
-  (declare (ignore ignore))
-  (setf (pane-display-time command-menu) :command-loop
-	(pane-incremental-redisplay command-menu) t
-	(pane-scroll-bars command-menu) t
-	(pane-display-function command-menu) 'display-command-menu))
-
+  ()
+  (:default-initargs :display-time :command-loop
+                     :incremental-redisplay t
+                     :scroll-bars t
+                     :display-function 'display-command-menu))
 
 ;;; TITLE PANE
 
 (defclass title-pane (clim-stream-pane)
-  ())
-
-(defmethod initialize-instance :before ((title title-pane) &rest args)
-  (declare (ignore args))
-  (setf (pane-display-time title) t))
-
+  ()
+  (:default-initargs :display-time t
+                     :scroll-bars nil
+                     :display-function 'display-title))
 
 ;;; POINTER DOCUMENTATION PANE
 
 (defclass pointer-documentation-pane (clim-stream-pane)
-  ())
+  ()
+  (:default-initargs :display-time nil
+                     :scroll-bars nil))
 
 
 ;;; CONSTRUCTORS
