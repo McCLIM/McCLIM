@@ -70,7 +70,8 @@
     (let ((arglist #+excl (excl:arglist (symbol-function thing))
                    #+cmu (kernel:%function-arglist (symbol-function thing))
                    #+sbcl (sb-kernel:%simple-fun-arglist (symbol-function thing))
-                   #-(or excl cmu sbcl) "( ??? )"))
+                   #+clisp (ext:arglist (symbol-function thing))
+                   #-(or excl cmu sbcl clisp) "( ??? )"))
       (when arglist
         (clim:present arglist
                       (clim:presentation-type-of arglist)
