@@ -65,12 +65,11 @@
                                                     first-point-y)))))
 
 (defun search-selected-object (record x y)
-  (let ((selected-objects))
-    (map-over-output-records-containing-position
+  (map-over-output-records-containing-position
      #'(lambda (x)
-         (push x selected-objects))
+         (return-from search-selected-object x))
      record x y)
-    (first selected-objects)))
+  nil)
 
 (defun signum-1 (value)
   (if (zerop value)
@@ -217,6 +216,7 @@
                  (setf (clim-fig-current-color (gadget-client gadget))
                        color))
 	     :width width :height height
+             :background color :foreground color
 	     :normal color :pushed-and-highlighted color
 	     :highlighted color))
 
@@ -253,33 +253,25 @@
 		      (elt (output-record-children output-history)
 			   (1- record-count)))))
     (if record
-        (with-output-recording-options (*standard-output* :record nil)
-          (with-bounding-rectangle* (x1 y1 x2 y2) record
-            (draw-rectangle* *standard-output* x1 y1 x2 y2 :ink +background-ink+)
-            (delete-output-record record output-history)
-            (push record (clim-fig-redo-list *application-frame*))
-            (replay-output-record output-history *standard-output*
-                                  (make-rectangle* x1 y1 x2 y2))))
+        (progn
+          (erase-output-record record *standard-output*)
+          (push record (clim-fig-redo-list *application-frame*)))
         (beep))))
 
 (define-command com-redo ()
-  (let* ((output-history (clim-fig-output-record *application-frame*))
-         (record (pop (clim-fig-redo-list *application-frame*))))
+  (let* ((record (pop (clim-fig-redo-list *application-frame*))))
     (if record
-        (with-output-recording-options (*standard-output* :record nil)
-          (with-bounding-rectangle* (x1 y1 x2 y2) record
-            (draw-rectangle* *standard-output* x1 y1 x2 y2 :ink +background-ink+)
-            (add-output-record record output-history)
-            (replay-output-record output-history *standard-output*
-                                  (make-rectangle* x1 y1 x2 y2))))
+        (progn
+          (stream-add-output-record *standard-output* record)
+          (replay record *standard-output* (bounding-rectangle record)))
         (beep))))
 
 (define-command com-clear ()
-  (setf (clim-demo::clim-fig-redo-list *application-frame*)
+  (setf (clim-fig-redo-list *application-frame*)
         (append (coerce (output-record-children (clim-fig-output-record
 						 *application-frame*))
-			'list) 
-                (clim-demo::clim-fig-redo-list *application-frame*)))
+			'list)
+                (clim-fig-redo-list *application-frame*)))
   (window-clear *standard-output*))
 
 (make-command-table 'file-command-table
@@ -418,9 +410,9 @@
   (let ((*standard-input* (frame-standard-input frame))
 	(*standard-output* (frame-standard-output frame))
 	(*query-io* (frame-query-io frame)))
-    (setf (slot-value frame 'output-record)
+    (setf (clim-fig-output-record frame)
           (stream-current-output-record *standard-output*)
-          (slot-value frame 'status)
+          (clim-fig-status frame)
           (find-if #'(lambda (pane) (typep pane 'text-field-pane))
                    (frame-panes frame)))
     (catch 'exit
