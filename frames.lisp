@@ -401,7 +401,7 @@ input focus. This is a McCLIM extension."))
 	   'command-line-read-remaining-arguments-for-partial-command)
 	  (prompt "Command: "))
   (loop
-    (let ((*standard-input* (frame-standard-input frame))
+    (let ((*standard-input*  (frame-standard-input frame))
 	  (*standard-output* (frame-standard-output frame))
 	  (*query-io* (frame-query-io frame))
 	  (*pointer-documentation-output* (frame-pointer-documentation-output
@@ -417,7 +417,7 @@ input focus. This is a McCLIM extension."))
           ;; We don't need to turn the cursor on here, as Goatee has its own
           ;; cursor which will appear. In fact, as a sane interface policy,
           ;; leave it off by default, and hopefully this doesn't violate the spec.
-          (progn
+          (progn            
             (setf (cursor-visibility (stream-text-cursor *standard-input*)) nil)
             (when prompt
               (with-text-style (*standard-input* prompt-style)
@@ -430,7 +430,7 @@ input focus. This is a McCLIM extension."))
               (when command
                 (execute-frame-command frame command))
               (fresh-line *standard-input*)))
-        (simple-event-loop)))))          
+        (simple-event-loop)))))
 
 
 (defmethod read-frame-command ((frame application-frame)
@@ -1004,8 +1004,8 @@ input focus. This is a McCLIM extension."))
   (declare (ignore input-context stream event))
   nil)
 
-(defmethod frame-input-context-track-pointer :before
-    ((frame standard-application-frame) input-context stream event)
+(defun frame-highlight-at-position (frame stream x y &optional (modifier 0)
+                                          (input-context *input-context*))
   (flet ((maybe-unhighlight (presentation)
 	   (when (and (frame-hilited-presentation frame)
 		      (not (eq presentation
@@ -1016,11 +1016,10 @@ input focus. This is a McCLIM extension."))
     (if (output-recording-stream-p stream)
 	(let ((presentation (find-innermost-applicable-presentation
 			     input-context
-			     stream
-			     (device-event-x event)
-			     (device-event-y event)
+                             stream
+			     x y
 			     :frame frame
-			     :modifier-state (event-modifier-state event))))
+			     :modifier-state modifier)))
 	  (maybe-unhighlight presentation)
 	  (if presentation
 	      (when (not (eq presentation
@@ -1031,7 +1030,16 @@ input focus. This is a McCLIM extension."))
 	      (setf (frame-hilited-presentation frame) nil)))
 	(progn
 	  (maybe-unhighlight nil)
-	  (setf (frame-hilited-presentation frame) nil))))
+	  (setf (frame-hilited-presentation frame) nil)))))
+  
+(defmethod frame-input-context-track-pointer :before
+    ((frame standard-application-frame) input-context
+     (stream output-recording-stream) event)
+  (frame-highlight-at-position frame stream
+                               (device-event-x event)
+                               (device-event-y event)
+                               (event-modifier-state event)
+                               input-context)
   (frame-update-pointer-documentation frame input-context stream event))
 
 (defun simple-event-loop ()
