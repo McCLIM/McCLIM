@@ -1100,9 +1100,18 @@ were added."
          ;; XXX STANDARD-OUTPUT-RECORDING-STREAM ^?
 	 (with-sheet-medium (medium stream)
 	   (when (stream-recording-p stream)
-	     (let ((record (make-instance ',class-name
-                                          :stream stream
-                                          ,@arg-list)))
+	     (let ((record
+                    ;; Hack: the coord-seq-mixin makes the assumption that, well
+                    ;; coord-seq is a coord-vector. So me morph a possible
+                    ;; coord-seq argument into a vector.
+                    (let (,@(when (member 'coord-seq args)
+                                  (list `(coord-seq
+                                          (if (listp coord-seq)
+                                              (coerce coord-seq 'vector)
+                                              coord-seq)))))
+                      (make-instance ',class-name
+                                     :stream stream
+                                     ,@arg-list))))
 	       (stream-add-output-record stream record)))
 	   (when (stream-drawing-p stream)
              (with-identity-transformation (medium)
