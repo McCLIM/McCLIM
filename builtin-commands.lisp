@@ -63,11 +63,6 @@
 (define-gesture-name :describe-presentation :pointer-button-press
   (:left :super))
 
-;;; This is defined as a command, not just as a translator to
-;;; com-describe, so it can be disabled independently of
-;;; com-describe. Also, it might do something different from
-;;; com-describe someday.
-
 ;;; The argument obj is not really the presentation object but the
 ;;; presentation itself as supplied by the translator.
 (define-command (com-describe-presentation :command-table global-command-table)
@@ -80,7 +75,8 @@
      :tester ((presentation)
 	      (not (eq presentation *null-presentation*)))
      :documentation "Describe Presentation"
-     :pointer-documentation "Describe Presentation")
+     :pointer-documentation "Describe Presentation"
+     :menu presentation-debugging)
   (presentation)
   (list presentation))
 
