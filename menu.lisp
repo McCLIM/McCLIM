@@ -162,7 +162,7 @@
 	  (mapc #'destroy-substructure (menu-children client))
 	  (create-substructure sub-menu sub-menu)))
     (arm-menu sub-menu)))
-	      
+
 (defmethod handle-event ((pane menu-button-submenu-pane) (event pointer-button-release-event))
   (destroy-substructure (menu-root pane)))
 
@@ -189,8 +189,17 @@
 		     :client client
 		     :value-changed-callback
 		     #'(lambda (gadget val)
-			 (declare (ignore gadget val))
-			 (funcall value)))
+			 (declare (ignore val))
+			 (throw-highlighted-presentation
+                          (make-instance 'standard-presentation
+                                         :object (list value)
+                                         :type 'command)
+                          *input-context*
+                          (make-instance 'pointer-button-press-event
+                                         :sheet gadget
+                                         :x 0 :y 0
+                                         :modifier-state 0
+                                         :button +pointer-left-button+))))
 	(make-pane-1 manager frame 'menu-button-submenu-pane
 		     :label name
 		     :client client
