@@ -1,3 +1,58 @@
+TBM:20031112:002300
+    These are TODO's from the 0.9 release notes. The listed functions
+    are unimplemented unless otherwise noted.
+
+    General designs need more work, particularly the support of
+    compositing.
+
+    A compound output recording record structure based on R trees or
+    another spatial data structure is needed.
+
+    make-design-from-output-record
+
+    surrounding-output-with-border - :move-cursor
+
+    filling-output - :after-line-break-initially
+
+    (setf* pointer-position)
+
+    drag-output-record, dragging-output
+
+    More spiffy presentation accept and present methods
+
+    presentation-single-box
+
+    presentation type histories
+
+    presentation-default-processor
+
+    define-drag-and-drop-translator
+
+    with-input-editor-typeout
+
+    read-only extents in Goatee
+
+    with-accept-help
+
+    accepting-values needs a lot of work
+
+    command-line-complete-input
+
+    display-command-table-menu, menu-choose-command-from-table
+
+    command-or-form presentation type
+
+    raise-frame, bury-frame, notify-user
+
+    :accept-values panes
+
+    frame-maintain-presentation-histories,
+    frame-drag-and-drop-feedback, frame-drag-and-drop-highlighting 
+
+    command-enable, display-command-menu
+
+    restraining-pane
+
 RS:20030805:111640
     Changing the sheet-transformation of a pane does not alter its
     native transformation, despite the fact that calls are made to

@@ -1,6 +1,8 @@
 Install instructions for CMU Common Lisp
 ----------------------------------------
 
+McCLIM has been tested with CMUCL 18e.
+
 1. Make sure you have a Lisp core file that includes 
 
    - CLX

@@ -1,3 +1,5 @@
+The OpenGL backend hasn't been tested recently.
+
 Here is a list of what we think works, organized by chapters and
 sections of the CLIM 2 specification.
 
@@ -209,3 +211,5 @@ sections of the CLIM 2 specification.
     restraining-pane isn't implemented.
 
   Chapter 30 Gadgets
+
+    This chapter is implemented.

@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.133 2003/10/20 01:29:05 hefner1 Exp $
+;;; $Id: panes.lisp,v 1.134 2003/11/11 23:45:15 moore Exp $
 
 (in-package :clim-internals)
 
@@ -966,7 +966,8 @@
     :type     (member :vertical :horizontal)
     :accessor box-layout-orientation)
    (clients
-    :accessor box-layout-mixin-clients)
+    :accessor box-layout-mixin-clients
+    :initform nil)
    )
   (:documentation
    "Mixin class for layout panes, which want to behave like a HBOX/VBOX."))
@@ -1943,6 +1944,11 @@
     (if (and parent (typep parent 'viewport-pane))
 	parent
       nil)))
+
+;;; Default for streams that aren't even panes.
+
+(defmethod pane-viewport-region ((pane t))
+  nil)
 
 (defmethod pane-viewport-region ((pane basic-pane))
   (let ((viewport (pane-viewport pane)))

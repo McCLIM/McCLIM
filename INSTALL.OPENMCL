@@ -1,6 +1,8 @@
 Install instructions for OpenMCL on Mac OS X
 --------------------------------------------
 
+McCLIM has been tested with OpenMCL 0.13.6 and OpenMCL 0.14-031018.
+
 These instructions are for using McCLIM, with its CLX backend, with
 OpenMCL.
 
