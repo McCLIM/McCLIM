@@ -166,7 +166,7 @@ setmatrix")
     (lambda () ,@body)))
 
 (defun postscript-save-graphics-state (medium)
-  (push (copy-alist (postscript-medium-graphics-state medium))
+  (push (copy-list (postscript-medium-graphics-state medium))
         (slot-value (medium-sheet medium) 'graphics-state-stack))
   (format (postscript-medium-file-stream medium) "gsave~%"))
 
