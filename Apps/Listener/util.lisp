@@ -64,6 +64,7 @@
   (or 
    #+cmu (cdr (assoc var ext:*environment-list*))
    #+sbcl (sb-ext:posix-getenv var)
+   #+lispworks (lw:environment-variable var)    
    nil))
 
 ;; A farce of a  "portable" run-program, which grows as I need options from
@@ -76,7 +77,14 @@
 
   #+SBCL (sb-ext:run-program program args :input input :search T
                                           :output output :wait wait)
-  #-(or CMU SBCL) (format T "~&Sorry, don't know how to run programs in your CL.~%"))
+  #+lispworks (system:call-system-showing-output   
+               (format nil "~A~{ ~A~}" program args)
+               :shell-type "/bin/sh"
+               :output-stream output
+               :wait wait)
+
+  #-(or CMU SBCL lispworks)
+  (format T "~&Sorry, don't know how to run programs in your CL.~%"))
 
 
 ;; CLIM/UI utilities
@@ -100,3 +108,4 @@
   (with-drawing-options (T :ink (or ink +royal-blue+) :text-style (make-text-style :sans-serif :bold nil))
      (bordering (T :underline)                        
       (funcall cont))))
+

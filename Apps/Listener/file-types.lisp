@@ -179,7 +179,7 @@
   (:icon (standard-icon "design.xpm")))
 
 (define-mime-type (application x-lisp-fasl)
-  (:extensions "x86f" "fasl" "ibin" "dfsl") ; MORE!
+  (:extensions "x86f" "fasl" "ibin" "dfsl" "ufsl") ; MORE!
   (:icon (standard-icon "object.xpm")))
 
 (define-mime-type (text x-shellscript)

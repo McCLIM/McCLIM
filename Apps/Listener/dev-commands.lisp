@@ -166,7 +166,7 @@
 
 (define-command (com-compile-and-load :name "Compile and load"
                                       :command-table dev-commands)
-  ((pathname 'pathname :prmopt "pathname"))
+  ((pathname 'pathname :prompt "pathname"))
   (load (compile-file pathname)))
 
 ;;; CLOS introspection commands
