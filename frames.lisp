@@ -535,7 +535,7 @@ frame, if any")
                  ;; cursor which will appear. In fact, leaving it on causes much
                  ;; bit flipping and slows command output somewhat. So, leave it
                  ;; off by default, and hope this doesn't violate the spec.  
-		   (progn            
+		   (progn
 		     (setf (cursor-visibility (stream-text-cursor *query-io*))
 			   nil)
 		     (when (and prompt interactorp)
@@ -560,14 +560,14 @@ frame, if any")
 		 (beep))))))))
 
 (defmethod read-frame-command :around ((frame application-frame)
-				       &key (stream *standard-input*))
+				       &key (stream *standard-input*))  
   (with-input-context ('menu-item)
       (object)
       (call-next-method)
     (menu-item
      (let ((command (command-menu-item-value object)))
        (unless (listp command)
-	 (setq command (list command)))
+	 (setq command (list command)))       
        (if (and (typep stream 'interactor-pane)
 		(member *unsupplied-argument-marker* command :test #'eq))
 	   (command-line-read-remaining-arguments-for-partial-command
@@ -576,7 +576,7 @@ frame, if any")
 
 (defmethod read-frame-command ((frame application-frame)
 			       &key (stream *standard-input*))
-      (read-command (frame-command-table frame) :stream stream))
+  (read-command (frame-command-table frame) :use-keystrokes t :stream stream))
 
 (defmethod execute-frame-command ((frame application-frame) command)
   (apply (command-name command) (command-arguments command)))

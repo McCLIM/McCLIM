@@ -27,12 +27,10 @@
 ;;; right place to do the transformation...
 
 ;;  Why exactly do we want to see #\Delete instead of #\Backspace?
-;;  There is a seperate Delete key, unless your keyboard is strange. --Hefner
+;;  There is a separate Delete key, unless your keyboard is strange. --Hefner
 
 (defconstant +read-char-map+ '((#\Return . #\Newline)
 			       #+nil (#\Backspace . #\Delete)))
-
-
 
 (defvar *abort-gestures* '(:abort))
 
@@ -425,7 +423,7 @@
 			      (:page . #\page)
 			      (:rubout . #\rubout)))
 
-(defun add-gesture-name (name type gesture-spec &key unique)
+(defun realize-gesture-spec (type gesture-spec)
   ;; Some CLIM code (scigraph) assumes that gesture-spec can be a symbol.
   (unless (listp gesture-spec)
     (setq gesture-spec (list gesture-spec)))
@@ -434,25 +432,28 @@
     (let* ((modifier-state (apply #'make-modifier-state modifiers)))
       (cond ((and (eq type :keyboard)
 		  (symbolp device-name))
-	     (let ((real-device-name (cdr (assoc device-name +name-to-char+))))
-	       (unless real-device-name
-		 (error "~S is not a known key name" device-name))
-	       (setq device-name real-device-name)))
+             (setq device-name (or (cdr (assoc device-name +name-to-char+))
+                                   device-name)))
 	    ((and (member type '(:pointer-button
 				 :pointer-button-press
 				 :pointer-button-release)
 			  :test #'eq))
 	     (let ((real-device-name
 		    (case device-name
-		      (:left +pointer-left-button+)
-		      (:middle +pointer-middle-button+)
-		      (:right +pointer-right-button+)
+		      (:left       +pointer-left-button+)
+		      (:middle     +pointer-middle-button+)
+		      (:right      +pointer-right-button+)
+                      (:wheel-up   +pointer-wheel-up+)
+                      (:wheel-down +pointer-wheel-down+)
 		      (t (error "~S is not a known button" device-name)))))
 	       (setq device-name real-device-name))))
-      (let ((gesture-entry (list type device-name modifier-state)))
+      (values type device-name modifier-state))))
+
+(defun add-gesture-name (name type gesture-spec &key unique)  
+      (let ((gesture-entry (multiple-value-list (realize-gesture-spec type gesture-spec))))
 	(if unique
 	    (setf (gethash name *gesture-names*) (list gesture-entry))
-	    (push gesture-entry (gethash name *gesture-names*)))))))
+	    (push gesture-entry (gethash name *gesture-names*)))))
 
 (defgeneric character-gesture-name (name))
 
@@ -480,8 +481,12 @@
 				   (type (eql :keyboard))
 				   device-name
 				   modifier-state)
-  (and (eql (keyboard-event-character event) device-name)
-       (eql (event-modifier-state event) modifier-state)))
+  (let ((character (keyboard-event-character event))
+        (name      (keyboard-event-key-name event)))
+    (and (if character
+             (eql character device-name)
+             (eql name device-name))
+         (eql (event-modifier-state event) modifier-state))))
 
 (defmethod %event-matches-gesture ((event pointer-button-press-event)
 				   type
@@ -522,7 +527,15 @@
        (eql modifier-state 0)))
 
 (defun event-matches-gesture-name-p (event gesture-name)
-  (let ((gesture-entry (gethash gesture-name *gesture-names*)))
+  ;; Just to be nice, we special-case literal characters here.
+  ;; We also special-case literal 'physical' gesture specs of
+  ;; the form (type device-name modifier-state).
+  ;; The CLIM spec requires neither of these things.
+  (let ((gesture-entry
+         (typecase gesture-name
+           (character (list (multiple-value-list (realize-gesture-spec :keyboard gesture-name))))
+           (cons (list gesture-name)) ;; Literal physical gesture
+           (t (gethash gesture-name *gesture-names*)))))    
     (loop for (type device-name modifier-state) in gesture-entry
 	  do (when (%event-matches-gesture event
 					   type

@@ -230,6 +230,8 @@
 		   (command-name-from-symbol command-name)))
 	      ((consp menu)
 	       (values (car menu) (cdr menu))))
+      (when keystroke
+        (add-keystroke-to-command-table command-table keystroke :command command-name :errorp nil))
       (let* ((item (if menu
 		       (apply #'make-menu-item
 			      menu-name :command menu-command
@@ -408,22 +410,32 @@
 		       item)))
 	(slot-value (find-command-table command-table) 'menu)))
 
+;; At this point we should still see the gesture name as supplied by the
+;; programmer in 'gesture'
 (defun %add-keystroke-item (command-table gesture item errorp)
   (with-slots (keystroke-accelerators keystroke-items)
       command-table
-    (let ((in-table (position gesture keystroke-accelerators :test #'equal)))
-      (when errorp
-	(error 'command-already-present))
+    (let* ((gesture (if (and (symbolp gesture) ; symbolic gesture name?
+                             (gethash gesture *gesture-names*))
+                        gesture
+                        (multiple-value-list (realize-gesture-spec :keyboard gesture))))
+           (in-table (position gesture keystroke-accelerators :test #'equal)))
+      (when (and in-table errorp)
+        (error 'command-already-present))
       (if in-table
 	  (setf (nth in-table keystroke-items) item)
 	  (progn
 	    (push gesture keystroke-accelerators)
 	    (push item keystroke-items))))))
 
+;; FIXME: According to the spec, we need to remove the menu item if already
+;; present. Also, you could argue we don't signal 'command-already-present
+;; in quite the right circumstance (see above).
 (defun add-keystroke-to-command-table (command-table gesture type value
 				       &key documentation (errorp t))
   (let ((command-table (find-command-table command-table)))
-    (%add-keystroke-item command-table gesture
+    (%add-keystroke-item command-table
+                         gesture
 			 (make-instance 'menu-item
 					:type type :value value
 					:keystroke gesture
@@ -435,7 +447,7 @@
   (let ((command-table (find-command-table command-table)))
     (with-slots (keystroke-accelerators keystroke-items)
 	command-table
-      (let ((in-table (position gesture keystroke-accelerators)))
+      (let ((in-table (position gesture keystroke-accelerators :test #'equal)))
 	(if in-table
 	    (if (zerop in-table)
 		(setq keystroke-accelerators (cdr keystroke-accelerators)
@@ -497,6 +509,16 @@
 	(error 'command-not-present)
 	nil)))
 
+(defun partial-command-from-name (command-name)
+  (let ((parser (gethash command-name *command-parser-table*)))
+    (if (null parser)
+        (error 'command-not-present)
+        (cons command-name
+              (mapcar #'(lambda (foo)
+                          (declare (ignore foo))
+                          *unsupplied-argument-marker*)
+                      (required-args parser))))))
+  
 ;;; XXX The spec says that GESTURE may be a gesture name, but also that the
 ;;; default test is event-matches-gesture-name-p.  Uh...
 
@@ -520,7 +542,11 @@
 			 ;; XXX What about the :menu case?
 			 (otherwise nil))))
 	  (if command
-	      (substitute-numeric-argument-marker command numeric-arg)
+              ; Return a literal command, or create a partial command from a command-name              
+	      (substitute-numeric-argument-marker (if (symbolp command)
+                                                      (partial-command-from-name command)
+                                                      command)
+                                                  numeric-arg)
 	      gesture))
 	gesture)))
 
@@ -532,7 +558,9 @@
   ((parser :accessor parser :initarg :parser)
    (partial-parser :accessor partial-parser :initarg :partial-parser)
    (argument-unparser :accessor argument-unparser
-		      :initarg :argument-unparser))
+		      :initarg :argument-unparser)
+   (required-args :accessor required-args :initarg :required-args)
+   (keyword-args :accessor keyword-args :initarg :keyword-args))
   
   (:documentation "A container for a command's parsing functions and
   data for unparsing"))
@@ -847,8 +875,8 @@
 	`(progn
 	  (defun ,func ,command-func-args
 	    ,@body)
-	  ,(if command-table
-	       `(add-command-to-command-table ',func ',command-table
+	  ,(when command-table
+                 `(add-command-to-command-table ',func ',command-table
 		 :name ,name :menu ',menu
 		 :keystroke ',keystroke :errorp nil
 		 ,@(and menu
@@ -870,6 +898,8 @@
 	        (make-instance 'command-parsers
 		               :parser #',accept-fun-name
 		               :partial-parser #',partial-parser-fun-name
+                               :required-args ',required-args
+                               :keyword-args  ',keyword-args
 			       :argument-unparser #',arg-unparser-fun-name))
 	  ',func)))))
 
@@ -1268,8 +1298,16 @@
 	(*accelerator-gestures* keystrokes))
     (handler-case (read-command command-table :stream stream)
       (accelerator-gesture (c)
-	(lookup-keystroke-command-item (accelerator-gesture-event c)
-				       command-table)))))
+        ;; If lookup-keystroke-item below returns a partial command, invoke the
+        ;; partial command parser to complete it.
+        (let ((command                            
+               (lookup-keystroke-command-item (accelerator-gesture-event c)
+                                              command-table)))
+          (if (partial-command-p command)
+              (funcall *partial-command-parser*
+                       command-table stream command
+                       (position *unsupplied-argument-marker* command))
+              command))))))
 
 (defun substitute-numeric-argument-marker (command numeric-arg)
   (substitute numeric-arg *numeric-argument-marker* command))

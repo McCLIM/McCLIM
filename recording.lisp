@@ -254,6 +254,9 @@ unspecified. "))
 (defgeneric invoke-with-output-recording-options
     (stream continuation record draw))
 
+;; The 'constructor' arg is absent from the CLIM 2.0 spec but is documented
+;; in the Allegro CLIM 2 User Guide and appears to exist in other 'classic'
+;; CLIM implementations. I'm assuming it's an omission from the spec.
 (defgeneric invoke-with-new-output-record
     (stream continuation record-type constructor
      &key &allow-other-keys))
@@ -1541,7 +1544,9 @@ were added."
 	  (transform-distance transform radius-2-dx radius-2-dy))
     ;; I think this should be untransform-angle below, as the ellipse angles
     ;; go counter-clockwise in screen coordinates, whereas our transformations
-    ;; rotate clockwise..  -Hefner
+    ;; rotate clockwise in the default coorinate system.. this is quite possibly
+    ;; wrong depending on how one reads the spec, but just reversing it here
+    ;; will break other things.  -Hefner
     (setf start-angle (untransform-angle transform start-angle))
     (setf end-angle   (untransform-angle transform end-angle))
     (multiple-value-bind (min-x min-y max-x max-y)

@@ -117,6 +117,7 @@ table cell as argument."
      (letf (((stream-cursor-position stream) (values 0 0)))
        (funcall cont stream)))
    record-type
+   nil
    :align-x align-x
    :align-y align-y
    :min-width (parse-space stream min-width :horizontal)
