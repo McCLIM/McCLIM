@@ -77,6 +77,6 @@
    "clx-frame-manager"
    
    "examples/calculator"
-   "examples/sliderdemo"
+   "examples/colorslider"
    ))
 
