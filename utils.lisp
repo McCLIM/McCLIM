@@ -123,3 +123,26 @@ Note:
   (max min (min max value)))
   
 
+;;;;
+;;;; Protocol Classes
+;;;;
+
+(defmacro define-protocol-class (name super-classes &optional slots &rest options)
+  (let ((protocol-predicate
+         (intern (concatenate 'string (symbol-name name) (if (find #\- (symbol-name name)) "-" "") "P"))))
+    `(progn
+       (defclass ,name ,super-classes ,slots ,@options)
+
+       (let ((the-class (find-class ',name)))
+         (defmethod initialize-instance :after ((object ,name) &key &allow-other-keys)
+           (when (eq (class-of object) the-class)
+             (error "You are a fool; Since ~S is a protocol class, it is not instantiable."
+                    ',name))))
+     
+       (defmethod ,protocol-predicate ((object t))
+         nil)
+     
+       (defmethod ,protocol-predicate ((object ,name))
+         t)
+
+       ',name)))
