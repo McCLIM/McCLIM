@@ -1016,15 +1016,21 @@ During realization the child of the spacing will have as cordinates
                                          (pane-viewport-region
                                           (gadget-client gadget)))))
                              (scroll-extent (gadget-client gadget)
-                                            (* new-value (scroll-bar-length gadget)) old-y)))
+                                            new-value old-y)))
                        :scroll-up-page-callback
                        #'(lambda (scroll-bar)
                            (scroll-page-callback scroll-bar 1))
                        :scroll-down-page-callback
                        #'(lambda (scroll-bar)
                            (scroll-page-callback scroll-bar -1))
-                       :foreground +grey40+
-                       :background +grey+))
+                       :scroll-up-line-callback
+                       #'(lambda (scroll-bar)
+                           (scroll-line-callback scroll-bar 1))
+                       :scroll-down-line-callback
+                       #'(lambda (scroll-bar)
+                           (scroll-line-callback scroll-bar -1))
+                       :foreground +grey+
+                       :background +grey40+))
       (sheet-adopt-child pane hscrollbar))))
     
 (defmacro scrolling ((&rest options) &body contents)
