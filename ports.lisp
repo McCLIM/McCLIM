@@ -170,13 +170,13 @@ returns a list in CLIM X11 format (:x11 :host host-name :display-id display-numb
 (defmethod make-medium ((port port) sheet)
   (make-instance 'medium :port port :graft (graft sheet) :sheet sheet))
 
-(defmethod line-height ((port port) text-style)
+(defmethod port-line-height ((port port) text-style)
   (declare (ignore text-style))
   (error "LINE-HEIGHT fell thru to a generic PORT"))
 
-(defmethod character-width ((port port) char text-style)
-  (declare (ignore char text-style))
-  (error "CHARACTER-WIDTH fell thru to a generic PORT"))
+(defmethod port-character-width ((port port) text-style char)
+  (declare (ignore text-style char))
+  (error "PORT-CHARACTER-WIDTH fell thru to a generic PORT"))
 
 (defmethod port-copy-area ((port port) sheet from-x from-y width height to-x to-y)
   (declare (ignore sheet from-x from-y width height to-x to-y))

@@ -296,21 +296,6 @@
 	    (setf (gethash text-style table)
 		  (open-font (clx-port-display port) font-name)))))))
 
-(defmethod text-style-height (text-style (port clx-port))
-  (let ((font (text-style-to-X-font port text-style)))
-    (+ (xlib:font-ascent font) (xlib:font-descent font))))
-
-(defmethod text-style-ascent (text-style (port clx-port))
-  (let ((font (text-style-to-X-font port text-style)))
-    (xlib:font-ascent font)))
-
-(defmethod text-style-descent (text-style (port clx-port))
-  (let ((font (text-style-to-X-font port text-style)))
-    (xlib:font-descent font)))
-
-(defmethod text-style-width (text-style (port clx-port))
-  (xlib:char-width (text-style-to-X-font port text-style) (char-code #\m)))
-
 (defmethod port-character-width ((port clx-port) text-style char)
   (let* ((font (text-style-to-X-font port text-style))
 	 (width (xlib:char-width font (char-code char))))

@@ -165,6 +165,21 @@
 ;;;
 ;;; Methods for text styles
 
+(defmethod text-style-ascent (text-style (medium clx-medium))
+  (let ((font (text-style-to-X-font (port medium) text-style)))
+    (xlib:font-ascent font)))
+
+(defmethod text-style-descent (text-style (medium clx-medium))
+  (let ((font (text-style-to-X-font (port medium) text-style)))
+    (xlib:font-descent font)))
+
+(defmethod text-style-height (text-style (medium clx-medium))
+  (let ((font (text-style-to-X-font (port medium) text-style)))
+    (+ (xlib:font-ascent font) (xlib:font-descent font))))
+
+(defmethod text-style-width (text-style (medium clx-medium))
+  (xlib:char-width (text-style-to-X-font (port medium) text-style) (char-code #\m)))
+
 (defun translate (src src-start src-end afont dst dst-start)
   ;; This is for replacing the clx-translate-default-function
   ;; who does'nt know about accentated characters because

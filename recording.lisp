@@ -726,8 +726,8 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
  (let* ((width (stream-string-width stream string
                                     :start start :end end
                                     :text-style text-style))
-        (ascent (text-style-ascent text-style (port (sheet-medium stream))))
-        (descent (text-style-descent text-style (port (sheet-medium stream))))
+        (ascent (text-style-ascent text-style (sheet-medium stream)))
+        (descent (text-style-descent text-style (sheet-medium stream)))
         (height (+ ascent descent))
         left top right bottom)
    (ecase align-x
@@ -931,13 +931,12 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
   (when (and (stream-recording-p stream)
              (slot-value stream 'local-record-p))
     (let* ((medium (sheet-medium stream))
-           (text-style (medium-text-style medium))
-           (port (port stream)))
+           (text-style (medium-text-style medium)))
       (stream-add-string-output stream line 0 nil text-style
                                 (stream-string-width stream line
                                                      :text-style text-style)
-                                (text-style-height text-style port)
-                                (text-style-ascent text-style port))))
+                                (text-style-height text-style medium)
+                                (text-style-ascent text-style medium))))
   (when (stream-drawing-p stream)
     (without-local-recording stream
                              (call-next-method))))
@@ -950,12 +949,11 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
             (eql char #\newline))
         (stream-close-text-output-record stream)
       (let* ((medium (sheet-medium stream))
-             (text-style (medium-text-style medium))
-             (port (port stream)))
+             (text-style (medium-text-style medium)))
         (stream-add-character-output stream char text-style
                                      (stream-character-width stream char :text-style text-style)
-                                     (text-style-height text-style port)
-                                     (text-style-ascent text-style port)))))
+                                     (text-style-height text-style medium)
+                                     (text-style-ascent text-style medium)))))
   (without-local-recording stream
                            (call-next-method)))
 
@@ -968,14 +966,13 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
   (when (and (stream-recording-p stream)
              (slot-value stream 'local-record-p))
     (let* ((medium (sheet-medium stream))
-           (text-style (medium-text-style medium))
-           (port (port stream)))
+           (text-style (medium-text-style medium)))
       (stream-add-string-output stream string start end text-style
                                 (stream-string-width stream string
                                                      :start start :end end
                                                      :text-style text-style)
-                                (text-style-height text-style port)
-                                (text-style-ascent text-style port))))
+                                (text-style-height text-style medium)
+                                (text-style-ascent text-style medium))))
   (without-local-recording stream
                            (call-next-method)))
   
