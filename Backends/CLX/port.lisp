@@ -302,10 +302,10 @@
               (xlib:drawable-height mirror) (clamp y2 1 #xFFFF))))))
 
 (defmethod port-enable-sheet ((port clx-port) (mirror mirrored-sheet-mixin))
-  (xlib:map-window (sheet-direct-mirror sheet)) )
+  (xlib:map-window (sheet-direct-mirror mirror)) )
 
 (defmethod port-disable-sheet ((port clx-port) (mirror mirrored-sheet-mixin))
-  (xlib:unmap-window (sheet-direct-mirror sheet)) )
+  (xlib:unmap-window (sheet-direct-mirror mirror)) )
 
 (defmethod destroy-port :before ((port clx-port))
   (xlib:close-display (clx-port-display port)))

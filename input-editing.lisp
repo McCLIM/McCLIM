@@ -113,6 +113,7 @@
 (defmethod stream-process-gesture :after ((stream standard-input-editing-stream)
 					  gesture
 					  type)
+  (declare (ignore type))
   (when (activation-gesture-p gesture)
     (unless (eql (stream-insertion-pointer stream)
 		 (fill-pointer (stream-input-buffer stream)))
@@ -351,6 +352,7 @@
   (char-equal gesture spec))
 
 (defmethod gesture-matches-spec-p (gesture spec)
+  (declare (ignore gesture spec))
   nil)
 
 (defun gesture-match (gesture list)
@@ -423,6 +425,7 @@
 		     (multiple-value-bind
 			   (input success object nmatches possibilities)
 			 (funcall func (subseq so-far 0) mode)
+		       (declare (ignorable possibilities))
 		       (when (and (zerop nmatches)
 				  (eq mode :complete-limited)
 				  (complete-gesture-p gesture))
@@ -606,7 +609,7 @@
        ;; we want the partial-delimiters argument and we need to insure its
        ;; proper evaluation order with everything else.
        (let* ((complete-input-args (list ,args))
-	      (partial-completers (getf ,complete-input-args
+	      (partial-completers (getf complete-input-args
 					:partial-completers
 					nil)))
 	 (apply #'complete-input

@@ -106,16 +106,17 @@
       #-NIL ; being fixed at the moment, a bit twitchy though -- BTS
       (let ((clipping-region (medium-device-region medium)))
         (unless (region-equal clipping-region +nowhere+)
-          (let ((tr (sheet-native-transformation (medium-sheet medium))))
-            (let ((rect-seq (clipping-region->rect-seq clipping-region)))
-              (when rect-seq
-                #+nil ; ok, what McCLIM is generating is not :yx-banded... (currently at least)
-                (setf (xlib:gcontext-clip-mask gc :yx-banded) rect-seq)
-                #-nil ; the region code doesn't support yx-banding...
-                      ; or does it? what does y-banding mean in this implementation?
-                      ; well, apparantly it doesn't mean what y-sorted means
-                      ; to clx :] we stick with :unsorted until that can be sorted out
-                (setf (xlib:gcontext-clip-mask gc :unsorted) rect-seq))))))
+	  (let ((rect-seq (clipping-region->rect-seq clipping-region)))
+	    (when rect-seq
+	      #+nil
+	      ;; ok, what McCLIM is generating is not :yx-banded... (currently at least)
+	      (setf (xlib:gcontext-clip-mask gc :yx-banded) rect-seq)
+	      #-nil
+	      ;; the region code doesn't support yx-banding...
+	      ;; or does it? what does y-banding mean in this implementation?
+	      ;; well, apparantly it doesn't mean what y-sorted means
+	      ;; to clx :] we stick with :unsorted until that can be sorted out
+	      (setf (xlib:gcontext-clip-mask gc :unsorted) rect-seq)))))
       gc)))
 
 (defmethod medium-gcontext ((medium clx-medium) (ink (eql +foreground-ink+)))

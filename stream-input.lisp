@@ -435,6 +435,7 @@
 (defgeneric %event-matches-gesture (event type device-name modifier-state))
 
 (defmethod %event-matches-gesture (event type device-name modifier-state)
+  (declare (ignore event type device-name modifier-state))
   nil)
 
 (defmethod %event-matches-gesture ((event key-press-event)
@@ -493,7 +494,7 @@
 	  finally (return nil))))
 
 (defun modifier-state-matches-gesture-name-p (modifier-state gesture-name)
-  (loop for (type device-name gesture-state) in (gethash gesture-name
+  (loop for (nil nil gesture-state) in (gethash gesture-name
 							 *gesture-names*)
 	do (when (eql gesture-state modifier-state)
 	     (return-from modifier-state-matches-gesture-name-p t))

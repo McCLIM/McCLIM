@@ -38,7 +38,7 @@
 (defclass pixie-gadget () (
    (highlighted      :initarg :highlight
                      :initform +gray93+
-                     :reader pane-foreground)
+                     :reader pane-highlight)
    (paper-color      :initarg :paper-color
                      :initform +white+
                      :reader pane-paper-color)
@@ -108,10 +108,10 @@
     (:vertical   +identity-transformation+)
     (:horizontal (make-transformation 0 1 1 0 0 0))))
 
-(defun translate-range-value (a mina maxa mino maxo)
-  "When \arg{a} is some value in the range from \arg{mina} to \arg{maxa},
-   proportionally translate the value into the range \arg{mino} to \arg{maxo}."
-  (+ mino (* (/ (- a mina) (- maxa mina)) (- maxo mino))))
+;(defun translate-range-value (a mina maxa mino maxo)
+;  "When \arg{a} is some value in the range from \arg{mina} to \arg{maxa},
+;   proportionally translate the value into the range \arg{mino} to \arg{maxo}."
+;  (+ mino (* (/ (- a mina) (- maxa mina)) (- maxo mino))))
 
 (defmethod gadget-thumb-region ((pane pixie-slider-pane))
   (with-bounding-rectangle* (x1 y1 x2 y2) (gadget-bed-region pane)
@@ -183,6 +183,7 @@
     (multiple-value-bind (x y)
         (transform-position (vertical-gadget-orientation-transformation pane)
                             (pointer-event-x event) (pointer-event-y event))
+      (declare (ignore x))
       (when dragging
         (let* ((y-new-thumb-top (- y drag-delta))
                (bed-region      (gadget-bed-region pane))
@@ -378,18 +379,6 @@
       (setf armed nil)
       (disarmed-callback pane (gadget-client pane) (gadget-id pane))))))
 
-(defmethod handle-event ((pane pixie-scroll-bar-pane) (event pointer-motion-event))
-  (with-slots (dragging) pane
-    (when dragging
-      (let ((value (convert-position-to-value
-                     pane
-                     (if (eq (gadget-orientation pane) :vertical)
-                             (pointer-event-y event)
-                             (pointer-event-x event)))))
-	(setf (gadget-value pane :invoke-callback nil) value)
-	(drag-callback pane (gadget-client pane) (gadget-id pane) value)
-	(dispatch-repaint pane (sheet-region pane))))))
-
 (defmethod handle-event ((pane pixie-scroll-bar-pane) (event pointer-button-release-event))
   (with-slots (armed dragging) pane
     (when dragging
@@ -433,6 +422,7 @@
     (multiple-value-bind (x y)
         (transform-position (vertical-gadget-orientation-transformation pane)
                             (pointer-event-x event) (pointer-event-y event))
+      (declare (ignore x))
       (when dragging
         (let* ((y-new-thumb-top (- y drag-delta))
                (ts (gadget-thumb-size pane))
@@ -509,6 +499,7 @@
 (defclass pixie-menu-bar-pane (pixie-gadget menu-bar) ())
 
 (defmethod handle-repaint ((pane pixie-menu-bar-pane) region)
+  (declare (ignore region))
   (with-special-choices (pane)
     (let* ((region (sheet-region pane))
            (frame (polygon-points (bounding-rectangle region))))
@@ -517,14 +508,14 @@
 
 (defclass pixie-menu-button-pane (pixie-gadget menu-button-pane) ())
 
-(defmethod handle-event ((pane menu-button-pane) (event pointer-enter-event))
+(defmethod handle-event ((pane pixie-menu-button-pane) (event pointer-enter-event))
   (when (slot-value (slot-value pane 'client) 'armed)
     (arm-branch pane)))
 
-(defmethod handle-event ((pane menu-button-pane) (event pointer-button-press-event))
+(defmethod handle-event ((pane pixie-menu-button-pane) (event pointer-button-press-event))
   (arm-branch pane))
 
-(defmethod handle-event ((pane menu-button-pane) (event pointer-ungrab-event))
+(defmethod handle-event ((pane pixie-menu-button-pane) (event pointer-ungrab-event))
   (destroy-substructure (menu-root pane)))
 
 

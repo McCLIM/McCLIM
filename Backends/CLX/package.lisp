@@ -1,3 +1,7 @@
+;;; -*- Mode: Lisp; Package: COMMON-LISP-USER -*-
+
+(in-package :common-lisp-user)
+
 (defpackage :clim-clx
   (:use :clim :clim-lisp)
   (:import-from :climi

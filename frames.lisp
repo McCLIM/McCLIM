@@ -225,15 +225,6 @@ FRAME-EXIT condition."))
 
 (defun find-pane-if (predicate panes)
   "Returns a pane satisfying PREDICATE in the forest growing from PANES"
-  (setq panes (copy-list panes))
-  (do ((pane (pop panes)(pop panes)))
-      ((null pane) nil)
-    (if (funcall predicate pane)
- 	(return pane)
-      (setq panes (nconc panes (copy-list (sheet-children pane)))))))
-
-(defun find-pane-if (predicate panes)
-  "Returns a pane satisfying PREDICATE in the forest growing from PANES"
   (loop for pane in panes
 	do (map-over-sheets #'(lambda (p)
 				(when (funcall predicate p)
@@ -330,8 +321,7 @@ FRAME-EXIT condition."))
 	  (*command-parser* command-parser)
 	  (*command-unparser* command-unparser)
 	  (*partial-command-parser* partial-command-parser)
-	  (prompt-style (make-text-style :fixed :italic :normal))
-	  results)
+	  (prompt-style (make-text-style :fixed :italic :normal)))
       (map-over-sheets #'(lambda (pane)
 			   (if (and (typep pane 'clim-stream-pane)
 				    (eq (pane-display-time pane) :command-loop)
@@ -631,6 +621,7 @@ FRAME-EXIT condition."))
 
 (defmethod frame-input-context-button-press-handler
     ((frame standard-application-frame) stream button-press-event)
+  (declare (ignore stream button-press-event))
   nil)
 
 (defmethod frame-input-context-track-pointer
@@ -642,7 +633,7 @@ FRAME-EXIT condition."))
 
 (defmethod frame-input-context-track-pointer
     ((frame standard-application-frame) input-context stream event)
-  (declare (ignore input-context))
+  (declare (ignore input-context stream event))
   nil)
 
 (defmethod frame-input-context-track-pointer :before

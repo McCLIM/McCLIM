@@ -339,6 +339,7 @@
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defun make-argument-accept-fun (name required-args keyword-args)
+    (declare (ignore keyword-args))
     (let ((stream-var (gensym "STREAM"))
 	  (required-arg-names (mapcar #'car required-args)))
       (flet ((make-accept (arg-clause)
@@ -405,7 +406,7 @@
 							     &allow-other-keys)
 					    arg-clause
 					  (declare (ignore ptype))
-					  `(arg-name default)))
+					  `(,arg-name ,default)))
 				    keyword-args)))))
 	     (accept-fun-name (gentemp (format nil "~A%ACCEPTOR%"
 					       (symbol-name func)

@@ -113,18 +113,18 @@ sheet-supports-only-one-child error to be signalled."))
 (defgeneric event-peek (client &optional event-type))
 (defgeneric event-unread (client event))
 (defgeneric event-listen (client))
-(defgeneric sheet-direct-mirror (sheet))
-(defgeneric sheet-mirrored-ancestor (sheet))
-(defgeneric sheet-mirror (sheet))
+;(defgeneric sheet-direct-mirror (sheet))
+;(defgeneric sheet-mirrored-ancestor (sheet))
+;(defgeneric sheet-mirror (sheet))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; repaint protocol
 
 (defgeneric dispatch-repaint (sheet region))
-(defgeneric queue-repaint (sheet region))
-(defgeneric handle-repaint (sheet region))
-(defgeneric repaint-sheet (sheet region))
+;(defgeneric queue-repaint (sheet region))
+;(defgeneric handle-repaint (sheet region))
+;(defgeneric repaint-sheet (sheet region))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

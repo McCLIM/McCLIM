@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.80 2002/05/20 02:11:18 mikemac Exp $
+;;; $Id: panes.lisp,v 1.81 2002/05/20 20:18:03 mikemac Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -153,13 +153,6 @@
   (draw-line* pane x1 y2 x2 y2 :ink +black+)
   (draw-line* pane x2 y1 x2 y2 :ink +black+))
 
-
-;;; GENERIC FUNCTIONS
-
-(defgeneric compose-space (pane &key width height))
-(defgeneric allocate-space (pane width height))
-(defgeneric change-space-requirements (pane &rest rest))
-(defgeneric note-space-requirements-changed (sheet pane))
 
 ;;; Space Requirements
 
@@ -574,7 +567,9 @@
         (call-next-method))))
 
 (defmethod change-space-requirements ((pane layout-protocol-mixin)
-                                      &rest space-req-keys &key resize-frame &allow-other-keys)
+                                      &rest space-req-keys &key resize-frame
+				      &allow-other-keys)
+  (declare (ignore resize-frame))
   (setf (pane-space-requirement pane) nil)
   (apply #'grok-user-space-requirement-options pane space-req-keys)
   (note-space-requirements-changed (sheet-parent pane) pane))
@@ -1228,6 +1223,7 @@
           res)))))
 
 (defmethod allocate-space ((pane table-pane) width height &aux rsrs csrs)
+  (declare (ignorable rsrs csrs))
   (with-slots (array) pane
     ;; allot rows
     (let ((rows (allot-space-vertically
@@ -1688,6 +1684,7 @@ During realization the child of the spacing will have as cordinates
     (sheet-parent (sheet-parent pane))))
 
 (defun update-scroll-bars (pane entire-region x y)
+  (declare (ignore pane entire-region x y))
   #+ignore(multiple-value-bind (min-x min-y max-x max-y) (bounding-rectangle* entire-region)
     (with-slots (vscrollbar hscrollbar viewport) (pane-scroller pane)
       (when vscrollbar
@@ -1841,11 +1838,6 @@ During realization the child of the spacing will have as cordinates
 
 ;;; GENERIC FUNCTIONS
 
-(defgeneric window-clear (clim-stream-pane))
-(defgeneric window-refresh (clim-stream-pane))
-(defgeneric window-viewport (clim-stream-pane))
-(defgeneric window-erase-viewport (clim-stream-pane))
-(defgeneric window-viewport-position (clim-stream-pane))
 (defgeneric* (setf window-viewport-position) (x y clim-stream-pane))
 
 

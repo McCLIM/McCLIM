@@ -443,13 +443,6 @@ supertypes of TYPE that are presentation types"))
 (defmethod presentation-ptype-supers ((type clos-presentation-type))
   (presentation-ptype-supers (clos-class type)))
 
-(defmethod presentation-ptype-supers ((type standard-class))
-  (mapcan #'(lambda (class)
-              (let ((ptype (gethash (clim-mop:class-name class)
-                                    *presentation-type-table*)))
-                (and ptype (list ptype))))
-          (clim-mop:class-direct-superclasses type)))
-
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defmethod ptype-specializer ((type symbol))
     (let ((ptype (gethash type *presentation-type-table*)))
@@ -1279,6 +1272,7 @@ function lambda list"))
      &key (buffer-start nil buffer-start-supplied-p)
      (rescan nil rescan-supplied-p)
      query-identifier for-context-type)
+  (declare (ignore query-identifier))
   (let ((result (present-to-string object type
 				   :view view :acceptably t
 				   :for-context-type for-context-type)))
@@ -1484,7 +1478,9 @@ function lambda list"))
 		 (additional-activation-gestures nil additional-activations-p)
 		 delimiter-gestures
 		 additional-delimiter-gestures)
-  (declare (ignore prompt prompt-mode))
+  (declare (ignore provide-default insert-default history active-p prompt prompt-mode
+		   display-default query-identifier
+		   delimiter-gestures additional-delimiter-gestures))
   (when (and defaultp (not default-type-p))
     (error ":default specified without :default-type"))
   (when (and activationsp additional-activations-p)
@@ -1539,6 +1535,7 @@ function lambda list"))
 (defmethod prompt-for-accept ((stream t)
 			      type view
 			      &rest accept-args)
+  (declare (ignore view))
   (apply #'prompt-for-accept-1 stream type accept-args))
 
 (defun prompt-for-accept-1 (stream type
@@ -1581,7 +1578,7 @@ function lambda list"))
   (let ((top-record (stream-output-history window))
 	(result nil)
 	(result-size 0))
-    (loop for (context-ptype . continuation) in input-context
+    (loop for (context-ptype . nil) in input-context
 	  do (progn
 	       (map-over-output-records-containing-position
 		#'(lambda (record)
@@ -1735,7 +1732,7 @@ function lambda list"))
 				'(("yes" t) ("no" nil))
 				nil
 				:action mode))
-			   default default-p default-type))
+			   default defaultp default-type))
 
 (define-presentation-type symbol ())
 

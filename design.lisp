@@ -446,53 +446,10 @@
     :ink ink
     :mask mask))
 
-(defmethod compose-in ((ink color) (mask opacity))
-  (make-instance 'uniform-compositum
-    :ink ink
-    :mask mask))
-
-(defmethod compose-in ((ink color) (mask uniform-compositum))
-  (make-instance 'uniform-compositum
-    :ink ink
-    :mask (compositum-mask mask)))
-
 (defmethod compose-over ((foreground design) (background design))
   (make-instance 'over-compositum
     :foreground foreground
     :background background))
-
-(defmethod compose-over ((foreground color) (background design))
-  foreground)
-
-(defmethod compose-over ((foreground uniform-compositum) (background uniform-compositum))
-  (multiple-value-bind (r g b o) 
-      (multiple-value-call #'color-blend-function
-        (color-rgb (compositum-ink foreground))
-        (opacity-value (compositum-mask foreground))
-        (color-rgb (compositum-ink background))
-        (opacity-value (compositum-ink background)))
-    (cond ((= o 1)
-           (make-rgb-color r g b))
-          ((= o 0)
-           +transparent-ink+))))
-
-(defconstant *opacity-epsilon* 1/256)
-
-(defmethod compose-over ((foreground uniform-compositum) (background color))
-  (multiple-value-bind (r g b o) 
-      (multiple-value-call #'color-blend-function
-        (color-rgb (compositum-ink foreground))
-        (opacity-value (compositum-mask foreground))
-        (color-rgb background)
-        1)
-    (cond ((< (abs (- o 1)) *opacity-epsilon*)
-           (make-rgb-color r g b))
-          ((< (abs (- o 0)) *opacity-epsilon*)
-           +transparent-ink+)
-          (t
-           (make-instance 'uniform-compositum
-             :ink (make-rgb-color r g b)
-             :mask (make-opacity o))))))
 
 ;;;
 ;;; color

@@ -643,11 +643,13 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
 (defmethod scroll-vertical :around ((stream output-recording-stream) dy)
   (declare (ignore dy))
   (with-output-recording-options (stream :record nil)
+    (declare (ignore stream))
     (call-next-method)))
 
 (defmethod scroll-horizontal :around ((stream output-recording-stream) dx)
   (declare (ignore dx))
   (with-output-recording-options (stream :record nil)
+    (declare (ignore stream))
     (call-next-method)))
 
 (defmethod handle-repaint ((stream output-recording-stream) region)

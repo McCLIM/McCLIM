@@ -210,6 +210,7 @@
 
 (defmethod repaint-sheet :around ((stream standard-extended-output-stream)
 				  region)
+  (declare (ignorable region))
   (let ((cursor (stream-text-cursor stream)))
     (if (cursor-visibility cursor)
 	(progn

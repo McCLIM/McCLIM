@@ -326,7 +326,7 @@
 
 (defclass ungrafted-medium (basic-medium) ())
 
-(defmethod initialize-instance :after ((medium medium) &rest args)
+(defmethod initialize-instance :after ((medium basic-medium) &rest args)
   (declare (ignore args))
   ;; Initial CLIPPING-REGION is in coordinates, given by initial
   ;; TRANSFORMATION, but we store it in SHEET's coords.

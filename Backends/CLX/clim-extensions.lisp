@@ -33,7 +33,7 @@
 (defun draw-image (sheet image
                          &rest args
                          &key clipping-region transformation)
-  (declare (ignorable args))
+  (declare (ignorable clipping-region transformation args))
   (with-medium-options (sheet args)
     (medium-draw-image* medium image)))
 

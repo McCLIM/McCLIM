@@ -351,9 +351,6 @@ state ~S lambda list ~S"
 (def-stream-method (setf medium-default-text-style)
     (text-style (stream standard-encapsulating-stream)))
 
-(def-stream-method medium-default-text-style
-    ((stream standard-encapsulating-stream)))
-
 (def-stream-method sheet-medium ((stream standard-encapsulating-stream)))
 
 (def-stream-method queue-repaint ((stream standard-encapsulating-stream)
@@ -454,11 +451,6 @@ state ~S lambda list ~S"
 
 (def-stream-method stream-increment-cursor-position
     ((stream standard-encapsulating-stream) dx dy))
-
-(def-stream-method stream-character-width 
-    ((stream standard-encapsulating-stream)
-     character 
-     &key text-style))
 
 (def-stream-method stream-character-width 
     ((stream standard-encapsulating-stream)

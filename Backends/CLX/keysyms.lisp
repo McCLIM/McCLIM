@@ -106,7 +106,7 @@
   (numeric-keysym-to-character (reverse-lookup-keysym keysym)))
 
 ;; XXX This is bogus. 
-(defmethod keyboard-event-character ((keyboard-event keyboard-event))
-  (and (zerop (logand (event-modifier-state keyboard-event)
-                      (logior +meta-key+ +hyper-key+ +super-key+ +control-key+ +alt-key+)))
-       (keysym-to-character (keyboard-event-key-name keyboard-event))))
+;(defmethod keyboard-event-character ((keyboard-event keyboard-event))
+;  (and (zerop (logand (event-modifier-state keyboard-event)
+;                      (logior +meta-key+ +hyper-key+ +super-key+ +control-key+ +alt-key+)))
+;       (keysym-to-character (keyboard-event-key-name keyboard-event))))
