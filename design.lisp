@@ -67,11 +67,9 @@
      (round (* 255 blue))))
 
 (defun make-rgb-color (red green blue)
-  (let* ((key (compute-color-key red green blue))
-	 (entry (gethash key *color-hash-table*)))
+  (let ((key (compute-color-key red green blue)))
     (declare (type fixnum key))
-    (if entry
-	entry
+    (or (gethash key *color-hash-table*)
 	(setf (gethash key *color-hash-table*)
 	      (make-instance 'named-color :red red :green green :blue blue)))))
 
