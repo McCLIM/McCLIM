@@ -115,7 +115,7 @@
 (defun family-key (family)
   (ecase family
     ((nil) 0)
-    ((:fix) 1)
+    ((:fix :fixed) 1)
     ((:serif) 2)
     ((:sans-serif) 3)))
 
@@ -126,7 +126,7 @@
 	((nil) 0)
 	((:roman) 1)
 	((:bold) 2)
-	((:italic 3)))))
+	((:italic) 3))))
 
 (defun size-key (size)
   (if (numberp size)
