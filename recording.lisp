@@ -616,9 +616,6 @@ the associated sheet can be determined."
   (error "Cannot add a child to ~S." record))
 
 (defmethod add-output-record :before (child (record compound-output-record))
-  (let ((sheet (find-output-record-sheet record)))
-    (when sheet
-      (note-output-record-got-sheet child sheet)))       
   (let ((parent (output-record-parent child)))    
     (when parent
       (restart-case
@@ -627,8 +624,11 @@ the associated sheet can be determined."
           :report "Delete from the old parent."
           (delete-output-record child parent))))))
 
-(defmethod add-output-record :after (child (record compound-output-record))                                           
-  (recompute-extent-for-new-child record child))
+(defmethod add-output-record :after (child (record compound-output-record))
+  (recompute-extent-for-new-child record child)
+  (when (eq record (output-record-parent child))
+    (let ((sheet (find-output-record-sheet record)))
+      (when sheet (note-output-record-got-sheet child sheet)))))
 
 (defmethod delete-output-record :before (child (record basic-output-record)
                                          &optional (errorp t))
