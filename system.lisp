@@ -55,6 +55,7 @@
       #+EXCL                           "lisp-dep/mp-acl"
       #| fall back |#                  "lisp-dep/mp-nil")
    "defresource"
+   "setf-star"
    
    "design"
    "X11-colors"
