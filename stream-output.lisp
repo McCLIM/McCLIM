@@ -19,6 +19,9 @@
 
 (in-package :CLIM-INTERNALS)
 
+;;; for gray streams
+#+cmu(progn (shadow 'collect) (use-package :ext))
+
 ;;; Note: in the methods defined on output streams, I often use
 ;;;	  the sheet's medium as the argument to the draw-* routines.
 ;;;	  This is so that they don't get recorded if the stream also
@@ -185,8 +188,8 @@
 	  (medium (sheet-medium stream))
 	  (port (port stream))
 	  (text-style (medium-text-style medium))
-	  (new-baseline (text-style-ascent port text-style))
-	  (new-height (text-style-height port text-style))
+	  (new-baseline (text-style-ascent text-style port))
+	  (new-height (text-style-height text-style port))
 	  (margin (stream-text-margin stream))
 	  (view-height (port-mirror-height port stream)))
      (if visible
@@ -282,7 +285,7 @@
    ((stringp string)
     (if (null end)
 	(setq end (length string)))
-    (loop for i from start to end
+    (loop for i from start below end
 	  for char = (aref string i)
 	  sum (or (stream-character-width stream char :text-style text-style)
 		  0) into line-width
@@ -301,6 +304,15 @@
 
 (defmethod stream-line-height ((stream extended-output-stream) &key (text-style nil))
   (line-height (port stream) (or text-style (medium-text-style (sheet-medium stream)))))
+
+(defmethod stream-line-column ((stream extended-output-stream))
+  (multiple-value-bind (x y) (stream-cursor-position stream)
+    (declare (ignore y))
+    (floor x (stream-string-width stream " "))))
+
+(defmethod stream-start-line-p ((stream extended-output-stream))
+  (multiple-value-bind (x y) (stream-cursor-position stream)
+    (zerop x)))
 
 (defmacro with-room-for-graphics ((&optional (stream t)
 				   &key (move-cursor t) height record-type)
