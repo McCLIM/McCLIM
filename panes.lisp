@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.83 2002/06/20 07:38:47 adejneka Exp $
+;;; $Id: panes.lisp,v 1.84 2002/06/20 08:33:24 adejneka Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -1714,7 +1714,7 @@ During realization the child of the spacing will have as cordinates
 	      (scroll-area pane 0 dy)
 	      (cond
 	       ((< dy 0)
-		(medium-clear-area (sheet-medium pane) 0 (+ y2 dy) (- x2 x1) (- y2 y1))
+		(medium-clear-area (sheet-medium pane) 0 (+ (- y2 y1) dy) (- x2 x1) (- y2 y1))
 		(handle-repaint pane (make-bounding-rectangle x1 (+ y2 dy) x2 y2)))
 	       (t
 		(medium-clear-area (sheet-medium pane) 0 0 (- x2 x1) dy)
@@ -1724,7 +1724,7 @@ During realization the child of the spacing will have as cordinates
 	      (scroll-area pane dx 0)
 	      (cond
 	       ((< dx 0)
-		(medium-clear-area (sheet-medium pane) (+ x2 dx) 0 (- x2 x1) (- y2 y1))
+		(medium-clear-area (sheet-medium pane) (+ (- x2 x1) dx) 0 (- x2 x1) (- y2 y1))
 		(handle-repaint pane (make-bounding-rectangle (+ x2 dx) y1 x2 y2)))
 	       (t
 		(medium-clear-area (sheet-medium pane) 0 0 dx (- y2 y1))
