@@ -521,7 +521,7 @@
 					     ,@args)
 					   args)))))))
 
-(defun make-key-acceptors (stream keyword-args)
+(defun make-key-acceptors (stream keyword-args key-results)
   ;; We don't use the name as a variable, and we do want a symbol in the
   ;; keyword package.
   (when (null keyword-args)
@@ -533,11 +533,9 @@
 			     keyword-args))
   (let ((key-possibilities (gensym "KEY-POSSIBILITIES"))
 	(member-ptype (gensym "MEMBER-PTYPE"))
-	(key-results (gensym "KEY-RESULTS"))
 	(key-result (gensym "KEY-RESULT"))
 	(val-result (gensym "VAL-RESULT")))
-    `(let ((,key-possibilities nil)
-	   (,key-results nil))
+    `(let ((,key-possibilities nil))
        ,@(mapcar #'(lambda (key-arg)
 		     (destructuring-bind (name ptype
 					  &key (when t) &allow-other-keys)
@@ -563,8 +561,9 @@
 			  keyword-args))))
 	       (setq ,key-results (list* ,key-result
 					 ,val-result
-					 ,key-results)))
+					 ,key-results)))	     
 	     (eat-delimiter-or-activator))))
+       
        ,key-results)))
 
 (defun make-argument-accept-fun (name required-args keyword-args)
@@ -597,8 +596,7 @@
 							    arg))
 				(eat-delimiter-or-activator))))
 			 required-args)
-	       (setq ,key-results ,(make-key-acceptors stream-var
-						       keyword-args)))))
+	       ,(make-key-acceptors stream-var keyword-args key-results))))
 	 (list* ,@required-arg-names ,key-results)))))
 
 (defun make-command-translators (command-name command-table args)
