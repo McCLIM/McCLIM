@@ -104,7 +104,7 @@
 
         (new-page stream)
 
-        (with-text-style (stream '(:face :serif :size :huge))
+        (with-text-style (stream '(:serif nil :huge))
           (draw-text* stream "Text alignment test" 170 20
                       :text-family :sans-serif
                       :text-face :bold)
