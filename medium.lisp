@@ -25,15 +25,6 @@
 ;; - Why is (EQ (MAKE-TEXT-STYLE NIL NIL 10) (MAKE-TEXT-STYLE NIL NIL 10.0005)) = T?
 ;;   Does it matter?
 ;; - Don't we want a weak hash-table for *TEXT-STYLE-HASH-TABLE*
-;; - we need more macro hygiene in WITH-TEXT-STYLE
-;;
-;; --GB 2002-02-26
-
-;;; Media
-
-;; - MEDIUM-DRAW-POINTS*, MEDIUM-DRAW-LINES*, MEDIUM-DRAW-RECTANGLES*
-;; - MEDIUM-DRAW-RECTANGLES*: POSITION-SEQ argument can be a
-;;   vector. Use MAP-REPEATED-SEQUENCE.
 ;;
 ;; --GB 2002-02-26
 
@@ -206,7 +197,11 @@
   (if (and (not (device-font-text-style-p s1))
 	   (not (device-font-text-style-p s2)))
       (let* ((family (or (text-style-family s1) (text-style-family s2)))
-             (face (or (text-style-face s1) (text-style-face s2)))
+             (face1 (text-style-face s1))
+             (face2 (text-style-face s2))
+             (face (if (subsetp '(:bold :italic) (list face1 face2))
+                       '(:bold :italic)
+                       (or face1 face2)))
              (size1 (text-style-size s1))
              (size2 (text-style-size s2))
              (size (case size1
@@ -218,34 +213,23 @@
       s1))
 
 (defun parse-text-style (style)
-  (if (text-style-p style)
-      style
-    (let ((family nil)
-	  (face nil)
-	  (size nil))
-      (loop for item in style
-	    do (cond
-		((member item '(:fix :serif :sans-serif))
-		 (setq family item))
-		((or (member item '(:roman :bold :italic))
-		     (consp item))
-		 (setq face item))
-		((or (member item '(:tiny :very-small :small :normal
-				    :large :very-large :huge))
-		     (numberp item))
-		 (setq size item))))
-      (make-text-style family face size))))
+  (cond ((text-style-p style) style)
+        ((null style) (make-text-style nil nil nil)) ; ?
+        ((and (listp style) (= 3 (length style)))
+         (apply #'make-text-style style))
+        (t (error "Invalid text style specification ~S." style))))
 
 (defmacro with-text-style ((medium text-style) &body body)
   (when (eq medium t)
     (setq medium '*standard-output*))
   (check-type medium symbol)
-  `(flet ((continuation (,medium)
-            (declare (ignorable ,medium))
-	    ,@body))
-     (declare (dynamic-extent #'continuation))
-     (invoke-with-text-style ,medium #'continuation
-                             (parse-text-style ,text-style))))
+  (with-gensyms (cont)
+    `(flet ((,cont (,medium)
+              (declare (ignorable ,medium))
+              ,@body))
+       (declare (dynamic-extent #',cont))
+       (invoke-with-text-style ,medium #',cont
+                               (parse-text-style ,text-style)))))
 
 (defmethod invoke-with-text-style ((sheet sheet) continuation text-style)
   (let ((medium (sheet-medium sheet))) ; FIXME: WITH-SHEET-MEDIUM
@@ -261,30 +245,36 @@
   (declare (type symbol medium))
   (when (eq medium t)
     (setq medium '*standard-output*))
-  `(flet ((continuation (,medium)
-	    ,@body))
-     (declare (dynamic-extent #'continuation))
-     (invoke-with-text-style ,medium #'continuation
-                             (make-text-style ,family nil nil))))
+  (with-gensyms (cont)
+    `(flet ((,cont (,medium)
+              (declare (ignorable ,medium))
+              ,@body))
+       (declare (dynamic-extent #',cont))
+       (invoke-with-text-style ,medium #',cont
+                               (make-text-style ,family nil nil)))))
 
 (defmacro with-text-face ((medium face) &body body)
   (declare (type symbol medium))
   (when (eq medium t)
     (setq medium '*standard-output*))
-  `(flet ((continuation (,medium)
-	    ,@body))
-     (declare (dynamic-extent #'continuation))
-     (invoke-with-text-style ,medium #'continuation
-                             (make-text-style nil ,face nil))))
+  (with-gensyms (cont)
+    `(flet ((,cont (,medium)
+              (declare (ignorable ,medium))
+              ,@body))
+       (declare (dynamic-extent #',cont))
+       (invoke-with-text-style ,medium #',cont
+                               (make-text-style nil ,face nil)))))
 
 (defmacro with-text-size ((medium size) &body body)
   (declare (type symbol medium))
   (when (eq medium t) (setq medium '*standard-output*))
-  `(flet ((continuation (,medium)
-	    ,@body))
-     (declare (dynamic-extent #'continuation))
-     (invoke-with-text-style ,medium #'continuation
-                             (make-text-style nil nil ,size))))
+  (with-gensyms (cont)
+    `(flet ((,cont (,medium)
+              (declare (ignorable ,medium))
+              ,@body))
+       (declare (dynamic-extent #',cont))
+       (invoke-with-text-style ,medium #',cont
+                               (make-text-style nil nil ,size)))))
 
 
 ;;; MEDIUM class
@@ -622,25 +612,30 @@
 ;;; Fall-through Methods For Multiple Objects Drawing Functions
 
 (defmethod medium-draw-points* ((medium basic-medium) coord-seq)
-  ;; WRONG! 
   (let ((tr (invert-transformation (medium-transformation medium))))
     (with-transformed-positions (tr coord-seq)
-      (loop for (x y) on coord-seq by #'cddr
-            do (medium-draw-point* medium x y)))))
+      (map-repeated-sequence nil 2
+                             (lambda (x y)
+                               (medium-draw-point* medium x y))
+                             coord-seq))))
 
 (defmethod medium-draw-lines* ((medium basic-medium) position-seq)
-  ;; WRONG! 
   (let ((tr (invert-transformation (medium-transformation medium))))
     (with-transformed-positions (tr position-seq)
-      (loop for (x1 y1 x2 y2) on position-seq by #'cddddr
-            do (medium-draw-line* medium x1 y1 x2 y2)))))
+      (map-repeated-sequence nil 4
+                             (lambda (x1 y1 x2 y2)
+                               (medium-draw-line* medium x1 y1 x2 y2))
+                             position-seq))))
 
 (defmethod medium-draw-rectangles* ((medium basic-medium) coord-seq filled)
-  ;; WRONG! 
   (let ((tr (invert-transformation (medium-transformation medium))))
     (with-transformed-positions (tr coord-seq)
-      (loop for (x1 y1 x2 y2) on coord-seq by #'cddddr
-            do (medium-draw-rectangle* medium x1 y1 x2 y2 filled)))))
+      (map-repeated-sequence nil 4
+                             (lambda (x1 y1 x2 y2)
+                               (medium-draw-rectangle* medium
+                                                       x1 y1 x2 y2
+                                                       filled))
+                             coord-seq))))
 
 
 ;;; Other Medium-specific Output Functions
