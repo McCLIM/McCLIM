@@ -388,11 +388,11 @@
                            nil
                            body)))
 
-(defmethod invoke-with-identity-transformation (medium cont)
-  (with-drawing-options
-      (medium 
-       :transformation (invert-transformation (medium-transformation medium)))
-    (funcall cont medium)))
+;; invoke-with-identity-transformation is gone to graphics.lisp
+;; invoke-with-identity-transformation and
+;; invoke-with-first-quadrant-coordinates
+;; likewise because of the with-drawing-options macro,
+;; perhaps we should gather macros in a macros.lisp file?
 
 (defmacro with-local-coordinates ((medium &optional x y) &body body)
   (setf medium (stream-designator-symbol medium))
@@ -407,56 +407,6 @@
                          (list medium)
                          (list x y)
                          body))
-
-(defmethod invoke-with-local-coordinates (medium cont x y)
-  ;; For now we do as real CLIM does.
-  ;; Default seems to be the cursor position.
-  ;; Moore suggests we use (0,0) if medium is no stream.
-  ;;
-  ;; Further the specification is vague about possible scalings ...
-  ;;
-  (unless (and x y)
-    (multiple-value-bind (cx cy) (if (extended-output-stream-p medium)
-                                     (stream-cursor-position medium)
-                                     (values 0 0))
-      (setf x (or x cx)
-            y (or y cy))))
-  (multiple-value-bind (mxx mxy myy myx tx ty)
-      (get-transformation (medium-transformation medium))
-    (declare (ignore tx ty))
-    (with-identity-transformation (medium)
-      (with-drawing-options
-          (medium :transformation (make-transformation
-                                   mxx mxy myy myx
-                                   x y))
-        (funcall cont medium)))))
-
-(defmethod invoke-with-first-quadrant-coordinates (medium cont x y)
-  ;; First we do the same as invoke-with-local-coordinates but rotate and
-  ;; deskew it so that it becomes first-quadrant. We do this
-  ;; by simply measuring the length of the transfomed x and y "unit vectors". 
-  ;; [That is (0,0)-(1,0) and (0,0)-(0,1)] and setting up a transformation
-  ;; which features an upward pointing y-axis and a right pointing x-axis with
-  ;; a length equal to above measured vectors.
-  (unless (and x y)
-    (multiple-value-bind (cx cy) (if (extended-output-stream-p medium)
-                                     (stream-cursor-position medium)
-                                     (values 0 0))
-      (setf x (or x cx)
-            y (or y cy))))
-  (let* ((tr (medium-transformation medium))
-         (xlen
-          (multiple-value-bind (dx dy) (transform-distance tr 1 0)
-            (sqrt (+ (expt dx 2) (expt dy 2)))))
-         (ylen
-          (multiple-value-bind (dx dy) (transform-distance tr 0 1)
-            (sqrt (+ (expt dx 2) (expt dy 2))))))
-    (with-identity-transformation (medium)
-      (with-drawing-options
-          (medium :transformation (make-transformation
-                                   xlen 0 0 (- ylen)
-                                   x y))
-        (funcall cont medium)))))
 
 (defmethod untransform-region ((transformation transformation) region)
   (transform-region (invert-transformation transformation) region))
