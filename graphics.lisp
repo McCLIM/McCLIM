@@ -62,9 +62,10 @@
 		(compose-transformations old-transform transformation)))
 	  (if clipping-region
 	      (setf (medium-clipping-region medium)
-		(region-intersection old-clip
-				     (transform-region (medium-transformation medium)
-						       clipping-region))))
+		(region-intersection (if transformation
+                                         (transform-region transformation old-clip)
+                                       old-clip)
+				     clipping-region)))
 	  (if (null line-style)
 	      (setf line-style old-line-style))
 	  (if (or line-unit line-thickness dashes-p line-joint-shape line-cap-shape)
@@ -93,8 +94,9 @@
 	  (when orig-medium
 	    (funcall func orig-medium)))
       (setf (medium-ink medium) old-ink)
-      (setf (medium-clipping-region medium) old-clip)
+      ;; First set transformation, then clipping!
       (setf (medium-transformation medium) old-transform)
+      (setf (medium-clipping-region medium) old-clip)
       (setf (medium-line-style medium) old-line-style)
       (setf (medium-text-style medium) old-text-style))))
 
