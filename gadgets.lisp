@@ -550,8 +550,6 @@
 ;; SLIDER gadget
 ;;
 
-(defgeneric drag-callback (slider client gadget-id value))
-
 (defclass slider-gadget (value-gadget oriented-gadget-mixin range-gadget-mixin labelled-gadget-mixin) ()
   (:documentation "The value is a real number"))
   
@@ -596,7 +594,7 @@
   (declare (ignorable pane))
   (setf (gadget-value button :invoke-callback t) t))
 
-(defmacro with-radio-box (&rest options &body body)
+(defmacro with-radio-box (&body body &rest options)
   `(make-pane 'radio-box ,@options
 	      :current-selection (first ,body)
 	      ,@body))
