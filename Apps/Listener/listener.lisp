@@ -225,32 +225,31 @@
 	  (partial-command-parser
 	   'command-line-read-remaining-arguments-for-partial-command)
           &allow-other-keys)
-    ;; Can't print a herald here without moving the return-to-listener restart.
-    (loop	  
-      (let ((*standard-input* (frame-standard-input frame))
-            (*standard-output* (frame-standard-output frame))
-            (*query-io* (frame-query-io frame))
-            (*default-pathname-defaults* *default-pathname-defaults*)
-            (*pointer-documentation-output* (frame-pointer-documentation-output
-                                             frame))
-            ;; during development, don't alter *error-output*
-            ;; (*error-output* (frame-error-output frame))
-            (*command-parser* command-parser)
-            (*command-unparser* command-unparser)
-            (*partial-command-parser* partial-command-parser)	  
-            (interactor (get-frame-pane frame 'interactor)))       
-        (update-panes frame)
-        (print-listener-prompt interactor)
-        (setf (cursor-visibility (stream-text-cursor *standard-input*)) nil)
-        (let ((command (listener-read frame interactor)))
-          (fresh-line)
-          (cond ((partial-command-p command)
-                 (format *query-io* "~&Argument ~D not supplied.~&"
-                         (position *unsupplied-argument-marker* command)))
-                (command (apply (command-name command)
-                                (command-arguments command)))
-                (T nil))
-        (fresh-line)))))
+  (let ((*default-pathname-defaults* *default-pathname-defaults*))
+    (loop
+        (let ((*standard-input* (frame-standard-input frame))
+              (*standard-output* (frame-standard-output frame))
+              (*query-io* (frame-query-io frame))            
+              (*pointer-documentation-output* (frame-pointer-documentation-output
+                                               frame))
+              ;; during development, don't alter *error-output*
+              ;; (*error-output* (frame-error-output frame))
+              (*command-parser* command-parser)
+              (*command-unparser* command-unparser)
+              (*partial-command-parser* partial-command-parser)
+              (interactor (get-frame-pane frame 'interactor)))
+          (update-panes frame)
+          (print-listener-prompt interactor)
+          (setf (cursor-visibility (stream-text-cursor *standard-input*)) nil)
+          (let ((command (listener-read frame interactor)))
+            (fresh-line)
+            (cond ((partial-command-p command)
+                   (format *query-io* "~&Argument ~D not supplied.~&"
+                           (position *unsupplied-argument-marker* command)))
+                  (command (apply (command-name command)
+                                  (command-arguments command)))
+                  (T nil))
+            (fresh-line))))))
 
 (defmethod frame-standard-output ((frame listener))
   (get-frame-pane frame 'interactor))
@@ -261,5 +260,5 @@
     (make-application-frame 'listener)))
 
 (defun run-listener-process ()
-  (clim-sys:make-process #'run-listener))
+  (clim-sys:make-process  #'run-listener :name "Listener"))
 

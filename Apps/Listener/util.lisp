@@ -191,7 +191,7 @@
                               )))
 
 (defun strip-filespec (pathname)
-  "Removes file, directory, and version spcs from a pathname."
+  "Removes name, type, and version components from a pathname."
   (make-pathname :host   (pathname-host pathname)
                  :device (pathname-device pathname)
                  :directory (pathname-directory pathname)
@@ -373,7 +373,7 @@ function specified by :ABBREVIATOR. Abbreviate is controlled by the variables
 ;;  * Utilities for getting data in and out of unix programs through streams    
 ;;  * Pseudoterminal support (yeah, right)
 
-(defparameter *program-wait* T)
+(defparameter *program-wait* t)
 
 ;; Disgusting hacks to make input default to nil, as CMUCL's run-program seems
 ;; to hang randomly unless I do that. But sometimes I'll need to really change these..
@@ -425,8 +425,9 @@ with some attempt to convert arguments intelligently."
     (unread-char                          
      (do ((c (read-char stream) (read-char stream)))
          ((or (member c '(#\Space #\Tab #\Newline #\Linefeed #\Page #\Return)) ;; What..??
-              (not (nth-value 1 (get-macro-character c))))
-          c)
+              (multiple-value-bind (a b) (get-macro-character c)
+                (and a (not b))))
+          c)       
        (when (eql c #\\)
          (setf c (read-char stream)))       
        (write-char c out))

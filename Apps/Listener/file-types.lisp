@@ -414,7 +414,7 @@
 (defun parse-mailcap-entry (line)
   "Parses a line of the mailcap file, returning either nil or the properties
    of the type in a hash table."
-  (let ((table (make-hash-table))
+  (let ((table (make-hash-table :size 8))
         (foo nil)) ; <- position after reading required fields
     (when                    ;; First read the required fields.
         (multiple-value-bind (text pos)
@@ -481,7 +481,7 @@
 
 ;; Running external viewers..
 ;; FIXME: I don't have the quoting for things quite right, I can't
-;; seem to play any mp3s with quotes in their titles. (how embarassing!)
+;; seem to open any file with quotes in the name. (how embarassing!)
 
 (defun quote-shell-characters (string)
   (let ((shell-chars '(#\` #\$ #\\ #\" #\')))
@@ -491,17 +491,59 @@
         (when (member c shell-chars)
           (write-char #\\ out))
         (write-char c out))))))
-  
+
+(defun translate-uri-pathspec-character (char)
+  (if (or (alphanumericp char)
+          (find char ";@&=+$,-_.!~*'()"))
+      char
+      (format nil "%~2,'0X" (char-code char))))            
+
+(defun encode-uri-path-element (string)
+  (with-output-to-string (out)
+    (map nil (lambda (char)
+               (write-string (string (translate-uri-pathspec-character char))
+                             out))
+         string)))
+
+(defgeneric concatenate-uri-directory-elements (type elements))
+
+(defmethod concatenate-uri-directory-elements ((type (eql :absolute)) elements)
+  (apply #'concatenate 'string (list #\/) (mapcan (lambda (x)
+                                             (list (encode-uri-path-element x)
+                                                   "/"))
+                                           elements)))
+
+;; Relative pathnames? Probably for most purposes this should not ever get
+;; called with one, as it makes litte sense.
+
+(defun translate-uri-pathname-directory (pathname)
+  (let ((dirs (pathname-directory pathname)))    
+    (if (not (listp dirs))
+        (progn (warn "Don't know how to convert ~A to a URI." pathname)
+               "")      
+        (ignore-errors (concatenate-uri-directory-elements (first dirs) (rest dirs))))))
+
+(defun translate-uri-pathname-name (pathname)
+  (encode-uri-path-element (namestring (make-pathname :name (pathname-name pathname)
+                                                      :type (pathname-type pathname)
+                                                      :version (pathname-version pathname)))))
+
+(defun pathname-to-uri-string (pathname)
+  (format nil "file://~A~A"
+          (translate-uri-pathname-directory pathname)
+          (translate-uri-pathname-name pathname)))
+
 (defun gen-view-command-line (spec pathname)
   (with-output-to-string (out)
     (with-input-from-string (in (gethash :view-command spec))
       (loop for c = (read-char in nil) while c do 
         (if (char= c #\%)
             (let ((d (read-char in nil)))
-              (cond ((eql d #\s)  (princ   (quote-shell-characters (namestring (truename pathname))) out))
+              (cond ((eql d #\s)  (princ (quote-shell-characters (namestring (truename pathname))) out))
                     ((eql d #\t)  (princ (gethash :type spec) out))
+                    ((eql d #\u)  (princ (pathname-to-uri-string pathname) out))
                     (T (debugf "Ignoring unknown % syntax." d))))
-          (write-char c out))))))
+            (write-char c out))))))
 
 (defun find-viewspec (pathname)
   (let* ((type (pathname-mime-type pathname))
@@ -510,7 +552,14 @@
                (probe-file pathname)
                (gethash :view-command def)
                (not (gethash :needsterminal def)))
-      (list "/bin/sh" `("-c" ,(gen-view-command-line def pathname) )))))
+      (values 
+       `(com-background-run "/bin/sh" ("-c" ,(gen-view-command-line def pathname)))
+       (format nil "Open using ~A" (subseq (gethash :view-command def)
+                                           0
+                                           (position #\Space (gethash :view-command def))))
+       (gen-view-command-line def pathname)))))
+       
+       
 
 (defun run-view-command (pathname)
   (let* ((type (pathname-mime-type pathname))
@@ -520,7 +569,7 @@
              (test (gethash :test def))
              (needsterminal (gethash :needsterminal def)))
         (if needsterminal
-            (format T "Sorry, the viewer app needs a terminal. Fix this.~%")
+            (format T "Sorry, the viewer app needs a terminal (fixme!)~%")
           (progn
             (when test
               (debugf "Sorry, ignoring TEST option right now.. " test))

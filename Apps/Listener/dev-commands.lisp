@@ -620,8 +620,11 @@
 
 (define-presentation-to-command-translator change-directory-translator
   (clim:pathname com-change-directory dev-commands :gesture :change-directory
-		 :pointer-documentation ((object stream)
-					 (format stream "Change directory to ~A" object))
+		 :pointer-documentation ((object stream)  (declare (ignore object))
+					 (format stream "Change to this directory"))
+                 :documentation ((object stream)  (declare (ignore object))
+                                 (format stream "Change to this directory"))
+                 
 		 :tester ((object)
 			  (directoryp object)))
   (object)
@@ -629,6 +632,9 @@
 
 
 ;;; External file viewers
+
+(defgeneric mime-type-to-command (mime-type pathname)
+  (:documentation "Translates a pathname to an invocation of a CLIM command, typically according to the mime type deduced for that pathname. Returns three values: command, documentation, and pointer documentation."))
 
 ;; This pathname translator stuff is really turning into a mess.
 ;; What I need to do is merge mime types with presentations, and
@@ -649,53 +655,57 @@
 
 (defmethod mime-type-to-command ((mime-type text/x-lisp-source) pathname)
   (values `(com-compile-and-load ,pathname)
+          "Compile and Load"
           (format nil "Compile and load ~A" pathname)))
 
 (defmethod mime-type-to-command ((mime-type application/x-lisp-fasl) pathname)
   (values `(com-load-file ,pathname)
+          "Load"
           (format nil "Load ~A" pathname)))
 
-; FIXME: Make this smart enough to load systems, somehow. Given that a system
-; could be mk-defsystem or ASDF (or Symbolics or god knows what else), this
-; might be tricky. Alternately, setup a seperate type for .ASD files that can
-; operate on them smartly.
 (defmethod mime-type-to-command ((mime-type text/x-lisp-system) pathname)
   (values `(com-load-file ,pathname)
-          (format nil "Load ~A" pathname)))
+          "Load System"
+          (format nil "Load System ~A" pathname)))
 
-(defun pprint-viewspec (viewspec)
-  (when viewspec
-    (with-output-to-string (out)
-      (format out "Run ")
-      (dolist (x (rest (second viewspec)))
-        (princ x out)
-        (princ " " out)))))
-
+;; I've taken to doing translator documentation exactly opposite of how the CLIM
+;; spec seems to intend. The spec says that the pointer-documentation should be
+;; short and quickly computer, and the documentation should be longer and more
+;; descriptive. Personally, I like seeing the full the command with the arguments
+;; in the pointer-doc window, and something short in right-button menus.
+;; So.. yeah.
 
 (defun automagic-translator (pathname)
-  "Returns two values, the command translation, and a documentation string for the translation."
-;  (debugf pathname)
-  (when (or (wild-pathname-p pathname) 
-            (not (probe-file pathname)))
-    (return-from automagic-translator nil))
-  (if (directoryp pathname)
-      (values `(com-show-directory ,pathname) ; hopefully this doesn't happen, and the other translator runs.
-              (format nil "Show directory ~A" pathname))
-    (let ((viewspec (find-viewspec pathname))
-          (mime-type (pathname-mime-type pathname)))
-      (mv-or
-       (when mime-type (mime-type-to-command mime-type pathname))
-       (when viewspec
-         (values `(com-background-run ,@viewspec)
-                 (pprint-viewspec viewspec)))))))
+  "Returns  values, the command translation, and a documentation string for the translation."  
+  (cond ((wild-pathname-p pathname)
+         (values `(com-show-directory ,pathname)
+                 "Show Matching Files"
+                 (format nil "Show Files Matching ~A" pathname)))
+        ((not (probe-file pathname))
+         (values nil nil nil))
+        ((directoryp pathname)
+         (values `(com-show-directory ,pathname)
+                 "Show Directory"
+                 (format nil "Show Directory ~A" pathname)))
+        (t
+         (multiple-value-bind (command doc pointer-doc)
+             (find-viewspec pathname)
+           (let ((mime-type (pathname-mime-type pathname)))
+             (mv-or
+              (when mime-type (mime-type-to-command mime-type pathname))
+              (when command
+                (values command doc pointer-doc))))))))
 
 (define-presentation-translator automagic-pathname-translator
   (clim:pathname clim:command dev-commands
                  :gesture :select
                  :tester ((object)
                           (automagic-translator object))
-                 :pointer-documentation ((object stream) (princ (nth-value 1 (automagic-translator object)) stream)))
-  (object)
+                 :documentation ((object stream)
+                                 (princ (nth-value 1 (automagic-translator object)) stream))
+                 :pointer-documentation ((object stream)                                         
+                                         (princ (nth-value 2 (automagic-translator object)) stream)))
+  (object)  
   (values
    (automagic-translator object)
    'command))
