@@ -25,7 +25,9 @@
   (:export #:inspector
 	   #:inspect-object
 	   #:inspect-object-briefly
-	   #:define-inspector-command))
+	   #:define-inspector-command
+	   #:inspector-table
+	   #:inspector-table-row))
 
 (asdf:defsystem clouseau
     :serial t
