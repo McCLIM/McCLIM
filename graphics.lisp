@@ -135,7 +135,6 @@
   (check-type medium symbol)
   (let ((gcontinuation (gensym)))
     `(flet ((,gcontinuation (,medium)
-              (declare (ignorable ,medium))
              ,@body))
       #-clisp (declare (dynamic-extent #',gcontinuation))
       (apply #'invoke-with-drawing-options

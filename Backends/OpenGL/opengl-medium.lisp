@@ -21,6 +21,10 @@
 
 (defclass opengl-medium (basic-medium) ())
 
+;;; The medium transformation is now handled by the
+;;; transform-coordinates-mixin in the McCLIM front end. For OpenGL it
+;;; might be better to make it part of the model matrix. --moore
+#|
 (defun medium-transform-position (medium x y)
   (declare (type real x y)
 	   (type opengl-medium medium))
@@ -34,6 +38,7 @@
   (declare (type real dx dy))
   (transform-distance (medium-device-transformation medium)
                       dx dy))
+|#
 
 (defmacro with-OpenGL-graphics ((medium) &body body)
   `(let ((ink (medium-ink ,medium))

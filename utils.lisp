@@ -336,6 +336,18 @@ by the number of variables in VARS."
                        (clim-mop:extract-lambda-list qualifier-or-ll)
                        body))))
 
+(defun get-body-declarations (body)
+  "Collect all declaration forms from a body of forms that may have
+ declarations at its top. Returns as values a list of the declarations and the
+ rest of the body."
+  (loop for bod on body
+	for (form) = bod
+	if (and (consp form) (eq (car form) 'declare))
+	  collect form into decls
+	else
+	  return (values decls bod)
+	finally	(return (values decls nil)))) ;It's all (declare ...)
+
 (defun decode-specializer (specializer-name)
   (if (atom specializer-name)
       (find-class specializer-name)
@@ -406,14 +418,12 @@ by the number of variables in VARS."
 	    nconc (list key value)
 	  end)))
 
-
 (defmacro with-keywords-removed ((var keywords &optional (new-var var))
 				 &body body)
   "binds NEW-VAR (defaults to VAR) to VAR with the keyword arguments specified
 in KEYWORDS removed."
   `(let ((,new-var (remove-keywords ,var ',keywords)))
      ,@body))
-
 
 (defun symbol-concat (&rest symbols)
   "Actually this function raises the next question: what is *PACKAGE* supposed to be?
@@ -501,3 +511,4 @@ STREAM in the direction DIRECTION."
                     (:horizontal (values 1 0))
                     (:vertical   (values 0 1))))
               (/ value (sqrt (+ (* dx dx) (* dy dy))))))))))))
+

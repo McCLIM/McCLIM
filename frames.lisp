@@ -52,7 +52,7 @@
 ;;; XXX All these slots should move to a mixin or to standard-application-frame.
 ;;; -- moore
 
-(define-protocol-class  application-frame ()
+(define-protocol-class  application-frame (presentation-history-mixin)
   ((port :initform nil
 	 :initarg :port
 	 :accessor port)
@@ -175,6 +175,7 @@ FRAME-EXIT condition."))
 (defgeneric (setf frame-properties) (value frame property))
 (defgeneric (setf client-setting) (value frame setting))
 (defgeneric reset-frame (frame &rest client-settings))
+(defgeneric frame-maintain-presentation-histories (frame))
 
 ; extension
 (defgeneric frame-schedule-timer-event (frame sheet delay token))
@@ -829,6 +830,11 @@ input focus. This is a McCLIM extension."))
   (make-instance 'menu-frame :pane pane :left left :top top))
 
 ;;; Frames and presentations
+(defmethod frame-maintain-presentation-histories
+    ((frame standard-application-frame))
+  (if (find-pane-of-type (frame-panes frame) 'interactor-pane)
+      t
+      nil))
 
 (defmethod frame-find-innermost-applicable-presentation
     ((frame standard-application-frame) input-context stream x y

@@ -176,6 +176,7 @@
    "builtin-commands" ; need dialog before commands are defined
    "describe"
    "Experimental/menu-choose" ; depends on table formatting, presentations
+   "Goatee/presentation-history"
    )
 
 (load (merge-pathnames "Backends/CLX/system" *clim-directory*))

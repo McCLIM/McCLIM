@@ -300,21 +300,13 @@
   (%replace-input stream new-input
 		  start end buffer-start rescan rescan-supplied-p nil))
 
-(defmethod presentation-replace-input
-    ((stream goatee-input-editing-mixin)
-     object type view
-     &key
-     (buffer-start nil buffer-start-supplied-p)
-     (rescan nil rescan-supplied-p)
-     query-identifier
-     (for-context-type nil for-context-type-p))
-  (declare (ignore query-identifier))
+(defun present-acceptably-to-string
+    (object type view for-context-type)
   (flet ((present-it (acceptably)
-	   (apply #'present-to-string object type
-		     :view view
-		     :acceptably acceptably
-		     (and for-context-type-p
-			  `(:for-context-type ,for-context-type)))))
+	   (present-to-string object type
+			      :view view
+			      :acceptably acceptably
+			      :for-context-type for-context-type)))
     (let* ((acceptably t)
 	   (printed-rep nil))
       (handler-case
@@ -322,15 +314,33 @@
 	(error ()
 	  (setq acceptably nil)
 	  (setq printed-rep (present-it nil))))
-      (unless buffer-start-supplied-p
-	(if (eq stream climi::*current-input-stream*)
-	    (setq buffer-start climi::*current-input-position*)
-	    (setq buffer-start 0)))
+      (values printed-rep (if acceptably
+			      nil
+			      object)))))
+
+(defmethod presentation-replace-input
+    ((stream goatee-input-editing-mixin)
+     object type view
+     &key
+     (buffer-start nil buffer-start-supplied-p)
+     (rescan nil rescan-supplied-p)
+     query-identifier
+     (for-context-type type))
+  (declare (ignore query-identifier))
+  (multiple-value-bind (printed-rep accept-object)
+      (present-acceptably-to-string object type view
+				    for-context-type)
+    (unless buffer-start-supplied-p
+      (if (eq stream climi::*current-input-stream*)
+	  (setq buffer-start climi::*current-input-position*)
+	  (setq buffer-start 0)))
       (apply #'%replace-input stream printed-rep
-	     0 (length printed-rep) buffer-start rescan rescan-supplied-p
-	     (if acceptably
+	     0 (length printed-rep) buffer-start rescan rescan-supplied-p 
+	     (if accept-object
 		 '(nil)
-		 `(accept-result-extent :object ,object :result-type ,type))))))
+		 `(accept-result-extent :object ,accept-object
+		                        :result-type ,type)))))
+
 
 ;;; There used to be complicated logic here to support output when
 ;;; rescanning, but it seems to be very hairy to get right in

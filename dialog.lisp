@@ -197,7 +197,6 @@ accept of this query")))
 			  additional-delimiter-gestures)
   (declare (ignore activation-gestures additional-activation-gestures
 		   delimiter-gestures additional-delimiter-gestures))
-  (apply #'prompt-for-accept stream type view rest-args)
   (let ((query (find query-identifier (queries stream)
 		     :key #'query-identifier :test #'equal)))
     (unless query

@@ -818,8 +818,10 @@
   (let ((command-name nil)
 	(command-args nil))
     (with-delimiter-gestures (*command-name-delimiters* :override t)
+      ;; While reading the command name we want use the history of the
+      ;; (accept 'command ...) that's calling this function.
       (setq command-name (accept `(command-name :command-table ,command-table)
-				 :stream stream :prompt nil))
+				 :stream stream :prompt nil :history nil))
       (let ((delimiter (read-gesture :stream stream :peek-p t)))
 	;; Let argument parsing function see activation gestures.
 	(when (and delimiter (delimiter-gesture-p delimiter))

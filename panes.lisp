@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.136 2003/12/16 23:20:18 hefner1 Exp $
+;;; $Id: panes.lisp,v 1.137 2004/01/20 16:07:26 moore Exp $
 
 (in-package :clim-internals)
 
@@ -1090,8 +1090,7 @@
               (wanted      (reduce #'+ allot))
               (excess      (- major wanted
                               (* (1- (length children)) major-spacing))))
-         #+nil
-         (progn
+         #+nil (progn
            (format *trace-output* "~&;; ALLOCATE-SPACE-AUX ~S~%" box)
            (format *trace-output* "~&;;   major = ~D, wanted = ~D, excess = ~D, allot = ~D.~%"
                    major wanted excess allot))
@@ -1115,8 +1114,7 @@
                                        (xically-content-sr** box c))))))))
                  (box-layout-mixin-clients box))))
            ;;
-           #+nil
-           (progn
+           #+nil(progn
              (format *trace-output* "~&;;   old allotment = ~S.~%" allot)
              (format *trace-output* "~&;;   qvector 0 = ~S.~%" (mapcar #'(lambda (x) (elt x 0)) qvector))
              (format *trace-output* "~&;;   qvector 1 = ~S.~%" (mapcar #'(lambda (x) (elt x 1)) qvector))
@@ -1137,8 +1135,8 @@
                  (format *trace-output* "~&;;   new excess = ~F, allotment = ~S.~%" excess allot)
                  )))
            ;;
-           #+nil (format *trace-output* "~&;;   excess = ~F.~%" excess)
-           #+nil (format *trace-output* "~&;;   new allotment = ~S.~%" allot)
+	   #+nil (format *trace-output* "~&;;   excess = ~F.~%" excess)
+	   #+nil (format *trace-output* "~&;;   new allotment = ~S.~%" allot)
 
            (values allot
                    (mapcar #'ceiling (mapcar #'space-requirement-minor content-srs))) )))))
@@ -2298,6 +2296,10 @@
   (let ((actual-pane (get-frame-pane frame pane)))
     (when actual-pane
       (redisplay-frame-pane frame actual-pane :force-p force-p))))
+
+(define-presentation-method presentation-type-history-for-stream
+    ((type t) (stream clim-stream-pane))
+  (funcall-presentation-generic-function presentation-type-history type))
 
 (defmethod change-space-requirements :around ((pane clim-stream-pane)
                                               &key (width nil)  (max-width nil)

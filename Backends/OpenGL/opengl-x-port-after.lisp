@@ -129,50 +129,63 @@
 	 (let ,var-forms
 	   ,@body)))))
 
+(defun decode-x-button-code (code)
+  (aref #.(vector +pointer-left-button+
+                  +pointer-middle-button+
+                  +pointer-right-button+
+		  nil
+		  nil)
+        (1- code)))
+
 (defun get-next-event-aux (port)
   (let ((event   (opengl-port-xevent port))
         (display (opengl-port-display port)))
     (xlib-gl:XNextEvent (opengl-port-display port) event)
     (let ((event-type (xlib-gl:xanyevent-type event)))
-      (cond ((or (eql event-type xlib-gl:keypress)
-		 (eql event-type xlib-gl:keyrelease))
-	     (multiple-value-bind (keyname modifier-state)
-		 (event-to-keysym-and-modifiers port event)
-	       (with-event-slots (:xkeyevent x y x_root y_root time)
-		 event
-		 (make-instance (if (eql event-type xlib-gl:keypress)
-				    'key-press-event
-				    'key-release-event)
-				:keyname keyname
-				:key-character (and (characterp keyname)
-						    keyname)
-				:x x :y y
-				:graft-x x_root	:graft-y y_root
-				:sheet (find-related-sheet port)
-				:modifier-state modifier-state
-				:timestamp time))))
-	    
-	    ((eq event-type xlib-gl:buttonpress)
-	     (make-instance 'pointer-button-press-event
-			    :pointer 0 
-			    :button (xlib-gl:xbuttonpressedevent-button event)
-			    :x (xlib-gl:xbuttonpressedevent-x event)
-			    :y (xlib-gl:xbuttonpressedevent-y event)
+      (case event-type
+	((xlib-gl:keypress xlib-gl:keyrelease)
+	 (multiple-value-bind (keyname modifier-state)
+	     (event-to-keysym-and-modifiers port event)
+	   (with-event-slots (:xkeyevent x y x_root y_root time)
+	     event
+	     (make-instance (if (eql event-type xlib-gl:keypress)
+				'key-press-event
+				'key-release-event)
+			    :keyname keyname
+			    :key-character (and (characterp keyname) keyname)
+			    :x x :y y
+			    :graft-x x_root :graft-y y_root
 			    :sheet (find-related-sheet port)
-			    :modifier-state (key-mod (xlib-gl:xbuttonpressedevent-state event))
-			    :timestamp (xlib-gl:xbuttonpressedevent-time event)))
-		  
-	    ((eq event-type xlib-gl:buttonrelease)
-	     (make-instance 'pointer-button-release-event
+			    :modifier-state modifier-state
+			    :timestamp time))))
+	((xlib-gl:buttonpress xlib-gl:buttonrelease)
+	 (with-event-slots (:xbuttonevent x y x_root y_root time button state)
+	   event
+	   (let ((modifier-state (clim-xcommon:x-event-state-modifiers port
+								       state)))
+	     (make-instance (if (eq event-type xlib-gl:buttonpress)
+				'pointer-button-press-event
+				'pointer-button-release-event)
 			    :pointer 0
-			    :button (xlib-gl:xbuttonreleasedevent-button event)
-			    :x (xlib-gl:xbuttonreleasedevent-x event)
-			    :y (xlib-gl:xbuttonreleasedevent-y event)
+			    :button (decode-x-button-code code) :x x :y y
+			    :graft-x x_root
+			    :graft-y y_root
 			    :sheet (find-related-sheet port)
-			    :modifier-state (key-mod (xlib-gl:xbuttonreleasedevent-state event))
-			    :timestamp (xlib-gl:xbuttonreleasedevent-time event)))
+			    :modifier-state modifier-state
+			    :timestamp time))))
+
+	((xlib-gl:enternotify xlib-gl:leavenotify)
+	 (let ((sheet (port-lookup-sheet port
+					 (xlib-gl:xcrossingevent-window event))))
+	   (when sheet
+	     (with-event-slots (:xcrossingevent x y x_root y_root state time
+						code)
+	       event
+	       (let ((modifier-state (clim-xcommon:x-event-state-modifiers port
+									   state)
+		       ))))))
 		  
-	    ((eq event-type xlib-gl:enternotify)
+	    ((eq event-type )
 	     (let ((sheet (port-lookup-sheet port (xlib-gl:xenterwindowevent-window event))))
 	       (when sheet
 		 (let* ((x (xlib-gl:xenterwindowevent-x event))

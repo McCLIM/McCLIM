@@ -314,10 +314,12 @@
 			      'cmd-yank
 			      *simple-area-gesture-table*)
 
+#+nil
 (add-gesture-command-to-table '(#\y :meta)
 			      'cmd-yank-next
 			      *simple-area-gesture-table*)
 
+#+nil
 (add-gesture-command-to-table '(#\y :control :meta)
 			      'cmd-yank-prev
 			      *simple-area-gesture-table*)

@@ -210,14 +210,16 @@
 	finally (return nil)))
 
 (defmacro with-input-editing ((&optional (stream t)
+			       &rest args
 			       &key input-sensitizer (initial-contents "")
 			       (class ''standard-input-editing-stream))
 			      &body body)
-  (if (eq stream t)
-      (setq stream '*standard-input*))
-  `(invoke-with-input-editing ,stream
-			      #'(lambda (,stream) ,@body)
-			      ,input-sensitizer ,initial-contents ,class))
+  (setq stream (stream-designator-symbol stream))
+  (with-keywords-removed (args (:input-sensitizer :initial-contents :class))
+    `(invoke-with-input-editing ,stream
+				#'(lambda (,stream) ,@body)
+				,input-sensitizer ,initial-contents ,class
+				,@args)))
 
 (define-condition rescan-condition (condition)
   ())

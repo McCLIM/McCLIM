@@ -106,3 +106,13 @@
 (defun yank-1 (ring buffer operation yank-extent)
   (let ((to-insert (buffer-string (contents (funcall operation ring)))))
     (insert buffer to-insert :position (bp-end yank-extent))))
+
+(defmacro with-object-on-ring ((object ring)  &body body)
+  (climi::with-gensyms  (ring-var cell-var)
+    `(let* ((,ring-var ,ring)
+	    (,cell-var (ring-obj-insert ,object ,ring-var)))
+       (unwind-protect
+	    (progn
+	      ,@body)
+	 (goatee::dbl-remove ,cell-var)))))
+

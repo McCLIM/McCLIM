@@ -231,6 +231,16 @@
 	(with-output-to-string (s)
 	  (describe-it s)))))
 
+(define-presentation-generic-function %presentation-default-processor
+    presentation-default-processor
+    (type-key parameters default type &key default-type))
+
+(define-default-presentation-method presentation-default-processor
+    (default type &key (default-type nil default-type-p))
+  (values default (if default-type-p
+		      default-type
+		      type)))
+
 ;;; XXX The spec calls out that the presentation generic function has keyword
 ;;; arguments acceptably and for-context-type, but the examples I've seen don't
 ;;; mention them at all in the methods defined for present.  So, leave them out
@@ -248,27 +258,30 @@
 				       &allow-other-keys)
 				       &body body)
   (declare (ignore parent single-box modifier))
-  (when (eq stream t)
-    (setq stream '*standard-output*))
-  (let ((output-record (gensym))
-	(invoke-key-args (cull-keywords '(:record-type
-					  :allow-sensitive-inferiors)
-					key-args)))
-    (declare (ignore invoke-key-args))
-     `(flet ((continuation (,stream ,output-record)
-	      (declare (ignore ,output-record))
-	      (let ((*allow-sensitive-inferiors*
-		     (if *allow-sensitive-inferiors*
-			 ,allow-sensitive-inferiors
-			 nil)))
-		,@body)))
-	(if (output-recording-stream-p ,stream)
-	    (invoke-with-new-output-record
-	     ,stream #'continuation ,record-type
-	     :object ,object
-	     :type (expand-presentation-type-abbreviation ,type)
-	     ,@key-args)
-	    (funcall #'continuation ,stream nil)))))
+  (setq stream (stream-designator-symbol stream))
+  (multiple-value-bind (decls with-body)
+      (get-body-declarations body)
+    (let ((output-record (gensym))
+	  (invoke-key-args (cull-keywords '(:record-type
+					    :allow-sensitive-inferiors)
+					  key-args)))
+      (declare (ignore invoke-key-args))
+      `(flet ((continuation (,stream ,output-record)
+		(declare (ignore ,output-record))
+	        ,@decls
+		(let ((*allow-sensitive-inferiors*
+		       (if *allow-sensitive-inferiors*
+			   ,allow-sensitive-inferiors
+			   nil)))
+		  ,@with-body)))
+	 (if (output-recording-stream-p ,stream)
+	     (invoke-with-new-output-record
+	      ,stream #'continuation ,record-type
+	      :object ,object
+	      :type (expand-presentation-type-abbreviation ,type)
+	      ,@key-args)
+	     (funcall #'continuation ,stream nil))))))
+
 
 
 (defun present (object &optional (type (presentation-type-of object))
@@ -277,16 +290,16 @@
 		(view (stream-default-view stream))
 		modifier
 		acceptably
-		(for-context-type nil for-context-type-p)
+		(for-context-type type)
 		single-box
 		(allow-sensitive-inferiors t)
 		(sensitive t)
 		(record-type 'standard-presentation))
   (let* ((real-type (expand-presentation-type-abbreviation type))
-	 (context-type (if for-context-type-p
+	 (context-type (if (eq for-context-type type)
+			   real-type
 			   (expand-presentation-type-abbreviation
-			    for-context-type)
-			   real-type)))
+			    for-context-type))))
     (stream-present stream object real-type
 		    :view view :modifier modifier :acceptably acceptably
 		    :for-context-type context-type :single-box single-box
@@ -344,14 +357,14 @@
 (defun present-to-string (object &optional (type (presentation-type-of object))
 			  &key (view +textual-view+)
 			  acceptably
-			  (for-context-type nil for-context-type-p)
+			  (for-context-type type)
 			  (string nil stringp)
 			  (index 0 indexp))
   (let* ((real-type (expand-presentation-type-abbreviation type))
-	 (context-type (if for-context-type-p
+	 (context-type (if (eq for-context-type type)
+			   real-type
 			   (expand-presentation-type-abbreviation
-			    for-context-type)
-			   real-type)))
+			    for-context-type))))
     (when (and stringp indexp)
       (setf (fill-pointer string) index))
     (flet ((do-present (s)
@@ -368,11 +381,13 @@
 	    (values string (fill-pointer string))
 	    result)))))
 
+;;; I believe this obsolete... --moore
 (defmethod presentation-replace-input
     ((stream input-editing-stream) object type view
      &key (buffer-start nil buffer-start-supplied-p)
      (rescan nil rescan-supplied-p)
-     query-identifier for-context-type)
+     query-identifier
+     (for-context-type type))
   (declare (ignore query-identifier))
   (let ((result (present-to-string object type
 				   :view view :acceptably nil
@@ -382,6 +397,113 @@
 						    ,buffer-start))
 					   ,@(and rescan-supplied-p
 						  `(:rescan ,rescan))))))
+
+;;; Presentation histories.
+
+;;; This allocates a hash table even if the frame doesn't support
+;;; histories!  I'm over it already. -- moore
+(defclass presentation-history-mixin ()
+  ((presentation-history :accessor frame-presentation-history
+			 :initform (make-hash-table :test #'eq)))
+  (:documentation "Mixin class for frames that implements presentation
+type histories"))
+
+(define-presentation-generic-function %presentation-type-history
+    presentation-type-history
+  (type-key parameters type))
+
+;;; This function should exist for convenience even if not mentioned in the
+;;; spec.
+
+(defun presentation-type-history (type)
+  (funcall-presentation-generic-function presentation-type-history type))
+
+(defclass presentation-history-ring (goatee::ring)
+  ())
+
+(define-default-presentation-method presentation-type-history (type)
+  (if (and *application-frame*
+	   (frame-maintain-presentation-histories *application-frame*))
+      (with-presentation-type-decoded (name)
+	type
+	(let* ((ptype (get-ptype-metaclass name))
+	       (history (history ptype)))
+	  (case history
+	    ((t)
+	     (let* ((history-table (frame-presentation-history
+				    *application-frame*))
+		    (history-object (gethash name history-table)))
+	       (unless history-object
+		 (setf history-object
+		       (make-instance 'presentation-history-ring)
+		       (gethash name history-table)
+		       history-object))
+	       history-object))
+	    (nil
+	     nil)
+	    (otherwise
+	     (funcall-presentation-generic-function presentation-type-history
+						    type)))))))
+
+;;; Not in the spec, but I think this is necessary (or at any rate, the easiest
+;;; way) to control whether or not to use histories in a given context.
+(define-presentation-generic-function %presentation-type-history-for-stream
+    presentation-type-history-for-stream
+  (type-key parameters type stream)
+  (:documentation "Returns a type history or nil for a presentation TYPE and
+STREAM. This is used by McCLIM to decide whether or not to use histories in a
+given situation. A primary method specialized on just the type should
+call-next-method to get the \"real\" answer based on the stream type."))
+
+(define-default-presentation-method presentation-type-history-for-stream
+    (type stream)
+  nil)
+
+;;; method for clim-stream-pane in panes.lisp
+
+(define-presentation-method presentation-type-history-for-stream
+    ((type t) (stream input-editing-stream))
+  (if (not (stream-rescanning-p stream))
+      (funcall-presentation-generic-function presentation-type-history type)
+      nil))
+
+(defun presentation-history-insert (history object ptype)
+  (goatee::ring-obj-insert (cons object ptype) history))
+
+(defun presentation-history-head (history ptype)
+  (loop
+   for cell = (goatee::dbl-head history) then (goatee::next cell)
+   for (object . object-ptype) = (and cell (goatee::contents cell))
+   while cell
+   if (presentation-subtypep object-ptype ptype)
+   return (values object object-ptype)
+   finally (return (values nil nil))))
+
+(defun presentation-history-next (history ptype)
+  (let ((first-object (goatee::forward history)))
+    (loop
+     for first-time = t then nil
+     for cell = first-object then (goatee::forward history)
+     for (object . object-ptype) = (goatee::contents cell)
+     while (or first-time (not (eq first-object cell)))
+     if (presentation-subtypep object-ptype ptype)
+       return (values object object-ptype)
+     end
+     finally (return (values nil nil)))))
+
+(defmacro with-object-on-history ((history object ptype) &body body)
+  `(goatee::with-object-on-ring ((cons ,object ,ptype) ,history)
+     ,@body))
+
+(defun presentation-history-add (history object ptype)
+  "Add OBJECT and PTYPE to the HISTORY unless they are already at the head of
+ HISTORY"
+  (let* ((cell (goatee::dbl-head history))
+	 (contents (and cell (goatee::contents cell))))
+    (unless (and cell
+		 (eql object (car contents))
+		 (equal ptype (cdr contents)))
+      (presentation-history-insert history object ptype))))
 
 ;;; Context-dependent input
 ;;; An input context is a cons of a presentation type and a continuation to
@@ -467,7 +589,7 @@
 		   (*input-wait-test* #'input-context-wait-test)
 		   (*input-wait-handler* #'input-context-event-handler))
 	       (return-from ,return-block ,form )))
-         (declare (ignorable ,object-var ,type-var)) ; XXX only when they are GENSYMed
+         (declare (ignorable ,object-var ,type-var ,event-var))
 	 (cond ,@(mapcar #'(lambda (pointer-case)
 			     (destructuring-bind (case-type &body case-body)
 				 pointer-case
@@ -480,6 +602,7 @@
 
 (defvar *recursive-accept-p* nil)
 (defvar *recursive-accept-1-p* nil)
+(defvar *active-history-type* nil)
 
 ;;; The spec says "default-type most be a presentation type specifier", but the
 ;;; examples we have imply that default-type is optional, so we'll be liberal
@@ -490,52 +613,77 @@
 	       view
 	       (default nil defaultp)
 	       (default-type nil default-type-p)
-	       provide-default
-	       insert-default
-	       replace-input
-	       (history nil historyp)
-	       active-p
-	       prompt
-	       prompt-mode
-	       display-default
+	       provide-default insert-default replace-input
+	       (history nil historyp)	; true default supplied below
+	       active-p			; Don't think this will be used
+	       prompt prompt-mode display-default
 	       query-identifier
-	       activation-gestures
-	       additional-activation-gestures
-	       delimiter-gestures
-	       additional-delimiter-gestures)
-  (declare (ignore view provide-default
-		   insert-default
-		   replace-input
-		   active-p
-		   prompt
-		   prompt-mode
-		   display-default
-		   query-identifier
-		   activation-gestures
-		   additional-activation-gestures
-		   delimiter-gestures
-		   additional-delimiter-gestures))
+	       activation-gestures additional-activation-gestures
+	       delimiter-gestures additional-delimiter-gestures)
+  (declare (ignore insert-default replace-input active-p prompt prompt-mode
+		   display-default query-identifier
+		   activation-gestures additional-activation-gestures
+		   delimiter-gestures additional-delimiter-gestures))
   (let* ((real-type (expand-presentation-type-abbreviation type))
-	 (real-default-type (and default-type-p
-				 (expand-presentation-type-abbreviation
-				  default-type)))
-	 (real-history-type (and historyp
-				 (expand-presentation-type-abbreviation
-				  history)))
-	 	 (*recursive-accept-p* *recursive-accept-1-p*)
+	 (real-default-type (cond (default-type-p
+				      (expand-presentation-type-abbreviation
+				       default-type))
+				  ((or defaultp provide-default)
+				   real-type)
+				  (t nil)))
+	 (real-history-type (cond ((null historyp) real-type)
+				  ((null history) nil)
+				  (t (expand-presentation-type-abbreviation
+				      history))))
+	 (*recursive-accept-p* *recursive-accept-1-p*)
 	 (*recursive-accept-1-p* t))
     (with-keywords-removed (rest-args (:stream))
-      (cond (default-type-p
-	     (setf rest-args
-		   (list* :default-type real-default-type rest-args)))
-	    (defaultp
-	      (setf rest-args (list* :default-type
-				     (presentation-type-of default)
-				     rest-args))))
+      (when (or default-type-p defaultp)
+	(setf rest-args
+	      (list* :default-type real-default-type rest-args)))
       (when historyp
 	(setf rest-args (list* :history real-history-type rest-args)))
-      (apply #'stream-accept stream real-type rest-args))))
-
+      ;; Presentation type history interaction. According to the spec,
+      ;; if provide-default is true, we take the default from the
+      ;; presentation history. In addition, we'll implement the Genera
+      ;; behavior of temporarily putting the default on the history
+      ;; stack so the user can conveniently suck it in.
+      (flet ((do-accept (args)
+	       (apply #'prompt-for-accept stream real-type view args)
+	       (apply #'stream-accept stream real-type args))
+	     (get-history ()
+	       (when real-history-type
+		 (funcall-presentation-generic-function
+		  presentation-type-history-for-stream
+		  real-history-type stream))))
+	(let* ((default-from-history (and (not defaultp) provide-default))
+	       (history (get-history))
+	       (results
+		(multiple-value-list 
+		 (if history
+		     (let ((*active-history-type* real-history-type))
+		       (cond (defaultp
+			      (with-object-on-history
+				  (history default real-default-type)
+				(do-accept rest-args)))
+			     (default-from-history
+			      (multiple-value-bind
+				    (history-default history-type)
+				  (presentation-history-head history
+							     real-default-type)
+				(do-accept (if history-type
+					       (list* :default history-default
+						      :default-type history-type
+						      rest-args)
+					       rest-args))))
+			     (t (do-accept rest-args))))
+		     (do-accept rest-args))))
+	       (results-history (get-history)))
+	  (when results-history
+	    (presentation-history-add results-history
+				      (car results)
+				      (cadr results)))
+	  (values-list results))))))
 
 (defgeneric stream-accept (stream type
 			   &key
@@ -558,16 +706,14 @@
 
 (defmethod stream-accept ((stream standard-extended-input-stream) type
 			  &rest args
-			  &key (view (stream-default-view stream))
+			  &key
 			  &allow-other-keys)
-  (apply #'prompt-for-accept stream type view args)
   (apply #'accept-1 stream type args))
 
 (defmethod stream-accept ((stream standard-input-editing-stream) type
 			  &rest args
-			  &key (view (stream-default-view stream))
+			  &key
 			  &allow-other-keys)
-  (apply #'prompt-for-accept stream type view args)
   (apply #'accept-1 stream type args))
 
 (defmethod stream-accept ((stream #.*string-input-stream-class*) type
@@ -631,6 +777,7 @@
 	 :input-sensitizer #'(lambda (stream cont)
 			       (with-output-as-presentation
 				   (stream sensitizer-object sensitizer-type)
+				 (declare (ignore stream))
 				 (funcall cont))))
       (with-input-position (stream)	; support for calls to replace-input
 	(setf (values sensitizer-object sensitizer-type)

@@ -114,6 +114,11 @@ fully, including defaulting parameters and options.")))
 	       (setf (slot-value obj 'ptype-specializer)
 		     (slot-value obj 'type-name))))
 
+  (defmethod history ((ptype standard-class))
+    "Default for CLOS types that are not defined explicitly as
+presentation types."
+    t)
+  
   (defun make-presentation-type-name (name)
     (intern (format nil "(presentation-type ~A::~A)"
 		    (package-name (symbol-package name))
