@@ -214,11 +214,13 @@
   (let ((*clx-port* port))
     (declare (special *clx-port*))
     (xlib:display-finish-output (clx-port-display port))
+;    (xlib:process-event (clx-port-display port) :timeout timeout :handler #'event-handler :discard-p t)))
     ; temporary solution
     (or (xlib:process-event (clx-port-display port) :timeout timeout :handler #'event-handler :discard-p t)
 	:timeout)))
-;; [Mike] Timeoute and wait-functions are both implementation 
+;; [Mike] Timeout and wait-functions are both implementation 
 ;;        specific and hence best done in the backends.
+
 
 (defmethod make-graft ((port clx-port) &key (orientation :default) (units :device))
   (let ((graft (make-instance 'clx-graft
@@ -335,7 +337,7 @@
     (xlib:drawable-height mirror)))
 
 (defmethod graft ((port clx-port))
-  (port-grafts port))
+  (first (port-grafts port)))
 
 ;;; Pixmap
 
@@ -397,6 +399,7 @@
 		     from-x from-y width height
 		     (sheet-direct-mirror sheet)
 		     to-x to-y)))
+
 
 ;; clim-stream-pane drawings
 
