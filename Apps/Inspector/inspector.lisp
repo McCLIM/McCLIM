@@ -171,7 +171,8 @@ structure objects."
 		   (format pane "~a:" slot-name))
 		 (inspect-object (slot-value object slot-name) pane)))))))
 
-(defparameter *object-representation-max-length* 60
+;; FIXME: should this be removed? It's really ugly.
+(defparameter *object-representation-max-length* 300
   "Maximum number of characters of an object's textual representation
 that are allowed before abbreviation kicks in")
 
@@ -184,7 +185,7 @@ that are allowed before abbreviation kicks in")
 			    (prin1 object string))))
       (if (< (length representation) *object-representation-max-length*)
 	  (princ representation pane)
-	  (format pane "instance of ~S" (class-name (class-of object)))))))
+	  (format pane "#<~S ...>" (class-name (class-of object)))))))
 
 (defmethod inspect-object ((object standard-object) pane)
   (inspect-structure-or-object object pane))
@@ -348,10 +349,8 @@ use implementation-specific functions to be more informative."
           (inspect-object uses pane)))))
 
 (defmethod inspect-object ((object vector) pane)
-  ;; Using 'vector as the presentation type may be nonstandard, but it
-  ;; is more useful than the default.
   (with-output-as-presentation
-      (pane object 'vector)
+      (pane object (presentation-type-of object))
     (formatting-table (pane)
       (formatting-row (pane)
         (formatting-cell (pane)
