@@ -671,6 +671,7 @@ updating-output-parent above this one in the tree.")
 					  erases)))
 			      old-children
 			      visible-region))
+    ;(break)
     ;; Visit this record's updating-output children and merge in the
     ;; difference set. We need to visit all updating-output records, not just
     ;; ones in the visible region, because they might have old records that
@@ -746,7 +747,7 @@ updating-output-parent above this one in the tree.")
 		 (format *trace-output* "Creating ~S~%" record))
 	       (setf (start-graphics-state record)
 		     (medium-graphics-state stream))
-	       (funcall continuation stream)
+	       (%invoke-updating record stream continuation)
 	       (setf (end-graphics-state record)
 		     (medium-graphics-state stream))
 	       (add-to-map parent-cache record  unique-id id-test all-new)))

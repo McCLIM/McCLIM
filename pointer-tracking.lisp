@@ -82,7 +82,7 @@
             (highlight nil highlight-p))
      &body body)
   (declare (ignorable pointer transformp context-type highlight))
-  (setq sheet (stream-designator-symbol sheet))
+  (setq sheet (stream-designator-symbol sheet '*standard-output*))
   (loop
      for (event-name handler-args . handler-body) in body
      for handler-name = (gensym (symbol-name event-name))
@@ -235,7 +235,7 @@
 			    &key repaint finish-on-release multiple-window)
 			   &body body)
   (declare (ignore repaint finish-on-release multiple-window))
-  (setq stream (stream-designator-symbol stream))
+  (setq stream (stream-designator-symbol stream '*standard-output*))
   (with-gensyms (record)
     `(let ((,record (with-output-to-output-record (,stream)
 		      ,@body)))

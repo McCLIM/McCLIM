@@ -4,7 +4,7 @@
 ;;;   Created: 1998-09-29
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: transforms.lisp,v 1.27 2004/03/31 13:31:20 moore Exp $
+;;;       $Id: transforms.lisp,v 1.28 2004/10/06 12:03:56 moore Exp $
 ;;; --------------------------------------------------------------------------------------
 ;;;  (c) copyright 1998,1999,2003 by Gilbert Baumann
 ;;;  (c) copyright 2000 by 
@@ -439,7 +439,7 @@ transformation protocol."))
   ;;
   ;; Q: Do we want a invoke-with-identity-transformation?
   ;;
-  (let ((medium (stream-designator-symbol medium)))
+  (let ((medium (stream-designator-symbol medium '*standard-output*)))
     (gen-invoke-trampoline 'invoke-with-identity-transformation
                            (list medium)
                            nil
@@ -452,14 +452,14 @@ transformation protocol."))
 ;; perhaps we should gather macros in a macros.lisp file?
 
 (defmacro with-local-coordinates ((medium &optional x y) &body body)
-  (setf medium (stream-designator-symbol medium))
+  (setf medium (stream-designator-symbol medium '*standard-output*))
   (gen-invoke-trampoline 'invoke-with-local-coordinates
                          (list medium)
                          (list x y)
                          body))
 
 (defmacro with-first-quadrant-coordinates ((medium &optional x y) &body body)
-  (setf medium (stream-designator-symbol medium))
+  (setf medium (stream-designator-symbol medium '*standard-output*))
   (gen-invoke-trampoline 'invoke-with-first-quadrant-coordinates
                          (list medium)
                          (list x y)

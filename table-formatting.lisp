@@ -132,7 +132,7 @@ table cell as argument."
 				      (min-width 0) (min-height 0)
 				      (record-type ''standard-cell-output-record))
                            &body body)
-  (setq stream (stream-designator-symbol stream))
+  (setq stream (stream-designator-symbol stream '*standard-output*))
   (with-keywords-removed (more (:record-type :min-width :min-height))
     (with-gensyms (record)
       ;; Blow off order-of-evaluation issues for the moment...
@@ -188,7 +188,7 @@ to a table cell within the row."))
 			  &rest more
 			  &key (record-type ''standard-row-output-record))
 			  &body body)
-  (setf stream (stream-designator-symbol stream))
+  (setf stream (stream-designator-symbol stream '*standard-output*))
   (with-gensyms (record)
     (with-keywords-removed (more (:record-type))
       `(with-new-output-record (,stream ,record-type ,record ,@more)
@@ -228,7 +228,7 @@ corresponding to a table cell within the column."))
                                         ''standard-column-output-record))
 			     
                              &body body)
-  (setf stream (stream-designator-symbol stream))
+  (setf stream (stream-designator-symbol stream '*standard-output*))
   (with-gensyms (record)
     (with-keywords-removed (more (:record-type))
       `(with-new-output-record (,stream ,record-type ,record ,@more)
@@ -288,7 +288,8 @@ skips intervening non-table output record structures."))
                    multiple-columns-x-spacing
                    equalize-column-widths move-cursor record-type))
   (gen-invoke-trampoline 'invoke-formatting-table
-                         (list (stream-designator-symbol stream))
+                         (list (stream-designator-symbol stream
+							 '*standard-output*))
                          args
                          body))
 
@@ -485,7 +486,7 @@ skips intervening non-table output record structures."))
                    max-width max-height
                    initial-spacing row-wise move-cursor
                    record-type))
-  (setf stream (stream-designator-symbol stream))
+  (setf stream (stream-designator-symbol stream '*standard-output*))
   (gen-invoke-trampoline 'invoke-format-item-list
                          (list stream)
                          args

@@ -43,6 +43,8 @@ by calls to accept coming from the query objects.
    (ptype :accessor ptype :initarg :ptype)
    (view :accessor view :initarg :view)
    (default :accessor default :initarg :default :initform nil)
+   (default-supplied-p :accessor default-supplied-p
+     :initarg :default-supplied-p :initform nil)
    (value :accessor value :initarg :value :initform nil)
    (changedp :accessor changedp :initform nil)
    (record :accessor record :initarg :record)
@@ -107,9 +109,7 @@ accept of this query")))
             modify-initial-query resynchronize-every-pass resize-frame
             align-prompts label scroll-bars
             x-position y-position width height command-table frame-class))
-  (when (eq stream 't)
-    (setq stream '*standard-input*))
-  (check-type stream symbol)
+  (setq stream (stream-designator-symbol stream '*standard-input*))
   (with-gensyms (accepting-values-continuation)
     `(flet ((,accepting-values-continuation (,stream)
               ,@body))
@@ -205,6 +205,7 @@ accept of this query")))
 				 :ptype type
 				 :view view
 				 :default default
+				 :default-supplied-p default-supplied-p
 				 :value default))
       (setf (queries stream) (nconc (queries stream) (list query))))
     (setf (accept-arguments query) rest-args)
@@ -314,9 +315,12 @@ is called. Used to determine if any editing has been done by user")))
 (define-default-presentation-method accept-present-default
     (type stream (view textual-dialog-view) default default-supplied-p
      present-p query-identifier)
+  (declare (ignore present-p))
   (let* ((editing-stream nil)
+	 ;; XXX Should be :CACHE-VALUE DEFAULT, but Goatee areas
+	 ;; aren't playing nicely with updating-output yet.
 	 (record (updating-output (stream :unique-id query-identifier
-				   :cache-value query-identifier
+				   :cache-value t
 				   :record-type 'av-text-record)
 		   (with-output-as-presentation
 		       (stream query-identifier 'selectable-query)
@@ -341,12 +345,20 @@ is called. Used to determine if any editing has been done by user")))
 (defun av-do-accept (query record)
   (let ((estream (editing-stream record))
 	(ptype (ptype query))
-	(view (view query)))
+	(view (view query))
+	(default (default query))
+	(default-supplied-p (default-supplied-p query)))
     (setf (values (value query) (ptype query)) ; Hmm, should ptype be set here?
 	  (input-editing-rescan-loop
 	   estream
-	   #'(lambda (s)
-	       (accept ptype :stream s :view view :prompt nil))))))
+	   (if default-supplied-p
+	       ;; Allow empty input to return a default value
+	       #'(lambda (s)
+		   (accept ptype :stream s :view view :prompt nil
+			   :default default))
+	       #'(lambda (s)
+	       (accept ptype :stream s :view view :prompt nil)))))))
+
 
 
 ;;; The desired 

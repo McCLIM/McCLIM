@@ -451,15 +451,15 @@ in KEYWORDS removed."
    of it -- Don't construct symbols, instead let the user specify them."
   (intern (apply #'concatenate 'string (mapcar #'symbol-name symbols))))
 
-(defun stream-designator-symbol (symbol)
+(defun stream-designator-symbol (symbol default)
   "Maps T to *standard-output*, barfs if argument does not look good.
    To be used in the various WITH-... macros."
   (cond ((eq symbol 't)
-         '*standard-output*)
+         default)
         ((symbolp symbol)
          symbol)
         (t
-         (error "~S does not look too good as a symbol." symbol))))
+         (error "~S Can not be a stream designator for ~S" symbol default))))
 
 (defun gen-invoke-trampoline (fun to-bind to-pass body)
   "Macro helper function, generates the LABELS / INVOKE-WITH-... ideom."

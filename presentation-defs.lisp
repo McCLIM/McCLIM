@@ -255,7 +255,7 @@
 					       &allow-other-keys)
 				       &body body)
   (declare (ignore parent single-box modifier))
-  (setq stream (stream-designator-symbol stream))
+  (setq stream (stream-designator-symbol stream '*standard-output*))
   (multiple-value-bind (decls with-body)
       (get-body-declarations body)
     (with-gensyms (record-arg continuation)

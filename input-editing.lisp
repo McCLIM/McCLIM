@@ -206,7 +206,7 @@
 			       &key input-sensitizer (initial-contents "")
 			       (class ''standard-input-editing-stream))
 			      &body body)
-  (setq stream (stream-designator-symbol stream))
+  (setq stream (stream-designator-symbol stream '*standard-input*))
   (with-keywords-removed (args (:input-sensitizer :initial-contents :class))
     `(invoke-with-input-editing ,stream
 				#'(lambda (,stream) ,@body)

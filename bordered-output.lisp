@@ -29,7 +29,7 @@
                                            &key (shape :rectangle) (move-cursor t))
                                           &body body)
   (declare (ignore shape move-cursor))
-  (setf stream (stream-designator-symbol stream))
+  (setf stream (stream-designator-symbol stream '*standard-output*))
   (gen-invoke-trampoline 'invoke-surrounding-output-with-border
                          (list stream)
                          drawing-options
