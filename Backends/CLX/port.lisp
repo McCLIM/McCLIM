@@ -87,7 +87,8 @@
 					 event-mask))))
 	(port-register-mirror (port sheet) sheet window)
 	(when map
-	  (xlib:map-window window))))))
+	  (xlib:map-window window)))))
+  (port-lookup-mirror port sheet))
 
 (defmethod realize-mirror ((port clx-port) (sheet sheet))
   (realize-mirror-aux port sheet :border-width 1))
@@ -101,10 +102,13 @@
 				    :structure-notify)))
 
 (defmethod realize-mirror ((port clx-port) (sheet top-level-sheet-pane))
-  (realize-mirror-aux port sheet
-		      :map nil
-		      :event-mask '(:exposure
-				    :structure-notify)))
+  (let ((frame (pane-frame sheet))
+	(window (realize-mirror-aux port sheet
+				    :map nil
+				    :event-mask '(:exposure
+						  :structure-notify))))
+    (setf (xlib:wm-name window) (frame-pretty-name frame))
+    (setf (xlib:wm-icon-name window) (frame-pretty-name frame))))
 
 (defmethod realize-mirror ((port clx-port) (sheet unmanaged-top-level-sheet-pane))
   (realize-mirror-aux port sheet
@@ -178,14 +182,14 @@
 		      :sheet sheet :modifier-state state :timestamp time))
       (:configure-notify
        (make-instance 'window-configuration-event :sheet sheet
-		      :x x :y y :width width :height height :modifier-state state))
+		      :x x :y y :width width :height height))
       (:destroy-notify
        (make-instance 'window-destroy-event :sheet sheet))
       (:motion-notify
        (make-instance 'pointer-motion-event :pointer 0 :button code :x x :y y
                      :sheet sheet :modifier-state state :timestamp time))
       ((:exposure :display)
-       (make-instance 'window-repaint-event :sheet sheet :modifier-state state))
+       (make-instance 'window-repaint-event :sheet sheet))
       (t
        nil))))
 
