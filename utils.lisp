@@ -353,3 +353,10 @@ by the number of variables in VARS."
 in KEYWORDS removed."
   `(let ((,new-var (remove-keywords ,var ',keywords)))
      ,@body))
+
+
+(defun symbol-concat (&rest symbols)
+  "Actually this function raises the next question: what is *PACKAGE* supposed to be?
+   The correct answer: listen to the elders and don't use this function or any variant
+   of it -- Don't construct symbols, instead let the user specify them."
+  (intern (apply #'concatenate 'string (mapcar #'symbol-name symbols))))

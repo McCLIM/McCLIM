@@ -753,8 +753,8 @@ were added."
    (text-style :initarg :text-style)))
 
 (defmacro def-grecording (name (&rest args) &body body)
-  (let ((method-name (intern (format nil "MEDIUM-~A*" name)))
-	(class-name (intern (format nil "~A-OUTPUT-RECORD" name)))
+  (let ((method-name (symbol-concat '#:medium- name '*))
+	(class-name  (symbol-concat name '#:-OUTPUT-RECORD))
 	(medium (gensym "MEDIUM"))
         (class-vars `((stream :initarg :stream)
                       ,@(loop for arg in args

@@ -796,8 +796,8 @@
                                   (or (getf face-table
                                             (if (listp face)
                                                 (intern (format nil "~A-~A"
-                                                                (first face)
-                                                                (second face))
+                                                                (symbol-name (first face))
+                                                                (symbol-name (second face)))
                                                         :keyword)
                                                 face))
                                       (getf *clx-text-faces* :roman))))
@@ -826,8 +826,8 @@
                              (or (getf face-table
                                        (if (listp face)
                                            (intern (format nil "~A-~A"
-                                                           (first face)
-                                                           (second face))
+                                                           (symbol-name (first face))
+                                                           (symbol-name (second face)))
                                                    :keyword)
                                            face))
                                  (getf *clx-text-faces* :roman))))

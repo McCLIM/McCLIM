@@ -588,7 +588,7 @@
 ;;; Generic graphic operation methods
 
 (defmacro def-graphic-op (name (&rest args))
-  (let ((method-name (intern (format nil "MEDIUM-~A*" name))))
+  (let ((method-name (symbol-concat '#:medium- name '*)))
     `(eval-when (eval load compile)
        (defmethod ,method-name ((stream sheet) ,@args)
 	 (with-sheet-medium (medium stream)

@@ -71,12 +71,15 @@
           (setf (slot-value event 'timestamp)
                 (incf *last-timestamp*))))))
 
-(defmethod event-type ((event event))
-  (let* ((type (string (type-of event)))
-	 (position (search "-EVENT" type)))
-    (if (null position)
-	:event
-      (intern (subseq type 0 position) :keyword))))
+;; ### method deleted, since it is defined below in a less obfuscated
+;;     way.
+;; --GB 2002-11-20
+;(defmethod event-type ((event event))
+;  (let* ((type (string (type-of event)))
+;	 (position (search "-EVENT" type)))
+;    (if (null position)
+;	:event
+;      (intern (subseq type 0 position) :keyword))))
 
 (defclass device-event (event)
   ((sheet :initarg :sheet
