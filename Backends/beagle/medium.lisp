@@ -235,7 +235,7 @@ This is equal to the length of the provided line-dash pattern."
 ;;; COCOA NOTE: each drawing operation flushes the window already, so
 ;;; we never get into the position of having unmirrored drawing ops
 ;;; in the off-screen buffer.
-#+nil
+
 (defmethod medium-finish-output ((medium beagle-medium))
   (debug-log 2 "medium.lisp -> medium-finish-output~%")
   (progn
@@ -252,7 +252,7 @@ This is equal to the length of the provided line-dash pattern."
 ;;; COCOA NOTE: each drawing operation flushes the window already, so
 ;;; we never get into the position of having unmirrored drawing ops
 ;;; in the off-screen buffer.
-#+nil
+
 (defmethod medium-force-output ((medium beagle-medium))
   (debug-log 2 "medium.lisp -> medium-force-output~%")
   (progn

@@ -59,6 +59,9 @@
     (unless (eql targetview (%null-ptr))
       (add-event-to-queue targetview event))))
 
+(define-objc-method ((:void :flags-changed event) lisp-window)
+  (add-event-to-queue self event))
+
 (define-objc-method ((:void :key-down event) lisp-window)
 ;;;  (nslog (format nil "LISP-WINDOW: Received KEY DOWN event: ~S" (description event)))
   (add-event-to-queue self event))

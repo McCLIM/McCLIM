@@ -90,22 +90,28 @@
     (send (@class ns-bezier-path) :set-default-line-cap-style cap)
     (send (@class ns-bezier-path) :set-default-line-join-style join)
     (send string :draw-at-point point :with-attributes attr)
-    (send (send self 'window) 'flush-window)
-    (send self 'unlock-focus)))
+;;;    (send (send self 'window) 'flush-window)
+    (send self 'unlock-focus))
+;;;  (send (send self 'window) 'flush-window))
+  )
 
 (define-objc-method ((:void :stroke-path path :in-colour colour) lisp-view)
   (when (send self 'lock-focus-if-can-draw)
     (send (the ns-color colour) 'set)      ; colour for current graphics context
     (send path 'stroke)
-    (send (send self 'window) 'flush-window)
-    (send self 'unlock-focus)))
+;;;    (send (send self 'window) 'flush-window)
+    (send self 'unlock-focus))
+;;;  (send (send self 'window) 'flush-window))
+  )
 
 (define-objc-method ((:void :fill-path path :in-colour colour) lisp-view)
   (when (send self 'lock-focus-if-can-draw)
     (send (the ns-color colour) 'set)      ; colour for current graphics context
     (send path 'fill)
-    (send (send self 'window) 'flush-window)
-    (send self 'unlock-focus)))
+;;;    (send (send self 'window) 'flush-window)
+    (send self 'unlock-focus))
+;;;  (send (send self 'window) 'flush-window))
+  )
 
 (define-objc-method ((:id :copy-bitmap-from-region (:<NSR>ect rect)) lisp-view)
   (debug-log 1 "lisp-view -> copy-bitmap-from-region (~A ~A ~A ~A)~%"
@@ -134,13 +140,14 @@
 ;  [image dissolveToPoint:point fraction:1.0];
 ;  [image release];
 
-  (if (send self 'lock-focus-if-can-draw)
-      (progn
-	(let ((image (send (send (@class ns-image) 'alloc) :init-with-data (send bitmap "TIFFRepresentation"))))
-	  (send image :dissolve-to-point point :fraction 1.0))
-	(send (send self 'window) 'flush-window)
-	(send self 'unlock-focus))))
-;;;    (format *debug-io* "(paste-bitmap...) - FAILED TO LOCK FOCUS ON VIEW ~S!!!~%" self)))
+  (when (send self 'lock-focus-if-can-draw)
+    (progn
+      (let ((image (send (send (@class ns-image) 'alloc) :init-with-data (send bitmap "TIFFRepresentation"))))
+	(send image :dissolve-to-point point :fraction 1.0))
+;;;	(send (send self 'window) 'flush-window)
+      (send self 'unlock-focus)))
+;;;  (send (send self 'window) 'flush-window))
+  )
 
 ;;; ----------------------------------------------------------------------------
 
@@ -184,8 +191,10 @@
       (send (the ns-color (view-background-colour self)) 'set))
     (slet ((bounds (send self 'bounds)))
       (#_NSRectFill bounds))
-    (send (send self 'window) 'flush-window)
-    (send self 'unlock-focus)))
+;;;    (send (send self 'window) 'flush-window)
+    (send self 'unlock-focus))
+;;;  (send (send self 'window) 'flush-window))
+  )
 
 ;;; Override the various :set-bounds-size etc. methods so we can reset the tracking
 ;;; rectangle when they change.

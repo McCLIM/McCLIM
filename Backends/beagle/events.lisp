@@ -28,7 +28,7 @@
 
 #||
 
-$Id: events.lisp,v 1.3 2004/08/08 16:09:13 duncan Exp $
+$Id: events.lisp,v 1.4 2004/08/21 20:51:28 duncan Exp $
 
 All these are copied pretty much from CLX/port.lisp
 
@@ -364,7 +364,8 @@ when a notification is added to the queue."
 		      *-current-pointer-graft-xy-*))
     (let ((window (send event 'window))
 	  (return-event event)
-	  (modifier-state (beagle-modifier-to-modifier-state (send event 'modifier-flags)))
+	  ;; Can't do this here any more - it breaks NSFlagsChanged event handling :-(
+;;;	  (modifier-state (beagle-modifier-to-modifier-state (send event 'modifier-flags)))
 	  (event-type (send event 'type)))
       (when (or (equal #$NSLeftMouseUp event-type)
 		(equal #$NSLeftMouseDown event-type)
@@ -415,7 +416,7 @@ when a notification is added to the queue."
 				     :graft-x        (pref location-in-screen-point :<NSP>oint.x)
 				     :graft-y        (pref location-in-screen-point :<NSP>oint.y)
 				     :sheet          (port-lookup-sheet-for-view *beagle-port* mirror)
-				     :modifier-state modifier-state
+				     :modifier-state (beagle-modifier-to-modifier-state (send event 'modifier-flags))
 				     ;; Timestamp from Cocoa looks like 12345.7 - CLIM wants integer no
 				     ;; bigger than a fixnum, so it gets a fixnum. Hope Cocoa doesn't
 				     ;; send non-unique timestamps.
@@ -447,7 +448,7 @@ when a notification is added to the queue."
 					  :graft-x 0
 					  :graft-y 0
 					  :sheet          (port-lookup-sheet-for-view *beagle-port* mirror)
-					  :modifier-state modifier-state
+					  :modifier-state (beagle-modifier-to-modifier-state (send event 'modifier-flags))
 					  ;; Timestamp from Cocoa looks like 12345.7 - CLIM wants integer no
 					  ;; bigger than a fixnum, so it gets a fixnum. Hope Cocoa doesn't
 					  ;; send non-unique timestamps.
@@ -478,7 +479,7 @@ when a notification is added to the queue."
 					    ;; Irrespective of where the key event happened, send it
 					    ;; to the sheet that has key-focus for the port.
 					    :sheet          (beagle-port-key-focus *beagle-port*)
-					    :modifier-state modifier-state
+					    :modifier-state (beagle-modifier-to-modifier-state (send event 'modifier-flags))
 					    :timestamp (incf timestamp)))))
       (when (or (equal #$NSMouseMoved event-type)
 		(equal #$NSLeftMouseDragged event-type)
@@ -545,7 +546,7 @@ when a notification is added to the queue."
 				 ;; find the "youngest" view (or sheet) over which the event occurred; this
 				 ;; is the sheet that should handle the event.
 				 :sheet (port-lookup-sheet-for-view *beagle-port* mirror)
-				 :modifier-state modifier-state
+				 :modifier-state (beagle-modifier-to-modifier-state (send event 'modifier-flags))
 				 :timestamp (incf timestamp))))))
       (when (or (equal #$NSMouseEntered event-type)
 		(equal #$NSMouseExited  event-type))
@@ -580,51 +581,117 @@ when a notification is added to the queue."
 				 :graft-x        (pref location-in-screen-point :<NSP>oint.x) ;0
 				 :graft-y        (pref location-in-screen-point :<NSP>oint.y) ;0
 				 :sheet (port-lookup-sheet-for-view *beagle-port* mirror)
-				 :modifier-state modifier-state
+				 :modifier-state (beagle-modifier-to-modifier-state (send event 'modifier-flags))
 				 :timestamp (incf timestamp))))))
+
+      ;; We need to maintain the modifier flags state constantly to be able to
+      ;; implement this; suggest a slot in beagle-port?
+      (when (equal #$NSFlagsChanged event-type)
+	(format *debug-io* "In event-build (flags changed)~%")
+	;; Use the 'old' 'modifiers' in conjunction with the new 'modifier-state'
+	;; to work out if this is a key up or a key down...
+	(setf return-event (make-instance (if (current-mods-map-to-key-down (send event 'modifier-flags))
+					      'key-press-event
+					    'key-release-event)
+					  :key-name       nil
+					  :key-character  nil
+					  :x              0
+					  :y              0
+					  :graft-x        0
+					  :graft-y        0
+					  ;; Irrespective of where the key event happened, send it
+					  ;; to the sheet that has key-focus for the port.
+					  :sheet          (beagle-port-key-focus *beagle-port*)
+					  :modifier-state (beagle-modifier-to-modifier-state (send event 'modifier-flags))
+					  :timestamp (incf timestamp))))
       
-      ;; #$NSFlagsChanged - want this one (or do we?)
       ;; #$NSHelpRequested- wonder if we can convert this into "user pressed help key" key event?
       ;;                    Then could pull up docs (or could do if there were any!)
       ;; #$NSCursorUpdate
 
-;;;      (when (or (typep return-event 'pointer-exit-event)
-;;;		(typep return-event 'pointer-enter-event))
-;;;	(format *debug-io* "Got CLIM pointer event: ~S~%" return-event))
       return-event))
 
-;;; This has been added to McCLIM and the CLX back end; I'm not sure what it's supposed
-;;; to be for. Never mind, add it anyway. defgeneric is in stream-input.lisp
-;;; SHOULD BE -> (defmethod synthesize-pointer-motion-event ((pointer beagle-pointer))
+  ;;; This has been added to McCLIM and the CLX back end; I'm not sure what it's supposed
+  ;;; to be for. Never mind, add it anyway. defgeneric is in stream-input.lisp
+  ;;; SHOULD BE -> (defmethod synthesize-pointer-motion-event ((pointer beagle-pointer))
 
-;;; Also - move inside closure above, so we can set the 'timestamp' properly.
-(defmethod synthesize-pointer-motion-event (pointer)
-  ;; *-current-event-modifier-state-* is set whenever an event or notification is received
-  ;; containing this information.
-  ;; *-current-pointer-button-state-* is set whenever there is a mouse down or drag, and
-  ;; unset on mouse up.
-  ;; *-current-pointer-graft-xy-* is set whenever there is a mouse event handled.
-  (declare (special *-current-event-modifier-state-*
-		    *-current-pointer-button-state-*
-		    *-current-pointer-view-xy-*
-		    *-current-pointer-graft-xy-*))
-  (let* ((port (port pointer))
-	 (sheet (port-pointer-sheet port)))
-    (when sheet
-      (let ((mirror (sheet-direct-mirror sheet)))
-	(when mirror
-	  (make-instance 'pointer-motion-event
-			 :pointer 0
-			 :button *-current-pointer-button-state-*
-			 :x (pref *-current-pointer-view-xy-* :<NSP>oint.x)
-			 :y (pref *-current-pointer-view-xy-* :<NSP>oint.y)
-			 :graft-x (pref *-current-pointer-graft-xy-* :<NSP>oint.x)
-			 :graft-y (pref *-current-pointer-graft-xy-* :<NSP>oint.y)
-			 :sheet sheet
-			 :modifier-state *-current-event-modifier-state-*
-			 :timestamp (incf timestamp)))))))
+  (defmethod synthesize-pointer-motion-event (pointer)
+    ;; *-current-event-modifier-state-* is set whenever an event or notification is received
+    ;; containing this information.
+    ;; *-current-pointer-button-state-* is set whenever there is a mouse down or drag, and
+    ;; unset on mouse up.
+    ;; *-current-pointer-graft-xy-* is set whenever there is a mouse event handled.
+    (declare (special *-current-event-modifier-state-*
+		      *-current-pointer-button-state-*
+		      *-current-pointer-view-xy-*
+		      *-current-pointer-graft-xy-*))
+    (let* ((port (port pointer))
+	   (sheet (port-pointer-sheet port)))
+      (when sheet
+	(let ((mirror (sheet-direct-mirror sheet)))
+	  (when mirror
+	    (make-instance 'pointer-motion-event
+			   :pointer 0
+			   :button *-current-pointer-button-state-*
+			   :x (pref *-current-pointer-view-xy-* :<NSP>oint.x)
+			   :y (pref *-current-pointer-view-xy-* :<NSP>oint.y)
+			   :graft-x (pref *-current-pointer-graft-xy-* :<NSP>oint.x)
+			   :graft-y (pref *-current-pointer-graft-xy-* :<NSP>oint.y)
+			   :sheet sheet
+			   :modifier-state *-current-event-modifier-state-*
+			   :timestamp (incf timestamp)))))))
 
   )  ; end of 'timestamp' closure
+
+;;; This is really, really horribly written. Hopefully it will just be
+;;; temporary until everything is 'band-aided' (!?) at which point we'll
+;;; look to migrate to Carbon and reimplement a lot of this stuff.
+(defun current-mods-map-to-key-down (current-modifier-state)
+  (declare (special *-current-event-modifier-state-*))
+  ;; Are there modifiers in 'current-modifier-state' that don't exist in
+  ;; *-current-event-modifier-state-* (key down) or vice versa (key up)?
+  ;; if shift is in special but not in current, it was a key-up
+  ;; if shift in current but not special, key-down
+  ;; ditto control, command, alternate, alpha
+  ;;#$NSShiftKeyMask +shift-key+
+  ;;#$NSControlKeyMask +control-key+
+  ;;#$NSCommandKeyMask +meta-key+
+  ;;#$NSAlternateKeyMask +super-key+
+  ;;#$NSAlphaShiftKeyMask +hyper-key+
+  (cond ((null *-current-event-modifier-state-*)
+	 t)
+	((and (> (logand *-current-event-modifier-state-* +shift-key+) 0)
+	      (= (logand current-modifier-state #$NSShiftKeyMask) 0))
+	 nil)
+	((and (= (logand *-current-event-modifier-state-* +shift-key+) 0)
+	      (> (logand current-modifier-state #$NSShiftKeyMask) 0))
+	 t)
+	((and (> (logand *-current-event-modifier-state-* +control-key+) 0)
+	      (= (logand current-modifier-state #$NSControlKeyMask) 0))
+	 nil)
+	((and (= (logand *-current-event-modifier-state-* +control-key+) 0)
+	      (> (logand current-modifier-state #$NSControlKeyMask) 0))
+	 t)
+	((and (> (logand *-current-event-modifier-state-* +meta-key+) 0)
+	      (= (logand current-modifier-state #$NSCommandKeyMask) 0))
+	 nil)
+	((and (= (logand *-current-event-modifier-state-* +meta-key+) 0)
+	      (> (logand current-modifier-state #$NSCommandKeyMask) 0))
+	 t)
+	((and (> (logand *-current-event-modifier-state-* +super-key+) 0)
+	      (= (logand current-modifier-state #$NSAlternateKeyMask) 0))
+	 nil)
+	((and (= (logand *-current-event-modifier-state-* +super-key+) 0)
+	      (> (logand current-modifier-state #$NSAlternateKeyMask) 0))
+	 t)
+	((and (> (logand *-current-event-modifier-state-* +hyper-key+) 0)
+	      (= (logand current-modifier-state #$NSAlphaShiftKeyMask) 0))
+	 nil)
+	((and (= (logand *-current-event-modifier-state-* +hyper-key+) 0)
+	      (> (logand current-modifier-state #$NSAlphaShiftKeyMask) 0))
+	 t)
+	(t nil)))
+
 
 ;; Need to make use of the Cocoa method for getting modifier state - this is independent of events
 ;; pretty much (i.e. pointer documentation pane changes depending what modifier keys are pressed
@@ -665,9 +732,33 @@ when a notification is added to the queue."
 	      (send window :order-front nil)
 	    (send window :make-key-and-order-front nil)))))))
 
-;; Not sure we need to do this...
-;;(defmethod port-force-output ((port clx-port))
-;;  (xlib:display-force-output (clx-port-display port)))
+;;; Not sure we need to do this... apparently we do. I have stopped flushing
+;;; the window after every drawing op, and now things don't get output
+;;; properly; some drawing ops appear not to do a medium-force-output or
+;;; a medium-finish-output so this hack does it instead. Note we can't do
+;;; quite the same thing as the CLX backend since each window needs flushing
+;;; rather than the drawing ops in the 'port output queue' (for want of a
+;;; better term).
+
+;;; I don't think this method should actually be in McCLIM personally - surely
+;;; the medium-*-output methods are sufficient (if invoked at the appropriate
+;;; points)?
+(defmethod port-force-output ((port beagle-port))
+  ;; For each graft, get the list of children. Loop over this list and
+  ;; do a flush on any children that are enabled.
+  (map-over-grafts #'(lambda (graft)
+		       (loop for sheet in (sheet-children graft)
+;;;			     do (format *debug-io* "Got sheet of: ~A~%" sheet)
+			     do (when (sheet-enabled-p sheet)
+;;;				  (format *debug-io* "Sheet is enabled - flushing window~%")
+				  ;; This next line is a hack; I'd much rather do the medium-force-output
+				  ;; solution. Unfortunately, all graft children are going to be either
+				  ;; top-level-sheet-pane or unmanaged-top-level-sheet-pane types - neither
+				  ;; of which have mediums (even though they are mirrored!). Kludge.
+				  (send (send (port-lookup-mirror port sheet) 'window)
+					'flush-window)))) ;;-if-needed))))
+;;;				  (medium-force-output (sheet-medium sheet)))))
+		       port))
 
 (defmethod port-grab-pointer ((port beagle-port) pointer sheet)
   (declare (ignore port pointer sheet))
