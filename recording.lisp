@@ -430,7 +430,7 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used."
     (x y (record basic-output-record))
   (values x y))
 
-#+CMU
+#+cmu
 (progn
   ;; Sometimes CMU's PCL fails with forward reference classes, so this
   ;; is a kludge to keep it happy.
@@ -876,7 +876,7 @@ were added."
   ;; up? Should handle-repaint do so?
   ;;
   ;; --GB 2003-03-14
-  #+NIL
+  #+nil
   (setf (medium-clipping-region medium) (graphics-state-clip state)))
 
 (defmethod match-output-records-1 and ((record gs-clip-mixin)

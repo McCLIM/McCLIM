@@ -504,7 +504,7 @@ sheet-supports-only-one-child error to be signalled."))
 
 (defmethod (setf sheet-transformation) :after (newvalue (sheet sheet-parent-mixin))
   (declare (ignore newvalue))
-  #+NIL(note-sheet-transformation-changed sheet))
+  #+nil(note-sheet-transformation-changed sheet))
 
 (defmethod map-sheet-position-to-parent ((sheet sheet-parent-mixin) x y)
   (transform-position (sheet-transformation sheet) x y))
@@ -686,7 +686,7 @@ that this might be different from the sheet's native region."
   (destroy-mirror (port sheet) sheet))
 
 (defmethod (setf sheet-region) :after (region (sheet mirrored-sheet-mixin))
-  #+NIL(port-set-sheet-region (port sheet) sheet region)
+  #+nil(port-set-sheet-region (port sheet) sheet region)
   (update-mirror-geometry sheet)
   )
 
@@ -722,7 +722,7 @@ that this might be different from the sheet's native region."
     ((or (null (sheet-parent sheet))
          (null (sheet-parent (sheet-parent sheet))))
      (make-rectangle* 0 0 #x10000 #x10000)
-     #+NIL
+     #+nil
      (make-rectangle* 0 0
                       (port-mirror-width (port sheet) sheet)
                       (port-mirror-height (port sheet) sheet)))

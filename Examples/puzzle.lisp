@@ -31,8 +31,8 @@
   (initialize-puzzle puzzle))
 
 (defmethod read-frame-command ((puzzle puzzle) &key (stream *standard-input*))
-  (let ((abort-chars #+Genera '(#\Abort #\End)
-		     #-Genera nil))
+  (let ((abort-chars #+genera '(#\Abort #\End)
+		     #-genera nil))
     (let ((command (read-command-using-keystrokes
 		     (frame-command-table puzzle) abort-chars
 		     :stream stream)))

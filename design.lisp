@@ -525,12 +525,12 @@
               (compose-in (compositum-mask ink)
                           mask)))
 
-#+NYI
+#+nyi
 (defmethod compose-in ((ink opacity) (mask in-compositum))
   (declare (ignorable ink mask))
   )
 
-#+NYI
+#+nyi
 (defmethod compose-in ((ink color) (mask in-compositum))
   (declare (ignorable ink mask))
   )
@@ -538,37 +538,37 @@
 
 ;;; OUT-COMPOSITUM
 
-#+NYI
+#+nyi
 (defmethod compose-in ((ink out-compositum) (mask out-compositum))
   (declare (ignorable ink mask))
   )
 
-#+NYI
+#+nyi
 (defmethod compose-in ((ink out-compositum) (mask in-compositum))
   (declare (ignorable ink mask))
   )
 
-#+NYI
+#+nyi
 (defmethod compose-in ((ink out-compositum) (mask uniform-compositum))
   (declare (ignorable ink mask))
   )
 
-#+NYI
+#+nyi
 (defmethod compose-in ((ink out-compositum) (mask opacity))
   (declare (ignorable ink mask))
   )
 
-#+NYI
+#+nyi
 (defmethod compose-in ((ink uniform-compositum) (mask out-compositum))
   (declare (ignorable ink mask))
   )
 
-#+NYI
+#+nyi
 (defmethod compose-in ((ink opacity) (mask out-compositum))
   (declare (ignorable ink mask))
   )
 
-#+NYI
+#+nyi
 (defmethod compose-in ((ink color) (mask out-compositum))
   (declare (ignorable ink mask))
   )
@@ -576,47 +576,47 @@
 
 ;;; OVER-COMPOSITUM
 
-#+NYI
+#+nyi
 (defmethod compose-in ((ink over-compositum) (mask over-compositum))
   (declare (ignorable ink mask))
   )
 
-#+NYI
+#+nyi
 (defmethod compose-in ((ink over-compositum) (mask out-compositum))
   (declare (ignorable ink mask))
   )
 
-#+NYI
+#+nyi
 (defmethod compose-in ((ink over-compositum) (mask in-compositum))
   (declare (ignorable ink mask))
   )
 
-#+NYI
+#+nyi
 (defmethod compose-in ((ink over-compositum) (mask uniform-compositum))
   (declare (ignorable ink mask))
   )
 
-#+NYI
+#+nyi
 (defmethod compose-in ((ink over-compositum) (mask opacity))
   (declare (ignorable ink mask))
   )
 
-#+NYI
+#+nyi
 (defmethod compose-in ((ink out-compositum) (mask over-compositum))
   (declare (ignorable ink mask))
   )
 
-#+NYI
+#+nyi
 (defmethod compose-in ((ink uniform-compositum) (mask over-compositum))
   (declare (ignorable ink mask))
   )
 
-#+NYI
+#+nyi
 (defmethod compose-in ((ink opacity) (mask over-compositum))
   (declare (ignorable ink mask))
   )
 
-#+NYI
+#+nyi
 (defmethod compose-in ((ink color) (mask over-compositum))
   (declare (ignorable ink mask))
   )
@@ -686,126 +686,126 @@
 
 ;;; IN-COMPOSITUM
 
-#+NYI
+#+nyi
 (defmethod compose-over ((foreground in-compositum) (background in-compositum))
   (declare (ignorable foreground background))
   )
 
-#+NYI
+#+nyi
 (defmethod compose-over ((foreground in-compositum) (background uniform-compositum))
   (declare (ignorable foreground background))
   )
 
-#+NYI
+#+nyi
 (defmethod compose-over ((foreground in-compositum) (background opacity))
   (declare (ignorable foreground background))
   )
 
-#+NYI
+#+nyi
 (defmethod compose-over ((foreground in-compositum) (background color))
   (declare (ignorable foreground background))
   )
 
-#+NYI
+#+nyi
 (defmethod compose-over ((foreground uniform-compositum) (background in-compositum))
   (declare (ignorable foreground background))
   )
 
-#+NYI
+#+nyi
 (defmethod compose-over ((foreground opacity) (background in-compositum))
   (declare (ignorable foreground background))
   )
 
 ;;; OUT-COMPOSITUM
 
-#+NYI
+#+nyi
 (defmethod compose-over ((foreground out-compositum) (background out-compositum))
   (declare (ignorable foreground background))
   )
 
-#+NYI
+#+nyi
 (defmethod compose-over ((foreground out-compositum) (background in-compositum))
   (declare (ignorable foreground background))
   )
 
-#+NYI
+#+nyi
 (defmethod compose-over ((foreground out-compositum) (background uniform-compositum))
   (declare (ignorable foreground background))
   )
 
-#+NYI
+#+nyi
 (defmethod compose-over ((foreground out-compositum) (background opacity))
   (declare (ignorable foreground background))
   )
 
-#+NYI
+#+nyi
 (defmethod compose-over ((foreground out-compositum) (background color))
   (declare (ignorable foreground background))
   )
 
-#+NYI
+#+nyi
 (defmethod compose-over ((foreground in-compositum) (background out-compositum))
   (declare (ignorable foreground background))
   )
 
-#+NYI
+#+nyi
 (defmethod compose-over ((foreground uniform-compositum) (background out-compositum))
   (declare (ignorable foreground background))
   )
 
-#+NYI
+#+nyi
 (defmethod compose-over ((foreground color) (background out-compositum))
   (declare (ignorable foreground background))
   )
 
 ;;; OVER-COMPOSITUM
 
-#+NYI
+#+nyi
 (defmethod compose-over ((foreground over-compositum) (background over-compositum))
   (declare (ignorable foreground background))
   )
 
-#+NYI
+#+nyi
 (defmethod compose-over ((foreground over-compositum) (background out-compositum))
   (declare (ignorable foreground background))
   )
 
-#+NYI
+#+nyi
 (defmethod compose-over ((foreground over-compositum) (background in-compositum))
   (declare (ignorable foreground background))
   )
 
-#+NYI
+#+nyi
 (defmethod compose-over ((foreground over-compositum) (background uniform-compositum))
   (declare (ignorable foreground background))
   )
 
-#+NYI
+#+nyi
 (defmethod compose-over ((foreground over-compositum) (background opacity))
   (declare (ignorable foreground background))
   )
 
-#+NYI
+#+nyi
 (defmethod compose-over ((foreground over-compositum) (background color))
   (declare (ignorable foreground background))
   )
 
-#+NYI
+#+nyi
 (defmethod compose-over ((foreground out-compositum) (background over-compositum))
   (declare (ignorable foreground background))
   )
 
-#+NYI
+#+nyi
 (defmethod compose-over ((foreground in-compositum) (background over-compositum))
   (declare (ignorable foreground background))
   )
 
-#+NYI
+#+nyi
 (defmethod compose-over ((foreground uniform-compositum) (background over-compositum))
   (declare (ignorable foreground background))
   )
 
-#+NYI
+#+nyi
 (defmethod compose-over ((foreground opacity) (background over-compositum))
   (declare (ignorable foreground background))
   )

@@ -185,9 +185,9 @@
            "WITH-STANDARD-IO-SYNTAX" "WRITE" "WRITE-BYTE" "WRITE-CHAR" "WRITE-LINE" "WRITE-SEQUENCE"
            "WRITE-STRING" "WRITE-TO-STRING" "Y-OR-N-P" "YES-OR-NO-P" "ZEROP"))
         (packages
-         #+CLISP  '(:common-lisp :clos)
-         #+GCL    '(:lisp :pcl)
-         #-(OR CLISP GCL) '(:common-lisp))
+         #+clisp  '(:common-lisp :clos)
+         #+gcl    '(:lisp :pcl)
+         #-(or clisp gcl) '(:common-lisp))
         (gray-symbols
          '("FUNDAMENTAL-STREAM"
            "FUNDAMENTAL-INPUT-STREAM"
@@ -218,12 +218,12 @@
            "STREAM-READ-BYTE"
            "STREAM-WRITE-BYTE" ))
         (gray-packages
-         `(#+:CLISP                 ,@'("LISP")
-           #+:CMU                   ,@'("EXT")
-	   #+:MCL                   ,@'("CCL")
-           #+:ALLEGRO               ,@'("COMMON-LISP" "EXCL" "STREAM")
-           #+:HARLEQUIN-COMMON-LISP ,@'("STREAM")
-           #+:SBCL                  ,@'("SB-GRAY"))) )
+         `(#+clisp                 ,@'("LISP")
+           #+cmu                   ,@'("EXT")
+	   #+mcl                   ,@'("CCL")
+           #+allegro               ,@'("COMMON-LISP" "EXCL" "STREAM")
+           #+harlequin-common-lisp ,@'("STREAM")
+           #+sbcl                  ,@'("SB-GRAY"))) )
     ;;
     (labels ((seek-symbol (name packages)
                ;; Seek the a symbol named 'name' in `packages'
@@ -1816,7 +1816,7 @@
 (defpackage :clim-sys
   (:use)
   ;;
-  #+CMU
+  #+cmu
   (:import-from "MP"
    #:make-process
    #:destroy-process

@@ -30,13 +30,13 @@
       (setf (ext:search-list "gray-streams:")
 	'("target:pcl/" "library:subsystems/")))
     (load "gray-streams:gray-streams-library"))
-  #-CLX
+  #-clx
   (require :clx)
-  #-MK-DEFSYSTEM
+  #-mk-defsystem
   (load "library:subsystems/defsystem"))
 
-(pushnew :CLIM *features*)
-(pushnew :MCCLIM *features*)
+(pushnew :clim *features*)
+(pushnew :mcclim *features*)
 
 #+mk-defsystem (use-package "MK")
 
@@ -74,17 +74,17 @@
 (clim-defsystem (:clim-lisp)
   ;; First possible patches
   "patch"
-  #+:CMU       "Lisp-Dep/fix-cmu"
-  #+:EXCL      "Lisp-Dep/fix-acl"
-  #+:SBCL      "Lisp-Dep/fix-sbcl"
-  #+:OPENMCL   "Lisp-Dep/fix-openmcl"
+  #+cmu       "Lisp-Dep/fix-cmu"
+  #+excl      "Lisp-Dep/fix-acl"
+  #+sbcl      "Lisp-Dep/fix-sbcl"
+  #+openmcl   "Lisp-Dep/fix-openmcl"
   "package")
 
 (clim-defsystem (:clim-core :depends-on (:clim-lisp))
    "decls"
 
-   #.(OR
-      #+(AND :CMU :MP (NOT :PTHREAD))  "Lisp-Dep/mp-cmu"
+   #.(or
+      #+(and :cmu :mp (not :pthread))  "Lisp-Dep/mp-cmu"
       ;;
       ;; This is perhaps a poor attempt of mine to conditionalize on
       ;; the actual presence of the SB-THREAD package which I guess
@@ -93,12 +93,12 @@
       ;; If this breaks, blame me.
       ;;
       ;; --GB 2003-03-14
-      #+:SBCL
+      #+sbcl
       (if (find-package "SB-THREAD")
           "Lisp-Dep/mp-sbcl"
           "Lisp-Dep/mp-nil")
-      #+:EXCL                          "Lisp-Dep/mp-acl"
-      #+:OPENMCL                       "Lisp-Dep/mp-openmcl"
+      #+excl                          "Lisp-Dep/mp-acl"
+      #+openmcl                       "Lisp-Dep/mp-openmcl"
       #| fall back |#                  "Lisp-Dep/mp-nil")
    "utils"
    "defresource"

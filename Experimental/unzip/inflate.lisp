@@ -27,7 +27,7 @@
 
 (in-package :UNZIP)
 
-#+EXCL
+#+excl
 (defmacro defsubst (fun args &body body)
   (if (and (consp fun) (eq (car fun) 'setf))
       (let ((fnam (intern (concatenate 'string
@@ -43,7 +43,7 @@
          (cons '(lambda ,args .,body)
                .args.)))))
 
-#+(OR CMU CLISP)
+#+(or cmu clisp)
 (defmacro defsubst (name args &body body)
   `(progn
      (declaim (inline ,name))
@@ -200,7 +200,7 @@
              (%dotimes (j (expt 2 lacking-bits))
                (declare (type (unsigned-byte 15) j))
                (let ((k (logior code (ash j codelen))))
-                 #-(AND)
+                 #-(and)
                  (unless (null (aref table k))
                    (error "Code clash!"))
                  (setf (aref table k)

@@ -35,7 +35,7 @@
                         (setq frame
                           (make-application-frame demo-frame-class)))
                        (t
-                        #+NIL
+                        #+nil
                         (destroy-frame frame)))))))
 
 (define-application-frame demodemo 
@@ -112,7 +112,7 @@
                      :foreground +WHITE+
                      :background +PALETURQUOISE4+
                      :text-style (make-text-style :sans-serif :roman :normal))
-    #+NIL
+    #+nil
     (make-pane 'push-button-pane :label 
                :text-style (make-text-style :sans-serif :roman :normal)
                :max-width 1000

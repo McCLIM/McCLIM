@@ -139,7 +139,7 @@
       (setf (xlib:gcontext-foreground gc) (X-pixel port ink)
 	    (xlib:gcontext-background gc) (X-pixel port (medium-background medium)))
       ;; Here is a bug with regard to clipping ... ;-( --GB )
-      #-NIL ; being fixed at the moment, a bit twitchy though -- BTS
+      #-nil ; being fixed at the moment, a bit twitchy though -- BTS
       (let ((clipping-region (medium-device-region medium)))
         (if (region-equal clipping-region +nowhere+)
 	    (setf (xlib:gcontext-clip-mask gc) #())

@@ -188,11 +188,11 @@
     (setf (clx-port-display port)
 	  (xlib:open-display (getf options :host "") :display (getf options :display-id 0)))
     (progn
-      #+NIL
+      #+nil
       (setf (xlib:display-error-handler (clx-port-display port))
         #'clx-error-handler)
     
-      #-NIL
+      #-nil
       (setf (xlib:display-after-function (clx-port-display port)) #'xlib:display-force-output))
     
     (setf (clx-port-screen port) (nth (getf options :screen-id 0)
@@ -212,7 +212,7 @@
                  (process-next-event port)))))
          :name (format nil "~S's event process." port)))) ))
 
-#+NIL
+#+nil
 (defmethod (setf sheet-mirror-transformation) :after (new-value (sheet mirrored-sheet-mixin))
   )
 
@@ -232,7 +232,7 @@
          (r* (transform-region
               (sheet-native-transformation (sheet-parent sheet))
               (transform-region (sheet-transformation sheet) r)))
-         #+NIL
+         #+nil
          (r*
           (bounding-rectangle
            (region-intersection
@@ -398,12 +398,12 @@
   (declare (ignore transformation))
   nil)
 
-#+NIL
+#+nil
 (defmethod port-set-sheet-transformation ((port clx-port) (pane application-pane) transformation)
   (declare (ignore transformation))
   nil)
 
-#+NIL
+#+nil
 (defmethod port-set-sheet-transformation ((port clx-port) (pane interactor-pane) transformation)
   (declare (ignore transformation))
   nil)
@@ -734,14 +734,14 @@
 
 (defparameter *clx-text-family+face-map*
   '(:fix
-    #-NIL
+    #-nil
     ("adobe-courier"
      (:roman               "medium-r"
       :bold                "bold-r"
       :italic              "medium-o"
       :bold-italic         "bold-o"
       :italic-bold         "bold-o"))
-    #+NIL
+    #+nil
     ("*-lucidatypewriter"
      (:roman               "medium-r"
       :bold                "bold-r"

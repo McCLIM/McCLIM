@@ -413,13 +413,13 @@
   ((label       :initarg :label
                 :initform ""
                 :accessor gadget-label)
-   #+NIL
+   #+nil
    (align-x     :initarg :align-x
                 :accessor gadget-label-align-x)
-   #+NIL
+   #+nil
    (align-y     :initarg :align-y
                 :accessor gadget-label-align-y)
-   #+NIL
+   #+nil
    (text-style  :initform *default-text-style*
 		:initarg :text-style
                 :accessor gadget-text-style)))
@@ -1574,7 +1574,7 @@ and must never be nil."))
                                                             (gadget-min-value sb)
                                                             (+ (gadget-max-value sb) ts))))))
            ;; Blitter hack:
-           #-NIL
+           #-nil
            (with-drawing-options (sb :transformation (scroll-bar-transformation sb))
              (with-bounding-rectangle* (ox1 oy1 ox2 oy2) (scroll-bar-thumb-region sb)
                (setf (gadget-value sb) new-value)
@@ -1584,7 +1584,7 @@ and must never be nil."))
                  (if (< oy1 ny1)
                      (draw-rectangle* sb ox1 oy1 ox2 ny1 :ink *3d-normal-color*)
                      (draw-rectangle* sb ox1 oy2 ox2 ny2 :ink *3d-normal-color*)))))
-           #+NIL
+           #+nil
            (dispatch-repaint sb +everywhere+)
            (unwind-protect
                 (progn
@@ -2009,7 +2009,7 @@ and must never be nil."))
                             :min-width w :min-height h
                             :max-width w :max-height h)))
 
-#+NIL
+#+nil
 (defmethod allocate-space ((pane generic-list-pane) width height)
   )
 

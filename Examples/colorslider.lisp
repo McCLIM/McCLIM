@@ -29,7 +29,7 @@
   (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
     (display-gadget-background pane (gadget-current-color pane) 0 0 (- x2 x1) (- y2 y1))))
 
-#+NIL
+#+nil
 (defmethod handle-event ((pane slider-test-pane) (event window-repaint-event))
   (declare (ignorable event))
   (dispatch-repaint pane (sheet-region pane)))
@@ -163,7 +163,7 @@
               :normal +black+
               :width 200 :height 90))
     (:layouts
-     #+NIL
+     #+nil
      (default (vertically ()
                 text
                 (horizontally ()

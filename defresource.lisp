@@ -167,7 +167,7 @@
   (let ((pack (symbol-package name)))
     (when (or (eq pack (find-package :keyword))
               (eq pack (find-package :common-lisp))
-              #+EXCL (excl:package-definition-lock pack)
+              #+excl (excl:package-definition-lock pack)
               )
       (cerror "Define resource ~S anyway"
               "Resource ~S cannot be defined, since its home package, ~S, is locked."
@@ -240,7 +240,7 @@
                           (atomic-incf (the fixnum (car ,lock.)))
                           (cond ((and (= 1 (the fixnum 
                                              (locally
-                                               #+EXCL (declare (optimize (safety 3))) ;EXCL bug
+                                               #+excl (declare (optimize (safety 3))) ;EXCL bug
                                                (car ,lock.))))
                                       ,(match-expr ro.))
                                  (return ,ro.))
@@ -314,7 +314,7 @@
                (allocator.   (gensym "ALLOCATOR."))
                (deallocator. (gensym "DEALLOCATOR.")) )
           `(progn
-             #+EXCL (EXCL:RECORD-SOURCE-FILE ',name :TYPE :RESOURCE-DEFINITION)
+             #+excl (excl:record-source-file ',name :type :resource-definition)
              (let* ((,allocator. ,(allocator))
                     (,deallocator. ,(deallocator))
                     (,r.

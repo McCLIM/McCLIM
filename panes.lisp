@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.115 2003/03/19 03:02:20 gilbert Exp $
+;;; $Id: panes.lisp,v 1.116 2003/03/21 15:15:08 mikemac Exp $
 
 (in-package :CLIM-INTERNALS)
 
@@ -1041,7 +1041,7 @@
               (wanted      (reduce #'+ allot))
               (excess      (- major wanted
                               (* (1- (length children)) major-spacing))))
-         #+NIL
+         #+nil
          (progn
            (format *debug-io* "~&;; ALLOCATE-SPACE-AUX ~S~%" box)
            (format *debug-io* "~&;;   major = ~D, wanted = ~D, excess = ~D, allot = ~D.~%"
@@ -1066,7 +1066,7 @@
                                        (xically-content-sr** box c))))))))
                  (box-layout-mixin-clients box))))
            ;;
-           #+NIL
+           #+nil
            (progn
              (format *debug-io* "~&;;   old allotment = ~S.~%" allot)
              (format *debug-io* "~&;;   qvector 0 = ~S.~%" (mapcar #'(lambda (x) (elt x 0)) qvector))
@@ -1084,12 +1084,12 @@
                                      (decf sum q)
                                      (+ allot delta))))
                                allot qvector))
-                 #+NIL
+                 #+nil
                  (format *debug-io* "~&;;   new excess = ~F, allotment = ~S.~%" excess allot)
                  )))
            ;;
-           #+NIL (format *debug-io* "~&;;   excess = ~F.~%" excess)
-           #+NIL (format *debug-io* "~&;;   new allotment = ~S.~%" allot)
+           #+nil (format *debug-io* "~&;;   excess = ~F.~%" excess)
+           #+nil (format *debug-io* "~&;;   new allotment = ~S.~%" allot)
 
            (values allot
                    (mapcar #'ceiling (mapcar #'space-requirement-minor content-srs))) )))))
@@ -1110,7 +1110,7 @@
              for major in majors
              for minor in minors
              do
-               #+NIL (format *debug-io* "~&;;   child ~S at 0, ~D ~D x ~D~%" child x width height)
+               #+nil (format *debug-io* "~&;;   child ~S at 0, ~D ~D x ~D~%" child x width height)
                (when (box-client-pane child)
                  (move-sheet (box-client-pane child)
                              ((lambda (major minor) height width) x 0)
@@ -1120,13 +1120,13 @@
                (incf x major)
                (incf x major-spacing)))))))
 
-;; #+NIL
+;; #+nil
 (defmethod note-sheet-enabled :before ((pane pane))
   ;; hmmm
   (when (panep (sheet-parent pane))
     (change-space-requirements pane)) )
 
-;; #+NIL
+;; #+nil
 (defmethod note-sheet-disabled :before ((pane pane))
   ;; hmmm
   (when (panep (sheet-parent pane))
@@ -1304,7 +1304,7 @@
                                       (space-requirement-min-major sr))
                                   (space-requirement-major sr))))
                         srs)))
-          #+NIL
+          #+nil
           (format T "~&;; ~S: allot=~S, wanted=~S, excess=~S, qs=~S~%"
                   'allot-space-xically allot wanted excess qs)
           (let ((sum (reduce #'+ qs)))
@@ -1358,7 +1358,7 @@
                 :height     (space-requirement-height c)
                 :min-height (space-requirement-min-height c)
                 :max-height (space-requirement-max-height c))))
-          #+NIL
+          #+nil
           (format *debug-io* "~%;;; TABLE-PANE sr = ~S." res)
           res)))))
 
@@ -1374,7 +1374,7 @@
                  (setq csrs (loop for j from 0 below (array-dimension array 1)
                                 collect (table-pane-col-space-requirement pane j)))
                  width)))
-      #+NIL
+      #+nil
       (progn
         (format T "~&;; row space requirements = ~S." rsrs)
         (format T "~&;; col space requirements = ~S." csrs)
@@ -1487,8 +1487,8 @@
   (with-slots (user-width user-min-width user-max-width
                user-height user-min-height user-max-height)
       spacing
-    #+NIL(setf user-width  (max (or thickness 0) (or user-width 0)))
-    #+NIL(setf user-height (max (or thickness 0) (or user-height 0)))))
+    #+nil(setf user-width  (max (or thickness 0) (or user-width 0)))
+    #+nil(setf user-height (max (or thickness 0) (or user-height 0)))))
 
 (defmethod compose-space ((pane spacing-pane) &key width height)
   (declare (ignore width height))

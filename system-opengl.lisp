@@ -36,7 +36,7 @@
   #+nil
   (load (merge-pathnames "patch-cmu.lisp" *clim-directory*))
 
-  #-MK-DEFSYSTEM
+  #-mk-defsystem
   (load "library:subsystems/defsystem"))
 
 (pushnew :CLIM *features*)
@@ -50,15 +50,15 @@
   (:serial
 
    ;; First possible patches
-   #+:CMU       "lisp-dep/fix-cmu"
+   #+cmu       "lisp-dep/fix-cmu"
 
    "package"
 
    "decls"
 
-   #.(OR
-      #+(AND :CMU :MP (NOT :PTHREAD))  "lisp-dep/mp-cmu"
-      #+EXCL                           "lisp-dep/mp-acl"
+   #.(or
+      #+(and :cmu :mp (not :pthread))  "lisp-dep/mp-cmu"
+      #+excl                           "lisp-dep/mp-acl"
       #| fall back |#                  "lisp-dep/mp-nil")
    "utils"
    "defresource"

@@ -30,7 +30,7 @@
        (setf (gethash ',name clim-lisp-patch::*compile-time-clos-names*) t))
      (cl:defclass ,name ,@args)))
 
-#+NIL
+#+nil
 (progn
   (eval-when (:compile-toplevel :load-toplevel :execute)
     (defvar clim-lisp-patch::*inline-functions* nil))

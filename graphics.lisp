@@ -662,11 +662,11 @@
                                  (apply #'draw-design medium region options))
                                design))
 
-#+NYI
+#+nyi
 (defmethod draw-design (medium (design standard-region-intersection) &rest options &key &allow-other-keys)
   )
 
-#+NYI
+#+nyi
 (defmethod draw-design (medium (design standard-region-difference) &rest options &key &allow-other-keys)
   )
 

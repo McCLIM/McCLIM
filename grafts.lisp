@@ -73,13 +73,13 @@
   `(let ((graft ,graft))
      ,@body))
 
-#-(AND)
+#-(and)
 (defmethod graft-width ((graft graft) &key (units :device))
   (if (eq units :device)
       1000
     1))
 
-#-(AND)
+#-(and)
 (defmethod graft-height ((graft graft) &key (units :device))
   (if (eq units :device)
       1000
