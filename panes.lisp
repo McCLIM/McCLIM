@@ -801,7 +801,8 @@ The margin sizes (w h) are given with the :width and :height initargs.
 During realization the child of the spacer will have as cordinates
  x = w/2 , y = h/2."))
 
-(defmethod initialize-instance :after ((spacer spacer-pane) &rest)
+(defmethod initialize-instance :after ((spacer spacer-pane) &rest ignore)
+  (declare (ignore ignore))
   (with-slots (margin-width margin-height
 	       margin-max-width margin-max-height
 	       margin-min-width margin-min-height) spacer
@@ -846,7 +847,8 @@ During realization the child of the spacer will have as cordinates
    )
   (:documentation ""))
 
-(defmethod initialize-instance :after ((bp border-pane) &rest)
+(defmethod initialize-instance :after ((bp border-pane) &rest ignore)
+  (declare (ignore ignore))
   (with-slots (border-width) bp
     (let ((2*border-width (* 2 border-width)))
       (setf (slot-value bp 'margin-width) 2*border-width
@@ -1144,7 +1146,8 @@ During realization the child of the spacer will have as cordinates
 (defclass command-menu-pane (clim-stream-pane)
   ())
 
-(defmethod initialize-instance :before ((command-menu command-menu-pane) &rest)
+(defmethod initialize-instance :before ((command-menu command-menu-pane) &rest ignore)
+  (declare (ignore ignore))
   (setf (pane-display-time command-menu) :command-loop
 	(pane-incremental-redisplay command-menu) t
 	(pane-scroll-bars command-menu) t
