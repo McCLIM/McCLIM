@@ -505,9 +505,9 @@ FRAME-EXIT condition."))
 						   (first form))
 						  ((keywordp (first form))
 						   (let ((maker (intern (concatenate 'string
-									  (symbol-name #:make-clim-)
+									  (symbol-name '#:make-clim-)
 									  (symbol-name (first form))
-									  (symbol-name #:-pane))
+									  (symbol-name '#:-pane))
 									:clim)))
 						     (if (fboundp maker)
 							 `(,maker :name ',name ,@(cdr form))
@@ -563,9 +563,9 @@ FRAME-EXIT condition."))
 	(top-level '(default-frame-top-level))
 	(others nil)
 	(command-name (intern (concatenate 'string
-				(symbol-name #:define-)
+				(symbol-name '#:define-)
 				(symbol-name name)
-				(symbol-name #:-command))))
+				(symbol-name '#:-command))))
 	(pointer-documentation nil))
     (loop for (prop . values) in options
 	do (case prop
