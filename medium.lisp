@@ -21,48 +21,51 @@
 
 ;;; MEDIUM class
 
-(defclass medium ()
-  ((port :initarg :port
-	 :accessor port)
-   (graft :initarg :graft
-	  :accessor graft)
-   (foreground :initarg :foreground
-	       :initform +black+
-	       :accessor medium-foreground)
+(defclass medium () ())
+
+(defclass basic-medium (medium)
+  ((foreground :initarg :foreground
+               :initform +black+
+               :accessor medium-foreground)
    (background :initarg :background
-	       :initform +white+
-	       :accessor medium-background)
+               :initform +white+
+               :accessor medium-background)
    (ink :initarg :ink
-	:initform +foreground-ink+
-	:accessor medium-ink)
+        :initform +foreground-ink+
+        :accessor medium-ink)
    (transformation :type transformation
-		   :initarg :transformation
-		   :initform +identity-transformation+ 
-		   :accessor medium-transformation)
+                   :initarg :transformation
+                   :initform +identity-transformation+ 
+                   :accessor medium-transformation)
    (clipping-region :type region
-		    :initarg :clipping-region
-		    :initform +everywhere+
-		    :documentation "Clipping region in the SHEET coordinates.")
+                    :initarg :clipping-region
+                    :initform +everywhere+
+                    :documentation "Clipping region in the SHEET coordinates.")
    ;; always use this slot through its accessor, since there may
    ;; be secondary methods on it -RS 2001-08-23
    (line-style :initarg :line-style
-	       :initform (make-line-style)
-	       :accessor medium-line-style)
+               :initform (make-line-style)
+               :accessor medium-line-style)
    ;; always use this slot through its accessor, since there may
    ;; be secondary methods on it -RS 2001-08-23
    (text-style :initarg :text-style
-	       :initform (make-text-style :fix :roman :normal)
-	       :accessor medium-text-style)
+               :initform (make-text-style :fix :roman :normal)
+               :accessor medium-text-style)
    (default-text-style :initarg :default-text-style
-                       :initform (make-text-style :fix :roman :normal)
-		       :accessor medium-default-text-style)
+     :initform (make-text-style :fix :roman :normal)
+     :accessor medium-default-text-style)
    (sheet :initarg :sheet
-	  :initform nil ; this means that medium is not linked to a sheet
-	  :accessor medium-sheet)
-   ))
+          :initform nil                 ; this means that medium is not linked to a sheet
+          :reader medium-sheet
+          :writer (setf %medium-sheet) )))
 
-(defun mediump (x)
-  (typep x 'medium))
+(defclass ungrafted-medium (basic-medium) ())
+
+(defmethod mediump ((x medium))
+  t)
+
+(defmethod mediump ((x medium))
+  nil)
 
 (defmethod initialize-instance :after ((medium medium) &rest args)
   (declare (ignore args))
@@ -96,34 +99,8 @@
 (defmethod medium-merged-text-style ((medium medium))
   (merge-text-styles (medium-text-style medium) (medium-default-text-style medium)))
 
-(defmacro with-sheet-medium ((medium sheet) &body body)
-  (let ((old-medium (gensym))
-	(old-sheet (gensym)))
-    `(let* ((,old-medium (sheet-medium ,sheet))
-	    (,medium (or ,old-medium (make-medium (port ,sheet) ,sheet)))
-	    (,old-sheet (medium-sheet ,medium)))
-       (setf (sheet-medium ,sheet) ,medium)
-       (setf (medium-sheet ,medium) ,sheet)
-       (unwind-protect
-	   (progn
-	     ,@body)
-	 (setf (sheet-medium ,sheet) ,old-medium)
-	 (setf (medium-sheet ,medium) ,old-sheet)))))
-
-(defmacro with-sheet-medium-bound ((sheet medium) &body body)
-  (let ((old-medium (gensym))
-	(old-sheet (gensym)))
-    `(let* ((,old-medium (sheet-medium ,sheet))
-	    (medium (or ,old-medium ,medium (make-medium (port sheet) sheet)))
-	    (,old-sheet (medium-sheet ,medium)))
-       (if (null ,old-medium)
-	   (setf (sheet-medium ,sheet) ,medium))
-       (setf (medium-sheet ,medium) ,sheet)
-       (unwind-protect
-	   (progn
-	     ,@body)
-	 (setf (sheet-medium ,sheet) ,old-medium)
-	 (setf (medium-sheet ,medium) ,old-sheet)))))
+;; with-sheet-medium moved to output.lisp. --GB
+;; with-sheet-medium-bound moved to output.lisp. --GB
 
 (defmacro with-pixmap-medium ((medium pixmap) &body body)
   (let ((old-medium (gensym))
@@ -155,8 +132,13 @@
 (defclass text-style ()
   ())
 
-(defun text-style-p (x)
-  (typep x 'text-style))
+(defmethod text-style-p ((x text-style))
+  (declare (ignorable x))
+  t)
+
+(defmethod text-style-p ((x t))
+  (declare (ignorable x))
+  nil)
 
 (defclass standard-text-style (text-style)
   ((family :initarg :text-family
@@ -218,14 +200,22 @@
 			     :text-size size)))))
 ) ; end eval-when
 
+(defmethod print-object ((self text-style) stream)
+  (print-unreadable-object (self stream :type t :identity nil)
+    (format stream "~{~S~^ ~}" (multiple-value-list (text-style-components self)))))
+
 (defconstant *default-text-style* (make-text-style :fix :roman :normal))
 
 (defconstant *smaller-sizes* '(:huge :very-large :large :normal
 			       :small :very-small :tiny :tiny))
 
+(defconstant *font-scaling-factor* 4/3)
+(defconstant *font-min-size* 6)
+(defconstant *font-max-size* 48)
+
 (defun find-smaller-size (size)
   (if (numberp size)
-      (max (round (* size 0.75)) 6)
+      (max (round (/ size *font-scaling-factor*)) *font-min-size*)
     (cadr (member size *smaller-sizes*))))
 
 (defconstant *larger-sizes* '(:tiny :very-small :small :normal
@@ -233,7 +223,7 @@
 
 (defun find-larger-size (size)
   (if (numberp size)
-      (max (round (* size 4/3)) 6)
+      (min (round (* size *font-scaling-factor*)) *font-max-size*)
     (cadr (member size *larger-sizes*))))
 
 (defmethod text-style-components ((text-style standard-text-style))
@@ -343,28 +333,38 @@
 ;;; Line-Style class
 
 (defclass line-style ()
-  ((unit :initarg :line-unit
-	 :initform :normal
-	 :reader line-style-unit)
-   (thickness :initarg :line-thickness
-	      :initform 1
-	      :reader line-style-thickness)
-   (joint-shape :initarg :line-joint-shape
-		:initform :miter
-		:reader line-style-joint-shape)
-   (cap-shape :initarg :line-cap-shape
-	      :initform :butt
-	      :reader line-style-cap-shape)
-   (dashes :initarg :line-dashes
-	   :initform nil
-	   :reader line-style-dashes)
-  ))
-
-(defun line-style-p (x)
-  (typep x 'line-style))
+  ())
 
 (defclass standard-line-style (line-style)
-  ())
+  ((unit        :initarg :line-unit
+	        :initform :normal
+	        :reader line-style-unit
+                :type (member :normal :point :coordinate))
+   (thickness   :initarg :line-thickness
+	        :initform 1
+	        :reader line-style-thickness
+                :type real)
+   (joint-shape :initarg :line-joint-shape
+		:initform :miter
+		:reader line-style-joint-shape
+                :type (member :miter :bevel :round :none))
+   (cap-shape   :initarg :line-cap-shape
+	        :initform :butt
+	        :reader line-style-cap-shape
+                :type (member :butt :squere :round :no-end-point))
+   (dashes      :initarg :line-dashes
+	        :initform nil
+	        :reader line-style-dashes
+                :type (or (member t nil)
+                          sequence)) ))
+
+(defmethod line-style-p ((x line-style))
+  (declare (ignorable x))
+  t)
+
+(defmethod line-style-p ((x t))
+  (declare (ignorable x))
+  nil)
 
 (defun make-line-style (&key (unit :normal) (thickness 1)
 			     (joint-shape :miter) (cap-shape :butt)
@@ -376,22 +376,15 @@
     :line-cap-shape cap-shape
     :line-dashes dashes))
 
-
-;;; Graphics ops
-
-(defgeneric medium-draw-point* (medium x y))
-(defgeneric medium-draw-points* (medium coord-seq))
-(defgeneric medium-draw-line* (medium x1 y1 x2 y2))
-(defgeneric medium-draw-lines* (medium coord-seq))
-(defgeneric medium-draw-polygon* (medium coord-seq closed filled))
-(defgeneric medium-draw-rectangle* (medium left top right bottom filled))
-(defgeneric medium-draw-ellipse* (medium center-x center-y
-				  radius-1-dx radius-1-dy radius-2-dx radius-2-dy
-				  start-angle end-angle filled))
-(defgeneric medium-draw-text* (medium string x y
-			       start end
-			       align-x align-y
-			       toward-x toward-y transform-glyphs))
+(defmethod print-object ((self standard-line-style) stream)
+  (print-unreadable-object (self stream :type t :identity nil)
+    (format stream "~{~S ~S~^ ~}"
+            (mapcan (lambda (slot)
+                      (when (slot-boundp self slot)
+                        (list
+                         (intern (symbol-name slot) :keyword)
+                         (slot-value self slot))))
+                    '(unit thickness joint-shape cap-shape dashes)))))
 
 
 ;;; Misc ops
@@ -556,18 +549,21 @@
 ;;; Fall-through Methods For Multiple Objects Drawing Functions
 
 (defmethod medium-draw-points* ((medium basic-medium) coord-seq)
+  ;; WRONG! 
   (let ((tr (invert-transformation (medium-transformation medium))))
     (with-transformed-positions (tr coord-seq)
       (loop for (x y) on coord-seq by #'cddr
             do (medium-draw-point* medium x y)))))
 
 (defmethod medium-draw-lines* ((medium basic-medium) position-seq)
+  ;; WRONG! 
   (let ((tr (invert-transformation (medium-transformation medium))))
     (with-transformed-positions (tr position-seq)
       (loop for (x1 y1 x2 y2) on position-seq by #'cddddr
             do (medium-draw-line* medium x1 y1 x2 y2)))))
 
 (defmethod medium-draw-rectangles* ((medium basic-medium) coord-seq filled)
+  ;; WRONG! 
   (let ((tr (invert-transformation (medium-transformation medium))))
     (with-transformed-positions (tr coord-seq)
       (loop for (x1 y1 x2 y2) on coord-seq by #'cddddr
@@ -587,3 +583,33 @@
 
 (defmethod medium-beep ((medium basic-medium))
   nil)
+
+;;;;;;;;;
+
+(defmethod engraft-medium ((medium basic-medium) port sheet)
+  (setf (%medium-sheet medium) sheet
+        (medium-foreground medium) (medium-foreground sheet)
+        (medium-background medium) (medium-background sheet)
+        (medium-ink medium) (medium-ink sheet)
+        (medium-transformation medium) (medium-transformation sheet)
+        (medium-clipping-region medium) (medium-clipping-region sheet)
+        (medium-line-style medium) (medium-line-style sheet)
+        (medium-text-stle medium) (medium-text-stle sheet)))
+
+(defmethod degraft-medium ((medium basic-medium) port sheet)
+  (setf (%medium-sheet medium) nil))
+
+(defmethod allocate-medium ((port port) sheet)
+  (make-medium port sheet))
+
+(defmethod deallocate-medium ((port port) medium)
+  (declare (ignorable port medium))
+  nil)
+
+(defmethod port ((medium basic-medium))
+  (and (medium-sheet medium)
+       (port (medium-sheet medium))))
+
+(defmethod graft ((medium basic-medium))
+  (and (medium-sheet medium)
+       (graft (medium-sheet medium))))
