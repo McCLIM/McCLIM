@@ -21,19 +21,3 @@
 
 ;;; This is not good. 
 (defmacro defconstant (var val) `(defparameter ,var ,val))
-
-(in-package :sb-ext)
-
-;;; This definition or something similar should (probably) be added to
-;;; the main SBCL code.
-(defun getenv (var)
-  (let ((env (sb-ext:posix-environ)))
-    (dolist (v env)
-      (let ((p (position #\= v)))
-       (when (string= var (subseq v 0 p))
-         (return-from getenv
-           (if p
-               (subseq v (1 p))
-               "")))))
-    nil))
-         
