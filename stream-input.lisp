@@ -326,7 +326,7 @@
 (defmethod stream-read-line ((stream standard-extended-input-stream))
   (with-encapsulating-stream (estream stream)
     (let ((result (make-array 1
-			      :element-type character
+			      :element-type 'character
 			      :adjustable t
 			      :fill-pointer 0)))
       (loop for char = (stream-read-char estream)
