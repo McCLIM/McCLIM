@@ -85,31 +85,31 @@
   (:panes
    (text    :text-field
 	    :value "Pick a color"
-	    :space-requirement (make-space-requirement :width 350 :height 50))
+	    :height 50)
    (slider-r  :slider
 	      :drag-callback callback-red
 	      :value-changed-callback callback-red
 	      :min-value 0
 	      :max-value 9999
 	      :value 0
-	      :space-requirement (make-space-requirement :width 50 :height 100))
+	      :width 120)
    (slider-g  :slider
 	      :drag-callback callback-green
 	      :value-changed-callback callback-green
 	      :min-value 0
 	      :max-value 9999
 	      :value 0
-	      :space-requirement (make-space-requirement :width 50 :height 100))
+	      :width 120)
    (slider-b  :slider
 	      :drag-callback callback-blue
 	      :value-changed-callback callback-blue
 	      :min-value 0
 	      :max-value 9999
 	      :value 0
-	      :space-requirement (make-space-requirement :width 50 :height 100))   
+	      :width 120)
    (colored :slider-test
 	    :normal +black+
-	    :space-requirement (make-space-requirement :width 200 :height 100)))
+	      :width 200 :height 90))
   (:layouts
    (default (vertically () text (horizontally () slider-r slider-g slider-b colored))))
   (:top-level (slidertest-frame-top-level . nil)))
