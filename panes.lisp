@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.146 2004/12/07 04:49:51 hefner1 Exp $
+;;; $Id: panes.lisp,v 1.147 2005/01/02 05:26:44 ahefner Exp $
 
 (in-package :clim-internals)
 
@@ -1343,6 +1343,9 @@ order to produce a double-click")
  )
 
 ;;; TABLE PANE
+
+;; TODO: The table and grid panes should respect the :x-spacing,
+;; :y-spacing, and :spacing initargs.
 
 (defclass table-pane (composite-pane)
   ((array
