@@ -22,7 +22,10 @@
 ;;; - Check types: RATIONAL, COORDINATE, REAL?
 ;;; - Better error detection.
 ;;; - Item list formatting.
-;;; - Multiple columns: all columns are assumed to have the same width.
+;;; - Multiple columns:
+;;; - - all columns are assumed to have the same width;
+;;; - - all columns have the same number of rows; they should have the
+;;;     same height.
 ;;; - :MOVE-CURSOR T support.
 ;;; - All types of spacing, widths, heights.
 ;;; - FIXMEs.
