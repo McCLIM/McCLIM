@@ -38,6 +38,129 @@
 
 (in-package :CLIM-POSTSCRIPT)
 
+;;; Postscript output utilities
+(defun format-postscript-number (number)
+  (if (not (integerp number))
+      (string-right-trim
+       "." (string-right-trim
+            "0" (format nil "~,3F" (coerce number 'single-float))))
+      number))
+
+(defun format-postscript-angle (angle)
+  (format-postscript-number (* angle (/ 180 pi))))
+
+(defun write-coordinates (stream x y)
+  (with-transformed-position (*transformation* x y)
+    (format stream "~A ~A "
+            (format-postscript-number x)
+            (format-postscript-number y))))
+
+(defun write-transformation* (stream mxx mxy myx myy tx ty)
+  (format stream "[~{~A~^ ~}] "
+          (loop for c in (list mxx myx mxy myy tx ty)
+             collect (format-postscript-number c))))
+
+;;; Low level functions
+(defstruct postscript-procedure
+  (name nil :type (or symbol string))
+  (body "" :type string))
+
+(defvar *dictionary-name* "McCLIMDict")
+
+(defvar *procedures* (make-hash-table))
+
+(defvar *extra-entries* 0)
+
+(defun write-postcript-dictionary (stream)
+  ;;; FIXME: DSC
+  (format stream "~&%%BeginProlog~%")
+  (format stream "/~A ~D dict def ~2:*~A begin~%"
+          *dictionary-name* (+ (hash-table-count *procedures*)
+                               *extra-entries*))
+  (loop for proc being each hash-value in *procedures*
+     for name = (postscript-procedure-name proc)
+     and body = (postscript-procedure-body proc)
+     do (format stream "/~A { ~A } def~%" name body))
+  (format stream "end~%")
+  (format stream "%%EndProlog~%"))
+
+(defmacro define-postscript-procedure
+    ((name &key postscript-name postscript-body
+           (extra-entries 0)) args
+     &body body)
+  (check-type name symbol)
+  (check-type postscript-name (or symbol string))
+  (check-type postscript-body string)
+  (check-type extra-entries unsigned-byte)
+  `(progn
+     (setf (gethash ',name *procedures*)
+           (make-postscript-procedure :name ,postscript-name
+                                      :body ,postscript-body))
+     (maxf *extra-entries* ,extra-entries)
+     (defun ,name ,args ,@body)))
+
+;;;
+(define-postscript-procedure
+    (moveto* :postscript-name "m"
+             :postscript-body "moveto")
+    (stream x y)
+  (write-coordinates stream x y)
+  (format stream "m~%"))
+
+(define-postscript-procedure
+    (lineto* :postscript-name "l"
+             :postscript-body "lineto")
+    (stream x y)
+  (write-coordinates stream x y)
+  (format stream "l~%"))
+
+(define-postscript-procedure
+    (put-rectangle* :postscript-name "pr"
+                    :postscript-body
+                    "/y2 exch def /x2 exch def /y1 exch def /x1 exch def
+x1 y1 moveto x1 y2 lineto x2 y2 lineto x2 y1 lineto x1 y1 lineto"
+                    :extra-entries 4)
+    (stream x1 y1 x2 y2)
+  (write-coordinates stream x1 y1)
+  (write-coordinates stream x2 y2)
+  (format stream "pr~%"))
+
+(define-postscript-procedure (put-line* :postscript-name "pl"
+                                        :postscript-body "moveto lineto")
+    (stream x1 y1 x2 y2)
+  (write-coordinates stream x2 y2)
+  (write-coordinates stream x1 y1)
+  (format stream "pl~%"))
+
+(define-postscript-procedure
+    (put-ellipse :postscript-name "pe"
+                 :postscript-body
+                 ;; filled end-angle start-angle trans
+                 "matrix currentmatrix 5 1 roll
+concat dup rotate sub
+1 0 moveto
+0 0 1 0 5 -1 roll arc
+{ 0 0 lineto 1 0 lineto } {} ifelse
+setmatrix")
+    (stream ellipse filled)
+  (multiple-value-bind (ndx1 ndy1 ndx2 ndy2) (ellipse-normal-radii* ellipse)
+    (let* ((center (ellipse-center-point ellipse))
+           (cx (point-x center))
+           (cy (point-y center))
+           (tr (make-transformation ndx2 ndx1 ndy2 ndy1 cx cy))
+           (circle (untransform-region tr ellipse))
+           (start-angle (or (ellipse-start-angle circle) 0))
+           (end-angle (or (ellipse-end-angle circle) (* 2 pi))))
+      (write-string (if filled "true " "false ") stream)
+      (format stream "~A ~A "
+              (format-postscript-angle (if (< end-angle start-angle)
+                                           (+ end-angle (* 2 pi))
+                                           end-angle))
+              (format-postscript-angle start-angle))
+      (write-transformation* stream ndx2 ndx1 ndy2 ndy1 cx cy)
+      (format stream "pe~%"))))
+
+;;;;
 (defvar *transformation* nil
   "Native transformation")
 
@@ -59,37 +182,6 @@
   (postscript-save-graphics-state medium)
   (funcall continuation)
   (postscript-restore-graphics-state medium))
-
-(defun format-postscript-number (number)
-  (if (not (integerp number))
-      (coerce number 'single-float)
-      number))
-
-(defun format-postscript-angle (angle)
-  (format-postscript-number (* angle (/ 180 pi))))
-
-(defun write-coordinates (stream x y)
-  (with-transformed-position (*transformation* x y)
-    (format stream "~A ~A "
-            (format-postscript-number x)
-            (format-postscript-number y))))
-
-(defun write-transformation* (stream mxx mxy myx myy tx ty)
-  (format stream "[~{~A~^ ~}]"
-          (loop for c in (list mxx mxy myx myy tx ty)
-             collect (format-postscript-number c))))
-
-(defun moveto (stream x y)
-  (write-coordinates stream x y)
-  (format stream "moveto~%"))
-
-(defun lineto (stream x y)
-  (write-coordinates stream x y)
-  (format stream "lineto~%"))
-
-(defun postscript-set-transformation (stream transformation)
-  (multiple-value-bind (mxx mxy myx myy tx ty) (get-transformation transformation)
-    (write-transformation* stream mxx mxy myx myy tx ty)))
 
 
 ;;; Postscript path functions
@@ -121,35 +213,14 @@
 ;;; Primitive paths
 (defmethod postscript-add-path (stream (polygon polygon))
   (let ((points (polygon-points polygon)))
-    (moveto stream (point-x (first points)) (point-y (first points)))
+    (moveto* stream (point-x (first points)) (point-y (first points)))
     (loop for point in (rest points)
-          do (lineto stream (point-x point) (point-y point)))
+          do (lineto* stream (point-x point) (point-y point)))
     (format stream "closepath~%")))
 
 (defmethod postscript-add-path (stream (ellipse ellipse))
   (let ((ellipse (transform-region *transformation* ellipse)))
-    (multiple-value-bind (ndx1 ndy1 ndx2 ndy2) (ellipse-normal-radii* ellipse)
-      (let* ((center (ellipse-center-point ellipse))
-             (cx (point-x center))
-             (cy (point-y center))
-             (tr (make-transformation ndx1 ndy1 ndx2 ndy2 cx cy))
-             (circle (untransform-region tr ellipse))
-             (start-angle (ellipse-start-angle circle))
-             (end-angle (ellipse-end-angle circle)))
-        (format stream "matrix currentmatrix~%")
-        (write-transformation* stream ndx1 ndy1 ndx2 ndy2 cx cy)
-        (format stream "concat~%")
-        (format stream "0 0 1 ~A ~A arc~%"
-                (format-postscript-angle start-angle)
-                (format-postscript-angle (if (< end-angle start-angle)
-                                             (+ end-angle (* 2 pi))
-                                             end-angle)))
-        ;; (when filled ; uncomment when this code will be shared
-        ;;              ; with ...-ELLIPTICAL-ARC
-        (format stream "0 0 lineto~%")
-        ;;)
-        (format stream "closepath~%")
-        (format stream "setmatrix~%")))))
+    (put-ellipse stream ellipse t)))
 
 
 ;;; Graphics state
@@ -167,8 +238,7 @@
            medium))
 
 (defmacro postscript-saved-state (medium kind)
-  `(getf (postscript-medium-graphics-state ,medium)
-       ,kind))
+  `(getf (postscript-medium-graphics-state ,medium) ,kind))
 
 (defun postscript-actualize-graphics-state (stream medium &rest kinds)
   "Sets graphics parameters named in STATES."
@@ -203,7 +273,7 @@
     (ecase unit
       (:normal +normal-line-width+)
       (:point 1)
-      (:coordinate (error ":COORDINATE line unit not implemented.")))))
+      (:coordinate (error ":COORDINATE line unit is not implemented.")))))
 
 (defmethod line-style-effective-thickness
     (line-style (medium postscript-medium))
@@ -249,7 +319,10 @@
 (defmethod postscript-set-graphics-state (stream medium (kind (eql :color)))
   (multiple-value-bind (r g b)
       (medium-color-rgb medium (medium-ink medium))
-    (format stream "~,3F ~,3F ~,3F setrgbcolor~%" r g b)))
+    (format stream "~A ~A ~A setrgbcolor~%"
+            (format-postscript-number r)
+            (format-postscript-number g)
+            (format-postscript-number b))))
 
 ;;; Clipping region
 (defgeneric postscript-set-clipping-region (stream region))
@@ -308,9 +381,8 @@
   (let ((stream (postscript-medium-file-stream medium))
         (*transformation* (sheet-native-transformation (medium-sheet medium))))
     (postscript-actualize-graphics-state stream medium :line-style :color)
-    (format stream "newpath~%")
-    (moveto stream x1 y1)
-    (lineto stream x2 y2)
+    (format stream "newpath ")
+    (put-line* stream x1 y1 x2 y2)
     (format stream "stroke~%")))
 
 (defmethod medium-draw-lines* ((medium postscript-medium) coord-seq)
@@ -319,9 +391,7 @@
     (postscript-actualize-graphics-state stream medium :line-style :color)
     (format stream "newpath~%")
     (map-repeated-sequence 'nil 4
-                           (lambda (x1 y1 x2 y2)
-                             (moveto stream x1 y1)
-                             (lineto stream x2 y2))
+                           (lambda (x1 y1 x2 y2) (put-line* stream x1 y1 x2 y2))
                            coord-seq)
     (format stream "stroke~%")))
 
@@ -342,9 +412,7 @@
                              coord-seq))
     (when closed
       (format stream "closepath~%"))
-    (format stream (if filled
-                       "fill~%"
-                       "stroke~%"))))
+    (format stream (if filled "fill~%" "stroke~%"))))
 
 (defmethod medium-draw-rectangle*
     ((medium postscript-medium) x1 y1 x2 y2 filled)
@@ -352,14 +420,8 @@
         (*transformation* (sheet-native-transformation (medium-sheet medium))))
     (postscript-actualize-graphics-state stream medium :line-style :color)
     (format stream "newpath~%")
-    (moveto stream x1 y1)
-    (lineto stream x2 y1)
-    (lineto stream x2 y2)
-    (lineto stream x1 y2)
-    (format stream "closepath~%")
-    (format stream (if filled
-                       "fill~%"
-                       "stroke~%"))))
+    (put-rectangle* stream x1 y1 x2 y2)
+    (format stream (if filled "fill~%" "stroke~%"))))
 
 (defmethod medium-draw-rectangles*
     ((medium postscript-medium) position-seq filled)
@@ -369,16 +431,9 @@
     (postscript-actualize-graphics-state stream medium :line-style :color)
     (format stream "newpath~%")
     (map-repeated-sequence 'nil 4
-        (lambda (x1 y1 x2 y2)
-          (moveto stream x1 y1)
-          (lineto stream x2 y1)
-          (lineto stream x2 y2)
-          (lineto stream x1 y2)
-          (format stream "closepath~%"))
+        (lambda (x1 y1 x2 y2) (put-rectangle* stream x1 y1 x2 y2))
          position-seq)
-    (format stream (if filled
-                       "fill~%"
-                       "stroke~%"))))
+    (format stream (if filled "fill~%" "stroke~%"))))
 
 (defmethod medium-draw-ellipse* ((medium postscript-medium) center-x center-y
 				 radius1-dx radius1-dy radius2-dx radius2-dy
@@ -391,30 +446,10 @@
                                   radius1-dx radius1-dy radius2-dx radius2-dy
                                   :start-angle start-angle
                                   :end-angle end-angle))))
-    (multiple-value-bind (ndx1 ndy1 ndx2 ndy2) (ellipse-normal-radii* ellipse)
-      (let* ((center (ellipse-center-point ellipse))
-             (cx (point-x center))
-             (cy (point-y center))
-             (tr (make-transformation ndx1 ndx2 ndy1 ndy2 cx cy))
-             (circle (untransform-region tr ellipse))
-             (start-angle (ellipse-start-angle circle))
-             (end-angle (ellipse-end-angle circle)))
-        (postscript-actualize-graphics-state stream medium :line-style :color)
-        (format stream "matrix currentmatrix~%")
-        (write-transformation* stream ndx1 ndy1 ndx2 ndy2 cx cy)
-        (format stream "concat~%")
-        (format stream "newpath~%")
-        (format stream "0 0 1 ~A ~A arc~%"
-                (format-postscript-angle start-angle)
-                (format-postscript-angle (if (< end-angle start-angle)
-                                             (+ end-angle (* 2 pi))
-                                             end-angle)))
-        (when filled
-          (format stream "0 0 lineto~%"))
-        (format stream "setmatrix~%")
-        (format stream (if filled
-                           "fill~%"
-                           "stroke~%"))))))
+    (postscript-actualize-graphics-state stream medium :line-style :color)
+    (format stream "newpath~%")
+    (put-ellipse stream ellipse filled)
+    (format stream (if filled "fill~%" "stroke~%"))))
 
 (defun medium-font (medium)
   (text-style-mapping (port medium) (medium-merged-text-style medium)))
@@ -495,6 +530,6 @@
                     (:center (- y (- (/ total-height 2)
                                      baseline)))
                     (:bottom (- y (- total-height baseline)))))
-          (moveto file-stream x y))
+          (moveto* file-stream x y))
         (format file-stream "(~A) show~%" (postscript-escape-string string))))))
 

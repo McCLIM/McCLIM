@@ -72,12 +72,13 @@
              (format file-stream "%%Pages: (atend)~%")
              (format file-stream "%%DocumentNeededResources: (atend)~%")
              (format file-stream "%%EndComments~%~%")
+             (write-postcript-dictionary file-stream)
              (start-page stream))
            (with-graphics-state ((sheet-medium stream))
              ;; we need at least one level of saving -- APD, 2002-02-11
              (funcall continuation stream)))
       (with-slots (file-stream current-page) stream
-        (format file-stream "showpage~%~%")
+        (format file-stream "end~%showpage~%~%")
         (format file-stream "%%Trailer~%")
         (format file-stream "%%Pages: ~D~%" current-page)
         (format file-stream "%%DocumentNeededResources: ~{font ~A~%~^%%+ ~}~%"
@@ -88,13 +89,14 @@
 
 (defun start-page (stream)
   (with-slots (file-stream current-page transformation) stream
-      (format file-stream "%%Page: ~D ~:*~D~%" (incf current-page))))
+      (format file-stream "%%Page: ~D ~:*~D~%" (incf current-page))
+      (format file-stream "~A begin~%" *dictionary-name*)))
 
 (defun new-page (stream)
   ;; FIXME: it is necessary to do smth with GS -- APD, 2002-02-11
   (let ((medium (sheet-medium stream)))
     (postscript-restore-graphics-state medium)
-    (format (postscript-stream-file-stream stream) "showpage~%")
+    (format (postscript-stream-file-stream stream) "end~%showpage~%")
     (start-page stream)
     (postscript-save-graphics-state medium))
   (clear-output-record (stream-output-history stream)))

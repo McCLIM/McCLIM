@@ -93,6 +93,7 @@
                    :orientation orientation
                    :paper device-type
                    :native-region region
+                   :region region
                    :transformation transform)))
 
 
