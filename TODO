@@ -16,10 +16,6 @@ TBM:20031112:002300
 
     More spiffy presentation accept and present methods
 
-    presentation type histories
-
-    presentation-default-processor
-
     define-drag-and-drop-translator
 
     with-input-editor-typeout
@@ -38,7 +34,6 @@ TBM:20031112:002300
 
     :accept-values panes
 
-    frame-maintain-presentation-histories,
     frame-drag-and-drop-feedback, frame-drag-and-drop-highlighting 
 
     command-enable, display-command-menu
@@ -66,6 +61,13 @@ RS:20030805:101708
     each pane to decide when it wants the input focus. 
 
 ======================  Resolved issues ======================
+TBM:20040121:150000
+    presentation type histories, frame-maintain-presentation-histories
+    [This has been implemented but needs some work]
+
+    presentation-default-processor [ The presentation generic function
+    is defined and called, but there aren't real methods defined yet.]
+
 TBM:20031124:230300
     command-or-form presentation type
 

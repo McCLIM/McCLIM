@@ -1894,8 +1894,84 @@
    #:pointer-motion-hint-event
    #:frame-display-pointer-documentation-string))
 
+;;; Symbols that must be defined by a backend.
+;;;
+;;; To start with, I grabbed the methods defined by the CLX backend
+;;; whose symbol package is CLIM or CLIMI.
+
+(defpackage :clim-backend
+  (:nicknames :climb)
+  (:use :clim :clim-extensions)
+  (:export
+   ;; Originally in CLIM-INTERNALS
+   #:get-next-event
+   #:invoke-with-special-choices
+   #:make-graft
+   #:medium-draw-circle*
+   #:medium-draw-glyph
+   #:mirror-transformation
+   #:port-allocate-pixmap
+   #:port-deallocate-pixmap
+   #:port-disable-sheet
+   #:port-enable-sheet
+   #:port-force-output
+   #:port-grab-pointer
+   #:port-mirror-height
+   #:port-mirror-width
+   #:port-motion-hints
+   #:port-set-mirror-region
+   #:port-set-mirror-transformation
+   #:port-set-sheet-region
+   #:port-set-sheet-transformation
+   #:port-ungrab-pointer
+   #:set-port-keyboard-focus
+   #:set-sheet-pointer-cursor
+   #:text-style-character-width
+   ;; From CLIM (mentioned in the spec)
+   #:adopt-frame
+   #:allocate-space
+   #:destroy-mirror
+   #:destroy-port
+   #:graft
+   #:graft-height
+   #:graft-width
+   #:handle-repaint
+   #:make-medium
+   #:make-pane-1
+   #:medium-beep
+   #:medium-buffering-output-p
+   #:medium-clear-area
+   #:medium-clipping-region
+   #:medium-copy-area
+   #:medium-draw-ellipse*
+   #:medium-draw-line*
+   #:medium-draw-lines*
+   #:medium-draw-point*
+   #:medium-draw-points*
+   #:medium-draw-polygon*
+   #:medium-draw-rectangle*
+   #:medium-draw-rectangles*
+   #:medium-draw-text*
+   #:medium-finish-output
+   #:medium-force-output
+   #:medium-line-style
+   #:medium-text-style
+   #:note-space-requirements-changed
+   #:pointer-button-state
+   #:pointer-modifier-state
+   #:pointer-position
+   #:realize-mirror
+   #:text-size
+   #:text-style-ascent
+   #:text-style-descent
+   #:text-style-height
+   #:text-style-mapping
+   #:text-style-width
+   ;; CLIM-EXTENSIONS
+   #:medium-miter-limit))
+
 (defpackage :clim-internals
-  (:use :clim :clim-sys :clim-extensions :clim-lisp)
+  (:use :clim :clim-sys :clim-extensions :clim-backend :clim-lisp)
   (:nicknames :climi)
   #+excl
   (:import-from :excl compile-system load-system)
@@ -1970,3 +2046,4 @@
    #:address
 
    ))
+
