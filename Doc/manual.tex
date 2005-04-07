@@ -7,6 +7,11 @@
 \usepackage{alltt}
 \usepackage{moreverb}
 
+\ifx\pdfoutput\undefined \csname newcount\endcsname\pdfoutput \fi 
+\ifcase\pdfoutput  \else 
+\usepackage[pdftex]{hyperref}
+\fi
+
 \setlength{\parskip}{0.3cm}
 \setlength{\parindent}{0cm}
 
@@ -372,7 +377,7 @@ Figure \ref{figex2} shows what ought to be visible on the screen.
 
 \begin{figure}
 \begin{center}
-\inputfig{ex2.pstex_t}
+\includegraphics{ex2}
 \end{center}
 \caption{\label{figex2} View of the improved example}
 \end{figure}
@@ -643,8 +648,9 @@ with a lower-case a and the origin of C is marked with a lower-case
 c.  Mirrors are outlined with dotted rectangles. 
 
 \begin{figure}
-\begin{center}
-\inputfig{native.pstex_t}
+  \begin{center}
+    \input native.pstex_t
+%\inputfig{native.pstex_t}
 \end{center}
 \caption{\label{fignative} A sheet with a nontrivial transformation}
 \end{figure}
@@ -1576,7 +1582,7 @@ toggled with the \texttt{Toggle Show List Cells} command.
 The new cons cell diagram format looks like this:
 
 \begin{center}
-\includegraphics{inspect-as-cells.eps}
+\includegraphics{inspect-as-cells}
 \end{center}
 
 \section{Extending Clouseau}
@@ -1718,7 +1724,7 @@ output of one form bolded on the left and the output of the other on
 the right. This gives us some reasonably nice-looking output:
 
 \begin{center}
-\includegraphics{inspect-object-1.eps}
+\includegraphics{inspect-object-1}
 \end{center}
 
 But what we really want is something more closely adapted to our
@@ -1754,7 +1760,7 @@ Then, in the \macro{inspector-table} body, we insert a couple of calls
 to \cl{x=y} and we're done. It looks like this:
 
 \begin{center}
-\includegraphics{inspect-object-2.eps}
+\includegraphics{inspect-object-2}
 \end{center}
 
 Finally, for our amusement and further practice, we'll try to get some
@@ -1816,7 +1822,7 @@ It should wrap its output in \macro{with-output-as-presentation}.
 Our final version looks like this:
 
 \begin{center}
-\includegraphics{inspect-object-3.eps}
+\includegraphics{inspect-object-3}
 \end{center}
 
 For more examples of how to extend the inspector, you can look at
