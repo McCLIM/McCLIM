@@ -3,7 +3,7 @@
 ;;;     Title: Graph Formatting
 ;;;   Created: 2002-08-13
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: graph-formatting.lisp,v 1.11 2004/12/05 19:37:52 hefner1 Exp $
+;;;       $Id: graph-formatting.lisp,v 1.12 2005/04/12 20:43:26 ahefner Exp $
 ;;; ---------------------------------------------------------------------------
 
 ;;;  (c) copyright 2002 by Gilbert Baumann
@@ -125,7 +125,9 @@
                                      merge-duplicates duplicate-key duplicate-test
                                      generation-separation
                                      within-generation-separation
-                                     center-nodes arc-drawer arc-drawing-options
+                                     center-nodes
+                                     (arc-drawer #'clim-internals::standard-arc-drawer)
+                                     arc-drawing-options
                                      graph-type (move-cursor t)
                                 &allow-other-keys)
   (declare (ignore orientation generation-separation within-generation-separation center-nodes))
