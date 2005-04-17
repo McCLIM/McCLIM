@@ -272,8 +272,11 @@ frame, if any")
 
 (defmethod (setf frame-current-layout) :after (name (frame application-frame))
   (declare (ignore name))
-  (generate-panes (frame-manager frame) frame)
-  (signal 'frame-layout-changed :frame frame))
+  (when (frame-manager frame)
+    (generate-panes (frame-manager frame) frame)
+    (multiple-value-bind (w h) (frame-geometry* frame)
+      (layout-frame frame w h))  
+    (signal 'frame-layout-changed :frame frame)))
 
 (defmethod generate-panes :before (fm  (frame application-frame))
   (declare (ignore fm))
@@ -578,6 +581,12 @@ frame, if any")
 
 (defmethod read-frame-command ((frame application-frame)
 			       &key (stream *standard-input*))
+  ;; The following is the correct interpretation according to the spec.
+  ;; I think it is terribly counterintuitive and want to look into
+  ;; what existing CLIMs do before giving in to it.
+  ;; If we do things as the spec says, command accelerators will
+  ;; appear to not work, confusing new users.
+  #+NIL (read-command (frame-command-table frame) :use-keystrokes nil :stream stream)
   (read-command (frame-command-table frame) :use-keystrokes t :stream stream))
 
 (defmethod execute-frame-command ((frame application-frame) command)
@@ -876,11 +885,11 @@ frame, if any")
       ,@(if command-table
             `((define-command-table ,@command-table)))
       ,@(if command-definer
-            `((defmacro ,command-definer (name-and-options arguements &rest body)
+            `((defmacro ,command-definer (name-and-options arguments &rest body)
                 (let ((name (if (listp name-and-options) (first name-and-options) name-and-options))
                       (options (if (listp name-and-options) (cdr name-and-options) nil))
                       (command-table ',(first command-table)))
-                  `(define-command (,name :command-table ,command-table ,@options) ,arguements ,@body))))))))
+                  `(define-command (,name :command-table ,command-table ,@options) ,arguments ,@body))))))))
 
 (defun get-application-frame-class-geometry (name indicator)
   (getf (get name 'application-frame-geometry) indicator nil))
