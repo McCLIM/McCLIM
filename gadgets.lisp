@@ -85,8 +85,6 @@
 
 ;; - Should RADIO-BOX-PANE and CHECK-BOX-PANE use rack or box layout?
 
-;; - I would like to have a :ACTIVE-P initarg
-
 ;; - :CHOICES initarg to RADIO-BOX and CHECK-BOX is from Franz' user
 ;;   guide.
 
@@ -144,7 +142,8 @@
    ;; ACTIVATE-GADGET after creating a gadget?
    ;;
    ;; I think, T is correct here --GB
-   (active-p            :initform t
+
+   (active-p            :initform t :initarg :active
                         :reader gadget-active-p)
    ;;
    ;; I am not so lucky with the armed slot in GADGET --GB
@@ -1954,7 +1953,33 @@ and must never be nil."))
 ;; things in their list pane. Instead of :exclusive and :nonexclusive modes,
 ;; they call them :one-of and :some-of. I've supported these aliases for
 ;; compatibility. They also state the default mode is :some-of, which
-;; contradicts the CLIM 2.0 Spec. Our default does not.
+;; contradicts the CLIM 2.0 Spec and doesn't make a lot of sense.
+;; McCLIM defaults to :one-of.
+
+;; TODO: Improve performance in order to scale to extremely large lists.
+;;        * Computing text-size for a 100k list items is expensive
+;;        * Need to share text size and cache of computed name-key/value-key
+;;          results with LIST-PANE when instantiated in the popup for
+;;          the OPTION-PANE.
+;;        * Improve repaint logic when items are selected to reduce flicker.
+;;       Currently the list and option panes are usable up to several thousand
+;;       items on a reasonably fast P4.
+
+;; TODO: Consider appearance of nonexclusive option-pane when multiple items are
+;;       selected.
+
+;; TODO: I think the list/option gadgets currently ignore enabled/disabled status.
+
+;; Notes
+;;   A some-of/nonexclusive list pane (or option-pane popup window) supports
+;;   the following behaviors:
+;;       single-click: toggle selected item
+;;        shift-click: select/deselect multiple items. Selection or deselection
+;;                     is chosen according to the result of your previous click.
+;;  McCLIM adds an initarg :prefer-single-selection. If true, a nonexclusive pane
+;;  will deselect other items selected when a new selection is made. Multiple
+;;  items can be selected using control-click, or shift-click as before. This
+;;  imitates the behvior of certain GUIs and may be useful in applications.
 
 (define-abstract-pane-mapping 'list-pane 'generic-list-pane)
 
@@ -1962,7 +1987,7 @@ and must never be nil."))
   ((mode        :initarg :mode
                 :initform :exclusive
                 :reader list-pane-mode
-                :type (member :one-of :some-of))
+                :type (member :one-of :some-of :exclusive :nonexclusive))
    (items       :initarg :items
                 :initform nil
                 :reader list-pane-items
@@ -2009,6 +2034,14 @@ selection via the control modifier.")
 
 (defmethod initialize-instance :after ((gadget meta-list-pane) &rest rest)
   (declare (ignorable rest))
+  ;; Initialize slot value if not specified
+  #+NIL ;; XXX
+  (when (slot-boundp gadget 'value)
+    (setf (slot-value gadget 'value)
+          (if (list-pane-exclusive-p gadget)
+              (funcall (list-pane-value-key gadget) (first (list-pane-items gadget)))
+              (mapcar #'list-pane-value-key (list (first (list-pane-items gadget)))))))
+    
   (when (and (not (list-pane-exclusive-p gadget))
              (not (listp (gadget-value gadget))))
     (error "A :nonexclusive list-pane cannot be initialized with a value which is not a list."))
@@ -2094,7 +2127,8 @@ selection via the control modifier.")
     (with-bounding-rectangle* (rx0 ry0 rx1 ry1)
       (if (bounding-rectangle-p region)
           region
-          (sheet-region pane))  ; workaround for non-rectangular regions (such as +everywhere+)
+          (or (pane-viewport-region pane)   ; workaround for +everywhere+
+              (sheet-region pane)))
       (let ((item-height (generic-list-pane-item-height pane))
             (highlight-ink (list-pane-highlight-ink pane)))
         (do ((index (floor (- ry0 sy0) item-height) (1+ index)))
@@ -2103,14 +2137,16 @@ selection via the control modifier.")
           (let ((y0 (+ sy0 (* index item-height)))
                 (y1 (+ sy0 (* (1+ index) item-height))))
             (multiple-value-bind (background foreground)
-                (if (if (list-pane-exclusive-p pane)
+                (cond ((not (slot-boundp pane 'value))
+                       (values (pane-background pane) (pane-foreground pane)))
+                      ((if (list-pane-exclusive-p pane)
                         (funcall (list-pane-test pane)
                                  (elt (generic-list-pane-item-values pane) index)
                                  (gadget-value pane))
                         (member (elt (generic-list-pane-item-values pane) index) (gadget-value pane)
                                 :test (list-pane-test pane)))
-                    (values highlight-ink (pane-background pane))
-                    (values (pane-background pane) (pane-foreground pane)))
+                       (values highlight-ink (pane-background pane)))
+                      (t (values (pane-background pane) (pane-foreground pane))))
               (draw-rectangle* pane rx0 y0 rx1 y1 :filled t :ink background)
               (draw-text* pane (elt (generic-list-pane-item-strings pane) index)
                           sx0
@@ -2261,9 +2297,11 @@ Returns two values, the item itself, and the index within the item list."
 (defun generic-option-pane-compute-label (pane)
   (generic-option-pane-compute-label-from-value pane (gadget-value pane)))
 
-(defmethod initialize-instance :after ((object generic-option-pane) &rest rest)
+(defmethod initialize-instance :after ((object generic-option-pane) &rest rest)  
   (setf (slot-value object 'current-label)
-        (generic-option-pane-compute-label object)))
+        (if (slot-boundp object 'value)
+            (generic-option-pane-compute-label object)
+            "")))
 
 (defmethod (setf gadget-value) :after (new-value (gadget generic-option-pane) &key &allow-other-keys)
   (setf (slot-value gadget 'current-label)
@@ -2391,13 +2429,14 @@ Returns two values, the item itself, and the index within the item list."
               (t (values nil :above height)))))))
 
 (defun popup-init (parent manager frame)
-  (let ((list-pane (make-pane-1 manager frame 'generic-list-pane
+  (let ((list-pane (apply #'make-pane-1 manager frame 'generic-list-pane
                                 :items (list-pane-items parent)
                                 :mode  (list-pane-mode parent)
-                                :value (gadget-value parent)
                                 :name-key (list-pane-name-key parent)
                                 :value-key (list-pane-value-key parent)
-                                :test (list-pane-test parent))))
+                                :test (list-pane-test parent)
+                                (and (slot-boundp parent 'value)
+                                     (list :value (gadget-value parent))))))
     (multiple-value-bind (scroll-p position height)
         (popup-compute-height parent list-pane)
       (with-bounding-rectangle* (cx0 cy0 cx1 cy1) parent
@@ -2429,11 +2468,11 @@ Returns two values, the item itself, and the index within the item list."
   (let* ((frame *application-frame*)
          (manager (frame-manager frame))
          ;; Popup state
-         (ready-to-exit nil)
-         (inner-grab nil)    ;; Gadget 'grabbing' the pointer, used to simulate the
-                             ;; implicit pointer grabbing of X for the scrollbar
+         (final-change nil) ;; Menu should exit after next value change         
+         (inner-grab nil)    ;; Gadget is grabbing the pointer, used to simulate
+                             ;; X implicit pointer grabbing (for the scrollbar)
          (retain-value nil)
-         (all-done nil)
+         (consume-and-exit nil) ;; If true, wait until a button release then exit
          (last-click-time nil)
          (last-item-index nil))
     (with-look-and-feel-realization (manager *application-frame*)
@@ -2458,16 +2497,16 @@ Returns two values, the item itself, and the index within the item list."
                                  (< (/ (- now last-click-time) internal-time-units-per-second) *double-click-delay*))
                        (setf last-click-time now))))
                  (end-it ()
-                   (unless all-done
-                     (setf all-done t)
-                     (throw 'popup-list-box-done nil))))
+                   (throw 'popup-list-box-done nil)))
           
           (catch 'popup-list-box-done
             (setf (slot-value list-pane 'value-changed-callback)
                   (lambda (pane value)
                     (declare (ignore pane value))
-                    (when ready-to-exit (end-it))))
-            
+                    (when (and final-change
+                               (not consume-and-exit))
+                      (end-it))))
+
             (tracking-pointer (list-pane :multiple-window t :highlight nil)
               (:pointer-motion (&key event window x y)
                  (cond (inner-grab (handle-event inner-grab (rewrite-event-for-grab inner-grab event)))
@@ -2484,30 +2523,33 @@ Returns two values, the item itself, and the index within the item list."
                             (multiple-value-bind (item current-index)
                                 (generic-list-pane-item-from-x-y list-pane x y)
                               (declare (ignore item))
-                              (setf retain-value t)
                               (let ((double-clicked (and (compute-double-clicked)
                                                          (= (or last-item-index -1)
                                                             (or current-index -2))))
                                     (exclusive (list-pane-exclusive-p parent)))
-                                (setf ready-to-exit (or exclusive double-clicked)
-                                      last-item-index current-index)
-                                (if (and (not exclusive)
-                                         double-clicked)
-                                    (end-it)
+                                (setf retain-value t
+                                      final-change   (or exclusive double-clicked)
+                                      last-item-index current-index
+                                      consume-and-exit (or exclusive
+                                                           (and (not exclusive)
+                                                                double-clicked)))
+                                (unless (and (not exclusive)
+                                             double-clicked)
                                     (handle-event list-pane event)))))
                            ((in-menu (event-sheet event) x  y)
                             (handle-event (event-sheet event) event)
                             (setf inner-grab (event-sheet event)))
-                           (t (end-it)))))
-              
+                           (t (setf consume-and-exit t)))))
+
               (:pointer-button-release (&key event x y)
+                (when consume-and-exit (end-it))
                 (cond (inner-grab
                        (handle-event inner-grab event)
                        (setf inner-grab nil))
                       ((in-list (event-sheet event) x y)
                        (when (list-pane-exclusive-p parent)
-                         (setf ready-to-exit t
-                               retain-value t)
+                         (setf retain-value t
+                               final-change t)
                          (handle-event list-pane event)))
                       ((in-menu (event-sheet event) x y)
                        (handle-event (event-sheet event) event)))))))
