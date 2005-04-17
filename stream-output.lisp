@@ -487,15 +487,15 @@ STREAM-STRING-WIDTH will be called."))
       (declare (ignore total-height final-y baseline))
       (values final-x total-width))))
 
-;;; XXX where does "6" come from?  Magic fudge factor? -- moore
 (defmethod stream-text-margin ((stream standard-extended-output-stream))
   (with-slots (margin) stream
     (or margin
 	(- (bounding-rectangle-width (or (pane-viewport stream)
                                          stream))
-	   6))))
+	   (text-size stream "O")))))
 
-(defmethod stream-line-height ((stream standard-extended-output-stream) &key (text-style nil))
+(defmethod stream-line-height ((stream standard-extended-output-stream)
+                               &key (text-style nil))
   (+ (text-style-height (or text-style (medium-text-style (sheet-medium stream)))
 			(sheet-medium stream))
      (stream-vertical-spacing stream)))
