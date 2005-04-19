@@ -48,6 +48,21 @@
   #+mp (when (eq mp::*initial-process* mp::*current-process*)
 	 (format t "~%~%You need to run (mp::startup-idle-and-top-level-loops) to start up the multiprocessing support.~%~%")))
 
+;;; Make CLX asdf-loadable on Allegro 6.2
+;;; possibly this should be further refined to funciton properly for
+;;; Allegro on Windows platforms. [2005/04/18:rpg]
+#+allegro
+(progn
+  (defclass requireable-system (asdf:system)
+       ())
+  (defmethod asdf:perform ((op asdf:load-op) (system requireable-system))
+    (require (intern (slot-value system 'asdf::name) "KEYWORD")))
+  (defmethod asdf::traverse ((op asdf:load-op) (system requireable-system))
+    (list (cons op system)))  
+  (defsystem :clx
+    :class requireable-system))
+
+
 (pushnew :clim *features*)
 (pushnew :mcclim *features*)
 
@@ -216,7 +231,7 @@
      ))
 
 (defsystem :clim-clx
-    :depends-on (:clim #+(or sbcl openmcl ecl) :clx)
+    :depends-on (:clim #+(or sbcl openmcl ecl allegro) :clx)
     :components
     ((:module "Backends/CLX"
               :pathname #.(make-pathname :directory '(:relative "Backends" "CLX"))
@@ -276,7 +291,7 @@
     :depends-on (:clim
                  ;; If we're on an implementation that ships CLX, use
                  ;; it. Same if the user has loaded CLX already.
-                 #+(or sbcl openmcl ecl clx) :clim-clx
+                 #+(or sbcl openmcl ecl clx allegro) :clim-clx
                  #+gl                        :clim-opengl
                  ;; OpenMCL and MCL support the beagle backend (native
                  ;; OS X look&feel on OS X).
