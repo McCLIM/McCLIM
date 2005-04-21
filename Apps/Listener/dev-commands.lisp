@@ -434,7 +434,7 @@
 (defparameter *graph-edge-ink* (make-rgb-color 0.72 0.72 0.72))
 (defparameter *graph-text-style* (make-text-style :fix :roman :normal))
 
-(defun class-grapher (stream class inferior-fun)
+(defun class-grapher (stream class inferior-fun &key (orientation :horizontal))
   "Does the graphing for Show Class Superclasses and Subclasses commands"
   (let ((normal-ink +foreground-ink+)
         (arrow-ink  *graph-edge-ink*)
@@ -453,7 +453,7 @@
                                :stream stream
                                :merge-duplicates T
                                :graph-type :tree
-                               :orientation :horizontal
+                               :orientation orientation
                                :arc-drawer
                                #'(lambda (stream foo bar x1 y1 x2 y2)
                                    (declare (ignore foo bar))
@@ -468,20 +468,26 @@
                                              :command-table show-commands
                                              :menu "Class Superclasses"
 					     :provide-output-destination-keyword t)
-    ((class-spec 'class-name :prompt "class"))
+    ((class-spec 'class-name :prompt "class")
+     &key
+     (orientation 'keyword :prompt "orientation" :default :horizontal))
   (let ((class (frob-to-class class-spec)))
     (if (null class)
 	(note "~A is not a defined class." class-spec)
-        (class-grapher *standard-output* class #'clim-mop:class-direct-superclasses))))
+        (class-grapher *standard-output* class #'clim-mop:class-direct-superclasses
+                       :orientation orientation))))
 
 (define-command (com-show-class-subclasses :name "Show Class Subclasses"
                                            :command-table show-commands
                                            :menu "Class Subclasses"
 					   :provide-output-destination-keyword t)
-    ((class-spec 'class-name :prompt "class"))
+    ((class-spec 'class-name :prompt "class")
+     &key
+     (orientation 'keyword :prompt "orientation" :default :horizontal))     
   (let ((class (frob-to-class class-spec)))
     (if (not (null class))
-        (class-grapher *standard-output* class #'clim-mop:class-direct-subclasses)
+        (class-grapher *standard-output* class #'clim-mop:class-direct-subclasses
+                       :orientation orientation)
       (note "~A is not a defined class." class-spec))))
 
 
