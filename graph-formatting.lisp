@@ -3,7 +3,7 @@
 ;;;     Title: Graph Formatting
 ;;;   Created: 2002-08-13
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: graph-formatting.lisp,v 1.12 2005/04/12 20:43:26 ahefner Exp $
+;;;       $Id: graph-formatting.lisp,v 1.13 2005/04/21 03:34:58 ahefner Exp $
 ;;; ---------------------------------------------------------------------------
 
 ;;;  (c) copyright 2002 by Gilbert Baumann
@@ -338,8 +338,8 @@
                                 (let ((v (+ v0 (/ (min 0 d) -2))))
                                   (setf (output-record-position node)
                                         (if (eq orientation :vertical)
-                                            (values v u0)
-                                            (values u0 v)))
+                                            (transform-position (medium-transformation stream) v u0)
+                                            (transform-position (medium-transformation stream) u0 v)))
                                   (add-output-record node graph-output-record))
                                 ;;
                                 (let ((u (+ u0 (car majors)))
@@ -401,6 +401,11 @@
 (defmethod layout-graph-edges ((graph standard-graph-output-record)
                                stream arc-drawer arc-drawing-options)
   (with-slots (orientation) graph
+   ;; We tranformed the position of the nodes when we inserted them into
+   ;; output history, so the bounding rectangles queried below will be
+   ;; transformed. Therefore, disable the transformation now, otherwise
+   ;; the transformation is effectively applied twice to the edges.
+   (with-identity-transformation (stream)
     (traverse-graph-nodes graph
                           (lambda (node children continuation)
                             (unless (eq node graph)
@@ -424,7 +429,7 @@
                                                 (/ (+ x1 x2) 2) from
                                                 (/ (+ u1 u2) 2) to
                                                 arc-drawing-options))))))))
-                            (map nil continuation children)))))
+                            (map nil continuation children))))))
 
 (defmethod layout-graph-edges :around ((graph-output-record tree-graph-output-record)
                                        stream arc-drawer arc-drawing-options)
