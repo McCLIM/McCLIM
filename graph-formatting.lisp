@@ -3,7 +3,7 @@
 ;;;     Title: Graph Formatting
 ;;;   Created: 2002-08-13
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: graph-formatting.lisp,v 1.13 2005/04/21 03:34:58 ahefner Exp $
+;;;       $Id: graph-formatting.lisp,v 1.14 2005/04/23 20:02:01 ahefner Exp $
 ;;; ---------------------------------------------------------------------------
 
 ;;;  (c) copyright 2002 by Gilbert Baumann
@@ -133,6 +133,7 @@
   (declare (ignore orientation generation-separation within-generation-separation center-nodes))
   ;; Mungle some arguments
   (check-type cutoff-depth (or null integer))
+  (check-type root-objects sequence)
   (setf stream (or stream *standard-output*)
         graph-type (or graph-type (if merge-duplicates :digraph :tree))
         duplicate-key (or duplicate-key #'identity)
