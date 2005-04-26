@@ -512,6 +512,12 @@ use implementation-specific functions to be more informative."
     (with-text-family (pane :fix)
       (princ (package-name object) pane))))
 
+(defun package-exported-symbols (package)
+  "Return a list of all symbols exported by PACKAGE"
+  (let (symbols)
+    (do-external-symbols (symbol package symbols)
+      (push symbol symbols))))
+
 (defmethod inspect-object ((object package) pane)
   (inspector-table (object pane)
       (format pane "Package: ~S" (package-name object))
@@ -526,7 +532,10 @@ use implementation-specific functions to be more informative."
       (inspect-vertical-list (package-used-by-list object) pane))
     (inspector-table-row (pane)
 	(princ "Uses:")
-      (inspect-vertical-list (package-use-list object) pane))))
+      (inspect-vertical-list (package-use-list object) pane))
+    (inspector-table-row (pane)
+	(princ "Exports:")
+      (inspect-vertical-list (package-exported-symbols object) pane))))
 
 (defmethod inspect-object ((object vector) pane)
   (with-output-as-presentation
