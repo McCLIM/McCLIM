@@ -280,36 +280,33 @@ spatially organized data structure.
 (defgeneric incremental-redisplay
     (stream position erases moves draws erase-overlapping move-overlapping))
 
-(defmethod incremental-redisplay
-    ((stream updating-output-stream-mixin) position
-     erases moves draws erase-overlapping move-overlapping)
+(defmethod incremental-redisplay ((stream updating-output-stream-mixin) position
+                                  erases moves draws erase-overlapping move-overlapping)
   (declare (ignore position))
   (let ((history (stream-output-history stream)))
     (with-output-recording-options (stream :record nil :draw t)
       (loop
-	 for (nil br) in erases
-	 do (erase-rectangle stream br))
+          for (nil br) in erases
+          do (erase-rectangle stream br))
       (loop
-	 for (nil old-bounding) in moves
-	 do (erase-rectangle stream old-bounding))
+          for (nil old-bounding) in moves
+          do (erase-rectangle stream old-bounding))
       (loop
-	 for (nil br) in erase-overlapping
-	 do (erase-rectangle stream br))
+          for (nil br) in erase-overlapping
+          do (erase-rectangle stream br))
       (loop
-	 for (nil old-bounding) in move-overlapping
-	 do (erase-rectangle stream old-bounding)))
+          for (nil old-bounding) in move-overlapping
+          do (erase-rectangle stream old-bounding)))
     (loop
-       for (r) in moves
-       do (replay r stream))
+        for (r) in moves
+        do (replay r stream))
     (loop
-       for (r) in draws
-       do (replay r stream))
-    (loop
-       for (r) in erase-overlapping
-       do (replay history stream r))
-    (loop
-       for (r) in move-overlapping
-	do (replay history stream r) )))
+        for (r) in draws
+        do (replay r stream))
+    (let ((res +nowhere+))
+      (loop for (r) in erase-overlapping do (setf res (region-union res r)))
+      (loop for (r) in move-overlapping do (setf res (region-union res r)))
+      (replay history stream res)) ))
 
 (defclass updating-stream-state (complete-medium-state)
   ((cursor-x :accessor cursor-x :initarg :cursor-x :initform 0)
@@ -713,141 +710,113 @@ records. "))
 ;;; work in progress
 (defvar *existing-output-records* nil)
 
-;;; Helper functions for managing a hash table of records
+;;;
 
-(defun get-record-hash (record hash)
-  (let ((bucket (gethash (slot-value record 'coordinates) hash)))
-    (if (null bucket)
-	(values nil nil)
-	(let ((rec (find record bucket :test #'output-record-equal)))
-	  (if rec
-	      (values rec t)
-	      (values nil nil))))))
-
-(defun add-record-hash (record hash)
-  (push record (gethash (slot-value record 'coordinates) hash nil)))
-
-(defun delete-record-hash (record hash)
-  (let ((bucket (gethash (slot-value record 'coordinates) hash)))
-    (if bucket
-	(multiple-value-bind (new-bucket deleted)
-	    (delete-1 record bucket :test #'output-record-equal)
-	  (if deleted
-	      (progn
-		(setf (gethash (slot-value record 'coordinates) hash)
-		      new-bucket)
-		t)
-	      nil))
-	nil)))
+(defmethod output-record-hash (record)
+  (slot-value record 'coordinates))
 
 (defmethod compute-difference-set ((record standard-updating-output-record)
 				   &optional (check-overlapping t)
-				   offset-x offset-y
-				   old-offset-x old-offset-y)
+                                             offset-x offset-y
+                                             old-offset-x old-offset-y)
   (declare (ignore offset-x offset-y old-offset-x old-offset-y))
-  (when (eq (output-record-dirty record) :clean)
-    (return-from compute-difference-set (values nil nil nil nil nil)))
-  (let* ((draws nil)
-	 (moves (explicit-moves record))
-	 (erases nil)
-	 (erase-overlapping nil)
-	 (move-overlapping nil)
-	 (stream (updating-output-stream record))
-	 (visible-region (pane-viewport-region stream))
-	 (old-children (if (slot-boundp record 'old-children)
-			   (old-children record)
-			   nil))
-	 (old-bounds (old-bounds record)))
-    (unless (or (null visible-region)
-		(region-intersects-region-p visible-region record)
-		(and old-children
-		     (region-intersects-region-p visible-region old-bounds)))
-      (return-from compute-difference-set (values nil nil nil nil nil)))
-    ;; XXX This means that compute-difference-set can't be called repeatedly on
-    ;; the same tree; ugh. On the other hand, if we don't clear explicit-moves,
-    ;; they can hang around in the tree for later passes and cause trouble.
-    (setf (explicit-moves record) nil)
-    (let ((existing-output-records (make-hash-table :test 'equalp)))
-      ;; Find output records in the new tree that match a record in the old
-      ;; tree i.e., already have a valid display on the screen.
-      (map-over-child-display
-       (if old-children
-	   #'(lambda (r)
-	       (add-record-hash r existing-output-records))
-	   #'(lambda (r) (push (list r r) draws)))
-       (sub-record record)
-       visible-region)
-      (when old-children
-	(map-over-child-display
-	 #'(lambda (r)
-	     (unless (delete-record-hash r existing-output-records)
-	       (push (list r (copy-bounding-rectange r)) erases)))
-	 old-children
-	 visible-region)
-	;; Any records left in the hash table do not have a counterpart
-	;; visible on the screen and need to be drawn.
-	(loop
-	   for bucket being the hash-values of existing-output-records
-	   do (loop
-		 for r in bucket
-		 do (push (list r r) draws)))))
-    (when check-overlapping
-      (setf erase-overlapping (nconc erases draws))
-      (setf move-overlapping moves)
-      (setf erases nil)
-      (setf moves nil)
-      (setf draws nil))
-    ;; Visit this record's updating-output children and merge in the
-    ;; difference set. We need to visit all updating-output records, not just
-    ;; ones in the visible region, because they might have old records that
-    ;; lie in the visible region and that need to be erased.
-    (map-over-child-updating-output
-     #'(lambda (r)
-	 (multiple-value-bind (e m d e-o m-o)
-	     (compute-difference-set r check-overlapping)
-	   (setf erases (nconc e erases))
-	   (setf moves (nconc m moves))
-	   (setf draws (nconc d draws))
-	   (setf erase-overlapping (nconc e-o erase-overlapping))
-	   (setf move-overlapping (nconc m-o move-overlapping))))
-     (sub-record record)
-     nil)
-    ;; Look for updating-output children that were not visited. Their
-    ;; display records need to be erased.
-    (when old-children
-      (flet ((erase-obsolete (dr)		;All of them
-	       (let ((erase-chunk (list dr (copy-bounding-rectange dr))))
-		 (if check-overlapping
-		     (push erase-chunk erase-overlapping)
-		     (push erase-chunk erases)))))
-	(declare (dynamic-extent #'erase-obsolete))
-	(map-over-child-updating-output
-	 #'(lambda (r)
-	     (when (eq (output-record-dirty r) :updating)
-	       (map-over-obsolete-display #'erase-obsolete
-					  (sub-record r)
-					  visible-region)))
-	 old-children
-	 visible-region)))
-    ;; Traverse all the display records for this updating output node and do
-    ;; the notes...
-    (flet ((note-got (r)
-	     (note-output-record-got-sheet r stream))
-	   (note-lost (r)
-	     (note-output-record-lost-sheet r stream)))
-      (declare (dynamic-extent #'note-got #'note-lost))
-      (map-over-child-display #'note-got (sub-record record) nil)
-      (when old-children
-	(map-over-child-display #'note-lost old-children nil)
-	(map-over-child-updating-output
-	 #'(lambda (r)
-	     (when (eq (output-record-dirty r) :updating)
-	       (map-over-obsolete-display #'note-lost
-					  (sub-record r)
-					  nil)))
-	 old-children
-	 nil)))
-    (values erases moves draws erase-overlapping move-overlapping)))
+  ;; (declare (values erases moves draws erase-overlapping move-overlapping))
+  (let (was
+        is
+        (everywhere (or +everywhere+
+                        (pane-viewport-region (updating-output-stream record)))))
+    ;; Collect what was there
+    (labels ((gather-was (record)
+               (cond ((displayed-output-record-p record)
+                      (push record was))
+                     ((updating-output-record-p record)
+                      (cond ((eq :clean (output-record-dirty record))
+                             (push record was))
+                            ((eq :moved (output-record-dirty record))
+                             (push (slot-value record 'old-bounds) was))
+                            (t
+                             (map-over-output-records-overlapping-region #'gather-was
+                                                                         (old-children record)
+                                                                         everywhere))))
+                     (t
+                      (map-over-output-records-overlapping-region #'gather-was record everywhere)) )))
+      (gather-was record))
+    ;; Collect what still is there
+    (labels ((gather-is (record)
+               (cond ((displayed-output-record-p record)
+                      (push record is))
+                     ((updating-output-record-p record)
+                      (cond ((eq :clean (output-record-dirty record))
+                             (push record is))
+                            ((eq :moved (output-record-dirty record))
+                             (push record is))
+                            (t
+                             (map-over-output-records-overlapping-region #'gather-is
+                                                                         (sub-record record)
+                                                                         everywhere))))
+                     (t
+                      (map-over-output-records-overlapping-region #'gather-is record everywhere) ))))
+      (gather-is record))
+    ;;
+    (let ((was-table (make-hash-table :test #'equalp))
+          (is-table (make-hash-table :test #'equalp))
+          gone
+          stay
+          come)
+      (loop for w in was do (push w (gethash (output-record-hash w) was-table)))
+      (loop for i in is do (push i (gethash (output-record-hash i) is-table)))
+      ;; gone = was \ is
+      (loop for w in was do
+            (cond ((updating-output-record-p w)
+                   (unless (eq :clean (output-record-dirty w))
+                     (push (old-children w) gone)))
+                  (t
+                   (let ((q (gethash (output-record-hash w) is-table)))
+                     (unless (some #'(lambda (x) (output-record-equal w x)) q)
+                       (push w gone))))))
+      ;; come = is \ was
+      ;; stay = is ^ was
+      (loop for i in is do
+            (cond ((updating-output-record-p i)
+                   (if (eq :clean (output-record-dirty i))
+                       (push i stay)
+                       (push i come)))
+                  (t
+                   (let ((q (gethash (output-record-hash i) was-table)))
+                     (if (some #'(lambda (x) (output-record-equal i x)) q)
+                         (push i stay)
+                         (push i come))))))
+      ;; Now we essentially want 'gone', 'stay', 'come'
+      (let ((gone-overlap nil)
+            (come-overlap nil))
+        (when check-overlapping
+          (setf (values gone gone-overlap)
+                (loop for k in gone
+                      if (some (lambda (x) (region-intersects-region-p k x))
+                               stay)
+                      collect k into gone-overlap*
+                      else collect k into gone*
+                      finally (return (values gone* gone-overlap*))))
+          (setf (values come come-overlap)
+                (loop for k in come
+                      if (some (lambda (x) (region-intersects-region-p k x))
+                               stay)
+                      collect k into come-overlap*
+                      else collect k into come*
+                      finally (return (values come* come-overlap*)))))
+        ;; Hmm, we somehow miss come-overlap ...
+        (values
+         ;; erases
+         (loop for k in gone collect (list k k))
+         ;; moves
+         nil
+         ;; draws
+         (loop for k in come collect (list k k))
+         ;; erase overlapping
+         (append (loop for k in gone-overlap collect (list k k))
+                 (loop for k in come-overlap collect (list k k)))
+         ;; move overlapping
+         nil)))))
 
 (defparameter *enable-updating-output* t
   "Switch to turn on incremental redisplay")
