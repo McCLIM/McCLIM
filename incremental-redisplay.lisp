@@ -349,10 +349,10 @@ spatially organized data structure.
 ;;;programmer forcing all new output.
 
 (defun state-matches-stream-p (state stream)
-  (multiple-value-bind (cx cy)
-      (stream-cursor-position stream)
+  (multiple-value-bind (cx cy) (stream-cursor-position stream)
     (with-sheet-medium (medium stream)
-      (match-output-records state :cursor-x cx :cursor-y cy))))
+      ;; Note: We don't match the y coordinate.
+      (match-output-records state :cursor-x cx))))
 
 (define-protocol-class updating-output-record (output-record))
 
@@ -825,6 +825,17 @@ records. "))
 
 (defvar *no-unique-id* (cons nil nil))
 
+(defun move-output-record (record dx dy)
+  (multiple-value-bind (sx sy) (output-record-start-cursor-position record)
+    (multiple-value-bind (ex ey) (output-record-end-cursor-position record)
+      (setf (output-record-position record)
+            (values (+ (nth-value 0 (output-record-position record)) dx)
+                    (+ (nth-value 1 (output-record-position record)) dy)))
+      (setf (output-record-start-cursor-position record)
+            (values (+ sx dx) (+ sy dy)))
+      (setf (output-record-end-cursor-position record)
+            (values (+ ex dx) (+ ey dy))))))
+
 (defmethod invoke-updating-output ((stream updating-output-stream-mixin)
 				   continuation
 				   record-type
@@ -864,16 +875,10 @@ records. "))
 	       (setf (end-graphics-state record)
 		     (medium-graphics-state stream))
 	       (add-to-map parent-cache record  unique-id id-test all-new)))
-	    ((or (setq state-mismatch
-		       (not (state-matches-stream-p (start-graphics-state
-						     record)
-						    stream)))
-		 (not (funcall cache-test
-			       cache-value
-			       (output-record-cache-value record))))
+	    ((or (setq state-mismatch (not (state-matches-stream-p (start-graphics-state record) stream)))
+		 (not (funcall cache-test cache-value (output-record-cache-value record))))
 	     (when *trace-updating-output*
-	       (format *trace-output* "~:[cache test~;stream state~] ~S~%"
-		       state-mismatch record))
+	       (format *trace-output* "~:[cache test~;stream state~] ~S~%" state-mismatch record))
 	     (let ((*current-updating-output* record))
 	       (setf (start-graphics-state record)
 		     (medium-graphics-state stream))
@@ -887,16 +892,29 @@ records. "))
 	     ;; parent's sequence of records
 	     (when *trace-updating-output*
 	       (format *trace-output* "clean ~S~%" record))
-	     (setf (output-record-dirty record) :clean)
-	     (setf (output-record-parent record) nil)
-	     (map-over-updating-output #'(lambda (r)
-					   (setf (output-record-dirty r)
-						 :clean))
-				       record
-				       nil)
-	     (add-output-record record (stream-current-output-record stream))
-	     (set-medium-graphics-state (end-graphics-state record) stream)
-	     (setf (parent-cache record) parent-cache)))
+             ;;
+             (multiple-value-bind (cx cy) (stream-cursor-position stream)
+               (multiple-value-bind (sx sy) (output-record-start-cursor-position record)
+                 (let ((dx (- cx sx))
+                       (dy (- cy sy)))
+                   (unless (zerop dy)
+                     (move-output-record record dx dy) )
+                   (let ((tag (cond ((= dx dy 0) :clean)
+                                    (t :moved))))
+                     (setf (output-record-dirty record) tag)
+                     (setf (output-record-parent record) nil)
+                     (map-over-updating-output #'(lambda (r)
+                                                   (unless (eq r record)
+                                                     (incf (slot-value (start-graphics-state r) 'cursor-x) dx)
+                                                     (incf (slot-value (start-graphics-state r) 'cursor-y) dy)
+                                                     (incf (slot-value (end-graphics-state r) 'cursor-x) dx)
+                                                     (incf (slot-value (end-graphics-state r) 'cursor-y) dy))
+                                                   (setf (output-record-dirty r) tag))
+                                               record
+                                               nil)
+                     (add-output-record record (stream-current-output-record stream))
+                     (set-medium-graphics-state (end-graphics-state record) stream)
+                     (setf (parent-cache record) parent-cache) )) ))))
       record)))
 
 ;;; The Franz user guide says that updating-output does
