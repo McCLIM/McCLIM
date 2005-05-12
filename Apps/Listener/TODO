@@ -3,7 +3,6 @@ There are plenty of things left to do before the listener will really be useful
 for its intended purpose:
 
 McCLIM TODO:
- - Editor history
  - Implement more of the emacs editing keys
  - Completion of pathnames and symbols
  - Subform accepting in places other than OpenMCL

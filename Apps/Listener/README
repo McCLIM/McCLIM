@@ -5,7 +5,7 @@ Overview
 --------
 
 The McCLIM Listener provides an interactive toplevel with full access to the
-graphical capabilities of CLIM, and a set of built-in commands intended to be
+graphical capabilities of CLIM and a set of built-in commands intended to be
 useful for lisp development and experimentation. Present features include:
 
  - Reading/evaluation of lisp expressions
@@ -19,17 +19,15 @@ useful for lisp development and experimentation. Present features include:
 Installation
 ------------
 
-The Listener uses ASDF for system definition. You must have ASDF loaded to build
-the listener (or else compile the files manually), but need not have compiled
-McCLIM using it. See http://www.cliki.net/asdf for information on ASDF.
+The clim-listener system is defined both by McCLIM's central system.lisp and
+the ASDF-ized version in mcclim.asd. It can be loaded in the same manner as
+the rest of McCLIM.
 
-Provided you have McCLIM and ASDF loaded into your lisp, compiling the listener
-is straightforward. Assuming you are in the McCLIM directory:
+For ASDF users, the following should work:
 
- * (load "Apps/Listener/clim-listener.asd")
  * (asdf:operate 'asdf:load-op :clim-listener)
 
-To run the listener:
+Once loaded, you can run the listener using:
  * (clim-listener:run-listener)
 
 If you have a multithreaded lisp, you can start the listener in a separate
@@ -40,20 +38,18 @@ thread, thereby leaving your main REPL available:
 Compatibility
 -------------
 
-The Listener is developed primarily on CMUCL 18e, and tested periodically on SBCL
-and possibly OpenMCL. On SBCL, the SB-POSIX package is used for filesystem 
-access, so you will need a fairly recent version of SBCL (minimum 0.8.2.44).
+The Listener is developed using CMUCL 18e and recent versions of SBCL. It is
+known to work well on these platforms. It has also been reported to work on
+OpenMCL, Lispworks, and clisp. It has not been tested on ACL and will
+require a small amount of work due to the number of implementation-specific
+features used (MOP, pathnames, run-program, environment variables, etc).
 
-Due to variation in how implementations treat pathnames as well as nonstandard 
-things like access to the MOP and the need to run programs, examine environment
-variables, etc, a little work is required to get everything running smoothly on
-a new CL. Most of this should be done for LispWorks. Allegro CL is untested and
-will need some hacking.
+
 
 Usage
 -----
 
-After starting the listener, a fairly normal lisp prompt will be displayed, with
+After starting the listener, a typical lisp prompt will be displayed, with
 the package name preceding the prompt. You may type lisp forms or commands to
 this prompt. The listener will treat alphabetical characters as beginning a 
 command name, and most other characters as the beginning of a lisp form. If for
@@ -132,13 +128,14 @@ in some meaningful way. Several transformations are performed:
    the DIRECTORY function of various CL environments)
 
 My apologies to anyone doing something more useful with this macro character
-which I have stepped on.
+if I have clobbered your readtable.
+
 
 
 Calling Commands from Lisp
 --------------------------
 
-Calling CLIM commands from lisp is straightforward. By convention, the "pretty"
+Calling CLIM commands from lisp is straightforward. By convention, the pretty
 names used at the interactor map to a function name which implements the command
 body by upcasing the name, replacing spaces with hyphens, and prepending "COM-" 
 (e.g., Show Directory becomes COM-SHOW-DIRECTORY).
