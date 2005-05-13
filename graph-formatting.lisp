@@ -3,7 +3,7 @@
 ;;;     Title: Graph Formatting
 ;;;   Created: 2002-08-13
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: graph-formatting.lisp,v 1.14 2005/04/23 20:02:01 ahefner Exp $
+;;;       $Id: graph-formatting.lisp,v 1.15 2005/05/13 03:00:25 ahefner Exp $
 ;;; ---------------------------------------------------------------------------
 
 ;;;  (c) copyright 2002 by Gilbert Baumann
@@ -312,7 +312,7 @@
                  (walk (node depth)
                    (unless (graph-node-minor-size node)
                      (when (>= depth (length generation-sizes))
-                       (setf generation-sizes (adjust-array generation-sizes (ceiling (* depth 1.2)))))
+                       (setf generation-sizes (adjust-array generation-sizes (ceiling (* depth 1.2)) :initial-element 0)))
                      (setf (aref generation-sizes depth)
                            (max (aref generation-sizes depth) (node-major-dimension node)))
                      (setf (graph-node-minor-size node) 0)
