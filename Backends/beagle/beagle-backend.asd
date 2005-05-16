@@ -1,6 +1,6 @@
 ;; -*- Mode: Lisp; -*-
 
-;; $Id: beagle-backend.asd,v 1.1 2004/08/08 16:20:44 duncan Exp $
+;; $Id: beagle-backend.asd,v 1.2 2005/05/16 22:13:08 drose Exp $
 
 (defpackage "BEAGLE"
   (:use "CLIM" "CLIM-LISP")
@@ -24,7 +24,7 @@
                 #:port-disable-sheet
 		#:port-motion-hints
                 #:port-force-output
-                #:set-port-keyboard-focus
+                #:%set-port-keyboard-focus
                 #:set-sheet-pointer-cursor
                 ;;
                 #:port-set-mirror-region
@@ -89,22 +89,56 @@
 		 :version "0.1"
 		 :serial t
 		 :components ((:file "package")
-			      (:file "lisp-window")
-			      (:file "lisp-window-delegate")
-			      (:file "lisp-view")
-			      (:file "lisp-view-additional")
-			      (:file "lisp-image")
-			      (:file "lisp-unmanaged-view")
+			      (:module "Native"
+				       :pathname #.(make-pathname :directory '(:relative "native"))
+				       :components
+				       ((:file "lisp-bezier-path")
+					(:file "lisp-window")
+					(:file "lisp-window-delegate")
+					(:file "lisp-view" :depends-on ("lisp-bezier-path"))
+					(:file "lisp-view-additional" :depends-on ("lisp-view"))
+					(:file "lisp-image")
+					(:file "lisp-unmanaged-view")))
 			      (:file "cocoa-util")
-			      (:file "port")
-			      (:file "frame-manager")
-			      (:file "medium")
-			      (:file "mirror")
-			      (:file "events")
-			      (:file "graft")
-			      (:file "fonts")
-			      (:file "image")
-;;;			      (:file "clim-extensions")
-			      (:file "keysymdef")
+			      (:module "Windowing"
+				       :depends-on ("Native")
+				       :pathname #.(make-pathname :directory '(:relative "windowing"))
+				       :components
+				       ((:file "port")
+					(:file "frame-manager")
+					(:file "mirror")
+					(:file "graft")))
+			      (:module "Output"
+				       :depends-on ("Windowing")
+				       :pathname #.(make-pathname :directory '(:relative "output"))
+				       :components
+				       ((:file "medium")
+					(:file "fonts")))
+			      (:module "Input"
+				       :depends-on ("Windowing")
+				       :pathname #.(make-pathname :directory '(:relative "input"))
+				       :components
+				       ((:file "events")
+					(:file "keysymdef")))
+			      (:module "Glimpse"
+				       :pathname #.(make-pathname :directory '(:relative "glimpse"))
+				       :components
+				       ((:file "glimpse")
+					(:file "glimpse-support")
+					(:file "glimpse-command-tables")
+					(:file "glimpse-present-process"   :depends-on ("glimpse" "glimpse-support"))
+					(:file "glimpse-present-window"    :depends-on ("glimpse" "glimpse-support"))
+					(:file "glimpse-modeless-commands" :depends-on ("glimpse" "glimpse-support"))
+					(:file "glimpse-process-commands"  :depends-on ("glimpse" "glimpse-support"))
+					(:file "glimpse-window-commands"   :depends-on ("glimpse" "glimpse-support"))))
+			      (:module "Profile"
+				       :pathname #.(make-pathname :directory '(:relative "profile"))
+				       :components
+				       ((:file "profile")))
+			      (:module "Tests"
+				       :pathname #.(make-pathname :directory '(:relative "tests"))
+				       :components
+				       ((:file "drawing-tests")
+					(:file "graft-tests")))
 			      ))
 

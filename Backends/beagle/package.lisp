@@ -11,19 +11,10 @@
 	(#_NSLog #@"Logging: %@" :address nsstr)))))
 ;;; END
 
-;;; START - Cribbed from lib/utils.lisp
-(in-package :cl-user)
-(defparameter *debug-log-level* 0)
-(defun debug-log (level  control-string &rest args)
-  (declare (special *debug-log-level*))
-  (when (>= *debug-log-level* level)
-	(apply #'format *debug-io* control-string args)))
-;;; END
-
 (in-package :common-lisp-user)
 
 (defpackage :beagle
-  (:use :clim :clim-lisp)
+  (:use :clim :clim-lisp :clim-backend)
   (:import-from :climi
                 #:+alt-key+
                 ;;
@@ -102,9 +93,9 @@
 		;;
 		#:synthesize-pointer-motion-event
                 ;;
+		#:vrack-pane
+		#:hrack-pane
                 )
-  (:import-from :cl-user
-				#:debug-log)
   (:import-from :ccl
 				#:@class
 				#:define-objc-method

@@ -25,32 +25,21 @@
 
 (in-package :beagle)
 
-#||
-
-I'm a little mixed up about what mirrors are, and how they're managed. They're a backend concept
-really, but don't appear to play a part in CLX that much. Basically, CLX looks up the "mirror"
-for a sheet via the port. We will do something similar, but we want to wrap the "physical" mirror
-in a lisp object. Hopefully then we'll be able to build a window inspector that works more
-sensibly.
-
-Note that mirrors in Cocoa *do* form a hierarchy ; mirrors will have other mirrors as both
-children, and as a parent. When a mirror has no parent, it's actually the frame content
-view. Or something 8-).
-
-There's no association between a COCOA-MIRROR and anything else (other than ObjC concepts)
-directly, but the port does keep a record of them. We just need to remember that our mirror
-object wraps the ObjC object,rather than it being a direct MAPCPTR reference.
-
-||#
-
 
 ;;; event mask should be all *except* pointer-motion.
-
+;;; Very similar to CLX defun of same name... a few differences.
 (defun realize-mirror-aux (port sheet &key view (map nil) (event-mask nil))
   (declare (ignore map))
+  ;; with this in, the Listener fails attempting to create a mirror for a
+  ;; SCROLLER-PANE, which has no medium (not sheet-with-medium-mixin).
+;;;  (check-type sheet sheet-with-medium-mixin)
   (when (null (port-lookup-mirror port sheet))
-    (update-mirror-geometry sheet) ; Play with this - does it make any difference?
-    (let* ((desired-color (typecase sheet
+    (update-mirror-geometry sheet)  ; Copy CLX
+    ;; because not every sheet coming through this method even has a medium,
+    ;; we have to use the nasty hack for background colour. This needs
+    ;; fixing.
+    (let* ((desired-color ;(medium-background sheet))
+	    (typecase sheet
 			    (sheet-with-medium-mixin (medium-background sheet))
 			    (basic-pane
 			     (let ((background (pane-background sheet)))
@@ -88,9 +77,6 @@ object wraps the ObjC object,rather than it being a direct MAPCPTR reference.
 		     (round-coordinate (space-requirement-height q))))
 	   (rect (ccl::make-ns-rect x y width height))
 	   (mirror (make-instance view :with-frame rect)))
-      (debug-log 3 "    initialising view with rect x=~A y=~A width=~A height=~A~%"
-		 (pref rect :<NSR>ect.origin.x) (pref rect :<NSR>ect.origin.y)
-		 (pref rect :<NSR>ect.size.width) (pref rect :<NSR>ect.size.height))
       (send mirror 'retain)
       (send mirror 'establish-tracking-rect)
       (setf (view-background-colour mirror) (%beagle-pixel port desired-color))
@@ -109,33 +95,28 @@ object wraps the ObjC object,rather than it being a direct MAPCPTR reference.
 						  #$NSOtherMouseDraggedMask
 						  #$NSScrollWheelMask)))
       (setf (view-event-mask mirror) event-mask)
-      (debug-log 3 "realize-mirror-aux, about to register mirror ~S for sheet ~S~%" mirror sheet)
       (port-register-mirror (port sheet) sheet mirror)
-      (debug-log 3 "realize-mirror-aux, done registering mirror~%")
       ;; Also record the view against the (McCLIM) sheet - used to look the sheet up when we get
-      ;; events which identify the view.
+      ;; events which identify the view. Don't rely on 'standard' cache since it relies on 'eq
+      ;; test and we need an 'eql test.
       (let ((vtable (slot-value port 'view-table)))
 	(setf (gethash mirror vtable) sheet))))
-;;;      (when map                               ; only used for frames - which don't currently go
-;;;        (send view :order-front nil))))       ; through this method!! At least, I'd hope so... we
-;;;                                              ; can't map arbitrary views in Cocoa.
   (port-lookup-mirror port sheet))
 
 ;; All mirrored-sheets (apart from the top-level pane) are view objects in Cocoa
 ;; From CLX/port.lisp
 (defmethod realize-mirror ((port beagle-port) (sheet mirrored-sheet-mixin))
-  (debug-log 2 "-> realize-mirror ~S~%" sheet)
   (send (sheet-mirror (sheet-parent sheet)) :add-subview
-		(realize-mirror-aux port sheet :view 'lisp-view
-					       :map (sheet-enabled-p sheet))))
+	              (realize-mirror-aux port sheet :view 'lisp-view)))
 
 (defmethod realize-mirror ((port beagle-port) (sheet border-pane))
-  (debug-log 2 "-> realize-mirror ~S~%" sheet)
   (send (sheet-mirror (sheet-parent sheet)) :add-subview
-		(realize-mirror-aux port sheet :view 'lisp-view
-					       :map (sheet-enabled-p sheet)
-					       ;; CLX uses (:exposure :structure-notify) event-mask
-					       :event-mask 0)))
+		      (realize-mirror-aux port sheet :view 'lisp-view
+					  ;; CLX uses (:exposure :structure-notify) event-mask, but
+					  ;; this is a NOTIFICATION in Beagle and all notifications
+					  ;; are provided as CLIM events to the target sheet (well -
+					  ;; all notifications that Beagle takes any notice of ;-)
+					  :event-mask 0)))
 
 ;;; For now, realize frame top-level sheets as Windows on the display, and everything
 ;;; else as a view. From CLX/port.lisp line ~380.
@@ -145,7 +126,6 @@ object wraps the ObjC object,rather than it being a direct MAPCPTR reference.
 ;;; Also note that this is "obsolete" in the CLX back end
 
 (defmethod realize-mirror ((port beagle-port) (sheet top-level-sheet-pane))
-  (debug-log 2 "mirror.lisp: -> REALIZE-MIRROR (port:~S sheet:~S)~%" port sheet)
 
   ;; Steps:
   ;;
@@ -247,7 +227,6 @@ object wraps the ObjC object,rather than it being a direct MAPCPTR reference.
 ;;; can be made a child of this unmanaged-top-level-sheet-pane. Seems a rather retarded
 ;;; way of doing it, but hey.
 (defmethod realize-mirror ((port beagle-port) (sheet unmanaged-top-level-sheet-pane))
-  (debug-log 3 "mirror.lisp -> realize-mirror ~S~%" sheet)
   (when (null (port-lookup-mirror port sheet)) ; Don't create a new object if one already exists
     (update-mirror-geometry sheet)
     (let* ((menu-frame (make-instance 'lisp-window))
@@ -287,9 +266,6 @@ object wraps the ObjC object,rather than it being a direct MAPCPTR reference.
 ;;;      (send menu-frame 'enable-cursor-rects)  ; Otherwise we don't get them; not sure we need them for menus anyway.
 ;;;      (format *debug-io* "Made window for menu-frame (menu) of: ~S~%" menu-frame)
       ;; Should we move the window somewhere more central after it's been put up on screen?
-      (debug-log 3 "    initialising window for content rect x=~A y=~A width=~A height=~A~%"
-		 (pref rect :<NSR>ect.origin.x) (pref rect :<NSR>ect.origin.y)
-		 (pref rect :<NSR>ect.size.width) (pref rect :<NSR>ect.size.height))
       (send menu-frame :init-with-content-rect rect :style-mask style-mask
 	    ;; only get exposed notifications for nonretained windows
 	    ;;		                 :backing #$NSBackingStoreNonretained :defer nil
@@ -341,10 +317,8 @@ object wraps the ObjC object,rather than it being a direct MAPCPTR reference.
 
 
 (defmethod realize-mirror ((port beagle-port) (sheet clim-stream-pane))
-  (debug-log 2 "mirror.lisp -> realize-mirror ~S~%" sheet)
   (send (sheet-mirror (sheet-parent sheet)) :add-subview
 		(realize-mirror-aux port sheet :view 'lisp-view
-					       :map (sheet-enabled-p sheet)
 					       ;; CLX uses (:exposure :key-press :key-release
 					       ;;           :button-press :button-release
 					       ;;           :enter-window :leave-window
@@ -368,7 +342,6 @@ object wraps the ObjC object,rather than it being a direct MAPCPTR reference.
 								   #$NSScrollWheelMask))))
 
 (defmethod realize-mirror ((port beagle-port) (pixmap pixmap))
-  (debug-log 2 "mirror.lisp -> realize-mirror ~S~%" pixmap)
   (when (null (port-lookup-mirror port pixmap))
     ;; Ignore direct mirror of (pixmap-sheet pixmap) - appears to be CLX specific...
     ;; -> [[NSImage alloc] initWithSize: <NSS>ize]
@@ -389,31 +362,17 @@ object wraps the ObjC object,rather than it being a direct MAPCPTR reference.
         (send mirror :set-size size))
       ;; Don't need a tracking rect since pixmaps are never 'on screen' and therefore the
       ;; mouse can't move into / out of them.
-;;;      (send mirror 'establish-tracking-rect)
-      ;; There's a specific method in NSImage to set the background colour; use that if we
-      ;; need to set one. Note that cached NSImages always have background colour = white,
-      ;; apparently.
-      ;; See NSImage setBackgroundColor:
-;;;      (setf (view-background-colour mirror) (%beagle-pixel port desired-color))
-      (debug-log 3 "realize-mirror-aux, about to register mirror ~S for sheet ~S~%" mirror pixmap)
-      (port-register-mirror port pixmap mirror)
-      (debug-log 3 "realize-mirror-aux, done registering mirror~%"))
-      ;; We don't record the view against the sheet; McCLIM keeps track of pixmaps for us
-      ;; already.
-;;;      ;; Also record the view against the (McCLIM) sheet - used to look the sheet up when we get
-;;;      ;; events which identify the view.
-;;;      (let ((vtable (slot-value port 'view-table)))
-;;;        (setf (gethash mirror vtable) sheet))))
-    (port-lookup-mirror port pixmap)))
+      (port-register-mirror port pixmap mirror)))
+    (port-lookup-mirror port pixmap))
 
+;; Need to fix this... remove the mirror from the sheet -> mirror hashtable when the
+;; mirror is destroyed. Also need to release the main frame window when the sheet
+;; being released is a top-level-sheet-pane.
 (defmethod destroy-mirror ((port beagle-port) (sheet mirrored-sheet-mixin))
-;;;  (format *debug-io* "mirror.lisp -> destroy-mirror ~S~%" sheet)
-  (debug-log 2 "mirror.lisp -> destroy-mirror~%")
   (let ((mirror (port-lookup-mirror port sheet)))
 	(when mirror
 	  (port-unregister-mirror port sheet (sheet-mirror sheet))
 	  (when (typep sheet 'command-menu-pane)
-;;;	    (format *debug-io* "Destroying a command menu pane; issuing close on frame ~S~%" (send mirror 'window))
 	    (send (send mirror 'window) 'close)  ;Make sure :set-released-when-closed has been set to #$YES.
 	    (send mirror 'release)
 	    (return-from destroy-mirror))
@@ -446,25 +405,51 @@ object wraps the ObjC object,rather than it being a direct MAPCPTR reference.
 ;; a 0,0 origin plane (like a sheet) into coordinates in a NON-0,0 origin plane (like the mirror).
 ;; However, all our mirrors have their origin at 0,0 anyway so I don't think this needs to return
 ;; anything else. Could be wrong...
+
+;; Not in the spec.; where's it from?
 (defmethod mirror-transformation ((port beagle-port) mirror)
   (declare (ignore port))
-  (debug-log 2 "mirror.lisp -> mirror-transformation~%")
   (slet ((frame (send mirror 'frame)))
-;;;        (make-translation-transformation (pref frame :<NSR>ect.size.width)      ; was clx:drawable-x
-;;;                                         (pref frame :<NSR>ect.size.height))))  ; was clx:drawable-y
-	(make-translation-transformation (pref frame :<NSR>ect.origin.x)
-					 (+ (pref frame :<NSR>ect.origin.y)        ; take account of flipped coords...
-					    (pref frame :<NSR>ect.size.height)))))
+    (make-translation-transformation (pref frame :<NSR>ect.origin.x)
+				     (+ (pref frame :<NSR>ect.origin.y)        ; take account of flipped coords...
+					(pref frame :<NSR>ect.size.height)))))
 
+;; Was invoked from 'sheets.lisp', no longer referenced. ::FIXME:: (remove)
 (defmethod port-set-sheet-region ((port beagle-port) (graft graft) region)
   (declare (ignore region))
-  (debug-log 2 "mirror.lisp -> port-set-sheet-region (port graft region)~%")
   (error "port-set-sheet-region (graft) - implement me"))
 
+;; Included in 'decls.lisp', but not used in the code. ::FIXME:: (remove)
 (defmethod port-set-sheet-transformation ((port beagle-port) (graft graft) transformation)
   (declare (ignore transformation))
-  (debug-log 2 "mirror.lisp -> port-set-sheet-transformation (port graft region)~%")
   (error "port-set-sheet-transformation (graft) - implement me"))
+
+;; Is *this* the missing piece of the puzzle? - apparently not :-(
+;; WAS invoked from 'sheets.lisp' but no longer.
+#+nil
+(defmethod port-set-sheet-region ((port beagle-port) (sheet mirrored-sheet-mixin) region)
+  (declare (ignore region))
+  (format *debug-io* "port-set-sheet-region entered~%")
+  (let ((mirror (sheet-direct-mirror sheet)))
+    (multiple-value-bind (tr rg) (%invent-sheet-mirror-transformation-and-region sheet)
+      (declare (ignore tr))
+      (multiple-value-bind (x1 y1 x2 y2) (if (eql rg +nowhere+)
+					     (values 0 0 0 0)
+					   (bounding-rectangle* rg))
+	(declare (ignore x1 y1))
+	(cond ((or (<= x2 0) (<= y2 0))
+	       ;; ?
+	       ))
+
+	;; Might need to dick around with the frame size depending on the sheet
+	;; type; might not. Dunno.
+	(slet ((bound-rect (send mirror 'bounds)))
+	  (rlet ((new-rect :<NSR>ect :origin.x (pref bound-rect :<NSR>ect.origin.x)
+			             :origin.y (pref bound-rect :<NSR>ect.origin.y)
+				     :size.width (coerce x2 'short-float)
+				     :size.height (coerce y2 'short-float)))
+	    (send mirror :set-bounds new-rect)))
+	y2))))
 
 
 ;;; I think port-set-mirror-region + port-set-mirror-transformation are indeed the key
@@ -476,24 +461,16 @@ object wraps the ObjC object,rather than it being a direct MAPCPTR reference.
 ;;; transformations ARE NOT CHANGING which seems rather wasteful. Need to catch
 ;;; these situations.
 
-;;; Finally, since we don't do any drawing in the drawRect NSView method, we can't
-;;; just use 'display' to redisplay the view; we need to invoke some specific
-;;; McCLIM redrawing functionality (though what this would be exactly I'm not sure;
-;;; the scroll bars get redrawn appropriately, so probably use the same redraw
-;;; method.
-
 ;;; Can probably do better than this and copy an area that's already on-screen, and
 ;;; just expose the bit that needs redrawing; then we can (hopefully) get better
 ;;; speed out of it.
 (defmethod port-set-mirror-region ((port beagle-port) mirror mirror-region)
+
   ;; When we're asked to resize the mirror corresponding to the top-level-sheet-pane, ALSO resize the
   ;; frame (NSWindow) in which it's situated.
-;;;  (debug-log 3 "port-set-mirror-region~%")
-;;;  (format *debug-io* "mirror.lisp -> port-set-mirror-region ~S~%" mirror)
-;;;  (format *debug-io* "Setting mirror region for ~S~%" mirror)
+
   ;; Handle top-level-sheet-pane case
-  (when (typep (port-lookup-sheet-for-view port mirror) 'top-level-sheet-pane)
-;;;    (format *debug-io*  "Handling top-level-sheet-pane case - moving window~%")
+  (when (typep (%beagle-port-lookup-sheet-for-view port mirror) 'top-level-sheet-pane)
     (slet ((frame-rect (send mirror 'frame)))
       (rlet ((rect :<NSR>ect :origin.x    (pref frame-rect :<NSR>ect.origin.x)
 		   :origin.y    (pref frame-rect :<NSR>ect.origin.y)
@@ -512,8 +489,7 @@ object wraps the ObjC object,rather than it being a direct MAPCPTR reference.
 
   ;; It's not a command-menu-pane case; it's a menu-button-pane case. Move to this, then we can scrap
   ;; the 'lisp-unmanaged-view' view type. Hopefully mouse motion events would work then...
-  (when	(typep mirror 'lisp-unmanaged-view) ;(port-lookup-sheet-for-view port mirror) 'command-menu-pane) ;unmanaged-top-level-sheet-pane?
-;;;    (format *debug-io*  "Handling lisp-unmanaged-view case - moving window~%")
+  (when	(typep mirror 'lisp-unmanaged-view)
     (slet ((frame-rect (send mirror 'frame)))
       (rlet ((rect :<NSR>ect :origin.x    (pref frame-rect :<NSR>ect.origin.x)
 		   :origin.y    (pref frame-rect :<NSR>ect.origin.y)
@@ -531,9 +507,9 @@ object wraps the ObjC object,rather than it being a direct MAPCPTR reference.
       (when (and (equal (pref frame-size :<NSR>ect.size.width) (pref size :<NSS>ize.width))
 		 (equal (pref frame-size :<NSR>ect.size.height) (pref size :<NSS>ize.height)))
 	;; No change to transformation; don't even try doing any repainting.
-	(return-from port-set-mirror-region))
-;;;      (format *debug-io* "Setting frame size for mirror ~S in window ~S..." mirror (send mirror 'window))
-      (send mirror :set-frame-size size))))
+	(return-from port-set-mirror-region (floor (bounding-rectangle-max-y mirror-region))))
+      (send mirror :set-frame-size size)))
+  (floor (bounding-rectangle-max-y mirror-region)))
 
 ;;; Cocoa doesn't automatically repaint in this case (unlike CLX it seems)
 ;;; Note that this should already be done by update-mirror-geometry, but appears not
@@ -543,64 +519,57 @@ object wraps the ObjC object,rather than it being a direct MAPCPTR reference.
         ;;; Should perhaps be an :after method on update-mirror-geometry?
 ;;;	(climi::dispatch-repaint (port-lookup-sheet-for-view port mirror) mirror-region)))) ; Use proper region asap
 
-;;; This is really, really, really horrible; assume any instance of lisp-unmanaged-view *must* be for
-;;; a popup menu. When we get instructions to transform this, we actually want to move the *window*
-;;; containing the menu. *shudder*
-
-;;; Note that executing the following in the OpenMCL listener works:
-;;;
-;;; ? (setf win (make-objc-instance 'ns-window))
-;;; #<A Mac Pointer #xF62490>
-;;; ? (send win :make-key-and-order-front nil)
-;;; ;Compiler warnings :
-;;; ;   Undeclared free variable WIN, in an anonymous lambda form.
-;;; NIL
-;;; ? (send win :set-frame-top-left-point (ns-make-point 700.0 550.0))
-;;; ;Compiler warnings :
-;;; ;   Undeclared free variable WIN, in an anonymous lambda form.
-;;; NIL
-
-;;; And creates a window, then moves it. This is exactly what we want here, but for some reason
-;;; it fails. Add plenty of debug and see if we can work out why...
-
-;;; If you watch really closely, you can see the window being drawn *in the right place*, but
-;;; it then appears at 0, 0. I *suspect* we're doing something wrong with the set-region
-;;; functionality. Investigating.
 (defmethod port-set-mirror-transformation ((port beagle-port) (mirror lisp-unmanaged-view)
 					   mirror-transformation)
   (multiple-value-bind (i1 i2 i3 i4 x y)
       (get-transformation mirror-transformation)
+      (declare (ignore i1 i2 i3 i4))
+    ;; This is why menus aren't being shown in the right place; because they are frames
+    ;; (borderless, admittedly) the coords provided for them aren't flipped (parent =
+    ;; screen). Hence, they're at the bottom instead of the top. Can fix now I've realized
+    ;; what the problem is ;-)
     (send (send mirror 'window) :set-frame-top-left-point
 	  (ns-make-point (coerce x 'short-float) (coerce y 'short-float)))
-    (send (send mirror 'window) :make-key-and-order-front nil)))
+    (send (send mirror 'window) :make-key-and-order-front nil))
+  (floor (nth-value 1 (transform-position mirror-transformation 0 0))))
 		
 ;;; From CLX/port.lisp
 (defmethod port-set-mirror-transformation ((port beagle-port) mirror mirror-transformation)
-  (debug-log 2 "mirror.lisp -> port-set-mirror-transformation~%")
-  (debug-log 3 "!!!!!!!! Setting mirror (~S) transfomation to ~S~%" mirror mirror-transformation)
-  (slet ((frame-origin (send mirror 'frame)))  ;position + size in parent
+  (slet ((mirror-bounds (send mirror 'bounds))
+	 (frame-origin (send mirror 'frame)))  ;position + size _in parent_
     (rlet ((point :<NSP>oint
 		  :x (coerce (floor (nth-value 0 (transform-position mirror-transformation 0 0))) 'short-float)
 		  :y (coerce (floor (nth-value 1 (transform-position mirror-transformation 0 0))) 'short-float)))
-      (debug-log 3 "               new x=~A, new y=~A~%" (pref point :<NSP>oint.x) (pref point :<NSP>oint.y))
       (when (and (equal (pref frame-origin :<NSR>ect.origin.x) (pref point :<NSP>oint.x))
 		 (equal (pref frame-origin :<NSR>ect.origin.y) (pref point :<NSP>oint.y)))
 	;; No change to transformation; do even try doing any repainting.
-	(return-from port-set-mirror-transformation))
-;;;      (format *debug-io* "Moving mirror: ~S to ~A, ~A~%" mirror (pref point :<NSP>oint.x) (pref point :<NSP>oint.y))
+	(return-from port-set-mirror-transformation (floor (nth-value
+							    1
+							    (transform-position mirror-transformation 0 0)))))
       ;; From Cocoa NSView documentation:-
       ;; Sets the origin of the receiver's frame rectangle to newOrigin, effectively repositioning it within its
       ;; superview. This method neither redisplays the receiver nor marks it as needing display. You must do this
       ;; yourself with display or setNeedsDisplay:.
       (send mirror :set-frame-origin point)
-      ;; This is how we do the scolling; but it's very inefficient (redraws entire mirror region).
-      ;; ::FIXME::
-      ;; Should perhaps be an :after method on update-mirror-geometry?
-      (climi::dispatch-repaint (port-lookup-sheet-for-view port mirror)
-			       (%sheet-mirror-region (port-lookup-sheet-for-view port mirror)))
+      ;; Should perhaps be an :after method on update-mirror-geometry? This *should* be done automatically
+      ;; by 'care-for-new-native-transformation' (see climsource:sheets.lisp), but that method never
+      ;; seems to be invoked...
+      (climi::dispatch-repaint (%beagle-port-lookup-sheet-for-view port mirror)
+;;;			       (untransform-region (sheet-device-transformation (port-lookup-sheet-for-view
+;;;										 port mirror))
+;;;						   (%beagle-region-from-ns-rect mirror-bounds)))
+			       (untransform-region mirror-transformation
+						   (%beagle-region-from-ns-rect mirror-bounds)))
 
-      )))
-  
+      ))
+  (floor (nth-value 1 (transform-position mirror-transformation 0 0))))
+
+(defun %beagle-region-from-ns-rect (rect)
+  (make-bounding-rectangle (pref rect :<NSR>ect.origin.x)
+			   (pref rect :<NSR>ect.origin.y)
+			   (+ (pref rect :<NSR>ect.origin.x) (pref rect :<NSR>ect.size.width))
+			   (+ (pref rect :<NSR>ect.origin.y) (pref rect :<NSR>ect.size.height))))
+
 ;;; Nabbed from CLX backend port.lisp - however, I think it's wrong. This (and the CLX) method
 ;;; actually attempt to put the sheet up on screen. I suspect it only needs to set a flag, and
 ;;; invoke "notify-sheet-enabled". Maybe not :-)  In any case, I think this gets called for every
@@ -608,17 +577,17 @@ object wraps the ObjC object,rather than it being a direct MAPCPTR reference.
 ;;; them!
 ;;; A few comments about how the current clim implementation works would be nice.
 
-;;; From CLX/port.lisp
+;;; Not in spec.; where's it from? Invoked from 'sheets.lisp'. No concept of 'enabling'
+;;; a sheet in the spec....
 (defmethod port-enable-sheet ((port beagle-port) (sheet mirrored-sheet-mixin))
-  (debug-log 2 "mirror.lisp -> port-enable-sheet~%")
   (when (null (port-lookup-mirror port sheet))
 	(error "port-enable-sheet: can't enable sheet with no mirror"))
   (let ((window (send (port-lookup-mirror port sheet) 'window)))
 	(unless (send window 'is-key-window)
 	  (send window :make-key-and-order-front nil))))
 
+;; Not in spec. Possibly invoked from sheets.lisp. ::FIXME::
 (defmethod port-disable-sheet ((port beagle-port) (mirror mirrored-sheet-mixin))
-  (debug-log 1 "mirror.lisp -> port-disable-sheet~%")
   (error "port-disable-sheet: implement me"))
 
 ;;; Nabbed from CLX backend medium.lisp
@@ -639,7 +608,6 @@ rounding\" gives consistent results."
 ;;; I suspect (though can't be sure) that a proper implementation of grafts might
 ;;; make all this much, much easier.
 (defun %invent-sheet-mirror-transformation-and-region (sheet)
-  (debug-log 2 "mirror.lisp -> %invent-sheet-mirror-transformation-and-region~%")
   (let* ((r (sheet-region sheet))                                 ; sheet region (origin, width, height) in "imaginary" units
 	 (r* (transform-region  
 	      (sheet-native-transformation (sheet-parent sheet))  ; native == user transformation. Of the *parent*

@@ -28,7 +28,7 @@
 
 #||
 
-$Id: events.lisp,v 1.5 2005/03/04 07:35:39 afuchs Exp $
+$Id: events.lisp,v 1.1 2005/05/16 22:13:16 drose Exp $
 
 All these are copied pretty much from CLX/port.lisp
 
@@ -92,13 +92,8 @@ press / release) is handled.")
   (warn "events:port-motion-hints:Motion hints not supported in Beagle backend")
   nil)
 
-;;;(defmethod (setf port-motion-hints) (hint)
-;;;  (declare (ignore hint))
-;;;  (warn "events:setf port-motion-hints:Motion hints not supported in Cocoa backend")
-;;;  nil)
-;;;
 (defmethod (setf port-motion-hints) (val (port beagle-port) (sheet mirrored-sheet-mixin))
-;;;  (declare (ignore val port sheet))
+  (declare (ignore val port sheet))
   (warn "events:setf port-motion-hints:Motion hints (2) not supported in Cocoa backend")
   nil)
 
@@ -176,7 +171,6 @@ event is added to the queue. Cocoa events that map onto a NIL CLIM event (i.e. t
 not handled) are not added to the queue."
   (declare (special *beagle-port
 		    *mcclim-event-queue*))
-  (debug-log 1 "events.lisp: entered add-event-to-queue~%")
   (let ((clim-event (beagle-event-to-clim-event mirror event)))
     (unless (not clim-event)
       (setf *mcclim-event-queue* (nconc *mcclim-event-queue* (list clim-event)))
@@ -187,7 +181,6 @@ not handled) are not added to the queue."
 a Cocoa notification MACPTR to a CLIM event. This method signals the port event semaphore
 when a notification is added to the queue."
   (declare (special *beagle-port*))
-  (debug-log 1 "events.lisp: entered add-event-to-queue~%")
   (let ((clim-event (beagle-notification-to-clim-event window notification origin-x origin-y width height)))
     (unless (not clim-event)
       (setf *mcclim-event-queue* (nconc *mcclim-event-queue* (list clim-event)))
@@ -252,23 +245,18 @@ when a notification is added to the queue."
   (let ((mods 0))
     (if (> (logand flags #$NSShiftKeyMask) 0)
 		(progn
-		  (debug-log 1 "events.lisp: adding shift mask to modifiers~%")
 		  (setf mods (logior mods +shift-key+))))
     (if (> (logand flags #$NSControlKeyMask) 0)
 		(progn
-		  (debug-log 1 "events.lisp: adding control mask to modifiers~%")
 		  (setf mods (logior mods +control-key+))))
     (if (> (logand flags #$NSCommandKeyMask) 0)
 		(progn
-		  (debug-log 1 "events.lisp: adding command mask to modifiers~%")
 		  (setf mods (logior mods +meta-key+))))
     (if (> (logand flags #$NSAlternateKeyMask) 0)
 		(progn
-		  (debug-log 1 "events.lisp: adding alternate mask to modifiers~%")
 		  (setf mods (logior mods +super-key+))))
     (if (> (logand flags #$NSAlphaShiftKeyMask) 0) ; caps lock
 		(progn
-		  (debug-log 1 "events.lisp: adding alpha-shift mask to modifiers~%")
 		  (setf mods (logior mods +hyper-key+))))
 ;;; Unused:
 ;;;  NSHelpKeyMask
@@ -310,10 +298,8 @@ when a notification is added to the queue."
 (let ((timestamp 0))
   (defun beagle-notification-to-clim-event (window notification &optional origin-x origin-y width height)
     (declare (special *beagle-port*))
-    (debug-log 1 "-> BEAGLE-NOTIFICATION-TO-CLIM-EVENT~%")
     (let ((return-event nil)
-	  (sheet (port-lookup-sheet-for-view *beagle-port* (send window 'content-view))))
-      (debug-log 1 "Got sheet: ~S~%" sheet)
+	  (sheet (%beagle-port-lookup-sheet-for-view *beagle-port* (send window 'content-view))))
       ;; We don't get exposure notifications when the window has a (Cocoa) backing store.
       (cond
        ;; I'm not sure this is right; we need to find the sheet in the hierarchy of this window
@@ -325,13 +311,12 @@ when a notification is added to the queue."
        ((send (send notification 'name) :is-equal-to-string #@"NSWindowDidBecomeKeyNotification")
         (setf return-event nil)
 	(when (send window 'is-visible)  ; only do if window is on-screen...
-          (debug-log 2 "Setting focus in *beagle-port* onto sheet: ~S~%" sheet)
           ;; NB: this isn't in the right coordinate system! Convert screen -> content view coords.
           (slet ((pointer-loc (send (@class ns-event) 'mouse-location))
 	         (loc-in-window (send window :convert-screen-to-base pointer-loc)))
 	    (let* ((content-view (send window 'content-view))
 	  	   (target-view (send content-view :hit-test loc-in-window))
-		   (target-sheet (port-lookup-sheet-for-view *beagle-port* target-view)))
+		   (target-sheet (%beagle-port-lookup-sheet-for-view *beagle-port* target-view)))
 	      (unless (null target-sheet)
 		(format *debug-io* "Setting focus in *beagle-port* onto (hopefully correct) sheet: ~S~%" target-sheet)
 		(%set-port-keyboard-focus target-sheet *beagle-port*))))))
@@ -355,7 +340,6 @@ when a notification is added to the queue."
        ;;       is it correct?  it means that if we get a
        ;;       notification that we don't recognize, we ignore it
        (t nil))
-      (debug-log 1 "Finished, returning ~S~%" return-event)
       return-event))
 
   (defun beagle-event-to-clim-event (mirror event)
@@ -415,7 +399,7 @@ when a notification is added to the queue."
 				     :y              (pref location-in-view-point :<NSP>oint.y)
 				     :graft-x        (pref location-in-screen-point :<NSP>oint.x)
 				     :graft-y        (pref location-in-screen-point :<NSP>oint.y)
-				     :sheet          (port-lookup-sheet-for-view *beagle-port* mirror)
+				     :sheet          (%beagle-port-lookup-sheet-for-view *beagle-port* mirror)
 				     :modifier-state (beagle-modifier-to-modifier-state (send event 'modifier-flags))
 				     ;; Timestamp from Cocoa looks like 12345.7 - CLIM wants integer no
 				     ;; bigger than a fixnum, so it gets a fixnum. Hope Cocoa doesn't
@@ -447,7 +431,7 @@ when a notification is added to the queue."
 					  :y 0
 					  :graft-x 0
 					  :graft-y 0
-					  :sheet          (port-lookup-sheet-for-view *beagle-port* mirror)
+					  :sheet          (%beagle-port-lookup-sheet-for-view *beagle-port* mirror)
 					  :modifier-state (beagle-modifier-to-modifier-state (send event 'modifier-flags))
 					  ;; Timestamp from Cocoa looks like 12345.7 - CLIM wants integer no
 					  ;; bigger than a fixnum, so it gets a fixnum. Hope Cocoa doesn't
@@ -545,7 +529,7 @@ when a notification is added to the queue."
 				 ;; the NSView hierarchy (or sheet hierarchy, whichever is easiest) until we
 				 ;; find the "youngest" view (or sheet) over which the event occurred; this
 				 ;; is the sheet that should handle the event.
-				 :sheet (port-lookup-sheet-for-view *beagle-port* mirror)
+				 :sheet (%beagle-port-lookup-sheet-for-view *beagle-port* mirror)
 				 :modifier-state (beagle-modifier-to-modifier-state (send event 'modifier-flags))
 				 :timestamp (incf timestamp))))))
       (when (or (equal #$NSMouseEntered event-type)
@@ -580,7 +564,7 @@ when a notification is added to the queue."
 				 :y              (pref location-in-view-point :<NSP>oint.y)
 				 :graft-x        (pref location-in-screen-point :<NSP>oint.x) ;0
 				 :graft-y        (pref location-in-screen-point :<NSP>oint.y) ;0
-				 :sheet (port-lookup-sheet-for-view *beagle-port* mirror)
+				 :sheet (%beagle-port-lookup-sheet-for-view *beagle-port* mirror)
 				 :modifier-state (beagle-modifier-to-modifier-state (send event 'modifier-flags))
 				 :timestamp (incf timestamp))))))
 
@@ -720,13 +704,13 @@ when a notification is added to the queue."
 ;;; Cocoa note: the Frame (NSWindow) must be made key for us to receive events; but they
 ;;; must then be sent to the Sheet that has focus.
 
-(defmethod %set-port-keyboard-focus (focus (port beagle-port) &key timestamp)
+;;; NB. when the method was renamed it appears that the argument order was also changed.
+(defmethod %set-port-keyboard-focus ((port beagle-port) focus &key timestamp)
+  (declare (ignore timestamp))
   (let ((mirror (sheet-mirror focus)))
-    (debug-log 2 "events.lisp:set-port-keyboard-focus - got mirror ~S~%" mirror)
     (when mirror
       (let ((window (send mirror 'window)))
         (when window
-	  (debug-log 2 "Setting key focus accordingly...~%")
 	  (setf (beagle-port-key-focus port) focus)
 	  (if (send window 'is-key-window)
 	      (send window :order-front nil)

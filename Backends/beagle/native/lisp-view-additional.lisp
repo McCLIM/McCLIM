@@ -34,14 +34,30 @@
 ;;; unit as they are defined. This is a (hopefully temporary) work-around
 ;;; until that's resolved.
 
+(define-objc-method ((:void :stroke-path path :in-colour colour) lisp-view)
+  (when (send self 'lock-focus-if-can-draw)
+    (send (the lisp-bezier-path path) :set-colour colour)
+    (send path :set-fill #$NO)
+    (send path 'draw)
+;;    (send path 'release)
+    (send self 'unlock-focus)))
+
+(define-objc-method ((:void :fill-path path :in-colour colour) lisp-view)
+  (when (send self 'lock-focus-if-can-draw)
+    (send (the lisp-bezier-path path) :set-colour colour)
+    (send path :set-fill #$YES)
+    (send path 'draw)
+;;    (send path 'release)
+    (send self 'unlock-focus)))
+
 (define-objc-method ((:void :set-bounds (:<NSR>ect bounds)) lisp-view)
   (send-super :set-bounds bounds)
-  (send self 'fill-bounds)  
+;;;  (send self 'fill-bounds)  
   (send self 'establish-tracking-rect))
 
 (define-objc-method ((:void :set-bounds-origin (:<NSP>oint point)) lisp-view)
   (send-super :set-bounds-origin point)
-  (send self 'fill-bounds)
+;;;  (send self 'fill-bounds)
   (send self 'establish-tracking-rect))
 
 (define-objc-method ((:void :set-bounds-rotation (:float angle)) lisp-view)
@@ -50,7 +66,7 @@
 
 (define-objc-method ((:void :set-bounds-size (:<NSS>ize size)) lisp-view)
   (send-super :set-bounds-size size)
-  (send self 'fill-bounds)
+;;;  (send self 'fill-bounds)
   (send self 'establish-tracking-rect))
 
 (define-objc-method ((:void :translate-origin-to-point (:<NSP>oint point)) lisp-view)
@@ -67,7 +83,7 @@
 
 (define-objc-method ((:void :set-frame (:<NSR>ect frame)) lisp-view)
   (send-super :set-frame frame)
-  (send self 'fill-bounds)
+;;;  (send self 'fill-bounds)
   (send self 'establish-tracking-rect))
 
 (define-objc-method ((:void :set-frame-origin (:<NSP>oint point)) lisp-view)
@@ -80,7 +96,7 @@
 
 (define-objc-method ((:void :set-frame-size (:<NSS>ize size)) lisp-view)
   (send-super :set-frame-size size)
-  (send self 'fill-bounds)
+;;;  (send self 'fill-bounds)
   (send self 'establish-tracking-rect))
 
 ;;; --->8--- end cut for kludgey work-around of OpenMCL bug --->8---

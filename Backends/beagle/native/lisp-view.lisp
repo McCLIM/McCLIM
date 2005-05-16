@@ -68,62 +68,39 @@
 (define-objc-method ((:<BOOL> is-flipped) lisp-view)
   #$YES)
 
-;;;(define-objc-method ((:void :draw-rect (:<NSR>ect rect)) 
-;;;                                         lisp-view)
-;;;;;;  (send-super :draw-rect rect)  ; <- is this right?
-;;;  (slet ((bounds (send self 'bounds)))
-;;;    (if (eql (%null-ptr) (view-background-colour self))
-;;;        (send (the ns-color (send (@class ns-color) 'white-color)) 'set)
-;;;      (send (the ns-color (view-background-colour self)) 'set))
-;;;    (#_NSRectFill bounds)))
+(define-objc-method ((:void :draw-rect (:<NSR>ect rect)) lisp-view)
+  ;; Set the background colour
+  (if (eql (%null-ptr) (view-background-colour self))
+      (send (the ns-color (send (@class ns-color) 'white-color)) 'set)
+    (send (the ns-color (view-background-colour self)) 'set))
+
+  ;; Fill the 'dirty' rect with background colour.
+  (#_NSRectFill rect))
 
 (define-objc-method ((:void :draw-string string
 				 :at-point (:<NSP>oint point)
 				 :with-attributes attr
-				 :in-colour colour
-				 :with-width (:float width)
-				 :with-cap-style (:int cap)
-				 :with-join-style (:int join)) lisp-view)
+				 :in-colour colour) lisp-view)
+;				 :with-width (:float width)
+;				 :with-cap-style (:int cap)
+;				 :with-join-style (:int join)) lisp-view)
   (when (send self 'lock-focus-if-can-draw)
     (send (the ns-color colour) 'set)
-    (send (@class ns-bezier-path) :set-default-line-width width)
-    (send (@class ns-bezier-path) :set-default-line-cap-style cap)
-    (send (@class ns-bezier-path) :set-default-line-join-style join)
+    ;; Test to see if any of these are actually useful; suspect many won't be.
+;    (send (@class ns-bezier-path) :set-default-line-width width)
+;    (send (@class ns-bezier-path) :set-default-line-cap-style cap)
+;    (send (@class ns-bezier-path) :set-default-line-join-style join)
     (send string :draw-at-point point :with-attributes attr)
 ;;;    (send (send self 'window) 'flush-window)
     (send self 'unlock-focus))
 ;;;  (send (send self 'window) 'flush-window))
   )
 
-(define-objc-method ((:void :stroke-path path :in-colour colour) lisp-view)
-  (when (send self 'lock-focus-if-can-draw)
-    (send (the ns-color colour) 'set)      ; colour for current graphics context
-    (send path 'stroke)
-;;;    (send (send self 'window) 'flush-window)
-    (send self 'unlock-focus))
-;;;  (send (send self 'window) 'flush-window))
-  )
-
-(define-objc-method ((:void :fill-path path :in-colour colour) lisp-view)
-  (when (send self 'lock-focus-if-can-draw)
-    (send (the ns-color colour) 'set)      ; colour for current graphics context
-    (send path 'fill)
-;;;    (send (send self 'window) 'flush-window)
-    (send self 'unlock-focus))
-;;;  (send (send self 'window) 'flush-window))
-  )
 
 (define-objc-method ((:id :copy-bitmap-from-region (:<NSR>ect rect)) lisp-view)
-  (debug-log 1 "lisp-view -> copy-bitmap-from-region (~A ~A ~A ~A)~%"
-	     (pref rect :<NSR>ect.origin.x)
-	     (pref rect :<NSR>ect.origin.y)
-	     (pref rect :<NSR>ect.size.width)
-	     (pref rect :<NSR>ect.size.height))
   (if (send self 'lock-focus-if-can-draw)
       (progn
-	(debug-log 1 "focus is locked~%")
 	(let ((bitmap (send (send (@class ns-bitmap-image-rep) 'alloc) :init-with-focused-view-rect rect)))
-	  (debug-log 1 "Got bitmap ~S = ~S~%" bitmap (ccl::description bitmap))
 	  (send bitmap 'retain)
 	  (send self 'unlock-focus)
 	  bitmap))
@@ -132,7 +109,7 @@
       nil)))
 
 (define-objc-method ((:void :paste-bitmap bitmap :to-point (:<NSP>oint point)) lisp-view)
-  (debug-log 1 "lisp-view -> paste-bitmap entered~%")
+
   ;; "fraction" defines the opacity of the bitmap.
   
 ;  NSImage image = [[NSImage alloc] initWithData:[bitmap TIFFRepresentation]];
@@ -141,13 +118,17 @@
 ;  [image release];
 
   (when (send self 'lock-focus-if-can-draw)
-    (progn
-      (let ((image (send (send (@class ns-image) 'alloc) :init-with-data (send bitmap "TIFFRepresentation"))))
-	(send image :dissolve-to-point point :fraction 1.0))
+    (let ((image (send (send (@class ns-image) 'alloc) :init-with-data (send bitmap "TIFFRepresentation"))))
+      (send image :dissolve-to-point point :fraction 1.0))
 ;;;	(send (send self 'window) 'flush-window)
-      (send self 'unlock-focus)))
+    (send self 'unlock-focus))
 ;;;  (send (send self 'window) 'flush-window))
   )
+
+(define-objc-method ((:void :draw-image image :at-point (:<NSP>oint point)) lisp-view)
+  (when (send self 'lock-focus-if-can-draw)
+    (send image :dissolve-to-point point :fraction 1.0)
+    (send self 'unlock-focus)))
 
 ;;; ----------------------------------------------------------------------------
 
@@ -182,19 +163,19 @@
 ;;; Support method; when the bounds or frame are reset, fill them with whatever
 ;;; background colour they have set.
 
-(define-objc-method ((:void fill-bounds) lisp-view)
-;;;  (nslog (format nil "setting view bounds, about to attempt to lock focus for filling~%"))
-  (when (send self 'lock-focus-if-can-draw)
-;;;    (nslog (format nil "got lock~%"))
-    (if (eql (%null-ptr) (view-background-colour self))
-	(send (the ns-color (send (@class ns-color) 'white-color)) 'set)
-      (send (the ns-color (view-background-colour self)) 'set))
-    (slet ((bounds (send self 'bounds)))
-      (#_NSRectFill bounds))
-;;;    (send (send self 'window) 'flush-window)
-    (send self 'unlock-focus))
-;;;  (send (send self 'window) 'flush-window))
-  )
+;;;(define-objc-method ((:void fill-bounds) lisp-view)
+;;;;;;  (nslog (format nil "setting view bounds, about to attempt to lock focus for filling~%"))
+;;;  (when (send self 'lock-focus-if-can-draw)
+;;;;;;    (nslog (format nil "got lock~%"))
+;;;    (if (eql (%null-ptr) (view-background-colour self))
+;;;        (send (the ns-color (send (@class ns-color) 'white-color)) 'set)
+;;;      (send (the ns-color (view-background-colour self)) 'set))
+;;;    (slet ((bounds (send self 'bounds)))
+;;;      (#_NSRectFill bounds))
+;;;;;;    (send (send self 'window) 'flush-window)
+;;;    (send self 'unlock-focus))
+;;;;;;  (send (send self 'window) 'flush-window))
+;;;  )
 
 ;;; Override the various :set-bounds-size etc. methods so we can reset the tracking
 ;;; rectangle when they change.

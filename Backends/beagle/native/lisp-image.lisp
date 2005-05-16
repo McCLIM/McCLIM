@@ -84,20 +84,10 @@
     (send self 'unlock-focus)))
 
 (define-objc-method ((:id :copy-bitmap-from-region (:<NSR>ect rect)) lisp-image)
-  (debug-log 1 "lisp-image -> copy-bitmap-from-region (~A ~A ~A ~A)~%"
-	     (pref rect :<NSR>ect.origin.x)
-	     (pref rect :<NSR>ect.origin.y)
-	     (pref rect :<NSR>ect.size.width)
-	     (pref rect :<NSR>ect.size.height))
-;;;  (format *debug-io* "copy-bitmap-from-region: isValid = ~S~%" (send self 'is-valid))
-;;;  (format *debug-io* "best-representation-for-device: ~S~%" (send self :best-representation-for-device nil))
-;;;  (format *debug-io* "sending self (~S) 'lock-focus~%" (description self))
   (if (send self 'is-valid) ;;lock-focus) ;;-if-can-draw)
       (progn
 	(send self 'lock-focus)
-	(debug-log 1 "focus is locked (valid)~%")
 	(let ((bitmap (send (send (@class ns-bitmap-image-rep) 'alloc) :init-with-focused-view-rect rect)))
-	  (debug-log 1 "Got bitmap ~S = ~S~%" bitmap (ccl::description bitmap))
 	  (send bitmap 'retain)
 	  (send self 'unlock-focus)
 	  bitmap))
@@ -125,7 +115,6 @@ See "http://www.stone.com/porting/dict_walk_and_lockFocus.html"
 ||#
 
 (define-objc-method ((:void :paste-bitmap bitmap :to-point (:<NSP>oint point)) lisp-image)
-  (debug-log 1 "lisp-image -> paste-bitmap entered~%")
   ;; "fraction" defines the opacity of the bitmap.
   
 ;  NSImage image = [[NSImage alloc] initWithData:[bitmap TIFFRepresentation]];

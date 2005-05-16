@@ -48,13 +48,12 @@ rather limiting [see note #2]) task:
 1.  Install McCLIM according to INSTALL.ASDF in the McCLIM root
     directory.
 2.  Start OpenMCL
-3.  Evaluate '(require "COCOA")'
+3.  Evaluate '(require :cocoa)'
 
 The following are evaluated from the 'OpenMCL Listener' that opens:
 
-4.  Evaluate '(require "ASDF")'
-5.  Evaluate '(asdf:oos 'asdf:load-op :clim-beagle)'
-6.  Evaluate '(asdf:oos 'asdf:load-op :mcclim)' [See note #3]
+4.  Evaluate '(asdf:oos 'asdf:load-op :clim-beagle)'
+5.  Evaluate '(asdf:oos 'asdf:load-op :mcclim)' [See note #3]
 
 The McCLIM Listener should now be able to be started from the OpenMCL
 Listener by evaluating '(clim-listener:run-listener)'. See the McCLIM
@@ -77,29 +76,14 @@ Note #2: Yes, this is a little silly. For a while the Beagle back end could
          loop.
 
 Note #3: If you'd rather run with the CLX back end, load CLX
-         instead here. Hopefully it will (soon?) be possible to run
-         with multiple ports simultaneously so that both a CLX and a
-         Beagle Listener can be run side by side for comparative
-         purposes.
+         instead here. It is possible to with multiple ports simultaneously
+	 so that both a CLX and a Beagle Listener can be run side by side
+	 for comparative purposes (or just because the Listener is actually
+	 usable for something useful when running under CLX).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 CONFIGURATION
-
-debug:
-------
-Most debug output within the Beagle back end uses a specialized debug
-logging method so it can be dynamically turned on and off. If for any
-reason you want to observe log messages, set the following parameter to a
-non-zero integer (the higher the integer, the more detail there is to the
-logging. No logging is higher than 4 at the moment though I don't think).
-
-CL-USER:*DEBUG-LOG-LEVEL* <defined in 'package.lisp'>
-  -> numeric  [0 by default]
-
-See also TODO item 12. In general I need to go through all the debug
-messages and sort them out.
-
 
 default frame manager:
 ----------------------
@@ -114,7 +98,7 @@ BEAGLE::*DEFAULT-BEAGLE-FRAME-MANAGER* <defined in 'port.lisp'>
 
 Should use CLIM:*DEFAULT-FRAME-MANAGER* for this!
 Note that as yet, no native (aqua) look and feel panes have been defined,
-so it doesn't matter which one you use.
+so it doesn't matter which frame manager you use.
 
 multiple ports:
 ---------------
@@ -141,31 +125,16 @@ You can also do a (clim-listener:run-listener-process) in (8) and
 then run the other listener from the OpenMCL Listener.
 Other variations probably work too, but I haven't experimented too
 much.
-(7) isn't necessary, since the CLX port appears in the server-path
-search order before the Beagle port does.
 
-
-listener:
----------
-If you want to run the Listener in this back end as it currently stands, you
-need to make the following modifications to
-'Apps/Listener/dev-commands.lisp' (or put up with broken directory display):-
-
-1. Modify 'pretty-pretty-pathname', removing:
-
-   (let ((icon (icon-of pathname)))
-     (when icon (draw-icon stream icon :extra-spacing 3)))
-
-2. Modify 'com-show-directory', removing:
-
-   (draw-icon T (standard-icon "up-folder.xpm") :extra-spacing 3)
+(7) isn't actually necessary, since the CLX port appears in the server-
+path search order before the Beagle port does.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 KNOWN LIMITATIONS / TODO LIST
 
 1.  Speed! The current implementation is __slow__, especially when there is a
-    large output history. Paolo's speed test takes 26 seconds and conses
+    large output history. Paolo's stress test takes 26 seconds and conses
     16MB on my (admittedly slow) iMac compared to 1.5 seconds on a 2.4GHz
     Pentium IV and unknown (to me) consing.
     Should be able to speed things up by performing fewer focus lock / unlocks,
@@ -173,6 +142,20 @@ KNOWN LIMITATIONS / TODO LIST
     far this will get us though...
     UPDATE - 21.AUG.2004 - performing fewer NSWindow flushes makes no difference
                            to speed.
+    UPDATE - 25.APR.2005 - When the mirror transformation is set (sheet is
+                           scrolling) we dispatch a repaint on the 'untransformed
+    mirror region' (using the mirror transformation as the 'untransformation')
+    instead of on the whole sheet. Things seem to behave better (i.e. quicker) now.
+    This HASN'T made '(time (clim-listener::com-show-class-subclasses t))' execute
+    any faster though (or cons less). We're doing way too much work drawing stuff
+    I think, and because we get CLIM to redraw the regions (linear search through
+    output history?) it's not too fast. Suspect in CLX when the sheet is scrolled,
+    no redraw happens from CLIM generally. Also, Cocoa appears to get really slow
+    at rendering text when the output history gets too large (maybe this is CLIM
+    again, it's hard to know). Need to profile.
+    TODO: cache lisp-bezier-path instances and reuse them. Use approximation for
+          text sizing (there's as much overhead working out how big rendered text
+          would be as there is to rendering the text itself, or almost).
 
 2.  When running the Listener (and probably other applications), the resize
     handle is not visible; it's there, but you can't see it. Grab and drag
@@ -180,9 +163,6 @@ KNOWN LIMITATIONS / TODO LIST
 
 3.  There are not yet any aqua look and feel panes. Sorry, I'm trying to
     get everything else working first!
-
-4.5. Designs (other than colours) aren't implemented - THIS means there are
-    no icons in the Listener.
 
 5.  Mouse down / up on buttons appears not to work very well unless the frame
     containing the buttons is the only active frame.
@@ -198,7 +178,7 @@ KNOWN LIMITATIONS / TODO LIST
     then back on the McCLIM Listener window).
     Additionally, clicking on a scroll-bar (for example) makes the window
     key, so clicking on a view that accepts keyboard input (interactor)
-    won't then allow keyboard input.
+    within this window won't then allow keyboard input.
     We should stop scroll-bars being able to get keyboard input...
 
 7.  Keyboard events are not handled "properly" as far as any OS X user will
@@ -215,8 +195,6 @@ KNOWN LIMITATIONS / TODO LIST
     in the same thread as the OpenMCL Listener (since we use its autorelease
     pool) but when running in a separate thread lots of warning messages
     are generated.
-
-11. Line dash patterns haven't been implemented.
 
 12. There's probably some debug output remaining in some corner cases.
 
@@ -238,9 +216,11 @@ KNOWN LIMITATIONS / TODO LIST
 18. The back end doesn't clear up after itself very well. You might find it
     necessary to force-quit OpenMCL after you've finished.
 
-19. Menus don't work in CLIM-FIG (or any else!). No idea why not...
-    This is because the way pointer tracking is done in clim-internals has
-    been changed, so another work-around needs to be implemented.
+19. Menus don't work in CLIM-FIG (or anywhere else!). No idea why not...
+    This is because (I think) the menu popups don't operate in a flipped
+    coord system (unlike NSViews).
+    TODO: make use of graft native transformation to flip coords rather
+          than the NSView 'isFlipped' method.
 
 20. Bounding rectangles are slightly off (this can be seen in CLIM-FIG again).
     It's only a matter of a pixel, maybe 2 in the worst case I've seen.
@@ -262,6 +242,14 @@ KNOWN LIMITATIONS / TODO LIST
     Presentation'.
     Need to check CLX implementation to see if this is the same...
 
+23. Large output histories: the transformations and geometry calculations
+    go wrong when the output takes up more than 2^16 pixels; the medium
+    should be used to account for this (it does in CLX) but for some
+    reason it isn't. Can work around by changing every #x8000 in
+    UPDATE-MIRROR-GEOMETRY (see sheets.lisp in core) to #x800000 (or larger)
+    but this will fail eventually (i.e. with a large enough output
+    history), so it needs sorting properly.
+
 -4.-  Pixmap support is not implemented; this means clim-fig drawing doesn't
     work.
     This is getting there, although not very efficiently; we are missing a
@@ -269,6 +257,13 @@ KNOWN LIMITATIONS / TODO LIST
     (clim-demo::clim-fig) and actually do some drawing.
     RESOLVED 08.AUG.04 [NB. this functionality is not too efficient I think
                        and needs revisiting (like everything else does)]
+
+-4.5.- Designs (other than colours) aren't implemented - THIS means there are
+     no icons in the Listener.
+    UPDATE 25.APR.2005 - This is done now, more or less (done for tiled patterns,
+                         hacked for non-tiled patterns, not looked at for
+                         stencils).
+
 
 -10.- Text sizes aren't calculated correctly; when multiple lines are output
     together, the bottom of one line can be overwritten by the top of the
@@ -282,6 +277,12 @@ KNOWN LIMITATIONS / TODO LIST
     Perhaps Cocoa thinks the dirty region includes that text or something.
     It's annoying whatever. Still, I'm going to mark this as fixed for now
     and maybe will come back to it later.
+    TODO: I think this is to do with the way width and height (rather than
+          text-size) is used to calculate bounding rectangles might be
+          wrong (i.e. getting the wrong information from Beagle).
+
+-11.- Line dash patterns haven't been implemented.
+
 
 -13.- Some Apropos cases fail; for example 'Apropos graft' fails (although
     '(apropos 'graft)' does not). The same problem prevents the address
@@ -303,8 +304,8 @@ KNOWN LIMITATIONS / TODO LIST
 WISH LIST
 
 1.  Bring Beagle back end into line with CLX back end in terms of supported
-    McCLIM functionality (basically - -pixmap-support-,- flipping ink and line
-    dashes)
+    McCLIM functionality (basically - -pixmap-support-, flipping ink and -line
+    dashes-)
 
 2.  Implement native look and feel
 

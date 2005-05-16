@@ -1,0 +1,73 @@
+
+Simple sheet hierarchy and process viewer. Based loosely on 'PEEK' on the Explorer
+(and probably Genera too, but I have no documentation on the Genera version).
+
+FILES:
+
+   TODO
+       + this file
+
+   glimpse.lisp
+       + variable definitions, application frame definition, 'glimpse' function.
+
+   glimpse-support.lisp
+       + general supporting functions used mainly by glimpse commands. Includes
+         functions for laying out the 'indented text graph' also.
+
+   glimpse-present-process.lisp
+       + presentation type definitions, presentation to command translators for
+         mode:processes.
+
+   glimpse-present-window.lisp
+       + presentation type definitions, presentation to command translators for
+         mode:windows.
+
+   glimpse-command-tables.lisp
+       + command table definitions for glimpse utility.
+
+   glimpse-modeless-commands.lisp
+       + commands that don't depend on the current Glimpse mode; select mode,
+         quit, clear output, that kind of thing.
+
+   glimpse-process-commands.lisp
+       + commands relevent to mode:processes.
+
+   glimpse-window-commands.lisp
+       + commands relevent to the mode:windows.
+
+TODO:
+
+-- Proper PRESENT methods for processes + windows.
+-- 'Proper' definition of windows; probably want to include application frames
+   + stream-panes only? Maybe this should be configurable...
+-- Timed updates of mode display pane
+-- Actually make commands available! For some reason they're not showing up at the moment.
+-- Commands differentiated by mode; for example (from Explorer PEEK):
+       PROCESS:
+           Open in debugger (check openmcl docs)
+           -Arrest-         (disable-process?)
+           -Un-arrest-      (enable-process?)
+           -Flush-          (force to wait forever) [same as arrest]
+           -Reset-          (restart-process?)
+           -Reset & Enable- (same as un-arrest + reset?)
+           -Kill-           (destroy-process?)
+           -Describe-       (have this already, sort of. Need to cut down current.)
+           Priority         (meaningless for native threads? Check openmcl docs)
+           Inspect          (send to Clouseau)
+       WINDOWS:
+           Deexpose
+           Expose
+           Select
+           Deselect
+           Deactivate
+           Kill
+           Bury
+           -Describe- (have this already, sort of)
+           Inspect (send to Clouseau)
+           Toggle display mode (graph / text)
+-- More modes (function histogram would be nice, but need to implement
+               this kind of feature in OpenMCL)
+-- Modes accessible by key assignment
+-- 'Typeout' window help
+-- Implement 'profile' too so configurable stuff can be easily
+   configured...

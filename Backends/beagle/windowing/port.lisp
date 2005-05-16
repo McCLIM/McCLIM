@@ -26,57 +26,6 @@
 
 (in-package :beagle)
 
-;;; This port can't do pointer grabbing; set appropriate setting to NIL.
-(setf climi::*port-can-grab* NIL)
-
-#||
-
-Class hierarchy - note, I'm not sure how much of the "member" data defined in basic port is defined
-by the spec, or that is needed... but we have it (suspect much of it can be removed - maybe we need
-both a BASIC-PORT, which really *is* basic, and a MCCLIM-PORT which is not so basic. CLX port could
-inherit from the MCCLIM-PORT, and BEAGLE-PORT could inherit from BASIC-PORT. Need to think about this
-some more before we start pulling McCLIM to bits!
-
-+---------------+
-|     PORT      |
-+---------------+
-|               |
-+---------------+
-^
-|
- +-------------------+
- |    BASIC-PORT     |
- +-------------------+
- |server-path        |
- |properties         |
- |grafts             |
- |frame-managers     |
- |sheet->mirror      |
- |mirror->sheet      |
- |pixmap->mirror     |
- |mirror->pixmap     |
- |event-process      |
- |lock               |
- |text-style-mappings|
- |pointer-sheet      |
- +-------------------+
-          ^
-          |
-+---------------+
-|  BEAGLE-PORT  |
-+---------------+
-|screen         |
-|color-table    |
-|view-table     |
-|pointer        |
-|key-focus-sheet|
-+---------------+
-
-Much of the content of this file is a direct copy of the CLX backend code.
-
-SEE ALSO McCLIM/Backends/Cocoa/notes/port.txt
-
-||#
 
 (defparameter *beagle-port* nil)
 (defparameter *default-beagle-frame-manager* 'beagle::beagle-aqua-frame-manager
@@ -85,42 +34,74 @@ frame manager. Permissable values are 'beagle::beagle-standard-frame-manager and
 'beagle::beagle-aqua-frame-manager (the default).")
 
 ;;; ::FIXME:: this holds the current cursor (mouse pointer) being used...
+;;; It's not implemented properly I don't think; McCLIM core should know
+;;; at least a little about pointers, and it appears to all be handled in
+;;; the back end at the moment.
+
 (defclass beagle-pointer (pointer)
   ((cursor :accessor pointer-cursor :initform :upper-left)))
 
+
 (defclass standard-pointer (beagle-pointer)
   ())
+
 
 (defclass beagle-cursor ()
   ((image   :accessor cursor-image   :initform nil)
    (hotspot :accessor cursor-hotspot :initform nil)))
 
-;;; Similar to clx-port. We aren't caching designs or modifiers, and we don't have a table of
-;;; cursors. Additionally we shove all the views we create into view-table, which is brain-
+
+;;; Similar to clx-port. We aren't caching modifiers.
+;;; Additionally we shove all the views we create into view-table, which is brain-
 ;;; damaged. This allows us to look up the appropriate mirror / medium when we're handling
 ;;; events, but the whole medium / mirror / sheet / NSView relationship thing needs rethinking
-;;; in the long-term.
+;;; in the long-term. (NB. this duplicates behaviour in McCLIM "PORT" type but that uses
+;;; 'eq tests in the hashtables, and MACPTRs (which is what a mirror boils down to being in
+;;; the end) are only ever 'eql.)
+
 (defclass beagle-port (basic-port)
   ((screen          :initform nil :accessor beagle-port-screen)
    (color-table     :initform (make-hash-table :test #'eq))
-   (view-table      :initform (make-hash-table :test #'equal)) ; Not looking too efficient...
+   (view-table      :initform (make-hash-table :test #'eql))
    (pointer         :reader   port-pointer)
-   ;; holds sheet that should receive key events.
+   (design-cache    :initform (make-hash-table :test #'eq))
+   ;; holds sheet that should receive key events. ::FIXME:: need to tell McCLIM which sheet
+   ;; is taking keyboard events; look into how all that bit hangs together, it's changed
+   ;; since this was written.
    (key-focus-sheet :initform nil :accessor beagle-port-key-focus)
    (event-semaphore :initform nil :accessor beagle-port-event-semaphore)))
+
+
+(defmethod destroy-port :before ((port beagle-port))
+  ;; clear out color-table, view-table, cached images etc. ::TODO:: check this logic is correct...
+
+  ;; The color table is populated as necessary in %beagle-pixel, which 'RETAINs the NSColor
+  ;; objects it creates. We release them when the port is killed.
+  (maphash #'(lambda (nscolor) (send nscolor 'release)) (slot-value port 'color-table))
+  ;; No need to clear out the hash-table since the port is being destroyed...
+;;;  (setf (slot-value port 'color-table) (make-hash-table :test #'eq))
+
+  ;; Look in detail at where / how mirrors are populated in the caches, and where they're
+  ;; destroyed.
+  
+;;  (maphash #'(lambda (nsview) (send nsview 'release)) (slot-value port 'view-table))
+;;  (maphash #'(lambda (design) (send design 'release)) (slot-value port 'design-cache))
+  (format *debug-io* "DESTROY-PORT ::FINISH ME::~%"))
+
 
 ;;; mirrors parse-clx-server-path, but the cocoa server only needs to know the screen its running
 ;;; on (it's more like the :genera port than an X port in that respect). I'm not sure this is
 ;;; doing the right thing. How will we permit the user to run the McCLIM app on a secondary screen?
+;;; ::TODO:: not sure this is right; not doing any parsing!
 (defun parse-beagle-server-path (path)
   (pop path)
   (let ((screen (send (@class "NSScreen") 'MAIN-SCREEN)))
     (list :beagle :screen (getf path :screen screen))))
 
-;;; I think it may be better to be an "openmcl" port, rather than a cocoa port. Otherwise, what
-;;; will users of other Lisps under Cocoa call their ports?
+
 (setf (get :beagle :port-type) 'beagle-port)
 (setf (get :beagle :server-path-parser) 'parse-beagle-server-path)
+
 
 ;;; As for CLX/port.lisp. At the moment, the default frame manager provides the "standard" McCLIM
 ;;; look and feel. When a Cocoa look and feel realizer is implemented, we might want to change
@@ -133,21 +114,24 @@ FRAME-MANAGER and standard-pointer for this port type."
 	   (special *beagle-port* *default-beagle-frame-manager*))
   (push (make-instance *default-beagle-frame-manager* :port port) (slot-value port 'frame-managers))
   (setf (slot-value port 'pointer)
-		(make-instance 'standard-pointer :port port))
+	(make-instance 'standard-pointer :port port))
   (setf *beagle-port* port)
   (initialize-beagle port))
+
 
 ;;; Another work-alike to the CLX/port.lisp code.
 (defmethod print-object ((object beagle-port) stream)
   "Print an unreadable version of the port to the screen; useful for debugging
 purposes. Note that it doesn't matter the the :screen in the beagle port is
 not initialised, we'll just get \":screen NIL\" in that case."
-  (print-unreadable-object (object stream :identity t :type t)
+;;;  (print-unreadable-object (object stream :identity t :type t)
+  (print-unreadable-object (object stream :identity nil :type t)
     (when (slot-boundp object 'screen)
-      (format stream ":screen ~S" (beagle-port-screen object)))))
+;;;      (format stream ":screen ~S" (beagle-port-screen object)))))
+      (format stream ":screen MAIN-SCREEN"))))
 
 
-;;; = initialize-clx from CLX/port.lisp. Screen selection could be more dynamic (using
+;;; ::TODO:: Screen selection could be more dynamic (using
 ;;; the port-server-path? Not sure...) to permit the user to make use of screens other
 ;;; than the main screen.
 (defmethod initialize-beagle ((port beagle-port))
@@ -156,74 +140,82 @@ not initialised, we'll just get \":screen NIL\" in that case."
   ;; this too, in the future ::FIXME::
   (setf (beagle-port-screen port) (send (@class "NSScreen") 'MAIN-SCREEN))
 
-  ;; Get the application recognised as multithreaded by Cocoa - this is supposed to cause
-  ;; Cocoa to do more sanity checking, though I'm not clear exactly what practical difference
-  ;; it makes (if any)
-  (unless (send (@class ns-thread) 'is-multi-threaded)
-    (send (@class ns-thread)
-		  :DETACH-NEW-THREAD-SELECTOR (get-selector-for "setHiddenUntilMouseMoves:")
-		  :TO-TARGET (@class "NSCursor")
-		  :WITH-OBJECT nil))
+;;;  ;; Get the application recognised as multithreaded by Cocoa - this is supposed to cause
+;;;  ;; Cocoa to do more sanity checking, though I'm not clear exactly what practical difference
+;;;  ;; it makes (if any)
+;;;  (unless (send (@class ns-thread) 'is-multi-threaded)
+;;;    (send (@class ns-thread)
+;;;		  :DETACH-NEW-THREAD-SELECTOR (get-selector-for "setHiddenUntilMouseMoves:")
+;;;		  :TO-TARGET (@class "NSCursor")
+;;;		  :WITH-OBJECT nil))
   
   (make-cursor-table port)
   (make-graft port)
   
   (setf (beagle-port-event-semaphore port) (ccl:make-semaphore))
   
-;;;  (when clim-sys:*multiprocessing-p*  ; BEAGLE back end is *always* multiprocessing...
   (setf (port-event-process port)
 	(clim-sys:make-process
 	 (lambda ()
 	   (loop
 	    (with-simple-restart
 	     (restart-event-loop "Restart CLIM's event loop.")
+;;;		  (with-autorelease-pool
 	     (loop
 	      ;; process-next-event is defined in ports.lisp. It invokes
 	      ;; get-next-event in the backend to actually get the next
 	      ;; event in the queue
 	      (process-next-event port)))))
-	 :name (format nil "~S's event process." port))))
+	 :name (format nil "~S's event process." port))));)
 
-
-;;;(defmethod %beagle-pixel ((port beagle-port) (clim-internals::transformed-design color) &key (alpha 1.0))
-;;;  (send (send (@class ns-color) :color-with-calibrated-red 0 :green 0 :blue 0 :alpha alpha) 'retain))
 
 ;;; From CLX/port.lisp
-(defmethod %beagle-pixel ((port beagle-port) color &key (alpha 1.0))
-  (let ((table (slot-value port 'color-table)))
-    (or (gethash color table)
-        (setf (gethash color table)
-          (multiple-value-bind (r g b) (color-rgb color)
-	    (let ((nsc (send (@class ns-color) :color-with-calibrated-red r
-			     :green g
-			     :blue b
-			     :alpha alpha)))
-	      (send nsc 'retain)
-	      nsc))))))
+(defun %beagle-pixel (port color &key (alpha 1.0))
+  (let* ((table (slot-value port 'color-table))
+	 (nscol (gethash color table)))
+    (when (null nscol)
+      (setf (gethash color table)
+	    (multiple-value-bind (r g b) (color-rgb color)
+	      (let ((nsc (send (@class ns-color) :color-with-calibrated-red (coerce r 'short-float)
+			       :green (coerce g 'short-float)
+			       :blue (coerce b 'short-float)
+			       :alpha (coerce alpha 'short-float))))
+		(send nsc 'retain)))))
+    (gethash color table)))
+	 
 
-;; Do we want the width in the PARENT coordinate system (use 'frame) or in the coordinate
-;; system of the VIEW (use 'bounds)? Not sure, so just pick one for now. ::FIXME::
+;; Returns the width of the mirror in MIRROR coordinate system. Use 'FRAME instead
+;; of 'BOUNDS to get width of mirror in PARENT MIRROR.
+
+;; This method is not ever invoked any longer (used to be from 'sheet-mirror-region'
+;; in sheets.lisp). Should be removed?
 (defmethod port-mirror-width ((port beagle-port) sheet)
   (let ((mirror (port-lookup-mirror port sheet)))
-    (slet ((frame (send mirror 'frame)))
+    (slet ((frame (send mirror 'bounds)))
 		  (pref frame :<NSR>ect.size.width))))
 
+;; Ditto the above method.
 (defmethod port-mirror-height ((port beagle-port) sheet)
   (let ((mirror (port-lookup-mirror port sheet)))
-    (slet ((frame (send mirror 'frame)))
+    (slet ((frame (send mirror 'bounds)))
 		  (pref frame :<NSR>ect.size.width))))
 
-;; Hrm... check in spec. if this is correct... ::FIXME::
+
+;; Hrm... don't think this is ever invoked.
 (defmethod graft ((port beagle-port))
+  (format *debug-io* "IS METHOD EVER INVOKED? (graft port)~%")
   (first (port-grafts port)))
 
+
 ;;; This method's been added for the Beagle back end.
-(defmethod port-lookup-sheet-for-view ((port beagle-port) view)
+(defun %beagle-port-lookup-sheet-for-view (port view)
   (let ((table (slot-value port 'view-table)))
     (gethash view table)))
 
+
 ;;; The following are direct copies of the ones in CLX/port.lisp.
 ;;; They should be suitable for our purposes.
+;;; Invoked from 'pixmap.lisp'
 (defmethod port-allocate-pixmap ((port beagle-port) sheet width height)
   (let ((pixmap (make-instance 'mirrored-pixmap
 			       :sheet sheet
@@ -234,12 +226,13 @@ not initialised, we'll just get \":screen NIL\" in that case."
       (realize-mirror port pixmap))
     pixmap))
 
+;;; Invoked from 'pixmap.lisp'
 (defmethod port-deallocate-pixmap ((port beagle-port) pixmap)
   (when (port-lookup-mirror port pixmap)
     (destroy-mirror port pixmap)))
 
 ;;; Currently we just use the default "cursor" (pointer pixmap), unless we do something like
-;;; press the "help" key in which case cocoa gives us a '?' pointer. Varied pointers are not
+;;; press the "help" key in which case Cocoa gives us a '?' pointer. Varied pointers are not
 ;;; yet supported in this back end.
 
 ;;; Needs implementing ::FIXME::
