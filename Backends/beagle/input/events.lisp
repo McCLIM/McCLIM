@@ -28,7 +28,7 @@
 
 #||
 
-$Id: events.lisp,v 1.2 2005/05/17 17:51:14 drose Exp $
+$Id: events.lisp,v 1.3 2005/05/17 20:12:37 drose Exp $
 
 All these are copied pretty much from CLX/port.lisp
 
@@ -302,24 +302,17 @@ when a notification is added to the queue."
 	  (sheet (%beagle-port-lookup-sheet-for-view *beagle-port* (send window 'content-view))))
       ;; We don't get exposure notifications when the window has a (Cocoa) backing store.
       (cond
-       ;; I'm not sure this is right; we need to find the sheet in the hierarchy of this window
-       ;; that can accept key events. Can there be multiple sheets this counts for? I'd guess
-       ;; so, in which case how do we know which one to set as port key focus? Suspect we can
-       ;; only know this by tracking the last view that can be key that received a mouse down?
-       ;; *Should* be able to do this by doing a :hit-test on the content view of the receiving
-       ;; window after manually grabbing the pointer coordinates.
        ((send (send notification 'name) :is-equal-to-string #@"NSWindowDidBecomeKeyNotification")
         (setf return-event nil)
 	(when (send window 'is-visible)  ; only do if window is on-screen...
-          ;; NB: this isn't in the right coordinate system! Convert screen -> content view coords.
-          (slet ((pointer-loc (send (@class ns-event) 'mouse-location))
-	         (loc-in-window (send window :convert-screen-to-base pointer-loc)))
-	    (let* ((content-view (send window 'content-view))
-	  	   (target-view (send content-view :hit-test loc-in-window))
-		   (target-sheet (%beagle-port-lookup-sheet-for-view *beagle-port* target-view)))
-	      (unless (null target-sheet)
-		(format *debug-io* "Setting focus in *beagle-port* onto (hopefully correct) sheet: ~S~%" target-sheet)
-		(%set-port-keyboard-focus target-sheet *beagle-port*))))))
+	  (let* ((content-view (send window 'content-view))
+		 (target-sheet (%beagle-port-lookup-sheet-for-view *beagle-port* content-view))
+		 (frame (pane-frame target-sheet))
+		 ;; Works out which sheet *should* be the focus, not which is currently...
+		 ;; or at least, so I think.
+		 (focus (climi::keyboard-input-focus frame)))
+	    (unless (null target-sheet)
+	      (setf (port-keyboard-input-focus *beagle-port*) focus)))))
        ((send (send notification 'name) :is-equal-to-string #@"NSWindowDidExposeNotification")
 	(setf return-event
 	      (make-instance 'window-repaint-event :timestamp (incf timestamp)
@@ -703,19 +696,28 @@ when a notification is added to the queue."
 ;;; (oops, we lose the timestamp here.)
 
 ;;; Cocoa note: the Frame (NSWindow) must be made key for us to receive events; but they
-;;; must then be sent to the Sheet that has focus.
+;;; must then be sent to the Sheet that has focus. Whilst there are Cocoa mechanisms to
+;;; do this, it's probably best to let CLIM decide on the appropriate sheet and we just
+;;; send all key events to it.
 
-;;; NB. when the method was renamed it appears that the argument order was also changed.
 (defmethod %set-port-keyboard-focus ((port beagle-port) focus &key timestamp)
   (declare (ignore timestamp))
-  (let ((mirror (sheet-mirror focus)))
-    (when mirror
-      (let ((window (send mirror 'window)))
-        (when window
-	  (setf (beagle-port-key-focus port) focus)
-	  (if (send window 'is-key-window)
-	      (send window :order-front nil)
-	    (send window :make-key-and-order-front nil)))))))
+  (if (eq (beagle-port-key-focus port) focus)
+      (format *trace-output* "Attempt to set keyboard focus on sheet ~a which already has focus.~%"
+	      focus)
+    (let ((mirror (sheet-mirror focus)))
+      (if (null mirror)
+	  (format *trace-output* "Attempt to set keyboard focus on sheet ~a which has no mirror!~%"
+		  focus)
+	(let ((window (send mirror 'window)))
+	  (if (eql window (%null-ptr))
+	      (format *trace-output* "Attempt to set keyboard focus on sheet ~a with no NSWindow!~%"
+		      focus)
+	    (progn
+	      (setf (beagle-port-key-focus port) focus)
+	      (unless (send window 'is-key-window)
+		(send window 'make-key-window)))))))))
+
 
 ;;; Not sure we need to do this... apparently we do. I have stopped flushing
 ;;; the window after every drawing op, and now things don't get output

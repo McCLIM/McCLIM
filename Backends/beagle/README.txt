@@ -5,10 +5,10 @@ CONTENTS
  . README
  . INSTALLATION
  . CONFIGURATION
-    . debug
     . default frame manager
-    . listener
+    . multiple ports
  . KNOWN LIMITATIONS / TODO LIST
+ . FIXED STUFF PREVIOUSLY ON THE KNOWN LIMITATIONS / TODO LIST
  . WISH LIST
  . APPLICATIONS
 
@@ -76,7 +76,7 @@ Note #2: Yes, this is a little silly. For a while the Beagle back end could
          loop.
 
 Note #3: If you'd rather run with the CLX back end, load CLX
-         instead here. It is possible to with multiple ports simultaneously
+         instead here. It is possible to run multiple ports simultaneously
 	 so that both a CLX and a Beagle Listener can be run side by side
 	 for comparative purposes (or just because the Listener is actually
 	 usable for something useful when running under CLX).
@@ -137,11 +137,18 @@ KNOWN LIMITATIONS / TODO LIST
     large output history. Paolo's stress test takes 26 seconds and conses
     16MB on my (admittedly slow) iMac compared to 1.5 seconds on a 2.4GHz
     Pentium IV and unknown (to me) consing.
-    Should be able to speed things up by performing fewer focus lock / unlocks,
-    and by not setting drawing options unless necessary. I don't know how
-    far this will get us though...
-    UPDATE - 21.AUG.2004 - performing fewer NSWindow flushes makes no difference
-                           to speed.
+
+    NB: the number of subclasses of T when running Beagle is about twice the
+        number when running CLX (because the Cocoa bridge introduces every
+        Cocoa object into the Lisp image, and even just the core + appkit
+        frameworks are large). Additionally, I think allocated Cocoa objects
+        are included in the cons measurement of the Lisp image which accounts
+        for a chunk of the memory usage.
+
+    Should be able to speed things up by not setting drawing options unless
+    necessary. A hammer-like approach to do this has been implemented but could
+    do with a little finessing.
+
     UPDATE - 25.APR.2005 - When the mirror transformation is set (sheet is
                            scrolling) we dispatch a repaint on the 'untransformed
     mirror region' (using the mirror transformation as the 'untransformation')
@@ -153,33 +160,30 @@ KNOWN LIMITATIONS / TODO LIST
     no redraw happens from CLIM generally. Also, Cocoa appears to get really slow
     at rendering text when the output history gets too large (maybe this is CLIM
     again, it's hard to know). Need to profile.
-    TODO: cache lisp-bezier-path instances and reuse them. Use approximation for
-          text sizing (there's as much overhead working out how big rendered text
-          would be as there is to rendering the text itself, or almost).
 
-2.  When running the Listener (and probably other applications), the resize
+    TODO: Use approximation for text sizing (there's as much overhead working out
+          how big rendered text would be as there is to rendering the text itself,
+          or almost).
+
+    TODO: Use pixmap for mirror contents and use blitting to copy areas?
+
+
+2.  When running the Listener (and other applications), the resize
     handle is not visible; it's there, but you can't see it. Grab and drag
     with faith and it should work anyway.
 
+
 3.  There are not yet any aqua look and feel panes. Sorry, I'm trying to
     get everything else working first!
+
 
 5.  Mouse down / up on buttons appears not to work very well unless the frame
     containing the buttons is the only active frame.
     Actually, this ^^^ seems to work fine, but the highlighting for button
     gadgets looks screwy under OS X.
+    (Think there is a problem with tracking rectangles not being set for
+    panes. Investigation needed.)
 
-6.  Swapping between key windows (the window accepting the keyboard input)
-    is a little flakey; as an example, if a second Listener is started from
-    the first, clicking between the windows transfers key focus (as
-    expected). However, if the first is then 'Exit'ed, the second will not
-    get the key focus until some other (non-McCLIM) window has been given
-    the keyboard focus first (i.e. click on the OpenMCL Listener window,
-    then back on the McCLIM Listener window).
-    Additionally, clicking on a scroll-bar (for example) makes the window
-    key, so clicking on a view that accepts keyboard input (interactor)
-    within this window won't then allow keyboard input.
-    We should stop scroll-bars being able to get keyboard input...
 
 7.  Keyboard events are not handled "properly" as far as any OS X user will
     be concerned; only the ASCII characters are recognised, along with
@@ -187,16 +191,26 @@ KNOWN LIMITATIONS / TODO LIST
     Emacs-like CTRL-B (backward char), CTRL-F (forward char), CTRL-A (start
     of line), CTRL-E (end of line), CTRL-D (delete char).
 
+
 8.  There is no +flipping-ink+ implementation. Anything drawn in flipping
     ink shows up bright red with about 50% transparency (which is why the
     cursor looks so strange).
 
+    NB: moving to 10.4 (Tiger) would fix this since there's an XOR mode
+    on NSBezierPath in that OS version. So too would implementing pixmaps
+    for mirrors, since we can do XOR image compositing. My gut feel is I'd
+    like to avoid having pixmap caches for mirrors though.
+
+
 9.  Foreign memory management is non-existent. This is fine whilst running
     in the same thread as the OpenMCL Listener (since we use its autorelease
     pool) but when running in a separate thread lots of warning messages
-    are generated.
+    are generated. You might find it necessary to force-quit OpenMCL after
+    you've finished.
 
-12. There's probably some debug output remaining in some corner cases.
+
+12. There's some debug output remaining in some corner cases.
+
 
 15. Popup menus don't work quite the same way as they do in the CLX back
     end. Cocoa doesn't support pointer grabbing so disposing of menus when
@@ -204,23 +218,27 @@ KNOWN LIMITATIONS / TODO LIST
     a command, or mouse-click on a different window to get rid of them).
     Additionally, highlighting the menu item the mouse is currently over
     is rather intermittent, although the correct menu item appears to always
-    be chosen on mouse-click.
+    be chosen on mouse-click (related to the same tracking rectangle issue
+    mentioned in (5)?).
+
 
 16. Windows are put on screen very early in the realization process which
     wasn't a bad thing during early development (could see how far through
     things got before blowing up) but now it just looks messy.
 
+
 17. *BEAGLE-DEFAULT-FRAME-MANAGER* should be replaced with the standard
     *DEFAULT-FRAME-MANAGER* instead.
 
-18. The back end doesn't clear up after itself very well. You might find it
-    necessary to force-quit OpenMCL after you've finished.
 
 19. Menus don't work in CLIM-FIG (or anywhere else!). No idea why not...
     This is because (I think) the menu popups don't operate in a flipped
-    coord system (unlike NSViews).
+    coord system (unlike NSViews). [Command menu that is drawn across
+    top of window has 'child menus' drawn in bottom-left corner of screen)
+
     TODO: make use of graft native transformation to flip coords rather
-          than the NSView 'isFlipped' method.
+          than the NSView 'isFlipped' method?
+
 
 20. Bounding rectangles are slightly off (this can be seen in CLIM-FIG again).
     It's only a matter of a pixel, maybe 2 in the worst case I've seen.
@@ -228,9 +246,11 @@ KNOWN LIMITATIONS / TODO LIST
     int -> float conversion and ordinate manipulation (in cocoa 0.0, 0.0 falls
     'between pixels' - 0.5, 0.5 is 'center of pixel').
 
+
 21. Highlighting on mouse overs isn't quite right; artefacts are left on the
     display after the mouse has moved out of the target object bounding
     rectangle (most easily visible in CLIM-FIG again).
+
 
 22. Sending key-down / key-up events for modifiers-changed events doesn't
     look to help get the pointer documentation pane to show the correct
@@ -242,6 +262,7 @@ KNOWN LIMITATIONS / TODO LIST
     Presentation'.
     Need to check CLX implementation to see if this is the same...
 
+
 23. Large output histories: the transformations and geometry calculations
     go wrong when the output takes up more than 2^16 pixels; the medium
     should be used to account for this (it does in CLX) but for some
@@ -249,6 +270,25 @@ KNOWN LIMITATIONS / TODO LIST
     UPDATE-MIRROR-GEOMETRY (see sheets.lisp in core) to #x800000 (or larger)
     but this will fail eventually (i.e. with a large enough output
     history), so it needs sorting properly.
+
+
+24. Testing + further work on patterns and stencils.
+
+
+25. Bounding rects for commands entered in interactor panes are way out;
+    looks like the baseline of the text is being used as the bottom of
+    the bounding rect!
+
+
+26. Minimising frames and then restoring them leads to the frame not
+    being drawn properly; it looks like 'drawRect' is invoked (as
+    expected), but nothing to tell McCLIM to redraw the whole frame.
+    Suspect a notification is sent... needs investigation.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+FIXED STUFF PREVIOUSLY ON THE KNOWN LIMITATIONS / TODO LIST
+
 
 -4.-  Pixmap support is not implemented; this means clim-fig drawing doesn't
     work.
@@ -264,6 +304,20 @@ KNOWN LIMITATIONS / TODO LIST
                          hacked for non-tiled patterns, not looked at for
                          stencils).
 
+-6.-  Swapping between key windows (the window accepting the keyboard input)
+    is a little flakey; as an example, if a second Listener is started from
+    the first, clicking between the windows transfers key focus (as
+    expected). However, if the first is then 'Exit'ed, the second will not
+    get the key focus until some other (non-McCLIM) window has been given
+    the keyboard focus first (i.e. click on the OpenMCL Listener window,
+    then back on the McCLIM Listener window).
+    Additionally, clicking on a scroll-bar (for example) makes the window
+    key, so clicking on a view that accepts keyboard input (interactor)
+    within this window won't then allow keyboard input.
+    We should stop scroll-bars being able to get keyboard input...
+    FIXED 17.MAY.2005 DAR - the problem was we never invoked 
+                            'setf (port-keyboard-input-focus' in handling
+    the 'did become key' notification.
 
 -10.- Text sizes aren't calculated correctly; when multiple lines are output
     together, the bottom of one line can be overwritten by the top of the
@@ -277,12 +331,17 @@ KNOWN LIMITATIONS / TODO LIST
     Perhaps Cocoa thinks the dirty region includes that text or something.
     It's annoying whatever. Still, I'm going to mark this as fixed for now
     and maybe will come back to it later.
+
     TODO: I think this is to do with the way width and height (rather than
           text-size) is used to calculate bounding rectangles might be
           wrong (i.e. getting the wrong information from Beagle).
 
--11.- Line dash patterns haven't been implemented.
+    TODO: Also note that when a graph is output, there's no (significant)
+          problem with bounding rects etc. I suspect Beagle may be drawing
+          with y-align :bottom when CLIM is expecting :baseline, or
+          something.
 
+-11.- Line dash patterns haven't been implemented.
 
 -13.- Some Apropos cases fail; for example 'Apropos graft' fails (although
     '(apropos 'graft)' does not). The same problem prevents the address
@@ -291,13 +350,16 @@ KNOWN LIMITATIONS / TODO LIST
     this is happening, but it should be possible to track it down].
     RESOLVED 21.AUG.2004 - it appears MACPTRs are output using the family
     (for a text style) of :fixed - which didn't exist (only :fix). Not
-    sure if this is a specification violation or not...
+    sure if this is a specification violation or not... both are bound
+    in McCLIM, so suspect :fixed is added for compatability with one of
+    the vendor CLIMs?
 
 -14.- Not all foreign objects we keep hold of in the back end are heap-
     allocated. Some are stack-allocated and cause errors about 'bogus'
     objects once they go out of scope. At least, I think (and hope) that's
     the reason 'cause that's easy to fix. RESOLVED 17.JUL.04
 
+-18.- Note about force-quit; appended to (5).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -315,16 +377,19 @@ WISH LIST
 
 4.  Look again at the build process and reintegrate with Bosco.
 
-5.  Possibly migrate to being a Carbon, rather then a Cocoa, application to
-    remove OpenMCL version dependencies.
+-5.-  Possibly migrate to being a Carbon, rather then a Cocoa, application to
+    remove OpenMCL version dependencies. *Don't bother doing this. Note that
+    in 10.4, Cocoa apps take advantage of GPU caching (performed by the OS),
+    but Carbon apps do not. It's possible in some future OS version that
+    Cocoa drawing will actually be faster than Carbon drawing.*
 
-6.  Reduce focus locking in NSViews (I think this will give a not
+-6.-  Reduce focus locking in NSViews (I think this will give a not
     insignificant speed increase).
 
 7.  Documentation
 
 8.  Code tidying, and lots of it! Refactoring. Need to implement many
-    abstractions (which should also help in the Cocoa -> Carbon move,
+    abstractions. (which should also help in the Cocoa -> Carbon move,
     when it happens).
 
 9.  Release resources on exit.
@@ -335,7 +400,10 @@ WISH LIST
     particular.
 
 12. Look again at sheet hierarchy stuff; I'm pretty sure this only works
-    when the graft is in the default orientation.
+    when the graft is in the default orientation. (There's lots of
+    problems in this area, most of which are in Beagle, some of which
+    are in McCLIM (by design? But not sure which are by design), e.g.
+    sheets being mirrored but with no medium attached).
 
 13. I'd like to see the silica functionality in a separate package; I
     think (need to check!) that silica + back-end implementation should

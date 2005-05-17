@@ -47,20 +47,6 @@
 ;;; in the events.lisp file.
 ;;;
 
-#||
-
-(define-objc-method ((:void :window-did-expose notification) lisp-window-delegate)
-  (nslog (format nil "LISP-WINDOW-DELEGATE: received windowDidExpose event"))
-  (nslog (format nil "Notification name is: ~A" (description (send notification 'name))))
-  ;; Window extents should be non-nil in this case... We can get an NSExposedRect out of the userInfo
-  ;; dictionary in the notification and pass this back to CLIM. Should speed things up a little...
-  #+nyi (slet ((rect (send (send notification 'object) 'frame)))
-    (add-notification-to-queue (send notification 'object) notification
-			       (pref rect :<NSR>ect.origin.x)
-			       (pref rect :<NSR>ect.origin.y)
-			       (pref rect :<NSR>ect.size.width)
-			       (pref rect :<NSR>ect.size.height))))
-||#
 
 (define-objc-method ((:void :window-did-resize notification) lisp-window-delegate)
 ;;;  (nslog (format nil "LISP-WINDOW-DELEGATE: received windowDidResize event"))
@@ -73,7 +59,14 @@
 			       (pref rect :<NSR>ect.size.width)
 			       (pref rect :<NSR>ect.size.height))))
 
+(define-objc-method ((:void :window-did-become-key notification) lisp-window-delegate)
+  (add-notification-to-queue (send notification 'object) notification))
+
+;;; No notifications below this point that we're interested in.
 #||
+
+;;; ... although this one might be useful. Especially wrt native cut&paste.
+
 (define-objc-method ((:void :window-will-close notification) lisp-window-delegate)
   (nslog (format nil "LISP-WINDOW-DELEGATE: received windowWillClose event"))
   (nslog (format nil "Notification name is: ~A" (description (send notification 'name))))
@@ -86,9 +79,6 @@
 
 ||#
 
-(define-objc-method ((:void :window-did-become-key notification) lisp-window-delegate)
-  (nslog (format nil "LISP-WINDOW-DELEGATE: received windowDidBecomeKey event"))
-  (add-notification-to-queue (send notification 'object) notification))
 
 #||
 (define-objc-method ((:void :window-did-change-screen notification) lisp-window-delegate)
@@ -148,6 +138,20 @@
 ;;;  (nslog (format nil "LISP-WINDOW-DELEGATE: received windowDidWillResize event"))
 ;;;  size)
 ;;;  (send-super :window-will-resize ns-window :to-size size))
+
+
+
+;;;(define-objc-method ((:void :window-did-expose notification) lisp-window-delegate)
+;;;  (nslog (format nil "LISP-WINDOW-DELEGATE: received windowDidExpose event"))
+;;;  (nslog (format nil "Notification name is: ~A" (description (send notification 'name))))
+;;;  ;; Window extents should be non-nil in this case... We can get an NSExposedRect out of the userInfo
+;;;  ;; dictionary in the notification and pass this back to CLIM. Should speed things up a little...
+;;;  #+nyi (slet ((rect (send (send notification 'object) 'frame)))
+;;;    (add-notification-to-queue (send notification 'object) notification
+;;;                               (pref rect :<NSR>ect.origin.x)
+;;;                               (pref rect :<NSR>ect.origin.y)
+;;;                               (pref rect :<NSR>ect.size.width)
+;;;                               (pref rect :<NSR>ect.size.height))))
 
 
 
