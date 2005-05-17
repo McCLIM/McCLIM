@@ -28,7 +28,7 @@
 
 #||
 
-$Id: events.lisp,v 1.1 2005/05/16 22:13:16 drose Exp $
+$Id: events.lisp,v 1.2 2005/05/17 17:51:14 drose Exp $
 
 All these are copied pretty much from CLX/port.lisp
 
@@ -571,23 +571,24 @@ when a notification is added to the queue."
       ;; We need to maintain the modifier flags state constantly to be able to
       ;; implement this; suggest a slot in beagle-port?
       (when (equal #$NSFlagsChanged event-type)
-	(format *debug-io* "In event-build (flags changed)~%")
+;;;	(format *debug-io* "In event-build (flags changed)~%")
 	;; Use the 'old' 'modifiers' in conjunction with the new 'modifier-state'
 	;; to work out if this is a key up or a key down...
-	(setf return-event (make-instance (if (current-mods-map-to-key-down (send event 'modifier-flags))
-					      'key-press-event
-					    'key-release-event)
-					  :key-name       nil
-					  :key-character  nil
-					  :x              0
-					  :y              0
-					  :graft-x        0
-					  :graft-y        0
-					  ;; Irrespective of where the key event happened, send it
-					  ;; to the sheet that has key-focus for the port.
-					  :sheet          (beagle-port-key-focus *beagle-port*)
-					  :modifier-state (beagle-modifier-to-modifier-state (send event 'modifier-flags))
-					  :timestamp (incf timestamp))))
+	(setf return-event
+	      (destructuring-bind (event-class key)
+		  (current-mods-map-to-key (send event 'modifier-flags))
+		(make-instance event-class
+			       :key-name       key
+			       :key-character  nil
+			       :x              0
+			       :y              0
+			       :graft-x        0
+			       :graft-y        0
+			       ;; Irrespective of where the key event happened, send it
+			       ;; to the sheet that has key-focus for the port.
+			       :sheet          (beagle-port-key-focus *beagle-port*)
+			       :modifier-state (beagle-modifier-to-modifier-state (send event 'modifier-flags))
+			       :timestamp (incf timestamp)))))
       
       ;; #$NSHelpRequested- wonder if we can convert this into "user pressed help key" key event?
       ;;                    Then could pull up docs (or could do if there were any!)
@@ -630,7 +631,7 @@ when a notification is added to the queue."
 ;;; This is really, really horribly written. Hopefully it will just be
 ;;; temporary until everything is 'band-aided' (!?) at which point we'll
 ;;; look to migrate to Carbon and reimplement a lot of this stuff.
-(defun current-mods-map-to-key-down (current-modifier-state)
+(defun current-mods-map-to-key (current-modifier-state)
   (declare (special *-current-event-modifier-state-*))
   ;; Are there modifiers in 'current-modifier-state' that don't exist in
   ;; *-current-event-modifier-state-* (key down) or vice versa (key up)?
@@ -643,38 +644,38 @@ when a notification is added to the queue."
   ;;#$NSAlternateKeyMask +super-key+
   ;;#$NSAlphaShiftKeyMask +hyper-key+
   (cond ((null *-current-event-modifier-state-*)
-	 t)
+	 '(key-release-event nil))
 	((and (> (logand *-current-event-modifier-state-* +shift-key+) 0)
 	      (= (logand current-modifier-state #$NSShiftKeyMask) 0))
-	 nil)
+	 '(key-release-event :shift))
 	((and (= (logand *-current-event-modifier-state-* +shift-key+) 0)
 	      (> (logand current-modifier-state #$NSShiftKeyMask) 0))
-	 t)
+	 '(key-press-event :shift))
 	((and (> (logand *-current-event-modifier-state-* +control-key+) 0)
 	      (= (logand current-modifier-state #$NSControlKeyMask) 0))
-	 nil)
+	 '(key-release-event :control))
 	((and (= (logand *-current-event-modifier-state-* +control-key+) 0)
 	      (> (logand current-modifier-state #$NSControlKeyMask) 0))
-	 t)
+	 '(key-press-event :control))
 	((and (> (logand *-current-event-modifier-state-* +meta-key+) 0)
 	      (= (logand current-modifier-state #$NSCommandKeyMask) 0))
-	 nil)
+	 '(key-release-event :meta))
 	((and (= (logand *-current-event-modifier-state-* +meta-key+) 0)
 	      (> (logand current-modifier-state #$NSCommandKeyMask) 0))
-	 t)
+	 '(key-press-event :meta))
 	((and (> (logand *-current-event-modifier-state-* +super-key+) 0)
 	      (= (logand current-modifier-state #$NSAlternateKeyMask) 0))
-	 nil)
+	 '(key-release-event :super))
 	((and (= (logand *-current-event-modifier-state-* +super-key+) 0)
 	      (> (logand current-modifier-state #$NSAlternateKeyMask) 0))
-	 t)
+	 '(key-press-event :super))
 	((and (> (logand *-current-event-modifier-state-* +hyper-key+) 0)
 	      (= (logand current-modifier-state #$NSAlphaShiftKeyMask) 0))
-	 nil)
+	 '(key-release-event :hyper))
 	((and (= (logand *-current-event-modifier-state-* +hyper-key+) 0)
 	      (> (logand current-modifier-state #$NSAlphaShiftKeyMask) 0))
-	 t)
-	(t nil)))
+	 '(key-press-event :hyper))
+	(t '(key-release-event))))
 
 
 ;; Need to make use of the Cocoa method for getting modifier state - this is independent of events
@@ -764,21 +765,29 @@ when a notification is added to the queue."
       (let ((key-name (lookup-keysym (send ns-string-characters-in :character-at-index 0))))
 	;; If key-name is nil after all that, see if we can look up a mapping from those supported in
 	;; Cocoa...
-;;;    (when (null key-name)
-;;;      (setf key-name (get-key-name-from-cocoa-constants ns-string-characters-in)))
-;;;	(format *terminal-io* "Got key-name of: ~A~%" key-name)
-	key-name))))
+	(cond
+	 ((null key-name)
+	  (let ((clim-key
+		 (get-key-name-from-cocoa-constants
+		  (send ns-string-characters-in :character-at-index 0))))
+	    clim-key))
+	 (t key-name))))))
 
 ;;; From CLX/keysyms.lisp
 
 (defun numeric-keysym-to-character (keysym)
-  (and (<= 0 keysym 255)
-       (code-char keysym)))
+  (cond
+   ((= #x1b keysym)
+    (get-key-name-from-cocoa-constants keysym))
+   ((and (<= 0 keysym 255))
+    (code-char keysym))
+   (t nil)))
 
 (defun keysym-to-character (keysym)
   (numeric-keysym-to-character (reverse-lookup-keysym keysym)))
 
-(defconstant *beagle-key-constants* '(#$NSUpArrowFunctionKey      :UP
+(defconstant *beagle-key-constants* (list
+				     #$NSUpArrowFunctionKey      :UP
 				     #$NSDownArrowFunctionKey    :DOWN
 				     #$NSLeftArrowFunctionKey    :LEFT
 				     #$NSRightArrowFunctionKey   :RIGHT
@@ -849,10 +858,33 @@ when a notification is added to the queue."
 				     #$NSRedoFunctionKey         :REDO
 				     #$NSFindFunctionKey         :FIND
 				     #$NSHelpFunctionKey         :HELP
-				     #$NSModeSwitchFunctionKey   :MODE-SWITCH))
+				     #$NSModeSwitchFunctionKey   :MODE-SWITCH
+				     #x1b                        :ESCAPE))
 
 ;;;(defun get-key-name-from-cocoa-constants (ns-in)
 ;;;  (loop for target, key in *cocoa-key-constants*
 ;;;        (do
 ;;;            (when (send target :is-equal-to-string ns-in)
 ;;;              key))))
+
+(defvar *beagle-key-hash-table*
+  (make-hash-table :test #'eql))
+
+(defvar *reverse-beagle-key-hash-table*
+  (make-hash-table :test #'eq))
+
+(defun define-beagle-key (ns-key clim-key)
+  (pushnew clim-key (gethash ns-key *beagle-key-hash-table*))
+  (setf (gethash clim-key *reverse-beagle-key-hash-table*) ns-key))
+
+(defun lookup-beagle-key (ns-key)
+  (car (last (gethash ns-key *beagle-key-hash-table*))))
+
+(defun reverse-lookup-beagle-key (clim-key)
+  (gethash clim-key *reverse-beagle-key-hash-table*))
+
+(loop for key-binding on *beagle-key-constants* by #'cddr
+   do (define-beagle-key (car key-binding) (cadr key-binding)))
+
+(defun get-key-name-from-cocoa-constants (ns-in)
+  (lookup-beagle-key ns-in))

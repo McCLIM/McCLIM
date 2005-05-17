@@ -135,6 +135,8 @@ not initialised, we'll just get \":screen NIL\" in that case."
 ;;; the port-server-path? Not sure...) to permit the user to make use of screens other
 ;;; than the main screen.
 (defmethod initialize-beagle ((port beagle-port))
+
+  (ccl::create-autorelease-pool)
   
   ;; CLX port gets some options here and uses those to set stuff up. We should probably do
   ;; this too, in the future ::FIXME::
