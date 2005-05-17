@@ -159,6 +159,7 @@ not initialised, we'll just get \":screen NIL\" in that case."
   (setf (port-event-process port)
 	(clim-sys:make-process
 	 (lambda ()
+	   (ccl::create-autorelease-pool)
 	   (loop
 	    (with-simple-restart
 	     (restart-event-loop "Restart CLIM's event loop.")
