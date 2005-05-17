@@ -28,7 +28,7 @@
 
 
 (defparameter *beagle-port* nil)
-(defparameter *default-beagle-frame-manager* 'beagle::beagle-aqua-frame-manager
+(defparameter *default-beagle-frame-manager* 'beagle:beagle-aqua-frame-manager
   "Specifies the frame manager that should be used by default when the port creates its
 frame manager. Permissable values are 'beagle::beagle-standard-frame-manager and
 'beagle::beagle-aqua-frame-manager (the default).")
@@ -111,8 +111,11 @@ frame manager. Permissable values are 'beagle::beagle-standard-frame-manager and
   "Initialises an instance of a BEAGLE-PORT. This makes an instance of the default
 FRAME-MANAGER and standard-pointer for this port type."
   (declare (ignore args)
-	   (special *beagle-port* *default-beagle-frame-manager*))
-  (push (make-instance *default-beagle-frame-manager* :port port) (slot-value port 'frame-managers))
+	   (special *beagle-port* *default-frame-manager* *default-beagle-frame-manager*))
+  (if (null *default-frame-manager*)
+      (push (make-instance *default-beagle-frame-manager* :port port)
+	    (slot-value port 'frame-managers))
+    (push (make-instance *default-frame-manager* :port port) (slot-value port 'frame-managers)))
   (setf (slot-value port 'pointer)
 	(make-instance 'standard-pointer :port port))
   (setf *beagle-port* port)

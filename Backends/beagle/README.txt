@@ -5,7 +5,7 @@ CONTENTS
  . README
  . INSTALLATION
  . CONFIGURATION
-    . default frame manager
+    . frame manager
     . multiple ports
  . KNOWN LIMITATIONS / TODO LIST
  . FIXED STUFF PREVIOUSLY ON THE KNOWN LIMITATIONS / TODO LIST
@@ -85,18 +85,17 @@ Note #3: If you'd rather run with the CLX back end, load CLX
 
 CONFIGURATION
 
-default frame manager:
-----------------------
+frame manager:
+--------------
 The Beagle back end defines two frame manager objects; one is the aqua
 look and feel, the other is the 'standard' McCLIM look and feel. If you
 want to configure a specific frame manager to be used, set the following
 parameter:-
 
-BEAGLE::*DEFAULT-BEAGLE-FRAME-MANAGER* <defined in 'port.lisp'>
-  -> 'beagle::beagle-aqua-frame-manager  [default]
-  -> 'beagle::beagle-standard-frame-manager
+CLIM:*DEFAULT-FRAME-MANAGER*
+  -> 'beagle:beagle-aqua-frame-manager  [default]
+  -> 'beagle:beagle-standard-frame-manager
 
-Should use CLIM:*DEFAULT-FRAME-MANAGER* for this!
 Note that as yet, no native (aqua) look and feel panes have been defined,
 so it doesn't matter which frame manager you use.
 
@@ -227,10 +226,6 @@ KNOWN LIMITATIONS / TODO LIST
     things got before blowing up) but now it just looks messy.
 
 
-17. *BEAGLE-DEFAULT-FRAME-MANAGER* should be replaced with the standard
-    *DEFAULT-FRAME-MANAGER* instead.
-
-
 19. Menus don't work in CLIM-FIG (or anywhere else!). No idea why not...
     This is because (I think) the menu popups don't operate in a flipped
     coord system (unlike NSViews). [Command menu that is drawn across
@@ -358,6 +353,11 @@ FIXED STUFF PREVIOUSLY ON THE KNOWN LIMITATIONS / TODO LIST
     allocated. Some are stack-allocated and cause errors about 'bogus'
     objects once they go out of scope. At least, I think (and hope) that's
     the reason 'cause that's easy to fix. RESOLVED 17.JUL.04
+
+-17.- *BEAGLE-DEFAULT-FRAME-MANAGER* should be replaced with the standard
+    *DEFAULT-FRAME-MANAGER* instead.
+    FIXED 17.MAY.2005 - *beagle-default-frame-manager* is no more (well...
+    it's still there but it can be ignored to all intents and purposes).
 
 -18.- Note about force-quit; appended to (5).
 

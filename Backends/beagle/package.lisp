@@ -112,5 +112,7 @@
 				#:send-super
 				#:slet
 				#:with-cstrs
-				#:with-nsstr))
+				#:with-nsstr)
+  (:export #:beagle-standard-frame-manager
+	   #:beagle-aqua-frame-manager))
 		

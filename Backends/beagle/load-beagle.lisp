@@ -7,5 +7,6 @@
 ;;; want 'beagle::beagle-aqua-frame-manager, you don't need to set this since that
 ;;; is the default).
 ;;;(setf beagle::*default-beagle-frame-manager* 'beagle::beagle-standard-frame-manager)
-(setf beagle::*default-beagle-frame-manager* 'beagle::beagle-aqua-frame-manager)
+;;;(setf beagle::*default-beagle-frame-manager* 'beagle::beagle-aqua-frame-manager)
+(setf clim:*default-frame-manager* 'beagle:beagle-aqua-frame-manager)
 (format t "~%Done.~%")
