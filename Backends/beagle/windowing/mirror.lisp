@@ -590,20 +590,6 @@
 (defmethod port-disable-sheet ((port beagle-port) (mirror mirrored-sheet-mixin))
   (error "port-disable-sheet: implement me"))
 
-;;; Nabbed from CLX backend medium.lisp
-(declaim (inline round-coordinate))
-(defun round-coordinate (x)
-  "Function used for rounding coordinates:
-
-We use \"mercantile rounding\", instead of the CL round to nearest
-even number, when in doubt.
-
-Reason: As the CLIM drawing model is specified, you quite often
-want to operate with coordinates, which are multiples of 1/2. 
-Using CL:ROUND gives \"random\" results. Using \"mercantile
-rounding\" gives consistent results."
-  (floor (+ x .5)))
-
 ;;; From CLX/port.lisp - hrm. What the heck is this doing exactly?
 ;;; I suspect (though can't be sure) that a proper implementation of grafts might
 ;;; make all this much, much easier.

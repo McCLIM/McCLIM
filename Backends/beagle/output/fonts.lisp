@@ -122,26 +122,43 @@
 ;;; performance. It's possible that the caching can be improved. Caching doesn't adversly
 ;;; affect performance though so it's staying in.
 
+#||
+origin 0.0
+     0.0+------------------------+
+        | ^       ^              |
+        | |height |ascent        |
+        | |       |       width  |
+        |<|-------|------------->|
+        | |       v              |
+   12.0 +-|----------------------+
+        | |       ^descent       |
+        | v       v              |
+   15.0 +------------------------+
+
+Baseline = 12.0
+Height   = 15.0 == height
+Ascent   = 12.0 == (height - (height - baseline)) == baseline
+Descent  =  3.0 == (height - ascent)              == (height - baseline)
+Width    = width
+||#
+
 (defun beagle-font-metrics (metric text-style medium &optional (char nil))
 "Metric is one of :ascent :descent :width :height"
-  (declare (ignore medium))  ; for now...
-  (when char
-    (setf char (format nil "~a" char)))
-  (let* ((key     (if char (cons text-style char) text-style))
+  (declare (special *beagle-font-metrics*))
+  (let* ((string (if char
+		     (string char)
+		   "m"))
+	 (key (cons text-style string))  ; possible to avoid consing?
 	 (metrics (gethash key *beagle-font-metrics*)))
     (when (null metrics)
-      ;; No metrics found in the hashtable; lookup the font and representative character,
-      ;; and populate the hashtable.
-      (let ((nsfont (%text-style->beagle-font (or text-style *default-text-style*)))
-            (representative (if char (%make-nsstring char) #@"m")))
-        ;; populate metrics, and the hashtable, accordingly with width,
-        ;; height, ascent, descent of text-style.
-	;; Should the height actually be ascent + descent? Probably want to (abs) the descender too...
-	(setf metrics (list `(:ascent  . ,(send nsfont 'ascender))
-			    `(:descent . ,(abs (send nsfont 'descender)))
-			    `(:width   . ,(send nsfont :width-of-string representative))
-			    `(:height  . ,(send nsfont 'default-line-height-for-font))))
-        (setf (gethash key *beagle-font-metrics*) metrics)))
+      (multiple-value-bind (width height x y baseline)
+	  (text-size medium string :text-style text-style)
+	(declare (ignore x y))
+	(setf metrics (list `(:ascent . ,baseline)
+			    `(:descent . ,(- height baseline))
+			    `(:width . ,width)
+			    `(:height . ,height))))
+      (setf (gethash key *beagle-font-metrics*) metrics))
     (cdr (assoc metric metrics))))
 
 
@@ -183,45 +200,76 @@
 
 ;;; All mediums and output sheets must implement a method for this generic function.
 
-;;; This is the primary method McCLIM uses to lay out text, so we have to get it right...
-;;; Spec says for STREAMS (and the text WILL be output in a "stream") the origin is in the TOP LEFT
-;;; corner (graft :default orientation). Cocoa assumes everything uses an orign in the BOTTOM LEFT
-;;; corner (graft :graphics orientation). We calculate the size the way CLIM wants it calculated,
-;;; and hope this means CLIM can lay everything out properly.
-
-;;; TODO: what is the meaning of START and END? Not the boundaries of a
-;;;       substring whose size is to be determined; the logic below
-;;;       ignores such possibilities
-
 (defmethod text-size ((medium beagle-medium) string &key text-style (start 0) end)
+  (declare (special *default-text-style*))
+  
+  ;; Method can be passed either a string or a char; make sure for the latter
+  ;; that we see only strings.
   (when (characterp string)
     (setf string (string string)))
-  (unless end (setf end (length string)))
-  (unless text-style (setf text-style (medium-text-style medium)))
-  (if (= start end)
+
+  ;; Make sure there's an 'end' specified
+  (unless end
+    (setf end (length string)))
+
+  ;; Make sure there's a text-style
+  (unless text-style
+    (setf text-style (medium-text-style medium)))
+
+  ;; Check for 'empty string' case
+  (if (>= start end)
       (values 0 0 0 0 0)
-    (let (;(position-newline (position #\newline string :start start))
-          (objc-string (%make-nsstring (subseq string start end)))
-          (beagle-font  (%text-style->beagle-font (or text-style *default-text-style*))))
-      ;; Now we actually need to take the font into account!
-      (slet ((bsize (send objc-string :size-with-attributes (reuse-attribute-dictionary medium beagle-font))))
-            (values (pref bsize :<NSS>ize.width) ; width
-                    (pref bsize :<NSS>ize.height) ; height
-                    (pref bsize :<NSS>ize.width) ; new x
-                    ;; new y
-                    (- (pref bsize :<NSS>ize.height) (send beagle-font 'default-line-height-for-font))
-                    ;; baseline - assume linegap is equal above + below the font...
-                    ;; baseline is at (- height (1/2 linegap) descender)
-                    (- (pref bsize :<NSS>ize.height) (/ (- (send beagle-font 'default-line-height-for-font)
-                                                           (send beagle-font 'ascender)
-                                                           (abs (send beagle-font 'descender)))
-                                                        2)
-                       (abs (send beagle-font 'descender))))))))
+    (let ((position-newline (position #\newline string :start start))
+	  ;; See if there's a better way to do this; is this stack
+	  ;; allocation?
+	  (objc-str (%make-nsstring (subseq string start end)))
+	  (font (%text-style->beagle-font (or text-style
+					      *default-text-style*))))
+      (slet ((bsize (send objc-str :size-with-attributes
+			  (reuse-attribute-dictionary medium font))))
+	    ;; Don't use 'text-style-descent' in the following, since that
+	    ;; method is defined in terms of this one :-)
+        (let* ((descender (abs (send font 'descender)))
+	       (fragment-width (pref bsize :<NSS>ize.width))
+	       (fragment-height (pref bsize :<NSS>ize.height))
+	       (fragment-x (pref bsize :<NSS>ize.width))
+	       ;; subtract line height from this later...
+	       (fragment-y (pref bsize :<NSS>ize.height))
+	       ;; baseline = height - descender
+	       (fragment-baseline (- fragment-height descender)))
+	  (send objc-str 'release)
+	  (if (null position-newline)
+	      (values fragment-width
+		      fragment-height
+		      fragment-x
+		      (- fragment-y fragment-height)
+		      fragment-baseline)
+	    (progn
+	      (multiple-value-bind (w h x y b)
+		  (text-size medium string :text-style text-style
+			     :start position-newline
+			     :end end)
+		;; Current width, or width of sub-fragment, whichever
+		;; is larger
+		(let ((largest-width (max fragment-width w))
+		      ;; current height + height of sub-fragment
+		      (current+fragment-height (+ fragment-height h))
+		      ;; new y position; one line height smaller than the
+		      ;; total height
+		      (y-position (- (+ fragment-y y) fragment-height))
+		      ;; baseline of string; total height - baseline size, where
+		      ;; baseline 'size' is (line-height - baseline).
+		      (baseline (- (+ fragment-height h) (- h b))))
+		  (values largest-width
+			  current+fragment-height
+			  x      ; always use last x calculated...
+			  y-position
+			  baseline))))))))))
 
 
-;;; Note: we DO NOT want to draw the fonts in the medium-foreground colour - we want to draw them in a specific
-;;; colour (unless McCLIM sets the medium foreground colour in order to achieve drawing elements in specific
-;;; colours).
+;;; Note: we DO NOT want to draw the fonts in the medium-foreground colour - we want
+;;; to draw them in a specific colour (unless McCLIM sets the medium foreground colour
+;;; in order to achieve drawing elements in specific colours).
 
 (let ((reusable-dict nil))
   ;; create a mutable dictionary on-demand and reuse it

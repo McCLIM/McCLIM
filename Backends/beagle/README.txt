@@ -235,16 +235,10 @@ KNOWN LIMITATIONS / TODO LIST
           than the NSView 'isFlipped' method?
 
 
-20. Bounding rectangles are slightly off (this can be seen in CLIM-FIG again).
-    It's only a matter of a pixel, maybe 2 in the worst case I've seen.
-    Probably caused by rounding errors in Beagle (we do quite a lot of
-    int -> float conversion and ordinate manipulation (in cocoa 0.0, 0.0 falls
-    'between pixels' - 0.5, 0.5 is 'center of pixel').
-
-
 21. Highlighting on mouse overs isn't quite right; artefacts are left on the
     display after the mouse has moved out of the target object bounding
-    rectangle (most easily visible in CLIM-FIG again).
+    rectangle (most easily visible in CLIM-FIG again, and also in the
+    directory view of the Listener (look at the highlighting of the images).
 
 
 22. Sending key-down / key-up events for modifiers-changed events doesn't
@@ -270,15 +264,25 @@ KNOWN LIMITATIONS / TODO LIST
 24. Testing + further work on patterns and stencils.
 
 
-25. Bounding rects for commands entered in interactor panes are way out;
-    looks like the baseline of the text is being used as the bottom of
-    the bounding rect!
-
-
 26. Minimising frames and then restoring them leads to the frame not
     being drawn properly; it looks like 'drawRect' is invoked (as
     expected), but nothing to tell McCLIM to redraw the whole frame.
     Suspect a notification is sent... needs investigation.
+
+
+27. Since key focus handling was implemented, closing apps often lands
+    you in the kernel debugger. As an example, running glimpse, then
+    the Listener, type something in Listener, give glimpse focus, exit
+    glimpse, type on Listener -> *boom*. Suspect some reference to
+    glimpse objects are being kept around when they shouldn't be.
+
+
+28. If a command is entered in the Listener which generates a presentation
+    immediately underneath ('show class subclasses' is good, the top
+    node is immediately under the command), and this presentation is
+    highlighted, when it is unhighlighted the command is cleared also.
+    It's still present in the output history, and mousing over it makes
+    it reappear, but still... not sure why this happens.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -360,6 +364,17 @@ FIXED STUFF PREVIOUSLY ON THE KNOWN LIMITATIONS / TODO LIST
     it's still there but it can be ignored to all intents and purposes).
 
 -18.- Note about force-quit; appended to (5).
+
+-20.- Bounding rectangles are slightly off (this can be seen in CLIM-FIG again).
+    It's only a matter of a pixel, maybe 2 in the worst case I've seen.
+    Probably caused by rounding errors in Beagle (we do quite a lot of
+    int -> float conversion and ordinate manipulation (in cocoa 0.0, 0.0 falls
+    'between pixels' - 0.5, 0.5 is 'center of pixel').
+
+-25.- Bounding rects for commands entered in interactor panes are way out;
+    looks like the baseline of the text is being used as the bottom of
+    the bounding rect!
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

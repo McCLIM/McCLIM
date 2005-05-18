@@ -577,12 +577,44 @@ objects. From and To coordinates must already be transformed as appropriate."
         (do-sequence ((left top right bottom) coord-seq)
 	  (when (< right left) (rotatef left right))
 	  (when (< top bottom) (rotatef top bottom))
-	  (let ((rect (ccl::make-ns-rect left bottom (- right left) (- top bottom))))
+	  (let ((rect (ccl::make-ns-rect (pixel-center left)
+					 (pixel-center bottom)
+					 (pixel-count (- right left))
+					 (pixel-count (- top bottom)))))
 	    (send path :append-bezier-path-with-rect rect)))
 	(if filled
 	    (send mirror :fill-path path :in-colour colour)
 	  (send mirror :stroke-path path :in-colour colour))))))
 
+;; ::FIXME:: Move these from here!
+(defun pixel-center (pt)
+"Ensure any ordinate provided sits on the center of a pixel. This
+prevents Cocoa from 'antialiasing' lines, making them thicker and
+a shade of grey. Ensures the return value is a short-float, as
+required by the Cocoa methods."
+;; Interesting... I thought 'center of pixel' was 0.5, 1.5, ... n.5
+;; but this works much better with 0.0, 1.0, 2.0...
+;;  (coerce (+ (round-coordinate pt) 0.5) 'short-float))
+  (coerce (round-coordinate pt) 'short-float))
+
+(defun pixel-count (sz)
+"Ensures any value provided is rounded to the nearest unit, and
+returned as a short-float as required by the Cocoa methods."
+  (coerce (round-coordinate sz) 'short-float))
+
+;;; Nabbed from CLX backend medium.lisp
+(declaim (inline round-coordinate))
+(defun round-coordinate (x)
+  "Function used for rounding coordinates:
+
+We use \"mercantile rounding\", instead of the CL round to nearest
+even number, when in doubt.
+
+Reason: As the CLIM drawing model is specified, you quite often
+want to operate with coordinates, which are multiples of 1/2. 
+Using CL:ROUND gives \"random\" results. Using \"mercantile
+rounding\" gives consistent results."
+  (floor (+ x .5)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -620,8 +652,10 @@ objects. From and To coordinates must already be transformed as appropriate."
 	     (origin-y (- center-y radius-dy))
 	     (width (* 2 radius-dx))
 	     (height (* 2 radius-dy)))
-	(send path :append-bezier-path-with-oval-in-rect (ccl::make-ns-rect origin-x origin-y
-									    width height))
+	(send path :append-bezier-path-with-oval-in-rect (ccl::make-ns-rect (pixel-center origin-x)
+									    (pixel-center origin-y)
+									    (pixel-count width)
+									    (pixel-count height)))
 	(if filled
 	    (send mirror :fill-path path :in-colour colour)
 	  (send mirror :stroke-path path :in-colour colour))))))
@@ -632,10 +666,10 @@ objects. From and To coordinates must already be transformed as appropriate."
   (let ((tr (sheet-native-transformation (medium-sheet medium))))
     (with-beagle-graphics (medium)
 	(with-transformed-position (tr center-x center-y)
-	  (slet ((point (ns-make-point (coerce center-x 'short-float)
-				       (coerce center-y 'short-float))))
+	  (slet ((point (ns-make-point (pixel-center center-x)
+				       (pixel-center center-y))))
 	    (send path :append-bezier-path-with-arc-with-center point
-		       :radius (coerce radius 'short-float)
+		       :radius (pixel-count radius)
 		       :start-angle (coerce (/ start-angle (/ pi 180)) 'short-float)
 		       :end-angle (coerce (/ end-angle (/ pi 180)) 'short-float)
 		       :clockwise NIL)))
@@ -683,10 +717,10 @@ objects. From and To coordinates must already be transformed as appropriate."
     (with-beagle-graphics (medium)
       (with-transformed-position (tr x1 y1)
 	(with-transformed-position (tr x2 y2)
-	  (slet ((p1 (ns-make-point (+ (coerce x1 'short-float) 0.5)
-				    (+ (coerce y1 'short-float) 0.5)))
-		 (p2 (ns-make-point (+ (coerce x2 'short-float) 0.5)
-				    (+ (coerce y2 'short-float) 0.5))))
+	  (slet ((p1 (ns-make-point (pixel-center x1)
+				    (pixel-center y1)))
+		 (p2 (ns-make-point (pixel-center x2)
+				    (pixel-center y2))))
 	    (send path :move-to-point p1)
 	    (send path :line-to-point p2)
 	    (send mirror :stroke-path path :in-colour colour)))))))
@@ -706,10 +740,10 @@ objects. From and To coordinates must already be transformed as appropriate."
   (with-transformed-positions ((sheet-native-transformation (medium-sheet medium)) coord-seq)
     (with-beagle-graphics (medium)
       (do-sequence ((x1 y1 x2 y2) coord-seq)
-        (slet ((p1 (ns-make-point (+ (coerce x1 'short-float) 0.5)
-				  (+ (coerce y1 'short-float) 0.5)))
-	       (p2 (ns-make-point (+ (coerce x2 'short-float) 0.5)
-				  (+ (coerce y2 'short-float) 0.5))))
+        (slet ((p1 (ns-make-point (pixel-center x1)
+				  (pixel-center y1)))
+	       (p2 (ns-make-point (pixel-center x2)
+				  (pixel-center y2))))
 	      (send path :move-to-point p1)
 	      (send path :line-to-point p2)))
       (send mirror :stroke-path path :in-colour colour))))
@@ -731,13 +765,13 @@ objects. From and To coordinates must already be transformed as appropriate."
 	  (when (< top bottom) (rotatef top bottom))
 	  (when (and filled (or (typep ink 'climi::transformed-design)
 				(typep ink 'climi::indexed-pattern)))
-	    (send mirror :draw-image colour :at-point (ns-make-point (coerce left 'short-float)
-								     (coerce top 'short-float)))
+	    (send mirror :draw-image colour :at-point (ns-make-point (pixel-center left)
+								     (pixel-center top)))
 	    (return-from medium-draw-rectangle* (values)))
-	  (send path :append-bezier-path-with-rect (ccl::make-ns-rect (coerce left 'short-float)
-								      (coerce bottom 'short-float)
-								      (coerce (- right left) 'short-float)
-								      (coerce (- top bottom) 'short-float)))
+	  (send path :append-bezier-path-with-rect (ccl::make-ns-rect (pixel-center left)
+								      (pixel-center bottom)
+								      (pixel-count (- right left))
+								      (pixel-count (- top bottom))))
 	  (if filled
 	      (send mirror :fill-path path :in-colour colour)
 	    (send mirror :stroke-path path :in-colour colour)))))))
@@ -757,12 +791,12 @@ objects. From and To coordinates must already be transformed as appropriate."
   (assert (evenp (length coord-seq)))
   (with-transformed-positions ((sheet-native-transformation (medium-sheet medium)) coord-seq)
     (with-beagle-graphics (medium)
-      (send path :move-to-point (ns-make-point (coerce (elt coord-seq 0) 'short-float)
-					       (coerce (elt coord-seq 1) 'short-float)))
+      (send path :move-to-point (ns-make-point (pixel-center (elt coord-seq 0))
+					       (pixel-center (elt coord-seq 1))))
       (do ((count 2 (+ count 2)))
 	  ((> count (1- (length coord-seq))))
-	(slet ((pt (ns-make-point (coerce (elt coord-seq count) 'short-float)
-				  (coerce (elt coord-seq (1+ count)) 'short-float))))
+	(slet ((pt (ns-make-point (pixel-center (elt coord-seq count))
+				  (pixel-center (elt coord-seq (1+ count))))))
 	  (send path :line-to-point pt)))
       ;; ensure polyline joins up if appropriate. This needs to be done after
       ;; all points have been set in the bezier path.
@@ -799,18 +833,22 @@ objects. From and To coordinates must already be transformed as appropriate."
 	(multiple-value-bind (text-width text-height x-cursor y-cursor baseline)
 	    (text-size medium string :start start :end end)
 	  (declare (ignore x-cursor y-cursor))
-	  (setf x (+ (- x (ecase align-x
-			    (:left 0)
-			    (:center (round text-width 2))
-			    (:right text-width)) 0.5)))
-	  (setf y (+ (ecase align-y
-		       (:top (- y text-height))
-		       (:center (- y (floor text-height 2)))
-		       (:baseline (- y baseline))
-		       (:bottom y)) 0.5))
+	  (setf x (- x (ecase align-x
+			 (:left 0)
+			 (:center (round text-width 2))
+			 (:right text-width))))
+	  (setf y (ecase align-y
+;;;		    (:top (- y text-height))
+		    (:top y)
+		    (:center (- y (floor text-height 2)))
+		    (:baseline (- y baseline))
+;;;		    (:bottom y)))
+		    (:bottom (- y text-height))))
 	  (slet ((point (ns-make-point (coerce x 'short-float)
 				       (coerce y 'short-float))))
 	    (let ((objc-string (%make-nsstring (subseq string start end))))
+	      ;; NB: draw-string-at-point uses upper-left as origin in a flipped
+	      ;; view.
 	      (send mirror :draw-string objc-string
 		    :at-point point
 		    :with-attributes (reuse-attribute-dictionary medium font :colour colour)
