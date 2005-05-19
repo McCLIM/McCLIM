@@ -486,6 +486,8 @@ objects. From and To coordinates must already be transformed as appropriate."
       (warn "medium.lisp -> medium-copy-area: failed to copy specified region (null bitmap)~%")
       (return-from medium-copy-area-aux nil))
     (send to :paste-bitmap bitmap-image :to-point target-point)
+    (#_free source-region)
+    (#_free target-point)
     (send bitmap-image 'release)))
   
 
@@ -581,7 +583,8 @@ objects. From and To coordinates must already be transformed as appropriate."
 					 (pixel-center bottom)
 					 (pixel-count (- right left))
 					 (pixel-count (- top bottom)))))
-	    (send path :append-bezier-path-with-rect rect)))
+	    (send path :append-bezier-path-with-rect rect)
+	    (#_free rect)))
 	(if filled
 	    (send mirror :fill-path path :in-colour colour)
 	  (send mirror :stroke-path path :in-colour colour))))))
@@ -651,11 +654,13 @@ rounding\" gives consistent results."
 	     (origin-x (- center-x radius-dx))
 	     (origin-y (- center-y radius-dy))
 	     (width (* 2 radius-dx))
-	     (height (* 2 radius-dy)))
-	(send path :append-bezier-path-with-oval-in-rect (ccl::make-ns-rect (pixel-center origin-x)
-									    (pixel-center origin-y)
-									    (pixel-count width)
-									    (pixel-count height)))
+	     (height (* 2 radius-dy))
+	     (rect (ccl::make-ns-rect (pixel-center origin-x)
+				      (pixel-center origin-y)
+				      (pixel-count width)
+				      (pixel-count height))))
+	(send path :append-bezier-path-with-oval-in-rect rect)
+	(#_free rect)
 	(if filled
 	    (send mirror :fill-path path :in-colour colour)
 	  (send mirror :stroke-path path :in-colour colour))))))
@@ -768,13 +773,15 @@ rounding\" gives consistent results."
 	    (send mirror :draw-image colour :at-point (ns-make-point (pixel-center left)
 								     (pixel-center top)))
 	    (return-from medium-draw-rectangle* (values)))
-	  (send path :append-bezier-path-with-rect (ccl::make-ns-rect (pixel-center left)
-								      (pixel-center bottom)
-								      (pixel-count (- right left))
-								      (pixel-count (- top bottom))))
-	  (if filled
-	      (send mirror :fill-path path :in-colour colour)
-	    (send mirror :stroke-path path :in-colour colour)))))))
+	  (let ((rect (ccl::make-ns-rect (pixel-center left)
+					 (pixel-center bottom)
+					 (pixel-count (- right left))
+					 (pixel-count (- top bottom)))))
+	    (send path :append-bezier-path-with-rect rect)
+	    (#_free rect)
+	    (if filled
+		(send mirror :fill-path path :in-colour colour)
+	      (send mirror :stroke-path path :in-colour colour))))))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

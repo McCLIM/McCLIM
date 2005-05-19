@@ -28,7 +28,7 @@
 
 #||
 
-$Id: events.lisp,v 1.3 2005/05/17 20:12:37 drose Exp $
+$Id: events.lisp,v 1.4 2005/05/19 22:25:34 drose Exp $
 
 All these are copied pretty much from CLX/port.lisp
 
@@ -56,19 +56,19 @@ Suspect some of the coordinates we pass back to CLIM from here may be *wrong*.
 ;;; The following parameters are *all* added for 'synthesize-pointer-motion-event' only.
 
 (defparameter *-current-event-modifier-state-* 0
-  "Contains the most recent modifier state for any ``real'' event. Reset whenever any
+  "Contains the most recent modifier state for any 'real' event. Reset whenever any
 event (but not notification) is handled.")
 (defparameter *-current-pointer-button-state-* 0
-  "Contains the most recent pointer button state for any ``real'' event. Reset whenever
+  "Contains the most recent pointer button state for any 'real' event. Reset whenever
 any pointer or button-press event is handled.")
 (defparameter *-current-pointer-graft-xy-* nil
   "Contains the (Cocoa) NSPoint foreign object (structure) representing the position of
-the mouse pointer in screen coordinates. Reset whenever a ``real'' pointer event
+the mouse pointer in screen coordinates. Reset whenever a 'real' pointer event
 (mouse-move, mouse-drag, enter / exit or button press / release) is handled.")
 (defparameter *-current-pointer-view-xy-* nil
   "Contains the (Cocoa) NSPoint foreign object (structure) representing the position of
 the mouse pointer in the coordinate system of the NSView it is currently over. Reset
-whenever a ``real'' pointer event (mouse-move, mouse-drag, enter / exit or button
+whenever a 'real' pointer event (mouse-move, mouse-drag, enter / exit or button
 press / release) is handled.")
 
 (defvar *keysym-hash-table*
@@ -104,17 +104,6 @@ press / release) is handled.")
 ;;; in cocoa (grab events and window hints), hopefully that won't matter to
 ;;; us (apart from the menus use grabbing I think)
 
-;;; All these parameters must be what CLX provides for the :handler argument
-;;; to the xlib:process-event method.
-
-;;; We don't actually need all this gubbins for Cocoa events. We just need a
-;;; method to convert from a Cocoa event to a CLIM event. As specified, this
-;;; would be quite a good fit. Unfortunately, McCLIM seems to have a whole
-;;; bunch of non-standard slots in the event objects (root-x, root-y etc.)
-;;; and the override-redirect-p, send-event-p, hint-p stuff in this method.
-
-;;; So we actually want to do this slightly differently.
-
 ;; From CLX/port.lisp
   
 ;; NOTE: Although it might be tempting to compress (consolidate)
@@ -136,31 +125,6 @@ press / release) is handled.")
 ;;
 ;;--GB
   
-;; XXX :button code -> :button (decode-x-button-code code)
-;;  (declare (ignorable event-slots))
-;;  (declare (special *cocoa-port*))
-;;  (let ((sheet (and window
-;;                    (port-lookup-sheet port window))))
-;;    (when sheet
-;;        (:enter-notify
-;;          (make-instance 'pointer-enter-event
-;;            :pointer 0
-;;            :button code :x x :y y
-;;            :graft-x root-x
-;;            :graft-y root-y
-;;            :sheet sheet
-;;            :modifier-state (cocoa-event-state-modifiers *cocoa-port* state)
-;;            :timestamp time))
-;;        (:leave-notify
-;;          (make-instance 'pointer-exit-event  ; No grab events in cocoa - may cause problems?
-;;            :pointer 0
-;;            :button code
-;;            :x x :y y
-;;            :graft-x root-x
-;;            :graft-y root-y
-;;            :sheet sheet
-;;            :modifier-state (cocoa-event-state-modifiers *cocoa-port* state)
-;;            :timestamp time))
 
 (defparameter *mcclim-event-queue* nil)
 
@@ -176,7 +140,8 @@ not handled) are not added to the queue."
       (setf *mcclim-event-queue* (nconc *mcclim-event-queue* (list clim-event)))
       (ccl:signal-semaphore (beagle-port-event-semaphore *beagle-port*)))))
 
-(defmethod add-notification-to-queue (window notification &optional origin-x origin-y width height)
+(defmethod add-notification-to-queue (window notification
+					     &optional origin-x origin-y width height)
   "Adds an event to the dynamically scoped *mcclim-event-queue* queue, after conversion from
 a Cocoa notification MACPTR to a CLIM event. This method signals the port event semaphore
 when a notification is added to the queue."
@@ -224,14 +189,16 @@ when a notification is added to the queue."
 ;; Can we make use of the other modifier states set by cocoa? Some of
 ;; them might be useful...
 
-;;; Every key on the keyboard has a physical "key-code". a and A share the same key code, since the
-;;; same key is pressed (0 in this case). We can't make use of the key-code with any confidence since
-;;; they're at a very low-level. We have to use the 'characters method (or 'characters-ignoring-modifiers)
-;;; to pull the actual keys out of the event. Then we need to map these to McCLIM key names. *sigh*
+;;; Every key on the keyboard has a physical "key-code". a and A share the same key
+;;; code, since the same key is pressed (0 in this case). We can't make use of the
+;;; key-code with any confidence since they're at a very low-level. We have to use
+;;; the 'characters method (or 'characters-ignoring-modifiers) to pull the actual
+;;; keys out of the event. Then we need to map these to McCLIM key names. *sigh*
 
-;;; We could use 'characters if we were going through the full Cocoa key-handling path; and we might
-;;; be able to make use of this anyway, but for now just use 'characters-ignoring-modifiers and compare
-;;; what we get with those values known from Cocoa for function keys etc.
+;;; We could use 'characters if we were going through the full Cocoa key-handling
+;;; path; and we might be able to make use of this anyway, but for now just use
+;;; 'characters-ignoring-modifiers and compare what we get with those values known
+;;; from Cocoa for function keys etc.
 (defun beagle-key-event-to-key-name (event)
   ;; This falls over when the function keys, the arrow keys, the num-lock key (and others)
   ;; are pressed; I guess we don't want to be doing this!
@@ -240,6 +207,7 @@ when a notification is added to the queue."
 ;;;    (format *terminal-io* "returning key-name: ~A~%" key-name)
     key-name))
 
+;;; ::TODO:: - make these masks parameters so the user can configure them?
 (defun beagle-modifier-to-modifier-state (flags)
   (declare (special *-current-event-modifier-state-*))
   (let ((mods 0))
@@ -262,6 +230,9 @@ when a notification is added to the queue."
 ;;;  NSHelpKeyMask
 ;;;  NSNumericKeyPadKeyMask (key on numeric pad was pressed)
 ;;;  NSFunctionKeyMask      (function key was pressed)
+
+    ;; ::TODO:: return from setf is the value set, so don't need
+    ;; the final line below.
     (setf *-current-event-modifier-state-* mods)
     mods))
 
@@ -295,14 +266,104 @@ when a notification is added to the queue."
 
 ;; I'm not sure this is the best way with dealing with the timestamp...
 
+(defun notification-type (notification)
+"Enumerates all the Cocoa notifications Beagle takes an interest in. These
+are all NSWindow delegate notifications."
+  (let ((name (send notification 'name)))
+    (cond ((send name :is-equal-to-string #@"NSWindowDidBecomeKeyNotification")
+	   :became-key)
+	  ((send name :is-equal-to-string #@"NSWindowDidExposeNotification")
+	   :did-expose)
+	  ((send name :is-equal-to-string #@"NSWindowDidResizeNotification")
+	   :did-resize)
+	  ((send name :is-equal-to-string #@"NSWindowWillCloseNotification")
+	   :will-close)
+	  (t :unknown))))
+
+(defun event-type (event)
+"Enumerates all the Cocoa events Beagle takes an interest in. Returns two
+values; the first is the TYPE of event (mouse-up, mouse-move) and the
+second is the button pressed at the time of the event. The latter value
+will be NIL if no button was involved in the event (or if the event is
+not a mouse event)."
+  (let ((event-type (send event 'type)))
+    (cond ((equal #$NSLeftMouseUp event-type)
+	   (values :mouse-up :left))
+	  ((equal #$NSRightMouseUp event-type)
+	   (values :mouse-up :right))
+	  ((equal #$NSOtherMouseUp event-type)
+	   (values :mouse-up :other))
+	  ((equal #$NSLeftMouseDown event-type)
+	   (values :mouse-down :left))
+	  ((equal #$NSRightMouseDown event-type)
+	   (values :mouse-down :right))
+	  ((equal #$NSOtherMouseDown event-type)
+	   (values :mouse-down :other))
+	  ((equal #$NSScrollWheel event-type)
+	   (values :scroll-wheel nil))
+	  ((equal #$NSKeyDown event-type)
+	   (values :key-down nil))
+	  ((equal #$NSKeyUp event-type)
+	   (values :key-up nil))
+	  ((equal #$NSMouseMoved event-type)		  
+	   (values :mouse-moved nil))
+	  ((equal #$NSLeftMouseDragged event-type)
+	   (values :mouse-moved :left))
+	  ((equal #$NSRightMouseDragged event-type)
+	   (values :mouse-moved :right))
+	  ((equal #$NSOtherMouseDragged event-type)
+	   (values :mouse-moved :other))
+	  ((equal #$NSMouseEntered event-type)
+	   ;; Not really a mouse event...
+	   (values :mouse-enter nil))
+	  ((equal #$NSMouseExited event-type)
+	   ;; Not really a mouse event...
+	   (values :mouse-exit nil))
+	  ((equal #$NSFlagsChanged event-type)
+	   (values :flags-changed nil))
+	  (t (values :unknown nil)))))
+
+
+;;; Record current pointer position + button state so we can 'synthesize' a motion
+;;; event at will... this feels like a hack. Is it really necessary?
+(defun set-hacky-graft/view-xy (graft-xy view-xy)
+  (declare (special *-current-pointer-graft-xy-*
+		    *-current-pointer-view-xy-*))
+
+  ;; Need to free memory assigned via 'make-record'. There's no nice way to do
+  ;; this :-(
+
+  (unless (or (null *-current-pointer-graft-xy-*)
+	      (eql (%null-ptr) *-current-pointer-graft-xy-*))
+    (#_free *-current-pointer-graft-xy-*))
+
+  (unless (or (null *-current-pointer-view-xy-*)
+	      (eql (%null-ptr) *-current-pointer-view-xy-*))
+    (#_free *-current-pointer-view-xy-*))
+  
+  (setf *-current-pointer-graft-xy-* (ccl::make-record :<NSP>oint
+						       :x (pref graft-xy :<NSP>oint.x)
+						       :y (pref graft-xy :<NSP>oint.y)))
+  (setf *-current-pointer-view-xy-* (ccl::make-record :<NSP>oint
+						      :x (pref view-xy :<NSP>oint.x)
+						      :y (pref view-xy :<NSP>oint.y))))
+
+
+(defun set-hacky-button-state (state)
+  (declare (special *-current-pointer-button-state*-))
+  (setf *-current-pointer-button-state*- state))
+
+
 (let ((timestamp 0))
   (defun beagle-notification-to-clim-event (window notification &optional origin-x origin-y width height)
     (declare (special *beagle-port*))
     (let ((return-event nil)
-	  (sheet (%beagle-port-lookup-sheet-for-view *beagle-port* (send window 'content-view))))
+	  (sheet (%beagle-port-lookup-sheet-for-view *beagle-port* (send window 'content-view)))
+	  (n-type (notification-type notification)))
       ;; We don't get exposure notifications when the window has a (Cocoa) backing store.
+      ;; Use 'ecase' for this, like in medium-draw-text?
       (cond
-       ((send (send notification 'name) :is-equal-to-string #@"NSWindowDidBecomeKeyNotification")
+       ((eq :became-key n-type)
         (setf return-event nil)
 	(when (send window 'is-visible)  ; only do if window is on-screen...
 	  (let* ((content-view (send window 'content-view))
@@ -313,7 +374,7 @@ when a notification is added to the queue."
 		 (focus (climi::keyboard-input-focus frame)))
 	    (unless (null target-sheet)
 	      (setf (port-keyboard-input-focus *beagle-port*) focus)))))
-       ((send (send notification 'name) :is-equal-to-string #@"NSWindowDidExposeNotification")
+       ((eq :did-expose n-type)
 	(setf return-event
 	      (make-instance 'window-repaint-event :timestamp (incf timestamp)
 			     :sheet     sheet
@@ -321,273 +382,255 @@ when a notification is added to the queue."
 			     ;; seem to be a way to specify a region... coord
 			     ;; system?
 			     :region    (make-rectangle* origin-x origin-y width height))))
-       ((send (send notification 'name) :is-equal-to-string #@"NSWindowDidResizeNotification")
+       ((eq :did-resize n-type)
 	(setf return-event (make-instance 'window-configuration-event :sheet  sheet
 					  :x      origin-x	; coord system?
 					  :y      origin-y
 					  :width  width
 					  :height height)))
-       ((send (send notification 'name) :is-equal-to-string #@"NSWindowWillCloseNotification")
+       ((eq :will-close n-type)
 	(setf return-event (make-instance 'window-destroy-event :sheet sheet)))
-       ;; TODO: this logic is the same as the previous version, but
-       ;;       is it correct?  it means that if we get a
-       ;;       notification that we don't recognize, we ignore it
+       ;; Ignore notifications in which we're uninterested.
        (t nil))
       return-event))
 
   (defun beagle-event-to-clim-event (mirror event)
-    (declare (special *-current-pointer-button-state-*
-		      *-current-pointer-view-xy-*
-		      *-current-pointer-graft-xy-*))
+    (declare (special *-current-pointer-button-state-*))
+
     (let ((window (send event 'window))
-	  (return-event event)
-	  ;; Can't do this here any more - it breaks NSFlagsChanged event handling :-(
-;;;	  (modifier-state (beagle-modifier-to-modifier-state (send event 'modifier-flags)))
-	  (event-type (send event 'type)))
-      (when (or (equal #$NSLeftMouseUp event-type)
-		(equal #$NSLeftMouseDown event-type)
-		(equal #$NSRightMouseUp event-type)
-		(equal #$NSRightMouseDown event-type)
-		(equal #$NSOtherMouseUp event-type)
-		(equal #$NSOtherMouseDown event-type))
-	(slet ((location-in-window-point (send event 'location-in-window))
-	       (window-bounds (send (send window 'content-view) 'bounds)))
-	      (setf (pref location-in-window-point :<NSP>oint.y) (- (pref window-bounds :<NSR>ect.size.height)
-								    (pref location-in-window-point :<NSP>oint.y)))
+	  (return-event event))
+      (multiple-value-bind (event-type button)
+	  (event-type event)
+	(when (or (eq :mouse-up event-type)
+		  (eq :mouse-down event-type))
+	  (slet ((location-in-window-point (send event 'location-in-window))
+		 (window-bounds (send (send window 'content-view) 'bounds)))
+	    (setf (pref location-in-window-point :<NSP>oint.y) (- (pref window-bounds :<NSR>ect.size.height)
+								  (pref location-in-window-point :<NSP>oint.y)))
 
-	      ;;; *SUSPECT* this will leak; gc won't collect heap-allocated store from make-record will it?
-	      (slet ((location-in-view-point (send mirror :convert-point location-in-window-point
-						   :from-view (send window 'content-view)))
-		     (location-in-screen-point (send window :convert-base-to-screen location-in-window-point)))
+	    (slet ((location-in-view-point (send mirror :convert-point location-in-window-point
+						 :from-view (send window 'content-view)))
+		   (location-in-screen-point (send window :convert-base-to-screen location-in-window-point)))
 
-		(setf *-current-pointer-graft-xy-* (ccl::make-record :<NSP>oint
-								     :x (pref location-in-screen-point :<NSP>oint.x)
-								     :y (pref location-in-screen-point :<NSP>oint.y)))
-		(setf *-current-pointer-view-xy-* (ccl::make-record  :<NSP>oint
-								     :x (pref location-in-view-point :<NSP>oint.x)
-								     :y (pref location-in-view-point :<NSP>oint.y)))
-	        (setf return-event
-		      (make-instance (if (or (equal #$NSLeftMouseUp event-type)
-					     (equal #$NSRightMouseUp event-type)
-					     (equal #$NSOtherMouseUp event-type))
-					 'pointer-button-release-event
-				       'pointer-button-press-event)
-				     :pointer 0
-				     :button (cond ((or (equal event-type #$NSLeftMouseUp)
-							(equal event-type #$NSLeftMouseDown))
-						    (setf *-current-pointer-button-state-* +pointer-left-button+)
-						    +pointer-left-button+)
-						   ((or (equal event-type #$NSRightMouseUp)
-							(equal event-type #$NSRightMouseDown))
-						    (setf *-current-pointer-button-state-* +pointer-right-button+)
-						    +pointer-right-button+)
-						   (t
-						    (setf *-current-pointer-button-state-* +pointer-middle-button+)
-						    +pointer-middle-button+))
-				     ;; x and y are in window coordinates. They need converting to screen
-				     ;; coordinates. Can do this with
-				     ;; [window convertBaseToScreen:location-in-window].x or .y.
-				     ;; They probably need coercing too :-(
-				     :x              (pref location-in-view-point :<NSP>oint.x)
-				     :y              (pref location-in-view-point :<NSP>oint.y)
-				     :graft-x        (pref location-in-screen-point :<NSP>oint.x)
-				     :graft-y        (pref location-in-screen-point :<NSP>oint.y)
-				     :sheet          (%beagle-port-lookup-sheet-for-view *beagle-port* mirror)
-				     :modifier-state (beagle-modifier-to-modifier-state (send event 'modifier-flags))
-				     ;; Timestamp from Cocoa looks like 12345.7 - CLIM wants integer no
-				     ;; bigger than a fixnum, so it gets a fixnum. Hope Cocoa doesn't
-				     ;; send non-unique timestamps.
-				     ;; NSTimeInterval is a double typedef
-				     :timestamp      (incf timestamp))))))
-      ;; (coerce (* 10 (pref timestamp :<NST>ime<I>nterval)) 'fixnum))))))
+	      ;; Only want this for 'synthesize-point-motion-event'
+	      (set-hacky-graft/view-xy location-in-screen-point
+				       location-in-view-point)
 
-      (when (equal #$NSScrollWheel event-type)
-	(setf return-event (make-instance 'pointer-button-press-event
-					  :pointer 0
-					  ;; The 'amount' of scroll can be specified in Cocoa by a
-					  ;; larger or smaller delta in either X, Y or Z directions.
-					  ;; We ignore this, and always pass up or down and let
-					  ;; CLIM set the amount. Could do better with scroll wheel
-					  ;; events, CLIM also ignores X and Z deltas...
-					  :button (if (plusp (send event 'delta-y))
+	      (setf return-event
+		    (make-instance (if (eq :mouse-up event-type)
+				       'pointer-button-release-event
+				     'pointer-button-press-event)
+				   :pointer 0
+				   :button (cond ((eq :left button)
+						  (set-hacky-button-state +pointer-left-button+)
+						  +pointer-left-button+)
+						 ((eq :right button)
+						  (set-hacky-button-state +pointer-right-button+)
+						  +pointer-right-button+)
+						 (t
+						  (set-hacky-button-state +pointer-middle-button+)
+						  +pointer-middle-button+))
+				   ;; x and y are in window coordinates. They need converting to screen
+				   ;; coordinates. Can do this with
+				   ;; [window convertBaseToScreen:location-in-window].x or .y.
+				   ;; They probably need coercing too :-(
+				   :x              (pref location-in-view-point :<NSP>oint.x)
+				   :y              (pref location-in-view-point :<NSP>oint.y)
+				   :graft-x        (pref location-in-screen-point :<NSP>oint.x)
+				   :graft-y        (pref location-in-screen-point :<NSP>oint.y)
+				   :sheet          (%beagle-port-lookup-sheet-for-view *beagle-port* mirror)
+				   :modifier-state (beagle-modifier-to-modifier-state (send event 'modifier-flags))
+				   ;; Timestamp from Cocoa looks like 12345.7 - CLIM wants integer no
+				   ;; bigger than a fixnum, so it gets a fixnum. Hope Cocoa doesn't
+				   ;; send non-unique timestamps.
+				   ;; NSTimeInterval is a double typedef
+				   :timestamp      (incf timestamp))))))
+
+	(when (eq :scroll-wheel event-type)
+	  (setf return-event (make-instance 'pointer-button-press-event
+					    :pointer 0
+					    ;; The 'amount' of scroll can be specified in Cocoa by a
+					    ;; larger or smaller delta in either X, Y or Z directions.
+					    ;; We ignore this, and always pass up or down and let
+					    ;; CLIM set the amount. Could do better with scroll wheel
+					    ;; events, CLIM also ignores X and Z deltas...
+					    :button (if (plusp (send event 'delta-y))
+							(progn
+							  (set-hacky-button-state +pointer-wheel-up+)
+							  +pointer-wheel-up+)
 						      (progn
-							(setf *-current-pointer-button-state-* +pointer-wheel-up+)
-							+pointer-wheel-up+)
-						    (progn
-						      (setf *-current-pointer-button-state-* +pointer-wheel-down+)
-						      +pointer-wheel-down+))
-					  ;; Surely scroll-wheel events do not need x, y coords? input.lisp
-					  ;; does a 'call-next-method' after handling the scroll but won't
-					  ;; that then get passed as a 'proper' button press? Best pass these
-					  ;; as values we're unlikely to ever get clicked.
-					  :x 0
-					  :y 0
-					  :graft-x 0
-					  :graft-y 0
-					  :sheet          (%beagle-port-lookup-sheet-for-view *beagle-port* mirror)
-					  :modifier-state (beagle-modifier-to-modifier-state (send event 'modifier-flags))
-					  ;; Timestamp from Cocoa looks like 12345.7 - CLIM wants integer no
-					  ;; bigger than a fixnum, so it gets a fixnum. Hope Cocoa doesn't
-					  ;; send non-unique timestamps.
-					  ;; NSTimeInterval is a double typedef
-					  :timestamp      (incf timestamp))))
-      
-      ;; Keyname should probably be the #$NSF1FunctionKey, #$NSUpArrowFunctionKey etc as defined in the docs
-      ;; for NSEvent (these are permitted to be implementation defined - not sure if that's the back end
-      ;; implementation or the McCLIM implementation!), apart from the "standard" keys which should be symbols
-      ;; in the keyword package (presumably :a :b :c etc.?)
-
-      ;; ::FIXME:: WILL ONLY WORK FOR "STANDARD" KEYS!!!
-      
-      (when (or (equal #$NSKeyDown event-type)
-		(equal #$NSKeyUp   event-type))
-	(let ((keyname (beagle-key-event-to-key-name event)))
-;;;	  (format *terminal-io* "In event-build with keyname: ~A (characterp = ~A)~%" keyname (characterp keyname))
-	  (setf return-event (make-instance (if (equal #$NSKeyDown event-type)
-						'key-press-event
-					      'key-release-event)
-					    :key-name       keyname
-					    ;; not needed by spec - should change implementation?
-					    :key-character  (and (characterp keyname) keyname)
-					    :x              0	; Not needed for key events?
-					    :y              0	; Not needed for key events?
-					    :graft-x        0	; Not needed for key events?
-					    :graft-y        0	; Not needed for key events?
-					    ;; Irrespective of where the key event happened, send it
-					    ;; to the sheet that has key-focus for the port.
-					    :sheet          (beagle-port-key-focus *beagle-port*)
+							(set-hacky-button-state +pointer-wheel-down+)
+							+pointer-wheel-down+))
+					    ;; Surely scroll-wheel events do not need x, y coords? input.lisp
+					    ;; does a 'call-next-method' after handling the scroll but won't
+					    ;; that then get passed as a 'proper' button press? Best pass these
+					    ;; as values we're unlikely to ever get clicked.
+					    :x 0
+					    :y 0
+					    :graft-x 0
+					    :graft-y 0
+					    :sheet          (%beagle-port-lookup-sheet-for-view *beagle-port* mirror)
 					    :modifier-state (beagle-modifier-to-modifier-state (send event 'modifier-flags))
-					    :timestamp (incf timestamp)))))
-      (when (or (equal #$NSMouseMoved event-type)
-		(equal #$NSLeftMouseDragged event-type)
-		(equal #$NSRightMouseDragged event-type)
-		(equal #$NSOtherMouseDragged event-type))
-	(slet ((location-in-window-point (send event 'location-in-window))
-	       (window-bounds (send (send window 'content-view) 'bounds)))
-	  ;; Because the location in window is *not* flipped, we need to flip it... (note: we flip by the size
-	  ;; of the window's content view, otherwise we end up out by the size of the window title bar).
-	  ;; *SUSPECT* this will leak; gc won't collect heap-allocated store from make-record will it?
-	  (setf (pref location-in-window-point :<NSP>oint.y) (- (pref window-bounds :<NSR>ect.size.height)
-								(pref location-in-window-point :<NSP>oint.y)))
-	  (slet ((location-in-view-point (send mirror :convert-point location-in-window-point
-					       :from-view (send window 'content-view)))
-		 (location-in-screen-point (send window :convert-base-to-screen location-in-window-point)))
+					    ;; Timestamp from Cocoa looks like 12345.7 - CLIM wants integer at least
+					    ;; as big as a fixnum, so it gets a fixnum. Hope Cocoa doesn't
+					    ;; send non-unique timestamps.
+					    ;; NSTimeInterval is a double typedef
+					    :timestamp      (incf timestamp))))
+      
+	;; Keyname should probably be the #$NSF1FunctionKey, #$NSUpArrowFunctionKey etc as defined in the docs
+	;; for NSEvent (these are permitted to be implementation defined - not sure if that's the back end
+	;; implementation or the McCLIM implementation!), apart from the "standard" keys which should be symbols
+	;; in the keyword package (presumably :a :b :c etc.?)
 
-	    (setf *-current-pointer-graft-xy-* (ccl::make-record :<NSP>oint
-								 :x (pref location-in-screen-point :<NSP>oint.x)
-								 :y (pref location-in-screen-point :<NSP>oint.y)))
-	    (setf *-current-pointer-view-xy-* (ccl::make-record :<NSP>oint
-								:x (pref location-in-view-point :<NSP>oint.x)
-								:y (pref location-in-view-point :<NSP>oint.y)))
-	    (setf return-event
-		  (make-instance 'pointer-motion-event
-				 :pointer        0
-				 :button         (cond ((equal event-type #$NSMouseMoved)
-							(setf *-current-pointer-button-state-* 0)
-							0)
-						       ((equal event-type #$NSLeftMouseDragged)
-							(setf *-current-pointer-button-state-* +pointer-left-button+)
-							+pointer-left-button+)
-						       ((equal event-type #$NSRightMouseDragged)
-							(setf *-current-pointer-button-state-* +pointer-right-button+)
-							+pointer-right-button+)
-						       (t
-							(setf *-current-pointer-button-state-* +pointer-middle-button+)
-							+pointer-middle-button+))
-				 ;; It looks like McCLIM diverges from the spec again in relation
-				 ;; to events (I wonder who is responsible? 8-) and expects :x and
-				 ;; :y to be relative to the MIRROR in which the events occur.
-				 ;; :x              (pref location-in-screen-point :<NSP>oint.x)
-				 ;; :y              (pref location-in-screen-point :<NSP>oint.y)
-				 :x              (pref location-in-view-point :<NSP>oint.x)
-				 :y              (pref location-in-view-point :<NSP>oint.y)
-				 ;; Even though graft-x, graft-y is *not in the spec* we need to populate
-				 ;; them because there's code in McCLIM/gadgets.lisp that makes direct
-				 ;; use of the graft-x/y slot values. Naughty. So how does this differ
-				 ;; from :x and :y which are supposedly in native coordinates? Methinks
-				 ;; that the event hierarchy and associated code in McCLIM should perhaps
-				 ;; be revisited... currently it appears that these are *only* used to support
-				 ;; pointer-motion-events. Strange. It doesn't seem to make any difference what
-				 ;; gets set here! Suspect we're not invoking the callback because we're not
-				 ;; passing the correct sheet...?
+	;; ::FIXME:: WILL ONLY WORK FOR "STANDARD" KEYS!!!
+      
+	(when (or (eq :key-down event-type)
+		  (eq :key-up event-type))
+	  (let ((keyname (beagle-key-event-to-key-name event)))
+	    (setf return-event (make-instance (if (eq :key-down event-type)
+						  'key-press-event
+						'key-release-event)
+					      :key-name       keyname
+					      ;; not needed by spec - should change implementation?
+					      :key-character  (and (characterp keyname) keyname)
+					      :x              0	; Not needed for key events?
+					      :y              0	; Not needed for key events?
+					      :graft-x        0	; Not needed for key events?
+					      :graft-y        0	; Not needed for key events?
+					      ;; Irrespective of where the key event happened, send it
+					      ;; to the sheet that has key-focus for the port.
+					      :sheet          (beagle-port-key-focus *beagle-port*)
+					      :modifier-state (beagle-modifier-to-modifier-state (send event 'modifier-flags))
+					      :timestamp (incf timestamp)))))
+	
+	(when (eq :mouse-moved event-type)
+	  (slet ((location-in-window-point (send event 'location-in-window))
+		 (window-bounds (send (send window 'content-view) 'bounds)))
+	    ;; Because the location in window is *not* flipped, we need to flip it... (note: we flip by the size
+	    ;; of the window's content view, otherwise we end up out by the size of the window title bar).
+	    (setf (pref location-in-window-point :<NSP>oint.y) (- (pref window-bounds :<NSR>ect.size.height)
+								  (pref location-in-window-point :<NSP>oint.y)))
+	    (slet ((location-in-view-point (send mirror :convert-point location-in-window-point
+						        :from-view (send window 'content-view)))
+		   (location-in-screen-point (send window :convert-base-to-screen location-in-window-point)))
+
+	      (set-hacky-graft/view-xy location-in-screen-point
+				       location-in-view-point)
+
+	      (setf return-event
+		    (make-instance 'pointer-motion-event
+				   :pointer        0
+				   :button         (cond ((null button)
+							  (set-hacky-button-state 0)
+							  0)
+							 ((eq :left button)
+							  (set-hacky-button-state +pointer-left-button+)
+							  +pointer-left-button+)
+							 ((eq :right button)
+							  (set-hacky-button-state +pointer-right-button+)
+							  +pointer-right-button+)
+							 (t
+							  (set-hacky-button-state +pointer-middle-button+)
+							  +pointer-middle-button+))
+				   ;; It looks like McCLIM diverges from the spec again in relation
+				   ;; to events (I wonder who is responsible? 8-) and expects :x and
+				   ;; :y to be relative to the MIRROR in which the events occur.
+				   ;; :x              (pref location-in-screen-point :<NSP>oint.x)
+				   ;; :y              (pref location-in-screen-point :<NSP>oint.y)
+				   :x              (pref location-in-view-point :<NSP>oint.x)
+				   :y              (pref location-in-view-point :<NSP>oint.y)
+				   ;; Even though graft-x, graft-y is *not in the spec* we need to populate
+				   ;; them because there's code in McCLIM/gadgets.lisp that makes direct
+				   ;; use of the graft-x/y slot values. Naughty. So how does this differ
+				   ;; from :x and :y which are supposedly in native coordinates? Methinks
+				   ;; that the event hierarchy and associated code in McCLIM should perhaps
+				   ;; be revisited... currently it appears that these are *only* used to support
+				   ;; pointer-motion-events. Strange. It doesn't seem to make any difference what
+				   ;; gets set here! Suspect we're not invoking the callback because we're not
+				   ;; passing the correct sheet...?
 ;;;				 :graft-x        (pref location-in-view-point :<NSP>oint.x) ;0
 ;;;				 :graft-y        (pref location-in-view-point :<NSP>oint.y) ;0
-				 :graft-x        (pref location-in-screen-point :<NSP>oint.x) ;0
-				 :graft-y        (pref location-in-screen-point :<NSP>oint.y) ;0
-				 ;; This is probably wrong too; the NSWindow receives and propogates mouse
-				 ;; moved events, but we need to translate them into an appropriate view.
-				 ;; Not sure quite how we do that, but I think we need to... we're ok for
-				 ;; key down / up, we keep track of the "key view". Do we also need to keep
-				 ;; track of what interactors we have? I suspect not. We just need to traverse
-				 ;; the NSView hierarchy (or sheet hierarchy, whichever is easiest) until we
-				 ;; find the "youngest" view (or sheet) over which the event occurred; this
-				 ;; is the sheet that should handle the event.
-				 :sheet (%beagle-port-lookup-sheet-for-view *beagle-port* mirror)
-				 :modifier-state (beagle-modifier-to-modifier-state (send event 'modifier-flags))
-				 :timestamp (incf timestamp))))))
-      (when (or (equal #$NSMouseEntered event-type)
-		(equal #$NSMouseExited  event-type))
-;;;	(format *debug-io* "Got mouse entered / exited event for mirror ~S~%" mirror)
-	(slet ((location-in-window-point (send event 'location-in-window))
-	       (window-bounds (send (send window 'content-view) 'bounds)))
-	  ;; Because the location in window is *not* flipped, we need to flip it... (note: we flip by the size
-	  ;; of the window's content view, otherwise we end up out by the size of the window title bar).
-	  (setf (pref location-in-window-point :<NSP>oint.y) (- (pref window-bounds :<NSR>ect.size.height)
-								(pref location-in-window-point :<NSP>oint.y)))
-	  (slet ((location-in-view-point (send mirror :convert-point location-in-window-point
-					       :from-view (send window 'content-view)))
-		 (location-in-screen-point (send window :convert-base-to-screen location-in-window-point)))
+				   :graft-x        (pref location-in-screen-point :<NSP>oint.x) ;0
+				   :graft-y        (pref location-in-screen-point :<NSP>oint.y) ;0
+				   ;; This is probably wrong too; the NSWindow receives and propogates mouse
+				   ;; moved events, but we need to translate them into an appropriate view.
+				   ;; Not sure quite how we do that, but I think we need to... we're ok for
+				   ;; key down / up, we keep track of the "key view". Do we also need to keep
+				   ;; track of what interactors we have? I suspect not. We just need to traverse
+				   ;; the NSView hierarchy (or sheet hierarchy, whichever is easiest) until we
+				   ;; find the "youngest" view (or sheet) over which the event occurred; this
+				   ;; is the sheet that should handle the event.
+				   :sheet (%beagle-port-lookup-sheet-for-view *beagle-port* mirror)
+				   :modifier-state (beagle-modifier-to-modifier-state (send event 'modifier-flags))
+				   :timestamp (incf timestamp))))))
+	
+	(when (or (eq :mouse-enter event-type)
+		  (eq :mouse-exit event-type))
+	  #+nil
+	  (let ((view-sheet (%beagle-port-lookup-sheet-for-view *beagle-port* mirror)))
+	    (when (typep view-sheet 'clim:push-button-pane)
+	      (format *debug-io* "Got ~a event on sheet ~a~%"
+		      event-type view-sheet)))
+	  (slet ((location-in-window-point (send event 'location-in-window))
+		 (window-bounds (send (send window 'content-view) 'bounds)))
+	    ;; Because the location in window is *not* flipped, we need to flip it...
+	    ;; (note: we flip by the size of the window's content view, otherwise we
+	    ;; end up out by the size of the window title bar).
 
-	    (setf *-current-pointer-graft-xy-* (ccl::make-record :<NSP>oint
-								     :x (pref location-in-screen-point :<NSP>oint.x)
-								     :y (pref location-in-screen-point :<NSP>oint.y)))
-	    (setf *-current-pointer-view-xy-* (ccl::make-record  :<NSP>oint
-								     :x (pref location-in-view-point :<NSP>oint.x)
-								     :y (pref location-in-view-point :<NSP>oint.y)))
-	    ;; This event does not provide button state, but we can use *-current-pointer-button-state-*
-	    ;; to populate button state in the CLIM event. Obviously, we do not need to update this value
-	    ;; (*-current-pointer-button-state-*) for enter / exit events...
-	    (setf return-event
-		  (make-instance (if (equal #$NSMouseEntered event-type)
-				     'pointer-enter-event
-				   'pointer-exit-event)
-				 :pointer        0
-				 :button         *-current-pointer-button-state-*
-				 :x              (pref location-in-view-point :<NSP>oint.x)
-				 :y              (pref location-in-view-point :<NSP>oint.y)
-				 :graft-x        (pref location-in-screen-point :<NSP>oint.x) ;0
-				 :graft-y        (pref location-in-screen-point :<NSP>oint.y) ;0
-				 :sheet (%beagle-port-lookup-sheet-for-view *beagle-port* mirror)
-				 :modifier-state (beagle-modifier-to-modifier-state (send event 'modifier-flags))
-				 :timestamp (incf timestamp))))))
+	    ;; Is this where things are going wrong with PUSH-BUTTON-PANE buttons?
+	    ;; Could be... whatever, I think this is a little dodgy...
+	    (setf (pref location-in-window-point :<NSP>oint.y) (- (pref window-bounds :<NSR>ect.size.height)
+								  (pref location-in-window-point :<NSP>oint.y)))
+	    (slet ((location-in-view-point (send mirror :convert-point location-in-window-point
+		 			                :from-view (send window 'content-view)))
+		   (location-in-screen-point (send window :convert-base-to-screen location-in-window-point)))
 
-      ;; We need to maintain the modifier flags state constantly to be able to
-      ;; implement this; suggest a slot in beagle-port?
-      (when (equal #$NSFlagsChanged event-type)
-;;;	(format *debug-io* "In event-build (flags changed)~%")
-	;; Use the 'old' 'modifiers' in conjunction with the new 'modifier-state'
-	;; to work out if this is a key up or a key down...
-	(setf return-event
-	      (destructuring-bind (event-class key)
-		  (current-mods-map-to-key (send event 'modifier-flags))
-		(make-instance event-class
-			       :key-name       key
-			       :key-character  nil
-			       :x              0
-			       :y              0
-			       :graft-x        0
-			       :graft-y        0
-			       ;; Irrespective of where the key event happened, send it
-			       ;; to the sheet that has key-focus for the port.
-			       :sheet          (beagle-port-key-focus *beagle-port*)
-			       :modifier-state (beagle-modifier-to-modifier-state (send event 'modifier-flags))
-			       :timestamp (incf timestamp)))))
+	      (set-hacky-graft/view-xy location-in-screen-point
+				       location-in-view-point)
+
+	      ;; This event does not provide button state, but we can use *-current-pointer-button-state-*
+	      ;; to populate button state in the CLIM event. Obviously, we do not need to update this value
+	      ;; (*-current-pointer-button-state-*) for enter / exit events...
+	      (setf return-event
+		    (make-instance (if (eq :mouse-enter event-type)
+				       'pointer-enter-event
+				     'pointer-exit-event)
+				   :pointer        0
+				   :button         *-current-pointer-button-state-*
+				   :x              (pref location-in-view-point :<NSP>oint.x)
+				   :y              (pref location-in-view-point :<NSP>oint.y)
+				   :graft-x        (pref location-in-screen-point :<NSP>oint.x) ;0
+				   :graft-y        (pref location-in-screen-point :<NSP>oint.y) ;0
+				   :sheet (%beagle-port-lookup-sheet-for-view *beagle-port* mirror)
+				   :modifier-state (beagle-modifier-to-modifier-state (send event 'modifier-flags))
+				   :timestamp (incf timestamp))))))
+
+	;; We need to maintain the modifier flags state constantly to be able to
+	;; implement this; suggest a slot in beagle-port?
+	(when (eq :flags-changed event-type)
+	  ;; Use the 'old' 'modifiers' in conjunction with the new 'modifier-state'
+	  ;; to work out if this is a key up or a key down...
+	  (setf return-event
+		(destructuring-bind (event-class key)
+		    (current-mods-map-to-key (send event 'modifier-flags))
+		  (make-instance event-class
+				 :key-name       key
+				 :key-character  nil
+				 :x              0
+				 :y              0
+				 :graft-x        0
+				 :graft-y        0
+				 ;; Irrespective of where the key event happened, send it
+				 ;; to the sheet that has key-focus for the port.
+				 :sheet          (beagle-port-key-focus *beagle-port*)
+				 :modifier-state (beagle-modifier-to-modifier-state (send event 'modifier-flags))
+				 :timestamp (incf timestamp)))))
       
-      ;; #$NSHelpRequested- wonder if we can convert this into "user pressed help key" key event?
-      ;;                    Then could pull up docs (or could do if there were any!)
-      ;; #$NSCursorUpdate
+	;; #$NSHelpRequested- wonder if we can convert this into "user pressed help key" key event?
+	;;                    Then could pull up docs (or could do if there were any!)
+	;; #$NSCursorUpdate
 
-      return-event))
+	return-event)))
 
   ;;; This has been added to McCLIM and the CLX back end; I'm not sure what it's supposed
   ;;; to be for. Never mind, add it anyway. defgeneric is in stream-input.lisp

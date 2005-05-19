@@ -114,9 +114,9 @@ backends, you can mix and match. For example, by issuing the following:-
 4.  -> (load "home:load-clim")
 5.  -> (load "home:load-clx")
 6.  -> (load "home:load-beagle")
-7.  -> (setf climi::*default-server-path* :clx)
+7.  -> (setf climi:*default-server-path* :clx)
 8.  -> (clim-listener:run-listener)
-9.  CL-USER> (setf climi::*default-server-path* :beagle)
+9.  CL-USER> (setf climi:*default-server-path* :beagle)
 10. CL-USER> (clim-listener:run-listener-process)
 
 I can get both a CLX and a Beagle Listener running simultaneously.
@@ -181,7 +181,8 @@ KNOWN LIMITATIONS / TODO LIST
     Actually, this ^^^ seems to work fine, but the highlighting for button
     gadgets looks screwy under OS X.
     (Think there is a problem with tracking rectangles not being set for
-    panes. Investigation needed.)
+    panes. Another alternative relates to the calculation of pointer position
+    in the MOUSE-ENTER/EXIT event generator.)
 
 
 7.  Keyboard events are not handled "properly" as far as any OS X user will
@@ -199,13 +200,6 @@ KNOWN LIMITATIONS / TODO LIST
     on NSBezierPath in that OS version. So too would implementing pixmaps
     for mirrors, since we can do XOR image compositing. My gut feel is I'd
     like to avoid having pixmap caches for mirrors though.
-
-
-9.  Foreign memory management is non-existent. This is fine whilst running
-    in the same thread as the OpenMCL Listener (since we use its autorelease
-    pool) but when running in a separate thread lots of warning messages
-    are generated. You might find it necessary to force-quit OpenMCL after
-    you've finished.
 
 
 12. There's some debug output remaining in some corner cases.
@@ -284,6 +278,13 @@ KNOWN LIMITATIONS / TODO LIST
     It's still present in the output history, and mousing over it makes
     it reappear, but still... not sure why this happens.
 
+
+29. Event signal-semaphore and consume-semaphore code isn't quite right;
+    if the user generates events whilst Beagle is in the middle of a
+    long-lived operation (generating a big graph, for example), some of
+    those events are 'trapped' in the queue until other events take place.
+    Looking at the code, I don't think this should happen... (but it does).
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 FIXED STUFF PREVIOUSLY ON THE KNOWN LIMITATIONS / TODO LIST
@@ -317,6 +318,20 @@ FIXED STUFF PREVIOUSLY ON THE KNOWN LIMITATIONS / TODO LIST
     FIXED 17.MAY.2005 DAR - the problem was we never invoked 
                             'setf (port-keyboard-input-focus' in handling
     the 'did become key' notification.
+
+-9.-  Foreign memory management is non-existent. This is fine whilst running
+    in the same thread as the OpenMCL Listener (since we use its autorelease
+    pool) but when running in a separate thread lots of warning messages
+    are generated. You might find it necessary to force-quit OpenMCL after
+    you've finished.
+
+    UPDATE: have made one pass ensuring heap allocated memory (with
+    MAKE-RECORD) is free'd, and that retained objects are released. Things
+    seem much better now but I'm sure I overlooked a few.
+    Moving this to 'resolved' (but keep eyes open for more occurrences ;-)
+
+    Note: this also seems to have given a bit of a speed-boost; perhaps we
+    avoid swapping, or have cut down on GC overhead.
 
 -10.- Text sizes aren't calculated correctly; when multiple lines are output
     together, the bottom of one line can be overwritten by the top of the

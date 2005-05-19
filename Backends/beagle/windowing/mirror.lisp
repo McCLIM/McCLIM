@@ -77,6 +77,7 @@
 		     (round-coordinate (space-requirement-height q))))
 	   (rect (ccl::make-ns-rect x y width height))
 	   (mirror (make-instance view :with-frame rect)))
+      (#_free rect)
       (send mirror 'retain)
       (send mirror 'establish-tracking-rect)
       (setf (view-background-colour mirror) (%beagle-pixel port desired-color))
@@ -217,7 +218,8 @@
 	(let ((vtable (slot-value port 'view-table)))
 	  (setf (gethash clim-mirror vtable) sheet))
 	;; Things don't work if we don't do this... hopefully it will help. Maybe it won't.
-	(send top-level-frame :make-key-and-order-front nil)))))
+	(send top-level-frame :make-key-and-order-front nil)
+	(#_free rect)))))
 
 ;;; The parent of this sheet is the NSScreen... how'd that happen? Very strange. Well, that
 ;;; means we can't add this sheet to its parent; so what's this sheet used for, and how
@@ -288,6 +290,7 @@
 	(let ((vtable (slot-value port 'view-table)))
 	  (setf (gethash clim-mirror vtable) sheet))
 ;;;	(send menu-frame :set-level (ccl::%get-ptr (ccl::foreign-symbol-address "_NSPopUpMenuWindowLevel")))
+	(#_free rect)
 	;; Things don't work if we don't do this... hopefully it will help. Maybe it won't.
 	(send menu-frame :make-key-and-order-front nil)))))
 

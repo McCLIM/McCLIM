@@ -140,8 +140,9 @@ and feel for McCLIM. If any pane types are not implemented for Beagle / Aqua, th
       (multiple-value-bind (w h x y) (climi::frame-geometry* frame)
 	(declare (ignore w h))
 	(when (and x y)
-	  (send (send mirror 'window) :set-frame-top-left-point
-		(ccl::make-ns-point (coerce x 'short-float) (coerce y 'short-float)))))
+	  (let ((point (ccl::make-ns-point (coerce x 'short-float) (coerce y 'short-float))))
+	    (send (send mirror 'window) :set-frame-top-left-point point)
+	    (#_free point))))
       (when (sheet-enabled-p sheet)
 	(send (send mirror 'window) :make-key-and-order-front nil)))))
 
@@ -161,9 +162,9 @@ and feel for McCLIM. If any pane types are not implemented for Beagle / Aqua, th
       (multiple-value-bind (w h x y) (climi::frame-geometry* frame)
 	(declare (ignore w h))
 	(when (and x y)
+	  (let ((point (ccl::make-ns-point (coerce x 'short-float) (coerce y 'short-float))))
 ;;	  (format *debug-io* "Setting frame top left point to (~a, ~a)~%" x y)
-	  (send (send mirror 'window) :set-frame-top-left-point
-		(ccl::make-ns-point (coerce x 'short-float) (coerce y 'short-float)))))
+	    (send (send mirror 'window) :set-frame-top-left-point point))))
       (when (sheet-enabled-p sheet)
 	(send (send mirror 'window) :make-key-and-order-front nil)))))
 
