@@ -2815,7 +2815,14 @@ Returns two values, the item itself, and the index within the item list."
    (left-peer)
    (right-sr)
    (right-peer))
-  (:default-initargs :background *3d-inner-color*))
+  (:default-initargs :background *3d-inner-color*)
+  (:documentation "The box-adjuster-gadget allows users to resize the panes
+in a layout by dragging the boundary between the panes.  To use it, insert
+it in a layout between two panes that are to be resizeable.  E.g.:
+ (vertically ()
+    top-pane
+    (make-pane 'clim-extensions:box-adjuster-gadget)
+    bottom-pane)"))  
 
 (defmethod compose-space ((gadget clim-extensions:box-adjuster-gadget)
                           &key width height)
