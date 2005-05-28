@@ -477,10 +477,12 @@ for non-tiled designs."
 (defun medium-copy-area-aux (from from-x from-y width height to to-x to-y)
   "Helper method for copying areas. 'from' and 'to' must both be 'mirror'
 objects. From and To coordinates must already be transformed as appropriate."
-  (let* ((source-region (ccl::make-ns-rect (+ from-x 0.5) (+ from-y 0.5)
-					   width height))
-	 (target-point  (ccl::make-ns-point (+ to-x 0.5)
-					    (+ to-y 0.5)))
+  (let* ((source-region (ccl::make-ns-rect (coerce from-x 'short-float)
+					   (coerce from-y 'short-float)
+					   (coerce width  'short-float)
+					   (coerce height 'short-float)))
+	 (target-point  (ccl::make-ns-point (coerce to-x 'short-float)
+					    (coerce to-y 'short-float)))
 	 (bitmap-image  (send from :copy-bitmap-from-region source-region)))
     (when (eql bitmap-image (%null-ptr))
       (warn "medium.lisp -> medium-copy-area: failed to copy specified region (null bitmap)~%")
@@ -489,7 +491,7 @@ objects. From and To coordinates must already be transformed as appropriate."
     (#_free source-region)
     (#_free target-point)
     (send bitmap-image 'release)))
-  
+
 
 (defmethod medium-copy-area ((from-drawable beagle-medium) from-x from-y width height
                              (to-drawable beagle-medium) to-x to-y)
@@ -595,15 +597,14 @@ objects. From and To coordinates must already be transformed as appropriate."
 prevents Cocoa from 'antialiasing' lines, making them thicker and
 a shade of grey. Ensures the return value is a short-float, as
 required by the Cocoa methods."
-;; Interesting... I thought 'center of pixel' was 0.5, 1.5, ... n.5
-;; but this works much better with 0.0, 1.0, 2.0...
-;;  (coerce (+ (round-coordinate pt) 0.5) 'short-float))
-  (coerce (round-coordinate pt) 'short-float))
+  (coerce (+ (round-coordinate pt) 0.5) 'short-float))
+
 
 (defun pixel-count (sz)
 "Ensures any value provided is rounded to the nearest unit, and
 returned as a short-float as required by the Cocoa methods."
   (coerce (round-coordinate sz) 'short-float))
+
 
 ;;; Nabbed from CLX backend medium.lisp
 (declaim (inline round-coordinate))
@@ -618,6 +619,7 @@ want to operate with coordinates, which are multiples of 1/2.
 Using CL:ROUND gives \"random\" results. Using \"mercantile
 rounding\" gives consistent results."
   (floor (+ x .5)))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

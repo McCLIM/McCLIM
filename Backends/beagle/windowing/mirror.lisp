@@ -59,23 +59,22 @@
 	   ;; coords outside the mirror's physical screen size to be used).
 	   ;; x,y = 0,0 unless there's a mirror-transformation in play
 	   (x (if (%sheet-mirror-transformation sheet)
-		  (round-coordinate (nth-value 0 (transform-position
-						  (%sheet-mirror-transformation sheet) 0 0)))
+		  (nth-value 0 (transform-position (%sheet-mirror-transformation sheet) 0 0))
 		0))
 	   (y (if (%sheet-mirror-transformation sheet)
-		  (round-coordinate (nth-value 1 (transform-position
-						  (%sheet-mirror-transformation sheet) 0 0)))
+		  (nth-value 1 (transform-position (%sheet-mirror-transformation sheet) 0 0))
 		0))
 	   (q (compose-space sheet))
 	   ;; Take the width / height from the mirror-region if there's one set, otherwise from the
 	   ;; space requirement.
 	   (width (if (%sheet-mirror-region sheet)
-		      (round-coordinate (bounding-rectangle-width (%sheet-mirror-region sheet)))
-		    (round-coordinate (space-requirement-width q))))
+		      (bounding-rectangle-width (%sheet-mirror-region sheet))
+		    (space-requirement-width q)))
 	   (height (if (%sheet-mirror-region sheet)
-		       (round-coordinate (bounding-rectangle-height (%sheet-mirror-region sheet)))
-		     (round-coordinate (space-requirement-height q))))
-	   (rect (ccl::make-ns-rect x y width height))
+		       (bounding-rectangle-height (%sheet-mirror-region sheet))
+		     (space-requirement-height q)))
+	   (rect (ccl::make-ns-rect (pixel-center x) (pixel-center y)
+				    (pixel-count width) (pixel-count height)))
 	   (mirror (make-instance view :with-frame rect)))
       (#_free rect)
       (send mirror 'retain)
@@ -177,20 +176,19 @@
 	   (frame (pane-frame sheet))
 	   (q (compose-space sheet))
 	   (x (if (%sheet-mirror-transformation sheet)
-		  (round-coordinate (nth-value 0 (transform-position
-						  (%sheet-mirror-transformation sheet) 0 0)))
+		  (nth-value 0 (transform-position (%sheet-mirror-transformation sheet) 0 0))
 		0))
 	   (y (if (%sheet-mirror-transformation sheet)
-		  (round-coordinate (nth-value 1 (transform-position
-						  (%sheet-mirror-transformation sheet) 0 0)))
+		  (nth-value 1 (transform-position (%sheet-mirror-transformation sheet) 0 0))
 		0))
 	   (width (if (%sheet-mirror-region sheet)
-		      (round-coordinate (bounding-rectangle-width (%sheet-mirror-region sheet)))
-		    (round-coordinate (space-requirement-width q))))
+		      (bounding-rectangle-width (%sheet-mirror-region sheet))
+		    (space-requirement-width q)))
 	   (height (if (%sheet-mirror-region sheet)
-		       (round-coordinate (bounding-rectangle-height (%sheet-mirror-region sheet)))
-		     (round-coordinate (space-requirement-height q))))
-	   (rect (ccl::make-ns-rect x y width height))
+		       (bounding-rectangle-height (%sheet-mirror-region sheet))
+		     (space-requirement-height q)))
+	   (rect (ccl::make-ns-rect (pixel-center x) (pixel-center y)
+				    (pixel-count width) (pixel-count height)))
 	   (style-mask (logior #$NSTitledWindowMask
 			       #$NSClosableWindowMask
 			       #$NSMiniaturizableWindowMask
@@ -245,20 +243,19 @@
 ;;;	   (frame (pane-frame sheet))
 	   (q (compose-space sheet))
 	   (x (if (%sheet-mirror-transformation sheet)
-		  (round-coordinate (nth-value 0 (transform-position
-						  (%sheet-mirror-transformation sheet) 0 0)))
+		  (nth-value 0 (transform-position (%sheet-mirror-transformation sheet) 0 0))
 		0))
 	   (y (if (%sheet-mirror-transformation sheet)
-		  (round-coordinate (nth-value 1 (transform-position
-						  (%sheet-mirror-transformation sheet) 0 0)))
+		  (nth-value 1 (transform-position (%sheet-mirror-transformation sheet) 0 0))
 		0))
 	   (width (if (%sheet-mirror-region sheet)
-		      (round-coordinate (bounding-rectangle-width (%sheet-mirror-region sheet)))
-		    (round-coordinate (space-requirement-width q))))
+		      (bounding-rectangle-width (%sheet-mirror-region sheet))
+		    (space-requirement-width q)))
 	   (height (if (%sheet-mirror-region sheet)
-		       (round-coordinate (bounding-rectangle-height (%sheet-mirror-region sheet)))
-		     (round-coordinate (space-requirement-height q))))
-	   (rect (ccl::make-ns-rect x y width height))
+		       (bounding-rectangle-height (%sheet-mirror-region sheet))
+		     (space-requirement-height q)))
+	   (rect (ccl::make-ns-rect (pixel-center x) (pixel-center y)
+				    (pixel-count width) (pixel-count height)))
 	   ;;; For a "popup" menu, we get rid of all decoration - allow the windowing system
 	   ;;; (McCLIM) get rid of the menu when it's no longer needed.
 	   (style-mask #$NSBorderlessWindowMask))
