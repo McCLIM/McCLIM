@@ -28,7 +28,7 @@
 
 #||
 
-$Id: events.lisp,v 1.5 2005/05/28 19:56:05 drose Exp $
+$Id: events.lisp,v 1.6 2005/05/29 09:55:39 drose Exp $
 
 Events in Cocoa
 ---------------
@@ -201,7 +201,8 @@ signals the port event semaphore when a notification is added to the queue."
   ;; This falls over when the function keys, the arrow keys, the num-lock key (and others)
   ;; are pressed; I guess we don't want to be doing this!
 ;;;	(key-name (ccl::lisp-string-from-nsstring (send event 'characters-ignoring-modifiers))))
-  (let ((key-name (characters-to-key-name (send event 'characters-ignoring-modifiers))))
+  (let* ((characters (send event 'characters-ignoring-modifiers))
+	 (key-name (characters-to-key-name characters)))
     key-name))
 
 
@@ -474,9 +475,13 @@ not a mouse event)."
   (make-instance (if (eq :key-down event-type)
 		     'key-press-event
 		   'key-release-event)
+		 ;; McCLIM seems not to understand these, whatever we pass :-(
 		 :key-name       keyname
-		 ;; not needed by spec - should change implementation?
-		 :key-character  (and (characterp keyname) keyname)
+		 ;; not needed by spec - should change implementation? And this is a
+		 ;; REALLY bad place to deal with DELETE-CHAR -> #\Del. ::FIXME::
+		 :key-character (if (eq keyname :DELETE-CHAR)
+				    #\Del
+				  (and (characterp keyname) keyname))
 		 :x              0	; Not needed for key events?
 		 :y              0	; Not needed for key events?
 		 :graft-x        0	; Not needed for key events?
@@ -818,7 +823,8 @@ not a mouse event)."
 (defun characters-to-key-name (ns-string-characters-in)
 ;;;  (format *terminal-io* "Processing ~S~%" ns-string-characters-in)
 ;;;  (format *terminal-io* "Got string with length ~A~%" (send ns-string-characters-in 'length))
-;;;  (format *terminal-io* "character(0) = ~A~%" (send ns-string-characters-in :character-at-index 0))
+;;;  (format *terminal-io* "character(0) = ~A~%"
+;;;	  (char-code (send ns-string-characters-in :character-at-index 0)))
   (if (<= (send ns-string-characters-in :character-at-index 0) 255)
       (numeric-keysym-to-character (send ns-string-characters-in :character-at-index 0))
     (progn
@@ -838,6 +844,12 @@ not a mouse event)."
   (cond
    ((= #x1b keysym)
     (get-key-name-from-cocoa-constants keysym))
+   ;; Manually massage this... messy. OS X generates 127 for |<-| key,
+   ;; map it onto #\Backspace (by default in OpenMCL it maps onto
+   ;; #\Del (delete forward)). OpenMCL treats #\Backspace and
+   ;; #\Delete as synonyms.
+   ((= #x7f keysym)
+    #\Backspace)
    ((and (<= 0 keysym 255))
     (code-char keysym))
    (t nil)))
@@ -888,6 +900,8 @@ not a mouse event)."
 				     #$NSF34FunctionKey          :F34
 				     #$NSF35FunctionKey          :F35
 				     #$NSInsertFunctionKey       :INSERT
+				     ;; Neither of these appear to have the desired result.
+;;;				     #$NSDeleteFunctionKey       #\Del   ; :DELETE-CHAR
 				     #$NSDeleteFunctionKey       :DELETE-CHAR
 				     #$NSHomeFunctionKey         :HOME
 				     #$NSBeginFunctionKey        :BEGIN
@@ -920,6 +934,9 @@ not a mouse event)."
 				     #$NSFindFunctionKey         :FIND
 				     #$NSHelpFunctionKey         :HELP
 				     #$NSModeSwitchFunctionKey   :MODE-SWITCH
+				     ;; #x7f = DEL in ASCII
+;;;				     #x7f                        :BACKSPACE
+				     ;; #x1b = ESC in ASCII
 				     #x1b                        :ESCAPE))
 
 ;;;(defun get-key-name-from-cocoa-constants (ns-in)
