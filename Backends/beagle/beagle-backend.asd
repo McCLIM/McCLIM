@@ -1,6 +1,6 @@
 ;; -*- Mode: Lisp; -*-
 
-;; $Id: beagle-backend.asd,v 1.2 2005/05/16 22:13:08 drose Exp $
+;; $Id: beagle-backend.asd,v 1.3 2005/06/02 22:17:27 drose Exp $
 
 (defpackage "BEAGLE"
   (:use "CLIM" "CLIM-LISP")
@@ -97,8 +97,8 @@
 					(:file "lisp-window-delegate")
 					(:file "lisp-view" :depends-on ("lisp-bezier-path"))
 					(:file "lisp-view-additional" :depends-on ("lisp-view"))
-					(:file "lisp-image")
-					(:file "lisp-unmanaged-view")))
+					(:file "lisp-image")))
+;;;					(:file "lisp-unmanaged-view")))
 			      (:file "cocoa-util")
 			      (:module "Windowing"
 				       :depends-on ("Native")

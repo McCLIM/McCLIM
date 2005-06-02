@@ -132,6 +132,50 @@ path search order before the Beagle port does.
 
 KNOWN LIMITATIONS / TODO LIST
 
+--- Button pane highlighting and mouse event handling ---
+
+!5.  Mouse down / up on buttons appears not to work very well unless the frame
+    containing the buttons is the only active frame.
+    Actually, this ^^^ seems to work fine, but the highlighting for button
+    gadgets looks screwy under OS X.
+    (Think there is a problem with tracking rectangles not being set for
+    panes. Another alternative relates to the calculation of pointer position
+    in the MOUSE-ENTER/EXIT event generator.)
+
+    Also, think 'drop down' menus aren't working for similar reasons; either
+    to do with McCLIM not understanding where the pointer is, or something to
+    do with tracking-pointer.
+
+
+!21. Highlighting on mouse overs isn't quite right; artefacts are left on the
+    display after the mouse has moved out of the target object bounding
+    rectangle (most easily visible in CLIM-FIG again, and also in the
+    directory view of the Listener (look at the highlighting of the images).
+
+
+--- General windowing and drawing ---
+
+!24. Testing + further work on patterns and stencils.
+
+
+!26. Minimising frames and then restoring them leads to the frame not
+    being drawn properly; it looks like 'drawRect' is invoked (as
+    expected), but nothing to tell McCLIM to redraw the whole frame.
+    Suspect a notification is sent... needs investigation.
+
+
+--- Large output histories ---
+
+!23. Large output histories: the transformations and geometry calculations
+    go wrong when the output takes up more than 2^16 pixels; the medium
+    should be used to account for this (it does in CLX) but for some
+    reason it isn't. Can work around by changing every #x8000 in
+    UPDATE-MIRROR-GEOMETRY (see sheets.lisp in core) to #x800000 (or larger)
+    but this will fail eventually (i.e. with a large enough output
+    history), so it needs sorting properly.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 1.  Speed! The current implementation is __slow__, especially when there is a
     large output history. Paolo's stress test takes 26 seconds and conses
     16MB on my (admittedly slow) iMac compared to 1.5 seconds on a 2.4GHz
@@ -176,20 +220,14 @@ KNOWN LIMITATIONS / TODO LIST
     get everything else working first!
 
 
-5.  Mouse down / up on buttons appears not to work very well unless the frame
-    containing the buttons is the only active frame.
-    Actually, this ^^^ seems to work fine, but the highlighting for button
-    gadgets looks screwy under OS X.
-    (Think there is a problem with tracking rectangles not being set for
-    panes. Another alternative relates to the calculation of pointer position
-    in the MOUSE-ENTER/EXIT event generator.)
-
-
 7.  Keyboard events are not handled "properly" as far as any OS X user will
     be concerned; only the ASCII characters are recognised, along with
     simple modifiers. It's enough to enter commands and edit the command via
     Emacs-like CTRL-B (backward char), CTRL-F (forward char), CTRL-A (start
     of line), CTRL-E (end of line), CTRL-D (delete char).
+
+    Suspect some changes to McCLIM core will be needed before this stuff
+    can be supported 'properly'.
 
 
 8.  There is no +flipping-ink+ implementation. Anything drawn in flipping
@@ -205,36 +243,6 @@ KNOWN LIMITATIONS / TODO LIST
 12. There's some debug output remaining in some corner cases.
 
 
-15. Popup menus don't work quite the same way as they do in the CLX back
-    end. Cocoa doesn't support pointer grabbing so disposing of menus when
-    the mouse pointer moves off them doesn't work in Beagle (either choose
-    a command, or mouse-click on a different window to get rid of them).
-    Additionally, highlighting the menu item the mouse is currently over
-    is rather intermittent, although the correct menu item appears to always
-    be chosen on mouse-click (related to the same tracking rectangle issue
-    mentioned in (5)?).
-
-
-16. Windows are put on screen very early in the realization process which
-    wasn't a bad thing during early development (could see how far through
-    things got before blowing up) but now it just looks messy.
-
-
-19. Menus don't work in CLIM-FIG (or anywhere else!). No idea why not...
-    This is because (I think) the menu popups don't operate in a flipped
-    coord system (unlike NSViews). [Command menu that is drawn across
-    top of window has 'child menus' drawn in bottom-left corner of screen)
-
-    TODO: make use of graft native transformation to flip coords rather
-          than the NSView 'isFlipped' method?
-
-
-21. Highlighting on mouse overs isn't quite right; artefacts are left on the
-    display after the mouse has moved out of the target object bounding
-    rectangle (most easily visible in CLIM-FIG again, and also in the
-    directory view of the Listener (look at the highlighting of the images).
-
-
 22. Sending key-down / key-up events for modifiers-changed events doesn't
     look to help get the pointer documentation pane to show the correct
     prompt. For example, in the Listener, issue a 'help commands' and
@@ -244,24 +252,6 @@ KNOWN LIMITATIONS / TODO LIST
     moves again is the PDP redisplayed correctly, with 's-L: Describe
     Presentation'.
     Need to check CLX implementation to see if this is the same...
-
-
-23. Large output histories: the transformations and geometry calculations
-    go wrong when the output takes up more than 2^16 pixels; the medium
-    should be used to account for this (it does in CLX) but for some
-    reason it isn't. Can work around by changing every #x8000 in
-    UPDATE-MIRROR-GEOMETRY (see sheets.lisp in core) to #x800000 (or larger)
-    but this will fail eventually (i.e. with a large enough output
-    history), so it needs sorting properly.
-
-
-24. Testing + further work on patterns and stencils.
-
-
-26. Minimising frames and then restoring them leads to the frame not
-    being drawn properly; it looks like 'drawRect' is invoked (as
-    expected), but nothing to tell McCLIM to redraw the whole frame.
-    Suspect a notification is sent... needs investigation.
 
 
 27. Since key focus handling was implemented, closing apps often lands
@@ -373,12 +363,51 @@ FIXED STUFF PREVIOUSLY ON THE KNOWN LIMITATIONS / TODO LIST
     objects once they go out of scope. At least, I think (and hope) that's
     the reason 'cause that's easy to fix. RESOLVED 17.JUL.04
 
+-15.- Popup menus don't work quite the same way as they do in the CLX back
+    end. Cocoa doesn't support pointer grabbing so disposing of menus when
+    the mouse pointer moves off them doesn't work in Beagle (either choose
+    a command, or mouse-click on a different window to get rid of them).
+    Additionally, highlighting the menu item the mouse is currently over
+    is rather intermittent, although the correct menu item appears to always
+    be chosen on mouse-click (related to the same tracking rectangle issue
+    mentioned in (5)?).
+
+    Further observation; if the right button is held down whilst moving
+    around the popup, the bounding rects are drawn properly. It's only
+    intermittent if the right mouse button is released. Not sure if this
+    makes sense... (note: right-click to bring menu up, the right click
+    again and 'drag' to get menu highlighting working). Not sure if this
+    is because the menu frames don't process mouse moved events properly.
+    Could be.
+
+
+-16.- Windows are put on screen very early in the realization process which
+    wasn't a bad thing during early development (could see how far through
+    things got before blowing up) but now it just looks messy.
+
+    This is now resolved for application frames (put up when ENABLE-FRAME
+    is invoked) but not for menu panes (since ENABLE-FRAME appears not
+    to be invoked at all for them). Resolved (kind-of) for menu frames too
+    now; these are put up during the ADOPT-FRAME functionality.
+
+    Drawing is still rather messy though, more investigation needed.
+
+
 -17.- *BEAGLE-DEFAULT-FRAME-MANAGER* should be replaced with the standard
     *DEFAULT-FRAME-MANAGER* instead.
     FIXED 17.MAY.2005 - *beagle-default-frame-manager* is no more (well...
     it's still there but it can be ignored to all intents and purposes).
 
 -18.- Note about force-quit; appended to (5).
+
+-19.- Menus don't work in CLIM-FIG (or anywhere else!). No idea why not...
+    This is because (I think) the menu popups don't operate in a flipped
+    coord system (unlike NSViews). [Command menu that is drawn across
+    top of window has 'child menus' drawn in bottom-left corner of screen]
+
+    TODO: make use of graft native transformation to flip coords rather
+          than the NSView 'isFlipped' method?
+
 
 -20.- Bounding rectangles are slightly off (this can be seen in CLIM-FIG again).
     It's only a matter of a pixel, maybe 2 in the worst case I've seen.

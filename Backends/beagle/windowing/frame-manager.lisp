@@ -120,53 +120,63 @@ and feel for McCLIM. If any pane types are not implemented for Beagle / Aqua, th
       (setf (slot-value frame 'climi::left) (decf (pref mouse-location :<NSP>oint.x) 10)
             (slot-value frame 'climi::top)  (incf (pref mouse-location :<NSP>oint.y) 10)))))
 
-;;; Only display the windows after they are mapped / should be mapped. Once these are
-;;; working, should be able to remove instances of 'make-key-and-order-front from
-;;; the mirror code.
 
 (defmethod adopt-frame :after ((fm beagle-standard-frame-manager) (frame menu-frame))
   (declare (ignore fm))
 ;;  (format *debug-io* "Entered adopt-frame :after for frame ~a~%" frame)
   (when (sheet-enabled-p (slot-value frame 'top-level-sheet))
     (send (send (sheet-direct-mirror (slot-value frame 'top-level-sheet)) 'window)
-	  :order-front nil)))  ; <- just :order-front?
+	  :make-key-and-order-front nil)))  ; <- just :order-front?
 
+#+nil
 (defmethod adopt-frame :after ((fm beagle-standard-frame-manager) (frame application-frame))
   (declare (ignore fm))
-;;  (format *debug-io* "Entered adopt-frame :after for frame ~a~%" frame)
-  (let ((sheet (slot-value frame 'top-level-sheet)))
-    (let* ((top-level-sheet (frame-top-level-sheet frame))
-	   (mirror (sheet-direct-mirror top-level-sheet)))
-      (multiple-value-bind (w h x y) (climi::frame-geometry* frame)
-	(declare (ignore w h))
-	(when (and x y)
-	  (let ((point (ccl::make-ns-point (coerce x 'short-float) (coerce y 'short-float))))
-	    (send (send mirror 'window) :set-frame-top-left-point point)
-	    (#_free point))))
-      (when (sheet-enabled-p sheet)
-	(send (send mirror 'window) :make-key-and-order-front nil)))))
+  (let* ((top-level-sheet (frame-top-level-sheet frame))
+	 (mirror (sheet-direct-mirror top-level-sheet)))
+    (multiple-value-bind (w h x y) (climi::frame-geometry* frame)
+      (declare (ignore w h))
+      (when (and x y)
+	(let ((point (ccl::make-ns-point (coerce x 'short-float) (coerce y 'short-float))))
+	  (send (send mirror 'window) :set-frame-top-left-point point)
+	  (#_free point))))))
+
 
 (defmethod adopt-frame :after ((fm beagle-aqua-frame-manager) (frame menu-frame))
   (declare (ignore fm))
 ;;  (format *debug-io* "Entered adopt-frame :after for frame ~a~%" frame)
   (when (sheet-enabled-p (slot-value frame 'top-level-sheet))
     (send (send (sheet-direct-mirror (slot-value frame 'top-level-sheet)) 'window)
-	  :order-front nil)))  ; <- just :order-front?
+	  :make-key-and-order-front nil)))  ; <- just :order-front?
 
+#+nil
 (defmethod adopt-frame :after ((fm beagle-aqua-frame-manager) (frame application-frame))
   (declare (ignore fm))
-;;  (format *debug-io* "Entered adopt-frame :after for frame ~a~%" frame)
-  (let ((sheet (slot-value frame 'top-level-sheet)))
-    (let* ((top-level-sheet (frame-top-level-sheet frame))
-	   (mirror (sheet-direct-mirror top-level-sheet)))
-      (multiple-value-bind (w h x y) (climi::frame-geometry* frame)
-	(declare (ignore w h))
-	(when (and x y)
-	  (let ((point (ccl::make-ns-point (coerce x 'short-float) (coerce y 'short-float))))
-;;	  (format *debug-io* "Setting frame top left point to (~a, ~a)~%" x y)
-	    (send (send mirror 'window) :set-frame-top-left-point point))))
-      (when (sheet-enabled-p sheet)
-	(send (send mirror 'window) :make-key-and-order-front nil)))))
+  (let* ((top-level-sheet (frame-top-level-sheet frame))
+	 (mirror (sheet-direct-mirror top-level-sheet)))
+    (multiple-value-bind (w h x y) (climi::frame-geometry* frame)
+      (declare (ignore w h))
+      (when (and x y)
+	(let ((point (ccl::make-ns-point (coerce x 'short-float) (coerce y 'short-float))))
+;;;	  (format *debug-io* "Setting frame top left point to (~a, ~a)~%" x y)
+	  (send (send mirror 'window) :set-frame-top-left-point point))))))
+
+
+;;; Will this method be invoked for all frame types? E.g. what if we have CLX + Beagle
+;;; frame managers? Will this method be invoked for both? Need to run a test...
+
+;;; Aargh, menu frames go through a different path... ENABLE-FRAME is not invoked
+;;; for them :-(
+(defmethod enable-frame :after (frame)
+  (declare (special *beagle-port*))
+  ;; How to get the frame manager for the frame? (frame-manager frame) [might be
+  ;; needed if we do indeed need to differentiate between CLX fm and Beagle fm].
+  ;; A better solution might be to introduce a BEAGLE-FRAME and a CLX-FRAME type.
+;;;  (format *trace-output* "Entered ENABLE-FRAME with frame = ~a~%" frame)
+  (let* ((sheet  (frame-top-level-sheet frame))
+	 (window (send (port-lookup-mirror *beagle-port* sheet) 'window)))
+    (unless (send window 'is-key-window)
+      (send window :make-key-and-order-front nil))))
+
 
 ;;; Override 'pointer-tracking.lisp' method of the same name since we *don't* do pointer tracking;
 ;;; should fix this properly in the future at which time we should be able to remove this.
