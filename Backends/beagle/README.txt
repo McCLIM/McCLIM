@@ -146,6 +146,8 @@ KNOWN LIMITATIONS / TODO LIST
     to do with McCLIM not understanding where the pointer is, or something to
     do with tracking-pointer.
 
+    (Doesn't appear to be anything to do with tracking pointer...)
+
 
 !21. Highlighting on mouse overs isn't quite right; artefacts are left on the
     display after the mouse has moved out of the target object bounding
@@ -274,6 +276,14 @@ KNOWN LIMITATIONS / TODO LIST
     long-lived operation (generating a big graph, for example), some of
     those events are 'trapped' in the queue until other events take place.
     Looking at the code, I don't think this should happen... (but it does).
+
+
+30. Event handling over 'drop down' menus is strange; after clicking on the
+    menu name, all events appear to be blocked until the mouse button is
+    released (no drag events or anything). After release, the events are
+    processed (but then it's too late, the menu is gone). Note that this is
+    *nothing* to do with tracking pointer, which appears not to be used in
+    drop down menus (only popup menus, which work, more or less).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

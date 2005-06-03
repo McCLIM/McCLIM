@@ -28,7 +28,7 @@
 
 #||
 
-$Id: events.lisp,v 1.6 2005/05/29 09:55:39 drose Exp $
+$Id: events.lisp,v 1.7 2005/06/03 21:33:09 drose Exp $
 
 Events in Cocoa
 ---------------
@@ -70,6 +70,13 @@ enter / exit or button press / release) is handled.")
 coordinate system of the NSView it is currently over. Reset whenever a 'real'
 pointer event (mouse-move, mouse-drag, enter / exit or button press / release)
 is handled.")
+
+
+(defparameter *grabber-sheets-list* nil
+  "Contains a push-down list containing all sheets that have 'grabbed' the
+pointer; the head of the list is the most recent 'grabber' to whom events
+should be dispatched. If the list is empty, the 'usual' dispatch mechanism
+is used.")
 
 
 (defvar *keysym-hash-table*
@@ -809,16 +816,31 @@ not a mouse event)."
 
 
 (defmethod port-grab-pointer ((port beagle-port) pointer sheet)
-  (declare (ignore port pointer sheet))
-  (warn "events:port-grab-pointer:Pointer grabbing not implemented in Cocoa backend")
-  nil)
+  (declare (ignore port pointer)
+	   (special *grabber-sheets-list*))
+  (push sheet *grabber-sheets-list*)
+  sheet)
 
 
 (defmethod port-ungrab-pointer ((port beagle-port) pointer sheet)
-  (declare (ignore port pointer sheet))
-  (warn "events:port-ungrab-pointer:Pointer grabbing not implemented in Cocoa backend")
-  nil)
+  (declare (ignore port pointer sheet)
+	   (special *grabber-sheets-list*))
+  ;; We *should* remove the last instance of the sheet provided to
+  ;; be pushed onto *grabber-sheets-list* I think, but instead just
+  ;; pop.
+  (when *grabber-sheets-list*
+    (pop *grabber-sheets-list*)))
 
+
+;;; Hrm. Do we use the 'distribute-event :around' method like CLX,
+;;; or make use of *grabber-sheets-list* directly in the event
+;;; generation code? For now, follow CLX' lead.
+(defmethod distribute-event :around ((port beagle-port) event)
+  (declare (ignore port)
+	   (special *grabber-sheets-list*))
+  (if *grabber-sheets-list*
+      (queue-event (first *grabber-sheets-list*) event)
+    (call-next-method)))
 
 (defun characters-to-key-name (ns-string-characters-in)
 ;;;  (format *terminal-io* "Processing ~S~%" ns-string-characters-in)
