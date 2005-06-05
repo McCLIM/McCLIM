@@ -24,6 +24,8 @@
 
 (in-package :MCCLIM-FREETYPE)
 
+(declaim (optimize (speed 3) (safety 3) (debug 1) (space 3)))
+
 ;;;; Notes
 
 ;; You might need to tweak mcclim-freetype::*families/faces* to point
@@ -33,71 +35,64 @@
   ((lib :initarg :lib)
    (filename :initarg :filename)))
 
-(defclass concrete-font (climi::device-font-text-style)
-  ((lib :initarg :lib)
-   (face :initarg :face)
-   (im-cache :initform (make-hash-table :test #'equal))
-   (ascent :initform nil)
-   (descent :initform nil)
-   ))
-
 (defun make-vague-font (filename)
   (make-instance 'vague-font
-                 :lib (let ((libf (alien:make-alien freetype:library)))
-                       (freetype:init-free-type libf)
-                       (alien:deref libf))
+                 :lib (let ((libf (make-alien freetype:library)))
+                        (declare (type (alien (* freetype:library)) libf))
+                        (freetype:init-free-type libf)
+                        (deref libf))
                  :filename filename))
 
 (defparameter *dpi* 72)
 
-(defmethod make-concrete-font ((vague-font vague-font) size &key (dpi *dpi*))
-  (let (face)
-    (with-slots (lib filename) vague-font
-      (setf face
-            (let ((facef (alien:make-alien freetype:face)))
-             (freetype:new-face lib filename 0 facef)
-             (alien:deref facef)))
-      (freetype:set-char-size face 0 (round (* size 64)) (round dpi) (round dpi))
-      (make-instance 'concrete-font :lib lib :face face))))
+(defun make-concrete-font (vague-font size &key (dpi *dpi*))
+  (with-slots (lib filename) vague-font
+              (let ((facef (make-alien freetype:face)))
+                (declare (type (alien (* freetype:face)) facef))
+                (freetype:new-face lib filename 0 facef)
+                (let ((face (deref facef)))
+                  (declare (type (alien freetype:face) face))
+                  (freetype:set-char-size face 0 (round (* size 64)) (round dpi) (round dpi))
+                  face))))
 
-(defmethod glyph-pixarray ((font concrete-font) char)
-  (declare (optimize (speed 3) (safety 0))
-           (inline freetype:load-glyph freetype:render-glyph))
-  (with-slots (face im-cache) font
-    (declare (type (alien:alien freetype:face) face))
-    (freetype:load-glyph face (freetype:get-char-index face (char-code char)) 0)
-    (freetype:render-glyph (alien:slot face 'freetype:glyph) 0)
-    (let* ((glyph (alien:slot face 'freetype:glyph))
-           (bm (alien:slot glyph 'freetype:bitmap)))
-      (declare (type (alien:alien freetype:bitmap) bm)
-               (type (alien:alien freetype:glyph-slot) glyph))
-      (let* ((width  (alien:slot bm 'freetype:width))
-             (pitch  (alien:slot bm 'freetype:pitch))
-             (height (alien:slot bm 'freetype:rows))
-             (res    (make-array (list height width) :element-type '(unsigned-byte 8))))
-        (declare (type (simple-array (unsigned-byte 8) (* *)) res))
-        (let ((m (* width height)))
-          (locally
-              (declare (optimize (speed 3) (safety 0)))
-            (loop for y*width of-type fixnum below m by width 
-                  for y*pitch of-type fixnum from 0 by pitch do
-                  (loop for x of-type fixnum below width do
-                        (setf (row-major-aref res (+ x y*width))
-                              (alien:deref (alien:slot bm 'freetype:buffer) (+ x y*pitch)))))))
-        (values
-         res
-         (alien:slot glyph 'freetype:bitmap-left)
-         (alien:slot glyph 'freetype:bitmap-top)
-         (/ (alien:slot (alien:slot glyph 'freetype:advance) 'freetype:x) 64)
-         (/ (alien:slot (alien:slot glyph 'freetype:advance) 'freetype:y) 64))))))
+(declaim (inline make-concrete-font))
 
-(defmethod glyph-advance ((font concrete-font) char)
-  (with-slots (face) font
-    (freetype:load-glyph face (freetype:get-char-index face (char-code char)) 0)
-    (let* ((glyph (alien:slot face 'freetype:glyph)))
+(defun glyph-pixarray (face char)
+  (declare (optimize (speed 3) (safety 3) (debug 1))
+           (inline freetype:load-glyph freetype:render-glyph)
+           (type (alien freetype:face) face))
+  (freetype:load-glyph face (freetype:get-char-index face (char-code char)) 0)
+  (freetype:render-glyph (slot face 'freetype:glyph) 0)
+  (symbol-macrolet
+      ((glyph (slot face 'freetype:glyph))
+       (bm (slot glyph 'freetype:bitmap)))
+    (let* ((width  (slot bm 'freetype:width))
+           (pitch  (slot bm 'freetype:pitch))
+           (height (slot bm 'freetype:rows))
+           (buffer (slot bm 'freetype:buffer))
+           (res    (make-array (list height width) :element-type '(unsigned-byte 8))))
+      (declare (type (simple-array (unsigned-byte 8) (* *)) res))
+      (let ((m (* width height)))
+        (locally
+            (declare (optimize (speed 3) (safety 0)))
+          (loop for y*width of-type fixnum below m by width 
+                for y*pitch of-type fixnum from 0 by pitch do
+                (loop for x of-type fixnum below width do
+                      (setf (row-major-aref res (+ x y*width))
+                            (deref buffer (+ x y*pitch)))))))
       (values
-       (/ (alien:slot (alien:slot glyph 'freetype:advance) 'freetype:x) 64)
-       (/ (alien:slot (alien:slot glyph 'freetype:advance) 'freetype:y) 64)))))
+       res
+       (slot glyph 'freetype:bitmap-left)
+       (slot glyph 'freetype:bitmap-top)
+       (/ (slot (slot glyph 'freetype:advance) 'freetype:x) 64)
+       (/ (slot (slot glyph 'freetype:advance) 'freetype:y) 64)))))
+
+(defun glyph-advance (face char)
+  (freetype:load-glyph face (freetype:get-char-index face (char-code char)) 0)
+  (let* ((glyph (slot face 'freetype:glyph)))
+    (values
+     (/ (slot (slot glyph 'freetype:advance) 'freetype:x) 64)
+     (/ (slot (slot glyph 'freetype:advance) 'freetype:y) 64))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -243,15 +238,16 @@
               (let* ((f.font (or (gethash font *font-hash*)
                                  (setf (gethash font *font-hash*)
                                        (make-vague-font font))))
-                     (f (slot-value (make-concrete-font f.font size) 'face)))
+                     (f (make-concrete-font f.font size)))
+                (declare (type (alien freetype:face) f))
                 (make-instance 'freetype-face
                                :display display
                                :font font
                                :matrix size
-                               :ascent  (/ (alien:slot (alien:slot (alien:slot f 'freetype:size) 'freetype:metrics) 'freetype:ascender) 64)
-                               :descent (/ (alien:slot (alien:slot (alien:slot f 'freetype:size) 'freetype:metrics) 'freetype:descender) -64)))))))
+                               :ascent  (/ (slot (slot (slot f 'freetype:size_s) 'freetype:metrics) 'freetype:ascender) 64)
+                               :descent (/ (slot (slot (slot f 'freetype:size_s) 'freetype:metrics) 'freetype:descender) -64)))))))
 
-(defparameter mcclim-freetype::*sizes*
+(defparameter *sizes*
   '(:normal 12
     :small 10
     :very-small 8
@@ -260,22 +256,26 @@
     :very-large 18
     :huge 24))
 
-(defparameter mcclim-freetype::*families/faces*
-  '(((:fix :roman) . "/usr/local/lib/fonts/microsoft/cour.ttf")
-    ((:fix :italic) . "/usr/local/lib/fonts/microsoft/couri.ttf")
-    ((:fix :bold-italic) . "/usr/local/lib/fonts/microsoft/courbi.ttf")
-    ((:fix :italic-bold) . "/usr/local/lib/fonts/microsoft/courbi.ttf")
-    ((:fix :bold) . "/usr/local/lib/fonts/microsoft/courbd.ttf")
-    ((:serif :roman) . "/usr/local/lib/fonts/microsoft/times.ttf")
-    ((:serif :italic) . "/usr/local/lib/fonts/microsoft/timesi.ttf")
-    ((:serif :bold-italic) . "/usr/local/lib/fonts/microsoft/timesbi.ttf")
-    ((:serif :italic-bold) . "/usr/local/lib/fonts/microsoft/timesbi.ttf")
-    ((:serif :bold) . "/usr/local/lib/fonts/microsoft/timesbd.ttf")
-    ((:sans-serif :roman) . "/usr/local/lib/fonts/microsoft/verdana.ttf")
-    ((:sans-serif :italic) . "/usr/local/lib/fonts/microsoft/verdanai.ttf")
-    ((:sans-serif :bold-italic) . "/usr/local/lib/fonts/microsoft/verdanaz.ttf")
-    ((:sans-serif :italic-bold) . "/usr/local/lib/fonts/microsoft/verdanaz.ttf")
-    ((:sans-serif :bold) . "/usr/local/lib/fonts/microsoft/verdanab.ttf")))
+(defparameter *families/faces*
+  '(((:fix :roman) . "VeraMono.ttf")
+    ((:fix :italic) . "VeraMoIt.ttf")
+    ((:fix :bold-italic) . "VeraMoBI.ttf")
+    ((:fix :italic-bold) . "VeraMoBI.ttf")
+    ((:fix :bold) . "VeraMoBd.ttf")
+    ((:serif :roman) . "VeraSe.ttf")
+    ((:serif :italic) . "VeraSe.ttf")
+    ((:serif :bold-italic) . "VeraSeBd.ttf")
+    ((:serif :italic-bold) . "VeraSeBd.ttf")
+    ((:serif :bold) . "VeraSeBd.ttf")
+    ((:sans-serif :roman) . "Vera.ttf")
+    ((:sans-serif :italic) . "VeraIt.ttf")
+    ((:sans-serif :bold-italic) . "VeraBI.ttf")
+    ((:sans-serif :italic-bold) . "VeraBI.ttf")
+    ((:sans-serif :bold) . "VeraBd.ttf")))
+
+(defvar *freetype-font-path*)
+
+(fmakunbound 'clim-clx::text-style-to-x-font)
 
 (defmethod clim-clx::text-style-to-X-font :around ((port clim-clx::clx-port) text-style)
   (multiple-value-bind (family face size) (clim:text-style-components text-style)
@@ -283,11 +283,12 @@
     (setf size (or size :normal))
     (cond (size
            (setf size (getf *sizes* size size))
-           (let ((q (cdr (assoc (list family face) *families/faces*
-                                :test #'equal))))
-             (if q
+           (let* ((font-path-relative (cdr (assoc (list family face) *families/faces*
+                                         :test #'equal)))
+                  (font-path (namestring (merge-pathnames font-path-relative *freetype-font-path*))))
+             (if (and font-path (probe-file font-path))
                  (make-free-type-face (slot-value port 'clim-clx::display)
-                                      q
+                                      font-path
                                       size)
                  (call-next-method))))
           (t
@@ -468,3 +469,10 @@
       (clim:with-drawing-options (m :clipping-region r)
         (clim:draw-design m r :ink clim:+background-ink+)
         (call-next-method s r)))))
+
+(format t
+"~%~%NOTE:~%~
+* Remember to set mcclim-freetype:*freetype-font-path* to the
+  location of the Bitstream Vera family of fonts on disk. If you
+  don't have them, get them from http://www.gnome.org/fonts/~%~%~%")
+(finish-output t)
