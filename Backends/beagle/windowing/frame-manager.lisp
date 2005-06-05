@@ -23,59 +23,41 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
+
 (in-package :beagle)
 
-#||
-
-Each frame manager type is associated with a port; and may manage multiple frames.
-In the cocoa world, a frame *is* an "NSWindow" (or an object mapping an NSWindow
-at least).
-
-   +---------------+
-   | FRAME-MANAGER |
-   +---------------+
-   |port           |
-   |frames         |
-   +---------------+
-           ^
-           |
- +---------------------+
- | BEAGLE-FRAME-MANAGER |
- +---------------------+
-
-The different kinds of frames we need to manage at the moment are:
-
-  1. (STANDARD-)APPLICATION-FRAME
-  2. MENU-FRAME
-
-This makes sense, even for cocoa.
-
-How do we then find a _different_ frame manager to adopt our sheets (say we want to implement a totally
-different look and feel, or want to embed the sheet hierarchy in an existing window, etc.)?
-
-||#
 
 (defclass beagle-standard-frame-manager (frame-manager) ()
   (:documentation "Frame manager for Beagle back end that provides the ``cross platform'' McCLIM
 look and feel"))
+
 
 (defclass beagle-aqua-frame-manager (frame-manager) ()
   (:documentation "Frame manager for Beagle back end that provides Apple's Aqua look
 and feel for McCLIM. If any pane types are not implemented for Beagle / Aqua, the
 ``cross platform'' look and feel will be used."))
 
-;;; This is an example of how make-pane-1 might create specialized instances of the generic pane types
-;;; based upon the type of the frame-manager. Unlike in the CLX case, we *do* expect there to be Beagle
-;;; specific panes (eventually!).
-(defmethod make-pane-1 ((fm beagle-aqua-frame-manager) (frame application-frame) type &rest args)
+
+;;; This is an example of how make-pane-1 might create specialized instances of the
+;;; generic pane types based upon the type of the frame-manager. Unlike in the CLX
+;;; case, we *do* expect there to be Beagle specific panes (eventually!).
+(defmethod make-pane-1 ((fm beagle-aqua-frame-manager)
+			(frame application-frame)
+			type
+			&rest args)
   (apply #'make-instance
 	 (or (find-symbol (concatenate 'string
-				       (symbol-name '#:beagle-) (symbol-name type))
+				       (symbol-name '#:beagle-)
+				       (symbol-name type))
 			  :beagle)
 	     (find-symbol (concatenate 'string
-				       (symbol-name '#:beagle-) (symbol-name type) (symbol-name '#:-pane))
+				       (symbol-name '#:beagle-)
+				       (symbol-name type)
+				       (symbol-name '#:-pane))
 			  :beagle)
-	     (find-symbol (concatenate 'string (symbol-name type) (symbol-name '#:-pane))
+	     (find-symbol (concatenate 'string
+				       (symbol-name type)
+				       (symbol-name '#:-pane))
 			  :climi)
 	     type)
 	 :frame frame
@@ -83,13 +65,12 @@ and feel for McCLIM. If any pane types are not implemented for Beagle / Aqua, th
 	 :port (port frame)
 	 args))
 
+
 ;;; We must implement this method to ensure the menu-frame has its top + left slots set.
 (defmethod adopt-frame :before ((fm beagle-aqua-frame-manager) (frame menu-frame))
-;;;  (format *debug-io* "frame-manager.lisp: ::FIXME:: -> ADOPT-FRAME :before (fm:~S frame:~S)~%" fm frame)
   ;; Temporary kludge.
   (when (eq (slot-value frame 'climi::top) nil)
     (slet ((mouse-location (send (@class ns-event) 'mouse-location)))
-      ;; Use CLX hackish 10-pixel offset... for now.
       (setf (slot-value frame 'climi::left) (decf (pref mouse-location :<NSP>oint.x) 10)
             (slot-value frame 'climi::top)  (incf (pref mouse-location :<NSP>oint.y) 10)))))
 
@@ -100,9 +81,14 @@ and feel for McCLIM. If any pane types are not implemented for Beagle / Aqua, th
 ;;; (and other?) back ends.
 
 ;;; Don't even check for beagle-* panes we don't want to find them.
-(defmethod make-pane-1 ((fm beagle-standard-frame-manager) (frame application-frame) type &rest args)
+(defmethod make-pane-1 ((fm beagle-standard-frame-manager)
+			(frame application-frame)
+			type
+			&rest args)
   (apply #'make-instance
-	 (or (find-symbol (concatenate 'string (symbol-name type) (symbol-name '#:-pane))
+	 (or (find-symbol (concatenate 'string
+				       (symbol-name type)
+				       (symbol-name '#:-pane))
 			  :climi)
 	     type)
 	 :frame frame
@@ -110,55 +96,28 @@ and feel for McCLIM. If any pane types are not implemented for Beagle / Aqua, th
 	 :port (port frame)
 	 args))
 
+
 ;;; We must implement this method to ensure the menu-frame has its top + left slots set.
 (defmethod adopt-frame :before ((fm beagle-standard-frame-manager) (frame menu-frame))
-;;;  (format *debug-io* "frame-manager.lisp: ::FIXME:: -> ADOPT-FRAME :before (fm:~S frame:~S)~%" fm frame)
   ;; Temporary kludge.
   (when (eq (slot-value frame 'climi::top) nil)
     (slet ((mouse-location (send (@class ns-event) 'mouse-location)))
-      ;; Use CLX hackish 10-pixel offset... for now.
       (setf (slot-value frame 'climi::left) (decf (pref mouse-location :<NSP>oint.x) 10)
             (slot-value frame 'climi::top)  (incf (pref mouse-location :<NSP>oint.y) 10)))))
 
 
 (defmethod adopt-frame :after ((fm beagle-standard-frame-manager) (frame menu-frame))
   (declare (ignore fm))
-;;  (format *debug-io* "Entered adopt-frame :after for frame ~a~%" frame)
   (when (sheet-enabled-p (slot-value frame 'top-level-sheet))
     (send (send (sheet-direct-mirror (slot-value frame 'top-level-sheet)) 'window)
 	  :make-key-and-order-front nil)))  ; <- just :order-front?
-
-#+nil
-(defmethod adopt-frame :after ((fm beagle-standard-frame-manager) (frame application-frame))
-  (declare (ignore fm))
-  (let* ((top-level-sheet (frame-top-level-sheet frame))
-	 (mirror (sheet-direct-mirror top-level-sheet)))
-    (multiple-value-bind (w h x y) (climi::frame-geometry* frame)
-      (declare (ignore w h))
-      (when (and x y)
-	(let ((point (ccl::make-ns-point (coerce x 'short-float) (coerce y 'short-float))))
-	  (send (send mirror 'window) :set-frame-top-left-point point)
-	  (#_free point))))))
 
 
 (defmethod adopt-frame :after ((fm beagle-aqua-frame-manager) (frame menu-frame))
   (declare (ignore fm))
-;;  (format *debug-io* "Entered adopt-frame :after for frame ~a~%" frame)
   (when (sheet-enabled-p (slot-value frame 'top-level-sheet))
     (send (send (sheet-direct-mirror (slot-value frame 'top-level-sheet)) 'window)
 	  :make-key-and-order-front nil)))  ; <- just :order-front?
-
-#+nil
-(defmethod adopt-frame :after ((fm beagle-aqua-frame-manager) (frame application-frame))
-  (declare (ignore fm))
-  (let* ((top-level-sheet (frame-top-level-sheet frame))
-	 (mirror (sheet-direct-mirror top-level-sheet)))
-    (multiple-value-bind (w h x y) (climi::frame-geometry* frame)
-      (declare (ignore w h))
-      (when (and x y)
-	(let ((point (ccl::make-ns-point (coerce x 'short-float) (coerce y 'short-float))))
-;;;	  (format *debug-io* "Setting frame top left point to (~a, ~a)~%" x y)
-	  (send (send mirror 'window) :set-frame-top-left-point point))))))
 
 
 ;;; Will this method be invoked for all frame types? E.g. what if we have CLX + Beagle
@@ -171,10 +130,8 @@ and feel for McCLIM. If any pane types are not implemented for Beagle / Aqua, th
   ;; How to get the frame manager for the frame? (frame-manager frame) [might be
   ;; needed if we do indeed need to differentiate between CLX fm and Beagle fm].
   ;; A better solution might be to introduce a BEAGLE-FRAME and a CLX-FRAME type.
-;;;  (format *trace-output* "Entered ENABLE-FRAME with frame = ~a~%" frame)
   (let* ((sheet  (frame-top-level-sheet frame))
 	 (window (send (port-lookup-mirror *beagle-port* sheet) 'window)))
     (unless (send window 'is-key-window)
       (send window :make-key-and-order-front nil))))
-
 

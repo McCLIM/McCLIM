@@ -99,45 +99,105 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun %beagle-make-plain-frame (screen rect)
-  (let* ((window     (make-instance 'lisp-window))
-	 (style-mask #$NSBorderlessWindowMask)
-	 (delegate   (make-instance 'lisp-window-delegate)))
+;;; Event masks for the different pane types we realize in Beagle. Defined
+;;; here for easy comparison (and it makes the code a *little* clearer I
+;;; think).
+
+
+;;; Group Cocoa events together to give 'event groupings'.
+(defconstant +key-events+ (logior #$NSKeyDownMask #$NSKeyUpMask))
+
+(defconstant +mouse-motion-events+ (logior #$NSMouseMovedMask
+					   #$NSLeftMouseDraggedMask
+					   #$NSRightMouseDraggedMask
+					   #$NSOtherMouseDraggedMask))
+
+(defconstant +mouse-button-events+ (logior #$NSLeftMouseDownMask
+					   #$NSRightMouseDownMask
+					   #$NSOtherMouseDownMask
+					   #$NSLeftMouseUpMask
+					   #$NSRightMouseUpMask
+					   #$NSOtherMouseUpMask))
+
+(defconstant +enter-exit-events+ (logior #$NSMouseEnteredMask #$NSMouseExitedMask))
+
+(defconstant +scroll-wheel-events+ #$NSScrollWheelMask)
+
+(defconstant +ignores-events+ 0)
+
+
+;;; Define which 'event groups' specific sheet types are interested in.
+;;; ::TODO:: define more of these; prevent as many sheets as possible
+;;;          from responding to events (particularly layout panes, like
+;;; vrack-pane etc.)
+(defconstant +border-pane-event-mask+ +ignores-events+)
+
+(defconstant +menu-button-pane-event-mask+ (logior +key-events+
+						   +mouse-button-events+
+						   +enter-exit-events+
+						   +mouse-motion-events+
+						   +scroll-wheel-events+))
+
+(defconstant +clim-stream-pane-event-mask+ (logior +key-events+
+						   +mouse-button-events+
+						   +enter-exit-events+
+						   +mouse-motion-events+
+						   +scroll-wheel-events+))
+
+(defconstant +mirrored-sheet-mixin-event-mask+ (logior +key-events+
+						       +mouse-button-events+
+						       +enter-exit-events+
+						       +mouse-motion-events+
+						       +scroll-wheel-events+))
+
+(defconstant +top-level-sheet-pane-event-mask+ +ignores-events+)
+
+(defconstant +unmanaged-top-level-sheet-pane-event-mask+ +ignores-events+)
+
+
+;;; Define window style masks for the two types of window used currently
+;;; in Beagle.
+(defconstant +decorated-window-style-mask+ (logior #$NSTitledWindowMask
+						   #$NSClosableWindowMask
+						   #$NSMiniaturizableWindowMask
+						   #$NSResizableWindowMask))
+
+(defconstant +plain-window-style-mask+ #$NSBorderlessWindowMask)
+
+
+(defun %beagle-make-window (screen rect &key (name nil) (decorated t))
+"Creates a native window (NSWindow) on the screen indicated by 'screen'
+with the internal (content rectangle) bounds 'rect'. If the window is
+'decorated' (i.e. has maximise, minimise and close buttons) set the
+window name to 'name' (if 'name' is non-NIL).
+
+'rect' specifies both the internal (bounds) and external (frame) size
+for windows that are not decorated."
+  (let* ((window (make-instance 'lisp-window))
+	 (style-mask (if decorated
+			 +decorated-window-style-mask+
+		       +plain-window-style-mask+))
+	 (delegate (make-instance 'lisp-window-delegate)))
     (send window 'retain)
+    ;; Could use the following in the init form below:-
+    ;; :backing #$NSBackingStoreNonretained :defer nil
+    ;; Suspect (for popup menus) we might want a non-retained window.
     (send window :init-with-content-rect rect :style-mask style-mask
-	  ;; :backing #$NSBackingStoreNonretained :defer nil
-	  ;; Suspect (for popup menus) we want a non-retained window. Fiddle with later.
-	         :backing #$NSBackingStoreBuffered :defer nil
-		 :screen screen)
+	  :backing #$NSBackingStoreBuffered :defer nil
+	  :screen screen)
+    (when (and name decorated)
+      (send window :set-title name))
     (send window :set-accepts-mouse-moved-events #$YES)
     (send window :set-delegate delegate)
     (send window :set-released-when-closed #$YES)
     window))
 
-
-(defun %beagle-make-decorated-frame (screen rect name)
-  (let* ((window     (make-instance 'lisp-window))
-	 (style-mask (logior #$NSTitledWindowMask
-			     #$NSClosableWindowMask
-			     #$NSMiniaturizableWindowMask
-			     #$NSResizableWindowMask))
-	 (delegate   (make-instance 'lisp-window-delegate)))
-    (send window 'retain)
-    (send window :init-with-content-rect rect :style-mask style-mask
-	         :backing #$NSBackingStoreBuffered :defer nil
-		 :screen screen)
-    (send window :set-title name)
-    (send window :set-accepts-mouse-moved-events #$YES)
-    (send window :set-delegate delegate)
-    (send window :set-released-when-closed #$YES)
-    window))
-
-
+ 
 ;;; This is a nasty hack; should pick the sheet background colour up from
 ;;; the sheet medium, but since not all mirrored sheets have mediums (!!)
 ;;; that's not possible.
 ;;; Would prefer to use (medium-background sheet) instead of the following.
-(defun %beagle-desired-colour-for-sheet (sheet)
+(defun %beagle-sheet-background-colour (sheet)
   (typecase sheet
     (sheet-with-medium-mixin (medium-background sheet))
     (basic-pane
@@ -149,7 +209,7 @@
   
 
 (defun %beagle-mirror->sheet-assoc (port mirror sheet)
-  ;; Also record the view against the (McCLIM) sheet - used to look the sheet up when we get
+  ;; Record the view against the (CLIM) sheet - used to look the sheet up when we get
   ;; events which identify the view. Don't rely on 'standard' cache since it relies on 'eq
   ;; test and we need an 'eql test.
   (let ((vtable (slot-value port 'view-table)))
@@ -166,9 +226,9 @@
   ;; this (view) as the mirror and set the mirror as the NSWindow's content
   ;; view. Then all our mirrors are instances of NSView.
 
-  (when (null (port-lookup-mirror port sheet)) ; Don't create a new object if one already exists
-    (update-mirror-geometry sheet)             ; ?
-    (let* ((desired-color   (%beagle-desired-colour-for-sheet sheet))
+  (when (null (port-lookup-mirror port sheet))
+    (update-mirror-geometry sheet)
+    (let* ((desired-color   (%beagle-sheet-background-colour sheet))
 	   (frame           (pane-frame sheet))
 	   (q               (compose-space sheet))
 	   (x               0)
@@ -178,14 +238,15 @@
 	   (rect            (ccl::make-ns-rect (pixel-center x) (pixel-center y)
 					       (pixel-count width) (pixel-count height)))
 	   (name            (%make-nsstring (frame-pretty-name frame)))
-	   (top-level-frame (%beagle-make-decorated-frame (beagle-port-screen port)
-							  rect
-							  name))
+	   (top-level-frame (%beagle-make-window (beagle-port-screen port)
+						 rect
+						 :name name
+						 :decorated t))
 	   (clim-mirror     (make-instance 'lisp-view :with-frame rect)))
       (send clim-mirror 'retain)
       (send clim-mirror 'establish-tracking-rect)
       (setf (view-background-colour clim-mirror) (%beagle-pixel port desired-color))
-      (setf (view-event-mask clim-mirror) 0)
+      (setf (view-event-mask clim-mirror) +top-level-sheet-pane-event-mask+)
       (send top-level-frame :set-content-view clim-mirror)
       (port-register-mirror (port sheet) sheet clim-mirror)
       (%beagle-mirror->sheet-assoc port clim-mirror sheet)
@@ -193,15 +254,13 @@
       clim-mirror)))  ; <- (port-lookup-mirror port sheet)?
 
 
-;;; The parent of this sheet is the NSScreen...
-
 ;;; This generates the 'menu frame'; then the menu buttons themselves
 ;;; can be made a child of this unmanaged-top-level-sheet-pane. Seems a rather retarded
 ;;; way of doing it, but hey.
 (defmethod realize-mirror ((port beagle-port) (sheet unmanaged-top-level-sheet-pane))
   (when (null (port-lookup-mirror port sheet)) ; Don't create a new object if one already exists
     (update-mirror-geometry sheet)
-    (let* ((desired-color (%beagle-desired-colour-for-sheet sheet))
+    (let* ((desired-color (%beagle-sheet-background-colour sheet))
 	   (q             (compose-space sheet))
 	   (x             0)
 	   (y             0)
@@ -209,12 +268,12 @@
 	   (height        (space-requirement-height q))
 	   (rect          (ccl::make-ns-rect (pixel-center x) (pixel-center y)
 					     (pixel-count width) (pixel-count height)))
-	   (menu-frame    (%beagle-make-plain-frame (beagle-port-screen port) rect))
+	   (menu-frame    (%beagle-make-window (beagle-port-screen port) rect :decorated nil))
 	   (clim-mirror   (make-instance 'lisp-view :with-frame rect)))
 	(send clim-mirror 'retain)
 	(send clim-mirror 'establish-tracking-rect)
 	(setf (view-background-colour clim-mirror) (%beagle-pixel port desired-color))
-	(setf (view-event-mask clim-mirror) 0)
+	(setf (view-event-mask clim-mirror) +unmanaged-top-level-sheet-pane-event-mask+)
 	(send menu-frame :set-content-view clim-mirror)
 	(port-register-mirror (port sheet) sheet clim-mirror)
 	(%beagle-mirror->sheet-assoc port clim-mirror sheet)
@@ -222,10 +281,14 @@
 	clim-mirror)))
 
 
-(defun realize-mirror-aux (port sheet &key view (event-mask nil))
+(defun realize-mirror-aux (port sheet &key (view 'lisp-view) (event-mask +ignores-events+))
+  ;; Current all realized views are instances of LISP-VIEW. It's conceivable
+  ;; that in the future different native types will be used for different
+  ;; views (as was the case in the past) but this seems unlikely. Is there
+  ;; then any value to retaining the :view keyword?
   (when (null (port-lookup-mirror port sheet))
-    (update-mirror-geometry sheet)  ; Copy CLX - not convinced this is a good idea...
-    (let* ((desired-color (%beagle-desired-colour-for-sheet sheet))
+    (update-mirror-geometry sheet)
+    (let* ((desired-color (%beagle-sheet-background-colour sheet))
 	   (x             0)
 	   (y             0)
 	   (q             (compose-space sheet))
@@ -238,93 +301,37 @@
       (send mirror 'retain)
       (send mirror 'establish-tracking-rect)
       (setf (view-background-colour mirror) (%beagle-pixel port desired-color))
-      (unless event-mask (setf event-mask (logior #$NSKeyDownMask
-						  #$NSKeyUpMask
-						  #$NSLeftMouseDownMask
-						  #$NSRightMouseDownMask
-						  #$NSOtherMouseDownMask
-						  #$NSLeftMouseUpMask
-						  #$NSRightMouseUpMask
-						  #$NSOtherMouseUpMask
-						  #$NSMouseEnteredMask
-						  #$NSMouseExitedMask
-						  #$NSLeftMouseDraggedMask
-						  #$NSRightMouseDraggedMask
-						  #$NSOtherMouseDraggedMask
-						  #$NSScrollWheelMask)))
       (setf (view-event-mask mirror) event-mask)
       (port-register-mirror (port sheet) sheet mirror)
       (%beagle-mirror->sheet-assoc port mirror sheet)))
   (port-lookup-mirror port sheet))
 
-  
+
 ;; All mirrored-sheets (apart from the top-level pane) are view objects in Cocoa
-;; From CLX/port.lisp
 (defmethod realize-mirror ((port beagle-port) (sheet mirrored-sheet-mixin))
   (send (sheet-mirror (sheet-parent sheet)) :add-subview
-	              (realize-mirror-aux port sheet :view 'lisp-view)))
+	              (realize-mirror-aux port sheet
+					  :event-mask +mirrored-sheet-mixin-event-mask+)))
 
 
 (defmethod realize-mirror ((port beagle-port) (sheet border-pane))
   (send (sheet-mirror (sheet-parent sheet)) :add-subview
-		      (realize-mirror-aux port sheet :view 'lisp-view
-					  :event-mask 0)))
+		      (realize-mirror-aux port sheet :event-mask +border-pane-event-mask+)))
 
 
-;;; MENU-BUTTON-PANE appears to be the menus across the top of the window.
-;;; Not sure what the COMMAND-MENU-PANE is in that case... assume one is
-;;; the 'static' menu, and the other is the popup (possibly generated from
-;;; the former).
 (defmethod realize-mirror ((port beagle-port) (sheet menu-button-pane))
   (send (sheet-mirror (sheet-parent sheet)) :add-subview
-	(realize-mirror-aux port sheet :view 'lisp-view
-				       :event-mask (logior #$NSKeyDownMask
-							   #$NSKeyUpMask
-							   #$NSLeftMouseDownMask
-							   #$NSRightMouseDownMask
-							   #$NSOtherMouseDownMask
-							   #$NSLeftMouseUpMask
-							   #$NSRightMouseUpMask
-							   #$NSOtherMouseUpMask
-							   #$NSMouseEnteredMask
-							   #$NSMouseExitedMask
-							   #$NSScrollWheelMask))))
+	(realize-mirror-aux port sheet :event-mask +menu-button-pane-event-mask+)))
 
 
 (defmethod realize-mirror ((port beagle-port) (sheet clim-stream-pane))
   (send (sheet-mirror (sheet-parent sheet)) :add-subview
-		(realize-mirror-aux port sheet :view 'lisp-view
-					       :event-mask (logior #$NSKeyDownMask
-								   #$NSKeyUpMask
-								   #$NSLeftMouseDownMask
-								   #$NSRightMouseDownMask
-								   #$NSOtherMouseDownMask
-								   #$NSLeftMouseUpMask
-								   #$NSRightMouseUpMask
-								   #$NSOtherMouseUpMask
-								   #$NSMouseEnteredMask
-								   #$NSMouseExitedMask
-								   #$NSMouseMovedMask
-								   #$NSLeftMouseDraggedMask
-								   #$NSRightMouseDraggedMask
-								   #$NSOtherMouseDraggedMask
-								   #$NSScrollWheelMask))))
+		(realize-mirror-aux port sheet :event-mask +clim-stream-pane-event-mask+)))
 
 
 (defmethod realize-mirror ((port beagle-port) (pixmap pixmap))
   (when (null (port-lookup-mirror port pixmap))
-    ;; Ignore direct mirror of (pixmap-sheet pixmap) - appears to be CLX specific...
-    ;; -> [[NSImage alloc] initWithSize: <NSS>ize]
-;;;    (rlet ((size :<NSS>ize :width  (coerce (pixmap-width pixmap) 'short-float)
-;;;		           :height (coerce (pixmap-height pixmap) 'short-float)))
-;;;      (let ((pix (send (make-instance 'ns::ns-image :init-with-size size) 'retain)))
-;;;	(port-register-mirror port pixmap pix)))
-;;;    (values)))
-
-    (let* (;;(desired-color +white+)
-	   ;; Take the width / height from the mirror-region if there's one set, otherwise from the
-	   ;; space requirement.
-	   (width (coerce (pixmap-width pixmap) 'short-float))
+    (let* ((width  (coerce (pixmap-width pixmap) 'short-float))
 	   (height (coerce (pixmap-height pixmap) 'short-float))
 	   (mirror (make-instance 'lisp-image))) ;; :with-frame rect)))
       (send mirror 'retain)
@@ -344,7 +351,8 @@
 	(when mirror
 	  (port-unregister-mirror port sheet (sheet-mirror sheet))
 	  (when (typep sheet 'command-menu-pane)
-	    (send (send mirror 'window) 'close)  ; freed because :set-released-when-closed = #$YES.
+	    ;; Memory for NSWindow is released if :set-released-when-closed = #$YES.
+	    (send (send mirror 'window) 'close)
 	    (send mirror 'release)
 	    (return-from destroy-mirror))
 	  (when (typep sheet 'top-level-sheet-pane)
@@ -358,15 +366,6 @@
       (port-unregister-mirror port pixmap mirror)  ;;(sheet-mirror pixmap))
       (send mirror 'release))))
 
-
-;; The transformation and region stuff has come from CLX/port.lisp - it seemed to make sense to me
-;; that it should be here instead.
-
-;;; A note about transformations; Cocoa supports transformations natively, so it might be an idea
-;;; to just set the transformation in the NSViews used throughout this backend, and then we may
-;;; well be able to ignore transformations going on at the backend level. Not sure though.
-
-;; From CLX/port.lisp - I have *no* idea if this is right 8-)
 
 ;; This method isn't described in the specification; I'm not quite sure what the transformation
 ;; we're creating is used for - and therefore I can't tell if it's right or not! It's a direct
@@ -460,15 +459,16 @@
 
 
 (defun %beagle-style-mask-for-frame (sheet)
+"Returns the appropriate native 'style mask' for the frame containing
+'sheet', which must be a TOP-LEVEL-SHEET-PANE instance.
+If invoked on any other kind of sheet, returns NIL."
   ;; Since UNMANAGED-top-level-sheet-pane objects are also top-level-sheet-pane objects,
   ;; but not the other way around, test for the most specific pane type here. Otherwise
   ;; the wrong style-mask is returned, with peculiar results (well. Not that peculiar!)
-  (if (typep sheet 'unmanaged-top-level-sheet-pane)
-      #$NSBorderlessWindowMask
-    (logior #$NSTitledWindowMask           ; Must be 'top-level-sheet-pane
-	    #$NSClosableWindowMask
-	    #$NSMiniaturizableWindowMask
-	    #$NSResizableWindowMask)))
+  (when (typep sheet 'top-level-sheet-pane)
+    (if (typep sheet 'unmanaged-top-level-sheet-pane)
+	+plain-window-style-mask+
+      +decorated-window-style-mask+)))       ; Must be 'top-level-sheet-pane
 
 
 ;;; ::FIXME::
@@ -550,6 +550,7 @@
 		      (origin-pt (ccl::make-ns-point 0.0 0.0)))
 		 (slet ((frame-pt (send tls-window :convert-base-to-screen origin-pt))
 			(tls-bounds (send tls-mirror 'bounds)))
+		   (#_free origin-pt)
 		   (let ((frame-x (pref frame-pt :<NSP>oint.x))
 			 (frame-y (pref frame-pt :<NSP>oint.y))
 			 (tls-height (pref tls-bounds :<NSR>ect.size.height)))
@@ -575,14 +576,11 @@
 (defun %beagle-sheet-hierarchy-contains-command-menu-pane (sheet)
   ;; This is rather ugly; must be a way to do this better...
   (if (typep sheet 'command-menu-pane)
-      (progn
-;;;	(format *trace-output* "Sheet is a command-menu-pane~%")
-	t)
+      t
     (let ((children (sheet-children sheet)))
       (dolist (child children)
-	(if (%beagle-sheet-hierarchy-contains-command-menu-pane child)
+	(when (%beagle-sheet-hierarchy-contains-command-menu-pane child)
 	    (return-from %beagle-sheet-hierarchy-contains-command-menu-pane t)))
-;;;      (format *trace-output* "No command-menu-pane found; returning nil~%")
       nil)))
 
 
@@ -657,16 +655,8 @@
 			   (+ (pref rect :<NSR>ect.origin.x) (pref rect :<NSR>ect.size.width))
 			   (+ (pref rect :<NSR>ect.origin.y) (pref rect :<NSR>ect.size.height))))
 
-
-;;; Nabbed from CLX backend port.lisp - however, I think it's unnecessary.
-;;; Not in spec.; where's it from? Invoked from 'sheets.lisp'. NO CONCEPT OF 'ENABLING'
-;;; A SHEET IN THE SPEC.... (actually, there is: (setf (sheet-enabled-p sheet) ...)).
-
-;;; NB. if this method is NOT executed, the window is not put on screen. ::TODO:: look
-;;; into when frames are adopted, and at what point they should be put on screen.
+;;; Unused by Beagle; possibly unnecessary altogether.
 (defmethod port-enable-sheet ((port beagle-port) (sheet mirrored-sheet-mixin))
-  ;; Now we make the NSWindow front and key when the frame is enabled. Not sure
-  ;; it's right, but it seems better than doing it here...
   t)
 
 

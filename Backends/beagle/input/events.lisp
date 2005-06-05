@@ -28,7 +28,7 @@
 
 #||
 
-$Id: events.lisp,v 1.7 2005/06/03 21:33:09 drose Exp $
+$Id: events.lisp,v 1.8 2005/06/05 19:52:55 drose Exp $
 
 Events in Cocoa
 ---------------
@@ -126,6 +126,7 @@ is used.")
 ;;;       beagle-event|notification-to-clim-event method differs
 ;;; between them.
 
+
 (defmethod add-event-to-queue (mirror event)
   "Adds an event to the dynamically scoped *mcclim-event-queue* queue, after
 conversion from a Cocoa event MACPTR to a CLIM event. This method signals
@@ -136,6 +137,13 @@ added to the queue."
 		    *mcclim-event-queue*))
   (let ((clim-event (beagle-event-to-clim-event mirror event)))
     (unless (not clim-event)
+      ;; This provides way too much information...
+      #+nil
+      (unless (or (typep event 'pointer-enter-event)
+		  (typep event 'pointer-exit-event))
+	(format *trace-output* "Adding event to queue: ")
+	(describe-object clim-event *trace-output*)
+	(terpri *trace-output*))
       (setf *mcclim-event-queue* (nconc *mcclim-event-queue* (list clim-event)))
       (ccl:signal-semaphore (beagle-port-event-semaphore *beagle-port*)))))
 
@@ -271,8 +279,6 @@ signals the port event semaphore when a notification is added to the queue."
 ;;; detail members for X11 enter and exit events.
 ;;;
 
-;; I'm not sure this is the best way with dealing with the timestamp...
-
 (defun notification-type (notification)
 "Enumerates all the Cocoa notifications Beagle takes an interest in. These
 are all NSWindow delegate notifications."
@@ -363,7 +369,8 @@ not a mouse event)."
   (setf *-current-pointer-button-state*- state))
 
 
-(defun make-mouse-up-down-event (event-type button location-in-view-point location-in-screen-point
+(defun make-mouse-up-down-event (event-type button location-in-view-point
+					    location-in-screen-point
 					    mirror event)
   (make-instance (if (eq :mouse-up event-type)
 		     'pointer-button-release-event
@@ -382,6 +389,7 @@ not a mouse event)."
 		 ;; coordinates. Can do this with
 		 ;; [window convertBaseToScreen:location-in-window].x or .y.
 		 ;; They probably need coercing too :-(
+
 		 :x              (pref location-in-view-point :<NSP>oint.x)
 		 :y              (pref location-in-view-point :<NSP>oint.y)
 		 :graft-x        (pref location-in-screen-point :<NSP>oint.x)
@@ -391,7 +399,8 @@ not a mouse event)."
 		 :timestamp      (get-internal-real-time)))
 
 
-(defun make-mouse-enter-exit-event (event-type location-in-view-point location-in-screen-point
+(defun make-mouse-enter-exit-event (event-type location-in-view-point
+					       location-in-screen-point
 					       mirror event)
   (make-instance (if (eq :mouse-enter event-type)
 		     'pointer-enter-event
@@ -407,7 +416,8 @@ not a mouse event)."
 		 :timestamp (get-internal-real-time)))
 
 
-(defun make-pointer-motion-event (button location-in-view-point location-in-screen-point
+(defun make-pointer-motion-event (button location-in-view-point
+					 location-in-screen-point
 					 mirror event)
   (make-instance 'pointer-motion-event
 		 :pointer        0
@@ -428,6 +438,7 @@ not a mouse event)."
 		 ;; :y to be relative to the MIRROR in which the events occur.
 		 ;; :x              (pref location-in-screen-point :<NSP>oint.x)
 		 ;; :y              (pref location-in-screen-point :<NSP>oint.y)
+
 		 :x              (pref location-in-view-point :<NSP>oint.x)
 		 :y              (pref location-in-view-point :<NSP>oint.y)
 		 ;; Even though graft-x, graft-y is *not in the spec* we need to populate
@@ -508,6 +519,7 @@ not a mouse event)."
 		 ;; We ignore this, and always pass up or down and let
 		 ;; CLIM set the amount. Could do better with scroll wheel
 		 ;; events, CLIM also ignores X and Z deltas...
+
 		 :button (if (plusp (send event 'delta-y))
 			     (progn
 			       (set-hacky-button-state +pointer-wheel-up+)
@@ -598,20 +610,20 @@ not a mouse event)."
       (cond
        ((or (eq :mouse-up event-type) (eq :mouse-down event-type))
 	(with-native-view-and-screen-locations (event window mirror)
-					       (make-mouse-up-down-event event-type
-									 button
-									 locn-in-view-pt
-									 locn-in-screen-pt
-									 mirror
-									 event)))
+	  (make-mouse-up-down-event event-type
+				    button
+				    locn-in-view-pt
+				    locn-in-screen-pt
+				    mirror
+				    event)))
 
        ((eq :mouse-moved event-type)
 	(with-native-view-and-screen-locations (event window mirror)
-					       (make-pointer-motion-event button
-									  locn-in-view-pt
-									  locn-in-screen-pt
-									  mirror
-									  event)))
+	  (make-pointer-motion-event button
+				     locn-in-view-pt
+				     locn-in-screen-pt
+				     mirror
+				     event)))
 
        ((or (eq :mouse-enter event-type) (eq :mouse-exit event-type))
 	#+nil
@@ -620,15 +632,15 @@ not a mouse event)."
 	    (format *debug-io* "Got ~a event on sheet ~a~%"
 		    event-type view-sheet)))
 	(with-native-view-and-screen-locations (event window mirror)
-					       ;; This event does not provide button state, but we can use
-					       ;; *-current-pointer-button-state-* to populate button state
-					       ;; in the CLIM event. Obviously, we do not need to update this value
-					       ;; (*-current-pointer-button-state-*) for enter / exit events...
-					       (make-mouse-enter-exit-event event-type
-									    locn-in-view-pt
-									    locn-in-screen-pt
-									    mirror
-									    event)))
+	  ;; This event does not provide button state, but we can use
+	  ;; *-current-pointer-button-state-* to populate button state
+	  ;; in the CLIM event. Obviously, we do not need to update this value
+	  ;; (*-current-pointer-button-state-*) for enter / exit events...
+	  (make-mouse-enter-exit-event event-type
+				       locn-in-view-pt
+				       locn-in-screen-pt
+				       mirror
+				       event)))
 
        ((eq :scroll-wheel event-type)
 	(make-scroll-wheel-event event
@@ -685,8 +697,6 @@ not a mouse event)."
 			 :timestamp (get-internal-real-time)))))))
 
 
-;;; This is really, really horribly written. Hopefully it will just be
-;;; temporary.
 (defun current-mods-map-to-key (current-modifier-state)
   (declare (special *-current-event-modifier-state-*))
   ;; Are there modifiers in 'current-modifier-state' that don't exist in
@@ -699,6 +709,7 @@ not a mouse event)."
   ;;#$NSCommandKeyMask +meta-key+
   ;;#$NSAlternateKeyMask +super-key+
   ;;#$NSAlphaShiftKeyMask +hyper-key+
+
   (cond ((null *-current-event-modifier-state-*)
 	 '(key-release-event nil))
 	((and (> (logand *-current-event-modifier-state-* +shift-key+) 0)
@@ -748,6 +759,8 @@ not a mouse event)."
 
 ;; Again, make use of Cocoa methods for querying the pointer position. See above ::FIXME::
 (defmethod pointer-position ((pointer beagle-pointer))
+;; Could make use of something like the following
+;;  (send (@class ns:ns-event) 'mouse-location)
   (warn "pointer-position: implement me")
   nil)
 
@@ -776,12 +789,10 @@ not a mouse event)."
   (unless (eq (beagle-port-key-focus port) focus)
     (let ((mirror (sheet-mirror focus)))
       (if (null mirror)
-	  (format *trace-output* "Attempt to set keyboard focus on sheet ~a which has no mirror!~%"
-		  focus)
+	  (warn "Attempt to set keyboard focus on sheet ~a which has no mirror!" focus)
 	(let ((window (send mirror 'window)))
 	  (if (eql window (%null-ptr))
-	      (format *trace-output* "Attempt to set keyboard focus on sheet ~a with no NSWindow!~%"
-		      focus)
+	      (warn "Attempt to set keyboard focus on sheet ~a with no NSWindow!" focus)
 	    (progn
 	      (setf (beagle-port-key-focus port) focus)
 	      (unless (send window 'is-key-window)
@@ -843,16 +854,12 @@ not a mouse event)."
     (call-next-method)))
 
 (defun characters-to-key-name (ns-string-characters-in)
-;;;  (format *terminal-io* "Processing ~S~%" ns-string-characters-in)
-;;;  (format *terminal-io* "Got string with length ~A~%" (send ns-string-characters-in 'length))
-;;;  (format *terminal-io* "character(0) = ~A~%"
-;;;	  (char-code (send ns-string-characters-in :character-at-index 0)))
   (if (<= (send ns-string-characters-in :character-at-index 0) 255)
       (numeric-keysym-to-character (send ns-string-characters-in :character-at-index 0))
     (progn
       (let ((key-name (lookup-keysym (send ns-string-characters-in :character-at-index 0))))
-	;; If key-name is nil after all that, see if we can look up a mapping from those supported in
-	;; Cocoa...
+	;; If key-name is nil after all that, see if we can look up a mapping from those
+	;; supported in Cocoa...
 	(cond
 	 ((null key-name)
 	  (let ((clim-key

@@ -42,7 +42,7 @@ The memory for any structure created with this method must be released
 by the user (using (#_free))."
   (make-record :<NSP>oint :x x :y y))
 
-;; Stolen from Bosco "main.lisp"
+;; Stolen from Bosco "main.lisp".
 (defun description (c)
   (with-autorelease-pool
    (lisp-string-from-nsstring
