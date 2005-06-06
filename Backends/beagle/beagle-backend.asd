@@ -1,6 +1,6 @@
 ;; -*- Mode: Lisp; -*-
 
-;; $Id: beagle-backend.asd,v 1.4 2005/06/05 19:52:54 drose Exp $
+;; $Id: beagle-backend.asd,v 1.5 2005/06/06 17:49:21 drose Exp $
 
 (defpackage "BEAGLE"
   (:use "CLIM" "CLIM-LISP")
@@ -111,7 +111,8 @@
 			      (:module "NativePanes"
 				       :pathname #.(make-pathname :directory '(:relative "native-panes"))
 				       :components
-				       ((:file "beagle-scroll-bar-pane")))
+				       ((:file "beagle-scroll-bar-pane")
+					(:file "scroller-pane-fix")))
 			      (:module "Output"
 				       :depends-on ("Windowing")
 				       :pathname #.(make-pathname :directory '(:relative "output"))
