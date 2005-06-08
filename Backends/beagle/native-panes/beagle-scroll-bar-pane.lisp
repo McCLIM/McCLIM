@@ -2,6 +2,7 @@
 (in-package :beagle)
 
 
+;;;(defclass beagle-scroll-bar-pane (scroll-bar)
 (defclass beagle-scroll-bar-pane (scroll-bar-pane)
   ((tk-obj :initform (%null-ptr) :accessor toolkit-object)))
 
@@ -25,7 +26,10 @@
 				  0.0
 				  (space-requirement-width q)
 				  (space-requirement-height q)))
-	 (mirror (make-instance 'lisp-scroller :with-frame rect)))
+	 (mirror (make-instance 'lisp-scroller :with-frame rect))
+	 ;; Not sure if this is sufficient...
+	 (action-mask (logior #$NSLeftMouseDown
+			      #$NSScrollWheel)))
     (send mirror 'retain)
     ;; Scrollers are disabled by default; enable it (otherwise the
     ;; lozenge and buttons are not displayed).
@@ -33,7 +37,23 @@
     ;; Make knob fill pane initially.
     (send mirror :set-float-value 0.0 :knob-proportion 1.0)
     (setf (toolkit-object sheet) mirror)
-    (setf (view-event-mask mirror) +mirrored-sheet-mixin-event-mask+)
+    (setf (view-lisp-scroller mirror) sheet)
+
+    ;; In this implementation, native scroll bars don't respond to events;
+    ;; Cocoa handles all that for us. We set them up to handle _actions_
+    ;; instead (analagous to callbacks). Set the target (recipient of
+    ;; actions) to be the scroll bar itself (i.e. the same object that
+    ;; generates the actions). Not sure if this is a good architectural
+    ;; decision or not...
+    (send mirror :set-target mirror)
+    ;; Also need to specify when an action is sent (i.e. which actions
+    ;; result in an action being posted)
+    (send mirror :send-action-on action-mask)
+    ;; We want continuous actions when we can get them...
+    (send mirror :set-continuous #$YES)
+    (send mirror :set-action (ccl::@selector "takeAction:"))
+
+    (setf (view-event-mask mirror) +ignores-events+)
     (port-register-mirror (port sheet) sheet mirror)
     (%beagle-mirror->sheet-assoc port mirror sheet)
     (send (sheet-mirror (sheet-parent sheet)) :add-subview mirror)
@@ -53,6 +73,8 @@
   (let ((width (send (@class ns-scroller)
 		     :scroller-width-for-control-size
 		     #$NSRegularControlSize)))
+    ;; For vertical scroll bars, ensure y > x. For horizontal, ensure
+    ;; x > y.
     (if (eq (gadget-orientation sb) :vertical)
 	(make-space-requirement :min-width width
 				:width     width
@@ -64,12 +86,23 @@
 			      :height width))))
 
 
+;;; No need to update the scrollbar (most of the time) since Cocoa will move
+;;; the 'thumb' appropriately. Stick some debug in to see when it's invoked.
+;;; As expected, this is invoked all the time; also, the calculation below
+;;; is wrong since the view coords are flipped for cocoa (scroll-bar moves
+;;; the wrong way!)
+
+;;; I believe it's safe to leave this alone though (other than the backwards
+;;; behaviour) since the sb will only be redrawn once through the event loop
+;;; it shouldn't be too inefficient to be changing its value regularly.
 (defmethod (setf gadget-value) :before (value (gadget beagle-scroll-bar-pane)
 					      &key invoke-callback)
   (declare (ignore invoke-callback))
+
   ;; (- gadget-max-value gadget-min-value) = range.
-  ;; height (or width) of scrollbar = proportional SIZE of lozenge.
-  ;; value = proportional POSITION of lozenge
+  ;; height (or width) of scrollbar        = proportional SIZE of lozenge.
+  ;; value                                 = proportional POSITION of lozenge
+
   (let* ((range (- (gadget-max-value gadget) (gadget-min-value gadget)))
 	 (size  (if (eq (gadget-orientation gadget) :vertical)
 		    (bounding-rectangle-height gadget)
@@ -82,6 +115,43 @@
 		     (/ size range))))
     (send (toolkit-object gadget)
 	  :set-float-value (coerce position 'short-float)
-	  :knob-proportion (coerce loz-size 'short-float))
-    (send (toolkit-object gadget) 'set-needs-display)))
+	  :knob-proportion (coerce loz-size 'short-float))))
+
+(defun action-handler (pane sender)
+  (format *trace-output* "Got action to handle of ~a on pane ~a~%" sender pane)
+  ;; Now we need to decide exactly what we do with these events... not sure
+  ;; if this is the right way to invoke the callbacks... shouldn't
+  ;; '(scroll-bar-scroll-up-line-callback sb)' come into it somewhere? Hmmm.
+
+  ;; Note: because the coords are all over the place, to make these work nicely
+  ;; with non-aqua panes, we reverse the 'up' and 'down' actions. I'm not
+  ;; convinced this is actually a good idea, but until flipped coords are gone,
+  ;; it'll have to do (how a full NSScrollView would work might be interesting).
+
+  (let ((hit-part (send sender 'hit-part)))
+    (cond ((eq hit-part #$NSScrollerKnob)   ; drag knob
+	   (format *trace-output* "Action was NSScrollerKnob~%")
+	   ;; Invoke '(drag-callback bar client id value)'
+	   )
+	  ((eq hit-part #$NSScrollerKnobSlot)   ; click on knob (or alt-click on slot)
+	   (format *trace-output* "Action was NSScrollerKnobSlot~%")
+	   ;; Invoke '(drag-callback bar client id value)'
+	   )
+	  ((eq hit-part #$NSScrollerDecrementLine)
+	   (format *trace-output* "Action was NSScrollerDecrementLine~%")
+	   (clim:scroll-down-line-callback pane (gadget-client pane) (gadget-id pane)))
+	  ((eq hit-part #$NSScrollerDecrementPage)
+	   (format *trace-output* "Action was NSScrollerDecrementPage~%")
+	   (clim:scroll-down-page-callback pane (gadget-client pane) (gadget-id pane)))
+	  ((eq hit-part #$NSScrollerIncrementLine)
+	   (format *trace-output* "Action was NSScrollerIncrementLine~%")
+	   (clim:scroll-up-line-callback pane (gadget-client pane) (gadget-id pane)))
+	  ((eq hit-part #$NSScrollerIncrementPage)
+	   (format *trace-output* "Action was NSScrollerIncrementPage~%")
+	   (clim:scroll-up-page-callback pane (gadget-client pane) (gadget-id pane)))
+	  ((eq hit-part #$NSScrollerNoPart)
+	   (format *trace-output* "Action was NSScrollerNoPart~%"))
+	  (t (format *trace-output* "Unknown action~%"))))
+
+  )
 

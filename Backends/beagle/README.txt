@@ -35,7 +35,7 @@ duncan@robotcat.demon.co.uk
 
 INSTALLATION
 
-The code has been written using OpenMCL Version (Beta: Darwin) 0.14.1-p1 and
+The code has been written using OpenMCL Version (Beta: Darwin) 0.14.2-p1 and
 up-to-date McCLIM sources (since both are available within the same CVS
 module, it should be safe to assume the back end will work with whatever
 McCLIM sources were checked out at the same time). Hopefully newer versions
