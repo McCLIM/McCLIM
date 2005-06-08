@@ -28,6 +28,7 @@
 				  (space-requirement-height q)))
 	 (mirror (make-instance 'lisp-scroller :with-frame rect))
 	 ;; Not sure if this is sufficient...
+	 #+nil
 	 (action-mask (logior #$NSLeftMouseDown
 			      #$NSScrollWheel)))
     (send mirror 'retain)
@@ -48,10 +49,11 @@
     (send mirror :set-target mirror)
     ;; Also need to specify when an action is sent (i.e. which actions
     ;; result in an action being posted)
-    (send mirror :send-action-on action-mask)
+;;;    (send mirror :send-action-on action-mask)
+    (send mirror :send-action-on #$NSScrollWheelMask)
     ;; We want continuous actions when we can get them...
     (send mirror :set-continuous #$YES)
-    (send mirror :set-action (ccl::@selector "takeAction:"))
+    (send mirror :set-action (ccl::@selector "takeScrollerAction:"))
 
     (setf (view-event-mask mirror) +ignores-events+)
     (port-register-mirror (port sheet) sheet mirror)
@@ -88,13 +90,11 @@
 
 ;;; No need to update the scrollbar (most of the time) since Cocoa will move
 ;;; the 'thumb' appropriately. Stick some debug in to see when it's invoked.
-;;; As expected, this is invoked all the time; also, the calculation below
-;;; is wrong since the view coords are flipped for cocoa (scroll-bar moves
-;;; the wrong way!)
+;;; => As expected, this is invoked all the time.
 
-;;; I believe it's safe to leave this alone though (other than the backwards
-;;; behaviour) since the sb will only be redrawn once through the event loop
-;;; it shouldn't be too inefficient to be changing its value regularly.
+;;; I believe it's safe to leave this alone though since the sb will only be
+;;; redrawn once through the event loop it shouldn't be too inefficient to
+;;; be changing its value regularly.
 (defmethod (setf gadget-value) :before (value (gadget beagle-scroll-bar-pane)
 					      &key invoke-callback)
   (declare (ignore invoke-callback))
@@ -103,7 +103,8 @@
   ;; height (or width) of scrollbar        = proportional SIZE of lozenge.
   ;; value                                 = proportional POSITION of lozenge
 
-  (let* ((range (- (gadget-max-value gadget) (gadget-min-value gadget)))
+  (let* ((range (- (gadget-max-value gadget)
+		   (gadget-min-value gadget)))
 	 (size  (if (eq (gadget-orientation gadget) :vertical)
 		    (bounding-rectangle-height gadget)
 		  (bounding-rectangle-width gadget)))
@@ -118,40 +119,54 @@
 	  :knob-proportion (coerce loz-size 'short-float))))
 
 (defun action-handler (pane sender)
-  (format *trace-output* "Got action to handle of ~a on pane ~a~%" sender pane)
+
   ;; Now we need to decide exactly what we do with these events... not sure
   ;; if this is the right way to invoke the callbacks... shouldn't
   ;; '(scroll-bar-scroll-up-line-callback sb)' come into it somewhere? Hmmm.
 
   ;; Note: because the coords are all over the place, to make these work nicely
-  ;; with non-aqua panes, we reverse the 'up' and 'down' actions. I'm not
-  ;; convinced this is actually a good idea, but until flipped coords are gone,
-  ;; it'll have to do (how a full NSScrollView would work might be interesting).
+  ;; with non-aqua panes, we reverse the 'up' and 'down' actions.
 
-  (let ((hit-part (send sender 'hit-part)))
-    (cond ((eq hit-part #$NSScrollerKnob)   ; drag knob
-	   (format *trace-output* "Action was NSScrollerKnob~%")
-	   ;; Invoke '(drag-callback bar client id value)'
-	   )
-	  ((eq hit-part #$NSScrollerKnobSlot)   ; click on knob (or alt-click on slot)
-	   (format *trace-output* "Action was NSScrollerKnobSlot~%")
-	   ;; Invoke '(drag-callback bar client id value)'
-	   )
+  ;; I actually think now that McCLIM + Cocoa have a different idea of what
+  ;; increment / up and decrement / down mean; or I have misunderstood things
+  ;; which wouldn't suprise me... perhaps it's reasonable that 'up line' and
+  ;; 'decrement line' are the same thing.
+
+  (let ((hit-part (send sender 'hit-part))
+	(value    (* (send sender 'float-value)    ; 0.0 - 1.0
+		     (- (gadget-max-value pane)    ; range of bar; 0.0 -> max extent ...
+			(gadget-min-value pane))))); ... (probably)
+    (cond ((or (eq hit-part #$NSScrollerKnob)      ; drag knob
+	       (eq hit-part #$NSScrollerKnobSlot)) ; click on knob (or alt-click on slot)
+	   #+nil
+	   (format *trace-output* "Action was NSScrollerKnob/Slot, value = ~a~%" value)
+	   (clim:drag-callback pane
+			       (gadget-client pane)
+			       (gadget-id pane)
+			       value))
 	  ((eq hit-part #$NSScrollerDecrementLine)
+	   #+nil
 	   (format *trace-output* "Action was NSScrollerDecrementLine~%")
-	   (clim:scroll-down-line-callback pane (gadget-client pane) (gadget-id pane)))
+	   (clim:scroll-up-line-callback pane
+					 (gadget-client pane)
+					 (gadget-id pane)))
 	  ((eq hit-part #$NSScrollerDecrementPage)
+	   #+nil
 	   (format *trace-output* "Action was NSScrollerDecrementPage~%")
-	   (clim:scroll-down-page-callback pane (gadget-client pane) (gadget-id pane)))
+	   (clim:scroll-up-page-callback pane
+					 (gadget-client pane)
+					 (gadget-id pane)))
 	  ((eq hit-part #$NSScrollerIncrementLine)
+	   #+nil
 	   (format *trace-output* "Action was NSScrollerIncrementLine~%")
-	   (clim:scroll-up-line-callback pane (gadget-client pane) (gadget-id pane)))
+	   (clim:scroll-down-line-callback pane
+					   (gadget-client pane)
+					   (gadget-id pane)))
 	  ((eq hit-part #$NSScrollerIncrementPage)
+	   #+nil
 	   (format *trace-output* "Action was NSScrollerIncrementPage~%")
-	   (clim:scroll-up-page-callback pane (gadget-client pane) (gadget-id pane)))
-	  ((eq hit-part #$NSScrollerNoPart)
-	   (format *trace-output* "Action was NSScrollerNoPart~%"))
-	  (t (format *trace-output* "Unknown action~%"))))
+	   (clim:scroll-down-page-callback pane
+					   (gadget-client pane)
+					   (gadget-id pane))))))
 
-  )
 
