@@ -47,15 +47,24 @@
     ;; generates the actions). Not sure if this is a good architectural
     ;; decision or not...
     (send mirror :set-target mirror)
-    ;; Also need to specify when an action is sent (i.e. which actions
-    ;; result in an action being posted)
+
+;;;    Don't need to do the following... these are the defaults for
+;;;    NSScroller anyway.
+
+;;;    ;; Also need to specify when an action is sent (i.e. which actions
+;;;    ;; result in an action being posted)
 ;;;    (send mirror :send-action-on action-mask)
-    (send mirror :send-action-on #$NSScrollWheelMask)
-    ;; We want continuous actions when we can get them...
-    (send mirror :set-continuous #$YES)
+;;;    (send mirror :send-action-on #$NSScrollWheelMask)
+;;;    ;; We want continuous actions when we can get them...
+;;;    (send mirror :set-continuous #$YES)
+
     (send mirror :set-action (ccl::@selector "takeScrollerAction:"))
 
-    (setf (view-event-mask mirror) +ignores-events+)
+    ;; We ignore event masks etc. altogether; most things we would be
+    ;; interested in are handled as actions, and any other event we
+    ;; take any notice of, we're interested in (scroll wheel events).
+;;;    (setf (view-event-mask mirror) +ignores-events+)
+
     (port-register-mirror (port sheet) sheet mirror)
     (%beagle-mirror->sheet-assoc port mirror sheet)
     (send (sheet-mirror (sheet-parent sheet)) :add-subview mirror)
@@ -118,6 +127,7 @@
 	  :set-float-value (coerce position 'short-float)
 	  :knob-proportion (coerce loz-size 'short-float))))
 
+
 (defun action-handler (pane sender)
 
   ;; Now we need to decide exactly what we do with these events... not sure
@@ -132,18 +142,19 @@
   ;; which wouldn't suprise me... perhaps it's reasonable that 'up line' and
   ;; 'decrement line' are the same thing.
 
-  (let ((hit-part (send sender 'hit-part))
-	(value    (* (send sender 'float-value)    ; 0.0 - 1.0
-		     (- (gadget-max-value pane)    ; range of bar; 0.0 -> max extent ...
-			(gadget-min-value pane))))); ... (probably)
+  (let ((hit-part (send sender 'hit-part)))
     (cond ((or (eq hit-part #$NSScrollerKnob)      ; drag knob
 	       (eq hit-part #$NSScrollerKnobSlot)) ; click on knob (or alt-click on slot)
-	   #+nil
-	   (format *trace-output* "Action was NSScrollerKnob/Slot, value = ~a~%" value)
-	   (clim:drag-callback pane
-			       (gadget-client pane)
-			       (gadget-id pane)
-			       value))
+	   (let ((value    (* (send sender 'float-value) ; 0.0 - 1.0
+			      (- (gadget-max-value pane) ; range; 0.0 -> max extent ...
+				 (gadget-min-value pane)))))  ; ... (probably)
+
+	     #+nil
+	     (format *trace-output* "Action was NSScrollerKnob/Slot, value = ~a~%" value)
+	     (clim:drag-callback pane
+				 (gadget-client pane)
+				 (gadget-id pane)
+				 value)))
 	  ((eq hit-part #$NSScrollerDecrementLine)
 	   #+nil
 	   (format *trace-output* "Action was NSScrollerDecrementLine~%")
