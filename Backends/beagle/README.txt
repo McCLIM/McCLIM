@@ -35,7 +35,7 @@ duncan@robotcat.demon.co.uk
 
 INSTALLATION
 
-The code has been written using OpenMCL Version (Beta: Darwin) 0.14.2-p1 and
+The code has been written using OpenMCL Version (Beta: Darwin) 0.14.3 and
 up-to-date McCLIM sources (since both are available within the same CVS
 module, it should be safe to assume the back end will work with whatever
 McCLIM sources were checked out at the same time). Hopefully newer versions
@@ -284,6 +284,17 @@ KNOWN LIMITATIONS / TODO LIST
     processed (but then it's too late, the menu is gone). Note that this is
     *nothing* to do with tracking pointer, which appears not to be used in
     drop down menus (only popup menus, which work, more or less).
+
+    (This is also a problem for context menus, if you keep the right button
+    depressed (menu isn't drawn))
+
+
+31. Using the scroll wheel over (aqua) scroll panes doesn't work (but does
+    when used over the appropriate viewport).
+
+    Also, I'd like to hide the scrollbar when there's no scrolling to be
+    done (lozenge size = 1.0), but I can't even deactivate them at this
+    point!
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

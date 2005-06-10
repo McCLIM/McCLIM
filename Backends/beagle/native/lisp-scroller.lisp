@@ -37,22 +37,20 @@
   (:metaclass ns:+ns-object))
 
 
-;;; See if this makes a difference... it doesn't.
-#+nil
-(define-objc-method ((:<BOOL> is-flipped) lisp-view)
-  #$YES)
-
 ;;; This method is the 'recipient' of any actions sent by the scrollbar
 ;;; (we set the scrollbar up as its own action 'target'). It just calls
 ;;; back into Lisp [BEAGLE-SCROLL-BAR-PANE] to handle things.
 (define-objc-method ((:void :take-scroller-action (:id sender)) lisp-scroller)
   (action-handler (view-lisp-scroller self) sender))
 
+
 ;;; Need to get scroll wheel events handled... not sure quite how though.
 (define-objc-method ((:void :scroll-wheel event) lisp-scroller)
   ;; Do what? Should pass them on to either the parent of the scroller
   ;; (scroll-pane?), or onto the viewport. Can it be guaranteed that
-  ;; there will *be* a viewport?
+  ;; there will *be* a viewport? Should send this to the next object in
+  ;; the responder chain, but that (parent) view appears not to be
+  ;; interested in scroll wheel events. Bah.
   #+nil
   (format *trace-output* "Received scroll-wheel event~%")
   )

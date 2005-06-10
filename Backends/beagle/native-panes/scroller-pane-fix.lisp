@@ -1,9 +1,11 @@
 
 (in-package :clim-internals)
 
+
 (setf *scrollbar-thickness* (ccl::send (ccl::@class ns:ns-scroller)
 				       :scroller-width-for-control-size
 				       #$NSRegularControlSize))
+
 
 ;;; Should the side of the scroller-pane that the vertical scrollbar
 ;;; appears be configurable?

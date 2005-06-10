@@ -14,27 +14,22 @@
 
 (defmethod realize-mirror ((port beagle-port)
 			   (sheet beagle-scroll-bar-pane))
-  ;; How do we construct one of these puppies so it looks right, is the
-  ;; correct orientation, etc.? Cocoa docs are a little lacking in this
-  ;; regard.
-  ;; Orientation is defined by the longer relative dimension; if
-  ;; maxx-minx > maxy - miny, we will get a :horizontal bar; otherwise
-  ;; we get a vertical bar.
-  ;; Use 'init with frame'?
+  ;; Orientation is defined by the longer relative dimension in
+  ;; Cocoa; if maxx-minx > maxy - miny, we will get a :horizontal
+  ;; bar; otherwise we get a :vertical bar.
+
   (let* ((q (compose-space sheet))
 	 (rect (ccl::make-ns-rect 0.0
 				  0.0
 				  (space-requirement-width q)
 				  (space-requirement-height q)))
-	 (mirror (make-instance 'lisp-scroller :with-frame rect))
-	 ;; Not sure if this is sufficient...
-	 #+nil
-	 (action-mask (logior #$NSLeftMouseDown
-			      #$NSScrollWheel)))
+	 (mirror (make-instance 'lisp-scroller :with-frame rect)))
     (send mirror 'retain)
+
     ;; Scrollers are disabled by default; enable it (otherwise the
     ;; lozenge and buttons are not displayed).
     (send mirror :set-enabled #$YES)
+
     ;; Make knob fill pane initially.
     (send mirror :set-float-value 0.0 :knob-proportion 1.0)
     (setf (toolkit-object sheet) mirror)
@@ -47,23 +42,7 @@
     ;; generates the actions). Not sure if this is a good architectural
     ;; decision or not...
     (send mirror :set-target mirror)
-
-;;;    Don't need to do the following... these are the defaults for
-;;;    NSScroller anyway.
-
-;;;    ;; Also need to specify when an action is sent (i.e. which actions
-;;;    ;; result in an action being posted)
-;;;    (send mirror :send-action-on action-mask)
-;;;    (send mirror :send-action-on #$NSScrollWheelMask)
-;;;    ;; We want continuous actions when we can get them...
-;;;    (send mirror :set-continuous #$YES)
-
     (send mirror :set-action (ccl::@selector "takeScrollerAction:"))
-
-    ;; We ignore event masks etc. altogether; most things we would be
-    ;; interested in are handled as actions, and any other event we
-    ;; take any notice of, we're interested in (scroll wheel events).
-;;;    (setf (view-event-mask mirror) +ignores-events+)
 
     (port-register-mirror (port sheet) sheet mirror)
     (%beagle-mirror->sheet-assoc port mirror sheet)
@@ -148,34 +127,23 @@
 	   (let ((value    (* (send sender 'float-value) ; 0.0 - 1.0
 			      (- (gadget-max-value pane) ; range; 0.0 -> max extent ...
 				 (gadget-min-value pane)))))  ; ... (probably)
-
-	     #+nil
-	     (format *trace-output* "Action was NSScrollerKnob/Slot, value = ~a~%" value)
 	     (clim:drag-callback pane
 				 (gadget-client pane)
 				 (gadget-id pane)
 				 value)))
 	  ((eq hit-part #$NSScrollerDecrementLine)
-	   #+nil
-	   (format *trace-output* "Action was NSScrollerDecrementLine~%")
 	   (clim:scroll-up-line-callback pane
 					 (gadget-client pane)
 					 (gadget-id pane)))
 	  ((eq hit-part #$NSScrollerDecrementPage)
-	   #+nil
-	   (format *trace-output* "Action was NSScrollerDecrementPage~%")
 	   (clim:scroll-up-page-callback pane
 					 (gadget-client pane)
 					 (gadget-id pane)))
 	  ((eq hit-part #$NSScrollerIncrementLine)
-	   #+nil
-	   (format *trace-output* "Action was NSScrollerIncrementLine~%")
 	   (clim:scroll-down-line-callback pane
 					   (gadget-client pane)
 					   (gadget-id pane)))
 	  ((eq hit-part #$NSScrollerIncrementPage)
-	   #+nil
-	   (format *trace-output* "Action was NSScrollerIncrementPage~%")
 	   (clim:scroll-down-page-callback pane
 					   (gadget-client pane)
 					   (gadget-id pane))))))
