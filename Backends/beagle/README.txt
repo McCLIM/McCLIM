@@ -8,6 +8,7 @@ CONTENTS
     . frame manager
     . multiple ports
  . KNOWN LIMITATIONS / TODO LIST
+ . NATIVE PANES
  . FIXED STUFF PREVIOUSLY ON THE KNOWN LIMITATIONS / TODO LIST
  . WISH LIST
  . APPLICATIONS
@@ -178,6 +179,61 @@ KNOWN LIMITATIONS / TODO LIST
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+NATIVE PANES
+
+The following panes have native equivalents...
+
+
+From the spec.:-
+
+    Spec. name                 McCLIM class                Cocoa equiv  Impl?
+    -------------------------------------------------------------------------
+    BASIC-PANE                 BASIC-PANE
+    HBOX-PANE                  HBOX-PANE
+    VBOX-PANE                  VBOX-PANE
+    HRACK-PANE                 HRACK-PANE
+    VRACK-PANE                 VRACK-PANE
+    TABLE-PANE                 TABLE-PANE                  NSTableView  [ ]
+    GRID-PANE                  GRID-PANE
+    SPACING-PANE               SPACING-PANE
+    OUTLINED-PANE              OUTLINED-PANE               NSBox        [ ]
+                               BORDER-PANE
+                               RAISED-PANE
+                               LOWERED-PANE
+    RESTRAINING-PANE           RESTRAINING-PANE
+    BBOARD-PANE                BBOARD-PANE
+                               VIEWPORT-PANE
+    LABEL-PANE                 LABEL-PANE                  NSBox        [ ]
+    SCROLLER-PANE              SCROLLER-PANE               NSScrollView [ ]
+    CLIM-STREAM-PANE           CLIM-STREAM-PANE
+    INTERACTOR-PANE            INTERACTOR-PANE
+    APPLICATION-PANE           APPLICATION-PANE
+    COMMAND-MENU-PANE          COMMAND-MENU-PANE
+    TITLE-PANE                 TITLE-PANE
+    POINTER-DOCUMENTATION-PANE POINTER-DOCUMENTATION-PANE 
+
+    PUSH-BUTTON-PANE (g)       PUSH-BUTTON-PANE            NSButton     [ ]
+    TOGGLE-BUTTON-PANE (g)     TOGGLE-BUTTON-PANE          NSButton     [ ]
+    MENU-BUTTON-PANE (g)       MENU-BUTTON-PANE            NSMenuItem   [ ]
+    SCROLL-BAR-PANE (g)        SCROLL-BAR-PANE             NSScroller   [x]
+    SLIDER-PANE (g)            SLIDER-PANE                 NSSlider     [x]
+    RADIO-BOX-PANE (g)         RADIO-BOX-PANE              NSButton     [ ]
+    CHECK-BOX-PANE (g)         CHECK-BOX-PANE              NSButton     [ ]
+    GENERIC-LIST-PANE (g)      GENERIC-LIST-PANE
+    GENERIC-OPTION-PANE (g)    GENERIC-OPTION-PANE         NSComboBox   [ ]
+    TEXT-FIELD-PANE (g)        TEXT-FIELD-PANE             NSTextField  [ ]
+    TEXT-EDITOR-PANE (g)       TEXT-EDITOR-PANE            NSTextView   [ ]
+
+
+McCLIM extensions:-
+
+    McCLIM class
+    ------------
+    BOX-ADJUSTER-GADGET                                    NSSplitView  [ ]
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 1.  Speed! The current implementation is __slow__, especially when there is a
     large output history. Paolo's stress test takes 26 seconds and conses
     16MB on my (admittedly slow) iMac compared to 1.5 seconds on a 2.4GHz
@@ -216,10 +272,6 @@ KNOWN LIMITATIONS / TODO LIST
 2.  When running the Listener (and other applications), the resize
     handle is not visible; it's there, but you can't see it. Grab and drag
     with faith and it should work anyway.
-
-
-3.  There are not yet any aqua look and feel panes. Sorry, I'm trying to
-    get everything else working first!
 
 
 7.  Keyboard events are not handled "properly" as far as any OS X user will
@@ -277,6 +329,9 @@ KNOWN LIMITATIONS / TODO LIST
     those events are 'trapped' in the queue until other events take place.
     Looking at the code, I don't think this should happen... (but it does).
 
+    NB. (11.JUN.2005) I haven't observed this since the move to 0.14.3
+    Hopefully it has been resolved within OpenMCL.
+
 
 30. Event handling over 'drop down' menus is strange; after clicking on the
     menu name, all events appear to be blocked until the mouse button is
@@ -296,9 +351,20 @@ KNOWN LIMITATIONS / TODO LIST
     done (lozenge size = 1.0), but I can't even deactivate them at this
     point!
 
+    BEAGLE-SCROLL-BAR-PANE should inherit from SCROLL-BAR rather than
+    SCROLL-BAR-PANE I think.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 FIXED STUFF PREVIOUSLY ON THE KNOWN LIMITATIONS / TODO LIST
+
+
+-3.-  There are not yet any aqua look and feel panes. Sorry, I'm trying to
+    get everything else working first!
+
+    UPDATE 11.JUN.2005 - I have implemented (90+%) native scroll bars, and
+                         am looking at implementing other native panes over
+                         time. These will be added over time.
 
 
 -4.-  Pixmap support is not implemented; this means clim-fig drawing doesn't

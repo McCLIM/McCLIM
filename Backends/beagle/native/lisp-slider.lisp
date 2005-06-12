@@ -28,18 +28,18 @@
 
 ;; Does this want to deal with NSSmallControlSize? It doesn't, currently.
 
-(defclass lisp-scroller (ns:ns-scroller)
-  ((lispscroller :initform nil
-		 :accessor view-lisp-scroller)
+(defclass lisp-slider (ns:ns-slider)
+  ((lispslider :initform nil
+	       :accessor view-lisp-slider)
    (eventmask :initform (%null-ptr) 
 	      :foreign-type :int
 	      :accessor view-event-mask))
   (:metaclass ns:+ns-object))
 
 
-;;; This method is the 'recipient' of any actions sent by the scrollbar
-;;; (we set the scrollbar up as its own action 'target'). It just calls
-;;; back into Lisp [BEAGLE-SCROLL-BAR-PANE] to handle things.
-(define-objc-method ((:void :take-scroller-action (:id sender)) lisp-scroller)
-  (scroll-bar-action-handler (view-lisp-scroller self) sender))
+;;; This method is the 'recipient' of any actions sent by the slider
+;;; (we set the slider up as its own action 'target'). It just calls
+;;; back into Lisp [BEAGLE-SLIDER-PANE] to handle things.
+(define-objc-method ((:void :take-slider-action (:id sender)) lisp-slider)
+  (slider-action-handler (view-lisp-slider self) sender))
 

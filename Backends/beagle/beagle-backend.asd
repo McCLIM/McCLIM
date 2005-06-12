@@ -1,6 +1,6 @@
 ;; -*- Mode: Lisp; -*-
 
-;; $Id: beagle-backend.asd,v 1.5 2005/06/06 17:49:21 drose Exp $
+;; $Id: beagle-backend.asd,v 1.6 2005/06/12 13:27:39 drose Exp $
 
 (defpackage "BEAGLE"
   (:use "CLIM" "CLIM-LISP")
@@ -98,6 +98,7 @@
 					(:file "lisp-view" :depends-on ("lisp-bezier-path"))
 					(:file "lisp-view-additional" :depends-on ("lisp-view"))
 					(:file "lisp-scroller")
+					(:file "lisp-slider")
 					(:file "lisp-image")))
 			      (:file "cocoa-util")
 			      (:module "Windowing"
@@ -112,6 +113,7 @@
 				       :pathname #.(make-pathname :directory '(:relative "native-panes"))
 				       :components
 				       ((:file "beagle-scroll-bar-pane")
+					(:file "beagle-slider-pane")
 					(:file "scroller-pane-fix")))
 			      (:module "Output"
 				       :depends-on ("Windowing")
