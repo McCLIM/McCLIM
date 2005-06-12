@@ -212,13 +212,13 @@ From the spec.:-
     TITLE-PANE                 TITLE-PANE
     POINTER-DOCUMENTATION-PANE POINTER-DOCUMENTATION-PANE 
 
-    PUSH-BUTTON-PANE (g)       PUSH-BUTTON-PANE            NSButton     [ ]
+    PUSH-BUTTON-PANE (g)       PUSH-BUTTON-PANE            NSButton     [x]  (32)
     TOGGLE-BUTTON-PANE (g)     TOGGLE-BUTTON-PANE          NSButton     [ ]
     MENU-BUTTON-PANE (g)       MENU-BUTTON-PANE            NSMenuItem   [ ]
     SCROLL-BAR-PANE (g)        SCROLL-BAR-PANE             NSScroller   [x]
     SLIDER-PANE (g)            SLIDER-PANE                 NSSlider     [x]
-    RADIO-BOX-PANE (g)         RADIO-BOX-PANE              NSButton     [ ]
-    CHECK-BOX-PANE (g)         CHECK-BOX-PANE              NSButton     [ ]
+    RADIO-BOX-PANE (g)         RADIO-BOX-PANE              NSMatrix     [ ]
+    CHECK-BOX-PANE (g)         CHECK-BOX-PANE              NSMatrix     [ ]
     GENERIC-LIST-PANE (g)      GENERIC-LIST-PANE
     GENERIC-OPTION-PANE (g)    GENERIC-OPTION-PANE         NSComboBox   [ ]
     TEXT-FIELD-PANE (g)        TEXT-FIELD-PANE             NSTextField  [ ]
@@ -341,7 +341,9 @@ McCLIM extensions:-
     drop down menus (only popup menus, which work, more or less).
 
     (This is also a problem for context menus, if you keep the right button
-    depressed (menu isn't drawn))
+    depressed (menu isn't drawn)) [yes, it is - no problem with popups that
+    I can see now, other than whilst the button is held down the events
+    aren't routed to them].
 
 
 31. Using the scroll wheel over (aqua) scroll panes doesn't work (but does
@@ -353,6 +355,16 @@ McCLIM extensions:-
 
     BEAGLE-SCROLL-BAR-PANE should inherit from SCROLL-BAR rather than
     SCROLL-BAR-PANE I think.
+
+
+32. Using a button to fire up a new frame is problematical; the callback
+    for the button doesn't return, so the button never releases focus and
+    no events are processed. Specific to aqua buttons.
+
+
+33. When a window is closed by the (x) button it should be cleared up
+    properly; specifically, its event loop etc. should be gced. Appears
+    at the moment that this isn't happening.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

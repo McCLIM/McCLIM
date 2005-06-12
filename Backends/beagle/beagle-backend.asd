@@ -1,6 +1,6 @@
 ;; -*- Mode: Lisp; -*-
 
-;; $Id: beagle-backend.asd,v 1.6 2005/06/12 13:27:39 drose Exp $
+;; $Id: beagle-backend.asd,v 1.7 2005/06/12 16:53:25 drose Exp $
 
 (defpackage "BEAGLE"
   (:use "CLIM" "CLIM-LISP")
@@ -99,6 +99,7 @@
 					(:file "lisp-view-additional" :depends-on ("lisp-view"))
 					(:file "lisp-scroller")
 					(:file "lisp-slider")
+					(:file "lisp-button")
 					(:file "lisp-image")))
 			      (:file "cocoa-util")
 			      (:module "Windowing"
@@ -114,6 +115,10 @@
 				       :components
 				       ((:file "beagle-scroll-bar-pane")
 					(:file "beagle-slider-pane")
+					;; Basic buttons - not collections of buttons
+					(:file "beagle-fundamental-button-pane")
+					;; Button collections (radio + checkbox)
+;;                                        (:file "beagle-button-collection-pane")
 					(:file "scroller-pane-fix")))
 			      (:module "Output"
 				       :depends-on ("Windowing")
