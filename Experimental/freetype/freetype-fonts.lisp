@@ -259,18 +259,18 @@
 (defparameter *families/faces*
   '(((:fix :roman) . "VeraMono.ttf")
     ((:fix :italic) . "VeraMoIt.ttf")
-    ((:fix (:bold italic)) . "VeraMoBI.ttf")
-    ((:fix (:italic bold)) . "VeraMoBI.ttf")
+    ((:fix (:bold :italic)) . "VeraMoBI.ttf")
+    ((:fix (:italic :bold)) . "VeraMoBI.ttf")
     ((:fix :bold) . "VeraMoBd.ttf")
     ((:serif :roman) . "VeraSe.ttf")
     ((:serif :italic) . "VeraSe.ttf")
-    ((:serif (:bold italic)) . "VeraSeBd.ttf")
-    ((:serif (:italic bold)) . "VeraSeBd.ttf")
+    ((:serif (:bold :italic)) . "VeraSeBd.ttf")
+    ((:serif (:italic :bold)) . "VeraSeBd.ttf")
     ((:serif :bold) . "VeraSeBd.ttf")
     ((:sans-serif :roman) . "Vera.ttf")
     ((:sans-serif :italic) . "VeraIt.ttf")
-    ((:sans-serif (:bold italic)) . "VeraBI.ttf")
-    ((:sans-serif (:italic bold)) . "VeraBI.ttf")
+    ((:sans-serif (:bold :italic)) . "VeraBI.ttf")
+    ((:sans-serif (:italic :bold)) . "VeraBI.ttf")
     ((:sans-serif :bold) . "VeraBd.ttf")))
 
 (defvar *freetype-font-path*)
@@ -284,7 +284,7 @@
     (cond (size
            (setf size (getf *sizes* size size))
            (let* ((font-path-relative (cdr (assoc (list family face) *families/faces*
-                                         :test #'equal)))
+                                                  :test #'equal)))
                   (font-path (namestring (merge-pathnames font-path-relative *freetype-font-path*))))
              (if (and font-path (probe-file font-path))
                  (make-free-type-face (slot-value port 'clim-clx::display)
