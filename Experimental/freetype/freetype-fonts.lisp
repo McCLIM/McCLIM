@@ -35,30 +35,43 @@
   ((lib :initarg :lib)
    (filename :initarg :filename)))
 
+(defparameter *vague-font-hash* (make-hash-table :test #'equal))
+
 (defun make-vague-font (filename)
-  (make-instance 'vague-font
-                 :lib (let ((libf (make-alien freetype:library)))
-                        (declare (type (alien (* freetype:library)) libf))
-                        (freetype:init-free-type libf)
-                        (deref libf))
-                 :filename filename))
+  (let ((val (gethash filename *vague-font-hash*)))
+    (or val
+        (setf (gethash filename *vague-font-hash*)
+              (make-instance 'vague-font
+                             :lib (let ((libf (make-alien freetype:library)))
+                                    (declare (type (alien (* freetype:library)) libf))
+                                    (freetype:init-free-type libf)
+                                    (deref libf))
+                             :filename filename)))))
 
 (defparameter *dpi* 72)
 
+(defparameter *concrete-font-hash* (make-hash-table :test #'equal))
+
 (defun make-concrete-font (vague-font size &key (dpi *dpi*))
   (with-slots (lib filename) vague-font
-              (let ((facef (make-alien freetype:face)))
-                (declare (type (alien (* freetype:face)) facef))
-                (freetype:new-face lib filename 0 facef)
-                (let ((face (deref facef)))
-                  (declare (type (alien freetype:face) face))
-                  (freetype:set-char-size face 0 (round (* size 64)) (round dpi) (round dpi))
-                  face))))
+    (let* ((key (cons lib filename))
+           (val (gethash key *concrete-font-hash*)))
+      (unless val
+        (let ((facef (make-alien freetype:face)))
+          (declare (type (alien (* freetype:face)) facef))
+          (if (zerop (freetype:new-face lib filename 0 facef))
+              (setf val (setf (gethash key *concrete-font-hash*)
+                              (deref facef)))
+              (error "Freetype error in make-concrete-font"))))
+      (let ((face val))
+        (declare (type (alien freetype:face) face))
+        (freetype:set-char-size face 0 (round (* size 64)) (round dpi) (round dpi))
+        face))))
 
 (declaim (inline make-concrete-font))
 
 (defun glyph-pixarray (face char)
-  (declare (optimize (speed 3) (safety 3) (debug 1))
+  (declare (optimize (speed 3) (debug 1))
            (inline freetype:load-glyph freetype:render-glyph)
            (type (alien freetype:face) face))
   (freetype:load-glyph face (freetype:get-char-index face (char-code char)) 0)
