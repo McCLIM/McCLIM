@@ -1,8 +1,7 @@
 Quick start
 ===========
 
-1. Start your Lisp system and make sure you have ASDF and McCLIM in
-   your core file.
+1. Start your Lisp system and make sure you have ASDF loaded.
 
 2. (asdf:operate 'asdf:load-op :clouseau)
 
