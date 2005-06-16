@@ -637,6 +637,13 @@
 (define-protocol-class pointer ()
   ((port :reader port :initarg :port)))
 
+;;; FIXME: I think the standard-pointer should absorb some of the
+;;; common methods that are currently entirely provided by the
+;;; backends.
+
+(defclass standard-pointer (pointer)
+  ())
+
 (defgeneric pointer-sheet (pointer))
 
 (defmethod pointer-sheet ((pointer pointer))

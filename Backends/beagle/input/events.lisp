@@ -28,7 +28,7 @@
 
 #||
 
-$Id: events.lisp,v 1.8 2005/06/05 19:52:55 drose Exp $
+$Id: events.lisp,v 1.9 2005/06/16 09:27:50 crhodes Exp $
 
 Events in Cocoa
 ---------------
@@ -666,9 +666,8 @@ not a mouse event)."
 
   ;;; This has been added to McCLIM and the CLX back end; I'm not sure what it's supposed
   ;;; to be for. Never mind, add it anyway. defgeneric is in stream-input.lisp
-  ;;; SHOULD BE -> (defmethod synthesize-pointer-motion-event ((pointer beagle-pointer))
 
-(defmethod synthesize-pointer-motion-event (pointer)
+(defmethod synthesize-pointer-motion-event ((pointer beagle-pointer))
   ;; *-current-event-modifier-state-* is set whenever an event or notification is received
   ;; containing this information.
   ;; *-current-pointer-button-state-* is set whenever there is a mouse down or drag, and

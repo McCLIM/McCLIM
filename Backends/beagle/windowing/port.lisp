@@ -38,13 +38,8 @@ frame manager. Permissable values are 'beagle::beagle-standard-frame-manager and
 ;;; at least a little about pointers, and it appears to all be handled in
 ;;; the back end at the moment.
 
-(defclass beagle-pointer (pointer)
+(defclass beagle-pointer (standard-pointer)
   ((cursor :accessor pointer-cursor :initform :upper-left)))
-
-
-(defclass standard-pointer (beagle-pointer)
-  ())
-
 
 (defclass beagle-cursor ()
   ((image   :accessor cursor-image   :initform nil)
@@ -117,7 +112,7 @@ FRAME-MANAGER and standard-pointer for this port type."
 	    (slot-value port 'frame-managers))
     (push (make-instance *default-frame-manager* :port port) (slot-value port 'frame-managers)))
   (setf (slot-value port 'pointer)
-	(make-instance 'standard-pointer :port port))
+	(make-instance 'beagle-pointer :port port))
   (setf *beagle-port* port)
   (initialize-beagle port))
 

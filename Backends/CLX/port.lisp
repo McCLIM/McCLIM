@@ -42,11 +42,8 @@
 
 ;;; CLX-PORT class
 
-(defclass clx-pointer (pointer)
+(defclass clx-pointer (standard-pointer)
   ((cursor :accessor pointer-cursor :initform :upper-left)))
-
-(defclass standard-pointer (clx-pointer)
-  ())
 
 #|
  Perhaps this belongs elsewhere
@@ -207,7 +204,7 @@
   (declare (ignore args))
   (push (make-instance 'clx-frame-manager :port port) (slot-value port 'frame-managers))
   (setf (slot-value port 'pointer)
-	(make-instance 'standard-pointer :port port))
+	(make-instance 'clx-pointer :port port))
   (initialize-clx port))
 
 (defmethod print-object ((object clx-port) stream)
