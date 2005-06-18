@@ -290,20 +290,25 @@
 
 (fmakunbound 'clim-clx::text-style-to-x-font)
 
+(defparameter *free-type-face-hash* (make-hash-table :test #'equal))
+
 (defmethod clim-clx::text-style-to-X-font :around ((port clim-clx::clx-port) text-style)
   (multiple-value-bind (family face size) (clim:text-style-components text-style)
     (setf face (or face :roman))
     (setf size (or size :normal))
     (cond (size
            (setf size (getf *sizes* size size))
-           (let* ((font-path-relative (cdr (assoc (list family face) *families/faces*
-                                                  :test #'equal)))
-                  (font-path (namestring (merge-pathnames font-path-relative *freetype-font-path*))))
-             (if (and font-path (probe-file font-path))
-                 (make-free-type-face (slot-value port 'clim-clx::display)
-                                      font-path
-                                      size)
-                 (call-next-method))))
+           (let ((val (gethash (list family face size) *free-type-face-hash*)))
+             (if val val
+                 (setf (gethash (list family face size) *free-type-face-hash*)
+                       (let* ((font-path-relative (cdr (assoc (list family face) *families/faces*
+                                                              :test #'equal)))
+                              (font-path (namestring (merge-pathnames font-path-relative *freetype-font-path*))))
+                         (if (and font-path (probe-file font-path))
+                             (make-free-type-face (slot-value port 'clim-clx::display)
+                                                  font-path
+                                                  size)
+                             (call-next-method)))))))
           (t
            (call-next-method)))))
 

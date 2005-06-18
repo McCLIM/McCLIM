@@ -12,7 +12,7 @@
   (list (component-pathname c)))
 
 (defsystem :mcclim-freetype
-  :depends-on (:xrender :clim :clx)
+  :depends-on (:clim :clx)
   :serial t
   :components
   ((:file "freetype-package")
