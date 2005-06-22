@@ -316,20 +316,17 @@
 
 (defun command-line-name-for-command (command-name command-table
 				      &key (errorp t))
-  (block exit				; save typing
-    (do-command-table-inheritance (table command-table)
-      (let* ((command-item (gethash command-name (slot-value table 'commands)))
-	     (command-line-name (and command-item
-				     (command-line-name command-item))))
-	(cond ((stringp command-line-name)
-	       (return-from exit command-line-name))
-	      ((eq errorp :create)
-	       (return-from exit (command-name-from-symbol command-name)))
-	      (errorp
-	       (error 'command-not-accessible))
-	      (t nil))))
-    nil))
-
+  (do-command-table-inheritance (table command-table)
+    (let* ((command-item (gethash command-name (slot-value table 'commands)))
+	   (command-line-name (and command-item
+				   (command-line-name command-item))))
+      (when (stringp command-line-name)
+	(return-from command-line-name-for-command command-line-name))))
+  (cond ((eq errorp :create)
+	 (command-name-from-symbol command-name))
+	(errorp
+	 (error 'command-not-accessible))
+	(t nil)))
 
 (defun find-menu-item (menu-name command-table &key (errorp t))
   (let* ((table (find-command-table command-table))
@@ -1081,11 +1078,13 @@
 (define-presentation-method present (object (type command-name)
 				     stream
 				     (view textual-view)
-				     &key acceptably for-context-type)
+				     &key)
   (declare (ignore acceptably for-context-type))
-  (princ (command-line-name-for-command object command-table :errorp :create)
-	 stream))
-
+  (let ((command-line-name (command-line-name-for-command object command-table
+							  :errorp nil)))
+    (if command-line-name
+	(write-string command-line-name stream)
+	(prin1 object stream))))
 
 (define-presentation-method accept ((type command-name) stream
 				    (view textual-view)
