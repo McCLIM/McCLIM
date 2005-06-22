@@ -927,17 +927,44 @@ call-next-method to get the \"real\" answer based on the stream type."))
   (declare (ignore type view other-args))
   nil)
 
+;;; XXX This needs work! It needs to do everything that accept does for
+;;; expanding ptypes and setting up recursive call processing
 (defun accept-from-string (type string
 			   &rest args
 			   &key view
-			   default
-			   default-type
+			   (default nil defaultp)
+			   (default-type nil default-type-p)
+			   activation-gestures additional-activation-gestures
+			   delimiter-gestures additional-delimiter-gestures
 			   (start 0)
 			   (end (length string)))
-  (declare (ignore view default default-type))
-  (with-input-from-string (stream string :start start :end end)
-    (with-keywords-removed (args (:start :end))
-      (apply #'stream-accept stream type :view +textual-view+ args))))
+  (declare (ignore view activation-gestures
+		   additional-activation-gestures 
+		   delimiter-gestures additional-delimiter-gestures))
+  (with-activation-gestures ((if additional-activations-p
+				 additional-activation-gestures
+				 activation-gestures)
+			     :override activationsp)
+    (with-delimiter-gestures ((if additional-delimiters-p
+				  additional-delimiter-gestures
+				  delimiter-gestures)
+			      :override delimitersp)))
+  (when (or (zerop (- end start))
+	    (let ((maybe-end))))
+    (if defaultp
+	(return-from accept-from-string (values default
+						(if default-type-p
+						    default-type
+						    type)
+						0))
+	(simple-parse-error "Empty string")))
+  (let ((index 0))
+    (multiple-value-bind (val ptype)
+	(with-input-from-string (stream string :start start :end end
+				 :index index)
+	  (with-keywords-removed (args (:start :end))
+	    (apply #'stream-accept stream type :view +textual-view+ args)))
+      (values val ptype index))))
 
 (define-presentation-generic-function %presentation-refined-position-test
     presentation-refined-position-test

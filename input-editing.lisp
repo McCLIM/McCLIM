@@ -869,7 +869,8 @@
 ;;; not.
 ;;; XXX Actually, it would be a violation of the `accept' protocol to consume
 ;;; the gesture, but who knows what random accept methods are doing.
-(defun empty-input-p (stream begin-scan-pointer completion-gestures)
+(defun empty-input-p
+    (stream begin-scan-pointer activation-gestures delimiter-gestures)
   (let ((scan-pointer (stream-scan-pointer stream))
 	(fill-pointer (fill-pointer (stream-input-buffer stream))))
     ;; activated?
@@ -881,7 +882,8 @@
 	   (let ((gesture (aref (stream-input-buffer stream)
 				begin-scan-pointer)))
 	     (and (characterp gesture)
-		  (gesture-match gesture completion-gestures))))
+		  (or (gesture-match gesture activation-gestures)
+		      (gesture-match gesture delimiter-gestures)))))
 	  (t nil))))
 
 ;;; The control flow in here might be a bit confusing. The handler catches
@@ -900,13 +902,15 @@
   (unless (input-editing-stream-p stream)
     (return-from invoke-handle-empty-input (funcall input-continuation)))
   (let ((begin-scan-pointer (stream-scan-pointer stream))
-	(completion-gestures *completion-gestures*))
+	(activation-gestures *activation-gestures*)
+	(delimiter-gestures *delimiter-gestures*))
     (block empty-input
       (handler-bind (((or simple-parse-error empty-input-condition)
 		      #'(lambda (c)
 			  (when (empty-input-p stream
 					       begin-scan-pointer
-					       completion-gestures)
+					       activation-gestures
+					       delimiter-gestures)
 			    (if (typep c 'empty-input-condition)
 				(signal c)
 				(signal 'empty-input-condition :stream stream))
@@ -914,4 +918,5 @@
 			    (return-from empty-input nil)))))
 	(return-from invoke-handle-empty-input (funcall input-continuation))))
     (funcall handler-continuation)))
+
 

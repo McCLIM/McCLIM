@@ -24,6 +24,10 @@
 
 ;;; Global help command
 
+(define-command (com-null-command :command-table global-command-table :name nil)
+    ()
+  nil)
+
 (define-command (com-help :command-table global-command-table :name "Help")
     ((kind '(completion (("Keyboard" keyboard) ("Commands" commands))
 	                :value-key cadr)

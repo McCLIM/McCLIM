@@ -1216,6 +1216,23 @@
             (position *unsupplied-argument-marker* command)))
 	  (t (values command type)))))
 
+;;; A presentation type for empty input at the command line; something for
+;;; read-command to supply as a default.  The command is defined in
+;;; builtin-commands.lisp.
+
+(define-presentation-type null-command
+    ()
+  :inherit-from '(command :command-table global-command-table))
+
+(define-presentation-method presentation-typep (object (type null-command))
+  (and (consp object) (eq (car object) 'com-null-command)))
+
+(define-presentation-method present
+    (object (type null-command) stream (view textual-view) &key)
+  (declare (ignore object stream view)))
+
+(defparameter +null-command+ '(com-null-command))
+
 (defclass presentation-command-translator (presentation-translator)
   ()
   (:documentation "Wraps the tester function with a test that
@@ -1308,16 +1325,20 @@
 	  ((or (typep stream 'interactor-pane)
 	       (typep stream 'input-editing-stream))
 	   (handler-case
-	       (let ((command (accept `(command :command-table ,command-table)
-				      :stream stream
-				      :prompt nil)))
-		 (if (partial-command-p command)
-		     (progn
-		       (beep)
-		       (format *query-io* "~&Argument ~D not supplied.~&"
-			       (position *unsupplied-argument-marker* command))
-		       nil)
-		     command))
+	       (multiple-value-bind (command ptype)
+		   (accept `(command :command-table ,command-table)
+			   :stream stream
+			   :prompt nil
+			   :default +null-command+
+			   :default-type 'null-command)
+		 (cond ((eq ptype 'null-command)
+			nil)
+		       ((partial-command-p command)
+			(beep)
+			(format *query-io* "~&Argument ~D not supplied.~&"
+				(position *unsupplied-argument-marker* command))
+			nil)
+		       (t command)))
 	     ((or simple-parse-error input-not-of-required-type)  (c)
 	       (beep)
 	       (fresh-line *query-io*)
