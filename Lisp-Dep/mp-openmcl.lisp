@@ -142,17 +142,15 @@
   (let ((lock-error nil))
     (unwind-protect
 	 (progn
-	   (handler-bind ((ccl::lock-not-owner #'(lambda (c)
-						   (declare (ignore c))
-						   (setq lock-error t))))
+	   (handler-bind
+	       ((ccl::lock-not-owner #'(lambda (c)
+					 (declare (ignore c))
+					 (setq lock-error t))))
 	     (ccl:release-lock lock))
-	   ;; OS error return value?
 	   (if timeout
-	       (progn
-		 (ccl:timed-wait-on-semaphore cv timeout)
-		 t)
-	       (ccl:wait-on-semaphore cv)))
-      (unless lock-error
+	       (ccl:timed-wait-on-semaphore cv timeout)
+	       (ccl:wait-on-semaphore cv))) ;XXX nil here is some kind of error
+      (unless lock-error       ; We didn't have the lock.
 	(ccl:grab-lock lock)))))
 
 (defun condition-notify (cv)

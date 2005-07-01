@@ -228,33 +228,33 @@
   (check-schedule eq)
   (let ((lock (event-queue-lock eq)))
     (with-lock-held (lock)
-  (with-slots (schedule-time) eq
-    (flet ((pred ()
-             (not (null (event-queue-head eq)))))
-      (cond
-        (timeout
-         (loop as    timeout-time = (+ now timeout)
-               with  now = (now)
-               do    (when (pred)
-                       (return t))
-               do    (when (>= now timeout-time)
-                       (return nil))
-               do    (let ((timeout (if schedule-time
-                                        (min (- schedule-time now)
-                                             (- timeout-time now))
-                                        (- timeout-time now))))
-			   (condition-wait (event-queue-processes eq)
-					   lock timeout))
-               do    (check-schedule eq)))
-        (schedule-time
-         (loop do (when (pred)
-                    (return t))
-		   do (condition-wait
-		       (event-queue-processes eq) lock (- schedule-time (now)))
-               do (check-schedule eq)))
-        (t
-          (or (pred)
-              (progn
+      (with-slots (schedule-time) eq
+	(flet ((pred ()
+		 (not (null (event-queue-head eq)))))
+	  (cond
+	    (timeout
+	     (loop as    timeout-time = (+ now timeout)
+		with  now = (now)
+		do    (when (pred)
+			(return t))
+		do    (when (>= now timeout-time)
+			(return nil))
+		do    (let ((timeout (if schedule-time
+					 (min (- schedule-time now)
+					      (- timeout-time now))
+					 (- timeout-time now))))
+			(condition-wait (event-queue-processes eq)
+					lock timeout))
+		do    (check-schedule eq)))
+	    (schedule-time
+	     (loop do (when (pred)
+			(return t))
+		do (condition-wait
+		    (event-queue-processes eq) lock (- schedule-time (now)))
+		do (check-schedule eq)))
+	    (t
+	     (or (pred)
+		 (progn
 		   (condition-wait (event-queue-processes eq) lock)
 		   t)))))))))
 
