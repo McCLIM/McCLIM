@@ -40,41 +40,54 @@
   state
   whostate
   function
-  id)
+  thread)
 
 (defvar *current-process*
-  (%make-process :name "initial process" :function nil :id (sb-thread:current-thread-id)))
+  (%make-process
+   :name "initial process" :function nil
+   :thread
+   #+#.(cl:if (cl:find-symbol "THREAD-NAME" "SB-THREAD") '(and) '(or))
+   sb-thread:*current-thread*
+   #-#.(cl:if (cl:find-symbol "THREAD-NAME" "SB-THREAD") '(and) '(or))
+   (sb-thread:current-thread-id)))
 
 (defvar *all-processes* (list *current-process*))
+
+(defvar *all-processes-lock*
+  (sb-thread:make-mutex :name "Lock around *ALL-PROCESSES*"))
 
 (defvar *permanent-queue*
   (sb-thread:make-mutex :name "Lock for disabled threads"
 			:data :permanently-queued))
 
 (defun make-process (function &key name)
-  (let ((p (%make-process :name name
-			  :function function)))
-    (pushnew p *all-processes*)
+  (let ((p (%make-process :name name :function function)))
+    (sb-thread:with-mutex (*all-processes-lock*)
+      (pushnew p *all-processes*))
     (restart-process p)))
 
 (defun restart-process (p)
   (labels ((boing ()
 	     (let ((*current-process* p))
 	       (funcall (process-function p) ))))
-    (when (process-id p) (sb-thread:terminate-thread p))
-    (when (setf (process-id p) (sb-thread:make-thread #'boing))
+    (when (process-thread p) (sb-thread:terminate-thread p))
+    (when (setf (process-thread p) (sb-thread:make-thread #'boing))
       p)))
 
 (defun destroy-process (process)
-  ;;; ew threadsafety
-  (setf *all-processes* (delete process *all-processes*))
-  (sb-thread:terminate-thread (process-id process)))
+  (sb-thread:with-mutex (*all-processes-lock*)
+    (setf *all-processes* (delete process *all-processes*)))
+  (sb-thread:terminate-thread (process-thread process)))
 
 (defun current-process ()
   *current-process*)
 
 (defun all-processes ()
-  *all-processes*)
+  ;; we're calling DELETE on *ALL-PROCESSES*.  If we look up the value
+  ;; while that delete is executing, we could end up with nonsense.
+  ;; Better use a lock (or call REMOVE instead in DESTROY-PROCESS).
+  (sb-thread:with-mutex (*all-processes-lock*)
+    *all-processes*))
 
 ;;; people should be shot for using these, honestly.  Use a queue!
 (declaim (inline yield))
@@ -113,17 +126,17 @@
       (setf (process-whostate *current-process*) old-state))))
 
 (defun process-interrupt (process function)
-  (sb-thread:interrupt-thread (process-id process) function))
+  (sb-thread:interrupt-thread (process-thread process) function))
 
 (defun disable-process (process)
   (sb-thread:interrupt-thread
-   (process-id process)
+   (process-thread process)
    (lambda ()
      (catch 'interrupted-wait (sb-thread:get-mutex *permanent-queue*)))))
 
 (defun enable-process (process)
   (sb-thread:interrupt-thread
-   (process-id process) (lambda () (throw 'interrupted-wait nil))))
+   (process-thread process) (lambda () (throw 'interrupted-wait nil))))
 
 (defun process-yield ()
   (sleep .1))
