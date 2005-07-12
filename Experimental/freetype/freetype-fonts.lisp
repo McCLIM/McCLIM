@@ -246,8 +246,8 @@
 
 (let ((cache (make-hash-table :test #'equal)))
   (defun make-free-type-face (display font size)
-    (or (gethash (list font size) cache)
-        (setf (gethash (list font size) cache)
+    (or (gethash (list display font size) cache)
+        (setf (gethash (list display font size) cache)
               (let* ((f.font (or (gethash font *font-hash*)
                                  (setf (gethash font *font-hash*)
                                        (make-vague-font font))))
