@@ -148,8 +148,8 @@
 (defun display-generate-glyph (display font matrix glyph-index)
   (let* ((glyph-id (display-draw-glyph-id display))
          (font (or (gethash font *font-hash*)
-                    (setf (gethash font *font-hash*)
-                          (make-vague-font font))))
+		   (setf (gethash font *font-hash*)
+			 (make-vague-font font))))
          (face (make-concrete-font font matrix)))
     (multiple-value-bind (arr left top dx dy) (glyph-pixarray face (code-char glyph-index))
       (when (= (array-dimension arr 0) 0)
@@ -293,24 +293,24 @@
 (defparameter *free-type-face-hash* (make-hash-table :test #'equal))
 
 (defmethod clim-clx::text-style-to-X-font :around ((port clim-clx::clx-port) text-style)
-  (multiple-value-bind (family face size) (clim:text-style-components text-style)
-    (setf face (or face :roman))
-    (setf size (or size :normal))
-    (cond (size
-           (setf size (getf *sizes* size size))
-           (let ((val (gethash (list family face size) *free-type-face-hash*)))
-             (if val val
-                 (setf (gethash (list family face size) *free-type-face-hash*)
-                       (let* ((font-path-relative (cdr (assoc (list family face) *families/faces*
-                                                              :test #'equal)))
-                              (font-path (namestring (merge-pathnames font-path-relative *freetype-font-path*))))
-                         (if (and font-path (probe-file font-path))
-                             (make-free-type-face (slot-value port 'clim-clx::display)
-                                                  font-path
-                                                  size)
-                             (call-next-method)))))))
-          (t
-           (call-next-method)))))
+  (multiple-value-bind (family face size) 
+      (clim:text-style-components text-style)
+    (let ((display (clim-clx::clx-port-display port)))
+      (setf face (or face :roman))
+      (setf size (or size :normal))
+      (cond (size
+	     (setf size (getf *sizes* size size))
+	     (let ((val (gethash (list display family face size) *free-type-face-hash*)))
+	       (if val val
+		   (setf (gethash (list display family face size) *free-type-face-hash*)
+			 (let* ((font-path-relative (cdr (assoc (list family face) *families/faces*
+								:test #'equal)))
+				(font-path (namestring (merge-pathnames font-path-relative *freetype-font-path*))))
+			   (if (and font-path (probe-file font-path))
+			       (make-free-type-face display font-path size)
+			       (call-next-method)))))))
+	    (t
+	     (call-next-method))))))
 
 (defmethod clim-clx::text-style-to-X-font ((port clim-clx::clx-port) text-style)
   (error "You lost: ~S." text-style))
