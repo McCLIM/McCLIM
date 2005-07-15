@@ -56,9 +56,14 @@
 (defvar *all-processes-lock*
   (sb-thread:make-mutex :name "Lock around *ALL-PROCESSES*"))
 
+;; we implement disable-process by making the disablee attempt to lock
+;; *permanent-queue*, which is already locked because we locked it
+;; here.  enable-process just interrupts the lock attempt.
+
 (defvar *permanent-queue*
-  (sb-thread:make-mutex :name "Lock for disabled threads"
-			:data :permanently-queued))
+  (sb-thread:make-mutex :name "Lock for disabled threads"))
+(unless (sb-thread:mutex-value *permanent-queue*)
+  (sb-thread:get-mutex *permanent-queue* :locked nil))
 
 (defun make-process (function &key name)
   (let ((p (%make-process :name name :function function)))
@@ -146,16 +151,15 @@
 (defmacro without-scheduling (&body body)
   `(progn ,@body))
 
-(defparameter *atomic-queue*
-  #+xlib xlib::*conditional-store-queue*
-  #-xlib (sb-thread:make-waitqueue :name "atomic incf/decf"))
+(defparameter *atomic-lock*
+  (sb-thread:make-mutex :name "atomic incf/decf"))
 
 (defmacro atomic-incf (place)
-  `(sb-thread::with-spinlock (*atomic-queue*)
+  `(sb-thread:with-mutex (*atomic-lock*)
     (incf ,place)))
 
 (defmacro atomic-decf (place) 
-  `(sb-thread::with-spinlock (*atomic-queue*)
+  `(sb-thread:with-mutex (*atomic-lock*)
     (decf ,place)))
 
 ;;; 32.3 Locks
