@@ -487,10 +487,3 @@
       (clim:with-drawing-options (m :clipping-region r)
         (clim:draw-design m r :ink clim:+background-ink+)
         (call-next-method s r)))))
-
-(format t
-"~%~%NOTE:~%~
-* Remember to set mcclim-freetype:*freetype-font-path* to the
-  location of the Bitstream Vera family of fonts on disk. If you
-  don't have them, get them from http://www.gnome.org/fonts/~%~%~%")
-(finish-output t)
