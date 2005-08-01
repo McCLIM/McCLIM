@@ -147,8 +147,15 @@ setmatrix")
            (cy (point-y center))
            (tr (make-transformation ndx2 ndx1 ndy2 ndy1 cx cy))
            (circle (untransform-region tr ellipse))
-           (start-angle (or (ellipse-start-angle circle) 0))
-           (end-angle (or (ellipse-end-angle circle) (* 2 pi))))
+           ;; we need an extra minus sign because the rotation
+           ;; convention for Postscript differs in chirality from the
+           ;; abstract CLIM convention; we do a reflection
+           ;; transformation to move the coordinates to the right
+           ;; handedness, but then the sense of positive rotation is
+           ;; backwards, so we need this reflection for angles.  --
+           ;; CSR, 2005-08-01
+           (start-angle (- (or (ellipse-end-angle circle) 0)))
+           (end-angle (- (or (ellipse-start-angle circle) (* -2 pi)))))
       (write-string (if filled "true " "false ") stream)
       (write-angle stream (if (< end-angle start-angle)
                               (+ end-angle (* 2 pi))
