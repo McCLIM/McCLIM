@@ -993,7 +993,7 @@ call-next-method to get the \"real\" answer based on the stream type."))
     (multiple-value-bind (min-x min-y max-x max-y)
 	(output-record-hit-detection-rectangle* record)
       (if (and (<= min-x x max-x) (<= min-y y max-y))
-	  (if (or (null single-box) (eq single-box :higlighting))
+	  (if (or (null single-box) (eq single-box :highlighting))
 	      (funcall-presentation-generic-function
 	       presentation-refined-position-test
 	       (presentation-type record) record x y)
