@@ -711,9 +711,41 @@ records. "))
 (defvar *existing-output-records* nil)
 
 ;;;
+(defgeneric output-record-hash (record)
+  (:documentation "Produce a value that can be used to hash the output record
+in an equalp hash table"))
 
-(defmethod output-record-hash (record)
+(defmethod output-record-hash ((record basic-output-record))
   (slot-value record 'coordinates))
+
+(defconstant +fixnum-bits+ (integer-length most-positive-fixnum))
+
+(declaim (inline hash-coords))
+(defun hash-coords (x1 y1 x2 y2)
+  (declare (type real x1 y1 x2 y2))	;XXX Someday this should be float
+  (let ((hash-val 0))
+      (declare (type fixnum hash-val))
+      (labels ((rot4 (val)
+		 (dpb (ldb (byte 4 0) val)
+		      (byte 4 (- +fixnum-bits+ 4 1))
+		      (ash val -4)))
+	       (mix-it-in (val)
+	       (let ((xval (sxhash val)))
+		 (declare (type fixnum xval))
+		 (when (minusp val)
+		   (setq xval (rot4 xval)))
+		 (setq hash-val (logxor (rot4 hash-val) xval)))))
+	(declare (inline rot4 mix-it-in))
+	(mix-it-in x1)
+	(mix-it-in y1)
+	(mix-it-in x2)
+	(mix-it-in y2)
+	hash-val)))
+
+(defmethod output-record-hash ((record output-record))
+  (with-bounding-rectangle* (x1 y1 x2 y2)
+      record
+    (hash-coords x1 y1 x2 y2)))
 
 (defmethod compute-difference-set ((record standard-updating-output-record)
 				   &optional (check-overlapping t)
