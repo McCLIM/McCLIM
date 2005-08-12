@@ -709,6 +709,7 @@
    #:float                              ;presentation type
    #:form                               ;presentation type
    #:format-graph-from-roots            ;function
+   #:format-graph-from-root            ;function
    #:format-items                       ;function
    #:format-textual-list                ;function
    #:formatting-cell                    ;macro
