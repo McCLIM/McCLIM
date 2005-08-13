@@ -38,7 +38,9 @@
 (defclass char-metrics ()
   ((width :initarg :width :reader char-width)
    (ascent :initarg :ascent :reader char-ascent)
-   (descent :initarg :descent :reader char-descent)))
+   (descent :initarg :descent :reader char-descent)
+   (xmin :initarg :xmin :reader char-xmin)
+   (xmax :initarg :xmax :reader char-xmax)))
 
 ;;;
 (defvar *font-metrics* (make-hash-table :test 'equal))
@@ -50,7 +52,7 @@
                                   :descent descent
                                   :italic-angle angle)))
     (setf (gethash name *font-metrics*) font-info)
-    (loop for (code name width ascent descent) in char-infos
+    (loop for (code name width ascent descent xmin xmax) in char-infos
          do (when (>= code 0)
               (setf (aref (font-info-char-names font-info) code)
                     name))
@@ -58,7 +60,9 @@
                (make-instance 'char-metrics
                               :width width
                               :ascent ascent
-                              :descent descent)))))
+                              :descent descent
+			      :xmin xmin
+			      :xmax xmax)))))
 
 ;;;
 (defun text-size-in-font (font-name size string start end)
@@ -169,6 +173,71 @@
       (text-size medium "M" :text-style text-style)
     (declare (ignore height final-x final-y baseline))
     width))
+
+(defmethod climi::text-bounding-rectangle*
+    ((medium postscript-medium) string
+     &key text-style (start 0) end)
+  (when (characterp string)
+    (setf string (make-string 1 :initial-element string)))
+  (unless end (setf end (length string)))
+  (unless text-style (setf text-style (medium-text-style medium)))
+  (destructuring-bind (psfont . size)
+      (text-style-mapping (port medium)
+                          (merge-text-styles text-style
+                                             (medium-merged-text-style medium)))
+    (let ((scale (/ size 1000)))
+      (cond ((= start end)
+             (values 0 0 0 0))
+            (t
+             (let ((position-newline (position #\newline string :start start)))
+               (cond ((not (null position-newline))
+                      (multiple-value-bind (width ascent descent left right
+                                                  font-ascent font-descent
+                                                  direction first-not-done)
+                          (psfont-text-extents psfont string
+                                               :start start :end position-newline)
+                        (multiple-value-bind (minx miny maxx maxy)
+                            (climi::text-bounding-rectangle*
+                             medium string :text-style text-style
+                             :start (1+ position-newline) :end end)
+                          (values (* scale (min minx left))
+                                  (* scale (- ascent))
+                                  (* scale (max maxx right))
+                                  (* scale (+ descent maxy))))))
+                     (t
+                      (multiple-value-bind (width ascent descent left right
+                                                  font-ascent font-descent
+                                                  direction first-not-done)
+                          (psfont-text-extents psfont string
+                                               :start start :end end)
+                        (values (* scale left)
+                                (* scale (- font-ascent))
+                                (* scale right)
+                                (* scale font-descent)))))))))))
+
+(defun psfont-text-extents (font string &key (start 0) (end (length string)))
+  (let* ((font-info (or (gethash font *font-metrics*)
+			(error "Unknown font ~S." font)))
+	 (char-metrics (font-info-char-infos font-info))
+	 (width (loop for i from start below end
+		   sum (char-width (gethash (aref *iso-latin-1-symbolic-names* (char-code (char string i)))
+					    char-metrics)))))
+    (values
+     width
+     (font-info-ascent font-info)
+     (font-info-descent font-info)
+     (char-xmin (gethash (aref *iso-latin-1-symbolic-names* (char-code (char string start)))
+			 char-metrics))
+     (- width (- (char-width (gethash (aref *iso-latin-1-symbolic-names* (char-code (char string (1- end))))
+				      char-metrics))
+		 (char-xmax (gethash (aref *iso-latin-1-symbolic-names* (char-code (char string (1- end))))
+				     char-metrics))))
+     (font-info-ascent font-info)
+     (font-info-descent font-info)
+     0 end)))
+     
+
+
 
 (defmethod text-size ((medium postscript-medium) string
                       &key text-style (start 0) end)

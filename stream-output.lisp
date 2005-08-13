@@ -358,9 +358,7 @@
 	    (unless (= start split)
 	      (stream-write-output stream
 				   string
-				   (if (eql end split)
-				       width
-				       nil)
+                                   nil
 				   start split)
 	      (setq cx (+ cx width))	      
           (with-slots (x y) (stream-text-cursor stream)

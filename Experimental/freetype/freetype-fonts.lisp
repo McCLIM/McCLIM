@@ -160,7 +160,8 @@
                               :y-origin top
                               :x-advance dx
                               :y-advance dy)
-      (list glyph-id dx dy))))
+      (let ((right (+ left (array-dimension arr 1))))
+        (list glyph-id dx dy left right top)))))
 
 ;;;;;;; mcclim interface
 
@@ -182,22 +183,32 @@
 (defmethod clim-clx::font-glyph-width ((font freetype-face) char)
   (with-slots (display font matrix) font
     (nth 1 (display-get-glyph display font matrix char))))
+(defmethod clim-clx::font-glyph-left ((font freetype-face) char)
+  (with-slots (display font matrix) font
+    (nth 3 (display-get-glyph display font matrix char))))
+(defmethod clim-clx::font-glyph-right ((font freetype-face) char)
+  (with-slots (display font matrix) font
+    (nth 4 (display-get-glyph display font matrix char))))
 
+;;; this is a hacky copy of XLIB:TEXT-EXTENTS
 (defmethod clim-clx::font-text-extents ((font freetype-face) string
                                         &key (start 0) (end (length string)) translate)
   ;; -> (width ascent descent left right
   ;; font-ascent font-descent direction
   ;; first-not-done)
   translate
-  (values
-   (loop for i from start below end 
-         sum (clim-clx::font-glyph-width font (char-code (aref string i))))
-   (clim-clx::font-ascent font)
-   (clim-clx::font-descent font)
-   0 0 
-   (clim-clx::font-ascent font)
-   (clim-clx::font-descent font)
-   0 end))
+  (let ((width (loop for i from start below end 
+                     sum (clim-clx::font-glyph-width font (char-code (aref string i))))))
+    (values
+     width
+     (clim-clx::font-ascent font)
+     (clim-clx::font-descent font)
+     (clim-clx::font-glyph-left font (char-code (char string start)))
+     (- width (- (clim-clx::font-glyph-width font (char-code (char string (1- end))))
+                 (clim-clx::font-glyph-right font (char-code (char string (1- end))))))
+     (clim-clx::font-ascent font)
+     (clim-clx::font-descent font)
+     0 end)))
 
 (defun drawable-picture (drawable)
   (or (getf (xlib:drawable-plist drawable) 'picture)
@@ -373,6 +384,47 @@
                                           font-ascent font-descent
                                           direction first-not-done))
                       (values width (+ ascent descent) width 0 ascent)) )))))) )
+
+(defmethod climi::text-bounding-rectangle*
+    ((medium clx-medium) string &key text-style (start 0) end)
+  (when (characterp string)
+    (setf string (make-string 1 :initial-element string)))
+  (unless end (setf end (length string)))
+  (unless text-style (setf text-style (medium-text-style medium)))
+  (let ((xfont (text-style-to-X-font (port medium) text-style)))
+    (cond ((= start end)
+           (values 0 0 0 0))
+          (t
+           (let ((position-newline (position #\newline string :start start)))
+             (cond ((not (null position-newline))
+                    (multiple-value-bind (width ascent descent left right
+                                                font-ascent font-descent direction
+                                                first-not-done)
+                        (font-text-extents xfont string
+                                           :start start :end position-newline
+                                           :translate #'translate)
+                      (declare (ignorable left right
+                                          font-ascent font-descent
+                                          direction first-not-done))
+                      (multiple-value-bind (minx miny maxx maxy)
+                          (climi::text-bounding-rectangle*
+                           medium string :text-style text-style
+                           :start (1+ position-newline) :end end)
+                        (values (min minx left) (- ascent)
+                                (max maxx right) (+ descent maxy)))))
+                   (t
+                    (multiple-value-bind (width ascent descent left right
+                                                font-ascent font-descent direction
+                                                first-not-done)
+                        (font-text-extents xfont string
+                                   :start start :end end
+                                   :translate #'translate)
+                      (declare (ignore width direction first-not-done))
+                      ;; FIXME: Potential style points:
+                      ;; * (min 0 left), (max width right)
+                      ;; * font-ascent / ascent
+                      (values left (- font-ascent) right font-descent)))))))))
+
 
 (defmethod make-medium-gcontext* (medium foreground background line-style text-style (ink color) clipping-region)
   (let* ((drawable (sheet-mirror (medium-sheet medium)))

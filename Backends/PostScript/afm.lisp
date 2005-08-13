@@ -126,23 +126,25 @@
      and width = nil
      and ascent = nil
      and descent = nil
+     and xmin = nil
+     and xmax = nil
      do (take-line)
-     (loop for keyword = (and (not (end-of-line-p))
-                              (take-keyword *char-metrics-keywords*))
-        while keyword
-        do (ecase keyword
-             ((nil) (skip-until-delimiter))
-             (:end-char-metrics
-              (return-from read-char-metrics metrics))
-             (:c (setq code (take-number)))
-             (:wx (setq width (take-number)))
-             (:n (setq name (take-name)))
-             (:b (take-number)
-                 (setq descent (- (take-number)))
-                 (take-number)
-                 (setq ascent (take-number))))
-        (take-delimiter))
-     collect (list code name width ascent descent) into metrics))
+       (loop for keyword = (and (not (end-of-line-p))
+				(take-keyword *char-metrics-keywords*))
+	  while keyword
+	  do (ecase keyword
+	       ((nil) (skip-until-delimiter))
+	       (:end-char-metrics
+		(return-from read-char-metrics metrics))
+	       (:c (setq code (take-number)))
+	       (:wx (setq width (take-number)))
+	       (:n (setq name (take-name)))
+	       (:b (setq xmin (take-number))
+		   (setq descent (- (take-number)))
+		   (setq xmax (take-number))
+		   (setq ascent (take-number))))
+	    (take-delimiter))
+     collect (list code name width ascent descent xmin xmax) into metrics))
 
 (defun read-afm-stream (stream)
   (let (name ascent descent

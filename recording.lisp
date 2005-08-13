@@ -1644,7 +1644,7 @@ were added."
 (def-grecording draw-text ((gs-text-style-mixin) string point-x point-y start end
 			   align-x align-y toward-x toward-y transform-glyphs) ()
   ;; FIXME!!! Text direction.
-  ;; Multiple lines?
+  ;; FIXME: Multiple lines.
  (let* ((text-style (graphics-state-text-style graphic))
 	(width (if (characterp string)
 		   (stream-character-width stream string :text-style text-style)
@@ -1654,27 +1654,26 @@ were added."
         (ascent (text-style-ascent text-style (sheet-medium stream)))
         (descent (text-style-descent text-style (sheet-medium stream)))
         (height (+ ascent descent))
-	(transform (medium-transformation medium))
-        left top right bottom)
+	(transform (medium-transformation medium)))
    (setf (values point-x point-y)
 	 (transform-position transform point-x point-y))
-   (ecase align-x
-     (:left (setq left point-x
-                  right (+ point-x width)))
-     (:right (setq left (- point-x width)
-                   right point-x))
-     (:center (setq left (- point-x (round width 2))
-                    right (+ point-x (round width 2)))))
-   (ecase align-y
-     (:baseline (setq top (- point-y ascent)
-                      bottom (+ point-y descent)))
-     (:top (setq top point-y
-                 bottom (+ point-y height)))
-     (:bottom (setq top (- point-y height)
-                    bottom point-y))
-     (:center (setq top (- point-y (floor height 2))
-                    bottom (+ point-y (ceiling height 2)))))
-   (values left top right bottom)))
+   (multiple-value-bind (left top right bottom)
+       (text-bounding-rectangle* medium string 
+                                 :start start :end end :text-style text-style)
+     (ecase align-x
+       (:left (incf left point-x) (incf right point-x))
+       (:right (incf left (- point-x width)) (incf right (- point-x width)))
+       (:center (incf left (- point-x (round width 2)))
+                (incf right (- point-x (round width 2)))))
+     (ecase align-y
+       (:baseline (incf top point-y) (incf bottom point-y))
+       (:top (incf top (+ point-y ascent))
+             (incf bottom (+ point-y ascent)))
+       (:bottom (incf top (- point-y descent))
+                (incf bottom (- point-y descent)))
+       (:center (incf top (+ point-y (ceiling (- ascent descent) 2)))
+                (incf bottom (+ point-y (ceiling (- ascent descent) 2)))))
+     (values left top right bottom))))
 
 (defmethod* (setf output-record-position) :around
     (nx ny (record draw-text-output-record))
@@ -1736,6 +1735,15 @@ were added."
    (baseline :initform 0)
    (width :initform 0)
    (max-height :initform 0)
+   ;; FIXME (or rework this comment): CLIM does not separate the
+   ;; notions of the text width and the bounding box; however, we need
+   ;; to, because some fonts will render outside the logical
+   ;; coordinates defined by the start position and the width.  LEFT
+   ;; and RIGHT here (and below) deal with this in a manner completely
+   ;; hidden from the user.  (should we export
+   ;; TEXT-BOUNDING-RECTANGLE*?)
+   (left :initarg :start-x)
+   (right :initarg :start-x)
    (start-x :initarg :start-x)
    (start-y :initarg :start-y)
    (end-x :initarg :start-x)
@@ -1757,12 +1765,14 @@ were added."
     ((record standard-text-displayed-output-record)
      (record2 standard-text-displayed-output-record))
   (with-slots
-	(initial-x1 initial-y1 start-x start-y end-x end-y wrapped strings)
+	(initial-x1 initial-y1 start-x start-y left right end-x end-y wrapped strings)
       record2
     (and (coordinate= (slot-value record 'initial-x1) initial-x1)
 	 (coordinate= (slot-value record 'initial-y1) initial-y1)
 	 (coordinate= (slot-value record 'start-x) start-x)
 	 (coordinate= (slot-value record 'start-y) start-y)
+         (coordinate= (slot-value record 'left) left)
+         (coordinate= (slot-value record 'right) right)
 	 (coordinate= (slot-value record 'end-x) end-x)
 	 (coordinate= (slot-value record 'end-y) end-y)
 	 (eq (slot-value record 'wrapped) wrapped)
@@ -1835,20 +1845,21 @@ were added."
 
 (defmethod tree-recompute-extent
     ((text-record standard-text-displayed-output-record))
-  (with-standard-rectangle* (:x1 x1 :y1 y1)
+  (with-standard-rectangle* (:y1 y1)
       text-record
-    (with-slots (width max-height)
+    (with-slots (max-height left right)
 	text-record
       (setf (rectangle-edges* text-record)
-	    (values x1 y1
-		    (coordinate (+ x1 width))
-		    (coordinate (+ y1 max-height))))))
+	    (values (coordinate left)
+                    y1 
+                    (coordinate right)
+                    (coordinate (+ y1 max-height))))))
   text-record)
 
 (defmethod add-character-output-to-text-record ; XXX OAOO with ADD-STRING-...
     ((text-record standard-text-displayed-output-record)
      character text-style char-width height new-baseline)
-  (with-slots (strings baseline width max-height start-y end-x end-y medium)
+  (with-slots (strings baseline width max-height left right start-y end-x end-y medium)
       text-record
     (if (and strings
 	     (let ((string (last1 strings)))
@@ -1868,11 +1879,18 @@ were added."
 					   :element-type 'character
 					   :adjustable t
 					   :fill-pointer t)))))
-    (setq baseline (max baseline new-baseline)
-	  end-x (+ end-x char-width)
-	  max-height (max max-height height)
-	  end-y (max end-y (+ start-y max-height))
-	  width (+ width char-width)))
+    (multiple-value-bind (minx miny maxx maxy)
+        (text-bounding-rectangle* medium character :text-style text-style)
+      (declare (ignore miny maxy))
+      (setq baseline (max baseline new-baseline)
+            ;; KLUDGE: note END-X here is really START-X of the new
+            ;; string
+            left (min left (+ end-x minx))
+            end-x (+ end-x char-width)
+            right (+ end-x (max 0 (- maxx char-width)))
+            max-height (max max-height height)
+            end-y (max end-y (+ start-y max-height))
+            width (+ width char-width))))
   (tree-recompute-extent text-record))
 
 (defmethod add-string-output-to-text-record
@@ -1886,7 +1904,7 @@ were added."
                                             (aref string start)
                                             text-style
                                             string-width height new-baseline))
-      (t (with-slots (strings baseline width max-height start-y end-x end-y
+      (t (with-slots (strings baseline width max-height left right start-y end-x end-y
 		      medium)
 	     text-record
 	   (let ((styled-string (make-instance
@@ -1901,12 +1919,21 @@ were added."
 	     (nconcf strings (list styled-string))
 	     (replace (styled-string-string styled-string) string
 		      :start2 start :end2 end))
-	   (setq baseline (max baseline new-baseline)
-		 end-x (+ end-x string-width)
-		 max-height (max max-height height)
-		 end-y (max end-y (+ start-y max-height))
-		 width (+ width string-width)))
-       (tree-recompute-extent text-record)))))
+           (multiple-value-bind (minx miny maxx maxy)
+               (text-bounding-rectangle* medium string
+                                         :text-style text-style
+                                         :start start :end end)
+             (declare (ignore miny maxy))
+             (setq baseline (max baseline new-baseline)
+                   ;; KLUDGE: note that END-X here really means
+                   ;; START-X of the new string.
+                   left (min left (+ end-x minx))
+                   end-x (+ end-x string-width)
+                   right (+ end-x (max 0 (- maxx string-width)))
+                   max-height (max max-height height)
+                   end-y (max end-y (+ start-y max-height))
+                   width (+ width string-width))))
+         (tree-recompute-extent text-record)))))
 
 (defmethod text-displayed-output-record-string
     ((record standard-text-displayed-output-record))
