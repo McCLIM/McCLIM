@@ -10,7 +10,7 @@
   ()
   (:pointer-documentation t)
   (:panes
-    (app :application :height 600 :width 600)
+    (app :application :display-time nil :height 400 :width 600)
     (int :interactor :height 200 :width 600))
   (:layouts
     (default (vertically () app int))))

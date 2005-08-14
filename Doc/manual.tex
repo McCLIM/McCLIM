@@ -1,6 +1,7 @@
 % -*- coding: latin-1; -*-
 \documentclass{book}
 
+\usepackage[T1]{fontenc}
 \usepackage[latin1]{inputenc}
 \usepackage{color}
 \usepackage{epsfig}
@@ -350,6 +351,22 @@ which can be used in calls both to ordinary input and output functions
 such as \texttt{format} and \texttt{read} and to CLIM-specific
 functions such as \texttt{draw-line}.
 
+In this example we have such an application pane, the name of which is
+\texttt{app}.  As you can see, we have defined it with an option
+\texttt{:display-time nil}.  The default value for this option for an
+application pane is \texttt{:command-loop}, which means that the pane
+is cleared after each iteration in the command loop, and then
+redisplayed using a client-supplied \emph{display function}.  The
+default display function does nothing, and we have not supplied any,
+so if we had omitted the \texttt{:display-time nil} option, the
+\texttt{parity} command would have written to the pane.  Then, at the
+end of the command loop, the pane would have been cleared, and nothing
+else would have been displayed.  The net result is that we would have
+seen no visible output.  With the option \texttt{:display-time nil},
+the pane is never cleared, and output is accumulated every time we
+execute the \texttt{parity} command.
+
+
 For this example, let us also add a few \emph{commands}.  Such
 commands are defined by the use of a macro called
 \texttt{define-}\textit{name}\texttt{-command}, where \textit{name} is
@@ -648,9 +665,8 @@ with a lower-case a and the origin of C is marked with a lower-case
 c.  Mirrors are outlined with dotted rectangles. 
 
 \begin{figure}
-  \begin{center}
-    \input native.pstex_t
-%\inputfig{native.pstex_t}
+\begin{center}
+\inputfig{native.pstex_t}
 \end{center}
 \caption{\label{fignative} A sheet with a nontrivial transformation}
 \end{figure}
