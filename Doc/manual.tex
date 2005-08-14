@@ -403,6 +403,52 @@ Notice that commands, in order to be available from the command line,
 must have an option of \texttt{:name t}.  The reason is that some
 commands will be available only from menus or by some other mechanism. 
 
+\section{An application displaying a data structure}
+
+Many applications use a central data structure that is to be on
+display at all times, and that is modified by the commands of the
+application.  CLIM allows for a very easy way to write such an
+application.  The main idea is to store the data structure in slots of
+the application frame, and to use a \emph{display function} that after
+each iteration of the command loop displays the entire data structure
+to the application pane. 
+
+Here is a variation of the previous application that shows this
+possibility:
+
+\verbatimtabinput{ex2b.lisp}
+
+Here, we have added a slot that is called \texttt{current-number} to
+the application frame.  It is initialized to \texttt{NIL} and it has
+an accessor function that allow us to query and to modify the value. 
+
+Observe that in this example, we no longer have the option
+\texttt{:display-time nil} set in the application pane.  By default,
+then, the \texttt{:display-time} is \texttt{:command-loop} which means
+that the pane is erased after each iteration of the command loop.
+Also observe the option \texttt{:display-function} which takes a
+symbol that names a function to be called to display the pane after it
+has been cleared.  In this case, the name is \texttt{display-app}, the
+name of the function defined immediately after the application frame. 
+
+Instead of immediately displaying information about its argument, the
+command \texttt{com-parity} instead modifies the new slot of the
+application frame.  Think of this function as being more general, for
+instance a command to add a new object to a set of graphical objects
+in a figure drawing program, or as a command to add a new name to an
+address book.  Notice how this function accesses the current
+application frame by means of the special variable
+\texttt{*application-frame*}.
+
+A display function is called with the frame and the pane as
+arguments.  It is good style to use the pane as the stream in calls to
+functions that will result in output.  This makes it possible for the
+same function to be used by several different frames, should that be
+called for.  In our simple example, the display function only displays
+the value of a single number (or \texttt{NIL}), but you could think of
+this as displaying all the objects that have been drawn in some figure
+drawing program or displaying all the entries in an address book. 
+
 \chapter{Using presentation types}
 
 \section{What is a presentation type}
