@@ -715,7 +715,7 @@ records. "))
   (:documentation "Produce a value that can be used to hash the output record
 in an equalp hash table"))
 
-(defmethod output-record-hash ((record basic-output-record))
+(defmethod output-record-hash ((record standard-bounding-rectangle))
   (slot-value record 'coordinates))
 
 (defconstant +fixnum-bits+ (integer-length most-positive-fixnum))
