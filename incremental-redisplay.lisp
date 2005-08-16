@@ -124,9 +124,9 @@ spatially organized data structure.
 	  ((and (symbolp map-test-func) (symbolp func)) ; not eq
 	   nil)
 	  ((and (symbolp map-test-func) (fboundp map-test-func))
-	   (eq (symbol-value map-test-func) func))
+	   (eq (symbol-function map-test-func) func))
 	  ((and (symbolp func) (fboundp func))
-	   (eq map-test-func (symbol-value func)))
+	   (eq map-test-func (symbol-function func)))
 	  (t nil))))
 
 (defun ensure-test (map test)
