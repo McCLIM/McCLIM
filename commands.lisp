@@ -746,30 +746,36 @@
       ;; We don't need fresh gensyms of these variables for each accept form.
       (with-gensyms (value ptype changedp)
 	`(defun ,name (,command-table ,stream ,partial-command)
-	   (destructuring-bind (,command-name ,@original-args)
-	       ,partial-command
-	     (let ((,command-line-name (command-line-name-for-command
-					,command-name
-					,command-table
-					:errorp nil))
-		   ,@(mapcar #'list required-arg-names original-args))
-	       (accepting-values (,stream)
-		 (format ,stream
-			 "You are being prompted for arguments to ~S~%"
-			 ,command-line-name)
-		 ,@(loop
-		      for var in required-arg-names
-		      for original-var in original-args
-		      for parameter in required-args
-		      append `((multiple-value-bind (,value ,ptype ,changedp)
-				   ,(accept-form-for-argument-partial
-				     stream parameter var original-var)
-				 (declare (ignore ,ptype))
-				 (terpri ,stream)
-				 (when ,changedp
-				   (setq ,var ,value))))))
-	       (list ,command-name ,@required-arg-names))))))))
-
+           (do ((still-missing nil t))
+               (nil)
+             (destructuring-bind (,command-name ,@original-args)
+                 ,partial-command
+               (let ((,command-line-name (command-line-name-for-command
+                                          ,command-name
+                                          ,command-table
+                                          :errorp nil))
+                     ,@(mapcar #'list required-arg-names original-args))
+                 (accepting-values (,stream)
+                   (format ,stream
+                           "You are being prompted for arguments to ~S~%~%"
+                           ,command-line-name)
+                   ,@(loop
+                        for var in required-arg-names
+                        for original-var in original-args
+                        for parameter in required-args
+                        append `((multiple-value-bind (,value ,ptype ,changedp)
+                                     ,(accept-form-for-argument-partial
+                                       stream parameter var original-var)
+                                   (declare (ignore ,ptype))
+                                   (terpri ,stream)
+                                   (when ,changedp
+                                     (setq ,var ,value)))))
+                   (when still-missing
+                     (format ,stream
+                             "~&Please supply all arguments.")))
+                 (setf ,partial-command (list ,command-name ,@required-arg-names))
+                 (unless (partial-command-p ,partial-command)
+                   (return ,partial-command))))))))))
 
 ;;; XXX What do to about :acceptably? Probably need to wait for Goatee "buffer
 ;;; streams" so we can insert an accept-result-extent in the buffer for
@@ -1079,7 +1085,6 @@
 				     stream
 				     (view textual-view)
 				     &key)
-  (declare (ignore acceptably for-context-type))
   (let ((command-line-name (command-line-name-for-command object command-table
 							  :errorp nil)))
     (if command-line-name
