@@ -89,6 +89,8 @@
 
 (define-protocol-class color (design uniform-design))
 
+(defgeneric color-rgb (color))
+
 (defmethod print-object ((color color) stream)
   (print-unreadable-object (color stream :identity nil :type t)
     (multiple-value-call #'format stream "~,4F ~,4F ~,4F" (color-rgb color))))
@@ -239,6 +241,8 @@
              (saturation (atan f2 f1)))
         (values intensity hue saturation)))))
 
+(defgeneric color-ihs (color))
+
 (defmethod color-ihs ((color color))
   (multiple-value-call #'rgb-to-ihs (color-rgb color)))
 
@@ -354,6 +358,8 @@
     (print-unreadable-object (flipper stream :identity nil :type t)
       (format stream "~S ~S" design1 design2))))
 
+(defgeneric make-flipping-ink (design1 design2))
+
 (defmethod make-flipping-ink ((design1 design) (design2 design))
   (make-instance 'standard-flipping-ink :design1 design1 :design2 design2))
 
@@ -396,9 +402,13 @@
 (defun make-pattern (array designs)
   (make-instance 'indexed-pattern :array array :designs designs))
 
+(defgeneric pattern-width (pattern))
+
 (defmethod pattern-width ((pattern indexed-pattern))
   (with-slots (array) pattern
     (array-dimension array 1)))
+
+(defgeneric pattern-height (pattern))
 
 (defmethod pattern-height ((pattern indexed-pattern))
   (with-slots (array) pattern

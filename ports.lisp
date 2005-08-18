@@ -92,6 +92,9 @@
 ;;   A method on (SETF KEYBOARD-INPUT-FOCUS) brings them together,
 ;;    calling %SET-PORT-KEYBOARD-FOCUS.
 
+(defgeneric port-keyboard-input-focus (port))
+(defgeneric (setf port-keyboard-input-focus) (focus port))
+
 (defmethod port-keyboard-input-focus (port)
   (declare (ignore port))
   (when *application-frame*
@@ -107,7 +110,7 @@
 ;; now calls (setf keyboard-input-focus), we need something concrete the
 ;; backend can implement to set the focus.    
 (defmethod %set-port-keyboard-focus (port focus &key timestamp)
-  (declare (ignore focus))  
+  (declare (ignore focus timestamp))  
   (warn "%SET-PORT-KEYBOARD-FOCUS is not implemented on ~W" port))
   
 
