@@ -245,8 +245,7 @@ spatially organized data structure.
 (defmethod pane-needs-redisplay :around ((pane updating-output-stream-mixin))
   (let ((redisplayp (call-next-method)))
     (values redisplayp (and (not (eq redisplayp :no-clear))
-			    (or (not (pane-incremental-redisplay pane))
-				(not *enable-updating-output*))))))
+			    (not (pane-incremental-redisplay pane))))))
 
 (defmethod window-clear :after ((pane updating-output-stream-mixin))
   "Get rid of any updating output records stored in the stream; they're gone
@@ -850,9 +849,6 @@ in an equalp hash table"))
          ;; move overlapping
          nil)))))
 
-(defparameter *enable-updating-output* t
-  "Switch to turn on incremental redisplay")
-
 (defvar *trace-updating-output* nil)
 
 (defvar *no-unique-id* (cons nil nil))
@@ -874,8 +870,6 @@ in an equalp hash table"))
 				   unique-id id-test cache-value cache-test
 				   &key (fixed-position nil) (all-new nil)
 				   (parent-cache nil))
-  (unless *enable-updating-output*
-    (return-from invoke-updating-output (funcall continuation stream)))
   (finish-output stream)
   (let ((parent-cache (or parent-cache *current-updating-output* stream)))
     (when (eq unique-id *no-unique-id*)
@@ -991,16 +985,6 @@ in an equalp hash table"))
 
 (defvar *dump-updating-output* nil)
 
-;;; Protocol for notifying that records have been added or deleted,
-;;; for real, during redisplay.
-
-(defgeneric redisplay-add-output-record (record stream)
-  (:documentation "Process an output record that has been added (i.e.,
-  was not in the output history of the stream) during redisplay. The
-  record has not been displayed yet."))
-
-(defgeneric redisplay-delete-output-record (record bounding-rectangle stream))
-
 (defgeneric redisplay-output-record (record stream
 				     &optional check-overlapping))
 
@@ -1031,30 +1015,6 @@ in an equalp hash table"))
 				      erase-overlapping move-overlapping))
 	     (delete-stale-updating-output record))
 	(set-medium-graphics-state current-graphics-state stream)))))
-
-(defmethod redisplay-add-output-record (record
-					(stream updating-output-stream-mixin))
-  (with-bounding-rectangle* (x1 y1 x2 y2)
-    record
-    (draw-rectangle* stream x1 y1 x2 y2
-		     :ink +background-ink+)))
-
-(defmethod redisplay-add-output-record :after
-    (record (stream updating-output-stream-mixin))
-  (note-output-record-got-sheet record stream))
-
-(defmethod redisplay-delete-output-record
-    (record bounding-rectangle (stream updating-output-stream-mixin))
-  (declare (ignore record))
-  (with-bounding-rectangle* (x1 y1 x2 y2)
-    bounding-rectangle
-    (draw-rectangle* stream x1 y1 x2 y2
-		     :ink +background-ink+)))
-
-(defmethod redisplay-delete-output-record :after
-    (record bounding-rectangle (stream updating-output-stream-mixin))
-  (declare (ignore bounding-rectangle))
-  (note-output-record-lost-sheet record stream))
 
 (defun erase-rectangle (stream bounding)
   (with-bounding-rectangle* (x1 y1 x2 y2)
@@ -1244,7 +1204,7 @@ in an equalp hash table"))
     ((frame application-frame) (pane updating-output-stream-mixin) &key force-p)
   (setf (id-counter pane) 0)
   (let ((incremental-redisplay (pane-incremental-redisplay pane)))
-    (cond ((or (not incremental-redisplay) (not *enable-updating-output*))
+    (cond ((not incremental-redisplay)
 	   (call-next-method))
 	  ((or (null (updating-record pane))
 	       force-p)

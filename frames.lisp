@@ -484,25 +484,6 @@ frame, if any")
 	  (:disowned
 	   (disown-frame fm frame)))))))
 
-;;; Defined in incremental-redisplay.lisp
-(defvar *enable-updating-output*)
-
-#+nil
-(defun redisplay-changed-panes (frame)
-  (map-over-sheets #'(lambda (pane)
-                       (multiple-value-bind (redisplayp clearp)
-                           (pane-needs-redisplay pane)
-                         (when redisplayp
-                           (when (and clearp
-                                      (or (not (pane-incremental-redisplay
-                                                pane))
-                                          (not *enable-updating-output*)))
-                             (window-clear pane))
-                           (redisplay-frame-pane frame pane)
-                           (unless (eq redisplayp :command-loop)
-                             (setf (pane-needs-redisplay pane) nil)))))
-                   (frame-top-level-sheet frame)))
-
 (defparameter +default-prompt-style+ (make-text-style :fix :italic :normal))
 
 (defmethod default-frame-top-level
