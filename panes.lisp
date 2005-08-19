@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.153 2005/06/22 09:49:15 tmoore Exp $
+;;; $Id: panes.lisp,v 1.154 2005/08/19 02:20:35 rstrandh Exp $
 
 (in-package :clim-internals)
 
@@ -2591,6 +2591,7 @@ order to produce a double-click")
     #+clim-mp
     (unless input-buffer
       (clim-sys:make-process (lambda () (let ((*application-frame* frame))
+					  (redisplay-frame-panes frame :force-p t)
                                           (standalone-event-loop)))))
     (slot-value frame 'stream)))
 
