@@ -136,6 +136,19 @@ accept of this query")))
 
 (defvar *accepting-values-stream* nil)
 
+(defmacro with-stream-in-own-window ((&optional (stream '*query-io*)
+                                                &rest further-streams)
+                                     &rest body)
+  `(let* ((,stream (open-window-stream))
+          ,@(mapcar (lambda (a-stream)
+                      (list a-stream stream))
+                    further-streams))
+     (sleep 0.1) ;; hackhack.. some delay to "ensure" that the window-stream ist opened
+     (unwind-protect
+         (progn
+           ,@body)
+       (close ,stream))))
+
 (defmacro accepting-values
     ((&optional (stream t)
       &rest args
@@ -144,17 +157,22 @@ accept of this query")))
            align-prompts label scroll-bars
            x-position y-position width height command-table frame-class)
      &body body)
-  (declare (ignorable own-window exit-boxes initially-select-query-identifier
+  (declare (ignorable exit-boxes initially-select-query-identifier
             modify-initial-query resynchronize-every-pass resize-frame
             align-prompts label scroll-bars
             x-position y-position width height command-table frame-class))
   (setq stream (stream-designator-symbol stream '*standard-input*))
   (with-gensyms (accepting-values-continuation)
-    `(flet ((,accepting-values-continuation (,stream)
-              ,@body))
-       (invoke-accepting-values ,stream
-                                #',accepting-values-continuation
-                                ,@args))))
+    (let ((return-form
+           `(flet ((,accepting-values-continuation (,stream)
+                     ,@body))
+              (invoke-accepting-values ,stream
+                                       #',accepting-values-continuation
+                                       ,@args))
+            ))
+      (if own-window
+          `(with-stream-in-own-window (,stream *standard-input* *standard-output*) ,return-form)
+          return-form))))
 
 (defun invoke-accepting-values
     (stream body
@@ -167,7 +185,10 @@ accept of this query")))
      (frame-class 'accept-values))
   (declare (ignore own-window exit-boxes modify-initial-query
     resize-frame label scroll-bars x-position y-position
-    width height frame-class))  
+    width height frame-class))
+  (when (and align-prompts ;; t means the same as :right
+             (not (eq align-prompts :left)))
+    (setf align-prompts :right))
   (multiple-value-bind (cx cy) (stream-cursor-position stream)
     (let* ((*accepting-values-stream*
             (make-instance 'accepting-values-stream
@@ -224,11 +245,11 @@ accept of this query")))
     (fresh-line stream)
     (with-output-as-presentation
 	(stream nil 'exit-button)
-      (format stream "Exit"))
+      (format stream "OK"))
     (write-char #\space stream)
     (with-output-as-presentation
 	(stream nil 'abort-button)
-      (format stream "Abort"))
+      (format stream "Cancel"))
     (terpri stream)))
 
 (defmethod stream-accept ((stream accepting-values-stream) type
