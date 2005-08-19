@@ -78,7 +78,7 @@
 			   (parse-namestring c)
 			   (make-pathname :type "lisp"
 					  :defaults *clim-directory*))
-		  collect `(:file ,(pathname-name p) :pathname ,p))))))
+		  collect `(:file ,(namestring p) :pathname ,p))))))
 
 (defsystem :clim-lisp
     :components

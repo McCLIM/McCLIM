@@ -2,10 +2,11 @@
   (when (find-package "SB-MOP")
     (pushnew :sb-mop *features*)))
 
-(defpackage #:clim-mop
-  (:use #+sb-mop #:sb-mop #-sb-mop #:sb-pcl)
-  #-sb-mop
-  (:shadowing-import-from #:sb-pcl #:eql-specializer-object))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (unless (find-package '#:clim-mop)
+    (make-package '#:clim-mop :use '(#+sb-mop #:sb-mop
+                                     #-sb-mop #:sb-pcl))
+    (shadowing-import 'sb-pcl::eql-specializer-object '#:clim-mop)))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (loop for sym being the symbols of :clim-mop
