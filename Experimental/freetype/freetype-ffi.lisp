@@ -1,6 +1,9 @@
 ;;; automatically generated, hand tweaked, do not regenerate.
 
-(DEFPACKAGE :FREETYPE (:USE :cl #+sbcl :sb-alien #+cmucl :alien)
+(DEFPACKAGE :FREETYPE 
+  (:USE :cl 
+        #+sbcl :sb-alien 
+        #+cmucl :alien #+cmucl :c-call)
             (:EXPORT "MEMORY-BASE" "DESCENDER" "LINEAR-VERT-ADVANCE" "YX" "XX" "FREE" "AVAILABLE-SIZES" "COVERAGE" "METRICS"
              "RASTER-FLAG" "GLYPH" "GET-CHAR-INDEX" "LIMIT" "STRING" "SHIFT" "LEN" "UNDERLINE-POSITION" "RASTER-NEW-FUNC"
              "POINTS" "TAG" "SIZE-INTERNAL" "NUM-SUBGLYPHS" "UNITS-PER-EM" "LIBRARY" "ALLOC" "OPEN-FACE" "ATTACH-FILE"
@@ -37,8 +40,6 @@
              "BITMAP-" "FILE_BASE" "KERN_MODE" "CHAR_CODE" "RENDERER-REC-" "RASTER-REC-" "VECTOR-" "SIZE-METRICS-" "CHAR_WIDTH"
              "GENERIC-" "ENCODING-" "FACE_INDEX" "SLOT" "GLYPH-FORMAT-" "OPEN-ARGS-" "BBOX-" "SIZE_S"))
 
-;;(declaim (sb-ext:muffle-conditions sb-int:deprecation-warning))
-
 (in-package :freetype)
 
 #+cmucl
@@ -74,6 +75,52 @@
 (define-alien-type freetype:fast (signed 32))
 
 (define-alien-type freetype:ufast (unsigned 32))
+
+(define-alien-type freetype:ptrdiff-t (signed 32))
+
+(define-alien-type freetype:size-t (unsigned 32))
+
+(define-alien-type freetype:wchar-t (signed 32))
+
+(define-alien-type freetype:wint-t (unsigned 32))
+
+(define-alien-type freetype:bool (unsigned 8))
+
+(define-alien-type freetype:fword (signed 16))
+
+(define-alien-type freetype:ufword (unsigned 16))
+
+(define-alien-type freetype:char (signed 8))
+
+(define-alien-type freetype:byte (unsigned 8))
+
+(define-alien-type freetype:string (signed 8))
+
+(define-alien-type freetype:short (signed 16))
+
+(define-alien-type freetype:ushort (unsigned 16))
+
+(define-alien-type freetype:int (signed 32))
+
+(define-alien-type freetype:uint (unsigned 32))
+
+(define-alien-type freetype:long long)
+
+(define-alien-type freetype:ulong unsigned-long)
+
+(define-alien-type freetype:f2dot14 (signed 16))
+
+(define-alien-type freetype:f26dot6 long)
+
+(define-alien-type freetype:fixed long)
+
+(define-alien-type freetype:error (signed 32))
+
+(define-alien-type freetype:pointer (* t))
+
+(define-alien-type freetype:offset freetype:size-t)
+
+(define-alien-type freetype:ptr-dist freetype:size-t)
 
 (define-alien-type nil
  (enum nil (:mod-err-base #.#x000) (:mod-err-autohint #.#x100) (:mod-err-cache #.#x200) (:mod-err-cff #.#x300)
@@ -118,7 +165,10 @@
  (struct freetype::memory-rec- (freetype:user (* t)) (freetype:alloc freetype:alloc-func) (freetype:free freetype:free-func)
   (freetype:realloc freetype:realloc-func)))
 
-(define-alien-type freetype:stream-desc (union freetype::stream-desc- (freetype:value (signed 32)) (freetype:pointer (* t))))
+(define-alien-type freetype:stream-desc 
+    (union freetype::stream-desc- 
+      (freetype:value long) 
+      (freetype:pointer (* t))))
 
 (define-alien-type freetype:stream-io (* t))
 
@@ -127,8 +177,8 @@
 (define-alien-type nil
     (struct freetype::stream-rec-
             (freetype:base (* (unsigned 8)))
-            (freetype:size (unsigned 32))
-            (freetype:pos (unsigned 32))
+            (freetype:size freetype:ulong)
+            (freetype:pos freetype:ulong)
             (freetype:descriptor freetype:stream-desc)
             (freetype:pathname freetype:stream-desc)
             (freetype:read freetype:stream-io)
@@ -137,7 +187,7 @@
             (freetype:cursor (* (unsigned 8)))
             (freetype:limit (* (unsigned 8)))))
 
-(define-alien-type freetype:pos (signed 32))
+(define-alien-type freetype:pos long)
 
 (define-alien-type freetype:vector (struct freetype::vector- (freetype:x freetype:pos) (freetype:y freetype:pos)))
 
@@ -229,52 +279,6 @@
   (freetype:raster-reset freetype:raster-reset-func) (freetype:raster-set-mode freetype:raster-set-mode-func)
   (freetype:raster-render freetype:raster-render-func) (freetype:raster-done freetype:raster-done-func)))
 
-(define-alien-type freetype:ptrdiff-t (signed 32))
-
-(define-alien-type freetype:size-t (unsigned 32))
-
-(define-alien-type freetype:wchar-t (signed 32))
-
-(define-alien-type freetype:wint-t (unsigned 32))
-
-(define-alien-type freetype:bool (unsigned 8))
-
-(define-alien-type freetype:fword (signed 16))
-
-(define-alien-type freetype:ufword (unsigned 16))
-
-(define-alien-type freetype:char (signed 8))
-
-(define-alien-type freetype:byte (unsigned 8))
-
-(define-alien-type freetype:string (signed 8))
-
-(define-alien-type freetype:short (signed 16))
-
-(define-alien-type freetype:ushort (unsigned 16))
-
-(define-alien-type freetype:int (signed 32))
-
-(define-alien-type freetype:uint (unsigned 32))
-
-(define-alien-type freetype:long (signed 32))
-
-(define-alien-type freetype:ulong (unsigned 32))
-
-(define-alien-type freetype:f2dot14 (signed 16))
-
-(define-alien-type freetype:f26dot6 (signed 32))
-
-(define-alien-type freetype:fixed (signed 32))
-
-(define-alien-type freetype:error (signed 32))
-
-(define-alien-type freetype:pointer (* t))
-
-(define-alien-type freetype:offset freetype:size-t)
-
-(define-alien-type freetype:ptr-dist freetype:size-t)
-
 (define-alien-type freetype:unit-vector
  (struct freetype::unit-vector- (freetype:x freetype:f2dot14) (freetype:y freetype:f2dot14)))
 
@@ -310,7 +314,7 @@
   (freetype:linear-vert-advance freetype:fixed) (freetype:advance freetype:vector) (freetype:format freetype:glyph-format)
   (freetype:bitmap freetype:bitmap) (freetype:bitmap-left freetype:int) (freetype:bitmap-top freetype:int)
   (freetype:outline freetype:outline) (freetype:num-subglyphs freetype:uint) (freetype:subglyphs (* freetype:sub-glyph))
-  (freetype:control-data (* t)) (freetype:control-len (signed 32)) (freetype:other (* t))
+  (freetype:control-data (* t)) (freetype:control-len long) (freetype:other (* t))
   (freetype:internal freetype:slot-internal)))
 
 (define-alien-type freetype:size-metrics
@@ -347,7 +351,7 @@
   (freetype:linear-vert-advance freetype:fixed) (freetype:advance freetype:vector) (freetype:format freetype:glyph-format)
   (freetype:bitmap freetype:bitmap) (freetype:bitmap-left freetype:int) (freetype:bitmap-top freetype:int)
   (freetype:outline freetype:outline) (freetype:num-subglyphs freetype:uint) (freetype:subglyphs (* freetype:sub-glyph))
-  (freetype:control-data (* t)) (freetype:control-len (signed 32)) (freetype:other (* t))
+  (freetype:control-data (* t)) (freetype:control-len long) (freetype:other (* t))
   (freetype:internal freetype:slot-internal)))
 
 (define-alien-type freetype:glyph-slot (* freetype:glyph-slot-rec))
