@@ -664,71 +664,72 @@ call-next-method to get the \"real\" answer based on the stream type."))
 		   display-default query-identifier
 		   activation-gestures additional-activation-gestures
 		   delimiter-gestures additional-delimiter-gestures))
-  (let* ((real-type (expand-presentation-type-abbreviation type))
-	 (real-default-type (cond (default-type-p
-				      (expand-presentation-type-abbreviation
-				       default-type))
-				  ((or defaultp provide-default)
-				   real-type)
-				  (t nil)))
-	 (real-history-type (cond ((null historyp) real-type)
-				  ((null history) nil)
-				  (t (expand-presentation-type-abbreviation
-				      history))))
-	 (*recursive-accept-p* *recursive-accept-1-p*)
-	 (*recursive-accept-1-p* t))
-    (with-keywords-removed (rest-args (:stream))
-      (when (or default-type-p defaultp)
-	(setf rest-args
-	      (list* :default-type real-default-type rest-args)))
-      (when historyp
-	(setf rest-args (list* :history real-history-type rest-args)))
-      (cond ((and viewp (symbolp view))
-	     (setf rest-args
-		   (list* :view (funcall #'make-instance view) rest-args)))
-	    ((consp view)
-	     (setf rest-args
-		   (list* :view (apply #'make-instance view) rest-args))))
-      ;; Presentation type history interaction. According to the spec,
-      ;; if provide-default is true, we take the default from the
-      ;; presentation history. In addition, we'll implement the Genera
-      ;; behavior of temporarily putting the default on the history
-      ;; stack so the user can conveniently suck it in.
-      (flet ((do-accept (args)
-	       (apply #'stream-accept stream real-type args))
-	     (get-history ()
-	       (when real-history-type
-		 (funcall-presentation-generic-function
-		  presentation-type-history-for-stream
-		  real-history-type stream))))
-	(let* ((default-from-history (and (not defaultp) provide-default))
-	       (history (get-history))
-	       (results
-		(multiple-value-list 
-		 (if history
-		     (let ((*active-history-type* real-history-type))
-		       (cond (defaultp
-			      (with-object-on-history
-				  (history default real-default-type)
-				(do-accept rest-args)))
-			     (default-from-history
-			      (multiple-value-bind
-				    (history-default history-type)
-				  (presentation-history-head history
-							     real-default-type)
-				(do-accept (if history-type
-					       (list* :default history-default
-						      :default-type history-type
-						      rest-args)
-					       rest-args))))
-			     (t (do-accept rest-args))))
-		     (do-accept rest-args))))
-	       (results-history (get-history)))
-	  (when results-history
-	    (presentation-history-add results-history
-				      (car results)
-				      (cadr results)))
-	  (values-list results))))))
+  (handler-bind ((abort-gesture #'abort))
+    (let* ((real-type (expand-presentation-type-abbreviation type))
+           (real-default-type (cond (default-type-p
+                                     (expand-presentation-type-abbreviation
+                                      default-type))
+                                    ((or defaultp provide-default)
+                                     real-type)
+                                    (t nil)))
+           (real-history-type (cond ((null historyp) real-type)
+                                    ((null history) nil)
+                                    (t (expand-presentation-type-abbreviation
+                                        history))))
+           (*recursive-accept-p* *recursive-accept-1-p*)
+           (*recursive-accept-1-p* t))
+      (with-keywords-removed (rest-args (:stream))
+        (when (or default-type-p defaultp)
+          (setf rest-args
+                (list* :default-type real-default-type rest-args)))
+        (when historyp
+          (setf rest-args (list* :history real-history-type rest-args)))
+        (cond ((and viewp (symbolp view))
+               (setf rest-args
+                     (list* :view (funcall #'make-instance view) rest-args)))
+              ((consp view)
+               (setf rest-args
+                     (list* :view (apply #'make-instance view) rest-args))))
+        ;; Presentation type history interaction. According to the spec,
+        ;; if provide-default is true, we take the default from the
+        ;; presentation history. In addition, we'll implement the Genera
+        ;; behavior of temporarily putting the default on the history
+        ;; stack so the user can conveniently suck it in.
+        (flet ((do-accept (args)
+                 (apply #'stream-accept stream real-type args))
+               (get-history ()
+                 (when real-history-type
+                   (funcall-presentation-generic-function
+                    presentation-type-history-for-stream
+                    real-history-type stream))))
+          (let* ((default-from-history (and (not defaultp) provide-default))
+                 (history (get-history))
+                 (results
+                  (multiple-value-list 
+                   (if history
+                       (let ((*active-history-type* real-history-type))
+                         (cond (defaultp
+                                (with-object-on-history
+                                    (history default real-default-type)
+                                  (do-accept rest-args)))
+                               (default-from-history
+                                (multiple-value-bind
+                                      (history-default history-type)
+                                    (presentation-history-head history
+                                                               real-default-type)
+                                  (do-accept (if history-type
+                                                 (list* :default history-default
+                                                        :default-type history-type
+                                                        rest-args)
+                                                 rest-args))))
+                               (t (do-accept rest-args))))
+                       (do-accept rest-args))))
+                 (results-history (get-history)))
+            (when results-history
+              (presentation-history-add results-history
+                                        (car results)
+                                        (cadr results)))
+            (values-list results)))))))
 
 (defgeneric stream-accept (stream type
 			   &key
