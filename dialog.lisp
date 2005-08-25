@@ -170,9 +170,9 @@ accept of this query")))
                                        #',accepting-values-continuation
                                        ,@args))
             ))
-      (if own-window
-          `(with-stream-in-own-window (,stream *standard-input* *standard-output*) ,return-form)
-          return-form))))
+      `(if  ,own-window
+            (with-stream-in-own-window (,stream *standard-input* *standard-output*) ,return-form)
+           ,return-form))))
 
 (defun invoke-accepting-values
     (stream body
