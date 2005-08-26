@@ -138,12 +138,13 @@ accept of this query")))
 
 (defmacro with-stream-in-own-window ((&optional (stream '*query-io*)
                                                 &rest further-streams)
+                                     (&optional label)
                                      &rest body)
-  `(let* ((,stream (open-window-stream))
+  `(let* ((,stream (open-window-stream :label ,label
+                                       :input-buffer (climi::frame-event-queue *application-frame*)))
           ,@(mapcar (lambda (a-stream)
                       (list a-stream stream))
                     further-streams))
-     (sleep 0.1) ;; hackhack.. some delay to "ensure" that the window-stream ist opened
      (unwind-protect
          (progn
            ,@body)
@@ -159,7 +160,7 @@ accept of this query")))
      &body body)
   (declare (ignorable exit-boxes initially-select-query-identifier
             modify-initial-query resynchronize-every-pass resize-frame
-            align-prompts label scroll-bars
+            align-prompts scroll-bars
             x-position y-position width height command-table frame-class))
   (setq stream (stream-designator-symbol stream '*standard-input*))
   (with-gensyms (accepting-values-continuation)
@@ -171,7 +172,9 @@ accept of this query")))
                                        ,@args))
             ))
       `(if  ,own-window
-            (with-stream-in-own-window (,stream *standard-input* *standard-output*) ,return-form)
+            (with-stream-in-own-window (,stream *standard-input* *standard-output*)
+                                       (,label)
+                                       ,return-form)
            ,return-form))))
 
 (defun invoke-accepting-values
