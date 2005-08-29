@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.154 2005/08/19 02:20:35 rstrandh Exp $
+;;; $Id: panes.lisp,v 1.155 2005/08/29 22:39:31 mretzlaff Exp $
 
 (in-package :clim-internals)
 
@@ -795,7 +795,7 @@ order to produce a double-click")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;; BASIC-PANE
+;;; BASIC PANE
 
 (defclass basic-pane (;; layout-protocol-mixin
                       standard-space-requirement-options-mixin
@@ -957,7 +957,7 @@ order to produce a double-click")
 			 (event window-manager-delete-event))
   (frame-exit (pane-frame (event-sheet event))))
 
-;;;; UNMANAGED-TOP-LEVEL-SHEET-PANE
+;;;; UNMANAGED-TOP-LEVEL-SHEET PANE
 
 (defclass unmanaged-top-level-sheet-pane (top-level-sheet-pane)
   ()
@@ -1643,7 +1643,7 @@ order to produce a double-click")
                     (- width border-width border-width)
                     (- height border-width border-width)))))
 
-;;; OUTLINED-PANE
+;;; OUTLINED PANE
 
 ;; same as SPACING-PANE but a different default background.
 
@@ -1654,7 +1654,7 @@ order to produce a double-click")
 (defmacro outlining ((&rest options) &body contents)
   `(make-pane 'outlined-pane ,@options :contents (list ,@contents)))
 
-;;; BORDER-PANE
+;;; BORDER PANE
 
 ;; same as outlined-pane, but thickness is now called border-width.
 
@@ -1666,6 +1666,11 @@ order to produce a double-click")
 
 (defmacro bordering ((&rest options) &body contents)
   `(make-pane 'border-pane ,@options :contents (list ,@contents)))
+
+(defmethod pane-border ((pane basic-pane))
+  (let ((parent (sheet-parent pane)))
+    (when (and parent (typep parent 'border-pane))
+	parent)))
 
 ;;; RAISED PANE
 
@@ -1751,7 +1756,7 @@ order to produce a double-click")
   (note-input-focus-changed (sheet-child pane) state))
 
 ;;;;
-;;;; SCROLLER-PANE
+;;;; SCROLLER PANE
 ;;;;
 
 ;;; How scrolling is done
@@ -2033,9 +2038,8 @@ order to produce a double-click")
 
 (defmethod pane-viewport ((pane basic-pane))
   (let ((parent (sheet-parent pane)))
-    (if (and parent (typep parent 'viewport-pane))
-	parent
-      nil)))
+    (when (and parent (typep parent 'viewport-pane))
+	parent)))
 
 ;;; Default for streams that aren't even panes.
 
@@ -2051,7 +2055,7 @@ order to produce a double-click")
 
 (defmethod pane-scroller ((pane basic-pane))
   (let ((viewport (pane-viewport pane)))
-    (if viewport
+    (when viewport
 	(sheet-parent viewport))))
 
 (defmethod scroll-extent ((pane basic-pane) x y)
