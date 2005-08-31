@@ -133,7 +133,8 @@
 ;; ICON-OF is measurably slow here in CMUCL. Interesting..
 
 (defmethod icon-of ((pathname pathname))
-  (cond ((not (probe-file pathname)) (standard-icon "invalid.xpm"))
+  (cond ((wild-pathname-p pathname) (standard-icon "wild.xpm"))
+        ((not (probe-file pathname)) (standard-icon "invalid.xpm"))
         ((directoryp pathname) *folder-icon*) ;; FIXME: use inode mime types                              
         (T (let ((mime-class (find-class (pathname-mime-type pathname) nil)))
              (if mime-class

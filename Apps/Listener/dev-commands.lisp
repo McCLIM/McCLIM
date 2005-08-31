@@ -1028,7 +1028,9 @@
   (terpri stream))
 
 (defun sort-pathnames (list sort-by)
-  list)                 ; <--- FIXME
+  (case sort-by            ; <--- FIXME
+    ('name  (sort list #'string-lessp :key #'file-namestring))
+    (t list)))
 
 (defun split-sort-pathnames (list group-dirs sort-by)
   (mapcar (lambda (x) (sort-pathnames x sort-by))
@@ -1064,31 +1066,37 @@
 				    :provide-output-destination-keyword t)
     ((pathname 'pathname #+nil(or 'string 'pathname) :prompt "pathname")
      &key
-     #+NIL (sort-by '(member name size modify none) :default 'name)
+     (sort-by '(member name size modify none) :default 'name)
      (show-hidden  'boolean :default nil :prompt "show hidden")
      (hide-garbage 'boolean :default T   :prompt "hide garbage")
      (show-all     'boolean :default nil :prompt "show all")
      (style '(member items list) :default 'items :prompt "listing style")
      (group-directories 'boolean :default T :prompt "group directories?")
-     (full-names 'boolean :default nil :prompt "show full name?"))
+     (full-names 'boolean :default nil :prompt "show full name?")
+     (list-all-direct-subdirectories 'boolean :default nil :prompt "list all direct subdirectories?"))
 
   (let* ((pathname (if (wild-pathname-p pathname) ; Forgot why I did this..
                        (merge-pathnames pathname)
                      pathname))
-         (dir (list-directory (gen-wild-pathname pathname))))
+         (wild-pathname (gen-wild-pathname pathname))
+         (dir (if list-all-direct-subdirectories
+                  (list-directory-with-all-direct-subdirectories wild-pathname)
+                  (list-directory wild-pathname))))
 
     (with-text-family (T :sans-serif)      
       (invoke-as-heading
         (lambda ()
           (format T "Directory contents of ")
-          (present pathname)))
+          (present (directory-namestring pathname) 'pathname)
+          (when (pathname-type pathname)
+            (format T " (only files of type ~a)" (pathname-type pathname)))))
     
       (when (parent-directory pathname)
-        (with-output-as-presentation (T (parent-directory pathname) 'clim:pathname)
+        (with-output-as-presentation (T (strip-filespec (parent-directory pathname)) 'clim:pathname)
           (draw-icon T (standard-icon "up-folder.xpm") :extra-spacing 3)
           (format T "Parent Directory~%")))
 
-      (dolist (group (split-sort-pathnames dir group-directories :none #+NIL sort-by))
+      (dolist (group (split-sort-pathnames dir group-directories sort-by))
         (unless show-all
           (setf group (filter-garbage-pathnames group show-hidden hide-garbage)))
         (ecase style
@@ -1105,7 +1113,8 @@
                  (goatee::reposition-stream-cursor *standard-output*)                 
                  (vertical-gap T))
           (list (dolist (ent group)
-                  (let ((ent (merge-pathnames ent pathname))) ; This is for CMUCL, see above. (fixme!)
+                  (let ((ent (merge-pathnames ent pathname))) ;; This is for CMUCL, see above. (fixme!)
+                                                              ;; And breaks some things for SBCL.. (mgr) 
                     (pretty-pretty-pathname ent *standard-output* :long-name full-names)))))))))
 
 #+nil   ; OBSOLETE

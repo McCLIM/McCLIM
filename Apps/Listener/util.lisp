@@ -118,6 +118,8 @@
 
 #+SBCL
 (defun list-directory (pathname)
+  (directory pathname)
+  #+nil ;; ugh. is too ughy. (mgr)
   (let* ((pathname (strip-filespec pathname)) ;; ugh.
          (dir (sb-posix:opendir pathname))
          (list nil))
@@ -141,6 +143,19 @@
 (defun list-directory (pathname)
   (directory pathname))
 
+;;; Calls LIST-DIRECTORY and appends the subdirectories of the directory
+;;; PATHNAME to the output of LIST-DIRECTORY if PATHNAME is a wild pathname.
+
+(defun list-directory-with-all-direct-subdirectories (pathname)
+  (let ((file-list (list-directory pathname)))
+    (if (wild-pathname-p pathname)
+        (nconc file-list 
+               (delete-if (lambda (directory)
+                            (member directory file-list :test #'equal))
+                          (delete-if-not #'directoryp
+                                        (list-directory (gen-wild-pathname
+                                                         (strip-filespec pathname))))))
+        file-list)))
 
 ;;; A farce of a  "portable" run-program, which grows as I need options from
 ;;; the CMUCL run-program.
