@@ -2020,17 +2020,20 @@ call-next-method to get the \"real\" answer based on the stream type."))
 	     (presentation-subtypep subtype-over over))))))
 
 (defmacro define-drag-and-drop-translator
-    (name
-     (from-type to-type destination-type command-table
-      &rest args
-      &key (gesture :select) tester documentation
-      pointer-documentation menu priority
-      (feedback 'frame-drag-and-drop-feedback)
-      (highlighting 'frame-drag-and-drop-highlighting))
+   (name (from-type to-type destination-type command-table
+           &rest args &key
+           (gesture :select)
+           (tester 'default-translator-tester)
+           documentation
+           (pointer-documentation nil pointer-documentation-p)
+           (menu t)
+           (priority 0)
+           (feedback 'frame-drag-and-drop-feedback)
+           (highlighting 'frame-drag-and-drop-highlighting))
      arglist
      &body body)
-  (declare (ignore tester documentation pointer-documentation menu
-		   priority))
+  (declare (ignore tester documentation pointer-documentation pointer-documentation-p
+                   menu priority))
   (let* ((real-from-type (expand-presentation-type-abbreviation from-type))
 	 (real-dest-type (expand-presentation-type-abbreviation
 			  destination-type))

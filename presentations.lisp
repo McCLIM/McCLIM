@@ -1357,6 +1357,7 @@ and used to ensure that presentation-translators-caches are up to date.")
 		    `',tester
 		    `#',(make-translator-fun (car tester)
 					     (cdr tester)))
+       :tester-definitive t
        :documentation #',(make-documentation-fun documentation)
        ,@(when pointer-documentation-p
 	       `(:pointer-documentation
