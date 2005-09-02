@@ -664,7 +664,9 @@ call-next-method to get the \"real\" answer based on the stream type."))
 		   display-default query-identifier
 		   activation-gestures additional-activation-gestures
 		   delimiter-gestures additional-delimiter-gestures))
-  (handler-bind ((abort-gesture #'abort))
+  (handler-bind ((abort-gesture (lambda (condition)
+                                  (signal condition) ;; to give outer handlers a chance to say "I know how to handle this"
+                                  (abort condition))))
     (let* ((real-type (expand-presentation-type-abbreviation type))
            (real-default-type (cond (default-type-p
                                      (expand-presentation-type-abbreviation
