@@ -16,8 +16,6 @@
 (assert (subtypep 'path 'region))
 (assert (subtypep 'path 'bounding-rectangle))
 
-
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; area
@@ -27,7 +25,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; coordiante
+;;; coordinate
 
 (assert (or (and (subtypep 'coordinate t)
 		 (subtypep t 'coordinate))
@@ -100,4 +98,77 @@
   (assert (or (typep d 'standard-region-difference)
 	      (pointp d)))
   (assert (member (length regions) '(1 2)))
-  (assert (member p1 regions :test #'region-equal)))
+  (assert (member p1 regions :test #'region-equal))
+  (let* ((regions2 '()))
+    (map-over-region-set-regions
+     (lambda (region) (push region regions2))
+     d)
+    (assert (null (set-difference regions regions2 :test #'region-equal)))
+    (assert (null (set-difference regions2 regions :test #'region-equal)))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; polyline
+
+(assert (subtypep 'polyline 'path))
+(assert (subtypep 'standard-polyline 'polyline))
+
+(let* ((x1 10) (y1 22) (x2 30) (y2 30) (x3 50) (y3 5)
+       (p1 (make-point x1 y1)) (p2 (make-point x2 y2)) (p3 (make-point x3 y3))
+       (pl1 (make-polyline (list p1 p2 p3)))
+       (pl2 (make-polyline* (list x1 y1 x2 y2 x3 y3)))
+       (pl3 (make-polyline (list p1 p2 p3) :closed t))
+       (pl4 (make-polyline* (list x1 y1 x2 y2 x3 y3) :closed t))
+       (points '()))
+  (assert (typep pl1 'standard-polyline))
+  (assert (polylinep pl1))
+  (assert (typep pl2 'standard-polyline))
+  (assert (polylinep pl2))
+  (assert (region-equal pl1 pl2))
+  (assert (typep pl3 'standard-polyline))
+  (assert (polylinep pl3))
+  (assert (typep pl4 'standard-polyline))
+  (assert (polylinep pl4))
+  (assert (region-equal pl3 pl4))
+  (assert (null (set-difference (polygon-points pl1) (list p1 p2 p3) :test #'region-equal)))
+  (assert (null (set-difference (list p1 p2 p3) (polygon-points pl1) :test #'region-equal)))
+  (assert (null (set-difference (polygon-points pl2) (list p1 p2 p3) :test #'region-equal)))
+  (assert (null (set-difference (list p1 p2 p3) (polygon-points pl2) :test #'region-equal)))
+  (assert (null (set-difference (polygon-points pl3) (list p1 p2 p3) :test #'region-equal)))
+  (assert (null (set-difference (list p1 p2 p3) (polygon-points pl3) :test #'region-equal)))
+  (assert (null (set-difference (polygon-points pl4) (list p1 p2 p3) :test #'region-equal)))
+  (assert (null (set-difference (list p1 p2 p3) (polygon-points pl4) :test #'region-equal)))
+  (map-over-polygon-coordinates
+   (lambda (x y)
+     (push (make-point x y) points))
+   pl1)
+  (assert (null (set-difference (list p1 p2 p3) points :test #'region-equal)))
+  (assert (null (set-difference points (list p1 p2 p3) :test #'region-equal))))  
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; polygon
+
+(assert (subtypep 'polygon 'area))
+(assert (subtypep 'standard-polygon 'polygon))
+
+(let* ((x1 10) (y1 22) (x2 30) (y2 30) (x3 50) (y3 5)
+       (p1 (make-point x1 y1)) (p2 (make-point x2 y2)) (p3 (make-point x3 y3))
+       (pg1 (make-polygon (list p1 p2 p3)))
+       (pg2 (make-polygon* (list x1 y1 x2 y2 x3 y3)))
+       (points '()))
+  (assert (typep pg1 'standard-polygon))
+  (assert (polygonp pg1))
+  (assert (typep pg2 'standard-polygon))
+  (assert (polygonp pg2))
+  (assert (region-equal pg1 pg2))
+  (assert (null (set-difference (polygon-points pg1) (list p1 p2 p3) :test #'region-equal)))
+  (assert (null (set-difference (list p1 p2 p3) (polygon-points pg1) :test #'region-equal)))
+  (assert (null (set-difference (polygon-points pg2) (list p1 p2 p3) :test #'region-equal)))
+  (assert (null (set-difference (list p1 p2 p3) (polygon-points pg2) :test #'region-equal)))
+  (map-over-polygon-coordinates
+   (lambda (x y)
+     (push (make-point x y) points))
+   pg1)
+  (assert (null (set-difference (list p1 p2 p3) points :test #'region-equal)))
+  (assert (null (set-difference points (list p1 p2 p3) :test #'region-equal))))
