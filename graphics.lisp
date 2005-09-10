@@ -705,15 +705,28 @@
 ;;; mess. I think we need a pixmap output recording stream in order to do this
 ;;; right. -- moore
 (defmacro with-output-to-pixmap ((medium-var sheet &key width height) &body body)
-  `(let* ((pixmap (allocate-pixmap ,sheet ,width ,height)) ; XXX size might be unspecified -- APD
-	  (,medium-var (make-medium (port ,sheet) pixmap))
-	  (old-medium (sheet-medium ,sheet)))
-     (setf (slot-value pixmap 'medium) ,medium-var) ; hmm, [seems to work] -- BTS
-     (setf (%sheet-medium ,sheet) ,medium-var) ;is sheet a sheet-with-medium-mixin? --GB
-     (unwind-protect
-	 (progn ,@body)
-       (setf (%sheet-medium ,sheet) old-medium));is sheet a sheet-with-medium-mixin? --GB
-     pixmap))
+  (if (and width height)
+      `(let* ((pixmap (allocate-pixmap ,sheet ,width ,height))
+              (,medium-var (make-medium (port ,sheet) pixmap))
+              (old-medium (sheet-medium ,sheet)))
+         (setf (slot-value pixmap 'medium) ,medium-var) ; hmm, [seems to work] -- BTS
+         (setf (%sheet-medium ,sheet) ,medium-var) ;is sheet a sheet-with-medium-mixin? --GB
+         (unwind-protect
+              (progn ,@body)
+           (setf (%sheet-medium ,sheet) old-medium)) ;is sheet a sheet-with-medium-mixin? --GB
+         pixmap)
+      (let ((record (gensym "OUTPUT-RECORD-")))
+        ;; rudi (2005-09-05) What to do when only width or height are
+        ;; given?  And what's the meaning of medium-var?
+        `(let* ((,medium-var ,sheet)
+                (,record (with-output-to-output-record (,medium-var)
+                           ,@body)))
+           (with-output-to-pixmap
+               (,medium-var 
+                ,sheet
+                :width ,(or width `(bounding-rectangle-width ,record))
+                :height ,(or height `(bounding-rectangle-height ,record)))
+             (replay-output-record ,record ,sheet))))))
 
 ;;; XXX This seems to be incorrect.
 ;;; This presumes that your drawing will completely fill the bounding rectangle
