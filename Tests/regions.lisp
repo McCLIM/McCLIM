@@ -227,4 +227,67 @@
   (assert (region-equal (make-point x1 y2) (rectangle-min-point r1)))
   (assert (region-equal (make-point x2 y1) (rectangle-max-point r1))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; ellipse
 
+(assert (subtypep 'ellipse 'area))
+(assert (subtypep 'standard-ellipse 'ellipse))
+
+(let* ((xc 234) (yc 345) (xdr1 -858) (ydr1 44) (xdr2 -55) (ydr2 5)
+       (sa 10) (ea 270)
+       (pc (make-point xc yc))
+       (e1 (make-ellipse* xc yc xdr1 ydr1 xdr2 ydr2 :start-angle sa :end-angle ea))
+       (e2 (make-ellipse pc xdr1 ydr1 xdr2 ydr2 :start-angle sa :end-angle ea))
+       (e3 (make-ellipse pc xdr1 ydr1 xdr2 ydr2)))
+  (assert (typep e1 'standard-ellipse))
+  (assert (ellipsep e1))
+;;; this test fails
+;;;  (assert (region-equal e1 e2))
+  (multiple-value-bind (x y) (ellipse-center-point* e1)
+    (assert (= (coordinate xc) x))
+    (assert (= (coordinate yc) y))
+    (assert (region-equal (make-point x y) (ellipse-center-point e2))))
+  (multiple-value-bind (xr11 yr11 xr12 yr12) (ellipse-radii e1)
+    (multiple-value-bind (xr21 yr21 xr22 yr22) (ellipse-radii e2)
+      (assert (= xr11 xr21))
+      (assert (= yr11 yr21))
+      (assert (= xr12 xr22))
+      (assert (= yr12 yr22))))
+  (assert (= (coordinate sa) (coordinate (ellipse-start-angle e1))))
+  (assert (= (coordinate ea) (coordinate (ellipse-end-angle e1))))
+  (assert (null (ellipse-start-angle e3)))
+  (assert (null (ellipse-end-angle e3))))
+  
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; elliptical arc
+
+(assert (subtypep 'elliptical-arc 'path))
+(assert (subtypep 'standard-elliptical-arc 'elliptical-arc))
+
+(let* ((xc 234) (yc 345) (xdr1 -858) (ydr1 44) (xdr2 -55) (ydr2 5)
+       (sa 10) (ea 270)
+       (pc (make-point xc yc))
+       (ea1 (make-elliptical-arc* xc yc xdr1 ydr1 xdr2 ydr2 :start-angle sa :end-angle ea))
+       (ea2 (make-elliptical-arc pc xdr1 ydr1 xdr2 ydr2 :start-angle sa :end-angle ea))
+       (ea3 (make-elliptical-arc pc xdr1 ydr1 xdr2 ydr2)))
+  (assert (typep ea1 'standard-elliptical-arc))
+  (assert (elliptical-arc-p ea1))
+;;; this test fails
+;;;  (assert (region-equal ea1 ea2))
+  (multiple-value-bind (x y) (ellipse-center-point* ea1)
+    (assert (= (coordinate xc) x))
+    (assert (= (coordinate yc) y))
+    (assert (region-equal (make-point x y) (ellipse-center-point ea2))))
+  (multiple-value-bind (xr11 yr11 xr12 yr12) (ellipse-radii ea1)
+    (multiple-value-bind (xr21 yr21 xr22 yr22) (ellipse-radii ea2)
+      (assert (= xr11 xr21))
+      (assert (= yr11 yr21))
+      (assert (= xr12 xr22))
+      (assert (= yr12 yr22))))
+  (assert (= (coordinate sa) (coordinate (ellipse-start-angle ea1))))
+  (assert (= (coordinate ea) (coordinate (ellipse-end-angle ea1))))
+  (assert (null (ellipse-start-angle ea3)))
+  (assert (null (ellipse-end-angle ea3))))
