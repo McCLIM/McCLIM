@@ -599,7 +599,7 @@ them."
   "Return the given universal time in ISO 8601 format. This will raise
 an error if the given time is not a decodable universal time."
   (multiple-value-bind (sec min hour date month year)
-      (decode-universal-time time)
+      (decode-universal-time time 0)
     (format nil "~4,'0D-~2,'0D-~2,'0DT~2,'0D:~2,'0D:~2,'0DZ"
 	    year month date hour min sec)))
 
