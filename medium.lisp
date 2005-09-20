@@ -585,7 +585,7 @@
        (eql (line-style-thickness style1) (line-style-thickness style2))
        (eql (line-style-joint-shape style1) (line-style-joint-shape style2))
        (eql (line-style-cap-shape style1) (line-style-cap-shape style2))
-       (eql (line-style-thickness style1) (line-style-thickness style2))))
+       (eql (line-style-dashes style1) (line-style-dashes style2))))
 
 ;;; Misc ops
 
