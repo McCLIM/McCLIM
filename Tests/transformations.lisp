@@ -54,3 +54,71 @@
     (assert (typep (make-3-point-transformation p1 p2 p3 p4 p5 p6) 'transformation))
     (assert (typep (make-3-point-transformation* x1 y1 x2 y2 x3 y3 x4 y4 x5 y5 x6 y6)
 		   'transformation))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; transformation protocol
+
+(let* ((t1 (make-rotation-transformation 0))
+       (t2 (make-scaling-transformation 1 1)))
+  (assert (identity-transformation-p t1))
+  (assert (identity-transformation-p t2))
+  (assert (transformation-equal t1 t2))
+  (assert (invertible-transformation-p t1))
+  (assert (invertible-transformation-p t2))
+  (assert (translation-transformation-p t1))
+  (assert (translation-transformation-p t2))
+;;; tests fail
+;;;  (assert (reflection-transformation-p t1))
+;;;  (assert (reflection-transformation-p t2))
+  (assert (rigid-transformation-p t1))
+  (assert (rigid-transformation-p t2))
+  (assert (even-scaling-transformation-p t1))
+  (assert (even-scaling-transformation-p t2))
+  (assert (scaling-transformation-p t1))
+  (assert (scaling-transformation-p t2))
+  (assert (rectilinear-transformation-p t1))
+  (assert (rectilinear-transformation-p t2))
+  (assert (transformation-equal t1 (compose-transformations t1 t2)))
+  (assert (transformation-equal t1 (invert-transformation t1)))
+  (assert (transformation-equal t1 (compose-translation-with-transformation t1 0 0)))
+  (assert (transformation-equal t1 (compose-rotation-with-transformation t1 0)))
+  (assert (transformation-equal t1 (compose-scaling-with-transformation t1 1 1)))
+;;; tests fail
+;;;  (assert (transformation-equal t1 (compose-transformation-with-translation t1 0 0)))
+  (assert (transformation-equal t1 (compose-transformation-with-rotation t1 0)))
+  (assert (transformation-equal t1 (compose-transformation-with-scaling t1 1 1))))
+  
+  
+(let ((tr (make-rotation-transformation 0))
+      (r (make-rectangle* 10 20 30 40))
+      (x 10) (y 20))
+  (assert (region-equal r (transform-region tr r)))
+  (assert (region-equal r (untransform-region tr r)))
+  (multiple-value-bind (xx yy) (transform-position tr x y)
+    (assert (= (coordinate x) xx))
+    (assert (= (coordinate y) yy)))
+  (multiple-value-bind (xx yy) (untransform-position tr x y)
+    (assert (= (coordinate x) xx))
+    (assert (= (coordinate y) yy)))
+  (multiple-value-bind (xx yy) (transform-distance tr x y)
+    (assert (= (coordinate x) xx))
+    (assert (= (coordinate y) yy)))
+  (multiple-value-bind (xx yy) (untransform-distance tr x y)
+    (assert (= (coordinate x) xx))
+    (assert (= (coordinate y) yy)))
+  (let ((x2 55) (y2 -20))
+    (multiple-value-bind (xx1 yy1 xx2 yy2) (transform-rectangle* tr x y x2 y2)
+      (assert (= xx1 (min (coordinate x) (coordinate x2))))
+      (assert (= yy1 (min (coordinate y) (coordinate y2))))
+      (assert (= xx2 (max (coordinate x) (coordinate x2))))
+      (assert (= yy2 (max (coordinate y) (coordinate y2)))))
+    (multiple-value-bind (xx1 yy1 xx2 yy2) (untransform-rectangle* tr x y x2 y2)
+      (assert (= xx1 (min (coordinate x) (coordinate x2))))
+      (assert (= yy1 (min (coordinate y) (coordinate y2))))
+      (assert (= xx2 (max (coordinate x) (coordinate x2))))
+      (assert (= yy2 (max (coordinate y) (coordinate y2)))))))
+
+
+
+    
