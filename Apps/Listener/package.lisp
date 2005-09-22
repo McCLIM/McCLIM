@@ -3,7 +3,7 @@
 
 (defpackage "CLIM-LISTENER"
   (:use "CLIM" "CLIM-LISP")
-  (:export #:run-listener #:run-listener-process #:dev-commands))
+  (:export #:run-listener #:dev-commands))
 
 (in-package :clim-listener)
 

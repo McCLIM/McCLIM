@@ -19,10 +19,9 @@
           (export sym :clim-mop))))
 
 
-;;; In SBCL the Common Lisp versions of CLASS-OF and FIND-CLASS return
-;;; wrappers which the MOP can't grok, so use the PCL versions
-;;; instead.
-
+;;; In SBCL the Common Lisp versions of CLASS-OF and FIND-CLASS used
+;;; to return wrappers which the MOP couldn't grok.  This has been fixed
+;;; for some time, certainly in sbcl 0.9.4.
 #+nil
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (flet ((reexport (symbols)

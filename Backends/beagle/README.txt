@@ -118,13 +118,12 @@ backends, you can mix and match. For example, by issuing the following:-
 7.  -> (setf climi:*default-server-path* :clx)
 8.  -> (clim-listener:run-listener)
 9.  CL-USER> (setf climi:*default-server-path* :beagle)
-10. CL-USER> (clim-listener:run-listener-process)
+10. CL-USER> (clim-listener:run-listener :new-process t)
 
 I can get both a CLX and a Beagle Listener running simultaneously.
-You can also do a (clim-listener:run-listener-process) in (8) and
-then run the other listener from the OpenMCL Listener.
-Other variations probably work too, but I haven't experimented too
-much.
+You can also do a (clim-listener:run-listener :new-process t) in (8)
+and then run the other listener from the OpenMCL Listener.  Other
+variations probably work too, but I haven't experimented too much.
 
 (7) isn't actually necessary, since the CLX port appears in the server-
 path search order before the Beagle port does.
