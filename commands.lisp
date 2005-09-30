@@ -471,7 +471,8 @@
       (loop for gesture in keystroke-accelerators
 	    for item in keystroke-items
 	    do (funcall function
-			(command-menu-item-name item)
+                        (and (slot-boundp item 'menu-name)
+                             (command-menu-item-name item))
 			gesture
 			item)))))
 
