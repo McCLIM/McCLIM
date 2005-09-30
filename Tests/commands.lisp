@@ -35,7 +35,7 @@
    (lambda (menu-name gesture item)
      (incf count)
      (assert 
-      (and (equal menu-name nil)
+      (and (equal menu-name "Test")
            (equal gesture '(:keyboard #\u 0))
            (equal (command-menu-item-value item)
                   (lookup-keystroke-command-item gesture 'menu-test-table)))))
