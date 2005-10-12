@@ -2634,13 +2634,20 @@ Returns two values, the item itself, and the index within the item list."
   (declare (ignore client id))
   (let ((port (port gadget)))    
     (setf (previous-focus gadget) (port-keyboard-input-focus port))
-    (setf (port-keyboard-input-focus port) gadget)))
+    (setf (port-keyboard-input-focus port) gadget))
+  (let ((cursor (cursor (area gadget))))
+    (letf (((cursor-state cursor) nil))
+      (setf (cursor-appearance cursor) :solid))))
 
 (defmethod disarmed-callback :after ((gadget text-field-pane) client id)
   (declare (ignore client id))
   (let ((port (port gadget)))
     (setf (port-keyboard-input-focus port) (previous-focus gadget))
-    (setf (previous-focus gadget) nil)))
+    (setf (previous-focus gadget) nil))
+  (let ((cursor (cursor (area gadget))))
+    (letf (((cursor-state cursor) nil))
+      (setf (cursor-appearance cursor) :hollow))))
+
 
 (defmethod handle-event ((gadget text-field-pane) (event key-press-event))
   (let ((gesture (convert-to-gesture event))

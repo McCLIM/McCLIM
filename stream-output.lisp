@@ -78,6 +78,9 @@
    (x :initform 0 :initarg :x-position)
    (y :initform 0 :initarg :y-position)
    (width :initform 8)
+   (appearance :type (member :solid :hollow) 
+               :initarg :appearance :initform :hollow
+               :accessor cursor-appearance)
    ;; XXX what does "cursor is active" mean?
    ;; It means that the sheet (stream) updates the cursor, though
    ;; currently the cursor appears to be always updated after stream
@@ -142,7 +145,8 @@
 	(draw-rectangle* (sheet-medium (cursor-sheet cursor))
 			 x y
 			 (+ x width) (+ y height)
-			 :filled t
+			 :filled (ecase (cursor-appearance cursor)
+                                   (:solid t) (:hollow nil))
 			 :ink +flipping-ink+)))))
 
 (defmethod display-cursor ((cursor cursor-mixin) state)
@@ -154,7 +158,8 @@
 	(:draw (draw-rectangle* (sheet-medium (cursor-sheet cursor))
 				x y
 				(+ x width) (+ y height)
-				:filled t
+				:filled (ecase (cursor-appearance cursor)
+                                   (:solid t) (:hollow nil))
 				:ink +foreground-ink+
 				))       
         (:erase
@@ -168,7 +173,8 @@
                 (draw-rectangle* (sheet-medium (cursor-sheet cursor))
                                  x y
                                  (+ x width) (+ y height)
-                                 :filled t
+                                 :filled (ecase (cursor-appearance cursor)
+                                   (:solid t) (:hollow nil))
                                  :ink +background-ink+))))))
 
 ;;; Standard-Text-Cursor class
