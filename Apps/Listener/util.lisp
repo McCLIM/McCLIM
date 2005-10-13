@@ -138,8 +138,12 @@
 (defun list-directory (pathname)
   (directory pathname :directories t :follow-links nil))
 
+#+ALLEGRO
+(defun list-directory (pathname)
+  (directory pathname :directories-are-files nil))
+
 ;; Fallback to ANSI CL
-#-(OR CMU SBCL OPENMCL)
+#-(OR CMU SBCL OPENMCL ALLEGRO)
 (defun list-directory (pathname)
   (directory pathname))
 
@@ -257,7 +261,8 @@ this point, increment it by SPACING, which defaults to zero."
                  :directory (pathname-directory pathname)
                  :name (or (pathname-name pathname) :wild)
                  :type (or (pathname-type pathname) :wild)
-                 :version (or :wild
+                 :version (or #+allegro :unspecific
+                              :wild
                               ;#-SBCL (pathname-version pathname)
                               ;#+SBCL :newest
                               )))
