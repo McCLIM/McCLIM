@@ -1029,7 +1029,10 @@
 
 (defun sort-pathnames (list sort-by)
   (case sort-by            ; <--- FIXME
-    ('name  (sort list #'string-lessp :key #'file-namestring))
+    ('name  (sort list #'string-lessp
+                  :key (lambda (pathname)
+                         (or (file-namestring pathname)
+                             (first (last (pathname-directory pathname)))))))
     (t list)))
 
 (defun split-sort-pathnames (list group-dirs sort-by)
