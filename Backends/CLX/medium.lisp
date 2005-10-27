@@ -34,15 +34,11 @@
 ;;; CLX-MEDIUM class
 
 (defclass clx-medium (basic-medium)
-  ((gc
-      :initform nil)
-   (picture
-    :initform nil)
+  ((gc :initform nil)
+   (picture :initform nil)
    #+unicode
-   (fontset
-      :initform nil
-      :accessor medium-fontset)
-   ))
+   (fontset :initform nil :accessor medium-fontset)
+   (buffer :initform nil :accessor medium-buffer)))
 
 #+CLX-EXT-RENDER
 (defun clx-medium-picture (clx-medium)
@@ -338,19 +334,19 @@
 
 (defmacro with-clx-graphics ((medium) &body body)
   `(let* ((port (port ,medium))
-          (mirror (port-lookup-mirror port (medium-sheet ,medium))))
+	  (mirror (or (medium-buffer medium) (port-lookup-mirror port (medium-sheet ,medium)))))
     (when mirror
       (let* ((line-style (medium-line-style ,medium))
-             (ink        (medium-ink ,medium))
-             (gc         (medium-gcontext ,medium ink))
-             #+unicode
-             (*fontset*  (or (medium-fontset ,medium)
-                             (setf (medium-fontset ,medium)
-                                   (text-style-to-X-fontset (port ,medium) *default-text-style*)))))
-        line-style ink
-        (unwind-protect
-             (progn ,@body)
-          #+ignore(xlib:free-gcontext gc))))))
+	     (ink        (medium-ink ,medium))
+	     (gc         (medium-gcontext ,medium ink))
+	     #+unicode
+	     (*fontset*  (or (medium-fontset ,medium)
+			     (setf (medium-fontset ,medium)
+				   (text-style-to-X-fontset (port ,medium) *default-text-style*)))))
+	line-style ink
+	(unwind-protect
+	     (progn ,@body)
+	  #+ignore(xlib:free-gcontext gc))))))
 
 
 ;;; Pixmaps
@@ -367,7 +363,7 @@
                       (medium-gcontext from-drawable +background-ink+)
                       (round-coordinate from-x) (round-coordinate from-y)
 		      (round width) (round height)
-                      (sheet-direct-mirror (medium-sheet to-drawable))
+                      (or (medium-buffer to-drawable) (sheet-direct-mirror (medium-sheet to-drawable)))
                       (round-coordinate to-x) (round-coordinate to-y)))))
 
 (defmethod medium-copy-area ((from-drawable clx-medium) from-x from-y width height
@@ -389,7 +385,7 @@
                     (medium-gcontext to-drawable +background-ink+)
                     (round-coordinate from-x) (round-coordinate from-y)
 		    (round width) (round height)
-                    (sheet-direct-mirror (medium-sheet to-drawable))
+                    (or (medium-buffer to-drawable) (sheet-direct-mirror (medium-sheet to-drawable)))
                     (round-coordinate to-x) (round-coordinate to-y))))
 
 (defmethod medium-copy-area ((from-drawable pixmap) from-x from-y width height
@@ -1013,13 +1009,16 @@
 	      (min-y (round-coordinate (min top bottom)))
 	      (max-x (round-coordinate (max left right)))
 	      (max-y (round-coordinate (max top bottom))))
-	  (xlib:clear-area (port-lookup-mirror (port medium)
-					       (medium-sheet medium))
-			   :x (max #x-8000 (min #x7fff min-x))
-			   :y (max #x-8000 (min #x7fff min-y))
-			   :width (max 0 (min #xffff (- max-x min-x)))
-			   :height (max 0 (min #xffff (- max-y min-y)))))))))
-
+	  (xlib:draw-rectangle (or (medium-buffer medium)
+				   (port-lookup-mirror (port medium)
+						       (medium-sheet medium)))
+			       (medium-gcontext medium (medium-background medium))
+			       (max #x-8000 (min #x7fff min-x))
+			       (max #x-8000 (min #x7fff min-y))
+			       (max 0 (min #xffff (- max-x min-x)))
+			       (max 0 (min #xffff (- max-y min-y)))
+			       t))))))
+  
 (defmethod medium-beep ((medium clx-medium))
   (xlib:bell (clx-port-display (port medium))))
 
@@ -1040,3 +1039,18 @@
 
 (defmethod medium-miter-limit ((medium clx-medium))
   #.(* pi (/ 11 180)))
+
+(defmethod climi::medium-invoke-with-possible-double-buffering (frame pane (medium clx-medium) continuation)
+  (if (climi::pane-double-buffering pane)
+      (let* ((mirror (sheet-direct-mirror pane))
+	     (width (xlib:drawable-width mirror))
+	     (height (xlib:drawable-height mirror))
+	     (depth (xlib:drawable-depth mirror))
+	     (pixmap (xlib:create-pixmap :width width :height height :depth depth :drawable mirror)))
+	(setf (medium-buffer medium) pixmap)
+	(unwind-protect (funcall continuation)
+	  (xlib:copy-area pixmap (medium-gcontext medium (medium-foreground medium)) 0 0 width height mirror 0 0)
+	  (xlib:free-pixmap pixmap)
+	  (setf (medium-buffer medium) nil)))
+      (funcall continuation)))
+

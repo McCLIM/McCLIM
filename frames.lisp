@@ -427,6 +427,23 @@ frame, if any")
   (declare (ignore pane force-p))
   nil)
 
+(defgeneric medium-invoke-with-possible-double-buffering (frame pane medium continuation))
+
+(defmethod medium-invoke-with-possible-double-buffering (frame pane medium continuation)
+  (funcall continuation))
+
+(defgeneric invoke-with-possible-double-buffering (frame pane continuation))
+
+(defmethod invoke-with-possible-double-buffering (frame pane continuation)
+  (declare (ignore frame pane))
+  (funcall continuation))
+
+(defmethod invoke-with-possible-double-buffering (frame (pane sheet-with-medium-mixin) continuation)
+  (medium-invoke-with-possible-double-buffering frame pane (sheet-medium pane) continuation))
+
+(defmacro with-possible-double-buffering ((frame pane) &body body)
+  `(invoke-with-possible-double-buffering ,frame ,pane (lambda () ,@body)))
+
 (defmethod redisplay-frame-pane :around ((frame application-frame) pane
 					 &key force-p)
   (multiple-value-bind (redisplayp clearp)
@@ -439,9 +456,10 @@ frame, if any")
 	(when hilited
 	  (highlight-presentation-1 (car hilited) (cdr hilited) :unhighlight)
 	  (setf (frame-hilited-presentation frame) nil)))
-      (when clearp
-	(window-clear pane))
-      (call-next-method)
+      (with-possible-double-buffering (frame pane)
+	(when clearp
+	  (window-clear pane))
+	(call-next-method))
       (unless (or (eq redisplayp :command-loop) (eq redisplayp :no-clear))
 	(setf (pane-needs-redisplay pane) nil)))))
 
