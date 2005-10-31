@@ -55,6 +55,9 @@
     (make-rectangle* 0 0 width height)))
 
 (defun make-postscript-transformation (paper-size-name orientation)
+  (when (eq paper-size-name :eps)
+    (return-from make-postscript-transformation
+      (make-reflection-transformation* 0 0 1 0)))
   (multiple-value-bind (width height) (paper-size paper-size-name)
     (case orientation
         (:portrait (make-3-point-transformation*

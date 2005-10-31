@@ -58,29 +58,45 @@
                                          orientation header-comments)))
     (unwind-protect
          (progn
+           (with-output-recording-options (stream :record t :draw nil)
+             (with-graphics-state (stream)
+               ;; we need at least one level of saving -- APD, 2002-02-11
+               (funcall continuation stream)))
            (with-slots (file-stream title for orientation paper) stream
-             (format file-stream "%!PS-Adobe-3.0~%")
+             (format file-stream "%!PS-Adobe-3.0~@[ EPSF-3.0~*~]~%"
+                     (eq device-type :eps))
              (format file-stream "%%Creator: McCLIM~%")
              (format file-stream "%%Title: ~A~%" title)
              (format file-stream "%%For: ~A~%" for)
              (format file-stream "%%LanguageLevel: 2~%")
-	     (multiple-value-bind (width height)
-		 (paper-size paper)
-	       (format file-stream "%%BoundingBox: 0 0 ~A ~A~%" width height)
-	       (format file-stream "%%DocumentMedia: ~A ~A ~A 0 () ()~%"
-		       paper width height))
-             (format file-stream "%%Orientation: ~A~%"
-                     (ecase orientation
-                       (:portrait "Portrait")
-                       (:landscape "Landscape")))
-             (format file-stream "%%Pages: (atend)~%")
+             (case paper
+               ((:eps)
+                (let ((record (stream-output-history stream)))
+                  (multiple-value-bind (lx ly ux uy) (bounding-rectangle* record)
+                    (format file-stream "%%BoundingBox: ~A ~A ~A ~A~%" 
+                            (floor lx) (- (ceiling uy))
+                            (ceiling ux) (- (floor ly))))))
+               (t
+                (multiple-value-bind (width height)
+                    (paper-size paper)
+                  (format file-stream "%%BoundingBox: 0 0 ~A ~A~%" width height)
+                  (format file-stream "%%DocumentMedia: ~A ~A ~A 0 () ()~%"
+                          paper width height))
+                (format file-stream "%%Orientation: ~A~%"
+                        (ecase orientation
+                          (:portrait "Portrait")
+                          (:landscape "Landscape")))
+                (format file-stream "%%Pages: (atend)~%")))
              (format file-stream "%%DocumentNeededResources: (atend)~%")
              (format file-stream "%%EndComments~%~%")
              (write-postcript-dictionary file-stream)
-             (start-page stream))
-           (with-graphics-state ((sheet-medium stream))
-             ;; we need at least one level of saving -- APD, 2002-02-11
-             (funcall continuation stream)))
+             (dolist (text-style (device-fonts (sheet-medium stream)))
+               (write-font-to-postscript-stream (sheet-medium stream) text-style))
+             (start-page stream)
+             (let ((record (stream-output-history stream)))
+               (with-output-recording-options (stream :draw t :record nil)
+                 (with-graphics-state (stream)
+                   (replay record stream))))))
       (with-slots (file-stream current-page) stream
         (format file-stream "end~%showpage~%~%")
         (format file-stream "%%Trailer~%")

@@ -37,7 +37,8 @@
 ;;;; Medium
 
 (defclass postscript-medium (basic-medium)
-  ())
+  ((device-fonts :initform nil
+		 :accessor device-fonts)))
 
 (defmacro postscript-medium-graphics-state (medium)
   `(first (slot-value (medium-sheet ,medium) 'graphics-state-stack)))
@@ -84,7 +85,9 @@
                    *default-postscript-title*))
         (for (or (getf header-comments :for)
                  *default-postscript-for*))
-        (region (paper-region device-type orientation))
+        (region (case device-type
+                  ((:eps) +everywhere+)
+                  (t (paper-region device-type orientation))))
         (transform (make-postscript-transformation device-type orientation)))
     (make-instance 'postscript-stream
                    :file-stream file-stream

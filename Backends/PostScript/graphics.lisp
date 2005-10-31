@@ -169,23 +169,25 @@ setmatrix")
   "Native transformation")
 
 ;;; Postscript output utilities
-(defmacro with-graphics-state ((medium) &body body)
-  `(invoke-with-graphics-state ,medium
+(defmacro with-graphics-state ((stream) &body body)
+  `(invoke-with-graphics-state ,stream
     (lambda () ,@body)))
 
-(defun postscript-save-graphics-state (medium)
-  (push (copy-list (postscript-medium-graphics-state medium))
-        (slot-value (medium-sheet medium) 'graphics-state-stack))
-  (format (postscript-medium-file-stream medium) "gsave~%"))
+(defun postscript-save-graphics-state (stream)
+  (push (copy-list (first (slot-value stream 'graphics-state-stack)))
+        (slot-value stream 'graphics-state-stack))
+  (when (stream-drawing-p stream)
+    (format (postscript-stream-file-stream stream) "gsave~%")))
 
-(defun postscript-restore-graphics-state (medium)
-  (pop (slot-value (medium-sheet medium) 'graphics-state-stack))
-  (format (postscript-medium-file-stream medium) "grestore~%"))
+(defun postscript-restore-graphics-state (stream)
+  (pop (slot-value stream 'graphics-state-stack))
+  (when (stream-drawing-p stream)
+    (format (postscript-stream-file-stream stream) "grestore~%")))
 
-(defun invoke-with-graphics-state (medium continuation)
-  (postscript-save-graphics-state medium)
+(defun invoke-with-graphics-state (stream continuation)
+  (postscript-save-graphics-state stream)
   (funcall continuation)
-  (postscript-restore-graphics-state medium))
+  (postscript-restore-graphics-state stream))
 
 
 ;;; Postscript path functions
@@ -346,8 +348,8 @@ setmatrix")
   ;; does only one level of saving graphics state, so we can restore
   ;; and save again GS to obtain an initial CP. It is ugly, but I see
   ;; no other way now. -- APD, 2002-02-11
-  (postscript-restore-graphics-state medium)
-  (postscript-save-graphics-state medium)
+  (postscript-restore-graphics-state (medium-sheet medium))
+  (postscript-save-graphics-state (medium-sheet medium))
   (postscript-set-clipping-region stream
                                   (medium-clipping-region medium)))
 
@@ -494,7 +496,7 @@ setmatrix")
   (let ((*transformation* (sheet-native-transformation (medium-sheet medium))))
     (let ((file-stream (postscript-medium-file-stream medium)))
       (postscript-actualize-graphics-state file-stream medium :color :text-style)
-      (with-graphics-state (medium)
+      (with-graphics-state ((medium-sheet medium))
         #+ignore
         (when transform-glyphs
           ;;
