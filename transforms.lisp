@@ -4,7 +4,7 @@
 ;;;   Created: 1998-09-29
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: transforms.lisp,v 1.29 2005/02/02 10:18:58 tmoore Exp $
+;;;       $Id: transforms.lisp,v 1.30 2005/11/22 11:40:02 gbaumann Exp $
 ;;; --------------------------------------------------------------------------------------
 ;;;  (c) copyright 1998,1999,2003 by Gilbert Baumann
 ;;;  (c) copyright 2000 by 
@@ -133,8 +133,11 @@ transformation protocol."))
     (values mxx mxy myx myy tx ty)))
 
 (defun make-translation-transformation (dx dy)
-  (make-instance 'standard-translation
-                 :dx (coordinate dx) :dy (coordinate dy)))
+  (cond ((and (coordinate= dx 0) (coordinate= dy 0))
+         +identity-transformation+)
+        (t
+         (make-instance 'standard-translation
+                        :dx (coordinate dx) :dy (coordinate dy)))))
 
 (defun make-rotation-transformation (angle &optional origin)
   (if origin
@@ -666,9 +669,7 @@ transformation protocol."))
   ;; (compose-transformations A B)x = (A o B)x = ABx
   (with-slots ((dx1 dx) (dy1 dy)) transformation1
     (with-slots ((dx2 dx) (dy2 dy)) transformation2
-      (make-instance 'standard-translation
-                     :dx (+ dx1 dx2)
-                     :dy (+ dy1 dy2)))))
+      (make-translation-transformation (+ dx1 dx2) (+ dy1 dy2)))))
 
 (defmethod compose-transformations (transformation2
                                     (transformation1 standard-identity-transformation))
