@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.158 2005/11/28 15:17:28 gbaumann Exp $
+;;; $Id: panes.lisp,v 1.159 2005/11/28 15:22:06 gbaumann Exp $
 
 (in-package :clim-internals)
 
@@ -1566,8 +1566,8 @@ order to produce a double-click")
                    for j from 0
                    do (let ((child (aref array i j)))
                         (layout-child child
-                                      (pane-align-x pane)
-                                      (pane-align-y pane)
+                                      (pane-align-x child)
+                                      (pane-align-y child)
                                       x y w h))))))))
 
 (defun table-pane-p (pane)
