@@ -766,7 +766,7 @@
 				:modifier-state modifier-state
 				:timestamp time)))))
         ;;
-	((:exposure :display)
+	((:exposure :display :graphics-exposure)
          ;; Notes:
          ;; . Do not compare count with 0 here, last rectangle in an
          ;;   :exposure event sequence does not cover the whole region. 
