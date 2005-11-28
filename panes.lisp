@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.159 2005/11/28 15:22:06 gbaumann Exp $
+;;; $Id: panes.lisp,v 1.160 2005/11/28 15:24:37 gbaumann Exp $
 
 (in-package :clim-internals)
 
@@ -2207,34 +2207,34 @@ order to produce a double-click")
         (tw (text-size pane (label-pane-label pane))))
     (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
       (multiple-value-bind (iright itop ileft ibottom
-                            bright btop bleft bbottom)
+                                   bright btop bleft bbottom)
           (label-pane-margins pane)
         (declare (ignorable iright itop ileft ibottom))
         (multiple-value-bind (tx ty)
             (values (ecase (pane-align-x pane)
                       (:left (+ x1 m0 (if (sheet-children pane)
                                           (+ a m0 m0 d)
-                                        0)))
+                                          0)))
                       (:right (- x2 m0 (if (sheet-children pane)
                                            (+ a m0 m0 d)
-                                         0)
-                                 tw))
+                                           0)
+                               tw))
                       (:center (- (/ (- x2 x1) 2) (/ tw 2))))
                     (ecase (label-pane-label-alignment pane)
                       (:top (+ y1 m0 a))
                       (:bottom (- y2 m0 d))))
           (draw-text* pane (label-pane-label pane)
                       tx ty)
+          ;;;
           (when (sheet-children pane)
-            (draw-design pane
-                         (region-difference
-                          (make-polyline* (list
-                                           (+ x1 bleft) (+ y1 btop)
-                                           (+ x1 bleft) (- y2 bbottom)
-                                           (- x2 bright) (- y2 bbottom)
-                                           (- x2 bright) (+ y1 btop))
-                                          :closed t)
-                          (make-rectangle* (- tx m0) (- ty a) (+ tx tw m0) (+ ty d)))) ))))))
+            (with-drawing-options (pane
+                                   :clipping-region
+                                   (region-difference
+                                    (sheet-region pane)
+                                    (make-rectangle* (- tx m0) (- ty a) (+ tx tw m0) (+ ty d))))
+              (draw-bordered-rectangle* pane (+ x1 bleft) (+ y1 btop) (- x2 bright) (- y2 bbottom) 
+                                        :style :groove))))))))
+
 
 (defmethod initialize-instance :after ((pane label-pane) &key contents &allow-other-keys)
   (when contents
