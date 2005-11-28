@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.156 2005/10/27 01:21:33 rstrandh Exp $
+;;; $Id: panes.lisp,v 1.157 2005/11/28 13:23:53 gbaumann Exp $
 
 (in-package :clim-internals)
 
@@ -1471,59 +1471,67 @@ order to produce a double-click")
 
 (defmethod compose-space ((pane table-pane) &key width height)
   (declare (ignore width height))
-  (with-slots (array) pane
+  (with-slots (array x-spacing y-spacing) pane
     ; ---v our problem is here.
+    ; Which problem? --GB
     (let ((rsrs (loop for i from 0 below (array-dimension array 0) 
                     collect (table-pane-row-space-requirement pane i)))
           (csrs (loop for j from 0 below (array-dimension array 1) 
-                    collect (table-pane-col-space-requirement pane j))))
+                    collect (table-pane-col-space-requirement pane j)))
+          (xs (* x-spacing (1- (array-dimension array 1))))
+          (ys (* y-spacing (1- (array-dimension array 0)))))
       (let ((r (stack-space-requirements-vertically rsrs))
             (c (stack-space-requirements-horizontally csrs)))
         (let ((res
                (make-space-requirement
-                :width      (space-requirement-width r)
-                :min-width  (space-requirement-min-width r)
-                :max-width  (space-requirement-max-width r)
-                :height     (space-requirement-height c)
-                :min-height (space-requirement-min-height c)
-                :max-height (space-requirement-max-height c))))
+                :width      (+ (space-requirement-width r) xs)
+                :min-width  (+ (space-requirement-min-width r) xs)
+                :max-width  (+ (space-requirement-max-width r) xs)
+                :height     (+ (space-requirement-height c) ys)
+                :min-height (+ (space-requirement-min-height c) ys)
+                :max-height (+ (space-requirement-max-height c) ys))))
           #+nil
           (format *trace-output* "~%;;; TABLE-PANE sr = ~S." res)
           res)))))
 
-(defmethod allocate-space ((pane table-pane) width height &aux rsrs csrs)
-  (declare (ignorable rsrs csrs))
-  (with-slots (array) pane
-    ;; allot rows
-    (let ((rows (allot-space-vertically
-                 (setq rsrs (loop for i from 0 below (array-dimension array 0)
-                                collect (table-pane-row-space-requirement pane i)))
-                 height))
-          (cols (allot-space-horizontally
-                 (setq csrs (loop for j from 0 below (array-dimension array 1)
-                                collect (table-pane-col-space-requirement pane j)))
-                 width)))
-      #+nil
-      (progn
-        (format T "~&;; row space requirements = ~S." rsrs)
-        (format T "~&;; col space requirements = ~S." csrs)
-        (format T "~&;; row allotment: needed = ~S result = ~S (sum ~S)." height rows (reduce #'+ rows))
-        (format T "~&;; col allotment: needed = ~S result = ~S (sum ~S)." width cols (reduce #'+ cols))
-        (format T "~&;; align-x = ~S, align-y ~S~%"
-                (pane-align-x pane)
-                (pane-align-y pane)))
-      ;; now finally layout each child
-      (loop
-          for y = 0 then (+ y h)
-          for h in rows
-          for i from 0
-          do (loop
-                 for x = 0 then (+ x w)
-                 for w in cols
-                 for j from 0
-                 do (layout-child (aref array i j) (pane-align-x pane) (pane-align-y pane)
-                                  x y w h))))))
-
+(defmethod allocate-space ((pane table-pane) width height)
+  (let (rsrs csrs)
+    (declare (ignorable rsrs csrs))
+    (with-slots (array x-spacing y-spacing) pane
+      ;; allot rows
+      (let* ((xs (* x-spacing (1- (array-dimension array 1))))
+             (ys (* y-spacing (1- (array-dimension array 0))))
+             (rows (allot-space-vertically
+                    (setq rsrs (loop for i from 0 below (array-dimension array 0)
+                                     collect (table-pane-row-space-requirement pane i)))
+                    (- height ys)))
+             (cols (allot-space-horizontally
+                    (setq csrs (loop for j from 0 below (array-dimension array 1)
+                                     collect (table-pane-col-space-requirement pane j)))
+                    (- width xs))))
+        #+nil
+        (progn
+          (format T "~&;; row space requirements = ~S." rsrs)
+          (format T "~&;; col space requirements = ~S." csrs)
+          (format T "~&;; row allotment: needed = ~S result = ~S (sum ~S)." height rows (reduce #'+ rows))
+          (format T "~&;; col allotment: needed = ~S result = ~S (sum ~S)." width cols (reduce #'+ cols))
+          (format T "~&;; align-x = ~S, align-y ~S~%"
+                  (pane-align-x pane)
+                  (pane-align-y pane)))
+        ;; now finally layout each child
+        (loop
+            for y = 0 then (+ y h y-spacing)
+            for h in rows
+            for i from 0
+            do (loop
+                   for x = 0 then (+ x w x-spacing)
+                   for w in cols
+                   for j from 0
+                   do (let ((child (aref array i j)))
+                        (layout-child child
+                                      (pane-align-x pane)
+                                      (pane-align-y pane)
+                                      x y w h))))))))
 
 (defun table-pane-p (pane)
   (typep pane 'table-pane))
