@@ -403,18 +403,27 @@ the incoming selection."))
 
 ;; FIXME: Non-text target conversions.. (?)
 (defun fetch-selection (pane)
-  (let (old-y2)
+  (let (old-y2 old-x2)
     (with-output-to-string (bag)
-;    (let ((bag *trace-output*))
       (map nil
            (lambda (m)
              (with-slots (record styled-string start end) m
-	       (with-standard-rectangle* (:y1 y1 :y2 y2) record
-                 (if (and old-y2 (>= y1 old-y2))
-                     (progn
-                       (setf old-y2 nil)
-                       (terpri bag))
-                   (setf old-y2 (max y2 (or old-y2 y2)))))
-               (princ (subseq (styled-string-string styled-string) start end) bag)))
+               (with-standard-rectangle*
+                   (:x1 x1 :x2 x2 :y1 y1 :y2 y2) record
+                   (cond ((and old-y2 (>= y1 old-y2))
+                          (setf old-y2 nil
+                                old-x2 0 ;<-- ### we should use the minimum of all x1 coordinates.
+                                )
+                          (terpri bag))
+                         (t
+                          (setf old-y2 (max y2 (or old-y2 y2)))))
+                   (when old-x2
+                     (loop repeat (round
+                                   (- x1 old-x2)
+                                   (text-style-width (slot-value styled-string 'text-style)
+                                                     pane))
+                       do
+                       (princ " " bag)))
+                   (setf old-x2 x2)
+                   (princ (subseq (styled-string-string styled-string) start end) bag))))
            (slot-value pane 'markings)))))
-
