@@ -1431,8 +1431,7 @@
 ;;; TODO: INCR property?
 ;;;
 ;;; FIXME: per ICCCM we MUST support :MULTIPLE
-(defmethod send-selection
-    ((port clx-port) (event clx-selection-request-event) string)
+(defmethod send-selection ((port clx-port) (event clx-selection-request-event) string)
   (let ((requestor (selection-event-requestor event))
         (property  (selection-event-property event))
         (target    (selection-event-target event))
@@ -1447,17 +1446,17 @@
 	     ;; debugging output, but the KDE Klipper client turns out
 	     ;; to poll other clients for selection, which means it
 	     ;; would be bad to print at every request.
-	     #+nil
+             #+nil
              (format *trace-output*
-                     "~&;; clim-clx::send-selection - Requested target ~A, sent ~A to property ~A.~%"
+                     "~&;; clim-clx::send-selection - Requested target ~A, sent ~A to property ~A. time ~S~%"
                      (selection-event-target event)
                      target
-                     property)
+                     property time)
              (xlib:send-event requestor
 			      :selection-notify nil
 			      :window requestor
 			      :event-window requestor
-			      :selection :primary
+			      :selection (climi::selection-event-selection event)
 			      :target target
 			      :property property
 			      :time time)))
