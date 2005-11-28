@@ -588,8 +588,25 @@ frame, if any")
   #+NIL (read-command (frame-command-table frame) :use-keystrokes nil :stream stream)
   (read-command (frame-command-table frame) :use-keystrokes t :stream stream))
 
+(defclass execute-command-event (window-manager-event)
+  ((sheet :initarg :sheet :reader event-sheet)
+   (command :initarg :command :reader execute-command-event-command)))
+
 (defmethod execute-frame-command ((frame application-frame) command)
-  (apply (command-name command) (command-arguments command)))
+  ;; ### FIXME: I'd like a different method than checking for
+  ;; *application-frame* to decide, which process processes which
+  ;; frames command loop. Perhaps looking ath the process slot?
+  ;; --GB 2005-11-28
+  (cond ((eq *application-frame* frame)
+         (apply (command-name command) (command-arguments command)))
+        (t
+         (let ((eq (sheet-event-queue (frame-top-level-sheet frame))))
+           (event-queue-append eq (make-instance 'execute-command-event
+                                                  :sheet frame
+                                                  :command command))))))
+
+(defmethod handle-event ((frame application-frame) (event execute-command-event))
+  (execute-frame-command frame (execute-command-event-command event)))
 
 (defmethod command-enabled (command-name (frame standard-application-frame))
   (and (command-accessible-in-command-table-p command-name
