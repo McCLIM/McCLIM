@@ -795,7 +795,7 @@
     (cond ((= start end)
            (values 0 0 0 0 0))
           (t
-           (let ((position-newline (position #\newline string :start start)))
+           (let ((position-newline (position #\newline string :start start :end end)))
              (cond ((not (null position-newline))
                     (multiple-value-bind (width ascent descent left right
                                                 font-ascent font-descent direction
@@ -834,7 +834,7 @@
     (cond ((= start end)
            (values 0 0 0 0))
           (t
-           (let ((position-newline (position #\newline string :start start)))
+           (let ((position-newline (position #\newline string :start start :end end)))
              (cond ((not (null position-newline))
                     (multiple-value-bind (width ascent descent left right
                                                 font-ascent font-descent direction
@@ -875,7 +875,7 @@
     (cond ((= start end)
            (values 0 0 0 0 0))
           (t
-           (let ((position-newline (position #\newline string :start start)))
+           (let ((position-newline (position #\newline string :start start :end end)))
              (cond ((not (null position-newline))
                     (multiple-value-bind (width ascent descent left right
                                                 font-ascent font-descent direction
