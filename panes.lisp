@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.157 2005/11/28 13:23:53 gbaumann Exp $
+;;; $Id: panes.lisp,v 1.158 2005/11/28 15:17:28 gbaumann Exp $
 
 (in-package :clim-internals)
 
@@ -1107,6 +1107,41 @@ order to produce a double-click")
              (t
               sr) ))))
 
+ (defmethod xically-content-sr*** ((pane box-layout-mixin) client major)
+   (let (p)
+     (let ((sr (if (box-client-pane client)
+                   (compose-space (box-client-pane client))
+                   (make-space-requirement :width 0 :min-width 0 :max-width 0
+                                           :height 0 :min-height 0 :max-height 0))))
+       (cond ((box-client-fillp client)
+              (make-space-requirement
+               :major     (space-requirement-major sr)
+               :min-major (space-requirement-min-major sr)
+               :max-major +fill+
+               :minor     (space-requirement-minor sr)
+               :min-minor (space-requirement-min-minor sr)
+               :max-minor (space-requirement-max-minor sr)))
+             ((setq p (box-client-fixed-size client))
+              (make-space-requirement
+               :major     p
+               :min-major p
+               :max-major p
+               :minor     (if sr (space-requirement-minor sr) 0)
+               :min-minor (if sr (space-requirement-min-minor sr) 0)
+               :max-minor (if sr (space-requirement-max-minor sr) 0)))
+             ((setq p (box-client-proportion client))
+              (make-space-requirement
+               :major     (clamp (* p major)
+                                 (space-requirement-min-major sr)
+                                 (space-requirement-max-major sr))
+               :min-major (space-requirement-min-major sr)
+               :max-major (space-requirement-max-major sr)
+               :minor     (if sr (space-requirement-minor sr) 0)
+               :min-minor (if sr (space-requirement-min-minor sr) 0)
+               :max-minor (if sr (space-requirement-max-minor sr) 0)))
+             (t
+              sr) ))))
+
  (defmethod box-layout-mixin/xically-compose-space ((pane box-layout-mixin))
    (let ((n (length (sheet-enabled-children pane))))
      (with-slots (major-spacing) pane
@@ -1118,7 +1153,7 @@ order to produce a double-click")
            sum (space-requirement-max-major sr) into max-major
            maximize (space-requirement-minor sr) into minor
            maximize (space-requirement-min-minor sr) into min-minor
-           minimize (space-requirement-max-minor sr) into max-minor
+           maximize (space-requirement-max-minor sr) into max-minor
            finally
              (return
                (space-requirement+*
@@ -1140,7 +1175,7 @@ order to produce a double-click")
    (declare (ignorable width height))
    (let ((children (reverse (sheet-enabled-children box))))
      (with-slots (major-spacing) box
-       (let* ((content-srs (mapcar #'(lambda (c) (xically-content-sr** box c))
+       (let* ((content-srs (mapcar #'(lambda (c) (xically-content-sr*** box c major))
                                    (box-layout-mixin-clients box)))
               (allot       (mapcar #'ceiling (mapcar #'space-requirement-major content-srs)))
               (wanted      (reduce #'+ allot))
@@ -1154,25 +1189,21 @@ order to produce a double-click")
 
          (let ((qvector
                 (mapcar
-                 (lambda (c &aux p)
+                 (lambda (c)
                    (cond
                      ((box-client-fillp c)
                       (vector 1 0 0))
-                     ((setq p (box-client-proportion c))
-                      (vector 0 p 0))
                      (t
                       (vector 0 0
                               (abs (- (if (> excess 0)
-                                          (space-requirement-max-major
-                                           (xically-content-sr** box c))
-                                          (space-requirement-min-major
-                                           (xically-content-sr** box c)))
-                                      (space-requirement-major
-                                       (xically-content-sr** box c))))))))
+                                          (space-requirement-max-major (xically-content-sr*** box c major))
+                                          (space-requirement-min-major (xically-content-sr*** box c major)))
+                                      (space-requirement-major (xically-content-sr*** box c major))))))))
                  (box-layout-mixin-clients box))))
            ;;
            (when *dump-allocate-space*
              (format *trace-output* "~&;;   old allotment = ~S.~%" allot)
+             (format *trace-output* "~&;;   qvector = ~S.~%" qvector)
              (format *trace-output* "~&;;   qvector 0 = ~S.~%" (mapcar #'(lambda (x) (elt x 0)) qvector))
              (format *trace-output* "~&;;   qvector 1 = ~S.~%" (mapcar #'(lambda (x) (elt x 1)) qvector))
              (format *trace-output* "~&;;   qvector 2 = ~S.~%" (mapcar #'(lambda (x) (elt x 2)) qvector)))
@@ -1189,8 +1220,7 @@ order to produce a double-click")
                                      (+ allot delta))))
                                allot qvector))
 		 (when *dump-allocate-space*
-		   (format *trace-output* "~&;;   new excess = ~F, allotment = ~S.~%" excess allot))
-                 )))
+		   (format *trace-output* "~&;;   new excess = ~F, allotment = ~S.~%" excess allot)) )))
            ;;
 	   (when *dump-allocate-space*
 	     (format *trace-output* "~&;;   excess = ~F.~%" excess)
@@ -1205,9 +1235,10 @@ order to produce a double-click")
      (values majors
              (mapcar (lambda (x) x minor) minors))))
 
- (defmethod box-layout-mixin/xically-allocate-space ((pane box-layout-mixin) width height)
+  (defmethod box-layout-mixin/xically-allocate-space ((pane box-layout-mixin) real-width real-height)
    (with-slots (major-spacing) pane
-     (multiple-value-bind (majors minors) (box-layout-mixin/xically-allocate-space-aux* pane width height)
+     (multiple-value-bind (majors minors)
+         (box-layout-mixin/xically-allocate-space-aux* pane real-width real-height)
        ;; now actually layout the children
        (let ((x 0))
          (loop
@@ -1215,15 +1246,21 @@ order to produce a double-click")
              for major in majors
              for minor in minors
              do
-               #+nil (format *trace-output* "~&;;   child ~S at 0, ~D ~D x ~D~%" child x width height)
-               (when (box-client-pane child)
-                 (move-sheet (box-client-pane child)
+             (when (box-client-pane child)
+               #+NIL
+               (format *trace-output* "~&;;   child ~S at 0, ~D ~D x ~D(~D)~%;;       ~S~%"
+                       (box-client-pane child)
+                       x width height real-height
+                       (compose-space (box-client-pane child)))
+               (layout-child (box-client-pane child)
+                             (pane-align-x (box-client-pane child))
+                             (pane-align-y (box-client-pane child))
                              ((lambda (major minor) height width) x 0)
-                             ((lambda (major minor) width height) x 0))
-                 (allocate-space (box-client-pane child)
-                                 width height))
-               (incf x major)
-               (incf x major-spacing)))))))
+                             ((lambda (major minor) width height) x 0)
+                             ((lambda (major minor) height width) width real-width)
+                             ((lambda (major minor) height width) real-height height)))
+             (incf x major)
+             (incf x major-spacing)))))) )
 
 ;; #+nil
 (defmethod note-sheet-enabled :before ((pane pane))
