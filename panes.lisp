@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.162 2005/11/29 13:18:28 gbaumann Exp $
+;;; $Id: panes.lisp,v 1.163 2005/11/29 14:46:53 gbaumann Exp $
 
 (in-package :clim-internals)
 
@@ -1848,7 +1848,10 @@ order to produce a double-click")
    (vscrollbar :initform nil)
    (hscrollbar :initform nil)
    (suggested-width  :initform 300 :initarg :suggested-width)
-   (suggested-height :initform 300 :initarg :suggested-height)))
+   (suggested-height :initform 300 :initarg :suggested-height))
+  (:default-initargs
+   :x-spacing 4
+   :y-spacing 4))
 
 (defmacro scrolling ((&rest options) &body contents)
   `(let ((viewport (make-pane 'viewport-pane :contents (list ,@contents))))
@@ -1889,7 +1892,7 @@ order to produce a double-click")
         (make-space-requirement))))
 
 (defmethod allocate-space ((pane scroller-pane) width height)
-  (with-slots (viewport vscrollbar hscrollbar) pane
+  (with-slots (viewport vscrollbar hscrollbar x-spacing y-spacing) pane
     (let ((viewport-width  (if vscrollbar (- width  *scrollbar-thickness*) width))
           (viewport-height (if hscrollbar (- height *scrollbar-thickness*) height)))
       
@@ -1946,10 +1949,11 @@ order to produce a double-click")
       (when viewport
         (setf (sheet-transformation viewport)
               (make-translation-transformation
-                   (if vscrollbar *scrollbar-thickness* 0) 0))
+                   (+ x-spacing (if vscrollbar *scrollbar-thickness* 0))
+                   (+ y-spacing 0)))
         (allocate-space viewport
-                        viewport-width
-                        viewport-height)))))
+                        (- viewport-width (* 2 x-spacing))
+                        (- viewport-height (* 2 y-spacing)))))))
 
 ;;;; Initialization
 
@@ -1999,6 +2003,12 @@ order to produce a double-click")
   (sheet-adopt-child pane (first contents))
   (with-slots (scroll-bar viewport vscrollbar hscrollbar) pane
     (setq viewport (first (sheet-children pane)))
+    ;; make the background of the viewport match the background of the
+    ;; things scrolled.
+    (when (first (sheet-children viewport))
+      (setf (slot-value pane 'background)  ;### hmm ...
+            (pane-background (first (sheet-children viewport)))))
+    ;;
     (when (member scroll-bar '(:vertical t))
       (setq vscrollbar
             (make-pane 'scroll-bar-pane
