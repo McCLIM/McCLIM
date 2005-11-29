@@ -1090,7 +1090,7 @@ and must never be nil."))
     :align-x :center
     :align-y :center
     :x-spacing 4
-    :y-spacing 4))
+    :y-spacing 2))
 
 (defmethod compose-space ((gadget push-button-pane) &key width height)
   (declare (ignore width height))
@@ -1161,8 +1161,8 @@ and must never be nil."))
    :text-style (make-text-style :sans-serif nil nil)
     :align-x :left
     :align-y :center
-    :x-spacing 3
-    :y-spacing 3
+    :x-spacing 2
+    :y-spacing 2
     :background *3d-normal-color*))
 
 (defmethod compose-space ((pane toggle-button-pane) &key width height)
@@ -2257,8 +2257,9 @@ Returns two values, the item itself, and the index within the item list."
         (generic-option-pane-compute-label-from-value gadget new-value)))
 
 (defmethod generic-option-pane-widget-size (pane)
-  (declare (ignore pane))
-  (values 22 16))
+  ;; We now always make the widget occupying a square.
+  (let ((h (bounding-rectangle-height pane)))
+    (values h h)))
 
 (defun draw-engraved-vertical-separator (pane x y0 y1 highlight-color shadow-color)
   (draw-line* pane (1+ x) (1+ y0) (1+ x) (1- y1) :ink highlight-color)
@@ -2297,20 +2298,22 @@ Returns two values, the item itself, and the index within the item list."
 
 (defmethod compose-space ((pane generic-option-pane) &key width height)
   (declare (ignore width height))
-  (multiple-value-bind (w-width w-height)
-      (generic-option-pane-widget-size pane)
-    (let* ((horizontal-padding 20)
-           (vertical-padding   10)
-           (l-width  (generic-option-pane-compute-max-label-width pane))
-           (l-height (text-style-height (pane-text-style pane) (sheet-medium pane)))
-           (total-width (+ horizontal-padding l-width w-width))
-           (total-height (+ vertical-padding (max l-height w-height))))
-      (make-space-requirement :min-width total-width
-                              :width total-width
-                              :max-width +fill+
-                              :min-height total-height
-                              :height total-height
-                              :max-height total-height))))
+  (let* ((horizontal-padding 8)         ;### 2px border + 2px padding each side
+         (vertical-padding   8)         ;### this should perhaps be computed from
+                                        ;### border-width and spacing.
+         (l-width  (generic-option-pane-compute-max-label-width pane))
+         (l-height (text-style-height (pane-text-style pane) (sheet-medium pane)))
+         (total-width (+ horizontal-padding l-width
+                         ;; widget width
+                         l-height
+                         8))
+         (total-height (+ vertical-padding l-height)))
+    (make-space-requirement :min-width total-width
+                            :width total-width
+                            :max-width +fill+
+                            :min-height total-height
+                            :height total-height
+                            :max-height total-height)))
 
 (defmethod generic-option-pane-draw-widget (pane)
   (with-bounding-rectangle* (x0 y0 x1 y1) pane
@@ -2519,8 +2522,14 @@ Returns two values, the item itself, and the index within the item list."
       (declare (ignore widget-height))
       (draw-rectangle* pane x0 y0 x1 y1 :ink (effective-gadget-background pane))
       (let* ((tx1 (- x1 widget-width)))
-        (draw-text* pane (slot-value pane 'current-label) (/ (- tx1 x0) 2) (/ (- y1 y0) 2)
-                    :align-x :center :align-y :center))
+        (draw-text* pane (slot-value pane 'current-label)
+                    (/ (- tx1 x0) 2)
+                    (/ (+ (- y1 y0)
+                           (- (text-style-ascent (pane-text-style pane) pane)
+                              (text-style-descent (pane-text-style pane) pane)))
+                        2)
+                    :align-x :center
+                    :align-y :baseline))
       (generic-option-pane-draw-widget pane))))
         
 
