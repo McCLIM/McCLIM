@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.160 2005/11/28 15:24:37 gbaumann Exp $
+;;; $Id: panes.lisp,v 1.161 2005/11/29 10:41:59 gbaumann Exp $
 
 (in-package :clim-internals)
 
@@ -1824,10 +1824,23 @@ order to produce a double-click")
 (defparameter *scrollbar-thickness* 17)
 
 (defclass scroller-pane (composite-pane)
-  ((scroll-bar :type (member t :vertical :horizontal)
-	       :initform t
-	       :initarg :scroll-bar
-	       :accessor scroller-pane-scroll-bar)
+  ((scroll-bar :type (member t :vertical :horizontal nil)
+               ;; ### Note: I added NIL here, so that the application
+               ;; programmer can switch off scroll bars alltogether. 
+               ;; The spec though has it neither in the description of
+               ;; SCROLLER-PANE, nor in the description of
+               ;; MAKE-CLIM-STREAM-PANE, but in OPEN-WINDOW-STREAM.
+               ;;
+               ;; One might argue that in case of no scroll-bars the
+               ;; application programmer can just skip the scroller
+               ;; pane altogether. But I think that the then needed
+               ;; special casing on having a scroller pane or a bare
+               ;; viewport at hand is an extra burden, that can be
+               ;; avoided.
+               ;; --GB 2005-11-29
+               :initform t
+               :initarg :scroll-bar
+               :accessor scroller-pane-scroll-bar)
    (viewport   :initform nil)
    (vscrollbar :initform nil)
    (hscrollbar :initform nil)
@@ -1983,7 +1996,7 @@ order to produce a double-click")
   (sheet-adopt-child pane (first contents))
   (with-slots (scroll-bar viewport vscrollbar hscrollbar) pane
     (setq viewport (first (sheet-children pane)))
-    (when (not (eq scroll-bar :horizontal))
+    (when (member scroll-bar '(:vertical t))
       (setq vscrollbar
             (make-pane 'scroll-bar-pane
                        :orientation :vertical
@@ -2009,7 +2022,7 @@ order to produce a double-click")
                        :min-value 0
                        :max-value 1))
       (sheet-adopt-child pane vscrollbar))
-    (when (not (eq scroll-bar :vertical))
+    (when (member scroll-bar '(:horizontal t))
       (setq hscrollbar
             (make-pane 'scroll-bar-pane
                        :orientation :horizontal
