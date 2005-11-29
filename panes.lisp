@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.161 2005/11/29 10:41:59 gbaumann Exp $
+;;; $Id: panes.lisp,v 1.162 2005/11/29 13:18:28 gbaumann Exp $
 
 (in-package :clim-internals)
 
@@ -1736,7 +1736,10 @@ order to produce a double-click")
 
 ;;; LOWERED PANE
 
-(defclass lowered-pane (border-pane permanent-medium-sheet-output-mixin) ())
+(defclass lowered-pane (border-pane permanent-medium-sheet-output-mixin)
+  ()
+  (:default-initargs
+   :border-width 2))
 
 (defmacro lowering ((&rest options) &body contents)
   `(make-pane 'lowered-pane ,@options :contents (list ,@contents)))
@@ -2133,9 +2136,9 @@ order to produce a double-click")
               :initform :top
               :initarg :label-alignment
               :reader label-pane-label-alignment)
-   (background :initform *3d-normal-color*)
-   )
+   (background :initform *3d-normal-color*))
   (:default-initargs
+   :align-y    :center
    :text-style (make-text-style :sans-serif nil nil))
   (:documentation ""))
 
