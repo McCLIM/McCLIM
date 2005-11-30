@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.163 2005/11/29 14:46:53 gbaumann Exp $
+;;; $Id: panes.lisp,v 1.164 2005/11/30 10:30:50 gbaumann Exp $
 
 (in-package :clim-internals)
 
@@ -461,24 +461,34 @@ order to produce a double-click")
    align-x, align-y name the desired child alignment.
    If the child does not have enough strechability to cover all of the
    given area, it is aligned within that area according to the given
-   options."
+   options.
+
+   As a special option we allow align-x or align-y be :expand, which
+   means that the child wouldn't be aligned in that direction but its
+   size would be forced."
   (let* ((sr           (compose-space child))
          ;; The child's dimension is clamped within its min/max space requirement
-         (child-width  (clamp width
-                              (space-requirement-min-width sr)
-                              (space-requirement-max-width sr)))
-         (child-height (clamp height
-                              (space-requirement-min-height sr)
-                              (space-requirement-max-height sr)))
+         (child-width  (if (eql :expand align-x)
+                           width
+                           (clamp width
+                                  (space-requirement-min-width sr)
+                                  (space-requirement-max-width sr))))
+         (child-height (if (eql :expand align-y)
+                           height
+                           (clamp height
+                                  (space-requirement-min-height sr)
+                                  (space-requirement-max-height sr))))
          ;; Align the child within the available area
          (child-x      (ecase align-x
                          ((:left)   x)
                          ((:center) (+ x (/ (- width child-width) 2)))
-                         ((:right)  (+ x (- width child-width)))))
+                         ((:right)  (+ x (- width child-width)))
+                         ((:expand)  x) ))
          (child-y      (ecase align-y
                          ((:top)    y)
                          ((:center) (+ y (/ (- height child-height) 2)))
-                         ((:bottom) (+ y (- height child-height))))))
+                         ((:bottom) (+ y (- height child-height)))
+                         ((:expand)  y) )))
     ;; Actually layout the child
     (move-sheet child child-x child-y)
     (resize-sheet child child-width child-height)
@@ -1235,11 +1245,17 @@ order to produce a double-click")
      (values majors
              (mapcar (lambda (x) x minor) minors))))
 
-  (defmethod box-layout-mixin/xically-allocate-space ((pane box-layout-mixin) real-width real-height)
+ ;; Now actually layout the children
+ ;;
+ ;; A rack pane would force the minor dimension of the child. A
+ ;; box pane would just align the child according to the
+ ;; alignment option. We do the same with the minor dimension.
+ ;;
+ 
+ (defmethod box-layout-mixin/xically-allocate-space ((pane box-layout-mixin) real-width real-height)
    (with-slots (major-spacing) pane
      (multiple-value-bind (majors minors)
          (box-layout-mixin/xically-allocate-space-aux* pane real-width real-height)
-       ;; now actually layout the children
        (let ((x 0))
          (loop
              for child in (box-layout-mixin-clients pane)
@@ -1258,9 +1274,35 @@ order to produce a double-click")
                              ((lambda (major minor) height width) x 0)
                              ((lambda (major minor) width height) x 0)
                              ((lambda (major minor) height width) width real-width)
-                             ((lambda (major minor) height width) real-height height)))
+                             ((lambda (major minor) height width) real-height height) ))
              (incf x major)
-             (incf x major-spacing)))))) )
+             (incf x major-spacing))))))
+
+ (defmethod box-layout-mixin/xically-allocate-space ((pane rack-layout-mixin) real-width real-height)
+   (with-slots (major-spacing) pane
+     (multiple-value-bind (majors minors)
+         (box-layout-mixin/xically-allocate-space-aux* pane real-width real-height)
+       (let ((x 0))
+         (loop
+             for child in (box-layout-mixin-clients pane)
+             for major in majors
+             for minor in minors
+             do
+             (when (box-client-pane child)
+               #+NIL
+               (format *trace-output* "~&;;   child ~S at 0, ~D ~D x ~D(~D)~%;;       ~S~%"
+                       (box-client-pane child)
+                       x width height real-height
+                       (compose-space (box-client-pane child)))
+               (layout-child (box-client-pane child)
+                             :expand
+                             :expand
+                             ((lambda (major minor) height width) x 0)
+                             ((lambda (major minor) width height) x 0)
+                             ((lambda (major minor) height width) width real-width)
+                             ((lambda (major minor) height width) real-height height) ))
+             (incf x major)
+             (incf x major-spacing)))))))
 
 ;; #+nil
 (defmethod note-sheet-enabled :before ((pane pane))
@@ -1861,15 +1903,17 @@ order to produce a double-click")
 
 (defmethod compose-space ((pane scroller-pane) &key width height)
   (declare (ignore width height))
-  (with-slots (viewport vscrollbar hscrollbar suggested-width suggested-height) pane
+  (with-slots (viewport vscrollbar hscrollbar suggested-width suggested-height
+               x-spacing y-spacing scroll-bar)
+      pane
     (if viewport
         (let ((req
                ; v-- where does this requirement come from?
                ;     a: just an arbitrary default
 		(make-space-requirement
                 :width suggested-width :height suggested-height :max-width +fill+ :max-height +fill+
-                :min-width 30
-                :min-height 30)
+                :min-width  (max (* 2 x-spacing) (if (null scroll-bar) 0 30))
+                :min-height (max (* 2 y-spacing) (if (null scroll-bar) 0 30)))
 		#+nil
 		(make-space-requirement :height +fill+ :width +fill+)))
           (when vscrollbar
