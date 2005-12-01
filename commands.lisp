@@ -811,7 +811,7 @@
 	   into key-clauses
 	 finally (setq key-case-clauses key-clauses))
       `(defun ,name (,command ,stream)
-	 (declare (ignorable ,stream))
+	 ,(declare-ignorable-form* stream)
 	 (let* ((,seperator #\Space) (,command-args (cdr ,command))
 		,@required-arg-bindings)
 	   (declare (ignorable ,seperator ,command-args

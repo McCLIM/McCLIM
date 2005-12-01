@@ -41,6 +41,11 @@
 
 (in-package "DEBUG")
 
+(#+CMU19C
+ ext:without-package-locks
+ #-CMU19C
+ progn
+
 (defun internal-debug ()
   (let ((*in-the-debugger* t)
 	(*read-suppress* nil))
@@ -85,8 +90,14 @@
 (defparameter *debug-prompt* #'debug-prompt
   "This is a function of no arguments that prints the debugger prompt
    on *debug-io*.")
+)
 
 (in-package "LISP")
+
+(#+CMU19C
+ ext:without-package-locks
+ #-CMU19C
+ progn
 
 (defun get-stream-command (stream)
   "This takes a stream and waits for text or a command to appear on it.  If
@@ -99,3 +110,4 @@
 	  (t
 	   ;; This waits for input and returns nil when it arrives.
 	   (unread-char (read-char stream) stream)))))
+)

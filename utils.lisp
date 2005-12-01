@@ -461,21 +461,27 @@ in KEYWORDS removed."
         (t
          (error "~S Can not be a stream designator for ~S" symbol default))))
 
+(defun declare-ignorable-form (variables)
+  #+CMU
+  ;; CMUCL barfs if you declare a special variable ignorable, work
+  ;; around that.
+  `(declare (ignorable
+             ,@(remove-if (lambda (symbol)
+                            (eq :special (lisp::info lisp::variable lisp::kind symbol)))
+                          variables)))
+  #-CMU
+  `(declare (ignorable ,@variables)))
+
+;; spread version:
+
+(defun declare-ignorable-form* (&rest variables)
+  (declare-ignorable-form variables))
+  
 (defun gen-invoke-trampoline (fun to-bind to-pass body)
   "Macro helper function, generates the LABELS / INVOKE-WITH-... ideom."
   (let ((cont (gensym ".CONT.")))
     `(labels ((,cont (,@to-bind)
-               #+CMU
-               ;; for some reason CMUCL barfs if we declare a special
-               ;; variable to be ignored. so we take an alternate
-               ;; route.
-               ;; --GB 2003-06-05
-               (progn
-                 ,@to-bind
-                 (locally ,@body))
-               #-CMU
-               (declare (ignorable ,@to-bind))
-               #-CMU
+               ,(declare-ignorable-form to-bind)
                ,@body))
       (declare (dynamic-extent #',cont))
       (,fun ,@to-bind #',cont ,@to-pass))))

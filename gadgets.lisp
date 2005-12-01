@@ -1140,6 +1140,13 @@ and must never be nil."))
             (draw-label* pane x1 y1 x2 y2 :ink (effective-gadget-foreground pane))
             (draw-engraved-label* pane x1 y1 x2 y2))))))
 
+(defmethod deactivate-gadget :after ((gadget push-button-pane))
+  (dispatch-repaint gadget +everywhere+))
+
+(defmethod activate-gadget :after ((gadget push-button-pane))
+  (dispatch-repaint gadget +everywhere+))
+
+
 ;;; ------------------------------------------------------------------------------------------
 ;;;  30.4.2 The concrete toggle-button Gadget
 
@@ -1533,7 +1540,9 @@ and must never be nil."))
 
 (defmethod scroll-bar-thumb-region ((sb scroll-bar-pane))
   (with-bounding-rectangle* (x1 y1 x2 y2) (scroll-bar-thumb-bed-region sb)
+    (declare (ignore y1 y2))
     (multiple-value-bind (y1 y2 y3) (scroll-bar/thumb-bed* sb)
+      (declare (ignore y1))
       (let ((y4 (scroll-bar/map-value-to-coordinate sb (gadget-value sb))))
         (make-rectangle* x1 y4 x2 (+ y4 (- y3 y2)))))))
 
@@ -2246,7 +2255,8 @@ Returns two values, the item itself, and the index within the item list."
 (defun generic-option-pane-compute-label (pane)
   (generic-option-pane-compute-label-from-value pane (gadget-value pane)))
 
-(defmethod initialize-instance :after ((object generic-option-pane) &rest rest)  
+(defmethod initialize-instance :after ((object generic-option-pane) &rest rest)
+  (declare (ignore rest))
   (setf (slot-value object 'current-label)
         (if (slot-boundp object 'value)
             (generic-option-pane-compute-label object)

@@ -374,7 +374,7 @@ unspecified. "))
   (setq stream (stream-designator-symbol stream '*standard-output*))
   (with-gensyms (continuation)
     `(flet ((,continuation  (,stream)
-	      (declare (ignorable ,stream))
+	      ,(declare-ignorable-form* stream)
 	      ,@body))
        (declare (dynamic-extent #',continuation))
        (invoke-with-output-recording-options
@@ -400,7 +400,7 @@ unspecified. "))
 	    (flet ((,constructor ()
 		     (make-instance ,record-type ,@m-i-args))
 		   (,continuation (,stream ,record)
-		     (declare (ignorable ,stream ,record))
+		     ,(declare-ignorable-form* stream record)
 		     ,@body))
 	      (declare (dynamic-extent #'constructor #'continuation))
 	      (,',func-name ,stream #',continuation ,record-type #',constructor
@@ -444,8 +444,7 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
 
 (defmethod initialize-instance :after ((record basic-output-record)
 				       &key (x-position 0.0d0)
-				       (y-position 0.0d0))
-  (declare (ignore args))
+                                            (y-position 0.0d0))
   (setf (rectangle-edges* record)
 	(values x-position y-position x-position y-position)))
 
@@ -1267,7 +1266,6 @@ were added."
                   ,class-vars)
                 (defmethod initialize-instance :after ((graphic ,class-name)
 						       &key)
-                  (declare (ignore args))
                   (with-slots (stream ink clipping-region
                                line-style text-style ,@args)
                       graphic

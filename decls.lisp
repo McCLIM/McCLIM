@@ -24,16 +24,63 @@
 
 (in-package :clim-internals)
 
-;;;; Early special variables
-
-(defvar *application-frame* nil)
-
 ;;; This is just an ad hoc list. Would it be a good idea to include all
 ;;; (exported) generic functions here? --GB
 ;;;
 ;;; YES!  -- CSR
 ;;; We'll get right on it :) -- moore
 ;;; Whose numbers are we using here?
+
+;;; The numbers are section numbers from the spec. --GB
+
+;; Since the declaim form for functions looks clumsy and is
+;; syntax-wise different from defun, we define us a new declfun, which
+;; fixes this.
+
+(defmacro declfun (name lambda-list)
+  `(declaim (ftype (function
+                    ,(let ((q lambda-list)
+                           res)
+                          (do () ((or (null q)
+                                      (member (car q) '(&optional &rest &key))))
+                            (push 't res)
+                            (pop q))
+                          (when (eq (car q) '&optional)
+                            (push '&optional res)
+                            (pop q)
+                            (do () ((or (null q)
+                                        (member (car q) '(&rest &key))))
+                              (pop q)
+                              (push 't res)))
+                          (when (eq (car q) '&rest)
+                            (push '&rest res)
+                            (pop q)
+                            (push 't res)
+                            (pop q))
+                          (when (eq (car q) '&key)
+                            (push '&key res)
+                            (pop q)
+                            (do () ((or (null q)
+                                        (member (car q) '(&allow-other-keys))))
+                              (push (list (intern (string (if (consp (car q))
+                                                              (if (consp (caar q))
+                                                                  (caaar q)
+                                                                  (caar q))
+                                                              (car q)))
+                                                  :keyword)
+                                          't)
+                                    res)
+                              (pop q)))
+                          (when (eq (car q) '&allow-other-keys)
+                            (push '&allow-other-keys res)
+                            (pop q))
+                          (reverse res))
+                    t)
+             ,name)))
+
+;;;; Early special variables
+
+(defvar *application-frame* nil)
 
 ;;; 3.2.1
 (defgeneric point-x (point))
@@ -55,6 +102,56 @@
 
 (defgeneric transform-region (transformation region))
 
+;;; 5.3.2 Composition of Transformations
+
+(defgeneric compose-transformations (transformation1 transformation2))
+(defgeneric invert-transformation (transformation))
+(declfun compose-translation-with-transformation (transformation dx dy))
+(declfun compose-scaling-with-transformation (transformation sx sy &optional origin))
+(declfun compose-rotation-with-transformation (transformation angle &optional origin))
+(declfun compose-transformation-with-translation (transformation dx dy))
+(declfun compose-transformation-with-scaling (transformation sx sy &optional origin))
+(declfun compose-transformation-with-rotation (transformation angle &optional origin))
+
+;;; 5.3.3 Applying Transformations
+
+(defgeneric transform-region (transformation region))
+(defgeneric untransform-region (transformation region))
+(defgeneric transform-position (transformation x y))
+(defgeneric untransform-position (transformation x y))
+(defgeneric transform-distance (transformation dx dy))
+(defgeneric untransform-distance (transformation dx dy))
+(defgeneric transform-rectangle* (transformation x1 y1 x2 y2))
+(defgeneric untransform-rectangle* (transformation x1 y1 x2 y2))
+
+;;; 7.3.1 Sheet Geometry Functions [complete]
+
+(defgeneric sheet-transformation (sheet))
+(defgeneric (setf sheet-transformation) (transformation sheet))
+(defgeneric sheet-region (sheet))
+(defgeneric (setf sheet-region) (region sheet))
+(defgeneric move-sheet (sheet x y))
+(defgeneric resize-sheet (sheet width height))
+(defgeneric move-and-resize-sheet (sheet x y width height))
+(defgeneric map-sheet-position-to-parent (sheet x y))
+(defgeneric map-sheet-position-to-child (sheet x y))
+(defgeneric map-sheet-rectangle*-to-parent (sheet x1 y1 x2 y2))
+(defgeneric map-sheet-rectangle*-to-child (sheet x1 y1 x2 y2))
+(defgeneric map-over-sheets-containing-position (function sheet x y))
+(defgeneric map-over-sheets-overlapping-region (function sheet region))
+(defgeneric child-containing-position (sheet x y))
+(defgeneric children-overlapping-region (sheet region))
+(defgeneric children-overlapping-rectangle* (sheet x1 y1 x2 y2))
+(defgeneric sheet-delta-transformation (sheet ancestor))
+(defgeneric sheet-allocated-region (sheet child))
+
+;;; 7.3.2 
+
+;; sheet-identity-transformation-mixin [class]
+;; sheet-translation-mixin [class]
+;; sheet-y-inverting-transformation-mixin [class]
+;; sheet-transformation-mixin [class]
+
 ;;;; 8.1
 (defgeneric process-next-event (port &key wait-function timeout))
 
@@ -70,7 +167,7 @@
 (defgeneric medium-drawable (medium))
 (defgeneric port (medium))
 
-;;;; 8.3.4.1 Grafting and Degrafting of Mediums
+;;; 8.3.4.1 Grafting and Degrafting of Mediums
 
 (defgeneric allocate-medium (port sheet))
 (defgeneric deallocate-medium (port medium))
@@ -78,16 +175,33 @@
 (defgeneric engraft-medium (medium port sheet))
 (defgeneric degraft-medium (medium port sheet))
 
-;; 8.4.1 Repaint Protocol Functions
+;;; 8.4.1 Repaint Protocol Functions
 
 (defgeneric queue-repaint (sheet repaint-event))
 (defgeneric handle-repaint (sheet region))
 (defgeneric repaint-sheet (sheet region))
 
-;; 9 Ports, Grafts, and Mirrored Sheets
+;;;; 9 Ports, Grafts, and Mirrored Sheets
 
 ;; (defgeneric portp (object))
 ;; find-port function
+
+;;; 9.3 Grafts
+
+(defgeneric sheet-grafted-p (sheet))
+(declfun find-graft (&key (server-path *default-server-path*)
+                          (port (find-port :server-path server-path))
+                          (orientation :default)
+                          (units :device)))
+(defgeneric graft (object))
+(declfun map-over-grafts (function port))
+;; with-graft-locked (graft) &body body [macro]
+(defgeneric graft-orientation (graft))
+(defgeneric graft-units (graft))
+(defgeneric graft-width (graft &key units))
+(defgeneric graft-height (graft &key units))
+(declfun graft-pixels-per-millimeter (graft))
+(declfun graft-pixels-per-inch (graft))
 
 ;; 9.4.1 Mirror Functions
 
@@ -143,6 +257,73 @@
 	    &key ink clipping-region transformation line-style line-thickness
 	    line-unit line-dashes line-joint-shape line-cap-shape text-style
 	    text-family text-face text-size))
+
+;;; 15.3 The Text Cursor [complete]
+
+;;; 15.3.1 Text Cursor Protocol [complete]
+
+;; cursor [protocol class]
+;; cursorp object [protocol predicate]
+;; :sheet [Initarg for cursor]
+;; standard-text-cursor [class]
+(defgeneric cursor-sheet (cursor))
+(defgeneric cursor-position (cursor))
+;;(defgeneric (setf* cursor-position) (x y cursor))
+(defgeneric cursor-active (cursor))
+(defgeneric (setf cursor-active) (value cursor))
+(defgeneric cursor-state (cursor))
+(defgeneric (setf cursor-state) (value cursor))
+(defgeneric cursor-focus (cursor))
+(defgeneric cursor-visibility (cursor))
+(defgeneric (setf cursor-visibility) (visibility cursor))
+
+;;; 15.3.2 Stream Text Cursor Protocol [complete]
+
+(defgeneric stream-text-cursor (stream))
+(defgeneric (setf stream-text-cursor) (cursor stream))
+(defgeneric stream-cursor-position (stream))
+;; (defgeneric (setf* stream-cursor-position) (x y stream)) unsure how to declare this, can somebody help? --GB
+(defgeneric stream-increment-cursor-position (stream dx dy))
+
+;;; 15.4 Text Protocol [complete]
+
+(defgeneric stream-character-width (stream character &key text-style))
+(defgeneric stream-string-width (stream character &key start end text-style))
+(defgeneric stream-text-margin (stream))
+(defgeneric (setf stream-text-margin) (margin stream))
+(defgeneric stream-line-height (stream &key text-style))
+(defgeneric stream-vertical-spacing (stream))
+(defgeneric stream-baseline (stream))
+
+;;; 15.4.1 Mixing Text and Graphics [complete]
+
+;; with-room-for-graphics (&optional stream &key (first-quadrant t) height (move-cursor t) record-type) &body body [Macro]
+
+;;; 15.4.2 Wrapping of Text Lines [complete]
+
+(defgeneric stream-end-of-line-action (stream))
+(defgeneric (setf stream-end-of-line-action) (action stream))
+;; with-end-of-line-action (stream action) &body body [Macro]
+(defgeneric stream-end-of-page-action (stream))
+(defgeneric (setf stream-end-of-page-action) (action stream))
+;; with-end-of-page-action (stream action) &body body [Macro]
+
+;;; 16.4.3 Text Output Recording [complete]
+
+(defgeneric stream-text-output-record (stream text-style))
+(defgeneric stream-close-text-output-record (stream))
+(defgeneric stream-add-character-output (stream character text-style width height baseline))
+(defgeneric stream-add-string-output (stream string start end text-style width height baseline))
+
+;;; 16.4.4 Output Recording Utilities [complete]
+
+;; with-output-recording-options (stream &key record draw) &body body [Macro]
+(defgeneric invoke-with-output-recording-options (stream continuation record draw))
+;; with-new-output-record (stream &optional record-type record &rest initargs) &body body [MAcro]
+(defgeneric invoke-with-new-output-record (stream continuation record-type &rest initargs &key parent &allow-other-keys))
+;; with-output-to-output-record (stream &optional record-type record &rest initargs)) &body body [Macro]
+(defgeneric invoke-with-output-to-output-record (stream continuation record-type &rest initargs &key))
+(defgeneric make-design-from-output-record (record))
 
 ;;;; 21.2
 (defgeneric invoke-updating-output
@@ -289,50 +470,6 @@ rendered on MEDIUM with the style LINE-STYLE."))
 ;; fall back, where to put this?
 (defmethod text-style-character-width (text-style medium char)
   (text-size medium char :text-style text-style))
-
-;; Since the declaim form for functions looks clumsy and is
-;; syntax-wise different from defun, we define us a new declfun, which
-;; fixes this.
-
-(defmacro declfun (name lambda-list)
-  `(declaim (ftype (function
-                    ,(let ((q lambda-list)
-                           res)
-                          (do () ((or (null q)
-                                      (member (car q) '(&optional &rest &key))))
-                            (push 't res)
-                            (pop q))
-                          (when (eq (car q) '&optional)
-                            (push '&optional res)
-                            (pop q)
-                            (do () ((or (null q)
-                                        (member (car q) '(&rest &key))))
-                              (push 't res)))
-                          (when (eq (car q) '&rest)
-                            (push '&rest res)
-                            (pop q)
-                            (push 't res)
-                            (pop q))
-                          (when (eq (car q) '&key)
-                            (push '&key res)
-                            (pop q)
-                            (do () ((or (null q)
-                                        (member (car q) '(&allow-other-keys))))
-                              (push (list (intern (string (if (consp (car q))
-                                                              (if (consp (caar q))
-                                                                  (caaar q)
-                                                                  (caar q))
-                                                              (car q)))
-                                                  :keyword)
-                                          't)
-                                    res)
-                              (pop q)))
-                          (when (eq (car q) '&allow-other-keys)
-                            (push '&allow-other-keys res)
-                            (pop q))
-                          (reverse res))
-                    t)
-             ,name)))
 
 (declfun draw-rectangle (sheet point1 point2
                                &rest args

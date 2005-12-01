@@ -334,7 +334,7 @@
   (check-type medium symbol)
   (with-gensyms (cont)
     `(flet ((,cont (,medium)
-              (declare (ignorable ,medium))
+              ,(declare-ignorable-form* medium)
               ,@body))
        (declare (dynamic-extent #',cont))
        (invoke-with-text-style ,medium #',cont
@@ -363,7 +363,7 @@
     (setq medium '*standard-output*))
   (with-gensyms (cont)
     `(flet ((,cont (,medium)
-              (declare (ignorable ,medium))
+              ,(declare-ignorable-form* medium)
               ,@body))
        (declare (dynamic-extent #',cont))
        (invoke-with-text-style ,medium #',cont
@@ -375,7 +375,7 @@
     (setq medium '*standard-output*))
   (with-gensyms (cont)
     `(flet ((,cont (,medium)
-              (declare (ignorable ,medium))
+              ,(declare-ignorable-form* medium)
               ,@body))
        (declare (dynamic-extent #',cont))
        (invoke-with-text-style ,medium #',cont
@@ -386,7 +386,7 @@
   (when (eq medium t) (setq medium '*standard-output*))
   (with-gensyms (cont)
     `(flet ((,cont (,medium)
-              (declare (ignorable ,medium))
+              ,(declare-ignorable-form* medium)
               ,@body))
        (declare (dynamic-extent #',cont))
        (invoke-with-text-style ,medium #',cont
@@ -398,7 +398,7 @@
   (when (eq medium t) (setq medium '*standard-output*))
   (with-gensyms (cont)
     `(flet ((,cont (,medium)
-              (declare (ignorable ,medium))
+              ,(declare-ignorable-form* medium)
               ,@body))
        (declare (dynamic-extent #',cont))
        (invoke-with-text-style ,medium #',cont
@@ -828,7 +828,7 @@
   "Macro for optimizing drawing with graphical system dependant mechanisms."
   (with-gensyms (fn)
     `(flet ((,fn (,medium)
-              (declare (ignorable ,medium))
+              ,(declare-ignorable-form* medium)
               ,@body))
        (declare (dynamic-extent #',fn))
        (invoke-with-special-choices #',fn ,medium))))
