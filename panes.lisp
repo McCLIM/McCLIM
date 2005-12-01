@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.164 2005/11/30 10:30:50 gbaumann Exp $
+;;; $Id: panes.lisp,v 1.165 2005/12/01 12:06:40 gbaumann Exp $
 
 (in-package :clim-internals)
 
@@ -1704,6 +1704,7 @@ order to produce a double-click")
   (typep pane 'spacing-pane))
 
 (defmethod initialize-instance :after ((spacing spacing-pane) &key thickness contents &allow-other-keys)
+  (declare (ignorable thickness contents))
   (with-slots (user-width user-min-width user-max-width
                user-height user-min-height user-max-height)
       spacing
@@ -1819,6 +1820,7 @@ order to produce a double-click")
 (defclass viewport-pane (single-child-composite-pane) ())
 
 (defmethod compose-space ((pane viewport-pane) &key width height)
+  (declare (ignorable width height))
   ; I _think_ this is right, it certainly shouldn't be the requirements of the child.
   (make-space-requirement))
 
@@ -2433,6 +2435,7 @@ order to produce a double-click")
 	(call-next-method))))
 
 (defmethod compose-space ((pane clim-stream-pane) &key width height)
+  (declare (ignorable width height))
   (let ((w (bounding-rectangle-width (stream-output-history pane)))
         (h (bounding-rectangle-height (stream-output-history pane))))
     (make-space-requirement :width  w :min-width  w :max-width +fill+
