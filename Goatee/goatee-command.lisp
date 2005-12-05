@@ -67,7 +67,9 @@
 	    modifier-state
 	    (keyboard-event-character gesture))
     (cdr (assoc modifier-state
-		(gethash (keyboard-event-character gesture) table nil)))))
+                (gethash (or (keyboard-event-character gesture)
+                             (keyboard-event-key-name gesture))
+                         table nil)))))
 
 (defmethod lookup-gesture-command (gesture table)
   (declare (ignore gesture table))
@@ -265,16 +267,28 @@
 (add-gesture-command-to-table '(#\f :control)
 			      'forward-character
 			      *simple-area-gesture-table*)
+(add-gesture-command-to-table '(:right)
+			      'forward-character
+			      *simple-area-gesture-table*)
 
 (add-gesture-command-to-table '(#\b :control)
+			      'backward-character
+			      *simple-area-gesture-table*)
+(add-gesture-command-to-table '(:left)
 			      'backward-character
 			      *simple-area-gesture-table*)
 
 (add-gesture-command-to-table '(#\f :meta)
 			      'forward-word
 			      *simple-area-gesture-table*)
+(add-gesture-command-to-table '(:right :meta)
+			      'forward-word
+			      *simple-area-gesture-table*)
 
 (add-gesture-command-to-table '(#\b :meta)
+			      'backward-word
+			      *simple-area-gesture-table*)
+(add-gesture-command-to-table '(:left :meta)
 			      'backward-word
 			      *simple-area-gesture-table*)
 
@@ -285,12 +299,21 @@
 (add-gesture-command-to-table '(#\delete :meta)
 			      'delete-word
 			      *simple-area-gesture-table*)
+(add-gesture-command-to-table '(#\d :meta)
+			      'delete-word
+			      *simple-area-gesture-table*)
 
 (add-gesture-command-to-table '(#\a :control)
 			      'beginning-line
 			      *simple-area-gesture-table*)
+(add-gesture-command-to-table '(:home)
+			      'beginning-line
+			      *simple-area-gesture-table*)
 
 (add-gesture-command-to-table '(#\e :control)
+			      'end-line
+			      *simple-area-gesture-table*)
+(add-gesture-command-to-table '(:end)
 			      'end-line
 			      *simple-area-gesture-table*)
 
@@ -305,8 +328,14 @@
 (add-gesture-command-to-table '(#\p :control)
 			      'up-line
 			      *simple-area-gesture-table*)
+(add-gesture-command-to-table '(:up)
+			      'up-line
+			      *simple-area-gesture-table*)
 
 (add-gesture-command-to-table '(#\n :control)
+			      'down-line
+			      *simple-area-gesture-table*)
+(add-gesture-command-to-table '(:down)
 			      'down-line
 			      *simple-area-gesture-table*)
 
