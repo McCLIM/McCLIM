@@ -72,7 +72,8 @@
   (declare (ignore frame))
   (let* ((*standard-output* pane)
          (username (or #+cmu (cdr (assoc :user ext:*environment-list*))
-		       #-cmu (getenv "USER")
+		       #+allegro (sys:getenv "USER")
+		       #-(or allegro cmu) (getenv "USER")
                        "luser"))  ; sorry..
          (sitename (machine-instance))
          (memusage #+cmu (lisp::dynamic-usage)
