@@ -440,24 +440,29 @@
         (arrow-ink  *graph-edge-ink*)
 	(text-style *graph-text-style*))
     (with-drawing-options (stream :text-style text-style)
-      (format-graph-from-roots (list class)
-                               #'(lambda (class stream)
-                                   (with-drawing-options (stream :ink normal-ink
-                                                                 :text-style text-style)
-                                     ;; Present class name rather than class here because the printing of the
-                                     ;; class object itself is rather long and freaks out the pointer doc pane.
-                                     (with-output-as-presentation (stream (clim-mop:class-name class) 'class-name)
-                                        ; (surrounding-output-with-border (stream :shape :drop-shadow)
-				       (princ (clim-mop:class-name class) stream)))) ;)
-                               inferior-fun
-                               :stream stream
-                               :merge-duplicates T
-                               :graph-type :tree
-                               :orientation orientation
-                               :arc-drawer
-                               #'(lambda (stream foo bar x1 y1 x2 y2)
-                                   (declare (ignore foo bar))
-                                   (draw-arrow* stream x1 y1 x2 y2 :ink arrow-ink))))))
+      (prog1
+	;; not sure whether anyone wants the return value...
+	(format-graph-from-roots (list class)
+				 #'(lambda (class stream)
+				     (with-drawing-options (stream :ink normal-ink
+								   :text-style text-style)
+				       ;; Present class name rather than class here because the printing of the
+				       ;; class object itself is rather long and freaks out the pointer doc pane.
+				       (with-output-as-presentation (stream (clim-mop:class-name class) 'class-name)
+					; (surrounding-output-with-border (stream :shape :drop-shadow)
+					 (princ (clim-mop:class-name class) stream)))) ;)
+				 inferior-fun
+				 :stream stream
+				 :merge-duplicates T
+				 :graph-type :tree
+				 :orientation orientation
+				 :arc-drawer
+				 #'(lambda (stream foo bar x1 y1 x2 y2)
+				     (declare (ignore foo bar))
+				     (draw-arrow* stream x1 y1 x2 y2 :ink arrow-ink)))
+	;; format-graph-from-roots doesn't do this by default...
+	(when (typep stream 'pane)
+	  (change-space-requirements stream))))))
 
 (defun frob-to-class (spec)
   (if (typep spec 'class)
