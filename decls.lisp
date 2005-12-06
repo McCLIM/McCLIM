@@ -390,7 +390,14 @@
 ;; space-requirement+ sr1 sr2 [Function]
 ;; space-requirement+* space-req &key width min-width max-width height min-height max-height [Function]
 
-(defgeneric compose-space (pane &key width height))
+(defgeneric compose-space (pane &key width height)
+  (:documentation "During the space composition pass, a composite pane will 
+typically ask each of its children how much space it requires by calling COMPOSE-SPACE. 
+They answer by returning space-requirement objects. The composite will then form 
+its own space requirement by composing the space requirements of its children 
+according to its own rules for laying out its children.
+
+Returns a SPACE-REQUIREMENT object."))
 (defgeneric allocate-space (pane width height))
 (defgeneric change-space-requirements
     (pane &rest space-req-keys &key resize-frame width height
