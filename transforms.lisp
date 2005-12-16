@@ -4,7 +4,7 @@
 ;;;   Created: 1998-09-29
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: transforms.lisp,v 1.30 2005/11/22 11:40:02 gbaumann Exp $
+;;;       $Id: transforms.lisp,v 1.31 2005/12/16 16:42:15 rgoldman Exp $
 ;;; --------------------------------------------------------------------------------------
 ;;;  (c) copyright 1998,1999,2003 by Gilbert Baumann
 ;;;  (c) copyright 2000 by 
@@ -161,6 +161,12 @@ transformation protocol."))
                                     origin-x origin-y  (+ origin-x c) (+ origin-y s)  (- origin-x s) (+ origin-y c)) )))
 
 (defun make-scaling-transformation (scale-x scale-y &optional origin)
+  "MAKE-SCALING-TRANSFORMATION returns a transformation that multiplies 
+the x-coordinate distance of every point from origin by SCALE-X and the 
+y-coordinate distance of every point from origin by SCALE-Y.  SCALE-X and 
+SCALE-Y must be real numbers.  If ORIGIN is supplied it must be a point; 
+if not supplied it defaults to (0, 0).  ORIGIN-X and ORIGIN-Y must be 
+real numbers, and default to 0."
   (make-scaling-transformation* scale-x scale-y 
                                 (if origin (point-x origin) 0)
                                 (if origin (point-y origin) 0)))
@@ -390,22 +396,22 @@ transformation protocol."))
                value)))
 
 (defun compose-translation-with-transformation (transformation dx dy)
-  (compose-transformations (make-translation-transformation dx dy) transformation))
-
-(defun compose-scaling-with-transformation (transformation sx sy &optional origin)
-  (compose-transformations (make-scaling-transformation sx sy origin) transformation))
-
-(defun compose-rotation-with-transformation (transformation angle &optional origin)
-  (compose-transformations (make-rotation-transformation angle origin) transformation))
-
-(defun compose-transformation-with-translation (transformation dx dy)
   (compose-transformations transformation (make-translation-transformation dx dy)))
 
-(defun compose-transformation-with-scaling (transformation sx sy &optional origin)
+(defun compose-scaling-with-transformation (transformation sx sy &optional origin)
   (compose-transformations transformation (make-scaling-transformation sx sy origin)))
 
-(defun compose-transformation-with-rotation (transformation angle &optional origin)
+(defun compose-rotation-with-transformation (transformation angle &optional origin)
   (compose-transformations transformation (make-rotation-transformation angle origin)))
+
+(defun compose-transformation-with-translation (transformation dx dy)
+  (compose-transformations (make-translation-transformation dx dy) transformation))
+
+(defun compose-transformation-with-scaling (transformation sx sy &optional origin)
+  (compose-transformations (make-scaling-transformation sx sy origin) transformation))
+
+(defun compose-transformation-with-rotation (transformation angle &optional origin)
+  (compose-transformations (make-rotation-transformation angle origin) transformation))
 
 (defmacro with-translation ((medium dx dy) &body body)
   `(with-drawing-options (,medium :transformation (make-translation-transformation ,dx ,dy))
