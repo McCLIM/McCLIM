@@ -89,7 +89,7 @@
                 (format file-stream "%%Pages: (atend)~%")))
              (format file-stream "%%DocumentNeededResources: (atend)~%")
              (format file-stream "%%EndComments~%~%")
-             (write-postcript-dictionary file-stream)
+             (write-postscript-dictionary file-stream)
              (dolist (text-style (device-fonts (sheet-medium stream)))
                (write-font-to-postscript-stream (sheet-medium stream) text-style))
              (start-page stream)
@@ -107,20 +107,44 @@
         (finish-output file-stream))
       (destroy-port port))))
 
+
 (defun start-page (stream)
   (with-slots (file-stream current-page transformation) stream
-      (format file-stream "%%Page: ~D ~:*~D~%" (incf current-page))
-      (format file-stream "~A begin~%" *dictionary-name*)))
+    (format file-stream "%%Page: ~D ~:*~D~%" (incf current-page))
+    (format file-stream "~A begin~%" *dictionary-name*)))
+
+;;; We define a new output-record class and a method on
+;;; replay-output-record so that we can record calls to new-page.
+;;;
+;;; FIXME: I (CSR) think that this works because we stuff this in a
+;;; sequence-output-record, so that the output records are replayed
+;;; in order.  That's fine, but if someone ever gets round to implementing
+;;; R-trees or similar, this method for storing the order of events might
+;;; stop working.  CSR, 2005-12-30
+(defclass new-page-record (climi::basic-output-record)
+  ())
+
+(defmethod replay-output-record ((record new-page-record) stream
+				 &optional (region nil) (x-offset 0) (y-offset 0))
+  (declare (ignore region x-offset y-offset))
+  (new-page stream))
 
 (defun new-page (stream)
-  ;; FIXME: it is necessary to do smth with GS -- APD, 2002-02-11
-  (let ((medium (sheet-medium stream)))
-    (postscript-restore-graphics-state medium)
+  (when (stream-recording-p stream)
+    (stream-add-output-record stream (make-instance 'new-page-record)))
+  (when (stream-drawing-p stream)
+    ;; FIXME: it is necessary to do smth with GS -- APD, 2002-02-11
+    ;; FIXME^2:  what do you mean by that? -- TPD, 2005-12-23
+    (postscript-restore-graphics-state stream)
     (format (postscript-stream-file-stream stream) "end~%showpage~%")
     (start-page stream)
-    (postscript-save-graphics-state medium))
-  (clear-output-record (stream-output-history stream))
-  (setf (stream-cursor-position stream) (values 0 0)))
+    (postscript-save-graphics-state stream)
+    ;; If we call clear-output-record here, it wipes all remaining
+    ;; output, so all pages after the first are blank.  But I don't
+    ;; know quite what the original purpose of the call was, so,
+    ;; FIXME.  -- TPD 2005-12-23
+    ;; (clear-output-record (stream-output-history stream))
+    (setf (stream-cursor-position stream) (values 0 0))))
 
 
 ;;;; Output Protocol

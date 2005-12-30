@@ -68,7 +68,7 @@
 
 (defvar *extra-entries* 0)
 
-(defun write-postcript-dictionary (stream)
+(defun write-postscript-dictionary (stream)
   ;;; FIXME: DSC
   (format stream "~&%%BeginProlog~%")
   (format stream "/~A ~D dict def ~2:*~A begin~%"
