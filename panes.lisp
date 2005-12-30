@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.165 2005/12/01 12:06:40 gbaumann Exp $
+;;; $Id: panes.lisp,v 1.166 2005/12/30 17:50:01 crhodes Exp $
 
 (in-package :clim-internals)
 
@@ -367,7 +367,7 @@ order to produce a double-click")
    (new-width :initform nil)
    (new-height :initform nil)
    (redisplay-needed :accessor pane-redisplay-needed
-		     :initarg :redisplay-neeeded :initform nil))
+		     :initarg :redisplay-needed :initform nil))
   (:documentation ""))
 
 (defmethod print-object ((pane pane) sink)
@@ -2373,7 +2373,7 @@ order to produce a double-click")
 		       :initarg :end-of-line-action
 		       :reader pane-end-of-line-action)
    (end-of-page-action :initform :scroll
-		       :initarg :end-of-line-action
+		       :initarg :end-of-page-action
 		       :reader pane-end-of-page-action)
    (double-buffering :initform nil
 		     :initarg :double-buffering
