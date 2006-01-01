@@ -64,7 +64,8 @@
 
 (defun precache-icons ()
   (let ((pathnames (remove-if #'directoryp
-                              (directory (strip-filespec *icon-path*)))))
+                              (list-directory (gen-wild-pathname
+                                               (strip-filespec *icon-path*))))))
     (dolist (pn pathnames)
       (standard-icon (namestring (make-pathname :name (pathname-name pn)
                                                 :type (pathname-type pn)))))))
