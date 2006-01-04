@@ -280,24 +280,23 @@
     (with-gensyms (record-arg continuation)
       (with-keywords-removed (key-args (:record-type
 					:allow-sensitive-inferiors))
-	`(let ((*allow-sensitive-inferiors*
-		(if *allow-sensitive-inferiors*
-		    ,allow-sensitive-inferiors
-		    nil)))
-	   (flet ((,continuation ()
-		    ,@decls
-		    ,@with-body))
-	     (declare (dynamic-extent #'continuation))
-	     (if (and (output-recording-stream-p ,stream)
-		      *allow-sensitive-inferiors*)
-		 (with-new-output-record
-		     (,stream ,record-type ,record-arg
-			      :object ,object
-			      :type (expand-presentation-type-abbreviation
-				     ,type)
-			      ,@key-args)
-		   (,continuation))
-		 (,continuation))))))))
+	`(flet ((,continuation ()
+		  ,@decls
+		  ,@with-body))
+	   (declare (dynamic-extent #'continuation))
+	   (if (and (output-recording-stream-p ,stream)
+		    *allow-sensitive-inferiors*)
+	       (with-new-output-record
+		   (,stream ,record-type ,record-arg
+			    :object ,object
+			    :type (expand-presentation-type-abbreviation
+				   ,type)
+			    ,@key-args)
+		 (let ((*allow-sensitive-inferiors*
+			,allow-sensitive-inferiors))
+		   (,continuation)))
+	       (,continuation)))))))
+
 
 (defun present (object &optional (type (presentation-type-of object))
 		&key
@@ -337,9 +336,10 @@
 			   (allow-sensitive-inferiors t)
 			   (sensitive t)
 			   (record-type 'standard-presentation))
-  (let ((*allow-sensitive-inferiors* (if *allow-sensitive-inferiors*
-					 sensitive
-					 nil)))
+  ;; *allow-sensitive-inferiors* controls whether or not
+  ;; with-output-as-presentation will emit a presentation
+  (let ((*allow-sensitive-inferiors* (and *allow-sensitive-inferiors*
+					  sensitive)))
     (with-output-as-presentation (stream object type
 				  :view view
 				  :modifier modifier
