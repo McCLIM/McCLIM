@@ -1638,6 +1638,8 @@
   (:export
    #:+pointer-wheel-up+ 
    #:+pointer-wheel-down+
+   #:+pointer-wheel-left+
+   #:+pointer-wheel-right+
    #:sheet-pointer-cursor)
   
    ;;; x11 color names - some are not in the spec - mikemac

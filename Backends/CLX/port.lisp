@@ -571,11 +571,12 @@
                                   +pointer-middle-button+
                                   +pointer-right-button+
                                   +pointer-wheel-up+
-                                  +pointer-wheel-down+)))
-    (if (and (> code 0)
-             (<= code (1+ (length button-mapping))))
-        (aref button-mapping (1- code))
-        nil)))
+                                  +pointer-wheel-down+
+                                  +pointer-wheel-left+
+                                  +pointer-wheel-right+)))
+    (and (> code 0)
+         (<= code (1+ (length button-mapping)))
+         (aref button-mapping (1- code)))))
 
 ;; From "Inter-Client Communication Conventions Manual", Version 2.0.xf86.1,
 ;; section 4.1.5:

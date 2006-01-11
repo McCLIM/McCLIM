@@ -304,6 +304,8 @@
 (defconstant +pointer-right-button+  #x04)
 (defconstant +pointer-wheel-up+      #x08)
 (defconstant +pointer-wheel-down+    #x10)
+(defconstant +pointer-wheel-left+    #x20)
+(defconstant +pointer-wheel-right+   #x40)
 
 (defconstant +shift-key+             #x0100)
 (defconstant +control-key+           #x0200)
