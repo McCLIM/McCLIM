@@ -536,7 +536,10 @@
   (xlib:unmap-window (sheet-direct-mirror mirror)) )
 
 (defmethod destroy-port :before ((port clx-port))
-  (xlib:close-display (clx-port-display port)))
+  (handler-case
+      (xlib:close-display (clx-port-display port))
+    (stream-error ()
+      (xlib:close-display (clx-port-display port) :abort t))))
 
 (defmethod port-motion-hints ((port clx-port) (sheet mirrored-sheet-mixin))
   (let ((event-mask (xlib:window-event-mask (sheet-direct-mirror sheet))))
