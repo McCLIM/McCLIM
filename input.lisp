@@ -535,23 +535,28 @@ to computed distance to scroll in response to mouse wheel events."))
 
 (defmethod scroll-quantum (pane) 10)
 
+(defun scroll-sheet (sheet vertical horizontal)
+  (with-bounding-rectangle* (vx0 vy0 vx1 vy1) (pane-viewport-region sheet)
+    (with-bounding-rectangle* (sx0 sy0 sx1 sy1) (sheet-region sheet)
+      (let ((viewport-height (- vy1 vy0))
+	    (viewport-width  (- vx1 vx0))
+	    (delta (* *mouse-scroll-distance*
+		      (scroll-quantum sheet))))
+	;; The coordinates (x,y) of the new upper-left corner of the viewport
+	;; must be "sx0 < x < sx1 - viewport-width"  and
+	;;         "sy0 < y < sy1 - viewport-height"	
+	(scroll-extent sheet
+		       (max sx0 (min (- sx1 viewport-width)  (+ vx0 (* delta horizontal))))
+		       (max sy0 (min (- sy1 viewport-height) (+ vy0 (* delta vertical)))))))))
+
 (defmethod dispatch-event :around ((sheet mouse-wheel-scroll-mixin)
                                    (event pointer-button-press-event))
-  (let ((viewport (pane-viewport sheet))
-        (button (pointer-event-button event))
-        (dy (* *mouse-scroll-distance*
-               (scroll-quantum sheet))))
-    (if (and viewport
-             (or (eql button +pointer-wheel-up+)
-                 (eql button +pointer-wheel-down+)))
-        (multiple-value-bind (x0 y0 x1 y1)
-            (bounding-rectangle* (pane-viewport-region sheet))
-          (declare (ignore x1))
-          (multiple-value-bind (sx0 sy0 sx1 sy1)
-              (bounding-rectangle* (sheet-region sheet))
-            (declare (ignore sx0 sx1))
-            (let ((height (- y1 y0)))
-              (scroll-extent sheet x0 (if (eql button +pointer-wheel-up+)
-                                          (max sy0 (- y0 dy))
-                                          (- (min sy1 (+ y1 dy)) height))))))
-        (call-next-method))))
+  (if (pane-viewport sheet)
+      (let ((button (pointer-event-button event)))
+	(cond
+	 ((eq button +pointer-wheel-up+)    (scroll-sheet sheet -1  0))
+	 ((eq button +pointer-wheel-down+)  (scroll-sheet sheet  1  0))
+	 ((eq button +pointer-wheel-left+)  (scroll-sheet sheet  0 -1))
+	 ((eq button +pointer-wheel-right+) (scroll-sheet sheet  0  1))
+	 (t (call-next-method))))      ; not a scroll wheel button
+    (call-next-method))))              ; no viewport
