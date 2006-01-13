@@ -639,6 +639,7 @@
 					     ,command-arg))
 		     else if (member key accept-keys :test #'eq)
 		       append `(,key ,val))))
+	(setq args (append args `(:query-identifier ',(gensym "COMMAND-PROMPT-ID"))))
 	(if (member :default args :test #'eq)
 	    `(accept ,ptype :stream ,stream ,@args)
 	    `(if (eq ,original-command-arg *unsupplied-argument-marker*)
