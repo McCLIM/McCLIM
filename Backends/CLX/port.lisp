@@ -345,8 +345,8 @@
 					      :button-press :button-release
 					      :enter-window :leave-window
 					      :structure-notify
-					     ;:pointer-motion
-                                              :button-motion)))
+					      :pointer-motion
+					      :button-motion)))
   (when (null (port-lookup-mirror port sheet))
     (update-mirror-geometry sheet)
     (let* ((desired-color (typecase sheet
