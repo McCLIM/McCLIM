@@ -559,4 +559,4 @@ to computed distance to scroll in response to mouse wheel events."))
 	 ((eq button +pointer-wheel-left+)  (scroll-sheet sheet  0 -1))
 	 ((eq button +pointer-wheel-right+) (scroll-sheet sheet  0  1))
 	 (t (call-next-method))))      ; not a scroll wheel button
-    (call-next-method))))              ; no viewport
+    (call-next-method)))               ; no viewport
