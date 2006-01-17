@@ -644,13 +644,11 @@
 ;; pointer-event-buttons slot to pointer events. -- moore
 ;; 
 
-(defun event-handler (&rest event-slots
-                      &key display window event-key code state mode time
+(defun event-handler (&key display window event-key code state mode time
 		      type width height x y root-x root-y
 		      data override-redirect-p send-event-p hint-p
                       target property requestor selection
                       &allow-other-keys)
-  (declare (ignorable event-slots))
   (declare (special *clx-port*))
   (let ((sheet (and window
 		    (port-lookup-sheet *clx-port* window))))
