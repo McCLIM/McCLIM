@@ -216,9 +216,8 @@
    "Goatee/goatee-test"
    "Examples/accepting-values")
 
-
-(clim-defsystem (:scigraph :depends-on (:clim #+clx :clim-looks))
-  ;; The DWIM part of SCIGRAPH		
+;;; The DWIM part of SCIGRAPH		
+(clim-defsystem (:scigraph-dwim :depends-on (:clim #+clx :clim-looks))
   "Apps/Scigraph/dwim/package"
   "Apps/Scigraph/dwim/feature-case"
   "Apps/Scigraph/dwim/macros"
@@ -227,8 +226,10 @@
   "Apps/Scigraph/dwim/present"
   "Apps/Scigraph/dwim/extensions"
   "Apps/Scigraph/dwim/wholine"
-  "Apps/Scigraph/dwim/export"
-  ;; The Scigraph part
+  "Apps/Scigraph/dwim/export")
+
+;;; The Scigraph part
+(clim-defsystem (:scigraph :depends-on (:scigraph-dwim))
   "Apps/Scigraph/scigraph/package" 
   "Apps/Scigraph/scigraph/copy"
   "Apps/Scigraph/scigraph/dump"
