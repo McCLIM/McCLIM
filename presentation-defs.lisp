@@ -810,7 +810,7 @@ call-next-method to get the \"real\" answer based on the stream type."))
 		 (additional-activation-gestures nil additional-activations-p)
 		 (delimiter-gestures nil delimitersp)
 		 (additional-delimiter-gestures nil  additional-delimiters-p))
-  (declare (ignore provide-default insert-default history active-p
+  (declare (ignore provide-default history active-p
 		   prompt prompt-mode
 		   display-default query-identifier))
   (when (and defaultp (not default-type-p))
@@ -830,6 +830,13 @@ call-next-method to get the \"real\" answer based on the stream type."))
 				 (declare (ignore stream))
 				 (funcall cont))))
       (with-input-position (stream)	; support for calls to replace-input
+        (when insert-default
+          ;; Insert the default value to the input stream. It should
+          ;; become fully keyboard-editable.
+          (presentation-replace-input stream
+                                       default
+                                       default-type
+                                       view))
 	(setf (values sensitizer-object sensitizer-type)
 	      (with-input-context (type)
 		  (object object-type event options)
@@ -846,10 +853,10 @@ call-next-method to get the \"real\" answer based on the stream type."))
 			  (setq accept-results
 				(multiple-value-list
 				 (if defaultp
-				     (funcall-presentation-generic-function
-				      accept type stream view
-				      :default default
-				      :default-type default-type)
+                                     (funcall-presentation-generic-function
+                                      accept type stream view
+                                      :default default
+                                      :default-type default-type)
 				     (funcall-presentation-generic-function
 				      accept type stream view))))
 			;; User entered activation or delimeter
@@ -897,6 +904,7 @@ call-next-method to get the \"real\" answer based on the stream type."))
 			    &key
 			    (default nil defaultp)
 			    (default-type type)
+                            (insert-default nil)
 			    (prompt t)
 			    (prompt-mode :normal)
 			    (display-default prompt)
@@ -914,9 +922,12 @@ call-next-method to get the \"real\" answer based on the stream type."))
 				     *recursive-accept-p*
 				     (describe-presentation-type type nil nil))
 			     prompt))
-	  (default-string (if (and defaultp display-default)
-			      (present-to-string default default-type)
-			      nil)))
+          ;; Don't display the default in the prompt if it is to be
+          ;; inserted into the input stream.
+	  (default-string (and defaultp
+				(not insert-default)
+				display-default
+				(present-to-string default default-type))))
       (cond ((null prompt)
 	   nil)
 	  (t

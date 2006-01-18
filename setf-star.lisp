@@ -23,6 +23,16 @@
 (defun setf-name-p (name)
   (and (listp name) (eq (car name) 'setf)))
 
+;;; Many implementations complain if a defsetf definition and a setf function
+;;; exist for the same place. Time to stop fighting that...
+
+(defun make-setf*-gfn-name (function-name)
+  (let* ((name-sym (cadr function-name)))
+    `(setf ,(intern (format nil ".~A-~A."
+			    (symbol-name name-sym)
+			    (symbol-name '#:star))
+		    (symbol-package name-sym)))))
+
 (defmacro defgeneric* (fun-name lambda-list &body options)
   "Defines a SETF* generic function.  FUN-NAME is a SETF function
 name.  The last argument is the single argument to the function in a
@@ -32,16 +42,17 @@ SETF new value form."
     (error "~S is not a valid name for a SETF* generic function." fun-name))
   (let ((setf-name (cadr fun-name))
 	(args (butlast lambda-list))
-	(place (car (last lambda-list))))
+	(place (car (last lambda-list)))
+	(gf (make-setf*-gfn-name fun-name)))
     `(progn
        (defsetf ,setf-name (,place) ,args
-	 `(funcall #',',fun-name ,,@args ,,place))
-       (defgeneric ,fun-name ,lambda-list ,@options))))
+	 `(funcall #',',gf ,,@args ,,place))
+       (defgeneric ,gf ,lambda-list ,@options))))
 
 (defmacro defmethod* (name &body body)
   "Defines a SETF* method.  NAME is a SETF function name.  Otherwise,
 like DEFMETHOD except there must exist a corresponding DEFGENERIC* form."
   (unless (setf-name-p name)
     (error "~S is not a valid name for a SETF* generic function." name))
-  `(defmethod ,name ,@body))
+  `(defmethod ,(make-setf*-gfn-name name) ,@body))
 

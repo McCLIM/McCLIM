@@ -99,9 +99,6 @@
 (defgeneric rectangle-height (rectangle))
 (defgeneric rectangle-size (rectangle))
 
-
-(defgeneric transform-region (transformation region))
-
 ;;; 5.3.2 Composition of Transformations
 
 (defgeneric compose-transformations (transformation1 transformation2))

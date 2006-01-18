@@ -4,7 +4,7 @@
 ;;;   Created: 1998-09-29
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: transforms.lisp,v 1.31 2005/12/16 16:42:15 rgoldman Exp $
+;;;       $Id: transforms.lisp,v 1.32 2006/01/18 14:07:36 tmoore Exp $
 ;;; --------------------------------------------------------------------------------------
 ;;;  (c) copyright 1998,1999,2003 by Gilbert Baumann
 ;;;  (c) copyright 2000 by 
@@ -435,9 +435,6 @@ real numbers, and default to 0."
 
 ;;(defmacro with-local-coordinates ((medium &optional x y) &body body)) -- what are local coordinates?
 ;;(defmacro with-first-quadrant-coordinates ((medium &optional x y) &body body))
-
-;;(defgeneric transform-region (transformation region))
-
 (defmacro with-identity-transformation ((medium) &body body)
   ;; I believe this should set the medium transformation to the identity
   ;; transformation. To use WITH-DRAWING-OPTIONS which concatenates the the
