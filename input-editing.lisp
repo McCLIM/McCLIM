@@ -653,7 +653,7 @@
 		   (if (> nmatches 0)
 		       (insert-input input)
 		       (beep)))
-		 (cond ((and success (eq mode :complete))
+                 (cond ((and success (eq mode :complete))
 			(return-from complete-input
 			  (values object success input)))
 		       ((activation-gesture-p gesture)

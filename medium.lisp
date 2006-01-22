@@ -79,8 +79,6 @@
 (defgeneric text-style-family (text-style))
 (defgeneric text-style-face (text-style))
 (defgeneric text-style-size (text-style))
-#+unicode
-(defgeneric text-style-language (text-style))
 (defgeneric merge-text-styles (text-style-1 text-style-2))
 (defgeneric text-style-ascent (text-style medium))
 (defgeneric text-style-descent (text-style medium))
@@ -99,23 +97,12 @@
 	     :reader text-style-face)
    (size     :initarg :text-size
 	     :initform :normal
-	     :reader text-style-size)
-   #+unicode
-   (language :initarg  :text-language
-	     :initform nil
-	     :reader   text-style-language)))
+	     :reader text-style-size)))
 
-#-unicode
 (defmethod make-load-form ((obj standard-text-style) &optional env)
   (declare (ignore env))
   (with-slots (family face size) obj
     `(make-text-style ',family ',face ',size)))
-
-#+unicode
-(defmethod make-load-form ((obj standard-text-style) &optional env)
-  (declare (ignore env))
-  (with-slots (family face size language) obj
-    `(make-text-style ',family ',face ',size ',language)))
 
 (defun family-key (family)
   (ecase family
@@ -148,29 +135,14 @@
 	((:smaller)    8)
 	((:larger)     9))))
 
-#+unicode
-(defun language-key (language)
-  (ecase language
-    ((:english nil) 0)
-    ((:korean)      1)))
-
-#-unicode
 (defun text-style-key (family face size)
   (+ (* 256 (size-key size))
      (* 16 (face-key face))
      (family-key family)))
 
-#+unicode
-(defun text-style-key (family face size &optional (language nil))
-  (+ (ash (size-key size)         12)
-     (ash (language-key language)  8)
-     (ash (face-key face)          4)
-     (ash (family-key family)      0)))
-
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defvar *text-style-hash-table* (make-hash-table :test #'eql)))
 
-#-unicode
 (defun make-text-style (family face size)
   (let ((key (text-style-key family face size)))
     (declare (type fixnum key))
@@ -181,17 +153,6 @@
 			     :text-face face
 			     :text-size size)))))
 
-#+unicode
-(defun make-text-style (family face size &optional language)
-  (let ((key (text-style-key family face size language)))
-    (declare (type fixnum key))
-    (or (gethash key *text-style-hash-table*)
-	(setf (gethash key *text-style-hash-table*)
-	      (make-instance 'standard-text-style
-			     :text-family family
-			     :text-face face
-			     :text-size size
-                             :text-language language)))))
 ) ; end eval-when
 
 (defmethod print-object ((self text-style) stream)
@@ -202,9 +163,7 @@
 			      (style2 standard-text-style))
   (and (eql (text-style-family style1) (text-style-family style2))
        (eql (text-style-face style1) (text-style-face style2))
-       (eql (text-style-size style1) (text-style-size style2))
-       #+unicode (eql (text-style-language style1)
-		      (text-style-language style2))))
+       (eql (text-style-size style1) (text-style-size style2))))
 
 (defconstant *default-text-style* (make-text-style :fix :roman :normal))
 (defconstant *undefined-text-style* *default-text-style*)
@@ -232,9 +191,7 @@
 (defmethod text-style-components ((text-style standard-text-style))
   (values (text-style-family   text-style)
           (text-style-face     text-style)
-          (text-style-size     text-style)
-          #+unicode
-          (text-style-language text-style)))
+          (text-style-size     text-style)))
 
 ;;; Device-Font-Text-Style class
 
@@ -274,7 +231,6 @@
 
 ;;; Text-style utilities
 
-#-unicode
 (defmethod merge-text-styles (s1 s2)
   (setq s1 (parse-text-style s1))
   (setq s2 (parse-text-style s2))
@@ -294,31 +250,6 @@
                      (:larger (find-larger-size size2))
                      (t size1))))
         (make-text-style family face size))
-      s1))
-
-#+unicode
-(defmethod merge-text-styles (s1 s2)
-  (setq s1 (parse-text-style s1))
-  (setq s2 (parse-text-style s2))
-  (if (and (not (device-font-text-style-p s1))
-	   (not (device-font-text-style-p s2)))
-      (let* ((family (or (text-style-family s1) (text-style-family s2)))
-             (face1 (text-style-face s1))
-             (face2 (text-style-face s2))
-             (face (if (subsetp '(:bold :italic) (list face1 face2))
-                       '(:bold :italic)
-                       (or face1 face2)))
-             (size1 (text-style-size s1))
-             (size2 (text-style-size s2))
-             (size (case size1
-                     ((nil) size2)
-                     (:smaller (find-smaller-size size2))
-                     (:larger (find-larger-size size2))
-                     (t size1)))
-             ; v- this is probably wrong, but it requires an idea of which
-             ; languages include which foreign language support.
-             (language (or (text-style-language s1) (text-style-language s2))))
-        (make-text-style family face size language))
       s1))
 
 (defun parse-text-style (style)
@@ -391,18 +322,6 @@
        (declare (dynamic-extent #',cont))
        (invoke-with-text-style ,medium #',cont
                                (make-text-style nil nil ,size)))))
-
-#+unicode
-(defmacro with-text-language ((medium language) &body body)
-  (declare (type symbol medium))
-  (when (eq medium t) (setq medium '*standard-output*))
-  (with-gensyms (cont)
-    `(flet ((,cont (,medium)
-              ,(declare-ignorable-form* medium)
-              ,@body))
-       (declare (dynamic-extent #',cont))
-       (invoke-with-text-style ,medium #',cont
-                               (make-text-style nil nil nil ,language)))))
 
 
 ;;; MEDIUM class

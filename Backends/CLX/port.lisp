@@ -937,7 +937,6 @@
 
 (defvar *fontset* nil)
 
-#-unicode
 (defmethod text-style-mapping ((port clx-port) text-style
                                &optional character-set)
   (declare (ignore character-set))
@@ -972,96 +971,6 @@
                           (open-font (clx-port-display port) font-name)))
               font-name))))))
 
-#+unicode
-(defun build-english-font-name (text-style)
-  (multiple-value-bind (family face size language)
-      (text-style-components text-style)
-    (destructuring-bind (family-name face-table)
-         (if (stringp family)
-             (list family *clx-text-faces*)
-             (or (getf *clx-text-family+face-map* family)
-                 (getf *clx-text-family+face-map* :fix)))
-       (let* ((face-name (if (stringp face)
-                             face
-                             (or (getf face-table
-                                       (if (listp face)
-                                           (intern (format nil "~A-~A"
-                                                           (symbol-name (first face))
-                                                           (symbol-name (second face)))
-                                                   :keyword)
-                                           face))
-                                 (getf *clx-text-faces* :roman))))
-              (size-number (if (numberp size)
-                               (round size)
-                               (or (getf *clx-text-sizes* size)
-                                   (getf *clx-text-sizes* :normal))))
-              (font-name (format nil "-~A-~A-*-*-~D-*-*-*-*-*-*-*"
-                                 family-name face-name size-number)))
-          font-name))))
-
-#+unicode
-(defun build-korean-font-name (text-style)
-  (multiple-value-bind (family face size language)
-      (text-style-components text-style)
-    (let* ((face (if (equal face '(:bold :italic)) :bold-italic face))
-           (font (case family
-                   ((:fix nil)
-                    (case face
-                      ((:roman nil)          "baekmuk-dotum-medium-r")
-                      ((:bold)               "baekmuk-dotum-bold-r")
-                      ((:italic)             "baekmuk-dotum-medium-r")
-                      ((:bold-italic)        "baekmuk-dotum-bold-r")))
-                   ((:serif)
-                    (case face
-                      ((:roman nil)          "baekmuk-batang-medium-r")
-                      ((:bold)               "baekmuk-batang-bold-r")
-                      ((:italic)             "baekmuk-batang-medium-r")
-                      ((:bold-italic)        "baekmuk-batang-bold-r")))
-                   ((:sans-serif)
-                    (case face
-                      ((:roman nil)          "baekmuk-gulim-medium-r")
-                      ((:bold)               "baekmuk-gulim-bold-r")
-                      ((:italic)             "baekmuk-gulim-medium-r")
-                      ((:bold-italic)        "baekmuk-gulim-bold-r")))))
-            (size-number (if (numberp size)
-                             (round size)
-                             (or (getf *clx-text-sizes* size)
-                                 (getf *clx-text-sizes* :normal)))))
-      (format nil "-~A-*-*-~D-*-*-*-*-*-ksx1001.1997-*" font size-number))))
-
-; this needs much refactoring... FIXME
-#+unicode
-(defmethod text-style-mapping ((port clx-port) text-style
-                               &optional character-set)
-  (declare (ignore character-set))
-
-  (let ((table (port-text-style-mappings port)))
-    (or (car (gethash text-style table))
-        (multiple-value-bind (family face size language)
-            (text-style-components text-style)
-          (let* ((display (clx-port-display port))
-                 (fontset (case language
-                            ((nil :english)
-                             (let* ((font-name (build-english-font-name text-style))
-                                    (font      (xlib:open-font display  font-name)))
-                               (make-fontset font-name
-                                 (0 255 font #'external-format::ascii-code-to-font-index))))
-                            ((:korean)
-                             (let* ((english-font-name (build-english-font-name text-style))
-                                    (english-font      (xlib:open-font display  english-font-name))
-                                    (korean-font-name  (build-korean-font-name  text-style))
-                                    (korean-font       (xlib:open-font display  korean-font-name)))
-                               (make-fontset korean-font-name
-                                 (0      255    english-font
-                                                #'external-format::ascii-code-to-font-index)
-                                 (#xAC00 #xD7A3 korean-font
-                                                #'external-format::ksc5601-code-to-font-index)
-                                 (#x4E00 #x9FA5 korean-font
-                                                #'external-format::ksc5601-code-to-font-index)))))))
-            (setf (gethash text-style table)
-                  (cons (fontset-name fontset) fontset))
-            (fontset-name fontset))))))
-
 (defmethod (setf text-style-mapping) (font-name (port clx-port)
                                       (text-style text-style)
                                       &optional character-set)
@@ -1070,37 +979,19 @@
         (cons font-name (open-font (clx-port-display port) font-name)))
   font-name)
 
-#-unicode
 (defun text-style-to-X-font (port text-style)
   (let ((text-style (parse-text-style text-style)))
     (text-style-mapping port text-style)
     (cdr (gethash text-style (port-text-style-mappings port)))))
 
-#+unicode
-(defun text-style-to-X-fontset (port text-style)
-  (let ((text-style (parse-text-style text-style)))
-    (text-style-mapping port text-style)
-    (cdr (gethash text-style (port-text-style-mappings port)))))
-
-#-unicode
 (defmethod port-character-width ((port clx-port) text-style char)
   (let* ((font (text-style-to-X-font port text-style))
 	 (width (xlib:char-width font (char-code char))))
     width))
 
-#+unicode
-(defmethod port-character-width ((port clx-port) text-style char)
-  (fontset-point-width (char-code char) (text-style-to-X-fontset port text-style)))
-
-#-unicode
 (defmethod port-string-width ((port clx-port) text-style string &key (start 0) end)
   (xlib:text-width (text-style-to-X-font port text-style)
 		   string :start start :end end))
-
-#+unicode ; this requires a translator and so on.
-(defmethod port-string-width ((port clx-port) text-style string &key (start 0) end)
-  (let ((*fontset* (text-style-to-X-fontset port text-style)))
-    (xlib:text-width nil string :start start :end end :translator #'translate)))
 
 (defmethod X-pixel ((port clx-port) color)
   (let ((table (slot-value port 'color-table)))
