@@ -946,7 +946,6 @@ frame, if any")
   (with-keywords-removed (options (:pretty-name :frame-manager :enable :state
 				   :left :top :right :bottom :width :height
 				   :save-under :frame-class))
-    (declare (ignorable frame-class))
     (let ((frame (apply #'make-instance frame-class
 			:name frame-name
 			:pretty-name pretty-name
@@ -973,6 +972,7 @@ frame, if any")
 			       (own-process *multiprocessing-p*) port
 			       frame-manager frame-class
 			       &allow-other-keys)
+  (declare (ignorable frame-class))
   (let ((frame (unless (eq create :force)
 		 (block
 		     found-frame
