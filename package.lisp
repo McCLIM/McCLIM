@@ -691,6 +691,7 @@
    #:extended-output-stream-p           ;predicate
    #:filling-output                     ;macro
    #:find-applicable-translators        ;function
+   #:find-application-frame		;function (in Franz User's Guide)
    #:find-cached-output-record          ;generic function
    #:find-child-output-record           ;generic function
    #:find-command-from-command-line-name ;function

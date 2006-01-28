@@ -198,7 +198,7 @@ input focus. This is a McCLIM extension."))
    (user-supplied-geometry :initform nil
 			   :initarg :user-supplied-geometry
                            :documentation "plist of defaulted :left, :top, :bottom, :right, :width and :height options.")
-   (process :reader frame-process :initform (current-process))
+   (process :accessor frame-process :initform nil)
    (client-settings :accessor client-settings :initform nil)))
 
 (defmethod frame-geometry ((frame application-frame))
@@ -465,10 +465,12 @@ frame, if any")
 
 (defmethod run-frame-top-level ((frame application-frame)
 				&key &allow-other-keys)
-  (handler-case
-      (funcall (frame-top-level-lambda frame) frame)
-    (frame-exit ()
-      nil)))
+  (letf (((frame-process frame) (current-process)))
+    (handler-case
+	(funcall (frame-top-level-lambda frame) frame)
+      (frame-exit ()
+	nil))))
+
 
 (defmethod run-frame-top-level :around ((frame application-frame) &key)
   (let ((*application-frame* frame)
@@ -686,6 +688,7 @@ frame, if any")
 
 (defgeneric enable-frame (frame))
 (defgeneric disable-frame (frame))
+(defgeneric destroy-frame (frame))
 
 (defgeneric note-frame-enabled (frame-manager frame))
 (defgeneric note-frame-disbled (frame-manager frame))
@@ -700,6 +703,11 @@ frame, if any")
   (setf (slot-value frame 'state) :disabled)
   (note-frame-disabled (frame-manager frame) frame))
 
+(defmethod destroy-frame ((frame application-frame))
+  (when (eq (frame-state frame) :enabled)
+    (disable-frame frame))
+  (disown-frame (frame-manager frame) frame))
+
 (defmethod note-frame-enabled ((fm frame-manager) frame)
   (declare (ignore frame))
   t)
@@ -707,6 +715,15 @@ frame, if any")
 (defmethod note-frame-disabled ((fm frame-manager) frame)
   (declare (ignore frame))
   t)
+
+(defun map-over-frames (function &key port frame-manager)
+  (cond (frame-manager
+	 (mapc function (frame-manager-frames frame-manager)))
+	(port
+	 (loop for manager in (frame-managers port)
+	       do (map-over-frames function :frame-manager manager)))
+	(t (loop for p in *all-ports*
+		 do (map-over-frames function :port p)))))
 
 (defvar *pane-realizer* nil)
 
@@ -929,6 +946,7 @@ frame, if any")
   (with-keywords-removed (options (:pretty-name :frame-manager :enable :state
 				   :left :top :right :bottom :width :height
 				   :save-under :frame-class))
+    (declare (ignorable frame-class))
     (let ((frame (apply #'make-instance frame-class
 			:name frame-name
 			:pretty-name pretty-name
@@ -947,6 +965,39 @@ frame, if any")
 	    (state-supplied-p
 	     (warn ":state ~S not supported yet." state)))
       frame)))
+
+;;; From Franz Users Guide
+
+(defun find-application-frame (frame-name &rest initargs
+			       &key (create t) (activate t)
+			       (own-process *multiprocessing-p*) port
+			       frame-manager frame-class
+			       &allow-other-keys)
+  (let ((frame (unless (eq create :force)
+		 (block
+		     found-frame
+		   (map-over-frames
+		    #'(lambda (frame)
+			(when (eq (frame-name frame) frame-name)
+			  (return-from found-frame frame)))
+		    :port port
+		    :frame-manager frame-manager)))))
+    (unless (or frame create)
+      (return-from find-application-frame nil))
+    (unless frame
+      (with-keywords-removed (initargs (:create :activate :own-process))
+	(setq frame (apply #'make-application-frame frame-name initargs))))
+    (when (and frame activate)
+      (cond ((frame-process frame)
+	     #-(and)(raise-frame frame)) ; not yet
+	    (own-process
+	     (clim-sys:make-process #'(lambda ()
+					(run-frame-top-level frame))
+				    :name (format nil "~A" frame-name)))
+	    (t (run-frame-top-level frame))))
+    frame))
+
+
 
 ;;; Menu frame class
 
