@@ -2,7 +2,7 @@
 
 (in-package :common-lisp-user)
 
-(asdf:defsystem conditional-commands
+(asdf:defsystem :conditional-commands
   :depends-on (:mcclim)
   :components ((:file "package")
                (:file "command-and-command-table-utilities" :depends-on ("package"))
