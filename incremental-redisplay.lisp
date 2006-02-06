@@ -305,7 +305,7 @@ spatially organized data structure.
     (let ((res +nowhere+))
       (loop for (r) in erase-overlapping do (setf res (region-union res r)))
       (loop for (r) in move-overlapping do (setf res (region-union res r)))
-      (replay history stream res)) ))
+      (replay history stream res))))
 
 (defclass updating-stream-state (complete-medium-state)
   ((cursor-x :accessor cursor-x :initarg :cursor-x :initform 0)
@@ -521,10 +521,11 @@ updating-output-parent above this one in the tree.")
   (with-output-recording-options (stream :record t :draw nil)
     (map-over-updating-output
      #'(lambda (r)
-	 (setf (old-children r) (sub-record r))
-	 (setf (output-record-dirty r) :updating)
-	 (setf (rectangle-edges* (old-bounds r))
-	       (rectangle-edges* (sub-record r))))
+         (let ((sub-record (sub-record r)))
+           (setf (old-children r) sub-record)
+           (setf (output-record-dirty r) :updating)
+           (setf (rectangle-edges* (old-bounds r))
+                 (rectangle-edges* sub-record))))
      record
      nil)
     (finish-output stream)
@@ -548,8 +549,9 @@ updating-output-parent above this one in the tree.")
     ((record standard-updating-output-record) stream displayer)
   (multiple-value-bind (x y)
       (output-record-position record)
-    (when (sub-record record)
-      (delete-output-record (sub-record record) record))
+    (let ((sub-record (sub-record record)))
+      (when sub-record
+        (delete-output-record sub-record record)))
     ;; Don't add this record repeatedly to a parent updating-output-record.
     (unless (eq (output-record-parent record)
 		(stream-current-output-record stream))
@@ -721,7 +723,7 @@ in an equalp hash table"))
 
 (declaim (inline hash-coords))
 (defun hash-coords (x1 y1 x2 y2)
-  (declare (type real x1 y1 x2 y2))	;XXX Someday this should be float
+  (declare (type coordinate x1 y1 x2 y2))
   (let ((hash-val 0))
       (declare (type fixnum hash-val))
       (labels ((rot4 (val)
@@ -916,8 +918,6 @@ in an equalp hash table"))
 	    (t
 	     ;; It doesn't need to be updated, but it does go into the
 	     ;; parent's sequence of records
-	     (when *trace-updating-output*
-	       (format *trace-output* "clean ~S~%" record))
              ;;
              (multiple-value-bind (cx cy) (stream-cursor-position stream)
                (multiple-value-bind (sx sy) (output-record-start-cursor-position record)
@@ -925,8 +925,15 @@ in an equalp hash table"))
                        (dy (- cy sy)))
                    (unless (zerop dy)
                      (move-output-record record dx dy) )
-                   (let ((tag (cond ((= dx dy 0) :clean)
-                                    (t :moved))))
+                   (let ((tag (cond
+				((= dx dy 0)
+				 (when *trace-updating-output*
+				   (format *trace-output* "clean ~S~%" record))
+				 :clean)
+				(t
+				 (when *trace-updating-output*
+				   (format *trace-output* "moved ~S~%" record))
+				 :moved))))
                      (setf (output-record-dirty record) tag)
                      (setf (output-record-parent record) nil)
                      (map-over-updating-output #'(lambda (r)
