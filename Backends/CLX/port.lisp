@@ -467,6 +467,18 @@
     (xlib:destroy-window (port-lookup-mirror port sheet))
     (port-unregister-mirror port sheet (sheet-mirror sheet))))
 
+(defmethod raise-mirror ((port clx-port) (sheet basic-sheet))
+  (let ((mirror (sheet-mirror sheet)))
+    (when (and mirror
+	       (typep mirror 'xlib:window))
+      (xlib:circulate-window-up mirror))))
+
+(defmethod bury-mirror ((port clx-port) (sheet basic-sheet))
+  (let ((mirror (sheet-mirror sheet)))
+    (when (and mirror
+	       (typep mirror 'xlib:window))
+      (xlib:circulate-window-down mirror))))
+
 (defmethod mirror-transformation ((port clx-port) mirror)
   (make-translation-transformation (xlib:drawable-x mirror)
                                    (xlib:drawable-y mirror)))

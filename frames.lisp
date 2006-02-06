@@ -689,6 +689,8 @@ frame, if any")
 (defgeneric enable-frame (frame))
 (defgeneric disable-frame (frame))
 (defgeneric destroy-frame (frame))
+(defgeneric raise-frame (frame))
+(defgeneric bury-frame (frame))
 
 (defgeneric note-frame-enabled (frame-manager frame))
 (defgeneric note-frame-disbled (frame-manager frame))
@@ -707,6 +709,12 @@ frame, if any")
   (when (eq (frame-state frame) :enabled)
     (disable-frame frame))
   (disown-frame (frame-manager frame) frame))
+
+(defmethod raise-frame ((frame application-frame))
+  (raise-sheet (frame-top-level-sheet frame)))
+
+(defmethod bury-frame ((frame application-frame))
+  (bury-sheet (frame-top-level-sheet frame)))
 
 (defmethod note-frame-enabled ((fm frame-manager) frame)
   (declare (ignore frame))
@@ -989,7 +997,7 @@ frame, if any")
 	(setq frame (apply #'make-application-frame frame-name initargs))))
     (when (and frame activate)
       (cond ((frame-process frame)
-	     #-(and)(raise-frame frame)) ; not yet
+	     (raise-frame frame))
 	    (own-process
 	     (clim-sys:make-process #'(lambda ()
 					(run-frame-top-level frame))
