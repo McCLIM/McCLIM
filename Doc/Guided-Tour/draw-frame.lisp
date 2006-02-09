@@ -11,7 +11,7 @@
 	  (interactor :interactor))
   (:layouts (default-default (vertically ()
 			       draw-pane
-			       interactor))
+			       interactor)))
   (:menu-bar t)
   (:command-definer t)
   (:top-level (default-frame-top-level)))

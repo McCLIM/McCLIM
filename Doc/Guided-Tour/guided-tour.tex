@@ -2,6 +2,7 @@
 \usepackage[dvips]{graphicx}
 \usepackage{color}		% Need the color package
 \usepackage{listings}
+\usepackage{url}
 %\usepackage{epsfig}
 \title{\Huge A Guided Tour of CLIM, \\ Common Lisp Interface Manager}
 \author{
@@ -36,7 +37,9 @@ Dennis Doughty \texttt{<doughty@ila.com>} &  International Lisp Associates, Inc.
 \newcommand {\concept} [1] {{\sl #1}\index{#1}}
 \newcommand {\term} [1] {{\sl #1}}
 \newcommand {\code}[1]{{\sffamily #1}}
-\newcommand {\CLIM}{{\small CLIM}}
+\newcommand {\CLIM}{\textsc{clim}}
+\newcommand {\CLOS}{\textsc{clos}}
+\newcommand {\mcclim}{\textsc{McCLIM}}
 \let\class\code
 \let\method\code
 \let\constant\code
@@ -54,7 +57,7 @@ facilities include a portable layers for basic windowing, input,
 output services, and mechanisms for constructing window types and user
 interface components; stream-oriented input and output facilities
 extended with presentations and context sensitive
-input\footnote{Similar to the work pioneered in the Genera UI system};
+input;\footnote{Similar to the work pioneered in the Genera UI system}
 and a gadget-oriented toolkit similar to those found in the X world
 extended with support for look and feel adaptiveness. In this article,
 we present an overview of \CLIM{}'s broad range of functionality and
@@ -62,25 +65,25 @@ present a series of examples that illustrates \CLIM{}'s power. The
 article originally appeared in Lisp Pointers in 1991 and was updated
 in 2006 by Clemens Fruhwirth.\footnote{The CLIM 2 specification
   changed significant parts of \CLIM{} rendering legacy code
-  unusable. Clemens Fruhwirth has rewritten all examples and the
-  corresponding text section for the \CLIM{} 2 specification. In
-  addition, he restructured the whole article and added text sections
+  unusable. Clemens Fruhwirth has rewritten all examples and the 
+  corresponding text sections for the \CLIM{} 2 specification. In
+  addition, he has restructured the whole article, adding sections
   to provide additional insights into \CLIM{} concepts.} All examples
-in this article have been developed with McCLIM{}\cite{mcclim}, a free
-\CLIM{} implementation.
+in this article have been run with \mcclim{}\cite{mcclim}, a free
+\CLIM{} implementation, as of January 2006.
 \end{abstract}
 
 \section*{Introduction}
 Common Lisp is a language standard that has provided a broad range of
 functionality, and that has, to a large degree, successfully enabled
-the writing of truly portable Lisp programs. The emergence of CLOS and
-the cleanup efforts of Ansi X3J13 have further enhanced the utility
+the writing of truly portable Lisp programs. The emergence of \CLOS{} and
+the cleanup efforts of ANSI X3J13 have further enhanced the utility
 and portability of Common Lisp. However, one major stumbling block
 remains in the path of those endeavoring to write large portable
 applications. The Common Lisp community has not yet provided a
 standard interface for implementing user interfaces beyond the most
 basic operations based on stream reading and printing.\footnote{Notice
-  that this sentence was written in 1991. Unfortunately, it is still
+  that this sentence was written in 1991; it is still
   true 15 years later.}
 
 The Common Lisp Interface Manager addresses this problem by specifying
@@ -92,7 +95,7 @@ stream operations, output recording, and advanced output formatting;
 and high level facilities like context sensitive input, an adaptive
 toolkit, and an application building framework.
 
-\CLIM{} will eventually support a large number of window environments
+\CLIM{} implementations will eventually support a large number of window environments
 including X Windows, Mac OS X and Microsoft Windows. \CLIM{} is
 designed to exploit the functionality provided by the host environment
 to the degree that it makes sense. For example, \CLIM{} top level
@@ -100,17 +103,17 @@ windows are typically mapped onto host windows, and input and output
 operations are ultimately performed by host window system
 code. Another example is that \CLIM{} supports the incorporation of
 toolkits written in other languages. A uniform interface provided by
-\CLIM{} allows Lisp applications programmers to deal only with Lisp
+\CLIM{} allows Lisp application programmers to deal only with Lisp
 objects and functions regardless of their operating platform.
 
-An important goal that has guided the design of \CLIM{} has been to
+An important goal that has guided the design of \CLIM{} was to
 layer the specification into a number of distinct
 facilities. Furthermore, the specification does not distinguish the
 use of a facility by higher level \CLIM{} facilities from its use by
 \CLIM{} users. For example, the geometry substrate, which includes
 transformations and regions, is designed for efficient use by the
-graphics and windowing substrates as well as by \CLIM{} users. This
-means that, in general, a \CLIM{} user can reimplement higher level
+graphics and windowing substrates as well as by \CLIM{} programmers. This
+means that, in general, a \CLIM{} programmer can reimplement higher level
 \CLIM{} facilities using the interfaces provided by lower level
 facilities.
 
@@ -123,20 +126,20 @@ frameworks that better support the specific needs or requirements of a
 particular application.
 
 For example, \CLIM{}'s application framework and adaptive toolkit
-allow users to develop applications that automatically adopt the look
+allow programmers to develop applications that automatically adopt the look
 and feel of the host's environment. (We often call this
 ``adaptiveness,'' ``look and feel independence,'' or occasionally more
 picturesquely, ``chameleon look and feel''.) However, many users may
 need or want to define a particular look and feel that stays constant
-across all host environments (we call this "portable look and
-feel"). Such users can circumvent the look and feel adaptiveness
+across all host environments (we call this ``portable look and
+feel''). Such users can circumvent the look and feel adaptiveness
 provided by \CLIM{}, while still using most of the application
 framework facility and other high level \CLIM{} facilities like
 context sensitive input. Furthermore, using the lower level facilities
 of \CLIM{}, they can develop portable toolkit libraries that define
 and implement their own particular look and feel. For instance, the
-\CLIM{} user can implement new gadget types on top of the drawing
-primitives and treat them equally to the build-in gadget types.
+\CLIM{} programmer can implement new gadget types on top of the drawing
+primitives and treat them equally to the built-in gadget types.
 
 We will use the term \concept{CLIM implementor} for the party
 implementing low-level and high-level parts according to the \CLIM{}
@@ -186,11 +189,11 @@ repainting it when necessary.
 \paragraph*{Formatted Output} \CLIM{} provides a set of high-level
 macros that enable programs to produce neatly formatted tabular and
 graphical displays easily.\footnote{This also includes Graph
-  Formatting}
+  Formatting.}
 
 \paragraph*{Presentations} \CLIM{} provides the ability to associate
 semantics with output, such that Lisp objects may be retrieved later
-via user gestures (e.g. mouse clicks) on their displayed
+via user gestures (e.g.{} mouse clicks) on their displayed
 representation. This context sensitive input is modularly layered on
 top of the output recording facility and is integrated with the Common
 Lisp type system. A mechanism for type coercion is also included,
@@ -213,9 +216,9 @@ operation. Application that use these gadget types and related
 facilities will automatically adapt to use whatever toolkit is
 available and appropriate for the host environment. In addition,
 portable Lisp-based implementations of the abstract gadget pane
-protocols are provided.\footnote{McCLIM does not support look and feel
-  adaptiveness at the moment except for the experimental port for Mac
-  OS X. Hence, McCLIM mostly uses this portable Lisp-based
+protocols are provided.\footnote{\mcclim{} does not support look and feel
+  adaptiveness at the moment except for the experimental beagle backend for Mac
+  OS X's Cocoa platform. Hence, \mcclim{} mostly uses this portable Lisp-based
   implementation.}
 
 \paragraph*{Application Building} \CLIM{} provides a set of tools for
@@ -237,13 +240,14 @@ output record can not only reproduce content that was written to a
 stream, the \CLIM{} programmer can also attach the code that generated
 the content to the content itself. Whenever necessary, the application
 programmer can ask an output stream to update itself. \CLIM{} will
-query all code generators and in case, replace obsolete content.
+query all drawn elements for obsolescence, and if necessary, rerun the
+code to produce fresh output.
 
 \noindent\hrulefill
 
-\noindent These are a lot of facilities to explore. The most
-systematically way -- exploring from the most low-level to the most
-high-level -- would also be the most longsome. Therefore, we start
+\noindent This is a large number of facilities to explore. The most
+systematic way -- progressing from the lowest-level to the highest
+-- would also be the lengthiest. Therefore, we start
 with showing several facilities in action with the most fundamental
 example in the realm of programming: Hello World.
 
@@ -269,6 +273,12 @@ of the specification first as this is the most relevant work for
 \CLIM{}. The best we can do in this context is to provide pointers and
 references and hope that the interested reader starts to explore the
 surrounding text sections on his own.
+
+After loading a \CLIM{} implementation, the package
+\keyword{:clim-user} is available to absorb user code. This package is
+a good start for experimentations and first steps. When proper
+packaging is required, simply include the packages \keyword{:clim} and
+\keyword{:clim-lisp} in your \keyword{:use} list.
 
 The central element of \CLIM{} application programming is the
 \concept{application-frame}. An application frame is defined via
@@ -318,15 +328,13 @@ look at the definition of \class{hello-world-pane}.
 
 The one and only superclass of \class{hello-world-pane} is
 \class{clim-stream-pane}\footnote{See Section 29.4 ``CLIM Stream
-  Panes'' in \cite{clim-spec}.}. As there are no additional slot, an
-experience CLOS user might have correctly guessed that we will use
-\class{hello-world-pane} solely for method specialization.
-
-But before we do that, let us have a look what we have actually
+  Panes'' in \cite{clim-spec}.}. As there are no additional slots, an
+experienced \CLOS{} user might guess that we will use
+\class{hello-world-pane} solely for method specialization.  Before doing so,
+let us have a look what we have actually
 inherited from \class{clim-stream-pane}\footnote{Internal classes
-  removed from Listing}:
+  removed from listing.}:
 
-\pagebreak % formathack
 \lstset{style=inlinestyle}
 \begin{lstlisting}
 CLIM-USER> (describe (find-class 
@@ -394,12 +402,12 @@ up to the details we skipped in this example.
 To \CLIM{}, geometry means \concept{regions}. A region is either bound
 or unbound and has a dimensionality of either zero, one or two. That
 corresponds to a point, a path or an area respectively. Regions can be
-compared (region predicate protocol\footnote{\CLIM{} relays heavily on
-  CLOS. In CLOS, the term \concept{protocol} means a set of generic
+compared (region predicate protocol\footnote{\CLIM{} relies heavily on
+  \CLOS{}. In \CLOS{}, the term \concept{protocol} means a set of generic
   functions that together form a coherent interface. A protocol
-  specification does not only include the syntactic details of the
+  specification not only includes the syntactic details of the
   function names and the number of function arguments, but also the
-  functions purpose and the semantic of the return values (and/or side
+  functions' purpose and the semantics of the return values (and/or side
   effects) must be given in a textual specification.}) and composed
 (region composition protocol).
 
@@ -422,14 +430,14 @@ can be changed permanently, or in the context of a
 \subsection{The Windowing Substrate} 
 
 \CLIM{} does not directly talk to the window system. Instead, \CLIM{}
-is layered on top of a windowing substrate\footnote{former Silica}.
+is layered on top of a windowing substrate.\footnote{formerly known as Silica.}
 This substrate is a middleware between \CLIM{} on one side and the
 host window system on the other.  This middleware layer provides a
 portable windowing model that insulates higher levels of \CLIM{} and
 \CLIM{} programmers from the details of the host window system. From
 the perspective of a \CLIM{} programmer, talking to the window system
 is equal to talking to this abstraction layer. The implementation
-details are hidden in \concept{backends}, like in McCLIM the CLX
+details are hidden in \concept{backends}, like in \mcclim{} the CLX
 backend, which hides X11 details, or the beagle backend, which hides
 details for Mac OS X's toolkit. These backends will use the services
 of a host window system to provide efficient windowing, input and
@@ -440,7 +448,7 @@ This framework allows uniform treatment of the following GUI building
 blocks:
 \begin{itemize}
 \item Windows like those in X, Mac OS X and Microsoft Windows.
-\item Gadgets typical of toolkit layers, such as GTK, QT or Mac OS X's
+\item Gadgets typical of toolkit layers, such as Gtk+, QT or Mac OS X's
   toolkit. The backend provides a frame manager which takes care of
   mapping the abstract gadget types found in \CLIM{} to appropriate
   gadget with a native look and feel.
@@ -480,7 +488,7 @@ sheets. Every sheet has a parent, a sheet might have one or more
 children. A sheet can be adopted by a parent sheet and disowned later.
 A sheet is grafted when it is connected to a \concept{graft} either
 directly or through it's ancestors. A graft is a special kind of sheet
-that stands in for a host window, typically a root window (i.e. screen
+that stands in for a host window, typically a root window (i.e.{} screen
 level). A sheet is attached to a particular host window system by
 making it a child of an associated graft. A host window will be
 allocated for that sheet; the sheet will then appear to be a child of
@@ -545,12 +553,12 @@ permanently. \code{sheet-medium} obtains the medium associated with a
 sheet.
 % \footnote{Notice that the \CLIM{} specification \cite{clim-spec}
 %   specifies draw-text, draw-line, draw-rectangle, etc. as functions
-%   that operate on mediums. McCLIM names these functions
+%   that operate on mediums. \mcclim{} names these functions
 %   medium-draw-text, medium-draw-line, medium-draw-rectangle, and so
-%   on. The functions that are available in McCLIM without the
+%   on. The functions that are available in \mcclim{} without the
 %   ``medium-'' prefix operate on sheets. These are trampoline
 %   functions that call the appropriate medium-prefixed function on
-%   the sheet's medium. According to the McCLIM authors, this is done
+%   the sheet's medium. According to the \mcclim{} authors, this is done
 %   for optimization.}
 
 The graphic output capabilities of sheets range from simple line style
@@ -563,9 +571,9 @@ in Chapters 10-14 of \cite{clim-spec}.
 
 \CLIM{} lives in idealized world in terms of graphics operations. A
 \CLIM{} programmer can use an infinitely long and wide drawing pane
-with an arbitrary precise resolution and continuously variable amount
-of opacity. As rendering devices with these properties are rare these
-days, we need to render the idealized graphic description to a device
+with an arbitrarily precise resolution and continuously variable 
+opacity. As rendering devices with these properties are rare,
+we need to render the idealized graphic description to a device
 with finite size and a fixed drawing precision. The rendering rules
 are specified in Section 12.4 ``Rendering Conventions for Geometric
 Shapes''of \cite{clim-spec}.
@@ -596,7 +604,7 @@ system window hierarchy) when the frame is adopted.
 To build a user interface, an application programmer defines one or
 more frames classes. These frame classes define a number of frame
 properties including application specific state and a hierarchy of
-panes (i.e. user interface gadgets and regions for interacting with
+panes (i.e.{} user interface gadgets and regions, for interacting with
 the users). Frame classes also provide hooks for customizing
 application behavior during various portions of the frame protocol.
 For example, an \keyword{:after} method on generic functions in the
@@ -616,13 +624,13 @@ a blocking read request. He does not have to take care of
 asynchronously handling confirmation or cancel button clicks.  For
 instance, the programmer requests a string from the user and the user
 is presented with a prompt, an editable text field, and two buttons
-for confirmation and canceling. Only after the user hit the
-confirmation button, the string requesting function returns and the
+for confirmation and canceling. Only after the user hits the
+confirmation button, the string requesting function returns; the
 programmer can directly use the function's return value which is the
-user provided string. A cancel button click is handled via throwing an
-abort tag.
+string provided by the user. Clicking the cancel button is dealt with by throwing to an
+\code{abort} tag.
 
-From the callers perspective, an attempt to separate application
+From the caller's perspective, an attempt to separate application
 frames and dialogs could be: a dialog window itself is side-effect
 free with respect to the application state and therefore the whole
 sense of calling a dialog creation routine must arise from the values
@@ -648,7 +656,7 @@ An intermediate dialog is something that is brought up to collect
 additional information for (or before) an operation. When the user
 selects the ``Search'' command, he is queried for a search string in
 an additional dialog window; probably offering other search options
-like case insensitive search or backwards search. This is done in a
+like case-insensitive search or backwards search. This is done in a
 synchronous manner, blocking until the requested input is made
 available by the user.
 
@@ -669,9 +677,9 @@ available by the user.
 An application frame is an interface that provides the user with a
 variety of commands to choose as his next step. For instance, the user
 may choose from commands like Open, Save, Search, or Quit. The frame
-is a long-living GUI object compared to dialogs and there is no linear
+is a long-living GUI object compared to dialogs, and there is no linear
 execution path as there is in after a dialog as the user is free to
-select any commands he likes as next step.
+select any commands he likes as his next action.
 
 Hence, the synchronous programming pattern for dialogs is more
 convenient because after dialog confirmations there is a predetermined
@@ -701,7 +709,7 @@ An application frame constructs its pane tree by specifying a
 top-level pane in \macro{define-application-frame}. This pane is
 usually a layout pane that contains more gadget and/or layout panes as
 its children. With the help of layout panes, a pane hierarchy can be
-constructed. The top-level pane (and the whole hierarchy when its a
+constructed. The top-level pane (and the whole hierarchy when it is a
 layout pane) is created when the application frame is adopted by a
 frame manager and made visible to the user. The programmer can compose
 an interface consisting of pre-defined gadget panes, layout panes, or
@@ -717,27 +725,27 @@ leads that panes are implemented as subclasses of \class{basic-sheet}
 augmenting the class with an active part. For instance, a button-pane
 actively draws its own button representation on its allotted screen
 area and a click on the correct button area triggers a callback for
-the button. A composite pane lays out its children elements and
-request them to draw themselves onto specific screen regions.
+the button. A composite pane lays out its child elements and
+requests them to draw themselves onto specific screen regions.
 
 \CLIM{} comes with a set of predefined gadget panes. They consist of
 push-button, toggle-button, slider, radio-box, text-field, text-editor
 panes ready for use by the \CLIM{} application programmer. These
 gadgets might be remapped to native system gadgets by the frame
 manager, so a native look and feel is possible.\footnote{Only possible
-  in McCLIM with the experimental beagle backend for Mac OS X.}
+  in \mcclim{} with the experimental beagle backend for Mac OS X.}
 
 Each gadget pane class is associated with a set of generic functions
-that as callbacks in traditional toolkits. For example, a pushbutton
+that act as callbacks do in traditional toolkits. For example, a pushbutton
 has an ``activate'' callback method which is invoked when its button
 is pressed. For this particular callback, a method named
-\method{activate-callback} is invoked per default and a \CLIM{}
-programmer can provide a specialized method to implementation
-application specific behavior for a subclassed button-pane. But except
+\method{activate-callback} is invoked by default, and a \CLIM{}
+programmer can provide a specialized method to implement
+application-specific behavior for a subclassed button-pane. But except
 in the case where the programmer needs a lot of buttons with related
 behavior, creating a subclass for changing a single specific callback
 is not economical. Hence upon gadget creation, the programmer can
-specify an alternative callback method for all callback available. By
+specify an alternative callback method for all callbacks available. By
 providing the \keyword{:activate-callback} initarg, the programmer can
 change the callback to any regular or generic function. By convention,
 all callbacks can be changed by providing an initarg keyword equal to
@@ -810,14 +818,14 @@ color selection by manipulating their red, green, and blue components
 separately. This example illustrates the use of gadget panes provided
 by \CLIM{}. In the code in Figure \ref{fig-color-editor}, we define an
 application frame using \method{define-application-frame}. As said
-before, the syntax of this macro is similar to \class{defclass}. It
+before, the syntax of this macro is similar to that of \class{defclass}. It
 defines a new frame class which automatically inherits from the class
 \class{frame} which provides most of the functionality for handling
 frames.
 
 One requirement must be fulfilled by all frame definitions: code to
 generate a pane hierarchy must be supplied. The \keyword{:pane} option
-is the simplest way to supply this code. \class{hello frame}
+is the simplest way to supply this code.  The \class{hello-world} frame
 constructs a hierarchy with only one application pane via
 \method{make-pane}. The pane hierarchy of color editor is more
 interesting.
@@ -896,7 +904,7 @@ look and feels for a slider. For example, no guarantee is made as to
 whether the mouse button is held down during dragging, or whether the
 mouse button is pressed once to start and again to stop dragging.
 
-We use the gadget id to distinguish between the red, green and blue
+We use the gadget ID to distinguish between the red, green and blue
 slider in the callback code. We could use three different callback
 functions here, but such callbacks would have much more similarities
 than differences, thus we do not do that here. Instead, we distinguish
@@ -940,15 +948,15 @@ combination.
 
 \subsection{A simple drawing application}
 
-Next in our show case, we have a simple drawing application that draws
+We move on to a simple drawing application that draws
 lines and inserts text interactively. Our simple drawing program
 defines commands for various drawing operations and binds specific
 input events to these commands.
 
 The application frame is defined in
 \figurename~\ref{fig-draw-defapp}. A different approach is used to
-generate the pane hierarchy. Instead of mixing the layout and pane
-information, we used the \keyword{:panes} keyword to list all panes
+generate the pane hierarchy: instead of mixing the layout and pane
+information, we use the \keyword{:panes} keyword to list all panes
 that should be available in frame layouts. The \keyword{:layouts}
 keyword combines them into several layouts. It is possible to define
 multiple layouts with this option. We define two simple layouts,
@@ -973,16 +981,16 @@ specify a name for a command-defining macro for this frame
 class. Passing \constant{t} to this option (its default) generates a
 command definer named
 \macro{define-\texttt{<}frame-name\texttt{>}-command}. We can use the
-command-defining macro as convenience macro for
-\method{define-command} which is used to define frame commands. We
-will see them in action before long. \keyword{:top-level} specifies a
+command-defining macro as a convenience macro for
+\method{define-command} which is used to define frame commands, and 
+will see it in action before long. \keyword{:top-level} specifies a
 special form that is used as top level command loop. The top level is
 responsible for dequeuing and executing commands that have been
 invoked by the user. This loop is to a application frame what the REPL
 is to a terminal.
 
 This is the first example that does not use \class{clim-stream-pane}
-(or one of its descendant) as pane class.\footnote{When using McCLIM,
+(or one of its subclasses) as a pane class.\footnote{When using \mcclim{},
 we have to do this as there are bugs in the behavior of
 \class{clim-stream-pane} that have not been fixed yet.} Instead, we
 compose our own drawing pane using
@@ -994,21 +1002,21 @@ draw-pane that are required for the convenience macro
 handling all requests belonging to the sheet and pane protocols in a
 standard manner. The last class is a mixin to tag the pane as
 permanently visible on screen during its instances' lifetime. Most
-static user interfaces use this mixin. Notice that McCLIM is sensible
-to the order of the superclasses.\footnote{All stream class like
+static user interfaces use this mixin. Note that \mcclim{} is sensitive
+to the order of the superclasses.\footnote{All stream classes like
 \class{standard-extended-input-stream} must be listed before
-\class{basic-pane}. Otherwise, there is no stream handling facilities
+\class{basic-pane}. Otherwise, there are no stream handling facilities
 available.}
 
 For \class{draw-pane}, the \method{handle-repaint} method shown in
-\figurename~\ref{fig-draw-handlerepaint} is straight forward. It
+\figurename~\ref{fig-draw-handlerepaint} is straightforward. It
 delegates background filling to the next less specific method and then
 iterates through the lines and strings painting them. Here, we
 implicitly defined the format of the \code{lines} slot and the
 \code{strings} slot of the application frame class. The elements of
 the list stored in \code{lines} are pairs of points, namely the start
 and end point for a line. In \code{strings}, we store the text's
-position as the first element of a cons and the text as its cdr.
+position as the \code{car} of a cons and the text as its \code{cdr}.
 
 % \class{draw-frame} uses two options in
 % \macro{define-application-frame} that we have not encountered
@@ -1026,9 +1034,9 @@ commands for adding a text string, for adding a line and resetting the
 draw pane. After every command, we update the drawing pane via the
 auxiliary method \method{update-draw-pane}.\footnote{An experienced
 \CLIM{} programmer would define a display-function for
-\class{draw-pane}. These function is run whenever a command was
-executed causing the display pane to be updated with any changes. But
-we will save this technique for later examples.}
+\class{draw-pane}. This function is run after a command is
+executed, and causes the display pane to be updated with any changes. We 
+will save this technique for later examples.}
 
 At this point, we can actually use the application; although not very
 conveniently. The interactor pane can be used to invoke one of three
@@ -1128,11 +1136,6 @@ execution (code bodies of \method{define-command}).
 % event-handling thread.
 % 
 
-You may notice that there are issue with redrawing with this example
-in McCLIM. Unfortunately, this has not been fixed before the release
-of this article.
-
-
 \section{High Level Facilities} 
 
 In this section, we explain a number of higher level facilities
@@ -1170,7 +1173,7 @@ instance row and column formatting information. Chapter 16 in
 \paragraph*{Output Formatting} \CLIM{} provides a convenient table and
 graph formatting facility, which is built on top of the output
 recording facility. The key to these formatting tools (as opposed to,
-say, \code{format}'s X directive) is that they dynamically compute the
+say, \code{format}'s \code{~T} directive) is that they dynamically compute the
 formatting parameters based on the actual size of the
 application-generated output.
 
@@ -1195,7 +1198,7 @@ information about the packages in the Lisp environment:
 Any attempt to fix this function to produce tabular output by building
 in a certain fixed spacing between the package name and symbol count
 will either get caught by an unexpectedly long package name, or will
-have to reserve way to much space for the typical case. In \CLIM{}, we
+have to reserve way too much space for the typical case. In \CLIM{}, we
 can use the code in Figure \ref{fig-formatting} to produce a neatly
 formatted table for any set of package names.
 \begin{figure*}
@@ -1230,7 +1233,7 @@ underlying system it is just a text string. Fortunately, in many cases
 the semantics can be recovered from the string. Thus the power of the
 various textual cut-and-paste mechanisms supported by contemporary
 computer systems. However, it is possible to improve upon the utility
-of this lowest common denominator facility (i.e. squeezing everything
+of this lowest common denominator facility (i.e.{} squeezing everything
 through its printed representation) by remembering the semantics of
 the output as well as its appearance. This is the idea behind
 presentations.
@@ -1258,10 +1261,10 @@ in a presentation of type \code{'pathname}.
 types, which are arranged in a super-type/subtype lattice like the CL
 types. In fact, the presentation type hierarchy is an extension of the
 CL type hierarchy. The reason that this extended type system is needed
-is that the CL type system is overloaded from the UI perspective. For
+is that the CL type system is insufficient from the UI perspective. For
 example, the integer 72 might represent a heart rate in one
 application and a Fahrenheit temperature in another, but it will
-always just be an integer to Lisp.
+always be just an integer to Lisp.
 
 The application programmer can define the UI entities of the
 application by defining presentation types, thus extending the
@@ -1270,7 +1273,7 @@ programmer can centralize all of the UI aspects of the new type in one
 place, including output appearance and input syntax. As an example,
 \CLIM{} defines a pathname presentation type that defines how a
 pathname is displayed and how one is input. The pathname input side
-provides pathname completion and possibilities-display features. By
+provides pathname completion and display of possibilities. By
 defining this behavior in one place and using it in all applications
 that need to display or read pathnames, \CLIM{} helps build consistent
 user interfaces.
@@ -1284,9 +1287,9 @@ associated with some graphics that were displayed on the screen.
 
 \begin{lstlisting}
 (with-output-as-presentation 
-       (:object path
-        :type 'pathname 
-        :stream s) 
+    (:object path
+     :type 'pathname 
+     :stream s) 
   (draw-rectangle* s 0 0 30 30))
 \end{lstlisting}
 
@@ -1358,17 +1361,17 @@ is defined to take an argument of the selected presentation type.
 \caption{File Browser}\label{fig-file-browser}
 \end{figure*}
 
-The \class{dirlist-frame} application is a very simple-minded file
+The \class{dirlist-frame} application is a very simple file
 system browser using presentation types.  It defines two panes, an
 output pane to display directory contents and an input pane to handle
 user typein.  For the output pane, the application defines a display
 function. \code{dirlist-display-files} works in conjunction with the
-top level command loop. Per default, the command loop calls all
+top level command loop. By default, the command loop calls all
 display functions after a command was processed to make all changes in
 the application's data structures visible that the command execution
 might have caused. When all display functions have updated their
 panes, the command loop displays a prompt in the
-interactor\footnote{Might be omitted when there is no interactor pane}
+interactor\footnote{Omitted when there is no interactor pane.}
 and waits for the next command.
 
 The \method{dirlist-display-files} display function iterates over the
@@ -1414,8 +1417,8 @@ This command translator has little work to do. The body of the
 translator has to return a list of arguments that are handed to the
 command \code{com-edit-directory}. But we do not need to any
 conversion of the supplied object, as it is already a pathname. Thus,
-the received object is wrapped in a list and handed back to the caller
-which will call \code{com-edit-directory} with the supplied objects.
+the object is wrapped in a list and returned to the caller
+which will apply \code{com-edit-directory} to the list.
 
 A simple trick is used to dispatch an initial command to the
 application frame. An after-method is provided for
@@ -1463,17 +1466,16 @@ methods on presentation types.  Via this macro, we define a printer
 and a parser function for the type \code{weekday}. As is the case with
 most presentation types, the printer and parser are duals. That is,
 the printer, when given an object to print, produces output that the
-parser can interpret to arrive back at the original object. Not in
-every case the parser in \code{accept} is needed to return an object
-of the requested type, and for simplicity the programmer might choose
-not to provide a parser at all.
+parser can interpret to arrive back at the original object.
+\code{accept} does not need a parser in every case, and for simplicity
+the programmer might choose not to provide a parser at all.
 
 We took the easy way out with our parser. \CLIM{} provides a
 completion facility and instead of reading the day name of the stream
 and parsing it into an integer, we provided an exhaustive set of input
 to object mappings. The \macro{completing-from-suggestions} macro
 collects all suggestions made by the parser via
-\code{suggest}. \code{suggest} is takes an input and object as
+\code{suggest}. \code{suggest} takes an input and object as
 suggestion. In our case, day name taken from \variable{*days*} is the
 input and the number of the week \variable{i} is the object. \CLIM{}
 will match the input given by the user with the suggestions and in
@@ -1513,7 +1515,7 @@ this keyword-value pair and generate a presentation translator. More
 precisely, a presentation-to-command translator is defined that is
 equal in functionality to the one we have seen in the file-browser
 example. Whenever a presentation of the type \code{pathname} is
-selected (e.g. with pointer clicks) in a \class{command} input
+selected (e.g.{} with pointer clicks) in a \class{command} input
 context, it is translated into a command invocation of ``Select
 Weekday''.
 
@@ -1605,27 +1607,28 @@ constructed from a high-level specification of its functionality.
 
 \section{Conclusion}
 
-The series of examples presented in this article illustrate the broad
+The series of examples presented in this article illustrates the broad
 range of functionality provided by \CLIM{}. The later examples,
 especially, demonstrate that complex user interfaces can be built
-economically and modularly using \CLIM{}. Many of the higher level
+economically and in a modular fashion using \CLIM{}. Many of the higher level
 facilities make it possible to separate the issues involved in
 designing an application's user interface from the functionality of
 the application.
 
-On the other hand, many of these higher level facilities may not be
-appropriate for all users. \CLIM{}'s lower level facilities and clean
-modularization of the higher level facilities provide these users with
+On the other hand, these higher level facilities are not
+appropriate for all programmers. \CLIM{}'s lower level facilities and clean
+modularization of the higher level facilities provide these programmers with
 portable platform and a framework for implementing their own user
-interface toolkits and frameworks. In addition, \CLIM{}'s use of CLOS
+interface toolkits and frameworks. In addition, \CLIM{}'s use of \CLOS{}
 to define explicit, documented protocols provides application
 programmers with the opportunity to customize \CLIM{} and support
 interfaces not anticipated by the \CLIM{} designers.
 
-A free \CLIM{} implementation is available as McCLIM. McCLIM only
-works on X windows at the moment. An experimental port to Mac OS X
-called Beagle is in progress. It can be found on
-http://common-lisp.net/project/mcclim/.
+A free \CLIM{} implementation is available as \mcclim{}, found at
+\url{http://common-lisp.net/project/mcclim/}. In addition to the
+caveats in this document, note that \mcclim{} only works with an X
+windows backend as of January 2006.  An experimental port called
+beagle to the native toolkit of Mac OS X is in progress.
 
 \section*{Acknowledgments}
 
@@ -1638,9 +1641,9 @@ Symbolics; and Gregor Kizcales and John Seely Brown of Xerox PARC.
 Mark Son-Bell and Jon L. White have help us improve this paper.
 
 \paragraph*{2006 update} Clemens Fruhwirth thanks the developers for
-McCLIM for producing a free \CLIM{} implementation, and especially
+\mcclim{} for producing a free \CLIM{} implementation, and especially
 Robert Strandh for answering so many questions in conjunction with
-McCLIM.
+\mcclim{}.
 
 \bibliographystyle{alpha}
 \bibliography{guided-tour}
