@@ -625,45 +625,78 @@
 (defmethod text-style-width (text-style (medium clx-medium))
   (text-style-character-width text-style medium #\m))
 
+(eval-when (:compile-toplevel :execute)
+  ;; ASCII / CHAR-CODE compatibility checking
+  (unless (equal (mapcar #'char-code '(#\Backspace #\Tab #\Linefeed
+                                       #\Page #\Return #\Rubout))
+                 '(8 9 10 12 13 127))
+    (error "~S not ASCII-compatible for semi-standard characters: ~
+           implement a CLX translate function for this implementation."
+           'code-char))
+  (let ((standard-chars " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"))
+    (dotimes (i 95)
+      (unless (eql (char standard-chars i) (code-char (+ i 32)))
+        (error "~S not ASCII-compatible for standard character ~S: ~
+                implement a CLX translate function for this implementation."
+               'code-char (code-char (+ i 32)))))))
+
+;;; The default CLX translation function is defined to work only for
+;;; ASCII characters; quoting from the documentation,
+;;;
+;;;   The default :translate function handles all characters that
+;;;   satisfy graphic-char-p by converting each character into its
+;;;   ASCII code.
+;;;
+;;; We provide our own translation function which is essentially the
+;;; same as that of CLX, but with the ASCII restriction relaxed.  This
+;;; is by no means a proper solution to the problem of
+;;; internationalization, because fonts tend not to have a complete
+;;; coverage of the entirety of the Unicode space, even assuming that
+;;; the underlying lisp supports it (as of 2006-02-06, only the case
+;;; for SBCL and CLISP); instead, the translation function is meant to
+;;; handle font sets by requesting the X server change fonts in the
+;;; middle of rendering strings.  However, the below stands a chance
+;;; of working when using ISO-8859-1-encoded fonts, and will tend to
+;;; lose in other cases.
 (defun translate (src src-start src-end afont dst dst-start)
-  ;; This is for replacing the clx-translate-default-function
-  ;; who does'nt know about accentated characters because
-  ;; of a call to cl:graphic-char-p that return nil with accentated characters.
-  ;; For further informations, on a clx-translate-function, see the clx-man.
   (declare (type sequence src)
 	   (type xlib:array-index src-start src-end dst-start)
 	   (type (or null xlib:font) afont)
 	   (type vector dst))
-  #+cmucl(declare (xlib::clx-values integer
-				    (or null integer xlib:font)
-				    (or null integer)))
+  ;; FIXME: what if AFONT is null?
   (let ((min-char-index (xlib:font-min-char afont))
 	(max-char-index (xlib:font-max-char afont)))
-    afont
     (if (stringp src)
 	(do ((i src-start (xlib::index+ i 1))
 	     (j dst-start (xlib::index+ j 1))
 	     (char))
 	    ((xlib::index>= i src-end)
 	     i)
-	    (declare (type xlib:array-index i j))
-	    (setq char (xlib:char->card8 (char src i)))
-	    (if (or (< char min-char-index) (> char max-char-index))
-		(return i)
-	        (setf (aref dst j) char)))
+          (declare (type xlib:array-index i j))
+          (setq char (char-code (char src i)))
+          (if (or (< char min-char-index) (> char max-char-index))
+              (progn
+                (warn "Character ~S not representable in font ~S" 
+                      (char src i) afont)
+                (return i))
+              (setf (aref dst j) char)))
         (do ((i src-start (xlib::index+ i 1))
 	     (j dst-start (xlib::index+ j 1))
 	     (elt))
 	    ((xlib::index>= i src-end)
 	     i)
-	    (declare (type xlib:array-index i j))
-	    (setq elt (elt src i))
-	    (when (characterp elt) (setq elt (xlib:char->card8 elt)))
-	    (if (or (not (integerp elt)) 
-		    (< elt min-char-index)
-		    (> elt max-char-index))
-		(return i)
-	        (setf (aref dst j) elt))))))
+          (declare (type xlib:array-index i j))
+          (setq elt (elt src i))
+          (when (characterp elt) 
+            (setq elt (char-code elt)))
+          (if (or (not (integerp elt)) 
+                  (< elt min-char-index)
+                  (> elt max-char-index))
+              (progn
+                (warn "Thing ~S not representable in font ~S"
+                      (elt src i) afont)
+                (return i))
+              (setf (aref dst j) elt))))))
 
 (defmethod text-size ((medium clx-medium) string &key text-style (start 0) end)
   (when (characterp string)
