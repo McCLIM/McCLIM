@@ -11,7 +11,7 @@
 ;;; hackery out of gadgets.lisp (but shouldn't these be part of the abstract type?)
 
 ;;;(defclass beagle-scroll-bar-pane (scroll-bar)
-(defclass beagle-scroll-bar-pane (scroll-bar-pane)
+(defclass beagle-scroll-bar-pane (scroll-bar)
   ((tk-obj :initform (%null-ptr) :accessor toolkit-object)))
 
 

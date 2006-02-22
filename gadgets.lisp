@@ -513,7 +513,11 @@
                             :reader scroll-bar-scroll-up-page-callback)
    (thumb-size :initarg :thumb-size :initform 1/4
                :accessor scroll-bar-thumb-size)
-   ))
+   )
+  (:default-initargs :value 0
+                     :min-value 0
+                     :max-value 1
+                     :orientation :vertical))
 
 (defmethod drag-callback ((pane scroll-bar) client gadget-id value)
   (declare (ignore client gadget-id))
@@ -1312,11 +1316,7 @@ and must never be nil."))
    (old-tb-y2    :initform nil)
    ;;
    (all-new-p    :initform t) )
-  (:default-initargs :value 0
-                     :min-value 0
-                     :max-value 1
-                     :orientation :vertical
-                     :border-width 2
+  (:default-initargs :border-width 2
                      :border-style :inset
                      :background *3d-inner-color*))
 
