@@ -196,8 +196,8 @@
 			    &key (start 0)
 			    (end (length (current-contents line))))
   (text-size (area-stream area) (current-contents line)
-	     :start start
-	     :end end))
+                               :start start
+                               :end end))
 
 (defmethod initialize-instance :after
     ((obj screen-line) &key (current-contents nil current-contents-p))
@@ -213,6 +213,18 @@
       (setf (rectangle-edges* obj)
 	    (values x1 y1 x2 (+ y1 (ascent obj) (descent obj))))
       (setf (baseline obj) (+ y1 (ascent obj))))))
+
+(defmethod bounding-rectangle* ((record screen-line))
+  (let ((cursor (cursor record)))
+    (multiple-value-bind (x1 y1 x2 y2) (call-next-method)
+      (values x1 y1
+              (if cursor
+                  (with-slots (climi::x climi::width) cursor
+                     (max x2 (+ climi::x climi::width)))
+                  x2)
+              (if cursor
+                  (max y2 (+ y1 (climi::cursor-height cursor)))
+                  y2)))))
 
 (defmethod climi::map-over-output-records-1 (function (record screen-line)
 				      function-args)
