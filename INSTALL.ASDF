@@ -16,15 +16,20 @@ first time, perform these steps:
     have to load CLX via (require :clx) or a similar mechanism
     yourself.
 
- 3. On your Lisp's REPL (with ASDF loaded), type
+ 3. You need to install the spatial-trees library (available at
+    http://cliki.net/spatial-trees). The preferred method for that is
+    via asdf-install. see http://cliki.net/asdf-install for an
+    introduction to that method.
+    
+ 4. On your Lisp's REPL (with ASDF loaded), type
 
      (asdf:oos 'asdf:load-op :mcclim)
      ; compilation messages should zip past
 
-After step 3, McCLIM and a suitable backend should be loaded and
+After step 4, McCLIM and a suitable backend should be loaded and
 you are good to go.
 
-When you restart your lisp image, you will need to perform step 3 to
+When you restart your lisp image, you will need to perform step 4 to
 load McCLIM again.
 
 Installing mcclim.asd if you were using ASDF & system.lisp before

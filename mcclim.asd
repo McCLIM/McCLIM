@@ -63,9 +63,6 @@
     :class requireable-system))
 
 
-(pushnew :clim *features*)
-(pushnew :mcclim *features*)
-
 (defmacro clim-defsystem ((module &key depends-on) &rest components)
   `(progn
      (asdf:defsystem ,module
@@ -96,7 +93,7 @@
    (:file "package" :depends-on ("Lisp-Dep"))))
 
 (defsystem :clim-core
-    :depends-on (:clim-lisp)
+    :depends-on (:clim-lisp :spatial-trees)
     :components ((:file "decls")
                  (:module "Lisp-Dep"
                           :depends-on ("decls")
@@ -392,3 +389,7 @@
 ;;; package dependency lists.
 (defsystem :mcclim
     :depends-on (:clim-looks))
+
+(defmethod perform :after ((op load-op) (c (eql (find-system :mcclim))))
+  (pushnew :clim *features*)
+  (pushnew :mcclim *features*))

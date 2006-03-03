@@ -934,7 +934,6 @@ the associated sheet can be determined."
 (defmethod map-over-output-records-1
     (function (record standard-sequence-output-record) function-args)
   "Applies FUNCTION to all children in the order they were added."
-  (declare (ignore x-offset y-offset))
   (if function-args
       (loop with children = (output-record-children record)
 	 for child across children
@@ -972,10 +971,115 @@ were added."
      when (region-intersects-region-p region child)
      do (apply function child function-args)))
 
-;;; XXX bogus for now.
-(defclass standard-tree-output-record (standard-sequence-output-record)
-  (
-   ))
+
+;;; tree output recording
+
+(defclass tree-output-record-entry ()
+     ((record :initarg :record :reader tree-output-record-entry-record)
+      (cached-rectangle :initform nil :accessor tree-output-record-entry-cached-rectangle)
+      (inserted-nr :initarg :inserted-nr :accessor tree-output-record-entry-inserted-nr)))
+
+(defun make-tree-output-record-entry (record inserted-nr)
+  (make-instance 'tree-output-record-entry :record record :inserted-nr inserted-nr))
+
+(defun %record-to-spatial-tree-rectangle (r)
+  (rectangles:make-rectangle
+   :lows `(,(bounding-rectangle-min-x r)
+            ,(bounding-rectangle-min-y r))
+   :highs `(,(bounding-rectangle-max-x r)
+             ,(bounding-rectangle-max-y r))))
+
+(defun %output-record-entry-to-spatial-tree-rectangle (r)
+  (when (null (tree-output-record-entry-cached-rectangle r))
+    (let* ((record (tree-output-record-entry-record r)))
+      (setf (tree-output-record-entry-cached-rectangle r) (%record-to-spatial-tree-rectangle record))))
+  (tree-output-record-entry-cached-rectangle r))
+
+(defun %make-tree-output-record-tree ()
+  (spatial-trees:make-spatial-tree :r
+                        :rectfun #'%output-record-entry-to-spatial-tree-rectangle))
+
+(defclass standard-tree-output-record (compound-output-record)
+  ((children :initform (%make-tree-output-record-tree)
+             :accessor %tree-record-children)
+   (children-hash :initform (make-hash-table :test #'eql) :reader %tree-record-children-cache)
+   (last-insertion-nr :initform 0 :accessor last-insertion-nr)))
+
+(defun %entry-in-children-cache (record entry)
+  (gethash entry (%tree-record-children-cache record)))
+
+(defun (setf %entry-in-children-cache) (new-val record entry)
+  (setf (gethash entry (%tree-record-children-cache record)) new-val))
+
+(defmethod output-record-children ((record standard-tree-output-record))
+  (map 'list
+       #'tree-output-record-entry-record
+       (spatial-trees:search (%record-to-spatial-tree-rectangle record)
+                             (%tree-record-children record))))
+
+(defmethod add-output-record (child (record standard-tree-output-record))
+  (let ((entry (make-tree-output-record-entry child (incf (last-insertion-nr record)))))
+    (spatial-trees:insert entry (%tree-record-children record))
+    (setf (output-record-parent child) record)
+    (setf (%entry-in-children-cache record child) entry)))
+
+(defmethod delete-output-record (child (record standard-tree-output-record) &optional (errorp t))
+  (let ((entry (find child (spatial-trees:search (%entry-in-children-cache record child)
+                                                 (%tree-record-children record))
+                     :key #'tree-output-record-entry-record)))
+   (cond
+     ((not (null entry))
+      (spatial-trees:delete entry (%tree-record-children record))
+      (setf (%entry-in-children-cache record child) nil)
+      (setf (output-record-parent child) nil))
+     (errorp (error "~S is not a child of ~S" child record)))))
+
+(defmethod clear-output-record ((record standard-tree-output-record))
+  (dolist (child (output-record-children record))
+    (setf (output-record-parent child) nil)
+    (setf (%entry-in-children-cache record child) nil))
+  (setf (%tree-record-children record) (%make-tree-output-record-tree)))
+
+(defun map-over-tree-output-records (function record rectangle sort-order function-args)
+  (dolist (child (sort (spatial-trees:search rectangle
+                                             (%tree-record-children record))
+                       (ecase sort-order
+                         (:most-recent-first #'>)
+                         (:most-recent-last #'<))
+                       :key #'tree-output-record-entry-inserted-nr))
+    (apply function (tree-output-record-entry-record child) function-args)))
+
+(defmethod map-over-output-records-1 (function (record standard-tree-output-record) function-args)
+  (map-over-tree-output-records function record (%record-to-spatial-tree-rectangle record) :most-recent-last
+                                function-args))
+
+(defmethod map-over-output-records-containing-position (function (record standard-tree-output-record) x y &optional x-offset y-offset &rest function-args)
+  (declare (ignore x-offset y-offset))
+  (map-over-tree-output-records function record (rectangles:make-rectangle :lows `(,x ,y) :highs `(,x ,y)) :most-recent-first
+                                function-args)) 
+
+(defmethod map-over-output-records-overlapping-region (function (record standard-tree-output-record) region &optional x-offset y-offset &rest function-args)
+  (declare (ignore x-offset y-offset))
+  (typecase region
+    (everywhere-region (map-over-output-records-1 function record function-args))
+    (nowhere-region nil)
+    (otherwise (map-over-tree-output-records
+                (lambda (child)
+                  (if (region-intersects-region-p (multiple-value-call 'make-rectangle* (bounding-rectangle* child))
+                                                     region)
+                       (apply function child function-args)))
+                record (%record-to-spatial-tree-rectangle (bounding-rectangle region)) :most-recent-last
+                nil))))
+
+(defmethod recompute-extent-for-changed-child :around ((record standard-tree-output-record) child old-min-x old-min-y old-max-x old-max-y)
+  (when (eql record (output-record-parent child))
+    (let ((entry (%entry-in-children-cache record child)))
+     (spatial-trees:delete entry (%tree-record-children record))
+     (setf (tree-output-record-entry-cached-rectangle entry) nil)
+     (spatial-trees:insert entry (%tree-record-children record))))
+  (call-next-method))
+
+;;;
 
 (defmethod match-output-records ((record t) &rest args)
   (apply #'match-output-records-1 record args))
