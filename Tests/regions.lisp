@@ -83,8 +83,6 @@
   (assert (member p2 regions :test #'region-equal)))
 
 ;;; intersection of two different points
-;;; this test fails.  It loops forever
-#+(or)
 (let* ((p1 (make-point 10 -10))
        (p2 (make-point -10 10))
        (i (region-intersection p1 p2)))
@@ -105,6 +103,18 @@
      d)
     (assert (null (set-difference regions regions2 :test #'region-equal)))
     (assert (null (set-difference regions2 regions :test #'region-equal)))))
+
+;;; standard-rectangle-set and containment calculation
+(let* ((r1 (make-rectangle* 0 0 1 1))
+       (r2 (make-rectangle* 2 0 3 1))
+       (ru (region-union r1 r2)))
+  (assert (not (region-contains-position-p ru -1/2 1/2)))
+  (assert (region-contains-position-p ru 1/2 1/2))
+  (assert (not (region-contains-position-p ru 3/2 1/2)))
+  (assert (region-contains-position-p ru 5/2 1/2))
+  (assert (not (region-contains-position-p ru 7/2 1/2)))
+  (assert (not (region-contains-position-p ru 1/2 3/2)))
+  (assert (not (region-contains-position-p ru 5/2 -1/2))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

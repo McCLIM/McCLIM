@@ -4,7 +4,7 @@
 ;;;   Created: 1998-12-02 19:26
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: regions.lisp,v 1.30 2005/02/11 10:05:57 crhodes Exp $
+;;;       $Id: regions.lisp,v 1.31 2006/03/06 16:09:12 crhodes Exp $
 ;;; --------------------------------------------------------------------------------------
 ;;;  (c) copyright 1998,1999,2001 by Gilbert Baumann
 ;;;  (c) copyright 2001 by Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
@@ -1042,6 +1042,11 @@
         (t
          (make-instance 'standard-region-union :regions (list a b)))))
 
+(defmethod region-intersection ((a point) (b point))
+  (cond
+    ((region-equal a b) a)
+    (t +nowhere+)))
+
 (defmethod region-equal ((a point) (b point))
   (and (coordinate= (point-x a) (point-x b))
        (coordinate= (point-y a) (point-y b))))
@@ -1316,8 +1321,8 @@
 
 (defun isum-member (elt isum)
   (cond ((null isum) nil)
-        ((<= (car isum) elt (cadr isum)) t)
-        ((> elt (cadr isum)) nil)
+        ((< elt (car isum)) nil)
+        ((<= elt (cadr isum)) t)
         (t (isum-member elt (cddr isum)))))
 
 (defun rectangle->standard-rectangle-set (rect)
@@ -1563,13 +1568,13 @@
 (defmethod region-intersection ((b region) (a standard-polyline))
   (region-intersection a b))
 
-(defmethod region-intersection ((a region) (p standard-point))
+(defmethod region-intersection ((a region) (p point))
   (multiple-value-bind (x y) (point-position p)
     (if (region-contains-position-p a x y)
         p
       +nowhere+)))
 
-(defmethod region-intersection ((p standard-point) (a region))
+(defmethod region-intersection ((p point) (a region))
   (region-intersection a p))
 
 (defmethod region-intersection ((a standard-region-union) (b region))
@@ -1656,7 +1661,7 @@
                                  x)
     res))
 
-(defmethod region-difference ((x standard-point) (y region))
+(defmethod region-difference ((x point) (y region))
   (multiple-value-bind (px py) (point-position x)
     (if (region-contains-position-p y px py)
         +nowhere+
@@ -2186,7 +2191,7 @@
   (region-union (region-difference a b) (region-difference b a)))
   
 
-(defmethod region-contains-region-p ((a region) (b standard-point))
+(defmethod region-contains-region-p ((a region) (b point))
   (region-contains-position-p a (point-x b) (point-y b)))
 
 ;; xxx was ist mit (region-contains-region-p x +nowhere+) ?
