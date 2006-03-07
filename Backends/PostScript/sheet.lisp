@@ -55,7 +55,8 @@
   (let* ((port (find-port :server-path `(:ps :stream ,file-stream)))
          (stream (make-postscript-stream file-stream port device-type
                                          multi-page scale-to-fit
-                                         orientation header-comments)))
+                                         orientation header-comments))
+         translate-x translate-y)
     (unwind-protect
          (progn
            (with-output-recording-options (stream :record t :draw nil)
@@ -73,9 +74,12 @@
                ((:eps)
                 (let ((record (stream-output-history stream)))
                   (multiple-value-bind (lx ly ux uy) (bounding-rectangle* record)
+                    (setf translate-x (- (ceiling lx))
+                          translate-y (ceiling uy))
                     (format file-stream "%%BoundingBox: ~A ~A ~A ~A~%" 
-                            (floor lx) (- (ceiling uy))
-                            (ceiling ux) (- (floor ly))))))
+                            0 0
+                            (+ translate-x (floor lx))
+                            (- translate-y (floor ly))))))
                (t
                 (multiple-value-bind (width height)
                     (paper-size paper)
@@ -93,6 +97,7 @@
              (dolist (text-style (device-fonts (sheet-medium stream)))
                (write-font-to-postscript-stream (sheet-medium stream) text-style))
              (start-page stream)
+             (format file-stream "~@[~A ~]~@[~A translate~%~]" translate-x translate-y)
              (let ((record (stream-output-history stream)))
                (with-output-recording-options (stream :draw t :record nil)
                  (with-graphics-state (stream)

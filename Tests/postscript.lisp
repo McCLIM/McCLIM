@@ -47,6 +47,9 @@
                      (assert (numberp lly))
                      (assert (numberp urx))
                      (assert (numberp ury))
+                     ;; our EPS files have lower bounds of 0.
+                     (assert (= 0 llx))
+                     (assert (= 0 lly))
                      (assert (>= 20 (- urx llx) 18))
                      (assert (>= 22 (- ury lly) 20))
                      (return t))))))))
