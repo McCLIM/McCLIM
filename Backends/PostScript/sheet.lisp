@@ -148,8 +148,8 @@
     ;; output, so all pages after the first are blank.  But I don't
     ;; know quite what the original purpose of the call was, so,
     ;; FIXME.  -- TPD 2005-12-23
-    ;; (clear-output-record (stream-output-history stream))
-    (setf (stream-cursor-position stream) (values 0 0))))
+    #-(and) (clear-output-record (stream-output-history stream)))
+  (setf (stream-cursor-position stream) (values 0 0)))
 
 
 ;;;; Output Protocol
