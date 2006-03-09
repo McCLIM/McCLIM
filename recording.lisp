@@ -1011,6 +1011,9 @@ were added."
 (defun (setf %entry-in-children-cache) (new-val record entry)
   (setf (gethash entry (%tree-record-children-cache record)) new-val))
 
+(defun %remove-entry-from-children-cache (record entry)
+  (remhash entry (%tree-record-children-cache record)))
+
 (defmethod output-record-children ((record standard-tree-output-record))
   (map 'list
        #'tree-output-record-entry-record
@@ -1030,14 +1033,14 @@ were added."
    (cond
      ((not (null entry))
       (spatial-trees:delete entry (%tree-record-children record))
-      (setf (%entry-in-children-cache record child) nil)
+      (%remove-entry-from-children-cache record child)
       (setf (output-record-parent child) nil))
      (errorp (error "~S is not a child of ~S" child record)))))
 
 (defmethod clear-output-record ((record standard-tree-output-record))
   (dolist (child (output-record-children record))
     (setf (output-record-parent child) nil)
-    (setf (%entry-in-children-cache record child) nil))
+    (%remove-entry-from-children-cache record child))
   (setf (%tree-record-children record) (%make-tree-output-record-tree)))
 
 (defun map-over-tree-output-records (function record rectangle sort-order function-args)
