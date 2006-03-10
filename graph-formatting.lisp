@@ -3,7 +3,7 @@
 ;;;     Title: Graph Formatting
 ;;;   Created: 2002-08-13
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: graph-formatting.lisp,v 1.16 2005/08/12 02:18:03 rgoldman Exp $
+;;;       $Id: graph-formatting.lisp,v 1.17 2006/03/10 21:58:13 tmoore Exp $
 ;;; ---------------------------------------------------------------------------
 
 ;;;  (c) copyright 2002 by Gilbert Baumann
@@ -54,8 +54,6 @@
 
 ;; format-graph-from-roots
 
-(define-protocol-class graph-output-record (output-record))
-
 (defgeneric graph-root-nodes (graph-output-record))
 (defgeneric (setf graph-root-nodes) (new-value graph-output-record))
 (defgeneric generate-graph-nodes (graph-output-record stream root-objects
@@ -64,8 +62,6 @@
 (defgeneric layout-graph-nodes (graph-output-record stream arc-drawer arc-drawing-options))
 (defgeneric layout-graph-edges (graph-output-record stream arc-drawer arc-drawing-options))
 ;;; NOTE: Which calls which? --GB 2002-08-13
-
-(define-protocol-class graph-node-output-record (output-record))
 
 (defgeneric graph-node-parents (graph-node-record))
 (defgeneric (setf graph-node-parents) (new-value graph-node-record))

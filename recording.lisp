@@ -69,12 +69,6 @@
 
 (in-package :clim-internals)
 
-(define-protocol-class output-record (bounding-rectangle)
-  ())
-
-(define-protocol-class displayed-output-record (output-record)
-  ())
-
 ;;; 16.2.1. The Basic Output Record Protocol
 #+:cmu(declaim (ftype (function (output-record) (values rational rational))
 		      output-record-position))
@@ -203,12 +197,7 @@ unspecified. "))
 (defgeneric tree-recompute-extent (record))
 
 ;;; 16.3. Types of Output Records
-(define-protocol-class graphics-displayed-output-record
-    (displayed-output-record)
-  ())
 
-(define-protocol-class text-displayed-output-record (displayed-output-record)
-  ())
 
 ;;; 16.3.3. Text Displayed Output Record
 (defgeneric add-character-output-to-text-record
@@ -220,8 +209,6 @@ unspecified. "))
 (defgeneric text-displayed-output-record-string (text-record))
 
 ;;; 16.4. Output Recording Streams
-(define-protocol-class output-recording-stream ()
-  ())
 
 ;;; 16.4.1. The Output Recording Stream Protocol
 (defgeneric stream-recording-p (stream))

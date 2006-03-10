@@ -25,9 +25,6 @@
 
 ;;; PRESENTATION class
 
-(define-protocol-class presentation ())
-
-
 (defvar *allow-sensitive-inferiors* t)
 
 (defclass presentation-mixin (presentation)

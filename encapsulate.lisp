@@ -20,13 +20,10 @@
 
 (defvar *original-stream* nil)
 
-(define-protocol-class encapsulating-stream ()
-  ((stream :reader encapsulating-stream-stream :initarg :stream)))
-
 (defclass standard-encapsulating-stream (encapsulating-stream
 					 fundamental-character-input-stream
 					 fundamental-character-output-stream)
-  ())
+  ((stream :reader encapsulating-stream-stream :initarg :stream)))
 
 ;;; Macro used by methods for other stream classes that need to respect the
 ;;; possibility of an encapsulating stream when calling other methods on their
@@ -629,7 +626,7 @@ state ~S lambda list ~S"
   
 (defmethod invoke-with-new-output-record ((stream standard-encapsulating-stream)
 					  continuation record-type constructor
-					  &rest initargs &key &allow-other-keys)
+					  &rest initargs)
   (apply #'invoke-with-new-output-record
 	 (slot-value stream 'stream)
 	 #'(lambda (inner-stream output-record)

@@ -180,7 +180,7 @@
    "dialog" ; depends on table formatting
    "builtin-commands" ; need dialog before commands are defined
    "describe"
-   "Experimental/menu-choose" ; depends on table formatting, presentations
+   "menu-choose" ; depends on table formatting, presentations
    "Goatee/presentation-history"
    )
 

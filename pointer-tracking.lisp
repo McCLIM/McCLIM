@@ -110,7 +110,7 @@
 (defclass tracking-pointer-state ()
   ((motion-handler :reader motion-handler :initarg :pointer-motion)
    (button-press-handler :reader button-press-handler
-			 :initarg :pointer-button-press)
+ 			 :initarg :pointer-button-press)
    (buttton-release-handler :reader button-release-handler
 			    :initarg :pointer-button-release)
    (keyboard-handler :reader keyboard-handler :initarg :keyboard))

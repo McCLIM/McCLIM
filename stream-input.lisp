@@ -117,6 +117,8 @@
 	else
 	  do (handle-event (event-sheet event) event))))
 
+;;; XXX The should be moved to protocol-classes.lisp and the
+;;; standard-sheet-input-mixin superclass should be removed.
 (define-protocol-class extended-input-stream (fundamental-character-input-stream ;Gray stream
 					      standard-sheet-input-mixin)
   ())
@@ -642,7 +644,7 @@
 ;;; backends.
 
 (defclass standard-pointer (pointer)
-  ())
+  ((port :reader port :initarg :port)))
 
 (defgeneric pointer-sheet (pointer))
 

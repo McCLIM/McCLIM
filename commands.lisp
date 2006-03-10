@@ -66,7 +66,7 @@
   (with-slots (documentation text-style) menu-item
     (list ':documentation documentation ':text-style text-style)))
 
-(define-protocol-class command-table ()
+(defclass standard-command-table (command-table)
   ((name :initarg :name :reader command-table-name)
    (inherit-from :initarg :inherit-from
 		 :initform '()
@@ -81,13 +81,9 @@
    (keystroke-accelerators :initform nil)
    (keystroke-items :initform nil)))
 
-
-(defmethod print-object ((table command-table) stream)
+(defmethod print-object ((table standard-command-table) stream)
   (print-unreadable-object (table stream :identity t :type t)
     (format stream "~S" (command-table-name table))))
-
-(defclass standard-command-table (command-table)
-  ())
    
 (defparameter *command-tables* (make-hash-table :test #'eq))
 

@@ -353,8 +353,6 @@ spatially organized data structure.
       ;; Note: We don't match the y coordinate.
       (match-output-records state :cursor-x cx))))
 
-(define-protocol-class updating-output-record (output-record))
-
 (defclass updating-output-record-mixin (updating-output-map-mixin
 					standard-sequence-output-record)
   ((unique-id :reader output-record-unique-id :initarg :unique-id)

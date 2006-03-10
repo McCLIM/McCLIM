@@ -52,7 +52,6 @@
 
 
 ;;; Cursor class
-(define-protocol-class cursor ())
 
 (defgeneric cursor-sheet (cursor))
 
@@ -187,13 +186,6 @@
 
 
 ;;; Extended-Output-Stream class
-
-(define-protocol-class extended-output-stream
-    (fundamental-character-output-stream)
-  ;; CLIM Specification says that E-O-S is a subclass of
-  ;; OUTPUT-STREAM, but it does not says what is it.
-  ()
-  )
 
 ;;; Stream text cursor protocol
 (defgeneric stream-text-cursor (stream))

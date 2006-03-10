@@ -79,15 +79,6 @@
 (in-package :clim-internals)
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-(define-protocol-class design ())
-
-;; Some internal superclasses:
-
-(define-protocol-class uniform-design ())
-
-;;; Color class
-
-(define-protocol-class color (design uniform-design))
 
 (defgeneric color-rgb (color))
 
@@ -310,8 +301,6 @@
 ;;;;
 ;;;; 13.4 Opacity
 ;;;;
-
-(define-protocol-class opacity (design))
 
 (defmethod print-object ((object opacity) stream)
   (print-unreadable-object (object stream :identity nil :type t)

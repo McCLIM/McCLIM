@@ -21,8 +21,6 @@
 ;;; Views are defined here and not in presentations.lisp so that they
 ;;; can be referenced in the streams code.
 
-(define-protocol-class view ())
-
 (defclass textual-view (view)
   ())
 

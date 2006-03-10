@@ -95,6 +95,7 @@
 (defsystem :clim-core
     :depends-on (:clim-lisp :spatial-trees)
     :components ((:file "decls")
+		 (:file "protocol-classes" :depends-on ("decls"))
                  (:module "Lisp-Dep"
                           :depends-on ("decls")
                           :components
@@ -106,36 +107,36 @@
                                      #+lispworks               "mp-lw"
                                      #| fall back |#           "mp-nil"))))
                  (:file "utils" :depends-on ("decls" "Lisp-Dep"))
-                 (:file "design" :depends-on ("decls" "Lisp-Dep" "utils"))
-                 (:file "X11-colors" :depends-on ("decls" "Lisp-Dep" "design"))
-                 (:file "coordinates" :depends-on ("decls" "Lisp-Dep"))
+                 (:file "design" :depends-on ("decls" "protocol-classes" "Lisp-Dep" "utils"))
+                 (:file "X11-colors" :depends-on ("decls" "protocol-classes" "Lisp-Dep" "design"))
+                 (:file "coordinates" :depends-on ("decls" "protocol-classes" "Lisp-Dep"))
                  (:file "setf-star" :depends-on ("decls" "Lisp-Dep"))
-                 (:file "transforms" :depends-on ("decls" "Lisp-Dep" "coordinates" "utils"))
-                 (:file "regions" :depends-on ("decls" "Lisp-Dep" "coordinates" "utils" "transforms" "setf-star" "design"))
-                 (:file "sheets" :depends-on ("decls" "Lisp-Dep" "utils" "transforms" "regions"))
-                 (:file "pixmap" :depends-on ("decls" "Lisp-Dep" "sheets" "transforms" "regions"))
-                 (:file "events" :depends-on ("decls" "Lisp-Dep" "transforms" "sheets" "utils"))
-                 (:file "ports" :depends-on ("decls" "Lisp-Dep" "events" "sheets" "pixmap" "utils"))
-                 (:file "grafts" :depends-on ("decls" "Lisp-Dep" "sheets" "ports" "transforms" "regions"))
-                 (:file "medium" :depends-on ("decls" "Lisp-Dep" "ports" "X11-colors" "utils" "pixmap" "regions"
+                 (:file "transforms" :depends-on ("decls" "protocol-classes" "Lisp-Dep" "coordinates" "utils"))
+                 (:file "regions" :depends-on ("decls" "protocol-classes" "Lisp-Dep" "coordinates" "utils" "transforms" "setf-star" "design"))
+                 (:file "sheets" :depends-on ("decls" "protocol-classes" "Lisp-Dep" "utils" "transforms" "regions"))
+                 (:file "pixmap" :depends-on ("decls" "protocol-classes" "Lisp-Dep" "sheets" "transforms" "regions"))
+                 (:file "events" :depends-on ("decls" "protocol-classes" "Lisp-Dep" "transforms" "sheets" "utils"))
+                 (:file "ports" :depends-on ("decls" "protocol-classes" "Lisp-Dep" "events" "sheets" "pixmap" "utils"))
+                 (:file "grafts" :depends-on ("decls" "protocol-classes" "Lisp-Dep" "sheets" "ports" "transforms" "regions"))
+                 (:file "medium" :depends-on ("decls" "protocol-classes" "Lisp-Dep" "ports" "X11-colors" "utils" "pixmap" "regions"
                                                       "transforms" "design"))
-                 (:file "output" :depends-on ("decls" "Lisp-Dep" "medium"))
-                 (:file "input" :depends-on ("decls" "Lisp-Dep" "events" "regions" "sheets"))
-                 (:file "repaint" :depends-on ("decls" "Lisp-Dep" "sheets" "events"))
-                 (:file "graphics" :depends-on ("decls" "Lisp-Dep" "output" "utils" "medium" "sheets" "pixmap"
+                 (:file "output" :depends-on ("decls" "protocol-classes" "Lisp-Dep" "medium"))
+                 (:file "input" :depends-on ("decls" "protocol-classes" "Lisp-Dep" "events" "regions" "sheets"))
+                 (:file "repaint" :depends-on ("decls" "protocol-classes" "Lisp-Dep" "sheets" "events"))
+                 (:file "graphics" :depends-on ("decls" "protocol-classes" "Lisp-Dep" "output" "utils" "medium" "sheets" "pixmap"
                                                          "regions" "design" "transforms"))
-                 (:file "views" :depends-on ("utils"))
-                 (:file "stream-output" :depends-on ("decls" "Lisp-Dep" "design" "utils" "X11-colors" "views"
+                 (:file "views" :depends-on ("utils" "protocol-classes"))
+                 (:file "stream-output" :depends-on ("decls" "protocol-classes" "Lisp-Dep" "design" "utils" "X11-colors" "views"
                                                               "output" "sheets" "regions" "graphics"
                                                               "medium" "setf-star"))
-                 (:file "recording" :depends-on ("decls" "Lisp-Dep" "output" "coordinates" "graphics" "design"
+                 (:file "recording" :depends-on ("decls" "protocol-classes" "Lisp-Dep" "output" "coordinates" "graphics" "design"
                                                           "medium" "transforms" "regions" "sheets"
                                                           "utils" "stream-output"))
-                 (:file "encapsulate" :depends-on ("decls" "Lisp-Dep" "sheets" "graphics" "utils" "medium" "input"
+                 (:file "encapsulate" :depends-on ("decls" "protocol-classes" "Lisp-Dep" "sheets" "graphics" "utils" "medium" "input"
                                                             "stream-output" "recording"))
-                 (:file "stream-input" :depends-on ("decls" "Lisp-Dep" "input" "ports" "sheets" "events"
+                 (:file "stream-input" :depends-on ("decls" "protocol-classes" "Lisp-Dep" "input" "ports" "sheets" "events"
                                                             "encapsulate" "transforms" "utils"))
-                 (:file "text-selection" :depends-on ("decls" "Lisp-Dep" "X11-colors" "medium" "output"
+                 (:file "text-selection" :depends-on ("decls" "protocol-classes" "Lisp-Dep" "X11-colors" "medium" "output"
                                                                    "transforms" "sheets" "stream-output"
                                                                    "ports" "recording" "regions"
                                                                    "events"))))
@@ -194,10 +195,11 @@
      (:file "defresource")
      (:file "presentation-defs" :depends-on ("input-editing" "presentations"))
      (:file "pointer-tracking" :depends-on ("input-editing"))
-     (:file "commands" :depends-on ("input-editing" "presentations" "presentation-defs"))
+     (:file "commands" :depends-on ("input-editing" "presentations"
+						    "presentation-defs"))
+     (:file "incremental-redisplay" :depends-on ("presentation-defs"))
      (:file "frames" :depends-on ("commands" "presentations" "presentation-defs"
-                                             "pointer-tracking"))
-     (:file "incremental-redisplay" :depends-on ("presentation-defs" "frames"))
+                                             "pointer-tracking" "incremental-redisplay"))
      (:file "panes" :depends-on ("incremental-redisplay" "presentations"
                                                          "presentation-defs" "input-editing" "frames"))
      (:file "gadgets" :depends-on ("commands" "pointer-tracking" "input-editing" 
@@ -219,10 +221,9 @@
      (:file "builtin-commands" :depends-on ("table-formatting" "commands" "presentations"
                                                                "presentation-defs" "input-editing"))
      (:file "describe" :depends-on ("presentations" "presentation-defs" "table-formatting"))
-     (:file "Experimental/menu-choose" :depends-on ("commands" "table-formatting" "presentation-defs"
-                                                               "panes" "frames" "pointer-tracking"
-                                                               "presentations")
-            :pathname #.(make-pathname :directory '(:relative "Experimental") :name "menu-choose" :type "lisp"))
+     (:file "menu-choose" :depends-on ("commands" "table-formatting" "presentation-defs"
+						  "panes" "frames" "pointer-tracking"
+						  "presentations"))
      (:file "Goatee/presentation-history" :depends-on ("presentation-defs")  ; XXX: this is loaded as part of the Goatee system. huh?
             :pathname #.(make-pathname :directory '(:relative "Goatee") :name "presentation-history" :type "lisp"))
      ))
@@ -389,6 +390,10 @@
 ;;; package dependency lists.
 (defsystem :mcclim
     :depends-on (:clim-looks))
+
+(defmethod perform :after ((op load-op) (c (eql (find-system :clim))))
+  (pushnew :clim *features*)
+  (pushnew :mcclim *features*))
 
 (defmethod perform :after ((op load-op) (c (eql (find-system :mcclim))))
   (pushnew :clim *features*)

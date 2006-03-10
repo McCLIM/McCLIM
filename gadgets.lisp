@@ -120,61 +120,6 @@
 ;;;;  30.3 Basic Gadget Classes
 ;;;;
 
-;;;
-;;; Gadget
-;;;
-
-(define-protocol-class gadget (pane)
-  ((id                :initarg :id
-                      :initform (gensym "GADGET")
-                      :accessor gadget-id)
-   (client            :initarg :client
-                      :initform *application-frame*
-                      :accessor gadget-client)
-   (armed-callback    :initarg :armed-callback
-                      :initform nil
-                      :reader gadget-armed-callback)
-   (disarmed-callback :initarg :disarmed-callback
-                      :initform nil
-                      :reader gadget-disarmed-callback)
-   ;; [Arthur] I'm not so sure about the value for :initform.
-   ;; Maybe T is better? Or maybe we should call
-   ;; ACTIVATE-GADGET after creating a gadget?
-   ;;
-   ;; I think, T is correct here --GB
-
-   (active-p            :initform t :initarg :active
-                        :reader gadget-active-p)
-   ;;
-   ;; I am not so lucky with the armed slot in GADGET --GB
-   (armed               :initform nil)
-
-   ;; These are directly borrowed from BASIC-PANE I am still not sure
-   ;; about the exact class hierarchy to implement. --GB
-#|
-   (foreground       :initarg :foreground
-                     :initform +black+
-                     :reader pane-foreground)
-   (background       :initarg :background
-                     :initform +white+
-                     :reader pane-background)
-   (text-style       :initarg :text-style
-                     :initform *default-text-style*
-                     :reader pane-text-style)
-
-   (align-x          :initarg :align-x
-                     :type (member :left :center :right)
-                     :initform :left    ;??
-                     :reader pane-align-x)
-   (align-y          :initarg :align-y
-                     :type (member :top :center :bottom)
-                     :initform :top     ;??
-                     :reader pane-align-y)|# )
-
-  )
-
-;;;
-
 (defun invoke-callback (pane callback &rest more-arguments)
   (when callback
     (let ((*application-frame* (pane-frame pane)))

@@ -35,8 +35,6 @@
 
 (defvar *all-ports* nil)
 
-(define-protocol-class port ())
-
 (defclass basic-port (port)
   ((server-path :initform nil
 		:initarg :server-path

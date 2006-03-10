@@ -152,6 +152,10 @@
 ;;;; 8.1
 (defgeneric process-next-event (port &key wait-function timeout))
 
+;;; 8.2 Standard Device Events
+
+(defgeneric event-timestamp (event))
+
 ;;;; 8.3.4 Associating a Medium with a Sheet
 
 ;;;; 8.3.4.1 Grafting and Degrafting of Mediums
@@ -317,7 +321,7 @@
 ;; with-output-recording-options (stream &key record draw) &body body [Macro]
 (defgeneric invoke-with-output-recording-options (stream continuation record draw))
 ;; with-new-output-record (stream &optional record-type record &rest initargs) &body body [MAcro]
-(defgeneric invoke-with-new-output-record (stream continuation record-type &rest initargs &key parent &allow-other-keys))
+(defgeneric invoke-with-new-output-record (stream continuation record-type &rest initargs &key parent))
 ;; with-output-to-output-record (stream &optional record-type record &rest initargs)) &body body [Macro]
 (defgeneric invoke-with-output-to-output-record (stream continuation record-type &rest initargs &key))
 (defgeneric make-design-from-output-record (record))
@@ -465,11 +469,6 @@ rendered on MEDIUM with the style LINE-STYLE."))
 
 ;;;
 
-(defgeneric sheet-grafted-p (sheet))
-(defgeneric graft-width (graft &key units))
-(defgeneric graft-height (graft &key units))
-(defgeneric graft-units (graft))
-
 (defgeneric text-style-character-width (text-style medium char))
 ;; fall back, where to put this?
 (defmethod text-style-character-width (text-style medium char)
@@ -520,6 +519,9 @@ rendered on MEDIUM with the style LINE-STYLE."))
   (:documentation
    "Returns two values: the baseline of an output record and a boolean
 indicating if this baseline is definitive. McCLIM addition."))
+
+(defgeneric encapsulating-stream-stream (encapsulating-stream)
+  (:documentation "The stream encapsulated by an encapsulating stream"))
 
 #||
 

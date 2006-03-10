@@ -61,19 +61,11 @@
 
 (in-package :clim-internals)
 
-;; This must come early, because of implementation quirks:
-
-(define-protocol-class medium ()
-  ())
-
 ;;;;
 ;;;; 11 Text Styles
 ;;;;
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-
-(define-protocol-class text-style ()
-  ())
 
 (defgeneric text-style-components (text-style))
 (defgeneric text-style-family (text-style))
@@ -446,8 +438,6 @@
 
 
 ;;; Line-Style class
-
-(define-protocol-class line-style ())
 
 (defgeneric line-style-equalp (arg1 arg2))
 

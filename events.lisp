@@ -56,14 +56,10 @@
 (defvar *last-timestamp* 0)
 (defvar *last-timestamp-lock* (make-lock))
 
-(define-protocol-class event ()
+(defclass standard-event (event)
   ((timestamp :initarg :timestamp
               :initform nil
-	      :reader event-timestamp)
-   ))
-
-(defclass standard-event (event)
-  ())
+	      :reader event-timestamp)))
 
 (defmethod initialize-instance :after ((event standard-event) &rest initargs)
   (declare (ignore initargs))

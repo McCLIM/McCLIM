@@ -4,7 +4,7 @@
 ;;;   Created: 1998-09-29
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: transforms.lisp,v 1.32 2006/01/18 14:07:36 tmoore Exp $
+;;;       $Id: transforms.lisp,v 1.33 2006/03/10 21:58:13 tmoore Exp $
 ;;; --------------------------------------------------------------------------------------
 ;;;  (c) copyright 1998,1999,2003 by Gilbert Baumann
 ;;;  (c) copyright 2000 by 
@@ -57,8 +57,6 @@
 ;;;; ----------------------------------------------------------------------------------------------------
 ;;;;  Transformations
 ;;;;
-
-(define-protocol-class transformation ())
 
 (defclass standard-transformation (transformation)
   ()

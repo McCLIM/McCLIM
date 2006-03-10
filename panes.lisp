@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.166 2005/12/30 17:50:01 crhodes Exp $
+;;; $Id: panes.lisp,v 1.167 2006/03/10 21:58:13 tmoore Exp $
 
 (in-package :clim-internals)
 
@@ -350,6 +350,8 @@ order to produce a double-click")
    (current-height    :accessor pane-current-height
                       :initform nil) ))
 
+;;; XXX Move to protocol-classes.lisp. Should this really have all these
+;;; superclasses? 
 (define-protocol-class pane (clim-repainting-mixin
 			     clim-sheet-input-mixin
 			     sheet-transformation-mixin

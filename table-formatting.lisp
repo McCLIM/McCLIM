@@ -58,7 +58,6 @@
   "Used to control whether changes to table cells propagate upwards.")
 
 ;;; Cell formatting
-(define-protocol-class cell-output-record (output-record))
 
 ;;; STANDARD-CELL-OUTPUT-RECORD class
 (defclass standard-cell-output-record (cell-output-record
@@ -167,7 +166,6 @@ table cell as argument."
 
 
 ;;; Row formatting
-(define-protocol-class row-output-record (output-record))
 
 (defgeneric map-over-row-cells (function row-record)
   (:documentation "Applies FUNCTION to all the cells in the row
@@ -206,7 +204,6 @@ to a table cell within the row."))
 
 
 ;;; Column formatting
-(define-protocol-class column-output-record (output-record))
 
 (defgeneric map-over-column-cells (function column-record)
   (:documentation "Applies FUNCTION to all the cells in the column
@@ -243,8 +240,6 @@ corresponding to a table cell within the column."))
 
 
 ;;; Table formatting
-
-(define-protocol-class table-output-record (output-record))
 
 (defgeneric map-over-table-elements (function table-record type)
   (:documentation "Applies FUNCTION to all the rows or columns of
@@ -385,9 +380,6 @@ skips intervening non-table output record structures."))
 
 
 ;;; Item list formatting
-
-(define-protocol-class item-list-output-record ()
-  ())
 
 (defgeneric map-over-item-cells (function item-list-record)
   )

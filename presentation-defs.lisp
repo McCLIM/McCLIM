@@ -942,19 +942,24 @@ call-next-method to get the \"real\" answer based on the stream type."))
   nil)
 
 ;;; XXX This needs work! It needs to do everything that accept does for
-;;; expanding ptypes and setting up recursive call processing
+;;; expanding ptypes and setting up recursive call procesusing
 (defun accept-from-string (type string
 			   &rest args
 			   &key view
 			   (default nil defaultp)
 			   (default-type nil default-type-p)
-			   activation-gestures additional-activation-gestures
-			   delimiter-gestures additional-delimiter-gestures
+			   activation-gestures
+			   (additional-activation-gestures
+			    nil
+			    additional-activations-p)
+			   delimiter-gestures
+			   (additional-delimiter-gestures
+			    nil
+			    additional-delimiters-p)
 			   (start 0)
 			   (end (length string)))
-  (declare (ignore view activation-gestures
-		   additional-activation-gestures 
-		   delimiter-gestures additional-delimiter-gestures))
+  (declare (ignore view))
+  ;;; XXX work in progress here.
   (with-activation-gestures ((if additional-activations-p
 				 additional-activation-gestures
 				 activation-gestures)
@@ -1991,8 +1996,11 @@ call-next-method to get the \"real\" answer based on the stream type."))
 ;;; drag-n-drop fun
 
 (defclass drag-n-drop-translator (presentation-translator)
-  ((feedback :reader feedback :initarg :feedback)
-   (highlighting :reader highlighting :initarg :highlighting)))
+  ((destination-ptype :reader destination-ptype :initarg :destination-ptype)
+   (feedback :reader feedback :initarg :feedback)
+   (highlighting :reader highlighting :initarg :highlighting)
+   (destination-translator :reader destination-translator
+			   :initarg :destination-translator)))
 
 (defvar *dragged-object* nil
   "Bound to the object dragged in a drag-and-drop context")
@@ -2019,55 +2027,38 @@ call-next-method to get the \"real\" answer based on the stream type."))
     (setf (slot-value obj 'translator-function)
 	  (make-adapter translator-function))))
 
-(define-presentation-type drag-over (over context)
-  :inherit-from t
-  :parameters-are-types t)
-
-(define-presentation-method presentation-subtypep ((type drag-over)
-						   maybe-supertype)
-  (with-presentation-type-parameters (drag-over type)
-    (let ((subtype-over under)
-	  (subtype-context context))
-      (with-presentation-type-parameters (drag-over maybe-supertype)
-	(and (presentation-subtypep subtype-over over)
-	     (presentation-subtypep subtype-over over))))))
-
 (defmacro define-drag-and-drop-translator
    (name (from-type to-type destination-type command-table
            &rest args &key
            (gesture :select)
            (tester 'default-translator-tester)
            documentation
-           (pointer-documentation nil pointer-documentation-p)
+           pointer-documentation
            (menu t)
            (priority 0)
            (feedback 'frame-drag-and-drop-feedback)
            (highlighting 'frame-drag-and-drop-highlighting))
      arglist
      &body body)
-  (declare (ignore tester documentation pointer-documentation pointer-documentation-p
-                   menu priority))
-  (let* ((real-from-type (expand-presentation-type-abbreviation from-type))
-	 (real-dest-type (expand-presentation-type-abbreviation
-			  destination-type))
-	 (real-to-type (expand-presentation-type-abbreviation to-type))
-	 (action-name (gensym (format nil "~S-~S-DRAG-ACTION"
-				      from-type to-type))))
+  (declare (ignore tester gesture documentation pointer-documentation
+		   menu priority))
+  (let ((real-dest-type (expand-presentation-type-abbreviation
+			  destination-type)))
+    
     (with-keywords-removed (args (:feedback :highlighting))
       `(progn
 	 (define-presentation-translator ,name
-	     (,real-dest-type (drag-over ,real-from-type ,real-to-type)
+	     (,from-type ,to-type
 	      ,@args
 	      :feedback #',feedback :highlighting #',highlighting
+	      :destination-ptype ',real-dest-type
+	      :destination-translator #',(make-translator-fun arglist body)
 	      :translator-class drag-n-drop-translator)
-	   ,arglist
-	   ,@body)
-	 (define-presentation-action ,action-name
-	     (,from-type ,to-type ,command-table :gesture ,gesture
-			 :priority -1)
 	   (object presentation context-type frame event window x y)
-	   (frame-drag ',name ',command-table object presentation context-type
-		       frame event window x y))))))
+	   (frame-drag-and-drop ',name ',command-table object
+				presentation context-type
+				frame event window x y))))))
+
 
 
 

@@ -30,12 +30,6 @@
 
 ;;; Frame-Manager class
 
-(define-protocol-class frame-manager ()
-  ((port :initarg :port
-	 :reader frame-manager-port)
-   (frames :initform nil
-	   :reader frame-manager-frames)))
-
 (defun find-frame-manager (&rest options &key port &allow-other-keys)
   (declare (special *frame-manager*))
   (if (boundp '*frame-manager*)
@@ -142,68 +136,6 @@ FRAME-EXIT condition."))
   (:documentation "Called when a pane receives or loses the keyboard
 input focus. This is a McCLIM extension."))
 
-(define-protocol-class  application-frame ()
-  ((port :initform nil
-	 :initarg :port
-	 :accessor port)
-   (graft :initform nil
-	  :initarg :graft
-	  :accessor graft)
-   (name :initarg :name
-	 :reader frame-name)
-   (pretty-name :initarg :pretty-name
-		:accessor frame-pretty-name)
-   (command-table :initarg :command-table
-		  :initform nil
-		  :accessor frame-command-table)
-   (disabled-commands :initarg :disabled-commands
-		      :initform nil
-		      :accessor frame-disabled-commands)
-   (named-panes :accessor frame-named-panes :initform nil)
-   (panes :initform nil :reader frame-panes
-	  :documentation "The tree of panes in the current layout.")
-   (layouts :initform nil
-	    :initarg :layouts
-	    :reader frame-layouts)
-   (current-layout :initform nil
-		   :initarg :current-layout
-		   :accessor frame-current-layout)
-   (panes-for-layout :initform nil :accessor frame-panes-for-layout
-		     :documentation "alist of names and panes (as returned by make-pane)")
-   (top-level-sheet :initform nil
-		    :reader frame-top-level-sheet)
-   (menu-bar :initarg :menu-bar
-	     :initform nil)
-   (calling-frame :initarg :calling-frame
-		  :initform nil)
-   (state :initarg :state
-	  :initform :disowned
-	  :reader frame-state)
-   (manager :initform nil
-	    :reader frame-manager
-            :accessor %frame-manager)
-   (keyboard-input-focus :initform nil
-                         :accessor keyboard-input-focus)
-   (properties :accessor %frame-properties
-	       :initarg :properties
-	       :initform nil)
-   (top-level :initform '(default-frame-top-level)
-	      :initarg :top-level
-	      :reader frame-top-level)
-   (top-level-lambda :initarg :top-level-lambda
-		     :reader frame-top-level-lambda)
-   (hilited-presentation :initform nil
-			 :initarg :hilited-presentation
-			 :accessor frame-hilited-presentation)
-   (user-supplied-geometry :initform nil
-			   :initarg :user-supplied-geometry
-                           :documentation "plist of defaulted :left, :top, :bottom, :right, :width and :height options.")
-   (process :accessor frame-process :initform nil)
-   (client-settings :accessor client-settings :initform nil)))
-
-(defmethod frame-geometry ((frame application-frame))
-  (slot-value frame 'user-supplied-geometry))
-
 (defmethod frame-geometry* ((frame application-frame))
   "-> width height &optional top left"
   (let ((pane (frame-top-level-sheet frame)))
@@ -226,7 +158,60 @@ input focus. This is a McCLIM extension."))
     
 (defclass standard-application-frame (application-frame
 				      presentation-history-mixin)
-  ((event-queue :initarg :frame-event-queue
+  ((port :initform nil
+	 :initarg :port
+	 :accessor port)
+   (graft :initform nil
+	  :initarg :graft
+	  :accessor graft)
+   (name :initarg :name
+	 :reader frame-name)
+   (pretty-name :initarg :pretty-name
+		:accessor frame-pretty-name)
+   (command-table :initarg :command-table
+		  :initform nil
+		  :accessor frame-command-table)
+   (named-panes :accessor frame-named-panes :initform nil)
+   (panes :initform nil :reader frame-panes
+	  :documentation "The tree of panes in the current layout.")
+   (layouts :initform nil
+	    :initarg :layouts
+	    :reader frame-layouts)
+   (current-layout :initform nil
+		   :initarg :current-layout
+		   :accessor frame-current-layout)
+   (panes-for-layout :initform nil :accessor frame-panes-for-layout
+		     :documentation "alist of names and panes (as returned by make-pane)")
+   (top-level-sheet :initform nil
+		    :reader frame-top-level-sheet)
+   (menu-bar :initarg :menu-bar
+	     :initform nil)
+   (state :initarg :state
+	  :initform :disowned
+	  :reader frame-state)
+   (manager :initform nil
+	    :reader frame-manager
+            :accessor %frame-manager)
+   (keyboard-input-focus :initform nil
+                         :accessor keyboard-input-focus)
+   (properties :accessor %frame-properties
+	       :initarg :properties
+	       :initform nil)
+   (top-level :initform '(default-frame-top-level)
+	      :initarg :top-level
+	      :reader frame-top-level)
+   (top-level-lambda :initarg :top-level-lambda
+		     :reader frame-top-level-lambda)
+   (hilited-presentation :initform nil
+			 :initarg :hilited-presentation
+			 :accessor frame-hilited-presentation)
+   (user-supplied-geometry :initform nil
+			   :initarg :user-supplied-geometry
+			   :reader frame-geometry
+                           :documentation "plist of defaulted :left, :top, :bottom, :right, :width and :height options.")
+   (process :accessor frame-process :initform nil)
+   (client-settings :accessor client-settings :initform nil)
+   (event-queue :initarg :frame-event-queue
                 :initarg :input-buffer
                 :initform nil
 		:accessor frame-event-queue
@@ -242,9 +227,15 @@ input focus. This is a McCLIM extension."))
 		  :documentation "The frame that is the parent of this
 frame, if any")
    (disabled-commands :accessor disabled-commands
+		      :accessor frame-disabled-commands
+		      :initarg :disabled-commands
 		      :initform nil
 		      :documentation "A list of command names that have been
-				      disabled in this frame")))
+				      disabled in this frame")
+   (documentation-record :accessor documentation-record
+			 :initform nil
+			 :documentation "updating output record for pointer
+documentation produced by presentations.")))
 
 ;;; Support the :input-buffer initarg for compatibility with "real CLIM"
 
@@ -1133,7 +1124,8 @@ frame, if any")
 							  long))
 		 (setq trailing t)))))
 
-
+;;; XXX Warning: Changing rapidly!
+;;;
 ;;; We don't actually want to print out the translator documentation and redraw
 ;;; the pointer documentation window on every motion event.  So, we compute a
 ;;; state object (basically modifier state and a list of the applicable
@@ -1250,6 +1242,43 @@ frame, if any")
 		     (print-modifiers pstream modifier :long)))
 	  (write-char #\. pstream))))))
 
+(defmethod frame-update-pointer-documentation
+    ((frame standard-application-frame) input-context stream event)
+  (when *pointer-documentation-output*
+    (with-accessors ((frame-documentation-state frame-documentation-state)
+		     (documentation-record documentation-record))
+      frame
+      (setf frame-documentation-state
+	    (frame-compute-pointer-documentation-state frame
+						       input-context
+						       stream
+						       event))
+      ;; These ugly special bindings work around the fact that the outer
+      ;; updating-output form closes over its body and allow the inner
+      ;; form to see the correct, current values of those variables.
+      (let ((%input-context% input-context)
+	    (%stream% stream)
+	    (%doc-state% frame-documentation-state)
+	    (%event% event))
+	(declare (special %input-context% %stream% %doc-state% %event&))
+	(if (and documentation-record
+		 (output-record-parent documentation-record))
+	    (redisplay documentation-record *pointer-documentation-output*)
+	    (progn
+	      (window-clear *pointer-documentation-output*)
+	      (setf documentation-record
+		    (updating-output (*pointer-documentation-output*)
+		      (updating-output (*pointer-documentation-output*
+					:cache-value %doc-state%
+					:cache-test
+					#'equal)
+			(frame-print-pointer-documentation frame
+							   %input-context%
+							   %stream%
+							   %doc-state%
+							   %event%))))))))))
+    
+#-(and)
 (defmethod frame-update-pointer-documentation
     ((frame standard-application-frame) input-context stream event)
   (when *pointer-documentation-output*
@@ -1396,13 +1425,16 @@ frame, if any")
      (highlight nil highlightp) context-type
      multiple-window)
   (declare (ignore multiple-window))
-  (setf (slot-value obj 'highlight) (if highlightp
-					highlight
-					(or presentation
-					    presentation-button-press
-					    presentation-button-release)))
+  (let ((presentation-clauses-p (or presentation
+				    presentation-button-press
+				    presentation-button-release)))
+    (setf (slot-value obj 'highlight) (if highlightp
+					  highlight
+					  presentation-clauses-p))
   (setf (slot-value obj 'input-context)
-	(make-fake-input-context context-type)))
+	(if (or presentation-clauses-p highlight)
+	    (make-fake-input-context context-type)
+	    nil))))
 
 (defmethod make-tracking-pointer-state
     ((frame standard-application-frame)	sheet args)
@@ -1423,44 +1455,41 @@ frame, if any")
 
 ;;; Poor man's find-applicable-translators. tracking-pointer doesn't want to
 ;;; see any results from presentation translators.
-
-(defun highlight-for-tracking-pointer (frame stream x y input-context)
+;;;
+;;; XXX I don't see why not (even though I wrote the above comment :) and
+;;; Classic CLIM seems to agree. -- moore
+(defun highlight-for-tracking-pointer (frame stream event input-context
+				       highlight)
   (let ((context-ptype (input-context-type (car input-context)))
 	(presentation nil)
 	(current-hilited (frame-hilited-presentation frame)))
-    (if (output-recording-stream-p stream)
-	(progn
-	  (block found-presentation
-	    (flet ((do-presentation (p)
-		     (when (presentation-subtypep (presentation-type p)
-						  context-ptype)
-		       (setq presentation p)
-		       (return-from found-presentation nil))))
-	      (declare (dynamic-extent #'do-presentation))
-	      (map-over-presentations-containing-position
-	       #'do-presentation (stream-output-history stream) x y)))
-	  (when (and current-hilited
-		     (not (eq (car current-hilited) presentation)))
-	    (highlight-presentation-1 (car current-hilited)
-				      (cdr current-hilited)
-				      :unhighlight))
-	  (if presentation
-	      (progn
-		(setf (frame-hilited-presentation frame)
-		      (cons presentation stream))
-		(highlight-presentation-1 presentation stream :highlight)))
-	  presentation))))
+    (when (output-recording-stream-p stream)
+      (setq presentation (find-innermost-applicable-presentation
+			  input-context
+			  stream
+			  (device-event-x event)
+			  (device-event-y event)
+			  :frame frame
+			  :event event)))
+    (when (and current-hilited (not (eq (car current-hilited) presentation)))
+      (highlight-presentation-1 (car current-hilited)
+				(cdr current-hilited)
+				:unhighlight))
+    (when (and presentation highlight)
+      (setf (frame-hilited-presentation frame) (cons presentation stream))
+      (highlight-presentation-1 presentation stream :highlight))
+    presentation))
 
 (defmethod tracking-pointer-loop-step :before
     ((state frame-tracking-pointer-state) (event pointer-event) x y)
   (declare (ignore x y))
-  (when (highlight state)
+  (when (input-context state)
     (let ((stream (event-sheet event)))
       (setf (applicable-presentation state)
 	    (highlight-for-tracking-pointer *application-frame* stream
-					    (device-event-x event)
-					    (device-event-y event)
-					    (input-context state))))))
+					    event
+					    (input-context state)
+					    (highlight state))))))
 
 
 (macrolet ((frob (event handler)
@@ -1510,17 +1539,56 @@ frame, if any")
 	    (null
 	     ())))))))
 
-(defun frame-drag (translator-name command-table object presentation
-		   context-type frame event window x y)
-  (let* ((translator (gethash translator-name
-			      (translators (presentation-translators
-					    (find-command-table
-					     command-table)))))
+(defgeneric frame-drag-and-drop-feedback
+    (frame from-presentation stream initial-x initial-y x y state))
+
+(defmethod frame-drag-and-drop-feedback
+    ((frame standard-application-frame) from-presentation stream
+     initial-x initial-y x y state)
+  (with-bounding-rectangle* (fp-x1 fp-y1 fp-x2 fp-y2)
+      from-presentation
+    ;; Offset from origin of presentation is preserved throughout
+    (let* ((x-off (-  fp-x1 initial-x))
+	   (y-off (-  fp-y1 initial-y))
+	   (hilite-x1 (+ x-off x))
+	   (hilite-y1 (+ y-off y))
+	   (hilite-x2 (+ hilite-x1 (- fp-x2 fp-x1)))
+	   (hilite-y2 (+ hilite-y1 (- fp-y2 fp-y1))))
+      (with-identity-transformation (stream)
+	(ecase state
+	  (:highlight
+	   (with-output-recording-options (stream :record nil)
+	     (draw-rectangle* stream hilite-x1 hilite-y1 hilite-x2 hilite-y2
+			      :filled nil :line-dashes #(4 4))))
+	  (:unhighlight
+	   (with-double-buffering
+	       ((stream hilite-x1 hilite-y1 hilite-x2 hilite-y2)
+		(buffer-rectangle))
+	     (stream-replay stream buffer-rectangle))))))))
+
+(defgeneric frame-drag-and-drop-highlighting (frame to-presentation state))
+
+(defmethod frame-drag-and-drop-highlighting
+    ((frame standard-application-frame) to-presentation state)
+  )
+
+(defun frame-drag-and-drop (translator-name command-table object presentation
+			    context-type frame event window x y)
+  (let* ((translators (mapcan (lambda (trans)
+				(and (typep trans 'drag-n-drop-translator)
+				     (test-presentation-translator
+				      trans presentation context-type frame
+				      window x y :event event)))
+			      (find-presentation-translators
+			       (presentation-type presentation)
+			       context-type
+			       (frame-command-table frame))))
+	 (translator (or (find translator-name translators :key #'name)
+			 (car translators)))
 	 (tester (tester translator))
 	 (drag-type (from-type translator))
 	 (feedback-fn (feedback translator))
 	 (hilite-fn (highlighting translator))
-	 (drag-c-type `(drag-over ))
 	 (drag-context (make-fake-input-context drag-c-type))
 	 (*dragged-object* object)
 	 (destination-object nil))
@@ -1528,8 +1596,16 @@ frame, if any")
 	(stream-pointer-position window)
       (funcall feedback-fn *application-frame* object window
 	       x0 y0 x0 y0 :highlight)
-      (tracking-pointer (window :context-type drag-c-type :highlight nil)
-       (:pointer-motion (&key event x y)
-	 (multiple-value-bind (presentation translator)
-	     (find-innermost-presentation-match drag-context window
-						x y :event event)))))))
+      (tracking-pointer (window :context-type `(or ,(mapcar #'from-type
+							    translators))
+				:highlight nil)
+	(:presentation (&key presentation event x y)
+	 )
+	(:pointer-motion (&key event x y)
+	  (multiple-value-bind (presentation translator)
+	      (find-innermost-presentation-match drag-context window
+						 x y :event event)))
+	(:presentation-button-press (&key presentation x y))
+	(:presentation-button-release (&key presentation x y))
+	(:button-press (&key x y))
+	(:button-release (&key x y))))))

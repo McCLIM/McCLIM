@@ -29,8 +29,6 @@
   (:method (stream)
     (cl:interactive-stream-p stream)))
 
-(define-protocol-class input-editing-stream ())
-
 (defclass empty-input-mixin ()
   ()
   (:documentation "A mixin class used for detecting empty input"))

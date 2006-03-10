@@ -266,33 +266,6 @@ by the number of variables in VARS."
   (max min (min max value)))
   
 ;;;;
-;;;; Protocol Classes
-;;;;
-
-(defmacro define-protocol-class (name super-classes &optional slots &rest options)
-  (let ((protocol-predicate
-         (intern (concatenate 'string (symbol-name name) (if (find #\- (symbol-name name)) "-" "") "P")))
-	(predicate-docstring
-	 (concatenate 'string "Protocol predicate checking for class " (symbol-name name))))
-    `(progn
-       (defclass ,name ,super-classes ,slots ,@options)
-
-       (let ((the-class (find-class ',name)))
-	 (setf (documentation the-class 'type) "CLIM protocol class")
-         (defmethod initialize-instance :after ((object ,name) &key &allow-other-keys)
-           (when (eq (class-of object) the-class)
-             (error "~S is a protocol class and thus can't be instantiated" ',name))))
-
-       (defgeneric ,protocol-predicate (object)
-	 (:method ((object t))
-	   nil)
-	 (:method ((object ,name))
-	   t)
-	 (:documentation ,predicate-docstring))
-
-       ',name)))
-
-;;;;
 ;;;; meta functions
 ;;;;
 
@@ -493,7 +466,7 @@ in KEYWORDS removed."
 STREAM in the direction DIRECTION."
   ;; This implementation lives unter the assumption that an
   ;; extended-output stream is also a sheet and has a graft. 
-  ;; --GB 2002-08-14
+  ;; --GB 2002-08-14
   (etypecase specification
     (integer specification)
     ((or string character) (multiple-value-bind (width height)

@@ -144,8 +144,6 @@ sheet-supports-only-one-child error to be signalled."))
 ;;;;
 ;;;; sheet protocol class
 
-(define-protocol-class sheet (bounding-rectangle))
-
 (defclass basic-sheet (sheet)
   ((region :type region
 	   :initarg :region
