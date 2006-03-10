@@ -42,16 +42,40 @@
    (xmin :initarg :xmin :reader char-xmin)
    (xmax :initarg :xmax :reader char-xmax)))
 
-;;;
 (defvar *font-metrics* (make-hash-table :test 'equal))
 
-(defun define-font-metrics (name ascent descent angle char-infos)
+(defstruct postscript-device-font-name
+  (font-file (error "missing argument"))
+  (metrics-file (error "missing argument"))
+  (size (error "missing argument")))
+
+(defun %font-name-size (font-name)
+  (etypecase font-name
+    (postscript-device-font-name (postscript-device-font-name-size font-name))
+    (cons (cdr font-name))))
+(defun %font-name-metrics-key (font-name)
+  (etypecase font-name
+    (postscript-device-font-name font-name)
+    (cons (car font-name))))
+(defun %font-name-postscript-name (font-name)
+  (etypecase font-name
+    (postscript-device-font-name 
+     (let ((font-info (gethash font-name *font-metrics*)))
+       (unless font-info
+         (error "Unknown font: ~S" font-info))
+       (font-info-name font-info)))
+    (cons (concatenate 'string (car font-name) "-iso"))))
+                                  
+
+
+
+(defun define-font-metrics (name ascent descent angle char-infos &optional (font-name nil))
   (let ((font-info (make-instance 'font-info
                                   :name name
                                   :ascent ascent
                                   :descent descent
                                   :italic-angle angle)))
-    (setf (gethash name *font-metrics*) font-info)
+    (setf (gethash (or font-name name) *font-metrics*) font-info)
     (loop for (code name width ascent descent xmin xmax) in char-infos
          do (when (>= code 0)
               (setf (aref (font-info-char-names font-info) code)
@@ -137,30 +161,44 @@
     (mapping (port postscript-port) (text-style text-style)
      &optional character-set)
   (declare (ignore character-set))
-  (unless (and (consp mapping)
-               (stringp (car mapping))
-               (numberp (cdr mapping)))
-    (error "Mapping a text style to a style specification is not~
-    implemented."))
-  (when (not (gethash (car mapping) *font-metrics*))
-    (cerror "Ignore." "Mapping text style ~S to an unknown font ~S."
-            text-style (car mapping)))
-  (setf (gethash text-style (port-text-style-mappings port))
-        mapping))
+  (cond 
+    ((and (consp mapping)
+	  (stringp (car mapping))
+	  (numberp (cdr mapping)))
+     (when (not (gethash (car mapping) *font-metrics*))
+       (cerror "Ignore." "Mapping text style ~S to an unknown font ~S."
+	       text-style (car mapping)))
+     (setf (gethash text-style (port-text-style-mappings port))
+	   mapping))
+    (t
+     (when (not (gethash mapping *font-metrics*))
+       (cerror "Ignore." "Mapping text style ~S to an unknown font ~S."
+	       text-style mapping))
+     (setf (gethash text-style (port-text-style-mappings port))
+	   mapping))))
 
 ;; The following four functions should be rewritten: AFM contains all
 ;; needed information
 (defmethod text-style-ascent (text-style (medium postscript-medium))
-  (multiple-value-bind (width height final-x final-y baseline)
-      (text-size medium "I" :text-style text-style)
-    (declare (ignore width height final-x final-y))
-    baseline))
+  (let* ((font-name (text-style-mapping (port medium)
+					(merge-text-styles text-style
+							   (medium-merged-text-style medium))))
+	 (font-info (or (gethash (%font-name-metrics-key font-name)
+                                 *font-metrics*)
+                        (error "Unknown font ~S." font-name)))
+         (size (%font-name-size font-name)))
+    (* (/ size 1000) (font-info-ascent font-info))))
+	 
 
 (defmethod text-style-descent (text-style (medium postscript-medium))
-  (multiple-value-bind (width height final-x final-y baseline)
-      (text-size medium "q" :text-style text-style)
-    (declare (ignore width final-x final-y))
-    (- height baseline)))
+  (let* ((font-name (text-style-mapping (port medium)
+					(merge-text-styles text-style
+							   (medium-merged-text-style medium))))
+	 (font-info (or (gethash (%font-name-metrics-key font-name)
+                                 *font-metrics*)
+                        (error "Unknown font ~S." font-name)))
+         (size (%font-name-size font-name)))
+    (* (/ size 1000) (font-info-descent font-info))))
 
 (defmethod text-style-height (text-style (medium postscript-medium))
   (multiple-value-bind (width height final-x final-y baseline)
@@ -181,10 +219,13 @@
     (setf string (make-string 1 :initial-element string)))
   (unless end (setf end (length string)))
   (unless text-style (setf text-style (medium-text-style medium)))
-  (destructuring-bind (psfont . size)
-      (text-style-mapping (port medium)
-                          (merge-text-styles text-style
-                                             (medium-merged-text-style medium)))
+  (let* ((font-name
+          (text-style-mapping (port medium)
+                              (merge-text-styles 
+                               text-style
+                               (medium-merged-text-style medium))))
+         (metrics-key (%font-name-metrics-key font-name))
+         (size (%font-name-size font-name)))
     (let ((scale (/ size 1000)))
       (cond ((= start end)
              (values 0 0 0 0))
@@ -194,7 +235,7 @@
                       (multiple-value-bind (width ascent descent left right
                                                   font-ascent font-descent
                                                   direction first-not-done)
-                          (psfont-text-extents psfont string
+                          (psfont-text-extents metrics-key string
                                                :start start :end position-newline)
                         (multiple-value-bind (minx miny maxx maxy)
                             (climi::text-bounding-rectangle*
@@ -208,24 +249,30 @@
                       (multiple-value-bind (width ascent descent left right
                                                   font-ascent font-descent
                                                   direction first-not-done)
-                          (psfont-text-extents psfont string
+                          (psfont-text-extents metrics-key string
                                                :start start :end end)
                         (values (* scale left)
-                                (* scale (- font-ascent))
+                                (* scale (- ascent))
                                 (* scale right)
-                                (* scale font-descent)))))))))))
+                                (* scale descent)))))))))))
 
-(defun psfont-text-extents (font string &key (start 0) (end (length string)))
-  (let* ((font-info (or (gethash font *font-metrics*)
-			(error "Unknown font ~S." font)))
+(defun psfont-text-extents (metrics-key string &key (start 0) (end (length string)))
+  (let* ((font-info (or (gethash metrics-key *font-metrics*)
+			(error "Unknown font ~S." metrics-key)))
 	 (char-metrics (font-info-char-infos font-info))
 	 (width (loop for i from start below end
 		   sum (char-width (gethash (aref *iso-latin-1-symbolic-names* (char-code (char string i)))
-					    char-metrics)))))
+					    char-metrics))))
+         (ascent (loop for i from start below end
+                       maximize (char-ascent (gethash (aref *iso-latin-1-symbolic-names* (char-code (char string i)))
+                                                      char-metrics))))
+         (descent (loop for i from start below end
+                       maximize (char-descent (gethash (aref *iso-latin-1-symbolic-names* (char-code (char string i)))
+                                                       char-metrics)))))
     (values
      width
-     (font-info-ascent font-info)
-     (font-info-descent font-info)
+     ascent
+     descent
      (char-xmin (gethash (aref *iso-latin-1-symbolic-names* (char-code (char string start)))
 			 char-metrics))
      (- width (- (char-width (gethash (aref *iso-latin-1-symbolic-names* (char-code (char string (1- end))))
@@ -243,9 +290,41 @@
                       &key text-style (start 0) end)
   (when (characterp string) (setq string (string string)))
   (unless end (setq end (length string)))
-  (destructuring-bind (font . size)
-      (text-style-mapping (port medium)
-                          (merge-text-styles text-style
-                                             (medium-merged-text-style medium)))
-    (text-size-in-font font size
+  (let* ((font-name (text-style-mapping (port medium)
+                                        (merge-text-styles text-style
+                                                           (medium-merged-text-style medium))))
+         (size (%font-name-size font-name))
+         (metrics-key (%font-name-metrics-key font-name)))
+    (text-size-in-font metrics-key size
                        string start (or end (length string)))))
+
+(defmethod invoke-with-text-style :around
+    ((medium postscript-medium)
+     continuation
+     (text-style clim-internals::device-font-text-style))
+  (unless (member text-style (device-fonts medium))
+    (push text-style (device-fonts medium)))
+  (call-next-method))
+
+(defun write-font-to-postscript-stream (stream text-style)
+  (with-open-file (font-stream
+		   (postscript-device-font-name-font-file (clim-internals::device-font-name text-style))
+		   :direction :input
+		   :external-format :latin-1)
+    (let ((font (make-string (file-length font-stream))))
+      (read-sequence font font-stream)
+      (write-string font (postscript-medium-file-stream stream)))))
+
+(defmethod make-device-font-text-style ((port postscript-port) font-name)
+  (check-type font-name postscript-device-font-name)
+  (let ((text-style (make-instance 'clim-internals::device-font-text-style
+				   :display-device port
+				   :device-font-name font-name)))
+    (multiple-value-bind (dict-name ascent descent angle char-infos)
+	(with-open-file (stream (postscript-device-font-name-metrics-file font-name)
+                                :direction :input
+                                :external-format :latin-1)
+	  (clim-postscript::read-afm-stream stream))
+      (clim-postscript::define-font-metrics dict-name ascent descent angle char-infos font-name))
+    (setf (text-style-mapping port text-style) font-name)
+    text-style))

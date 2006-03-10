@@ -301,9 +301,32 @@
 
 (fmakunbound 'clim-clx::text-style-to-x-font)
 
+(defstruct freetype-device-font-name
+  (font-file (error "missing argument"))
+  (size (error "missing argument")))
+
+(defmethod clim-clx::text-style-to-X-font :around 
+    ((port clim-clx::clx-port) (text-style climi::device-font-text-style))
+  (let ((display (slot-value port 'clim-clx::display))
+        (font-name (climi::device-font-name text-style)))
+    (make-free-type-face display
+                         (freetype-device-font-name-font-file font-name)
+                         (freetype-device-font-name-size font-name))))
+
+(defmethod text-style-mapping :around
+    ((port clim-clx::clx-port) (text-style climi::device-font-text-style)
+     &optional character-set)
+  (values (gethash text-style (clim-clx::port-text-style-mappings port))))
+(defmethod (setf text-style-mapping) :around
+    (value 
+     (port clim-clx::clx-port) 
+     (text-style climi::device-font-text-style)
+     &optional character-set)
+  (setf (gethash text-style (clim-clx::port-text-style-mappings port)) value))
+
 (defparameter *free-type-face-hash* (make-hash-table :test #'equal))
 
-(defmethod clim-clx::text-style-to-X-font :around ((port clim-clx::clx-port) text-style)
+(defmethod clim-clx::text-style-to-X-font :around ((port clim-clx::clx-port) (text-style standard-text-style))
   (multiple-value-bind (family face size) 
       (clim:text-style-components text-style)
     (let ((display (clim-clx::clx-port-display port)))

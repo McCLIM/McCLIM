@@ -462,11 +462,14 @@ setmatrix")
 
 (defmethod postscript-set-graphics-state (stream medium
                                           (kind (eql :text-style)))
-  (destructuring-bind (font . size)
-      (medium-font medium)
+  (let* ((font-name (medium-font medium))
+         (font (%font-name-postscript-name font-name))
+         (size (%font-name-size font-name)))
     (pushnew font (slot-value (medium-sheet medium) 'document-fonts)
              :test #'string=)
-    (format stream "/~A-iso findfont ~D scalefont setfont~%" font size))) ;### evil hack.
+    (format stream "/~A findfont ~D scalefont setfont~%"
+	    font
+	    size))) ;### evil hack.
 
 (defun postscript-escape-char (char)
   (case char
@@ -522,7 +525,9 @@ setmatrix")
                     (format-postscript-number ty))))
         (multiple-value-bind (total-width total-height
                               final-x final-y baseline)
-            (destructuring-bind (font . size) (medium-font medium)
+            (let* ((font-name (medium-font medium))
+                   (font (%font-name-metrics-key font-name))
+                   (size (%font-name-size font-name)))
               (text-size-in-font font size string 0 nil))
           (declare (ignore final-x final-y))
           ;; Only one line?

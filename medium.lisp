@@ -87,6 +87,7 @@
 (defgeneric text-style-fixed-width-p (text-style medium))
 
 (defgeneric text-style-equalp (style1 style2))
+(defmethod text-style-equalp ((style1 text-style) (style2 text-style)) nil)
 
 (defclass standard-text-style (text-style)
   ((family   :initarg :text-family
@@ -155,7 +156,7 @@
 
 ) ; end eval-when
 
-(defmethod print-object ((self text-style) stream)
+(defmethod print-object ((self standard-text-style) stream)
   (print-unreadable-object (self stream :type t :identity nil)
     (format stream "~{~S~^ ~}" (multiple-value-list (text-style-components self)))))
 
@@ -196,15 +197,25 @@
 ;;; Device-Font-Text-Style class
 
 (defclass device-font-text-style (text-style)
-  ())
+  ((display-device :initarg :display-device :accessor display-device)
+   (device-font-name :initarg :device-font-name :accessor device-font-name)))
+
+(defmethod print-object ((self device-font-text-style) stream)
+  (print-unreadable-object (self stream :type t :identity nil)
+    (format stream "~S on ~S" (device-font-name self) (display-device self))))
 
 (defun device-font-text-style-p (s)
   (typep s 'device-font-text-style))
 
+(defmethod text-style-equalp ((style1 device-font-text-style) (style2 device-font-text-style))
+  (eq style1 style2))
+
 (defmethod text-style-mapping ((port basic-port) text-style
                                &optional character-set)
   (declare (ignore character-set))
-  (gethash (parse-text-style text-style) (port-text-style-mappings port)))
+  (if (keywordp text-style)
+      (gethash (parse-text-style text-style) (port-text-style-mappings port))
+      (gethash text-style (port-text-style-mappings port))))
 
 (defmethod (setf text-style-mapping) (mapping (port basic-port)
                                       text-style
@@ -221,11 +232,12 @@
   (setf (gethash text-style (port-text-style-mappings port))
         mapping))
 
-(defun make-device-font-text-style (port font-name)
+(defgeneric make-device-font-text-style (port font-name))
+
+(defmethod make-device-font-text-style (port font-name)
   (let ((text-style (make-instance 'device-font-text-style
-                                   :text-family font-name
-                                   :text-face nil
-                                   :text-size nil)))
+				   :display-device port
+				   :device-font-name font-name)))
     (setf (text-style-mapping port text-style) font-name)
     text-style))
 
