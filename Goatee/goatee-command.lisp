@@ -216,6 +216,29 @@
     (error "Last operation was not a yank!"))
   (yank-prev *kill-ring* *buffer* *insert-extent*))
 
+;; Transposing (taken from climacs)
+
+(defun at-beginning-of-buffer-p (buffer)
+  (and (first-line-p (line (point buffer)))
+       (zerop (pos (point buffer)))))
+
+(defun at-end-of-line-p (buffer)
+  (multiple-value-bind (line pos) (location* (point buffer))
+    (declare (ignore line))
+    (multiple-value-bind (eoline eolpos) (end-of-line* buffer)
+      (declare (ignore eoline))
+      (= eolpos pos))))
+
+(defun cmd-transpose-chars (&key &allow-other-keys)
+  (unless (at-beginning-of-buffer-p *buffer*)
+    (with-point (*buffer*)
+      (when (at-end-of-line-p *buffer*)
+        (backward-character))
+      (let ((object (char-ref *buffer* (point *buffer*))))
+        (delete-char *buffer*)
+        (backward-character)
+        (insert *buffer* object)))))
+
 ;; Line motion
 
 (defun up-line (&key &allow-other-keys)
@@ -284,6 +307,9 @@
 (add-gesture-command-to-table '(:right :meta)
 			      'forward-word
 			      *simple-area-gesture-table*)
+(add-gesture-command-to-table '(:right :control)
+			      'forward-word
+			      *simple-area-gesture-table*)
 
 (add-gesture-command-to-table '(#\b :meta)
 			      'backward-word
@@ -291,15 +317,24 @@
 (add-gesture-command-to-table '(:left :meta)
 			      'backward-word
 			      *simple-area-gesture-table*)
+(add-gesture-command-to-table '(:left :control)
+			      'backward-word
+			      *simple-area-gesture-table*)
 
 (add-gesture-command-to-table '(#\backspace :meta)
 			      'backwards-delete-word
 			      *simple-area-gesture-table*)
+(add-gesture-command-to-table '(#\backspace :control)
+			      'backwards-delete-word
+			      *simple-area-gesture-table*)
 
+(add-gesture-command-to-table '(#\d :meta)
+			      'delete-word
+			      *simple-area-gesture-table*)
 (add-gesture-command-to-table '(#\delete :meta)
 			      'delete-word
 			      *simple-area-gesture-table*)
-(add-gesture-command-to-table '(#\d :meta)
+(add-gesture-command-to-table '(#\delete :control)
 			      'delete-word
 			      *simple-area-gesture-table*)
 
@@ -341,6 +376,10 @@
 
 (add-gesture-command-to-table '(#\y :control)
 			      'cmd-yank
+			      *simple-area-gesture-table*)
+
+(add-gesture-command-to-table '(#\t :control)
+			      'cmd-transpose-chars
 			      *simple-area-gesture-table*)
 
 #+nil
