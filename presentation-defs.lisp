@@ -2002,30 +2002,44 @@ call-next-method to get the \"real\" answer based on the stream type."))
    (destination-translator :reader destination-translator
 			   :initarg :destination-translator)))
 
+
+(defvar *dragged-presentation* nil
+  "Bound to the presentation dragged in a drag-and-drop context")
 (defvar *dragged-object* nil
   "Bound to the object dragged in a drag-and-drop context")
 
+()
 ;;; According to the Franz User's guide, the destination object is
 ;;; available in the tester, documentation, and translator function
 ;;; as destination-object. Therefore OBJECT is the dragged object. In
 ;;; our scheme the tester function, translator function etc. is
 ;;; really called on the destination object. So, we do a little
-;;; shuffling of arguments here.
+;;; shuffling of arguments here. We don't do that for the destination
+;;; translator because we can call that ourselves in frame-drag-and-drop.
+;;;
+;;; Also, in Classic CLIM the destination presentation is passed as a
+;;; destination-presentation keyword argument; hence the presentation argument
+;;; is the dragged presentation.
 
 (defmethod initialize-instance :after ((obj drag-n-drop-translator)
-				       &key tester documentation
+				       &key documentation
 				       pointer-documentation
-				       translator-function)
+				       destination-translator)
+  ;; This is starting to smell...
   (flet ((make-adapter (func)
-	   (lambda (object &rest args)
-	     (apply func *dragged-object* :destination-object object args))))
-    (setf (slot-value obj 'tester) (make-adapter tester))
+	   (lambda (object &rest args &key presentation &allow-other-keys)
+	     (if *dragged-presentation*
+		 (apply func
+			*dragged-object*
+			:presentation *dragged-presentation*
+			:destination-object object
+			:destination-presentation presentation
+			args)
+		 (apply func object args)))))
     (setf (slot-value obj 'documentation) (make-adapter documentation))
     (when pointer-documentation
       (setf (slot-value obj 'pointer-documentation)
-	    (make-adapter pointer-documentation)))
-    (setf (slot-value obj 'translator-function)
-	  (make-adapter translator-function))))
+	    (make-adapter pointer-documentation)))))
 
 (defmacro define-drag-and-drop-translator
    (name (from-type to-type destination-type command-table
@@ -2048,17 +2062,14 @@ call-next-method to get the \"real\" answer based on the stream type."))
     (with-keywords-removed (args (:feedback :highlighting))
       `(progn
 	 (define-presentation-translator ,name
-	     (,from-type ,to-type
+	     (,from-type ,to-type ,command-table
 	      ,@args
 	      :feedback #',feedback :highlighting #',highlighting
 	      :destination-ptype ',real-dest-type
 	      :destination-translator #',(make-translator-fun arglist body)
 	      :translator-class drag-n-drop-translator)
-	   (object presentation context-type frame event window x y)
-	   (frame-drag-and-drop ',name ',command-table object
+	   (presentation context-type frame event window x y)
+	   (frame-drag-and-drop ',name ',command-table
 				presentation context-type
 				frame event window x y))))))
-
-
-
 

@@ -1497,17 +1497,20 @@ and used to ensure that presentation-translators-caches are up to date.")
 (defmethod call-presentation-translator
     ((translator presentation-translator) presentation context-type
      frame event window x y)
-  (multiple-value-bind (object ptype options)
-      (funcall (translator-function translator)
-	       (presentation-object presentation)
-	       :presentation presentation
-	       :context-type context-type
-	       :frame frame
-	       :event event
-	       :window window
-	       :x x
-	       :y y)
-    (values object (or ptype context-type) options)))
+  ;; Let the translator return an explict ptype of nil to, in effect, abort the
+  ;; presentation throw.
+  (multiple-value-call
+      #'(lambda (object &optional (ptype context-type) options)
+	  (values object ptype options))
+    (funcall (translator-function translator)
+	     (presentation-object presentation)
+	     :presentation presentation
+	     :context-type context-type
+	     :frame frame
+	     :event event
+	     :window window
+	     :x x
+	     :y y)))
 
 (defmethod call-presentation-translator
     ((translator presentation-action) presentation context-type

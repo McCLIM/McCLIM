@@ -1566,46 +1566,162 @@ documentation produced by presentations.")))
 		(buffer-rectangle))
 	     (stream-replay stream buffer-rectangle))))))))
 
-(defgeneric frame-drag-and-drop-highlighting (frame to-presentation state))
+(defgeneric frame-drag-and-drop-highlighting
+    (frame to-presentation stream state))
 
 (defmethod frame-drag-and-drop-highlighting
-    ((frame standard-application-frame) to-presentation state)
-  )
+    ((frame standard-application-frame) to-presentation stream state)
+  (highlight-presentation-1 to-presentation stream state))
 
-(defun frame-drag-and-drop (translator-name command-table object presentation
-			    context-type frame event window x y)
-  (let* ((translators (mapcan (lambda (trans)
+(defun frame-drag-and-drop (translator-name command-table
+			    from-presentation context-type frame event window
+			    x y)
+  (declare (ignore command-table))
+  (let* ((*dragged-presentation* from-presentation)
+	 (*dragged-object* (presentation-object from-presentation))
+	 (translators (mapcan (lambda (trans)
 				(and (typep trans 'drag-n-drop-translator)
-				     (test-presentation-translator
-				      trans presentation context-type frame
-				      window x y :event event)))
+				     (funcall (tester trans)
+					      (presentation-object
+					       from-presentation)
+					      :presentation from-presentation
+					      :context-type context-type
+					      :frame frame
+					      :window window
+					      :x x
+					      :y y
+					      :event event)))
 			      (find-presentation-translators
-			       (presentation-type presentation)
+			       (presentation-type from-presentation)
 			       context-type
 			       (frame-command-table frame))))
+	 ;; Try to run the feedback and highlight functions of the translator
+	 ;; that got us here.
 	 (translator (or (find translator-name translators :key #'name)
 			 (car translators)))
-	 (tester (tester translator))
-	 (drag-type (from-type translator))
-	 (feedback-fn (feedback translator))
-	 (hilite-fn (highlighting translator))
-	 (drag-context (make-fake-input-context drag-c-type))
-	 (*dragged-object* object)
-	 (destination-object nil))
-    (multiple-value-bind (x0 y0)
-	(stream-pointer-position window)
-      (funcall feedback-fn *application-frame* object window
-	       x0 y0 x0 y0 :highlight)
-      (tracking-pointer (window :context-type `(or ,(mapcar #'from-type
-							    translators))
-				:highlight nil)
-	(:presentation (&key presentation event x y)
-	 )
-	(:pointer-motion (&key event x y)
-	  (multiple-value-bind (presentation translator)
-	      (find-innermost-presentation-match drag-context window
-						 x y :event event)))
-	(:presentation-button-press (&key presentation x y))
-	(:presentation-button-release (&key presentation x y))
-	(:button-press (&key x y))
-	(:button-release (&key x y))))))
+	 (initial-feedback-fn (feedback translator))
+	 (initial-hilite-fn (highlighting translator))
+	 (destination-presentation nil)
+	 (initial-x x)
+	 (initial-y y)
+	 (last-presentation nil)
+	 (feedback-activated nil)
+	 (feedback-fn initial-feedback-fn)
+	 (hilite-fn initial-hilite-fn)
+	 (last-event nil))
+    ;; We shouldn't need to use find-innermost-presentation-match
+    ;; This repeats what tracking-pointer has already done, but what are you
+    ;; gonna do?
+    (flet ((find-dest-translator (presentation window x y)
+	     (loop for translator in translators
+		   when (and (presentation-subtypep
+			      (presentation-type presentation)
+			      (destination-ptype translator))
+			     (test-presentation-translator translator
+							   presentation
+							   context-type frame
+							   window x y))
+		   do (return-from find-dest-translator translator))
+	     nil)
+	   (do-feedback (window x y state do-it)
+	     (when do-it
+	       (funcall feedback-fn frame from-presentation window
+			initial-x initial-y x y state)))
+	   (do-hilite (presentation window state)
+	     (when presentation
+	       (funcall hilite-fn frame presentation window state)))
+	   (last-window ()
+	     (event-sheet last-event))
+	   (last-x ()
+	     (pointer-event-x last-event))
+	   (last-y ()
+	     (pointer-event-y last-event)))
+      ;; :highlight nil will cause the presentation that is the source of the
+      ;; dragged object to be unhighlighted initially.
+      (block do-tracking
+	(tracking-pointer (window :context-type `(or ,(mapcar #'from-type
+							      translators))
+				  :highlight nil
+				  :multiple-window t)
+	  (:presentation (&key presentation window event x y)
+	    (let ((dest-translator (find-dest-translator presentation window
+							 x y)))
+	      (do-feedback (last-window) (last-x) (last-y)
+			   :unhighlight feedback-activated)
+	      (setq feedback-activated t
+		    last-event event)
+	      (do-hilite last-presentation (last-window) :unhighlight)
+	      (setq last-presentation presentation
+		    feedback-fn (feedback dest-translator)
+		    hilite-fn (highlighting dest-translator))
+	      (do-hilite presentation window :highlight)
+	      (do-feedback window x y :highlight t)
+	      (document-drag-n-drop dest-translator presentation
+				    context-type frame event window
+				    x y)))
+	  (:pointer-motion (&key event window x y)
+	    (do-feedback (last-window) (last-x) (last-y)
+			 :unhighlight feedback-activated)
+	    (setq feedback-activated t
+		  last-event event)
+	    (do-hilite last-presentation (last-window) :unhighlight)
+	    (setq last-presentation nil)
+	    (do-feedback window x y :highlight t)
+	    (document-drag-n-drop translator nil
+				  context-type frame event window
+				  x y))
+	  ;; XXX only support finish-on-release for now.
+	  #-(and)(:presentation-button-press ())
+	  (:presentation-button-release (&key presentation event)
+	    (setq destination-presentation presentation
+		  last-event event)
+	    (return-from do-tracking nil))
+	  #-(and)(:button-press ())
+	  (:button-release (&key event)
+	    (setq last-event event)
+	    (return-from do-tracking nil))))
+      ;;
+      ;; XXX Assumes x y from :button-release are the same as for the preceding
+      ;; button-motion; is that correct?
+      (do-feedback (last-window) (last-x) (last-y)
+		   :unhighlight feedback-activated)
+      (do-hilite last-presentation (last-window) :unhighlight)
+      (if destination-presentation
+	  (let ((final-translator (find-dest-translator destination-presentation
+							(last-window)
+							(last-x)
+							(last-y))))
+	    (if final-translator
+		(funcall (destination-translator final-translator)
+			 *dragged-object*
+			 :presentation *dragged-presentation*
+			 :destination-object (presentation-object
+					      destination-presentation)
+			 :destination-presentation destination-presentation
+			 :context-type context-type
+			 :frame frame
+			 :event event
+			 :window window
+			 :x x
+			 :y y)
+		(values nil nil)))
+	  (values nil nil)))))
+
+(defun document-drag-n-drop
+    (translator presentation context-type frame event window x y)
+  (when *pointer-documentation-output*
+    (let ((s *pointer-documentation-output*))
+      (window-clear s)
+      (with-end-of-page-action (s :allow)
+	(with-end-of-line-action (s :allow)
+	  (document-presentation-translator translator
+					    presentation
+					    context-type
+					    frame
+					    event
+					    window
+					    x y
+					    :stream s
+					    :documentation-type :pointer))))))
+
+
