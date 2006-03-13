@@ -1562,7 +1562,7 @@ documentation produced by presentations.")))
 			      :filled nil :line-dashes #(4 4))))
 	  (:unhighlight
 	   (with-double-buffering
-	       ((stream hilite-x1 hilite-y1 hilite-x2 hilite-y2)
+	       ((stream hilite-x1 hilite-y1 (1+ hilite-x2) (1+ hilite-y2))
 		(buffer-rectangle))
 	     (stream-replay stream buffer-rectangle))))))))
 
@@ -1590,7 +1590,8 @@ documentation produced by presentations.")))
 					      :window window
 					      :x x
 					      :y y
-					      :event event)))
+					      :event event)
+				     (list trans)))
 			      (find-presentation-translators
 			       (presentation-type from-presentation)
 			       context-type
@@ -1623,13 +1624,11 @@ documentation produced by presentations.")))
 							   window x y))
 		   do (return-from find-dest-translator translator))
 	     nil)
-	   (do-feedback (window x y state do-it)
-	     (when do-it
-	       (funcall feedback-fn frame from-presentation window
-			initial-x initial-y x y state)))
+	   (do-feedback (window x y state)
+	     (funcall feedback-fn frame from-presentation window
+			initial-x initial-y x y state))
 	   (do-hilite (presentation window state)
-	     (when presentation
-	       (funcall hilite-fn frame presentation window state)))
+	     (funcall hilite-fn frame presentation window state))
 	   (last-window ()
 	     (event-sheet last-event))
 	   (last-x ()
@@ -1646,27 +1645,29 @@ documentation produced by presentations.")))
 	  (:presentation (&key presentation window event x y)
 	    (let ((dest-translator (find-dest-translator presentation window
 							 x y)))
-	      (do-feedback (last-window) (last-x) (last-y)
-			   :unhighlight feedback-activated)
+	      (when feedback-activated
+		(do-feedback (last-window) (last-x) (last-y) :unhighlight))
 	      (setq feedback-activated t
 		    last-event event)
-	      (do-hilite last-presentation (last-window) :unhighlight)
+	      (when last-presentation
+		(do-hilite last-presentation (last-window) :unhighlight))
 	      (setq last-presentation presentation
 		    feedback-fn (feedback dest-translator)
 		    hilite-fn (highlighting dest-translator))
 	      (do-hilite presentation window :highlight)
-	      (do-feedback window x y :highlight t)
+	      (do-feedback window x y :highlight)
 	      (document-drag-n-drop dest-translator presentation
 				    context-type frame event window
 				    x y)))
 	  (:pointer-motion (&key event window x y)
-	    (do-feedback (last-window) (last-x) (last-y)
-			 :unhighlight feedback-activated)
+	    (when feedback-activated
+	      (do-feedback (last-window) (last-x) (last-y) :unhighlight))
 	    (setq feedback-activated t
 		  last-event event)
-	    (do-hilite last-presentation (last-window) :unhighlight)
+	    (when last-presentation
+	      (do-hilite last-presentation (last-window) :unhighlight))
 	    (setq last-presentation nil)
-	    (do-feedback window x y :highlight t)
+	    (do-feedback window x y :highlight)
 	    (document-drag-n-drop translator nil
 				  context-type frame event window
 				  x y))
@@ -1683,9 +1684,10 @@ documentation produced by presentations.")))
       ;;
       ;; XXX Assumes x y from :button-release are the same as for the preceding
       ;; button-motion; is that correct?
-      (do-feedback (last-window) (last-x) (last-y)
-		   :unhighlight feedback-activated)
-      (do-hilite last-presentation (last-window) :unhighlight)
+      (when feedback-activated
+	(do-feedback (last-window) (last-x) (last-y) :unhighlight))
+      (when last-presentation
+	(do-hilite last-presentation (last-window) :unhighlight))
       (if destination-presentation
 	  (let ((final-translator (find-dest-translator destination-presentation
 							(last-window)
@@ -1714,14 +1716,19 @@ documentation produced by presentations.")))
       (window-clear s)
       (with-end-of-page-action (s :allow)
 	(with-end-of-line-action (s :allow)
-	  (document-presentation-translator translator
-					    presentation
-					    context-type
-					    frame
-					    event
-					    window
-					    x y
-					    :stream s
-					    :documentation-type :pointer))))))
+	  (funcall (pointer-documentation translator)
+	   *dragged-object*
+	   :presentation *dragged-presentation*
+	   :destination-object (and presentation
+				    (presentation-object presentation))
+	   :destination-presentation presentation
+	   :context-type context-type
+	   :frame frame
+	   :event event
+	   :window window
+	   :x x
+	   :y y
+	   :stream s))))))
+
 
 
