@@ -80,12 +80,7 @@
     (setf (color shape) (cdr (nth elt *color-alist*)))))
 
 (define-drag-and-drop-translator com-drop-color
-    (rect command rect drag-test
-     :tester ((destination-object event)
-	      (when destination-object
-		(break))
-	      event
-	      t))
+    (rect command rect drag-test)
     (object destination-object)
   (if (eq object destination-object)
       `(com-set-random-color ,object)
