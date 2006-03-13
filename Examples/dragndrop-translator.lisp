@@ -23,14 +23,15 @@
 (defparameter *colors* (list +black+ +white+ +red+ +green+ +blue+ +magenta+
 			     +cyan+ +yellow+))
 
-(defparameter *color-alist*  `(("black" . ,+black+)
-			       ("white" . ,+white+)
-			       ("red" . ,+red+)
-			       ("green" . ,+green+)
-			       ("blue" . ,+blue+)
-			       ("magenta" . ,+magenta+)
-			       ("cyan" . ,+cyan+)
-			       ("yellow" . ,+yellow+)))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defparameter *color-alist*  `(("black" . ,+black+)
+				 ("white" . ,+white+)
+				 ("red" . ,+red+)
+				 ("green" . ,+green+)
+				 ("blue" . ,+blue+)
+				 ("magenta" . ,+magenta+)
+				 ("cyan" . ,+cyan+)
+				 ("yellow" . ,+yellow+))))
 
 (define-presentation-type named-color ()
   :inherit-from `(completion ,*color-alist* :value-key cdr))
@@ -79,7 +80,12 @@
     (setf (color shape) (cdr (nth elt *color-alist*)))))
 
 (define-drag-and-drop-translator com-drop-color
-    (rect command rect drag-test)
+    (rect command rect drag-test
+     :tester ((destination-object event)
+	      (when destination-object
+		(break))
+	      event
+	      t))
     (object destination-object)
   (if (eq object destination-object)
       `(com-set-random-color ,object)
