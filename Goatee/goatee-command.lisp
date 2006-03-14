@@ -261,6 +261,11 @@
       do (add-gesture-command-to-table (code-char i)
 				       'insert-character
 				       *simple-area-gesture-table*))
+;;; people who use dead keys get to implement code for that in Goatee.
+(loop for i from 160 to 255
+      do (add-gesture-command-to-table (code-char i)
+                                       'insert-character
+                                       *simple-area-gesture-table*))
 
 (add-gesture-command-to-table #\tab
 			      'insert-character
