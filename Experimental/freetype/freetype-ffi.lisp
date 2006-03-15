@@ -3,7 +3,7 @@
 (DEFPACKAGE :FREETYPE 
   (:USE :cl 
         #+sbcl :sb-alien 
-        #+cmucl :alien #+cmucl :c-call)
+        #+(or cmu scl) :alien #+(or cmu scl) :c-call)
             (:EXPORT "MEMORY-BASE" "DESCENDER" "LINEAR-VERT-ADVANCE" "YX" "XX" "FREE" "AVAILABLE-SIZES" "COVERAGE" "METRICS"
              "RASTER-FLAG" "GLYPH" "GET-CHAR-INDEX" "LIMIT" "STRING" "SHIFT" "LEN" "UNDERLINE-POSITION" "RASTER-NEW-FUNC"
              "POINTS" "TAG" "SIZE-INTERNAL" "NUM-SUBGLYPHS" "UNITS-PER-EM" "LIBRARY" "ALLOC" "OPEN-FACE" "ATTACH-FILE"
@@ -42,8 +42,19 @@
 
 (in-package :freetype)
 
-#+cmucl
+#+cmu
 (alien:load-foreign "/usr/lib/libfreetype.so.6")
+
+#+scl
+(alien:load-dynamic-object #+64bit "/usr/lib64/libfreetype.so.6"
+			   #-64bit "/usr/lib/libfreetype.so.6")
+
+#+(or scl cmu)
+(defmacro define-alien-type (&rest rest)
+  `(def-alien-type ,@rest))
+#+(or scl cmu)
+(defmacro define-alien-routine (&rest rest)
+  `(def-alien-routine ,@rest))
 
 #+sbcl
 (load-shared-object #+darwin "/usr/X11R6/lib/libfreetype.dylib" #-darwin "libfreetype.so")
@@ -373,7 +384,7 @@
   (freetype:driver freetype:module) (freetype:num-params freetype:int) (freetype:params (* freetype:parameter))))
 
 (define-alien-routine ("FT_New_Face" freetype:new-face) freetype:error (freetype:library freetype:library)
- (freetype::filepathname #+cmucl c-call:c-string #+sbcl c-string) (freetype::face_index freetype:long) (freetype::aface (* (* freetype:face-rec))))
+ (freetype::filepathname #+(or cmu scl) c-call:c-string #+sbcl c-string) (freetype::face_index freetype:long) (freetype::aface (* (* freetype:face-rec))))
 
 (define-alien-routine ("FT_New_Memory_Face" freetype:new-memory-face) freetype:error (freetype:library freetype:library)
  (freetype::file_base (* freetype:byte)) (freetype::file_size freetype:long) (freetype::face_index freetype:long)
@@ -403,7 +414,7 @@
 (define-alien-routine ("FT_Load_Char" freetype:load-char) freetype:error (freetype:face freetype:face)
  (freetype::char_code freetype:ulong) (freetype::load_flags freetype:int))
 
-(define-alien-routine ("FT_Set_Transform" freetype:set-transform) #+cmucl c-call:void #+sbcl void (freetype:face freetype:face)
+(define-alien-routine ("FT_Set_Transform" freetype:set-transform) #+(or cmu scl) c-call:void #+sbcl void (freetype:face freetype:face)
  (freetype:matrix (* freetype:matrix)) (freetype:delta (* freetype:vector)))
 
 (define-alien-type freetype:render-mode (enum freetype::render-mode- (:ft-render-mode-normal #.#o0) (:ft-render-mode-mono #.1)))
@@ -437,7 +448,7 @@
 
 (define-alien-routine ("FT_FloorFix" freetype:floor-fix) freetype:fixed (freetype::a freetype:fixed))
 
-(define-alien-routine ("FT_Vector_Transform" freetype:vector-transform) #+cmucl c-call:void #+sbcl void (freetype::vec (* freetype:vector))
+(define-alien-routine ("FT_Vector_Transform" freetype:vector-transform) #+(or cmu scl) c-call:void #+sbcl void (freetype::vec (* freetype:vector))
  (freetype:matrix (* freetype:matrix)))
 
 (define-alien-type freetype:encoding

@@ -672,7 +672,8 @@
   #+clisp (clos:specializer-direct-generic-functions specializer)
   #+openmcl-partial-mop
   (openmcl-mop:specializer-direct-generic-functions specializer)
-  #-(or PCL SBCL clisp openmcl-partial-mop)
+  #+scl (clos:specializer-direct-generic-functions specializer)
+  #-(or PCL SBCL scl clisp openmcl-partial-mop)
   (error "Sorry, not supported in your CL implementation. See the function X-SPECIALIZER-DIRECT-GENERIC-FUNCTION if you are interested in fixing this."))
 
 (defun class-funcs (class)
@@ -941,10 +942,10 @@
   "Return the number of internal symbols in PACKAGE."
   ;; We take only the first value, the symbol count, and discard the second, the
   ;; hash table capacity
-  #+cmu  (values (lisp::internal-symbol-count package))
+  #+(or cmu scl)  (values (lisp::internal-symbol-count package))
   #+sbcl (values (sb-int:package-internal-symbol-count package))
   #+clisp (svref (sys::%record-ref *package* 1) 2)
-  #-(or cmu sbcl clisp) (portable-internal-symbol-count package))
+  #-(or cmu scl sbcl clisp) (portable-internal-symbol-count package))
 
 (defun portable-external-symbol-count (package)
   (let ((n 0))
@@ -955,10 +956,10 @@
 
 (defun count-external-symbols (package)
   "Return the number of external symbols in PACKAGE."
-  #+cmu  (values (lisp::external-symbol-count package))
+  #+(or cmu scl)  (values (lisp::external-symbol-count package))
   #+sbcl (values (sb-int:package-external-symbol-count package))
   #+clisp (svref (sys::%record-ref *package* 0) 2)
-  #-(or cmu sbcl clisp) (portable-external-symbol-count package))
+  #-(or cmu scl sbcl clisp) (portable-external-symbol-count package))
 
 (defun package-grapher (stream package inferior-fun)
   "Draw package hierarchy graphs for `Show Package Users' and `Show Used Packages'."

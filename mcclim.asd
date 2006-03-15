@@ -85,6 +85,7 @@
             :depends-on ("patch")
             :components
             ((:file   #+cmu       "fix-cmu"
+		      #+scl       "fix-scl"
                       #+excl      "fix-acl"
                       #+sbcl      "fix-sbcl"
                       #+openmcl   "fix-openmcl"
@@ -101,6 +102,7 @@
                           :components
                           ((:file #.(or
                                      #+(and :cmu :mp (not :pthread))  "mp-cmu"
+                                     #+scl                     "mp-scl"
                                      #+sb-thread               "mp-sbcl"
                                      #+excl                    "mp-acl"
                                      #+openmcl                 "mp-openmcl"
@@ -289,7 +291,7 @@
     :depends-on (:clim
                  ;; If we're on an implementation that ships CLX, use
                  ;; it. Same if the user has loaded CLX already.
-                 #+(or sbcl openmcl ecl clx allegro) :clim-clx
+                 #+(or sbcl scl openmcl ecl clx allegro) :clim-clx
                  #+gl                        :clim-opengl
                  ;; OpenMCL and MCL support the beagle backend (native
                  ;; OS X look&feel on OS X).

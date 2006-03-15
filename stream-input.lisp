@@ -117,6 +117,15 @@
 	else
 	  do (handle-event (event-sheet event) event))))
 
+(defmethod stream-clear-input ((pane standard-input-stream))
+  (setf (stream-unread-chars pane) nil)
+  (loop for event = (event-read-no-hang pane)
+	if (null event)
+	   return nil
+	else
+	do (handle-event (event-sheet event) event))
+  nil)
+
 ;;; XXX The should be moved to protocol-classes.lisp and the
 ;;; standard-sheet-input-mixin superclass should be removed.
 (define-protocol-class extended-input-stream (fundamental-character-input-stream ;Gray stream
@@ -383,6 +392,18 @@
 	 until (or (characterp char) (eq reason :eof) (eq reason :timeout))
 	 do (stream-read-gesture estream) ; consume pointer gesture
 	 finally (return (characterp char)))))
+
+(defmethod stream-clear-input ((stream standard-extended-input-stream))
+  (with-encapsulating-stream (estream stream)
+    (loop
+       with char and reason
+	 do (setf (values char reason) (stream-read-gesture estream
+							    :timeout 0
+							    :peek-p t))
+	 until (or (eq reason :eof) (eq reason :timeout))
+	 do (stream-read-gesture estream) ; consume pointer gesture
+	 ))
+  nil)
 
 ;;; stream-read-line returns a second value of t if terminated by eof.
 (defmethod stream-read-line ((stream standard-extended-input-stream))

@@ -210,9 +210,11 @@
 (defmethod print-object ((object clx-port) stream)
   (print-unreadable-object (object stream :identity t :type t)
     (when (slot-boundp object 'display)
-      (format stream "~S ~S ~S ~S"
-              :host (xlib:display-host (slot-value object 'display))
-              :display-id (xlib:display-display (slot-value object 'display))))))
+      (let ((display (slot-value object 'display)))
+	(when display
+	  (format stream "~S ~S ~S ~S"
+		  :host (xlib:display-host display)
+		  :display-id (xlib:display-display display)))))))
 
 (defun clx-error-handler (display error-name &rest args &key major &allow-other-keys)
   (unless (and (eql major 42)  ; 42 is SetInputFocus, we ignore match-errors from that

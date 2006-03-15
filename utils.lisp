@@ -21,12 +21,12 @@
 
 (defun get-environment-variable (string)
   #+excl (sys:getenv string)
-  #+cmu (cdr (assoc string ext:*environment-list* :test #'string=))
+  #+(or cmu scl) (cdr (assoc string ext:*environment-list* :test #'string=))
   #+clisp (ext:getenv (string string))
   #+sbcl (sb-ext::posix-getenv string)
   #+openmcl (ccl::getenv string)
   #+lispworks (lw:environment-variable string)
-  #-(or excl cmu clisp sbcl openmcl lispworks)
+  #-(or excl cmu scl clisp sbcl openmcl lispworks)
   (error "GET-ENVIRONMENT-VARIABLE not implemented"))
 
 ;;; It would be nice to define this macro in terms of letf, but that

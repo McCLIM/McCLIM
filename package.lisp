@@ -219,6 +219,7 @@
         (gray-packages
          `(#+clisp                 ,@'(:gray)
            #+cmu                   ,@'(:ext)
+           #+scl                   ,@'(:ext)
 	   #+mcl                   ,@'(:ccl)
            #+allegro               ,@'(:common-lisp :excl :stream)
            #+harlequin-common-lisp ,@'(:stream)

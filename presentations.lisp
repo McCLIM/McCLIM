@@ -910,6 +910,7 @@ suitable for SUPER-NAME"))
 
 (defvar *standard-object-class* (find-class 'standard-object))
 
+#-scl
 (defmethod clim-mop:compute-applicable-methods-using-classes :around
     ((gf presentation-generic-function) classes)
   (multiple-value-bind (methods success)
@@ -924,7 +925,24 @@ suitable for SUPER-NAME"))
 				     *standard-object-class*))
 			     methods)
 		  t)))))
-  
+
+#+scl
+(defmethod clim-mop:compute-applicable-methods-using-classes :around
+    ((gf presentation-generic-function) classes)
+  (multiple-value-bind (methods success non-class-positions)
+      (call-next-method)
+    (let ((ptype-class (car classes)))
+      (if (or (null success)
+	      (not (typep ptype-class 'presentation-type-class)))
+	  (values methods non-class-positions non-class-positions)
+	  (values (remove-if #'(lambda (method)
+				 (eq (car (clim-mop:method-specializers
+					   method))
+				     *standard-object-class*))
+			     methods)
+		  t
+		  non-class-positions)))))
+
 (defun method-applicable (method arguments)
   (loop for arg in arguments
 	for specializer in (clim-mop:method-specializers method)

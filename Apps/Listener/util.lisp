@@ -63,6 +63,7 @@
 (defun getenv (var)
   (or 
    #+cmu (cdr (assoc var ext:*environment-list*))
+   #+scl (cdr (assoc var ext:*environment-list* :test #'string=))
    #+sbcl (sb-ext:posix-getenv var)
    #+lispworks (lw:environment-variable var)
    #+openmcl (ccl::getenv var)
@@ -73,6 +74,7 @@
 (defun change-directory (pathname)
   "Ensure that the current directory seen by RUN-PROGRAM has changed, and update *default-pathname-defaults*"
   #+CMU (unix:unix-chdir (namestring pathname))
+  #+scl (unix:unix-chdir (ext:unix-namestring pathname))
   #+clisp (ext:cd pathname)
   ; SBCL FIXME?
  (setf *default-pathname-defaults* pathname))
@@ -85,7 +87,7 @@
 ;;; LIST-DIRECTORY is a wrapper for the CL DIRECTORY function, which really doesn't
 ;;; do what I'd like (resolves symbolic links, tends to be horribly buggy, etc.)
 
-#+CMU
+#+(or CMU scl)
 (defun list-directory (pathname)
   (directory pathname :truenamep nil))
 
@@ -143,7 +145,7 @@
   (directory pathname :directories-are-files nil))
 
 ;; Fallback to ANSI CL
-#-(OR CMU SBCL OPENMCL ALLEGRO)
+#-(OR CMU scl SBCL OPENMCL ALLEGRO)
 (defun list-directory (pathname)
   (directory pathname))
 
@@ -167,8 +169,8 @@
 ;;; (see above)
 
 (defun run-program (program args &key (wait T) (output *standard-output*) (input *standard-input*))    
-  #+CMU (ext:run-program program args :input input
-                                       :output output :wait wait)
+  #+(or CMU scl) (ext:run-program program args :input input
+				  :output output :wait wait)
 
   #+SBCL (sb-ext:run-program program args :input input :search T
                                           :output output :wait wait)
@@ -179,7 +181,7 @@
                :wait wait)
   #+clisp (ext:run-program program :arguments args :wait wait)
 
-  #-(or CMU SBCL lispworks clisp)
+  #-(or CMU scl SBCL lispworks clisp)
   (format T "~&Sorry, don't know how to run programs in your CL.~%"))
 
 ;;;; CLIM/UI utilities
@@ -256,25 +258,23 @@ this point, increment it by SPACING, which defaults to zero."
 
 (defun gen-wild-pathname (pathname)
   "Build a pathname with appropriate :wild components for the directory listing."
-  (make-pathname :host   (pathname-host pathname)
-                 :device (pathname-device pathname)
-                 :directory (pathname-directory pathname)
-                 :name (or (pathname-name pathname) :wild)
+  (make-pathname :name (or (pathname-name pathname) :wild)
                  :type (or (pathname-type pathname) :wild)
                  :version (or #+allegro :unspecific
                               :wild
                               ;#-SBCL (pathname-version pathname)
                               ;#+SBCL :newest
-                              )))
+                              )
+		 #+scl :query #+scl nil
+		 :defaults pathname))
 
 (defun strip-filespec (pathname)
   "Removes name, type, and version components from a pathname."
-  (make-pathname :host   (pathname-host pathname)
-                 :device (pathname-device pathname)
-                 :directory (pathname-directory pathname)
-                 :name nil
+  (make-pathname :name nil
                  :type nil
-                 :version nil))
+                 :version nil
+		 #+scl :query #+scl nil
+		 :defaults pathname))
 
 ;; Oops, should I be doing something with relative pathnames here?
 (defun parent-directory (pathname)
@@ -282,12 +282,8 @@ this point, increment it by SPACING, which defaults to zero."
   (let ((dir (pathname-directory (truename (strip-filespec pathname)))))
     (when (and (eq (first dir) :absolute)
                (not (zerop (length (rest dir)))))
-      (make-pathname :host   (pathname-host pathname)
-                     :device (pathname-device pathname)
-                     :directory `(:absolute ,@(nreverse (rest (reverse (rest dir)))))
-                     :name (pathname-name pathname)
-                     :type (pathname-type pathname)
-                     :version (pathname-version pathname)))))
+      (make-pathname :directory `(:absolute ,@(nreverse (rest (reverse (rest dir)))))
+		     :defaults pathname))))
 
 
 ;;;; Abbreviating item formatter

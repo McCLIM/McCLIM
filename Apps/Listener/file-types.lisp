@@ -181,7 +181,8 @@
   (:icon (standard-icon "design.xpm")))
 
 (define-mime-type (application x-lisp-fasl)
-  (:extensions "x86f" "fasl" "ibin" "dfsl" "ufsl") ; MORE!
+  (:extensions "x86f" "amd64f" "sparcf" "sparc64f" "hpf" "hp64f" "lbytef"
+	       "fasl" "ibin" "dfsl" "ufsl") ; MORE!
   (:icon (standard-icon "object.xpm")))
 
 (define-mime-type (text x-shellscript)

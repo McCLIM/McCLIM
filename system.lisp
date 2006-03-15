@@ -80,6 +80,7 @@
   ;; First possible patches
   "patch"
   #+cmu       "Lisp-Dep/fix-cmu"
+  #+scl       "Lisp-Dep/fix-scl"
   #+excl      "Lisp-Dep/fix-acl"
   #+sbcl      "Lisp-Dep/fix-sbcl"
   #+openmcl   "Lisp-Dep/fix-openmcl"
@@ -101,6 +102,7 @@
       #+excl                    "Lisp-Dep/mp-acl"
       #+openmcl                 "Lisp-Dep/mp-openmcl"
       #+lispworks               "Lisp-Dep/mp-lw"
+      #+scl                     "Lisp-Dep/mp-scl"
       #| fall back |#           "Lisp-Dep/mp-nil")
    "utils"
    "defresource"
