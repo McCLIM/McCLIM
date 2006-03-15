@@ -178,19 +178,6 @@
 			     :menu ',menu
 			     :errorp nil))))
 
-(defun command-name-from-symbol (symbol)
-  (let ((name (symbol-name symbol)))
-    (string-capitalize
-     (substitute
-      #\Space #\-
-      (subseq name (if (string= "COM-" name :end2 (min (length name) 4))
-		       4
-		       0))))))
-
-(defun keyword-arg-name-from-symbol (symbol)
-  (let ((name (symbol-name symbol)))
-    (string-capitalize (substitute #\Space #\- name))))
-
 (defun remove-command-from-command-table (command-name
 					  command-table
 					  &key (errorp t))

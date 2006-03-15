@@ -574,3 +574,18 @@ STREAM in the direction DIRECTION."
      (intern (symbol-name obj) :keyword))
     (string
      (intern (string-upcase obj) :keyword))))
+
+;;; Command name utilities that are useful elsewhere.
+
+(defun command-name-from-symbol (symbol)
+  (let ((name (symbol-name symbol)))
+    (string-capitalize
+     (substitute
+      #\Space #\-
+      (subseq name (if (string= '#:com- name :end2 (min (length name) 4))
+		       4
+		       0))))))
+
+(defun keyword-arg-name-from-symbol (symbol)
+  (let ((name (symbol-name symbol)))
+    (string-capitalize (substitute #\Space #\- name))))

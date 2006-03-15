@@ -1598,8 +1598,6 @@ and used to ensure that presentation-translators-caches are up to date.")
 				       x y)
 				      context-type))
 	(return-from test-presentation-translator nil))))
-  
-  
   t)
 
 ;;; presentation-contains-position moved to presentation-defs.lisp
@@ -1661,9 +1659,14 @@ and used to ensure that presentation-translators-caches are up to date.")
 		  presentation
 		  x y)))))
 
+(defun window-modifier-state (window)
+  "Provides default modifier state for presentation translator functions."
+  (let ((pointer (port-pointer (port window))))
+    (pointer-modifier-state pointer)))
+
 (defun find-applicable-translators
     (presentation input-context frame window x y
-     &key event (modifier-state 0) for-menu fastp)
+     &key event (modifier-state (window-modifier-state window)) for-menu fastp)
   (let ((results nil))
     (flet ((fast-func (translator presentation context)
 	     (declare (ignore translator presentation context))
@@ -1751,7 +1754,9 @@ and used to ensure that presentation-translators-caches are up to date.")
 
 (defun find-innermost-applicable-presentation
     (input-context window x y
-     &key (frame *application-frame*) modifier-state event)
+     &key (frame *application-frame*)
+     (modifier-state (window-modifier-state window))
+     event)
   (values (find-innermost-presentation-match input-context
                                              (stream-output-history window)
                                              frame
@@ -1761,12 +1766,13 @@ and used to ensure that presentation-translators-caches are up to date.")
                                              modifier-state
 					     nil)))
 
-(defun find-innermost-presentation-context (input-context window x y
-					    &key
-					    (top-record
-					     (stream-output-history window))
-					    (frame *application-frame*)
-					    event modifier-state button)
+(defun find-innermost-presentation-context
+    (input-context window x y
+     &key (top-record (stream-output-history window))
+     (frame *application-frame*)
+     event
+     (modifier-state (window-modifier-state window))
+     button)
   (find-innermost-presentation-match input-context
 				     top-record
 				     frame

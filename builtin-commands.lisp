@@ -136,7 +136,9 @@
                           :for-menu t))
 
 ;;; Action for possibilities menu of complete-input
-
+;;;
+;;; XXX The context type needs to change to COMPLETER or something so that this
+;;; isn't applicable all over the place.
 (define-presentation-action possibilities-menu
     (blank-area nil global-command-table
      :documentation "Possibilities menu for completion"

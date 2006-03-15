@@ -321,7 +321,8 @@
                (:file "presentation-test")
                #+clx (:file "gadget-test")
                (:file "accepting-values")
-               (:file "method-browser")))))
+               (:file "method-browser")
+	       (:file "dragndrop-translator")))))
 
 ;;; This won't load in SBCL, either. I have really crappy code to
 ;;; extract dependency information from :serial t ASDF systems, but

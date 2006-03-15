@@ -502,6 +502,10 @@ rendered on MEDIUM with the style LINE-STYLE."))
 (defgeneric port-disable-sheet (port sheet))
 (defgeneric port-pointer (port))
 
+(defgeneric pointer-update-state (pointer event)
+  (:documentation "Called by port event dispatching code to update the modifier
+and button states of the pointer."))
+
 ;;;
 
 ;; Used in stream-input.lisp, defined in frames.lisp

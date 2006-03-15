@@ -2047,7 +2047,7 @@ call-next-method to get the \"real\" answer based on the stream type."))
            (gesture :select)
            (tester 'default-translator-tester)
            documentation
-           pointer-documentation
+           (pointer-documentation nil pointer-doc-p)
            (menu t)
            (priority 0)
            (feedback 'frame-drag-and-drop-feedback)
@@ -2056,14 +2056,25 @@ call-next-method to get the \"real\" answer based on the stream type."))
      &body body)
   (declare (ignore tester gesture documentation pointer-documentation
 		   menu priority))
-  (let ((real-dest-type (expand-presentation-type-abbreviation
-			  destination-type)))
-    
-    (with-keywords-removed (args (:feedback :highlighting))
+  (let* ((real-dest-type (expand-presentation-type-abbreviation
+			  destination-type))
+	 (name-string (command-name-from-symbol name))
+	 (drag-string (format nil "Drag to ~A" name-string))
+	 (pointer-doc (if pointer-doc-p
+			  nil
+			  `(:pointer-documentation
+			    ((object destination-object stream)
+			     (declare (ignore object))
+			     (write-string (if destination-object
+					       ,name-string
+					       ,drag-string)
+			                   stream))))))
+        (with-keywords-removed (args (:feedback :highlighting))
       `(progn
 	 (define-presentation-translator ,name
 	     (,from-type ,to-type ,command-table
 	      ,@args
+	      ,@pointer-doc
 	      :feedback #',feedback :highlighting #',highlighting
 	      :destination-ptype ',real-dest-type
 	      :destination-translator #',(make-translator-fun arglist body)

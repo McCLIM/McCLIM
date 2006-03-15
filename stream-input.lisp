@@ -644,7 +644,10 @@
 ;;; backends.
 
 (defclass standard-pointer (pointer)
-  ((port :reader port :initarg :port)))
+  ((port :reader port :initarg :port)
+   (state-lock :reader state-lock :initform (make-lock "pointer lock"))
+   (button-state :initform 0 )
+   (modifier-state :initform 0)))
 
 (defgeneric pointer-sheet (pointer))
 
@@ -680,8 +683,37 @@
   (with-accessors ((port-pointer-sheet port-pointer-sheet))
       (port sheet)
     (when (eq port-pointer-sheet sheet)
+
       (setq port-pointer-sheet nil))))
 
+(defmethod pointer-button-state ((pointer standard-pointer))
+  (with-lock-held ((state-lock pointer))
+    (slot-value pointer 'button-state)))
+
+(defmethod pointer-modifier-state ((pointer standard-pointer))
+  (with-lock-held ((state-lock pointer))
+    (slot-value pointer 'modifier-state)))
+
+(defmethod pointer-update-state
+    ((pointer standard-pointer) (event keyboard-event))
+  (with-lock-held ((state-lock pointer))
+    (setf (slot-value pointer 'modifier-state) (event-modifier-state event))))
+
+(defmethod pointer-update-state
+    ((pointer standard-pointer) (event pointer-button-press-event))
+  (with-lock-held ((state-lock pointer))
+    (setf (slot-value pointer 'button-state)
+	  (logior (slot-value pointer 'button-state)
+		  (pointer-event-button event)))))
+
+(defmethod pointer-update-state
+    ((pointer standard-pointer) (event pointer-button-release-event))
+  (with-lock-held ((state-lock pointer))
+    (setf (slot-value pointer 'button-state)
+	  (logandc2 (slot-value pointer 'button-state)
+		    (pointer-event-button event)))))
+
+(defmethod pointer-butt)
 (defgeneric stream-pointer-position (stream &key pointer))
 
 (defmethod stream-pointer-position ((stream standard-extended-input-stream)

@@ -89,6 +89,7 @@
 
 (clim-defsystem (:clim-core :depends-on (:clim-lisp))
    "decls"
+   "protocol-classes"
 
    #.(or
       #+(and :cmu :mp (not :pthread))  "Lisp-Dep/mp-cmu"
@@ -213,6 +214,7 @@
    "Examples/dragndrop"
    "Examples/gadget-test"
    "Examples/method-browser"
+   "Examples/dragndrop-translator"
    "Goatee/goatee-test"
    "Examples/accepting-values")
 

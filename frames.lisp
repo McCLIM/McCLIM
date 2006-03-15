@@ -1460,17 +1460,19 @@ documentation produced by presentations.")))
 ;;; Classic CLIM seems to agree. -- moore
 (defun highlight-for-tracking-pointer (frame stream event input-context
 				       highlight)
-  (let ((context-ptype (input-context-type (car input-context)))
-	(presentation nil)
+  (let ((presentation nil)
 	(current-hilited (frame-hilited-presentation frame)))
     (when (output-recording-stream-p stream)
-      (setq presentation (find-innermost-applicable-presentation
-			  input-context
-			  stream
-			  (device-event-x event)
-			  (device-event-y event)
-			  :frame frame
-			  :event event)))
+      ;; XXX Massive hack to prevent the presentation action for completions
+      ;; from being applicable. After the .9.2.2 release that action will have
+      ;; a more restrictive context type.
+      (let ((*completion-possibilities-continuation* nil))
+	(setq presentation (find-innermost-applicable-presentation
+			    input-context
+			    stream
+			    (device-event-x event)
+			    (device-event-y event)
+			    :frame frame))))
     (when (and current-hilited (not (eq (car current-hilited) presentation)))
       (highlight-presentation-1 (car current-hilited)
 				(cdr current-hilited)
@@ -1641,7 +1643,7 @@ documentation produced by presentations.")))
 	(tracking-pointer (window :context-type `(or ,(mapcar #'from-type
 							      translators))
 				  :highlight nil
-				  :multiple-window t)
+				  :multiple-window nil)	;XXX
 	  (:presentation (&key presentation window event x y)
 	    (let ((dest-translator (find-dest-translator presentation window
 							 x y)))
