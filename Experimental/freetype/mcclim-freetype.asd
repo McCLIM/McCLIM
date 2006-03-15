@@ -12,13 +12,20 @@ your lisp's init file:
 (defpackage :mcclim-freetype-system (:use :cl :asdf))
 (in-package :mcclim-freetype-system)
 
-(defclass uncompiled-cl-source-file (cl-source-file) ())
+(defclass uncompiled-cl-source-file (source-file) ())
 
 (defmethod perform ((o compile-op) (f uncompiled-cl-source-file))
   t)
-
+(defmethod perform ((o load-op) (f uncompiled-cl-source-file))
+  (mapcar #'load (input-files o f)))
 (defmethod output-files ((operation compile-op) (c uncompiled-cl-source-file))
+  nil)
+(defmethod input-files ((operation load-op) (c uncompiled-cl-source-file))
   (list (component-pathname c)))
+(defmethod operation-done-p ((operation compile-op) (c uncompiled-cl-source-file))
+  t)
+(defmethod source-file-type ((c uncompiled-cl-source-file) (s module))
+  "lisp")
 
 (defsystem :mcclim-freetype
   :depends-on (:clim-clx)
