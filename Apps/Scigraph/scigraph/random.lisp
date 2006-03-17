@@ -289,7 +289,7 @@ CACM, June 1988, Vol 31, Number 6, p. 742-774.
 				  (setq .entry. (multiple-value-list ,@body)))
 			    (values-list .entry.))))))
 
-  `(let ((.table. ,(make-hash-table :test #'equal)))
+  `(let ((.table. (load-time-value (make-hash-table :test #'equal))))
      ,(if (cdr args)
 	  `(with-stack-list (.args. ,@args) ,body)
 	  `(let ((.args. ,(first args))) ,body)))))

@@ -320,7 +320,7 @@ without any way to override them.  So this is commented out.
 
 (defconstant *DASH-PATTERN-SIZE* 64 "Length of dashed pattern in pixels.")
 (defconstant *DASH-STEP-SIZE* (/ *dash-pattern-size* 8))
-(defconstant *DASH-PATTERNS*
+(defvar *DASH-PATTERNS*
 	     #2A((8  7  6  5  4  3  2  1)
 		 (7  6  5  4  3  2  1 -1)
 		 (5  4  3  2  1 -1  1 -1)
@@ -331,7 +331,7 @@ without any way to override them.  So this is commented out.
 		 (1 -1  1 -1  1 -1  1 -1))
 	     "Dashed line patterns.  -1 -> lift pen.")
 
-(defconstant *dash-pattern-alist*
+(defvar *dash-pattern-alist*
 	     '(("----------------" :value 0)
 	       ("------- ------- " :value 1)
 	       ("----- - ----- - " :value 2)

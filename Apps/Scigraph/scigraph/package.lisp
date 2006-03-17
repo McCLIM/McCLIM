@@ -27,22 +27,25 @@ advised of the possiblity of such damages.
 
 (in-package #-ansi-cl :user #+ansi-cl :common-lisp-user)
 
-(eval-when (compile load eval)
-  (defpackage TOOL
-    #+MCL     (:shadow copy)
-    (:use dwim-lisp)))
+(defpackage TOOL
+  #+MCL     (:shadow copy)
+  (:use dwim-lisp))
 
-(eval-when (compile load eval)
-  (defpackage STATISTICS
-    (:nicknames stat st)
-    (:use dwim-lisp)))
+(defpackage STATISTICS
+  (:nicknames stat st)
+  (:use dwim-lisp))
 
-(eval-when (compile load eval)
-  (defpackage GRAPH
-    #-allegro (:nicknames gr)           ; "GR" names something already.
-    (:shadow variable)                  ; shouldn't be inherited but is
-    #+MCL     (:shadow copy)
-    (:use dwim-lisp tool statistics)))
+(defpackage GRAPH
+  #-allegro (:nicknames gr)           ; "GR" names something already.
+  (:shadow variable)                  ; shouldn't be inherited but is
+  #+MCL     (:shadow copy)
+  (:use dwim-lisp tool statistics))
+
+(in-package :graph)
+
+(declaim (declaration downward-funarg
+		      downward-function
+		      array-register))
+
 
 (dwim:make-command-table :graph)
-

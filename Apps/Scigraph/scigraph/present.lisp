@@ -178,7 +178,7 @@ advised of the possiblity of such damages.
 	    (dotimes (column columns)
 	      (let ((g nil))
 		(dotimes (row rows)
-		  (ignore row)
+		  (declare (ignore row))
 		  (let ((temp (pop graphs)))
 		    (and temp (push temp g))))
 		(stream-set-cursor-position*

@@ -90,8 +90,7 @@ advised of the possiblity of such damages.
       ;; In 0.9, we can take advantage of one of the BBN clim extensions.
       (notify-user frame string)))
    (:clim-1.0
-    (progn
-      (ignore stream)
+    (locally (declare (ignore stream))
       (let ((stream clim::*pointer-documentation-output*)
 	    #+genera (documentation-window (clim::mouse-documentation-window stream)))
 	#+genera
@@ -102,16 +101,14 @@ advised of the possiblity of such damages.
 	  (window-clear stream)
 	  (format stream string)))))
    ((and :clim-2 (not :mcclim))
-    (progn
-      (ignore stream)
+    (locally (declare (ignore stream))
       (clim:frame-manager-display-pointer-documentation-string
        (frame-manager *application-frame*)
        *application-frame*
        clim:*pointer-documentation-output*
        string)))
    (:mcclim
-    (progn
-      (ignore stream)
+    (locally (declare (ignore stream))
       (clim-extensions:frame-display-pointer-documentation-string
        *application-frame* clim:*pointer-documentation-output* string)))
    ((not :clim) nil)))

@@ -557,6 +557,7 @@ advised of the possiblity of such damages.
 
 (defmethod graph-with-clipping ((self basic-graph) STREAM inside-p continuation)
   ;; Internal to WITH-CLIPPING-TO-GRAPH macro.
+  #-(or sbcl cmu)
   (declare (downward-funarg continuation))
   (multiple-value-bind (le re be te)
       (if inside-p (screen-inside self STREAM) (screen-outside self STREAM))

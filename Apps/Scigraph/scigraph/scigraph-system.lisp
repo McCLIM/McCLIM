@@ -86,6 +86,3 @@ See the file scigraph.doc for user documentation.
   ("frame" :load-before-compile ("duplicate-methods")) 
   ("export" :load-before-compile ("frame")) 
   ("demo-frame" :load-before-compile ("export")))
-  
-
-

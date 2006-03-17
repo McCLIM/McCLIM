@@ -94,11 +94,13 @@ PROTOCOL:
 
 (defmethod map-data ((dataset t) function (data sequence))
   "Map FUNCTION over each datum."
+  #-(or sbcl cmu)
   (declare (downward-funarg function))
   (map nil function data))
 
 (defmethod map-data-xy ((dataset ESSENTIAL-GRAPH-DATA-MAP-MIXIN) function data)
   "Map function over each x y pair."
+  #-(or sbcl cmu)
   (declare (downward-funarg function))
   (declare (compiled-function function))
   (map-data dataset
@@ -649,7 +651,7 @@ PROTOCOL:
 	 (last-in nil)
 	 (last-u NIL)
 	 (last-v NIL))
-    (declare (fixnum last-u last-v thickness))
+    (declare (fixnum thickness))
     (if (< bottom top) (psetq top bottom bottom top))
     (if (zerop line-style)
 	(let ((displayer (compute-line-displayer self)))
@@ -1115,7 +1117,7 @@ way.  The graph takes the union of the limits returned.
   (unless *repainting-dataset*
     (with-new-output-record (stream 'dataset-record-element record
 					 :dataset dataset :graph graph)
-				 (ignore record)
+				 (declare (ignore record))
 				 :done)))
 
 (defclass presentable-mixin
