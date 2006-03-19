@@ -1,4 +1,4 @@
-(define-application-frarae hello-frame () ()
+(define-application-frame hello-frame () ()
   (:pane (make-instance 'hello-data-pane
 			:hs 200 :hs+ +fill+ :vs 200 :vs+ +fill+))
   (:settings :title "Hello from Lisp"))
