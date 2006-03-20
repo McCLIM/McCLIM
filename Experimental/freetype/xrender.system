@@ -1,7 +1,0 @@
-(mk:defsystem :xrender
-    :source-pathname #.(make-pathname :name nil :type nil
-                                      :defaults (truename *load-pathname*) )
-    :source-extension "lisp"
-    :components
-    ("xrender.lisp"))
-
