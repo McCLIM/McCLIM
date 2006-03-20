@@ -2073,6 +2073,7 @@ call-next-method to get the \"real\" answer based on the stream type."))
       `(progn
 	 (define-presentation-translator ,name
 	     (,from-type ,to-type ,command-table
+	      :tester-definitive t
 	      ,@args
 	      ,@pointer-doc
 	      :feedback #',feedback :highlighting #',highlighting

@@ -301,6 +301,12 @@
 	;; We don't want activation gestures like :return causing an eof
 	;; while reading a form. Also, we don't want spaces within forms or
 	;; strings causing a premature return either!
+	;; XXX This loses when rescanning (possibly in other contexts too) an
+	;; activated input buffer (e.g., reading an expression from the accept
+	;; method for OR where the previous readers have already given
+	;; up). We should call *sys-read-preserving-whitespace* and handle the
+	;; munching of whitespace ourselves according to the
+	;; PRESERVE-WHITESPACE parameter. Fix after .9.2.2.
 	(with-delimiter-gestures (nil :override t)
 	  (with-activation-gestures (nil :override t)
 	    (setq object (funcall (if preserve-whitespace

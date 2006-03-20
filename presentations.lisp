@@ -1228,6 +1228,9 @@ and used to ensure that presentation-translators-caches are up to date.")
     :writer (setf presentation-translators-cache)
     :initform (make-hash-table :test #'equal))))
 
+(defun invalidate-translator-caches ()
+  (incf *current-translator-cache-generation*))
+
 (defmethod presentation-translators-cache ((table translator-table))
   (with-slots ((cache presentation-translators-cache)
 	       (generation translator-cache-generation))
@@ -1269,10 +1272,11 @@ and used to ensure that presentation-translators-caches are up to date.")
 	      (remove old
 		      (gethash (presentation-type-name (from-type old))
 			       simple-type-translators))))
-      (incf *current-translator-cache-generation*)
+      (invalidate-translator-caches)
       (setf (gethash (name translator) translators) translator)
       (push translator
-	    (gethash (from-type translator) simple-type-translators)))))
+	    (gethash (from-type translator) simple-type-translators))
+      translator)))
 
 (defun make-translator-fun (args body)
   (multiple-value-bind (ll ignore)
@@ -1301,7 +1305,7 @@ and used to ensure that presentation-translators-caches are up to date.")
 	   (gesture :select)
 	   (tester 'default-translator-tester testerp)
 	   (tester-definitive (if testerp nil t))
-	   (documentation nil)
+	   (documentation nil documentationp)
 	   (pointer-documentation nil pointer-documentation-p)
 	   (menu t)
 	   (priority 0)
@@ -1335,7 +1339,10 @@ and used to ensure that presentation-translators-caches are up to date.")
 							      (cdr tester)))
 			:tester-definitive ',tester-definitive
 			:documentation #',(make-documentation-fun
-					   documentation)
+					   (if documentationp
+					       documentation
+					       (command-name-from-symbol
+						name)))
 			,@(when pointer-documentation-p
 				`(:pointer-documentation
 				  #',(make-documentation-fun
@@ -1350,7 +1357,7 @@ and used to ensure that presentation-translators-caches are up to date.")
     (name (from-type to-type command-table &key
 	   (gesture :select)
 	   (tester 'default-translator-tester)
-	   (documentation nil)
+	   (documentation nil documentationp)
 	   (pointer-documentation nil pointer-documentation-p)
 	   (menu t)
 	   (priority 0))
@@ -1373,7 +1380,10 @@ and used to ensure that presentation-translators-caches are up to date.")
 		    `#',(make-translator-fun (car tester)
 					     (cdr tester)))
        :tester-definitive t
-       :documentation #',(make-documentation-fun documentation)
+       :documentation #',(make-documentation-fun (if documentationp
+						     documentation
+						     (command-name-from-symbol
+						      name)))
        ,@(when pointer-documentation-p
 	       `(:pointer-documentation
 		 #',(make-documentation-fun pointer-documentation)))

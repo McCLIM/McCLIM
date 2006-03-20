@@ -84,7 +84,15 @@
 (defmethod print-object ((table standard-command-table) stream)
   (print-unreadable-object (table stream :identity t :type t)
     (format stream "~S" (command-table-name table))))
-   
+
+;;; Franz user manual says that this slot is setf-able
+(defgeneric (setf command-table-inherit-from) (inherit-from table))
+
+(defmethod (setf command-table-inherit-from)
+    (inherit (table standard-command-table))
+  (invalidate-translator-caches)
+  (setf (slot-value table 'inherit-from) inherit))
+
 (defparameter *command-tables* (make-hash-table :test #'eq))
 
 (define-condition command-table-error (error)

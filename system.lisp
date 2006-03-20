@@ -267,7 +267,6 @@
 (clim-defsystem (:clim-listener :depends-on (:clim #+clx :clim-looks #+sbcl :sb-posix))
   "Experimental/xpm"
   "Apps/Listener/package"
-  "Apps/Listener/hotfixes"
   "Apps/Listener/util"
   "Apps/Listener/icons.lisp"
   "Apps/Listener/file-types"

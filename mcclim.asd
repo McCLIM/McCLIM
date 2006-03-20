@@ -56,7 +56,7 @@
   (defclass requireable-system (asdf:system)
        ())
   (defmethod asdf:perform ((op asdf:load-op) (system requireable-system))
-    (require (intern (slot-value system 'asdf::name) "KEYWORD")))
+    (require (intern (slot-value system 'asdf::name) :keyword)))
   (defmethod asdf::traverse ((op asdf:load-op) (system requireable-system))
     (list (cons op system)))  
   (defsystem :clx
