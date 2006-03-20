@@ -189,7 +189,7 @@
                (:file "standard-metrics" :depends-on ("font" "package"))))))
 
 (defsystem :clim
-    :depends-on (:clim-core :goatee-core :clim-postscript)
+    :depends-on (:clim-core :goatee-core)
     :components
     ((:file "text-formatting")
      (:file "input-editing")
@@ -288,7 +288,7 @@
 ;;; A system that loads the appropriate backend for the current
 ;;; platform.
 (defsystem :clim-looks
-    :depends-on (:clim
+    :depends-on (:clim :clim-postscript
                  ;; If we're on an implementation that ships CLX, use
                  ;; it. Same if the user has loaded CLX already.
                  #+(or sbcl scl openmcl ecl clx allegro) :clim-clx
