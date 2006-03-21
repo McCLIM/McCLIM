@@ -991,7 +991,7 @@ combination.
 
 \subsection{A simple drawing application}
 
-We move on to a simple drawing application that draws
+We move on to a simple application that draws
 lines and inserts text interactively. Our simple drawing program
 defines commands for various drawing operations and binds specific
 input events to these commands.
@@ -1004,6 +1004,11 @@ that should be available in frame layouts. The \keyword{:layouts}
 keyword combines them into several layouts. It is possible to define
 multiple layouts with this option. We define two simple layouts,
 \code{default-layout} and \code{alternative}.
+
+% I was confused by the discussion of layouts here.  Looking at Figure
+% 4, I do not see an alternative layout, and the default-default in
+% the listing looks odd to me.  Is this the remainder of a discussion
+% that was deleted or an extension yet to be written? [2006/03/19:rpg]
 
 \begin{figure*}[t]
 \lstset{style=framestyle}
@@ -1048,8 +1053,18 @@ permanently visible on screen during its instances' lifetime. Most
 static user interfaces use this mixin. Note that \mcclim{} is sensitive
 to the order of the superclasses.\footnote{All stream classes like
 \class{standard-extended-input-stream} must be listed before
-\class{basic-pane}. Otherwise, there are no stream handling facilities
-available.}
+\class{basic-pane}. Otherwise, no stream handling facilities
+will be available.}
+
+% The above footnote refers to what looks like a very big potential
+% ``gotcha'' for the beginning McCLIM programmer.  Suggestion: promote
+% this out of the footnote into body text as a main body paragraph
+% here.  That paragraph should explain (1) why is it that putting
+% basic-pane before standard-extended-input-stream will cause stream
+% handling facilities to be crushed and (2) what exactly are the
+% implications of not having stream handling facilities.  The phrase
+% ``stream handling'' hasn't been defined, and it's not obvious what
+% these facilities are. [2006/03/19:rpg]
 
 For \class{draw-pane}, the \method{handle-repaint} method shown in
 \figurename~\ref{fig-draw-handlerepaint} is straightforward. It
@@ -1085,41 +1100,61 @@ At this point, we can actually use the application; although not very
 conveniently. The interactor pane can be used to invoke one of three
 commands, either by typing the complete command including all its
 parameters or by typing only the command name, then a dialog queries
-the user for the missing command argument. Clicking on the menu bar
-entries is also possible. Also in this case, the user is queried for
-the missing arguments.
+the user for the missing command argument(s). Clicking on the menu bar
+entries is another way to invoke commands.  When commands are invoked
+through the menu bar, the user will be queried for the missing
+argument(s) in the same way as if a command had been typed into the
+interactor pane.
+% also possible. Also in this case, the user is queried for
+% the missing arguments.
 
 But drawing by typing coordinates is not convenient. Therefore, we
 attach these commands to other user interactions.  Figure
-\ref{fig-draw-interfacing} defines input methods for pointer button
-presses as well as key presses on the draw pane. Both handlers invoke
-the respective tracking function that uses \macro{tracking-pointer} to
+\ref{fig-draw-interfacing} defines input methods (methods for
+\code{handle-event}) for pointer button
+presses as well as key presses on the draw pane.  
+Each handler invokes a tracking function (\code{track-line-drawing} and
+\code{track-text-drawing}) that uses \macro{tracking-pointer} to
 bypass the regular input distribution channels and to dispatch events
 to user defined handlers.
+% old text: [2006/03/19:rpg]
+% Both handlers invoke
+% the respective tracking function that uses \macro{tracking-pointer} to
+% bypass the regular input distribution channels and to dispatch events
+% to user defined handlers.
 
-For \class{pointer-button-press-event}, the input loop manages a
-``rubber-banding'' line. The \keyword{:pointer-motion} is invoked
+For \class{pointer-button-press-event}, which is used to draw lines, 
+the input loop manages a
+``rubber-banding'' line. %
+% what is pointer-motion here?  Is it an event?  And it's not really
+% the event that's invoked, to be absolutely clear.  The event is
+% signaled, and the tracking-pointer macro provides a handler for that
+% event.  So it is the code associated with :pointer-motion that is
+% invoked...  I wasn't confident enough in my understanding of the
+% precise organization of the (Mc)CLIM architecture to venture a
+% rewrite, but there should be a clarification here. [2006/03/19:rpg]
+The \keyword{:pointer-motion} is invoked
 whenever the mouse pointer is moved by the user. The code attached to
-\keyword{:pointer-motion} clears line already drawn and draws a new
+\keyword{:pointer-motion} clears the previously-drawn line and draws a new
 line with the new pointer position. It can easily undraw the old line
 by the using the special ink \constant{+flipping-ink+}. When the user
 confirms the line by releasing the pointer button, a command to the
 application is synthesized via \method{execute-frame-command}
 supplying all required parameters.
 
-Similarly, we provide such an input facility for text input. Whenever
+We provide a similar  input facility for text input. Whenever
 the user hits a key in the draw-pane, the respective
 \method{handle-event} calls \method{track-text-drawing} which attaches
-the character entered to the mouse pointer. Similarly to the
-rubber-banding line, the user can move the around this character while
+the character entered to the mouse pointer.  As with the
+rubber-banding line, the user can move the displayed string around while
 he is free to append additional string characters by additional key
 presses. He can confirm the text position with a mouse click causing a
-command to be dispatched to the application frame adding the text to
+command to be dispatched to the application frame that will add the text to
 the application frame permanently.
 
 As each of these methods invoke \code{execute-frame-command} passing
-in a special command invocation form, this naturally leads to code
-separation of how a command is invoked (menu-bar click, click on
+in a special command invocation form, this naturally leads to a
+separation between the code that specifies how a command is invoked (menu-bar click, click on
 draw-pane or typing in the interactor pane) and the code for command
 execution (code bodies of \method{define-command}).
 
