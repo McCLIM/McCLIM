@@ -78,7 +78,7 @@
 		       #-(or allegro cmu scl) (getenv "USER")
                        "luser"))  ; sorry..
          (sitename (machine-instance))
-         (memusage #+(or cmu scl) (lisp::dynamic-space-usage)
+         (memusage #+(or cmu scl) (lisp::dynamic-usage)
                    #+sbcl  (sb-kernel:dynamic-usage)
                    #+lispworks (getf (system:room-values) :total-allocated)
 		   #+openmcl (+ (ccl::%usedbytes) (ccl::%freebytes))
