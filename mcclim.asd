@@ -286,16 +286,24 @@
               :components
               ((:file "calculator")
                (:file "colorslider")
+	       (:file "menutest") ; extra
                (:file "address-book")
                (:file "traffic-lights")
                (:file "clim-fig")
                (:file "postscript-test")
+               (:file "puzzle")
+               (:file "transformations-test")
+	       (:file "demodemo")
                (:file "stream-test")
                (:file "presentation-test")
+               (:file "dragndrop")
                #+clx (:file "gadget-test")
                (:file "accepting-values")
                (:file "method-browser")
-	       (:file "dragndrop-translator")))))
+	       (:file "dragndrop-translator")))
+     (:module "Goatee"
+	      :components
+	      ((:file "goatee-test")))))
 
 ;;; This won't load in SBCL, either. I have really crappy code to
 ;;; extract dependency information from :serial t ASDF systems, but
