@@ -93,7 +93,7 @@ McCLIM comes with some interesting demo programs and applications:
 
    
    functional-geometry - Frank Buss' and Rainer Joswig's functional
-   geometry explorer, implmented on top of clim-listener:
+   geometry explorer, implemented on top of clim-listener:
 
    (load "Apps/Functional-Geometry/functional-geometry.asd")
    (asdf:oos 'asdf:load :functional-geometry)
