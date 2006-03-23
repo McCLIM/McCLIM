@@ -200,71 +200,104 @@ Width    = width
 
 ;;; All mediums and output sheets must implement a method for this generic function.
 
-(defmethod text-size ((medium beagle-medium) string &key text-style (start 0) end)
+;;; Helper that doesn't handle newline
+
+;;; XXX text-size and text-bounding-rectangle* are both broken because the
+;;; Cocoa NSString function :size-with-attributes is quite buggy. Text
+;;; rendering should be rewritten to use glyphs or ATSUI (a pleasant task I'm
+;;; sure). -- moore
+
+(defun text-size-aux (medium string font start end)
+  ;; See if there's a better way to do this; is this stack allocation?
+  (let ((objc-str (%make-nsstring (subseq string start end))))
+    (slet ((bsize (send objc-str :size-with-attributes
+			(reuse-attribute-dictionary medium font))))
+      (let* ((descender (abs (send font 'descender)))
+	     (fragment-width (pref bsize :<NSS>ize.width))
+	     (fragment-height (pref bsize :<NSS>ize.height))
+	     (fragment-baseline (- fragment-height descender)))
+	(send objc-str 'release)
+	(values fragment-width fragment-height descender fragment-baseline)))))
+
+(defmethod text-size ((medium beagle-medium) (s character)
+		      &key (text-style (medium-text-style medium))
+		      (start 0)
+		      (end 1))
+  (text-size medium (string s) :text-style text-style :start start :end end))
+
+(defmethod text-size ((medium beagle-medium) (string string)
+		      &key (text-style (medium-text-style medium))
+		      (start 0)
+		      ( end (length string)))
   (declare (special *default-text-style*))
-  
-  ;; Method can be passed either a string or a char; make sure for the latter
-  ;; that we see only strings.
-  (when (characterp string)
-    (setf string (string string)))
-
-  ;; Make sure there's an 'end' specified
-  (unless end
-    (setf end (length string)))
-
-  ;; Make sure there's a text-style
-  (unless text-style
-    (setf text-style (medium-text-style medium)))
-
   ;; Check for 'empty string' case
-  (if (>= start end)
-      (values 0 0 0 0 0)
-    (let ((position-newline (position #\newline string :start start))
-	  ;; See if there's a better way to do this; is this stack
-	  ;; allocation?
-	  (objc-str (%make-nsstring (subseq string start end)))
-	  (font (%text-style->beagle-font (or text-style
-					      *default-text-style*))))
-      (slet ((bsize (send objc-str :size-with-attributes
-			  (reuse-attribute-dictionary medium font))))
-	    ;; Don't use 'text-style-descent' in the following, since that
-	    ;; method is defined in terms of this one :-)
-        (let* ((descender (abs (send font 'descender)))
-	       (fragment-width (pref bsize :<NSS>ize.width))
-	       (fragment-height (pref bsize :<NSS>ize.height))
-	       (fragment-x (pref bsize :<NSS>ize.width))
-	       ;; subtract line height from this later...
-	       (fragment-y (pref bsize :<NSS>ize.height))
-	       ;; baseline = height - descender
-	       (fragment-baseline (- fragment-height descender)))
-	  (send objc-str 'release)
-	  (if (null position-newline)
-	      (values fragment-width
-		      fragment-height
-		      fragment-x
-		      (- fragment-y fragment-height)
-		      fragment-baseline)
-	    (progn
-	      (multiple-value-bind (w h x y b)
-		  (text-size medium string :text-style text-style
-			     :start position-newline
-			     :end end)
-		;; Current width, or width of sub-fragment, whichever
-		;; is larger
-		(let ((largest-width (max fragment-width w))
-		      ;; current height + height of sub-fragment
-		      (current+fragment-height (+ fragment-height h))
-		      ;; new y position; one line height smaller than the
-		      ;; total height
-		      (y-position (- (+ fragment-y y) fragment-height))
-		      ;; baseline of string; total height - baseline size, where
-		      ;; baseline 'size' is (line-height - baseline).
-		      (baseline (- (+ fragment-height h) (- h b))))
-		  (values largest-width
-			  current+fragment-height
-			  x      ; always use last x calculated...
-			  y-position
-			  baseline))))))))))
+  (when (>= start end)
+    ;; XXX is 0 value for the baseline correct?
+    (return-from text-size (values 0 0 0 0 0)))
+  (let ((position-newline (position #\newline string :start start :end end))
+	(font (%text-style->beagle-font (or text-style *default-text-style*))))
+    (multiple-value-bind
+	  (fragment-width fragment-height descender fragment-baseline)
+	(text-size-aux medium string font start (or position-newline end))
+      (declare (ignore descender))
+      (unless position-newline
+	(return-from text-size
+	  (values fragment-width fragment-height fragment-width 0
+		  fragment-baseline)))
+      (multiple-value-bind (w h x y b)
+	  (text-size medium string :text-style text-style
+		     :start (1+ position-newline)
+		     :end end)
+	;; Current width, or width of sub-fragment, whichever is larger
+	(let ((largest-width (max fragment-width w))
+	      ;; current height + height of sub-fragment
+	      (current+fragment-height (+ fragment-height h))
+	      ;; new y position; one line height smaller than the total height
+	      (y-position y)
+	      ;; baseline of string; total height - baseline size, where
+	      ;; baseline 'size' is (line-height - baseline).
+	      (Baseline (- (+ fragment-height h) (- h b))))
+	  (values largest-width
+		  current+fragment-height
+		  x			; always use last x calculated...
+		  y-position
+		  baseline))))))
+
+(defmethod climi::text-bounding-rectangle*
+    ((medium beagle-medium) (s character)
+     &key (text-style (medium-text-style medium))
+		      (start 0)
+		      (end 1))
+  (climi::text-bounding-rectangle* medium (string s)
+				   :text-style text-style :start start :end end))
+
+(defmethod climi::text-bounding-rectangle*
+    ((medium beagle-medium) (s string)
+     &key (text-style (medium-text-style medium))
+     (start 0)
+     (end 1))
+    (declare (special *default-text-style*))
+  ;; Check for 'empty string' case
+  (when (>= start end)
+    (return-from climi::text-bounding-rectangle* (values 0 0 0 0)))
+  (let ((font (%text-style->beagle-font (or text-style *default-text-style*)))
+	(height 0)
+	(width 0)
+	(baseline nil))
+    (loop
+       for line-start = start then (1+ line-end)
+       for line-end = (position #\newline s :start line-start :end end)
+       do (multiple-value-bind
+		(fragment-width fragment-height descender fragment-baseline)
+	      (text-size-aux medium s font line-start (or line-end end))
+	    (declare (ignore descender))
+	    (incf height fragment-height)
+	    (setq width (max width fragment-width))
+	    (unless baseline
+	      (setq baseline fragment-baseline)))
+       while line-end)
+    (values 0 (- baseline) width (- height baseline))))
+
 
 
 ;;; Note: we DO NOT want to draw the fonts in the medium-foreground colour - we want

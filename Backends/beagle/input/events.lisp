@@ -28,7 +28,7 @@
 
 #||
 
-$Id: events.lisp,v 1.9 2005/06/16 09:27:50 crhodes Exp $
+$Id: events.lisp,v 1.10 2006/03/23 15:27:24 tmoore Exp $
 
 Events in Cocoa
 ---------------
@@ -747,26 +747,12 @@ not a mouse event)."
 ;; Need to make use of the Cocoa method for getting modifier state - this is independent of events
 ;; pretty much (i.e. pointer documentation pane changes depending what modifier keys are pressed
 ;; prior to a mouse click etc.) ::FIXME::
-(defmethod pointer-modifier-state ((pointer beagle-pointer))
-  ;;  (multiple-value-bind (x y same-screen-p child mask)
-  ;;      (xlib:query-pointer (clx-port-window (port pointer)))
-  ;;    (declare (ignore x y same-screen-p child))
-  ;;    (x-event-state-modifiers (port pointer) mask)))
-  (warn "pointer-modifier-state: implement me")
-  nil)
-
 
 ;; Again, make use of Cocoa methods for querying the pointer position. See above ::FIXME::
 (defmethod pointer-position ((pointer beagle-pointer))
 ;; Could make use of something like the following
 ;;  (send (@class ns:ns-event) 'mouse-location)
   (warn "pointer-position: implement me")
-  nil)
-
-
-;; Ditto previous two methods...
-(defmethod pointer-button-state ((pointer beagle-pointer))
-  (warn "pointer-button-state: implement me")
   nil)
 
 ;;; Is PORT-POINTER-SHEET also needed? See STREAM-POINTER-POSITION in

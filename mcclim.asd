@@ -256,35 +256,6 @@
    "Backends/OpenGL/opengl-medium"
    "Backends/OpenGL/opengl-x-graft")
 
-;;; TODO/asf: I don't have the required macintosh to get :clim-beagle to load.
-
-(defsystem :clim-objc-support)
-(defmethod perform ((op load-op) (c (eql (find-system :clim-objc-support))))
-  (require "OBJC-SUPPORT"))
-
-(clim-defsystem (:clim-beagle :depends-on (:clim :clim-objc-support))
-   "Backends/beagle/package"
-   "Backends/beagle/lisp-window"
-   "Backends/beagle/lisp-window-delegate"
-   "Backends/beagle/lisp-view"
-   "Backends/beagle/lisp-view-additional"
-   "Backends/beagle/lisp-image"
-   "Backends/beagle/lisp-unmanaged-view"
-   "Backends/beagle/cocoa-util"
-   "Backends/beagle/port"
-   "Backends/beagle/frame-manager"
-   "Backends/beagle/medium"
-   "Backends/beagle/mirror"
-   "Backends/beagle/events"
-   "Backends/beagle/graft"
-   "Backends/beagle/fonts"
-   "Backends/beagle/image"
-   "Backends/beagle/keysymdef")
-
-;;; legacy system that loads :clim-beagle
-(defsystem :beagle
-    :depends-on (:clim-beagle))
-
 ;;; A system that loads the appropriate backend for the current
 ;;; platform.
 (defsystem :clim-looks
