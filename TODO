@@ -14,18 +14,11 @@ TBM:20031112:002300
     General designs need more work, particularly the support of
     compositing.
 
-    A compound output recording record structure based on R trees or
-    another spatial data structure is needed.
-
     make-design-from-output-record
 
     (setf* pointer-position)
 
-    drag-output-record, dragging-output
-
     More spiffy presentation accept and present methods
-
-    define-drag-and-drop-translator
 
     with-input-editor-typeout
 
@@ -39,11 +32,9 @@ TBM:20031112:002300
 
     display-command-table-menu, menu-choose-command-from-table
 
-    raise-frame, bury-frame, notify-user
+    notify-user
 
     :accept-values panes
-
-    frame-drag-and-drop-feedback, frame-drag-and-drop-highlighting 
 
     display-command-menu
 
@@ -70,6 +61,19 @@ RS:20030805:101708
     each pane to decide when it wants the input focus. 
 
 ======================  Resolved issues ======================
+TBM:20060323:175700
+    A compound output recording record structure based on R trees or
+    another spatial data structure is needed. [Implemented by
+    Christophe Rhodes and Andreas Fuchs].
+
+    drag-output-record, dragging-output
+
+    define-drag-and-drop-translator
+
+    raise-frame, bury-frame
+
+    frame-drag-and-drop-feedback, frame-drag-and-drop-highlighting 
+
 TBM:20040524:100000
     command-enable
 
