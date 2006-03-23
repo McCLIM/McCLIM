@@ -198,11 +198,11 @@
 	  (when (typep item 'menu-item)
 	    (remove-menu-item-from-command-table table
 						 (command-menu-item-name item)
-						 :errorp nil)
-	    
-	    (when (command-item-name item)
-	      (remhash (command-item-name item) (command-line-names table)))
-	    (remhash command-name (commands table)))))))
+                                                 :errorp nil))
+
+          (when (command-item-name item)
+            (remhash (command-item-name item) (command-line-names table)))
+          (remhash command-name (commands table))))))
 
 (defun add-command-to-command-table (command-name
 				     command-table

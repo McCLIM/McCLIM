@@ -41,3 +41,12 @@
                   (lookup-keystroke-command-item gesture 'menu-test-table)))))
    'menu-test-table)
   (assert (= count 1)))
+
+(define-command-table removal-test-table)
+(add-command-to-command-table 'com-test-command 'removal-test-table)
+(remove-command-from-command-table 'com-test-command 'removal-test-table)
+(assert (handler-case
+            (remove-command-from-command-table 'com-test-command
+                                               'removal-test-table)
+          (command-not-present () t)
+          (:no-error (x) (declare (ignore x)) nil)))
