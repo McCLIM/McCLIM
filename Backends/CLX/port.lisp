@@ -1412,3 +1412,24 @@
                   Sending property NIL to target.~%" target)
 	 (send-event :target target :property nil))))
     (xlib:display-force-output (xlib:window-display requestor))))
+
+;;; XXX CLX in ACL doesn't use local sockets, so here's a fix. This is gross
+;;; and should obviously be included in Franz' clx and portable clx, but I
+;;; believe that enough users will find that their X servers don't listen for
+;;; TCP connections that it is worthwhile to include this code here
+;;; temporarily.
+
+#+allegro
+(defun xlib::open-x-stream (host display protocol)
+  (declare (ignore protocol)) ;; Derive from host
+  (let ((stream (if (or (string= host "") (string= host "unix"))
+		    (socket:make-socket
+		     :address-family :file
+		     :remote-filename (format nil "/tmp/.X11-unix/X~D" display)
+		     :format :binary)
+		    (socket:make-socket :remote-host (string host)
+					:remote-port (+ *x-tcp-port* display)
+					:format :binary))))
+    (if (streamp stream)
+	stream
+      (error "Cannot connect to server: ~A:~D" host display))))
