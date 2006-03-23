@@ -363,7 +363,7 @@ advised of the possiblity of such damages.
    ((not :clim) (scl:send frame :superior))))
 
 (defun find-frame-manager (&key (if-exists :reuse))
-  (ignore if-exists)
+  (declare (ignorable if-exists))
   #FEATURE-CASE
   ((:clim-2 (clim:find-frame-manager))
    (:clim-1.0
@@ -384,10 +384,10 @@ advised of the possiblity of such damages.
 	  (tv:console-default-superior))))))
 
 (defun get-reusable-frame (manager type)
+  (declare (ignorable manager))
   #FEATURE-CASE
   (((not :clim)
     (let ((choices *deactivated-frames*))
-      (ignore manager)
       (dolist (item choices)
 	(when (and (eq (frame-manager item) manager)
 		   (typep (scl:send item :program) type))
@@ -401,7 +401,6 @@ advised of the possiblity of such damages.
    (:clim-1.0
     #-MCL
     (let ((choices *deactivated-frames*))
-      (ignore manager)
       (dolist (item choices)
 	(when (typep item type)
 	  (setq *deactivated-frames* (delete item *deactivated-frames*))
@@ -582,7 +581,6 @@ advised of the possiblity of such damages.
      :left left :top top :right (+ left width) :bottom (+ top height)))
    (:clim-2
     ;; what parent does this get?
-    #-mcclim (ignore parent)
     (let ((frame (clim:make-application-frame
 		  type
 		  :pretty-name title

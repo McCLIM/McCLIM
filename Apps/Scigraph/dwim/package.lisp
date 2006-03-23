@@ -87,6 +87,7 @@ advised of the possiblity of such damages.
 	       ;; March 1989, X3J13 votes to subsume downward-funarg & downward-function
 	       ;; by dynamic-extent.  Get rid of the next two eventually.  jpm.
 	       dwim::downward-funarg dwim::downward-function
+              #-ansi-cl
 	       dwim::dynamic-extent
 	       dwim::array-register)))
 

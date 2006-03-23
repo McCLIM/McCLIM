@@ -490,12 +490,12 @@ advised of the possiblity of such damages.
 
 #+(or clim-1.0 clim-2)
 (defmethod clim:read-frame-command :around ((frame t) &key stream)
-  (ignore stream)
+  (declare (ignore stream))
   (with-process-state (input-string) (call-next-method)))
 
 #+(or clim-1.0 clim-2)
 (defmethod clim:execute-frame-command :around ((frame t) command)
-  (ignore command)
+  (declare (ignore command))
   (with-process-state (run-string) (call-next-method)))
 
 #-clim

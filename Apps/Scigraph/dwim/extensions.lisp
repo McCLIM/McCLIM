@@ -31,6 +31,7 @@ advised of the possiblity of such damages.
 ;;; Lisp Extensions
 ;;;*****************
 
+#-(and)
 (unless (fboundp 'ignore)
   ;; Define IGNORE to be like our old friend from Genera.
   ;; This practice is frowned upon because IGNORE is in the

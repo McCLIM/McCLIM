@@ -527,9 +527,10 @@ advised of the possiblity of such damages.
 				    #+clim-0.9 nil
 				    #+clim-1.0 clim:*activation-characters*))
   (declare (ignore bchars))
+  (declare (ignorable achars))
   #FEATURE-CASE
   ((:clim-0.9 (clim::activation-character-p char))
-   (:clim-2 (ignore achars) (clim:activation-gesture-p char))
+   (:clim-2 (clim:activation-gesture-p char))
    ((or :clim-1.0 :clim-2 (not :clim))
     (and
      (if (consp char) (setq char (second char)) t)
@@ -548,9 +549,10 @@ advised of the possiblity of such damages.
 (defun accept-blip-p (char &optional (chars #-clim dw::*accept-blip-chars*
 					    #+clim-1.0 clim:*blip-characters*
 					    #+clim-0.9 nil))
+  (declare (ignorable chars))
   #FEATURE-CASE
   ((:clim-0.9 (clim::blip-character-p char))
-   (:clim-2 (ignore chars) (clim:delimiter-gesture-p char))
+   (:clim-2 (clim:delimiter-gesture-p char))
    ((or :clim-1.0 :clim-2 (not :clim))
     (loop for l in chars
 	thereis (and (characterp char) (member char l :test #'char-equal))))))
@@ -662,7 +664,7 @@ advised of the possiblity of such damages.
 	    #-clim (dw:accept 'tv:sheet :stream stream :prompt nil))
    :printer ((window stream)
 	     (let ((*print-readably* nil))
-	       (declare (special *print-readably*))
+	       #-ansi-cl (declare (special *print-readably*))
 	       #+clim (format stream "~A" window)
 	       #-clim (present window 'tv:sheet :stream stream)))
    :description "a window")
@@ -690,12 +692,13 @@ advised of the possiblity of such damages.
     (otherwise (present-to-string element))))
 
 (defun make-accept-values-choices (&key query-identifier sequence select-action)
+  (declare (ignorable sequence))
   #FEATURE-CASE
-  ((:clim-2 (ignore sequence)
+  ((:clim-2
 	      (clim-internals::make-accept-values-multiple-choices
 	       :query-identifier query-identifier
 	       :select-action select-action))
-   (:clim-1.0 (ignore sequence)
+   (:clim-1.0 
 	      (clim::make-accept-values-multiple-choices
 	       :query-identifier query-identifier
 	       :select-action select-action))
@@ -710,12 +713,13 @@ advised of the possiblity of such damages.
 
 (defun make-accept-values-choice (&key choices choice value documentation)
   #+clim (declare (ignore documentation))
+  (declare (ignorable choice))
   #FEATURE-CASE
-  ((:clim-2 (ignore choice)
+  ((:clim-2 
 	      (clim-internals::make-accept-values-multiple-choice
 	       :choices choices
 	       :value value))
-   (:clim-1.0 (ignore choice)
+   (:clim-1.0
 	      (clim::make-accept-values-multiple-choice
 	       :choices choices
 	       :value value))
@@ -871,7 +875,7 @@ advised of the possiblity of such damages.
       (accept 'string :stream stream :prompt nil :default nil)))
    (:clim-1.0
     (let ((clim::*disable-input-editor-echo* t))
-      (ignore clim::*disable-input-editor-echo*)
+      (declare (ignorable clim::*disable-input-editor-echo*))
       ;; This variable is defined in a patch file (echo-patch.lisp)
       ;; that came from Scott MacKay and has not been made a part of DWIM.
       ;; You must load it separately.
@@ -907,5 +911,5 @@ advised of the possiblity of such damages.
   :parser ((stream)
 	   (values (readline-no-echo stream) 'invisible-object))
   :printer ((object stream)
-	    (ignore object)
+            (declare (ignore object))
 	    (write-string "*" stream)))
