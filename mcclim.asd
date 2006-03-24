@@ -246,6 +246,18 @@
                (:file "graft" :depends-on ("port" "package"))
                (:file "frame-manager" :depends-on ("medium" "port" "package"))))))
 
+(defsystem :clim-null
+    :depends-on (:clim)
+    :components
+    ((:module "Backends/Null"
+	      :pathname #.(make-pathname :directory '(:relative "Backends" "Null"))
+	      :components
+	      ((:file "package")
+	       (:file "port" :depends-on ("package"))
+	       (:file "medium" :depends-on ("port" "package"))
+	       (:file "graft" :depends-on ("port" "package"))
+	       (:file "frame-manager" :depends-on ("medium" "port" "package"))))))
+
 ;;; TODO/asf: I don't have the required libs to get :clim-opengl to load. tough.
 (clim-defsystem (:clim-opengl :depends-on (:clim))
    "Backends/OpenGL/opengl-x-frame-manager"
@@ -270,6 +282,9 @@
                  ;; But until it's ready, it's no use forcing users to
                  ;; cope with possible bugs.
                  ;; #+(or openmcl mcl)          :clim-beagle
+
+		 ;; null backend
+		 :clim-null
                  )
     :components ((:file "Looks/pixie"
                         :pathname #.(make-pathname :directory '(:relative "Looks") :name "pixie" :type "lisp"))))
