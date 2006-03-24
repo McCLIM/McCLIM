@@ -236,78 +236,32 @@
 
 ;;; Event handling methods.
 
-;;; Add the event they're invoked with to the "event queue" we define
-;;; in the events.lisp file.
+;;; Add the event they're invoked with to the event queue of the associated
+;;;sheet.
 ;;;
 ;;; Cocoa docs say if you don't want to handle the event, you should
 ;;; pass it on to your superclass. So that's what we do.
 
 ;;; ----------------------------------------------------------------------------
 
-(define-objc-method ((:void :mouse-moved event) lisp-view)
-  (when (> (logand (view-event-mask self) #$NSMouseMovedMask) 0)
-;;;    (nslog (format nil "LISP-VIEW: Received MOUSE MOVED event: ~S" (description event)))
-    (add-event-to-queue self event)))
-
-(define-objc-method ((:void :mouse-down event) lisp-view)
-  (when (> (logand (view-event-mask self) #$NSLeftMouseDownMask) 0)
-;;;    (nslog (format nil "LISP-VIEW: Received MOUSE DOWN event: ~S" (description event)))
-    (add-event-to-queue self event)))
-
-(define-objc-method ((:void :mouse-dragged event) lisp-view)
-  (when (> (logand (view-event-mask self) #$NSLeftMouseDraggedMask) 0)
-;;;    (nslog (format nil "LISP-VIEW: Received MOUSE DRAGGED event: ~S" (description event)))
-    (add-event-to-queue self event)))
-
-(define-objc-method ((:void :mouse-up event) lisp-view)
-  (when (> (logand (view-event-mask self) #$NSLeftMouseUpMask) 0)
-;;;    (nslog (format nil "LISP-VIEW: Received MOUSE UP event: ~S" (description event)))
-    (add-event-to-queue self event)))
-
-(define-objc-method ((:void :mouse-entered event) lisp-view)
-  (when (> (logand (view-event-mask self) #$NSMouseEnteredMask) 0)
-;;;    (nslog (format nil "LISP-VIEW: Received MOUSE ENTERED event: ~S" (description event)))
-    (add-event-to-queue self event)))
-
-(define-objc-method ((:void :mouse-exited event) lisp-view)
-  (when (> (logand (view-event-mask self) #$NSMouseExitedMask) 0)
-;;;    (nslog (format nil "LISP-VIEW: Received MOUSE EXITED event: ~S" (description event)))
-    (add-event-to-queue self event)))
-
-(define-objc-method ((:void :right-mouse-down event) lisp-view)
-  (when (> (logand (view-event-mask self) #$NSRightMouseDownMask) 0)
-;;;    (nslog (format nil "LISP-VIEW: Received RIGHT MOUSE DOWN event: ~S" (description event)))
-    (add-event-to-queue self event)))
-
-(define-objc-method ((:void :right-mouse-dragged event) lisp-view)
-  (when (> (logand (view-event-mask self) #$NSRightMouseDraggedMask) 0)
-;;;    (nslog (format nil "LISP-VIEW: Received RIGHT MOUSE DRAGGED event: ~S" (description event)))
-    (add-event-to-queue self event)))
-
-(define-objc-method ((:void :right-mouse-up event) lisp-view)
-  (when (> (logand (view-event-mask self) #$NSRightMouseUpMask) 0)
-;;;    (nslog (format nil "LISP-VIEW: Received RIGHT MOUSE UP event: ~S" (description event)))
-    (add-event-to-queue self event)))
-
-(define-objc-method ((:void :other-mouse-down event) lisp-view)
-  (when (> (logand (view-event-mask self) #$NSOtherMouseDownMask) 0)
-;;;    (nslog (format nil "LISP-VIEW: Received OTHER MOUSE DOWN event: ~S" (description event)))
-    (add-event-to-queue self event)))
-
-(define-objc-method ((:void :other-mouse-dragged event) lisp-view)
-  (when (> (logand (view-event-mask self) #$NSOtherMouseDraggedMask) 0)
-;;;    (nslog (format nil "LISP-VIEW: Received OTHER MOUSE DRAGGED event: ~S" (description event)))
-    (add-event-to-queue self event)))
-
-(define-objc-method ((:void :other-mouse-up event) lisp-view)
-  (when (> (logand (view-event-mask self) #$NSOtherMouseUpMask) 0)
-;;;    (nslog (format nil "LISP-VIEW: Received OTHER MOUSE UP event: ~S" (description event)))
-    (add-event-to-queue self event)))
-
-(define-objc-method ((:void :scroll-wheel event) lisp-view)
-  (when (> (logand (view-event-mask self) #$NSScrollWheelMask) 0)
-;;;    (nslog (format nil "LISP-VIEW: Received SCROLL WHEEL event: ~S" (description event)))
-    (add-event-to-queue self event)))
+(macrolet ((frob (selector mask)
+	     `(define-objc-method ((:void ,selector event) lisp-view)
+		(unless (zerop (logand (view-event-mask self) ,mask))
+		  ;; (nslog (format nil "LISP-VIEW: Received ~S event: ~S" ',selector (description event)))
+		  (add-event-to-queue self event)))))
+  (frob :mouse-moved #$NSMouseMovedMask)
+  (frob :mouse-down #$NSLeftMouseDownMask)
+  (frob :mouse-dragged #$NSLeftMouseDraggedMask)
+  (frob :mouse-up #$NSLeftMouseUpMask)
+  (frob :mouse-entered #$NSMouseEnteredMask)
+  (frob :mouse-exited #$NSMouseExitedMask)
+  (frob :right-mouse-down #$NSRightMouseDownMask)
+  (frob :right-mouse-dragged #$NSRightMouseDraggedMask)
+  (frob :right-mouse-up #$NSRightMouseUpMask)
+  (frob :other-mouse-down #$NSOtherMouseDownMask)
+  (frob :other-mouse-dragged #$NSOtherMouseDraggedMask)
+  (frob :other-mouse-up #$NSOtherMouseUpMask)
+  (frob :scroll-wheel #$NSScrollWheelMask))
 
 ;;; ----------------------------------------------------------------------------
 

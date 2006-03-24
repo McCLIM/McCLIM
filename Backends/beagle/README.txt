@@ -32,16 +32,22 @@ experienced and have made many silly decisions, probably.)
 -Duncan
 duncan@robotcat.demon.co.uk
 
+I've taken a look at the Beagle backend for the .9.2 release of McCLIM
+and added some of my own notes and edits to this file.
+
+-Tim
+moore@bricoworks.com
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 INSTALLATION
 
-The code has been written using OpenMCL Version (Beta: Darwin) 0.14.3 and
-up-to-date McCLIM sources (since both are available within the same CVS
-module, it should be safe to assume the back end will work with whatever
-McCLIM sources were checked out at the same time). Hopefully newer versions
-of OpenMCL will be ok; unfortunately older versions will not work due to
-changes in the OpenMCL Cocoa Bridge.
+The code has been tested using OpenMCL Version 1.0 and up-to-date
+McCLIM sources (since both are available within the same CVS module,
+it should be safe to assume the back end will work with whatever
+McCLIM sources were checked out at the same time). Hopefully newer
+versions of OpenMCL will be ok; unfortunately older versions will not
+work due to changes in the OpenMCL Cocoa Bridge.
 
 Compiling and running the back end currently is a straight-forward (if
 rather limiting [see note #2]) task:
@@ -57,8 +63,14 @@ The following are evaluated from the 'OpenMCL Listener' that opens:
 5.  Evaluate '(asdf:oos 'asdf:load-op :mcclim)' [See note #3]
 
 The McCLIM Listener should now be able to be started from the OpenMCL
-Listener by evaluating '(clim-listener:run-listener)'. See the McCLIM
-installation notes for other things you might want to do. [See note #1]
+Listener by evaluating '(clim-listener:run-listener)' after loading it
+with '(asdf:oos 'asdf:load-op :clim-listener)'. See the McCLIM
+installation notes for other things you might want to do. [See note
+#1]. If you load the clim-examples system, you cause the CLX backend
+to be loaded too; after this you currently need to set a default
+backend with '(setf climi:*default-server-path* :beagle)' to avoid
+problems.
+
 
 Note #1: Some of the examples provided with McCLIM do not execute when using
          the Beagle back end, either because of unimplemented features in

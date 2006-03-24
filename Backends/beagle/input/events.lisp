@@ -28,7 +28,7 @@
 
 #||
 
-$Id: events.lisp,v 1.10 2006/03/23 15:27:24 tmoore Exp $
+$Id: events.lisp,v 1.11 2006/03/24 11:18:27 tmoore Exp $
 
 Events in Cocoa
 ---------------
@@ -119,52 +119,48 @@ is used.")
 ;;; us (apart from the menus use grabbing I think)
 
 
-(defparameter *mcclim-event-queue* nil)
-
-
 ;;; TODO: roll the next two methods into a single code-block; only the
 ;;;       beagle-event|notification-to-clim-event method differs
 ;;; between them.
 
 
 (defmethod add-event-to-queue (mirror event)
-  "Adds an event to the dynamically scoped *mcclim-event-queue* queue, after
+  "Adds an event to the event queue associated with the mirror's sheet, after
 conversion from a Cocoa event MACPTR to a CLIM event. This method signals
 the port event semaphore when an event is added to the queue. Cocoa events
 that map onto a NIL CLIM event (i.e. those that are not handled) are not
 added to the queue."
-  (declare (special *beagle-port
-		    *mcclim-event-queue*))
   (let ((clim-event (beagle-event-to-clim-event mirror event)))
     (unless (not clim-event)
       ;; This provides way too much information...
-      #+nil
+      #-(and)
       (unless (or (typep event 'pointer-enter-event)
 		  (typep event 'pointer-exit-event))
 	(format *trace-output* "Adding event to queue: ")
 	(describe-object clim-event *trace-output*)
 	(terpri *trace-output*))
-      (setf *mcclim-event-queue* (nconc *mcclim-event-queue* (list clim-event)))
-      (ccl:signal-semaphore (beagle-port-event-semaphore *beagle-port*)))))
+      (distribute-event *beagle-port* clim-event))))
 
 
 (defmethod add-notification-to-queue (window notification
 					     &optional origin-x origin-y width height)
-  "Adds an event to the dynamically scoped *mcclim-event-queue* queue, after
+  "Adds an event to the queue, after queue associated with the mirror's sheet after
 conversion from a Cocoa notification MACPTR to a CLIM event. This method
 signals the port event semaphore when a notification is added to the queue."
-  (declare (special *beagle-port*
-		    *mcclim-event-queue*))
   (let ((clim-event (beagle-notification-to-clim-event window notification
 						       origin-x origin-y
 						       width height)))
     (unless (not clim-event)
-      (setf *mcclim-event-queue* (nconc *mcclim-event-queue* (list clim-event)))
-      (ccl:signal-semaphore (beagle-port-event-semaphore *beagle-port*)))))
+      (distribute-event *beagle-port* clim-event))))
 
 
 ;;; timeout = timeout delay in seconds
-;;; If no timeout is specified (nil timeout), this method hangs around until an event arrives.
+;;; If no timeout is specified (nil timeout), this method hangs around until an
+;;; event arrives.
+;;;
+;;; get-next-event is not defined because it is not used in the Beagle backend
+;;; (there is no event process calling process-next-event).
+#-(and)
 (defmethod get-next-event ((port beagle-port) &key wait-function (timeout nil))
   (declare (special *mcclim-event-queue* *beagle-port*)
 	   (ignore wait-function))

@@ -26,8 +26,14 @@
 
 (in-package :beagle)
 
+;;; The beagle backend of McCLIM runs inside a Cocoa application. There is one
+;;; port, associated with that application. There is no separate event process;
+;;; the main thread of the Cocoa app is notified of events and puts them on the
+;;; proper event queues using the mapping in the port object between NSViews
+;;; and sheets.
 
 (defparameter *beagle-port* nil)
+
 (defparameter *default-beagle-frame-manager* 'beagle:beagle-aqua-frame-manager
   "Specifies the frame manager that should be used by default when the port creates its
 frame manager. Permissable values are 'beagle::beagle-standard-frame-manager and
@@ -53,6 +59,10 @@ frame manager. Permissable values are 'beagle::beagle-standard-frame-manager and
 ;;; in the long-term. (NB. this duplicates behaviour in McCLIM "PORT" type but that uses
 ;;; 'eq tests in the hashtables, and MACPTRs (which is what a mirror boils down to being in
 ;;; the end) are only ever 'eql.)
+;;;
+;;; I'm not sure what Duncan was getting at with that comment;
+;;; mirror/sheet/NSView seems like a fine correspondence to me, unless you want
+;;; to only use one mirror per window. -- moore
 
 (defclass beagle-port (basic-port)
   ((screen          :initform nil :accessor beagle-port-screen)
@@ -63,9 +73,7 @@ frame manager. Permissable values are 'beagle::beagle-standard-frame-manager and
    ;; holds sheet that should receive key events. ::FIXME:: need to tell McCLIM which sheet
    ;; is taking keyboard events; look into how all that bit hangs together, it's changed
    ;; since this was written.
-   (key-focus-sheet :initform nil :accessor beagle-port-key-focus)
-   (event-semaphore :initform nil :accessor beagle-port-event-semaphore)))
-
+   (key-focus-sheet :initform nil :accessor beagle-port-key-focus)))
 
 (defmethod destroy-port :before ((port beagle-port))
   ;; clear out color-table, view-table, cached images etc. ::TODO:: check this logic is correct...
@@ -133,8 +141,10 @@ not initialised, we'll just get \":screen NIL\" in that case."
 ;;; the port-server-path? Not sure...) to permit the user to make use of screens other
 ;;; than the main screen.
 (defmethod initialize-beagle ((port beagle-port))
-
-  (ccl::create-autorelease-pool)
+  ;; If we were not already running inside a Cocoa application (OpenMCL's
+  ;; COCOA), we would obviously have to invoke the magic here to start up a
+  ;; Cocoa main thread.
+  (ccl::create-autorelease-pool)	;XXX Is this necessary? -- moore
   
   ;; CLX port gets some options here and uses those to set stuff up. We should probably do
   ;; this too, in the future ::FIXME::
@@ -150,24 +160,7 @@ not initialised, we'll just get \":screen NIL\" in that case."
 ;;;		  :WITH-OBJECT nil))
   
   (make-cursor-table port)
-  (make-graft port)
-  
-  (setf (beagle-port-event-semaphore port) (ccl:make-semaphore))
-  
-  (setf (port-event-process port)
-	(clim-sys:make-process
-	 (lambda ()
-	   (ccl::create-autorelease-pool)
-	   (loop
-	    (with-simple-restart
-	     (restart-event-loop "Restart CLIM's event loop.")
-;;;		  (with-autorelease-pool
-	     (loop
-	      ;; process-next-event is defined in ports.lisp. It invokes
-	      ;; get-next-event in the backend to actually get the next
-	      ;; event in the queue
-	      (process-next-event port)))))
-	 :name (format nil "~S's event process." port))));)
+  (make-graft port))
 
 
 ;;; From CLX/port.lisp
