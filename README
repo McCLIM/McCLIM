@@ -1,4 +1,4 @@
-McCLIM 0.9 "Armistice"
+McCLIM 0.9.2 "Laetare Sunday"
 
 This is McCLIM, an implementation of the "Common Lisp Interface
 Manager CLIM II Specification." It currently works on X Windows using
@@ -14,6 +14,10 @@ The other directories of interest are:
 Doc - the start of a manual
 
 Apps - sample applications. This includes:
+Apps/Debugger - Peter Mechleborg's debugger (similar to SLIME's)
+Apps/Functional-Geometry - Frank Buss and Rainer Joswig's functional
+                geometry package for drawing "Escher" tiles.
+Apps/Inspector - Robert Strandh's inspector (similar to SLIME's)
 Apps/Listener - Andy Hefner's incredibly cool Lisp listener
 Apps/Scigraph - BBN's graphing package, currently not quite working
 
@@ -32,4 +36,4 @@ goatee-test - Hacks with Goatee, the Emacs-like editor used in McCLIM
 Spec - The LaTeX source to the CLIM specification.
 
 
-Please send bug reports and comments to free-clim@mikemac.com
+Please send bug reports and comments to mcclim-devel@common-lisp.net
