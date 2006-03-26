@@ -6,6 +6,16 @@ Compatibility
 This release works on CMUCL, SBCL, CLISP, OpenMCL, Allegro CL,
 LispWorks, and the Scieneer CL, using the CLX X Window bindings.
 
+Changes to the Install Process
+==============================
+
+Implementation-specific INSTALL.* files were removed. Generic and
+implementation-specific Installation instructions were improved and
+merged into the file INSTALL.
+
+This release requires the "spatial-trees" library by Christophe
+Rhodes. Get it via asdf-install or at http://cliki.net/spatial-trees.
+
 Changes to Backends
 ===================
 
