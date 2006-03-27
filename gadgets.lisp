@@ -2656,17 +2656,15 @@ Returns two values, the item itself, and the index within the item list."
 (defclass gadget-output-record (basic-output-record displayed-output-record)
   ((gadget :initarg :gadget :accessor gadget)))
 
-(defmethod initialize-instance :after ((record gadget-output-record) &key child x y)
-  (let* ((sr (compose-space child))
-         (width  (space-requirement-width sr))
-         (height (space-requirement-height sr)))
-    (allocate-space child width height)
-    (setf (gadget record) child
-          (rectangle-edges* record) (values x y (+ x width) (+ y height)))))
+(defmethod initialize-instance :after ((record gadget-output-record) &key x y)
+  (setf (output-record-position record) (values x y)))
 
 (defmethod note-output-record-got-sheet ((record gadget-output-record) sheet)
   (multiple-value-bind (x y)  (output-record-position record)
     (sheet-adopt-child sheet (gadget record))
+    (allocate-space (gadget record)
+		    (rectangle-width record)
+		    (rectangle-height record))
     (move-sheet (gadget record) x y)))
 
 (defmethod note-output-record-lost-sheet ((record gadget-output-record) sheet)
@@ -2686,15 +2684,19 @@ Returns two values, the item itself, and the index within the item list."
                    (= oy gy))
         (move-sheet (gadget record) ox oy)))))
 
-(defun setup-gadget-record (sheet record x y)
-  ;; Here we modify the height of the current text line. This is necessary so
-  ;; that when the cursor advances to the next line, it does not start writing
-  ;; underneath the gadget. This is probably a less than optimal solution.
-  (with-slots (height) sheet    
-    (setf height (max height (bounding-rectangle-height record))))
-  (setf (stream-cursor-position sheet)
-        (values (+ x (bounding-rectangle-width record))
-                y)))
+(defun setup-gadget-record (sheet record)
+  (let* ((child (gadget record))
+	 (sr (compose-space child))
+	 (width  (space-requirement-width sr))
+	 (height (space-requirement-height sr)))
+    (multiple-value-bind (x y)(output-record-position record)
+      (setf (rectangle-edges* record) (values x y (+ x width) (+ y height)))
+    (when t ; :move-cursor t
+      ;; Almost like LWW, except baseline of text should align with bottom
+      ;; of gadget? FIXME
+      (setf (stream-cursor-position sheet)
+	    (values (+ x (bounding-rectangle-width record))
+		    (+ y (bounding-rectangle-height record))))))))
 
 ;; The CLIM 2.0 spec does not really say what this macro should return.
 ;; Existing code written for "Real CLIM" assumes it returns the gadget pane
@@ -2702,22 +2704,36 @@ Returns two values, the item itself, and the index within the item list."
 ;; For compatibility I'm having it return (values GADGET GADGET-OUTPUT-RECORD)
 
 (defmacro with-output-as-gadget ((stream &rest options) &body body)
-  (declare (type symbol stream)
-           (ignorable options))
-  (when (eq stream t)
-    (setq stream '*standard-output*))
-  (let ((gadget (gensym))
-	(gadget-output-record (gensym))
-        (x (gensym))
-        (y (gensym)))
-    `(multiple-value-bind (,x ,y)  (stream-cursor-position ,stream)
-       (let* ((,gadget (progn ,@body))
-              (,gadget-output-record (make-instance 'gadget-output-record
-                                                    :child ,gadget :x (round ,x) :y (round ,y))))
-         (stream-add-output-record ,stream ,gadget-output-record)
-         (setup-gadget-record ,stream ,gadget-output-record (round ,x) (round ,y))
-         (values ,gadget ,gadget-output-record)))))
-
+  ;; NOTE - incremental-redisplay 12/28/05 will call this on redisplay
+  ;; unless wrapped in (updating-output (stream :cache-value t) ...)
+  ;; Otherwise, new gadget-output-records are generated but only the first
+  ;; gadget is ever adopted, and an erase-output-record called on a newer
+  ;; gadget-output-record will face a sheet-not-child error when trying
+  ;; to disown the never adopted gadget.
+  (let ((gadget-output-record (gensym))
+	(x (gensym))
+	(y (gensym)))
+    `(multiple-value-bind (,x ,y)(stream-cursor-position ,stream)
+       (flet ((with-output-as-gadget-continuation (,stream record)
+		(flet ((with-output-as-gadget-body (,stream)
+			 (declare (ignorable ,stream))
+			 (progn ,@body)))
+		  (setf (gadget record)
+			(with-output-as-gadget-body ,stream))))
+	      (gadget-output-record-constructor ()
+		(make-instance 'gadget-output-record
+			       ,@options :x ,x :y ,y)))
+	 (declare (dynamic-extent with-output-as-gadget-continuation
+				  gadget-output-record-constructor))
+	 (let ((,gadget-output-record
+		(invoke-with-output-to-output-record
+		 ,stream
+		 #'with-output-as-gadget-continuation
+		 nil
+		 #'gadget-output-record-constructor)))
+	   (setup-gadget-record ,stream ,gadget-output-record)
+	   (stream-add-output-record ,stream ,gadget-output-record)
+	   (values (gadget ,gadget-output-record) ,gadget-output-record))))))
 ;;; 
 
 (defclass orientation-from-parent-mixin () ())

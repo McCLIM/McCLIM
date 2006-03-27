@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.167 2006/03/10 21:58:13 tmoore Exp $
+;;; $Id: panes.lisp,v 1.168 2006/03/27 10:46:11 crhodes Exp $
 
 (in-package :clim-internals)
 
@@ -2654,7 +2654,8 @@ order to produce a double-click")
   (let ((frame (pane-frame stream)))
     (when frame
       (disown-frame (frame-manager frame) frame)))
-  (call-next-method))
+  (when (next-method-p)
+    (call-next-method)))
 
 (define-application-frame a-window-stream (standard-encapsulating-stream
                                            standard-extended-input-stream
