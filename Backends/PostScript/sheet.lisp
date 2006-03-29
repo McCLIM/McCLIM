@@ -35,7 +35,7 @@
 ;;;
 ;;;--GB
 
-(in-package :CLIM-POSTSCRIPT)
+(in-package :clim-postscript)
 
 (defmacro with-output-to-postscript-stream ((stream-var file-stream
                                              &rest options)

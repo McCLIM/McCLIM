@@ -211,4 +211,4 @@
 
 
 
-(format T "~&;; try (CLIM-DEMO::DEMODEMO)~%")
+(format t "~&;; try (CLIM-DEMO::DEMODEMO)~%")

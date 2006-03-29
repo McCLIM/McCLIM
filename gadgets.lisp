@@ -115,11 +115,14 @@
 ;; - make NIL a valid label, and take it into account when applying
 ;;   spacing.
 
-;;;; ------------------------------------------------------------------------------------------
+;;;; --------------------------------------------------------------------------
 ;;;;
 ;;;;  30.3 Basic Gadget Classes
 ;;;;
 
+;;; XXX I'm not sure that *application-frame* should be rebound like this. What
+;;; about gadgets in accepting-values windows? An accepting-values window
+;;; shouldn't be bound to *application-frame*. -- moore
 (defun invoke-callback (pane callback &rest more-arguments)
   (when callback
     (let ((*application-frame* (pane-frame pane)))
@@ -1420,6 +1423,14 @@ and must never be nil."))
 (defmethod (setf gadget-value) :after (new-value (pane scroll-bar-pane) &key invoke-callback)
   (declare (ignore new-value invoke-callback))
   (scroll-bar/update-display pane))
+
+(defmethod* (setf scroll-bar-values)
+    (min-value max-value thumb-size value (scroll-bar scroll-bar-pane))
+  (setf (slot-value scroll-bar 'min-value) min-value
+	(slot-value scroll-bar 'max-value) max-value
+	(slot-value scroll-bar 'thumb-size) thumb-size
+	(slot-value scroll-bar 'value) value)
+  (scroll-bar/update-display scroll-bar))
 
 ;;;; geometry
 
@@ -2818,3 +2829,31 @@ it in a layout between two panes that are to be resizeable.  E.g.:
 
 (defmethod note-sheet-grafted ((sheet clim-extensions:box-adjuster-gadget))
   (setf (sheet-pointer-cursor sheet) :rotate))
+
+;;; Support for definition of callbacks and associated callback events. A
+;;; callback event is used by a backend when a high-level notification of a
+;;; gadget state change is delivered in the CLIM event process -- by a native
+;;; gadget, for example -- and must be delivered in the application process.
+
+(define-event-class callback-event (standard-event)
+  ((sheet :initarg :gadget :reader event-gadget
+	  :documentation "An alias for sheet, for readability")
+   (callback-function :initarg :callback-function :reader callback-function)
+   (client :initarg :client :reader event-client)
+   (client-id :initarg :client-id :reader event-client-id)
+   (other-args :initarg :other-args :reader event-other-args :initform nil)))
+
+(defun queue-callback (fn gadget client client-id &rest other-args)
+  (queue-event gadget (make-instance 'callback-event
+				     :callback-function fn
+				     :gadget gadget
+				     :client client
+				     :client-id client-id
+				     :other-args other-args)))
+
+(defmethod handle-event ((gadget basic-gadget) (event callback-event))
+  (apply (callback-function event)
+	 (event-client event)
+	 (event-client-id event)
+	 (event-other-args event)))
+

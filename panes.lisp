@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.168 2006/03/27 10:46:11 crhodes Exp $
+;;; $Id: panes.lisp,v 1.169 2006/03/29 10:43:37 tmoore Exp $
 
 (in-package :clim-internals)
 
@@ -1515,7 +1515,7 @@ order to produce a double-click")
                                   (space-requirement-major sr))))
                         srs)))
           #+nil
-          (format T "~&;; ~S: allot=~S, wanted=~S, excess=~S, qs=~S~%"
+          (format t "~&;; ~S: allot=~S, wanted=~S, excess=~S, qs=~S~%"
                   'allot-space-xically allot wanted excess qs)
           (let ((sum (reduce #'+ qs)))
             (cond ((zerop sum)
@@ -1592,11 +1592,11 @@ order to produce a double-click")
                     (- width xs))))
         #+nil
         (progn
-          (format T "~&;; row space requirements = ~S." rsrs)
-          (format T "~&;; col space requirements = ~S." csrs)
-          (format T "~&;; row allotment: needed = ~S result = ~S (sum ~S)." height rows (reduce #'+ rows))
-          (format T "~&;; col allotment: needed = ~S result = ~S (sum ~S)." width cols (reduce #'+ cols))
-          (format T "~&;; align-x = ~S, align-y ~S~%"
+          (format t "~&;; row space requirements = ~S." rsrs)
+          (format t "~&;; col space requirements = ~S." csrs)
+          (format t "~&;; row allotment: needed = ~S result = ~S (sum ~S)." height rows (reduce #'+ rows))
+          (format t "~&;; col allotment: needed = ~S result = ~S (sum ~S)." width cols (reduce #'+ cols))
+          (format t "~&;; align-x = ~S, align-y ~S~%"
                   (pane-align-x pane)
                   (pane-align-y pane)))
         ;; now finally layout each child
@@ -1882,7 +1882,7 @@ order to produce a double-click")
                ;;
                ;; One might argue that in case of no scroll-bars the
                ;; application programmer can just skip the scroller
-               ;; pane altogether. But I think that the then needed
+               ;; pane altogether. Bu I think that the then needed
                ;; special casing on having a scroller pane or a bare
                ;; viewport at hand is an extra burden, that can be
                ;; avoided.
@@ -1898,6 +1898,12 @@ order to produce a double-click")
   (:default-initargs
    :x-spacing 4
    :y-spacing 4))
+
+(defgeneric scroll-bar-values (scroll-bar)
+  (:documentation "Returns the min value, max value, thumb size, and value of a
+  scroll bar. When Setf-ed, updates the scroll bar graphics"))
+
+(defgeneric* (setf scroll-bar-values) (min-value max-value thumb-size value scroll-bar))
 
 (defmacro scrolling ((&rest options) &body contents)
   `(let ((viewport (make-pane 'viewport-pane :contents (list ,@contents))))
@@ -1973,11 +1979,7 @@ order to produce a double-click")
                         0
                         (* (/ (gadget-value vscrollbar) (gadget-max-value vscrollbar))
                            max))))
-          (setf (gadget-min-value vscrollbar) min
-                (gadget-max-value vscrollbar) max
-                (scroll-bar-thumb-size vscrollbar) ts
-                (gadget-value vscrollbar :invoke-callback nil) val)))
-      
+	  (setf (scroll-bar-values vscrollbar) (values min max ts val))))
       (when hscrollbar
         (let* ((scrollee (first (sheet-children viewport)))
                (min 0)
@@ -1989,11 +1991,7 @@ order to produce a double-click")
                         0
                         (* (/ (gadget-value hscrollbar) (gadget-max-value hscrollbar))
                            max))))
-          (setf (gadget-min-value hscrollbar) min
-                (gadget-max-value hscrollbar) max
-                (scroll-bar-thumb-size hscrollbar) ts
-                (gadget-value hscrollbar :invoke-callback nil) val)))
-
+	  (setf (scroll-bar-values hscrollbar) (values min max ts val))))
       (when viewport
         (setf (sheet-transformation viewport)
               (make-translation-transformation
@@ -2009,17 +2007,24 @@ order to produce a double-click")
   "Callback for the vertical scroll-bar of a scroller-pane."
   (with-slots (viewport hscrollbar vscrollbar) pane
     (let ((scrollee (first (sheet-children viewport))))
-      (scroll-extent scrollee
-                     (if hscrollbar (gadget-value hscrollbar) 0)
-                     new-value))))
+      (when (pane-viewport scrollee)
+	(move-sheet scrollee
+		    (round (if hscrollbar
+			       (- (gadget-value hscrollbar))
+			       0))
+		    (round (- new-value)))))))
 
 (defmethod scroller-pane/horizontal-drag-callback ((pane scroller-pane) new-value)
   "Callback for the horizontal scroll-bar of a scroller-pane."
   (with-slots (viewport hscrollbar vscrollbar) pane
     (let ((scrollee (first (sheet-children viewport))))
-      (scroll-extent scrollee
-                     new-value
-                     (if vscrollbar (gadget-value vscrollbar) 0)))))
+      (when (pane-viewport scrollee)
+	(move-sheet scrollee
+		    (round (- new-value))
+		    (round (if vscrollbar
+			       (- (gadget-value vscrollbar))
+			       0)))))))
+    
 
 (defmethod scroller-pane/update-scroll-bars ((pane scroller-pane))
   (with-slots (viewport hscrollbar vscrollbar) pane
@@ -2028,24 +2033,27 @@ order to produce a double-click")
            (viewport-sr (sheet-region viewport)))
       ;;
       (when hscrollbar
-        (setf (gadget-min-value hscrollbar)      (bounding-rectangle-min-x scrollee-sr)
-              (gadget-max-value hscrollbar)      (max (- (bounding-rectangle-max-x scrollee-sr)
-                                                         (bounding-rectangle-width viewport-sr))
-                                                      (bounding-rectangle-min-x scrollee-sr))
-              (scroll-bar-thumb-size hscrollbar) (bounding-rectangle-width viewport-sr)
-              (gadget-value hscrollbar :invoke-callback nil)
-              (- (nth-value 0 (transform-position (sheet-transformation scrollee) 0 0)))
-              ))
+	(setf (scroll-bar-values hscrollbar)
+	      (values (bounding-rectangle-min-x scrollee-sr)
+		      (max (- (bounding-rectangle-max-x scrollee-sr)
+			      (bounding-rectangle-width viewport-sr))
+			   (bounding-rectangle-min-x scrollee-sr))
+		      (bounding-rectangle-width viewport-sr)
+		      (- (nth-value 0 (transform-position
+				       (sheet-transformation scrollee) 0 0))))))
       ;;
       (when vscrollbar
-        (setf (gadget-min-value vscrollbar)      (bounding-rectangle-min-y scrollee-sr)
-              (gadget-max-value vscrollbar)      (max (- (bounding-rectangle-max-y scrollee-sr)
-                                                         (bounding-rectangle-height viewport-sr))
-                                                      (bounding-rectangle-min-y scrollee-sr))
-              (scroll-bar-thumb-size vscrollbar) (bounding-rectangle-height viewport-sr)
-              (gadget-value vscrollbar :invoke-callback nil)
-              (- (nth-value 1 (transform-position (sheet-transformation scrollee) 0 0)))
-              )))))
+	(setf (scroll-bar-values vscrollbar)
+	      (values (bounding-rectangle-min-y scrollee-sr)
+		      (max (- (bounding-rectangle-max-y scrollee-sr)
+			      (bounding-rectangle-height viewport-sr))
+			   (bounding-rectangle-min-y scrollee-sr))
+		      (bounding-rectangle-height viewport-sr)
+		      (- (nth-value 1 (transform-position
+				       (sheet-transformation scrollee)
+				       0
+				       0)))))))))
+
 
 (defmethod initialize-instance :after ((pane scroller-pane) &key contents &allow-other-keys)
   (sheet-adopt-child pane (first contents))

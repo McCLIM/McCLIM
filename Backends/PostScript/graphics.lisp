@@ -37,7 +37,7 @@
 ;;; - structure this file
 ;;; - set miter limit?
 
-(in-package :CLIM-POSTSCRIPT)
+(in-package :clim-postscript)
 
 ;;; Postscript output utilities
 (defun write-number (stream number)

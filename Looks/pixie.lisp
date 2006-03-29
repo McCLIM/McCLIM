@@ -1,4 +1,4 @@
-(in-package :CLIM-INTERNALS)
+(in-package :clim-internals)
 
 ;;;
 ;
@@ -341,6 +341,7 @@
 
 ; We derive from the slider, since the slider is the same, only
 ; less so.
+;;; XXX Probably should derive from scroll-bar too.
 
 (defconstant +pixie-scroll-bar-pane-thumb-size+  5000.0)
 (defconstant +pixie-scroll-bar-thumb-half-height+ 17)
@@ -475,6 +476,14 @@
             (let ((ya (translate-range-value v minv (+ maxv ts) y1 y2))
                   (yb (translate-range-value (+ v ts) minv (+ maxv ts) y1 y2)))
               (make-rectangle* x1 (- ya 1) x2 (+ yb 1)))))))))
+
+(defmethod* (setf scroll-bar-values)
+  (min-value max-value thumb-size value (scroll-bar pixie-scroll-bar-pane))
+  (setf (slot-value scroll-bar 'min-value) min-value
+	(slot-value scroll-bar 'max-value) max-value
+	(slot-value scroll-bar 'thumb-size) thumb-size
+	(slot-value scroll-bar 'value) value)
+  (dispatch-repaint scroll-bar (sheet-region scroll-bar)))
 
 (defmethod handle-event ((pane pixie-scroll-bar-pane) (event pointer-button-release-event))
   (with-slots (armed dragging repeating was-repeating) pane

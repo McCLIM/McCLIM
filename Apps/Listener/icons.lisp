@@ -52,11 +52,11 @@
 
 ;; Icon functions
 
-(defmethod icon-of ((object T))
+(defmethod icon-of ((object t))
   *object-icon*)
 
 (defun draw-icon (stream pattern &key (extra-spacing 0) )
-  (let ((stream (if (eq stream T) *standard-output* stream)))
+  (let ((stream (if (eq stream t) *standard-output* stream)))
     (multiple-value-bind (x y)
         (stream-cursor-position stream)
       (draw-pattern* stream pattern x y)

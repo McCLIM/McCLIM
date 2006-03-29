@@ -51,17 +51,17 @@
 ;;; Make CLX asdf-loadable on Allegro 6.2
 ;;; possibly this should be further refined to funciton properly for
 ;;; Allegro on Windows platforms. [2005/04/18:rpg]
+
 #+allegro
 (progn
   (defclass requireable-system (asdf:system)
-       ())
+    ())
   (defmethod asdf:perform ((op asdf:load-op) (system requireable-system))
     (require (intern (slot-value system 'asdf::name) :keyword)))
   (defmethod asdf::traverse ((op asdf:load-op) (system requireable-system))
     (list (cons op system)))  
   (defsystem :clx
     :class requireable-system))
-
 
 (defmacro clim-defsystem ((module &key depends-on) &rest components)
   `(progn

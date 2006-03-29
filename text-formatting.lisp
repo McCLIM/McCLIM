@@ -143,8 +143,8 @@ SUPPRESS-SPACE-AFTER-CONJUNCTION are non-standard."
 	    (setq seg-start (1+ i))))
 	(foo seg-start end)))))
 		     
-(defmacro indenting-output ((stream indent &key (move-cursor T)) &body body)
-  (when (eq stream T)
+(defmacro indenting-output ((stream indent &key (move-cursor t)) &body body)
+  (when (eq stream t)
     (setq stream '*standard-output*))
   (with-gensyms (old-x old-y)
      `(multiple-value-bind (,old-x ,old-y)

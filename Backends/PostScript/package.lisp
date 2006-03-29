@@ -18,24 +18,23 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-(in-package :COMMON-LISP-USER)
+(in-package :cl-user)
 
-(defpackage "CLIM-POSTSCRIPT"
-  (:use "CLIM" "CLIM-EXTENSIONS" "CLIM-LISP")
-  (:export "LOAD-AFM-FILE")
-  (:import-from "CLIM-INTERNALS"
-                "GET-ENVIRONMENT-VARIABLE"
-                "MAP-REPEATED-SEQUENCE"
-                "ATAN*"
+(defpackage #:clim-postscript
+  (:use #:clim #:clim-extensions #:clim-lisp)
+  (:export #:load-afm-file)
+  (:import-from #:clim-internals
+                #:get-environment-variable
+                #:map-repeated-sequence
+                #:atan*
 
-                "ELLIPSE-NORMAL-RADII*"
+                #:ellipse-normal-radii*
 
-                "GET-TRANSFORMATION"
-                "UNTRANSFORM-ANGLE"
-                "WITH-TRANSFORMED-POSITION"
+                #:get-transformation
+                #:untransform-angle
+                #:with-transformed-position
 
-                "MAXF"
+                #:maxf
 
-                "PORT-TEXT-STYLE-MAPPINGS"
-  ))
+                #:port-text-style-mappings))
 

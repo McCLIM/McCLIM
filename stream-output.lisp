@@ -107,8 +107,8 @@
 (defun decode-cursor-visibility (visibility)
   "Given :on, :off, or nil, returns the needed active and state attributes for the cursor."
   (ecase visibility
-    ((:on T) (values T T))
-    (:off    (values T nil))
+    ((:on t) (values t t))
+    (:off    (values t nil))
     ((nil)   (values nil nil))))
 
 (defmethod cursor-visibility ((cursor cursor-mixin))
@@ -116,7 +116,7 @@
         (s (cursor-state cursor)))
     (cond ((and a s) :on)
           ((and a (not s)) :off)
-          (T nil))))
+          (t nil))))
 
 (defmethod (setf cursor-visibility) (nv (cursor cursor-mixin))
   (multiple-value-bind (active state)

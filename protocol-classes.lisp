@@ -22,10 +22,15 @@
 (in-package :clim-internals)
 
 (defmacro define-protocol-class (name super-classes &optional slots &rest options)
-  (let ((protocol-predicate
-         (intern (concatenate 'string (symbol-name name) (if (find #\- (symbol-name name)) "-" "") "P")))
-	(predicate-docstring
-	 (concatenate 'string "Protocol predicate checking for class " (symbol-name name))))
+  (let* ((sym-name (symbol-name name))
+	 (protocol-predicate
+	  (intern (concatenate 'string
+			       sym-name
+			       (if (find #\- sym-name) "-" "")
+			       (symbol-name '#:p))))
+	 (predicate-docstring
+	  (concatenate 'string
+		       "Protocol predicate checking for class " sym-name)))
     `(progn
        (defclass ,name ,super-classes ,slots ,@options)
 

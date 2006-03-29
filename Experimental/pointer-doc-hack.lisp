@@ -235,7 +235,7 @@
 			      ((eql button +pointer-left-button+)   *icon-mouse-left*)
 			      ((eql button +pointer-middle-button+) *icon-mouse-middle*)
 			      ((eql button +pointer-right-button+)  *icon-mouse-right*)
-			      (T name)))
+			      (t name)))
 		 (if (not (typep name 'indexed-pattern))  (format pstream "~A: " name)
 		   (multiple-value-bind (x y)  (stream-cursor-position pstream)
 		     (draw-pattern* pstream name x y)

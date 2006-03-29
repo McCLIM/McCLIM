@@ -1,6 +1,6 @@
 
-(IN-PACKAGE :CLIM-POSTSCRIPT) 
-(DEFINE-FONT-METRICS '"Times-Roman"
+(in-package :clim-postscript) 
+(define-font-metrics '"Times-Roman"
                      '683
                      '217
                      '0
@@ -209,7 +209,7 @@
                        (-1 "Yacute" 722 890 0 -22 703)
                        (-1 "brokenbar" 200 676 14 -67 133)
                        (-1 "onehalf" 750 676 14 -31 746))) 
-(DEFINE-FONT-METRICS '"Times-Bold"
+(define-font-metrics '"Times-Bold"
                      '676
                      '205
                      '0
@@ -419,7 +419,7 @@
                        (-1 "Yacute" 722 928 0 -15 699)
                        (-1 "brokenbar" 220 691 19 -66 154)
                        (-1 "onehalf" 750 688 12 7 775))) 
-(DEFINE-FONT-METRICS '"Times-Italic"
+(define-font-metrics '"Times-Italic"
                      '683
                      '205
                      '-15.5
@@ -630,7 +630,7 @@
                        (-1 "Yacute" 556 876 0 -78 633)
                        (-1 "brokenbar" 275 666 18 -105 171)
                        (-1 "onehalf" 750 676 10 -34 749))) 
-(DEFINE-FONT-METRICS '"Times-BoldItalic"
+(define-font-metrics '"Times-BoldItalic"
                      '699
                      '205
                      '-15
@@ -836,7 +836,7 @@
                        (-1 "Yacute" 611 904 0 -73 659)
                        (-1 "brokenbar" 220 685 18 -66 154)
                        (-1 "onehalf" 750 683 14 9 723))) 
-(DEFINE-FONT-METRICS '"Courier"
+(define-font-metrics '"Courier"
                      '629
                      '157
                      '0
@@ -1077,7 +1077,7 @@
                        (-1 "aring" 600 627 15 -53 559)
                        (-1 "yacute" 600 672 157 -7 592)
                        (-1 "icircumflex" 600 654 0 -94 505))) 
-(DEFINE-FONT-METRICS '"Courier-Oblique"
+(define-font-metrics '"Courier-Oblique"
                      '629
                      '157
                      '-12
@@ -1319,7 +1319,7 @@
                        (-1 "aring" 600 627 15 -76 569)
                        (-1 "yacute" 600 672 157 4 683)
                        (-1 "icircumflex" 600 654 0 -95 551))) 
-(DEFINE-FONT-METRICS '"Courier-Bold"
+(define-font-metrics '"Courier-Bold"
                      '626
                      '142
                      '0
@@ -1558,7 +1558,7 @@
                        (-1 "aring" 600 678 15 -35 570)
                        (-1 "yacute" 600 661 142 4 601)
                        (-1 "icircumflex" 600 657 0 -63 523))) 
-(DEFINE-FONT-METRICS '"Courier-BoldOblique"
+(define-font-metrics '"Courier-BoldOblique"
                      '626
                      '142
                      '-12
@@ -1798,7 +1798,7 @@
                        (-1 "aring" 600 678 15 -62 592)
                        (-1 "yacute" 600 661 142 20 694)
                        (-1 "icircumflex" 600 657 0 -77 566))) 
-(DEFINE-FONT-METRICS '"Helvetica"
+(define-font-metrics '"Helvetica"
                      '718
                      '207
                      '0
@@ -2006,7 +2006,7 @@
                        (-1 "Yacute" 667 929 0 -14 653)
                        (-1 "brokenbar" 260 737 19 -94 167)
                        (-1 "onehalf" 834 703 19 -43 773))) 
-(DEFINE-FONT-METRICS '"Helvetica-Oblique"
+(define-font-metrics '"Helvetica-Oblique"
                      '718
                      '207
                      '-12
@@ -2215,7 +2215,7 @@
                        (-1 "Yacute" 667 929 0 -167 806)
                        (-1 "brokenbar" 260 737 19 -90 324)
                        (-1 "onehalf" 834 703 19 -114 839))) 
-(DEFINE-FONT-METRICS '"Helvetica-Bold"
+(define-font-metrics '"Helvetica-Bold"
                      '718
                      '207
                      '0
@@ -2423,7 +2423,7 @@
                        (-1 "Yacute" 667 936 0 -15 653)
                        (-1 "brokenbar" 280 737 19 -84 196)
                        (-1 "onehalf" 834 710 19 -26 794))) 
-(DEFINE-FONT-METRICS '"Helvetica-BoldOblique"
+(define-font-metrics '"Helvetica-BoldOblique"
                      '718
                      '207
                      '-12

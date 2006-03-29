@@ -220,7 +220,7 @@
     ;; needed. We loop, until we have enough bits to make a
     ;; sensible decision.
     `((lambda (ht)
-        (declare (type (simple-array T (*)) ht))
+        (declare (type (simple-array t (*)) ht))
         (let ((m ',(car ms)) (b 0) x)
           (declare (type (unsigned-byte 24) b))
           ;; (bs/ensure-n-bits 24)
@@ -246,7 +246,7 @@
   `((lambda (huffman-tree n)
       (declare (type (integer 0 1000) n))
       (let ((res (make-array n :initial-element 0)))
-        (declare (type (simple-array T (*)) res))
+        (declare (type (simple-array t (*)) res))
         (do ((i 0 i))
             ((>= i n))
           (declare (type (integer 0 1000) i))
@@ -507,7 +507,7 @@
                      n-hclen (+ 4 (bs/read-byte 4))
                      hclens  (make-array 19 :initial-element 0))
                (locally
-                   (declare (type (simple-array T (*)) hclens)
+                   (declare (type (simple-array t (*)) hclens)
                             (type (unsigned-byte 6) n-hdist)
                             (type (unsigned-byte 5) n-hclen))
                  (loop

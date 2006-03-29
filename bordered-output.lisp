@@ -101,11 +101,11 @@
 		     :filled nil)
     (draw-rectangle* stream
 		     right-edge (+ top-edge offset)
-		     (+ right-edge offset) bottom-edge :filled T)
+		     (+ right-edge offset) bottom-edge :filled t)
     (draw-rectangle* stream
 		     (+ left-edge offset) bottom-edge
 		     (+ right-edge offset) (+ bottom-edge offset)
-		     :filled T)))
+		     :filled t)))
 
 (define-border-type :underline (stream record)
   (labels ((fn (record)

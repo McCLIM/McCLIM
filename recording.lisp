@@ -844,7 +844,7 @@ the associated sheet can be determined."
 		      (>= cx2 old-max-x) (>= cy2 old-max-y))
                  (values (min cx1 ox1) (min cy1 oy1)
                          (max cx2 ox2) (max cy2 oy2)))
-                (T (%tree-recompute-extent* record)))        
+                (t (%tree-recompute-extent* record)))        
         ;; XXX banish x, y
         (with-slots (x y)
 	    record
@@ -2337,7 +2337,7 @@ according to the flags RECORD and DRAW."
 		      (bounding-rectangle region))))
 	(with-bounding-rectangle* (x1 y1 x2 y2) region
 	  (with-output-recording-options (stream :record nil)
-	    (draw-rectangle* stream x1 y1 x2 y2 :filled T :ink +background-ink+)))
+	    (draw-rectangle* stream x1 y1 x2 y2 :filled t :ink +background-ink+)))
 	(stream-replay stream region)))))
 
 (defmethod handle-repaint ((stream output-recording-stream) region)

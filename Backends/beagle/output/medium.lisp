@@ -93,7 +93,7 @@
       (send (medium-bezier-path medium) :set-line-width width)
 
       (when dashes
-	(when (eq dashes T)
+	(when (eq dashes t)
 	  ;; Provide default dash pattern... no idea why, but when I use
 	  ;; #(5.0 5.0) as the dafault dash, it gets displayed as a solid
 	  ;; line (no dashing). So the default is larger than it needs to
@@ -694,7 +694,7 @@ rounding\" gives consistent results."
 (defmethod medium-draw-point* ((medium beagle-medium) x y)
   (let ((width (coerce (line-style-thickness (medium-line-style medium))
 		       'short-float)))
-    (medium-draw-circle* medium x y (/ width 2) 0 (* 2 pi) T)))
+    (medium-draw-circle* medium x y (/ width 2) 0 (* 2 pi) t)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -709,7 +709,7 @@ rounding\" gives consistent results."
   (with-transformed-positions ((sheet-native-transformation (medium-sheet medium)) coord-seq)
     (let ((width (coerce (line-style-thickness (medium-line-style medium)) 'short-float)))
       (do-sequence ((x y) coord-seq)
-        (medium-draw-circle* medium x y (/ width 2) 0 (* 2 pi) T)))))
+        (medium-draw-circle* medium x y (/ width 2) 0 (* 2 pi) t)))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

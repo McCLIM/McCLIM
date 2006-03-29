@@ -84,22 +84,22 @@
 		   #+openmcl (+ (ccl::%usedbytes) (ccl::%freebytes))
                    #+clisp (values (sys::%room))
                    #-(or cmu scl sbcl lispworks openmcl clisp) 0))
-    (with-text-family (T :serif)
-      (formatting-table (T :x-spacing '(3 :character))
-        (formatting-row (T)                        
+    (with-text-family (t :serif)
+      (formatting-table (t :x-spacing '(3 :character))
+        (formatting-row (t)                        
           (macrolet ((cell ((align-x) &body body)                         
-                       `(formatting-cell (T :align-x ,align-x) ,@body)))
-            (cell (:left)   (format T "~A@~A" username sitename))
+                       `(formatting-cell (t :align-x ,align-x) ,@body)))
+            (cell (:left)   (format t "~A@~A" username sitename))
             (cell (:center)
-              (format T "Package ")
-              (print-package-name T))
+              (format t "Package ")
+              (print-package-name t))
             (cell (:center)
               (when (probe-file *default-pathname-defaults*)
-                (with-output-as-presentation (T (truename *default-pathname-defaults*) 'pathname)
-                  (format T "~A" (frob-pathname *default-pathname-defaults*))))
+                (with-output-as-presentation (t (truename *default-pathname-defaults*) 'pathname)
+                  (format t "~A" (frob-pathname *default-pathname-defaults*))))
               (when *directory-stack*
-                (with-output-as-presentation (T *directory-stack* 'directory-stack)
-                  (format T "  (~D deep)" (length *directory-stack*)))))
+                (with-output-as-presentation (t *directory-stack* 'directory-stack)
+                  (format t "  (~D deep)" (length *directory-stack*)))))
           ;; Although the CLIM spec says the item formatter should try to fill
           ;; the available width, I can't get either the item or table formatters
           ;; to really do so such that the memory usage appears right justified.
@@ -157,7 +157,7 @@
     ((system-command-reader :accessor system-command-reader
 			    :initarg :system-command-reader
 			    :initform t))
-  (:panes (interactor :interactor :scroll-bars T
+  (:panes (interactor :interactor :scroll-bars t
                       :display-function #'listener-initial-display-function
                       :display-time t)
           (doc :pointer-documentation)
@@ -218,7 +218,7 @@
 	(restart-case (call-next-method)
 	  (return-to-listener ()
 	    :report "Return to listener."
-	    (throw 'return-to-listener T)))))))
+	    (throw 'return-to-listener t)))))))
 
 ;; Oops. As we've ditched our custom toplevel, we now have to duplicate all
 ;; this setup work to implement one little trick.

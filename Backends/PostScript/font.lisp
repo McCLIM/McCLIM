@@ -23,7 +23,7 @@
 ;;; - Kerning, ligatures.
 ;;; - device fonts
 
-(in-package :CLIM-POSTSCRIPT)
+(in-package :clim-postscript)
 
 (defclass font-info ()
   ((name :type string :initarg :name :reader font-info-name)

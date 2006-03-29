@@ -23,7 +23,7 @@
 ;;; Boston, MA  02111-1307  USA.
  
  
-(in-package :CLIM-POSTSCRIPT)
+(in-package :clim-postscript)
 
 (defvar *iso-latin-1-symbolic-names*
     '#(NIL             NIL             NIL             NIL

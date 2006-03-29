@@ -43,7 +43,7 @@
 ;;; + menu frame size
 ;;; + layout
 
-(in-package :CLIM-INTERNALS)
+(in-package :clim-internals)
 
 (defgeneric menu-choose
     (items

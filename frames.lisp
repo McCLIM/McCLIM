@@ -581,7 +581,7 @@ documentation produced by presentations.")))
   #+NIL (read-command (frame-command-table frame) :use-keystrokes nil :stream stream)
   (read-command (frame-command-table frame) :use-keystrokes t :stream stream))
 
-(defclass execute-command-event (window-manager-event)
+(define-event-class execute-command-event (window-manager-event)
   ((sheet :initarg :sheet :reader event-sheet)
    (command :initarg :command :reader execute-command-event-command)))
 

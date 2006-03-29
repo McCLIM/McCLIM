@@ -59,7 +59,11 @@
 (defclass standard-event (event)
   ((timestamp :initarg :timestamp
               :initform nil
-	      :reader event-timestamp)))
+	      :reader event-timestamp)
+   ;; This slot is pretty much required in order to call handle-event. Some
+   ;; events have something other than a sheet in this slot, which is gross.
+   (sheet :initarg :sheet
+	  :reader event-sheet)))
 
 (defmethod initialize-instance :after ((event standard-event) &rest initargs)
   (declare (ignore initargs))
@@ -79,11 +83,28 @@
 ;    (if (null position)
 ;	:event
 ;      (intern (subseq type 0 position) :keyword))))
+;;; Reintroduce something like that definition, with defmethod goodness.
+;;; -- moore
 
-(defclass device-event (standard-event)
-  ((sheet :initarg :sheet
-	  :reader event-sheet)
-   (modifier-state :initarg :modifier-state
+(defmacro define-event-class (name supers slots &rest options)
+  (let* ((event-tag (string '#:-event))
+	 (name-string (string name))
+	 (pos (search event-tag name-string :from-end t)))
+    (when (or (null pos)
+	      (not (eql (+ pos (length event-tag)) (length name-string))))
+      (error "~S does not end in ~A and is not a valid event name for ~
+  define-event-class."
+	     name event-tag))
+    (let ((type (intern (subseq name-string 0 pos) :keyword)))
+      `(progn
+	 (defclass ,name ,supers
+	   ,slots
+	   ,@options)
+	 (defmethod event-type ((event ,name))
+	   ',type)))))
+
+(define-event-class device-event (standard-event)
+  ((modifier-state :initarg :modifier-state
 		   :reader event-modifier-state)
    (x :initarg :x
       :reader device-event-native-x)
@@ -94,21 +115,19 @@
    (graft-y :initarg :graft-y
             :reader device-event-native-graft-y)))
 
-(defclass keyboard-event (device-event)
+(define-event-class keyboard-event (device-event)
   ((key-name :initarg :key-name
 	     :reader keyboard-event-key-name)
    (key-character :initarg :key-character :reader keyboard-event-character
 		  :initform nil)))
 
-(defclass key-press-event (keyboard-event)
-  (
-   ))
+(define-event-class key-press-event (keyboard-event)
+  ())
 
-(defclass key-release-event (keyboard-event)
-  (
-   ))
+(define-event-class key-release-event (keyboard-event)
+  ())
 
-(defclass pointer-event (device-event)
+(define-event-class pointer-event (device-event)
   ((pointer :initarg :pointer
 	    :reader pointer-event-pointer)
    (button :initarg :button
@@ -149,33 +168,28 @@
 (defmethod device-event-y ((event device-event))
   (get-pointer-position ((event-sheet event) event) y))
 
-(defclass pointer-button-event (pointer-event)
-  (
-   ))
+(define-event-class pointer-button-event (pointer-event)
+  ())
 
 
-(defclass pointer-button-press-event (pointer-button-event) ())
+(define-event-class pointer-button-press-event (pointer-button-event) ())
 
-(defclass pointer-button-release-event (pointer-button-event) ())
+(define-event-class pointer-button-release-event (pointer-button-event) ())
 
-(defclass pointer-button-hold-event (pointer-button-event) ())
+(define-event-class pointer-button-hold-event (pointer-button-event) ())
 
 
-(defclass pointer-button-click-event (pointer-button-event)
-  (
-   ))
+(define-event-class pointer-button-click-event (pointer-button-event)
+  ())
 
-(defclass pointer-button-double-click-event (pointer-button-event)
-  (
-   ))
+(define-event-class pointer-button-double-click-event (pointer-button-event)
+  ())
 
-(defclass pointer-button-click-and-hold-event (pointer-button-event)
-  (
-   ))
+(define-event-class pointer-button-click-and-hold-event (pointer-button-event)
+  ())
 
-(defclass pointer-motion-event (pointer-event)
-  (
-   ))
+(define-event-class pointer-motion-event (pointer-event)
+  ())
 
 (defclass motion-hint-mixin ()
   ()
@@ -185,28 +199,22 @@
 (defclass pointer-motion-hint-event (pointer-motion-event motion-hint-mixin)
   ())
 
-(defclass pointer-boundary-event (pointer-motion-event)
-  (
-   ))
-
-(defclass pointer-enter-event (pointer-boundary-event)
-  (
-   ))
-
-(defclass pointer-exit-event (pointer-boundary-event)
-  (
-   ))
-
-
-(defclass pointer-ungrab-event (pointer-exit-event)
+(define-event-class pointer-boundary-event (pointer-motion-event)
   ())
 
-(defclass window-event (standard-event)
-  ((sheet :initarg :sheet
-	  :reader event-sheet)
-   (region :initarg :region
-	   :reader window-event-native-region)
-   ))
+(define-event-class pointer-enter-event (pointer-boundary-event)
+  ())
+
+(define-event-class pointer-exit-event (pointer-boundary-event)
+  ())
+
+
+(define-event-class pointer-ungrab-event (pointer-exit-event)
+  ())
+
+(define-event-class window-event (standard-event)
+  ((region :initarg :region
+	   :reader window-event-native-region)))
 
 (defmethod window-event-region ((event window-event))
   (untransform-region (sheet-native-transformation (event-sheet event))
@@ -215,7 +223,7 @@
 (defmethod window-event-mirrored-sheet ((event window-event))
   (sheet-mirror (event-sheet event)))
 
-(defclass window-configuration-event (window-event)
+(define-event-class window-configuration-event (window-event)
   ((x :initarg :x :reader window-configuration-event-native-x)
    (y :initarg :y :reader window-configuration-event-native-y)
    (width :initarg :width :reader window-configuration-event-width)
@@ -235,63 +243,26 @@
 (defmethod window-configuration-event-y ((event window-configuration-event))
   (get-window-position ((event-sheet event) event) y))
 
-(defclass window-unmap-event (window-event)
+(define-event-class window-unmap-event (window-event)
   ())
 
-(defclass window-destroy-event (window-event)
+(define-event-class window-destroy-event (window-event)
   ())
 
-(defclass window-repaint-event (window-event)
-  (
-   ))
+(define-event-class window-repaint-event (window-event)
+  ())
 
-(defclass window-manager-event (standard-event) ())
+(define-event-class window-manager-event (standard-event) ())
 
-(defclass window-manager-delete-event (window-manager-event)
-  ((sheet :initarg :sheet	; not required by the spec but we need 
-	  :reader event-sheet)	; to know which window to delete - mikemac
-   ))
+(define-event-class window-manager-delete-event (window-manager-event)
+  ;; sheet (inherited from standard-event) is not required by the spec but we
+  ;; need to know which window to delete - mikemac
+  ())     
 
-(defclass timer-event (standard-event)
-  ((sheet
-     :initarg :sheet
-     :reader  event-sheet)
-   (token
+(define-event-class timer-event (standard-event)
+  ((token
      :initarg :token
      :reader  event-token)))
-
-(defmethod event-instance-slots ((self event))
-  '(timestamp))
-
-(defmethod event-instance-slots ((self device-event))
-  '(timestamp modifier-state sheet))
-
-(defmethod event-instance-slots ((self keyboard-event))
-   '(timestamp modifier-state sheet key-name))
-
-(defmethod event-instance-slots ((self pointer-event))
-  '(timestamp modifier-state sheet pointer button x y root-x root-y))
-
-(defmethod event-instance-slots ((self window-event))
-  '(timestamp region))
-
-;(defmethod print-object ((self event) sink)
-; (print-object-with-slots self (event-instance-slots self) sink))
-
-;(defmethod translate-event ((self pointer-event) dx dy)
-;  (apply #'make-instance (class-of self)
-;         :x (+ dx (pointer-event-x self))
-;         :y (+ dy (pointer-event-y self))
-;         (fetch-slots-as-kwlist self (event-instance-slots self))))
-
-;(defmethod translate-event ((self window-event) dx dy)
-;  (apply #'make-instance (class-of self)
-;         :region (translate-region (window-event-region self) dx dy)
-;         (fetch-slots-as-kwlist self (event-instance-slots self))))
-
-;(defmethod translate-event ((self event) dx dy)
-;  (declare (ignore dx dy))
-;  self)
 
 ;;; Constants dealing with events
 
@@ -338,32 +309,6 @@
       `(flet ((check-button (,b) (= ,button ,b))
 	      (check-modifier (,m) (not (zerop (logand ,m ,modifier-state)))))
 	 (and ,@(do-substitutes clauses))))))
-
-(defmethod event-type ((event device-event)) :device)
-(defmethod event-type ((event keyboard-event)) :keyboard)
-(defmethod event-type ((event key-press-event)) :key-press)
-(defmethod event-type ((event key-release-event)) :key-release)
-(defmethod event-type ((event pointer-event)) :pointer)
-(defmethod event-type ((event pointer-button-event)) :pointer-button)
-(defmethod event-type ((event pointer-button-press-event)) :pointer-button-press)
-(defmethod event-type ((event pointer-button-release-event)) :pointer-button-release)
-(defmethod event-type ((event pointer-button-hold-event)) :pointer-button-hold)
-(defmethod event-type ((event pointer-motion-event)) :pointer-motion)
-(defmethod event-type ((event pointer-boundary-event)) :pointer-boundary)
-(defmethod event-type ((event pointer-enter-event)) :pointer-enter)
-(defmethod event-type ((event pointer-exit-event)) :pointer-exit)
-(defmethod event-type ((event window-event)) :window)
-(defmethod event-type ((event window-configuration-event)) :window-configuration)
-(defmethod event-type ((event window-repaint-event)) :window-repaint)
-(defmethod event-type ((event window-manager-event)) :window-manager)
-(defmethod event-type ((event window-manager-delete-event)) :window-manager-delete)
-(defmethod event-type ((event timer-event)) :timer)
-
-;; keyboard-event-character keyboard-event 
-;; pointer-event-native-x pointer-event
-;; pointer-event-native-y pointer-event
-;; window-event-native-region window-event
-;; window-event-mirrored-sheet window-event
 
 ;; Key names are a symbol whose value is port-specific. Key names
 ;; corresponding to the set of standard characters (such as the

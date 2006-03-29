@@ -136,7 +136,7 @@
   (cond ((wild-pathname-p pathname) (standard-icon "wild.xpm"))
         ((not (probe-file pathname)) (standard-icon "invalid.xpm"))
         ((directoryp pathname) *folder-icon*) ;; FIXME: use inode mime types                              
-        (T (let ((mime-class (find-class (pathname-mime-type pathname) nil)))
+        (t (let ((mime-class (find-class (pathname-mime-type pathname) nil)))
              (if mime-class
                  (or (gethash (class-name mime-class) *icon-mapping*)
                      (icon-of (clim-mop:class-prototype (find-class (pathname-mime-type pathname) nil))))
@@ -201,15 +201,15 @@
 (defun read-slashified-line (stream &optional (accumulation nil))
   (let ((line (read-line stream nil)))
     (cond ((null line) (values nil nil))
-          ((zerop (length line)) (values accumulation T))
+          ((zerop (length line)) (values accumulation t))
           ((and (null accumulation)  ;; # Comment
                 (char= (elt line 0) #\#))
-           (values nil T))
-          (T (if (char= #\\ (elt line (1- (length line))))
+           (values nil t))
+          (t (if (char= #\\ (elt line (1- (length line))))
                  (read-slashified-line stream
                                        (concatenate 'string accumulation
                                            (subseq line 0 (1- (length line)))))
-               (values (concatenate 'string accumulation line) T))))))
+               (values (concatenate 'string accumulation line) t))))))
 
 (defun read-the-lines (pathname)
   (let ((elements nil))
@@ -273,7 +273,7 @@
       (when split-pos
         (let* ((foo (subseq string start split-pos))
                (pos (skip-whitespace string (1+ split-pos))))
-;          (format T "~%*****   foo=~A~%" foo)
+;          (format t "~%*****   foo=~A~%" foo)
           (when pos
             (let* ((end (or (if (eql (elt string pos) #\")
                                 (1+ (position-if (lambda (c)
@@ -299,7 +299,7 @@
               (when (eq keysym :type)
                 (setf (gethash :subtype table) (nth-value 2 (read-mime-type bar)))
                 (setf (gethash :media-type table) (read-mime-type bar)))
-;              (format T "~&~W => ~W~%" foo bar)
+;              (format t "~&~W => ~W~%" foo bar)
               (setf (gethash keysym table) value)
               (parse-netscrapings table string end) ))))))
   table)
@@ -335,7 +335,7 @@
               (exts (gethash :exts elt)))
           (eval `(define-mime-type (,media-type ,subtype)
                    (:extensions ,@exts))))
-      #+nil(format T "Ignoring ~W, unknown media type.~%" (gethash :type elt)))))
+      #+nil(format t "Ignoring ~W, unknown media type.~%" (gethash :type elt)))))
   
 (defun parse-mime-types-file (pathname)
   (mapcar (lambda (x) (process-mime-type (parse-mt-elt x)))
@@ -401,7 +401,7 @@
                (when (< index (1- (length string)))
                  (push (elt string (incf index)) chars)))
               ((eql c #\;) (return-from poop chars))
-              (T (push c chars)))
+              (t (push c chars)))
         (incf index)))
     (values 
      (string-trim *whitespace* (concatenate 'string (nreverse chars)))
@@ -411,7 +411,7 @@
   (let* ((sep-pos (position #\= string))
          (field-name (subseq string 0 (or sep-pos (length string)))))
     (values (intern (string-upcase field-name) (find-package :keyword))
-            (ignore-errors (or (when sep-pos (subseq string (1+ sep-pos))) T)))))
+            (ignore-errors (or (when sep-pos (subseq string (1+ sep-pos))) t)))))
 
 (defun parse-mailcap-entry (line)
   "Parses a line of the mailcap file, returning either nil or the properties
@@ -469,7 +469,7 @@
                            *mime.types-search-path*)))
     (dolist (path (reverse search-path))
       (when (probe-file path)
-        (format T "Loading mime types from ~A~%" path)
+        (format t "Loading mime types from ~A~%" path)
         (parse-mime-types-file path)))))
 
 (defun load-mailcaps ()
@@ -477,7 +477,7 @@
                            *mailcap-search-path*)))
     (dolist (path (reverse search-path))
       (when (probe-file path)
-        (format T "Loading mailcap from ~A~%" path)
+        (format t "Loading mailcap from ~A~%" path)
         (parse-mailcap-file path)))))
 
 
@@ -544,7 +544,7 @@
               (cond ((eql d #\s)  (princ (quote-shell-characters (namestring (truename pathname))) out))
                     ((eql d #\t)  (princ (gethash :type spec) out))
                     ((eql d #\u)  (princ (pathname-to-uri-string pathname) out))
-                    (T (debugf "Ignoring unknown % syntax." d))))
+                    (t (debugf "Ignoring unknown % syntax." d))))
             (write-char c out))))))
 
 (defun find-viewspec (pathname)
@@ -571,13 +571,13 @@
              (test (gethash :test def))
              (needsterminal (gethash :needsterminal def)))
         (if needsterminal
-            (format T "Sorry, the viewer app needs a terminal (fixme!)~%")
+            (format t "Sorry, the viewer app needs a terminal (fixme!)~%")
           (progn
             (when test
               (debugf "Sorry, ignoring TEST option right now.. " test))
             (if view-command 
                 (run-program "/bin/sh" `("-c" ,(gen-view-command-line def pathname) "&"))
-              (format T "~&No view-command!~%"))))))))
+              (format t "~&No view-command!~%"))))))))
 
 
 

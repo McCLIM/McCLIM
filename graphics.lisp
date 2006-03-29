@@ -111,7 +111,7 @@
           (if (null line-style)              
               (setf line-style old-line-style))
 	  (when (or line-unit line-thickness dashes-p line-joint-shape line-cap-shape)
-            (setf changed-line-style T)
+            (setf changed-line-style t)
             (setf line-style (make-line-style
                               :unit (or line-unit
                                         (line-style-unit line-style))
@@ -130,7 +130,7 @@
 						  (medium-merged-text-style medium)))
 	    (setf text-style (medium-merged-text-style medium)))
 	  (when (or text-family-p text-face-p text-size-p)
-            (setf changed-text-style T)
+            (setf changed-text-style t)
             (setf text-style (merge-text-styles (make-text-style text-family
                                                                  text-face
                                                                  text-size)

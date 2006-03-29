@@ -42,7 +42,7 @@
                   (mapcar #'(lambda (x)                              
                               (cond
                                 ((stringp x) `((princ ,x *trace-output*)))
-                                (T `((princ ',x *trace-output*)
+                                (t `((princ ',x *trace-output*)
                                      (princ "=" *trace-output*)
                                      (write ,x :stream *trace-output*)
                                      (princ #\space *trace-output*)))))
@@ -96,8 +96,8 @@
 (defun sbcl-frob-to-pathname (pathname string)
   "This just keeps getting more disgusting."
   (let* ((parent (strip-filespec pathname))
-        (pn (merge-pathnames (make-pathname :name (subseq string 0 (position #\. string :start 1 :from-end T))
-                                            :type (let ((x (position #\. string :start 1 :from-end T)))
+        (pn (merge-pathnames (make-pathname :name (subseq string 0 (position #\. string :start 1 :from-end t))
+                                            :type (let ((x (position #\. string :start 1 :from-end t)))
                                                      (if x (subseq string (1+ x)) nil)))
                               parent))
          (dir (ignore-errors (sb-posix:opendir (namestring pn)))))
@@ -168,7 +168,7 @@
 ;;; This ought to change the current directory to *default-pathname-defaults*..
 ;;; (see above)
 
-(defun run-program (program args &key (wait T) (output *standard-output*) (input *standard-input*))    
+(defun run-program (program args &key (wait t) (output *standard-output*) (input *standard-input*))    
   #+(or CMU scl) (ext:run-program program args :input input
 				  :output output :wait wait)
 
@@ -182,7 +182,7 @@
   #+clisp (ext:run-program program :arguments args :wait wait)
 
   #-(or CMU scl SBCL lispworks clisp)
-  (format T "~&Sorry, don't know how to run programs in your CL.~%"))
+  (format t "~&Sorry, don't know how to run programs in your CL.~%"))
 
 ;;;; CLIM/UI utilities
 
@@ -216,12 +216,12 @@
       (truncate (/ (text-style-ascent (medium-text-style stream) stream) fraction))))
 
 (defun invoke-as-heading (cont &optional ink)
-  (with-drawing-options (T :ink (or ink +royal-blue+) :text-style (make-text-style :sans-serif :bold nil))
+  (with-drawing-options (t :ink (or ink +royal-blue+) :text-style (make-text-style :sans-serif :bold nil))
     (fresh-line)
-    (bordering (T :underline)
+    (bordering (t :underline)
       (funcall cont))
     (fresh-line)
-    (vertical-gap T)))
+    (vertical-gap t)))
 
 (defun indent-to (stream x &optional (spacing 0) )
   "Advances cursor horizontally to coordinate X. If the cursor is already past
@@ -451,7 +451,7 @@ function specified by :ABBREVIATOR. Abbreviate is controlled by the variables
 ;; Disgusting hacks to make input default to nil, as CMUCL's run-program seems
 ;; to hang randomly unless I do that. But sometimes I'll need to really change these..
 ;; ** Goddamn CMUCL's run-program likes to hang randomly even with this dumb hack. Beware..
-(defparameter *run-output* T)
+(defparameter *run-output* t)
 (defparameter *run-input* nil)
 
 ;; We attempt to translate keywords and a few types of lisp objects
@@ -459,7 +459,7 @@ function specified by :ABBREVIATOR. Abbreviate is controlled by the variables
 
 (defgeneric transform-program-arg (arg))
 
-(defmethod transform-program-arg ((arg T))
+(defmethod transform-program-arg ((arg t))
   (values (prin1-to-string arg)))
 
 (defmethod transform-program-arg ((arg string))

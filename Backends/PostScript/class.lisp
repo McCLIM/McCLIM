@@ -32,7 +32,7 @@
 ;;;
 ;;;--GB
 
-(in-package :CLIM-POSTSCRIPT)
+(in-package :clim-postscript)
 
 ;;;; Medium
 

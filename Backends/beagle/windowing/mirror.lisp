@@ -455,7 +455,7 @@ for windows that are not decorated."
 	    (send (send mirror 'window)
 		  :frame-rect-for-content-rect rect
 		  :style-mask (%beagle-style-mask-for-frame sheet))
-	    :display T))))
+	    :display t))))
 
 
 (defun %beagle-style-mask-for-frame (sheet)

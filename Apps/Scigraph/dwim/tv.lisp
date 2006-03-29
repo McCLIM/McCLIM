@@ -457,7 +457,7 @@ advised of the possiblity of such damages.
 	     (clim:enable-frame frame)
 	     (clim:panes-need-redisplay frame)
 	     (clim:redisplay-frame-panes frame))
-	    (T (clim:start-frame frame wait-until-done)))))
+	    (t (clim:start-frame frame wait-until-done)))))
    (:clim-1.0
     (labels ((set-backing-store (window value)
 	       #+xlib
