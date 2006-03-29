@@ -46,11 +46,11 @@
 ;;;   * Portable MOP provided by CLIM-MOP package
 
 ;;; TODO:
-;;;   * EQL specializers on implementations other than SBCL/CMUCL
-;;;   * Nicer, more clever display of methods than simply listing them in a row.
-;;;     To do this right really involes some nonportable fun and a codewalker.
-;;;     You could probably write something that just understood the standard
-;;;     method combination and qualifiers with substantially less work.
+;;;   * Nicer, more clever display of methods than simply listing them
+;;;     in a row.  To do this right really involes some nonportable
+;;;     fun and a codewalker.  You could probably write something that
+;;;     just understood the standard method combination and qualifiers
+;;;     with substantially less work.
 ;;;   * Change focus behavior of McCLIM text entry gadget
 ;;;   * Implement focus-aware cursor shapes in McCLIM and/or Goatee
 ;;;     (actually I did this ages ago, but let it rot away on my disk..)
@@ -67,23 +67,19 @@ specialized on, removing duplicates"
          collect (remove-duplicates (mapcar (lambda (specs) (nth index specs))
                                             specializers)))))
 
+;;; FIXME: why is this necessary?  I'm pretty sure the #+CMU clause
+;;; here has been superseded by events for quite a while now.  (Should
+;;; clim-mop:class not cater for these implementation differences?)
 (defun classp (x)
   (or (typep x 'cl:class)
-      #+CMU (typep x 'pcl::class)))
-
-(defun eql-specializer-p (x)
-  #+SBCL (typep x 'sb-mop:eql-specializer)
-  #+CMU  (typep x 'pcl:eql-specializer))
-
-(defun eql-specializer-object (x)
-  #+SBCL (sb-mop:eql-specializer-object x)
-  #+CMU  (pcl::eql-specializer-object x))
+      #+CMU (typep x 'pcl::class)
+      #+scl (typep x 'clos::std-class)))
 
 (defun compute-applicable-methods-from-specializers (gf specializers)
   (clim-mop:compute-applicable-methods gf
      (mapcar (lambda (spec)
-               (cond ((eql-specializer-p spec)
-                      (eql-specializer-object spec))
+               (cond ((typep spec 'clim-mop:eql-specializer)
+                      (clim-mop:eql-specializer-object spec))
                      ((classp spec)
                       (clim-mop:class-prototype spec))
                      (t (error "Can't compute effective methods, specializer ~A is not understood." spec))))
@@ -104,17 +100,17 @@ specialized on, removing duplicates"
                             (classp b))
                        (string< (class-name a)
                                 (class-name b)))
-                      ((and (eql-specializer-p a)
-                            (not (eql-specializer-p b)))
+                      ((and (typep a 'clim-mop:eql-specializer)
+                            (not (typep b 'clim-mop:eql-specializer)))
                        nil)
-                      ((and (not (eql-specializer-p a))
-                            (eql-specializer-p b))
+                      ((and (not (typep a 'clim-mop:eql-specializer))
+                            (typep b 'clim-mop:eql-specializer))
                        t)
-                      ((and (eql-specializer-p a)
-                            (eql-specializer-p b))
+                      ((and (typep a 'clim-mop:eql-specializer)
+                            (typep b 'clim-mop:eql-specializer))
                        (string<
-                        (princ-to-string (eql-specializer-object a))
-                        (princ-to-string (eql-specializer-object b))))
+                        (princ-to-string (clim-mop:eql-specializer-object a))
+                        (princ-to-string (clim-mop:eql-specializer-object b))))
                       (t (warn "Received specializer of unknown type")
                          nil) ))))
           (compute-gf-specializers gf)))
@@ -135,8 +131,8 @@ specialized on, removing duplicates"
   "Pretty print the name of a method specializer"
   (cond ((classp spec)
          (princ-to-string (class-name spec)))
-        ((eql-specializer-p spec)
-         (format nil "(EQL '~A)" (eql-specializer-object spec)))
+        ((typep spec 'clim-mop:eql-specializer)
+         (format nil "(EQL '~A)" (clim-mop:eql-specializer-object spec)))
         (t (princ-to-string spec))))
 
 (defun maybe-find-gf (name)
@@ -174,7 +170,7 @@ specialized on, removing duplicates"
 ;; commands within your application, a menu bar, etc.
 
 ;; The :panes option is typically used to define and name the important
-;; elements of your interface. CLIM provides some syntactic sugare, for
+;; elements of your interface. CLIM provides some syntactic sugar, for
 ;; example (arg-pane :vrack-pane) below is equivalent to
 ;; (arg-pane (make-pane 'vrack-pane)).
 
