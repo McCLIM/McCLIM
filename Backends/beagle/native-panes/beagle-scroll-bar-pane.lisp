@@ -4,13 +4,7 @@
 ;;; Limitations:
 ;;;
 ;;;  - ignores different NSControl sizes
-;;;  - inherits from the 'standard' scroll-bar-pane, rather than from the abstract
-;;;    scroll bar
 
-;;; Inheriting from 'scroll-bar' will probably work if we use the :default-initargs
-;;; hackery out of gadgets.lisp (but shouldn't these be part of the abstract type?)
-
-;;;(defclass beagle-scroll-bar-pane (scroll-bar)
 (defclass beagle-scroll-bar-pane (scroll-bar)
   ((tk-obj :initform (%null-ptr) :accessor toolkit-object)))
 
@@ -83,6 +77,54 @@
 			      :min-height width
 			      :height width))))
 
+;;; Change the value of the scroll bar in the application process i.e.,
+;;; consistently with respect to events that have been received.
+
+(defmethod drag-callback :before
+    ((gadget beagle-scroll-bar-pane) client gadget-id value)
+  (declare (ignore client gadget-id))
+  (setf (slot-value gadget 'climi::value) value))
+
+(defun update-cocoa-scroll-bar (scroll-bar)
+  (let* ((range (- (gadget-max-value scroll-bar)
+		   (gadget-min-value scroll-bar)))
+	 (value (if (zerop range)
+		    0.0
+		     (/ (- (gadget-value scroll-bar)
+			   (gadget-min-value scroll-bar))
+			range)))
+	 (ts (climi::scroll-bar-thumb-size scroll-bar))
+	 (loz-size (if (<= range 0)
+		       1.0
+		       (/ ts (+ range ts)))))
+    (send (toolkit-object scroll-bar)
+	  :set-float-value (coerce (clamp value 0.0 1.0) 'short-float)
+	  :knob-proportion (coerce (clamp loz-size 0.0 1.0) 'short-float))))
+
+(defmethod (setf gadget-min-value) :after
+    (new-value (pane beagle-scroll-bar-pane))
+  (declare (ignore new-value))
+  (update-cocoa-scroll-bar pane))
+
+(defmethod (setf gadget-max-value) :after (new-value (pane beagle-scroll-bar-pane))
+  (declare (ignore new-value))
+  (update-cocoa-scroll-bar pane))
+
+(defmethod (setf climi::scroll-bar-thumb-size) :after (new-value (pane beagle-scroll-bar-pane))
+  (declare (ignore new-value))
+  (update-cocoa-scroll-bar pane))
+
+(defmethod (setf gadget-value) :after (new-value (pane beagle-scroll-bar-pane) &key invoke-callback)
+  (declare (ignore new-value invoke-callback))
+  (update-cocoa-scroll-bar pane))
+
+(climi::defmethod* (setf climi::scroll-bar-values)
+    (min-value max-value thumb-size value (scroll-bar beagle-scroll-bar-pane))
+  (setf (slot-value scroll-bar 'climi::min-value) min-value
+	(slot-value scroll-bar 'climi::max-value) max-value
+	(slot-value scroll-bar 'climi::thumb-size) thumb-size
+	(slot-value scroll-bar 'climi::value) value)
+  (update-cocoa-scroll-bar scroll-bar))
 
 ;;; No need to update the scrollbar (most of the time) since Cocoa will move
 ;;; the 'thumb' appropriately. Stick some debug in to see when it's invoked.
@@ -91,6 +133,7 @@
 ;;; I believe it's safe to leave this alone though since the sb will only be
 ;;; redrawn once through the event loop it shouldn't be too inefficient to
 ;;; be changing its value regularly.
+#-(and)
 (defmethod (setf gadget-value) :before (value (gadget beagle-scroll-bar-pane)
 					      &key invoke-callback)
   (declare (ignore invoke-callback))
@@ -101,12 +144,10 @@
 
   (let* ((range (- (gadget-max-value gadget)
 		   (gadget-min-value gadget)))
-	 (size  (if (eq (gadget-orientation gadget) :vertical)
-		    (bounding-rectangle-height gadget)
-		  (bounding-rectangle-width gadget)))
+	 (size  (climi::scroll-bar-thumb-size gadget))
 	 (position (if (<= range 0)
 		       0.0
-		     (/ value range)))
+		     (/ (- value (gadget-min-value gadget) range)))
 	 (loz-size (if (<= range 0)
 		       1.0
 		     (/ size range))))
@@ -115,6 +156,7 @@
 	  :knob-proportion (coerce loz-size 'short-float))))
 
 
+;;; Called in the Cocoa App thread.
 (defun scroll-bar-action-handler (pane sender)
 
   ;; Now we need to decide exactly what we do with these events... not sure
@@ -132,28 +174,33 @@
   (let ((hit-part (send sender 'hit-part)))
     (cond ((or (eq hit-part #$NSScrollerKnob)      ; drag knob
 	       (eq hit-part #$NSScrollerKnobSlot)) ; click on knob (or alt-click on slot)
-	   (let ((value    (* (send sender 'float-value) ; 0.0 - 1.0
+	   (let ((value (+ (* (send sender 'float-value) ; 0.0 - 1.0
 			      (- (gadget-max-value pane) ; range; 0.0 -> max extent ...
-				 (gadget-min-value pane)))))  ; ... (probably)
-	     (clim:drag-callback pane
-				 (gadget-client pane)
-				 (gadget-id pane)
-				 value)))
+				 (gadget-min-value pane)))
+			   (gadget-min-value pane)))) ; ... (probably)
+	     (queue-callback #'clim:drag-callback
+			     pane
+			     (gadget-client pane)
+			     (gadget-id pane)
+			     value)))
 	  ((eq hit-part #$NSScrollerDecrementLine)
-	   (clim:scroll-up-line-callback pane
-					 (gadget-client pane)
-					 (gadget-id pane)))
+	   (queue-callback #'clim:scroll-up-line-callback
+			   pane
+			   (gadget-client pane)
+			   (gadget-id pane)))
 	  ((eq hit-part #$NSScrollerDecrementPage)
-	   (clim:scroll-up-page-callback pane
-					 (gadget-client pane)
-					 (gadget-id pane)))
+	   (queue-callback #'clim:scroll-up-page-callback
+			   pane
+			   (gadget-client pane)
+			   (gadget-id pane)))
 	  ((eq hit-part #$NSScrollerIncrementLine)
-	   (clim:scroll-down-line-callback pane
-					   (gadget-client pane)
-					   (gadget-id pane)))
+	   (queue-callback #'clim:scroll-down-line-callback
+			   pane
+			   (gadget-client pane)
+			   (gadget-id pane)))
 	  ((eq hit-part #$NSScrollerIncrementPage)
-	   (clim:scroll-down-page-callback pane
-					   (gadget-client pane)
-					   (gadget-id pane))))))
-
+	   (queue-callback #'clim:scroll-down-page-callback
+			   pane
+			   (gadget-client pane)
+			   (gadget-id pane))))))
 

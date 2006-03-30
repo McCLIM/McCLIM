@@ -460,8 +460,11 @@
                             :initform nil
                             :reader scroll-bar-scroll-up-page-callback)
    (thumb-size :initarg :thumb-size :initform 1/4
-               :accessor scroll-bar-thumb-size)
-   )
+               :accessor scroll-bar-thumb-size
+	       :documentation "The size of the scroll bar thumb (slug) in the
+  units of the gadget value. When the scroll bar is drawn the empty region of
+  the scroll bar and the thumb are drawn in proportion  to the values of the
+  gadget range and thumb size."))
   (:default-initargs :value 0
                      :min-value 0
                      :max-value 1
@@ -2853,6 +2856,7 @@ it in a layout between two panes that are to be resizeable.  E.g.:
 
 (defmethod handle-event ((gadget basic-gadget) (event callback-event))
   (apply (callback-function event)
+	 (event-gadget event)
 	 (event-client event)
 	 (event-client-id event)
 	 (event-other-args event)))
