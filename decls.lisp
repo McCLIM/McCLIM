@@ -321,9 +321,9 @@
 ;; with-output-recording-options (stream &key record draw) &body body [Macro]
 (defgeneric invoke-with-output-recording-options (stream continuation record draw))
 ;; with-new-output-record (stream &optional record-type record &rest initargs) &body body [MAcro]
-(defgeneric invoke-with-new-output-record (stream continuation record-type &rest initargs &key parent))
+(defgeneric invoke-with-new-output-record (stream continuation record-type constructor &key &allow-other-keys))
 ;; with-output-to-output-record (stream &optional record-type record &rest initargs)) &body body [Macro]
-(defgeneric invoke-with-output-to-output-record (stream continuation record-type &rest initargs &key))
+(defgeneric invoke-with-output-to-output-record (stream continuation record-type constructor &rest initargs &key &allow-other-keys))
 (defgeneric make-design-from-output-record (record))
 
 ;;;; 21.2
