@@ -74,11 +74,11 @@
                ((:eps)
                 (let ((record (stream-output-history stream)))
                   (multiple-value-bind (lx ly ux uy) (bounding-rectangle* record)
-                    (setf translate-x (- (ceiling lx))
+                    (setf translate-x (- (floor lx))
                           translate-y (ceiling uy))
                     (format file-stream "%%BoundingBox: ~A ~A ~A ~A~%" 
                             0 0
-                            (+ translate-x (floor lx))
+                            (+ translate-x (ceiling ux))
                             (- translate-y (floor ly))))))
                (t
                 (multiple-value-bind (width height)
