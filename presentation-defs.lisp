@@ -100,8 +100,9 @@
 (defmethod presentation-type-of ((object structure-object))
   (multiple-value-bind (name lambda-list)
       (get-ptype-from-class-of object)
-    (if (or (null lambda-list)
-            (member lambda-list lambda-list-keywords))
+    (if (and name
+	     (or (null lambda-list)
+		 (member lambda-list lambda-list-keywords)))
         name
         (call-next-method))))
 

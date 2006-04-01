@@ -26,7 +26,8 @@
 
 ;;; cheat and use this McCLIM internal class :)
 (defclass screen-area-cursor (clim-internals::cursor-mixin cursor)
-  ((screen-line :accessor screen-line :initarg :screen-line)))
+  ((screen-line :accessor screen-line :initarg :screen-line))
+  (:default-initargs :appearance :solid))
 
 (defmethod* (setf cursor-position) (nx ny (cursor screen-area-cursor))
   (declare (ignore nx ny))
