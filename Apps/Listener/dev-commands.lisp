@@ -37,10 +37,20 @@
 
 ;;; Presentation types
 
-(define-presentation-type class () :inherit-from 'expression)
+(define-presentation-type specializer () :inherit-from 'expression)
+(define-presentation-type class () :inherit-from 'specializer)
+(define-presentation-type eql-specializer () :inherit-from 'specializer)
 (define-presentation-type class-name () :inherit-from 'symbol)
 (define-presentation-type slot-definition () :inherit-from 'expression)
-(define-presentation-type function-name () :inherit-from 'symbol)
+
+(define-presentation-type-abbreviation function-name () 
+  `(and expression (satisfies legal-and-fboundp)))
+
+(defun legal-and-fboundp (object)
+  (and #+sbcl (sb-int:valid-function-name-p object)
+       #-sbcl (typep object '(or symbol (cons (eql setf))))
+       (fboundp object)))
+
 (define-presentation-type process () :inherit-from 'expression)
 (define-presentation-type generic-function () :inherit-from 't)
 
@@ -67,9 +77,7 @@
 
 (define-presentation-type package-name () :inherit-from 'string)
 (define-presentation-method presentation-typep (object (type package-name))
-  (find-package 'object))
-    
-
+  (find-package object))
 
 ;;; Presentation methods
 
@@ -98,8 +106,10 @@
 		 (write-char #\( stream)
 		 (present arg 'symbol :stream stream)
 		 (write-char #\space  stream)
-		 (with-output-as-presentation (stream spec 'class)
-		   (format stream "~S" (clim-mop:class-name spec)))
+		 (with-output-as-presentation (stream spec 'specializer)
+                   (if (typep spec 'class)
+                       (format stream "~S" (clim-mop:class-name spec))
+                       (format stream "~S" `(eql ,(clim-mop:eql-specializer-object spec)))))
                  (write-char #\) stream))))
       (when optional
 	(format stream " &optional ~{~A ~^ ~}" optional))
@@ -187,13 +197,31 @@
   (object)
   (clim-mop:class-name object))
 
+(define-presentation-translator expression-to-function-name
+  (expression function-name lisp-dev-commands
+     :documentation ((object stream) (format stream "~A" object))
+     :gesture t
+     :tester ((object) (legal-and-fboundp object))
+     :tester-definitive t)
+  (object)
+  object)
 (define-presentation-translator symbol-to-function-name
   (symbol function-name lisp-dev-commands
-     :documentation ((object stream) (format stream "Function ~A" object))
+     :documentation ((object stream) (format stream "~A" object))
      :gesture t
-     :tester ((object) (fboundp object))
+     :tester ((object) (legal-and-fboundp object))
      :tester-definitive t)
-  (object) object)
+  (object)
+  object)
+#+nil ; doesn't work for some reason
+(define-presentation-translator sequence-to-function-name
+  ((sequence t) function-name lisp-dev-commands
+     :documentation ((object stream) (format stream "~A" object))
+     :gesture t
+     :tester ((object) (legal-and-fboundp object))
+     :tester-definitive t)
+  (object)
+  object)
 
 ;;; Application commands
 
@@ -336,7 +364,7 @@
 			   :command-table lisp-commands
                            :menu t
 			   :provide-output-destination-keyword nil)
-    ((fsym 'function-name :prompt "function-name"))
+    ((fsym 'function-name :prompt "function name"))
   (if (fboundp fsym)
       (progn 
 	(eval `(trace ,fsym))
@@ -347,7 +375,7 @@
 			     :command-table lisp-commands
                              :menu t
 			     :provide-output-destination-keyword nil)
-    ((fsym 'symbol :prompt "function name"))
+    ((fsym 'function-name :prompt "function name"))
   (if (fboundp fsym)
       (progn
 	(eval `(untrace ,fsym))
@@ -572,10 +600,16 @@
           (note "No accessors")
         (progn
           (with-ink (readers)
-            (if readers (dolist (reader readers)  (format t "~A~%" reader))
-              (note "No readers~%")))
+            (if readers 
+                (dolist (reader readers)
+                  (hackish-present reader)
+                  (terpri))
+                (note "No readers~%")))
           (with-ink (writers)
-            (if writers (dolist (writer writers)  (format t "~A~%" writer))
+            (if writers 
+                (dolist (writer writers) 
+                  (hackish-present writer)
+                  (terpri))
               (note "No writers"))))))
 
     (fcell (documentation :left)
@@ -1379,19 +1413,14 @@
 				     :command-table lisp-commands
                                      :menu t
 				     :provide-output-destination-keyword nil)
-  ((symbol 'symbol :prompt "function-name"))
-  (clim-sys:make-process (lambda () (ed symbol))))
-
-(defun editable-definition-p (symbol)
-  (fboundp symbol))
+  ((function-name 'function-name :prompt "function name"))
+  (clim-sys:make-process (lambda () (ed function-name))))
 
 (define-presentation-to-command-translator edit-definition
-  (symbol com-edit-definition lisp-commands :gesture :select
+  (function-name com-edit-definition lisp-commands :gesture :select
 	  :pointer-documentation ((object stream)
 				  (format stream "Edit Definition of ~A" object))
-	  :documentation ((stream) (format stream "Edit Definition"))
-	  :tester ((object)
-		   (editable-definition-p object)))
+	  :documentation ((stream) (format stream "Edit Definition")))
   (object)
   (list object))
 		   
