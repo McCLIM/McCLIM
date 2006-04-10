@@ -767,7 +767,7 @@
 ;;; The possibilities action is different enough that I don't want to add to
 ;;; the spaghetti above...
 
-(defun complete-from-generator-possibilities  
+(defun complete-from-generator-possibilities
     (initial-string generator predicate)
   (let ((possibilities nil)
 	(nmatches 0)
@@ -783,12 +783,13 @@
       (funcall generator initial-string #'suggester)
       (if (and (eql nmatches 1)
 	       (string-equal initial-string (caar possibilities)))
+	  ;; return values are as from complete-from-generator, qv.
 	  (values (caar possibilities)
 		  t
 		  (cdar possibilities)
 		  nmatches
 		  possibilities)
-	  (values initial-string nil nil nmatches possibilities)))))
+	  (values initial-string nil nil nmatches (sort possibilities #'string-lessp :key #'car))))))
 
 (defun complete-from-possibilities (initial-string completions delimiters &key
 				    (action :complete)
