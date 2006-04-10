@@ -315,7 +315,8 @@
                #+clx (:file "gadget-test")
                (:file "accepting-values")
                (:file "method-browser")
-	       (:file "dragndrop-translator")))
+	       (:file "dragndrop-translator")
+               (:file "draggable-graph")))
      (:module "Goatee"
 	      :components
 	      ((:file "goatee-test")))))

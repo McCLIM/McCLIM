@@ -3,7 +3,7 @@
 ;;;     Title: Graph Formatting
 ;;;   Created: 2002-08-13
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: graph-formatting.lisp,v 1.17 2006/03/10 21:58:13 tmoore Exp $
+;;;       $Id: graph-formatting.lisp,v 1.18 2006/04/10 09:48:40 crhodes Exp $
 ;;; ---------------------------------------------------------------------------
 
 ;;;  (c) copyright 2002 by Gilbert Baumann
@@ -240,6 +240,8 @@
     :initarg :graph-children
     :initform nil
     :accessor graph-node-children)
+   (edges-from :initform (make-hash-table))
+   (edges-to   :initform (make-hash-table))
    (object
     :initarg :object
     :reader graph-node-object)
@@ -405,6 +407,15 @@
                                (incf v within-generation-separation)))
                            (graph-root-nodes graph-output-record)))))))))))
 
+;;;; Edges
+
+(defclass standard-edge-output-record (standard-sequence-output-record)
+  ((stream)
+   (arc-drawer)
+   (arc-drawing-options)
+   (from-node :initarg :from-node)
+   (to-node :initarg :to-node)))
+
 
 (defmethod layout-graph-nodes ((graph-output-record dag-graph-output-record)
                                stream arc-drawer arc-drawing-options)
@@ -526,7 +537,7 @@ cutoff-depth.  GENERATE-GRAPH-NODES seems to obey this precondition."
   (with-slots (root-nodes orientation) graph-output-record
     (let ((hash (make-hash-table)))
       (labels ((walk (node)
-                 (unless (gethash node hash)
+		 (unless (gethash node hash)
                    (setf (gethash node hash) t)
                    (dolist (k (graph-node-children node))
                      (with-bounding-rectangle* (x1 y1 x2 y2) node
@@ -551,6 +562,55 @@ cutoff-depth.  GENERATE-GRAPH-NODES seems to obey this precondition."
                      (walk k)))))
         (map nil #'walk root-nodes)))))
 
+(defun layout-edges (graph node stream arc-drawer arc-drawing-options)
+  (dolist (k (graph-node-children node))
+    (layout-edge graph node k stream arc-drawer arc-drawing-options)))
+
+(defun ensure-edge-record (graph major-node minor-node)
+  (let ((edges-from (slot-value major-node 'edges-from))
+	(edges-to   (slot-value minor-node 'edges-to)))
+    (assert (eq (gethash minor-node edges-from)
+		(gethash major-node edges-to)))
+    (or (gethash minor-node edges-from)
+	(let ((record (make-instance 'standard-edge-output-record
+				     :from-node major-node :to-node minor-node)))
+	  (setf (gethash minor-node edges-from) record
+		(gethash major-node edges-to) record)
+	  (add-output-record record graph)
+	  record))))
+
+(defun layout-edge-1 (graph major-node minor-node)
+  (let ((edge-record (ensure-edge-record graph major-node minor-node)))    
+    (with-slots (stream arc-drawer arc-drawing-options) edge-record
+      (with-bounding-rectangle* (x1 y1 x2 y2) major-node
+        (with-bounding-rectangle* (u1 v1 u2 v2) minor-node
+          (clear-output-record edge-record)  ;;; FIXME: repaint?
+           (letf (((stream-current-output-record stream) edge-record))
+            (ecase (slot-value graph 'orientation)
+	      ((:horizontal)
+	       (multiple-value-bind (from to) (if (< x1 u1)
+						  (values x2 u1)
+					          (values x1 u2))
+		 (apply arc-drawer stream major-node minor-node
+			from (/ (+ y1 y2) 2)
+			to   (/ (+ v1 v2) 2)
+			arc-drawing-options)))
+	      ((:vertical)
+	       (multiple-value-bind (from to) (if (< y1 v1)
+						  (values y2 v1)
+				     	          (values y1 v2))
+		 (apply arc-drawer stream major-node minor-node
+			(/ (+ x1 x2) 2) from
+			(/ (+ u1 u2) 2) to
+			arc-drawing-options))))))))))
+
+(defun layout-edge (graph major-node minor-node stream arc-drawer arc-drawing-options)
+  (let ((edge-record (ensure-edge-record graph major-node minor-node)))
+    (setf (slot-value edge-record 'stream) stream
+	  (slot-value edge-record 'arc-drawer) arc-drawer
+	  (slot-value edge-record 'arc-drawing-options) arc-drawing-options)
+    (layout-edge-1 graph major-node minor-node)))
+
 (defmethod layout-graph-edges ((graph standard-graph-output-record)
                                stream arc-drawer arc-drawing-options)
   (with-slots (orientation) graph
@@ -562,26 +622,7 @@ cutoff-depth.  GENERATE-GRAPH-NODES seems to obey this precondition."
     (traverse-graph-nodes graph
                           (lambda (node children continuation)
                             (unless (eq node graph)
-                              (dolist (k children)
-                                (with-bounding-rectangle* (x1 y1 x2 y2) node
-                                  (with-bounding-rectangle* (u1 v1 u2 v2) k
-                                    (ecase orientation
-                                      ((:horizontal)
-                                       (multiple-value-bind (from to) (if (< x1 u1)
-                                                                          (values x2 u1)
-                                                                          (values x1 u2))
-                                         (apply arc-drawer stream node k
-                                                from (/ (+ y1 y2) 2)
-                                                to   (/ (+ v1 v2) 2)
-                                                arc-drawing-options)))
-                                      ((:vertical)
-                                       (multiple-value-bind (from to) (if (< y1 v1)
-                                                                          (values y2 v1)
-                                                                          (values y1 v2))
-                                         (apply arc-drawer stream node k
-                                                (/ (+ x1 x2) 2) from
-                                                (/ (+ u1 u2) 2) to
-                                                arc-drawing-options))))))))
+			      (layout-edges graph node stream arc-drawer arc-drawing-options))
                             (map nil continuation children))))))
 
 (defmethod layout-graph-edges :around ((graph-output-record tree-graph-output-record)
