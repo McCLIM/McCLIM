@@ -112,14 +112,20 @@
 	(gdk_threads_leave)))))
 
 
-;; GROVELME
+;;; GROVELME
 
-(cffi:defcstruct gtkwidget
+;; must be a separate structure definition in order for padding on AMD64
+;; to work properly.
+(cffi:defcstruct gtkobject
   (gtype :unsigned-long)		;GTypeInstance
   (ref_count :unsigned-int)		;GObject
   (qdata :pointer)			;  -"-
   (flags :uint32)			;GtkObject
-  (private_flags :uint16)		;von hier an endlich GtkWidget
+  )
+
+(cffi:defcstruct gtkwidget
+  (header gtkobject)
+  (private_flags :uint16)
   (state :uint8)
   (saved_state :uint8)
   (name :pointer)
@@ -132,6 +138,16 @@
   (allocation-height :int)		;  -"-
   (gdkwindow :pointer)
   (parent :pointer))
+
+(defun gtkwidget-header (widget)
+  (cffi:foreign-slot-value widget 'gtkwidget 'header))
+
+(defun gtkwidget-flags (widget)
+  (cffi:foreign-slot-value (gtkwidget-header widget) 'gtkobject 'flags))
+
+(defun (setf gtkwidget-flags) (newval widget)
+  (setf (cffi:foreign-slot-value (gtkwidget-header widget) 'gtkobject 'flags)
+        newval))
 
 (cffi:defcstruct gdkeventexpose
   (type :int)

@@ -40,9 +40,8 @@
 				 GDK_ENTER_NOTIFY_MASK
 				 GDK_LEAVE_NOTIFY_MASK
 				 #+nil GDK_STRUCTURE_MASK))
-  (setf (cffi:foreign-slot-value widget 'gtkwidget 'flags)
-	(logior (cffi:foreign-slot-value widget 'gtkwidget 'flags)
-		GTK_CAN_FOCUS))
+  (setf (gtkwidget-flags widget)
+        (logior (gtkwidget-flags widget) GTK_CAN_FOCUS))
   (connect-signal widget "expose-event" 'expose-handler)
   (connect-signal widget "motion-notify-event" 'motion-notify-handler)
   (connect-signal widget "button-press-event" 'button-handler)
