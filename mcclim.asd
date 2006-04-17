@@ -258,6 +258,26 @@
 	       (:file "graft" :depends-on ("port" "package"))
 	       (:file "frame-manager" :depends-on ("medium" "port" "package"))))))
 
+(defsystem :clim-gtkairo
+    :depends-on (:clim :cffi)
+    :components
+    ((:module "Backends/gtkairo"
+	      :pathname #.(make-pathname :directory '(:relative "Backends" "gtkairo"))
+	      :serial t			;asf wird's ja richten
+	      :components
+	      ((:file "clim-fix")
+	       (:file "package")
+	       (:file "gtk-ffi")
+	       (:file "cairo-ffi")
+	       (:file "port")
+	       (:file "event")
+	       (:file "keysymdef")
+	       (:file "medium")
+	       (:file "pixmap")
+	       (:file "graft")
+	       (:file "frame-manager")
+	       (:file "gadgets")))))
+
 ;;; TODO/asf: I don't have the required libs to get :clim-opengl to load. tough.
 (clim-defsystem (:clim-opengl :depends-on (:clim))
    "Backends/OpenGL/opengl-x-frame-manager"
@@ -282,6 +302,8 @@
                  ;; But until it's ready, it's no use forcing users to
                  ;; cope with possible bugs.
                  ;; #+(or openmcl mcl)          :clim-beagle
+
+		 #+gtkairo :clim-gtkairo
 
 		 ;; null backend
 		 :clim-null
