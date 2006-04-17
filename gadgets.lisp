@@ -2562,6 +2562,7 @@ Returns two values, the item itself, and the index within the item list."
   (let ((port (port gadget)))    
     (setf (previous-focus gadget) (port-keyboard-input-focus port))
     (setf (port-keyboard-input-focus port) gadget))
+  (handle-repaint gadget +everywhere+)	;FIXME: trigger initialization
   (let ((cursor (cursor (area gadget))))
     (letf (((cursor-state cursor) nil))
       (setf (cursor-appearance cursor) :solid))))
@@ -2571,6 +2572,7 @@ Returns two values, the item itself, and the index within the item list."
   (let ((port (port gadget)))
     (setf (port-keyboard-input-focus port) (previous-focus gadget))
     (setf (previous-focus gadget) nil))
+  (handle-repaint gadget +everywhere+)	;FIXME: trigger initialization
   (let ((cursor (cursor (area gadget))))
     (letf (((cursor-state cursor) nil))
       (setf (cursor-appearance cursor) :hollow))))
