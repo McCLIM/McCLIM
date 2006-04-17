@@ -316,7 +316,8 @@
                (:file "accepting-values")
                (:file "method-browser")
 	       (:file "dragndrop-translator")
-               (:file "draggable-graph")))
+               (:file "draggable-graph")
+               (:file "text-size-test")))
      (:module "Goatee"
 	      :components
 	      ((:file "goatee-test")))))
