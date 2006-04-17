@@ -757,7 +757,7 @@
                                           font-ascent font-descent
                                           direction first-not-done))
                       (multiple-value-bind (minx miny maxx maxy)
-                          (text-bounding-rectangle*
+                          (climi::text-bounding-rectangle*
                            medium string :text-style text-style
                            :start (1+ position-newline) :end end)
                         (values (min minx left) (- ascent)
