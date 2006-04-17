@@ -590,6 +590,18 @@
 
 ;;; TEXT-STYLE-ASCENT
 
+;; FIXME: Cairo documentation states that these numbers, AIUI, are not
+;; exact measurements but rather values tweaked by the font designer for
+;; better visual effect.
+;;
+;; What this seems to mean in practise is that, say, ASCENT is nearly
+;; identical to text_extent.height in the tests I tried.
+;;
+;; So which one does CLIM want?  What are these function actually being
+;; used for?
+;;
+;;   --DFL
+
 (let ((hash (make-hash-table)))
   (defmethod text-style-ascent :around (text-style (medium gtkairo-medium))
     (or (gethash text-style hash)
@@ -653,6 +665,11 @@
 	 (cairo_font_extents cr res)
 	 ;; ### let's hope that cairo respects
 	 ;; height = ascent + descent.
+	 ;;
+	 ;; No, it expressly doesn't.  Cairo documentation states that
+	 ;; height includes additional space that is meant to give more
+	 ;; aesthetic line spacing than ascent+descent would.  Is that a
+	 ;; problem for us? --DFL
 	 (slot res 'cairo_font_extents 'height))))))
 
 
@@ -673,9 +690,13 @@
        (sync-sheet medium)
        (cairo_identity_matrix cr)
        (sync-text-style medium text-style t)
-       (cffi:with-foreign-object (res 'cairo_text_extents)
-	 (cairo_text_extents cr "m" res)
-	 (slot res 'cairo_text_extents 'width))))))
+       ;; This didn't work well for Climacs. --DFL
+;;;       (cffi:with-foreign-object (res 'cairo_text_extents)
+;;;         (cairo_text_extents cr "m" res)
+;;;         (slot res 'cairo_text_extents 'width))
+       (cffi:with-foreign-object (res 'cairo_font_extents)
+	 (cairo_font_extents cr res)
+	 (slot res 'cairo_font_extents 'max_x_advance))))))
 
 
 ;;; TEXT-STYLE-FIXED-WIDTH-P
@@ -717,6 +738,27 @@
 	       :start start
 	       :end (or end (length string)))))
 
+(defmethod climi::text-bounding-rectangle*
+    ((medium gtkairo-medium) string &key text-style (start 0) end)
+  (with-gtk ()
+    (when (characterp string) (setf string (string string)))
+    (setf text-style (or text-style (medium-text-style medium)))
+    (setf text-style
+	  (merge-text-styles text-style (medium-default-text-style medium)))
+    (climi::text-bounding-rectangle* (metrik-medium (port medium))
+				     string
+				     :text-style text-style
+				     :start start
+				     :end (or end (length string)))))
+
+;; FIXME: TEXT-SIZE [and presumably TEXT-BOUNDING-RECTANGLE*, too] are
+;; supposed to take newlines into account.  The CLX backend code was
+;; written to support that but does not -- T-B-R errors out and T-S
+;; doesn't return what WRITE-STRING on the sheet actually does.  So
+;; let's not steal code from CLIM-CLX when it's broken.  Doesn't
+;; actually look like anyone has been depending on this after all.
+;; -- DFL
+
 (defmethod text-size
     ((medium metrik-medium) string &key text-style (start 0) end)
   (with-cairo-medium (medium)
@@ -733,17 +775,46 @@
 			    (subseq string start (or end (length string)))
 			    res)
 	(cffi:with-foreign-slots
-	    ((width height x_advance y_advance) res cairo_text_extents)
-	  (values (ceiling width)
-		  (ceiling height)
-		  (ceiling x_advance)
-		  (ceiling y_advance)
-		  ;; baseline?
-		  (ceiling (text-style-ascent text-style medium))))))))
+	    ((x_advance height y_bearing) res cairo_text_extents)
+	  (values
+	   ;; use x_advance instead of width, since CLIM wants to trailing
+	   ;; spaces to be taken into account.
+	   (ceiling x_advance)
+	   (ceiling height)
+	   ;; Sames values again here: The CLIM spec states that these
+	   ;; values differ only for multi-line text.  And y_advance is 0
+	   ;; for european text, which is not what we want. --DFL
+	   (ceiling x_advance)
+	   (ceiling height)
+	   ;; This used to be TEXT-STYLE-ASCENT, but see comment there.
+	   (abs (ceiling y_bearing))))))))
 
 (defmethod climi::text-bounding-rectangle*
-    ((medium gtkairo-medium) string &key text-style (start 0) end)
-  (text-size medium string :text-style text-style :start start :end end))
+    ((medium metrik-medium) string &key text-style (start 0) end)
+  (with-cairo-medium (medium)
+    ;; -> left ascent right descent
+    (when (characterp string) (setf string (string string)))
+    (setf text-style (or text-style (make-text-style nil nil nil)))
+    (setf text-style
+	  (merge-text-styles text-style (medium-default-text-style medium)))
+    (with-slots (cr) medium
+      (cairo_identity_matrix cr)
+      (sync-text-style medium text-style t)
+      (cffi:with-foreign-object (res 'cairo_text_extents)
+	(cairo_text_extents cr
+			    (subseq string start (or end (length string)))
+			    res)
+	;; This used to be a straight call to TEXT-SIZE.  Looking at
+	;; what CLIM-CLX does, this looks better to me, but I'm not sure
+	;; whether it's 100% right:
+	;;   --DFL
+	(cffi:with-foreign-slots
+	    ((height x_advance y_advance x_bearing y_bearing)
+	     res cairo_text_extents)
+	  (values (ceiling x_bearing)
+		  (ceiling y_bearing)
+		  (ceiling x_advance)
+		  (ceiling (+ height y_bearing))))))))
 
 ;;;; ------------------------------------------------------------------------
 ;;;;  General Designs
