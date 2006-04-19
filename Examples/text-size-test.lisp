@@ -37,6 +37,11 @@
     (with-radio-box (:type :some-of)
       (make-pane 'toggle-button :label "Bold" :id :bold)
       (make-pane 'toggle-button :label "Italic" :id :italic)))
+   (rectangle
+    (with-radio-box ()
+      (radio-box-current-selection
+       (make-pane 'toggle-button :label "Text-Size" :id :text-size))
+      (make-pane 'toggle-button :label "Text-Bounding-Rectangle" :id :text-bounding-rectangle)))
    (size
     (make-pane 'slider
 	       :orientation :horizontal
@@ -49,7 +54,8 @@
 	 (labelling (:label "Text") text)
 	 (horizontally ()
 	   (labelling (:label "Family") family)
-	   (labelling (:label "Face") face))
+	   (labelling (:label "Face") face)
+           (labelling (:label "Rectangle") rectangle))
 	 (labelling (:label "Size") size)
 	 canvas))))
 
@@ -62,6 +68,7 @@
 	 (family (gadget-id (gadget-value (find-pane-named frame 'family))))
 	 (faces
 	  (mapcar #'gadget-id (gadget-value (find-pane-named frame 'face))))
+         (rectangle (gadget-id (gadget-value (find-pane-named frame 'rectangle))))
 	 (face (if (cdr faces) '(:bold :italic) (car faces)))
 	 (style (make-text-style family face size)))
     (multiple-value-bind (width height final-x final-y baseline)
@@ -78,16 +85,26 @@
 ;;;	(setf (stream-cursor-position stream) (values x1 y1))
 ;;;	(with-text-style (stream style)
 ;;;	  (write-string str stream))
-	(draw-rectangle* stream
-			 x1 y1
-			 (+ x1 width) (+ y1 height)
-			 :ink +red+
-			 :filled nil)
-	(draw-rectangle* stream
-			 x1 y1
-			 (+ x1 final-x) (+ y1 final-y)
-			 :ink +blue+
-			 :filled nil)))))
+        (ecase rectangle
+          ((:text-size)
+           (draw-rectangle* stream
+                            x1 y1
+                            (+ x1 width) (+ y1 height)
+                            :ink +red+
+                            :filled nil)
+           (draw-rectangle* stream
+                            x1 y1
+                            (+ x1 final-x) (+ y1 final-y)
+                            :ink +blue+
+                            :filled nil))
+          ((:text-bounding-rectangle)
+           (multiple-value-bind (left top right bottom)
+               (climi::text-bounding-rectangle* (sheet-medium stream) str :text-style style)
+             (draw-rectangle* stream 
+                              (+ x1 left) (+ y1 baseline top)
+                              (+ x1 right) (+ y1 baseline bottom)
+                              :ink +purple+
+                              :filled nil))))))))
 
 (define-text-size-test-command (com-quit-text-size-test :menu "Quit") ()
   (frame-exit *application-frame*))
