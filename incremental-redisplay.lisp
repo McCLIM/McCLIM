@@ -748,75 +748,79 @@ in an equalp hash table"))
 
 (defmethod compute-difference-set ((record standard-updating-output-record)
 				   &optional (check-overlapping t)
-                                             offset-x offset-y
-                                             old-offset-x old-offset-y)
+                                   offset-x offset-y
+                                   old-offset-x old-offset-y)
   (declare (ignore offset-x offset-y old-offset-x old-offset-y))
   ;; (declare (values erases moves draws erase-overlapping move-overlapping))
   (let (was
         is
+        stay
+        come
         (everywhere (or +everywhere+
-                        (pane-viewport-region (updating-output-stream record)))))
-    ;; Collect what was there
-    (labels ((gather-was (record)
-               (cond ((displayed-output-record-p record)
-                      (push record was))
-                     ((updating-output-record-p record)
-                      (cond ((eq :clean (output-record-dirty record))
-                             (push record was))
-                            ((eq :moved (output-record-dirty record))
-                             (push (slot-value record 'old-bounds) was))
-                            (t
-                             (map-over-output-records-overlapping-region #'gather-was
-                                                                         (old-children record)
-                                                                         everywhere))))
+                        (pane-viewport-region (updating-output-stream record))))
+        (was-table (make-hash-table :test #'equalp))
+        (is-table (make-hash-table :test #'equalp)))
+    
+    (labels ((collect-1-was (record)
+               (push record was)
+               (push record (gethash (output-record-hash record) was-table)))
+             (collect-1-is (record)
+               (push record is)
+               (push record (gethash (output-record-hash record) is-table))
+               ;; come = is \ was
+               ;; stay = is ^ was
+               (cond ((updating-output-record-p record)
+                      (if (eq :clean (output-record-dirty record))
+                          (push record stay)
+                          (push record come)))
                      (t
-                      (map-over-output-records-overlapping-region #'gather-was record everywhere)) )))
-      (gather-was record))
-    ;; Collect what still is there
-    (labels ((gather-is (record)
-               (cond ((displayed-output-record-p record)
-                      (push record is))
-                     ((updating-output-record-p record)
-                      (cond ((eq :clean (output-record-dirty record))
-                             (push record is))
-                            ((eq :moved (output-record-dirty record))
-                             (push record is))
-                            (t
-                             (map-over-output-records-overlapping-region #'gather-is
-                                                                         (sub-record record)
-                                                                         everywhere))))
-                     (t
-                      (map-over-output-records-overlapping-region #'gather-is record everywhere) ))))
-      (gather-is record))
+                      (let ((q (gethash (output-record-hash record) was-table)))
+                        (if (some #'(lambda (x) (output-record-equal record x)) q)
+                            (push record stay)
+                            (push record come)))))))
+      ;; Collect what was there
+      (labels ((gather-was (record)
+                 (cond ((displayed-output-record-p record)
+                        (collect-1-was record))
+                       ((updating-output-record-p record)
+                        (cond ((eq :clean (output-record-dirty record))
+                               (collect-1-was record))
+                              ((eq :moved (output-record-dirty record))
+                               (collect-1-was (slot-value record 'old-bounds)))
+                              (t
+                               (map-over-output-records-overlapping-region #'gather-was
+                                                                           (old-children record)
+                                                                           everywhere))))
+                       (t
+                        (map-over-output-records-overlapping-region #'gather-was record everywhere)))))
+        (gather-was record))
+      ;; Collect what still is there
+      (labels ((gather-is (record)
+                 (cond ((displayed-output-record-p record)
+                        (collect-1-is record))
+                       ((updating-output-record-p record)
+                        (cond ((eq :clean (output-record-dirty record))
+                               (collect-1-is record))
+                              ((eq :moved (output-record-dirty record))
+                               (collect-1-is record))
+                              (t
+                               (map-over-output-records-overlapping-region #'gather-is
+                                                                           (sub-record record)
+                                                                           everywhere))))
+                       (t
+                        (map-over-output-records-overlapping-region #'gather-is record everywhere) ))))
+        (gather-is record)))
     ;;
-    (let ((was-table (make-hash-table :test #'equalp))
-          (is-table (make-hash-table :test #'equalp))
-          gone
-          stay
-          come)
-      (loop for w in was do (push w (gethash (output-record-hash w) was-table)))
-      (loop for i in is do (push i (gethash (output-record-hash i) is-table)))
+    (let (gone)
       ;; gone = was \ is
       (loop for w in was do
-            (cond ((updating-output-record-p w)
-                   (unless (eq :clean (output-record-dirty w))
-                     (push (old-children w) gone)))
-                  (t
-                   (let ((q (gethash (output-record-hash w) is-table)))
-                     (unless (some #'(lambda (x) (output-record-equal w x)) q)
-                       (push w gone))))))
-      ;; come = is \ was
-      ;; stay = is ^ was
-      (loop for i in is do
-            (cond ((updating-output-record-p i)
-                   (if (eq :clean (output-record-dirty i))
-                       (push i stay)
-                       (push i come)))
-                  (t
-                   (let ((q (gethash (output-record-hash i) was-table)))
-                     (if (some #'(lambda (x) (output-record-equal i x)) q)
-                         (push i stay)
-                         (push i come))))))
+        (cond ((updating-output-record-p w)
+               (unless (eq :clean (output-record-dirty w))
+                 (push (old-children w) gone)))
+              (t
+               (let ((q (gethash (output-record-hash w) is-table)))
+                 (unless (some #'(lambda (x) (output-record-equal w x)) q)
+                   (push w gone))))))
       ;; Now we essentially want 'gone', 'stay', 'come'
       (let ((gone-overlap nil)
             (come-overlap nil))
@@ -825,14 +829,14 @@ in an equalp hash table"))
                 (loop for k in gone
                       if (some (lambda (x) (region-intersects-region-p k x))
                                stay)
-                      collect k into gone-overlap*
+                        collect k into gone-overlap*
                       else collect k into gone*
                       finally (return (values gone* gone-overlap*))))
           (setf (values come come-overlap)
                 (loop for k in come
                       if (some (lambda (x) (region-intersects-region-p k x))
                                stay)
-                      collect k into come-overlap*
+                        collect k into come-overlap*
                       else collect k into come*
                       finally (return (values come* come-overlap*)))))
         ;; Hmm, we somehow miss come-overlap ...
