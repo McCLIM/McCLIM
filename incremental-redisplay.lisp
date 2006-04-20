@@ -778,24 +778,38 @@ in an equalp hash table"))
                         (if (some #'(lambda (x) (output-record-equal record x)) q)
                             (push record stay)
                             (push record come)))))))
-      ;; Collect what was there and what's still there
-      (labels ((gather-was-and-is (record)
+      ;; Collect what was there
+      (labels ((gather-was (record)
                  (cond ((displayed-output-record-p record)
                         (collect-1-was record))
                        ((updating-output-record-p record)
                         (cond ((eq :clean (output-record-dirty record))
-                               (collect-1-was record)
-                               (collect-1-is record))
+                               (collect-1-was record))
                               ((eq :moved (output-record-dirty record))
-                               (collect-1-was (slot-value record 'old-bounds))
-                               (collect-1-is record))
+                               (collect-1-was (slot-value record 'old-bounds)))
                               (t
-                               (map-over-output-records-overlapping-region #'gather-was-and-is
+                               (map-over-output-records-overlapping-region #'gather-was
                                                                            (old-children record)
                                                                            everywhere))))
                        (t
-                        (map-over-output-records-overlapping-region #'gather-was-and-is record everywhere)))))
-        (gather-was-and-is record)))
+                        (map-over-output-records-overlapping-region #'gather-was record everywhere)))))
+        (gather-was record))
+      ;; Collect what still is there
+      (labels ((gather-is (record)
+                 (cond ((displayed-output-record-p record)
+                        (collect-1-is record))
+                       ((updating-output-record-p record)
+                        (cond ((eq :clean (output-record-dirty record))
+                               (collect-1-is record))
+                              ((eq :moved (output-record-dirty record))
+                               (collect-1-is record))
+                              (t
+                               (map-over-output-records-overlapping-region #'gather-is
+                                                                           (sub-record record)
+                                                                           everywhere))))
+                       (t
+                        (map-over-output-records-overlapping-region #'gather-is record everywhere) ))))
+        (gather-is record)))
     ;;
     (let (gone)
       ;; gone = was \ is
