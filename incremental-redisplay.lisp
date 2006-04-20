@@ -754,7 +754,6 @@ in an equalp hash table"))
   ;; (declare (values erases moves draws erase-overlapping move-overlapping))
   (let (was
         is
-        stay
         come
         (everywhere (or +everywhere+
                         (pane-viewport-region (updating-output-stream record))))
@@ -772,7 +771,8 @@ in an equalp hash table"))
                ;; stay = is ^ was
                (cond ((updating-output-record-p record)
                       (if (eq :clean (output-record-dirty record))
-                          (push record stay)
+                          (spatial-trees:insert
+                             (make-tree-output-record-entry record 0) stay-tree)
                           (push record come)))
                      (t
                       (let ((q (gethash (output-record-hash record) was-table)))
