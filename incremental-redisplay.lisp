@@ -759,7 +759,8 @@ in an equalp hash table"))
         (everywhere (or +everywhere+
                         (pane-viewport-region (updating-output-stream record))))
         (was-table (make-hash-table :test #'equalp))
-        (is-table (make-hash-table :test #'equalp)))
+        (is-table (make-hash-table :test #'equalp))
+        (stay-tree (%make-tree-output-record-tree)))
     
     (labels ((collect-1-was (record)
                (push record was)
@@ -776,7 +777,8 @@ in an equalp hash table"))
                      (t
                       (let ((q (gethash (output-record-hash record) was-table)))
                         (if (some #'(lambda (x) (output-record-equal record x)) q)
-                            (push record stay)
+                            (spatial-trees:insert
+                             (make-tree-output-record-entry record 0) stay-tree)
                             (push record come)))))))
       ;; Collect what was there
       (labels ((gather-was (record)
@@ -827,29 +829,28 @@ in an equalp hash table"))
         (when check-overlapping
           (setf (values gone gone-overlap)
                 (loop for k in gone
-                      if (some (lambda (x) (region-intersects-region-p k x))
-                               stay)
-                        collect k into gone-overlap*
-                      else collect k into gone*
+                      if (spatial-trees:search (%record-to-spatial-tree-rectangle k)
+                                 stay-tree)
+                        collect (list k k) into gone-overlap*
+                      else collect (list k k) into gone*
                       finally (return (values gone* gone-overlap*))))
           (setf (values come come-overlap)
                 (loop for k in come
-                      if (some (lambda (x) (region-intersects-region-p k x))
-                               stay)
-                        collect k into come-overlap*
-                      else collect k into come*
+                      if (spatial-trees:search (%record-to-spatial-tree-rectangle k)
+                                 stay-tree)
+                        collect (list k k) into come-overlap*
+                      else collect (list k k) into come*
                       finally (return (values come* come-overlap*)))))
         ;; Hmm, we somehow miss come-overlap ...
         (values
          ;; erases
-         (loop for k in gone collect (list k k))
+         gone
          ;; moves
          nil
          ;; draws
-         (loop for k in come collect (list k k))
+         come
          ;; erase overlapping
-         (append (loop for k in gone-overlap collect (list k k))
-                 (loop for k in come-overlap collect (list k k)))
+         (append gone-overlap come-overlap)
          ;; move overlapping
          nil)))))
 
