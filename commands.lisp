@@ -95,8 +95,9 @@
 
 (defparameter *command-tables* (make-hash-table :test #'eq))
 
-(define-condition command-table-error (error)
-  ())
+(define-condition command-table-error (simple-error)
+  ()
+  (:default-initargs :format-control "" :format-arguments nil))
 
 (define-condition command-table-not-found (command-table-error)
   ())

@@ -50,3 +50,23 @@
                                                'removal-test-table)
           (command-not-present () t)
           (:no-error (x) (declare (ignore x)) nil)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; command table errors (see 27.2)
+(assert (subtypep 'command-table-error 'error))
+(assert (subtypep 'command-table-not-found 'command-table-error))
+(assert (subtypep 'command-table-already-exists 'command-table-error))
+(assert (subtypep 'command-not-present 'command-table-error))
+(assert (subtypep 'command-not-accessible 'command-table-error))
+(assert (subtypep 'command-already-present 'command-table-error))
+
+(let ((condition (make-condition 'command-table-error 
+                                 :format-control "~A" 
+                                 :format-arguments '(!))))
+  (assert (find #\! (format nil "~A" condition))))
+;;; not actually required to DTRT here, but we use this form (without
+;;; control and arguments) internally, so make sure that we don't
+;;; error out recursively when in the debugger with one of these.
+(let ((condition (make-condition 'command-not-present)))
+  (format nil "~A" condition))
