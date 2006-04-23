@@ -1,26 +1,26 @@
-1.
+(FIXED) 1. [flipping ink is implemented now, but see 11.]
     In the address book example example, the input cursor when typing
     and erasing characters is not getting removed properly, leaving a
     trace.
 
-2.
+(FIXED) 2. [see clim-fix.lisp]
     Also, the presentation highlighting rectangle leaves traces if
     antialiasing is enabled.
 
-3.
+(FIXED) 3.
     The text cursor does not show the correct horizontal position in climacs.
 
 4.
     Menus appear but do not really work.  Worth fixing, even though we
     would rather want native menus in the long term.
 
-5a.
+(FIXED) 5a. [but see 8.]
     Colored buttons (clim-fig) are missing.
 
 5b.
     the slider is not quite right.
 
-5c.
+(WORK IN PROGRESS) 5c.
     Inheriting from the standard gadget panes is bogus anyway, we should
     build them from scratch.
 
@@ -30,7 +30,8 @@
 6.
     Should work on Windows but does not.  Using the installer from
     gimp-win.sf.net I see an address book window, but there are cairo
-    font warnings in the background and moving the mouse gives an error.
+    font warnings in the background and font metrik functions return
+    totally bogus values sometimes.
     Although the hordes of sbcl/win32 hackers might contribute a native
     Windows backend sooner or later, it would be nice to get Gtkairo
     working on Windows, too.
