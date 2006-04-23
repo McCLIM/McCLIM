@@ -261,6 +261,11 @@
     :copy :invert :xor :clear :and :and_reverse :and_invert :noop :or :equiv
     :or_reverse :copy_invert :or_invert :nand :nor :set)
 
+(cffi:defcenum gtkscrolltype
+    :none :jump :step_backward :step_forward :page_backward :page_forward
+    :step_up :step_down :page_up :page_down :step_left :step_right :page_left
+    :page_right :start :end)
+
 
 ;;; GTK functions
 
@@ -633,9 +638,19 @@
     :pointer
   (range :pointer))
 
+(defcfun "gtk_range_set_adjustment"
+    :void
+  (range :pointer)
+  (adjustment :pointer))
+
 (defcfun "gtk_adjustment_get_value"
     :double
   (range :pointer))
+
+(defcfun "gtk_adjustment_set_value"
+    :void
+  (adjustment :pointer)
+  (value :double))
 
 (defcfun "gtk_adjustment_new"
     :pointer

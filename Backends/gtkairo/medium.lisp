@@ -708,22 +708,25 @@
   (text-style-height text-style (metrik-medium (port medium))))
 
 (defmethod text-style-height (text-style (medium metrik-medium))
-  (with-cairo-medium (medium)
-    (ceiling
-     (with-slots (cr) medium
-       (sync-sheet medium)
-       (cairo_identity_matrix cr)
-       (sync-text-style medium text-style t)
-       (cffi:with-foreign-object (res 'cairo_font_extents)
-	 (cairo_font_extents cr res)
-	 ;; ### let's hope that cairo respects
-	 ;; height = ascent + descent.
-	 ;;
-	 ;; No, it expressly doesn't.  Cairo documentation states that
-	 ;; height includes additional space that is meant to give more
-	 ;; aesthetic line spacing than ascent+descent would.  Is that a
-	 ;; problem for us? --DFL
-	 (slot res 'cairo_font_extents 'height))))))
+;;;  (with-cairo-medium (medium)
+;;;    (ceiling
+;;;     (with-slots (cr) medium
+;;;       (sync-sheet medium)
+;;;       (cairo_identity_matrix cr)
+;;;       (sync-text-style medium text-style t)
+;;;       (cffi:with-foreign-object (res 'cairo_font_extents)
+;;;	 (cairo_font_extents cr res)
+;;;	 ;; ### let's hope that cairo respects
+;;;	 ;; height = ascent + descent.
+;;;	 ;;
+;;;	 ;; No, it expressly doesn't.  Cairo documentation states that
+;;;	 ;; height includes additional space that is meant to give more
+;;;	 ;; aesthetic line spacing than ascent+descent would.  Is that a
+;;;	 ;; problem for us? --DFL
+;;;	 (slot res 'cairo_font_extents 'height)))))
+  ;; OK, so it _does_ matter (see bug 15).
+  (+ (text-style-ascent text-style medium)
+     (text-style-descent text-style medium)))
 
 
 ;;; TEXT-STYLE-WIDTH

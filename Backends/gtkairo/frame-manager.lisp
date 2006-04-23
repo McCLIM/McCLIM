@@ -65,9 +65,6 @@
 (defmethod make-pane-2 ((type (eql 'clim:scroll-bar-pane))
 			&rest initargs
 			&key orientation)
-  ;; doesn't really work yet
-  (call-next-method)
-  #+(or)
   (apply #'make-instance
 	 (if (eq orientation :vertical)
 	     'gtk-vscrollbar

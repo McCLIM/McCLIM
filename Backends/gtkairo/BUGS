@@ -18,13 +18,13 @@
     Colored buttons (clim-fig) are missing.
 
 5b.
-    the slider is not quite right.
+    the slider needs tick marks
 
-(WORK IN PROGRESS) 5c.
+(FIXED) 5c.
     Inheriting from the standard gadget panes is bogus anyway, we should
     build them from scratch.
 
-5d.
+(FIXED) 5d.
     Default gadget values aren't being used.
 
 6.
@@ -76,5 +76,10 @@
 14.
     Climacs doesn't draw itself until the window is resized.
 
-15.
+(FIXED) 15.
     The text cursor does not show the correct vertical position in climacs.
+
+16.
+    Scroll panes are now native widgets, but don't really behave.  The
+    scroll test works a little, many other examples don't.  See comment
+    in update-scrollbar-adjustment.

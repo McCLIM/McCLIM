@@ -106,16 +106,24 @@
       (gtk-main-iteration port #-(and sbcl (not win32)) t)
       (dequeue port))))
 
-(defmacro define-signal (name (widget event) &body body)
-  (let ((impl (intern (concatenate 'string (symbol-name name) "-IMPL"))))
-    ;; jump through a trampoline so that C-M-x works without having to restart:
-    `(progn
-       (defun ,impl (,widget ,event)
-	 ,@body)
-       (cffi:defcallback ,name :void
-	 ((widget :pointer) (event :pointer) (data :pointer))
-	 data
-	 (,impl widget event)))))
+(defmacro define-signal (name+options (widget event &rest args) &body body)
+  (destructuring-bind (name &key (return-type :void))
+      (if (listp name+options)
+	  name+options
+	  (list name+options))
+    (let ((impl (intern (concatenate 'string (symbol-name name) "-IMPL")))
+	  (args (if (symbolp event)
+		    `((,event :pointer) ,@args)
+		    (cons event args))))
+      ;; jump through a trampoline so that C-M-x works without having to
+      ;; restart:
+      `(progn
+	 (defun ,impl (,widget ,@(mapcar #'car args))
+	   ,@body)
+	 (cffi:defcallback ,name ,return-type
+	   ((widget :pointer) ,@args (data :pointer))
+	   data
+	   (,impl widget ,@(mapcar #'car args)))))))
 
 (define-signal noop-handler (widget event))
 
@@ -298,7 +306,30 @@
    (make-instance 'climi::window-destroy-event
      :sheet (widget->sheet widget *port*))))
 
-(define-signal clicked-handler (widget event)
+;; native widget handlers:
+
+(define-signal magic-clicked-handler (widget event)
   (declare (ignore event))
   (when (boundp '*port*)		;hack alert
-    (enqueue (make-gadget-event (widget->sheet widget *port*)))))
+    (enqueue
+     (make-instance 'magic-gadget-event
+       :sheet (widget->sheet widget *port*)))))
+
+#-sbcl
+(define-signal (scrollbar-change-value-handler :return-type :int)
+    (widget (scroll gtkscrolltype) (value :double))
+  (enqueue (make-instance 'scrollbar-change-value-event
+	     :scroll-type scroll
+	     :value value
+	     :sheet (widget->sheet widget *port*)))
+  1)
+
+#+sbcl
+;; :double in callbacks doesn't work:
+(define-signal (scrollbar-change-value-handler :return-type :int)
+    (widget (scroll gtkscrolltype) (lo :unsigned-int) (hi :int))
+  (enqueue (make-instance 'scrollbar-change-value-event
+	     :scroll-type scroll
+	     :value (sb-kernel:make-double-float hi lo)
+	     :sheet (widget->sheet widget *port*)))
+  1)

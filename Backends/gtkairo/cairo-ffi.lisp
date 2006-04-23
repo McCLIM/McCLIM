@@ -25,6 +25,29 @@
 (in-package :clim-gtkairo)
 
 
+(defvar *cairo-error-mode* :warn
+  "NIL, :WARN, or :BREAK.")
+
+(defmacro def-cairo-fun (name rtype &rest args)
+  (let* ((str (string-upcase name))
+	 (actual (intern (concatenate 'string "%-" str) :clim-gtkairo))
+	 (wrapper (intern str :clim-gtkairo))
+	 (argnames (mapcar #'car args)))
+    `(progn
+       (cffi:defcfun (,name ,actual)
+	   ,rtype
+	 ,@args)
+       (defun ,wrapper ,argnames
+	 (multiple-value-prog1
+	     (,actual ,@argnames)
+	   (when *cairo-error-mode*
+	     (let ((status (cairo_status ,(car argnames))))
+	       (unless (eq status :success)
+		 (warn "~A returned with status ~A" ,name status))
+	       (when (eq *cairo-error-mode* :break)
+		 (break)))))))))
+
+
 ;; user-visible structures
 
 (cffi:defcstruct cairo_text_extents
@@ -125,11 +148,11 @@
     :void
   (cr :pointer))
 
-(defcfun "cairo_save"
+(def-cairo-fun "cairo_save"
     :void
   (cr :pointer))
 
-(defcfun "cairo_restore"
+(def-cairo-fun "cairo_restore"
     :void
   (cr :pointer))
 
@@ -156,21 +179,21 @@
 ;;;  (height :int)
 ;;;  (stride :int))
 
-(defcfun "cairo_set_operator"
+(def-cairo-fun "cairo_set_operator"
     :void
   (cr :pointer)
   (op cairo_operator))
 
 ;;; Colors
 
-(defcfun "cairo_set_source_rgb"
+(def-cairo-fun "cairo_set_source_rgb"
     :void
   (cr :pointer)
   (red :double)
   (green :double)
   (blue :double))
 
-(defcfun "cairo_set_source_rgba"
+(def-cairo-fun "cairo_set_source_rgba"
     :void
   (cr :pointer)
   (red :double)
@@ -178,73 +201,73 @@
   (blue :double)
   (alpha :double))
 
-(defcfun "cairo_set_source"
+(def-cairo-fun "cairo_set_source"
     :void
   (cr :pointer)
   (pattern :pointer))
 
-(defcfun "cairo_set_tolerance"
+(def-cairo-fun "cairo_set_tolerance"
     :void
   (cr :pointer)
   (tolerance :double))
 
-(defcfun "cairo_set_fill_rule"
+(def-cairo-fun "cairo_set_fill_rule"
     :void
   (cr :pointer)
   (fill_rule cairo_fill_rule))
 
-(defcfun "cairo_set_line_width"
+(def-cairo-fun "cairo_set_line_width"
     :void
   (cr :pointer)
   (w :double))
 
-(defcfun "cairo_set_line_cap"
+(def-cairo-fun "cairo_set_line_cap"
     :void
   (cr :pointer)
   (line_cap cairo_line_cap))
 
-(defcfun "cairo_set_line_join"
+(def-cairo-fun "cairo_set_line_join"
     :void
   (cr :pointer)
   (line_join cairo_line_join))
 
-(defcfun "cairo_set_dash"
+(def-cairo-fun "cairo_set_dash"
     :void
   (cr :pointer)
   (dashes :pointer)			;*double
   (ndash :int)
   (offset :double))
 
-(defcfun "cairo_set_miter_limit"
+(def-cairo-fun "cairo_set_miter_limit"
     :int
   (cr :pointer)
   (limit :double))
 
 ;;; Transformations
 
-(defcfun "cairo_translate"
+(def-cairo-fun "cairo_translate"
     :void
   (cr :pointer)
   (tx :double)
   (ty :double))
 
-(defcfun "cairo_scale"
+(def-cairo-fun "cairo_scale"
     :void
   (cr :pointer)
   (sx :double)
   (sy :double))
 
-(defcfun "cairo_rotate"
+(def-cairo-fun "cairo_rotate"
     :void
   (cr :pointer)
   (angle :double))
 
-(defcfun "cairo_set_matrix"
+(def-cairo-fun "cairo_set_matrix"
     :void
   (cr :pointer)
   (matrix :pointer))
 
-(defcfun "cairo_identity_matrix"
+(def-cairo-fun "cairo_identity_matrix"
     :void
   (cr :pointer))
 
@@ -278,23 +301,23 @@
 
 ;;; Path creation functions
 
-(defcfun "cairo_new_path"
+(def-cairo-fun "cairo_new_path"
     :void
   (cr :pointer))
 
-(defcfun "cairo_move_to"
+(def-cairo-fun "cairo_move_to"
     :void
   (cr :pointer)
   (x :double)
   (y :double))
 
-(defcfun "cairo_line_to"
+(def-cairo-fun "cairo_line_to"
     :void
   (cr :pointer)
   (x :double)
   (y :double))
 
-(defcfun "cairo_curve_to"
+(def-cairo-fun "cairo_curve_to"
     :void
   (cr :pointer)
   (x1 :double)
@@ -304,7 +327,7 @@
   (x3 :double)
   (y3 :double))
 
-(defcfun "cairo_arc"
+(def-cairo-fun "cairo_arc"
     :void
   (cr :pointer)
   (xc :double)
@@ -313,7 +336,7 @@
   (angle1 :double)
   (angle2 :double))
 
-(defcfun "cairo_arc_negative"
+(def-cairo-fun "cairo_arc_negative"
     :void
   (cr :pointer)
   (xc :double)
@@ -322,19 +345,19 @@
   (angle1 :double)
   (angle2 :double))
 
-(defcfun "cairo_rel_move_to"
+(def-cairo-fun "cairo_rel_move_to"
     :void
   (cr :pointer)
   (dx :double)
   (dy :double))
 
-(defcfun "cairo_rel_line_to"
+(def-cairo-fun "cairo_rel_line_to"
     :void
   (cr :pointer)
   (dx :double)
   (dy :double))
 
-(defcfun "cairo_rel_curve_to"
+(def-cairo-fun "cairo_rel_curve_to"
     :void
   (cr :pointer)
   (dx1 :double)
@@ -344,7 +367,7 @@
   (dx3 :double)
   (dy3 :double))
 
-(defcfun "cairo_rectangle"
+(def-cairo-fun "cairo_rectangle"
     :void
   (cr :pointer)
   (x :double)
@@ -352,35 +375,35 @@
   (w :double)
   (h :double))
 
-(defcfun "cairo_close_path"
+(def-cairo-fun "cairo_close_path"
     :void
   (cr :pointer))
 
-(defcfun "cairo_stroke"
+(def-cairo-fun "cairo_stroke"
     :void
   (cr :pointer))
 
-(defcfun "cairo_fill"
+(def-cairo-fun "cairo_fill"
     :void
   (cr :pointer))
 
-(defcfun "cairo_copy_page"
+(def-cairo-fun "cairo_copy_page"
     :void
   (cr :pointer))
 
-(defcfun "cairo_show_page"
+(def-cairo-fun "cairo_show_page"
     :void
   (cr :pointer))
 
 ;;; Insideness testing
 
-(defcfun "cairo_in_stroke"
+(def-cairo-fun "cairo_in_stroke"
     :int
   (cr :pointer)
   (x :double)
   (y :double))
 
-(defcfun "cairo_in_fill"
+(def-cairo-fun "cairo_in_fill"
     :int
   (cr :pointer)
   (x :double)
@@ -388,7 +411,7 @@
 
 ;;; Rectangular extents
 
-(defcfun "cairo_stroke_extents"
+(def-cairo-fun "cairo_stroke_extents"
     :void
   (cr :pointer)
   (x1 :pointer)				;*double
@@ -397,7 +420,7 @@
   (y2 :pointer)				;*double
   )
 
-(defcfun "cairo_fill_extents"
+(def-cairo-fun "cairo_fill_extents"
     :void
   (cr :pointer)
   (x1 :pointer)				;*double
@@ -406,12 +429,12 @@
   (y2 :pointer)				;*double
   )
 
-(defcfun "cairo_reset_clip"
+(def-cairo-fun "cairo_reset_clip"
     :void
   (cr :pointer))
 
 ;; Note: cairo_clip does not consume the current path
-(defcfun "cairo_clip"
+(def-cairo-fun "cairo_clip"
     :void
   (cr :pointer))
 
@@ -421,14 +444,14 @@
 ;; This interface is for dealing with text as text, not caring about the
 ;; font object inside the the cairo_t.
 
-(defcfun "cairo_select_font_face"
+(def-cairo-fun "cairo_select_font_face"
     :void
     (cr :pointer)
     (family :string)
     (slant cairo_font_slant)
     (weight cairo_font_weight))
 
-(defcfun "cairo_set_font_size"
+(def-cairo-fun "cairo_set_font_size"
     :void
   (cr :pointer)
   (size :double))
@@ -438,50 +461,50 @@
 ;;;  (cr :pointer)
 ;;;  (matrix :pointer))
 
-(defcfun "cairo_show_text"
+(def-cairo-fun "cairo_show_text"
     :void
   (cr :pointer)
   (string :string))
 
-(defcfun "cairo_show_glyphs"
+(def-cairo-fun "cairo_show_glyphs"
     :void
   (cr :pointer)
   (glyphs :pointer)
   (num_glyphs :int))
 
-;;;(defcfun "cairo_current_font"
+;;;(def-cairo-fun "cairo_current_font"
 ;;;    :pointer
 ;;;  (cr :pointer))
 ;;;
-(defcfun "cairo_font_extents"
+(def-cairo-fun "cairo_font_extents"
     :void
   (cr :pointer)
   (extents :pointer))
 
-;;;(defcfun "cairo_set_font"
+;;;(def-cairo-fun "cairo_set_font"
 ;;;    :void
 ;;;  (cr :pointer)
 ;;;  (font :pointer))
 
-(defcfun "cairo_text_extents"
+(def-cairo-fun "cairo_text_extents"
     :void
   (cr :pointer)
   (string :string)			;### utf_8
   (extents :pointer))
 
-(defcfun "cairo_glyph_extents"
+(def-cairo-fun "cairo_glyph_extents"
     :void
   (cr :pointer)
   (glyphs :pointer)
   (num_glyphs :int)
   (extents :pointer))
 
-(defcfun "cairo_text_path"
+(def-cairo-fun "cairo_text_path"
     :void
   (cr :pointer)
   (string :string))			;### utf_8
 
-(defcfun "cairo_glyph_path"
+(def-cairo-fun "cairo_glyph_path"
     :void
   (cr :pointer)
   (glyphs :pointer)
@@ -500,7 +523,7 @@
 
 ;;; Image functions
 
-;;;(defcfun "cairo_show_surface"
+;;;(def-cairo-fun "cairo_show_surface"
 ;;;    :void
 ;;;  (cr :pointer)
 ;;;  (surface :pointer)
@@ -509,11 +532,11 @@
 
 ;;; Query functions 
 
-;;;(defcfun "cairo_current_operator"
+;;;(def-cairo-fun "cairo_current_operator"
 ;;;    cairo_operator
 ;;;  (cr :pointer))
 ;;;
-;;;(defcfun "cairo_current_rgb_color"
+;;;(def-cairo-fun "cairo_current_rgb_color"
 ;;;    :void
 ;;;  (cr :pointer)
 ;;;  (red :pointer)			;*double
@@ -521,53 +544,69 @@
 ;;;  (blue :pointer)			;*double
 ;;;  )
 ;;;
-;;;(defcfun "cairo_current_pattern"
+;;;(def-cairo-fun "cairo_current_pattern"
 ;;;    :pointer
 ;;;  (cr :pointer))
 ;;;
-;;;(defcfun "cairo_current_alpha"
+;;;(def-cairo-fun "cairo_current_alpha"
 ;;;    :double
 ;;;  (cr :pointer))
 ;;;
-;;;(defcfun "cairo_current_tolerance"
+;;;(def-cairo-fun "cairo_current_tolerance"
 ;;;    :double
 ;;;  (cr :pointer))
 ;;;
-;;;(defcfun "cairo_current_point"
+;;;(def-cairo-fun "cairo_current_point"
 ;;;    :void
 ;;;  (cr :pointer)
 ;;;  (x :pointer)				;*double
 ;;;  (y :pointer)				;*double
 ;;;  )
 ;;;
-;;;(defcfun "cairo_current_fill_rule"
+;;;(def-cairo-fun "cairo_current_fill_rule"
 ;;;    cairo_fill_rule
 ;;;  (cr :pointer))
 
-;;;(defcfun "cairo_current_line_width"
+;;;(def-cairo-fun "cairo_current_line_width"
 ;;;    :double
 ;;;  (cr :pointer))
 ;;;
-;;;(defcfun "cairo_current_line_cap"
+;;;(def-cairo-fun "cairo_current_line_cap"
 ;;;    cairo_line_cap
 ;;;  (cr :pointer))
 ;;;
-;;;(defcfun "cairo_current_line_join"
+;;;(def-cairo-fun "cairo_current_line_join"
 ;;;    cairo_line_join
 ;;;  (cr :pointer))
 ;;;
-;;;(defcfun "cairo_current_miter_limit"
+;;;(def-cairo-fun "cairo_current_miter_limit"
 ;;;    :double
 ;;;  (cr :pointer))
 ;;;
-;;;(defcfun "cairo_current_matrix"
+;;;(def-cairo-fun "cairo_current_matrix"
 ;;;    :void
 ;;;  (cr :pointer)
 ;;;  (matrix :pointer))
 ;;;
-;;;(defcfun "cairo_current_target_surface"
+;;;(def-cairo-fun "cairo_current_target_surface"
 ;;;    :pointer
 ;;;  (cr :pointer))
+
+
+;;; 
+
+(def-cairo-fun "cairo_get_target"
+    :pointer
+  (cr :pointer))
+
+(def-cairo-fun "cairo_set_antialias"
+    :void
+  (cr :pointer)
+  (antialias :int))
+
+(def-cairo-fun "cairo_paint"
+    :void
+  (cr :pointer))
 
 
 ;;; Error status queries
@@ -798,16 +837,3 @@
 (defcfun "cairo_surface_mark_dirty"
     :void
   (surface :pointer))
-
-(defcfun "cairo_get_target"
-    :pointer
-  (cr :pointer))
-
-(defcfun "cairo_set_antialias"
-    :void
-  (cr :pointer)
-  (antialias :int))
-
-(defcfun "cairo_paint"
-    :void
-  (cr :pointer))
