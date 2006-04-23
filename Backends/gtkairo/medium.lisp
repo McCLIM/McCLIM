@@ -238,6 +238,7 @@
       (let ((pixmap
 	     (gdk_pixmap_new drawable allocation-width allocation-height -1)))
 	(setf (cr medium) (gdk_cairo_create pixmap))
+	(cairo_paint (cr medium))
 	(setf (flipping-pixmap medium) pixmap)
 	(sync-transformation medium)
 	(sync-ink medium +white+)))))

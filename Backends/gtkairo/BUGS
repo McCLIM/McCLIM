@@ -58,7 +58,7 @@
     coordinates correctly.  (Watch the Drag&Drop test not work unless
     the window is in the upper left corner of the screen.)
 
-11.
+(FIXED) 11.
     The new flipping ink implementation is buggy, it produces garbage
     output in some cases.
 
@@ -75,3 +75,6 @@
 
 14.
     Climacs doesn't draw itself until the window is resized.
+
+15.
+    The text cursor does not show the correct vertical position in climacs.

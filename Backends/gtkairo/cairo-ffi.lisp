@@ -807,3 +807,7 @@
     :void
   (cr :pointer)
   (antialias :int))
+
+(defcfun "cairo_paint"
+    :void
+  (cr :pointer))
