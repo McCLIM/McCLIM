@@ -334,7 +334,7 @@
                (:file "stream-test")
                (:file "presentation-test")
                (:file "dragndrop")
-               #+clx (:file "gadget-test")
+	       (:file "gadget-test")
                (:file "accepting-values")
                (:file "method-browser")
 	       (:file "dragndrop-translator")
