@@ -208,23 +208,28 @@
     (:layouts
      (default
        (raising (:border-width 5 :background +Gray83+)
-         (vertically ()
-           tf1 tf2 tf3 tf4
-           slider-h
-           (horizontally ()
-             (vertically ()
-               slider-v
-               slider-v2)
-             slider-v3
-             radar)
-	   text-edit
-           push-btn
-           table
-           toggle-btn
-           scroll
-           radio-box
-           check-box
-           ))))
+         (horizontally ()
+	   (vertically ()
+	     (horizontally ()
+	       (horizontally ()
+		 (vertically ()
+		   slider-v
+		   slider-v2)
+		 slider-v3)
+	       (vertically ()
+		 tf1 tf2 tf3 tf4
+		 slider-h))
+	     ;; FIXME: the radar doesn't seem to do anything except take
+	     ;; up vast amounts of space.
+	     #+(or) radar
+	     text-edit)
+	   (vertically ()
+	     push-btn
+	     table
+	     toggle-btn
+	     scroll
+	     radio-box
+	     check-box)))))
     (:top-level (gadget-test-frame-top-level . nil)))
 
 (defmethod run-frame-top-level :around ((frame gadget-test) &key &allow-other-keys)
