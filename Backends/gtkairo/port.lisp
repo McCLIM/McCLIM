@@ -102,7 +102,8 @@
 ;;;; Mirrors
 
 (defclass mirror ()
-    ((mediums :initform '() :accessor mirror-mediums)))
+    ((mediums :initform '() :accessor mirror-mediums)
+     (region :initform nil :accessor mirror-region)))
 
 (defclass widget-mirror (mirror)
     ((widget :initarg :widget :accessor mirror-widget)
@@ -181,24 +182,32 @@
     ((port gtkairo-port) (sheet climi::unmanaged-top-level-sheet-pane))
   (realize-window-mirror port sheet GTK_WINDOW_POPUP))
 
+(defun gtk-widget-modify-bg (widget color)
+  (cffi:with-foreign-object (c 'gdkcolor)
+    (setf (cffi:foreign-slot-value c 'gdkcolor 'pixel) 0)
+    (setf (values (cffi:foreign-slot-value c 'gdkcolor 'r)
+		  (cffi:foreign-slot-value c 'gdkcolor 'g)
+		  (cffi:foreign-slot-value c 'gdkcolor 'b))
+	  (multiple-value-bind (r g b)
+	      (color-rgb color)
+	    (values (min (truncate (* r 65536)) 65535)
+		    (min (truncate (* g 65536)) 65535)
+		    (min (truncate (* b 65536)) 65535))))
+    (gtk_widget_modify_bg widget 0 c)))
+
 ;; copy&paste from port.lisp|CLX:
 (defun sheet-desired-color (sheet)
-  (multiple-value-bind (r g b)
-      (color-rgb
-       (typecase sheet
-	 (sheet-with-medium-mixin
-	   (medium-background sheet))
-	 (basic-pane
-	   ;; CHECKME [is this sensible?] seems to be
-	   (let ((background (pane-background sheet)))
-	     (if (typep background 'color)
-		 background
-		 +white+)))
-	 (t
-	   +white+)))
-    (values (min (truncate (* r 65536)) 65535)
-	    (min (truncate (* g 65536)) 65535)
-	    (min (truncate (* b 65536)) 65535))))
+  (typecase sheet
+    (sheet-with-medium-mixin
+      (medium-background sheet))
+    (basic-pane
+      ;; CHECKME [is this sensible?] seems to be
+      (let ((background (pane-background sheet)))
+	(if (typep background 'color)
+	    background
+	    +white+)))
+    (t
+      +white+)))
 
 (defmethod realize-mirror ((port gtkairo-port) (sheet mirrored-sheet-mixin))
   (with-gtk ()
@@ -223,25 +232,21 @@
 	(setf y (round-coordinate y))
 	(gtk_fixed_put (mirror-widget parent) widget x y))
       (climi::port-register-mirror (port sheet) sheet mirror)
-      (cffi:with-foreign-object (color 'gdkcolor)
-	(setf (cffi:foreign-slot-value color 'gdkcolor 'pixel) 0)
-	(setf (values (cffi:foreign-slot-value color 'gdkcolor 'r)
-		      (cffi:foreign-slot-value color 'gdkcolor 'g)
-		      (cffi:foreign-slot-value color 'gdkcolor 'b))
-	      (sheet-desired-color sheet))
-	(gtk_widget_modify_bg widget 0 color))
+      (gtk-widget-modify-bg widget (sheet-desired-color sheet))
       (when (sheet-enabled-p sheet)
 	(gtk_widget_show widget))
       mirror)))
 
-(defclass native-widget-mixin () ())
+(defclass native-widget-mixin ()
+    ((widget :initform nil :accessor native-widget)))
 
 (defmethod realize-mirror ((port gtkairo-port) (sheet native-widget-mixin))
   (with-gtk ()
-    (let* ((parent (sheet-mirror (sheet-parent sheet)))
+    (setf (native-widget sheet) (realize-native-widget sheet))
+    (let* ((widget (native-widget sheet))
+	   (parent (sheet-mirror (sheet-parent sheet)))
 	   (q (compose-space sheet))
 	   (fixed (gtk_fixed_new))
-	   (widget (realize-native-widget sheet))
 	   (width (round-coordinate (space-requirement-width q)))
 	   (height (round-coordinate (space-requirement-height q)))
 	   (mirror
@@ -312,6 +317,10 @@
       (climi::port-unregister-mirror port sheet mirror)
       (setf (widget->sheet (mirror-widget mirror) port) nil))))
 
+(defmethod destroy-mirror :after
+	   ((port gtkairo-port) (sheet native-widget-mixin))
+  (setf (native-widget sheet) nil))
+
 (defmethod destroy-mirror ((port gtkairo-port) (pixmap-sheet climi::pixmap))
   (with-gtk ()
     (let ((mirror (climi::port-lookup-mirror port pixmap-sheet)))
@@ -346,12 +355,15 @@
 
 (defmethod port-set-mirror-region
     ((port gtkairo-port) (mirror mirror) mirror-region)
-  (with-gtk ()
-    (reset-mediums mirror)
-    (gtk_widget_set_size_request
-     (mirror-widget mirror)
-     (floor (bounding-rectangle-max-x mirror-region))
-     (floor (bounding-rectangle-max-y mirror-region)))))
+  (unless (and (mirror-region mirror)
+	       (region-equal (mirror-region mirror) mirror-region))
+    (with-gtk ()
+      (reset-mediums mirror)
+      (gtk_widget_set_size_request
+       (mirror-widget mirror)
+       (floor (bounding-rectangle-max-x mirror-region))
+       (floor (bounding-rectangle-max-y mirror-region))))
+    (setf (mirror-region mirror) mirror-region)))
 
 (defmethod port-set-mirror-region
     ((port gtkairo-port) (mirror native-widget-mirror) mirror-region)

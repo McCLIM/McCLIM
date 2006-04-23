@@ -24,3 +24,24 @@
 
 (defmethod clim:handle-repaint :after ((s clim:sheet-with-medium-mixin) r)
   (medium-force-output (sheet-medium s)))
+
+;; cairo hack: adjust rectangle coordinates by half a pixel each to avoid
+;; anti-aliasing (and follow-up output artifacts)
+(defun highlight-output-record-rectangle (record stream state)
+  (with-identity-transformation (stream)
+    (multiple-value-bind (x1 y1 x2 y2)
+        (output-record-hit-detection-rectangle* record)
+      (ecase state
+        (:highlight	 
+	  (draw-rectangle* (sheet-medium stream)
+			   (+ (ceiling x1) 0.5d0)
+			   (+ (ceiling y1) 0.5d0)
+			   (+ (floor (1- x2)) 0.5d0)
+			   (+ (floor (1- y2)) 0.5d0)
+			   ;; XXX +FLIPPING-INK+? 
+			   :filled nil :ink +foreground-ink+))
+        (:unhighlight
+	  ;; FIXME: repaint the hit detection rectangle. It could be
+	  ;; bigger than
+	  ;; the bounding rectangle.
+	  (repaint-sheet stream record))))))

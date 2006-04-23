@@ -33,7 +33,7 @@
 ;; vielleicht, von TOGGLE-BUTTON statt TOGGLE-BUTTON-PANE zu erben und
 ;; alles selbst zu machen.  Mindestens COMPOSE-SPACE muesste man dann
 ;; hier implementieren.
-(defclass gtk-button (native-widget-mixin push-button-pane) ())
+(defclass gtk-button (native-widget-mixin push-button) ())
 (defclass gtk-check-button (native-widget-mixin toggle-button-pane) ())
 (defclass gtk-radio-button (native-widget-mixin toggle-button-pane) ())
 (defclass gtk-vscale (native-widget-mixin slider-pane) ())
@@ -45,7 +45,10 @@
 ;;;; Constructors
 
 (defmethod realize-native-widget ((sheet gtk-button))
-  (gtk_button_new_with_label (climi::gadget-label sheet)))
+  (let ((button (gtk_button_new_with_label (climi::gadget-label sheet))))
+    (when (pane-background sheet)
+      (gtk-widget-modify-bg button (pane-background sheet)))
+    button))
 
 (defmethod realize-native-widget ((sheet gtk-check-button))
   (gtk_check_button_new_with_label (climi::gadget-label sheet)))
@@ -166,3 +169,18 @@
 	;; see hack in clicked-handler
 	(gtk_toggle_button_set_active (mirror-widget mirror)
 				      (if value 1 0))))))
+
+;; KLUDGE: this is getting called before the sheet has been realized.
+(defmethod compose-space ((gadget native-widget-mixin) &key width height)
+  (declare (ignore width height))
+  (let* ((widget (native-widget gadget))
+	 (widgetp widget))
+    (unless widgetp
+      (setf widget (realize-native-widget gadget)))
+    (prog1
+	(cffi:with-foreign-object (r 'gtkrequisition)
+	  (gtk_widget_size_request widget r)
+	  (cffi:with-foreign-slots ((width height) r gtkrequisition)
+	    (make-space-requirement :width width :height height)))
+      (unless widgetp
+	(gtk_widget_destroy widget)))))

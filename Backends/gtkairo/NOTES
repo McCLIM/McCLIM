@@ -113,7 +113,11 @@ Gilbert Baumann's notes, copied from clim-cairo-2005-03-20/cairo-medium.lisp.
 ;; by Cairo and will perhaps stop working around 2012. The fun thing is:
 ;; Flipping will now turn into a rather slow operation.
 
-[ David: Das ginge auch mit Cairo, ja. ]
+[ David: I have implemented this strategy now.  We draw flipping ink to
+  a gdk pixmap, then copy that over with GDK_XOR.  And indeed, Goatee
+  now is extremely slow over remote X because it uses flipping ink.
+  FIXME: Although simple cases work, sometimes flipping ink now causes
+  garbage output to appear.  ]
 
 ;; - flipping ink
 ;;
@@ -125,3 +129,6 @@ Gilbert Baumann's notes, copied from clim-cairo-2005-03-20/cairo-medium.lisp.
 ;;   But: A flippink can't be solved by just setting up the proper Cairo pattern
 ;;   to a Cairo context, but drawing the shape itself must happen on our
 ;;   temporary surface.
+
+[ David: see above for my implemenation of flipping ink.  Not sure how the
+  alpha channel is meant to be handled though. ]

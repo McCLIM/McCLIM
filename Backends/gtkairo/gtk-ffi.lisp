@@ -139,6 +139,10 @@
   (gdkwindow :pointer)
   (parent :pointer))
 
+(cffi:defcstruct gtkrequisition
+  (width :int)
+  (height :int))
+
 (defun gtkwidget-header (widget)
   (cffi:foreign-slot-value widget 'gtkwidget 'header))
 
@@ -253,6 +257,10 @@
   (max_aspect :double)
   (win_gravity :int))
 
+(cffi:defcenum gdkfunction
+    :copy :invert :xor :clear :and :and_reverse :and_invert :noop :or :equiv
+    :or_reverse :copy_invert :or_invert :nand :nor :set)
+
 
 ;;; GTK functions
 
@@ -321,6 +329,11 @@
   (widget :pointer)
   (width :pointer)
   (height :pointer))
+
+(defcfun "gtk_widget_size_request"
+    :void
+  (widget :pointer)
+  (requisition :pointer))
 
 (defcfun "gtk_container_add"
     :void
@@ -533,6 +546,11 @@
 (defcfun "gdk_gc_unref"
     :void
   (drawable :pointer))
+
+(defcfun "gdk_gc_set_function"
+    :void
+  (gc :pointer)
+  (function gdkfunction))
 
 (defcfun "gdk_draw_drawable"
     :void

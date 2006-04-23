@@ -50,7 +50,11 @@
   (connect-signal widget "key-release-event" 'key-handler)
   (connect-signal widget "enter-notify-event" 'enter-handler)
   (connect-signal widget "leave-notify-event" 'leave-handler)
-  (connect-signal widget "configure-event" 'configure-handler))
+  (connect-signal widget "configure-event" 'configure-handler)
+  ;; override gtkwidget's focus handlers, which trigger an expose event,
+  ;; causing unnecessary redraws for mouse movement
+  (connect-signal widget "focus-in-event" 'noop-handler)
+  (connect-signal widget "focus-out-event" 'noop-handler))
 
 (defun connect-window-signals (widget)
   (gtk_widget_add_events widget (logior GDK_STRUCTURE_MASK
@@ -85,8 +89,10 @@
 (defun gtk-main-iteration (port &optional block)
   (with-gtk ()
     (let ((*port* port))
-      (while (plusp (gtk_events_pending))
-	(gtk_main_iteration_do (if block 1 0))))))
+      (if block
+	  (gtk_main_iteration_do 1)
+	  (while (plusp (gtk_events_pending))
+	    (gtk_main_iteration_do 0))))))
 
 (defmethod get-next-event
     ((port gtkairo-port) &key wait-function (timeout nil))
@@ -110,6 +116,8 @@
 	 ((widget :pointer) (event :pointer) (data :pointer))
 	 data
 	 (,impl widget event)))))
+
+(define-signal noop-handler (widget event))
 
 (define-signal expose-handler (widget event)
   (enqueue

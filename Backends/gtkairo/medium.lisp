@@ -32,7 +32,16 @@
 (defclass gtkairo-medium (climi::basic-medium clim:medium)
   ((port :initarg :port :accessor port)
    (cr :initform nil :initarg :cr :accessor cr)
-   (surface :initarg :surface :accessor surface)))
+   (flipping-original-cr :initform nil :accessor flipping-original-cr)
+   (flipping-pixmap :accessor flipping-pixmap)
+   (surface :initarg :surface :accessor surface)
+   (last-seen-sheet :accessor last-seen-sheet)
+   (last-seen-region :accessor last-seen-region)))
+
+(defmethod initialize-instance :after
+    ((instance gtkairo-medium) &key cr)
+  (unless cr
+    (setf (last-seen-sheet instance) nil)))
 
 (defclass metrik-medium (gtkairo-medium)
   ())
@@ -43,7 +52,7 @@
 ;; artifacts remain around lines that are blurry with antialiasing
 ;; enabled, which perhaps points to round-off error being the reason for
 ;; both blurryness and visual artifacts.  Both need to be fixed.
-(defparameter *antialiasingp* nil)
+(defparameter *antialiasingp* t)
 
 (defun gtkwidget-gdkwindow (widget)
   (cffi:foreign-slot-value widget 'gtkwidget 'gdkwindow))
@@ -59,16 +68,28 @@
   (when (or (cr medium)
 	    (climi::port-lookup-mirror (port medium) (medium-sheet medium)))
     (with-gtk ()
-      (funcall fn))))
+      (multiple-value-prog1
+	  (funcall fn)
+	(when (flipping-original-cr medium)
+	  (apply-flipping-ink medium))))))
+
+(defun sheet-changed-behind-our-back-p (medium)
+  (and (slot-boundp medium 'last-seen-sheet)
+       (or (not (eq (last-seen-sheet medium) (medium-sheet medium)))
+	   (not (region-equal (last-seen-region medium)
+			      (sheet-region (medium-sheet medium)))))))
 
 (defun sync-sheet (medium)
-  (unless (cr medium)
+  (when (or (null (cr medium))
+	    (sheet-changed-behind-our-back-p medium))
     (with-cairo-medium (medium)
       (let* ((mirror (medium-mirror medium))
 	     (drawable (mirror-drawable mirror)))
 	(setf (cr medium) (gdk_cairo_create drawable))
 	(push medium (mirror-mediums mirror))
-	(cairo_set_antialias (cr medium) (if *antialiasingp* 0 1))))))
+	(cairo_set_antialias (cr medium) (if *antialiasingp* 0 1)))
+      (setf (last-seen-sheet medium) (medium-sheet medium))
+      (setf (last-seen-region medium) (sheet-region (medium-sheet medium))))))
 
 
 ;;;; ------------------------------------------------------------------------
@@ -88,16 +109,21 @@
 ;;;; Drawing Options
 ;;;;
 
-(defun sync-transformation (medium)
+(defun sync-transformation (medium &optional extra-transformation)
   (with-slots (cr) medium
     (cffi:with-foreign-object (matrix 'cairo_matrix_t)
-      (multiple-value-bind (mxx mxy myx myy tx ty)
-	  (climi::get-transformation
-	   (sheet-native-transformation (medium-sheet medium)))
-	(cairo_matrix_init matrix
-			   (df mxx) (df mxy) (df myx) (df myy)
-			   (df tx) (df ty))
-	(cairo_set_matrix cr matrix)))))
+      (let ((tr
+	     (if (medium-sheet medium)
+		 (sheet-native-transformation (medium-sheet medium))
+		 clim:+identity-transformation+)))
+	(when extra-transformation
+	  (setf tr (compose-transformations extra-transformation tr)))
+	(multiple-value-bind (mxx mxy myx myy tx ty)
+	    (climi::get-transformation tr)
+	  (cairo_matrix_init matrix
+			     (df mxx) (df mxy) (df myx) (df myy)
+			     (df tx) (df ty))
+	  (cairo_set_matrix cr matrix))))))
 
 (defmacro with-cairo-matrix ((matrix transformation) &body body)
   `(cffi:with-foreign-object (,matrix 'cairo_matrix_t)
@@ -182,11 +208,39 @@
         (cairo_pattern_set_matrix p matrix))
       p)))
 
+(defun apply-flipping-ink (medium)
+  (let ((from-surface (cairo_get_target (cr medium)))
+	(from-drawable (flipping-pixmap medium))
+	(to-surface (cairo_get_target (flipping-original-cr medium)))
+	(to-drawable (medium-gdkdrawable medium)))
+    (cairo_surface_flush from-surface)
+    (cairo_surface_flush to-surface)
+    (let ((gc (gdk_gc_new to-drawable)))
+      (gdk_gc_set_function gc :xor)
+      (cffi:with-foreign-slots ((allocation-width allocation-height)
+				(mirror-widget (medium-mirror medium))
+				gtkwidget)
+	(gdk_draw_drawable to-drawable gc from-drawable 0 0 0 0
+			   allocation-width allocation-height))
+      (gdk_gc_unref gc))
+    (cairo_surface_mark_dirty to-surface))
+  (cairo_destroy (cr medium))
+  (setf (cr medium) (flipping-original-cr medium))
+  (setf (flipping-original-cr medium) nil))
+
 (defmethod sync-ink (medium (design climi::standard-flipping-ink))
-  (with-slots ((d1 climi::design1) (d2 climi::design2)) design
-    (with-slots (cr) medium
-      (cairo_set_source_rgba cr 1.0d0 1.0d0 1.0d0 1d0)
-      (cairo_set_operator cr :xor))))
+  (setf (flipping-original-cr medium) (cr medium))
+  (let* ((mirror (medium-mirror medium))
+	 (drawable (mirror-drawable mirror)))
+    (cffi:with-foreign-slots ((allocation-width allocation-height)
+			      (mirror-widget mirror)
+			      gtkwidget)
+      (let ((pixmap
+	     (gdk_pixmap_new drawable allocation-width allocation-height -1)))
+	(setf (cr medium) (gdk_cairo_create pixmap))
+	(setf (flipping-pixmap medium) pixmap)
+	(sync-transformation medium)
+	(sync-ink medium +white+)))))
 
 (defmethod sync-ink (medium new-value)
   (warn "SYNC-INK lost ~S." new-value))
@@ -524,9 +578,7 @@
 						(+ cx rx2) (+ cy ry2))))
 	  (sync-sheet medium)
 	  ;; hmm, something is wrong here.
-	  (sync-transformation
-	   medium
-	   (compose-transformations tr (medium-transformation medium)))
+	  (sync-transformation medium tr)
 	  (sync-ink medium (medium-ink medium))
 	  (sync-clipping-region medium (medium-clipping-region medium))
 	  (sync-line-style medium (medium-line-style medium))
@@ -809,11 +861,11 @@
 	;; whether it's 100% right:
 	;;   --DFL
 	(cffi:with-foreign-slots
-	    ((height x_advance y_advance x_bearing y_bearing)
+	    ((width height x_advance y_advance x_bearing y_bearing)
 	     res cairo_text_extents)
-	  (values (ceiling x_bearing)
-		  (ceiling y_bearing)
-		  (ceiling x_advance)
+	  (values (floor x_bearing)
+		  (floor y_bearing)
+		  (ceiling (+ width (max 0 x_bearing)))
 		  (ceiling (+ height y_bearing))))))))
 
 ;;;; ------------------------------------------------------------------------
