@@ -153,7 +153,7 @@
 		     (/ size range))))
     (send (toolkit-object gadget)
 	  :set-float-value (coerce position 'short-float)
-	  :knob-proportion (coerce loz-size 'short-float))))
+	  :knob-proportion (coerce loz-size 'short-float)))))
 
 
 ;;; Called in the Cocoa App thread.
