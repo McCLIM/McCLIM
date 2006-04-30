@@ -86,8 +86,8 @@
 
 (defun make-scrollbar (fn sheet)
   (let* ((min (df (gadget-min-value sheet)))
-	 (max (df (gadget-max-value sheet)))
 	 (page-size (df (climi::scroll-bar-thumb-size sheet)))
+	 (max (+ (df (gadget-max-value sheet)) page-size))
 	 (adjustment (gtk_adjustment_new 0.0d0 min max 0.0d0 0.0d0 page-size)))
     (gtk_adjustment_set_value adjustment (df (gadget-value sheet)))
     (funcall fn adjustment)))
@@ -227,9 +227,9 @@
 (defun update-scrollbar-adjustment (sheet)
   (with-gtk ()
     (let* ((min (df (gadget-min-value sheet)))
-	   (max (df (gadget-max-value sheet)))
 	   (value (df (gadget-value sheet)))
-	   (page-size (df (climi::scroll-bar-thumb-size sheet))))
+	   (page-size (df (climi::scroll-bar-thumb-size sheet)))
+	   (max (+ (df (gadget-max-value sheet)) page-size)))
       (gtk_range_set_adjustment
        (mirror-widget (sheet-direct-mirror sheet))
        (gtk_adjustment_new value min max 0.0d0 0.0d0 page-size)))))

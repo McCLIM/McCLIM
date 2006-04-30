@@ -79,7 +79,7 @@
 (FIXED) 15.
     The text cursor does not show the correct vertical position in climacs.
 
-16.
+(FIXED?) 16.
     Scroll panes are now native widgets, but don't really behave.  The
     scroll test works a little, many other examples don't.  See comment
     in update-scrollbar-adjustment.
