@@ -17,10 +17,12 @@
     :ink ink
     :mask mask))
 
-(defmethod transform-region (transformation (design design))
-  (make-instance 'transformed-design
-                 :transformation transformation
-                 :design design))
+;; FIXME: See bug 17.
+;;;(defmethod transform-region (transformation (design design))
+;;;  (make-instance 'transformed-design
+;;;                 :transformation transformation
+;;;                 :design design)
+;;;  (call-next-method))
 
 (defmethod clim:handle-repaint :after ((s clim:sheet-with-medium-mixin) r)
   (medium-force-output (sheet-medium s)))

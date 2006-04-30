@@ -83,3 +83,9 @@
     Scroll panes are now native widgets, but don't really behave.  The
     scroll test works a little, many other examples don't.  See comment
     in update-scrollbar-adjustment.
+
+17.
+    There's a commented-out method on TRANSFORM-REGION for DESIGN in
+    design.lisp.  See comment there.  clim-fix tried to reinstate it,
+    but that doesn't work for gsharp when drawing ellipses.  Find out
+    what this is all about.
