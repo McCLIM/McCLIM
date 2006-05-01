@@ -31,7 +31,9 @@
    (or (find-class
 	(intern (concatenate 'string (symbol-name type) "-PANE") :climi)
 	nil)
-       (find-class type))))
+       (if (keywordp type)
+	   (find-class (intern (symbol-name type) :climi))
+	   (find-class type)))))
 
 (defmethod make-pane-1
     ((fm gtkairo-frame-manager) (frame application-frame) type &rest initargs)

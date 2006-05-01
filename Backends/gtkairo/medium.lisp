@@ -226,7 +226,9 @@
     (cairo_surface_mark_dirty to-surface))
   (cairo_destroy (cr medium))
   (setf (cr medium) (flipping-original-cr medium))
-  (setf (flipping-original-cr medium) nil))
+  (setf (flipping-original-cr medium) nil)
+  (gdk_drawable_unref (flipping-pixmap medium))
+  (setf (flipping-pixmap medium) nil))
 
 (defmethod sync-ink (medium (design climi::standard-flipping-ink))
   (setf (flipping-original-cr medium) (cr medium))

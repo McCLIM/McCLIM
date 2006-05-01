@@ -221,6 +221,9 @@
 (define-signal button-handler (widget event)
   (cffi:with-foreign-slots
       ((type time button state x y x_root y_root) event gdkeventbutton)
+    (when (eql type GDK_BUTTON_PRESS)
+      ;; Hack alert: Menus don't work without this.
+      (gdk_pointer_ungrab GDK_CURRENT_TIME))
     (enqueue
      (make-instance (if (eql type GDK_BUTTON_PRESS)
 			'pointer-button-press-event

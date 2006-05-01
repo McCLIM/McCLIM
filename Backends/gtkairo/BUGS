@@ -10,7 +10,7 @@
 (FIXED) 3.
     The text cursor does not show the correct horizontal position in climacs.
 
-4.
+(FIXED) 4.
     Menus appear but do not really work.  Worth fixing, even though we
     would rather want native menus in the long term.
 
@@ -89,3 +89,9 @@
     design.lisp.  See comment there.  clim-fix tried to reinstate it,
     but that doesn't work for gsharp when drawing ellipses.  Find out
     what this is all about.
+
+18.
+    Flipping ink optimization: As suggested by Gilbert, make the temporary
+    pixmap just large enough for the clipping region and the currently
+    visible part of a (scrolled) sheet.  Right now we're copying the
+    entire window around, which seems excessive.
