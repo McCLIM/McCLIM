@@ -24,8 +24,20 @@
 ;;;                 :design design)
 ;;;  (call-next-method))
 
-(defmethod clim:handle-repaint :after ((s clim:sheet-with-medium-mixin) r)
-  (medium-force-output (sheet-medium s)))
+(defmethod clim:handle-repaint :around ((s clim:sheet-with-medium-mixin) r)
+  (let ((m (clim:sheet-medium s))
+        (r (clim:bounding-rectangle
+            (clim:region-intersection r (clim:sheet-region s)))))
+    (unless (eql r clim:+nowhere+)
+      ;; Test case: Start CLIM-DEMO::DEMODEMO and watch the header string.
+      ;; At the beginning, the text is nicely antialiased.  Then start any
+      ;; demo and move the new window around over the header.  As the
+      ;; header gets exposed again, the text is apparently redrawn
+      ;; multiple times and looks like crap.  This fixes it:
+      (clim:with-drawing-options (m :clipping-region r)
+        (clim:draw-design m r :ink clim:+background-ink+)
+        (call-next-method s r)))
+    (medium-force-output m)))
 
 ;; cairo hack: adjust rectangle coordinates by half a pixel each to avoid
 ;; anti-aliasing (and follow-up output artifacts)
