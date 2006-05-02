@@ -57,7 +57,7 @@
   `(def-alien-routine ,@rest))
 
 #+sbcl
-(load-shared-object #+darwin "/usr/X11R6/lib/libfreetype.dylib" #-darwin "libfreetype.so")
+(load-shared-object #+darwin "/usr/X11R6/lib/libfreetype.6.dylib" #-darwin "libfreetype.so.6")
 
 (declaim (optimize (speed 3)))
 
