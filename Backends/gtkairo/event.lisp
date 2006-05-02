@@ -130,6 +130,7 @@
 (define-signal expose-handler (widget event)
   (enqueue
    (cffi:with-foreign-slots ((x y width height) event gdkeventexpose)
+     (gdk_window_clear_area (gtkwidget-gdkwindow widget) x y width height)
      (make-instance 'window-repaint-event
        :timestamp (get-internal-real-time)
        :sheet (widget->sheet widget *port*)

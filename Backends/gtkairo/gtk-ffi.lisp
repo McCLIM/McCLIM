@@ -674,6 +674,14 @@
   (window :pointer)
   (title :string))
 
+(defcfun "gdk_window_clear_area"
+    :void
+  (window :pointer)
+  (x :int)
+  (y :int)
+  (width :int)
+  (height :int))
+
 (defconstant GDK_EXPOSURE_MASK             (ash 1 1))
 (defconstant GDK_POINTER_MOTION_MASK       (ash 1 2))
 (defconstant GDK_POINTER_MOTION_HINT_MASK  (ash 1 3))

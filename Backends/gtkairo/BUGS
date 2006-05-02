@@ -46,7 +46,7 @@
     The frontend specifies background colors (*3d-normal-color*) where
     the gtk theme should take precedence.
 
-9.
+(FIXED) 9.
     Sometimes repaint seems to draw again without clearing the window
     first.  For example, the header in demodemo gets darker with every
     repaint, until the originally antialiased text looks really crappy.
