@@ -434,12 +434,6 @@ updating-output-parent above this one in the tree.")
   (let ((state (end-graphics-state record)))
     (setf (values (cursor-x state) (cursor-y state)) (values x y))))
 
-;;; XXX still needed?
-(defmethod add-output-record :after
-    ((child updating-output-record-mixin) record)
-  (declare (ignore record child)))
-
-
 ;;; Prevent deleted output records from coming back from the dead.
 (defmethod delete-output-record :after ((child updating-output-record-mixin)
 					record
