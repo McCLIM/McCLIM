@@ -387,9 +387,6 @@ record is stored.")
    (stream :accessor updating-output-stream :initarg :stream :initform nil
 	   :documentation "Capture the screen in order to restrict update to
 					visible records")
-   (children-updating-output :accessor children-updating-output :initform nil
-			     :documentation "A list of updating-output records
-that are children (but not necessarily direct) of this record.")
    (parent-updating-output :accessor parent-updating-output
 			   :initarg :parent-updating-output :initform nil
 			   :documentation "A backlink to the
@@ -440,10 +437,7 @@ updating-output-parent above this one in the tree.")
 ;;; XXX still needed?
 (defmethod add-output-record :after
     ((child updating-output-record-mixin) record)
-  (declare (ignore record))
-  (if (parent-updating-output child)
-      (push child (children-updating-output (parent-updating-output child)))
-      nil))
+  (declare (ignore record child)))
 
 
 ;;; Prevent deleted output records from coming back from the dead.
@@ -451,15 +445,10 @@ updating-output-parent above this one in the tree.")
 					record
 					&optional errorp)
   (declare (ignore record errorp))
-  (let ((pcache (parent-cache child))
-	(parent-updating (parent-updating-output child)))
+  (let ((pcache (parent-cache child)))
     (delete-from-map pcache
 		     (output-record-unique-id child)
-		     (output-record-id-test child))
-    (when parent-updating
-      (setf (children-updating-output parent-updating)
-	    (delete child (children-updating-output parent-updating)
-		    :test #'eq)))))
+		     (output-record-id-test child))))
 
 
 (defclass standard-updating-output-record (updating-output-record-mixin
