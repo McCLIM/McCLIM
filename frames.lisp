@@ -59,76 +59,6 @@
 ;;; XXX All these slots should move to a mixin or to standard-application-frame.
 ;;; -- moore
 
-;;; Generic operations
-(defgeneric frame-name (frame))
-(defgeneric frame-pretty-name (frame))
-(defgeneric (setf frame-pretty-name) (name frame))
-(defgeneric frame-command-table (frame))
-(defgeneric (setf frame-command-table) (command-table frame))
-(defgeneric frame-standard-output (frame)
-  (:documentation
-   "Returns the stream that will be used for *standard-output* for the FRAME."))
-(defgeneric frame-standard-input (frame)
-  (:documentation
-   "Returns the stream that will be used for *standard-input* for the FRAME."))
-(defgeneric frame-query-io (frame)
-  (:documentation
-   "Returns the stream that will be used for *query-io* for the FRAME."))
-(defgeneric frame-error-output (frame)
-  (:documentation
-   "Returns the stream that will be used for *error-output* for the FRAME."))
-(defgeneric frame-pointer-documentation-output (frame)
-  (:documentation
-   "Returns the stream that will be used for *pointer-documentation-output*
-for the FRAME."))
-(defgeneric frame-calling-frame (frame)
-  (:documentation
-   "Returns the application frame that invoked the FRAME."))
-(defgeneric frame-parent (frame)
-  (:documentation
-   "Returns the object that acts as the parent for the FRAME."))
-(defgeneric frame-panes (frame)
-  (:documentation
-   "Returns the pane that is the top-level pane in the current layout
-of the FRAME's named panes."))
-(defgeneric frame-top-level-sheet (frame)
-  (:documentation
-   "Returns the shhet that is the top-level sheet for the FRAME. This
-is the sheet that has as its descendants all of the panes of the FRAME."))
-(defgeneric frame-current-panes (frame)
-  (:documentation
-   "Returns a list of those named panes in the FRAME's current layout.
-If there are no named panes, only the single, top level pane is returned."))
-(defgeneric get-frame-pane (frame pane-name)
-  (:documentation
-   "Returns the named CLIM stream pane in the FRAME whose name is PANE-NAME."))
-(defgeneric find-pane-named (frame pane-name)
-  (:documentation
-   "Returns the pane in the FRAME whose name is PANE-NAME."))
-(defgeneric frame-current-layout (frame))
-(defgeneric (setf frame-current-layout) (layout frame))
-(defgeneric frame-all-layouts (frame))
-(defgeneric layout-frame (frame &optional width height))
-(defgeneric frame-exit-frame (condition)
-  (:documentation
-   "Returns the frame that is being exited from associated with the
-FRAME-EXIT condition."))
-(defgeneric frame-exit (frame)
-  (:documentation
-   "Exits from the FRAME."))
-(defgeneric pane-needs-redisplay (pane))
-(defgeneric (setf pane-needs-redisplay) (value pane))
-(defgeneric redisplay-frame-pane (frame pane &key force-p))
-(defgeneric redisplay-frame-panes (frame &key force-p))
-(defgeneric frame-replay (frame stream &optional region))
-(defgeneric notify-user (frame message &key associated-window title
-                         documentation exit-boxes name style text-style))
-(defgeneric frame-properties (frame property))
-(defgeneric (setf frame-properties) (value frame property))
-(defgeneric (setf client-setting) (value frame setting))
-(defgeneric reset-frame (frame &rest client-settings))
-(defgeneric frame-maintain-presentation-histories (frame))
-
 ; extension
 (defgeneric frame-schedule-timer-event (frame sheet delay token))
 
@@ -288,10 +218,11 @@ documentation produced by presentations.")))
     (sheet-adopt-child (graft frame) (frame-top-level-sheet frame)))
   ;; Find the size of the new frame
   (multiple-value-bind (w h x y) (frame-geometry* frame)
+    (declare (ignore x y))
     ;; automatically generates a window-configuation-event
     ;; which then calls allocate-space
     ;;
-    ;; Not any longer, we turn of CONFIGURE-NOTIFY events until the
+    ;; Not any longer, we turn off CONFIGURE-NOTIFY events until the
     ;; window is mapped and do the space allocation now, so that all
     ;; sheets will have their correct geometry at once. --GB
     (setf (sheet-region (frame-top-level-sheet frame))
@@ -676,15 +607,6 @@ documentation produced by presentations.")))
   (setf (slot-value frame 'state) :disowned)
   (port-force-output (frame-manager-port fm))
   frame)
-
-(defgeneric enable-frame (frame))
-(defgeneric disable-frame (frame))
-(defgeneric destroy-frame (frame))
-(defgeneric raise-frame (frame))
-(defgeneric bury-frame (frame))
-
-(defgeneric note-frame-enabled (frame-manager frame))
-(defgeneric note-frame-disbled (frame-manager frame))
 
 (defmethod enable-frame ((frame application-frame))
   (setf (sheet-enabled-p (frame-top-level-sheet frame)) t)
@@ -1541,9 +1463,6 @@ documentation produced by presentations.")))
 	    (null
 	     ())))))))
 
-(defgeneric frame-drag-and-drop-feedback
-    (frame from-presentation stream initial-x initial-y x y state))
-
 (defmethod frame-drag-and-drop-feedback
     ((frame standard-application-frame) from-presentation stream
      initial-x initial-y x y state)
@@ -1567,9 +1486,6 @@ documentation produced by presentations.")))
 	       ((stream hilite-x1 hilite-y1 (1+ hilite-x2) (1+ hilite-y2))
 		(buffer-rectangle))
 	     (stream-replay stream buffer-rectangle))))))))
-
-(defgeneric frame-drag-and-drop-highlighting
-    (frame to-presentation stream state))
 
 (defmethod frame-drag-and-drop-highlighting
     ((frame standard-application-frame) to-presentation stream state)

@@ -52,11 +52,6 @@
 ;;; 3.1 General Regions
 (define-protocol-class bounding-rectangle ())
 
-;;; 13.2 XXX moved here because of a bug in sbcl 0.9.8
-(define-protocol-class design ())
-
-
-;;; Forward reference shouldn't be a problem XXX see above
 
 (define-protocol-class region (design))
 (define-protocol-class path (region bounding-rectangle))
@@ -97,14 +92,16 @@
 (define-protocol-class text-style ()
   ())
 
-;; An internal superclasses. Don't know if it is still used.
+;;; 13.2 Basic Designs
 
-(define-protocol-class uniform-design ())
+(define-protocol-class design ())
 
 ;;; 13.3 Color class
-(define-protocol-class color (design uniform-design))
+
+(define-protocol-class color (design))
 
 ;;; 13.4
+
 (define-protocol-class opacity (design))
 
 ;;; 15.2 Extended Output Streams
@@ -112,8 +109,7 @@
     (fundamental-character-output-stream)
   ;; CLIM Specification says that E-O-S is a subclass of
   ;; OUTPUT-STREAM, but it does not says what is it.
-  ()
-  )
+  ())
 
 ;;; 15.3 The Text Cursor
 (define-protocol-class cursor ())
@@ -160,6 +156,10 @@
 (define-protocol-class updating-output-record (output-record))
 
 ;;; 22.2 Extended Input Streams
+
+(define-protocol-class extended-input-stream 
+    (fundamental-character-input-stream)
+  ())
 
 ;;; 22.4 The Pointer Protocol
 

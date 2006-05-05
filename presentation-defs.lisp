@@ -734,25 +734,6 @@ call-next-method to get the \"real\" answer based on the stream type."))
                                         (cadr results)))
             (values-list results)))))))
 
-(defgeneric stream-accept (stream type
-			   &key
-			   view
-			   default
-			   default-type
-			   provide-default
-			   insert-default
-			   replace-input
-			   history
-			   active-p
-			   prompt
-			   prompt-mode
-			   display-default
-			   query-identifier
-			   activation-gestures
-			   additional-activation-gestures
-			   delimiter-gestures
-			   additional-delimiter-gestures))
-
 (defmethod stream-accept ((stream standard-extended-input-stream) type
 			  &rest args
 			  &key (view (stream-default-view stream))
@@ -891,8 +872,6 @@ call-next-method to get the \"real\" answer based on the stream type."))
 		 (values object object-type))))
 	;; Just to make it clear that we're returning values
 	(values sensitizer-object sensitizer-type)))))
-
-(defgeneric prompt-for-accept (stream type view &rest accept-args &key))
 
 (defmethod prompt-for-accept ((stream t)
 			      type view

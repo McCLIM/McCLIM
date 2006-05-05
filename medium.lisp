@@ -67,17 +67,6 @@
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
 
-(defgeneric text-style-components (text-style))
-(defgeneric text-style-family (text-style))
-(defgeneric text-style-face (text-style))
-(defgeneric text-style-size (text-style))
-(defgeneric merge-text-styles (text-style-1 text-style-2))
-(defgeneric text-style-ascent (text-style medium))
-(defgeneric text-style-descent (text-style medium))
-(defgeneric text-style-height (text-style medium))
-(defgeneric text-style-width (text-style medium))
-(defgeneric text-style-fixed-width-p (text-style medium))
-
 (defgeneric text-style-equalp (style1 style2))
 (defmethod text-style-equalp ((style1 text-style) (style2 text-style)) nil)
 
@@ -463,14 +452,6 @@
 	        :reader line-style-dashes
                 :type (or (member t nil)
                           sequence)) ))
-
-(defmethod line-style-p ((x line-style))
-  (declare (ignorable x))
-  t)
-
-(defmethod line-style-p ((x t))
-  (declare (ignorable x))
-  nil)
 
 (defun make-line-style (&key (unit :normal) (thickness 1)
 			     (joint-shape :miter) (cap-shape :butt)

@@ -29,11 +29,9 @@
 ;;; Standard-Output-Stream class
 
 (defclass standard-output-stream (fundamental-character-output-stream)
-  ()
-  )
+  ())
 
 (defmethod stream-recording-p ((stream t)) nil)
-
 (defmethod stream-drawing-p ((stream t)) t)
 
 #+ignore(defmethod stream-write-char ((stream standard-output-stream) char)
@@ -53,22 +51,7 @@
 
 ;;; Cursor class
 
-(defgeneric cursor-sheet (cursor))
-
-(defgeneric cursor-position (cursor))
-
 (defgeneric* (setf cursor-position) (x y cursor))
-
-(defgeneric cursor-active (cursor))
-(defgeneric (setf cursor-active) (value cursor))
-
-(defgeneric cursor-state (cursor))
-(defgeneric (setf cursor-state) (value cursor))
-
-(defgeneric cursor-focus (cursor))
-
-(defgeneric cursor-visibility (cursor))
-(defgeneric (setf cursor-visibility) (visibility cursor))
 
 ;;; Cursor-Mixin class
 (defclass cursor-mixin ()
@@ -187,34 +170,7 @@
 
 ;;; Extended-Output-Stream class
 
-;;; Stream text cursor protocol
-(defgeneric stream-text-cursor (stream))
-(defgeneric (setf stream-text-cursor) (cursor stream))
-
-(defgeneric stream-cursor-position (stream))
 (defgeneric* (setf stream-cursor-position) (x y stream))
-
-(defgeneric stream-increment-cursor-position (stream dx dy))
-
-;;; Text protocol
-(defgeneric stream-character-width (stream character &key text-style))
-
-(defgeneric stream-string-width (stream character &key start end text-style))
-
-(defgeneric stream-text-margin (stream))
-(defgeneric (setf stream-text-margin) (margin stream))
-
-(defgeneric stream-line-height (stream &key text-style))
-
-(defgeneric stream-vertical-spacing (stream))
-
-(defgeneric stream-baseline (stream))
-
-(defgeneric stream-end-of-line-action (stream))
-(defgeneric (setf stream-end-of-line-action) (action stream))
-
-(defgeneric stream-end-of-page-action (stream))
-(defgeneric (setf stream-end-of-page-action) (action stream))
 
 ;;; Standard-Extended-Output-Stream class
 

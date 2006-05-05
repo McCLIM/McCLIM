@@ -39,8 +39,6 @@
 (define-condition abort-gesture (condition)
   ((event :reader %abort-gesture-event :initarg :event)))
 
-(defgeneric abort-gesture-event (condition))
-
 (defmethod abort-gesture-event ((condition abort-gesture))
   (%abort-gesture-event condition))
 
@@ -49,8 +47,6 @@
    (numeric-argument :reader %accelerator-gesture-numeric-argument
 		     :initarg :numeric-argument
 		     :initform 1)))
-
-(defgeneric accelerator-gesture-event (condition))
 
 (defmethod accelerator-gesture-event ((condition accelerator-gesture))
   (%accelerator-gesture-event condition))
@@ -126,13 +122,9 @@
 	do (handle-event (event-sheet event) event))
   nil)
 
-;;; XXX The should be moved to protocol-classes.lisp and the
-;;; standard-sheet-input-mixin superclass should be removed.
-(define-protocol-class extended-input-stream (fundamental-character-input-stream ;Gray stream
-					      standard-sheet-input-mixin)
-  ())
-
-(defclass standard-extended-input-stream (extended-input-stream)
+(defclass standard-extended-input-stream (extended-input-stream
+                                          ;; FIXME: is this still needed?
+                                          standard-sheet-input-mixin)
   ((pointer)
    (cursor :initarg :text-cursor)
    (last-gesture :accessor last-gesture :initform nil
@@ -143,8 +135,6 @@
 (defvar *input-wait-test* nil)
 (defvar *input-wait-handler* nil)
 (defvar *pointer-button-press-handler* nil)
-
-(defgeneric stream-set-input-focus (stream))
 
 (defmacro with-input-focus ((stream) &body body)
   (when (eq stream t)
@@ -174,11 +164,6 @@
 		       :pointer-button-press-handler
 		       pointer-button-press-handler))
 
-(defgeneric stream-read-gesture (stream
-				 &key timeout peek-p
-				 input-wait-test
-				 input-wait-handler
-				 pointer-button-press-handler))
 
 ;;; Do streams care about any other events?
 (defun handle-non-stream-event (buffer)
@@ -295,8 +280,6 @@
 	 (go wait-for-char)))))
 
 
-(defgeneric stream-input-wait (stream &key timeout input-wait-test))
-
 (defmethod stream-input-wait ((stream standard-extended-input-stream)
 			      &key timeout input-wait-test)
   (block exit
@@ -327,8 +310,6 @@
 
 (defun unread-gesture (gesture &key (stream *standard-input*))
   (stream-unread-gesture stream gesture))
-
-(defgeneric stream-unread-gesture (stream gesture))
 
 (defmethod stream-unread-gesture ((stream standard-extended-input-stream)
 				  gesture)
@@ -657,9 +638,6 @@
 ;;;
 ;;; Implemented by the back end.  Sort of.
 
-(define-protocol-class pointer ()
-  ((port :reader port :initarg :port)))
-
 ;;; FIXME: I think the standard-pointer should absorb some of the
 ;;; common methods that are currently entirely provided by the
 ;;; backends.
@@ -735,7 +713,6 @@
 		    (pointer-event-button event)))))
 
 (defmethod pointer-butt)
-(defgeneric stream-pointer-position (stream &key pointer))
 
 (defmethod stream-pointer-position ((stream standard-extended-input-stream)
 				    &key (pointer

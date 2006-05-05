@@ -4,7 +4,7 @@
 ;;;   Created: 1998-12-02 19:26
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: regions.lisp,v 1.32 2006/03/10 21:58:13 tmoore Exp $
+;;;       $Id: regions.lisp,v 1.33 2006/05/05 10:24:02 crhodes Exp $
 ;;; --------------------------------------------------------------------------------------
 ;;;  (c) copyright 1998,1999,2001 by Gilbert Baumann
 ;;;  (c) copyright 2001 by Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
@@ -154,11 +154,6 @@
 ;;; ---- 2.5.3 Polygons and Polylines in CLIM --------------------------------------------
 
 ;; Protocol: 
-(defgeneric polygon-points (polygon-or-polyline))
-(defgeneric map-over-polygon-coordinates (fun polygon-or-polyline))
-(defgeneric map-over-polygon-segments (fun polygon-or-polyline))
-(defgeneric polyline-closed (polyline))
-
 (defclass standard-polyline (polyline)
   ((points :initarg :points)
    (closed :initarg :closed)))
@@ -291,9 +286,6 @@
            (coordinate= start-y end-y))
       +nowhere+
     (make-instance 'standard-line :x1 start-x :y1 start-y :x2 end-x :y2 end-y)))
-
-(defgeneric line-start-point* (line))
-(defgeneric line-end-point* (line))
 
 (defmethod line-start-point* ((line standard-line))
   (with-slots (x1 y1 x2 y2) line

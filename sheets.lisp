@@ -32,74 +32,8 @@
 
 (in-package :clim-internals)
 
-(defgeneric sheet-parent (sheet)
-  (:documentation
-   "Returns the parent of the sheet SHEET or nil if the sheet has
-no parent"))
-
-(defgeneric sheet-children (sheet)
-  (:documentation
-   "Returns a list of sheets that are the children of the sheet SHEET.
-Some sheet classes support only a single child; in this case, the
-result of sheet-children will be a list of one element. This
-function returns objects that reveal CLIM's internal state ; do not
-modify those objects."))
-
-(defgeneric sheet-adopt-child (sheet child)
-  (:documentation
-   "Adds the child sheet child to the set of children of the sheet SHEET,
-and makes the sheet the child's parent. If child already has a parent,
-the sheet-already-has-parent error will be signalled.
-
-Some sheet classes support only a single child. For such sheets,
-attempting to adopt more than a single child will cause the
-sheet-supports-only-one-child error to be signalled."))
-
-(defgeneric sheet-disown-child (sheet child &key errorp))
-(defgeneric sheet-enabled-children (sheet))
-(defgeneric sheet-ancestor-p (sheet putative-ancestor))
-(defgeneric raise-sheet (sheet))
-
-;;; not for external use
 (defgeneric raise-sheet-internal (sheet parent))
-
-(defgeneric bury-sheet (sheet))
-
-;;; not for external use
 (defgeneric bury-sheet-internal (sheet parent))
-
-(defgeneric reorder-sheets (sheet new-ordering))
-(defgeneric sheet-enabled-p (sheet))
-(defgeneric (setf sheet-enabled-p) (enabled-p sheet))
-(defgeneric sheet-viewable-p (sheet))
-(defgeneric sheet-occluding-sheets (sheet child))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; Sheet geometry
-
-(defgeneric sheet-transformation (sheet))
-(defgeneric (setf sheet-transformation) (transformation sheet))
-(defgeneric sheet-region (sheet))
-(defgeneric (setf sheet-region) (region sheet))
-(defgeneric map-sheet-position-to-parent (sheet x y))
-(defgeneric map-sheet-position-to-child (sheet x y))
-(defgeneric map-sheet-rectangle*-to-parent (sheet x1 y1 x2 y2))
-(defgeneric map-sheet-rectangle*-to-child (sheet x1 y1 x2 y2))
-(defgeneric child-containing-position (sheet x y))
-(defgeneric children-overlapping-region (sheet region))
-(defgeneric children-overlapping-rectangle* (sheet x1 y1 x2 y2))
-(defgeneric sheet-delta-transformation (sheet ancestor))
-(defgeneric sheet-allocated-region (sheet child))
-
-;;these are now in decls.lisp --GB
-;;(defgeneric sheet-native-region (sheet))
-;;(defgeneric sheet-device-region (sheet))
-;;(defgeneric invalidate-cached-regions (sheet))
-
-;;(defgeneric sheet-native-transformation (sheet))
-;;(defgeneric sheet-device-transformation (sheet))
-;;(defgeneric invalidate-cached-transformations (sheet))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

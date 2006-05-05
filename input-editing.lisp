@@ -197,12 +197,6 @@
    stream
    (stream-insertion-pointer stream)))
 
-(defgeneric stream-process-gesture (stream gesture type)
-  (:documentation "McCLIM relys on a text editor class (by default
-  GOATEE-INPUT-EDITING-MIXIN) to perform the user interaction and display for
-  input editing. Also, that class must update the stream buffer and the
-  insertion pointer, cause rescans to happen, and handle activation gestures."))
-
 ;;; The editing functions of stream-process-gesture are performed by the
 ;;; primary method on goatee-input-editing-mixin
 ;;;
@@ -348,24 +342,16 @@
   (declare (ignore input-sensitizer initial-contents class))
   (funcall continuation stream))
 
-(defgeneric reset-scan-pointer (stream &optional scan-pointer))
-
 (defmethod reset-scan-pointer ((stream standard-input-editing-stream)
 			       &optional (scan-pointer 0))
   (setf (stream-scan-pointer stream) scan-pointer)
   (setf (slot-value stream 'rescanning-p) t))
 
-(defgeneric immediate-rescan (stream))
-
 (defmethod immediate-rescan ((stream standard-input-editing-stream))
   (signal 'rescan-condition))
 
-(defgeneric queue-rescan (stream))
-
 (defmethod queue-rescan ((stream standard-input-editing-stream))
   (setf (rescan-queued stream) t))
-
-(defgeneric rescan-if-necessary (stream &optional inhibit-activation))
 
 (defmethod rescan-if-necessary ((stream standard-input-editing-stream)
 				&optional inhibit-activation)
@@ -373,8 +359,6 @@
   (when (rescan-queued stream)
     (setf (rescan-queued stream) nil)
     (immediate-rescan stream)))
-
-(defgeneric input-editor-format (stream format-string &rest format-args))
 
 (defmethod input-editor-format ((stream t) format-string &rest format-args)
   (unless (and (typep stream '#.*string-input-stream-class*)
@@ -403,9 +387,6 @@
 	    (*current-input-position* (and *current-input-stream*
 					   (stream-scan-pointer ,stream-var))))
        ,@body)))
-
-(defgeneric replace-input (stream new-input
-			   &key start end buffer-start rescan))
 
 (defun read-token (stream &key
 		   (input-wait-handler *input-wait-handler*)
