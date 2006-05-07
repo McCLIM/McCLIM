@@ -581,7 +581,11 @@
 
 (defmethod port-force-output ((port gtkairo-port))
   (with-gtk ()
-    (gdk_display_flush (gdk_display_get_default))))
+    (gdk_display_flush (gdk_display_get_default))
+    ;; Don't know whether p-f-o is actually meant to XSync, which is
+    ;; what gdk_flush does.  But it seems useful to have _some_ function
+    ;; for this, so let's use p-f-o until we find a better one.
+    (gdk_flush)))
 
 ;; FIXME: What happens when CLIM code calls tracking-pointer recursively?
 (defmethod port-grab-pointer ((port gtkairo-port) pointer sheet)

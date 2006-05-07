@@ -339,7 +339,8 @@
                (:file "method-browser")
 	       (:file "dragndrop-translator")
                (:file "draggable-graph")
-               (:file "text-size-test")))
+               (:file "text-size-test")
+               (:file "drawing-benchmark")))
      (:module "Goatee"
 	      :components
 	      ((:file "goatee-test")))))

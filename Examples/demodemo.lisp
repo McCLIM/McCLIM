@@ -73,7 +73,9 @@
                    (make-demo-button "Scroll Test" 'Scroll-test)
                    (make-demo-button "List Test" 'list-test)
                    (make-demo-button "HBOX Test"  'hbox-test)
-                   (make-demo-button "Text Size Test"  'text-size-test)))))))))
+                   (make-demo-button "Text Size Test"  'text-size-test)
+                   (make-demo-button "Drawing Benchmark"
+				     'drawing-benchmark)))))))))
 
 (defun demodemo ()
   #+nil
