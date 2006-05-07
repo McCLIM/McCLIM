@@ -194,11 +194,13 @@
 			(char string 0)))
 		(sym (gethash keyval *keysyms*)))
 	    ;; McCLIM will #\a statt ^A sehen:
-	    (when (and char
-		       (< 0 (char-code char) 32)
-		       ;; ...aber fuer return dann auf einmal doch
-		       (not (eql char #\return)))
-	      (setf char (code-char (+ (char-code char) 96))))
+	    (cond
+	      ((null char))
+	      ((eql char #\return))
+	      ((eql char #\escape)
+		(setf char nil))
+	      ((< 0 (char-code char) 32)
+		(setf char (code-char (+ (char-code char) 96)))))
 	    (when (eq sym :backspace)
 	      (setf char #\backspace))
 	    ;; irgendwas sagt mir, dass hier noch weitere Korrekturen
