@@ -62,7 +62,7 @@
     The new flipping ink implementation is buggy, it produces garbage
     output in some cases.
 
-12.
+(FIXED) 12.
     In the address book, there are often wide grey borders instead of
     the narrow black ones.
 
@@ -95,3 +95,11 @@
     pixmap just large enough for the clipping region and the currently
     visible part of a (scrolled) sheet.  Right now we're copying the
     entire window around, which seems excessive.
+
+19.
+   Key press events for modifier keys don't have the corresponding
+   modifier bit set; key release events do.  This is opposite to what
+   CLIM-CLX does.
+
+20.
+   Very nasty duplicate keyboard events when typing in the listener.
