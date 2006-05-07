@@ -19,11 +19,19 @@
 
 (in-package :clim-gtkairo)
 
-#-(or win32 mswindows windows)
+#-(or win32 mswindows windows darwin)
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (cffi:load-foreign-library "libcairo.so")
   (cffi:load-foreign-library "libgthread-2.0.so")
   (cffi:load-foreign-library "libgtk-x11-2.0.so"))
+
+#+darwin
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (let ((cffi:*foreign-library-directories*
+	 (cons "/opt/local/lib/" cffi:*foreign-library-directories*)))
+    (cffi:load-foreign-library "libcairo.dylib")
+    (cffi:load-foreign-library "libgthread-2.0.dylib")
+    (cffi:load-foreign-library "libgtk-x11-2.0.dylib")))
 
 #+(or win32 mswindows windows)
 (eval-when (:compile-toplevel :load-toplevel :execute)
