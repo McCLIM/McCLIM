@@ -219,11 +219,11 @@
   (let ((cursor (cursor record)))
     (multiple-value-bind (x1 y1 x2 y2) (call-next-method)
       (values x1 y1
-              (if cursor
+              (if (and cursor (eq (cursor-visibility cursor) :on))
                   (with-slots (climi::x climi::width) cursor
                      (max x2 (+ climi::x climi::width)))
                   x2)
-              (if cursor
+              (if (and cursor (eq (cursor-visibility cursor) :on))
                   (max y2 (+ y1 (climi::cursor-height cursor)))
                   y2)))))
 
