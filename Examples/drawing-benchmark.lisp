@@ -90,6 +90,6 @@
 (define-drawing-benchmark-command (com-quit-drawing-benchmark :menu "Quit") ()
   (frame-exit *application-frame*))
 
-(define-drawing-benchmark-command (com-update :menu "Run") ()
+(define-drawing-benchmark-command (com-run-drawing-benchmark :menu "Run") ()
   (run-drawing-benchmark *application-frame*
 			 (frame-standard-output *application-frame*)))

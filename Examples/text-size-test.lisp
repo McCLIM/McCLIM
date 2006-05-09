@@ -109,6 +109,6 @@
 (define-text-size-test-command (com-quit-text-size-test :menu "Quit") ()
   (frame-exit *application-frame*))
 
-(define-text-size-test-command (com-update :menu "Update") ()
+(define-text-size-test-command (com-update-text-size-test :menu "Update") ()
   (display-canvas *application-frame*
 		  (frame-standard-output *application-frame*)))
