@@ -841,7 +841,7 @@ call-next-method to get the \"real\" answer based on the stream type."))
                                       :default-type default-type)
 				     (funcall-presentation-generic-function
 				      accept type stream view))))
-			;; User entered activation or delimeter
+			;; User entered activation or delimiter
 			;; gesture without any input.
 			(if defaultp
 			    (progn
