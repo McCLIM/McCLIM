@@ -121,6 +121,7 @@
    (history-length :initform 25 :initarg :history-length :accessor history-length)))
 
 (defmethod execute-frame-command :after ((frame command-history-mixin) command)
+  ;; FIXME: not safe against commands sent from other frames.
   (push command (history frame))  
   (when (> (length (history frame)) (history-length frame))
     (setf (history frame)
