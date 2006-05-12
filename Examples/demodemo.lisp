@@ -43,6 +43,7 @@
 
 (define-application-frame demodemo 
     () ()
+    (:menu-bar nil)
     (:layouts
      (default
          (vertically (:equalize-width t)
