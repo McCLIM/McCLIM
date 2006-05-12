@@ -1090,11 +1090,15 @@
 				    &key)
   (flet ((generator (string suggester)
 	   (declare (ignore string))
-	   (map-over-command-table-names
-	    (lambda (cline-name command-name)
-	      (when (command-enabled command-name *application-frame*)
-		(funcall suggester cline-name command-name)))
-	    command-table)))
+           (let ((possibilities nil))
+             (map-over-command-table-names
+              (lambda (cline-name command-name)
+                (when (command-enabled command-name *application-frame*)
+                  (pushnew (cons cline-name command-name) possibilities
+                           :key #'car :test #'string=)))
+              command-table)
+             (loop for (cline-name . command-name) in possibilities
+                   do (funcall suggester cline-name command-name)))))
     ;; Bind the frame's command table so that the command-enabled
     ;; test passes with this command table.
     (letf (((frame-command-table *application-frame*)
