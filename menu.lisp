@@ -362,20 +362,55 @@
 		           (max-width +fill+) max-height
 			   min-width min-height)
   (with-slots (menu) (find-command-table command-table)
-    (raising ()
-      (make-pane-1 *pane-realizer* *application-frame*
-                   'menu-bar
-                   :background *3d-normal-color*
-                   :width width :height height
-                   :max-width max-width :max-height max-height
-                   :min-width min-width :min-height min-height
-                   :contents
-                   (append
-                    (loop for item in menu
-                          collect 
-                          (make-menu-button-from-menu-item
-			   item nil
-			   :bottomp t
-                           :vertical nil
-			   :command-table command-table))
-                    (list +fill+))))))
+    (make-pane-1 *pane-realizer* *application-frame*
+		 'menu-bar
+		 :background *3d-normal-color*
+		 :width width :height height
+		 :max-width max-width :max-height max-height
+		 :min-width min-width :min-height min-height
+		 :contents
+		 (append
+		  (loop for item in menu
+		      collect 
+			(make-menu-button-from-menu-item
+			 item nil
+			 :bottomp t
+			 :vertical nil
+			 :command-table command-table))
+		  (list +fill+)))))
+
+(defmethod handle-repaint ((pane menu-bar) region)
+  (declare (ignore region))
+  (with-slots (border-width) pane
+    (multiple-value-call #'draw-bordered-rectangle*
+      pane
+      (bounding-rectangle* (sheet-region pane))
+      :style :outset
+      :border-width 2)))
+
+(defmethod compose-space ((pane menu-bar) &key width height)
+  (declare (ignore width height))
+  (space-requirement+ (call-next-method)
+		      (make-space-requirement :height 4 :max-height 4)))
+
+(defmethod box-layout-mixin/horizontally-allocate-space
+    ((pane menu-bar) real-width real-height)
+  (with-slots (x-spacing) pane
+    (let ((widths
+	   (box-layout-mixin/horizontally-allocate-space-aux*
+	    pane real-width real-height))
+	  (x 2))
+      (loop
+	  for child in (box-layout-mixin-clients pane)
+	  for width in widths
+	  do
+	    (when (box-client-pane child)
+	      (layout-child (box-client-pane child)
+			    :expand
+			    :expand
+			    x
+			    2
+			    width
+			    (- real-height 4)))
+	    (incf x width)
+	    (incf x x-spacing)))))
