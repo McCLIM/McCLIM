@@ -390,8 +390,9 @@
 
 (defmethod compose-space ((pane menu-bar) &key width height)
   (declare (ignore width height))
-  (space-requirement+ (call-next-method)
-		      (make-space-requirement :height 4 :max-height 4)))
+  (space-requirement+
+   (call-next-method)
+   (make-space-requirement :height 4 :max-height 4 :min-height 4)))
 
 (defmethod box-layout-mixin/horizontally-allocate-space
     ((pane menu-bar) real-width real-height)
