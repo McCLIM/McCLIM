@@ -26,8 +26,17 @@
     ((scroll-type :initarg :scroll-type :accessor event-scroll-type)
      (value :initarg :value :accessor event-value)))
 
+(defclass menu-clicked-event (gadget-event)
+    ((item :initarg :item :accessor event-item)))
+
+(defclass context-menu-clicked-event (gadget-event)
+    ((value :initarg :value :accessor event-value)
+     (itemspec :initarg :itemspec :accessor event-itemspec)))
+
 
 ;;;; Classes
+
+;; gtk-menu-* see port.lisp
 
 (defclass gtk-button (native-widget-mixin push-button) ())
 
@@ -60,6 +69,9 @@
     (when (pane-background sheet)
       (gtk-widget-modify-bg button (pane-background sheet)))
     button))
+
+(defmethod realize-native-widget ((sheet gtk-menu-bar))
+  (gtk_menu_bar_new))
 
 (defmethod realize-native-widget ((sheet gtk-check-button))
   (let ((widget (gtk_check_button_new_with_label (climi::gadget-label sheet))))
@@ -111,6 +123,94 @@
      (if (eq sheet (gadget-value (gadget-client sheet))) 1 0))
     result))
 
+(defun append-menu-items (port sheet menu command-table-name)
+  (let ((ct (find-command-table command-table-name)))
+    (dolist (menu-item (slot-value ct 'climi::menu))
+      (let ((item (make-native-menu-item port sheet menu-item)))
+	(gtk_menu_shell_append menu item)))))
+
+(defun make-native-menu-item (port sheet menu-item)
+  (ecase (command-menu-item-type menu-item)
+    (:divider
+      (gtk_separator_menu_item_new))
+    (:command
+      (let ((item
+	     (gtk_menu_item_new_with_label
+	      (climi::command-menu-item-name menu-item))))
+	;; naja, ein sheet ist das nicht
+	(setf (widget->sheet item port) menu-item)
+	(connect-signal item "activate" 'menu-clicked-handler)
+	item))
+    (:menu
+      (let ((item
+	     (gtk_menu_item_new_with_label
+	      (climi::command-menu-item-name menu-item)))
+	    (menu (gtk_menu_new)))
+	(setf (widget->sheet item port) sheet)
+	(setf (widget->sheet menu port) sheet)
+	(append-menu-items port sheet menu (command-menu-item-value menu-item))
+	(gtk_menu_item_set_submenu item menu)
+	item))))
+
+(defun destructure-mc-menu-item (x)
+  (cond
+    ((atom x)
+      (values :item x x nil))
+    ((atom (cdr x))
+      (values :item (car x) (cdr x) nil))
+    (t
+      (destructuring-bind
+	  (&key value style items documentation active type)
+	  (cdr x)
+	(declare (ignore style documentation active))
+	(values (if items :menu type)
+		(car x)
+		(or value (car x))
+		items)))))
+
+;;(defclass dummy-context-menu-sheet (climi::clim-sheet-input-mixin sheet) ())
+
+(defclass dummy-context-menu-sheet (climi::standard-sheet-input-mixin sheet)
+    ())
+
+(defclass dummy-menu-item-sheet (sheet)
+    ((parent :initarg :parent :accessor dummy-menu-item-sheet-parent)
+     (value :initarg :value :accessor dummy-menu-item-sheet-value)
+     (itemspec :initarg :itemspec :accessor dummy-menu-item-sheet-itemspec)))
+
+(defun make-context-menu (port sheet items)
+  (let ((menu (gtk_menu_new)))
+    (dolist (itemspec items)
+      (multiple-value-bind (type display-object value sub-items)
+	  (destructure-mc-menu-item itemspec)
+	(let* ((label (princ-to-string display-object))
+	       (gtkmenuitem
+		(ecase type
+		  (:divider
+		    (gtk_separator_menu_item_new))
+		  (:label
+		    (gtk_menu_item_new_with_label label))
+		  (:item
+		    (let ((item
+			   (gtk_menu_item_new_with_label label)))
+		      (setf (widget->sheet item port)
+			    (make-instance 'dummy-menu-item-sheet
+			      :parent sheet
+			      :value value
+			      :itemspec itemspec))
+		      (connect-signal item
+				      "activate"
+				      'context-menu-clicked-handler)
+		      item))
+		  (:menu
+		    (let ((item (gtk_menu_item_new_with_label label))
+			  (menu (make-context-menu port sheet sub-items)))
+		      (gtk_menu_item_set_submenu item menu)
+		      item)))))
+	  (gtk_menu_shell_append menu gtkmenuitem))))
+    (gtk_widget_show_all menu)
+    menu))
+
 
 ;;;; Event definition
 
@@ -123,6 +223,10 @@
 (defmethod connect-native-signals ((sheet native-scrollbar) widget)
   ;; (connect-signal widget "value-changed" 'magic-clicked-handler)
   (connect-signal widget "change-value" 'scrollbar-change-value-handler))
+
+(defmethod connect-native-signals ((sheet gtk-menu-bar) widget)
+  ;; no signals
+  )
 
 
 ;;;; Event handling
@@ -166,6 +270,17 @@
     (:page_forward
       (scroll-down-page-callback pane (gadget-client pane) (gadget-id pane)))))
 
+(defmethod handle-event
+    ((pane gtk-menu) (event menu-clicked-event))
+  (let ((item (event-item event)))
+    (ecase (command-menu-item-type item)
+      (:command
+	(climi::throw-object-ptype item 'menu-item)))))
+
+(defmethod handle-event
+    ((pane gtk-nonmenu) (event magic-gadget-event))
+  (funcall (gtk-nonmenu-callback pane) pane nil))
+
 
 ;;; COMPOSE-SPACE
 
@@ -183,6 +298,10 @@
 	    (make-space-requirement :width width :height height)))
       (unless widgetp
 	(gtk_widget_destroy widget)))))
+
+(defmethod compose-space ((gadget gtk-menu-bar) &key width height)
+  (declare (ignore width height))
+  (make-space-requirement :height 20 :min-height 20 :max-height 20))
 
 
 ;;; Vermischtes

@@ -101,9 +101,9 @@
   (cond
     ((dequeue port))
     (t
-      #+(and sbcl (not win32))
-      (sb-sys:wait-until-fd-usable (gdk-xlib-fd) :input timeout)
-      (gtk-main-iteration port #-(and sbcl (not win32)) t)
+      #+clim-gtkairo::do-not-block-in-ffi
+      (sb-sys:wait-until-fd-usable (gdk-xlib-fd) :input 0.1)
+      (gtk-main-iteration port #-clim-gtkairo::do-not-block-in-ffi t)
       (dequeue port))))
 
 (defmacro define-signal (name+options (widget event &rest args) &body body)
@@ -193,18 +193,15 @@
 			;; fixme: what about the other characters in `string'?
 			(char string 0)))
 		(sym (gethash keyval *keysyms*)))
-	    ;; McCLIM will #\a statt ^A sehen:
 	    (cond
+	      ((eq sym :backspace)
+		(setf char #\backspace))
 	      ((null char))
 	      ((eql char #\return))
 	      ((eql char #\escape)
 		(setf char nil))
 	      ((< 0 (char-code char) 32)
 		(setf char (code-char (+ (char-code char) 96)))))
-	    (when (eq sym :backspace)
-	      (setf char #\backspace))
-	    ;; irgendwas sagt mir, dass hier noch weitere Korrekturen
-	    ;; werden folgen muessen.
 	    (enqueue
 	     (make-instance (if (eql type GDK_KEY_PRESS)
 				'key-press-event
@@ -320,6 +317,23 @@
     (enqueue
      (make-instance 'magic-gadget-event
        :sheet (widget->sheet widget *port*)))))
+
+(define-signal menu-clicked-handler (widget event)
+  (declare (ignore event))
+  (let ((parent (cffi:foreign-slot-value widget 'gtkwidget 'parent)))
+    (enqueue
+     (make-instance 'menu-clicked-event
+       :sheet (widget->sheet parent *port*)
+       :item (widget->sheet widget *port*)))))
+
+(define-signal context-menu-clicked-handler (widget event)
+  (declare (ignore event))
+  (let ((dummy-item (widget->sheet widget *port*)))
+    (enqueue
+     (make-instance 'context-menu-clicked-event
+       :sheet (dummy-menu-item-sheet-parent dummy-item)
+       :value (dummy-menu-item-sheet-value dummy-item)
+       :itemspec (dummy-menu-item-sheet-itemspec dummy-item)))))
 
 #-sbcl
 (define-signal (scrollbar-change-value-handler :return-type :int)

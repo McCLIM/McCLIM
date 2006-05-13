@@ -240,6 +240,22 @@
 (defclass native-widget-mixin ()
     ((widget :initform nil :accessor native-widget)))
 
+(defclass gtk-menu (basic-pane)
+    ((label :initarg :label :accessor gtk-menu-label)
+     (command-table :initform nil
+		    :initarg :command-table
+		    :accessor gtk-menu-command-table)))
+
+(defclass gtk-nonmenu (basic-pane)
+    ((label :initarg :label :accessor gtk-nonmenu-label)
+     (callback :initarg :value-changed-callback
+	       :accessor gtk-nonmenu-callback)))
+
+(defclass gtk-menu-bar (native-widget-mixin
+			sheet-multiple-child-mixin
+			basic-pane)
+    ((contents :initarg :contents :accessor gtk-menu-bar-contents)))
+
 (defmethod realize-mirror ((port gtkairo-port) (sheet native-widget-mixin))
   (with-gtk ()
     (setf (native-widget sheet) (realize-native-widget sheet))
@@ -267,6 +283,51 @@
       (when (sheet-enabled-p sheet)
 	(gtk_widget_show_all fixed))
       mirror)))
+
+(defclass menu-mirror (widget-mirror)
+    ((menu-item :initarg :menu-item :reader mirror-menu-item)
+     (menu :initarg :menu :reader mirror-menu)))
+
+(defclass nonmenu-mirror (widget-mirror)
+    ((menu-item :initarg :menu-item :reader mirror-menu-item)))
+
+(defmethod realize-mirror :after ((port gtkairo-port) (sheet gtk-menu-bar))
+  (dolist (menu (gtk-menu-bar-contents sheet))
+    (unless (integerp menu)		;?
+      (sheet-adopt-child sheet menu))))
+
+(defmethod realize-mirror ((port gtkairo-port) (sheet gtk-menu))
+  (unless (climi::port-lookup-mirror port sheet)
+    (with-gtk ()
+      (let* ((menu-item (gtk_menu_item_new_with_label (gtk-menu-label sheet)))
+	     (menu (gtk_menu_new))
+	     (parent (sheet-mirror (sheet-parent sheet)))
+	     (mirror
+	      (make-instance 'menu-mirror :menu menu :menu-item menu-item)))
+	(setf (widget->sheet menu-item port) sheet)
+	(setf (widget->sheet menu port) sheet)
+	(append-menu-items port sheet menu (gtk-menu-command-table sheet))
+	(gtk_menu_item_set_submenu menu-item menu)
+	(gtk_menu_shell_append (mirror-widget parent) menu-item)
+	(climi::port-register-mirror (port sheet) sheet mirror)
+	(when (sheet-enabled-p sheet)
+	  (gtk_widget_show_all menu-item))
+	mirror))))
+
+(defmethod realize-mirror ((port gtkairo-port) (sheet gtk-nonmenu))
+  (unless (climi::port-lookup-mirror port sheet)
+    (with-gtk ()
+      (let* ((menu-item
+	      (gtk_menu_item_new_with_label (gtk-nonmenu-label sheet)))
+	     (parent (sheet-mirror (sheet-parent sheet)))
+	     (mirror (make-instance 'nonmenu-mirror :menu-item menu-item)))
+	(setf (widget->sheet menu-item port) sheet)
+	(connect-signal menu-item "activate" 'magic-clicked-handler)
+	(gtk_menu_shell_append (mirror-widget parent) menu-item)
+	(climi::port-register-mirror (port sheet) sheet mirror)
+	(when (sheet-enabled-p sheet)
+	  (gtk_widget_show_all menu-item))
+	mirror))))
 
 (defmethod realize-mirror ((port gtkairo-port) (pixmap-sheet climi::pixmap))
   (unless (climi::port-lookup-mirror port pixmap-sheet)
@@ -298,7 +359,8 @@
   (dolist (medium (mirror-mediums mirror))
     (when (cr medium)
       (cairo_destroy (cr medium))
-      (setf (cr medium) nil)))
+      (setf (cr medium) nil)
+      (dispose-flipping-pixmap medium)))
   (setf (mirror-mediums mirror) '()))
 
 (defmethod destroy-mirror
@@ -327,6 +389,18 @@
       (when mirror
 	(destroy-mediums mirror)
 	(gdk_drawable_unref (mirror-drawable mirror))
+	(climi::port-unregister-mirror port pixmap-sheet mirror)))))
+
+(defmethod destroy-mirror ((port gtkairo-port) (pixmap-sheet gtk-menu))
+  (with-gtk ()
+    (let ((mirror (climi::port-lookup-mirror port pixmap-sheet)))
+      (when mirror
+	(climi::port-unregister-mirror port pixmap-sheet mirror)))))
+
+(defmethod destroy-mirror ((port gtkairo-port) (pixmap-sheet gtk-nonmenu))
+  (with-gtk ()
+    (let ((mirror (climi::port-lookup-mirror port pixmap-sheet)))
+      (when mirror
 	(climi::port-unregister-mirror port pixmap-sheet mirror)))))
 
 

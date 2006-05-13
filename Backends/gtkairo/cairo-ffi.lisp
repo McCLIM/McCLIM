@@ -25,9 +25,6 @@
 (in-package :clim-gtkairo)
 
 
-(defvar *cairo-error-mode* :warn
-  "NIL, :WARN, or :BREAK.")
-
 (defmacro def-cairo-fun (name rtype &rest args)
   (let* ((str (string-upcase name))
 	 (actual (intern (concatenate 'string "%-" str) :clim-gtkairo))
@@ -40,12 +37,9 @@
        (defun ,wrapper ,argnames
 	 (multiple-value-prog1
 	     (,actual ,@argnames)
-	   (when *cairo-error-mode*
-	     (let ((status (cairo_status ,(car argnames))))
-	       (unless (eq status :success)
-		 (warn "~A returned with status ~A" ,name status))
-	       (when (eq *cairo-error-mode* :break)
-		 (break)))))))))
+	   (let ((status (cairo_status ,(car argnames))))
+	     (unless (eq status :success)
+	       (error "~A returned with status ~A" ,name status))))))))
 
 
 ;; user-visible structures
@@ -607,6 +601,14 @@
 (def-cairo-fun "cairo_paint"
     :void
   (cr :pointer))
+
+(def-cairo-fun "cairo_get_font_face"
+    :pointer
+  (cr :pointer))
+
+(defcfun "cairo_font_face_status"
+    cairo_status
+  (font :pointer))
 
 
 ;;; Error status queries

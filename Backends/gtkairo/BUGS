@@ -27,20 +27,28 @@
 (FIXED) 5d.
     Default gadget values aren't being used.
 
-6.
-    Should work on Windows but does not.  Using the installer from
-    gimp-win.sf.net I see an address book window, but there are cairo
-    font warnings in the background and font metrik functions return
-    totally bogus values sometimes.
-    Although the hordes of sbcl/win32 hackers might contribute a native
-    Windows backend sooner or later, it would be nice to get Gtkairo
-    working on Windows, too.
+(FIXED) 6.
+    [Address book didn't work on windows.]
 
-7.
-    (some?) drawing operations are rather slow.  (Remote X to an ancient
-    server spends insane amounts of real (!) time doing XGetImage
-    requests.  But even locally, where that isn't reproducable, it's not
-    really snappy.  Just try scrolling in beirc.)
+6b.
+    On windows, something draws gray ink over the buttons in demodemo
+    after expose events.  This should not happen, since the gtkbuttons
+    are in a gtkfixed with its own window.  Thorough double buffering
+    of all output seems to be a viable workaround though.
+
+6c.
+    On windows, all we get is a sans serif font.  No serif and notably
+    no monospace font, breaking climacs like bug 3 did.
+
+7a.
+    flipping ink takes time proportional to the with the size of the
+    window, not with the size of the shape being drawn
+
+7b.
+    flipping ink pixmap caching is broken on windows
+
+7c.
+    text drawing is noticably slower than with CLX
 
 8.
     The frontend specifies background colors (*3d-normal-color*) where
@@ -66,14 +74,14 @@
     In the address book, there are often wide grey borders instead of
     the narrow black ones.
 
-13.
+(WONTFIX) 13.
     McCLIM seems to think that things like button panes have a maximum
     size equal to their preferred size.  I don't agree and return the
     default gtk size as space-requirement :width and :height without
     giving a maximum or minimum size at all.  Naturally, the existing
     demos look a little, erm, different with that.
 
-14.
+(FIXED?) 14.
     Climacs doesn't draw itself until the window is resized.
 
 (FIXED) 15.
@@ -101,5 +109,11 @@
    modifier bit set; key release events do.  This is opposite to what
    CLIM-CLX does.
 
-20.
+(NOTABUG) 20.
    Very nasty duplicate keyboard events when typing in the listener.
+
+21.
+   Copy&paste needs to be implemented.
+
+22.
+   medium-draw-ellipse* needs a rewrite.

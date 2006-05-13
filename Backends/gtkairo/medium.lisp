@@ -33,7 +33,7 @@
   ((port :initarg :port :accessor port)
    (cr :initform nil :initarg :cr :accessor cr)
    (flipping-original-cr :initform nil :accessor flipping-original-cr)
-   (flipping-pixmap :accessor flipping-pixmap)
+   (flipping-pixmap :initform nil :accessor flipping-pixmap)
    (surface :initarg :surface :accessor surface)
    (last-seen-sheet :accessor last-seen-sheet)
    (last-seen-region :accessor last-seen-region)))
@@ -46,12 +46,6 @@
 (defclass metrik-medium (gtkairo-medium)
   ())
 
-;; FIXME: turn this back on.
-;;
-;; Disabling antialiasing hides some visual artifacts.  Some other
-;; artifacts remain around lines that are blurry with antialiasing
-;; enabled, which perhaps points to round-off error being the reason for
-;; both blurryness and visual artifacts.  Both need to be fixed.
 (defparameter *antialiasingp* t)
 
 (defun gtkwidget-gdkwindow (widget)
@@ -86,10 +80,16 @@
       (let* ((mirror (medium-mirror medium))
 	     (drawable (mirror-drawable mirror)))
 	(setf (cr medium) (gdk_cairo_create drawable))
-	(push medium (mirror-mediums mirror))
+	(dispose-flipping-pixmap medium)
+	(pushnew medium (mirror-mediums mirror))
 	(cairo_set_antialias (cr medium) (if *antialiasingp* 0 1)))
       (setf (last-seen-sheet medium) (medium-sheet medium))
       (setf (last-seen-region medium) (sheet-region (medium-sheet medium))))))
+
+(defun dispose-flipping-pixmap (medium)
+  (when (flipping-pixmap medium)
+    (gdk_drawable_unref (flipping-pixmap medium))
+    (setf (flipping-pixmap medium) nil)))
 
 
 ;;;; ------------------------------------------------------------------------
@@ -215,20 +215,19 @@
 	(to-drawable (medium-gdkdrawable medium)))
     (cairo_surface_flush from-surface)
     (cairo_surface_flush to-surface)
-    (let ((gc (gdk_gc_new to-drawable)))
+    (let ((gc (gdk_gc_new to-drawable))
+	  (region (climi::sheet-mirror-region (medium-sheet medium))))
       (gdk_gc_set_function gc :xor)
-      (cffi:with-foreign-slots ((allocation-width allocation-height)
-				(mirror-widget (medium-mirror medium))
-				gtkwidget)
-	(gdk_draw_drawable to-drawable gc from-drawable 0 0 0 0
-			   allocation-width allocation-height))
+      (gdk_draw_drawable to-drawable gc from-drawable 0 0 0 0
+			 (floor (bounding-rectangle-max-x region))
+			 (floor (bounding-rectangle-max-y region))) 
       (gdk_gc_unref gc))
     (cairo_surface_mark_dirty to-surface))
   (cairo_destroy (cr medium))
   (setf (cr medium) (flipping-original-cr medium))
   (setf (flipping-original-cr medium) nil)
-  (gdk_drawable_unref (flipping-pixmap medium))
-  (setf (flipping-pixmap medium) nil))
+  #+(or win32 mswindows windows)	;fixme
+  (dispose-flipping-pixmap medium))
 
 (defmethod sync-ink (medium (design climi::standard-flipping-ink))
   (setf (flipping-original-cr medium) (cr medium))
@@ -237,11 +236,15 @@
     (cffi:with-foreign-slots ((allocation-width allocation-height)
 			      (mirror-widget mirror)
 			      gtkwidget)
-      (let ((pixmap
-	     (gdk_pixmap_new drawable allocation-width allocation-height -1)))
+      (let* ((region (climi::sheet-mirror-region (medium-sheet medium)))
+	     (width (floor (bounding-rectangle-max-x region)))
+	     (height (floor (bounding-rectangle-max-y region)))
+	     (pixmap
+	      (or (flipping-pixmap medium)
+		  (setf (flipping-pixmap medium)
+			(gdk_pixmap_new drawable width height -1)))))
 	(setf (cr medium) (gdk_cairo_create pixmap))
 	(cairo_paint (cr medium))
-	(setf (flipping-pixmap medium) pixmap)
 	(sync-transformation medium)
 	(sync-ink medium +white+)))))
 
@@ -348,6 +351,11 @@
 
 ;;; text-style
 
+(defun assert-font-status (cr str)
+  (let ((status (cairo_font_face_status (cairo_get_font_face cr))))
+    (unless (eq status :success)
+      (error "status ~A after call to ~A" status str))))
+
 (defun sync-text-style (medium text-style transform-glyphs-p)
   (with-slots (cr) medium
     (multiple-value-bind (family face size)
@@ -386,6 +394,7 @@
 	 ((:bold :bold-italic :italic-bold :bold-oblique
 		 :oblique-bold)
 	   :bold)))
+      (assert-font-status cr "cairo_select_font_face")
       ;;
       (cond (transform-glyphs-p
 	     (cairo_set_font_size cr (df size)))
@@ -403,7 +412,8 @@
 ;;;                 (cairo_matrix_invert matrix)
 ;;;		 (cairo_transform_font cr matrix)
 ;;;		 ))
-	      )))))
+	      ))
+      (assert-font-status cr "cairo_set_font_size"))))
 
 (defun sync-drawing-options (medium)
   (sync-transformation medium)
@@ -609,21 +619,19 @@
 					  (medium-default-text-style medium))
 		       transform-glyphs)
       (cairo_move_to cr (df x) (df y))
-      (cairo_show_text cr (subseq text start end)) )))
+      (setf end (or end (length text)))
+      (unless (eql start end)		;empty string breaks cairo/windows
+	(cairo_show_text cr (subseq text start end))))))
 
 (defmethod medium-finish-output ((medium gtkairo-medium))
   (with-cairo-medium (medium)
     (when (cr medium)
-      (cairo_surface_flush (cairo_get_target (cr medium)))
-;;;    (port-force-output (port medium))
-      )))
+      (cairo_surface_flush (cairo_get_target (cr medium))))))
 
 (defmethod medium-force-output ((medium gtkairo-medium))
   (with-cairo-medium (medium)
     (when (cr medium)
-      (cairo_surface_flush (cairo_get_target (cr medium)))
-;;;    (port-force-output (port medium))
-      )))
+      (cairo_surface_flush (cairo_get_target (cr medium))))))
 
 (defmethod medium-beep ((medium gtkairo-medium))
   ;; fixme: visual beep?
@@ -641,6 +649,20 @@
 
 (defmacro slot (o c s)
   `(cffi:foreign-slot-value ,o ,c ,s))
+
+(defun cairo-text-extents (cr str res)
+  (cond
+    #+(or win32 mswindows windows)	;empty string breaks cairo/windows
+    ((string= str "")
+      (setf str " ")
+      (cairo_text_extents cr str res)
+      (cffi:with-foreign-slots
+	  ((width x_advance x_bearing) res cairo_text_extents)
+	(setf width 0.0d0)
+	(setf x_advance 0.0d0)
+	(setf x_bearing 0.0d0)))
+    (t
+      (cairo_text_extents cr str res))))
 
 
 ;;; TEXT-STYLE-ASCENT
@@ -777,9 +799,9 @@
       (sync-text-style medium text-style t)
       (cffi:with-foreign-object (res 'cairo_text_extents)
 	(let (i m)
-	  (cairo_text_extents cr "i" res)
+	  (cairo-text-extents cr "i" res)
 	  (setf i (slot res 'cairo_text_extents 'width))
-	  (cairo_text_extents cr "m" res)
+	  (cairo-text-extents cr "m" res)
 	  (setf m (slot res 'cairo_text_extents 'width))
 	  (= i m))))))
 
@@ -829,7 +851,7 @@
       (cairo_identity_matrix cr)
       (sync-text-style medium text-style t)
       (cffi:with-foreign-object (res 'cairo_text_extents)
-	(cairo_text_extents cr
+	(cairo-text-extents cr
 			    (subseq string start (or end (length string)))
 			    res)
 	(cffi:with-foreign-slots
@@ -859,7 +881,7 @@
       (cairo_identity_matrix cr)
       (sync-text-style medium text-style t)
       (cffi:with-foreign-object (res 'cairo_text_extents)
-	(cairo_text_extents cr
+	(cairo-text-extents cr
 			    (subseq string start (or end (length string)))
 			    res)
 	;; This used to be a straight call to TEXT-SIZE.  Looking at
@@ -965,11 +987,12 @@
     (draw-rectangle* medium 0 0 600 600 :ink design)))
 
 ;; FIXME: this is some kind of special-purpose function for mediums
-;; that aren't intended to be used again.  Normal mediums are handled
-;; by DESTROY-MEDIUMS.
+;; created by MAKE-CAIRO-SURFACE.  Normal mediums are handled by
+;; DESTROY-MEDIUMS.
 (defun destroy-cairo-medium (medium)
   (cairo_destroy (cr medium))
   (setf (cr medium) :destroyed)
+  (dispose-flipping-pixmap medium)
   (when (surface medium)
     (cairo_surface_destroy (surface medium))))
 

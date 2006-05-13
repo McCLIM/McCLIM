@@ -50,6 +50,17 @@
 (defmethod make-pane-2 ((type (eql 'push-button-pane)) &rest initargs)
   (apply #'make-instance 'gtk-button initargs))
 
+(defmethod make-pane-2
+    ((type (eql 'climi::menu-button-leaf-pane)) &rest initargs)
+  (apply #'make-instance 'gtk-nonmenu initargs))
+
+(defmethod make-pane-2
+    ((type (eql 'climi::menu-button-submenu-pane)) &rest initargs)
+  (apply #'make-instance 'gtk-menu initargs))
+
+(defmethod make-pane-2 ((type (eql 'climi::menu-bar)) &rest initargs)
+  (apply #'make-instance 'gtk-menu-bar initargs))
+
 ;;;(defmethod make-pane-2 ((type (eql 'clim:check-box-pane)) &rest initargs)
 ;;;  (apply #'make-instance gtkairo-check-box-pane initargs))
 ;;;(defmethod make-pane-2 ((type (eql 'clim:radio-box-pane)) &rest initargs)
@@ -104,3 +115,37 @@
     ((fm gtkairo-frame-manager) (frame climi::menu-frame))
   (port-enable-sheet (car climi::*all-ports*)
 		     (slot-value frame 'climi::top-level-sheet)))
+
+#+(or)					;doesn't work yet
+(defmethod frame-manager-menu-choose
+    ((frame-manager gtkairo-frame-manager)
+     items
+     &key associated-window printer presentation-type
+     (default-item nil default-item-p)
+     text-style label cache unique-id id-test cache-value cache-test
+     max-width max-height n-rows n-columns x-spacing y-spacing row-wise
+     cell-align-x cell-align-y scroll-bars pointer-documentation)
+  (declare
+   ;; XXX hallo?
+   (ignore printer presentation-type default-item default-item-p
+	   text-style label cache unique-id id-test cache-value
+	   cache-test max-width max-height n-rows n-columns x-spacing
+	   y-spacing row-wise cell-align-x cell-align-y scroll-bars
+	   pointer-documentation))
+  (let* ((frame (if associated-window
+		    (pane-frame associated-window)
+		    *application-frame*))
+	 (port (port frame))
+	 (tls (slot-value frame 'climi::top-level-sheet))
+	 (tls-mirror (climi::port-lookup-mirror port tls))
+	 (sheet (make-instance 'dummy-context-menu-sheet))
+	 (menu (make-context-menu port sheet items)))
+    (gtk_menu_popup menu
+		    (cffi:null-pointer)
+		    (cffi:null-pointer)
+		    (cffi:null-pointer)
+		    (cffi:null-pointer)
+		    0
+		    (gtk_get_current_event_time))
+    (let ((event (event-read sheet)))
+      (values (event-value event) (event-itemspec event) event))))

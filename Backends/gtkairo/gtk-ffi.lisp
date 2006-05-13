@@ -585,6 +585,46 @@
     :pointer
   (label :string))
 
+(defcfun "gtk_menu_item_new_with_label"
+    :pointer
+  (label :string))
+
+(defcfun "gtk_menu_bar_new"
+    :pointer
+  )
+
+(defcfun "gtk_menu_shell_append"
+    :void
+  (menu :pointer)
+  (item :pointer))
+
+(defcfun "gtk_menu_item_set_submenu"
+    :void
+  (item :pointer)
+  (menu :pointer))
+
+(defcfun "gtk_menu_new"
+    :pointer
+  )
+
+(defcfun "gtk_separator_menu_item_new"
+    :pointer
+  )
+
+(defcfun "gtk_menu_popup"
+    :void
+  (menu :pointer)
+  (parent_menu_shell :pointer)
+  (parent_menu_item :pointer)
+  (func :pointer)
+  (data :pointer)
+  (button :unsigned-int)
+  (time :uint32))
+
+(defcfun "gtk_get_current_event_time"
+    :uint32
+  )
+
 (defcfun "gtk_button_set_label"
     :void
   (button :pointer)
@@ -794,7 +834,7 @@
 ;;; foo
 
 (defun test (&optional (port :gtkairo))
-  (mapc #'climi::destroy-port climi::*all-ports*)
+;;;  (mapc #'climi::destroy-port climi::*all-ports*)
   (setf climi::*server-path-search-order* (list port))
   (clim:run-frame-top-level
    (clim:make-application-frame 'clim-demo::address-book)))
