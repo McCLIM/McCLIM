@@ -47,6 +47,9 @@ your lisp's init file:
 ;;; Freetype autodetection
 
 (defun parse-fontconfig-output (s)
+  (when (stringp s)
+    (setf s
+	  (make-string-input-stream s)))
   (let* ((match-string (concatenate 'string (string #\Tab) "file:"))
          (matching-line
           (loop for l = (read-line s nil nil)
@@ -68,19 +71,53 @@ your lisp's init file:
   don't have them, get them from http://www.gnome.org/fonts/~%~%~%"))
 
 #+sbcl
-(defmethod perform :after ((o load-op) (s (eql (asdf:find-system :mcclim-freetype))))
+(defun find-bitstream-fonts ()
   (let ((fc-match  (sb-ext:find-executable-in-search-path "fc-match")))
     (if (null fc-match)
-        (warn-about-unset-font-path)
-        (let* ((process (sb-ext:run-program fc-match `("-v" "Bitstream Vera")
-                                            :output :stream
-                                            :input nil))
-               (font-path (parse-fontconfig-output (sb-ext:process-output process))))
-          (if (null font-path)
-              (warn-about-unset-font-path)
-              (setf (symbol-value (intern "*FREETYPE-FONT-PATH*" :mcclim-freetype))
-                    font-path))))))
+	nil
+      (let* ((process (sb-ext:run-program fc-match `("-v" "Bitstream Vera")
+					  :output :stream
+					  :input nil))
+	     (font-path (parse-fontconfig-output (sb-ext:process-output process))))
+	font-path))))
 
-#-sbcl
+#+allegro
+(defun find-bitstream-fonts ()
+  (let* ((fc-match (excl.osi:find-in-path "fc-match"))
+	 (command (format nil "~A -v Bitstream Vera" fc-match)))
+    (if (null fc-match)
+	nil
+	(multiple-value-bind (output error-output exit-code)
+	    (excl.osi:command-output
+	     command
+	     :whole t)
+	  (if (not (= exit-code 0))
+	      (progn
+		(format t "~&Tried to autoset font path, but was unable to find Bitstream Vera fonts.~%~T~A error output was ~%~T~T~A~%"
+			command error-output)
+		nil)
+	      (let ((font-path (parse-fontconfig-output output)))
+		(if (null font-path)
+		    (progn
+		      (format t "~&Tried to autoset font path, using command:~%~T~A~%~Tbut was unable to find Bitstream Vera fonts.~%"
+			      command)
+		      nil)
+		    font-path)))))))
+
+;;;#-(or sbcl allegro)
+;;;(defmethod perform :after ((o load-op) (s (eql (asdf:find-system :mcclim-freetype))))
+;;;  (warn-about-unset-font-path))
+
+(defvar cl-user::*mcclim-freetype-font-path* nil
+  "Set this variable to tell mcclim-freetype where to find the bitstream 
+Vera fonts (instead of having it look for them.")
+
 (defmethod perform :after ((o load-op) (s (eql (asdf:find-system :mcclim-freetype))))
-  (warn-about-unset-font-path))
+  (let (font-path)
+    (cond (cl-user::*mcclim-freetype-font-path*
+	   (setf  (symbol-value (intern "*FREETYPE-FONT-PATH*" :mcclim-freetype))
+		  cl-user::*mcclim-freetype-font-path*))
+	  ((setf font-path (find-bitstream-fonts))
+	   (setf (symbol-value (intern "*FREETYPE-FONT-PATH*" :mcclim-freetype))
+		 font-path))
+	  (t (warn-about-unset-font-path)))))
