@@ -307,6 +307,12 @@ spatially organized data structure.
       (loop for (r) in move-overlapping do (setf res (region-union res r)))
       (replay history stream res))))
 
+;;; FIXME: although this inherits from COMPLETE-MEDIUM-STATE, in fact
+;;; it needn't, as we only ever call SET-MEDIUM-CURSOR-POSITION on it.
+;;; Until 2006-05-28, we did also use the various medium attributes,
+;;; but with the reworking of REPLAY-OUTPUT-RECORD
+;;; (STANDARD-DISPLAYED-OUTPUT-RECORD) to use around methods and
+;;; WITH-DRAWING-OPTIONS, they are no longer necessary.
 (defclass updating-stream-state (complete-medium-state)
   ((cursor-x :accessor cursor-x :initarg :cursor-x :initform 0)
    (cursor-y :accessor cursor-y :initarg :cursor-y :initform 0)))
@@ -325,7 +331,7 @@ spatially organized data structure.
        (or (not y-supplied-p)
 	   (coordinate= (slot-value state 'cursor-y) cursor-y))))
 
-(defmethod set-medium-graphics-state :after
+(defmethod set-medium-cursor-position
     ((state updating-stream-state) (stream updating-output-stream-mixin))
   (setf (stream-cursor-position stream)
 	(values (cursor-x state) (cursor-y state))))
@@ -931,7 +937,7 @@ in an equalp hash table"))
                                                record
                                                nil)
                      (add-output-record record (stream-current-output-record stream))
-                     (set-medium-graphics-state (end-graphics-state record) stream)
+                     (set-medium-cursor-position (end-graphics-state record) stream)
                      (setf (parent-cache record) parent-cache) )) ))))
       record)))
 
@@ -989,7 +995,7 @@ in an equalp hash table"))
       (unwind-protect
 	   (progn
 	     (letf (((do-note-output-record stream) nil))
-	       (set-medium-graphics-state (start-graphics-state record) stream)
+	       (set-medium-cursor-position (start-graphics-state record) stream)
 	       (compute-new-output-records record stream)
 	       (when *dump-updating-output*
 		 (dump-updating record :both *trace-output*)))
@@ -1006,7 +1012,7 @@ in an equalp hash table"))
 	       (incremental-redisplay stream nil erases moves draws
 				      erase-overlapping move-overlapping))
 	     (delete-stale-updating-output record))
-	(set-medium-graphics-state current-graphics-state stream)))))
+	(set-medium-cursor-position current-graphics-state stream)))))
 
 (defun erase-rectangle (stream bounding)
   (with-bounding-rectangle* (x1 y1 x2 y2)

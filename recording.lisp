@@ -470,16 +470,13 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
 	     ;; Is there a better value to bind to baseline?
              ((slot-value stream 'baseline) (slot-value stream 'baseline)))
 	(with-sheet-medium (medium stream)
-	  (let ((medium-state (make-instance 'complete-medium-state
-					     :medium medium))
-		(transformation (medium-transformation medium)))
+	  (let ((transformation (medium-transformation medium)))
 	    (unwind-protect
 		 (progn
 		   (setf (medium-transformation medium)
 			 +identity-transformation+)
 		   (replay-output-record record stream region))
-	      (setf (medium-transformation medium) transformation)
-	      (set-medium-graphics-state medium-state medium))))))))
+	      (setf (medium-transformation medium) transformation))))))))
 
 (defmethod replay-output-record ((record compound-output-record) stream
 				 &optional region (x-offset 0) (y-offset 0))
@@ -1025,17 +1022,6 @@ were added."
   (:documentation "Stores those parts of the medium/stream graphics state
   that need to be restored when drawing an output record"))
 
-(defgeneric set-medium-graphics-state (state medium)
-  (:documentation "Sets the MEDIUM graphics state from STATE"))
-
-(defmethod set-medium-graphics-state (state medium)
-  (declare (ignore medium))
-  state)
-
-(defmethod set-medium-graphics-state (state (stream output-recording-stream))
-  (with-sheet-medium (medium stream)
-    (set-medium-graphics-state state medium)))
-
 (defclass gs-ink-mixin (graphics-state)
   ((ink :initarg :ink :accessor graphics-state-ink)))
 
@@ -1046,8 +1032,10 @@ were added."
   (when (and medium (not (slot-boundp obj 'ink)))
     (setf (slot-value obj 'ink) (medium-ink medium))))
 
-(defmethod set-medium-graphics-state :after ((state gs-ink-mixin) medium)
-  (setf (medium-ink medium) (graphics-state-ink state)))
+(defmethod replay-output-record :around
+    ((record gs-ink-mixin) stream &optional region x-offset y-offset)
+  (with-drawing-options (stream :ink (graphics-state-ink record))
+    (call-next-method)))
 
 (defrecord-predicate gs-ink-mixin (ink)
   (if-supplied (ink)
@@ -1056,7 +1044,6 @@ were added."
 (defclass gs-clip-mixin (graphics-state)
   ((clip :initarg :clipping-region :accessor graphics-state-clip
          :documentation "Clipping region in stream coordinates.")))
-
 
 (defmethod initialize-instance :after ((obj gs-clip-mixin)
 				       &key (stream nil)
@@ -1073,31 +1060,10 @@ were added."
 	(setq clip (transform-region (medium-transformation medium)
 				     clip-region))))))
 
-(defmethod set-medium-graphics-state :after ((state gs-clip-mixin) medium)
-  ;;
-  ;; This definition is kind of wrong. When output records are about to
-  ;; be replayed only a certain region of the stream should be affected.[1]
-  ;; Therefore I disabled this code, since this way only breaks the
-  ;; [not very frequent case] that the output record actually contains
-  ;; a clipping region different from +everywhere+, while having it in
-  ;; breaks redisplay of streams in just about every case.
-  ;;
-  ;; Most notably Closure is affected by this, as it does the equivalent of
-  ;; (draw-rectangle* medium 0 0 800 200 :ink +white+ :filled t)
-  ;; (draw-text* medium "Hello" 100 100)
-  ;;
-  ;; Having this code in a redisplay on the region
-  ;; (make-rectangle* 0 0 50 50) fills the drawing pane with a white
-  ;; rectangle obscuring the text.
-  ;;
-  ;; [1] it is of course debatable where this extra clipping because
-  ;; of redisplay should come from. Should replay-output-record set it
-  ;; up? Should handle-repaint do so?
-  ;;
-  ;; --GB 2003-03-14
-  (declare (ignore medium))
-  #+nil
-  (setf (medium-clipping-region medium) (graphics-state-clip state)))
+(defmethod replay-output-record :around
+    ((record gs-clip-mixin) stream &optional region x-offset y-offset)
+  (with-drawing-options (stream :clipping-region (graphics-state-clip record))
+    (call-next-method)))
 
 (defrecord-predicate gs-clip-mixin ((:clipping-region clip))
   (if-supplied (clip)
@@ -1123,8 +1089,10 @@ were added."
     (unless (slot-boundp obj 'line-style)
       (setf (slot-value obj 'line-style) (medium-line-style medium)))))
 
-(defmethod set-medium-graphics-state :after ((state gs-line-style-mixin) medium)
-  (setf (medium-line-style medium) (graphics-state-line-style state)))
+(defmethod replay-output-record :around
+    ((record gs-line-style-mixin) stream &optional region x-offset y-offset)
+  (with-drawing-options (stream :line-style (graphics-state-line-style record))
+    (call-next-method)))
 
 (defrecord-predicate gs-line-style-mixin (line-style)
   (if-supplied (line-style)
@@ -1147,8 +1115,10 @@ were added."
     (unless (slot-boundp obj 'text-style)
       (setf (slot-value obj 'text-style) (medium-text-style medium)))))
 
-(defmethod set-medium-graphics-state :after ((state gs-text-style-mixin) medium)
-  (setf (medium-text-style medium) (graphics-state-text-style state)))
+(defmethod replay-output-record :around
+    ((record gs-text-style-mixin) stream &optional region x-offset y-offset)
+  (with-drawing-options (stream :text-style (graphics-state-text-style record))
+    (call-next-method)))
 
 (defrecord-predicate gs-text-style-mixin (text-style)
   (if-supplied (text-style)
@@ -1186,17 +1156,6 @@ were added."
 (defmethod output-record-equal and ((record standard-displayed-output-record)
 				    (record2 standard-displayed-output-record))
   (region-equal record record2))
-
-;;; This is an around method so that more specific before methods can be
-;;; defined for the various mixin classes, that modify the state after it has
-;;; been set in the graphics state.
-
-(defmethod replay-output-record :around
-    ((record standard-displayed-output-record) stream
-     &optional region x-offset y-offset)
-  (declare (ignore region x-offset y-offset))
-  (set-medium-graphics-state record stream)
-  (call-next-method))
 
 (defclass coord-seq-mixin ()
   ((coord-seq :accessor coord-seq :initarg :coord-seq))
@@ -1851,8 +1810,15 @@ were added."
 		   substring
 		 (setf (stream-cursor-position stream)
 		       (values start-x start-y))
-		 (set-medium-graphics-state substring medium)
-		 (stream-write-output stream string nil)))
+                 ;; FIXME: a bit of an abstraction inversion.  Should
+                 ;; the styled strings here not simply be output
+                 ;; records?  Then we could just replay them and all
+                 ;; would be well.  -- CSR, 20060528.
+                 (with-drawing-options (stream 
+                                        :ink (graphics-state-ink substring)
+                                        :clipping-region (graphics-state-clip substring)
+                                        :text-style (graphics-state-text-style substring))
+                   (stream-write-output stream string nil))))
       (when wrapped			; FIXME
 	(draw-rectangle* medium
 			 (+ wrapped 0) start-y
