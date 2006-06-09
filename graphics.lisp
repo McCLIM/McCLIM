@@ -868,7 +868,7 @@
 
 (defmacro def-graphic-op (name (&rest args))
   (let ((method-name (symbol-concat '#:medium- name '*)))
-    `(eval-when (eval load compile)
+    `(eval-when (:execute :load-toplevel :compile-toplevel)
        (defmethod ,method-name ((stream sheet) ,@args)
 	 (with-sheet-medium (medium stream)
 	   (,method-name medium ,@args))))))
