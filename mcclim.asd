@@ -315,9 +315,14 @@
 (defsystem :clim-clx-user
     :depends-on (:clim :clim-clx))
 
+;;; The actual McCLIM system that people should to use in their ASDF
+;;; package dependency lists.
+(defsystem :mcclim
+    :depends-on (:clim-looks))
+
 ;;; CLIM-Examples depends on having at least one backend loaded.
 (defsystem :clim-examples
-    :depends-on (:clim :clim-looks)
+    :depends-on (:mcclim)
     :components
     ((:module "Examples"
               :components
@@ -348,7 +353,7 @@
 ;;; This won't load in SBCL, either. I have really crappy code to
 ;;; extract dependency information from :serial t ASDF systems, but
 ;;; this comment is too narrow to contain it.
-(clim-defsystem (:scigraph :depends-on (:clim :clim-looks))
+(clim-defsystem (:scigraph :depends-on (:mcclim))
   ;; The DWIM part of SCIGRAPH		
   "Apps/Scigraph/dwim/package"
   "Apps/Scigraph/dwim/feature-case"
@@ -391,7 +396,7 @@
   "Apps/Scigraph/scigraph/demo-frame")
 
 (defsystem :clim-listener
-    :depends-on (:clim :clim-looks #+sbcl :sb-posix)
+    :depends-on (:mcclim #+sbcl :sb-posix)
     :components
     ((:file "Experimental/xpm"
             :pathname #.(make-pathname :directory '(:relative "Experimental") :name "xpm" :type "lisp"))
@@ -407,11 +412,13 @@
                (:file "listener" :depends-on ("package" "file-types" "icons" "dev-commands" "util"))
                #+CMU (:file "cmu-hacks" :depends-on ("package"))))))
 
-
-;;; The actual McCLIM system that people should to use in their ASDF
-;;; package dependency lists.
-(defsystem :mcclim
-    :depends-on (:clim-looks))
+(defsystem :clouseau
+    :depends-on (:mcclim)
+    :serial t
+    :components
+    ((:file "Apps/Inspector/package")
+     (:file "Apps/Inspector/disassembly")
+     (:file "Apps/Inspector/inspector")))
 
 (defmethod perform :after ((op load-op) (c (eql (find-system :clim))))
   (pushnew :clim *features*)
