@@ -301,7 +301,23 @@
 
 (defmethod compose-space ((gadget gtk-menu-bar) &key width height)
   (declare (ignore width height))
-  (make-space-requirement :height 20 :min-height 20 :max-height 20))
+  (let* ((widget (native-widget gadget))
+	 (widgetp widget)
+	 (item nil))
+    (unless widgetp
+      (setf widget (realize-native-widget gadget))
+      (setf item (gtk_menu_item_new_with_label "foo"))
+      (gtk_menu_shell_append widget item)
+      (gtk_widget_show_all widget))
+    (prog1
+	(cffi:with-foreign-object (r 'gtkrequisition)
+	  (gtk_widget_size_request widget r)
+	  (cffi:with-foreign-slots ((height) r gtkrequisition)
+	    (make-space-requirement :height height
+				    :min-height height
+				    :max-height height)))
+      (unless widgetp
+	(gtk_widget_destroy widget)))))
 
 
 ;;; Vermischtes

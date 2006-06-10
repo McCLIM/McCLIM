@@ -40,7 +40,7 @@
     On windows, all we get is a sans serif font.  No serif and notably
     no monospace font, breaking climacs like bug 3 did.
 
-7a.
+(WONTFIX) 7a. [fixed for draw-rectangle, good enough for now]
     flipping ink takes time proportional to the with the size of the
     window, not with the size of the shape being drawn
 
@@ -98,7 +98,7 @@
     but that doesn't work for gsharp when drawing ellipses.  Find out
     what this is all about.
 
-18.
+(WONTFIX) 18. [see 7a, good enough for now]
     Flipping ink optimization: As suggested by Gilbert, make the temporary
     pixmap just large enough for the clipping region and the currently
     visible part of a (scrolled) sheet.  Right now we're copying the
@@ -117,3 +117,10 @@
 
 22.
    medium-draw-ellipse* needs a rewrite.
+
+23.
+   Beirc problem: When connecting to a server, the first receiver pane
+   is created, and suddenly the windows gets unusably large, hiding the
+   interactor.  Replacing the :min-height 800 in receivers.lisp with
+   :min-height 400 :max-height 400 fixes that, but CLX doesn't have the
+   same problem.
