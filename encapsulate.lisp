@@ -475,8 +475,15 @@ state ~S lambda list ~S"
     ((stream standard-encapsulating-stream)))
 
 ;;; A setf* method, but this should still work...
-(def-stream-method (setf stream-cursor-position)
-    (x y (stream standard-encapsulating-stream)))
+;; (It didn't. --Hefner)
+;(def-stream-method (setf stream-cursor-position)
+;    (x y (stream standard-encapsulating-stream)))
+
+(defmethod* (setf stream-cursor-position)
+    (x y (stream standard-encapsulating-stream))
+  (let ((*original-stream* stream)
+        (stream (slot-value stream 'stream)))
+    (setf (stream-cursor-position stream) (values x y))))
 
 (def-stream-method stream-increment-cursor-position
     ((stream standard-encapsulating-stream) dx dy))
