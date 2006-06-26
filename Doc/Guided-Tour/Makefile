@@ -13,10 +13,10 @@ guided-tour.dvi: guided-tour.tex hello-world.cut draw-frame.cut scheduler.cut fi
 	fig2dev -L pstex_t $(value $@) -E 1 -p $^ $@
 
 %.cut: %.lisp
-	gawk '/LTAG-end/   { found=found " " active; active="" }   \
-	                   { if (active!="") print $$active > active}      \
-	      /LTAG-start/ { split($$2,foo,":"); active=foo[2] } \
-	      END          { print found }' $<
+	awk '/LTAG-end/   { found=found " " active; active="" }   \
+	                  { if (active!="") print > active}      \
+	     /LTAG-start/ { split($$2,foo,":"); active=foo[2] } \
+	     END          { print found }' $<
 
 .PHONY: clean
 
