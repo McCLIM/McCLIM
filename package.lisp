@@ -220,7 +220,7 @@
          `(#+clisp                 ,@'(:gray)
            #+cmu                   ,@'(:ext)
            #+scl                   ,@'(:ext)
-	   #+mcl                   ,@'(:ccl)
+	   #+(or mcl openmcl)      ,@'(:ccl)
            #+allegro               ,@'(:common-lisp :excl :stream)
            #+harlequin-common-lisp ,@'(:stream)
            #+sbcl                  ,@'(:sb-gray))) )
