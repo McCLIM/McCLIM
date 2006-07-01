@@ -230,8 +230,12 @@
   nil)
 
 (defmethod destroy-port ((port basic-port))
-  (reset-watcher port :destroy)
-  (setf *all-ports* (remove port *all-ports*)))
+  (reset-watcher port :destroy))
+
+(defmethod destroy-port :around ((port basic-port))
+  (unwind-protect
+       (call-next-method)
+    (setf *all-ports* (remove port *all-ports*))))
 
 (defmethod add-watcher ((port basic-port) watcher)
   (declare (ignore watcher))
