@@ -459,11 +459,10 @@ documentation produced by presentations.")))
 	       (redisplay-frame-panes frame :force-p first-time)
 	       (setq first-time nil)
 	       (if query-io
-                 ;; We don't need to turn the cursor on here, as Goatee has its own
-                 ;; cursor which will appear. In fact, leaving it on causes much
-                 ;; bit flipping and slows command output somewhat. So, leave it
-                 ;; off by default, and hope this doesn't violate the spec.  
+                   ;; For frames with an interactor:
 		   (progn
+                     ;; Hide cursor, so we don't need to toggle it during
+                     ;; command output.
 		     (setf (cursor-visibility (stream-text-cursor *query-io*))
 			   nil)
 		     (when (and prompt interactorp)
@@ -480,7 +479,9 @@ documentation produced by presentations.")))
 			 (execute-frame-command frame command))
 		       (when interactorp
 			 (fresh-line *query-io*))))
-		   (simple-event-loop)))
+                   ;; Frames without an interactor:
+                   (let ((command (read-frame-command frame :stream nil)))
+                     (when command (execute-frame-command frame command)))))
 	   (abort ()
 	     :report "Return to application command loop"
 	     (if interactorp
@@ -488,7 +489,7 @@ documentation produced by presentations.")))
 		 (beep))))))))
 
 (defmethod read-frame-command :around ((frame application-frame)
-				       &key (stream *standard-input*))  
+				       &key (stream *standard-input*))
   (with-input-context ('menu-item)
       (object)
       (call-next-method)
@@ -510,7 +511,9 @@ documentation produced by presentations.")))
   ;; If we do things as the spec says, command accelerators will
   ;; appear to not work, confusing new users.
   #+NIL (read-command (frame-command-table frame) :use-keystrokes nil :stream stream)
-  (read-command (frame-command-table frame) :use-keystrokes t :stream stream))
+  (if stream
+      (read-command (frame-command-table frame) :use-keystrokes t :stream stream)
+      (simple-event-loop frame)))
 
 (define-event-class execute-command-event (window-manager-event)
   ((sheet :initarg :sheet :reader event-sheet)
@@ -1297,10 +1300,10 @@ documentation produced by presentations.")))
                                input-context)
   (frame-update-pointer-documentation frame input-context stream event))
 
-(defun simple-event-loop ()
+(defun simple-event-loop (&optional (frame *application-frame*))
   "An simple event loop for applications that want all events to be handled by
  handle-event methods"
-  (let ((queue (frame-event-queue *application-frame*)))
+  (let ((queue (frame-event-queue frame)))
     (loop for event = (event-queue-read queue)
        ;; EVENT-QUEUE-READ in single-process mode calls PROCESS-NEXT-EVENT itself.
        do (handle-event (event-sheet event) event))))
