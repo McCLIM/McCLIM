@@ -61,6 +61,7 @@
                    (make-demo-button "Method Browser" 'method-browser)
                    (make-demo-button "Address Book"  'address-book)
                    (make-demo-button "Puzzle"  'puzzle)
+                   (make-demo-button "Logic Cube" 'logic-cube)
                    (make-demo-button "Gadget Test"  'gadget-test)
                    (make-demo-button "Drag and Drop" 'dragndrop)
                    (make-demo-button "Colorslider" 'colorslider)

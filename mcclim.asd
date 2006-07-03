@@ -345,7 +345,8 @@
 	       (:file "dragndrop-translator")
                (:file "draggable-graph")
                (:file "text-size-test")
-               (:file "drawing-benchmark")))
+               (:file "drawing-benchmark")
+               (:file "logic-cube")))
      (:module "Goatee"
 	      :components
 	      ((:file "goatee-test")))))
