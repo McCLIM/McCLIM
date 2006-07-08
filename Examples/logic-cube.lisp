@@ -390,7 +390,7 @@
 (defun won-logic-cube (pane)
   (let ((start-time (get-internal-real-time))
         (spin-start-time 0.3)
-        (text-style (make-text-style :serif :bold 50))
+        (text-style (make-text-style :serif :bold :huge))
         (start-yaw (yaw pane))
         (win-message (elt '("Great Success!" "You Win!" "Completed!"
                             "Vanquished!" "Terminated!" "Good job!" "Boom!")
