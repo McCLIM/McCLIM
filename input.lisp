@@ -519,7 +519,7 @@
 
 ;;; Class actually used by panes.
 
-(defclass clim-sheet-input-mixin (#+clim-mp standard-sheet-input-mixin #-clim-mp immediate-sheet-input-mixin)
+(defclass clim-sheet-input-mixin (standard-sheet-input-mixin)
   ())
 
 ;;; Mixin for panes which want the mouse wheel to scroll vertically

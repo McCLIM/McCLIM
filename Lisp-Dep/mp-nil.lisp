@@ -125,7 +125,10 @@
   (declare (ignore lock))
   (flet ((wait-func ()
 	   (loop for port in climi::*all-ports*	;; this is dubious
-	      do (process-next-event port))
+                 do (loop as this-event = (process-next-event port :timeout 0)
+                     for got-events = this-event then (or got-events this-event)
+                     while this-event
+                     finally (unless got-events (process-next-event port))))
 	   (car cv)))
     (setf (car cv) nil)
     (if timeout
