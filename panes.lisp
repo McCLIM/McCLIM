@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.169 2006/03/29 10:43:37 tmoore Exp $
+;;; $Id: panes.lisp,v 1.170 2006/07/09 06:23:22 ahefner Exp $
 
 (in-package :clim-internals)
 
@@ -2326,6 +2326,44 @@ order to produce a double-click")
 
 (defgeneric* (setf window-viewport-position) (x y clim-stream-pane))
 
+;;; Mixin for panes which want the mouse wheel to scroll vertically
+
+(defclass mouse-wheel-scroll-mixin () ())
+
+(defparameter *mouse-scroll-distance* 4
+  "Number of lines by which to scroll the window in response to the scroll wheel")
+
+(defgeneric scroll-quantum (pane)
+  (:documentation "Returns the number of pixels respresenting a 'line', used
+to computed distance to scroll in response to mouse wheel events."))
+
+(defmethod scroll-quantum (pane) 10)
+
+(defun scroll-sheet (sheet vertical horizontal)
+  (with-bounding-rectangle* (vx0 vy0 vx1 vy1) (pane-viewport-region sheet)
+    (with-bounding-rectangle* (sx0 sy0 sx1 sy1) (sheet-region sheet)
+      (let ((viewport-height (- vy1 vy0))
+	    (viewport-width  (- vx1 vx0))
+	    (delta (* *mouse-scroll-distance*
+		      (scroll-quantum sheet))))
+	;; The coordinates (x,y) of the new upper-left corner of the viewport
+	;; must be "sx0 < x < sx1 - viewport-width"  and
+	;;         "sy0 < y < sy1 - viewport-height"	
+	(scroll-extent sheet
+		       (max sx0 (min (- sx1 viewport-width)  (+ vx0 (* delta horizontal))))
+		       (max sy0 (min (- sy1 viewport-height) (+ vy0 (* delta vertical)))))))))
+
+(defmethod dispatch-event :around ((sheet mouse-wheel-scroll-mixin)
+                                   (event pointer-button-press-event))
+  (if (pane-viewport sheet)
+      (let ((button (pointer-event-button event)))
+	(cond
+	 ((eq button +pointer-wheel-up+)    (scroll-sheet sheet -1  0))
+	 ((eq button +pointer-wheel-down+)  (scroll-sheet sheet  1  0))
+	 ((eq button +pointer-wheel-left+)  (scroll-sheet sheet  0 -1))
+	 ((eq button +pointer-wheel-right+) (scroll-sheet sheet  0  1))
+	 (t (call-next-method))))      ; not a scroll wheel button
+    (call-next-method)))               ; no viewport
 
 ;;;
 ;;; 29.4 CLIM Stream Panes
