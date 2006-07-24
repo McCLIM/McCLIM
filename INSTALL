@@ -70,37 +70,14 @@ Running the demos
 =================
 
 McCLIM comes with some interesting demo programs and applications:
-
-   address-book - The classic CLIM demo:
-   
-   (asdf:oos 'asdf:load :clim-examples)
-   (in-package :clim-demo)
-   (run-frame-top-level (make-application-frame 'address-book)
-
-   The Examples directory includes other demo programs that might be
-   of interest. Many of these are quite old and were written before
-   large parts of the CLIM specification were implemented; for good
+    address-book - The classic CLIM demo:        (asdf:oos 'asdf:load-op :clim-examples)    (in-package :clim-demo)    (run-frame-top-level (make-application-frame 'address-book))     The Examples directory includes other demo programs that might be    of interest. Many of these are quite old and were written before    large parts of the CLIM specification were implemented; for good
    examples of CLIM style it is best to look elsewhere.
 
 
    clim-listener - a Lisp 'listener' or top-level loop with many
    goodies for examining directories, CLOS classes, etc. Printed
-   results are mouse-sensitive and in supported implementations
-   (currently OpenMCL) can be used directly as arguments in Lisp expressions:
-
-   (asdf:oos 'asdf:load :clim-listener)
-   (clim-listener:run-listener)
-
-   
-   functional-geometry - Frank Buss' and Rainer Joswig's functional
-   geometry explorer, implemented on top of clim-listener:
-
-   (load "Apps/Functional-Geometry/functional-geometry.asd")
-   (asdf:oos 'asdf:load :functional-geometry)
-   (functional-geometry::run-functional-geometry)
-
-
-Installation Notes for Implementations
+   results are mouse-sensitive and in supported implementations    (currently OpenMCL) can be used directly as arguments in Lisp expressions:     (asdf:oos 'asdf:load-op :clim-listener)    (clim-listener:run-listener)         functional-geometry - Frank Buss' and Rainer Joswig's functional
+   geometry explorer, implemented on top of clim-listener:     (load "Apps/Functional-Geometry/functional-geometry.asd")    (asdf:oos 'asdf:load-op :functional-geometry)    (functional-geometry::run-functional-geometry)   Installation Notes for Implementations
 ======================================
 
 Notes about bugs or gotchas in specific Common Lisp implementations
