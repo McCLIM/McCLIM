@@ -76,7 +76,7 @@
 	     (let ((*current-process* p))
 	       (funcall (process-function p) ))))
     (when (process-thread p) (sb-thread:terminate-thread p))
-    (when (setf (process-thread p) (sb-thread:make-thread #'boing))
+    (when (setf (process-thread p) (sb-thread:make-thread #'boing :name (process-name p)))
       p)))
 
 (defun destroy-process (process)
