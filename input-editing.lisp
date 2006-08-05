@@ -620,7 +620,9 @@
 			   nmatches mode))
 		 (when (and (> nmatches 0) (eq mode :possibilities))
 		   (multiple-value-bind (menu-object item event)
-		       (menu-choose (possibilities-for-menu possibilities))
+		       (menu-choose (possibilities-for-menu possibilities)
+                                    :label "Possibilities"
+                                    :n-columns 1)
 		     (declare (ignore event))
 		     (if item
 			 (progn

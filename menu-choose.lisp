@@ -29,22 +29,15 @@
 
 ;;; Mid time TODO:
 ;;;
-;;; - Menu item options: :active.
-;;;
 ;;; - Documentation.
 ;;;
-;;; - Menu position.
-;;;
 ;;; - Empty menu.
-
-;;; TODO:
 ;;;
-;;; + returned values
-;;; + menu frame size
-;;; + layout
+;;; - :DIVIDER type menu items.
 
 (in-package :clim-internals)
 
+;; Spec function.
 (defgeneric menu-choose
     (items
      &key associated-window printer presentation-type default-item
@@ -52,6 +45,7 @@
      max-width max-height n-rows n-columns x-spacing y-spacing row-wise
      cell-align-x cell-align-y scroll-bars pointer-documentation))
 
+;; Spec function.
 (defgeneric frame-manager-menu-choose
     (frame-manager items
      &key associated-window printer presentation-type default-item
@@ -59,12 +53,18 @@
      max-width max-height n-rows n-columns x-spacing y-spacing row-wise
      cell-align-x cell-align-y scroll-bars pointer-documentation))
 
+;; Spec function.
 (defgeneric menu-choose-from-drawer
     (menu presentation-type drawer
      &key x-position y-position cache unique-id id-test cache-value cache-test
      default-presentation pointer-documentation))
 
-;;;
+(defgeneric adjust-menu-size-and-position (menu &key x-position y-position)
+  (:documentation "Adjust the size of the menu so it fits
+  properly on the screen with regards to the menu entries. `menu'
+  should be the menu pane. This is an internal,
+  non-specification-defined function."))
+
 (defun menu-item-value (menu-item)
   (cond ((atom menu-item)
          menu-item)
@@ -84,7 +84,9 @@
       nil))
 
 (defun menu-item-option (menu-item option &optional default)
-  (getf (menu-item-options menu-item) option default))
+  (if (listp menu-item)
+      (getf (menu-item-options menu-item) option default)
+      default))
 
 (defun print-menu-item (menu-item &optional (stream *standard-output*))
   (let ((style (getf (menu-item-options menu-item) :style '(nil nil nil))))
@@ -101,6 +103,7 @@
                                                 (medium-background stream)))
             (princ (menu-item-display menu-item) stream))))))
 
+;; Spec function.
 (defun draw-standard-menu
     (stream presentation-type items default-item
      &key item-printer
@@ -110,20 +113,39 @@
   (orf item-printer #'print-menu-item)
   (format-items items
                 :stream stream
-                :printer (lambda (item stream)
-                           (let ((activep (menu-item-option item :active t)))
-                             (with-presentation-type-decoded (name params options)
-                                 presentation-type
-                               (let ((*allow-sensitive-inferiors* activep))                                 
-                                 (with-text-style (stream (or (getf (menu-item-options item) :style)
-                                                              '(:sans-serif nil nil)))
-                                   (with-output-as-presentation                                     
-                                       (stream
-                                        item
-                                        `((,name ,@params)
-                                          :description ,(getf (menu-item-options item) :documentation)
-                                          ,@options))
-                                     (funcall item-printer item stream)))))))
+                :printer
+                (lambda (item stream)
+                  (ecase (menu-item-option item :type :item)
+                    (:item
+                     ;; This is a normal item, just output.
+                     (let ((activep (menu-item-option item :active t)))
+                       (with-presentation-type-decoded (name params options)
+                           presentation-type
+                         (let ((*allow-sensitive-inferiors* activep))
+                           (with-text-style
+                               (stream (menu-item-option
+                                        item :style
+                                        '(:sans-serif nil nil)))
+                             (with-output-as-presentation
+                                 (stream
+                                  item
+                                  `((,name ,@params)
+                                    :description ,(getf (menu-item-options item) :documentation)
+                                    ,@options))
+                               (funcall item-printer item stream)))))))
+                    (:label
+                     ;; This is a static label, it should not be
+                     ;; mouse-sensitive, but not grayed out either.
+                     (with-text-style (stream (menu-item-option
+                                               item :style
+                                               '(:sans-serif nil nil)))
+                       (funcall item-printer item stream)))
+                    (:divider
+                     ;; FIXME: Should draw a line instead.
+                     (with-text-style (stream (menu-item-option
+                                               item :style
+                                               '(:sans-serif :italic nil)))
+                       (funcall item-printer item stream)))))
                 :presentation-type nil
                 :x-spacing x-spacing
                 :y-spacing y-spacing
@@ -135,7 +157,7 @@
                 :cell-align-y (or cell-align-y :top)
                 :row-wise row-wise))
 
-
+;; Spec macro.
 (defmacro with-menu ((menu &optional associated-window
                            &key (deexpose t) label scroll-bars)
                      &body body)
@@ -148,37 +170,38 @@
                          ,associated-window ; XXX
                          ',deexpose ; XXX!!!
 			 ,label
-			 ,scroll-bars)))) 
+			 ,scroll-bars))))
 
 (defun invoke-with-menu (continuation associated-window deexpose
 			 label scroll-bars)
-  (declare (ignore deexpose label scroll-bars))           ; FIXME!!!
   (let* ((associated-frame (if associated-window
                                (pane-frame associated-window)
                                *application-frame*))
          (fm (frame-manager associated-frame)))
     (with-look-and-feel-realization (fm associated-frame) ; hmm... checkme
-      (let* ((stream (make-pane-1 fm associated-frame 'command-menu-pane
-			          :background +gray80+))
-	     (raised (make-pane-1 fm associated-frame 'raised-pane
-			          :border-width 2 :background +gray80+
-			          :contents (list stream)))
-             (frame (make-menu-frame raised
-                                     :left nil
-                                     :top  nil)))
-          (adopt-frame fm frame)
-          (change-space-requirements stream :width 1 :height 1) ;What is that supposed to do? --GB 2003-03-16
-                                                                ; Shadow bug somewhere else?
-          (unwind-protect
-               (progn
-                 (setf (stream-end-of-line-action stream) :allow
-                       (stream-end-of-page-action stream) :allow)
-                 (funcall continuation stream))
-            (disown-frame fm frame))))))
+      (let* ((menu-stream (make-pane-1 fm associated-frame 'clim-stream-pane
+                                       :background +gray80+))
+             (container (scrolling (:scroll-bar scroll-bars)
+                          menu-stream))
+	     (frame (make-menu-frame (if label
+                                         (labelling (:label label
+                                                     :label-alignment :top
+                                                     :background +gray80+)
+                                           container)
+                                         container)
+				     :left nil
+				     :top nil)))
+        (adopt-frame fm frame)
+        (unwind-protect
+             (progn
+               (setf (stream-end-of-line-action menu-stream) :allow
+                     (stream-end-of-page-action menu-stream) :allow)
+               (funcall continuation menu-stream))
+          (when deexpose ; Checkme as well.
+            (disown-frame fm frame)))))))
 
 (define-presentation-type menu-item ())
 
-;;;
 (defmethod menu-choose
     (items &rest args &key associated-window &allow-other-keys)
   (let* ((associated-frame (if associated-window
@@ -193,8 +216,10 @@
      &key associated-window printer presentation-type
      (default-item nil default-item-p)
      text-style label cache unique-id id-test cache-value cache-test
-     max-width max-height n-rows n-columns x-spacing y-spacing row-wise
-     cell-align-x cell-align-y scroll-bars pointer-documentation)
+     max-width max-height n-rows (n-columns 1) x-spacing y-spacing row-wise
+     cell-align-x cell-align-y (scroll-bars :vertical)
+     ;; We provide pointer documentation by default.
+     (pointer-documentation *pointer-documentation-output*))
   (flet ((drawer (stream type)
            (draw-standard-menu stream type items
                                (if default-item-p
@@ -214,7 +239,9 @@
                                :cell-align-x cell-align-x
                                :cell-align-y cell-align-y)))
     (multiple-value-bind (object event)
-        (with-menu (menu associated-window)
+        (with-menu (menu associated-window
+                         :label label
+                         :scroll-bars scroll-bars)
           (when text-style
             (setf (medium-text-style menu) text-style))
           (letf (((stream-default-view menu) +textual-menu-view+))
@@ -226,59 +253,127 @@
                                      :cache-value cache-value
                                      :cache-test cache-test
                                      :pointer-documentation pointer-documentation)))
-      (let ((subitems (menu-item-option object :items 'menu-item-no-items)))
-        (if (eq subitems 'menu-item-no-items)
-            (values (menu-item-value object) object event)
-            (apply #'frame-manager-menu-choose
-                   frame-manager subitems
-                   options))))))
+      (unless (null event)              ; Event is NIL if user aborted.
+        (let ((subitems (menu-item-option object :items 'menu-item-no-items)))
+          (if (eq subitems 'menu-item-no-items)
+              (values (menu-item-value object) object event)
+              (apply #'frame-manager-menu-choose
+                     frame-manager subitems
+                     options)))))))
 
-#+NIL
+(defun max-x-y (frame)
+  "Return the maximum X and Y coordinate values for a menu for
+`frame' (essentially, the screen resolution with a slight
+padding.)"
+  ;; FIXME? There may be a better way.
+  (let* ((port (frame-manager-port (frame-manager frame)))
+         (graft (find-graft :port port)))
+    (values (- (graft-width graft) 50)
+            (- (graft-height graft) 50))))
+
+(defun menu-size (menu frame)
+  "Return two values, the height and width of MENU (adjusted for
+maximum size according to `frame')."
+  (multiple-value-bind (max-width max-height)
+      (max-x-y frame)
+    (with-bounding-rectangle* (x1 y1 x2 y2) menu
+      (declare (ignore x1 y1))
+      (values (min x2 max-width)
+              (min y2 max-height)))))
+
+(defmethod adjust-menu-size-and-position ((menu clim-stream-pane)
+                                          &key x-position y-position)
+  ;; Make sure the menu isn't higher or wider than the screen.
+  (multiple-value-bind (menu-width menu-height)
+      (menu-size (stream-output-history menu) *application-frame*)
+    (change-space-requirements menu
+			       :width menu-width
+			       :height menu-height
+                               :resize-frame t)
+
+    ;; If we have scroll-bars, we need to do some calibration of the
+    ;; size of the viewport.
+    (when (pane-viewport menu)
+     (multiple-value-bind (viewport-width viewport-height)
+         (menu-size (pane-viewport menu) *application-frame*)
+       (change-space-requirements (pane-scroller menu)
+                                  ;; HACK: How are you supposed to
+                                  ;; change the size of the viewport?
+                                  ;; I could only find this way, where
+                                  ;; I calculate the size difference
+                                  ;; between the viewport and the
+                                  ;; scroller pane, and set the
+                                  ;; scroller pane to the desired size
+                                  ;; of the viewport, plus the
+                                  ;; difference (to make room for
+                                  ;; scroll bars).
+                                  :width (+ menu-width
+                                            (- (pane-current-width (pane-scroller menu))
+                                               viewport-width))
+                                  :height (+ menu-height
+                                             (- (pane-current-height (pane-scroller menu))
+                                                viewport-height))
+                                  :resize-frame t)))
+
+    ;; Modify the size and location of the frame as well.
+    (let* ((label-pane (sheet-parent (pane-scroller menu)))
+           (top-level-pane (sheet-parent label-pane)))
+      (when (not (typep label-pane 'label-pane))
+        ;; Oops, we have no label. Rebind...
+        (setf top-level-pane label-pane)
+        (setf label-pane nil))
+      (multiple-value-bind (frame-width frame-height)
+          (menu-size top-level-pane *application-frame*)
+        (multiple-value-bind (res-max-x res-max-y) (max-x-y *application-frame*)
+          ;; Move the menu frame so that no entries are outside the visible
+          ;; part of the screen.
+          (let ((max-left (- res-max-x frame-width))
+                (max-top (- res-max-y frame-height)))
+            ;; XXX: This is an ugly way to find the screen position of
+            ;; the menu frame, possibly even undefined.
+            (multiple-value-bind (left top)
+                (with-slots (dx dy) (sheet-transformation top-level-pane)
+                  (values dx dy))
+              (when x-position
+                (setf left x-position))
+              (when y-position
+                (setf top y-position))
+              ;; Adjust for maximum position if the programmer has not
+              ;; explicitly provided coordinates.
+              (if (null x-position)
+               (when (> left max-left)
+                 (setf left max-left)))
+              (if (null y-position)
+               (when (> top max-top)
+                 (setf top max-top)))
+              (move-sheet top-level-pane
+                          (max left 0) (max top 0)))))))))
+
+(defmethod adjust-menu-size-and-position (menu &key &allow-other-keys)
+  ;; Nothing.
+  nil)
+
+;; Spec function.
 (defmethod menu-choose-from-drawer
     (menu presentation-type drawer
      &key x-position y-position cache unique-id id-test cache-value cache-test
      default-presentation pointer-documentation)
-  (funcall drawer menu presentation-type)
-  (when (typep menu 'command-menu-pane)
-    (with-bounding-rectangle* (x1 y1 x2 y2)
-        (stream-output-history menu)
-      (declare (ignorable x1 y1 x2 y2))
-      (change-space-requirements menu
-                                 :width x2
-                                 :height y2
-                                 :resize-frame t)))
-  (let ((*pointer-documentation-output* pointer-documentation))
-    (handler-case
-        (with-input-context (presentation-type :override t)
-              (object type event)
-          (loop (read-gesture :stream menu))
-          (t (values object event)))
-      (abort-gesture () (values nil)))))
-
-(defmethod menu-choose-from-drawer
-    (menu presentation-type drawer
-     &key x-position y-position cache unique-id id-test cache-value cache-test
-     default-presentation pointer-documentation)
+  (declare (ignore cache unique-id
+                   id-test cache-value cache-test default-presentation))
   (with-room-for-graphics (menu :first-quadrant nil)
     (funcall drawer menu presentation-type))
-  (when (typep menu 'command-menu-pane)
-    (with-bounding-rectangle* (x1 y1 x2 y2)
-        (stream-output-history menu)
-      (declare (ignorable x1 y1 x2 y2))
-      (change-space-requirements menu
-                                 :width x2
-                                 :height y2
-                                 :resize-frame t)))
-  (let ((*pointer-documentation-output* pointer-documentation))	
-    (tracking-pointer (menu :context-type presentation-type
-			    :multiple-window t :highlight t)
-      (:pointer-button-press (&key event x y) ; Close if pointer clicked outside menu.
-         (unless (and (sheet-ancestor-p (event-sheet event) menu)
-                      (region-contains-position-p (sheet-region menu) x y))
-           (return-from menu-choose-from-drawer (values nil))))
-      (:presentation-button-release (&key event presentation x y)
-        (if (and (sheet-ancestor-p (event-sheet event) menu)
-                 (region-contains-position-p (sheet-region menu) x y))
-            (return-from menu-choose-from-drawer
-              (values (presentation-object presentation) event))
-            (return-from menu-choose-from-drawer (values nil)))))))
+  
+  (adjust-menu-size-and-position
+   menu
+   :x-position x-position
+   :y-position y-position)
+  
+  (let ((*pointer-documentation-output* pointer-documentation))
+    (let ((*pointer-documentation-output* pointer-documentation))
+      (handler-case
+          (with-input-context (`(or ,presentation-type blank-area) :override t)
+              (object type event) 
+              (prog1 nil (read-gesture :stream menu))
+            (blank-area nil)
+            (t (values object event)))
+        (abort-gesture () nil)))))

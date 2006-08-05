@@ -133,7 +133,9 @@
   (presentation frame window x y)
   (call-presentation-menu presentation *input-context*
                           frame window x y
-                          :for-menu t))
+                          :for-menu t
+                          :label (format nil "Operation on ~A"
+                                         (presentation-type presentation))))
 
 ;;; Action for possibilities menu of complete-input
 ;;;

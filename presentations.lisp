@@ -1880,6 +1880,7 @@ a presentation"
       (setq items (nreverse items))
       (multiple-value-bind (item object event)
           (menu-choose items
+                       :label label
                        :associated-window window
                        :printer #'(lambda (item stream)
                                     (document-presentation-translator
