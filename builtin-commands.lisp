@@ -329,6 +329,66 @@
 	       (unread-char c stream))
 	     (return (values object ptype))))))
 
+(define-presentation-method accept ((type expression)
+                                    (stream input-editing-stream)
+                                    (view textual-view)
+				    &key)
+			    ;; This method is specialized to
+			    ;; input-editing-streams and has thus been
+			    ;; made slightly more tolerant of input
+			    ;; errors. It is slightly hacky, but seems
+			    ;; to work fine.
+			    (let* ((object nil)
+	 (ptype nil))
+    (if (and #-openmcl nil subform-read)
+	(multiple-value-bind (val valid)
+	    (funcall *sys-%read-list-expression* stream *dot-ok* *termch*)
+	  (if valid
+	      (setq object val)
+	      (return-from accept (values nil 'list-terminator))))
+	;; We don't want activation gestures like :return causing an
+	;; eof while reading a form. Also, we don't want spaces within
+	;; forms or strings causing a premature return either!
+	(with-delimiter-gestures (nil :override t)
+	  (with-activation-gestures (nil :override t)
+            (setq object
+                  ;; We loop in our accept of user input, if a reader
+                  ;; error is signalled, we merely ignore it and ask
+                  ;; for more input. This is so a single malplaced #\(
+                  ;; or #\, won't throw up a debugger with a
+                  ;; READER-ERROR and remove whatever the user wrote
+                  ;; to the stream.
+                  (loop for potential-object =
+                       (handler-case (funcall
+                                      (if preserve-whitespace
+                                          *sys-read-preserving-whitespace*
+                                          *sys-read*)
+                                      stream
+                                      *eof-error-p*
+                                      *eof-value*
+                                      *recursivep*)
+                         #+sbcl(sb-kernel:reader-package-error (e)
+                                 (progn
+                                   ;; Resignal the error.
+                                   (error e)))
+                         ((and reader-error) (e)
+                           (declare (ignore e))
+                           nil))
+                       unless (null potential-object)
+                       return potential-object)))))
+    (setq ptype (presentation-type-of object))
+    (unless (presentation-subtypep ptype 'expression)
+      (setq ptype 'expression))
+    (if (or subform-read auto-activate)
+	(values object ptype)
+	(loop
+	   for c = (read-char stream)
+	   until (or (activation-gesture-p c) (delimiter-gesture-p c))
+	   finally
+	     (when (delimiter-gesture-p c)
+	       (unread-char c stream))
+	     (return (values object ptype))))))
+
 (with-system-redefinition-allowed
 (defun read (&optional (stream *standard-input*)
 	     (eof-error-p t)
