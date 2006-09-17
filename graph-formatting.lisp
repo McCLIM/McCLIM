@@ -3,7 +3,7 @@
 ;;;     Title: Graph Formatting
 ;;;   Created: 2002-08-13
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: graph-formatting.lisp,v 1.18 2006/04/10 09:48:40 crhodes Exp $
+;;;       $Id: graph-formatting.lisp,v 1.19 2006/09/17 20:27:09 thenriksen Exp $
 ;;; ---------------------------------------------------------------------------
 
 ;;;  (c) copyright 2002 by Gilbert Baumann
@@ -39,8 +39,8 @@
 ;;   'duplicate-test', if so why it is passed down and why is it not
 ;;   restricted to the set of hash test functions? --GB 2002-08-13
 
-;; - What is the purpose of (SETF GRAPH-NODE-CHILDREN) and
-;;   (SETF GRAPH-NODE-PARENTS)? --GB 2002-08-14
+;; - What is the purpose of (SETF GRAPH-NODE-CHILDREN) and
+;;   (SETF GRAPH-NODE-PARENTS)? --GB 2002-08-14
 
 ;; - FORMAT-GRAPH-FROM-ROOTS passes the various options on to the
 ;;   instantiation of the graph-output-record class, so that the
