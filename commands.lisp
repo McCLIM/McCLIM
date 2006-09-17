@@ -481,8 +481,7 @@
 	nil)))
 
 (defun lookup-keystroke-item (gesture command-table
-			      &key (test #'event-matches-gesture-name-p)
-			      (errorp t))
+			      &key (test #'event-matches-gesture-name-p))
   (let ((command-table (find-command-table command-table)))
     (multiple-value-bind (item table)
 	(find-keystroke-item gesture command-table :test test :errorp nil)
@@ -495,15 +494,11 @@
 	     (multiple-value-bind (sub-item sub-command-table)
 		 (lookup-keystroke-item gesture
 					(command-menu-item-value item)
-					:test test
-					:errorp nil)
+					:test test)
 	       (when sub-command-table
 		 (return-from lookup-keystroke-item
 		   (values sub-item sub-command-table))))))
-       command-table))
-    (if errorp
-	(error 'command-not-present)
-	nil)))
+       command-table))))
 
 (defun partial-command-from-name (command-name)
   (let ((parser (gethash command-name *command-parser-table*)))
@@ -1369,7 +1364,8 @@
         (let ((command
                (lookup-keystroke-command-item (accelerator-gesture-event c)
                                               command-table)))
-          (if (partial-command-p command)
+          (if (and (listp command)
+                   (partial-command-p command))
               (funcall *partial-command-parser*
                        command-table stream command
                        (position *unsupplied-argument-marker* command))
