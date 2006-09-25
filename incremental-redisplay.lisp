@@ -474,15 +474,12 @@ updating-output-parent above this one in the tree.")
 				     (record standard-updating-output-record)
 				     use-old-records)
   (funcall function record)
-  (cond (use-old-records
-	 (if (slot-boundp record 'old-children)
-	     (map-over-updating-output function
-				       (old-children record)
-				       use-old-records)
-	     nil))
-	(t (map-over-updating-output function
-				     (sub-record record)
-				     use-old-records))))
+  (let ((children (cond (use-old-records
+                         (when (slot-boundp record 'old-children)
+                           (old-children record)))
+                        (t (sub-record record)))))
+    (when children
+      (map-over-updating-output function children use-old-records))))
 
 
 (defmethod map-over-updating-output
