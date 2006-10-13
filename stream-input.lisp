@@ -712,8 +712,6 @@
 	  (logandc2 (slot-value pointer 'button-state)
 		    (pointer-event-button event)))))
 
-(defmethod pointer-butt)
-
 (defmethod stream-pointer-position ((stream standard-extended-input-stream)
 				    &key (pointer
 					  (port-pointer (port stream))))
