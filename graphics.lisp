@@ -569,17 +569,25 @@
                (start    (sqrt (+ (expt (- x2 x1) 2)
                                   (expt (- y2 y1) 2))))
                (p end)
-               (q start)                                  
+               (q start)
 
                (medium     (sheet-medium sheet))
                (line-style (medium-line-style medium))
-               (thickness  (line-style-thickness line-style))
+               ;; FIXME: I believe this thickness is in "line-style-units",
+               ;; which are only coincidentally the same as pixel coorindates
+               ;; on screen backends, using :normal units. There is no function
+               ;; documented for converting the units to stream coordinates.
+               (thickness  (multiple-value-bind (dx dy)
+                               (transform-distance (invert-transformation (medium-transformation medium))
+                                               (line-style-thickness line-style)
+                                               0)
+                             (sqrt (+ (* dx dx) (* dy dy)))))
                (width/2    (/ head-width 2))
 
                (a (atan (/ width/2 head-length)))
                (offset     (if (and head-length (not (zerop head-length)))
                                (/ thickness (* 2 (sin a )))
-                               0.0))               
+                               0.0))
                (tip-to-peak (+ head-length offset (- (* thickness 0.5 (sin a)))))) ;; okay, a guess..
          (when to-head   (incf p offset))
          (when from-head (decf q offset))
@@ -596,7 +604,7 @@
                                     start 0
                                      (/ start 2) (- width))
                               :filled t
-                              :line-thickness 0 ))
+                              :line-thickness 0))
              (progn
                (when to-head
                  (draw-polygon* sheet
