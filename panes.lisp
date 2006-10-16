@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.170 2006/07/09 06:23:22 ahefner Exp $
+;;; $Id: panes.lisp,v 1.171 2006/10/16 23:53:52 thenriksen Exp $
 
 (in-package :clim-internals)
 
@@ -1848,6 +1848,29 @@ order to produce a double-click")
 
 (defmethod note-input-focus-changed ((pane viewport-pane) state)
   (note-input-focus-changed (sheet-child pane) state))
+
+;; This method ensures that when the child changes size, the viewport
+;; will move its focus so that it will not display a region outside of
+;; `child' (if at all possible, this ideal can be circumvented by
+;; creating a child sheet that is smaller than the viewport). I do not
+;; believe having a viewport look at "empty" space is ever useful.
+(defmethod note-space-requirements-changed ((pane viewport-pane) child)
+  (let ((viewport-width (bounding-rectangle-width pane))
+        (viewport-height (bounding-rectangle-height pane))
+        (child-width (bounding-rectangle-width child))
+        (child-height (bounding-rectangle-height child)))
+    (destructuring-bind (horizontal-scroll vertical-scroll)
+        (mapcar #'- (multiple-value-list
+                     (transform-position (sheet-transformation child) 0 0)))
+      (scroll-extent child
+                     (if (> (+ horizontal-scroll viewport-width)
+                            child-width)
+                         (max 0 (- child-width viewport-width))
+                         horizontal-scroll)
+                     (if (> (+ vertical-scroll viewport-height)
+                            child-width)
+                         (max 0 (- child-height viewport-height))
+                         vertical-scroll)))))
 
 ;;;;
 ;;;; SCROLLER PANE
