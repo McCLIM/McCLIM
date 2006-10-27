@@ -170,7 +170,8 @@
   (let* ((event (event-queue-peek buffer))
 	 (sheet (event-sheet event)))
     (if (and event
-	     (or (gadgetp sheet)
+	     (or (and (gadgetp sheet)
+                      (gadget-active-p sheet))
 		 (not (and (typep sheet 'clim-stream-pane)
 			   (or (typep event 'key-press-event)
 			       (typep event 'pointer-button-press-event))))))
