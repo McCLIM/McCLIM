@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.171 2006/10/16 23:53:52 thenriksen Exp $
+;;; $Id: panes.lisp,v 1.172 2006/10/28 16:44:13 thenriksen Exp $
 
 (in-package :clim-internals)
 
@@ -1862,15 +1862,19 @@ order to produce a double-click")
     (destructuring-bind (horizontal-scroll vertical-scroll)
         (mapcar #'- (multiple-value-list
                      (transform-position (sheet-transformation child) 0 0)))
-      (scroll-extent child
-                     (if (> (+ horizontal-scroll viewport-width)
-                            child-width)
-                         (max 0 (- child-width viewport-width))
-                         horizontal-scroll)
-                     (if (> (+ vertical-scroll viewport-height)
-                            child-width)
-                         (max 0 (- child-height viewport-height))
-                         vertical-scroll)))))
+      ;; XXX: We cannot use `scroll-extent', because McCLIM ignores it
+      ;; unless the scrollee happens to be drawing. Very weird, should
+      ;; be fixed.
+      (move-sheet child
+                  (round (- (if (> (+ horizontal-scroll viewport-width)
+                                   child-width)
+                                (- child-width viewport-width)
+                                horizontal-scroll)))
+                  (round (- (if (> (+ vertical-scroll viewport-height)
+                                   child-width)
+                                (- child-height viewport-height)
+                                vertical-scroll))))
+      (scroller-pane/update-scroll-bars (sheet-parent pane)))))
 
 ;;;;
 ;;;; SCROLLER PANE
@@ -2607,6 +2611,7 @@ to computed distance to scroll in response to mouse wheel events."))
 (defclass interactor-pane (clim-stream-pane)
   ()
   (:default-initargs :display-time nil
+                     :end-of-line-action :scroll
                      :scroll-bars :vertical))
 
 (defmethod initialize-instance :after ((pane interactor-pane) &rest args)
