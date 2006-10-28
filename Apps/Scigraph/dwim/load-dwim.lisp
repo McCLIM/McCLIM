@@ -64,7 +64,8 @@ advised of the possiblity of such damages.
   #+genera                   si:*default-binary-file-type*
   #+(or allegro sbcl)        #.(if (fboundp 'compile-file-pathname)
 				   (pathname-type (compile-file-pathname "foo"))
-				 "fasl")
+				   "fasl")
+  #+scl                      (pathname-type (compile-file-pathname "foo"))
   #+lucid                    (car lcl:*load-binary-pathname-types*)
   #+(and (not genera)
          (not allegro)
@@ -88,7 +89,8 @@ advised of the possiblity of such damages.
          #+LUCID            "LUCID"
          #+ALLEGRO          "ALLEGRO"
 	 #+OPENMCL	    "OPENMCL"
-	 #+SBCL             "SBCL")
+	 #+SBCL             "SBCL"
+	 #+scl              "SCL")
         (GUI
          #+(and mcl (not clim)) "MAC"
          #+(and genera (not clim)) "DW"

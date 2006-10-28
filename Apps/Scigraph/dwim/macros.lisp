@@ -82,7 +82,7 @@ advised of the possiblity of such damages.
 	     (mapcar #'(lambda (v) (if (symbolp v) v (car v))) let-vars)))
     `(let ,forms (declare (dynamic-extent ,@(get-vars forms))) ,@body)))
 
-#-(or openmcl-native-threads sb-thread)
+#-(or openmcl-native-threads sb-thread scl)
 (defmacro without-interrupts (&body body)
   #FEATURE-CASE
   ((:genera  `(scl::without-interrupts ,@body))
@@ -90,7 +90,7 @@ advised of the possiblity of such damages.
    (:allegro `(excl:without-interrupts ,@body))
    (:mcl     `(ccl:without-interrupts ,@body))))
 
-#+(or openmcl-native-threads sb-thread)
+#+(or openmcl-native-threads sb-thread scl)
 (progn
   (defparameter *dwim-giant-lock* (clim-sys:make-lock "dwim giant lock"))
   (defmacro without-interrupts (&body body)

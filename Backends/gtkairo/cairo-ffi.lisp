@@ -26,7 +26,12 @@
 
 
 (defmacro def-cairo-fun (name rtype &rest args)
-  (let* ((str (string-upcase name))
+  (let* (#-scl
+	 (str (string-upcase name))
+	 #+scl
+	 (str (if (eq ext:*case-mode* :upper)
+		  (string-upcase name)
+		  (string-downcase name)))
 	 (actual (intern (concatenate 'string "%-" str) :clim-gtkairo))
 	 (wrapper (intern str :clim-gtkairo))
 	 (argnames (mapcar #'car args)))
@@ -36,8 +41,12 @@
 	 ,@args)
        (defun ,wrapper ,argnames
 	 (multiple-value-prog1
-	     (,actual ,@argnames)
-	   (let ((status (cairo_status ,(car argnames))))
+	     #-scl (,actual ,@argnames)
+	     #+scl 
+	     (ext:with-float-traps-masked (:underflow :overflow :inexact
+						      :divide-by-zero :invalid)
+	       (,actual ,@argnames))
+	     (let ((status (cairo_status ,(car argnames))))
 	     (unless (eq status :success)
 	       (error "~A returned with status ~A" ,name status))))))))
 

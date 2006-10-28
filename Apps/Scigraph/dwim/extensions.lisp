@@ -105,7 +105,9 @@ advised of the possiblity of such damages.
    (:genera (let ((symbol (intern string :scl)))
 	      (and (boundp symbol) (symbol-value symbol))))
    (:openmcl (ccl::getenv string))
-   (:sbcl (sb-ext:posix-getenv string))))
+   (:sbcl (sb-ext:posix-getenv string))
+   (:scl (cdr (assoc string ext:*environment-list* :test #'string=)))
+   ))
 
 #+allegro
 ;;>> Allegro 4.2 supports SYSTEM:GETENV.  How do I set an environment variable?
@@ -328,7 +330,8 @@ advised of the possiblity of such damages.
    ((or :allegro :sbcl)
     #.(if (fboundp 'compile-file-pathname)
 	  (pathname-type (compile-file-pathname "foo"))
-	"fasl"))
+	  "fasl"))
+   (:scl (pathname-type (compile-file-pathname "foo")))
    (:lucid (car lcl:*load-binary-pathname-types*))
    (:mcl #.(pathname-type ccl:*.fasl-pathname*))
    ))

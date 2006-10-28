@@ -100,6 +100,7 @@ SUBSYSTEMS:  None.
   #+(or allegro sbcl)        #.(if (fboundp 'compile-file-pathname)
 				   (pathname-type (compile-file-pathname "foo"))
 				 "fasl")
+  #+scl                      (pathname-type (compile-file-pathname "foo"))
   #+lucid                    (car lcl:*load-binary-pathname-types*)
   #+(and (not genera)
          (not allegro)
@@ -124,7 +125,8 @@ SUBSYSTEMS:  None.
          #+GENERA           "GENERA"
          #+LUCID            "LUCID"
          #+ALLEGRO          "ALLEGRO"
-	 #+SBCL             "SBCL")
+	 #+SBCL             "SBCL"
+	 #+scl              "SCL")
         (GUI
          #+(and mcl (not clim)) "MAC"
          #+(and genera (not clim)) "DW"

@@ -128,13 +128,11 @@
 
 
 (defpackage :clim-mop
-  (:use :common-lisp :clos))
+  (:use :clos))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (loop for sym being the symbols of :clim-mop
 	do (export sym :clim-mop)))
-
-(in-package :clim-mop)
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (export '(clim-lisp-patch::defconstant

@@ -342,6 +342,7 @@
 	       (:file "gadget-test")
                (:file "accepting-values")
                (:file "method-browser")
+	       (:file "stopwatch")
 	       (:file "dragndrop-translator")
                (:file "draggable-graph")
                (:file "text-size-test")
@@ -417,9 +418,12 @@
     :depends-on (:mcclim)
     :serial t
     :components
-    ((:file "Apps/Inspector/package")
-     (:file "Apps/Inspector/disassembly")
-     (:file "Apps/Inspector/inspector")))
+    ((:module "Apps/Inspector"
+              :pathname #.(make-pathname :directory '(:relative "Apps" "Inspector"))
+              :components
+	      ((:file "package")
+	       (:file "disassembly")
+	       (:file "inspector")))))
 
 (defmethod perform :after ((op load-op) (c (eql (find-system :clim))))
   (pushnew :clim *features*)
