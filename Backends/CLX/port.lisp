@@ -1428,7 +1428,8 @@
 		     :remote-filename (format nil "/tmp/.X11-unix/X~D" display)
 		     :format :binary)
 		    (socket:make-socket :remote-host (string host)
-					:remote-port (+ *x-tcp-port* display)
+					:remote-port (+ xlib::*x-tcp-port*
+                                                        display)
 					:format :binary))))
     (if (streamp stream)
 	stream

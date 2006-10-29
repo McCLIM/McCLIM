@@ -91,7 +91,7 @@
                       #+openmcl   "fix-openmcl"
                       #+lispworks "fix-lispworks"
                       #+clisp     "fix-clisp")))
-   (:file "package" :depends-on ("Lisp-Dep"))))
+   (:file "package" :depends-on ("Lisp-Dep" "patch"))))
 
 (defsystem :clim-core
     :depends-on (:clim-lisp :spatial-trees)
