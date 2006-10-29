@@ -100,14 +100,15 @@
                  (:module "Lisp-Dep"
                           :depends-on ("decls")
                           :components
-                          ((:file #.(or
-                                     #+(and :cmu :mp (not :pthread))  "mp-cmu"
-                                     #+scl                     "mp-scl"
-                                     #+sb-thread               "mp-sbcl"
-                                     #+excl                    "mp-acl"
-                                     #+openmcl                 "mp-openmcl"
-                                     #+lispworks               "mp-lw"
-                                     #| fall back |#           "mp-nil"))))
+                          ((:file #.(first
+                                     (list
+                                      #+(and :cmu :mp (not :pthread))  "mp-cmu"
+                                      #+scl                     "mp-scl"
+                                      #+sb-thread               "mp-sbcl"
+                                      #+excl                    "mp-acl"
+                                      #+openmcl                 "mp-openmcl"
+                                      #+lispworks               "mp-lw"
+                                      #| fall back |#           "mp-nil")))))
                  (:file "utils" :depends-on ("decls" "Lisp-Dep"))
                  (:file "design" :depends-on ("decls" "protocol-classes" "Lisp-Dep" "utils"))
                  (:file "X11-colors" :depends-on ("decls" "protocol-classes" "Lisp-Dep" "design"))
