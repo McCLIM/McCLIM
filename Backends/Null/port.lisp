@@ -69,13 +69,14 @@
 (defmethod port-set-sheet-region ((port null-port) (graft graft) region)
   ())
 
-(defmethod port-set-sheet-transformation
-    ((port null-port) (graft graft) transformation)
-  ())
-
-(defmethod port-set-sheet-transformation
-    ((port null-port) (sheet mirrored-sheet-mixin) transformation)
-  ())
+;; these don't exist
+;;;(defmethod port-set-sheet-transformation
+;;;    ((port null-port) (graft graft) transformation)
+;;;  ())
+;;;
+;;;(defmethod port-set-sheet-transformation
+;;;    ((port null-port) (sheet mirrored-sheet-mixin) transformation)
+;;;  ())
 
 (defmethod port-set-sheet-region
     ((port null-port) (sheet mirrored-sheet-mixin) region)
