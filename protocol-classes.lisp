@@ -180,7 +180,7 @@
   ())
 
 ;;; 28.2 Application Frames
-(define-protocol-class  application-frame ()
+(define-protocol-class application-frame ()
   ())
 
 ;;; 28.5 Frame Managers
