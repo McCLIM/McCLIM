@@ -41,6 +41,11 @@
      (eval-when (:compile-toplevel :load-toplevel :execute)
        (setf (excl:package-definition-lock (find-package :common-lisp)) t))))
 
+#+clisp
+(defmacro with-system-redefinition-allowed (&body body)
+  `(ext:without-package-lock ("COMMON-LISP")
+     ,@body))
+
 #+openmcl
 (defmacro with-system-redefinition-allowed (&body body)
   `(progn
@@ -90,7 +95,7 @@
   `(progn
     ,@body))
 
-#-(or excl openmcl cmu sbcl)
+#-(or excl openmcl cmu sbcl clisp)
 (defmacro with-system-redefinition-allowed (&body body)
   `(progn
      ,@body))
