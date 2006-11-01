@@ -348,7 +348,8 @@
                (:file "draggable-graph")
                (:file "text-size-test")
                (:file "drawing-benchmark")
-               (:file "logic-cube")))
+               (:file "logic-cube")
+               (:file "views")))
      (:module "Goatee"
 	      :components
 	      ((:file "goatee-test")))))
