@@ -1,3 +1,6 @@
+* Changes in mcclim-0.9.4 relative to 0.9.3:
+** cleanup: removed the obsolete system.lisp file.
+
 * Changes in mcclim-0.9.3 "All Souls' Day" relative to 0.9.2:
 ** backend improvement: The Null backend now registers itself in the
    server search path
