@@ -14,7 +14,7 @@ implementations:
 In our tests, this release of McCLIM did not work on the following
 implementations:
 
- * CLisp (there are some problems with CLisp at the moment, but it is
+ * CLISP (there are some problems with CLISP at the moment, but it is
    possible to run McCLIM there; a HOWTO will be posted to
    http://planet.lisp.org).
  * CMUCL (at the time of this release, the released CMUCL has a bug
