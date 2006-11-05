@@ -602,6 +602,21 @@
   (width :int)
   (height :int))
 
+(defcfun "gdk_draw_rectangle"
+    :void
+  (drawable :pointer)
+  (gc :pointer)
+  (filled :int)
+  (x :int)
+  (y :int)
+  (width :int)
+  (height :int))
+
+(defcfun "gdk_gc_set_rgb_fg_color"
+    :void
+  (gc :pointer)
+  (color :pointer))
+
 (defcfun "gtk_button_new"
     :pointer
   )

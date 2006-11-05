@@ -379,12 +379,20 @@
     (let* ((drawable
 	    (mirror-drawable
 	     (sheet-direct-mirror (climi::pixmap-sheet pixmap-sheet))))
-	   (pixmap
-	    (gdk_pixmap_new drawable
-			    (round (pixmap-width pixmap-sheet))
-			    (round (pixmap-height pixmap-sheet))
-			    -1))
-	   (mirror (make-instance 'drawable-mirror :drawable pixmap)))
+	   (w (round (pixmap-width pixmap-sheet)))
+	   (h (round (pixmap-height pixmap-sheet)))
+	   (pixmap (gdk_pixmap_new drawable w h -1))
+	   (mirror (make-instance 'drawable-mirror :drawable pixmap))
+	   (gc (gdk_gc_new pixmap)))
+      (cffi:with-foreign-object (c 'gdkcolor)
+	(setf (cffi:foreign-slot-value c 'gdkcolor 'pixel) 0)
+	(setf (values (cffi:foreign-slot-value c 'gdkcolor 'r)
+		      (cffi:foreign-slot-value c 'gdkcolor 'g)
+		      (cffi:foreign-slot-value c 'gdkcolor 'b))
+	      (values 65535 65535 65535))
+	(gdk_gc_set_rgb_fg_color gc c))
+      (gdk_draw_rectangle pixmap gc 1 0 0 w h)
+      (gdk_gc_unref gc)
       (climi::port-register-mirror port pixmap-sheet mirror)
       mirror)))
 

@@ -446,7 +446,7 @@
       (setf x (df x))
       (setf y (df y))
       (cairo_move_to cr x y)
-      (cairo_line_to cr (+ x (/ x (expt 2 16))) y)
+      (cairo_line_to cr (+ x 0.5) (+ y 0.5))
       (cairo_stroke cr))))
 
 (defmethod medium-draw-points* ((medium gtkairo-medium) coord-seq)
@@ -462,7 +462,7 @@
 	    (let ((x (df (elt coord-seq (+ i 0))))
 		  (y (df (elt coord-seq (+ i 1)))))
 	      (cairo_move_to cr x y)
-	      (cairo_line_to cr (+ x (/ x (expt 2 16))) y)
+	      (cairo_line_to cr (+ x 0.5) (+ y 0.5))
 	      (cairo_stroke cr))))))
 
 (defmethod medium-draw-line* ((medium gtkairo-medium) x1 y1 x2 y2)
