@@ -86,11 +86,11 @@
 	(car c)))))
 
 (defun dribble-x-errors ()
+  #-(or win32 windows mswindows)
   (unless (zerop *-gdk-error-code*)
     (warn "Ignoring X error ~D: ~A"
 	  *-gdk-error-code*
 	  (cffi:with-foreign-pointer-as-string (buf 64)
-	    #-(or win32 windows mswindows)
 	    (XGetErrorText *gdk-display* *-gdk-error-code* buf 63)))
     (setf *-gdk-error-code* 0)))
 
@@ -107,6 +107,7 @@
 (defmethod get-next-event
     ((port gtkairo-port) &key wait-function (timeout nil))
   (declare (ignore wait-function))
+  #-clim-mp (port-force-output port)
   (gtk-main-iteration port)
   (cond
     ((dequeue port))

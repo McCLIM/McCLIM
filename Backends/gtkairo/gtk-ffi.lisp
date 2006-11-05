@@ -136,6 +136,7 @@
 (cffi:defcvar "_gdk_error_warnings" :int)
 (cffi:defcvar "_gdk_error_code" :int)
 
+#-(or win32 mswindows windows)
 (cffi:defcfun "XGetErrorText"
     :void
   (display :pointer)

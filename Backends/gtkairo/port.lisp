@@ -75,6 +75,7 @@
   (when (zerop *g-threads-got-initialized*)
     (g_thread_init (cffi:null-pointer))
     (gdk_threads_init)
+    #-(or win32 windows mswindows)
     (setf *-gdk-error-warnings* 0))
   (with-gtk ()
     ;; FIXME: hier koennten wir mindestens ein anderes --display uebergeben
