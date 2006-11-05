@@ -1,4 +1,4 @@
-(defpackage :mcclim-freetype
+(cl:defpackage :mcclim-freetype
     (:use :climi :clim :clim-lisp)
     (:export :*freetype-font-path*)
     (:import-from #+(or cmu scl) :alien
