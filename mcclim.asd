@@ -270,12 +270,12 @@
 	       (:file "package")
 	       (:file "gtk-ffi")
 	       (:file "cairo-ffi")
+	       (:file "graft")
 	       (:file "port")
 	       (:file "event")
 	       (:file "keysymdef")
 	       (:file "medium")
 	       (:file "pixmap")
-	       (:file "graft")
 	       (:file "frame-manager")
 	       (:file "gadgets")))))
 
