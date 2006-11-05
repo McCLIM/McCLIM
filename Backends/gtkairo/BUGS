@@ -30,7 +30,7 @@
 (FIXED) 6.
     [Address book didn't work on windows.]
 
-6b.
+(FIXED) 6b.
     On windows, something draws gray ink over the buttons in demodemo
     after expose events.  This should not happen, since the gtkbuttons
     are in a gtkfixed with its own window.  Thorough double buffering
@@ -44,7 +44,7 @@
     flipping ink takes time proportional to the with the size of the
     window, not with the size of the shape being drawn
 
-7b.
+(FIXED) 7b. (problem appears to be gone with double buffering)
     flipping ink pixmap caching is broken on windows
 
 7c.

@@ -236,9 +236,7 @@
     (cairo_surface_mark_dirty to-surface))
   (cairo_destroy (cr medium))
   (setf (cr medium) (flipping-original-cr medium))
-  (setf (flipping-original-cr medium) nil)
-  #+(or win32 mswindows windows)	;fixme
-  (dispose-flipping-pixmap medium))
+  (setf (flipping-original-cr medium) nil))
 
 (defmethod sync-ink (medium (design climi::standard-flipping-ink))
   (setf (flipping-original-cr medium) (cr medium))
