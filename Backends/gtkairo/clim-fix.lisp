@@ -36,8 +36,7 @@
       ;; multiple times and looks like crap.  This fixes it:
       (clim:with-drawing-options (m :clipping-region r)
         (clim:draw-design m r :ink clim:+background-ink+)
-        (call-next-method s r)))
-    (medium-force-output m)))
+        (call-next-method s r)))))
 
 ;; cairo hack: adjust rectangle coordinates by half a pixel each to avoid
 ;; anti-aliasing (and follow-up output artifacts)
@@ -58,4 +57,5 @@
 	  ;; FIXME: repaint the hit detection rectangle. It could be
 	  ;; bigger than
 	  ;; the bounding rectangle.
-	  (repaint-sheet stream record))))))
+	  (repaint-sheet stream record)))
+      (force-output stream))))

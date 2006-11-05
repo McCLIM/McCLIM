@@ -75,6 +75,8 @@
 			      (sheet-region (medium-sheet medium)))))))
 
 (defun sync-sheet (medium)
+  (when (medium-sheet medium)		;ignore the metrik-medium
+    (setf (gethash medium (dirty-mediums (port medium))) t))
   (when (or (null (cr medium))
 	    (sheet-changed-behind-our-back-p medium))
     (with-cairo-medium (medium)
@@ -121,6 +123,10 @@
 	  (setf tr (compose-transformations extra-transformation tr)))
 	(multiple-value-bind (mxx mxy myx myy tx ty)
 	    (climi::get-transformation tr)
+	  ;; Make sure not to hand transformations to cairo that it won't
+	  ;; like, since debugging gets ugly once a cairo context goes
+	  ;; into an error state:
+	  (invert-transformation tr)
 	  (cairo_matrix_init matrix
 			     (df mxx) (df mxy) (df myx) (df myy)
 			     (df tx) (df ty))
@@ -238,21 +244,18 @@
   (setf (flipping-original-cr medium) (cr medium))
   (let* ((mirror (medium-mirror medium))
 	 (drawable (mirror-drawable mirror)))
-    (cffi:with-foreign-slots ((allocation-width allocation-height)
-			      (mirror-widget mirror)
-			      gtkwidget)
-      (let* ((region (climi::sheet-mirror-region (medium-sheet medium)))
-	     (width (floor (bounding-rectangle-max-x region)))
-	     (height (floor (bounding-rectangle-max-y region)))
-	     (pixmap
-	      (or (flipping-pixmap medium)
-		  (setf (flipping-pixmap medium)
-			(gdk_pixmap_new drawable width height -1)))))
-	(setf (cr medium) (gdk_cairo_create pixmap))
-	(setf (flipping-region medium) region)
-	(cairo_paint (cr medium))
-	(sync-transformation medium)
-	(sync-ink medium +white+)))))
+    (let* ((region (climi::sheet-mirror-region (medium-sheet medium)))
+	   (width (floor (bounding-rectangle-max-x region)))
+	   (height (floor (bounding-rectangle-max-y region)))
+	   (pixmap
+	    (or (flipping-pixmap medium)
+		(setf (flipping-pixmap medium)
+		      (gdk_pixmap_new drawable width height -1)))))
+      (setf (cr medium) (gdk_cairo_create pixmap))
+      (setf (flipping-region medium) region)
+      (cairo_paint (cr medium))
+      (sync-transformation medium)
+      (sync-ink medium +white+))))
 
 (defmethod sync-ink (medium new-value)
   (warn "SYNC-INK lost ~S." new-value))
@@ -639,12 +642,30 @@
 (defmethod medium-finish-output ((medium gtkairo-medium))
   (with-cairo-medium (medium)
     (when (cr medium)
-      (cairo_surface_flush (cairo_get_target (cr medium))))))
+      (cairo_surface_flush (cairo_get_target (cr medium)))))
+  (medium-force-output medium))
 
 (defmethod medium-force-output ((medium gtkairo-medium))
+  (remhash medium (dirty-mediums (port medium)))
   (with-cairo-medium (medium)
     (when (cr medium)
-      (cairo_surface_flush (cairo_get_target (cr medium))))))
+      (cairo_surface_flush (cairo_get_target (cr medium)))
+      (invalidate-mirror (medium-mirror medium) (medium-sheet medium)))))
+
+(defmethod invalidate-mirror ((mirror drawable-mirror) sheet)
+  (declare (ignore sheet)))
+
+(defmethod invalidate-mirror ((mirror widget-mirror) sheet)
+  (let* ((drawable (mirror-drawable mirror))
+	 (real-drawable (mirror-real-drawable mirror)))
+    (unless (cffi:pointer-eq drawable real-drawable)
+      (let* ((region (climi::sheet-mirror-region sheet))
+	     (width (floor (bounding-rectangle-max-x region)))
+	     (height (floor (bounding-rectangle-max-y region))))
+	(cffi:with-foreign-object (r 'gdkrectangle)
+	  (setf (cffi:foreign-slot-value r 'gdkrectangle 'width) width)
+	  (setf (cffi:foreign-slot-value r 'gdkrectangle 'height) height)
+	  (gdk_window_invalidate_rect real-drawable r 0))))))
 
 (defmethod medium-beep ((medium gtkairo-medium))
   ;; fixme: visual beep?

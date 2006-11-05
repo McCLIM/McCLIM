@@ -120,6 +120,19 @@
 	(gdk_threads_leave)))))
 
 
+;;; Error handling:
+
+(cffi:defcvar "_gdk_error_warnings" :int)
+(cffi:defcvar "_gdk_error_code" :int)
+
+(cffi:defcfun "XGetErrorText"
+    :void
+  (display :pointer)
+  (code :int)
+  (buf :pointer)
+  (length :int))
+
+
 ;;; GROVELME
 
 ;; must be a separate structure definition in order for padding on AMD64
@@ -729,6 +742,12 @@
   (y :int)
   (width :int)
   (height :int))
+
+(defcfun "gdk_window_invalidate_rect"
+    :void
+  (window :pointer)
+  (rect :pointer)
+  (childrenp :int))
 
 (defconstant GDK_EXPOSURE_MASK             (ash 1 1))
 (defconstant GDK_POINTER_MOTION_MASK       (ash 1 2))

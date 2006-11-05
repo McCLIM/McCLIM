@@ -47,7 +47,9 @@
    (events-head :accessor events-head)
    (events-tail :accessor events-tail)
    (widgets->sheets :initform (make-hash-table) :accessor widgets->sheets)
-   (metrik-medium :accessor metrik-medium)))
+   (dirty-mediums :initform (make-hash-table) :accessor dirty-mediums)
+   (metrik-medium :accessor metrik-medium)
+   (pointer-grab-sheet :accessor pointer-grab-sheet :initform nil)))
 
 ;;;(defmethod print-object ((object gtkairo-port) stream)
 ;;;  (print-unreadable-object (object stream :identity t :type t)
@@ -72,7 +74,8 @@
 	(slot-value port 'climi::frame-managers))
   (when (zerop *g-threads-got-initialized*)
     (g_thread_init (cffi:null-pointer))
-    (gdk_threads_init))
+    (gdk_threads_init)
+    (setf *-gdk-error-warnings* 0))
   (with-gtk ()
     ;; FIXME: hier koennten wir mindestens ein anderes --display uebergeben
     ;; wenn wir wollten
@@ -106,8 +109,13 @@
      (region :initform nil :accessor mirror-region)))
 
 (defclass widget-mirror (mirror)
-    ((widget :initarg :widget :accessor mirror-widget)
-     (mediums :initform '() :accessor mirror-mediums)))
+    ((port :initarg :port :accessor mirror-port)
+     (widget :initarg :widget :accessor mirror-widget)
+     (mediums :initform '() :accessor mirror-mediums)
+     (buffering-pixmap-dirty-p
+      :initform t
+      :accessor buffering-pixmap-dirty-p)
+     (buffering-pixmap :initform nil :accessor mirror-buffering-pixmap)))
 
 (defclass window-mirror (widget-mirror)
     ((window :initarg :window :accessor mirror-window)))
@@ -116,11 +124,41 @@
     ((fixed :initarg :fixed :accessor mirror-fixed)))
 
 (defclass drawable-mirror (mirror)
-    ((drawable :initarg :drawable :accessor mirror-drawable)
+    ((drawable :initarg :drawable
+	       :accessor mirror-drawable
+	       :accessor mirror-real-drawable)
      (mediums :initform '() :accessor mirror-mediums)))
 
-(defmethod mirror-drawable ((mirror widget-mirror))
+(defmethod mirror-real-drawable ((mirror widget-mirror))
   (gtkwidget-gdkwindow (mirror-widget mirror)))
+
+(defvar *double-buffering-p* t)
+
+(defparameter *old-frontend-size-hack* t)
+
+(defmethod mirror-drawable ((mirror widget-mirror))
+  (if *double-buffering-p*
+      (or (mirror-buffering-pixmap mirror)
+	  (setf (mirror-buffering-pixmap mirror)
+		(let* ((*old-frontend-size-hack* nil)
+		       (window (mirror-real-drawable mirror))
+		       (region (climi::sheet-mirror-region
+				(climi::port-lookup-sheet
+				 (mirror-port mirror)
+				 mirror)))
+		       (width (floor (bounding-rectangle-max-x region)))
+		       (height (floor (bounding-rectangle-max-y region)))
+		       (pixmap (gdk_pixmap_new window width height -1))
+		       (cr (gdk_cairo_create pixmap)))
+		  (cairo_set_source_rgba cr
+					 1.0d0
+					 1.0d0
+					 1.0d0
+					 1.0d0)
+		  (cairo_paint cr)
+		  (cairo_destroy cr)
+		  pixmap)))
+      (mirror-real-drawable mirror)))
 
 (defun widget->sheet (widget port)
   (gethash (cffi:pointer-address widget) (widgets->sheets port)))
@@ -160,7 +198,10 @@
 	   (widget (gtk_fixed_new))
 	   (width (round-coordinate (space-requirement-width q)))
 	   (height (round-coordinate (space-requirement-height q)))
-	   (mirror (make-instance 'window-mirror :window window :widget widget)))
+	   (mirror (make-instance 'window-mirror
+		     :port port
+		     :window window
+		     :widget widget)))
       (gtk_window_set_title window (frame-pretty-name (pane-frame sheet)))
       (setf (widget->sheet widget port) sheet)
       (setf (widget->sheet window port) sheet)
@@ -216,7 +257,7 @@
 	   (widget (gtk_fixed_new))
 	   (width (round-coordinate (space-requirement-width q)))
 	   (height (round-coordinate (space-requirement-height q)))
-	   (mirror (make-instance 'widget-mirror :widget widget)))
+	   (mirror (make-instance 'widget-mirror :port port :widget widget)))
       (setf (widget->sheet widget port) sheet)
       ;; Das machen wir uns mal einfach und geben jedem Widget sein eigenes
       ;; Fenster, dann haben wir naemlich das Koordinatensystem und Clipping
@@ -266,7 +307,10 @@
 	   (width (round-coordinate (space-requirement-width q)))
 	   (height (round-coordinate (space-requirement-height q)))
 	   (mirror
-	    (make-instance 'native-widget-mirror :fixed fixed :widget widget)))
+	    (make-instance 'native-widget-mirror
+	      :port port
+	      :fixed fixed
+	      :widget widget)))
       (setf (widget->sheet fixed port) sheet)
       (setf (widget->sheet widget port) sheet)
       (gtk_fixed_set_has_window fixed 1)
@@ -376,6 +420,8 @@
     (let ((mirror (climi::port-lookup-mirror port sheet)))
       (destroy-mediums mirror)
       (gtk_widget_destroy (mirror-widget mirror))
+      (when (mirror-buffering-pixmap mirror)
+	(gdk_drawable_unref (mirror-drawable mirror)))
       (climi::port-unregister-mirror port sheet mirror)
       (setf (widget->sheet (mirror-widget mirror) port) nil))))
 
@@ -408,15 +454,25 @@
 
 (defun reset-mediums (mirror)
   (dolist (medium (mirror-mediums mirror))
-    (setf (cr medium) nil)))
+    (setf (cr medium) nil))
+  (when (mirror-buffering-pixmap mirror)
+    (let* ((old (mirror-buffering-pixmap mirror))
+	   (new (progn
+		  (setf (mirror-buffering-pixmap mirror) nil)
+		  (mirror-drawable mirror)))
+	   (gc (gdk_gc_new new)))
+      (gdk_draw_drawable new gc old 0 0 0 0 -1 -1)
+      (gdk_gc_unref gc)
+      (gdk_drawable_unref old))
+    (setf (buffering-pixmap-dirty-p mirror) t)))
 
 (defmethod port-set-mirror-region
     ((port gtkairo-port) (mirror window-mirror) mirror-region)
   (with-gtk ()
-    (reset-mediums mirror)
     (gtk_window_resize (mirror-window mirror)
 		       (floor (bounding-rectangle-max-x mirror-region))
 		       (floor (bounding-rectangle-max-y mirror-region)))
+    (reset-mediums mirror)
     ;; Nanu, ohne die Geometrie hier zu korrigieren kann das Fenster nur
     ;; vergroessert, nicht aber wieder verkleinert werden.
     (cffi:with-foreign-object (geometry 'gdkgeometry)
@@ -432,11 +488,11 @@
   (unless (and (mirror-region mirror)
 	       (region-equal (mirror-region mirror) mirror-region))
     (with-gtk ()
-      (reset-mediums mirror)
       (gtk_widget_set_size_request
        (mirror-widget mirror)
        (floor (bounding-rectangle-max-x mirror-region))
-       (floor (bounding-rectangle-max-y mirror-region))))
+       (floor (bounding-rectangle-max-y mirror-region)))
+      (reset-mediums mirror))
     (setf (mirror-region mirror) mirror-region)))
 
 (defmethod port-set-mirror-region
@@ -452,7 +508,8 @@
   (with-gtk ()
     (multiple-value-bind (x y)
 	(transform-position mirror-transformation 0 0)
-      (gtk_window_move (mirror-window mirror) (floor x) (floor y)))))
+      (gtk_window_move (mirror-window mirror) (floor x) (floor y)))
+    (reset-mediums mirror)))
 
 (defmethod port-set-mirror-transformation
     ((port gtkairo-port) (mirror mirror) mirror-transformation)
@@ -578,10 +635,28 @@
   (error "port-string-width called, what now?"))
 
 (defmethod port-mirror-width ((port gtkairo-port) sheet)
-  (error "port-mirror-width called, we thought the frontend doesn't do that"))
+  (if *old-frontend-size-hack*
+      #x10000
+      (cffi:with-foreign-object (r 'gtkrequisition)
+	(gtk_widget_size_request
+	 (mirror-widget (climi::port-lookup-mirror port sheet))
+	 r)
+	(cffi:foreign-slot-value r 'gtkrequisition 'width))))
 
 (defmethod port-mirror-height ((port gtkairo-port) sheet)
-  (error "port-mirror-height called, we thought the frontend doesn't do that"))
+  (if *old-frontend-size-hack*
+      #x10000
+      (cffi:with-foreign-object (r 'gtkrequisition)
+	(gtk_widget_size_request
+	 (mirror-widget (climi::port-lookup-mirror port sheet))
+	 r)
+	(cffi:foreign-slot-value r 'gtkrequisition 'height))))
+
+(defmethod port-mirror-width ((port gtkairo-port) (sheet gtkairo-graft))
+  (graft-width sheet))
+
+(defmethod port-mirror-height ((port gtkairo-port) (sheet gtkairo-graft))
+  (graft-height sheet))
 
 (defmethod graft ((port gtkairo-port))
   (first (climi::port-grafts port)))
@@ -655,11 +730,15 @@
 
 (defmethod port-force-output ((port gtkairo-port))
   (with-gtk ()
+    (loop
+	for medium being each hash-key in (dirty-mediums port)
+	do (medium-force-output medium))
     (gdk_display_flush (gdk_display_get_default))
     ;; Don't know whether p-f-o is actually meant to XSync, which is
     ;; what gdk_flush does.  But it seems useful to have _some_ function
     ;; for this, so let's use p-f-o until we find a better one.
-    (gdk_flush)))
+    (gdk_flush)
+    (dribble-x-errors)))
 
 ;; FIXME: What happens when CLIM code calls tracking-pointer recursively?
 (defmethod port-grab-pointer ((port gtkairo-port) pointer sheet)
@@ -680,15 +759,21 @@
 ;;;			       (tr :timeout!)
 ;;;			       (with-gtk ()
 ;;;				 (gdk_pointer_ungrab GDK_CURRENT_TIME))))
-      (zerop status))))
+      (when (zerop status)
+	(setf (pointer-grab-sheet port) sheet)))))
 
 (defmethod port-ungrab-pointer ((port gtkairo-port) pointer sheet)
   (declare (ignore pointer sheet))
   (with-gtk ()
-    (gdk_pointer_ungrab GDK_CURRENT_TIME)))
+    (when (eq (pointer-grab-sheet port) sheet)
+      (gdk_pointer_ungrab GDK_CURRENT_TIME)
+      (setf (pointer-grab-sheet port) nil))))
 
 (defmethod distribute-event :around ((port gtkairo-port) event)
-  (call-next-method))
+  (let ((grab-sheet (pointer-grab-sheet port)))
+    (if grab-sheet
+	(queue-event grab-sheet event)
+	(call-next-method))))
 
 (defmethod set-sheet-pointer-cursor ((port gtkairo-port) sheet cursor)
   ())        

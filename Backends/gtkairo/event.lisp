@@ -85,6 +85,15 @@
 	(pop (events-head port))
 	(car c)))))
 
+(defun dribble-x-errors ()
+  (unless (zerop *-gdk-error-code*)
+    (warn "Ignoring X error ~D: ~A"
+	  *-gdk-error-code*
+	  (cffi:with-foreign-pointer-as-string (buf 64)
+	    #-(or win32 windows mswindows)
+	    (XGetErrorText *gdk-display* *-gdk-error-code* buf 63)))
+    (setf *-gdk-error-code* 0)))
+
 ;; thread-safe entry function
 (defun gtk-main-iteration (port &optional block)
   (with-gtk ()
@@ -92,7 +101,8 @@
       (if block
 	  (gtk_main_iteration_do 1)
 	  (while (plusp (gtk_events_pending))
-	    (gtk_main_iteration_do 0))))))
+	    (gtk_main_iteration_do 0))))
+    (dribble-x-errors)))
 
 (defmethod get-next-event
     ((port gtkairo-port) &key wait-function (timeout nil))
@@ -128,13 +138,29 @@
 (define-signal noop-handler (widget event))
 
 (define-signal expose-handler (widget event)
-  (enqueue
-   (cffi:with-foreign-slots ((x y width height) event gdkeventexpose)
-     (gdk_window_clear_area (gtkwidget-gdkwindow widget) x y width height)
-     (make-instance 'window-repaint-event
-       :timestamp (get-internal-real-time)
-       :sheet (widget->sheet widget *port*)
-       :region (make-rectangle* x y (+ x width) (+ y height))))))
+  (let* ((sheet (widget->sheet widget *port*))
+	 (mirror (climi::port-lookup-mirror *port* sheet)))
+    (unless
+	;; fixme: this shouldn't happen
+	(typep mirror 'drawable-mirror)
+      (if (buffering-pixmap-dirty-p mirror)
+	  (cffi:with-foreign-slots ((x y width height) event gdkeventexpose)
+	    (if (mirror-buffering-pixmap mirror)
+		(setf (buffering-pixmap-dirty-p mirror) nil)
+		(gdk_window_clear_area (gtkwidget-gdkwindow widget)
+				       x y
+				       width height))
+	    (enqueue
+	     (make-instance 'window-repaint-event
+	       :timestamp (get-internal-real-time)
+	       :sheet (widget->sheet widget *port*)
+	       :region (make-rectangle* x y (+ x width) (+ y height)))))
+	  (cffi:with-foreign-slots ((x y width height) event gdkeventexpose)
+	    (let* ((from (mirror-buffering-pixmap mirror))
+		   (to (gtkwidget-gdkwindow (mirror-widget mirror)))
+		   (gc (gdk_gc_new to)))
+	      (gdk_draw_drawable to gc from x y x y width height)
+	      (gdk_gc_unref gc)))))))
 
 (defun gdkmodifiertype->modifier-state (state)
   (logior
@@ -246,6 +272,11 @@
 (define-signal enter-handler (widget event)
   (cffi:with-foreign-slots
       ((time state x y x_root y_root) event gdkeventcrossing)
+    ;; The frontend sets p-p-s for us, but apparently that sometimes
+    ;; happens too late, leaving NIL in the slot.  Test case is the Drag and
+    ;; Drop demo.  (Even weirder: Starting it from demodemo for a second time
+    ;; makes the problem go away, only the first invocation has this problem.)
+    (setf (climi::port-pointer-sheet *port*) (widget->sheet widget *port*))
     (enqueue
      (make-instance 'pointer-enter-event
        :pointer 0
