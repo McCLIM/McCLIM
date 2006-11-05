@@ -671,17 +671,16 @@ that this might be different from the sheet's native region."
     ;; the server, since it is not under our control.
     ((or (null (sheet-parent sheet))
          (null (sheet-parent (sheet-parent sheet))))
-     (make-rectangle* 0 0 #x10000 #x10000)
-     #+nil
      (make-rectangle* 0 0
                       (port-mirror-width (port sheet) sheet)
                       (port-mirror-height (port sheet) sheet)))
     (t
      ;; For other sheets just use the calculated value, saves a round trip.
      (or (%sheet-mirror-region sheet)
-         ;; XXX what to do if the sheet has no idea about its region?
-         ;; XXX can we consider calling sheet-mirror-region then an error?
-         (make-rectangle* 0 0 #x10000 #x10000) ))))
+	 ;; ... unless we don't have it yet.
+	 (make-rectangle* 0 0
+			  (port-mirror-width (port sheet) sheet)
+			  (port-mirror-height (port sheet) sheet)) ))))
 
 (defmethod sheet-native-transformation ((sheet mirrored-sheet-mixin))
   ;; XXX hm...
