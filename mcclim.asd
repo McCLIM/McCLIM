@@ -295,7 +295,8 @@
     :depends-on (:clim :clim-postscript
                  ;; If we're on an implementation that ships CLX, use
                  ;; it. Same if the user has loaded CLX already.
-                 #+(or sbcl scl openmcl ecl clx allegro) :clim-clx
+                 #+(and (or sbcl scl openmcl ecl clx allegro) (not gtkairo))
+		 :clim-clx
                  #+gl                        :clim-opengl
                  ;; OpenMCL and MCL support the beagle backend (native
                  ;; OS X look&feel on OS X).
@@ -309,7 +310,8 @@
 		 ;; null backend
 		 :clim-null
                  )
-    :components ((:file "Looks/pixie"
+    :components (#-gtkairo
+		 (:file "Looks/pixie"
                         :pathname #.(make-pathname :directory '(:relative "Looks") :name "pixie" :type "lisp"))))
 
 ;;; name of :clim-clx-user chosen by mikemac for no good reason
