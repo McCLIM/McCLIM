@@ -41,14 +41,8 @@
 	 ,@args)
        (defun ,wrapper ,argnames
 	 (multiple-value-prog1
-             ;; FIXME: This should probably go into with-cairo-floats.
-             ;; (see http://www.ircbrowse.com/channel/lisp/20061028?utime=3371045114#utime_requested)
-	     #-scl (,actual ,@argnames)
-	     #+scl 
-	     (ext:with-float-traps-masked (:underflow :overflow :inexact
-						      :divide-by-zero :invalid)
-	       (,actual ,@argnames))
-	     (let ((status (cairo_status ,(car argnames))))
+	     (,actual ,@argnames)
+	   (let ((status (cairo_status ,(car argnames))))
 	     (unless (eq status :success)
 	       (error "~A returned with status ~A" ,name status))))))))
 

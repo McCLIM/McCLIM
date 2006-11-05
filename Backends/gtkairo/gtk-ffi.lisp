@@ -85,12 +85,23 @@
 ;; reset all options afterwards, I get lisp errors like f-p-i-o for, say,
 ;; (ATAN -13 13/2) in McCLIM.  Isn't SBCL responsible for calling C code
 ;; with the with the modes C code expects?  Or does cairo change them?
+#+sbcl
 (defmacro with-cairo-floats ((&optional) &body body)
   `(unwind-protect
        (progn
-	 #+sbcl (sb-int:set-floating-point-modes :traps nil)
+	 (sb-int:set-floating-point-modes :traps nil)
 	 ,@body)
-     #+sbcl (apply #'sb-int:set-floating-point-modes *normal-modes*)))
+     (apply #'sb-int:set-floating-point-modes *normal-modes*)))
+
+#+(or scl cmu)
+(defmacro with-cairo-floats ((&optional) &body body)
+  `(ext:with-float-traps-masked
+       (:underflow :overflow :inexact :divide-by-zero :invalid)
+     ,@body))
+
+#-(or scl cmu sbcl)
+(defmacro with-cairo-floats ((&optional) &body body)
+  `(progn ,@body))
 
 ;; Note: There's no need for locking in single threaded mode for most
 ;; functions, except that the main loop functions try to release the
