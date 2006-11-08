@@ -32,6 +32,16 @@
 
 (defparameter *clim-directory* (directory-namestring *load-truename*))
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun find-swank-package ()
+    (find-package :swank))
+  (defun find-swank-system ()
+    (handler-case (asdf:find-system :swank)
+      (asdf:missing-component ())))
+  (defun find-swank ()
+    (or (find-swank-package)
+        (find-swank-system))))
+
 ;;; Legacy CMUCL support stuff
 #+cmu
 (progn
@@ -93,7 +103,7 @@
                       #+clisp     "fix-clisp")))
    (:file "package" :depends-on ("Lisp-Dep" "patch"))))
 
-(defsystem :clim-core
+(defsystem :clim-basic
     :depends-on (:clim-lisp :spatial-trees)
     :components ((:file "decls")
 		 (:file "protocol-classes" :depends-on ("decls"))
@@ -145,7 +155,7 @@
                                                                    "events"))))
 
 (defsystem :goatee-core
-    :depends-on (:clim-core)
+    :depends-on (:clim-basic)
     :components
     ((:module "Goatee"
               :components
@@ -169,67 +179,140 @@
                (:file "presentation-history" :depends-on ("editing-stream" "buffer"
                                                                            "flexivector" "editable-buffer"
                                                                            "goatee-command"))))))
-
 ;;; CLIM-PostScript is not a backend in the normal sense.
 ;;; It is an extension (Chap. 35.1 of the spec) and is an
 ;;; "included" part of McCLIM. Hence the defsystem is here.
 (defsystem :clim-postscript
-    :depends-on (:clim-core)
-    :components
-    ((:module "Backends/PostScript"
-              :pathname #.(make-pathname :directory '(:relative "Backends" "PostScript"))
-              :components
-              ((:file "package")
-               (:file "encoding" :depends-on ("package"))
-               (:file "paper" :depends-on ("package"))
-               (:file "class" :depends-on ("paper" "package"))
-               (:file "font" :depends-on ("encoding" "class" "paper" "package"))
-               (:file "graphics" :depends-on ("encoding" "paper" "class" "font" "package"))
-               (:file "sheet" :depends-on ("paper" "class" "graphics" "package"))
-               (:file "afm" :depends-on ("class" "paper" "font" "package"))
-               (:file "standard-metrics" :depends-on ("font" "package"))))))
+  :depends-on (:clim-basic)
+  :components
+  ((:module "Backends/PostScript"
+            :pathname #.(make-pathname :directory '(:relative "Backends" "PostScript"))
+            :components
+            ((:file "package")
+             (:file "encoding" :depends-on ("package"))
+             (:file "paper" :depends-on ("package"))
+             (:file "class" :depends-on ("paper" "package"))
+             (:file "font" :depends-on ("encoding" "class" "paper" "package"))
+             (:file "graphics" :depends-on ("encoding" "paper" "class" "font" "package"))
+             (:file "sheet" :depends-on ("paper" "class" "graphics" "package"))
+             (:file "afm" :depends-on ("class" "paper" "font" "package"))
+             (:file "standard-metrics" :depends-on ("font" "package"))))))
+
+(defsystem :clim-core
+  :depends-on (:clim-basic :goatee-core :clim-postscript)
+  :components ((:file "text-formatting")
+               (:file "defresource")
+               (:file "input-editing")
+               (:file "presentations")
+               (:file "pointer-tracking" :depends-on ("input-editing"))
+               (:file "graph-formatting")
+               (:file "frames" :depends-on ("commands" "presentations" "presentation-defs"
+                                                       "pointer-tracking" "incremental-redisplay"))
+               (:file "table-formatting" :depends-on ("presentation-defs" "panes"
+                                                                          "presentations" "input-editing"))
+               (:file "bordered-output" :depends-on ("input-editing" "incremental-redisplay"
+                                                                     "presentation-defs" "panes"))
+               (:file "dialog-views" :depends-on ("presentations" "incremental-redisplay"
+                                                                  "bordered-output" "presentation-defs"))
+               (:file "presentation-defs" :depends-on ("input-editing" "presentations"))
+               (:file "gadgets" :depends-on ("commands" "pointer-tracking" "input-editing" 
+                                                        "frames" "incremental-redisplay" "panes"))
+               (:file "describe" :depends-on ("presentations" "presentation-defs" "table-formatting"))
+               (:file "commands" :depends-on ("input-editing" "presentations"
+                                                              "presentation-defs"))
+               (:file "incremental-redisplay" :depends-on ("presentation-defs"))
+               (:file "menu-choose" :depends-on ("commands" "table-formatting" "presentation-defs"
+                                                            "panes" "frames" "pointer-tracking"
+                                                            "presentations"))
+               (:file "menu" :depends-on ("panes" "commands" "gadgets"
+                                                  "presentations" "frames"))
+               (:file "panes" :depends-on ("incremental-redisplay" "presentations"
+                                                                   "presentation-defs" "input-editing" "frames"))
+               (:file "dialog" :depends-on ("panes" "frames" "incremental-redisplay"
+                                                    "table-formatting" "presentations"
+                                                    "bordered-output" "presentation-defs"
+                                                    "dialog-views" "input-editing"
+                                                    "commands"))
+               (:file "builtin-commands" :depends-on ("table-formatting" "commands" "presentations"
+                                                                         "presentation-defs" "input-editing"))))
+
+(defsystem :esa-mcclim
+  :depends-on (:clim-core)
+  :components ((:module "ESA"
+                        :components ((:file "packages")
+                                     (:file "utils" :depends-on ("packages"))
+                                     (:file "colors" :depends-on ("packages"))
+                                     (:file "esa" :depends-on ("colors" "packages" "utils"))
+                                     (:file "esa-buffer" :depends-on ("packages" "esa"))
+                                     (:file "esa-io" :depends-on ("packages" "esa" "esa-buffer"))
+                                     (:file "esa-command-parser" :depends-on ("packages" "esa"))))))
+
+
+
+(defsystem :drei-mcclim
+  :depends-on (:flexichain :esa-mcclim :clim-core #.(if (find-swank-system) :swank (values)))
+  :components
+  ((:module "cl-automaton"
+            :pathname #.(make-pathname :directory '(:relative "Drei" "cl-automaton"))
+	    :components ((:file "automaton-package")
+			 (:file "eqv-hash" :depends-on ("automaton-package"))
+			 (:file "state-and-transition" :depends-on ("eqv-hash"))
+			 (:file "automaton" :depends-on ("state-and-transition" "eqv-hash"))
+			 (:file "regexp" :depends-on ("automaton"))))
+   (:module "Persistent"
+            :pathname #.(make-pathname :directory '(:relative "Drei" "Persistent"))
+            :components ((:file "binseq-package")
+                         (:file "binseq" :depends-on ("binseq-package"))
+                         (:file "obinseq" :depends-on ("binseq-package" "binseq"))
+                         (:file "binseq2" :depends-on ("binseq-package" "obinseq" "binseq"))))
+   (:module "Drei" :depends-on ("cl-automaton" "Persistent")
+            :components ((:file "packages")
+                         (:file "buffer" :depends-on ("packages"))
+                         (:file "motion" :depends-on ("packages" "buffer" "syntax"))
+                         (:file "editing" :depends-on ("packages" "buffer" "syntax" "motion" "kill-ring"))
+                         (:file "base" :depends-on ("packages" "buffer" "persistent-buffer" "kill-ring"))
+                         (:file "syntax" :depends-on ("packages" "buffer" "base"))
+                         (:file "drei" :depends-on ("packages" "syntax" "buffer" "base"
+                                                               "persistent-undo" "persistent-buffer" "abbrev"
+                                                               "delegating-buffer" "undo" "motion" "editing"))
+                         (:file "drei-clim" :depends-on ("drei"))
+                         (:file "drei-redisplay" :depends-on ("drei-clim"))
+                         (:file "input-editor" :depends-on ("drei-redisplay" "lisp-syntax"))
+                         (:file "fundamental-syntax" :depends-on ("packages" "drei-redisplay"))
+                         (:file "abbrev" :depends-on ("packages"))
+                         (:file "kill-ring" :depends-on ("packages"))
+                         (:file "undo" :depends-on ("packages"))
+                         (:file "delegating-buffer" :depends-on ("packages" "buffer"))
+                         (:file "basic-commands" :depends-on ("drei-clim" "motion" "editing"))
+                         (:file "core" :depends-on ("drei"))
+                         (:file "rectangle" :depends-on ("core"))
+                         (:file "core-commands" :depends-on ("core" "rectangle" "drei-clim"))
+                         (:file "persistent-buffer"
+                                :pathname #.(make-pathname :directory '(:relative "Persistent")
+                                                           :name "persistent-buffer"
+                                                           :type "lisp")
+                                :depends-on ("packages"))
+                         (:file "persistent-undo"
+                                :pathname #p"Persistent/persistent-undo.lisp"
+                                :depends-on ("packages" "buffer" "persistent-buffer" "undo"))
+                         (:file "misc-commands" :depends-on ("basic-commands"))
+                         (:file "unicode-commands" :depends-on ("core" "drei-clim"))
+                         (:file "search-commands" :depends-on ("core" "drei-clim"))
+                         (:file "lisp-syntax" :depends-on ("core" "motion" "fundamental-syntax"))
+                         (:file "lisp-syntax-swine" :depends-on ("lisp-syntax"))
+                         (:file "lisp-syntax-commands" :depends-on ("lisp-syntax-swine" "misc-commands"))
+                         #.(if (find-swank)
+                               '(:file "lisp-syntax-swank" :depends-on ("lisp-syntax"))
+                               (values))))))
 
 (defsystem :clim
-    :depends-on (:clim-core :goatee-core)
-    :components
-    ((:file "text-formatting")
-     (:file "input-editing")
-     (:file "presentations")
-     (:file "defresource")
-     (:file "presentation-defs" :depends-on ("input-editing" "presentations"))
-     (:file "pointer-tracking" :depends-on ("input-editing"))
-     (:file "commands" :depends-on ("input-editing" "presentations"
-						    "presentation-defs"))
-     (:file "incremental-redisplay" :depends-on ("presentation-defs"))
-     (:file "frames" :depends-on ("commands" "presentations" "presentation-defs"
-                                             "pointer-tracking" "incremental-redisplay"))
-     (:file "panes" :depends-on ("incremental-redisplay" "presentations"
-                                                         "presentation-defs" "input-editing" "frames"))
-     (:file "gadgets" :depends-on ("commands" "pointer-tracking" "input-editing" 
-                                              "frames" "incremental-redisplay" "panes"))
-     (:file "menu" :depends-on ("panes" "commands" "gadgets"
-                                        "presentations" "frames"))
-     (:file "table-formatting" :depends-on ("presentation-defs" "panes"
-                                                                "presentations" "input-editing"))
-     (:file "graph-formatting")
-     (:file "bordered-output" :depends-on ("input-editing" "incremental-redisplay"
-                                                           "presentation-defs" "panes"))
-     (:file "dialog-views" :depends-on ("presentations" "incremental-redisplay"
-                                                        "bordered-output" "presentation-defs"))
-     (:file "dialog" :depends-on ("panes" "frames" "incremental-redisplay"
-                                          "table-formatting" "presentations"
-                                          "bordered-output" "presentation-defs"
-                                          "dialog-views" "input-editing"
-                                          "commands"))
-     (:file "builtin-commands" :depends-on ("table-formatting" "commands" "presentations"
-                                                               "presentation-defs" "input-editing"))
-     (:file "describe" :depends-on ("presentations" "presentation-defs" "table-formatting"))
-     (:file "menu-choose" :depends-on ("commands" "table-formatting" "presentation-defs"
-						  "panes" "frames" "pointer-tracking"
-						  "presentations"))
-     (:file "Goatee/presentation-history" :depends-on ("presentation-defs")  ; XXX: this is loaded as part of the Goatee system. huh?
-            :pathname #.(make-pathname :directory '(:relative "Goatee") :name "presentation-history" :type "lisp"))
-     ))
+  :depends-on (:clim-core :goatee-core :clim-postscript :drei-mcclim)
+  :components
+  ((:file "Goatee/presentation-history" ; XXX: this is loaded as part of the Goatee system. huh?
+          :pathname #.(make-pathname :directory '(:relative "Goatee") :name "presentation-history" :type "lisp"))
+   (:file "input-editing-goatee")
+   (:file "input-editing-drei")
+   (:file "text-editor-gadget")))
 
 (defsystem :clim-clx
     :depends-on (:clim #+(or sbcl openmcl ecl allegro) :clx)
@@ -437,3 +520,15 @@
 (defmethod perform :after ((op load-op) (c (eql (find-system :mcclim))))
   (pushnew :clim *features*)
   (pushnew :mcclim *features*))
+
+;; XXX This is very ugly, but ESA and Drei need to know whether they
+;; are being compiled as part of McCLIM, or in another CLIM
+;; implementation.
+(defmethod perform :around (op c)
+  (if (and (or (eql (component-system c) (find-system :esa-mcclim))
+               (eql (component-system c) (find-system :drei-mcclim)))
+           (not (find :building-mcclim *features*)))
+      (unwind-protect (progn (push :building-mcclim *features*)
+                             (call-next-method))
+        (setf *features* (delete :building-mcclim *features*)))
+      (call-next-method)))
