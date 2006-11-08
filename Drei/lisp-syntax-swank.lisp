@@ -1,0 +1,106 @@
+;;; -*- Mode: Lisp; Package: DREI-LISP-SYNTAX; -*-
+
+;;;  (c) copyright 2005-2006 by
+;;;           Robert Strandh (strandh@labri.fr)
+;;;           David Murray (splittist@yahoo.com)
+;;;           Troels Henriksen (athas@sigkill.dk)
+
+;;; This library is free software; you can redistribute it and/or
+;;; modify it under the terms of the GNU Library General Public
+;;; License as published by the Free Software Foundation; either
+;;; version 2 of the License, or (at your option) any later version.
+;;;
+;;; This library is distributed in the hope that it will be useful,
+;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;;; Library General Public License for more details.
+;;;
+;;; You should have received a copy of the GNU Library General Public
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+;;; Boston, MA  02111-1307  USA.
+
+;;; An implementation of some of the editor-centric functionality of
+;;; the Lisp syntax using calls to Swank functions.
+
+(in-package :drei-lisp-syntax)
+
+(defclass swank-local-image ()
+  ())
+
+;; If this file is loaded, make local Swank the default way of
+;; interacting with the image.
+
+(defmethod shared-initialize :after
+    ((obj lisp-syntax) slot-names &key)
+  (declare (ignore slot-names))
+  (setf (image obj)
+        (make-instance 'swank-local-image)))
+
+(defmethod default-image ()
+  (make-instance 'swank-local-image))
+
+(define-command (com-enable-swank-for-buffer :name t :command-table lisp-table)
+    ()
+  (unless (find-package :swank)
+    (let ((*standard-output* *terminal-io*))
+      (handler-case (asdf:oos 'asdf:load-op :swank)
+        (asdf:missing-component ()
+          (esa:display-message "Swank not available.")))))
+  (setf (image (syntax *current-buffer*))
+        (make-instance 'swank-local-image)))
+
+(defmethod compile-string-for-drei ((image swank-local-image) string package buffer buffer-mark)
+  (declare (ignore image))
+  (let* ((buffer-name (name buffer))
+         (buffer-file-name (filepath buffer))
+         ;; swank::compile-string-for-emacs binds *compile-verbose* to t
+         ;; so we need to do this to avoid scribbles on the pane
+         (*standard-output* *debug-io*)
+         (swank::*buffer-package* package)
+         (swank::*buffer-readtable* *readtable*))
+    (let  ((result (swank::compile-string-for-emacs
+                    string buffer-name (offset buffer-mark) buffer-file-name))
+           (notes (loop for note in (swank::compiler-notes-for-emacs)
+                     collect (make-compiler-note note))))
+      (values result notes))))
+
+(defmethod compile-file-for-drei ((image swank-local-image) filepath package &optional load-p)
+  (declare (ignore image))
+  (let* ((swank::*buffer-package* package)
+         (swank::*buffer-readtable* *readtable*)
+         (*compile-verbose* nil)
+         (result (swank::compile-file-for-emacs filepath load-p))
+         (notes (loop for note in (swank::compiler-notes-for-emacs)
+                   collect (make-compiler-note note))))
+    (values result notes)))
+
+(defmethod find-definitions-for-drei ((image swank-local-image) symbol)
+  (declare (ignore image))
+  (flet ((fully-qualified-symbol-name (symbol)
+           (let ((*package* (find-package :keyword)))
+             (format nil "~S" symbol))))
+    (let* ((name (fully-qualified-symbol-name symbol))
+           (swank::*buffer-package* *package*)
+           (swank::*buffer-readtable* *readtable*))
+      (swank::find-definitions-for-emacs name))))
+
+(defmethod get-class-keyword-parameters ((image swank-local-image) class)
+  (declare (ignore image))
+  (loop for arg in (swank::extra-keywords/make-instance 'make-instance class)
+     if (swank::keyword-arg.default-arg arg)
+     collect (list (swank::keyword-arg.arg-name arg)
+                   (swank::keyword-arg.default-arg arg))
+     else collect (swank::keyword-arg.arg-name arg)))
+
+(defmethod arglist ((image swank-local-image) symbol)
+  (declare (ignore image))
+  (swank::arglist symbol))
+
+(defmethod simple-completions ((image swank-local-image) string default-package)
+  (declare (ignore image))
+  (swank::completions string (package-name default-package)))
+
+(defmethod fuzzy-completions ((image swank-local-image) symbol-name default-package &optional limit)
+  (declare (ignore image))
+  (swank::fuzzy-completions symbol-name (package-name default-package) limit))
