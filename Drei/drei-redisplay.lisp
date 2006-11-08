@@ -53,6 +53,16 @@
            (letf (((stream-default-view stream) (view drei)))
              (call-next-method))))
 
+;; XXX: If the display begins with a blank area - for example spaces -
+;; CLIM will (rightly) think the output records position is at the
+;; first output. This is not good, because it means that the output
+;; record will "walk" across the screen if the buffer starts with
+;; blanks. Therefore, we make sure that an output record exists at the
+;; very beginning of the output.
+(defmethod display-drei-contents :before ((stream extended-output-stream) (drei drei-area) syntax)
+  (with-new-output-record (stream 'standard-sequence-output-record record)
+    (setf (output-record-position record) (stream-cursor-position stream))))
+
 (defgeneric display-drei-cursor (stream drei cursor syntax)
   (:documentation "Display the given cursor to `stream'.")
   (:method :around ((stream extended-output-stream) (drei drei)

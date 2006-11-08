@@ -109,7 +109,7 @@
                           pane (- tab-width (mod x tab-width)) 0))))
            (incf start))))))
 
-(defmethod display-line (stream (drei drei) mark)
+(defmethod display-line ((stream clim-stream-pane) (drei drei) mark)
   (let ((mark (clone-mark mark)))
     (with-accessors ((space-width space-width) (tab-width tab-width)) stream
       (let ((saved-offset nil)
@@ -120,7 +120,7 @@
                                             saved-offset
                                             mark)
                                            'string)))
-                     (updating-output (stream :unique-id (cons stream (incf id))
+                     (updating-output (stream :unique-id (cons drei (incf id))
                                               :id-test #'equal
                                               :cache-value contents
                                               :cache-test #'equal)
@@ -162,7 +162,7 @@
                (unless (end-of-buffer-p mark)
                  (terpri stream)))))))))
 
-(defmethod display-drei-contents (stream drei (syntax fundamental-syntax))
+(defmethod display-drei-contents ((stream clim-stream-pane) (drei drei) (syntax fundamental-syntax))
   (with-slots (top bot) drei
     (with-accessors ((cursor-positions cursor-positions)) syntax
       (setf cursor-positions (make-array (1+ (number-of-lines-in-region top bot))

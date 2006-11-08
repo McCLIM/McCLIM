@@ -2029,7 +2029,7 @@ after `string'."
     (loop for child in (cdr children) do
       (display-parse-tree child stream drei syntax))))
 
-(defmethod display-drei-contents (stream (drei drei) (syntax lisp-syntax))
+(defmethod display-drei-contents ((stream clim-stream-pane) (drei drei) (syntax lisp-syntax))
   (with-slots (top bot) drei
     (with-accessors ((cursor-positions cursor-positions)) syntax
       ;; There must always be room for at least one element of line
