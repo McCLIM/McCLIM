@@ -176,8 +176,7 @@ be used outside the input-editor."))
   (with-accessors ((buffer buffer)) (drei-instance stream)
     (let* ((array (buffer-sequence buffer 0 (size buffer))))
       (make-array (length array)
-                  :fill-pointer t
-                  :adjustable t
+                  :fill-pointer (length array)
                   :initial-contents array))))
 
 (defmethod replace-input ((stream drei-input-editing-mixin) (new-input array)
@@ -251,6 +250,10 @@ for `type', or `object' if it isn't."
                              accept-object))
                  printed-rep)
              args))))
+
+(defvar *drei-input-editing-stream* nil
+  "Used to provide CLIM-specified input-editing-commands with the
+input-editing-stream. Bound when executing a command.")
 
 ;;; Have to reexamine how many of the keyword arguments to
 ;;; stream-read-gesture should really be passed to the encapsulated
@@ -356,7 +359,8 @@ if stuff is inserted after the insertion pointer."
          (drei (drei-instance stream))
          (*command-processor* drei)
          (was-directly-processing (directly-processing-p drei))
-         (minibuffer (or (minibuffer drei) *minibuffer*)))
+         (minibuffer (or (minibuffer drei) *minibuffer*))
+         (*drei-input-editing-stream* stream))
     (with-bound-drei-special-variables (drei
                                         ;; If the minibuffer is the
                                         ;; stream we are encapsulating
@@ -500,19 +504,22 @@ CL:SUBSEQ into the sequence indicating where processing stopped."
 ;;; CLIM spec does not define, or even suggest, any kind of
 ;;; programmatic access to the data structures of the input-editor for
 ;;; these function, it is utterly impossible to write portable
-;;; input-editor functions using this
-;;; facility. `Add-input-editor-command' is implemented like this in
-;;; Drei: the specified gesture sequence is bound to the provided
-;;; function in the `editor-table' command table, and will have a
-;;; standard Drei command environment when invoked. This is sufficient
-;;; for only the most trivial of commands, using `define-command' and
-;;; `set-key' is a much, much more powerful mechanism, and it allows
-;;; far more elegant handling of numeric arguments.
+;;; input-editor functions using this facility. Fortunately, Franz's
+;;; user guide saves us. An input-editor-command defined via this
+;;; facility takes four arguments: the input-editing stream, the input
+;;; buffer (ugh!), the gesture used to invoke the command, and the
+;;; accumulated numeric argument.
 
 (defun add-input-editor-command (gestures function)
   "Set up Drei so performing `gestures' will result in the
 invocation of `function' "
-  (set-key function 'editor-table gestures))
+  (set-key `(,(lambda (numeric-argument)
+                      (funcall function *drei-input-editing-stream*
+                               (stream-input-buffer *drei-input-editing-stream*)
+                               gestures
+                               numeric-argument)) ,*numeric-argument-marker*)
+           'exclusive-input-editor-table
+           gestures))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 

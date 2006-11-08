@@ -58,20 +58,20 @@
 (make-command-table 'self-insert-table :errorp nil)
 
 ;;; Command table for concrete editor stuff.
-(make-command-table 'editor-table
-                    :errorp nil
-                    :inherit-from '(comment-table
-                                    deletion-table
-                                    editing-table
-                                    case-table
-                                    fill-table
-                                    indent-table
-                                    marking-table
-                                    movement-table
-                                    search-table
-                                    info-table
-                                    self-insert-table
-                                    keyboard-macro-table))
+(define-syntax-command-table editor-table
+    :errorp nil
+    :inherit-from '(comment-table
+                    deletion-table
+                    editing-table
+                    case-table
+                    fill-table
+                    indent-table
+                    marking-table
+                    movement-table
+                    search-table
+                    info-table
+                    self-insert-table
+                    keyboard-macro-table))
 
 ;; Command table for commands that are only available when Drei is a
 ;; pane.
