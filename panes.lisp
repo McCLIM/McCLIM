@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.172 2006/10/28 16:44:13 thenriksen Exp $
+;;; $Id: panes.lisp,v 1.173 2006/11/08 01:18:22 thenriksen Exp $
 
 (in-package :clim-internals)
 
@@ -2612,7 +2612,8 @@ to computed distance to scroll in response to mouse wheel events."))
   ()
   (:default-initargs :display-time nil
                      :end-of-line-action :scroll
-                     :scroll-bars :vertical))
+                     :scroll-bars :vertical
+                     :incremental-redisplay t))
 
 (defmethod initialize-instance :after ((pane interactor-pane) &rest args)
   (declare (ignore args))

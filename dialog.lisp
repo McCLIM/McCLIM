@@ -439,28 +439,28 @@ is called. Used to determine if any editing has been done by user")))
   (declare (ignore present-p))
   (let* ((editing-stream nil)
 	 (record (updating-output (stream :unique-id query-identifier
-				   :cache-value (if default-supplied-p
-						    default
-						    *no-default-cache-value*)
-				   :record-type 'av-text-record)
-		   (with-output-as-presentation
-		       (stream query-identifier 'selectable-query
-			       :single-box t)
-		     (surrounding-output-with-border
-		         (stream :shape :inset :move-cursor t)
-		       (setq editing-stream
-			     (make-instance 'standard-input-editing-stream
-					    :stream stream
-					    :cursor-visibility nil
-					    :background-ink +grey90+
-					    :single-line t))))
-		   (when default-supplied-p
-		     (input-editing-rescan-loop ;XXX probably not needed
-		      editing-stream
-		      (lambda (s)
-			(presentation-replace-input s default type view
-						    :rescan t)
-			(goatee::update-input-editing-stream s)))))))
+                                          :cache-value (if default-supplied-p
+                                                           default
+                                                           *no-default-cache-value*)
+                                          :record-type 'av-text-record)
+                   (with-output-as-presentation
+                       (stream query-identifier 'selectable-query
+                               :single-box t)
+                     (surrounding-output-with-border
+                         (stream :shape :inset :move-cursor t)
+                       (setq editing-stream
+                             (make-instance 'standard-input-editing-stream
+                                            :stream stream
+                                            :cursor-visibility nil
+                                            :background-ink +grey90+
+                                            :single-line t
+                                            :min-width t))))
+                   (when default-supplied-p
+                     (input-editing-rescan-loop ;XXX probably not needed
+                      editing-stream
+                      (lambda (s)
+                        (presentation-replace-input s default type view
+                                                    :rescan t)))))))
     (when editing-stream
       (setf (editing-stream record) editing-stream))
     record))
@@ -500,21 +500,19 @@ is called. Used to determine if any editing has been done by user")))
 		     ((error
 		       #'(lambda (c)
 			   (format *trace-output*
-				   "accepting-values accept condition: ~A~%"
-				   c)
+                                   "accepting-values accept condition: ~A~%"
+                                   c)
 			   (if interactive
-			       (progn
-				 (beep)
-				 (goatee::set-editing-stream-insertion-pointer
-				  estream
-				  (1- (stream-scan-pointer estream)))
-				 (immediate-rescan estream)
-				 (format *trace-output* "Ack!~%"))
-			       (progn
-				 (setf (accept-condition query) c)
-				 (return-from accept-condition-handler
-				   c))))))
-		   (goatee::update-input-editing-stream s)
+                               (progn
+                                 (beep)
+                                 (setf (stream-insertion-pointer estream)
+                                       (max 0 (1- (stream-scan-pointer estream))))
+                                 (immediate-rescan estream)
+                                 (format *trace-output* "Ack!~%"))
+                               (progn
+                                 (setf (accept-condition query) c)
+                                 (return-from accept-condition-handler
+                                   c))))))
 		   (if default-supplied-p
 		       (accept ptype :stream s
 			       :view view :prompt nil :default default)

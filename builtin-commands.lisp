@@ -389,6 +389,7 @@
 	       (unread-char c stream))
 	     (return (values object ptype))))))
 
+
 (with-system-redefinition-allowed
 (defun read (&optional (stream *standard-input*)
 	     (eof-error-p t)

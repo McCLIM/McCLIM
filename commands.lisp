@@ -667,7 +667,7 @@
 		 keyword-args)
        (setq ,key-possibilities (nreverse ,key-possibilities))
        (when ,key-possibilities
-	 (input-editor-format ,stream "~%(keywords)")
+	 (input-editor-format ,stream "(keywords) ")
 	 (let ((,member-ptype `(token-or-type ,,key-possibilities empty)))
 	   (loop
 	     (let* ((,key-result (prog1 (accept ,member-ptype
@@ -1146,18 +1146,18 @@
 					  (presentation-type-of arg))
 		       stream))))))))
 
-;;; Assume that stream is a goatee-based input editing stream for the moment...
-;;;
+;;; In order for this to work, the input-editing-stream must implement
+;;; a method for the nonstandard function
+;;; `input-editing-stream-bounding-rectangle'.
 (defun command-line-read-remaining-arguments-for-partial-command
     (command-table stream partial-command start-position)
   (declare (ignore start-position))
   (let ((partial-parser (partial-parser (gethash (command-name partial-command)
 						 *command-parser-table*))))
     (if (encapsulating-stream-p stream)
-	(let ((interactor (encapsulating-stream-stream stream))
-	      (editor-record (goatee::area stream)))
+	(let ((interactor (encapsulating-stream-stream stream)))
 	  (multiple-value-bind (x1 y1 x2 y2)
-	      (bounding-rectangle* editor-record)
+	      (input-editing-stream-bounding-rectangle stream)
 	    (declare (ignore y1 x2))
 	    ;; Start the dialog below the editor area
 	    (letf (((stream-cursor-position interactor) (values x1 y2)))
@@ -1169,7 +1169,6 @@
 	  (fresh-line stream)
 	  (funcall partial-parser
 		 command-table stream  partial-command)))))
-
 
 (defparameter *command-parser* #'command-line-command-parser)
 

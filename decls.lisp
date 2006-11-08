@@ -567,7 +567,7 @@
 (defgeneric erase-input-buffer (stream &optional start-position))
 
 ;;; McCLIM relies on a text editor class (by default
-;;; GOATEE-INPUT-EDITING-MIXIN) to perform the user interaction and
+;;; DREI-INPUT-EDITING-MIXIN) to perform the user interaction and
 ;;; display for input editing. Also, that class must update the stream
 ;;; buffer and the insertion pointer, cause rescans to happen, and
 ;;; handle activation gestures.

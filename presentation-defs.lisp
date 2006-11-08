@@ -741,13 +741,6 @@ call-next-method to get the \"real\" answer based on the stream type."))
   (apply #'prompt-for-accept stream type view args)
   (apply #'accept-1 stream type args))
 
-(defmethod stream-accept ((stream standard-input-editing-stream) type
-			  &rest args
-			  &key (view (stream-default-view stream))
-			  &allow-other-keys)
-  (apply #'prompt-for-accept stream type view args)
-  (apply #'accept-1 stream type args))
-
 (defmethod stream-accept ((stream #.*string-input-stream-class*) type
 			  &key (view (stream-default-view stream))
 			  (default nil defaultp)
@@ -812,13 +805,13 @@ call-next-method to get the \"real\" answer based on the stream type."))
 				 (declare (ignore stream))
 				 (funcall cont))))
       (with-input-position (stream)	; support for calls to replace-input
-        (when insert-default
+        (when (and insert-default
+                   (not (stream-rescanning-p stream)))
           ;; Insert the default value to the input stream. It should
-          ;; become fully keyboard-editable.
-          (presentation-replace-input stream
-                                       default
-                                       default-type
-                                       view))
+          ;; become fully keyboard-editable. We do not want to insert
+          ;; the default if we're rescanning, only during initial
+          ;; setup.
+          (presentation-replace-input stream default default-type view))
 	(setf (values sensitizer-object sensitizer-type)
 	      (with-input-context (type)
 		  (object object-type event options)
@@ -1082,12 +1075,14 @@ call-next-method to get the \"real\" answer based on the stream type."))
   t)
 
 (define-presentation-method present (object (type t) 
-				     stream
-				     (view textual-view)
-				     &key acceptably for-context-type)
+                                            stream
+                                            (view textual-view)
+                                            &key acceptably for-context-type)
   (declare (ignore for-context-type))
   (let ((*print-readably* acceptably))
-    (princ object stream)))
+    (if acceptably
+        (prin1 object stream)
+        (princ object stream))))
 
 (define-presentation-type nil ())
 
