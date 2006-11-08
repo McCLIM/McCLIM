@@ -25,5 +25,5 @@
     :serial t
     :components
     ((:file "package")
-     (:file "disassembly")
-     (:file "inspector")))
+     (:file "disassembly" :depends-on ("package"))
+     (:file "inspector" :depends-on ("disassembly"))))
