@@ -420,8 +420,7 @@ non-NIL."
     (if (full-redisplay-p drei-pane)
         (progn (reposition-pane drei-pane)
                (adjust-pane-bot drei-pane)
-               (setf (full-redisplay-p drei-pane) nil)
-               (window-clear drei-pane))
+               (setf (full-redisplay-p drei-pane) nil))
         (adjust-pane drei-pane))
     (update-syntax-for-display buffer (syntax buffer) top bot)
     (display-drei-contents drei-pane drei-pane (syntax buffer))
@@ -432,8 +431,7 @@ non-NIL."
     (fix-pane-viewport drei-pane)))
 
 (defgeneric full-redisplay (pane)
-  (:documentation "Return T if `pane' is queued to do a full
-redisplay, NIL otherwise."))
+  (:documentation "Queue a full redisplay for `pane'."))
 
 (defmethod full-redisplay ((pane drei-pane))
   (setf (full-redisplay-p pane) t))
