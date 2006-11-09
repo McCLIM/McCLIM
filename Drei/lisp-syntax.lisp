@@ -1866,13 +1866,12 @@ after `string'."
 (defmethod display-parse-tree ((parser-symbol literal-object-lexeme) stream (drei drei)
                                (syntax lisp-syntax))
   (updating-output
-      (stream :unique-id (list stream parser-symbol)
+      (stream :unique-id (list drei parser-symbol)
               :id-test #'equal
               :cache-value parser-symbol
               :cache-test #'eql)
     (let ((object (token-to-object syntax parser-symbol)))
-      (present object
-               (presentation-type-of object) :stream stream))))
+      (present object (presentation-type-of object) :stream stream))))
 
 (defmethod display-parse-tree ((parser-symbol lisp-lexeme) stream (drei drei)
                                (syntax lisp-syntax))
@@ -1883,7 +1882,7 @@ after `string'."
                 (eq (slot-value t1 'face)
                     (text-style-face (medium-text-style (sheet-medium stream)))))))
     (updating-output
-        (stream :unique-id (list stream parser-symbol)
+        (stream :unique-id (list drei parser-symbol)
                 :id-test #'equal
                 :cache-value parser-symbol
                 :cache-test #'cache-test)
