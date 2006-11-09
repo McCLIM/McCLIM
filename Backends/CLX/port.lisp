@@ -337,7 +337,7 @@
      mirror-region)))
 
 (defun realize-mirror-aux (port sheet
-				&key width height (x 0) (y 0)
+				&key (width 100) (height 100) (x 0) (y 0)
 				(border-width 0) (border 0)
 				(override-redirect :off)
 				(map t)
@@ -367,10 +367,12 @@
            (pixel (xlib:alloc-color (xlib:screen-default-colormap (clx-port-screen port)) color))
            (window (xlib:create-window
                     :parent (sheet-mirror (sheet-parent sheet))
-                    :width (or width
-                               (round-coordinate (bounding-rectangle-width (%sheet-mirror-region sheet))))
-                    :height (or height
-				(round-coordinate (bounding-rectangle-height (%sheet-mirror-region sheet))))
+                    :width (if (%sheet-mirror-region sheet)
+                               (round-coordinate (bounding-rectangle-width (%sheet-mirror-region sheet)))
+                               width)
+                    :height (if (%sheet-mirror-region sheet)
+                               (round-coordinate (bounding-rectangle-height (%sheet-mirror-region sheet)))
+                               height)
                     :x (if (%sheet-mirror-transformation sheet)
                                (round-coordinate (nth-value 0 (transform-position
                                                                (%sheet-mirror-transformation sheet)
