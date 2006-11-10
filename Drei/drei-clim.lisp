@@ -352,7 +352,9 @@ command loop completely."))
     #+(or mcclim building-mcclim) (climi::arm-gadget drei t)))
 
 (defmethod execute-drei-command ((drei drei-gadget-pane) command)
-  (let* ((*minibuffer* (or *minibuffer* *standard-input*)))
+  (let* ((*minibuffer* (or *minibuffer*
+                           (unless (eq drei *standard-input*)
+                             *standard-input*))))
     (accepting-from-user (drei)
       (execute-drei-command-for-frame (pane-frame drei) drei command))))
 
