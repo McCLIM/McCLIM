@@ -545,7 +545,7 @@ user in the minibuffer."
      (user-condition-mixin (c)
        (beep) (with-minibuffer-stream (minibuffer)
                 (let ((*print-escape* nil))
-                  (print-object c minibuffer))))))
+                  (princ c minibuffer))))))
 
 (defmacro with-bound-drei-special-variables ((drei-instance &key
                                               current-buffer
