@@ -46,6 +46,10 @@ activate callback to be called"))
   (:default-initargs
    :activation-gestures *standard-activation-gestures*))
 
+(defmethod initialize-instance :after ((object text-field-pane) &key value)
+  ;; Why doesn't `value-gadget' do this for us?
+  (setf (gadget-value object) value))
+
 (defmethod compose-space ((pane text-field-pane) &key width height)
   (declare (ignore width height))
   (with-sheet-medium (medium pane)
@@ -73,6 +77,10 @@ activate callback to be called"))
 	   :initform nil
            :accessor text-editor-nlines))
   (:default-initargs :activation-gestures nil))
+
+(defmethod initialize-instance :after ((object text-editor-pane) &key value)
+  ;; Why doesn't `value-gadget' do this for us?
+  (setf (gadget-value object) value))
 
 (defmethod make-pane-1 :around (fm (frame application-frame)
                                    (type (eql :text-editor))
