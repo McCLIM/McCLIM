@@ -54,9 +54,8 @@ activate callback to be called"))
           (w  (text-size medium (gadget-value pane))))
       (let ((width w)
             (height (+ as ds)))
-        (make-space-requirement :width width :height height
-                                :max-width width :max-height height
-                                :min-width width :min-height height)))))
+        (make-space-requirement :height height :max-height height :min-height height
+                                :min-width width :width width)))))
 
 (defmethod allocate-space ((pane text-field-pane) w h)
   (resize-sheet pane w h))
