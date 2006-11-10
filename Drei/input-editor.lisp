@@ -523,6 +523,45 @@ invocation of `function' "
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 
+;;; `With-input-editor-typeout'
+;;;
+;;; The CLIM spec is very vague about what this function is supposed
+;;; to do, but the Franz users guide suggests that it is to be used to
+;;; display information to the user while editing, sort of what we
+;;; normally use a minibuffer for. Perhaps the output should be put in
+;;; an output record above or below the editing area, but for now, we
+;;; just put it in the minibuffer. That also means the `:erase'
+;;; keyword argument is meaningless. We do add some extra limitations,
+;;; though (check the docstring)
+
+(defgeneric invoke-with-input-editor-typeout (stream continuation &key erase)
+  (:documentation "Call `continuation' with a single argument, a
+stream to do input-editor-typeout on."))
+
+(defmethod invoke-with-input-editor-typeout ((stream drei-input-editing-mixin)
+                                             (continuation function) &key erase)
+  (declare (ignore erase))
+  (let ((drei (drei-instance stream)))
+    (when (minibuffer drei)
+      (funcall continuation (minibuffer drei)))))
+
+(defmacro with-input-editor-typeout ((&optional (stream t) &rest args
+                                                &key erase)
+                                     &body body)
+  "`Stream' is not evaluated and must be a symbol. If T (the
+default), `*standard-input*' will be used. `Stream' will be bound
+to an `extended-output-stream' while `body' is being evaluated."
+  (declare (ignore erase))
+  (check-type stream symbol)
+  (let ((stream (if (eq stream t) *standard-input* stream)))
+    `(apply #'invoke-with-input-editor-typeout
+            ,stream
+            #'(lambda (,stream)
+                ,@body)
+            ,args)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; 
 ;;; Presentation type specialization.
 
 (define-presentation-method accept :around
