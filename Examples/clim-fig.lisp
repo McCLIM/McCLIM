@@ -278,7 +278,8 @@
           :activate-callback #'(lambda (x)
                                  (declare (ignore x))
                                  (com-clear)))
-   (status :text-field :value "CLIM Fig"))
+   (status :text-field :value "CLIM Fig"
+           :editable-p nil))
   (:layouts
    (default
      (vertically ()
