@@ -476,7 +476,7 @@ the concrete Drei implementation. ")
                 :type (or minibuffer-pane null)
                 :documentation "The minibuffer pane (or null)
 associated with the Drei instance."))
-  (:default-initargs :active t)
+  (:default-initargs :active t :editable-p t)
   (:documentation "An abstract Drei class that should not be
 directly instantiated."))
 
@@ -485,10 +485,12 @@ directly instantiated."))
               (setf (active cursor) new-val))
           (cursors drei)))
 
-(defmethod initialize-instance :after ((object drei) &rest args &key active single-line)
+(defmethod initialize-instance :after ((object drei) &rest args &key
+                                       active single-line (editable-p t))
   (declare (ignore args))
   (setf (single-line-p (implementation (buffer object))) single-line)
   (with-slots (buffer point mark top bot scan) object
+    (setf (read-only-p buffer) (not editable-p))
     (setf point (clone-mark (point buffer)))
     (when (null point)
       (setf point (clone-mark (low-mark buffer) :right)))
