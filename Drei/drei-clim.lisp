@@ -297,9 +297,12 @@ command loop completely."))
 
 (defmethod (setf gadget-value) (new-value (gadget drei-gadget-pane)
                                 &key (invoke-callback t))
-  (performing-drei-operations (gadget :with-undo nil :redisplay nil)
-    (delete-buffer-range (buffer gadget) 0 (size (buffer gadget)))
-    (insert-buffer-sequence (buffer gadget) 0 new-value))
+  ;; I think we're supposed to permit this, even if the buffer is
+  ;; non-editable.
+  (letf (((read-only-p (buffer gadget)) nil))
+    (performing-drei-operations (gadget :with-undo nil :redisplay nil)
+      (delete-buffer-range (buffer gadget) 0 (size (buffer gadget)))
+      (insert-buffer-sequence (buffer gadget) 0 new-value)))
   (when invoke-callback
     (value-changed-callback gadget
                             (gadget-client gadget)
@@ -446,7 +449,7 @@ record."))
                                    &rest args &key
                                    (syntax nil) (initial-contents "")
                                    (minibuffer t) (border-width 1)
-                                   (scroll-bars :horizontal) (editable-p t)
+                                   (scroll-bars :horizontal)
                                    (drei-class 'drei-gadget-pane))
   (check-type initial-contents array)
   (check-type border-width integer)
@@ -464,8 +467,8 @@ is not T, NIL or a `minibuffer-pane'."))))
            (drei-pane (apply #'make-pane-1 fm frame drei-class
                              :minibuffer minibuffer-pane args))
            (pane drei-pane))
-      (insert-sequence (point drei-pane) initial-contents)
-      (setf (read-only-p (buffer drei-pane)) (not editable-p))
+      (letf (((read-only-p (buffer drei-pane)) nil))
+        (insert-sequence (point drei-pane) initial-contents))
       (if syntax
           (setf (syntax (buffer drei-pane))
                 (make-instance (or (when (syntaxp syntax)
