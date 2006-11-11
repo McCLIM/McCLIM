@@ -200,7 +200,7 @@ characters."))
            #:comment-table #:deletion-table #:editing-table
            #:fill-table #:indent-table #:marking-table #:case-table
            #:movement-table #:search-table #:info-table #:self-insert-table
-           #:editor-table #:exclusive-pane-table #:exclusive-input-editor-table
+           #:editor-table #:exclusive-gadget-table #:exclusive-input-editor-table
 
            ;; DREI interface stuff.
            #:drei #:drei-pane #:drei-gadget-pane #:drei-area
