@@ -43,8 +43,7 @@
 ;;; The command table.
 
 (define-syntax-command-table lisp-table
-    :errorp nil
-    :inherit-from '(editor-table))
+    :errorp nil)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

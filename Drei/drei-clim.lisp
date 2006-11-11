@@ -32,74 +32,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; Drei command tables.
-
-;;; Commenting.
-(make-command-table 'comment-table :errorp nil)
-;;; Deleting.
-(make-command-table 'deletion-table :errorp nil)
-;;; Editing - making changes to a buffer.
-(make-command-table 'editing-table :errorp nil)
-;;; Filling.
-(make-command-table 'fill-table :errorp nil)
-;;; Dealing with charcase.
-(make-command-table 'case-table :errorp nil)
-;;; Indentation.
-(make-command-table 'indent-table :errorp nil)
-;;; Marking things.
-(make-command-table 'marking-table :errorp nil)
-;;; Moving around.
-(make-command-table 'movement-table :errorp nil)
-;;; Searching.
-(make-command-table 'search-table :errorp nil)
-;;; Information about buffer contents.
-(make-command-table 'info-table :errorp nil)
-;;; Self-insertion.
-(make-command-table 'self-insert-table :errorp nil)
-
-;;; Command table for concrete editor stuff.
-(define-syntax-command-table editor-table
-    :errorp nil
-    :inherit-from '(comment-table
-                    deletion-table
-                    editing-table
-                    case-table
-                    fill-table
-                    indent-table
-                    marking-table
-                    movement-table
-                    search-table
-                    info-table
-                    self-insert-table
-                    keyboard-macro-table))
-
-;; Command table for commands that are only available when Drei is a
-;; pane.
-(make-command-table 'exclusive-pane-table :errorp nil)
-
-;; Command table for input-editor-only commands.
-(make-command-table 'exclusive-input-editor-table :errorp nil)
-
-(define-command (com-extended-command :command-table exclusive-pane-table)
-    ()
-  "Prompt for a command name and arguments, then run it."
-  (let ((item (handler-case
-                  (accept
-                   `(command :command-table ,(command-table *current-window*))
-                   ;; this gets erased immediately anyway
-                   :prompt "" :prompt-mode :raw)
-                ((or command-not-accessible command-not-present) ()
-                  (beep)
-                  (display-message "No such command")
-                  (return-from com-extended-command nil)))))
-    (execute-drei-command *current-window* item)))
-
-(set-key 'com-extended-command
-         'exclusive-pane-table
-         '((#\x :meta)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; The Drei gadget and pane.
 ;;;
 ;;; An application can use Drei in two different ways - by using
@@ -254,9 +186,6 @@ command loop completely."))
         (setf space-width (text-size medium " " :text-style style)
               tab-width (* 8 space-width))))))
 
-(defmethod additional-command-tables append ((drei drei-pane) (table command-table))
-  `(exclusive-pane-table))
-
 ;;; The fun is that in the gadget version of Drei, we do not control
 ;;; the application command loop, and in fact, need to operate
 ;;; completely independently of it - we can only act when the our port
@@ -361,6 +290,10 @@ command loop completely."))
     (accepting-from-user (drei)
       (execute-drei-command-for-frame (pane-frame drei) drei command))))
 
+(defmethod additional-command-tables append ((drei drei-gadget-pane)
+                                             (table drei-command-table))
+  `(exclusive-gadget-table))
+
 (defclass drei-area (drei standard-sequence-output-record
                           command-processor
                           instant-macro-execution-mixin)
@@ -392,7 +325,7 @@ record."))
 (defmethod (setf active) :after (new-val (drei drei-area))
   (replay drei (editor-pane drei)))
 
-(defmethod additional-command-tables append ((drei drei-area) (table command-table))
+(defmethod additional-command-tables append ((drei drei-area) (table drei-command-table))
   `(exclusive-input-editor-table))
 
 (defclass drei-minibuffer-pane (minibuffer-pane)
@@ -425,14 +358,6 @@ record."))
 
 (defmethod display-drei (frame (instance drei-area))
   (display-drei-area instance))
-
-(defgeneric command-table (drei)
-  (:documentation "Return the command table object used by the
-  Drei instance `drei'."))
-
-(defmethod command-table ((drei drei))
-  (find-command-table (or (command-table (syntax (buffer drei)))
-                          'editor-table)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

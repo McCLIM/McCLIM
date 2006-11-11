@@ -24,12 +24,19 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
+;;; Every syntax must have a command table.
+
+(define-syntax-command-table fundamental-table
+    :errorp nil)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
 ;;; The syntax object and misc stuff.
 
 (define-syntax fundamental-syntax (syntax)
   ((lines :initform (make-instance 'standard-flexichain))
    (scan :accessor scan))
-  (:command-table editor-table)
+  (:command-table fundamental-table)
   (:name "Fundamental"))
 
 (defmethod initialize-instance :after ((syntax fundamental-syntax) &rest args)

@@ -132,7 +132,7 @@ characters."))
 (defpackage :drei-syntax
   (:use :clim-lisp :clim :drei-buffer :drei-base :flexichain :esa-utils)
   (:export #:syntax #:syntaxp #:define-syntax #:*default-syntax* #:cursor-positions
-           #:syntax-command-table #:additional-command-tables #:define-syntax-command-table
+           #:syntax-command-table #:use-editor-commands-p #:additional-command-tables #:define-syntax-command-table
            #:eval-option
            #:define-option-for-syntax
            #:current-attributes-for-syntax

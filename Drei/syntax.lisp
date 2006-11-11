@@ -25,7 +25,7 @@
 (defclass syntax (name-mixin)
   ((buffer :initarg :buffer :reader buffer)
    (command-table :initarg :command-table
-                  :initform nil
+                  :initform (error "A command table has not been provided for this syntax")
                   :reader command-table)
    (%cursor-positions :accessor cursor-positions
                       :initform nil)))
@@ -73,6 +73,17 @@ syntax is used in other applications than the one it is supposed
 to. For example, the Return From Definition command should be
 available when Lisp syntax is used in Climacs (or another
 editor), but not anywhere else."))
+
+(defgeneric use-editor-commands-p (command-table)
+  (:documentation "If `command-table' is supposed to include
+standard editor commands (for inserting objects, moving cursor,
+etc), this function will return T (the default). If you want your
+syntax to use standard editor commands, you should *not* inherit
+from `editor-table' - the command tables containing the editor
+commands will be added automatically, as long as this function
+returns T.")
+  (:method ((command-table syntax-command-table))
+    t))
 
 (defgeneric additional-command-tables (editor command-table)
   (:method-combination append)
@@ -240,20 +251,23 @@ mandated by file types or attribute lists.")
     ;; collide with user-defined syntax initargs.  Use
     ;; DREI-SYNTAX::%NAME instead.
     (setf default-initargs (list* :name name default-initargs))
-    (once-only (command-table)
-      `(progn
-         (push (make-syntax-description
-                :name ,name :class-name ',class-name
-                :pathname-types ',pathname-types)
-               *syntaxes*)
-         (defclass ,class-name ,superclasses ,slots
-           (:default-initargs :command-table (when (find-command-table ,command-table)
-                                               (if (find-class ,command-table nil)
-                                                   (make-instance ,command-table :name ,command-table)
-                                                   ;; It must be just a command table.
-                                                   (find-command-table ,command-table)))
-             ,@default-initargs)
-           ,@defclass-options)))))
+    `(progn
+       (push (make-syntax-description
+              :name ,name :class-name ',class-name
+              :pathname-types ',pathname-types)
+             *syntaxes*)
+       (defclass ,class-name ,superclasses ,slots
+         ,(append '(:default-initargs)
+                  (when command-table
+                    (list :command-table
+                          (once-only (command-table)
+                            `(when (find-command-table ,command-table)
+                               (if (find-class ,command-table nil)
+                                   (make-instance ,command-table :name ,command-table)
+                                   ;; It must be just a command table.
+                                   (find-command-table ,command-table))))))
+                  default-initargs)
+         ,@defclass-options))))
 
 (defgeneric eval-option (syntax name value)
   (:documentation "Evaluate the option `name' with the specified

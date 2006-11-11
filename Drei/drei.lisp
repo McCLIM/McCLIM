@@ -405,6 +405,96 @@ single-line buffer."))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
+;;; Drei command tables.
+
+;;; Commenting.
+(make-command-table 'comment-table :errorp nil)
+;;; Deleting.
+(make-command-table 'deletion-table :errorp nil)
+;;; Editing - making changes to a buffer.
+(make-command-table 'editing-table :errorp nil)
+;;; Filling.
+(make-command-table 'fill-table :errorp nil)
+;;; Dealing with charcase.
+(make-command-table 'case-table :errorp nil)
+;;; Indentation.
+(make-command-table 'indent-table :errorp nil)
+;;; Marking things.
+(make-command-table 'marking-table :errorp nil)
+;;; Moving around.
+(make-command-table 'movement-table :errorp nil)
+;;; Searching.
+(make-command-table 'search-table :errorp nil)
+;;; Information about buffer contents.
+(make-command-table 'info-table :errorp nil)
+;;; Self-insertion.
+(make-command-table 'self-insert-table :errorp nil)
+
+;;; Command table for concrete editor stuff.
+(define-syntax-command-table editor-table
+    :errorp nil
+    :inherit-from '(comment-table
+                    deletion-table
+                    editing-table
+                    case-table
+                    fill-table
+                    indent-table
+                    marking-table
+                    movement-table
+                    search-table
+                    info-table
+                    self-insert-table
+                    keyboard-macro-table))
+
+;; Command table for commands that are only available when Drei is a
+;; gadget. There is no pane-exclusive table because the Drei pane is
+;; not meant to be used as-is, but is meant to be subclassed, so we do
+;; not want to force users to work around too much default behavior.
+(make-command-table 'exclusive-gadget-table :errorp nil)
+
+;; Command table for input-editor-only commands.
+(make-command-table 'exclusive-input-editor-table :errorp nil)
+
+(define-command (com-drei-extended-command :command-table exclusive-gadget-table)
+    ()
+  "Prompt for a command name and arguments, then run it."
+  (let ((item (handler-case
+                  (accept
+                   `(command :command-table ,(command-table *current-window*))
+                   ;; this gets erased immediately anyway
+                   :prompt "" :prompt-mode :raw)
+                ((or command-not-accessible command-not-present) ()
+                  (beep)
+                  (display-message "No such command")
+                  (return-from com-drei-extended-command nil)))))
+    (execute-drei-command *current-window* item)))
+
+(set-key 'com-drei-extended-command
+         'exclusive-gadget-table
+         '((#\x :meta)))
+
+(defclass drei-command-table (standard-command-table)
+  ()
+  (:documentation "This class is used to provide the kind of
+indirection we need to support syntax-specific command tables in
+Drei. Commands should *NOT* be added to it."))
+
+(defmethod additional-command-tables append ((frame application-frame)
+                                             (command-table syntax-command-table))
+  "This method allows users of Drei to extend syntaxes with new,
+app-specific commands, as long as they inherit from a Drei class
+and specialise a method for it."
+  (additional-command-tables *current-window* command-table))
+
+(defmethod command-table-inherit-from ((table drei-command-table))
+  (let ((syntax-table (command-table *current-syntax*)))
+    (list* syntax-table
+           (when (use-editor-commands-p syntax-table)
+             'editor-table)
+           (additional-command-tables *current-window* table))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
 ;;; The basic Drei class.
 
 (defclass drei ()
@@ -475,7 +565,15 @@ the concrete Drei implementation. ")
                 :initarg :minibuffer
                 :type (or minibuffer-pane null)
                 :documentation "The minibuffer pane (or null)
-associated with the Drei instance."))
+associated with the Drei instance.")
+   (%command-table :initform (make-instance 'drei-command-table
+                                            :name 'drei-dispatching-table)
+                   :reader command-table
+                   :initarg :command-table
+                   :type standard-command-table
+                   :documentation "The command table used for
+looking up commands for the Drei instance. Has a sensible
+default, don't override it unless you know what you are doing."))
   (:default-initargs :active t :editable-p t)
   (:documentation "An abstract Drei class that should not be
 directly instantiated."))
@@ -686,13 +784,6 @@ syntax to reflect the changes."
   (let ((*standard-input* (or *minibuffer* *standard-input*)))
     (execute-drei-command-for-frame (pane-frame (editor-pane drei))
                                     drei command)))
-
-(defmethod additional-command-tables append ((frame application-frame)
-                                             (command-table command-table))
-  "This method allows users of Drei to extend syntaxes with new,
-app-specific commands, as long as they inherit from a Drei class
-and specialise a method for it."
-  (additional-command-tables *current-window* command-table))
 
 (defgeneric invoke-accepting-from-user (drei continuation)
   (:documentation "Set up `drei' and the environment so that
