@@ -246,12 +246,15 @@
 	       :modifier-state (gdkmodifiertype->modifier-state state)
 	       :timestamp time))))))))
 
+(defvar *last-seen-button* 3)
+
 (define-signal button-handler (widget event)
   (cffi:with-foreign-slots
       ((type time button state x y x_root y_root) event gdkeventbutton)
     (when (eql type GDK_BUTTON_PRESS)
       ;; Hack alert: Menus don't work without this.
       (gdk_pointer_ungrab GDK_CURRENT_TIME))
+    (setf *last-seen-button* button)
     (enqueue
      (make-instance (if (eql type GDK_BUTTON_PRESS)
 			'pointer-button-press-event
@@ -368,6 +371,12 @@
        :value (dummy-menu-item-sheet-value dummy-item)
        :itemspec (dummy-menu-item-sheet-itemspec dummy-item)))))
 
+(define-signal popup-deactivated-handler (widget (menu :pointer))
+  menu
+  (enqueue
+   (make-instance 'context-menu-cancelled-event
+     :sheet (widget->sheet widget *port*))))
+
 #-sbcl
 (define-signal (scrollbar-change-value-handler :return-type :int)
     (widget (scroll gtkscrolltype) (value :double))
@@ -386,3 +395,19 @@
 	     :value (sb-kernel:make-double-float hi lo)
 	     :sheet (widget->sheet widget *port*)))
   1)
+
+(defvar *later-table* (make-hash-table))
+(defvar *later-counter* 0)
+
+(defun invoke-later (fun)
+  (with-gtk ()
+    (let ((i (incf *later-counter*)))
+      (setf (gethash i *later-table*) fun)
+      (g_idle_add (cffi:get-callback 'idle-function) i))))
+
+(cffi:defcallback idle-function :int
+  ((data :long))			;hack
+  (let ((fun (gethash data *later-table*)))
+    (remhash data *later-table*)
+    (funcall fun))
+  0)

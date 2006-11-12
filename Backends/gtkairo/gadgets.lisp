@@ -33,6 +33,8 @@
     ((value :initarg :value :accessor event-value)
      (itemspec :initarg :itemspec :accessor event-itemspec)))
 
+(defclass context-menu-cancelled-event (gadget-event) ())
+
 
 ;;;; Classes
 
@@ -163,7 +165,7 @@
 	  (&key value style items documentation active type)
 	  (cdr x)
 	(declare (ignore style documentation active))
-	(values (if items :menu type)
+	(values (cond (items :menu) (type) (t :item))
 		(car x)
 		(or value (car x))
 		items)))))
@@ -208,6 +210,8 @@
 		      (gtk_menu_item_set_submenu item menu)
 		      item)))))
 	  (gtk_menu_shell_append menu gtkmenuitem))))
+    (setf (widget->sheet menu port) sheet)
+    (connect-signal menu "deactivate" 'popup-deactivated-handler)
     (gtk_widget_show_all menu)
     menu))
 

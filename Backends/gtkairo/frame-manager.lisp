@@ -116,15 +116,14 @@
   (port-enable-sheet (car climi::*all-ports*)
 		     (slot-value frame 'climi::top-level-sheet)))
 
-#+(or)					;doesn't work yet
 (defmethod frame-manager-menu-choose
     ((frame-manager gtkairo-frame-manager)
      items
      &key associated-window printer presentation-type
-     (default-item nil default-item-p)
-     text-style label cache unique-id id-test cache-value cache-test
-     max-width max-height n-rows n-columns x-spacing y-spacing row-wise
-     cell-align-x cell-align-y scroll-bars pointer-documentation)
+	  (default-item nil default-item-p)
+	  text-style label cache unique-id id-test cache-value cache-test
+	  max-width max-height n-rows n-columns x-spacing y-spacing row-wise
+	  cell-align-x cell-align-y scroll-bars pointer-documentation)
   (declare
    ;; XXX hallo?
    (ignore printer presentation-type default-item default-item-p
@@ -136,16 +135,27 @@
 		    (pane-frame associated-window)
 		    *application-frame*))
 	 (port (port frame))
-	 (tls (slot-value frame 'climi::top-level-sheet))
-	 (tls-mirror (climi::port-lookup-mirror port tls))
 	 (sheet (make-instance 'dummy-context-menu-sheet))
 	 (menu (make-context-menu port sheet items)))
-    (gtk_menu_popup menu
-		    (cffi:null-pointer)
-		    (cffi:null-pointer)
-		    (cffi:null-pointer)
-		    (cffi:null-pointer)
-		    0
-		    (gtk_get_current_event_time))
+    (invoke-later
+     (lambda ()
+       (invoke-later (lambda () (gdk_pointer_ungrab GDK_CURRENT_TIME)))
+       (gtk_menu_popup menu
+		       (cffi:null-pointer)
+		       (cffi:null-pointer)
+		       (cffi:null-pointer)
+		       (cffi:null-pointer)
+		       *last-seen-button*
+		       (gtk_get_current_event_time))))
     (let ((event (event-read sheet)))
-      (values (event-value event) (event-itemspec event) event))))
+      ;; `deactivate' is signalled on the menu before `clicked' on the item,
+      ;; so let's make sure we have processed all events before deciding
+      ;; whether the was a `clicked' or not
+      (gtk-main-iteration port)
+      (when (typep (event-peek sheet) 'context-menu-clicked-event)
+	(setf event (event-read sheet)))
+      (etypecase event
+	(context-menu-clicked-event
+	  (values (event-value event) (event-itemspec event) event))
+	(context-menu-cancelled-event
+	  nil)))))
