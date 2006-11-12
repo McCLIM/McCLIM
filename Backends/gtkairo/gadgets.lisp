@@ -35,6 +35,8 @@
 
 (defclass context-menu-cancelled-event (gadget-event) ())
 
+(defclass list-selection-event (gadget-event) ())
+
 
 ;;;; Classes
 
@@ -44,6 +46,10 @@
 
 (defclass gtk-check-button (native-widget-mixin toggle-button) ())
 (defclass gtk-radio-button (native-widget-mixin toggle-button) ())
+
+(defclass gtk-list (native-widget-mixin list-pane climi::meta-list-pane)
+    ((title :initarg :title :initform "" :accessor list-pane-title)
+     (tree-view :accessor list-pane-tree-view)))
 
 (defclass native-slider (native-widget-mixin climi::slider-gadget)
     ((climi::show-value-p :type boolean
@@ -79,6 +85,104 @@
   (let ((widget (gtk_check_button_new_with_label (climi::gadget-label sheet))))
     (gtk_toggle_button_set_active widget (if (gadget-value sheet) 1 0))
     widget))
+
+(defconstant +g-type-string+ (ash 16 2))
+
+(defun uninstall-scroller-pane (pane)
+  (with-slots (climi::scroll-bar
+	       climi::vscrollbar climi::hscrollbar
+	       climi::x-spacing climi::y-spacing)
+      pane
+    (setf scroll-bar nil)
+    (when climi::vscrollbar
+      (sheet-disown-child pane climi::vscrollbar)
+      (setf climi::vscrollbar nil))
+    (when climi::hscrollbar
+      (sheet-disown-child pane climi::hscrollbar)
+      (setf climi::hscrollbar nil))
+    (setf climi::x-spacing 0)
+    (setf climi::y-spacing 0)
+    (let ((r (sheet-region pane)))
+      (allocate-space pane
+		      (bounding-rectangle-width r)
+		      (bounding-rectangle-height r)))))
+
+(defun list-pane-selection (sheet)
+  (gtk_tree_view_get_selection (list-pane-tree-view sheet)))
+
+(defmethod realize-native-widget ((sheet gtk-list))
+  (cffi:with-foreign-object (types :ulong 2)
+    (setf (cffi:mem-aref types :long 0) +g-type-string+)
+    (setf (cffi:mem-aref types :long 1) 0)
+    (let* ((model (gtk_list_store_newv 1 types))
+	   (tv (gtk_tree_view_new_with_model model))
+	   (name-key (climi::list-pane-name-key sheet))
+	   (column (gtk_tree_view_column_new))
+	   (renderer (gtk_cell_renderer_text_new)))
+      (setf (list-pane-tree-view sheet) tv)
+      (gtk_tree_view_column_pack_start column renderer 1)
+      (gtk_tree_view_insert_column tv column -1)
+      (gtk_tree_view_column_add_attribute column renderer "text" 0)
+      (gtk_tree_view_column_set_title column (list-pane-title sheet))
+      (cffi:with-foreign-object (&iter 'gtktreeiter)
+	(dolist (i (climi::list-pane-items sheet))
+	  (gtk_list_store_append model &iter)
+	  (cffi:with-foreign-string (n (funcall name-key i))
+	    (cffi:with-foreign-object (&value 'gvalue)
+	      (setf (cffi:foreign-slot-value &value 'gvalue 'type) 0)
+	      (g_value_init &value +g-type-string+)
+	      (g_value_set_string &value n)
+	      (gtk_list_store_set_value model &iter 0 &value)))))
+      (gtk_tree_selection_set_mode
+       (list-pane-selection sheet)
+       (if (eq (climi::list-pane-mode sheet) :exclusive)
+	   :browse
+	   :multiple))
+      (gtk-list-reset-selection sheet)
+      (let ((ancestor
+	     (and (sheet-parent sheet) (sheet-parent (sheet-parent sheet))))
+	    (result tv))
+	(when (typep ancestor 'scroller-pane)
+	  (uninstall-scroller-pane ancestor))
+	(let ((wrapper (gtk_scrolled_window_new
+			(gtk_tree_view_get_hadjustment tv)
+			(gtk_tree_view_get_vadjustment tv))))
+	  (gtk_container_add wrapper tv)
+	  (setf result wrapper))
+	(setf (list-pane-tree-view sheet) tv) ;?!
+	(gtk_tree_selection_set_select_function
+	 (list-pane-selection sheet)
+	 (cffi:get-callback 'view-selection-callback)
+	 result
+	 (cffi:null-pointer))
+	result))))
+
+(defun gtk-list-select-value (sheet value)
+  (let ((path
+	 (gtk_tree_path_new_from_indices
+	  (position value
+		    (climi::list-pane-items sheet)
+		    :key (climi::list-pane-value-key sheet)
+		    :test (climi::list-pane-test sheet))
+	  :int -1)))
+    (gtk_tree_selection_select_path (list-pane-selection sheet) path)
+    (gtk_tree_path_free path)))
+
+(defun gtk-list-reset-selection (sheet)
+  (gtk_tree_selection_unselect_all (list-pane-selection sheet))
+  (let ((value (gadget-value sheet)))
+    (if (eq (climi::list-pane-mode sheet) :exclusive)
+	(gtk-list-select-value sheet value)
+	(dolist (v value)
+	  (gtk-list-select-value sheet v)))))
+
+(defmethod (setf gadget-value) :after
+	   (value (gadget gtk-list) &key invoke-callback)
+  (declare (ignore invoke-callback))
+  (with-gtk ()
+    (let ((mirror (sheet-direct-mirror gadget)))
+      (when mirror
+	(gtk-list-reset-selection gadget)))))
 
 (defun make-scale (fn sheet)
   (let* ((min (df (gadget-min-value sheet)))
@@ -232,6 +336,10 @@
   ;; no signals
   )
 
+(defmethod connect-native-signals ((sheet gtk-list) widget)
+  ;; no signals
+  )
+
 
 ;;;; Event handling
 
@@ -284,6 +392,40 @@
 (defmethod handle-event
     ((pane gtk-nonmenu) (event magic-gadget-event))
   (funcall (gtk-nonmenu-callback pane) pane nil))
+
+(defvar *list-selection-result*)
+
+(cffi:defcallback list-selection-callback :void
+  ((model :pointer)
+   (path :pointer)
+   (iter :pointer)
+   (data :pointer))
+  model iter data
+  (setf (gethash (cffi:mem-ref (gtk_tree_path_get_indices path) :int 0)
+		 *list-selection-result*)
+	t))
+
+(defmethod handle-event
+    ((pane gtk-list) (event list-selection-event))
+  (with-gtk ()
+    (let ((*list-selection-result* (make-hash-table))
+	  (value-key (climi::list-pane-value-key pane)))
+      (gtk_tree_selection_selected_foreach
+       (list-pane-selection pane)
+       (cffi:get-callback 'list-selection-callback)
+       (cffi:null-pointer))
+      (setf (gadget-value pane :invoke-callback t)
+	    (if (eq (climi::list-pane-mode pane) :exclusive)
+		(loop
+		    for i being each hash-key in *list-selection-result*
+		    do (return
+			 (funcall value-key
+				  (elt (climi::list-pane-items pane) i))))
+		(loop
+		    for i from 0
+		    for value in (climi::list-pane-items pane)
+		    when (gethash i *list-selection-result*)
+		    collect (funcall value-key value)))))))
 
 
 ;;; COMPOSE-SPACE

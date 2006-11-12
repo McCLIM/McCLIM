@@ -411,3 +411,15 @@
     (remhash data *later-table*)
     (funcall fun))
   0)
+
+(cffi:defcallback view-selection-callback :int
+  ((selection :pointer)
+   (model :pointer)
+   (path :pointer)
+   (isselected :int)
+   (data :pointer))
+  selection model path isselected
+  (when (boundp '*port*)		;kludge
+    (let ((sheet (widget->sheet data *port*)))
+      (enqueue (make-instance 'list-selection-event :sheet sheet))))
+  1)

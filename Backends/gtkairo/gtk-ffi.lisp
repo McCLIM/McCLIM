@@ -290,6 +290,17 @@
   (max_aspect :double)
   (win_gravity :int))
 
+(cffi:defcstruct gtktreeiter
+  (stamp :int)
+  (user_data :pointer)
+  (user_data2 :pointer)
+  (user_data3 :pointer))
+
+(cffi:defcstruct gvalue
+  (type :ulong)
+  (data0 :uint64)
+  (data1 :uint64))
+
 (cffi:defcenum gdkfunction
     :copy :invert :xor :clear :and :and_reverse :and_invert :noop :or :equiv
     :or_reverse :copy_invert :or_invert :nand :nor :set)
@@ -298,6 +309,9 @@
     :none :jump :step_backward :step_forward :page_backward :page_forward
     :step_up :step_down :page_up :page_down :step_left :step_right :page_left
     :page_right :start :end)
+
+(cffi:defcenum gtkselectionmode
+    :none :single :browse :multiple)
 
 
 ;;; GTK functions
@@ -782,6 +796,131 @@
   ;; hack
   ;; (data :pointer)
   (data :long))
+
+(defcfun "gtk_tree_view_new_with_model"
+    :pointer
+  (model :pointer))
+
+(defcfun "gtk_list_store_newv"
+    :pointer
+  (columns :int)
+  (types :pointer))
+
+(defcfun "gtk_list_store_append"
+    :void
+  (list_store :pointer)
+  (iter :pointer))
+
+(defcfun "gtk_list_store_set_value"
+    :void
+  (list_store :pointer)
+  (iter :pointer)
+  (column :int)
+  (value :pointer))
+
+(defcfun "g_value_init"
+    :pointer
+  (gvalue :pointer)
+  (gtype :ulong))
+
+(defcfun "g_value_set_string"
+    :void
+  (gvalue :pointer)
+  (string :pointer))
+
+(defcfun "gtk_cell_renderer_text_new" :pointer)
+
+(defcfun "gtk_tree_view_column_new" :pointer)
+
+(defcfun "gtk_tree_view_column_get_widget"
+    :pointer
+  (column :pointer))
+
+(defcfun "gtk_tree_view_column_set_widget"
+    :void
+  (column :pointer)
+  (widget :pointer))
+
+(defcfun "gtk_tree_view_column_pack_start"
+    :void
+  (column :pointer)
+  (cell :pointer)
+  (expand :int))
+
+(defcfun "gtk_tree_view_insert_column"
+    :int
+  (treeview :pointer)
+  (column :pointer)
+  (position :int))
+
+(defcfun "gtk_tree_view_column_add_attribute"
+    :void
+  (column :pointer)
+  (renderer :pointer)
+  (attribute :string)
+  (column-index :int))
+
+(defcfun "gtk_tree_view_column_set_title"
+    :void
+  (column :pointer)
+  (title :string))
+
+(defcfun "gtk_scrolled_window_new"
+    :pointer
+  (hadjustment :pointer)
+  (vadjustment :pointer))
+
+(defcfun "gtk_tree_view_get_hadjustment"
+    :pointer
+  (tv :pointer))
+
+(defcfun "gtk_tree_view_get_vadjustment"
+    :pointer
+  (tv :pointer))
+
+(defcfun "gtk_tree_view_get_selection"
+    :pointer
+  (tv :pointer))
+
+(defcfun "gtk_tree_selection_set_mode"
+    :void
+  (selection :pointer)
+  (mode gtkselectionmode))
+
+(defcfun "gtk_tree_selection_unselect_all"
+    :void
+  (selection :pointer))
+
+(defcfun "gtk_tree_selection_select_path"
+    :void
+  (selection :pointer)
+  (path :pointer))
+
+(defcfun "gtk_tree_path_new_from_indices"
+    :pointer
+  (index :int)
+  &rest)
+
+(defcfun "gtk_tree_path_free"
+    :void
+  (path :pointer))
+
+(defcfun "gtk_tree_selection_set_select_function"
+    :void
+  (selection :pointer)
+  (fun :pointer)
+  (data :pointer)
+  (destroynotify :pointer))
+
+(defcfun "gtk_tree_path_get_indices"
+    :pointer
+  (path :pointer))
+
+(defcfun "gtk_tree_selection_selected_foreach"
+    :void
+  (selection :pointer)
+  (fun :pointer)
+  (data :pointer))
 
 (defconstant GDK_EXPOSURE_MASK             (ash 1 1))
 (defconstant GDK_POINTER_MOTION_MASK       (ash 1 2))
