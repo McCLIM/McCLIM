@@ -87,12 +87,13 @@
 
 (defun dribble-x-errors ()
   #-(or win32 windows mswindows)
-  (unless (zerop *-gdk-error-code*)
-    (warn "Ignoring X error ~D: ~A"
-	  *-gdk-error-code*
-	  (cffi:with-foreign-pointer-as-string (buf 64)
-	    (XGetErrorText *gdk-display* *-gdk-error-code* buf 63)))
-    (setf *-gdk-error-code* 0)))
+  (let ((code (gdk_error_trap_pop)))
+    (unless (zerop code)
+      (warn "Ignoring X error ~D: ~A"
+            code
+            (cffi:with-foreign-pointer-as-string (buf 64)
+              (XGetErrorText *gdk-display* code buf 63))))
+    (gdk_error_trap_push)))
 
 ;; thread-safe entry function
 (defun gtk-main-iteration (port &optional block)

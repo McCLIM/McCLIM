@@ -76,7 +76,7 @@
     (g_thread_init (cffi:null-pointer))
     (gdk_threads_init)
     #-(or win32 windows mswindows)
-    (setf *-gdk-error-warnings* 0))
+    (gdk_error_trap_push))
   (with-gtk ()
     ;; FIXME: hier koennten wir mindestens ein anderes --display uebergeben
     ;; wenn wir wollten
@@ -135,14 +135,11 @@
 
 (defvar *double-buffering-p* t)
 
-(defparameter *old-frontend-size-hack* t)
-
 (defmethod mirror-drawable ((mirror widget-mirror))
   (if *double-buffering-p*
       (or (mirror-buffering-pixmap mirror)
 	  (setf (mirror-buffering-pixmap mirror)
-		(let* ((*old-frontend-size-hack* nil)
-		       (window (mirror-real-drawable mirror))
+		(let* ((window (mirror-real-drawable mirror))
 		       (region (climi::sheet-mirror-region
 				(climi::port-lookup-sheet
 				 (mirror-port mirror)
@@ -644,22 +641,18 @@
   (error "port-string-width called, what now?"))
 
 (defmethod port-mirror-width ((port gtkairo-port) sheet)
-  (if *old-frontend-size-hack*
-      #x10000
-      (cffi:with-foreign-object (r 'gtkrequisition)
-	(gtk_widget_size_request
-	 (mirror-widget (climi::port-lookup-mirror port sheet))
-	 r)
-	(cffi:foreign-slot-value r 'gtkrequisition 'width))))
+  (cffi:with-foreign-object (r 'gtkrequisition)
+    (gtk_widget_size_request
+     (mirror-widget (climi::port-lookup-mirror port sheet))
+     r)
+    (cffi:foreign-slot-value r 'gtkrequisition 'width)))
 
 (defmethod port-mirror-height ((port gtkairo-port) sheet)
-  (if *old-frontend-size-hack*
-      #x10000
-      (cffi:with-foreign-object (r 'gtkrequisition)
-	(gtk_widget_size_request
-	 (mirror-widget (climi::port-lookup-mirror port sheet))
-	 r)
-	(cffi:foreign-slot-value r 'gtkrequisition 'height))))
+  (cffi:with-foreign-object (r 'gtkrequisition)
+    (gtk_widget_size_request
+     (mirror-widget (climi::port-lookup-mirror port sheet))
+     r)
+    (cffi:foreign-slot-value r 'gtkrequisition 'height)))
 
 (defmethod port-mirror-width ((port gtkairo-port) (sheet gtkairo-graft))
   (graft-width sheet))

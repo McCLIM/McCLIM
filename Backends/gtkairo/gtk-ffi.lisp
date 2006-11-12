@@ -133,8 +133,8 @@
 
 ;;; Error handling:
 
-(cffi:defcvar "_gdk_error_warnings" :int)
-(cffi:defcvar "_gdk_error_code" :int)
+(defcfun "gdk_error_trap_push" :void)
+(defcfun "gdk_error_trap_pop" :int)
 
 #-(or win32 mswindows windows)
 (cffi:defcfun "XGetErrorText"
