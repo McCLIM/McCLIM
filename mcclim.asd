@@ -233,8 +233,10 @@
                                                     "bordered-output" "presentation-defs"
                                                     "dialog-views" "input-editing"
                                                     "commands"))
-               (:file "builtin-commands" :depends-on ("table-formatting" "commands" "presentations"
-                                                                         "presentation-defs" "input-editing"))))
+               (:file "builtin-commands" :depends-on ("table-formatting"
+                                                      "commands" "presentations"
+                                                      "dialog" "presentation-defs"
+                                                      "input-editing"))))
 
 (defsystem :esa-mcclim
   :depends-on (:clim-core)
