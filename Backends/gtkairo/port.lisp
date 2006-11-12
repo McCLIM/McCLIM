@@ -133,7 +133,9 @@
 (defmethod mirror-real-drawable ((mirror widget-mirror))
   (gtkwidget-gdkwindow (mirror-widget mirror)))
 
-(defvar *double-buffering-p* t)
+(defvar *double-buffering-p*
+    #+(or win32 windows mswindows) t
+    #-(or win32 windows mswindows) nil)
 
 (defmethod mirror-drawable ((mirror widget-mirror))
   (if *double-buffering-p*
