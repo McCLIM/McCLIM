@@ -284,12 +284,15 @@
      (value :initarg :value :accessor dummy-menu-item-sheet-value)
      (itemspec :initarg :itemspec :accessor dummy-menu-item-sheet-itemspec)))
 
-(defun make-context-menu (port sheet items)
+(defun make-context-menu (port sheet items &key printer)
   (let ((menu (gtk_menu_new)))
     (dolist (itemspec items)
       (multiple-value-bind (type display-object value sub-items)
 	  (destructure-mc-menu-item itemspec)
-	(let* ((label (princ-to-string display-object))
+	(let* ((label (with-output-to-string (s)
+			(funcall (or printer #'print-menu-item)
+				 display-object
+				 s)))
 	       (gtkmenuitem
 		(ecase type
 		  (:divider

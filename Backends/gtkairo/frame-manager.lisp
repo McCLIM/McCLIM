@@ -129,7 +129,7 @@
 	  cell-align-x cell-align-y scroll-bars pointer-documentation)
   (declare
    ;; XXX hallo?
-   (ignore printer presentation-type default-item default-item-p
+   (ignore presentation-type default-item default-item-p
 	   text-style label cache unique-id id-test cache-value
 	   cache-test max-width max-height n-rows n-columns x-spacing
 	   y-spacing row-wise cell-align-x cell-align-y scroll-bars
@@ -139,7 +139,7 @@
 		    *application-frame*))
 	 (port (port frame))
 	 (sheet (make-instance 'dummy-context-menu-sheet))
-	 (menu (make-context-menu port sheet items)))
+	 (menu (make-context-menu port sheet items :printer printer)))
     (invoke-later
      (lambda ()
        (invoke-later (lambda () (gdk_pointer_ungrab GDK_CURRENT_TIME)))
