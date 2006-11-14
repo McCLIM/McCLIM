@@ -199,7 +199,7 @@ The body is executed for each element, with object being the current object
           (end-of-line mark)
           (delete-region offset mark)))))
 
-(defgeneric extract-line (mark &key from-end whole-line as-string)
+(defgeneric extract-line (mark &key from-end whole-line)
   (:documentation "Destructively remove part of a line and return
 it. The line `mark' is in indicates which line to perform the
 extraction on. The line contents from the beginning of the line
