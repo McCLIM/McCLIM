@@ -409,6 +409,27 @@ point at the beginning of the last line of the buffer."
 	 'marking-table
 	 '((#\x :control) (#\x :control)))
 
+(define-command (com-sort-lines :name t :command-table editing-table)
+    ((sort-ascending 'boolean :prompt "Sort in ascending order"))
+  "Sort the lines in the region delimited by current point and
+mark. The lines will be lexicographically sorted, ignoring all
+non-character objects in the lines. When the command is run, it
+will ask whether to sort in ascending or descending order."
+  ;; I think the fastest thing is to extract all the lines to an list
+  ;; of lines, sort the list, and put the lines back in. The
+  ;; cons-memory overhead is probably smaller than writing an in-place
+  ;; sort algorithm (though the latter definitely wins on hack value).
+  (let ((lines (extract-lines-in-region *current-point* *current-mark*)))
+    (dolist (line (sort lines (if sort-ascending
+                                  #'string<=
+                                  #'string>=)
+                        :key #'(lambda (line)
+                                 (coerce (remove-if-not #'character line)
+                                         'string))))
+      (insert-sequence *current-point* line)
+      (insert-object *current-point* #\Newline))
+    (com-backward-delete-object 1 nil)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 
 ;;; Kill-ring
