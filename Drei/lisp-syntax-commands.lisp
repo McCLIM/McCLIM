@@ -184,12 +184,6 @@ the arglist for the most recently enclosed operator."
       (rotatef mark point))
     (eval-region mark point *current-syntax*)))
 
-(define-command (com-compile-definition :name t :command-table pane-lisp-table)
-    ()
-  "Compile and load definition at point."
-  (evaluating-interactively
-    (compile-definition-interactively *current-point* *current-syntax*)))
-
 (define-command (com-eval-last-expression :name t :command-table pane-lisp-table)
     ((insertp 'boolean :prompt "Insert?"))
   "Evaluate the expression before point in the local Lisp image."
@@ -280,10 +274,6 @@ the arglist for the most recently enclosed operator."
 (set-key 'com-eval-region
          'pane-lisp-table
          '((#\c :control) (#\r :control)))
-
-(set-key 'com-compile-definition
-         'pane-lisp-table
-         '((#\c :control) (#\c :control)))
 
 (set-key `(com-eval-last-expression ,*numeric-argument-p*)
          'pane-lisp-table

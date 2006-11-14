@@ -1080,24 +1080,3 @@ results."
              (result (apply #'format nil "~{{~:[No values~;~:*~{~S~^,~}~]}~}"
                             values)))
         (esa:display-message result)))))
-
-(defun compile-definition-interactively (mark syntax)
-  (let* ((token (definition-at-mark mark syntax))
-         (string (token-string syntax token))
-         (m (clone-mark mark))
-         (buffer-name (name (buffer syntax)))
-         (*read-base* (base syntax)))
-    (with-syntax-package (syntax mark)
-      (forward-definition m syntax)
-      (backward-definition m syntax)
-      (multiple-value-bind (result notes)
-          (compile-form-for-drei (get-usable-image syntax)
-                                    (token-to-object syntax token
-                                                     :read t
-                                                     :package (package-at-mark syntax mark))
-                                    (buffer syntax)
-                                    m)
-        (show-note-counts notes (second result))
-        (when (not (null notes))
-          (show-notes notes buffer-name
-                      (one-line-ify (subseq string 0 (min (length string) 20)))))))))
