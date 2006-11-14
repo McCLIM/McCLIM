@@ -196,7 +196,64 @@
 ;;; 
 ;;; Object editing
 
+(defun forward-delete-object (mark &optional (count 1) limit-action)
+  "Kill `count' objects beginning from `mark'."
+  (let ((offset (offset mark)))
+    (handler-case (progn (forward-object mark count)
+                         (delete-region offset mark))
+      (invalid-motion ()
+        (when limit-action
+          (funcall limit-action mark (offset mark)
+                   count "object" nil))))))
+
+(defun backward-delete-object (mark &optional (count 1) limit-action)
+  "Kill `count' objects backwards beginning from `mark'."
+  (let ((offset (offset mark)))
+    (handler-case (progn (backward-object mark count)
+                         (delete-region offset mark))
+      (invalid-motion ()
+        (when limit-action
+          (funcall limit-action mark (offset mark)
+                   (- count) "object" nil))))))
+
+(defun forward-kill-object (mark &optional (count 1) concatenate-p limit-action)
+  "Kill `count' objects beginning from `mark'."
+  (let ((start (offset mark)))
+    (handler-case (progn (forward-object mark count)
+                         (if concatenate-p
+                             (if (plusp count)
+                                 (kill-ring-concatenating-push
+                                  *kill-ring* (region-to-sequence start mark))
+                                 (kill-ring-reverse-concatenating-push
+                                  *kill-ring* (region-to-sequence start mark)))
+                             (kill-ring-standard-push
+                              *kill-ring* (region-to-sequence start mark)))
+                         (delete-region start mark))
+      (invalid-motion ()
+        (when limit-action
+          (funcall limit-action mark (offset mark)
+                   (- count) "object" nil))))))
+
+(defun backward-kill-object (mark &optional (count 1) concatenate-p limit-action)
+  "Kill `count' objects backwards beginning from `mark'."
+  (let ((start (offset mark)))
+    (handler-case (progn (forward-object mark count)
+                         (if concatenate-p
+                             (if (plusp count)
+                                 (kill-ring-concatenating-push
+                                  *kill-ring* (region-to-sequence start mark))
+                                 (kill-ring-reverse-concatenating-push
+                                  *kill-ring* (region-to-sequence start mark)))
+                             (kill-ring-standard-push
+                              *kill-ring* (region-to-sequence start mark)))
+                         (delete-region start mark))
+      (invalid-motion ()
+        (when limit-action
+          (funcall limit-action mark (offset mark)
+                   (- count) "object" nil))))))
+
 (defun transpose-objects (mark)
+  "Transpose two objects at `mark'."
   (unless (beginning-of-buffer-p mark)
     (when (end-of-line-p mark)
       (backward-object mark))

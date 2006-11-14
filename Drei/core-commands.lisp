@@ -428,7 +428,7 @@ will ask whether to sort in ascending or descending order."
                                          'string))))
       (insert-sequence *current-point* line)
       (insert-object *current-point* #\Newline))
-    (com-backward-delete-object 1 nil)))
+    (backward-delete-object *current-point*)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 

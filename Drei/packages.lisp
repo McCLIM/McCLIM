@@ -329,7 +329,11 @@ implement the motion commands."))
 (defpackage :drei-editing
   (:use :clim-lisp :drei-base :drei-buffer
         :drei-syntax :drei-motion :drei :drei-kill-ring)
-  (:export #:transpose-objects
+  (:export #:forward-delete-object
+           #:backward-delete-object
+           #:forward-kill-object
+           #:backward-kill-object
+           #:transpose-objects
            
            ;; Lines
            #:forward-delete-line #:backward-delete-line

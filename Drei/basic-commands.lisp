@@ -371,13 +371,9 @@ the first object of that line to the end of the previous line."
   "Delete the object after point.
 With a numeric argument, kill that many objects 
 after (or before, if negative) point."
-  (let* ((point *current-point*)
-	 (mark (clone-mark point)))
-    (forward-object mark count)
-    (when killp
-      (kill-ring-standard-push *kill-ring*
-			       (region-to-sequence point mark)))
-    (delete-region point mark)))
+   (if killp
+      (forward-kill-object *current-point* count)
+      (forward-delete-object *current-point* count)))
 
 (define-command (com-backward-delete-object :name t :command-table deletion-table)
     ((count 'integer :prompt "Number of Objects")
@@ -385,13 +381,9 @@ after (or before, if negative) point."
   "Delete the object before point.
 With a numeric argument, kills that many objects 
 before (or after, if negative) point."
-  (let* ((point *current-point*)
-	 (mark (clone-mark point)))
-    (backward-object mark count)
-    (when killp
-      (kill-ring-standard-push *kill-ring*
-			       (region-to-sequence mark point)))
-  (delete-region mark point)))
+  (if killp
+      (backward-kill-object *current-point* count)
+      (backward-delete-object *current-point* count)))
 
 ;; We require somewhat special behavior from Kill Line, so define a
 ;; new function and use that to implement the Kill Line command.
