@@ -9,7 +9,7 @@ IMAGES=ex2.eps inspect-as-cells.eps inspect-object-1.eps \
 inspect-object-2.eps inspect-object-3.eps native.fig
 IMAGETARGETTYPES=gif png eps
 TARGETIMAGES=$(shell sh ./makeimages.sh -e "$(IMAGES)" "$(IMAGETARGETTYPES)")
-TEXIFILES=$(NAME).texi
+TEXIFILES=$(NAME).texi drei.texi
 
 all : $(NAME).ps $(NAME2).ps
 
@@ -31,7 +31,7 @@ $(TARGETIMAGES):
 	sh ./makeimages.sh "$(IMAGES)" "$(IMAGETARGETTYPES)"
 
 $(NAME).html: $(TEXIFILES)
-	makeinfo --html $<
+	makeinfo --html $(NAME).texi
 
 $(NAME).ps: $(NAME).dvi
 	dvips $< -o

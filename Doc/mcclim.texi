@@ -43,11 +43,6 @@ Copyright @copyright{} 2004,2005,2006 the McCLIM hackers.
 @cindex \ENTRY\
 @end macro
 
-@macro func{NAME}
-@t{\NAME\}
-@findex \NAME\
-@end macro
-
 @macro fmacro{MACRO}
 @func{\MACRO\}
 @end macro
@@ -57,15 +52,15 @@ Copyright @copyright{} 2004,2005,2006 the McCLIM hackers.
 @end macro
 
 @alias gloss = i
-@alias class = t
-@alias gadget = t
-@alias pane = t
-@alias initarg = t
+@alias class = code
+@alias package = code
+@alias gadget = code
+@alias pane = code
 @alias methcomp = t
-@alias slot = t
+@alias slot = code
 @alias longref = t
-@alias cl = t
-@alias initarg = t
+@alias cl = code
+@alias initarg = code
 
 @ifnottex
 @node Top
@@ -77,45 +72,47 @@ Copyright @copyright{} 2004,2005,2006 the McCLIM hackers.
 * Introduction::
 
 Getting started
-* CLIM Demos and Applications:: 
-* The First Application:: 
+* CLIM Demos and Applications::
+* The First Application::
 * Using presentation types::
 
-User Manual 
-* Using views:: 
+User Manual
+* Using views::
 * Using command tables::
 
 Reference Manual
-* Concepts:: 
-* Windowing system drawing functions:: 
-* CLIM drawing functions:: 
-* Panes:: 
-* Output Protocol:: 
+* Concepts::
+* Windowing system drawing functions::
+* CLIM drawing functions::
+* Panes::
+* Output Protocol::
 * Command Processing::
 
 Extensions
-* Output Protocol Extensions:: 
-* Output Recording Extensions:: 
+* Output Protocol Extensions::
+* Output Recording Extensions::
 * Drawing Two-Dimensional Images::
 * File Selector Gadget::
 * PostScript Backend::
+* Drei::
 
-Utility Programs 
-* Listener:: 
+Utility Programs
+* Listener::
 * Inspector::
 
-Auxilliary Material 
+Auxilliary Material
 * Glossary::
 * Development History::
 
 Index
 * Concept Index::
+* Variable Index::
 * Function Index::
 @end menu
 
 @node Introduction
 @chapter Introduction
-@cindex Ehtoota
+@cindex ehtoota
 
 CLIM is a large layered software system that allows the user to
 customize it at each level.  The most simple ways of using CLIM is to
@@ -154,7 +151,7 @@ is not a formal specification, it does contain many cleanups and is
 often clearer than the official specification; on the other hand, the
 original specification is a useful reference. This manual will note
 where McCLIM has followed the 2.2 API.
-@cindex Specification
+@cindex specification
 
 Also, some protocols mentioned in the 2.0 specification, such as parts
 of the incremental redisplay protocol, are clearly internal to CLIM and
@@ -175,10 +172,10 @@ between application ``business logic'' and the way the user interacts
 with objects of the application.  In fact, CLIM doesn't have to be used
 with graphics output at all, as it contains a large collection of
 functionality to manage text.
-@cindex Interface manager
+@cindex interface manager
 
 Traditional GUI toolkits have an @emph{event loop}.
-@cindex Event loop
+@cindex event loop
 Events are delivered to GUI elements called @emph{gadgets} (or
 @emph{widgets}), and the programmer attaches @emph{event handlers} to
 those gadgets in order to invoke the functionality of the application
@@ -191,8 +188,8 @@ have very rudimentary interaction policies.
 
 At the lowest level, CLIM also has an event loop, but most application
 programmers never have any reason to program at that level with CLIM.
-Instead, CLIM has a @emph{command loop} 
-@cindex Command loop
+Instead, CLIM has a @emph{command loop}
+@cindex command loop
 at a much higher level than the event loop.  At each iteration of the
 command loop:
 
@@ -248,7 +245,7 @@ separately and independently.
 
 @node CLIM Demos and Applications
 @chapter CLIM Demos and Applications
-@cindex Demo applications
+@cindex demo applications
 
 @menu
 * Running the Demos::
@@ -376,7 +373,7 @@ specific Common Lisp implementations or McCLIM features.
 
 @node Multiprocessing with CMUCL
 @subsection Multiprocessing with CMUCL
-@cindex Multiprocessing
+@cindex multiprocessing
 
 Before beginning a McCLIM session with CMUCL, @b{you are strongly
 advised} to initialize multiprocessing by evaluating the form:
@@ -411,8 +408,8 @@ Common Lisp system for more information.
 
 @node The First Application
 @chapter The First Application
-@cindex Building an application
-@cindex Writing an application
+@cindex building an application
+@cindex writing an application
 
 @menu
 * Panes and Gadgets::
@@ -433,8 +430,8 @@ correspond to what other toolkits call @emph{widgets}.  Frequently used
 CLIM gadgets are @gadget{button}s, @gadget{slider}s, etc, and typical
 panes are the layout panes such as @pane{hbox}, @pane{vbox},
 @pane{hrack}, etc.
-@cindex Pane
-@cindex Gadget
+@cindex pane
+@cindex gadget
 
 @node Defining Application Frames
 @section Defining Application Frames
@@ -447,7 +444,7 @@ needed by your application.  It is considered good style to keep all
 your application-specific data in slots in the application frame (rather
 than, say, in global variables), and to define your application-specific
 application frame in its own package.
-@cindex Application frame
+@cindex application frame
 
 The usual way to define an application frame is to use the macro
 @fmacro{define-application-frame}.  This macro works much like
@@ -468,11 +465,12 @@ As we can see in this example, we have put our application in a separate
 package, here a package named @t{APP}.  While not required, putting the
 application in its own package is good practice.
 
-The package for the application uses two packages: @t{CLIM} and
-@t{CLIM-LISP}.  The @t{CLIM} package is the one that contains all the
-symbols needed for using CLIM.  The @t{CLIM-LISP} package replaces the
-@t{COMMON-LISP} package for CLIM applications.  It is essentially the
-same as the @t{COMMON-LISP} package as far as the user is concerned.
+The package for the application uses two packages: @package{CLIM} and
+@package{CLIM-LISP}.  The @package{CLIM} package is the one that
+contains all the symbols needed for using CLIM.  The @package{CLIM-LISP}
+package replaces the @package{COMMON-LISP} package for CLIM
+applications.  It is essentially the same as the @package{COMMON-LISP}
+package as far as the user is concerned.
 
 In our example, we export the symbol that corresponds to the main
 function to start our application, here called @t{APP-MAIN}.
@@ -493,8 +491,10 @@ CLOS slots to be added to any instance of this kind of application
 frame.  These slots are typically used for holding all
 application-specific data.  The current instance of the application
 frame will always be the value of the special variable
-@t{*application-frame*}, so that the values of these slots can be
-accessed.  In our example, we do not initially have any further slots.
+@t{*application-frame*},
+@vindex *application-frame*
+so that the values of these slots can be accessed.  In our example, we
+do not initially have any further slots.
 
 The rest of the definition of an application frame contains additional
 elements that CLIM will allow the user to define.  In our example, we
@@ -555,8 +555,8 @@ displayed.  The net result is that we would have seen no visible output.
 With the option @t{:display-time nil}, the pane is never cleared, and
 output is accumulated every time we execute the @t{parity} command.
 
-For this example, let us also add a few @emph{commands}.  
-@cindex Command
+For this example, let us also add a few @emph{commands}.
+@cindex command
 Such commands are defined by the use of a macro called
 @fmacro{@t{define-}@i{name}@t{-command}}, where @i{name} is the name of
 the application, in our case @t{superapp}. This macro is automatically
@@ -617,7 +617,7 @@ Many applications use a central data structure that is to be on display
 at all times, and that is modified by the commands of the application.
 CLIM allows for a very easy way to write such an application.  The main
 idea is to store the data structure in slots of the application frame,
-and to use a @emph{display function} 
+and to use a @emph{display function}
 @cindex display function
 that after each iteration of the command loop displays the entire data
 structure to the application pane.
@@ -630,7 +630,7 @@ possibility:
 @end lisp
 
 Here, we have added a slot that is called @t{current-number} to the
-application frame.  It is initialized to @t{NIL} and it has an accessor
+application frame.  It is initialized to @cl{NIL} and it has an accessor
 function that allow us to query and to modify the value.
 
 Observe that in this example, we no longer have the option
@@ -655,7 +655,7 @@ It is good style to use the pane as the stream in calls to functions
 that will result in output.  This makes it possible for the same
 function to be used by several different frames, should that be called
 for.  In our simple example, the display function only displays the
-value of a single number (or @t{NIL}), but you could think of this as
+value of a single number (or @cl{NIL}), but you could think of this as
 displaying all the objects that have been drawn in some figure drawing
 program or displaying all the entries in an address book.
 
@@ -730,7 +730,7 @@ during the new iteration.
 
 @node Using presentation types
 @chapter Using presentation types
-@cindex Presentation type
+@cindex presentation type
 
 @menu
 * What is a presentation type::
@@ -811,7 +811,7 @@ of the frame), is ``the 15 of The third month''.
 
 @node Using views
 @chapter Using views
-@cindex View
+@cindex view
 
 The CLIM specification mentions a concept called a @emph{view}, and also
 lists a number of predefined views to be used in various different
@@ -877,7 +877,7 @@ as the default view of the main pane.
 
 @node Using command tables
 @chapter Using command tables
-@cindex Command table
+@cindex command table
 
 (to be filled in)
 
@@ -900,17 +900,17 @@ to transform coordinates between them.
 
 The coordinate system used for the arguments of drawing functions is
 called the @gloss{user coordinate system},
-@cindex User coordinate system
+@cindex user coordinate system
  and coordinate values expressed in the user coordinate system are known
 as @gloss{user coordinates}.
-@cindex User coordinates
+@cindex user coordinates
 
 Each sheet has its own coordinate system called the @gloss{sheet
 coordinate system},
-@cindex Sheet coordinate system
+@cindex sheet coordinate system
  and positions expressed in this coordinate system are said to be
 expressed in @gloss{sheet coordinates}.
-@cindex Sheet coordinates
+@cindex sheet coordinates
   User coordinates are translated to @gloss{sheet coordinates} by means
 of the @gloss{user transformation} also called the @gloss{medium
 transformation}.  This transformation is stored in the @gloss{medium}
@@ -1043,7 +1043,7 @@ windows.
 
 @node Panes
 @chapter Panes
-@cindex Pane
+@cindex pane
 
 Panes are subclasses of sheets.  Some panes are @gloss{layout panes}
 that determine the size and position of its children according to rules
@@ -1107,7 +1107,7 @@ than 1.
 
 @node Layout protocol
 @section Layout protocol
-@cindex Layout protocol
+@cindex layout protocol
 
 There is a set of fundamental rules of CLIM dividing responsibility
 between a parent pane and a child pane, with respect to the size and
@@ -1296,9 +1296,9 @@ Sets the parent of all children of @var{record} to @cl{nil}.
 
 @node Command Processing
 @chapter Command Processing
-@cindex Command
-@cindex Command processing
-@cindex Command tables
+@cindex command
+@cindex command processing
+@cindex command tables
 
 @deffn {Macro} {define-command-table} name &key inherit-from menu inherit-menu
 @findex define-command-table
@@ -1320,7 +1320,7 @@ tables must inherit from @cl{global-command-table}. McCLIM treats a
 
 @node Output Protocol Extensions
 @chapter Output Protocol Extensions
-@cindex Extensions
+@cindex extensions
 
 @deffn {Generic Function} {medium-miter-limit} medium
 @end deffn
@@ -1332,7 +1332,7 @@ used; for smaller angles :MITER is interpreted as :BEVEL.
 
 @node Output Recording Extensions
 @chapter Output Recording Extensions
-@cindex Extensions
+@cindex extensions
 
 @menu
 * Standard classes::
@@ -1577,6 +1577,8 @@ Package @cl{clim-postscript} exports the following functions:
 
 Loads a description of a font from the specified AFM file.
 
+@include drei.texi
+
 @c @node Utility Programs
 @c @part Utility Programs
 
@@ -1588,7 +1590,7 @@ Loads a description of a font from the specified AFM file.
 
 @node Inspector
 @chapter Inspector
-@cindex Inspector
+@cindex inspector
 @cindex Clouseau
 
 The inspector, called ``Clouseau'', is used for interactively inspecting
@@ -1773,7 +1775,7 @@ average that everyone learns: add up all the numbers and divide by how
 many of them there are. It's written @math{\overline {x}}
 
 @lisp
-(defgeneric mean (sample) 
+(defgeneric mean (sample)
   (:documentation "The mean of the numbers in a statistical
 sample"))
 
@@ -2297,16 +2299,21 @@ that happen.  So far (summer 2001) he has contributed a number of
 cosmetic fixes to McCLIM and also worked on a GTK-like gadget set.  He
 finally started work to get the OpenGL backend operational.
 
-@node Concept Index
-@unnumbered Concept Index
+@node {Concept Index}
+@unnumbered {Concept Index}
 
 @printindex cp
 
-@node Function Index
-@unnumbered Function Index
+@node {Variable Index}
+@unnumbered {Variable Index}
+
+@printindex vr
+
+@node {Function And Macro Index}
+@unnumbered {Function And Macro Index}
 
 @printindex fn
 
-@bye
+@c LocalWords:  viewport scroller mixin PostScript
 
-@c LocalWords:  viewport scroller mixin} PostScript
+@bye
