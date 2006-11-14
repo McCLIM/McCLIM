@@ -32,6 +32,45 @@
 
 (in-package :drei-base)
 
+(defgeneric invoke-as-region (mark1 mark2 continuation)
+  (:documentation "Invoke `continuation' with two arguments
+ordering a proper region."))
+
+(defmethod invoke-as-region ((mark1 integer) (mark2 integer)
+                             (continuation function))
+  (if (>= mark2 mark1)
+      (funcall continuation mark1 mark2)
+      (funcall continuation mark2 mark1)))
+
+(defmethod invoke-as-region ((mark1 mark) (mark2 mark)
+                             (continuation function))
+  (if (mark>= mark2 mark1)
+      (funcall continuation mark1 mark2)
+      (funcall continuation mark2 mark1)))
+
+(defmacro as-region ((mark1 mark2) &body body)
+  "Rebind `mark1' and `mark2' to be a proper region. That
+is, `(mark>= mark2 mark1)' will hold. `Mark1' and `mark2' must be
+symbols bound to marks or integers (but they must be of the same
+type). It is a good idea to use this macro when dealing with
+regions."
+  `(invoke-as-region ,mark1 ,mark2
+                     #'(lambda (,mark1 ,mark2)
+                         ,@body)))
+
+(defmacro as-full-region ((mark1 mark2) &body body)
+  "Bind `mark1' and `mark2' to marks that delimit a full
+  region (a region where the beginning and end are at the
+  beginning and end of their lines, respectively). The new marks
+  will be copies of the marks `mark1' and `mark2' are already
+  bound to. `Mark1' and `mark2' must be symbols bound to marks."
+  `(as-region (,mark1 ,mark2)
+     (let ((,mark1 (clone-mark ,mark1))
+           (,mark2 (clone-mark ,mark2)))
+       (beginning-of-line ,mark1)
+       (end-of-line ,mark2)
+       ,@body)))
+
 (defmacro as-offsets ((&rest marks)
                       &body body)
   "Bind the symbols in `marks' to the numeric offsets of the mark
@@ -75,16 +114,15 @@ The body is executed for each element, with object being the current object
     `(progn
        (let* ((,mark-sym (clone-mark ,mark1))
               (,mark2-sym (clone-mark ,mark2)))
-         (when (mark< ,mark2-sym ,mark-sym)
-           (rotatef ,mark-sym ,mark2-sym))
-         (loop while (and (mark<= ,mark-sym ,mark2-sym)
-                          (not (end-of-buffer-p ,mark-sym)))
-            do              
-            (let ((,line-var (clone-mark ,mark-sym)))
-              ,@body)
-            (end-of-line ,mark-sym)
-            (unless (end-of-buffer-p ,mark-sym)
-              (forward-object ,mark-sym)))))))
+         (as-region (,mark-sym ,mark2-sym)
+           (loop while (and (mark<= ,mark-sym ,mark2-sym)
+                            (not (end-of-buffer-p ,mark-sym)))
+              do              
+              (let ((,line-var (clone-mark ,mark-sym)))
+                ,@body)
+              (end-of-line ,mark-sym)
+              (unless (end-of-buffer-p ,mark-sym)
+                (forward-object ,mark-sym))))))))
 
 (defgeneric previous-line (mark &optional column count)
   (:documentation "Move a mark up `count' lines conserving
@@ -161,6 +199,66 @@ The body is executed for each element, with object being the current object
           (end-of-line mark)
           (delete-region offset mark)))))
 
+(defgeneric extract-line (mark &key from-end whole-line as-string)
+  (:documentation "Destructively remove part of a line and return
+it. The line `mark' is in indicates which line to perform the
+extraction on. The line contents from the beginning of the line
+up to `mark' will be deleted and returned as a vector. If
+`from-end' is true, the line contents from the end of the line to
+`mark' will be affected instead. If `whole-line' is true, the
+entire line, including any single ending newline character, will
+be deleted and returned."))
+
+(defun extract-whole-line (mark)
+  "Extract the whole line `mark' is in, and remove any single
+  trailing newline."
+  (let* ((border-mark (clone-mark mark))
+         eol-offset)
+    (end-of-line border-mark)
+    (setf eol-offset (offset border-mark))
+    (unless (end-of-buffer-p border-mark)
+      (incf eol-offset))
+    (beginning-of-line border-mark)
+    (let ((sequence (region-to-sequence border-mark eol-offset)))
+      (delete-region border-mark eol-offset)
+      sequence)))
+
+(defmethod extract-line ((mark mark) &key from-end whole-line)
+  (if whole-line
+      (extract-whole-line mark)
+      (let ((border-mark (clone-mark mark)))
+        (if from-end
+            (end-of-line border-mark)
+            (beginning-of-line border-mark))
+        (as-region (mark border-mark)
+          (let ((sequence (region-to-sequence mark border-mark)))
+            (delete-region mark border-mark)
+            sequence)))))
+
+(defgeneric lines-in-region (mark1 mark2)
+  (:documentation "Return a list of all the lines (not including
+  newline characters) in the full region delimited by `mark1' and
+  `mark2'."))
+
+(defmethod lines-in-region (mark1 mark2)
+  (as-full-region (mark1 mark2)
+    (let (result)
+      (do-buffer-region-lines (line-mark mark1 mark2)
+        (let ((bol-offset (offset line-mark)))
+          (end-of-line line-mark)
+          (push (region-to-sequence bol-offset line-mark) result)))
+      result)))
+
+(defgeneric extract-lines-in-region (mark1 mark2)
+  (:documentation "Delete the lines of the full region delimited
+by `mark1' and `mark2'"))
+
+(defmethod extract-lines-in-region ((mark1 mark) (mark2 mark))
+  (as-full-region (mark1 mark2)
+    (let ((lines (lines-in-region mark1 mark2)))
+      (delete-region mark1 mark2)
+      lines)))
+
 (defun empty-line-p (mark)
   "Check whether the mark is in an empty line."
   (and (beginning-of-line-p mark) (end-of-line-p mark)))
@@ -212,21 +310,18 @@ one of the marks"))
   (assert (eq (buffer mark1) (buffer mark2)))
   (let ((offset1 (offset mark1))
 	(offset2 (offset mark2)))
-    (when (> offset1 offset2)
-      (rotatef offset1 offset2))
-    (buffer-number-of-lines-in-region (buffer mark1) offset1 offset2)))
+    (as-region (offset1 offset2)
+      (buffer-number-of-lines-in-region (buffer mark1) offset1 offset2))))
 
 (defmethod number-of-lines-in-region ((offset1 integer) (mark2 mark))
   (let ((offset2 (offset mark2)))
-    (when (> offset1 offset2)
-      (rotatef offset1 offset2))
-    (buffer-number-of-lines-in-region (buffer mark2) offset1 offset2)))
+    (as-region (offset1 offset2)
+      (buffer-number-of-lines-in-region (buffer mark2) offset1 offset2))))
 
 (defmethod number-of-lines-in-region ((mark1 mark) (offset2 integer))
   (let ((offset1 (offset mark1)))
-    (when (> offset1 offset2)
-      (rotatef offset1 offset2))
-    (buffer-number-of-lines-in-region (buffer mark1) offset1 offset2)))
+    (as-region (offset1 offset2)
+      (buffer-number-of-lines-in-region (buffer mark1) offset1 offset2))))
 
 (defun constituentp (obj)
   "A predicate to ensure that an object is a constituent character."
@@ -506,21 +601,18 @@ buffers. It is acceptable to pass an offset in place of one of the marks."))
   (assert (eq (buffer mark1) (buffer mark2)))
   (let ((offset1 (offset mark1))
 	(offset2 (offset mark2)))
-    (when (> offset1 offset2)
-      (rotatef offset1 offset2))
-    (downcase-buffer-region (buffer mark1) offset1 offset2)))
+    (as-region (offset1 offset2)
+      (downcase-buffer-region (buffer mark1) offset1 offset2))))
 
 (defmethod downcase-region ((offset1 integer) (mark2 mark))
   (let ((offset2 (offset mark2)))
-    (when (> offset1 offset2)
-      (rotatef offset1 offset2))
-    (downcase-buffer-region (buffer mark2) offset1 offset2)))
+    (as-region (offset1 offset2)
+      (downcase-buffer-region (buffer mark2) offset1 offset2))))
 
 (defmethod downcase-region ((mark1 mark) (offset2 integer))
   (let ((offset1 (offset mark1)))
-    (when (> offset1 offset2)
-      (rotatef offset1 offset2))
-    (downcase-buffer-region (buffer mark1) offset1 offset2)))
+    (as-region (offset1 offset2)
+      (downcase-buffer-region (buffer mark1) offset1 offset2))))
 
 (defun upcase-buffer-region (buffer offset1 offset2)
   (do-buffer-region (object offset buffer offset1 offset2)
@@ -536,21 +628,18 @@ buffers. It is acceptable to pass an offset in place of one of the marks."))
   (assert (eq (buffer mark1) (buffer mark2)))
   (let ((offset1 (offset mark1))
 	(offset2 (offset mark2)))
-    (when (> offset1 offset2)
-      (rotatef offset1 offset2))
-    (upcase-buffer-region (buffer mark1) offset1 offset2)))
+    (as-region (offset1 offset2)
+      (upcase-buffer-region (buffer mark1) offset1 offset2))))
 
 (defmethod upcase-region ((offset1 integer) (mark2 mark))
   (let ((offset2 (offset mark2)))
-    (when (> offset1 offset2)
-      (rotatef offset1 offset2))
-    (upcase-buffer-region (buffer mark2) offset1 offset2)))
+    (as-region (offset1 offset2)
+      (upcase-buffer-region (buffer mark2) offset1 offset2))))
 
 (defmethod upcase-region ((mark1 mark) (offset2 integer))
   (let ((offset1 (offset mark1)))
-    (when (> offset1 offset2)
-      (rotatef offset1 offset2))
-    (upcase-buffer-region (buffer mark1) offset1 offset2)))
+    (as-region (offset1 offset2)
+      (upcase-buffer-region (buffer mark1) offset1 offset2))))
 
 (defun capitalize-buffer-region (buffer offset1 offset2)
   (let ((previous-char-constituent-p nil))
@@ -572,21 +661,18 @@ It is acceptable to pass an offset in place of one of the marks."))
   (assert (eq (buffer mark1) (buffer mark2)))
   (let ((offset1 (offset mark1))
 	(offset2 (offset mark2)))
-    (when (> offset1 offset2)
-      (rotatef offset1 offset2))
-    (capitalize-buffer-region (buffer mark1) offset1 offset2)))
+    (as-region (offset1 offset2)
+      (capitalize-buffer-region (buffer mark1) offset1 offset2))))
 
 (defmethod capitalize-region ((offset1 integer) (mark2 mark))
   (let ((offset2 (offset mark2)))
-    (when (> offset1 offset2)
-      (rotatef offset1 offset2))
-    (capitalize-buffer-region (buffer mark2) offset1 offset2)))
+    (as-region (offset1 offset2)
+      (capitalize-buffer-region (buffer mark2) offset1 offset2))))
 
 (defmethod capitalize-region ((mark1 mark) (offset2 integer))
   (let ((offset1 (offset mark1)))
-    (when (> offset1 offset2)
-      (rotatef offset1 offset2))
-    (capitalize-buffer-region (buffer mark1) offset1 offset2)))
+    (as-region (offset1 offset2)
+      (capitalize-buffer-region (buffer mark1) offset1 offset2))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 
@@ -618,21 +704,18 @@ in the region delimited by mark1 and mark2."))
   (assert (eq (buffer mark1) (buffer mark2)))
   (let ((offset1 (offset mark1))
 	(offset2 (offset mark2)))
-    (when (> offset1 offset2)
-      (rotatef offset1 offset2))
-    (tabify-buffer-region (buffer mark1) offset1 offset2 tab-width)))
+    (as-region (offset1 offset2)
+     (tabify-buffer-region (buffer mark1) offset1 offset2 tab-width))))
 
 (defmethod tabify-region ((offset1 integer) (mark2 mark) tab-width)
   (let ((offset2 (offset mark2)))
-    (when (> offset1 offset2)
-      (rotatef offset1 offset2))
-    (tabify-buffer-region (buffer mark2) offset1 offset2 tab-width)))
+    (as-region (offset1 offset2)
+      (tabify-buffer-region (buffer mark2) offset1 offset2 tab-width))))
 
 (defmethod tabify-region ((mark1 mark) (offset2 integer) tab-width)
   (let ((offset1 (offset mark1)))
-    (when (> offset1 offset2)
-      (rotatef offset1 offset2))
-    (tabify-buffer-region (buffer mark1) offset1 offset2 tab-width)))
+    (as-region (offset1 offset2)
+      (tabify-buffer-region (buffer mark1) offset1 offset2 tab-width))))
 
 (defun untabify-buffer-region (buffer offset1 offset2 tab-width)
   (loop for offset = offset1 then (1+ offset)
@@ -656,21 +739,18 @@ delimited by mark1 and mark2."))
   (assert (eq (buffer mark1) (buffer mark2)))
   (let ((offset1 (offset mark1))
 	(offset2 (offset mark2)))
-    (when (> offset1 offset2)
-      (rotatef offset1 offset2))
-    (untabify-buffer-region (buffer mark1) offset1 offset2 tab-width)))
+    (as-region (offset1 offset2)
+      (untabify-buffer-region (buffer mark1) offset1 offset2 tab-width))))
 
 (defmethod untabify-region ((offset1 integer) (mark2 mark) tab-width)
   (let ((offset2 (offset mark2)))
-    (when (> offset1 offset2)
-      (rotatef offset1 offset2))
-    (untabify-buffer-region (buffer mark2) offset1 offset2 tab-width)))
+    (as-region (offset1 offset2)
+      (untabify-buffer-region (buffer mark2) offset1 offset2 tab-width))))
 
 (defmethod untabify-region ((mark1 mark) (offset2 integer) tab-width)
   (let ((offset1 (offset mark1)))
-    (when (> offset1 offset2)
-      (rotatef offset1 offset2))
-    (untabify-buffer-region (buffer mark1) offset1 offset2 tab-width)))
+    (as-region (offset1 offset2)
+      (untabify-buffer-region (buffer mark1) offset1 offset2 tab-width))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
