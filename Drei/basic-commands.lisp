@@ -146,7 +146,7 @@ With a negative argument -N, move point forward by N objects."
 
 (set-key `(com-forward-object ,*numeric-argument-marker*)
 	 'movement-table
-	 '((#+mcclim :right #-mcclim :right-arrow)))
+	 '((#+(or mcclim building-mcclim) :right #-(or mcclim building-mcclim) :right-arrow)))
 
 (set-key `(com-backward-object ,*numeric-argument-marker*)
 	 'movement-table
@@ -154,7 +154,7 @@ With a negative argument -N, move point forward by N objects."
 
 (set-key `(com-backward-object ,*numeric-argument-marker*)
 	 'movement-table
-	 '((#+mcclim :left #-mcclim :left-arrow)))
+	 '((#+(or mcclim building-mcclim) :left #-(or mcclim building-mcclim) :left-arrow)))
 
 (set-key `(com-forward-word ,*numeric-argument-marker*)
 	 'movement-table
@@ -162,7 +162,7 @@ With a negative argument -N, move point forward by N objects."
 
 (set-key `(com-forward-word ,*numeric-argument-marker*)
 	 'movement-table
-	 '((#+mcclim :right #-mcclim :right-arrow :control)))
+	 '((#+(or mcclim building-mcclim) :right #-(or mcclim building-mcclim) :right-arrow :control)))
 
 (set-key `(com-backward-word ,*numeric-argument-marker*)
 	 'movement-table
@@ -170,7 +170,7 @@ With a negative argument -N, move point forward by N objects."
 
 (set-key `(com-backward-word ,*numeric-argument-marker*)
 	 'movement-table
-	 '((#+mcclim :left #-mcclim :left-arrow :control)))
+	 '((#+(or mcclim building-mcclim) :left #-(or mcclim building-mcclim) :left-arrow :control)))
 
 (set-key `(com-forward-line ,*numeric-argument-marker*)
 	 'movement-table
@@ -178,7 +178,7 @@ With a negative argument -N, move point forward by N objects."
 
 (set-key `(com-forward-line ,*numeric-argument-marker*)
 	 'movement-table
-	 '((#+mcclim :down #-mcclim :down-arrow)))
+	 '((#+(or mcclim building-mcclim) :down #-(or mcclim building-mcclim) :down-arrow)))
 
 (set-key `(com-backward-line ,*numeric-argument-marker*)
 	 'movement-table
@@ -186,7 +186,7 @@ With a negative argument -N, move point forward by N objects."
 
 (set-key `(com-backward-line ,*numeric-argument-marker*)
 	 'movement-table
-	 '((#+mcclim :up #-mcclim :up-arrow)))
+	 '((#+(or mcclim building-mcclim) :up #-(or mcclim building-mcclim) :up-arrow)))
 
 (set-key 'com-beginning-of-line
 	 'movement-table
@@ -218,7 +218,7 @@ With a negative argument -N, move point forward by N objects."
 
 (set-key `(com-backward-paragraph ,*numeric-argument-marker*)
 	 'movement-table
-	 '((#+mcclim :up #-mcclim :up-arrow :control)))
+	 '((#+(or mcclim building-mcclim) :up #-(or mcclim building-mcclim) :up-arrow :control)))
 
 (set-key `(com-forward-paragraph ,*numeric-argument-marker*)
 	 'movement-table
@@ -226,7 +226,7 @@ With a negative argument -N, move point forward by N objects."
 
 (set-key `(com-forward-paragraph ,*numeric-argument-marker*)
 	 'movement-table
-	 '((#+mcclim :down #-mcclim :down-arrow :control)))
+	 '((#+(or mcclim building-mcclim) :down #-(or mcclim building-mcclim) :down-arrow :control)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 
