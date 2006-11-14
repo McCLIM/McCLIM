@@ -287,8 +287,7 @@ command loop completely."))
   (let* ((*minibuffer* (or *minibuffer*
                            (unless (eq drei *standard-input*)
                              *standard-input*))))
-    (accepting-from-user (drei)
-      (execute-drei-command-for-frame (pane-frame drei) drei command))))
+    (execute-drei-command-for-frame (pane-frame drei) drei command)))
 
 (defmethod additional-command-tables append ((drei drei-gadget-pane)
                                              (table drei-command-table))
@@ -344,20 +343,17 @@ record."))
   (:documentation "A constellation of a Drei gadget instance and
   a minibuffer."))
 
-(defgeneric display-drei (frame instance)
-  (:documentation "Display the given Drei instance."))
-
-(defmethod display-drei (frame (instance drei-pane))
+(defmethod display-drei (frame (drei drei-pane))
   (declare (ignore frame))
-  (display-drei-pane instance (active instance)))
+  (display-drei-pane drei (active drei)))
 
-(defmethod display-drei :after (frame (instance drei))
-  (with-accessors ((minibuffer minibuffer)) instance
-    (when (and minibuffer (not (eq minibuffer (editor-pane instance))))
+(defmethod display-drei :after (frame (drei drei))
+  (with-accessors ((minibuffer minibuffer)) drei
+    (when (and minibuffer (not (eq minibuffer (editor-pane drei))))
       (redisplay-frame-pane (pane-frame minibuffer) minibuffer))))
 
-(defmethod display-drei (frame (instance drei-area))
-  (display-drei-area instance))
+(defmethod display-drei (frame (drei drei-area))
+  (display-drei-area drei))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

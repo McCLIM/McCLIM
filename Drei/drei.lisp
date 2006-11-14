@@ -615,6 +615,10 @@ directly instantiated."))
           top (clone-mark (low-mark buffer) :left)
           bot (clone-mark (high-mark buffer) :right))))
 
+;; Main redisplay entry point.
+(defgeneric display-drei (frame drei)
+  (:documentation "Display the given Drei instance."))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Some standard building block machinery.
@@ -754,6 +758,23 @@ original options after `body' has been evaluated."
            (unwind-protect (progn ,@body)
              ,@(remove-if #'null (mapcar #'third triple-list))))))))
 
+(defgeneric invoke-accepting-from-user (drei continuation)
+  (:documentation "Set up `drei' and the environment so that
+calls to `accept' will behave properly. Then call
+`continuation'."))
+
+(defmethod invoke-accepting-from-user ((drei drei) (continuation function))
+  ;; By default, everything should work.
+  (funcall continuation))
+
+(defmacro accepting-from-user ((drei) &body body)
+  "Modidfy `drei' and the environment so that calls to `accept'
+can be done to arbitrary streams from within `body'. Or, at
+least, make sure the Drei instance will not be a problem. When
+Drei calls a command, it will be wrapped in this macro, so it
+should be safe to use `accept' within Drei commands."
+  `(invoke-accepting-from-user ,drei #'(lambda () ,@body)))
+
 ;;; Plain `execute-frame-command' is not good enough for us. Our
 ;;; event-handler method uses this function to invoke commands, note
 ;;; that it is also responsible for updating the syntax of the buffer
@@ -774,7 +795,8 @@ syntax to reflect the changes."
     (handling-drei-conditions
       ;; Must be a list of buffers, so wrap in call to `list'.
       (with-undo ((list buffer))
-        (execute-frame-command frame command))
+        (accepting-from-user (drei-instance)
+          (execute-frame-command frame command)))
       (setf (previous-command drei-instance) command)
       (update-syntax buffer (syntax buffer))
       (when (modified-p buffer)
@@ -784,20 +806,3 @@ syntax to reflect the changes."
   (let ((*standard-input* (or *minibuffer* *standard-input*)))
     (execute-drei-command-for-frame (pane-frame (editor-pane drei))
                                     drei command)))
-
-(defgeneric invoke-accepting-from-user (drei continuation)
-  (:documentation "Set up `drei' and the environment so that
-calls to `accept' will behave properly. Then call
-`continuation'."))
-
-(defmethod invoke-accepting-from-user ((drei drei) (continuation function))
-  ;; By default, everything should work.
-  (funcall continuation))
-
-(defmacro accepting-from-user ((drei) &body body)
-  "Modidfy `drei' and the environment so that calls to `accept'
-can be done to arbitrary streams from within `body'. Or, at
-least, make sure the Drei instance will not be a problem. When
-Drei calls a command, it will be wrapped in this macro, so it
-should be safe to use `accept' within Drei commands."
-  `(invoke-accepting-from-user ,drei #'(lambda () ,@body)))
