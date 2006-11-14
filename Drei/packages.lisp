@@ -84,12 +84,17 @@ not user-oriented at all."))
 
 (defpackage :drei-base
   (:use :clim-lisp :drei-buffer :drei-kill-ring :esa-buffer :esa-utils)
-  (:export #:as-offsets
+  (:export #:as-region
+           #:as-full-region
+           #:as-offsets
            #:do-buffer-region
            #:do-buffer-region-lines
            #:previous-line #:next-line
            #:open-line
            #:delete-line
+           #:extract-line
+           #:lines-in-region
+           #:extract-lines-in-region
            #:empty-line-p
            #:line-indentation
            #:buffer-display-column
