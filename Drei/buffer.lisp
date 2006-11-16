@@ -31,7 +31,7 @@
 (in-package :drei-buffer)
 
 (defclass buffer () ()
-  (:documentation "A base class for all buffers. A buffer conceptually contains a
+  (:documentation "The base class for all buffers. A buffer conceptually contains a
 large array of arbitrary objects.  Lines of objects are separated by
 newline characters.  The last object of the buffer is not
 necessarily a newline character."))
@@ -47,31 +47,33 @@ necessarily a newline character."))
    (low-mark :reader low-mark)
    (high-mark :reader high-mark)
    (modified :initform nil :reader modified-p))
-  (:documentation "The Drei standard buffer [an instantable subclass of buffer]."))
+  (:documentation "The standard instantiable class for buffers."))
 
 (defgeneric buffer (mark)
   (:documentation "Return the buffer that the mark is positioned in."))  
 
 (defclass mark () ()
-  (:documentation "A base class for all marks."))
+  (:documentation "The base class for all marks."))
 
 (defclass left-sticky-mark (mark) ()
-  (:documentation "A subclass of mark.  A mark of this type will \"stick\" to the left of 
-an object, i.e. when an object is inserted at this mark, the mark will 
-be positioned to the left of the object"))
+  (:documentation "A subclass of mark.  A mark of this type will
+\"stick\" to the left of an object, i.e. when an object is
+inserted at this mark, the mark will be positioned to the left of
+the object."))
 
 (defclass right-sticky-mark (mark) ()
-  (:documentation "A subclass of mark.  A mark of this type will \"stick\" to the right of 
-an object, i.e. when an object is inserted at this mark, the mark will 
-be positioned to the right of the object."))
+  (:documentation "A subclass of mark.  A mark of this type will
+\"stick\" to the right of an object, i.e. when an object is
+inserted at this mark, the mark will be positioned to the right
+of the object."))
 
 (defgeneric offset (mark)
   (:documentation "Return the offset of the mark into the buffer."))
 
 (defgeneric (setf offset) (new-offset mark)
-  (:documentation "Set the offset of the mark into the buffer.  A no-such-offset
-condition is signaled if the offset is less than zero or greater than
-the size of the buffer."))
+  (:documentation "Set the offset of the mark into the buffer.  A
+no-such-offset condition is signaled if the offset is less than
+zero or greater than the size of the buffer."))
 
 (defclass mark-mixin ()
   ((buffer :initarg :buffer :reader buffer)
@@ -85,9 +87,9 @@ the size of the buffer."))
   ((offset :reader condition-offset :initarg :offset))
   (:report (lambda (condition stream)
 	     (format stream "No such offset: ~a" (condition-offset condition))))
-  (:documentation "This condition is signaled whenever an attempt is
-made to access buffer contents that is before the beginning or after
-the end of the buffer."))
+  (:documentation "This condition is signaled whenever an attempt
+is made to access buffer contents that is before the beginning or
+after the end of the buffer."))
 
 (define-condition offset-before-beginning (no-such-offset)
   ()
@@ -186,10 +188,10 @@ made to move a mark after the end of the buffer."))
      (setf high-mark (make-instance 'standard-right-sticky-mark :buffer buffer))))
 
 (defgeneric clone-mark (mark &optional stick-to)
-  (:documentation "Clone a mark.  By default (when stick-to is NIL)
-the same type of mark is returned.  Otherwise stick-to is either :left
-or :right indicating whether a left-sticky or a right-sticky mark
-should be created."))
+  (:documentation "Clone a mark.  By default (when stick-to is
+NIL) the same type of mark is returned.  Otherwise stick-to is
+either :left or :right indicating whether a left-sticky or a
+right-sticky mark should be created."))
 
 (defmethod clone-mark ((mark standard-left-sticky-mark) &optional stick-to)
   (cond ((or (null stick-to) (eq stick-to :left))
