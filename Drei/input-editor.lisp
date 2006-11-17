@@ -76,7 +76,7 @@ instantiated."))
                      (syntax (buffer (drei-instance obj))))
       ;; XXX Really add it here?
       (stream-add-output-record stream (drei-instance obj))
-      (display-drei-area (drei-instance obj)))))
+      (display-drei (drei-instance obj)))))
 
 (defmethod stream-insertion-pointer
     ((stream drei-input-editing-mixin))
@@ -202,7 +202,7 @@ be used outside the input-editor."))
         (delete-region begin-mark (stream-scan-pointer stream))
         (insert-sequence begin-mark new-contents))
       (update-syntax (buffer drei) (syntax (buffer drei)))
-      (display-drei-area drei)
+      (display-drei drei)
       (when (or rescan (not equal))
         (queue-rescan stream)))))
 
@@ -387,7 +387,7 @@ if stuff is inserted after the insertion pointer."
                 (when was-directly-processing
                   (display-message "Aborted"))))))
       ;; Will also take care of redisplaying minibuffer.
-      (display-drei (pane-frame (editor-pane drei)) drei)
+      (display-drei drei)
       (let ((first-mismatch (mismatch before (stream-input-buffer stream))))
         (cond ((null first-mismatch)
                ;; No change actually took place, even though IP may
@@ -493,7 +493,7 @@ CL:SUBSEQ into the sequence indicating where processing stopped."
     ;; Since everything inserted with this method is noise strings, we
     ;; do not bother to modify the scan pointer or queue rescans.
     (update-syntax (buffer drei) (syntax (buffer drei)))
-    (display-drei-area drei)))
+    (display-drei drei)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 
@@ -591,12 +591,15 @@ to an `extended-output-stream' while `body' is being evaluated."
          for gesture = (with-input-context ('expression :override nil)
                            (object type)
                            (read-gesture :stream stream)
-                         (expression (performing-drei-operations (drei :with-undo t)
+                         (expression (performing-drei-operations (drei :with-undo t
+                                                                       :redisplay t)
                                        (presentation-replace-input
                                         stream object type (view drei)
                                         :buffer-start (stream-insertion-pointer stream)
                                         :allow-other-keys t
-                                        :accept-result nil))
+                                        :accept-result nil
+                                        :rescan t))
+                                     (rescan-if-necessary stream)
                                      nil))
          ;; True if `gesture' was freshly read from the user, and not
          ;; just retrieved from the buffer during a rescan.

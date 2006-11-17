@@ -394,27 +394,14 @@ reposition the pane if point is outside the visible area."
                                     (round (- cursor-x)))
                            0)))))))
 
-(defun display-drei-gadget (drei &key force-p (display-minibuffer t))
-  "Redisplay the given Drei pane. If `display-minibuffer' is
-non-NIL (the default), also redisplay the minibuffer associated
-with the Drei instance. Use this from the event handlers so
-`*standard-output*' is properly bound."
-  (let ((*standard-output* drei))
-    (redisplay-frame-pane (pane-frame drei) drei :force-p force-p))
-  (when display-minibuffer
-    (with-accessors ((minibuffer minibuffer)) drei
-      (let* ((minibuffer (or minibuffer *minibuffer*))
-             (*standard-output* minibuffer))
-        (redisplay-frame-pane (pane-frame minibuffer) minibuffer)))))
-
 (defmethod handle-repaint :before ((pane drei-pane) region)
   (declare (ignore region))
   (redisplay-frame-pane (pane-frame pane) pane))
 
-(defun display-drei-pane (drei-pane current-p)
+(defun display-drei-pane (frame drei-pane)
   "Display `pane'. If `pane' has focus, `current-p' should be
 non-NIL."
-  (declare (ignore current-p))
+  (declare (ignore frame))
   (with-accessors ((buffer buffer) (top top) (bot bot)
                    (point-cursor point-cursor)) drei-pane
     (if (full-redisplay-p drei-pane)

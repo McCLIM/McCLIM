@@ -150,13 +150,16 @@ false.")
     :end-of-line-action :scroll
     :background *background-color*
     :foreground *foreground-color*
-    :display-function 'display-drei
+    :display-function 'display-drei-pane
     :default-view +drei-textual-view+
     :width 900
     :active nil)
   (:documentation "An actual, instantiable Drei pane that
 permits (and requires) the host application to control the
 command loop completely."))
+
+(defmethod display-drei ((drei drei-pane))
+  (redisplay-frame-pane (pane-frame drei) drei))
 
 (defmethod editor-pane ((drei drei-pane))
   ;; The whole point of the `drei-pane' class is that it's its own
@@ -241,12 +244,12 @@ command loop completely."))
 (defmethod armed-callback :after ((gadget drei-gadget-pane) client id)
   (declare (ignore client id))
   (setf (active gadget) t)
-  (display-drei-gadget gadget :display-minibuffer nil))
+  (display-drei gadget))
 
 (defmethod disarmed-callback :after ((gadget drei-gadget-pane) client id)
   (declare (ignore client id))
   (setf (active gadget) nil)
-  (display-drei-gadget gadget :display-minibuffer nil))
+  (display-drei gadget))
 
 (defun handle-new-gesture (drei gesture)
   (let ((*command-processor* drei)
@@ -259,8 +262,24 @@ command loop completely."))
         (unbound-gesture-sequence (c)
           (display-message "~A is unbound" (gesture-name (gestures c))))
         (abort-gesture ()
-          (display-message "Aborted")))
-      (redisplay-frame-pane (pane-frame drei) drei))))
+          (display-message "Aborted"))))))
+
+(defmethod execute-drei-command :around ((drei drei-gadget-pane) command)
+  (with-accessors ((buffer buffer)) drei
+    (let* ((*minibuffer* (or *minibuffer*
+                             (unless (eq drei *standard-input*)
+                               *standard-input*))))
+      (call-next-method))
+    (redisplay-frame-pane (pane-frame drei) drei)
+    (when (modified-p buffer)
+      (clear-modify buffer))))
+
+(defmethod execute-drei-command :after ((drei drei-gadget-pane) command)
+  (with-accessors ((buffer buffer)) drei
+    (when (syntax buffer)
+      (update-syntax buffer (syntax buffer)))
+    (when (modified-p buffer)
+      (setf (needs-saving buffer) t))))
 
 ;;; This is the method that functions as the entry point for all Drei
 ;;; gadget logic.
@@ -280,14 +299,7 @@ command loop completely."))
   (unwind-protect (progn (deactivate-gadget drei)
                          (funcall continuation))
     (activate-gadget drei)
-    ;; XXX: Work around McCLIM brokenness:
-    #+(or mcclim building-mcclim) (climi::arm-gadget drei t)))
-
-(defmethod execute-drei-command ((drei drei-gadget-pane) command)
-  (let* ((*minibuffer* (or *minibuffer*
-                           (unless (eq drei *standard-input*)
-                             *standard-input*))))
-    (execute-drei-command-for-frame (pane-frame drei) drei command)))
+    (setf (active drei) t)))
 
 (defmethod additional-command-tables append ((drei drei-gadget-pane)
                                              (table drei-command-table))
@@ -313,6 +325,9 @@ record."))
 (defmethod initialize-instance :after ((area drei-area)
 				       &key)
   (tree-recompute-extent area))
+
+(defmethod display-drei ((drei drei-area))
+  (display-drei-area drei))
 
 ;; For areas, we need to switch to ESA abort gestures after we have
 ;; left the CLIM gesture reading machinery, but before we start doing
@@ -343,17 +358,10 @@ record."))
   (:documentation "A constellation of a Drei gadget instance and
   a minibuffer."))
 
-(defmethod display-drei (frame (drei drei-pane))
-  (declare (ignore frame))
-  (display-drei-pane drei (active drei)))
-
-(defmethod display-drei :after (frame (drei drei))
+(defmethod display-drei :after ((drei drei))
   (with-accessors ((minibuffer minibuffer)) drei
     (when (and minibuffer (not (eq minibuffer (editor-pane drei))))
       (redisplay-frame-pane (pane-frame minibuffer) minibuffer))))
-
-(defmethod display-drei (frame (drei drei-area))
-  (display-drei-area drei))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

@@ -535,7 +535,10 @@ bound to this value.")
                :documentation "The kill ring object associated
 with the Drei instance.")
    (%previous-command :initform nil
-                      :accessor previous-command)
+                      :accessor previous-command
+                      :documentation "The previous CLIM command
+executed by this Drei instance. May be NIL if no command has been
+executed.")
    (%point-cursor :accessor point-cursor
                   :initarg :point-cursor
                   :type cursor
@@ -565,7 +568,7 @@ the concrete Drei implementation. ")
                 :initarg :minibuffer
                 :type (or minibuffer-pane null)
                 :documentation "The minibuffer pane (or null)
-associated with the Drei instance.")
+associated with the Drei instance. This may be NIL.")
    (%command-table :initform (make-instance 'drei-command-table
                                             :name 'drei-dispatching-table)
                    :reader command-table
@@ -575,8 +578,10 @@ associated with the Drei instance.")
 looking up commands for the Drei instance. Has a sensible
 default, don't override it unless you know what you are doing."))
   (:default-initargs :active t :editable-p t)
-  (:documentation "An abstract Drei class that should not be
-directly instantiated."))
+  (:documentation "The abstract Drei class that maintains
+standard Drei editor state. It should not be directly
+instantiated, a subclass implementing specific behavior (a Drei
+variant) should be used instead."))
 
 (defmethod (setf active) :after (new-val (drei drei))
   (mapcar #'(lambda (cursor)
@@ -616,7 +621,7 @@ directly instantiated."))
           bot (clone-mark (high-mark buffer) :right))))
 
 ;; Main redisplay entry point.
-(defgeneric display-drei (frame drei)
+(defgeneric display-drei (drei)
   (:documentation "Display the given Drei instance."))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -626,7 +631,9 @@ directly instantiated."))
 (defmacro handling-drei-conditions (&body body)
   "Evaluate `body' while handling Drei user notification
 signals. The handling consists of displaying their meaning to the
-user in the minibuffer."
+user in the minibuffer. This is the macro that ensures conditions
+such as `motion-before-end' does not land the user in the
+debugger."
   `(handler-case (progn ,@body)
      (offset-before-beginning ()
        (beep) (display-message "Beginning of buffer"))
@@ -673,7 +680,9 @@ variables (`*current-buffer*', `*current-window*',
 from `drei-instance'. The keyword arguments can be used to
 provide forms that will be used to obtain values for the
 respective special variables, instead of finding their value in
-`drei-instance'."
+`drei-instance'. This macro binds all of the usual Drei special
+variables, but also some CLIM special variables needed for
+ESA-style command parsing."
   (once-only (drei-instance)
     `(let* ((*current-buffer* ,(or current-buffer `(buffer ,drei-instance)))
             (*current-window* ,(or current-window drei-instance))
@@ -697,15 +706,17 @@ the given Drei instance."))
                                               &key with-undo (update-syntax t) (redisplay t))
   (with-accessors ((buffer buffer)) drei
     (with-undo ((when with-undo (list buffer)))
-      (funcall continuation)
-      (when update-syntax
-        (update-syntax buffer (syntax buffer))
-        (when (modified-p buffer)
-          (clear-modify buffer)))
-      (when redisplay
-        (display-drei *application-frame* drei))
-      (unless with-undo
-        (clear-undo-history (buffer drei))))))
+      (funcall continuation))
+    (when (or update-syntax redisplay)
+      (update-syntax buffer (syntax buffer)))
+    (unless with-undo
+      (clear-undo-history (buffer drei)))
+    (when redisplay
+      (etypecase drei
+        (pane
+         (redisplay-frame-pane *application-frame* drei))
+        (t
+         (display-drei drei))))))
 
 (defmacro performing-drei-operations ((drei &rest args &key with-undo
                                             (update-syntax t)
@@ -718,7 +729,8 @@ properly reflected in the undo tree, that the Drei is
 redisplayed, the syntax updated, etc. Exactly what is done can be
 controlled via the keyword arguments. Note that if `with-undo' is
 false, the *entire* undo history will be cleared after `body' has
-been evaluated."
+been evaluated. This macro expands into a call to
+`invoke-performing-drei-operations'."
   (declare (ignore with-undo update-syntax redisplay))
   `(invoke-performing-drei-operations ,drei (lambda ()
                                               ,@body)
@@ -772,7 +784,8 @@ calls to `accept' will behave properly. Then call
 can be done to arbitrary streams from within `body'. Or, at
 least, make sure the Drei instance will not be a problem. When
 Drei calls a command, it will be wrapped in this macro, so it
-should be safe to use `accept' within Drei commands."
+should be safe to use `accept' within Drei commands. This macro
+expands into a call to `invoke-accepting-from-user'."
   `(invoke-accepting-from-user ,drei #'(lambda () ,@body)))
 
 ;;; Plain `execute-frame-command' is not good enough for us. Our
@@ -780,29 +793,19 @@ should be safe to use `accept' within Drei commands."
 ;;; that it is also responsible for updating the syntax of the buffer
 ;;; in the pane.
 (defgeneric execute-drei-command (drei-instance command)
-  (:documentation "Execute a CLIM command for a given Drei
-instance. Methods defined on this generic function should set up
-things like handling some Drei conditions, setting up undo,
-etc."))
-
-(defun execute-drei-command-for-frame (frame drei-instance command)
-  "Execute `command' using `execute-frame-command' on
-`frame'. This function will handle Drei conditions and display
-them on the minibuffer, as well as recording whatever changes
-`command' makes to the buffer in the undo tree, and update the
-syntax to reflect the changes."
-  (with-accessors ((buffer buffer)) drei-instance
-    (handling-drei-conditions
-      ;; Must be a list of buffers, so wrap in call to `list'.
-      (with-undo ((list buffer))
-        (accepting-from-user (drei-instance)
-          (execute-frame-command frame command)))
-      (setf (previous-command drei-instance) command)
-      (update-syntax buffer (syntax buffer))
-      (when (modified-p buffer)
-        (clear-modify buffer)))))
+  (:documentation "Execute `command' for `drei'. This is the
+standard function for executing Drei commands - it will take care
+of reporting to the user if a condition is signalled, updating
+the syntax, setting the `previous-command' of `drei' and
+recording the operations performed by `command' for undo."))
 
 (defmethod execute-drei-command ((drei drei) command)
-  (let ((*standard-input* (or *minibuffer* *standard-input*)))
-    (execute-drei-command-for-frame (pane-frame (editor-pane drei))
-                                    drei command)))
+  (with-accessors ((buffer buffer)) drei
+    (let ((*standard-input* (or *minibuffer* *standard-input*)))
+      (performing-drei-operations (drei :redisplay nil
+                                        :update-syntax t
+                                        :with-undo t)
+        (handling-drei-conditions
+          (accepting-from-user (drei)
+            (apply (command-name command) (command-arguments command)))
+          (setf (previous-command drei) command))))))
