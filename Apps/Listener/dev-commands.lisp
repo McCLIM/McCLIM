@@ -106,7 +106,8 @@
 		 (write-char #\( stream)
 		 (present arg 'symbol :stream stream)
 		 (write-char #\space  stream)
-		 (with-output-as-presentation (stream spec 'specializer)
+		 (with-output-as-presentation (stream spec 'specializer
+                                                      :single-box t)
                    (if (typep spec 'class)
                        (format stream "~S" (clim-mop:class-name spec))
                        (format stream "~S" `(eql ,(clim-mop:eql-specializer-object spec)))))
@@ -476,7 +477,8 @@
 								   :text-style text-style)
 				       ;; Present class name rather than class here because the printing of the
 				       ;; class object itself is rather long and freaks out the pointer doc pane.
-				       (with-output-as-presentation (stream (clim-mop:class-name class) 'class-name)
+				       (with-output-as-presentation (stream (clim-mop:class-name class) 'class-name
+                                                                            :single-box t)
 					; (surrounding-output-with-border (stream :shape :drop-shadow)
 					 (princ (clim-mop:class-name class) stream)))) ;)
 				 inferior-fun
@@ -567,7 +569,7 @@
                    (with-ink (,var) ,@body) )))
     
     (fcell (name :left)
-     (with-output-as-presentation (t slot 'slot-definition)
+     (with-output-as-presentation (t slot 'slot-definition :single-box t)
        (princ name))
      (unless (eq type t)
        (fresh-line)
@@ -602,13 +604,13 @@
           (with-ink (readers)
             (if readers 
                 (dolist (reader readers)
-                  (present reader (presentation-type-of reader) :single-box t)
+                  (present reader (presentation-type-of reader))
                   (terpri))
                 (note "No readers~%")))
           (with-ink (writers)
             (if writers 
                 (dolist (writer writers) 
-                  (present writer (presentation-type-of writer) :single-box t)
+                  (present writer (presentation-type-of writer))
                   (terpri))
               (note "No writers"))))))
 
@@ -687,7 +689,7 @@
               (invoke-as-heading
                (lambda ()
                  (format t "~&Slots for ")
-                 (with-output-as-presentation (t (clim-mop:class-name class) 'class-name)
+                 (with-output-as-presentation (t (clim-mop:class-name class) 'class-name :single-box t)
                    (princ (clim-mop:class-name class)))))
               (present-the-slots class) ))))))
 
@@ -916,7 +918,8 @@
 	   do (progn
 		(with-output-as-presentation (*standard-output*
 					      (clim-mop:class-name class)
-					      'class-name)
+					      'class-name
+                                              :single-box t)
 		  (format *standard-output*
 			  "~S~%" (clim-mop:class-name class)))))))
     (when methods
@@ -1009,7 +1012,8 @@
                                                                             normal-ink
                                                                             (make-rgb-color 0.4 0.4 0.4))
                                                                    :text-style text-style)
-                                       (with-output-as-presentation (stream package 'package)
+                                       (with-output-as-presentation (stream package 'package
+                                                                            :single-box t)
                                          (format stream "~A (~D/~D)" (package-name package) internal external)))))
                                inferior-fun
                                :stream stream
@@ -1061,7 +1065,8 @@
                                  :version (pathname-version pathname))))))
 
 (defun pretty-pretty-pathname (pathname stream &key (long-name t))
-  (with-output-as-presentation (stream pathname 'clim:pathname)
+  (with-output-as-presentation (stream pathname 'clim:pathname
+                                       :single-box t)
     (let ((icon (icon-of pathname)))
       (when icon  (draw-icon stream icon :extra-spacing 3)))
     (princ (pathname-printing-name pathname long-name) stream))
@@ -1135,7 +1140,7 @@
             (format t " (only files of type ~a)" (pathname-type pathname)))))
     
       (when (parent-directory pathname)
-        (with-output-as-presentation (t (strip-filespec (parent-directory pathname)) 'clim:pathname)
+        (with-output-as-presentation (t (strip-filespec (parent-directory pathname)) 'clim:pathname :single-box t)
           (draw-icon t (standard-icon "up-folder.xpm") :extra-spacing 3)
           (format t "Parent Directory~%")))
 
@@ -1441,19 +1446,23 @@
   (with-drawing-options (t :ink +olivedrab+)
     (cond ((null values)
            (format t "No values.~%"))
-          ((= 1 (length values))           
-           (present (first values) (presentation-type-of (first values))
-                    :single-box t)
+          ((= 1 (length values))
+           (let ((o (first values)))
+             (with-output-as-presentation (t o (presentation-type-of o)
+                                             :single-box t)
+               (present (first values) 'expression)))
            (fresh-line))
-          (t (do ((i 0 (1+ i))
-                  (item values (rest item)))
-                 ((null item))           
+          (t (do* ((i 0 (1+ i))
+                   (items values (rest items))
+                   (o (first items) (first items)))
+                  ((null items))           
                (with-drawing-options (t :ink +limegreen+)
                  (with-text-style (t (make-text-style nil :italic :small))
                    (format t "~A  " i)))
-                 (present (first item) (presentation-type-of (first item))
-                          :single-box t)
-                 (fresh-line))))))
+               (with-output-as-presentation (t o (presentation-type-of o)
+                                               :single-box t)
+                 (present o 'expression))
+               (fresh-line))))))
 
 (defun shuffle-specials (form values)
   (setf +++ ++
@@ -1510,7 +1519,7 @@
           (invoke-as-heading
            (lambda ()
              (format t "Command table ")
-             (with-output-as-presentation (t ct 'clim:command-table)
+             (with-output-as-presentation (t ct 'clim:command-table :single-box t)
                (princ (command-table-name ct)))))
           (if commands
               (format-items commands :printer (lambda (cmd s) (present cmd 'clim:command-name :stream s))

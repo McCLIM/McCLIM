@@ -186,15 +186,35 @@
         (values result type)
         (input-not-of-required-type result type))))
 
+;;; Listener interactor stream.  If only STREAM-PRESENT were
+;;; specializable on the VIEW argument, this wouldn't be necessary.
+;;; However, it isn't, so we have to play this game.  We currently
+;;; only use this to get single-box presentation highlighting.
+
+(defclass listener-interactor-pane (interactor-pane) ())
+
+(defmethod stream-present :around 
+    ((stream listener-interactor-pane) object type
+     &rest args &key (single-box nil sbp) &allow-other-keys)
+  (apply #'call-next-method stream object type :single-box t args)
+  ;; we would do this, but CLIM:PRESENT calls STREAM-PRESENT with all
+  ;; the keyword arguments explicitly.  *sigh*.
+  #+nil 
+  (if sbp
+      (call-next-method)
+      (apply #'call-next-method stream object type :single-box t args)))
+
 ;;; Listener application frame
 (define-application-frame listener (standard-application-frame
                                     command-history-mixin)
     ((system-command-reader :accessor system-command-reader
 			    :initarg :system-command-reader
 			    :initform t))
-  (:panes (interactor :interactor :scroll-bars t
-                      :display-function #'listener-initial-display-function
-                      :display-time t)
+  (:panes (interactor-container
+           (make-clim-stream-pane
+            :type 'listener-interactor-pane
+            :name 'interactor :scroll-bars t :display-time t
+            :display-function #'listener-initial-display-function))
           (doc :pointer-documentation)
           (wholine (make-pane 'wholine-pane
                      :display-function 'display-wholine :scroll-bars nil
@@ -210,7 +230,7 @@
   (:menu-bar t)
   (:layouts (default
 	      (vertically ()
-                interactor
+                interactor-container
                 doc
                 wholine))))
 
@@ -298,16 +318,17 @@
             object type)
         (flet ((sensitizer (stream cont)
                  (case type
-                   ((command) (with-output-as-presentation 
-                                  (stream object type :single-box t)
+                   ((command) (with-output-as-presentation (stream object type :single-box t)
                                 (funcall cont)))
-                   ((form) (with-output-as-presentation
-                               (stream object 'command :single-box t)
-                             (with-output-as-presentation
-                                 (stream (cadr object) 
-                                         (presentation-type-of (cadr object))
-                                         :single-box t)
-                               (funcall cont))))
+                   ((form) 
+                    (with-output-as-presentation (stream object 'command :single-box t)
+                      (with-output-as-presentation 
+                          (stream (cadr object) 'expression :single-box t)
+                        (with-output-as-presentation
+                            (stream (cadr object) 
+                                    (presentation-type-of (cadr object))
+                                    :single-box t)
+                          (funcall cont)))))
                    (t (funcall cont)))))
           (handler-case
               ;; Body
@@ -354,15 +375,15 @@
       (command
        ;; Kludge the cursor position - Goatee will have moved it all around
        (setf (stream-cursor-position stream) (values x y))
-       (present object object-type
-                :view (stream-default-view stream)
-                :stream stream :single-box t)
+       (present object object-type :stream stream
+                :view (stream-default-view stream))
        object))))
 
 (defun print-listener-prompt (stream frame)
   (declare (ignore frame))
   (with-text-face (stream :italic)
-    (print-package-name stream)
+    (with-output-as-presentation (stream *package* 'package :single-box t)
+      (print-package-name stream))
     (princ "> " stream)))
 
 (defmethod frame-standard-output ((frame listener))
