@@ -150,7 +150,41 @@
      (lambda ()
        (funcall *listener-initial-function*)
        (fresh-line)))))
-  
+
+;;; Listener view
+;;;
+;;; FIXME: this TEXTUAL-VIEW thing is a lie: we can draw graphics.
+;;; However, all the various presentation methods around the world are
+;;; specialized on textual view, and it sucks to have to reimplement
+;;; them all.
+(defclass listener-view (textual-view) ())
+
+(defclass listener-pointer-documentation-view 
+    (listener-view pointer-documentation-view)
+  ())
+
+(defparameter +listener-view+ (make-instance 'listener-view))
+(defparameter +listener-pointer-documentation-view+
+  (make-instance 'listener-pointer-documentation-view))
+
+(define-presentation-method present :around
+  ((object sequence) (type sequence) stream (view listener-view)
+   &key acceptably for-context-type)
+  (present object 'expression :stream stream :view view
+           :acceptably acceptably :for-context-type for-context-type))
+
+(define-presentation-method accept :around
+  ((type sequence) stream (view listener-view) &key default default-type)
+  (let* ((token (read-token stream))
+         (result (handler-case (read-from-string token)
+                   (error (c)
+                     (declare (ignore c))
+                     (simple-parse-error 
+                      "Error parsing ~S for presentation type ~S"
+                      token type)))))
+    (if (presentation-typep result type)
+        (values result type)
+        (input-not-of-required-type result type))))
 
 ;;; Listener application frame
 (define-application-frame listener (standard-application-frame
@@ -213,7 +247,11 @@
 	(*read-default-float-format* *read-default-float-format*)
 	(*read-eval* *read-eval*)
 	(*read-suppress* *read-suppress*)
-	(*readtable* *readtable*))    
+	(*readtable* *readtable*))
+    (setf (stream-default-view (get-frame-pane frame 'interactor))
+          +listener-view+)
+    (setf (stream-default-view (get-frame-pane frame 'doc))
+          +listener-pointer-documentation-view+)
     (loop while 
       (catch 'return-to-listener
 	(restart-case (call-next-method)
@@ -258,43 +296,52 @@
       (let* ((command-table (find-command-table 'listener))
              (*accelerator-gestures* (climi::compute-inherited-keystrokes command-table))
             object type)
-	(handler-case
-            ;; Body
-	    (with-input-editing (stream :input-sensitizer
-					(lambda (stream cont)
-					  (if type
-					      (with-output-as-presentation
-						  (stream object type)
-						(funcall cont))
-					      (funcall cont))))
-	      (let ((c (read-gesture :stream stream :peek-p t)))
-		(setf object
-		      (if (member c *form-opening-characters*)
-			  (prog2
-			      (when (char= c #\,)
-				(read-gesture :stream stream)) ; lispm behavior 
-                   #| ---> |# (list 'com-eval (accept 'form :stream stream :prompt nil))
-			    (setf type 'command #|'form|# )) ; FIXME? 
-			  (prog1
-			      (accept '(command :command-table listener)  :stream stream
-				      :prompt nil)
-			    (setf type 'command))))))
-          ;; Handlers
-	  ((or simple-parse-error input-not-of-required-type)  (c)
-	    (beep)
-	    (fresh-line *query-io*)
-	    (princ c *query-io*)
-	    (terpri *query-io*)
-	    nil)
-          (accelerator-gesture (c)
-            (let ((command (lookup-keystroke-command-item (accelerator-gesture-event c)
-                                                          command-table)))              
-              (setf ;type 'command
-                    object (if (partial-command-p command)
-                               (funcall *partial-command-parser*
-                                        command-table stream command
-                                        (position *unsupplied-argument-marker* command))
-                               command)))))
+        (flet ((sensitizer (stream cont)
+                 (case type
+                   ((command) (with-output-as-presentation 
+                                  (stream object type :single-box t)
+                                (funcall cont)))
+                   ((form) (with-output-as-presentation
+                               (stream object 'command :single-box t)
+                             (with-output-as-presentation
+                                 (stream (cadr object) 
+                                         (presentation-type-of (cadr object))
+                                         :single-box t)
+                               (funcall cont))))
+                   (t (funcall cont)))))
+          (handler-case
+              ;; Body
+              (with-input-editing 
+                  (stream :input-sensitizer #'sensitizer)
+                (let ((c (read-gesture :stream stream :peek-p t)))
+                  (setf object
+                        (if (member c *form-opening-characters*)
+                            (prog2
+                                (when (char= c #\,)
+                                  ;; lispm behavior 
+                                  (read-gesture :stream stream))
+                                (list 'com-eval (accept 'form :stream stream :prompt nil))
+                              (setf type 'form))
+                            (prog1
+                                (accept '(command :command-table listener)  :stream stream
+                                        :prompt nil)
+                              (setf type 'command))))))
+            ;; Handlers
+            ((or simple-parse-error input-not-of-required-type) (c)
+              (beep)
+             (fresh-line *query-io*)
+             (princ c *query-io*)
+             (terpri *query-io*)
+             nil)
+            (accelerator-gesture (c)
+              (let ((command (lookup-keystroke-command-item (accelerator-gesture-event c)
+                                                            command-table)))              
+                (setf ;type 'command
+                 object (if (partial-command-p command)
+                            (funcall *partial-command-parser*
+                                     command-table stream command
+                                     (position *unsupplied-argument-marker* command))
+                            command))))))
 	object)))
 
 (defmethod read-frame-command :around ((frame listener)
@@ -303,14 +350,14 @@
    and whatever else need be done."
   (multiple-value-bind (x y)  (stream-cursor-position stream)    
     (with-input-context ('command) (object object-type)
-            (call-next-method)
-        (command
-         ;; Kludge the cursor position - Goatee will have moved it all around
-         (setf (stream-cursor-position stream) (values x y))
-         (present object object-type
-                  :view (stream-default-view stream)
-                  :stream stream)
-         object))))
+        (call-next-method)
+      (command
+       ;; Kludge the cursor position - Goatee will have moved it all around
+       (setf (stream-cursor-position stream) (values x y))
+       (present object object-type
+                :view (stream-default-view stream)
+                :stream stream :single-box t)
+       object))))
 
 (defun print-listener-prompt (stream frame)
   (declare (ignore frame))
@@ -328,14 +375,14 @@
                           (process-name "Listener")
                           (eval nil))
   (flet ((run ()
-           (run-frame-top-level
-            (make-application-frame 'listener
-                                    :width width
-                                    :height height
-                                    :system-command-reader system-command-reader)
-            :listener-funcall (cond ((null eval) nil)
-                                    ((functionp eval) eval)
-                                    (t (lambda () (eval eval)))))))
+           (let ((frame (make-application-frame 
+                         'listener
+                         :width width :height height
+                         :system-command-reader system-command-reader)))
+             (run-frame-top-level 
+              frame :listener-funcall (cond ((null eval) nil)
+                                            ((functionp eval) eval)
+                                            (t (lambda () (eval eval))))))))
     (if new-process
         (clim-sys:make-process #'run :name process-name)
         (run))))

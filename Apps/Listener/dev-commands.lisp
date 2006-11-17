@@ -602,13 +602,13 @@
           (with-ink (readers)
             (if readers 
                 (dolist (reader readers)
-                  (hackish-present reader)
+                  (present reader (presentation-type-of reader) :single-box t)
                   (terpri))
                 (note "No readers~%")))
           (with-ink (writers)
             (if writers 
                 (dolist (writer writers) 
-                  (hackish-present writer)
+                  (present writer (presentation-type-of writer) :single-box t)
                   (terpri))
               (note "No writers"))))))
 
@@ -1437,18 +1437,13 @@
 
 ;;; Eval
 
-(defun hackish-present (object)
-  "Hack of the day.. let McCLIM determine presentation type to use, except for lists, because the list presentation method is inappropriate for lisp return values."
-  (typecase object
-    (sequence (present object 'expression))
-    (t (present object))))
-
 (defun display-evalues (values)
   (with-drawing-options (t :ink +olivedrab+)
     (cond ((null values)
            (format t "No values.~%"))
           ((= 1 (length values))           
-           (hackish-present (first values))
+           (present (first values) (presentation-type-of (first values))
+                    :single-box t)
            (fresh-line))
           (t (do ((i 0 (1+ i))
                   (item values (rest item)))
@@ -1456,7 +1451,8 @@
                (with-drawing-options (t :ink +limegreen+)
                  (with-text-style (t (make-text-style nil :italic :small))
                    (format t "~A  " i)))
-                 (hackish-present (first item))
+                 (present (first item) (presentation-type-of (first item))
+                          :single-box t)
                  (fresh-line))))))
 
 (defun shuffle-specials (form values)
