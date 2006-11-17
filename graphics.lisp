@@ -528,9 +528,10 @@
 			toward-x toward-y transform-glyphs
 			ink clipping-region transformation
 			text-style text-family text-face text-size)
-" Draws a single character of filled text represented by the given element. 
-  element is a character or other object to be translated into a font index.
-  The given x and y specify the left baseline position for the character."
+"Draws a single character of filled text represented by the given
+element.  element is a character or other object to be translated
+into a font index.  The given x and y specify the left baseline
+position for the character."
   (declare (ignore ink clipping-region transformation
 		   text-style text-family text-face text-size))
   (with-medium-options (sheet args)
