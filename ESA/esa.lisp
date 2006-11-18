@@ -301,7 +301,6 @@ current message was set."))
           (funcall continuation minibuffer))))
 
 (defmethod invoke-with-minibuffer-stream ((minibuffer pointer-documentation-pane) continuation)
-  (window-clear minibuffer)
   (funcall continuation minibuffer))
 
 (defmethod invoke-with-minibuffer-stream ((minibuffer null) continuation)
