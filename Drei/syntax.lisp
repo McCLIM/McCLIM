@@ -28,7 +28,8 @@
                   :initform (error "A command table has not been provided for this syntax")
                   :reader command-table)
    (%cursor-positions :accessor cursor-positions
-                      :initform nil)))
+                      :initform nil))
+  (:documentation "The base class for all syntaxes."))
 
 (defun syntaxp (object)
   "Return T if `object' is an instance of a syntax, NIL
@@ -51,9 +52,15 @@ made to execute an operation that is unavailable for the particular syntax" ))
   (:documentation "This condition is signaled whenever an attempt is
 made to execute a by-experssion motion command and no expression is available." ))
 
-(defgeneric update-syntax (buffer syntax))
+(defgeneric update-syntax (buffer syntax)
+  (:documentation "Inform the syntax module that it must update
+its view of the buffer The low-mark and the high-mark of the
+buffer indicate what region has been updated."))
 
-(defgeneric update-syntax-for-display (buffer syntax from to))
+(defgeneric update-syntax-for-display (buffer syntax from to)
+  (:documentation "Inform the syntax module that it must update
+its syntactic analysis to cover the region between the two marks
+from and to."))
 
 (defgeneric syntax-line-indentation (mark tab-width syntax)
   (:documentation "Return the correct indentation for the line containing
@@ -355,9 +362,12 @@ mandated by file types or attribute lists.")
 
 (defclass parse-tree ()
   ((start-mark :initform nil :initarg :start-mark :reader start-mark)
-   (size :initform nil :initarg :size)))
+   (size :initform nil :initarg :size))
+  (:documentation "The base class for all parse trees."))
 
-(defgeneric start-offset (parse-tree))
+(defgeneric start-offset (parse-tree)
+  (:documentation "The offset in the buffer of the first
+character of a parse tree."))
 
 (defmethod start-offset ((tree parse-tree))
   (let ((mark (start-mark tree)))
@@ -375,7 +385,9 @@ mandated by file types or attribute lists.")
 	 (setf start-mark (clone-mark offset))
 	 (setf (offset start-mark) (offset offset)))))
 
-(defgeneric end-offset (parse-tree))
+(defgeneric end-offset (parse-tree)
+  (:documentation "The offset in the buffer of the character
+following the last one of a parse tree."))
 
 (defmethod end-offset ((tree parse-tree))
   (with-slots (start-mark size) tree
@@ -402,19 +414,61 @@ mandated by file types or attribute lists.")
 ;;; lexer
 
 (defclass lexer ()
-  ((buffer :initarg :buffer :reader buffer)))
+  ((buffer :initarg :buffer
+           :reader buffer
+           :documentation "The buffer associated with the
+lexer."))
+  (:documentation "The base class for all lexers."))
 
-(defgeneric nb-lexemes (lexer))
-(defgeneric lexeme (lexer pos))
-(defgeneric insert-lexeme (lexer pos lexeme))
-(defgeneric delete-invalid-lexemes (lexer from to))
-(defgeneric inter-lexeme-object-p (lexer object))
-(defgeneric skip-inter-lexeme-objects (lexer scan))
-(defgeneric update-lex (lexer start-pos end))
-(defgeneric next-lexeme (lexer scan))
+(defgeneric nb-lexemes (lexer)
+  (:documentation "Return the number of lexemes in the lexer."))
+
+(defgeneric lexeme (lexer pos)
+  (:documentation "Given a lexer and a position, return the
+lexeme in that position in the lexer."))
+
+(defgeneric insert-lexeme (lexer pos lexeme)
+  (:documentation "Insert a lexeme at the position in the lexer.
+All lexemes following POS are moved to one position higher."))
+
+(defgeneric delete-invalid-lexemes (lexer from to)
+  (:documentation "Invalidate all lexemes that could have changed
+as a result of modifications to the buffer"))
+
+(defgeneric inter-lexeme-object-p (lexer object)
+  (:documentation "This generic function is called by the
+incremental lexer to determine whether a buffer object is an
+inter-lexeme object, typically whitespace. Client code must
+supply a method for this generic function."))
+
+(defgeneric skip-inter-lexeme-objects (lexer scan)
+  (:documentation "This generic function is called by the
+incremental lexer to skip inter-lexeme buffer objects.  The
+default method for this generic function increments the scan mark
+until the object after the mark is not an inter-lexeme object, or
+until the end of the buffer has been reached."))
+
+(defgeneric update-lex (lexer start-pos end)
+  (:documentation "This function is called by client code as part
+of the buffer-update protocol to inform the lexer that it needs
+to analyze the contents of the buffer at least up to the `end'
+mark of the buffer.  `start-pos' is the position in the lexeme
+sequence at which new lexemes should be inserted."))
+
+(defgeneric next-lexeme (lexer scan)
+  (:documentation "This generic function is called by the
+incremental lexer to get a new lexeme from the buffer.  Client
+code must supply a method for this function that specializes on
+the lexer class.  It is guaranteed that scan is not at the end of
+the buffer, and that the first object after scan is not an
+inter-lexeme object.  Thus, a lexeme should always be returned by
+this function."))
 
 (defclass incremental-lexer (lexer)
-  ((lexemes :initform (make-instance 'standard-flexichain) :reader lexemes)))
+  ((lexemes :initform (make-instance 'standard-flexichain) :reader lexemes))
+  (:documentation "A subclass of lexer which maintains the buffer
+in the form of a sequence of lexemes that is updated
+incrementally."))
 
 (defmethod nb-lexemes ((lexer incremental-lexer))
   (nb-elements (lexemes lexer)))
@@ -517,6 +571,7 @@ position in the lexemes of LEXER"
 
 
 (defmacro grammar (&body body)
+  "Create a grammar object from a set of rules."
   (let ((rule (gensym "RULE"))
 	(rules (gensym "RULES"))
 	(result (gensym "RESULT")))
