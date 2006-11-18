@@ -375,17 +375,18 @@ if stuff is inserted after the insertion pointer."
       ;; We narrow the buffer to the input position, so the user won't
       ;; be able to erase the original command (when entering command
       ;; arguments) or stuff like argument prompts.
-      (drei-core:with-narrowed-buffer (drei (input-position stream) t t)
-        (handler-case (process-gestures-or-command drei)
-          (unbound-gesture-sequence (c)
-            (display-message "~A is unbound" (gesture-name (gestures c))))
-          (abort-gesture (c)
-            (if (member (abort-gesture-event c)
-                        *abort-gestures*
-                        :test #'event-matches-gesture-name-p)
-                (signal 'abort-gesture :event (abort-gesture-event c))
-                (when was-directly-processing
-                  (display-message "Aborted"))))))
+      (accepting-from-user (drei)
+        (drei-core:with-narrowed-buffer (drei (input-position stream) t t)
+          (handler-case (process-gestures-or-command drei)
+            (unbound-gesture-sequence (c)
+              (display-message "~A is unbound" (gesture-name (gestures c))))
+            (abort-gesture (c)
+              (if (member (abort-gesture-event c)
+                          *abort-gestures*
+                          :test #'event-matches-gesture-name-p)
+                  (signal 'abort-gesture :event (abort-gesture-event c))
+                  (when was-directly-processing
+                    (display-message "Aborted")))))))
       ;; Will also take care of redisplaying minibuffer.
       (display-drei drei)
       (let ((first-mismatch (mismatch before (stream-input-buffer stream))))

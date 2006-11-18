@@ -806,6 +806,5 @@ recording the operations performed by `command' for undo."))
                                         :update-syntax t
                                         :with-undo t)
         (handling-drei-conditions
-          (accepting-from-user (drei)
-            (apply (command-name command) (command-arguments command)))
+          (apply (command-name command) (command-arguments command))
           (setf (previous-command drei) command))))))

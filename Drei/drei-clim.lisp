@@ -257,22 +257,18 @@ command loop completely."))
     ;; It is important that the minibuffer of the Drei object is
     ;; actually the minibuffer that will be used for output, or it
     ;; will not be properly redisplayed by `display-drei'.
-    (letf (((minibuffer drei) (or (minibuffer drei) *minibuffer*)))
-      (handler-case (process-gesture drei gesture)
-        (unbound-gesture-sequence (c)
-          (display-message "~A is unbound" (gesture-name (gestures c))))
-        (abort-gesture ()
-          (display-message "Aborted"))))))
-
-(defmethod execute-drei-command :around ((drei drei-gadget-pane) command)
-  (with-accessors ((buffer buffer)) drei
-    (let* ((*minibuffer* (or *minibuffer*
-                             (unless (eq drei *standard-input*)
-                               *standard-input*))))
-      (call-next-method))
-    (redisplay-frame-pane (pane-frame drei) drei)
-    (when (modified-p buffer)
-      (clear-modify buffer))))
+    (accepting-from-user (drei)
+      (letf (((minibuffer drei) (or (minibuffer drei) *minibuffer*
+                                    (unless (eq drei *standard-input*)
+                                      *standard-input*))))
+        (handler-case (process-gesture drei gesture)
+          (unbound-gesture-sequence (c)
+            (display-message "~A is unbound" (gesture-name (gestures c))))
+          (abort-gesture ()
+            (display-message "Aborted")))
+        (display-drei drei)
+        (when (modified-p (buffer drei))
+          (clear-modify (buffer drei)))))))
 
 (defmethod execute-drei-command :after ((drei drei-gadget-pane) command)
   (with-accessors ((buffer buffer)) drei
@@ -359,9 +355,10 @@ record."))
   a minibuffer."))
 
 (defmethod display-drei :after ((drei drei))
-  (with-accessors ((minibuffer minibuffer)) drei
-    (when (and minibuffer (not (eq minibuffer (editor-pane drei))))
-      (redisplay-frame-pane (pane-frame minibuffer) minibuffer))))
+  (when (and *minibuffer* (not (eq *minibuffer* (editor-pane drei))))
+    ;; We need to use :force-p t to remove any existing output from
+    ;; the pane.
+    (redisplay-frame-pane (pane-frame *minibuffer*) *minibuffer* :force-p t)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
