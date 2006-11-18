@@ -87,11 +87,16 @@
 	do (decf (offset mark))))
 
 (defun beep-limit-action (mark original-offset remaining unit syntax)
+  "This limit action will beep at the user."
   (declare (ignore mark original-offset remaining unit syntax))
   (clim:beep)
   nil)
 
 (defun revert-limit-action (mark original-offset remaining unit syntax)
+  "This limit action will try to restore the mark state from
+before the attempted action. Note that this will not restore any
+destructive actions that have been performed, it will only
+restore the position of `mark'."
   (declare (ignore remaining unit syntax))
   (setf (offset mark) original-offset)
   nil)
@@ -103,12 +108,14 @@
    (remaining :initarg :remaining)
    (syntax :initarg :syntax))
   (:documentation
-   "Type of conditions signalled by motion functions unable to move.")
+   "This error condition signifies that a motion cannot be performed.")
   (:report (lambda (condition stream)
              (format stream "Motion by ~A reached limit."
                      (slot-value condition 'UNIT)))))
 
 (defun error-limit-action (mark original-offset remaining unit syntax)
+  "This limit action will signal an error of type
+`motion-limit-error'."
   (error 'MOTION-LIMIT-ERROR
          :mark mark
          :original-offset original-offset
@@ -180,6 +187,9 @@
                    (t t))))))))
 
 (defun make-diligent-motor (motor fiddler)
+  "Create and return a diligent motor with a default limit action
+of `beep-limit-action'. `Motor' and `fiddler' will take turns
+being called until either `motor' succeeds or `fiddler' fails."
   (labels ((make-limit-action (loser)
              (labels ((limit-action
                           (mark original-offset remaining unit syntax)
