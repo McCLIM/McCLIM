@@ -175,16 +175,21 @@
 
 (define-presentation-method accept :around
   ((type sequence) stream (view listener-view) &key default default-type)
-  (let* ((token (read-token stream))
-         (result (handler-case (read-from-string token)
-                   (error (c)
-                     (declare (ignore c))
-                     (simple-parse-error 
-                      "Error parsing ~S for presentation type ~S"
-                      token type)))))
-    (if (presentation-typep result type)
-        (values result type)
-        (input-not-of-required-type result type))))
+  ;; oh, my word.  although TYPE here might look like it's bound to
+  ;; the presentation type itself, in fact it is bound to the
+  ;; parameter of the SEQUENCE presentation type.  We need the
+  ;; presentation type itself, so we reconstruct it.
+  (let ((ptype (list 'sequence type)))
+    (let* ((token (read-token stream))
+	   (result (handler-case (read-from-string token)
+		     (error (c)
+		       (declare (ignore c))
+		       (simple-parse-error 
+			"Error parsing ~S for presentation type ~S"
+			token ptype)))))
+      (if (presentation-typep result ptype)
+	  (values result ptype)
+	  (input-not-of-required-type result ptype)))))
 
 ;;; Listener interactor stream.  If only STREAM-PRESENT were
 ;;; specializable on the VIEW argument, this wouldn't be necessary.
