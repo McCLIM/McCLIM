@@ -47,8 +47,26 @@
 ;;; The basic Drei redisplay functions:
 
 (defgeneric display-drei-contents (stream drei syntax)
-  (:documentation "Display the contents of the Drei instance
-`drei', which is in the syntax `syntax', to `stream'.")
+  (:documentation "The purpose of this function is to display the
+buffer contents of a Drei instance to some output
+surface. `Stream' is the CLIM output stream that redisplay should
+be performed on, `drei' is the Drei instance that is being
+redisplayed, and `syntax' is the syntax object of the buffer in
+`drei'. Methods defined for this generic function can draw
+whatever they want, but they should not assume that they are the
+only user of `stream', unless the `stream' argument has been
+specialized to some application-specific pane class that can
+guarantee this. For example, when accepting multiple values using
+the `accepting-values' macro, several Drei instances will be
+displayed simultaneously on the same stream. It is permitted to
+only specialise `stream' on `clim-stream-pane' and not
+`extended-output-stream'. When writing methods for this function,
+be aware that you cannot assume that the buffer will contain only
+characters, and that any subsequence of the buffer is coercable
+to a string. Drei buffers can contain arbitrary objects, and
+redisplay methods are required to handle this (though they are
+not required to handle it nicely, they can just ignore the
+object, or display the `princ'ed representation.)")
   (:method :around ((stream extended-output-stream) (drei drei) (syntax syntax))
            (letf (((stream-default-view stream) (view drei)))
              (call-next-method))))
@@ -64,7 +82,26 @@
     (setf (output-record-position record) (stream-cursor-position stream))))
 
 (defgeneric display-drei-cursor (stream drei cursor syntax)
-  (:documentation "Display the given cursor to `stream'.")
+  (:documentation "The purpose of this function is to display a
+visible indication of a cursor of a Drei instance to some output
+surface. `Stream' is the CLIM output stream that drawing should
+be performed on, `drei' is the Drei instance that is being
+redisplayed, `cursor' is the cursor object to be displayed (a
+subclass of `drei-cursor') and `syntax' is the syntax object of
+the buffer in `drei'}. Methods on this generic function can draw
+whatever they want, but they should not assume that they are the
+only user of `stream', unless the `stream' argument has been
+specialized to some application-specific pane class that can
+guarantee this. It is permitted to only specialise `stream' on
+`clim-stream-pane' and not `extended-output-stream'. It is
+recommended to use the function `offset-to-screen-position' to
+determine where to draw the visual representation for the
+cursor. It is also recommended to use the ink specified by
+`cursor' to perform the drawing, if applicable. This method will
+only be called by the Drei redisplay engine when the cursor is
+active and the buffer position it refers to is on display -
+therefore, `offset-to-screen-position' is *guaranteed* to not
+return NIL or T.")
   (:method :around ((stream extended-output-stream) (drei drei)
                     (cursor drei-cursor) (syntax syntax))
            (when (visible cursor drei)

@@ -129,24 +129,67 @@ invoking the debugger)."))
 ;;; Undo
 
 (defclass undo-mixin ()
-  ((tree :initform (make-instance 'standard-undo-tree) :reader undo-tree)
-   (undo-accumulate :initform '() :accessor undo-accumulate)
-   (performing-undo :initform nil :accessor performing-undo)))
+  ((tree :initform (make-instance 'standard-undo-tree)
+         :reader undo-tree
+         :documentation "Returns the undo-tree of the buffer.")
+   (undo-accumulate :initform '()
+                    :accessor undo-accumulate
+                    :documentation "The list returned by this
+function is initially NIL (the empty list). The :before methods
+on `insert-buffer-object', `insert-buffer-sequence', and
+`delete-buffer-range' push undo records on to this list.")
+   (performing-undo :initform nil
+                    :accessor performing-undo
+                    :documentation "This is initially NIL.
+The :before methods on `insert-buffer-object',
+`insert-buffer-sequence', and `delete-buffer-range' push undo
+records onto the undo accumulator only if this slot is NIL so
+that no undo information is added as a result of an undo
+operation."))
+  (:documentation "This is a mixin class that buffer classes can
+inherit from. It contains an undo tree, an undo accumulator and a
+flag specifyng whether or not it is currently performing
+undo. The undo tree and undo accumulators are initially empty."))
 
 (defclass drei-undo-record (standard-undo-record)
-  ((buffer :initarg :buffer)))
+  ((buffer :initarg :buffer
+           :documentation "The buffer to which the record
+belongs."))
+  (:documentation "A base class for all output records in
+Drei."))
 
 (defclass simple-undo-record (drei-undo-record)
-  ((offset :initarg :offset :reader undo-offset)))
+  ((offset :initarg :offset
+           :reader undo-offset
+           :documentation "The offset that determines the
+position at which the undo operation is to be executed."))
+  (:documentation "A base class for output records that modify
+buffer contents at a specific offset."))
 
 (defclass insert-record (simple-undo-record)
-  ((objects :initarg :objects)))
+  ((objects :initarg :objects
+            :documentation "The sequence of objects that are to
+be inserted whenever flip-undo-record is called on an instance of
+insert-record."))
+  (:documentation "Whenever objects are deleted, the sequence of
+objects is stored in an insert record containing a mark."))
 
 (defclass delete-record (simple-undo-record)
-  ((length :initarg :length)))
+  ((length :initarg :length
+           :documentation "The length of the sequence of objects
+to be deleted whenever `flip-undo-record' is called on an
+instance of `delete-record'."))
+  (:documentation "Whenever objects are inserted, a
+`delete-record' containing a mark is created and added to the
+undo tree."))
 
 (defclass compound-record (drei-undo-record)
-  ((records :initform '() :initarg :records)))
+  ((records :initform '()
+            :initarg :records
+            :documentation "The undo records contained by this
+compound record."))
+  (:documentation "This record simply contains a list of other
+records."))
 
 (defmethod print-object  ((object delete-record) stream)
   (with-slots (offset length) object
@@ -181,12 +224,16 @@ invoking the debugger)."))
 	  (undo-accumulate buffer))))
 
 (defmacro with-undo ((get-buffers-exp) &body body)
-  "Evaluate `body', registering any changes to buffer contents in
-the undo memory for the respective buffer, permitting individual
-undo for each buffer. `get-buffers-exp' should be a form, that
-will be evaluated whenever a complete list of buffers is
-needed (to set up all buffers to prepare for undo, and to check
-them all for changes after `body' has run)."
+  "This macro executes the forms of `body', registering changes
+made to the list of buffers retrieved by evaluating
+`get-buffers-exp'. When `body' has run, for each buffer it will
+call `add-undo' with an undo record and the undo tree of the
+buffer.  If the changes done by `body' to the buffer has resulted
+in only a single undo record, it is passed as is to `add-undo'.
+If it contains several undo records, a compound undo record is
+constructed out of the list and passed to `add-undo'.  Finally,
+if the buffer has no undo records, `add-undo' is not called at
+all."
   (with-gensyms (buffer)
     `(progn
        (dolist (,buffer ,get-buffers-exp)

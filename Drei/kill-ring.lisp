@@ -26,12 +26,21 @@
 
 (defclass kill-ring ()
   ((max-size :type (integer 5 *) ;5 element minimum from flexichain protocol 
-	     :initarg :max-size)
+	     :initarg :max-size
+             :documentation "The limitation placed upon the
+number of elements held by the kill ring.  Once the maximum size
+has been reached, older entries must first be removed before new
+ones can be added. When altered, any surplus elements will be
+silently dropped.")
    (cursorchain :type standard-cursorchain
 		:accessor kill-ring-chain
-		:initform (make-instance 'standard-cursorchain))
+		:initform (make-instance 'standard-cursorchain)
+                :documentation "The cursorchain associated with
+the kill ring.")
    (yankpoint   :type left-sticky-flexicursor
-	        :accessor kill-ring-cursor)
+	        :accessor kill-ring-cursor
+                :documentation "The flexicursor associated with
+the kill ring.")
    (append-next-p :type boolean :initform nil
 		  :accessor append-next-p))
   (:documentation "A class for all kill rings"))
@@ -51,38 +60,40 @@
     (setf yankpoint (make-instance 'left-sticky-flexicursor :chain cursorchain))))
 
 (defgeneric kill-ring-length (kr)
-  (:documentation "Returns the current length of the kill ring"))
+  (:documentation "Returns the current length of the kill-ring.
+Note this is different than `kill-ring-max-size'."))
 
 (defgeneric kill-ring-max-size (kr)
-  (:documentation "Returns the value of a kill ring's maximum size"))
+  (:documentation "Returns the value of the kill ring's maximum
+size"))
 
 (defgeneric (setf kill-ring-max-size) (kr size)
-  (:documentation "Alters the maximum size of a kill ring, even 
+  (:documentation "Alters the maximum size of the kill ring, even
 if it means dropping elements to do so."))
 
 (defgeneric reset-yank-position (kr)
-  (:documentation "Moves the current yank point back to the start of 
-                   of kill ring position"))
+  (:documentation "Moves the current yank point back to the start
+of of kill ring position"))
 
 (defgeneric rotate-yank-position (kr &optional times)
-  (:documentation "Moves the yank point associated with a kill-ring 
-                   one or times many positions away from the start 
-                   of ring position.  If times is greater than the 
-                   current length then the cursor will wrap to the 
-                   start of ring position and continue rotating."))
+  (:documentation "Moves the yank point associated with a
+kill-ring one or times many positions away from the start of ring
+position.  If times is greater than the current length then the
+cursor will wrap to the start of ring position and continue
+rotating."))
 
 (defgeneric kill-ring-standard-push (kr vector)
-  (:documentation "Pushes a vector of objects onto the kill ring creating a new
-start of ring position.  This function is much like an every-
-day lisp push with size considerations.  If the length of the
-kill ring is greater than the maximum size, then \"older\"
-elements will be removed from the ring until the maximum size
-is reached."))
+  (:documentation "Pushes a vector of objects onto the kill ring
+creating a new start of ring position.  This function is much
+like an everyday Lisp push with size considerations.  If the
+length of the kill ring is greater than the maximum size, then
+\"older\" elements will be removed from the ring until the
+maximum size is reached."))
 
 (defgeneric kill-ring-concatenating-push (kr vector)
-  (:documentation "Concatenates the contents of vector onto the end
-                   of the current contents of the top of the kill ring.
-                   If the kill ring is empty the a new entry is pushed."))
+  (:documentation "Concatenates the contents of vector onto the
+end of the current contents of the top of the kill ring.  If the
+kill ring is empty the a new entry is pushed."))
 
 (defgeneric kill-ring-reverse-concatenating-push (kr vector)
   (:documentation "Concatenates the contents of vector onto the front
@@ -91,12 +102,10 @@ is empty a new entry is pushed."))
 
 (defgeneric kill-ring-yank (kr &optional reset)
   (:documentation "Returns the vector of objects currently
-                   pointed to by the cursor.  If reset is T, a
-                   call to reset-yank-position is called before
-                   the object is yanked.  The default for reset
-                   is NIL.  If the kill ring is empty, a
-                   condition of type `empty-kill-ring' is
-                   signalled."))
+pointed to by the cursor.  If `reset' is T, a call to
+`reset-yank-position' is called before the object is yanked.  The
+default for reset is NIL.  If the kill ring is empty, a condition
+of type `empty-kill-ring' is signalled."))
 
 (defmethod kill-ring-length ((kr kill-ring))
   (nb-elements (kill-ring-chain kr)))
@@ -172,4 +181,4 @@ is empty a new entry is pushed."))
 
 (defparameter *kill-ring* nil
   "This special variable is bound to the kill ring of the running
-application or DREI instance whenever a command is executed.")
+application or Drei instance whenever a command is executed.")

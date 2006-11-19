@@ -72,7 +72,7 @@ not user-oriented at all."))
 
 (defpackage :drei-kill-ring
   (:use :clim-lisp :flexichain)
-  (:export #:kill-ring
+  (:export #:kill-ring #:kill-ring-chain #:kill-ring-cursor
            #:empty-kill-ring
            #:kill-ring-length #:kill-ring-max-size
            #:append-next-p
@@ -192,6 +192,15 @@ characters."))
            #:isearch-state #:search-string #:search-mark
            #:search-forward-p #:search-success-p
            #:query-replace-state #:string1 #:string2 #:buffers #:mark #:occurrences
+
+           ;; Undo.
+           #:undo-mixin #:undo-tree #:undo-accumulate #:performing-undo
+           #:drei-undo-record
+           #:simple-undo-record
+           #:insert-record
+           #:delete-record
+           #:compound-record
+           
            #:with-undo
            #:drei-buffer
            #:drei-textual-view #:+drei-textual-view+

@@ -34,35 +34,36 @@ parent state (presumably as a result of a call to undo) or to that of
 one of its child states.
 
 Client code is required to supply methods for this function on
-client-specific subclasses of undo-record."))
+client-specific subclasses of `undo-record'."))
 
 (defgeneric undo (undo-tree &optional n)
-  (:documentation "Move the current state n steps up the undo tree and
-call flip-undo-record on each step.  If the current state is at a
-level less than n, a no-more-undo condition is signaled and the
-current state is not moved (and no calls to flip-undo-record are
-made).
+  (:documentation "Move the current state `n' steps up the undo
+tree and call `flip-undo-record' on each step.  If the current
+state is at a level less than `n', a `no-more-undo' condition is
+signaled and the current state is not moved (and no calls to
+`flip-undo-record' are made).
 
 As long as no new record are added to the tree, the undo module
 remembers which branch it was in before a sequence of calls to undo."))
 
 (defgeneric redo (undo-tree &optional n)
-  (:documentation "Move the current state n steps down the remembered
-branch of the undo tree and call flip-undo-record on each step.  If
-the remembered branch is shorter than n, a no-more-undo condition is
-signaled and the current state is not moved (and no calls to
-flip-undo-record are made)."))
+  (:documentation "Move the current state `n' steps down the
+remembered branch of the undo tree and call `flip-undo-record' on
+each step.  If the remembered branch is shorter than `n', a
+`no-more-undo' condition is signaled and the current state is not
+moved (and no calls to `flip-undo-record' are made)."))
 
 (define-condition no-more-undo (simple-error)
   ()
   (:report (lambda (condition stream)
 	     (declare (ignore condition))
 	     (format stream "No more undo")))
-  (:documentation "This condition is signaled whenever an attempt is made to 
-call undo on a tree that is in its initial state."))
+  (:documentation "A condition of this type is signaled whenever
+an attempt is made to call undo when the application is in its
+initial state."))
 
 (defclass undo-tree () ()
-  (:documentation "Protocol class for all undo trees"))
+  (:documentation "The base class for all undo trees."))
 
 (defclass standard-undo-tree (undo-tree)
   ((current-record :accessor current-record)
@@ -70,7 +71,10 @@ call undo on a tree that is in its initial state."))
    (redo-path :initform '() :accessor redo-path)
    (children :initform '() :accessor children)
    (depth :initform 0 :reader depth))
-  (:documentation "Standard instantiable class for undo trees."))
+  (:documentation "The base class for all undo records.
+
+Client code typically derives subclasses of this class that are
+specific to the application."))
 
 (defmethod initialize-instance :after ((tree standard-undo-tree) &rest args)
   (declare (ignore args))
@@ -78,11 +82,14 @@ call undo on a tree that is in its initial state."))
 	(leaf-record tree) tree))
 
 (defclass undo-record () ()
-  (:documentation "The protocol class for all undo records."))
+  (:documentation "The base class for all undo records."))
 
 (defclass standard-undo-record (undo-record)
   ((parent :initform nil :accessor parent)
-   (tree :initform nil :accessor undo-tree)
+   (tree :initform nil
+         :accessor undo-tree
+         :documentation "The undo tree to which the undo record
+belongs.")
    (children :initform '() :accessor children)
    (depth :initform nil :accessor depth))
   (:documentation "Standard instantiable class for undo records."))
