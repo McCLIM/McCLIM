@@ -51,6 +51,10 @@
     ((title :initarg :title :initform "" :accessor list-pane-title)
      (tree-view :accessor list-pane-tree-view)))
 
+(defclass gtk-option-pane
+    (native-widget-mixin option-pane climi::meta-list-pane)
+    ())
+
 (defclass native-slider (native-widget-mixin climi::slider-gadget)
     ((climi::show-value-p :type boolean
 			  :initform nil
@@ -174,6 +178,15 @@
 	 (cffi:null-pointer))
 	result))))
 
+(defmethod realize-native-widget ((sheet gtk-option-pane))
+  (let* ((widget (gtk_combo_box_new_text))
+	 (name-key (climi::list-pane-name-key sheet)))
+    (dolist (i (climi::list-pane-items sheet))
+      (cffi:with-foreign-string (n (funcall name-key i))
+	(gtk_combo_box_append_text widget n)))
+    (option-pane-set-active sheet widget)
+    widget))
+
 (defun gtk-list-select-value (sheet value)
   (let ((path
 	 (gtk_tree_path_new_from_indices
@@ -200,6 +213,22 @@
     (let ((mirror (sheet-direct-mirror gadget)))
       (when mirror
 	(gtk-list-reset-selection gadget)))))
+
+(defun option-pane-set-active (sheet widget)
+  (gtk_combo_box_set_active
+   widget
+   (position (gadget-value sheet)
+	     (climi::list-pane-items sheet)
+	     :key (climi::list-pane-value-key sheet)
+	     :test (climi::list-pane-test sheet))))
+
+(defmethod (setf gadget-value) :after
+	   (value (gadget gtk-option-pane) &key invoke-callback)
+  (declare (ignore invoke-callback))
+  (with-gtk ()
+    (let ((mirror (sheet-direct-mirror gadget)))
+      (when mirror
+	(option-pane-set-active gadget (mirror-widget mirror))))))
 
 (defun make-scale (fn sheet)
   (let* ((min (df (gadget-min-value sheet)))
@@ -364,6 +393,9 @@
   ;; no signals
   )
 
+(defmethod connect-native-signals ((sheet gtk-option-pane) widget)
+  (connect-signal widget "changed" 'magic-clicked-handler))
+
 
 ;;;; Event handling
 
@@ -450,6 +482,13 @@
 		    for value in (climi::list-pane-items pane)
 		    when (gethash i *list-selection-result*)
 		    collect (funcall value-key value)))))))
+
+(defmethod handle-event ((pane gtk-option-pane) (event magic-gadget-event))
+  (setf (gadget-value pane :invoke-callback t)
+	(funcall (climi::list-pane-value-key pane)
+		 (elt (climi::list-pane-items pane)
+		      (gtk_combo_box_get_active
+		       (mirror-widget (sheet-direct-mirror pane)))))))
 
 
 ;;; COMPOSE-SPACE

@@ -934,6 +934,25 @@
   (label :string)                       ;const gchar *
   )
 
+(defcfun "gtk_combo_box_append_text"
+    :void
+  (combo_box :pointer)                  ;GtkComboBox *
+  (text :string)                        ;const gchar *
+  )
+
+(defcfun "gtk_combo_box_get_active"
+    :int
+  (combo_box :pointer)                  ;GtkComboBox *
+  )
+
+(defcfun "gtk_combo_box_new_text" :pointer)
+
+(defcfun "gtk_combo_box_set_active"
+    :void
+  (combo_box :pointer)                  ;GtkComboBox *
+  (index_ :int)                         ;gint
+  )
+
 (defcfun "gtk_container_add"
     :void
   (container :pointer)                  ;GtkContainer *
