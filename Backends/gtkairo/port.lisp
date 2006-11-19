@@ -80,7 +80,7 @@
   (with-gtk ()
     ;; FIXME: hier koennten wir mindestens ein anderes --display uebergeben
     ;; wenn wir wollten
-    (gtk_init 0 (cffi:null-pointer))
+    (gtk_init (cffi:null-pointer) (cffi:null-pointer))
     (let ((cr (gdk_cairo_create
 		(gdk_screen_get_root_window (gdk_screen_get_default)))))
       (setf (metrik-medium port)

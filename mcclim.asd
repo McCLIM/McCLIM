@@ -355,6 +355,7 @@
 	       (:file "package")
 	       (:file "gtk-ffi")
 	       (:file "cairo-ffi")
+	       (:file "ffi")
 	       (:file "graft")
 	       (:file "port")
 	       (:file "event")

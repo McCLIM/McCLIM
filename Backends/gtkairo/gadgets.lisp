@@ -136,8 +136,8 @@
       (gtk_tree_selection_set_mode
        (list-pane-selection sheet)
        (if (eq (climi::list-pane-mode sheet) :exclusive)
-	   :browse
-	   :multiple))
+	   :GTK_SELECTION_BROWSE
+	   :GTK_SELECTION_MULTIPLE))
       (gtk-list-reset-selection sheet)
       (let ((ancestor
 	     (and (sheet-parent sheet) (sheet-parent (sheet-parent sheet))))
@@ -369,20 +369,20 @@
 (defmethod handle-event
     ((pane native-scrollbar) (event scrollbar-change-value-event))
   (case (event-scroll-type event)
-    (:jump
+    (:gtk_scroll_jump
       (let ((value
 	     (clamp (gadget-min-value pane)
 		    (event-value event)
 		    (gadget-max-value pane))))
 	(setf (gadget-value pane :invoke-callback nil) value)
 	(drag-callback pane (gadget-client pane) (gadget-id pane) value)))
-    (:step_backward
+    (:gtk_scroll_step_backward
       (scroll-up-line-callback pane (gadget-client pane) (gadget-id pane)))
-    (:step_forward
+    (:gtk_scroll_step_forward
       (scroll-down-line-callback pane (gadget-client pane) (gadget-id pane)))
-    (:page_backward
+    (:gtk_scroll_page_backward
       (scroll-up-page-callback pane (gadget-client pane) (gadget-id pane)))
-    (:page_forward
+    (:gtk_scroll_page_forward
       (scroll-down-page-callback pane (gadget-client pane) (gadget-id pane)))))
 
 (defmethod handle-event

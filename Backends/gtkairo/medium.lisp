@@ -224,7 +224,7 @@
     (cairo_surface_flush to-surface)
     (let ((gc (gdk_gc_new to-drawable))
 	  (region (flipping-region medium)))
-      (gdk_gc_set_function gc :xor)
+      (gdk_gc_set_function gc :GDK_XOR)
       (gdk_draw_drawable to-drawable gc from-drawable
 			 (floor (bounding-rectangle-min-x region))
 			 (floor (bounding-rectangle-min-y region))
