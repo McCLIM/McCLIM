@@ -250,6 +250,12 @@
     (t
       +white+)))
 
+(defmethod container-put ((parent sheet) parent-widget child x y)
+  (gtk_fixed_put parent-widget child x y))
+
+(defmethod container-move ((parent sheet) parent-widget child x y)
+  (gtk_fixed_move parent-widget child x y))
+
 (defmethod realize-mirror ((port gtkairo-port) (sheet mirrored-sheet-mixin))
   (with-gtk ()
     (let* ((parent (sheet-mirror (sheet-parent sheet)))
@@ -271,7 +277,7 @@
 	  (transform-position (climi::%sheet-mirror-transformation sheet) 0 0)
 	(setf x (round-coordinate x))
 	(setf y (round-coordinate y))
-	(gtk_fixed_put (mirror-widget parent) widget x y))
+	(container-put (sheet-parent sheet) (mirror-widget parent) widget x y))
       (climi::port-register-mirror (port sheet) sheet mirror)
       (gtk-widget-modify-bg widget (sheet-desired-color sheet))
       (when (sheet-enabled-p sheet)
@@ -321,7 +327,7 @@
 	  (transform-position (climi::%sheet-mirror-transformation sheet) 0 0)
 	(setf x (round-coordinate x))
 	(setf y (round-coordinate y))
-	(gtk_fixed_put (mirror-widget parent) fixed x y))
+	(container-put (sheet-parent sheet) (mirror-widget parent) fixed x y))
       (gtk_fixed_put fixed widget 0 0)
       (climi::port-register-mirror (port sheet) sheet mirror)
       (when (sheet-enabled-p sheet)
@@ -523,19 +529,21 @@
     ((port gtkairo-port) (mirror mirror) mirror-transformation)
   (with-gtk ()
     (let* ((w (mirror-widget mirror))
+	   (parent-sheet (sheet-parent (climi::port-lookup-sheet port mirror)))
 	   (parent (cffi:foreign-slot-value w 'gtkwidget 'parent)))
       (multiple-value-bind (x y)
 	  (transform-position mirror-transformation 0 0)
-	(gtk_fixed_move parent w (floor x) (floor y))))))
+	(container-move parent-sheet parent w (floor x) (floor y))))))
 
 (defmethod port-set-mirror-transformation
     ((port gtkairo-port) (mirror native-widget-mirror) mirror-transformation)
   (with-gtk ()
     (let* ((w (mirror-fixed mirror))
+	   (parent-sheet (sheet-parent (climi::port-lookup-sheet port mirror)))
 	   (parent (cffi:foreign-slot-value w 'gtkwidget 'parent)))
       (multiple-value-bind (x y)
 	  (transform-position mirror-transformation 0 0)
-	(gtk_fixed_move parent w (floor x) (floor y))))))
+	(container-move parent-sheet parent w (floor x) (floor y))))))
 
 
 ;;;; An und aus

@@ -3,7 +3,7 @@
 ** backend improvements: Gtkairo
 *** Double buffering is now supported (fixes disappearing widgets on Windows).
 *** X errors no longer terminate the lisp process.
-*** Native implementation of context menus and list panes.
+*** Native implementation of context menus, list panes, and label panes.
 ** Improvement: Added new editor substrate ("Drei").
 
 * Changes in mcclim-0.9.3 "All Souls' Day" relative to 0.9.2:

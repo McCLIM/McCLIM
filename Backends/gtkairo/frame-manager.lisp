@@ -96,6 +96,9 @@
 (defmethod make-pane-2 ((type (eql 'clim:generic-list-pane)) &rest initargs)
   (apply #'make-instance 'gtk-list initargs))
 
+(defmethod make-pane-2 ((type (eql 'clim:label-pane)) &rest initargs)
+  (apply #'make-instance 'gtk-label-pane initargs))
+
 (defmethod adopt-frame :after
     ((fm gtkairo-frame-manager) (frame application-frame))
   ())

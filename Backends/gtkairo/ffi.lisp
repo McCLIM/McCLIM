@@ -966,6 +966,11 @@
   (has_window :int)                     ;gboolean
   )
 
+(defcfun "gtk_frame_new"
+    :pointer
+  (label :string)                       ;const gchar *
+  )
+
 (defcfun "gtk_get_current_event_time" :uint32)
 
 (defcfun "gtk_hscale_new_with_range"

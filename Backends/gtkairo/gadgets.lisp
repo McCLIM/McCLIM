@@ -69,6 +69,8 @@
 (defclass gtk-vscrollbar (native-scrollbar) ())
 (defclass gtk-hscrollbar (native-scrollbar) ())
 
+(defclass gtk-label-pane (native-widget-mixin label-pane)
+    ((label-pane-fixed :accessor label-pane-fixed)))
 
 ;;;; Constructors
 
@@ -85,6 +87,21 @@
   (let ((widget (gtk_check_button_new_with_label (climi::gadget-label sheet))))
     (gtk_toggle_button_set_active widget (if (gadget-value sheet) 1 0))
     widget))
+
+(defmethod realize-native-widget ((sheet gtk-label-pane))
+  (let ((frame (gtk_frame_new (climi::label-pane-label sheet)))
+	(fixed (gtk_fixed_new)))
+    (setf (label-pane-fixed sheet) fixed)
+    (gtk_container_add frame fixed)
+    frame))
+
+(defmethod container-put ((parent gtk-label-pane) parent-widget child x y)
+  (declare (ignore parent-widget))
+  (gtk_fixed_put (label-pane-fixed parent) child x y))
+
+(defmethod container-move ((parent gtk-label-pane) parent-widget child x y)
+  (declare (ignore parent-widget))
+  (gtk_fixed_move (label-pane-fixed parent) child x y))
 
 (defconstant +g-type-string+ (ash 16 2))
 
@@ -343,6 +360,10 @@
   ;; no signals
   )
 
+(defmethod connect-native-signals ((sheet gtk-label-pane) widget)
+  ;; no signals
+  )
+
 
 ;;;; Event handling
 
@@ -433,20 +454,25 @@
 
 ;;; COMPOSE-SPACE
 
+(defvar *use-frontend-compose-space* nil)
+
 ;; KLUDGE: this is getting called before the sheet has been realized.
 (defmethod compose-space ((gadget native-widget-mixin) &key width height)
   (declare (ignore width height))
-  (let* ((widget (native-widget gadget))
-	 (widgetp widget))
-    (unless widgetp
-      (setf widget (realize-native-widget gadget)))
-    (prog1
-	(cffi:with-foreign-object (r 'gtkrequisition)
-	  (gtk_widget_size_request widget r)
-	  (cffi:with-foreign-slots ((width height) r gtkrequisition)
-	    (make-space-requirement :width width :height height)))
-      (unless widgetp
-	(gtk_widget_destroy widget)))))
+  (if *use-frontend-compose-space*
+      (let ((*use-frontend-compose-space* nil))
+	(call-next-method))
+      (let* ((widget (native-widget gadget))
+	     (widgetp widget))
+	(unless widgetp
+	  (setf widget (realize-native-widget gadget)))
+	(prog1
+	    (cffi:with-foreign-object (r 'gtkrequisition)
+	      (gtk_widget_size_request widget r)
+	      (cffi:with-foreign-slots ((width height) r gtkrequisition)
+		(make-space-requirement :width width :height height)))
+	  (unless widgetp
+	    (gtk_widget_destroy widget))))))
 
 (defmethod compose-space ((gadget gtk-menu-bar) &key width height)
   (declare (ignore width height))
@@ -467,6 +493,11 @@
 				    :max-height height)))
       (unless widgetp
 	(gtk_widget_destroy widget)))))
+
+(defmethod compose-space ((gadget gtk-label-pane) &key width height)
+  (declare (ignore width height))
+  (let ((*use-frontend-compose-space* t))
+    (call-next-method)))
 
 
 ;;; Vermischtes
