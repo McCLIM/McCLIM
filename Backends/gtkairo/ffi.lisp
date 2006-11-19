@@ -2,6 +2,38 @@
 
 (in-package :clim-gtkairo)
 
+(cffi:defcstruct Depth
+  (depth :int)                          ;int
+  (nvisuals :int)                       ;int
+  (visuals :pointer)                    ;Visual *
+  )
+
+(defcenum GConnectFlags
+  (:G_CONNECT_AFTER 1)
+  :G_CONNECT_SWAPPED)
+
+(defcenum GdkCrossingMode
+  :GDK_CROSSING_NORMAL
+  :GDK_CROSSING_GRAB
+  :GDK_CROSSING_UNGRAB)
+
+(defcenum GdkDragAction
+  (:GDK_ACTION_DEFAULT 1)
+  :GDK_ACTION_COPY
+  (:GDK_ACTION_MOVE 4)
+  (:GDK_ACTION_LINK 8)
+  (:GDK_ACTION_PRIVATE 16)
+  (:GDK_ACTION_ASK 32))
+
+(defcenum GdkDragProtocol
+  :GDK_DRAG_PROTO_MOTIF
+  :GDK_DRAG_PROTO_XDND
+  :GDK_DRAG_PROTO_ROOTWIN
+  :GDK_DRAG_PROTO_NONE
+  :GDK_DRAG_PROTO_WIN32_DROPFILES
+  :GDK_DRAG_PROTO_OLE2
+  :GDK_DRAG_PROTO_LOCAL)
+
 (defcenum GdkEventMask
   (:GDK_EXPOSURE_MASK 2)
   (:GDK_POINTER_MOTION_MASK 4)
@@ -25,23 +57,6 @@
   (:GDK_SUBSTRUCTURE_MASK 1048576)
   (:GDK_SCROLL_MASK 2097152)
   (:GDK_ALL_EVENTS_MASK 4194302))
-
-(defcenum GdkWindowHints
-  (:GDK_HINT_POS 1)
-  :GDK_HINT_MIN_SIZE
-  (:GDK_HINT_MAX_SIZE 4)
-  (:GDK_HINT_BASE_SIZE 8)
-  (:GDK_HINT_ASPECT 16)
-  (:GDK_HINT_RESIZE_INC 32)
-  (:GDK_HINT_WIN_GRAVITY 64)
-  (:GDK_HINT_USER_POS 128)
-  (:GDK_HINT_USER_SIZE 256))
-
-(cffi:defcstruct Depth
-  (depth :int)                          ;int
-  (nvisuals :int)                       ;int
-  (visuals :pointer)                    ;Visual *
-  )
 
 (defcenum GdkEventType
   (:GDK_NOTHING -1)
@@ -82,43 +97,6 @@
   :GDK_OWNER_CHANGE
   :GDK_GRAB_BROKEN)
 
-(defcenum GdkModifierType
-  (:GDK_SHIFT_MASK 1)
-  :GDK_LOCK_MASK
-  (:GDK_CONTROL_MASK 4)
-  (:GDK_MOD1_MASK 8)
-  (:GDK_MOD2_MASK 16)
-  (:GDK_MOD3_MASK 32)
-  (:GDK_MOD4_MASK 64)
-  (:GDK_MOD5_MASK 128)
-  (:GDK_BUTTON1_MASK 256)
-  (:GDK_BUTTON2_MASK 512)
-  (:GDK_BUTTON3_MASK 1024)
-  (:GDK_BUTTON4_MASK 2048)
-  (:GDK_BUTTON5_MASK 4096)
-  (:GDK_RELEASE_MASK 1073741824)
-  (:GDK_MODIFIER_MASK 1073750015))
-
-(defcenum GtkStateType
-  :GTK_STATE_NORMAL
-  :GTK_STATE_ACTIVE
-  :GTK_STATE_PRELIGHT
-  :GTK_STATE_SELECTED
-  :GTK_STATE_INSENSITIVE)
-
-(defcenum GdkDragAction
-  (:GDK_ACTION_DEFAULT 1)
-  :GDK_ACTION_COPY
-  (:GDK_ACTION_MOVE 4)
-  (:GDK_ACTION_LINK 8)
-  (:GDK_ACTION_PRIVATE 16)
-  (:GDK_ACTION_ASK 32))
-
-(defcenum GdkCrossingMode
-  :GDK_CROSSING_NORMAL
-  :GDK_CROSSING_GRAB
-  :GDK_CROSSING_UNGRAB)
-
 (defcenum GdkFunction
   :GDK_COPY
   :GDK_INVERT
@@ -137,14 +115,29 @@
   :GDK_NOR
   :GDK_SET)
 
-(defcenum GdkDragProtocol
-  :GDK_DRAG_PROTO_MOTIF
-  :GDK_DRAG_PROTO_XDND
-  :GDK_DRAG_PROTO_ROOTWIN
-  :GDK_DRAG_PROTO_NONE
-  :GDK_DRAG_PROTO_WIN32_DROPFILES
-  :GDK_DRAG_PROTO_OLE2
-  :GDK_DRAG_PROTO_LOCAL)
+(defcenum GdkGrabStatus
+  :GDK_GRAB_SUCCESS
+  :GDK_GRAB_ALREADY_GRABBED
+  :GDK_GRAB_INVALID_TIME
+  :GDK_GRAB_NOT_VIEWABLE
+  :GDK_GRAB_FROZEN)
+
+(defcenum GdkModifierType
+  (:GDK_SHIFT_MASK 1)
+  :GDK_LOCK_MASK
+  (:GDK_CONTROL_MASK 4)
+  (:GDK_MOD1_MASK 8)
+  (:GDK_MOD2_MASK 16)
+  (:GDK_MOD3_MASK 32)
+  (:GDK_MOD4_MASK 64)
+  (:GDK_MOD5_MASK 128)
+  (:GDK_BUTTON1_MASK 256)
+  (:GDK_BUTTON2_MASK 512)
+  (:GDK_BUTTON3_MASK 1024)
+  (:GDK_BUTTON4_MASK 2048)
+  (:GDK_BUTTON5_MASK 4096)
+  (:GDK_RELEASE_MASK 1073741824)
+  (:GDK_MODIFIER_MASK 1073750015))
 
 (defcenum GdkNotifyType
   :GDK_NOTIFY_ANCESTOR
@@ -154,13 +147,16 @@
   :GDK_NOTIFY_NONLINEAR_VIRTUAL
   :GDK_NOTIFY_UNKNOWN)
 
-(defcenum GtkWindowType
-  :GTK_WINDOW_TOPLEVEL
-  :GTK_WINDOW_POPUP)
-
-(defcenum GConnectFlags
-  (:G_CONNECT_AFTER 1)
-  :G_CONNECT_SWAPPED)
+(defcenum GdkWindowHints
+  (:GDK_HINT_POS 1)
+  :GDK_HINT_MIN_SIZE
+  (:GDK_HINT_MAX_SIZE 4)
+  (:GDK_HINT_BASE_SIZE 8)
+  (:GDK_HINT_ASPECT 16)
+  (:GDK_HINT_RESIZE_INC 32)
+  (:GDK_HINT_WIN_GRAVITY 64)
+  (:GDK_HINT_USER_POS 128)
+  (:GDK_HINT_USER_SIZE 256))
 
 (defcenum GtkScrollType
   :GTK_SCROLL_NONE
@@ -179,6 +175,24 @@
   :GTK_SCROLL_PAGE_RIGHT
   :GTK_SCROLL_START
   :GTK_SCROLL_END)
+
+(defcenum GtkSelectionMode
+  :GTK_SELECTION_NONE
+  :GTK_SELECTION_SINGLE
+  :GTK_SELECTION_BROWSE
+  :GTK_SELECTION_MULTIPLE
+  (:GTK_SELECTION_EXTENDED 3))
+
+(defcenum GtkStateType
+  :GTK_STATE_NORMAL
+  :GTK_STATE_ACTIVE
+  :GTK_STATE_PRELIGHT
+  :GTK_STATE_SELECTED
+  :GTK_STATE_INSENSITIVE)
+
+(defcenum GtkWindowType
+  :GTK_WINDOW_TOPLEVEL
+  :GTK_WINDOW_POPUP)
 
 (cffi:defcstruct Screen
   (ext_data :pointer)                   ;XExtData *
@@ -203,193 +217,14 @@
   (root_input_mask :long)               ;long int
   )
 
-(defcenum GdkGrabStatus
-  :GDK_GRAB_SUCCESS
-  :GDK_GRAB_ALREADY_GRABBED
-  :GDK_GRAB_INVALID_TIME
-  :GDK_GRAB_NOT_VIEWABLE
-  :GDK_GRAB_FROZEN)
-
-(defcenum GtkSelectionMode
-  :GTK_SELECTION_NONE
-  :GTK_SELECTION_SINGLE
-  :GTK_SELECTION_BROWSE
-  :GTK_SELECTION_MULTIPLE
-  (:GTK_SELECTION_EXTENDED 3))
-
-(defcfun "gtk_check_button_new_with_label"
-    :pointer
-  (label :string)                       ;const gchar *
-  )
-
-(defcfun "cairo_set_matrix"
-    :void
-  (arg0 :pointer)                       ;cairo_t *
-  (arg1 :pointer)                       ;const cairo_matrix_t *
-  )
-
-(defcfun "gdk_screen_get_width"
-    :int
-  (screen :pointer)                     ;GdkScreen *
-  )
-
-(defcfun "gtk_widget_size_request"
-    :void
-  (widget :pointer)                     ;GtkWidget *
-  (requisition :pointer)                ;GtkRequisition *
-  )
-
-(defcfun "cairo_line_to"
+(defcfun "cairo_arc"
     :void
   (arg0 :pointer)                       ;cairo_t *
   (arg1 :double)                        ;double
   (arg2 :double)                        ;double
-  )
-
-(defcfun "gtk_init"
-    :void
-  (argc :pointer)                       ;int *
-  (argv :pointer)                       ;char ***
-  )
-
-(defcfun "gdk_window_get_root_origin"
-    :void
-  (window :pointer)                     ;GdkWindow *
-  (x :pointer)                          ;gint *
-  (y :pointer)                          ;gint *
-  )
-
-(defcfun "cairo_reference"
-    :pointer
-  (arg0 :pointer)                       ;cairo_t *
-  )
-
-(defcfun "cairo_font_extents"
-    :void
-  (arg0 :pointer)                       ;cairo_t *
-  (arg1 :pointer)                       ;cairo_font_extents_t *
-  )
-
-(defcfun "g_signal_connect_data"
-    :unsigned-long
-  (instance :pointer)                   ;gpointer
-  (detailed_signal :string)             ;const gchar *
-  (c_handler :pointer)                  ;GCallback
-  (data :pointer)                       ;gpointer
-  (destroy_data :pointer)               ;GClosureNotify
-  (connect_flags GConnectFlags))
-
-(defcfun "gdk_screen_get_height_mm"
-    :int
-  (screen :pointer)                     ;GdkScreen *
-  )
-
-(defcfun "cairo_surface_create_similar"
-    :pointer
-  (arg0 :pointer)                       ;cairo_surface_t *
-  (arg1 cairo_content_t)
-  (arg2 :int)                           ;int
-  (arg3 :int)                           ;int
-  )
-
-(defcfun "gtk_adjustment_set_value"
-    :void
-  (adjustment :pointer)                 ;GtkAdjustment *
-  (value :double)                       ;gdouble
-  )
-
-(defcfun "cairo_pattern_reference"
-    :pointer
-  (arg0 :pointer)                       ;cairo_pattern_t *
-  )
-
-(defcfun "cairo_glyph_extents"
-    :void
-  (arg0 :pointer)                       ;cairo_t *
-  (arg1 :pointer)                       ;cairo_glyph_t *
-  (arg2 :int)                           ;int
-  (arg3 :pointer)                       ;cairo_text_extents_t *
-  )
-
-(defcfun "gtk_widget_hide_all"
-    :void
-  (widget :pointer)                     ;GtkWidget *
-  )
-
-(defcfun "gtk_widget_destroy"
-    :void
-  (widget :pointer)                     ;GtkWidget *
-  )
-
-(defcfun "gtk_tree_view_new_with_model"
-    :pointer
-  (model :pointer)                      ;GtkTreeModel *
-  )
-
-(defcfun "gdk_display_flush"
-    :void
-  (display :pointer)                    ;GdkDisplay *
-  )
-
-(defcfun "gtk_tree_view_column_add_attribute"
-    :void
-  (tree_column :pointer)                ;GtkTreeViewColumn *
-  (cell_renderer :pointer)              ;GtkCellRenderer *
-  (attribute :string)                   ;const gchar *
-  (column :int)                         ;gint
-  )
-
-(defcfun "cairo_font_face_status"
-    cairo_status_t
-  (arg0 :pointer)                       ;cairo_font_face_t *
-  )
-
-(defcfun "g_value_set_string"
-    :void
-  (value :pointer)                      ;GValue *
-  (v_string :string)                    ;const gchar *
-  )
-
-(defcfun "cairo_get_target"
-    :pointer
-  (arg0 :pointer)                       ;cairo_t *
-  )
-
-(defcfun "gtk_window_resize"
-    :void
-  (window :pointer)                     ;GtkWindow *
-  (width :int)                          ;gint
-  (height :int)                         ;gint
-  )
-
-(defcfun "gtk_widget_modify_bg"
-    :void
-  (widget :pointer)                     ;GtkWidget *
-  (state GtkStateType)
-  (color :pointer)                      ;const GdkColor *
-  )
-
-(defcfun "cairo_pattern_destroy"
-    :void
-  (arg0 :pointer)                       ;cairo_pattern_t *
-  )
-
-(defcfun "gtk_list_store_newv"
-    :pointer
-  (n_columns :int)                      ;gint
-  (types :pointer)                      ;GType *
-  )
-
-(defcfun "gtk_scale_set_digits"
-    :void
-  (scale :pointer)                      ;GtkScale *
-  (digits :int)                         ;gint
-  )
-
-(defcfun "gdk_gc_set_rgb_fg_color"
-    :void
-  (gc :pointer)                         ;GdkGC *
-  (color :pointer)                      ;const GdkColor *
+  (arg3 :double)                        ;double
+  (arg4 :double)                        ;double
+  (arg5 :double)                        ;double
   )
 
 (defcfun "cairo_arc_negative"
@@ -402,106 +237,19 @@
   (arg5 :double)                        ;double
   )
 
-(defcfun "cairo_surface_destroy"
+(defcfun "cairo_clip"
+    :void
+  (arg0 :pointer)                       ;cairo_t *
+  )
+
+(defcfun "cairo_copy_page"
+    :void
+  (arg0 :pointer)                       ;cairo_t *
+  )
+
+(defcfun "cairo_create"
     :pointer
   (arg0 :pointer)                       ;cairo_surface_t *
-  )
-
-(defcfun "gdk_drag_status"
-    :void
-  (context :pointer)                    ;GdkDragContext *
-  (action GdkDragAction)
-  (time :uint32)                        ;guint32
-  )
-
-(defcfun "gdk_gc_set_function"
-    :void
-  (gc :pointer)                         ;GdkGC *
-  (function GdkFunction))
-
-(defcfun "gtk_radio_button_get_group"
-    :pointer
-  (radio_button :pointer)               ;GtkRadioButton *
-  )
-
-(defcfun "gtk_widget_set_double_buffered"
-    :void
-  (widget :pointer)                     ;GtkWidget *
-  (double_buffered :int)                ;gboolean
-  )
-
-(defcfun "gtk_range_set_adjustment"
-    :void
-  (range :pointer)                      ;GtkRange *
-  (adjustment :pointer)                 ;GtkAdjustment *
-  )
-
-(defcfun "cairo_new_path"
-    :pointer
-  (arg0 :pointer)                       ;cairo_t *
-  )
-
-(defcfun "cairo_glyph_path"
-    :void
-  (arg0 :pointer)                       ;cairo_t *
-  (arg1 :pointer)                       ;cairo_glyph_t *
-  (arg2 :int)                           ;int
-  )
-
-(defcfun "gtk_tree_selection_set_mode"
-    :void
-  (selection :pointer)                  ;GtkTreeSelection *
-  (type GtkSelectionMode))
-
-(defcfun "cairo_surface_reference"
-    :pointer
-  (arg0 :pointer)                       ;cairo_surface_t *
-  )
-
-(defcfun "cairo_rotate"
-    :void
-  (arg0 :pointer)                       ;cairo_t *
-  (arg1 :double)                        ;double
-  )
-
-(defcfun "gtk_cell_renderer_text_new" :pointer)
-
-(defcfun "cairo_set_source"
-    :void
-  (arg0 :pointer)                       ;cairo_t *
-  (arg1 :pointer)                       ;cairo_pattern_t *
-  )
-
-(defcfun "gtk_window_set_default_size"
-    :void
-  (window :pointer)                     ;GtkWindow *
-  (width :int)                          ;gint
-  (height :int)                         ;gint
-  )
-
-(defcfun "gtk_list_store_set_value"
-    :void
-  (list_store :pointer)                 ;GtkListStore *
-  (iter :pointer)                       ;GtkTreeIter *
-  (column :int)                         ;gint
-  (value :pointer)                      ;GValue *
-  )
-
-(defcfun "cairo_image_surface_create"
-    :pointer
-  (arg0 cairo_format_t)
-  (arg1 :int)                           ;int
-  (arg2 :int)                           ;int
-  )
-
-(defcfun "gtk_get_current_event_time" :uint32)
-
-(defcfun "cairo_set_dash"
-    :void
-  (arg0 :pointer)                       ;cairo_t *
-  (arg1 :pointer)                       ;const double *
-  (arg2 :int)                           ;int
-  (arg3 :double)                        ;double
   )
 
 (defcfun "cairo_curve_to"
@@ -515,124 +263,9 @@
   (arg6 :double)                        ;double
   )
 
-(defcfun "cairo_clip"
+(defcfun "cairo_destroy"
     :void
   (arg0 :pointer)                       ;cairo_t *
-  )
-
-(defcfun "g_thread_init"
-    :void
-  (init :pointer)                       ;GThreadFunctions *
-  )
-
-(defcfun "gtk_scrolled_window_new"
-    :pointer
-  (hadjustment :pointer)                ;GtkAdjustment *
-  (vadjustment :pointer)                ;GtkAdjustment *
-  )
-
-(defcfun "gtk_tree_path_free"
-    :void
-  (path :pointer)                       ;GtkTreePath *
-  )
-
-(defcfun "cairo_text_extents"
-    :void
-  (arg0 :pointer)                       ;cairo_t *
-  (arg1 :string)                        ;const char *
-  (arg2 :pointer)                       ;cairo_text_extents_t *
-  )
-
-(defcfun "gtk_window_set_title"
-    :void
-  (window :pointer)                     ;GtkWindow *
-  (title :string)                       ;const gchar *
-  )
-
-(defcfun "gtk_hscale_new_with_range"
-    :pointer
-  (min :double)                         ;gdouble
-  (max :double)                         ;gdouble
-  (step :double)                        ;gdouble
-  )
-
-(defcfun "gtk_widget_show_all"
-    :void
-  (widget :pointer)                     ;GtkWidget *
-  )
-
-(defcfun "cairo_paint"
-    :void
-  (arg0 :pointer)                       ;cairo_t *
-  )
-
-(defcfun "gdk_drawable_unref"
-    :void
-  (drawable :pointer)                   ;GdkDrawable *
-  )
-
-(defcfun "gtk_fixed_new" :pointer)
-
-(defcfun "cairo_in_fill"
-    :int
-  (arg0 :pointer)                       ;cairo_t *
-  (arg1 :double)                        ;double
-  (arg2 :double)                        ;double
-  )
-
-(defcfun "cairo_show_glyphs"
-    :void
-  (arg0 :pointer)                       ;cairo_t *
-  (arg1 :pointer)                       ;cairo_glyph_t *
-  (arg2 :int)                           ;int
-  )
-
-(defcfun "gtk_tree_view_get_hadjustment"
-    :pointer
-  (tree_view :pointer)                  ;GtkTreeView *
-  )
-
-(defcfun "gtk_container_add"
-    :void
-  (container :pointer)                  ;GtkContainer *
-  (widget :pointer)                     ;GtkWidget *
-  )
-
-(defcfun "gtk_tree_selection_selected_foreach"
-    :void
-  (selection :pointer)                  ;GtkTreeSelection *
-  (func :pointer)                       ;GtkTreeSelectionForeachFunc
-  (data :pointer)                       ;gpointer
-  )
-
-(defcfun "cairo_set_antialias"
-    :void
-  (arg0 :pointer)                       ;cairo_t *
-  (arg1 cairo_antialias_t))
-
-(defcfun "gtk_fixed_put"
-    :void
-  (fixed :pointer)                      ;GtkFixed *
-  (widget :pointer)                     ;GtkWidget *
-  (x :int)                              ;gint
-  (y :int)                              ;gint
-  )
-
-(defcfun "cairo_matrix_rotate"
-    :void
-  (arg0 :pointer)                       ;cairo_matrix_t *
-  (arg1 :double)                        ;double
-  )
-
-(defcfun "cairo_identity_matrix"
-    :void
-  (arg0 :pointer)                       ;cairo_t *
-  )
-
-(defcfun "gtk_tree_view_column_set_title"
-    :void
-  (tree_column :pointer)                ;GtkTreeViewColumn *
-  (title :string)                       ;const gchar *
   )
 
 (defcfun "cairo_fill"
@@ -649,62 +282,106 @@
   (arg4 :pointer)                       ;double *
   )
 
+(defcfun "cairo_font_extents"
+    :void
+  (arg0 :pointer)                       ;cairo_t *
+  (arg1 :pointer)                       ;cairo_font_extents_t *
+  )
+
+(defcfun "cairo_font_face_status"
+    cairo_status_t
+  (arg0 :pointer)                       ;cairo_font_face_t *
+  )
+
+(defcfun "cairo_get_font_face"
+    :pointer
+  (arg0 :pointer)                       ;cairo_t *
+  )
+
+(defcfun "cairo_get_target"
+    :pointer
+  (arg0 :pointer)                       ;cairo_t *
+  )
+
+(defcfun "cairo_glyph_extents"
+    :void
+  (arg0 :pointer)                       ;cairo_t *
+  (arg1 :pointer)                       ;cairo_glyph_t *
+  (arg2 :int)                           ;int
+  (arg3 :pointer)                       ;cairo_text_extents_t *
+  )
+
+(defcfun "cairo_glyph_path"
+    :void
+  (arg0 :pointer)                       ;cairo_t *
+  (arg1 :pointer)                       ;cairo_glyph_t *
+  (arg2 :int)                           ;int
+  )
+
+(defcfun "cairo_identity_matrix"
+    :void
+  (arg0 :pointer)                       ;cairo_t *
+  )
+
+(defcfun "cairo_image_surface_create"
+    :pointer
+  (arg0 cairo_format_t)
+  (arg1 :int)                           ;int
+  (arg2 :int)                           ;int
+  )
+
+(defcfun "cairo_image_surface_create_for_data"
+    :pointer
+  (arg0 :string)                        ;unsigned char *
+  (arg1 cairo_format_t)
+  (arg2 :int)                           ;int
+  (arg3 :int)                           ;int
+  (arg4 :int)                           ;int
+  )
+
+(defcfun "cairo_in_fill"
+    :int
+  (arg0 :pointer)                       ;cairo_t *
+  (arg1 :double)                        ;double
+  (arg2 :double)                        ;double
+  )
+
+(defcfun "cairo_in_stroke"
+    :int
+  (arg0 :pointer)                       ;cairo_t *
+  (arg1 :double)                        ;double
+  (arg2 :double)                        ;double
+  )
+
+(defcfun "cairo_line_to"
+    :void
+  (arg0 :pointer)                       ;cairo_t *
+  (arg1 :double)                        ;double
+  (arg2 :double)                        ;double
+  )
+
+(defcfun "cairo_matrix_init"
+    :pointer
+  (arg0 :pointer)                       ;cairo_matrix_t *
+  (arg1 :double)                        ;double
+  (arg2 :double)                        ;double
+  (arg3 :double)                        ;double
+  (arg4 :double)                        ;double
+  (arg5 :double)                        ;double
+  (arg6 :double)                        ;double
+  )
+
+(defcfun "cairo_matrix_rotate"
+    :void
+  (arg0 :pointer)                       ;cairo_matrix_t *
+  (arg1 :double)                        ;double
+  )
+
 (defcfun "cairo_matrix_translate"
     :void
   (arg0 :pointer)                       ;cairo_matrix_t *
   (arg1 :double)                        ;double
   (arg2 :double)                        ;double
-  )
-
-(defcfun "cairo_set_source_rgba"
-    :void
-  (arg0 :pointer)                       ;cairo_t *
-  (arg1 :double)                        ;double
-  (arg2 :double)                        ;double
-  (arg3 :double)                        ;double
-  (arg4 :double)                        ;double
-  )
-
-(defcfun "cairo_rel_move_to"
-    :void
-  (arg0 :pointer)                       ;cairo_t *
-  (arg1 :double)                        ;double
-  (arg2 :double)                        ;double
-  )
-
-(defcfun "gdk_draw_rectangle"
-    :void
-  (drawable :pointer)                   ;GdkDrawable *
-  (gc :pointer)                         ;GdkGC *
-  (filled :int)                         ;gboolean
-  (x :int)                              ;gint
-  (y :int)                              ;gint
-  (width :int)                          ;gint
-  (height :int)                         ;gint
-  )
-
-(defcfun "cairo_set_tolerance"
-    :void
-  (arg0 :pointer)                       ;cairo_t *
-  (arg1 :double)                        ;double
-  )
-
-(defcfun "gdk_error_trap_push" :void)
-
-(defcfun "gtk_window_new"
-    :pointer
-  (type GtkWindowType))
-
-(defcfun "gdk_threads_enter" :void)
-
-(defcfun "gdk_drawable_get_depth"
-    :int
-  (drawable :pointer)                   ;GdkDrawable *
-  )
-
-(defcfun "cairo_surface_mark_dirty"
-    :void
-  (arg0 :pointer)                       ;cairo_surface_t *
   )
 
 (defcfun "cairo_move_to"
@@ -714,27 +391,92 @@
   (arg2 :double)                        ;double
   )
 
-(defcfun "gdk_threads_init" :void)
+(defcfun "cairo_new_path"
+    :pointer
+  (arg0 :pointer)                       ;cairo_t *
+  )
 
-(defcfun "cairo_set_miter_limit"
+(defcfun "cairo_paint"
+    :void
+  (arg0 :pointer)                       ;cairo_t *
+  )
+
+(defcfun "cairo_pattern_create_for_surface"
+    :pointer
+  (arg0 :pointer)                       ;cairo_surface_t *
+  )
+
+(defcfun "cairo_pattern_create_linear"
+    :pointer
+  (arg0 :double)                        ;double
+  (arg1 :double)                        ;double
+  (arg2 :double)                        ;double
+  (arg3 :double)                        ;double
+  )
+
+(defcfun "cairo_pattern_create_radial"
+    :pointer
+  (arg0 :double)                        ;double
+  (arg1 :double)                        ;double
+  (arg2 :double)                        ;double
+  (arg3 :double)                        ;double
+  (arg4 :double)                        ;double
+  (arg5 :double)                        ;double
+  )
+
+(defcfun "cairo_pattern_destroy"
+    :void
+  (arg0 :pointer)                       ;cairo_pattern_t *
+  )
+
+(defcfun "cairo_pattern_get_extend"
+    cairo_extend_t
+  (arg0 :pointer)                       ;cairo_pattern_t *
+  )
+
+(defcfun "cairo_pattern_get_filter"
+    cairo_filter_t
+  (arg0 :pointer)                       ;cairo_pattern_t *
+  )
+
+(defcfun "cairo_pattern_get_matrix"
+    :void
+  (arg0 :pointer)                       ;cairo_pattern_t *
+  (arg1 :pointer)                       ;cairo_matrix_t *
+  )
+
+(defcfun "cairo_pattern_reference"
+    :pointer
+  (arg0 :pointer)                       ;cairo_pattern_t *
+  )
+
+(defcfun "cairo_pattern_set_extend"
+    :void
+  (arg0 :pointer)                       ;cairo_pattern_t *
+  (arg1 cairo_extend_t))
+
+(defcfun "cairo_pattern_set_filter"
+    :void
+  (arg0 :pointer)                       ;cairo_pattern_t *
+  (arg1 cairo_filter_t))
+
+(defcfun "cairo_pattern_set_matrix"
+    :void
+  (arg0 :pointer)                       ;cairo_pattern_t *
+  (arg1 :pointer)                       ;const cairo_matrix_t *
+  )
+
+(defcfun "cairo_rectangle"
     :void
   (arg0 :pointer)                       ;cairo_t *
   (arg1 :double)                        ;double
+  (arg2 :double)                        ;double
+  (arg3 :double)                        ;double
+  (arg4 :double)                        ;double
   )
 
-(defcfun "g_value_init"
+(defcfun "cairo_reference"
     :pointer
-  (value :pointer)                      ;GValue *
-  (g_type :unsigned-long)               ;GType
-  )
-
-(defcfun "gdk_screen_get_width_mm"
-    :int
-  (screen :pointer)                     ;GdkScreen *
-  )
-
-(defcfun "cairo_status"
-    cairo_status_t
   (arg0 :pointer)                       ;cairo_t *
   )
 
@@ -749,60 +491,279 @@
   (arg6 :double)                        ;double
   )
 
-(defcfun "gtk_widget_grab_focus"
+(defcfun "cairo_rel_move_to"
     :void
-  (widget :pointer)                     ;GtkWidget *
+  (arg0 :pointer)                       ;cairo_t *
+  (arg1 :double)                        ;double
+  (arg2 :double)                        ;double
   )
 
-(defcfun "cairo_get_font_face"
-    :pointer
+(defcfun "cairo_reset_clip"
+    :void
   (arg0 :pointer)                       ;cairo_t *
   )
 
-(defcfun "cairo_pattern_create_for_surface"
-    :pointer
-  (arg0 :pointer)                       ;cairo_surface_t *
-  )
-
-(defcfun "gdk_gc_new"
-    :pointer
-  (drawable :pointer)                   ;GdkDrawable *
-  )
-
-(defcfun "gtk_toggle_button_set_active"
+(defcfun "cairo_rotate"
     :void
-  (toggle_button :pointer)              ;GtkToggleButton *
-  (is_active :int)                      ;gboolean
+  (arg0 :pointer)                       ;cairo_t *
+  (arg1 :double)                        ;double
   )
 
-(defcfun "cairo_image_surface_create_for_data"
-    :pointer
-  (arg0 :string)                        ;unsigned char *
-  (arg1 cairo_format_t)
+(defcfun "cairo_scale"
+    :void
+  (arg0 :pointer)                       ;cairo_t *
+  (arg1 :double)                        ;double
+  (arg2 :double)                        ;double
+  )
+
+(defcfun "cairo_select_font_face"
+    :void
+  (arg0 :pointer)                       ;cairo_t *
+  (arg1 :string)                        ;const char *
+  (arg2 cairo_font_slant_t)
+  (arg3 cairo_font_weight_t))
+
+(defcfun "cairo_set_antialias"
+    :void
+  (arg0 :pointer)                       ;cairo_t *
+  (arg1 cairo_antialias_t))
+
+(defcfun "cairo_set_dash"
+    :void
+  (arg0 :pointer)                       ;cairo_t *
+  (arg1 :pointer)                       ;const double *
   (arg2 :int)                           ;int
-  (arg3 :int)                           ;int
-  (arg4 :int)                           ;int
+  (arg3 :double)                        ;double
   )
 
-(defcfun "gdk_error_trap_pop" :int)
+(defcfun "cairo_set_fill_rule"
+    :void
+  (arg0 :pointer)                       ;cairo_t *
+  (arg1 cairo_fill_rule_t))
+
+(defcfun "cairo_set_font_size"
+    :void
+  (arg0 :pointer)                       ;cairo_t *
+  (arg1 :double)                        ;double
+  )
+
+(defcfun "cairo_set_line_cap"
+    :void
+  (arg0 :pointer)                       ;cairo_t *
+  (arg1 cairo_line_cap_t))
+
+(defcfun "cairo_set_line_join"
+    :void
+  (arg0 :pointer)                       ;cairo_t *
+  (arg1 cairo_line_join_t))
+
+(defcfun "cairo_set_line_width"
+    :void
+  (arg0 :pointer)                       ;cairo_t *
+  (arg1 :double)                        ;double
+  )
+
+(defcfun "cairo_set_matrix"
+    :void
+  (arg0 :pointer)                       ;cairo_t *
+  (arg1 :pointer)                       ;const cairo_matrix_t *
+  )
+
+(defcfun "cairo_set_miter_limit"
+    :void
+  (arg0 :pointer)                       ;cairo_t *
+  (arg1 :double)                        ;double
+  )
+
+(defcfun "cairo_set_operator"
+    :void
+  (arg0 :pointer)                       ;cairo_t *
+  (arg1 cairo_operator_t))
+
+(defcfun "cairo_set_source"
+    :void
+  (arg0 :pointer)                       ;cairo_t *
+  (arg1 :pointer)                       ;cairo_pattern_t *
+  )
+
+(defcfun "cairo_set_source_rgb"
+    :void
+  (arg0 :pointer)                       ;cairo_t *
+  (arg1 :double)                        ;double
+  (arg2 :double)                        ;double
+  (arg3 :double)                        ;double
+  )
+
+(defcfun "cairo_set_source_rgba"
+    :void
+  (arg0 :pointer)                       ;cairo_t *
+  (arg1 :double)                        ;double
+  (arg2 :double)                        ;double
+  (arg3 :double)                        ;double
+  (arg4 :double)                        ;double
+  )
+
+(defcfun "cairo_set_tolerance"
+    :void
+  (arg0 :pointer)                       ;cairo_t *
+  (arg1 :double)                        ;double
+  )
+
+(defcfun "cairo_show_glyphs"
+    :void
+  (arg0 :pointer)                       ;cairo_t *
+  (arg1 :pointer)                       ;cairo_glyph_t *
+  (arg2 :int)                           ;int
+  )
+
+(defcfun "cairo_show_page"
+    :void
+  (arg0 :pointer)                       ;cairo_t *
+  )
+
+(defcfun "cairo_show_text"
+    :void
+  (arg0 :pointer)                       ;cairo_t *
+  (arg1 :string)                        ;const char *
+  )
+
+(defcfun "cairo_status"
+    cairo_status_t
+  (arg0 :pointer)                       ;cairo_t *
+  )
 
 (defcfun "cairo_stroke"
     :void
   (arg0 :pointer)                       ;cairo_t *
   )
 
-(defcfun "gtk_separator_menu_item_new" :pointer)
-
-(defcfun "cairo_pattern_set_matrix"
+(defcfun "cairo_stroke_extents"
     :void
-  (arg0 :pointer)                       ;cairo_pattern_t *
-  (arg1 :pointer)                       ;const cairo_matrix_t *
+  (arg0 :pointer)                       ;cairo_t *
+  (arg1 :pointer)                       ;double *
+  (arg2 :pointer)                       ;double *
+  (arg3 :pointer)                       ;double *
+  (arg4 :pointer)                       ;double *
   )
 
-(defcfun "gtk_scale_set_draw_value"
+(defcfun "cairo_surface_create_similar"
+    :pointer
+  (arg0 :pointer)                       ;cairo_surface_t *
+  (arg1 cairo_content_t)
+  (arg2 :int)                           ;int
+  (arg3 :int)                           ;int
+  )
+
+(defcfun "cairo_surface_destroy"
+    :pointer
+  (arg0 :pointer)                       ;cairo_surface_t *
+  )
+
+(defcfun "cairo_surface_flush"
     :void
-  (scale :pointer)                      ;GtkScale *
-  (draw_value :int)                     ;gboolean
+  (arg0 :pointer)                       ;cairo_surface_t *
+  )
+
+(defcfun "cairo_surface_mark_dirty"
+    :void
+  (arg0 :pointer)                       ;cairo_surface_t *
+  )
+
+(defcfun "cairo_surface_reference"
+    :pointer
+  (arg0 :pointer)                       ;cairo_surface_t *
+  )
+
+(defcfun "cairo_text_extents"
+    :void
+  (arg0 :pointer)                       ;cairo_t *
+  (arg1 :string)                        ;const char *
+  (arg2 :pointer)                       ;cairo_text_extents_t *
+  )
+
+(defcfun "cairo_text_path"
+    :void
+  (arg0 :pointer)                       ;cairo_t *
+  (arg1 :string)                        ;const char *
+  )
+
+(defcfun "cairo_translate"
+    :void
+  (arg0 :pointer)                       ;cairo_t *
+  (arg1 :double)                        ;double
+  (arg2 :double)                        ;double
+  )
+
+(defcfun "g_idle_add"
+    :unsigned-int
+  (function :pointer)                   ;GSourceFunc
+  (data :pointer)                       ;gpointer
+  )
+
+(defcfun "g_signal_connect_data"
+    :unsigned-long
+  (instance :pointer)                   ;gpointer
+  (detailed_signal :string)             ;const gchar *
+  (c_handler :pointer)                  ;GCallback
+  (data :pointer)                       ;gpointer
+  (destroy_data :pointer)               ;GClosureNotify
+  (connect_flags GConnectFlags))
+
+(defcfun "g_thread_init"
+    :void
+  (init :pointer)                       ;GThreadFunctions *
+  )
+
+(defcfun "g_value_init"
+    :pointer
+  (value :pointer)                      ;GValue *
+  (g_type :unsigned-long)               ;GType
+  )
+
+(defcfun "g_value_set_string"
+    :void
+  (value :pointer)                      ;GValue *
+  (v_string :string)                    ;const gchar *
+  )
+
+(defcfun "gdk_cairo_create"
+    :pointer
+  (drawable :pointer)                   ;GdkDrawable *
+  )
+
+(defcfun "gdk_display_flush"
+    :void
+  (display :pointer)                    ;GdkDisplay *
+  )
+
+(defcfun "gdk_display_get_default" :pointer)
+
+(defcfun "gdk_display_get_pointer"
+    :void
+  (display :pointer)                    ;GdkDisplay *
+  (screen :pointer)                     ;GdkScreen **
+  (x :pointer)                          ;gint *
+  (y :pointer)                          ;gint *
+  (mask :pointer)                       ;GdkModifierType *
+  )
+
+(defcfun "gdk_drag_motion"
+    :int
+  (context :pointer)                    ;GdkDragContext *
+  (dest_window :pointer)                ;GdkWindow *
+  (protocol GdkDragProtocol)
+  (x_root :int)                         ;gint
+  (y_root :int)                         ;gint
+  (suggested_action GdkDragAction)
+  (possible_actions GdkDragAction)
+  (time :uint32)                        ;guint32
+  )
+
+(defcfun "gdk_drag_status"
+    :void
+  (context :pointer)                    ;GdkDragContext *
+  (action GdkDragAction)
+  (time :uint32)                        ;guint32
   )
 
 (defcfun "gdk_draw_drawable"
@@ -818,20 +779,47 @@
   (height :int)                         ;gint
   )
 
-(defcfun "gtk_tree_path_get_indices"
-    :pointer
-  (path :pointer)                       ;GtkTreePath *
+(defcfun "gdk_draw_rectangle"
+    :void
+  (drawable :pointer)                   ;GdkDrawable *
+  (gc :pointer)                         ;GdkGC *
+  (filled :int)                         ;gboolean
+  (x :int)                              ;gint
+  (y :int)                              ;gint
+  (width :int)                          ;gint
+  (height :int)                         ;gint
   )
 
-(defcfun "cairo_matrix_init"
+(defcfun "gdk_drawable_get_depth"
+    :int
+  (drawable :pointer)                   ;GdkDrawable *
+  )
+
+(defcfun "gdk_drawable_unref"
+    :void
+  (drawable :pointer)                   ;GdkDrawable *
+  )
+
+(defcfun "gdk_error_trap_pop" :int)
+
+(defcfun "gdk_error_trap_push" :void)
+
+(defcfun "gdk_flush" :void)
+
+(defcfun "gdk_gc_new"
     :pointer
-  (arg0 :pointer)                       ;cairo_matrix_t *
-  (arg1 :double)                        ;double
-  (arg2 :double)                        ;double
-  (arg3 :double)                        ;double
-  (arg4 :double)                        ;double
-  (arg5 :double)                        ;double
-  (arg6 :double)                        ;double
+  (drawable :pointer)                   ;GdkDrawable *
+  )
+
+(defcfun "gdk_gc_set_function"
+    :void
+  (gc :pointer)                         ;GdkGC *
+  (function GdkFunction))
+
+(defcfun "gdk_gc_set_rgb_fg_color"
+    :void
+  (gc :pointer)                         ;GdkGC *
+  (color :pointer)                      ;const GdkColor *
   )
 
 (defcfun "gdk_gc_unref"
@@ -839,73 +827,12 @@
   (gc :pointer)                         ;GdkGC *
   )
 
-(defcfun "gtk_widget_show"
-    :void
-  (widget :pointer)                     ;GtkWidget *
-  )
-
-(defcfun "gtk_vscrollbar_new"
-    :pointer
-  (adjustment :pointer)                 ;GtkAdjustment *
-  )
-
-(defcfun "gtk_menu_shell_append"
-    :void
-  (menu_shell :pointer)                 ;GtkMenuShell *
-  (child :pointer)                      ;GtkWidget *
-  )
-
-(defcfun "cairo_pattern_get_extend"
-    cairo_extend_t
-  (arg0 :pointer)                       ;cairo_pattern_t *
-  )
-
-(defcfun "gtk_tree_view_column_pack_start"
-    :void
-  (tree_column :pointer)                ;GtkTreeViewColumn *
-  (cell :pointer)                       ;GtkCellRenderer *
-  (expand :int)                         ;gboolean
-  )
-
-(defcfun "gtk_range_get_adjustment"
-    :pointer
-  (range :pointer)                      ;GtkRange *
-  )
-
-(defcfun "gdk_screen_get_root_window"
-    :pointer
-  (screen :pointer)                     ;GdkScreen *
-  )
-
-(defcfun "gdk_flush" :void)
-
-(defcfun "gdk_cairo_create"
+(defcfun "gdk_pixmap_new"
     :pointer
   (drawable :pointer)                   ;GdkDrawable *
-  )
-
-(defcfun "gtk_tree_selection_select_path"
-    :void
-  (selection :pointer)                  ;GtkTreeSelection *
-  (path :pointer)                       ;GtkTreePath *
-  )
-
-(defcfun "cairo_pattern_create_radial"
-    :pointer
-  (arg0 :double)                        ;double
-  (arg1 :double)                        ;double
-  (arg2 :double)                        ;double
-  (arg3 :double)                        ;double
-  (arg4 :double)                        ;double
-  (arg5 :double)                        ;double
-  )
-
-(defcfun "gtk_fixed_move"
-    :void
-  (fixed :pointer)                      ;GtkFixed *
-  (widget :pointer)                     ;GtkWidget *
-  (x :int)                              ;gint
-  (y :int)                              ;gint
+  (width :int)                          ;gint
+  (height :int)                         ;gint
+  (depth :int)                          ;gint
   )
 
 (defcfun "gdk_pointer_grab"
@@ -918,17 +845,43 @@
   (time :uint32)                        ;guint32
   )
 
-(defcfun "cairo_destroy"
+(defcfun "gdk_pointer_ungrab"
     :void
-  (arg0 :pointer)                       ;cairo_t *
+  (time :uint32)                        ;guint32
   )
 
-(defcfun "cairo_select_font_face"
-    :void
-  (arg0 :pointer)                       ;cairo_t *
-  (arg1 :string)                        ;const char *
-  (arg2 cairo_font_slant_t)
-  (arg3 cairo_font_weight_t))
+(defcfun "gdk_screen_get_default" :pointer)
+
+(defcfun "gdk_screen_get_height"
+    :int
+  (screen :pointer)                     ;GdkScreen *
+  )
+
+(defcfun "gdk_screen_get_height_mm"
+    :int
+  (screen :pointer)                     ;GdkScreen *
+  )
+
+(defcfun "gdk_screen_get_root_window"
+    :pointer
+  (screen :pointer)                     ;GdkScreen *
+  )
+
+(defcfun "gdk_screen_get_width"
+    :int
+  (screen :pointer)                     ;GdkScreen *
+  )
+
+(defcfun "gdk_screen_get_width_mm"
+    :int
+  (screen :pointer)                     ;GdkScreen *
+  )
+
+(defcfun "gdk_threads_enter" :void)
+
+(defcfun "gdk_threads_init" :void)
+
+(defcfun "gdk_threads_leave" :void)
 
 (defcfun "gdk_window_clear_area"
     :void
@@ -939,91 +892,18 @@
   (height :int)                         ;gint
   )
 
+(defcfun "gdk_window_get_root_origin"
+    :void
+  (window :pointer)                     ;GdkWindow *
+  (x :pointer)                          ;gint *
+  (y :pointer)                          ;gint *
+  )
+
 (defcfun "gdk_window_invalidate_rect"
     :void
   (window :pointer)                     ;GdkWindow *
   (rect :pointer)                       ;GdkRectangle *
   (invalidate_children :int)            ;gboolean
-  )
-
-(defcfun "cairo_translate"
-    :void
-  (arg0 :pointer)                       ;cairo_t *
-  (arg1 :double)                        ;double
-  (arg2 :double)                        ;double
-  )
-
-(defcfun "gdk_drag_motion"
-    :int
-  (context :pointer)                    ;GdkDragContext *
-  (dest_window :pointer)                ;GdkWindow *
-  (protocol GdkDragProtocol)
-  (x_root :int)                         ;gint
-  (y_root :int)                         ;gint
-  (suggested_action GdkDragAction)
-  (possible_actions GdkDragAction)
-  (time :uint32)                        ;guint32
-  )
-
-(defcfun "g_idle_add"
-    :unsigned-int
-  (function :pointer)                   ;GSourceFunc
-  (data :pointer)                       ;gpointer
-  )
-
-(defcfun "gtk_hscrollbar_new"
-    :pointer
-  (adjustment :pointer)                 ;GtkAdjustment *
-  )
-
-(defcfun "gtk_menu_popup"
-    :void
-  (menu :pointer)                       ;GtkMenu *
-  (parent_menu_shell :pointer)          ;GtkWidget *
-  (parent_menu_item :pointer)           ;GtkWidget *
-  (func :pointer)                       ;GtkMenuPositionFunc
-  (data :pointer)                       ;gpointer
-  (button :unsigned-int)                ;guint
-  (activate_time :uint32)               ;guint32
-  )
-
-(defcfun "cairo_show_text"
-    :void
-  (arg0 :pointer)                       ;cairo_t *
-  (arg1 :string)                        ;const char *
-  )
-
-(defcfun "gdk_threads_leave" :void)
-
-(defcfun "cairo_set_line_join"
-    :void
-  (arg0 :pointer)                       ;cairo_t *
-  (arg1 cairo_line_join_t))
-
-(defcfun "cairo_reset_clip"
-    :void
-  (arg0 :pointer)                       ;cairo_t *
-  )
-
-(defcfun "gdk_screen_get_height"
-    :int
-  (screen :pointer)                     ;GdkScreen *
-  )
-
-(defcfun "cairo_set_line_width"
-    :void
-  (arg0 :pointer)                       ;cairo_t *
-  (arg1 :double)                        ;double
-  )
-
-(defcfun "gtk_widget_hide"
-    :void
-  (widget :pointer)                     ;GtkWidget *
-  )
-
-(defcfun "gtk_range_get_value"
-    :double
-  (range :pointer)                      ;GtkRange *
   )
 
 (defcfun "gtk_adjustment_new"
@@ -1036,152 +916,48 @@
   (page_size :double)                   ;gdouble
   )
 
-(defcfun "cairo_pattern_get_matrix"
+(defcfun "gtk_adjustment_set_value"
     :void
-  (arg0 :pointer)                       ;cairo_pattern_t *
-  (arg1 :pointer)                       ;cairo_matrix_t *
+  (adjustment :pointer)                 ;GtkAdjustment *
+  (value :double)                       ;gdouble
   )
 
-(defcfun "cairo_arc"
-    :void
-  (arg0 :pointer)                       ;cairo_t *
-  (arg1 :double)                        ;double
-  (arg2 :double)                        ;double
-  (arg3 :double)                        ;double
-  (arg4 :double)                        ;double
-  (arg5 :double)                        ;double
-  )
-
-(defcfun "gtk_widget_set_size_request"
-    :void
-  (widget :pointer)                     ;GtkWidget *
-  (width :int)                          ;gint
-  (height :int)                         ;gint
-  )
-
-(defcfun "gtk_widget_set_events"
-    :void
-  (widget :pointer)                     ;GtkWidget *
-  (events :int)                         ;gint
-  )
-
-(defcfun "gtk_radio_button_new_with_label"
+(defcfun "gtk_button_new_with_label"
     :pointer
-  (group :pointer)                      ;GSList *
   (label :string)                       ;const gchar *
   )
 
-(defcfun "gtk_main_iteration_do"
-    :int
-  (blocking :int)                       ;gboolean
-  )
+(defcfun "gtk_cell_renderer_text_new" :pointer)
 
-(defcfun "cairo_show_page"
-    :void
-  (arg0 :pointer)                       ;cairo_t *
-  )
-
-(defcfun "cairo_scale"
-    :void
-  (arg0 :pointer)                       ;cairo_t *
-  (arg1 :double)                        ;double
-  (arg2 :double)                        ;double
-  )
-
-(defcfun "gtk_tree_view_insert_column"
-    :int
-  (tree_view :pointer)                  ;GtkTreeView *
-  (column :pointer)                     ;GtkTreeViewColumn *
-  (position :int)                       ;gint
-  )
-
-(defcfun "cairo_pattern_create_linear"
+(defcfun "gtk_check_button_new_with_label"
     :pointer
-  (arg0 :double)                        ;double
-  (arg1 :double)                        ;double
-  (arg2 :double)                        ;double
-  (arg3 :double)                        ;double
+  (label :string)                       ;const gchar *
   )
 
-(defcfun "gtk_widget_add_events"
+(defcfun "gtk_container_add"
     :void
+  (container :pointer)                  ;GtkContainer *
   (widget :pointer)                     ;GtkWidget *
-  (events :int)                         ;gint
   )
-
-(defcfun "gtk_vscale_new_with_range"
-    :pointer
-  (min :double)                         ;gdouble
-  (max :double)                         ;gdouble
-  (step :double)                        ;gdouble
-  )
-
-(defcfun "gtk_tree_view_column_new" :pointer)
-
-(defcfun "cairo_set_source_rgb"
-    :void
-  (arg0 :pointer)                       ;cairo_t *
-  (arg1 :double)                        ;double
-  (arg2 :double)                        ;double
-  (arg3 :double)                        ;double
-  )
-
-(defcfun "cairo_set_line_cap"
-    :void
-  (arg0 :pointer)                       ;cairo_t *
-  (arg1 cairo_line_cap_t))
-
-(defcfun "cairo_pattern_set_filter"
-    :void
-  (arg0 :pointer)                       ;cairo_pattern_t *
-  (arg1 cairo_filter_t))
-
-(defcfun "cairo_in_stroke"
-    :int
-  (arg0 :pointer)                       ;cairo_t *
-  (arg1 :double)                        ;double
-  (arg2 :double)                        ;double
-  )
-
-(defcfun "gtk_tree_selection_unselect_all"
-    :void
-  (selection :pointer)                  ;GtkTreeSelection *
-  )
-
-(defcfun "gtk_menu_bar_new" :pointer)
 
 (defcfun "gtk_events_pending" :int)
 
-(defcfun "gdk_display_get_default" :pointer)
-
-(defcfun "gtk_tree_view_get_selection"
-    :pointer
-  (tree_view :pointer)                  ;GtkTreeView *
-  )
-
-(defcfun "cairo_set_font_size"
+(defcfun "gtk_fixed_move"
     :void
-  (arg0 :pointer)                       ;cairo_t *
-  (arg1 :double)                        ;double
-  )
-
-(defcfun "gdk_display_get_pointer"
-    :void
-  (display :pointer)                    ;GdkDisplay *
-  (screen :pointer)                     ;GdkScreen **
-  (x :pointer)                          ;gint *
-  (y :pointer)                          ;gint *
-  (mask :pointer)                       ;GdkModifierType *
-  )
-
-(defcfun "cairo_surface_flush"
-    :void
-  (arg0 :pointer)                       ;cairo_surface_t *
-  )
-
-(defcfun "gtk_widget_get_events"
-    :int
+  (fixed :pointer)                      ;GtkFixed *
   (widget :pointer)                     ;GtkWidget *
+  (x :int)                              ;gint
+  (y :int)                              ;gint
+  )
+
+(defcfun "gtk_fixed_new" :pointer)
+
+(defcfun "gtk_fixed_put"
+    :void
+  (fixed :pointer)                      ;GtkFixed *
+  (widget :pointer)                     ;GtkWidget *
+  (x :int)                              ;gint
+  (y :int)                              ;gint
   )
 
 (defcfun "gtk_fixed_set_has_window"
@@ -1190,7 +966,25 @@
   (has_window :int)                     ;gboolean
   )
 
-(defcfun "gtk_menu_new" :pointer)
+(defcfun "gtk_get_current_event_time" :uint32)
+
+(defcfun "gtk_hscale_new_with_range"
+    :pointer
+  (min :double)                         ;gdouble
+  (max :double)                         ;gdouble
+  (step :double)                        ;gdouble
+  )
+
+(defcfun "gtk_hscrollbar_new"
+    :pointer
+  (adjustment :pointer)                 ;GtkAdjustment *
+  )
+
+(defcfun "gtk_init"
+    :void
+  (argc :pointer)                       ;int *
+  (argv :pointer)                       ;char ***
+  )
 
 (defcfun "gtk_list_store_append"
     :void
@@ -1198,14 +992,30 @@
   (iter :pointer)                       ;GtkTreeIter *
   )
 
-(defcfun "cairo_set_fill_rule"
-    :void
-  (arg0 :pointer)                       ;cairo_t *
-  (arg1 cairo_fill_rule_t))
-
-(defcfun "gtk_tree_view_get_vadjustment"
+(defcfun "gtk_list_store_newv"
     :pointer
-  (tree_view :pointer)                  ;GtkTreeView *
+  (n_columns :int)                      ;gint
+  (types :pointer)                      ;GType *
+  )
+
+(defcfun "gtk_list_store_set_value"
+    :void
+  (list_store :pointer)                 ;GtkListStore *
+  (iter :pointer)                       ;GtkTreeIter *
+  (column :int)                         ;gint
+  (value :pointer)                      ;GValue *
+  )
+
+(defcfun "gtk_main_iteration_do"
+    :int
+  (blocking :int)                       ;gboolean
+  )
+
+(defcfun "gtk_menu_bar_new" :pointer)
+
+(defcfun "gtk_menu_item_new_with_label"
+    :pointer
+  (label :string)                       ;const gchar *
   )
 
 (defcfun "gtk_menu_item_set_submenu"
@@ -1213,6 +1023,106 @@
   (menu_item :pointer)                  ;GtkMenuItem *
   (submenu :pointer)                    ;GtkWidget *
   )
+
+(defcfun "gtk_menu_new" :pointer)
+
+(defcfun "gtk_menu_popup"
+    :void
+  (menu :pointer)                       ;GtkMenu *
+  (parent_menu_shell :pointer)          ;GtkWidget *
+  (parent_menu_item :pointer)           ;GtkWidget *
+  (func :pointer)                       ;GtkMenuPositionFunc
+  (data :pointer)                       ;gpointer
+  (button :unsigned-int)                ;guint
+  (activate_time :uint32)               ;guint32
+  )
+
+(defcfun "gtk_menu_shell_append"
+    :void
+  (menu_shell :pointer)                 ;GtkMenuShell *
+  (child :pointer)                      ;GtkWidget *
+  )
+
+(defcfun "gtk_radio_button_get_group"
+    :pointer
+  (radio_button :pointer)               ;GtkRadioButton *
+  )
+
+(defcfun "gtk_radio_button_new_with_label"
+    :pointer
+  (group :pointer)                      ;GSList *
+  (label :string)                       ;const gchar *
+  )
+
+(defcfun "gtk_range_get_adjustment"
+    :pointer
+  (range :pointer)                      ;GtkRange *
+  )
+
+(defcfun "gtk_range_get_value"
+    :double
+  (range :pointer)                      ;GtkRange *
+  )
+
+(defcfun "gtk_range_set_adjustment"
+    :void
+  (range :pointer)                      ;GtkRange *
+  (adjustment :pointer)                 ;GtkAdjustment *
+  )
+
+(defcfun "gtk_scale_set_digits"
+    :void
+  (scale :pointer)                      ;GtkScale *
+  (digits :int)                         ;gint
+  )
+
+(defcfun "gtk_scale_set_draw_value"
+    :void
+  (scale :pointer)                      ;GtkScale *
+  (draw_value :int)                     ;gboolean
+  )
+
+(defcfun "gtk_scrolled_window_new"
+    :pointer
+  (hadjustment :pointer)                ;GtkAdjustment *
+  (vadjustment :pointer)                ;GtkAdjustment *
+  )
+
+(defcfun "gtk_separator_menu_item_new" :pointer)
+
+(defcfun "gtk_toggle_button_set_active"
+    :void
+  (toggle_button :pointer)              ;GtkToggleButton *
+  (is_active :int)                      ;gboolean
+  )
+
+(defcfun "gtk_tree_path_free"
+    :void
+  (path :pointer)                       ;GtkTreePath *
+  )
+
+(defcfun "gtk_tree_path_get_indices"
+    :pointer
+  (path :pointer)                       ;GtkTreePath *
+  )
+
+(defcfun "gtk_tree_selection_select_path"
+    :void
+  (selection :pointer)                  ;GtkTreeSelection *
+  (path :pointer)                       ;GtkTreePath *
+  )
+
+(defcfun "gtk_tree_selection_selected_foreach"
+    :void
+  (selection :pointer)                  ;GtkTreeSelection *
+  (func :pointer)                       ;GtkTreeSelectionForeachFunc
+  (data :pointer)                       ;gpointer
+  )
+
+(defcfun "gtk_tree_selection_set_mode"
+    :void
+  (selection :pointer)                  ;GtkTreeSelection *
+  (type GtkSelectionMode))
 
 (defcfun "gtk_tree_selection_set_select_function"
     :void
@@ -1222,43 +1132,87 @@
   (destroy :pointer)                    ;GtkDestroyNotify
   )
 
-(defcfun "XGetErrorText"
-    :int
-  (dpy :pointer)                        ;Display *
-  (code :int)                           ;int
-  (buffer :string)                      ;char *
-  (nbytes :int)                         ;int
+(defcfun "gtk_tree_selection_unselect_all"
+    :void
+  (selection :pointer)                  ;GtkTreeSelection *
   )
 
-(defcfun "gtk_window_set_geometry_hints"
+(defcfun "gtk_tree_view_column_add_attribute"
     :void
-  (window :pointer)                     ;GtkWindow *
-  (geometry_widget :pointer)            ;GtkWidget *
-  (geometry :pointer)                   ;GdkGeometry *
-  (geom_mask GdkWindowHints))
-
-(defcfun "cairo_copy_page"
-    :void
-  (arg0 :pointer)                       ;cairo_t *
+  (tree_column :pointer)                ;GtkTreeViewColumn *
+  (cell_renderer :pointer)              ;GtkCellRenderer *
+  (attribute :string)                   ;const gchar *
+  (column :int)                         ;gint
   )
 
-(defcfun "cairo_set_operator"
-    :void
-  (arg0 :pointer)                       ;cairo_t *
-  (arg1 cairo_operator_t))
+(defcfun "gtk_tree_view_column_new" :pointer)
 
-(defcfun "cairo_create"
+(defcfun "gtk_tree_view_column_pack_start"
+    :void
+  (tree_column :pointer)                ;GtkTreeViewColumn *
+  (cell :pointer)                       ;GtkCellRenderer *
+  (expand :int)                         ;gboolean
+  )
+
+(defcfun "gtk_tree_view_column_set_title"
+    :void
+  (tree_column :pointer)                ;GtkTreeViewColumn *
+  (title :string)                       ;const gchar *
+  )
+
+(defcfun "gtk_tree_view_get_hadjustment"
     :pointer
-  (arg0 :pointer)                       ;cairo_surface_t *
+  (tree_view :pointer)                  ;GtkTreeView *
   )
 
-(defcfun "cairo_rectangle"
+(defcfun "gtk_tree_view_get_selection"
+    :pointer
+  (tree_view :pointer)                  ;GtkTreeView *
+  )
+
+(defcfun "gtk_tree_view_get_vadjustment"
+    :pointer
+  (tree_view :pointer)                  ;GtkTreeView *
+  )
+
+(defcfun "gtk_tree_view_insert_column"
+    :int
+  (tree_view :pointer)                  ;GtkTreeView *
+  (column :pointer)                     ;GtkTreeViewColumn *
+  (position :int)                       ;gint
+  )
+
+(defcfun "gtk_tree_view_new_with_model"
+    :pointer
+  (model :pointer)                      ;GtkTreeModel *
+  )
+
+(defcfun "gtk_vscale_new_with_range"
+    :pointer
+  (min :double)                         ;gdouble
+  (max :double)                         ;gdouble
+  (step :double)                        ;gdouble
+  )
+
+(defcfun "gtk_vscrollbar_new"
+    :pointer
+  (adjustment :pointer)                 ;GtkAdjustment *
+  )
+
+(defcfun "gtk_widget_add_events"
     :void
-  (arg0 :pointer)                       ;cairo_t *
-  (arg1 :double)                        ;double
-  (arg2 :double)                        ;double
-  (arg3 :double)                        ;double
-  (arg4 :double)                        ;double
+  (widget :pointer)                     ;GtkWidget *
+  (events :int)                         ;gint
+  )
+
+(defcfun "gtk_widget_destroy"
+    :void
+  (widget :pointer)                     ;GtkWidget *
+  )
+
+(defcfun "gtk_widget_get_events"
+    :int
+  (widget :pointer)                     ;GtkWidget *
   )
 
 (defcfun "gtk_widget_get_pointer"
@@ -1268,59 +1222,105 @@
   (y :pointer)                          ;gint *
   )
 
-(defcfun "gtk_menu_item_new_with_label"
-    :pointer
-  (label :string)                       ;const gchar *
-  )
-
-(defcfun "gtk_button_new_with_label"
-    :pointer
-  (label :string)                       ;const gchar *
-  )
-
-(defcfun "cairo_stroke_extents"
+(defcfun "gtk_widget_grab_focus"
     :void
-  (arg0 :pointer)                       ;cairo_t *
-  (arg1 :pointer)                       ;double *
-  (arg2 :pointer)                       ;double *
-  (arg3 :pointer)                       ;double *
-  (arg4 :pointer)                       ;double *
+  (widget :pointer)                     ;GtkWidget *
   )
 
-(defcfun "gdk_screen_get_default" :pointer)
-
-(defcfun "cairo_text_path"
+(defcfun "gtk_widget_hide"
     :void
-  (arg0 :pointer)                       ;cairo_t *
-  (arg1 :string)                        ;const char *
+  (widget :pointer)                     ;GtkWidget *
   )
 
-(defcfun "cairo_pattern_get_filter"
-    cairo_filter_t
-  (arg0 :pointer)                       ;cairo_pattern_t *
+(defcfun "gtk_widget_hide_all"
+    :void
+  (widget :pointer)                     ;GtkWidget *
   )
 
-(defcfun "gdk_pixmap_new"
-    :pointer
-  (drawable :pointer)                   ;GdkDrawable *
+(defcfun "gtk_widget_modify_bg"
+    :void
+  (widget :pointer)                     ;GtkWidget *
+  (state GtkStateType)
+  (color :pointer)                      ;const GdkColor *
+  )
+
+(defcfun "gtk_widget_set_double_buffered"
+    :void
+  (widget :pointer)                     ;GtkWidget *
+  (double_buffered :int)                ;gboolean
+  )
+
+(defcfun "gtk_widget_set_events"
+    :void
+  (widget :pointer)                     ;GtkWidget *
+  (events :int)                         ;gint
+  )
+
+(defcfun "gtk_widget_set_size_request"
+    :void
+  (widget :pointer)                     ;GtkWidget *
   (width :int)                          ;gint
   (height :int)                         ;gint
-  (depth :int)                          ;gint
   )
 
-(defcfun "gdk_pointer_ungrab"
+(defcfun "gtk_widget_show"
     :void
-  (time :uint32)                        ;guint32
+  (widget :pointer)                     ;GtkWidget *
   )
 
-(defcfun "cairo_pattern_set_extend"
+(defcfun "gtk_widget_show_all"
     :void
-  (arg0 :pointer)                       ;cairo_pattern_t *
-  (arg1 cairo_extend_t))
+  (widget :pointer)                     ;GtkWidget *
+  )
+
+(defcfun "gtk_widget_size_request"
+    :void
+  (widget :pointer)                     ;GtkWidget *
+  (requisition :pointer)                ;GtkRequisition *
+  )
 
 (defcfun "gtk_window_move"
     :void
   (window :pointer)                     ;GtkWindow *
   (x :int)                              ;gint
   (y :int)                              ;gint
+  )
+
+(defcfun "gtk_window_new"
+    :pointer
+  (type GtkWindowType))
+
+(defcfun "gtk_window_resize"
+    :void
+  (window :pointer)                     ;GtkWindow *
+  (width :int)                          ;gint
+  (height :int)                         ;gint
+  )
+
+(defcfun "gtk_window_set_default_size"
+    :void
+  (window :pointer)                     ;GtkWindow *
+  (width :int)                          ;gint
+  (height :int)                         ;gint
+  )
+
+(defcfun "gtk_window_set_geometry_hints"
+    :void
+  (window :pointer)                     ;GtkWindow *
+  (geometry_widget :pointer)            ;GtkWidget *
+  (geometry :pointer)                   ;GdkGeometry *
+  (geom_mask GdkWindowHints))
+
+(defcfun "gtk_window_set_title"
+    :void
+  (window :pointer)                     ;GtkWindow *
+  (title :string)                       ;const gchar *
+  )
+
+(defcfun "XGetErrorText"
+    :int
+  (dpy :pointer)                        ;Display *
+  (code :int)                           ;int
+  (buffer :string)                      ;char *
+  (nbytes :int)                         ;int
   )
