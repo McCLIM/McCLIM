@@ -480,9 +480,12 @@ call-next-method to get the \"real\" answer based on the stream type."))
 
 (define-presentation-method presentation-type-history-for-stream
     ((type t) (stream input-editing-stream))
-  (if (not (stream-rescanning-p stream))
-      (funcall-presentation-generic-function presentation-type-history type)
-      nil))
+  ;; What is the purpose of this? Makes stuff harder to do, so
+  ;; commented out...
+  ;;(if (not (stream-rescanning-p stream))
+  ;;       (funcall-presentation-generic-function presentation-type-history type)
+  ;;       nil)
+  (funcall-presentation-generic-function presentation-type-history type))
 
 (defun presentation-history-insert (history object ptype)
   (goatee::ring-obj-insert (cons object ptype) history))
@@ -507,6 +510,18 @@ call-next-method to get the \"real\" answer based on the stream type."))
        return (values object object-ptype)
      end
      finally (return (values nil nil)))))
+
+(defun presentation-history-previous (history ptype)
+  (let ((first-object (goatee::backward history)))
+    (loop
+       for first-time = t then nil
+       for cell = first-object then (goatee::backward history)
+       for (object . object-ptype) = (goatee::contents cell)
+       while (or first-time (not (eq first-object cell)))
+       if (presentation-subtypep object-ptype ptype)
+       return (values object object-ptype)
+       end
+       finally (return (values nil nil)))))
 
 (defmacro with-object-on-history ((history object ptype) &body body)
   `(goatee::with-object-on-ring ((cons ,object ,ptype) ,history)

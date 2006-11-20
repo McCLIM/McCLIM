@@ -190,3 +190,46 @@ activated with GESTURE"))
 
 (defmethod input-editing-stream-bounding-rectangle ((stream standard-input-editing-stream))
   (bounding-rectangle* (drei:drei-instance stream)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; 
+;;; Presentation type history support
+;;;
+;;; Presentation histories are pretty underspecified, so we have to
+;;; rely on internal features and implement input-editor support in
+;;; CLIM-INTERNALS (Goatee does the same trick).
+
+(defun history-yank (stream input-buffer gesture numeric-argument)
+  (let* ((accepting-type *active-history-type*)
+         (history (and accepting-type
+                       (presentation-type-history accepting-type))))
+    (when history
+      (multiple-value-bind (object type)
+          (presentation-history-head history accepting-type)
+        (presentation-replace-input stream object type (stream-default-view stream))))))
+
+(defun history-yank-next (stream input-buffer gesture numeric-argument)
+  (let* ((accepting-type *active-history-type*)
+         (history (and accepting-type
+                       (presentation-type-history accepting-type))))
+    (when history
+      (multiple-value-bind (object type)
+          (presentation-history-next history accepting-type)
+        (when type
+          (presentation-replace-input stream object type (stream-default-view stream)))))))
+
+(defun history-yank-previous (stream input-buffer gesture numeric-argument)
+  (let* ((accepting-type *active-history-type*)
+         (history (and accepting-type
+                       (presentation-type-history accepting-type))))
+    (when history
+      (multiple-value-bind (object type)
+          (presentation-history-previous history accepting-type)
+        (when type
+          (presentation-replace-input stream object type (stream-default-view stream)))))))
+
+(add-input-editor-command '((#\y :control :meta)) 'history-yank)
+
+(add-input-editor-command '((#\p :meta)) 'history-yank-next)
+
+(add-input-editor-command '((#\n :meta)) 'history-yank-previous)
