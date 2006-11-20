@@ -1340,11 +1340,3 @@
   (window :pointer)                     ;GtkWindow *
   (title :string)                       ;const gchar *
   )
-
-(defcfun "XGetErrorText"
-    :int
-  (dpy :pointer)                        ;Display *
-  (code :int)                           ;int
-  (buffer :string)                      ;char *
-  (nbytes :int)                         ;int
-  )

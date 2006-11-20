@@ -316,6 +316,15 @@
   (index :int)
   &rest)
 
+#-(or win32 windows mswindows)
+(defcfun "XGetErrorText"
+    :int
+  (dpy :pointer)                        ;Display *
+  (code :int)                           ;int
+  (buffer :string)                      ;char *
+  (nbytes :int)                         ;int
+  )
+
 (defconstant GDK_CURRENT_TIME 0)
 
 ;; fixme: GtkWidgetFlags is an enum, why is it not in the object file?
