@@ -333,10 +333,10 @@
 (add-gesture-command-to-table '(#\d :meta)
 			      'delete-word
 			      *simple-area-gesture-table*)
-(add-gesture-command-to-table '(#\delete :meta)
+(add-gesture-command-to-table '(#\rubout :meta)
 			      'delete-word
 			      *simple-area-gesture-table*)
-(add-gesture-command-to-table '(#\delete :control)
+(add-gesture-command-to-table '(#\rubout :control)
 			      'delete-word
 			      *simple-area-gesture-table*)
 
