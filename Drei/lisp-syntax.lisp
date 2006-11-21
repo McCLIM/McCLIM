@@ -1006,7 +1006,7 @@ along with any default values) that can be used in a
 (define-parser-state |' form | (lexer-toplevel-state parser-state) ())
 
 (define-new-lisp-state (form-may-follow quote-lexeme) |' |)
-(define-new-lisp-state (|' | form) |' form |)
+(define-new-lisp-state (|' | complete-form-mixin) |' form |)
 (define-new-lisp-state (|' | comment) |' |)
 (define-new-lisp-state (|' | unmatched-right-parenthesis-lexeme) |( form* ) |)
 
@@ -1032,7 +1032,7 @@ along with any default values) that can be used in a
 (define-parser-state |` form | (lexer-toplevel-state parser-state) ())
 
 (define-new-lisp-state (form-may-follow backquote-lexeme) |` |)
-(define-new-lisp-state (|` | form) |` form |)
+(define-new-lisp-state (|` | complete-form-mixin) |` form |)
 (define-new-lisp-state (|` | comment) |` |)
 (define-new-lisp-state (|` | unmatched-right-parenthesis-lexeme) |( form* ) |)
 
@@ -1083,17 +1083,23 @@ along with any default values) that can be used in a
 
 ;;; parse trees
 (defclass function-form (form) ())
+(defclass complete-function-form (form complete-form-mixin) ())
+(defclass incomplete-function-form (form incomplete-form-mixin) ())
 
 (define-parser-state |#' | (form-may-follow) ())
 (define-parser-state |#' form | (lexer-toplevel-state parser-state) ())
 
 (define-new-lisp-state (form-may-follow function-lexeme) |#' |)
-(define-new-lisp-state (|#' | form) |#' form |)
+(define-new-lisp-state (|#' | complete-form-mixin) |#' form |)
 (define-new-lisp-state (|#' | comment) |#' |)
 
 ;;; reduce according to the rule form -> #' form
 (define-lisp-action (|#' form | t)
-  (reduce-until-type function-form function-lexeme))
+  (reduce-until-type complete-function-form function-lexeme))
+(define-lisp-action (|#' | unmatched-right-parenthesis-lexeme)
+  (reduce-until-type incomplete-function-form function-lexeme))
+(define-lisp-action (|#' | (eql nil))
+  (reduce-until-type incomplete-function-form function-lexeme))
 
 ;;;;;;;;;;;;;;;; Reader conditionals
 
@@ -1219,17 +1225,21 @@ along with any default values) that can be used in a
 
 ;;; parse trees
 (defclass pathname-form (form) ())
+(defclass complete-pathname-form (pathname-form complete-form-mixin) ())
+(defclass incomplete-pathname-form (pathname-form incomplete-form-mixin) ())
 
 (define-parser-state |#P | (form-may-follow) ())
 (define-parser-state |#P form | (lexer-toplevel-state parser-state) ())
 
 (define-new-lisp-state (form-may-follow pathname-start-lexeme) |#P |)
-(define-new-lisp-state (|#P | form) |#P form |)
+(define-new-lisp-state (|#P | complete-form-mixin) |#P form |)
 (define-new-lisp-state (|#P | comment) |#P |)
 
 ;;; reduce according to the rule form -> #P form
 (define-lisp-action (|#P form | t)
-  (reduce-until-type pathname-form pathname-start-lexeme))
+  (reduce-until-type complete-pathname-form pathname-start-lexeme))
+(define-lisp-action (|#P | (eql nil))
+  (reduce-until-type incomplete-pathname-form pathname-start-lexeme))
 
 ;;;;;;;;;;;;;;;; undefined reader macro
 
@@ -2606,6 +2616,26 @@ object. Otherwise, nil will be returned.")
 (defmethod token-to-object ((syntax lisp-syntax) (token literal-object-lexeme) &key &allow-other-keys)
   (object-after (start-mark token)))
 
+(defmethod token-to-object ((syntax lisp-syntax) (token pathname-form) &key &allow-other-keys)
+  (read-from-string (token-string syntax token)))
+
+(defmethod token-to-object ((syntax lisp-syntax) (token incomplete-pathname-form) &rest args &key read &allow-other-keys)
+  (if read
+      ;; Will cause a reader error (which is what we want).
+      (call-next-method)
+      ;; Try to create a pathname as much as possible.
+      (let ((pathspec-token (second (children token))))
+        (pathname (if pathspec-token
+                      (apply #'token-to-object syntax pathspec-token
+                             ;; Since `pathspec-token' will be
+                             ;; incomplete, `read'ing from it is
+                             ;; probably bad.
+                             :read nil args)
+                      "")))))
+
+(defmethod token-to-object ((syntax lisp-syntax) (token complete-function-form) &rest args &key &allow-other-keys)
+  (fdefinition (apply #'token-to-object syntax (second (children token)) args)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Arglist fetching.
@@ -2691,6 +2721,9 @@ object. Otherwise, nil will be returned.")
   (values tree 0))
 
 (defmethod indent-form ((syntax lisp-syntax) (tree long-comment-form) path)
+  (values tree 0))
+
+(defmethod indent-form ((syntax lisp-syntax) (tree pathname-form) path)
   (values tree 0))
 
 (defmethod indent-form ((syntax lisp-syntax) (tree quote-form) path)
