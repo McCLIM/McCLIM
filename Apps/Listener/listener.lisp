@@ -110,46 +110,7 @@
 (defun display-wholine (frame pane)
   (invoke-and-center-output pane
     (lambda () (generate-wholine-contents frame pane))
-    :horizontally nil :hpad 5))    
-
-;; This is a toy command history.
-;; Possibly this should become something integrated with the presentation
-;; histories, which I have not played with.
-
-(defclass command-history-mixin ()
-  ((history :initform nil :accessor history)
-   (history-length :initform 25 :initarg :history-length :accessor history-length)))
-
-(defmethod execute-frame-command :after ((frame command-history-mixin) command)
-  ;; FIXME: not safe against commands sent from other frames.
-  (push command (history frame))  
-  (when (> (length (history frame)) (history-length frame))
-    (setf (history frame)
-          (subseq (history frame) 0 (max (length (history frame))
-                                         (history-length frame))))))
-
-(define-command (com-show-command-history :name "Show Command History"
-                                          :command-table application-commands
-                                          :menu ("Show Command History" :after "Clear Output History"))
-    ()
-  (formatting-table ()
-     (loop for n from 0 by 1
-           for command in (history *application-frame*)
-           do (formatting-row ()
-                (formatting-cell ()
-                   (princ n))
-                (formatting-cell ()
-                   (present command 'command))))))
-
-(defparameter *listener-initial-function* nil)
-
-(defun listener-initial-display-function (frame pane)
-  (declare (ignore frame pane))
-  (when *listener-initial-function*
-    (funcall-in-listener
-     (lambda ()
-       (funcall *listener-initial-function*)
-       (fresh-line)))))
+    :horizontally nil :hpad 5))
 
 ;;; Listener view
 ;;;
@@ -175,6 +136,7 @@
 
 (define-presentation-method accept :around
   ((type sequence) stream (view listener-view) &key default default-type)
+  (declare (ignorable default default-type))
   ;; oh, my word.  although TYPE here might look like it's bound to
   ;; the presentation type itself, in fact it is bound to the
   ;; parameter of the SEQUENCE presentation type.  We need the
@@ -201,7 +163,7 @@
 (defmethod stream-present :around 
     ((stream listener-interactor-pane) object type
      &rest args &key (single-box nil sbp) &allow-other-keys)
-  (apply #'call-next-method stream object type :single-box t args)
+   (apply #'call-next-method stream object type :single-box t args)
   ;; we would do this, but CLIM:PRESENT calls STREAM-PRESENT with all
   ;; the keyword arguments explicitly.  *sigh*.
   #+nil 
@@ -210,16 +172,14 @@
       (apply #'call-next-method stream object type :single-box t args)))
 
 ;;; Listener application frame
-(define-application-frame listener (standard-application-frame
-                                    command-history-mixin)
+(define-application-frame listener (standard-application-frame)
     ((system-command-reader :accessor system-command-reader
 			    :initarg :system-command-reader
 			    :initform t))
   (:panes (interactor-container
            (make-clim-stream-pane
             :type 'listener-interactor-pane
-            :name 'interactor :scroll-bars t :display-time t
-            :display-function #'listener-initial-display-function))
+            :name 'interactor :scroll-bars t))
           (doc :pointer-documentation)
           (wholine (make-pane 'wholine-pane
                      :display-function 'display-wholine :scroll-bars nil
@@ -241,148 +201,14 @@
 
 ;;; Lisp listener command loop
 
-;; Set this to true if you want the listener to bind *debug-io* to the
-;; listener window.
-(defparameter *listener-use-debug-io* #+hefner t #-hefner nil)
-
-(defmethod run-frame-top-level ((frame listener) &key listener-funcall &allow-other-keys)
-  (let ((*debug-io* (if *listener-use-debug-io*
-                        (get-frame-pane frame 'interactor)
-			*debug-io*))
-	;; Borrowed from OpenMCL.
-	;; from CLtL2, table 22-7:
-        (*listener-initial-function* listener-funcall)
-	(*package* *package*)
-	(*print-array* *print-array*)
-	(*print-base* *print-base*)
-	(*print-case* *print-case*)
-	(*print-circle* *print-circle*)
-	(*print-escape* *print-escape*)
-	(*print-gensym* *print-gensym*)
-	(*print-length* *print-length*)
-	(*print-level* *print-level*)
-	(*print-lines* *print-lines*)
-	(*print-miser-width* *print-miser-width*)
-	(*print-pprint-dispatch* *print-pprint-dispatch*)
-	(*print-pretty* *print-pretty*)
-	(*print-radix* *print-radix*)
-	(*print-readably* *print-readably*)
-	(*print-right-margin* *print-right-margin*)
-	(*read-base* *read-base*)
-	(*read-default-float-format* *read-default-float-format*)
-	(*read-eval* *read-eval*)
-	(*read-suppress* *read-suppress*)
-	(*readtable* *readtable*))
-    (setf (stream-default-view (get-frame-pane frame 'interactor))
-          +listener-view+)
-    (setf (stream-default-view (get-frame-pane frame 'doc))
-          +listener-pointer-documentation-view+)
-    (loop while 
-      (catch 'return-to-listener
-	(restart-case (call-next-method)
-	  (return-to-listener ()
-	    :report "Return to listener."
-	    (throw 'return-to-listener t)))))))
-
-;; Oops. As we've ditched our custom toplevel, we now have to duplicate all
-;; this setup work to implement one little trick.
-(defun funcall-in-listener (fn)
-  (let* ((frame *application-frame*)
-         (*standard-input*  (or (frame-standard-input frame)
-                                *standard-input*))
-         (*standard-output* (or (frame-standard-output frame)
-                                *standard-output*))
-         (query-io  (frame-query-io frame))
-         (*query-io* (or query-io *query-io*))
-         (*pointer-documentation-output* (frame-pointer-documentation-output frame))
-         (interactorp (typep *query-io* 'interactor-pane)))
-    ;; FIXME - Something strange is happening which causes the initial command
-    ;; prompt to be indented incorrectly after performing this output. Various
-    ;; things like as calling TERPRI, manually moving the cursor, and closing
-    ;; the open output record, don't seem to help.
-    (with-room-for-graphics (*standard-output* :first-quadrant nil
-                                               :move-cursor t)
-      (funcall fn)
-      (stream-close-text-output-record *standard-output*)
-      (fresh-line))))      
-
-(defparameter *form-opening-characters*
-  '(#\( #\) #\[ #\] #\# #\; #\: #\' #\" #\* #\, #\` #\- 
-    #\+ #\/ #\0 #\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9))
-
 (defmethod read-frame-command ((frame listener) &key (stream *standard-input*))  
   "Specialized for the listener, read a lisp form to eval, or a command."
-  (if (system-command-reader frame)
-      (multiple-value-bind (object type)
-	  (accept 'command-or-form :stream stream :prompt nil)
-	(if (presentation-subtypep type 'command)
-	    object
-	    `(com-eval ,object)))
-      (let* ((command-table (find-command-table 'listener))
-             (*accelerator-gestures* (climi::compute-inherited-keystrokes command-table))
-            object type)
-        (flet ((sensitizer (stream cont)
-                 (case type
-                   ((command) (with-output-as-presentation (stream object type :single-box t)
-                                (funcall cont)))
-                   ((form) 
-                    (with-output-as-presentation (stream object 'command :single-box t)
-                      (with-output-as-presentation 
-                          (stream (cadr object) 'expression :single-box t)
-                        (with-output-as-presentation
-                            (stream (cadr object) 
-                                    (presentation-type-of (cadr object))
-                                    :single-box t)
-                          (funcall cont)))))
-                   (t (funcall cont)))))
-          (handler-case
-              ;; Body
-              (with-input-editing 
-                  (stream :input-sensitizer #'sensitizer)
-                (let ((c (read-gesture :stream stream :peek-p t)))
-                  (setf object
-                        (if (member c *form-opening-characters*)
-                            (prog2
-                                (when (char= c #\,)
-                                  ;; lispm behavior 
-                                  (read-gesture :stream stream))
-                                (list 'com-eval (accept 'form :stream stream :prompt nil))
-                              (setf type 'form))
-                            (prog1
-                                (accept '(command :command-table listener)  :stream stream
-                                        :prompt nil)
-                              (setf type 'command))))))
-            ;; Handlers
-            ((or simple-parse-error input-not-of-required-type) (c)
-              (beep)
-             (fresh-line *query-io*)
-             (princ c *query-io*)
-             (terpri *query-io*)
-             nil)
-            (accelerator-gesture (c)
-              (let ((command (lookup-keystroke-command-item (accelerator-gesture-event c)
-                                                            command-table)))              
-                (setf ;type 'command
-                 object (if (partial-command-p command)
-                            (funcall *partial-command-parser*
-                                     command-table stream command
-                                     (position *unsupplied-argument-marker* command))
-                            command))))))
-	object)))
-
-(defmethod read-frame-command :around ((frame listener)
-				       &key (stream *standard-input*))
-  "Read a command or form, taking care to manage the input context
-   and whatever else need be done."
-  (multiple-value-bind (x y)  (stream-cursor-position stream)    
-    (with-input-context ('command) (object object-type)
-        (call-next-method)
-      (command
-       ;; Kludge the cursor position - Goatee will have moved it all around
-       (setf (stream-cursor-position stream) (values x y))
-       (present object object-type :stream stream
-                :view (stream-default-view stream))
-       object))))
+  (multiple-value-bind (object type)
+      (accept 'command-or-form :stream stream :prompt nil)
+    (format *trace-output* "~&object=~W~%" object)
+    (if (presentation-subtypep type 'command)
+        object
+        `(com-eval ,object))))
 
 (defun print-listener-prompt (stream frame)
   (declare (ignore frame))
@@ -394,21 +220,15 @@
 (defmethod frame-standard-output ((frame listener))
   (get-frame-pane frame 'interactor))
 
-(defun run-listener (&key (system-command-reader nil)
-                          (new-process nil)
+(defun run-listener (&key (new-process nil)
                           (width 760)
                           (height 550)
-                          (process-name "Listener")
-                          (eval nil))
+                          (process-name "Listener"))
   (flet ((run ()
            (let ((frame (make-application-frame 
                          'listener
-                         :width width :height height
-                         :system-command-reader system-command-reader)))
-             (run-frame-top-level 
-              frame :listener-funcall (cond ((null eval) nil)
-                                            ((functionp eval) eval)
-                                            (t (lambda () (eval eval))))))))
+                         :width width :height height)))
+             (run-frame-top-level frame))))
     (if new-process
         (clim-sys:make-process #'run :name process-name)
         (run))))
