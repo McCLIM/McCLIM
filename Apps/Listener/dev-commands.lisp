@@ -1477,7 +1477,8 @@
 
 (define-command (com-eval :menu t :command-table lisp-commands)
     ((form 'clim:form :prompt "form"))  
-  (let ((values (multiple-value-list (eval form))))
+  (let* ((- form)
+         (values (multiple-value-list (eval form))))
     (fresh-line)
     (shuffle-specials form values)
     (display-evalues values)
