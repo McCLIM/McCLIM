@@ -1448,27 +1448,144 @@ call-next-method to get the \"real\" answer based on the stream type."))
 (define-presentation-method presentation-typep (object (type pathname))
   (pathnamep object))
 
+(define-presentation-method present ((object pathname) (type pathname)
+                                     stream (view textual-view) &key)
+  ;; XXX: We can only visually represent the pathname if it has a name
+  ;; - making it wild is a compromise. If the pathname is completely
+  ;; blank, we leave it as-is, though.
+  (let ((pathname (if (equal object #.(make-pathname))
+                      object
+                      (merge-pathnames object (make-pathname :name :wild)))))
+    (princ pathname stream)))
+
+(define-presentation-method present ((object string) (type pathname)
+                                     stream (view textual-view)
+                                     &rest args &key)
+  (apply-presentation-generic-function
+   present (pathname object) type stream view args))
+
 (defmethod presentation-type-of ((object pathname))
   'pathname)
 
-(define-presentation-method present (object (type pathname) stream
-				     (view textual-view)
-				     &key acceptably for-context-type)
-  (declare (ignore acceptably for-context-type))
-  (princ object stream))
+(defun filename-completer (so-far mode)
+  (flet ((remove-trail (s)
+           (subseq s 0 (let ((pos (position #\/ s :from-end t)))
+                         (if pos (1+ pos) 0)))))
+    (let* ((directory-prefix
+            (if (and (plusp (length so-far)) (eql (aref so-far 0) #\/))
+                ""
+                (namestring #+sbcl *default-pathname-defaults*
+                            #+cmu (ext:default-directory)
+                            #-(or sbcl cmu) *default-pathname-defaults*)))
+           (full-so-far (concatenate 'string directory-prefix so-far))
+           (pathnames
+            (loop with length = (length full-so-far)
+               and wildcard = (concatenate 'string (remove-trail so-far) "*.*")
+               for path in
+               #+(or sbcl cmu lispworks) (directory wildcard)
+               #+openmcl (directory wildcard :directories t)
+               #+allegro (directory wildcard :directories-are-files nil)
+               #+cormanlisp (nconc (directory wildcard)
+                                   (cl::directory-subdirs dirname))
+               #-(or sbcl cmu lispworks openmcl allegro cormanlisp)
+               (directory wildcard)
+               when (let ((mismatch (mismatch (namestring path) full-so-far)))
+                      (or (null mismatch) (= mismatch length)))
+               collect path))
+           (strings (mapcar #'namestring pathnames))
+           (first-string (car strings))
+           (length-common-prefix nil)
+           (completed-string nil)
+           (full-completed-string nil)
+           (input-is-directory-p (when (plusp (length so-far))
+                                   (char= (aref so-far (1- (length so-far))) #\/))))
+      (unless (null pathnames)
+        (setf length-common-prefix
+              (loop with length = (length first-string)
+                 for string in (cdr strings)
+                 do (setf length (min length (or (mismatch string first-string) length)))
+                 finally (return length))))
+      (unless (null pathnames)
+        (setf completed-string
+              (subseq first-string (length directory-prefix)
+                      (if (null (cdr pathnames)) nil length-common-prefix)))
+        (setf full-completed-string
+              (concatenate 'string directory-prefix completed-string)))
+      (case mode
+        ((:complete-limited :complete-maximal)
+         (cond ((null pathnames)
+                (values so-far nil nil 0 nil))
+               ((null (cdr pathnames))
+                (values completed-string (plusp (length so-far)) (car pathnames) 1 nil))
+               (input-is-directory-p
+                (values completed-string t (parse-namestring so-far) (length pathnames) nil))
+               (t
+                (values completed-string nil nil (length pathnames) nil))))
+        (:complete
+         ;; This is reached when input is activated, if we did
+         ;; completion, that would mean that an input of "foo" would
+         ;; be expanded to "foobar" if "foobar" exists, even if the
+         ;; user actually *wants* the "foo" pathname (to create the
+         ;; file, for example).
+         (values so-far t so-far 1 nil))
+        (:possibilities
+         (values nil nil nil (length pathnames)
+                 (loop with length = (length directory-prefix)
+                    for name in pathnames
+                    collect (list (subseq (namestring name) length nil)
+                                  name))))))))
 
-(define-presentation-method accept 
-    ((type pathname) stream (view textual-view)
-     &key (default *default-pathname-defaults*))
-  (let* ((namestring (read-token stream))
-	 (path (parse-namestring namestring)))
-    (if merge-default
-	(merge-pathnames 
-	 path 
-	 (merge-pathnames (make-pathname :type default-type
-					 :version default-version)
-			  default))
-	path)))
+(define-presentation-method accept ((type pathname) stream (view textual-view)
+                                    &key (default *default-pathname-defaults* defaultp)
+                                    ((:default-type accept-default-type) type))
+  (multiple-value-bind (pathname success string)
+      (complete-input stream
+                      #'filename-completer
+                      :allow-any-input t)
+    (cond ((and pathname success)
+           (values (if merge-default
+                       (progn
+                         (unless (or (pathname-type pathname)
+                                     (null default-type))
+                           (setf pathname (make-pathname :defaults pathname
+                                                         :type default-type)))
+                         (merge-pathnames pathname default default-version))
+                       pathname)
+                   type))
+          ((and (zerop (length string))
+                defaultp)
+           (values default accept-default-type))
+          (t (values string 'string)))))
+
+(defmethod presentation-replace-input :around
+    ((stream input-editing-stream)
+     (object pathname) (type (eql 'pathname))
+     view &rest args &key &allow-other-keys)
+  ;; This is fully valid and compliant, but it still smells slightly
+  ;; like a hack.
+  (let ((name (pathname-name object))
+        (directory (when (pathname-directory object)
+                     (directory-namestring object)))
+        (type (pathname-type object))
+        (string "")
+        (old-insp (stream-insertion-pointer stream)))
+    (setf string (or directory string))
+    (setf string (concatenate 'string string
+                              (cond ((and name type)
+                                     (file-namestring object))
+                                    (name name)
+                                    (type (subseq
+                                           (namestring
+                                            (make-pathname
+                                             :name " "
+                                             :type type))
+                                           1)))))
+    (apply #'replace-input stream string args)
+    (when directory
+      (setf (stream-insertion-pointer stream)
+            (+ old-insp (if directory (length directory) 0)))
+      ;; If we moved the insertion pointer, this might be a good idea.
+      (redraw-input-buffer stream old-insp))))
 
 (defgeneric default-completion-name-key (item))
 
