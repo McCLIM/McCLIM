@@ -32,6 +32,7 @@
            #:mark #:left-sticky-mark #:right-sticky-mark
            #:standard-left-sticky-mark #:standard-right-sticky-mark
            #:clone-mark
+           #:condition-offset
            #:no-such-offset #:offset-before-beginning #:offset-after-end
            #:invalid-motion #:motion-before-beginning #:motion-after-end
            #:size #:number-of-lines
@@ -52,7 +53,7 @@
            #:delete-buffer-range #:delete-range
            #:delete-region
            #:buffer-object #:buffer-sequence
-           #:object-before #:object-after #:region-to-sequence
+           #:object-before #:object-after #:region-to-sequence #:region-to-string
            #:low-mark #:high-mark #:modified-p #:clear-modify
            #:binseq-buffer #:obinseq-buffer #:binseq2-buffer
            #:persistent-left-sticky-mark #:persistent-right-sticky-mark

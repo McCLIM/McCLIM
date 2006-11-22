@@ -665,6 +665,12 @@ an offset in place of one of the marks. This function calls
       (rotatef offset1 offset2))
     (buffer-sequence (buffer mark1) offset1 offset2)))
 
+(defun region-to-string (start end)
+  "Return a string of the contents of the buffer associated with
+the marks, from `start' to `end', of which at least one must be a
+mark object."
+  (coerce (region-to-sequence start end) 'string))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Buffer modification protocol
