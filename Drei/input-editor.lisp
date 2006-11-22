@@ -496,6 +496,13 @@ CL:SUBSEQ into the sequence indicating where processing stopped."
     (update-syntax (buffer drei) (syntax (buffer drei)))
     (display-drei drei)))
 
+(defmethod redraw-input-buffer ((stream drei-input-editing-mixin)
+                                &optional (start-position 0))
+  (declare (ignore start-position))
+  ;; We ignore `start-position', because it would be more work to
+  ;; figure out what to redraw than to just redraw everything.
+  (display-drei (drei-instance stream)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 
 ;;; `Add-input-editor-command'

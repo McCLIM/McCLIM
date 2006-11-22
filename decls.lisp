@@ -552,6 +552,7 @@
 ;;; 24.1 The Input Editor
 
 (defgeneric input-editor-format (stream format-string &rest args))
+(defgeneric redraw-input-buffer (stream &optional start-from))
 
 ;;; 24.1.1 The Input Editing Stream Protocol
 
