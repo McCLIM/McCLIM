@@ -210,7 +210,10 @@ command loop completely."))
                                       climi::enter/exit-arms/disarms-mixin
                                       asynchronous-command-processor)
   ((%currently-processing :initform nil
-                          :accessor currently-processing-p))
+                          :accessor currently-processing-p)
+   (%previous-focus :accessor previous-focus :initform nil
+                    :documentation "The pane that previously had
+keyboard focus"))
   (:default-initargs :command-executor 'execute-drei-command)
   (:documentation "An actual, instantiable Drei gadget with
  event-based command processing."))
@@ -241,13 +244,21 @@ command loop completely."))
                             (gadget-id gadget)
                             new-value)))
 
+;; It's really silly that we have to manage keyboard input focus
+;; ourself.
 (defmethod armed-callback :after ((gadget drei-gadget-pane) client id)
   (declare (ignore client id))
+  (let ((port (port gadget)))
+    (setf (previous-focus gadget) (port-keyboard-input-focus port))
+    (setf (port-keyboard-input-focus port) gadget))
   (setf (active gadget) t)
   (display-drei gadget))
 
 (defmethod disarmed-callback :after ((gadget drei-gadget-pane) client id)
   (declare (ignore client id))
+  (let ((port (port gadget)))
+    (setf (port-keyboard-input-focus port) (previous-focus gadget))
+    (setf (previous-focus gadget) nil))
   (setf (active gadget) nil)
   (display-drei gadget))
 
@@ -292,10 +303,10 @@ command loop completely."))
   ;; When an `accept' is called during the execution of a command for
   ;; the Drei gadget, we must deactivate the gadget in order to not
   ;; eat keyboard events.
-  (unwind-protect (progn (deactivate-gadget drei)
+  (unwind-protect (progn (disarmed-callback drei t t)
                          (funcall continuation))
     (activate-gadget drei)
-    (setf (active drei) t)))
+    (armed-callback drei t t)))
 
 (defmethod additional-command-tables append ((drei drei-gadget-pane)
                                              (table drei-command-table))
