@@ -384,7 +384,7 @@ along with any default values) that can be used in a
 (defclass structure-start-lexeme (lisp-lexeme) ())
 (defclass pathname-start-lexeme (lisp-lexeme) ())
 (defclass undefined-reader-macro-lexeme (lisp-lexeme) ())
-(defclass bit-vector-lexeme (form-lexeme) ())
+(defclass bit-vector-form (form-lexeme complete-form-mixin) ())
 (defclass number-lexeme (form-lexeme complete-form-mixin) ())
 (defclass token-mixin () ())
 (defclass literal-object-lexeme (form-lexeme) ())
@@ -475,7 +475,7 @@ along with any default values) that can be used in a
 			       (if (and (not (end-of-buffer-p scan))
 					(constituentp (object-after scan)))
 				   (make-instance 'error-lexeme)
-				   (make-instance 'bit-vector-lexeme)))
+				   (make-instance 'bit-vector-form)))
 			  (#\: (fo)
 			       (make-instance 'uninterned-symbol-lexeme))
 			  (#\. (fo)
@@ -2635,6 +2635,10 @@ object. Otherwise, nil will be returned.")
 
 (defmethod token-to-object ((syntax lisp-syntax) (token complete-function-form) &rest args &key &allow-other-keys)
   (fdefinition (apply #'token-to-object syntax (second (children token)) args)))
+
+(defmethod token-to-object ((syntax lisp-syntax) (token bit-vector-form)
+                            &key &allow-other-keys)
+  (read-from-string (token-string syntax token)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
