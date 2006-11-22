@@ -263,6 +263,9 @@
     (setf (point* buffer) (location*-offset buffer pointer))
     (redisplay-area area)))
 
+(defmethod (setf stream-insertion-pointer) :after
+    ((new-value integer) (stream goatee-input-editing-mixin))
+  (set-editing-stream-insertion-pointer stream new-value))
 
 (defun %replace-input (stream new-input start end buffer-start
 		       rescan rescan-supplied-p
