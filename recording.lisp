@@ -670,16 +670,23 @@ the associated sheet can be determined."
        (output-record-children record)))
 
 ;;; XXX Dunno about this definition... -- moore
+;;; Your apprehension is justified, but we lack a better means by which
+;;; to distinguish "empty" compound records (roots of trees of compound
+;;; records, containing no non-compound records). Such subtrees should
+;;; not affect bounding rectangles.  -- Hefner
 (defun null-bounding-rectangle-p (bbox)
   (with-bounding-rectangle* (x1 y1 x2 y2) bbox
      (and (zerop x1) (zerop y1)
-          (zerop x2) (zerop y2))))                           
+          (zerop x2) (zerop y2))))
 
 ;;; 16.2.3. Output Record Change Notification Protocol
 (defmethod recompute-extent-for-new-child
     ((record compound-output-record) child)
   (unless (null-bounding-rectangle-p child)
     (with-bounding-rectangle* (old-x1 old-y1 old-x2 old-y2) record
+      ;; I expect there's a bug here. If you create a record A, add an empty child B
+      ;; then add a displayed-output-record C, the code below will use min/max to
+      ;; grow the all-zero bounds of A, typically giving a bogus x1,y1 of 0,0. --Hefner
       (if (eql 1 (output-record-count record))
 	  (setf (rectangle-edges* record) (bounding-rectangle* child))
 	  (with-bounding-rectangle* (x1-child y1-child x2-child y2-child)
@@ -765,21 +772,41 @@ the associated sheet can be determined."
       ;; If so, we can use min/max to grow record's current rectangle.
       ;; If not, the child has shrunk, and we need to fully recompute.                              
       (multiple-value-bind (nx1 ny1 nx2 ny2) 
-          (cond ((not (output-record-parent changed-child))
-		 ;; The child has been deleted; who knows what the
-		 ;; new bounding box might be.
-                 (%tree-recompute-extent* record))
-                ((eql (output-record-count record) 1)
-		 (values cx1 cy1 cx2 cy2))
-		#+nil((null-bounding-rectangle-p record)
-                 (%tree-recompute-extent* record))
-                #+nil((null-bounding-rectangle-p changed-child)
-                 (values ox1 oy1 ox2 oy2))
-                ((and (<= cx1 old-min-x) (<= cy1 old-min-y)
-		      (>= cx2 old-max-x) (>= cy2 old-max-y))
-                 (values (min cx1 ox1) (min cy1 oy1)
-                         (max cx2 ox2) (max cy2 oy2)))
-                (t (%tree-recompute-extent* record)))        
+          (cond
+            ;; The child has been deleted; who knows what the
+            ;; new bounding box might be.
+            ((not (output-record-parent changed-child))
+             (%tree-recompute-extent* record))
+            ;; Only one child of record, and we already have the bounds.
+            ((eql (output-record-count record) 1)
+             (values cx1 cy1 cx2 cy2))
+            ;; If our record occupied no space (had no children, or had only
+            ;; children similarly occupying no space, hackishly determined by
+            ;; null-bounding-rectangle-p), recompute the extent now, otherwise
+            ;; the next COND clause would, as an optimization, attempt to extend
+            ;; our current bounding rectangle, which is invalid.
+            ((null-bounding-rectangle-p record)
+             (%tree-recompute-extent* record))
+            ;; In the following cases, we can grow the new bounding rectangle
+            ;; from its previous state:
+            ((or
+              ;; If the child was originally empty, it should not have affected
+              ;; previous computation of our bounding rectangle.
+              ;; This is hackish for reasons similar to the above.
+              (and (zerop old-min-x) (zerop old-min-y)
+                   (zerop old-max-x) (zerop old-max-y))
+              ;; New child bounds contain old child bounds, so use min/max
+              ;; to extend the already-calculated rectangle.
+              (and (<= cx1 old-min-x) (<= cy1 old-min-y)
+                   (>= cx2 old-max-x) (>= cy2 old-max-y)))
+             (values (min cx1 ox1) (min cy1 oy1)
+                     (max cx2 ox2) (max cy2 oy2)))
+            ;; No shortcuts - we must compute a new bounding box from those of
+            ;; all our children. We want to avoid this - in worst cases, such as
+            ;; a toplevel output history, large graph, or table, there may exist
+            ;; thousands of children. Without the above optimizations,
+            ;; construction becomes O(N^2) due to bounding rectangle calculation.
+            (t (%tree-recompute-extent* record)))
         ;; XXX banish x, y
         (with-slots (x y)
 	    record
@@ -863,7 +890,6 @@ the associated sheet can be determined."
       (loop with children = (output-record-children record)
 	 for child across children
 	 do (funcall function child))))
-
 
 (defmethod map-over-output-records-containing-position
     (function (record standard-sequence-output-record) x y
