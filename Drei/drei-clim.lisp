@@ -228,7 +228,7 @@ keyboard focus"))
 
 (defmethod gadget-value ((gadget drei-gadget-pane))
   (buffer-substring (buffer gadget)
-                    0 (max 0 (1- (size (buffer gadget))))))
+                    0 (size (buffer gadget))))
 
 (defmethod (setf gadget-value) (new-value (gadget drei-gadget-pane)
                                 &key (invoke-callback t))
