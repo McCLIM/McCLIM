@@ -258,7 +258,7 @@ file, replacing its contents. If not, prompt for a filename."
     "Prompt for a filename and write the current buffer to it.
 Changes the file visted by the buffer to the given file."
   (let ((buffer (current-buffer)))
-    (write-buffer buffer filepath)))
+    (write-buffer filepath buffer)))
 
 (set-key `(com-write-buffer ,*unsupplied-argument-marker*)
          'esa-io-table '((#\x :control) (#\w :control)))
