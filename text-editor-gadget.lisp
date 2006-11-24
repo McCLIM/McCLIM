@@ -61,13 +61,11 @@ activate callback to be called"))
         (make-space-requirement :height height :max-height height :min-height height
                                 :min-width width :width width)))))
 
-(defmethod handle-event ((gadget text-field-pane) (event key-press-event))
-  (unless (and (drei::currently-processing-p gadget)
-               (drei::directly-processing-p gadget))
-    (if (with-activation-gestures ((activation-gestures gadget))
-          (activation-gesture-p (convert-to-gesture event)))
-        (activate-callback gadget (gadget-client gadget) (gadget-id gadget))
-        (call-next-method))))
+(defmethod drei:handle-gesture ((drei text-field-pane) gesture)
+  (if (with-activation-gestures ((activation-gestures drei))
+        (activation-gesture-p gesture))
+      (activate-callback drei (gadget-client drei) (gadget-id drei))
+      (call-next-method)))
 
 (defmethod allocate-space ((pane text-field-pane) w h)
   (resize-sheet pane w h))

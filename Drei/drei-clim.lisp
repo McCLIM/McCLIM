@@ -262,7 +262,16 @@ keyboard focus"))
   (setf (active gadget) nil)
   (display-drei gadget))
 
-(defun handle-new-gesture (drei gesture)
+(defgeneric handle-gesture (drei gesture)
+  (:documentation "This generic function is called whenever a
+Drei gadget variant has determined that a keyboard event
+corresponds to a useful gesture that should be handled. A useful
+gesture is, for example, one that is not simply a click on a
+modifier key. When this function is called, the Drei special
+variables (`*current-window*', `*current-buffer*', etc) are
+properly bound."))
+
+(defmethod handle-gesture ((drei drei-gadget-pane) gesture)
   (let ((*command-processor* drei)
         (*abort-gestures* *esa-abort-gestures*))
     ;; It is important that the minibuffer of the Drei object is
@@ -281,9 +290,9 @@ keyboard focus"))
         (when (modified-p (buffer drei))
           (clear-modify (buffer drei))
           (value-changed-callback drei
-                                   (gadget-client drei)
-                                   (gadget-id drei)
-                                   (gadget-value drei)))))))
+                                  (gadget-client drei)
+                                  (gadget-id drei)
+                                  (gadget-value drei)))))))
 
 (defmethod execute-drei-command :after ((drei drei-gadget-pane) command)
   (with-accessors ((buffer buffer)) drei
@@ -301,7 +310,7 @@ keyboard focus"))
         (when (proper-gesture-p gesture)
           (with-bound-drei-special-variables (gadget :prompt (format nil "~A " (gesture-name gesture)))
             (let ((*standard-input* (or *minibuffer* *standard-input*)))
-              (handle-new-gesture gadget gesture))))))))
+              (handle-gesture gadget gesture))))))))
 
 (defmethod invoke-accepting-from-user ((drei drei-gadget-pane) (continuation function))
   ;; When an `accept' is called during the execution of a command for

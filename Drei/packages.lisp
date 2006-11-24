@@ -226,6 +226,9 @@ characters."))
            #:with-bound-drei-special-variables
            #:accepting-from-user #:invoke-accepting-from-user
 
+           ;; Gadget interface stuff.
+           #:handle-gesture
+
            ;; Input-editor interface stuff.
            #:drei-input-editing-mixin #:drei-instance
            #:object #:result-type
