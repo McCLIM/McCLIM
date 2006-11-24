@@ -9,4 +9,6 @@
 
 (eval-when (:load-toplevel)
 ;  (format t "~&~%!@#%^!@#!@ ... ~A~%~%" *load-truename*)
-  (defparameter *icon-path* (merge-pathnames #P"icons/" *load-truename*)))
+  (defparameter *icon-path* (merge-pathnames
+                             #P"icons/"
+                             (load-time-value (or #.*compile-file-pathname* *load-pathname*)))))
