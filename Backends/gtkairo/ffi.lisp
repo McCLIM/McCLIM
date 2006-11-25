@@ -1234,6 +1234,12 @@
   (widget :pointer)                     ;GtkWidget *
   )
 
+(defcfun "gtk_widget_get_child_requisition"
+    :void
+  (widget :pointer)                     ;GtkWidget *
+  (requisition :pointer)                ;GtkRequisition *
+  )
+
 (defcfun "gtk_widget_get_events"
     :int
   (widget :pointer)                     ;GtkWidget *
@@ -1244,6 +1250,13 @@
   (widget :pointer)                     ;GtkWidget *
   (x :pointer)                          ;gint *
   (y :pointer)                          ;gint *
+  )
+
+(defcfun "gtk_widget_get_size_request"
+    :void
+  (widget :pointer)                     ;GtkWidget *
+  (width :pointer)                      ;gint *
+  (height :pointer)                     ;gint *
   )
 
 (defcfun "gtk_widget_grab_focus"

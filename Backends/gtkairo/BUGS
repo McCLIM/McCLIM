@@ -124,3 +124,9 @@
    interactor.  Replacing the :min-height 800 in receivers.lisp with
    :min-height 400 :max-height 400 fixes that, but CLX doesn't have the
    same problem.
+
+24.
+   Weird problem in the text size test with the drei gadget in the label
+   pane: Resizing ends up resizing the one-line drei gadget, and doesn't
+   even do it in one step.  Instead, it enlarges itself in a smooth
+   animation, taking several seconds to stabilize.

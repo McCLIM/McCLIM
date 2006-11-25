@@ -74,7 +74,9 @@
 (defclass gtk-hscrollbar (native-scrollbar) ())
 
 (defclass gtk-label-pane (native-widget-mixin label-pane)
-    ((label-pane-fixed :accessor label-pane-fixed)))
+    ((label-pane-fixed :accessor label-pane-fixed)
+     (label-pane-extra-width :accessor label-pane-extra-width)
+     (label-pane-extra-height :accessor label-pane-extra-height)))
 
 ;;;; Constructors
 
@@ -94,9 +96,21 @@
 
 (defmethod realize-native-widget ((sheet gtk-label-pane))
   (let ((frame (gtk_frame_new (climi::label-pane-label sheet)))
-	(fixed (gtk_fixed_new)))
-    (setf (label-pane-fixed sheet) fixed)
+	(fixed (gtk_fixed_new))
+	(child (car (sheet-children sheet))))
     (gtk_container_add frame fixed)
+    (gtk_widget_show fixed)
+    (when child
+      (let* ((q (compose-space child))
+	     (width1 (space-requirement-width q))
+	     (height1 (space-requirement-height q)))
+	(gtk_widget_set_size_request fixed width1 height1)
+	(cffi:with-foreign-object (r 'gtkrequisition)
+	  (gtk_widget_size_request frame r)
+	  (cffi:with-foreign-slots ((width height) r gtkrequisition)
+	    (setf (label-pane-extra-width sheet) (- width width1))
+	    (setf (label-pane-extra-height sheet) (- height height1))))))
+    (setf (label-pane-fixed sheet) fixed)
     frame))
 
 (defmethod container-put ((parent gtk-label-pane) parent-widget child x y)
@@ -493,25 +507,21 @@
 
 ;;; COMPOSE-SPACE
 
-(defvar *use-frontend-compose-space* nil)
-
 ;; KLUDGE: this is getting called before the sheet has been realized.
 (defmethod compose-space ((gadget native-widget-mixin) &key width height)
   (declare (ignore width height))
-  (if *use-frontend-compose-space*
-      (let ((*use-frontend-compose-space* nil))
-	(call-next-method))
-      (let* ((widget (native-widget gadget))
-	     (widgetp widget))
-	(unless widgetp
-	  (setf widget (realize-native-widget gadget)))
-	(prog1
-	    (cffi:with-foreign-object (r 'gtkrequisition)
-	      (gtk_widget_size_request widget r)
-	      (cffi:with-foreign-slots ((width height) r gtkrequisition)
-		(make-space-requirement :width width :height height)))
-	  (unless widgetp
-	    (gtk_widget_destroy widget))))))
+  (let* ((widget (native-widget gadget))
+	 (widgetp widget))
+    (unless widgetp
+      (setf widget (realize-native-widget gadget)))
+    (prog1
+	(cffi:with-foreign-object (r 'gtkrequisition)
+	  (gtk_widget_size_request widget r)
+	  (cffi:with-foreign-slots ((width height) r gtkrequisition)
+	    (make-space-requirement :width width :height height)))
+      (unless widgetp
+	(gtk_widget_destroy widget)
+	(setf (native-widget gadget) nil)))))
 
 (defmethod compose-space ((gadget gtk-menu-bar) &key width height)
   (declare (ignore width height))
@@ -531,12 +541,15 @@
 				    :min-height height
 				    :max-height height)))
       (unless widgetp
-	(gtk_widget_destroy widget)))))
+	(gtk_widget_destroy widget)
+	(setf (native-widget gadget) nil)))))
 
-(defmethod compose-space ((gadget gtk-label-pane) &key width height)
-  (declare (ignore width height))
-  (let ((*use-frontend-compose-space* t))
-    (call-next-method)))
+(defmethod allocate-space ((pane label-pane) width height)
+  (when (sheet-children pane)
+    (move-sheet (first (sheet-children pane)) 0 0)
+    (allocate-space (first (sheet-children pane))
+		    (- width (label-pane-extra-width pane))
+		    (- height (label-pane-extra-height pane)))))
 
 
 ;;; Vermischtes
