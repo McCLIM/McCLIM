@@ -44,7 +44,8 @@
 
 (defmacro defcfun (name rtype &rest argtypes)
   (if (and (eq rtype 'cairo_status_t)
-	   (not (equal name "cairo_status")))
+	   (not (or (equal name "cairo_status")
+                    (equal name "cairo_font_face_status"))))
       `(def-cairo-fun ,name ,rtype ,@argtypes)
       `(cffi:defcfun (,name ,(intern (string-upcase name) :clim-gtkairo))
 	   ,rtype

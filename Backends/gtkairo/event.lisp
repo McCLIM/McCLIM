@@ -403,7 +403,7 @@
   (with-gtk ()
     (let ((i (incf *later-counter*)))
       (setf (gethash i *later-table*) fun)
-      (g_idle_add (cffi:get-callback 'idle-function) i))))
+      (g_idle_add (cffi:get-callback 'idle-function) (cffi:make-pointer i)))))
 
 (cffi:defcallback idle-function :int
   ((data :long))			;hack
