@@ -1293,6 +1293,12 @@
   (events :int)                         ;gint
   )
 
+(defcfun "gtk_widget_set_sensitive"
+    :void
+  (widget :pointer)                     ;GtkWidget *
+  (sensitive :int)                      ;gboolean
+  )
+
 (defcfun "gtk_widget_set_size_request"
     :void
   (widget :pointer)                     ;GtkWidget *

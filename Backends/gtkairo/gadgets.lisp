@@ -585,6 +585,21 @@
 	(gtk_toggle_button_set_active (mirror-widget mirror)
 				      (if value 1 0))))))
 
+(defmethod realize-native-widget :around ((gadget native-widget-mixin))
+  (let ((widget (call-next-method)))
+    (gtk_widget_set_sensitive widget (if (gadget-active-p gadget) 1 0))
+    widget))
+
+(defmethod activate-gadget :after ((gadget native-widget-mixin))
+  (with-gtk ()
+    (when (native-widget gadget)
+      (gtk_widget_set_sensitive (native-widget gadget) 1))))
+
+(defmethod deactivate-gadget :after ((gadget native-widget-mixin))
+  (with-gtk ()
+    (when (native-widget gadget)
+      (gtk_widget_set_sensitive (native-widget gadget) 0))))
+
 
 ;;; Scroll bars.
 
