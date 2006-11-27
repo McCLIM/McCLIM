@@ -500,6 +500,18 @@ call-next-method to get the \"real\" answer based on the stream type."))
    finally (return (values nil nil))))
 
 (defun presentation-history-next (history ptype)
+  (let ((first-object (goatee::backward history)))
+    (loop
+       for first-time = t then nil
+       for cell = first-object then (goatee::backward history)
+       for (object . object-ptype) = (goatee::contents cell)
+       while (or first-time (not (eq first-object cell)))
+       if (presentation-subtypep object-ptype ptype)
+         return (values object object-ptype)
+       end
+       finally (return (values nil nil)))))
+
+(defun presentation-history-previous (history ptype)
   (let ((first-object (goatee::forward history)))
     (loop
      for first-time = t then nil
@@ -510,18 +522,6 @@ call-next-method to get the \"real\" answer based on the stream type."))
        return (values object object-ptype)
      end
      finally (return (values nil nil)))))
-
-(defun presentation-history-previous (history ptype)
-  (let ((first-object (goatee::backward history)))
-    (loop
-       for first-time = t then nil
-       for cell = first-object then (goatee::backward history)
-       for (object . object-ptype) = (goatee::contents cell)
-       while (or first-time (not (eq first-object cell)))
-       if (presentation-subtypep object-ptype ptype)
-       return (values object object-ptype)
-       end
-       finally (return (values nil nil)))))
 
 (defmacro with-object-on-history ((history object ptype) &body body)
   `(goatee::with-object-on-ring ((cons ,object ,ptype) ,history)
@@ -723,7 +723,7 @@ call-next-method to get the \"real\" answer based on the stream type."))
           (let* ((default-from-history (and (not defaultp) provide-default))
                  (history (get-history))
                  (results
-                  (multiple-value-list 
+                  (multiple-value-list
                    (if history
                        (let ((*active-history-type* real-history-type))
                          (cond (defaultp
@@ -746,7 +746,7 @@ call-next-method to get the \"real\" answer based on the stream type."))
             (when results-history
               (presentation-history-add results-history
                                         (car results)
-                                        (cadr results)))
+                                        real-type))
             (values-list results)))))))
 
 (defmethod stream-accept ((stream standard-extended-input-stream) type

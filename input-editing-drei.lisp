@@ -199,16 +199,8 @@ activated with GESTURE"))
 ;;; rely on internal features and implement input-editor support in
 ;;; CLIM-INTERNALS (Goatee does the same trick).
 
-(defun history-yank (stream input-buffer gesture numeric-argument)
-  (let* ((accepting-type *active-history-type*)
-         (history (and accepting-type
-                       (presentation-type-history accepting-type))))
-    (when history
-      (multiple-value-bind (object type)
-          (presentation-history-head history accepting-type)
-        (presentation-replace-input stream object type (stream-default-view stream))))))
-
 (defun history-yank-next (stream input-buffer gesture numeric-argument)
+  (declare (ignore input-buffer gesture numeric-argument))
   (let* ((accepting-type *active-history-type*)
          (history (and accepting-type
                        (presentation-type-history accepting-type))))
@@ -219,6 +211,7 @@ activated with GESTURE"))
           (presentation-replace-input stream object type (stream-default-view stream)))))))
 
 (defun history-yank-previous (stream input-buffer gesture numeric-argument)
+  (declare (ignore input-buffer gesture numeric-argument))
   (let* ((accepting-type *active-history-type*)
          (history (and accepting-type
                        (presentation-type-history accepting-type))))
@@ -228,8 +221,6 @@ activated with GESTURE"))
         (when type
           (presentation-replace-input stream object type (stream-default-view stream)))))))
 
-(add-input-editor-command '((#\y :control :meta)) 'history-yank)
+(add-input-editor-command '((#\n :meta)) 'history-yank-next)
 
-(add-input-editor-command '((#\p :meta)) 'history-yank-next)
-
-(add-input-editor-command '((#\n :meta)) 'history-yank-previous)
+(add-input-editor-command '((#\p :meta)) 'history-yank-previous)
