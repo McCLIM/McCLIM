@@ -1559,8 +1559,8 @@ Use C-x ( to start and C-x ) to finish recording a keyboard macro."
 (defclass example-pane (esa-pane-mixin application-pane)
   ((contents :initform "hello" :accessor contents)))
 
-(define-application-frame example (standard-application-frame
-				   esa-frame-mixin)
+(define-application-frame example (esa-frame-mixin
+				   standard-application-frame)
   ()
   (:panes
    (window (let* ((my-pane 
