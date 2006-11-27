@@ -1376,7 +1376,7 @@ invalid, return the CLIM-USER package."
          (let ((osp (option-specified-package syntax)))
           (typecase osp
             (package osp)
-            (string osp)))
+            (string (find-package osp))))
          (find-package (option-specified-package syntax))
          (find-package :clim-user)))))
 
