@@ -166,7 +166,7 @@
            (:documentation
             ,(concat "Transpose two " plural " at MARK.")))
          (defmethod ,transpose
-             (mark syntax)
+             ((mark right-sticky-mark) syntax)
            (let (start1 end1 start2 end2)
              (,backward mark syntax 1 nil)
              (setf start1 (clone-mark mark))
@@ -190,7 +190,33 @@
                (insert-sequence mark obj2)
                (update-syntax (buffer syntax)
                               syntax)
-               (,forward mark syntax 1 nil))))))))
+               (,forward mark syntax 1 nil))))
+         (defmethod ,transpose
+             ((mark left-sticky-mark) syntax)
+           (let (start1 end1 start2 end2)
+             (,backward mark syntax 1 nil)
+             (setf start1 (clone-mark mark))
+             (,forward mark syntax 1 #'error-limit-action)
+             (setf end1 (clone-mark mark))
+             (,forward mark syntax 1 #'error-limit-action)
+             (setf end2 (clone-mark mark))
+             (,backward mark syntax 1 nil)
+             (setf start2 (clone-mark mark))
+             (let ((obj1 (buffer-sequence (buffer mark) (offset start1) (offset end1)))
+                   (obj2 (buffer-sequence (buffer mark) (offset start2) (offset end2))))
+               (,forward-delete mark syntax 1 nil)
+               (insert-sequence mark obj1)
+               (,forward mark syntax 1 nil)
+               ;; KLUDGE: Having to do this manually is ugly, but it
+               ;; is necessary if the motion functions uses syntax
+               ;; information.
+               (update-syntax (buffer syntax)
+                              syntax)
+               (,backward mark syntax 2 nil)
+               (,forward-delete mark syntax 1 nil)
+               (insert-sequence mark obj2)
+               (update-syntax (buffer syntax)
+                              syntax))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 
