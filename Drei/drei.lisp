@@ -706,17 +706,17 @@ debugger."
                   (princ c minibuffer))))))
 
 (defmacro with-bound-drei-special-variables ((drei-instance &key
-                                              current-buffer
-                                              current-window
-                                              current-mark
-                                              current-point
-                                              current-syntax
-                                              kill-ring
-                                              minibuffer
-                                              command-parser
-                                              partial-command-parser
-                                              previous-command
-                                              prompt)
+                                              (current-buffer nil current-buffer-p)
+                                              (current-window nil current-window-p)
+                                              (current-mark nil current-mark-p)
+                                              (current-point nil current-point-p)
+                                              (current-syntax nil current-syntax-p)
+                                              (kill-ring nil kill-ring-p)
+                                              (minibuffer nil minibuffer-p)
+                                              (command-parser nil command-parser-p)
+                                              (partial-command-parser nil partial-command-parser-p)
+                                              (previous-command nil previous-command-p)
+                                              (prompt nil prompt-p))
                                               &body body)
   "Evaluate `body' with a set of Drei special
 variables (`*current-buffer*', `*current-window*',
@@ -731,17 +731,28 @@ respective special variables, instead of finding their value in
 variables, but also some CLIM special variables needed for
 ESA-style command parsing."
   (once-only (drei-instance)
-    `(let* ((*current-buffer* ,(or current-buffer `(buffer ,drei-instance)))
-            (*current-window* ,(or current-window drei-instance))
-            (*current-mark* ,(or current-mark `(mark ,drei-instance)))
-            (*current-point* ,(or current-point `(point ,drei-instance)))
-            (*current-syntax* ,(or current-syntax `(syntax *current-buffer*)))
-            (*kill-ring* ,(or kill-ring `(kill-ring ,drei-instance)))
-            (*minibuffer* ,(or minibuffer `(or (minibuffer ,drei-instance) *minibuffer*)))
-            (*command-parser* ,(or command-parser ''esa-command-parser))
-            (*partial-command-parser* ,(or partial-command-parser ''esa-partial-command-parser))
-            (*previous-command* ,(or previous-command `(previous-command ,drei-instance)))
-            (*extended-command-prompt* ,(or prompt "Extended command: ")))
+    `(let* ((*current-buffer* ,(if current-buffer-p current-buffer
+                                   `(buffer ,drei-instance)))
+            (*current-window* ,(if current-window-p current-window
+                                   drei-instance))
+            (*current-mark* ,(if current-mark-p current-mark
+                                 `(mark ,drei-instance)))
+            (*current-point* ,(if current-point-p current-point
+                                  `(point ,drei-instance)))
+            (*current-syntax* ,(if current-syntax-p current-syntax
+                                   `(syntax *current-buffer*)))
+            (*kill-ring* ,(if kill-ring-p kill-ring
+                              `(kill-ring ,drei-instance)))
+            (*minibuffer* ,(if minibuffer-p minibuffer
+                               `(or (minibuffer ,drei-instance) *minibuffer*)))
+            (*command-parser* ,(if command-parser-p command-parser
+                                   ''esa-command-parser))
+            (*partial-command-parser* ,(if partial-command-parser-p partial-command-parser
+                                           ''esa-partial-command-parser))
+            (*previous-command* ,(if previous-command-p previous-command
+                                     `(previous-command ,drei-instance)))
+            (*extended-command-prompt* ,(if prompt-p prompt
+                                            "Extended command: ")))
        ,@body)))
 
 (defgeneric invoke-performing-drei-operations (drei continuation &key with-undo update-syntax redisplay)
