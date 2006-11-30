@@ -351,8 +351,13 @@ Return T if successful, or NIL if the buffer limit was
 reached."))
 
 (defmethod forward-one-page (mark syntax)
-  (when (search-forward mark (coerce (page-delimiter syntax) 'vector))
-      t))
+  (unless (end-of-buffer-p mark)
+    (forward-object mark 1)
+    (if (search-forward mark (coerce (page-delimiter syntax) 'vector))
+        (progn (backward-object mark (length (page-delimiter syntax)))
+               t)
+        (progn (end-of-buffer mark)
+               nil))))
 
 (defgeneric backward-one-page (mark syntax)
   (:documentation
@@ -361,9 +366,13 @@ Return T if successful, or NIL if the buffer limit was
 reached."))
 
 (defmethod backward-one-page (mark syntax)
-  (when (search-backward mark (coerce (page-delimiter syntax) 'vector))
-    (forward-object mark)
-    t))
+  (unless (beginning-of-buffer-p mark)
+    (backward-object mark 1)
+    (if (search-backward mark (coerce (page-delimiter syntax) 'vector))
+        (progn (forward-object mark (length (page-delimiter syntax)))
+               t)
+        (progn (beginning-of-buffer mark)
+               nil))))
 
 (define-motion-fns page)
 
@@ -464,9 +473,13 @@ Return T if successful, or NIL if the buffer limit was reached."))
 Return T if successful, or NIL if the buffer limit was reached."))
 
 (defmethod backward-one-paragraph (mark syntax)
-  (when (search-backward mark (coerce (paragraph-delimiter syntax) 'vector))
-    (forward-object mark)
-    t))
+  (unless (beginning-of-buffer-p mark)
+    (backward-object mark 1)
+    (if (search-backward mark (coerce (paragraph-delimiter syntax) 'vector))
+        (progn (forward-object mark (length (paragraph-delimiter syntax)))
+               t)
+        (progn (beginning-of-buffer mark)
+               nil))))
 
 (defgeneric forward-one-paragraph (mark syntax)
   (:documentation
@@ -474,9 +487,13 @@ Return T if successful, or NIL if the buffer limit was reached."))
 Return T if successful, or NIL if the buffer limit was reached."))
 
 (defmethod forward-one-paragraph (mark syntax)
-  (when (search-forward mark (coerce (paragraph-delimiter syntax) 'vector))
-    (backward-object mark)
-    t))
+  (unless (end-of-buffer-p mark)
+    (forward-object mark 1)
+    (if (search-forward mark (coerce (paragraph-delimiter syntax) 'vector))
+        (progn (backward-object mark (length (paragraph-delimiter syntax)))
+               t)
+        (progn (end-of-buffer mark)
+               nil))))
 
 (define-motion-fns paragraph)
 
