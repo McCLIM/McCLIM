@@ -171,8 +171,9 @@ be used outside the input-editor."))
   (clear-undo-history (buffer (drei-instance stream))))
 
 (defmethod stream-input-buffer ((stream drei-input-editing-mixin))
-  ;; NOTE: This is very slow, we should attempt to replace uses of
-  ;; this function in McCLIM with something more efficient.
+  ;; NOTE: This is very slow, please do not use it unless you want to
+  ;; be compatible with other editor substrates. Use the Drei buffer
+  ;; directly instead.
   (with-accessors ((buffer buffer)) (drei-instance stream)
     (let* ((array (buffer-sequence buffer 0 (size buffer))))
       (make-array (length array)
@@ -275,71 +276,70 @@ input-editing-stream. Bound when executing a command.")
 				&allow-other-keys)
   (with-keywords-removed (rest-args (:peek-p))
     (rescan-if-necessary stream)
-    (with-accessors ((buffer stream-input-buffer)
-                     (insertion-pointer stream-insertion-pointer)
+    (with-accessors ((insertion-pointer stream-insertion-pointer)
                      (scan-pointer stream-scan-pointer)
                      (activation-gesture activation-gesture)) stream
-      (loop
-         (loop
-            while (< scan-pointer insertion-pointer)
-            while (< scan-pointer (length buffer))
-            do (let ((gesture (aref buffer scan-pointer)))
-                 ;; Skip noise strings.
-                 (cond ((typep gesture 'noise-string)
-                        (incf scan-pointer))
-                       ((and (not peek-p)
-                             (typep gesture 'accept-result))
-                        (incf scan-pointer)
-                        #+(or mcclim building-mcclim)
-                        (climi::throw-object-ptype (object gesture)
-                                                   (result-type gesture)))
-                       ;; Note that this implies that
-                       ;; `stream-read-gesture' may return accept
-                       ;; results, which might as well be arbitrary
-                       ;; objects to the code calling
-                       ;; `stream-read-gesture', since it can't really
-                       ;; do anything with them except for asserting
-                       ;; that they exist. According to the spec,
-                       ;; "accept results are treated as a single
-                       ;; gesture", and this kind of behavior is
-                       ;; necessary to make sure `stream-read-gesture'
-                       ;; doesn't simply claim that there are no more
-                       ;; gestures in the input-buffer when the
-                       ;; remaining gesture(s) is an accept result.
-                       ((typep gesture 'accept-result)
-                        (return-from stream-read-gesture gesture))
-                       (t
-                        (unless peek-p
+      (let ((buffer (buffer (drei-instance stream))))
+        (loop
+           (loop
+              while (< scan-pointer insertion-pointer)
+              while (< scan-pointer (size buffer))
+              do (let ((gesture (buffer-object buffer scan-pointer)))
+                   ;; Skip noise strings.
+                   (cond ((typep gesture 'noise-string)
                           (incf scan-pointer))
-                        (return-from stream-read-gesture gesture))
-                       (t (incf scan-pointer)))))
-         (setf (stream-rescanning stream) nil)
-         (when activation-gesture
-           (return-from stream-read-gesture
-             (prog1 activation-gesture
-               (unless peek-p
-                 (setf activation-gesture nil)))))
-         ;; In McCLIM, stream-process-gesture is responsible for
-         ;; inserting characters into the buffer, changing the
-         ;; insertion pointer and possibly setting up the
-         ;; activation-gesture slot.
-         (loop
-            with gesture and type
-            do (setf (values gesture type)
-                     (apply #'stream-read-gesture
-                            (encapsulating-stream-stream stream) rest-args))
-            when (null gesture)
-            do (return-from stream-read-gesture (values gesture type))
-            when (stream-process-gesture stream gesture type)
-            do (loop-finish))))))
+                         ((and (not peek-p)
+                               (typep gesture 'accept-result))
+                          (incf scan-pointer)
+                          #+(or mcclim building-mcclim)
+                          (climi::throw-object-ptype (object gesture)
+                                                     (result-type gesture)))
+                         ;; Note that this implies that
+                         ;; `stream-read-gesture' may return accept
+                         ;; results, which might as well be arbitrary
+                         ;; objects to the code calling
+                         ;; `stream-read-gesture', since it can't really
+                         ;; do anything with them except for asserting
+                         ;; that they exist. According to the spec,
+                         ;; "accept results are treated as a single
+                         ;; gesture", and this kind of behavior is
+                         ;; necessary to make sure `stream-read-gesture'
+                         ;; doesn't simply claim that there are no more
+                         ;; gestures in the input-buffer when the
+                         ;; remaining gesture(s) is an accept result.
+                         ((typep gesture 'accept-result)
+                          (return-from stream-read-gesture gesture))
+                         (t
+                          (unless peek-p
+                            (incf scan-pointer))
+                          (return-from stream-read-gesture gesture))
+                         (t (incf scan-pointer)))))
+           (setf (stream-rescanning stream) nil)
+           (when activation-gesture
+             (return-from stream-read-gesture
+               (prog1 activation-gesture
+                 (unless peek-p
+                   (setf activation-gesture nil)))))
+           ;; In McCLIM, stream-process-gesture is responsible for
+           ;; inserting characters into the buffer, changing the
+           ;; insertion pointer and possibly setting up the
+           ;; activation-gesture slot.
+           (loop
+              with gesture and type
+              do (setf (values gesture type)
+                       (apply #'stream-read-gesture
+                              (encapsulating-stream-stream stream) rest-args))
+              when (null gesture)
+              do (return-from stream-read-gesture (values gesture type))
+              when (stream-process-gesture stream gesture type)
+              do (loop-finish)))))))
 
 (defmethod stream-unread-gesture ((stream drei-input-editing-mixin)
 				  gesture)
-  (with-accessors ((buffer stream-input-buffer)
-                   (scan-pointer stream-scan-pointer)
+  (with-accessors ((scan-pointer stream-scan-pointer)
                    (activation-gesture activation-gesture)) stream
     (when (> scan-pointer 0)
-      (if (and (eql scan-pointer (fill-pointer buffer))
+      (if (and (eql scan-pointer (stream-insertion-pointer stream))
                (activation-gesture-p gesture))
           (setf activation-gesture gesture)
           (decf scan-pointer)))))
@@ -355,8 +355,8 @@ the gesture that will be read in the first call to
 `stream-read-gesture' for the stream encapsulated by
 `stream'. The second return value of this function will be `type'
 if stuff is inserted after the insertion pointer."
-  (let* ((before (stream-input-buffer stream))
-         (drei (drei-instance stream))
+  (let* ((drei (drei-instance stream))
+         (buffer (buffer drei))
          (*command-processor* drei)
          (was-directly-processing (directly-processing-p drei))
          (minibuffer (or (minibuffer drei) *minibuffer*))
@@ -389,7 +389,8 @@ if stuff is inserted after the insertion pointer."
                     (display-message "Aborted")))))))
       ;; Will also take care of redisplaying minibuffer.
       (display-drei drei)
-      (let ((first-mismatch (mismatch before (stream-input-buffer stream))))
+      (let ((first-mismatch (offset (high-mark buffer))))
+        (clear-modify buffer)
         (cond ((null first-mismatch)
                ;; No change actually took place, even though IP may
                ;; have moved.
