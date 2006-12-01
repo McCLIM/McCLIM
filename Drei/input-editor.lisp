@@ -560,6 +560,13 @@ CL:SUBSEQ into the sequence indicating where processing stopped."
   ;; figure out what to redraw than to just redraw everything.
   (display-drei (drei-instance stream)))
 
+(defmethod erase-input-buffer ((stream drei-input-editing-mixin)
+                               &optional (start-position 0))
+  (declare (ignore start-position))
+  ;; Again, we ignore `start-position'. What is the big idea behind
+  ;; this function anyway?
+  (clear-output-record (drei-instance stream)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 
 ;;; `Add-input-editor-command'

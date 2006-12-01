@@ -406,3 +406,8 @@
 (defmethod redraw-input-buffer ((stream goatee-input-editing-mixin) &optional (start-position 0))
   (declare (ignore start-position))
   (redisplay-area (area stream)))
+
+(defmethod erase-input-buffer ((stream goatee-input-editing-mixin)
+                               &optional (start-position 0))
+  (declare (ignore start-position))
+  (clear-output-record (area stream)))
