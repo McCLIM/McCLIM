@@ -41,7 +41,12 @@
                         :initform nil)
    (%rescanning-p :reader stream-rescanning-p
                   :writer (setf stream-rescanning)
-                  :initform nil))
+                  :initform nil)
+   (%input-buffer-array :accessor input-buffer-array
+                        :initform nil
+                        :documentation "After a command has been
+executed, the contents of the Drei area instance shall be
+replaced by the contents of this array, if non-NIL."))
   (:documentation "An mixin that helps in implementing Drei-based
 input-editing streams. This class should not be directly
 instantiated."))
@@ -170,15 +175,62 @@ be used outside the input-editor."))
   ;; want to permit the user to undo input for this context.
   (clear-undo-history (buffer (drei-instance stream))))
 
+(defun update-drei-buffer (stream)
+  "Update the Drei buffer of the Drei instance used by `stream'
+if the `input-buffer-array' of `stream' is non-NIl. This will set
+the contents of the array to the contents of the array up to the
+fill pointer. When this function returns, the
+`input-buffer-array' of `stream' will be NIL. Also, the syntax
+will be up-to-date."
+  (with-accessors ((array input-buffer-array)) stream
+    (let ((buffer (buffer (drei-instance stream))))
+      (when array
+        ;; Attempt to minimise the changes to the buffer, so the
+        ;; position of marks will not be changed too much. Find the
+        ;; first mismatch between buffer contents and array contents.
+        (let ((index (loop
+                        for index from 0 below (min (length array)
+                                                    (size buffer))
+                        unless (eql (buffer-object buffer index)
+                                    (aref array index))
+                        do (return index)
+                        finally (return nil)))
+              (insertion-pointer (stream-insertion-pointer stream)))
+          (when index         ; NIL if buffer and array are identical.
+            ;; Delete from the first mismatch to the end of the buffer.
+            (delete-buffer-range buffer index
+                                 (- (size buffer) index))
+            ;; Insert from the mismatch to array end into the buffer.
+            (insert-buffer-sequence buffer index
+                                    (subseq array index))
+            ;; We also need to update the syntax.
+            (update-syntax buffer (syntax buffer))
+            ;; Finally, see if it is possible to maintain the old
+            ;; position of the insertion pointer.
+            (setf (stream-insertion-pointer stream)
+                  (min insertion-pointer (size buffer)))))
+        (setf array nil)))))
+
+;; While the CLIM spec says that user-commands are not allowed to do
+;; much with the input buffer, the Franz User Guide provides some
+;; examples that hint to the opposite. How do we make modifications of
+;; the input-buffer, which must be a standard array with a fill
+;; pointer, to be applied to the "real" buffer? This is how: when this
+;; method is called, we store the object in the stream object. In the
+;; command loop, we check the stream object and update the buffer
+;; (using `update-drei-buffer') to reflect the changes done to the
+;; buffer.
 (defmethod stream-input-buffer ((stream drei-input-editing-mixin))
-  ;; NOTE: This is very slow, please do not use it unless you want to
-  ;; be compatible with other editor substrates. Use the Drei buffer
-  ;; directly instead.
-  (with-accessors ((buffer buffer)) (drei-instance stream)
-    (let* ((array (buffer-sequence buffer 0 (size buffer))))
-      (make-array (length array)
-                  :fill-pointer (length array)
-                  :initial-contents array))))
+  ;; NOTE: This is very slow (consing up a whole new array - twice!),
+  ;; please do not use it unless you want to be compatible with other
+  ;; editor substrates. Use the Drei buffer directly instead.
+  (or (input-buffer-array stream)
+      (setf (input-buffer-array stream)
+            (with-accessors ((buffer buffer)) (drei-instance stream)
+              (let* ((array (buffer-sequence buffer 0 (size buffer))))
+                (make-array (length array)
+                            :fill-pointer (length array)
+                            :initial-contents array))))))
 
 (defmethod replace-input ((stream drei-input-editing-mixin) (new-input array)
 			  &key
@@ -372,21 +424,25 @@ if stuff is inserted after the insertion pointer."
                                                         *pointer-documentation-output*
                                                         minibuffer)
                                         :prompt "M-x ")
-      ;; We narrow the buffer to the input position, so the user won't
-      ;; be able to erase the original command (when entering command
-      ;; arguments) or stuff like argument prompts.
-      (accepting-from-user (drei)
-        (drei-core:with-narrowed-buffer (drei (input-position stream) t t)
-          (handler-case (process-gestures-or-command drei)
-            (unbound-gesture-sequence (c)
-              (display-message "~A is unbound" (gesture-name (gestures c))))
-            (abort-gesture (c)
-              (if (member (abort-gesture-event c)
-                          *abort-gestures*
-                          :test #'event-matches-gesture-name-p)
-                  (signal 'abort-gesture :event (abort-gesture-event c))
-                  (when was-directly-processing
-                    (display-message "Aborted")))))))
+      ;; Commands are permitted to signal immediate rescans, but
+      ;; we may need to do some stuff first.
+      (unwind-protect
+           (accepting-from-user (drei)
+             ;; We narrow the buffer to the input position, so the user won't
+             ;; be able to erase the original command (when entering command
+             ;; arguments) or stuff like argument prompts.
+             (drei-core:with-narrowed-buffer (drei (input-position stream) t t)
+               (handler-case (process-gestures-or-command drei)
+                 (unbound-gesture-sequence (c)
+                   (display-message "~A is unbound" (gesture-name (gestures c))))
+                 (abort-gesture (c)
+                   (if (member (abort-gesture-event c)
+                               *abort-gestures*
+                               :test #'event-matches-gesture-name-p)
+                       (signal 'abort-gesture :event (abort-gesture-event c))
+                       (when was-directly-processing
+                         (display-message "Aborted")))))))
+        (update-drei-buffer stream))
       ;; Will also take care of redisplaying minibuffer.
       (display-drei drei)
       (let ((first-mismatch (offset (high-mark buffer))))
