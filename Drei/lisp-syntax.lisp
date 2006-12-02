@@ -1709,6 +1709,8 @@ the form that `token' quotes, peeling away all quote forms."
 (define-form-predicate form-token-p (token-mixin))
 (define-form-predicate form-string-p (string-form))
 (define-form-predicate form-quoted-p (quote-form backquote-form))
+(define-form-predicate form-comma-p (comma-form))
+(define-form-predicate form-comma-at-p (comma-at-form))
 
 (define-form-predicate comment-p (comment))
 
@@ -2563,7 +2565,13 @@ object. Otherwise, nil will be returned.")
 (defmethod token-to-object (syntax (token backquote-form) &rest args)
   (let ((backquoted-form (first-form (children token))))
     (if (form-list-p backquoted-form)
-        `'(,@(apply #'token-to-object syntax backquoted-form args))
+        `(list ,@(loop for element in (children backquoted-form)
+                    if (form-comma-p element)
+                    collect (apply #'token-to-object syntax element args)
+                    else if (form-comma-at-p element)
+                    nconc (apply #'token-to-object syntax element args)
+                    else if (formp element)
+                    collect (apply #'token-to-object syntax element :quote t args)))
         `',(apply #'token-to-object syntax backquoted-form args))))
 
 (defmethod token-to-object (syntax (token comma-form) &rest args)
@@ -2634,7 +2642,7 @@ object. Otherwise, nil will be returned.")
                       "")))))
 
 (defmethod token-to-object ((syntax lisp-syntax) (token complete-function-form) &rest args &key &allow-other-keys)
-  (fdefinition (apply #'token-to-object syntax (second (children token)) args)))
+  (list 'function (apply #'token-to-object syntax (second (children token)) args)))
 
 (defmethod token-to-object ((syntax lisp-syntax) (token bit-vector-form)
                             &key &allow-other-keys)
