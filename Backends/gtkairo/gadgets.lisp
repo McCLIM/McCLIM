@@ -587,7 +587,8 @@
 
 (defmethod realize-native-widget :around ((gadget native-widget-mixin))
   (let ((widget (call-next-method)))
-    (gtk_widget_set_sensitive widget (if (gadget-active-p gadget) 1 0))
+    (when (typep gadget 'gadget)
+      (gtk_widget_set_sensitive widget (if (gadget-active-p gadget) 1 0)))
     widget))
 
 (defmethod activate-gadget :after ((gadget native-widget-mixin))
