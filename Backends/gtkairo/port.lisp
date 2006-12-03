@@ -83,6 +83,7 @@
     (gtk_init (cffi:null-pointer) (cffi:null-pointer))
     (let ((cr (gdk_cairo_create
 		(gdk_screen_get_root_window (gdk_screen_get_default)))))
+      (set-antialias cr)
       (setf (metrik-medium port)
             (make-instance 'metrik-medium :port port :cr cr))))
   (when clim-sys:*multiprocessing-p*
@@ -150,6 +151,7 @@
 		       (height (floor (bounding-rectangle-max-y region)))
 		       (pixmap (gdk_pixmap_new window width height -1))
 		       (cr (gdk_cairo_create pixmap)))
+		  (set-antialias cr)
 		  (cairo_set_source_rgba cr
 					 1.0d0
 					 1.0d0

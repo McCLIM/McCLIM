@@ -44,16 +44,23 @@
 	  (to-drawable (medium-gdkdrawable to-medium)))
       (cairo_surface_flush from-surface)
       (cairo_surface_flush to-surface)
-      (let ((gc (gdk_gc_new to-drawable)))
-	(gdk_draw_drawable to-drawable
-			   gc
-			   from-drawable
-			   (truncate from-x)
-			   (truncate from-y)
-			   (truncate to-x)
-			   (truncate to-y)
-			   (truncate width)
-			   (truncate height))
+      (let ((gc (gdk_gc_new to-drawable))
+	    (region (medium-clipping-region to-medium)))
+	(unless (eq region +nowhere+)
+	  (setf region
+		(region-intersection
+		 region
+		 (make-rectangle* to-x to-y (+ to-x width) (+ to-y height))))
+	  (loop for (x y w h) in (clipping-region->rect-seq region) do
+		(gdk_draw_drawable to-drawable
+				   gc
+				   from-drawable
+				   (truncate (+ from-x x (- to-x)))
+				   (truncate (+ from-y y (- to-y)))
+				   (truncate x)
+				   (truncate y)
+				   (truncate w)
+				   (truncate h))))
 	(gdk_gc_unref gc))
       (cairo_surface_mark_dirty to-surface))))
 

@@ -74,6 +74,12 @@
 	   (not (region-equal (last-seen-region medium)
 			      (sheet-region (medium-sheet medium)))))))
 
+(defun set-antialias (cr)
+  (cairo_set_antialias cr
+		       (if *antialiasingp*
+			   :CAIRO_ANTIALIAS_DEFAULT
+			   :CAIRO_ANTIALIAS_NONE)))
+
 (defun sync-sheet (medium)
   (when (medium-sheet medium)		;ignore the metrik-medium
     (setf (gethash medium (dirty-mediums (port medium))) t))
@@ -85,7 +91,7 @@
 	(setf (cr medium) (gdk_cairo_create drawable))
 	(dispose-flipping-pixmap medium)
 	(pushnew medium (mirror-mediums mirror))
-	(cairo_set_antialias (cr medium) (if *antialiasingp* 0 1)))
+	(set-antialias (cr medium)))
       (setf (last-seen-sheet medium) (medium-sheet medium))
       (setf (last-seen-region medium) (sheet-region (medium-sheet medium))))))
 
@@ -250,6 +256,7 @@
 		(setf (flipping-pixmap medium)
 		      (gdk_pixmap_new drawable width height -1)))))
       (setf (cr medium) (gdk_cairo_create pixmap))
+      (set-antialias (cr medium))
       (setf (flipping-region medium) region)
       (cairo_paint (cr medium))
       (sync-transformation medium)
@@ -938,6 +945,7 @@
 	     (cairo_get_target (cr compatible-medium))
              format width height))
          (c (cairo_create s)))
+    (set-antialias c)
     (make-instance 'gtkairo-medium :cr c :surface s)))
 
 (defmacro with-pattern ((m1 mp) &body body)
