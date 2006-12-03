@@ -208,7 +208,9 @@ activated with GESTURE"))
       (multiple-value-bind (object type)
           (presentation-history-next history accepting-type)
         (when type
-          (presentation-replace-input stream object type (stream-default-view stream)))))))
+          (presentation-replace-input stream object type (stream-default-view stream)
+                                      :allow-other-keys t
+                                      :accept-result nil))))))
 
 (defun history-yank-previous (stream input-buffer gesture numeric-argument)
   (declare (ignore input-buffer gesture numeric-argument))
@@ -219,7 +221,9 @@ activated with GESTURE"))
       (multiple-value-bind (object type)
           (presentation-history-previous history accepting-type)
         (when type
-          (presentation-replace-input stream object type (stream-default-view stream)))))))
+          (presentation-replace-input stream object type (stream-default-view stream)
+                                      :allow-other-keys t
+                                      :accept-result nil))))))
 
 (add-input-editor-command '((#\n :meta)) 'history-yank-next)
 
