@@ -250,8 +250,8 @@ mark<= `mark2.'"
                  syntax-line-indentation-function
                  fill-column
                  tab-width
-                 compress-whitespaces
-                 syntax))))
+                 syntax
+                 compress-whitespaces))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 
