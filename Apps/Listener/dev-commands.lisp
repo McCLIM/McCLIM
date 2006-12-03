@@ -23,7 +23,7 @@
 
 (define-command-table application-commands)
 
-(define-command-table lisp-dev-commands :inherit-from nil) ;; "Abstract" command table used for defining some translators in
+(define-command-table lisp-dev-commands :inherit-from nil) ;; Translators live here
 (define-command-table lisp-commands :inherit-from (lisp-dev-commands))
 
 (define-command-table show-commands :inherit-from (lisp-dev-commands))
@@ -519,11 +519,11 @@
     ((class-spec 'class-name :prompt "class")
      &key
      (orientation 'keyword :prompt "orientation" :default :horizontal))     
-  (let ((class (frob-to-class class-spec)))
-    (if (not (null class))
+  (let ((class (frob-to-class class-spec)))    
+    (if (not (null class))        
         (class-grapher *standard-output* class #'clim-mop:class-direct-subclasses
                        :orientation orientation)
-      (note "~A is not a defined class." class-spec))))
+        (note "~A is not a defined class." class-spec))))
 
 
 ; Lookup direct slots from along the CPL given a class and a slot name.
@@ -1261,7 +1261,7 @@
 ;; So.. yeah.
 
 (defun automagic-translator (pathname)
-  "Returns  values, the command translation, and a documentation string for the translation."  
+  "Returns 2 values: the command translation, and a documentation string for the translation."
   (cond ((wild-pathname-p pathname)
          (values `(com-show-directory ,pathname)
                  "Show Matching Files"
@@ -1443,26 +1443,47 @@
 ;;; Eval
 
 (defun display-evalues (values)
-  (with-drawing-options (t :ink +olivedrab+)
-    (cond ((null values)
-           (format t "No values.~%"))
-          ((= 1 (length values))
-           (let ((o (first values)))
-             (with-output-as-presentation (t o (presentation-type-of o)
-                                             :single-box t)
-               (present (first values) 'expression)))
-           (fresh-line))
-          (t (do* ((i 0 (1+ i))
-                   (items values (rest items))
-                   (o (first items) (first items)))
-                  ((null items))           
+  (labels
+      ((present-value (value)         
+         ;; I would really prefer this to behave as below, as presenting
+         ;; things as expressions causes translators applicable to expression
+         ;; to override those which would be otherwise applicable (such as
+         ;; the set-current-package translator). I retain the use of w-o-a-p,
+         ;; swapping the inner/outer presentation types, with the assumption
+         ;; that someone (the form reader?) really does want expressions, and
+         ;; the presentation-type-of is seldom a subtype of expression.
+         ;; Aside from that, the problem with my code below is that it
+         ;; will use the default presentation method for the type, which will
+         ;; not necessarily print in the fashion expected from the lisp REPL.
+         ;; Possibly this +listener-view+ could save the day here, but I'm
+         ;; unclear on why it exists.   --Hefner
+
+         ;; Okay, set-current-package translator now mysteriously works, but
+         ;; I stand by the notion that 'expression should not be the type of
+         ;; the innermost presentation.
+         
+         #+(or)
+         (with-output-as-presentation (t value 'expression :single-box t)
+           (present value (presentation-type-of value) :single-box t))
+
+         (with-output-as-presentation (t value (presentation-type-of value)
+                                         :single-box t)
+           (present (first values) 'expression))))
+    (with-drawing-options (t :ink +olivedrab+)
+      (cond ((null values)
+             (format t "No values.~%"))
+            ((= 1 (length values))             
+             (present-value (first values))
+             (fresh-line))
+            (t (do* ((i 0 (1+ i))
+                     (items values (rest items))
+                     (object (first items) (first items)))
+                    ((null items))
                (with-drawing-options (t :ink +limegreen+)
                  (with-text-style (t (make-text-style nil :italic :small))
                    (format t "~A  " i)))
-               (with-output-as-presentation (t o (presentation-type-of o)
-                                               :single-box t)
-                 (present o 'expression))
-               (fresh-line))))))
+                 (present-value object)
+                 (fresh-line)))))))
 
 (defun shuffle-specials (form values)
   (setf +++ ++
@@ -1476,7 +1497,7 @@
         *   (first values)))
 
 (define-command (com-eval :menu t :command-table lisp-commands)
-    ((form 'clim:form :prompt "form"))  
+    ((form 'clim:form :prompt "form"))
   (let* ((- form)
          (values (multiple-value-list (eval form))))
     (fresh-line)
@@ -1563,3 +1584,14 @@
 				 :provide-output-destination-keyword nil)
     ((p 'package))
   (setf *package* p))
+
+(define-presentation-to-command-translator set-current-package
+    (package com-set-package lisp-commands
+             :pointer-documentation ((object stream)
+                                     (format stream "Set current package to ~A" (package-name object)))
+             :documentation ((stream) (format stream "Set Package"))
+             :menu t
+             :tester ((object) (not (eql *package* object))))
+    (object)
+  (list object))
+    

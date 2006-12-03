@@ -19,6 +19,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
+(define-presentation-type listener-current-package () :inherit-from 'package)
 
 ;; Wholine Pane
 
@@ -92,7 +93,8 @@
             (cell (:left)   (format t "~A@~A" username sitename))
             (cell (:center)
               (format t "Package ")
-              (print-package-name t))
+              (with-output-as-presentation (t *package* 'listener-current-package)
+                (print-package-name t)))
             (cell (:center)
               (when (probe-file *default-pathname-defaults*)
                 (with-output-as-presentation (t (truename *default-pathname-defaults*) 'pathname)
@@ -163,7 +165,7 @@
 (defmethod stream-present :around 
     ((stream listener-interactor-pane) object type
      &rest args &key (single-box nil sbp) &allow-other-keys)
-   (apply #'call-next-method stream object type :single-box t args)
+  (apply #'call-next-method stream object type :single-box t args)
   ;; we would do this, but CLIM:PRESENT calls STREAM-PRESENT with all
   ;; the keyword arguments explicitly.  *sigh*.
   #+nil 
@@ -198,6 +200,29 @@
                 interactor-container
                 doc
                 wholine))))
+
+;;; Package selection popup
+
+(define-listener-command (com-choose-package)
+    ()
+  (let ((new-package (menu-choose (sort (mapcar (lambda (package) (cons (package-name package)
+                                                                        package))
+                                                (list-all-packages))
+                                        #'string<
+                                        :key #'car)
+                                  :label "Choose Package")))
+    (when new-package
+      (setf *package* new-package))))
+
+(define-presentation-to-command-translator choose-package-translator
+    (listener-current-package com-choose-package listener
+     :echo nil
+     :priority 100  ; These presentations appear in exactly one context, so give this a high priority.
+     :documentation ((object stream)
+                     (declare (ignore object))
+                     (format stream "Choose package")))
+  (current-package)
+  nil)
 
 ;;; Lisp listener command loop
 
