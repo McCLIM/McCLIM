@@ -169,7 +169,7 @@
    (if (logtest GDK_SHIFT_MASK state) +shift-key+ 0)
    (if (logtest GDK_CONTROL_MASK state) +control-key+ 0)
    (if (logtest GDK_MOD1_MASK state) +meta-key+ 0)
-   (if (logtest GDK_MOD2_MASK state) +super-key+ 0)
+   ;; (if (logtest GDK_MOD2_MASK state) +super-key+ 0)
    (if (logtest GDK_MOD3_MASK state) +hyper-key+ 0)
 ;;;   (if (logtest GDK_MOD4_MASK state) ??? 0)
 ;;;   (if (logtest GDK_MOD5_MASK state) ??? 0)
@@ -224,6 +224,8 @@
 	    (cond
 	      ((eq sym :backspace)
 		(setf char #\backspace))
+	      ((eq sym :tab)
+		(setf char #\tab))
 	      ((null char))
 	      ((eql char #\return))
 	      ((eql char #\escape)
