@@ -24,6 +24,14 @@
 
 (in-package :drei-kill-ring)
 
+(defgeneric kill-ring-chain (ring)
+  (:documentation "Return the cursorchain associated with the
+kill ring `ring'."))
+
+(defgeneric kill-ring-cursor (ring)
+  (:documentation "Return the flexicursor associated with the
+kill ring."))
+
 (defclass kill-ring ()
   ((max-size :type (integer 5 *) ;5 element minimum from flexichain protocol 
 	     :initarg :max-size
