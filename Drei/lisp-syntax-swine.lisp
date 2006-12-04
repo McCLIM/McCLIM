@@ -997,61 +997,69 @@ to find completions based on `string'."
          (best (caar set)))
     (values best set)))
 
-(defun complete-symbol-at-mark-with-fn (syntax mark &optional (fn #'find-completions))
+(defun complete-symbol-at-mark-with-fn (syntax mark &key (completion-finder #'find-completions)
+                                        (complete-blank t))
   "Attempt to find and complete the symbol at `mark' using the
-  function `fn' to get the list of completions. If the completion
+  function `completion-finder' to get the list of completions. If the completion
   is ambiguous, a list of possible completions will be
-  displayed. If no symbol can be found at `mark', return nil."
+  displayed. If no symbol can be found at `mark', return NIL. If
+  there is no symbol at `mark' and `complete-blank' is true (the
+  default), all symbols available in the current package will be
+  shown. If `complete-blank' is true, nothing will be shown and
+  the function will return NIL."
   (let* ((token (form-around syntax (offset mark)))
          (useful-token (and (not (null token))
                             (form-token-p token)
                             (not (= (start-offset token)
                                     (offset mark))))))
-    (multiple-value-bind (longest completions)
-        (funcall fn syntax
-                 (if useful-token
-                     (start-offset (fully-quoted-form token))
-                     (if (and (form-quoted-p token)
-                              (form-incomplete-p token))
-                         (start-offset token)
-                         (offset mark)))
-                 (if useful-token
-                     (token-string syntax token)
-                     ""))
-      (if completions
-          (if (= (length completions) 1)
-              (replace-symbol-at-mark mark syntax longest)
-              (progn
-                (esa:display-message (format nil "Longest is ~a|" longest))
-                (let ((selection (menu-choose (mapcar
-                                               ;; FIXME: this can
-                                               ;; get ugly.
-                                               #'(lambda (completion)
-                                                   (if (listp completion)
-                                                       (cons completion
-                                                             (first completion))
-                                                       completion))
-                                               completions)
-                                              :label "Possible completions"
-                                              :scroll-bars :vertical)))
-                  (if useful-token
-                      (replace-symbol-at-mark mark syntax (or selection longest))
-                      (insert-sequence mark (or selection longest))))))
-          (esa:display-message "No completions found")))
-    t))
+    (when (or useful-token complete-blank)
+      (multiple-value-bind (longest completions)
+          (funcall completion-finder syntax
+                   (if useful-token
+                       (start-offset (fully-quoted-form token))
+                       (if (and (form-quoted-p token)
+                                (form-incomplete-p token))
+                           (start-offset token)
+                           (offset mark)))
+                   (if useful-token
+                       (token-string syntax token)
+                       ""))
+        (if completions
+            (if (= (length completions) 1)
+                (replace-symbol-at-mark mark syntax longest)
+                (progn
+                  (esa:display-message (format nil "Longest is ~a|" longest))
+                  (let ((selection (menu-choose (mapcar
+                                                 ;; FIXME: this can
+                                                 ;; get ugly.
+                                                 #'(lambda (completion)
+                                                     (if (listp completion)
+                                                         (cons completion
+                                                               (first completion))
+                                                         completion))
+                                                 completions)
+                                                :label "Possible completions"
+                                                :scroll-bars :vertical)))
+                    (if useful-token
+                        (replace-symbol-at-mark mark syntax (or selection longest))
+                        (insert-sequence mark (or selection longest)))
+                    t)))
+            (esa:display-message "No completions found"))))))
 
-(defun complete-symbol-at-mark (syntax mark)
+(defun complete-symbol-at-mark (syntax mark &optional (complete-blank t))
   "Attempt to find and complete the symbol at `mark'. If the
   completion is ambiguous, a list of possible completions will be
   displayed. If no symbol can be found at `mark', return nil."
-  (complete-symbol-at-mark-with-fn syntax mark))
+  (complete-symbol-at-mark-with-fn syntax mark :complete-blank complete-blank))
 
-(defun fuzzily-complete-symbol-at-mark (syntax mark)
+(defun fuzzily-complete-symbol-at-mark (syntax mark &optional (complete-blank t))
   "Attempt to find and complete the symbol at `mark' using fuzzy
   completion. If the completion is ambiguous, a list of possible
   completions will be displayed. If no symbol can be found at
   `mark', return nil."
-  (complete-symbol-at-mark-with-fn syntax mark #'find-fuzzy-completions))
+  (complete-symbol-at-mark-with-fn syntax mark
+                                   :completion-finder #'find-fuzzy-completions
+                                   :complete-blank complete-blank))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

@@ -125,29 +125,26 @@ string at point."
     (forward-object mark)
     (clear-completions)))
 
-(define-command (com-complete-symbol :name t :command-table lisp-table) ()
+(define-command (com-complete-symbol :name t :command-table lisp-table)
+    ()
   "Attempt to complete the symbol at mark. If successful, move point
 to end of symbol.  
 
-If more than one completion is available, a list of
-possible completions will be displayed."
-  (let* ((pane *current-window*)
-         (buffer (buffer pane))
-         (syntax (syntax buffer))
-         (mark (point pane)))
-    (complete-symbol-at-mark syntax mark)))
+If more than one completion is available, a list of possible
+completions will be displayed. If there is no symbol at mark, all
+relevant symbols accessible in the current package will be
+displayed."
+  (complete-symbol-at-mark *current-syntax* *current-mark*))
 
-(define-command (com-fuzzily-complete-symbol :name t :command-table lisp-table) ()
+(define-command (com-fuzzily-complete-symbol :name t :command-table lisp-table)
+    ()
   "Attempt to fuzzily complete the abbreviation at mark.
 
 Fuzzy completion tries to guess which symbol is abbreviated. If
 the abbreviation is ambiguous, a list of possible completions
-will be displayed."
-  (let* ((pane *current-window*)
-         (buffer (buffer pane))
-         (syntax (syntax buffer))
-         (mark (point pane)))
-    (fuzzily-complete-symbol-at-mark syntax mark)))
+will be displayed. If there is no symbol at mark, all relevant
+symbols accessible in the current package will be displayed."
+  (fuzzily-complete-symbol-at-mark *current-syntax* *current-mark*))
 
 (define-command (com-indent-line-and-complete-symbol :name t :command-table lisp-table) ()
   "Indents the current line and performs symbol completion.
@@ -162,7 +159,7 @@ the arglist for the most recently enclosed operator."
              (offset point))
       (let* ((buffer (buffer pane))
              (syntax (syntax buffer)))
-        (or (complete-symbol-at-mark syntax point)
+        (or (complete-symbol-at-mark syntax point nil)
             (show-arglist-for-form-at-mark point syntax))))))
 
 (define-presentation-to-command-translator lookup-symbol-arglist
