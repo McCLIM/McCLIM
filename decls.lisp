@@ -696,6 +696,8 @@
 (defgeneric pane-scroller (pane)) 
 (defgeneric scroll-extent (pane x y)) 
 
+(deftype scroll-bar-spec () '(member t :both :vertical :horizontal nil))
+
 ;;;; 29.3.4 The Layout Protocol
 
 ;; (define-protocol-class space-requirement ()) 
