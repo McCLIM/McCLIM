@@ -307,6 +307,31 @@
                                '(:file "lisp-syntax-swank" :depends-on ("lisp-syntax"))
                                (values))))))
 
+(defsystem :drei-tests
+  :depends-on (:drei-mcclim :fiveam)
+  :components
+  ((:module "Tests"
+            :pathname #.(make-pathname :directory '(:relative "Drei" "Tests"))
+            :components 
+            ((:module
+              "cl-automaton"
+              :depends-on ("testing")
+              :components
+              ((:file "eqv-hash-tests")
+               (:file "state-and-transition-tests")
+               (:file "automaton-tests")
+               (:file "regexp-tests")))
+             (:file "packages")
+             (:file "testing" :depends-on ("packages"))
+             (:file "buffer-tests" :depends-on ("testing"))
+             (:file "base-tests" :depends-on ("testing"))
+             (:file "kill-ring-tests" :depends-on ("testing"))
+             (:file "motion-tests" :depends-on ("testing"))
+             (:file "editing-tests" :depends-on ("testing"))
+             (:file "core-tests" :depends-on ("testing"))
+             (:file "rectangle-tests" :depends-on ("testing"))
+             (:file "undo-tests" :depends-on ("testing"))))))
+
 (defsystem :clim
   :depends-on (:clim-core :goatee-core :clim-postscript :drei-mcclim)
   :components
