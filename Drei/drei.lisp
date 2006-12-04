@@ -128,24 +128,39 @@ invoking the debugger)."))
 ;;;
 ;;; Undo
 
+(defgeneric undo-tree (buffer)
+  (:documentation "The undo-tree object associated with the
+buffer. This usually contains a record of every change that has
+been made to the buffer since it was created."))
+
+(defgeneric undo-accumulate (buffer)
+  (:documentation "A list of the changes that have been made to
+`buffer' since the last time undo was added to the undo tree for
+the buffer. The list returned by this function is initially
+NIL (the empty list). The :before methods on
+`insert-buffer-object', `insert-buffer-sequence', and
+`delete-buffer-range' push undo records on to this list."))
+
+(defgeneric performing-undo (buffer)
+  (:documentation "If true, the buffer is currently performing an
+undo operation. The :before methods on `insert-buffer-object',
+`insert-buffer-sequence', and `delete-buffer-range' push undo
+records onto the undo accumulator only if `performing-undo' is
+false, so that no undo information is added as a result of an
+undo operation."))
+
 (defclass undo-mixin ()
   ((tree :initform (make-instance 'standard-undo-tree)
          :reader undo-tree
          :documentation "Returns the undo-tree of the buffer.")
    (undo-accumulate :initform '()
                     :accessor undo-accumulate
-                    :documentation "The list returned by this
-function is initially NIL (the empty list). The :before methods
-on `insert-buffer-object', `insert-buffer-sequence', and
-`delete-buffer-range' push undo records on to this list.")
+                    :documentation "The undo records created
+since the start of the undo context.")
    (performing-undo :initform nil
                     :accessor performing-undo
-                    :documentation "This is initially NIL.
-The :before methods on `insert-buffer-object',
-`insert-buffer-sequence', and `delete-buffer-range' push undo
-records onto the undo accumulator only if this slot is NIL so
-that no undo information is added as a result of an undo
-operation."))
+                    :documentation "True if we are currently
+performing undo, false otherwise."))
   (:documentation "This is a mixin class that buffer classes can
 inherit from. It contains an undo tree, an undo accumulator and a
 flag specifyng whether or not it is currently performing

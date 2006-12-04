@@ -84,6 +84,10 @@ specific to the application."))
 (defclass undo-record () ()
   (:documentation "The base class for all undo records."))
 
+(defgeneric undo-tree (record)
+  (:documentation "The undo tree to which the undo record
+`record' belongs."))
+
 (defclass standard-undo-record (undo-record)
   ((parent :initform nil :accessor parent)
    (tree :initform nil
