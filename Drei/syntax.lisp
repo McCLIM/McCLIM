@@ -865,9 +865,9 @@ internal state of the parser.  Do not alter it!"
 (defgeneric word-constituentp (syntax obj)
   (:documentation "Return T if `obj' is a word constituent
   character in `syntax'.")
-  (:method (syntax obj)
+  (:method ((syntax syntax) obj)
     nil)
-  (:method (syntax (obj character))
+  (:method ((syntax syntax) (obj character))
     (alphanumericp obj)))
 
 (defgeneric whitespacep (syntax obj)
