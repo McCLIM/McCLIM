@@ -2142,18 +2142,17 @@ after `string'."
 	(form-around-in-children (children stack-top) offset))))
 
 (defun find-list-parent-offset (form fn)
-    "Find a list parent of `token' and return `fn' 
+  "Find a list parent of `token' and return `fn' 
 applied to this parent token. `Fn' should be a function 
 that returns an offset when applied to a 
 token (eg. `start-offset' or `end-offset'). If a list
 parent cannot be found, return `fn' applied to `form'."
-  (when (not (formp form))
-    (let ((parent (parent form)))
-      (typecase parent
-        (form* (funcall fn form))
-        (list-form (funcall fn form))
-        (null (funcall fn form))
-        (t (find-list-parent-offset parent fn))))))
+  (let ((parent (parent form)))
+    (typecase parent
+      (form* (funcall fn form))
+      (list-form (funcall fn form))
+      (null (funcall fn form))
+      (t (find-list-parent-offset parent fn)))))
 
 (defun find-list-child-offset (form fn &optional (min-offset 0))
   "Find a list child of `token' with a minimum start 
@@ -2250,11 +2249,11 @@ NIL if the buffer limit was reached."))
                   (form-after syntax (offset mark))
                   (form-around syntax (offset mark)))))
     (when form
-        (let ((parent (parent form)))
-          (when (not (null parent))
-            (let ((new-offset (find-list-parent-offset parent fn)))
-              (when new-offset
-                (setf (offset mark) new-offset))))))))
+      (let ((parent (parent form)))
+        (when (not (null parent))
+          (let ((new-offset (find-list-parent-offset parent fn)))
+            (when new-offset
+              (setf (offset mark) new-offset))))))))
 
 (defmethod backward-one-up (mark (syntax lisp-syntax))
   (up-list-by-fn mark syntax #'start-offset))
