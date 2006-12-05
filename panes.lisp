@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.173 2006/11/08 01:18:22 thenriksen Exp $
+;;; $Id: panes.lisp,v 1.174 2006/12/05 02:08:44 rgoldman Exp $
 
 (in-package :clim-internals)
 
@@ -1900,7 +1900,7 @@ order to produce a double-click")
 (defparameter *scrollbar-thickness* 17)
 
 (defclass scroller-pane (composite-pane)
-  ((scroll-bar :type (member t :vertical :horizontal nil)
+  ((scroll-bar :type scroll-bar-spec ; (member t :vertical :horizontal nil)
                ;; ### Note: I added NIL here, so that the application
                ;; programmer can switch off scroll bars alltogether. 
                ;; The spec though has it neither in the description of
@@ -2091,8 +2091,9 @@ order to produce a double-click")
     (when (first (sheet-children viewport))
       (setf (slot-value pane 'background)  ;### hmm ...
             (pane-background (first (sheet-children viewport)))))
-    ;;
-    (when (member scroll-bar '(:vertical t))
+    ;; make sure that we have ok options for the scroll-bar argument...
+    (check-type scroll-bar scroll-bar-spec) ; (member :vertical :horizontal :both t nil))
+    (when (member scroll-bar '(:vertical :both t))
       (setq vscrollbar
             (make-pane 'scroll-bar-pane
                        :orientation :vertical
@@ -2118,7 +2119,7 @@ order to produce a double-click")
                        :min-value 0
                        :max-value 1))
       (sheet-adopt-child pane vscrollbar))
-    (when (member scroll-bar '(:horizontal t))
+    (when (member scroll-bar '(:horizontal :both t))
       (setq hscrollbar
             (make-pane 'scroll-bar-pane
                        :orientation :horizontal
@@ -2430,7 +2431,7 @@ to computed distance to scroll in response to mouse wheel events."))
                             mouse-wheel-scroll-mixin
                             cut-and-paste-mixin)
   ((redisplay-needed :initarg :display-time) 
-   (scroll-bars :type (member t :vertical :horizontal nil)
+   (scroll-bars :type scroll-bar-spec ; (member t :vertical :horizontal nil)
 		:initform nil
 		:initarg :scroll-bars
 		:accessor pane-scroll-bars)
