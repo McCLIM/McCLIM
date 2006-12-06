@@ -1050,9 +1050,9 @@ along with any default values) that can be used in a
 ;;;;;;;;;;;;;;;; Comma
 
 ;;; parse trees
-(defclass comma-form (form) ())
-(defclass comma-at-form (form) ())
-(defclass comma-dot-form (form) ())
+(defclass comma-form (form complete-form-mixin) ())
+(defclass comma-at-form (form complete-form-mixin) ())
+(defclass comma-dot-form (form complete-form-mixin) ())
 
 (define-parser-state |, | (form-may-follow) ())
 (define-parser-state |, form | (lexer-toplevel-state parser-state) ())
@@ -2477,25 +2477,21 @@ found in a package, an uninterned symbol will be returned."
                    :case case
                    :no-error t))
 
-(defgeneric token-to-object (syntax token &key no-error package quote read &allow-other-keys)
+(defgeneric token-to-object (syntax token &key no-error package read backquoted &allow-other-keys)
   (:documentation "Return the Lisp object `token' would evaluate
 to if read. An attempt will be made to construct objects from
 incomplete tokens. This function may signal an error if
 `no-error' is nil and `token' cannot be converted to a Lisp
 object. Otherwise, nil will be returned.")
-  (:method :around (syntax (token t) &rest args &key
-                           package quote no-error &allow-other-keys)
+  (:method :around (syntax (token t) &key package no-error &allow-other-keys)
            ;; Ensure that every symbol that is READ will be looked up
            ;; in the correct package. Also handle quoting.
            (flet ((act ()
                     (let ((*package* (or package
                                          (package-at-mark
-                                     syntax (start-offset token)))))
-                      (cond (quote
-                             (setf (getf args :quote) nil)
-                             `',(call-next-method))
-                            (t
-                             (call-next-method))))))
+                                          syntax (start-offset token)))))
+
+                      (call-next-method))))
              (if no-error 
                  (ignore-errors (act))
                  (act))))
@@ -2509,6 +2505,57 @@ object. Otherwise, nil will be returned.")
            (unless no-error
              (error "Cannot convert incomplete form to Lisp object: ~A"
                     token))))
+
+;;; The complicated primary structure forms.
+
+;; The problem is that we can't portably create in-memory backquote
+;; forms, so we have to rewrite them to calls to `nconc'. I think this
+;; is valid, because the CLHS doesn't specify the in-memory
+;; representation of backquoted forms, and thus the user can't assume
+;; that it isn't just a whole bunch of calls to `nconc' anyway.
+(defmethod token-to-object (syntax (token list-form) &rest args &key backquoted)
+  (if backquoted
+      `(nconc ,@(loop for child in (children token)
+                   if (typep child 'comma-at-form)
+                   collect (apply #'token-to-object syntax child :backquoted nil args)
+                   else if (typep child 'comma-form)
+                   collect `(list ,(apply #'token-to-object syntax child :backquoted nil args))
+                   else if (form-token-p child)
+                   collect `(list ,`',(apply #'token-to-object syntax child args))
+                   else if (formp child)
+                   collect `(list ,(apply #'token-to-object syntax child args))))
+      (mapcar #'(lambda (child)
+                  (apply #'token-to-object syntax child args))
+              (remove-if-not #'formp (children token)))))
+
+(defmethod token-to-object (syntax (token complete-quote-form) &rest args &key backquoted)
+  (if backquoted
+      (let ((quoted-form (first-form (children token))))
+        (if (form-token-p quoted-form)
+            `(list 'quote (quote ,(apply #'token-to-object syntax (second (children token)) args)))
+            `(list 'quote ,(apply #'token-to-object syntax (second (children token)) args))))
+      `',(apply #'token-to-object syntax (second (children token)) args)))
+
+(defmethod token-to-object (syntax (token incomplete-quote-form) &rest args)
+  (declare (ignore args))
+  ;; Utterly arbitrary, but reasonable in my opinion.
+  '(quote))
+
+;; I'm not sure backquotes are handled correctly, but they should be,
+;; at least when :read t is specified.
+(defmethod token-to-object (syntax (token backquote-form) &rest args)
+  (let ((backquoted-form (first-form (children token))))
+    (if (form-token-p backquoted-form)
+        `',(apply #'token-to-object syntax backquoted-form args)
+        (apply #'token-to-object syntax  backquoted-form :backquoted t args))))
+
+(defmethod token-to-object (syntax (token comma-form) &rest args)
+  (apply #'token-to-object syntax (first-form (children token)) :backquoted nil args))
+
+(defmethod token-to-object (syntax (token comma-at-form) &rest args)
+  (apply #'token-to-object syntax (first-form (children token)) :backquoted nil args))
+
+;;; The atom(-ish) forms.
 
 (defmethod token-to-object (syntax (token complete-token-lexeme)
                             &key no-error read (case (readtable-case *readtable*))
@@ -2531,13 +2578,6 @@ object. Otherwise, nil will be returned.")
   (let ((*read-base* (base syntax)))
     (read-from-string (token-string syntax token))))
 
-(defmethod token-to-object (syntax (token list-form) &rest args)
-  (loop for child in (children token)
-     if (typep child 'comma-at-form)
-       nconc (listed (apply #'token-to-object syntax child args))
-     else if (formp child)
-       collect (apply #'token-to-object syntax child args)))
-
 (defmethod token-to-object (syntax (token simple-vector-form) &key &allow-other-keys)
   (apply #'vector (call-next-method)))
 
@@ -2550,34 +2590,6 @@ object. Otherwise, nil will be returned.")
 (defmethod token-to-object (syntax (token complete-string-form) &key no-error &allow-other-keys)
   (declare (ignore no-error))
   (read-from-string (token-string syntax token)))
-
-(defmethod token-to-object (syntax (token complete-quote-form) &rest args)
-  (apply #'token-to-object syntax (second (children token)) :quote t args))
-
-(defmethod token-to-object (syntax (token incomplete-quote-form) &rest args)
-  (declare (ignore args))
-  ;; Utterly arbitrary, but reasonable in my opinion.
-  '(quote))
-
-;; I'm not sure backquotes are handled correctly, but they should be,
-;; at least when :read t is specified.
-(defmethod token-to-object (syntax (token backquote-form) &rest args)
-  (let ((backquoted-form (first-form (children token))))
-    (if (form-list-p backquoted-form)
-        `(list ,@(loop for element in (children backquoted-form)
-                    if (form-comma-p element)
-                      collect (apply #'token-to-object syntax element args)
-                    else if (form-comma-at-p element)
-                      nconc (listed (apply #'token-to-object syntax element args))
-                    else if (formp element)
-                      collect (apply #'token-to-object syntax element :quote t args)))
-        `',(apply #'token-to-object syntax backquoted-form args))))
-
-(defmethod token-to-object (syntax (token comma-form) &rest args)
-  (apply #'token-to-object syntax (first-form (children token)) args))
-
-(defmethod token-to-object (syntax (token comma-at-form) &rest args)
-  (apply #'token-to-object syntax (first-form (children token)) args))
 
 (defmethod token-to-object (syntax (token function-form) &rest args)
   (list 'cl:function (apply #'token-to-object syntax (second (children token)) args)))
