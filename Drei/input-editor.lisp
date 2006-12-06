@@ -304,6 +304,56 @@ for `type', or `object' if it isn't."
                  printed-rep)
              args))))
 
+;; The purpose of this method is to ensure that things such as lists
+;; should are not completely inserted as literal objects if they have
+;; unreadable elements.
+(defmethod presentation-replace-input
+    ((stream drei-input-editing-mixin) object (type (eql 'expression)) view
+     &rest args &key
+     (buffer-start (input-position stream)) rescan
+     query-identifier (for-context-type type))
+  (declare (ignore query-identifier rescan for-context-type buffer-start))
+  ;; Build up an array, `insertion', and use `replace-input' to insert
+  ;; it.
+  (let ((insertion (make-array 10 :adjustable t :fill-pointer 0)))
+    (labels ((insert-object (object)
+               (vector-push-extend object insertion
+                                   (* (length insertion))))
+             (insert-objects (objects)
+               (setf insertion (adjust-array insertion
+                                             (+ (length insertion)
+                                                (length objects))
+                                             :fill-pointer (+ (fill-pointer insertion)
+                                                              (length objects))))
+               (setf (subseq insertion (- (fill-pointer insertion)
+                                          (length objects))) objects))
+             (present-object (object)
+               (multiple-value-bind (printed-rep accept-object)
+                   (present-acceptably-to-string object 'expression
+                                                 +textual-view+ 'expression)
+                 (if (null accept-object)
+                     (insert-objects printed-rep)
+                     (typecase object
+                       (list (insert-list-in-stream object))
+                       (array (insert-object #\#)
+                              (insert-list-in-stream object))
+                       (function (let ((name (nth-value 2 (function-lambda-expression object))))
+                                   (insert-objects (or (format nil "#'~A" name)
+                                                       (vector object)))))
+                       ;; Okay, we give up, just insert it.
+                       (t (insert-object object)))))))
+      (present-object object))
+    (with-keywords-removed (args (:type :view :query-identifier :for-context-type))
+      (apply #'replace-input stream insertion args))))
+
+(defmethod presentation-replace-input
+    ((stream drei-input-editing-mixin) object (type (eql 'form)) view
+     &rest args &key
+     (buffer-start (input-position stream)) rescan
+     query-identifier (for-context-type type))
+  (declare (ignore query-identifier rescan for-context-type buffer-start))
+  (apply #'presentation-replace-input stream object 'expression view args))
+
 (defvar *drei-input-editing-stream* nil
   "Used to provide CLIM-specified input-editing-commands with the
 input-editing-stream. Bound when executing a command.")
