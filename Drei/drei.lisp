@@ -550,10 +550,10 @@ and specialise a method for it."
 
 (defmethod command-table-inherit-from ((table drei-command-table))
   (let ((syntax-table (command-table *current-syntax*)))
-    (list* syntax-table
-           (when (use-editor-commands-p syntax-table)
-             'editor-table)
-           (additional-command-tables *current-window* table))))
+    (append `(,syntax-table)
+            (additional-command-tables *current-window* table)
+            (when (use-editor-commands-p syntax-table)
+              '(editor-table)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
