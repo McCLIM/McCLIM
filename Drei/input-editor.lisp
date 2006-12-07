@@ -175,41 +175,116 @@ be used outside the input-editor."))
   ;; want to permit the user to undo input for this context.
   (clear-undo-history (buffer (drei-instance stream))))
 
-(defun update-drei-buffer (stream)
-  "Update the Drei buffer of the Drei instance used by `stream'
-if the `input-buffer-array' of `stream' is non-NIl. This will set
-the contents of the array to the contents of the array up to the
-fill pointer. When this function returns, the
-`input-buffer-array' of `stream' will be NIL. Also, the syntax
-will be up-to-date."
+(defun buffer-array-mismatch (sequence1 sequence2 
+                              &key (from-end nil)
+                              (start1 0) 
+                              (start2 0))
+  "Like `cl:mismatch', but supporting fewer keyword arguments,
+and the two sequences can be Drei buffers instead."
+  (flet ((seq-elt (seq i)
+           (typecase seq
+             (drei-buffer (buffer-object seq i))
+             (array (aref seq i))))
+         (seq-length (seq)
+           (typecase seq
+             (drei-buffer (size seq))
+             (array (length seq)))))
+    (if from-end
+        (loop
+           for index1 downfrom (1- (seq-length sequence1)) to 0
+           for index2 downfrom (1- (seq-length sequence2)) to 0
+           unless (= index1 index2 0)
+           if (or (= index1 0)
+                  (= index2 0))
+           return index1
+           unless (eql (seq-elt sequence1 index1)
+                       (seq-elt sequence2 index2))
+           return (1+ index1))
+
+        (do* ((i1 start1 (1+ i1))
+              (i2 start2 (1+ i2))
+              x1 x2)
+             ((and (>= i1 (seq-length sequence1))
+                   (>= i2 (seq-length sequence2))) nil)
+          (if (>= i1 (seq-length sequence1)) (return i1))
+          (if (>= i2 (seq-length sequence2)) (return i1))
+          (setq x1 (seq-elt sequence1 i1))
+          (setq x2 (seq-elt sequence2 i2))
+          (unless (eql x1 x2)
+            (return i1))))))
+
+(defun synchronize-drei-buffer (stream)
+  "If the `input-buffer-array' of `stream' is non-NIL, copy the
+contents of the array to the Drei buffer. This will set the
+contents of the buffer to the contents of the array up to the
+fill pointer."
   (with-accessors ((array input-buffer-array)) stream
     (let ((buffer (buffer (drei-instance stream))))
       (when array
         ;; Attempt to minimise the changes to the buffer, so the
         ;; position of marks will not be changed too much. Find the
         ;; first mismatch between buffer contents and array contents.
-        (let ((index (loop
-                        for index from 0 below (min (length array)
-                                                    (size buffer))
-                        unless (eql (buffer-object buffer index)
-                                    (aref array index))
-                        do (return index)
-                        finally (return nil)))
-              (insertion-pointer (stream-insertion-pointer stream)))
-          (when index         ; NIL if buffer and array are identical.
-            ;; Delete from the first mismatch to the end of the buffer.
-            (delete-buffer-range buffer index
-                                 (- (size buffer) index))
-            ;; Insert from the mismatch to array end into the buffer.
-            (insert-buffer-sequence buffer index
-                                    (subseq array index))
-            ;; We also need to update the syntax.
-            (update-syntax buffer (syntax buffer))
-            ;; Finally, see if it is possible to maintain the old
-            ;; position of the insertion pointer.
-            (setf (stream-insertion-pointer stream)
-                  (min insertion-pointer (size buffer)))))
-        (setf array nil)))))
+        (multiple-value-bind (index buffer-end array-end)
+            (let* ((buffer-array-mismatch-begin (or (buffer-array-mismatch
+                                                     buffer array)
+                                                    0))
+                   (buffer-buffer-array-mismatch-end (or (buffer-array-mismatch
+                                                          buffer array :from-end t
+                                                          :start2 buffer-array-mismatch-begin)
+                                                         buffer-array-mismatch-begin))
+                   (array-buffer-array-mismatch-end (or (buffer-array-mismatch
+                                                         array buffer :from-end t
+                                                         :start2 buffer-array-mismatch-begin)
+                                                        buffer-array-mismatch-begin)))
+              (values buffer-array-mismatch-begin
+                      (max buffer-buffer-array-mismatch-end buffer-array-mismatch-begin)
+                      (max array-buffer-array-mismatch-end buffer-array-mismatch-begin)))
+          (let ((insertion-pointer (stream-insertion-pointer stream)))
+            (when index       ; NIL if buffer and array are identical.
+              ;; Delete from the first mismatch to the end of the
+              ;; mismatch.
+              (delete-buffer-range buffer index (- buffer-end index))
+              ;; Also delete from the end of the buffer if the array
+              ;; is smaller than the buffer.
+              (when (> (size buffer) (length array))
+                (delete-buffer-range buffer (length array)
+                                     (- (size buffer)
+                                        (length array))))
+              ;; Insert from the mismatch to end mismatch from the
+              ;; array into the buffer.
+              (insert-buffer-sequence buffer index (subseq array index array-end))
+              ;; We also need to update the syntax.
+              (update-syntax buffer (syntax buffer))
+              ;; Finally, see if it is possible to maintain the old
+              ;; position of the insertion pointer.
+              (setf (stream-insertion-pointer stream)
+                    (min insertion-pointer (size buffer))))))))))
+
+(defun synchronize-input-buffer-array (stream)
+  "If the `input-buffer-array' of `stream' is non-NIL, copy the
+contents of the Drei buffer to the array. The fill pointer of the
+array will point to after the last element."
+  (with-accessors ((array input-buffer-array)) stream
+    (let ((buffer (buffer (drei-instance stream))))
+      (when array
+        (let ((new-array (buffer-sequence buffer 0 (size buffer))))
+          (setf array
+                ;; We probably lose if `adjust-array' doesn't
+                ;; destructively modify `array.
+                (adjust-array array (length new-array)
+                              :initial-contents new-array
+                              :fill-pointer (length new-array))))))))
+
+(defun update-drei-buffer (stream)
+  "Update the Drei buffer of the Drei instance used by `stream'
+if the `input-buffer-array' of `stream' is non-NIl. This will set
+the contents of the buffer to the contents of the array up to the
+fill pointer. Changes to the buffer will be recordes as
+undoable. When this function returns, the `input-buffer-array' of
+`stream' will be NIL. Also, the syntax will be up-to-date."
+  (with-undo ((list (buffer (drei-instance stream))))
+    (synchronize-drei-buffer stream))
+  (setf (input-buffer-array stream) nil))
 
 ;; While the CLIM spec says that user-commands are not allowed to do
 ;; much with the input buffer, the Franz User Guide provides some
@@ -224,13 +299,11 @@ will be up-to-date."
   ;; NOTE: This is very slow (consing up a whole new array - twice!),
   ;; please do not use it unless you want to be compatible with other
   ;; editor substrates. Use the Drei buffer directly instead.
-  (or (input-buffer-array stream)
-      (setf (input-buffer-array stream)
-            (with-accessors ((buffer buffer)) (drei-instance stream)
-              (let* ((array (buffer-sequence buffer 0 (size buffer))))
-                (make-array (length array)
-                            :fill-pointer (length array)
-                            :initial-contents array))))))
+  (unless (input-buffer-array stream)
+    ;; Create dummy array and synchronize it to the buffer contents.
+    (setf (input-buffer-array stream) (make-array 0 :fill-pointer 0))
+    (synchronize-input-buffer-array stream))
+  (input-buffer-array stream))
 
 (defmethod replace-input ((stream drei-input-editing-mixin) (new-input array)
 			  &key
@@ -241,6 +314,13 @@ will be up-to-date."
   (check-type start integer)
   (check-type end integer)
   (check-type buffer-start integer)
+  ;; Since this is a CLIM-specified function, we have to make sure the
+  ;; input-buffer-array is taken into consideration, because some
+  ;; input-editor-command might call this function and expect the
+  ;; changes to be reflected in the array it holds. Also, if changes
+  ;; have been made to the array, they need to be propagated to the
+  ;; buffer before we do anything.
+  (synchronize-drei-buffer stream)
   (let* ((drei (drei-instance stream))
          (new-contents (subseq new-input start end))
          (old-contents (buffer-sequence (buffer drei)
@@ -253,11 +333,16 @@ will be up-to-date."
       (unless equal
         (setf (offset begin-mark) buffer-start)
         (delete-region begin-mark (stream-scan-pointer stream))
-        (insert-sequence begin-mark new-contents))
-      (update-syntax (buffer drei) (syntax (buffer drei)))
+        (insert-sequence begin-mark new-contents)
+        (update-syntax (buffer drei) (syntax (buffer drei)))
+        ;; Make the buffer reflect the changes in the array.
+        (synchronize-input-buffer-array stream))
       (display-drei drei)
       (when (or rescan (not equal))
-        (queue-rescan stream)))))
+        (queue-rescan stream))
+      ;; We have to return "the position in the input buffer". We
+      ;; return the insertion position.
+      buffer-start)))
 
 (defun present-acceptably-to-string (object type view for-context-type)
   "Return two values - a string containing the printed
@@ -608,14 +693,17 @@ CL:SUBSEQ into the sequence indicating where processing stopped."
   (declare (ignore start-position))
   ;; We ignore `start-position', because it would be more work to
   ;; figure out what to redraw than to just redraw everything.
+  ;; We assume that this function is mostly called from non-Drei-aware
+  ;; code, and thus synchronise the input-editor-array with the Drei
+  ;; buffer before redisplaying.
+  (update-drei-buffer stream)
   (display-drei (drei-instance stream)))
 
 (defmethod erase-input-buffer ((stream drei-input-editing-mixin)
                                &optional (start-position 0))
   (declare (ignore start-position))
-  ;; Again, we ignore `start-position'. What is the big idea behind
-  ;; this function anyway?
-  (clear-output-record (drei-instance stream)))
+  ;; No-op, just to save older CLIM programs from dying.
+  nil)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 
