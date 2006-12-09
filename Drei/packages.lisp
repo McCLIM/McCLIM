@@ -219,7 +219,7 @@ characters."))
 
            ;; DREI interface stuff.
            #:drei #:drei-pane #:drei-gadget-pane #:drei-area
-           #:handling-drei-conditions
+           #:handling-drei-conditions #:handle-drei-condition
            #:execute-drei-command #:display-drei-contents #:display-drei-cursor
            #:with-drei-options
            #:performing-drei-operations #:invoke-performing-drei-operations

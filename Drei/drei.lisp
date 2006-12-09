@@ -690,35 +690,65 @@ variant) should be used instead."))
 ;;;
 ;;; Some standard building block machinery.
 
+(defgeneric handle-drei-condition (drei condition)
+  (:documentation "When an unhandled condition that is a subtype
+of `user-condition-mixin' (and some other hardcoded condition
+types) is signalled during execution of a Drei command, this
+generic function will be called with the Drei instance as the
+first argument, and the condition as the second argument."))
+
+(defmethod handle-drei-condition (drei (condition offset-before-beginning))
+  (beep) (display-message "Beginning of buffer"))
+
+(defmethod handle-drei-condition (drei (condition offset-after-end))
+  (beep) (display-message "End of buffer"))
+
+(defmethod handle-drei-condition (drei (condition motion-before-beginning))
+  (beep) (display-message "Beginning of buffer"))
+
+(defmethod handle-drei-condition (drei (condition motion-after-end))
+  (beep) (display-message "End of buffer"))
+
+(defmethod handle-drei-condition (drei (condition no-expression))
+  (beep) (display-message "No expression around point"))
+
+(defmethod handle-drei-condition (drei (condition no-such-operation))
+  (beep) (display-message "Operation unavailable for syntax"))
+
+(defmethod handle-drei-condition (drei (condition buffer-read-only))
+  (beep) (display-message "Buffer is read only"))
+
+(defmethod handle-drei-condition (drei (condition user-condition-mixin))
+  (beep) (with-minibuffer-stream (minibuffer)
+           (let ((*print-escape* nil))
+             (princ condition minibuffer))))
+
 (defmacro handling-drei-conditions (&body body)
   "Evaluate `body' while handling Drei user notification
 signals. The handling consists of displaying their meaning to the
 user in the minibuffer. This is the macro that ensures conditions
 such as `motion-before-end' does not land the user in the
 debugger."
+  ;; Perhaps a DREI-CONDITION class should be added so we could more
+  ;; easily catch all these. `User-condition-mixin' isn't available
+  ;; at, for example, the buffer level, after all.
   `(handler-case (progn ,@body)
-     (offset-before-beginning ()
-       (beep) (display-message "Beginning of buffer"))
-     (offset-after-end ()
-       (beep) (display-message "End of buffer"))
-     (motion-before-beginning ()
-       (beep) (display-message "Beginning of buffer"))
-     (motion-after-end ()
-       (beep) (display-message "End of buffer"))
-     (no-expression ()
-       (beep) (display-message "No expression around point"))
-     (no-such-operation ()
-       (beep) (display-message "Operation unavailable for syntax"))
-     (buffer-read-only ()
-       (beep) (display-message "Buffer is read only"))
-     ;; I'd like a situation where all conditions that should result
-     ;; in the user being informed of something just inherit from
-     ;; `user-condition-mixin'. Enumerating all possible conditions
-     ;; where is not scaleable.
      (user-condition-mixin (c)
-       (beep) (with-minibuffer-stream (minibuffer)
-                (let ((*print-escape* nil))
-                  (princ c minibuffer))))))
+       (handle-drei-condition *current-window* c))
+     (offset-before-beginning (c)
+       (handle-drei-condition *current-window* c))
+     (offset-after-end (c)
+       (handle-drei-condition *current-window* c))
+     (motion-before-beginning (c)
+       (handle-drei-condition *current-window* c))
+     (motion-after-end (c)
+       (handle-drei-condition *current-window* c))
+     (no-expression (c)
+       (handle-drei-condition *current-window* c))
+     (no-such-operation (c)
+       (handle-drei-condition *current-window* c))
+     (buffer-read-only (c)
+       (handle-drei-condition *current-window* c))))
 
 (defmacro with-bound-drei-special-variables ((drei-instance &key
                                               (current-buffer nil current-buffer-p)
@@ -879,5 +909,5 @@ recording the operations performed by `command' for undo."))
                                         :update-syntax t
                                         :with-undo t)
         (handling-drei-conditions
-          (apply (command-name command) (command-arguments command))
-          (setf (previous-command drei) command))))))
+          (apply (command-name command) (command-arguments command)))
+        (setf (previous-command drei) command)))))
