@@ -193,3 +193,15 @@ otherwise it is case-sensitive."
 in KEYWORDS removed."
   `(let ((,new-var (remove-keywords ,var ',keywords)))
      ,@body))
+
+(defun maptree (fn x)
+  "This auxiliary function is like MAPCAR but has two extra
+purposes: (1) it handles dotted lists; (2) it tries to make the
+result share with the argument x as much as possible."
+  (if (atom x) 
+      (funcall fn x) 
+      (let ((a (funcall fn (car x))) 
+            (d (maptree fn (cdr x)))) 
+        (if (and (eql a (car x)) (eql d (cdr x))) 
+            x 
+            (cons a d)))))

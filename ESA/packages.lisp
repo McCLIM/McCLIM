@@ -39,7 +39,8 @@
            #:case-relevant-test
            #:with-keywords-removed
            #:invoke-with-dynamic-bindings-1
-           #:invoke-with-dynamic-bindings))
+           #:invoke-with-dynamic-bindings
+           #:maptree))
 
 (defpackage :esa
   (:use :clim-lisp :clim :esa-utils)
