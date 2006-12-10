@@ -432,8 +432,12 @@ used to implement the editing commands."))
   (:use :clim-lisp :clim :clim-extensions :drei-buffer :drei-base 
         :drei-syntax :drei-fundamental-syntax :flexichain :drei
         :drei-motion :drei-editing :esa-utils :esa :drei-core :esa-io)
-  (:export #:lisp-string
-           #:edit-definition)
+  (:export #:lisp-syntax
+           #:lisp-string
+           #:edit-definition
+           #:form
+           #:form-to-object
+           #:form-conversion-error)
   (:shadow clim:form))
 
 (defpackage :drei-commands

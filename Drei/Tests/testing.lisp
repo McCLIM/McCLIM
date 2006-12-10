@@ -111,6 +111,8 @@ display. Used for testing."))
   (run! 'rectangle-tests)
   (format t "Testing undo~%")
   (run! 'undo-tests)
+  (format t "Testing the Lisp syntax module~%")
+  (run! 'lisp-syntax-tests)
 
   (format t "Running the CL-AUTOMATON tests~%")
   (format t "Testing regular expressions~%")

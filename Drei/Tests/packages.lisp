@@ -30,4 +30,6 @@
         :drei-editing :automaton :eqv-hash :drei-core :drei-kill-ring
         :drei-syntax :drei :esa :esa-utils :clim :drei-lisp-syntax :drei-undo)
   (:shadowing-import-from :automaton #:run)
-  (:export #:run-tests))
+  (:shadowing-import-from :drei-lisp-syntax #:form)
+  (:export #:run-tests
+           #:*run-self-compilation-test*))

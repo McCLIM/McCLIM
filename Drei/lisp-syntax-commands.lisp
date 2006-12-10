@@ -98,7 +98,7 @@ string at point."
          (mark (point pane))
          (token (this-form mark syntax)))
     (if (and token (form-token-p token))
-        (com-lookup-arglist (token-to-object syntax token))
+        (com-lookup-arglist (form-to-object syntax token))
         (display-message "Could not find symbol at point."))))
 
 (define-command (com-lookup-arglist :name t :command-table lisp-table)
@@ -189,7 +189,7 @@ the arglist for the most recently enclosed operator."
         (with-syntax-package (*current-syntax* *current-point*)
           (let ((*read-base* (base *current-syntax*)))
             (drei-commands::com-eval-expression
-             (token-to-object *current-syntax* token :read t)
+             (form-to-object *current-syntax* token :read t)
              insertp)))
         (display-message "Nothing to evaluate."))))
 

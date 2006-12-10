@@ -841,11 +841,19 @@ to an `extended-output-stream' while `body' is being evaluated."
          do (with-activation-gestures (nil :override t)
               (stream-process-gesture stream gesture nil))
          finally (unread-gesture gesture :stream stream)
-         (let* ((object (drei-lisp-syntax::token-to-object syntax form
-                                                           :read t
-                                                           :package *package*))
-                (ptype (presentation-type-of object)))
-           (return-from control-loop
-             (values object
-                     (if (presentation-subtypep ptype 'expression)
-                         ptype 'expression))))))))
+           (let* ((object (handler-case
+                              (drei-lisp-syntax:form-to-object syntax form
+                                                               :read t
+                                                               :package *package*)
+                            (drei-lisp-syntax:form-conversion-error (e)
+                              ;; Move point to the problematic form
+                              ;; and signal a rescan.
+                              (setf (activation-gesture stream) nil)
+                              (handle-drei-condition drei e)
+                              (display-drei drei)
+                              (immediate-rescan stream))))
+                  (ptype (presentation-type-of object)))
+             (return-from control-loop
+               (values object
+                       (if (presentation-subtypep ptype 'expression)
+                           ptype 'expression))))))))

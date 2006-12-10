@@ -243,7 +243,7 @@ along with any default values) that can be used in a
 
 (defclass lexer-state ()
   ()
-  (:documentation "These states are used to determine how the lexer 
+  (:documentation "These states are used to determine how the lexer
     should behave."))
 
 (defmacro define-lexer-state (name superclasses &body body)
@@ -257,23 +257,23 @@ along with any default values) that can be used in a
 
 (define-lexer-state lexer-toplevel-state ()
   ()
-  (:documentation "In this state, the lexer assumes it can skip 
+  (:documentation "In this state, the lexer assumes it can skip
     whitespace and should recognize ordinary lexemes of the language
     except for the right parenthesis"))
 
 (define-lexer-state lexer-list-state (lexer-toplevel-state)
   ()
-  (:documentation "In this state, the lexer assumes it can skip 
+  (:documentation "In this state, the lexer assumes it can skip
     whitespace and should recognize ordinary lexemes of the language"))
 
 (define-lexer-state lexer-string-state ()
   ()
-  (:documentation "In this state, the lexer is working inside a string 
+  (:documentation "In this state, the lexer is working inside a string
     delimited by double quote characters."))
 
 (define-lexer-state lexer-line-comment-state ()
   ()
-  (:documentation "In this state, the lexer is working inside a line 
+  (:documentation "In this state, the lexer is working inside a line
     comment (starting with a semicolon."))
 
 (define-lexer-state lexer-long-comment-state ()
@@ -314,7 +314,7 @@ along with any default values) that can be used in a
 (defclass parser-state () ())
 
 (defmacro define-parser-state (name superclasses &body body)
-  `(progn 
+  `(progn
      (defclass ,name ,superclasses
 	  ,@body)
      (defvar ,name (make-instance ',name))))
@@ -336,12 +336,12 @@ along with any default values) that can be used in a
 	   (end (find-if-not #'null children :key #'end-offset :from-end t)))
        (when start
 	 (setf start-mark (slot-value start 'start-mark)
-	       size (- (end-offset end) (start-offset start)))))))  
+	       size (- (end-offset end) (start-offset start)))))))
 
 ;;; until here
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defclass lisp-nonterminal (nonterminal) ())     
+(defclass lisp-nonterminal (nonterminal) ())
 (defclass form (lisp-nonterminal) ())
 (defclass complete-form-mixin () ())
 (defclass incomplete-form-mixin () ())
@@ -411,7 +411,7 @@ along with any default values) that can be used in a
 	 (setf (offset scan) start-offset)
 	 (setf start-mark scan
 	       size new-size))
-      lexeme)))		  
+      lexeme)))
 
 (defmethod lex ((syntax lisp-syntax) (state lexer-toplevel-state) scan)
   (macrolet ((fo () `(forward-object scan)))
@@ -439,7 +439,7 @@ along with any default values) that can be used in a
 	(#\# (fo)
 	     (cond ((end-of-buffer-p scan)
 		    (make-instance 'incomplete-lexeme))
-		   (t 
+		   (t
 		    (let ((prefix 0))
 		      (loop until (end-of-buffer-p scan)
 			    while (digit-char-p (object-after scan))
@@ -450,7 +450,7 @@ along with any default values) that can be used in a
 		    (if (end-of-buffer-p scan)
 			(make-instance 'incomplete-lexeme)
 			(case (object-after scan)
-			  ((#\Backspace #\Tab #\Newline #\Linefeed 
+			  ((#\Backspace #\Tab #\Newline #\Linefeed
 			    #\Page #\Return #\Space #\))
 			   (fo)
 			   (make-instance 'error-lexeme))
@@ -487,6 +487,9 @@ along with any default values) that can be used in a
 				    ((#\O #\o) 8)
 				    ((#\X #\x) 16))))
 			     (fo)
+                             (when (char= (object-after scan)
+                                          #\-)
+                               (fo))
 			     (loop until (end-of-buffer-p scan)
 				   while (digit-char-p (object-after scan) radix)
 				   do (fo)))
@@ -666,31 +669,33 @@ along with any default values) that can be used in a
 (defmethod lex ((syntax lisp-syntax) (state lexer-escaped-token-state) scan)
   (let ((bars-seen 0))
     (macrolet ((fo () `(forward-object scan)))
-      (tagbody
-       start
-	 (when (end-of-buffer-p scan)
-	   (return-from lex (make-instance 'text-lexeme)))
-	 (when (eql (object-after scan) #\\)
-	   (fo)
-	   (when (end-of-buffer-p scan)
-	     (return-from lex (make-instance 'incomplete-lexeme)))
-	   (fo)
-	   (go start))
-	 (when (eql (object-after scan) #\|)
-	   (incf bars-seen)
-	   (fo)
-	   (go start))
-         (if (evenp bars-seen)
-             (unless (whitespacep syntax (object-after scan))
-               (fo)
-               (go start))
-             (when (constituentp (object-after scan))
-               (fo)
-               (go start)))
-	 (return-from lex 
-	   (if (oddp bars-seen)
-	       (make-instance 'multiple-escape-end-lexeme)
-	       (make-instance 'text-lexeme)))))))
+      (flet ((end ()
+               (return-from lex
+                 (if (oddp bars-seen)
+                     (make-instance 'multiple-escape-end-lexeme)
+                     (make-instance 'text-lexeme)))))
+        (tagbody
+         start
+           (when (end-of-buffer-p scan)
+             (end))
+           (when (eql (object-after scan) #\\)
+             (fo)
+             (when (end-of-buffer-p scan)
+               (return-from lex (make-instance 'incomplete-lexeme)))
+             (fo)
+             (go start))
+           (when (eql (object-after scan) #\|)
+             (incf bars-seen)
+             (fo)
+             (go start))
+           (if (evenp bars-seen)
+               (unless (whitespacep syntax (object-after scan))
+                 (fo)
+                 (go start))
+               (when (constituentp (object-after scan))
+                 (fo)
+                 (go start)))
+           (end))))))
 
 (defmethod lex ((syntax lisp-syntax) (state lexer-error-state) scan)
   (macrolet ((fo () `(forward-object scan)))
@@ -703,7 +708,7 @@ along with any default values) that can be used in a
 ;;; nonterminals
 
 (defclass line-comment (lisp-nonterminal) ())
-(defclass long-comment (lisp-nonterminal) ())  
+(defclass long-comment (lisp-nonterminal) ())
 (defclass error-symbol (lisp-nonterminal) ())
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -772,13 +777,13 @@ along with any default values) that can be used in a
 	  (with-slots (start-mark size) result
 	     (setf start-mark (clone-mark scan :right)
 		   size 0))))
-     result))     
+     result))
 
 (define-parser-state error-state (lexer-error-state parser-state) ())
 (define-parser-state error-reduce-state (lexer-toplevel-state parser-state) ())
 
 (define-lisp-action (error-reduce-state (eql nil))
-  (throw 'done nil)) 
+  (throw 'done nil))
 
 ;;; the default action for any lexeme is shift
 (define-lisp-action (t lisp-lexeme)
@@ -791,14 +796,14 @@ along with any default values) that can be used in a
 ;;; the default new state is the error state
 (define-new-lisp-state (t parser-symbol) error-state)
 
-;;; the new state when an error-state 
+;;; the new state when an error-state
 (define-new-lisp-state (t error-symbol) error-reduce-state)
 
 
-;;;;;;;;;;;;;;;; Top-level 
+;;;;;;;;;;;;;;;; Top-level
 
 #| rules
-   form* -> 
+   form* ->
    form* -> form* form
 |#
 
@@ -818,7 +823,7 @@ along with any default values) that can be used in a
   (reduce-all form*))
 
 (define-new-lisp-state (|initial-state | form*) |form* | )
-  
+
 (define-lisp-action (|form* | (eql nil))
   (throw 'done nil))
 
@@ -927,7 +932,7 @@ along with any default values) that can be used in a
 (define-lisp-action (|" word* " | t)
   (reduce-until-type complete-string-form string-start-lexeme))
 
-;;; reduce at the end of the buffer 
+;;; reduce at the end of the buffer
 (define-lisp-action (|" word* | (eql nil))
   (reduce-until-type incomplete-string-form string-start-lexeme))
 
@@ -1125,7 +1130,7 @@ along with any default values) that can be used in a
 (define-new-lisp-state (|#- form | form) |#- form form |)
 (define-new-lisp-state (|#- | comment) |#- |)
 (define-new-lisp-state (|#- form | comment) |#- form |)
-  
+
 (define-lisp-action (|#+ form form | t)
   (reduce-until-type reader-conditional-positive-form reader-conditional-positive-lexeme))
 
@@ -1292,7 +1297,7 @@ along with any default values) that can be used in a
 	      (t (loop with new-tree = (cadr (member tree siblings :test #'eq))
 		       until (null (children new-tree))
 		       do (setf new-tree (car (children new-tree)))
-		       finally (return new-tree)))))))	 
+		       finally (return new-tree)))))))
 
 (defun find-last-valid-lexeme (parse-tree offset)
   (cond ((or (null parse-tree) (null (start-offset parse-tree))) nil)
@@ -1302,7 +1307,7 @@ along with any default values) that can be used in a
 	 (find-last-valid-lexeme (car (last (children parse-tree))) offset))
 	((>= (end-offset parse-tree) offset)
 	 (find-last-valid-lexeme (preceding-parse-tree parse-tree) offset))
-	(t parse-tree)))  
+	(t parse-tree)))
 
 (defun find-first-potentially-valid-lexeme (parse-trees offset)
   (cond ((null parse-trees) nil)
@@ -1322,7 +1327,7 @@ along with any default values) that can be used in a
   (and (eq (class-of tree1) (class-of tree2))
        (eq (parser-state tree1) (parser-state tree2))
        (= (end-offset tree1) (end-offset tree2))))
-  
+
 (defmethod print-object ((mark mark) stream)
   (print-unreadable-object (mark stream :type t :identity t)
     (format stream "~s" (offset mark))))
@@ -1350,7 +1355,7 @@ along with any default values) that can be used in a
 			      (>= (start-offset potentially-valid-trees)
 				  (end-offset stack-top)))
 		    do (setf potentially-valid-trees
-			     (next-tree potentially-valid-trees)))))))	    
+			     (next-tree potentially-valid-trees)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -1435,7 +1440,7 @@ list. If no such package is specified, return \"CLIM-USER\"."
                          (typep x 'complete-list-form))
                 (let ((candidate (first-form (children x))))
                   (and (form-token-p candidate)
-                       (eq (token-to-object syntax candidate
+                       (eq (form-to-object syntax candidate
                                             :no-error t)
                            'cl:in-package)))))))
       (with-slots (stack-top) syntax
@@ -1457,12 +1462,12 @@ list. If no such package is specified, return \"CLIM-USER\"."
            (when (form-list-p x)
              (let ((candidate (first-form (children x))))
                (and (form-token-p candidate)
-                    (eq (token-to-object syntax candidate
+                    (eq (form-to-object syntax candidate
                                          :no-error t)
                         'cl:in-package)))))
          (extract (x)
            (let ((designator (second-form (children x))))
-             (token-to-object syntax designator
+             (form-to-object syntax designator
                               :no-error t))))
     (with-slots (stack-top) syntax
       (loop for child in (children stack-top)
@@ -1672,18 +1677,18 @@ the form that `token' quotes, peeling away all quote forms."
   "Return the text of the definition at mark."
   (let ((definition (definition-at-mark mark syntax)))
     (buffer-substring (buffer mark)
-                      (start-offset definition)           
+                      (start-offset definition)
                       (end-offset definition))))
-                      
+
 (defun text-of-expression-at-mark (mark-or-offset syntax)
   "Return the text of the expression at `mark-or-offset'."
   (let ((expression (expression-at-mark mark-or-offset syntax)))
-    (token-string syntax expression)))
+    (form-string syntax expression)))
 
 (defun symbol-name-at-mark (mark-or-offset syntax)
   "Return the text of the symbol at `mark-or-offset'."
   (let ((token (symbol-at-mark mark-or-offset syntax)))
-    (when token (token-string syntax token))))
+    (when token (form-string syntax token))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -1711,6 +1716,7 @@ the form that `token' quotes, peeling away all quote forms."
 (define-form-predicate form-quoted-p (quote-form backquote-form))
 (define-form-predicate form-comma-p (comma-form))
 (define-form-predicate form-comma-at-p (comma-at-form))
+(define-form-predicate form-comma-dot-p (comma-dot-form))
 
 (define-form-predicate comment-p (comment))
 
@@ -1805,16 +1811,16 @@ after `string'."
 (defmethod display-parse-tree :around (parse-symbol stream (drei drei)
                                                     (syntax lisp-syntax))
   (with-slots (top bot) drei
-     (when (and (start-offset parse-symbol) 
+     (when (and (start-offset parse-symbol)
                 (mark< (start-offset parse-symbol) bot)
                 (mark> (end-offset parse-symbol) top))
-       (call-next-method))))  
+       (call-next-method))))
 
 (defmethod display-parse-tree (parse-symbol stream (drei drei)
                                (syntax lisp-syntax))
   (with-slots (top bot) drei
     (loop for child in (children parse-symbol)
-       when (and (start-offset child) 
+       when (and (start-offset child)
                  (mark> (end-offset child) top))
          do (if (mark< (start-offset child) bot)
                 (display-parse-tree child stream drei syntax)
@@ -1850,9 +1856,9 @@ after `string'."
 
 (defmethod display-parse-tree ((parse-symbol token-mixin) stream (drei drei) (syntax lisp-syntax))
   (if (> (the fixnum (end-offset parse-symbol)) (the fixnum (start-offset parse-symbol)))
-      (let ((string (token-string syntax parse-symbol)))
+      (let ((string (form-string syntax parse-symbol)))
         (multiple-value-bind (symbol status)
-            (token-to-object syntax parse-symbol :no-error t)
+            (form-to-object syntax parse-symbol :no-error t)
           (with-output-as-presentation
               (stream (if status symbol string)
                       (if status 'symbol 'unknown-symbol)
@@ -1881,7 +1887,7 @@ after `string'."
               :id-test #'equal
               :cache-value parser-symbol
               :cache-test #'eql)
-    (let ((object (token-to-object syntax parser-symbol)))
+    (let ((object (form-to-object syntax parser-symbol)))
       (present object (presentation-type-of object) :stream stream))))
 
 (defmethod display-parse-tree ((parser-symbol lisp-lexeme) stream (drei drei)
@@ -1900,15 +1906,15 @@ after `string'."
       (with-slots (ink face) parser-symbol
         (setf ink (medium-ink (sheet-medium stream))
               face (text-style-face (medium-text-style (sheet-medium stream))))
-        (let ((string (token-string syntax parser-symbol)))
+        (let ((string (form-string syntax parser-symbol)))
           (present string 'string :stream stream))))))
-          
+
 (defmethod display-parse-tree :before ((parse-symbol lisp-lexeme) stream (drei drei)
                                        (syntax lisp-syntax))
   (handle-whitespace stream (buffer drei) *white-space-start* (start-offset parse-symbol))
   (setf *white-space-start* (end-offset parse-symbol)))
 
-(define-presentation-type lisp-string () 
+(define-presentation-type lisp-string ()
                           :description "lisp string")
 
 (defmethod display-parse-tree ((parse-symbol complete-string-form) stream (drei drei) (syntax lisp-syntax))
@@ -1980,7 +1986,7 @@ after `string'."
   "The KEYWORD package.")
 
 (defmethod eval-feature-conditional ((conditional token-mixin) (syntax lisp-syntax))
-  (let* ((string (token-string syntax conditional))
+  (let* ((string (form-string syntax conditional))
 	 (symbol (parse-symbol string :package +keyword-package+)))
     (member symbol *features*)))
 
@@ -1996,7 +2002,7 @@ after `string'."
 				(remove-if
 				 #'comment-p
 				 children))))
-	       (type-string (token-string syntax type))
+	       (type-string (form-string syntax type))
 	       (type-symbol (parse-symbol type-string :package +keyword-package+)))
 	  (case type-symbol
 	    (:and (funcall #'every #'eval-fc conditionals))
@@ -2004,7 +2010,7 @@ after `string'."
 	    (:not (when conditionals
 		    (funcall #'(lambda (f l) (not (apply f l)))
 			     #'eval-fc conditionals)))))))))
-	  
+
 (defmethod display-parse-tree ((parse-symbol complete-list-form) stream (drei drei) (syntax lisp-syntax))
   (let* ((children (children parse-symbol))
          (point-offset (the fixnum (offset (point drei))))
@@ -2053,10 +2059,10 @@ after `string'."
   (let ((*current-faces* *standard-faces*))
     (with-slots (stack-top) syntax
       (display-parse-tree stack-top stream drei syntax))))
-    
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; exploit the parse 
+;;; exploit the parse
 
 (defun form-before-in-children (children offset)
   (loop for (first . rest) on children
@@ -2084,7 +2090,7 @@ after `string'."
                             (when (formp first)
                               first)))))
              (t nil))))
-		 
+
 (defun form-before (syntax offset)
   (with-slots (stack-top) syntax
     (if (or (null (start-offset stack-top))
@@ -2109,14 +2115,14 @@ after `string'."
                              (when (formp child)
                                child)))))
               (t nil))))
-		 
+
 (defun form-after (syntax offset)
   (with-slots (stack-top) syntax
     (if (or (null (start-offset stack-top))
 	    (>= offset (end-offset stack-top)))
 	nil
 	(form-after-in-children (children stack-top) offset))))
-	     
+
 (defun form-around-in-children (children offset)
   (loop for child in children
 	if (formp child)
@@ -2142,9 +2148,9 @@ after `string'."
 	(form-around-in-children (children stack-top) offset))))
 
 (defun find-list-parent-offset (form fn)
-  "Find a list parent of `token' and return `fn' 
-applied to this parent token. `Fn' should be a function 
-that returns an offset when applied to a 
+  "Find a list parent of `token' and return `fn'
+applied to this parent token. `Fn' should be a function
+that returns an offset when applied to a
 token (eg. `start-offset' or `end-offset'). If a list
 parent cannot be found, return `fn' applied to `form'."
   (let ((parent (parent form)))
@@ -2155,9 +2161,9 @@ parent cannot be found, return `fn' applied to `form'."
       (t (find-list-parent-offset parent fn)))))
 
 (defun find-list-child-offset (form fn &optional (min-offset 0))
-  "Find a list child of `token' with a minimum start 
+  "Find a list child of `token' with a minimum start
 offset of `min-offset' and return `fn' applied to this child token.
-`Fn' should be a function that returns an offset when applied to a 
+`Fn' should be a function that returns an offset when applied to a
 token (eg. `start-offset' or `end-offset'). If a list child cannot
 be found, return nil."
   (labels ((has-list-child (form)
@@ -2188,7 +2194,7 @@ be found, return nil."
 
 (defgeneric forward-one-list (mark syntax)
   (:documentation
-   "Move `mark' forward by one list. 
+   "Move `mark' forward by one list.
 Return T if successful, or NIL if the buffer limit was reached."))
 
 (defmethod forward-one-list (mark (syntax lisp-syntax))
@@ -2231,10 +2237,10 @@ NIL if the buffer limit was reached."))
                         (list-form (start-offset potential-form))
                         (null nil)
                         (t (find-list-child-offset
-                            (parent potential-form) 
+                            (parent potential-form)
                             fn
                             offset)))))
-      (when new-offset 
+      (when new-offset
         (progn (setf (offset mark) (1+ new-offset)) t)))))
 
 (defmethod forward-one-down (mark (syntax lisp-syntax))
@@ -2268,7 +2274,7 @@ NIL if the buffer limit was reached."))
 		     (mark<= mark (end-offset form)))
 	     do (return (eval-form-for-drei
                          (get-usable-image syntax)
-                         (token-to-object syntax form :read t))))))
+                         (form-to-object syntax form :read t))))))
 
 (defmethod backward-one-definition (mark (syntax lisp-syntax))
   (with-slots (stack-top) syntax
@@ -2338,7 +2344,7 @@ Uses part of the READ algorithm in CLTL2 22.1.1."
     (tagbody
      step-8
        (unless (< index length) (go end))
-       (cond 
+       (cond
 	 ((char/= (char string index) #\\ #\|)
 	  (push (char string index) chars)
 	  (incf index)
@@ -2355,7 +2361,7 @@ Uses part of the READ algorithm in CLTL2 22.1.1."
 	  (go step-9)))
      step-9
        (unless (< index length) (go end))
-       (cond 
+       (cond
 	 ((char/= (char string index) #\\ #\|)
 	  (push (length chars) irreplaceables)
 	  (push (char string index) chars)
@@ -2446,18 +2452,20 @@ and whether the symbol-name was separated from the package by a double colon."
 		(parse-token input readtable-case))))))
 |#
 
-(defun token-string (syntax token)
-  "Return the string that specifies `token' in the buffer of
-  `syntax'."
-  (buffer-substring (buffer syntax)
-                    (start-offset token)
-                    (end-offset token)))
+(defun form-string (syntax form)
+  "Return the string that correspond to `form' in the buffer of
+`syntax'."
+  (buffer-substring (buffer syntax) (start-offset form) (end-offset form)))
 
 (defun parse-symbol (string &key (package *package*) (case (readtable-case *readtable*)))
   "Find the symbol named STRING.
-Return the symbol and a flag indicating whether the symbol was
-found in the package. Note that a symbol may be returned even if
-it was not found in a package."
+Return the symbol, the package of the symbol and a flag
+indicating whether the symbol was found in the package. Note that
+a symbol and a package may be returned even if it was not found
+in a package, for example if you do `foo-pkg::bar', where
+`foo-pkg' is an existing package but `bar' isn't interned in
+it. If the package cannot be found, NIL will be returned in its
+place."
   (multiple-value-bind (symbol-name package-name)
       (parse-token string case)
     (let ((package (cond ((string= package-name "") +keyword-package+)
@@ -2467,197 +2475,452 @@ it was not found in a package."
           (when package
             (find-symbol symbol-name package))
         (if (or symbol status)
-            (values symbol status)
-            (values (make-symbol symbol-name) nil))))))
+            (values symbol package status)
+            (values (make-symbol symbol-name) package nil))))))
+
+;;; The following algorithm for reading backquote forms was originally
+;;; taken from the example reader macro in Common LISP the Language
+;;; 2nd. Ed, and was subsequently optimized and cleaned with some
+;;; ideas taken from SBCL's backquote implementation.
+
+;;; Define synonyms for the lisp functions we use, so that we can
+;;; eventually recognize them and print them in a pretty-printer-style
+;;; way.
+(macrolet ((def (b-name name)
+             (let ((args (gensym "ARGS")))
+               `(defun ,b-name (&rest ,args)
+                  (declare (dynamic-extent ,args))
+                  (apply #',name ,args)))))
+  (def backquote-list list)
+  (def backquote-list* list*)
+  (def backquote-append append)
+  (def backquote-nconc nconc)
+  (def backquote-cons cons))
+
+(defun backquote-vector (list)
+  (declare (list list))
+  (coerce list 'simple-vector))
+
+(defconstant +comma-marker+ (gensym "COMMA")
+  "The marker used for identifying commas.")
+(defconstant +comma-at-marker+ (gensym "COMMA-AT")
+  "The marker used for identifying ,@ contructs.")
+(defconstant +comma-dot-marker+ (gensym "COMMA-DOT")
+  "The marker used for identifying ,. contructs.")
+
+(defconstant +clobberable-marker+ (gensym "CLOBBERABLE")
+  "Marker for a constant that we can safely modify
+destructively.")
+
+(defconstant +quote-marker+ 'quote
+  "The marker used for identifying quote forms in backquoted
+forms.")
+(defconstant +quote-nil-marker+ (list +quote-marker+ nil))
+(defconstant +list-marker+ 'backquote-list)
+(defconstant +append-marker+ 'backquote-append)
+(defconstant +list*-marker+ 'backquote-list*)
+(defconstant +nconc-marker+ 'backquote-nconc)
+(defconstant +vector-marker+ 'backquote-vector)
+
+(defun completely-process-backquote (expression)
+  "Considering `expression' a list (or tree) containing comma,
+comma-at and comma-dot markers, return an expression constructed
+so that it, when evaluated, will behave like a backquoted form is
+expected to. `Expression' is treated as being implicitly preceded
+by a backquote."
+  (remove-backquote-tokens (simplify-backquote (process-backquote expression))))
+
+(defun process-backquote (x)
+  (cond ((vectorp x)
+         ;; FIXME? Is there a faster way to handle this?
+         (list +vector-marker+
+               (process-backquote
+                (loop for elt across x
+                   collecting elt))))
+        ((atom x)
+         (list +quote-marker+ x))
+        ((eq (car x) +comma-marker+) (cadr x))
+        ((eq (car x) +comma-at-marker+)
+         (error ",@~S after `" (cadr x)))
+        ((eq (car x) +comma-dot-marker+)
+         (error ",.~S after `" (cadr x)))
+        (t (do ((p x (cdr p))
+                (q '() (cons (bracket (car p)) q)))
+               ((atom p)
+                (cons +append-marker+
+                      (nreconc q (list (list +quote-marker+ p)))))
+             (when (eq (car p) +comma-marker+)
+               (unless (null (cddr p)) (error "Malformed ,~S" p))
+               (return (cons +append-marker+
+                             (nreconc q (list (cadr p))))))
+             (when (eq (car p) +comma-at-marker+)
+               (error "Dotted ,@~S" p))
+             (when (eq (car p) +comma-dot-marker+)
+               (error "Dotted ,.~S" p))))))
+
+(defun bracket (x)
+  (cond ((atom x)
+         (list +list-marker+ (process-backquote x)))
+        ((eq (car x) +comma-marker+)
+         (list +list-marker+ (cadr x)))
+        ((eq (car x) +comma-at-marker+)
+         (cadr x))
+        ((eq (car x) +comma-dot-marker+)
+         (list +clobberable-marker+ (cadr x)))
+        (t (list +list-marker+ (process-backquote x)))))
+
+(defun remove-backquote-tokens (x)
+  (cond ((atom x) x)
+        ((eq (car x) +clobberable-marker+)
+         (remove-backquote-tokens (cadr x)))
+        ((and (eq (car x) +list*-marker+)
+              (consp (cddr x))
+              (null (cdddr x)))
+         (cons 'cons (maptree #'remove-backquote-tokens (cdr x))))
+        (t (maptree #'remove-backquote-tokens x))))
+
+(defun splicing-comma-marker-p (x)
+  "True for forms that textually looks like
+,@foo or ,.foo."
+  (and (consp x)
+       (or (eq (car x) +comma-at-marker+)
+           (eq (car x) +comma-dot-marker+))))
+
+(defun comma-marker-p (x)
+  "This predicate is true of a form that textually looks like
+,@foo or ,.foo or just plain ,foo."
+  (and (consp x)
+       (or (eq (car x) +comma-marker+)
+           (eq (car x) +comma-at-marker+)
+           (eq (car x) +comma-dot-marker+))))
+
+(defun simplify-backquote (x)
+  (if (atom x)
+      x
+      (let ((x (if (eq (car x) +quote-marker+)
+                   x
+                   (maptree #'simplify-backquote x))))
+        (if (not (eq (car x) +append-marker+))
+            x
+            (simplify-backquote-args x)))))
+
+(defun simplify-backquote-args (x)
+  (do ((args (reverse (cdr x)) (cdr args))
+       (result
+        nil
+        (cond ((atom (car args))
+               (attach-backquote-append +append-marker+ (car args) result))
+              ((and (eq (caar args) +list-marker+)
+                    (notany #'splicing-comma-marker-p (cdar args)))
+               (attach-backquote-conses (cdar args) result))
+              ((and (eq (caar args) +list-marker+)
+                    (notany #'splicing-comma-marker-p (cdar args)))
+               (attach-backquote-conses
+                (reverse (cdr (reverse (cdar args))))
+                (attach-backquote-append +append-marker+
+                                         (car (last (car args)))
+                                         result)))
+              ((and (eq (caar args) +quote-marker+)
+                    (consp (cadar args))
+                    (not (comma-marker-p (cadar args)))
+                    (null (cddar args)))
+               (attach-backquote-conses (list (list +quote-marker+
+                                                    (caadar args)))
+                                        result))
+              ((eq (caar args) +clobberable-marker+)
+               (attach-backquote-append +nconc-marker+ (cadar args) result))
+              (t (attach-backquote-append +append-marker+
+                                          (car args)
+                                          result)))))
+      ((null args) result)))
+
+(defun attach-backquote-conses (items result)
+  "The effect of `attach-backquote-conses' is to produce a form as if by
+`(list* ,@items ,result) but some simplifications are done on the
+fly.
+
+ (LIST* 'a 'b 'c 'd) => '(a b c . d)
+ (LIST* a b c 'nil) => (LIST a b c)
+ (LIST* a b c (LIST* d e f g)) => (LIST* a b c d e f g)
+ (LIST* a b c (LIST d e f g)) => (LIST a b c d e f g)"
+  (cond ((and (every #'null-or-quoted items)
+              (null-or-quoted result))
+         (list +quote-marker+
+               (append (mapcar #'cadr items) (cadr result))))
+        ((or (null result) (equal result +quote-marker+))
+         (cons +list-marker+ items))
+        ((and (consp result)
+              (or (eq (car result) +list-marker+)
+                  (eq (car result) +list*-marker+)))
+         (cons (car result) (append items (cdr result))))
+        (t (cons +list*-marker+ (append items (list result))))))
+
+(defun null-or-quoted (x)
+  (or (null x) (and (consp x)
+                    (eq (car x) +quote-marker+))))
+
+(defun attach-backquote-append (op item result)
+  "When `attach-backquote-append' is called, the OP should be
+`+append-marker+' or `+nconc-marker' This produces a form (op
+item result) but some simplifications are done on the fly:
+
+ (op '(a b c) '(d e f g)) => '(a b c d e f g)
+ (op item 'nil) => item, provided item is not a splicable frob
+ (op item 'nil) => (op item), if item is a splicable frob
+ (op item (op a b c)) => (op item a b c)"
+  (cond ((and (null-or-quoted item) (null-or-quoted result) (listp (cadr item)))
+         (list +nconc-marker+ (append (cadr item) (cadr result))))
+        ((or (null result) (equal result +quote-nil-marker+))
+         (if (splicing-comma-marker-p item) (list op item) item))
+        ((and (consp result) (eq (car result) op))
+         (list* (car result) item (cdr result)))
+        (t (list op item result))))
 
 (defun token-to-symbol (syntax token &optional (case (readtable-case *readtable*)))
   "Return the symbol `token' represents. If the symbol cannot be
 found in a package, an uninterned symbol will be returned."
-  (token-to-object syntax token
-                   :case case
-                   :no-error t))
+  (form-to-object syntax token :case case :no-error t))
 
-(defgeneric token-to-object (syntax token &key no-error package read backquoted &allow-other-keys)
-  (:documentation "Return the Lisp object `token' would evaluate
-to if read. An attempt will be made to construct objects from
-incomplete tokens. This function may signal an error if
-`no-error' is nil and `token' cannot be converted to a Lisp
-object. Otherwise, nil will be returned.")
-  (:method :around (syntax (token t) &key package no-error &allow-other-keys)
+(define-condition form-conversion-error (simple-error user-condition-mixin)
+  ((syntax :reader syntax :initarg :syntax
+           :initform (error "You must provide the syntax the
+erroneous form is in."))
+   (form :reader form :initarg :form
+         :initform (error "You must provide the erroneous form."))
+   (problem :reader problem :initarg :problem :initform "invalid form"))
+  (:report (lambda (condition stream)
+	     (format stream "Syntax problem: ~A" (problem condition))))
+  (:documentation "This condition (or a subclass) is signalled by
+`form-to-object' when a form cannot be converted to a proper Lisp
+object."))
+
+(defun form-conversion-error (syntax form problem &rest args)
+  "Signal a `form-conversion-error' for the `form' in
+`syntax'. `Problem' should be a succint description of why `form'
+is invalid and cannot be converted to an object. `Problem' is a
+format string, in which case `args' is used as format
+parameters."
+  (error 'form-conversion-error
+         :syntax syntax :form form :problem (apply #'format nil problem args)))
+
+(defmethod handle-drei-condition (drei (condition form-conversion-error))
+  (with-minibuffer-stream (minibuffer)
+    (let ((*print-escape* nil))
+      (princ condition minibuffer)))
+  (setf (offset (point drei))
+        (start-offset (form condition))))
+
+(defgeneric form-to-object (syntax form &key no-error package read backquote-level case)
+  (:documentation "Return the Lisp object `form' would become if
+read. An attempt will be made to construct objects from
+incomplete tokens. Some forms (such as negative
+readtime-conditional-forms) may return no values. This function
+may signal an error of type `form-conversion-error' if `no-error'
+is false and `token' cannot be converted to a Lisp
+object. Otherwise, NIL will be returned. Also, if `read' is true
+and `no-error' is false, an error of type `form-conversion-error'
+will be signalled for incomplete forms.")
+  (:method :around ((syntax lisp-syntax) (form form) &key package no-error &allow-other-keys)
            ;; Ensure that every symbol that is READ will be looked up
            ;; in the correct package. Also handle quoting.
            (flet ((act ()
                     (let ((*package* (or package
                                          (package-at-mark
-                                          syntax (start-offset token)))))
+                                          syntax (start-offset form)))))
 
                       (call-next-method))))
-             (if no-error 
-                 (ignore-errors (act))
+             (if no-error
+                 (handler-case (act)
+                   (form-conversion-error ()))
                  (act))))
-  (:method (syntax (token t) &key no-error &allow-other-keys)
-           (declare (ignore no-error))
-           ;; We ignore `no-error' as it is truly a bug in the syntax
-           ;; module if no handler method is specialized on this form.
-           (error "Cannot convert token to Lisp object: ~A"
-                  token))
-  (:method (syntax (token incomplete-form-mixin) &key no-error &allow-other-keys)
-           (unless no-error
-             (error "Cannot convert incomplete form to Lisp object: ~A"
-                    token))))
+  (:method ((syntax lisp-syntax) (form t) &rest args
+            &key no-error &allow-other-keys)
+    (unless no-error
+      (apply #'no-applicable-method #'form-to-object syntax form args)))
+  (:method :around ((syntax lisp-syntax) (form incomplete-form-mixin)
+                    &key read no-error &allow-other-keys)
+           (when (and read (null no-error))
+             (form-conversion-error syntax form "form is incomplete"))))
+
+(defmethod form-to-object ((syntax lisp-syntax) (form error-lexeme)
+                           &key &allow-other-keys)
+  (form-conversion-error syntax form "invalid syntax"))
 
 ;;; The complicated primary structure forms.
 
-;; The problem is that we can't portably create in-memory backquote
-;; forms, so we have to rewrite them to calls to `nconc'. I think this
-;; is valid, because the CLHS doesn't specify the in-memory
-;; representation of backquoted forms, and thus the user can't assume
-;; that it isn't just a whole bunch of calls to `nconc' anyway.
-(defmethod token-to-object (syntax (token list-form) &rest args &key backquoted)
-  (if backquoted
-      `(nconc ,@(loop for child in (children token)
-                   if (typep child 'comma-at-form)
-                   collect (apply #'token-to-object syntax child :backquoted nil args)
-                   else if (typep child 'comma-form)
-                   collect `(list ,(apply #'token-to-object syntax child :backquoted nil args))
-                   else if (form-token-p child)
-                   collect `(list ,`',(apply #'token-to-object syntax child args))
-                   else if (formp child)
-                   collect `(list ,(apply #'token-to-object syntax child args))))
-      (mapcar #'(lambda (child)
-                  (apply #'token-to-object syntax child args))
-              (remove-if-not #'formp (children token)))))
+(defmethod form-to-object ((syntax lisp-syntax) (form list-form) &rest args
+                           &key &allow-other-keys)
+  (mapcan #'(lambda (child)
+              (multiple-value-list (apply #'form-to-object syntax child args)))
+          (remove-if-not #'formp (children form))))
 
-(defmethod token-to-object (syntax (token complete-quote-form) &rest args &key backquoted)
-  (if backquoted
-      (let ((quoted-form (first-form (children token))))
-        (if (form-token-p quoted-form)
-            `(list 'quote (quote ,(apply #'token-to-object syntax (second (children token)) args)))
-            `(list 'quote ,(apply #'token-to-object syntax (second (children token)) args))))
-      `',(apply #'token-to-object syntax (second (children token)) args)))
+(defmethod form-to-object ((syntax lisp-syntax) (form complete-quote-form) &rest args
+                           &key (backquote-level 0) &allow-other-keys)
+  (if (plusp backquote-level)
+      (list +quote-marker+ (apply #'form-to-object syntax (second (children form)) args))
+      `',(apply #'form-to-object syntax (second (children form)) args)))
 
-(defmethod token-to-object (syntax (token incomplete-quote-form) &rest args)
+(defmethod form-to-object (syntax (form incomplete-quote-form) &rest args)
   (declare (ignore args))
   ;; Utterly arbitrary, but reasonable in my opinion.
   '(quote))
 
-;; I'm not sure backquotes are handled correctly, but they should be,
-;; at least when :read t is specified.
-(defmethod token-to-object (syntax (token backquote-form) &rest args)
-  (let ((backquoted-form (first-form (children token))))
-    (if (form-token-p backquoted-form)
-        `',(apply #'token-to-object syntax backquoted-form args)
-        (apply #'token-to-object syntax  backquoted-form :backquoted t args))))
+(defmethod form-to-object ((syntax lisp-syntax) (form backquote-form) &rest args
+                           &key (backquote-level 0) &allow-other-keys)
+  (let ((backquoted-form (first-form (children form))))
+    (when (or (form-comma-p backquoted-form)
+              (form-comma-at-p backquoted-form)
+              (form-comma-dot-p backquoted-form))
+      (form-conversion-error syntax form "comma form cannot follow backquote"))
+    (let ((backquoted-obj (apply #'form-to-object syntax backquoted-form
+                                 :backquote-level (1+ backquote-level) args)))
+      (completely-process-backquote backquoted-obj))))
 
-(defmethod token-to-object (syntax (token comma-form) &rest args)
-  (apply #'token-to-object syntax (first-form (children token)) :backquoted nil args))
+(defmethod form-to-object ((syntax lisp-syntax) (form comma-form) &rest args
+                           &key read (backquote-level 0 backquote-active-p)
+                           &allow-other-keys)
+  (when (and read (or (null backquote-active-p)
+                      (zerop backquote-level)))
+    (form-conversion-error syntax form "comma form found outside backquote"))
+  (let ((obj (apply #'form-to-object syntax (first-form (children form))
+                    :backquote-level (max (1- backquote-level) 0) args)))
+    (if (plusp backquote-level)
+        (list +comma-marker+ obj)
+        obj)))
 
-(defmethod token-to-object (syntax (token comma-at-form) &rest args)
-  (apply #'token-to-object syntax (first-form (children token)) :backquoted nil args))
+(defmethod form-to-object ((syntax lisp-syntax) (form comma-at-form) &rest args
+                           &key read (backquote-level 0 backquote-active-p)
+                           &allow-other-keys)
+  (when (and read (or (null backquote-active-p)
+                      (zerop backquote-level)))
+    (form-conversion-error syntax form "comma-at form found outside backquote"))
+  (let ((obj (apply #'form-to-object syntax (first-form (children form))
+                    :backquote-level (max (1- backquote-level) 0) args)))
+    (if (plusp backquote-level)
+        (list +comma-at-marker+ obj)
+        obj)))
+
+(defmethod form-to-object ((syntax lisp-syntax) (form comma-dot-form) &rest args
+                           &key read (backquote-level 0 backquote-active-p)
+                           &allow-other-keys)
+  (when (and read (or (null backquote-active-p)
+                      (zerop backquote-level)))
+    (form-conversion-error syntax form "comma-dot form found outside backquote"))
+  (let ((obj (apply #'form-to-object syntax (first-form (children form))
+                    :backquote-level (max (1- backquote-level) 0) args)))
+    (if (plusp backquote-level)
+        (list +comma-dot-marker+ obj)
+        obj)))
 
 ;;; The atom(-ish) forms.
 
-(defmethod token-to-object (syntax (token complete-token-lexeme)
-                            &key no-error read (case (readtable-case *readtable*))
-                            &allow-other-keys)
-  (declare (ignore no-error))
-  (if read
-      (read-from-string (token-string syntax token))
-      (parse-symbol (token-string syntax token) :case case)))
+(defmethod form-to-object ((syntax lisp-syntax) (form complete-token-lexeme)
+                           &key read (case (readtable-case *readtable*))
+                           &allow-other-keys)
+  (multiple-value-bind (symbol package status)
+      (parse-symbol (form-string syntax form)
+                    :package *package* :case case)
+    (values (cond ((and read (null status))
+                   (intern (symbol-name symbol) package))
+                  (t symbol)))))
 
-(defmethod token-to-object (syntax (token complete-token-form)
-                            &key no-error read (case (readtable-case *readtable*))
-                            &allow-other-keys)
-  (declare (ignore no-error))
-  (if read
-      (read-from-string (token-string syntax token))
-      (parse-symbol (token-string syntax token) :case case)))
+(defmethod form-to-object ((syntax lisp-syntax) (form complete-token-form)
+                           &key read (case (readtable-case *readtable*))
+                           &allow-other-keys)
+  (multiple-value-bind (symbol package status)
+      (parse-symbol (form-string syntax form)
+                    :package *package* :case case)
+    (values (cond ((and read (null status))
+                   (intern (symbol-name symbol) package))
+                  (t symbol)))))
 
-(defmethod token-to-object (syntax (token number-lexeme) &rest args)
-  (declare (ignore args))
+(defmethod form-to-object ((syntax lisp-syntax) (form number-lexeme)
+                           &key &allow-other-keys)
   (let ((*read-base* (base syntax)))
-    (read-from-string (token-string syntax token))))
+    (values (read-from-string (form-string syntax form)))))
 
-(defmethod token-to-object (syntax (token simple-vector-form) &key &allow-other-keys)
+(defmethod form-to-object ((syntax lisp-syntax) (form simple-vector-form)
+                           &key &allow-other-keys)
   (apply #'vector (call-next-method)))
 
-(defmethod token-to-object (syntax (token incomplete-string-form) &rest args)
-  (declare (ignore args))
-  (read-from-string (concatenate 'string
-                                 (token-string syntax token)
-                                 "\"")))
+(defmethod form-to-object ((syntax lisp-syntax) (form incomplete-string-form)
+                           &key &allow-other-keys)
+  (values (read-from-string (concatenate 'string (form-string syntax form) "\""))))
 
-(defmethod token-to-object (syntax (token complete-string-form) &key no-error &allow-other-keys)
-  (declare (ignore no-error))
-  (read-from-string (token-string syntax token)))
+(defmethod form-to-object ((syntax lisp-syntax) (form complete-string-form)
+                           &key &allow-other-keys)
+  (values (read-from-string (form-string syntax form))))
 
-(defmethod token-to-object (syntax (token function-form) &rest args)
-  (list 'cl:function (apply #'token-to-object syntax (second (children token)) args)))
+(defmethod form-to-object ((syntax lisp-syntax) (form function-form) &rest args)
+  (list 'cl:function (apply #'form-to-object syntax (second (children form)) args)))
 
-(defmethod token-to-object (syntax (token complete-character-lexeme) &key &allow-other-keys)
-  (read-from-string (token-string syntax token)))
+(defmethod form-to-object ((syntax lisp-syntax) (form complete-character-lexeme)
+                           &key &allow-other-keys)
+  (or (ignore-errors (values (read-from-string (form-string syntax form))))
+      (form-conversion-error syntax form
+                             "character ~A not recognized"
+                             (form-string syntax form))))
 
-(defmethod token-to-object (syntax (token cons-cell-form) &key &allow-other-keys)
-  (let ((components (remove-if #'(lambda (token)
-                                   (not (formp token)))
-                               (children token))))
-    (if (<= (length components) 2)
-        (cons (token-to-object syntax (first components))
-              (token-to-object syntax (second components)))
-        (loop for (head . tail) on components
-           if (rest tail)
-           collect (token-to-object syntax head)
-           else if (not (null tail))
-           append (cons (token-to-object syntax head)
-                        (token-to-object syntax (first tail)))))))
+(defmethod form-to-object ((syntax lisp-syntax) (form cons-cell-form) &rest args
+                           &key &allow-other-keys)
+  (apply #'list* (mapcar #'(lambda (form)
+                             (apply #'form-to-object syntax form args))
+                         (remove-if-not #'formp (children form)))))
 
-;; Perhaps just returning no values for conditionals whose condition
-;; evaluates to NIL isn't such a good idea?
-(defmethod token-to-object (syntax (token reader-conditional-positive-form) &key &allow-other-keys)
-  (let ((conditional (second-noncomment (children token))))
+(defmethod form-to-object ((syntax lisp-syntax) (form reader-conditional-positive-form)
+                           &key &allow-other-keys)
+  (let ((conditional (second-noncomment (children form))))
     (if (eval-feature-conditional conditional syntax)
-        (token-to-object syntax (third-noncomment (children token)))
+        (form-to-object syntax (third-noncomment (children form)))
         (values))))
 
-(defmethod token-to-object (syntax (token reader-conditional-negative-form) &key &allow-other-keys)
-  (let ((conditional (second-noncomment (children token))))
-    (when (not (eval-feature-conditional conditional syntax))
-      (token-to-object syntax (third-noncomment (children token))))))
+(defmethod form-to-object ((syntax lisp-syntax) (form reader-conditional-negative-form)
+                           &key &allow-other-keys)
+  (let ((conditional (second-noncomment (children form))))
+    (if (not (eval-feature-conditional conditional syntax))
+        (form-to-object syntax (third-noncomment (children form)))
+        (values))))
 
-(defmethod token-to-object (syntax (token uninterned-symbol-form) &key &allow-other-keys)
-  (read-from-string (token-string syntax token)))
+(defmethod form-to-object ((syntax lisp-syntax) (form uninterned-symbol-form)
+                           &key (case (readtable-case *readtable*)) &allow-other-keys)
+  (make-symbol (parse-token (form-string syntax form) case)))
 
-(defmethod token-to-object (syntax (token undefined-reader-macro-form) &key read &allow-other-keys)
+(defmethod form-to-object ((syntax lisp-syntax) (form undefined-reader-macro-form)
+                           &key read &allow-other-keys)
   ;; ???
   (when read
-    (read-from-string (token-string syntax token))))
+    (read-from-string (form-string syntax form))))
 
-(defmethod token-to-object ((syntax lisp-syntax) (token literal-object-lexeme) &key &allow-other-keys)
-  (object-after (start-mark token)))
+(defmethod form-to-object ((syntax lisp-syntax) (form literal-object-lexeme) &key &allow-other-keys)
+  (object-after (start-mark form)))
 
-(defmethod token-to-object ((syntax lisp-syntax) (token pathname-form) &key &allow-other-keys)
-  (read-from-string (token-string syntax token)))
+(defmethod form-to-object ((syntax lisp-syntax) (form pathname-form) &key &allow-other-keys)
+  (values (read-from-string (form-string syntax form))))
 
-(defmethod token-to-object ((syntax lisp-syntax) (token incomplete-pathname-form) &rest args &key read &allow-other-keys)
+(defmethod form-to-object ((syntax lisp-syntax) (form incomplete-pathname-form) &rest args &key read &allow-other-keys)
   (if read
       ;; Will cause a reader error (which is what we want).
       (call-next-method)
       ;; Try to create a pathname as much as possible.
-      (let ((pathspec-token (second (children token))))
-        (pathname (if pathspec-token
-                      (apply #'token-to-object syntax pathspec-token
-                             ;; Since `pathspec-token' will be
+      (let ((pathspec-form (second (children form))))
+        (pathname (if pathspec-form
+                      (apply #'form-to-object syntax pathspec-form
+                             ;; Since `pathspec-form' will be
                              ;; incomplete, `read'ing from it is
                              ;; probably bad.
                              :read nil args)
                       "")))))
 
-(defmethod token-to-object ((syntax lisp-syntax) (token complete-function-form) &rest args &key &allow-other-keys)
-  (list 'function (apply #'token-to-object syntax (second (children token)) args)))
+(defmethod form-to-object ((syntax lisp-syntax) (form complete-function-form) &rest args &key &allow-other-keys)
+  (list 'function (apply #'form-to-object syntax (second (children form)) args)))
 
-(defmethod token-to-object ((syntax lisp-syntax) (token bit-vector-form)
-                            &key &allow-other-keys)
-  (read-from-string (token-string syntax token)))
+(defmethod form-to-object ((syntax lisp-syntax) (form bit-vector-form) &key &allow-other-keys)
+  (values (read-from-string (form-string syntax form))))
+
+(defmethod form-to-object ((syntax lisp-syntax) (form readtime-evaluation-form)
+                           &rest args &key read &allow-other-keys)
+  (when read
+    (values (eval (apply #'form-to-object syntax (first-form (children form)) args)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -2724,8 +2987,8 @@ object. Otherwise, nil will be returned.")
       (values tree 1)
       (let ((first-child (elt-noncomment (children tree) 1)))
 	(cond ((and (form-token-p first-child)
-		    (token-to-object syntax first-child))
-	       (compute-list-indentation syntax (token-to-object syntax first-child) tree path))
+		    (form-to-object syntax first-child))
+	       (compute-list-indentation syntax (form-to-object syntax first-child) tree path))
 	      ((null (cdr path))
 	       ;; top level
 	       (if (= (car path) 2)
@@ -2735,7 +2998,7 @@ object. Otherwise, nil will be returned.")
 		   (values (elt-noncomment (children tree) 2) 0)))
 	      (t
 	       ;; inside a subexpression
-	       (indent-form syntax (elt-noncomment (children tree) (car path)) (cdr path)))))))	    
+	       (indent-form syntax (elt-noncomment (children tree) (car path)) (cdr path)))))))
 
 (defmethod indent-form ((syntax lisp-syntax) (tree token-form) path)
   (values tree 0))
@@ -2871,7 +3134,7 @@ object. Otherwise, nil will be returned.")
 
 ;;; non-simple-cases: LOOP, MACROLET, FLET, LABELS
 
-;;; do this better 
+;;; do this better
 (define-list-indentor indent-slot-specs indent-list)
 
 (defmethod compute-list-indentation
@@ -2884,7 +3147,7 @@ object. Otherwise, nil will be returned.")
 	 ;; in the class name or superclasses respectively
 	 (indent-list syntax (elt-noncomment (children tree) (car path)) (cdr path)))
 	(4
-	 ;; in the slot specs 
+	 ;; in the slot specs
 	 (indent-slot-specs syntax (elt-noncomment (children tree) 4) (cdr path)))
 	(t
 	 ;; this is an approximation, might want to do better
@@ -2938,7 +3201,7 @@ object. Otherwise, nil will be returned.")
   (if (null (cdr path))
       ;; top level
       (if (= (car path) 2)
-	  ;; after `cond' 
+	  ;; after `cond'
 	  (values tree 2)
 	  ;; indent like the first clause
 	  (values (elt-noncomment (children tree) 2) 0))
@@ -2969,7 +3232,7 @@ object. Otherwise, nil will be returned.")
       ;; the symbol existing in the current image.  (Arguably, too,
       ;; this is a broken indentation form because it doesn't carry
       ;; over to the implicit tagbodies in macros such as DO.
-      (if (form-token-p (elt-noncomment (children tree) (car path))) 
+      (if (form-token-p (elt-noncomment (children tree) (car path)))
           (values tree 2)
           (values tree 4))
       (indent-form syntax (elt-noncomment (children tree) (car path)) (cdr path))))
@@ -2997,7 +3260,7 @@ object. Otherwise, nil will be returned.")
 (define-simple-indentor (labels indent-local-function-definitions))
 (define-simple-indentor (with-open-file indent-list))
 
-;;; CLIM indentation 
+;;; CLIM indentation
 
 (define-simple-indentor (clim:with-output-as-presentation indent-list))
 (define-simple-indentor (clim:vertically indent-list))
@@ -3010,7 +3273,7 @@ object. Otherwise, nil will be returned.")
 
 (defun compute-path-in-trees (trees n offset)
   (cond ((or (null (first-noncomment trees))
-	     (>= (start-offset (first-noncomment trees)) offset))    
+	     (>= (start-offset (first-noncomment trees)) offset))
 	 (list n))
 	((or (< (start-offset (first-noncomment trees)) offset (end-offset (first-noncomment trees)))
 	     (typep (first-noncomment trees) 'incomplete-form-mixin))

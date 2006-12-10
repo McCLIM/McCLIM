@@ -417,7 +417,7 @@ inserted from `provided-args'.
                               indexing-start-arg
                               operator-form))
            (preceding-arg-obj (when preceding-arg-token
-                                (token-to-object syntax preceding-arg-token
+                                (form-to-object syntax preceding-arg-token
                                                  :no-error t))))
       (values preceding-arg-obj argument-indices))))
 
@@ -461,7 +461,7 @@ inserted from `provided-args'.
 argument\" is defined as an argument that would be directly bound
 to a symbol when evaluating the operators body, or as an argument
 that would be a direct component of a &body or &rest argument."
-  (let ((operator (token-to-object syntax operator-form)))
+  (let ((operator (form-to-object syntax operator-form)))
     (and
      ;; An operator is not an argument to itself.
      (not (eq arg-form
@@ -790,11 +790,11 @@ modification will be generated, respectively."
               ;; If we cannot find a form, there's no point in looking
               ;; up any of this stuff.
               (,operator-sym (when (and ,form-sym (form-list-p ,form-sym))
-                               (token-to-object ,syntax (form-operator ,syntax ,form-sym))))
+                               (form-to-object ,syntax (form-operator ,syntax ,form-sym))))
               (,operands-sym (when (and ,form-sym (form-list-p ,form-sym))
                                (mapcar #'(lambda (operand)
                                            (when operand
-                                             (token-to-object ,syntax operand)))
+                                             (form-to-object ,syntax operand)))
                                        (form-operands ,syntax ,form-sym)))))
          (declare (ignorable ,form-sym ,operator-sym ,operands-sym))
          (multiple-value-bind (,preceding-operand-sym ,operand-indices-sym)
@@ -1022,7 +1022,7 @@ to find completions based on `string'."
                            (start-offset token)
                            (offset mark)))
                    (if useful-token
-                       (token-string syntax token)
+                       (form-string syntax token)
                        ""))
         (if completions
             (if (= (length completions) 1)
