@@ -744,12 +744,7 @@ corresponding commands in `command-table' and invoke them using
   (loop
      (setf *current-gesture* (esa-read-gesture :command-processor command-processor))
      (unless (process-gesture command-processor *current-gesture*)
-       (return)))
-  #+nil(loop
-          for gestures = '() then (nconc gestures (list *current-gesture*))
-          for *current-gesture* = (esa-read-gesture :command-processor command-processor)
-          unless (process-gestures command-processor)
-          do (return)))
+       (return))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 
