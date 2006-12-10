@@ -384,7 +384,7 @@
 	       (:file "graft")
 	       (:file "port")
 	       (:file "event")
-	       (:file "keysymdef")
+	       (:file "keys")
 	       (:file "medium")
 	       (:file "pixmap")
 	       (:file "frame-manager")

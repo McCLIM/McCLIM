@@ -357,6 +357,8 @@
       GdkGrabStatus GdkWindowHints GtkStateType GdkDragAction GConnectFlags
       GdkDragProtocol
 
+      gdk_x11_drawable_get_xid
+
       cairo_format_t cairo_operator_t cairo_fill_rule_t cairo_line_cap_t
       cairo_line_join_t cairo_font_slant_t cairo_font_weight_t cairo_status_t
       cairo_filter_t cairo_extend_t))

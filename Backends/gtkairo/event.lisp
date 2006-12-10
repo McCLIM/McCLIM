@@ -22,10 +22,10 @@
 ;;; Locking rule for this file: The entire event loop grabs the GTK
 ;;; lock, individual callees don't.
 
-(defvar *keysyms* (make-hash-table))
+(defvar *keys* (make-hash-table))
 
-(defmacro define-keysym (name id)
-  `(setf (gethash ,id *keysyms*) ',name))
+(defmacro define-key (name &rest clauses)
+  `(setf (gethash ,name *keys*) ',clauses))
 
 (defun connect-signal (widget name sym)
   (g-signal-connect widget name (cffi:get-callback sym)))
@@ -170,7 +170,7 @@
    (if (logtest GDK_CONTROL_MASK state) +control-key+ 0)
    (if (logtest GDK_MOD1_MASK state) +meta-key+ 0)
    ;; (if (logtest GDK_MOD2_MASK state) +super-key+ 0)
-   (if (logtest GDK_MOD3_MASK state) +hyper-key+ 0)
+   ;; (if (logtest GDK_MOD3_MASK state) +hyper-key+ 0)
 ;;;   (if (logtest GDK_MOD4_MASK state) ??? 0)
 ;;;   (if (logtest GDK_MOD5_MASK state) ??? 0)
 ;;;   (if (logtest GDK_LOCK_MASK state) ??? 0)
@@ -209,44 +209,62 @@
        :sheet (widget->sheet widget *port*)
        :modifier-state (gdkmodifiertype->modifier-state state)))))
 
+(defun state-without-buttons (state)
+  (logand state (1- GDK_BUTTON1_MASK)))
+
+;; aus CLIM-CLX geklaut:
+(defconstant +clim-modifiers+ '(((:meta-left :meta-right) #.+meta-key+)
+				((:hyper-left :hyper-right) #.+hyper-key+)
+				((:super-left :super-right) #.+super-key+)
+				((:shift-left :shift-right) #.+shift-key+)
+				((:control-left :control-right)
+				 #.+control-key+)))
+(defun modify-modifiers (type keysym-keyword modifiers)
+  (let ((keysym-modifier (loop for (keysyms modifier) in +clim-modifiers+
+			       if (member keysym-keyword keysyms)
+			       return modifier)))
+    (cond ((and keysym-modifier (eql type GDK_KEY_PRESS))
+	   (logior modifiers keysym-modifier))
+	  ((and keysym-modifier (eql type GDK_KEY_RELEASE))
+	   (logandc2 modifiers keysym-modifier))
+	  (t modifiers))))
+
 (define-signal key-handler (widget event)
   (let ((sheet (widget->sheet widget *port*)))
-    (multiple-value-bind (root-x root-y state)
+    (multiple-value-bind (root-x root-y)
 	(%gdk-display-get-pointer)
       (multiple-value-bind (x y)
 	  (mirror-pointer-position (sheet-direct-mirror sheet))
 	(cffi:with-foreign-slots
 	    ((type time state keyval string length) event gdkeventkey)
-	  (let ((char (when (plusp length)
-			;; fixme: what about the other characters in `string'?
-			(char string 0)))
-		(sym (gethash keyval *keysyms*)))
-	    (cond
-	      ((eq sym :backspace)
-		(setf char #\backspace))
-	      ((eq sym :tab)
-		(setf char #\tab))
-	      ((null char))
-	      ((eql char #\return))
-	      ((eql char #\escape)
-		(setf char nil))
-	      ((< 0 (char-code char) 32)
-		(setf char (code-char (+ (char-code char) 96)))))
-	    (enqueue
-	     (make-instance (if (eql type GDK_KEY_PRESS)
-				'key-press-event
-				'key-release-event)
-	       :key-name sym
-	       ;; fixme: was ist mit dem rest des strings?
-	       ;; fixme: laut dokumentation hier nicht utf-8
-	       :key-character char
-	       :x x
-	       :y y
-	       :graft-x root-x
-	       :graft-y root-y
-	       :sheet sheet
-	       :modifier-state (gdkmodifiertype->modifier-state state)
-	       :timestamp time))))))))
+	  (let ((state (state-without-buttons state))
+		(modifier-state (gdkmodifiertype->modifier-state state)))
+	    (let ((clauses (gethash keyval *keys*))
+		  sym char)
+	      (loop
+		  for (st sy ch) in clauses
+		  when (or (eql st t) (find state st))
+		  do
+		    (setf sym sy)
+		    (setf char ch)
+		    (return))
+	      (unless char
+		(setf modifier-state
+		      (modify-modifiers type sym modifier-state)))
+	      (unless (eq sym 'throw-away)
+		(enqueue
+		 (make-instance (if (eql type GDK_KEY_PRESS)
+				    'key-press-event
+				    'key-release-event)
+		   :key-name sym
+		   :key-character char
+		   :x x
+		   :y y
+		   :graft-x root-x
+		   :graft-y root-y
+		   :sheet sheet
+		   :modifier-state modifier-state
+		   :timestamp time))))))))))
 
 (defvar *last-seen-button* 3)
 

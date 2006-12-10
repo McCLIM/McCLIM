@@ -104,7 +104,7 @@
     visible part of a (scrolled) sheet.  Right now we're copying the
     entire window around, which seems excessive.
 
-19.
+(FIXED) 19.
    Key press events for modifier keys don't have the corresponding
    modifier bit set; key release events do.  This is opposite to what
    CLIM-CLX does.
