@@ -431,6 +431,11 @@
   `(add-gesture-name ',name ',type ',gesture-spec ,@(and unique
 							 `(:unique ',unique))))
 
+(defun delete-gesture-name (name)
+  "Delete the gesture named by the symbol `name' from the list of
+known gestures."
+  (remhash name *gesture-names*))
+
 ;;; XXX perhaps this should be in the backend somewhere?
 (defconstant +name-to-char+ '((:newline . #\newline)
 			      (:linefeed . #\linefeed)
