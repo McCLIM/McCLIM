@@ -353,6 +353,8 @@
    ;; this list of exported symbols was automatically generated from the
    ;; specification as of version 1.17 of this very file, please think twice
    ;; before fiddling with it. thanks! --gb 2002-11-10
+   ;; A good reason for fiddling with with it is to add symbols from
+   ;; CLIM 2.2. --thenriksen 2006-12-11
 
    #:*abort-gestures*                   ;variable
    #:*accelerator-gestures*             ;variable
@@ -1417,6 +1419,7 @@
    #:stream-replay                      ;generic function
    #:stream-rescanning-p                ;generic function
    #:stream-scan-pointer                ;generic function
+   #:stream-set-cursor-position         ;generic function
    #:stream-set-input-focus             ;generic function
    #:stream-start-line-p                ;generic function
    #:stream-start-line-p                ;generic function
