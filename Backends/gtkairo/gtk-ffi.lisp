@@ -131,17 +131,18 @@
 ;; functions to lock and unlock a recursive lock for that, which the
 ;; portability files currently don't provide.
 (defun invoke-with-gtk (fn)
-  (with-cairo-floats ()
-    (unless *have-lock*
-      (gdk_threads_enter))
-    (unwind-protect
-	(let ((*have-lock* t))
-	  (funcall fn))
+  (#-cmu progn #+cmu mp:without-scheduling
+    (with-cairo-floats ()
       (unless *have-lock*
-	;; fixme: gdk documentation recommends flushing before releasing
-	;; the lock.  But doing so makes everything s.l.o.w.
+	(gdk_threads_enter))
+      (unwind-protect
+	  (let ((*have-lock* t))
+	    (funcall fn))
+	(unless *have-lock*
+	  ;; fixme: gdk documentation recommends flushing before releasing
+	  ;; the lock.  But doing so makes everything s.l.o.w.
 ;;;	(gdk_flush)
-	(gdk_threads_leave)))))
+	  (gdk_threads_leave))))))
 
 
 ;;; GROVELME

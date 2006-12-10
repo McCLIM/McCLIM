@@ -3,6 +3,7 @@
 ** backend improvements: Gtkairo
 *** Double buffering is now supported (fixes disappearing widgets on Windows).
 *** X errors no longer terminate the lisp process.
+*** Some bugfixes, including CMUCL support and better key event handling.
 *** Native implementation of context menus, list panes, label panes, and
     option panes.
 ** Improvement: Added new editor substrate ("Drei").

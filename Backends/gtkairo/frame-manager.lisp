@@ -44,6 +44,9 @@
 	 :port (port frame)
 	 initargs))
 
+;; make CMUCL happy
+(defgeneric make-pane-2 (type &rest args &key &allow-other-keys))
+
 (defmethod make-pane-2 (type &rest initargs)
   (apply #'make-instance type initargs))
 

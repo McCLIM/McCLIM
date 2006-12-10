@@ -115,6 +115,7 @@
     (t
       #+clim-gtkairo::do-not-block-in-ffi
       (sb-sys:wait-until-fd-usable (gdk-xlib-fd) :input 0.1)
+      #+cmu (mp:process-yield)
       (gtk-main-iteration port #-clim-gtkairo::do-not-block-in-ffi t)
       (dequeue port))))
 

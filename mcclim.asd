@@ -53,7 +53,7 @@
 	(extensions:without-package-locks
 	 (load "gray-streams:gray-streams-library"))
       (load "gray-streams:gray-streams-library")))
-  #-clx
+  #-(or clx gtkairo)
   (require :clx)
   #+mp (when (eq mp::*initial-process* mp::*current-process*)
 	 (format t "~%~%You need to run (mp::startup-idle-and-top-level-loops) to start up the multiprocessing support.~%~%")))
