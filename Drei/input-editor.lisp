@@ -821,10 +821,11 @@ to an `extended-output-stream' while `body' is being evaluated."
                                      nil))
          ;; True if `gesture' was freshly read from the user, and not
          ;; just retrieved from the buffer during a rescan.
-         for freshly-inserted = (not (equal (buffer-object
-                                             (buffer drei)
-                                             (1- (stream-scan-pointer stream)))
-                                            gesture))
+         for freshly-inserted = (and (plusp (stream-scan-pointer stream))
+                                     (not (equal (buffer-object
+                                                  (buffer drei)
+                                                  (1- (stream-scan-pointer stream)))
+                                                 gesture)))
          for form = (drei-lisp-syntax::form-after syntax (input-position stream))
          ;; We do not stop until the input is complete and an activation
          ;; gesture has just been provided. The freshness check is so
