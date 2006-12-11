@@ -1370,7 +1370,7 @@ attempt will be made to find the package specified in
 the (in-package) preceding `mark-or-offset'. If none can be
 found, return the package specified in the attribute list. If no
 package can be found at all, or the otherwise found packages are
-invalid, return the CLIM-USER package."
+invalid, return the value of `*package*'."
   (as-offsets ((offset mark-or-offset))
    (let* ((designator (rest (find offset (package-list syntax)
                                   :key #'first
@@ -1383,7 +1383,7 @@ invalid, return the CLIM-USER package."
             (package osp)
             (string (find-package osp))))
          (find-package (option-specified-package syntax))
-         (find-package :clim-user)))))
+         *package*))))
 
 (defun provided-package-name-at-mark (syntax mark-or-offset)
   "Get the name of the specified Lisp package for the
