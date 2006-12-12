@@ -63,12 +63,14 @@ Goatee component is faster and more mature than Drei.")
 	(t existing-delimiter-gestures)))
 
 (defmacro with-activation-gestures ((gestures &key override) &body body)
-  ;; XXX Guess this implies that gestures need to be defined at compile time.
-  ;; Sigh.
-  (let ((gesture-form (if (and (symbolp gestures)
-			       (gethash gestures *gesture-names*))
-			  `(list ',gestures)
-			  gestures))
+  ;; XXX Guess this implies that gestures need to be defined at
+  ;; compile time.  Sigh.  We permit both CLIM 2.0-style gesture names
+  ;; and CLIM 2.2 style characters.
+  (let ((gesture-form (cond ((or (and (symbolp gestures)
+                                      (gethash gestures *gesture-names*))
+                                 (characterp gestures))
+                             `(list ',gestures))
+                            (t gestures)))
 	(gestures (gensym))
 	(override-var (gensym)))
     `(let* ((,gestures ,gesture-form)	;Preserve evaluation order of arguments
@@ -81,15 +83,17 @@ Goatee component is faster and more mature than Drei.")
        ,@body)))
 
 (defmacro with-delimiter-gestures ((gestures &key override) &body body)
-  ;; XXX Guess this implies that gestures need to be defined at compile time.
-  ;; Sigh.
-  (let ((gesture-form (if (and (symbolp gestures)
-			       (gethash gestures *gesture-names*))
-			  `(list ',gestures)
-			  gestures))
+  ;; XXX Guess this implies that gestures need to be defined at
+  ;; compile time.  Sigh.  We permit both CLIM 2.0-style gesture names
+  ;; and CLIM 2.2 style characters.
+  (let ((gesture-form (cond ((or (and (symbolp gestures)
+                                      (gethash gestures *gesture-names*))
+                                 (characterp gestures))
+                             `(list ',gestures))
+                            (t gestures)))
 	(gestures (gensym))
 	(override-var (gensym)))
-    `(let* ((,gestures ,gesture-form)	;Preserve evaluation order of arguments
+    `(let* ((,gestures ,gesture-form) ;Preserve evaluation order of arguments
 	    (,override-var ,override)
 	    (*delimiter-gestures* (make-delimiter-gestures
 				   (if ,override-var
