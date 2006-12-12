@@ -27,7 +27,7 @@
 
 (in-package :clim-internals)
 
-(defvar *use-goatee* t
+(defvar *use-goatee* nil
   "I true, use the Goatee editing component instead of Drei. The
 Goatee component is faster and more mature than Drei.")
 
