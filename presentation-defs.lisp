@@ -194,6 +194,21 @@
 	  (values t t)
 	  (values nil nil)))))
 
+(define-presentation-generic-function
+    %presentation-type-specifier-p
+    presentation-type-specifier-p
+  (type-class type))
+
+(define-default-presentation-method presentation-type-specifier-p (type)
+  t)
+
+(defun presentation-type-specifier-p (type)
+  "Return true if `type' is a valid presentation type specifier,
+otherwise return false."
+  (funcall-presentation-generic-function
+   presentation-type-specifier-p
+   type))
+
 (defun default-describe-presentation-type (description stream plural-count)
   (if (symbolp description)
       (setq description (make-default-description (symbol-name description))))
