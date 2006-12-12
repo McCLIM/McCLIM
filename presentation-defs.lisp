@@ -202,12 +202,16 @@
 (define-default-presentation-method presentation-type-specifier-p (type)
   t)
 
-(defun presentation-type-specifier-p (type)
-  "Return true if `type' is a valid presentation type specifier,
+(defun presentation-type-specifier-p (object)
+  "Return true if `object' is a valid presentation type specifier,
 otherwise return false."
-  (funcall-presentation-generic-function
-   presentation-type-specifier-p
-   type))
+  ;; Apparently, this funtion has to handle arbitrary objects.
+  (let ((name (presentation-type-name object)))
+    (when (and (or (symbolp name)
+                   (and (typep name 'class)
+                        (not (typep name 'built-in-class))))
+               (get-ptype-metaclass name))
+      (%presentation-type-specifier-p t object))))
 
 (defun default-describe-presentation-type (description stream plural-count)
   (if (symbolp description)
