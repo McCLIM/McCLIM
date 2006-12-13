@@ -466,6 +466,12 @@ filled in."
 (defmethod get-ptype-metaclass ((type (eql *builtin-t-class*)))
   type)
 
+(defmethod get-ptype-metaclass ((type class))
+  type)
+
+(defmethod get-ptype-metaclass (type)
+  (error "~A is not the name of a presentation type" type))
+
 ;;; external functions
 (defun find-presentation-type-class (name &optional (errorp t) environment)
   (declare (ignore environment))
