@@ -1632,11 +1632,6 @@ call-next-method to get the \"real\" answer based on the stream type."))
   :options #.+completion-options+
   :inherit-from t)
 
-(define-presentation-method presentation-type-specifier-p ((type sequence))
-  (and (listp type)
-       (consp (rest type))
-       (presentation-type-specifier-p (second type))))
-
 (define-presentation-method presentation-typep (object (type completion))
   (map nil #'(lambda (obj)
 	       (when (funcall test object (funcall value-key obj))
@@ -1839,6 +1834,11 @@ call-next-method to get the \"real\" answer based on the stream type."))
   :options ((separator #\,) (echo-space t))
   :inherit-from 't
   :parameters-are-types t)
+
+(define-presentation-method presentation-type-specifier-p ((type sequence))
+  (and (listp type)
+       (consp (rest type))
+       (presentation-type-specifier-p (second type))))
 
 (define-presentation-method presentation-typep (object (type sequence))
   ;; XXX TYPE here is the sequence element type, not the whole type specifier
