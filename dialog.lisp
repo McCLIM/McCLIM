@@ -449,7 +449,9 @@ is called. Used to determine if any editing has been done by user")))
                      (surrounding-output-with-border
                          (stream :shape :inset :move-cursor t)
                        (setq editing-stream
-                             (make-instance 'standard-input-editing-stream
+                             (make-instance (if *use-goatee*
+                                                'goatee-input-editing-stream
+                                                'standard-input-editing-stream)
                                             :stream stream
                                             :cursor-visibility nil
                                             :background-ink +grey90+
