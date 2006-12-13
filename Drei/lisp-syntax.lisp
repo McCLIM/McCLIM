@@ -1906,8 +1906,7 @@ after `string'."
       (with-slots (ink face) parser-symbol
         (setf ink (medium-ink (sheet-medium stream))
               face (text-style-face (medium-text-style (sheet-medium stream))))
-        (let ((string (form-string syntax parser-symbol)))
-          (present string 'string :stream stream))))))
+        (write-string (form-string syntax parser-symbol) stream)))))
 
 (defmethod display-parse-tree :before ((parse-symbol lisp-lexeme) stream (drei drei)
                                        (syntax lisp-syntax))
