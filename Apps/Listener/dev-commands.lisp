@@ -1468,7 +1468,7 @@
 
          (with-output-as-presentation (t value (presentation-type-of value)
                                          :single-box t)
-           (present (first values) 'expression))))
+           (present value 'expression))))
     (with-drawing-options (t :ink +olivedrab+)
       (cond ((null values)
              (format t "No values.~%"))
