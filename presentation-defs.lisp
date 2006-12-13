@@ -207,11 +207,9 @@
 otherwise return false."
   ;; Apparently, this funtion has to handle arbitrary objects.
   (let ((name (presentation-type-name object)))
-    (when (and (or (symbolp name)
-                   (and (typep name 'class)
-                        (not (typep name 'built-in-class))))
+    (when (and (typep name '(or symbol class))
                (get-ptype-metaclass name))
-      (%presentation-type-specifier-p t object))))
+      (funcall-presentation-generic-function presentation-type-specifier-p object))))
 
 (defun default-describe-presentation-type (description stream plural-count)
   (if (symbolp description)
@@ -1633,6 +1631,11 @@ call-next-method to get the \"real\" answer based on the stream type."))
 				      &key (test 'eql) (value-key 'identity))
   :options #.+completion-options+
   :inherit-from t)
+
+(define-presentation-method presentation-type-specifier-p ((type sequence))
+  (and (listp type)
+       (consp (rest type))
+       (presentation-type-specifier-p (second type))))
 
 (define-presentation-method presentation-typep (object (type completion))
   (map nil #'(lambda (obj)
