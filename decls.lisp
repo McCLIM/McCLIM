@@ -583,6 +583,20 @@
     (stream object type view
 	    &key buffer-start rescan query-identifier for-context-type))
 
+;;; 27.3 Command Menus
+
+(defgeneric display-command-table-menu (command-table stream &key max-width
+                                                      max-height n-rows n-columns x-spacing
+                                                      y-spacing initial-spacing row-wise
+                                                      cell-align-x cell-align-y move-cursor)
+  (:documentation "Display a menu of the commands accessible in
+`command-table' to `stream'.
+
+`max-width', `max-height', `n-rows', `n-columns', `x-spacing',
+`y-spacing', `row-wise', `initial-spacing', `cell-align-x',
+`cell-align-y', and `move-cursor' are as for
+`formatting-item-list'."))
+
 ;;; 28.2 Specifying the Panes of a Frame
 
 (defgeneric destroy-frame (frame))
