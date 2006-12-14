@@ -659,6 +659,18 @@
 (defgeneric run-frame-top-level (frame &key &allow-other-keys))
 (defgeneric command-enabled (command-name frame))
 (defgeneric (setf command-name) (enabled command-name frame))
+(defgeneric display-command-menu (frame stream &key command-table
+                                        initial-spacing row-wise max-width
+                                        max-height n-rows n-columns
+                                        cell-align-x cell-align-y)
+  (:documentation "Display the command table associated with
+`command-table' on `stream' by calling
+`display-command-table-menu'. If no command table is
+provided, (frame-command-table frame) will be used.
+
+The arguments `initial-spacing', `row-wise',
+`max-width', `max-height', `n-rows', `n-columns', `cell-align-x',
+and `cell-align-y' are as for `formatting-item-list'."))
 
 ;;;; 28.5.2 Frame Manager Operations
 
