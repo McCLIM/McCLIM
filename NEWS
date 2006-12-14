@@ -11,6 +11,10 @@
 ** specification compliance: DELETE-GESTURE-NAME function now implemented.
 ** specification compliance: PRESENTATION-TYPE-SPECIFIER-P presentaion
    function now implemented.
+** specification compliance: DISPLAY-COMMAND-TABLE-MENU function now
+   implemented.
+** specification compliance: DISPLAY-COMMAND-MENU function now
+   implemented.
 
 * Changes in mcclim-0.9.3 "All Souls' Day" relative to 0.9.2:
 ** backend improvement: The Null backend now registers itself in the
