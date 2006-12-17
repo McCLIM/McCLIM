@@ -368,22 +368,25 @@ documentation produced by presentations.")))
 
 (defmethod redisplay-frame-pane :around ((frame application-frame) pane
 					 &key force-p)
-  (multiple-value-bind (redisplayp clearp)
-      (pane-needs-redisplay pane)
-    (when force-p
-      (setq redisplayp (or redisplayp t)
-	    clearp t))
-    (when redisplayp
-      (let ((hilited (frame-hilited-presentation frame)))
-	(when hilited
-	  (highlight-presentation-1 (car hilited) (cdr hilited) :unhighlight)
-	  (setf (frame-hilited-presentation frame) nil)))
-      (with-possible-double-buffering (frame pane)
-	(when clearp
-	  (window-clear pane))
-	(call-next-method))
-      (unless (or (eq redisplayp :command-loop) (eq redisplayp :no-clear))
-	(setf (pane-needs-redisplay pane) nil)))))
+  (let ((pane-object (if (typep pane 'pane)
+			 pane
+			 (find-pane-named frame pane))))
+    (multiple-value-bind (redisplayp clearp)
+	(pane-needs-redisplay pane-object)
+      (when force-p
+	(setq redisplayp (or redisplayp t)
+	      clearp t))
+      (when redisplayp
+	(let ((hilited (frame-hilited-presentation frame)))
+	  (when hilited
+	    (highlight-presentation-1 (car hilited) (cdr hilited) :unhighlight)
+	    (setf (frame-hilited-presentation frame) nil)))
+	(with-possible-double-buffering (frame pane-object)
+	  (when clearp
+	    (window-clear pane-object))
+	  (call-next-method))
+	(unless (or (eq redisplayp :command-loop) (eq redisplayp :no-clear))
+	  (setf (pane-needs-redisplay pane-object) nil))))))
 
 (defmethod run-frame-top-level ((frame application-frame)
 				&key &allow-other-keys)
@@ -560,7 +563,6 @@ documentation produced by presentations.")))
 				 frame
 				 command-name)
 	  nil))))
-
 
 (defmethod make-pane-1 :around (fm (frame standard-application-frame) type
 				&rest args
