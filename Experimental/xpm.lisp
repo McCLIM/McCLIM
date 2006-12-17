@@ -2,10 +2,12 @@
 ;;; ---------------------------------------------------------------------------
 ;;;     Title: XPM Parser
 ;;;   Created: 2003-05-25
-;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
+;;;   Authors: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
+;;;            Andy Hefner <ahefner@gmail.com>
 ;;;   License: LGPL (See file COPYING for details).
 ;;; ---------------------------------------------------------------------------
 ;;;  (c) copyright 2003 by Gilbert Baumann
+;;;  (c) copyright 2006 by Andy Hefner
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -25,6 +27,26 @@
 (in-package :clim-internals)
 
 ;;;; Notes
+
+;;; This is essentially a rewrite/transliteration of Gilbert's original code,
+;;; modified to improve performance. This is achieved primarily by using 
+;;; read-sequence into an (unsigned-byte 8) array and parsing directly
+;;; from this array (the original code read a list of strings using read-line
+;;; and further divided these into substrings in various places. It is
+;;; substantially faster than the original code, but there are opportunities
+;;; to further improve performance by perhaps several times, including:
+;;;  - Use an array rather than hash table to resolve color tokens
+;;;    (I avoided doing this for now due to a pathological case of a file
+;;;     with a small palette but high CPP and sparse color tokens)
+;;;  - Stricter type declarations (some but not all of the code assumes cpp<3)
+;;;  - In the worst case (photographs), we spent most of our time parsing
+;;;    the palette (it may have thousands or millions of entries).
+;;;  - For the above case, we should be generating an RGB or RGBA image
+;;;    rather than an indexed-pattern (and consing a ton of color objects).
+;;;  - People who save photographs in XPM format are morons, so it isn't
+;;;    worth optimizing.
+
+;;; Gilbert's Notes:
 
 ;; - We lose when the XPM image only specifies colors for say the mono
 ;;   visual.
@@ -47,14 +69,9 @@
 ;; - This needs to be incorporated into READ-BITMAP-FILE or what ever
 ;;   that is called.
 ;;
-;; - Also: Don't read from text streams but also be able to read from
-;;   binary streams, as a general image reader will want a binary
-;;   stream and first parse off a magic to figure out the format and
-;;   then pass the stream further down here.
-;;
 ;; - We might be interested in the hot spot also.
 ;;
-;; --GB 2003-05-25 
+;; --GB 2003-05-25
 
 ;;;; Summary of the File Format
 
@@ -140,174 +157,293 @@
 ;; | prefixed by the name of the company. This would ensure uniqueness.
 ;; | 
 
-(defun xpm-white-space-p (char)
-  (member char '(#\space #\tab #\newline)))
+(deftype xpm-data-array () `(simple-array (unsigned-byte 8) 1))
+(deftype array-index ()
+  #-sbcl '#.(integer 0 #.array-dimension-limit)
+  #+sbcl 'sb-int:index)
+(deftype xpm-pixcode () `(unsigned-byte 24)) ; Bogus upper limit for speed.. =/
 
-(defun xpm-pop-token (string start end)
-  ;; -> token-start, token-end
-  (let* ((p1 (position-if-not #'xpm-white-space-p string :start start :end end))
-         (p2 (and p1 (or (position-if #'xpm-white-space-p string :start p1 :end end) end))))
-    (values p1 p2)))
+(defmacro xpm-over-array ((arrayform elt0 idx0 elt1 idx1 start) &body body)
+  (let ((arraysym  (gensym))
+        (lengthsym (gensym)))
+    `(let* ((,arraysym ,arrayform)
+            (,lengthsym (length ,arraysym)))
+      (declare (type xpm-data-array ,arraysym)
+               (optimize (speed 3)))
+      (loop for ,idx0 of-type array-index from ,start below (1- ,lengthsym)
+            as ,idx1 of-type array-index = (1+ ,idx0)
+            as ,elt0 = (aref ,arraysym ,idx0)
+            as ,elt1 = (aref ,arraysym ,idx1)
+            do (progn ,@body)))))
 
-(defun xpm-parse-color (string cpp &key (start 0) (end (length string)))
-  (let ((code (subseq string start (+ start cpp)))
-        (color (xpm-parse-color-spec string :start (+ start cpp) :end end)))
+(declaim (inline xpm-whitespace-p)
+         (ftype (function ((unsigned-byte 8)) t) xpm-whitespace-p))
+(defun xpm-white-space-p (code)
+  (declare (type (unsigned-byte 8) code)
+           (optimize (speed 3)))
+  (or (= code 32)                       ; #\Space
+      (= code 9)                        ; #\Tab
+      (= code 10)))                     ; #\Newline
+
+(defun xpm-token-terminator-p (code)
+  (declare (type (unsigned-byte 8) code))
+  (or (xpm-white-space-p code)
+      (= code 34)))                     ; #\"
+
+(defun xpm-token-bounds (data start)
+  (xpm-over-array (data b0 start b1 i1 start)
+    (when (not (xpm-white-space-p b0))
+      (xpm-over-array (data b0 end b1 i1 start)
+        (when (xpm-token-terminator-p b0) (return-from xpm-token-bounds (values start end))))
+      (error "Unbounded token")))
+  (error "Missing token"))
+
+(defun xpm-extract-color-token (data start end)
+  (declare (type xpm-data-array data)
+           (type array-index start end)
+           (optimize (speed 3)))
+  (let ((x 0))
+    (declare (type xpm-pixcode x))      ; Bah, this didn't help.
+    (loop for i from start below end do (setf x (+ (ash x 8) (elt data i))))
+    x))
+
+(defun xpm-parse-color (data cpp index)
+  (declare (type xpm-data-array data)
+           (type (integer 1 4) cpp)     ; ??? =p
+           (type array-index index)
+           (optimize (speed 3) (safety 0)))
+  (let* ((color-token-end (the array-index (+ index cpp)))
+         (code (xpm-extract-color-token data index color-token-end))
+         (string-end (1- (xpm-exit-string data color-token-end)))
+         (color (xpm-parse-color-spec data color-token-end string-end)))
+    (declare (type array-index color-token-end string-end)
+             (type xpm-pixcode code))
     (unless color
-      (error "Color ~S does not parse." (subseq string (+ start cpp) end)))
-    (values code color)))
+      (error "Color ~S does not parse." (map 'string #'code-char (subseq data color-token-end string-end))))
+    (values code color (1+ string-end))))
 
-(defparameter *xpm-color-keys*
-  '("m" "s" "g4" "g" "c"))
+(declaim (inline xpm-key-p))
+(defun xpm-key-p (x)
+  (or (= x 109)
+      (= x 115)
+      (= x 103)
+      (= x 99)))
 
-(defun xpm-parse-color-spec (string &key (start 0) (end (length string)))
-  ;; Lossage!
-  ;; There exist files which say e.g. "c light yellow".
-  ;; How am I supposed to parse that?
-  ;;
-  ;; It seems that the C code just parse everything until one of keys. 
-  ;; That is we do the same although it is quite stupid.
-  ;;
-  (let ((start0 start)
-        (key nil)
-        (color nil)
-        (last-was-key nil))
-    (labels ((quux (k c)
-               (let ((ink (xpm-parse-single-color k c)))
+(defun xpm-parse-color-spec (data start end)
+  ;; Gilbert says:
+  ;; > Lossage!
+  ;; > There exist files which say e.g. "c light yellow".
+  ;; > How am I supposed to parse that?
+  ;; >
+  ;; > It seems that the C code just parse everything until one of keys. 
+  ;; > That is we do the same although it is quite stupid.
+  ;(declare (optimize (debug 3) (safety 3)))
+  (declare (optimize (speed 3) (space 0) (safety 0))
+           (type xpm-data-array data)
+           (type array-index start end))
+  (let ((original-start start)
+        key last-was-key
+        color-token-start
+        color-token-end)
+    (declare (type (or null array-index) color-token-start color-token-end)
+             (type (or null (unsigned-byte 8)) key))
+    (flet ((find-token (start end)
+             (let* ((p1 (position-if-not #'xpm-white-space-p data :start start :end end))
+                    (p2 (and p1 (or (position-if #'xpm-white-space-p data :start p1 :end end) end))))
+               (values p1 p2)))
+           (quux (key color-token-start color-token-end)
+               (let ((ink (xpm-parse-single-color key data color-token-start color-token-end)))
                  (when ink
-                   (return-from xpm-parse-color-spec ink)))))
-      (loop
-          (multiple-value-bind (p1 p2) (xpm-pop-token string start end)
-            (unless p1
-              (cond (last-was-key
-                     (error "Premature end of color line (no color present after key): ~S."
-                            (subseq string start0 end))))
-              (if color
-                  (quux key color))
-              (error "We failed to parse a color out of ~S."
-                     (subseq string start0 end)))
-            (let ((thing (subseq string p1 p2)))
-              (cond (last-was-key
-                     (setf last-was-key nil)
-                     (setf color thing))
-                    ((find thing *xpm-color-keys* :test #'string=)
-                     (when color
-                       (quux key color))
-                     (setf last-was-key t
-                           color nil
-                           key thing))
-                    (t
-                     (when (null color)
-                       (error "Color not prefixed by a key: ~S."
-                              (subseq string start0 end)))
-                     (setf last-was-key nil)
-                     (setf color (concatenate 'string color " " thing)))))
-            (setf start p2) )))))
-
-(defun xpm-parse-single-color (key color)
-  (cond ((and (string= key "s") (string-equal color "None"))
+                   (return-from xpm-parse-color-spec ink))))
+           (stringize () (map 'string #'code-char (subseq data original-start end))))
+    (loop
+      (multiple-value-bind (p1 p2) (find-token start end)
+        (unless p1
+          (when last-was-key
+            (error "Premature end of color line (no color present after key): ~S." (stringize)))
+          (when color-token-start (quux key color-token-start color-token-end))
+          (error "We failed to parse a color out of ~S." (stringize)))
+        (cond (last-was-key
+               (setf last-was-key      nil
+                     color-token-start p1
+                     color-token-end   p2))              
+              ((xpm-key-p (elt data p1))
+               (when color-token-start (quux key color-token-start color-token-end))               
+               (setf last-was-key t
+                     color-token-start nil
+                     color-token-end nil
+                     key (elt data p1)))
+              (t (when (null color-token-start)
+                   (error "Color not prefixed by a key: ~S." (stringize)))
+                 (setf last-was-key nil)                 
+                 (setf color-token-end p2)))
+        (setf start p2))))))
+                     
+(defun xpm-subvector-eql-p (data start end vector) ; FIXME: Guarantee type of input 'vector' and strengthen declaration
+  (declare (type xpm-data-array data)
+           (type array-index start end)
+           (type simple-array vector)
+           (optimize (speed 3)))
+  (and (= (length vector) (- end start))
+       (loop for i from start below end
+             do (unless (= (elt data i) (elt vector (- i start))) (return nil))
+             return t)))
+             
+(defun xpm-parse-single-color (key data start end)
+  (declare (type xpm-data-array data)
+           (type array-index start end)
+           (type (unsigned-byte 8) key)
+           (optimize (speed 3)))  
+  (cond ((and (= key 115)
+              (or
+               (xpm-subvector-eql-p data start end #|"None"|# #(78 111 110 101))
+               (xpm-subvector-eql-p data start end #|"background"|# #(98 97 99 107 103 114 111 117 110 100))))
          clim:+transparent-ink+)
-        ((and (string= key "c")
-              (xpm-parse-single-color-2 color)))))
+        ((= key 99) (xpm-parse-single-color-2 data start end))
+        (t (error "Unimplemented key type ~A" key))))
 
-(defun xpm-parse-single-color-2 (color &aux ink)
-  (cond ((and (char= (char color 0) #\#)
-              (= 0 (mod (- (length color) 1) 3))
-              (every #'(lambda (x) (digit-char-p x 16)) (subseq color 1)))
-         (let* ((n (1- (length color)))
-                (w (* 4 (/ n 3)))
-                (m (1- (expt 2 w)))
-                (x (parse-integer color :start 1 :radix 16)))
-           (clim:make-rgb-color (/ (ldb (byte w (* 2 w)) x) m)
-                                (/ (ldb (byte w (* 1 w)) x) m)
-                                (/ (ldb (byte w (* 0 w)) x) m))))
-        ((setq ink (xpm-find-named-color color))
-         ink)))
+(declaim (ftype (function ((unsigned-byte 8)) t) xpm-hex-digit-p))
+(defun xpm-hex-digit-p (byte)
+  (declare (type (unsigned-byte 8) byte)
+           (optimize (speed 3)))
+  (or (<= 48 byte 57)
+      (<= 65 byte 70)
+      (<= 97 byte 102)))
 
-(defun xpm-parse-header (string &key (start 0) (end (length string)))
+(defun xpm-parse-integer-hex (data start end)
+  (declare (type xpm-data-array data)
+           (type array-index start end)
+           (optimize (speed 3)))
+  (let ((accumulator 0))                ; stupid optimizer..
+    (loop for index from start below end
+          as byte = (elt data index)
+          do (setf accumulator (+ (ash accumulator 4)
+                                  (cond ((<= 48 byte 57)  (- byte 48))
+                                        ((<= 65 byte 70)  (- byte 65 -10))
+                                        ((<= 97 byte 102) (- byte 97 -10))
+                                        (t (error "Unknown hex digit ~A, this should be impossible." byte)))))
+          finally (return accumulator))))
+
+(defun xpm-parse-single-color-2 (data start end)
+  (declare (type xpm-data-array data)
+           (type array-index start end)
+           (optimize (speed 3)))
+  (or (and (= (elt data start) 35)   ; 35 = #\#
+           (= 0 (mod (- end start 1) 3))
+           (loop for i from (1+ start) below end do (unless (xpm-hex-digit-p (elt data i)) (return nil)) finally (return t))
+           (let* ((n (- end start 1))
+                  (w (* 4 (/ n 3)))
+                  (m (1- (expt 2 w)))
+                  (x (xpm-parse-integer-hex data (1+ start) end)))             
+             (clim:make-rgb-color (/ (ldb (byte w (* 2 w)) x) m)
+                                  (/ (ldb (byte w (* 1 w)) x) m)
+                                  (/ (ldb (byte w (* 0 w)) x) m))))
+      (xpm-find-named-color (map 'string #'code-char (subseq data start end)))))
+
+(defun xpm-parse-header (data &optional (index 0))
+  (setf index (xpm-find-next-c-string data index))
+  (flet ((token (name)
+           (multiple-value-bind (p1 p2) (xpm-token-bounds data index)
+             (unless p1 (error "~A field missing in header." name))
+             (setf index p2)             
+             (parse-integer (map 'string #'code-char (subseq data p1 p2)) :radix 10 :junk-allowed nil))))
   (values
-   (multiple-value-bind (p1 p2) (xpm-pop-token string start end)
-     (unless p1 (error "width field missing in header."))
-     (setf start p2)
-     (parse-integer string :start p1 :end p2 :radix 10 :junk-allowed nil))
-   (multiple-value-bind (p1 p2) (xpm-pop-token string start end)
-     (unless p1 (error "height field missing in header."))
-     (setf start p2)
-     (parse-integer string :start p1 :end p2 :radix 10 :junk-allowed nil))
-   (multiple-value-bind (p1 p2) (xpm-pop-token string start end)
-     (unless p1 (error "ncolors field missing in header."))
-     (setf start p2)
-     (parse-integer string :start p1 :end p2 :radix 10 :junk-allowed nil))
-   (multiple-value-bind (p1 p2) (xpm-pop-token string start end)
-     (unless p1 (error "cpp field missing in header."))
-     (setf start p2)
-     (parse-integer string :start p1 :end p2 :radix 10 :junk-allowed nil))))
+   (token "width")
+   (token "height")
+   (token "ncolors")
+   (token "cpp")
+   (xpm-exit-string data index))))
 
-(defun xpm-parse* (strings)
-  (multiple-value-bind (width height ncolors cpp) (xpm-parse-header (pop strings))
-    (let ((color-hash (make-hash-table :test #'equal))
+(defun xpm-parse* (data)
+  (declare (type xpm-data-array data))
+  (multiple-value-bind (width height ncolors cpp index) (xpm-parse-header data)
+    (let ((color-hash (make-hash-table :test #'eql))
           (designs (make-array ncolors))
           (j 0))
+      
       (dotimes (i ncolors)
-        (multiple-value-bind (code ink) (xpm-parse-color (pop strings) cpp)
-          (setf (aref designs j) ink)
-          (setf (gethash code color-hash) j)
+        (multiple-value-bind (code ink post-index) (xpm-parse-color data cpp (xpm-find-next-c-string data index))
+          (setf (aref designs j) ink
+                (gethash code color-hash) j
+                index post-index)
           (incf j)))
-      (let ((res (make-array (list height width))))
+
+      ;; It is considerably faster still to make the array below of element type '(unsigned-byte 8),
+      ;; but this would be wrong by failing to load many legal XPM files. To support both, most
+      ;; of this file would have to be compiled twice for the different types, which is more
+      ;; trouble than its worth. =(
+      (let ((res (make-array (list height width) #|:element-type '(unsigned-byte 8)|#)))
+            ;(line-start (xpm-find-next-c-string data index))
+        (setf index (xpm-find-next-c-string data index))
         (dotimes (y height)
           (dotimes (x width)
+            (when (= 34 (elt data index)) ; Reached closing quote for this line of pixels?
+              (setf index (xpm-find-next-c-string data (1+ index))))
             (setf (aref res y x)
-                  (or (gethash (subseq (first strings) (* x cpp) (+ cpp (* x cpp))) color-hash)
+                  (or (gethash (xpm-extract-color-token data index (+ index cpp)) color-hash)
                       (error "Color code ~S not defined."
-                             (subseq (first strings) (* x cpp) (+ cpp (* x cpp)))))))
-          (pop strings))
+                             (subseq data index (+ index cpp)))))
+            (incf index cpp)))
         (clim:make-pattern res designs)))))
+                  
+;        (dotimes (y height)
+;          (dotimes (x width)
+;            (setf (aref res y x)
+;                  (or (gethash (subseq (first strings) (* x cpp) (+ cpp (* x cpp))) color-hash)
+;                      (error "Color code ~S not defined."
+;                             (subseq (first strings) (* x cpp) (+ cpp (* x cpp)))))))
+;          (pop strings))
+;        (clim:make-pattern res designs))))))
 
-(defun xpm-parse-next-c-string (input)
-  (do ((c (read-char input nil nil) (read-char input nil nil)))
-      ((null c)
-       nil)
-    (cond ((and (char= c #\/)
-                (char= (peek-char nil input) #\*))
-           ;; a comment
-           (do ((c1 #\space c2)
-                (c2 (read-char input) (read-char input)))
-               ((and (char= c1 #\*) (char= c2 #\/)))))
-          ((char= c #\")
-           (return
-             (with-output-to-string (bag)
-               (do ((c (read-char input) (read-char input)))
-                   ((char= c #\"))
-                 (write-char
-                  (cond ((char= c #\\)
-                         (let ((d (read-char input)))
-                           (cond ((digit-char-p d 8)
-                                  (code-char (+ (* 8 8 (digit-char-p d 8))
-                                                (* 8 (digit-char-p (read-char input) 8))
-                                                (digit-char-p (read-char input) 8))))
-                                 ((char= d #\x)
-                                  (code-char (+ (* 16 (digit-char-p (read-char input) 16))
-                                                (digit-char-p (read-char input) 16))))
-                                 ((char= d #\n) #\newline)
-                                 ((char= d #\r) #\return)
-                                 ((char= d #\t) #\tab)
-                                 ((char= d #\a) #\bell)
-                                 ((char= d #\f) #\page)
-                                 (t
-                                  d))))
-                        (t
-                         c))
-                  bag))))))))
+(declaim (ftype (function (xpm-data-array array-index) array-index) xpm-scan-comment))
+(defun xpm-scan-comment (data start)
+  (declare (optimize (speed 3)))
+  (xpm-over-array (data b0 i0 b1 i1 start)
+    (when (and (= b0 42)
+               (= b1 47))
+      (return-from xpm-scan-comment (1+ i1))))
+  (error "Unterminated comment starting at byte ~A" (- start 2)))
+  
+(defun xpm-find-next-c-string (data start)
+  (declare (optimize (speed 3))
+           (type array-index start))
+  (xpm-over-array (data b0 i0 b1 i1 start)
+    (cond
+      ((and (= b0 47)                 ; 47 = #\/
+            (= b1 42))                ; 42 = #\*
+       (setf i0 (1- (xpm-scan-comment data (1+ i1)))))
+      ((= b0 34) (return i1)))))
 
+(declaim (ftype (function (xpm-data-array array-index) array-index) xpm-exit-string))
+(defun xpm-exit-string (data start)
+  (declare (optimize (speed 3)))
+  (xpm-over-array (data byte index next-byte next-index start)
+    (when (= byte 34) (return-from xpm-exit-string next-index)) ; 34 = #\"
+    (when (= byte 92) (incf index)))    ; 92 = #\\ (escape sequence)
+  (error "Unterminated string"))
+
+;(loop for index of-type array-index from start below length
+;          as byte = (elt data index)
+;          do (cond
+;               ( ; 42 = #\*
+;                (incf index 2)
+;                ;; a comment
+;                (do ((c1 0 c2)
+;                     (c2 (elt data index) (elt data index)))
+;                    (and (= c1 42) (= c2
+  
 (defun xpm-parse-stream (input)
   ;; For not needing to parse an actual subset of C, we take a very lazy approach.
   ;; We just seek out for the first #\" and parse a C string from there.
-  (xpm-parse*
-   (loop for line = (xpm-parse-next-c-string input)
-         while line
-         collect line)))
+  (let ((data (make-array (file-length input)
+                          :element-type '(unsigned-byte 8)
+                          :adjustable nil
+                          :fill-pointer nil)))
+    (read-sequence data input)
+    (xpm-parse* data)))
 
 (defun xpm-parse-file (pathname)
-  (with-open-file (input pathname)
+  (with-open-file (input pathname :element-type '(unsigned-byte 8))
     (xpm-parse-stream input)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
