@@ -84,7 +84,7 @@
   ((pixels :initarg :pixels
            :type (simple-array (unsigned-byte 24) (* *))
            :reader image-pixels)
-   (max-level :initarg :max-level :type card-8 :reader image-max-level)))
+   (max-level :initarg :max-level :type xlib:card8 :reader image-max-level)))
 
 (defun make-truecolor-image (pixels max-value)
   (make-instance 'truecolor-image :pixels pixels :max-level max-value))
