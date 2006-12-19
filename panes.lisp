@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.174 2006/12/05 02:08:44 rgoldman Exp $
+;;; $Id: panes.lisp,v 1.175 2006/12/19 04:02:14 ahefner Exp $
 
 (in-package :clim-internals)
 
@@ -377,6 +377,10 @@ order to produce a double-click")
     (prin1 (pane-name pane) sink)))
 
 (defun make-pane (type &rest args)
+  (when (eql (symbol-package type)
+             (symbol-package :foo))
+    (setf type (or (find-symbol (symbol-name type) (find-package :clim))
+                   type)))
   (apply #'make-pane-1 *pane-realizer* *application-frame* type args))
 
 (defmethod medium-foreground ((pane pane))
@@ -2095,7 +2099,7 @@ order to produce a double-click")
     (check-type scroll-bar scroll-bar-spec) ; (member :vertical :horizontal :both t nil))
     (when (member scroll-bar '(:vertical :both t))
       (setq vscrollbar
-            (make-pane 'scroll-bar-pane
+            (make-pane 'scroll-bar
                        :orientation :vertical
                        :client (first (sheet-children viewport))
                        :drag-callback (lambda (gadget new-value)
@@ -2121,7 +2125,7 @@ order to produce a double-click")
       (sheet-adopt-child pane vscrollbar))
     (when (member scroll-bar '(:horizontal :both t))
       (setq hscrollbar
-            (make-pane 'scroll-bar-pane
+            (make-pane 'scroll-bar
                        :orientation :horizontal
                        :client (first (sheet-children viewport))
                        :drag-callback (lambda (gadget new-value)

@@ -89,7 +89,7 @@ activate callback to be called"))
   (setf (gadget-value object) value))
 
 (defmethod make-pane-1 :around (fm (frame application-frame)
-                                   (type (eql :text-editor))
+                                   (type (eql 'text-editor))
                                    &rest args &key)
   (apply #'make-pane-1 fm frame :drei
          :drei-class 'text-editor-pane
@@ -278,14 +278,14 @@ activate callback to be called"))
 ;;;  Drei/Goatee selection.
 
 (defmethod make-pane-1 :around (fm (frame application-frame)
-                                   (type (eql :text-field))
+                                   (type (eql 'text-field))
                                    &rest args &key)
   (if *use-goatee*
       (apply #'make-pane-1 fm frame 'goatee-text-field-pane args)
       (apply #'make-pane-1 fm frame 'text-field-pane args)))
 
 (defmethod make-pane-1 :around (fm (frame application-frame)
-                                   (type (eql :text-editor))
+                                   (type (eql 'text-editor))
                                    &rest args &key)
   (if *use-goatee*
       (apply #'make-pane-1 fm frame 'goatee-text-editor-pane args)
