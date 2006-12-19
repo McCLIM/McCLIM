@@ -456,7 +456,15 @@
 
 (defmethod design-gcontext ((medium clx-medium) (ink climi::indexed-pattern))
   (let* ((array (slot-value ink 'climi::array))
-         (inks  (slot-value ink 'climi::designs))
+         (inks  (map 'vector
+                     (lambda (ink)
+                       (cond
+                         ((eql ink +foreground-ink+) (medium-foreground medium))
+                         ((eql ink +background-ink+) (medium-background medium))
+                         ((eql ink +flipping-ink+)
+                          (error "Flipping ink within patterns is not supported."))
+                         (t ink)))
+                     (slot-value ink 'climi::designs)))
          (w     (array-dimension array 1))
          (h     (array-dimension array 0)))
     (assert (not (zerop w)))
