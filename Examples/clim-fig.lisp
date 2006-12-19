@@ -146,7 +146,7 @@
  )
 
 (defun make-colored-button (color &key width height)
-  (make-pane 'push-button-pane
+  (make-pane 'push-button
 	     :label " "
 	     :activate-callback
              #'(lambda (gadget)
@@ -158,7 +158,7 @@
 	     :highlighted color))
 
 (defun make-drawing-mode-button (label mode &key width height)
-  (make-pane 'push-button-pane
+  (make-pane 'push-button
 	     :label label
 	     :activate-callback
              #'(lambda (gadget)

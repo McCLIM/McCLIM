@@ -91,12 +91,12 @@
      (default
          (horizontally (:background climi::*3d-normal-color*)
            30
-           (make-pane 'push-button-pane :label "Okay"
+           (make-pane 'push-button :label "Okay"
                       :width '(50 :mm))
            '+fill+
-           (make-pane 'push-button-pane :label "Cancel")
+           (make-pane 'push-button :label "Cancel")
            '+fill+
-           (make-pane 'push-button-pane :label "Help")
+           (make-pane 'push-button :label "Help")
            5
            ) )))
 
@@ -105,10 +105,10 @@
     (:layouts
      (default
          (tabling (:background +red+)
-           (list (make-pane 'push-button-pane :label "Last Name" :max-height +fill+)
-                 (make-pane 'push-button-pane :label "First Name" #||:max-height +fill+||#))
-           (list (make-pane 'push-button-pane :label "C 1 0")
-                 (make-pane 'push-button-pane :label "C 1 1"))
+           (list (make-pane 'push-button :label "Last Name" :max-height +fill+)
+                 (make-pane 'push-button :label "First Name" #||:max-height +fill+||#))
+           (list (make-pane 'push-button :label "C 1 0")
+                 (make-pane 'push-button :label "C 1 1"))
            ) )))
 
 (defun make-test-label (ax ay)
@@ -118,7 +118,7 @@
                      :foreground +WHITE+
                      :background +PALETURQUOISE4+
                      :text-style (make-text-style :sans-serif :roman :normal))
-    (make-pane 'push-button-pane :label (format nil "~S" (list ax ay))
+    (make-pane 'push-button :label (format nil "~S" (list ax ay))
                :text-style (make-text-style :sans-serif :roman :normal)
                :max-width 1000
                :max-height 1000)))
@@ -131,7 +131,7 @@
                      :background +PALETURQUOISE4+
                      :text-style (make-text-style :sans-serif :roman :normal))
     #+nil
-    (make-pane 'push-button-pane :label 
+    (make-pane 'push-button :label 
                :text-style (make-text-style :sans-serif :roman :normal)
                :max-width 1000
                :max-height 1000)))

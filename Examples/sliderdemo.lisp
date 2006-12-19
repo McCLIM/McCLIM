@@ -75,7 +75,7 @@
   (setf (gadget-value *text-field*) (princ-to-string value)))
 
 (defun find-text-field (frame)
-  (first (member-if #'(lambda (gadget) (typep gadget 'text-field-pane))
+  (first (member-if #'(lambda (gadget) (typep gadget 'text-field))
 		    (frame-panes frame))))
 
 (defmethod sliderdemo-frame-top-level ((frame application-frame)

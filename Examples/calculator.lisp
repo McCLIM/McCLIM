@@ -89,7 +89,7 @@
 (defun make-button (label operator &key width height
                                         (max-width +fill+) min-width
                                         (max-height +fill+) min-height)
-  (make-pane 'push-button-pane
+  (make-pane 'push-button
 	     :label label
 	     :activate-callback operator
              :text-style *calculator-text-style*
