@@ -159,7 +159,7 @@
 
 (deftype xpm-data-array () `(simple-array (unsigned-byte 8) 1))
 (deftype array-index ()
-  #-sbcl '#.(integer 0 #.array-dimension-limit)
+  #-sbcl '(integer 0 #.array-dimension-limit)
   #+sbcl 'sb-int:index)
 (deftype xpm-pixcode () `(unsigned-byte 24)) ; Bogus upper limit for speed.. =/
 
