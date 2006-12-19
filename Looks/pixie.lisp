@@ -19,7 +19,25 @@
 (defclass pixie-look (frame-manager) ())
 #+clx (defclass pixie/clx-look (pixie-look clim-clx::clx-frame-manager) ())
 
-; our stub inside clim proper
+
+(defmacro define-pixie-gadget (abstract-type pixie-type &key (enabled t))
+  `(defmethod make-pane-1 ((fm pixie-look)
+			   (frame application-frame)
+			   (type (eql ',abstract-type))
+			   &rest args)
+    (declare (ignorable fm frame type args))
+    (format *trace-output* "~&  make-pane-1 ~A => ~A~%" ',abstract-type ',pixie-type)
+    ,(if enabled
+	 `(apply #'make-instance
+           ',pixie-type
+           :frame frame
+           :manager fm
+           :port (port frame)
+	   args)
+	 `(call-next-method))))
+
+;; Let us please stop playing these stupid symbol games.
+#+NIL
 (defmethod make-pane-1 ((fm pixie-look) (frame application-frame) type &rest args)
   (apply #'make-instance
          (or (find-symbol (concatenate 'string "PIXIE-" (symbol-name type)) :climi)
@@ -68,11 +86,11 @@
           (y1 (+ y1 2))
           (x2 (- x2 1))
           (y2 (- y2 1)))
-      (draw-line* pane x1 y2 (+ x2 1) y2 :ink +gray54+) ; <- not a typo
-      (draw-line* pane x2 y1 x2 (+ y2 1) :ink +gray54+))
+      (draw-line* pane x1 y2 x2 y2 :ink +gray54+)
+      (draw-line* pane x2 y1 x2 y2 :ink +gray54+))
     ;; now for the black outline
-    (draw-line* pane x1 y2 (+ x2 1) y2 :ink +black+)
-    (draw-line* pane x2 y1 x2 (+ y2 1) :ink +black+)
+    (draw-line* pane x1 y2 x2 y2 :ink +black+)
+    (draw-line* pane x2 y1 x2 y2 :ink +black+)
     (draw-label* pane x1 y1 x2 y2
                       :ink (pane-inking-color pane))))
 
@@ -88,9 +106,9 @@
         (y2 (- y2 2)))
     (draw-line* pane x1 y1 (+ x2 1) y1 :ink +black+)
     (draw-line* pane x1 y1 x1 (+ y2 1) :ink +black+))
-  ;; now for the black outline
-  (draw-line* pane x1 y2 (+ x2 1) y2 :ink +white+)
-  (draw-line* pane x2 y1 x2 (+ y2 1) :ink +white+)
+  ;; now for the white outline
+  (draw-line* pane x1 y2 x2 y2 :ink +white+)
+  (draw-line* pane x2 y1 x2 y2 :ink +white+)
   (draw-label* pane x1 y1 x2 y2
                :ink (pane-inking-color pane)))
 
@@ -141,6 +159,7 @@
 (defconstant +pixie-slider-thumb-height+      34)
 (defconstant +pixie-slider-thumb-half-width+   8)
 
+
 (defclass pixie-slider-pane (pixie-gadget draggable-arming-mixin slider-pane)
   ((dragging
     :initform nil)
@@ -159,6 +178,8 @@
   (:default-initargs
     :border-style :inset
     :border-width 1))
+
+(define-pixie-gadget slider pixie-slider-pane)
 
 (defmethod compose-space ((pane pixie-slider-pane) &key width height)
   (declare (ignore width height))
@@ -334,8 +355,8 @@
                      (x1     (+ x1 2))
                      (x2     (- x2 3)))
                 (draw-line* pane x1 y1 x2 y1       :ink +gray58+)
-                (draw-line* pane x1 y2 (+ x2 1) y2 :ink +white+)
-                (draw-line* pane x2 y1 x2 (+ y2 1) :ink +white+)))))))))
+                (draw-line* pane x1 y2 x2 y2 :ink +white+)
+                (draw-line* pane x2 y1 x2 y2 :ink +white+)))))))))
 
 ; Scrollbar
 
@@ -386,6 +407,8 @@
      :min-value 0
      :max-value 1
      :orientation :vertical))
+
+(define-pixie-gadget scroll-bar pixie-scroll-bar-pane)
 
 (defmethod compose-space ((pane pixie-scroll-bar-pane) &key width height)
   (declare (ignore width height))
@@ -657,6 +680,8 @@
 ; silly menu-bar isn't named pane, so this catches it
 (defclass pixie-menu-bar (pixie-menu-bar-pane) ())
 
+(define-pixie-gadget menu-bar pixie-menu-bar-pane :enabled nil)  
+
 (defmethod handle-repaint ((pane pixie-menu-bar-pane) region)
   (declare (ignore region))
   (with-special-choices (pane)
@@ -858,6 +883,8 @@
 
 (defclass pixie-toggle-button-pane (pixie-gadget toggle-button-pane) ())
 
+(define-pixie-gadget toggle-button pixie-toggle-button-pane)
+
 (defmethod draw-toggle-button-indicator ((pane pixie-toggle-button-pane) (type (eql :one-of)) value x1 y1 x2 y2)
   (multiple-value-bind (cx cy) (values (/ (+ x1 x2) 2) (/ (+ y1 y2) 2))
     (let ((radius (/ (- y2 y1) 2)))
@@ -923,6 +950,8 @@
 (defclass pixie-push-button-pane  (pixie-gadget push-button-pane slider-pane) (
   (dragging
     :initform nil)))
+
+(define-pixie-gadget push-button pixie-push-button-pane)
 
 (defmethod compose-space ((gadget pixie-push-button-pane) &key width height)
   (declare (ignore width height))
@@ -995,6 +1024,10 @@
 ; Text Area
 
 (defclass pixie-text-field-pane (text-field-pane) ())
+
+;; Why does pixie need its own text area subclass? Leave it disabled for now.
+; (define-pixie-class text-field-pane pixie-text-field-pane)
+
 
 (defmethod initialize-instance :after ((pane pixie-text-field-pane) &rest rest)
   (unless (getf rest :normal)
