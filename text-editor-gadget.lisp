@@ -97,24 +97,24 @@ activate callback to be called"))
          args))
 
 (defmethod compose-space ((pane text-editor-pane) &key width height)
-  (declare (ignore width height))
   (with-sheet-medium (medium pane)
     (let* ((text-style (medium-text-style medium))
-           (tr-height (text-style-height text-style medium))
-           (tr-width (text-style-width text-style medium))
-           (padding (- (bounding-rectangle-width pane)
-                       (stream-text-margin pane))))
+           (line-height (+ (text-style-height text-style medium)
+                           (stream-vertical-spacing pane)))
+           (column-width (text-style-width text-style medium)))
       (with-accessors ((ncolumns text-editor-ncolumns)
                        (nlines text-editor-nlines)) pane
-        (apply #'make-space-requirement
-               (append (when ncolumns
-                         (let ((width (max (+ (* ncolumns tr-width))
-                                           (bounding-rectangle-width (stream-current-output-record  pane)))))
-                           (list :width width :max-width width :min-width width)))
-                       (when nlines
-                         (let ((height (+ (* nlines tr-height) (* 2 padding)
-                                          (stream-vertical-spacing pane))))
-                           (list :height height :max-height height :min-height height)))))))))
+        (apply #'space-requirement-combine* #'(lambda (req1 req2)
+                                                (or req2 req1))
+               (call-next-method)
+               (let ((width (if ncolumns
+                                (+ (* ncolumns column-width))
+                                width))
+                     (height (if nlines
+                                 (+ (* nlines line-height))
+                                 height)))
+                 (list :width width :max-width width :min-width width
+                       :height height :max-height height :min-height height)))))))
 
 (defmethod allocate-space ((pane text-editor-pane) w h)
   (resize-sheet pane w h))
@@ -289,7 +289,4 @@ activate callback to be called"))
                                    &rest args &key)
   (if *use-goatee*
       (apply #'make-pane-1 fm frame 'goatee-text-editor-pane args)
-      (apply #'make-pane-1 fm frame :drei
-             :drei-class 'text-editor-pane
-             :minibuffer t
-             args)))
+      (apply #'make-pane-1 fm frame 'text-editor-pane args)))
