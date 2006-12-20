@@ -40,7 +40,9 @@
   (cffi:load-foreign-library "libgthread-2.0-0.dll")
   (cffi:load-foreign-library "libgobject-2.0-0.dll")
   (cffi:load-foreign-library "libgdk-win32-2.0-0.dll")
-  (cffi:load-foreign-library "libgtk-win32-2.0-0.dll"))
+  (cffi:load-foreign-library "libgtk-win32-2.0-0.dll")
+  (cffi:load-foreign-library "libpangocairo-1.0-0.dll")
+  (cffi:load-foreign-library "libpango-1.0-0.dll"))
 
 (defmacro defcfun (name rtype &rest argtypes)
   (if (and (eq rtype 'cairo_status_t)
