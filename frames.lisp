@@ -30,14 +30,21 @@
 
 ;;; Frame-Manager class
 
+;; FIXME: The spec says the port must "conform to options".
+;; I've added a check that the ports match, but we've no
+;; protocol for testing the other options. -Hefner
 (defun find-frame-manager (&rest options &key port &allow-other-keys)
   (declare (special *frame-manager*))
-  (if (boundp '*frame-manager*)
+  (if (and (boundp '*frame-manager*)
+           (or (null port)
+               (eql port (frame-manager-port *frame-manager*))))
       *frame-manager*
     (if (and *default-frame-manager*
-	     (frame-manager-p *default-frame-manager*))
+             (frame-manager-p *default-frame-manager*)
+             (or (null port)
+                 (eql port (frame-manager-port *default-frame-manager*))))
 	*default-frame-manager*
-      (first (frame-managers (or port (apply #'find-port options)))))))
+        (first (frame-managers (or port (apply #'find-port options)))))))
 
 (defmacro with-frame-manager ((frame-manager) &body body)
   `(let ((*frame-manager* ,frame-manager))
