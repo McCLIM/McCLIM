@@ -327,6 +327,12 @@
   (nbytes :int)                         ;int
   )
 
+#-(or win32 windows mswindows)
+(defcfun "gdk_x11_drawable_get_xid"
+    :unsigned-long
+  (drawable :pointer)                   ;GdkDrawable *
+  )
+
 (defconstant GDK_CURRENT_TIME 0)
 
 ;; fixme: GtkWidgetFlags is an enum, why is it not in the object file?

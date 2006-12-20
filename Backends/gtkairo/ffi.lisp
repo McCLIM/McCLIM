@@ -932,11 +932,6 @@
   (invalidate_children :int)            ;gboolean
   )
 
-(defcfun "gdk_x11_drawable_get_xid"
-    :unsigned-long
-  (drawable :pointer)                   ;GdkDrawable *
-  )
-
 (defcfun "gtk_adjustment_new"
     :pointer
   (value :double)                       ;gdouble
