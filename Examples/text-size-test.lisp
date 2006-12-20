@@ -26,7 +26,7 @@
 	   :min-width 600
 	   :display-time t
 	   :display-function 'display-canvas)
-   (text (make-pane 'text-field :value "ytmM"))
+   (text (make-pane 'text-editor :height 200 :value "ytmM"))
    (family
     (with-radio-box ()
       (make-pane 'toggle-button :label "Fixed" :id :fixed)
@@ -45,7 +45,7 @@
    (size
     (make-pane 'slider
 	       :orientation :horizontal
-	       :value 160
+	       :value 120
 	       :min-value 1
 	       :max-value 1000)))
   (:layouts
@@ -164,11 +164,14 @@
                             (+ x1 width) (+ y1 height)
                             :ink +red+
                             :filled nil)
-           (draw-rectangle* stream
-                            x1 y1
-                            (+ x1 final-x) (+ y1 final-y)
-                            :ink +blue+
-                            :filled nil))
+	    (draw-line* stream
+			0 (+ y1 final-y)
+			pane-width (+ y1 final-y)
+			:ink +blue+)
+	    (draw-line* stream
+			(+ x1 final-x) 0
+			(+ x1 final-x) pane-height
+			:ink +blue+))
           ((:text-bounding-rectangle)
            (multiple-value-bind (left top right bottom)
                (climi::text-bounding-rectangle* medium str :text-style style)
