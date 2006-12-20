@@ -544,7 +544,7 @@
 	(gtk_widget_destroy widget)
 	(setf (native-widget gadget) nil)))))
 
-(defmethod allocate-space ((pane label-pane) width height)
+(defmethod allocate-space ((pane gtk-label-pane) width height)
   (when (sheet-children pane)
     (move-sheet (first (sheet-children pane)) 0 0)
     (allocate-space (first (sheet-children pane))
