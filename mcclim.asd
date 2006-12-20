@@ -539,8 +539,8 @@
               :pathname #.(make-pathname :directory '(:relative "Apps" "Inspector"))
               :components
 	      ((:file "package")
-	       (:file "disassembly")
-	       (:file "inspector")))))
+	       (:file "disassembly" :depends-on ("package"))
+	       (:file "inspector" :depends-on ("disassembly"))))))
 
 (defmethod perform :after ((op load-op) (c (eql (find-system :clim))))
   (pushnew :clim *features*)
