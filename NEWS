@@ -6,6 +6,9 @@
 *** Some bugfixes, including CMUCL support and better key event handling.
 *** Native implementation of context menus, list panes, label panes, and
     option panes.
+*** Draw text using Pango.  (Bug fix: Fixed-width font supported on Windows
+    now.  Multiple lines of output in TEXT-SIZE supported now.
+    TEXT-STYLE-FIXED-WIDTH-P works correctly now.)
 ** Improvement: Added new editor substrate ("Drei").
 ** Improvement: Improved the pathname presentation methods considerably.
 ** specification compliance: DELETE-GESTURE-NAME function now implemented.
