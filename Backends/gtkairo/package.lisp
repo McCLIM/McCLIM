@@ -3,4 +3,5 @@
 (in-package :common-lisp-user)
 
 (defpackage :clim-gtkairo
-  (:use :clim :clim-lisp :clim-backend))
+  (:use :clim :clim-lisp :clim-backend)
+  (:export #:*default-font-families*))

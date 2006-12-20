@@ -44,9 +44,6 @@
   (unless cr
     (setf (last-seen-sheet instance) nil)))
 
-(defclass metrik-medium (gtkairo-medium)
-  ())
-
 (defparameter *antialiasingp* t)
 
 (defun gtkwidget-gdkwindow (widget)
@@ -55,9 +52,6 @@
 (defun medium-mirror (medium)
   (or (climi::port-lookup-mirror (port medium) (medium-sheet medium))
       (error "oops, drawing operation on unmirrored sheet ~A" medium)))
-
-(defmacro with-cairo-medium ((medium) &body body)
-  `(invoke-with-cairo-medium (lambda () ,@body) ,medium))
 
 (defun invoke-with-cairo-medium (fn medium)
   (when (or (cr medium)
@@ -635,14 +629,15 @@
       (sync-transformation medium)
       (sync-ink medium (medium-ink medium))
       (sync-clipping-region medium (medium-clipping-region medium))
-      (sync-text-style medium
-		       (merge-text-styles (medium-text-style medium)
-					  (medium-default-text-style medium))
-		       transform-glyphs)
-      (cairo_move_to cr (df x) (df y))
       (setf end (or end (length text)))
-      (unless (eql start end)		;empty string breaks cairo/windows
-	(cairo_show_text cr (subseq text start end))))))
+      (unless (eql start end)
+	(with-pango-cairo (layout cr
+				  :text-style medium
+				  :text (subseq text start end))
+	  (let ((y2
+		 (nth-value 1 (pango-layout-line-get-pixel-extents layout 0))))
+	    (cairo_move_to cr (df x) (df (+ y y2))))
+	  (pango_cairo_show_layout cr layout))))))
 
 (defmethod medium-finish-output ((medium gtkairo-medium))
   (with-cairo-medium (medium)
@@ -720,102 +715,44 @@
 
 (let ((hash (make-hash-table)))
   (defmethod text-style-ascent :around (text-style (medium gtkairo-medium))
-    (or (gethash text-style hash)
+    (or #-debug-metrik (gethash text-style hash)
         (setf (gethash text-style hash) (call-next-method)))))
 
 (defmethod text-style-ascent (text-style (medium gtkairo-medium))
   (text-style-ascent text-style (metrik-medium (port medium))))
-
-(defmethod text-style-ascent (text-style (medium metrik-medium))
-  (with-cairo-medium (medium)
-    (ceiling
-     (with-slots (cr) medium
-       (sync-sheet medium)
-       (cairo_identity_matrix cr)
-       (sync-text-style medium text-style t)
-       (cffi:with-foreign-object (res 'cairo_font_extents)
-	 (cairo_font_extents cr res)
-	 (slot res 'cairo_font_extents 'ascent))))))
 
 
 ;;; TEXT-STYLE-DESCENT
 
 (let ((hash (make-hash-table)))
   (defmethod text-style-descent :around (text-style (medium gtkairo-medium))
-    (or (gethash text-style hash)
+    (or #-debug-metrik (gethash text-style hash)
         (setf (gethash text-style hash) (call-next-method)))))
 
 (defmethod text-style-descent (text-style (medium gtkairo-medium))
   (text-style-descent text-style (metrik-medium (port medium))))
-
-(defmethod text-style-descent (text-style (medium metrik-medium))
-  (with-cairo-medium (medium)
-    (ceiling
-     (with-slots (cr) medium
-       (sync-sheet medium)
-       (cairo_identity_matrix cr)
-       (sync-text-style medium text-style t)
-       (cffi:with-foreign-object (res 'cairo_font_extents)
-	 (cairo_font_extents cr res)
-	 (slot res 'cairo_font_extents 'descent))))))
 
 
 ;;; TEXT-STYLE-HEIGHT
 
 (let ((hash (make-hash-table)))
   (defmethod text-style-height :around (text-style (medium gtkairo-medium))
-    (or (gethash text-style hash)
+    (or #-debug-metrik (gethash text-style hash)
         (setf (gethash text-style hash) (call-next-method)))))
 
 (defmethod text-style-height (text-style (medium gtkairo-medium))
   (text-style-height text-style (metrik-medium (port medium))))
-
-(defmethod text-style-height (text-style (medium metrik-medium))
-;;;  (with-cairo-medium (medium)
-;;;    (ceiling
-;;;     (with-slots (cr) medium
-;;;       (sync-sheet medium)
-;;;       (cairo_identity_matrix cr)
-;;;       (sync-text-style medium text-style t)
-;;;       (cffi:with-foreign-object (res 'cairo_font_extents)
-;;;	 (cairo_font_extents cr res)
-;;;	 ;; ### let's hope that cairo respects
-;;;	 ;; height = ascent + descent.
-;;;	 ;;
-;;;	 ;; No, it expressly doesn't.  Cairo documentation states that
-;;;	 ;; height includes additional space that is meant to give more
-;;;	 ;; aesthetic line spacing than ascent+descent would.  Is that a
-;;;	 ;; problem for us? --DFL
-;;;	 (slot res 'cairo_font_extents 'height)))))
-  ;; OK, so it _does_ matter (see bug 15).
-  (+ (text-style-ascent text-style medium)
-     (text-style-descent text-style medium)))
 
 
 ;;; TEXT-STYLE-WIDTH
 
 (let ((hash (make-hash-table)))
   (defmethod text-style-width :around (text-style (medium gtkairo-medium))
-    (or (gethash text-style hash)
+    (or #-debug-metrik (gethash text-style hash)
         (setf (gethash text-style hash) (call-next-method)))))
 
 (defmethod text-style-width (text-style (medium gtkairo-medium))
   (text-style-width text-style (metrik-medium (port medium))))
-
-(defmethod text-style-width (text-style (medium metrik-medium))
-  (with-cairo-medium (medium)
-    (ceiling
-     (with-slots (cr) medium
-       (sync-sheet medium)
-       (cairo_identity_matrix cr)
-       (sync-text-style medium text-style t)
-       ;; This didn't work well for Climacs. --DFL
-;;;       (cffi:with-foreign-object (res 'cairo_text_extents)
-;;;         (cairo_text_extents cr "m" res)
-;;;         (slot res 'cairo_text_extents 'width))
-       (cffi:with-foreign-object (res 'cairo_font_extents)
-	 (cairo_font_extents cr res)
-	 (slot res 'cairo_font_extents 'max_x_advance))))))
 
 
 ;;; TEXT-STYLE-FIXED-WIDTH-P
@@ -824,25 +761,11 @@
   (defmethod text-style-fixed-width-p
       :around
       (text-style (medium gtkairo-medium))
-    (or (gethash text-style hash)
+    (or #-debug-metrik (gethash text-style hash)
         (setf (gethash text-style hash) (call-next-method)))))
 
 (defmethod text-style-fixed-width-p (text-style (medium gtkairo-medium))
   (text-style-fixed-width-p text-style (metrik-medium (port medium))))
-
-(defmethod text-style-fixed-width-p (text-style (medium metrik-medium))
-  (with-cairo-medium (medium)
-    (with-slots (cr) medium
-      (sync-sheet medium)
-      (cairo_identity_matrix cr)
-      (sync-text-style medium text-style t)
-      (cffi:with-foreign-object (res 'cairo_text_extents)
-	(let (i m)
-	  (cairo-text-extents cr "i" res)
-	  (setf i (slot res 'cairo_text_extents 'width))
-	  (cairo-text-extents cr "m" res)
-	  (setf m (slot res 'cairo_text_extents 'width))
-	  (= i m))))))
 
 (defmethod text-size
     ((medium gtkairo-medium) string &key text-style (start 0) end)
@@ -869,71 +792,6 @@
 				     :text-style text-style
 				     :start start
 				     :end (or end (length string)))))
-
-;; FIXME: TEXT-SIZE [and presumably TEXT-BOUNDING-RECTANGLE*, too] are
-;; supposed to take newlines into account.  The CLX backend code was
-;; written to support that but does not -- T-B-R errors out and T-S
-;; doesn't return what WRITE-STRING on the sheet actually does.  So
-;; let's not steal code from CLIM-CLX when it's broken.  Doesn't
-;; actually look like anyone has been depending on this after all.
-;; -- DFL
-
-(defmethod text-size
-    ((medium metrik-medium) string &key text-style (start 0) end)
-  (with-cairo-medium (medium)
-    ;; -> width height final-x final-y baseline
-    (when (characterp string) (setf string (string string)))
-    (setf text-style (or text-style (make-text-style nil nil nil)))
-    (setf text-style
-	  (merge-text-styles text-style (medium-default-text-style medium)))
-    (with-slots (cr) medium
-      (cairo_identity_matrix cr)
-      (sync-text-style medium text-style t)
-      (cffi:with-foreign-object (res 'cairo_text_extents)
-	(cairo-text-extents cr
-			    (subseq string start (or end (length string)))
-			    res)
-	(cffi:with-foreign-slots
-	    ((x_advance height y_bearing) res cairo_text_extents)
-	  (values
-	   ;; use x_advance instead of width, since CLIM wants to trailing
-	   ;; spaces to be taken into account.
-	   (ceiling x_advance)
-	   (ceiling height)
-	   ;; Sames values again here: The CLIM spec states that these
-	   ;; values differ only for multi-line text.  And y_advance is 0
-	   ;; for european text, which is not what we want. --DFL
-	   (ceiling x_advance)
-	   (ceiling height)
-	   ;; This used to be TEXT-STYLE-ASCENT, but see comment there.
-	   (abs (ceiling y_bearing))))))))
-
-(defmethod climi::text-bounding-rectangle*
-    ((medium metrik-medium) string &key text-style (start 0) end)
-  (with-cairo-medium (medium)
-    ;; -> left ascent right descent
-    (when (characterp string) (setf string (string string)))
-    (setf text-style (or text-style (make-text-style nil nil nil)))
-    (setf text-style
-	  (merge-text-styles text-style (medium-default-text-style medium)))
-    (with-slots (cr) medium
-      (cairo_identity_matrix cr)
-      (sync-text-style medium text-style t)
-      (cffi:with-foreign-object (res 'cairo_text_extents)
-	(cairo-text-extents cr
-			    (subseq string start (or end (length string)))
-			    res)
-	;; This used to be a straight call to TEXT-SIZE.  Looking at
-	;; what CLIM-CLX does, this looks better to me, but I'm not sure
-	;; whether it's 100% right:
-	;;   --DFL
-	(cffi:with-foreign-slots
-	    ((width height x_advance y_advance x_bearing y_bearing)
-	     res cairo_text_extents)
-	  (values (floor x_bearing)
-		  (floor y_bearing)
-		  (ceiling (+ width (max 0 x_bearing)))
-		  (ceiling (+ height y_bearing))))))))
 
 ;;;; ------------------------------------------------------------------------
 ;;;;  General Designs

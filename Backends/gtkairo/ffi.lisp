@@ -194,6 +194,20 @@
   :GTK_WINDOW_TOPLEVEL
   :GTK_WINDOW_POPUP)
 
+(defcenum PangoStyle
+  :PANGO_STYLE_NORMAL
+  :PANGO_STYLE_OBLIQUE
+  :PANGO_STYLE_ITALIC)
+
+(defcenum PangoWeight
+  (:PANGO_WEIGHT_ULTRALIGHT 200)
+  (:PANGO_WEIGHT_LIGHT 300)
+  (:PANGO_WEIGHT_NORMAL 400)
+  (:PANGO_WEIGHT_SEMIBOLD 600)
+  (:PANGO_WEIGHT_BOLD 700)
+  (:PANGO_WEIGHT_ULTRABOLD 800)
+  (:PANGO_WEIGHT_HEAVY 900))
+
 (cffi:defcstruct Screen
   (ext_data :pointer)                   ;XExtData *
   (display :pointer)                    ;struct _XDisplay *
@@ -694,10 +708,20 @@
   (arg2 :double)                        ;double
   )
 
+(defcfun "g_free"
+    :void
+  (mem :pointer)                        ;gpointer
+  )
+
 (defcfun "g_idle_add"
     :unsigned-int
   (function :pointer)                   ;GSourceFunc
   (data :pointer)                       ;gpointer
+  )
+
+(defcfun "g_object_unref"
+    :void
+  (_object :pointer)                    ;gpointer
   )
 
 (defcfun "g_signal_connect_data"
@@ -826,6 +850,8 @@
     :void
   (gc :pointer)                         ;GdkGC *
   )
+
+(defcfun "gdk_pango_context_get" :pointer)
 
 (defcfun "gdk_pixmap_new"
     :pointer
@@ -1363,4 +1389,201 @@
     :void
   (window :pointer)                     ;GtkWindow *
   (title :string)                       ;const gchar *
+  )
+
+(defcfun "pango_cairo_create_layout"
+    :pointer
+  (cr :pointer)                         ;cairo_t *
+  )
+
+(defcfun "pango_cairo_show_layout"
+    :void
+  (cr :pointer)                         ;cairo_t *
+  (layout :pointer)                     ;PangoLayout *
+  )
+
+(defcfun "pango_context_get_font_map"
+    :pointer
+  (context :pointer)                    ;PangoContext *
+  )
+
+(defcfun "pango_context_get_metrics"
+    :pointer
+  (context :pointer)                    ;PangoContext *
+  (desc :pointer)                       ;const PangoFontDescription *
+  (language :pointer)                   ;PangoLanguage *
+  )
+
+(defcfun "pango_context_list_families"
+    :void
+  (context :pointer)                    ;PangoContext *
+  (families :pointer)                   ;PangoFontFamily ***
+  (n_families :pointer)                 ;int *
+  )
+
+(defcfun "pango_context_load_font"
+    :pointer
+  (context :pointer)                    ;PangoContext *
+  (desc :pointer)                       ;const PangoFontDescription *
+  )
+
+(defcfun "pango_font_describe"
+    :pointer
+  (font :pointer)                       ;PangoFont *
+  )
+
+(defcfun "pango_font_description_free"
+    :void
+  (desc :pointer)                       ;PangoFontDescription *
+  )
+
+(defcfun "pango_font_description_from_string"
+    :pointer
+  (str :string)                         ;const char *
+  )
+
+(defcfun "pango_font_description_get_family"
+    :string
+  (desc :pointer)                       ;const PangoFontDescription *
+  )
+
+(defcfun "pango_font_description_new" :pointer)
+
+(defcfun "pango_font_description_set_absolute_size"
+    :void
+  (desc :pointer)                       ;PangoFontDescription *
+  (size :double)                        ;double
+  )
+
+(defcfun "pango_font_description_set_family"
+    :void
+  (desc :pointer)                       ;PangoFontDescription *
+  (family :string)                      ;const char *
+  )
+
+(defcfun "pango_font_description_set_size"
+    :void
+  (desc :pointer)                       ;PangoFontDescription *
+  (size :int)                           ;gint
+  )
+
+(defcfun "pango_font_description_set_style"
+    :void
+  (desc :pointer)                       ;PangoFontDescription *
+  (style PangoStyle))
+
+(defcfun "pango_font_description_set_weight"
+    :void
+  (desc :pointer)                       ;PangoFontDescription *
+  (weight PangoWeight))
+
+(defcfun "pango_font_description_to_string"
+    :string
+  (desc :pointer)                       ;const PangoFontDescription *
+  )
+
+(defcfun "pango_font_family_get_name"
+    :string
+  (family :pointer)                     ;PangoFontFamily *
+  )
+
+(defcfun "pango_font_family_is_monospace"
+    :int
+  (family :pointer)                     ;PangoFontFamily *
+  )
+
+(defcfun "pango_font_map_load_font"
+    :pointer
+  (fontmap :pointer)                    ;PangoFontMap *
+  (context :pointer)                    ;PangoContext *
+  (desc :pointer)                       ;const PangoFontDescription *
+  )
+
+(defcfun "pango_font_metrics_get_approximate_char_width"
+    :int
+  (metrics :pointer)                    ;PangoFontMetrics *
+  )
+
+(defcfun "pango_font_metrics_get_ascent"
+    :int
+  (metrics :pointer)                    ;PangoFontMetrics *
+  )
+
+(defcfun "pango_font_metrics_get_descent"
+    :int
+  (metrics :pointer)                    ;PangoFontMetrics *
+  )
+
+(defcfun "pango_font_metrics_unref"
+    :void
+  (metrics :pointer)                    ;PangoFontMetrics *
+  )
+
+(defcfun "pango_layout_get_context"
+    :pointer
+  (layout :pointer)                     ;PangoLayout *
+  )
+
+(defcfun "pango_layout_get_line"
+    :pointer
+  (layout :pointer)                     ;PangoLayout *
+  (line :int)                           ;int
+  )
+
+(defcfun "pango_layout_get_line_count"
+    :int
+  (layout :pointer)                     ;PangoLayout *
+  )
+
+(defcfun "pango_layout_get_pixel_extents"
+    :void
+  (layout :pointer)                     ;PangoLayout *
+  (ink_rect :pointer)                   ;PangoRectangle *
+  (logical_rect :pointer)               ;PangoRectangle *
+  )
+
+(defcfun "pango_layout_get_pixel_size"
+    :void
+  (layout :pointer)                     ;PangoLayout *
+  (width :pointer)                      ;int *
+  (height :pointer)                     ;int *
+  )
+
+(defcfun "pango_layout_get_size"
+    :void
+  (layout :pointer)                     ;PangoLayout *
+  (width :pointer)                      ;int *
+  (height :pointer)                     ;int *
+  )
+
+(defcfun "pango_layout_line_get_pixel_extents"
+    :void
+  (layout_line :pointer)                ;PangoLayoutLine *
+  (ink_rect :pointer)                   ;PangoRectangle *
+  (logical_rect :pointer)               ;PangoRectangle *
+  )
+
+(defcfun "pango_layout_set_font_description"
+    :void
+  (layout :pointer)                     ;PangoLayout *
+  (desc :pointer)                       ;const PangoFontDescription *
+  )
+
+(defcfun "pango_layout_set_single_paragraph_mode"
+    :void
+  (layout :pointer)                     ;PangoLayout *
+  (setting :int)                        ;gboolean
+  )
+
+(defcfun "pango_layout_set_spacing"
+    :void
+  (layout :pointer)                     ;PangoLayout *
+  (spacing :int)                        ;int
+  )
+
+(defcfun "pango_layout_set_text"
+    :void
+  (layout :pointer)                     ;PangoLayout *
+  (text :string)                        ;const char *
+  (length :int)                         ;int
   )

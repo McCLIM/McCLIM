@@ -386,6 +386,7 @@
 	       (:file "port")
 	       (:file "event")
 	       (:file "keys")
+	       (:file "pango")
 	       (:file "medium")
 	       (:file "pixmap")
 	       (:file "frame-manager")

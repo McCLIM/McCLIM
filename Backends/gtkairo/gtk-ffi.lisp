@@ -350,15 +350,25 @@
 (defconstant GTK_DOUBLE_BUFFERED  (ash 1 21))
 (defconstant GTK_NO_SHOW_ALL      (ash 1 22))
 
+(defconstant PANGO_SCALE 1024)
+
+(cffi:defcstruct PangoRectangle
+  (x :int)
+  (y :int)
+  (width :int)
+  (height :int))
+
 
 ;; magic symbols for FFI code generation
 (defvar *dummy*
-    '(GdkFunction gtkselectionmode GtkScrollType GdkEventMask GdkEventType 
+    '(GdkFunction gtkselectionmode GtkScrollType GdkEventMask GdkEventType
       GtkWidgetFlags GdkModifierType GdkCrossingMode GtkWindowType
       GdkGrabStatus GdkWindowHints GtkStateType GdkDragAction GConnectFlags
       GdkDragProtocol
 
       gdk_x11_drawable_get_xid
+
+      pangostyle pangoweight PangoRectangle PangoFontMetrics
 
       cairo_format_t cairo_operator_t cairo_fill_rule_t cairo_line_cap_t
       cairo_line_join_t cairo_font_slant_t cairo_font_weight_t cairo_status_t
