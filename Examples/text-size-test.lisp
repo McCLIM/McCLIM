@@ -45,7 +45,7 @@
    (size
     (make-pane 'slider
 	       :orientation :horizontal
-	       :value 200
+	       :value 160
 	       :min-value 1
 	       :max-value 1000)))
   (:layouts
@@ -59,6 +59,30 @@
 	 (labelling (:label "Size") size)
 	 canvas))))
 
+(defun draw-vstrecke (stream x y1 y2 &rest args &key ink &allow-other-keys)
+  (draw-line* stream (- x 10) y1 (+ x 10) y1 :ink ink)
+  (draw-line* stream (- x 10) y2 (+ x 10) y2 :ink ink)
+  (apply #'draw-arrow* stream x y1 x y2 args))
+
+(defun draw-hstrecke (stream y x1 x2 &rest args &key ink &allow-other-keys)
+  (draw-line* stream x1 (- y 10) x1 (+ y 10) :ink ink)
+  (draw-line* stream x2 (- y 10) x2 (+ y 10) :ink ink)
+  (apply #'draw-arrow* stream x1 y x2 y args))
+
+(defun legend-text-style ()
+  (make-text-style :sans-serif :roman :small))
+
+(defun draw-legend (stream &rest entries)
+  (let* ((style (legend-text-style))
+	 (y 2)
+	 (h (nth-value 1 (text-size stream "dummy" :text-style style))))
+    (dolist (entry entries)
+      (when entry
+	(incf y h)
+	(let ((y* (+ 0.5 (round (- y (/ h 2))))))
+	  (apply #'draw-line* stream 2 y* 35 y* (cdr entry)))
+	(draw-text* stream (car entry) 40 y :text-style style)))))
+
 (defmethod display-canvas (frame stream)
   (window-clear stream)
   (let* ((pane-width (rectangle-width (sheet-region stream)))
@@ -70,11 +94,59 @@
 	  (mapcar #'gadget-id (gadget-value (find-pane-named frame 'face))))
          (rectangle (gadget-id (gadget-value (find-pane-named frame 'rectangle))))
 	 (face (if (cdr faces) '(:bold :italic) (car faces)))
-	 (style (make-text-style family face size)))
+	 (style (make-text-style family face size))
+	 (medium (sheet-medium stream)))
     (multiple-value-bind (width height final-x final-y baseline)
 	(text-size stream str :text-style style)
       (let ((x1 (/ (- pane-width width) 2))
 	    (y1 (/ (- pane-height height) 2)))
+	(draw-text* stream
+		    (format nil "fixed-width-p: ~(~A~)"
+			    (handler-case
+				(text-style-fixed-width-p style medium)
+			      (error (c)
+				c)))
+		    2
+		    pane-height
+		    :text-style (legend-text-style))
+	(draw-legend stream
+		     (list "Ascent"
+			   ;; :line-style (make-line-style :dashes '(1.5))
+			   :ink +black+)
+		     (list "Descent" :ink +black+)
+		     (list "Height"
+			   :line-style (make-line-style :thickness 2)
+			   :ink +black+)
+		     (list "Width (Avg.)" :ink +black+)
+		     (list "Baseline" :ink +green+)
+		     (when (eq rectangle :text-bounding-rectangle)
+		       (list "Bounding rectangle" :ink +purple+))
+		     (when (eq rectangle :text-size)
+		       (list "Text size (width/height)" :ink +red+))
+		     (when (eq rectangle :text-size)
+		       (list "Text size (final x/y)" :ink +blue+)))
+	(draw-vstrecke stream
+		      (- x1 20)
+		      (+ y1 (text-style-ascent style medium))
+		      y1
+		      ;; :line-style (make-line-style :dashes '(1.5))
+		      :ink +black+)
+	(draw-vstrecke stream
+		      (- x1 40)
+		      (+ y1 baseline)
+		      (+ y1 baseline (text-style-descent style medium))
+		      :ink +black+)
+	(draw-vstrecke stream
+		      (- x1 60)
+		      y1
+		      (+ y1 (text-style-height style medium))
+		      :line-style (make-line-style :thickness 2)
+		      :ink +black+)
+	(draw-hstrecke stream
+		       (- y1 20)
+		       x1
+		       (+ x1 (text-style-width style medium))
+		       :ink +black+)
 	(draw-line* stream
 		    0 (+ y1 baseline)
 		    pane-width (+ y1 baseline)
@@ -99,7 +171,7 @@
                             :filled nil))
           ((:text-bounding-rectangle)
            (multiple-value-bind (left top right bottom)
-               (climi::text-bounding-rectangle* (sheet-medium stream) str :text-style style)
+               (climi::text-bounding-rectangle* medium str :text-style style)
              (draw-rectangle* stream 
                               (+ x1 left) (+ y1 baseline top)
                               (+ x1 right) (+ y1 baseline bottom)
