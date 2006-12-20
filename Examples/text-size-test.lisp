@@ -98,8 +98,9 @@
 	 (medium (sheet-medium stream)))
     (multiple-value-bind (width height final-x final-y baseline)
 	(text-size stream str :text-style style)
-      (let ((x1 (/ (- pane-width width) 2))
-	    (y1 (/ (- pane-height height) 2)))
+      (let* ((x1 (/ (- pane-width width) 2))
+	     (y1 (/ (- pane-height height) 2))
+	     (ybase (+ y1 baseline)))
 	(draw-text* stream
 		    (format nil "fixed-width-p: ~(~A~)"
 			    (handler-case
@@ -127,17 +128,17 @@
 		       (list "Text size (final x/y)" :ink +blue+)))
 	(draw-vstrecke stream
 		      (- x1 20)
-		      (+ y1 (text-style-ascent style medium))
-		      y1
+		      ybase
+		      (- ybase (text-style-ascent style medium))
 		      ;; :line-style (make-line-style :dashes '(1.5))
 		      :ink +black+)
 	(draw-vstrecke stream
-		      (- x1 40)
-		      (+ y1 baseline)
-		      (+ y1 baseline (text-style-descent style medium))
+		      (- x1 20)
+		      ybase
+		      (+ ybase (text-style-descent style medium))
 		      :ink +black+)
 	(draw-vstrecke stream
-		      (- x1 60)
+		      (- x1 40)
 		      y1
 		      (+ y1 (text-style-height style medium))
 		      :line-style (make-line-style :thickness 2)
@@ -148,12 +149,16 @@
 		       (+ x1 (text-style-width style medium))
 		       :ink +black+)
 	(draw-line* stream
-		    0 (+ y1 baseline)
-		    pane-width (+ y1 baseline)
+		    0 ybase
+		    pane-width ybase
 		    :ink +green+)
-	(draw-text* stream str x1 (+ y1 baseline) :text-style style)
-	;; Here an attempt at testing text with newlines, results are garbage
-	;; even with CLIM-CLX:
+	(draw-text* stream str x1 ybase :text-style style)
+	;; Gtkairo's DRAW-TEXT* understands multiple lines.
+	;; (CLIM-CLX doesn't like multiple lines much.)
+	;;
+	;; If we use WRITE-STRING instead of DRAW-TEXT, the frontend will
+	;; handle the line breaks, but lines 2..n will start at x = 0 rather
+	;; than x = x1, confusing our diagram.
 ;;;	(setf (stream-cursor-position stream) (values x1 y1))
 ;;;	(with-text-style (stream style)
 ;;;	  (write-string str stream))
