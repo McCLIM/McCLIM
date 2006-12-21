@@ -1110,7 +1110,10 @@
    #:pointer-event-x                    ;generic function
    #:pointer-event-y                    ;generic function
    #:pointer-exit-event                 ;class
+   #:pointer-input-rectangle            ;function (in franz user guide)
+   #:pointer-input-rectangle*           ;function (in franz user guide)
    #:pointer-motion-event               ;class
+   #:pointer-place-rubber-band-line*    ;function (in franz user guide)
    #:pointer-position                   ;generic function
    #:pointer-sheet                      ;generic function
    #:pointerp                           ;predicate
