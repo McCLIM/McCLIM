@@ -164,18 +164,22 @@ accept of this query")))
             x-position y-position width height command-table frame-class))
   (setq stream (stream-designator-symbol stream '*standard-input*))
   (with-gensyms (accepting-values-continuation)
-    (let ((return-form
-           `(flet ((,accepting-values-continuation (,stream)
-                     ,@body))
-              (invoke-accepting-values ,stream
-                                       #',accepting-values-continuation
-                                       ,@args))
-            ))
-      `(if  ,own-window
-            (with-stream-in-own-window (,stream *standard-input* *standard-output*)
-                                       (,label)
-                                       ,return-form)
-           ,return-form))))
+    (let* ((return-form
+            `(flet ((,accepting-values-continuation (,stream)
+                      ,@body))
+               (invoke-accepting-values ,stream
+                                        #',accepting-values-continuation
+                                        ,@args)))
+           (true-form `(with-stream-in-own-window (,stream *standard-input* *standard-output*)
+                         (,label)
+                         ,return-form)))
+      ;; To avoid unreachable-code warnings, if `own-window' is a
+      ;; boolean constant, don't generate the `if' form.
+      (cond ((eq own-window t) true-form)
+            ((eq own-window nil) return-form)
+            (t `(if ,own-window
+                    ,true-form
+                    ,return-form))))))
 
 (defun invoke-accepting-values
     (stream body
