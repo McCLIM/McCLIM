@@ -227,8 +227,15 @@ keyboard focus"))
   (activate-gadget drei))
 
 (defmethod gadget-value ((gadget drei-gadget-pane))
-  (buffer-substring (buffer gadget)
-                    0 (size (buffer gadget))))
+  ;; This is supposed to be a string, but a Drei buffer can contain
+  ;; literal objects. We return a string if we can, an array
+  ;; otherwise. This is a bit slow, as we cons up the array and then
+  ;; probably a new one for the string, most of the time.
+  (let ((contents (buffer-sequence (buffer gadget)
+                                   0 (size (buffer gadget)))))
+    (if (every #'characterp contents)
+        (coerce contents 'string)
+        contents)))
 
 (defmethod (setf gadget-value) (new-value (gadget drei-gadget-pane)
                                 &key (invoke-callback t))
@@ -287,7 +294,8 @@ properly bound."))
           (abort-gesture ()
             (display-message "Aborted")))
         (display-drei drei)
-        (when (modified-p (buffer drei))
+        (when (and (modified-p (buffer drei))
+                   (gadget-value-changed-callback drei))
           (clear-modify (buffer drei))
           (value-changed-callback drei
                                   (gadget-client drei)
@@ -404,7 +412,8 @@ record."))
   (check-type initial-contents array)
   (check-type border-width integer)
   (check-type scroll-bars (member t :both :vertical :horizontal nil))
-  (with-keywords-removed (args (:minibuffer :scroll-bars :border-width :syntax))
+  (with-keywords-removed (args (:minibuffer :scroll-bars :border-width
+                                            :syntax :drei-class))
     (let* ((borderp (and border-width (plusp border-width)))
            (minibuffer-pane (cond ((eq minibuffer t)
                                    (make-pane 'drei-minibuffer-pane))
