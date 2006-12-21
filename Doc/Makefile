@@ -7,6 +7,10 @@ PSFILES=mcclim.ps
 PDFFILES=mcclim.pdf
 INFOFILE=mcclim.info
 HTMLDIRS=$(basename $(MCCLIMTEXI))
+IMAGES=ex2.eps inspect-as-cells.eps inspect-object-1.eps \
+inspect-object-2.eps inspect-object-3.eps native.fig
+IMAGETARGETTYPES=gif png eps
+TARGETIMAGES=$(shell sh ./makeimages.sh -e "$(IMAGES)" "$(IMAGETARGETTYPES)")
 # Place where generated documentation ends up. The value of
 # DOCSTRINGDIR has to end with a slash or you lose (it's passed to
 # Lisp's `pathname' function).
@@ -38,9 +42,12 @@ all: ps pdf info html
 .PHONY: dist
 dist: html pdf
 
+$(TARGETIMAGES):
+	sh ./makeimages.sh "$(IMAGES)" "$(IMAGETARGETTYPES)"
+
 # html documentation; output in $(HTMLDIRS)
 .PHONY: html
-html: html-stamp
+html: html-stamp $(TARGETIMAGES)
 
 html-stamp: $(DOCFILES) docstrings
 	@rm -rf $(HTMLDIRS)
@@ -49,20 +56,20 @@ html-stamp: $(DOCFILES) docstrings
 
 # Postscript documentation
 .PHONY: ps
-ps: $(PSFILES)
+ps: $(PSFILES) $(TARGETIMAGES)
 
-%.ps: %.dvi
+%.ps: %.dvi $(TARGETIMAGES)
 	dvips -o $@ $<
 
 # DVI generation
-%.dvi: %.texi $(DOCFILES) docstrings
+%.dvi: %.texi $(DOCFILES) docstrings $(TARGETIMAGES)
 	texi2dvi $(I_FLAGS) $<
 
 # PDF documentation
 .PHONY: pdf
-pdf: $(PDFFILES)
+pdf: $(PDFFILES) $(TARGETIMAGES)
 
-%.pdf: %.texi $(DOCFILES) docstrings
+%.pdf: %.texi $(DOCFILES) docstrings $(TARGETIMAGES)
 	texi2pdf $(I_FLAGS) $<
 
 # info docfiles
