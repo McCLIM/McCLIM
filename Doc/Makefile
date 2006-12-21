@@ -1,51 +1,93 @@
-NAME=mcclim
-NAME2=sheet-hierarchy
+# This Makefile has been cribbed from SBCL.
+MCCLIMTEXI:=mcclim.texi
+DOCFILES:=*.texi
+TMPTYPES:=aux cp cps fn fns ky log pg toc tp tps vr vrs
+TMPFILES:=$(foreach target,mcclim,$(foreach type,$(TMPTYPES),$(target).$(type)))
+PSFILES=mcclim.ps
+PDFFILES=mcclim.pdf
+INFOFILE=mcclim.info
+HTMLDIRS=$(basename $(MCCLIMTEXI))
+# Place where generated documentation ends up. The value of
+# DOCSTRINGDIR has to end with a slash or you lose (it's passed to
+# Lisp's `pathname' function).
+DOCSTRINGDIR="docstrings/"
+I_FLAGS=-I $(DOCSTRINGDIR)
 
-TEXFILES=$(NAME2).tex $(shell ./tex-dependencies $(NAME2).tex)
-PSTEX_T=$(shell ./strip-dependence inputfig $(TEXFILES))
-VERBATIM=$(shell ./strip-dependence verbatimtabinput $(TEXFILES))
-PSTEX=$(subst .pstex_t,.pstex,$(PSTEX_T))
-IMAGES=ex2.eps inspect-as-cells.eps inspect-object-1.eps \
-inspect-object-2.eps inspect-object-3.eps native.fig
-IMAGETARGETTYPES=gif png eps
-TARGETIMAGES=$(shell sh ./makeimages.sh -e "$(IMAGES)" "$(IMAGETARGETTYPES)")
-TEXIFILES=$(NAME).texi drei.texi
+# SBCL_SYSTEM is an optional argument to this make program. If this
+# variable is set, its contents are used as the command line for
+# invoking SBCL.
 
-all : $(NAME).ps $(NAME2).ps
+# When passing a non-standard SBCL_SYSTEM, be sure to set the
+# environment variable SBCL_HOME to a useful value, as well.
 
-%.pstex: %.fig
-	fig2dev -Lpstex -m 0.75  $< $@
+ifeq ($(MAKEINFO),)
+  MAKEINFO:=makeinfo
+endif
 
-%.pstex_t: %.fig %.pstex
-	fig2dev -Lpstex_t -m 0.75 -p $(basename $<).pstex $< $@
+ifeq ($(TEXI2PDF),)
+  TEXI2PDF:=texi2pdf
+endif
 
-$(NAME).dvi: $(TEXIFILES) $(TARGETIMAGES)
-	texi2dvi $(NAME).texi
+ifeq ($(DVIPS),)
+  DVIPS:=dvips
+endif
 
-$(NAME2).dvi: $(NAME2).tex $(PSTEX_T) $(VERBATIM)
-	latex $<
-	makeindex $(NAME)
-	latex $<
+.PHONY: all
+all: ps pdf info html
 
-$(TARGETIMAGES):
-	sh ./makeimages.sh "$(IMAGES)" "$(IMAGETARGETTYPES)"
+.PHONY: dist
+dist: html pdf
 
-$(NAME).html: $(TEXIFILES)
-	makeinfo --html $(NAME).texi
+# html documentation; output in $(HTMLDIRS)
+.PHONY: html
+html: html-stamp
 
-$(NAME).ps: $(NAME).dvi
-	dvips $< -o
+html-stamp: $(DOCFILES) docstrings
+	@rm -rf $(HTMLDIRS)
+	$(MAKEINFO) $(I_FLAGS) --html $(HTMLDIRS)
+	touch html-stamp
 
-$(NAME2).ps: $(NAME2).dvi $(PSTEX)
-	dvips $< -o
+# Postscript documentation
+.PHONY: ps
+ps: $(PSFILES)
 
-view: $(NAME).ps
-	gv -antialias -scale 1 $<
+%.ps: %.dvi
+	dvips -o $@ $<
 
-clean:
-	rm -f *.aux *.log *~
+# DVI generation
+%.dvi: %.texi $(DOCFILES) docstrings
+	texi2dvi $(I_FLAGS) $<
 
-spotless:
-	make clean
-	rm -f *.ps *.dvi *.pstex *.pstex_t *.toc *.idx *.ilg *.ind *pdf \
-*ky *pg *tmp *tp *tps *vr *fn *fns *info
+# PDF documentation
+.PHONY: pdf
+pdf: $(PDFFILES)
+
+%.pdf: %.texi $(DOCFILES) docstrings
+	texi2pdf $(I_FLAGS) $<
+
+# info docfiles
+.PHONY: info
+info: $(INFOFILE)
+
+%.info: %.texi $(DOCFILES) docstrings
+	$(MAKEINFO) $(I_FLAGS) --output=$(INFOFILE) $<
+
+# Texinfo docstring snippets
+.PHONY: docstrings
+docstrings: tempfiles-stamp
+
+tempfiles-stamp:
+	DOCSTRINGDIR=$(DOCSTRINGDIR) PACKAGES=$(PACKAGES) sh make-tempfiles.sh "$(SBCL_SYSTEM)" && touch tempfiles-stamp
+
+
+.PHONY: clean
+clean: 
+	rm -f *~ *.bak *.orig \#*\# .\#* texput.log *.fasl
+	rm -rf $(HTMLDIRS) $(DOCSTRINGDIR)
+	rm -f variables.texi
+	rm -f $(PSFILES) $(PDFFILES) html-stamp tempfiles-stamp
+	rm -f $(TMPFILES) $(INDEXFILES)
+	rm -f mcclim.info mcclim.info-*
+
+.PHONY: distclean
+distclean: clean

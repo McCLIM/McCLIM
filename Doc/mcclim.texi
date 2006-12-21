@@ -52,6 +52,7 @@ Copyright @copyright{} 2004,2005,2006 the McCLIM hackers.
 @end macro
 
 @alias gloss = i
+@alias func = code
 @alias class = code
 @alias package = code
 @alias gadget = code
@@ -107,7 +108,7 @@ Auxilliary Material
 Index
 * Concept Index::
 * Variable Index::
-* Function Index::
+* Function And Macro Index::
 @end menu
 
 @node Introduction
@@ -2299,18 +2300,18 @@ that happen.  So far (summer 2001) he has contributed a number of
 cosmetic fixes to McCLIM and also worked on a GTK-like gadget set.  He
 finally started work to get the OpenGL backend operational.
 
-@node {Concept Index}
-@unnumbered {Concept Index}
+@node Concept Index
+@unnumbered Concept Index
 
 @printindex cp
 
-@node {Variable Index}
-@unnumbered {Variable Index}
+@node Variable Index
+@unnumbered Variable Index
 
 @printindex vr
 
-@node {Function And Macro Index}
-@unnumbered {Function And Macro Index}
+@node Function And Macro Index
+@unnumbered Function And Macro Index
 
 @printindex fn
 

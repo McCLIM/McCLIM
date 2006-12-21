@@ -8,10 +8,9 @@
 @cindex text-field
 
 Drei - an acronym for @i{Drei Replaces EINE's Inheritor} - is one of the
-editor substrates provided by McCLIM. It is currently disabled by
-default (instead, a somewhat less sophisticated editor substrate,
-Goatee, is used), but it can be activated by evaluating @code{(setf
-clim-internals::*use-goatee* nil)}.
+editor substrates provided by McCLIM. Drei is activated by default, but
+if it gives you problem, you can disable it by evaluating @code{(setf
+clim-internals::*use-goatee* t)}.
 
 @menu
 * Drei Concepts::               The core Drei concepts and design philosophy.
@@ -126,12 +125,7 @@ The previous CLIM command that was executed by the Drei instance.
 @node External API
 @section External API
 
-@deftp {Class} drei
-
-The abstract Drei class that maintains standard Drei editor state. It
-should not be directly instantiated, a subclass implementing specific
-behavior should be used instead.
-@end deftp
+@include class-drei-drei.texi
 
 @deftp {@class{drei} Initarg} {:editable-p}
 Whether or not the Drei instance will be editable. If @cl{NIL}, the
@@ -145,94 +139,19 @@ and a condition of type @class{buffer-single-line} will be signalled if
 an attempt is made to insert a newline character.
 @end deftp
 
-@deffn {Generic Function} {view} drei
-@deffnx {Generic Function} {(setf view)} view drei
-@findex view
-The CLIM view that will be used whenever @var{drei} is being
-displayed. During redisplay, the @cl{stream-default-view} of the editor
-pane will be temporarily bound to this value.
-@end deffn
+@include macro-drei-handling-drei-conditions.texi
 
-@deffn {Generic Function} {kill-ring} drei
-@deffnx {Generic Function} {(setf kill-ring)} kill-ring drei
-@findex view
+@include macro-drei-with-bound-drei-special-variables.texi
 
-The kill ring object used by @var{drei}.
-@end deffn
+@include macro-drei-performing-drei-operations.texi
 
-@deffn {Generic Function} {previous-command} drei
-@deffnx {Generic Function} {(setf previous-command)} command drei
-@findex previous-command
+@include fun-drei-invoke-performing-drei-operations.texi
 
-The previous command executed by @var{drei}.
-@end deffn
+@include macro-drei-accepting-from-user.texi
 
-@deffn {Generic Function} {minibuffer} drei
-@deffnx {Generic Function} {(setf minibuffer)} pane drei
-@findex minibuffer
+@include fun-drei-invoke-accepting-from-user.texi
 
-The minibuffer associated with @var{drei}. This may be @cl{NIL}.
-@end deffn
-
-@defmac {handling-drei-conditions} &body body
-@findex handling-drei-conditions
-
-Evaluate `body' while handling Drei user notification signals. The
-handling consists of displaying their meaning to the user in the
-minibuffer. This is the macro that ensures conditions such as
-@cl{motion-before-end} does not land the user in the debugger.
-@end defmac
-
-@defmac {with-bound-drei-special-variables} {((drei-instance &key current-buffer current-window current-mark current-point current-syntax kill-ring minibuffer command-parser partial-command-parser previous-command prompt) &body body)}
-
-Evaluate @var{body} with Drei special variables bound to their proper
-values, taken from @var{drei-instance}. The keyword arguments can be
-used to provide forms that will be used to obtain values for the
-respective special variables instead of the default. This macro binds
-all of the special variables listed in @ref{Special Variables}, but also
-some CLIM special variables needed for ESA-style command parsing.
-@end defmac
-
-@defmac {performing-drei-operations} {((drei &rest args &key with-undo (update-syntax t) (redisplay t)) &body body)}
-
-Provide various Drei convenience services around the evaluation of
-@var{body}. This macro provides a convenient way to perform some
-operations on a Drei, and make sure that they are properly reflected in
-the undo tree, that the Drei is redisplayed, the syntax updated,
-etc. Exactly what is done can be controlled via the keyword
-arguments. Note that if @var{:with-undo'} is false (the default), the
-@emph{entire} undo history will be cleared after @var{body} has been
-evaluated. This macro expands into a call to
-@cl{invoke-performing-drei-operations}.
-@end defmac
-
-@deffn {Generic Function} {invoke-performing-drei-operations} {(drei continuation &key with-undo update-syntax redisplay)}
-
-Implement the behavior of @cl{performing-drei-operations}.
-@end deffn
-
-@deffn {Generic Function} {execute-drei-command} drei command
-
-Execute @var{command} for @var{drei}. This is the standard function for
-executing Drei commands - it will take care of reporting to the user if
-a condition is signalled, updating the syntax, setting the
-@cl{previous-command} of @var{drei} and recording the operations
-performed by @var{command} for undo.
-@end deffn
-
-@defmac {accepting-from-user} ((drei) &body body)
-Modidfy @var{drei} and the environment so that calls to @cl{accept} can
-be done to arbitrary streams from within @var{body}. Or, at least, make
-sure the Drei instance will not be a problem. When Drei calls a command,
-it will be wrapped in this macro, so it should be safe to use
-@cl{accept} within Drei commands. This macro expands into a call to
-@cl{invoke-accepting-from-user}
-@end defmac
-
-@deffn {Generic Function} {invoke-accepting-from-user} {(drei continuation)}
-
-Implement the behavior of @cl{performing-drei-operations}.
-@end deffn
+@include fun-drei-execute-drei-command.texi
 
 @node Standard Drei Variants
 @section Standard Drei Variants
@@ -292,370 +211,112 @@ mark.
 @node General Buffer Protocol Parts
 @subsubsection General Buffer Protocol Parts
 
-@deftp {Protocol Class} buffer
+@include class-drei-buffer-buffer.texi
 
-The base class for all buffers.  A buffer conceptually contains a
-large array of arbitrary objects.  Lines of objects are separated by
-newline characters.  The last object of the buffer is not
-necessarily a newline character.
-@end deftp
+@include class-drei-buffer-standard-buffer.texi
 
-@deftp {Class} standard-buffer
+@include class-drei-buffer-mark.texi
 
-The standard instantiable class for buffers.  A subclass of buffer.
-@end deftp
+@include class-drei-buffer-left-sticky-mark.texi
 
-@deftp {Protocol Class} mark
+@include class-drei-buffer-right-sticky-mark.texi
 
-The base class for all marks.
-@end deftp
+@include fun-drei-buffer-offset.texi
 
-@deftp {@class{buffer} Initarg} :buffer
+@include fun-drei-buffer-setf-offset.texi
 
-The :buffer initarg is mandatory because no mark can exist without a
-buffer.
-@end deftp
+@include fun-drei-buffer-clone-mark.texi
 
-@deftp {@class{buffer} Initarg} :offset
+@include fun-drei-buffer-buffer.texi
 
-If an :offset initarg is given that is less than zero or greater than
-the size of the buffer, a no-such-offset condition is signaled. When the
-:offset initarg is not given, it defaults to zero.
-@end deftp
+@include condition-drei-buffer-no-such-offset.texi
 
-@deftp {Protocol Class} left-sticky-mark
+@include condition-drei-buffer-offset-before-beginning.texi
 
-A subclass of mark.  A mark of this type will "stick" to the object
-to the left of it, i.e. when an object is inserted at this mark, the
-mark will be positioned to the left of the object.
-@end deftp
+@include condition-drei-buffer-offset-after-end.texi
 
-@deftp {Protocol Class} right-sticky-mark
+@include condition-drei-buffer-invalid-motion.texi
 
-A subclass of mark.  A mark of this type will "stick" to the object
-to the right of it, i.e. when an object is inserted at this mark, the
-mark will be positioned to the right of the object.
-@end deftp
+@include condition-drei-buffer-motion-before-beginning.texi
 
-@deffn {Generic Function} {clone-mark} mark &optional stick-to
+@include condition-drei-buffer-motion-after-end.texi
 
-Clone a mark.  By default (when stick-to is NIL) the same type of mark
-is returned.  Otherwise stick-to is either :left, indicating that a
-left-sticky-mark should be created, or :right indicating that a
-right-sticky-mark should be created.
-@end deffn
+@include fun-drei-buffer-size.texi
 
-@deffn {Generic Function} {buffer} mark
-
-Return the buffer that the mark is positioned in.
-@end deffn
-
-@deftp {Error Condition} no-such-offset
-
-This condition is signaled whenever an attempt is made to access an
-object that is before the beginning or after the end of the buffer.
-@end deftp
-
-@deftp {Error Condition} offset-before-beginning
-
-This condition is signaled whenever an attempt is made to access
-buffer contents that is before the beginning of the buffer.
-This condition is a subclass of no-such-offset
-@end deftp
-
-@deftp {Error Condition} offset-after-end
-
-This condition is signaled whenever an attempt is made to access
-buffer contents that is after the end of the buffer.
-This condition is a subclass of no-such-offset
-@end deftp
-
-@deftp {Error Condition} invalid-motion
-
-This condition is signaled whenever an attempt is made to move a mark
-before the beginning or after the end of the buffer.
-@end deftp
-
-@deftp {Error Condition} motion-before-beginning
-
-This condition is signaled whenever an attempt is made to move a mark
-before the beginning of the buffer.
-This condition is a subclass of invalid-motion.
-@end deftp
-
-@deftp {Error Condition} motion-after-end
-
-This condition is signaled whenever an attempt is made to move a mark
-after the end of the buffer.
-This condition is a subclass of invalid-motion.
-@end deftp
-
-@deffn {Generic Function} {size} buffer
-
-Return the number of objects in the buffer.
-@end deffn
-
-@deffn {Generic Function} {number-of-lines} buffer
-
-Return the number of lines of the buffer, or really the number of
-newline characters.
-@end deffn
+@include fun-drei-buffer-number-of-lines.texi
 
 @node Operations Related To The Offset Of Marks
 @subsubsection Operations Related To The Offset Of Marks
 
-@deffn {Generic Function} {offset} mark
+@include fun-drei-buffer-forward-object.texi
 
-Return the offset of the mark into the buffer.
-@end deffn
+@include fun-drei-buffer-backward-object.texi
 
-@deffn {Generic Function} {(setf offset)} offset mark
+@include fun-drei-buffer-mark=.texi
 
-Set the offset of the mark into the buffer.  A motion-before-beginning
-condition is signaled if the offset is less than zero. A
-motion-after-end condition is signaled if the offset is greater than
-the size of the buffer.
-@end deffn
+@include fun-drei-buffer-mark-lt.texi
 
-@deffn {Generic Function} {forward-object} mark &optional (count 1)
+@include fun-drei-buffer-mark-lt=.texi
 
-Move the mark forward the number of positions indicated by count.
-This function could be implemented by an incf on the offset of the
-mark, but many buffer implementations can implement this function much
-more efficiently in a different way.  A motion-before-beginning
-condition is signaled if the resulting offset of the mark is less than
-zero. A motion-after-end condition is signaled if the resulting offset
-of the mark is greater than the size of the buffer.
-@end deffn
+@include fun-drei-buffer-mark-gt.texi
 
-@deffn {Generic Function} {backward-object} mark &optional (count 1)
+@include fun-drei-buffer-mark-gt=.texi
 
-Move the mark backward the number of positions indicated by count.
-This function could be implemented by a decf on the offset of the
-mark, but many buffer implementations can implement this function much
-more efficiently in a different way. A motion-before-beginning
-condition is signaled if the resulting offset of the mark is less than
-zero. A motion-after-end condition is signaled if the resulting offset
-of the mark is greater than the size of the buffer.
-@end deffn
+@include fun-drei-buffer-beginning-of-buffer.texi
 
-@deffn {Generic Function} {mark<} mark1 mark2
+@include fun-drei-buffer-end-of-buffer.texi
 
-Return t if the offset of mark1 is strictly less than that of mark2.
-An error is signaled if the two marks are not positioned in the same
-buffer.  It is acceptable to pass an offset in place of one of the
-marks.
-@end deffn
+@include fun-drei-buffer-beginning-of-buffer-p.texi
 
-@deffn {Generic Function} {mark<=} mark1 mark2
+@include fun-drei-buffer-end-of-buffer-p.texi
 
-Return t if the offset of mark1 is less than or equal to that of
-mark2.  An error is signaled if the two marks are not positioned in
-the same buffer.  It is acceptable to pass an offset in place of one
-of the marks.
-@end deffn
+@include fun-drei-buffer-beginning-of-line.texi
 
-@deffn {Generic Function} {mark>} mark1 mark2
+@include fun-drei-buffer-end-of-line.texi
 
-Return t if the offset of mark1 is strictly greater than that of
-mark2.  An error is signaled if the two marks are not positioned in
-the same buffer.  It is acceptable to pass an offset in place of one
-of the marks.
-@end deffn
+@include fun-drei-buffer-beginning-of-line-p.texi
 
-@deffn {Generic Function} {mark>=} mark1 mark2
+@include fun-drei-buffer-end-of-line-p.texi
 
-Return t if the offset of mark1 is greater than or equal to that of
-mark2.  An error is signaled if the two marks are not positioned in
-the same buffer.  It is acceptable to pass an offset in place of one
-of the marks.
-@end deffn
+@include fun-drei-buffer-buffer-line-number.texi
 
-@deffn {Generic Function} {mark=} mark1 mark2
+@include fun-drei-buffer-buffer-column-number.texi
 
-Return t if the offset of mark1 is equal to that of mark2.  An error
-is signaled if the two marks are not positioned in the same buffer.
-It is acceptable to pass an offset in place of one of the marks.
-@end deffn
+@include fun-drei-buffer-line-number.texi
 
-@deffn {Generic Function} {beginning-of-buffer} mark
-
-Move the mark to the beginning of the buffer.  This is equivalent to
-(setf (offset mark) 0)
-@end deffn
-
-@deffn {Generic Function} {end-of-buffer} mark
-
-Move the mark to the end of the buffer.
-@end deffn
-
-@deffn {Generic Function} {beginning-of-buffer-p} mark
-
-Return t if the mark is at the beginning of the buffer, nil
-otherwise.
-@end deffn
-
-@deffn {Generic Function} {end-of-buffer-p} mark
-
-Return t if the mark is at the end of the buffer, nil otherwise.
-@end deffn
-
-@deffn {Generic Function} {beginning-of-line} mark
-
-Move the mark to the beginning of the line.  The mark will be
-positioned either immediately after the closest preceding newline
-character, or at the beginning of the buffer if no preceding newline
-character exists.
-@end deffn
-
-@deffn {Generic Function} {end-of-line} mark
-
-Move the mark to the end of the line. The mark will be positioned
-either immediately before the closest following newline character, or
-at the end of the buffer if no following newline character exists.
-@end deffn
-
-@deffn {Generic Function} {beginning-of-line-p} mark
-
-Return t if the mark is at the beginning of the line (i.e., if the
-character preceding the mark is a newline character or if the mark is
-at the beginning of the buffer), nil otherwise.
-@end deffn
-
-@deffn {Generic Function} {end-of-line-p} mark
-
-Return t if the mark is at the end of the line (i.e., if the character
-following the mark is a newline character, or if the mark is at the
-end of the buffer), nil otherwise.
-@end deffn
-
-@deffn {Generic Function} {buffer-line-number} buffer offset
-
-Return the line number of the line at offset.  Lines are numbered from
-zero.
-@end deffn
-
-@deffn {Generic Function} {buffer-column-number} buffer offset
-
-Return the column number of the line at offset. It is the number of
-objects between it and the preceding newline, or between it and the
-beginning of the buffer if offset is on the first line of the buffer.
-@end deffn
-
-@deffn {Generic Function} {line-number} mark
-
-Return the line number of the mark.  Lines are numbered from zero.
-@end deffn
-
-@deffn {Generic Function} {column-number} mark
-
-Return the column number of the mark. The column number of a mark is
-the number of objects between it and the preceding newline, or
-between it and the beginning of the buffer if the mark is on the
-first line of the buffer.
-@end deffn
+@include fun-drei-buffer-column-number.texi
 
 @node Inserting And Deleting Objects
 @subsubsection Inserting And Deleting Objects
 
-@deffn {Generic Function} {insert-buffer-object} buffer offset object
+@include fun-drei-buffer-insert-buffer-object.texi
 
-Insert the object at the offset in the buffer.  Any left-sticky marks
-that are placed at the offset will remain positioned before the
-inserted object.  Any right-sticky marks that are placed at the
-offset will be positioned after the inserted object.
-@end deffn
+@include fun-drei-buffer-insert-buffer-sequence.texi
 
-@deffn {Generic Function} {insert-buffer-sequence} buffer offset sequence
+@include fun-drei-buffer-insert-object.texi
 
-Like calling insert-buffer-object on each of the objects in the
-sequence.
-@end deffn
+@include fun-drei-buffer-insert-sequence.texi
 
-@deffn {Generic Function} {insert-object} mark object
+@include fun-drei-buffer-delete-buffer-range.texi
 
-Insert the object at the mark.  This function simply calls
-insert-buffer-object with the buffer and the position of the mark.
-@end deffn
+@include fun-drei-buffer-delete-range.texi
 
-@deffn {Generic Function} {insert-sequence} mark sequence
-
-Insert the objects in the sequence at the mark. This function simply
-calls insert-buffer-sequence with the buffer and the position of the
-mark.
-@end deffn
-
-@deffn {Generic Function} {delete-buffer-range} buffer offset n
-
-Delete n objects from the buffer starting at the offset.  If offset is
-negative, a offset-before-beginning condition is signaled.  If
-offset+n is greater than the size of the buffer, a offset-after-end
-condition is signaled.
-@end deffn
-
-@deffn {Generic Function} {delete-range} mark &optional (n 1)
-
-Delete n objects after (if n > 0) or before (if n < 0) the mark.
-This function eventually calls delete-buffer-range, provided that n
-is not zero.
-@end deffn
-
-@deffn {Generic Function} {delete-region} mark1 mark2
-
-Delete the objects in the buffer that are between mark1 and mark2.  An
-error is signaled if the two marks are positioned in different
-buffers.  It is acceptable to pass an offset in place of one of the
-marks.
-
-This function calls delete-buffer-range with the appropriate arguments.
-@end deffn
+@include fun-drei-buffer-delete-region.texi
 
 @node Getting Objects Out Of The Buffer
 @subsubsection Getting Objects Out Of The Buffer
 
-@deffn {Generic Function} {buffer-object} buffer offset
+@include fun-drei-buffer-buffer-object.texi
 
-Return the object at the offset in the buffer.  The first object
-has offset 0. If offset is less than zero, an offset-before-beginning
-condition is signaled.  If offset is greater than or equal to
-the size of the buffer, an offset-after-end condition is signaled.
-@end deffn
+@include fun-drei-buffer-setf-buffer-object.texi
 
-@deffn {Generic Function} {buffer-sequence} buffer offset1 offset2
+@include fun-drei-buffer-buffer-sequence.texi
 
-Return the contents of the buffer starting at offset1 and ending at
-offset2-1 as a sequence.  If either of the offsets is less than zero,
-an offset-before-beginning condition is signaled.  If either of the
-offsets is greater than or equal to the size of the buffer, an
-offset-after-end condition is signaled.  If offset2 is smaller than or
-equal to offset1, an empty sequence will be returned.
-@end deffn
+@include fun-drei-buffer-object-before.texi
 
-@deffn {Generic Function} {object-before} mark
+@include fun-drei-buffer-object-after.texi
 
-Return the object that is immediately before the mark.  If mark is at
-the beginning of the buffer, an offset-before-beginning condition is
-signaled.  If the mark is at the beginning of a line, but not at the
-beginning of the buffer, a newline character is returned.
-@end deffn
-
-@deffn {Generic Function} {object-after} mark
-
-Return the object that is immediately after the mark.  If mark is at
-the end of the buffer, an offset-after-end condition is signaled.  If
-the mark is at the end of a line, but not at the end of the buffer, a
-newline character is returned.
-@end deffn
-
-@deffn {Generic Function} {region-to-sequence} mark1 mark2
-
-Return a freshly allocated sequence of the objects between mark1 and
-mark2.  An error is signaled if the two marks are positioned in
-different buffers.  It is acceptable to pass an offset in place of one
-of the marks.
-
-This function calls buffer-sequence with the appropriate arguments.
-@end deffn
+@include fun-drei-buffer-region-to-sequence.texi
 
 @node Implementation Hints
 @subsubsection Implementation Hints
@@ -710,15 +371,9 @@ closed.
 
 The buffer maintains two marks, the low mark and the high mark:
 
-@deffn {Generic Function} {low-mark} buffer
+@include fun-drei-buffer-low-mark.texi
 
-Return the low mark of the buffer.
-@end deffn
-
-@deffn {Generic Function} {high-mark} buffer
-
-Return the high mark of the buffer.
-@end deffn
+@include fun-drei-buffer-high-mark.texi
 
 The low mark is a left-sticky mark and high mark is a right-sticky
 mark.  Whenever a modification is made to the buffer, the offset of
@@ -736,17 +391,9 @@ In addition to these marks, the buffer maintains a modification flag
 that determines.  Whether the buffer has been modified since the last
 call to clear-modify.
 
-@deffn {Generic Function} {modified-p} buffer
+@include fun-drei-buffer-modified-p.texi
 
-Return true if and only if the buffer has beeen modified.
-@end deffn
-
-@deffn {Generic Function} {clear-modify} buffer
-
-Set the high-mark to the beginning of the beginning of the buffer and
-the low-mark to the end of the buffer, and clear the modification
-flag.
-@end deffn
+@include fun-drei-buffer-clear-modify.texi
 
 This function is used by the redisplay module after all of the panes
 on display have been redisplayed properly.  A call to this function
@@ -878,16 +525,12 @@ redisplay module and by user commands.
 * Lexical Analysis::            
 * Earley Parser::               
 * Specifying A Grammar::        
-* Common Lisp Syntax::          
 @end menu
 
 @node General Syntax Protocol
 @subsubsection General Syntax Protocol
 
-@deftp {Protocol Class} syntax
-
-The base class for all syntaxes.
-@end deftp
+@include class-drei-syntax-syntax.texi
 
 The redisplay module exploits the syntax module for several things:
 
@@ -933,22 +576,11 @@ the buffer contents.
 The first case is handled by the redisplay invoking the following
 generic function:
 
-@deffn {Generic Function} {update-syntax} buffer syntax
-
-Inform the syntax module that it must update its view of the buffer
-The low-mark and the high-mark of the buffer indicate what region has
-been updated. It is acceptable to pass an offset instead of the mark.
-@end deffn
+@include fun-drei-syntax-update-syntax.texi
 
 The second case is handled by the following generic function:
 
-@deffn {Generic Function} {update-syntax-for-display} buffer syntax from to
-
-Inform the syntax module that it must update its syntactic analysis to
-cover the region between the two marks from and to.  It is acceptable
-to pass an offset instead of a mark for either or both of the last
-two arguments.
-@end deffn
+@include fun-drei-syntax-update-syntax-for-display.texi
 
 The third case is handled by the syntax module itself when needed in
 order to correctly compute the effects of a command.
@@ -962,26 +594,16 @@ different, display units.
 @node Incremental Parsing Framework
 @subsubsection Incremental Parsing Framework
 
-@deftp {Protocol Class} parse-tree
-
-The base class for all parse trees.
-@end deftp
+@include class-drei-syntax-parse-tree.texi
 
 We use the term parse tree in a wider sense than what is common in the
 parsing literature, in that a lexeme is a (trivial) parse tree.  The
 parser does not distinguish between lexemes and other parse trees, and
 a grammar rule can produce a lexeme if that should be desired.
 
-@deffn {Generic Function} {start-offset} parse-tree
+@include fun-drei-syntax-start-offset.texi
 
-The offset in the buffer of the first character of a parse tree.
-@end deffn
-
-@deffn {Generic Function} {end-offset} parse-tree
-
-The offset in the buffer of the character following the last one of a
-parse tree.
-@end deffn
+@include fun-drei-syntax-end-offset.texi
 
 The length of a parse-tree is thus the difference of its end offset
 and its start offset.
@@ -992,87 +614,28 @@ case when a parse tree is derived from the empty sequence of lexemes.
 @node Lexical Analysis
 @subsubsection Lexical analysis
 
-@deftp {Protocol Class} lexer
+@include class-drei-syntax-lexer.texi
 
-The base class for all lexers.
-@end deftp
-
-@deftp {@class{lexer} Initarg} :buffer
-
-Associate a buffer with a lexer
-@end deftp
-
-@deffn {Generic Function} {buffer} lexer
-
-Return the buffer associated with the lexer
-@end deffn
-
-@deftp {Class} incremental-lexer
-
-A subclass of lexer which maintains the buffer in the form of a
-sequence of lexemes that is updated incrementally.
-@end deftp
+@include class-drei-syntax-incremental-lexer.texi
 
 In the sequence of lexemes maintained by the incremental lexer, the
 lexemes are indexed by a position starting from zero.
 
-@deffn {Generic Function} {nb-lexemes} lexer
+@include fun-drei-syntax-nb-lexemes.texi
 
-Return the number of lexemes in the lexer.
-@end deffn
+@include fun-drei-syntax-lexeme.texi
 
-@deffn {Generic Function} {lexeme} lexer pos
+@include fun-drei-syntax-insert-lexeme.texi
 
-Given a lexer and a position, return the lexeme in that position in
-the lexer.
-@end deffn
+@include fun-drei-syntax-delete-invalid-lexemes.texi
 
-@deffn {Generic Function} {insert-lexeme} lexer pos lexeme
+@include fun-drei-syntax-inter-lexeme-object-p.texi
 
-Insert a lexeme at the position in the lexer.  All lexemes following
-POS are moved to one position higher.
-@end deffn
+@include fun-drei-syntax-skip-inter-lexeme-objects.texi
 
-@deffn {Generic Function} {delete-invalid-lexemes} lexer from to
+@include fun-drei-syntax-update-lex.texi
 
-Invalidate all lexemes that could have changed as a result of
-modifications to the buffer
-@end deffn
-
-@deffn {Generic Function} {inter-lexeme-object-p} lexer object
-
-This generic function is called by the incremental lexer to determine
-whether a buffer object is an inter-lexeme object, typically
-whitespace. Client code must supply a method for this generic
-function.
-@end deffn
-
-@deffn {Generic Function} {skip-inter-lexeme-objects} lexer scan
-
-This generic function is called by the incremental lexer to skip
-inter-lexeme buffer objects.  The default method for this generic
-function increments the scan mark until the object after the mark is
-not an inter-lexeme object, or until the end of the buffer has been
-reached.
-@end deffn
-
-@deffn {Generic Function} {update-lex} lexer start-pos end
-
-This function is called by client code as part of the buffer-update
-protocol to inform the lexer that it needs to analyze the contents of
-the buffer at least up to the END mark of the buffer.  START-POS is
-the position in the lexeme sequence at which new lexemes should be
-inserted.
-@end deffn
-
-@deffn {Generic Function} {next-lexeme} lexer scan
-This generic function is called by the incremental lexer to get a new
-lexeme from the buffer.  Client code must supply a method for this
-function that specializes on the lexer class.  It is guaranteed that
-scan is not at the end of the buffer, and that the first object after
-scan is not an inter-lexeme object.  Thus, a lexeme should always be
-returned by this function.
-@end deffn
+@include fun-drei-syntax-next-lexeme.texi
 
 @node Earley Parser
 @subsubsection Earley Parser
@@ -1092,26 +655,23 @@ is ambiguous.
 
 An incremental parser is created from a grammar.
 
-@defmac {grammar} &body rules
-
-Create a grammar object from a set of rules
-@end defmac
+@include macro-drei-syntax-grammar.texi
 
 @deftp {Rule} {} symbol -> (&rest arguments) &optional body
 
 Each rule is a list of this form.
 @end deftp
 
-@noindent
-Here @var{symbol} is the target symbol of the rule, and should be the name of
-a CLOS class.
+Here @var{symbol} is the target symbol of the rule, and should be the
+name of a CLOS class.
 
-@deffn {Rule argument} {} (var type test)
+@deftp {Rule argument} {} (var type test)
 
 The most general form of a rule argument.
-@end deffn
+@end deftp
 
 @noindent
+
 Here @var{var} is the name of a lexical variable.  The scope of the
 variable contains the test, all the following arguments and the body
 of the rule.  The @var{type} is a Common Lisp type specification.  The
@@ -1119,29 +679,29 @@ rule applies only of the @var{type} of the object contain in var is of
 that type.  The @var{test} contains arbitrary Common Lisp code for
 additional checks as to the applicability of the rule.
 
-@deffn {Rule argument} {} (var type)
+@deftp {Rule argument} {} (var type)
 
 Abbreviated form of a rule argument.
-@end deffn
+@end deftp
 
 @noindent
 Here, @var{type} must be a symbol typically the name of a CLOS class.
 This form is an abbreviation for @code{(@var{var} @var{type} t)}.
 
-@deffn {Rule argument} {} (var test)
+@deftp {Rule argument} {} (var test)
 
 Abbreviated form of a rule argument.
-@end deffn
+@end deftp
 
 @noindent
 Here, @var{test} must not be a symbol.  This form is an abbreviation
 of @code{(@var{var} @var{var} @var{test})}, i.e., the name of the
 variable is also the name of a type, typically a CLOS class.
 
-@deffn {Rule argument} {} var
+@deftp {Rule argument} {} var
 
 Abbreviated form of a rule argument.
-@end deffn
+@end deftp
 
 @noindent
 This form is an abbreviation of @code{(@var{var} @var{var} t)}.
@@ -1155,785 +715,9 @@ otherwise.
 If the @var{body} is absent, it is the same as if a body of the form
 @code{(make-instance '@var{symbol})} had been given.
 
-The body can also be a sequence of forms, the first one of which
-must be a symbol.  These forms typically contain initargs, and will be
-passed as additional arguments to @code{(make-instance '@var{symbol})}.
-
-@node Common Lisp Syntax
-@subsubsection Common LiSp Syntax
-
-Technically, comments and such are not expressions, but it is OK for
-our purposes to consider that they are.
-
-@multitable @columnfractions .2 .1 .5
-@item program @tab -> @tab expr*
-@item expr @tab -> @tab quoted-expression
-@item expr @tab -> @tab comment
-@item expr @tab -> @tab string
-@item expr @tab -> @tab backquote-expression
-@item expr @tab -> @tab unquote-expression
-@item expr @tab -> @tab list-expression
-@item expr @tab -> @tab label-ref
-@item expr @tab -> @tab function-expression
-@item expr @tab -> @tab vector-expression
-@item expr @tab -> @tab array-expression
-@item expr @tab -> @tab bitvector-expression
-@item expr @tab -> @tab labeled-expression
-@item expr @tab -> @tab character
-@item expr @tab -> @tab balanced-comment
-@item expr @tab -> @tab read-time-conditional-+
-@item expr @tab -> @tab read-time-conditional--
-@item expr @tab -> @tab read-time-evaluation
-@item expr @tab -> @tab binary-expression
-@item expr @tab -> @tab complex-expression
-@item expr @tab -> @tab octal-expression
-@item expr @tab -> @tab pathname-expression
-@item expr @tab -> @tab radix-n-expression
-@item expr @tab -> @tab hex-expression
-@item expr @tab -> @tab token
-@end multitable
-
-@multitable @columnfractions .3 .3 .3
-@item Expression @tab Syntax @tab handle/read
-@item quoted-expression @tab 'expr  @tab handle
-@item comment @tab ; chars <newline> @tab handle
-@item string @tab " chars " @tab read
-@item backquote-expression @tab ` expr @tab handle
-@item unquote-expression @tab , expr @tab handle
-@item list-expression @tab ( expr* ) @tab handle
-@item label-ref @tab #n# @tab handle
-@item function-expression @tab #' expr @tab handle
-@item vector-expression @tab #( expr* ) @tab handle
-@item array-expression @tab #nA(...) @tab handle
-@item bitvector-expression @tab #* bits @tab read
-@item labeled-expression @tab #n= @tab handle
-@item character @tab #\.. @tab read
-@item balanced-comment @tab #| .. |# @tab handle
-@item read-time-conditional-+ @tab #+test expr @tab handle
-@item read-time-conditional-- @tab #-test expr @tab handle
-@item read-time-evaluation @tab #.expr @tab handle
-@item binary-expression @tab #b... @tab read
-@item complex-expression @tab #c... @tab read
-@item octal-expression @tab #o... @tab read
-@item pathname-expression @tab #p... @tab read
-@item radix-n-expression @tab #nr @tab read
-@item hex-expression @tab #x @tab read
-@end multitable
-
-@deftp {Class} stack-entry
-
-A stack entry corresponds to a syntactic category and contains a
-start offset and an end offset.  The end offset is initialized to
-nil, meaning we do not know where it ends.
-@end deftp
-
-@deftp {@class{stack-entry} Initarg} :start-offset
-@end deftp
-
-@deftp {Class} error-entry
-
-This is a subclass of stack-entry.  It is used whenever some invalid
-input syntax is encountered.
-@end deftp
-
-@deftp {Class} terminal-entry
-
-This is a subclass of stack-entry.  It is used for tokens (numbers,
-symbols), but also for macro characters that start more complex
-expressions.
-@end deftp
-
-@deftp {Class} number-entry
-
-A subclass of terminal-entry corresponding to the syntactic class of
-numbers.
-@end deftp
-
-@deftp {Class} symbol-entry
-
-A subclass of terminal-entry corresponding to the syntactic class of
-symbols.
-@end deftp
-
-@deftp {Class} character-entry
-
-A subclass of terminal-entry corresponding to the syntactic class of
-characters.
-@end deftp
-
-@deftp {Class} string-entry
-
-A subclass of terminal-entry corresponding to the syntactic class of
-character strings
-@end deftp
-
-@deftp {Class} quote-entry
-
-A subclass of terminal-entry corresponding to the syntactic class of
-quote inidicators.
-@end deftp
-
-@deftp {Class} backquote-entry
-
-A subclass of terminal-entry corresponding to the syntactic class of
-backquote indicators.
-@end deftp
-
-@deftp {Class} unquote-entry
-
-A subclass of terminal-entry corresponding to the syntactic class of
-unquote indicators.
-@end deftp
-
-@deftp {Class} comment-entry
-
-A subclass of terminal-entry corresponding to the syntactic class of
-single-line comment indicators.
-@end deftp
-
-@deftp {Class} list-start-entry
-
-A subclass of terminal-entry corresponding to the syntactic class of
-list start indicators.
-@end deftp
-
-@deftp {Class} list-end-entry
-
-A subclass of terminal-entry corresponding to the syntactic class of
-list end indicators.
-@end deftp
-
-@deftp {Class} label-ref-entry
-
-A subclass of terminal-entry corresponding to the syntactic class of
-label reference indicators.
-@end deftp
-
-@deftp {Class} label-entry
-
-A subclass of terminal-entry corresponding to the syntactic class of
-label indicators.
-@end deftp
-
-@deftp {Class} function-entry
-
-A subclass of terminal-entry corresponding to the syntactic class of
-function indicators.
-@end deftp
-
-@deftp {Class} balanced-comment-entry
-
-A subclass of terminal-entry corresponding to the syntactic class of
-balanced comment entry indicators.
-@end deftp
-
-@deftp {Class} read-time-conditional-entry
-
-A subclass of terminal-entry corresponding to the syntactic class of
-read-time conditional indicators.
-@end deftp
-
-@deftp {Class} vector-entry
-
-A subclass of terminal-entry corresponding to the syntactic class of
-vector indicators.
-@end deftp
-
-@deftp {Class} array-entry
-
-A subclass of terminal-entry corresponding to the syntactic class of
-array indicators.
-@end deftp
-
-@deftp {Class} bitvector-entry
-
-A subclass of terminal-entry corresponding to the syntactic class of
-bit vector indicators.
-@end deftp
-
-@deftp {Class} read-time-evaluation-entry
-
-A subclass of terminal-entry corresponding to the syntactic class of
-read-time evaluation indicators.
-@end deftp
-
-@deftp {Class} complex-entry
-
-A subclass of terminal-entry corresponding to the syntactic class of
-complex indicators.
-@end deftp
-
-@deftp {Class} octal-entry
-
-A subclass of terminal-entry corresponding to the syntactic class of
-octal rational indicators.
-@end deftp
-
-@deftp {Class} hex-entry
-
-A subclass of terminal-entry corresponding to the syntactic class of
-hex rational indicators.
-@end deftp
-
-@deftp {Class} radix-n-entry
-
-A subclass of terminal-entry corresponding to the syntactic class of
-radix-n rational indicators.
-@end deftp
-
-@deftp {Class} pathname-entry
-
-A subclass of terminal-entry corresponding to the syntactic class of
-pathname indicators.
-@end deftp
-
-@deftp {Class} binary-entry
-
-A subclass of terminal-entry corresponding to the syntactic class of
-binary rational indicators.
-@end deftp
-
-@deftp {Class} unknown-entry
-
-A subclass of terminal-entry corresponding to unknown (user-defined)
-syntactic classes.
-@end deftp
-
-@deftp {Class} nonterminal-entry
-
-This is a subclass of stack-entry.  A nonterminal entry maintains an
-expression count, which is initialized to 0.  It corresponds to the
-number of subexpressions of this expression that have been detected.
-A nonterminal entry also maintains a backquote-depth which is
-initially 0, is incremented by 1 for each nested backquote, and is
-decremented by 1 for each comma.
-@end deftp
-
-@deffn {Generic Function} expression-count nonterminal-entry
-
-Return the expression count of this entry.
-@end deffn
-
-@deffn {Generic Function} {(setf expression-count)} count nonterminal-entry
-
-Set the expression count of this entry.
-@end deffn
-
-@deffn {Generic Function} backquote-depth nonterminal-entry
-
-Return the backquote-depth of this entry.
-@end deffn
-
-@deffn {Generic Function} {(setf backquote-depth)} depth nonterminal-entry
-
-Set the backquote-depth of this entry.
-@end deffn
-
-@deftp {Class} program-entry
-
-A subclass of nonterminal-entry corresponding to the entire buffer
-contents.
-@end deftp
-
-@deftp {Class} quoted-expression-entry
-
-A subclass of nonterminal-entry corresponding to a quoted
-expression.
-@end deftp
-
-@deftp {Class} unquoted-expression-entry
-
-A subclass of nonterminal-entry corresponding to an unquoted
-expression.
-@end deftp
-
-@deftp {Class} list-expression-entry
-
-A subclass of nonterminal-entry corresponding to a list expression.
-@end deftp
-
-@deftp {Class} function-expression-entry
-
-A subclass of nonterminal-entry corresponding to a function
-expression.
-@end deftp
-
-@deftp {Class} vector-expression-entry
-
-A subclass of nonterminal-entry corresponding to a vector expression.
-@end deftp
-
-@deftp {Class} labeled-expression-entry
-
-A subclass of nonterminal-entry corresponding to a labeled expression.
-@end deftp
-
-@deftp {Class} array-expression-entry
-
-A subclass of nonterminal-entry corresponding to a list expression.
-@end deftp
-
-@deftp {Class} array-dimension-entry
-
-A subclass of nonterminal-entry corresponding to an array dimension.
-@end deftp
-
-@deftp {Class} read-time-feature-entry
-
-A subclass of nonterminal-entry corresponding to a read-time
-feature.
-@end deftp
-
-@deftp {Class} read-time-conditional-expression-entry
-
-A subclass of nonterminal-entry corresponding to a read-time
-conditional expression.
-@end deftp
-
-@deftp {Class} read-time-evaluation-expression-entry
-
-A subclass of nonterminal-entry corresponding to a read-time
-evaluation expression.
-@end deftp
-
-@deftp {Class} complex-expression-entry
-
-A subclass of nonterminal-entry corresponding to a complex
-expression.
-@end deftp
-
-@deftp {Class} octal-expression-entry
-
-A subclass of nonterminal-entry corresponding to an octal expression.
-@end deftp
-
-@deftp {Class} hex-expression-entry
-
-A subclass of nonterminal-entry corresponding to a hexadecimal
-expression.
-@end deftp
-
-@deftp {Class} radix-n-expression-entry
-
-A subclass of nonterminal-entry corresponding to a radix-n
-expression.
-@end deftp
-
-@deftp {Class} pathname-expression-entry
-
-A subclass of nonterminal-entry corresponding to a pathname
-expression.
-@end deftp
-
-@deftp {Class} binary-expression-entry
-
-A subclass of nonterminal-entry corresponding to binary expression.
-@end deftp
-
-@deftp {Class} buffer-stream
-
-A stream corresponding to a text buffer.  It contains a current parse
-stack which is a list of stack entries.
-@end deftp
-
-@deftp {@class{buffer-stream} Initarg} :buffer
-
-The buffer underlying the stream.
-@end deftp
-
-@deffn {Generic Function} current-offset buffer-stream
-
-Return the current offset of the buffer stream.
-@end deffn
-
-@deffn {Generic Function} {(setf current-offset)} offset buffer-stream
-
-set the current offset of the buffer stream.
-@end deffn
-
-@deffn {Generic Function} max-offset buffer-stream
-
-Return the maximum offset of the buffer stream, beyond which no
-parsing is required.
-@end deffn
-
-@deffn {Generic Function} {(setf max-offset)} offset buffer-stream
-
-set the maximum offset of the buffer stream.
-@end deffn
-
-@deffn {method} stream-read-char buffer-stream
-
-Return the character at the current offset (or :eof if the offset is
-equal to the size of the buffer)
-@end deffn
-
-@deffn {Generic Function} parse-stack buffer-stream
-
-Return the current parse stack of the buffer stream.  The parse stack
-contains either all nonterminals, or all but the top element
-nonterminal.  The list of entries is initially a list of a single
-entry corresponding to the syntactic category `program-entry' with a
-start offset of 0 and an expression count of 0.
-@end deffn
-
-@deffn {Generic Function} {(setf parse-stack)} stack buffer-stream
-
-Set the current parse stack of the buffer.
-@end deffn
-
-@deffn {Generic Function} analysis buffer-stream
-
-An adjustable vector each element of which is a parse stack with top
-element being terminal. The vector is initially empty.
-@end deffn
-
-@deffn {Generic Function} invalidate-parse buffer-stream offset
-
-Called by client code to indicate that the buffer has been altered
-starting at the offset indicated.  The analysis vector of the buffer
-stream is shortened to the last entry ending before or at the
-offset.  The parse stack is set to the tail of the stack at the last
-entry of the analysis vector. The current offset is set to the end
-offset of the last entry of the analysis vector.
-@end deffn
-
-@deffn {Generic Function} advance-parse buffer-stream offset
-
-Inform the parser that it should construct a valid analysis vector up
-to the offset indicated.  The redisplay module will call this
-function with the highest offset of all the windows on display before
-calling display-region for each window.  The algorithm is as follows:
-
-  Set the max offset of the buffer stream to the offset passed as
-  argument.
-  Loop until the current offset is greater than or equal to max
-  offset (i.e., EOF on the buffer stream is reached):
-    Remember the current offset
-    Read a character
-    If it is a whitespace,
-      do nothing
-    Else if it is a single-dispatch-macro character
-      Call parse-macro-character with the buffer stream, the value of
-      a call to get-macro-character of the character, the
-      top-element of the current parse stack, and the remembered
-     offset.
-    Else
-      Unread the character and call `read' on the stream.
-      Add an entry to the end of the analysis vector containing as
-      start offset the remembered offset, as end offset the current
-      offset after the call to read, and a stack containing the
-      current parse stack with an additional entry on top
-      corresponding to the item read (number, symbol, etc).
-      Increment the expression count of the top of the stack.
-      Perform a count check (see below).
-@end deffn
-
-@deffn {Generic Function} parse-macro-character buffer-stream function entry o
-
-This generic function is called with a buffer stream, with a function
-that is returned by a call to get-macro-character, the top-entry
-of the current parse stack, and a remembered offset.
-@end deffn
-
-It has a number of methods, each one specialized (using an eql
-specializer) on a function returned by a call to get-macro-character
-in standard syntax.  We indicate here the character itself, but it is
-the associated function that is actually used.
-
-@table @samp
-@item ) nonterminal-entry
-@itemize @bullet
-@item
-Add an entry at the end of the analysis vector with the current
-stack augmented with an entry for `error-entry' with a start offset
-of the remembered offset and an end offset of the current offset.
-@end itemize
-@item ) vector-expression-entry
-@itemx ) list-expression-entry
-@itemx ) array-expression-entry
-@itemize @bullet
-@item
-Set the end offset of the entry on top of the stack to the current
-offset.
-@item
-Pop the current stack.
-@item
-Increment the expression count of the top of the stack.
-@item
-Perform a count check (see below)
-@item
-Add an entry at the end of the analysis vector with the current
-stack augmented with an entry for `list-end-entry' with a start
-offset of the remembered offset, and an end offset of the current
-offset
-@end itemize
-
-@item ) nonterminal-entry
-@itemize @bullet
-  Add an entry at the end of the analysis vector with the current
-  stack augmented with an entry for `error-entry' with a start offset
-  of the remembered offset and an end offset of the current offset.
-@end itemize
-
-@item ) vector-expression-entry
-@itemx ) list-expression-entry
-@itemx ) array-expression-entry
-@itemize @bullet
-@item
-  Set the end offset of the entry on top of the stack to the current
-  offset.
-@item
-  Pop the current stack.
-@item
-  Increment the expression count of the top of the stack.
-@item
-  Perform a count check (see below).
-@item
-  Add an entry at the end of the analysis vector with the current
-  stack augmented with an entry for `list-end-entry' with a start
-  offset of the remembered offset, and an end offset of the current
-  offset.
-@end itemize
-
-@item ; nonterminal-entry
-@itemize @bullet
-@item
-  Read characters until a newline has been read.
-@item
-  Add an entry to the end of the analysis vector with the current
-  stack augmented with an entry for `comment-entry' with a start
-  offset of the remembered offset and the end offset of the current
-  offset.
-@end itemize
-
-@item ' nonterminal-entry
-@itemize @bullet
-@item
-  Push an entry for quoted-expression-entry on the stack with a
-  backquote-depth of one plus that of the current top of the stack.
-@item
-  Add an entry at the end of the analysis vector with the current
-  stack augmented with an entry for `quote-entry' with a
-  start offset of the remembered offset and an end offset of
-  the current offset.
-@end itemize
-
-@item ` nonterminal-entry
-@itemize @bullet
-@item
-  Push an entry for quoted-expression-entry on the stack with a
-  backquote-depth of that of the current top of the stack plus one.
-@item
-  Add an entry at the end of the analysis vector with the current
-  stack augmented with an entry for `backquote-entry' with a
-  start offset of the remembered offset and an end offset of
-  the current offset.
-@end itemize
-
-@item , nonterminal-entry
-@itemize @bullet
-@item
-  If the backquote-depth of the top of the stack is greater than 0
-@itemize @bullet
-@item
-    Push an entry for unquoted-expression-entry on the stack  with a
-    backquote-depth of that of the current top of the stack minus
-    one.
-@item
-    Add an entry at the end of the analysis vector with the current
-    stack augmented with an entry for `unquote-entry' with a
-    start offset of the remembered offset and an end offset of
-    the current offset.
-@end itemize
-@item
-  Else
-@itemize @bullet
-@item
-    Push an entry for unquoted-expression-entry on the stack  with a
-    backquote-depth of 0.
-@item
-    Add an entry at the end of the analysis vector with the current
-    stack augmented with an entry for `error-entry' with a start
-    offset of the remembered offset and an end offset of the current
-    offset.
-@end itemize
-@end itemize
-
-@item ( nonterminal-entry
-@itemize @bullet
-@item
-  Push an entry for list-expression-entry on the stack with a
-  backquote-depth of that of the current top of the stack.
-@item
-  Add an entry at the end of the analysis vector with the current
-  stack augmented with an entry for `list-start-entry' with a
-  start offset of the remembered offset and an end offset of
-  the current offset.
-@end itemize
-
-@item " nonterminal-entry
-@itemize @bullet
-@item
-  Call the function associated with the character.
-  Increment the expression count of the top of the stack.
-@item
-  Perform a count check (see below).
-@item
-  Add an entry at the end of the analysis vector with the current
-  stack augmented with an entry for `string-entry' with a start
-  offset of the remembered offset and an end offset of the current
-  offset.
-@end itemize
-
-@item # nonterminal-entry
-@itemize @bullet
-@item
-  Remember the first char.
-@item
-  Read characters as long as they are digits, and form a count (a
-  number or nil if there are no digits).
-@item
-  If the first non-digit character is a dispatch macro character
-@itemize @bullet
-@item
-    Call parse-dispatch-macro-character with the buffer stream, the
-    result of a call to get-dispatch-macro-character, the entry, and
-    the remembered offset
-@end itemize
-@item
-  Else
-@item
-    Add an entry at the end of the analysis vector with the current
-    stack augmented with an entry for `error-entry' with a start
-    offset of the remembered offset and an end offset of the current
-    offset.
-@end itemize
-
-@item any nonterminal-entry
-@itemize @bullet
-@item
-  Call the function associated with the character.
-@item
-  Add an entry at the end of the analysis vector with the current
-  stack augmented with an entry for `unknown-entry' with a start
-  offset of the remembered offset and an end offset of the
-  current offset.
-@end itemize
-@end table
-
-@deffn {Generic Function} parse-dispatch-macro-character buffer-stream function entry o
-@end deffn
-
-@table @samp
-@item # nonterminal-entry
-@itemize @bullet
-@item
-  Increment the expression count of the top of the stack.
-@item
-  Perform a count check (see below).
-@item
-  Add an entry at the end of the analysis vector with the current
-  stack augmented with an entry for `label-ref-entry' with a
-  start offset of the remembered offset and an end offset of
-  the current offset.
-@end itemize
-
-@item ' nonterminal-entry
-@itemize @bullet
-@item
-  Push an entry for function-expression-entry on the stack with a
-  backquote-depth of that of the current top of the stack.
-@item
-  Add an entry at the end of the analysis vector with the current
-  stack augmented with the entry for function-entry with a start
-  offset of the remembered offset and the end offset of the current
-  offset.
-@end itemize
-
-@item ( nonterminal-entry
-@itemize @bullet
-@item
-  Push an entry for vector-expression-entry on the stack with a
-  backquote-depth of that of the current top of the stack.
-@item
-  Add an entry at the end of the analysis vector with the current
-  stack augmented with the entry for vector-entry with a start offset
-  of the remembered offset and the end offset of the current offset.
-@end itemize
-
-@item A nonterminal-entry
-  [to be filled in]
-
-@item = nonterminal-entry
-@itemize @bullet
-@item
-  Push an entry for labeled-expression-entry on the stack with a
-  backquote-depth of that of the current top of the stack.
-@item
-  Add an entry at the end of the analysis vector with the current
-  stack augmented with the entry for label-entry with a start offset
-  of the remembered offset and the end offset of the current offset.
-@end itemize
-
-@item | nonterminal-entry
-@itemize @bullet
-@item
-  Read characters until a |# pair has been seen or EOF is reached.
-@item
-  Add an entry at the end of the analysis vector with the current
-  stack augmented with the entry for balanced-comment-entry with a
-  start offset of the remembered offset and the end offset of the
-  current offset.
-@end itemize
-
-@item + nonterminal-entry
-@itemx - nonterminal-entry
-@itemize @bullet
-@item
-  Push an entry for read-time-conditional-expression-entry on the
-  stack with a backquote-depth of that of the current top of the
-  stack.
-@item
-  Add an entry at the end of the analysis vector with the current
-  stack augmented with the entry for read-time-conditional-entry with
-  a start offset of the remembered offset and the end offset of the
-  current offset.
-@end itemize
-
-@item . nonterminal-entry
-@itemize @bullet
-@item
-  Push an entry for read-time-evaluation-expression-entry on the
-  stack with a backquote-depth of that of the current top of the
-  stack.
-@item
-  Add an entry at the end of the analysis vector with the current
-  stack augmented with the entry for read-time-evaluation-entry with
-  a start offset of the remembered offset and the end offset of the
-  current offset.
-@end itemize
-
-@item any nonterminal-entry
-@itemize @bullet
-@item
-  Call the function associated with the character.
-@item
-  Add an entry at the end of the analysis vector with the current
-  stack augmented with an entry for `unknown terminal' with a start
-  offset of the remembered offset and an end offset of the
-  current offset.
-@end itemize
-@end table
-
-@deffn {Generic Function} count-check nonterminal-entry
-
-A count check means that we compare the expression count of the top of
-the stack and its syntactic category.  If the category has a limited
-number of expressions allowed, and we have reached it, we pop off the
-top element, increment the expression count of the new top entry, and
-perform a count check again.
-@end deffn
+The body can also be a sequence of forms, the first one of which must be
+a symbol.  These forms typically contain initargs, and will be passed as
+additional arguments to @code{(make-instance '@var{symbol})}.
 
 @node Unit Protocol
 @subsection Unit Protocol
@@ -2010,32 +794,13 @@ motion would be complete; @var{unit} is a string naming the unit; and
 is a number of predefined limit actions:
 @cindex limit action
 
-@deffn {Function} {beep-limit-action} {(mark original-offset remaining unit syntax)}
-@findex beep-limit-action
+@include fun-drei-motion-beep-limit-action.texi
 
-This limit action will beep at the user.
-@end deffn
+@include fun-drei-motion-revert-limit-action.texi
 
-@deffn {Function} {revert-limit-action} {(mark original-offset remaining unit syntax)}
-@findex revert-limit-action
+@include condition-drei-motion-motion-limit-error.texi
 
-This limit action will try to restore the mark state before the
-attempted action. Note that this will not restore any destructive
-actions that have been performed, it will only restore the position of
-@var{mark}.
-@end deffn
-
-@deftp {Error Condition} {motion-limit-error}
-@findex motion-limit-error
-
-This error condition signifies that a motion cannot be performed.
-@end deftp
-
-@deffn {Function} {error-limit-action} (mark original-offset remaining)
-@findex error-limit-action
-
-This limit action will signal an error of type @cl{motion-limit-error}.
-@end deffn
+@include fun-drei-motion-error-limit-action.texi
 
 A @i{diligent motor} is a combination of two motion functions that has
 the same signature as a standard motion function (@pxref{Motion
@@ -2053,13 +818,7 @@ a single expression, and if that fails, it tries to move up a level in
 the expression tree and tries again.
 @cindex limit-action
 
-@deffn {Function} {make-diligent-motor} (motor fiddler)
-@findex make-diligent-motor
-
-Create and return a diligent motor with a default limit action of
-@cl{beep-limit-action}. @var{Motor} and @var{fiddler} will take turns
-being called until either @var{motor} succeeds or @var{fiddler} fails.
-@end deffn
+@include fun-drei-motion-make-diligent-motor.texi
 
 @node Motion Protocol
 @subsubsection Motion Protocol
@@ -2119,53 +878,9 @@ both of which have sensible default methods defined by the Fundamental
 syntax, so if your syntax is a subclass of @class{fundamental-syntax},
 you do not need to define them.
 
-@deffn {Generic Function} {display-drei-contents} stream drei syntax
-@findex display-drei-contents
+@include fun-drei-display-drei-contents.texi
 
-The purpose of this function is to display the buffer contents of a Drei
-instance to some output surface. @var{Stream} is the CLIM output stream
-that redisplay should be performed on, @var{drei} is the Drei instance
-that is being redisplayed, and @var{syntax} is the syntax object of the
-buffer in @var{drei}. Methods on this generic function can draw whatever
-they want, but they should not assume that they are the only user of
-@var{stream}, unless the @var{stream} argument has been specialized to
-some application-specific pane class that can guarantee this. For
-example, when accepting multiple values using the
-@code{accepting-values} macro, several Drei instances will be displayed
-simultaneously on the same stream. It is permitted to only specialise
-@var{stream} on @class{clim-stream-pane} and not
-@class{extended-output-stream}. When writing methods for this function,
-be aware that you cannot assume the buffer will only contain characters,
-and that any subsequence of the buffer is coercable to a string. Drei
-buffers can contain arbitrary objects, and redisplay methods are
-required to handle this (though they are not required to handle it
-nicely, they can just ignore the object, or display the @code{princ}ed
-representation.)
-@end deffn
-
-@deffn {Generic Function} {display-drei-cursor} stream drei cursor syntax
-@findex display-drei-cursor
-
-The purpose of this function is to display a visible indication of a
-cursor of a Drei instance to some output surface. @var{Stream} is the
-CLIM output stream that drawing should be performed on, @var{drei} is
-the Drei instance that is being redisplayed, @var{cursor} is the cursor
-object to be displayed (a subclass of @class{drei-cursor}) and
-@var{syntax} is the syntax object of the buffer in @var{drei}. Methods
-on this generic function can draw whatever they want, but they should
-not assume that they are the only user of @var{stream}, unless the
-@var{stream} argument has been specialized to some application-specific
-pane class that can guarantee this. It is permitted to only specialise
-@var{stream} on @class{clim-stream-pane} and not
-@class{extended-output-stream}. It is recommended to use the function
-@code{offset-to-screen-position} to determine where to draw the visual
-representation for the cursor. It is also recommended to use the ink
-specified by @var{cursor} to perform the drawing, if applicable. This
-method will only be called by the Drei redisplay engine when the cursor
-is active and the buffer position it refers to is on display -
-therefore, @code{offset-to-screen-position} is @emph{guaranteed} to not
-return @cl{NIL} or @cl{T}.
-@end deffn
+@include fun-drei-display-drei-cursor.texi
 
 @node Undo Protocol
 @subsection Undo Protocol
@@ -2198,67 +913,21 @@ generic function that client code must supply a method for.
 @node Protocol Specification
 @subsubsection Protocol Specification
 
-@deftp {error condition} no-more-undo
+@include condition-drei-undo-no-more-undo.texi
 
-A condition of this type is signaled whenever an attempt is made to
-call undo when the application is in its initial state.
-@end deftp
+@include class-drei-undo-undo-tree.texi
 
-@deftp {Protocol Class} undo-tree
+@include class-drei-undo-undo-record.texi
 
-The base class for all undo trees.
-@end deftp
+@include class-drei-undo-standard-undo-record.texi
 
-@deftp {Protocol Class} standard-undo-record
+@include fun-drei-undo-add-undo.texi
 
-The base class for all undo records.
+@include fun-drei-undo-flip-undo-record.texi
 
-Client code typically derives subclasses of this class that are
-specific to the application.
-@end deftp
+@include fun-drei-undo-undo.texi
 
-@deftp {@class{undo-tree} Initarg} :tree
-
-Supplies the undo tree to which the undo record belongs.
-@end deftp
-
-@deffn {Generic Function} add-undo undo-record undo-tree
-
-Add an undo record to the undo tree below the current state, and set
-the current state to be below the transition represented by the undo
-record.
-@end deffn
-
-@deffn {Generic Function} flip-undo-record undo-record
-
-This function is called by the undo module whenever the current state
-is changed from its current value to that of the parent state
-(presumably as a result of a call to undo) or to that of one of its
-child states.
-
-Client code is required to supply methods for this function on
-client-specific subclasses of undo-record.
-@end deffn
-
-@deffn {Generic Function} undo undo-tree &optional (n 1)
-
-Move the current state n steps up the undo tree and call
-flip-undo-record on each step.  If the current state is at a level
-less than n, a no-more-undo condition is signaled and the current
-state is not moved (and no calls to flip-undo-record are made).
-
-As long as no new record are added to the tree, the undo module
-remembers which branch it was in before a sequence of calls to undo.
-@end deffn
-
-@deffn {Generic Function} redo undo-tree &optional (n 1)
-
-Move the current state n steps down the remembered branch of the undo
-tree and call flip-undo-record on each step.  If the remembered
-branch is shorter than n, a no-more-undo condition is signaled and
-the current state is not moved (and no calls to flip-undo-record are
-made).
-@end deffn
+@include fun-drei-undo-redo.texi
 
 @node Implementation
 @subsubsection Implementation
@@ -2272,142 +941,62 @@ application.
 @node How The Buffer Handles Undo
 @subsubsection How The Buffer Handles Undo
 
-@deftp {Class} undo-mixin
+@include class-drei-undo-mixin.texi
 
-This is a mixin class that buffer classes can inherit from. It contains
-an undo tree, an undo accumulator and a flag specifyng whether or not it
-is currently performing undo. The undo tree and undo accumulators are
-initially empty.
-@end deftp
-
-@deffn {Generic Function} undo-tree undo-mixin
-
-A slot reader.  Returns the undo-tree of the buffer.
-@end deffn
+@include fun-drei-undo-tree.texi
 
 Undo is implemented as :before methods on, insert-buffer-object,
 insert-buffer-sequence and delete-buffer-range specialized on
 undo-mixin.
 
-@deffn {Generic Function} undo-accumulate undo-mixin
-A slot accessor.  This list returned by thus function is initially nil
-(the empty list).  The :before methods on insert-buffer-object,
-insert-buffer-sequence, and delete-buffer-range push undo records on to
-this list.
-@end deffn
+@include fun-drei-undo-accumulate.texi
 
-@deffn {Generic Function} performing-undo undo-mixin
+@include fun-drei-performing-undo.texi
 
-A slot accessor.  This slot is initially nil.  The :before methods on
-insert-buffer-object, insert-buffer-sequence, and delete-buffer-range
-push undo records onto the undo accumulator only if this slot is nil so
-that no undo information is added as a result of an undo operation.
-@end deffn
-
-Three subclasses `insert-record', `delete-record', and
-`compound-record' of undo-record are used.  An insert record stores a
+Three subclasses @cl{insert-record}, @cl{delete-record}, and
+@cl{compound-record} of undo-record are used.  An insert record stores a
 position and some sequence of objects to be inserted, a delete record
 stores a position and the length of the sequence to be deleted, and a
 compound record stores a list of other undo records.
 
-The :before methods on insert-buffer-object and insert-buffer-sequence
-push a record of type delete-record onto the undo accumulator for the
-buffer, and the :before method on delete-buffer-range pushes a record of
-type insert-record onto the undo accumulator.
+The :before methods on @cl{insert-buffer-object} and
+@cl{insert-buffer-sequence} push a record of type delete-record onto the
+undo accumulator for the buffer, and the :before method on
+@cl{delete-buffer-range} pushes a record of type @cl{insert-record} onto
+the undo accumulator.
 
-@defmac with-undo (get-buffers-exp) &body body
-
-This macro executes the forms of `body', registering changes made to the
-list of buffers retrieved by evaluating `get-buffers-exp'. When `body'
-has run, for each buffer it will call add-undo with an undo record and
-the undo tree of the buffer.  If the changes done by `body' to the
-buffer has resulted in only a single undo record, it is passed as is to
-add-undo.  If it contains several undo records, a compound undo record
-is constructed out of the list and passed to add-undo.  Finally, if the
-buffer has no undo records, add-undo is not called at all.
-@end defmac
+@include macro-drei-with-undo.texi
 
 To avoid storing an undo record for each object that is inserted,
 the with-undo macro may in some cases just increment the length of
 the sequence in the last delete-record.
 
-The method on flip-undo-record specialized on insert-record binds
-performing-undo for the buffer to t, inserts the sequence of objects in
-the buffer, and calls change-class to convert the insert-record to a
-delete-record, giving it a the length of the stored sequence.
+The method on @cl{flip-undo-record} specialized on @cl{insert-record}
+binds @cl{performing-undo} for the buffer to @cl{T}, inserts the
+sequence of objects in the buffer, and calls @cl{change-class} to
+convert the @cl{insert-record} to a @cl{delete-record}, giving it a the
+length of the stored sequence.
 
-The method on flip-undo-record specialized on delete-record binds
-performing-undo for the buffer to t, deletes the range from the buffer,
-and calls change-class to convert the delete-record to an insert-record,
-giving it the sequence at the stored offset in the buffer with the
-specified length.
+The method on @cl{flip-undo-record} specialized on @cl{delete-record}
+binds @cl{performing-undo} for the buffer to @cl{T}, deletes the range
+from the buffer, and calls @cl{change-class} to convert the
+@cl{delete-record} to an @cl{insert-record}, giving it the sequence at
+the stored offset in the buffer with the specified length.
 
-The method on flip-undo-record specialized on compound-record binds
-performing-undo for the buffer to t, recursively calls flip-undo-record
-on each element of the list of undo records, and finally destructively
-reverses the list.
+The method on @cl{flip-undo-record} specialized on @cl{compound-record}
+binds @cl{performing-undo} for the buffer to @cl{T}, recursively calls
+@cl{flip-undo-record} on each element of the list of undo records, and
+finally destructively reverses the list.
 
-@deftp {Class} drei-undo-record
+@include class-drei-drei-undo-record.texi
 
-A subclass of standard-undo-record.
-@end deftp
+@include class-drei-simple-undo-record.texi
 
-@deftp {@class{drei-undo-record} Initarg} :buffer
+@include class-drei-insert-record.texi
 
-The buffer to which the record belongs.
-@end deftp
+@include class-drei-delete-record.texi
 
-@deftp {Class} simple-undo-record
-
-A subclass of drei-undo-record.
-@end deftp
-
-@deftp {@class{simple-undo-record} Initarg} :offset
-
-This initarg is mandatory and supplies the offset that determines the
-position at which the undo operation is to be executed.
-@end deftp
-
-@deffn {Generic Function} undo-offset undo-record
-
-Return the offset of the undo record.
-@end deffn
-
-@deftp {Class} delete-record
-
-A subclass of buffer-undo-record.  Whenever objects are inserted, a
-delete-record containing a mark is created and added to the undo
-tree.
-@end deftp
-
-@deftp {@class{delete-record} Initarg} :length
-
-Supply the length of the sequence of objects to be deleted whenever
-flip-undo-record is called on an instance of delete-record.
-@end deftp
-
-@deftp {Class} insert-record
-
-A subclass of simple-undo-record.  Whenever objects are deleted, the
-sequence of objectgs is stored in an insert record containing a mark.
-@end deftp
-
-@deftp {@class{insert-record} Initarg} :objects
-
-Supply the sequence of objects that are to be inserted whenever
-flip-undo-record is called on an instance of insert-record.
-@end deftp
-
-@deftp {Class} compound-record
-
-A subclass of simple-undo-record.  This record simply contains a list
-of other records.
-@end deftp
-
-@deftp {@class{compound-record} Initarg} :records
-
-A list of output records.
-@end deftp
+@include class-drei-compound-record.texi
 
 @node Kill Ring Protocol
 @subsection Kill Ring Protocol
@@ -2445,76 +1034,23 @@ start position.
 @node Kill Ring Protocol Specification
 @subsubsection Kill Ring Protocol Specification
 
-@deftp {Class} kill-ring
+@include class-drei-kill-ring-kill-ring.texi
 
-A class for all kill rings.
-@end deftp
+@include fun-drei-kill-ring-kill-ring-max-size.texi
 
-@deftp {init-arg} :max-size
+@include fun-drei-kill-ring-kill-ring-length.texi
 
-A limitation placed upon the number of elements held by a kill ring.  Once the maximum size
-has been reached, older entries must first be removed before new ones can be added.
-@end deftp
+@include fun-drei-kill-ring-kill-ring-standard-push.texi
 
-@deffn {Generic Function} kill-ring-max-size kill-ring
+@include fun-drei-kill-ring-kill-ring-concatenating-push.texi
 
-Returns the value of a kill ring's maximum size.
-@end deffn
+@include fun-drei-kill-ring-kill-ring-reverse-concatenating-push.texi
 
-@deffn {Generic Function} {(setf kill-ring-max-size)} size kill-ring
+@include fun-drei-kill-ring-rotate-yank-position.texi
 
-Alters the maximum size of a kill ring even if it means dropping
-elements to do so.
-@end deffn
+@include fun-drei-kill-ring-reset-yank-position.texi
 
-@deffn {Generic Function} kill-ring-length kill-ring
-
-Returns the current length of a kill-ring.  Note this is different than
-kill-ring-max-size.
-@end deffn
-
-@deffn {Generic Function} kill-ring-standard-push kill-ring vector
-
-Pushes a vector of objects onto a given kill ring creating a new start of ring
-position.  This function is much like an everyday lisp push with size considerations.
-If the length of the kill ring is greater than its maximum size, ``older'' elements
-will be removed from the ring until the maximum size is reached.
-@end deffn
-
-@deffn {Generic Function} kill-ring-concatenating-push kill-ring vector
-
-Concatenates the contents of vector onto the end of the contents of
-the current top of the kill-ring.  If the kill-ring is empty, a new
-entry is pushed.
-@end deffn
-
-@deffn {Generic Function} kill-ring-reverse-concatenating-push kill-ring vector
-
-Concatenates the contents of vector onto the front of the current
-contents of the top of the kill ring. If the kill ring is empty a new
-entry is pushed.
-@end deffn
-
-@deffn {Generic Function} rotate-yank-position kill-ring &optional times
-
-Moves the yank point associated with a kill-ring one or times many positions
-away from the start of ring position.  If times is greater than the current length
-then the cursor will wrap to the start of ring position and continue rotating.
-@end deffn
-
-@deffn {Generic Function} reset-yank-position kill-ring
-
-Moves the current position of the yank point associated with a kill ring
-back to the start of ring position.
-@end deffn
-
-@deffn {Generic Function} kill-ring-yank kill-ring &optional reset
-
-Returns the vector of objects currently pointed to by the cursor.  If
-reset is T, then a call to reset-yank-position is called before the
-object is yanked.  The default for reset is NIL. If the kill ring is
-empty, a condition of type `empty-kill-ring' is signalled.
-@end deffn
+@include fun-drei-kill-ring-kill-ring-yank.texi
 
 @node Kill Ring Implementation
 @subsubsection Kill Ring Implementation
@@ -2532,17 +1068,9 @@ ring implementation borrows heavily from the flexichain library of
 functions. The following functions lie outside the kill ring and
 flexichain protocols, but are pertinent to the kill ring implementation.
 
-@deffn {accessor} kill-ring-chain kill-ring
+@include fun-drei-kill-ring-kill-ring-chain.texi
 
-A slot accessor provided by the Drei implemention of the kill ring
-class, which returns the cursorchain associated with kill-ring.
-@end deffn
-
-@deffn {accessor} kill-ring-cursor kill-ring
-
-A slot accessor provided by the Drei implemention of the kill ring
-class, which returns the flexicursor assocated with kill-ring.
-@end deffn
+@include fun-drei-kill-ring-kill-ring-cursor.texi
 
 @node Defining Drei Commands
 @section Defining Drei Commands
