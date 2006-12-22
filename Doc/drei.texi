@@ -1177,11 +1177,11 @@ before you can do this (@pxref{Examples Of Defining Drei Commands}).
 
 A common text editing task is to repeat the word at point, but for some
 reason, Drei does not come with a command to do this, so we need to
-write our own. Fortunately, Drei is extensible software. We're going to
-put our command in the @package{DREI-COMMANDS} package, though,
-strictly, that is an internal package. We're going to create a standard
-CLIM command named @cl{com-repeat-word} in the command table
-@cl{editing-table}. We'll clone the current point, move it a word
+write our own. Fortunately, Drei is extensible software, and to that
+end, a @package{DREI-USER} package is provided that is intended for user
+customizations. We're going to create a standard CLIM command named
+@cl{com-repeat-word} in the command table @cl{editing-table}. The
+implementation consists of cloning the current point, move it a word
 backward, and insert into the buffer the sequence delimited by point and
 our moved mark. Our command takes no arguments.
 
