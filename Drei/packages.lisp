@@ -421,12 +421,16 @@ used to implement the editing commands."))
            #:replace-rectangle-line
            #:insert-in-rectangle-line
            #:delete-rectangle-line-whitespace
-           #:with-narrowed-buffer))
+           #:with-narrowed-buffer)
+  (:documentation "Implementation of much syntax-aware, yet no
+syntax-specific, core functionality of Drei."))
 
 (defpackage :drei-fundamental-syntax
   (:use :clim-lisp :clim :drei-buffer :drei-base 
         :drei-syntax :flexichain :drei)
-  (:export #:fundamental-syntax #:scan))
+  (:export #:fundamental-syntax #:scan)
+  (:documentation "Implementation of the basic syntax module for
+editing plain text."))
 
 (defpackage :drei-lisp-syntax
   (:use :clim-lisp :clim :clim-extensions :drei-buffer :drei-base 
@@ -438,7 +442,9 @@ used to implement the editing commands."))
            #:form
            #:form-to-object
            #:form-conversion-error)
-  (:shadow clim:form))
+  (:shadow clim:form)
+  (:documentation "Implementation of the syntax module used for
+editing Common Lisp code."))
 
 (defpackage :drei-commands
   (:use :clim-lisp :drei-base :drei-buffer
@@ -447,4 +453,14 @@ used to implement the editing commands."))
         :esa-utils :drei-core :drei-undo)
   (:export #:define-motion-commands
            #:define-deletion-commands
-           #:define-editing-commands))
+           #:define-editing-commands)
+  (:documentation "Command definitions that are not tied to
+specific syntaxes."))
+
+(defpackage :drei-user
+  (:use :clim-lisp :clim :clim-extensions :drei-buffer :drei-base 
+        :drei-syntax :drei-fundamental-syntax :flexichain :drei
+        :drei-motion :drei-editing :esa-utils :esa :drei-core :esa-io
+        :drei-commands)
+  (:documentation "The package intended for user-made
+customizations and extensions."))
