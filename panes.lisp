@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.175 2006/12/19 04:02:14 ahefner Exp $
+;;; $Id: panes.lisp,v 1.176 2006/12/23 11:42:43 ahefner Exp $
 
 (in-package :clim-internals)
 
@@ -1983,15 +1983,13 @@ order to produce a double-click")
       
       (when vscrollbar
         (setf (sheet-transformation vscrollbar)
-              (make-translation-transformation 0 0))
+              (make-translation-transformation (- width *scrollbar-thickness*) 0))
         (allocate-space vscrollbar
                         *scrollbar-thickness*
                         (if hscrollbar (- height *scrollbar-thickness*) height)))
       (when hscrollbar
         (move-sheet hscrollbar
-                    (if vscrollbar
-                        *scrollbar-thickness*
-                        0)
+		    0
                     (- height *scrollbar-thickness*))
         (allocate-space hscrollbar
                         (if vscrollbar (- width *scrollbar-thickness*) width)
@@ -2026,7 +2024,7 @@ order to produce a double-click")
       (when viewport
         (setf (sheet-transformation viewport)
               (make-translation-transformation
-                   (+ x-spacing (if vscrollbar *scrollbar-thickness* 0))
+                   (+ x-spacing 0)
                    (+ y-spacing 0)))
         (allocate-space viewport
                         (- viewport-width (* 2 x-spacing))
