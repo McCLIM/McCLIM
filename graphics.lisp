@@ -1008,12 +1008,18 @@ position for the character."
 (defmethod medium-draw-pattern* (medium pattern x y)
   (let ((width  (pattern-width pattern))
         (height (pattern-height pattern)))
-    #+NIL ;; debugging aid.
-    (draw-rectangle* medium x y (+ x width) (+ y height)
-                     :filled t
-                     :ink +red+)
-    (draw-rectangle* medium x y (+ x width) (+ y height)
-                     :filled t
-                     :ink (transform-region
-                           (make-translation-transformation x y)
-                           pattern))))
+    ;; As I read the spec, the pattern itself is not transformed, so
+    ;; we should draw the full (untransformed) pattern at the tranformed
+    ;; x/y coordinates. This requires we revert to the identity transformation
+    ;; before drawing the rectangle. -Hefner
+    (with-transformed-position ((medium-transformation medium) x y)
+      (with-identity-transformation (medium)
+	#+NIL ;; debugging aid.
+	(draw-rectangle* medium x y (+ x width) (+ y height)
+			 :filled t
+			 :ink +red+)
+	(draw-rectangle* medium x y (+ x width) (+ y height)
+			 :filled t
+			 :ink (transform-region
+			       (make-translation-transformation x y)
+			       pattern))))))
