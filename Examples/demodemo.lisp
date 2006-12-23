@@ -205,16 +205,32 @@
 
 (define-application-frame list-test
     () ()
+    (:panes
+     (substring :text-field :value "INTER")
+     (result-list
+      (make-pane 'list-pane
+		 :value 'clim:region-intersection
+		 :items (apropos-list "INTER" :clim t)
+		 :name-key (lambda (x) (format nil "~(~S~)" x)))))
     (:layouts
      (defaults
          (labelling (:label "Matching symbols"
                             :text-style (make-text-style :sans-serif :roman :normal))
-           (scrolling (:height 200)
-             (make-pane 'list-pane
-                        :value 'clim:region-intersection
-                        :items (apropos-list "INTER" :clim t)
-                        :name-key (lambda (x) (format nil "~(~S~)" x))
-                        ))))))
+           (vertically ()
+	     (scrolling (:height 200)
+	       result-list)
+	     (horizontally ()
+	       substring
+	       (make-pane 'push-button
+			  :label "Update"
+			  :activate-callback 'update-list-test)))))))
+
+(defun update-list-test (pane)
+  (declare (ignore pane))
+  (setf (list-pane-items (find-pane-named *application-frame* 'result-list))
+	(apropos-list (gadget-value
+		       (find-pane-named *application-frame* 'substring))
+		      :clim t)))
 
 
 

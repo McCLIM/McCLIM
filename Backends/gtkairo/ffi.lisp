@@ -1042,6 +1042,11 @@
   (iter :pointer)                       ;GtkTreeIter *
   )
 
+(defcfun "gtk_list_store_clear"
+    :void
+  (list_store :pointer)                 ;GtkListStore *
+  )
+
 (defcfun "gtk_list_store_newv"
     :pointer
   (n_columns :int)                      ;gint
@@ -1211,6 +1216,11 @@
   )
 
 (defcfun "gtk_tree_view_get_hadjustment"
+    :pointer
+  (tree_view :pointer)                  ;GtkTreeView *
+  )
+
+(defcfun "gtk_tree_view_get_model"
     :pointer
   (tree_view :pointer)                  ;GtkTreeView *
   )

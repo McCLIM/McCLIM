@@ -1921,7 +1921,8 @@
    #:compose-space-aux
    #:simple-event-loop
    #:pointer-motion-hint-event
-   #:frame-display-pointer-documentation-string))
+   #:frame-display-pointer-documentation-string
+   #:list-pane-items))
 
 ;;; Symbols that must be defined by a backend.
 ;;;

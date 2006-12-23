@@ -2175,6 +2175,48 @@ Returns two values, the item itself, and the index within the item list."
            (generic-list-pane-handle-click-from-event pane event))
       (when (next-method-p) (call-next-method))))
 
+(defgeneric (setf list-pane-items)
+    (newval pane &key invoke-callback)
+  (:documentation
+   "Set the current list of items for this list pane.
+The current GADGET-VALUE will be adjusted by removing values not
+specified by the new items.  VALUE-CHANGED-CALLBACK will be called
+if INVOKE-CALLBACK is given."))
+
+(defmethod (setf list-pane-items)
+    (newval (pane meta-list-pane) &key invoke-callback)
+  (declare (ignore invoke-callback))
+  (setf (slot-value pane 'items) newval))
+
+(defmethod (setf list-pane-items)
+    :after
+    (newval (pane meta-list-pane) &key invoke-callback)
+  (when (slot-boundp pane 'value)
+    (let ((new-values
+	   (coerce (climi::generic-list-pane-item-values pane) 'list))
+	  (test (list-pane-test pane)))
+      (setf (gadget-value pane :invoke-callback invoke-callback)
+	    (if (list-pane-exclusive-p pane)
+		(if (find (gadget-value pane) new-values :test test)
+		    (gadget-value pane)
+		    nil)
+		(intersection (gadget-value pane) new-values :test test))))))
+
+(defmethod (setf list-pane-items)
+    (newval (pane generic-list-pane) &key invoke-callback)
+  (call-next-method)
+  (with-slots (items items-length item-strings item-values) pane
+    (setf items-length (length newval))
+    (setf item-strings nil)
+    (setf item-values nil)))
+
+(defmethod (setf list-pane-items) :after
+    (newval (pane generic-list-pane) &key invoke-callback)
+  (change-space-requirements
+   pane
+   :height (space-requirement-height (compose-space pane)))
+  (handle-repaint pane +everywhere+))
+
 ;;; OPTION-PANE
 
 (define-abstract-pane-mapping 'option-pane 'generic-option-pane)

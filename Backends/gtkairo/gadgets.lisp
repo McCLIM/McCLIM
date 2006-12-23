@@ -49,7 +49,9 @@
 
 (defclass gtk-list (native-widget-mixin list-pane climi::meta-list-pane)
     ((title :initarg :title :initform "" :accessor list-pane-title)
-     (tree-view :accessor list-pane-tree-view)))
+     (tree-view :accessor list-pane-tree-view))
+  ;; fixme?
+  (:default-initargs :value nil))
 
 (defclass gtk-option-pane
     (native-widget-mixin option-pane climi::meta-list-pane)
@@ -151,7 +153,6 @@
     (setf (cffi:mem-aref types :long 1) 0)
     (let* ((model (gtk_list_store_newv 1 types))
 	   (tv (gtk_tree_view_new_with_model model))
-	   (name-key (climi::list-pane-name-key sheet))
 	   (column (gtk_tree_view_column_new))
 	   (renderer (gtk_cell_renderer_text_new)))
       (setf (list-pane-tree-view sheet) tv)
@@ -159,15 +160,7 @@
       (gtk_tree_view_insert_column tv column -1)
       (gtk_tree_view_column_add_attribute column renderer "text" 0)
       (gtk_tree_view_column_set_title column (list-pane-title sheet))
-      (cffi:with-foreign-object (&iter 'gtktreeiter)
-	(dolist (i (climi::list-pane-items sheet))
-	  (gtk_list_store_append model &iter)
-	  (cffi:with-foreign-string (n (funcall name-key i))
-	    (cffi:with-foreign-object (&value 'gvalue)
-	      (setf (cffi:foreign-slot-value &value 'gvalue 'type) 0)
-	      (g_value_init &value +g-type-string+)
-	      (g_value_set_string &value n)
-	      (gtk_list_store_set_value model &iter 0 &value)))))
+      (reset-list-pane-items sheet)
       (gtk_tree_selection_set_mode
        (list-pane-selection sheet)
        (if (eq (climi::list-pane-mode sheet) :exclusive)
@@ -191,6 +184,20 @@
 	 result
 	 (cffi:null-pointer))
 	result))))
+
+(defun reset-list-pane-items (sheet)
+  (let ((model (gtk_tree_view_get_model (list-pane-tree-view sheet)))
+	(name-key (climi::list-pane-name-key sheet)))
+    (gtk_list_store_clear model)  
+    (cffi:with-foreign-object (&iter 'gtktreeiter)
+      (dolist (i (climi::list-pane-items sheet))
+	(gtk_list_store_append model &iter)
+	(cffi:with-foreign-string (n (funcall name-key i))
+	  (cffi:with-foreign-object (&value 'gvalue)
+	    (setf (cffi:foreign-slot-value &value 'gvalue 'type) 0)
+	    (g_value_init &value +g-type-string+)
+	    (g_value_set_string &value n)
+	    (gtk_list_store_set_value model &iter 0 &value)))))))
 
 (defmethod realize-native-widget ((sheet gtk-option-pane))
   (let* ((widget (gtk_combo_box_new_text))
@@ -216,7 +223,8 @@
   (gtk_tree_selection_unselect_all (list-pane-selection sheet))
   (let ((value (gadget-value sheet)))
     (if (eq (climi::list-pane-mode sheet) :exclusive)
-	(gtk-list-select-value sheet value)
+	(when value			;fixme?
+	  (gtk-list-select-value sheet value))
 	(dolist (v value)
 	  (gtk-list-select-value sheet v)))))
 
@@ -227,6 +235,17 @@
     (let ((mirror (sheet-direct-mirror gadget)))
       (when mirror
 	(gtk-list-reset-selection gadget)))))
+
+(defmethod (setf climi::list-pane-items)
+    (newval (pane gtk-list) &key invoke-callback)
+  (declare (ignore invoke-callback))
+  (call-next-method)
+  (with-gtk ()
+    (reset-list-pane-items pane)))
+
+(defmethod climi::generic-list-pane-item-values ((pane gtk-list))
+  (mapcar (climi::list-pane-value-key pane)
+	  (climi::list-pane-items pane)))
 
 (defun option-pane-set-active (sheet widget)
   (gtk_combo_box_set_active
