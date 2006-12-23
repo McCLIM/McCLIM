@@ -119,6 +119,12 @@
 	(sheet-children (first (sheet-children (frame-panes submenu-frame))))
 	'())))
 
+(defclass submenu-border (border-pane) ())
+
+(defclass submenu-border-pane (raised-pane)
+  ()
+  (:default-initargs :border-width 2 :background *3d-normal-color*))
+
 (defun create-substructure (sub-menu client)
   (let* ((frame *application-frame*)
 	 (manager (frame-manager frame))
@@ -130,7 +136,7 @@
 				    'menu)))
 	 (rack (make-pane-1 manager frame 'vrack-pane
 			    :background *3d-normal-color* :contents items))
-	 (raised (make-pane-1 manager frame 'raised-pane :border-width 2 :background *3d-normal-color* :contents (list rack))))
+	 (raised (make-pane-1 manager frame 'submenu-border :contents (list rack))))
     (with-slots (bottomp) sub-menu
       (multiple-value-bind (xmin ymin xmax ymax)
 	  (bounding-rectangle* (sheet-region sub-menu))
@@ -277,6 +283,7 @@
                           :label name
                           :text-style *enabled-text-style*
                           :client client
+                          :vertical vertical
                           :value-changed-callback
                           #'(lambda (gadget val)
                               (declare (ignore gadget val))
@@ -285,6 +292,7 @@
                             :label name
                             :text-style *disabled-text-style*
                             :client client
+                            :vertical vertical
                             :value-changed-callback
                             #'(lambda (gadget val)
                                 (declare (ignore gadget val))
@@ -296,6 +304,7 @@
                      :label name
                      :text-style *enabled-text-style*
                      :client client
+                     :vertical vertical
                      :value-changed-callback
                      #'(lambda (gadget val)
                          (declare (ignore gadget val))
@@ -308,6 +317,7 @@
       (:divider
        (make-pane-1 manager frame 'menu-divider-leaf-pane
                     :label name
+                    :vertical vertical
                     :client client))
       (:menu
         (make-pane-1 manager frame (if vertical
@@ -315,6 +325,7 @@
                                        'menu-button-submenu-pane)
 		     :label name
 		     :client client
+                     :vertical vertical
 		     :frame-manager manager
 		     :command-table value
 		     :bottomp bottomp))
@@ -372,7 +383,7 @@
 		 (append
 		  (loop for item in menu
 		      collect 
-			(make-menu-button-from-menu-item
+                        (make-menu-button-from-menu-item
 			 item nil
 			 :bottomp t
 			 :vertical nil

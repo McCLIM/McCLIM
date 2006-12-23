@@ -14,6 +14,12 @@
 ;
 ;;;
 
+;;; TODO: Add units label to slider pane
+;;; TODO: Matching repaint method for the list pane
+;;; TODO: Is there a locking bug, and does it somehow involve pixie?
+;;;       (Or is my computer still haunted?)
+;;; TODO: Colors of buttons in clim-fig are wrong
+
 (export '(pixie-look #+clx pixie/clx-look))
 
 (defclass pixie-look (frame-manager) ())
@@ -26,7 +32,6 @@
 			   (type (eql ',abstract-type))
 			   &rest args)
     (declare (ignorable fm frame type args))
-    (format *trace-output* "~&  make-pane-1 ~A => ~A~%" ',abstract-type ',pixie-type)
     ,(if enabled
 	 `(apply #'make-instance
            ',pixie-type
@@ -50,13 +55,45 @@
          :port (port frame)
          args))
 
+;;; Scroll button patterns
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defparameter +pixie-arrow-pattern+
+    #2a((0 0 0 1 0 0 0)
+        (0 0 1 1 1 0 0)
+        (0 1 1 1 1 1 0)
+        (1 1 1 1 1 1 1)))
+  
+  (flet ((rotate (array)
+	   (let ((new-array (make-array (reverse (array-dimensions array)))))
+	     (dotimes (i (array-dimension array 0))
+	       (dotimes (j (array-dimension array 1))
+		 (setf (aref new-array j (- (array-dimension array 0) i 1))
+		       (aref array i j))))
+	     new-array)))
+    (let* ((up    +pixie-arrow-pattern+)
+	   (right (rotate up))
+	   (down  (rotate right))
+	   (left  (rotate down)))
+      (macrolet ((def (var) 
+		     `(defparameter ,(intern (format nil "~A~A~A"
+						     (symbol-name '#:+pixie-)
+						     (symbol-name var)
+						     (symbol-name '#:-arrow+))
+					     (find-package :climi))
+		       (make-pattern ,var (list +transparent-ink+ +black+)))))
+	(def up)
+	(def right)
+	(def down)
+	(def left)))))
+
 ; Standard
 
 ; TODO - clean up all of this colour nonsense
 ; which should involve some sensible ideas about tints vs' inks
 
-(defclass pixie-gadget () (
-   (highlighted      :initarg :highlight
+(defclass pixie-gadget ()
+  ((highlighted      :initarg :highlight
                      :initform +gray93+
                      :reader pane-highlight)
    (paper-color      :initarg :paper-color
@@ -73,7 +110,6 @@
                      :reader pane-background)))
 
 ; Convenience
-
 
 (defun draw-up-box (pane x1 y1 x2 y2 foreground)
   (let ((x2 (- x2 1)))
@@ -112,7 +148,7 @@
   (draw-label* pane x1 y1 x2 y2
                :ink (pane-inking-color pane)))
 
-; Highlighting (could the defaults be less horrible?)
+; Highlighting
 
 (defmethod gadget-highlight-background ((gadget pixie-gadget))
   +gray93+)
@@ -625,26 +661,17 @@
                                    :border-width 1)
             ;; draw up arrow
             (with-bounding-rectangle* (x1 y1 x2 y2) gadget-up-region
-               (if (eq (slot-value pane 'armed) :up)
+	       (if (eq (slot-value pane 'armed) :up)
                    (draw-down-box pane x1 y1 x2 y2 +gray83+)
                    (draw-up-box   pane x1 y1 x2 y2 +gray83+))
                 ;; draw decoration in the region
-                ;; for this, we want to have an odd width and height
-                (flet ((oddify (v) (let ((v (floor v))) (if (oddp v) v (+ v 1)))))
-                  (let* ((width  (oddify (- x2 x1)))
-                         (height (oddify (- y2 y1)))
-                         (arrow (list (make-point (floor (/ (+ x1 x2) 2))
-                                                  (floor (+ y1 (* height 5/13))))
-                                      (make-point (floor (+ x1 (* width 4/13)))
-                                                  (floor (- y2 (* height 6/13))))
-                                      (make-point (floor (+ x1 (* width 4/13)))
-                                                  (floor (- y2 (* height 5/13))))
-                                      (make-point (floor (- x2 (* width 4/13)))
-                                                  (floor (- y2 (* height 5/13))))
-                                      (make-point (floor (- x2 (* width 4/13)))
-                                                  (floor (- y2 (* height 6/13)))))))
-                    (draw-polygon pane arrow :filled t :ink +black+))))
-            ; old
+	       (multiple-value-bind (pattern fudge-x fudge-y)
+		   (if (eq (gadget-orientation pane) :vertical)
+		       (values +pixie-up-arrow+ -1 1)
+		       (values +pixie-left-arrow+ -1 1))
+		 (draw-pattern* pane pattern
+				(+ fudge-x (floor (- (+ x1 x2) (pattern-width  pattern)) 2))
+				(+ fudge-y (floor (- (+ y1 y2) (pattern-height pattern)) 2)))))
   
             ;; draw down arrow
             (with-bounding-rectangle* (x1 y1 x2 y2) gadget-down-region
@@ -652,20 +679,13 @@
                    (draw-down-box pane x1 y1 x2 y2 +gray83+)
                    (draw-up-box   pane x1 y1 x2 y2 +gray83+))
                 ;; draw decoration in the region
-                (flet ((oddify (v) (let ((v (floor v))) (if (oddp v) v (+ v 1)))))
-                  (let* ((width  (oddify (- x2 x1)))
-                         (height (oddify (- y2 y1)))
-                         (arrow (list (make-point (floor (/ (+ x1 x2) 2))
-                                                  (floor (- y2 (* height 5/13))))
-                                      (make-point (floor (+ x1 (* width 4/13)))
-                                                  (floor (+ y1 (* height 6/13))))
-                                      (make-point (floor (+ x1 (* width 4/13)))
-                                                  (floor (+ y1 (* height 5/13))))
-                                      (make-point (floor (- x2 (* width 4/13)))
-                                                  (floor (+ y1 (* height 5/13))))
-                                      (make-point (floor (- x2 (* width 4/13)))
-                                                  (floor (+ y1 (* height 6/13)))))))
-                    (draw-polygon pane arrow :filled t :ink +black+))))
+	       (multiple-value-bind (pattern fudge-x fudge-y)
+		   (if (eq (gadget-orientation pane) :vertical)
+		       (values +pixie-down-arrow+  -1 1)
+		       (values +pixie-right-arrow+ -1 2))
+		 (draw-pattern* pane pattern
+				(+ fudge-x (floor (- (+ x1 x2) (pattern-width  pattern)) 2))
+				(+ fudge-y (floor (- (+ y1 y2) (pattern-height pattern)) 2)))))
   
             ;; draw thumb
             (with-bounding-rectangle* (x1 y1 x2 y2) gadget-thumb-region
@@ -677,36 +697,43 @@
 
 (defclass pixie-menu-bar-pane (pixie-gadget menu-bar) ())
 
-; silly menu-bar isn't named pane, so this catches it
-(defclass pixie-menu-bar (pixie-menu-bar-pane) ())
-
-(define-pixie-gadget menu-bar pixie-menu-bar-pane :enabled nil)  
+(define-pixie-gadget menu-bar pixie-menu-bar-pane :enabled t)
 
 (defmethod handle-repaint ((pane pixie-menu-bar-pane) region)
   (declare (ignore region))
   (with-special-choices (pane)
     (let* ((region (sheet-region pane))
            (frame (polygon-points (bounding-rectangle region))))
-      (draw-polygon pane frame :ink +Blue+ :filled t)
+      #+NIL      (draw-polygon pane frame :ink +Blue+ :filled t)
       (draw-bordered-polygon pane frame :style :outset :border-width 1))))
 
-(defmethod compose-space ((gadget pixie-menu-bar-pane) &key width height)
-  (declare (ignore width height))
-  (multiple-value-bind (width min-width max-width height min-height max-height)
-      (space-requirement-components (call-next-method))
-    (make-space-requirement
-      :width width
-      :min-width min-width
-      :max-width max-width
-      :height min-height
-      :min-height min-height
-      :max-height min-height)))
+(define-pixie-gadget menu-button pixie-menu-button-pane)
 
-(defclass pixie-menu-button-pane (pixie-gadget menu-button-pane) ()
+(defclass pixie-menu-button-pane (pixie-gadget menu-button-pane)
+  ((left-margin :reader left-margin)
+   (right-margin :reader right-margin))                
   (:default-initargs
     :align-x :left
     :align-y :center))
 
+(defparameter *pixie-menu-button-left-margin*  26)
+(defparameter *pixie-menu-button-right-margin* 26)
+(defparameter *pixie-menubar-item-left-margin* 8)
+(defparameter *pixie-menubar-item-right-margin* 8)
+(defparameter *pixie-menubar-item-spacing* 0)
+
+(defmethod initialize-instance :after ((pane pixie-menu-button-pane)
+                                       &rest args &key vertical &allow-other-keys)
+  (declare (ignore args))
+  (with-slots (left-margin right-margin) pane
+    (setf (values left-margin right-margin)
+          (if (or (typep (slot-value pane 'client) 'menu-bar)
+                  (not vertical))
+              (values *pixie-menubar-item-left-margin* *pixie-menubar-item-right-margin*)
+              (values *pixie-menu-button-left-margin* *pixie-menu-button-right-margin*)))))
+
+;; What even uses this? All the subclasses have their own handle-repaint methods!
+#+NIL
 (defmethod handle-repaint ((pane pixie-menu-button-pane) region)
   (declare (ignore region))
   (with-special-choices (pane)
@@ -724,25 +751,23 @@
                            :border-width 1)))
           (t
            (draw-polygon pane frame :filled t :ink (effective-gadget-foreground pane))))
-        (draw-label* pane (+ x1 5) y1 x2 y2 :ink (pane-inking-color pane))))))
+        (draw-label* pane (+ x1 (left-margin pane)) y1 (- x2 (right-margin pane)) y2 :ink +red+ #+NIL (pane-inking-color pane))))))
 
 (defmethod compose-space ((gadget pixie-menu-button-pane) &key width height)
   (declare (ignore width height))
-  (space-requirement+* (space-requirement+* (compose-label-space gadget :wider 5 :higher 10)
-                                            :min-width  (* 2 (pane-x-spacing gadget))
-                                            :width      (* 2 (pane-x-spacing gadget))
-                                            :max-width  +fill+ 
-                                            :min-height (* 2 (pane-y-spacing gadget))
-                                            :height     (* 2 (pane-y-spacing gadget))
-                                            :max-height (* 2 (pane-y-spacing gadget)))
-                       :min-width  (+ 17 (* 2 *3d-border-thickness*))
-                       :width      (+ 17 (* 2 *3d-border-thickness*))
+  (space-requirement+* (compose-label-space gadget
+					    :wider (+ (left-margin gadget)
+                                                      (right-margin gadget))
+					    :higher (+ 6 (* 2 *3d-border-thickness*)))
+                       :min-width  0
+                       :width      0
                        :max-width  +fill+
-                       :min-height (* 2 *3d-border-thickness*)
-                       :height     (* 2 *3d-border-thickness*)
-                       :max-height (* 2 *3d-border-thickness*)))
+                       :min-height 0
+                       :height     0
+                       :max-height 0))
 
 (defclass pixie-menu-button-leaf-pane (pixie-menu-button-pane menu-button-leaf-pane) ())
+(define-pixie-gadget menu-button-leaf-pane pixie-menu-button-leaf-pane)
 
 (defmethod handle-repaint ((pane pixie-menu-button-leaf-pane) region)
   (declare (ignore region))
@@ -759,25 +784,26 @@
                                :filled t)
               (when armed
                 (draw-edges-lines* pane +white+ 0 0 +black+ (1- w) (1- h)))
-              (draw-label* pane (+ x1 8) y1 (- x2 17) y2 :ink +black+))))))))
+	      (let ((x1 (+ x1 (left-margin pane)))
+		    (x2 (- x2 (right-margin pane))))
+		(if (gadget-active-p pane)
+		    (draw-label* pane x1 y1 x2 y2 :ink +black+)
+		    (draw-engraved-label* pane x1 y1 x2 y2))))))))))
 
 (defclass pixie-menu-button-submenu-pane (pixie-menu-button-pane menu-button-submenu-pane) ())
 
+(define-pixie-gadget menu-button-submenu-pane pixie-menu-button-submenu-pane)
+(define-pixie-gadget menu-button-vertical-submenu-pane pixie-menu-button-submenu-pane)
+
+
 (defmethod compose-space ((gadget pixie-menu-button-submenu-pane) &key width height)
   (declare (ignore width height))
-  (space-requirement+* (space-requirement+* (compose-label-space gadget :wider 5 :higher 10)
-                                            :min-width  (* 2 (pane-x-spacing gadget))
-                                            :width      (* 2 (pane-x-spacing gadget))
-                                            :max-width  +fill+ 
-                                            :min-height (* 2 (pane-y-spacing gadget))
-                                            :height     (* 2 (pane-y-spacing gadget))
-                                            :max-height (* 2 (pane-y-spacing gadget)))
-                       :min-width  (+ 17 (* 2 *3d-border-thickness*))
-                       :width      (+ 17 (* 2 *3d-border-thickness*))
-                       :max-width  +fill+
-                       :min-height (* 2 *3d-border-thickness*)
-                       :height     (* 2 *3d-border-thickness*)
-                       :max-height (* 2 *3d-border-thickness*)))
+  (if (typep (slot-value gadget 'client) 'menu-bar) ; XXX
+      (compose-label-space gadget
+			   :wider (+ (left-margin gadget)
+				     (right-margin gadget))
+			   :higher 10)
+      (call-next-method)))
 
 (defmethod handle-repaint ((pane pixie-menu-button-submenu-pane) region)
   (declare (ignore region))
@@ -793,28 +819,18 @@
                                :filled t)
               (when submenu-frame
                 (draw-edges-lines* pane +white+ 0 0 +black+ (1- w) (1- h)))
+	      
+	      (if (typep client 'menu-button)
+		  (let ((pattern +pixie-right-arrow+))
+		    (draw-label* pane (+ x1 (left-margin pane)) y1
+				 (- x2 (right-margin pane)) y2 :ink +black+)  
+		    (draw-pattern* pane pattern (- x2 10) (+ y1 (floor (- h (pattern-height pattern)) 2))))
+		  (draw-label* pane
+			       (+ x1 (left-margin pane))  y1
+			       (- x2 (right-margin pane)) y2
+			       :ink +black+)))))))))
 
-              (draw-label* pane (+ x1 8) y1 (- x2 17) y2 :ink +black+)
-  
-              (when (typep client 'menu-button-pane)
-                (let* ((x1 (- x2 17))
-                       (ym (/ (+ y1 y2) 2))
-                       (y1 (- ym  8))
-                       (y2 (+ ym  8)))
-                  (flet ((oddify (v) (let ((v (floor v))) (if (oddp v) v (+ v 1)))))
-                    (let* ((width  (oddify (- x2 x1)))
-                           (height (oddify (- y2 y1)))
-                           (arrow (list (make-point (floor (- x2 (* width 5/13)))
-                                                    (floor (/ (+ y1 y2) 2)))
-                                        (make-point (floor (+ x1 (* width 6/13)))
-                                                    (floor (+ y1 (* height 4/13))))
-                                        (make-point (floor (+ x1 (* width 5/13)))
-                                                    (floor (+ y1 (* height 4/13))))
-                                        (make-point (floor (+ x1 (* width 5/13)))
-                                                    (floor (- y2 (* height 4/13))))
-                                        (make-point (floor (+ x1 (* width 6/13)))
-                                                    (floor (- y2 (* height 4/13)))))))
-                      (draw-polygon pane arrow :filled t :ink +black+))))))))))))
+
 
 ; Image pane
 
@@ -823,6 +839,7 @@
 
 ; This is just test/proof-of-concept code :]
 
+#+NIL
 (defclass pixie-image-pane (pixie-gadget basic-gadget) (
   (image-pathname :initarg :pathname)
   (image-mask-pathname :initarg :mask-pathname :initform nil)
@@ -837,6 +854,7 @@
   (image-stencil  :initform nil)))
 
 ; TODO: allow pixmaps to be realized from unrealized media
+#+NIL
 (defmethod initialize-instance :after ((pane pixie-image-pane) &rest args)
   (declare (ignore args))
   (with-slots (image-pathname image-image image-width image-height) pane
@@ -851,6 +869,7 @@
       (let* ((data (image:read-image-file image-mask-pathname)))
         (setf image-stencil (make-stencil data))))))
 
+#+NIL
 (defmethod handle-repaint ((pane pixie-image-pane) region)
   (declare (ignore region))
   (with-slots (image-pixmap image-width image-height) pane
@@ -870,6 +889,7 @@
                             :clipping-region (make-rectangle* 0 0 image-width image-height))))))
     (copy-from-pixmap image-pixmap 0 0 image-width image-height pane 0 0)))
 
+#+NIL
 (defmethod compose-space ((pane pixie-image-pane) &key width height)
   (declare (ignore width height))
   (with-slots (image-width image-height) pane
@@ -1021,13 +1041,30 @@
            (pressedp
             (draw-down-box pane x1 y1 x2 y2 (effective-gadget-foreground pane)))))))))
 
+(defclass pixie-submenu-border-pane (submenu-border)
+  ()
+  (:default-initargs :border-width 2))
+
+(define-pixie-gadget submenu-border pixie-submenu-border-pane)
+
+(defmethod handle-repaint ((pane pixie-submenu-border-pane) region)
+  (declare (ignore region))
+  (with-slots (border-width) pane
+    (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
+      (draw-rectangle* pane x1 y1 x2 y2 :filled nil :ink +black+)
+      ;; Why, having incremented the coordinates, and despite setting
+      ;; the border-width to 2, do I now get a single pixel border ?
+      ;; It's fine, that's the result I want, but an explanation is in order.
+      (draw-bordered-rectangle* pane (1+ x1) (1+ y1) (1- x2) (1- y2)
+				:style :outset
+				:border-width border-width))))
+
 ; Text Area
 
 (defclass pixie-text-field-pane (text-field-pane) ())
 
 ;; Why does pixie need its own text area subclass? Leave it disabled for now.
-; (define-pixie-class text-field-pane pixie-text-field-pane)
-
+(define-pixie-gadget text-field-pane pixie-text-field-pane :enabled nil)
 
 (defmethod initialize-instance :after ((pane pixie-text-field-pane) &rest rest)
   (unless (getf rest :normal)
@@ -1051,11 +1088,6 @@
       (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
         (display-gadget-background pane (gadget-current-color pane) 0 0 (- x2 x1) (- y2 y1))
         (goatee::redisplay-all (area pane))))))
-
-
-;;; Unilaterally declare a "focus follows mouse" policy.  I don't like this
-;;; much; the whole issue of keyboard focus needs a lot more thought,
-;;; especially when multiple application frames per port become possible.
 
 (defmethod armed-callback :after ((gadget pixie-text-field-pane) client id)
   (declare (ignore client id))
