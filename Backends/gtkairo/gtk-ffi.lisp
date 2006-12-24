@@ -372,7 +372,7 @@
     '(GdkFunction gtkselectionmode GtkScrollType GdkEventMask GdkEventType
       GtkWidgetFlags GdkModifierType GdkCrossingMode GtkWindowType
       GdkGrabStatus GdkWindowHints GtkStateType GdkDragAction GConnectFlags
-      GdkDragProtocol
+      GdkDragProtocol GtkPolicyType
 
       gdk_x11_drawable_get_xid
 

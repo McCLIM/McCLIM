@@ -175,6 +175,9 @@
 	(let ((wrapper (gtk_scrolled_window_new
 			(gtk_tree_view_get_hadjustment tv)
 			(gtk_tree_view_get_vadjustment tv))))
+	  (gtk_scrolled_window_set_policy wrapper
+					  GTK_POLICY_AUTOMATIC
+					  GTK_POLICY_AUTOMATIC)
 	  (gtk_container_add wrapper tv)
 	  (setf result wrapper))
 	(setf (list-pane-tree-view sheet) tv) ;?!

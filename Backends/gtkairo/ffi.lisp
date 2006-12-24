@@ -158,6 +158,11 @@
   (:GDK_HINT_USER_POS 128)
   (:GDK_HINT_USER_SIZE 256))
 
+(defcenum GtkPolicyType
+  :GTK_POLICY_ALWAYS
+  :GTK_POLICY_AUTOMATIC
+  :GTK_POLICY_NEVER)
+
 (defcenum GtkScrollType
   :GTK_SCROLL_NONE
   :GTK_SCROLL_JUMP
@@ -1142,6 +1147,12 @@
   (hadjustment :pointer)                ;GtkAdjustment *
   (vadjustment :pointer)                ;GtkAdjustment *
   )
+
+(defcfun "gtk_scrolled_window_set_policy"
+    :void
+  (scrolled_window :pointer)            ;GtkScrolledWindow *
+  (hscrollbar_policy GtkPolicyType)
+  (vscrollbar_policy GtkPolicyType))
 
 (defcfun "gtk_separator_menu_item_new" :pointer)
 
