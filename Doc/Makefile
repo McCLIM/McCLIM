@@ -63,7 +63,7 @@ ps: $(PSFILES) $(TARGETIMAGES)
 
 # DVI generation
 %.dvi: %.texi $(DOCFILES) docstrings $(TARGETIMAGES)
-	texi2dvi $(I_FLAGS) $<
+	texi2dvi -b $(I_FLAGS) $<
 
 # PDF documentation
 .PHONY: pdf
@@ -87,14 +87,19 @@ tempfiles-stamp:
 	DOCSTRINGDIR=$(DOCSTRINGDIR) PACKAGES=$(PACKAGES) sh make-tempfiles.sh "$(SBCL_SYSTEM)" && touch tempfiles-stamp
 
 
-.PHONY: clean
-clean: 
+.PHONY: softclean
+softclean: 
 	rm -f *~ *.bak *.orig \#*\# .\#* texput.log *.fasl
-	rm -rf $(HTMLDIRS) $(DOCSTRINGDIR)
+	rm -rf $(HTMLDIRS)
 	rm -f variables.texi
-	rm -f $(PSFILES) $(PDFFILES) html-stamp tempfiles-stamp
+	rm -f $(PSFILES) $(PDFFILES) html-stamp
 	rm -f $(TMPFILES) $(INDEXFILES)
 	rm -f mcclim.info mcclim.info-*
+
+.PHONY: clean
+clean: softclean
+	rm -rf $(DOCSTRINGDIR)
+	rm -f tempfiles-stamp
 
 .PHONY: distclean
 distclean: clean
