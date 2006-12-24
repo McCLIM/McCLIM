@@ -67,7 +67,14 @@
                    (make-demo-button "Colorslider" 'colorslider)
                    (make-demo-button "Goatee Test" 'goatee::goatee-test)
                    (make-demo-button "D&D Translator" 'drag-test)
-                   (make-demo-button "Draggable Graph" 'draggable-graph-demo)))
+                   (make-demo-button "Draggable Graph" 'draggable-graph-demo)
+		   (make-pane 'push-button
+			      :label "Font Selector"
+			      :activate-callback
+			      (lambda (&rest ignore)
+				(declare (ignore ignore))
+				(format *trace-output* "~&You chose: ~A~%"
+					(select-font))))))
                (labelling (:label "Tests")
                  (vertically (:equalize-width t)
                    (make-demo-button "Label Test" 'label-test)

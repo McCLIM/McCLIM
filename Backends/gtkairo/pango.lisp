@@ -123,23 +123,11 @@
 				 (symbol-name (first face))
 				 (symbol-name (second face)))
 			 :keyword)))
-    (let ((desc (pango_font_description_new))
-	  (family (or (getf *default-font-families*
-			    (if (eq family :fixed) :fix family))
-		      (error "unknown font family: ~A" family)))
-	  (weight (ecase face
-		    ((:roman :italic :oblique)
-		      :PANGO_WEIGHT_NORMAL)
-		    ((:bold :bold-italic :italic-bold :bold-oblique
-			    :oblique-bold)
-		      :PANGO_WEIGHT_BOLD)))
-	  (style (ecase face
-		   ((:roman :bold)
-		     :PANGO_STYLE_NORMAL)
-		   ((:italic :bold-italic :italic-bold)
-		     :PANGO_STYLE_ITALIC)
-		   ((:oblique :bold-oblique :oblique-bold) 
-		     :PANGO_STYLE_OBLIQUE)))
+    (let ((family (if (stringp family)
+		      family
+		      (or (getf *default-font-families*
+				(if (eq family :fixed) :fix family))
+			  (error "unknown font family: ~A" family))))
 	  (size (case size
 		  (:normal 12)
 		  (:tiny 6)
@@ -148,10 +136,28 @@
 		  (:large 14)
 		  (:very-large 16)
 		  (:huge 24)
-		  (otherwise (truncate size)))))
+		  (otherwise (truncate size))))
+	  desc)
+      (if (stringp face)
+	  (setf desc (pango_font_description_from_string
+		      (concatenate 'string ", " face)))
+	  (let ((weight (ecase face
+			  ((:roman :italic :oblique)
+			    :PANGO_WEIGHT_NORMAL)
+			  ((:bold :bold-italic :italic-bold :bold-oblique
+				  :oblique-bold)
+			    :PANGO_WEIGHT_BOLD)))
+		(style (ecase face
+			 ((:roman :bold)
+			   :PANGO_STYLE_NORMAL)
+			 ((:italic :bold-italic :italic-bold)
+			   :PANGO_STYLE_ITALIC)
+			 ((:oblique :bold-oblique :oblique-bold) 
+			   :PANGO_STYLE_OBLIQUE))))
+	    (setf desc (pango_font_description_new))
+	    (pango_font_description_set_weight desc weight)
+	    (pango_font_description_set_style desc style)))
       (pango_font_description_set_family desc family)
-      (pango_font_description_set_weight desc weight)
-      (pango_font_description_set_style desc style)
       (pango_font_description_set_size desc (* size PANGO_SCALE))
       desc)))
 
@@ -242,17 +248,6 @@
 
 ;; (pango_layout_get_context layout)
 
-(defun pango-context-list-families (context)
-  (cffi:with-foreign-object (&families :pointer)
-    (cffi:with-foreign-object (&n :int)
-      (pango_context_list_families context &families &n)
-      (let ((families (cffi:mem-aref &families :pointer)))
-	(prog1
-	    (loop
-		for i from 0 below (cffi:mem-aref &n :int)
-		collect (cffi:mem-aref families :pointer i))
-	  (g_free families))))))
-
 (defun resolve-font-description (context desc)
   (pango_font_describe (pango_context_load_font context desc)))
 
@@ -308,3 +303,81 @@
 	(with-font-metrics (metrics context desc)
 	  (ceiling (pango_font_metrics_get_approximate_char_width metrics)
 		   PANGO_SCALE))))))
+
+
+;; font listing
+
+(defclass pango-font-family (clim-extensions:font-family)
+    ((native-family :initarg :native-family :accessor native-family)))
+
+(defclass pango-font-face (clim-extensions:font-face)
+    ((native-face :initarg :native-face :accessor native-face)))
+
+(defun invoke-lister (fn type)
+  (cffi:with-foreign-object (&array :pointer)
+    (cffi:with-foreign-object (&n :int)
+      (funcall fn &array &n)
+      (let ((array (cffi:mem-aref &array :pointer)))
+	(if (cffi:null-pointer-p array)
+	    :null
+	    (prog1
+		(loop
+		    for i from 0 below (cffi:mem-aref &n :int)
+		    collect (cffi:mem-aref array type i))
+	      (g_free array)))))))
+
+(defun pango-context-list-families (context)
+  (invoke-lister (lambda (&families &n)
+		   (pango_context_list_families context &families &n))
+		 :pointer))
+
+(defun pango-font-family-list-faces (family)
+  (invoke-lister (lambda (&faces &n)
+		   (pango_font_family_list_faces family &faces &n))
+		 :pointer))
+
+(defun pango-font-face-list-sizes (face)
+  (invoke-lister (lambda (&sizes &n)
+		   (pango_font_face_list_sizes face &sizes &n))
+		 :int))
+
+(defmethod clim-extensions:port-all-font-families
+    ((port gtkairo-port) &key invalidate-cache)
+  (declare (ignore invalidate-cache))
+  (sort (mapcar (lambda (native-family)
+		  (make-instance 'pango-font-family
+		    :native-family native-family
+		    :port port
+		    :name (pango_font_family_get_name native-family)))
+		(pango-context-list-families (global-pango-context port)))
+	#'string<
+	:key #'clim-extensions:font-family-name))
+
+(defmethod clim-extensions:font-family-all-faces ((family pango-font-family))
+  (sort (mapcar (lambda (native-face)
+		  (make-instance 'pango-font-face
+		    :native-face native-face
+		    :family family
+		    :name (pango_font_face_get_face_name native-face)))
+		(pango-font-family-list-faces (native-family family)))
+	#'string<
+	:key #'clim-extensions:font-face-name))
+
+(defmethod clim-extensions:font-face-all-sizes ((face pango-font-face))
+  (let ((sizes (pango-font-face-list-sizes (native-face face))))
+    (if (eq sizes :null)
+	(loop for i from 0 below 200 collect i)
+	(mapcar (lambda (p)
+		  ;; das mit dem round kommt mir aber nicht koscher vor
+		  (round (/ p PANGO_SCALE)))
+		sizes))))
+
+(defmethod clim-extensions:font-face-scalable-p ((face pango-font-face))
+  (eq :null (pango-font-face-list-sizes (native-face face))))
+
+(defmethod clim-extensions:font-face-text-style
+    ((face pango-font-face) &optional size)
+  (make-text-style (clim-extensions:font-family-name
+		    (clim-extensions:font-face-family face))
+		   (clim-extensions:font-face-name face)
+		   size))

@@ -49,7 +49,8 @@
    (widgets->sheets :initform (make-hash-table) :accessor widgets->sheets)
    (dirty-mediums :initform (make-hash-table) :accessor dirty-mediums)
    (metrik-medium :accessor metrik-medium)
-   (pointer-grab-sheet :accessor pointer-grab-sheet :initform nil)))
+   (pointer-grab-sheet :accessor pointer-grab-sheet :initform nil)
+   (global-pango-context :accessor global-pango-context)))
 
 ;;;(defmethod print-object ((object gtkairo-port) stream)
 ;;;  (print-unreadable-object (object stream :identity t :type t)
@@ -85,7 +86,8 @@
 		(gdk_screen_get_root_window (gdk_screen_get_default)))))
       (set-antialias cr)
       (setf (metrik-medium port)
-            (make-instance 'metrik-medium :port port :cr cr))))
+            (make-instance 'metrik-medium :port port :cr cr)))
+    (setf (global-pango-context port) (gdk_pango_context_get)))
   (when clim-sys:*multiprocessing-p*
     (start-event-thread port)))
 

@@ -465,7 +465,8 @@
                (:file "text-size-test")
                (:file "drawing-benchmark")
                (:file "logic-cube")
-               (:file "views")))
+               (:file "views")
+               (:file "font-selector")))
      (:module "Goatee"
 	      :components
 	      ((:file "goatee-test")))))

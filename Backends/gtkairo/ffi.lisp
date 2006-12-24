@@ -1498,6 +1498,18 @@
   (desc :pointer)                       ;const PangoFontDescription *
   )
 
+(defcfun "pango_font_face_get_face_name"
+    :string
+  (face :pointer)                       ;PangoFontFace *
+  )
+
+(defcfun "pango_font_face_list_sizes"
+    :void
+  (face :pointer)                       ;PangoFontFace *
+  (sizes :pointer)                      ;int **
+  (n_sizes :pointer)                    ;int *
+  )
+
 (defcfun "pango_font_family_get_name"
     :string
   (family :pointer)                     ;PangoFontFamily *
@@ -1506,6 +1518,13 @@
 (defcfun "pango_font_family_is_monospace"
     :int
   (family :pointer)                     ;PangoFontFamily *
+  )
+
+(defcfun "pango_font_family_list_faces"
+    :void
+  (family :pointer)                     ;PangoFontFamily *
+  (faces :pointer)                      ;PangoFontFace ***
+  (n_faces :pointer)                    ;int *
   )
 
 (defcfun "pango_font_map_load_font"

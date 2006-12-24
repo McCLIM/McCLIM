@@ -126,14 +126,25 @@
   (defvar *text-style-hash-table* (make-hash-table :test #'eql)))
 
 (defun make-text-style (family face size)
-  (let ((key (text-style-key family face size)))
-    (declare (type fixnum key))
-    (or (gethash key *text-style-hash-table*)
-	(setf (gethash key *text-style-hash-table*)
-	      (make-instance 'standard-text-style
-			     :text-family family
-			     :text-face face
-			     :text-size size)))))
+  (if (and (symbolp family)
+	   (or (symbolp face)
+	       (and (listp face) (every #'symbolp face))))
+      ;; Portable text styles have always been cached in McCLIM like this:
+      ;; (as permitted by the CLIM spec for immutable objects, section 2.4)
+      (let ((key (text-style-key family face size)))
+	(declare (type fixnum key))
+	(or (gethash key *text-style-hash-table*)
+	    (setf (gethash key *text-style-hash-table*)
+		  (make-text-style-1 family face size))))
+      ;; Extended text styles using string components could be cached using
+      ;; an appropriate hash table, but for now we just re-create them:
+      (make-text-style-1 family face size)))
+
+(defun make-text-style-1 (family face size)
+  (make-instance 'standard-text-style
+    :text-family family
+    :text-face face
+    :text-size size))
 
 ) ; end eval-when
 
@@ -143,8 +154,8 @@
 
 (defmethod text-style-equalp ((style1 standard-text-style)
 			      (style2 standard-text-style))
-  (and (eql (text-style-family style1) (text-style-family style2))
-       (eql (text-style-face style1) (text-style-face style2))
+  (and (equal (text-style-family style1) (text-style-family style2))
+       (equal (text-style-face style1) (text-style-face style2))
        (eql (text-style-size style1) (text-style-size style2))))
 
 (defconstant *default-text-style* (make-text-style :fix :roman :normal))

@@ -1922,7 +1922,19 @@
    #:simple-event-loop
    #:pointer-motion-hint-event
    #:frame-display-pointer-documentation-string
-   #:list-pane-items))
+   #:list-pane-items
+   ;; Font listing extension:
+   #:font-family
+   #:font-face
+   #:port-all-font-families
+   #:font-family-name
+   #:font-family-port
+   #:font-family-all-faces
+   #:font-face-name
+   #:font-face-family
+   #:font-face-all-sizes
+   #:font-face-scalable-p
+   #:font-face-text-style))
 
 ;;; Symbols that must be defined by a backend.
 ;;;
