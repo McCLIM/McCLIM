@@ -1248,3 +1248,5 @@ facilitate the addition of commands to syntaxes when they are run in a
 specific context (for example, a large editor application adding a Show
 Macroexpansion command to Lisp syntax), their modus operandi is general
 enough to be used for all conditional activity of command tables.
+
+@bye
