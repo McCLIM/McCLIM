@@ -388,6 +388,7 @@
 	       (:file "keys")
 	       (:file "pango")
 	       (:file "medium")
+	       (:file "gdk")
 	       (:file "pixmap")
 	       (:file "frame-manager")
 	       (:file "gadgets")))))

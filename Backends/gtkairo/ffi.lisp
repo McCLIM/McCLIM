@@ -12,6 +12,12 @@
   (:G_CONNECT_AFTER 1)
   :G_CONNECT_SWAPPED)
 
+(defcenum GdkCapStyle
+  :GDK_CAP_NOT_LAST
+  :GDK_CAP_BUTT
+  :GDK_CAP_ROUND
+  :GDK_CAP_PROJECTING)
+
 (defcenum GdkCrossingMode
   :GDK_CROSSING_NORMAL
   :GDK_CROSSING_GRAB
@@ -121,6 +127,16 @@
   :GDK_GRAB_INVALID_TIME
   :GDK_GRAB_NOT_VIEWABLE
   :GDK_GRAB_FROZEN)
+
+(defcenum GdkJoinStyle
+  :GDK_JOIN_MITER
+  :GDK_JOIN_ROUND
+  :GDK_JOIN_BEVEL)
+
+(defcenum GdkLineStyle
+  :GDK_LINE_SOLID
+  :GDK_LINE_ON_OFF_DASH
+  :GDK_LINE_DOUBLE_DASH)
 
 (defcenum GdkModifierType
   (:GDK_SHIFT_MASK 1)
@@ -760,6 +776,16 @@
   (drawable :pointer)                   ;GdkDrawable *
   )
 
+(defcfun "gdk_colormap_alloc_color"
+    :int
+  (colormap :pointer)                   ;GdkColormap *
+  (color :pointer)                      ;GdkColor *
+  (writeable :int)                      ;gboolean
+  (best_match :int)                     ;gboolean
+  )
+
+(defcfun "gdk_colormap_get_system" :pointer)
+
 (defcfun "gdk_display_flush"
     :void
   (display :pointer)                    ;GdkDisplay *
@@ -795,6 +821,19 @@
   (time :uint32)                        ;guint32
   )
 
+(defcfun "gdk_draw_arc"
+    :void
+  (drawable :pointer)                   ;GdkDrawable *
+  (gc :pointer)                         ;GdkGC *
+  (filled :int)                         ;gboolean
+  (x :int)                              ;gint
+  (y :int)                              ;gint
+  (width :int)                          ;gint
+  (height :int)                         ;gint
+  (angle1 :int)                         ;gint
+  (angle2 :int)                         ;gint
+  )
+
 (defcfun "gdk_draw_drawable"
     :void
   (drawable :pointer)                   ;GdkDrawable *
@@ -808,6 +847,50 @@
   (height :int)                         ;gint
   )
 
+(defcfun "gdk_draw_layout"
+    :void
+  (drawable :pointer)                   ;GdkDrawable *
+  (gc :pointer)                         ;GdkGC *
+  (x :int)                              ;int
+  (y :int)                              ;int
+  (layout :pointer)                     ;PangoLayout *
+  )
+
+(defcfun "gdk_draw_line"
+    :void
+  (drawable :pointer)                   ;GdkDrawable *
+  (gc :pointer)                         ;GdkGC *
+  (x1 :int)                             ;gint
+  (y1 :int)                             ;gint
+  (x2 :int)                             ;gint
+  (y2 :int)                             ;gint
+  )
+
+(defcfun "gdk_draw_lines"
+    :void
+  (drawable :pointer)                   ;GdkDrawable *
+  (gc :pointer)                         ;GdkGC *
+  (points :pointer)                     ;GdkPoint *
+  (npoints :int)                        ;gint
+  )
+
+(defcfun "gdk_draw_point"
+    :void
+  (drawable :pointer)                   ;GdkDrawable *
+  (gc :pointer)                         ;GdkGC *
+  (x :int)                              ;gint
+  (y :int)                              ;gint
+  )
+
+(defcfun "gdk_draw_polygon"
+    :void
+  (drawable :pointer)                   ;GdkDrawable *
+  (gc :pointer)                         ;GdkGC *
+  (filled :int)                         ;gboolean
+  (points :pointer)                     ;GdkPoint *
+  (npoints :int)                        ;gint
+  )
+
 (defcfun "gdk_draw_rectangle"
     :void
   (drawable :pointer)                   ;GdkDrawable *
@@ -817,6 +900,11 @@
   (y :int)                              ;gint
   (width :int)                          ;gint
   (height :int)                         ;gint
+  )
+
+(defcfun "gdk_drawable_get_clip_region"
+    :pointer
+  (drawable :pointer)                   ;GdkDrawable *
   )
 
 (defcfun "gdk_drawable_get_depth"
@@ -840,10 +928,50 @@
   (drawable :pointer)                   ;GdkDrawable *
   )
 
+(defcfun "gdk_gc_set_background"
+    :void
+  (gc :pointer)                         ;GdkGC *
+  (color :pointer)                      ;const GdkColor *
+  )
+
+(defcfun "gdk_gc_set_clip_region"
+    :void
+  (gc :pointer)                         ;GdkGC *
+  (region :pointer)                     ;GdkRegion *
+  )
+
+(defcfun "gdk_gc_set_dashes"
+    :void
+  (gc :pointer)                         ;GdkGC *
+  (dash_offset :int)                    ;gint
+  (dash_list :pointer)                  ;gint8 *
+  (n :int)                              ;gint
+  )
+
+(defcfun "gdk_gc_set_foreground"
+    :void
+  (gc :pointer)                         ;GdkGC *
+  (color :pointer)                      ;const GdkColor *
+  )
+
 (defcfun "gdk_gc_set_function"
     :void
   (gc :pointer)                         ;GdkGC *
   (function GdkFunction))
+
+(defcfun "gdk_gc_set_line_attributes"
+    :void
+  (gc :pointer)                         ;GdkGC *
+  (line_width :int)                     ;gint
+  (line_style GdkLineStyle)
+  (cap_style GdkCapStyle)
+  (join_style GdkJoinStyle))
+
+(defcfun "gdk_gc_set_rgb_bg_color"
+    :void
+  (gc :pointer)                         ;GdkGC *
+  (color :pointer)                      ;const GdkColor *
+  )
 
 (defcfun "gdk_gc_set_rgb_fg_color"
     :void
@@ -857,6 +985,11 @@
   )
 
 (defcfun "gdk_pango_context_get" :pointer)
+
+(defcfun "gdk_pango_context_get_for_screen"
+    :pointer
+  (screen :pointer)                     ;GdkScreen *
+  )
 
 (defcfun "gdk_pixmap_new"
     :pointer
@@ -879,6 +1012,25 @@
 (defcfun "gdk_pointer_ungrab"
     :void
   (time :uint32)                        ;guint32
+  )
+
+(defcfun "gdk_region_destroy"
+    :void
+  (r :pointer)                          ;GdkRegion *
+  )
+
+(defcfun "gdk_region_new" :pointer)
+
+(defcfun "gdk_region_union"
+    :void
+  (region :pointer)                     ;GdkRegion *
+  (other :pointer)                      ;GdkRegion *
+  )
+
+(defcfun "gdk_region_union_with_rect"
+    :void
+  (region :pointer)                     ;GdkRegion *
+  (rect :pointer)                       ;GdkRectangle *
   )
 
 (defcfun "gdk_screen_get_default" :pointer)
@@ -1596,6 +1748,11 @@
   (layout_line :pointer)                ;PangoLayoutLine *
   (ink_rect :pointer)                   ;PangoRectangle *
   (logical_rect :pointer)               ;PangoRectangle *
+  )
+
+(defcfun "pango_layout_new"
+    :pointer
+  (context :pointer)                    ;PangoContext *
   )
 
 (defcfun "pango_layout_set_font_description"

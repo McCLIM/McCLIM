@@ -30,8 +30,10 @@
 (defun df (x) (coerce x 'double-float))
 
 (defclass gtkairo-medium (climi::basic-medium clim:medium)
-  ((port :initarg :port :accessor port)
-   (cr :initform nil :initarg :cr :accessor cr)
+    ((port :initarg :port :accessor port)))
+
+(defclass cairo-medium (gtkairo-medium)
+  ((cr :initform nil :initarg :cr :accessor cr)
    (flipping-original-cr :initform nil :accessor flipping-original-cr)
    (flipping-pixmap :initform nil :accessor flipping-pixmap)
    (flipping-region :accessor flipping-region)
@@ -40,7 +42,7 @@
    (last-seen-region :accessor last-seen-region)))
 
 (defmethod initialize-instance :after
-    ((instance gtkairo-medium) &key cr)
+    ((instance cairo-medium) &key cr)
   (unless cr
     (setf (last-seen-sheet instance) nil)))
 
@@ -53,7 +55,7 @@
   (or (climi::port-lookup-mirror (port medium) (medium-sheet medium))
       (error "oops, drawing operation on unmirrored sheet ~A" medium)))
 
-(defun invoke-with-cairo-medium (fn medium)
+(defmethod invoke-with-medium (fn (medium cairo-medium))
   (when (or (cr medium)
 	    (climi::port-lookup-mirror (port medium) (medium-sheet medium)))
     (with-gtk ()
@@ -68,6 +70,9 @@
 	   (not (region-equal (last-seen-region medium)
 			      (sheet-region (medium-sheet medium)))))))
 
+(defmethod metrik-medium-for ((medium cairo-medium))
+  (cairo-metrik-medium (port medium)))
+
 (defun set-antialias (cr)
   (cairo_set_antialias cr
 		       (if *antialiasingp*
@@ -79,7 +84,7 @@
     (setf (gethash medium (dirty-mediums (port medium))) t))
   (when (or (null (cr medium))
 	    (sheet-changed-behind-our-back-p medium))
-    (with-cairo-medium (medium)
+    (with-medium (medium)
       (let* ((mirror (medium-mirror medium))
 	     (drawable (mirror-drawable mirror)))
 	(setf (cr medium) (gdk_cairo_create drawable))
@@ -105,8 +110,20 @@
 (defmethod degraft-medium :after ((medium gtkairo-medium) port sheet)
   )
 
+(defvar *medium-type* :cairo)
+
+#+(or)
+(setf *medium-type* :gdk)
+
+#+(or)
+(setf *medium-type* :cairo)
+
 (defmethod make-medium ((port gtkairo-port) sheet)
-  (make-instance 'gtkairo-medium :port port :sheet sheet))
+  (make-instance (ecase *medium-type*
+		   (:gdk 'gdk-medium)
+		   (:cairo 'cairo-medium))
+    :port port
+    :sheet sheet))
 
 ;;;; ------------------------------------------------------------------------
 ;;;; Drawing Options
@@ -357,86 +374,18 @@
   (multiple-value-bind (dx dy) (transform-distance transformation size 0)
     (sqrt (+ (expt dx 2) (expt dy 2)))))
 
-;;; text-style
-
-(defun assert-font-status (cr str)
-  (let ((status (cairo_font_face_status (cairo_get_font_face cr))))
-    (unless (eq status :success)
-      (error "status ~A after call to ~A" status str))))
-
-(defun sync-text-style (medium text-style transform-glyphs-p)
-  (with-slots (cr) medium
-    (multiple-value-bind (family face size)
-        (text-style-components
-	 (merge-text-styles text-style *default-text-style*))
-      (setf size
-            (df
-             (case size
-               (:normal 12)
-               (:tiny 6)
-               (:small 10)
-               (:very-small 8)
-               (:large 14)
-               (:very-large 16)
-               (:huge 24)
-               (otherwise size))))
-      ;;
-      (when (listp face)
-	;; Ein Pfusch ist das!
-	(setf face (intern (format nil "~A-~A"
-				   (symbol-name (first face))
-				   (symbol-name (second face)))
-			   :keyword)))
-      (cairo_select_font_face
-       cr
-       (ecase family
-	 ((:fix :fixed) "mono")
-	 (:serif "serif")
-	 (:sans-serif "sansserif"))
-       (ecase face
-	 ((:roman :bold) :normal)
-	 ((:italic :bold-italic :italic-bold) :italic)
-	 ((:oblique :bold-oblique :oblique-bold) :oblique))
-       (ecase face
-	 ((:roman :italic :oblique) :normal)
-	 ((:bold :bold-italic :italic-bold :bold-oblique
-		 :oblique-bold)
-	   :bold)))
-      (assert-font-status cr "cairo_select_font_face")
-      ;;
-      (cond (transform-glyphs-p
-	     (cairo_set_font_size cr (df size)))
-            (t
-             (cairo_set_font_size cr (df size)) ;###
-	     ;; das habe ich halb auskommentiert vorgefunden, daher erstmal
-	     ;; ganz raus:
-	     ;; FIXME: Und Vorsicht, wir rufen das hier auf dem metrik-medium
-	     ;; auf, falls die transformation doch eine Rolle spielen sollte,
-	     ;; muessten wir sie dann natuerlich vorher mit dem eigentlichen
-	     ;; Medium abgleichen.
-;;;             (with-cairo-matrix (matrix (medium-transformation medium))
-;;;               (multiple-value-bind (mxx mxy myx myy tx ty)
-;;;                   (climi::get-transformation )
-;;;                 (cairo_matrix_invert matrix)
-;;;		 (cairo_transform_font cr matrix)
-;;;		 ))
-	      ))
-      (assert-font-status cr "cairo_set_font_size"))))
-
 (defun sync-drawing-options (medium)
   (sync-transformation medium)
   (sync-ink medium (medium-ink medium))
   (sync-clipping-region medium (medium-clipping-region medium))
-  (sync-line-style medium (medium-line-style medium))
-  ;;(sync-text-style medium (medium-text-style medium))
-  )
+  (sync-line-style medium (medium-line-style medium)))
 
 ;;;; ------------------------------------------------------------------------
 ;;;;  Drawing Operations
 ;;;;
 
-(defmethod medium-draw-point* ((medium gtkairo-medium) x y)
-  (with-cairo-medium (medium)
+(defmethod medium-draw-point* ((medium cairo-medium) x y)
+  (with-medium (medium)
     (sync-sheet medium)
     (sync-transformation medium)
     (sync-ink medium (medium-ink medium))
@@ -450,8 +399,8 @@
       (cairo_line_to cr (+ x 0.5) (+ y 0.5))
       (cairo_stroke cr))))
 
-(defmethod medium-draw-points* ((medium gtkairo-medium) coord-seq)
-  (with-cairo-medium (medium)
+(defmethod medium-draw-points* ((medium cairo-medium) coord-seq)
+  (with-medium (medium)
     (sync-sheet medium)
     (sync-transformation medium)
     (sync-ink medium (medium-ink medium))
@@ -466,8 +415,8 @@
 	      (cairo_line_to cr (+ x 0.5) (+ y 0.5))
 	      (cairo_stroke cr))))))
 
-(defmethod medium-draw-line* ((medium gtkairo-medium) x1 y1 x2 y2)
-  (with-cairo-medium (medium)
+(defmethod medium-draw-line* ((medium cairo-medium) x1 y1 x2 y2)
+  (with-medium (medium)
     (sync-sheet medium)
     (sync-transformation medium)
     (sync-ink medium (medium-ink medium))
@@ -478,8 +427,8 @@
       (cairo_line_to cr (df x2) (df y2))
       (cairo_stroke cr))))
 
-(defmethod medium-draw-lines* ((medium gtkairo-medium) position-seq)
-  (with-cairo-medium (medium)
+(defmethod medium-draw-lines* ((medium cairo-medium) position-seq)
+  (with-medium (medium)
     (sync-sheet medium)
     (sync-transformation medium)
     (sync-ink medium (medium-ink medium))
@@ -496,8 +445,8 @@
       (cairo_stroke cr))))
 
 (defmethod medium-draw-polygon*
-    ((medium gtkairo-medium) coord-seq closed filled)
-  (with-cairo-medium (medium)
+    ((medium cairo-medium) coord-seq closed filled)
+  (with-medium (medium)
     (sync-sheet medium)
     (sync-transformation medium)
     (sync-ink medium (medium-ink medium))
@@ -516,8 +465,8 @@
 	  (cairo_fill cr)
 	  (cairo_stroke cr)))))
 
-(defmethod medium-draw-rectangle* ((medium gtkairo-medium) x1 y1 x2 y2 filled)
-  (with-cairo-medium (medium)
+(defmethod medium-draw-rectangle* ((medium cairo-medium) x1 y1 x2 y2 filled)
+  (with-medium (medium)
     (sync-sheet medium)
     (sync-transformation medium)
     (sync-ink medium (medium-ink medium))
@@ -544,8 +493,8 @@
 	  (cairo_stroke cr)))))
 
 (defmethod medium-draw-rectangles*
-    ((medium gtkairo-medium) position-seq filled)
-  (with-cairo-medium (medium)
+    ((medium cairo-medium) position-seq filled)
+  (with-medium (medium)
     (sync-sheet medium)
     (sync-transformation medium)
     (sync-ink medium (medium-ink medium))
@@ -566,7 +515,7 @@
 		  (cairo_stroke cr)))))))
 
 (defmethod medium-draw-ellipse*
-    ((medium gtkairo-medium) cx cy rx1 ry1 rx2 ry2 start end filled)
+    ((medium cairo-medium) cx cy rx1 ry1 rx2 ry2 start end filled)
   ;; This one is tricky. Cairo doesn't know ellipses, it only knows
   ;; circles. But then it is fully capable to draw circles under affine
   ;; transformations only that the line style is transformed too. So
@@ -580,7 +529,7 @@
   ;; Anyhow, let's hack along.
   ;;
   ;; Quick test if this is a circle:
-  (with-cairo-medium (medium)
+  (with-medium (medium)
     (cond
       ((= (+ (expt rx1 2) (expt ry1 2))
 	  (+ (expt rx2 2) (expt ry2 2)))
@@ -620,10 +569,19 @@
 		  (cairo_rectangle cr (df (sin a)) (df (cos a)) .05d0 .05d0)
 		  (cairo_fill cr))))))))
 
+(defmethod invoke-with-pango-layout
+    (fn (medium cairo-medium) &key text-style text)
+  (let ((layout (pango_cairo_create_layout (slot-value medium 'cr))))
+    (unwind-protect
+	(progn
+	  (configure-pango-layout layout :text-style text-style :text text)
+	  (funcall fn layout))
+      (g_object_unref layout))))
+
 (defmethod medium-draw-text*
-    ((medium gtkairo-medium) text x y start end
+    ((medium cairo-medium) text x y start end
      align-x align-y toward-x toward-y transform-glyphs)
-  (with-cairo-medium (medium)
+  (with-medium (medium)
     (sync-sheet medium)
     (with-slots (cr) medium
       (sync-transformation medium)
@@ -631,23 +589,23 @@
       (sync-clipping-region medium (medium-clipping-region medium))
       (setf end (or end (length text)))
       (unless (eql start end)
-	(with-pango-cairo (layout cr
-				  :text-style medium
-				  :text (subseq text start end))
+	(with-pango-layout (layout medium
+				   :text-style medium
+				   :text (subseq text start end))
 	  (let ((y2
 		 (nth-value 1 (pango-layout-line-get-pixel-extents layout 0))))
 	    (cairo_move_to cr (df x) (df (+ y y2))))
 	  (pango_cairo_show_layout cr layout))))))
 
-(defmethod medium-finish-output ((medium gtkairo-medium))
-  (with-cairo-medium (medium)
+(defmethod medium-finish-output ((medium cairo-medium))
+  (with-medium (medium)
     (when (cr medium)
       (cairo_surface_flush (cairo_get_target (cr medium)))))
   (medium-force-output medium))
 
-(defmethod medium-force-output ((medium gtkairo-medium))
+(defmethod medium-force-output ((medium cairo-medium))
   (remhash medium (dirty-mediums (port medium)))
-  (with-cairo-medium (medium)
+  (with-medium (medium)
     (when (cr medium)
       (cairo_surface_flush (cairo_get_target (cr medium)))
       (invalidate-mirror (medium-mirror medium) (medium-sheet medium)))))
@@ -667,7 +625,7 @@
 	  (setf (cffi:foreign-slot-value r 'gdkrectangle 'height) height)
 	  (gdk_window_invalidate_rect real-drawable r 0))))))
 
-(defmethod medium-beep ((medium gtkairo-medium))
+(defmethod medium-beep ((medium cairo-medium))
   ;; fixme: visual beep?
   )
 
@@ -684,88 +642,42 @@
 (defmacro slot (o c s)
   `(cffi:foreign-slot-value ,o ,c ,s))
 
-(defun cairo-text-extents (cr str res)
-  (cond
-    #+(or win32 mswindows windows)	;empty string breaks cairo/windows
-    ((string= str "")
-      (setf str " ")
-      (cairo_text_extents cr str res)
-      (cffi:with-foreign-slots
-	  ((width x_advance x_bearing) res cairo_text_extents)
-	(setf width 0.0d0)
-	(setf x_advance 0.0d0)
-	(setf x_bearing 0.0d0)))
-    (t
-      (cairo_text_extents cr str res))))
 
+(let ((hash (make-hash-table :test 'equal)))
+  (defmethod text-style-ascent (text-style (medium gtkairo-medium))
+    (let ((key (cons (class-name (class-of medium)) text-style)))
+      (or #-debug-metrik (gethash key hash)
+	  (setf (gethash key hash)
+		(text-style-ascent text-style (metrik-medium-for medium)))))))
 
-;;; TEXT-STYLE-ASCENT
+(let ((hash (make-hash-table :test 'equal)))
+  (defmethod text-style-descent (text-style (medium gtkairo-medium))
+    (let ((key (cons (class-name (class-of medium)) text-style)))
+      (or #-debug-metrik (gethash key hash)
+	  (setf (gethash key hash)
+		(text-style-descent text-style (metrik-medium-for medium)))))))
 
-;; FIXME: Cairo documentation states that these numbers, AIUI, are not
-;; exact measurements but rather values tweaked by the font designer for
-;; better visual effect.
-;;
-;; What this seems to mean in practise is that, say, ASCENT is nearly
-;; identical to text_extent.height in the tests I tried.
-;;
-;; So which one does CLIM want?  What are these function actually being
-;; used for?
-;;
-;;   --DFL
+(let ((hash (make-hash-table :test 'equal)))
+  (defmethod text-style-height (text-style (medium gtkairo-medium))
+    (let ((key (cons (class-name (class-of medium)) text-style)))
+      (or #-debug-metrik (gethash key hash)
+	  (setf (gethash key hash)
+		(text-style-height text-style (metrik-medium-for medium)))))))
 
-(let ((hash (make-hash-table)))
-  (defmethod text-style-ascent :around (text-style (medium gtkairo-medium))
-    (or #-debug-metrik (gethash text-style hash)
-        (setf (gethash text-style hash) (call-next-method)))))
+(let ((hash (make-hash-table :test 'equal)))
+  (defmethod text-style-width (text-style (medium gtkairo-medium))
+    (let ((key (cons (class-name (class-of medium)) text-style)))
+      (or #-debug-metrik (gethash key hash)
+	  (setf (gethash key hash)
+		(text-style-width text-style (metrik-medium-for medium)))))))
 
-(defmethod text-style-ascent (text-style (medium gtkairo-medium))
-  (text-style-ascent text-style (metrik-medium (port medium))))
-
-
-;;; TEXT-STYLE-DESCENT
-
-(let ((hash (make-hash-table)))
-  (defmethod text-style-descent :around (text-style (medium gtkairo-medium))
-    (or #-debug-metrik (gethash text-style hash)
-        (setf (gethash text-style hash) (call-next-method)))))
-
-(defmethod text-style-descent (text-style (medium gtkairo-medium))
-  (text-style-descent text-style (metrik-medium (port medium))))
-
-
-;;; TEXT-STYLE-HEIGHT
-
-(let ((hash (make-hash-table)))
-  (defmethod text-style-height :around (text-style (medium gtkairo-medium))
-    (or #-debug-metrik (gethash text-style hash)
-        (setf (gethash text-style hash) (call-next-method)))))
-
-(defmethod text-style-height (text-style (medium gtkairo-medium))
-  (text-style-height text-style (metrik-medium (port medium))))
-
-
-;;; TEXT-STYLE-WIDTH
-
-(let ((hash (make-hash-table)))
-  (defmethod text-style-width :around (text-style (medium gtkairo-medium))
-    (or #-debug-metrik (gethash text-style hash)
-        (setf (gethash text-style hash) (call-next-method)))))
-
-(defmethod text-style-width (text-style (medium gtkairo-medium))
-  (text-style-width text-style (metrik-medium (port medium))))
-
-
-;;; TEXT-STYLE-FIXED-WIDTH-P
-
-(let ((hash (make-hash-table)))
-  (defmethod text-style-fixed-width-p
-      :around
-      (text-style (medium gtkairo-medium))
-    (or #-debug-metrik (gethash text-style hash)
-        (setf (gethash text-style hash) (call-next-method)))))
-
-(defmethod text-style-fixed-width-p (text-style (medium gtkairo-medium))
-  (text-style-fixed-width-p text-style (metrik-medium (port medium))))
+(let ((hash (make-hash-table :test 'equal)))
+  (defmethod text-style-fixed-width-p (text-style (medium gtkairo-medium))
+    (let ((key (cons (class-name (class-of medium)) text-style)))
+      (or #-debug-metrik (gethash key hash)
+	  (setf (gethash key hash)
+		(text-style-fixed-width-p text-style
+					  (metrik-medium-for medium)))))))
 
 (defmethod text-size
     ((medium gtkairo-medium) string &key text-style (start 0) end)
@@ -774,7 +686,7 @@
     (setf text-style (or text-style (medium-text-style medium)))
     (setf text-style
 	  (merge-text-styles text-style (medium-default-text-style medium)))
-    (text-size (metrik-medium (port medium))
+    (text-size (metrik-medium-for medium)
 	       string
 	       :text-style text-style
 	       :start start
@@ -787,7 +699,7 @@
     (setf text-style (or text-style (medium-text-style medium)))
     (setf text-style
 	  (merge-text-styles text-style (medium-default-text-style medium)))
-    (climi::text-bounding-rectangle* (metrik-medium (port medium))
+    (climi::text-bounding-rectangle* (metrik-medium-for medium)
 				     string
 				     :text-style text-style
 				     :start start
@@ -804,7 +716,7 @@
              format width height))
          (c (cairo_create s)))
     (set-antialias c)
-    (make-instance 'gtkairo-medium :cr c :surface s)))
+    (make-instance 'cairo-medium :cr c :surface s)))
 
 (defmacro with-pattern ((m1 mp) &body body)
   (let ((p (gensym "P.")))
@@ -818,10 +730,10 @@
 ;;;; draw design
 
 (defmethod draw-design
-    ((medium gtkairo-medium)
+    ((medium cairo-medium)
      (pattern clim-internals::indexed-pattern)
      &key &allow-other-keys)
-  (with-cairo-medium (medium)
+  (with-medium (medium)
     (with-slots ((designs climi::designs) (array climi::array)) pattern
       (loop for y below (array-dimension array 0) do
 	    (loop for x below (array-dimension array 1) do
@@ -831,9 +743,9 @@
 				   :ink (elt designs (aref array y x))))))))
 
 (defmethod draw-design
-    ((medium gtkairo-medium) (pattern clim-internals::stencil)
+    ((medium cairo-medium) (pattern clim-internals::stencil)
      &key &allow-other-keys)
-  (with-cairo-medium (medium)
+  (with-medium (medium)
     (with-slots ((array climi::array)) pattern
       (loop for y below (array-dimension array 0) do
 	    (loop for x below (array-dimension array 1) do
@@ -843,18 +755,18 @@
 				   :ink (make-opacity (aref array y x))))))))
 
 (defmethod draw-design
-    ((medium gtkairo-medium) (design clim-internals::transformed-design)
+    ((medium cairo-medium) (design clim-internals::transformed-design)
      &key &allow-other-keys)
-  (with-cairo-medium (medium)
+  (with-medium (medium)
     (with-slots ((design climi::design) (transformation climi::transformation))
 	design
       (with-drawing-options (medium :transformation transformation)
 	(draw-design medium design)))))
 
 (defmethod draw-design
-    ((medium gtkairo-medium) (design clim-internals::rectangular-tile)
+    ((medium cairo-medium) (design clim-internals::rectangular-tile)
      &key &allow-other-keys)
-  (with-cairo-medium (medium)
+  (with-medium (medium)
     (with-slots ((design climi::design)
 		 (width climi::width)
 		 (height climi::height))
@@ -869,35 +781,36 @@
 				design)))))))
 
 (defmethod draw-design
-    ((medium gtkairo-medium) (design clim:opacity) &key &allow-other-keys)
-  (with-cairo-medium (medium)
+    ((medium cairo-medium) (design clim:opacity) &key &allow-other-keys)
+  (with-medium (medium)
     (draw-design medium (compose-in (clim:medium-foreground medium) design))))
 
 (defmethod draw-design
-    ((medium gtkairo-medium) (design climi::uniform-compositum)
+    ((medium cairo-medium) (design climi::uniform-compositum)
      &key &allow-other-keys)
-  (with-cairo-medium (medium)
+  (with-medium (medium)
     (draw-rectangle* medium 0 0 600 600 :ink design)))
 
 (defmethod draw-design
-    ((medium gtkairo-medium) (design clim:color) &key &allow-other-keys)
-  (with-cairo-medium (medium)
+    ((medium cairo-medium) (design clim:color) &key &allow-other-keys)
+  (with-medium (medium)
     (draw-rectangle* medium 0 0 600 600 :ink design)))
 
-;; FIXME: this is some kind of special-purpose function for mediums
-;; created by MAKE-CAIRO-SURFACE.  Normal mediums are handled by
-;; DESTROY-MEDIUMS.
-(defun destroy-cairo-medium (medium)
-  (cairo_destroy (cr medium))
-  (setf (cr medium) :destroyed)
-  (dispose-flipping-pixmap medium)
+(defun destroy-surface-medium (medium)
+  (destroy-medium medium)
   (when (surface medium)
     (cairo_surface_destroy (surface medium))))
 
+(defmethod destroy-medium ((medium cairo-medium))
+  (when (cr medium)
+    (cairo_destroy (cr medium))
+    (setf (cr medium) nil)
+    (dispose-flipping-pixmap medium)))
+
 (defmethod draw-design
-    ((medium gtkairo-medium) (design clim-internals::in-compositum)
+    ((medium cairo-medium) (design clim-internals::in-compositum)
      &key &allow-other-keys)
-  (with-cairo-medium (medium)
+  (with-medium (medium)
     (with-slots ((ink climi::ink) (mask climi::mask)) design
       (let ((mink (make-cairo-surface medium 600 600))
 	    (mmask (make-cairo-surface medium 600 600 :a8))) 
@@ -912,13 +825,13 @@
 	  (cairo_rectangle (slot-value medium 'cr) 0d0 0d0 600d0 600d0)
 	  (cairo_fill (slot-value medium 'cr)))
 	;;
-	(destroy-cairo-medium mink)
-	(destroy-cairo-medium mmask)))))
+	(destroy-surface-medium mink)
+	(destroy-surface-medium mmask)))))
 
 (defmethod draw-design
-    ((medium gtkairo-medium) (design clim-internals::out-compositum)
+    ((medium cairo-medium) (design clim-internals::out-compositum)
      &key &allow-other-keys)
-  (with-cairo-medium (medium)
+  (with-medium (medium)
     (with-slots ((ink climi::ink) (mask climi::mask)) design
       (let ((mink (make-cairo-surface medium 600 600))
 	    (mmask (make-cairo-surface medium 600 600 :a8))) 
@@ -933,13 +846,13 @@
 	  (cairo_rectangle (slot-value medium 'cr) 0d0 0d0 600d0 600d0)
 	  (cairo_fill (slot-value medium 'cr)))
 	;;
-	(destroy-cairo-medium mink)
-	(destroy-cairo-medium mmask)))))
+	(destroy-surface-medium mink)
+	(destroy-surface-medium mmask)))))
 
-(defmethod draw-design ((medium gtkairo-medium)
+(defmethod draw-design ((medium cairo-medium)
 			(design clim-internals::over-compositum)
 			&key &allow-other-keys)
-  (with-cairo-medium (medium)
+  (with-medium (medium)
     (with-slots ((foreground climi::foreground) (background climi::background))
 	design
       (draw-design medium background)

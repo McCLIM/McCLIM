@@ -33,36 +33,52 @@
   (gdk_drawable_get_depth
    (medium-gdkdrawable (ensure-pixmap-medium pixmap-sheet))))
 
-(defun %medium-copy-area (from-medium from-x from-y width height
-			  to-medium to-x to-y)
+(defmethod %medium-copy-area
+    :around
+    (from-medium from-x from-y width height to-medium to-x to-y)
   (with-gtk ()
-    (sync-sheet from-medium)
-    (sync-sheet to-medium)
-    (let ((from-surface (cairo_get_target (cr from-medium)))
-	  (from-drawable (medium-gdkdrawable from-medium))
- 	  (to-surface (cairo_get_target (cr to-medium)))
-	  (to-drawable (medium-gdkdrawable to-medium)))
-      (cairo_surface_flush from-surface)
-      (cairo_surface_flush to-surface)
-      (let ((gc (gdk_gc_new to-drawable))
-	    (region (medium-clipping-region to-medium)))
-	(unless (eq region +nowhere+)
-	  (setf region
-		(region-intersection
-		 region
-		 (make-rectangle* to-x to-y (+ to-x width) (+ to-y height))))
-	  (loop for (x y w h) in (clipping-region->rect-seq region) do
-		(gdk_draw_drawable to-drawable
-				   gc
-				   from-drawable
-				   (truncate (+ from-x x (- to-x)))
-				   (truncate (+ from-y y (- to-y)))
-				   (truncate x)
-				   (truncate y)
-				   (truncate w)
-				   (truncate h))))
-	(gdk_gc_unref gc))
-      (cairo_surface_mark_dirty to-surface))))
+    (call-next-method)))
+
+(defmethod %medium-copy-area :before
+	   ((from-medium cairo-medium) from-x from-y width height
+	    to-medium to-x to-y)
+  (sync-sheet from-medium)
+  (cairo_surface_flush (cairo_get_target (cr from-medium))))
+
+(defmethod %medium-copy-area :before
+	   (from-medium from-x from-y width height
+	    (to-medium cairo-medium) to-x to-y)
+  (sync-sheet to-medium)
+  (cairo_surface_flush (cairo_get_target (cr to-medium))))
+
+(defmethod %medium-copy-area
+    (from-medium from-x from-y width height to-medium to-x to-y)
+  (let ((from-drawable (medium-gdkdrawable from-medium))
+	(to-drawable (medium-gdkdrawable to-medium)))
+    (let ((gc (gdk_gc_new to-drawable))
+	  (region (medium-clipping-region to-medium)))
+      (unless (eq region +nowhere+)
+	(setf region
+	      (region-intersection
+	       region
+	       (make-rectangle* to-x to-y (+ to-x width) (+ to-y height))))
+	(loop for (x y w h) in (clipping-region->rect-seq region) do
+	      (gdk_draw_drawable to-drawable
+				 gc
+				 from-drawable
+				 (truncate (+ from-x x (- to-x)))
+				 (truncate (+ from-y y (- to-y)))
+				 (truncate x)
+				 (truncate y)
+				 (truncate w)
+				 (truncate h))))
+      (gdk_gc_unref gc))))
+
+(defmethod %medium-copy-area :after
+	   (from-medium from-x from-y width height
+	    (to-medium cairo-medium) to-x to-y)
+  (cairo_surface_mark_dirty (cairo_get_target (cr to-medium))))
+
 
 ;;; Wer hat sich denn diese Transformiererei ausgedacht?
 

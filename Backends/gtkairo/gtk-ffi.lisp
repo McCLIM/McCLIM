@@ -261,6 +261,10 @@
   (width :int)
   (height :int))
 
+(cffi:defcstruct gdkpoint
+  (x :int)
+  (y :int))
+
 (cffi:defcstruct gdkrectangle
   (x :int)
   (y :int)
@@ -372,7 +376,7 @@
     '(GdkFunction gtkselectionmode GtkScrollType GdkEventMask GdkEventType
       GtkWidgetFlags GdkModifierType GdkCrossingMode GtkWindowType
       GdkGrabStatus GdkWindowHints GtkStateType GdkDragAction GConnectFlags
-      GdkDragProtocol GtkPolicyType
+      GdkDragProtocol GtkPolicyType gdkpoint gdklinestyle
 
       gdk_x11_drawable_get_xid
 

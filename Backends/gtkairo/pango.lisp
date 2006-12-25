@@ -26,19 +26,26 @@
 
 ;;; these shouldn't be here:
 
-(defclass metrik-medium (gtkairo-medium) ())
+(defclass metrik-medium-mixin () ())
+(defclass cairo-metrik-medium (metrik-medium-mixin cairo-medium) ())
+(defclass gdk-metrik-medium (metrik-medium-mixin gdk-medium) ())
 
-(defmacro with-cairo-medium ((medium) &body body)
-  `(invoke-with-cairo-medium (lambda () ,@body) ,medium))
+(defgeneric invoke-with-medium (fn medium))
+
+(defmacro with-medium ((medium) &body body)
+  `(invoke-with-medium (lambda () ,@body) ,medium))
+
+(defgeneric metrik-medium-for (medium))
 
 
 ;;;; Helper macros.
 
-(defmacro with-pango-cairo ((layout-var cr &key text-style text) &body body)
-  `(invoke-with-pango-cairo (lambda (,layout-var) ,@body)
-			    ,cr
-			    :text-style ,text-style
-			    :text ,text))
+(defmacro with-pango-layout
+    ((layout-var medium &key text-style text) &body body)
+  `(invoke-with-pango-layout (lambda (,layout-var) ,@body)
+			     ,medium
+			     :text-style ,text-style
+			     :text ,text))
 
 (defmacro with-text-style-font-description ((var text-style) &body body)
   `(invoke-with-text-style-font-description
@@ -54,25 +61,22 @@
 (defmacro with-pango-context ((var medium) &body body)
   `(invoke-with-pango-context (lambda (,var) ,@body) ,medium))
 
-(defun invoke-with-pango-cairo (fn cr &key text-style text)
-  (let ((layout (pango_cairo_create_layout cr)))
-    (unwind-protect
-	(progn
-	  (when text-style
-	    (with-text-style-font-description
-		(desc
-		 (etypecase text-style
-		   (text-style
-		     text-style)
-		   (medium
-		     (merge-text-styles
-		      (medium-text-style text-style)
-		      (medium-default-text-style text-style)))))
-	      (pango_layout_set_font_description layout desc)))
-	  (when text
-	    (pango_layout_set_text layout text -1))
-	  (funcall fn layout))
-      (g_object_unref layout))))
+(defun configure-pango-layout (layout &key text-style text)
+  (when text-style
+    (with-text-style-font-description
+	(desc
+	 (etypecase text-style
+	   (text-style
+	     text-style)
+	   (medium
+	     (merge-text-styles
+	      (medium-text-style text-style)
+	      (medium-default-text-style text-style)))))
+      (pango_layout_set_font_description layout desc)))
+  (when text
+    (pango_layout_set_text layout text -1)))
+
+(defgeneric invoke-with-pango-layout (fn medium &key text-style text))
 
 (defun invoke-with-font-description (fn desc)
   (unwind-protect
@@ -195,56 +199,66 @@
       (values x y width height))))
 
 (defmethod text-size
-    ((medium metrik-medium) string &key text-style (start 0) end)
-  (with-cairo-medium (medium)
+    :before
+    ((medium cairo-metrik-medium) string &key text-style (start 0) end)
+  (with-medium (medium)
+    (with-slots (cr) medium
+      (cairo_identity_matrix cr))))
+
+(defmethod text-size
+    ((medium metrik-medium-mixin) string &key text-style (start 0) end)
+  (with-medium (medium)
     ;; -> width height final-x final-y baseline
     (when (characterp string) (setf string (string string)))
     (setf text-style (or text-style (make-text-style nil nil nil)))
     (setf text-style
 	  (merge-text-styles text-style (medium-default-text-style medium)))
-    (with-slots (cr) medium
-      (cairo_identity_matrix cr)
-      (with-pango-cairo (layout cr
-				:text-style text-style
-				:text (unless (eql start end)
-					(subseq string start end)))
-	(multiple-value-bind (width height)
-	    (pango-layout-get-pixel-size layout)
-	  (multiple-value-bind (first-x first-y first-width first-height)
-	      (pango-layout-line-get-pixel-extents layout 0)
-	    (declare (ignorable first-x first-y first-width first-height))
-	    (multiple-value-bind (final-x final-y final-width final-height)
-		(pango-layout-line-get-pixel-extents layout -1)
-	      (declare (ignorable final-x final-y final-width final-height))
-	      (values width
-		      height
-		      final-width
-		      (- height final-height)
-		      (abs first-y)))))))))
+    (with-pango-layout (layout medium
+			       :text-style text-style
+			       :text (unless (eql start end)
+				       (subseq string start end)))
+      (multiple-value-bind (width height)
+	  (pango-layout-get-pixel-size layout)
+	(multiple-value-bind (first-x first-y first-width first-height)
+	    (pango-layout-line-get-pixel-extents layout 0)
+	  (declare (ignorable first-x first-y first-width first-height))
+	  (multiple-value-bind (final-x final-y final-width final-height)
+	      (pango-layout-line-get-pixel-extents layout -1)
+	    (declare (ignorable final-x final-y final-width final-height))
+	    (values width
+		    height
+		    final-width
+		    (- height final-height)
+		    (abs first-y))))))))
 
 (defmethod climi::text-bounding-rectangle*
-    ((medium metrik-medium) string &key text-style (start 0) end)
-  (with-cairo-medium (medium)
+    :before
+    ((medium cairo-metrik-medium) string &key text-style (start 0) end)
+  (with-medium (medium)
+    (with-slots (cr) medium
+      (cairo_identity_matrix cr))))
+
+(defmethod climi::text-bounding-rectangle*
+    ((medium metrik-medium-mixin) string &key text-style (start 0) end)
+  (with-medium (medium)
     ;; -> left ascent right descent
     (when (characterp string) (setf string (string string)))
     (setf text-style (or text-style (make-text-style nil nil nil)))
     (setf text-style
 	  (merge-text-styles text-style (medium-default-text-style medium)))
-    (with-slots (cr) medium
-      (cairo_identity_matrix cr)
-      (with-pango-cairo (layout cr
-				:text-style text-style
-				:text (unless (eql start end)
-					(subseq string start end)))
-	(multiple-value-bind (x y width height)
-	    (pango-layout-get-ink-rectangle layout)
-	  (let* ((first-y
-		  (nth-value 1 (pango-layout-line-get-pixel-extents layout 0)))
-		 (ascent (- (abs first-y) y)))
-	    (values x
-		    (ceiling (- ascent))
-		    (ceiling (+ width (max 0 x)))
-		    (ceiling (- height ascent)))))))))
+    (with-pango-layout (layout medium
+			       :text-style text-style
+			       :text (unless (eql start end)
+				       (subseq string start end)))
+      (multiple-value-bind (x y width height)
+	  (pango-layout-get-ink-rectangle layout)
+	(let* ((first-y
+		(nth-value 1 (pango-layout-line-get-pixel-extents layout 0)))
+	       (ascent (- (abs first-y) y)))
+	  (values x
+		  (ceiling (- ascent))
+		  (ceiling (+ width (max 0 x)))
+		  (ceiling (- height ascent))))))))
 
 ;; (pango_layout_get_context layout)
 
@@ -258,7 +272,7 @@
 	  :key #'pango_font_family_get_name
 	  :test #'equal)))
 
-(defmethod text-style-fixed-width-p (text-style (medium metrik-medium))
+(defmethod text-style-fixed-width-p (text-style (medium metrik-medium-mixin))
   (with-gtk ()
     (with-pango-context (context medium)
       (with-text-style-font-description (desc text-style)
@@ -266,7 +280,7 @@
 	  (assert family)
 	  (not (zerop (pango_font_family_is_monospace family))))))))
 
-(defmethod text-style-ascent (text-style (medium metrik-medium))
+(defmethod text-style-ascent (text-style (medium metrik-medium-mixin))
 ;;;  (with-gtk ()
 ;;;    (with-pango-context (context medium)
 ;;;      (with-text-style-font-description (desc text-style)
@@ -278,7 +292,7 @@
     (declare (ignore width height final-x final-y))
     baseline))
 
-(defmethod text-style-descent (text-style (medium metrik-medium))
+(defmethod text-style-descent (text-style (medium metrik-medium-mixin))
 ;;;  (with-gtk ()
 ;;;    (with-pango-context (context medium)
 ;;;      (with-text-style-font-description (desc text-style)
@@ -290,13 +304,13 @@
     (declare (ignore width final-x final-y))
     (- height baseline)))
 
-(defmethod text-style-height (text-style (medium metrik-medium))
+(defmethod text-style-height (text-style (medium metrik-medium-mixin))
   (nth-value 1 (text-size medium "foo" :text-style text-style))
 ;;;  (+ (text-style-ascent text-style medium)
 ;;;     (text-style-descent text-style medium))
   )
 
-(defmethod text-style-width (text-style (medium metrik-medium))
+(defmethod text-style-width (text-style (medium metrik-medium-mixin))
   (with-gtk ()
     (with-pango-context (context medium)
       (with-text-style-font-description (desc text-style)

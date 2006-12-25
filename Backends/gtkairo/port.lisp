@@ -48,7 +48,8 @@
    (events-tail :accessor events-tail)
    (widgets->sheets :initform (make-hash-table) :accessor widgets->sheets)
    (dirty-mediums :initform (make-hash-table) :accessor dirty-mediums)
-   (metrik-medium :accessor metrik-medium)
+   (gdk-metrik-medium :accessor gdk-metrik-medium)
+   (cairo-metrik-medium :accessor cairo-metrik-medium)
    (pointer-grab-sheet :accessor pointer-grab-sheet :initform nil)
    (global-pango-context :accessor global-pango-context)))
 
@@ -82,11 +83,17 @@
     ;; FIXME: hier koennten wir mindestens ein anderes --display uebergeben
     ;; wenn wir wollten
     (gtk_init (cffi:null-pointer) (cffi:null-pointer))
-    (let ((cr (gdk_cairo_create
-		(gdk_screen_get_root_window (gdk_screen_get_default)))))
+    (let* ((root (gdk_screen_get_root_window (gdk_screen_get_default)))
+	   (cr (gdk_cairo_create root)))
       (set-antialias cr)
-      (setf (metrik-medium port)
-            (make-instance 'metrik-medium :port port :cr cr)))
+      (setf (gdk-metrik-medium port)
+            (make-instance 'gdk-metrik-medium
+	      :port port
+	      :gc (gdk_gc_new root)))
+      (setf (cairo-metrik-medium port)
+            (make-instance 'cairo-metrik-medium
+	      :port port
+	      :cr cr)))
     (setf (global-pango-context port) (gdk_pango_context_get)))
   (when clim-sys:*multiprocessing-p*
     (start-event-thread port)))
@@ -139,6 +146,9 @@
 (defvar *double-buffering-p*
     #+(or win32 windows mswindows) t
     #-(or win32 windows mswindows) nil)
+
+#+(or)
+(setf *double-buffering-p* nil)
 
 (defmethod mirror-drawable ((mirror widget-mirror))
   (if *double-buffering-p*
@@ -227,17 +237,24 @@
     ((port gtkairo-port) (sheet climi::unmanaged-top-level-sheet-pane))
   (realize-window-mirror port sheet GTK_WINDOW_POPUP))
 
-(defun gtk-widget-modify-bg (widget color)
+(defmacro with-gdkcolor ((var clim-color) &body body)
+  `(invoke-with-gdkcolor (lambda (,var) ,@body) ,clim-color))
+
+(defun invoke-with-gdkcolor (fn clim-color)
   (cffi:with-foreign-object (c 'gdkcolor)
     (setf (cffi:foreign-slot-value c 'gdkcolor 'pixel) 0)
     (setf (values (cffi:foreign-slot-value c 'gdkcolor 'r)
 		  (cffi:foreign-slot-value c 'gdkcolor 'g)
 		  (cffi:foreign-slot-value c 'gdkcolor 'b))
 	  (multiple-value-bind (r g b)
-	      (color-rgb color)
+	      (color-rgb clim-color)
 	    (values (min (truncate (* r 65536)) 65535)
 		    (min (truncate (* g 65536)) 65535)
 		    (min (truncate (* b 65536)) 65535))))
+    (funcall fn c)))
+
+(defun gtk-widget-modify-bg (widget color)
+  (with-gdkcolor (c color)
     (gtk_widget_modify_bg widget 0 c)))
 
 ;; copy&paste from port.lisp|CLX:
@@ -418,11 +435,7 @@
       (setf (widget->sheet (mirror-widget mirror) port) nil))))
 
 (defun destroy-mediums (mirror)
-  (dolist (medium (mirror-mediums mirror))
-    (when (cr medium)
-      (cairo_destroy (cr medium))
-      (setf (cr medium) nil)
-      (dispose-flipping-pixmap medium)))
+  (mapc #'destroy-medium (mirror-mediums mirror))
   (setf (mirror-mediums mirror) '()))
 
 (defmethod destroy-mirror
@@ -471,8 +484,7 @@
 ;;;; Positioning and resizing
 
 (defun reset-mediums (mirror)
-  (dolist (medium (mirror-mediums mirror))
-    (setf (cr medium) nil))
+  (mapc #'destroy-medium (mirror-mediums mirror))
   (when (mirror-buffering-pixmap mirror)
     (let* ((old (mirror-buffering-pixmap mirror))
 	   (new (progn
