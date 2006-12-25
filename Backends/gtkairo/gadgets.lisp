@@ -630,14 +630,15 @@
 ;; not a ratio but given in value units?  Why is min==max all the time?
 ;; And why doesn't this work! :-(
 (defun update-scrollbar-adjustment (sheet)
-  (with-gtk ()
-    (let* ((min (df (gadget-min-value sheet)))
-	   (value (df (gadget-value sheet)))
-	   (page-size (df (climi::scroll-bar-thumb-size sheet)))
-	   (max (+ (df (gadget-max-value sheet)) page-size)))
-      (gtk_range_set_adjustment
-       (mirror-widget (sheet-direct-mirror sheet))
-       (gtk_adjustment_new value min max 0.0d0 0.0d0 page-size)))))
+  (when (sheet-direct-mirror sheet)
+    (with-gtk ()
+      (let* ((min (df (gadget-min-value sheet)))
+	     (value (df (gadget-value sheet)))
+	     (page-size (df (climi::scroll-bar-thumb-size sheet)))
+	     (max (+ (df (gadget-max-value sheet)) page-size)))
+	(gtk_range_set_adjustment
+	 (mirror-widget (sheet-direct-mirror sheet))
+	 (gtk_adjustment_new value min max 0.0d0 0.0d0 page-size))))))
 
 (defmethod (setf gadget-min-value) :after (new-value (pane native-scrollbar))
   (declare (ignore new-value))
