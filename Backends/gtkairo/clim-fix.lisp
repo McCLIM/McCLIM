@@ -49,8 +49,8 @@
 	  (draw-rectangle* (sheet-medium stream)
 			   (+ (ceiling x1) 0.5d0)
 			   (+ (ceiling y1) 0.5d0)
-			   (+ (floor (1- x2)) 0.5d0)
-			   (+ (floor (1- y2)) 0.5d0)
+			   (- (floor (1- x2)) 0.5d0)
+			   (- (floor (1- y2)) 0.5d0)
 			   ;; XXX +FLIPPING-INK+? 
 			   :filled nil :ink +foreground-ink+))
         (:unhighlight
