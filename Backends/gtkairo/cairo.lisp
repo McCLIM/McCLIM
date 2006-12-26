@@ -555,8 +555,8 @@
 ;;;;  General Designs
 ;;;;
 
-(defun make-cairo-surface
-    (compatible-medium width height &optional (format :argb32))
+(defun make-cairo-surface (compatible-medium width height
+			   &optional (format :CAIRO_CONTENT_COLOR_ALPHA))
   (let* ((s (cairo_surface_create_similar
 	     (cairo_get_target (cr compatible-medium))
              format width height))
