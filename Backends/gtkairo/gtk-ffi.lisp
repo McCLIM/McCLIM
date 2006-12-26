@@ -118,6 +118,9 @@
 (defmacro with-cairo-floats ((&optional) &body body)
   `(progn ,@body))
 
+(defmacro slot (o c s)
+  `(cffi:foreign-slot-value ,o ,c ,s))
+
 ;; Note: There's no need for locking in single threaded mode for most
 ;; functions, except that the main loop functions try to release the
 ;; lock temporarily, so those need to be called with locking.  Let's do

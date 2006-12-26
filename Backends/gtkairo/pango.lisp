@@ -24,20 +24,6 @@
 (in-package :clim-gtkairo)
 
 
-;;; these shouldn't be here:
-
-(defclass metrik-medium-mixin () ())
-(defclass cairo-metrik-medium (metrik-medium-mixin cairo-medium) ())
-(defclass gdk-metrik-medium (metrik-medium-mixin gdk-medium) ())
-
-(defgeneric invoke-with-medium (fn medium))
-
-(defmacro with-medium ((medium) &body body)
-  `(invoke-with-medium (lambda () ,@body) ,medium))
-
-(defgeneric metrik-medium-for (medium))
-
-
 ;;;; Helper macros.
 
 (defmacro with-pango-layout
