@@ -703,3 +703,51 @@
 	design
       (draw-design medium background)
       (draw-design medium foreground))))
+
+
+;;;; Bezier support
+
+(defmethod climi::medium-draw-bezier-design*
+    ((medium cairo-medium) (design climi::bezier-area))
+  (with-medium (medium)
+    (sync-sheet medium)
+    (sync-transformation medium)
+    (sync-ink medium (medium-ink medium))
+    (sync-clipping-region medium (medium-clipping-region medium))
+    (sync-line-style medium (medium-line-style medium))
+    (with-slots (cr) medium
+      (let ((p0 (slot-value (car (climi::segments design)) 'climi::p0)))
+	(cairo_move_to cr (df (point-x p0)) (df (point-y p0))))
+      (dolist (segment (climi::segments design))
+	(with-slots (climi::p1 climi::p2 climi::p3) segment
+	  (cairo_curve_to cr
+			  (df (point-x climi::p1)) (df (point-y climi::p1))
+			  (df (point-x climi::p2)) (df (point-y climi::p2))
+			  (df (point-x climi::p3)) (df (point-y climi::p3)))))
+      (cairo_fill cr))))
+
+(defmethod climi::medium-draw-bezier-design*
+    ((medium cairo-medium) (design climi::bezier-union))
+  (dolist (area (climi::areas design))
+    (climi::medium-draw-bezier-design* medium area)))
+
+(defmethod climi::medium-draw-bezier-design*
+    ((medium cairo-medium) (design climi::bezier-difference))
+  (dolist (area (climi::positive-areas design))
+    (climi::medium-draw-bezier-design* medium area))
+  (with-drawing-options (medium :ink +background-ink+)
+    (dolist (area (climi::negative-areas design))
+      (climi::medium-draw-bezier-design* medium area))))
+
+(defmethod climi::medium-draw-bezier-design*
+    ((medium cairo-medium) (design climi::translated-bezier-design))
+  (let ((tx (climi::translation design)))
+    (setf tx
+	  ;;
+	  ;; FIXME: needed for gsharp, doesn't make sense to me
+	  ;;
+	  (compose-transformations tx (medium-transformation medium)))
+    (climi::medium-draw-bezier-design* medium
+				       (climi::really-transform-region
+					tx
+					(climi::original-region design)))))

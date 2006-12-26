@@ -104,7 +104,7 @@
    (:file "package" :depends-on ("Lisp-Dep" "patch"))))
 
 (defsystem :clim-basic
-    :depends-on (:clim-lisp :spatial-trees)
+    :depends-on (:clim-lisp :spatial-trees :flexichain)
     :components ((:file "decls")
 		 (:file "protocol-classes" :depends-on ("decls"))
                  (:module "Lisp-Dep"
@@ -152,7 +152,8 @@
                  (:file "text-selection" :depends-on ("decls" "protocol-classes" "Lisp-Dep" "X11-colors" "medium" "output"
                                                                    "transforms" "sheets" "stream-output"
                                                                    "ports" "recording" "regions"
-                                                                   "events"))))
+                                                                   "events"))
+		 (:file "bezier" :depends-on ("recording"))))
 
 (defsystem :goatee-core
     :depends-on (:clim-basic)

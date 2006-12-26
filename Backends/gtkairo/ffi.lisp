@@ -317,6 +317,11 @@
   (arg4 :pointer)                       ;double *
   )
 
+(defcfun "cairo_fill_preserve"
+    :pointer
+  (arg0 :pointer)                       ;cairo_t *
+  )
+
 (defcfun "cairo_font_extents"
     :void
   (arg0 :pointer)                       ;cairo_t *
@@ -668,6 +673,11 @@
   )
 
 (defcfun "cairo_stroke"
+    :void
+  (arg0 :pointer)                       ;cairo_t *
+  )
+
+(defcfun "cairo_stroke_preserve"
     :void
   (arg0 :pointer)                       ;cairo_t *
   )

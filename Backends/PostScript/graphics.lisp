@@ -544,3 +544,39 @@ setmatrix")
           (moveto* file-stream x y))
         (format file-stream "(~A) show~%" (postscript-escape-string string))))))
 
+
+;;; Bezier support
+
+(defmethod climi::medium-draw-bezier-design*
+    ((medium clim-postscript::postscript-medium) (design climi::bezier-area))
+  (let ((stream (clim-postscript::postscript-medium-file-stream medium))
+        (clim-postscript::*transformation* (sheet-native-transformation (medium-sheet medium))))
+    (clim-postscript::postscript-actualize-graphics-state stream medium :color)
+    (format stream "newpath~%")
+    (let ((p0 (slot-value (car (climi::segments design)) 'climi::p0)))
+      (clim-postscript::write-coordinates stream (point-x p0) (point-y p0))
+      (format stream "moveto~%"))
+    (loop for segment in (climi::segments design)
+          do (with-slots (climi::p1 climi::p2 climi::p3) segment
+               (clim-postscript::write-coordinates stream (point-x climi::p1) (point-y climi::p1))
+               (clim-postscript::write-coordinates stream (point-x climi::p2) (point-y climi::p2))
+               (clim-postscript::write-coordinates stream (point-x climi::p3) (point-y climi::p3))
+               (format stream "curveto~%")))
+    (format stream "fill~%")))
+
+(defmethod climi::medium-draw-bezier-design*
+    ((medium clim-postscript::postscript-medium) (design climi::bezier-union))
+  (dolist (area (climi::areas design))
+    (climi::medium-draw-bezier-design* medium area)))
+
+(defmethod climi::medium-draw-bezier-design*
+    ((medium clim-postscript::postscript-medium) (design climi::bezier-difference))
+  (dolist (area (climi::positive-areas design))
+    (climi::medium-draw-bezier-design* medium area))
+  (with-drawing-options (medium :ink +background-ink+)
+    (dolist (area (climi::negative-areas design))
+      (climi::medium-draw-bezier-design* medium area))))
+
+(defmethod climi::medium-draw-bezier-design*
+    ((medium clim-postscript::postscript-medium) (design climi::translated-bezier-design))
+  (climi::medium-draw-bezier-design* medium (climi::really-transform-region (climi::translation design) (climi::original-region design))))

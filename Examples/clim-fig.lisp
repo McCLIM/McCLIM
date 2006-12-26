@@ -31,7 +31,7 @@
   (setf (gadget-value (clim-fig-status *application-frame*))
 	string))
 
-(defun draw-figure (pane x y x1 y1 &key fastp)
+(defun draw-figure (pane x y x1 y1 &key fastp cp-x1 cp-y1 cp-x2 cp-y2)
   (with-slots (line-style current-color fill-mode constrict-mode)
       *application-frame*
     (let* ((radius-x (- x1 x))
@@ -70,7 +70,23 @@
         (:ellipse
          (draw-ellipse* pane x y radius-x 0 0 radius-y
                         :filled fill-mode
-                        :ink current-color :line-style line-style))))))
+                        :ink current-color :line-style line-style))
+        (:bezier
+	  (when fastp
+	    (draw-text* pane
+			"[Use the middle and right mouse button to set control points]"
+			0
+			20))
+	  (let* ((cp-x1 (or cp-x1 x))
+		 (cp-y1 (or cp-y1 y1))
+		 (cp-x2 (or cp-x2 x1))
+		 (cp-y2 (or cp-y2 y))
+		 (design (climi::make-bezier-thing*
+			  'climi::bezier-area
+			  (list x y cp-x1 cp-y1 cp-x2 cp-y2 x1 y1))))
+	    (climi::draw-bezier-design* pane design)
+	    (draw-line* pane x y cp-x1 cp-y1 :ink +red+)
+	    (draw-line* pane x1 y1 cp-x2 cp-y2 :ink +blue+)))))))
 
 (defun signum-1 (value)
   (if (zerop value)
@@ -87,7 +103,8 @@
 (defun handle-draw-object (pane x1 y1)
   (let* ((pixmap-width (round (bounding-rectangle-width (sheet-region pane))))
          (pixmap-height (round (bounding-rectangle-height (sheet-region pane))))
-         (canvas-pixmap (allocate-pixmap pane pixmap-width pixmap-height)))
+         (canvas-pixmap (allocate-pixmap pane pixmap-width pixmap-height))
+	 cp-x1 cp-y1 cp-x2 cp-y2)
     (copy-to-pixmap pane 0 0 pixmap-width pixmap-height canvas-pixmap)
     (multiple-value-bind (x y)
         (block processor
@@ -105,17 +122,29 @@
                                    (copy-from-pixmap canvas-pixmap 0 0 pixmap-width pixmap-height pane 0 0)
                                    (draw-figure pane
                                                 x1 y1 x y
-                                                :fastp t)))
-                (:pointer-button-release (&key event x y)
+                                                :fastp t
+						:cp-x1 cp-x1 :cp-y1 cp-y1
+						:cp-x2 cp-x2 :cp-y2 cp-y2)))
+		(:pointer-button-release (&key event x y)
                                          (when (= (pointer-event-button event)
                                                   +pointer-left-button+)
-                                           (return-from processor (values x y)))))))
+                                           (return-from processor (values x y))))
+                (:pointer-button-press (&key event x y)
+				       (cond
+					 ((= (pointer-event-button event)
+					     +pointer-right-button+)
+					   (setf cp-x1 x cp-y1 y))
+					 ((= (pointer-event-button event)
+					     +pointer-middle-button+)
+					   (setf cp-x2 x cp-y2 y)))))))
       (set-status-line " ")
       (copy-from-pixmap canvas-pixmap 0 0 pixmap-width pixmap-height pane 0 0)
       (deallocate-pixmap canvas-pixmap)
       (with-output-as-presentation (pane nil 'figure
                                          :single-box t)
-        (draw-figure pane x1 y1 x y))
+        (draw-figure pane x1 y1 x y
+		     :cp-x1 cp-x1 :cp-y1 cp-y1
+		     :cp-x2 cp-x2 :cp-y2 cp-y2))
       (setf (clim-fig-redo-list *application-frame*) nil))))
 
 (defun handle-move-object (pane figure first-point-x first-point-y)
@@ -248,6 +277,7 @@
    (arrow-button     (make-drawing-mode-button "Arrow" :arrow))
    (rectangle-button (make-drawing-mode-button "Rectangle" :rectangle))
    (ellipse-button   (make-drawing-mode-button "Ellipse" :ellipse))
+   (bezier-button   (make-drawing-mode-button "Bezier" :bezier))
 
    ;; Colors
    (black-button     (make-colored-button +black+))
@@ -293,7 +323,8 @@
            round-shape-toggle
            (horizontally () fill-mode-toggle constrict-toggle)
            point-button line-button arrow-button
-           ellipse-button rectangle-button)
+           ellipse-button rectangle-button
+	   bezier-button)
          (scrolling (:width 600 :height 400) canvas))
        (horizontally (:height 30) clear undo redo)
        status)))
