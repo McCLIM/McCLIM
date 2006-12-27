@@ -250,6 +250,33 @@
   (mapcar (climi::list-pane-value-key pane)
 	  (climi::list-pane-items pane)))
 
+(defmethod handle-event-p
+    ((pane gtk-list) (event pointer-button-press-event))
+  (eql (pointer-event-button event) +pointer-right-button+))
+
+(defun gtk-list-one-value (pane)
+  (if (eq (climi::list-pane-mode pane) :exclusive)
+      (if (and (slot-boundp pane 'climi::value)
+	       ;; FIXME: we still assume NIL == no value
+	       (gadget-value pane))
+	  (values (gadget-value pane) t)
+	  (values nil nil))
+      (if (and (slot-boundp pane 'climi::value)
+	       (eql 1 (length (gadget-value pane))))
+	  (values (car (gadget-value pane)) t)
+	  (values nil nil))))
+
+(defmethod handle-event ((pane gtk-list) (event pointer-button-press-event))
+  (multiple-value-bind (value valuep) (gtk-list-one-value pane)
+    (when valuep
+      (let* ((i (position value (climi::generic-list-pane-item-values pane)))
+	     (item (elt (climi::list-pane-items pane) i)))
+	(climi::meta-list-pane-call-presentation-menu pane item)))))
+
+(defmethod handle-event-p
+    ((pane gtk-list) (event pointer-button-release-event))
+  nil)
+
 (defun option-pane-set-active (sheet widget)
   (gtk_combo_box_set_active
    widget
@@ -422,8 +449,10 @@
   )
 
 (defmethod connect-native-signals ((sheet gtk-list) widget)
-  ;; no signals
-  )
+  (setf (widget->sheet (list-pane-tree-view sheet) (port sheet)) sheet)
+  (connect-signal (list-pane-tree-view sheet)
+		  "button-press-event"
+		  'button-handler))
 
 (defmethod connect-native-signals ((sheet gtk-label-pane) widget)
   ;; no signals

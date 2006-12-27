@@ -218,7 +218,9 @@
       (make-pane 'list-pane
 		 :value 'clim:region-intersection
 		 :items (apropos-list "INTER" :clim t)
-		 :name-key (lambda (x) (format nil "~(~S~)" x)))))
+		 :presentation-type-key (constantly 'list-test-symbol)
+		 :name-key (lambda (x) (format nil "~(~S~)" x))))
+     (interactor :interactor :height 200))
     (:layouts
      (defaults
          (labelling (:label "Matching symbols"
@@ -230,7 +232,17 @@
 	       substring
 	       (make-pane 'push-button
 			  :label "Update"
-			  :activate-callback 'update-list-test)))))))
+			  :activate-callback 'update-list-test))
+	     interactor)))))
+
+(define-presentation-type list-test-symbol ())
+
+(define-list-test-command com-describe-symbol
+    ((sym 'list-test-symbol :gesture :select))
+  ;; Let's print only three lines, we don't have space for more.
+  (with-input-from-string (s (with-output-to-string (s) (describe sym s)))
+    (dotimes (x 3)
+      (write-line (read-line s nil "") *standard-input*))))
 
 (defun update-list-test (pane)
   (declare (ignore pane))

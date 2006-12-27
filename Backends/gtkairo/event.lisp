@@ -269,31 +269,43 @@
 
 (defvar *last-seen-button* 3)
 
-(define-signal button-handler (widget event)
+(defgeneric handle-event-p (sheet event))
+
+(defmethod handle-event-p (sheet event)
+  t)
+
+(define-signal (button-handler :return-type :int) (widget event)
   (cffi:with-foreign-slots
       ((type time button state x y x_root y_root) event gdkeventbutton)
     (when (eql type GDK_BUTTON_PRESS)
       ;; Hack alert: Menus don't work without this.
       (gdk_pointer_ungrab GDK_CURRENT_TIME))
     (setf *last-seen-button* button)
-    (enqueue
-     (make-instance (if (eql type GDK_BUTTON_PRESS)
-			'pointer-button-press-event
-			'pointer-button-release-event)
-       :pointer 0
-       :button (ecase button
-		 (1 +pointer-left-button+)
-		 (2 +pointer-middle-button+)
-		 (3 +pointer-right-button+)
-		 (4 +pointer-wheel-up+)
-		 (5 +pointer-wheel-down+))
-       :x (truncate x)
-       :y (truncate y)
-       :graft-x (truncate x_root)
-       :graft-y (truncate y_root)
-       :sheet (widget->sheet widget *port*)
-       :modifier-state (gdkmodifiertype->modifier-state state)
-       :timestamp time))))
+    (let* ((sheet (widget->sheet widget *port*))
+	   (event
+	    (make-instance (if (eql type GDK_BUTTON_PRESS)
+			       'pointer-button-press-event
+			       'pointer-button-release-event)
+	      :pointer 0
+	      :button (ecase button
+			(1 +pointer-left-button+)
+			(2 +pointer-middle-button+)
+			(3 +pointer-right-button+)
+			(4 +pointer-wheel-up+)
+			(5 +pointer-wheel-down+))
+	      :x (truncate x)
+	      :y (truncate y)
+	      :graft-x (truncate x_root)
+	      :graft-y (truncate y_root)
+	      :sheet sheet
+	      :modifier-state (gdkmodifiertype->modifier-state state)
+	      :timestamp time)))
+      (cond
+	((handle-event-p sheet event)
+	  (enqueue event)
+	  1)
+	(t
+	  0)))))
 
 (define-signal enter-handler (widget event)
   (cffi:with-foreign-slots

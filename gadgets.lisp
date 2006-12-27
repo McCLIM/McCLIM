@@ -1917,7 +1917,11 @@ and must never be nil."))
                 :initform #'identity
                 :reader list-pane-value-key
                 :documentation "A function to be applied to items to gain its value
-                                for the purpose of GADGET-VALUE.")   
+                                for the purpose of GADGET-VALUE.")
+   (presentation-type-key :initarg :presentation-type-key
+			  :initform (constantly nil)
+			  :reader list-pane-presentation-type-key
+			  :documentation "A function to be applied to items to find the presentation types for their values, or NIL.")
    (test        :initarg :test
                 :initform #'eql
                 :reader list-pane-test
@@ -1969,6 +1973,16 @@ selection via the control modifier.")
   (when (and (list-pane-exclusive-p gadget)
              (> (length (gadget-value gadget)) 1))
     (error "An 'exclusive' list-pane cannot be initialized with more than one item selected.")))
+
+(defmethod value-changed-callback
+    :before
+    ((gadget meta-list-pane) client gadget-id value)
+  (declare (ignore client gadget-id))
+  (let* ((i (position value (generic-list-pane-item-values gadget)))
+	 (item (elt (list-pane-items gadget) i))
+	 (ptype (funcall (list-pane-presentation-type-key gadget) item)))
+    (when ptype
+      (throw-object-ptype value ptype))))
 
 (defun list-pane-exclusive-p (pane)
   (or (eql (list-pane-mode pane) :exclusive)
@@ -2163,11 +2177,47 @@ Returns two values, the item itself, and the index within the item list."
   (multiple-value-bind (x y) (values (pointer-event-x event) (pointer-event-y event))
     (generic-list-pane-handle-click pane x y (event-modifier-state event))))
 
+(defclass ad-hoc-presentation (standard-presentation) ())
+
+(defmethod output-record-hit-detection-rectangle*
+    ((presentation ad-hoc-presentation))
+  (values most-negative-fixnum most-negative-fixnum
+	  most-positive-fixnum most-positive-fixnum))
+
+(defun generic-list-pane-handle-right-click (pane event)
+  (multiple-value-bind (x y)
+      (values (pointer-event-x event) (pointer-event-y event))
+    (multiple-value-bind (item-value index)
+	(generic-list-pane-item-from-x-y pane x y)
+      (let* ((item (elt (list-pane-items pane) index)))
+	(meta-list-pane-call-presentation-menu pane item)))))
+
+(defun meta-list-pane-call-presentation-menu (pane item)
+  (let ((ptype (funcall (list-pane-presentation-type-key pane) item)))
+    (when ptype
+      (let ((presentation
+	     (make-instance 'ad-hoc-presentation
+	       :object (funcall (list-pane-value-key pane) item)
+	       :single-box t
+	       :type ptype)))
+	(call-presentation-menu
+	 presentation
+	 *input-context*
+	 *application-frame*
+	 pane
+	 42 42
+	 :for-menu t
+	 :label (format nil "Operation on ~A" ptype))))))
+
 (defmethod handle-event ((pane generic-list-pane) (event pointer-button-press-event))
-  (if (eql (pointer-event-button event) +pointer-left-button+)      
-      (progn (generic-list-pane-handle-click-from-event pane event)
-             (setf (slot-value pane 'armed) nil))
-      (when (next-method-p) (call-next-method))))
+  (case (pointer-event-button event)
+    (#.+pointer-left-button+
+      (generic-list-pane-handle-click-from-event pane event)
+      (setf (slot-value pane 'armed) nil))      
+    (#.+pointer-right-button+
+      (generic-list-pane-handle-right-click pane event))
+    (t
+      (when (next-method-p) (call-next-method)))))
 
 (defmethod handle-event ((pane generic-list-pane) (event pointer-button-release-event))
   (if (eql (pointer-event-button event) +pointer-left-button+)
