@@ -430,8 +430,6 @@
           ;; Create an xlib "image" and copy it to our pixmap.
           ;; I do this because I'm not smart enough to operate xlib:put-raw-image.
           (let ((image (xlib:create-image :bits-per-pixel (* 8 bytes-per-pixel) :depth depth
-                                          :bit-lsb-first-p t
-                                          :byte-lsb-first-p t
                                           :width w :height h
                                           :format :z-pixmap
                                           :data converted-data)))
@@ -450,6 +448,8 @@
 
     ;; We can use image upload for the mask in either case.
     (let ((mask-image (xlib:create-image :bits-per-pixel 1 :depth 1
+                                         :bit-lsb-first-p t
+                                         :byte-lsb-first-p t                                          
                                          :width w :height h
                                          :data mask-data)))
       (xlib:put-image mask mask-gc mask-image
