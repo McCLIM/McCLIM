@@ -387,7 +387,7 @@ along with any default values) that can be used in a
 (defclass bit-vector-form (form-lexeme complete-form-mixin) ())
 (defclass number-lexeme (form-lexeme complete-form-mixin) ())
 (defclass token-mixin () ())
-(defclass literal-object-lexeme (form-lexeme) ())
+(defclass literal-object-form (form-lexeme complete-form-mixin) ())
 (defclass complete-token-lexeme (token-mixin form-lexeme complete-form-mixin) ())
 (defclass multiple-escape-start-lexeme (lisp-lexeme) ())
 (defclass multiple-escape-end-lexeme (lisp-lexeme) ())
@@ -539,7 +539,7 @@ along with any default values) that can be used in a
 	(t (cond ((or (constituentp object)
                       (eql object #\\))
                   (lex-token syntax scan))
-                 (t (fo) (make-instance 'literal-object-lexeme))))))))
+                 (t (fo) (make-instance 'literal-object-form))))))))
 
 (defmethod lex ((syntax lisp-syntax) (state lexer-list-state) scan)
   (macrolet ((fo () `(forward-object scan)))
@@ -1880,7 +1880,7 @@ after `string'."
                   (t (call-next-method))))))
       (call-next-method)))
 
-(defmethod display-parse-tree ((parser-symbol literal-object-lexeme) stream (drei drei)
+(defmethod display-parse-tree ((parser-symbol literal-object-form) stream (drei drei)
                                (syntax lisp-syntax))
   (updating-output
       (stream :unique-id (list drei parser-symbol)
@@ -2890,7 +2890,7 @@ will be signalled for incomplete forms.")
   (when read
     (read-from-string (form-string syntax form))))
 
-(defmethod form-to-object ((syntax lisp-syntax) (form literal-object-lexeme) &key &allow-other-keys)
+(defmethod form-to-object ((syntax lisp-syntax) (form literal-object-form) &key &allow-other-keys)
   (object-after (start-mark form)))
 
 (defmethod form-to-object ((syntax lisp-syntax) (form pathname-form) &key &allow-other-keys)
