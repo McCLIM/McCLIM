@@ -567,6 +567,7 @@ if stuff is inserted after the insertion pointer."
                                                         *pointer-documentation-output*
                                                         minibuffer)
                                         :prompt "M-x ")
+      (update-drei-buffer stream)
       ;; Commands are permitted to signal immediate rescans, but
       ;; we may need to do some stuff first.
       (unwind-protect
