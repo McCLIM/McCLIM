@@ -181,8 +181,9 @@
   (:panes (interactor-container
            (make-clim-stream-pane
             :type 'listener-interactor-pane
-            :name 'interactor :scroll-bars t))
-          (doc :pointer-documentation)
+            :name 'interactor :scroll-bars t
+            :default-view +listener-view+))
+          (doc :pointer-documentation :default-view +listener-pointer-documentation-view+)
           (wholine (make-pane 'wholine-pane
                      :display-function 'display-wholine :scroll-bars nil
                      :display-time :command-loop :end-of-line-action :allow)))
@@ -229,8 +230,8 @@
 (defmethod read-frame-command ((frame listener) &key (stream *standard-input*))  
   "Specialized for the listener, read a lisp form to eval, or a command."
   (multiple-value-bind (object type)
-      (accept 'command-or-form :stream stream :prompt nil)
-    (format *trace-output* "~&object=~W~%" object)
+      (let ((*command-dispatchers* '(#\,)))
+        (accept 'command-or-form :stream stream :prompt nil))
     (if (presentation-subtypep type 'command)
         object
         `(com-eval ,object))))
