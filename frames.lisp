@@ -709,7 +709,7 @@ documentation produced by presentations.")))
   pane)
 
 (defun coerce-pane-name (pane name)
-  (when pane 
+  (when pane
     (setf (slot-value pane 'name) name)    
     (push pane (frame-named-panes (pane-frame pane))))
   pane)
