@@ -45,7 +45,7 @@
 
 ;;; According to the specification, command menu items are stored as
 ;;; lists.  This way seems better, and I hope nothing will break.
-(defclass menu-item (command-item)
+(defclass %menu-item (command-item)
   ((menu-name :reader command-menu-item-name :initarg :menu-name)
    (type :initarg :type :reader command-menu-item-type)
    (value :initarg :value :reader command-menu-item-value)
@@ -53,7 +53,7 @@
    (text-style :initarg :text-style :initform nil)
    (keystroke :initarg :keystroke)))
 
-(defmethod print-object ((item menu-item) stream)
+(defmethod print-object ((item %menu-item) stream)
   (print-unreadable-object (item stream :identity t :type t)
     (when (slot-boundp item 'menu-name)
       (format stream "~S" (command-menu-item-name item)))
@@ -196,7 +196,7 @@
 	(when errorp
 	  (error 'command-not-present))
 	(progn 
-	  (when (typep item 'menu-item)
+	  (when (typep item '%menu-item)
 	    (remove-menu-item-from-command-table table
 						 (command-menu-item-name item)
                                                  :errorp nil))
@@ -352,7 +352,7 @@
   (when (and (consp text-style)
 	   (eq (first text-style) 'make-text-style))
     (setq text-style (apply #'make-text-style (rest text-style))))
-  (apply #'make-instance 'menu-item
+  (apply #'make-instance '%menu-item
 	 :menu-name name :type type :value value
 	 `(,@(and documentationp `(:documentation ,documentation))
 	   ,@(and keystrokep `(:keystroke ,keystroke))
@@ -431,7 +431,7 @@
   (let ((command-table (find-command-table command-table)))
     (%add-keystroke-item command-table
                          gesture
-			 (make-instance 'menu-item
+			 (make-instance '%menu-item
 					:type type :value value
 					:keystroke gesture
 					:documentation documentation)
