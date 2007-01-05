@@ -425,19 +425,18 @@
               :menu t
               :documentation "Show Class Subclasses"
               :pointer-documentation "Show Class Subclasses")
-  (presentation)
-  (list (presentation-object presentation)))
+  (object)
+  (list object))
 
 
 (define-presentation-to-command-translator com-show-class-superclasses-translator
   (class-name com-show-class-superclasses lisp-commands
               :menu t
-              :tester ((presentation)
-                       (not (eq t (presentation-object presentation))))
+              :tester ((object) (not (eq t object)))
               :documentation "Show Class Superclasses"
               :pointer-documentation "Show Class Superclasses")
-  (presentation)
-  (list (presentation-object presentation)))
+  (object)
+  (list object))
 
 
 (define-presentation-to-command-translator com-show-class-generic-functions-translator
@@ -445,8 +444,8 @@
               :menu t
               :documentation "Show Class Generic Functions"
               :pointer-documentation "Show Class Generic Functions")
-  (presentation)
-  (list (presentation-object presentation)))
+  (object)
+  (list object))
 
 
 (define-presentation-to-command-translator com-show-class-slots-translator
@@ -454,8 +453,8 @@
               :menu t
               :documentation "Show Class Slots"
               :pointer-documentation "Show Class Slots")
-  (presentation)
-  (list (presentation-object presentation)))
+  (object)
+  (list object))
 
 
 ;;; CLOS introspection commands
