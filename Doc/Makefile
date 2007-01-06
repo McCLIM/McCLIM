@@ -9,7 +9,7 @@ INFOFILE=mcclim.info
 HTMLDIRS=$(basename $(MCCLIMTEXI))
 IMAGES=ex2.eps inspect-as-cells.eps inspect-object-1.eps \
 inspect-object-2.eps inspect-object-3.eps native.fig
-IMAGETARGETTYPES=gif png eps
+IMAGETARGETTYPES=gif png eps pdf
 TARGETIMAGES=$(shell sh ./makeimages.sh -e "$(IMAGES)" "$(IMAGETARGETTYPES)")
 # Place where generated documentation ends up. The value of
 # DOCSTRINGDIR has to end with a slash or you lose (it's passed to
