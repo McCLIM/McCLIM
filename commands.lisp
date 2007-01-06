@@ -1401,8 +1401,8 @@
 	  (if (member initial-char *command-dispatchers*)
 	      (progn
 		(read-gesture :stream stream)
-		(accept command-ptype :stream stream :view view :prompt nil))
-	      (accept 'form :stream stream :view view :prompt nil)))
+		(accept command-ptype :stream stream :view view :prompt nil :history 'command-or-form))
+	      (accept 'form :stream stream :view view :prompt nil :history 'command-or-form)))
       (t
        (funcall (cdar *input-context*) object type event options)))))
 
