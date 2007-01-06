@@ -23,7 +23,7 @@ else
     SBCLRUNTIME="$1"
 fi
 
-SBCL="$SBCLRUNTIME --noinform --no-sysinit --no-userinit --noprint --disable-debugger"
+SBCL="$SBCLRUNTIME --noinform --no-sysinit --noprint --disable-debugger"
 
 # Output directory.  This has to end with a slash (it's interpreted by
 # Lisp's `pathname' function) or you lose.  This is normally set from

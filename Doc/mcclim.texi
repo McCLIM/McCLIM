@@ -43,6 +43,10 @@ Copyright @copyright{} 2004,2005,2006 the McCLIM hackers.
 @cindex \ENTRY\
 @end macro
 
+@macro func{FUN}
+@b{\FUN\}
+@end macro
+
 @macro fmacro{MACRO}
 @func{\MACRO\}
 @end macro
@@ -2080,7 +2084,9 @@ consistency, and because they handle quite a bit of effort for you.
 @node Glossary
 @chapter Glossary
 
-@glossentry{Direct mirror}
+@c @glossentry{Direct mirror}
+@b{Direct mirror}
+@cindex Direct mirror
 
 A @gloss{mirror} of a sheet which is not shared with any of the
 ancestors of the sheet.  All grafted McCLIM sheets have mirrors, but not
@@ -2098,7 +2104,9 @@ class mirrored-sheet-mixin, whether a McCLIM sheet has a direct mirror
 or not is not determined statically by the class of a sheet, but
 dynamically by the frame manager.
 
-@glossentry{Mirror}
+@c @glossentry{Mirror}
+@b{Mirror}
+@cindex Mirror
 
 A device window such as an X11 window that parallels a @gloss{sheet} in
 the CLIM @gloss{sheet hierarchy}.  A @gloss{sheet} having such a
@@ -2111,7 +2119,9 @@ CLIM @gloss{sheet}s that are not mirrored must be @gloss{descendents}
 (direct or indirect) of a @gloss{mirrored sheet}, which will then be the
 @gloss{sheet} that receives the drawing commands.
 
-@glossentry{Mirrored sheet}
+@c @glossentry{Mirrored sheet}
+@b{Mirrored sheet}
+@cindex Mirrored sheet
 
 A @gloss{sheet} in the CLIM @gloss{sheet hiearchy} that has a direct
 parallel (called the @gloss{direct mirror}) in the host windowing
@@ -2147,14 +2157,18 @@ returns a mirror for all grafted sheets, whether the sheet is a mirrored
 sheet or not.  A call to @genfun{sheet-direct-mirror}, on the other
 hand, returns nil if the sheet is not a mirrored sheet.
 
-@glossentry{Mirror transformation}
+@c @glossentry{Mirror transformation}
+@b{Mirror transformation}
+@cindex Mirror transformation
 
 The transformation that transforms coordinates in the coordinate system
 of a mirror (i.e. the native coordinates of the mirror) to native
 coordinates of its parent in the underlying windowing system.  On most
 systems, including X, this transformation will be a simple translation.
 
-@glossentry{Native coordinates}
+@c @glossentry{Native coordinates}
+@b{Native coordinates}
+@cindex Native coordinates
 
 Each mirror has a coordinate system called the native coordinate system.
 Usually, the native coordinate system of a mirror has its origin in the
@@ -2168,23 +2182,31 @@ has the same native coordinate system as its parent.  To obtain native
 coordinates of the parent of a mirror, use the @gloss{mirror
 transformation}.
 
-@glossentry{Native region}
+@c @glossentry{Native region}
+@b{Native region}
+@cindex Native region
 
 The native region of a sheet is the intersection of its region and the
 sheet region of all of its parents, expressed in the @gloss{native
 coordinates} of the sheet.
 
-@glossentry{Potentially visible area}
+@c @glossentry{Potentially visible area}
+@b{Potentially visible area}
+@cindex Potentially visible area
 
 A bounded area of an otherwise infinte drawing plane that is visible
 unless it is covered by other visible areas.
 
-@glossentry{Sheet coordinates}
+@c @glossentry{Sheet coordinates}
+@b{Sheet coordinates}
+@cindex Sheet coordinates
 
 The coordinate system of coordinates obtained by application of the
 @gloss{user transformation}.
 
-@glossentry{Sheet region}
+@c @glossentry{Sheet region}
+@b{Sheet region}
+@cindex Sheet region
 
 The @gloss{region} of a sheet determines the visible part of the drawing
 plane.  The dimensions of the sheet region are given in @gloss{sheet
@@ -2208,7 +2230,9 @@ the underlying sheets (panes and gadgets are special kinds of sheets) to
 obtain effects such as scrolling, zooming, coordinate system
 transformations, etc.
 
-@glossentry{Sheet transformation}
+@c @glossentry{Sheet transformation}
+@b{Sheet transformation}
+@cindex Sheet transformation
 
 The transformation used to transform @gloss{sheet coordinates} of a
 sheet to @gloss{sheet coordinates} of its @gloss{parent sheet}.  The
@@ -2220,7 +2244,9 @@ the underlying sheets (panes and gadgets are special kinds of sheets) to
 obtain effects such as scrolling, zooming, coordinate system
 transformations, etc.
 
-@glossentry{User Clipping region }
+@c @glossentry{User Clipping region }
+@b{User Clipping region }
+@cindex User Clipping region 
 
 A @gloss{clipping region} used to limit the effect of @gloss{drawing
 functions}.  The user @gloss{clipping region} is stored in the
@@ -2228,12 +2254,16 @@ functions}.  The user @gloss{clipping region} is stored in the
 @gloss{medium}, or by passing a value for the :clipping-region
 @gloss{drawing option} to a @gloss{drawing function}.
 
-@glossentry{User Coordinates}
+@c @glossentry{User Coordinates}
+@b{User Coordinates}
+@cindex User Coordinates
 
 The coordinate system of coordinates passed to the @gloss{drawing
 functions}.
 
-@glossentry{User Transformation}
+@c @glossentry{User Transformation}
+@b{User Transformation}
+@cindex User Transformation
 
 A transformation used to transform @gloss{user coordinates} into
 @gloss{sheet coordinates}.  The user transformation is stored in the
@@ -2241,7 +2271,9 @@ A transformation used to transform @gloss{user coordinates} into
 @gloss{medium}, or by passing a value for the :transformation
 @gloss{drawing option} to a @gloss{drawing function}.
 
-@glossentry{Visible area}
+@c @glossentry{Visible area}
+@b{Visible area}
+@cindex Visible area
 
 @node Development History
 @chapter Development History
