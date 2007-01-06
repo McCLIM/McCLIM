@@ -418,6 +418,7 @@ Common Lisp system for more information.
 @cindex writing an application
 
 @menu
+* How CLIM applications produce output::
 * Panes and Gadgets::
 * Defining Application Frames::
 * A First Attempt::
@@ -426,6 +427,84 @@ Common Lisp system for more information.
 * An application displaying a data structure::
 * Incremental redisplay::
 @end menu
+
+@node How CLIM applications produce output
+@section How CLIM applications produce output
+
+CLIM stream panes use output recording.  This means that such a pane
+maintains a display list, consisting of a sequence of output records,
+ordered chronologically, from the first output record to be drawn to
+the last.  
+
+This display list is used to fill in damaged areas of the pane, for
+instance as a result of the pane being partially or totally covered by
+other panes, and then having some or all of its area again becoming
+visible.  The output records of the display list that have some parts
+in common with the exposed area are partially or totally replayed (in
+chronological order) to redraw the contents of the area.
+
+An application can have a pane establish this display list in several
+fundamentally different ways.
+
+Very simple applications have no internal data structure to keep track
+of application objects, and simply produce output to the pane from
+time to time as a result of running commands, occasionally perhaps
+erasing the pane and starting over.  Such applications typically use
+text or graphics output as a result of running commands.  CLIM
+maintains the display list for the pane, and adds to the end of it,
+each time also producing the pixels that result from drawing the new
+output record.  If the pane uses scrolling (which it typically does),
+then CLIM must determine the extent of the pane so as to update the
+scroll bar after each new output.  
+
+More complicated applications use a display function.  Before the
+display function is run, the existing display list is typically
+deleted, so that the purpose of the display function becomes to
+establish an entirely new display list.  The display function might
+for instance produce some kind of form to be filled in, and
+application commands can use text or graphics operations to fill in
+the form.  A game of tic-tac-toe could work this way, where the
+display function draws the board and commands draw shapes into the
+squares.  
+
+Even more complicated applications might have some internal data
+structure that has a direct mapping to output, and commands simply
+modify this internal data structure.  In this case, the display
+function is run after each time around the command loop, because a
+command can have modified the internal data structure in some
+arbitrary ways.  Some such applications might simply want to delete
+the existing display list and produce a new one each time (to minimize
+flicker, double buffering could be used).  This is a very simple way
+of structuring an application, and entirely acceptable in many cases.
+Consider, for instance, a board game where pieces can be moved (as
+opposed to just added).  A very simple way of structuring such an
+application is to have an internal representation of the board, and to
+make the display function traverse this data structure and produce the
+complete output each time in the command loop.  
+
+Some applications have very large internal data structures to be
+displayed, and it would cause a serious performance problem if the
+display list had to be computer from scratch each time around the
+command loop.  To solve this problem, CLIM contains a feature called
+incremental redisplay.  It allows many of the output records to be
+kept from one iteration of the command loop to the next.  This can be
+done in two different ways.  The simplest way is for the application
+to keep the simple structure which consists of traversing the entire
+data structure each time, but at various points indicate to CLIM that
+the output has not changed since last time, so as to avoid actually
+invoking the application code for computing it.  This is accomplished
+by the use of @t{updating-output}.  The advantage of
+@t{updating-output} is that the application logic remains
+straightforward, and it is up to CLIM to do the hard work of recycling
+output records.  The disadvantage is that for some very demanding
+applications, this method might not be fast enough.
+
+The other way is more complicated and requires the programmer to
+structure the application differently.  Essentially, the application
+has to keep track of the output records in the display list, and
+inform CLIM about modifications to it.  The main disadvantage of this
+method is that the programmer must now write the application to keep
+track of the output records itself, as opposed to leaving it to CLIM. 
 
 @node Panes and Gadgets
 @section Panes and Gadgets
