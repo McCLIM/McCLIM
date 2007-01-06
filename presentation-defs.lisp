@@ -451,8 +451,20 @@ type histories"))
 (defun presentation-type-history (type)
   (funcall-presentation-generic-function presentation-type-history type))
 
-(defclass presentation-history-ring (goatee::ring)
-  ())
+(defclass presentation-history ()
+  ((stack :accessor presentation-history-array
+          :initform (make-array 1 :fill-pointer 0
+                                  :adjustable t)
+          :documentation "The history, with the newest objects at
+the end of the array. Should contain conses with the car being
+the object and the cdr being the type.")
+   (pointer :accessor presentation-history-pointer
+            :initform nil
+            :documentation "The index of the \"current\" object,
+used when navigating the history. If NIL, means that no
+navigation has yet been performed."))
+  (:documentation "Class for objects that contain the history for
+a specific type."))
 
 (define-default-presentation-method presentation-type-history (type)
   (if (and *application-frame*
@@ -468,7 +480,7 @@ type histories"))
 		    (history-object (gethash name history-table)))
 	       (unless history-object
 		 (setf history-object
-		       (make-instance 'presentation-history-ring)
+		       (make-instance 'presentation-history)
 		       (gethash name history-table)
 		       history-object))
 	       history-object))
@@ -505,53 +517,94 @@ call-next-method to get the \"real\" answer based on the stream type."))
   (funcall-presentation-generic-function presentation-type-history type))
 
 (defun presentation-history-insert (history object ptype)
-  (goatee::ring-obj-insert (cons object ptype) history))
+  "Unconditionally insert `object' as an input of presentation
+type `type' at the top of the presentation history `history', as
+the most recently added object."
+  (vector-push-extend (cons object ptype)
+                      (presentation-history-array history)))
 
-(defun presentation-history-head (history ptype)
+(defun presentation-history-top (history ptype)
+  "Find the topmost (most recently added object) of `history'
+that is of the presentation type `ptype' or a subtype. Two values
+will be returned, the object and the presentation type of the
+object. If no applicable object can be found, these values will
+both be NIL."
   (loop
-   for cell = (goatee::dbl-head history) then (goatee::next cell)
-   for (object . object-ptype) = (and cell (goatee::contents cell))
-   while cell
-   if (presentation-subtypep object-ptype ptype)
-   return (values object object-ptype)
-   finally (return (values nil nil))))
+     with array = (presentation-history-array history)
+     for index from (1- (fill-pointer array)) downto 0
+     for (object . object-ptype) = (aref array index)
+     do
+     (when (presentation-subtypep object-ptype ptype)
+       (return (aref array index)))
+     finally (return (values nil nil))))
+
+(defun presentation-history-reset-pointer (history)
+  "Set the pointer to point at the object most recently added
+object."
+  (setf (presentation-history-pointer history) nil))
 
 (defun presentation-history-next (history ptype)
-  (let ((first-object (goatee::backward history)))
-    (loop
-       for first-time = t then nil
-       for cell = first-object then (goatee::backward history)
-       for (object . object-ptype) = (goatee::contents cell)
-       while (or first-time (not (eq first-object cell)))
-       if (presentation-subtypep object-ptype ptype)
-         return (values object object-ptype)
-       end
-       finally (return (values nil nil)))))
+  "Go to the next input (forward in time) in `history' that is a
+presentation-subtype of `ptype', respective to the pointer in
+`history'. Returns two values: the found object and its
+presentation type, both of which will be NIL if no applicable
+object can be found."
+  (with-accessors ((pointer presentation-history-pointer)
+                   (array presentation-history-array)) history
+    ;; If no navigation has been performed, we have no object to go
+    ;; forwards to.
+    (if (or (null pointer) (>= (1+ pointer) (length array)))
+        (values nil nil)
+        (progn
+          (incf pointer)
+          (destructuring-bind (object . object-ptype)
+              (aref array pointer)
+            (if object-ptype
+                (if (presentation-subtypep object-ptype ptype)
+                    (values object object-ptype)
+                    (presentation-history-next history ptype))
+                (values nil nil)))))))
 
 (defun presentation-history-previous (history ptype)
-  (let ((first-object (goatee::forward history)))
-    (loop
-     for first-time = t then nil
-     for cell = first-object then (goatee::forward history)
-     for (object . object-ptype) = (goatee::contents cell)
-     while (or first-time (not (eq first-object cell)))
-     if (presentation-subtypep object-ptype ptype)
-       return (values object object-ptype)
-     end
-     finally (return (values nil nil)))))
+  "Go to the previous input (backward in time) in `history' that
+is a presentation-subtype of `ptype', respective to the pointer
+in `history'. Returns two values: the found object and its
+presentation type, both of which will be NIL if no applicable
+object can be found."
+  (with-accessors ((pointer presentation-history-pointer)
+                   (array presentation-history-array)) history
+    (if (and (numberp pointer) (zerop pointer))
+        (values nil nil)
+        (progn
+          (if pointer
+              (decf pointer)
+              (setf pointer (1- (fill-pointer array))))
+          (destructuring-bind (object . object-ptype)
+              (when (array-in-bounds-p array pointer)
+                (aref array pointer))
+            (if object-ptype
+                (if (presentation-subtypep object-ptype ptype)
+                    (values object object-ptype)
+                    (progn (presentation-history-previous history ptype)))
+                (values nil nil)))))))
 
 (defmacro with-object-on-history ((history object ptype) &body body)
-  `(goatee::with-object-on-ring ((cons ,object ,ptype) ,history)
-     ,@body))
+  "Evaluate `body' with `object' as `ptype' as the head (most
+recently added object) on `history', and remove it again after
+`body' has run. If `body' as `ptype' is already the head, the
+history will be unchanged."
+  (with-gensyms (added)
+    `(let ((,added (presentation-history-add ,history ,object ,ptype)))
+       (unwind-protect (progn ,@body)
+         (when ,added
+           (decf (fill-pointer (presentation-history-array ,history))))))))
 
 (defun presentation-history-add (history object ptype)
   "Add OBJECT and PTYPE to the HISTORY unless they are already at the head of
  HISTORY"
-  (let* ((cell (goatee::dbl-head history))
-	 (contents (and cell (goatee::contents cell))))
-    (unless (and cell
-		 (eql object (car contents))
-		 (equal ptype (cdr contents)))
+  (multiple-value-bind (top-object top-ptype)
+      (presentation-history-top history ptype)
+    (unless (and top-ptype (eql object top-object) (equal ptype top-ptype))
       (presentation-history-insert history object ptype))))
 
 ;;; Context-dependent input
@@ -730,34 +783,37 @@ call-next-method to get the \"real\" answer based on the stream type."))
         ;; presentation history. In addition, we'll implement the Genera
         ;; behavior of temporarily putting the default on the history
         ;; stack so the user can conveniently suck it in.
-        (flet ((do-accept (args)
-                 (apply #'stream-accept stream real-type args))
-               (get-history ()
-                 (when real-history-type
-                   (funcall-presentation-generic-function
-                    presentation-type-history-for-stream
-                    real-history-type stream))))
+        (labels ((get-history ()
+                   (when real-history-type
+                     (funcall-presentation-generic-function
+                      presentation-type-history-for-stream
+                      real-history-type stream)))
+                 (do-accept (args)
+                   (apply #'stream-accept stream real-type args)))
           (let* ((default-from-history (and (not defaultp) provide-default))
                  (history (get-history))
                  (results
                   (multiple-value-list
                    (if history
-                       (let ((*active-history-type* real-history-type))
-                         (cond (defaultp
-                                (with-object-on-history
-                                    (history default real-default-type)
-                                  (do-accept rest-args)))
-                               (default-from-history
-                                (multiple-value-bind
-                                      (history-default history-type)
-                                    (presentation-history-head history
-                                                               real-default-type)
-                                  (do-accept (if history-type
-                                                 (list* :default history-default
-                                                        :default-type history-type
-                                                        rest-args)
-                                                 rest-args))))
-                               (t (do-accept rest-args))))
+                       (unwind-protect
+                            (let ((*active-history-type* real-history-type))
+                              (cond (defaultp
+                                     (with-object-on-history
+                                         (history default real-default-type)
+                                       (do-accept rest-args)))
+                                    (default-from-history
+                                     (multiple-value-bind
+                                           (history-default history-type)
+                                         (presentation-history-top history
+                                                                   real-default-type)
+                                       (do-accept (if history-type
+                                                      (list* :default history-default
+                                                             :default-type history-type
+                                                             rest-args)
+                                                      rest-args))))
+                                    (t (do-accept rest-args))))
+                         (unless *recursive-accept-p*
+                           (presentation-history-reset-pointer (get-history))))
                        (do-accept rest-args))))
                  (results-history (get-history)))
             (when results-history
