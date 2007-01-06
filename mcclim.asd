@@ -41,6 +41,11 @@
   (defun find-swank ()
     (or (find-swank-package)
         (find-swank-system)))
+  (defun dep-on-swank ()
+    (if (and (find-swank-system)
+             (not (find-package :swank)))
+        '(and)
+        '(or)))
   (defun ifswank ()
     (if (find-swank)
         '(and)
@@ -257,7 +262,7 @@
 
 
 (defsystem :drei-mcclim
-  :depends-on (:flexichain :esa-mcclim :clim-core #+#.(mcclim.system::ifswank) :swank)
+  :depends-on (:flexichain :esa-mcclim :clim-core #+#.(mcclim.system::dep-on-swank) :swank)
   :components
   ((:module "cl-automaton"
             :pathname #.(make-pathname :directory '(:relative "Drei" "cl-automaton"))
