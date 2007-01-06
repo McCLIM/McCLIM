@@ -40,7 +40,11 @@
       (asdf:missing-component ())))
   (defun find-swank ()
     (or (find-swank-package)
-        (find-swank-system))))
+        (find-swank-system)))
+  (defun ifswank ()
+    (if (find-swank)
+        '(and)
+        '(or))))
 
 ;;; Legacy CMUCL support stuff
 #+cmu
@@ -253,7 +257,7 @@
 
 
 (defsystem :drei-mcclim
-  :depends-on (:flexichain :esa-mcclim :clim-core #.(if (find-swank-system) :swank (values)))
+  :depends-on (:flexichain :esa-mcclim :clim-core #+#.(mcclim.system::ifswank) :swank)
   :components
   ((:module "cl-automaton"
             :pathname #.(make-pathname :directory '(:relative "Drei" "cl-automaton"))
@@ -304,9 +308,7 @@
                          (:file "lisp-syntax" :depends-on ("core" "motion" "fundamental-syntax"))
                          (:file "lisp-syntax-swine" :depends-on ("lisp-syntax"))
                          (:file "lisp-syntax-commands" :depends-on ("lisp-syntax-swine" "misc-commands"))
-                         #.(if (find-swank)
-                               '(:file "lisp-syntax-swank" :depends-on ("lisp-syntax"))
-                               (values))))))
+                         #+#.(mcclim.system::ifswank) (:file "lisp-syntax-swank" :depends-on ("lisp-syntax"))))))
 
 (defsystem :drei-tests
   :depends-on (:drei-mcclim :fiveam)
