@@ -348,7 +348,8 @@
           :pathname #.(make-pathname :directory '(:relative "Goatee") :name "presentation-history" :type "lisp"))
    (:file "input-editing-goatee")
    (:file "input-editing-drei")
-   (:file "text-editor-gadget")))
+   (:file "text-editor-gadget")
+   (:file "Extensions/rgb-image")))
 
 (defsystem :clim-clx
     :depends-on (:clim #+(or sbcl openmcl ecl allegro) :clx)
