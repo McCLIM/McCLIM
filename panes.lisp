@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.176 2006/12/23 11:42:43 ahefner Exp $
+;;; $Id: panes.lisp,v 1.177 2007/01/07 19:53:05 thenriksen Exp $
 
 (in-package :clim-internals)
 
@@ -2543,7 +2543,8 @@ to computed distance to scroll in response to mouse wheel events."))
   (stream-replay pane))
 
 (defmethod window-viewport ((pane clim-stream-pane))
-  (pane-viewport-region pane))
+  (or (pane-viewport-region pane)
+      (sheet-region pane)))
 
 (defmethod window-erase-viewport ((pane clim-stream-pane))
   (with-bounding-rectangle* (x1 y1 x2 y2) (or (pane-viewport-region pane)
