@@ -119,6 +119,7 @@ advised of the possiblity of such damages.
 	 (binary (make-pathname :defaults bin-dir
 				:name name
 				:type (file-type-for-binaries))))
+    (ensure-directories-exist bin-dir)
     (when (or (not (probe-file binary))
 	      (< (file-write-date binary) (file-write-date source)))
       (compile-file source :output-file binary))
