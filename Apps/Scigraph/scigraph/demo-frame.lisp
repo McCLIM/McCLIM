@@ -117,7 +117,7 @@ advised of the possiblity of such damages.
 		  :color :salmon
 		  :symbologies (list :line-symbol)
 		  :data-symbol :circle
-		  :pattern :filled
+		  :pattern nil
 		  :equation '(* (sin (* a x)) (sin (* b x)))
 		  :variable 'x :min 0 :max 10 :increment .1
 		  :parameters '((a 2) (b 3))))
