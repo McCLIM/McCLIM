@@ -30,67 +30,40 @@
 (defun insert-ptype-history (object type)
   (multiple-value-bind (line pos)
       (point* *buffer*)
-    (setf *insert-extent* (make-instance 'extent
-					 :start-line line
-					 :start-pos pos))
     (multiple-value-bind (printed-rep accept-object)
 	(present-acceptably-to-string object type
 				      +textual-view+ ; XXX
 				      type)
-      (format *trace-output* "insert-ptype-history: ~S, ~S~%"
-	      (pos (bp-start *insert-extent*))
-	      (pos (bp-end *insert-extent*)))
       ;; XXX accept-object
-      (insert *buffer* printed-rep :line line :pos pos)
-      (format *trace-output* "insert-ptype-history:: ~S, ~S~%"
-	      (pos (bp-start *insert-extent*))
-	      (pos (bp-end *insert-extent*))))))
+      (insert *buffer* printed-rep :line line :pos pos))))
 
 
-(defun cmd-presentation-history-yank (&key &allow-other-keys)
+(defun cmd-history-yank-next (&key &allow-other-keys)
   (let* ((accepting-type climi::*active-history-type*)
-	 (history (and accepting-type
-		       (climi::presentation-type-history accepting-type))))
-    (setq *last-history-type* accepting-type
-	  *last-history* history)
+         (history (and accepting-type
+                       (presentation-type-history accepting-type))))
     (when history
       (multiple-value-bind (object type)
-	  (climi::presentation-history-head history accepting-type)
-	(if type
-	    (insert-ptype-history object type))))))
+          (climi::presentation-history-next history accepting-type)
+        (when type
+          (clear-buffer *buffer*)
+          (insert-ptype-history object type))))))
 
-(defun cmd-presentation-history-yank-next (&key &allow-other-keys)
-  (when (and *last-history-type* *last-history*)
+(defun cmd-history-yank-previous (&key &allow-other-keys)
+  (let* ((accepting-type climi::*active-history-type*)
+         (history (and accepting-type
+                       (presentation-type-history accepting-type))))
+    (when history
       (multiple-value-bind (object type)
-	  (climi::presentation-history-next *last-history* *last-history-type*)
-	(when type
-	  (delete-region *buffer*
-			 (bp-start *insert-extent*)
-			 (bp-end *insert-extent*))
-	  (insert-ptype-history object type)))))
+          (climi::presentation-history-previous history accepting-type)
+        (when type
+          (clear-buffer *buffer*)
+          (insert-ptype-history object type))))))
 
+(add-gesture-command-to-table '(#\p :meta)
+                              'cmd-history-yank-previous
+                              *simple-area-gesture-table*)
 
-(defun goatee-next (&key &allow-other-keys)
-  (cond ((or (eq *last-command* 'cmd-presentation-history-yank)
-	     (and (eq *last-command* 'goatee-next)
-		  (or (eq *last-yank-command* 'cmd-presentation-history-yank-next) 
-		      (eq *last-yank-command*
-			  'cmd-presentation-history-yank-prev)))) 
-	 (funcall #'cmd-presentation-history-yank-next)
-	 (setq *last-yank-command* 'cmd-presentation-history-yank-next))
-	((or (eq *last-command* 'cmd-yank)
-	     (eq *last-command* 'cmd-yank-prev)
-	     (and (eq *last-command* 'goatee-next)
-		  (or (eq *last-yank-command* 'cmd-yank-next) 
-		      (eq *last-yank-command* 'cmd-yank-prev))))
-	 (funcall #'cmd-yank-next)
-	 (setq *last-yank-command* 'cmd-yank-next))
-	(t (beep))))
-
-(add-gesture-command-to-table '(#\y :control :meta)
-			      'cmd-presentation-history-yank
-			      *simple-area-gesture-table*)
-
-(add-gesture-command-to-table '(#\y :meta)
-			      'goatee-next
-			      *simple-area-gesture-table*)
+(add-gesture-command-to-table '(#\n :meta)
+                              'cmd-history-yank-next
+                              *simple-area-gesture-table*)
