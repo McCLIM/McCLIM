@@ -95,7 +95,9 @@
 
 (defmethod arglist ((image swank-local-image) symbol)
   (declare (ignore image))
-  (swank::arglist symbol))
+  (let ((arglist (swank::arglist symbol)))
+    (unless (eq arglist :not-available)
+      arglist)))
 
 (defmethod simple-completions ((image swank-local-image) string default-package)
   (declare (ignore image))
