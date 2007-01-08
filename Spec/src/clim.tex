@@ -4,7 +4,9 @@
                                 % --SWM
 \pagestyle{headings}
 \usepackage{makeidx}
-\usepackage{epsfig}
+% replaced with using graphics package [2007/01/05:rpg]
+%\usepackage{epsfig}
+\usepackage{graphicx}
 
 \makeatletter
 \renewenvironment{theindex}%
@@ -16,6 +18,22 @@
   \let\item\@idxitem}
   {\end{small}\clearpage}
 \makeatother
+
+%% added to try to make nice bookmarks in PDF... [2005/04/12:rpg]
+\ifx\pdfoutput\undefined \csname newcount\endcsname\pdfoutput \fi 
+\ifcase\pdfoutput  \else 
+\usepackage[pdftex]{hyperref}
+\fi
+
+%% added to try to make nice bookmarks in PDF... [2005/04/12:rpg]
+\ifx\pdfoutput\undefined \csname newcount\endcsname\pdfoutput \fi 
+\ifcase\pdfoutput \DeclareGraphicsExtensions{.epsi}\DeclareGraphicsRule{epsi}{eps}{*}{}
+\fi
+
+% \DeclareGraphicsExtensions{.pdf,.epsi}
+% % \DeclareGraphicsRule{epsi}{eps}{*}{}
+
+% \DeclareGraphicsRule{epsi}{eps}{*}{}
 
 %\usepackage{times}
 
