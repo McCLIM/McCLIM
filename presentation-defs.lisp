@@ -172,6 +172,21 @@
 	    when (presentation-subtypep type or-type)
 	    do (return-from presentation-subtypep (values t t))
 	    finally (return-from presentation-subtypep (values nil t))))
+    (when (eq super-name 'satisfies)
+      (return-from presentation-subtypep (values nil nil)))
+    (with-presentation-type-decoded (sub-name sub-parameters)
+      type
+       (when (eq sub-name 'and)
+	 (loop for and-type in sub-parameters
+	       with subtypep and knownp
+	       with answer-knownp = t
+	       do (multiple-value-setq (subtypep knownp)
+		      (presentation-subtypep and-type maybe-supertype))
+	       if subtypep
+		 do (return-from presentation-subtypep (values t t))
+	       else			; track whether we know the answer
+		 do (setf answer-knownp (and answer-knownp knownp))
+	       finally (return-from presentation-subtypep (values nil answer-knownp)))))
     (map-over-presentation-type-supertypes
      #'(lambda (name massaged)
 	 (when (eq name super-name)
@@ -1526,10 +1541,17 @@ history will be unchanged."
   ;; XXX: We can only visually represent the pathname if it has a name
   ;; - making it wild is a compromise. If the pathname is completely
   ;; blank, we leave it as-is, though.
+
+  ;; The above comment was meant to indicate that if the pathname had
+  ;; neither a name NOR a directory, then it couldn't be visually
+  ;; represented.  Some discussion has ensued on the possbility of
+  ;; emitting something like "A pathname of type <foo>"
+  ;; [2007/01/08:rpg]
   (let ((pathname (if (equal object #.(make-pathname))
                       object
                       (merge-pathnames object (make-pathname :name :wild)))))
-    (princ pathname stream)))
+    (princ object stream))
+  )
 
 (define-presentation-method present ((object string) (type pathname)
                                      stream (view textual-view)
@@ -2149,6 +2171,19 @@ history will be unchanged."
 	   :stream stream :view view
 	   :acceptably acceptably
 	   :for-context-type for-context-type))
+
+(define-presentation-method accept ((type and)
+				    (stream input-editing-stream)
+				    (view textual-view)
+				    &key)
+  (let* ((subtype (first types))
+	 (value (accept subtype
+			:stream stream
+			:view view
+			:prompt nil)))
+    (unless (presentation-typep value type)
+      (simple-parse-error "Input type is not of type ~S" type))
+    value))
 
 (define-presentation-type-abbreviation token-or-type (tokens type)
   `(or (member-alist ,tokens) ,type))
