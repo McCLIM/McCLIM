@@ -2,6 +2,9 @@
   (asdf:oos 'asdf:load-op :clim)
   (asdf:oos 'asdf:load-op :clim-clx))
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (asdf:oos 'asdf:load-op :cl-fad))
+
 (in-package :clim-user)
 
 ; LTAG-start:file-browser-all
@@ -18,6 +21,9 @@
 				 file-browser
 				 interactor))))
 
+(define-presentation-type dir-pathname ()
+  :inherit-from 'pathname)
+
 (defmethod dirlist-display-files ((frame file-browser) pane)
   ;; Clear old displayed entries
   (clear-output-record (stream-output-history pane))
@@ -26,27 +32,39 @@
     ;; Instead of write-string, we use present so that the link to
     ;; object file and the semantic information that file is
     ;; pathname is retained.
-    (present file 'pathname :stream pane) 
+    (present file 
+	     (if (cl-fad:directory-pathname-p file) 'dir-pathname 'pathname)
+	     :stream pane)
     (terpri pane)))
 
 (define-file-browser-command (com-edit-directory :name "Edit Directory")
-  ((dir 'pathname))
-  (let ((dir (make-pathname :directory (pathname-directory dir)
-			    :name :wild :type :wild :version :wild
-			    :defaults dir)))
+  ((dir 'dir-pathname))
+  ;; the following was a previous attempt to deal with the oddities of
+  ;; CL pathnames.  Unfortunately, it does not work properly with all
+  ;; lisp implementations.  Because of these oddities, we really need
+  ;; a layer like cl-fad to keep things straight. [2007/01/05:rpg]
+;;;  (let ((dir (make-pathname :directory (pathname-directory dir)
+;;;			    :name :wild :type :wild :version :wild
+;;;			    :defaults dir)))
     (setf (active-files *application-frame*)
-	  (directory dir))))
+	  (cl-fad:list-directory dir)))
 
 (define-presentation-to-command-translator pathname-to-edit-command
-    (pathname                           ; source presentation-type
+    (dir-pathname                       ; source presentation-type
      com-edit-directory                 ; target-command
      file-browser                       ; command-table
      :gesture :select                   ; use this translator for pointer clicks
      :documentation "Edit this path")   ; used in context menu
     (object)                            ; argument List
-  (list object))                        ; arguments for target-command
+    (list object))                        ; arguments for target-command
+
+(define-file-browser-command (com-quit :name t) ()
+  (frame-exit *application-frame*)
+  )
 
 (defmethod adopt-frame :after (frame-manager (frame file-browser))
+  (declare (ignore frame-manager))
   (execute-frame-command frame
-    `(com-edit-directory ,(make-pathname :directory '(:absolute)))))
+	`(com-edit-directory ,(make-pathname :directory '(:absolute)))))
+
 ; LTAG-end
