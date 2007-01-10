@@ -165,9 +165,6 @@ the arglist for the most recently enclosed operator."
 (define-presentation-to-command-translator lookup-symbol-arglist
     (symbol com-lookup-arglist lisp-table
             :gesture :describe
-            :tester ((object presentation)
-                     (declare (ignore object))
-                     (not (eq (presentation-type presentation) 'unknown-symbol)))
             :documentation "Lookup arglist")
     (object)
   (list object))
