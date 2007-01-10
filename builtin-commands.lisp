@@ -93,9 +93,15 @@
     (t nil global-command-table
      :gesture :select
      :tester ((presentation context-type)
-	      (presentation-subtypep (presentation-type presentation)
-				     context-type))
-     :tester-definitive t
+              ;; see the comments around DEFUN PRESENTATION-SUBTYPEP
+              ;; for some of the logic behind this.  Only when
+              ;; PRESENTATION-SUBTYPEP is unsure do we test the object
+              ;; itself for PRESENTATION-TYPEP.
+              (multiple-value-bind (yp sp)
+                  (presentation-subtypep (presentation-type presentation)
+                                         context-type)
+                (or yp (not sp))))
+     :tester-definitive nil
      :menu nil
      :documentation ((object presentation context-type frame event window x y stream)
                      (let* ((type (presentation-type presentation))
@@ -116,6 +122,10 @@
                                     :stream stream
                                     :sensitive nil)))))
   (object presentation)
+  ;; returning (PRESENTATION-TYPE PRESENTATION) as the ptype is
+  ;; formally undefined, as this means that the translator returns a
+  ;; presentation type which is not PRESENTATION-SUBTYPEP the
+  ;; translator's TO-TYPE.
   (values object (presentation-type presentation)))
 
 (define-presentation-action presentation-menu

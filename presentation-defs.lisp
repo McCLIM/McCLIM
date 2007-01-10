@@ -162,31 +162,126 @@
 	       (block presentation-subtypep
 		 ,@body))))))))
 
+;;; PRESENTATION-SUBTYPEP suffers from some of the same problems as
+;;; CL:SUBTYPEP, most (but sadly not all) of which were solved in
+;;; H. Baker "A Decision Procedure for SUBTYPEP"; additionally, it
+;;; suffers from the behaviour being underspecified, as CLIM
+;;; documentation did not have the years of polish that CLtS did.
+;;;
+;;; So you might wonder why, instead of copying or using directly some
+;;; decent Public Domain subtype code (such as that found in SBCL,
+;;; implementing CL:SUBTYPEP), there's this slightly wonky
+;;; implementation here.  Well, some of the answer lies in the fact
+;;; that the subtype relationships answered by this predicate are not
+;;; in fact analogous to CL's type system.  The major use of
+;;; PRESENTATION-SUBTYPEP seems to be for determining whether a
+;;; presentation is applicable as input to a translator (including the
+;;; default translator, transforming an object to itself); actually,
+;;; the first step is taken by STUPID-SUBTYPEP, but that I believe is
+;;; simply intended to be a short-circuiting conservative version of
+;;; PRESENTATION-SUBTYPEP.
+;;;
+;;; Most presentation types in CLIM are hierarchically arranged by
+;;; single-inheritance, and SUBTYPEP relations on the hierarchy are
+;;; easy to determine: simply walk up the hierarchy until you find the
+;;; putative supertype (in which case the answer is T, T unless the
+;;; type's parameters are wrong) or you find the universal supertype
+;;; (in which case the answer is NIL, T.  There are numerous wrinkles,
+;;; however...
+;;;
+;;; (1) the NIL presentation type is the universal subtype, breaking
+;;;     the single-inheritance of the hierarchy.  This isn't too bad,
+;;;     because it can be special-cased.
+;;;
+;;; (2) union types can be constructed, destroying the
+;;;     single-inheritance hierarchy (when used as a subtype).
+;;;
+;;; (3) union types can give rise to ambiguity.  For example, is the
+;;;     NUMBER presentation type subtypep (OR REAL COMPLEX)?  What
+;;;     about (INTEGER 3 6) subtypep (OR (INTEGER 3 4) (INTEGER 5 6))?
+;;;     Is (OR A B) subtypep (OR B A)?  The answer to this last
+;;;     question is not obvious, as the two types have different
+;;;     ACCEPT behaviour if A and B have any Lisp objects in common,
+;;;     even if the presentation types are hierarchically unrelated...
+;;;
+;;; (4) intersection types can be constructed, destroying the
+;;;     single-inheritance hierarchy (when used as a supertype).  This
+;;;     is partially mitigated by the explicit documentation that the
+;;;     first type in the AND type's parameters is privileged and
+;;;     treated specially by ACCEPT.
+;;;
+;;; Given these difficulties, I'm aiming for roughly expected
+;;; behaviour from STUPID- and PRESENTATION-SUBTYPEP, rather than
+;;; something which has a comprehensive understanding of presentation
+;;; types and the Lisp object universe (as this would be unachievable
+;;; anyway: the user can write arbitrary PRESENTATION-TYPEP
+;;; functions); PRESENTATION-SUBTYPEP should not be thought of as a
+;;; predicate over sets of Lisp objects, but simply a formal predicate
+;;; over a graph of names.  This gives rise to the implementation
+;;; below for OR and AND types, and the hierarchical walk for all
+;;; other types.  CSR, 2007-01-10
 (defun presentation-subtypep (type maybe-supertype)
-  (when (equal type maybe-supertype)
+  ;; special shortcuts: the universal subtype is privileged (and
+  ;; doesn't in fact fit into a hierarchical lattice); the universal
+  ;; supertype is easy to identify.
+  (when (or (eql type nil) (eql maybe-supertype t))
+    (return-from presentation-subtypep (values t t)))
+  (when (eql type maybe-supertype)
     (return-from presentation-subtypep (values t t)))
   (with-presentation-type-decoded (super-name super-parameters)
-    maybe-supertype
-    (when (eq super-name 'or)
-      (loop for or-type in super-parameters
-	    when (presentation-subtypep type or-type)
-	    do (return-from presentation-subtypep (values t t))
-	    finally (return-from presentation-subtypep (values nil t))))
-    (when (eq super-name 'satisfies)
-      (return-from presentation-subtypep (values nil nil)))
-    (with-presentation-type-decoded (sub-name sub-parameters)
-      type
-       (when (eq sub-name 'and)
-	 (loop for and-type in sub-parameters
-	       with subtypep and knownp
-	       with answer-knownp = t
-	       do (multiple-value-setq (subtypep knownp)
-		      (presentation-subtypep and-type maybe-supertype))
-	       if subtypep
-		 do (return-from presentation-subtypep (values t t))
-	       else			; track whether we know the answer
-		 do (setf answer-knownp (and answer-knownp knownp))
-	       finally (return-from presentation-subtypep (values nil answer-knownp)))))
+      maybe-supertype
+    (with-presentation-type-decoded (type-name type-parameters)
+        type
+      (cond
+        ;; DO NOT BE TEMPTED TO REARRANGE THESE CLAUSES
+        ((eq type-name 'or)
+         (dolist (or-type type-parameters 
+                  (return-from presentation-subtypep (values t t)))
+           (multiple-value-bind (yesp surep)
+               (presentation-subtypep or-type maybe-supertype)
+             (unless yesp
+               (return-from presentation-subtypep (values yesp surep))))))
+        ((eq super-name 'and)
+         (let ((result t))
+           (dolist (and-type super-parameters 
+                    (return-from presentation-subtypep (values result result)))
+             (cond
+               ((and (consp and-type) (eq (car and-type) 'satisfies))
+                (setq result nil))
+               ((and (consp and-type) (eq (car and-type) 'not))
+                (multiple-value-bind (yp sp)
+                    (presentation-subtypep type (cadr and-type))
+                  (if yp
+                      (return-from presentation-subtypep (values nil t))
+                      (setq result nil))))
+               (t (multiple-value-bind (yp sp)
+                      (presentation-subtypep type and-type)
+                    (unless yp
+                      (if sp
+                          (return-from presentation-subtypep (values nil t))
+                          (setq result nil)))))))))
+        ((eq super-name 'or)
+         (assert (not (eq type-name 'or)))
+         ;; FIXME: this would be the right method were it not for the
+         ;; fact that there can be unions 'in disguise' in the
+         ;; subtype; examples: 
+         ;;   (PRESENTATION-SUBTYPEP 'NUMBER '(OR REAL COMPLEX))
+         ;;   (PRESENTATION-SUBTYPEP '(INTEGER 3 6)
+         ;;                          '(OR (INTEGER 2 5) (INTEGER 4 7)))
+         ;; Sorry about that.
+         (let ((surep t))
+           (dolist (or-type super-parameters 
+                    (return-from presentation-subtypep (values nil surep)))
+             (multiple-value-bind (yp sp)
+                 (presentation-subtypep type or-type)
+               (cond
+                 (yp (return-from presentation-subtypep (values t t)))
+                 ((not sp) (setq surep nil)))))))
+        ((eq type-name 'and)
+         (assert (not (eq super-name 'and)))
+         (multiple-value-bind (yp sp)
+             (presentation-subtypep (car type-parameters) maybe-supertype)
+           (return-from presentation-subtypep (values yp yp))))))
     (map-over-presentation-type-supertypes
      #'(lambda (name massaged)
 	 (when (eq name super-name)
@@ -2172,18 +2267,14 @@ history will be unchanged."
 	   :acceptably acceptably
 	   :for-context-type for-context-type))
 
-(define-presentation-method accept ((type and)
-				    (stream input-editing-stream)
-				    (view textual-view)
-				    &key)
-  (let* ((subtype (first types))
-	 (value (accept subtype
-			:stream stream
-			:view view
-			:prompt nil)))
-    (unless (presentation-typep value type)
-      (simple-parse-error "Input type is not of type ~S" type))
-    value))
+(define-presentation-method accept 
+    ((type and) (stream input-editing-stream) (view textual-view) &rest args &key)
+  (let ((subtype (first types)))
+    (multiple-value-bind (obj ptype)
+        (apply-presentation-generic-function accept subtype stream view args)
+      (unless (presentation-typep obj type)
+        (simple-parse-error "Input object ~S is not of type ~S" obj type))
+      obj)))
 
 (define-presentation-type-abbreviation token-or-type (tokens type)
   `(or (member-alist ,tokens) ,type))
