@@ -28,6 +28,8 @@
    Text Styles" in the manual.
 ** Improvement: Added support for bezier splines (Robert Strandh).
    To be documented.
+** better PRESENTATION-SUBTYPEP (more likely to give the right answer
+   on some-of and all-of presentation types)
 
 * Changes in mcclim-0.9.3 "All Souls' Day" relative to 0.9.2:
 ** backend improvement: The Null backend now registers itself in the
