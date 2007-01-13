@@ -791,6 +791,7 @@ to an `extended-output-stream' while `body' is being evaluated."
   (with-drei-options ((drei-instance stream)
                       :syntax "Lisp"
                       :keep-syntax t)
+    (redraw-input-buffer stream)
     (call-next-method)))
 
 (define-presentation-method accept ((type expression)
