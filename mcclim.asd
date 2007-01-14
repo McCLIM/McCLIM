@@ -44,12 +44,12 @@
   (defun dep-on-swank ()
     (if (and (find-swank-system)
              (not (find-package :swank)))
-        '(and)
-        '(or)))
+        '(:and)
+        '(:or)))
   (defun ifswank ()
     (if (find-swank)
-        '(and)
-        '(or))))
+        '(:and)
+        '(:or))))
 
 ;;; Legacy CMUCL support stuff
 #+cmu
@@ -310,7 +310,7 @@
                          (:file "misc-commands" :depends-on ("basic-commands"))
                          (:file "unicode-commands" :depends-on ("core" "drei-clim"))
                          (:file "search-commands" :depends-on ("core" "drei-clim"))
-                         (:file "lisp-syntax" :depends-on ("core" "motion" "fundamental-syntax"))
+                         (:file "lisp-syntax" :depends-on ("motion" "fundamental-syntax"))
                          (:file "lisp-syntax-swine" :depends-on ("lisp-syntax"))
                          (:file "lisp-syntax-commands" :depends-on ("lisp-syntax-swine" "misc-commands"))
                          #+#.(mcclim.system::ifswank) (:file "lisp-syntax-swank" :depends-on ("lisp-syntax"))))))
@@ -349,7 +349,8 @@
    (:file "input-editing-goatee")
    (:file "input-editing-drei")
    (:file "text-editor-gadget")
-   (:file "Extensions/rgb-image")))
+   (:file "Extensions/rgb-image" :pathname #.(make-pathname :directory '(:relative "Extensions")
+                                                            :name "rgb-image"))))
 
 (defsystem :clim-clx
     :depends-on (:clim #+(or sbcl openmcl ecl allegro) :clx)
