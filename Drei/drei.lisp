@@ -628,7 +628,7 @@ the concrete Drei implementation. ")
    (%minibuffer :initform nil
                 :accessor minibuffer
                 :initarg :minibuffer
-                :type (or minibuffer-pane null)
+                :type (or minibuffer-pane pointer-documentation-pane null)
                 :documentation "The minibuffer pane (or null)
 associated with the Drei instance. This may be NIL.")
    (%command-table :initform (make-instance 'drei-command-table
