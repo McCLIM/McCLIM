@@ -102,9 +102,9 @@
   (loop with m = (clone-mark (low-mark (buffer mark))
 		       :right)
 	initially (beginning-of-buffer m)
-	do (end-of-line m)
+       	repeat (1- line-number)
 	until (end-of-buffer-p m)
-	repeat (1- line-number)
+       	do (end-of-line m)
 	do (incf (offset m))
 	   (end-of-line m)
 	finally (beginning-of-line m)
@@ -202,16 +202,16 @@ compression means just the deletion of trailing whitespaces."
           with line-beginning-offset = (offset begin-mark)
           with walking-mark = (clone-mark begin-mark)
           while (mark< walking-mark mark)
-          as object = (object-after walking-mark)
-          do (case object
-               (#\Space
-                (setf (offset begin-mark) (offset walking-mark))
-                (incf column))
-               (#\Tab
-                (setf (offset begin-mark) (offset walking-mark))
-                (incf column (- tab-width (mod column tab-width))))
-               (t
-                (incf column)))
+          do (let ((object (object-after walking-mark)))
+               (case object
+                 (#\Space
+                  (setf (offset begin-mark) (offset walking-mark))
+                  (incf column))
+                 (#\Tab
+                  (setf (offset begin-mark) (offset walking-mark))
+                  (incf column (- tab-width (mod column tab-width))))
+                 (t
+                  (incf column))))
              (when (and (>= column fill-column)
 			(/= (offset begin-mark) line-beginning-offset))
 	       (when compress-whitespaces
@@ -266,8 +266,8 @@ spaces only."))
   (let ((mark2 (clone-mark mark)))
     (beginning-of-line mark2)
     (loop until (end-of-buffer-p mark2)
-       as object = (object-after mark2)
-       while (or (eql object #\Space) (eql object #\Tab))
+       while (or (eql (object-after mark2) #\Space)
+                 (eql (object-after mark2) #\Tab))
        do (delete-range mark2 1))
     (loop until (zerop indentation)
        do (cond ((and tab-width (>= indentation tab-width))

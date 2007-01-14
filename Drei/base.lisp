@@ -268,14 +268,16 @@ by `mark1' and `mark2'"))
 constituent character of the line."
   (let ((mark2 (clone-mark mark)))
     (beginning-of-line mark2)
-    (loop with indentation = 0
-          until (end-of-buffer-p mark2)
-          as object = (object-after mark2)
-          while (or (eql object #\Space) (eql object #\Tab))
-          do (incf indentation
-                   (if (eql (object-after mark2) #\Tab) tab-width 1))
-             (incf (offset mark2))
-          finally (return indentation))))
+    (if (end-of-line-p mark2)
+        0
+        (loop with indentation = 0
+           as object = (object-after mark2)
+           until (end-of-buffer-p mark2)
+           while (or (eql object #\Space) (eql object #\Tab))
+           do (incf indentation
+                    (if (eql (object-after mark2) #\Tab) tab-width 1))
+           (incf (offset mark2))
+           finally (return indentation)))))
 
 (defmethod buffer-number-of-lines-in-region (buffer offset1 offset2)
   "Helper method for number-of-lines-in-region.  Count newline
