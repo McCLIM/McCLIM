@@ -603,7 +603,7 @@ executed by this Drei instance. May be NIL if no command has been
 executed.")
    (%point-cursor :accessor point-cursor
                   :initarg :point-cursor
-                  :type cursor
+                  :type drei-cursor
                   :documentation "The cursor object associated
 with point. This is guaranteed to be displayed
 on top of all other cursors.")
