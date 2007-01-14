@@ -686,17 +686,19 @@ object can be found."
     (if (and (numberp pointer) (zerop pointer))
         (values nil nil)
         (progn
-          (if pointer
-              (decf pointer)
-              (setf pointer (1- (fill-pointer array))))
-          (destructuring-bind (object . object-ptype)
-              (when (array-in-bounds-p array pointer)
-                (aref array pointer))
-            (if object-ptype
-                (if (presentation-subtypep object-ptype ptype)
-                    (values object object-ptype)
-                    (progn (presentation-history-previous history ptype)))
-                (values nil nil)))))))
+          (cond ((and (numberp pointer) (plusp pointer))
+                 (decf pointer))
+                ((plusp (length array))
+                 (setf pointer (1- (fill-pointer array)))))
+          (if (and (numberp pointer) (array-in-bounds-p array pointer))
+              (destructuring-bind (object . object-ptype)
+                  (aref array pointer)
+                (if object-ptype
+                    (if (presentation-subtypep object-ptype ptype)
+                        (values object object-ptype)
+                        (progn (presentation-history-previous history ptype)))
+                    (values nil nil)))
+              (values nil nil))))))
 
 (defmacro with-object-on-history ((history object ptype) &body body)
   "Evaluate `body' with `object' as `ptype' as the head (most
