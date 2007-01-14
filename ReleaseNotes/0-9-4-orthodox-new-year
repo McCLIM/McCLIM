@@ -21,6 +21,25 @@ implementations:
 Also, McCLIM currently does not support lisps with case-sensitive
 readers (ACL "modern mode" and lower-case SCL).
 
+Known Bugs
+==========
+
+Due to the radical changes introduced by the new editor substrate,
+some bugs may surface in day-to-day use. We would very much like to
+hear about them on mcclim-devel@common-lisp.net. As a work-around, you
+can enable the old input substrate by using
+	(setf climi::*use-goatee* t)
+on the REPL when clim is loaded.
+
+The following bugs are known to exist:
+
+* McCLIM freetype can interact poorly with Drei under some
+  circumstances
+* Drei does not handle most reader macros well
+* Sometimes, the ENTER key is not very responsive when editing forms
+  with Drei
+* Calling stream-input-buffer is still buggy.
+
 Changes in mcclim-0.9.4 "Orthodox New Year" relative to 0.9.3:
 ===========================================================
 
