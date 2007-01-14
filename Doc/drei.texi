@@ -9,7 +9,7 @@
 
 Drei - an acronym for @i{Drei Replaces EINE's Inheritor} - is one of the
 editor substrates provided by McCLIM. Drei is activated by default, but
-if it gives you problem, you can disable it by evaluating @code{(setf
+if it gives you problems, you can disable it by evaluating @code{(setf
 clim-internals::*use-goatee* t)}.
 
 @menu
@@ -29,7 +29,7 @@ some of the code, is due to the flexibility that Drei is meant to
 expose. Drei has to work as, at least, an input-editor, a text editor
 gadget and a simple pane. These three different uses have widely
 different semantics for reading input and performing redisplay - from
-passively being fed gestures in the input editor, to having to event
+passively being fed gestures in the input editor, to having to do event
 handling and redisplay timing manually in the gadget
 version. Furthermore, Drei is extensible software, so we wished to make
 the differences between these three modus operandorum transparent to the
