@@ -20,8 +20,8 @@ can understand as a pathname. For example:
 
 You can also use the SBCL_SYSTEM environment variable to change which
 SBCL is used. Please note that SBCL will be run without evaluating the
-user- or system-initialization-file (--no-sysinit --no-userinit). If
-this does not work for you, edit make-tempfiles.sh
+system-initialization-file (--no-sysinit). If this does not work for
+you, edit make-tempfiles.sh
 
 The Makefile will have to reload McCLIM from scratch every time it
 regerenes the docstrings. If you are working on McCLIM, this is rather
