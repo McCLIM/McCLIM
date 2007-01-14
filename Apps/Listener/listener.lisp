@@ -96,7 +96,11 @@
               (with-output-as-presentation (t *package* 'listener-current-package)
                 (print-package-name t)))
             (cell (:center)
-              (when (probe-file *default-pathname-defaults*)
+                  ;; CLISP gives us an error when calling
+                  ;; `cl:probe-file' with a directory argument.
+              (when #+clisp (or (ignore-errors (ext:probe-directory *default-pathname-defaults*))
+                                (ignore-errors (probe-file *default-pathname-defaults*)))
+                    #-clisp (probe-file *default-pathname-defaults*)
                 (with-output-as-presentation (t (truename *default-pathname-defaults*) 'pathname)
                   (format t "~A" (frob-pathname *default-pathname-defaults*))))
               (when *directory-stack*
