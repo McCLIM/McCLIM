@@ -110,13 +110,13 @@ same (eq) destination state."
   "Returns true if state-set objects SS1 and SS2 contain the same (eql)
 state objects."
   (and (= (hash-table-count (ht ss1)) (hash-table-count (ht ss2)))
-       (loop for st being the hash-key of (ht ss1)
+       (loop for st being the hash-keys of (ht ss1)
 	  always (gethash st (ht ss2)))))
 
 (defmethod hash ((ss state-set) (s (eql +equalp-key-situation+)))
   "Returns the hash code for state-set SS."
   (the fixnum
-    (mod (loop for st being the hash-key of (ht ss)
+    (mod (loop for st being the hash-keys of (ht ss)
 	    sum (sxhash st))
 	 most-positive-fixnum)))
 

@@ -100,13 +100,13 @@
 
 (defmacro with-ht ((key value) table &body body)
   (let ((bucket (gensym "BUCKET")))
-    `(loop for ,bucket being the hash-value of (ht ,table) do
+    `(loop for ,bucket being the hash-values of (ht ,table) do
 	  (loop for (,key . ,value) in ,bucket do
 	       ,@body))))
 
 (defmacro with-ht-collect ((key value) table &body body)
   (let ((bucket (gensym "BUCKET")))
-    `(loop for ,bucket being the hash-value of (ht ,table) nconc
+    `(loop for ,bucket being the hash-values of (ht ,table) nconc
 	  (loop for (,key . ,value) in ,bucket collect
 	       ,@body))))
 

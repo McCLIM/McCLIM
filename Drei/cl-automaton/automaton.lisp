@@ -83,20 +83,21 @@ the initial state of A."
 	(worklist nil))
     (setf (gethash (initial a) visited) t)
     (push (initial a) worklist)
-    (loop while worklist
-       for s = (pop worklist) do
-	 (with-ht (tr nil) (transitions s)
-	   (let ((s2 (to tr)))
-	     (unless (gethash s2 visited)
-	       (setf (gethash s2 visited) t)
-	       (push s2 worklist)))))
+    (loop for s = (first worklist)
+       while worklist do
+       (pop worklist)
+       (with-ht (tr nil) (transitions s)
+         (let ((s2 (to tr)))
+           (unless (gethash s2 visited)
+             (setf (gethash s2 visited) t)
+             (push s2 worklist)))))
     visited))
 
 (defun accepting-states (a)
   "Returns a hash table containing the set of accepting states
 reachable from the initial state of A."
   (let ((accepting (make-hash-table)))
-    (loop for s being the hash-key of (states a)
+    (loop for s being the hash-keys of (states a)
        when (accept s) do
 	 (setf (gethash s accepting) t))
     accepting))
@@ -106,7 +107,7 @@ reachable from the initial state of A."
 states being the keys of STATES hash table, and finally returns
 STATES."
   (let ((i -1))
-    (loop for s being the hash-key of states do
+    (loop for s being the hash-keys of states do
 	 (setf (num s) (incf i))))
   states)
 
@@ -117,7 +118,7 @@ that the transition function is total. Finally, returns A."
 	 (tr (make-instance
 	      'transition :minc +min-char-code+ :maxc +max-char-code+ :to s)))
     (htadd (transitions s) tr)
-    (loop for p being the hash-key of (states a)
+    (loop for p being the hash-keys of (states a)
        and maxi = +min-char-code+ do
 	 (loop for tr in (sorted-transition-list p nil) do
 	      (with-slots (minc maxc) tr
@@ -140,7 +141,7 @@ intervals with the same destination. Finally, returns A."
       a
       (let ((states (states a)))
 	(set-state-nums states)
-	(loop for s being the hash-key of states do
+	(loop for s being the hash-keys of states do
 	     (let ((st (sorted-transition-list s t)))
 	       (reset-transitions s)
 	       (let ((p nil)
@@ -179,7 +180,7 @@ intervals with the same destination. Finally, returns A."
   "Returns a sorted vector of all interval start points (character
 codes)."
   (let ((pset (make-hash-table)))
-    (loop for s being the hash-key of (states a) do
+    (loop for s being the hash-keys of (states a) do
 	 (setf (gethash +min-char-code+ pset) t)
 	 (with-ht (tr nil) (transitions s)
 	   (with-slots (minc maxc) tr
@@ -188,7 +189,7 @@ codes)."
 	       (setf (gethash (1+ maxc) pset) t)))))
     (let ((pa (make-array (hash-table-count pset)
 			  :element-type 'char-code-type)))
-      (loop for p being the hash-key of pset and n from 0 do
+      (loop for p being the hash-keys of pset and n from 0 do
 	   (setf (aref pa n) p)
 	 finally (return (sort pa #'<))))))
 
@@ -196,19 +197,20 @@ codes)."
   "Returns the set of live states of A that are in STATES hash
 table. A state is live if an accepting state is reachable from it."
   (let ((map (make-hash-table)))
-    (loop for s being the hash-key of states do
+    (loop for s being the hash-keys of states do
 	 (setf (gethash s map) (make-hash-table)))
-    (loop for s being the hash-key of states do
+    (loop for s being the hash-keys of states do
 	 (with-ht (tr nil) (transitions s)
 	   (setf (gethash s (gethash (to tr) map)) t)))
     (let* ((live (accepting-states a))
-	   (worklist (loop for s being the hash-key of live collect s)))
-      (loop while worklist
-	 for s = (pop worklist) do
-	   (loop for p being the hash-key of (gethash s map)
-	      unless (gethash p live) do
-		(setf (gethash p live) t)
-		(push p worklist)))
+	   (worklist (loop for s being the hash-keys of live collect s)))
+      (loop for s = (first worklist)
+         while worklist do
+         (pop worklist)
+         (loop for p being the hash-keys of (gethash s map)
+            unless (gethash p live) do
+            (setf (gethash p live) t)
+            (push p worklist)))
       live)))
 
 (defun remove-dead-transitions (a)
@@ -218,7 +220,7 @@ is dead if no accepting state is reachable from it."
       nil
       (let* ((states (states a))
 	     (live (live-states2 a states)))
-	(loop for s being the hash-key of states do
+	(loop for s being the hash-keys of states do
 	     (let ((st (transitions s)))
 	       (reset-transitions s)
 	       (with-ht (tr nil) st
@@ -232,7 +234,7 @@ of sorted vectors of transitions for each state, ordered by the NUM
 slot."
   (set-state-nums states)
   (let ((transitions (make-array (hash-table-count states))))
-    (loop for s being the hash-key of states do
+    (loop for s being the hash-keys of states do
 	 (setf (aref transitions (num s)) (sorted-transition-vector s nil)))
     transitions))
 
@@ -466,7 +468,7 @@ languages of A1 and A2. Complexity: linear in the number of states."
       (progn
 	(setf a1 (clone-expanded a1)
 	      a2 (clone-expanded a2))
-	(loop for s being the hash-key of (accepting-states a1) do
+	(loop for s being the hash-keys of (accepting-states a1) do
 	     (setf (accept s) nil)
 	     (add-epsilon s (initial a2)))
 	(setf (deterministic a1) nil)
@@ -482,7 +484,7 @@ linear in the total number of states."
 	(loop for a2 in (cdr l) do
 	     (let* ((a2 (clone-expanded a2))
 		    (ac2 (accepting-states a2)))
-	       (loop for s being the hash-key of ac1 do
+	       (loop for s being the hash-keys of ac1 do
 		    (setf (accept s) nil)
 		    (add-epsilon s (initial a2))
 		    (when (accept s)
@@ -511,7 +513,7 @@ the number of states."
 	(s (make-instance 'state)))
     (setf (accept s) t)
     (add-epsilon s (initial a))
-    (loop for p being the hash-key of (accepting-states a) do
+    (loop for p being the hash-keys of (accepting-states a) do
 	 (add-epsilon p s))
     (setf (initial a) s
 	  (deterministic a) nil)
@@ -546,10 +548,10 @@ automaton is returned."
     (let ((a3 (clone a)))
       (loop while (> (decf max) 0) do
 	   (let ((a4 (clone a)))
-	     (loop for p being the hash-key of (accepting-states a4) do
+	     (loop for p being the hash-keys of (accepting-states a4) do
 		  (add-epsilon p (initial a3)))
 	     (setq a3 a4)))
-      (loop for p being the hash-key of (accepting-states a2) do
+      (loop for p being the hash-keys of (accepting-states a2) do
 	   (add-epsilon p (initial a3)))
       (setf (deterministic a2) nil)
       (check-minimize-always a2))))
@@ -559,7 +561,7 @@ automaton is returned."
   (let ((a (clone-expanded a)))
     (determinize a)
     (totalize a)
-    (loop for p being the hash-key of (states a) do
+    (loop for p being the hash-keys of (states a) do
 	 (setf (accept p) (not (accept p))))
     (remove-dead-transitions a)
     (check-minimize-always a)))
@@ -673,7 +675,7 @@ state-set."
     (loop while worklist do
 	 (let* ((s (pop worklist))
 		(r (htref newstate s)))
-	   (loop for q being the hash-key of (ht s)
+	   (loop for q being the hash-keys of (ht s)
 	      when (accept q) do
 		(setf (accept r) t)
 		(return))
@@ -681,7 +683,7 @@ state-set."
 	      for c across points
 	      and n from 0 do
 		(let ((p (make-instance 'state-set)))
-		  (loop for q being the hash-key of (ht s) do
+		  (loop for q being the hash-keys of (ht s) do
 		       (with-ht (tr nil) (transitions q)
 			 (when (<= (minc tr) c (maxc tr))
 			   (setf (gethash (to tr) (ht p)) t))))
@@ -763,7 +765,7 @@ returns it."
 (defun mark-pair (mark triggers n1 n2)
   (setf (aref mark n1 n2) t)
   (when (aref triggers n1 n2)
-    (loop for p being the hash-key of (aref triggers n1 n2) do
+    (loop for p being the hash-keys of (aref triggers n1 n2) do
 	 (let ((m1 (n1 p))
 	       (m2 (n2 p)))
 	   (when (> m1 m2)
@@ -773,7 +775,7 @@ returns it."
 
 (defun ht-set-to-vector (ht)
   (loop with vec = (make-array (hash-table-count ht))
-     for k being the hash-key of ht
+     for k being the hash-keys of ht
      and i from 0 do
        (setf (aref vec i) k)
      finally (return vec)))
@@ -900,9 +902,10 @@ regarded as one of the most generally efficient existing algorithms."
 	   (let ((j (if (<= i0 i1) 0 1)))
 	     (push (make-instance 'int-pair :n1 j :n2 i) pending)
 	     (setf (aref pending2 i j) t)))
-      (loop while pending
-	 for ip = (pop pending)
-	 for p = (n1 ip) and i = (n2 ip) do
+      (loop for ip = (first pending)
+            for p = (when pending (n1 ip)) and i = (when pending (n2 ip))
+            while pending do
+           (pop pending)
 	   (setf (aref pending2 i p) nil)
 	   (loop for m = (fst (aref active p i)) then (succ m)
 	      while m do
@@ -970,20 +973,20 @@ new initial states."
   (let ((m (make-hash-table))
 	(states (states a))
 	(astates (accepting-states a)))
-    (loop for r being the hash-key of states do
+    (loop for r being the hash-keys of states do
 	 (setf (gethash r m)
 	       (make-generalized-hash-table +equalp-key-situation+)
 	       (accept r) nil))
-    (loop for r being the hash-key of states do
+    (loop for r being the hash-keys of states do
 	 (with-ht (tr nil) (transitions r)
 	   (htadd (gethash (to tr) m)
 		  (make-instance
 		   'transition :minc (minc tr) :maxc (maxc tr) :to r))))
-    (loop for r being the hash-key of states do
+    (loop for r being the hash-keys of states do
 	 (setf (transitions r) (gethash r m)))
     (setf (accept (initial a)) t
 	  (initial a) (make-instance 'state))
-    (loop for r being the hash-key of astates do
+    (loop for r being the hash-keys of astates do
 	 (add-epsilon (initial a) r))
     (setf (deterministic a) nil)
     astates))
@@ -1011,13 +1014,14 @@ epsilon transitions should be added."
     (let ((worklist pairs)
 	  (workset (make-generalized-hash-table +equalp-key-situation+)))
       (loop for p in pairs do (htadd workset p))
-      (loop while worklist
-	 for p = (pop worklist) do
+      (loop for p = (first worklist)
+            while worklist do
+           (pop worklist)
 	   (htremove workset p)
 	   (let ((tos (gethash (s2 p) forward))
 		 (froms (gethash (s1 p) back)))
 	     (when tos
-	       (loop for s being the hash-key of tos
+	       (loop for s being the hash-keys of tos
 		  for pp = (make-instance 'state-pair :s1 (s1 p) :s2 s)
 		  unless (member pp pairs
 				 :test #'(lambda (o1 o2)
@@ -1029,7 +1033,7 @@ epsilon transitions should be added."
 		    (push pp worklist)
 		    (htadd workset pp)
 		    (when froms
-		      (loop for q being the hash-key of froms
+		      (loop for q being the hash-keys of froms
 			 for qq = (make-instance 'state-pair :s1 q :s2 (s1 p))
 			 unless (htpresent workset qq) do
 			   (push qq worklist)
@@ -1113,7 +1117,7 @@ the length of STR (when A is deterministic)."
   "Returns the number of transitions of A."
   (if (singleton a)
     (length (singleton a))
-    (loop for s being the hash-key of (states a)
+    (loop for s being the hash-keys of (states a)
        sum (cnt (transitions s)))))
 
 (defun empty-p (a)
@@ -1152,7 +1156,7 @@ the length of STR (when A is deterministic)."
       (set-state-nums states))
     (format s "~@<initial state: ~A ~_~@<~{~W~^ ~_~}~:>~:>"
   	    (num (initial a))
-	    (loop for st being the hash-key of states collect st)))
+	    (loop for st being the hash-keys of states collect st)))
   a)
 
 (defun clone-expanded (a)
@@ -1173,9 +1177,9 @@ the length of STR (when A is deterministic)."
 	(setf (singleton a2) (singleton a))
 	(let ((map (make-hash-table))
 	      (states (states a)))
-	  (loop for s being the hash-key of states do
+	  (loop for s being the hash-keys of states do
 	       (setf (gethash s map) (make-instance 'state)))
-	  (loop for s being the hash-key of states do
+	  (loop for s being the hash-keys of states do
 	       (let ((p (gethash s map)))
 		 (setf (accept p) (accept s))
 		 (when (eq s (initial a))
