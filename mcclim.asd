@@ -446,7 +446,7 @@
 ;;; The actual McCLIM system that people should to use in their ASDF
 ;;; package dependency lists.
 (defsystem :mcclim
-    :version "0.9.3-dev"
+    :version "0.9.4"
     :depends-on (:clim-looks))
 
 ;;; CLIM-Examples depends on having at least one backend loaded.
