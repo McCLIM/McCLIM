@@ -855,16 +855,18 @@ original options after `body' has been evaluated."
       (when syntax-provided-p
         (push (list (unless keep-syntax
                       `(old-syntax (syntax (buffer ,drei))))
-                    `(setf (syntax (buffer ,drei))
-                           (etypecase ,syntax
-                             (string (make-instance (or (syntax-from-name ,syntax)
-                                                        (error "No such syntax: ~A" ,syntax))
-                                                    :buffer (buffer ,drei)))
-                             (symbol (make-instance ,syntax
-                                                    :buffer (buffer ,drei)))
-                             (syntax ,syntax)))
+                    `(progn (setf (syntax (buffer ,drei))
+                                  (etypecase ,syntax
+                                    (string (make-instance (or (syntax-from-name ,syntax)
+                                                               (error "No such syntax: ~A" ,syntax))
+                                                           :buffer (buffer ,drei)))
+                                    (symbol (make-instance ,syntax
+                                                           :buffer (buffer ,drei)))
+                                    (syntax ,syntax)))
+                            (update-syntax (buffer ,drei) (syntax (buffer ,drei))))
                     (unless keep-syntax
-                      `(setf (syntax (buffer ,drei)) old-syntax)))
+                      `(progn (setf (syntax (buffer ,drei)) old-syntax)
+                              (update-syntax (buffer ,drei) (syntax (buffer ,drei))))))
               triple-list))
       `(progn
          (check-type ,drei drei)
