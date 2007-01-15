@@ -2664,10 +2664,30 @@ item result) but some simplifications are done on the fly:
          (list* (car result) item (cdr result)))
         (t (list op item result))))
 
-(defun token-to-symbol (syntax token &optional (case (readtable-case *readtable*)))
-  "Return the symbol `token' represents. If the symbol cannot be
-found in a package, an uninterned symbol will be returned."
-  (form-to-object syntax token :case case :no-error t))
+(define-condition reader-invoked (condition)
+  ((%end-mark :reader end-mark :initarg :end-mark
+              :initform (error "You must provide an ending-mark for
+the condition")
+              :documentation "The position at which the reader
+stopped reading, form-to-object conversion should be resumed
+from this point.")
+   (%object :reader object :initarg :object
+            :initform (error "You must provide the object that
+was returned by the reader")
+            :documentation "The object that was returned by the reader."))
+  (:documentation "Signal that the reader has been directly
+invoked on the buffer contents, that the object of this condition
+should be assumed as the result of the form-conversion."))
+
+(defun invoke-reader (syntax form)
+  "Use the system reader to handle `form' and signal a
+`reader-invoked' condition with the resulting data."
+  (let* ((start-mark (clone-mark (high-mark (buffer syntax)))))
+    (setf (offset start-mark) (start-offset form))
+    (let* ((stream (make-buffer-stream :buffer (buffer syntax)
+                                       :start-mark start-mark))
+           (object (read-preserving-whitespace stream)))
+      (signal 'reader-invoked :end-mark (point stream) :object object))))
 
 (define-condition form-conversion-error (simple-error user-condition-mixin)
   ((syntax :reader syntax :initarg :syntax
@@ -2698,6 +2718,153 @@ parameters."
   (setf (offset (point drei))
         (start-offset (form condition))))
 
+;;; Handling labels (#n= and #n#) takes a fair bit of machinery, most
+;;; of which is located here. We follow an approach similar to that
+;;; found in the SBCL reader, where we replace instances of #n# with a
+;;; special unique marker symbol that we replace before returning the
+;;; final object. We maintain two tables, one that maps labels to
+;;; placerholder symbols and one that maps placeholder symbols to the
+;;; concrete objects.
+
+(defvar *labels->placeholders* nil
+  "This variable holds an alist mapping labels (as integers) to a
+placeholder symbol. It is used for implementing the label reader
+macros (#n=foo #n#).")
+
+(defvar *label-placeholders->object* nil
+  "This variable holds an alist mapping placeholder symbols to
+the object. It is used for implementing the label reader
+macros (#n=foo #n#).")
+
+(defgeneric extract-label (syntax form)
+  (:documentation "Get the label of `form' as an integer."))
+
+(defmethod extract-label ((syntax lisp-syntax) (form sharpsign-equals-form))
+  (let ((string (form-string syntax (first (children form)))))
+    (parse-integer string :start 1 :end (1- (length string)) :radix 10)))
+
+(defmethod extract-label ((syntax lisp-syntax) (form sharpsign-sharpsign-lexeme))
+  (let ((string (form-string syntax form)))
+    (parse-integer string :start 1 :end (1- (length string)) :radix 10)))
+
+(defun register-form-label (syntax form &rest args)
+  "Register the label of `form' and the corresponding placeholder
+symbol. `Form' must be a sharpsign-equals form (#n=), and if the
+label has already been registered, an error of type
+`form-conversion-error' will be signalled. Args will be passed to
+`form-to-object' for the creation of the object referred to by
+the label. Returns `form' converted to an object."
+  (let* ((label (extract-label syntax form))
+         (placeholder-symbol (gensym)))
+    (when (assoc label *labels->placeholders*)
+      (form-conversion-error syntax form "multiply defined label: ~A" label))
+    (push (list label placeholder-symbol) *labels->placeholders*)
+    (let ((object (apply #'form-to-object syntax
+                         (second (children form)) args)))
+      (push (list placeholder-symbol object) *label-placeholders->object*)
+      object)))
+
+(defgeneric find-and-register-label (syntax form label limit &rest args)
+  (:documentation "Find the object referred to by the integer
+value `label' in children of `form' or `form' itself. `Args' will
+be passed to `form-to-object' for the creation of the
+object. `Limit' is a buffer offset delimiting where not to search
+past."))
+
+(defmethod find-and-register-label ((syntax lisp-syntax) (form form)
+                                    (label integer) (limit integer) &rest args)
+  (find-if #'(lambda (child)
+               (when (and (formp child)
+                          (< (start-offset form) limit))
+                 (apply #'find-and-register-label syntax child label limit args)))
+           (children form)))
+
+(defmethod find-and-register-label ((syntax lisp-syntax) (form sharpsign-equals-form)
+                                    (label integer) (limit integer) &rest args)
+  (when (and (= (extract-label syntax form) label)
+             (< (start-offset form) limit))
+    (apply #'register-form-label syntax form args)))
+
+(defun ensure-label (syntax form label &rest args)
+  "Ensure as best as possible that `label' exist. `Form' is the
+form that needs the value of the label, limiting where to end the
+search. `Args' will be passed to `form-to-object' if it is
+necessary to create a new object for the label."
+  (unless (assoc label *labels->placeholders*)
+    (apply #'find-and-register-label syntax (form-toplevel form syntax) label (start-offset form) args)))
+
+(defun label-placeholder (syntax form label &optional search-whole-form &rest args)
+  "Get the placeholder for `label' (which must be an integer). If
+the placeholder symbol cannot be found, the label is undefined,
+and an error of type `form-conversion-error' will be
+signalled. If `search-whole-form' is true, the entire
+top-level-form will be searched for the label reference if it has
+not already been seen, upwards from `form', but not past
+`form'. `Args' will be passed as arguments to `form-to-object' to
+create the labelled object."
+  (when search-whole-form
+    (apply #'ensure-label syntax form label args))
+  (let ((pair (assoc label *labels->placeholders*)))
+    (second pair)))
+
+;;; The `circle-subst' function is cribbed from SBCL.
+
+(defvar *sharp-equal-circle-table* nil
+  "Objects already seen by `circle-subst'.")
+
+(defun circle-subst (old-new-alist tree)
+  "This function is kind of like NSUBLIS, but checks for
+circularities and substitutes in arrays and structures as well as
+lists. The first arg is an alist of the things to be replaced
+assoc'd with the things to replace them."
+  (cond ((not (typep tree
+                     '(or cons (array t) structure-object standard-object)))
+         (let ((entry (find tree old-new-alist :key #'first)))
+           (if entry (second entry) tree)))
+        ((null (gethash tree *sharp-equal-circle-table*))
+         (setf (gethash tree *sharp-equal-circle-table*) t)
+         (cond ((typep tree '(or structure-object standard-object))
+                ;; I am time and again saved by the MOP as I code
+                ;; myself into a corner.
+                (let ((class (class-of tree)))
+                  (dolist (slotd (clim-mop:class-slots class))
+                    (when (clim-mop:slot-boundp-using-class class tree slotd)
+                      (let* ((old (clim-mop:slot-value-using-class class tree slotd))
+                             (new (circle-subst old-new-alist old)))
+                        (unless (eq old new)
+                          (setf (clim-mop:slot-value-using-class
+                                 class tree slotd)
+                                new)))))))
+               ((arrayp tree)
+                (loop for i from 0 below (length tree) do
+                     (let* ((old (aref tree i))
+                            (new (circle-subst old-new-alist old)))
+                       (unless (eq old new)
+                         (setf (aref tree i) new)))))
+               (t
+                (let ((a (circle-subst old-new-alist (car tree)))
+                      (d (circle-subst old-new-alist (cdr tree))))
+                  (unless (eq a (car tree))
+                    (rplaca tree a))
+                  (unless (eq d (cdr tree))
+                    (rplacd tree d)))))
+         tree)
+        (t tree)))
+
+(defun replace-placeholders (&rest values)
+  "Replace the placeholder symbols in `values' with the real
+objects as determined by `*label-placeholders->objects*' and
+return the modified `values' as multiple return values."
+  (values-list
+   (mapcar #'(lambda (value)
+               (let ((*sharp-equal-circle-table* (make-hash-table :test #'eq :size 20)))
+                 (circle-subst *label-placeholders->object* value)))
+           values)))
+
+(defvar *form-to-object-depth* 0
+  "This variable is used to keep track of how deeply nested calls
+to `form-to-object' are.")
+
 (defgeneric form-to-object (syntax form &key no-error package read backquote-level case)
   (:documentation "Return the Lisp object `form' would become if
 read. An attempt will be made to construct objects from
@@ -2710,17 +2877,25 @@ and `no-error' is false, an error of type `form-conversion-error'
 will be signalled for incomplete forms.")
   (:method :around ((syntax lisp-syntax) (form form) &key package no-error &allow-other-keys)
            ;; Ensure that every symbol that is READ will be looked up
-           ;; in the correct package. Also handle quoting.
+           ;; in the correct package.
            (flet ((act ()
-                    (let ((*package* (or package
-                                         (package-at-mark
-                                          syntax (start-offset form)))))
-
-                      (call-next-method))))
-             (if no-error
-                 (handler-case (act)
-                   (form-conversion-error ()))
-                 (act))))
+                    (handler-case
+                        (multiple-value-call #'replace-placeholders (call-next-method))
+                      (reader-invoked (c)
+                        (if (> (offset (end-mark c)) (end-offset form))
+                            (signal c)
+                            (object c)))
+                      (form-conversion-error (e)
+                        (unless no-error
+                          (error e))))))
+             (let ((*form-to-object-depth* (1+ *form-to-object-depth*))
+                   (*package* (or package (package-at-mark
+                                           syntax (start-offset form)))))
+               (if (= *form-to-object-depth* 1)
+                   (let ((*labels->placeholders* nil)
+                         (*label-placeholders->object* nil))
+                     (act))
+                   (act)))))
   (:method ((syntax lisp-syntax) (form t) &rest args
             &key no-error &allow-other-keys)
     (unless no-error
@@ -2738,9 +2913,20 @@ will be signalled for incomplete forms.")
 
 (defmethod form-to-object ((syntax lisp-syntax) (form list-form) &rest args
                            &key &allow-other-keys)
-  (mapcan #'(lambda (child)
-              (multiple-value-list (apply #'form-to-object syntax child args)))
-          (remove-if-not #'formp (children form))))
+  (labels ((recurse (elements)
+             (unless (null elements)
+               (handler-case
+                   (nconc (multiple-value-list
+                           (apply #'form-to-object syntax (first elements) args))
+                          (recurse (rest elements)))
+                 (reader-invoked (c)
+                   (let ((remaining-elements (remove (offset (end-mark c)) elements
+                                                     :key #'start-offset :test #'>)))
+                     (if (and (not (null (rest elements)))
+                              (null remaining-elements))
+                         (signal c)
+                         (cons (object c) (recurse remaining-elements)))))))))
+    (recurse (remove-if-not #'formp (children form)))))
 
 (defmethod form-to-object ((syntax lisp-syntax) (form complete-quote-form) &rest args
                            &key (backquote-level 0) &allow-other-keys)
@@ -2825,7 +3011,7 @@ will be signalled for incomplete forms.")
 (defmethod form-to-object ((syntax lisp-syntax) (form number-lexeme)
                            &key &allow-other-keys)
   (let ((*read-base* (base syntax)))
-    (values (read-from-string (form-string syntax form)))))
+    (invoke-reader syntax form)))
 
 (defmethod form-to-object ((syntax lisp-syntax) (form simple-vector-form)
                            &key &allow-other-keys)
@@ -2837,7 +3023,7 @@ will be signalled for incomplete forms.")
 
 (defmethod form-to-object ((syntax lisp-syntax) (form complete-string-form)
                            &key &allow-other-keys)
-  (values (read-from-string (form-string syntax form))))
+  (invoke-reader syntax form))
 
 (defmethod form-to-object ((syntax lisp-syntax) (form function-form) &rest args)
   (list 'cl:function (apply #'form-to-object syntax (second (children form)) args)))
@@ -2875,9 +3061,10 @@ will be signalled for incomplete forms.")
 
 (defmethod form-to-object ((syntax lisp-syntax) (form undefined-reader-macro-form)
                            &key read &allow-other-keys)
-  ;; ???
+  ;; This is likely to malfunction for some really evil reader macros,
+  ;; in that case, you need to extend the parser to understand them.
   (when read
-    (read-from-string (form-string syntax form))))
+    (invoke-reader syntax form)))
 
 (defmethod form-to-object ((syntax lisp-syntax) (form literal-object-form) &key &allow-other-keys)
   (object-after (start-mark form)))
@@ -2909,6 +3096,14 @@ will be signalled for incomplete forms.")
                            &rest args &key read &allow-other-keys)
   (when read
     (values (eval (apply #'form-to-object syntax (first-form (children form)) args)))))
+
+(defmethod form-to-object ((syntax lisp-syntax) (form sharpsign-equals-form)
+                           &rest args)
+  (apply #'register-form-label syntax form args))
+
+(defmethod form-to-object ((syntax lisp-syntax) (form sharpsign-sharpsign-lexeme)
+                           &rest args)
+  (apply #'label-placeholder syntax form (extract-label syntax form) t args))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

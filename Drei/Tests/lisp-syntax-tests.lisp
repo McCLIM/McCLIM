@@ -364,13 +364,30 @@ self-compilation test, of course).")
 
 (test form-to-object-16
   (testing-lisp-syntax ("#+mcclim t")
-    (is (eq (get-object) t)))
+    (is (eq (get-object) (or #+mcclim t))))
   (testing-lisp-syntax ("#-mcclim t")
-    (is (eq (get-object) nil)))
+    (is (eq (get-object) (or #-mcclim t))))
   (testing-lisp-syntax ("(#+mcclim t)")
-    (is (equal (get-object) '(t))))
+    (is (equal (get-object) '(#+mcclim t))))
   (testing-lisp-syntax ("(#-mcclim t)")
-    (is (equal (get-object) '()))))
+    (is (equal (get-object) '(#-mcclim t)))))
+
+(test form-to-object-17
+  (testing-lisp-syntax ("(#1=list #1#)")
+    (is (equal (get-object) '(list list))))
+  (testing-lisp-syntax ("#1=(list . #1#)")
+    (finishes
+      (loop for x in (get-object)
+         for y in '#1=(list . #1#)
+         for i from 0 upto 100
+         unless (eq y x)
+         do (fail "~A is not eq to ~A" x y))))
+  (testing-lisp-syntax ("(#1=list (#1# 1 2 3))")
+    (let ((form (drei-lisp-syntax::form-before (syntax buffer) 14)))
+      (is (eq (form-to-object (syntax buffer) form) 'list))))
+  (testing-lisp-syntax ("(#1=list #1=cons)")
+    (signals form-conversion-error
+      (get-object))))
 
 (defgeneric find-pathnames (module)
   (:documentation "Get a list of the pathnames of the files
