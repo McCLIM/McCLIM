@@ -297,6 +297,7 @@
                          (:file "delegating-buffer" :depends-on ("packages" "buffer"))
                          (:file "basic-commands" :depends-on ("drei-clim" "motion" "editing"))
                          (:file "core" :depends-on ("drei"))
+                         (:file "buffer-streams" :depends-on ("core"))
                          (:file "rectangle" :depends-on ("core"))
                          (:file "core-commands" :depends-on ("core" "rectangle" "drei-clim"))
                          (:file "persistent-buffer"
@@ -337,6 +338,7 @@
              (:file "motion-tests" :depends-on ("testing"))
              (:file "editing-tests" :depends-on ("testing"))
              (:file "core-tests" :depends-on ("testing"))
+             (:file "buffer-streams-tests" :depends-on ("testing"))
              (:file "rectangle-tests" :depends-on ("testing"))
              (:file "undo-tests" :depends-on ("testing"))
              (:file "lisp-syntax-tests" :depends-on ("testing"))))))

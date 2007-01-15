@@ -421,7 +421,11 @@ used to implement the editing commands."))
            #:replace-rectangle-line
            #:insert-in-rectangle-line
            #:delete-rectangle-line-whitespace
-           #:with-narrowed-buffer)
+           #:with-narrowed-buffer
+
+           #:start-mark
+           #:end-mark
+           #:make-buffer-stream)
   (:documentation "Implementation of much syntax-aware, yet no
 syntax-specific, core functionality of Drei."))
 
