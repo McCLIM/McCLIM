@@ -294,13 +294,13 @@ properly bound."))
           (abort-gesture ()
             (display-message "Aborted")))
         (display-drei drei)
-        (when (and (modified-p (buffer drei))
-                   (gadget-value-changed-callback drei))
+        (when (modified-p (buffer drei))                   
           (clear-modify (buffer drei))
-          (value-changed-callback drei
-                                  (gadget-client drei)
-                                  (gadget-id drei)
-                                  (gadget-value drei)))))))
+          (when (gadget-value-changed-callback drei)
+            (value-changed-callback drei
+                                    (gadget-client drei)
+                                    (gadget-id drei)
+                                    (gadget-value drei))))))))
 
 (defmethod execute-drei-command :after ((drei drei-gadget-pane) command)
   (with-accessors ((buffer buffer)) drei
