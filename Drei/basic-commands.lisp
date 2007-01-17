@@ -245,7 +245,7 @@ With a negative argument -N, move point forward by N objects."
 ;;;
 ;;; This file also holds command definitions for other functions
 ;;; defined in the DREI-EDITING package.
-n
+
 (defmacro define-deletion-commands (unit command-table &key
                                     noun
                                     plural)
