@@ -89,7 +89,7 @@ syntax to use standard editor commands, you should *not* inherit
 from `editor-table' - the command tables containing the editor
 commands will be added automatically, as long as this function
 returns T.")
-  (:method ((command-table syntax-command-table))
+  (:method ((command-table standard-command-table))
     t))
 
 (defgeneric additional-command-tables (editor command-table)
