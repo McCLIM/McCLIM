@@ -245,7 +245,7 @@ With a negative argument -N, move point forward by N objects."
 ;;;
 ;;; This file also holds command definitions for other functions
 ;;; defined in the DREI-EDITING package.
-
+n
 (defmacro define-deletion-commands (unit command-table &key
                                     noun
                                     plural)
@@ -311,14 +311,14 @@ Successive kills append to the kill ring.")
                ((count 'integer :prompt ,(concat "Number of " plural)))
              ,(concat "Delete from point until the next " noun " end.
 With a positive numeric argument, delete that many " plural " forward.")
-             (,backward-delete *current-point* count))
+             (,backward-delete *current-point* (syntax *current-buffer*) count))
 
            ;; Backward Delete Unit
            (define-command (,com-backward-delete :name t :command-table ,command-table)
                ((count 'integer :prompt ,(concat "Number of " plural)))
              ,(concat "Delete from point until the previous " noun " beginning.
 With a positive numeric argument, delete that many " plural " backward.")
-             (,backward-delete *current-point* count)))))))
+             (,backward-delete *current-point* (syntax *current-buffer*) count)))))))
 
 (defmacro define-editing-commands (unit command-table &key
                                    noun
