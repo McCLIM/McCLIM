@@ -326,7 +326,6 @@ properly bound."))
   ;; eat keyboard events.
   (unwind-protect (progn (disarmed-callback drei t t)
                          (funcall continuation))
-    (activate-gadget drei)
     (armed-callback drei t t)))
 
 (defmethod additional-command-tables append ((drei drei-gadget-pane)
