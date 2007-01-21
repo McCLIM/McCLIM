@@ -1736,7 +1736,7 @@ the form that `token' quotes, peeling away all quote forms."
 after `string'."
   (let ((token (symbol-at-mark mark syntax)))
     (setf (offset mark) (start-offset token))
-    (forward-kill-expression mark syntax)
+    (forward-delete-expression mark syntax)
     (insert-sequence mark string)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
