@@ -32,7 +32,7 @@ different semantics for reading input and performing redisplay - from
 passively being fed gestures in the input editor, to having to do event
 handling and redisplay timing manually in the gadget
 version. Furthermore, Drei is extensible software, so we wished to make
-the differences between these three modus operandorum transparent to the
+the differences between these three modi operandi transparent to the
 extender (as much as possible at least, unfortunately the Law of Leaky
 Abstractions prevents us from reaching perfection). These two demands
 require the core Drei protocols, especially those pertaining to
