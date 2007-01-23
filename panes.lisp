@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.177 2007/01/07 19:53:05 thenriksen Exp $
+;;; $Id: panes.lisp,v 1.178 2007/01/23 07:51:10 ahefner Exp $
 
 (in-package :clim-internals)
 
@@ -1869,16 +1869,28 @@ order to produce a double-click")
       ;; XXX: We cannot use `scroll-extent', because McCLIM ignores it
       ;; unless the scrollee happens to be drawing. Very weird, should
       ;; be fixed.
+
+      ;; It's not a bug, it's a feature. This requires further thought. -Hefner
       (move-sheet child
                   (round (- (if (> (+ horizontal-scroll viewport-width)
                                    child-width)
                                 (- child-width viewport-width)
                                 horizontal-scroll)))
                   (round (- (if (> (+ vertical-scroll viewport-height)
-                                   child-width)
+                                   child-height)
                                 (- child-height viewport-height)
                                 vertical-scroll))))
-      (scroller-pane/update-scroll-bars (sheet-parent pane)))))
+      (scroller-pane/update-scroll-bars (sheet-parent pane))
+      #+NIL
+      (scroll-extent child
+                     (if (> (+ horizontal-scroll viewport-width)
+                            child-width)
+                         (max 0 (- child-width viewport-width))
+                         horizontal-scroll)
+                     (if (> (+ vertical-scroll viewport-height)
+                            child-height)
+                         (max 0 (- child-height viewport-height))
+                         vertical-scroll)))))
 
 ;;;;
 ;;;; SCROLLER PANE
@@ -2090,6 +2102,8 @@ order to produce a double-click")
     (setq viewport (first (sheet-children pane)))
     ;; make the background of the viewport match the background of the
     ;; things scrolled.
+    ;; This doesn't appear to work, hence the "gray space" bugs. Actually
+    ;; handy for observing when the space requirements get messed up.. -Hefner
     (when (first (sheet-children viewport))
       (setf (slot-value pane 'background)  ;### hmm ...
             (pane-background (first (sheet-children viewport)))))
@@ -2487,7 +2501,7 @@ to computed distance to scroll in response to mouse wheel events."))
   (flet ((compute (val default)
 	   (if (eq val :compute) default val)))
     (if (or (eq (pane-user-width pane) :compute)
-	    (eq (pane-user-height pane) :compute))
+            (eq (pane-user-height pane) :compute))  
 	(progn
 	  (with-output-recording-options (pane :record t :draw nil)
 	    ;; multiple-value-letf anyone?
@@ -2500,7 +2514,7 @@ to computed distance to scroll in response to mouse wheel events."))
 	    (stream-output-history pane)
 	    ;; Should we now get rid of the output history?
             ;; Why should we? --GB 2003-03-16
-	    (reset-output-history pane)
+            (reset-output-history pane)
 	    (let ((width (- x2 x1))
 		  (height (- y2 y1)))
               ;; I don't want this letf here --GB 2003-01-23
