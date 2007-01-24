@@ -416,20 +416,30 @@ reposition the pane if point is outside the visible area."
 (defgeneric fix-pane-viewport (pane))
 
 (defmethod fix-pane-viewport ((pane drei-pane))
-  (let ((output-width (bounding-rectangle-width (stream-current-output-record pane))))
-    (change-space-requirements pane :width output-width))
-  (when (and (pane-viewport pane) (active pane))
-    (multiple-value-bind (cursor-x cursor-y) (offset-to-screen-position pane pane (offset (point pane)))
-      (declare (ignore cursor-y))
-      (let ((x-position (abs (transform-position (sheet-transformation pane) 0 0)))
-            (viewport-width (bounding-rectangle-width (or (pane-viewport pane) pane))))
-        (cond ((> cursor-x (+ x-position viewport-width))
-               (move-sheet pane (round (- (- cursor-x viewport-width))) 0))
-              ((> x-position cursor-x)
-               (move-sheet pane (if (> viewport-width cursor-x)
-                                    0
-                                    (round (- cursor-x)))
-                           0)))))))
+  (let* ((output-width (bounding-rectangle-width (stream-current-output-record pane)))
+         (viewport (pane-viewport pane))
+         (viewport-width (and viewport (bounding-rectangle-width viewport)))
+         (pane-width (bounding-rectangle-width pane)))
+    ;; If the width of the output is greater than the width of the
+    ;; sheet, make the sheet wider. If the sheet is wider than the
+    ;; viewport, but doesn't really need to be, make it thinner.
+    (when (or (> output-width pane-width)
+              (and viewport
+                   (> pane-width viewport-width)
+                   (>= viewport-width output-width)))
+      (change-space-requirements pane :width output-width))
+    (when (and viewport (active pane))
+      (multiple-value-bind (cursor-x cursor-y) (offset-to-screen-position pane pane (offset (point pane)))
+        (declare (ignore cursor-y))
+        (let ((x-position (abs (transform-position (sheet-transformation pane) 0 0)))
+              (viewport-width (bounding-rectangle-width (or (pane-viewport pane) pane))))
+          (cond ((> cursor-x (+ x-position viewport-width))
+                 (move-sheet pane (round (- (- cursor-x viewport-width))) 0))
+                ((> x-position cursor-x)
+                 (move-sheet pane (if (> viewport-width cursor-x)
+                                      0
+                                      (round (- cursor-x)))
+                             0))))))))
 
 (defmethod handle-repaint :before ((pane drei-pane) region)
   (declare (ignore region))
