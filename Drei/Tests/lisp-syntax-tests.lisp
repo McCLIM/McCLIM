@@ -254,7 +254,15 @@ self-compilation test, of course).")
                                      collecting x)
       (is (string= (symbol-name a) "NIL"))
       (is (string= (symbol-name b) "nil"))
-      (is (string= (symbol-name c) "Nil")))))
+      (is (string= (symbol-name c) "Nil"))))
+  (testing-lisp-syntax ("#(a b c c c c)")
+    (is (equalp (get-object) #6(a b c c c c))))
+  (testing-lisp-syntax ("#6(a b c c c c)")
+    (is (equalp (get-object) #6(a b c c c c))))
+  (testing-lisp-syntax ("#6(a b c)")
+    (is (equalp (get-object) #6(a b c c c c))))
+  (testing-lisp-syntax ("#6(a b c c)")
+    (is (equalp (get-object) #6(a b c c c c)))))
 
 (test form-to-object-12
   (testing-lisp-syntax ("(t . t)")
@@ -388,6 +396,18 @@ self-compilation test, of course).")
   (testing-lisp-syntax ("(#1=list #1=cons)")
     (signals form-conversion-error
       (get-object))))
+
+(test form-to-object-18
+  (testing-lisp-syntax ("#2A((0 1 5) (foo 2 (hot dog)))")
+    (is (equalp (get-object) #2A((0 1 5) (foo 2 (hot dog))))))
+  (testing-lisp-syntax ("#2A((0 1) (foo 2 (hot dog)))")
+    (signals form-conversion-error (get-object)))
+  (testing-lisp-syntax ("#1A((0 1 5) (foo 2 (hot dog)))")
+    (is (equalp (get-object) #1A((0 1 5) (foo 2 (hot dog))))))
+  (testing-lisp-syntax ("#0Anil")
+    (is (equalp (get-object) #0Anil)))
+  (testing-lisp-syntax ("#0A#2A((0 1 5) (foo 2 (hot dog)))")
+    (is (equalp (get-object) #0A#2A((0 1 5) (foo 2 (hot dog)))))))
 
 (defgeneric find-pathnames (module)
   (:documentation "Get a list of the pathnames of the files

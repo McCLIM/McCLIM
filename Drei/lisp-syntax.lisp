@@ -2835,12 +2835,19 @@ assoc'd with the things to replace them."
                           (setf (clim-mop:slot-value-using-class
                                  class tree slotd)
                                 new)))))))
-               ((arrayp tree)
+               ((vectorp tree)
                 (loop for i from 0 below (length tree) do
                      (let* ((old (aref tree i))
                             (new (circle-subst old-new-alist old)))
                        (unless (eq old new)
                          (setf (aref tree i) new)))))
+               ((arrayp tree)
+                (loop with array-size = (array-total-size tree)
+                   for i from 0 below array-size do
+                   (let* ((old (row-major-aref tree i))
+                          (new (circle-subst old-new-alist old)))
+                     (unless (eq old new)
+                       (setf (row-major-aref tree i) new)))))
                (t
                 (let ((a (circle-subst old-new-alist (car tree)))
                       (d (circle-subst old-new-alist (cdr tree))))
@@ -3015,7 +3022,18 @@ will be signalled for incomplete forms.")
 
 (defmethod form-to-object ((syntax lisp-syntax) (form simple-vector-form)
                            &key &allow-other-keys)
-  (apply #'vector (call-next-method)))
+  (let* ((contents (call-next-method))
+         (lexeme-string (form-string syntax (first (children form))))
+         (size (parse-integer lexeme-string :start 1
+                              :end (1- (length lexeme-string))
+                              :junk-allowed t))
+         (vector (make-array (or size (length contents)))))
+    (loop for cons = contents then (or rest cons)
+       for element = (first cons)
+       for rest = (rest cons)
+       for i below (length vector) do
+       (setf (aref vector i) element)
+       finally (return vector))))
 
 (defmethod form-to-object ((syntax lisp-syntax) (form incomplete-string-form)
                            &key &allow-other-keys)
@@ -3104,6 +3122,26 @@ will be signalled for incomplete forms.")
 (defmethod form-to-object ((syntax lisp-syntax) (form sharpsign-sharpsign-form)
                            &rest args)
   (apply #'label-placeholder syntax form (extract-label syntax form) t args))
+
+(defmethod form-to-object ((syntax lisp-syntax) (form array-form)
+                           &rest args)
+  (let* ((rank-string (form-string syntax (first (children form))))
+         (rank (parse-integer rank-string :start 1
+                              :end (1- (length rank-string))))
+         (array-contents (apply #'form-to-object syntax (second (children form)) args)))
+    (labels ((dimensions (rank contents)
+               (cond ((= rank 0)
+                      nil)
+                     ((= rank 1)
+                      (list (length contents)))
+                     (t
+                      (let ((goal (dimensions (1- rank) (first contents))))
+                        (dolist (element (rest contents))
+                          (unless (equal goal (dimensions (1- rank) element))
+                            (form-conversion-error syntax form "jagged multidimensional array")))
+                        (cons (length contents) goal))))))
+      (make-array (dimensions rank array-contents)
+                  :initial-contents array-contents))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
