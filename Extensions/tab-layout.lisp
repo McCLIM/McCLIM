@@ -329,10 +329,6 @@ that the frame manager can customize the implementation."))
 	(setf (sheet-enabled-p (tab-page-pane page)) t)))
   (call-next-method))
 
-;;;;
-;;;; Beginning of original MGR source code -- license not confirmed
-;;;;
-
 (defclass tab-bar-view (gadget-view)
   ())
 
@@ -404,10 +400,6 @@ that the frame manager can customize the implementation."))
     (sheet-adopt-child instance header)
     (setf (sheet-enabled-p header) t)))
 
-;;;;
-;;;; End of original MGR source code
-;;;;
-
 (defmethod compose-space ((pane tab-layout-pane) &key width height)
   (declare (ignore width height))
   (let ((q (compose-space (tab-layout-header-pane pane))))
@@ -434,3 +426,11 @@ that the frame manager can customize the implementation."))
 
 (defmethod internal-child-p (child (parent tab-layout-pane))
   (eq child (tab-layout-header-pane parent)))
+
+(defmethod clim-tab-layout:note-tab-page-changed
+    ((layout tab-layout-pane) page)
+  (redisplay-frame-pane (pane-frame layout)
+			(car (sheet-children
+			      (car (sheet-children
+				    (tab-layout-header-pane layout)))))
+			:force-p t))
