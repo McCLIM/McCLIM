@@ -6,7 +6,8 @@
                     :output-directory *output-dir*
                     :packages '(:clim :drei :drei-buffer :drei-undo :drei-kill-ring
                                 :drei-base :drei-abbrev :drei-syntax :drei-motion
-                                :drei-editing :drei-core :esa :clim-extensions)
+                                :drei-editing :drei-core :esa :clim-extensions
+				:clim-tab-layout)
                     :ignored-packages '(:clim-internals)
                     :filetype "texi"))
 

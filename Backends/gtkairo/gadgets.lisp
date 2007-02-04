@@ -37,6 +37,13 @@
 
 (defclass list-selection-event (gadget-event) ())
 
+(defclass tab-button-event (gadget-event)
+    ((page :initarg :page :accessor event-page)
+     (button :initarg :button :accessor event-button)))
+
+(defclass tab-press-event (tab-button-event) ())
+(defclass tab-release-event (tab-button-event) ())
+
 
 ;;;; Classes
 
@@ -79,6 +86,11 @@
     ((label-pane-fixed :accessor label-pane-fixed)
      (label-pane-extra-width :accessor label-pane-extra-width)
      (label-pane-extra-height :accessor label-pane-extra-height)))
+
+(defclass gtk-tab-layout (native-widget-mixin clim-tab-layout:tab-layout)
+    ((tab-layout-extra-width :accessor tab-layout-extra-width)
+     (tab-layout-extra-height :accessor tab-layout-extra-height)))
+
 
 ;;;; Constructors
 
@@ -277,6 +289,97 @@
     ((pane gtk-list) (event pointer-button-release-event))
   nil)
 
+(defmethod realize-native-widget ((sheet gtk-tab-layout))
+  (let ((result (gtk_notebook_new))
+	(dummy-child (gtk_fixed_new))
+	(dummy-label (gtk_label_new "foo")))
+    (gtk_notebook_append_page result dummy-child dummy-label)
+    (gtk_widget_show dummy-child)
+    (let* ((q
+	    (reduce (lambda (x y)
+		      (space-requirement-combine #'max x y))
+		    (mapcar #'compose-space (sheet-children sheet))
+		    :initial-value
+		    (make-space-requirement
+		     :width 0 :min-width 0 :max-width 0
+		     :height 0 :min-height 0 :max-height 0)))
+	   (width1 (space-requirement-width q))
+	   (height1 (space-requirement-height q)))
+      (gtk_widget_set_size_request dummy-child width1 height1)
+      (cffi:with-foreign-object (r 'gtkrequisition)
+	(gtk_widget_size_request result r)
+	(cffi:with-foreign-slots ((width height) r gtkrequisition)
+	  (setf (tab-layout-extra-width sheet) (- width width1))
+	  (setf (tab-layout-extra-height sheet) (- height height1))))
+      (gtk_notebook_remove_page result 0))
+    result))
+
+(defmethod container-put ((parent gtk-tab-layout) parent-widget child x y)
+  (declare (ignore x y))
+  (let* ((page (clim-tab-layout:sheet-to-page
+		(widget->sheet child (port parent))))
+	 (index (position page (clim-tab-layout:tab-layout-pages parent)))
+	 (label (gtk_label_new (clim-tab-layout:tab-page-title page)))
+	 (box (gtk_event_box_new)))
+    (gtk_event_box_set_visible_window box 0)
+    (gtk_container_add box label)
+    (gtk_widget_show_all box)
+    ;; naja, ein sheet ist das nicht
+    (setf (widget->sheet box (port parent)) page)
+    (connect-signal box "button-press-event" 'tab-button-handler)
+    (gtk_widget_show child)
+    (gtk_notebook_insert_page parent-widget child box index)
+    (set-tab-page-attributes page label)
+    ;; fixme:
+    (reorder-notebook-pages parent)
+    (setf (clim-tab-layout:tab-layout-enabled-page parent)
+	  (clim-tab-layout:tab-layout-enabled-page parent))))
+
+(defmethod (setf clim-tab-layout:tab-layout-pages)
+    :after
+    (newval (parent gtk-tab-layout))
+  (declare (ignore newval))
+  (reorder-notebook-pages parent))
+
+(defun reorder-notebook-pages (parent)
+  (loop
+      for page in (clim-tab-layout:tab-layout-pages parent)
+      for i from 0
+      do
+	(let* ((pane (clim-tab-layout:tab-page-pane page))
+	       (mirror (climi::port-lookup-mirror (port parent) pane)))
+	  (when mirror
+	    (gtk_notebook_reorder_child
+	     (native-widget parent)
+	     (mirror-widget mirror)
+	     i)))))
+
+(defmethod container-move ((parent gtk-tab-layout) parent-widget child x y)
+  (declare (ignore parent-widget child x y)))
+
+(defmethod allocate-space ((pane gtk-tab-layout) width height)
+  (dolist (page (clim-tab-layout:tab-layout-pages pane))
+    (let ((child (clim-tab-layout:tab-page-pane page)))
+      (move-sheet child 0 0)		;dummy
+      (allocate-space child
+		      (- width (tab-layout-extra-width pane))
+		      (- height (tab-layout-extra-height pane))))))
+
+(defmethod allocate-space :around ((pane gtk-tab-layout) width height)
+  ;; ARGH!  Force the around method in panes.lisp to c-n-m.
+  (setf (climi::pane-current-width pane) nil)
+  (call-next-method))
+
+(defmethod (setf clim-tab-layout:tab-layout-enabled-page)
+    :after
+    (newval (parent gtk-tab-layout))
+  (when (and (native-widget parent) newval)
+    ;; fixme:
+    (reorder-notebook-pages parent)
+    (gtk_notebook_set_current_page
+     (native-widget parent)
+     (position newval (clim-tab-layout:tab-layout-pages parent)))))
+
 (defun option-pane-set-active (sheet widget)
   (gtk_combo_box_set_active
    widget
@@ -458,6 +561,10 @@
   ;; no signals
   )
 
+(defmethod connect-native-signals ((sheet gtk-tab-layout) widget)
+  ;; no signals
+  )
+
 (defmethod connect-native-signals ((sheet gtk-option-pane) widget)
   (connect-signal widget "changed" 'magic-clicked-handler))
 
@@ -509,6 +616,66 @@
     (ecase (command-menu-item-type item)
       (:command
 	(climi::throw-object-ptype item 'menu-item)))))
+
+;;;(defmethod handle-event
+;;;    ((pane gtk-tab-layout) (event tab-release-event))
+;;;  )
+
+(defclass parent-ad-hoc-presentation (climi::ad-hoc-presentation)
+    ((ad-hoc-children :initarg :ad-hoc-children
+		      :reader output-record-children)))
+
+(defmethod clim-tab-layout:note-tab-page-changed ((layout gtk-tab-layout) page)
+  (with-gtk ()
+    (let* ((pane (clim-tab-layout:tab-page-pane page))
+	   (mirror (climi::port-lookup-mirror (port layout) pane)))
+      (when mirror
+	(let ((box (gtk_notebook_get_tab_label (native-widget layout)
+					       (mirror-widget mirror))))
+	  (set-tab-page-attributes page (gtk_bin_get_child box)))))))
+
+(defun set-tab-page-attributes (page label)
+  ;; fixme: wieso funktioniert das in der tabdemo, nicht aber in beirc?
+  (let ((ink (getf (clim-tab-layout:tab-page-drawing-options page) :ink)))
+    (when ink
+      (gtk-widget-modify-fg label ink)))
+  (gtk_label_set_text label (clim-tab-layout:tab-page-title page))
+  (gtk_widget_queue_draw label))
+
+(defmethod handle-event
+    ((pane gtk-tab-layout) (event tab-press-event))
+  (let* ((page (event-page event))
+	 (ptype (clim-tab-layout:tab-page-presentation-type page))
+	 (inner-presentation
+	  (make-instance 'climi::ad-hoc-presentation
+	    :object page
+	    :single-box t
+	    :type 'clim-tab-layout:tab-page))
+	 (presentation
+	  (make-instance 'parent-ad-hoc-presentation
+	    :ad-hoc-children (vector inner-presentation)
+	    :object page
+	    :single-box t
+	    :type ptype)))
+    (case (event-button event)
+      (#.+pointer-right-button+
+	(call-presentation-menu
+	 presentation
+	 *input-context*
+	 *application-frame*
+	 pane
+	 42 42
+	 :for-menu t
+	 :label (format nil "Operation on ~A" ptype)))
+      (#.+pointer-left-button+
+	(throw-highlighted-presentation
+	 presentation
+	 *input-context*
+	 (make-instance 'pointer-button-press-event
+	   :sheet pane
+	   :x 42 :y 42
+	   :modifier-state 0
+	   :button (event-button event)))))))
 
 (defmethod handle-event
     ((pane gtk-nonmenu) (event magic-gadget-event))

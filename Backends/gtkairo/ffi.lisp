@@ -677,11 +677,6 @@
   (arg0 :pointer)                       ;cairo_t *
   )
 
-(defcfun "cairo_stroke_preserve"
-    :void
-  (arg0 :pointer)                       ;cairo_t *
-  )
-
 (defcfun "cairo_stroke_extents"
     :void
   (arg0 :pointer)                       ;cairo_t *
@@ -689,6 +684,11 @@
   (arg2 :pointer)                       ;double *
   (arg3 :pointer)                       ;double *
   (arg4 :pointer)                       ;double *
+  )
+
+(defcfun "cairo_stroke_preserve"
+    :pointer
+  (arg0 :pointer)                       ;cairo_t *
   )
 
 (defcfun "cairo_surface_create_similar"
@@ -1115,6 +1115,11 @@
   (value :double)                       ;gdouble
   )
 
+(defcfun "gtk_bin_get_child"
+    :pointer
+  (bin :pointer)                        ;GtkBin *
+  )
+
 (defcfun "gtk_button_new_with_label"
     :pointer
   (label :string)                       ;const gchar *
@@ -1150,6 +1155,20 @@
     :void
   (container :pointer)                  ;GtkContainer *
   (widget :pointer)                     ;GtkWidget *
+  )
+
+(defcfun "gtk_event_box_new" :pointer)
+
+(defcfun "gtk_event_box_set_above_child"
+    :void
+  (event_box :pointer)                  ;GtkEventBox *
+  (above_child :int)                    ;gboolean
+  )
+
+(defcfun "gtk_event_box_set_visible_window"
+    :void
+  (event_box :pointer)                  ;GtkEventBox *
+  (visible_window :int)                 ;gboolean
   )
 
 (defcfun "gtk_events_pending" :int)
@@ -1201,6 +1220,17 @@
     :void
   (argc :pointer)                       ;int *
   (argv :pointer)                       ;char ***
+  )
+
+(defcfun "gtk_label_new"
+    :pointer
+  (str :string)                         ;const gchar *
+  )
+
+(defcfun "gtk_label_set_text"
+    :void
+  (label :pointer)                      ;GtkLabel *
+  (str :string)                         ;const gchar *
   )
 
 (defcfun "gtk_list_store_append"
@@ -1263,6 +1293,53 @@
     :void
   (menu_shell :pointer)                 ;GtkMenuShell *
   (child :pointer)                      ;GtkWidget *
+  )
+
+(defcfun "gtk_notebook_append_page"
+    :int
+  (notebook :pointer)                   ;GtkNotebook *
+  (child :pointer)                      ;GtkWidget *
+  (tab_label :pointer)                  ;GtkWidget *
+  )
+
+(defcfun "gtk_notebook_get_current_page"
+    :int
+  (notebook :pointer)                   ;GtkNotebook *
+  )
+
+(defcfun "gtk_notebook_get_tab_label"
+    :pointer
+  (notebook :pointer)                   ;GtkNotebook *
+  (child :pointer)                      ;GtkWidget *
+  )
+
+(defcfun "gtk_notebook_insert_page"
+    :int
+  (notebook :pointer)                   ;GtkNotebook *
+  (child :pointer)                      ;GtkWidget *
+  (tab_label :pointer)                  ;GtkWidget *
+  (position :int)                       ;gint
+  )
+
+(defcfun "gtk_notebook_new" :pointer)
+
+(defcfun "gtk_notebook_remove_page"
+    :void
+  (notebook :pointer)                   ;GtkNotebook *
+  (page_num :int)                       ;gint
+  )
+
+(defcfun "gtk_notebook_reorder_child"
+    :void
+  (notebook :pointer)                   ;GtkNotebook *
+  (child :pointer)                      ;GtkWidget *
+  (position :int)                       ;gint
+  )
+
+(defcfun "gtk_notebook_set_current_page"
+    :void
+  (notebook :pointer)                   ;GtkNotebook *
+  (page_num :int)                       ;gint
   )
 
 (defcfun "gtk_radio_button_get_group"
@@ -1454,6 +1531,11 @@
   (widget :pointer)                     ;GtkWidget *
   )
 
+(defcfun "gtk_widget_get_parent"
+    :pointer
+  (widget :pointer)                     ;GtkWidget *
+  )
+
 (defcfun "gtk_widget_get_pointer"
     :void
   (widget :pointer)                     ;GtkWidget *
@@ -1488,6 +1570,18 @@
   (widget :pointer)                     ;GtkWidget *
   (state GtkStateType)
   (color :pointer)                      ;const GdkColor *
+  )
+
+(defcfun "gtk_widget_modify_fg"
+    :void
+  (widget :pointer)                     ;GtkWidget *
+  (state GtkStateType)
+  (color :pointer)                      ;const GdkColor *
+  )
+
+(defcfun "gtk_widget_queue_draw"
+    :void
+  (widget :pointer)                     ;GtkWidget *
   )
 
 (defcfun "gtk_widget_set_double_buffered"

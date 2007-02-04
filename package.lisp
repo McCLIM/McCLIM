@@ -2104,3 +2104,26 @@
 
    ))
 
+(defpackage :clim-tab-layout
+  (:use :clim :clim-lisp)
+  (:export #:tab-layout
+	   #:tab-layout-pane
+	   #:tab-layout-pages
+	   #:tab-page
+	   #:tab-page-tab-layout
+	   #:tab-page-title
+	   #:tab-page-pane
+	   #:tab-page-presentation-type
+	   #:tab-page-drawing-options
+	   #:add-page
+	   #:remove-page
+	   #:tab-layout-enabled-page
+	   #:sheet-to-page
+	   #:find-tab-page-named
+	   #:switch-to-page
+	   #:remove-page-named
+	   #:with-tab-layout
+           #:com-switch-to-tab-page
+	   #:com-remove-tab-page
+	   #:internal-child-p
+	   #:note-tab-page-changed))

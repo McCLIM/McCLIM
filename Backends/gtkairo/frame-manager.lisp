@@ -24,7 +24,9 @@
 (defclass gtkairo-frame-manager (frame-manager)
   ())
 
-(defun frob-stupid-type-spec (type)
+;; fixme!  we're supposed to dispatch on the abstract name, not resolve
+;; it to the (incorrect) concrete generic class name and dispatch on that.
+(defun resolve-abstract-pane-name (type)
   (when (get type 'climi::concrete-pane-class-name)
     (setf type (get type 'climi::concrete-pane-class-name)))
   (class-name
@@ -38,7 +40,7 @@
 (defmethod make-pane-1
     ((fm gtkairo-frame-manager) (frame application-frame) type &rest initargs)
   (apply #'make-pane-2
-	 (frob-stupid-type-spec type)
+	 (resolve-abstract-pane-name type)
 	 :frame frame
 	 :manager fm
 	 :port (port frame)
@@ -98,6 +100,10 @@
 
 (defmethod make-pane-2 ((type (eql 'clim:generic-list-pane)) &rest initargs)
   (apply #'make-instance 'gtk-list initargs))
+
+(defmethod make-pane-2
+    ((type (eql 'clim-tab-layout:tab-layout-pane)) &rest initargs)
+  (apply #'make-instance 'gtk-tab-layout initargs))
 
 (defmethod make-pane-2 ((type (eql 'clim:label-pane)) &rest initargs)
   (apply #'make-instance 'gtk-label-pane initargs))

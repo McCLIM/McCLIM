@@ -74,7 +74,8 @@
 			      (lambda (&rest ignore)
 				(declare (ignore ignore))
 				(format *trace-output* "~&You chose: ~A~%"
-					(select-font))))))
+					(select-font))))
+                   (make-demo-button "Tab Layout" 'tabdemo:tabdemo)))
                (labelling (:label "Tests")
                  (vertically (:equalize-width t)
                    (make-demo-button "Label Test" 'label-test)

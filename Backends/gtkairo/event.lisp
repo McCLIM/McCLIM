@@ -307,6 +307,28 @@
 	(t
 	  0)))))
 
+(define-signal (tab-button-handler :return-type :int) (widget event)
+  (cffi:with-foreign-slots
+      ((type time button state x y x_root y_root) event gdkeventbutton)
+    (when (eql type GDK_BUTTON_PRESS)
+      ;; Hack alert: Menus don't work without this.
+      (gdk_pointer_ungrab GDK_CURRENT_TIME))
+    (setf *last-seen-button* button)
+    (let ((page (widget->sheet widget *port*)))
+      (enqueue (make-instance
+		   (if (eql type GDK_BUTTON_PRESS)
+		       'tab-press-event
+		       'tab-release-event)
+		 :button (ecase button
+			   (1 +pointer-left-button+)
+			   (2 +pointer-middle-button+)
+			   (3 +pointer-right-button+)
+			   (4 +pointer-wheel-up+)
+			   (5 +pointer-wheel-down+))
+		 :page page
+		 :sheet (clim-tab-layout:tab-page-tab-layout page)))))
+  1)
+
 (define-signal enter-handler (widget event)
   (cffi:with-foreign-slots
       ((time state x y x_root y_root) event gdkeventcrossing)

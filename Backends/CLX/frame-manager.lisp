@@ -49,9 +49,11 @@
   (remove-if #'null (mapcar #'(lambda (x) (find-symbol-from-spec (first x) (rest x))) name-specs)))
 
 (defun generate-standard-pane-specs (type)
-  `((:climi ,(get type 'climi::concrete-pane-class-name))
-    (:climi ,type #:-pane)
-    (:climi ,type)))
+  (let ((mapping (get type 'climi::concrete-pane-class-name)))
+    `((,(symbol-package mapping) ,mapping)
+      (:climi ,mapping)
+      (:climi ,type #:-pane)
+      (:climi ,type))))
 
 (defun generate-clx-pane-specs (type)
   (append 
@@ -67,7 +69,8 @@
           (eql (symbol-package type)
                (find-package '#:climi))
           (eql (symbol-package type)
-               (find-package '#:keyword)))
+               (find-package '#:keyword))
+	  (get type 'climi::concrete-pane-class-name))
       (find-first-defined-class (find-symbols (generate-clx-pane-specs type)))
       type))
   

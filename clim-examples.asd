@@ -20,7 +20,7 @@
                (:file "postscript-test")
                (:file "puzzle")
                (:file "transformations-test")
-	       (:file "demodemo")
+	       (:file "demodemo" :depends-on ("tabdemo"))
                (:file "stream-test")
                (:file "presentation-test")
                (:file "dragndrop")
@@ -34,7 +34,8 @@
                (:file "drawing-benchmark")
                (:file "logic-cube")
                (:file "views")
-               (:file "font-selector")))
+               (:file "font-selector")
+               (:file "tabdemo")))
      (:module "Goatee"
 	      :components
 	      ((:file "goatee-test")))))

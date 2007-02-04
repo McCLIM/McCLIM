@@ -244,6 +244,10 @@
   (with-gdkcolor (c color)
     (gtk_widget_modify_bg widget 0 c)))
 
+(defun gtk-widget-modify-fg (widget color)
+  (with-gdkcolor (c color)
+    (gtk_widget_modify_fg widget 0 c)))
+
 ;; copy&paste from port.lisp|CLX:
 (defun sheet-desired-color (sheet)
   (typecase sheet

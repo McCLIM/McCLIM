@@ -352,7 +352,10 @@
    (:file "input-editing-drei")
    (:file "text-editor-gadget")
    (:file "Extensions/rgb-image" :pathname #.(make-pathname :directory '(:relative "Extensions")
-                                                            :name "rgb-image"))))
+                                                            :name "rgb-image"))
+   (:file "Extensions/tab-layout"
+	  :pathname #.(make-pathname :directory '(:relative "Extensions")
+				     :name "tab-layout"))))
 
 (defsystem :clim-clx
     :depends-on (:clim #+(or sbcl openmcl ecl allegro) :clx)
