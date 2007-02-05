@@ -118,10 +118,10 @@
     (draw-line* pane x1 y2 x1 y1 :ink +white+)
     (draw-line* pane x2 y1 x1 y1 :ink +white+)
     ;; now for the gray inline
-    (let ((x1 (+ x1 2))
-          (y1 (+ y1 2))
-          (x2 (- x2 1))
-          (y2 (- y2 1)))
+    (let ((x1 (+ x1 1))			; I'd prefer this be zero, so that there isn't
+          (y1 (+ y1 1))			; the little sparkling white pixel in both corners
+          (x2 (- x2 1))			; (bothersome in the corner of a scroller-pane),
+          (y2 (- y2 1)))		; but we may be transformed, so too much work. Bah.
       (draw-line* pane x1 y2 x2 y2 :ink +gray54+)
       (draw-line* pane x2 y1 x2 y2 :ink +gray54+))
     ;; now for the black outline
@@ -284,11 +284,13 @@
         (case token
           ((up-notch)
            (when (< (gadget-value pane) (gadget-max-value pane))
+	     #+NIL
              (clim-internals::schedule-timer-event pane token 0.1)
              (incf (gadget-value pane))
              (dispatch-repaint pane (sheet-region pane))))
           ((down-notch)
            (when (> (gadget-value pane) (gadget-min-value pane))
+	     #+NIL
              (clim-internals::schedule-timer-event pane token 0.1)
              (decf (gadget-value pane))
              (dispatch-repaint pane (sheet-region pane)))))))))
@@ -313,12 +315,14 @@
            ; move up or down one notch
            (cond
              ((< y (bounding-rectangle-min-y thumb))
+	      #+NIL
               (clim-internals::schedule-timer-event pane 'down-notch 0.1)
               ; move toward the min
               (when (> (gadget-value pane) (gadget-min-value pane))
                 (decf (gadget-value pane))
                 (dispatch-repaint pane (sheet-region pane))))
              ((> y (bounding-rectangle-max-y thumb))
+	      #+NIL
               (clim-internals::schedule-timer-event pane 'up-notch 0.1)
               ; move toward the max
               (when (< (gadget-value pane) (gadget-max-value pane))
@@ -564,6 +568,7 @@
   (let ((token (clim-internals::event-token event)))
     (with-slots (was-repeating repeating) pane
       (unless (eql was-repeating repeating)
+	#+NIL
         (clim-internals::schedule-timer-event pane token 0.1)
         (case token
           ((up-line)
@@ -590,12 +595,14 @@
                  armed    t
                  drag-delta (- y (bounding-rectangle-min-y thumb))))
           ((region-contains-position-p (gadget-up-region pane) x y)
+	   #+NIL
            (clim-internals::schedule-timer-event pane 'up-line 0.1)
            ; Up Arrow
            (scroll-up-line-callback pane (gadget-client pane) (gadget-id pane))
            (setf (slot-value pane 'armed) :up)
            (dispatch-repaint pane +everywhere+))
           ((region-contains-position-p (gadget-down-region pane) x y)
+	   #+NIL
            (clim-internals::schedule-timer-event pane 'down-line 0.1)
            ; Down Arrow
            (scroll-down-line-callback pane (gadget-client pane) (gadget-id pane))
@@ -605,9 +612,11 @@
            ; Bed
            (cond
              ((< y (bounding-rectangle-min-y thumb))
+	      #+NIL
               (clim-internals::schedule-timer-event pane 'up-page 0.1)
               (scroll-up-page-callback pane (gadget-client pane) (gadget-id pane)))
              (t
+	      #+NIL
               (clim-internals::schedule-timer-event pane 'down-page 0.1)
               (scroll-down-page-callback pane (gadget-client pane) (gadget-id pane)))))
           (t
