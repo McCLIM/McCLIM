@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.178 2007/01/23 07:51:10 ahefner Exp $
+;;; $Id: panes.lisp,v 1.179 2007/02/05 03:02:59 ahefner Exp $
 
 (in-package :clim-internals)
 
@@ -496,7 +496,7 @@ order to produce a double-click")
                          ((:bottom) (+ y (- height child-height)))
                          ((:expand)  y) )))
     ;; Actually layout the child
-    (move-sheet child child-x child-y)
+    (move-sheet child child-x child-y)    
     (resize-sheet child child-width child-height)
     (allocate-space child child-width child-height)))
 
@@ -720,8 +720,8 @@ order to produce a double-click")
 ;;   call change-space-requirements on parent pane
 ;;   call note-space-requirements-changed
 ;;
-;; This is splitted into :before, primary and :after method to allow
-;; for easy overriding of change-space-requirements without needing to
+;; This is split into :before, primary and :after method to allow for
+;; easy overriding of change-space-requirements without needing to
 ;; know the details of the space requirement cache and the
 ;; note-space-requirements-changed notifications.
 ;;
@@ -1197,10 +1197,10 @@ order to produce a double-click")
               (wanted      (reduce #'+ allot))
               (excess      (- major wanted
                               (* (1- (length children)) major-spacing))))
-          (when *dump-allocate-space*
-	    (format *trace-output* "~&;; ~S ~S~%"
-		    'box-layout-mixin/xically-allocate-space-aux* box)
-	    (format *trace-output* "~&;;   major = ~D, wanted = ~D, excess = ~D, allot = ~D.~%"
+         (when *dump-allocate-space*
+           (format *trace-output* "~&;; ~S ~S~%"
+                   'box-layout-mixin/xically-allocate-space-aux* box)
+           (format *trace-output* "~&;;   major = ~D, wanted = ~D, excess = ~D, allot = ~D.~%"
                    major wanted excess allot))
 
          (let ((qvector
@@ -1731,11 +1731,12 @@ order to produce a double-click")
 
 (defmethod allocate-space ((pane spacing-pane) width height)
   (with-slots (border-width) pane
-    (let ((child (first (sheet-children pane))))
+    (let ((child (first (sheet-children pane)))
+	  (new-width  (- width border-width border-width))
+	  (new-height (- height border-width border-width)))
       (layout-child child (pane-align-x pane) (pane-align-y pane)
                     border-width border-width
-                    (- width border-width border-width)
-                    (- height border-width border-width)))))
+		    new-width new-height))))
 
 ;;; OUTLINED PANE
 
@@ -2167,17 +2168,15 @@ order to produce a double-click")
 ;;;; Accounting for changed space requirements
 
 (defmethod change-space-requirements ((pane clim-extensions:viewport-pane) &rest ignore)
-  (declare (ignore ignore))  
-  (let ((client (first (sheet-children pane))))
-    (resize-sheet client (max (bounding-rectangle-width pane)
-                              (space-requirement-width (compose-space client)))
-                  (max (bounding-rectangle-height pane)
-                       (space-requirement-height (compose-space client))))
-    (allocate-space client
-                    (max (bounding-rectangle-width pane)
-                         (space-requirement-width (compose-space client)))
-                    (max (bounding-rectangle-height pane)
-                         (space-requirement-height (compose-space client))))
+  (declare (ignore ignore))
+  (let* ((client (first (sheet-children pane)))
+	 (sr (compose-space client))
+	 (width  (max (bounding-rectangle-width pane)
+		      (space-requirement-width sr)))
+	 (height (max (bounding-rectangle-height pane)
+		      (space-requirement-height sr))))
+    (resize-sheet client width height)
+    (allocate-space client width height)
     (scroller-pane/update-scroll-bars (sheet-parent pane))))
 
 ;;;; 
@@ -2381,25 +2380,37 @@ order to produce a double-click")
   (:documentation "Returns the number of pixels respresenting a 'line', used
 to computed distance to scroll in response to mouse wheel events."))
 
-(defmethod scroll-quantum (pane) 10)
+(defmethod scroll-quantum (pane) 10)	; TODO: Connect this with the scroller-pane motion
+
+(defun find-viewport-for-scroll (pane)
+  "Find a viewport in the chain of parents which contains 'pane',
+   returning this viewport and the sheet immediately contained within."
+  (cond ((not (typep pane 'basic-pane))
+         (values nil nil))
+	((pane-viewport pane) (values (pane-viewport pane) pane))
+	(t (find-viewport-for-scroll (sheet-parent pane)))))
 
 (defun scroll-sheet (sheet vertical horizontal)
-  (with-bounding-rectangle* (vx0 vy0 vx1 vy1) (pane-viewport-region sheet)
-    (with-bounding-rectangle* (sx0 sy0 sx1 sy1) (sheet-region sheet)
-      (let ((viewport-height (- vy1 vy0))
-	    (viewport-width  (- vx1 vx0))
-	    (delta (* *mouse-scroll-distance*
-		      (scroll-quantum sheet))))
-	;; The coordinates (x,y) of the new upper-left corner of the viewport
-	;; must be "sx0 < x < sx1 - viewport-width"  and
-	;;         "sy0 < y < sy1 - viewport-height"	
-	(scroll-extent sheet
-		       (max sx0 (min (- sx1 viewport-width)  (+ vx0 (* delta horizontal))))
-		       (max sy0 (min (- sy1 viewport-height) (+ vy0 (* delta vertical)))))))))
+  (multiple-value-bind (viewport sheet)
+      (find-viewport-for-scroll sheet)
+    (declare (ignore viewport))
+    (with-bounding-rectangle* (vx0 vy0 vx1 vy1) (pane-viewport-region sheet)
+      (with-bounding-rectangle* (sx0 sy0 sx1 sy1) (sheet-region sheet)
+	(let ((viewport-height (- vy1 vy0))
+	      (viewport-width  (- vx1 vx0))
+	      (delta (* *mouse-scroll-distance*
+			(scroll-quantum sheet))))
+	  ;; The coordinates (x,y) of the new upper-left corner of the viewport
+	  ;; must be "sx0 < x < sx1 - viewport-width"  and
+	  ;;         "sy0 < y < sy1 - viewport-height"
+	  (scroll-extent sheet
+			 (max sx0 (min (- sx1 viewport-width)  (+ vx0 (* delta horizontal))))
+			 (max sy0 (min (- sy1 viewport-height) (+ vy0 (* delta vertical))))))))))
 
+;; Note that handling this from dispatch-event is evil, and we shouldn't.
 (defmethod dispatch-event :around ((sheet mouse-wheel-scroll-mixin)
                                    (event pointer-button-press-event))
-  (if (pane-viewport sheet)
+  (if (find-viewport-for-scroll sheet)
       (let ((button (pointer-event-button event)))
 	(cond
 	 ((eq button +pointer-wheel-up+)    (scroll-sheet sheet -1  0))
@@ -2862,5 +2873,6 @@ to computed distance to scroll in response to mouse wheel events."))
 ; timer-event convenience
 
 (defmethod schedule-timer-event ((pane pane) token delay)
+  (warn "Are you sure you want to use schedule-timer-event? It probably doesn't work.")
   (schedule-event pane (make-instance 'timer-event :token token :sheet pane) delay))
 
