@@ -651,10 +651,12 @@ position for the character."
       (with-medium-options (sheet args)
         (if (coordinate<= y-radius x-radius)
             (let ((x1 (- center-x x-radius)) (x2 (+ center-x x-radius))
-                  (y1 (- center-y y-radius)) (y2 (+ center-y y-radius)))              
+                  (y1 (- center-y y-radius)) (y2 (+ center-y y-radius)))
               (if filled
-                  (draw-rectangle* sheet x1 y1 x2 y2)
-                  (draw-lines* sheet (list x1 y1 x2 y1 x1 y2 x2 y2)))              
+                  ;; Kludge coordinates, sometimes due to rounding the lines don't connect.
+                  (draw-rectangle* sheet (floor x1) y1 (ceiling x2) y2)
+                  (draw-lines* sheet (list (floor x1) y1 (ceiling x2) y1
+                                           (floor x1) y2 (ceiling x2) y2)))
               (draw-circle* sheet x1 center-y y-radius
                             :filled filled
                             :start-angle (* pi 0.5)
@@ -1023,3 +1025,72 @@ position for the character."
 			 :ink (transform-region
 			       (make-translation-transformation x y)
 			       pattern))))))
+
+(defun draw-rounded-rectangle* (sheet x1 y1 x2 y2
+                                      &rest args &key
+                                      (radius 7)
+                                      (radius-x radius)
+                                      (radius-y radius)
+                                      (radius-left  radius-x)
+                                      (radius-right radius-x)
+                                      (radius-top    radius-y)
+                                      (radius-bottom radius-y)
+                                      filled &allow-other-keys)
+  "Draw a rectangle with rounded corners"
+
+  (apply #'invoke-with-drawing-options sheet
+    (lambda (medium)
+      (declare (ignore medium))
+      (let ((medium sheet))
+        (if (not (and (>= (- x2 x1) (* 2 radius-x))
+                      (>= (- y2 y1) (* 2 radius-y))))
+            (draw-rectangle* medium x1 y1 x2 y2)       
+            (with-grown-rectangle* ((ix1 iy1 ix2 iy2) (x1 y1 x2 y2)
+                                    :radius-left   (- radius-left)
+                                    :radius-right  (- radius-right)
+                                    :radius-top    (- radius-top)
+                                    :radius-bottom (- radius-bottom))
+              (let ((zl (zerop radius-left))
+                    (zr (zerop radius-right))
+                    (zt (zerop radius-top))
+                    (zb (zerop radius-bottom)))
+                (if filled
+                    (progn              ; Filled
+                      (unless (or zl zt)
+                        (draw-ellipse* medium ix1 iy1 radius-left  0 0 radius-top    :filled t))
+                      (unless (or zr zt)
+                        (draw-ellipse* medium ix2 iy1 radius-right 0 0 radius-top    :filled t))
+                      (unless (or zl zb)
+                        (draw-ellipse* medium ix1 iy2 radius-left  0 0 radius-bottom :filled t))
+                      (unless (or zr zb)
+                        (draw-ellipse* medium ix2 iy2 radius-right 0 0 radius-bottom :filled t))
+                      (draw-rectangle* medium x1 iy1 x2 iy2 :filled t)
+                      (draw-rectangle* medium ix1 y1 ix2 iy1 :filled t)
+                      (draw-rectangle* medium ix1 iy2 ix2 y2 :filled t))                    
+                    (progn              ; Unfilled
+                      (unless (or zl zt)
+                        (draw-ellipse* medium ix1 iy1 (- radius-left) 0 0 (- radius-top)
+                                       :start-angle (/ pi 2) :end-angle pi
+                                       :filled nil))
+                      (unless (or zr zt)
+                        (draw-ellipse* medium ix2 iy1 (- radius-right) 0 0 (- radius-top)
+                                       :start-angle 0 :end-angle (/ pi 2)
+                                       :filled nil))
+                      (unless (or zl zb)
+                        (draw-ellipse* medium ix1 iy2 (- radius-left) 0 0 (- radius-bottom)
+                                       :start-angle pi :end-angle (* 3/2 pi)
+                                       :filled nil))
+                      (unless (or zr zb)
+                        (draw-ellipse* medium ix2 iy2 (- radius-right) 0 0 (- radius-bottom)
+                                       :start-angle (* 3/2 pi)
+                                       :filled nil))
+                      (labels ((fx (y p x1a x2a x1b x2b) (draw-line* medium (if p x1a x1b) y (if p x2a x2b) y))
+                               (fy (x p y1a y2a y1b y2b) (draw-line* medium x (if p y1a y1b) x (if p y2a y2b))))
+                        (fx y1 zt x1 x2 ix1 ix2)
+                        (fy x1 zl y1 y2 iy1 iy2)
+                        (fx y2 zb x1 x2 ix1 ix2)
+                        (fy x2 zr y1 y2 iy1 iy2)))))))))
+   (with-keywords-removed (args '(:radius :radius-x :radius-y
+                                  :radius-left :radius-right
+                                  :radius-top  :radius-bottom))
+     args)))
