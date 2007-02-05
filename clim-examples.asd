@@ -35,7 +35,9 @@
                (:file "logic-cube")
                (:file "views")
                (:file "font-selector")
-               (:file "tabdemo")))
+               (:file "tabdemo")
+               (:file "bordered-output-examples")
+               (:file "misc-tests")))
      (:module "Goatee"
 	      :components
 	      ((:file "goatee-test")))))
