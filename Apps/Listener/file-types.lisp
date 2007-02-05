@@ -419,17 +419,20 @@
   (let ((table (make-hash-table :size 8))
         (foo nil)) ; <- position after reading required fields
     (when                    ;; First read the required fields.
-        (multiple-value-bind (text pos)
-            (read-mailcap-field line)
-          (multiple-value-bind (media-type type subtype)
-              (read-mime-type text)
-            (multiple-value-bind (view-command pos)
-                (read-mailcap-field line pos)                
-              (setf foo pos)
-              (setf (gethash :type table) type)
-              (setf (gethash :subtype table) subtype)
-              (setf (gethash :media-type table) media-type)
-    #| --> |# (setf (gethash :view-command table) view-command))))
+	(with-simple-restart (skip "Skip mailcap entry \"~A\"" (string-trim #(#\Space #\Tab)  line))
+	  (multiple-value-bind (text pos)
+	      (read-mailcap-field line)
+	    (and pos
+		 (multiple-value-bind (media-type type subtype)
+		     (read-mime-type text)
+		   (multiple-value-bind (view-command pos)
+		       (read-mailcap-field line pos)
+		     (setf foo pos)
+		     (setf (gethash :type table) type)
+		     (setf (gethash :subtype table) subtype)
+		     (setf (gethash :media-type table) media-type)
+                     ;; Note the return value:
+                     (setf (gethash :view-command table) view-command))))))
       ;; If the required fields were read successfully, read
       ;; the options into the hash table.
       (loop
