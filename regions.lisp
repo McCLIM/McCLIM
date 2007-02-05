@@ -4,7 +4,7 @@
 ;;;   Created: 1998-12-02 19:26
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: regions.lisp,v 1.33 2006/05/05 10:24:02 crhodes Exp $
+;;;       $Id: regions.lisp,v 1.34 2007/02/05 03:07:22 ahefner Exp $
 ;;; --------------------------------------------------------------------------------------
 ;;;  (c) copyright 1998,1999,2001 by Gilbert Baumann
 ;;;  (c) copyright 2001 by Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
@@ -2378,3 +2378,23 @@
   ;;    (and (<= u1 x2) (<= x1 u2)
   ;;         (<= v1 y2) (<= y1 v2))))
   )
+
+;;; Internal helpers
+
+(defmacro with-grown-rectangle* (((out-x1 out-y1 out-x2 out-y2)
+                                  (in-x1 in-y1 in-x2 in-y2)
+                                  &key
+                                  radius
+                                  (radius-x radius)
+                                  (radius-y radius)
+                                  (radius-left  radius-x)
+                                  (radius-right radius-x)
+                                  (radius-top    radius-y)
+                                  (radius-bottom radius-y))
+                                  &body body)
+  `(multiple-value-bind (,out-x1 ,out-y1 ,out-x2 ,out-y2)
+    (values (- ,in-x1 ,radius-left)
+     (- ,in-y1 ,radius-top)
+     (+ ,in-x2 ,radius-right)
+     (+ ,in-y2 ,radius-bottom))
+    ,@body))
