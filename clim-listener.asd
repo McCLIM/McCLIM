@@ -19,5 +19,7 @@
                (:file "icons" :depends-on ("package" "util"))
                (:file "file-types" :depends-on ("package" "icons" "util"))
                (:file "dev-commands" :depends-on ("package" "icons" "file-types" "util"))
-               (:file "listener" :depends-on ("package" "file-types" "icons" "dev-commands" "util"))
+               (:file "wholine" :depends-on ("package" "dev-commands" "util"))
+               (:file "listener" :depends-on ("package" "wholine" "file-types" "icons" "dev-commands" "util"))
+               
                #+CMU (:file "cmu-hacks" :depends-on ("package"))))))
