@@ -856,3 +856,29 @@
       (and (= r1 r2)
 	   (= g1 g2)
 	   (= b1 b2)))))
+
+;;; Color utilities
+
+(defgeneric highlight-shade (ink)
+  (:documentation
+  "Produce an alternate shade of the given ink for the purpose of highlighting.
+   Typically the ink will be brightened, but very light inks may be darkened."))
+
+(defmethod highlight-shade (ink) ink)
+
+(defmethod highlight-shade ((ink (eql +background-ink+)))
+  +foreground-ink+)
+
+(defmethod highlight-shade ((ink (eql +foreground-ink+)))
+  +background-ink+)
+
+(defmethod highlight-shade ((ink standard-color))
+  (let ((brighten-factor 0.5)
+        (darken-factor 0.15))
+  (multiple-value-bind (r g b) (color-rgb ink)
+    (multiple-value-bind (blend-ink factor)
+        (if (> (- 3.0 r g b) 0.2)
+            (values +white+ brighten-factor)
+            (values +black+ darken-factor))
+      (compose-over (compose-in blend-ink (make-opacity factor))
+                    ink)))))
