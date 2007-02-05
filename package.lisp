@@ -1923,6 +1923,16 @@
    #:pointer-motion-hint-event
    #:frame-display-pointer-documentation-string
    #:list-pane-items
+   
+   #:draw-output-border-over
+   #:draw-output-border-under
+   #:make-bordered-output-record
+   #:bordered-output-record
+
+   #:draw-rounded-rectangle*
+
+   #:highlight-output-record-tree
+   
    ;; Font listing extension:
    #:font-family
    #:font-face
