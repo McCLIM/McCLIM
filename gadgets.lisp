@@ -203,13 +203,9 @@
                         ;; immediate-sheet-input-mixin
                         ;; immediate-repainting-mixin
 			basic-pane
-                        gadget
-                        )
-  ;; Half-baked attempt to be compatible with Lispworks. ??? -moore
-  ;; Inherited from basic-pane with different defaults.
-  ((foreground  :initform +black+)
-   #+IGNORE (background  :initform +white+)  ; This is evil.. -Hefner
-   ))
+                        gadget)
+  ())
+                        
 
 
 ;; Where is this standard-gadget from? --GB
@@ -701,8 +697,8 @@ and must never be nil."))
 (defclass enter/exit-arms/disarms-mixin ()
   ()
   (:documentation
-   "Mixin class for gadgets, which will be armed, when the mouse enters and 
-    disarmed, when the mouse leaves."))
+   "Mixin class for gadgets which are armed when the mouse enters and 
+    disarmed when the mouse leaves."))
 
 (defmethod handle-event :before ((pane enter/exit-arms/disarms-mixin) (event pointer-enter-event))
   (declare (ignorable event))
@@ -737,7 +733,12 @@ and must never be nil."))
   (declare (ignorable client))
   (disarm-gadget gadget))
 
-;;
+;;;; ------------------------------------------------------------------------------------------
+;;;;
+;;;;  Drawing Utilities for Concrete Gadgets
+;;;;
+
+;;; Labels
 
 (defmethod compose-label-space ((gadget labelled-gadget-mixin) &key (wider 0) (higher 0))
   (with-slots (label align-x align-y) gadget
@@ -768,11 +769,6 @@ and must never be nil."))
                   ;; Giving the text-style here shouldn't be neccessary --GB
                   :text-style (pane-text-style pane)
                   :ink ink))))
-
-;;;; ------------------------------------------------------------------------------------------
-;;;;
-;;;;  Drawing Utilities for Concrete Gadgets
-;;;;
 
 ;;; 3D-ish Look
 
@@ -950,7 +946,10 @@ and must never be nil."))
          medium
          (polygon-points (make-rectangle* x1 y1 x2 y2))
          options))
-  
+
+(defun draw-engraved-label* (pane x1 y1 x2 y2)
+  (draw-label* pane (1+ x1) (1+ y1) (1+ x2) (1+ y2) :ink *3d-light-color*)
+  (draw-label* pane x1 y1 x2 y2 :ink *3d-dark-color*))  
 
 ;;;;
 ;;;; 3D-BORDER-MIXIN Class
@@ -1040,7 +1039,7 @@ and must never be nil."))
 		      :initarg :show-as-default-p
 		      :accessor push-button-show-as-default-p))
   (:default-initargs
-   :text-style (make-text-style :sans-serif nil nil)
+    :text-style (make-text-style :sans-serif nil nil)
     :background *3d-normal-color*
     :align-x :center
     :align-y :center
@@ -1075,10 +1074,6 @@ and must never be nil."))
       (activate-callback pane (gadget-client pane) (gadget-id pane))
       (setf pressedp nil)
       (dispatch-repaint pane +everywhere+))))
-
-(defun draw-engraved-label* (pane x1 y1 x2 y2)
-  (draw-label* pane (1+ x1) (1+ y1) (1+ x2) (1+ y2) :ink *3d-light-color*)
-  (draw-label* pane x1 y1 x2 y2 :ink *3d-dark-color*))
 
 (defmethod handle-repaint ((pane push-button-pane) region)
   (declare (ignore region))
@@ -2044,7 +2039,7 @@ selection via the control modifier.")
          (h (* n (generic-list-pane-item-height pane))))
     (make-space-requirement :width w     :height h
                             :min-width w :min-height h
-                            :max-width +fill+ :max-height h)))
+                            :max-width +fill+ :max-height +fill+)))
 
 (defmethod allocate-space ((pane generic-list-pane) w h)
   (resize-sheet pane w h))
