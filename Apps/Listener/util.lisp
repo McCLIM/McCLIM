@@ -116,8 +116,6 @@
 	   (merge-pathnames (parse-namestring (concatenate 'string string "/"))
 			    parent)))))
 
-;; FIXME: SB-POSIX now has STAT, so USE IT HERE !!!
-
 #+SBCL
 (defun list-directory (pathname)
   (directory pathname)
@@ -195,11 +193,12 @@
      ,@body))
 
 (defmacro bordering ((stream shape) &body body)
-  `(surrounding-output-with-border (,stream :shape ,shape :move-cursor nil)
+  `(surrounding-output-with-border (,stream :shape ,shape :move-cursor t)
      ,@body))
 
 (defmacro underlining ((stream) &body body)
-  `(bordering (,stream :underline) ,@body))
+  `(surrounding-output-with-border (,stream :shape :underline :move-cursor nil)
+    ,@body))
 
 (defun note (string &rest args)
   (let ((stream *query-io*))
@@ -218,7 +217,7 @@
 (defun invoke-as-heading (cont &optional ink)
   (with-drawing-options (t :ink (or ink +royal-blue+) :text-style (make-text-style :sans-serif :bold nil))
     (fresh-line)
-    (bordering (t :underline)
+    (underlining (t)
       (funcall cont))
     (fresh-line)
     (vertical-gap t)))
