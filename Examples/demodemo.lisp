@@ -64,8 +64,7 @@
                    (make-demo-button "Logic Cube" 'logic-cube)
                    (make-demo-button "Gadget Test"  'gadget-test)
                    (make-demo-button "Drag and Drop" 'dragndrop)
-                   (make-demo-button "Colorslider" 'colorslider)
-                   (make-demo-button "Goatee Test" 'goatee::goatee-test)
+                   ;(make-demo-button "Colorslider" 'colorslider)                   
                    (make-demo-button "D&D Translator" 'drag-test)
                    (make-demo-button "Draggable Graph" 'draggable-graph-demo)
 		   (make-pane 'push-button
@@ -84,8 +83,12 @@
                    (make-demo-button "List Test" 'list-test)
                    (make-demo-button "HBOX Test"  'hbox-test)
                    (make-demo-button "Text Size Test"  'text-size-test)
+                   (make-demo-button "Goatee Test" 'goatee::goatee-test)
                    (make-demo-button "Drawing Benchmark"
-				     'drawing-benchmark)))))))))
+				     'drawing-benchmark)
+                   (make-demo-button "Border Styles Test" 'bordered-output)
+                   (make-demo-button "Misc. Tests"
+				     'misc-tests)))))))))
 
 (defun demodemo ()
   #+nil
