@@ -180,15 +180,16 @@
          (fm (frame-manager associated-frame)))
     (with-look-and-feel-realization (fm associated-frame) ; hmm... checkme
       (let* ((menu-stream (make-pane-1 fm associated-frame 'clim-stream-pane
-                                       :background +gray80+))
+                                       :background *3d-normal-color* #+NIL +gray80+))
              (container (scrolling (:scroll-bar scroll-bars)
                           menu-stream))
-	     (frame (make-menu-frame (if label
-                                         (labelling (:label label
-                                                     :label-alignment :top
-                                                     :background +gray80+)
-                                           container)
-                                         container)
+	     (frame (make-menu-frame (raising ()
+				       (if label
+					   (labelling (:label label
+						       :name 'label
+						       :label-alignment :top)
+					     container)
+					   container))
 				     :left nil
 				     :top nil)))
         (adopt-frame fm frame)
@@ -316,12 +317,11 @@ maximum size according to `frame')."
                                   :resize-frame t)))
 
     ;; Modify the size and location of the frame as well.
-    (let* ((label-pane (sheet-parent (pane-scroller menu)))
-           (top-level-pane (sheet-parent label-pane)))
-      (when (not (typep label-pane 'label-pane))
-        ;; Oops, we have no label. Rebind...
-        (setf top-level-pane label-pane)
-        (setf label-pane nil))
+    (let* ((top-level-pane (labels ((searching (pane)
+				      (if (typep pane 'top-level-sheet-pane)
+					  pane
+					  (searching (sheet-parent pane)))))
+			     (searching menu))))
       (multiple-value-bind (frame-width frame-height)
           (menu-size top-level-pane *application-frame*)
         (multiple-value-bind (res-max-x res-max-y) (max-x-y *application-frame*)
