@@ -504,13 +504,26 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
     (multiple-value-bind (x1 y1 x2 y2)
         (output-record-hit-detection-rectangle* record)
       (ecase state
-        (:highlight	 
+        (:highlight
          (draw-rectangle* (sheet-medium stream) x1 y1 (1- x2) (1- y2)
                           :filled nil :ink +foreground-ink+)) ; XXX +FLIPPING-INK+? 
         (:unhighlight
 	 ;; FIXME: repaint the hit detection rectangle. It could be bigger than
-	 ;;; the bounding rectangle.
-	 (repaint-sheet stream record))))))
+	 ;; the bounding rectangle.         
+	 (repaint-sheet stream record)
+         
+         ;; Using queue-repaint should be faster in apps (such as clouseau) that
+         ;; highlight/unhighlight many bounding rectangles at once. The event 
+         ;; code should merge these into a single larger repaint. Unfortunately,
+         ;; since an enqueued repaint does not occur immediately, and highlight
+         ;; rectangles are not recorded, newer highlighting gets wiped out
+         ;; shortly after being drawn. So, we aren't ready for this yet.
+         #+NIL
+	 (queue-repaint stream (make-instance 'window-repaint-event
+					      :sheet stream
+					      :region (transform-region
+						       (sheet-native-transformation stream)
+						       record))))))))
 
 ;;; XXX Should this only be defined on recording streams?
 (defmethod highlight-output-record ((record output-record) stream state)
@@ -676,8 +689,8 @@ the associated sheet can be determined."
 ;;; not affect bounding rectangles.  -- Hefner
 (defun null-bounding-rectangle-p (bbox)
   (with-bounding-rectangle* (x1 y1 x2 y2) bbox
-     (and (zerop x1) (zerop y1)
-          (zerop x2) (zerop y2))))
+     (and (= x1 x2)
+          (= y1 y2))))
 
 ;;; 16.2.3. Output Record Change Notification Protocol
 (defmethod recompute-extent-for-new-child
@@ -770,7 +783,7 @@ the associated sheet can be determined."
       ;; If record is currently empty, use the child's bbox directly. Else..
       ;; Does the new rectangle of the child contain the original rectangle?
       ;; If so, we can use min/max to grow record's current rectangle.
-      ;; If not, the child has shrunk, and we need to fully recompute.                              
+      ;; If not, the child has shrunk, and we need to fully recompute.
       (multiple-value-bind (nx1 ny1 nx2 ny2) 
           (cond
             ;; The child has been deleted; who knows what the

@@ -1206,21 +1206,28 @@ history will be unchanged."
 					   stream
 					   state)))
 
+(defgeneric highlight-output-record-tree (record stream state))
+
+(defmethod highlight-output-record-tree (record stream state)
+  (declare (ignore record stream state))
+  (values))
+
+(defmethod highlight-output-record-tree ((record compound-output-record) stream state)
+  (map-over-output-records
+   (lambda (record)
+     (highlight-output-record-tree record stream state))
+   record))
+
+(defmethod highlight-output-record-tree ((record displayed-output-record) stream state)
+  (highlight-output-record record stream state))
+
 (define-default-presentation-method highlight-presentation
     (type record stream state)
   (declare (ignore type))
   (if (or (eq (presentation-single-box record) t)
 	  (eq (presentation-single-box record) :highlighting))
-      (highlight-output-record-rectangle record stream state)
-      (labels ((highlighter (record)
-		 (typecase record
-		   (displayed-output-record
-		    (highlight-output-record record stream state))
-		   (compound-output-record
-		    (map-over-output-records #'highlighter record))
-		   (t nil))))
-	(highlighter record))))
-
+      (highlight-output-record record stream state)
+      (highlight-output-record-tree record stream state)))
 
 (define-default-presentation-method present
     (object type stream (view textual-view) &key acceptably for-context-type)
