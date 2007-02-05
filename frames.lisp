@@ -238,8 +238,9 @@ documentation produced by presentations.")))
 
 (defmethod layout-frame ((frame application-frame) &optional width height)
   (let ((pane (frame-panes frame)))
-    (if (and  width (not height))
-	(error "LAYOUT-FRAME must be called with both WIDTH and HEIGHT or neither"))
+    (when (and (or width height)
+               (not (and width height)))
+      (error "LAYOUT-FRAME must be called with both WIDTH and HEIGHT or neither"))
     (if (and (null width) (null height))
 	(let ((space (compose-space pane))) ;I guess, this might be wrong. --GB 2004-06-01
 	  (setq width (space-requirement-width space))
@@ -600,7 +601,7 @@ documentation produced by presentations.")))
          #+clim-mp (event-queue (sheet-event-queue t-l-s)))
     (setf (slot-value frame 'top-level-sheet) t-l-s)
     (generate-panes fm frame)
-    (setf (slot-value frame 'state)  :disabled)
+    (setf (slot-value frame 'state) :disabled)
     #+clim-mp
     (when (typep event-queue 'port-event-queue)
       (setf (event-queue-port event-queue)
@@ -795,6 +796,7 @@ documentation produced by presentations.")))
 	(others nil)	
 	(pointer-documentation nil)
 	(geometry nil)
+	(user-default-initargs nil)
 	(frame-arg (gensym "FRAME-ARG")))
     (loop for (prop . values) in options
 	do (case prop
@@ -810,6 +812,7 @@ documentation produced by presentations.")))
 	     (:top-level (setq top-level (first values)))
 	     (:pointer-documentation (setq pointer-documentation (car values)))
 	     (:geometry (setq geometry values))
+	     (:default-initargs (setq user-default-initargs values))
 	     (t (push (cons prop values) others))))
     (when (eq command-definer t)
       (setf command-definer
@@ -838,7 +841,8 @@ documentation produced by presentations.")))
          :top-level (list ',(car top-level) ,@(cdr top-level))
          :top-level-lambda (lambda (,frame-arg)
                              (,(car top-level) ,frame-arg
-                               ,@(cdr top-level))))
+                               ,@(cdr top-level)))
+	 ,@user-default-initargs)
         ,@others)
       ;; We alway set the frame class default geometry, so that the
       ;; user can undo the effect of a specified :geometry option.
@@ -943,11 +947,14 @@ documentation produced by presentations.")))
    (graft :initform nil :accessor graft)
    (manager :initform nil :accessor frame-manager)))
 
+(defclass menu-unmanaged-top-level-sheet-pane (unmanaged-top-level-sheet-pane)
+  ())
+
 (defmethod adopt-frame ((fm frame-manager) (frame menu-frame))
   (setf (slot-value fm 'frames) (cons frame (slot-value fm 'frames)))
   (setf (frame-manager frame) fm)
   (let* ((t-l-s (make-pane-1 fm *application-frame*
-                             'unmanaged-top-level-sheet-pane
+                             'menu-unmanaged-top-level-sheet-pane
 			     :name 'top-level-sheet)))
     (setf (slot-value frame 'top-level-sheet) t-l-s)
     (sheet-adopt-child t-l-s (frame-panes frame))
