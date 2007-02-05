@@ -1,4 +1,3 @@
-(in-package :clim-listener)
 
 ;;; This is a lisp listener.
 
@@ -19,104 +18,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-(define-presentation-type listener-current-package () :inherit-from 'package)
-
-;; Wholine Pane
-
-(defclass wholine-pane (application-pane) ()
-  (:default-initargs :background +gray90+))
-
-(defmethod compose-space ((pane wholine-pane) &key width height)
-  (declare (ignore width height))  
-  (let ((h (* 1.5 (text-style-height (medium-text-style pane) pane)))) ; magic padding
-    (make-space-requirement :height h
-                            :min-height h
-                            :max-height h)))
-
-;; When the pane is grown, we must repaint more than just the newly exposed
-;; regions, because the decoration within the previous region must move.
-;; Likewise, shrinking the pane requires repainting some of the interior.
-(defmethod allocate-space :after ((pane wholine-pane) width height)
-  (repaint-sheet pane (sheet-region pane)))
-
-(defun print-package-name (stream)
-  (let ((foo (package-name *package*)))
-    (with-drawing-options (stream :ink +royalblue+)
-      (format stream "~A" (reduce (lambda (&optional (a foo) (b foo))
-                                    (if (< (length a) (length b)) a b))
-                                  (package-nicknames *package*))))))
-
-(defun frob-pathname (pathname)
-  (namestring (truename pathname)))
-
-;; How to add repaint-time decoration underneath the contents of a
-;; stream pane: Write your own handle-repaint that draws the
-;; decoration then replays the recorded output, and define a
-;; window-clear method which calls the next window-clear method,
-;; then calls handle-repaint to redraw the decoration.
-
-(defmethod handle-repaint ((pane wholine-pane) region)
-  (declare (ignore region))
-  (with-output-recording-options (pane :draw t :record nil)
-    (with-bounding-rectangle* (x0 y0 x1 y1) (sheet-region pane)
-      (climi::draw-bordered-rectangle* (sheet-medium pane)
-                                       x0 y0 x1 y1
-                                       :style :mickey-mouse-inset)
-      #+NIL (draw-rectangle* (sheet-medium pane) x0 y0 x1 y1 :ink +red+))
-    (replay-output-record (stream-output-history pane) pane)))
-
-(defmethod window-clear ((pane wholine-pane))
-  (call-next-method)
-  (handle-repaint pane (sheet-region pane)))
-
-(defun generate-wholine-contents (frame pane)
-  (declare (ignore frame))
-  (let* ((*standard-output* pane)
-         (username (or #+cmu (cdr (assoc :user ext:*environment-list*))
-		       #+scl (cdr (assoc "USER" ext:*environment-list*
-					 :test 'string=))
-		       #+allegro (sys:getenv "USER")
-		       #-(or allegro cmu scl) (getenv "USER")
-                       "luser"))  ; sorry..
-         (sitename (machine-instance))
-         (memusage #+(or cmu scl) (lisp::dynamic-usage)
-                   #+sbcl  (sb-kernel:dynamic-usage)
-                   #+lispworks (getf (system:room-values) :total-allocated)
-		   #+openmcl (+ (ccl::%usedbytes) (ccl::%freebytes))
-                   #+clisp (values (sys::%room))
-                   #-(or cmu scl sbcl lispworks openmcl clisp) 0))
-    (with-text-family (t :serif)
-      (formatting-table (t :x-spacing '(3 :character))
-        (formatting-row (t)                        
-          (macrolet ((cell ((align-x) &body body)                         
-                       `(formatting-cell (t :align-x ,align-x) ,@body)))
-            (cell (:left)   (format t "~A@~A" username sitename))
-            (cell (:center)
-              (format t "Package ")
-              (with-output-as-presentation (t *package* 'listener-current-package)
-                (print-package-name t)))
-            (cell (:center)
-                  ;; CLISP gives us an error when calling
-                  ;; `cl:probe-file' with a directory argument.
-              (when #+clisp (or (ignore-errors (ext:probe-directory *default-pathname-defaults*))
-                                (ignore-errors (probe-file *default-pathname-defaults*)))
-                    #-clisp (probe-file *default-pathname-defaults*)
-                (with-output-as-presentation (t (truename *default-pathname-defaults*) 'pathname)
-                  (format t "~A" (frob-pathname *default-pathname-defaults*))))
-              (when *directory-stack*
-                (with-output-as-presentation (t *directory-stack* 'directory-stack)
-                  (format t "  (~D deep)" (length *directory-stack*)))))
-          ;; Although the CLIM spec says the item formatter should try to fill
-          ;; the available width, I can't get either the item or table formatters
-          ;; to really do so such that the memory usage appears right justified.
-            (cell (:center)
-              (when (numberp memusage)
-                (present memusage 'lisp-memory-usage)))))))))
-
-(defun display-wholine (frame pane)
-  (invoke-and-center-output pane
-    (lambda () (generate-wholine-contents frame pane))
-    :horizontally nil :hpad 5))
+(in-package :clim-listener)
 
 ;;; Listener view
 ;;;
@@ -182,15 +84,15 @@
     ((system-command-reader :accessor system-command-reader
 			    :initarg :system-command-reader
 			    :initform t))
-  (:panes (interactor-container
-           (make-clim-stream-pane
-            :type 'listener-interactor-pane
-            :name 'interactor :scroll-bars t
-            :default-view +listener-view+))
-          (doc :pointer-documentation :default-view +listener-pointer-documentation-view+)
-          (wholine (make-pane 'wholine-pane
-                     :display-function 'display-wholine :scroll-bars nil
-                     :display-time :command-loop :end-of-line-action :allow)))
+    (:panes (interactor-container
+             (make-clim-stream-pane
+              :type 'listener-interactor-pane
+              :name 'interactor :scroll-bars t
+              :default-view +listener-view+))
+            (doc :pointer-documentation :default-view +listener-pointer-documentation-view+)
+            (wholine (make-pane 'wholine-pane
+                                :display-function 'display-wholine :scroll-bars nil
+                                :display-time :command-loop :end-of-line-action :allow)))
   (:top-level (default-frame-top-level :prompt 'print-listener-prompt))
   (:command-table (listener
                    :inherit-from (application-commands lisp-commands filesystem-commands show-commands)
@@ -253,12 +155,12 @@
 (defun run-listener (&key (new-process nil)
                           (width 760)
                           (height 550)
-                          (process-name "Listener"))
-  (flet ((run ()
-           (let ((frame (make-application-frame 
-                         'listener
-                         :width width :height height)))
-             (run-frame-top-level frame))))
-    (if new-process
-        (clim-sys:make-process #'run :name process-name)
-        (run))))
+                          (process-name "Listener"))  
+  (let ((frame (make-application-frame 'listener
+                                       :width width
+                                       :height height)))
+    (flet ((run () (run-frame-top-level frame)))
+      (if new-process
+          (values (clim-sys:make-process #'run :name process-name)
+                  frame)
+          (run)))))
