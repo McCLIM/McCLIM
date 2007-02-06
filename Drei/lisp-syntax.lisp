@@ -1612,7 +1612,7 @@ stripping leading non-forms."
 ;;;
 ;;; Useful functions for selecting forms based on the mark.
 
-(defun expression-at-mark (mark-or-offset syntax)
+(defun expression-at-mark (syntax mark-or-offset)
   "Return the form at `mark-or-offset'. If `mark-or-offset' is just after,
 or inside, a top-level-form, or if there are no forms after
 `mark-or-offset', the form preceding `mark-or-offset' is
@@ -1623,7 +1623,7 @@ returned."
         (form-after syntax offset)
         (form-before syntax offset))))
 
-(defun definition-at-mark (mark-or-offset syntax)
+(defun definition-at-mark (syntax mark-or-offset)
   "Return the top-level form at `mark-or-offset'. If `mark-or-offset' is just after,
 or inside, a top-level-form, or if there are no forms after
 `mark-or-offset', the top-level-form preceding `mark-or-offset'
@@ -1631,16 +1631,20 @@ is returned. Otherwise, the top-level-form following
 `mark-or-offset' is returned."
   (form-toplevel (expression-at-mark mark-or-offset syntax) syntax))
 
-(defun symbol-at-mark (mark-or-offset syntax)
+(defun symbol-at-mark (syntax mark-or-offset
+                       &optional (form-fetcher 'expression-at-mark))
   "Return a symbol token at `mark-or-offset'. This function will
-  \"unwrap\" quote-forms in order to return the symbol token. If
-  no symbol token can be found, NIL will be returned."
-  (labels ((unwrap-form (form)
-             (cond ((form-quoted-p form)
-                    (unwrap-form (first-form (children form))))
-                   ((form-token-p form)
-                    form))))
-    (unwrap-form (expression-at-mark mark-or-offset syntax))))
+\"unwrap\" quote-forms in order to return the symbol token. If no
+symbol token can be found, NIL will be returned. `Form-fetcher'
+must be a function with the same signature as `expression-at-mark', and
+will be used to retrieve the initial form at `mark'."
+  (as-offsets (mark-or-offset)
+    (labels ((unwrap-form (form)
+               (cond ((form-quoted-p form)
+                      (unwrap-form (first-form (children form))))
+                     ((form-token-p form)
+                      form))))
+      (unwrap-form (funcall form-fetcher syntax mark-or-offset)))))
 
 (defun fully-quoted-form (token)
   "Return the top token object for `token', return `token' or the
@@ -1660,34 +1664,34 @@ the form that `token' quotes, peeling away all quote forms."
                    (t form))))
     (descend token)))
 
-(defun this-form (mark-or-offset syntax)
+(defun this-form (syntax mark-or-offset)
   "Return a form at `mark-or-offset'. This function defines which
   forms the COM-FOO-this commands affect."
   (as-offsets ((offset mark-or-offset))
     (or (form-around syntax offset)
         (form-before syntax offset))))
 
-(defun preceding-form (mark-or-offset syntax)
+(defun preceding-form (syntax mark-or-offset)
   "Return a form at `mark-or-offset'."
   (as-offsets ((offset mark-or-offset))
    (or (form-before syntax offset)
        (form-around syntax offset))))
 
-(defun text-of-definition-at-mark (mark syntax)
+(defun text-of-definition-at-mark (syntax mark)
   "Return the text of the definition at mark."
   (let ((definition (definition-at-mark mark syntax)))
     (buffer-substring (buffer mark)
                       (start-offset definition)
                       (end-offset definition))))
 
-(defun text-of-expression-at-mark (mark-or-offset syntax)
+(defun text-of-expression-at-mark (syntax mark-or-offset)
   "Return the text of the expression at `mark-or-offset'."
   (let ((expression (expression-at-mark mark-or-offset syntax)))
     (form-string syntax expression)))
 
-(defun symbol-name-at-mark (mark-or-offset syntax)
+(defun symbol-name-at-mark (syntax mark-or-offset)
   "Return the text of the symbol at `mark-or-offset'."
-  (let ((token (symbol-at-mark mark-or-offset syntax)))
+  (let ((token (symbol-at-mark syntax mark-or-offset)))
     (when token (form-string syntax token))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1731,13 +1735,22 @@ the form that `token' quotes, peeling away all quote forms."
 ;;;
 ;;; Useful functions for modifying forms based on the mark.
 
-(defun replace-symbol-at-mark (mark syntax string)
-  "Replace the symbol at `mark' with `string' and move `mark' to
-after `string'."
-  (let ((token (symbol-at-mark mark syntax)))
-    (setf (offset mark) (start-offset token))
-    (forward-delete-expression mark syntax)
+(defgeneric replace-symbol-at-mark (syntax mark string)
+  (:documentation "Replace the symbol around `mark' with `string'
+and move `mark' to after `string'. If there is no symbol at
+`mark', insert `string' and move `mark' anyway."))
+
+(defmethod replace-symbol-at-mark ((syntax lisp-syntax) (mark mark)
+                                   (string string))
+  (let ((token (symbol-at-mark syntax mark #'form-around)))
+    (when (and token (form-token-p token))
+      (setf (offset mark) (start-offset token))
+      (forward-delete-expression mark syntax))
     (insert-sequence mark string)))
+
+(defmethod replace-symbol-at-mark :after ((syntax lisp-syntax)
+                                          (mark left-sticky-mark) (string string))
+  (forward-object mark (length string)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

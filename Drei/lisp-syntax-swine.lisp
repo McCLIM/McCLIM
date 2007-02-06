@@ -539,12 +539,16 @@ argument. Return NIL if none can be found."
                 (>= (+ index
                        difference) 
                     key-position)
-                (evenp (- index (- key-position
-                                   (1- difference)))))
+                (let ((offset (- index (- key-position (1- difference)))))
+                  (or (evenp offset) (zerop key-position))))
            (mapcar #'unlisted (subseq cleaned-arglist
-                                      (+ (- key-position
-                                            difference)
-                                         (if rest-position 2 1))))))))
+                                      (+ (max (- key-position
+                                                 difference)
+                                              (- (if rest-position 2 1)))
+                                         (if rest-position 2 1))
+                                      (if rest-position
+                                          (1- (length cleaned-arglist))
+                                          (length cleaned-arglist))))))))
 
 (defgeneric possible-completions (syntax operator string package operands indices)
   (:documentation "Get the applicable completions for completing
@@ -554,7 +558,8 @@ the operator `operator' (which should be a valid operator
 object), and which has the operands `operands'. `Indices' should
 be the argument indices from the operator to `token' (see
 `find-argument-indices-for-operands').")
-  (:method (syntax operator string package operands indices)
+  (:method ((syntax lisp-syntax) operator (string string)
+            (package package) (operands list) (indices list))
     (let ((completions (first (simple-completions (get-usable-image syntax)
                                                   string package))))
       ;; Welcome to the ugly mess! Part of the uglyness is that we
@@ -778,7 +783,7 @@ modification will be generated, respectively."
       `(let* ((,form-sym
                ;; Find a form with a valid (fboundp) operator.
                (let ((immediate-form
-                      (preceding-form ,mark-or-offset ,syntax)))
+                      (preceding-form ,syntax ,mark-or-offset)))
                  (unless (null immediate-form)
                    (or (find-applicable-form ,syntax immediate-form)
                        ;; If nothing else can be found, and `arg-form'
@@ -1000,13 +1005,13 @@ to find completions based on `string'."
 (defun complete-symbol-at-mark-with-fn (syntax mark &key (completion-finder #'find-completions)
                                         (complete-blank t))
   "Attempt to find and complete the symbol at `mark' using the
-  function `completion-finder' to get the list of completions. If the completion
-  is ambiguous, a list of possible completions will be
-  displayed. If no symbol can be found at `mark', return NIL. If
-  there is no symbol at `mark' and `complete-blank' is true (the
-  default), all symbols available in the current package will be
-  shown. If `complete-blank' is true, nothing will be shown and
-  the function will return NIL."
+function `completion-finder' to get the list of completions. If
+the completion is ambiguous, a list of possible completions will
+be displayed. If no symbol can be found at `mark', return NIL. If
+there is no symbol at `mark' and `complete-blank' is true (the
+default), all symbols available in the current package will be
+shown. If `complete-blank' is true, nothing will be shown and the
+function will return NIL."
   (let* ((token (form-around syntax (offset mark)))
          (useful-token (and (not (null token))
                             (form-token-p token)
@@ -1015,36 +1020,34 @@ to find completions based on `string'."
     (when (or useful-token complete-blank)
       (multiple-value-bind (longest completions)
           (funcall completion-finder syntax
-                   (if useful-token
-                       (start-offset (fully-quoted-form token))
-                       (if (and (form-quoted-p token)
-                                (form-incomplete-p token))
-                           (start-offset token)
-                           (offset mark)))
+                   (cond (useful-token
+                          (start-offset (fully-quoted-form token)))
+                         ((and (form-quoted-p token)
+                               (form-incomplete-p token))
+                          (start-offset token))
+                         (t (offset mark)))
                    (if useful-token
                        (form-string syntax token)
                        ""))
-        (if completions
-            (if (= (length completions) 1)
-                (replace-symbol-at-mark mark syntax longest)
-                (progn
-                  (esa:display-message (format nil "Longest is ~a|" longest))
-                  (let ((selection (menu-choose (mapcar
-                                                 ;; FIXME: this can
-                                                 ;; get ugly.
-                                                 #'(lambda (completion)
-                                                     (if (listp completion)
-                                                         (cons completion
-                                                               (first completion))
-                                                         completion))
-                                                 completions)
-                                                :label "Possible completions"
-                                                :scroll-bars :vertical)))
-                    (if useful-token
-                        (replace-symbol-at-mark mark syntax (or selection longest))
-                        (insert-sequence mark (or selection longest)))
-                    t)))
-            (esa:display-message "No completions found"))))))
+        (cond ((null completions)
+               (esa:display-message "No completions found")
+               nil)
+              ((endp (rest completions))
+               (replace-symbol-at-mark syntax mark longest)
+               t)
+              (t (replace-symbol-at-mark
+                  syntax mark
+                  (or (menu-choose (mapcar
+                                    #'(lambda (completion)
+                                        (if (listp completion)
+                                            (cons completion
+                                                  (first completion))
+                                            completion))
+                                    completions)
+                                   :label "Possible completions"
+                                   :scroll-bars :vertical)
+                      longest))
+                 t))))))
 
 (defun complete-symbol-at-mark (syntax mark &optional (complete-blank t))
   "Attempt to find and complete the symbol at `mark'. If the

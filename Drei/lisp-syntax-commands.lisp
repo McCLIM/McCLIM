@@ -96,7 +96,7 @@ string at point."
          (buffer (buffer pane))
          (syntax (syntax buffer))
          (mark (point pane))
-         (token (this-form mark syntax)))
+         (token (this-form syntax mark)))
     (if (and token (form-token-p token))
         (com-lookup-arglist (form-to-object syntax token))
         (display-message "Could not find symbol at point."))))
@@ -134,7 +134,7 @@ If more than one completion is available, a list of possible
 completions will be displayed. If there is no symbol at mark, all
 relevant symbols accessible in the current package will be
 displayed."
-  (complete-symbol-at-mark *current-syntax* *current-mark*))
+  (complete-symbol-at-mark *current-syntax* *current-point*))
 
 (define-command (com-fuzzily-complete-symbol :name t :command-table lisp-table)
     ()
@@ -144,7 +144,7 @@ Fuzzy completion tries to guess which symbol is abbreviated. If
 the abbreviation is ambiguous, a list of possible completions
 will be displayed. If there is no symbol at mark, all relevant
 symbols accessible in the current package will be displayed."
-  (fuzzily-complete-symbol-at-mark *current-syntax* *current-mark*))
+  (fuzzily-complete-symbol-at-mark *current-syntax* *current-point*))
 
 (define-command (com-indent-line-and-complete-symbol :name t :command-table lisp-table) ()
   "Indents the current line and performs symbol completion.
