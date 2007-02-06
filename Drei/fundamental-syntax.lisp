@@ -210,7 +210,7 @@
     (multiple-value-bind (cursor-x cursor-y line-height)
 	(offset-to-screen-position stream drei (offset mark))
       (updating-output (stream :unique-id (list stream :cursor)
-                               :cache-value (offset mark))
+                               :cache-value (list* cursor-x cursor-y line-height))
 	(draw-rectangle* stream
 			 (1- cursor-x) cursor-y
 			 (+ cursor-x 2) (+ cursor-y line-height)
