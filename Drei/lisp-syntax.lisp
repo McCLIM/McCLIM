@@ -63,7 +63,9 @@ the form. The list is sorted with the earliest (in-package) forms
 last (descending offset).")
    (base :initform nil
          :documentation "The base which numbers in the buffer are
-expected to be in.")
+expected to be in. If the provided value is NIL, the value of
+`*read-base*' will be used."
+         :type (or null (integer 2 36)))
    (option-specified-package :accessor option-specified-package
                              :initform nil
                              :documentation "The package
