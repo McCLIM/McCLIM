@@ -1971,7 +1971,7 @@ selection via the control modifier.")
 
 (defmethod value-changed-callback
     :before
-    ((gadget meta-list-pane) client gadget-id value)
+    ((gadget generic-list-pane) client gadget-id value)
   (declare (ignore client gadget-id))
   (let* ((i (position value (generic-list-pane-item-values gadget)))
 	 (item (elt (list-pane-items gadget) i))
