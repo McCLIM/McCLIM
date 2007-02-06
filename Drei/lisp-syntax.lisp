@@ -1142,7 +1142,7 @@ along with any default values) that can be used in a
 ;;;;;;;;;;;;;;;; uninterned symbol
 
 ;;; parse trees
-(defclass uninterned-symbol-form (form) ())
+(defclass uninterned-symbol-form (form complete-form-mixin) ())
 
 (define-parser-state |#: | (form-may-follow) ())
 (define-parser-state |#: form | (lexer-toplevel-state parser-state) ())
@@ -1157,7 +1157,7 @@ along with any default values) that can be used in a
 ;;;;;;;;;;;;;;;; readtime evaluation
 
 ;;; parse trees
-(defclass readtime-evaluation-form (form) ())
+(defclass readtime-evaluation-form (form complete-form-mixin) ())
 
 (define-parser-state |#. | (form-may-follow) ())
 (define-parser-state |#. form | (lexer-toplevel-state parser-state) ())
@@ -1173,7 +1173,7 @@ along with any default values) that can be used in a
 ;;;;;;;;;;;;;;;; sharpsign equals
 
 ;;; parse trees
-(defclass sharpsign-equals-form (form) ())
+(defclass sharpsign-equals-form (form complete-form-mixin) ())
 
 (define-parser-state |#= | (form-may-follow) ())
 (define-parser-state |#= form | (lexer-toplevel-state parser-state) ())
@@ -1189,7 +1189,7 @@ along with any default values) that can be used in a
 ;;;;;;;;;;;;;;;; array
 
 ;;; parse trees
-(defclass array-form (form) ())
+(defclass array-form (form complete-form-mixin) ())
 
 (define-parser-state |#A | (form-may-follow) ())
 (define-parser-state |#A form | (lexer-toplevel-state parser-state) ())
@@ -1251,7 +1251,7 @@ along with any default values) that can be used in a
 ;;;;;;;;;;;;;;;; undefined reader macro
 
 ;;; parse trees
-(defclass undefined-reader-macro-form (form) ())
+(defclass undefined-reader-macro-form (form complete-form-mixin) ())
 
 (define-parser-state |#<other> | (form-may-follow) ())
 (define-parser-state |#<other> form | (lexer-toplevel-state parser-state) ())
