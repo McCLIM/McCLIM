@@ -2,6 +2,9 @@
 ** Installation: the systems clim-listener, scigraph, clim-examples,
    and clouseau can now be loaded without loading the system mcclim
    first.
+** improvement: the CLX backend should no longer cause focus stealing
+   when an application has text-editor panes.  This change comes with
+   a rudimentary click-to-focus-keyboard widget policy.
 
 * Changes in mcclim-0.9.4 relative to 0.9.3:
 ** cleanup: removed the obsolete system.lisp file.

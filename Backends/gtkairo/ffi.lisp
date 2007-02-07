@@ -1625,6 +1625,10 @@
   (requisition :pointer)                ;GtkRequisition *
   )
 
+(defcfun "gtk_window_get_focus"
+    :pointer
+  (window :pointer))
+
 (defcfun "gtk_window_move"
     :void
   (window :pointer)                     ;GtkWindow *

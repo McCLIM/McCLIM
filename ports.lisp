@@ -49,9 +49,6 @@
    (mirror->sheet :initform (make-hash-table :test #'eq))
    (pixmap->mirror :initform (make-hash-table :test #'eq))
    (mirror->pixmap :initform (make-hash-table :test #'eq))
-   #+ignore (keyboard-input-focus :initform nil ;; nuked this, see below
-			 :initarg :keyboard-input-focus
-			 :accessor port-keyboard-input-focus)
    (event-process
     :initform nil
     :initarg  :event-process
@@ -66,51 +63,23 @@
    (text-style-mappings :initform (make-hash-table :test #'eq)
                         :reader port-text-style-mappings)
    (pointer-sheet :initform nil :accessor port-pointer-sheet
-		  :documentation "The sheet the pointer is over, if any")
-   ))
-
-;; Keyboard focus is now managed per-frame rather than per-port,
-;; which makes a lot of sense (less sense in the presense of
-;; multiple top-level windows, but no one does that yet). The CLIM
-;; spec suggests this in a "Minor Issue". So, redirect
-;; PORT-KEYBOARD-INPUT-FOCUS to the current application frame
-;; for compatibility.
-
-;; Note: This would prevent you from using the function the
-;; function to query who currently has the focus. I don't
-;; know if this is an intended use or not.
-
-;; The big picture:
-;;   PORT-KEYBOARD-INPUT-FOCUS is defined by CLIM 2.0
-;;   Our default method on this delegates to KEYBOARD-INPUT-FOCUS
-;;    on the current application frame.
-;;   %SET-PORT-KEYBOARD-FOCUS is the function which
-;;    should be implemented in a McCLIM backend and
-;;    does the work of changing the focus.
-;;   A method on (SETF KEYBOARD-INPUT-FOCUS) brings them together,
-;;    calling %SET-PORT-KEYBOARD-FOCUS.
-
-(defgeneric port-keyboard-input-focus (port))
-(defgeneric (setf port-keyboard-input-focus) (focus port))
+		  :documentation "The sheet the pointer is over, if any")))
 
 (defmethod port-keyboard-input-focus (port)
-  (declare (ignore port))
-  (when *application-frame*
-    (keyboard-input-focus *application-frame*)))
-
+  (when (null *application-frame*)
+    (error "~S called with null ~S" 
+           'port-keyboard-input-focus '*application-frame*))
+  (port-frame-keyboard-input-focus port *application-frame*))
 (defmethod (setf port-keyboard-input-focus) (focus port)
-  (when focus
-    (if (pane-frame focus)
-        (setf (keyboard-input-focus (pane-frame focus)) focus)
-        (%set-port-keyboard-focus port focus))))
+  (when (null *application-frame*)
+    (error "~S called with null ~S" 
+           '(setf port-keyboard-input-focus) '*application-frame*))
+  (unless (eq *application-frame* (pane-frame focus))
+    (error "frame mismatch in ~S" '(setf port-keyboard-input-focus)))
+  (setf (port-frame-keyboard-input-focus port *application-frame*) focus))
 
-;; This is not in the CLIM spec, but since (setf port-keyboard-input-focus)
-;; now calls (setf keyboard-input-focus), we need something concrete the
-;; backend can implement to set the focus.    
-(defmethod %set-port-keyboard-focus (port focus &key timestamp)
-  (declare (ignore focus timestamp))  
-  (warn "%SET-PORT-KEYBOARD-FOCUS is not implemented on ~W" port))
-  
+(defgeneric port-frame-keyboard-input-focus (port frame))
+(defgeneric (setf port-frame-keyboard-input-focus) (focus port frame))
 
 (defun find-port (&key (server-path *default-server-path*))
   (if (null server-path)
@@ -195,8 +164,7 @@
 (defmethod distribute-event ((port basic-port) event)
   (cond
    ((typep event 'keyboard-event)
-    (dispatch-event (or #+ignore(port-keyboard-input-focus port) (event-sheet event))
-		    event))
+    (dispatch-event (event-sheet event) event))
    ((typep event 'window-event)
 ;   (dispatch-event (window-event-mirrored-sheet event) event)
     (dispatch-event (event-sheet event) event))

@@ -1098,18 +1098,6 @@
         (display-gadget-background pane (gadget-current-color pane) 0 0 (- x2 x1) (- y2 y1))
         (goatee::redisplay-all (area pane))))))
 
-(defmethod armed-callback :after ((gadget pixie-text-field-pane) client id)
-  (declare (ignore client id))
-  (let ((port (port gadget)))
-    (setf (previous-focus gadget) (port-keyboard-input-focus port))
-    (setf (port-keyboard-input-focus port) gadget)))
-
-(defmethod disarmed-callback :after ((gadget pixie-text-field-pane) client id)
-  (declare (ignore client id))
-  (let ((port (port gadget)))
-    (setf (port-keyboard-input-focus port) (previous-focus gadget))
-    (setf (previous-focus gadget) nil)))
-
 (defmethod handle-event ((gadget pixie-text-field-pane) (event key-press-event))
   (let ((gesture (convert-to-gesture event))
 	(*activation-gestures* *standard-activation-gestures*))

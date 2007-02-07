@@ -742,10 +742,22 @@
 		  ;; reasonable timestamp.
 		  :timestamp 0)))))))))
 
-(defmethod %set-port-keyboard-focus ((port gtkairo-port) focus &key timestamp)
-  (declare (ignore timestamp))
+(defmethod port-frame-keyboard-input-focus ((port gtkairo-port) frame)
   (with-gtk ()
-    (gtk_widget_grab_focus (mirror-widget (sheet-mirror focus)))))
+    (let* ((sheet (frame-top-level-sheet frame))
+           (mirror (climi::port-lookup-mirror port sheet))
+           (widget (gtk_window_get_focus (mirror-window mirror))))
+      (if (cffi:null-pointer-p widget)
+          nil
+          (widget->sheet widget port)))))
+
+(defmethod (setf port-frame-keyboard-input-focus) 
+    (focus (port gtkairo-port) frame)
+  (with-gtk ()
+    ;; could use gtk_window_set_focus here for symmetry, but we don't
+    ;; have to.
+    (gtk_widget_grab_focus (mirror-widget (sheet-mirror focus))))
+  focus)
 
 (defmethod port-force-output ((port gtkairo-port))
   (with-gtk ()

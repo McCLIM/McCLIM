@@ -129,8 +129,6 @@ input focus. This is a McCLIM extension."))
    (manager :initform nil
 	    :reader frame-manager
             :accessor %frame-manager)
-   (keyboard-input-focus :initform nil
-                         :accessor keyboard-input-focus)
    (properties :accessor %frame-properties
 	       :initarg :properties
 	       :initform nil)
@@ -1329,12 +1327,8 @@ documentation produced by presentations.")))
   `(let ((,frame *application-frame*))
      ,@body))
 
-
 (defmethod note-input-focus-changed (pane state)
   (declare (ignore pane state)))
-
-(defmethod (setf keyboard-input-focus) :after (focus frame)
-  (%set-port-keyboard-focus (port frame) focus))
 
 (defmethod (setf client-setting) (value frame setting)
   (setf (getf (client-settings frame) setting) value))

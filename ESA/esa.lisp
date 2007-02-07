@@ -119,10 +119,10 @@ current message was set."))
   ;; error: there's no feedback, unlike emacs' quite nice "[no
   ;; match]".
   (loop
-     (handler-case 
-         (return (call-next-method))
-       (parse-error ()
-         nil))))
+   (handler-case
+       (with-input-focus (pane)
+         (return (call-next-method)))
+     (parse-error () nil))))
 
 (defmethod stream-accept ((pane minibuffer-pane) type &rest args
                           &key (view (stream-default-view pane))

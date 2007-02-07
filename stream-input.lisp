@@ -141,12 +141,9 @@
     (setq stream '*standard-input*))
   (let ((old-stream (gensym "OLD-STREAM")))
     `(let ((,old-stream (stream-set-input-focus ,stream)))
-       (unwind-protect (locally
-			 ,@body)
-	 (if ,old-stream
-	     (stream-set-input-focus ,old-stream)
-	     (setf (port-keyboard-input-focus (port ,stream)) nil))))))
-
+       (unwind-protect (locally ,@body)
+         (when ,old-stream
+           (stream-set-input-focus ,old-stream))))))
 
 (defun read-gesture (&key
 		     (stream *standard-input*)
@@ -265,9 +262,9 @@
 	   ;; the problem. -- moore
 	   (cond ((null gesture)
 		  (go wait-for-char))
-		 ((and pointer-button-press-handler
-		       (typep gesture 'pointer-button-press-event))
-		  (funcall pointer-button-press-handler stream gesture))
+                 ((and pointer-button-press-handler
+                       (typep gesture 'pointer-button-press-event))
+                  (funcall pointer-button-press-handler stream gesture))
 		 ((loop for gesture-name in *abort-gestures*
 			thereis (event-matches-gesture-name-p gesture
 							      gesture-name))

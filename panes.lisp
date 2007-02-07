@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.179 2007/02/05 03:02:59 ahefner Exp $
+;;; $Id: panes.lisp,v 1.180 2007/02/07 12:44:17 crhodes Exp $
 
 (in-package :clim-internals)
 
@@ -2599,9 +2599,15 @@ to computed distance to scroll in response to mouse wheel events."))
 
 (defmethod stream-set-input-focus ((stream clim-stream-pane))
   (with-slots (port) stream
-    (prog1
-	(port-keyboard-input-focus port)
+    (prog1 (port-keyboard-input-focus port)
       (setf (port-keyboard-input-focus port) stream))))
+
+#+nil
+(defmethod stream-set-input-focus ((stream null))
+  (let ((frame *application-frame*))
+    (prog1
+        (frame-keyboard-input-focus frame)
+      (setf (frame-keyboard-input-focus frame) nil))))
 
 ;;; output any buffered stuff before input
 
@@ -2648,6 +2654,20 @@ to computed distance to scroll in response to mouse wheel events."))
   (declare (ignore args))
 #+ignore  (let ((cursor (stream-text-cursor pane)))
     (setf (cursor-visibility cursor) t)))
+
+;;; KLUDGE: this is a hack to get keyboard focus (click-to-focus)
+;;; roughly working for interactor panes.  It's a hack somewhat
+;;; analogous to the mouse-wheel / select-and-paste handling in
+;;; DISPATCH-EVENT, just in a slightly different place.
+(defmethod frame-input-context-button-press-handler :before
+    ((frame standard-application-frame) 
+     (stream interactor-pane) 
+     button-press-event)
+  (let ((previous (stream-set-input-focus stream)))
+    (when (and previous (typep previous 'gadget))
+      (let ((client (gadget-client previous))
+            (id (gadget-id previous)))
+      (disarmed-callback previous client id)))))
 
 ;;; APPLICATION PANES
 

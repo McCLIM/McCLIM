@@ -432,7 +432,7 @@
       (setf (xlib:wm-hints window) (xlib:make-wm-hints :input :on))
       (setf (xlib:wm-name window) (frame-pretty-name frame))
       (setf (xlib:wm-icon-name window) (frame-pretty-name frame))
-      (setf (xlib:wm-protocols window) `(:wm_delete_window :wm_take_focus)))))
+      (setf (xlib:wm-protocols window) `(:wm_delete_window)))))
 
 (defmethod realize-mirror ((port clx-port) (sheet unmanaged-top-level-sheet-pane))
   (realize-mirror-aux port sheet
@@ -663,10 +663,10 @@
 		      type width height x y root-x root-y
 		      data override-redirect-p send-event-p hint-p
                       target property requestor selection
+                      request first-keycode count
                       &allow-other-keys)
   (declare (special *clx-port*))
-  (let ((sheet (and window
-		    (port-lookup-sheet *clx-port* window))))
+  (let ((sheet (and window (port-lookup-sheet *clx-port* window))))
     (when sheet
       (case event-key
 	((:key-press :key-release)
@@ -681,7 +681,8 @@
 	     :x x :y y
 	     :graft-x root-x
 	     :graft-y root-y
-             :sheet sheet :modifier-state modifier-state :timestamp time)))
+             :sheet (or (frame-properties (pane-frame sheet) 'focus) sheet)
+             :modifier-state modifier-state :timestamp time)))
 	((:button-press :button-release)
 	 (let ((modifier-state (clim-xcommon:x-event-state-modifiers *clx-port*
 								     state)))
@@ -842,22 +843,7 @@
 
 (defmethod port-wm-protocols-message (sheet time (message (eql :wm_delete_window)) data)
   (declare (ignore data))
-  (make-instance 'window-manager-delete-event
-                 :sheet sheet
-                 :timestamp time))
-
-(defmethod port-wm-protocols-message (sheet time (message (eql :wm_take_focus)) data)
-  (when time
-    (format *trace-output* "~&;; In :WM_TAKE_FOCUS, TIME is not NIL: ~S" time))
-  (let* ((frame (pane-frame sheet))
-         (focus (climi::keyboard-input-focus frame))
-	 ;; FIXME: Do I really have to use ELT here?  The CLX manual
-	 ;; says (sequence integer), so I suppose I do.
-	 (timestamp (elt data 1)))
-    (when (and focus (sheet-mirror focus))
-      (xlib:set-input-focus (clx-port-display *clx-port*)
-                            (sheet-mirror focus) :parent timestamp)
-      nil)))
+  (make-instance 'window-manager-delete-event :sheet sheet :timestamp time))
 
 (defmethod port-wm-protocols-message (sheet time (message t) data)
   (warn "Unprocessed WM Protocols message: ~:_message = ~S;~:_ data = ~S;~_ sheet = ~S."
@@ -1155,13 +1141,10 @@
 	       ;; reasonable timestamp.
 	       :timestamp 0))))))))
   
-
-;;; Set the keyboard input focus for the port.
-
-(defmethod %set-port-keyboard-focus ((port clx-port) focus &key timestamp)
-  (let ((mirror (sheet-mirror focus)))
-    (when mirror
-      (xlib:set-input-focus (clx-port-display port) mirror :parent timestamp))))
+(defmethod port-frame-keyboard-input-focus ((port clx-port) frame)
+  (frame-properties frame 'focus))
+(defmethod (setf port-frame-keyboard-input-focus) (focus (port clx-port) frame)
+  (setf (frame-properties frame 'focus) focus))
 
 (defmethod port-force-output ((port clx-port))
   (xlib:display-force-output (clx-port-display port)))

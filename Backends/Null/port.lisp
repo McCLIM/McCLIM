@@ -155,9 +155,16 @@
 (defmethod synthesize-pointer-motion-event ((pointer null-pointer))
   ())
 
-;;; Set the keyboard input focus for the port.
+(defmethod port-frame-keyboard-input-focus ((port null-port) frame)
+  (frame-properties frame 'focus))
+(defmethod (setf port-frame-keyboard-input-focus) 
+    (focus (port null-port) frame)
+  (setf (frame-properties frame 'focus) focus))
 
-(defmethod %set-port-keyboard-focus (focus (port null-port) &key timestamp)
+(defmethod (setf port-keyboard-input-focus) (focus (port null-port))
+  focus)
+
+(defmethod port-keyboard-input-focus ((port null-port))
   ())
 
 (defmethod port-force-output ((port null-port))

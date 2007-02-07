@@ -1967,6 +1967,7 @@
    #:port-disable-sheet
    #:port-enable-sheet
    #:port-force-output
+   #:port-frame-keyboard-input-focus
    #:port-grab-pointer
    #:port-mirror-height
    #:port-mirror-width
@@ -1977,7 +1978,6 @@
    #:port-set-sheet-transformation
    #:port-ungrab-pointer
    #:queue-callback
-   #:%set-port-keyboard-focus
    #:set-sheet-pointer-cursor
    #:synthesize-pointer-motion-event
    #:text-style-character-width

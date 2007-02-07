@@ -126,10 +126,9 @@ activate callback to be called"))
     (make-text-style :fixed :roman :normal))
 
 (defclass goatee-text-field-pane (text-field
-			   standard-extended-output-stream
-			   standard-output-recording-stream
-			   enter/exit-arms/disarms-mixin
-			   basic-pane)
+                                  standard-extended-output-stream
+                                  standard-output-recording-stream
+                                  basic-pane)
   ((area :accessor area :initform nil
 	 :documentation "The Goatee area used for text editing.")
    (previous-focus :accessor previous-focus :initform nil
@@ -169,15 +168,17 @@ activate callback to be called"))
 								     'value))))
     (stream-add-output-record pane (area pane))))
 
-;;; Unilaterally declare a "focus follows mouse" policy.  I don't like this
-;;; much; the whole issue of keyboard focus needs a lot more thought,
-;;; especially when multiple application frames per port become possible.
+;;; This implements click-to-focus-keyboard-and-pass-click-through
+;;; behaviour.
+(defmethod handle-event :before 
+    ((gadget goatee-text-field-pane) (event pointer-button-press-event))
+  (let ((previous (stream-set-input-focus gadget)))
+    (when (and previous (typep previous 'gadget))
+      (disarmed-callback previous (gadget-client previous) (gadget-id previous)))
+    (armed-callback gadget (gadget-client gadget) (gadget-id gadget))))
 
 (defmethod armed-callback :after ((gadget goatee-text-field-pane) client id)
   (declare (ignore client id))
-  (let ((port (port gadget)))
-    (setf (previous-focus gadget) (port-keyboard-input-focus port))
-    (setf (port-keyboard-input-focus port) gadget))
   (handle-repaint gadget +everywhere+)	;FIXME: trigger initialization
   (let ((cursor (cursor (area gadget))))
     (letf (((cursor-state cursor) nil))
@@ -185,16 +186,13 @@ activate callback to be called"))
 
 (defmethod disarmed-callback :after ((gadget goatee-text-field-pane) client id)
   (declare (ignore client id))
-  (let ((port (port gadget)))
-    (setf (port-keyboard-input-focus port) (previous-focus gadget))
-    (setf (previous-focus gadget) nil))
   (handle-repaint gadget +everywhere+)	;FIXME: trigger initialization
   (let ((cursor (cursor (area gadget))))
     (letf (((cursor-state cursor) nil))
       (setf (cursor-appearance cursor) :hollow))))
 
-
-(defmethod handle-event ((gadget goatee-text-field-pane) (event key-press-event))
+(defmethod handle-event 
+    ((gadget goatee-text-field-pane) (event key-press-event))
   (let ((gesture (convert-to-gesture event))
 	(*activation-gestures* (activation-gestures gadget)))
     (when (activation-gesture-p gesture)

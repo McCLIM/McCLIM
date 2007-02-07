@@ -206,8 +206,6 @@ command loop completely."))
 ;;; updating is done after a command has been executed, and only then
 ;;; (or by commands at their own discretion).
 (defclass drei-gadget-pane (drei-pane value-gadget action-gadget
-                                      #+(or mcclim building-mcclim) ; No idea how it works in classic CLIM.
-                                      climi::enter/exit-arms/disarms-mixin
                                       asynchronous-command-processor)
   ((%currently-processing :initform nil
                           :accessor currently-processing-p)
@@ -251,21 +249,13 @@ keyboard focus"))
                             (gadget-id gadget)
                             new-value)))
 
-;; It's really silly that we have to manage keyboard input focus
-;; ourself.
 (defmethod armed-callback :after ((gadget drei-gadget-pane) client id)
   (declare (ignore client id))
-  (let ((port (port gadget)))
-    (setf (previous-focus gadget) (port-keyboard-input-focus port))
-    (setf (port-keyboard-input-focus port) gadget))
   (setf (active gadget) t)
   (display-drei gadget))
 
 (defmethod disarmed-callback :after ((gadget drei-gadget-pane) client id)
   (declare (ignore client id))
-  (let ((port (port gadget)))
-    (setf (port-keyboard-input-focus port) (previous-focus gadget))
-    (setf (previous-focus gadget) nil))
   (setf (active gadget) nil)
   (display-drei gadget))
 
@@ -319,6 +309,13 @@ properly bound."))
           (with-bound-drei-special-variables (gadget :prompt (format nil "~A " (gesture-name gesture)))
             (let ((*standard-input* (or *minibuffer* *standard-input*)))
               (handle-gesture gadget gesture))))))))
+
+(defmethod handle-event :before 
+    ((gadget drei-gadget-pane) (event pointer-button-press-event))
+  (let ((previous (stream-set-input-focus gadget)))
+    (when (and previous (typep previous 'gadget))
+      (disarmed-callback previous (gadget-client previous) (gadget-id previous)))
+    (armed-callback gadget (gadget-client gadget) (gadget-id gadget))))
 
 (defmethod invoke-accepting-from-user ((drei drei-gadget-pane) (continuation function))
   ;; When an `accept' is called during the execution of a command for

@@ -53,7 +53,6 @@
                 #:width                 ;dito
                 #:coordinate=
                 #:get-transformation
-                #:keyboard-input-focus
                 ;;
                 #:invoke-with-special-choices
                 #:medium-miter-limit
