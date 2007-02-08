@@ -90,7 +90,7 @@ information is present."))
 (defmethod inspect-object :around (object pane)
   (cond ((member object *inspected-objects*)
          (with-output-as-presentation
-             (pane object (presentation-type-of object)) 
+             (pane object (presentation-type-of object))
            (princ "===" pane)))		; Prevent infinite loops
         ((not (gethash object (dico *application-frame*)))
          (inspect-object-briefly object pane))
@@ -113,7 +113,7 @@ information is present."))
 
 (defmethod inspect-object (object pane)
   (with-output-as-presentation
-      (pane object (presentation-type-of object))  
+      (pane object (presentation-type-of object))
     (prin1 object pane)))
 
 
@@ -124,7 +124,7 @@ information is present."))
 (define-presentation-type long-list-tail ()
   :inherit-from t)
 
-(define-presentation-method present (object (type settable-slot) 
+(define-presentation-method present (object (type settable-slot)
 					    stream
 					    (view textual-view)
 					    &key acceptably for-context-type)
@@ -417,21 +417,45 @@ list as interactive as you would expect."
       (inspect-cons-as-cells object pane)
       (inspect-cons-as-list object pane)))
 
+(defun show-hash-table-status (hash pane &key (message "Usage Graph"))
+  "Show a hash table's status graphically on a given
+pane. Display a given message, which defaults to 'Usage Graph'."
+  (with-room-for-graphics (pane :height 20)
+    (let* ((my-beige (make-rgb-color 0.9372549 0.8862745 0.8862745))
+	   (used-color (make-rgb-color 0.43529412 0.7921569 0.87058824))
+	   (text-color (make-rgb-color 0.7176471 0.29803923 0.2))
+	   (pattern (make-rectangular-tile
+		     (make-pattern #2A((0 1 0 0 0)
+				       (1 0 0 0 0)
+				       (0 0 0 0 1)
+				       (0 0 0 1 0)
+				       (0 0 1 0 0))
+				   (list my-beige +black+)) 5 5)))
+      (draw-rectangle* pane 0 0 150 20 :filled t :ink my-beige)
+      (draw-rectangle* pane 0 0 (* 150 (/ (hash-table-count hash)
+					  (hash-table-size hash)))
+		       20 :filled t :ink used-color :line-thickness 0)
+      (draw-rectangle* pane (* 150 (hash-table-rehash-threshold hash)) 0 150 20
+		       :filled t :ink pattern :line-thickness 0)
+      (draw-rectangle* pane 0 0 150 20 :filled nil :ink +black+)
+      (draw-text* pane message 7 10 :align-y :center :align-x :left
+		  :text-size :small :ink text-color :text-face :italic))))
 
 (defmethod inspect-object-briefly ((object hash-table) pane)
   (with-output-as-presentation
       (pane object (presentation-type-of object))
-    (princ 'hash-table pane)))
+    (show-hash-table-status object pane :message "Hash table")))
 (defmethod inspect-object ((object hash-table) pane)
   (inspector-table (object pane)
-      (format pane "~A (test: ~A)" 'hash-table (hash-table-test object))
+      (progn (format pane "~A (test: ~A)" 'hash-table (hash-table-test object))
+	     (show-hash-table-status object pane))
     (loop for key being the hash-keys of object
-          do (formatting-row (pane)
-	       (formatting-cell (pane :align-x :right)
-		 (inspect-object key pane))
-	       (formatting-cell (pane) (princ "=" pane))
-	       (formatting-cell (pane)
-		 (inspect-object (gethash key object) pane))))))
+       do (formatting-row (pane)
+	    (formatting-cell (pane :align-x :right)
+	      (inspect-object key pane))
+	    (formatting-cell (pane) (princ "=" pane))
+	    (formatting-cell (pane)
+	      (inspect-object (gethash key object) pane))))))
 
 (defmethod inspect-object ((object generic-function) pane)
   (inspector-table (object pane)
