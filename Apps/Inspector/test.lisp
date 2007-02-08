@@ -1,3 +1,7 @@
+;; This is a test file which doesn't properly test anything. It just
+;; has a bunch of code which may occasionally be useful for testing
+;; Clouseau, if you squint at it. All data dictated by wild whims.
+
 (in-package :clouseau)
 
 (defclass oddity ()
@@ -17,8 +21,8 @@ avoid being picked up for vagrancy."
 
 (defstruct historical-event
   (severity 5 :type (integer 0 10))
-  (tragedy "" :type string)
-  (farce "" :type string))
+  (attribute "" :type string)
+  (pirate "" :type string))
 
 (defclass packrat (queer-oddity salad-mixin)
   ((name :initform "Willy the Packrat"
@@ -30,9 +34,9 @@ avoid being picked up for vagrancy."
    (an-array :initform #2A((1 0 0) (0 1 0) (0 0 1))
 	     :documentation "An identity matrix")
    (global-fun :initform #'inspector)
-   (creationism :initform (make-historical-event :severity 7
-						 :tragedy "Scopes monkey trial"
-						 :farce "ID Creationism"))
+   (reunion :initform (make-historical-event :severity 7
+					     :attribute "Sephiroth!"
+					     :pirate "Sephiroth?"))
    (l :initform #'(lambda (x)
 		    (declare (number x))
 		    (1+ x)))
