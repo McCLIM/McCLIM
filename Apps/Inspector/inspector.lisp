@@ -447,7 +447,7 @@ pane. Display a given message, which defaults to 'Usage Graph'."
     (show-hash-table-status object pane :message "Hash table")))
 (defmethod inspect-object ((object hash-table) pane)
   (inspector-table (object pane)
-      (progn (format pane "~A (test: ~A)" 'hash-table (hash-table-test object))
+      (progn (format pane "~A (test: ~A)  " 'hash-table (hash-table-test object))
 	     (show-hash-table-status object pane))
     (loop for key being the hash-keys of object
        do (formatting-row (pane)
@@ -880,3 +880,9 @@ available in direct slots."
 				   (tracedp object))))
     (object)
   (list object))
+
+;; FIXME: This is a horrible hack to gloss over issues that I don't
+;; properly understand. See
+;; <http://common-lisp.net/pipermail/mcclim-devel/2005-February/003700.html>
+(defmethod clim:presentation-type-of ((object standard-generic-function))
+  'clim:expression)
