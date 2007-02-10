@@ -1618,8 +1618,10 @@ history will be unchanged."
 (define-presentation-method present (object (type string) stream
 				     (view textual-view)
 				     &key acceptably for-context-type)
-  (declare (ignore acceptably for-context-type))
-  (princ object stream))
+  (declare (ignore for-context-type))
+  (if acceptably
+      (prin1 object stream)
+      (princ object stream)))
 
 (define-presentation-method accept ((type string) stream (view textual-view)
 				    &key (default nil defaultp)

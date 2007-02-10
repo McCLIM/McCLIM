@@ -21,9 +21,11 @@
 (define-superapp-command (com-quit :name t) ()
   (frame-exit *application-frame*))
 
-(define-presentation-type name-of-month ())
+(define-presentation-type name-of-month ()
+  :inherit-from 'string)
 
-(define-presentation-type day-of-month ())
+(define-presentation-type day-of-month ()
+  :inherit-from 'integer)
 
 (define-superapp-command (com-out :name t) ()
   (with-output-as-presentation (t "The third month" 'name-of-month)
