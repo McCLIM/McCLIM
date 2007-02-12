@@ -285,19 +285,19 @@ spaces only."))
 (defmethod indent-line ((mark right-sticky-mark) indentation tab-width)
   (indent-line* mark indentation tab-width nil))
 
-(defun delete-indentation (mark)
-  (beginning-of-line mark)
-  (unless (beginning-of-buffer-p mark)
-    (delete-range mark -1)
-    (loop until (end-of-buffer-p mark)
-          while (buffer-whitespacep (object-after mark))
-          do (delete-range mark 1))
-    (loop until (beginning-of-buffer-p mark)
-          while (buffer-whitespacep (object-before mark))
-          do (delete-range mark -1))
-    (when (and (not (beginning-of-buffer-p mark))
-	       (constituentp (object-before mark)))
-      (insert-object mark #\Space))))
+(defgeneric delete-indentation (syntax mark)
+  (:documentation "Delete all indentation in the line of `mark'
+with the whitespace rules of `syntax'. The default method just
+removes leading whitespace characters."))
+
+(defmethod delete-indentation ((syntax syntax) (mark mark))
+  (let ((working-mark (clone-mark mark)))
+    (beginning-of-line working-mark)
+    (let ((end-offset (loop for offset from (offset working-mark) below (size *current-buffer*)
+                         unless (whitespacep syntax (buffer-object *current-buffer* offset))
+                         return offset)))
+      (when end-offset
+        (delete-region working-mark end-offset)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 

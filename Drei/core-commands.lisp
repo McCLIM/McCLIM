@@ -257,7 +257,7 @@ of the previous line and the first non-whitespace object of
 the current line, and point after that space. If there is no 
 previous non-blank line, deletes all whitespace at the 
 beginning of the buffer at leaves point there."
-  (delete-indentation *current-point*))
+  (delete-indentation *current-syntax* *current-point*))
 
 (set-key 'com-delete-indentation
 	 'indent-table

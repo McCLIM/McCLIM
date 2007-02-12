@@ -363,6 +363,28 @@ Though this line is growing by a fair bit too, I better test it as well."))))
       (buffer-is #. (format nil "~A~A~A~A~A I am to be indented"
                             #\Tab #\Tab #\Tab #\Tab #\Tab)))))
 
+(test delete-indentation
+  (with-drei-environment (:initial-contents "")
+    (delete-indentation *current-syntax* *current-point*)
+    (buffer-is ""))
+  (with-drei-environment (:initial-contents "Foo")
+    (delete-indentation *current-syntax* *current-point*)
+    (buffer-is "Foo"))
+  (with-drei-environment (:initial-contents " Foo")
+    (delete-indentation *current-syntax* *current-point*)
+    (buffer-is "Foo"))
+  (with-drei-environment (:initial-contents "   	Foo  ")
+    (delete-indentation *current-syntax* *current-point*)
+    (buffer-is "Foo  "))
+  (with-drei-environment (:initial-contents "   Foo  
+  Bar
+ Baz")
+    (forward-line *current-point* *current-syntax*)
+    (delete-indentation *current-syntax* *current-point*)
+    (buffer-is "   Foo  
+Bar
+ Baz")))
+
 (test set-syntax
   (dolist (syntax-designator `("Lisp" drei-lisp-syntax::lisp-syntax
                                       ,(find-class 'drei-lisp-syntax::lisp-syntax)))
