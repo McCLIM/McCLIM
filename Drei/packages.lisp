@@ -410,6 +410,7 @@ used to implement the editing commands."))
            #:indent-region
            #:fill-line #:fill-region
            #:indent-line #:delete-indentation
+           #:join-line
            #:set-syntax
 
            #:*killed-rectangle*
@@ -445,7 +446,8 @@ editing plain text."))
            #:edit-definition
            #:form
            #:form-to-object
-           #:form-conversion-error)
+           #:form-conversion-error
+           #:forward-one-list #:backward-one-list #:forward-list #:backward-list)
   (:shadow clim:form)
   (:documentation "Implementation of the syntax module used for
 editing Common Lisp code."))

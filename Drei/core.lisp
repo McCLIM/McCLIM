@@ -294,10 +294,32 @@ removes leading whitespace characters."))
   (let ((working-mark (clone-mark mark)))
     (beginning-of-line working-mark)
     (let ((end-offset (loop for offset from (offset working-mark) below (size *current-buffer*)
-                         unless (whitespacep syntax (buffer-object *current-buffer* offset))
+                         for buffer-object = (buffer-object *current-buffer* offset)
+                         until (char= buffer-object #\Newline)
+                         unless (whitespacep syntax buffer-object)
                          return offset)))
       (when end-offset
         (delete-region working-mark end-offset)))))
+
+(defgeneric join-line (syntax mark)
+  (:documentation "Join the line that `mark' is in to the
+previous line, and remove whitespace objects at the join
+point. `Syntax' is used for judging what a whitespace character
+is."))
+
+(defmethod join-line ((syntax syntax) (mark mark))
+  (beginning-of-line mark)
+  (unless (beginning-of-buffer-p mark)
+    (delete-range mark -1)
+    (loop until (end-of-buffer-p mark)
+       while (whitespacep syntax (object-after mark))
+       do (delete-range mark 1))
+    (loop until (beginning-of-buffer-p mark)
+       while (whitespacep syntax (object-before mark))
+       do (delete-range mark -1))
+    (when (and (not (beginning-of-buffer-p mark))
+	       (constituentp (object-before mark)))
+      (insert-object mark #\Space))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 

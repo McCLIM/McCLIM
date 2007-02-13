@@ -383,7 +383,54 @@ Though this line is growing by a fair bit too, I better test it as well."))))
     (delete-indentation *current-syntax* *current-point*)
     (buffer-is "   Foo  
 Bar
- Baz")))
+ Baz"))
+  (with-drei-environment (:initial-contents "
+foo bar")
+    (let ((start (clone-mark (point *current-window*)))
+          (end (clone-mark (point *current-window*)))
+          (orig-contents (buffer-contents)))
+      (beginning-of-buffer start)
+      (end-of-buffer end)
+      (do-buffer-region-lines (line start end)
+        (delete-indentation *current-syntax* line))
+      (buffer-is orig-contents))))
+
+(test join-line
+  (with-drei-environment (:initial-contents "
+        climacs   ")
+    (let ((m (clone-mark *current-point* :left)))
+      (setf (offset m) 3)
+      (join-line *current-syntax* m)
+      (is (= (offset m) 0))
+      (buffer-is "climacs   ")))
+  (with-drei-environment (:initial-contents "
+      climacs   ")
+    (let ((m (clone-mark *current-point* :right)))
+      (setf (offset m) 7)
+      (join-line *current-syntax* m)
+      (is (= (offset m) 0))
+      (buffer-is "climacs   ")))
+  (with-drei-environment (:initial-contents "   climacs   ")
+    (let ((m (clone-mark *current-point* :left)))
+      (setf (offset m) 7)
+      (join-line *current-syntax* m)
+      (is (= (offset m) 0))
+      (buffer-is "   climacs   ")))
+  (with-drei-environment (:initial-contents "climacs
+   climacs   ")
+    (let ((m (clone-mark *current-point* :right)))
+      (setf (offset m) 12)
+      (join-line *current-syntax* m)
+      (is (= (offset m) 8))
+      (buffer-is "climacs climacs   ")))
+  (with-drei-environment (:initial-contents "
+
+   climacs   ")
+    (let ((m (clone-mark *current-point* :right)))
+      (setf (offset m) 12)
+      (join-line *current-syntax* m)
+      (is (= (offset m) 0))
+      (buffer-is "climacs   "))))
 
 (test set-syntax
   (dolist (syntax-designator `("Lisp" drei-lisp-syntax::lisp-syntax
