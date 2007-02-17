@@ -328,7 +328,8 @@ inserted from `provided-args'.
                    provided-args)))
 
 (defun cleanup-arglist (arglist)
-  "Remove elements of `arglist' that we are not interested in."
+  "Remove elements of `arglist' that we are not interested in,
+including implementation-specific lambda list keywords."
   (loop
      for arg in arglist
      with in-&aux                       ; If non-NIL, we are in the
@@ -348,6 +349,11 @@ inserted from `provided-args'.
      do (setf in-garbage t)
      else
      collect arg))
+
+(defun canonicalize-arglist (arglist)
+  "Convert `arglist' to the Grand Unified Arglist Format used by
+Drei, and signal errors if the arglist is found to be invalid."
+  arglist)
 
 (defun find-argument-indices-for-operand (syntax operand-form operator-form)
   "Return a list of argument indices for `argument-form' relative
@@ -783,7 +789,7 @@ modification will be generated, respectively."
       `(let* ((,form-sym
                ;; Find a form with a valid (fboundp) operator.
                (let ((immediate-form
-                      (preceding-form ,syntax ,mark-or-offset)))
+                      (this-form ,syntax ,mark-or-offset)))
                  (unless (null immediate-form)
                    (or (find-applicable-form ,syntax immediate-form)
                        ;; If nothing else can be found, and `arg-form'

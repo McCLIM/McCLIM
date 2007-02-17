@@ -76,8 +76,7 @@ substituted for a right sticky mark class."
                   (begin-offset 0) (end-offset (size buffer)))
   "Check (using FiveAM) whether `buffer' contains `string' in the
 subsequence delimited by `begin-offset' and `end-offset'."
-  (is (string= (buffer-substring buffer begin-offset end-offset)
-               string)))
+  (is (string= string (buffer-substring buffer begin-offset end-offset))))
 
 (defclass test-drei (drei)
   ()

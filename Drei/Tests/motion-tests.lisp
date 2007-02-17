@@ -1,8 +1,7 @@
 ;;; -*- Mode: Lisp; Package: COMMON-LISP-USER -*-
 
-;;;  (c) copyright 2005 by
+;;;  (c) copyright 2005-2007 by
 ;;;           Aleksandar Bakic (a_bakic@yahoo.com)
-;;;  (c) copyright 2006 by
 ;;;           Troels Henriksen (athas@sigkill.dk)
 
 ;;; This library is free software; you can redistribute it and/or
@@ -94,18 +93,18 @@ climacs  ")
                                      backward-end-offset
                                      (offset goal-forward-offset goal-backward-offset)
                                      initial-contents
-                                     &key (syntax ''drei-fundamental-syntax:fundamental-syntax)))
-  (check-type forward-begin-offset integer)
-  (check-type backward-end-offset integer)
+                                     &key (syntax 'drei-fundamental-syntax:fundamental-syntax)))
+  (check-type forward-begin-offset (or integer null))
+  (check-type backward-end-offset (or integer null))
   (check-type offset integer)
   (check-type goal-forward-offset integer)
   (check-type goal-backward-offset integer)
   (let ((forward (intern (format nil "FORWARD-ONE-~S" unit)))
         (backward (intern (format nil "BACKWARD-ONE-~S" unit))))
     `(progn
-       (test ,forward
+       (test ,(intern (format nil "~A-~A" syntax forward))
          (with-buffer (buffer :initial-contents ,initial-contents
-                              :syntax ,syntax)
+                              :syntax ',syntax)
            (let ((syntax (syntax buffer))
                  (m0l (clone-mark (low-mark buffer) :left))
                  (m0r (clone-mark (low-mark buffer) :right))
@@ -119,21 +118,25 @@ climacs  ")
                    (offset m1r) ,offset
                    (offset m2l) (size buffer)
                    (offset m2r) (size buffer))
-             (is-true (,forward m0l syntax))
-             (is (= (offset m0l) ,forward-begin-offset))
-             (is-true (,forward m0r syntax))
-             (is (= (offset m0r) ,forward-begin-offset))
+             ,(when forward-begin-offset
+                    `(progn
+                       (is-true (,forward m0l syntax))
+                       (is (= ,forward-begin-offset (offset m0l)))))
+             ,(when backward-end-offset
+                    `(progn
+                       (is-true (,forward m0r syntax))
+                       (is (= ,forward-begin-offset (offset m0r)))))
              (is-true (,forward m1l syntax))
-             (is (= (offset m1l) ,goal-forward-offset))
+             (is (= ,goal-forward-offset (offset m1l)))
              (is-true (,forward m1r syntax))
-             (is (= (offset m1r) ,goal-forward-offset))
+             (is (= ,goal-forward-offset (offset m1r)))
              (is-false (,forward m2l syntax))
-             (is (= (offset m2l) (size buffer)))
+             (is (= (size buffer) (offset m2l)))
              (is-false (,forward m2r syntax))
-             (is (= (offset m2r) (size buffer))))))
-       (test ,backward
+             (is (= (size buffer) (offset m2r))))))
+       (test ,(intern (format nil "~A-~A" syntax backward))
          (with-buffer (buffer :initial-contents ,initial-contents
-                              :syntax ,syntax)
+                              :syntax ',syntax)
            (let ((syntax (syntax buffer))
                  (m0l (clone-mark (low-mark buffer) :left))
                  (m0r (clone-mark (low-mark buffer) :right))
@@ -148,17 +151,21 @@ climacs  ")
                    (offset m2l) (size buffer)
                    (offset m2r) (size buffer))
              (is-false (,backward m0l syntax))
-             (is (= (offset m0l) 0))
+             (is (= 0 (offset m0l)))
              (is-false (,backward m0r syntax))
-             (is (= (offset m0r) 0))
+             (is (= 0 (offset m0r)))
              (is-true (,backward m1l syntax))
-             (is (= (offset m1l) ,goal-backward-offset))
+             (is (= ,goal-backward-offset (offset m1l)))
              (is-true (,backward m1r syntax))
-             (is (= (offset m1r) ,goal-backward-offset))
-             (is-true (,backward m2l syntax))
-             (is (= (offset m2l) ,backward-end-offset))
-             (is-true (,backward m2r syntax))
-             (is (= (offset m2r) ,backward-end-offset))))))))
+             (is (= ,goal-backward-offset (offset m1r)))
+             ,(when backward-end-offset
+                    `(progn
+                       (is-true (,backward m2l syntax))
+                       (is (= ,backward-end-offset (offset m2l)))))
+             ,(when backward-end-offset
+                    `(progn
+                       (is-true (,backward m2r syntax))
+                       (is (= ,backward-end-offset (offset m2r)))))))))))
 
 (motion-fun-one-test word (9 10 (5 9 2)
                              "  climacs

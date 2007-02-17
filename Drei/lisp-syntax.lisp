@@ -387,7 +387,7 @@ along with any default values) that can be used in a
 (defclass pathname-start-lexeme (lisp-lexeme) ())
 (defclass undefined-reader-macro-lexeme (lisp-lexeme) ())
 (defclass bit-vector-form (form-lexeme complete-form-mixin) ())
-(defclass number-lexeme (form-lexeme complete-form-mixin) ())
+(defclass number-lexeme (complete-token-lexeme) ())
 (defclass token-mixin () ())
 (defclass literal-object-form (form-lexeme complete-form-mixin) ())
 (defclass complete-token-lexeme (token-mixin form-lexeme complete-form-mixin) ())
@@ -1011,15 +1011,19 @@ along with any default values) that can be used in a
 
 (define-parser-state |' | (form-may-follow) ())
 (define-parser-state |' form | (lexer-toplevel-state parser-state) ())
+(define-parser-state |' incomplete-form | (lexer-toplevel-state parser-state) ())
 
 (define-new-lisp-state (form-may-follow quote-lexeme) |' |)
 (define-new-lisp-state (|' | complete-form-mixin) |' form |)
+(define-new-lisp-state (|' | incomplete-form-mixin) |' incomplete-form |)
 (define-new-lisp-state (|' | comment) |' |)
 (define-new-lisp-state (|' | unmatched-right-parenthesis-lexeme) |( form* ) |)
 
 ;;; reduce according to the rule form -> ' form
 (define-lisp-action (|' form | t)
   (reduce-until-type complete-quote-form quote-lexeme))
+(define-lisp-action (|' incomplete-form | t)
+  (reduce-until-type incomplete-quote-form quote-lexeme))
 
 (define-lisp-action (|' | right-parenthesis-lexeme)
   (reduce-until-type incomplete-quote-form quote-lexeme))
@@ -1090,8 +1094,8 @@ along with any default values) that can be used in a
 
 ;;; parse trees
 (defclass function-form (form) ())
-(defclass complete-function-form (form complete-form-mixin) ())
-(defclass incomplete-function-form (form incomplete-form-mixin) ())
+(defclass complete-function-form (function-form complete-form-mixin) ())
+(defclass incomplete-function-form (function-form incomplete-form-mixin) ())
 
 (define-parser-state |#' | (form-may-follow) ())
 (define-parser-state |#' form | (lexer-toplevel-state parser-state) ())
@@ -1142,7 +1146,7 @@ along with any default values) that can be used in a
 ;;;;;;;;;;;;;;;; uninterned symbol
 
 ;;; parse trees
-(defclass uninterned-symbol-form (form complete-form-mixin) ())
+(defclass uninterned-symbol-form (complete-token-form) ())
 
 (define-parser-state |#: | (form-may-follow) ())
 (define-parser-state |#: form | (lexer-toplevel-state parser-state) ())
@@ -1237,14 +1241,18 @@ along with any default values) that can be used in a
 
 (define-parser-state |#P | (form-may-follow) ())
 (define-parser-state |#P form | (lexer-toplevel-state parser-state) ())
+(define-parser-state |#P incomplete-form | (lexer-toplevel-state parser-state) ())
 
 (define-new-lisp-state (form-may-follow pathname-start-lexeme) |#P |)
 (define-new-lisp-state (|#P | complete-form-mixin) |#P form |)
+(define-new-lisp-state (|#P | incomplete-form-mixin) |#P incomplete-form |)
 (define-new-lisp-state (|#P | comment) |#P |)
 
 ;;; reduce according to the rule form -> #P form
 (define-lisp-action (|#P form | t)
   (reduce-until-type complete-pathname-form pathname-start-lexeme))
+(define-lisp-action (|#P incomplete-form | t)
+  (reduce-until-type incomplete-pathname-form pathname-start-lexeme))
 (define-lisp-action (|#P | (eql nil))
   (reduce-until-type incomplete-pathname-form pathname-start-lexeme))
 
@@ -1593,21 +1601,21 @@ stripping leading non-forms."
 (defmethod form-operands (syntax (form list-form))
   (remove-if-not #'formp (rest-forms (children form))))
 
-(defun form-toplevel (form syntax)
+(defun form-toplevel (syntax form)
   "Return the top-level form of `form'."
   (if (null (parent (parent form)))
       form
-      (form-toplevel (parent form) syntax)))
+      (form-toplevel syntax (parent form))))
 
-(defgeneric form-operator-p (token syntax)
-  (:documentation "Return true if `token' is the operator of its form. Otherwise,
-  return nil.")
-  (:method (token syntax)
+(defgeneric form-operator-p (syntax token)
+  (:documentation "Return true if `token' is the operator of its
+  form. Otherwise, return nil.")
+  (:method ((syntax lisp-syntax) (token lisp-lexeme))
     (with-accessors ((pre-token preceding-parse-tree)) token
       (cond ((typep pre-token 'left-parenthesis-lexeme)
              t)
             ((comment-p pre-token)
-             (form-operator-p pre-token syntax))
+             (form-operator-p syntax pre-token))
             (t nil)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1615,15 +1623,20 @@ stripping leading non-forms."
 ;;; Useful functions for selecting forms based on the mark.
 
 (defun expression-at-mark (syntax mark-or-offset)
-  "Return the form at `mark-or-offset'. If `mark-or-offset' is just after,
-or inside, a top-level-form, or if there are no forms after
-`mark-or-offset', the form preceding `mark-or-offset' is
-returned. Otherwise, the form following `mark-or-offset' is
-returned."
+  "Return the form closest to `mark-or-offset'."
   (as-offsets ((offset mark-or-offset))
-    (or (form-around syntax offset)
-        (form-after syntax offset)
-        (form-before syntax offset))))
+    (flet ((distance (form)
+             (max (abs (- (start-offset form) mark-or-offset))
+                  (abs (- (end-offset form) mark-or-offset)))))
+      (reduce #'(lambda (form1 form2)
+                  (cond ((null form1) form2)
+                        ((null form2) form1)
+                        ((> (distance form1) (distance form2))
+                         form2)
+                        (t form1)))
+              (list (form-around syntax offset)
+                    (form-after syntax offset)
+                    (form-before syntax offset))))))
 
 (defun definition-at-mark (syntax mark-or-offset)
   "Return the top-level form at `mark-or-offset'. If `mark-or-offset' is just after,
@@ -1631,7 +1644,7 @@ or inside, a top-level-form, or if there are no forms after
 `mark-or-offset', the top-level-form preceding `mark-or-offset'
 is returned. Otherwise, the top-level-form following
 `mark-or-offset' is returned."
-  (form-toplevel (expression-at-mark mark-or-offset syntax) syntax))
+  (form-toplevel syntax (expression-at-mark syntax mark-or-offset)))
 
 (defun symbol-at-mark (syntax mark-or-offset
                        &optional (form-fetcher 'expression-at-mark))
@@ -1641,12 +1654,10 @@ symbol token can be found, NIL will be returned. `Form-fetcher'
 must be a function with the same signature as `expression-at-mark', and
 will be used to retrieve the initial form at `mark'."
   (as-offsets (mark-or-offset)
-    (labels ((unwrap-form (form)
-               (cond ((form-quoted-p form)
-                      (unwrap-form (first-form (children form))))
-                     ((form-token-p form)
-                      form))))
-      (unwrap-form (funcall form-fetcher syntax mark-or-offset)))))
+    (let ((unwrapped-form (fully-unquoted-form
+                           (funcall form-fetcher syntax mark-or-offset))))
+      (when (form-token-p unwrapped-form)
+        unwrapped-form))))
 
 (defun fully-quoted-form (token)
   "Return the top token object for `token', return `token' or the
@@ -1672,29 +1683,6 @@ the form that `token' quotes, peeling away all quote forms."
   (as-offsets ((offset mark-or-offset))
     (or (form-around syntax offset)
         (form-before syntax offset))))
-
-(defun preceding-form (syntax mark-or-offset)
-  "Return a form at `mark-or-offset'."
-  (as-offsets ((offset mark-or-offset))
-   (or (form-before syntax offset)
-       (form-around syntax offset))))
-
-(defun text-of-definition-at-mark (syntax mark)
-  "Return the text of the definition at mark."
-  (let ((definition (definition-at-mark mark syntax)))
-    (buffer-substring (buffer mark)
-                      (start-offset definition)
-                      (end-offset definition))))
-
-(defun text-of-expression-at-mark (syntax mark-or-offset)
-  "Return the text of the expression at `mark-or-offset'."
-  (let ((expression (expression-at-mark mark-or-offset syntax)))
-    (form-string syntax expression)))
-
-(defun symbol-name-at-mark (syntax mark-or-offset)
-  "Return the text of the symbol at `mark-or-offset'."
-  (let ((token (symbol-at-mark syntax mark-or-offset)))
-    (when token (form-string syntax token))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -1744,8 +1732,8 @@ and move `mark' to after `string'. If there is no symbol at
 
 (defmethod replace-symbol-at-mark ((syntax lisp-syntax) (mark mark)
                                    (string string))
-  (let ((token (symbol-at-mark syntax mark #'form-around)))
-    (when (and token (form-token-p token))
+  (let ((token (symbol-at-mark syntax mark)))
+    (when token
       (setf (offset mark) (start-offset token))
       (forward-delete-expression mark syntax))
     (insert-sequence mark string)))
@@ -1873,12 +1861,14 @@ and move `mark' to after `string'. If there is no symbol at
                 ((eql (buffer-object (buffer syntax) (start-offset parse-symbol)) #\&)
                  (with-face (:lambda-list-keyword)
                    (call-next-method)))
-                ((and (macro-function symbol)
-                      (form-operator-p parse-symbol syntax))
+                ((and (symbolp symbol)
+                      (macro-function symbol)
+                      (form-operator-p syntax parse-symbol))
                  (with-face (:macro)
                    (call-next-method)))
-                ((and (special-operator-p symbol)
-                      (form-operator-p parse-symbol syntax))
+                ((and (symbolp symbol)
+                      (special-operator-p symbol)
+                      (form-operator-p syntax parse-symbol))
                  (with-face (:special-form)
                    (call-next-method)))
                 (t (call-next-method)))))
@@ -2095,6 +2085,10 @@ and move `mark' to after `string'. If there is no symbol at
              (t nil))))
 
 (defun form-before (syntax offset)
+  (assert (>= (size (buffer syntax)) offset) nil
+          "Offset past buffer end")
+  (assert (>= offset 0) nil
+          "Offset before buffer start")
   (with-slots (stack-top) syntax
     (if (or (null (start-offset stack-top))
 	    (<= offset (start-offset stack-top)))
@@ -2120,6 +2114,10 @@ and move `mark' to after `string'. If there is no symbol at
               (t nil))))
 
 (defun form-after (syntax offset)
+  (assert (>= (size (buffer syntax)) offset) nil
+          "Offset past buffer end")
+  (assert (>= offset 0) nil
+          "Offset before buffer start")
   (with-slots (stack-top) syntax
     (if (or (null (start-offset stack-top))
 	    (>= offset (end-offset stack-top)))
@@ -2133,16 +2131,18 @@ and move `mark' to after `string'. If there is no symbol at
                       (= offset (end-offset child))
                       (= offset (start-offset child)))
 		  (return (if (null (first-form (children child)))
-			      (when (formp child)
-				child)
+                              child
 			      (or (form-around-in-children (children child) offset)
-                                  (when (formp child)
-                                    child)))))
+                                  child))))
 		 ((< offset (start-offset child))
 		  (return nil))
 		 (t nil))))
 
 (defun form-around (syntax offset)
+  (assert (>= (size (buffer syntax)) offset) nil
+          "Offset past buffer end")
+  (assert (>= offset 0) nil
+          "Offset before buffer start")
   (with-slots (stack-top) syntax
     (if (or (null (start-offset stack-top))
 	    (> offset (end-offset stack-top))
@@ -2151,16 +2151,14 @@ and move `mark' to after `string'. If there is no symbol at
 	(form-around-in-children (children stack-top) offset))))
 
 (defun find-list-parent-offset (form fn)
-  "Find a list parent of `token' and return `fn'
-applied to this parent token. `Fn' should be a function
-that returns an offset when applied to a
-token (eg. `start-offset' or `end-offset'). If a list
-parent cannot be found, return `fn' applied to `form'."
+  "Find a list parent of `form' and return `fn' applied to this
+parent token. `Fn' should be a function that returns an offset
+when applied to a token (eg. `start-offset' or `end-offset'). If
+a list parent cannot be found, return nil"
   (let ((parent (parent form)))
     (typecase parent
-      (form* (funcall fn form))
       (list-form (funcall fn form))
-      (null (funcall fn form))
+      ((or form* null) nil)
       (t (find-list-parent-offset parent fn)))))
 
 (defun find-list-child-offset (form fn &optional (min-offset 0))
@@ -2196,8 +2194,7 @@ be found, return nil."
 	(setf (offset mark) (end-offset potential-form)))))
 
 (defgeneric forward-one-list (mark syntax)
-  (:documentation
-   "Move `mark' forward by one list.
+  (:documentation "Move `mark' forward by one list.
 Return T if successful, or NIL if the buffer limit was reached."))
 
 (defmethod forward-one-list (mark (syntax lisp-syntax))
@@ -2214,9 +2211,8 @@ Return T if successful, or NIL if the buffer limit was reached."))
      (return t)))
 
 (defgeneric backward-one-list (mark syntax)
-  (:documentation
-   "Move `mark' backward by one list.  Return T if successful, or
-NIL if the buffer limit was reached."))
+  (:documentation "Move `mark' backward by one list.  Return T if
+successful, or NIL if the buffer limit was reached."))
 
 (defmethod backward-one-list (mark (syntax lisp-syntax))
   (loop for start = (offset mark)
@@ -2233,44 +2229,84 @@ NIL if the buffer limit was reached."))
 
 (drei-motion:define-motion-fns list)
 
-(defun down-list-by-fn (mark syntax fn)
-  (let* ((offset (offset mark))
-         (potential-form (form-after syntax offset)))
-    (let ((new-offset (typecase potential-form
-                        (list-form (start-offset potential-form))
-                        (null nil)
-                        (t (find-list-child-offset
-                            (parent potential-form)
-                            fn
-                            offset)))))
+(defun down-list (mark syntax selector next-offset-fn target-offset-fn)
+  (labels ((find-offset (potential-form)
+             (typecase potential-form
+               (list-form (funcall target-offset-fn potential-form))
+               (null nil)
+               (t (find-offset (funcall selector syntax
+                                        (funcall next-offset-fn potential-form)))))))
+    (let ((new-offset (find-offset (funcall selector syntax (offset mark)))))
       (when new-offset
-        (progn (setf (offset mark) (1+ new-offset)) t)))))
+        (setf (offset mark) new-offset)
+        t))))
 
-(defmethod forward-one-down (mark (syntax lisp-syntax))
-  (down-list-by-fn mark syntax #'start-offset))
+(defmethod forward-one-down ((mark mark) (syntax lisp-syntax))
+  (when (down-list mark syntax #'form-after #'end-offset #'start-offset)
+    (forward-object mark)))
 
-(defmethod backward-one-down (mark (syntax lisp-syntax))
-  (down-list-by-fn mark syntax #'end-offset)
-  (backward-object mark syntax))
+(defmethod backward-one-down ((mark mark) (syntax lisp-syntax))
+  (when (down-list mark syntax #'form-before #'start-offset #'end-offset)
+    (backward-object mark)))
 
-(defun up-list-by-fn (mark syntax fn)
-  (let ((form (or (form-before syntax (offset mark))
-                  (form-after syntax (offset mark))
-                  (form-around syntax (offset mark)))))
+(defun up-list (mark syntax fn)
+  (let ((form (form-around syntax (offset mark))))
     (when form
-      (let ((parent (parent form)))
-        (when (not (null parent))
-          (let ((new-offset (find-list-parent-offset parent fn)))
-            (when new-offset
-              (setf (offset mark) new-offset))))))))
+      (let ((new-offset (find-list-parent-offset form fn)))
+        (when new-offset
+          (setf (offset mark) new-offset)
+          t)))))
 
 (defmethod backward-one-up (mark (syntax lisp-syntax))
-  (up-list-by-fn mark syntax #'start-offset))
+  (up-list mark syntax #'start-offset))
 
 (defmethod forward-one-up (mark (syntax lisp-syntax))
-  (up-list-by-fn mark syntax #'end-offset))
+  (up-list mark syntax #'end-offset))
 
-(defmethod eval-defun (mark (syntax lisp-syntax))
+(defmethod backward-one-definition ((mark mark) (syntax lisp-syntax))
+  (with-slots (stack-top) syntax
+    ;; FIXME? This conses! I'm over it already. I don't think it
+    ;; matters much, but if someone is bored, please profile it.
+    (loop for form in (reverse (children stack-top))
+       when (and (formp form)
+                 (mark> mark (start-offset form)))
+       do (setf (offset mark) (start-offset form))
+       and do (return t))))
+
+(defmethod forward-one-definition ((mark mark) (syntax lisp-syntax))
+  (with-slots (stack-top) syntax
+    (loop for form in (children stack-top)
+       when (and (formp form)
+                 (mark< mark (end-offset form)))
+       do (setf (offset mark) (end-offset form))
+       and do (return t))))
+
+(defun in-type-p-in-children (children offset type)
+  (loop for child in children
+     do (cond ((< (start-offset child) offset (end-offset child))
+               (return (if (typep child type)
+                           child
+                           (in-type-p-in-children (children child) offset type))))
+              ((<= offset (start-offset child))
+               (return nil))
+              (t nil))))
+
+(defun in-type-p (mark-or-offset syntax type)
+  (as-offsets ((offset mark-or-offset))
+    (with-slots (stack-top) syntax
+      (if (or (null (start-offset stack-top))
+              (>= offset (end-offset stack-top))
+              (<= offset (start-offset stack-top)))
+          nil)
+      (in-type-p-in-children (children stack-top) offset type))))
+
+(defun in-string-p (mark-or-offset syntax)
+  (in-type-p mark-or-offset syntax 'string-form))
+
+(defun in-comment-p (mark-or-offset syntax)
+  (in-type-p mark-or-offset syntax 'comment))
+
+(defmethod eval-defun ((mark mark) (syntax lisp-syntax))
   (with-slots (stack-top) syntax
      (loop for form in (children stack-top)
 	   when (and (mark<= (start-offset form) mark)
@@ -2278,58 +2314,6 @@ NIL if the buffer limit was reached."))
 	     do (return (eval-form-for-drei
                          (get-usable-image syntax)
                          (form-to-object syntax form :read t))))))
-
-(defmethod backward-one-definition (mark (syntax lisp-syntax))
-  (with-slots (stack-top) syntax
-    (loop for form in (children stack-top)
-	  with last-toplevel-list = nil
-	  when (and (formp form)
-		    (mark< mark (end-offset form)))
-          do (if (mark< (start-offset form) mark)
-		 (setf (offset mark) (start-offset form))
-		 (when last-toplevel-list form
-		       (setf (offset mark) (start-offset last-toplevel-list))))
-	     (return t)
-	  when (formp form)
-	  do (setf last-toplevel-list form)
-	  finally (when last-toplevel-list form
-		       (setf (offset mark)
-                             (start-offset last-toplevel-list))
-                       (return t)))))
-
-(defmethod forward-one-definition (mark (syntax lisp-syntax))
-  (with-slots (stack-top) syntax
-    (loop for form in (children stack-top)
-	  when (and (formp form)
-		    (mark< mark (end-offset form)))
-	  do (setf (offset mark) (end-offset form))
-	     (loop-finish)
-          finally (return t))))
-
-(defun in-type-p-in-children (children offset type)
-  (loop for child in children
-	do (cond ((< (start-offset child) offset (end-offset child))
-		  (return (if (typep child type)
-			      child
-			      (in-type-p-in-children (children child) offset type))))
-		 ((<= offset (start-offset child))
-		  (return nil))
-		 (t nil))))
-
-(defun in-type-p (mark syntax type)
-  (let ((offset (offset mark)))
-    (with-slots (stack-top) syntax
-       (if (or (null (start-offset stack-top))
-	       (>= offset (end-offset stack-top))
-	       (<= offset (start-offset stack-top)))
-	   nil)
-       (in-type-p-in-children (children stack-top) offset type))))
-
-(defun in-string-p (mark syntax)
-  (in-type-p mark syntax 'string-form))
-
-(defun in-comment-p (mark syntax)
-  (in-type-p mark syntax 'comment))
 
 ;;; shamelessly replacing SWANK code
 ;; We first work through the string removing the characters and noting
@@ -2746,7 +2730,7 @@ parameters."
 placeholder symbol. It is used for implementing the label reader
 macros (#n=foo #n#).")
 
-(defvar *label-placeholders->object* nil
+(defvar *label-placeholders->objects* nil
   "This variable holds an alist mapping placeholder symbols to
 the object. It is used for implementing the label reader
 macros (#n=foo #n#).")
@@ -2776,7 +2760,7 @@ the label. Returns `form' converted to an object."
     (push (list label placeholder-symbol) *labels->placeholders*)
     (let ((object (apply #'form-to-object syntax
                          (second (children form)) args)))
-      (push (list placeholder-symbol object) *label-placeholders->object*)
+      (push (list placeholder-symbol object) *label-placeholders->objects*)
       object)))
 
 (defgeneric find-and-register-label (syntax form label limit &rest args)
@@ -2806,7 +2790,7 @@ form that needs the value of the label, limiting where to end the
 search. `Args' will be passed to `form-to-object' if it is
 necessary to create a new object for the label."
   (unless (assoc label *labels->placeholders*)
-    (apply #'find-and-register-label syntax (form-toplevel form syntax) label (start-offset form) args)))
+    (apply #'find-and-register-label syntax (form-toplevel syntax form) label (start-offset form) args)))
 
 (defun label-placeholder (syntax form label &optional search-whole-form &rest args)
   "Get the placeholder for `label' (which must be an integer). If
@@ -2878,10 +2862,12 @@ assoc'd with the things to replace them."
 objects as determined by `*label-placeholders->objects*' and
 return the modified `values' as multiple return values."
   (values-list
-   (mapcar #'(lambda (value)
-               (let ((*sharp-equal-circle-table* (make-hash-table :test #'eq :size 20)))
-                 (circle-subst *label-placeholders->object* value)))
-           values)))
+   (if *label-placeholders->objects*
+       (mapcar #'(lambda (value)
+                   (let ((*sharp-equal-circle-table* (make-hash-table :test #'eq :size 20)))
+                     (circle-subst *label-placeholders->objects* value)))
+               values)
+       values)))
 
 (defvar *form-to-object-depth* 0
   "This variable is used to keep track of how deeply nested calls
@@ -2915,7 +2901,7 @@ will be signalled for incomplete forms.")
                                            syntax (start-offset form)))))
                (if (= *form-to-object-depth* 1)
                    (let ((*labels->placeholders* nil)
-                         (*label-placeholders->object* nil))
+                         (*label-placeholders->objects* nil))
                      (act))
                    (act)))))
   (:method ((syntax lisp-syntax) (form t) &rest args
@@ -3165,19 +3151,19 @@ will be signalled for incomplete forms.")
 ;;; Just the basics. The fun stuff is found in lisp-syntax-swine.lisp.
 
 (defgeneric arglist-for-form (syntax operator &optional arguments)
-  (:documentation
-   "Return an arglist for `operator'")
-  (:method (syntax operator &optional arguments)
+  (:documentation "Return an arglist for `operator'.")
+  (:method ((syntax lisp-syntax) (operator symbol) &optional arguments)
     (declare (ignore arguments))
-    (cleanup-arglist
-     (arglist (get-usable-image syntax) operator))))
+    (canonicalize-arglist
+     (cleanup-arglist
+      (arglist (get-usable-image syntax) operator)))))
 
 (defmethod arglist-for-form (syntax (operator list) &optional arguments)
   (declare (ignore arguments))
   (case (first operator)
-    ('cl:lambda (cleanup-arglist (second operator)))))
+    ('cl:lambda (canonicalize-arglist (cleanup-arglist (second operator))))))
 
-;; HACK ALERT: SBCL, and some implementations I guess, provides us
+;; SBCL, and some other implementations I would guess, provides us
 ;; with an arglist that is too simple, confusing the code
 ;; analysers. We fix that here.
 (defmethod arglist-for-form (syntax (operator (eql 'clim-lisp:defclass)) &optional arguments)
@@ -3203,7 +3189,7 @@ will be signalled for incomplete forms.")
 	(t (indent-form syntax (elt-noncomment (children tree) (car path)) (cdr path)))))
 
 (defmethod indent-form ((syntax lisp-syntax) (tree string-form) path)
-  (values (form-toplevel tree syntax) 0))
+  (values (form-toplevel syntax tree) 0))
 
 (defmethod indent-form ((syntax lisp-syntax) (tree reader-conditional-form) path)
   (cond ((or (null path)
@@ -3218,23 +3204,34 @@ will be signalled for incomplete forms.")
       (indent-form syntax (elt-form (children tree) 0) (cdr path))))
 
 (defmethod indent-form ((syntax lisp-syntax) (tree list-form) path)
-  (if (= (car path) 1)
-      ;; before first element
+  (if (and (= (car path) 1)
+           (null (cdr path)))
+      ;; Before first element.
       (values tree 1)
       (let ((first-child (elt-noncomment (children tree) 1)))
-	(cond ((and (form-token-p first-child)
-		    (form-to-object syntax first-child))
-	       (compute-list-indentation syntax (form-to-object syntax first-child) tree path))
-	      ((null (cdr path))
-	       ;; top level
-	       (if (= (car path) 2)
-		   ;; indent like first element
-		   (values (elt-noncomment (children tree) 1) 0)
-		   ;; indent like second element
-		   (values (elt-noncomment (children tree) 2) 0)))
-	      (t
-	       ;; inside a subexpression
-	       (indent-form syntax (elt-noncomment (children tree) (car path)) (cdr path)))))))
+        (cond ((form-token-p first-child)
+               (compute-list-indentation syntax (form-to-object syntax first-child) tree path))
+              ((null (cdr path))
+               ;; top level
+               (if (= (car path) 2)
+                   ;; indent like first element
+                   (values (elt-noncomment (children tree) 1) 0)
+                   ;; indent like second element
+                   (values (elt-noncomment (children tree) 2) 0)))
+              (t
+               ;; inside a subexpression
+               (indent-form syntax (elt-noncomment (children tree) (car path)) (cdr path)))))))
+
+(defmethod indent-form ((syntax lisp-syntax) (tree simple-vector-form) path)
+  (if (= (car path) 1)
+      ;; Before first element.
+      (values tree 1)
+      (cond ((null (cdr path))
+             ;; Top level, indent like first element.
+             (values (elt-noncomment (children tree) 1) 0))
+            (t
+             ;; Inside a subexpression.
+             (indent-form syntax (elt-noncomment (children tree) (car path)) (cdr path))))))
 
 (defmethod indent-form ((syntax lisp-syntax) (tree token-form) path)
   (values tree 0))
@@ -3252,10 +3249,24 @@ will be signalled for incomplete forms.")
   (indent-list syntax (elt-noncomment (children tree) (car path)) (cdr path)))
 
 (defmethod indent-form ((syntax lisp-syntax) (tree backquote-form) path)
-  (indent-list syntax (elt-noncomment (children tree) (car path)) (cdr path)))
+  (if (null (cdr path))
+      (indent-list syntax (elt-noncomment (children tree) (car path)) (cdr path))
+      (indent-form syntax (elt-noncomment (children tree) (car path)) (cdr path))))
 
 (defmethod indent-form ((syntax lisp-syntax) (tree comma-form) path)
-  (indent-form syntax (elt-noncomment (children tree) (car path)) (cdr path)))
+  (if (null (cdr path))
+      (indent-list syntax (elt-noncomment (children tree) (car path)) (cdr path))
+      (indent-form syntax (elt-noncomment (children tree) (car path)) (cdr path))))
+
+(defmethod indent-form ((syntax lisp-syntax) (tree comma-at-form) path)
+  (if (null (cdr path))
+      (indent-list syntax (elt-noncomment (children tree) (car path)) (cdr path))
+      (indent-form syntax (elt-noncomment (children tree) (car path)) (cdr path))))
+
+(defmethod indent-form ((syntax lisp-syntax) (tree comma-dot-form) path)
+  (if (null (cdr path))
+      (indent-list syntax (elt-noncomment (children tree) (car path)) (cdr path))
+      (indent-form syntax (elt-noncomment (children tree) (car path)) (cdr path))))
 
 (defmethod indent-form ((syntax lisp-syntax) (tree function-form) path)
   (if (null (cdr path))
@@ -3287,7 +3298,7 @@ will be signalled for incomplete forms.")
       ;; inside a bind form
       (indent-binding syntax (elt-noncomment (children tree) (car path)) (cdr path))))
 
-(defmethod compute-list-indentation ((syntax lisp-syntax) symbol tree path)
+(defmethod compute-list-indentation ((syntax lisp-syntax) (symbol symbol) tree path)
   (if (null (cdr path))
       ;; top level
       (let* ((arglist (when (fboundp symbol)
@@ -3305,13 +3316,57 @@ will be signalled for incomplete forms.")
                 ;; non-&body-arg.
                 (values (elt-noncomment (children tree) 1) 1))
             ;; normal form.
-            (if (= (car path) 2)
-                ;; indent like first child
-                (values (elt-noncomment (children tree) 1) 0)
-                ;; indent like second child
-                (values (elt-noncomment (children tree) 2) 0))))
+            (call-next-method)))
       ;; inside a subexpression
       (indent-form syntax (elt-noncomment (children tree) (car path)) (cdr path))))
+
+(defmethod compute-list-indentation ((syntax lisp-syntax) symbol tree path)
+  (if (null (cdr path))
+      ;; normal form.
+      (if (= (car path) 2)
+          ;; indent like first child
+          (values (elt-noncomment (children tree) 1) 0)
+          ;; indent like second child
+          (values (elt-noncomment (children tree) 2) 0))
+      ;; inside a subexpression
+      (indent-form syntax (elt-noncomment (children tree) (car path)) (cdr path))))
+
+;; TODO: `define-simple-indentor' is not flexible enough for the
+;; indentation rules of `progn' and `multiple-value-bind' (and a few
+;; others). TODO: Write a more powerful `define-indentor'.
+
+(defmethod compute-list-indentation ((syntax lisp-syntax) (symbol (eql 'progn)) tree path)
+  (if (null (cdr path))
+      ;; normal form.
+      (if (= (car path) 2)
+          (values (elt-noncomment (children tree) 1) 1)
+          (values (elt-noncomment (children tree) 2) 0))
+      ;; inside a subexpression
+      (indent-form syntax (elt-noncomment (children tree) (car path)) (cdr path))))
+
+(defmethod compute-list-indentation ((syntax lisp-syntax)
+                                     (symbol (eql 'multiple-value-bind)) tree path)
+  (cond ((null (cdr path))
+         (cond
+           ;; Value bindings.
+           ((= (car path) 2) (values tree 6))
+           ;; Values form.
+           ((= (car path) 3) (values tree 4))
+           ;; First element of body.
+           ((= (car path) 4) (values tree 2))
+           ;; More body elements, indent to first body element, like
+           ;; `progn'.
+           (t (values (elt-noncomment (children tree) 4) 0))))
+        ((= (car path) 2)
+         (indent-list syntax (elt-noncomment (children tree) 2)
+                      (cdr path)))
+        ((= (car path) 3)
+         (indent-form syntax (elt-noncomment (children tree) 3)
+                      (cdr path)))
+        (t
+         (indent-form syntax
+                      (elt-noncomment (children tree) (car path))
+                      (cdr path)))))
 
 (defmacro define-list-indentor (name element-indentor)
   `(defun ,name (syntax tree path)
@@ -3348,13 +3403,11 @@ will be signalled for incomplete forms.")
 			    (,fun syntax (elt-noncomment (children tree) ,i) (cdr path))))
 	   (t (indent-form syntax (elt-noncomment (children tree) (car path)) (cdr path))))))
 
-(define-simple-indentor (progn))
 (define-simple-indentor (prog1 indent-form))
 (define-simple-indentor (prog2 indent-form indent-form))
 (define-simple-indentor (locally))
 (define-simple-indentor (let indent-bindings))
 (define-simple-indentor (let* indent-bindings))
-(define-simple-indentor (multiple-value-bind indent-list indent-form))
 (define-simple-indentor (defun indent-list indent-ordinary-lambda-list))
 (define-simple-indentor (defmacro indent-list indent-macro-lambda-list))
 (define-simple-indentor (with-slots indent-bindings indent-form))
