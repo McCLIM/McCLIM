@@ -1796,9 +1796,10 @@ and move `mark' to after `string'. If there is no symbol at
                             pane (first (aref cursor-positions 0)) 0))
                 ((#\Page #\Return #\Space) (stream-increment-cursor-position
                                             pane space-width 0))
-                (#\Tab (let ((x (stream-cursor-position pane)))
-                         (stream-increment-cursor-position
-                          pane (- tab-width (mod x tab-width)) 0))))
+                (#\Tab (when (plusp tab-width)
+                         (let ((x (stream-cursor-position pane)))
+                           (stream-increment-cursor-position
+                            pane (- tab-width (mod x tab-width)) 0)))))
            (incf start))))))
 
 (defgeneric display-parse-tree (parse-symbol stream drei syntax)

@@ -164,7 +164,7 @@ be used outside the input-editor."))
     ;; position properly (ie. after the prompt).
     (loop
        with buffer = (buffer (drei-instance stream))
-       until (= (stream-scan-pointer stream) (size buffer))
+       until (>= (stream-scan-pointer stream) (size buffer))
        while (typep (buffer-object buffer (stream-scan-pointer stream))
                     'noise-string)
        do (incf (stream-scan-pointer stream)))
