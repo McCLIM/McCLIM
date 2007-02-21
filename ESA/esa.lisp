@@ -18,7 +18,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; Emacs-Style Appication
+;;; Emacs-Style Application
 
 (in-package :esa)
 
@@ -621,6 +621,7 @@ of a prefix arg returns 1 (and nil)."
                 do
                 (setf numarg (+ (* 10 numarg) (meta-digit gesture)))
                 (pop gestures)
+                finally
                 (return (values (if (and (= sign -1) (= numarg 0))
                                     -1
                                     (* sign numarg))
