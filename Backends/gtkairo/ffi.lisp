@@ -372,7 +372,7 @@
 
 (defcfun "cairo_image_surface_create_for_data"
     :pointer
-  (arg0 :string)                        ;unsigned char *
+  (arg0 utf8-string)                    ;unsigned char *
   (arg1 cairo_format_t)
   (arg2 :int)                           ;int
   (arg3 :int)                           ;int
@@ -559,7 +559,7 @@
 (defcfun "cairo_select_font_face"
     :void
   (arg0 :pointer)                       ;cairo_t *
-  (arg1 :string)                        ;const char *
+  (arg1 utf8-string)                    ;const char *
   (arg2 cairo_font_slant_t)
   (arg3 cairo_font_weight_t))
 
@@ -664,7 +664,7 @@
 (defcfun "cairo_show_text"
     :void
   (arg0 :pointer)                       ;cairo_t *
-  (arg1 :string)                        ;const char *
+  (arg1 utf8-string)                    ;const char *
   )
 
 (defcfun "cairo_status"
@@ -722,14 +722,14 @@
 (defcfun "cairo_text_extents"
     :void
   (arg0 :pointer)                       ;cairo_t *
-  (arg1 :string)                        ;const char *
+  (arg1 utf8-string)                    ;const char *
   (arg2 :pointer)                       ;cairo_text_extents_t *
   )
 
 (defcfun "cairo_text_path"
     :void
   (arg0 :pointer)                       ;cairo_t *
-  (arg1 :string)                        ;const char *
+  (arg1 utf8-string)                    ;const char *
   )
 
 (defcfun "cairo_translate"
@@ -758,7 +758,7 @@
 (defcfun "g_signal_connect_data"
     :unsigned-long
   (instance :pointer)                   ;gpointer
-  (detailed_signal :string)             ;const gchar *
+  (detailed_signal utf8-string)         ;const gchar *
   (c_handler :pointer)                  ;GCallback
   (data :pointer)                       ;gpointer
   (destroy_data :pointer)               ;GClosureNotify
@@ -778,7 +778,7 @@
 (defcfun "g_value_set_string"
     :void
   (value :pointer)                      ;GValue *
-  (v_string :string)                    ;const gchar *
+  (v_string utf8-string)                ;const gchar *
   )
 
 (defcfun "gdk_cairo_create"
@@ -1122,20 +1122,20 @@
 
 (defcfun "gtk_button_new_with_label"
     :pointer
-  (label :string)                       ;const gchar *
+  (label utf8-string)                   ;const gchar *
   )
 
 (defcfun "gtk_cell_renderer_text_new" :pointer)
 
 (defcfun "gtk_check_button_new_with_label"
     :pointer
-  (label :string)                       ;const gchar *
+  (label utf8-string)                   ;const gchar *
   )
 
 (defcfun "gtk_combo_box_append_text"
     :void
   (combo_box :pointer)                  ;GtkComboBox *
-  (text :string)                        ;const gchar *
+  (text utf8-string)                    ;const gchar *
   )
 
 (defcfun "gtk_combo_box_get_active"
@@ -1199,7 +1199,7 @@
 
 (defcfun "gtk_frame_new"
     :pointer
-  (label :string)                       ;const gchar *
+  (label utf8-string)                   ;const gchar *
   )
 
 (defcfun "gtk_get_current_event_time" :uint32)
@@ -1224,13 +1224,13 @@
 
 (defcfun "gtk_label_new"
     :pointer
-  (str :string)                         ;const gchar *
+  (str utf8-string)                     ;const gchar *
   )
 
 (defcfun "gtk_label_set_text"
     :void
   (label :pointer)                      ;GtkLabel *
-  (str :string)                         ;const gchar *
+  (str utf8-string)                     ;const gchar *
   )
 
 (defcfun "gtk_list_store_append"
@@ -1267,7 +1267,7 @@
 
 (defcfun "gtk_menu_item_new_with_label"
     :pointer
-  (label :string)                       ;const gchar *
+  (label utf8-string)                   ;const gchar *
   )
 
 (defcfun "gtk_menu_item_set_submenu"
@@ -1350,7 +1350,7 @@
 (defcfun "gtk_radio_button_new_with_label"
     :pointer
   (group :pointer)                      ;GSList *
-  (label :string)                       ;const gchar *
+  (label utf8-string)                   ;const gchar *
   )
 
 (defcfun "gtk_range_get_adjustment"
@@ -1446,7 +1446,7 @@
     :void
   (tree_column :pointer)                ;GtkTreeViewColumn *
   (cell_renderer :pointer)              ;GtkCellRenderer *
-  (attribute :string)                   ;const gchar *
+  (attribute utf8-string)               ;const gchar *
   (column :int)                         ;gint
   )
 
@@ -1462,7 +1462,7 @@
 (defcfun "gtk_tree_view_column_set_title"
     :void
   (tree_column :pointer)                ;GtkTreeViewColumn *
-  (title :string)                       ;const gchar *
+  (title utf8-string)                   ;const gchar *
   )
 
 (defcfun "gtk_tree_view_get_hadjustment"
@@ -1664,7 +1664,7 @@
 (defcfun "gtk_window_set_title"
     :void
   (window :pointer)                     ;GtkWindow *
-  (title :string)                       ;const gchar *
+  (title utf8-string)                   ;const gchar *
   )
 
 (defcfun "pango_cairo_create_layout"
@@ -1715,11 +1715,11 @@
 
 (defcfun "pango_font_description_from_string"
     :pointer
-  (str :string)                         ;const char *
+  (str utf8-string)                     ;const char *
   )
 
 (defcfun "pango_font_description_get_family"
-    :string
+    utf8-string
   (desc :pointer)                       ;const PangoFontDescription *
   )
 
@@ -1734,7 +1734,7 @@
 (defcfun "pango_font_description_set_family"
     :void
   (desc :pointer)                       ;PangoFontDescription *
-  (family :string)                      ;const char *
+  (family utf8-string)                  ;const char *
   )
 
 (defcfun "pango_font_description_set_size"
@@ -1754,12 +1754,12 @@
   (weight PangoWeight))
 
 (defcfun "pango_font_description_to_string"
-    :string
+    utf8-string
   (desc :pointer)                       ;const PangoFontDescription *
   )
 
 (defcfun "pango_font_face_get_face_name"
-    :string
+    utf8-string
   (face :pointer)                       ;PangoFontFace *
   )
 
@@ -1771,7 +1771,7 @@
   )
 
 (defcfun "pango_font_family_get_name"
-    :string
+    utf8-string
   (family :pointer)                     ;PangoFontFamily *
   )
 
@@ -1884,6 +1884,6 @@
 (defcfun "pango_layout_set_text"
     :void
   (layout :pointer)                     ;PangoLayout *
-  (text :string)                        ;const char *
+  (text utf8-string)                    ;const char *
   (length :int)                         ;int
   )

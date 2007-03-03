@@ -19,6 +19,8 @@
 
 (in-package :clim-gtkairo)
 
+(cffi:defctype utf8-string (:string :encoding :utf-8))
+
 #-(or win32 mswindows windows darwin)
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (cffi:load-foreign-library "libcairo.so")
@@ -238,7 +240,7 @@
   (state :uint)
   (keyval :uint)
   (length :int)
-  (string :string))
+  (string utf8-string))
 
 (cffi:defcstruct gdkeventcrossing
   (type :int)
