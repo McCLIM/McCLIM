@@ -505,9 +505,9 @@ documentation produced by presentations.")))
     (menu-item
      (let ((command (command-menu-item-value object)))
        (unless (listp command)
-	 (setq command (list command)))       
+	 (setq command (partial-command-from-name command)))
        (if (and (typep stream 'interactor-pane)
-		(member *unsupplied-argument-marker* command :test #'eq))
+		(partial-command-p command))
 	   (command-line-read-remaining-arguments-for-partial-command
 	    (frame-command-table frame) stream command 0)
 	   command)))))
