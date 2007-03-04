@@ -3,7 +3,7 @@
 ;;;     Title: Graph Formatting
 ;;;   Created: 2002-08-13
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: graph-formatting.lisp,v 1.19 2006/09/17 20:27:09 thenriksen Exp $
+;;;       $Id: graph-formatting.lisp,v 1.20 2007/03/04 22:26:22 ahefner Exp $
 ;;; ---------------------------------------------------------------------------
 
 ;;;  (c) copyright 2002 by Gilbert Baumann
@@ -175,8 +175,11 @@
 		    ))))
       (setf (output-record-position graph-output-record)
             (values cursor-old-x cursor-old-y))
-      (with-output-recording-options (stream :draw t :record nil)
-        (replay graph-output-record stream))               
+      (when (and (stream-drawing-p stream)
+                 (output-record-ancestor-p (stream-output-history stream)
+                                           graph-output-record))
+	(with-output-recording-options (stream :draw t :record nil)
+	  (replay graph-output-record stream)))
       (when move-cursor
         (setf (stream-cursor-position stream)
               (values (bounding-rectangle-max-x graph-output-record)
