@@ -72,26 +72,6 @@
 (defgeneric note-input-focus-changed (pane state)
   (:documentation "Called when a pane receives or loses the keyboard
 input focus. This is a McCLIM extension."))
-
-(defmethod frame-geometry* ((frame application-frame))
-  "-> width height &optional top left"
-  (let ((pane (frame-top-level-sheet frame)))
-    (destructuring-bind (&key left top right bottom width height) (frame-geometry frame)
-      ;; Find width and height from looking at the respective options
-      ;; first, then at left/right and top/bottom and finally at what
-      ;; compose-space says.
-      (setf width (or width
-                      (and left right (- right left))
-                      (space-requirement-width (compose-space pane))))
-      (setf height (or height
-                       (and top bottom (- bottom top))
-                       (space-requirement-height (compose-space pane))))
-      ;; See if a position is wanted and return left, top.
-      (setf left (or left
-                     (and right (- right width))))
-      (setf top (or top
-                    (and bottom (- bottom height))))
-      (values width height left top))))
     
 (defclass standard-application-frame (application-frame
 				      presentation-history-mixin)
@@ -139,11 +119,7 @@ input focus. This is a McCLIM extension."))
 		     :reader frame-top-level-lambda)
    (hilited-presentation :initform nil
 			 :initarg :hilited-presentation
-			 :accessor frame-hilited-presentation)
-   (user-supplied-geometry :initform nil
-			   :initarg :user-supplied-geometry
-			   :reader frame-geometry
-                           :documentation "plist of defaulted :left, :top, :bottom, :right, :width and :height options.")
+			 :accessor frame-hilited-presentation)   
    (process :accessor frame-process :initform nil)
    (client-settings :accessor client-settings :initform nil)
    (event-queue :initarg :frame-event-queue
@@ -170,7 +146,49 @@ frame, if any")
    (documentation-record :accessor documentation-record
 			 :initform nil
 			 :documentation "updating output record for pointer
-documentation produced by presentations.")))
+documentation produced by presentations.")
+   (geometry-left :accessor geometry-left
+		  :initarg :left
+		  :initform nil)
+   (geometry-right :accessor geometry-right
+		  :initarg :right
+		  :initform nil)
+   (geometry-top :accessor geometry-top
+		  :initarg :top
+		  :initform nil)
+   (geometry-bottom :accessor geometry-bottom
+		  :initarg :bottom
+		  :initform nil)
+   (geometry-width :accessor geometry-width
+		  :initarg :width
+		  :initform nil)
+   (geometry-height :accessor geometry-height
+		  :initarg :height
+		  :initform nil)))
+
+(defmethod frame-geometry* ((frame standard-application-frame))
+  "-> width height &optional top left"
+  (let ((pane (frame-top-level-sheet frame)))
+    ;(destructuring-bind (&key left top right bottom width height) (frame-geometry frame)
+    (with-slots (geometry-left geometry-top geometry-right
+			       geometry-bottom geometry-width
+			       geometry-height) frame
+      ;; Find width and height from looking at the respective options
+      ;; first, then at left/right and top/bottom and finally at what
+      ;; compose-space says.
+      (let* ((width (or geometry-width
+			(and geometry-left geometry-right
+			     (- geometry-right geometry-left))
+			(space-requirement-width (compose-space pane))))
+	     (height (or geometry-height
+			 (and geometry-top geometry-bottom (- geometry-bottom geometry-top))
+			 (space-requirement-height (compose-space pane))))	   
+	     ;; See if a position is wanted and return left, top.
+	     (left (or geometry-left
+		       (and geometry-right (- geometry-right geometry-width))))
+	     (top (or geometry-top
+		      (and geometry-bottom (- geometry-bottom geometry-height)))))
+      (values width height left top)))))
 
 ;;; Support the :input-buffer initarg for compatibility with "real CLIM"
 
@@ -811,7 +829,7 @@ documentation produced by presentations.")))
 	     (:pointer-documentation (setq pointer-documentation (car values)))
 	     (:geometry (setq geometry values))
 	     (:default-initargs (setq user-default-initargs values))
-	     (t (push (cons prop values) others))))
+	     (t (push (cons prop values) others))))    
     (when (eq command-definer t)
       (setf command-definer
             (intern (concatenate 'string
@@ -840,12 +858,9 @@ documentation produced by presentations.")))
          :top-level-lambda (lambda (,frame-arg)
                              (,(car top-level) ,frame-arg
                                ,@(cdr top-level)))
+	 ,@geometry
 	 ,@user-default-initargs)
         ,@others)
-      ;; We alway set the frame class default geometry, so that the
-      ;; user can undo the effect of a specified :geometry option.
-      ;; --GB 2004-06-01
-      (setf (get ',name 'application-frame-geometry) ',geometry)
       ,(if pane
            (make-single-pane-generate-panes-form name menu-bar pane)
            (make-panes-generate-panes-form name menu-bar panes layouts
@@ -859,9 +874,6 @@ documentation produced by presentations.")))
                       (command-table ',(first command-table)))
                   `(define-command (,name :command-table ,command-table ,@options) ,arguments ,@body))))))))
 
-(defun get-application-frame-class-geometry (name indicator)
-  (getf (get name 'application-frame-geometry) indicator nil))
-
 (defun make-application-frame (frame-name
 			       &rest options
 			       &key (pretty-name
@@ -869,25 +881,14 @@ documentation produced by presentations.")))
 			            (frame-manager nil frame-manager-p)
 			            enable
 			            (state nil state-supplied-p)
-				    (left (get-application-frame-class-geometry frame-name :left))
-				    (top (get-application-frame-class-geometry frame-name :top))
-				    (right (get-application-frame-class-geometry frame-name :right))
-				    (bottom (get-application-frame-class-geometry frame-name :bottom))
-				    (width (get-application-frame-class-geometry frame-name :width))
-				    (height  (get-application-frame-class-geometry frame-name :height))
 			            save-under (frame-class frame-name)
 			       &allow-other-keys)
   (declare (ignore save-under))
   (with-keywords-removed (options (:pretty-name :frame-manager :enable :state
-				   :left :top :right :bottom :width :height
 				   :save-under :frame-class))
     (let ((frame (apply #'make-instance frame-class
 			:name frame-name
 			:pretty-name pretty-name
-                        :user-supplied-geometry
-                        (list :left left :top top
-                              :right right :bottom bottom
-                              :width width :height height)
 			options)))
       (when frame-manager-p
 	(adopt-frame frame-manager frame))
