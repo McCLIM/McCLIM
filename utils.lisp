@@ -498,7 +498,7 @@ STREAM in the direction DIRECTION."
                  (gunit (graft-units graft)))
             ;; mungle specification into what grafts talk about
             (case unit
-              ((:point)  (setf value (/ value 72) unit :inch))
+              ((:point)  (setf value (/ value 72) unit :inches))
               ((:pixel)  (setf unit :device))
               ((:mm)     (setf unit :millimeters)))
             ;; 
