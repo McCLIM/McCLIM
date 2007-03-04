@@ -1115,7 +1115,8 @@ and must never be nil."))
 		   :reader toggle-button-indicator-type
                    :initform :some-of) )
   (:default-initargs
-   :text-style (make-text-style :sans-serif nil nil)
+    :value nil
+    :text-style (make-text-style :sans-serif nil nil)    
     :align-x :left
     :align-y :center
     :x-spacing 2
