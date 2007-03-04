@@ -85,7 +85,7 @@
 		   #+openmcl (+ (ccl::%usedbytes) (ccl::%freebytes))
                    #+clisp (values (sys::%room))
                    #-(or cmu scl sbcl lispworks openmcl clisp) 0))
-    (with-text-family (t :serif)
+    (with-text-style (t (make-text-style :sans-serif :roman :small))
       (formatting-table (t :x-spacing '(3 :character))
         (formatting-row (t)                        
           (macrolet ((cell ((align-x) &body body)                         
