@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.180 2007/02/07 12:44:17 crhodes Exp $
+;;; $Id: panes.lisp,v 1.181 2007/03/04 15:08:00 thenriksen Exp $
 
 (in-package :clim-internals)
 
@@ -2785,10 +2785,12 @@ to computed distance to scroll in response to mouse wheel events."))
                                            standard-extended-input-stream
                                            fundamental-character-output-stream
                                            standard-application-frame)
-  ((stream))
+  ((stream)
+   (scroll-bars :initform :vertical
+                :initarg :scroll-bars))
   (:panes
    (io
-    (scrolling (:height 400 :width 700)
+    (scrolling (:height 400 :width 700 :scroll-bar (slot-value *application-frame* 'scroll-bars))
       (setf (slot-value *application-frame* 'stream)
         (make-pane 'window-stream
                    :width 700
@@ -2824,7 +2826,6 @@ to computed distance to scroll in response to mouse wheel events."))
                       initial-cursor-visibility
                       text-margin
                       save-under
-                      scroll-bars
                       borders
                       label))
   (setf port (or port (find-port)))
@@ -2838,7 +2839,8 @@ to computed distance to scroll in response to mouse wheel events."))
 					:right right
 					:bottom bottom
 					:width width
-					:height height)))
+					:height height
+                                        :scroll-bars scroll-bars)))
     ;; Adopt and enable the pane
     (when (eq (frame-state frame) :disowned)
       (adopt-frame fm frame))
