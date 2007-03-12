@@ -175,9 +175,9 @@
   `(or line-style
     (merge-line-styles
      (make-line-style
-      :unit      line-unit
-      :thickness line-thickness
-      :cap-shape line-cap-shape
+      :unit      (or line-unit :point)
+      :thickness (or line-thickness 1)
+      :cap-shape (or line-cap-shape :butt)
       :dashes    line-dashes)
      (medium-line-style stream))))
 
