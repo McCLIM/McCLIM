@@ -62,7 +62,7 @@
 	(extensions:without-package-locks
 	 (load "gray-streams:gray-streams-library"))
       (load "gray-streams:gray-streams-library")))
-  #-(or clx gtkairo)
+  #-(or clx gtkairo clim-graphic-forms)
   (require :clx)
   #+mp (when (eq mp::*initial-process* mp::*current-process*)
 	 (format t "~%~%You need to run (mp::startup-idle-and-top-level-loops) to start up the multiprocessing support.~%~%")))
@@ -409,6 +409,20 @@
 	       (:file "frame-manager")
 	       (:file "gadgets")))))
 
+(defsystem :clim-graphic-forms
+    :depends-on (:clim :graphic-forms-uitoolkit)
+    :components
+    ((:module "Backends/Graphic-Forms"
+	      :pathname #.(make-pathname :directory '(:relative "Backends" "Graphic-Forms"))
+	      :components
+	      ((:file "package")
+         (:file "utils" :depends-on ("package"))
+	       (:file "graft" :depends-on ("package"))
+	       (:file "port" :depends-on ("utils" "graft"))
+	       (:file "medium" :depends-on ("port"))
+	       (:file "frame-manager" :depends-on ("medium"))
+         (:file "gadgets" :depends-on ("port"))))))
+
 ;;; TODO/asf: I don't have the required libs to get :clim-opengl to load. tough.
 (clim-defsystem (:clim-opengl :depends-on (:clim))
    "Backends/OpenGL/opengl-x-frame-manager"
@@ -425,8 +439,10 @@
     :depends-on (:clim :clim-postscript
                  ;; If we're on an implementation that ships CLX, use
                  ;; it. Same if the user has loaded CLX already.
-                 #+(and (or sbcl scl openmcl ecl clx allegro) (not gtkairo))
+                 #+(and (or sbcl scl openmcl ecl clx allegro)
+			(not (or gtkairo clim-graphic-forms)))
 		 :clim-clx
+                 #+clim-graphic-forms             :clim-graphic-forms
                  #+gl                        :clim-opengl
                  ;; OpenMCL and MCL support the beagle backend (native
                  ;; OS X look&feel on OS X).
@@ -440,7 +456,7 @@
 		 ;; null backend
 		 :clim-null
                  )
-    :components (#-gtkairo
+    :components (#-(or gtkairo clim-graphic-forms)
 		 (:file "Looks/pixie"
                         :pathname #.(make-pathname :directory '(:relative "Looks") :name "pixie" :type "lisp"))))
 
