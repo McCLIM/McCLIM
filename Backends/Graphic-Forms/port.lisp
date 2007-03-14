@@ -122,10 +122,21 @@
 (setf (get :graphic-forms :port-type) 'graphic-forms-port)
 (setf (get :graphic-forms :server-path-parser) 'parse-graphic-forms-server-path)
 
+(defun resolve-abstract-pane-name (type)
+  (when (get type 'climi::concrete-pane-class-name)
+    (setf type (get type 'climi::concrete-pane-class-name)))
+  (class-name
+   (or (find-class
+	(intern (concatenate 'string (symbol-name type) "-PANE") :climi)
+	nil)
+       (if (keywordp type)
+	   (find-class (intern (symbol-name type) :climi))
+	   (find-class type)))))
+
 (defgeneric make-pane-2 (type &rest initargs)
   (:documentation "Implement this to instantiate specific pane types.")
   (:method (type &rest initargs)
-    (apply #'make-instance type initargs)))
+    (apply #'make-instance (resolve-abstract-pane-name type) initargs)))
 
 ;;;
 ;;; helper functions
@@ -211,7 +222,7 @@
          (mirror (make-instance 'gfw-panel
                                 :sheet sheet
                                 :dispatcher *sheet-dispatcher*
-                                :style '(:border)
+                                :style '() ;was: '(:border)
                                 :parent parent)))
     (setf (gfw:size mirror) (requirement->size req))
     (multiple-value-bind (x y)
@@ -335,6 +346,16 @@
 
 ;;; Set the keyboard input focus for the port.
 
+(defmethod port-frame-keyboard-input-focus
+    ((port graphic-forms-port) frame)
+  ;; fixme
+  (frame-properties frame 'focus))
+
+(defmethod (setf port-frame-keyboard-input-focus)
+    (focus (port graphic-forms-port) frame)
+  (gfw:give-focus (sheet-mirror focus))
+  (setf (frame-properties frame 'focus) focus))
+
 (defmethod %set-port-keyboard-focus (focus (port graphic-forms-port) &key timestamp)
   (declare (ignore timestamp))
   ())
@@ -419,6 +440,109 @@
   (setf (event (port self)) (make-instance 'menu-clicked-event
                                            :sheet (sheet (gfw:owner mirror))
                                            :item (sheet mirror))))
+
+(defun translate-button-name (name)
+  (case name
+    (:left-button +pointer-left-button+)
+    (:right-button +pointer-right-button+)
+    (:middle-button +pointer-middle-button+)
+    (t
+     (warn "unknown button name: ~A" name)
+     nil)))
+
+(defmethod gfw:event-mouse-move
+    ((self sheet-event-dispatcher) mirror point button)
+  (setf (event (port self))
+	(make-instance 'pointer-motion-event
+		       :pointer 0
+		       :sheet (sheet mirror)
+		       :x (gfs:point-x point)
+		       :y (gfs:point-y point)
+		       :button (translate-button-name button)
+		       ;; FIXME:
+;;;  		       :timestamp
+;;; 		       :graft-x
+;;; 		       :graft-y
+		       :modifier-state 0
+		       )))
+
+(defmethod gfw:event-mouse-down ((self sheet-event-dispatcher) mirror point button)
+  (setf (event (port self))
+	(make-instance 'pointer-button-press-event
+		       :pointer 0
+		       :sheet (sheet mirror)
+		       :x (gfs:point-x point)
+		       :y (gfs:point-y point)
+		       :button (translate-button-name button)
+		       ;; FIXME:
+;;;  		       :timestamp
+;;; 		       :graft-x
+;;; 		       :graft-y
+		       :modifier-state 0
+		       )))
+
+(defmethod gfw:event-mouse-up ((self sheet-event-dispatcher) mirror point button)
+  (setf (event (port self))
+	(make-instance 'pointer-button-release-event
+		       :pointer 0
+		       :sheet (sheet mirror)
+		       :x (gfs:point-x point)
+		       :y (gfs:point-y point)
+		       :button (translate-button-name button)
+		       ;; FIXME:
+;;;  		       :timestamp
+;;; 		       :graft-x
+;;; 		       :graft-y
+		       :modifier-state 0
+		       )))
+
+(defun char-to-sym (char)
+  (case char
+    (#\  :| |) (#\! :!) (#\" :|"|) (#\# :|#|) (#\$ :$) (#\% :%) (#\& :&)
+    (#\' :|'|) (#\( :|(|) (#\) :|)|) (#\* :*) (#\+ :+) (#\, :|,|) (#\- :-)
+    (#\. :|.|) (#\/ :/) (#\0 :|0|) (#\1 :|1|) (#\2 :|2|) (#\3 :|3|) (#\4 :|4|)
+    (#\5 :|5|) (#\6 :|6|) (#\7 :|7|) (#\8 :|8|) (#\9 :|9|) (#\: :|:|) (#\; :|;|)
+    (#\< :<) (#\= :=) (#\> :>) (#\? :?) (#\@ :@) (#\A :A) (#\B :B) (#\C :C)
+    (#\D :D) (#\E :E) (#\F :F) (#\G :G) (#\H :H) (#\I :I) (#\J :J) (#\K :K)
+    (#\L :L) (#\M :M) (#\N :N) (#\O :O) (#\P :P) (#\Q :Q) (#\R :R) (#\S :S)
+    (#\T :T) (#\U :U) (#\V :V) (#\W :W) (#\X :X) (#\Y :Y) (#\Z :Z) (#\[ :[)
+    (#\\ :|\\|) (#\] :]) (#\_ :_) (#\` :|`|) (#\a :|a|) (#\b :|b|) (#\c :|c|)
+    (#\d :|d|) (#\e :|e|) (#\f :|f|) (#\g :|g|) (#\h :|h|) (#\i :|i|) (#\j :|j|)
+    (#\k :|k|) (#\l :|l|) (#\m :|m|) (#\n :|n|) (#\o :|o|) (#\p :|p|) (#\q :|q|)
+    (#\r :|r|) (#\s :|s|) (#\t :|t|) (#\u :|u|) (#\v :|v|) (#\w :|w|) (#\x :|x|)
+    (#\y :|y|) (#\z :|z|) (#\{ :{) (#\| :|\||) (#\} :}) (#\Backspace :BACKSPACE)
+    (#\Tab :TAB) (#\Return :RETURN) (#\Rubout :DELETE)))
+
+(defmethod gfw:event-key-down ((self sheet-event-dispatcher) mirror code char)
+  (setf (event (port self))
+	(make-instance 'key-press-event
+		       :key-name (char-to-sym char)
+		       :key-character char
+		       :sheet (sheet mirror)
+		       ;; FIXME:
+		       :x 0
+		       :y 0
+		       :modifier-state 0
+;;; 			 :timestamp time
+;;; 			 :graft-x root-x
+;;; 			 :graft-y root-y
+		       )))
+
+(defmethod gfw:event-key-up ((self sheet-event-dispatcher) mirror code char)
+  (setf (event (port self))
+	(make-instance 'key-release-event
+		       :key-name (char-to-sym char)
+		       :key-character char
+		       :sheet (sheet mirror)
+		       ;; FIXME:
+		       :x 0
+		       :y 0
+		       :modifier-state 0
+;;; 			 :timestamp time
+;;; 			 :graft-x root-x
+;;; 			 :graft-y root-y
+		       )))
+
 
 ;;;
 ;;; McCLIM handle-event methods

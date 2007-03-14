@@ -92,10 +92,12 @@
     ;;
     (gfw:with-graphics-context (gc (climi::port-lookup-mirror (port-of medium) (medium-sheet medium)))
       (let ((old-data (if (font-of medium) (gfg:data-object (font-of medium) gc)))
-            (face-name (case family
-                         ((:fix :fixed) "Lucida Console")
-                         (:serif        "Times New Roman")
-                         (:sansserif    "Arial")))
+            (face-name (if (stringp family)
+			   family
+			   (ecase family
+			     ((:fix :fixed) "Lucida Console")
+			     (:serif        "Times New Roman")
+			     (:sans-serif    "Arial"))))
             (pnt-size (case size
                         (:tiny       6)
                         (:very-small 8)

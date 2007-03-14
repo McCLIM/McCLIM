@@ -37,7 +37,7 @@
 
 (defmethod graft-height ((graft graphic-forms-graft) &key (units :device))
   (gfw:with-root-window (window)
-    (let ((size (first (gethash (gfs:obtain-system-metrics) :display-sizes))))
+    (let ((size (first (gethash :display-sizes (gfs:obtain-system-metrics)))))
       (gfw:with-graphics-context (gc window)
         (ecase units
           (:device       (gfs:size-height size))

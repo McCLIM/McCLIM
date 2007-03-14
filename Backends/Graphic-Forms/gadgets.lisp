@@ -141,7 +141,7 @@
 (defmethod realize-mirror ((port graphic-forms-port) (gadget scroll-bar))
   (gfs::debug-format "realizing ~a~%" gadget)
   (let* ((parent-mirror (sheet-mirror (sheet-parent gadget)))
-         (mirror (make-instance 'gfw-scrollbar :parent parent-mirror :style :vertical)))
+         (mirror (make-instance 'gfw-scroll-bar :parent parent-mirror :style :vertical)))
     (climi::port-register-mirror port gadget mirror)
     mirror))
 
