@@ -123,7 +123,11 @@
 (defmethod realize-mirror ((port graphic-forms-port) (gadget push-button))
   (gfs::debug-format "realizing ~a~%" gadget)
   (let* ((parent-mirror (sheet-mirror (sheet-parent gadget)))
-         (mirror (make-instance 'gfw-button :parent parent-mirror :style '(:push-button))))
+         (mirror (make-instance 'gfw-button
+				:sheet gadget
+				:parent parent-mirror
+				:dispatcher *pane-dispatcher*
+				:style '(:push-button))))
     (if (gadget-label gadget)
       (setf (gfw:text mirror) (gadget-label gadget)))
     (climi::port-register-mirror port gadget mirror)

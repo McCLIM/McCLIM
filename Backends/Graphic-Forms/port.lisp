@@ -59,6 +59,7 @@
     :accessor item
     :initarg :item
     :initform nil)
+   (callback :initarg :value-changed-callback :accessor callback)
    (command
     :accessor command
     :initarg :command
@@ -408,12 +409,35 @@
   (setf (event (port self)) (make-instance 'window-manager-delete-event
                                            :sheet  (sheet mirror))))
 
+;; copy&paste from port.lisp|CLX:
+(defun sheet-desired-ink (sheet)
+  (typecase sheet
+    (sheet-with-medium-mixin
+      (medium-background sheet))
+    (basic-pane
+      ;; CHECKME [is this sensible?] seems to be
+      (let ((background (pane-background sheet)))
+	(if (typep background 'color)
+	    background
+	    +white+)))
+    (t
+      +white+)))
+
 (defmethod gfw:event-paint ((self sheet-event-dispatcher) mirror gc rect)
   (declare (ignore gc))
   (let ((sheet (sheet mirror)))
-    (setf (event (port self)) (make-instance 'window-repaint-event
-                                             :sheet  sheet
-                                             :region (translate-rectangle rect)))))
+    (when (and (typep sheet 'sheet-with-medium-mixin)
+	       (not (image-of (sheet-medium sheet))))
+      (gfw:with-graphics-context (gc mirror)
+	(let ((c (ink-to-color (sheet-medium sheet)
+			       (sheet-desired-ink sheet))))
+	  (setf (gfg:background-color gc) c
+		(gfg:foreground-color gc) c))
+	(gfg:draw-filled-rectangle gc rect)))
+    (setf (event (port self))
+	  (make-instance 'window-repaint-event
+			 :sheet sheet
+			 :region (translate-rectangle rect)))))
 
 (defun generate-configuration-event (mirror pnt size)
   (make-instance 'window-configuration-event
@@ -431,15 +455,26 @@
   (let ((sheet (sheet mirror)))
     (if (and sheet (subtypep (class-of sheet) 'sheet-with-medium-mixin))
       (let ((medium (climi::sheet-medium sheet)))
-        (if medium
+        (if (and medium (image-of medium))
           (resize-medium-buffer medium size))))
     (setf (event (port self))
           (generate-configuration-event mirror (gfw:location mirror) size))))
 
+(defclass gadget-event (window-event) ())
+(defclass button-pressed-event (gadget-event) ())
+
 (defmethod gfw:event-select ((self pane-event-dispatcher) mirror)
-  (setf (event (port self)) (make-instance 'menu-clicked-event
-                                           :sheet (sheet (gfw:owner mirror))
-                                           :item (sheet mirror))))
+  (setf (event (port self))
+	(typecase mirror
+	  (gfw-button
+	   (make-instance 'button-pressed-event :sheet (sheet mirror)))
+	  (t
+	   (make-instance 'menu-clicked-event
+			  :sheet (sheet (gfw:owner mirror))
+			  :item (sheet mirror))))))
+
+(defmethod handle-event ((pane push-button) (event button-pressed-event))
+  (activate-callback pane (gadget-client pane) (gadget-id pane)))
 
 (defun translate-button-name (name)
   (case name
@@ -553,8 +588,9 @@
     (if pane
       (let ((menu-item (item pane)))
         (if menu-item
-          (if (eql (command-menu-item-type menu-item) :command)
-            (climi::throw-object-ptype menu-item 'menu-item)))))))
+	    (if (eql (command-menu-item-type menu-item) :command)
+		(climi::throw-object-ptype menu-item 'menu-item))
+	    (funcall (callback pane) pane nil))))))
 
 (defmethod handle-event ((pane gfw-menu-pane) (event menu-clicked-event))
   (handle-menu-clicked-event event))

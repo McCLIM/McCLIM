@@ -44,10 +44,8 @@
                         :width (round-coordinate (- right left))
                         :height (round-coordinate (- bottom top))))
 
-(defun coordinates->points (list)
-  (cond
-    ((null list) (values))
-    ((and (car list) (cdr list))
-      (concatenate 'list (list (gfs:make-point :x (round-coordinate (car list)) 
-                                               :y (round-coordinate (car (cdr list)))))
-                         (coordinates->points (cdr (cdr list)))))))
+(defun coordinates->points (seq)
+  (loop for i from 2 below (length seq) by 2
+	collect
+	(gfs:make-point :x (round-coordinate (elt seq i))
+			:y (round-coordinate (elt seq (+ i 1))))))
