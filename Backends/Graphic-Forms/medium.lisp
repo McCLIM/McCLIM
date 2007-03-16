@@ -1,4 +1,4 @@
-;;; -*- Mode: Lisp; Package: CLIM-GRAPHIC-FORMS -*-
+;; -*- Mode: Lisp; Package: CLIM-GRAPHIC-FORMS -*-
 
 ;;; (c) 2006 Jack D. Unrue (jdunrue (at) gmail (dot) com)
 ;;; based on the null backend by:
@@ -60,9 +60,9 @@
     ((eql ink +background-ink+)
      (setf ink (medium-background medium))))
   (multiple-value-bind (red green blue) (clim:color-rgb ink)
-    (gfg:make-color :red (truncate (* red 256))
-		    :green (truncate (* green 256))
-		    :blue (truncate (* blue 256)))))
+    (gfg:make-color :red (min (truncate (* red 256)) 255)
+		    :green (min (truncate (* green 256)) 255)
+		    :blue (min (truncate (* blue 256)) 255))))
 
 (defun target-of (medium)
   (let ((sheet (medium-sheet medium)))
@@ -202,62 +202,163 @@
     ()))
 
 (defmethod medium-draw-point* ((medium graphic-forms-medium) x y)
-  ())
-
-(defmethod medium-draw-points* ((medium graphic-forms-medium) coord-seq)
-  ())
-
-(defmethod medium-draw-line* ((medium graphic-forms-medium) x1 y1 x2 y2)
-  ())
-
-;; FIXME: Invert the transformation and apply it here, as the :around
-;; methods on transform-coordinates-mixin will cause it to be applied
-;; twice, and we need to undo one of those. The
-;; transform-coordinates-mixin stuff needs to be eliminated.
-(defmethod medium-draw-lines* ((medium graphic-forms-medium) coord-seq)
-  (let ((tr (invert-transformation (medium-transformation medium))))
-    (declare (ignore tr))
-    nil))
-
-(defmethod medium-draw-polygon* ((medium graphic-forms-medium) coord-seq closed filled)
-  #+nil (gfs::debug-format "draw-polygon ~a ~a ~a~%" coord-seq closed filled)
   (when (target-of medium)
     (gfw:with-graphics-context (gc (target-of medium))
-      (let ((points-list (coordinates->points coord-seq))
-	    (color (ink-to-color medium (medium-ink medium))))
+      (let ((color (ink-to-color medium (medium-ink medium))))
 	(setf (gfg:background-color gc) color
-	      (gfg:foreground-color gc) color)
-        (if filled
-          (gfg:draw-filled-polygon gc points-list)
-          (gfg:draw-polygon gc points-list))))
+	      (gfg:foreground-color gc) color))
+      (let ((tr (sheet-native-transformation (medium-sheet medium))))
+	(climi::with-transformed-position (tr x y)
+	  (gfg:draw-point gc (gfs:make-point :x (round-coordinate x)
+					     :y (round-coordinate y))))))
+    (add-medium-to-render medium)))
+
+(defmethod medium-draw-points* ((medium graphic-forms-medium) coord-seq)
+  (when (target-of medium)
+    (gfw:with-graphics-context (gc (target-of medium))
+      (let ((color (ink-to-color medium (medium-ink medium))))
+	(setf (gfg:background-color gc) color
+	      (gfg:foreground-color gc) color))
+      (let ((tr (sheet-native-transformation (medium-sheet medium))))
+	(loop for (x y) on (coerce coord-seq 'list) by #'cddr do
+	      (climi::with-transformed-position (tr x y)
+		(gfg:draw-point gc
+				(gfs:make-point :x (round-coordinate x)
+						:y (round-coordinate y)))))))
+    (add-medium-to-render medium)))
+
+(defmethod medium-draw-line* ((medium graphic-forms-medium) x1 y1 x2 y2)
+  (when (target-of medium)
+    (gfw:with-graphics-context (gc (target-of medium))
+      (let ((color (ink-to-color medium (medium-ink medium))))
+	(setf (gfg:background-color gc) color
+	      (gfg:foreground-color gc) color))
+      (let ((tr (sheet-native-transformation (medium-sheet medium))))
+	(climi::with-transformed-position (tr x1 y1)
+	  (climi::with-transformed-position (tr x2 y2)
+	    (gfg:draw-line gc
+			   (gfs:make-point :x (round-coordinate x1)
+					   :y (round-coordinate y1))
+			   (gfs:make-point :x (round-coordinate x2)
+					   :y (round-coordinate y2)))))))
+    (add-medium-to-render medium)))
+
+(defmethod medium-draw-lines* ((medium graphic-forms-medium) coord-seq)
+  (when (target-of medium)
+    (gfw:with-graphics-context (gc (target-of medium))
+      (let ((color (ink-to-color medium (medium-ink medium))))
+	(setf (gfg:background-color gc) color
+	      (gfg:foreground-color gc) color))
+      (let ((tr (sheet-native-transformation (medium-sheet medium))))
+	(loop for (x1 y1 x2 y2) on (coerce coord-seq 'list) by #'cddddr do
+	      (climi::with-transformed-position (tr x1 y1)
+		(climi::with-transformed-position (tr x2 y2)
+		  (gfg:draw-line gc
+				 (gfs:make-point :x (round-coordinate x1)
+						 :y (round-coordinate y1))
+				 (gfs:make-point :x (round-coordinate x2)
+						 :y (round-coordinate y2))))))))
+    (add-medium-to-render medium)))
+
+(defmethod medium-draw-polygon* ((medium graphic-forms-medium) coord-seq closed filled)
+  (when (target-of medium)
+    (gfw:with-graphics-context (gc (target-of medium))
+      (climi::with-transformed-positions
+	  ((sheet-native-transformation (medium-sheet medium)) coord-seq)
+	(let ((points-list (coordinates->points coord-seq))
+	      (color (ink-to-color medium (medium-ink medium))))
+	  (setf (gfg:background-color gc) color
+		(gfg:foreground-color gc) color)
+	  (when (and closed (not filled))
+	    (push (car (last points-list)) points-list))
+	  (if filled
+	      (gfg:draw-filled-polygon gc points-list)
+	      (gfg:draw-polygon gc points-list)))))
     (add-medium-to-render medium)))
 
 (defmethod medium-draw-rectangle* ((medium graphic-forms-medium) left top right bottom filled)
-  #+nil (gfs::debug-format "draw-rectangle ~a ~a ~a ~a ~a~%" left top right bottom filled)
   (when (target-of medium)
     (gfw:with-graphics-context (gc (target-of medium))
-      (let ((rect (coordinates->rectangle left top right bottom))
-	    (color (ink-to-color medium (medium-ink medium))))
-	(setf (gfg:background-color gc) color
-	      (gfg:foreground-color gc) color)
-        (if filled
-          (gfg:draw-filled-rectangle gc rect)
-          (gfg:draw-rectangle gc rect))))
+      (let ((tr (sheet-native-transformation (medium-sheet medium))))
+	(climi::with-transformed-position (tr left top)
+	  (climi::with-transformed-position (tr right bottom)
+	    (let ((rect (coordinates->rectangle left top right bottom))
+		  (color (ink-to-color medium (medium-ink medium))))
+	      (setf (gfg:background-color gc) color
+		    (gfg:foreground-color gc) color)
+	      (if filled
+		  (gfg:draw-filled-rectangle gc rect)
+		  (gfg:draw-rectangle gc rect)))))))
     (add-medium-to-render medium)))
 
 (defmethod medium-draw-rectangles* ((medium graphic-forms-medium) position-seq filled)
-  ())
+  (when (target-of medium)
+    (gfw:with-graphics-context (gc (target-of medium))
+      (let ((tr (sheet-native-transformation (medium-sheet medium)))
+	    (color (ink-to-color medium (medium-ink medium))))
+	(setf (gfg:background-color gc) color
+	      (gfg:foreground-color gc) color)
+	(loop for i below (length position-seq) by 4 do
+	      (let ((x1 (round-coordinate (elt position-seq (+ i 0))))
+		    (y1 (round-coordinate (elt position-seq (+ i 1))))
+		    (x2 (round-coordinate (elt position-seq (+ i 2))))
+		    (y2 (round-coordinate (elt position-seq (+ i 3)))))
+		(climi::with-transformed-position (tr x1 y1)
+		  (climi::with-transformed-position (tr x2 y2)
+		    (let ((rect (coordinates->rectangle x1 y1 x2 y2)))
+		      (if filled
+			  (gfg:draw-filled-rectangle gc rect)
+			  (gfg:draw-rectangle gc rect)))))))))
+    (add-medium-to-render medium)))
 
+;; FIXME: completely untested.  Not sure we're even using the right GFG h
+;; functions.  Are start-point and end-point right?
 (defmethod medium-draw-ellipse* ((medium graphic-forms-medium) center-x center-y
 				 radius-1-dx radius-1-dy
 				 radius-2-dx radius-2-dy
 				 start-angle end-angle filled)
-  ())
+  (unless (or (= radius-2-dx radius-1-dy 0) (= radius-1-dx radius-2-dy 0))
+    (error "MEDIUM-DRAW-ELLIPSE* not for non axis-aligned ellipses."))
+  (when (target-of medium)
+    (gfw:with-graphics-context (gc (target-of medium))
+      (let ((color (ink-to-color medium (medium-ink medium))))
+	(setf (gfg:background-color gc) color
+	      (gfg:foreground-color gc) color))
+      (climi::with-transformed-position
+	  ((sheet-native-transformation (medium-sheet medium))
+	   center-x center-y)
+	(let* ((radius-dx (abs (+ radius-1-dx radius-2-dx)))
+	       (radius-dy (abs (+ radius-1-dy radius-2-dy)))
+	       (min-x (round-coordinate (- center-x radius-dx)))
+	       (min-y (round-coordinate (- center-y radius-dy)))
+	       (max-x (round-coordinate (+ center-x radius-dx)))
+	       (max-y (round-coordinate (+ center-y radius-dy)))
+	       (rect (coordinates->rectangle min-x min-y max-x max-y))
+	       (start-point
+		(gfs:make-point :x (round-coordinate
+				    (* (cos start-angle) radius-dx))
+				:y (round-coordinate
+				    (* (sin start-angle) radius-dy))))
+	       (end-point
+		(gfs:make-point :x (round-coordinate
+				    (* (cos end-angle) radius-dx))
+				:y (round-coordinate
+				    (* (sin end-angle) radius-dy)))))
+	  (if filled
+	      (gfg:draw-filled-pie-wedge gc rect start-point end-point)
+	      (gfg:draw-pie-wedge gc rect start-point end-point)))))
+    (add-medium-to-render medium)))
 
+;; FIXME: completely untested.
 (defmethod medium-draw-circle* ((medium graphic-forms-medium)
 				center-x center-y radius start-angle end-angle
 				filled)
-  ())
+  (medium-draw-ellipse* medium
+			center-x center-y
+			radius radius
+			radius radius
+			start-angle end-angle
+			filled))
 
 (defmethod text-style-ascent (text-style (medium graphic-forms-medium))
   (let ((font (font-of medium)))
