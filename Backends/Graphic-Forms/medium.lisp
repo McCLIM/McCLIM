@@ -426,6 +426,9 @@
                               toward-x toward-y transform-glyphs)
   #+nil (gfs::debug-format "medium-draw-text: ~d, ~d  ~s~%" x y string)
   (when (target-of medium)
+    (sync-text-style medium
+                     (merge-text-styles (medium-text-style medium)
+                                        (medium-default-text-style medium)))
     (setf string (normalize-text-data string))
     (gfw:with-graphics-context (gc (target-of medium))
       (let ((font (font-of medium)))
