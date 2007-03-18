@@ -103,12 +103,15 @@
 
 (defclass graphic-forms-port (basic-port)
   ((id)
-   (event
-    :accessor event
+   (events
+    :accessor events
     :initform nil)
    (pointer
     :accessor port-pointer
     :initform (make-instance 'gfw-pointer))))
+
+(defun enqueue (port event)
+  (push event (events port)))
 
 (defvar *sheet-dispatcher* (make-instance 'sheet-event-dispatcher))
 
@@ -263,20 +266,17 @@
 
 (defmethod get-next-event ((port graphic-forms-port) &key wait-function (timeout nil))
   (declare (ignore wait-function timeout)) ; FIXME
-  (setf (event port) nil)
-  (cffi:with-foreign-object (msg-ptr 'gfs::msg)
-    (let ((gm (gfs::get-message msg-ptr (cffi:null-pointer) 0 0))
-          (event nil))
-      (cffi:with-foreign-slots ((gfs::hwnd gfs::message gfs::wparam gfs::lparam
-                                 gfs::time gfs::pnt)
-                                 msg-ptr gfs::msg)
-        (unless (gfw::default-message-filter gm msg-ptr)
-          (if (setf event (event port))
-            (setf (slot-value event 'climi::timestamp) gfs::time)
-            #+nil (gfs::debug-format "unhandled Win32 message ID: #x~x~%"
-                               (gfs::lparam-low-word gfs::message))))
-          (setf (event port) nil))
-      event)))
+  (or (pop (events port))
+      (cffi:with-foreign-object (msg-ptr 'gfs::msg)
+	(let ((gm (gfs::get-message msg-ptr (cffi:null-pointer) 0 0)))
+	  (cffi:with-foreign-slots ((gfs::hwnd gfs::message gfs::wparam gfs::lparam
+					       gfs::time gfs::pnt)
+				    msg-ptr gfs::msg)
+	    (unless (gfw::default-message-filter gm msg-ptr)
+	      (dolist (event (events port))
+		(setf (slot-value event 'climi::timestamp) gfs::time)))))
+	(setf (events port) (nreverse (events port)))
+	(pop (events port)))))
 
 (defmethod process-next-event :after ((port graphic-forms-port) &key wait-function (timeout nil))
   (declare (ignore wait-function timeout))
@@ -406,8 +406,8 @@
   (gfs::debug-format "menu item: ~a invoked~%" item))
 
 (defmethod gfw:event-close ((self sheet-event-dispatcher) mirror)
-  (setf (event (port self)) (make-instance 'window-manager-delete-event
-                                           :sheet  (sheet mirror))))
+  (enqueue (port self)
+	   (make-instance 'window-manager-delete-event :sheet (sheet mirror))))
 
 ;; copy&paste from port.lisp|CLX:
 (defun sheet-desired-ink (sheet)
@@ -434,10 +434,10 @@
 	  (setf (gfg:background-color gc) c
 		(gfg:foreground-color gc) c))
 	(gfg:draw-filled-rectangle gc rect)))
-    (setf (event (port self))
-	  (make-instance 'window-repaint-event
-			 :sheet sheet
-			 :region (translate-rectangle rect)))))
+    (enqueue (port self)
+	     (make-instance 'window-repaint-event
+			    :sheet sheet
+			    :region (translate-rectangle rect)))))
 
 (defun generate-configuration-event (mirror pnt size)
   (make-instance 'window-configuration-event
@@ -448,7 +448,8 @@
                  :height (gfs:size-height size)))
 
 (defmethod gfw:event-move ((self sheet-event-dispatcher) mirror pnt)
-  (setf (event (port self)) (generate-configuration-event mirror pnt (gfw:client-size mirror))))
+  (enqueue (port self)
+	   (generate-configuration-event mirror pnt (gfw:client-size mirror))))
 
 (defmethod gfw:event-resize ((self sheet-event-dispatcher) mirror size type)
   (declare (ignore type))
@@ -457,21 +458,21 @@
       (let ((medium (climi::sheet-medium sheet)))
         (if (and medium (image-of medium))
           (resize-medium-buffer medium size))))
-    (setf (event (port self))
-          (generate-configuration-event mirror (gfw:location mirror) size))))
+    (enqueue (port self)
+	     (generate-configuration-event mirror (gfw:location mirror) size))))
 
 (defclass gadget-event (window-event) ())
 (defclass button-pressed-event (gadget-event) ())
 
 (defmethod gfw:event-select ((self pane-event-dispatcher) mirror)
-  (setf (event (port self))
-	(typecase mirror
-	  (gfw-button
-	   (make-instance 'button-pressed-event :sheet (sheet mirror)))
-	  (t
-	   (make-instance 'menu-clicked-event
-			  :sheet (sheet (gfw:owner mirror))
-			  :item (sheet mirror))))))
+  (enqueue (port self)
+	   (typecase mirror
+	     (gfw-button
+	      (make-instance 'button-pressed-event :sheet (sheet mirror)))
+	     (t
+	      (make-instance 'menu-clicked-event
+			     :sheet (sheet (gfw:owner mirror))
+			     :item (sheet mirror))))))
 
 (defmethod handle-event ((pane push-button) (event button-pressed-event))
   (activate-callback pane (gadget-client pane) (gadget-id pane)))
@@ -487,49 +488,46 @@
 
 (defmethod gfw:event-mouse-move
     ((self sheet-event-dispatcher) mirror point button)
-  (setf (event (port self))
-	(make-instance 'pointer-motion-event
-		       :pointer 0
-		       :sheet (sheet mirror)
-		       :x (gfs:point-x point)
-		       :y (gfs:point-y point)
-		       :button (translate-button-name button)
-		       ;; FIXME:
-;;;  		       :timestamp
+  (enqueue (port self)
+	   (make-instance 'pointer-motion-event
+			  :pointer 0
+			  :sheet (sheet mirror)
+			  :x (gfs:point-x point)
+			  :y (gfs:point-y point)
+			  :button (translate-button-name button)
+			  ;; FIXME:
 ;;; 		       :graft-x
 ;;; 		       :graft-y
-		       :modifier-state 0
-		       )))
+			  :modifier-state 0
+			  )))
 
 (defmethod gfw:event-mouse-down ((self sheet-event-dispatcher) mirror point button)
-  (setf (event (port self))
-	(make-instance 'pointer-button-press-event
-		       :pointer 0
-		       :sheet (sheet mirror)
-		       :x (gfs:point-x point)
-		       :y (gfs:point-y point)
-		       :button (translate-button-name button)
-		       ;; FIXME:
-;;;  		       :timestamp
+  (enqueue (port self)
+	   (make-instance 'pointer-button-press-event
+			  :pointer 0
+			  :sheet (sheet mirror)
+			  :x (gfs:point-x point)
+			  :y (gfs:point-y point)
+			  :button (translate-button-name button)
+			  ;; FIXME:
 ;;; 		       :graft-x
 ;;; 		       :graft-y
-		       :modifier-state 0
-		       )))
+			  :modifier-state 0
+			  )))
 
 (defmethod gfw:event-mouse-up ((self sheet-event-dispatcher) mirror point button)
-  (setf (event (port self))
-	(make-instance 'pointer-button-release-event
-		       :pointer 0
-		       :sheet (sheet mirror)
-		       :x (gfs:point-x point)
-		       :y (gfs:point-y point)
-		       :button (translate-button-name button)
-		       ;; FIXME:
-;;;  		       :timestamp
+  (enqueue (port self)
+	   (make-instance 'pointer-button-release-event
+			  :pointer 0
+			  :sheet (sheet mirror)
+			  :x (gfs:point-x point)
+			  :y (gfs:point-y point)
+			  :button (translate-button-name button)
+			  ;; FIXME:
 ;;; 		       :graft-x
 ;;; 		       :graft-y
-		       :modifier-state 0
-		       )))
+			  :modifier-state 0
+			  )))
 
 (defun char-to-sym (char)
   (case char
@@ -549,34 +547,32 @@
     (#\Tab :TAB) (#\Return :RETURN) (#\Rubout :DELETE)))
 
 (defmethod gfw:event-key-down ((self sheet-event-dispatcher) mirror code char)
-  (setf (event (port self))
-	(make-instance 'key-press-event
-		       :key-name (char-to-sym char)
-		       :key-character char
-		       :sheet (sheet mirror)
-		       ;; FIXME:
-		       :x 0
-		       :y 0
-		       :modifier-state 0
-;;; 			 :timestamp time
+  (enqueue (port self)
+	   (make-instance 'key-press-event
+			  :key-name (char-to-sym char)
+			  :key-character char
+			  :sheet (sheet mirror)
+			  ;; FIXME:
+			  :x 0
+			  :y 0
+			  :modifier-state 0
 ;;; 			 :graft-x root-x
 ;;; 			 :graft-y root-y
-		       )))
+			  )))
 
 (defmethod gfw:event-key-up ((self sheet-event-dispatcher) mirror code char)
-  (setf (event (port self))
-	(make-instance 'key-release-event
-		       :key-name (char-to-sym char)
-		       :key-character char
-		       :sheet (sheet mirror)
-		       ;; FIXME:
-		       :x 0
-		       :y 0
-		       :modifier-state 0
-;;; 			 :timestamp time
+  (enqueue (port self)
+	   (make-instance 'key-release-event
+			  :key-name (char-to-sym char)
+			  :key-character char
+			  :sheet (sheet mirror)
+			  ;; FIXME:
+			  :x 0
+			  :y 0
+			  :modifier-state 0
 ;;; 			 :graft-x root-x
 ;;; 			 :graft-y root-y
-		       )))
+			  )))
 
 
 ;;;
