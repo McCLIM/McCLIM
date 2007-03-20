@@ -273,7 +273,7 @@ as :PRESENTATION-TYPE to pane creation forms that specify no type themselves."
 		  :pages (list ,@(mapcar (lambda (spec)
 					   `(make-tab-page ,@spec
 							   :presentation-type
-							   ,ptypevar))
+					     ,ptypevar))
 					 body))
 		  ,@initargs))))
 
@@ -308,26 +308,6 @@ as :PRESENTATION-TYPE to pane creation forms that specify no type themselves."
 
 
 ;;; generic TAB-LAYOUT-PANE implementation
-
-(defclass tab-layout-pane (tab-layout)
-    ((header-pane :accessor tab-layout-header-pane
-		  :initarg :header-pane))
-  (:documentation "A pure-lisp implementation of the tab-layout, this is
-the generic implementation chosen by the CLX frame manager automatically.
-Users should create panes for type TAB-LAYOUT, not TAB-LAYOUT-PANE, so
-that the frame manager can customize the implementation."))
-
-(defmethod (setf tab-layout-enabled-page)
-    (page (parent tab-layout-pane))
-  (let ((old-page (tab-layout-enabled-page parent)))
-    (unless (equal page old-page)
-      (when old-page
-	(setf (sheet-enabled-p (tab-page-pane old-page)) nil))
-      (when page
-	(setf (sheet-enabled-p (tab-page-pane page)) t)))
-    (when page
-	(setf (sheet-enabled-p (tab-page-pane page)) t)))
-  (call-next-method))
 
 (defclass tab-bar-view (gadget-view)
   ())
@@ -369,33 +349,64 @@ that the frame manager can customize the implementation."))
          (tab-page-drawing-options tab-page))
   (stream-increment-cursor-position stream 10 0))
 
+(defclass tab-layout-pane (tab-layout)
+    ((header-pane :accessor tab-layout-header-pane
+		  :initarg :header-pane)
+     (header-display-function
+      :accessor header-display-function
+      :initarg :header-display-function
+      :initform 'default-display-tab-header))
+  (:documentation "A pure-lisp implementation of the tab-layout, this is
+the generic implementation chosen by the CLX frame manager automatically.
+Users should create panes for type TAB-LAYOUT, not TAB-LAYOUT-PANE, so
+that the frame manager can customize the implementation."))
+
+(defmethod (setf tab-layout-enabled-page)
+    (page (parent tab-layout-pane))
+  (let ((old-page (tab-layout-enabled-page parent)))
+    (unless (equal page old-page)
+      (when old-page
+	(setf (sheet-enabled-p (tab-page-pane old-page)) nil))
+      (when page
+	(setf (sheet-enabled-p (tab-page-pane page)) t)))
+    (when page
+	(setf (sheet-enabled-p (tab-page-pane page)) t)))
+  (call-next-method))
+
+(defun default-display-tab-header (tab-layout pane)
+  (stream-increment-cursor-position pane 0 3)
+  (draw-line* pane
+	      0
+	      17
+	      (slot-value pane 'climi::current-width)
+	      17
+	      :ink +black+)
+  (mapc (lambda (page)
+	  (with-output-as-presentation
+	      (pane (tab-page-pane page)
+		    (tab-page-presentation-type page))
+	    (present page 'tab-page :stream pane)))
+	(tab-layout-pages tab-layout)))
+
+(defclass tab-bar-pane (application-pane)
+  ()
+  (:default-initargs :default-view +tab-bar-view+))
+
+(defmethod compose-space ((pane tab-bar-pane) &key width height)
+  (declare (ignore width height))
+  (make-space-requirement :min-height 22 :height 22 :max-height 22))
+
 (defmethod initialize-instance :after ((instance tab-layout-pane) &key pages)
   (let ((current (tab-layout-enabled-page instance)))
     (dolist (page pages)
       (setf (sheet-enabled-p (tab-page-pane page)) (eq page current))))
   (let ((header
-	 (make-clim-stream-pane
-	  :default-view +tab-bar-view+
+	 (make-pane 'tab-bar-pane
 	  :display-time :command-loop
-	  :scroll-bars nil
-	  :borders nil
-	  :height 22
 	  :display-function
 	  (lambda (frame pane)
-	    (declare (ignore frame))
-	    (stream-increment-cursor-position pane 0 3)
-	    (draw-line* pane
-			0
-			17
-			(slot-value pane 'climi::current-width)
-			17
-			:ink +black+)
-	    (mapc (lambda (page)
-		    (with-output-as-presentation
-			(pane (tab-page-pane page)
-			      (tab-page-presentation-type page))
-		      (present page 'tab-page :stream pane)))
-		  (tab-layout-pages instance))))))
+	    (declare (ignore frame))	    
+	    (funcall (header-display-function instance) instance pane)))))
     (setf (tab-layout-header-pane instance) header)
     (sheet-adopt-child instance header)
     (setf (sheet-enabled-p header) t)))
@@ -430,6 +441,8 @@ that the frame manager can customize the implementation."))
 (defmethod clim-tab-layout:note-tab-page-changed
     ((layout tab-layout-pane) page)
   (redisplay-frame-pane (pane-frame layout)
+			(tab-layout-header-pane layout)
+			#+NIL
 			(car (sheet-children
 			      (car (sheet-children
 				    (tab-layout-header-pane layout)))))

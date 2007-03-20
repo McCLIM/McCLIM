@@ -984,6 +984,7 @@
 
 (defmethod compose-space ((gadget pixie-push-button-pane) &key width height)
   (declare (ignore width height))
+  ;; Why does a button have spacing options, anyway?
   (space-requirement+* (space-requirement+* (compose-label-space gadget)
                                             :min-width (* 2 (pane-x-spacing gadget))
                                             :width (* 2 (pane-x-spacing gadget))
@@ -991,12 +992,12 @@
                                             :min-height (* 2 (pane-y-spacing gadget))
                                             :height (* 2 (pane-y-spacing gadget))
                                             :max-height (* 2 (pane-y-spacing gadget)))
-                       :min-width  (* 2 *3d-border-thickness*)
-                       :width      (* 2 *3d-border-thickness*)
-                       :max-width  (* 2 *3d-border-thickness*)
-                       :min-height (* 2 *3d-border-thickness*)
-                       :height     (* 2 *3d-border-thickness*)
-                       :max-height (* 2 *3d-border-thickness*)))
+                       :min-width  (* 8 *3d-border-thickness*)
+                       :width      (* 8 *3d-border-thickness*)
+                       :max-width  (* 8 *3d-border-thickness*)
+                       :min-height (* 4 *3d-border-thickness*)
+                       :height     (* 4 *3d-border-thickness*)
+                       :max-height (* 4 *3d-border-thickness*)))
 
 ; factor out the dragging code into a mixin
 (defmethod handle-event ((pane pixie-push-button-pane) (event pointer-enter-event))
@@ -1041,8 +1042,8 @@
             (y1 (+ y1 1))
             (x2 (- x2 1))
             (y2 (- y2 1)))
-        (let ((x2 (- x2 1))
-              (y2 (- y2 1)))
+        (let ((x2 (- x2 1))		; Removing this magic weirdness slightly uglifies the 
+              (y2 (- y2 1)))		; scroll bar. Not sure why, but FIXME.
           (cond
            ((or (not pressedp)
                 (eq dragging :outside))
@@ -1140,3 +1141,130 @@
 
 (defmethod allocate-space ((pane pixie-text-field-pane) w h)
   (resize-sheet pane w h))
+
+;;;; Pixie tab-layout. Reuses implementation of the generic tab-layout-pane.
+
+(define-pixie-gadget clim-tab-layout:tab-layout pixie-tab-layout-pane)
+(define-pixie-gadget clim-tab-layout::tab-bar-pane pixie-tab-bar-pane)
+
+(defclass pixie-tab-bar-view (gadget-view)
+  ((selected :initform nil
+	     :initarg :selected
+	     :reader pixie-tab-view-selected-p)))
+
+(defparameter +pixie-tab-bar-view+
+  (make-instance 'pixie-tab-bar-view :selected nil))
+
+(defparameter +pixie-selected-tab-bar-view+
+  (make-instance 'pixie-tab-bar-view :selected t))
+
+
+
+(defclass pixie-tab-layout-pane (clim-tab-layout:tab-layout-pane)
+  ()
+  (:default-initargs
+    :header-display-function 'pixie-display-tab-header))
+
+(defclass pixie-tab-bar-pane (application-pane pixie-gadget)
+  ()
+  (:default-initargs
+    :default-view +pixie-tab-bar-view+
+    :background +gray83+
+    :text-style (make-text-style :sans-serif :roman :small)))
+
+(defmethod compose-space ((pane pixie-tab-bar-pane) &key width height)
+  (declare (ignore width height))
+  (let ((h (+ 6				; padding on the top
+	      6				; padding on the bottom
+	      (text-style-ascent (pane-text-style pane) pane)
+	      (text-style-descent (pane-text-style pane) pane))))
+    (make-space-requirement :min-height h :height h :max-height h)))
+
+(defun draw-pixie-tab-bar-bottom (pane)
+  (let ((y0 (bounding-rectangle-min-y (sheet-region pane)))
+	(y1 (bounding-rectangle-max-y (sheet-region pane))))
+    (draw-line* pane 0 (- y1 6) +fill+ (- y1 6) :ink *3d-light-color*)
+    (draw-line* pane 0 (- y1 1) +fill+ (- y1 1) :ink *3d-dark-color*)
+    #+NIL (draw-line* pane 0 (1- y1) x1 (1- y1)   :ink +gray30+)))
+
+(defmethod draw-output-border-over
+    ((shape (eql 'pixie-tab-bar-border)) stream record &key &allow-other-keys)
+  (declare (ignore shape stream record)))
+
+(defmethod draw-output-border-under
+    ((shape (eql 'pixie-tab-bar-border)) stream record
+     &key background enabled &allow-other-keys)
+  (with-border-edges (stream record)
+    (declare (ignore bottom))
+    (with-bounding-rectangle* (x0 y0 x1 y1) (sheet-region stream)
+      (declare (ignore x0 x1 y0))
+      (let ((bottom (- y1 7))
+	    (left   (- left 4 (if enabled 2 0)))
+	    (right  (+ right 4 (if enabled 2 0)))
+	    (top    (- top 2 #+NIL (if enabled 2 0))))
+	(draw-rectangle* stream left top right (+ bottom (if enabled 2 1))
+			 :filled t :ink background)
+	(draw-line* stream (1+ left) (1- top) (- right 1) (1- top) :ink +white+)
+	(draw-point* stream left top :ink +white+)
+	(draw-line* stream (1- left) bottom (1- left) (1+ top) :ink +white+)
+	(draw-line* stream right bottom right top :ink +gray66+)
+	(draw-point* stream right top :ink +gray40+)
+	(draw-line* stream (1+ right) bottom (1+ right) (1+ top) :ink +gray40+)))))
+
+(define-default-highlighting-method 'pixie-tab-bar-border)
+
+(define-presentation-method present
+    (tab-page (type clim-tab-layout:tab-page) stream (view pixie-tab-bar-view) &key)
+  (stream-increment-cursor-position stream 5 0)
+  (surrounding-output-with-border (stream :shape 'pixie-tab-bar-border
+					  :enabled (pixie-tab-view-selected-p view)
+					  :highlight-background +gray94+
+					  :background +gray83+
+					  :move-cursor nil)
+    (apply #'invoke-with-drawing-options stream
+	   (lambda (rest)
+	     (declare (ignore rest))
+	     (write-string (clim-tab-layout:tab-page-title tab-page) stream))
+	   (clim-tab-layout:tab-page-drawing-options tab-page)))
+  (stream-increment-cursor-position stream 6 0))
+
+(defun pixie-display-tab-header (tab-layout pane)
+  (draw-pixie-tab-bar-bottom pane)
+  (setf (stream-cursor-position pane)
+	(values 3 (- (bounding-rectangle-height (sheet-region pane))
+		     7
+		     (text-style-descent (pane-text-style pane) pane)
+		     (text-style-ascent (pane-text-style pane) pane))))  
+  (let ((enabled-page-drawers nil))
+    (mapc (lambda (page)
+	    ;; This gets a little silly, but the tabs are laid out simply by
+	    ;; letting the cursor move from left to right. In order to make
+	    ;; the selected tab overlap, we can't draw it until after the other
+	    ;; tabs. We then draw it slightly larger in each direcetion. But the
+	    ;; cursor has to have moved as though it were smaller (so that it
+	    ;; overlaps its neighbors), so draw it initially, note its position,
+	    ;; and redraw a larger version once everything is done.	    
+	    (let ((enabled (sheet-enabled-p (clim-tab-layout:tab-page-pane page))))
+	      (when enabled
+		(multiple-value-bind (x y) (stream-cursor-position pane)
+		  (push (lambda ()
+			  (setf (stream-cursor-position pane)
+				(values x (- y 2)))
+			  (with-output-as-presentation
+			      (pane (clim-tab-layout:tab-page-pane page)
+				    (clim-tab-layout:tab-page-presentation-type page))
+			    (present page 'clim-tab-layout:tab-page :stream pane
+				     :view +pixie-selected-tab-bar-view+)))
+			enabled-page-drawers)))
+	      (let ((record 
+		     (with-output-as-presentation
+			 (pane (clim-tab-layout:tab-page-pane page)
+			       (clim-tab-layout:tab-page-presentation-type page))
+		       (present page 'clim-tab-layout:tab-page :stream pane))))
+		;; Because piling the presentations on top of each other confuses
+		;; CLIM as to which should be highlighted, erase the smaller one.
+		;; The cursor has already been moved, so we don't need it.
+		(when enabled
+		  (delete-output-record record (output-record-parent record))))))
+	  (clim-tab-layout:tab-layout-pages tab-layout))
+    (mapcar #'funcall enabled-page-drawers)))
