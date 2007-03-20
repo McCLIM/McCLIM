@@ -84,7 +84,8 @@
 	   :initform (make-bounding-rectangle 0 0 100 100)
 	   :accessor sheet-region)
    (native-transformation :type (or null transformation)
-			  :initform nil
+			  ;:initform nil
+			  :initform +identity-transformation+
                           :writer %%set-sheet-native-transformation
                           :reader %%sheet-native-transformation)
    (native-region :type (or null region)
@@ -95,7 +96,7 @@
 		  :initform nil)
    (pointer-cursor :accessor sheet-pointer-cursor
                    :initarg  :pointer-cursor
-                   :initform :default)                   
+                   :initform :default)
    (enabled-p :type boolean
 	      :initarg :enabled-p
               :initform t

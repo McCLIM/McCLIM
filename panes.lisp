@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.181 2007/03/04 15:08:00 thenriksen Exp $
+;;; $Id: panes.lisp,v 1.182 2007/03/20 01:43:55 ahefner Exp $
 
 (in-package :clim-internals)
 
@@ -2548,7 +2548,8 @@ to computed distance to scroll in response to mouse wheel events."))
   (stream-close-text-output-record pane)
   (let ((output-history (stream-output-history pane)))
     (with-bounding-rectangle* (left top right bottom) output-history
-      (medium-clear-area (sheet-medium pane) left top right bottom))
+      (when (sheet-viewable-p pane)
+	(medium-clear-area (sheet-medium pane) left top right bottom)))
     (clear-output-record output-history))
   (window-erase-viewport pane)
   (let ((cursor (stream-text-cursor pane)))
