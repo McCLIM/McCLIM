@@ -173,13 +173,12 @@
 
 (defmacro %%line-style-for-method ()
   `(or line-style
-    (merge-line-styles
-     (make-line-style
-      :unit      (or line-unit :point)
-      :thickness (or line-thickness 1)
-      :cap-shape (or line-cap-shape :butt)
-      :dashes    line-dashes)
-     (medium-line-style stream))))
+    (let ((mls (medium-line-style stream)))
+      (make-line-style
+       :unit      (or line-unit (line-style-unit mls))
+       :thickness (or line-thickness (line-style-thickness mls))
+       :cap-shape (or line-cap-shape (line-style-cap-shape mls))
+       :dashes    (or line-dashes (line-style-dashes mls))))))
 
 (defmacro %%adjusting-for-padding (&body body)
   `(let ((left   (- left   padding-left))
@@ -201,7 +200,7 @@
   ;; The Franz User guide implies that &key isn't needed.
   (pushnew '&key arglist)
   `(progn
-    (pushnew ,shape *border-types*)
+    (pushnew ',shape *border-types*)
     (defmethod draw-output-border-over ((shape (eql ',shape)) stream record
                                         &rest drawing-options)
       (with-border-edges (stream record)
@@ -675,7 +674,7 @@
                                                     new-drawing-options)
                    ;; Great, this again..
                    (queue-repaint stream
-                     (make-instance 'window-repaint-event
+                      (make-instance 'window-repaint-event
                                     :sheet stream
                                     :region (transform-region
                                              (sheet-native-transformation stream)

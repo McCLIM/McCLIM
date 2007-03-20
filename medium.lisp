@@ -500,18 +500,6 @@
        (eql (line-style-cap-shape style1) (line-style-cap-shape style2))
        (eql (line-style-dashes style1) (line-style-dashes style2))))
 
-(defun merge-line-styles (a b)
-  (make-line-style :unit (or (line-style-unit a)
-                             (line-style-unit b))
-                   :thickness (or (line-style-thickness a)
-                                  (line-style-thickness b))
-                   :joint-shape (or (line-style-joint-shape a)
-                                    (line-style-joint-shape b))
-                   :cap-shape (or (line-style-cap-shape a)
-                                  (line-style-cap-shape b))
-                   :dashes (or (line-style-dashes a)
-                               (line-style-dashes b))))
-
 
 ;;; Misc ops
 
