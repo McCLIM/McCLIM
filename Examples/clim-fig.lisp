@@ -160,19 +160,7 @@
         (return-from handle-move-object)))))
 
 (defun clim-fig ()
-  (loop for port in climi::*all-ports*
-      do (destroy-port port))
-  (setq climi::*all-ports* nil)
- (run-frame-top-level (make-application-frame 'clim-fig))
- ;(setq frame (make-application-frame 'clim-fig))
- ;(setq fm (frame-manager frame))
- ;(setq port (climi::frame-manager-port fm))
- ;(setq pane (first (frame-panes frame)))
- ;(setq medium (sheet-medium pane))
- ;(setq graft (graft frame))
- ;(setq vbox (climi::frame-pane frame))
- ;(run-frame-top-level frame)
- )
+  (run-frame-top-level (make-application-frame 'clim-fig)))
 
 (defun make-colored-button (color &key width height)
   (make-pane 'push-button

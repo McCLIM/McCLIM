@@ -92,9 +92,6 @@
 ;; test functions
 
 (defun fire ()
-  (loop for port in climi::*all-ports*
-      do (destroy-port port))
-  (setq climi::*all-ports* nil)
   (run-frame-top-level (make-application-frame 'firelights)))
 
 (defmethod fire-frame-top-level ((frame application-frame))
