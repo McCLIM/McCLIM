@@ -403,7 +403,8 @@
 		       menu-name
 		       (and (slot-boundp item 'keystroke) keystroke)
 		       item)))
-	(slot-value (find-command-table command-table) 'menu)))
+	(slot-value (find-command-table command-table) 'menu))
+  (values))
 
 ;; At this point we should still see the gesture name as supplied by the
 ;; programmer in 'gesture'
