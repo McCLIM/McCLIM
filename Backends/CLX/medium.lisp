@@ -1159,7 +1159,7 @@
     ((medium clx-medium) (design climi::rgb-image-design) x y)
   (let* ((da (sheet-direct-mirror (medium-sheet medium)))
 	 (image (slot-value design 'climi::image))
-	 (width (climi::image-height image))
+	 (width (climi::image-width image))
 	 (height (climi::image-height image)))
     (destructuring-bind (&optional pixmap mask)
 	(slot-value design 'climi::medium-data)
