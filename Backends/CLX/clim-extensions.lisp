@@ -400,3 +400,43 @@
 		  :clipping-region (sheet-region pane)
 		  :transformation (make-translation-transformation tx ty)))))
 ||#
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; retrieve image
+
+(defun zimage-to-rgb (zimage)
+  (unless (eql (xlib:image-depth zimage) 24)
+    (error "sorry, only true color images supported in zimage-to-rgb"))
+  (let* ((data (xlib:image-z-pixarray zimage))
+	 (w (xlib:image-width zimage))
+	 (h (xlib:image-height zimage))
+	 (rbyte (mask->byte (xlib:image-red-mask zimage)))
+	 (gbyte (mask->byte (xlib:image-green-mask zimage)))
+	 (bbyte (mask->byte (xlib:image-blue-mask zimage)))
+	 (result (make-array (list h w)
+			     :element-type '(unsigned-byte 32))))
+    (dotimes (y h)
+      (dotimes (x w)
+	(setf (aref result y x)
+	      (let ((pixel (aref data y x)))
+		(dpb (the (unsigned-byte 8) (ldb rbyte pixel))
+		     (byte 8 0)
+		     (dpb (the (unsigned-byte 8) (ldb gbyte pixel))
+			  (byte 8 8)
+			  (dpb (the (unsigned-byte 8) (ldb bbyte pixel))
+			       (byte 8 16)
+			       0)))))))
+    result))
+
+(defmethod climi::sheet-rgb-data ((port clx-port) sheet &key x y width height)
+  (let ((window (port-lookup-mirror port sheet)))
+    (values
+     (zimage-to-rgb
+      (xlib:get-image window
+		      :format :z-pixmap
+		      :x (or x 0)
+		      :y (or y 0)
+		      :width (or width (xlib:drawable-width window))
+		      :height (or height (xlib:drawable-height window))))
+     nil)))

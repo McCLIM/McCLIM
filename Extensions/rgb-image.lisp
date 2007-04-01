@@ -67,3 +67,24 @@
 
 (defmethod medium-draw-image-design* :before (medium design x y)
   (assert (eq medium (slot-value design 'medium))))
+
+
+;;; Fetching protocol
+
+(defun sheet-rgb-image (sheet &key x y width height)
+  (multiple-value-bind (data alphap)
+      (sheet-rgb-data (port sheet)
+		      sheet
+		      :x x
+		      :y y
+		      :width width
+		      :height height)
+    (destructuring-bind (height width)
+	(array-dimensions data)
+      (make-instance 'rgb-image
+	:width width
+	:height height
+	:data data
+	:alphap alphap))))
+
+(defgeneric sheet-rgb-data (port sheet &key x y width height))
