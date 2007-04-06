@@ -332,7 +332,7 @@ one of the marks"))
        (or (alphanumericp obj)
            (member obj '(#\! #\$ #\% #\& #\* #\+ #\- #\. #\/
                          #\: #\< #\= #\> #\? #\@ #\^ #\~ #\_
-                         #\{ #\} #\[ #\] )))))
+                         #\{ #\} #\[ #\] #\#)))))
 
 (defun buffer-whitespacep (obj)
   "Return T if `obj' is a basic whitespace character. This
