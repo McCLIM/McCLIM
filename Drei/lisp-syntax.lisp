@@ -1626,7 +1626,7 @@ stripping leading non-forms."
   "Return the form closest to `mark-or-offset'."
   (as-offsets ((offset mark-or-offset))
     (flet ((distance (form)
-             (max (abs (- (start-offset form) mark-or-offset))
+             (min (abs (- (start-offset form) mark-or-offset))
                   (abs (- (end-offset form) mark-or-offset)))))
       (reduce #'(lambda (form1 form2)
                   (cond ((null form1) form2)
