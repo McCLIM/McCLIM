@@ -1461,8 +1461,8 @@ list. If no such package is specified, return \"CLIM-USER\"."
                do (return t))
             (loop
                for (offset . nil) in (package-list syntax)
-               unless (let ((form (form-around syntax offset)))
-                        (form-list-p form))
+               unless (and (>= (size buffer) offset)
+                           (form-list-p (form-around syntax offset)))
                do (return t)))))))
 
 (defun update-package-list (buffer syntax)
