@@ -499,6 +499,26 @@ Return T if successful, or NIL if the buffer limit was reached."))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 
+;;; List motion
+
+(defgeneric backward-one-list (mark syntax)
+  (:documentation
+   "Move MARK backward by one list.
+Return T if successful, or NIL if the buffer limit was reached.")
+  (:method (mark syntax)
+    (error 'no-such-operation)))
+
+(defgeneric forward-one-list (mark syntax)
+  (:documentation
+   "Move MARK forward by one list.
+Return T if successful, or NIL if the buffer limit was reached.")
+  (:method (mark syntax)
+    (error 'no-such-operation)))
+
+(define-motion-fns list)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; 
 ;;; Sentence motion
 
 (defgeneric backward-one-sentence (mark syntax)

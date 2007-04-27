@@ -160,13 +160,9 @@ characters."))
            #:name-for-info-pane
            #:display-syntax-name
            #:syntax-line-indentation
-           #:forward-expression #:backward-expression
            #:eval-defun
            #:record-line-vertical-offset
            #:line-vertical-offset
-           #:backward-paragraph #:forward-paragraph
-           #:backward-sentence #:forward-sentence
-           #:forward-list #:backward-list
            #:syntax-line-comment-string
            #:line-comment-region #:comment-region
            #:line-uncomment-region #:uncomment-region
@@ -331,7 +327,13 @@ characters."))
            #:forward-one-sentence
            #:backward-one-sentence
            #:forward-sentence
-           #:backward-sentence)
+           #:backward-sentence
+
+           ;; Lists
+           #:forward-one-list
+           #:backward-one-list
+           #:forward-list
+           #:backward-list)
   (:documentation "Functions and facilities for moving a mark
 around by syntactical elements. The functions in this package are
 syntax-aware, and their behavior is based on the semantics
@@ -384,7 +386,12 @@ implement the motion commands."))
            ;; Sentences
            #:forward-delete-sentence #:backward-delete-sentence
            #:forward-kill-sentence #:backward-kill-sentence
-           #:transpose-sentences)
+           #:transpose-sentences
+
+           ;; Lists
+           #:forward-delete-list #:backward-delete-list
+           #:forward-kill-list #:backward-kill-list
+           #:transpose-list)
   (:documentation "Functions and facilities for changing the
 buffer contents by syntactical elements. The functions in this
 package are syntax-aware, and their behavior is based on the
@@ -437,17 +444,33 @@ syntax-specific, core functionality of Drei."))
   (:documentation "Implementation of the basic syntax module for
 editing plain text."))
 
+(defpackage :drei-lr-syntax
+  (:use :clim-lisp :clim :clim-extensions :drei-buffer :drei-base
+	:drei-syntax :drei-fundamental-syntax)
+  (:export #:lr-syntax-mixin #:stack-top #:initial-state
+	   #:skip-inter #:lex #:define-lexer-state
+	   #:lexer-toplevel-state #:lexer-error-state
+	   #:parser-symbol #:parent #:children
+	   #:start-offset #:end-offset #:parser-state
+	   #:preceding-parse-tree
+	   #:define-parser-state
+	   #:lexeme #:nonterminal
+	   #:action #:new-state #:done
+	   #:reduce-fixed-number #:reduce-until-type #:reduce-all 
+	   #:error-state #:error-reduce-state)
+  (:documentation "Underlying LR parsing functionality."))
+
 (defpackage :drei-lisp-syntax
   (:use :clim-lisp :clim :clim-extensions :drei-buffer :drei-base 
         :drei-syntax :drei-fundamental-syntax :flexichain :drei
-        :drei-motion :drei-editing :esa-utils :esa :drei-core :esa-io)
+        :drei-motion :drei-editing :esa-utils :esa :drei-core :esa-io
+	:drei-lr-syntax)
   (:export #:lisp-syntax
            #:lisp-string
            #:edit-definition
            #:form
            #:form-to-object
-           #:form-conversion-error
-           #:forward-one-list #:backward-one-list #:forward-list #:backward-list)
+           #:form-conversion-error)
   (:shadow clim:form)
   (:documentation "Implementation of the syntax module used for
 editing Common Lisp code."))

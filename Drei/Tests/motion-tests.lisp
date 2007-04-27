@@ -102,7 +102,7 @@ climacs  ")
   (let ((forward (intern (format nil "FORWARD-ONE-~S" unit)))
         (backward (intern (format nil "BACKWARD-ONE-~S" unit))))
     `(progn
-       (test ,(intern (format nil "~A-~A" syntax forward))
+       (test ,(intern (format nil "~A-~A" syntax forward) #.*package*)
          (with-buffer (buffer :initial-contents ,initial-contents
                               :syntax ',syntax)
            (let ((syntax (syntax buffer))
@@ -134,7 +134,7 @@ climacs  ")
              (is (= (size buffer) (offset m2l)))
              (is-false (,forward m2r syntax))
              (is (= (size buffer) (offset m2r))))))
-       (test ,(intern (format nil "~A-~A" syntax backward))
+       (test ,(intern (format nil "~A-~A" syntax backward) #.*package*)
          (with-buffer (buffer :initial-contents ,initial-contents
                               :syntax ',syntax)
            (let ((syntax (syntax buffer))
@@ -207,8 +207,8 @@ Preferably a bit faster."))
   (check-type offset integer)
   (check-type goal-forward-offset integer)
   (check-type goal-backward-offset integer)
-  (let ((forward (intern (format nil "FORWARD-~S" unit)))
-        (backward (intern (format nil "BACKWARD-~S" unit))))
+  (let ((forward (intern (format nil "FORWARD-~S" unit) #.*package*))
+        (backward (intern (format nil "BACKWARD-~S" unit) #.*package*)))
     `(progn
        (test ,forward
          (with-buffer (buffer :initial-contents ,initial-contents

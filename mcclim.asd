@@ -311,7 +311,8 @@
                          (:file "misc-commands" :depends-on ("basic-commands"))
                          (:file "unicode-commands" :depends-on ("core" "drei-clim"))
                          (:file "search-commands" :depends-on ("core" "drei-clim"))
-                         (:file "lisp-syntax" :depends-on ("motion" "fundamental-syntax" "core"))
+                         (:file "lr-syntax" :depends-on ("fundamental-syntax" "core"))
+                         (:file "lisp-syntax" :depends-on ("lr-syntax" "motion" "core"))
                          (:file "lisp-syntax-swine" :depends-on ("lisp-syntax"))
                          (:file "lisp-syntax-commands" :depends-on ("lisp-syntax-swine" "misc-commands"))
                          #+#.(mcclim.system::ifswank) (:file "lisp-syntax-swank" :depends-on ("lisp-syntax"))))))
@@ -341,7 +342,7 @@
              (:file "buffer-streams-tests" :depends-on ("testing"))
              (:file "rectangle-tests" :depends-on ("testing"))
              (:file "undo-tests" :depends-on ("testing"))
-             (:file "lisp-syntax-tests" :depends-on ("testing"))))))
+             (:file "lisp-syntax-tests" :depends-on ("testing" "motion-tests"))))))
 
 (defsystem :clim
   :depends-on (:clim-core :goatee-core :clim-postscript :drei-mcclim)

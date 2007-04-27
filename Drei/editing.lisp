@@ -364,3 +364,9 @@
 
 (define-edit-fns expression)
 (define-edit-fns definition)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; 
+;;; List editing
+
+(define-edit-fns list)
