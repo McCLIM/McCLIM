@@ -1,6 +1,4 @@
-(defpackage :clim-postscript-tests
-  (:use :clim :clim-lisp))
-(in-package :clim-postscript-tests)
+(in-package :clim-tests)
 
 (let ((psfilename "/tmp/clim-postscript-test.ps")
       (epsfilename "/tmp/clim-postscript-test.eps"))
