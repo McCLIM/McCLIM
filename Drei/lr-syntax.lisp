@@ -160,14 +160,17 @@
 	   until (typep child type)
 	   finally (return result))))
 
-(defmacro reduce-until-type (symbol type)
+(defmacro reduce-until-type (symbol type &optional end-of-buffer)
   `(let ((result (make-instance ',symbol
-		    :children (pop-until-type syntax ',type))))
-     (when (null (children result))
-       (with-slots (scan) syntax
-	  (with-slots (start-mark size) result
-	     (setf start-mark (clone-mark scan :right)
-		   size 0))))
+                  :children (pop-until-type syntax ',type))))
+     (with-slots (start-mark size) result
+       (when (null (children result))
+         (with-slots (scan) syntax
+           (setf start-mark (clone-mark scan :right)
+                 size 0)))
+       (when ,end-of-buffer
+         (setf size (- (size (buffer syntax))
+                       (start-offset result)))))
      result))
 
 (defun pop-all (syntax)
