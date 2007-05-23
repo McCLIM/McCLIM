@@ -1040,14 +1040,14 @@ First ask if modified buffers should be saved. If you decide not to save a modif
    :width 400))
 
 (defun read-gestures-for-help (command-table)
-  (loop for gestures = (list (esa-read-gesture))
-	  then (nconc gestures (list (esa-read-gesture)))
-	for item = (find-gestures-with-inheritance gestures command-table)
-	unless item
-	  do (return (values nil gestures))
-	when (eq (command-menu-item-type item) :command)
-	  do (return (values (command-menu-item-value item)
-			     gestures))))
+  (with-input-focus (t)
+    (loop for gestures = (list (esa-read-gesture))
+            then (nconc gestures (list (esa-read-gesture)))
+          for item = (find-gestures-with-inheritance gestures command-table)
+          unless item
+            do (return (values nil gestures))
+          when (eq (command-menu-item-type item) :command)
+            do (return (values (command-menu-item-value item) gestures)))))
 
 (defun describe-key-briefly (pane)
   (let ((command-table (command-table pane)))
