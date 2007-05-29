@@ -96,15 +96,13 @@ advised of the possiblity of such damages.
   (list object window presentation))
 
 (install-command #+(or clim-0.9 (not clim)) 'accept-values
-		 #+(or clim-1.0 (and clim-2 (not mcclim))) 'clim::accept-values
-		 #+mcclim 'climi::accepting-values
+		 #+(or clim-1.0 clim-2 mcclim) 'clim::accept-values
 		 'com-pop-edit-dataset)
 
 #+(or clim-1.0 clim-2)
 (define-presentation-to-command-translator com-pop-edit-dataset
    (graph-data :command-name com-pop-edit-dataset
-	       :command-table #-mcclim clim::accept-values
-	                      #+mcclim climi::accepting-values
+	       :command-table clim::accept-values
 	       :documentation "Change Data Symbols..."
 	       :menu t
 	       :gesture :select) 

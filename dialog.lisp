@@ -117,7 +117,7 @@ accept of this query")))
 ;;; The accepting-values state machine is controlled by commands. Each
 ;;; action (e.g., "select a text field") terminates 
 
-(define-command-table accepting-values)	; :inherit-from nil???
+(define-command-table accept-values)    ; :inherit-from nil???
 
 (defvar *default-command* '(accepting-values-default-command))
 
@@ -188,7 +188,7 @@ accept of this query")))
      modify-initial-query resynchronize-every-pass resize-frame
      align-prompts label scroll-bars
      x-position y-position width height
-     (command-table 'accepting-values)
+     (command-table 'accept-values)
      (frame-class 'accept-values))
   (declare (ignore own-window exit-boxes modify-initial-query
     resize-frame label scroll-bars x-position y-position
@@ -226,7 +226,7 @@ accept of this query")))
                         (when resynchronize-every-pass
                           (redisplay arecord stream)))
                     (with-input-context
-                        ('(command :command-table accepting-values))
+                        ('(command :command-table accept-values))
                       (object)
                       (progn
                         (apply (command-name current-command)
@@ -298,7 +298,9 @@ accept of this query")))
 				 :default default
 				 :default-supplied-p default-supplied-p
 				 :value default))
-      (setf (queries stream) (nconc (queries stream) (list query))))
+      (setf (queries stream) (nconc (queries stream) (list query)))
+      (when default
+        (setf (changedp query) t)))
     (setf (accept-arguments query) rest-args)
     ;; If the program changes the default, that becomes the value.
     (unless (equal default (default query)) 
@@ -338,20 +340,20 @@ accept of this query")))
   (declare (ignore view))
   (apply #'prompt-for-accept-1 stream type :display-default nil args))
 
-(define-command (com-query-exit :command-table accepting-values
+(define-command (com-query-exit :command-table accept-values
 				:name nil
 				:provide-output-destination-keyword nil)
     ()
   (signal 'av-exit))
 
-(define-command (com-query-abort :command-table accepting-values
+(define-command (com-query-abort :command-table accept-values
 				 :name nil
 				 :provide-output-destination-keyword nil)
     ()
   (and (find-restart 'abort)
        (invoke-restart 'abort)))
 
-(define-command (com-change-query :command-table accepting-values
+(define-command (com-change-query :command-table accept-values
 				  :name nil
 				  :provide-output-destination-keyword nil)
     ((query-identifier t)
@@ -372,7 +374,7 @@ a query is selected for input. It is responsible for updating the
   (:documentation "Deselect a query field: turn the cursor off, turn off
 highlighting, etc." ))
 
-(define-command (com-select-query :command-table accepting-values
+(define-command (com-select-query :command-table accept-values
 				  :name nil
 				  :provide-output-destination-keyword nil)
     ((query-identifier t))
@@ -391,14 +393,14 @@ highlighting, etc." ))
 	(when query
 	  (setf selected-query query)
 	  (select-query *accepting-values-stream* query (record query))
-	  (let ((command-ptype '(command :command-table accepting-values)))
+	  (let ((command-ptype '(command :command-table accept-values)))
 	    (if (cdr query-list)
 	      (throw-object-ptype `(com-select-query ,(query-identifier
 						       (cadr query-list)))
 				  command-ptype)
 	      (throw-object-ptype '(com-deselect-query) command-ptype))))))))
 
-(define-command (com-deselect-query :command-table accepting-values
+(define-command (com-deselect-query :command-table accept-values
 				    :name nil
 				    :provide-output-destination-keyword nil)
     ()
@@ -587,7 +589,7 @@ is run for the last time"))
 
 
 (define-presentation-to-command-translator com-select-field
-    (selectable-query com-select-query accepting-values
+    (selectable-query com-select-query accept-values
      :gesture :select
      :documentation "Select field for input"
      :pointer-documentation "Select field for input"
@@ -600,7 +602,7 @@ is run for the last time"))
   `(,object))
 
 (define-presentation-to-command-translator com-exit-button
-    (exit-button com-query-exit accepting-values
+    (exit-button com-query-exit accept-values
      :gesture :select
      :documentation "Exit dialog"
      :pointer-documentation "Exit dialog"
@@ -609,7 +611,7 @@ is run for the last time"))
   ())
 
 (define-presentation-to-command-translator com-abort-button
-    (abort-button com-query-abort accepting-values
+    (abort-button com-query-abort accept-values
      :gesture :select
      :documentation "Abort dialog"
      :pointer-documentation "Abort dialog"
