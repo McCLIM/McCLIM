@@ -779,73 +779,65 @@ the associated sheet can be determined."
      old-min-x old-min-y old-max-x old-max-y)    
   (with-bounding-rectangle* (ox1 oy1 ox2 oy2)  record
     (with-bounding-rectangle* (cx1 cy1 cx2 cy2) changed-child
-      (let ((child-was-empty (and (= old-min-x old-min-y) ; =(
-                                  (= old-max-x old-max-y))))
-        ;; If record is currently empty, use the child's bbox directly. Else..
-        ;; Does the new rectangle of the child contain the original rectangle?
-        ;; If so, we can use min/max to grow record's current rectangle.
-        ;; If not, the child has shrunk, and we need to fully recompute.      
-        (multiple-value-bind (nx1 ny1 nx2 ny2)
-            (cond
-              ;; The child has been deleted, but none of its edges contribute
-              ;; to the bounding rectangle of the parent, so the bounding
-              ;; rectangle cannot be changed by its deletion.
-              ;; This is also true if the child was empty.
-              ((or child-was-empty
-                   (and (output-record-parent changed-child)
-                        (> old-min-x ox1)
-                        (> old-min-y oy1)
-                        (< old-max-x ox2)
-                        (< old-max-y oy2)))
-               (values ox1 oy1 ox2 oy2))
-              ;; The child has been deleted; who knows what the
-              ;; new bounding box might be.
-              ((not (output-record-parent changed-child))
-               (%tree-recompute-extent* record))
-              ;; Only one child of record, and we already have the bounds.
-              ((eql (output-record-count record) 1)
-               (values cx1 cy1 cx2 cy2))
-              ;; If our record occupied no space (had no children, or had only
-              ;; children similarly occupying no space, hackishly determined by
-              ;; null-bounding-rectangle-p), recompute the extent now, otherwise
-              ;; the next COND clause would, as an optimization, attempt to extend
-              ;; our current bounding rectangle, which is invalid.
-              ((null-bounding-rectangle-p record)
-               (%tree-recompute-extent* record))
-              ;; In the following cases, we can grow the new bounding rectangle
-              ;; from its previous state:
-              ((or
-                ;; If the child was originally empty, it should not have affected
-                ;; previous computation of our bounding rectangle.
-                child-was-empty
-                ;; No child edge which may have defined the bounding rectangle of
-                ;; the parent has shrunk inward, so min/max the new child rectangle
-                ;; against the existing rectangle. Other edges of the child may have
-                ;; moved, but this can't affect the parent bounding rectangle.
-                (and (or (> old-min-x ox1) (>= old-min-x cx1))
-                     (or (> old-min-y oy1) (>= old-min-y cy1))
-                     (or (< old-max-x ox2) (<= old-max-x cx2))
-                     (or (< old-max-y oy2) (<= old-max-y cy2))))
-               ;; In these cases, we can grow the rectangle using min/max.
-               (values (min cx1 ox1) (min cy1 oy1)
-                       (max cx2 ox2) (max cy2 oy2)))
-              ;; No shortcuts - we must compute a new bounding box from those of
-              ;; all our children. We want to avoid this - in worst cases, such as
-              ;; a toplevel output history, large graph, or table, there may exist
-              ;; thousands of children. Without the above optimizations,
-              ;; construction becomes O(N^2) due to bounding rectangle calculation.
-              (t (%tree-recompute-extent* record)))
-          ;; XXX banish x, y
-          (with-slots (x y)
-              record
-            (setf x nx1 y ny1)
-            (setf (rectangle-edges* record) (values  nx1 ny1 nx2 ny2))
-            (let ((parent (output-record-parent record)))
-              (unless (or (null parent)
-                          (and (= nx1 ox1) (= ny1 oy1)
-                               (= nx2 ox2) (= nx2 oy2)))
-                (recompute-extent-for-changed-child parent record
-                                                    ox1 oy1 ox2 oy2))))))))
+      ;; If record is currently empty, use the child's bbox directly. Else..
+      ;; Does the new rectangle of the child contain the original rectangle?
+      ;; If so, we can use min/max to grow record's current rectangle.
+      ;; If not, the child has shrunk, and we need to fully recompute.
+      (multiple-value-bind (nx1 ny1 nx2 ny2) 
+          (cond
+            ;; The child has been deleted; who knows what the
+            ;; new bounding box might be.
+            ((not (output-record-parent changed-child))
+             (%tree-recompute-extent* record))
+            ;; Only one child of record, and we already have the bounds.
+            ((eql (output-record-count record) 1)
+             (values cx1 cy1 cx2 cy2))
+            ;; If our record occupied no space (had no children, or had only
+            ;; children similarly occupying no space, hackishly determined by
+            ;; null-bounding-rectangle-p), recompute the extent now, otherwise
+            ;; the next COND clause would, as an optimization, attempt to extend
+            ;; our current bounding rectangle, which is invalid.
+            ((null-bounding-rectangle-p record)
+             (%tree-recompute-extent* record))
+            ;; In the following cases, we can grow the new bounding rectangle
+            ;; from its previous state:
+            ((or
+              ;; If the child was originally empty, it should not have affected
+              ;; previous computation of our bounding rectangle.
+              ;; This is hackish for reasons similar to the above.
+              (and (zerop old-min-x) (zerop old-min-y)
+                   (zerop old-max-x) (zerop old-max-y))
+	      ;; For each old child coordinate, either it was not
+	      ;; involved in determining the bounding rectangle of the
+	      ;; parent, or else it is the same as the corresponding
+	      ;; new child coordinate.
+	      (and (or (> old-min-x ox1) (= old-min-x cx1))
+		   (or (> old-min-y oy1) (= old-min-y cy1))
+		   (or (< old-max-x ox2) (= old-max-x cx2))
+		   (or (< old-max-y oy2) (= old-max-y cy2)))
+              ;; New child bounds contain old child bounds, so use min/max
+              ;; to extend the already-calculated rectangle.
+              (and (<= cx1 old-min-x) (<= cy1 old-min-y)
+                   (>= cx2 old-max-x) (>= cy2 old-max-y)))
+             (values (min cx1 ox1) (min cy1 oy1)
+                     (max cx2 ox2) (max cy2 oy2)))
+            ;; No shortcuts - we must compute a new bounding box from those of
+            ;; all our children. We want to avoid this - in worst cases, such as
+            ;; a toplevel output history, large graph, or table, there may exist
+            ;; thousands of children. Without the above optimizations,
+            ;; construction becomes O(N^2) due to bounding rectangle calculation.
+            (t (%tree-recompute-extent* record)))
+        ;; XXX banish x, y
+        (with-slots (x y)
+	    record
+          (setf x nx1 y ny1)
+	  (setf (rectangle-edges* record) (values  nx1 ny1 nx2 ny2))
+	  (let ((parent (output-record-parent record)))
+	    (unless (or (null parent)
+			(and (= nx1 ox1) (= ny1 oy1)
+			     (= nx2 ox2) (= nx2 oy2)))
+	      (recompute-extent-for-changed-child parent record
+						  ox1 oy1 ox2 oy2)))))))
   record)
 
 ;; There was once an :around method on recompute-extent-for-changed-child here,
