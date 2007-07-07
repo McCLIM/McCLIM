@@ -18,7 +18,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; Derived from dk.brics.automaton v1.8.1, (c) 2001-2005 by Anders Møller
+;;; Derived from dk.brics.automaton v1.8.1, (c) 2001-2005 by Anders M/oller
 
 (in-package :automaton)
 

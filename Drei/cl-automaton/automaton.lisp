@@ -18,7 +18,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 ;;;
-;;; Derived from dk.brics.automaton v1.8.1, (c) 2001-2005 by Anders Møller
+;;; Derived from dk.brics.automaton v1.8.1, (c) 2001-2005 by Anders M/oller
 ;;; - Functionality not used by the regular expression engine and not tested
 ;;;   has been omitted from this initial release.
 ;;; - Some comments have been copied verbatim from the original code.
