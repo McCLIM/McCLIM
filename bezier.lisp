@@ -56,7 +56,8 @@
   (- (* (realpart z) (point-y v))
      (* (imagpart z) (point-x v))))
 
-(defclass bezier-design (design) ())
+(defclass bezier-design (design) 
+  ((%or :accessor original-region :initform nil)))
 
 (defgeneric medium-draw-bezier-design* (stream design))
 
@@ -79,6 +80,12 @@
 	  (stream-add-output-record stream record)))
       (when (stream-drawing-p stream)
 	(medium-draw-bezier-design* medium design)))))
+
+(defmethod medium-draw-bezier-design* :around 
+    ((medium transform-coordinates-mixin) design)
+  (let* ((tr (medium-transformation medium))
+         (design (transform-region tr design)))
+    (call-next-method medium design)))
 
 (defmethod replay-output-record ((record bezier-design-output-record) stream &optional
 				 (region +everywhere+) (x-offset 0) (y-offset 0))
@@ -108,12 +115,12 @@
     (values min-x min-y max-x max-y)))
 
 (defclass segments-mixin (bounding-rectangle-mixin)
-  ((%segments :initarg :segments :initform '() :reader segments)))
+  ((%segments :initarg :segments :initform '() :reader %segments)))
 
-(defun compute-bounding-rectangle* (segments-mixin)
+(defmethod compute-bounding-rectangle* ((segments-mixin segments-mixin))
   (multiple-value-bind (final-min-x final-min-y final-max-x final-max-y)
-      (segment-bounding-rectangle (car (segments segments-mixin)))
-    (loop for segment in (cdr (segments segments-mixin))
+      (segment-bounding-rectangle (car (%segments segments-mixin)))
+    (loop for segment in (cdr (%segments segments-mixin))
 	  do (multiple-value-bind (min-x min-y max-x max-y)
 		 (segment-bounding-rectangle segment)
 	       (setf final-min-x (min final-min-x min-x)
@@ -171,7 +178,7 @@
   (make-instance 'bezier-curve
 		 :segments (mapcar (lambda (segment)
 				     (transform-segment transformation segment))
-				   (segments path))))
+				   (%segments path))))
 
 (defmethod region-equal ((p1 point) (p2 point))
   (let ((coordinate-epsilon (* #.(expt 2 10) double-float-epsilon)))
@@ -179,49 +186,33 @@
 	 (<= (abs (- (point-y p1) (point-y p2))) coordinate-epsilon))))	 
 
 (defmethod region-union ((r1 bezier-curve) (r2 bezier-curve))
-  (let ((p (slot-value (car (last (segments r1))) 'p3))
-	(seg (car (segments r2))))
+  (let ((p (slot-value (car (last (%segments r1))) 'p3))
+	(seg (car (%segments r2))))
     (if (region-equal p (slot-value seg 'p0))
 	(with-slots (p1 p2 p3) seg
 	  (make-instance 'bezier-curve
-			 :segments (append (segments r1)
+			 :segments (append (%segments r1)
 					   (cons (make-bezier-segment p p1 p2 p3)
-						 (cdr (segments r2))))))
+						 (cdr (%segments r2))))))
 	(call-next-method))))
 
-;;; A region that translates a different region
-(defclass translated-bezier-design (region bezier-design)
-  ((%translation :initarg :translation :reader translation)
-   (%region :initarg :region :reader original-region)))
-
-(defmethod bounding-rectangle* ((region translated-bezier-design))
-  (let ((translation (translation region)))
-    (multiple-value-bind (min-x min-y max-x max-y)
-	(bounding-rectangle* (original-region region))
-      (multiple-value-bind (final-min-x final-min-y)
-	  (transform-position translation min-x min-y)
-	(multiple-value-bind (final-max-x final-max-y)
-	    (transform-position translation max-x max-y)
-	  (values final-min-x final-min-y final-max-x final-max-y))))))
-
-(defgeneric really-transform-region (transformation region))
-
 ;;; an area defined as a closed path of Bezier curve segments
-(defclass bezier-area (area bezier-design segments-mixin bounding-rectangle-mixin) ())
+(defclass bezier-area (area bezier-design segments-mixin bounding-rectangle-mixin) 
+  ((%trans :initarg :transformation :reader transformation :initform +identity-transformation+)))
 
 (defgeneric close-path (path))
 
 (defmethod close-path ((path bezier-curve))
-  (let ((segments (segments path)))
+  (let ((segments (%segments path)))
     (assert (region-equal (slot-value (car segments) 'p0)
 			  (slot-value (car (last segments)) 'p3)))
     (make-instance 'bezier-area :segments segments)))
 
 (defun path-start (path)
-  (slot-value (car (segments path)) 'p0))
+  (slot-value (car (%segments path)) 'p0))
 
 (defun path-end (path)
-  (slot-value (car (last (segments path))) 'p3))
+  (slot-value (car (last (%segments path))) 'p3))
 
 (defun make-bezier-area (point-seq)
   (assert (region-equal (car point-seq) (car (last point-seq))))
@@ -232,18 +223,26 @@
 	       (coordinate= (cadr coord-seq) (car (last coord-seq)))))
   (make-bezier-thing* 'bezier-area coord-seq))
 
-(defmethod really-transform-region (transformation (area bezier-area))
-  (make-instance 'bezier-area
-		 :segments (mapcar (lambda (segment)
-				     (transform-segment transformation segment))
-				   (segments area))))
+(defmethod segments ((area bezier-area))
+  (let ((tr (transformation area)))
+    (mapcar (lambda (s) (transform-segment tr s)) (%segments area))))
 
 (defmethod transform-region (transformation (area bezier-area))
-  (if (translation-transformation-p transformation)
-      (make-instance 'translated-bezier-design
-		     :translation transformation
-		     :region area)
-      (really-transform-region transformation area)))
+  (let* ((tr (transformation area))
+         (result (if (translation-transformation-p transformation)
+                     (make-instance 'bezier-area :segments (%segments area)
+                                    :transformation 
+                                    (compose-transformations transformation tr))
+                     (make-instance 'bezier-area 
+                                    :segments (mapcar (lambda (s) (transform-segment transformation s)) (segments area))))))
+    (when (translation-transformation-p transformation)
+      (setf (original-region result) (or (original-region area) area)))
+    result))
+
+(defmethod compute-bounding-rectangle* ((area bezier-area))
+  (multiple-value-bind (lx ly ux uy) (call-next-method)
+    (let ((tr (transformation area)))
+      (transform-rectangle* tr lx ly ux uy))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -251,20 +250,20 @@
 
 ;;; A union of bezier areas.  This is not itself a bezier area.
 (defclass bezier-union (area bezier-design)
-  ((%areas :initarg :areas :initform '() :reader areas)))
+  ((%trans :initarg :transformation :reader transformation :initform +identity-transformation+)
+   (%areas :initarg :areas :initform '() :reader areas)))
 
-(defmethod really-transform-region (transformation (area bezier-union))
-  (let ((areas (loop for area in (areas area)
-		     collect (transform-region transformation area))))
-    (make-instance 'bezier-union
-		   :areas areas)))
-
-(defmethod transform-region (transformation (area bezier-union))
-  (if (translation-transformation-p transformation)
-      (make-instance 'translated-bezier-design
-		     :translation transformation
-		     :region area)
-      (really-transform-region transformation area)))
+(defmethod transform-region (transformation (union bezier-union))
+  (let* ((tr (transformation union))
+         (new-tr (compose-transformations transformation tr))
+         (result (if (translation-transformation-p transformation)
+                     (make-instance 'bezier-union :areas (areas union)
+                                    :transformation new-tr)
+                     (make-instance 'bezier-union
+                                    :areas (loop for area in (areas union) collect (transform-region new-tr area))))))
+    (when (translation-transformation-p transformation)
+      (setf (original-region result) (or (original-region union) union)))
+    result))
 
 (defun bounding-rectangle-of-areas (areas)
   (multiple-value-bind (final-min-x final-min-y final-max-x final-max-y)
@@ -279,43 +278,57 @@
     (values final-min-x final-min-y final-max-x final-max-y)))
 
 (defmethod bounding-rectangle* ((design bezier-union))
-  (bounding-rectangle-of-areas (areas design)))
+  (multiple-value-bind (lx ly ux uy)
+      (bounding-rectangle-of-areas (areas design))
+    (transform-rectangle* (transformation design) lx ly ux uy)))
 
 (defmethod region-union ((r1 bezier-area) (r2 bezier-area))
-  (make-instance 'bezier-union
-		 :areas (list r1 r2)))
+  (make-instance 'bezier-union :areas (list r1 r2)))
 
 (defmethod region-union ((r1 bezier-union) (r2 bezier-area))
-  (make-instance 'bezier-union
-		 :areas (cons r2 (areas r1))))
+  (let ((tr (transformation r1)))
+    (make-instance 'bezier-union 
+                   :areas (cons (untransform-region tr r2) (areas r1))
+                   :transformation tr)))
 
 (defmethod region-union ((r1 bezier-area) (r2 bezier-union))
-  (make-instance 'bezier-union
-		 :areas (cons r1 (areas r2))))
+  (let ((tr (transformation r2)))
+    (make-instance 'bezier-union 
+                   :areas (cons (untransform-region tr r1) (areas r2))
+                   :transformation tr)))
 
 (defmethod region-union ((r1 bezier-union) (r2 bezier-union))
-  (make-instance 'bezier-union
-		 :areas (append (areas r1) (areas r2))))
+  (let ((tr1 (transformation r1))
+        (tr2 (transformation r2)))
+    (if (transformation-equal tr1 tr2)
+        (make-instance 'bezier-union 
+                       :areas (append (areas r1) (areas r2))
+                       :transformation tr1)
+        (let ((len1 (length (areas r1)))
+              (len2 (length (areas r2))))
+          (if (> len2 len1)
+              (make-instance 'bezier-union
+                             :areas (append (mapcar (lambda (r) (untransform-region tr2 (transform-region tr1 r))) (areas r1)) (areas r2))
+                             :transformation tr2)
+              (make-instance 'bezier-union
+                             :areas (append (mapcar (lambda (r) (untransform-region tr1 (transform-region tr2 r))) (areas r2)) (areas r1))
+                             :transformation tr1))))))
 
 (defclass bezier-difference (area bezier-design)
   ((%positive-areas :initarg :positive-areas :initform '() :reader positive-areas)
    (%negative-areas :initarg :negative-areas :initform '() :reader negative-areas)))
 
-(defmethod really-transform-region (transformation (area bezier-difference))
-  (let ((pareas (loop for area in (positive-areas area)
-		      collect (transform-region transformation area)))
-	(nareas (loop for area in (negative-areas area)
-		      collect (transform-region transformation area))))
-    (make-instance 'bezier-difference
-		   :positive-areas pareas
-		   :negative-areas nareas)))
-
 (defmethod transform-region (transformation (area bezier-difference))
-  (if (translation-transformation-p transformation)
-      (make-instance 'translated-bezier-design
-		     :translation transformation
-		     :region area)
-      (really-transform-region transformation area)))
+  (let* ((pareas (loop for area in (positive-areas area)
+                       collect (transform-region transformation area)))
+         (nareas (loop for area in (negative-areas area)
+                       collect (transform-region transformation area)))
+         (result (make-instance 'bezier-difference
+                                :positive-areas pareas
+                                :negative-areas nareas)))
+    (when (translation-transformation-p transformation)
+      (setf (original-region result) (or (original-region area) area)))
+    result))
 
 (defmethod bounding-rectangle* ((design bezier-difference))
   (bounding-rectangle-of-areas (positive-areas design)))
@@ -326,19 +339,23 @@
 		 :negative-areas (list r2)))
 
 (defmethod region-difference ((r1 bezier-area) (r2 bezier-union))
-  (make-instance 'bezier-difference
-		 :positive-areas (list r1)
-		 :negative-areas (areas r2)))
+  (let ((tr (transformation r2)))
+    (make-instance 'bezier-difference
+                   :positive-areas (list r1)
+                   :negative-areas (mapcar (lambda (r) (transform-region tr r)) (areas r2)))))
 
 (defmethod region-difference ((r1 bezier-union) (r2 bezier-area))
-  (make-instance 'bezier-difference
-		 :positive-areas (areas r1)
-		 :negative-areas (list r2)))
+  (let ((tr (transformation r1)))
+    (make-instance 'bezier-difference
+                   :positive-areas (mapcar (lambda (r) (transform-region tr r)) (areas r1))
+                   :negative-areas (list r2))))
 
 (defmethod region-difference ((r1 bezier-union) (r2 bezier-union))
-  (make-instance 'bezier-difference
-		 :positive-areas (areas r1)
-		 :negative-areas (areas r2)))
+  (let ((tr1 (transformation r1))
+        (tr2 (transformation r2)))
+    (make-instance 'bezier-difference
+                   :positive-areas (mapcar (lambda (r) (transform-region tr1 r)) (areas r1))
+                   :negative-areas (mapcar (lambda (r) (transform-region tr2 r)) (areas r2)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -369,7 +386,7 @@
     (%polygonalize p0 p1 p2 p3)))
 
 (defmethod polygonalize ((path bezier-curve))
-  (let ((segments (segments path)))
+  (let ((segments (%segments path)))
     (make-polyline
      (cons (slot-value (car segments) 'p0)
 	   (mapcan #'polygonalize segments)))))
@@ -390,11 +407,12 @@
 
 (defmethod reverse-path ((path bezier-curve))
   (make-instance 'bezier-curve
-		 :segments (reverse (mapcar #'reverse-segment (segments path)))))
+		 :segments (reverse (mapcar #'reverse-segment (%segments path)))))
 
 (defmethod reverse-path ((path bezier-area))
   (make-instance 'bezier-area
-		 :segments (reverse (mapcar #'reverse-segment (segments path)))))
+		 :segments (reverse (mapcar #'reverse-segment (%segments path)))
+                 :transformation (transformation path)))
 
 ;;; slanting transformation are used by Metafont
 (defun make-slanting-transformation (slant)
@@ -574,7 +592,7 @@
 (defmethod convolute-regions ((area bezier-area) (path bezier-curve))
   (let ((polygon (polygonalize area)))
     (make-instance 'bezier-union
-      :areas (loop for segment in (segments path)
+      :areas (loop for segment in (%segments path)
 		   append (convolute-polygon-and-segment area polygon segment)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -670,9 +688,6 @@
 (defmethod positive-negative-areas ((design bezier-difference))
   (values (positive-areas design) (negative-areas design)))
 
-(defmethod positive-negative-areas ((design translated-bezier-design))
-  (positive-negative-areas (original-region design)))
-
 (defun render-to-array (design)
   (multiple-value-bind (positive-areas negative-areas)
       (positive-negative-areas design)
@@ -695,9 +710,6 @@
 		   (render-polygon result polygon 1 min-x min-y)))
 	result))))
 
-(defparameter *x* 0)
-(defparameter *y* 0)
-
 (defparameter *pixmaps* (make-hash-table :test #'equal))
 
 (defun resolve-ink (medium)
@@ -715,8 +727,9 @@
 
 (defgeneric ensure-pixmap (medium design))
 
-(defmethod ensure-pixmap (medium design)
-  (let ((pixmap (gethash (list (medium-sheet medium) (resolve-ink medium) design)
+(defmethod ensure-pixmap (medium rdesign)
+  (let* ((design (or (original-region rdesign) rdesign))
+         (pixmap (gethash (list (medium-sheet medium) (resolve-ink medium) design)
 			 *pixmaps*)))
     (when (null pixmap)
       (let* ((picture (render-to-array design))
@@ -743,17 +756,21 @@
 	      pixmap)))
     pixmap))
 
-(defmethod ensure-pixmap (medium (design translated-bezier-design))
-  (ensure-pixmap medium (original-region design)))
-
 (defun render-through-pixmap (design medium)
   (multiple-value-bind (min-x min-y)
       (bounding-rectangle* design)
-    (setf min-x (floor min-x)
-	  min-y (floor min-y))
-    (let ((pixmap (ensure-pixmap medium design)))
-      (copy-from-pixmap pixmap 0 0 (pixmap-width pixmap) (pixmap-height pixmap)
-			(medium-sheet medium) (+ *x* min-x) (+ *y* min-y)))))
+    ;; the design we've got has already been transformed by the
+    ;; medium/user transformation, and COPY-FROM-PIXMAP is in user
+    ;; coordinates.  So we need to transform back (or set the medium's
+    ;; transformation to be +IDENTITY-TRANSFORMATION+ temporarily, but
+    ;; that's even uglier)
+    (multiple-value-bind (utmin-x utmin-y)
+        (untransform-position (medium-transformation medium) min-x min-y)
+      (setf min-x (floor utmin-x)
+            min-y (floor utmin-y))
+      (let ((pixmap (ensure-pixmap medium design)))
+        (copy-from-pixmap pixmap 0 0 (pixmap-width pixmap) (pixmap-height pixmap)
+                          (medium-sheet medium) min-x min-y)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -775,73 +792,6 @@
 
 (defmethod medium-draw-bezier-design* (medium design)
   (render-through-pixmap design medium))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; Special cases on region-union and region-intersection
-
-(defmethod region-union ((r1 translated-bezier-design) (r2 bezier-curve))
-  (region-union (really-transform-region (translation r1) (original-region r1)) r2))
-
-(defmethod region-union ((r1 translated-bezier-design) (r2 bezier-area))
-  (region-union (really-transform-region (translation r1) (original-region r1)) r2))
-
-(defmethod region-union ((r1 translated-bezier-design) (r2 bezier-union))
-  (region-union (really-transform-region (translation r1) (original-region r1)) r2))
-
-(defmethod region-union ((r1 translated-bezier-design) (r2 bezier-difference))
-  (region-union (really-transform-region (translation r1) (original-region r1)) r2))
-
-(defmethod region-union ((r1 bezier-curve) (r2 translated-bezier-design))
-  (region-union r1 (really-transform-region (translation r2) (original-region r2))))
-
-(defmethod region-union ((r1 bezier-area) (r2 translated-bezier-design))
-  (region-union r1 (really-transform-region (translation r2) (original-region r2))))
-
-(defmethod region-union ((r1 bezier-union) (r2 translated-bezier-design))
-  (region-union r1 (really-transform-region (translation r2) (original-region r2))))
-
-(defmethod region-union ((r1 bezier-difference) (r2 translated-bezier-design))
-  (region-union r1 (really-transform-region (translation r2) (original-region r2))))
-
-(defmethod region-union ((r1 translated-bezier-design) (r2 translated-bezier-design))
-  (region-union (really-transform-region (translation r1) (original-region r1)) r2))
-
-(defmethod region-difference ((r1 translated-bezier-design) (r2 bezier-curve))
-  (region-difference (really-transform-region (translation r1) (original-region r1)) r2))
-
-(defmethod region-difference ((r1 translated-bezier-design) (r2 bezier-area))
-  (region-difference (really-transform-region (translation r1) (original-region r1)) r2))
-
-(defmethod region-difference ((r1 translated-bezier-design) (r2 bezier-union))
-  (region-difference (really-transform-region (translation r1) (original-region r1)) r2))
-
-(defmethod region-difference ((r1 translated-bezier-design) (r2 bezier-difference))
-  (region-difference (really-transform-region (translation r1) (original-region r1)) r2))
-
-(defmethod region-difference ((r1 bezier-curve) (r2 translated-bezier-design))
-  (region-difference r1 (really-transform-region (translation r2) (original-region r2))))
-
-(defmethod region-difference ((r1 bezier-area) (r2 translated-bezier-design))
-  (region-difference r1 (really-transform-region (translation r2) (original-region r2))))
-
-(defmethod region-difference ((r1 bezier-union) (r2 translated-bezier-design))
-  (region-difference r1 (really-transform-region (translation r2) (original-region r2))))
-
-(defmethod region-difference ((r1 bezier-difference) (r2 translated-bezier-design))
-  (region-difference r1 (really-transform-region (translation r2) (original-region r2))))
-
-(defmethod region-difference ((r1 translated-bezier-design) (r2 translated-bezier-design))
-  (region-difference r1 (really-transform-region (translation r2) (original-region r2))))
-
-(defmethod transform-region (transformation (region translated-bezier-design))
-  (let ((combined-transformation (compose-transformations transformation
-							  (translation region))))
-    (if (translation-transformation-p transformation)
-	(make-instance 'translated-bezier-design
-		       :translation combined-transformation
-		       :region (original-region region))
-	(transform-region combined-transformation (original-region region)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
