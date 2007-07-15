@@ -2048,10 +2048,20 @@ were added."
      when (eq parent nil) do (return nil)
      when (eq parent ancestor) do (return t)))
 
+(defun rounded-bounding-rectangle (region)
+  ;; return a bounding rectangle whose coordinates have been rounded to
+  ;; lock into the pixel grid.  Includes some extra safety to make
+  ;; sure antialiasing around the theoretical limits are included, too.
+  (with-bounding-rectangle* (x1 y1 x2 y2) region
+    (make-rectangle*  (floor (- x1 0.5))
+		      (floor (- y1 0.5))
+		      (ceiling (+ x2 0.5))
+		      (ceiling (+ y2 0.5)))))
+
 (defmethod erase-output-record (record (stream standard-output-recording-stream)
                                 &optional (errorp t))
   (letf (((stream-recording-p stream)  nil))
-    (let ((region (bounding-rectangle record)))
+    (let ((region (rounded-bounding-rectangle record)))
       (with-bounding-rectangle* (x1 y1 x2 y2) region
         (if (output-record-ancestor-p (stream-output-history stream) record)
             (progn
