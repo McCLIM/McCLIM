@@ -568,7 +568,13 @@
 				   (add-points p1 left) (add-points p0 left))
 	      (make-line-segment (add-points p0 left) (add-points p0 right)))))))
 
-(defun convolute-polygon-and-segment (area polygon segment)
+(defun area-at-point (area point)
+  (let ((transformation 
+	 (make-translation-transformation (point-x point) (point-y point))))
+    (transform-region transformation area)))
+
+(defun convolve-polygon-and-segment (area polygon segment first)
+  (declare (optimize debug))
   (let* ((points (polygon-points polygon))
 	 (sides (loop for (p0 p1) on (append (last points) points)
 		      until (null p1)
@@ -576,24 +582,20 @@
 	 (split-points (find-split-points sides segment))
 	 (segments (split-segment segment split-points)))
     (loop for segment in segments 
-	  append (list (let* ((p (slot-value segment 'p0))
-			      (transformation (make-translation-transformation 
-					       (point-x p) (point-y p))))
-			 (transform-region transformation area))
-		       (convert-primitive-segment-to-bezier-area (polygon-points polygon)
-								 segment)
-		       (let* ((p (slot-value segment 'p3))
-			      (transformation (make-translation-transformation 
-					       (point-x p) (point-y p))))
-			 (transform-region transformation area))))))
+	  if first collect (area-at-point area (slot-value segment 'p0))
+	  collect (convert-primitive-segment-to-bezier-area 
+		   (polygon-points polygon) segment)
+	  collect (area-at-point area (slot-value segment 'p3)))))
 
-(defgeneric convolute-regions (area path))
+(defgeneric convolve-regions (area path))
 
-(defmethod convolute-regions ((area bezier-area) (path bezier-curve))
+(defmethod convolve-regions ((area bezier-area) (path bezier-curve))
   (let ((polygon (polygonalize area)))
-    (make-instance 'bezier-union
-      :areas (loop for segment in (%segments path)
-		   append (convolute-polygon-and-segment area polygon segment)))))
+    (make-instance 
+     'bezier-union :areas 
+     (loop for segment in (%segments path)
+	   for first = t then nil
+	   append (convolve-polygon-and-segment area polygon segment first)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -793,6 +795,7 @@
 (defmethod medium-draw-bezier-design* (medium design)
   (render-through-pixmap design medium))
 
+#|
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Test cases
@@ -806,3 +809,4 @@
 (defparameter *r4* (make-bezier-curve* '(100 100 120 150 160 160 170 160)))
 
 (defparameter *r5* (convolute-regions *r2* *r4*))
+|#
