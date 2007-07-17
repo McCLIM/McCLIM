@@ -23,18 +23,22 @@
   ((buffering-output-p :accessor medium-buffering-output-p)))
 
 (defmethod (setf medium-text-style) :before (text-style (medium null-medium))
-  ())
+  (declare (ignore text-style))
+  nil)
 
 (defmethod (setf medium-line-style) :before (line-style (medium null-medium))
-  ())
+  (declare (ignore line-style))
+  nil)
 
 (defmethod (setf medium-clipping-region) :after (region (medium null-medium))
-  ())
+  (declare (ignore region))
+  nil)
 
 (defmethod medium-copy-area ((from-drawable null-medium)
 			     from-x from-y width height
                              (to-drawable null-medium)
 			     to-x to-y)
+  (declare (ignore from-x from-y width height to-x to-y))
   nil)
 
 #+nil ; FIXME: PIXMAP class
@@ -43,26 +47,34 @@
 			       from-x from-y width height
 			       (to-drawable pixmap)
 			       to-x to-y)
+    (declare (ignore from-x from-y width height to-x to-y))
     nil)
+
   (defmethod medium-copy-area ((from-drawable pixmap)
 			       from-x from-y width height
 			       (to-drawable null-medium)
 			       to-x to-y)
-    ())
+    (declare (ignore from-x from-y width height to-x to-y))
+    nil)
+
   (defmethod medium-copy-area ((from-drawable pixmap)
 			       from-x from-y width height
 			       (to-drawable pixmap)
 			       to-x to-y)
-    ()))
+    (declare (ignore from-x from-y width height to-x to-y))
+    nil))
 
 (defmethod medium-draw-point* ((medium null-medium) x y)
-  ())
+  (declare (ignore x y))
+  nil)
 
 (defmethod medium-draw-points* ((medium null-medium) coord-seq)
-  ())
+  (declare (ignore coord-seq))
+  nil)
 
 (defmethod medium-draw-line* ((medium null-medium) x1 y1 x2 y2)
-  ())
+  (declare (ignore x1 y1 x2 y2)) 
+  nil)
 
 ;; FIXME: Invert the transformation and apply it here, as the :around
 ;; methods on transform-coordinates-mixin will cause it to be applied
@@ -74,33 +86,50 @@
     nil))
 
 (defmethod medium-draw-polygon* ((medium null-medium) coord-seq closed filled)
-  ())
+  (declare (ignore coord-seq closed filled))
+  nil)
 
 (defmethod medium-draw-rectangle* ((medium null-medium) left top right bottom filled)
-  ())
+  (declare (ignore left top right bottom filled))
+  nil)
+
 (defmethod medium-draw-rectangles* ((medium null-medium) position-seq filled)
-  ())
+  (declare (ignore position-seq filled))
+  nil)
 
 (defmethod medium-draw-ellipse* ((medium null-medium) center-x center-y
 				 radius-1-dx radius-1-dy
 				 radius-2-dx radius-2-dy
 				 start-angle end-angle filled)
-  ())
+  (declare (ignore center-x center-y
+		   radius-1-dx radius-1-dy
+		   radius-2-dx radius-2-dy
+		   start-angle end-angle filled))
+  nil)
 
 (defmethod medium-draw-circle* ((medium null-medium)
 				center-x center-y radius start-angle end-angle
 				filled)
-  ())
+  (declare (ignore center-x center-y radius
+		   start-angle end-angle filled))
+  nil)
 
 (defmethod text-style-ascent (text-style (medium null-medium))
+  (declare (ignore text-style))
   1)
+
 (defmethod text-style-descent (text-style (medium null-medium))
+  (declare (ignore text-style))
   1)
+
 (defmethod text-style-height (text-style (medium null-medium))
   (+ (text-style-ascent text-style medium)
      (text-style-descent text-style medium)))
+
 (defmethod text-style-character-width (text-style (medium null-medium) char)
+  (declare (ignore text-style char))
   1)
+
 ;;; FIXME: this one is nominally backend-independent
 (defmethod text-style-width (text-style (medium null-medium))
   (text-style-character-width text-style medium #\m))
@@ -134,11 +163,16 @@
                               start end
                               align-x align-y
                               toward-x toward-y transform-glyphs)
-  ())
+  (declare (ignore string x y
+		   start end
+		   align-x align-y
+		   toward-x toward-y transform-glyphs))
+  nil)
 
 #+nil
 (defmethod medium-buffering-output-p ((medium null-medium))
   t)
+
 #+nil
 (defmethod (setf medium-buffering-output-p) (buffer-p (medium null-medium))
   buffer-p)
@@ -146,18 +180,23 @@
 (defmethod medium-draw-glyph ((medium null-medium) element x y
 			      align-x align-y toward-x toward-y
 			      transform-glyphs)
-  ())
+  (declare (ignore element x y
+		   align-x align-y toward-x toward-y
+		   transform-glyphs))
+  nil)
 
 (defmethod medium-finish-output ((medium null-medium))
-  ())
+  nil)
+
 (defmethod medium-force-output ((medium null-medium))
-  ())
+  nil)
 
 (defmethod medium-clear-area ((medium null-medium) left top right bottom)
-  ())
+  (declare (ignore left top right bottom))
+  nil)
 
 (defmethod medium-beep ((medium null-medium))
-  ())
+  nil)
 
 (defmethod invoke-with-special-choices (continuation (medium null-medium))
   (let ((sheet (medium-sheet medium)))

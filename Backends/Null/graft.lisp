@@ -23,7 +23,9 @@
   ())
 
 (defmethod graft-width ((graft null-graft) &key (units :device))
-  ())
+  (declare (ignore units))
+  nil)
 
 (defmethod graft-height ((graft null-graft) &key (units :device))
-  ())
+  (declare (ignore units))
+  nil)
