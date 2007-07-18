@@ -1083,6 +1083,7 @@ were added."
 
 (defmethod replay-output-record :around
     ((record gs-ink-mixin) stream &optional region x-offset y-offset)
+  (declare (ignore region x-offset y-offset))
   (with-drawing-options (stream :ink (graphics-state-ink record))
     (call-next-method)))
 
@@ -1111,6 +1112,7 @@ were added."
 
 (defmethod replay-output-record :around
     ((record gs-clip-mixin) stream &optional region x-offset y-offset)
+  (declare (ignore region x-offset y-offset))
   (with-drawing-options (stream :clipping-region (graphics-state-clip record))
     (call-next-method)))
 
@@ -1140,6 +1142,7 @@ were added."
 
 (defmethod replay-output-record :around
     ((record gs-line-style-mixin) stream &optional region x-offset y-offset)
+  (declare (ignore region x-offset y-offset))
   (with-drawing-options (stream :line-style (graphics-state-line-style record))
     (call-next-method)))
 
@@ -1166,6 +1169,7 @@ were added."
 
 (defmethod replay-output-record :around
     ((record gs-text-style-mixin) stream &optional region x-offset y-offset)
+  (declare (ignore region x-offset y-offset))
   (with-drawing-options (stream :text-style (graphics-state-text-style record))
     (call-next-method)))
 
@@ -1688,7 +1692,6 @@ were added."
 					:text-style text-style)) )
         (ascent (text-style-ascent text-style (sheet-medium stream)))
         (descent (text-style-descent text-style (sheet-medium stream)))
-        (height (+ ascent descent))
 	(transform (medium-transformation medium)))
    (setf (values point-x point-y)
 	 (transform-position transform point-x point-y))
