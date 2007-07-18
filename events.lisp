@@ -158,12 +158,18 @@
 (defmethod pointer-event-y ((event pointer-event))
   (get-pointer-position ((event-sheet event) event) y))
 
+(defgeneric pointer-event-position* (pointer-event))
+
 (defmethod pointer-event-position* ((event pointer-event))
   (get-pointer-position ((event-sheet event) event)
     (values x y)))
 
+(defgeneric device-event-x (device-event))
+
 (defmethod device-event-x ((event device-event))
   (get-pointer-position ((event-sheet event) event) x))
+
+(defgeneric device-event-y (device-event))
 
 (defmethod device-event-y ((event device-event))
   (get-pointer-position ((event-sheet event) event) y))
@@ -237,8 +243,12 @@
      (declare (ignorable x y))
      ,@body))
 
+(defgeneric window-configuration-event-x (window-configuration-event))
+
 (defmethod window-configuration-event-x ((event window-configuration-event))
   (get-window-position ((event-sheet event) event) x))
+
+(defgeneric window-configuration-event-y (window-configuration-event))
 
 (defmethod window-configuration-event-y ((event window-configuration-event))
   (get-window-position ((event-sheet event) event) y))
