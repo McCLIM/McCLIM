@@ -299,7 +299,6 @@
 
 (defmethod climi::map-over-output-records-1 (function (record simple-screen-area)
 				      function-args)
-  (declare (ignore x-offset y-offset))
   (if function-args
       (loop for line = (area-first-line record) then (next line)
 	 while line
