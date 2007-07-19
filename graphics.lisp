@@ -572,14 +572,13 @@ position for the character."
                (p end)
                (q start)
 
-               (medium     (sheet-medium sheet))
-               (line-style (medium-line-style medium))
+               (line-style (medium-line-style sheet))
                ;; FIXME: I believe this thickness is in "line-style-units",
                ;; which are only coincidentally the same as pixel coorindates
                ;; on screen backends, using :normal units. There is no function
                ;; documented for converting the units to stream coordinates.
                (thickness  (multiple-value-bind (dx dy)
-                               (transform-distance (invert-transformation (medium-transformation medium))
+                               (transform-distance (invert-transformation (medium-transformation sheet))
                                                (line-style-thickness line-style)
                                                0)
                              (sqrt (+ (* dx dx) (* dy dy)))))
