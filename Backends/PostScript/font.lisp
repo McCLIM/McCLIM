@@ -94,7 +94,6 @@
   (unless end (setq end (length string)))
   (let* ((font-info (or (gethash font-name *font-metrics*)
                         (error "Unknown font ~S." font-name)))
-         (char-names (font-info-char-names font-info))
          (char-metrics (font-info-char-infos font-info))
          (scale (/ size 1000))
          (width 0) (upper-width 0)
@@ -237,10 +236,12 @@
                                                   direction first-not-done)
                           (psfont-text-extents metrics-key string
                                                :start start :end position-newline)
+			(declare (ignore width font-ascent font-descent direction first-not-done))
                         (multiple-value-bind (minx miny maxx maxy)
                             (climi::text-bounding-rectangle*
                              medium string :text-style text-style
                              :start (1+ position-newline) :end end)
+			  (declare (ignore miny))
                           (values (* scale (min minx left))
                                   (* scale (- ascent))
                                   (* scale (max maxx right))
@@ -251,6 +252,7 @@
                                                   direction first-not-done)
                           (psfont-text-extents metrics-key string
                                                :start start :end end)
+			(declare (ignore width font-ascent font-descent direction first-not-done))
                         (values (* scale left)
                                 (* scale (- ascent))
                                 (* scale right)
