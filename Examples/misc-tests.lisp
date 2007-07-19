@@ -111,9 +111,7 @@
                                                     :filled t
 						    :line-thickness 1
                                                     :background +gray50+
-                                                    :outline-ink +gray40+)
-              ;(multiple-value-call #'draw-point* stream (stream-cursor-position stream))
-              #+NIL (print i stream))))))
+                                                    :outline-ink +gray40+))))))
 
 (define-misc-test "Underlining" (stream)
     "Tests the underlining border style. You should see five lines of text, equally spaced, with the second and third lines having the phrase 'all live' underlined, first by a thick black line then by a thin dashed red line. If the lines are broken or the spacing is irregular, the :move-cursor nil key of surrounding-output-with-border may not have behaved as expected. "
@@ -200,12 +198,7 @@
 
 (define-misc-test "Gadget Output Records" (stream)
     "This tests integration of gadget output records. They should have correct bounding rectangles, and moving the output record should move the gadget. Adding/removing the output record from the history should add/remove the gadget as expected. If these things are true, gadget outputs records should work in almost any situation normal CLIM drawing would (excluding inside incremental redisplay, at present (?)), including graph layout and table formatting. This test uses format-graph-from-roots to create graph whose nodes are push-buttons."
-  (let ((tree #+NIL '(peter peter (pumpkin eater))
-          #+NIL '(one (two (three (four and there he kept her very well)
-                          )
-                     had a wife but "couldn't" keep her)
-                peter peter pumpkin eater)
-              '((peter peter pumpkin eater)
+  (let ((tree '((peter peter pumpkin eater)
                 (had (a wife) (but (couldnt (keep (her)))))
                 (he (put her (in (a pumpkin shell))))
                 (and there he (kept her (very well))))))
