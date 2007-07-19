@@ -173,6 +173,11 @@
 		(setf (xlib:gcontext-clip-mask gc :unsorted) rect-seq)))))
       gc)))
 
+(defmethod medium-gcontext ((medium clx-medium) (ink (eql +transparent-ink+)))
+  (let ((drawable (port-lookup-mirror (port medium) (medium-sheet medium))))
+    (with-slots (gc) medium
+      (or gc (setf gc (xlib:create-gcontext :drawable drawable))))))
+
 (defmethod medium-gcontext ((medium clx-medium) (ink (eql +foreground-ink+)))
   (medium-gcontext medium (medium-foreground medium)))
 
@@ -589,8 +594,9 @@
 	     (ink        (medium-ink ,medium))
 	     (gc         (medium-gcontext ,medium ink)))
 	line-style ink
-	(unwind-protect
-	     (progn ,@body)
+	(unwind-protect             
+	     (unless (eql ink +transparent-ink+)
+               (progn ,@body))
 	  #+ignore(xlib:free-gcontext gc))))))
 
 
