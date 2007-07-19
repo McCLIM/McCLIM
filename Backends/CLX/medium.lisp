@@ -638,9 +638,10 @@
 (defmethod medium-copy-area ((from-drawable pixmap) from-x from-y width height
                              (to-drawable pixmap) to-x to-y)
   (xlib:copy-area (pixmap-mirror from-drawable)
-                  (medium-gcontext from-drawable +background-ink+)
+                  (medium-gcontext (sheet-medium (slot-value to-drawable 'sheet))
+                                   +background-ink+)              
                   (round-coordinate from-x) (round-coordinate from-y)
-		  (round width) (round height)
+                  (round width) (round height)
                   (pixmap-mirror to-drawable)
                   (round-coordinate to-x) (round-coordinate to-y)))
 
