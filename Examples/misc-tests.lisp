@@ -24,7 +24,18 @@
 
 (in-package :clim-demo)
 
-(defstruct misc-test-item name drawer description)
+
+(defvar *misc-tests* (make-hash-table :test 'equal))
+
+(defstruct misc-test name description drawer)
+
+(defmacro define-misc-test (name arglist description &body body)
+  (check-type name string)
+  (check-type description string)
+  `(setf (gethash ,name *misc-tests*)
+         (make-misc-test :name ,name
+                         :description ,description
+                         :drawer (lambda ,arglist ,@body))))
 
 (define-application-frame misc-tests ()
   ()
@@ -33,23 +44,9 @@
    (description :application-pane)
    (selector :list-pane
              :mode :exclusive
-             :name-key #'misc-test-item-name
-             :items (list
-                     (make-misc-test-item :name "Empty Records 1"
-                                          :drawer 'misc-empty-records-1
-                                          :description "Tests the effect of empty output records on their parent's bounding rectangle. If successful, you will see a circle enclosed in a square. The square should tightly fit the circle. If the rectangle extends all the way to the top/left edges of the pane, McCLIM is not handling this correctly. This specifically exercises addition of empty children in recompute-extent-for-new-child.")
-                     (make-misc-test-item :name "Empty Records 2"
-                                          :drawer 'misc-empty-records-2
-                                          :description "Tests the effect of empty output records on their parent's bounding rectangle. If successful, you will see a circle enclosed in a square. The square should tightly fit the circle. If the rectangle extends all the way to the top/left edges of the pane, McCLIM is not handling this correctly. This specifically tests addition and deletion of an empty child, and failure may point to recompute-extent-for-new-child or recompute-extent-for-changed-child.")
-                     (make-misc-test-item :name "Empty Records 3"
-                                          :drawer 'misc-empty-records-3
-                                          :description "Tests the effect of empty output records on their parent's bounding rectangle. If successful, you will see a circle enclosed in a square. The square should tightly fit the circle. If the rectangle extends all the way to the top/left edges of the pane, McCLIM is not handling this correctly. This test creates a new output record, fills it with content, then clears the record contents.")
-                     (make-misc-test-item :name "Empty Borders"
-                                          :drawer 'misc-empty-bordering
-                                          :description "Tests handling of empty output records by surrounding-output-with-border. If successful, you will see twelve small circles arranged themselves in a larger circle. A likely failure mode will exhibit the circles piled on each other in the upper-left corner of the pane.")
-		     (make-misc-test-item :name "Underlining"
-                                          :drawer 'misc-underlining-test
-					  :description "Tests the underlining border style. You should see five lines of text, equally spaced, with the second and third lines having the phrase 'all live' underlined, first by a thick black line then by a thin dashed red line. If the lines are broken or the spacing is irregular, the :move-cursor nil key of surrounding-output-with-border may not have behaved as expected. "))
+             :name-key #'misc-test-name
+             :items (sort (loop for x being the hash-values of *misc-tests*
+                                collect x) #'string< :key #'misc-test-name)
              :value-changed-callback
              (lambda (pane item)
                (declare (ignore pane))
@@ -58,8 +55,8 @@
                  (window-clear output)
                  (window-clear description)
                  (with-text-style (description (make-text-style :sans-serif :roman :normal))
-                   (write-string (misc-test-item-description item) description))
-                 (funcall (misc-test-item-drawer item) output)))))
+                   (write-string (misc-test-description item) description))
+                 (funcall (misc-test-drawer item) output)))))
   (:layouts
    (default
      (spacing (:thickness 3)
@@ -73,25 +70,30 @@
 	     (clim-extensions:lowering ()
 	       (scrolling (:scroll-bar :vertical :height 200) description)))))))))
 
-(defun misc-empty-records-1 (stream)
+(define-misc-test "Empty Records 1" (stream)                                          
+    "Tests the effect of empty output records on their parent's bounding rectangle. If successful, you will see a circle enclosed in a square. The square should tightly fit the circle. If the rectangle extends all the way to the top/left edges of the pane, McCLIM is not handling this correctly. This specifically exercises addition of empty children in recompute-extent-for-new-child."
   (surrounding-output-with-border (stream :shape :rectangle)
     (draw-circle* stream 200 200 40)
     (with-new-output-record (stream))))
 
-(defun misc-empty-records-2 (stream)
+
+(define-misc-test "Empty Records 2" (stream)
+ "Tests the effect of empty output records on their parent's bounding rectangle. If successful, you will see a circle enclosed in a square. The square should fit the circle within a few pixels distance. If the rectangle extends all the way to the top/left edges of the pane, McCLIM is not handling this correctly. This specifically tests addition and deletion of an empty child, and failure may point to recompute-extent-for-new-child or recompute-extent-for-changed-child."
   (surrounding-output-with-border (stream :shape :rectangle)
     (draw-circle* stream 200 200 40)
     (let ((record (with-new-output-record (stream))))
       (delete-output-record record (output-record-parent record)))))
 
-(defun misc-empty-records-3 (stream)
+(define-misc-test "Empty Records 3" (stream)
+  "Tests the effect of empty output records on their parent's bounding rectangle. If successful, you will see a circle enclosed in a square. The square should fit the circle within a few pixels distance. If the rectangle extends all the way to the top/left edges of the pane, McCLIM is not handling this correctly. This test creates a new output record, fills it with content, then clears the record contents."
   (surrounding-output-with-border (stream :shape :rectangle)
     (draw-circle* stream 200 200 40)
     (let ((record (with-new-output-record (stream)
                     (draw-circle* stream 50 50 10))))
       (clear-output-record record))))
-
-(defun misc-empty-bordering (stream)
+                                           
+(define-misc-test "Empty Borders" (stream)
+    "Tests handling of empty output records by surrounding-output-with-border. If successful, you will see twelve small circles arranged themselves in a larger circle. A likely failure mode will exhibit the circles piled on each other in the upper-left corner of the pane."
   (with-room-for-graphics (stream :first-quadrant nil)
     (with-text-style (stream (make-text-style :sans-serif :roman :small))
       (loop with outer-radius = 180
@@ -113,7 +115,8 @@
               ;(multiple-value-call #'draw-point* stream (stream-cursor-position stream))
               #+NIL (print i stream))))))
 
-(defun misc-underlining-test (stream)
+(define-misc-test "Underlining" (stream)
+    "Tests the underlining border style. You should see five lines of text, equally spaced, with the second and third lines having the phrase 'all live' underlined, first by a thick black line then by a thin dashed red line. If the lines are broken or the spacing is irregular, the :move-cursor nil key of surrounding-output-with-border may not have behaved as expected. "
   (with-text-family (stream :sans-serif)
     (format stream "~&We all live in a yellow subroutine.~%")
     (format stream "~&We ")
@@ -132,3 +135,95 @@
     (format stream "~&We all live in a yellow subroutine.~%")
     (format stream "~&We all live in a yellow subroutine.~%")))
 
+(define-misc-test "Transparent Ink Test" (stream)
+    "Drawing with transparent ink can be useful as a way of reserving space as padding around the visible part of a drawing. This test checks that the medium supports drawing in transparent ink, and that it is recorded with the expected bounding rectangle. It will draw two tables, which should format identically except for one square, which will be transparent in the first table and blue in the second. If the in absence of the blue square its row and column collapse to a small size, the bounding rectangle for the transparent squares is probably wrong. Light gray circles will be drawn in the backgroud, and should show through the empty row/column of the table."
+  (let ((table '((1 1 1 0 1)
+                 (1 1 1 0 1)
+                 (1 1 1 0 1)
+                 (0 0 0 2 0)
+                 (1 1 1 0 1)))
+        (inks (list +transparent-ink+ +red+ +blue+))
+        (records nil))
+    ;; Draw some junk to make sure the transparent ink is really transparent,
+    ;; and not just matching the background:
+    (dotimes (i 400)
+      (draw-circle* stream (- (random 600) 100) (- (random 600) 100) (1+ (* 40 (random 1.0) (random 1.0))) :ink +gray90+))
+    ;; Draw two tables:
+    (format-items '(0 2) :stream stream :printer
+      (lambda (foo stream)
+        ;; Why isn't there an :equalize-row-heights ?
+        (surrounding-output-with-border (stream)
+          (formatting-table (stream :equalize-column-widths nil)
+            (dolist (row table)
+              (formatting-row (stream)
+                (dolist (cell row)
+                  (formatting-cell (stream)
+                    (push
+                     (with-new-output-record (stream)
+                       (draw-rectangle* stream 0 0 32 32
+                                        :ink (elt inks (if (eql cell 2)
+                                                           foo
+                                                           cell))))
+                     records)))))))))
+    ;; Make sure the bounding rectangles are the same:
+    (unless (reduce
+             (lambda (a b)
+               (and a
+                    (> 1 (abs (- (bounding-rectangle-width a)
+                                 (bounding-rectangle-width b))))
+                    (> 1 (abs (- (bounding-rectangle-height a)
+                                 (bounding-rectangle-height b))))
+                    b))
+             records)
+      (format stream "~&The bounding rectangles don't look right..~%"))))
+
+(define-misc-test "Arrows" (stream)
+    "Tests scaling and rotation of arrow heads, and the handling of the case where the heads become sufficiently large that they would overlap and should join in the middle. The line thickness and arrowhead width is increased from thin to thick, counterclockwise. The tips of the arrows should always fall on the green and red points."
+  (let ((scale 1.2)
+        (from-head t)
+        (to-head t))
+  (with-room-for-graphics (stream :first-quadrant nil)
+   (with-scaling (stream scale scale)
+     (loop for theta from 0.0 below (* 2 pi) by (/ (* 2 pi) 17) do
+          (progn (let* ((x2 (* 250 (sin theta)))
+                        (y2 (* 250 (cos theta)))
+                        (x1 (* 0.2 x2))
+                        (y1 (* 0.2 y2)))
+                   (draw-arrow* stream x1 y1 x2 y2
+                                :line-thickness (1+ (* 8 theta))
+                                :head-width (* 5 (1+ theta))
+                                :to-head to-head
+                                :from-head from-head
+                                :head-length (* 10 (1+ theta)) )
+                   (draw-point* stream x1 y1 :ink +red+ :line-thickness 5)
+                   (draw-point* stream x2 y2 :ink +green+ :line-thickness 5))))))))
+
+(define-misc-test "Gadget Output Records" (stream)
+    "This tests integration of gadget output records. They should have correct bounding rectangles, and moving the output record should move the gadget. Adding/removing the output record from the history should add/remove the gadget as expected. If these things are true, gadget outputs records should work in almost any situation normal CLIM drawing would (excluding inside incremental redisplay, at present (?)), including graph layout and table formatting. This test uses format-graph-from-roots to create graph whose nodes are push-buttons."
+  (let ((tree #+NIL '(peter peter (pumpkin eater))
+          #+NIL '(one (two (three (four and there he kept her very well)
+                          )
+                     had a wife but "couldn't" keep her)
+                peter peter pumpkin eater)
+              '((peter peter pumpkin eater)
+                (had (a wife) (but (couldnt (keep (her)))))
+                (he (put her (in (a pumpkin shell))))
+                (and there he (kept her (very well))))))
+    (format-graph-from-roots tree
+      (lambda (obj stream)
+        (let ((obj (typecase obj (list (first obj)) (t obj))))
+          (let ((fm (frame-manager *application-frame*)))
+            (with-look-and-feel-realization (fm *application-frame*)
+              (with-output-as-gadget (stream)
+                (make-pane 'push-button
+                           :activate-callback
+                           (lambda (&rest args)
+                             (declare (ignore args))
+                             (notify-user *application-frame* "You clicked a button."))
+                           :label (string-downcase
+                                   (princ-to-string obj))))))))
+      (lambda (obj)
+        (if (listp obj) (rest obj) nil))
+      :stream stream)))
+
+    
