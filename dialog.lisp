@@ -278,7 +278,9 @@ accept of this query")))
 			  additional-activation-gestures
 			  delimiter-gestures
 			  additional-delimiter-gestures)
-  (declare (ignore activation-gestures additional-activation-gestures
+  (declare (ignore default-type provide-default insert-default replace-input
+		   history active-p prompt-mode display-default
+		   activation-gestures additional-activation-gestures
 		   delimiter-gestures additional-delimiter-gestures))
   (let ((query (find query-identifier (queries stream)
 		     :key #'query-identifier :test #'equal))
