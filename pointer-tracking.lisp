@@ -81,7 +81,7 @@
             &key pointer multiple-window transformp context-type
             (highlight nil highlight-p))
      &body body)
-  (declare (ignorable pointer transformp context-type highlight))
+  (declare (ignorable multiple-window pointer transformp context-type highlight))
   (setq sheet (stream-designator-symbol sheet '*standard-output*))
   (loop
      for (event-name handler-args . handler-body) in body
@@ -123,7 +123,7 @@
 (defmethod tracking-pointer-loop
     ((state tracking-pointer-state) frame sheet &rest args
      &key pointer multiple-window transformp context-type highlight)
-  (declare (ignore pointer context-type highlight frame))
+  (declare (ignore args pointer context-type highlight frame))
   (with-sheet-medium (medium sheet)
     (flet ((do-tracking ()
 	     (loop
