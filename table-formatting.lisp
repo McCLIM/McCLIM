@@ -132,6 +132,7 @@ table cell as argument."
 				      (min-width 0) (min-height 0)
 				      (record-type ''standard-cell-output-record))
                            &body body)
+  (declare (ignorable align-x align-y))
   (setq stream (stream-designator-symbol stream '*standard-output*))
   (with-keywords-removed (more (:record-type :min-width :min-height))
     (with-gensyms (record)
