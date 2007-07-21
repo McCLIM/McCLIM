@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.182 2007/03/20 01:43:55 ahefner Exp $
+;;; $Id: panes.lisp,v 1.183 2007/07/21 13:18:59 rstrandh Exp $
 
 (in-package :clim-internals)
 
@@ -904,6 +904,7 @@ order to produce a double-click")
 (defmethod change-space-requirements ((pane top-level-sheet-pane)
                                       &rest space-req-keys
                                       &key resize-frame &allow-other-keys)
+  (declare (ignore space-req-keys))
   (cond (*changing-space-requirements*
          ;; just record what we have
          (unless (find pane *changed-space-requirements* :key #'second)
@@ -999,6 +1000,7 @@ order to produce a double-click")
   ;;   application-frame. I am not sure if this is totally right.
   ;;
   ;; --GB 2003-03-16
+  (declare (ignore space-req-keys resize-frame))
   (let ((w (space-requirement-width (compose-space pane)))
         (h (space-requirement-height (compose-space pane))))
     (resize-sheet pane w h)
