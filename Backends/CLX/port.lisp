@@ -137,6 +137,7 @@
   (let ((entry (fontset-point point fontset)))
     (if entry
         (destructuring-bind ((range-start . range-stop) font translator) entry
+	  (declare (ignore range-start range-stop))
           (xlib:char-width font (funcall translator point)))
         0)))
 
@@ -350,6 +351,10 @@
 					      :structure-notify
 					      :pointer-motion
 					      :button-motion)))
+  ;; I am declaring BORDER-WIDTH ignore to get a cleaner build, but I
+  ;; don't really understand why the use of it is commented out in favor
+  ;; of the constant 0.  -- RS 2007-07-22
+  (declare (ignore border-width))
   (when (null (port-lookup-mirror port sheet))
     (update-mirror-geometry sheet)
     (let* ((desired-color (typecase sheet
@@ -665,6 +670,7 @@
                       target property requestor selection
                       request first-keycode count
                       &allow-other-keys)
+  (declare (ignore display request first-keycode count))
   (declare (special *clx-port*))
   (let ((sheet (and window (port-lookup-sheet *clx-port* window))))
     (when sheet
