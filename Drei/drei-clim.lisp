@@ -355,7 +355,7 @@ record."))
 (defmethod initialize-instance :after ((area drei-area)
 				       &key)
   (setf (input-editor-position area)
-        (multiple-value-list (stream-cursor-position (editor-pane area))))
+        (multiple-value-list (output-record-position (editor-pane area))))
   (tree-recompute-extent area))
 
 (defmethod display-drei ((drei drei-area))
