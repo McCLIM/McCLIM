@@ -79,7 +79,7 @@ object, or display the `princ'ed representation.)")
 ;; very beginning of the output.
 (defmethod display-drei-contents :before ((stream extended-output-stream) (drei drei-area) syntax)
   (with-new-output-record (stream 'standard-sequence-output-record record)
-    (setf (output-record-position record) (stream-cursor-position stream))))
+    (setf (output-record-position record) (values-list (input-editor-position drei)))))
 
 (defgeneric display-drei-cursor (stream drei cursor syntax)
   (:documentation "The purpose of this function is to display a
@@ -289,7 +289,7 @@ and T if offset is after the end of the screen."))
             (cursors drei))
     (with-output-recording-options (stream :record t :draw nil)
       (letf (((stream-current-output-record stream) drei)
-             ((stream-cursor-position stream) (output-record-position drei)))
+             ((stream-cursor-position stream) (values-list (input-editor-position drei))))
         (display-drei-contents stream drei (syntax (buffer drei)))))))
 
 (defmethod replay-output-record :after ((drei drei-area) (stream extended-output-stream) &optional
@@ -315,9 +315,7 @@ and T if offset is after the end of the screen."))
   "Adjust the returned offset with the position of the Drei area
 on display."
   (multiple-value-bind (x y height style-width) (call-next-method)
-    (multiple-value-bind (drei-x drei-y) (output-record-position drei)
-      (declare (ignore drei-y))
-      (values (+ x drei-x) y height style-width))))
+    (values (+ x (first (input-editor-position drei))) y height style-width)))
 
 (defun display-drei-area (drei)
   (with-accessors ((stream editor-pane)) drei

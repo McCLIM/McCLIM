@@ -341,13 +341,21 @@ properly bound."))
                :documentation "The minimum width of the Drei
 editable area. Should be an integer >= 0 or T, meaning that it
 will extend to the end of the viewport, if the Drei area is in a
-scrolling arrangement."))
+scrolling arrangement.")
+   (%drei-position :accessor input-editor-position
+                   :initarg :input-editor-position
+                   :documentation "The position of the Drei
+editing area in the coordinate system of the encapsulated
+stream. An (X,Y) list, not necessarily the same as the position
+of the associated output record."))
   (:default-initargs :command-executor 'execute-drei-command)
   (:documentation "A Drei editable area implemented as an output
 record."))
 
 (defmethod initialize-instance :after ((area drei-area)
 				       &key)
+  (setf (input-editor-position area)
+        (multiple-value-list (stream-cursor-position (editor-pane area))))
   (tree-recompute-extent area))
 
 (defmethod display-drei ((drei drei-area))
