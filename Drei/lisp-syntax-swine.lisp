@@ -2,7 +2,7 @@
 
 ;;;  (c) copyright 2005 by
 ;;;           Robert Strandh (strandh@labri.fr)
-;;;  (c) copyright 2006 by
+;;;  (c) copyright 2006-2007 by
 ;;;           Troels Henriksen (athas@sigkill.dk)
 ;;;
 ;;; This library is free software; you can redistribute it and/or
@@ -65,367 +65,165 @@
 ;;;
 ;;; Code interrogation/form analysis
 
-(defparameter +cl-arglist-keywords+
+(defparameter +cl-lambda-list-keywords+
   lambda-list-keywords)
 
 (defparameter +cl-garbage-keywords+
   '(&whole &environment))
 
-(defun arglist-keyword-p (arg)
-  "Return T if `arg' is an arglist keyword. NIL otherwise."
-  (when (member arg +cl-arglist-keywords+)
-    t))
+(defun lambda-list-keyword-p (arg)
+  "Return true if `arg' is a lambda list keyword, false otherwise."
+  (member arg +cl-lambda-list-keywords+))
 
-(defun split-arglist-on-keywords (arglist)
-  "Return an alist keying lambda list keywords of `arglist'
-to the symbols affected by the keywords."
-  (let ((sing-result '())
-        (env (position '&environment arglist)))
-    (when env
-      (push (list '&environment (elt arglist (1+ env))) sing-result)
-      (setf arglist (remove-if (constantly t) arglist :start env :end (+ env 2))))
-    (when (eq '&whole (first arglist))
-      (push (subseq arglist 0 2) sing-result)
-      (setf arglist (cddr arglist)))
-    (do ((llk '(&mandatory &optional &key &allow-other-keys &aux &rest &body))
-         (args (if (arglist-keyword-p (first arglist))
-                   arglist
-                   (cons '&mandatory arglist))
-               (cdr args))
-         (chunk '())
-         (result '()))
-        ((null args)
-         (when chunk (push (nreverse chunk) result))
-         (nreverse (nconc sing-result result)))
-      (if (member (car args) llk)
-          (progn
-            (when chunk (push (nreverse chunk) result))
-            (setf chunk (list (car args))))
-          (push (car args) chunk)))))
+(defgeneric parameter-match-p (parameter arg-indices &key &allow-other-keys)
+  (:method ((parameter parameter) (arg-indices list) &key)
+    nil))
 
-(defun find-optional-argument-values (arglist provided-args &optional
-                                      (split-arglist
-                                       (split-arglist-on-keywords
-                                        arglist)))
-  "Return an association list mapping symbols of optional or
-  keyword arguments from `arglist' to the specified values in
-  `provided-args'. `Split-arglist' should be either a split
-  arglist or nil, in which case it will be calculated from
-  `arglist'."
-  (flet ((get-args (keyword)
-           (rest (assoc keyword split-arglist))))
-    (let* ((mandatory-args-count (length (get-args '&mandatory)))
-           (optional-args-count (length (get-args '&optional)))
-           (keyword-args-count (length (get-args '&key)))
-           (provided-args-count (length provided-args))
-           (nonmandatory-args-count (+ keyword-args-count
-                                       optional-args-count)))
-      ;; First we check whether any optional arguments have even been
-      ;; provided.
-      (when (> provided-args-count
-               mandatory-args-count)
-        ;; We have optional arguments.
-        (let (
-              ;; Find the part of the provided arguments that concern
-              ;; optional arguments.
-              (opt-args-values (subseq provided-args
-                                       mandatory-args-count
-                                       (min provided-args-count
-                                            nonmandatory-args-count)))
-              ;; Find the part of the provided arguments that concern
-              ;; keyword arguments.
-              (keyword-args-values (subseq provided-args
-                                           (min (+ mandatory-args-count
-                                                   optional-args-count)
-                                                provided-args-count))))
-          (append (mapcar #'cons
-                          (mapcar #'unlisted (get-args '&optional))
-                          opt-args-values)
+(defmethod parameter-match-p ((parameter named-parameter) (arg-indices list) &key)
+  (and (= (caar arg-indices) (min-arg-index parameter))
+       (null (rest arg-indices))))
 
-                  (loop
-                     ;; Loop over the provided keyword symbols and
-                     ;; values in the argument list. Note that
-                     ;; little checking is done to ensure that the
-                     ;; given symbols are valid - this is not a
-                     ;; compiler, so extra mappings do not
-                     ;; matter.
-                     for (keyword value) on keyword-args-values by #'cddr
-                     if (keywordp keyword)
-                     collect (let ((argument-symbol
-                                    (unlisted (find (symbol-name keyword)
-                                                    (get-args '&key)
-                                                    :key #'(lambda (arg)
-                                                             (symbol-name (fully-unlisted arg)))
-                                                    :test #'string=))))
-                               ;; We have to find the associated
-                               ;; symbol in the argument list... ugly.
-                               (cons argument-symbol
-                                     value)))))))))
+(defmethod parameter-match-p ((parameter rest-parameter) (arg-indices list) &key)
+  (and (>= (caar arg-indices) (min-arg-index parameter))
+       (null (rest arg-indices))))
 
-(defun find-affected-simple-arguments (arglist current-arg-index preceding-arg
-                                       &optional (split-arglist (split-arglist-on-keywords arglist)))
-  "Find the simple arguments of `arglist' that would be affected
-  if an argument was intered at index `current-arg-index' in the
-  arglist. If `current-arg-index' is nil, no calculation will be
-  done (this function will just return nil). `Preceding-arg'
-  should either be nil or the argument directly preceding
-  point. `Split-arglist' should either be a split arglist or nil,
-  in which case `split-arglist' will be computed from
-  `arglist'. This function returns two values: The primary value
-  is a list of symbols that should be emphasized, the secondary
-  value is a list of symbols that should be highlighted."
-  (when current-arg-index
-    (flet ((get-args (keyword)
-             (rest (assoc keyword split-arglist))))
-      (let ((mandatory-argument-count (length (get-args '&mandatory))))
-        (cond ((> mandatory-argument-count
-                  current-arg-index)
-               ;; We are in the main, mandatory, positional arguments.
-               (let ((relevant-arg (elt (get-args '&mandatory)
-                                        current-arg-index)))
-                 ;; We do not handle complex argument lists here, only
-                 ;; pure standard arguments.
-                 (unless (and (listp relevant-arg)
-                              (< current-arg-index mandatory-argument-count))
-                   (values nil (list (unlisted relevant-arg))))))
-              ((> (+ (length (get-args '&optional))
-                     (length (get-args '&mandatory)))
-                  current-arg-index)
-               ;; We are in the &optional arguments.
-               (values nil
-                       (list (unlisted (elt (get-args '&optional)
-                                            (- current-arg-index
-                                               (length (get-args '&mandatory))))))))
-              (t
-               (let ((body-or-rest-args (or (get-args '&rest)
-                                            (get-args '&body)))
-                     (key-arg (find (format nil "~A" preceding-arg)
-                                    (get-args '&key)
-                                    :test #'string=
-                                    :key #'(lambda (arg)
-                                             (symbol-name (fully-unlisted arg))))))
-                 ;; We are in the &body, &rest or &key arguments.
-                 (values
-                  ;; Only emphasize the &key
-                  ;; symbol if we are in a position to add a new
-                  ;; keyword-value pair, and not just in a position to
-                  ;; specify a value for a keyword.
-                  (when (and (null key-arg)
-                             (get-args '&key))
-                    '(&key))
-                  (append (when key-arg
-                            (list (unlisted key-arg)))
-                          body-or-rest-args)))))))))
+(defmethod parameter-match-p ((parameter keyword-parameter) (arg-indices list)
+                              &key allow-other-keys)
+  (let* ((index (caar arg-indices))
+         (preceding-arg-p (rest (first arg-indices)))
+         (preceding-arg (first preceding-arg-p)))
+    (and (>= index (min-arg-index parameter))
+         preceding-arg-p
+         (or allow-other-keys
+             (eq (keyword-name parameter) preceding-arg)))))
 
-(defun analyze-arglist-impl (arglist current-arg-indices preceding-arg provided-args)
-  "The implementation for `analyze-arglist'."
-  (let* ((split-arglist (split-arglist-on-keywords arglist))
-         (user-supplied-arg-values (find-optional-argument-values
-                                    arglist
-                                    provided-args
-                                    split-arglist))
-         (mandatory-argument-count
-          (length (rest (assoc '&mandatory split-arglist))))
-         
-         (current-arg-index (or (first current-arg-indices)
-                                0))
-         ret-arglist
-         emphasized-symbols
-         highlighted-symbols)
-    ;; First, we find any standard arguments that should be
-    ;; highlighted or emphasized, more complex, destructuring
-    ;; arguments will be handled specially.
-    (multiple-value-bind (es hs)
-        (find-affected-simple-arguments arglist
-                                        ;; If `current-arg-indices' is
-                                        ;; nil, that means that we do
-                                        ;; not have enough information
-                                        ;; to properly highlight
-                                        ;; symbols in the arglist.
-                                        (and current-arg-indices
-                                             current-arg-index)
-                                        preceding-arg
-                                        split-arglist)
-      (setf emphasized-symbols es)
-      (setf highlighted-symbols hs))
-    ;; We loop over the arglist and build a new list, and if we have a
-    ;; default value for a given argument, we insert it into the
-    ;; list. Also, whenever we encounter a list in a mandatory
-    ;; argument position, we assume that it is a destructuring arglist
-    ;; and recursively call `analyze-arglist' on it to find the
-    ;; arglist and emphasized and highlighted symbols for it.
-    (labels ((generate-arglist (arglist)
-               (loop
-                  for arg-element in arglist
-                  for arg-name = (unlisted arg-element)
-                  for index from 0
-                    
-                  if (and (listp arg-element)
-                          (> mandatory-argument-count
-                             index))
-                  collect (multiple-value-bind (arglist
-                                                sublist-emphasized-symbols
-                                                sublist-highlighted-symbols)
-                              (analyze-arglist arg-element
-                                               (rest current-arg-indices)
-                                               preceding-arg
-                                               (when (< index (length provided-args))
-                                                 (listed (elt provided-args index))))
-                            ;; Unless our `current-arg-index'
-                            ;; actually refers to this sublist, its
-                            ;; highlighted and emphasized symbols
-                            ;; are ignored. Also, if
-                            ;; `current-arg-indices' is nil, we do
-                            ;; not have enough information to
-                            ;; properly highlight symbols in the
-                            ;; arglist.
-                            (when (and current-arg-indices
-                                       (= index current-arg-index))
-                              (if (and (rest current-arg-indices))
-                                  (setf emphasized-symbols
-                                        (union (mapcar #'unlisted
-                                                       sublist-emphasized-symbols)
-                                               emphasized-symbols)
-                                        highlighted-symbols
-                                        (union sublist-highlighted-symbols
-                                               highlighted-symbols))
-                                  (setf emphasized-symbols
-                                        (union (mapcar #'unlisted
-                                                       arg-element)
-                                               emphasized-symbols))))
-                            arglist)
-                  else if (assoc arg-name user-supplied-arg-values)
-                  collect (list arg-name
-                                (rest (assoc
-                                       arg-name
-                                       user-supplied-arg-values)))
-                  else
-                  collect arg-element)))
-      (setf ret-arglist (generate-arglist arglist)))
-    (list ret-arglist emphasized-symbols highlighted-symbols)))
+(defmethod parameter-match-p ((parameter destructuring-parameter) (arg-indices list) &key)
+  (and (= (caar arg-indices) (min-arg-index parameter))
+       (not (null (rest arg-indices)))))
 
-(defun analyze-arglist (arglist current-arg-indices
-                        preceding-arg provided-args)
-  "Analyze argument list and provide information for highlighting
+(defmethod parameter-match-p ((parameter destructuring-keyword-parameter)
+                              (arg-indices list) &key allow-other-keys)
+  (let* ((index (caar arg-indices))
+         (preceding-arg-p (rest (first arg-indices)))
+         (preceding-arg (first preceding-arg-p)))
+    (and (>= index (min-arg-index parameter))
+         preceding-arg-p
+         (or allow-other-keys
+             (eq (keyword-name parameter) preceding-arg)))))
+
+(defun find-affected-parameters (lambda-list arg-indices)
+  "Find the parameters of `lambda-list' that would be affected if
+an argument was entered at index `arg-indices' in the argument
+list of the form with lambda list `lambda-list'. If `arg-indices'
+is nil, no calculation will be done (this function will just
+return NIL). This function returns two values: The primary value
+is a list of symbols that should be emphasized, the secondary
+value is a list of symbols that should be highlighted."
+  (let ((affected-parameters '()))
+    (loop for parameter in (all-parameters lambda-list)
+       do (etypecase parameter
+            (destructuring-keyword-parameter
+             (when (parameter-match-p parameter arg-indices)
+               (if (null (rest arg-indices))
+                   (push parameter affected-parameters)
+                   (setf affected-parameters
+                         (nconc (list parameter)
+                                (find-affected-parameters (inner-lambda-list parameter)
+                                                          (rest arg-indices))
+                                affected-parameters)))))
+            (keyword-parameter
+             (when (parameter-match-p parameter arg-indices)
+               (push parameter affected-parameters)))
+            (destructuring-parameter
+             (when (parameter-match-p parameter arg-indices)
+               (setf affected-parameters
+                     (nconc (find-affected-parameters (inner-lambda-list parameter)
+                                                      (rest arg-indices))
+                            affected-parameters))))
+            (rest-parameter
+             (when (parameter-match-p parameter arg-indices)
+               (push parameter affected-parameters)))
+            (named-parameter
+             (when (parameter-match-p parameter arg-indices)
+               (push parameter affected-parameters))))
+       finally (return affected-parameters))))
+
+(defgeneric analyze-lambda-list (lambda-list current-arg-indices)
+  (:documentation "Analyze lambda list and information about
+provided arguments, and provide information for highlighting
 it. `Arglist' is the argument list that is to be analyzed,
-`current-arg-index' is the index where the next argument would be
-written (0 is just after the operator), `preceding-arg' is the
-written argument preceding point and `provided-args' is a list of
-the args already written.
+`current-arg-index' is the argument index where the next argument
+would be written (0 is just after the operator).
 
-Three values are returned: 
+A single value is returned: a list of parameters that should be
+highlighted."))
 
-* An argument list with values for &optional and &key arguments
-inserted from `provided-args'.
+(defmethod analyze-lambda-list ((lambda-list lambda-list)
+                                (current-arg-indices list))
+  (find-affected-parameters lambda-list current-arg-indices))
 
-* A list of symbols that should be emphasized.
-
-* A list of symbols that should be highlighted."
-  (apply #'values (analyze-arglist-impl
-                   arglist
-                   current-arg-indices
-                   preceding-arg
-                   provided-args)))
-
-(defun cleanup-arglist (arglist)
-  "Remove elements of `arglist' that we are not interested in,
-including implementation-specific lambda list keywords."
-  (loop
-     for arg in arglist
-     with in-&aux                       ; If non-NIL, we are in the
-                                        ; &aux parameters that should
-                                        ; not be displayed.
-                    
-     with in-garbage                    ; If non-NIL, the next
-                                        ; argument is a garbage
-                                        ; parameter that should not be
-                                        ; displayed.
-     if in-garbage
-     do (setf in-garbage nil)
-     else if (not in-&aux)
-     if (eq arg '&aux)
-     do (setf in-&aux t)
-     else if (member arg +cl-garbage-keywords+ :test #'eq)
-     do (setf in-garbage t)
-     else
-     collect arg))
-
-(defun canonicalize-arglist (arglist)
-  "Convert `arglist' to the Grand Unified Arglist Format used by
-Drei, and signal errors if the arglist is found to be invalid."
-  arglist)
-
-(defun find-argument-indices-for-operand (syntax operand-form operator-form)
+(defun find-argument-indices-for-operand (syntax operand-form full-form)
   "Return a list of argument indices for `argument-form' relative
-  to `operator-form'. These lists take the form of (n m p), which
-  means (list-aref form-operand-list n m p). A list of argument
-  indices can have arbitrary length (but they are practically
-  always at most 2 elements long). "
-  (declare (ignore syntax))
-  (let ((operator (first-form (children operator-form))))
-    (labels ((worker (operand-form &optional the-first)
+to the operator of `full-form'. These lists take the form of ((n
+x1) (m x2) (p x3)), which means (list-aref form-operand-list n m
+p), and where x1...xN is the argument preceding the argument at
+the index. If there is no preceding argument, this list may have
+just a single element. A list of argument indices can have
+arbitrary length (but they are practically always at most 2
+elements long)."
+  (let ((operator-form (first-form (children full-form))))
+    (labels ((worker (operand-form)
                ;; Cannot find index for top-level-form.
-               (when (parent operand-form)
-                 (let ((form-operand-list
-                        (remove-if #'(lambda (form)
-                                       (or (not (formp form))
-                                           (eq form operator)))
-                                   (children (parent operand-form)))))
+               (unless (or (eq operand-form operator-form)
+                           (form-at-top-level-p operand-form))
+                 (let* ((parent-operator (first-form (children (parent operand-form))))
+                        (form-operand-list
+                         (remove-if #'(lambda (form)
+                                        (or (not (formp form))
+                                            (eq form operator-form)))
+                                    (children (parent operand-form))))
+                        (operand-position (or (position operand-form form-operand-list)
+                                              (count-if #'(lambda (form)
+                                                            (<= (start-offset form)
+                                                                (start-offset operand-form)))
+                                                        form-operand-list))))
+                   ;; If we find anything, we have to increment the
+                   ;; position by 1, since we consider the existance
+                   ;; of a first operand to mean point is at operand
+                   ;; 2. Likewise, a position of nil is interpreted
+                   ;; as 0.
+                   (cons (cons (or operand-position 0)
+                               (when (and operand-position
+                                          (plusp operand-position))
+                                 (list (form-to-object
+                                        syntax (elt form-operand-list
+                                                    (1- operand-position))))))
+                         (when (not (eq operator-form parent-operator))
+                           (worker (parent operand-form))))))))
+      (nreverse (worker operand-form)))))
 
-                   (let ((operand-position (position operand-form form-operand-list))
-                         (go-on (not (eq operator-form (parent operand-form)))))
-                     ;; If we find anything, we have to increment the
-                     ;; position by 1, since we consider the existance
-                     ;; of a first operand to mean point is at operand
-                     ;; 2. Likewise, a position of nil is interpreted
-                     ;; as 0.
-                     (cons (if operand-position
-                               (if (or the-first)
-                                   (1+ operand-position)
-                                   operand-position)
-                               0)
-                           (when go-on
-                             (worker (parent operand-form)))))))))
-      (nreverse (worker operand-form t)))))
+(defclass placeholder-form (form)
+  ((start-offset :accessor start-offset)
+   (end-offset :accessor end-offset)))
 
-(defun find-operand-info (syntax mark-or-offset operator-form)
-  "Returns two values: The operand preceding `mark-or-offset' and
-  the path from `operator-form' to the operand."
+(defun find-operand-info (syntax mark-or-offset full-form)
+  "Returns the path from the operator of `full-form' to the
+operand at `mark-or-offset'. If there is no operand at this
+position, pretend there is and calculate the path."
   (as-offsets ((offset mark-or-offset))
-    (let* ((preceding-arg-token (form-before syntax offset))
-           (indexing-start-arg
-            (let* ((candidate-before preceding-arg-token)
-                   (candidate-after (when (null candidate-before)
-                                      (let ((after (form-after syntax offset)))
-                                        (when after
-                                          (parent after)))))
-                   (candidate-around (when (null candidate-after)
-                                       (form-around syntax offset)))
-                   (candidate (or candidate-before
-                                  candidate-after
-                                  candidate-around)))
-              (if (or (and candidate-before
-                           (typep candidate-before 'incomplete-list-form))
-                      (and (null candidate-before)
-                           (form-list-p (or candidate-after candidate-around))))
-                  ;; HACK: We should not attempt to find the location of
-                  ;; the list form itself, so we create a new parser
-                  ;; symbol, attach the list form as a parent and try to
-                  ;; find the new symbol. That way we can get a list of
-                  ;; argument-indices to the first element of the list
-                  ;; form, even if it is empty or incomplete.
-                  (let ((obj (make-instance 'parser-symbol)))
-                    (setf (parent obj) candidate)
-                    obj)
-                  candidate)))
-           (argument-indices (find-argument-indices-for-operand
-                              syntax
-                              indexing-start-arg
-                              operator-form))
-           (preceding-arg-obj (when preceding-arg-token
-                                (form-to-object syntax preceding-arg-token
-                                                 :no-error t))))
-      (values preceding-arg-obj argument-indices))))
+    (let ((indexing-start-arg
+           (let ((candidate (form-around syntax offset)))
+             (if (or (and (form-list-p candidate)
+                          (not (or (eq candidate (form-before syntax offset))
+                                   (eq candidate (form-after syntax offset)))))
+                     (null candidate))
+                 (let ((obj (make-instance 'placeholder-form)))
+                   (setf (parent obj) candidate
+                         (start-offset obj) offset
+                         (end-offset obj) offset)
+                   obj)
+                 candidate))))
+      (find-argument-indices-for-operand syntax indexing-start-arg full-form))))
 
 (defun valid-operator-p (operator)
   "Check whether or not `operator' is a valid
@@ -436,52 +234,58 @@ Drei, and signal errors if the arglist is found to be invalid."
              (macro-function operator)
              (special-operator-p operator)))
         ((listp operator)
-         (eq (first operator) 'cl:lambda))))
+         (and (eq (first operator) 'cl:lambda)
+              (not (null (rest operator)))
+              (listp (second operator))))))
 
-(defun indices-match-arglist (arglist arg-indices)
-  "Check whether the argument indices `arg-indices' could refer
-  to a direct argument for the operator with the argument list
-  `arglist'. Returns T if they could, NIL otherwise. This
-  functions does not care about the argument quantity, only their
-  structure."
-  (let* ((index (first arg-indices))
-         (pure-arglist (remove-if #'arglist-keyword-p arglist))
-         (arg (when (< index (length pure-arglist))
-                (elt pure-arglist index))))
-    (cond ((or (and (>= index (or (position-if #'arglist-keyword-p arglist)
-                                  (1+ index)))
-                    (not (null (rest arg-indices))))
-               (and (not (null (rest arg-indices)))
-                    (> (length pure-arglist)
-                       index)
-                    (not (listp (elt pure-arglist index)))))
-           nil)
-          ((and (not (null arg))
-                (listp arg)
-                (rest arg-indices))
-           (indices-match-arglist arg (rest arg-indices)))
-          (t t))))
+(defgeneric indices-match-arglist (lambda-list arg-indices)
+  (:documentation "Check whether the argument indices
+`arg-indices' could refer to a direct argument for the operator
+with the lambda list `lambda-list'. Returns T if they could, NIL
+otherwise. Does not check for the validity of keyword
+arguments."))
 
-(defun direct-arg-p (syntax operator-form arg-form)
-  "Is `arg-form' a direct argument to `operator-form'? A \"direct
-argument\" is defined as an argument that would be directly bound
-to a symbol when evaluating the operators body, or as an argument
-that would be a direct component of a &body or &rest argument."
-  (let ((operator (form-to-object syntax operator-form)))
+(defmethod indices-match-arglist ((lambda-list semiordinary-lambda-list)
+                                  (arg-indices list))
+  (and arg-indices
+       (null (rest arg-indices))
+       (or (> (+ (length (required-parameters lambda-list))
+                 (length (optional-parameters lambda-list)))
+              (caar arg-indices))
+           (rest-parameter lambda-list)
+           (keyword-parameters lambda-list))
+       t))
+
+(defmethod indices-match-arglist ((lambda-list macro-lambda-list)
+                                  (arg-indices list))
+  (or (some #'(lambda (parameter)
+                (and (parameter-match-p parameter arg-indices
+                      :allow-other-keys t)
+                     (or (not (typep parameter 'destructuring-parameter))
+                         (null (rest arg-indices))
+                         (indices-match-arglist (inner-lambda-list parameter)
+                                                (rest arg-indices)))))
+            (all-parameters lambda-list))
+      (call-next-method)))
+
+(defun direct-arg-p (syntax full-form arg-form)
+  "Is `arg-form' a direct argument to the operator in
+`full-form'? A \"direct argument\" is defined as an argument that
+would be directly bound to a symbol when evaluating the operators
+body, or as an argument that would be a direct component of a
+&body or &rest argument, or as an argument that would be a
+destructuring argument."
+  (let* ((operator-form (first-form (children full-form)))
+         (operator (form-to-object syntax operator-form)))
     (and
      ;; An operator is not an argument to itself.
-     (not (eq arg-form
-              (first-form (children (parent operator-form)))))
+     (not (eq arg-form operator-form))
      ;; An operator must be valid.
      (valid-operator-p operator)
      ;; The argument must match the operators argument list.
      (indices-match-arglist
-      (arglist (image syntax)
-               operator)
-      (nth-value 1 (find-operand-info
-                    syntax
-                    (start-offset arg-form)
-                    (parent operator-form)))))))
+      (arglist-for-form syntax operator)
+      (find-operand-info syntax (start-offset arg-form) full-form)))))
 
 (defun find-direct-operator (syntax arg-form)
   "Check whether `arg-form' is a direct argument to one of its
@@ -491,7 +295,7 @@ parents. If it is, return the form with the operator that
              ;; Check whether `arg-form' is a direct argument to
              ;; the operator of `form'.
              (when (parent form)
-               (if (direct-arg-p syntax (first-form (children form)) arg-form)
+               (if (direct-arg-p syntax form arg-form)
                    form
                    (recurse (parent form))))))
     (recurse (parent arg-form))))
@@ -512,8 +316,7 @@ argument. Return NIL if none can be found."
   ;; nested/destructuring argument lists such as those found in
   ;; macros.
   (labels ((recurse (candidate-form)
-             (if (and (direct-arg-p syntax (first-form (children candidate-form))
-                                    arg-form)
+             (if (and (direct-arg-p syntax candidate-form arg-form)
                       (not (find-applicable-form syntax (first-form (children candidate-form)))))
                  candidate-form
                  (unless (form-at-top-level-p candidate-form)
@@ -521,40 +324,30 @@ argument. Return NIL if none can be found."
     (unless (form-at-top-level-p arg-form)
       (recurse (parent arg-form)))))
 
-(defun relevant-keywords (arglist arg-indices)
-  "Return a list of the keyword arguments that it would make
-  sense to use at the position `arg-indices' relative to the
-  operator that has the argument list `arglist'."
-  (let* ((key-position (position '&key arglist))
-         (rest-position (position '&rest arglist))
-         (cleaned-arglist (remove-if #'arglist-keyword-p
-                                     arglist))
-         (index (first arg-indices))
-         (difference (+ (- (length arglist)
-                           (length cleaned-arglist))
-                        (if rest-position 1 0))))
-    (cond ((and (null key-position)
-                (rest arg-indices)
-                (> (length cleaned-arglist)
-                   index)
-                (listp (elt cleaned-arglist index)))
-           ;; Look in a nested argument list.
-           (relevant-keywords (elt cleaned-arglist index)
-                              (rest arg-indices)))
-          ((and (not (null key-position))
-                (>= (+ index
-                       difference) 
-                    key-position)
-                (let ((offset (- index (- key-position (1- difference)))))
-                  (or (evenp offset) (zerop key-position))))
-           (mapcar #'unlisted (subseq cleaned-arglist
-                                      (+ (max (- key-position
-                                                 difference)
-                                              (- (if rest-position 2 1)))
-                                         (if rest-position 2 1))
-                                      (if rest-position
-                                          (1- (length cleaned-arglist))
-                                          (length cleaned-arglist))))))))
+(defgeneric relevant-keywords (lambda-list arg-indices)
+  (:documentation "Return a list of the keyword arguments that it
+would make sense to use at the position `arg-indices' relative to
+the operator that has the argument list `arglist'."))
+
+(defmethod relevant-keywords ((lambda-list semiordinary-lambda-list)
+                              (arg-indices list))
+  (let ((keyword-parameters (keyword-parameters lambda-list)))
+    (when (and (null (rest arg-indices))
+               keyword-parameters
+               (>= (caar arg-indices) (min-arg-index (first keyword-parameters))))
+      (mapcar #'keyword-name keyword-parameters))))
+
+(defmethod relevant-keywords ((lambda-list macro-lambda-list)
+                              (arg-indices list))
+  (or (call-next-method)
+      (unless (null (rest arg-indices))
+        (let ((parameter (find-if #'(lambda (parameter)
+                                      (parameter-match-p parameter arg-indices))
+                                  (append (required-parameters lambda-list)
+                                          (optional-parameters lambda-list)
+                                          (keyword-parameters lambda-list)))))
+          (when parameter
+            (relevant-keywords (inner-lambda-list parameter) (rest arg-indices)))))))
 
 (defgeneric possible-completions (syntax operator string package operands indices)
   (:documentation "Get the applicable completions for completing
@@ -591,9 +384,9 @@ be the argument indices from the operator to `token' (see
                                           (first (simple-completions (get-usable-image syntax)
                                                                      ":" package))
                                           completions))
-                 keyword-completions
-                 :key #'string-downcase
-                 :test #'string=))))
+                              keyword-completions
+                              :key #'string-downcase
+                              :test #'string=))))
           completions))))
 
 (defgeneric complete-argument-of-type (argument-type syntax string all-completions)
@@ -660,10 +453,16 @@ be the argument indices from the operator to `token' (see
                                   (> (length (elt arguments arg-position)) 1)
                                   (eq (first (elt arguments arg-position)) 'cl:quote)
                                   (find-class (second (elt arguments arg-position)) nil))
-                             (nconc arglist
-                                     (cons '&key (get-class-keyword-parameters
-                                                  (get-usable-image syntax)
-                                                  (elt arguments arg-position))))
+                             (make-lambda-list
+                              :defaults arglist
+                              :keyword-parameters
+                              (mapcar #'(lambda (parameter-data)
+                                          (make-&key-parameter
+                                           parameter-data
+                                           (positional-parameter-count arglist)))
+                                      (get-class-keyword-parameters
+                                       (get-usable-image syntax)
+                                       (elt arguments arg-position))))
                              arglist)))
 
 (define-argument-type package-designator ()
@@ -710,7 +509,7 @@ modification will be generated, respectively."
                                            for (car . cdr) on indices
                                            if (null cdr)
                                            collect (1+ car)
-                                           else collect car))
+                                           else collect (first car)))
                        (keyword (apply #'list-aref operands keyword-indices))
                        (type (getf ',arguments keyword)))
                   (if (null type)
@@ -721,16 +520,18 @@ modification will be generated, respectively."
                (cond ((null argument)
                       nil)
                      ((eq argument '&rest)
-                      `(((>= (first indices) ,index)
+                      `(((>= (caar indices) ,index)
                          (complete-argument-of-type ',(second arguments) syntax string all-completions))))
                      ((eq argument '&key)
                       (process-keyword-arg-descs (rest arguments)))
                      ((listp argument)
-                      (cons `((= (first indices) ,index)
+                      (cons `((= (caar indices) ,index)
                               ,(if (eq (first argument) 'quote)
-                                   `(cond ((eq (first (apply #'list-aref operands indices)) 'quote)
-                                           (complete-argument-of-type ',(second argument) syntax string all-completions))
-                                          (t (call-next-method)))
+                                   `(let ((selected-operand (apply #'list-aref operands (mapcar #'first indices))))
+                                      (cond ((and (listp selected-operand)
+                                                  (eq (first selected-operand) 'quote))
+                                             (complete-argument-of-type ',(second argument) syntax string all-completions))
+                                            (t (call-next-method))))
                                    `(cond ((not (null (rest indices)))
                                            (pop indices)
                                            (cond ,@(build-completions-cond-body argument)))
@@ -738,7 +539,7 @@ modification will be generated, respectively."
                             (process-arg-descs (rest arguments)
                                                (1+ index))))
                      (t
-                      (cons `((= (first indices) ,index)
+                      (cons `((= (caar indices) ,index)
                               (complete-argument-of-type ',argument syntax string all-completions))
                             (process-arg-descs (rest arguments)
                                                (1+ index)))))))
@@ -746,14 +547,14 @@ modification will be generated, respectively."
              (append (process-arg-descs arguments 0)
                      '((t (call-next-method))))))
     `(progn
-       (defmethod possible-completions (syntax (operator (eql ',operator)) string package operands indices)
+       (defmethod possible-completions ((syntax lisp-syntax) (operator (eql ',operator)) string package operands indices)
          ,(if no-typed-completion
               '(call-next-method)
               `(let* ((*package* package)
                       (all-completions (call-next-method)))
                  (cond ,@(build-completions-cond-body arguments)))))
        ,(unless no-smart-arglist
-                `(defmethod arglist-for-form (syntax (operator (eql ',operator)) &optional arguments)
+                `(defmethod arglist-for-form ((syntax lisp-syntax) (operator (eql ',operator)) &optional arguments)
                    (declare (ignorable arguments))
                    (let ((arglist (call-next-method))
                          (arg-position 0))
@@ -766,52 +567,68 @@ modification will be generated, respectively."
                           collect '(incf arg-position))
                      arglist))))))
 
-(defmacro with-code-insight (mark-or-offset syntax (&key operator preceding-operand
-                                                         form preceding-operand-indices
+(defun invoke-with-code-insight (syntax offset continuation)
+  "Call `continuation' with argument-values containing
+interesting details about the code at `offset'. If `offset' is
+not within a form, everything will be bound to nil. The values
+provided are, in order: the form, the forms operator, the indices
+to the operand at `offset', or the indices to an operand entered
+at that position if none is there, and the operands in the form."
+  (let* ((form
+          ;; Find a form with a valid (fboundp) operator.
+          (let ((immediate-form
+                 (or (form-before syntax offset)
+                     (form-around syntax offset))))
+            (unless (null immediate-form)
+              (find-applicable-form syntax immediate-form)
+              (or (find-applicable-form syntax immediate-form)
+                  ;; If nothing else can be found, and `arg-form'
+                  ;; is the operator of its enclosing form, we use
+                  ;; the enclosing form.
+                  (when (and (not (form-at-top-level-p immediate-form))
+                             (eq (first-form (children (parent immediate-form))) immediate-form))
+                    (parent immediate-form))))))
+         ;; If we cannot find a form, there's no point in looking
+         ;; up any of this stuff.
+         (operator (when (and form (form-list-p form))
+                     (form-to-object syntax (form-operator syntax form))))
+         (operands (when (and form (form-list-p form))
+                     (mapcar #'(lambda (operand)
+                                 (when operand
+                                   (form-to-object syntax operand)))
+                             (form-operands syntax form))))
+         (current-operand-indices (when form
+                                    (find-operand-info syntax offset form))))
+    (funcall continuation form operator current-operand-indices operands)))
+
+(defmacro with-code-insight (mark-or-offset syntax (&key operator form this-operand-indices
                                                          operands)
                              &body body)
   "Evaluate `body' with the provided symbols lexically bound to
-  interesting details about the code at `mark'. If `mark' is not
-  within a form, everything will be bound to nil."
-  ;; This macro is pretty complicated and deals with tons of border
-  ;; issues. If it at all possible, please don't modify it. It is the
-  ;; main interface for syntax module code to get high-level
-  ;; information about the forms in the buffer, so if it breaks, most
-  ;; of the user-oriented functionality of this syntax module breaks
-  ;; as well.
+interesting details about the code at `mark-or-offset'. If
+`mark-or-offset' is not within a form, everything will be bound
+to nil."
+  (check-type operator symbol)
+  (check-type form symbol)
+  (check-type this-operand-indices symbol)
+  (check-type operands symbol)
   (let ((operator-sym (or operator (gensym)))
-        (preceding-operand-sym (or preceding-operand (gensym)))
         (operands-sym (or operands (gensym)))
         (form-sym (or form (gensym)))
-        (operand-indices-sym (or preceding-operand-indices (gensym))))
-    (once-only (mark-or-offset syntax)
-      `(declare (ignorable ,mark-or-offset ,syntax))
-      `(let* ((,form-sym
-               ;; Find a form with a valid (fboundp) operator.
-               (let ((immediate-form
-                      (this-form ,syntax ,mark-or-offset)))
-                 (unless (null immediate-form)
-                   (or (find-applicable-form ,syntax immediate-form)
-                       ;; If nothing else can be found, and `arg-form'
-                       ;; is the operator of its enclosing form, we use
-                       ;; the enclosing form.
-                       (when (and (not (form-at-top-level-p immediate-form))
-                                  (eq (first-form (children (parent immediate-form))) immediate-form))
-                         (parent immediate-form))))))
-              ;; If we cannot find a form, there's no point in looking
-              ;; up any of this stuff.
-              (,operator-sym (when (and ,form-sym (form-list-p ,form-sym))
-                               (form-to-object ,syntax (form-operator ,syntax ,form-sym))))
-              (,operands-sym (when (and ,form-sym (form-list-p ,form-sym))
-                               (mapcar #'(lambda (operand)
-                                           (when operand
-                                             (form-to-object ,syntax operand)))
-                                       (form-operands ,syntax ,form-sym)))))
-         (declare (ignorable ,form-sym ,operator-sym ,operands-sym))
-         (multiple-value-bind (,preceding-operand-sym ,operand-indices-sym)
-             (when ,form-sym (find-operand-info ,syntax ,mark-or-offset ,form-sym))
-           (declare (ignorable ,preceding-operand-sym ,operand-indices-sym))
-           ,@body)))))
+        (this-operand-indices-sym (or this-operand-indices (gensym))))
+    `(as-offsets ((offset ,mark-or-offset))
+       (invoke-with-code-insight ,syntax offset
+                                 #'(lambda (,form-sym ,operator-sym
+                                            ,this-operand-indices-sym ,operands-sym)
+                                     (declare (ignore ,@(append (unless operator
+                                                                  (list operator-sym))
+                                                                (unless operands
+                                                                  (list operands-sym))
+                                                                (unless form
+                                                                  (list form-sym))
+                                                                (unless this-operand-indices
+                                                                  (list this-operand-indices-sym)))))
+                                     ,@body)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -846,70 +663,86 @@ modification will be generated, respectively."
   (case (first operator)
     ('cl:lambda '|Lambda-Expression|)))
 
-(defun display-arglist-to-stream (stream operator arglist
-                                  &optional emphasized-symbols
-                                  highlighted-symbols)
-  "Display the operator and arglist to stream, format as
+(defun display-lambda-list-to-stream (stream operator lambda-list
+                                      &optional highlighted-parameters)
+  "Display the operator and lambda list to stream, format as
   appropriate."
-  ;; FIXME: This is fairly ugly.
-  (labels ((display-symbol (symbol)
-             (with-text-style
-                 (stream
-                  `(nil
-                    ,(cond ((member symbol
-                                    highlighted-symbols)
-                            :bold)
-                           ((member symbol
-                                    emphasized-symbols)
-                            :italic))
-                    nil))
-               (format stream "~A" symbol)))
-           (display-list (list)
-             (if (and (eq (first list) 'quote)
-                      (= (length list) 2))
-                 (progn
-                   (format stream "'")
-                   (display-argument (second list)))
-                 (progn
-                   (format stream "(")
-                   (display-argument (first list))
-                   (dolist (arg (rest list))
-                     (format stream " ")
-                     (display-argument arg))
-                   (format stream ")"))))
-           (display-argument (arg)
-             (if (and (listp arg)
-                      (not (null arg)))
-                 (display-list arg)
-                 (display-symbol arg))))
-    (display-argument (cons (operator-for-display operator)
-                            arglist))))
+  (labels ((show (parameter format-string &rest format-args)
+             (with-text-face (stream (if (member parameter highlighted-parameters)
+                                      :bold
+                                      :roman))
+               (apply #'format stream format-string format-args)))
+           (show-parameters (parameters)
+             (loop for (parameter . next-parameters) on parameters
+                do (etypecase parameter
+                     (destructuring-keyword-parameter
+                      (show parameter ":~A " (keyword-name parameter))
+                      (format stream "(")
+                      (show-lambda-list (inner-lambda-list parameter))
+                      (format stream ")"))
+                     (keyword-parameter
+                      (show parameter ":~A" (keyword-name parameter)))
+                     (destructuring-parameter
+                      (format stream "(")
+                      (show-lambda-list (inner-lambda-list parameter))
+                      (format stream ")"))
+                     (named-parameter
+                      (show parameter "~A" (name parameter))))
+                do (when next-parameters
+                     (princ #\Space stream))))
+           (show-lambda-list (lambda-list)
+             (let ((space-needed (not (null (required-parameters lambda-list)))))
+              (show-parameters (required-parameters lambda-list))
+              (when (optional-parameters lambda-list)
+                (when space-needed
+                  (princ #\Space stream))
+                (format stream "&OPTIONAL ")
+                (show-parameters (optional-parameters lambda-list))
+                (setf space-needed t))
+              (when (rest-parameter lambda-list)
+                (when space-needed
+                  (princ #\Space stream))
+                (format stream "&REST ")
+                (show (rest-parameter lambda-list) "~A" (name (rest-parameter lambda-list)))
+                (setf space-needed t))
+              (when (body-parameter lambda-list)
+                (when space-needed
+                  (princ #\Space stream))
+                (format stream "&BODY ")
+                (show (body-parameter lambda-list) "~A" (name (body-parameter lambda-list)))
+                (setf space-needed t))
+              (when (keyword-parameters lambda-list)
+                (when space-needed
+                  (princ #\Space stream))
+                (format stream "&KEY ")
+                (show-parameters (keyword-parameters lambda-list))))))
+    (format stream "(~A" operator)
+    (when (required-parameters lambda-list)
+      (princ #\Space stream))
+    (show-lambda-list lambda-list)
+    (format stream ")")))
 
-(defun show-arglist-silent (operator &optional
+(defun show-arglist-silent (syntax operator &optional
                             current-arg-indices
-                            preceding-arg arguments)
+                            arguments)
   "Display the arglist for `operator' in the minibuffer, do not
 complain if `operator' is not bound to, or is not, a function.
 
-`Current-arg-index' and `preceding-arg' are used to add extra
-information to the arglist display. `Arguments' should be either
-nil or a list of provided arguments in the form housing symbol.
+`Current-arg-index' is used to add extra information to the
+arglist display. `Arguments' should be either nil or a list of
+provided arguments in the form housing symbol.
 
 Returns NIL if an arglist cannot be displayed."
-  (multiple-value-bind (arglist emphasized-symbols highlighted-symbols)
-      (analyze-arglist
-       (arglist-for-form (syntax *current-buffer*) operator arguments)
-       current-arg-indices
-       preceding-arg
-       arguments)
+  (let* ((lambda-list (arglist-for-form syntax operator arguments))
+         (highlighted-parameters
+          (analyze-lambda-list lambda-list current-arg-indices)))
     (esa:with-minibuffer-stream (minibuffer)
-      (display-arglist-to-stream minibuffer operator
-                                 arglist emphasized-symbols
-                                 highlighted-symbols))))
+      (display-lambda-list-to-stream minibuffer operator
+                                     lambda-list highlighted-parameters))))
 
-(defun show-arglist (symbol)
+(defun show-arglist (syntax symbol)
   (unless (and (fboundp symbol)
-               (show-arglist-silent symbol))
+               (show-arglist-silent syntax symbol))
     (esa:display-message "Function ~a not found." symbol)))
 
 (defun show-arglist-for-form-at-mark (mark syntax)
@@ -917,11 +750,10 @@ Returns NIL if an arglist cannot be displayed."
 list need not be complete. If an argument list cannot be
 retrieved for the operator, nothing will be displayed."
   (with-code-insight mark syntax (:operator operator
-                                            :preceding-operand preceding-operand
-                                            :preceding-operand-indices preceding-operand-indices
-                                            :operands operands)
+                                  :this-operand-indices this-operand-indices
+                                  :operands operands)
     (when (valid-operator-p operator) 
-      (show-arglist-silent operator preceding-operand-indices preceding-operand operands))))
+      (show-arglist-silent syntax operator this-operand-indices operands))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -986,7 +818,7 @@ completions as strings."
   (let* ((result (with-code-insight mark-or-offset syntax
                      (:operator operator
                                 :operands operands
-                                :preceding-operand-indices indices)
+                                :this-operand-indices indices)
                    (let ((completions (possible-completions
                                        syntax operator string
                                        (package-at-mark syntax mark-or-offset)

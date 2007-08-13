@@ -470,7 +470,52 @@ editing plain text."))
            #:edit-definition
            #:form
            #:form-to-object
-           #:form-conversion-error)
+
+           ;; Lambda list classes.
+           #:lambda-list
+           #:semiordinary-lambda-list
+           #:ordinary-lambda-list
+           #:macro-lambda-list
+           #:destructuring-lambda-list
+
+           ;; Lambda list constructors.
+           #:make-lambda-list
+           #:make-required-parameter
+           #:make-&optional-parameter
+           #:make-&key-parameter
+           #:make-&body-parameter
+           #:make-&rest-parameter
+           #:parse-lambda-list
+
+           ;; Lambda list readers.
+           #:required-parameters
+           #:optional-parameters
+           #:keyword-parameters
+           #:allow-other-keys-p
+           #:rest-parameter
+           #:body-parameter
+
+           ;; Parameter classes.
+           #:parameter
+           #:named-parameter
+           #:destructuring-parameter
+           #:required-parameter #:destructuring-required-parameter #:named-required-parameter
+           #:optional-parameter #:destructuring-optional-parameter #:named-optional-parameter
+           #:keyword-parameter #:destructuring-keyword-parameter #:named-keyword-parameter
+           #:rest-parameter
+           #:body-parameter
+
+
+           ;; Parameter object readers.
+           #:min-arg-index
+           #:name
+           #:inner-lambda-list
+           #:init-form
+           #:keyword-name
+
+           ;; Conditions.
+           #:form-conversion-error
+           #:invalid-arglist)
   (:shadow clim:form)
   (:documentation "Implementation of the syntax module used for
 editing Common Lisp code."))

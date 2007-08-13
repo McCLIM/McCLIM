@@ -1,8 +1,8 @@
-;; -*- Mode: Lisp; Package: DREI-LISP-SYNTAX -*-
+;;; -*- Mode: Lisp; Package: DREI-LISP-SYNTAX -*-
 
 ;;;  (c) copyright 2005 by
 ;;;           Robert Strandh (strandh@labri.fr)
-;;;  (c) copyright 2006 by
+;;;  (c) copyright 2006-2007 by
 ;;;           Troels Henriksen (athas@sigkill.dk)
 ;;;
 ;;; This library is free software; you can redistribute it and/or
@@ -20,7 +20,8 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; Alternative syntax module for analysing Common Lisp
+;;; A syntax module for analysing Common Lisp using an LR based
+;;; parser.
 
 (in-package :drei-lisp-syntax)
 
@@ -690,7 +691,7 @@ along with any default values) that can be used in a
 
 ;;; reduce at the end of the buffer
 (define-lisp-action (|( form* | (eql nil))
-  (reduce-until-type incomplete-list-form left-parenthesis-lexeme))
+  (reduce-until-type incomplete-list-form left-parenthesis-lexeme t))
 
 ;;;;;;;;;;;;;;;; Cons cell
 ;; Also (foo bar baz . quux) constructs.
@@ -724,9 +725,9 @@ along with any default values) that can be used in a
 
 ;;; Reduce at end of buffer.
 (define-lisp-action (|( form* dot-lexeme | (eql nil))
-  (reduce-until-type incomplete-cons-cell-form left-parenthesis-lexeme))
+  (reduce-until-type incomplete-cons-cell-form left-parenthesis-lexeme t))
 (define-lisp-action (|( form* dot-lexeme form | (eql nil))
-  (reduce-until-type incomplete-cons-cell-form left-parenthesis-lexeme))
+  (reduce-until-type incomplete-cons-cell-form left-parenthesis-lexeme t))
 
 ;;;;;;;;;;;;;;;; Simple Vector
 
@@ -749,7 +750,7 @@ along with any default values) that can be used in a
 
 ;;; reduce at the end of the buffer
 (define-lisp-action (|#( form* | (eql nil))
-  (reduce-until-type incomplete-simple-vector-form simple-vector-start-lexeme))
+  (reduce-until-type incomplete-simple-vector-form simple-vector-start-lexeme t))
 
 ;;;;;;;;;;;;;;;; String
 
@@ -772,7 +773,7 @@ along with any default values) that can be used in a
 
 ;;; reduce at the end of the buffer
 (define-lisp-action (|" word* | (eql nil))
-  (reduce-until-type incomplete-string-form string-start-lexeme))
+  (reduce-until-type incomplete-string-form string-start-lexeme t))
 
 ;;;;;;;;;;;;;;;; Line comment
 
@@ -814,7 +815,7 @@ along with any default values) that can be used in a
 
 ;;; reduce at the end of the buffer
 (define-lisp-action (|#\| word* | (eql nil))
-  (reduce-until-type incomplete-long-comment-form long-comment-start-lexeme))
+  (reduce-until-type incomplete-long-comment-form long-comment-start-lexeme t))
 
 ;;;;;;;;;;;;;;;; Token (number or symbol)
 
@@ -836,7 +837,7 @@ along with any default values) that can be used in a
 
 ;;; reduce at the end of the buffer
 (define-lisp-action (| m-e-start text* | (eql nil))
-  (reduce-until-type incomplete-token-form multiple-escape-start-lexeme))
+  (reduce-until-type incomplete-token-form multiple-escape-start-lexeme t))
 
 ;;;;;;;;;;;;;;;; Quote
 
@@ -866,7 +867,7 @@ along with any default values) that can be used in a
 (define-lisp-action (|' | unmatched-right-parenthesis-lexeme)
   (reduce-until-type incomplete-quote-form quote-lexeme))
 (define-lisp-action (|' | (eql nil))
-  (reduce-until-type incomplete-quote-form quote-lexeme))
+  (reduce-until-type incomplete-quote-form quote-lexeme t))
 
 ;;;;;;;;;;;;;;;; Backquote
 
@@ -892,7 +893,7 @@ along with any default values) that can be used in a
 (define-lisp-action (|` | unmatched-right-parenthesis-lexeme)
   (reduce-until-type incomplete-backquote-form backquote-lexeme))
 (define-lisp-action (|` | (eql nil))
-  (reduce-until-type incomplete-backquote-form backquote-lexeme))
+  (reduce-until-type incomplete-backquote-form backquote-lexeme t))
 
 ;;;;;;;;;;;;;;;; Comma
 
@@ -946,7 +947,7 @@ along with any default values) that can be used in a
 (define-lisp-action (|#' | unmatched-right-parenthesis-lexeme)
   (reduce-until-type incomplete-function-form function-lexeme))
 (define-lisp-action (|#' | (eql nil))
-  (reduce-until-type incomplete-function-form function-lexeme))
+  (reduce-until-type incomplete-function-form function-lexeme t))
 
 ;;;;;;;;;;;;;;;; Reader conditionals
 
@@ -1062,7 +1063,7 @@ along with any default values) that can be used in a
 
 ;;; reduce at the end of the buffer
 (define-lisp-action (|#S( form* | (eql nil))
-  (reduce-until-type incomplete-structure-form structure-start-lexeme))
+  (reduce-until-type incomplete-structure-form structure-start-lexeme t))
 
 
 ;;;;;;;;;;;;;;;; pathname
@@ -1090,7 +1091,7 @@ along with any default values) that can be used in a
 (define-lisp-action (|#P incomplete-form | t)
   (reduce-until-type incomplete-pathname-form pathname-start-lexeme))
 (define-lisp-action (|#P | (eql nil))
-  (reduce-until-type incomplete-pathname-form pathname-start-lexeme))
+  (reduce-until-type incomplete-pathname-form pathname-start-lexeme t))
 
 ;;;;;;;;;;;;;;;; undefined reader macro
 
@@ -1348,8 +1349,8 @@ stripping leading non-forms."
   "Return the form closest to `mark-or-offset'."
   (as-offsets ((offset mark-or-offset))
     (flet ((distance (form)
-             (min (abs (- (start-offset form) mark-or-offset))
-                  (abs (- (end-offset form) mark-or-offset)))))
+             (min (abs (- (start-offset form) offset))
+                  (abs (- (end-offset form) offset)))))
       (reduce #'(lambda (form1 form2)
                   (cond ((null form1) form2)
                         ((null form2) form1)
@@ -1439,7 +1440,7 @@ the form that `token' quotes, peeling away all quote forms."
 (defgeneric form-at-top-level-p (form)
   (:documentation "Return NIL if `form' is not a top-level-form,
   T otherwise.")
-  (:method ((form t))
+  (:method ((form form))
     (or (typep (parent form) 'form*)
         (null (parent form)))))
 
@@ -1784,28 +1785,24 @@ and move `mark' to after `string'. If there is no symbol at
   (loop for (first . rest) on children
      if (formp first)
      do
-       (cond ((< (start-offset first) offset (end-offset first))
-              (return (if (null (children first))
-                          nil
-                          (form-before-in-children (children first) offset))))
-             ((and (>= offset (end-offset first))
-                   (or (null (first-form rest))
-                       (<= offset (start-offset (first-form rest)))))
-              (return (let ((potential-form
-                             (cond ((form-list-p first)
-                                    (form-before-in-children (children first) offset))
-                                   ((and (form-quoted-p first)
-                                         (not (form-incomplete-p first))
-                                         (form-list-p (second (children first))))
-                                    (form-before-in-children (children (second (children first))) offset)))))
-                        (if (not (null potential-form))
-                            (if (<= (end-offset first)
-                                    (end-offset potential-form))
-                                potential-form
-                                first)
-                            (when (formp first)
-                              first)))))
-             (t nil))))
+     (cond ((< (start-offset first) offset (end-offset first))
+            (return (if (null (children first))
+                        nil
+                        (form-before-in-children (children first) offset))))
+           ((and (>= offset (end-offset first))
+                 (or (null (first-form rest))
+                     (<= offset (start-offset (first-form rest)))))
+            (return (let ((potential-form
+                           (form-before-in-children (children (fully-unquoted-form first)) offset)))
+                      (if (not (null potential-form))
+                          (if (or (<= (end-offset first)
+                                      (end-offset potential-form))
+                                  (form-incomplete-p (fully-unquoted-form first)))
+                              potential-form
+                              first)
+                          (when (formp first)
+                            first)))))
+           (t nil))))
 
 (defun form-before (syntax offset)
   (assert (>= (size (buffer syntax)) offset) nil
@@ -1849,17 +1846,17 @@ and move `mark' to after `string'. If there is no symbol at
 
 (defun form-around-in-children (children offset)
   (loop for child in children
-	if (formp child)
-	do (cond ((or (<= (start-offset child) offset (end-offset child))
-                      (= offset (end-offset child))
-                      (= offset (start-offset child)))
-		  (return (if (null (first-form (children child)))
-                              child
-			      (or (form-around-in-children (children child) offset)
-                                  child))))
-		 ((< offset (start-offset child))
-		  (return nil))
-		 (t nil))))
+     if (formp child)
+     do (cond ((or (<= (start-offset child) offset (end-offset child))
+                   (= offset (end-offset child))
+                   (= offset (start-offset child)))
+               (return (if (null (first-form (children child)))
+                           child
+                           (or (form-around-in-children (children child) offset)
+                               child))))
+              ((< offset (start-offset child))
+               (return nil))
+              (t nil))))
 
 (defun form-around (syntax offset)
   (assert (>= (size (buffer syntax)) offset) nil
@@ -2627,11 +2624,11 @@ will be signalled for incomplete forms.")
                          (*label-placeholders->objects* nil))
                      (act))
                    (act)))))
-  (:method ((syntax lisp-syntax) (form t) &rest args
+  (:method ((syntax lisp-syntax) (form form) &rest args
             &key no-error &allow-other-keys)
     (unless no-error
       (apply #'no-applicable-method #'form-to-object syntax form args)))
-  (:method :around ((syntax lisp-syntax) (form incomplete-form-mixin)
+  (:method :before ((syntax lisp-syntax) (form incomplete-form-mixin)
                     &key read no-error &allow-other-keys)
            (when (and read (null no-error))
              (form-conversion-error syntax form "form is incomplete"))))
@@ -2809,7 +2806,7 @@ will be signalled for incomplete forms.")
     (invoke-reader syntax form)))
 
 (defmethod form-to-object ((syntax lisp-syntax) (form literal-object-form) &key &allow-other-keys)
-  (object-after (start-mark form)))
+  (buffer-object (buffer syntax) (start-offset form)))
 
 (defmethod form-to-object ((syntax lisp-syntax) (form pathname-form) &key &allow-other-keys)
   (values (read-from-string (form-string syntax form))))
@@ -2869,33 +2866,782 @@ will be signalled for incomplete forms.")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; Arglist fetching.
+;;; Lambda-list handling.
 ;;;
-;;; Just the basics. The fun stuff is found in lisp-syntax-swine.lisp.
+;;; Just the infrastructure. The fun processing and analysis stuff is
+;;; found in lisp-syntax-swine.lisp. The lambda-list interface is
+;;; based on the simplicity of CL pathnames.
 
 (defgeneric arglist-for-form (syntax operator &optional arguments)
   (:documentation "Return an arglist for `operator'.")
   (:method ((syntax lisp-syntax) (operator symbol) &optional arguments)
     (declare (ignore arguments))
-    (canonicalize-arglist
-     (cleanup-arglist
-      (arglist (get-usable-image syntax) operator)))))
+    (parse-lambda-list (cleanup-arglist (arglist (get-usable-image syntax) operator)))))
 
-(defmethod arglist-for-form (syntax (operator list) &optional arguments)
+(defmethod arglist-for-form ((syntax lisp-syntax) (operator list) &optional arguments)
   (declare (ignore arguments))
   (case (first operator)
-    ('cl:lambda (canonicalize-arglist (cleanup-arglist (second operator))))))
+    ('cl:lambda (parse-lambda-list (cleanup-arglist (second operator))))))
 
 ;; SBCL, and some other implementations I would guess, provides us
 ;; with an arglist that is too simple, confusing the code
 ;; analysers. We fix that here.
-(defmethod arglist-for-form (syntax (operator (eql 'clim-lisp:defclass)) &optional arguments)
+(defmethod arglist-for-form ((syntax lisp-syntax)
+                             (operator (eql 'clim-lisp:defclass))
+                             &optional arguments)
   (declare (ignore arguments))
-  '(name (&rest superclasses) (&rest slots) &rest options))
+  (parse-lambda-list '(name (&rest superclasses) (&rest slots) &rest options)))
 
-(defmethod arglist-for-form (syntax (operator (eql 'cl:defclass)) &optional arguments)
+(defmethod arglist-for-form ((syntax lisp-syntax)
+                             (operator (eql 'cl:defclass))
+                             &optional arguments)
   (declare (ignore arguments))
-  '(name (&rest superclasses) (&rest slots) &rest options))
+  (parse-lambda-list '(name (&rest superclasses) (&rest slots) &rest options)))
+
+(defun cleanup-arglist (arglist)
+  "Remove elements of `arglist' that we are not interested in,
+including implementation-specific lambda list keywords."
+  (loop
+     for arg in arglist
+     with in-&aux                       ; If non-NIL, we are in the
+                                        ; &aux parameters that should
+                                        ; not be displayed.
+                    
+     with in-garbage                    ; If non-NIL, the next
+                                        ; argument is a garbage
+                                        ; parameter that should not be
+                                        ; displayed.
+     if in-garbage
+     do (setf in-garbage nil)
+     else if (not in-&aux)
+     if (eq arg '&aux)
+     do (setf in-&aux t)
+     else if (member arg +cl-garbage-keywords+ :test #'eq)
+     do (setf in-garbage t)
+     else if (listp arg)
+     collect (cleanup-arglist arg)
+     else
+     collect arg))
+
+;; Arglist classes. Some arglist elements are not represented (&env,
+;; &aux), because they are not interesting.
+
+(defclass lambda-list ()
+  ((%original-lambda-list :initarg :original-lambda-list
+                                   :reader original-lambda-list))
+  (:documentation "The superclass of all lambda list classes."))
+
+(defgeneric required-parameters (lambda-list)
+  (:documentation "Return a list containing objects representing
+the required parameters of `lambda-list'.")
+  (:method ((lambda-list lambda-list))
+    nil))
+
+(defgeneric optional-parameters (lambda-list)
+  (:documentation "Return a list containing objects representing
+the optional parameters of `lambda-list'.")
+  (:method ((lambda-list lambda-list))
+    nil))
+
+(defgeneric keyword-parameters (lambda-list)
+  (:documentation "Return a list containing objects representing
+the keyword parameters of `lambda-list'.")
+  (:method ((lambda-list lambda-list))
+    nil))
+
+(defgeneric rest-parameter (lambda-list)
+  (:documentation "Return an object representing the rest
+parameter of `lambda-list'. If `lambda-list' does not have a rest
+parameter, this function will return NIL.")
+  (:method ((lambda-list lambda-list))
+    nil))
+
+(defgeneric body-parameter (lambda-list)
+  (:documentation "Return an object representing the body
+parameter of `lambda-list'. If `lambda-list' does not have a body
+parameter, this function will return NIL.")
+  (:method ((lambda-list lambda-list))
+    nil))
+
+(defgeneric all-parameters (lambda-list)
+  (:documentation "Return a list of all the parameters in
+`lambda-list'.")
+  (:method-combination append))
+
+(defun clone-lambda-list-element (object &rest additional-initargs)
+  "Create a clone (cloned as much as available initargs permit)
+of the `lambda-list' object."
+  (apply #'make-instance (class-of object)
+         (append additional-initargs
+                 ;; Find initargs and values from class. This only
+                 ;; works because we know the lambda-list and
+                 ;; parameter slots all have initargs.
+                 (loop for slot in (clim-mop:class-slots (class-of object))
+                    for slot-initarg = (first (clim-mop:slot-definition-initargs slot))
+                    for slot-name = (clim-mop:slot-definition-name slot)
+                    for slot-boundp = (slot-boundp object slot-name)
+                    when (and slot-initarg slot-boundp)
+                    nconc (list slot-initarg (slot-value object slot-name))))))
+
+(defgeneric merge-parameters-of-type (lambda-list type parameters)
+  (:documentation "Return a new `lambda-list' object based on
+`lambda-list' with `parameters' added to the list of parameters
+of `type', which must be a keyword symbol naming a parameter
+type.")
+  (:method :around ((lambda-list lambda-list) type parameters)
+           (let* ((result (call-next-method))
+                  (minimum-classes (mapcar #'minimum-lambda-list-class
+                                           (all-parameters result)))
+                  (optimal-subclass (if (null minimum-classes)
+                                        (class-of result)
+                                        (first (sort minimum-classes #'subtypep)))))
+             (if (subtype-compatible-p minimum-classes)
+                 (change-class result (if (subtypep (class-of result) optimal-subclass)
+                                          (class-of result)
+                                          optimal-subclass))
+                 (error "Lambda list has incompatible parameters")))))
+
+(defun set-parameter-minimums (parameters start-value incrementer)
+  "Return a list of clones of the parameters in `parameters' with
+new \"minimum arg offset\" values. `Start-value' is used for the
+initial offset, `incrementer' will be called with the previously
+used offset to calculate a new offset."
+  (loop for parameter in parameters
+     for index = start-value then (funcall incrementer index)
+     collecting (clone-lambda-list-element parameter :min-arg-index index)))
+
+(defun increment-parameter-minimums (parameters start-value incrementer)
+  "Return a list of clones of the parameters in `parameters' with
+new \"minimum arg offset\" values, calculated by adding values to
+the old ones. `Start-value' is used for the initial offset,
+`incrementer' will be called with the previously used offset to
+calculate a new offset to add to the old offset."
+  (when parameters
+    (loop for parameter in parameters
+       for index = start-value then (funcall incrementer index)
+       collecting (clone-lambda-list-element parameter
+                   :min-arg-index (+ (min-arg-index parameter) index)))))
+
+(defun make-lambda-list (&rest args &key (defaults (make-instance 'ordinary-lambda-list))
+                         &allow-other-keys)
+  "Makes a new lambda-list object from the component arguments,
+using `defaults' for the default values. The resulting object
+will be of the same class as `defaults'. `Defaults' defaults to
+an `ordinary-lambda-list' object containing no parameters."
+  (let ((result defaults))
+    (loop for (type args) on args by #'cddr
+       unless (eq type :defaults)
+       do (setf result (merge-parameters-of-type result type args))
+       finally (return result))))
+
+(defclass semiordinary-lambda-list (lambda-list)
+  ((%required-parameters :initarg :required-parameters
+                         :initform nil
+                         :reader required-parameters)
+   (%optional-parameters :initarg :optional-parameters
+                         :initform nil
+                         :reader optional-parameters)
+   (%keyword-parameters :initarg :keyword-parameters
+                        :initform nil
+                        :reader keyword-parameters)
+   (%allow-other-keys :initarg :allow-other-keys
+                      :initform nil
+                      :reader allow-other-keys-p)
+   (%rest-parameter :initarg :rest-parameter
+                    :initform nil
+                    :reader rest-parameter))
+  (:documentation "The class for lambda lists that are
+approximately ordinary (as found in `defun' and simple `defmacro's)."))
+
+(defun positional-parameter-count (lambda-list)
+  "Return the number of positional parameters in `lambda-list'."
+  (+ (length (required-parameters lambda-list))
+     (length (optional-parameters lambda-list))))
+
+(defmethod merge-parameters-of-type ((lambda-list semiordinary-lambda-list)
+                                     (type (eql :required-parameters)) (parameters list))
+  (clone-lambda-list-element lambda-list :required-parameters parameters))
+
+(defmethod merge-parameters-of-type :around ((lambda-list semiordinary-lambda-list)
+                                             (type (eql :required-parameters)) (parameters list))
+  (let ((parameter-delta (- (length parameters)
+                            (length (required-parameters lambda-list))))
+        (new-lambda-list (call-next-method)))
+    (clone-lambda-list-element new-lambda-list
+     :required-parameters (set-parameter-minimums
+                           (required-parameters new-lambda-list) 0 #'1+)
+     :optional-parameters (increment-parameter-minimums
+                           (optional-parameters new-lambda-list) parameter-delta #'identity)
+     :keyword-parameters (increment-parameter-minimums
+                          (keyword-parameters new-lambda-list) parameter-delta #'identity)
+     :rest-parameter (first (increment-parameter-minimums
+                             (listed (rest-parameter new-lambda-list))
+                             parameter-delta (constantly 0))))))
+
+(defmethod merge-parameters-of-type ((lambda-list semiordinary-lambda-list)
+                                     (type (eql :optional-parameters)) (parameters list))
+  (clone-lambda-list-element lambda-list :optional-parameters
+                             parameters))
+
+(defmethod merge-parameters-of-type :around ((lambda-list semiordinary-lambda-list)
+                                             (type (eql :optional-parameters)) (parameters list))
+  (let ((parameter-delta (- (length parameters)
+                            (length (optional-parameters lambda-list))))
+        (new-lambda-list (call-next-method)))
+    (clone-lambda-list-element new-lambda-list
+     :optional-parameters (set-parameter-minimums
+                           (optional-parameters new-lambda-list)
+                           (length (required-parameters new-lambda-list)) #'1+)
+     :keyword-parameters (increment-parameter-minimums
+                          (keyword-parameters new-lambda-list) parameter-delta #'identity)
+     :rest-parameter (first (increment-parameter-minimums
+                             (listed (rest-parameter new-lambda-list))
+                             parameter-delta (constantly 0))))))
+
+(defmethod merge-parameters-of-type ((lambda-list semiordinary-lambda-list)
+                                     (type (eql :keyword-parameters)) (parameters list))
+  (clone-lambda-list-element lambda-list
+   :keyword-parameters (set-parameter-minimums parameters (positional-parameter-count lambda-list) #'identity)))
+
+(defmethod merge-parameters-of-type ((lambda-list semiordinary-lambda-list)
+                                     (type (eql :allow-other-keys)) parameter)
+  (check-type parameter boolean)
+  (clone-lambda-list-element lambda-list :allow-other-keys parameter))
+
+(defmethod merge-parameters-of-type ((lambda-list semiordinary-lambda-list)
+                                     (type (eql :rest-parameter)) parameter)
+  (check-type parameter (or null rest-parameter))
+  (clone-lambda-list-element lambda-list :rest-parameter
+                             (clone-lambda-list-element parameter
+                              :min-arg-index (positional-parameter-count lambda-list))))
+
+(defmethod all-parameters append ((lambda-list semiordinary-lambda-list))
+  (append (required-parameters lambda-list)
+          (optional-parameters lambda-list)
+          (keyword-parameters lambda-list)
+          (when (rest-parameter lambda-list)
+            (list (rest-parameter lambda-list)))))
+
+(defclass ordinary-lambda-list (semiordinary-lambda-list)
+  ()
+  (:documentation "The class for ordinary lambda lists (as found
+in `defun')."))
+
+(defclass macro-lambda-list (semiordinary-lambda-list)
+  ((%body-parameter :initarg :body-parameter
+                    :initform nil
+                    :reader body-parameter))
+  (:documentation "The class for macro lambda lists."))
+
+(defmethod initialize-instance :after ((object macro-lambda-list) &key)
+  (assert (null (and (rest-parameter object) (body-parameter object))) nil
+          "It is not permitted to have both a &rest and a &body argument in a lambda list."))
+
+(defmethod merge-parameters-of-type :around ((lambda-list macro-lambda-list)
+                                             (type (eql :required-parameters)) (parameters list))
+  (let ((parameter-delta (- (length parameters)
+                            (length (required-parameters lambda-list))))
+        (new-lambda-list (call-next-method)))
+    (clone-lambda-list-element new-lambda-list
+     :body-parameter (first (increment-parameter-minimums
+                             (listed (body-parameter new-lambda-list))
+                             parameter-delta (constantly 0))))))
+
+(defmethod merge-parameters-of-type :around ((lambda-list macro-lambda-list)
+                                             (type (eql :optional-parameters)) (parameters list))
+  (let ((parameter-delta (- (length parameters)
+                            (length (optional-parameters lambda-list))))
+        (new-lambda-list (call-next-method)))
+    (clone-lambda-list-element new-lambda-list
+     :body-parameter (first (increment-parameter-minimums
+                             (listed (body-parameter new-lambda-list))
+                             parameter-delta (constantly 0))))))
+
+(defmethod merge-parameters-of-type ((lambda-list macro-lambda-list)
+                                     (type (eql :rest-parameter)) parameter)
+  (check-type parameter (or null rest-parameter))
+  (clone-lambda-list-element lambda-list
+   :rest-parameter (clone-lambda-list-element
+                    parameter :min-arg-index (positional-parameter-count lambda-list))
+   :body-parameter nil))
+
+(defmethod merge-parameters-of-type ((lambda-list macro-lambda-list)
+                                     (type (eql :body-parameter)) parameter)
+  (check-type parameter (or null rest-parameter))
+  (clone-lambda-list-element lambda-list
+   :body-parameter (clone-lambda-list-element
+                    parameter :min-arg-index (positional-parameter-count lambda-list))
+   :rest-parameter nil))
+
+(defmethod all-parameters append ((lambda-list macro-lambda-list))
+  (when (body-parameter lambda-list)
+    (list (body-parameter lambda-list))))
+
+(defclass destructuring-lambda-list (macro-lambda-list)
+  ()
+  (:documentation "The class for nested inner lambda lists (as in
+macros) and `destructuring-bind' (though it's not used for that
+here)."))
+
+(defgeneric minimum-lambda-list-class (parameter)
+  (:documentation "Return the least specific subclass of
+`lambda-list' `parameter' should be in."))
+
+(defclass parameter ()
+  ((%min-arg-index :initarg :min-arg-index
+                   :initform (error "Must provide a minimum argument index for parameter")
+                   :reader min-arg-index
+                   :documentation "The minimum index an argument
+must have in its (possibly inner) argument list in order to
+affect the value of this parameter."))
+  (:documentation "The base class for lambda list parameters."))
+
+(defmethod minimum-lambda-list-class ((parameter parameter))
+  'lambda-list)
+
+(defclass named-parameter (parameter)
+  ((%name :initarg :name
+          :initform (error "A name must be provided for a named parameter")
+          :reader name))
+  (:documentation "The base class for all parameter classes
+representing a named parameter."))
+
+(defmethod minimum-lambda-list-class ((parameter named-parameter))
+  'semiordinary-lambda-list)
+
+(defclass destructuring-parameter (parameter)
+  ((%inner-lambda-list :initarg :inner-lambda-list
+                       :initform (error "The inner lambda list must be provided for a destructuring parameter")
+                       :reader inner-lambda-list))
+  (:documentation "The base class used for destructing
+parameters/nested lambda lists (as in macros)."))
+
+(defmethod minimum-lambda-list-class ((parameter destructuring-parameter))
+  'macro-lambda-list)
+
+(defclass required-parameter (parameter)
+  ()
+  (:documentation "The class for representing required
+parameters."))
+
+(defclass optional-parameter (parameter)
+  ((%init-form :initarg :init-form
+               :initform nil
+               :reader init-form))
+  (:documentation "The class for representing optional
+parameters."))
+
+(defclass keyword-parameter (optional-parameter)
+  ((%keyword-name :initarg :keyword-name
+                  :initform (error "A keyword parameter must have a keyword")
+                  :reader keyword-name))
+  (:documentation "The class for representing keyword parameters."))
+
+(defclass destructuring-required-parameter (destructuring-parameter required-parameter)
+  ()
+  (:documentation "The class for representing required
+destructuring parameters in lambda lists. "))
+
+(defclass destructuring-optional-parameter (destructuring-parameter optional-parameter)
+  ()
+  (:documentation "The class for representing optional
+destructuring parameters in lambda lists. "))
+
+(defclass destructuring-keyword-parameter (destructuring-parameter keyword-parameter)
+  ()
+  (:documentation "The class for representing keyword
+destructuring parameters in lambda lists. "))
+
+(defclass named-required-parameter (named-parameter required-parameter)
+  ()
+  (:documentation "The class representing named mandatory
+parameters in a lambda list."))
+
+(defclass named-optional-parameter (named-parameter optional-parameter)
+  ()
+  (:documentation "The class representing named optional parameters
+in a lambda list."))
+
+(defclass rest-parameter (named-parameter)
+  ()
+  (:documentation "The class representing the &rest parameter in
+a lambda list."))
+
+(defclass body-parameter (rest-parameter)
+  ()
+  (:documentation "The class representing the &body parameter in
+a lambda list."))
+
+;; Fine-grained conditions for malformed lambda lists.
+
+(define-condition invalid-lambda-list (condition)
+  ((%arglist :reader invalid-lambda-list
+             :initarg :arglist
+             :initform (error "Must provide an arglist for condition")))
+  (:documentation "Subclasses of this condition are signalled
+whenever a malformed arglist is found during arglist
+processing."))
+
+(define-condition misplaced-element (invalid-lambda-list)
+  ((%misplaced-element :reader misplaced-element
+                       :initarg :misplaced-element
+                       :initform (error "Must provide a misplaced element for condition"))
+   (%misplaced-element-index :reader misplaced-element-index
+                             :initarg :misplaced-element-index
+                             :initform (error "Must provide a misplaced element index for condition")))
+  (:report (lambda (condition stream)
+	     (format stream "Element ~A is not allowed at position ~A in ~A"
+                     (misplaced-element condition)
+                     (misplaced-element-index condition)
+                     (invalid-lambda-list condition))))
+  (:documentation "Subclasses of this condition are signalled
+whenever some single element of a lambda list is in an misplaced
+position."))
+
+(define-condition misplaced-&optional (misplaced-element)
+  ()
+  (:documentation "Subclasses of this condition are signalled
+whenever an &optional argument is misplaced in an argument
+list."))
+
+(define-condition &optional-after-&key (misplaced-&optional)
+  ()
+  (:report (lambda (condition stream)
+	     (format stream "&optional found after &key in: ~A"
+                     (invalid-lambda-list condition))))
+  (:documentation "This condition is signalled whenever an
+&optional parameter is found after a &key argument in an argument
+list."))
+
+(define-condition &optional-after-&rest (misplaced-&optional)
+  ()
+  (:report (lambda (condition stream)
+	     (format stream "&optional found after &rest in: ~A"
+                     (invalid-lambda-list condition))))
+  (:documentation "This condition is signalled whenever an
+&optional parameter is found after a &rest argument in an argument
+list."))
+
+(define-condition misplaced-&rest (misplaced-element)
+  ()
+  (:documentation "Subclasses of this condition are signalled
+whenever a &rest parameter is misplaced in an argument list."))
+
+(define-condition &rest-after-&key (misplaced-&rest)
+  ()
+  (:report (lambda (condition stream)
+	     (format stream "&rest found after &key in: ~A"
+                     (invalid-lambda-list condition))))
+  (:documentation "This condition is signalled whenever a &rest
+parameter is found after a &key argument in a lambda list."))
+
+(define-condition misplaced-&body (misplaced-element)
+  ()
+  (:documentation "Subclasses of this condition are signalled
+whenever a &body parameter is misplaced in an argument list."))
+
+(define-condition &body-after-&key (misplaced-&body)
+  ()
+  (:report (lambda (condition stream)
+	     (format stream "&body found after &key in: ~A"
+                     (invalid-lambda-list condition))))
+  (:documentation "This condition is signalled whenever a &body
+parameter is found after a &key argument in a lambda list."))
+
+(define-condition &body-and-&rest-found (misplaced-&body misplaced-&rest)
+  ()
+  (:report (lambda (condition stream)
+	     (format stream "&body and &rest found in same lambda list: ~A"
+                     (invalid-lambda-list condition))))
+  (:documentation "This condition is signalled whenever both a
+&body and a &rest parameter is found in the same lambda list."))
+
+(define-condition symbol-after-&allow-other-keys (misplaced-element)
+  ()
+  (:report (lambda (condition stream)
+	     (format stream "Element ~A at position ~A is not allowed after &allow-other-keys in ~A"
+                     (misplaced-element condition)
+                     (misplaced-element-index condition)
+                     (invalid-lambda-list condition)))))
+
+(defun make-required-parameter (parameter-data &optional (min-arg-index 0))
+  "Parse `parameter-data' as a required parameter and return two
+values: an appropriate parameter object and a boolean that is NIL
+if the parameter cannot be part of an ordinary lambda list."
+  (if (listp parameter-data)
+      (values (make-instance 'destructuring-required-parameter
+               :min-arg-index min-arg-index
+               :inner-lambda-list (parse-lambda-list parameter-data 'destructuring-lambda-list))
+              t)
+      (make-instance 'named-required-parameter
+       :name parameter-data
+       :min-arg-index min-arg-index)))
+
+(defun make-&optional-parameter (parameter-data &optional (min-arg-index 0))
+  "Parse `parameter-data' as an optional parameter and return two
+values: an appropriate parameter object and a boolean that is NIL
+if the parameter cannot be part of an ordinary lambda list."
+  (cond ((and (listp parameter-data)
+              (listp (first parameter-data)))
+         (values
+          (make-instance 'destructuring-optional-parameter
+           :init-form (second parameter-data)
+           :min-arg-index min-arg-index
+           :inner-lambda-list (parse-lambda-list (first parameter-data)
+                                                 'destructuring-lambda-list))
+          t))
+        ((listp parameter-data)
+         (make-instance 'named-optional-parameter
+          :init-form (second parameter-data)
+          :min-arg-index min-arg-index
+          :name (first parameter-data)))
+        ((symbolp parameter-data)
+         (make-instance 'named-optional-parameter
+          :init-form nil
+          :min-arg-index min-arg-index
+          :name parameter-data))
+        (t (error "I have no idea how to handle ~A as an optional parameter in a lambda list" parameter-data))))
+
+(defun make-&key-parameter (parameter-data &optional (min-arg-index 0))
+  "Parse `parameter-data' as a keyword parameter and return two
+values: an appropriate parameter object and a boolean that is true
+if the parameter cannot be part of an ordinary lambda list."
+  (cond ((and (listp parameter-data)
+              (listp (first parameter-data))
+              (listp (second (first parameter-data))))
+         (values
+          (make-instance 'destructuring-keyword-parameter
+           :init-form (second parameter-data)
+           :min-arg-index min-arg-index
+           :keyword-name (first (first parameter-data))
+           :inner-lambda-list (parse-lambda-list (second (first parameter-data))
+                                                        'destructuring-lambda-list))
+          t))
+        ((listp parameter-data)
+         (make-instance 'keyword-parameter
+          :init-form (second parameter-data)
+          :min-arg-index min-arg-index
+          :keyword-name (if (listp (first parameter-data))
+                            (first (first parameter-data))
+                            (intern (string (first parameter-data)) :keyword))))
+        ((symbolp parameter-data)
+         (make-instance 'keyword-parameter
+          :init-form nil
+          :min-arg-index min-arg-index
+          :keyword-name (intern (symbol-name parameter-data) :keyword)))
+        (t (error "I have no idea how to handle ~A as a keyword parameter in a lambda list" parameter-data))))
+
+(defun make-&rest-parameter (parameter-data &optional (min-arg-index 0))
+  "Parse `parameter-data' as a rest parameter and return two
+values: an appropriate parameter object and a boolean that is true
+if the parameter cannot be part of an ordinary lambda list."
+  (make-instance 'rest-parameter
+   :name parameter-data
+   :min-arg-index min-arg-index))
+
+(defun make-&body-parameter (parameter-data &optional (min-arg-index 0))
+  "Parse `parameter-data' as a body parameter and return two
+values: an appropriate parameter object and a boolean that is true
+if the parameter cannot be part of an ordinary lambda list."
+  (values
+   (make-instance 'body-parameter
+    :name parameter-data
+    :min-arg-index min-arg-index)
+   t))
+
+(defun parse-lambda-list (lambda-list &optional class)
+  "Convert a provided `lambda-list' (as a list) to a
+`lambda-list' object, and signal errors if the lambda list is
+found to be invalid.
+
+This function can handle ordinary lambda lists, generic function
+lambda lists, macro lambda lists and extended lambda lists.
+
+If `lambda-list' is an invalid lambda list, an appropriate subclass of
+`invalid-lambda-list' will be signalled.
+
+If `class' is non-NIL, it should be the name of a subclass of
+`semiordinary-lambda-list'. A lambda list of this class will be
+returned. Otherwise, `parse-lambda-list' will figure out the
+right class based on the lambda list contents."
+  (declare (optimize (debug 3)))
+  (let ((ordinary-lambda-list-p t)
+        (macro-lambda-list-p t)
+        (index 0))
+    (labels ((incr-index ()
+               (prog1 index (incf index)))
+             (update-ordinarity (new-ordinarity)
+               (when ordinary-lambda-list-p
+                 (setf ordinary-lambda-list-p (not new-ordinarity))))
+             (required-parameter (parameter)
+               (multiple-value-bind (parameter unordinaryp)
+                   (make-required-parameter parameter (incr-index))
+                 (prog1 parameter (update-ordinarity unordinaryp))))
+             (&optional-parameter (parameter)
+               (multiple-value-bind (parameter unordinaryp)
+                   (make-&optional-parameter parameter (incr-index))
+                 (prog1 parameter (update-ordinarity unordinaryp))))
+             (&key-parameter (parameter)
+               (multiple-value-bind (parameter unordinaryp)
+                   (make-&key-parameter parameter index)
+                 (prog1 parameter (update-ordinarity unordinaryp)))))
+      (multiple-value-bind (required optional keyword allow-other-keys rest body)
+          (macrolet ((in (&key optional key rest body)
+                       `(setf in-required nil
+                              in-&optional ,optional
+                              in-&key ,key
+                              in-&rest ,rest
+                              in-&body ,body))
+                     (misplaced (condition &rest args)
+                       `(error ',condition :arglist lambda-list
+                                           :misplaced-element element
+                                           :misplaced-element-index index
+                                           ,@args)))
+            (loop
+               for element in lambda-list
+               with in-required = t
+               with in-&optional = nil
+               with in-&key = nil
+               with in-&rest = nil
+               with in-&body = nil
+               with saw-&allow-other-keys = nil
+               with saw-&rest-or-&body-param = nil
+               if saw-&allow-other-keys
+               do (misplaced symbol-after-&allow-other-keys)
+               else if (lambda-list-keyword-p element)
+               do (case element
+                    (&optional
+                     (cond (in-&key
+                            (misplaced &optional-after-&key))
+                           (in-&rest
+                            (misplaced &optional-after-&rest))
+                           (t (in :optional t))))
+                    (&key
+                     (in :key t))
+                    (&rest
+                     (cond (in-&key
+                            (misplaced &rest-after-&key))
+                           (in-&body
+                            (misplaced &body-and-&rest-found))
+                           (t (in :rest t))))
+                    (&body
+                     (cond (in-&key
+                            (misplaced &body-after-&key))
+                           (in-&rest
+                            (misplaced &body-and-&rest-found))
+                           (t (in :body t))))
+                    (&allow-other-keys
+                     (setf saw-&allow-other-keys t)))
+               else if in-required
+               collect (required-parameter element) into required
+               else if in-&optional
+               collect (&optional-parameter element) into optional
+               else if in-&key
+               collect (&key-parameter element) into keyword
+               else if in-&rest
+               if saw-&rest-or-&body-param
+               do (misplaced misplaced-element)
+               end and
+               collect (make-&rest-parameter element index) into rest and
+               do (setf saw-&rest-or-&body-param t)
+               else if in-&body
+               if saw-&rest-or-&body-param
+               do (misplaced misplaced-element)
+               end and
+               do (setf ordinary-lambda-list-p nil) and
+               collect (make-&body-parameter element index) into body and
+               do (setf saw-&rest-or-&body-param t)
+               finally (return (values required optional keyword saw-&allow-other-keys rest body))))
+        (assert (not (and body rest)) nil
+                "There cannot be both &body and &rest in a lambda list")
+        (let ((lambda-list-class (cond (class class)
+                                       (ordinary-lambda-list-p 'ordinary-lambda-list)
+                                       (macro-lambda-list-p 'macro-lambda-list))))
+          (apply #'make-instance lambda-list-class
+           :original-lambda-list lambda-list
+           :required-parameters required
+           :optional-parameters optional
+           :keyword-parameters keyword
+           :allow-other-keys allow-other-keys
+           :rest-parameter (first rest)
+           (when (subtypep 'macro-lambda-list lambda-list-class)
+             (list :body-parameter (first body)))))))))
+
+(defgeneric lambda-list-as-list (lambda-list)
+  (:documentation "Return the list version of the provided lambda
+list object. This could be considered \"serialization\" of the
+lambda list object."))
+
+(defgeneric serialize-lambda-list-parameter (element)
+  (:documentation "Used by `lambda-list-as-list' to convert
+lambda list parameter objects to symbols or lists."))
+
+(defmethod serialize-lambda-list-parameter ((element named-parameter))
+  (name element))
+
+(defmethod serialize-lambda-list-parameter ((element named-optional-parameter))
+  (if (init-form element)
+      (list (name element) (init-form element))
+      (name element)))
+
+(defmethod serialize-lambda-list-parameter ((element keyword-parameter))
+  (if (init-form element)
+      (list (keyword-name element) (init-form element))
+      (keyword-name element)))
+
+(defmethod serialize-lambda-list-parameter ((element destructuring-required-parameter))
+  (lambda-list-as-list (inner-lambda-list element)))
+
+(defmethod serialize-lambda-list-parameter ((element destructuring-optional-parameter))
+  (append (list (lambda-list-as-list (inner-lambda-list element)))
+          (when (init-form element)
+            (list (init-form element)))))
+
+(defmethod serialize-lambda-list-parameter ((element destructuring-keyword-parameter))
+  (append (list (keyword-name element)
+                (lambda-list-as-list (inner-lambda-list element)))
+          (when (init-form element)
+            (list (init-form element)))))
+
+;; The following two methods are annoyingly similar.
+(defmethod lambda-list-as-list ((lambda-list ordinary-lambda-list))
+  (flet ((serialize-parameters (parameters)
+           (mapcar #'serialize-lambda-list-parameter parameters)))
+    (let ((required (serialize-parameters (required-parameters lambda-list)))
+          (optional (serialize-parameters (optional-parameters lambda-list)))
+          (rest (rest-parameter lambda-list))
+          (keyword (serialize-parameters (keyword-parameters lambda-list)))
+          (allow-other-keys (allow-other-keys-p lambda-list)))
+      (nconc required
+             (when optional
+               (cons '&optional optional))
+             (when rest
+               (list '&rest (serialize-lambda-list-parameter rest)))
+             (when keyword
+               (cons '&key keyword))
+             (when allow-other-keys
+               (list '&allow-other-keys))))))
+
+(defmethod lambda-list-as-list ((lambda-list macro-lambda-list))
+  (flet ((serialize-parameters (parameters)
+           (mapcar #'serialize-lambda-list-parameter parameters)))
+    (let ((required (serialize-parameters (required-parameters lambda-list)))
+          (optional (serialize-parameters (optional-parameters lambda-list)))
+          (rest (rest-parameter lambda-list))
+          (body (body-parameter lambda-list))
+          (keyword (serialize-parameters (keyword-parameters lambda-list)))
+          (allow-other-keys (allow-other-keys-p lambda-list)))
+      (nconc required
+             (when optional
+               (cons '&optional optional))
+             (when rest
+               (list '&rest (serialize-lambda-list-parameter rest)))
+             (when body
+               (list '&body (serialize-lambda-list-parameter body)))
+             (when keyword
+               (cons '&key keyword))
+             (when allow-other-keys
+               (list '&allow-other-keys))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -3026,8 +3772,11 @@ will be signalled for incomplete forms.")
       ;; top level
       (let* ((arglist (when (fboundp symbol)
                         (arglist-for-form syntax symbol)))
-             (body-or-rest-pos (or (position '&body arglist)
-                                   (position '&rest arglist))))
+             (body-or-rest-arg (when arglist
+                                 (or (body-parameter arglist)
+                                     (rest-parameter arglist))))
+             (body-or-rest-pos (when body-or-rest-arg
+                                 (min-arg-index body-or-rest-arg))))
         (if (and (or (macro-function symbol)
                      (special-operator-p symbol))
                  (and (not (null body-or-rest-pos))

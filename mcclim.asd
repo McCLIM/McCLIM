@@ -342,7 +342,8 @@
              (:file "buffer-streams-tests" :depends-on ("testing"))
              (:file "rectangle-tests" :depends-on ("testing"))
              (:file "undo-tests" :depends-on ("testing"))
-             (:file "lisp-syntax-tests" :depends-on ("testing" "motion-tests"))))))
+             (:file "lisp-syntax-tests" :depends-on ("testing" "motion-tests"))
+             (:file "lisp-syntax-swine-tests" :depends-on ("lisp-syntax-tests"))))))
 
 (defsystem :clim
   :depends-on (:clim-core :goatee-core :clim-postscript :drei-mcclim)

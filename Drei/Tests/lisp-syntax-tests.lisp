@@ -53,6 +53,15 @@ self-compilation test, of course).")
                              (get-form) args)))
              ,@body))))))
 
+(defmacro swine-test (name &body body)
+  `(test ,name
+     ,(when (stringp (first body))
+            (first body))
+     (if (eq (drei-lisp-syntax::default-image) t)
+         (skip "No useful image link found")
+         (progn
+           ,@body))))
+
 (defmacro testing-symbol ((sym-sym &rest args) &body body)
   `(let ((,sym-sym (get-object ,@args)))
      ,@body
@@ -60,7 +69,9 @@ self-compilation test, of course).")
                  (eq (symbol-package sym)
                      (find-package :clim))
                  (eq (symbol-package sym)
-                     (find-package :common-lisp)))
+                     (find-package :common-lisp))
+                 (eq (symbol-package sym)
+                     (find-package :keyword)))
        (unintern ,sym-sym (symbol-package sym)))))
 
 (defmacro testing-lisp-syntax-symbol ((buffer-contents sym-sym &rest args)
@@ -582,7 +593,37 @@ references)."
 )  ")
     (test-selector-null drei-lisp-syntax::form-before 0)
     (test-selector-null drei-lisp-syntax::form-before 4)
-    (test-selector drei-lisp-syntax::form-before 5 'list)))
+    (test-selector drei-lisp-syntax::form-before 5 'list))
+  (testing-form-selectors ("'(list #|foo|# foo #|bar|# bar
+ baz ; baz indeed
+)  ")
+    (test-selector-null drei-lisp-syntax::form-before 0)
+    (test-selector-null drei-lisp-syntax::form-before 5)
+    (test-selector drei-lisp-syntax::form-before 6 'list))
+  (testing-form-selectors ("#(list #|foo|# foo #|bar|# bar
+ baz ; baz indeed
+)  ")
+    (test-selector-null drei-lisp-syntax::form-before 0)
+    (test-selector-null drei-lisp-syntax::form-before 5)
+    (test-selector drei-lisp-syntax::form-before 6 'list))
+  (testing-form-selectors ("(list #|foo|# list #|bar|# find
+ list ; baz indeed
+  ")
+    (test-selector drei-lisp-syntax::form-before 53 'list)
+    (test-selector drei-lisp-syntax::form-before 43 'list)
+    (test-selector drei-lisp-syntax::form-before 33 'find))
+  (testing-form-selectors ("'(list #|foo|# list #|bar|# find
+ list ; baz indeed
+  ")
+    (test-selector drei-lisp-syntax::form-before 54 'list)
+    (test-selector drei-lisp-syntax::form-before 44 'list)
+    (test-selector drei-lisp-syntax::form-before 34 'find))
+  (testing-form-selectors ("#(list #|foo|# list #|bar|# find
+ list ; baz indeed
+  ")
+    (test-selector drei-lisp-syntax::form-before 54 'list)
+    (test-selector drei-lisp-syntax::form-before 44 'list)
+    (test-selector drei-lisp-syntax::form-before 34 'find)))
 
 (test form-after
   "Test the `form-after' form selector of Lisp syntax."
@@ -830,9 +871,9 @@ comment |#")
     (is-true (drei-lisp-syntax::in-comment-p 60 *current-syntax*))
     (is-false (drei-lisp-syntax::in-comment-p 69 *current-syntax*))))
 
-;; For the arglist fetching tests, we need some dummy functions and
-;; macros whose arglists we can be sure of. We define those here. We
-;; also hope we don't clobber anything important.
+;; For some tests, we need various functions, classes and
+;; macros. Define them here and pray we don't clobber anything
+;; important.
 
 (defun lisp-syntax-f1 ())
 (defun lisp-syntax-f2 (l) (declare (ignore l)))
@@ -842,18 +883,519 @@ comment |#")
                           &body forms-decls) ; with-output-to-string
   (declare (ignore var string element-type forms-decls)))
 
-(defmacro swine-test (name &body body)
-  `(test ,name
-     (if (eq (drei-lisp-syntax::default-image) t)
-         (skip "No useful image link found")
-         (progn
-           ,@body))))
+(defmacro lisp-syntax-m2 (&key ((:a (a b c &key d))))
+  (declare (ignore a b c d)))
+
+(defclass lisp-syntax-c1 ()
+  ((foo :initarg :foo)
+   (bar :initarg bar)))
+
+(defclass lisp-syntax-c2 (lisp-syntax-c1)
+  ((baz :initarg :foo)))
+
+(test parse-lambda-list-1
+  "Test that `parse-lambda-list' can correctly parse ordinary and
+macro lambda lists with no parameters."
+  (let ((oll (parse-lambda-list '()))
+        (mll (parse-lambda-list '() 'macro-lambda-list)))
+    (is-true (typep oll 'ordinary-lambda-list))
+    (is-true (null (required-parameters oll)))
+    (is-true (null (optional-parameters oll)))
+    (is-true (null (keyword-parameters oll)))
+    (is-true (null (rest-parameter oll)))
+
+    (is-true (typep mll 'macro-lambda-list))
+    (is-true (null (required-parameters mll)))
+    (is-true (null (optional-parameters mll)))
+    (is-true (null (keyword-parameters mll)))
+    (is-true (null (rest-parameter mll)))
+    (is-true (null (body-parameter mll)))))
+
+(test parse-lambda-list-2
+  "Test that `parse-lambda-list' can correctly parse ordinary and
+macro lambda lists with only required parameters."
+  (let ((oll1 (parse-lambda-list '(list)))
+        (oll2 (parse-lambda-list '(list find)))
+        (mll1 (parse-lambda-list '(list) 'macro-lambda-list))
+        (mll2 (parse-lambda-list '(list find) 'macro-lambda-list)))
+    (is-true (typep oll1 'ordinary-lambda-list))
+    (is (= 1 (length (required-parameters oll1))))
+    (is (string= 'list (name (first (required-parameters oll1)))))
+    (is (= 0 (min-arg-index (first (required-parameters oll1)))))
+    (is-true (null (optional-parameters oll1)))
+    (is-true (null (keyword-parameters oll1)))
+    (is-true (null (rest-parameter oll1)))
+
+    (is-true (typep oll2 'ordinary-lambda-list))
+    (is (= 2 (length (required-parameters oll2))))
+    (is (string= 'list (name (first (required-parameters oll2)))))
+    (is (= 0 (min-arg-index (first (required-parameters oll2)))))
+    (is (string= 'find (name (second (required-parameters oll2)))))
+    (is (= 1 (min-arg-index (second (required-parameters oll2)))))
+    (is-true (null (optional-parameters oll2)))
+    (is-true (null (keyword-parameters oll2)))
+    (is-true (null (rest-parameter oll2)))
+
+    (is-true (typep mll1 'macro-lambda-list))
+    (is (= 1 (length (required-parameters mll1))))
+    (is (string= (name (first (required-parameters mll1))) 'list))
+    (is (= 0 (min-arg-index (first (required-parameters mll1)))))
+    (is-true (null (optional-parameters mll1)))
+    (is-true (null (keyword-parameters mll1)))
+    (is-true (null (rest-parameter mll1)))
+    (is-true (null (body-parameter mll1)))
+
+    (is-true (typep mll2 'macro-lambda-list))
+    (is (= 2 (length (required-parameters mll2))))
+    (is (string= (name (first (required-parameters mll2))) 'list))
+    (is (= 0 (min-arg-index (first (required-parameters mll2)))))
+    (is (string= (name (second (required-parameters mll2))) 'find))
+    (is (= 1 (min-arg-index (second (required-parameters mll2)))))
+    (is-true (null (optional-parameters mll2)))
+    (is-true (null (keyword-parameters mll2)))
+    (is-true (null (rest-parameter mll2)))
+    (is-true (null (body-parameter mll2)))))
+
+(test parse-lambda-list-2a
+  "Test that `parse-lambda-list' can correctly parse various
+destructuring required parameters for macro lambda lists."
+  (let ((mll1 (parse-lambda-list '((list))))
+        (mll2 (parse-lambda-list '((list find)))))
+    (is-true (typep mll1 'macro-lambda-list))
+    (is (= (min-arg-index (first (required-parameters mll1)))))
+    (is (= 1 (length (required-parameters (inner-lambda-list (first (required-parameters mll1)))))))
+    (is (string= 'list (name (first (required-parameters (inner-lambda-list (first (required-parameters mll1))))))))
+
+    (let ((mll2-parameter (first (required-parameters mll2))))
+      (is-true (typep (inner-lambda-list mll2-parameter) 'destructuring-lambda-list))
+      (is (= 2 (length (required-parameters (inner-lambda-list mll2-parameter)))))
+      (is (string= 'list (name (first (required-parameters (inner-lambda-list mll2-parameter))))))
+      (is (= 0 (min-arg-index (first (required-parameters (inner-lambda-list mll2-parameter))))))
+      (is (string= 'find (name (second (required-parameters (inner-lambda-list mll2-parameter))))))
+      (is (= 1 (min-arg-index (second (required-parameters (inner-lambda-list mll2-parameter))))))
+      (is-true (null (optional-parameters (inner-lambda-list mll2-parameter))))
+      (is-true (null (keyword-parameters (inner-lambda-list mll2-parameter))))
+      (is-true (null (rest-parameter (inner-lambda-list mll2-parameter)))))))
+
+(test parse-lambda-list-3
+  "Test that `parse-lambda-list' can correctly parse optional
+parameters in ordinary and macro lambda lists."
+  (let ((oll1 (parse-lambda-list '(&optional (list 2))))
+        (oll2 (parse-lambda-list '(&optional (list nil) find)))
+        (oll3 (parse-lambda-list '(reduce &optional list (find 2))))
+        (mll1 (parse-lambda-list '(&optional (list 2)) 'macro-lambda-list))
+        (mll2 (parse-lambda-list '(&optional (list nil) find) 'macro-lambda-list))
+        (mll3 (parse-lambda-list '(reduce &optional list (find 2)) 'macro-lambda-list)))
+    (is-true (typep oll1 'ordinary-lambda-list))
+    (is (= 0 (length (required-parameters oll1))))
+    (is (= 1 (length (optional-parameters oll1))))
+    (is (= 0 (length (keyword-parameters oll1))))
+    (is-true (null (rest-parameter oll1)))
+    (is (= 0 (min-arg-index (first (optional-parameters oll1)))))
+    (is (string= 'list (name (first (optional-parameters oll1)))))
+    (is (= 2 (init-form (first (optional-parameters oll1)))))
+
+    (is-true (typep oll2 'ordinary-lambda-list))
+    (is (= 0 (length (required-parameters oll2))))
+    (is (= 2 (length (optional-parameters oll2))))
+    (is (= 0 (length (keyword-parameters oll2))))
+    (is-true (null (rest-parameter oll2)))
+    (is (= 0 (min-arg-index (first (optional-parameters oll2)))))
+    (is (string= 'list (name (first (optional-parameters oll2)))))
+    (is-true (null (init-form (first (optional-parameters oll2)))))
+    (is (= 1 (min-arg-index (second (optional-parameters oll2)))))
+    (is (string= 'find (name (second (optional-parameters oll2)))))
+    (is-true (null (init-form (second (optional-parameters oll2)))))
+
+    (is-true (typep oll3 'ordinary-lambda-list))
+    (is (= 1 (length (required-parameters oll3))))
+    (is (= 2 (length (optional-parameters oll3))))
+    (is (= 0 (length (keyword-parameters oll3))))
+    (is-true (null (rest-parameter oll3)))
+    (is (= 1 (min-arg-index (first (optional-parameters oll3)))))
+    (is (string= 'list (name (first (optional-parameters oll3)))))
+    (is-true (null (init-form (first (optional-parameters oll3)))))
+    (is (= 2 (min-arg-index (second (optional-parameters oll3)))))
+    (is (string= 'find (name (second (optional-parameters oll3)))))
+    (is (= 2 (init-form (second (optional-parameters oll3)))))
+
+    (is-true (typep mll1 'macro-lambda-list))
+    (is (= 0 (length (required-parameters mll1))))
+    (is (= 1 (length (optional-parameters mll1))))
+    (is (= 0 (length (keyword-parameters mll1))))
+    (is-true (null (rest-parameter mll1)))
+    (is (= 0 (min-arg-index (first (optional-parameters mll1)))))
+    (is (string= 'list (name (first (optional-parameters mll1)))))
+    (is (= 2 (init-form (first (optional-parameters mll1)))))
+
+    (is-true (typep mll2 'macro-lambda-list))
+    (is (= 0 (length (required-parameters mll2))))
+    (is (= 2 (length (optional-parameters mll2))))
+    (is (= 0 (length (keyword-parameters mll2))))
+    (is-true (null (rest-parameter mll2)))
+    (is (= 0 (min-arg-index (first (optional-parameters mll2)))))
+    (is (string= 'list (name (first (optional-parameters mll2)))))
+    (is-true (null (init-form (first (optional-parameters mll2)))))
+    (is (= 1 (min-arg-index (second (optional-parameters mll2)))))
+    (is (string= 'find (name (second (optional-parameters mll2)))))
+    (is-true (null (init-form (second (optional-parameters mll2)))))
+
+    (is-true (typep mll3 'macro-lambda-list))
+    (is (= 1 (length (required-parameters mll3))))
+    (is (= 2 (length (optional-parameters mll3))))
+    (is (= 0 (length (keyword-parameters mll3))))
+    (is-true (null (rest-parameter mll3)))
+    (is (= 1 (min-arg-index (first (optional-parameters mll3)))))
+    (is (string= 'list (name (first (optional-parameters mll3)))))
+    (is-true (null (init-form (first (optional-parameters mll3)))))
+    (is (= 2 (min-arg-index (second (optional-parameters mll3)))))
+    (is (string= 'find (name (second (optional-parameters mll3)))))
+    (is (= 2 (init-form (second (optional-parameters mll3)))))))
+
+(test parse-lambda-list-3a
+  "Test that `parse-lambda-list' can correctly parse
+destructuring optional parameters in macro lambda lists."
+  (let ((mll1 (parse-lambda-list '(&optional ((list)))))
+        (mll2 (parse-lambda-list '(&optional ((list) '(2)))))
+        (mll3 (parse-lambda-list '(&optional ((list find)))))
+        (mll4 (parse-lambda-list '(&optional ((list find) '(2 3))))))
+    (is-true (typep mll1 'macro-lambda-list))
+    (is-true (typep (first (optional-parameters mll1)) 'destructuring-optional-parameter))
+    (is (= 0 (min-arg-index (first (optional-parameters mll1)))))
+    (is (= 0 (min-arg-index (first (required-parameters (inner-lambda-list (first (optional-parameters mll1))))))))
+
+    (is-true (typep mll2 'macro-lambda-list))
+    (is-true (typep (first (optional-parameters mll2)) 'destructuring-optional-parameter))
+    (is (= 0 (min-arg-index (first (optional-parameters mll2)))))
+    (is (= 0 (min-arg-index (first (required-parameters (inner-lambda-list (first (optional-parameters mll2))))))))
+    (is (equal ''(2) (init-form (first (optional-parameters mll2)))))
+
+    (is-true (typep mll3 'macro-lambda-list))
+    (is-true (typep (first (optional-parameters mll3)) 'destructuring-optional-parameter))
+    (is (= 0 (min-arg-index (first (optional-parameters mll3)))))
+    (is (= 0 (min-arg-index (first (required-parameters (inner-lambda-list (first (optional-parameters mll3))))))))
+    (is (= 1 (min-arg-index (second (required-parameters (inner-lambda-list (first (optional-parameters mll3))))))))
+
+    (is-true (typep mll4 'macro-lambda-list))
+    (is-true (typep (first (optional-parameters mll4)) 'destructuring-optional-parameter))
+    (is (= 0 (min-arg-index (first (optional-parameters mll4)))))
+    (is (= 0 (min-arg-index (first (required-parameters (inner-lambda-list (first (optional-parameters mll4))))))))
+    (is (= 1 (min-arg-index (second (required-parameters (inner-lambda-list (first (optional-parameters mll4))))))))
+    (is (equal ''(2 3) (init-form (first (optional-parameters mll4)))))))
+
+(test parse-lambda-list-4
+  "Test that `parse-lambda-list' can correctly parse keyword
+parameters in ordinary and macro lambda lists."
+  (let ((oll1 (parse-lambda-list '(&key (list 2))))
+        (oll2 (parse-lambda-list '(&key (list nil) find)))
+        (oll3 (parse-lambda-list '(reduce &key list (find 2))))
+        (oll4 (parse-lambda-list '(&key ((:fooarg list) 2))))
+        (mll1 (parse-lambda-list '(&key (list 2)) 'macro-lambda-list))
+        (mll2 (parse-lambda-list '(&key (list nil) find) 'macro-lambda-list))
+        (mll3 (parse-lambda-list '(reduce &key list (find 2)) 'macro-lambda-list))
+        (mll4 (parse-lambda-list '(&key ((:fooarg list) 2)) 'macro-lambda-list)))
+    (is-true (typep oll1 'ordinary-lambda-list))
+    (is (= 0 (length (required-parameters oll1))))
+    (is (= 0 (length (optional-parameters oll1))))
+    (is (= 1 (length (keyword-parameters oll1))))
+    (is-true (null (rest-parameter oll1)))
+    (is (= 0 (min-arg-index (first (keyword-parameters oll1)))))
+    (is (string= :list (keyword-name (first (keyword-parameters oll1)))))
+    (is (= 2 (init-form (first (keyword-parameters oll1)))))
+
+    (is-true (typep oll2 'ordinary-lambda-list))
+    (is (= 0 (length (required-parameters oll2))))
+    (is (= 0 (length (optional-parameters oll2))))
+    (is (= 2 (length (keyword-parameters oll2))))
+    (is-true (null (rest-parameter oll2)))
+    (is (= 0 (min-arg-index (first (keyword-parameters oll2)))))
+    (is (string= :list (keyword-name (first (keyword-parameters oll2)))))
+    (is-true (null (init-form (first (keyword-parameters oll2)))))
+    (is (= 0 (min-arg-index (second (keyword-parameters oll2)))))
+    (is (string= :find (keyword-name (second (keyword-parameters oll2)))))
+    (is-true (null (init-form (second (keyword-parameters oll2)))))
+
+    (is-true (typep oll3 'ordinary-lambda-list))
+    (is (= 1 (length (required-parameters oll3))))
+    (is (= 0 (length (optional-parameters oll3))))
+    (is (= 2 (length (keyword-parameters oll3))))
+    (is-true (null (rest-parameter oll3)))
+    (is (= 1 (min-arg-index (first (keyword-parameters oll3)))))
+    (is (string= :list (keyword-name (first (keyword-parameters oll3)))))
+    (is-true (null (init-form (first (keyword-parameters oll3)))))
+    (is (= 1 (min-arg-index (second (keyword-parameters oll3)))))
+    (is (string= :find (keyword-name (second (keyword-parameters oll3)))))
+    (is (= 2 (init-form (second (keyword-parameters oll3)))))
+
+    (is-true (typep oll4 'ordinary-lambda-list))
+    (is (= 0 (length (required-parameters oll4))))
+    (is (= 0 (length (optional-parameters oll4))))
+    (is (= 1 (length (keyword-parameters oll4))))
+    (is-true (null (rest-parameter oll4)))
+    (is (= 0 (min-arg-index (first (keyword-parameters oll4)))))
+    (is (string= :fooarg (keyword-name (first (keyword-parameters oll4)))))
+    (is (= 2 (init-form (first (keyword-parameters oll4)))))
+
+    (is-true (typep mll1 'macro-lambda-list))
+    (is (= 0 (length (required-parameters mll1))))
+    (is (= 0 (length (optional-parameters mll1))))
+    (is (= 1 (length (keyword-parameters mll1))))
+    (is-true (null (rest-parameter mll1)))
+    (is (= 0 (min-arg-index (first (keyword-parameters mll1)))))
+    (is (string= :list (keyword-name (first (keyword-parameters mll1)))))
+    (is (= 2 (init-form (first (keyword-parameters mll1)))))
+
+    (is-true (typep mll2 'macro-lambda-list))
+    (is (= 0 (length (required-parameters mll2))))
+    (is (= 0 (length (optional-parameters mll2))))
+    (is (= 2 (length (keyword-parameters mll2))))
+    (is-true (null (rest-parameter mll2)))
+    (is (= 0 (min-arg-index (first (keyword-parameters mll2)))))
+    (is (string= :list (keyword-name (first (keyword-parameters mll2)))))
+    (is-true (null (init-form (first (keyword-parameters mll2)))))
+    (is (= 0 (min-arg-index (second (keyword-parameters mll2)))))
+    (is (string= :find (keyword-name (second (keyword-parameters mll2)))))
+    (is-true (null (init-form (second (keyword-parameters mll2)))))
+
+    (is-true (typep mll3 'macro-lambda-list))
+    (is (= 1 (length (required-parameters mll3))))
+    (is (= 0 (length (optional-parameters mll3))))
+    (is (= 2 (length (keyword-parameters mll3))))
+    (is-true (null (rest-parameter mll3)))
+    (is (= 1 (min-arg-index (first (keyword-parameters mll3)))))
+    (is (string= :list (keyword-name (first (keyword-parameters mll3)))))
+    (is-true (null (init-form (first (keyword-parameters mll3)))))
+    (is (= 1 (min-arg-index (second (keyword-parameters mll3)))))
+    (is (string= :find (keyword-name (second (keyword-parameters mll3)))))
+    (is (= 2 (init-form (second (keyword-parameters mll3)))))
+
+    (is-true (typep mll4 'macro-lambda-list))
+    (is (= 0 (length (required-parameters mll4))))
+    (is (= 0 (length (optional-parameters mll4))))
+    (is (= 1 (length (keyword-parameters mll4))))
+    (is-true (null (rest-parameter mll4)))
+    (is (= 0 (min-arg-index (first (keyword-parameters mll4)))))
+    (is (string= :fooarg (keyword-name (first (keyword-parameters mll4)))))
+    (is (= 2 (init-form (first (keyword-parameters mll4)))))))
+
+(test parse-lambda-list-4a
+  "Test that `parse-lambda-list' can correctly parse
+destructuring keyword parameters in macro lambda lists."
+  (let ((mll1 (parse-lambda-list '(&key ((:list (list))))))
+        (mll2 (parse-lambda-list '(&key ((:list (list)) '(2)))))
+        (mll3 (parse-lambda-list '(&key ((:list (list find))))))
+        (mll4 (parse-lambda-list '(&key ((:list (list find)) '(2 3))))))
+    (is-true (typep mll1 'macro-lambda-list))
+    (is-true (typep (first (keyword-parameters mll1)) 'destructuring-keyword-parameter))
+    (is (= 0 (min-arg-index (first (keyword-parameters mll1)))))
+    (is (= 0 (min-arg-index (first (required-parameters (inner-lambda-list (first (keyword-parameters mll1))))))))
+    (is (equal :list (keyword-name (first (keyword-parameters mll1)))))
+    (is-true (null (init-form (first (keyword-parameters mll1)))))
+
+    (is-true (typep mll2 'macro-lambda-list))
+    (is-true (typep (first (keyword-parameters mll2)) 'destructuring-keyword-parameter))
+    (is (= 0 (min-arg-index (first (keyword-parameters mll2)))))
+    (is (= 0 (min-arg-index (first (required-parameters (inner-lambda-list (first (keyword-parameters mll2))))))))
+    (is (equal :list (keyword-name (first (keyword-parameters mll2)))))
+    (is (equal ''(2) (init-form (first (keyword-parameters mll2)))))
+
+    (is-true (typep mll3 'macro-lambda-list))
+    (is-true (typep (first (keyword-parameters mll3)) 'destructuring-keyword-parameter))
+    (is (= 0 (min-arg-index (first (keyword-parameters mll3)))))
+    (is (= 0 (min-arg-index (first (required-parameters (inner-lambda-list (first (keyword-parameters mll3))))))))
+    (is (= 1 (min-arg-index (second (required-parameters (inner-lambda-list (first (keyword-parameters mll3))))))))
+    (is (equal :list (keyword-name (first (keyword-parameters mll3)))))
+    (is-true (null (init-form (first (keyword-parameters mll3)))))
+
+    (is-true (typep mll4 'macro-lambda-list))
+    (is-true (typep (first (keyword-parameters mll4)) 'destructuring-keyword-parameter))
+    (is (= 0 (min-arg-index (first (keyword-parameters mll4)))))
+    (is (= 0 (min-arg-index (first (required-parameters (inner-lambda-list (first (keyword-parameters mll4))))))))
+    (is (= 1 (min-arg-index (second (required-parameters (inner-lambda-list (first (keyword-parameters mll4))))))))
+    (is (equal :list (keyword-name (first (keyword-parameters mll4)))))
+    (is (equal ''(2 3) (init-form (first (keyword-parameters mll4)))))))
+
+(defmacro make-parameter-maker (parameter-type)
+  (let ((fname (intern (format nil "MAKE-~A-PARAMETERS" parameter-type)
+                       #.*package*))
+        (makename (find-symbol (format nil "MAKE-~A-PARAMETER" parameter-type)
+                   :drei-lisp-syntax)))
+    `(defun ,fname (parameters)
+       (mapcar #'(lambda (p)
+                   (,makename p 0))
+               parameters))))
+
+(make-parameter-maker required)
+(make-parameter-maker &optional)
+(make-parameter-maker &key)
+
+(test make-lambda-list-1
+  "Test that the `make-lambda-list' function works correctly
+for lambda lists with only required parameters."
+  (let* ((lambda-list-1
+          (make-lambda-list
+           :required-parameters (make-required-parameters '(a b c)))))
+    (is (equal 0 (min-arg-index (first (required-parameters lambda-list-1)))))
+    (is (equal 1 (min-arg-index (second (required-parameters lambda-list-1)))))
+    (is (equal 2 (min-arg-index (third (required-parameters lambda-list-1)))))
+    (is-true (typep lambda-list-1 'ordinary-lambda-list))))
+
+(test make-lambda-list-2
+  "Test that the `make-lambda-list' function works correctly for
+lambda lists with required parameters that have optional
+parameters added."
+  (let* ((lambda-list-1
+          (make-lambda-list
+           :required-parameters (make-required-parameters '(a b c))))
+         (lambda-list-2
+          (make-lambda-list
+           :optional-parameters (make-&optional-parameters '(a b c))))
+         (lambda-list-3
+          (make-lambda-list
+           :defaults lambda-list-1
+           :optional-parameters (make-&optional-parameters '(d e f)))))
+    (is (equal 0 (min-arg-index (first (required-parameters lambda-list-1)))))
+    (is (equal 1 (min-arg-index (second (required-parameters lambda-list-1)))))
+    (is (equal 2 (min-arg-index (third (required-parameters lambda-list-1)))))
+    (is-true (typep lambda-list-1 'ordinary-lambda-list))
+    (is (equal 0 (min-arg-index (first (optional-parameters lambda-list-2)))))
+    (is (equal 1 (min-arg-index (second (optional-parameters lambda-list-2)))))
+    (is (equal 2 (min-arg-index (third (optional-parameters lambda-list-2)))))
+    (is-true (typep lambda-list-2 'ordinary-lambda-list))
+    (is (equal 3 (min-arg-index (first (optional-parameters lambda-list-3)))))
+    (is (equal 4 (min-arg-index (second (optional-parameters lambda-list-3)))))
+    (is (equal 5 (min-arg-index (third (optional-parameters lambda-list-3)))))
+    (is-true (typep lambda-list-3 'ordinary-lambda-list))))
+
+(test make-lambda-list-3
+  "Test that the `make-lambda-list' function works correctly for
+lambda lists with or without required or optional parameters that
+have keyword parameters added."
+  (let* ((lambda-list-1
+          (make-lambda-list
+           :required-parameters (make-required-parameters '(a b c))))
+         (lambda-list-2
+          (make-lambda-list
+           :defaults lambda-list-1
+           :optional-parameters (make-&optional-parameters '(d e f))))
+         (lambda-list-3
+          (make-lambda-list
+           :defaults lambda-list-2
+           :required-parameters nil
+           :keyword-parameters (make-&key-parameters '(d e f))))
+         (lambda-list-4
+          (make-lambda-list
+           :defaults lambda-list-1
+           :keyword-parameters (make-&key-parameters '(d e f))))
+         (lambda-list-5
+          (make-lambda-list :keyword-parameters (make-&key-parameters '(a b c)))))
+
+    (is (equal 0 (min-arg-index (first (keyword-parameters lambda-list-5)))))
+    (is (equal 0 (min-arg-index (second (keyword-parameters lambda-list-5)))))
+    (is (equal 0 (min-arg-index (third (keyword-parameters lambda-list-5)))))
+    (is-true (typep lambda-list-5 'ordinary-lambda-list))
+    (is (equal 0 (min-arg-index (first (optional-parameters lambda-list-3)))))
+    (is (equal 1 (min-arg-index (second (optional-parameters lambda-list-3)))))
+    (is (equal 2 (min-arg-index (third (optional-parameters lambda-list-3)))))
+    (is (equal 3 (min-arg-index (first (keyword-parameters lambda-list-3)))))
+    (is (equal 3 (min-arg-index (second (keyword-parameters lambda-list-3)))))
+    (is (equal 3 (min-arg-index (third (keyword-parameters lambda-list-3)))))
+    (is-true (typep lambda-list-3 'ordinary-lambda-list))
+    (is (equal 0 (min-arg-index (first (required-parameters lambda-list-4)))))
+    (is (equal 1 (min-arg-index (second (required-parameters lambda-list-4)))))
+    (is (equal 2 (min-arg-index (third (required-parameters lambda-list-4)))))
+    (is (equal 3 (min-arg-index (first (keyword-parameters lambda-list-4)))))
+    (is (equal 3 (min-arg-index (second (keyword-parameters lambda-list-4)))))
+    (is (equal 3 (min-arg-index (third (keyword-parameters lambda-list-4)))))
+    (is-true (typep lambda-list-4 'ordinary-lambda-list))))
+
+(test make-lambda-list-4
+  "Test that the `make-lambda-list' function works correctly for
+lambda lists with or without required, optional or keyword
+parameters that have a rest parameter added. Also tests that the
+lambda lists are of the proper type."
+  (let* ((lambda-list-1 (make-lambda-list))
+         (lambda-list-2
+          (make-lambda-list
+           :required-parameters (make-required-parameters '(a b c))))
+         (lambda-list-3
+          (make-lambda-list
+           :required-parameters (make-required-parameters '(a b c))
+           :optional-parameters (make-&optional-parameters '(d e f))))
+         (lambda-list-4
+          (make-lambda-list
+           :optional-parameters (make-&optional-parameters '(a b c))))
+         (lambda-list-5
+          (make-lambda-list
+           :required-parameters (make-required-parameters '(a b c))
+           :optional-parameters (make-&optional-parameters '(d e f))
+           :keyword-parameters (make-&key-parameters '(g h i))))
+         (lambda-list-6
+          (make-lambda-list
+           :required-parameters (make-required-parameters '(a b c))
+           :keyword-parameters (make-&key-parameters '(d e f))))
+         (lambda-list-7
+          (make-lambda-list :keyword-parameters (make-&key-parameters '(a b c)))))
+    (flet ((&restify-lambda-list (lambda-list)
+             (make-lambda-list :defaults lambda-list
+                               :rest-parameter (make-&rest-parameter 'a 0))))
+      (is (= 0 (min-arg-index (rest-parameter (&restify-lambda-list lambda-list-1)))))
+      (is-true (typep lambda-list-1 'ordinary-lambda-list))
+      (is (= 3 (min-arg-index (rest-parameter (&restify-lambda-list lambda-list-2)))))
+      (is-true (typep lambda-list-2 'ordinary-lambda-list))
+      (is (= 6 (min-arg-index (rest-parameter (&restify-lambda-list lambda-list-3)))))
+      (is-true (typep lambda-list-3 'ordinary-lambda-list))
+      (is (= 3 (min-arg-index (rest-parameter (&restify-lambda-list lambda-list-4)))))
+      (is-true (typep lambda-list-4 'ordinary-lambda-list))
+      (is (= 6 (min-arg-index (rest-parameter (&restify-lambda-list lambda-list-5)))))
+      (is-true (typep lambda-list-5 'ordinary-lambda-list))
+      (is (= 3 (min-arg-index (rest-parameter (&restify-lambda-list lambda-list-6)))))
+      (is-true (typep lambda-list-6 'ordinary-lambda-list))
+      (is (= 0 (min-arg-index (rest-parameter (&restify-lambda-list lambda-list-7)))))
+      (is-true (typep lambda-list-7 'ordinary-lambda-list)))))
+
+(test make-lambda-list-5
+  "Test that the `make-lambda-list' function correctly creates
+macro lambda lists when destructuring (or body) parameters are
+used for lambda list construction."
+  (let* ((lambda-list-1 (parse-lambda-list nil 'macro-lambda-list))
+         (lambda-list-2
+          (make-lambda-list
+           :required-parameters (make-required-parameters '(a (b) c))))
+         (lambda-list-3
+          (make-lambda-list
+           :defaults (make-lambda-list
+                      :required-parameters (make-required-parameters '(a b c)))
+           :optional-parameters (make-&optional-parameters '(((d)) e f))))
+         (lambda-list-4
+          (make-lambda-list
+           :optional-parameters (make-&optional-parameters '(((d)) b c))))
+         (lambda-list-5
+          (make-lambda-list
+           :defaults (make-lambda-list
+                      :required-parameters (make-required-parameters '(a b c))
+                      :optional-parameters (make-&optional-parameters '(d e f)))
+           :keyword-parameters (make-&key-parameters '(((:g (g))) h i))))
+         (lambda-list-6
+          (make-lambda-list
+           :defaults (make-lambda-list :required-parameters (make-required-parameters '(a b c)))
+           :keyword-parameters (make-&key-parameters '(((:d (d))) e f))))
+         (lambda-list-7
+          (make-lambda-list :keyword-parameters (make-&key-parameters '(((:a (a))) b c)))))
+    (is-true (typep lambda-list-1 'macro-lambda-list))
+    (is-true (typep lambda-list-2 'macro-lambda-list))
+    (is-true (typep lambda-list-3 'macro-lambda-list))
+    (is-true (typep lambda-list-4 'macro-lambda-list))
+    (is-true (typep lambda-list-5 'macro-lambda-list))
+    (is-true (typep lambda-list-6 'macro-lambda-list))
+    (is-true (typep lambda-list-7 'macro-lambda-list))))
 
 (defmacro arglist-test (name &body body)
   `(swine-test ,name
      (flet ((arglist-of (symbol)
-              (drei-lisp-syntax::arglist-for-form
-               *current-syntax* symbol)))
+              (drei-lisp-syntax::lambda-list-as-list
+               (drei-lisp-syntax::arglist-for-form
+                *current-syntax* symbol))))
        ,@body)))
 
 (arglist-test arglist-for-form-1
@@ -863,7 +1405,7 @@ of functions and macros."
     (is (equal '() (arglist-of 'lisp-syntax-f1)))
     (is (equal '(l) (arglist-of 'lisp-syntax-f2)))
     (is (equal '(a b c &optional (l 1)) (arglist-of 'lisp-syntax-f3)))
-    (is (equal '((var &optional string &key (element-type ''character))
+    (is (equal '((var &optional string &key (:element-type ''character))
                  &body forms-decls)
                (arglist-of 'lisp-syntax-m1)))))
 
@@ -1256,5 +1798,5 @@ making up an ASDF module/system/component.")
         ;; test before running the suite.
         (let ((*run-self-compilation-test* nil))
           (format t "Re-running Drei test suite with newly evaluated Drei definitions~%")
-          (run-tests))) 
-      (skip "Sensibly skipping self-compilation test")))
+          (run-tests)))
+      (skip "Sensibly skipping self-compilation test. Set DREI-TESTS:*RUN-SELF-COMPILATION-TEST* to true if you don't want to skip it")))

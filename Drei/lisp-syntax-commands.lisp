@@ -104,26 +104,18 @@ string at point."
 (define-command (com-lookup-arglist :name t :command-table lisp-table)
     ((symbol 'symbol :prompt "Symbol"))
   "Show argument list for a given symbol."
-  (show-arglist symbol))
+  (show-arglist *current-syntax* symbol))
 
 (define-command (com-space :command-table lisp-table)
     ()
   "Insert a space and display argument hints in the minibuffer."
-  (let* ((window *current-window*)
-         (mark (point window))
-         (syntax (syntax (buffer window))))
-    ;; It is important that the space is inserted before we look up
-    ;; any symbols, but at the same time, there must not be a space
-    ;; between the mark and the symbol.
-    (insert-character #\Space)
-    (backward-object mark)
-    ;; We must update the syntax in order to reflect any changes to
-    ;; the parse tree our insertion of a space character may have
-    ;; done.
-    (update-syntax (buffer syntax) syntax)
-    (show-arglist-for-form-at-mark mark syntax)
-    (forward-object mark)
-    (clear-completions)))
+  (insert-character #\Space)
+  ;; We must update the syntax in order to reflect any changes to
+  ;; the parse tree our insertion of a space character may have
+  ;; done.
+  (update-syntax *current-buffer* *current-syntax*)
+  (show-arglist-for-form-at-mark *current-point* *current-syntax*)
+  (clear-completions))
 
 (define-command (com-complete-symbol :name t :command-table lisp-table)
     ()
