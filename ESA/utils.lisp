@@ -205,3 +205,10 @@ result share with the argument x as much as possible."
         (if (and (eql a (car x)) (eql d (cdr x))) 
             x 
             (cons a d)))))
+
+(defun subtype-compatible-p (types)
+  "Return true if an element of `types' is a subtype of every
+other type specifier in `types'. `Types' must be a list of type
+specifiers."
+  (some (lambda (x)
+          (subtypep x `(and ,@types))) types))

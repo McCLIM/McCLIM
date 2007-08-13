@@ -40,7 +40,8 @@
            #:with-keywords-removed
            #:invoke-with-dynamic-bindings-1
            #:invoke-with-dynamic-bindings
-           #:maptree))
+           #:maptree
+           #:subtype-compatible-p))
 
 (defpackage :esa
   (:use :clim-lisp :clim :esa-utils)
