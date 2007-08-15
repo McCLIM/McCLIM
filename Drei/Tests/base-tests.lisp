@@ -26,7 +26,7 @@
 (cl:in-package :drei-tests)
 
 (def-suite base-tests :description "The test suite for DREI-BASE
-related tests.")
+related tests." :in drei-tests)
 
 (in-suite base-tests)
 

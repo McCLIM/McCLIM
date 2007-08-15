@@ -23,7 +23,7 @@
 (cl:in-package :drei-tests)
 
 ;; Define some stuff to ease the pain of writing repetitive test
-;; cases. Also provide test-running entry point.
+;; cases. Also provide global test-suite and test-running entry point.
 
 (defclass delegating-standard-buffer (delegating-buffer) ()
   (:default-initargs :implementation (make-instance 'standard-buffer)))
@@ -93,34 +93,11 @@ display. Used for testing."))
          (with-bound-drei-special-variables (,drei :minibuffer nil)
            ,@body)))))
 
-(defun run-tests ()
-  (format t "Testing buffer protocol implementation(s)~%")
-  (run! 'buffer-tests)
-  (format t "Testing basic functions~%")
-  (run! 'base-tests)
-  (format t "Testing the kill ring~%")
-  (run! 'kill-ring-tests)
-  (format t "Testing mark motion~%")
-  (run! 'motion-tests)
-  (format t "Testing text editing functions~%")
-  (run! 'editing-tests)
-  (format t "Testing miscellaneus editor functions~%")
-  (run! 'core-tests)
-  (format t "Testing buffer-based gray streams~%")
-  (run! 'buffer-streams-tests)
-  (format t "Testing rectangle editing~%")
-  (run! 'rectangle-tests)
-  (format t "Testing undo~%")
-  (run! 'undo-tests)
-  (format t "Testing the Lisp syntax module~%")
-  (run! 'lisp-syntax-tests)
+(def-suite drei-tests :description "The test suite for all Drei
+test cases. Has nested test suites for the actual tests.")
 
-  (format t "Running the CL-AUTOMATON tests~%")
-  (format t "Testing regular expressions~%")
-  (run! 'regexp-tests)
-  (format t "Testing eqv-hash~%")
-  (run! 'eqv-hash-tests)
-  (format t "Testing states and transitions~%")
-  (run! 'state-and-transition-tests)
-  (format t "Testing core automata functions~%")
-  (run! 'automaton-tests))
+(defun run-tests ()
+  "Run the Drei test suite. A dot will be printed for each passed
+test, a \"f\" for each failed test, a \"X\" for each test that
+causes an error, and an \"s\" for each skipped test."
+  (run! 'drei-tests))

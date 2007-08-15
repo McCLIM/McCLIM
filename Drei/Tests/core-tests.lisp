@@ -23,7 +23,7 @@
 (cl:in-package :drei-tests)
 
 (def-suite core-tests :description "The test suite for
-DREI-CORE related tests.")
+DREI-CORE related tests." :in drei-tests)
 
 (in-suite core-tests)
 

@@ -23,7 +23,7 @@
 (cl:in-package :drei-tests)
 
 (def-suite state-and-transition-tests :description "The test
-suite for CL-AUTOMATON state-and-transition related tests.")
+suite for CL-AUTOMATON state-and-transition related tests." :in automaton-tests)
 
 (in-suite state-and-transition-tests)
 

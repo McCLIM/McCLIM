@@ -23,7 +23,7 @@
 (cl:in-package :drei-tests)
 
 (def-suite buffer-streams-tests :description "The test suite for
-buffer-streams related tests.")
+buffer-streams related tests." :in drei-tests)
 
 (in-suite buffer-streams-tests)
 

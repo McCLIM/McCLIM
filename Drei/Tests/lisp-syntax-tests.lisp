@@ -25,7 +25,7 @@ tests related to the Lisp syntax module. The parser is not
 explicitly tested. Instead, it is hoped that any defects will be
 caught by other test cases, all of which depend on correct
 parsing. Also, redisplay is not tested, because no-one has any
-idea how to do it.")
+idea how to do it." :in drei-tests)
 
 (in-suite lisp-syntax-tests)
 
@@ -1797,6 +1797,7 @@ making up an ASDF module/system/component.")
         ;; Also, as fun as infinite recursion would be... disable this
         ;; test before running the suite.
         (let ((*run-self-compilation-test* nil))
-          (format t "Re-running Drei test suite with newly evaluated Drei definitions~%")
-          (run-tests)))
+          (format *test-dribble* "~%Re-running Drei test suite with newly evaluated Drei definitions~%")
+          (is-true (results-status (let ((fiveam:*test-dribble* (make-broadcast-stream)))
+                                     (fiveam:run 'drei-tests))))))
       (skip "Sensibly skipping self-compilation test. Set DREI-TESTS:*RUN-SELF-COMPILATION-TEST* to true if you don't want to skip it")))

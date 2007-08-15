@@ -28,7 +28,7 @@
 (cl:in-package :drei-tests)
 
 (def-suite buffer-tests :description "The test suite for
-buffer-protocol related tests.")
+buffer-protocol related tests." :in drei-tests)
 
 (in-suite buffer-tests)
 

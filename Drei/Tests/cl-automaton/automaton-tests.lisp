@@ -23,7 +23,7 @@
 (cl:in-package :drei-tests)
 
 (def-suite automaton-tests :description "The test suite for
-CL-AUTOMATON related tests.")
+CL-AUTOMATON related tests." :in drei-tests)
 
 (in-suite automaton-tests)
 

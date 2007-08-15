@@ -23,7 +23,7 @@
 (cl:in-package :drei-tests)
 
 (def-suite editing-tests :description "The test suite for
-DREI-EDITING related tests.")
+DREI-EDITING related tests." :in drei-tests)
 
 (in-suite editing-tests)
 

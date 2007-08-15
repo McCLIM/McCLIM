@@ -21,7 +21,7 @@
 (cl:in-package :drei-tests)
 
 (def-suite undo-tests :description "The test suite for tests
-related to Drei's undo system.")
+related to Drei's undo system." :in drei-tests)
 
 (in-suite undo-tests)
 

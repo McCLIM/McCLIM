@@ -23,7 +23,7 @@
 (cl:in-package :drei-tests)
 
 (def-suite regexp-tests :description "The test suite for
-CL-AUTOMATON regexp related tests.")
+CL-AUTOMATON regexp related tests." :in automaton-tests)
 
 (in-suite regexp-tests)
 

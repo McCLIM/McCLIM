@@ -23,7 +23,7 @@
 (cl:in-package :drei-tests)
 
 (def-suite eqv-hash-tests :description "The test suite for
-CL-AUTOMATON eqv-hash related tests.")
+CL-AUTOMATON eqv-hash related tests." :in automaton-tests)
 
 (in-suite eqv-hash-tests)
 

@@ -21,7 +21,7 @@
 (cl:in-package :drei-tests)
 
 (def-suite rectangle-tests :description "The test suite for
-rectangle-editing related tests.")
+rectangle-editing related tests." :in drei-tests)
 
 (in-suite rectangle-tests)
 

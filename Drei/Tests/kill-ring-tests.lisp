@@ -27,7 +27,7 @@
 (in-package :drei-tests)
 
 (def-suite kill-ring-tests :description "The test suite for DREI-KILL-RING
-related tests.")
+related tests." :in drei-tests)
 
 (in-suite kill-ring-tests)
 

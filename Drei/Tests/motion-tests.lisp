@@ -22,7 +22,7 @@
 (cl:in-package :drei-tests)
 
 (def-suite motion-tests :description "The test suite for
-DREI-MOTION related tests.")
+DREI-MOTION related tests." :in drei-tests)
 
 (in-suite motion-tests)
 

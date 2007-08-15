@@ -327,10 +327,10 @@
               "cl-automaton"
               :depends-on ("testing")
               :components
-              ((:file "eqv-hash-tests")
-               (:file "state-and-transition-tests")
-               (:file "automaton-tests")
-               (:file "regexp-tests")))
+              ((:file "automaton-tests")
+               (:file "state-and-transition-tests" :depends-on ("automaton-tests"))
+               (:file "eqv-hash-tests" :depends-on ("automaton-tests"))
+               (:file "regexp-tests" :depends-on ("automaton-tests"))))
              (:file "packages")
              (:file "testing" :depends-on ("packages"))
              (:file "buffer-tests" :depends-on ("testing"))
