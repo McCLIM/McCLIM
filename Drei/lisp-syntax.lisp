@@ -1395,7 +1395,8 @@ top quote-form that `token' is buried in. "
   "Return the bottom token object for `token', return `token' or
 the form that `token' quotes, peeling away all quote forms."
   (labels ((descend (form)
-             (cond ((form-quoted-p form)
+             (cond ((and (form-quoted-p form)
+                         (rest (children form)))
                     (descend (first-form (children form))))
                    (t form))))
     (descend token)))
