@@ -341,9 +341,11 @@ undoable. When this function returns, the `input-buffer-array' of
       ;; XXX: This behavior for the :rescan parameter is not mentioned
       ;; explicitly in any CLIM guide, but McCLIM input-editing
       ;; machinery relies on it.
-      (when (and (or rescan (not equal))
-                 (or rescan (not rescan-supplied-p)))
-        (queue-rescan stream))
+      (if (and (or rescan (not equal))
+               (not (and (null rescan) rescan-supplied-p)))
+          (queue-rescan stream)
+          (incf (stream-scan-pointer stream) (- (length new-contents)
+                                                (length old-contents))))
       ;; We have to return "the position in the input buffer". We
       ;; return the insertion position.
       buffer-start)))
