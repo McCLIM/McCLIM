@@ -88,24 +88,29 @@ etc), this function will return T (the default). If you want your
 syntax to use standard editor commands, you should *not* inherit
 from `editor-table' - the command tables containing the editor
 commands will be added automatically, as long as this function
-returns T.")
+returns true. For most syntax command tables, you do not need to
+define a method for this generic function, you really do want the
+standard editor commands for all but the most esoteric
+syntaxes.")
   (:method ((command-table standard-command-table))
     t))
 
 (defgeneric additional-command-tables (editor command-table)
   (:method-combination append)
-  (:documentation "Get a list of additional command tables that
-should be checked for commands in addition to those
+  (:documentation "Return a list of additional command tables
+that should be checked for commands in addition to those
 `command-table' inherits from. The idea is that methods are
-specialised to `editor', and that those methods may call the
-function again recursively with a new `editor' argument to
-provide arbitrary granularity for command-table-selection. For
-instance, some commands may be applicable in a situation where
-the editor is a pane or gadget in its own right, but not when it
-functions as an input-editor. In this case, a method could be
-defined for `application-frame' as the `editor' argument, that
-calls `additional-command-tables' again with whatever the
-\"current\" editor instance is.")
+specialised to `editor' (which is at first a Drei instance), and
+that those methods may call the function again recursively with a
+new `editor' argument to provide arbitrary granularity for
+command-table-selection. For instance, some commands may be
+applicable in a situation where the editor is a pane or gadget in
+its own right, but not when it functions as an input-editor. In
+this case, a method could be defined for `application-frame' as
+the `editor' argument, that calls `additional-command-tables'
+again with whatever the \"current\" editor instance is. The
+default method on this generic function just returns the empty
+list.")
   (:method append (editor command-table)
     '()))
 

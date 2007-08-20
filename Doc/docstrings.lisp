@@ -764,26 +764,37 @@ followed another tabulation label or a tabulation body."
        (format *texinfo-output* "@findex ~A~%" title)))))
 
 (defun texinfo-inferred-body (doc)
-  (when (member (get-kind doc) '(class structure condition))
-    (let ((name (get-name doc)))
-      ;; class precedence list
-      (format *texinfo-output* "Class precedence list: @code{~(~{@w{~A}~^, ~}~)}~%~%"
-              (remove-if (lambda (class)  (hide-superclass-p name class))
-                         (mapcar #'class-name (class-precedence-list (progn (finalize-inheritance (find-class name))
-                                                                            (find-class name))))))
-      ;; slots
-      (let ((slots (remove-if (lambda (slot) (hide-slot-p name slot))
-                              (class-direct-slots (find-class name)))))
-        (when slots
-          (format *texinfo-output* "Slots:~%@itemize~%")
-          (dolist (slot slots)
-            (format *texinfo-output* "@item ~(@code{~A} ~
+  (cond ((member (get-kind doc) '(class structure condition))
+         (let ((name (get-name doc)))
+           ;; class precedence list
+           (format *texinfo-output* "Class precedence list: @code{~(~{@w{~A}~^, ~}~)}~%~%"
+                   (remove-if (lambda (class)  (hide-superclass-p name class))
+                              (mapcar #'class-name (class-precedence-list (progn (finalize-inheritance (find-class name))
+                                                                                 (find-class name))))))
+           ;; slots
+           (let ((slots (remove-if (lambda (slot) (hide-slot-p name slot))
+                                   (class-direct-slots (find-class name)))))
+             (when slots
+               (format *texinfo-output* "Slots:~%@itemize~%")
+               (dolist (slot slots)
+                 (format *texinfo-output* "@item ~(@code{~A} ~
                                      ~@[--- initargs: @code{~{@w{~S}~^, ~}}~]~)~%~%"
-                    (slot-definition-name slot)
-                    (slot-definition-initargs slot))
-            ;; FIXME: Would be neater to handler as children
-            (write-texinfo-string (docstring slot t)))
-          (format *texinfo-output* "@end itemize~%~%"))))))
+                         (slot-definition-name slot)
+                         (slot-definition-initargs slot))
+                 ;; FIXME: Would be neater to handler as children
+                 (write-texinfo-string (docstring slot t)))
+               (format *texinfo-output* "@end itemize~%~%")))))
+        ((eq (get-kind doc) 'generic-function)
+         (let* ((method-combination
+                 (sb-mop:generic-function-method-combination
+                  (fdefinition (get-name doc))))
+                (combination-name (sb-pcl::method-combination-type-name
+                                   method-combination))
+                (options (sb-pcl::method-combination-options method-combination)))
+           (unless (eq combination-name 'standard)
+             (format *texinfo-output*
+                     "Method combination: @code{~A} (~(~{@w{~A}~^, ~}~))~%~%"
+                     combination-name options))))))
 
 (defun texinfo-body (doc)
   (write-texinfo-string (get-string doc)))
