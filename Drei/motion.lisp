@@ -372,7 +372,7 @@ reached."))
         (progn (forward-object mark (length (page-delimiter syntax)))
                t)
         (progn (beginning-of-buffer mark)
-               nil))))
+               t))))
 
 (define-motion-fns page)
 
