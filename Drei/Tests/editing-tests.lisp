@@ -39,13 +39,13 @@ DREI-EDITING related tests." :in drei-tests)
                   (let ((mark (clone-mark (point buffer) mark-stickto)))
                     (setf (offset mark) offset)
                     (funcall action buffer mark)
-                    (is (string= (buffer-contents buffer)
-                                 end-contents))
+                    (is (string= end-contents
+                                 (buffer-contents buffer)))
                     ;; `kill-ring-end-contents' is a list of what should
                     ;; be at the top of the kill ring now. Assert that
                     ;; it is.
                     (handler-case (mapcar #'(lambda (killed-string expected)
-                                              (is (string= killed-string expected)))
+                                              (is (string= expected killed-string)))
                                           (loop repeat (length kill-ring-end-contents)
                                              collecting (coerce (kill-ring-yank kill-ring nil) 'string)
                                              do (rotate-yank-position kill-ring 1))
