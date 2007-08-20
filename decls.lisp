@@ -581,10 +581,42 @@
 ;;; 24.4 Reading and Writing of Tokens
 
 (defgeneric replace-input 
-    (stream new-input &key start end buffer-start rescan))
+    (stream new-input &key start end buffer-start rescan)
+  ;; XXX: Nonstandard behavior for :rescan.
+  (:documentation "Replaces the part of the input editing stream
+`stream's input buffer that extends from `buffer-start' to its
+scan pointer with the string `new-input'. `buffer-start' defaults
+to the current input position of stream, which is the position at
+which the current accept \"session\" starts. `start' and `end' can be
+supplied to specify a subsequence of `new-input'; start defaults to
+0 and end defaults to the length of `new-input'.
+
+`replace-input' will queue a rescan by calling `queue-rescan' if
+the new input does not match the old input, or `rescan' is
+true. If `rescan' is explicitly provided as NIL, no rescan will
+be queued in any case.
+
+The returned value is the position in the input buffer."))
+
 (defgeneric presentation-replace-input
     (stream object type view
-	    &key buffer-start rescan query-identifier for-context-type))
+	    &key buffer-start rescan query-identifier for-context-type)
+  (:documentation "Like `replace-input', except that the new
+input to insert into the input buffer is gotten by presenting
+`object' with the presentation type `type' and view
+`view'. `buffer-start' and `rescan' are as for `replace-input',
+and `query-identifier' and `for-context-type' as as for
+`present'.
+
+Typically, this function will be implemented by calling
+`present-to-string' on `object', `type', `view', and
+`for-context-type', and then calling `replace-input' on the
+resulting string.
+
+If the object cannot be transformed into an acceptable textual
+form, it may be inserted as a special \"accept result\" that is
+considered a single gesture. These accept result objects have no
+standardised form."))
 
 ;;; 27.3 Command Menus
 

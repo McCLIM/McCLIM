@@ -382,6 +382,7 @@ used by the command processing code for layout."))
                (adjust-array so-far (length input)
                              :fill-pointer (length input))
                (replace so-far input)
+               ;; XXX: Relies on non-specified behavior of :rescan.
                (replace-input stream input :rescan nil)))
         (multiple-value-bind (object success input)
             (complete-input-rescan stream func partial-completers
@@ -420,9 +421,8 @@ used by the command processing code for layout."))
                                       :n-columns 1)
                        (declare (ignore event))
                        (if item
-                           (progn
-                             (setf (values input success object nmatches)
-                                   (values (car item) t menu-object 1)))
+                           (setf (values input success object nmatches)
+                                 (values (car item) t menu-object 1))
                            (setf success nil
                                  nmatches 0))))
                    (unless (and (eq mode :complete) (not success))

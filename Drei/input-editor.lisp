@@ -165,8 +165,8 @@ be used outside the input-editor."))
     (loop
        with buffer = (buffer (drei-instance stream))
        until (>= (stream-scan-pointer stream) (size buffer))
-       while (typep (buffer-object buffer (stream-scan-pointer stream))
-                    'noise-string)
+       while (or (typep #1=(buffer-object buffer (stream-scan-pointer stream)) 'noise-string)
+                 (delimiter-gesture-p #1#))
        do (incf (stream-scan-pointer stream)))
     (setf (input-position stream) (stream-scan-pointer stream))))
 
@@ -310,7 +310,7 @@ undoable. When this function returns, the `input-buffer-array' of
 			  (start 0)
 			  (end (length new-input))
 			  (buffer-start (input-position stream))
-			  rescan)
+			  (rescan nil rescan-supplied-p))
   (check-type start integer)
   (check-type end integer)
   (check-type buffer-start integer)
@@ -338,7 +338,11 @@ undoable. When this function returns, the `input-buffer-array' of
         ;; Make the buffer reflect the changes in the array.
         (synchronize-input-buffer-array stream))
       (display-drei drei)
-      (when (or rescan (not equal))
+      ;; XXX: This behavior for the :rescan parameter is not mentioned
+      ;; explicitly in any CLIM guide, but McCLIM input-editing
+      ;; machinery relies on it.
+      (when (and (or rescan (not equal))
+                 (or rescan (not rescan-supplied-p)))
         (queue-rescan stream))
       ;; We have to return "the position in the input buffer". We
       ;; return the insertion position.
