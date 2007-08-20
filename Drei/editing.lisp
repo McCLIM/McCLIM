@@ -82,12 +82,14 @@
            (:documentation
             ,(concat "Delete COUNT " plural " beginning from MARK.")))
          (defmethod ,forward-delete
-             (mark syntax &optional (count 1) limit-action)
+             (mark syntax &optional (count 1)
+              (limit-action #'error-limit-action))
            (let ((mark2 (clone-mark mark)))
              (,forward mark2 syntax count limit-action)
              (delete-region mark mark2)))
          (defmethod ,forward-delete :around
-             (mark syntax &optional (count 1) limit-action)
+             (mark syntax &optional (count 1)
+                   (limit-action #'error-limit-action))
            (cond ((minusp count)
                   (,backward-delete mark syntax (- count) limit-action))
                  ((plusp count)
@@ -98,12 +100,14 @@
            (:documentation
             ,(concat "Delete COUNT " plural " backwards beginning from MARK.")))
          (defmethod ,backward-delete
-             (mark syntax &optional (count 1) limit-action)
+             (mark syntax &optional (count 1)
+              (limit-action #'error-limit-action))
            (let ((mark2 (clone-mark mark)))
              (,backward mark2 syntax count limit-action)
              (delete-region mark mark2)))
          (defmethod ,backward-delete :around
-             (mark syntax &optional (count 1) limit-action)
+             (mark syntax &optional (count 1)
+                   (limit-action #'error-limit-action))
            (cond ((minusp count)
                   (,forward-delete mark syntax (- count) limit-action))
                  ((plusp count)
@@ -114,7 +118,8 @@
            (:documentation
             ,(concat "Kill COUNT " plural " beginning from MARK.")))
          (defmethod ,forward-kill
-             (mark syntax &optional (count 1) concatenate-p limit-action)
+             (mark syntax &optional (count 1) concatenate-p
+              (limit-action #'error-limit-action))
            (let ((start (offset mark)))
              (,forward mark syntax count limit-action)
              (unless (mark= mark start)
@@ -128,7 +133,8 @@
                                             (region-to-sequence start mark)))
                (delete-region start mark))))
          (defmethod ,forward-kill :around
-             (mark syntax &optional (count 1) concatenate-p limit-action)
+             (mark syntax &optional (count 1) concatenate-p
+                   (limit-action #'error-limit-action))
            (declare (ignore concatenate-p))
            (cond ((minusp count)
                   (,backward-kill mark syntax (- count) limit-action))
@@ -140,7 +146,8 @@
            (:documentation
             ,(concat "Kill COUNT " plural " backwards beginning from MARK.")))
          (defmethod ,backward-kill
-             (mark syntax &optional (count 1) concatenate-p limit-action)
+             (mark syntax &optional (count 1) concatenate-p
+              (limit-action #'error-limit-action))
            (let ((start (offset mark)))
              (,backward mark syntax count limit-action)
              (unless (mark= mark start)
@@ -154,7 +161,8 @@
                                             (region-to-sequence start mark)))
                (delete-region start mark))))
          (defmethod ,backward-kill :around
-             (mark syntax &optional (count 1) concatenate-p limit-action)
+             (mark syntax &optional (count 1) concatenate-p
+                   (limit-action #'error-limit-action))
            (declare (ignore concatenate-p))
            (cond ((minusp count)
                   (,forward-kill mark syntax (- count) limit-action))

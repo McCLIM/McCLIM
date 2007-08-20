@@ -33,6 +33,20 @@
 
 (in-package :drei-commands)
 
+(defmacro handling-motion-limit-errors ((unit-plural &key (beep t)
+                                                     (display-message t))
+                                        &body body)
+  "Evaluate body, if a `motion-limit-error' is signalled, beep if
+`beep' is true (the default), and display a message stating that
+there are no more `unit-plural's if `display-message' is
+true (the default)."
+  `(handler-case (progn ,@body)
+     (motion-limit-error ()
+       ,(when beep
+              `(beep))
+       ,(when display-message
+              `(display-message ,(concatenate 'string "No more " unit-plural))))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 
 ;;; Motion commands.
@@ -75,12 +89,10 @@
            ,(concat "Move point forward by one " noun ".
 With a numeric argument N, move point forward by N " plural ".
 With a negative argument -N, move point backward by N " plural ".")
-           (handler-case (,forward *current-point*
-                                   (SYNTAX *current-buffer*)
-                                   COUNT)
-             (motion-limit-error ()
-               (beep)
-               (display-message ,(concat "No more " plural)))))
+           (handling-motion-limit-errors (,plural)
+             (,forward *current-point*
+                       (SYNTAX *current-buffer*)
+                       COUNT)))
          (DEFINE-COMMAND (,com-backward
                           :NAME T
                           :COMMAND-TABLE ,command-table)
@@ -88,12 +100,10 @@ With a negative argument -N, move point backward by N " plural ".")
            ,(concat "Move point backward by one " noun ".
 With a numeric argument N, move point backward by N " plural ".
 With a negative argument -N, move point forward by N " plural ".")
-           (handler-case (,backward *current-point*
-                                    (SYNTAX *current-buffer*)
-                                    COUNT)
-             (motion-limit-error ()
-               (beep)
-               (display-message ,(concat "No more " plural)))))))))
+           (handling-motion-limit-errors (,plural)
+             (,backward *current-point*
+                        (SYNTAX *current-buffer*)
+                        COUNT)))))))
 
 ;;; Manually define some commands
 
@@ -113,24 +123,18 @@ With a negative argument -N, move point forward by N " plural ".")
   "Move point forward by one object.
 With a numeric argument N, move point forward by N objects.
 With a negative argument -N, move point backward by M objects."
-  (handler-case
-      (forward-object *current-point*
-                      count)
-    (motion-limit-error nil
-      (beep)
-      (display-message "No more objects"))))
+  (handling-motion-limit-errors ("objects")
+    (forward-object *current-point*
+                    count)))
 
 (define-command (com-backward-object :name t :command-table movement-table)
     ((count 'integer :prompt "number of objects"))
   "Move point backward by one object.
 With a numeric argument N, move point backward by N objects.
 With a negative argument -N, move point forward by N objects."
-  (handler-case
-      (backward-object *current-point*
-                       count)
-    (motion-limit-error nil
-      (beep)
-      (display-message "No more objects"))))
+  (handling-motion-limit-errors ("objects")
+    (backward-object *current-point*
+                     count)))
 
 ;;; Autogenerate commands
 (define-motion-commands word movement-table)
@@ -280,13 +284,11 @@ With a numeric argument, kill forward (backward if negative)
 that many " plural ".
 
 Successive kills append to the kill ring.")
-             (handler-case (,forward-kill *current-point*
-                                          (syntax *current-buffer*)
-                                          count
-                                          (eq (command-name *previous-command*) ',com-kill))
-               (motion-limit-error ()
-                 (beep)
-                 (display-message ,(concat "No more " plural " to kill")))))
+             (handling-motion-limit-errors (,plural)
+               (,forward-kill *current-point*
+                              (syntax *current-buffer*)
+                              count
+                              (eq (command-name *previous-command*) ',com-kill))))
 
            ;; Backward Kill Unit
            (define-command (,com-backward-kill
@@ -298,13 +300,11 @@ With a numeric argument, kill backward (forward, if negative)
 that many " plural ".
 
 Successive kills append to the kill ring.")
-             (handler-case (,backward-kill *current-point*
-                                           (syntax *current-buffer*)
-                                           count
-                                           (eq (command-name *previous-command*) ',com-backward-kill))
-               (motion-limit-error ()
-                 (beep)
-                 (display-message ,(concat "No more " plural "to kill")))))
+             (handling-motion-limit-errors (,plural)
+               (,backward-kill *current-point*
+                               (syntax *current-buffer*)
+                               count
+                               (eq (command-name *previous-command*) ',com-backward-kill))))
 
            ;; Delete Unit
            (define-command (,com-delete :name t :command-table ,command-table)
@@ -349,11 +349,9 @@ before and after point. With point inside a " noun ",
 transpose that " noun " with the next one. With point
 before the first " noun " of the buffer, transpose the
 first two " plural " of the buffer.")
-           (handler-case (,transpose *current-point*
-                                     (syntax *current-buffer*))
-             (motion-limit-error ()
-               (beep)
-               (display-message ,(concat "No more " plural " to transpose")))))))))
+           (handling-motion-limit-errors (,plural)
+             (,transpose *current-point*
+                         (syntax *current-buffer*))))))))
 
 ;;; Some manually defined commands
 
@@ -371,9 +369,10 @@ the first object of that line to the end of the previous line."
   "Delete the object after point.
 With a numeric argument, kill that many objects 
 after (or before, if negative) point."
-   (if killp
-      (forward-kill-object *current-point* count)
-      (forward-delete-object *current-point* count)))
+  (handling-motion-limit-errors ("objects")
+    (if killp
+        (forward-kill-object *current-point* count)
+        (forward-delete-object *current-point* count))))
 
 (define-command (com-backward-delete-object :name t :command-table deletion-table)
     ((count 'integer :prompt "Number of Objects")
@@ -381,9 +380,10 @@ after (or before, if negative) point."
   "Delete the object before point.
 With a numeric argument, kills that many objects 
 before (or after, if negative) point."
-  (if killp
-      (backward-kill-object *current-point* count)
-      (backward-delete-object *current-point* count)))
+  (handling-motion-limit-errors ("objects")
+    (if killp
+        (backward-kill-object *current-point* count #'error-limit-action)
+        (backward-delete-object *current-point* count #'error-limit-action))))
 
 ;; We require somewhat special behavior from Kill Line, so define a
 ;; new function and use that to implement the Kill Line command.
