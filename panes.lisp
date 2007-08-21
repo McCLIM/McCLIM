@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.183 2007/07/21 13:18:59 rstrandh Exp $
+;;; $Id: panes.lisp,v 1.184 2007/08/21 21:45:49 thenriksen Exp $
 
 (in-package :clim-internals)
 
@@ -1171,7 +1171,7 @@ order to produce a double-click")
            sum (space-requirement-max-major sr) into max-major
            maximize (space-requirement-minor sr) into minor
            maximize (space-requirement-min-minor sr) into min-minor
-           maximize (space-requirement-max-minor sr) into max-minor
+           minimize (space-requirement-max-minor sr) into max-minor
            finally
              (return
                (space-requirement+*
@@ -1830,8 +1830,15 @@ order to produce a double-click")
 
 (defmethod compose-space ((pane viewport-pane) &key width height)
   (declare (ignorable width height))
-  ; I _think_ this is right, it certainly shouldn't be the requirements of the child.
-  (make-space-requirement))
+  ;; I _think_ this is right, it certainly shouldn't be the
+  ;; requirements of the child, apart from the max sizes. If the child
+  ;; does not want to go bigger than a specific size, we should not
+  ;; force it to do so.
+  (let ((child-sr (compose-space (first (sheet-children pane)))))
+    (if child-sr
+        (make-space-requirement :max-width (space-requirement-max-width child-sr)
+                                :max-height (space-requirement-max-height child-sr))
+        (make-space-requirement))))
 
 (defmethod allocate-space ((pane viewport-pane) width height)
   (with-slots (hscrollbar vscrollbar) (sheet-parent pane)
@@ -1960,34 +1967,59 @@ order to produce a double-click")
 (defmethod compose-space ((pane scroller-pane) &key width height)
   (declare (ignore width height))
   (with-slots (viewport vscrollbar hscrollbar suggested-width suggested-height
-               x-spacing y-spacing scroll-bar)
+                        x-spacing y-spacing scroll-bar)
       pane
     (if viewport
         (let ((req
-               ; v-- where does this requirement come from?
-               ;     a: just an arbitrary default
-		(make-space-requirement
+               ;; v-- where does this requirement come from?
+               ;;     a: just an arbitrary default
+               (make-space-requirement
                 :width suggested-width :height suggested-height :max-width +fill+ :max-height +fill+
                 :min-width  (max (* 2 x-spacing) (if (null scroll-bar) 0 30))
-                :min-height (max (* 2 y-spacing) (if (null scroll-bar) 0 30)))
-		#+nil
-		(make-space-requirement :height +fill+ :width +fill+)))
+                :min-height (max (* 2 y-spacing) (if (null scroll-bar) 0 30))))
+              (viewport-child (first (sheet-children viewport))))
           (when vscrollbar
             (setq req (space-requirement+*
-                        (space-requirement-combine #'max
-                              req
-                              (compose-space vscrollbar))
-                        :height     *scrollbar-thickness*
-                        :min-height *scrollbar-thickness*
-                        :max-height *scrollbar-thickness*)))
+                       (space-requirement-combine #'max
+                                                  req
+                                                  (compose-space vscrollbar))
+                       :height     *scrollbar-thickness*
+                       :min-height *scrollbar-thickness*
+                       :max-height *scrollbar-thickness*)))
           (when hscrollbar
             (setq req (space-requirement+*
-                        (space-requirement-combine #'max
-                              req
-                              (compose-space hscrollbar))
-                        :width     *scrollbar-thickness*
-                        :min-width *scrollbar-thickness*
-                        :max-width *scrollbar-thickness*)))
+                       (space-requirement-combine
+                        #'max req (compose-space hscrollbar))
+                       :width     *scrollbar-thickness*
+                       :min-width *scrollbar-thickness*
+                       :max-width *scrollbar-thickness*)))
+          (let* ((viewport-sr (compose-space viewport
+                               :width suggested-width
+                               :height suggested-height))
+                 (max-width (+ (space-requirement-max-width viewport-sr)
+                               (if vscrollbar *scrollbar-thickness* 0)
+                               ;; I don't know why this is necessary.
+                               (if (extended-output-stream-p viewport-child)
+                                   (* 4 (stream-vertical-spacing viewport-child))
+                                   0)))
+                 (max-height (+ (space-requirement-max-height viewport-sr)
+                                (if hscrollbar *scrollbar-thickness* 0)
+                                ;; I don't know why this is necessary.
+                                (if (extended-output-stream-p viewport-child)
+                                    (* 4 (stream-vertical-spacing viewport-child))
+                                    0))))
+            (setq req (make-space-requirement
+                       :width (min (space-requirement-width req)
+                                   max-width)
+                       :height (min (space-requirement-height req)
+                                    max-height)
+                       :min-width (min (space-requirement-min-width req)
+                                       max-width)
+                       :min-height (min (space-requirement-min-height req)
+                                        max-height)
+                       :max-width max-width
+                       :max-height max-height)))
+          
           req)
         (make-space-requirement))))
 
