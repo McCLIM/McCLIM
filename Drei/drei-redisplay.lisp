@@ -194,7 +194,12 @@ forth. `Line-number' should be >= 1."))
            for object = (when go-again
                           (object-before line-beg-mark))
            while go-again
-           when (characterp object)
+           if (eql object #\Tab)
+           do (progn (incf displacement (string-size array))
+                     (incf displacement (tab-width pane))
+                     (setf (fill-pointer array) 0))
+           else if (and (characterp object)
+                        (not (eql object #\Tab)))
            do (vector-push-extend object array)
            else do (progn (incf displacement (string-size array))
                           (incf displacement (object-size object))
