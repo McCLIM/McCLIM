@@ -1441,7 +1441,7 @@ the form that `token' quotes, peeling away all quote forms."
 (defgeneric form-at-top-level-p (form)
   (:documentation "Return NIL if `form' is not a top-level-form,
   T otherwise.")
-  (:method ((form form))
+  (:method ((form parser-symbol))
     (or (typep (parent form) 'form*)
         (null (parent form)))))
 
@@ -1539,10 +1539,10 @@ and move `mark' to after `string'. If there is no symbol at
 (defmethod display-parse-tree :around (parse-symbol stream (drei drei)
                                                     (syntax lisp-syntax))
   (with-slots (top bot) drei
-     (when (and (start-offset parse-symbol)
-                (mark< (start-offset parse-symbol) bot)
-                (mark> (end-offset parse-symbol) top))
-       (call-next-method))))
+    (when (and (start-offset parse-symbol)
+               (mark< (start-offset parse-symbol) bot)
+               (mark> (end-offset parse-symbol) top))
+      (call-next-method))))
 
 (defmethod display-parse-tree (parse-symbol stream (drei drei)
                                (syntax lisp-syntax))
