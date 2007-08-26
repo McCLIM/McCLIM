@@ -1,4 +1,6 @@
 * Changes in mcclim-0.9.5 relative to 0.9.4:
+** specification compliance: various layout panes no longer quite as
+   aggressive at eating the space requirements of their children.
 ** Drei now has better support for delimiter gestures.
 ** Installation: the systems clim-listener, scigraph, clim-examples,
    and clouseau can now be loaded without loading the system mcclim
