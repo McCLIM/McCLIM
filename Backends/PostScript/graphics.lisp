@@ -228,6 +228,10 @@ setmatrix")
   (let ((ellipse (transform-region *transformation* ellipse)))
     (put-ellipse stream ellipse t)))
 
+(defmethod postscript-add-path (stream (rs climi::standard-rectangle-set))
+  (map-over-region-set-regions
+   (lambda (r) (postscript-add-path stream r))
+   rs))
 
 ;;; Graphics state
 
