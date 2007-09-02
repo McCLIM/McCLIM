@@ -465,7 +465,7 @@
 ;;; The actual McCLIM system that people should to use in their ASDF
 ;;; package dependency lists.
 (defsystem :mcclim
-    :version "0.9.5-dev"
+    :version "0.9.5"
     :depends-on (:clim-looks))
 
 (defmethod perform :after ((op load-op) (c (eql (find-system :clim))))
