@@ -121,7 +121,7 @@
 ;;;
 
 (defmethod realize-mirror ((port graphic-forms-port) (gadget push-button))
-  (gfs::debug-format "realizing ~a~%" gadget)
+  #+nil (gfs::debug-format "realizing ~a~%" gadget)
   (let* ((parent-mirror (sheet-mirror (sheet-parent gadget)))
          (mirror (make-instance 'gfw-button
 				:sheet gadget
@@ -134,7 +134,7 @@
     mirror))
 
 (defmethod realize-mirror ((port graphic-forms-port) (gadget toggle-button))
-  (gfs::debug-format "realizing ~a~%" gadget)
+  #+nil (gfs::debug-format "realizing ~a~%" gadget)
   (let* ((parent-mirror (sheet-mirror (sheet-parent gadget)))
          (mirror (make-instance 'gfw-button :parent parent-mirror :style '(:check-box))))
     (if (gadget-label gadget)
@@ -143,7 +143,7 @@
     mirror))
 
 (defmethod realize-mirror ((port graphic-forms-port) (gadget scroll-bar))
-  (gfs::debug-format "realizing ~a~%" gadget)
+  #+nil (gfs::debug-format "realizing ~a~%" gadget)
   (let* ((parent-mirror (sheet-mirror (sheet-parent gadget)))
          (mirror (make-instance 'gfw-scroll-bar :parent parent-mirror :style :vertical)))
     (climi::port-register-mirror port gadget mirror)
@@ -168,11 +168,9 @@
     (if mirror
       (setf pref-size (gfw:preferred-size mirror -1 -1))
       (progn
-        (gfs::debug-format "compose-space parent: ~a~%" (sheet-mirror (sheet-parent gadget)))
         (setf mirror (make-instance 'gfw:button :parent (sheet-mirror (sheet-parent gadget)) :text (gadget-label gadget)))
         (setf pref-size (gfw:preferred-size mirror -1 -1))
         (gfs:dispose mirror)
         (setf mirror nil)))
-    (gfs::debug-format "pref size ~a for ~a mirror ~a~%" pref-size gadget mirror)
     (make-space-requirement :width (gfs:size-width pref-size)
                             :height (gfs:size-height pref-size))))

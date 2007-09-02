@@ -32,4 +32,4 @@
   ())
 
 (defmethod note-space-requirements-changed :after ((graft graphic-forms-graft) pane)
-  (gfs::debug-format "space requirements changed: ~a~%" pane))
+  #+nil (gfs::debug-format "space requirements changed: ~a~%" pane))
