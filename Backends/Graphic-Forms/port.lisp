@@ -111,6 +111,7 @@
     :initform (make-instance 'gfw-pointer))))
 
 (defun enqueue (port event)
+  (setf (slot-value event 'climi::timestamp) (gfw:obtain-event-time))
   (push event (events port)))
 
 (defvar *sheet-dispatcher* (make-instance 'sheet-event-dispatcher))
@@ -169,7 +170,6 @@
 ;;;
 
 (defmethod port-set-mirror-region ((port graphic-forms-port) (mirror gf-mirror-mixin) region)
-  (gfs::debug-format "~a~%" region)
   (setf (gfw:size mirror)
         (gfs:make-size :width (round-coordinate (bounding-rectangle-width region))
                        :height (round-coordinate (bounding-rectangle-height region)))))
@@ -179,6 +179,10 @@
 
 (defmethod port-set-mirror-region ((port graphic-forms-port) (mirror gfw-menu-item) region)
   (declare (ignore port mirror region)))
+
+(defmethod port-set-mirror-transformation ((port graphic-forms-port) (mirror gfw-top-level) transformation)
+  ;; FIXME: does McCLIM really need to set position of top-level window's?
+  ())
 
 (defmethod port-set-mirror-transformation ((port graphic-forms-port) (mirror gf-mirror-mixin) transformation)
   (multiple-value-bind (x y)
@@ -201,7 +205,7 @@
 ;;;
 
 (defmethod realize-mirror ((port graphic-forms-port) (sheet climi::top-level-sheet-pane))
-  (gfs::debug-format "realizing ~a~%" (class-of sheet))
+  #+nil (gfs::debug-format "realizing ~a~%" (class-of sheet))
   (let* ((mirror (make-instance 'gfw-top-level
                                 :sheet sheet
                                 :dispatcher *sheet-dispatcher*
@@ -211,7 +215,6 @@
       (gfw::put-widget (gfw::thread-context) menu-bar)
       (setf (gfw:menu-bar mirror) menu-bar))
     (climi::port-register-mirror (port sheet) sheet mirror)
-    (port-enable-sheet port sheet)
     mirror))
 
 (defmethod destroy-mirror ((port graphic-forms-port) (sheet climi::top-level-sheet-pane))
@@ -220,22 +223,13 @@
     (gfs:dispose mirror)))
 
 (defmethod realize-mirror ((port graphic-forms-port) (sheet mirrored-sheet-mixin))
-  (gfs::debug-format "---> realizing ~a~%" (class-of sheet))
   (let* ((parent (sheet-mirror (sheet-parent sheet)))
-         (req (compose-space sheet))
          (mirror (make-instance 'gfw-panel
                                 :sheet sheet
                                 :dispatcher *sheet-dispatcher*
                                 :style '() ;was: '(:border)
                                 :parent parent)))
-    (setf (gfw:size mirror) (requirement->size req))
-    (multiple-value-bind (x y)
-        (transform-position (climi::%sheet-mirror-transformation sheet) 0 0)
-      (setf (gfw:location mirror)
-            (gfs:make-point :x (round-coordinate x)
-                            :y (round-coordinate y))))
     (climi::port-register-mirror (port sheet) sheet mirror)
-    (port-enable-sheet port sheet)
     mirror))
 
 (defmethod destroy-mirror ((port graphic-forms-port) (sheet mirrored-sheet-mixin))
@@ -268,15 +262,9 @@
   (declare (ignore wait-function timeout)) ; FIXME
   (or (pop (events port))
       (cffi:with-foreign-object (msg-ptr 'gfs::msg)
-	(let ((gm (gfs::get-message msg-ptr (cffi:null-pointer) 0 0)))
-	  (cffi:with-foreign-slots ((gfs::hwnd gfs::message gfs::wparam gfs::lparam
-					       gfs::time gfs::pnt)
-				    msg-ptr gfs::msg)
-	    (unless (gfw::default-message-filter gm msg-ptr)
-	      (dolist (event (events port))
-		(setf (slot-value event 'climi::timestamp) gfs::time)))))
-	(setf (events port) (nreverse (events port)))
-	(pop (events port)))))
+        (let ((gm (gfs::get-message msg-ptr (cffi:null-pointer) 0 0)))
+          (gfw::default-message-filter gm msg-ptr))
+        (pop (events port)))))
 
 (defmethod process-next-event :after ((port graphic-forms-port) &key wait-function (timeout nil))
   (declare (ignore wait-function timeout))
@@ -288,7 +276,7 @@
                  :orientation orientation :units units))
 
 (defmethod make-medium ((port graphic-forms-port) sheet)
-  (gfs::debug-format "creating medium for ~a~%" (class-of sheet))
+  #+nil (gfs::debug-format "creating medium for ~a~%" (class-of sheet))
   (make-instance 'graphic-forms-medium :port port :sheet sheet))
 
 (defmethod text-style-mapping
@@ -301,18 +289,18 @@
   ())
 
 (defmethod port-character-width ((port graphic-forms-port) text-style char)
-  (gfs::debug-format "port-character-width called: ~a ~c~%" text-style char))
+  #+nil (gfs::debug-format "port-character-width called: ~a ~c~%" text-style char))
 
 (defmethod port-string-width ((port graphic-forms-port) text-style string &key (start 0) end)
-  (gfs::debug-format "port-string-width called: ~a ~c~%" text-style string))
+  #+nil (gfs::debug-format "port-string-width called: ~a ~c~%" text-style string))
 
 (defmethod port-mirror-width ((port graphic-forms-port) (sheet mirrored-sheet-mixin))
-  (gfs::debug-format "port-mirror-width called for ~a~%" sheet)
+  #+nil (gfs::debug-format "port-mirror-width called for ~a~%" sheet)
   (let ((mirror (climi::port-lookup-mirror port sheet)))
     (gfs:size-width (gfw:size mirror))))
 
 (defmethod port-mirror-height ((port graphic-forms-port) (sheet mirrored-sheet-mixin))
-  (gfs::debug-format "port-mirror-height called for ~a~%" sheet)
+  #+nil (gfs::debug-format "port-mirror-height called for ~a~%" sheet)
   (let ((mirror (climi::port-lookup-mirror port sheet)))
     (gfs:size-height (gfw:size mirror))))
 
@@ -370,10 +358,6 @@
 
 (defmethod port-ungrab-pointer ((port graphic-forms-port) pointer sheet)
   ())
-
-(defmethod distribute-event :around ((port graphic-forms-port) event)
-  ; (gfs::debug-format "distribute-event -> port: ~a event: ~a~%" port event)
-  (call-next-method))
 
 (defmethod set-sheet-pointer-cursor ((port graphic-forms-port) sheet cursor)
   ())        
@@ -447,19 +431,19 @@
                  :width (gfs:size-width size)
                  :height (gfs:size-height size)))
 
-(defmethod gfw:event-move ((self sheet-event-dispatcher) mirror pnt)
-  (enqueue (port self)
-	   (generate-configuration-event mirror pnt (gfw:client-size mirror))))
-
 (defmethod gfw:event-resize ((self sheet-event-dispatcher) mirror size type)
   (declare (ignore type))
   (let ((sheet (sheet mirror)))
     (if (and sheet (subtypep (class-of sheet) 'sheet-with-medium-mixin))
-      (let ((medium (climi::sheet-medium sheet)))
-        (if (and medium (image-of medium))
-          (resize-medium-buffer medium size))))
-    (enqueue (port self)
-	     (generate-configuration-event mirror (gfw:location mirror) size))))
+        (let ((medium (climi::sheet-medium sheet)))
+          (when (and medium (image-of medium))
+            (resize-medium-buffer medium size)))))
+  (enqueue (port self)
+           (generate-configuration-event mirror (gfw:location mirror) size)))
+
+(defmethod gfw:event-move ((self sheet-event-dispatcher) mirror pnt)
+  (enqueue (port self)
+           (generate-configuration-event mirror pnt (gfw:size mirror))))
 
 (defclass gadget-event (window-event) ())
 (defclass button-pressed-event (gadget-event) ())
