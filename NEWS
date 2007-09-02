@@ -1,5 +1,5 @@
 * Changes in mcclim-0.9.5 relative to 0.9.4:
-** Installation: the systems clim-listener, scigraph, clim-examples,
+** Installation: the systems clim-listener, clim-examples,
    and clouseau can now be loaded without loading the system mcclim
    first. Users with existing McCLIM installations should use the 
    provided script:
