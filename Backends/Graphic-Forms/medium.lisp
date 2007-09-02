@@ -58,11 +58,17 @@
     ((eql ink +foreground-ink+)
      (setf ink (medium-foreground medium)))
     ((eql ink +background-ink+)
-     (setf ink (medium-background medium))))
-  (multiple-value-bind (red green blue) (clim:color-rgb ink)
-    (gfg:make-color :red (min (truncate (* red 256)) 255)
-		    :green (min (truncate (* green 256)) 255)
-		    :blue (min (truncate (* blue 256)) 255))))
+     (setf ink (medium-background medium)))
+    ((eql ink +flipping-ink+)
+     (warn "+flipping-ink+ encountered in ink-to-color~%")
+     (setf ink nil)))
+  (if ink
+    (multiple-value-bind (red green blue) (clim:color-rgb ink)
+      (gfg:make-color :red (min (truncate (* red 256)) 255)
+                      :green (min (truncate (* green 256)) 255)
+                      :blue (min (truncate (* blue 256)) 255)))
+    (gfw:with-graphics-context (gc (target-of medium))
+      (gfg:background-color gc))))
 
 (defun target-of (medium)
   (let ((sheet (medium-sheet medium)))
@@ -128,46 +134,47 @@
     ;; have better control over them
     ;;
     (let ((face-name (if (stringp family)
-			 family
-			 (ecase family
-			   ((:fix :fixed) "Lucida Console")
-			   (:serif        "Times New Roman")
-			   (:sans-serif    "Arial"))))
-	  (pnt-size (case size
-		      (:tiny       6)
-		      (:very-small 8)
-		      (:small      10)
-		      (:normal     12)
-		      (:large      14)
-		      (:very-large 16)
-		      (:huge       18)
-		      (otherwise   10)))
-	  (style nil))
+                         family
+                         (ecase family
+                           ((:fix :fixed) "Lucida Console")
+                           (:serif        "Times New Roman")
+                           (:sans-serif    "Arial"))))
+          (pnt-size (case size
+                      (:tiny       6)
+                      (:very-small 7)
+                      (:small      8)
+                      (:normal     10)
+                      (:large      12)
+                      (:very-large 14)
+                      (:huge       16)
+                      (otherwise   10)))
+          (style nil))
       (pushnew (case face
-		 ((:bold :bold-italic :bold-oblique :italic-bold :oblique-bold)
-		  :bold)
-		 (otherwise
-		  :normal))
-	       style)
+                 ((:bold :bold-italic :bold-oblique :italic-bold :oblique-bold)
+                  :bold)
+                 (otherwise
+                  :normal))
+               style)
       (pushnew (case face
-		 ((:bold-italic :italic :italic-bold)
-		  :italic)
-		 (otherwise
-		  :normal))
-	       style)
+                 ((:bold-italic :italic :italic-bold)
+                  :italic)
+                 (otherwise
+                  :normal))
+               style)
       (pushnew (case family
-		 ((:fix :fixed) :fixed)
-		 (otherwise     :normal))
-	       style)
-      (when (or (null old-data)
-		(not (eql pnt-size (gfg:font-data-point-size old-data)))
-		(string-not-equal face-name (gfg:font-data-face-name old-data))
-		(/= (length style)
-		    (length (intersection style (gfg:font-data-style old-data)))))
-	(let ((new-data (gfg:make-font-data :face-name face-name
-					    :point-size pnt-size
-					    :style style)))
-	  (make-instance 'gfg:font :gc gc :data new-data))))))
+                 ((:fix :fixed) :fixed)
+                 (otherwise     :normal))
+               style)
+      (if (or (null old-data)
+              (not (eql pnt-size (gfg:font-data-point-size old-data)))
+              (string-not-equal face-name (gfg:font-data-face-name old-data))
+              (/= (length style)
+                  (length (intersection style (gfg:font-data-style old-data)))))
+          (let ((new-data (gfg:make-font-data :face-name face-name
+                                              :point-size pnt-size
+                                              :style style)))
+            (make-instance 'gfg:font :gc gc :data new-data))
+          (make-instance 'gfg:font :gc gc :data old-data)))))
 
 (defmethod (setf medium-text-style) :before (text-style (medium graphic-forms-medium))
   (sync-text-style medium
@@ -402,18 +409,19 @@
   (setf string (normalize-text-data string))
   (setf text-style (or text-style (make-text-style nil nil nil)))
   (setf text-style
-	(merge-text-styles text-style (medium-default-text-style medium)))
+        (merge-text-styles text-style (medium-default-text-style medium)))
   (gfw:with-graphics-context (gc (target-of medium))
-    (let* ((font (text-style-to-font gc text-style nil))
-	   (metrics (gfg:metrics gc font))
-	   (width (gfs:size-width (gfg:text-extent gc (subseq string
-							      start
-							      (or end (length string)))))))
-      (values width
-	      (gfg:height metrics)
-	      width
-	      (gfg:height metrics)
-	      (gfg:ascent metrics)))))
+    (let ((font (text-style-to-font gc text-style nil)))
+      (setf (gfg:font gc) font)
+      (let ((metrics (gfg:metrics gc font))
+            (extent (gfg:text-extent gc (subseq string
+                                                start
+                                                (or end (length string))))))
+        (values (gfs:size-width extent)
+                (gfg:height metrics)
+                (gfs:size-width extent)
+                (gfg:height metrics)
+                (gfg:ascent metrics))))))
 
 (defmethod climi::text-bounding-rectangle*
     ((medium graphic-forms-medium) string &key text-style (start 0) end)
@@ -434,12 +442,12 @@
       (let ((font (font-of medium)))
         (if font
           (setf (gfg:font gc) font))
-        (let ((h (gfg:height (gfg:metrics gc font)))
+        (let ((ascent (gfg:ascent (gfg:metrics gc font)))
 	      (x (round-coordinate x))
 	      (y (round-coordinate y)))
 	  (gfg:draw-text gc
 			 (subseq string start (or end (length string)))
-			 (gfs:make-point :x x :y (- y h))))))
+			 (gfs:make-point :x x :y (- y ascent))))))
     (add-medium-to-render medium)))
 
 (defmethod medium-buffering-output-p ((medium graphic-forms-medium))
@@ -463,10 +471,11 @@
 
 (defmethod medium-clear-area ((medium graphic-forms-medium) left top right bottom)
   (when (target-of medium)
-    (let ((rect (coordinates->rectangle left top right bottom)))
+    (let ((rect (coordinates->rectangle left top right bottom))
+          (color (ink-to-color medium (medium-background medium))))
       (gfw:with-graphics-context (gc (target-of medium))
-        (setf (gfg:background-color gc) gfg:*color-white*
-              (gfg:foreground-color gc) gfg:*color-white*)
+        (setf (gfg:background-color gc) color
+              (gfg:foreground-color gc) color)
         (gfg:draw-filled-rectangle gc rect)))
     (add-medium-to-render medium)))
 
