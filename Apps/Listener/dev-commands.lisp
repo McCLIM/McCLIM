@@ -672,25 +672,29 @@
                          class))))
 
 (define-command (com-show-class-slots :name "Show Class Slots"
-				      :command-table show-commands
+                                      :command-table show-commands
                                       :menu "Class Slots"
-				      :provide-output-destination-keyword t)
+                                      :provide-output-destination-keyword t)
     ((class-name 'clim:symbol :prompt "class name"))
-  (let ((class (find-class class-name nil)))
-    (if (null class)
-	(format t "~&~A is not a defined class.~%" class-name)
-      (let ((slots (clim-mop:class-slots class)))
-	(if (null slots)
-	    (note "~%This class has no slots.~%~%")
-            (progn
-            ; oddly, looks much better in courier, because of all the capital letters.
-;            (with-text-family (t :sans-serif)
-              (invoke-as-heading
-               (lambda ()
-                 (format t "~&Slots for ")
-                 (with-output-as-presentation (t (clim-mop:class-name class) 'class-name :single-box t)
-                   (princ (clim-mop:class-name class)))))
-              (present-the-slots class) ))))))
+  (let* ((class (find-class class-name nil))
+         (finalized-p (and class
+                           (progn
+                             (clim-mop:finalize-inheritance class)
+                             (clim-mop:class-finalized-p class))))
+         (slots (and finalized-p (clim-mop:class-slots class))))
+    (cond
+     ((null class)
+      (note "~A is not a defined class.~%" class-name))
+     ((not finalized-p)
+      (note "Class ~A is not finalized." class-name))
+     ((null slots)
+      (note "~%This class has no slots.~%~%"))
+     (t (invoke-as-heading
+         (lambda ()
+           (format t "~&Slots for ")
+           (with-output-as-presentation (t (clim-mop:class-name class) 'class-name :single-box t)
+             (princ (clim-mop:class-name class)))))
+        (present-the-slots class)))))
 
 (defparameter *ignorable-internal-class-names*
   '(standard-object))
