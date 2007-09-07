@@ -619,7 +619,7 @@ the associated sheet can be determined."
       record
     (setf (rectangle-edges* record) (values x y x y))))
 
-(defmethod output-record-count ((record basic-output-record))
+(defmethod output-record-count ((record displayed-output-record))
   0)
 
 (defmethod map-over-output-records-1
@@ -971,6 +971,7 @@ were added."
   ((children :initform (%make-tree-output-record-tree)
              :accessor %tree-record-children)
    (children-hash :initform (make-hash-table :test #'eql) :reader %tree-record-children-cache)
+   (child-count :initform 0)
    (last-insertion-nr :initform 0 :accessor last-insertion-nr)))
 
 (defun %entry-in-children-cache (record entry)
@@ -992,24 +993,32 @@ were added."
   (let ((entry (make-tree-output-record-entry child (incf (last-insertion-nr record)))))
     (spatial-trees:insert entry (%tree-record-children record))
     (setf (output-record-parent child) record)
-    (setf (%entry-in-children-cache record child) entry)))
+    (setf (%entry-in-children-cache record child) entry))
+  (incf (slot-value record 'child-count))
+  (values))
 
 (defmethod delete-output-record (child (record standard-tree-output-record) &optional (errorp t))
   (let ((entry (find child (spatial-trees:search (%entry-in-children-cache record child)
                                                  (%tree-record-children record))
                      :key #'tree-output-record-entry-record)))
-   (cond
-     ((not (null entry))
-      (spatial-trees:delete entry (%tree-record-children record))
-      (%remove-entry-from-children-cache record child)
-      (setf (output-record-parent child) nil))
-     (errorp (error "~S is not a child of ~S" child record)))))
+    (decf (slot-value record 'child-count))
+    (cond
+      ((not (null entry))
+       (spatial-trees:delete entry (%tree-record-children record))
+       (%remove-entry-from-children-cache record child)
+       (setf (output-record-parent child) nil))
+      (errorp (error "~S is not a child of ~S" child record)))))
 
 (defmethod clear-output-record ((record standard-tree-output-record))
-  (dolist (child (output-record-children record))
-    (setf (output-record-parent child) nil)
-    (%remove-entry-from-children-cache record child))
+  (map nil (lambda (child)
+             (setf (output-record-parent child) nil)
+             (%remove-entry-from-children-cache record child))
+       (output-record-children record))
+  (setf (slot-value record 'child-count) 0)
   (setf (%tree-record-children record) (%make-tree-output-record-tree)))
+
+(defmethod output-record-count ((record standard-tree-output-record))
+  (slot-value record 'child-count))
 
 (defun map-over-tree-output-records (function record rectangle sort-order function-args)
   (dolist (child (sort (spatial-trees:search rectangle
