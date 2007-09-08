@@ -169,6 +169,11 @@
 ;;; mirror methods
 ;;;
 
+(defmethod port-set-mirror-region ((port graphic-forms-port) (mirror gfw-top-level) region)
+  (let ((size (gfs:make-size :width (round-coordinate (bounding-rectangle-width region))
+                             :height (round-coordinate (bounding-rectangle-height region)))))
+    (setf (gfw:size mirror) (gfw::compute-outer-size mirror size))))
+
 (defmethod port-set-mirror-region ((port graphic-forms-port) (mirror gf-mirror-mixin) region)
   (setf (gfw:size mirror)
         (gfs:make-size :width (round-coordinate (bounding-rectangle-width region))
@@ -190,9 +195,6 @@
     (setf (gfw:location mirror)
           (gfs:make-point :x (round-coordinate x)
                           :y (round-coordinate y)))))
-
-(defmethod port-set-mirror-transformation ((port graphic-forms-port) (mirror gfw-top-level) transformation)
-  (declare (ignore port mirror transformation)))
 
 (defmethod port-set-mirror-transformation ((port graphic-forms-port) (mirror gfw-menu) transformation)
   (declare (ignore port mirror transformation)))
@@ -377,6 +379,10 @@
 (defmethod send-selection ((port graphic-forms-port) event string)
   nil)
 
+(defmethod compose-space ((pane gfw-menu-bar-pane) &key width height)
+  (declare (ignore width height))
+  (make-space-requirement :width 0 :height 0))
+
 ;;;
 ;;; dispatchers and callbacks
 ;;;
@@ -433,6 +439,7 @@
 
 (defmethod gfw:event-resize ((self sheet-event-dispatcher) mirror size type)
   (declare (ignore type))
+  (setf size (gfw:client-size mirror))
   (let ((sheet (sheet mirror)))
     (if (and sheet (subtypep (class-of sheet) 'sheet-with-medium-mixin))
         (let ((medium (climi::sheet-medium sheet)))
@@ -443,7 +450,7 @@
 
 (defmethod gfw:event-move ((self sheet-event-dispatcher) mirror pnt)
   (enqueue (port self)
-           (generate-configuration-event mirror pnt (gfw:size mirror))))
+           (generate-configuration-event mirror pnt (gfw:client-size mirror))))
 
 (defclass gadget-event (window-event) ())
 (defclass button-pressed-event (gadget-event) ())
