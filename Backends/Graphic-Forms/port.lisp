@@ -170,14 +170,14 @@
 ;;;
 
 (defmethod port-set-mirror-region ((port graphic-forms-port) (mirror gfw-top-level) region)
-  (let ((size (gfs:make-size :width (round-coordinate (bounding-rectangle-width region))
-                             :height (round-coordinate (bounding-rectangle-height region)))))
+  (let ((size (gfs:make-size :width (floor (bounding-rectangle-width region))
+                             :height (floor (bounding-rectangle-height region)))))
     (setf (gfw:size mirror) (gfw::compute-outer-size mirror size))))
 
 (defmethod port-set-mirror-region ((port graphic-forms-port) (mirror gf-mirror-mixin) region)
   (setf (gfw:size mirror)
-        (gfs:make-size :width (round-coordinate (bounding-rectangle-width region))
-                       :height (round-coordinate (bounding-rectangle-height region)))))
+        (gfs:make-size :width (floor (bounding-rectangle-width region))
+                       :height (floor (bounding-rectangle-height region)))))
 
 (defmethod port-set-mirror-region ((port graphic-forms-port) (mirror gfw-menu) region)
   (declare (ignore port mirror region)))
@@ -193,8 +193,8 @@
   (multiple-value-bind (x y)
       (transform-position transformation 0 0)
     (setf (gfw:location mirror)
-          (gfs:make-point :x (round-coordinate x)
-                          :y (round-coordinate y)))))
+          (gfs:make-point :x (floor x)
+                          :y (floor y)))))
 
 (defmethod port-set-mirror-transformation ((port graphic-forms-port) (mirror gfw-menu) transformation)
   (declare (ignore port mirror transformation)))
@@ -211,7 +211,7 @@
   (let* ((mirror (make-instance 'gfw-top-level
                                 :sheet sheet
                                 :dispatcher *sheet-dispatcher*
-                                :style '(:frame)
+                                :style '(:workspace)
                                 :text (frame-pretty-name (pane-frame sheet)))))
     (let ((menu-bar (make-instance 'gfw-menu :handle (gfs::create-menu))))
       (gfw::put-widget (gfw::thread-context) menu-bar)
@@ -266,6 +266,7 @@
       (cffi:with-foreign-object (msg-ptr 'gfs::msg)
         (let ((gm (gfs::get-message msg-ptr (cffi:null-pointer) 0 0)))
           (gfw::default-message-filter gm msg-ptr))
+        (setf (events port) (nreverse (events port)))
         (pop (events port)))))
 
 (defmethod process-next-event :after ((port graphic-forms-port) &key wait-function (timeout nil))
@@ -414,20 +415,18 @@
       +white+)))
 
 (defmethod gfw:event-paint ((self sheet-event-dispatcher) mirror gc rect)
-  (declare (ignore gc))
   (let ((sheet (sheet mirror)))
     (when (and (typep sheet 'sheet-with-medium-mixin)
-	       (not (image-of (sheet-medium sheet))))
-      (gfw:with-graphics-context (gc mirror)
-	(let ((c (ink-to-color (sheet-medium sheet)
-			       (sheet-desired-ink sheet))))
-	  (setf (gfg:background-color gc) c
-		(gfg:foreground-color gc) c))
-	(gfg:draw-filled-rectangle gc rect)))
+               (not (image-of (sheet-medium sheet))))
+      (let ((c (ink-to-color (sheet-medium sheet)
+                             (sheet-desired-ink sheet))))
+        (setf (gfg:background-color gc) c
+              (gfg:foreground-color gc) c))
+      (gfg:draw-filled-rectangle gc rect))
     (enqueue (port self)
-	     (make-instance 'window-repaint-event
-			    :sheet sheet
-			    :region (translate-rectangle rect)))))
+             (make-instance 'window-repaint-event
+                            :sheet sheet
+                            :region (translate-rectangle rect)))))
 
 (defun generate-configuration-event (mirror pnt size)
   (make-instance 'window-configuration-event

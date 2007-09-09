@@ -21,13 +21,9 @@
 
 (in-package :clim-graphic-forms)
 
-(declaim (inline round-coordinate))
-(defun round-coordinate (x)
-  (floor (+ x .5)))
-
 (defun requirement->size (req)
-  (gfs:make-size :width (round-coordinate (space-requirement-width req))
-                 :height (round-coordinate (space-requirement-height req))))
+  (gfs:make-size :width (floor (space-requirement-width req))
+                 :height (floor (space-requirement-height req))))
 
 (defun translate-rectangle (gfw-rect)
   (let ((pnt (gfs:location gfw-rect))
@@ -39,13 +35,12 @@
 
 (declaim (inline coordinates->rectangle))
 (defun coordinates->rectangle (left top right bottom)
-  (gfs:create-rectangle :x (round-coordinate left)
-                        :y (round-coordinate top)
-                        :width (round-coordinate (- right left))
-                        :height (round-coordinate (- bottom top))))
+  (gfs:create-rectangle :x (floor left)
+                        :y (floor top)
+                        :width (floor (- right left))
+                        :height (floor (- bottom top))))
 
 (defun coordinates->points (seq)
-  (loop for i from 2 below (length seq) by 2
-	collect
-	(gfs:make-point :x (round-coordinate (elt seq i))
-			:y (round-coordinate (elt seq (+ i 1))))))
+  (loop for i from 0 below (length seq) by 2
+        collect (gfs:make-point :x (floor (elt seq i))
+                                :y (floor (elt seq (+ i 1))))))
