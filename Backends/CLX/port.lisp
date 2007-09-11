@@ -169,33 +169,35 @@
 
 (defun parse-clx-server-path (path)
   (pop path)
-  (let* ((name (get-environment-variable "DISPLAY"))
-	 ;; this code courtesy telent-clx.
-         (slash-i (or (position #\/ name) -1))
-         (colon-i (position #\: name :start (1+ slash-i)))
-         (decnet-colon-p (eql (elt name (1+ colon-i)) #\:))
-         (host (subseq name (1+ slash-i) colon-i))
-         (dot-i (and colon-i (position #\. name :start colon-i)))
-         (display (when colon-i
-                    (parse-integer name
-                                   :start (if decnet-colon-p
-                                              (+ colon-i 2)
-					      (1+ colon-i))
-                                   :end dot-i)))
-         (screen (when dot-i
-                   (parse-integer name :start (1+ dot-i))))
-         (protocol
-          (cond ((or (string= host "") (string-equal host "unix")) :local)
-                (decnet-colon-p :decnet)
-                ((> slash-i -1) (intern
-                                 (string-upcase (subseq name 0 slash-i))
-                                 :keyword))
-                (t :internet))))
-    (list :clx
-	  :host (getf path :host host)
-	  :display-id (getf path :display-id (or display 0))
-	  :screen-id (getf path :screen-id (or screen 0))
-	  :protocol protocol)))
+  (let ((name (get-environment-variable "DISPLAY")))
+    (assert name (name)
+            "Environment variable DISPLAY is not set")
+    (let* (; this code courtesy telent-clx.
+           (slash-i (or (position #\/ name) -1))
+           (colon-i (position #\: name :start (1+ slash-i)))
+           (decnet-colon-p (eql (elt name (1+ colon-i)) #\:))
+           (host (subseq name (1+ slash-i) colon-i))
+           (dot-i (and colon-i (position #\. name :start colon-i)))
+           (display (when colon-i
+                      (parse-integer name
+                                     :start (if decnet-colon-p
+                                                (+ colon-i 2)
+                                                (1+ colon-i))
+                                     :end dot-i)))
+           (screen (when dot-i
+                     (parse-integer name :start (1+ dot-i))))
+           (protocol
+            (cond ((or (string= host "") (string-equal host "unix")) :local)
+                  (decnet-colon-p :decnet)
+                  ((> slash-i -1) (intern
+                                   (string-upcase (subseq name 0 slash-i))
+                                   :keyword))
+                  (t :internet))))
+      (list :clx
+            :host (getf path :host host)
+            :display-id (getf path :display-id (or display 0))
+            :screen-id (getf path :screen-id (or screen 0))
+            :protocol protocol))))
 
 (setf (get :x11 :port-type) 'clx-port)
 (setf (get :x11 :server-path-parser) 'parse-clx-server-path)
