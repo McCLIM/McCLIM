@@ -3,7 +3,7 @@
 ;;;     Title: Graph Formatting
 ;;;   Created: 2002-08-13
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: graph-formatting.lisp,v 1.20 2007/03/04 22:26:22 ahefner Exp $
+;;;       $Id: graph-formatting.lisp,v 1.21 2007/09/16 22:39:22 rgoldman Exp $
 ;;; ---------------------------------------------------------------------------
 
 ;;;  (c) copyright 2002 by Gilbert Baumann
@@ -115,9 +115,11 @@
 (define-graph-type :digraph digraph-graph-output-record)
 
 ;;;; Entry
+(defun format-graph-from-root (root-object &rest other-args)
+  (apply #'format-graph-from-roots (list root-object) other-args))
 
 (defun format-graph-from-roots (root-objects object-printer inferior-producer
-                                &rest graph-options
+                                &rest rest-args
                                 &key stream orientation cutoff-depth
                                      merge-duplicates duplicate-key duplicate-test
                                      generation-separation
@@ -128,63 +130,65 @@
                                      graph-type (move-cursor t)
                                 &allow-other-keys)
   (declare (ignore orientation generation-separation within-generation-separation center-nodes))
-  ;; Mungle some arguments
-  (check-type cutoff-depth (or null integer))
-  (check-type root-objects sequence)
-  (setf stream (or stream *standard-output*)
-        graph-type (or graph-type (if merge-duplicates :digraph :tree))
-        duplicate-key (or duplicate-key #'identity)
-        duplicate-test (or duplicate-test #'eql) )
+  ;; don't destructively modify the &rest arg
+  (let ((graph-options (copy-list rest-args)))
+    ;; Munge some arguments
+    (check-type cutoff-depth (or null integer))
+    (check-type root-objects sequence)
+    (setf stream (or stream *standard-output*)
+	  graph-type (or graph-type (if merge-duplicates :digraph :tree))
+	  duplicate-key (or duplicate-key #'identity)
+	  duplicate-test (or duplicate-test #'eql) )
 
-  ;; I'm not sure what to do here.  Saying you want a tree, but want
-  ;; duplicates merged seems wrong.  OTOH, if you go out of your way
-  ;; to do it, at your own risk, is it our place to say "no"?
+    ;; I'm not sure what to do here.  Saying you want a tree, but want
+    ;; duplicates merged seems wrong.  OTOH, if you go out of your way
+    ;; to do it, at your own risk, is it our place to say "no"?
   ;; [2005/08/11:rpg]
 ;;;  (when (and (eq graph-type :tree) merge-duplicates)
 ;;;    (cerror "Substitute NIL for merge-duplicates"
 ;;;	    "Merge duplicates specified to be true when using :tree layout.")
 ;;;    (setf merge-duplicates nil))
   
-  ;; clean the options
-  (remf graph-options :stream)
-  (remf graph-options :duplicate-key)
-  (remf graph-options :duplicate-test)
-  (remf graph-options :arc-drawer)
-  (remf graph-options :arc-drawing-options)
-  (remf graph-options :graph-type)
-  (remf graph-options :move-cursor)
+    ;; clean the options
+    (remf graph-options :stream)
+    (remf graph-options :duplicate-key)
+    (remf graph-options :duplicate-test)
+    (remf graph-options :arc-drawer)
+    (remf graph-options :arc-drawing-options)
+    (remf graph-options :graph-type)
+    (remf graph-options :move-cursor)
   
-  (multiple-value-bind (cursor-old-x cursor-old-y)
-      (stream-cursor-position stream)
-    (let ((graph-output-record
-           (labels ((cont (stream graph-output-record)
-                      (with-output-recording-options (stream :draw nil :record t)
-                        (generate-graph-nodes graph-output-record stream root-objects
-                                              object-printer inferior-producer
-                                              :duplicate-key duplicate-key
-                                              :duplicate-test duplicate-test)
-                        (layout-graph-nodes graph-output-record stream arc-drawer arc-drawing-options)
-                        (layout-graph-edges graph-output-record stream arc-drawer arc-drawing-options)) ))
-             (apply #'invoke-with-new-output-record stream
-                    #'cont
-                    (find-graph-type graph-type)
-		    nil
-		    ;; moved to local variable... [2005/07/25:rpg]
-                    ;; :hash-table (make-hash-table :test duplicate-test)
-		    graph-options 
-		    ))))
-      (setf (output-record-position graph-output-record)
-            (values cursor-old-x cursor-old-y))
-      (when (and (stream-drawing-p stream)
-                 (output-record-ancestor-p (stream-output-history stream)
-                                           graph-output-record))
-	(with-output-recording-options (stream :draw t :record nil)
-	  (replay graph-output-record stream)))
-      (when move-cursor
-        (setf (stream-cursor-position stream)
-              (values (bounding-rectangle-max-x graph-output-record)
-                      (bounding-rectangle-max-y graph-output-record))))
-      graph-output-record)))
+    (multiple-value-bind (cursor-old-x cursor-old-y)
+	(stream-cursor-position stream)
+      (let ((graph-output-record
+	     (labels ((cont (stream graph-output-record)
+			(with-output-recording-options (stream :draw nil :record t)
+			  (generate-graph-nodes graph-output-record stream root-objects
+						object-printer inferior-producer
+						:duplicate-key duplicate-key
+						:duplicate-test duplicate-test)
+			  (layout-graph-nodes graph-output-record stream arc-drawer arc-drawing-options)
+			  (layout-graph-edges graph-output-record stream arc-drawer arc-drawing-options)) ))
+	       (apply #'invoke-with-new-output-record stream
+		      #'cont
+		      (find-graph-type graph-type)
+		      nil
+		      ;; moved to local variable... [2005/07/25:rpg]
+		      ;; :hash-table (make-hash-table :test duplicate-test)
+		      graph-options 
+		      ))))
+	(setf (output-record-position graph-output-record)
+	  (values cursor-old-x cursor-old-y))
+	(when (and (stream-drawing-p stream)
+		   (output-record-ancestor-p (stream-output-history stream)
+					     graph-output-record))
+	  (with-output-recording-options (stream :draw t :record nil)
+	    (replay graph-output-record stream)))
+	(when move-cursor
+	  (setf (stream-cursor-position stream)
+	    (values (bounding-rectangle-max-x graph-output-record)
+		    (bounding-rectangle-max-y graph-output-record))))
+	graph-output-record))))
 
 (defun format-graph-from-root (root &rest rest)
   (apply #'format-graph-from-roots (list root) rest))
@@ -248,7 +252,7 @@
    (object
     :initarg :object
     :reader graph-node-object)
-   ;; internal slots for the graph layout algorithmn
+   ;; internal slots for the graph layout algorithm
    (minor-size
     :initform nil
     :accessor graph-node-minor-size
