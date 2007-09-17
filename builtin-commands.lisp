@@ -377,10 +377,6 @@
                                       *eof-error-p*
                                       *eof-value*
                                       *recursivep*)
-                         #+sbcl(sb-kernel:reader-package-error (e)
-                                 (progn
-                                   ;; Resignal the error.
-                                   (error e)))
                          ((and reader-error) (e)
                            (declare (ignore e))
                            nil))
