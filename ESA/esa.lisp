@@ -467,19 +467,6 @@ fundamental interface to the command processor."))
      do (process-gesture drei gesture)
      finally (setf (executingp drei) nil)))
 
-(defclass macrorecord-processed-gestures-mixin ()
-  ()
-  (:documentation "Subclasses of this class will perform gesture
-recording for macro recording when the gesture is being
-processed. This is important when gesture reading does not go
-through `esa-read-gesture', for example when the command
-processor is being in an event-handling context."))
-
-(defmethod process-gesture :before ((command-processor macrorecord-processed-gestures-mixin) gesture)
-  (when (and (recordingp command-processor)
-             (directly-processing-p command-processor))
-    (push gesture (recorded-keys command-processor))))
-
 (defclass asynchronous-command-processor (command-processor
                                           instant-macro-execution-mixin
                                           macrorecord-processed-gestures-mixin)
@@ -491,8 +478,9 @@ asynchronous event handling, and not through
 
 (defmethod process-gesture :before ((command-processor asynchronous-command-processor) gesture)
   (when (and (find gesture *abort-gestures*
-                   :test #'gesture-matches-gesture-name-p)
+              :test #'gesture-matches-gesture-name-p)
              (directly-processing-p command-processor))
+    (setf (accumulated-gestures command-processor) nil)
     (signal 'abort-gesture :event gesture)))
 
 (defclass command-loop-command-processor (command-processor)
@@ -632,7 +620,16 @@ of a prefix arg returns 1 (and nil)."
 (defun substitute-numeric-argument-p (command numargp)
   (substitute numargp *numeric-argument-p* command :test #'eq))
 
-(defgeneric process-gestures (command-processor))
+(defgeneric process-gestures (command-processor)
+  (:documentation "Process the gestures accumulated in
+`command-processor', returning T if there are no gestures
+accumulated or the accumulated gestures correspond to a
+command. In this case, the command will also be executed and the
+list of accumulated gestures set to NIL. Will return NIL if the
+accumulated gestures do not yet correspond to a command, but
+eventually could, if more gestures are provided. Signals
+`unbound-gesture-sequence' if the accumulated gestures could
+never refer to a command."))
 
 (defmethod process-gestures ((command-processor command-processor))
   (multiple-value-bind (prefix-arg prefix-p gestures)
@@ -660,7 +657,13 @@ of a prefix arg returns 1 (and nil)."
                                            *partial-command-parser*
                                            (command-table command-processor)
                                            *standard-input* command 0)))
-                   (setf (accumulated-gestures command-processor) nil))
+                    ;; If we are macrorecording, store whatever the user
+                    ;; did to invoke this command.
+                    (when (recordingp command-processor)
+                      (setf (recorded-keys command-processor)
+                            (append (accumulated-gestures command-processor)
+                                    (recorded-keys command-processor))))
+                    (setf (accumulated-gestures command-processor) nil))
                   (funcall (command-executor command-processor) command-processor command)
                   nil))
                (t t)))))))
@@ -686,14 +689,15 @@ of a prefix arg returns 1 (and nil)."
   (loop
      for gesture = (read-gesture :stream stream)
      until (proper-gesture-p gesture)
-     finally (progn (when (recordingp command-processor)
-                      (push gesture (recorded-keys command-processor)))
-                    (return gesture))))
+     finally (return gesture)))
 
 (defun esa-unread-gesture (gesture &key (command-processor *command-processor*)
                            (stream *standard-input*))
   (cond ((recordingp command-processor)
-	 (pop (recorded-keys command-processor))
+         (cond ((equal (first (recorded-keys command-processor)) gesture)
+                (pop (recorded-keys command-processor)))
+               ((equal (first (accumulated-gestures command-processor)) gesture)
+                (pop (accumulated-gestures command-processor))))
 	 (unread-gesture gesture :stream stream))
 	((executingp command-processor)
 	 (push gesture (remaining-keys command-processor)))
@@ -735,6 +739,14 @@ corresponding commands in `command-table' and invoke them using
        (funcall (command-executor command-processor)
                 command-processor command)))))
 
+(defmethod process-gestures-or-command :around ((command-processor command-processor))
+  (handler-case (call-next-method)
+    (abort-gesture (c)
+      ;; If the user aborts, we want to forget whatever previous
+      ;; gestures he entered since the last command execution.
+      (setf (accumulated-gestures command-processor) nil)
+      (signal c))))
+
 (defmethod process-gestures-or-command ((command-processor command-processor))
   ;; Build up a list of gestures and repeatedly pass them to
   ;; `process-gestures'. This "clumsy" approach is chosen because we
@@ -743,7 +755,8 @@ corresponding commands in `command-table' and invoke them using
   ;; rescanning of accumulated input data or some yet-unimplemented
   ;; complex state retaining mechanism (such as continuations).
   (loop
-     (setf *current-gesture* (esa-read-gesture :command-processor command-processor))
+     (setf *current-gesture*
+           (esa-read-gesture :command-processor command-processor))
      (unless (process-gesture command-processor *current-gesture*)
        (return))))
 
