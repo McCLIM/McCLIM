@@ -1062,8 +1062,8 @@ First ask if modified buffers should be saved. If you decide not to save a modif
           when (eq (command-menu-item-type item) :command)
             do (return (values (command-menu-item-value item) gestures)))))
 
-(defun describe-key-briefly (pane)
-  (let ((command-table (command-table pane)))
+(defun describe-key-briefly (frame)
+  (let ((command-table (find-applicable-command-table frame)))
     (multiple-value-bind (command gestures)
 	(read-gestures-for-help command-table)
       (when (consp command)
@@ -1116,8 +1116,10 @@ First ask if modified buffers should be saved. If you decide not to save a modif
                 #'(lambda (menu-name keystroke item)
                     (declare (ignore menu-name))
                     (cond ((and (eq (command-menu-item-type item) :command)
-                                (listp (command-menu-item-value item))
-                                (eq (car (command-menu-item-value item)) command))
+                                (or (and (symbolp (command-menu-item-value item))
+                                         (eq (command-menu-item-value item) command))
+                                    (and (listp (command-menu-item-value item))
+                                         (eq (car (command-menu-item-value item)) command))))
                            (push (cons keystroke prefix) keystrokes))
                           ((eq (command-menu-item-type item) :menu)
                            (helper command (command-menu-item-value item) (cons keystroke prefix)))
@@ -1352,13 +1354,13 @@ First ask if modified buffers should be saved. If you decide not to save a modif
   "Prompt for a key and show the command it invokes."  
   (display-message "Describe key briefly:")
   (redisplay-frame-panes *application-frame*)
-  (describe-key-briefly (car (windows *application-frame*))))
+  (describe-key-briefly *application-frame*))
 
 (set-key 'com-describe-key-briefly 'help-table '((#\h :control) (#\c)))
 
 (define-command (com-where-is :name t :command-table help-table) ()
   "Prompt for a command name and show the key that invokes it."
-  (let* ((command-table (command-table (car (windows *application-frame*))))
+  (let* ((command-table (find-applicable-command-table *application-frame*))
 	 (command
 	  (handler-case
 	      (accept
@@ -1383,7 +1385,7 @@ First ask if modified buffers should be saved. If you decide not to save a modif
   "Show which keys invoke which commands.
 Without a numeric prefix, sorts the list by command name. With a numeric prefix, sorts by key."
   (let ((stream (help-stream *application-frame* (format nil "Help: Describe Bindings")))
-	 (command-table (find-applicable-command-table *application-frame*)))
+        (command-table (find-applicable-command-table *application-frame*)))
     (describe-bindings stream command-table
 		       (if sort-by-keystrokes
 			   #'sort-by-keystrokes
