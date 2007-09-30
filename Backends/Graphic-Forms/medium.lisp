@@ -1,6 +1,6 @@
 ;; -*- Mode: Lisp; Package: CLIM-GRAPHIC-FORMS -*-
 
-;;; (c) 2006 Jack D. Unrue (jdunrue (at) gmail (dot) com)
+;;; (c) 2006-2007 Jack D. Unrue (jdunrue (at) gmail (dot) com)
 ;;; based on the null backend by:
 ;;;  (c) 2005 Christophe Rhodes (c.rhodes@gold.ac.uk)
 
@@ -55,6 +55,8 @@
 
 (defun ink-to-color (medium ink)
   (cond
+    ((subtypep (class-of ink) (find-class 'climi::opacity))
+     (setf ink (medium-foreground medium))) ; see discussion of opacity in design.lisp
     ((eql ink +foreground-ink+)
      (setf ink (medium-foreground medium)))
     ((eql ink +background-ink+)
@@ -183,30 +185,6 @@
 
 (defmethod (setf medium-line-style) :before (line-style (medium graphic-forms-medium))
   ())
-
-(defmethod medium-copy-area ((from-drawable graphic-forms-medium)
-			     from-x from-y width height
-                             (to-drawable graphic-forms-medium)
-			     to-x to-y)
-  nil)
-
-#+nil ; FIXME: PIXMAP class
-(progn
-  (defmethod medium-copy-area ((from-drawable graphic-forms-medium)
-			       from-x from-y width height
-			       (to-drawable pixmap)
-			       to-x to-y)
-    nil)
-  (defmethod medium-copy-area ((from-drawable pixmap)
-			       from-x from-y width height
-			       (to-drawable graphic-forms-medium)
-			       to-x to-y)
-    ())
-  (defmethod medium-copy-area ((from-drawable pixmap)
-			       from-x from-y width height
-			       (to-drawable pixmap)
-			       to-x to-y)
-    ()))
 
 (defmethod medium-draw-point* ((medium graphic-forms-medium) x y)
   (when (target-of medium)
