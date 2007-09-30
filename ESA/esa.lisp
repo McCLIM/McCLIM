@@ -468,8 +468,7 @@ fundamental interface to the command processor."))
      finally (setf (executingp drei) nil)))
 
 (defclass asynchronous-command-processor (command-processor
-                                          instant-macro-execution-mixin
-                                          macrorecord-processed-gestures-mixin)
+                                          instant-macro-execution-mixin)
   ()
   (:documentation "Helper class that provides behavior necessary
 for a command processor that expects to receive gestures through
