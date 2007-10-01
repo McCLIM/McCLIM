@@ -44,3 +44,7 @@
   (loop for i from 0 below (length seq) by 2
         collect (gfs:make-point :x (floor (elt seq i))
                                 :y (floor (elt seq (+ i 1))))))
+
+(declaim (inline radians->degrees))
+(defun radians->degrees (rads)
+  (floor (* rads 180) pi))

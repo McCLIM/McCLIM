@@ -295,6 +295,78 @@
                           (gfg:draw-rectangle gc rect)))))))))
     (add-medium-to-render medium)))
 
+(defun compute-quad-point (center-x height angle)
+  (let* ((opp-len (/ height 2))
+         (hyp-len (/ opp-len (sin angle)))
+         (adj-len (sqrt (- (expt hyp-len 2) (expt opp-len 2)))))
+    (gfs:make-point :x (floor (+ center-x adj-len))
+                    :y (floor opp-len))))
+
+(defun compute-arc-point (center-x center-y width height radians)
+  (let ((angle (radians->degrees radians)))
+    (multiple-value-bind (count remainder)
+        (floor angle 360)
+      (if (> count 0)
+          (compute-arc-point center-x center-y width height remainder)
+          (cond
+            ((= angle 270)
+             (gfs:make-point :x (floor center-x)
+                             :y (+ (floor center-y) (floor height 2))))
+            ((> angle 270)
+             (compute-quad-point center-x height (- angle 270)))
+            ((= angle 180)
+             (gfs:make-point :x (- (floor center-x) (floor width 2))
+                             :y (floor center-y)))
+            ((> angle 180)
+             (compute-quad-point center-x height (- angle 180)))
+            ((= angle 90)
+             (gfs:make-point :x (floor center-x)
+                             :y (- (floor center-y) (floor height 2))))
+            ((> angle 90)
+             (compute-quad-point center-x height(- angle 90)))
+            ((= angle 0)
+             (gfs:make-point :x (+ (floor center-x) (floor width 2))
+                             :y (floor center-y)))
+            (t
+             (compute-quad-point center-x height angle)))))))
+
+(defmethod medium-draw-ellipse* ((medium graphic-forms-medium)
+                                 center-x center-y
+                                 radius-1-dx radius-1-dy
+                                 radius-2-dx radius-2-dy
+                                 start-angle end-angle
+                                 filled)
+  (unless (or (= radius-2-dx radius-1-dy 0)
+              (= radius-1-dx radius-2-dy 0))
+    (error "MEDIUM-DRAW-ELLIPSE* not for non axis-aligned ellipses."))
+  (when (target-of medium)
+    (gfw:with-graphics-context (gc (target-of medium))
+      (let ((color (ink-to-color medium (medium-ink medium))))
+        (if filled
+            (setf (gfg:background-color gc) color))
+        (setf (gfg:foreground-color gc) color))
+      (climi::with-transformed-position
+          ((sheet-native-transformation (medium-sheet medium))
+           center-x center-y)
+        (let* ((width (abs (+ radius-1-dx radius-2-dx)))
+               (height (abs (+ radius-1-dy radius-2-dy)))
+               (min-x (floor (- center-x width)))
+               (min-y (floor (- center-y height)))
+               (max-x (floor (+ center-x width)))
+               (max-y (floor (+ center-y height)))
+               (rect (coordinates->rectangle min-x min-y max-x max-y))
+               (start-pnt (compute-arc-point center-x center-y
+                                             width height
+                                             start-angle))
+               (end-pnt (compute-arc-point center-x center-y
+                                           width height
+                                           end-angle)))
+          (if filled
+              (gfg:draw-filled-pie-wedge gc rect start-pnt end-pnt)
+              (gfg:draw-arc gc rect start-pnt end-pnt)))))
+    (add-medium-to-render medium)))
+
+#|
 ;; FIXME: completely untested.  Not sure we're even using the right GFG h
 ;; functions.  Are start-point and end-point right?
 (defmethod medium-draw-ellipse* ((medium graphic-forms-medium) center-x center-y
@@ -320,19 +392,16 @@
                (max-y (floor (+ center-y radius-dy)))
                (rect (coordinates->rectangle min-x min-y max-x max-y))
                (start-point
-                (gfs:make-point :x (floor
-                                    (* (cos start-angle) radius-dx))
-                                :y (floor
-                                    (* (sin start-angle) radius-dy))))
+                (gfs:make-point :x (floor (* (cos start-angle) radius-dx))
+                                :y (floor (* (sin start-angle) radius-dy))))
                (end-point
-                (gfs:make-point :x (floor
-                                    (* (cos end-angle) radius-dx))
-                                :y (floor
-                                    (* (sin end-angle) radius-dy)))))
+                (gfs:make-point :x (floor (* (cos end-angle) radius-dx))
+                                :y (floor (* (sin end-angle) radius-dy)))))
           (if filled
               (gfg:draw-filled-pie-wedge gc rect start-point end-point)
-              (gfg:draw-pie-wedge gc rect start-point end-point)))))
+              (gfg:draw-arc gc rect start-point end-point)))))
     (add-medium-to-render medium)))
+|#
 
 ;; FIXME: completely untested.
 (defmethod medium-draw-circle* ((medium graphic-forms-medium)
