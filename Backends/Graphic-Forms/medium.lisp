@@ -366,44 +366,6 @@
               (gfg:draw-arc gc rect start-pnt end-pnt)))))
     (add-medium-to-render medium)))
 
-#|
-;; FIXME: completely untested.  Not sure we're even using the right GFG h
-;; functions.  Are start-point and end-point right?
-(defmethod medium-draw-ellipse* ((medium graphic-forms-medium) center-x center-y
-                                 radius-1-dx radius-1-dy
-                                 radius-2-dx radius-2-dy
-                                 start-angle end-angle filled)
-  (unless (or (= radius-2-dx radius-1-dy 0) (= radius-1-dx radius-2-dy 0))
-    (error "MEDIUM-DRAW-ELLIPSE* not for non axis-aligned ellipses."))
-  (when (target-of medium)
-    (gfw:with-graphics-context (gc (target-of medium))
-      (let ((color (ink-to-color medium (medium-ink medium))))
-        (if filled
-            (setf (gfg:background-color gc) color))
-        (setf (gfg:foreground-color gc) color))
-      (climi::with-transformed-position
-          ((sheet-native-transformation (medium-sheet medium))
-           center-x center-y)
-        (let* ((radius-dx (abs (+ radius-1-dx radius-2-dx)))
-               (radius-dy (abs (+ radius-1-dy radius-2-dy)))
-               (min-x (floor (- center-x radius-dx)))
-               (min-y (floor (- center-y radius-dy)))
-               (max-x (floor (+ center-x radius-dx)))
-               (max-y (floor (+ center-y radius-dy)))
-               (rect (coordinates->rectangle min-x min-y max-x max-y))
-               (start-point
-                (gfs:make-point :x (floor (* (cos start-angle) radius-dx))
-                                :y (floor (* (sin start-angle) radius-dy))))
-               (end-point
-                (gfs:make-point :x (floor (* (cos end-angle) radius-dx))
-                                :y (floor (* (sin end-angle) radius-dy)))))
-          (if filled
-              (gfg:draw-filled-pie-wedge gc rect start-point end-point)
-              (gfg:draw-arc gc rect start-point end-point)))))
-    (add-medium-to-render medium)))
-|#
-
-;; FIXME: completely untested.
 (defmethod medium-draw-circle* ((medium graphic-forms-medium)
 				center-x center-y radius start-angle end-angle
 				filled)
