@@ -361,14 +361,15 @@ cause the activate callback to be called."))
                                        &key id client armed-callback
                                        disarmed-callback
                                        activation-gestures activate-callback
-                                       value)
+                                       value value-changed-callback)
   ;; Make an editor substrate object for the gadget.
   (let ((substrate (make-text-field-substrate
                     object :id id :client client :armed-callback armed-callback
                     :disarmed-callback disarmed-callback
                     :activation-gestures activation-gestures
                     :activate-callback activate-callback
-                    :value value)))
+                    :value value
+                    :value-changed-callback value-changed-callback)))
     (setf (substrate object) substrate)
     (sheet-adopt-child object substrate)))
 
