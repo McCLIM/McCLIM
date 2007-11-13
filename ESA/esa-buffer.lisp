@@ -32,9 +32,9 @@ from STREAM"
 (defgeneric frame-make-new-buffer (application-frame &key &allow-other-keys)
   (:documentation "Create a empty buffer for the application frame."))
 
-(defun make-new-buffer (&key &allow-other-keys)
+(defun make-new-buffer (&rest args &key &allow-other-keys)
   "Create a empty buffer for the current frame."
-  (frame-make-new-buffer *application-frame*))
+  (apply #'frame-make-new-buffer *application-frame* args))
 
 (defgeneric frame-save-buffer-to-stream (application-frame buffer stream)
   (:documentation "Save the entire BUFFER to STREAM in the appropriate
