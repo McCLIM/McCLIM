@@ -325,8 +325,10 @@ preventing the undoing to before the state of whatever
 (defclass isearch-state ()
   ((search-string :initarg :search-string :accessor search-string)
    (search-mark :initarg :search-mark :accessor search-mark)
+   (search-buffer :initarg :search-buffer :accessor search-buffer)
    (search-forward-p :initarg :search-forward-p :accessor search-forward-p)
-   (search-success-p :initarg :search-success-p :accessor search-success-p)))
+   (search-success-p :initarg :search-success-p :accessor search-success-p)
+   (targets :initarg :targets :accessor targets )))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -335,7 +337,7 @@ preventing the undoing to before the state of whatever
 (defclass query-replace-state ()
   ((string1 :initarg :string1 :accessor string1)
    (string2 :initarg :string2 :accessor string2)
-   (mark :initarg :mark :accessor mark)
+   (targets :initarg :targets :accessor targets)
    (occurences :initform 0 :accessor occurrences)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -675,7 +677,11 @@ variant) should be used instead."))
                          :active active)
           cursors)))
 
-(defmethod (setf buffer) :after (buffer (object drei))
+(defmethod (setf buffer) :before ((buffer drei-buffer) (object drei))
+  (with-slots (buffer point) object
+    (setf (point buffer) point)))
+
+(defmethod (setf buffer) :after ((buffer drei-buffer) (object drei))
   (with-slots (point mark top bot) object
     (setf point (clone-mark (point buffer))
           mark (clone-mark (low-mark buffer) :right)

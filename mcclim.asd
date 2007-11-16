@@ -299,6 +299,7 @@
                          (:file "core" :depends-on ("drei"))
                          (:file "buffer-streams" :depends-on ("core"))
                          (:file "rectangle" :depends-on ("core"))
+                         (:file "targets" :depends-on ("core"))
                          (:file "core-commands" :depends-on ("core" "rectangle" "drei-clim"))
                          (:file "persistent-buffer"
                                 :pathname #.(make-pathname :directory '(:relative "Persistent")
@@ -310,7 +311,7 @@
                                 :depends-on ("packages" "buffer" "persistent-buffer" "undo"))
                          (:file "misc-commands" :depends-on ("basic-commands"))
                          (:file "unicode-commands" :depends-on ("core" "drei-clim"))
-                         (:file "search-commands" :depends-on ("core" "drei-clim"))
+                         (:file "search-commands" :depends-on ("core" "targets" "drei-clim"))
                          (:file "lr-syntax" :depends-on ("fundamental-syntax" "core"))
                          (:file "lisp-syntax" :depends-on ("lr-syntax" "motion" "core"))
                          (:file "lisp-syntax-swine" :depends-on ("lisp-syntax"))

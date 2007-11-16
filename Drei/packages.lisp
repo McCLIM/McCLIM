@@ -186,9 +186,9 @@ characters."))
            #:offset-to-screen-position
            #:page-down #:page-up
            #:indent-tabs-mode
-           #:isearch-state #:search-string #:search-mark
+           #:isearch-state #:search-string #:search-mark #:search-buffer
            #:search-forward-p #:search-success-p
-           #:query-replace-state #:string1 #:string2 #:buffers #:mark #:occurrences
+           #:query-replace-state #:string1 #:string2 #:targets #:occurrences
 
            ;; Undo.
            #:undo-mixin #:undo-tree #:undo-accumulate #:performing-undo
@@ -433,7 +433,17 @@ used to implement the editing commands."))
 
            #:start-mark
            #:end-mark
-           #:make-buffer-stream)
+           #:make-buffer-stream
+
+           #:target-specification
+           #:activate-target-specification
+           #:deactivate-target-specification
+           #:subsequent-targets-p #:preceding-targets-p
+           #:next-target #:previous-target
+           #:previous-target
+           #:no-more-targets
+           #:*default-target-creator*
+           #:buffer-list-target-specification)
   (:documentation "Implementation of much syntax-aware, yet no
 syntax-specific, core functionality of Drei."))
 
