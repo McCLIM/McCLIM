@@ -95,5 +95,42 @@ include this table in the global application command table.
 
 * Using the ESA input/output functions
 
+The ESA library provides facilities for loading a buffer from a file,
+and saving a buffer to a file.  The esa-io package contains symbols
+related to this functionality.
+
+A command table, esa-io:esa-io-table contains a number of commands and
+related key bindings related to input/output.  Typically, an
+application that needs such i/o would inherit from this command table
+when creating its global command table.  The commands that are
+supplied by this table are com-find-file (C-x C-f),
+com-find-file-read-only (C-x C-r), com-read-only (C-x C-q) which
+toggle the read-only flag of the buffer, com-set-visited-file-name
+(available as an extended command only) which prompts for a file name
+to be associated with the current buffer, com-save-buffer (C-x C-s),
+and com-write-buffer (C-x C-w).  
+
+These commands handle prompting for file names, searching for existing
+buffers with the file name given, Emacs-style file versioning, and
+more.  The only thing they need help from the application with is for
+saving a buffer to a stream, and for creating a buffer from a stream.
+For that, the ESA library calls the generic functions
+esa-buffer:frame-save-buffer-to-stream and
+esa-buffer:frame-make-buffer-from-stream respectively.  Applications
+that use the ESA i/o facility must provide methods on these generic
+functions, specialized on the particular class of the application
+frame.  Applications should also provide a method on
+esa-buffer:frame-make-new-buffer so that the ESA library can create a
+new buffer whenever a non-existing file name is given. 
+
+To implement the i/o functions, the ESA i/o facility calls the generic
+functions esa-io:frame-find-file, esa-io:frame-find-file-read-only,
+esa-io:frame-set-visited-file-name, esa-io:frame-save-buffer, and
+esa-io:frame-write-buffer.  Applications can override these methods,
+or provide :before, :after, or :around methods on them in order to
+customize their behavior. 
+
+* Help facility
+
 
 
