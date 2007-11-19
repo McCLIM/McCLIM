@@ -136,7 +136,9 @@ invoking the debugger)."))
   1)
 
 (defmethod tab-space-count ((tabify tabify-mixin))
-  (round (tab-width tabify) (space-width tabify)))
+  (if (and (tab-width tabify) (space-width tabify))
+      (round (tab-width tabify) (space-width tabify))
+      8))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
