@@ -1156,15 +1156,24 @@ function lambda list"))
   (let ((gf (gethash name *presentation-gf-table*)))
     (unless gf
       (error "~S is not a presentation generic function" name))
-    (let* ((rebound-args (mapcar (lambda (arg)
-				   `(,(gensym "ARG") ,arg))
-				 args))
-	   (gf-name (generic-function-name gf))
-	   (type-spec-var (car (nth (1- (type-arg-position gf)) rebound-args))))
+    (let* ((rebound-args (loop for arg in args
+                            unless (symbolp arg)
+                            collect (list (gensym "ARG"))))
+           (gf-name (generic-function-name gf))
+           (type-spec-var (car (nth (1- (type-arg-position gf)) rebound-args))))
       `(let ,rebound-args
-	 (,gf-name (prototype-or-error (presentation-type-name
-					,type-spec-var))
-		   ,@(mapcar #'car rebound-args))))))
+         (,gf-name (prototype-or-error (presentation-type-name
+                                        ,type-spec-var))
+                   ,@(mapcar #'(lambda (arg)
+                                 ;; Order of evaluation doesn't matter
+                                 ;; for symbols, and this shuts up
+                                 ;; warnings about arguments in a
+                                 ;; keyword position not being
+                                 ;; constant. By the way, why do we
+                                 ;; care about order of evaluation
+                                 ;; here? -trh
+                                 (or (first (find arg rebound-args :key #'second))
+                                     arg)) args))))))
 
 (defmacro apply-presentation-generic-function (name &rest args)
   (let ((gf (gethash name *presentation-gf-table*)))
