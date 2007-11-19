@@ -1156,12 +1156,13 @@ function lambda list"))
       (error "~S is not a presentation generic function" name))
     (let* ((rebound-args (loop for arg in args
                             unless (symbolp arg)
-                            collect (list (gensym "ARG"))))
+                            collect (list (gensym "ARG") arg)))
            (gf-name (generic-function-name gf))
-           (type-spec-var (car (nth (1- (type-arg-position gf)) rebound-args))))
+           (type-spec-var (nth (1- (type-arg-position gf)) args)))
       `(let ,rebound-args
          (,gf-name (prototype-or-error (presentation-type-name
-                                        ,type-spec-var))
+                                        ,(or (first (find type-spec-var rebound-args :key #'second))
+                                             type-spec-var)))
                    ,@(mapcar #'(lambda (arg)
                                  ;; Order of evaluation doesn't matter
                                  ;; for symbols, and this shuts up
