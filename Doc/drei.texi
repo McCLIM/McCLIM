@@ -75,52 +75,35 @@ these special variables themselves, or Drei commands are likely to
 malfunction.
 
 @menu
-* Special Variables::           
+* Special Variables::
+* Access Functions::
 @end menu
 
 @node Special Variables
 @subsection Special Variables
 
-Drei commands are meant to work by using the values of a number of
-special variables bound by Drei during its pseudo command loop.  Here is
-a list of them:
+Drei uses a number of special variables to provide access to data
+structures. These are described below.
 
-@defvar *current-window*
-@vindex *current-window*
-Somewhat counter-intuitively, the Drei instance. Not necessarily the
-same as the editor pane.
-@end defvar
-@defvar *current-buffer*
-@vindex *current-buffer*
-The buffer of the Drei instance the command is being executed for.
-@end defvar
-@defvar *current-mark*
-@vindex *current-mark*
-The mark of the Drei instance.
-@end defvar
-@defvar *current-point*
-@vindex *current-point*
-The point of the Drei instance.
-@end defvar
-@defvar *current-syntax*
-@vindex *current-syntax*
-The syntax of @cl{*current-buffer*}.
-@end defvar
-@defvar *kill-ring*
-@vindex *kill-ring*
-The kill-ring object of the Drei instance.
-@end defvar
-@defvar *minibuffer*
-@vindex *minibuffer*
-The minibuffer of the Drei instance, which is where commands should
-print information and other interesting things (using
-@cl{display-message} or @cl{with-minibuffer-stream}). This may be
-@cl{NIL} if no minibuffer is associated with the Drei instance.
-@end defvar
-@defvar *previous-command*
-@vindex *previous-command*
-The previous CLIM command that was executed by the Drei instance.
-@end defvar
+@include var-drei-star-drei-instance-star.texi
+@include var-drei-kill-ring-star-kill-ring-star.texi
+
+Additionally, a number of ESA special variables are used in Drei.
+
+@include var-esa-star-minibuffer-star.texi
+@include var-esa-star-previous-command-star.texi
+
+@node Access Functions
+@subsection Access Functions
+
+The special variables essentially provide all that is needed to access
+all parts of the Drei state, but for convenience, a number of utility
+functions providing access to commonly used objects have been defined.
+
+@include fun-esa-current-buffer.texi
+@include fun-drei-point.texi
+@include fun-drei-mark.texi
+@include fun-drei-current-syntax.texi
 
 @node External API
 @section External API
@@ -1189,13 +1172,12 @@ our moved mark. Our command takes no arguments.
 (define-command (com-repeat-word :name t
                                  :command-table editing-table)
     ()
-  (let ((mark (clone-mark *current-point*)))
-    (backward-word mark *current-syntax* 1)
-    (insert-sequence mark (region-to-sequence mark *current-point*))))
+  (let ((mark (clone-mark (point)))
+    (backward-word mark (current-syntax 1)
+    (insert-sequence mark (region-to-sequence mark (point))))
 @end lisp
 
-For @cl{*current-point*} and @cl{*current-syntax*}, see @ref{Special
-Variables}.
+For @cl{(point)} and @cl{(current-syntax)}, see @ref{Access Functions}.
 
 This command facilitates the single repeat of a word, but that's
 it. This is not very useful - instead, we would like a command that
@@ -1208,9 +1190,9 @@ argument specifying the number of times to repeat the word at point.
 (define-command (com-repeat-word :name t
                                  :command-table editing-table)
     ((count 'integer :prompt "Number of repeats"))
-  (let ((mark (clone-mark *current-point*)))
-    (backward-word mark *current-syntax* 1)
-    (let ((word (region-to-sequence mark *current-point*)))
+  (let ((mark (clone-mark (point)))
+    (backward-word mark (current-syntax 1)
+    (let ((word (region-to-sequence mark (point)))
       (dotimes (i count)
         (insert-sequence mark word)))))
 @end lisp
