@@ -508,7 +508,7 @@ editing plain text."))
            #:destructuring-parameter
            #:required-parameter #:destructuring-required-parameter #:named-required-parameter
            #:optional-parameter #:destructuring-optional-parameter #:named-optional-parameter
-           #:keyword-parameter #:destructuring-keyword-parameter #:named-keyword-parameter
+           #:keyword-parameter #:destructuring-keyword-parameter
            #:rest-parameter
            #:body-parameter
 
@@ -522,7 +522,7 @@ editing plain text."))
 
            ;; Conditions.
            #:form-conversion-error
-           #:invalid-arglist)
+           #:invalid-lambda-list)
   (:shadow clim:form)
   (:documentation "Implementation of the syntax module used for
 editing Common Lisp code."))
