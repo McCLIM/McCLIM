@@ -1121,11 +1121,11 @@ history will be unchanged."
 			   &key view
 			   (default nil defaultp)
 			   (default-type nil default-type-p)
-			   activation-gestures
+			   (activation-gestures nil activationsp)
 			   (additional-activation-gestures
 			    nil
 			    additional-activations-p)
-			   delimiter-gestures
+			   (delimiter-gestures nil delimitersp)
 			   (additional-delimiter-gestures
 			    nil
 			    additional-delimiters-p)
@@ -1141,8 +1141,7 @@ history will be unchanged."
 				  additional-delimiter-gestures
 				  delimiter-gestures)
 			      :override delimitersp)))
-  (when (or (zerop (- end start))
-	    (let ((maybe-end))))
+  (when (zerop (- end start))
     (if defaultp
 	(return-from accept-from-string (values default
 						(if default-type-p
@@ -1153,7 +1152,7 @@ history will be unchanged."
   (let ((index 0))
     (multiple-value-bind (val ptype)
 	(with-input-from-string (stream string :start start :end end
-				 :index index)
+                                               :index index)
 	  (with-keywords-removed (args (:start :end))
 	    (apply #'stream-accept stream type :view +textual-view+ args)))
       (values val ptype index))))
