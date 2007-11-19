@@ -56,7 +56,7 @@
            #:esa-frame-mixin #:recordingp #:executingp
            #:*esa-abort-gestures* #:*numeric-argument-p* #:*current-gesture* #:*command-processor*
            #:unbound-gesture-sequence #:gestures
-           #:command-processor #:instant-macro-execution-mixin #:macrorecord-processed-gestures-mixin
+           #:command-processor #:instant-macro-execution-mixin
            #:asynchronous-command-processor #:command-loop-command-processor
            #:overriding-handler #:directly-processing-p #:process-gesture #:process-gestures-or-command
            #:*extended-command-prompt*
