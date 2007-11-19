@@ -69,7 +69,7 @@ string at point."
                                     :buffer buffer-implementation
                                     :offset offset2)
                      #'(lambda (mark)
-                         (syntax-line-indentation (point) tab-width (current-syntax)))
+                         (syntax-line-indentation mark tab-width (current-syntax)))
                      fill-column
                      tab-width
                      (current-syntax)
