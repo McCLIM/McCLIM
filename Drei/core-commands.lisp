@@ -39,7 +39,7 @@ When overwrite is on, an object entered on the keyboard
 will replace the object after the point. 
 When overwrite is off (the default), objects are inserted at point. 
 In both cases point is positioned after the new object."
-  (with-slots (overwrite-mode) (current-window)
+  (with-slots (overwrite-mode) *drei-instance*
     (setf overwrite-mode (not overwrite-mode))))
 
 (set-key 'com-overwrite-mode
@@ -48,7 +48,7 @@ In both cases point is positioned after the new object."
 
 (defun set-fill-column (column)
   (if (> column 1)
-      (setf (auto-fill-column (current-window)) column)
+      (setf (auto-fill-column *drei-instance*) column)
       (progn (beep) (display-message "Set Fill Column requires an explicit argument."))))
 
 (define-command (com-set-fill-column :name t :command-table fill-table)
@@ -126,29 +126,26 @@ With a numeric argument greater than 1, insert that many #\Newlines."
                          :name t
                          :command-table ,command-table)
            ((count 'integer :prompt ,(concat "Number of " plural)))
-           ,(if (not (null move-point))
-                (concat "Place point and mark around the current " noun ".
+         ,(if (not (null move-point))
+              (concat "Place point and mark around the current " noun ".
 Put point at the beginning of the current " noun ", and mark at the end. 
 With a positive numeric argument, put mark that many " plural " forward. 
 With a negative numeric argument, put point at the end of the current 
 " noun " and mark that many " plural " backward. 
 Successive invocations extend the selection.")
-                (concat "Place mark at the next " noun " end.
+              (concat "Place mark at the next " noun " end.
 With a positive numeric argument, place mark at the end of 
 that many " plural " forward. With a negative numeric argument, 
 place mark at the beginning of that many " plural " backward. 
 
 Successive invocations extend the selection."))
-         (let* ((pane (current-window))
-                (point (point pane))
-                (mark (mark pane)))
-           (unless (eq (command-name *previous-command*) 'com-mark-word)
-             (setf (offset mark) (offset point))
-             ,(when (not (null move-point))
-                    `(if (plusp count)
-                         (,backward point (syntax (buffer pane)))
-                         (,forward point (syntax (buffer pane))))))
-           (,forward mark (syntax (buffer pane)) count))))))
+         (unless (eq (command-name *previous-command*) 'com-mark-word)
+           (setf (offset (mark)) (offset (point)))
+           ,(when (not (null move-point))
+                  `(if (plusp count)
+                       (,backward (point) (current-syntax))
+                       (,forward (point) (current-syntax)))))
+         (,forward (mark) (current-syntax) (current-buffer) count)))))
 
 (define-mark-unit-command word marking-table)
 (define-mark-unit-command expression marking-table)
@@ -224,7 +221,7 @@ Uses TAB-SPACE-COUNT of the STREAM-DEFAULT-VIEW of the pane."
                    (tab-space-count (view *drei-instance*))))
 
 (define-command (com-indent-line :name t :command-table indent-table) ()
-  (indent-current-line (current-window) (point)))
+  (indent-current-line *drei-instance* (point)))
 
 (set-key 'com-indent-line
 	 'indent-table
@@ -239,7 +236,7 @@ Uses TAB-SPACE-COUNT of the STREAM-DEFAULT-VIEW of the pane."
   (insert-object (point) #\Newline)
   (update-syntax (current-buffer)
                  (syntax (current-buffer)))
-  (indent-current-line (current-window) (point)))
+  (indent-current-line *drei-instance* (point)))
 
 (set-key 'com-newline-and-indent
 	 'indent-table
@@ -248,7 +245,7 @@ Uses TAB-SPACE-COUNT of the STREAM-DEFAULT-VIEW of the pane."
 (define-command (com-indent-region :name t :command-table indent-table) ()
   "Indent every line of the current region as specified by the
 syntax for the buffer."
-  (indent-region (current-window) (point) (mark)))
+  (indent-region *drei-instance* (point) (mark)))
 
 (define-command (com-delete-indentation :name t :command-table indent-table) ()
   "Join current line to previous non-blank line.
@@ -264,8 +261,8 @@ beginning of the buffer at leaves point there."
 	 '((#\^ :shift :meta)))
 
 (define-command (com-auto-fill-mode :name t :command-table fill-table) ()
-  (setf (auto-fill-mode (current-window))
-        (not (auto-fill-mode (current-window)))))
+  (setf (auto-fill-mode *drei-instance*)
+        (not (auto-fill-mode *drei-instance*))))
 
 (define-command (com-fill-paragraph :name t :command-table fill-table) ()
   (let* ((syntax (syntax (current-buffer)))
@@ -301,7 +298,7 @@ beginning of the buffer at leaves point there."
 	 '((:home :control)))
 
 (define-command (com-page-down :name t :command-table movement-table) ()
-  (page-down (current-window)))
+  (page-down *drei-instance*))
 
 (set-key 'com-page-down
 	 'movement-table
@@ -312,7 +309,7 @@ beginning of the buffer at leaves point there."
 	 '((:next)))
 
 (define-command (com-page-up :name t :command-table movement-table) ()
-  (page-up (current-window)))
+  (page-up *drei-instance*))
 
 (set-key 'com-page-up
 	 'movement-table
@@ -542,7 +539,7 @@ inserting each in turn at point as an expansion."
   (let* ((syntax (syntax (current-buffer))))
     (with-accessors ((original-prefix original-prefix)
                      (prefix-start-offset prefix-start-offset)
-                     (dabbrev-expansion-mark dabbrev-expansion-mark)) (current-window)
+                     (dabbrev-expansion-mark dabbrev-expansion-mark)) *drei-instance*
        (flet ((move () (cond ((beginning-of-buffer-p dabbrev-expansion-mark)
 			      (setf (offset dabbrev-expansion-mark)
 				    (offset (point)))
@@ -634,8 +631,8 @@ FIXME: no it doesn't."
 
 (define-command (com-visible-region :name t :command-table marking-table) ()
   "Toggle the visibility of the region in the current pane."
-  (setf (region-visible-p (current-window))
-        (not (region-visible-p (current-window)))))
+  (setf (region-visible-p *drei-instance*)
+        (not (region-visible-p *drei-instance*))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 

@@ -538,14 +538,14 @@ single-line buffer."))
   "Prompt for a command name and arguments, then run it."
   (let ((item (handler-case
                   (accept
-                   `(command :command-table ,(command-table (current-window)))
+                   `(command :command-table ,(command-table *drei-instance*))
                    ;; this gets erased immediately anyway
                    :prompt "" :prompt-mode :raw)
                 ((or command-not-accessible command-not-present) ()
                   (beep)
                   (display-message "No such command")
                   (return-from com-drei-extended-command nil)))))
-    (execute-drei-command (current-window) item)))
+    (execute-drei-command *drei-instance* item)))
 
 (set-key 'com-drei-extended-command
          'exclusive-gadget-table
@@ -562,12 +562,12 @@ Drei. Commands should *NOT* be added to it."))
   "This method allows users of Drei to extend syntaxes with new,
 app-specific commands, as long as they inherit from a Drei class
 and specialise a method for it."
-  (additional-command-tables (current-window) command-table))
+  (additional-command-tables *drei-instance* command-table))
 
 (defmethod command-table-inherit-from ((table drei-command-table))
   (let ((syntax-table (command-table (current-syntax))))
     (append `(,syntax-table)
-            (additional-command-tables (current-window) table)
+            (additional-command-tables *drei-instance* table)
             (when (use-editor-commands-p syntax-table)
               '(editor-table)))))
 
@@ -760,21 +760,21 @@ debugger."
   ;; at, for example, the buffer level, after all.
   `(handler-case (progn ,@body)
      (user-condition-mixin (c)
-       (handle-drei-condition (current-window) c))
+       (handle-drei-condition *drei-instance* c))
      (offset-before-beginning (c)
-       (handle-drei-condition (current-window) c))
+       (handle-drei-condition *drei-instance* c))
      (offset-after-end (c)
-       (handle-drei-condition (current-window) c))
+       (handle-drei-condition *drei-instance* c))
      (motion-before-beginning (c)
-       (handle-drei-condition (current-window) c))
+       (handle-drei-condition *drei-instance* c))
      (motion-after-end (c)
-       (handle-drei-condition (current-window) c))
+       (handle-drei-condition *drei-instance* c))
      (no-expression (c)
-       (handle-drei-condition (current-window) c))
+       (handle-drei-condition *drei-instance* c))
      (no-such-operation (c)
-       (handle-drei-condition (current-window) c))
+       (handle-drei-condition *drei-instance* c))
      (buffer-read-only (c)
-       (handle-drei-condition (current-window) c))))
+       (handle-drei-condition *drei-instance* c))))
 
 (defmacro with-bound-drei-special-variables ((drei-instance &key
                                                             (kill-ring nil kill-ring-p)

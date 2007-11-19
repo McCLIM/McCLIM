@@ -396,15 +396,15 @@ reposition the pane if point is outside the visible area."
         (reposition-pane pane))))
   (adjust-pane-bot pane))
 
-(defun page-down (pane)
-  (with-slots (top bot) pane
+(defun page-down (drei)
+  (with-slots (top bot) drei
     (when (mark> (size (buffer bot)) bot)
       (setf (offset top) (offset bot))
       (beginning-of-line top)
-      (setf (offset (point pane)) (offset top)))))
+      (setf (offset (point drei)) (offset top)))))
 
-(defun page-up (pane)
-  (with-slots (top bot) pane
+(defun page-up (drei)
+  (with-slots (top bot) drei
     (when (> (offset top) 0)
       (let ((nb-lines-in-region (number-of-lines-in-region top bot)))
         (setf (offset bot) (offset top))
@@ -413,8 +413,8 @@ reposition the pane if point is outside the visible area."
            while (> (offset top) 0)
            do (decf (offset top))
            (beginning-of-line top))
-        (setf (offset (point pane)) (offset bot))
-        (beginning-of-line (point pane))))))
+        (setf (offset (point drei)) (offset bot))
+        (beginning-of-line (point drei))))))
 
 (defgeneric fix-pane-viewport (pane))
 

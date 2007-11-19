@@ -55,50 +55,40 @@
     ()
   "Fill paragraph at point. Will have no effect unless there is a
 string at point."
-  (let* ((pane (current-window))
-         (buffer (buffer pane))
-         (implementation (implementation buffer))
-         (syntax (syntax buffer))
-         (token (form-around syntax (offset (point pane))))
-         (fill-column (auto-fill-column pane))
-         (tab-width (tab-space-count (stream-default-view pane))))
+  (let* ((buffer-implementation (implementation (current-buffer)))
+         (token (form-around (current-syntax) (offset (point))))
+         (fill-column (auto-fill-column *drei-instance*))
+         (tab-width (tab-space-count (view *drei-instance*))))
     (when (form-string-p token)
       (with-accessors ((offset1 start-offset) 
                        (offset2 end-offset)) token
         (fill-region (make-instance 'standard-right-sticky-mark
-                                    :buffer implementation
+                                    :buffer buffer-implementation
                                     :offset offset1)
                      (make-instance 'standard-right-sticky-mark
-                                    :buffer implementation
+                                    :buffer buffer-implementation
                                     :offset offset2)
                      #'(lambda (mark)
-                         (syntax-line-indentation mark tab-width syntax))
+                         (syntax-line-indentation (point) tab-width (current-syntax)))
                      fill-column
                      tab-width
-                     syntax
+                     (current-syntax)
                      t)))))
 
 (define-command (com-indent-expression :name t :command-table lisp-table)
     ((count 'integer :prompt "Number of expressions"))
-  (let* ((pane (current-window))
-         (point (point pane))
-         (mark (clone-mark point))
-         (syntax (syntax (buffer pane))))
+  (let ((mark (point)))
     (if (plusp count)
-        (loop repeat count do (forward-expression mark syntax))
-        (loop repeat (- count) do (backward-expression mark syntax)))
-    (indent-region pane (clone-mark point) mark)))
+        (loop repeat count do (forward-expression mark (current-syntax)))
+        (loop repeat (- count) do (backward-expression mark (current-syntax))))
+    (indent-region *drei-instance* (point) mark)))
 
 (define-command (com-lookup-arglist-for-this-symbol :command-table lisp-table)
     ()
   "Show argument list for symbol at point."
-  (let* ((pane (current-window))
-         (buffer (buffer pane))
-         (syntax (syntax buffer))
-         (mark (point pane))
-         (token (this-form syntax mark)))
+  (let* ((token (this-form (current-syntax) (point))))
     (if (and token (form-token-p token))
-        (com-lookup-arglist (form-to-object syntax token))
+        (com-lookup-arglist (form-to-object (current-syntax) token))
         (display-message "Could not find symbol at point."))))
 
 (define-command (com-lookup-arglist :name t :command-table lisp-table)
@@ -143,16 +133,12 @@ symbols accessible in the current package will be displayed."
 First indents the line.  If the line was already indented,
 completes the symbol.  If there's no symbol at the point, shows
 the arglist for the most recently enclosed operator."
-  (let* ((pane (current-window))
-         (point (point pane))
-         (old-offset (offset point)))
-    (indent-current-line pane point)
+  (let ((old-offset (offset (point))))
+    (indent-current-line *drei-instance* (point))
     (when (= old-offset
-             (offset point))
-      (let* ((buffer (buffer pane))
-             (syntax (syntax buffer)))
-        (or (complete-symbol-at-mark syntax point nil)
-            (show-arglist-for-form-at-mark point syntax))))))
+             (offset (point)))
+      (or (complete-symbol-at-mark (current-syntax) (point) nil)
+          (show-arglist-for-form-at-mark (point) (current-syntax))))))
 
 (define-presentation-to-command-translator lookup-symbol-arglist
     (symbol com-lookup-arglist lisp-table

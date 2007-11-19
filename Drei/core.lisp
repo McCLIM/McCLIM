@@ -18,22 +18,18 @@
 ;;; Misc stuff
 
 (defun possibly-fill-line ()
-  (let* ((pane (current-window))
-         (buffer (buffer pane)))
-    (when (auto-fill-mode pane)
-      (let* ((fill-column (auto-fill-column pane))
-             (point (point pane))
-             (offset (offset point))
-             (tab-width (tab-space-count (stream-default-view pane)))
-             (syntax (syntax buffer)))
-        (when (>= (buffer-display-column buffer offset tab-width)
-                  (1- fill-column))
-          (fill-line point
-                     (lambda (mark)
-                       (syntax-line-indentation mark tab-width syntax))
-                     fill-column
-                     tab-width
-                     (syntax buffer)))))))
+  (when (auto-fill-mode *drei-instance*)
+    (let* ((fill-column (auto-fill-column *drei-instance*))
+           (offset (offset (point)))
+           (tab-width (tab-space-count (view *drei-instance*))))
+      (when (>= (buffer-display-column (current-buffer) offset tab-width)
+                (1- fill-column))
+        (fill-line (point)
+                   (lambda (mark)
+                     (syntax-line-indentation mark tab-width (current-syntax)))
+                   fill-column
+                   tab-width
+                   (current-syntax))))))
 
 (defun back-to-indentation (mark syntax)
   (beginning-of-line mark)
@@ -42,17 +38,16 @@
      do (forward-object mark)))
 
 (defun insert-character (char)
-  (let* ((window (current-window))
-	 (point (point window)))
-    (unless (constituentp char)
-      (possibly-expand-abbrev point))
-    (when (whitespacep (syntax (buffer window)) char)
-      (possibly-fill-line))
-    (if (and (slot-value window 'overwrite-mode) (not (end-of-line-p point)))
-	(progn
-	  (delete-range point)
-	  (insert-object point char))
-	(insert-object point char))))
+  (unless (constituentp char)
+    (possibly-expand-abbrev (point)))
+  (when (whitespacep (syntax (current-buffer)) char)
+    (possibly-fill-line))
+  (if (and (slot-value *drei-instance* 'overwrite-mode)
+           (not (end-of-line-p (point))))
+      (progn
+        (delete-range (point))
+        (insert-object (point) char))
+      (insert-object (point) char)))
 
 (defun delete-horizontal-space (mark syntax &optional (backward-only-p nil))
   (let ((mark2 (clone-mark mark)))
@@ -65,9 +60,9 @@
 	    do (forward-object mark2)))
     (delete-region mark mark2)))
 
-(defun indent-current-line (pane point)
-  (let* ((buffer (buffer pane))
-         (view (stream-default-view pane))
+(defun indent-current-line (drei point)
+  (let* ((buffer (buffer drei))
+         (view (view drei))
          (tab-space-count (tab-space-count view))
          (indentation (syntax-line-indentation point
                                                tab-space-count
@@ -164,11 +159,13 @@ using the case of those objects if USE-REGION-CASE is true."
 ;;; 
 ;;; Indentation
 
-(defun indent-region (pane mark1 mark2)
-  "Indent all lines in the region delimited by `mark1' and `mark2'
-   according to the rules of the active syntax in `pane'."
-  (let* ((buffer (buffer pane))
-         (view (clim:stream-default-view pane))
+(defun indent-region (drei mark1 mark2)
+  "Indent all lines in the region delimited by `mark1' and
+`mark2' according to the rules of the active syntax in
+`drei'. `Mark1' and `mark2' will not be modified by this
+function."
+  (let* ((buffer (buffer drei))
+         (view (view drei))
          (tab-space-count (tab-space-count view))
          (tab-width (and (indent-tabs-mode buffer)
                          tab-space-count))
