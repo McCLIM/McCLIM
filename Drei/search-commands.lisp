@@ -61,7 +61,7 @@
     ((string 'string :prompt "String Search"))
   "Prompt for a string and search forward for it.
 If found, leaves point after string. If not, leaves point where it is."
-  (simple-search-forward *current-window*
+  (simple-search-forward (current-window)
                         #'(lambda (mark)
                             (search-forward mark string
                              :test (case-relevant-test string)))))
@@ -70,7 +70,7 @@ If found, leaves point after string. If not, leaves point where it is."
     ((string 'string :prompt "Reverse String Search"))
   "Prompt for a string and search backward for it.
 If found, leaves point before string. If not, leaves point where it is."
-  (simple-search-backward *current-window*
+  (simple-search-backward (current-window)
                         #'(lambda (mark)
                             (search-backward mark string
                              :test (case-relevant-test string)))))
@@ -83,7 +83,7 @@ If found, leaves point before string. If not, leaves point where it is."
     ((word 'string :prompt "Search word"))
   "Prompt for a whitespace delimited word and search forward for it.
 If found, leaves point after the word. If not, leaves point where it is."
-  (simple-search-forward *current-window*
+  (simple-search-forward (current-window)
                         #'(lambda (mark)
                             (search-word-forward mark word))))
 
@@ -91,7 +91,7 @@ If found, leaves point after the word. If not, leaves point where it is."
     ((word 'string :prompt "Search word"))
   "Prompt for a whitespace delimited word and search backward for it.
 If found, leaves point before the word. If not, leaves point where it is."
-  (simple-search-backward *current-window*
+  (simple-search-backward (current-window)
                         #'(lambda (mark)
                             (search-backward mark word))))
 
@@ -173,7 +173,7 @@ If found, leaves point before the word. If not, leaves point where it is."
 
 (define-command (com-isearch-forward :name t :command-table search-table) ()
   (display-message "Isearch: ")
-  (isearch-command-loop *current-window* t))
+  (isearch-command-loop (current-window) t))
 
 (set-key 'com-isearch-forward
 	 'search-table
@@ -181,14 +181,14 @@ If found, leaves point before the word. If not, leaves point where it is."
 
 (define-command (com-isearch-backward :name t :command-table search-table) ()
   (display-message "Isearch backward: ")
-  (isearch-command-loop *current-window* nil))
+  (isearch-command-loop (current-window) nil))
 
 (set-key 'com-isearch-backward
 	 'search-table
 	 '((#\r :control)))
 
 (defun isearch-append-char (char)
-  (let* ((states (isearch-states *current-window*))
+  (let* ((states (isearch-states (current-window)))
          (string (concatenate 'string
                               (search-string (first states))
                               (string char)))
@@ -196,7 +196,7 @@ If found, leaves point before the word. If not, leaves point where it is."
          (forwardp (search-forward-p (first states))))
     (unless (or forwardp (end-of-buffer-p mark))
       (incf (offset mark)))
-    (isearch-from-mark *current-window* mark string forwardp)))
+    (isearch-from-mark (current-window) mark string forwardp)))
 
 (define-command (com-isearch-append-char :name t :command-table isearch-drei-table) ()
   (isearch-append-char *current-gesture*))
@@ -205,30 +205,30 @@ If found, leaves point before the word. If not, leaves point where it is."
   (isearch-append-char #\Newline))
 
 (defun isearch-append-text (movement-function)
-  (let* ((states (isearch-states *current-window*))
-	 (start (clone-mark *current-point*))
+  (let* ((states (isearch-states (current-window)))
+	 (start (clone-mark (point)))
 	 (mark (clone-mark (search-mark (first states))))
 	 (forwardp (search-forward-p (first states))))
-    (funcall movement-function *current-point*)
+    (funcall movement-function (point))
     (let* ((start-offset (offset start))
-	   (point-offset (offset *current-point*))
+	   (point-offset (offset (point)))
 	   (string (concatenate 'string
 				(search-string (first states))
-				(buffer-substring *current-buffer*
+				(buffer-substring (current-buffer)
 						  start-offset
 						  point-offset))))
       (unless (or forwardp (end-of-buffer-p mark))
 	(incf (offset mark) (- point-offset start-offset)))
-      (isearch-from-mark *current-window* mark string forwardp))))
+      (isearch-from-mark (current-window) mark string forwardp))))
 
 (define-command (com-isearch-append-word :name t :command-table isearch-drei-table) ()
-  (isearch-append-text #'(lambda (mark) (forward-word mark *current-syntax*))))
+  (isearch-append-text #'(lambda (mark) (forward-word mark (current-syntax)))))
 
 (define-command (com-isearch-append-line :name t :command-table isearch-drei-table) ()
   (isearch-append-text #'end-of-line))
 
 (define-command (com-isearch-append-kill :name t :command-table isearch-drei-table) ()
-  (let* ((states (isearch-states *current-window*))
+  (let* ((states (isearch-states (current-window)))
 	 (yank (handler-case (kill-ring-yank *kill-ring*)
                  (empty-kill-ring ()
                    "")))
@@ -239,10 +239,10 @@ If found, leaves point before the word. If not, leaves point where it is."
 	 (forwardp (search-forward-p (first states))))
     (unless (or forwardp (end-of-buffer-p mark))
       (incf (offset mark) (length yank)))
-    (isearch-from-mark *current-window* mark string forwardp)))
+    (isearch-from-mark (current-window) mark string forwardp)))
 
 (define-command (com-isearch-delete-char :name t :command-table isearch-drei-table) ()
-  (let* ((pane *current-window*))
+  (let* ((pane (current-window)))
     (cond ((null (second (isearch-states pane)))
 	   (display-message "Isearch: ")
            (beep))
@@ -263,26 +263,26 @@ If found, leaves point before the word. If not, leaves point where it is."
 			      (display-string (search-string state))))))))
 
 (define-command (com-isearch-search-forward :name t :command-table isearch-drei-table) ()
-  (let* ((states (isearch-states *current-window*))
+  (let* ((states (isearch-states (current-window)))
          (string (if (null (second states))
-                     (isearch-previous-string *current-window*)
+                     (isearch-previous-string (current-window))
                      (search-string (first states))))
-         (mark (clone-mark *current-point*)))
-    (isearch-from-mark *current-window* mark string t)))
+         (mark (clone-mark (point))))
+    (isearch-from-mark (current-window) mark string t)))
 
 (define-command (com-isearch-search-backward :name t :command-table isearch-drei-table) ()
-  (let* ((states (isearch-states *current-window*))
+  (let* ((states (isearch-states (current-window)))
          (string (if (null (second states))
-                     (isearch-previous-string *current-window*)
+                     (isearch-previous-string (current-window))
                      (search-string (first states))))
-         (mark (clone-mark *current-point*)))
-    (isearch-from-mark *current-window* mark string nil)))
+         (mark (clone-mark (point))))
+    (isearch-from-mark (current-window) mark string nil)))
 
 (define-command (com-isearch-exit :name t :command-table isearch-drei-table) ()
-  (let* ((states (isearch-states *current-window*))
+  (let* ((states (isearch-states (current-window)))
 	 (string (search-string (first states)))
 	 (search-forward-p (search-forward-p (first states))))
-    (setf (isearch-mode *current-window*) nil)
+    (setf (isearch-mode (current-window)) nil)
     (when (string= string "")
       (execute-frame-command *application-frame*
 			     (funcall
@@ -320,7 +320,7 @@ If found, leaves point before the word. If not, leaves point where it is."
   ;; We have to do it this way if we want to refer to STRING in NEWSTRING
   (let* ((string (accept 'string :prompt "Replace String"))
 	 (newstring (accept'string :prompt (format nil "Replace ~A with" string))))
-    (loop with point = *current-point*
+    (loop with point = (point)
 	  with length = (length string)
 	  with use-region-case = (no-upper-p string)
 	  for occurrences from 0
@@ -351,7 +351,7 @@ If found, leaves point before the word. If not, leaves point where it is."
         t))))
 
 (define-command (com-query-replace :name t :command-table search-table) ()
-  (let* ((drei *current-window*)
+  (let* ((drei (current-window))
          (old-state (query-replace-state drei))
          (old-string1 (when old-state (string1 old-state)))
          (old-string2 (when old-state (string2 old-state)))
@@ -402,7 +402,7 @@ If found, leaves point before the word. If not, leaves point where it is."
 	 '((#\% :shift :meta)))
 
 (define-command (com-query-replace-replace :name t :command-table query-replace-drei-table) ()
-  (let* ((pane *current-window*)
+  (let* ((pane (current-window))
          (state (query-replace-state pane)))
     (with-accessors ((string1 string1)
                      (string2 string2)
@@ -425,7 +425,7 @@ If found, leaves point before the word. If not, leaves point where it is."
 		 :name t
 		 :command-table query-replace-drei-table)
     ()
-  (let* ((pane *current-window*)
+  (let* ((pane (current-window))
          (state (query-replace-state pane)))
     (with-accessors ((string1 string1)
                      (string2 string2)
@@ -445,7 +445,7 @@ If found, leaves point before the word. If not, leaves point where it is."
 		 :name t
 		 :command-table query-replace-drei-table)
     ()
-  (let* ((pane *current-window*)
+  (let* ((pane (current-window))
          (state (query-replace-state pane)))
     (with-accessors ((string1 string1)
                      (string2 string2)
@@ -463,7 +463,7 @@ If found, leaves point before the word. If not, leaves point where it is."
                finally (setf (query-replace-mode pane) nil))))))
 
 (define-command (com-query-replace-skip :name t :command-table query-replace-drei-table) ()
-  (let* ((pane *current-window*)
+  (let* ((pane (current-window))
          (state (query-replace-state pane)))
     (with-accessors ((string1 string1)
                      (string2 string2)) state
@@ -473,7 +473,7 @@ If found, leaves point before the word. If not, leaves point where it is."
           (setf (query-replace-mode pane) nil)))))
 
 (define-command (com-query-replace-exit :name t :command-table query-replace-drei-table) ()
-  (setf (query-replace-mode *current-window*) nil))
+  (setf (query-replace-mode (current-window)) nil))
 
 (defun query-replace-set-key (gesture command)
   (add-command-to-command-table command 'query-replace-drei-table
@@ -509,7 +509,7 @@ If found, leaves point before the word. If not, leaves point where it is."
 			:delimiter-gestures nil
 			:activation-gestures
 			'(:newline :return))))
-    (simple-search-forward *current-window*
+    (simple-search-forward (current-window)
                         #'(lambda (mark)
                             (re-search-forward mark (normalise-minibuffer-regex string))))))
 
@@ -518,14 +518,14 @@ If found, leaves point before the word. If not, leaves point where it is."
 			:delimiter-gestures nil
 			:activation-gestures
 			'(:newline :return))))
-    (simple-search-backward *current-window*
+    (simple-search-backward (current-window)
                         #'(lambda (mark)
                             (re-search-backward mark (normalise-minibuffer-regex string))))))
 
 (define-command (com-how-many :name t :command-table search-table)
     ((regex 'string :prompt "How many matches for"))
   (let* ((re (normalise-minibuffer-regex regex))
-	 (mark (clone-mark *current-point*))
+	 (mark (clone-mark (point)))
 	 (occurrences (loop for count from 0
 			    while (re-search-forward mark re)
 			    finally (return count))))

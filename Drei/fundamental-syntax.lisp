@@ -1,4 +1,4 @@
-;; -*- Mode: Lisp; Package: DREI-FUNDAMENTAL-SYNTAX -*-
+;;; -*- Mode: Lisp; Package: DREI-FUNDAMENTAL-SYNTAX -*-
 
 ;;;  (c) copyright 2005 by
 ;;;           Robert Strandh (strandh@labri.fr)

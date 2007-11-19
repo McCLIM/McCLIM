@@ -68,11 +68,11 @@ substituted for a right sticky mark class."
      (update-syntax ,buffer (syntax ,buffer))
      ,@body))
 
-(defun buffer-contents (&optional (buffer *current-buffer*))
-  "The contents of `*current-buffer*' as a string."
+(defun buffer-contents (&optional (buffer (current-buffer)))
+  "The contents of `(current-buffer)' as a string."
   (buffer-substring buffer 0 (size buffer)))
 
-(defun buffer-is (string &optional (buffer *current-buffer*)
+(defun buffer-is (string &optional (buffer (current-buffer))
                   (begin-offset 0) (end-offset (size buffer)))
   "Check (using FiveAM) whether `buffer' contains `string' in the
 subsequence delimited by `begin-offset' and `end-offset'."

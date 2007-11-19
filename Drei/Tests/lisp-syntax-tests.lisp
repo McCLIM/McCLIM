@@ -46,10 +46,10 @@ self-compilation test, of course).")
          (with-bound-drei-special-variables (,drei :minibuffer nil)
            (labels ((get-form ()
                       (first (drei-lisp-syntax::children
-                              (slot-value *current-syntax*
+                              (slot-value (current-syntax)
                                           'drei-lisp-syntax::stack-top))))
                     (get-object (&rest args)
-                      (apply #'form-to-object *current-syntax*
+                      (apply #'form-to-object (current-syntax)
                              (get-form) args)))
              ,@body))))))
 
@@ -78,9 +78,9 @@ self-compilation test, of course).")
                                       &body body)
   `(testing-lisp-syntax (,buffer-contents)
      (flet ((get-object (&rest args)
-              (apply #'form-to-object *current-syntax*
+              (apply #'form-to-object (current-syntax)
                      (first (drei-lisp-syntax::children
-                             (slot-value *current-syntax*
+                             (slot-value (current-syntax)
                                          'drei-lisp-syntax::stack-top)))
                      args)))
        (testing-symbol (,sym-sym ,@args)
@@ -89,107 +89,107 @@ self-compilation test, of course).")
 (test lisp-syntax-test-base
   "Test the Base syntax attribute for Lisp syntax."
   (testing-lisp-syntax ("")
-    (is (= *read-base* (drei-lisp-syntax::base *current-syntax*))))
+    (is (= *read-base* (drei-lisp-syntax::base (current-syntax)))))
   (testing-lisp-syntax ("" :base "2")
-    (is (= 2 (drei-lisp-syntax::base *current-syntax*))))
+    (is (= 2 (drei-lisp-syntax::base (current-syntax)))))
   (testing-lisp-syntax ("" :base "36")
-    (is (= 36 (drei-lisp-syntax::base *current-syntax*))))
+    (is (= 36 (drei-lisp-syntax::base (current-syntax)))))
   (testing-lisp-syntax ("" :base "1")   ; Should be ignored.
-    (is (= *read-base* (drei-lisp-syntax::base *current-syntax*))))
+    (is (= *read-base* (drei-lisp-syntax::base (current-syntax)))))
   (testing-lisp-syntax ("" :base "37")  ; Should be ignored.
-    (is (= *read-base* (drei-lisp-syntax::base *current-syntax*)))))
+    (is (= *read-base* (drei-lisp-syntax::base (current-syntax))))))
 
 (test lisp-syntax-test-package
   "Test the Package syntax attribute for Lisp syntax."
   (testing-lisp-syntax ("")
-    (is (eq nil (drei-lisp-syntax::option-specified-package *current-syntax*))))
+    (is (eq nil (drei-lisp-syntax::option-specified-package (current-syntax)))))
   (testing-lisp-syntax ("" :package "COMMON-LISP")
     (is (eq (find-package :cl)
-            (drei-lisp-syntax::option-specified-package *current-syntax*))))
+            (drei-lisp-syntax::option-specified-package (current-syntax)))))
   (testing-lisp-syntax ("" :package "CL")
     (is (eq (find-package :cl)
-            (drei-lisp-syntax::option-specified-package *current-syntax*))))
+            (drei-lisp-syntax::option-specified-package (current-syntax)))))
   (testing-lisp-syntax ("" :package "common-lisp")
     (is (string= "common-lisp"
-                 (drei-lisp-syntax::option-specified-package *current-syntax*)))))
+                 (drei-lisp-syntax::option-specified-package (current-syntax))))))
 
 (test lisp-syntax-test-attributes
   "Test that the syntax attributes of Lisp syntax are returned
 properly."
   (testing-lisp-syntax ("")
-    (is-true (assoc :package (current-attributes-for-syntax *current-syntax*)))
-    (is-true (assoc :base (current-attributes-for-syntax *current-syntax*)))))
+    (is-true (assoc :package (current-attributes-for-syntax (current-syntax))))
+    (is-true (assoc :base (current-attributes-for-syntax (current-syntax))))))
 
 (test lisp-syntax-package-at-mark
   "Test that Lisp syntax' handling of (in-package) forms is
 correct."
   (testing-lisp-syntax ("(in-package :cl-user)  ")
     (is (eq *package*
-            (drei-lisp-syntax::package-at-mark *current-syntax* 10))))
+            (drei-lisp-syntax::package-at-mark (current-syntax) 10))))
   (testing-lisp-syntax ("(in-package :cl-user)  " :package "DREI-LISP-SYNTAX")
     (is (eq (find-package :drei-lisp-syntax)
-            (drei-lisp-syntax::package-at-mark *current-syntax* 10))))
+            (drei-lisp-syntax::package-at-mark (current-syntax) 10))))
   (testing-lisp-syntax ("(in-package :cl-user)  ")
     (is (eq (find-package :cl-user)
-            (drei-lisp-syntax::package-at-mark *current-syntax* 23))))
+            (drei-lisp-syntax::package-at-mark (current-syntax) 23))))
   (testing-lisp-syntax ("(in-package \"CL-USER\")  ")
     (is (eq (find-package :cl-user)
-            (drei-lisp-syntax::package-at-mark *current-syntax* 23))))
+            (drei-lisp-syntax::package-at-mark (current-syntax) 23))))
   (testing-lisp-syntax ("(in-package \"cl-user\")  ")
     (is (eq *package*
-            (drei-lisp-syntax::package-at-mark *current-syntax* 23))))
+            (drei-lisp-syntax::package-at-mark (current-syntax) 23))))
   (testing-lisp-syntax ("(in-package :cl-user)(in-package :clim)  ")
     (is (eq (find-package :clim)
-            (drei-lisp-syntax::package-at-mark *current-syntax* 43))))
+            (drei-lisp-syntax::package-at-mark (current-syntax) 43))))
   (testing-lisp-syntax ("(in-package :cl-user)(in-package :iDoNotExist)  ")
     (is (eq (find-package :cl-user)
-            (drei-lisp-syntax::package-at-mark *current-syntax* 43)))))
+            (drei-lisp-syntax::package-at-mark (current-syntax) 43)))))
 
 (test lisp-syntax-provided-package-name-at-mark
   "Test that Lisp syntax' handling of (in-package) forms is
 correct, even counting packages that cannot be found."
   (testing-lisp-syntax ("(in-package :cl-user)  ")
     (is (string= "CLIM-USER"
-                 (drei-lisp-syntax::provided-package-name-at-mark *current-syntax* 10))))
+                 (drei-lisp-syntax::provided-package-name-at-mark (current-syntax) 10))))
   (testing-lisp-syntax ("(in-package :cl-user)  " :package "DREI-LISP-SYNTAX")
     (is (string= "DREI-LISP-SYNTAX"
-                 (drei-lisp-syntax::provided-package-name-at-mark *current-syntax* 10))))
+                 (drei-lisp-syntax::provided-package-name-at-mark (current-syntax) 10))))
   (testing-lisp-syntax ("(in-package :cl-user)  ")
     (is (string= "CL-USER"
-                 (drei-lisp-syntax::provided-package-name-at-mark *current-syntax* 23))))
+                 (drei-lisp-syntax::provided-package-name-at-mark (current-syntax) 23))))
   (testing-lisp-syntax ("(in-package \"CL-USER\")  ")
     (is (string= "CL-USER"
-                 (drei-lisp-syntax::provided-package-name-at-mark *current-syntax* 23))))
+                 (drei-lisp-syntax::provided-package-name-at-mark (current-syntax) 23))))
   (testing-lisp-syntax ("(in-package \"cl-user\")  ")
     (is (string= "cl-user"
-                 (drei-lisp-syntax::provided-package-name-at-mark *current-syntax* 23))))
+                 (drei-lisp-syntax::provided-package-name-at-mark (current-syntax) 23))))
   (testing-lisp-syntax ("(in-package :cl-user)(in-package :clim)  ")
     (is (string= "CLIM"
-                 (drei-lisp-syntax::provided-package-name-at-mark *current-syntax* 43))))
+                 (drei-lisp-syntax::provided-package-name-at-mark (current-syntax) 43))))
   (testing-lisp-syntax ("(in-package :cl-user)(in-package :iDoNotExist)  ")
     (is (string= "IDONOTEXIST"
-                 (drei-lisp-syntax::provided-package-name-at-mark *current-syntax* 48)))))
+                 (drei-lisp-syntax::provided-package-name-at-mark (current-syntax) 48)))))
 
 (test lisp-syntax-need-to-update-package-list-p
   "Test that Lisp syntax can properly handle it when (in-package)
   forms change."
   (testing-lisp-syntax ("(in-package :cl-user)  ")
     (is (eq (find-package :cl-user)
-            (drei-lisp-syntax::package-at-mark *current-syntax* 23)))
-    (delete-buffer-range *current-buffer* 0 (size *current-buffer*))
-    (insert-buffer-sequence *current-buffer* 0 "(in-package :cl-userr)  ")
-    (update-syntax *current-buffer* *current-syntax*)
+            (drei-lisp-syntax::package-at-mark (current-syntax) 23)))
+    (delete-buffer-range (current-buffer) 0 (size (current-buffer)))
+    (insert-buffer-sequence (current-buffer) 0 "(in-package :cl-userr)  ")
+    (update-syntax (current-buffer) (current-syntax))
     (is (eq *package*
-            (drei-lisp-syntax::package-at-mark *current-syntax* 24)))
-    (insert-buffer-sequence *current-buffer* 24 "(in-package :drei-lisp-syntax)  ")
-    (update-syntax *current-buffer* *current-syntax*)
+            (drei-lisp-syntax::package-at-mark (current-syntax) 24)))
+    (insert-buffer-sequence (current-buffer) 24 "(in-package :drei-lisp-syntax)  ")
+    (update-syntax (current-buffer) (current-syntax))
     (is (eq (find-package :drei-lisp-syntax)
-            (drei-lisp-syntax::package-at-mark *current-syntax* 54)))
-    (delete-buffer-range *current-buffer* 0 23)
-    (insert-buffer-sequence *current-buffer* 0 "(in-package :clim-user)")
-    (update-syntax *current-buffer* *current-syntax*)
+            (drei-lisp-syntax::package-at-mark (current-syntax) 54)))
+    (delete-buffer-range (current-buffer) 0 23)
+    (insert-buffer-sequence (current-buffer) 0 "(in-package :clim-user)")
+    (update-syntax (current-buffer) (current-syntax))
     (is (eq (find-package :clim-user)
-            (drei-lisp-syntax::package-at-mark *current-syntax* 26)))))
+            (drei-lisp-syntax::package-at-mark (current-syntax) 26)))))
 
 (test form-to-object-1
   "Test that we can parse and recognize T in Lisp syntax."
@@ -535,8 +535,8 @@ references)."
          unless (eq y x)
          do (fail "~A is not eq to ~A" x y))))
   (testing-lisp-syntax ("(#1=list (#1# 1 2 3))")
-    (let ((form (drei-lisp-syntax::form-before *current-syntax* 14)))
-      (is (eq 'list (form-to-object *current-syntax* form)))))
+    (let ((form (drei-lisp-syntax::form-before (current-syntax) 14)))
+      (is (eq 'list (form-to-object (current-syntax) form)))))
   (testing-lisp-syntax ("(#1=list #1=cons)")
     (signals form-conversion-error
       (get-object))))
@@ -580,10 +580,10 @@ references)."
      (macrolet ((test-selector (selector-fn offset expected-result
                                             &optional (test 'eql))
                   `(is (,test ,expected-result
-                         (form-to-object *current-syntax*
-                                         (,selector-fn *current-syntax* ,offset)))))
+                         (form-to-object (current-syntax)
+                                         (,selector-fn (current-syntax) ,offset)))))
                 (test-selector-null (selector-fn offset)
-                  `(is-false (,selector-fn *current-syntax* ,offset))))
+                  `(is-false (,selector-fn (current-syntax) ,offset))))
        ,@body)))
 
 (test form-before
@@ -630,8 +630,8 @@ references)."
   (testing-form-selectors ("(list #|foo|# foo #|bar|# bar
  baz ; baz indeed
 )  ")
-    (test-selector-null drei-lisp-syntax::form-after (size *current-buffer*))
-    (test-selector-null drei-lisp-syntax::form-after (- (size *current-buffer*) 4))
+    (test-selector-null drei-lisp-syntax::form-after (size (current-buffer)))
+    (test-selector-null drei-lisp-syntax::form-after (- (size (current-buffer)) 4))
     (test-selector drei-lisp-syntax::form-after 7 'foo)))
 
 (test form-around
@@ -639,9 +639,9 @@ references)."
   (testing-form-selectors ("(list #|foo|# foo #|bar|# bar
  baz ; baz indeed
 )  ")
-    (test-selector-null drei-lisp-syntax::form-around (size *current-buffer*))
+    (test-selector-null drei-lisp-syntax::form-around (size (current-buffer)))
     (test-selector drei-lisp-syntax::form-around
-                   (- (size *current-buffer*) 4)
+                   (- (size (current-buffer)) 4)
                    '(list foo bar baz) equal)
     (test-selector drei-lisp-syntax::form-around 3 'list)))
 
@@ -652,7 +652,7 @@ references)."
 )  " :syntax "DREI-TESTS")
     (test-selector drei-lisp-syntax::expression-at-mark 15 'foo)
     (test-selector drei-lisp-syntax::expression-at-mark 10 'foo)
-    (test-selector drei-lisp-syntax::expression-at-mark (1- (size *current-buffer*))
+    (test-selector drei-lisp-syntax::expression-at-mark (1- (size (current-buffer)))
                    '(list foo bar baz) equal)))
 
 (test definition-at-mark
@@ -663,7 +663,7 @@ references)."
                      expected-result equal)
       (test-selector drei-lisp-syntax::definition-at-mark 10
                      expected-result equal)
-      (test-selector drei-lisp-syntax::definition-at-mark (1- (size *current-buffer*))
+      (test-selector drei-lisp-syntax::definition-at-mark (1- (size (current-buffer)))
                      expected-result equal))))
 
 (test symbol-at-mark
@@ -778,45 +778,45 @@ syntax."
 top-level form."
   (testing-lisp-syntax ("(defun foo (&rest x y z) (append x y z))")
     (is-false (drei-lisp-syntax::form-at-top-level-p
-               (drei-lisp-syntax::form-around *current-syntax* 10)))
+               (drei-lisp-syntax::form-around (current-syntax) 10)))
     (is-true (drei-lisp-syntax::form-at-top-level-p
-              (drei-lisp-syntax::form-around *current-syntax* 0)))
+              (drei-lisp-syntax::form-around (current-syntax) 0)))
     (is-false (drei-lisp-syntax::form-at-top-level-p
-               (drei-lisp-syntax::form-around *current-syntax* 30)))))
+               (drei-lisp-syntax::form-around (current-syntax) 30)))))
 
 (test replace-symbol-at-mark
   "Test the function for replacing symbols at the position of a
 mark."
   (testing-lisp-syntax ("(defun foo (&rest x y z) (append x y z))")
-    (let ((mark (clone-mark *current-point*)))
+    (let ((mark (clone-mark (point))))
       (setf (offset mark) 8)
-      (performing-drei-operations (*current-window* :redisplay nil)
+      (performing-drei-operations ((current-window) :redisplay nil)
         (drei-lisp-syntax::replace-symbol-at-mark
-         *current-syntax* mark
+         (current-syntax) mark
          "list"))
       (is (= 11 (offset mark)))
       (is (eq 'list (second (get-object))))
       (setf (offset mark) 0)
-      (performing-drei-operations (*current-window* :redisplay nil)
+      (performing-drei-operations ((current-window) :redisplay nil)
         (drei-lisp-syntax::replace-symbol-at-mark
-         *current-syntax* mark
+         (current-syntax) mark
          "quote"))
       (is (= 5 (offset mark)))
       (is (eq 'quote (get-object)))))
   ;; And now for a real-world test case (completion)...
   (testing-lisp-syntax ("(w-o-t-s (s \"foo\" :e-t 'character ")
-    (let ((mark (clone-mark *current-point*)))
+    (let ((mark (clone-mark (point))))
       (setf (offset mark) 8)
-      (performing-drei-operations (*current-window* :redisplay nil)
+      (performing-drei-operations ((current-window) :redisplay nil)
         (drei-lisp-syntax::replace-symbol-at-mark
-         *current-syntax* mark
+         (current-syntax) mark
          "with-output-to-string"))
       (is (= 22 (offset mark)))
       (buffer-is "(with-output-to-string (s \"foo\" :e-t 'character ")
       (setf (offset mark) 36)
-      (performing-drei-operations (*current-window* :redisplay nil)
+      (performing-drei-operations ((current-window) :redisplay nil)
         (drei-lisp-syntax::replace-symbol-at-mark
-         *current-syntax* mark
+         (current-syntax) mark
          ":element-type"))
       (buffer-is "(with-output-to-string (s \"foo\" :element-type 'character ")
       (is (= 45 (offset mark))))))
@@ -845,12 +845,12 @@ mark."
 (test in-string-p
   "Test the `in-string-p' function of Lisp syntax."
   (testing-lisp-syntax (" \"foobar!\" ")
-    (is-false (drei-lisp-syntax::in-string-p 0 *current-syntax*))
-    (is-false (drei-lisp-syntax::in-string-p 1 *current-syntax*))
-    (is-true (drei-lisp-syntax::in-string-p 2 *current-syntax*))
-    (is-true (drei-lisp-syntax::in-string-p 6 *current-syntax*))
-    (is-true (drei-lisp-syntax::in-string-p 9 *current-syntax*))
-    (is-false (drei-lisp-syntax::in-string-p 10 *current-syntax*))))
+    (is-false (drei-lisp-syntax::in-string-p 0 (current-syntax)))
+    (is-false (drei-lisp-syntax::in-string-p 1 (current-syntax)))
+    (is-true (drei-lisp-syntax::in-string-p 2 (current-syntax)))
+    (is-true (drei-lisp-syntax::in-string-p 6 (current-syntax)))
+    (is-true (drei-lisp-syntax::in-string-p 9 (current-syntax)))
+    (is-false (drei-lisp-syntax::in-string-p 10 (current-syntax)))))
 
 (test in-comment-p
   "Test the `in-comment-p' function of Lisp syntax."
@@ -859,17 +859,17 @@ mark."
 #| I'm a
 - BLOCK -
 comment |#")
-    (is-false (drei-lisp-syntax::in-comment-p 0 *current-syntax*))
-    (is-false (drei-lisp-syntax::in-comment-p 1 *current-syntax*))
-    (is-true (drei-lisp-syntax::in-comment-p 2 *current-syntax*))
-    (is-false (drei-lisp-syntax::in-comment-p 16 *current-syntax*))
-    (is-false (drei-lisp-syntax::in-comment-p 17 *current-syntax*))
-    (is-true (drei-lisp-syntax::in-comment-p 18 *current-syntax*))
-    (is-false (drei-lisp-syntax::in-comment-p 40 *current-syntax*))
-    (is-true (drei-lisp-syntax::in-comment-p 41 *current-syntax*))
-    (is-true (drei-lisp-syntax::in-comment-p 50 *current-syntax*))
-    (is-true (drei-lisp-syntax::in-comment-p 60 *current-syntax*))
-    (is-false (drei-lisp-syntax::in-comment-p 69 *current-syntax*))))
+    (is-false (drei-lisp-syntax::in-comment-p 0 (current-syntax)))
+    (is-false (drei-lisp-syntax::in-comment-p 1 (current-syntax)))
+    (is-true (drei-lisp-syntax::in-comment-p 2 (current-syntax)))
+    (is-false (drei-lisp-syntax::in-comment-p 16 (current-syntax)))
+    (is-false (drei-lisp-syntax::in-comment-p 17 (current-syntax)))
+    (is-true (drei-lisp-syntax::in-comment-p 18 (current-syntax)))
+    (is-false (drei-lisp-syntax::in-comment-p 40 (current-syntax)))
+    (is-true (drei-lisp-syntax::in-comment-p 41 (current-syntax)))
+    (is-true (drei-lisp-syntax::in-comment-p 50 (current-syntax)))
+    (is-true (drei-lisp-syntax::in-comment-p 60 (current-syntax)))
+    (is-false (drei-lisp-syntax::in-comment-p 69 (current-syntax)))))
 
 ;; For some tests, we need various functions, classes and
 ;; macros. Define them here and pray we don't clobber anything
@@ -1395,7 +1395,7 @@ used for lambda list construction."
      (flet ((arglist-of (symbol)
               (drei-lisp-syntax::lambda-list-as-list
                (drei-lisp-syntax::arglist-for-form
-                *current-syntax* symbol))))
+                (current-syntax) symbol))))
        ,@body)))
 
 (arglist-test arglist-for-form-1
@@ -1426,13 +1426,13 @@ of lambda expressions."
   `(swine-test ,name
      (macrolet ((test-indentation (string)
                   `(testing-lisp-syntax (,string)
-                     (let ((start (clone-mark (point *current-window*)))
-                           (end (clone-mark (point *current-window*))))
+                     (let ((start (clone-mark (point (current-window))))
+                           (end (clone-mark (point (current-window)))))
                        (beginning-of-buffer start)
                        (end-of-buffer end)
                        (do-buffer-region-lines (line start end)
-                         (delete-indentation *current-syntax* line))
-                       (indent-region *current-window* start end)
+                         (delete-indentation (current-syntax) line))
+                       (indent-region (current-window) start end)
                        (buffer-is ,string)))))
        (macrolet ((test-indentations (&rest strings)
                     `(progn
@@ -1743,17 +1743,17 @@ Lisp syntax."
 
 baz
 ")
-    (let ((begin (beginning-of-buffer (clone-mark *current-point*)))
-          (end (end-of-buffer (clone-mark *current-point*))))
-      (comment-region *current-syntax* begin end)
+    (let ((begin (beginning-of-buffer (clone-mark (point))))
+          (end (end-of-buffer (clone-mark (point)))))
+      (comment-region (current-syntax) begin end)
       (buffer-is ";;; foo bar
 ;;; 
 ;;; baz
 ")))
   (testing-lisp-syntax ("")
-    (let ((begin (beginning-of-buffer (clone-mark *current-point*)))
-          (end (end-of-buffer (clone-mark *current-point*))))
-      (comment-region *current-syntax* begin end)
+    (let ((begin (beginning-of-buffer (clone-mark (point))))
+          (end (end-of-buffer (clone-mark (point)))))
+      (comment-region (current-syntax) begin end)
       (buffer-is ""))))
 
 (defgeneric find-pathnames (module)
@@ -1774,6 +1774,10 @@ making up an ASDF module/system/component.")
       (read-sequence string strm)
       string)))
 
+(defparameter *running-self-compilation-test* nil
+  "This variable is set to true while running the
+self-compilation test.")
+
 (test self-compilation-test
   ;; The big one. Prepare for pain and suffering. TODO: Recompile more
   ;; stuff. Once McCLIM has a test suite worthy of the name, recompile
@@ -1784,9 +1788,9 @@ making up an ASDF module/system/component.")
         (format t "Re-evaluating Drei code using the Lisp syntax parser~%")
         (dolist (pathname pathnames)
           (testing-lisp-syntax ((slurp-file pathname))
-            ; Rebind because the `*current-syntax*' variable will be
+            ; Rebind because the `(current-syntax)' variable will be
             ; clobbered during the test.
-            (let ((syntax *current-syntax*))
+            (let ((syntax (current-syntax)))
               (mapcar #'(lambda (form)
                           (when (drei-lisp-syntax::formp form)
                             (eval (form-to-object syntax form :read t))))
@@ -1796,8 +1800,10 @@ making up an ASDF module/system/component.")
         ;; interpreted, making this test close to a whole-night event.
         ;; Also, as fun as infinite recursion would be... disable this
         ;; test before running the suite.
-        (let ((*run-self-compilation-test* nil))
+        (let ((*run-self-compilation-test* nil)
+              (*running-self-compilation-test* t))
           (format *test-dribble* "~%Re-running Drei test suite with newly evaluated Drei definitions~%")
           (is-true (results-status (let ((fiveam:*test-dribble* (make-broadcast-stream)))
                                      (fiveam:run 'drei-tests))))))
-      (skip "Sensibly skipping self-compilation test. Set DREI-TESTS:*RUN-SELF-COMPILATION-TEST* to true if you don't want to skip it")))
+      (unless *running-self-compilation-test*
+       (skip "Sensibly skipping self-compilation test. Set DREI-TESTS:*RUN-SELF-COMPILATION-TEST* to true if you don't want to skip it"))))

@@ -2873,6 +2873,16 @@ will be signalled for incomplete forms.")
 ;;; found in lisp-syntax-swine.lisp. The lambda-list interface is
 ;;; based on the simplicity of CL pathnames.
 
+(defparameter +cl-lambda-list-keywords+
+  lambda-list-keywords)
+
+(defparameter +cl-garbage-keywords+
+  '(&whole &environment))
+
+(defun lambda-list-keyword-p (arg)
+  "Return true if `arg' is a lambda list keyword, false otherwise."
+  (member arg +cl-lambda-list-keywords+))
+
 (defgeneric arglist-for-form (syntax operator &optional arguments)
   (:documentation "Return an arglist for `operator'.")
   (:method ((syntax lisp-syntax) (operator symbol) &optional arguments)

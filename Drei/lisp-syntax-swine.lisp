@@ -65,16 +65,6 @@
 ;;;
 ;;; Code interrogation/form analysis
 
-(defparameter +cl-lambda-list-keywords+
-  lambda-list-keywords)
-
-(defparameter +cl-garbage-keywords+
-  '(&whole &environment))
-
-(defun lambda-list-keyword-p (arg)
-  "Return true if `arg' is a lambda list keyword, false otherwise."
-  (member arg +cl-lambda-list-keywords+))
-
 (defgeneric parameter-match-p (parameter arg-indices &key &allow-other-keys)
   (:method ((parameter parameter) (arg-indices list) &key)
     nil))

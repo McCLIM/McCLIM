@@ -90,8 +90,8 @@ true (the default)."
 With a numeric argument N, move point forward by N " plural ".
 With a negative argument -N, move point backward by N " plural ".")
            (handling-motion-limit-errors (,plural)
-             (,forward *current-point*
-                       (SYNTAX *current-buffer*)
+             (,forward (point)
+                       (SYNTAX (current-buffer))
                        COUNT)))
          (DEFINE-COMMAND (,com-backward
                           :NAME T
@@ -101,19 +101,19 @@ With a negative argument -N, move point backward by N " plural ".")
 With a numeric argument N, move point backward by N " plural ".
 With a negative argument -N, move point forward by N " plural ".")
            (handling-motion-limit-errors (,plural)
-             (,backward *current-point*
-                        (SYNTAX *current-buffer*)
+             (,backward (point)
+                        (SYNTAX (current-buffer))
                         COUNT)))))))
 
 ;;; Manually define some commands
 
 (define-command (com-beginning-of-line :name t :command-table movement-table) ()
   "Move point to the beginning of the current line."
-  (beginning-of-line *current-point*))
+  (beginning-of-line (point)))
 
 (define-command (com-end-of-line :name t :command-table movement-table) ()
   "Move point to the end of the current line."
-  (end-of-line *current-point*))
+  (end-of-line (point)))
 
 ;; Object movement comands - defined specially because FORWARD-OBJECT
 ;; and BACKWARD-OBJECT is part of the buffer protocol, not the
@@ -124,7 +124,7 @@ With a negative argument -N, move point forward by N " plural ".")
 With a numeric argument N, move point forward by N objects.
 With a negative argument -N, move point backward by M objects."
   (handling-motion-limit-errors ("objects")
-    (forward-object *current-point*
+    (forward-object (point)
                     count)))
 
 (define-command (com-backward-object :name t :command-table movement-table)
@@ -133,7 +133,7 @@ With a negative argument -N, move point backward by M objects."
 With a numeric argument N, move point backward by N objects.
 With a negative argument -N, move point forward by N objects."
   (handling-motion-limit-errors ("objects")
-    (backward-object *current-point*
+    (backward-object (point)
                      count)))
 
 ;;; Autogenerate commands
@@ -285,8 +285,8 @@ that many " plural ".
 
 Successive kills append to the kill ring.")
              (handling-motion-limit-errors (,plural)
-               (,forward-kill *current-point*
-                              (syntax *current-buffer*)
+               (,forward-kill (point)
+                              (syntax (current-buffer))
                               count
                               (eq (command-name *previous-command*) ',com-kill))))
 
@@ -301,8 +301,8 @@ that many " plural ".
 
 Successive kills append to the kill ring.")
              (handling-motion-limit-errors (,plural)
-               (,backward-kill *current-point*
-                               (syntax *current-buffer*)
+               (,backward-kill (point)
+                               (syntax (current-buffer))
                                count
                                (eq (command-name *previous-command*) ',com-backward-kill))))
 
@@ -311,14 +311,14 @@ Successive kills append to the kill ring.")
                ((count 'integer :prompt ,(concat "Number of " plural)))
              ,(concat "Delete from point until the next " noun " end.
 With a positive numeric argument, delete that many " plural " forward.")
-             (,backward-delete *current-point* (syntax *current-buffer*) count))
+             (,backward-delete (point) (syntax (current-buffer)) count))
 
            ;; Backward Delete Unit
            (define-command (,com-backward-delete :name t :command-table ,command-table)
                ((count 'integer :prompt ,(concat "Number of " plural)))
              ,(concat "Delete from point until the previous " noun " beginning.
 With a positive numeric argument, delete that many " plural " backward.")
-             (,backward-delete *current-point* (syntax *current-buffer*) count)))))))
+             (,backward-delete (point) (syntax (current-buffer)) count)))))))
 
 (defmacro define-editing-commands (unit command-table &key
                                    noun
@@ -350,8 +350,8 @@ transpose that " noun " with the next one. With point
 before the first " noun " of the buffer, transpose the
 first two " plural " of the buffer.")
            (handling-motion-limit-errors (,plural)
-             (,transpose *current-point*
-                         (syntax *current-buffer*))))))))
+             (,transpose (point)
+                         (syntax (current-buffer)))))))))
 
 ;;; Some manually defined commands
 
@@ -361,7 +361,7 @@ At the end of a line transpose the previous two objects without
 advancing point. At the beginning of the buffer do nothing.  At
 the beginning of any line other than the first effectively move
 the first object of that line to the end of the previous line."
-  (transpose-objects *current-point*))
+  (transpose-objects (point)))
 
 (define-command (com-delete-object :name t :command-table deletion-table)
     ((count 'integer :prompt "Number of Objects")
@@ -371,8 +371,8 @@ With a numeric argument, kill that many objects
 after (or before, if negative) point."
   (handling-motion-limit-errors ("objects")
     (if killp
-        (forward-kill-object *current-point* count)
-        (forward-delete-object *current-point* count))))
+        (forward-kill-object (point) count)
+        (forward-delete-object (point) count))))
 
 (define-command (com-backward-delete-object :name t :command-table deletion-table)
     ((count 'integer :prompt "Number of Objects")
@@ -382,8 +382,8 @@ With a numeric argument, kills that many objects
 before (or after, if negative) point."
   (handling-motion-limit-errors ("objects")
     (if killp
-        (backward-kill-object *current-point* count #'error-limit-action)
-        (backward-delete-object *current-point* count #'error-limit-action))))
+        (backward-kill-object (point) count #'error-limit-action)
+        (backward-delete-object (point) count #'error-limit-action))))
 
 ;; We require somewhat special behavior from Kill Line, so define a
 ;; new function and use that to implement the Kill Line command.
@@ -426,7 +426,7 @@ if negative) from point.
 
 Successive kills append to the kill ring."
   (let* ((concatenate-p (eq (command-name *previous-command*) 'com-kill-line)))
-    (user-kill-line *current-point* numarg numargp concatenate-p)))
+    (user-kill-line (point) numarg numargp concatenate-p)))
 
 ;;; Autogenerate commands
 

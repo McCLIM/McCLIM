@@ -43,7 +43,7 @@ buffer. This mark should not be changed.")
 stream that indicates the buffer position that the stream will
 consider end-of-file. By default, the end of the buffer. This
 mark should not be changed.")
-   (%point :accessor point
+   (%point :accessor point-of
            :documentation "A mark indicating the current position
 in the buffer of the stream."))
   (:documentation "A bidirectional stream that performs I/O on an
@@ -146,7 +146,7 @@ operate on only a specific section of the buffer."))
 
 ;;; Interface functions.
 
-(defun make-buffer-stream (&key (buffer *current-buffer*)
+(defun make-buffer-stream (&key (buffer (current-buffer))
                            (start-mark nil start-mark-p)
                            (end-mark nil end-mark-p))
   "Create a buffer stream object reading data from `buffer'. By

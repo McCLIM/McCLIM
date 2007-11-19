@@ -2,6 +2,8 @@
 
 ;;;  (c) copyright 2005 by
 ;;;           Robert Strandh (strandh@labri.fr)
+;;;  (c) copyright 2006-2007 by
+;;;           Troels Henriksen (athas@sigkill.dk)
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -26,41 +28,38 @@
 ;;; 
 ;;; Querying ESAs.
 
-(defgeneric buffers (application-frame)
+(defvar *esa-instance* nil
+  "This symbol should be bound to an ESA instance, though any
+object will do, provided the proper methods are defined. It will
+be used as the argument to the various \"query\" functions
+defined by ESA. For the vast majority of ESAs, `*esa-instance*'
+will probably have the same value as `*application-frame*'.")
+
+(defgeneric buffers (esa)
   (:documentation "Return a list of all the buffers of the application."))
 
-(defgeneric frame-current-buffer (application-frame)
-  (:documentation "Return the current buffer of APPLICATION-FRAME.")
-  (:method ((frame application-frame))
-    nil))
-
-(defvar *current-buffer* nil
-  "When a command is being executed, the current buffer.")
+(defgeneric esa-current-buffer (esa)
+  (:documentation "Return the current buffer of APPLICATION-FRAME."))
 
 (defun current-buffer ()
-  "Return the current buffer of `*application-frame*'."
-  (frame-current-buffer *application-frame*))
+  "Return the currently active buffer of the running ESA."
+  (esa-current-buffer *esa-instance*))
 
-(defgeneric windows (application-frame)
-  (:documentation "Return a list of all the windows of the application.")
-  (:method ((application-frame application-frame))
+(defgeneric windows (esa)
+  (:documentation "Return a list of all the windows of the ESA.")
+  (:method ((esa application-frame))
     '()))
 
-(defgeneric frame-current-window (application-frame)
-  (:documentation "Return the current window of APPLICATION-FRAME.")
-  (:method ((frame application-frame))
-    (first (windows frame))))
-
-(defvar *current-window* nil
-  "When a command is being executed, the current window.")
+(defgeneric esa-current-window (esa)
+  (:documentation "Return the current window of ESA."))
 
 (defun current-window ()
-  "Return the current window of `*application-frame*'."  
-  (frame-current-window *application-frame*))
+  "Return the currently active window of the running ESA instance."
+  (esa-current-window *esa-instance*))
 
 (defvar *previous-command* nil
   "When a command is being executed, the command previously
-executed by the current frame.")
+executed by the application.")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 
@@ -766,6 +765,12 @@ corresponding commands in `command-table' and invoke them using
 (defclass esa-frame-mixin (command-processor)
   ((windows :accessor windows)))
 
+(defmethod esa-current-buffer ((esa esa-frame-mixin))
+  (first (buffers esa)))
+
+(defmethod esa-current-window ((esa esa-frame-mixin))
+  (first (windows esa)))
+
 (defmethod command-table ((frame esa-frame-mixin))
   (find-applicable-command-table frame))
 
@@ -795,7 +800,7 @@ corresponding commands in `command-table' and invoke them using
   ;; FIXME: I'm not sure that we want to do this for commands sent
   ;; from other threads; we almost certainly don't want to do it twice
   ;; in such cases...
-  (setf (previous-command (frame-current-window frame)) command))
+  (setf (previous-command (esa-current-window frame)) command))
 
 (defmethod execute-frame-command :around ((frame esa-frame-mixin) command)
   (call-next-method)
@@ -850,16 +855,15 @@ used.")
                     (*partial-command-parser* ,partial-command-parser)
                     (*extended-command-prompt* ,prompt)
                     (*pointer-documentation-output*
-                     (frame-pointer-documentation-output ,frame)))
+                     (frame-pointer-documentation-output ,frame))
+                    (*esa-instance* ,frame))
                 (unless (eq (frame-state ,frame) :enabled)
                   (enable-frame ,frame))
                 (redisplay-frame-panes ,frame :force-p t)
                 (loop
                    do (restart-case
                           (handler-case
-                              (let* ((*current-window* (frame-current-window ,frame))
-                                     (*current-buffer* (frame-current-buffer ,frame))
-                                     (*command-processor* ,frame)
+                              (let* ((*command-processor* ,frame)
                                      (command-table (find-applicable-command-table ,frame))
                                      ,@bindings)
                                 ;; for presentation-to-command-translators,

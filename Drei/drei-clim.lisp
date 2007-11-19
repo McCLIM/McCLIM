@@ -58,7 +58,7 @@
   ((%drei-instance :reader drei-instance
                    :initarg :drei-instance
                    :initform (error "A Drei cursor must be associated with a Drei instance"))
-   (%mark :reader mark
+   (%mark :reader mark-of
           :initarg :mark
           :initform (error "A Drei cursor must be associated with a mark."))
    (%active :accessor active
@@ -112,7 +112,7 @@ of this class is to visually represent the position of point."))
   (:documentation "A class that should be used for the visual
 representation of the point of a Drei instance."))
 
-(defmethod mark ((cursor point-cursor))
+(defmethod mark-of ((cursor point-cursor))
   (point (drei-instance cursor)))
 
 (defclass mark-cursor (drei-cursor)
@@ -125,7 +125,7 @@ representation of the point of a Drei instance."))
   (:documentation "A class that should be used for the visual
 representation of the mark of a Drei instance."))
 
-(defmethod mark ((cursor mark-cursor))
+(defmethod mark-of ((cursor mark-cursor))
   (mark (drei-instance cursor)))
 
 (defmethod enabled ((cursor mark-cursor))
@@ -151,12 +151,14 @@ false.")
     :background *background-color*
     :foreground *foreground-color*
     :display-function 'display-drei-pane
-    :default-view +drei-textual-view+
     :width 900
     :active nil)
   (:documentation "An actual, instantiable Drei pane that
 permits (and requires) the host application to control the
 command loop completely."))
+
+(defmethod stream-default-view ((stream drei-pane))
+  (view stream))
 
 (defmethod display-drei ((drei drei-pane))
   (redisplay-frame-pane (pane-frame drei) drei))
@@ -264,9 +266,7 @@ keyboard focus"))
 Drei gadget variant has determined that a keyboard event
 corresponds to a useful gesture that should be handled. A useful
 gesture is, for example, one that is not simply a click on a
-modifier key. When this function is called, the Drei special
-variables (`*current-window*', `*current-buffer*', etc) are
-properly bound."))
+modifier key."))
 
 (defmethod handle-gesture ((drei drei-gadget-pane) gesture)
   (let ((*command-processor* drei)
@@ -357,6 +357,9 @@ record."))
   (setf (input-editor-position area)
         (multiple-value-list (output-record-position area)))
   (tree-recompute-extent area))
+
+(defmethod esa-current-window ((drei drei))
+  (editor-pane drei))
 
 (defmethod display-drei ((drei drei-area))
   (display-drei-area drei))

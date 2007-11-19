@@ -37,46 +37,46 @@ Line number four")
                     (is (> 4 line))
                     (is (= startcol ,startcol))
                     (is (= endcol ,endcol)))))
-      (beginning-of-buffer *current-point*)
-      (end-of-buffer *current-mark*)
+      (beginning-of-buffer (point))
+      (end-of-buffer (mark))
       (let ((line -1))
-        (map-rectangle-lines *current-buffer*
+        (map-rectangle-lines (current-buffer)
                              #'(lambda (mark startcol endcol)
                                  (check 0 16))
-                             *current-point*
-                             *current-mark*)
+                             (point)
+                             (mark))
         (is (= line 3)))
       (let ((line -1))
-        (map-rectangle-lines *current-buffer*
+        (map-rectangle-lines (current-buffer)
                              #'(lambda (mark startcol endcol)
                                  (check 0 16))
-                             *current-mark*
-                             *current-point*)
+                             (mark)
+                             (point))
         (is (= line 3)))
-      (setf (offset *current-point*) 2)
-      (setf (offset *current-mark*) 63)
+      (setf (offset (point)) 2)
+      (setf (offset (mark)) 63)
       (let ((line -1))
-        (map-rectangle-lines *current-buffer*
+        (map-rectangle-lines (current-buffer)
                              #'(lambda (mark startcol endcol)
                                  (check 2 13))
-                             *current-point*
-                             *current-mark*)
+                             (point)
+                             (mark))
         (is (= line 3)))
       (let ((line -1))
-        (map-rectangle-lines *current-buffer*
+        (map-rectangle-lines (current-buffer)
                              #'(lambda (mark startcol endcol)
                                  (check 2 13))
-                             *current-mark*
-                             *current-point*)
+                             (mark)
+                             (point))
         (is (= line 3)))
-      (beginning-of-buffer *current-point*)
-      (beginning-of-buffer *current-mark*)
+      (beginning-of-buffer (point))
+      (beginning-of-buffer (mark))
       (let ((line -1))
-        (map-rectangle-lines *current-buffer*
+        (map-rectangle-lines (current-buffer)
                              #'(lambda (mark startcol endcol)
                                  (check 0 0))
-                             *current-point*
-                             *current-mark*)
+                             (point)
+                             (mark))
         (is (= line 0))))))
 
 (test extract-and-delete-rectangle-line
@@ -84,12 +84,12 @@ Line number four")
 Line number two
 Line number three
 Line number four")
-    (beginning-of-buffer *current-point*)
-    (end-of-buffer *current-mark*)
-    (is (equal (map-rectangle-lines *current-buffer*
+    (beginning-of-buffer (point))
+    (end-of-buffer (mark))
+    (is (equal (map-rectangle-lines (current-buffer)
                                     #'extract-and-delete-rectangle-line
-                                    *current-point*
-                                    *current-mark*)
+                                    (point)
+                                    (mark))
                '("Line number one "
                  "Line number two "
                  "Line number thre"
@@ -102,13 +102,13 @@ e
 Line number two
 Line number three
 Line number four")
-    (beginning-of-buffer *current-point*)
-    (end-of-buffer *current-mark*)
-    (beginning-of-line *current-mark*)
-    (is (equal (map-rectangle-lines *current-buffer*
+    (beginning-of-buffer (point))
+    (end-of-buffer (mark))
+    (beginning-of-line (mark))
+    (is (equal (map-rectangle-lines (current-buffer)
                                     #'extract-and-delete-rectangle-line
-                                    *current-point*
-                                    *current-mark*)
+                                    (point)
+                                    (mark))
                '(""
                  ""
                  ""
@@ -121,19 +121,19 @@ Line number four"))
 Line number two
 Line number three
 Line number four")
-    (beginning-of-buffer *current-point*)
-    (forward-line *current-point* *current-syntax*)
-    (forward-object *current-point* 5)
+    (beginning-of-buffer (point))
+    (forward-line (point) (current-syntax))
+    (forward-object (point) 5)
     
-    (end-of-buffer *current-mark*)
-    (backward-line *current-mark* *current-syntax*)
-    (beginning-of-line *current-mark*)
-    (forward-object *current-mark* 12)
+    (end-of-buffer (mark))
+    (backward-line (mark) (current-syntax))
+    (beginning-of-line (mark))
+    (forward-object (mark) 12)
 
-    (is (equal (map-rectangle-lines *current-buffer*
+    (is (equal (map-rectangle-lines (current-buffer)
                                     #'extract-and-delete-rectangle-line
-                                    *current-point*
-                                    *current-mark*)
+                                    (point)
+                                    (mark))
                '("number "
                  "number ")))
     (buffer-is "Line number one
@@ -146,12 +146,12 @@ Line number four")))
 Line number two
 Line number three
 Line number four")
-    (beginning-of-buffer *current-point*)
-    (end-of-buffer *current-mark*)
-    (map-rectangle-lines *current-buffer*
+    (beginning-of-buffer (point))
+    (end-of-buffer (mark))
+    (map-rectangle-lines (current-buffer)
                          #'open-rectangle-line
-                         *current-point*
-                         *current-mark*)
+                         (point)
+                         (mark))
     (buffer-is "                Line number one
                 Line number two
                 Line number three
@@ -160,13 +160,13 @@ Line number four")
 Line number two
 Line number three
 Line number four")
-    (beginning-of-buffer *current-point*)
-    (end-of-buffer *current-mark*)
-    (beginning-of-line *current-mark*)
-    (map-rectangle-lines *current-buffer*
+    (beginning-of-buffer (point))
+    (end-of-buffer (mark))
+    (beginning-of-line (mark))
+    (map-rectangle-lines (current-buffer)
                          #'open-rectangle-line
-                         *current-point*
-                         *current-mark*)
+                         (point)
+                         (mark))
     (buffer-is "Line number one
 Line number two
 Line number three
@@ -175,19 +175,19 @@ Line number four"))
 Line number two
 Line number three
 Line number four")
-    (beginning-of-buffer *current-point*)
-    (forward-line *current-point* *current-syntax*)
-    (forward-object *current-point* 5)
+    (beginning-of-buffer (point))
+    (forward-line (point) (current-syntax))
+    (forward-object (point) 5)
     
-    (end-of-buffer *current-mark*)
-    (backward-line *current-mark* *current-syntax*)
-    (beginning-of-line *current-mark*)
-    (forward-object *current-mark* 12)
+    (end-of-buffer (mark))
+    (backward-line (mark) (current-syntax))
+    (beginning-of-line (mark))
+    (forward-object (mark) 12)
 
-    (map-rectangle-lines *current-buffer*
+    (map-rectangle-lines (current-buffer)
                          #'open-rectangle-line
-                         *current-point*
-                         *current-mark*)
+                         (point)
+                         (mark))
     (buffer-is "Line number one
 Line        number two
 Line        number three
@@ -198,12 +198,12 @@ Line number four")))
 Line number two
 Line number three
 Line number four")
-    (beginning-of-buffer *current-point*)
-    (end-of-buffer *current-mark*)
-    (map-rectangle-lines *current-buffer*
+    (beginning-of-buffer (point))
+    (end-of-buffer (mark))
+    (map-rectangle-lines (current-buffer)
                          #'clear-rectangle-line
-                         *current-point*
-                         *current-mark*)
+                         (point)
+                         (mark))
     (buffer-is "               
                
                 e
@@ -212,13 +212,13 @@ Line number four")
 Line number two
 Line number three
 Line number four")
-    (beginning-of-buffer *current-point*)
-    (end-of-buffer *current-mark*)
-    (beginning-of-line *current-mark*)
-    (map-rectangle-lines *current-buffer*
+    (beginning-of-buffer (point))
+    (end-of-buffer (mark))
+    (beginning-of-line (mark))
+    (map-rectangle-lines (current-buffer)
                          #'clear-rectangle-line
-                         *current-point*
-                         *current-mark*)
+                         (point)
+                         (mark))
     (buffer-is "Line number one
 Line number two
 Line number three
@@ -227,19 +227,19 @@ Line number four"))
 Line number two
 Line number three
 Line number four")
-    (beginning-of-buffer *current-point*)
-    (forward-line *current-point* *current-syntax*)
-    (forward-object *current-point* 5)
+    (beginning-of-buffer (point))
+    (forward-line (point) (current-syntax))
+    (forward-object (point) 5)
     
-    (end-of-buffer *current-mark*)
-    (backward-line *current-mark* *current-syntax*)
-    (beginning-of-line *current-mark*)
-    (forward-object *current-mark* 12)
+    (end-of-buffer (mark))
+    (backward-line (mark) (current-syntax))
+    (beginning-of-line (mark))
+    (forward-object (mark) 12)
 
-    (map-rectangle-lines *current-buffer*
+    (map-rectangle-lines (current-buffer)
                          #'clear-rectangle-line
-                         *current-point*
-                         *current-mark*)
+                         (point)
+                         (mark))
     (buffer-is "Line number one
 Line        two
 Line        three
@@ -250,12 +250,12 @@ Line number four")))
       Line number two
  Line number three
 Line number four")
-    (beginning-of-buffer *current-point*)
-    (end-of-buffer *current-mark*)
-    (map-rectangle-lines *current-buffer*
+    (beginning-of-buffer (point))
+    (end-of-buffer (mark))
+    (map-rectangle-lines (current-buffer)
                          #'delete-rectangle-line-whitespace
-                         *current-point*
-                         *current-mark*)
+                         (point)
+                         (mark))
     (buffer-is "Line number one
 Line number two
 Line number three
@@ -264,13 +264,13 @@ Line number four"))
       Line number two
  Line number three
 Line number four")
-    (beginning-of-buffer *current-point*)
-    (end-of-buffer *current-mark*)
-    (beginning-of-line *current-mark*)
-    (map-rectangle-lines *current-buffer*
+    (beginning-of-buffer (point))
+    (end-of-buffer (mark))
+    (beginning-of-line (mark))
+    (map-rectangle-lines (current-buffer)
                          #'delete-rectangle-line-whitespace
-                         *current-point*
-                         *current-mark*)
+                         (point)
+                         (mark))
     (buffer-is "Line number one
 Line number two
 Line number three
@@ -279,17 +279,17 @@ Line number four"))
       Line number two
  Line number three
 Line number four")
-    (beginning-of-buffer *current-point*)
-    (forward-line *current-point* *current-syntax*)
+    (beginning-of-buffer (point))
+    (forward-line (point) (current-syntax))
     
-    (end-of-buffer *current-mark*)
-    (backward-line *current-mark* *current-syntax*)
-    (beginning-of-line *current-mark*)
+    (end-of-buffer (mark))
+    (backward-line (mark) (current-syntax))
+    (beginning-of-line (mark))
 
-    (map-rectangle-lines *current-buffer*
+    (map-rectangle-lines (current-buffer)
                          #'delete-rectangle-line-whitespace
-                         *current-point*
-                         *current-mark*)
+                         (point)
+                         (mark))
     (buffer-is "   Line number one
 Line number two
 Line number three
@@ -300,13 +300,13 @@ Line number four")))
 Line number two
 Line number three
 Line number four")
-    (beginning-of-buffer *current-point*)
-    (end-of-buffer *current-mark*)
-    (map-rectangle-lines *current-buffer*
+    (beginning-of-buffer (point))
+    (end-of-buffer (mark))
+    (map-rectangle-lines (current-buffer)
                          #'(lambda (mark startcol endcol)
                              (replace-rectangle-line mark startcol endcol "DREI"))
-                         *current-point*
-                         *current-mark*)
+                         (point)
+                         (mark))
     (buffer-is "DREI
 DREI
 DREIe
@@ -315,14 +315,14 @@ DREI"))
 Line number two
 Line number three
 Line number four")
-    (beginning-of-buffer *current-point*)
-    (end-of-buffer *current-mark*)
-    (beginning-of-line *current-mark*)
-    (map-rectangle-lines *current-buffer*
+    (beginning-of-buffer (point))
+    (end-of-buffer (mark))
+    (beginning-of-line (mark))
+    (map-rectangle-lines (current-buffer)
                          #'(lambda (mark startcol endcol)
                              (replace-rectangle-line mark startcol endcol "DREI"))
-                         *current-point*
-                         *current-mark*)
+                         (point)
+                         (mark))
     (buffer-is "DREILine number one
 DREILine number two
 DREILine number three
@@ -331,20 +331,20 @@ DREILine number four"))
 Line number two
 Line number three
 Line number four")
-    (beginning-of-buffer *current-point*)
-    (forward-line *current-point* *current-syntax*)
-    (forward-object *current-point* 5)
+    (beginning-of-buffer (point))
+    (forward-line (point) (current-syntax))
+    (forward-object (point) 5)
     
-    (end-of-buffer *current-mark*)
-    (backward-line *current-mark* *current-syntax*)
-    (beginning-of-line *current-mark*)
-    (forward-object *current-mark* 12)
+    (end-of-buffer (mark))
+    (backward-line (mark) (current-syntax))
+    (beginning-of-line (mark))
+    (forward-object (mark) 12)
 
-    (map-rectangle-lines *current-buffer*
+    (map-rectangle-lines (current-buffer)
                          #'(lambda (mark startcol endcol)
                              (replace-rectangle-line mark startcol endcol "DREI"))
-                         *current-point*
-                         *current-mark*)
+                         (point)
+                         (mark))
     (buffer-is "Line number one
 Line DREItwo
 Line DREIthree
@@ -355,13 +355,13 @@ Line number four")))
 Line number two
 Line number three
 Line number four")
-    (beginning-of-buffer *current-point*)
-    (end-of-buffer *current-mark*)
-    (map-rectangle-lines *current-buffer*
+    (beginning-of-buffer (point))
+    (end-of-buffer (mark))
+    (map-rectangle-lines (current-buffer)
                          #'(lambda (mark startcol endcol)
                              (insert-in-rectangle-line mark startcol endcol "DREI"))
-                         *current-point*
-                         *current-mark*)
+                         (point)
+                         (mark))
     (buffer-is "DREILine number one
 DREILine number two
 DREILine number three
@@ -370,14 +370,14 @@ DREILine number four"))
 Line number two
 Line number three
 Line number four")
-    (beginning-of-buffer *current-point*)
-    (end-of-buffer *current-mark*)
-    (beginning-of-line *current-mark*)
-    (map-rectangle-lines *current-buffer*
+    (beginning-of-buffer (point))
+    (end-of-buffer (mark))
+    (beginning-of-line (mark))
+    (map-rectangle-lines (current-buffer)
                          #'(lambda (mark startcol endcol)
                              (insert-in-rectangle-line mark startcol endcol "DREI"))
-                         *current-point*
-                         *current-mark*)
+                         (point)
+                         (mark))
     (buffer-is "DREILine number one
 DREILine number two
 DREILine number three
@@ -386,20 +386,20 @@ DREILine number four"))
 Line number two
 Line number three
 Line number four")
-    (beginning-of-buffer *current-point*)
-    (forward-line *current-point* *current-syntax*)
-    (forward-object *current-point* 5)
+    (beginning-of-buffer (point))
+    (forward-line (point) (current-syntax))
+    (forward-object (point) 5)
     
-    (end-of-buffer *current-mark*)
-    (backward-line *current-mark* *current-syntax*)
-    (beginning-of-line *current-mark*)
-    (forward-object *current-mark* 12)
+    (end-of-buffer (mark))
+    (backward-line (mark) (current-syntax))
+    (beginning-of-line (mark))
+    (forward-object (mark) 12)
 
-    (map-rectangle-lines *current-buffer*
+    (map-rectangle-lines (current-buffer)
                          #'(lambda (mark startcol endcol)
                              (insert-in-rectangle-line mark startcol endcol "DREI"))
-                         *current-point*
-                         *current-mark*)
+                         (point)
+                         (mark))
     (buffer-is "Line number one
 Line DREInumber two
 Line DREInumber three
@@ -411,9 +411,9 @@ Line number four")))
                (check-type rectangle list)
                (check-type after string)
                `(with-drei-environment (:initial-contents ,before)
-                  (setf (offset *current-point*) ,offset)
+                  (setf (offset (point)) ,offset)
                   (insert-rectangle-at-mark
-                   *current-buffer* *current-point*
+                   (current-buffer) (point)
                    ,rectangle)
                   (buffer-is ,after))))
     (check "Line number one

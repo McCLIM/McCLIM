@@ -63,26 +63,40 @@
 ;;;
 ;;; Convenience stuff.
 
-(defun current-point ()
-  "Return the current panes point."
-  (point *current-window*))
+(defvar *drei-instance* nil
+  "The currently running Drei instance.")
 
-(defun current-mark ()
-  "Return the current panes mark."
-  (mark *current-window*))
+(defun point (&optional (object *drei-instance*))
+  "Return the point of the provided object. If no object is
+provided, the currently running Drei instance (`*drei-instance*')
+will be used."
+  (point-of object))
+
+(defun (setf point) (new-point object)
+  (setf (point-of object) new-point))
+
+(defgeneric point-of (object)
+  (:documentation "Return the mark object that is the point of
+`object'. Some objects have their own points, for example Drei
+instances and buffers."))
+
+(defun mark (&optional (object *drei-instance*))
+  "Return the mark of the provided object. If no object is
+provided, the currently running Drei instance (`*drei-instance*')
+will be used."
+  (mark-of object))
+
+(defun (setf mark) (new-mark object)
+  (setf (mark-of object) new-mark))
+
+(defgeneric mark-of (object)
+  (:documentation "Return the mark object that is the mark of
+`object'. Some objects have their own points, for example Drei
+instances."))
 
 (defun current-syntax ()
   "Return the syntax of the current buffer."
-  (syntax *current-buffer*))
-
-(defparameter *current-point* nil
-  "The current point.")
-
-(defparameter *current-mark* nil
-  "The current mark.")
-
-(defparameter *current-syntax* nil
-  "The syntax of the current buffer.")
+  (syntax (current-buffer)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -440,10 +454,10 @@ single-line buffer."))
 (defclass drei-buffer (delegating-buffer esa-buffer-mixin)
   ((needs-saving :initform nil :accessor needs-saving)
    (syntax :accessor syntax)
-   (point :initform nil :initarg :point :accessor point)
-   (indent-tabs-mode :initarg indent-tabs-mode
-                     :initform *use-tabs-for-indentation*
-                     :accessor indent-tabs-mode))
+   (point :initarg :point :initform nil :accessor point-of)
+   (indent-tabs-mode :initarg :indent-tabs-mode
+                              :initform *use-tabs-for-indentation*
+                              :accessor indent-tabs-mode))
   (:default-initargs
    :name "*scratch*"
     :implementation (make-instance 'extended-standard-buffer)))
@@ -524,14 +538,14 @@ single-line buffer."))
   "Prompt for a command name and arguments, then run it."
   (let ((item (handler-case
                   (accept
-                   `(command :command-table ,(command-table *current-window*))
+                   `(command :command-table ,(command-table (current-window)))
                    ;; this gets erased immediately anyway
                    :prompt "" :prompt-mode :raw)
                 ((or command-not-accessible command-not-present) ()
                   (beep)
                   (display-message "No such command")
                   (return-from com-drei-extended-command nil)))))
-    (execute-drei-command *current-window* item)))
+    (execute-drei-command (current-window) item)))
 
 (set-key 'com-drei-extended-command
          'exclusive-gadget-table
@@ -548,12 +562,12 @@ Drei. Commands should *NOT* be added to it."))
   "This method allows users of Drei to extend syntaxes with new,
 app-specific commands, as long as they inherit from a Drei class
 and specialise a method for it."
-  (additional-command-tables *current-window* command-table))
+  (additional-command-tables (current-window) command-table))
 
 (defmethod command-table-inherit-from ((table drei-command-table))
-  (let ((syntax-table (command-table *current-syntax*)))
+  (let ((syntax-table (command-table (current-syntax))))
     (append `(,syntax-table)
-            (additional-command-tables *current-window* table)
+            (additional-command-tables (current-window) table)
             (when (use-editor-commands-p syntax-table)
               '(editor-table)))))
 
@@ -563,8 +577,8 @@ and specialise a method for it."
 
 (defclass drei ()
   ((buffer :initform (make-instance 'drei-buffer) :initarg :buffer :accessor buffer)
-   (point :initform nil :initarg :point :accessor point)
-   (mark :initform nil :initarg :mark :accessor mark)
+   (point :initform nil :initarg :point :accessor point-of)
+   (mark :initform nil :initarg :mark :accessor mark-of)
    (top :reader top)
    (bot :reader bot)
    (cursor-x :initform 2)
@@ -688,6 +702,12 @@ variant) should be used instead."))
           top (clone-mark (low-mark buffer) :left)
           bot (clone-mark (high-mark buffer) :right))))
 
+(defmethod esa-current-buffer ((drei drei))
+  (buffer drei))
+
+(defmethod esa-current-window ((drei drei))
+  drei)
+
 ;; Main redisplay entry point.
 (defgeneric display-drei (drei)
   (:documentation "Display the given Drei instance."))
@@ -740,71 +760,55 @@ debugger."
   ;; at, for example, the buffer level, after all.
   `(handler-case (progn ,@body)
      (user-condition-mixin (c)
-       (handle-drei-condition *current-window* c))
+       (handle-drei-condition (current-window) c))
      (offset-before-beginning (c)
-       (handle-drei-condition *current-window* c))
+       (handle-drei-condition (current-window) c))
      (offset-after-end (c)
-       (handle-drei-condition *current-window* c))
+       (handle-drei-condition (current-window) c))
      (motion-before-beginning (c)
-       (handle-drei-condition *current-window* c))
+       (handle-drei-condition (current-window) c))
      (motion-after-end (c)
-       (handle-drei-condition *current-window* c))
+       (handle-drei-condition (current-window) c))
      (no-expression (c)
-       (handle-drei-condition *current-window* c))
+       (handle-drei-condition (current-window) c))
      (no-such-operation (c)
-       (handle-drei-condition *current-window* c))
+       (handle-drei-condition (current-window) c))
      (buffer-read-only (c)
-       (handle-drei-condition *current-window* c))))
+       (handle-drei-condition (current-window) c))))
 
 (defmacro with-bound-drei-special-variables ((drei-instance &key
-                                              (current-buffer nil current-buffer-p)
-                                              (current-window nil current-window-p)
-                                              (current-mark nil current-mark-p)
-                                              (current-point nil current-point-p)
-                                              (current-syntax nil current-syntax-p)
-                                              (kill-ring nil kill-ring-p)
-                                              (minibuffer nil minibuffer-p)
-                                              (command-parser nil command-parser-p)
-                                              (partial-command-parser nil partial-command-parser-p)
-                                              (previous-command nil previous-command-p)
-                                              (prompt nil prompt-p))
-                                              &body body)
+                                                            (kill-ring nil kill-ring-p)
+                                                            (minibuffer nil minibuffer-p)
+                                                            (command-parser nil command-parser-p)
+                                                            (partial-command-parser nil partial-command-parser-p)
+                                                            (previous-command nil previous-command-p)
+                                                            (prompt nil prompt-p))
+                                             &body body)
   "Evaluate `body' with a set of Drei special
-variables (`*current-buffer*', `*current-window*',
-`*current-mark*', `*current-point*', `*current-syntax*',
-`*kill-ring*', `*minibuffer*', `*command-parser*',
-`*partial-command-parser*', `*previous-command*',
-`*extended-command-prompt*') bound to their proper values, taken
-from `drei-instance'. The keyword arguments can be used to
-provide forms that will be used to obtain values for the
-respective special variables, instead of finding their value in
-`drei-instance'. This macro binds all of the usual Drei special
-variables, but also some CLIM special variables needed for
-ESA-style command parsing."
-  (once-only (drei-instance)
-    `(let* ((*current-buffer* ,(if current-buffer-p current-buffer
-                                   `(buffer ,drei-instance)))
-            (*current-window* ,(if current-window-p current-window
-                                   drei-instance))
-            (*current-mark* ,(if current-mark-p current-mark
-                                 `(mark ,drei-instance)))
-            (*current-point* ,(if current-point-p current-point
-                                  `(point ,drei-instance)))
-            (*current-syntax* ,(if current-syntax-p current-syntax
-                                   `(syntax *current-buffer*)))
-            (*kill-ring* ,(if kill-ring-p kill-ring
-                              `(kill-ring ,drei-instance)))
-            (*minibuffer* ,(if minibuffer-p minibuffer
-                               `(or (minibuffer ,drei-instance) *minibuffer*)))
-            (*command-parser* ,(if command-parser-p command-parser
-                                   ''esa-command-parser))
-            (*partial-command-parser* ,(if partial-command-parser-p partial-command-parser
-                                           ''esa-partial-command-parser))
-            (*previous-command* ,(if previous-command-p previous-command
-                                     `(previous-command ,drei-instance)))
-            (*extended-command-prompt* ,(if prompt-p prompt
-                                            "Extended command: ")))
-       ,@body)))
+variables (`*drei-instance*', `*kill-ring*', `*minibuffer*',
+`*command-parser*', `*partial-command-parser*',
+`*previous-command*', `*extended-command-prompt*') bound to their
+proper values, taken from `drei-instance'. The keyword arguments
+can be used to provide forms that will be used to obtain values
+for the respective special variables, instead of finding their
+value in `drei-instance'. This macro binds all of the usual Drei
+special variables, but also some CLIM special variables needed
+for ESA-style command parsing."
+  `(let* ((*drei-instance* ,drei-instance)
+          (*esa-instance* *drei-instance*)
+          (*kill-ring* ,(if kill-ring-p kill-ring
+                            `(kill-ring *drei-instance*)))
+          (*minibuffer* ,(if minibuffer-p minibuffer
+                             `(or (minibuffer *drei-instance*) *minibuffer*)))
+          (*command-parser* ,(if command-parser-p command-parser
+                                 ''esa-command-parser))
+          (*partial-command-parser* ,(if partial-command-parser-p partial-command-parser
+                                         ''esa-partial-command-parser))
+          (*previous-command* ,(if previous-command-p previous-command
+                                   `(previous-command *drei-instance*)))
+          (*extended-command-prompt* ,(if prompt-p prompt
+                                          "Extended command: ")))
+     ,@body))
 
 (defgeneric invoke-performing-drei-operations (drei continuation &key with-undo update-syntax redisplay)
   (:documentation "Invoke `continuation', setting up and

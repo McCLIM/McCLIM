@@ -236,7 +236,6 @@ characters."))
 
            ;; Accessors of DREI instances.
            #:buffer
-           #:point
            #:top #:bot
            #:tab-space-count #:space-width #:tab-width
            #:auto-fill-mode #:auto-fill-column
@@ -253,13 +252,12 @@ characters."))
            #:in-focus-p
 
            ;; Info functions.
-           #:current-point
-           #:current-mark
+           #:point #:point-of
+           #:mark #:mark-of
+           #:current-syntax
 
            ;; Info variables.
-           #:*current-point*
-           #:*current-mark*
-           #:*current-syntax*
+           #:*drei-instance*
 
            ;; Configuration.
            #:*foreground-color*
@@ -431,8 +429,7 @@ used to implement the editing commands."))
            #:delete-rectangle-line-whitespace
            #:with-narrowed-buffer
 
-           #:start-mark
-           #:end-mark
+           #:start-mark #:end-mark
            #:make-buffer-stream
 
            #:target-specification

@@ -99,9 +99,9 @@ lambda lists."
                `(macrolet ((argument-indices (contents operand-index)
                              `(testing-lisp-syntax (,contents :package :drei-tests)
                                 (drei-lisp-syntax::find-argument-indices-for-operand
-                                 *current-syntax*
-                                 (drei-lisp-syntax::form-around *current-syntax* ,operand-index)
-                                 (drei-lisp-syntax::form-around *current-syntax* 0)))))
+                                 (current-syntax)
+                                 (drei-lisp-syntax::form-around (current-syntax) ,operand-index)
+                                 (drei-lisp-syntax::form-around (current-syntax) 0)))))
                   (is (equal ',expected-result
                              (argument-indices ,contents ,operand-index))))))
     (test-argument-indices-for-operand "(f)" 1 nil)
@@ -121,9 +121,9 @@ lambda lists."
                `(macrolet ((path-of (string offset)
                              `(testing-lisp-syntax (,string :package :drei-tests)
                                 (drei-lisp-syntax::find-operand-info
-                                 *current-syntax*
+                                 (current-syntax)
                                  ,offset
-                                 (drei-lisp-syntax::form-around *current-syntax* 0)))))
+                                 (drei-lisp-syntax::form-around (current-syntax) 0)))))
                   (is (equal ',correct-path (path-of ,string ,offset))))))
     (test-find-operand-info "(list )" 5 nil)
     (test-find-operand-info "(list )" 6 ((0)))
@@ -200,10 +200,10 @@ lambda lists."
                `(macrolet ((direct-operator-of (string offset)
                              `(testing-lisp-syntax (,string :package :drei-tests)
                                 (first (form-to-object
-                                        *current-syntax*
+                                        (current-syntax)
                                         (drei-lisp-syntax::find-direct-operator
-                                         *current-syntax*
-                                         (drei-lisp-syntax::form-around *current-syntax* ,offset)))))))
+                                         (current-syntax)
+                                         (drei-lisp-syntax::form-around (current-syntax) ,offset)))))))
                   (is (eq ,desired-operator (direct-operator-of ,string ,offset))))))
     (test-find-direct-operator "(list 1)" 7 'list)
     (test-find-direct-operator "(list 1 2 3)" 11 'list)
@@ -220,17 +220,17 @@ lambda lists."
                `(macrolet ((applicable-operator-of (string offset)
                              `(testing-lisp-syntax (,string :package :drei-tests)
                                 (first (form-to-object
-                                        *current-syntax*
+                                        (current-syntax)
                                         (drei-lisp-syntax::find-applicable-form
-                                         *current-syntax*
-                                         (drei-lisp-syntax::form-around *current-syntax* ,offset)))))))
+                                         (current-syntax)
+                                         (drei-lisp-syntax::form-around (current-syntax) ,offset)))))))
                   (is (eq ,desired-operator (applicable-operator-of ,string ,offset)))))
              (test-no-find-applicable-form (string offset)
                `(macrolet ((applicable-form-of (string offset)
                              `(testing-lisp-syntax (,string :package :drei-tests)
                                 (drei-lisp-syntax::find-applicable-form
-                                 *current-syntax*
-                                 (drei-lisp-syntax::form-around *current-syntax* ,offset)))))
+                                 (current-syntax)
+                                 (drei-lisp-syntax::form-around (current-syntax) ,offset)))))
                   (is-false (applicable-form-of ,string ,offset)))))
     (test-find-applicable-form "(list 1)" 6 'list)
     (test-find-applicable-form "(list 1" 6 'list)
@@ -261,7 +261,7 @@ lambda lists."
   "Test the `possible-completions' function."
   (testing-lisp-syntax ("")
     (flet ((find-possible-completions (string &optional operator operands indices)
-             (drei-lisp-syntax::possible-completions *current-syntax* operator
+             (drei-lisp-syntax::possible-completions (current-syntax) operator
                                                      string #.(find-package :common-lisp) operands indices)))
       (is (equal '("lisp-implementation-type" "lisp-implementation-version" "list" "list*"
                    "list-all-packages" "list-length" "listen" "listp")
@@ -290,7 +290,7 @@ lambda lists."
 (swine-test with-code-insight
   "Test the `with-code-insight' macro."
   (testing-lisp-syntax ("(list ")
-    (drei-lisp-syntax::with-code-insight 6 *current-syntax* (:operator operator
+    (drei-lisp-syntax::with-code-insight 6 (current-syntax) (:operator operator
                                                              :form form
                                                              :this-operand-indices indices
                                                              :operands operands)
@@ -300,7 +300,7 @@ lambda lists."
       (is (equal '((0)) indices))
       (is-true (null operands))))
   (testing-lisp-syntax ("(list 1 )")
-    (drei-lisp-syntax::with-code-insight 8 *current-syntax* (:operator operator
+    (drei-lisp-syntax::with-code-insight 8 (current-syntax) (:operator operator
                                                              :form form
                                                              :this-operand-indices indices
                                                              :operands operands)
@@ -310,7 +310,7 @@ lambda lists."
       (is (equal '((1 1)) indices))
       (is (equal '(1) operands))))
   (testing-lisp-syntax ("(with-output-to-string (stream string) (list stream))")
-    (drei-lisp-syntax::with-code-insight 23 *current-syntax* (:operator operator
+    (drei-lisp-syntax::with-code-insight 23 (current-syntax) (:operator operator
                                                               :form form
                                                               :this-operand-indices indices
                                                               :operands operands)
@@ -324,7 +324,7 @@ lambda lists."
   "Test the form traits for the `make-instance' function"
   (testing-lisp-syntax ("")
     (flet ((find-possible-completions (string &optional operator operands indices)
-             (drei-lisp-syntax::possible-completions *current-syntax* operator
+             (drei-lisp-syntax::possible-completions (current-syntax) operator
                                                      string #.(find-package :common-lisp) operands indices)))
       (is (equal '("clim:clim-stream-pane")
                  (find-possible-completions "clim:c-s-" 'make-instance '('#:c-s-) '((0)))))
@@ -332,7 +332,7 @@ lambda lists."
                    "list-all-packages" "list-length" "listen" "listp")
                  (find-possible-completions "lis" 'make-instance '(#:lis) '((0)))))
       (is-false (find-possible-completions "cl:nonono" 'make-instance '('#:nonono) '((0)))))
-    (let ((lambda-list (drei-lisp-syntax::arglist-for-form *current-syntax* 'make-instance '('lisp-syntax-c1))))
+    (let ((lambda-list (drei-lisp-syntax::arglist-for-form (current-syntax) 'make-instance '('lisp-syntax-c1))))
       (flet ((takes-keyword-arg (keyword)
                (member keyword (drei-lisp-syntax::keyword-parameters lambda-list)
                 :key #'drei-lisp-syntax::keyword-name)))
@@ -343,7 +343,7 @@ lambda lists."
   "Test the form traits for the `find-class' function"
   (testing-lisp-syntax ("")
     (flet ((find-possible-completions (string &optional operator operands indices)
-             (drei-lisp-syntax::possible-completions *current-syntax* operator
+             (drei-lisp-syntax::possible-completions (current-syntax) operator
                                                      string #.(find-package :common-lisp) operands indices)))
       (is (equal '("clim:clim-stream-pane")
                  (find-possible-completions "clim:c-s-" 'find-class '('#:c-s-) '((0)))))

@@ -45,8 +45,9 @@
 
 (defpackage :esa
   (:use :clim-lisp :clim :esa-utils)
-  (:export #:buffers #:frame-current-buffer #:current-buffer #:*current-buffer*
-           #:windows #:frame-current-window #:current-window #:*current-window*
+  (:export #:*esa-instance*
+           #:buffers #:esa-current-buffer #:current-buffer
+           #:windows #:esa-current-window #:current-window
            #:*previous-command*
            #:*minibuffer* #:minibuffer #:minibuffer-pane #:display-message
            #:with-minibuffer-stream

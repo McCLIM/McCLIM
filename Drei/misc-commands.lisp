@@ -44,26 +44,26 @@ otherwise prints the result."
 					      (return-from com-eval-expression nil))))))
 	 (result (format nil "~:[; No values~;~:*~{~S~^,~}~]" values)))
     (if insertp
-	(insert-sequence *current-point* result)
+	(insert-sequence (point) result)
 	(display-message result))))
 
 (define-command (com-count-lines-page :name t :command-table info-table) ()
   "Print the number of lines in the current page.
 Also prints the number of lines before and after point (as '(b + a)')."
-  (let* ((start (clone-mark *current-point*))
-	 (end (clone-mark *current-point*)))
-    (backward-page start *current-syntax* 1 nil)
-    (forward-page end *current-syntax* 1 nil)
+  (let* ((start (clone-mark (point)))
+	 (end (clone-mark (point))))
+    (backward-page start (current-syntax) 1 nil)
+    (forward-page end (current-syntax) 1 nil)
     (let ((total (number-of-lines-in-region start end))
-	  (before (number-of-lines-in-region start *current-point*))
-	  (after (number-of-lines-in-region *current-point* end)))
+	  (before (number-of-lines-in-region start (point)))
+	  (after (number-of-lines-in-region (point) end)))
       (display-message "Page has ~A lines (~A + ~A)" (1+ total) before after))))
 
 (define-command (com-count-lines-region :name t :command-table info-table) ()
   "Print the number of lines in the region.
 Also prints the number of objects (as 'o character[s]')."
-  (let*  ((lines (number-of-lines-in-region *current-point* *current-mark*))
-	  (chars (abs (- (offset *current-point*) (offset *current-mark*)))))
+  (let*  ((lines (number-of-lines-in-region (point) (mark)))
+	  (chars (abs (- (offset (point)) (offset (mark))))))
     (display-message "Region has ~D line~:P, ~D character~:P." (1+ lines) chars)))
 
 (set-key `(com-eval-expression ,*unsupplied-argument-marker* ,*numeric-argument-p*)

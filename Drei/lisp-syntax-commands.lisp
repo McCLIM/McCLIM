@@ -55,7 +55,7 @@
     ()
   "Fill paragraph at point. Will have no effect unless there is a
 string at point."
-  (let* ((pane *current-window*)
+  (let* ((pane (current-window))
          (buffer (buffer pane))
          (implementation (implementation buffer))
          (syntax (syntax buffer))
@@ -80,7 +80,7 @@ string at point."
 
 (define-command (com-indent-expression :name t :command-table lisp-table)
     ((count 'integer :prompt "Number of expressions"))
-  (let* ((pane *current-window*)
+  (let* ((pane (current-window))
          (point (point pane))
          (mark (clone-mark point))
          (syntax (syntax (buffer pane))))
@@ -92,7 +92,7 @@ string at point."
 (define-command (com-lookup-arglist-for-this-symbol :command-table lisp-table)
     ()
   "Show argument list for symbol at point."
-  (let* ((pane *current-window*)
+  (let* ((pane (current-window))
          (buffer (buffer pane))
          (syntax (syntax buffer))
          (mark (point pane))
@@ -104,7 +104,7 @@ string at point."
 (define-command (com-lookup-arglist :name t :command-table lisp-table)
     ((symbol 'symbol :prompt "Symbol"))
   "Show argument list for a given symbol."
-  (show-arglist *current-syntax* symbol))
+  (show-arglist (current-syntax) symbol))
 
 (define-command (com-space :command-table lisp-table)
     ()
@@ -113,8 +113,8 @@ string at point."
   ;; We must update the syntax in order to reflect any changes to
   ;; the parse tree our insertion of a space character may have
   ;; done.
-  (update-syntax *current-buffer* *current-syntax*)
-  (show-arglist-for-form-at-mark *current-point* *current-syntax*)
+  (update-syntax (current-buffer) (current-syntax))
+  (show-arglist-for-form-at-mark (point) (current-syntax))
   (clear-completions))
 
 (define-command (com-complete-symbol :name t :command-table lisp-table)
@@ -126,7 +126,7 @@ If more than one completion is available, a list of possible
 completions will be displayed. If there is no symbol at mark, all
 relevant symbols accessible in the current package will be
 displayed."
-  (complete-symbol-at-mark *current-syntax* *current-point*))
+  (complete-symbol-at-mark (current-syntax) (point)))
 
 (define-command (com-fuzzily-complete-symbol :name t :command-table lisp-table)
     ()
@@ -136,14 +136,14 @@ Fuzzy completion tries to guess which symbol is abbreviated. If
 the abbreviation is ambiguous, a list of possible completions
 will be displayed. If there is no symbol at mark, all relevant
 symbols accessible in the current package will be displayed."
-  (fuzzily-complete-symbol-at-mark *current-syntax* *current-point*))
+  (fuzzily-complete-symbol-at-mark (current-syntax) (point)))
 
 (define-command (com-indent-line-and-complete-symbol :name t :command-table lisp-table) ()
   "Indents the current line and performs symbol completion.
 First indents the line.  If the line was already indented,
 completes the symbol.  If there's no symbol at the point, shows
 the arglist for the most recently enclosed operator."
-  (let* ((pane *current-window*)
+  (let* ((pane (current-window))
          (point (point pane))
          (old-offset (offset point)))
     (indent-current-line pane point)
@@ -164,26 +164,26 @@ the arglist for the most recently enclosed operator."
 (define-command (com-eval-region :name t :command-table pane-lisp-table)
     ()
   "Evaluate the current region."
-  (let ((mark *current-mark*)
-        (point *current-point*))
+  (let ((mark (mark))
+        (point (point)))
     (when (mark> mark point)
       (rotatef mark point))
-    (eval-region mark point *current-syntax*)))
+    (eval-region mark point (current-syntax))))
 
 (define-command (com-eval-last-expression :name t :command-table pane-lisp-table)
     ((insertp 'boolean :prompt "Insert?"))
   "Evaluate the expression before point in the local Lisp image."
-  (let ((token (form-before *current-syntax* (offset *current-point*))))
+  (let ((token (form-before (current-syntax) (offset (point)))))
     (if token
-        (with-syntax-package (*current-syntax* *current-point*)
-          (let ((*read-base* (base *current-syntax*)))
+        (with-syntax-package ((current-syntax) (point))
+          (let ((*read-base* (base (current-syntax))))
             (drei-commands::com-eval-expression
-             (form-to-object *current-syntax* token :read t)
+             (form-to-object (current-syntax) token :read t)
              insertp)))
         (display-message "Nothing to evaluate."))))
 
 (define-command (com-eval-defun :name t :command-table pane-lisp-table) ()
-  (eval-defun *current-point* *current-syntax*))
+  (eval-defun (point) (current-syntax)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

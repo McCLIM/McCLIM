@@ -18,7 +18,7 @@
 ;;; Misc stuff
 
 (defun possibly-fill-line ()
-  (let* ((pane *current-window*)
+  (let* ((pane (current-window))
          (buffer (buffer pane)))
     (when (auto-fill-mode pane)
       (let* ((fill-column (auto-fill-column pane))
@@ -42,7 +42,7 @@
      do (forward-object mark)))
 
 (defun insert-character (char)
-  (let* ((window *current-window*)
+  (let* ((window (current-window))
 	 (point (point window)))
     (unless (constituentp char)
       (possibly-expand-abbrev point))
@@ -293,8 +293,8 @@ removes leading whitespace characters."))
 (defmethod delete-indentation ((syntax syntax) (mark mark))
   (let ((working-mark (clone-mark mark)))
     (beginning-of-line working-mark)
-    (let ((end-offset (loop for offset from (offset working-mark) below (size *current-buffer*)
-                         for buffer-object = (buffer-object *current-buffer* offset)
+    (let ((end-offset (loop for offset from (offset working-mark) below (size (current-buffer))
+                         for buffer-object = (buffer-object (current-buffer) offset)
                          until (char= buffer-object #\Newline)
                          unless (whitespacep syntax buffer-object)
                          return offset)))
