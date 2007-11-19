@@ -794,10 +794,10 @@ history will be unchanged."
 						 (port
 						  *application-frame*)))))
     (when event
-      (frame-input-context-track-pointer *application-frame*
-				       *input-context*
-				       (event-sheet event)
-				       event))))
+      (frame-input-context-track-pointer frame
+                                         input-context
+                                         (event-sheet event)
+                                         event))))
 
 (defmacro with-input-context ((type &key override)
 			      (&optional (object-var (gensym))
