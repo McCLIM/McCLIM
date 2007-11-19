@@ -1,4 +1,80 @@
-* Introduction
+% @c -*- Coding: utf-8; Mode: Texinfo -*-
+% @c Note that Texinfo does not support UTF-8. Please do not use literal
+% @c UTF-8 characters in this document.
+\input texinfo
+
+@setfilename esa
+@settitle ESA User's Manual
+
+@copying
+Copyright @copyright{} 2004,2005,2006,2007 the ESA hackers.
+@end copying
+
+@dircategory Common Lisp
+@direntry
+* ESA User's Manual: (esa). A library for creating Emacs-Style Applications.
+@end direntry
+
+@titlepage
+@title{ESA User's Manual}
+
+@page
+@vskip 0pt plus 1filll
+@insertcopying
+
+@end titlepage
+
+@iftex
+@contents
+@end iftex
+
+@macro glossentry{ENTRY}
+@b{\ENTRY\}
+@cindex \ENTRY\
+@end macro
+
+@macro func{FUN}
+@b{\FUN\}
+@end macro
+
+@macro fmacro{MACRO}
+@func{\MACRO\}
+@end macro
+
+@macro genfun{FUN}
+@func{\FUN\}
+@end macro
+
+@alias gloss = i
+@alias func = code
+@alias class = code
+@alias package = code
+@alias gadget = code
+@alias pane = code
+@alias methcomp = t
+@alias slot = code
+@alias longref = t
+@alias cl = code
+@alias initarg = code
+
+@ifnottex
+@node Top
+@top McCLIM User's Manual
+@insertcopying
+@end ifnottex
+
+@menu
+* Introduction::
+* Using the ESA input/output functions::
+
+Index
+* Concept Index::
+* Variable Index::
+* Function And Macro Index::
+@end menu
+
+@node Introduction
+@chapter Introduction
 
 ESA is a library that makes it easier to write Emacs-Style
 Applications on top of McCLIM.  It supplies a command processor that
@@ -10,32 +86,43 @@ ESA assumes that an application that displays a certain number of
 buffers in a certain number of windows, and that at all times, there
 is a current buffer that is being worked on.
 
-* Basic use of ESA
+@node Basic use of ESA
+@chapter Basic use of ESA
 
-** Mixin classes
+@menu
+* Mixin classes::
+* The info pane::
+* The minibuffer pane::
+* Command tables::
+@end menu
 
-For basic use of the ESA library, the application needs to supply
-it with certain functionality.  The basic application document should
-be a class that inherits from the class esa-buffer:esa-buffer mixin.
+@node Mixin classes
+@section Mixin classes
+@cindex mixin classes
+
+For basic use of the ESA library, the application needs to supply it
+with certain functionality.  The basic application document should be a
+class that inherits from the class @class{esa-buffer:esa-buffer} mixin.
 This class supplies functionality for associating the buffer with a
 file, to determine whether the buffer has been modified since last
-saved, and whether the buffer is read-only. 
+saved, and whether the buffer is read-only.
 
-Application panes should inherit from the class esa:esa-pane-mixin.
+Application panes should inherit from the class
+@class{esa:esa-pane-mixin}.
 
-Application frames should inherit from the class esa:esa-frame-mixin.
-This class supplies a slot that stores a list of the windows used by
-the application, and an accessor esa:windows that can be used by
-application code to return or to modify the list of windows used.
-Notice that the class definition for the application frame must
-explicitly inherit not only from esa-frame-mixin, but also from
-standard-application-frame, since the latter is automatically supplied
-only if the list of superclasses is empty. 
+Application frames should inherit from the class
+@class{esa:esa-frame-mixin}.  This class supplies a slot that stores a
+list of the windows used by the application, and an accessor esa:windows
+that can be used by application code to return or to modify the list of
+windows used.  Notice that the class definition for the application
+frame must explicitly inherit not only from @class{esa-frame-mixin}, but
+also from @class{standard-application-frame}, since the latter is
+automatically supplied only if the list of superclasses is empty.
 
 Applications should supply a method on the generic function
-esa:buffers which takes a single argument, the application frame.  It
-should return a list of all the application documents (buffers) that
-the application is currently manipulating.  
+@cl{esa:buffers} which takes a single argument, the application frame.
+It should return a list of all the application documents (buffers) that
+the application is currently manipulating.
 
 Applications should also supply a method on the generic function
 esa:frame-current-buffer, which also take a single argument, the
@@ -46,7 +133,9 @@ keyboard focus.  This method is called by functions that require the
 current buffer, in particular in order to save the current buffer to
 file, or to toggle the read-only flag of the current buffer.  
 
-** The info pane
+@node The info pane
+@section The info pane
+@cindex info pane
 
 ESA supplies a class esa:info-pane which is typically used to display
 something similar to the status line of Emacs.  It supplies a slot
@@ -56,44 +145,54 @@ master-pane.  An application typically supplies a CLIM
 display-function for an info pane that displays some data about its 
 master pane. 
 
-** The minibuffer pane
+@node The minibuffer pane
+@section The minibuffer pane
+@cindex minibuffer pane
 
 ESA supplies a class esa:minibuffer-pane that is used to display
 messages to the user of the application, and also to acquire arguments
 to commands.  Applications should make sure the application frame
 contains an instance of this class, or of a subclass of it.  
 
-** Command tables
+@node Command tables
+@section Command tables
+@cindex command tables
 
 Typically, an application using the ESA library will need a number of
 CLIM command tables.  ESA supplies a number of such command tables
 that the application can inherit from.  
 
-  esa:global-esa-table                               [command table]
-
+@deftp {Command Table} esa:global-esa-table
 This command table contains a few basic commands that every
 application using the ESA library will need.
+@end deftp
 
-  esa:com-quit                                       [command]
 
+@deffn {Command} esa:com-quit
 This command quits the application by invoking the CLIM function
 FRAME-EXIT on the application frame.  It is included in the
 global-esa-table, together with the standard key bindings C-x C-c. 
+@end deffn
 
-The global-esa-table also contains the keyboard binding M-x which
-invokes the command esa:com-extended-command.  This command prompts
-the user for the name of a command in the minibuffer, and executes
-that command. 
+The @class{global-esa-table} also contains the keyboard binding
+@kbd{M-x} which invokes the command @cl{esa:com-extended-command}.  This
+command prompts the user for the name of a command in the minibuffer,
+and executes that command.
 
-  esa:keyboard-macro-table                           [command table]
-
+@deftp {Command Table} esa:keyboard-macro-table
 This command table contains three commands, com-start-kbd-macro (C-x
 (), com-end-kbd-macro (C-x )) and com-call-last-kbd-macro (C-x e).
 Applications that want to use Emacs-style keyboard macros should
 include this table in the global application command table. 
+@end deftp
 
 
-* Using the ESA input/output functions
+@node Using the ESA input/output functions
+@chapter Using the ESA input/output functions
+@cindex IO
+@cindex input
+@cindex output
+
 
 The ESA library provides facilities for loading a buffer from a file,
 and saving a buffer to a file.  The esa-io package contains symbols
@@ -130,7 +229,23 @@ esa-io:frame-write-buffer.  Applications can override these methods,
 or provide :before, :after, or :around methods on them in order to
 customize their behavior. 
 
-* Help facility
+@node Help facility
+@chapter Help facility
+
+@node Concept Index
+@unnumbered Concept Index
+
+@printindex cp
+
+@node Variable Index
+@unnumbered Variable Index
+
+@printindex vr
+
+@node Function And Macro Index
+@unnumbered Function And Macro Index
 
 
+@printindex fn
 
+@bye
