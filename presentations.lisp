@@ -240,9 +240,7 @@ that has no default is supplied with '*"
 		       (let ((var (car lambda-var)))
 			 (do-arg (if (and (eq state '&key) (consp var))
 				     (car var)
-				     var))))
-		      (t (list (fake-params-args lambda-var))))))))
-  
+				     var)))))))))
 
 ;;; Yet another variation on a theme...
 
