@@ -358,7 +358,7 @@ record."))
         (multiple-value-list (output-record-position area)))
   (tree-recompute-extent area))
 
-(defmethod esa-current-window ((drei drei))
+(defmethod esa-current-window ((drei drei-area))
   (editor-pane drei))
 
 (defmethod display-drei ((drei drei-area))
