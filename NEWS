@@ -1,6 +1,9 @@
 * Changes in mcclim-0.9.6 relative to 0.9.5:
 ** Bug fix: ESA's help commands are better at finding bindings and
    describing them
+** Bug fix: Some missing methods and functions have been implemented
+   for the Null backend, allowing headless operation for many
+   applications.
 
 * Changes in mcclim-0.9.5 relative to 0.9.4:
 ** Installation: the systems clim-listener, clim-examples,

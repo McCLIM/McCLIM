@@ -204,3 +204,15 @@
 
 (defmethod medium-miter-limit ((medium null-medium))
   0)
+
+;;; FIXME: need these to stop the default method attempting to do
+;;; pixmaps, which it appears the null backend doesn't support yet.
+(defmethod climi::medium-draw-bezier-design* 
+    ((medium null-medium) (design climi::bezier-area))
+  nil)
+(defmethod climi::medium-draw-bezier-design* 
+    ((medium null-medium) (design climi::bezier-union))
+  nil)
+(defmethod climi::medium-draw-bezier-design* 
+    ((medium null-medium) (design climi::bezier-difference))
+  nil)

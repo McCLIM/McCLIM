@@ -145,6 +145,8 @@
 
 (defmethod port-allocate-pixmap ((port null-port) sheet width height)
   (declare (ignore sheet width height))
+  ;; FIXME: this isn't actually good enough; it leads to errors in
+  ;; WITH-OUTPUT-TO-PIXMAP
   nil)
 
 (defmethod port-deallocate-pixmap ((port null-port) pixmap)
