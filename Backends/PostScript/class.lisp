@@ -79,7 +79,8 @@
                    :reader sheet-native-transformation)
    (current-page :initform 0)
    (document-fonts :initform '())
-   (graphics-state-stack :initform '())))
+   (graphics-state-stack :initform '())
+   (pages  :initform nil :accessor postscript-pages)))
 
 (defun make-postscript-stream (file-stream port device-type
                                multi-page scale-to-fit

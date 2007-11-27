@@ -62,7 +62,9 @@
            (with-output-recording-options (stream :record t :draw nil)
              (with-graphics-state (stream)
                ;; we need at least one level of saving -- APD, 2002-02-11
-               (funcall continuation stream)))
+               (funcall continuation stream)
+               (unless (eql (slot-value stream 'paper) :eps)
+                 (new-page stream))))	; Close final page.
            (with-slots (file-stream title for orientation paper) stream
              (format file-stream "%!PS-Adobe-3.0~@[ EPSF-3.0~*~]~%"
                      (eq device-type :eps))
@@ -98,10 +100,17 @@
                (write-font-to-postscript-stream (sheet-medium stream) text-style))
              (start-page stream)
              (format file-stream "~@[~A ~]~@[~A translate~%~]" translate-x translate-y)
-             (let ((record (stream-output-history stream)))
-               (with-output-recording-options (stream :draw t :record nil)
-                 (with-graphics-state (stream)
-                   (replay record stream))))))
+	     
+	     (with-output-recording-options (stream :draw t :record nil)
+	       (with-graphics-state (stream)
+                 (case paper
+                   ((:eps) (replay (stream-output-history stream) stream))
+                   (t (let ((last-page (first (postscript-pages stream))))
+                        (dolist (page (reverse (postscript-pages stream)))
+                          (replay page stream)
+                          (unless (eql page last-page)
+                            (emit-new-page stream))))))))))
+
       (with-slots (file-stream current-page) stream
         (format file-stream "end~%showpage~%~%")
         (format file-stream "%%Trailer~%")
@@ -118,38 +127,20 @@
     (format file-stream "%%Page: ~D ~:*~D~%" (incf current-page))
     (format file-stream "~A begin~%" *dictionary-name*)))
 
-;;; We define a new output-record class and a method on
-;;; replay-output-record so that we can record calls to new-page.
-;;;
-;;; FIXME: I (CSR) think that this works because we stuff this in a
-;;; sequence-output-record, so that the output records are replayed
-;;; in order.  That's fine, but if someone ever gets round to implementing
-;;; R-trees or similar, this method for storing the order of events might
-;;; stop working.  CSR, 2005-12-30
-(defclass new-page-record (climi::basic-output-record)
-  ())
-
-(defmethod replay-output-record ((record new-page-record) stream
-				 &optional (region nil) (x-offset 0) (y-offset 0))
-  (declare (ignore region x-offset y-offset))
-  (new-page stream))
-
-(defun new-page (stream)
-  (when (stream-recording-p stream)
-    (stream-add-output-record stream (make-instance 'new-page-record)))
-  (when (stream-drawing-p stream)
-    ;; FIXME: it is necessary to do smth with GS -- APD, 2002-02-11
-    ;; FIXME^2:  what do you mean by that? -- TPD, 2005-12-23
-    (postscript-restore-graphics-state stream)
-    (format (postscript-stream-file-stream stream) "end~%showpage~%")
-    (start-page stream)
-    (postscript-save-graphics-state stream)
-    ;; If we call clear-output-record here, it wipes all remaining
-    ;; output, so all pages after the first are blank.  But I don't
-    ;; know quite what the original purpose of the call was, so,
-    ;; FIXME.  -- TPD 2005-12-23
-    #-(and) (clear-output-record (stream-output-history stream)))
+(defun new-page (stream)  
+  (push (stream-output-history stream) (postscript-pages stream))
+  (let ((history (make-instance 'standard-tree-output-history :stream stream)))
+    (setf (slot-value stream 'climi::output-history) history
+	  (stream-current-output-record stream) history))    
   (setf (stream-cursor-position stream) (values 0 0)))
+
+(defun emit-new-page (stream)
+  ;; FIXME: it is necessary to do smth with GS -- APD, 2002-02-11
+  ;; FIXME^2:  what do you mean by that? -- TPD, 2005-12-23
+  (postscript-restore-graphics-state stream)
+  (format (postscript-stream-file-stream stream) "end~%showpage~%")
+  (start-page stream)
+  (postscript-save-graphics-state stream))
 
 
 ;;;; Output Protocol
