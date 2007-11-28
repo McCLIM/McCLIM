@@ -63,7 +63,7 @@
 (defvar *permanent-queue*
   (sb-thread:make-mutex :name "Lock for disabled threads"))
 (unless (sb-thread:mutex-value *permanent-queue*)
-  (sb-thread:get-mutex *permanent-queue* :locked nil))
+  (sb-thread:get-mutex *permanent-queue* nil))
 
 (defun make-process (function &key name)
   (let ((p (%make-process :name name :function function)))
