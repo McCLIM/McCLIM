@@ -1,3 +1,5 @@
+(in-package :cl-user)
+
 (eval-when (:compile-toplevel :execute)
   (when (find-package "SB-MOP")
     (pushnew :sb-mop *features*)))
