@@ -611,9 +611,7 @@ A page is delimited by the sequence #\Newline #\Page."
      (wrap-p 'boolean :prompt "Wrap expressions?"))
   "Insert a pair of parentheses, leaving point in between.
 With a numeric argument, enclose that many expressions 
-forward (backward if negative).
-
-FIXME: no it doesn't."
+forward (backward if negative)."
   (unless wrap-p (setf count 0))
   (insert-parentheses (point) (current-syntax) count))
 
@@ -625,6 +623,15 @@ FIXME: no it doesn't."
   "Toggle the visibility of the region in the current pane."
   (setf (region-visible-p *drei-instance*)
         (not (region-visible-p *drei-instance*))))
+
+(define-command (com-move-past-close-and-reindent :name t :command-table editing-table)
+    ()
+  "Move past the next `)' and reindent"
+  (move-past-close-and-reindent (current-view) (point)))
+
+(set-key `(com-move-past-close-and-reindent)
+	 'editing-table
+	 '((#\) :meta)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 

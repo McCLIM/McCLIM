@@ -422,6 +422,7 @@ used to implement the editing commands."))
            #:delete-horizontal-space
            #:indent-current-line
            #:insert-pair
+           #:move-past-close-and-reindent
            #:downcase-word #:upcase-word #:capitalize-word
            #:indent-region
            #:fill-line #:fill-region

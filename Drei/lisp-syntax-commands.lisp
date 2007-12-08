@@ -243,3 +243,12 @@ the arglist for the most recently enclosed operator."
 (set-key `(com-eval-last-expression ,*numeric-argument-p*)
          'pane-lisp-table
          '((#\c :control) (#\e :control)))
+
+(set-key `(com-backward-kill-expression ,*numeric-argument-marker*)
+	 'lisp-table
+	 '((#\Backspace :control :meta)))
+
+(set-key `(com-kill-expression ,*numeric-argument-marker*)
+	 'lisp-table
+	 '((#\Delete :control :meta)))
+
