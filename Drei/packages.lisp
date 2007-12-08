@@ -27,11 +27,11 @@
 (in-package :cl-user)
 
 (defpackage :drei-buffer
-  (:use :clim-lisp :flexichain :binseq)
+  (:use :clim-lisp :flexichain :binseq :esa-utils)
   (:export #:buffer #:standard-buffer
            #:mark #:left-sticky-mark #:right-sticky-mark
            #:standard-left-sticky-mark #:standard-right-sticky-mark
-           #:clone-mark
+           #:make-buffer-mark #:clone-mark
            #:condition-offset
            #:no-such-offset #:offset-before-beginning #:offset-after-end
            #:invalid-motion #:motion-before-beginning #:motion-after-end
@@ -54,12 +54,13 @@
            #:delete-region
            #:buffer-object #:buffer-sequence
            #:object-before #:object-after #:region-to-sequence #:region-to-string
-           #:low-mark #:high-mark #:modified-p #:clear-modify
+           #:observable-buffer-mixin
            #:binseq-buffer #:obinseq-buffer #:binseq2-buffer
            #:persistent-left-sticky-mark #:persistent-right-sticky-mark
            #:persistent-left-sticky-line-mark #:persistent-right-sticky-line-mark
            #:p-line-mark-mixin #:buffer-line-offset
-           #:delegating-buffer #:implementation)
+           #:delegating-buffer #:implementation
+           #:delegating-left-sticky-mark #:delegating-right-sticky-mark)
   (:documentation "An implementation of the buffer protocol. This
 package is quite low-level, not syntax-aware, not CLIM-aware and
 not user-oriented at all."))
@@ -105,7 +106,6 @@ not user-oriented at all."))
            #:move-to-column
            #:buffer-whitespacep
            #:buffer-region-case
-           #:name-mixin #:name
            #:buffer-looking-at #:looking-at
            #:buffer-search-forward #:buffer-search-backward
            #:buffer-re-search-forward #:buffer-re-search-backward
@@ -137,14 +137,14 @@ characters."))
 
 (defpackage :drei-syntax
   (:use :clim-lisp :clim :drei-buffer :drei-base :flexichain :esa-utils)
-  (:export #:syntax #:syntaxp #:define-syntax #:*default-syntax* #:cursor-positions
+  (:export #:syntax #:update-parse #:syntaxp #:define-syntax #:*default-syntax* #:cursor-positions
            #:syntax-command-table #:use-editor-commands-p #:additional-command-tables #:define-syntax-command-table
            #:eval-option
            #:define-option-for-syntax
            #:current-attributes-for-syntax
            #:make-attribute-line
            #:syntax-from-name
-           #:update-syntax #:update-syntax-for-display
+           #:update-syntax
            #:grammar #:grammar-rule #:add-rule
            #:parser #:initial-state
            #:advance-parse
@@ -197,26 +197,49 @@ characters."))
            #:insert-record
            #:delete-record
            #:compound-record
-           
            #:with-undo
+           
            #:drei-buffer
-           #:drei-textual-view #:+drei-textual-view+
 
            ;; Signals and conditions.
            #:user-condition-mixin
            #:buffer-read-only
            #:buffer-single-line
 
+           ;; Views and their facilities.
+           #:drei-view #:modified-p #:no-cursors
+           #:drei-buffer-view #:buffer #:top #:bot
+           #:drei-syntax-view #:syntax
+           #:textual-drei-syntax-view
+           #:tab-space-count #:space-width #:tab-width
+           #:auto-fill-mode #:auto-fill-column
+           #:isearch-mode #:isearch-states #:isearch-previous-string
+           #:query-replace-mode
+           #:region-visible-p
+           #:dabbrev-expansion-mark
+           #:original-prefix
+           #:prefix-start-offset
+           #:overwrite-mode
+           #:goal-column
+           
+           #:create-view-cursors
+           #:clone-view
+           #:make-syntax-for-view
+           
            ;; DREI command tables.
            #:comment-table #:deletion-table #:editing-table
            #:fill-table #:indent-table #:marking-table #:case-table
            #:movement-table #:search-table #:info-table #:self-insert-table
            #:editor-table #:exclusive-gadget-table #:exclusive-input-editor-table
 
+           #:minibuffer
+
            ;; DREI interface stuff.
            #:drei #:drei-pane #:drei-gadget-pane #:drei-area
            #:handling-drei-conditions #:handle-drei-condition
-           #:execute-drei-command #:display-drei-contents #:display-drei-cursor
+           #:execute-drei-command
+           #:display-drei-view-contents #:display-syntax-view
+           #:display-drei-view-cursor
            #:with-drei-options
            #:performing-drei-operations #:invoke-performing-drei-operations
            #:with-bound-drei-special-variables
@@ -234,27 +257,14 @@ characters."))
            #:mark-cursor #:active #:mark
            #:active-ink #:inactive-ink #:ink
 
-           ;; Accessors of DREI instances.
-           #:buffer
-           #:top #:bot
-           #:tab-space-count #:space-width #:tab-width
-           #:auto-fill-mode #:auto-fill-column
-           #:isearch-mode #:isearch-states #:isearch-previous-string
-           #:query-replace-mode
-           #:region-visible-p
-           #:minibuffer
            
-           #:dabbrev-expansion-mark
-           #:original-prefix
-           #:prefix-start-offset
-           #:overwrite-mode
-           #:goal-column
            #:in-focus-p
 
            ;; Info functions.
            #:point #:point-of
            #:mark #:mark-of
            #:current-syntax
+           #:current-view
 
            ;; Info variables.
            #:*drei-instance*
@@ -402,7 +412,8 @@ used to implement the editing commands."))
         :drei-syntax :drei-motion :drei :drei-kill-ring
         :drei-editing :clim :drei-abbrev :esa :esa-buffer :esa-io
         :esa-utils :drei-undo)
-  (:export #:goto-position
+  (:export #:proper-line-indentation
+           #:goto-position
            #:goto-line
            #:replace-one-string
            #:possibly-fill-line
@@ -440,20 +451,21 @@ used to implement the editing commands."))
            #:previous-target
            #:no-more-targets
            #:*default-target-creator*
-           #:buffer-list-target-specification)
+           #:view-list-target-specification #:views)
   (:documentation "Implementation of much syntax-aware, yet no
 syntax-specific, core functionality of Drei."))
 
 (defpackage :drei-fundamental-syntax
   (:use :clim-lisp :clim :drei-buffer :drei-base 
-        :drei-syntax :flexichain :drei)
-  (:export #:fundamental-syntax #:scan)
+        :drei-syntax :flexichain :drei :drei-core)
+  (:export #:fundamental-syntax #:scan
+           #:*current-line* #:*white-space-start* #:handle-whitespace)
   (:documentation "Implementation of the basic syntax module for
 editing plain text."))
 
 (defpackage :drei-lr-syntax
   (:use :clim-lisp :clim :clim-extensions :drei-buffer :drei-base
-	:drei-syntax :drei-fundamental-syntax)
+	:drei-syntax :drei :drei-core :drei-fundamental-syntax)
   (:export #:lr-syntax-mixin #:stack-top #:initial-state
 	   #:skip-inter #:lex #:define-lexer-state
 	   #:lexer-toplevel-state #:lexer-error-state
@@ -464,7 +476,11 @@ editing plain text."))
 	   #:lexeme #:nonterminal
 	   #:action #:new-state #:done
 	   #:reduce-fixed-number #:reduce-until-type #:reduce-all 
-	   #:error-state #:error-reduce-state)
+	   #:error-state #:error-reduce-state
+           #:*current-faces*
+           #:make-face #:face-name #:face-colour #:face-style
+           #:get-faces #:define-standard-faces #:with-face
+           #:display-parse-tree)
   (:documentation "Underlying LR parsing functionality."))
 
 (defpackage :drei-lisp-syntax

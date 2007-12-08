@@ -53,22 +53,20 @@
 
 ;;; NOTE: Despite the name, this does not have anything to do with
 ;;; CLIM cursors, though perhaps this facility should be built on top
-;;; of what CLIM already provides. That seemed a bit hairy, though.
+;;; of what CLIM already provides. That seemed a bit (=a lot) hairy,
+;;; though.
 (defclass drei-cursor (standard-sequence-output-record)
-  ((%drei-instance :reader drei-instance
-                   :initarg :drei-instance
-                   :initform (error "A Drei cursor must be associated with a Drei instance"))
+  ((%view :reader view
+          :initarg :view
+          :initform (error "A Drei cursor must be associated with a Drei view")
+          :type drei-view)
+   (%output-stream :reader output-stream
+                   :initarg :output-stream
+                   :initform (error "A Drei cursor must be associated with an output stream")
+                   :type extended-output-stream)
    (%mark :reader mark-of
           :initarg :mark
           :initform (error "A Drei cursor must be associated with a mark."))
-   (%active :accessor active
-            :initarg :active
-            :initform t
-            :type boolean
-            :documentation "Whether the cursor is active or
-not. An active cursor is drawn using the active ink, and an
-inactive is drawn using the inactive ink. Typically, a cursor
-will be active when the associated Drei instance has focus.")
    (%enabled :accessor enabled
              :initarg :enabled
              :initform t
@@ -92,6 +90,13 @@ when it is inactive."))
 Drei buffer. The most important role for instances of subclasses
 of this class is to visually represent the position of point."))
 
+(defmethod active ((cursor drei-cursor))
+  "Whether the cursor is active or
+not. An active cursor is drawn using the active ink, and an
+inactive is drawn using the inactive ink. Typically, a cursor
+will be active when the associated Drei view has focus."
+  (active (view cursor)))
+
 (defgeneric ink (cursor)
   (:documentation "Return the ink object that should be used for
   displaying the given cursor."))
@@ -102,18 +107,18 @@ of this class is to visually represent the position of point."))
       (inactive-ink cursor)))
 
 (defmethod (setf enabled) ((new-value null) (cursor drei-cursor))
-  (erase-output-record cursor (editor-pane (drei-instance cursor)) nil))
+  (erase-output-record cursor (output-stream cursor) nil))
 
 (defclass point-cursor (drei-cursor)
   ()
   (:default-initargs
    :mark nil
-    :active t)
+   :active t)
   (:documentation "A class that should be used for the visual
 representation of the point of a Drei instance."))
 
 (defmethod mark-of ((cursor point-cursor))
-  (point (drei-instance cursor)))
+  (point (view cursor)))
 
 (defclass mark-cursor (drei-cursor)
   ()
@@ -126,19 +131,19 @@ representation of the point of a Drei instance."))
 representation of the mark of a Drei instance."))
 
 (defmethod mark-of ((cursor mark-cursor))
-  (mark (drei-instance cursor)))
+  (mark (view cursor)))
 
 (defmethod enabled ((cursor mark-cursor))
   *show-mark*)
 
-(defgeneric visible (cursor drei)
-  (:documentation "Is `cursor', associated with `drei', visible?
+(defgeneric visible (cursor view)
+  (:documentation "Is `cursor', associated with `view', visible?
 If this function returns true, it is assumed that it is safe to
 display `cursor' to the editor stream. If just one of the
 applicable methods returns false, the entire function returns
 false.")
   (:method-combination and)
-  (:method and (cursor drei)
+  (:method and (cursor view)
     (enabled cursor)))
 
 ;;; Drei instances.
@@ -168,28 +173,15 @@ command loop completely."))
   ;; display surface.
   drei)
 
-(defmethod visible and (cursor (drei drei-pane))
+(defmethod visible and (cursor (view drei-view))
   ;; We should only redisplay when the cursor is on display, or
   ;; `offset-to-screen-position' will return a non-number.
-  (<= (offset (top drei))
+  (<= (offset (top view))
       (offset (mark cursor))
-      (offset (bot drei))))
+      (offset (bot view))))
 
-(defmethod tab-width ((pane drei-pane))
-  (tab-width (stream-default-view pane)))
-
-(defmethod space-width ((pane drei-pane))
-  (space-width (stream-default-view pane)))
-
-(defmethod note-sheet-grafted :around ((pane drei-pane))
-  (call-next-method)
-  (setf (stream-default-view pane) (view pane))
-  (with-slots (space-width tab-width) (stream-default-view pane)
-    (with-sheet-medium (medium pane)
-      (setf (medium-text-style medium) (pane-text-style pane))
-      (let ((style (medium-text-style medium)))
-        (setf space-width (text-size medium " " :text-style style)
-              tab-width (* 8 space-width))))))
+(defmethod note-sheet-grafted :after ((pane drei-pane))
+  (setf (stream-default-view pane) (view pane)))
 
 ;;; The fun is that in the gadget version of Drei, we do not control
 ;;; the application command loop, and in fact, need to operate
@@ -241,10 +233,10 @@ keyboard focus"))
                                 &key (invoke-callback t))
   ;; I think we're supposed to permit this, even if the buffer is
   ;; non-editable.
-  (letf (((read-only-p (buffer gadget)) nil))
+  (letf (((read-only-p (buffer (view gadget))) nil))
     (performing-drei-operations (gadget :with-undo nil :redisplay nil)
-      (delete-buffer-range (buffer gadget) 0 (size (buffer gadget)))
-      (insert-buffer-sequence (buffer gadget) 0 new-value)))
+      (delete-buffer-range (buffer (view gadget)) 0 (size (buffer (view gadget))))
+      (insert-buffer-sequence (buffer (view gadget)) 0 new-value)))
   (when invoke-callback
     (value-changed-callback gadget
                             (gadget-client gadget)
@@ -284,20 +276,13 @@ modifier key."))
           (abort-gesture ()
             (display-message "Aborted")))
         (display-drei drei)
-        (when (modified-p (buffer drei))                   
-          (clear-modify (buffer drei))
+        (when (modified-p (view drei))
           (when (gadget-value-changed-callback drei)
             (value-changed-callback drei
                                     (gadget-client drei)
                                     (gadget-id drei)
-                                    (gadget-value drei))))))))
-
-(defmethod execute-drei-command :after ((drei drei-gadget-pane) command)
-  (with-accessors ((buffer buffer)) drei
-    (when (syntax buffer)
-      (update-syntax buffer (syntax buffer)))
-    (when (modified-p buffer)
-      (setf (needs-saving buffer) t))))
+                                    (gadget-value drei)))
+          (setf (modified-p (view drei)) nil))))))
 
 ;;; This is the method that functions as the entry point for all Drei
 ;;; gadget logic.
@@ -420,7 +405,7 @@ record."))
   (check-type border-width integer)
   (check-type scroll-bars (member t :both :vertical :horizontal nil))
   (with-keywords-removed (args (:minibuffer :scroll-bars :border-width
-                                            :syntax :drei-class))
+                                                         :syntax :drei-class))
     (let* ((borderp (and border-width (plusp border-width)))
            (minibuffer-pane (cond ((eq minibuffer t)
                                    (make-pane 'drei-minibuffer-pane))
@@ -431,26 +416,26 @@ record."))
                                   (t (error "Provided minibuffer
 is not T, NIL or a `minibuffer-pane'."))))
            (drei-pane (apply #'make-pane-1 fm frame drei-class
-                             :minibuffer minibuffer-pane args))
-           (pane drei-pane))
-      (letf (((read-only-p (buffer drei-pane)) nil))
-        (insert-sequence (point drei-pane) initial-contents))
+                       :minibuffer minibuffer-pane args))
+           (pane drei-pane)
+           (view (view drei-pane)))
+      (letf (((read-only-p (buffer view)) nil))
+        (insert-sequence (point view) initial-contents))
       (if syntax
-          (setf (syntax (buffer drei-pane))
+          (setf (syntax view)
                 (make-instance (or (when (syntaxp syntax)
                                      syntax)
                                    (syntax-from-name (string syntax))
                                    (error "Syntax ~A not found" (string syntax)))
-                               :buffer (buffer drei-pane)))
-          (update-syntax (buffer drei-pane) (syntax (buffer drei-pane))))
+                 :buffer (buffer view))))
       (when scroll-bars
         (setf pane (scrolling (:scroll-bar scroll-bars)
                      pane)))
       (when minibuffer
         (setf pane (make-pane 'drei-constellation
-                              :drei drei-pane
-                              :minibuffer minibuffer-pane
-                              :contents (list pane minibuffer-pane))))
+                    :drei drei-pane
+                    :minibuffer minibuffer-pane
+                    :contents (list pane minibuffer-pane))))
       (when borderp
         (setf pane (#+(or mcclim building-mcclim)
                       climi::bordering

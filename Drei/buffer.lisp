@@ -36,30 +36,12 @@ conceptually contains a large array of arbitrary objects.  Lines
 of objects are separated by newline characters.  The last object
 of the buffer is not necessarily a newline character."))
 
-(defgeneric low-mark (buffer)
-  (:documentation "Return the low mark of the buffer."))
-
-(defgeneric high-mark (buffer)
-  (:documentation "Return the high mark of the buffer."))
-
-(defgeneric modified-p (buffer)
-  (:documentation "Return true if and only if the buffer has been
-modified."))
-
 (defclass standard-buffer (buffer)
-  ((contents :initform (make-instance 'standard-cursorchain))
-   (low-mark :reader low-mark
-             :documentation "The low mark of the buffer.")
-   (high-mark :reader high-mark
-              :documentation "The high mark of the buffer.")
-   (modified :initform nil
-             :reader modified-p
-             :documentation "True if and only if the buffer has
-been modified."))
+  ((contents :initform (make-instance 'standard-cursorchain)))
   (:documentation "The standard instantiable class for buffers."))
 
 (defgeneric buffer (mark)
-  (:documentation "Return the buffer that the mark is positioned in."))  
+  (:documentation "Return the buffer that the mark is positioned in."))
 
 (defclass mark () ()
   (:documentation "The base class for all marks."))
@@ -153,8 +135,8 @@ indicated by count.  This function could be implemented by a
 can implement this function much more efficiently in a different
 way. A `motion-before-beginning' condition is signaled if the
 resulting offset of the mark is less than zero. A
-motion-after-end condition is signaled if the resulting offset of
-the mark is greater than the size of the buffer. Returns
+`motion-after-end' condition is signaled if the resulting offset
+of the mark is greater than the size of the buffer. Returns
 `mark'."))
 
 (defgeneric forward-object (mark &optional count)
@@ -206,12 +188,20 @@ of the mark is greater than the size of the buffer. Returns
 	   :chain (slot-value (buffer mark) 'contents)
 	   :position offset)))
 
-(defmethod initialize-instance :after ((buffer standard-buffer) &rest args)
-  "Create the low-mark and high-mark"
-  (declare (ignore args))
-  (with-slots (low-mark high-mark) buffer
-     (setf low-mark (make-instance 'standard-left-sticky-mark :buffer buffer))
-     (setf high-mark (make-instance 'standard-right-sticky-mark :buffer buffer))))
+(defgeneric make-buffer-mark (buffer &optional offset stick-to)
+  (:documentation "Create a mark with the provided `offset' and
+stickyness, with the buffer of the mark being
+`buffer'. Instantiable buffer classes must define a method on
+this generic function. The default value for `offset' should be
+0, and the default value of `stick-to' should be `:left'."))
+
+(defmethod make-buffer-mark ((buffer standard-buffer)
+                             &optional (offset 0) (stick-to :left))
+  (make-instance (ecase stick-to
+                   (:left 'standard-left-sticky-mark)
+                   (:right 'standard-right-sticky-mark))
+                 :buffer buffer
+                 :offset offset))
 
 (defgeneric clone-mark (mark &optional stick-to)
   (:documentation "Clone a mark.  By default (when stick-to is
@@ -416,10 +406,9 @@ following newline character exists. Returns `mark'."))
 (defmethod end-of-line ((mark mark-mixin))
   (let* ((offset (offset mark))
 	 (buffer (buffer mark))
-	 (chain (slot-value buffer 'contents))
-	 (size (nb-elements chain)))
+	 (size (size buffer)))
     (loop until (or (= offset size)
-		    (eql (element* chain offset) #\Newline))
+		    (eql (buffer-object buffer offset) #\Newline))
 	  do (incf offset))
     (setf (offset mark) offset)))
 
@@ -491,6 +480,10 @@ inserted object."))
 the objects in the sequence."))
       
 (defmethod insert-buffer-sequence ((buffer standard-buffer) offset sequence)
+  (assert (<= 0 offset) ()
+	  (make-condition 'offset-before-beginning :offset offset))
+  (assert (<= offset (size buffer)) ()
+	  (make-condition 'offset-after-end :offset offset))
   (insert-vector* (slot-value buffer 'contents) offset sequence))
 
 (defgeneric insert-object (mark object)
@@ -520,8 +513,10 @@ signaled."))
 	  (make-condition 'offset-before-beginning :offset offset))
   (assert (<= offset (size buffer)) ()
 	  (make-condition 'offset-after-end :offset offset))
+  (assert (<= (+ offset n) (size buffer)) ()
+          (make-condition 'offset-after-end :offset (+ offset n)))
   (loop repeat n
-	do (delete* (slot-value buffer 'contents) offset)))
+     do (delete* (slot-value buffer 'contents) offset)))
 
 (defgeneric delete-range (mark &optional n)
   (:documentation "Delete `n' objects after `(if n > 0)' or
@@ -675,45 +670,22 @@ mark object."
 ;;;
 ;;; Buffer modification protocol
 
-(defmethod (setf buffer-object) :before (object (buffer standard-buffer) offset)
-  (declare (ignore object))
-  (setf (offset (low-mark buffer))
-        (min (offset (low-mark buffer)) offset))
-  (setf (offset (high-mark buffer))
-        (max (offset (high-mark buffer)) offset))
-  (setf (slot-value buffer 'modified) t))
+(defclass observable-buffer-mixin (observable-mixin)
+  ()
+  (:documentation "A mixin class that will make a subclass buffer
+notify observers when it is changed through the buffer
+protocol. When an observer of the buffer is notified of changes,
+the provided data will be a cons of two values, offsets into the
+buffer denoting the region that has been modified."))
 
-(defmethod insert-buffer-object :before ((buffer standard-buffer) offset object)
-  (declare (ignore object))
-  (setf (offset (low-mark buffer))
-	(min (offset (low-mark buffer)) offset))
-  (setf (offset (high-mark buffer))
-	(max (offset (high-mark buffer)) offset))
-  (setf (slot-value buffer 'modified) t))
+(defmethod insert-buffer-object :after ((buffer observable-buffer-mixin) offset object)
+  (notify-observers buffer (constantly (cons offset (1+ offset)))))
 
-(defmethod insert-buffer-sequence :before ((buffer standard-buffer) offset sequence)
-  (declare (ignore sequence))
-  (setf (offset (low-mark buffer))
-	(min (offset (low-mark buffer)) offset))
-  (setf (offset (high-mark buffer))
-	(max (offset (high-mark buffer)) offset))
-  (setf (slot-value buffer 'modified) t))
+(defmethod insert-buffer-sequence :after ((buffer observable-buffer-mixin) offset sequence)
+  (notify-observers buffer (constantly (cons offset (+ offset (length sequence))))))
 
-(defmethod delete-buffer-range :before ((buffer standard-buffer) offset n)
-  (setf (offset (low-mark buffer))
-	(min (offset (low-mark buffer)) offset))
-  (setf (offset (high-mark buffer))
-	(max (offset (high-mark buffer)) (+ offset n)))
-  (setf (slot-value buffer 'modified) t))
+(defmethod delete-buffer-range :after ((buffer observable-buffer-mixin) offset n)
+  (notify-observers buffer (constantly (cons offset offset))))
 
-(defgeneric clear-modify (buffer)
-  (:documentation "Set the high-mark to the beginning of the
-beginning of the buffer and the low-mark to the end of the
-buffer, and clear the modification flag. This means that
-`modified-p' will return NIL for this buffer until the next time
-it is modified."))
-
-(defmethod clear-modify ((buffer standard-buffer))
-  (beginning-of-buffer (high-mark buffer))
-  (end-of-buffer (low-mark buffer))
-  (setf (slot-value buffer 'modified) nil))
+(defmethod (setf buffer-object) :after (object (buffer observable-buffer-mixin) offset)
+  (notify-observers buffer (constantly (cons offset (1+ offset)))))

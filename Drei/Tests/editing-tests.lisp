@@ -32,26 +32,27 @@ DREI-EDITING related tests." :in drei-tests)
   `(labels ((test-buffer-action-with-stickto (action offset mark-stickto initial-contents
                                                      end-contents kill-ring-end-contents)
               (with-buffer (buffer :initial-contents initial-contents)
-                ;; If your test surpasses this max size, you're
-                ;; probably doing something semi-insane.
-                (let* ((kill-ring (make-instance 'kill-ring :max-size 20))
-                       (*kill-ring* kill-ring))
-                  (let ((mark (clone-mark (point buffer) mark-stickto)))
-                    (setf (offset mark) offset)
-                    (funcall action buffer mark)
-                    (is (string= end-contents
-                                 (buffer-contents buffer)))
-                    ;; `kill-ring-end-contents' is a list of what should
-                    ;; be at the top of the kill ring now. Assert that
-                    ;; it is.
-                    (handler-case (mapcar #'(lambda (killed-string expected)
-                                              (is (string= expected killed-string)))
-                                          (loop repeat (length kill-ring-end-contents)
-                                             collecting (coerce (kill-ring-yank kill-ring nil) 'string)
-                                             do (rotate-yank-position kill-ring 1))
-                                          kill-ring-end-contents)
-                      (empty-kill-ring ()
-                        (fail "Kill ring did not contain enough values to satisfy ~A" kill-ring-end-contents)))))))
+                (with-view (view :buffer buffer)
+                  ;; If your test surpasses this max size, you're
+                  ;; probably doing something semi-insane.
+                  (let* ((kill-ring (make-instance 'kill-ring :max-size 20))
+                         (*kill-ring* kill-ring))
+                    (let ((mark (clone-mark (point buffer) mark-stickto)))
+                      (setf (offset mark) offset)
+                      (funcall action view mark)
+                      (is (string= end-contents
+                                   (buffer-contents buffer)))
+                      ;; `kill-ring-end-contents' is a list of what should
+                      ;; be at the top of the kill ring now. Assert that
+                      ;; it is.
+                      (handler-case (mapcar #'(lambda (killed-string expected)
+                                                (is (string= expected killed-string)))
+                                            (loop repeat (length kill-ring-end-contents)
+                                               collecting (coerce (kill-ring-yank kill-ring nil) 'string)
+                                               do (rotate-yank-position kill-ring 1))
+                                            kill-ring-end-contents)
+                        (empty-kill-ring ()
+                          (fail "Kill ring did not contain enough values to satisfy ~A" kill-ring-end-contents))))))))
             (test-buffer-action (action offset initial-contents end-contents kill-ring-end-contents)
               (test-buffer-action-with-stickto action offset :left initial-contents end-contents kill-ring-end-contents)
               (test-buffer-action-with-stickto action offset :right initial-contents end-contents kill-ring-end-contents)))
@@ -85,8 +86,8 @@ DREI-EDITING related tests." :in drei-tests)
         (end (length initial-contents)))
     (flet ((make-deletion-test-function-case
                (operation motion-count initial-offset after-contents kill-ring-end-contents)
-             `(test-buffer-action #'(lambda (buffer mark)
-                                      (,operation mark (syntax buffer) ,motion-count nil))
+             `(test-buffer-action #'(lambda (view mark)
+                                      (,operation mark (syntax view) ,motion-count nil))
                                   ,initial-offset ,initial-contents
                                   ,after-contents
                                   ',kill-ring-end-contents)))
@@ -314,16 +315,16 @@ This is the last paragraph.")
         (end (length initial-contents)))
     (flet ((make-transposition-test-function-case
                (operation initial-offset after-contents kill-ring-end-contents)
-             `(test-buffer-action #'(lambda (buffer mark)
-                                      (,operation mark (syntax buffer)))
+             `(test-buffer-action #'(lambda (view mark)
+                                      (,operation mark (syntax view)))
                                   ,initial-offset ,initial-contents
                                   ,after-contents
                                   ',kill-ring-end-contents))
            (make-transposition-test-function-case-with-stickto
                (operation initial-offset stickto after-contents kill-ring-end-contents)
              `(test-buffer-action-with-stickto
-               #'(lambda (buffer mark)
-                   (,operation mark (syntax buffer)))
+               #'(lambda (view mark)
+                   (,operation mark (syntax view)))
                ,initial-offset ,stickto ,initial-contents
                ,after-contents
                ',kill-ring-end-contents)))

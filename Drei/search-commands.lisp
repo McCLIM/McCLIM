@@ -102,43 +102,38 @@ If found, leaves point before the word. If not, leaves point where it is."
 (make-command-table 'isearch-drei-table :errorp nil)
 
 (defun isearch-command-loop (drei-instance forwardp)
-  (let* ((point (point drei-instance))
-         (orig-offset (offset point))
-         (orig-buffer (buffer drei-instance)))
+  (let ((point (point (view drei-instance))))
     (unless (endp (isearch-states drei-instance))
       (setf (isearch-previous-string drei-instance)
             (search-string (first (isearch-states drei-instance)))))
     (setf (isearch-mode drei-instance) t)
     (setf (isearch-states drei-instance)
           (list (make-instance 'isearch-state
-                               :search-string ""
-                               :search-mark (clone-mark point)
-                               :search-buffer orig-buffer
-                               :search-forward-p forwardp
-                               :search-success-p t
-                               :targets (funcall *default-target-creator* drei-instance))))
+                 :search-string ""
+                 :search-mark (clone-mark point)
+                 :search-forward-p forwardp
+                 :search-success-p t
+                 :targets (funcall *default-target-creator* drei-instance))))
     (activate-target-specification (targets (first (isearch-states drei-instance))))
     (simple-command-loop 'isearch-drei-table
                          (isearch-mode drei-instance)
                          ((display-message "Mark saved where search started")
-                          (setf (offset (mark drei-instance)) orig-offset)
+                          (deactivate-target-specification (targets (first (isearch-states drei-instance))))
                           (setf (isearch-mode drei-instance) nil))
                          ((display-message "Returned point to original location")
-                          (setf (buffer drei-instance) orig-buffer)
-                          (setf (offset (point drei-instance)) orig-offset)
+                          (deactivate-target-specification (targets (first (isearch-states drei-instance))))
                           (setf (isearch-mode drei-instance) nil)
                           (signal 'abort-gesture :event *current-gesture*)))))
 
 (defun isearch-from-mark (drei-instance mark string forwardp)
-  (let* ((point (point drei-instance))
-	 (mark2 (clone-mark mark))
+  (let* ((mark2 (clone-mark mark))
 	 (success (funcall (if forwardp #'search-forward #'search-backward)
 			   mark2
 			   string
 			   :test (case-relevant-test string)))
          (state (first (isearch-states drei-instance))))
     (if success
-        (setf (offset point) (offset mark2)
+        (setf (offset (point)) (offset mark2)
               (offset mark) (if forwardp
                                 (- (offset mark2) (length string))
                                 (+ (offset mark2) (length string))))
@@ -148,21 +143,19 @@ If found, leaves point before the word. If not, leaves point where it is."
                        (targets state))
           (funcall (if forwardp #'next-target #'previous-target)
                    (targets state))
-          (if (isearch-from-mark drei-instance (clone-mark (point drei-instance))
+          (if (isearch-from-mark drei-instance (clone-mark (point))
                                  string forwardp)
               (return-from isearch-from-mark t)
               (progn (pop (isearch-states drei-instance))
                      (funcall (if forwardp #'previous-target #'next-target)
                               (targets state))
-                     (setf (offset (point drei-instance))
-                           (offset (search-mark state)))
+                     (setf (offset (point)) (offset (search-mark state)))
                      nil))))
     (display-message "~:[Failing ~;~]Isearch~:[ backward~;~]: ~A"
 		     success forwardp (display-string string))
     (push (make-instance 'isearch-state
            :search-string string
            :search-mark mark
-           :search-buffer (buffer drei-instance)
            :search-forward-p forwardp
            :search-success-p success
            :targets (targets state))

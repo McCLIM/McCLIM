@@ -28,66 +28,63 @@ DREI-MOTION related tests." :in drei-tests)
 
 (test error-limit-action
   (with-buffer (buffer)
-    (signals motion-limit-error
-      (error-limit-action (point buffer) 0 0 "foo" (syntax buffer)))))
+    (with-view (view :buffer buffer)
+      (signals motion-limit-error
+        (error-limit-action (point buffer) 0 0 "foo" (syntax view))))))
 
 (test forward-to-word-boundary
   (with-buffer (buffer :initial-contents "  climacs
 climacs")
-    (let ((syntax (syntax buffer))
-          (m0l (clone-mark (low-mark buffer) :left))
-          (m0r (clone-mark (low-mark buffer) :right))
-          (m1l (clone-mark (low-mark buffer) :left))
-          (m1r (clone-mark (low-mark buffer) :right))
-          (m2l (clone-mark (low-mark buffer) :left))
-          (m2r (clone-mark (low-mark buffer) :right)))
-      (setf (offset m0l) 0
-            (offset m0r) 0
-            (offset m1l) 5
-            (offset m1r) 5
-            (offset m2l) 17
-            (offset m2r) 17)
-      (forward-to-word-boundary m0l syntax)
-      (is (= (offset m0l) 2))
-      (forward-to-word-boundary m0r syntax)
-      (is (= (offset m0r) 2))
-      (forward-to-word-boundary m1l syntax)
-      (is (= (offset m1l) 5))
-      (forward-to-word-boundary m1r syntax)
-      (is (= (offset m1r) 5))
-      (forward-to-word-boundary m2l syntax)
-      (is (= (offset m2l) 17))
-      (forward-to-word-boundary m2r syntax)
-      (is (= (offset m2r) 17)))))
+    (with-view (view :buffer buffer)
+      (let ((syntax (syntax view))
+            (m0l (clone-mark (point buffer) :left))
+            (m0r (clone-mark (point buffer) :right))
+            (m1l (clone-mark (point buffer) :left))
+            (m1r (clone-mark (point buffer) :right))
+            (m2l (clone-mark (point buffer) :left))
+            (m2r (clone-mark (point buffer) :right)))
+        (setf (offset m0l) 0
+              (offset m0r) 0
+              (offset m1l) 5
+              (offset m1r) 5
+              (offset m2l) 17
+              (offset m2r) 17)
+        (forward-to-word-boundary m0l syntax)
+        (is (= (offset m0l) 2))
+        (forward-to-word-boundary m0r syntax)
+        (is (= (offset m0r) 2))
+        (forward-to-word-boundary m1l syntax)
+        (is (= (offset m1l) 5))
+        (forward-to-word-boundary m1r syntax)
+        (is (= (offset m1r) 5))
+        (forward-to-word-boundary m2l syntax)
+        (is (= (offset m2l) 17))
+        (forward-to-word-boundary m2r syntax)
+        (is (= (offset m2r) 17))))))
 
 (test backward-to-word-boundary
   (with-buffer (buffer :initial-contents "climacs
 climacs  ")
-    (let ((syntax (syntax buffer))
-          (m0l (clone-mark (low-mark buffer) :left))
-          (m0r (clone-mark (low-mark buffer) :right))
-          (m1l (clone-mark (low-mark buffer) :left))
-          (m1r (clone-mark (low-mark buffer) :right))
-          (m2l (clone-mark (low-mark buffer) :left))
-          (m2r (clone-mark (low-mark buffer) :right)))
-      (setf (offset m0l) 17
-            (offset m0r) 17
-            (offset m1l) 10
-            (offset m1r) 10
-            (offset m2l) 0
-            (offset m2r) 0)
-      (backward-to-word-boundary m0l syntax)
-      (is (= (offset m0l) 15))
-      (backward-to-word-boundary m0r syntax)
-      (is (= (offset m0r) 15))
-      (backward-to-word-boundary m1l syntax)
-      (is (= (offset m1l) 10))
-      (backward-to-word-boundary m1r syntax)
-      (is (= (offset m1r) 10))
-      (backward-to-word-boundary m2l syntax)
-      (is (= (offset m2l) 0))
-      (backward-to-word-boundary m2r syntax)
-      (is (= (offset m2r) 0)))))
+    (with-view (view :buffer buffer)
+      (let ((syntax (syntax view))
+            (m0l (make-buffer-mark buffer 17 :left))
+            (m0r (make-buffer-mark buffer 17 :right))
+            (m1l (make-buffer-mark buffer 10 :left))
+            (m1r (make-buffer-mark buffer 10 :right))
+            (m2l (make-buffer-mark buffer 0 :left))
+            (m2r (make-buffer-mark buffer 0 :right)))
+        (backward-to-word-boundary m0l syntax)
+        (is (= (offset m0l) 15))
+        (backward-to-word-boundary m0r syntax)
+        (is (= (offset m0r) 15))
+        (backward-to-word-boundary m1l syntax)
+        (is (= (offset m1l) 10))
+        (backward-to-word-boundary m1r syntax)
+        (is (= (offset m1r) 10))
+        (backward-to-word-boundary m2l syntax)
+        (is (= (offset m2l) 0))
+        (backward-to-word-boundary m2r syntax)
+        (is (= (offset m2r) 0))))))
 
 (defmacro motion-fun-one-test (unit (forward-begin-offset
                                      backward-end-offset
@@ -103,69 +100,60 @@ climacs  ")
         (backward (intern (format nil "BACKWARD-ONE-~S" unit))))
     `(progn
        (test ,(intern (format nil "~A-~A" syntax forward) #.*package*)
-         (with-buffer (buffer :initial-contents ,initial-contents
-                              :syntax ',syntax)
-           (let ((syntax (syntax buffer))
-                 (m0l (clone-mark (low-mark buffer) :left))
-                 (m0r (clone-mark (low-mark buffer) :right))
-                 (m1l (clone-mark (low-mark buffer) :left))
-                 (m1r (clone-mark (low-mark buffer) :right))
-                 (m2l (clone-mark (low-mark buffer) :left))
-                 (m2r (clone-mark (low-mark buffer) :right)))
-             (setf (offset m0l) 0
-                   (offset m0r) 0
-                   (offset m1l) ,offset
-                   (offset m1r) ,offset
-                   (offset m2l) (size buffer)
-                   (offset m2r) (size buffer))
-             ,(when forward-begin-offset
-                    `(progn
-                       (is-true (,forward m0l syntax))
-                       (is (= ,forward-begin-offset (offset m0l)))))
-             ,(when backward-end-offset
-                    `(progn
-                       (is-true (,forward m0r syntax))
-                       (is (= ,forward-begin-offset (offset m0r)))))
-             (is-true (,forward m1l syntax))
-             (is (= ,goal-forward-offset (offset m1l)))
-             (is-true (,forward m1r syntax))
-             (is (= ,goal-forward-offset (offset m1r)))
-             (is-false (,forward m2l syntax))
-             (is (= (size buffer) (offset m2l)))
-             (is-false (,forward m2r syntax))
-             (is (= (size buffer) (offset m2r))))))
+         (with-buffer (buffer :initial-contents ,initial-contents)
+           (with-view (view :buffer buffer :syntax ',syntax)
+             (let ((syntax (syntax view))
+                   (m0l (make-buffer-mark buffer 0 :left))
+                   (m0r (make-buffer-mark buffer 0 :right))
+                   (m1l (make-buffer-mark buffer ,offset :left))
+                   (m1r (make-buffer-mark buffer ,offset :right))
+                   (m2l (make-buffer-mark buffer (size buffer) :left))
+                   (m2r (make-buffer-mark buffer (size buffer) :right)))
+               (declare (ignore ,@(unless forward-begin-offset '(m0l))
+                                ,@(unless backward-end-offset '(m0r))))
+               ,(when forward-begin-offset
+                      `(progn
+                         (is-true (,forward m0l syntax))
+                         (is (= ,forward-begin-offset (offset m0l)))))
+               ,(when backward-end-offset
+                      `(progn
+                         (is-true (,forward m0r syntax))
+                         (is (= ,forward-begin-offset (offset m0r)))))
+               (is-true (,forward m1l syntax))
+               (is (= ,goal-forward-offset (offset m1l)))
+               (is-true (,forward m1r syntax))
+               (is (= ,goal-forward-offset (offset m1r)))
+               (is-false (,forward m2l syntax))
+               (is (= (size buffer) (offset m2l)))
+               (is-false (,forward m2r syntax))
+               (is (= (size buffer) (offset m2r)))))))
        (test ,(intern (format nil "~A-~A" syntax backward) #.*package*)
-         (with-buffer (buffer :initial-contents ,initial-contents
-                              :syntax ',syntax)
-           (let ((syntax (syntax buffer))
-                 (m0l (clone-mark (low-mark buffer) :left))
-                 (m0r (clone-mark (low-mark buffer) :right))
-                 (m1l (clone-mark (low-mark buffer) :left))
-                 (m1r (clone-mark (low-mark buffer) :right))
-                 (m2l (clone-mark (low-mark buffer) :left))
-                 (m2r (clone-mark (low-mark buffer) :right)))
-             (setf (offset m0l) 0
-                   (offset m0r) 0
-                   (offset m1l) ,offset
-                   (offset m1r) ,offset
-                   (offset m2l) (size buffer)
-                   (offset m2r) (size buffer))
-             (is-false (,backward m0l syntax))
-             (is (= 0 (offset m0l)))
-             (is-false (,backward m0r syntax))
-             (is (= 0 (offset m0r)))
-             (is-true (,backward m1l syntax))
-             (is (= ,goal-backward-offset (offset m1l)))
-             (is-true (,backward m1r syntax))
-             (is (= ,goal-backward-offset (offset m1r)))
-             ,(when backward-end-offset
-                    `(progn
-                       (is-true (,backward m2l syntax))
-                       (is (= ,backward-end-offset (offset m2l)))))
-             ,(when backward-end-offset
-                    `(progn
-                       (is-true (,backward m2r syntax))
-                       (is (= ,backward-end-offset (offset m2r)))))))))))
+         (with-buffer (buffer :initial-contents ,initial-contents)
+           (with-view (view :buffer buffer :syntax ',syntax)
+             (let ((syntax (syntax view))
+                   (m0l (make-buffer-mark buffer 0 :left))
+                   (m0r (make-buffer-mark buffer 0 :right))
+                   (m1l (make-buffer-mark buffer ,offset :left))
+                   (m1r (make-buffer-mark buffer ,offset :right))
+                   (m2l (make-buffer-mark buffer (size buffer) :left))
+                   (m2r (make-buffer-mark buffer (size buffer) :right)))
+               (declare (ignore ,@(unless backward-end-offset '(m2l m2r))))
+               (is-false (,backward m0l syntax))
+               (is (= 0 (offset m0l)))
+               (is-false (,backward m0r syntax))
+               (is (= 0 (offset m0r)))
+               (is-true (,backward m1l syntax))
+               (is (= ,goal-backward-offset (offset m1l)))
+               (is-true (,backward m1r syntax))
+               (is (= ,goal-backward-offset (offset m1r)))
+               ,(when backward-end-offset
+                      `(progn
+                         (is-true (,backward m2l syntax))
+                         (is (= ,backward-end-offset (offset m2l)))))
+               ,(when backward-end-offset
+                      `(progn
+                         (is-true (,backward m2r syntax))
+                         (is (= ,backward-end-offset (offset m2r))))))))))))
 
 (motion-fun-one-test word (9 10 (5 9 2)
                              "  climacs
@@ -199,7 +187,7 @@ Preferably a bit faster."))
                                          goal-forward-offset
                                          goal-backward-offset)
                                  initial-contents
-                                 &key (syntax ''drei-fundamental-syntax:fundamental-syntax)))
+                                 &key (syntax 'drei-fundamental-syntax:fundamental-syntax)))
   (check-type forward-begin-offset1 integer)
   (check-type forward-begin-offset2 integer)
   (check-type backward-end-offset1 integer)
@@ -211,79 +199,67 @@ Preferably a bit faster."))
         (backward (intern (format nil "BACKWARD-~S" unit) #.*package*)))
     `(progn
        (test ,forward
-         (with-buffer (buffer :initial-contents ,initial-contents
-                              :syntax ,syntax)
-           (let ((syntax (syntax buffer))
-                 (m0l (clone-mark (low-mark buffer) :left))
-                 (m0r (clone-mark (low-mark buffer) :right))
-                 (m1l (clone-mark (low-mark buffer) :left))
-                 (m1r (clone-mark (low-mark buffer) :right))
-                 (m2l (clone-mark (low-mark buffer) :left))
-                 (m2r (clone-mark (low-mark buffer) :right)))
-             (setf (offset m0l) 0
-                   (offset m0r) 0
-                   (offset m1l) ,offset
-                   (offset m1r) ,offset
-                   (offset m2l) (size buffer)
-                   (offset m2r) (size buffer))
-             (is-true (,forward m0l syntax 1 nil))
-             (is (= (offset m0l) ,forward-begin-offset1))
-             (beginning-of-buffer m0l)
-             (is-true (,forward m0l syntax 2 nil))
-             (is (= (offset m0l) ,forward-begin-offset2))
+         (with-buffer (buffer :initial-contents ,initial-contents)
+           (with-view (view :buffer buffer :syntax ',syntax)
+             (let ((syntax (syntax view))
+                   (m0l (make-buffer-mark buffer 0 :left))
+                   (m0r (make-buffer-mark buffer 0 :right))
+                   (m1l (make-buffer-mark buffer ,offset :left))
+                   (m1r (make-buffer-mark buffer ,offset :right))
+                   (m2l (make-buffer-mark buffer (size buffer) :left))
+                   (m2r (make-buffer-mark buffer (size buffer) :right)))
+               (is-true (,forward m0l syntax 1 nil))
+               (is (= (offset m0l) ,forward-begin-offset1))
+               (beginning-of-buffer m0l)
+               (is-true (,forward m0l syntax 2 nil))
+               (is (= (offset m0l) ,forward-begin-offset2))
 
-             (is-true (,forward m0r syntax 1 nil))
-             (is (= (offset m0r) ,forward-begin-offset1))
-             (beginning-of-buffer m0r)
-             (is-true (,forward m0r syntax 2 nil))
-             (is (= (offset m0r) ,forward-begin-offset2))
+               (is-true (,forward m0r syntax 1 nil))
+               (is (= (offset m0r) ,forward-begin-offset1))
+               (beginning-of-buffer m0r)
+               (is-true (,forward m0r syntax 2 nil))
+               (is (= (offset m0r) ,forward-begin-offset2))
                  
-             (is-true (,forward m1l syntax ,unit-count nil))
-             (is (= (offset m1l) ,goal-forward-offset))
-             (is-true (,forward m1r syntax ,unit-count nil))
-             (is (= (offset m1r) ,goal-forward-offset))
+               (is-true (,forward m1l syntax ,unit-count nil))
+               (is (= (offset m1l) ,goal-forward-offset))
+               (is-true (,forward m1r syntax ,unit-count nil))
+               (is (= (offset m1r) ,goal-forward-offset))
 
-             (is-false (,forward m2l syntax 1 nil))
-             (is (= (offset m2l) (size buffer)))
-             (is-false (,forward m2r syntax 2 nil))
-             (is (= (offset m2r) (size buffer))))))
+               (is-false (,forward m2l syntax 1 nil))
+               (is (= (offset m2l) (size buffer)))
+               (is-false (,forward m2r syntax 2 nil))
+               (is (= (offset m2r) (size buffer)))))))
        (test ,backward
-         (with-buffer (buffer :initial-contents ,initial-contents
-                              :syntax ,syntax)
-           (let ((syntax (syntax buffer))
-                 (m0l (clone-mark (low-mark buffer) :left))
-                 (m0r (clone-mark (low-mark buffer) :right))
-                 (m1l (clone-mark (low-mark buffer) :left))
-                 (m1r (clone-mark (low-mark buffer) :right))
-                 (m2l (clone-mark (low-mark buffer) :left))
-                 (m2r (clone-mark (low-mark buffer) :right)))
-             (setf (offset m0l) 0
-                   (offset m0r) 0
-                   (offset m1l) ,offset
-                   (offset m1r) ,offset
-                   (offset m2l) (size buffer)
-                   (offset m2r) (size buffer))
-             (is-false (,backward m0l syntax 1 nil))
-             (is (= (offset m0l) 0))
-             (is-false (,backward m0r syntax 2 nil))
-             (is (= (offset m0r) 0))
+         (with-buffer (buffer :initial-contents ,initial-contents)
+           (with-view (view :buffer buffer :syntax ',syntax)
+            (let ((syntax (syntax view))
+                  (m0l (make-buffer-mark buffer 0 :left))
+                  (m0r (make-buffer-mark buffer 0 :right))
+                  (m1l (make-buffer-mark buffer ,offset :left))
+                  (m1r (make-buffer-mark buffer ,offset :right))
+                  (m2l (make-buffer-mark buffer (size buffer) :left))
+                  (m2r (make-buffer-mark buffer (size buffer) :right)))
+              (is-false (,backward m0l syntax 1 nil))
+              (is (= (offset m0l) 0))
+              (is-false (,backward m0r syntax 2 nil))
+              (is (= (offset m0r) 0))
                  
-             (is-true (,backward m1l syntax ,unit-count nil))
-             (is (= (offset m1l) ,goal-backward-offset))
-             (is-true (,backward m1r syntax ,unit-count nil))
-             (is (= (offset m1r) ,goal-backward-offset))
+              (is-true (,backward m1l syntax ,unit-count nil))
+              (is (= (offset m1l) ,goal-backward-offset))
+              (is-true (,backward m1r syntax ,unit-count nil))
+              (is (= (offset m1r) ,goal-backward-offset))
 
-             (is-true (,backward m2l syntax 1 nil))
-             (is (= (offset m2l) ,backward-end-offset1))
-             (end-of-buffer m2l)
-             (is-true (,backward m2l syntax 2 nil))
-             (is (= (offset m2l) ,backward-end-offset2))
+              (is-true (,backward m2l syntax 1 nil))
+              (is (= (offset m2l) ,backward-end-offset1))
+              (end-of-buffer m2l)
+              (is-true (,backward m2l syntax 2 nil))
+              (is (= (offset m2l) ,backward-end-offset2))
 
-             (is-true (,backward m2r syntax 1 nil))
-             (is (= (offset m2r) ,backward-end-offset1))
-             (end-of-buffer m2r)
-             (is-true (,backward m2r syntax 2 nil))
-             (is (= (offset m2r) ,backward-end-offset2))))))))
+              (is-true (,backward m2r syntax 1 nil))
+              (is (= (offset m2r) ,backward-end-offset1))
+              (end-of-buffer m2r)
+              (is-true (,backward m2r syntax 2 nil))
+              (is (= (offset m2r) ,backward-end-offset2)))))))))
 
 (motion-fun-test word ((2 7) (21 16) (10 3 15 0)
                        "My word, it's a

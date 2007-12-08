@@ -52,10 +52,7 @@
 ;;; have to do with immediate editing, understood as insertion,
 ;;; deletion or movement of buffer contents. Transformation of buffer
 ;;; contents (such as converting the case of a region) should not be
-;;; here (FIXME: It actually is. Moving it to misc-commands.lisp is
-;;; tempting, but I don't like putting too much non-command-related
-;;; into the command files Perhaps the solution is a
-;;; transformation.lisp?).
+;;; here.
 
 (in-package :drei-editing)
 
@@ -188,16 +185,9 @@
                    (obj2 (buffer-sequence (buffer mark) (offset start2) (offset end2))))
                (,forward-delete mark syntax 1 nil)
                (insert-sequence mark obj1)
-               ;; KLUDGE: Having to do this manually is ugly, but it
-               ;; is necessary if the motion functions uses syntax
-               ;; information.
-               (update-syntax (buffer syntax)
-                              syntax)
                (,backward mark syntax 2 nil)
                (,forward-delete mark syntax 1 nil)
                (insert-sequence mark obj2)
-               (update-syntax (buffer syntax)
-                              syntax)
                (,forward mark syntax 1 nil))))
          (defmethod ,transpose
              ((mark left-sticky-mark) syntax)
@@ -215,16 +205,9 @@
                (,forward-delete mark syntax 1 nil)
                (insert-sequence mark obj1)
                (,forward mark syntax 1 nil)
-               ;; KLUDGE: Having to do this manually is ugly, but it
-               ;; is necessary if the motion functions uses syntax
-               ;; information.
-               (update-syntax (buffer syntax)
-                              syntax)
                (,backward mark syntax 2 nil)
                (,forward-delete mark syntax 1 nil)
-               (insert-sequence mark obj2)
-               (update-syntax (buffer syntax)
-                              syntax))))))))
+               (insert-sequence mark obj2))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 

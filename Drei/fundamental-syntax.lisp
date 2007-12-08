@@ -41,8 +41,8 @@
 
 (defmethod initialize-instance :after ((syntax fundamental-syntax) &rest args)
   (declare (ignore args))
-  (with-slots (buffer scan) syntax
-     (setf scan (clone-mark (low-mark buffer) :left))))
+  (with-accessors ((buffer buffer) (scan scan)) syntax
+    (setf scan (make-buffer-mark buffer 0 :left))))
 
 (setf *default-syntax* 'fundamental-syntax)
 
@@ -56,39 +56,43 @@
 (defmethod update-syntax-for-display (buffer (syntax fundamental-syntax) top bot)
   nil)
 
-(defmethod update-syntax (buffer (syntax fundamental-syntax))
-  (let* ((low-mark (low-mark buffer))
-	 (high-mark (high-mark buffer)))
+(defmethod update-syntax ((syntax fundamental-syntax) prefix-size suffix-size
+                          &optional begin end)
+  (declare (ignore begin end))
+  (let ((low-mark (clone-mark (scan syntax) :left))
+        (high-mark (clone-mark (scan syntax) :left)))
+    (setf (offset low-mark) prefix-size
+          (offset high-mark) (- (size (buffer syntax)) suffix-size))
     (when (mark<= low-mark high-mark)
       (beginning-of-line low-mark)
       (end-of-line high-mark)
       (with-slots (lines scan) syntax
-	(let ((low-index 0)
-	      (high-index (nb-elements lines)))
-	  (loop while (< low-index high-index)
-		do (let* ((middle (floor (+ low-index high-index) 2))
-			  (line-start (start-mark (element* lines middle))))
-		     (cond ((mark> low-mark line-start)
-			    (setf low-index (1+ middle)))
-			   (t
-			    (setf high-index middle)))))
-	  ;; discard lines that have to be re-analyzed
-	  (loop while (and (< low-index (nb-elements lines))
-			   (mark<= (start-mark (element* lines low-index))
-				   high-mark))
-		do (delete* lines low-index))
-	  ;; analyze new lines
-	  (setf (offset scan) (offset low-mark))
-	  (loop while (and (mark<= scan high-mark)
-			   (not (end-of-buffer-p scan)))
-		for i from low-index
-		do (progn (insert* lines i (make-instance
-					    'line-object
-					    :start-mark (clone-mark scan)))
-			  (end-of-line scan)
-			  (unless (end-of-buffer-p scan)
-			    ;; skip newline
-			    (forward-object scan)))))))))
+        (let ((low-index 0)
+              (high-index (nb-elements lines)))
+          (loop while (< low-index high-index)
+             do (let* ((middle (floor (+ low-index high-index) 2))
+                       (line-start (start-mark (element* lines middle))))
+                  (cond ((mark> low-mark line-start)
+                         (setf low-index (1+ middle)))
+                        (t
+                         (setf high-index middle)))))
+          ;; discard lines that have to be re-analyzed
+          (loop while (and (< low-index (nb-elements lines))
+                           (mark<= (start-mark (element* lines low-index))
+                                   high-mark))
+             do (delete* lines low-index))
+          ;; analyze new lines
+          (setf (offset scan) (offset low-mark))
+          (loop while (and (mark<= scan high-mark)
+                           (not (end-of-buffer-p scan)))
+             for i from low-index
+             do (progn (insert* lines i (make-instance
+                                         'line-object
+                                         :start-mark (clone-mark scan)))
+                       (end-of-line scan)
+                       (unless (end-of-buffer-p scan)
+                         ;; skip newline
+                         (forward-object scan)))))))))
 		
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -98,14 +102,14 @@
 
 (defvar *current-line* 0)
 
-(defun handle-whitespace (pane buffer start end)
-  (let ((space-width (space-width pane))
-        (tab-width (tab-width pane)))
+(defun handle-whitespace (pane view buffer start end)
+  (let ((space-width (space-width pane view))
+        (tab-width (tab-width pane view)))
     (with-sheet-medium (medium pane)
-      (with-accessors ((cursor-positions cursor-positions)) (syntax buffer)
+      (with-accessors ((cursor-positions cursor-positions)) view
         (loop while (< start end)
            do (case (buffer-object buffer start)
-                (#\Newline (record-line-vertical-offset pane (syntax buffer) (incf *current-line*))
+                (#\Newline (record-line-vertical-offset pane view (incf *current-line*))
                            (terpri pane)
                            (stream-increment-cursor-position
                             pane (first (aref cursor-positions 0)) 0))
@@ -117,66 +121,68 @@
                             pane (- tab-width (mod x tab-width)) 0)))))
            (incf start))))))
 
-(defmethod display-line ((stream clim-stream-pane) (drei drei) mark)
+(defmethod display-line ((stream clim-stream-pane) (view textual-drei-syntax-view) mark)
   (let ((mark (clone-mark mark)))
-    (with-accessors ((space-width space-width) (tab-width tab-width)) stream
-      (let ((saved-offset nil)
-            (id 0))
-        (flet ((output-word ()
-                 (unless (null saved-offset)
-                   (let ((contents (coerce (region-to-sequence
-                                            saved-offset
-                                            mark)
-                                           'string)))
-                     (updating-output (stream :unique-id (cons drei (incf id))
-                                              :id-test #'equal
-                                              :cache-value contents
-                                              :cache-test #'equal)
-                       (unless (null contents)
-                         (present contents 'string :stream stream))))
-                   (setf saved-offset nil))))
-          (with-slots (bot scan cursor-x cursor-y) drei
-            (loop
-               until (end-of-line-p mark)
-               do (let ((obj (object-after mark)))
-                    (cond ((eql obj #\Space)
-                           (output-word)
-                           (stream-increment-cursor-position stream space-width 0))
-                          ((eql obj #\Tab)
-                           (output-word)
-                           (let ((x (stream-cursor-position drei)))
-                             (stream-increment-cursor-position
-                              stream (- tab-width (mod x tab-width)) 0)))
-                          ((constituentp obj)
-                           (when (null saved-offset)
-                             (setf saved-offset (offset mark))))
-                          ((characterp obj)
-                           (output-word)
-                           (updating-output (stream :unique-id (cons stream (incf id))
-                                                    :id-test #'equal
-                                                    :cache-value obj)
-                             (present obj 'character :stream stream)))
-                          (t
-                           (output-word)
-                           (updating-output (stream :unique-id (cons stream (incf id))
-                                                    :id-test #'equal
-                                                    :cache-value obj
-                                                    :cache-test #'eq)
-                             (present obj (presentation-type-of obj)
-                                      :stream stream)))))
-               do (forward-object mark)
-               finally
-               (output-word)
-               (unless (end-of-buffer-p mark)
-                 (terpri stream)))))))))
+    (let ((saved-offset nil)
+          (id 0)
+          (space-width (space-width stream view))
+          (tab-width (tab-width stream view)))
+      (flet ((output-word ()
+               (unless (null saved-offset)
+                 (let ((contents (coerce (region-to-sequence
+                                          saved-offset
+                                          mark)
+                                         'string)))
+                   (updating-output (stream :unique-id (cons view (incf id))
+                                            :id-test #'equal
+                                            :cache-value contents
+                                            :cache-test #'equal)
+                     (unless (null contents)
+                       (present contents 'string :stream stream))))
+                 (setf saved-offset nil))))
+        (loop
+           until (end-of-line-p mark)
+           do (let ((obj (object-after mark)))
+                (cond ((eql obj #\Space)
+                       (output-word)
+                       (stream-increment-cursor-position stream space-width 0))
+                      ((eql obj #\Tab)
+                       (output-word)
+                       (let ((x (stream-cursor-position stream)))
+                         (stream-increment-cursor-position
+                          stream (- tab-width (mod x tab-width)) 0)))
+                      ((constituentp obj)
+                       (when (null saved-offset)
+                         (setf saved-offset (offset mark))))
+                      ((characterp obj)
+                       (output-word)
+                       (updating-output (stream :unique-id (cons stream (incf id))
+                                                :id-test #'equal
+                                                :cache-value obj)
+                         (present obj 'character :stream stream)))
+                      (t
+                       (output-word)
+                       (updating-output (stream :unique-id (cons stream (incf id))
+                                                :id-test #'equal
+                                                :cache-value obj
+                                                :cache-test #'eq)
+                         (present obj (presentation-type-of obj)
+                          :stream stream)))))
+           do (forward-object mark)
+           finally
+           (output-word)
+           (unless (end-of-buffer-p mark)
+             (terpri stream)))))))
 
-(defmethod display-drei-contents ((stream clim-stream-pane) (drei drei) (syntax fundamental-syntax))
-  (with-slots (top bot) drei
-    (with-accessors ((cursor-positions cursor-positions)) syntax
+(defmethod display-syntax-view ((stream clim-stream-pane) (view textual-drei-syntax-view)
+                                (syntax fundamental-syntax))
+  (update-parse syntax)
+  (with-accessors ((top top) (bot bot)) view
+    (with-accessors ((cursor-positions cursor-positions)) view
       (setf cursor-positions (make-array (1+ (number-of-lines-in-region top bot))
-                                         :initial-element nil
-                                         :fill-pointer 1
-                                         :adjustable t)
+                              :initial-element nil
+                              :fill-pointer 1
+                              :adjustable t)
             *current-line* 0
             (aref cursor-positions 0) (multiple-value-list (stream-cursor-position stream))))
     (setf *white-space-start* (offset top))
@@ -198,162 +204,16 @@
                       (mark< (start-mark (element* lines i))
                              bot))
            do (let ((line (element* lines i)))
-                (updating-output (stream :unique-id (cons drei i)
+                (updating-output (stream :unique-id (cons view i)
                                          :id-test #'equal
                                          :cache-value line
                                          :cache-test #'equal)
-                  (display-line stream drei (start-mark (element* lines i))))))))))
-
-(defmethod display-drei-cursor ((stream extended-output-stream) (drei drei)
-                                (cursor drei-cursor) (syntax fundamental-syntax))
-  (let ((mark (mark cursor))
-        (drei (drei-instance cursor)))
-    (multiple-value-bind (cursor-x cursor-y line-height)
-	(offset-to-screen-position stream drei (offset mark))
-      (updating-output (stream :unique-id (list stream :cursor)
-                               :cache-value (list* cursor-x cursor-y line-height))
-	(draw-rectangle* stream
-			 (1- cursor-x) cursor-y
-			 (+ cursor-x 2) (+ cursor-y line-height)
-			 :ink (ink cursor))))))
-
-(defmethod display-region ((pane drei-pane) (syntax fundamental-syntax))
-  (highlight-region pane (point pane) (mark pane)))
-
-(defgeneric highlight-region (pane mark1 offset2 &optional ink))
-
-(defmethod highlight-region ((pane drei-pane) (offset1 integer) (offset2 integer)
-			     &optional (ink (compose-in +green+ (make-opacity .1))))
-  ;; FIXME stream-vertical-spacing between lines
-  ;; FIXME note sure updating output is working properly...
-  ;; we'll call offset1 CURSOR and offset2 MARK
-  (multiple-value-bind (cursor-x cursor-y line-height)
-      (offset-to-screen-position offset1 pane pane)
-    (multiple-value-bind (mark-x mark-y)
-	(offset-to-screen-position offset2 pane pane)
-      (cond
-	;; mark and point are above the screen
-	((and (null cursor-y) (null mark-y)
-	      (null cursor-x) (null mark-x))
-	 nil)
-	;; mark and point are below the screen
-	((and (null cursor-y) (null mark-y)
-	      cursor-x mark-x)
-	 nil)
-	;; mark or point is above the screen, and point or mark below it
-	((and (null cursor-y) (null mark-y)
-	      (or (and cursor-x (null mark-x))
-		  (and (null cursor-x) mark-x)))
-	 (let ((width (stream-text-margin pane))
-	       (height (bounding-rectangle-height
-			(window-viewport pane))))
-	   (updating-output (pane :unique-id -3
-				  :cache-value (list cursor-y mark-y cursor-x mark-x
-						     height width ink))
-	     (draw-rectangle* pane
-			      0 0
-			      width height
-			      :ink ink))))
-	;; mark is above the top of the screen
-	((and (null mark-y) (null mark-x))
-	 (let ((width (stream-text-margin pane)))
-	   (updating-output (pane :unique-id -3
-				  :cache-value ink)
-	     (updating-output (pane :cache-value (list mark-y mark-x cursor-y width))
-	       (draw-rectangle* pane
-				0 0
-				width cursor-y
-				:ink ink))
-	     (updating-output (pane :cache-value (list cursor-y cursor-x))
-	       (draw-rectangle* pane
-				0 cursor-y 
-				cursor-x (+ cursor-y line-height)
-				:ink ink)))))
-	;; mark is below the bottom of the screen
-	((and (null mark-y) mark-x)
-	 (let ((width (stream-text-margin pane))
-	       (height (bounding-rectangle-height
-			(window-viewport pane))))
-	   (updating-output (pane :unique-id -3
-				  :cache-value ink)
-	     (updating-output (pane :cache-value (list cursor-y width height))
-	       (draw-rectangle* pane
-				0 (+ cursor-y line-height)
-				width height
-				:ink ink))
-	     (updating-output (pane :cache-value (list cursor-x cursor-y width))
-	       (draw-rectangle* pane
-				cursor-x cursor-y
-				width (+ cursor-y line-height)
-				:ink ink)))))
-	;; mark is at point
-	((and (= mark-x cursor-x) (= mark-y cursor-y))
-	 nil)
-	;; mark and point are on the same line
-	((= mark-y cursor-y)
-	 (updating-output (pane :unique-id -3
-				:cache-value (list offset1 offset2 ink))
-	   (draw-rectangle* pane
-			    mark-x mark-y
-			    cursor-x (+ cursor-y line-height)
-			    :ink ink)))
-	;; mark and point are both visible, mark above point
-	((< mark-y cursor-y)
-	 (let ((width (stream-text-margin pane)))
-	   (updating-output (pane :unique-id -3
-				  :cache-value ink)
-	     (updating-output (pane :cache-value (list mark-x mark-y width))
-	       (draw-rectangle* pane
-				mark-x mark-y
-				width (+ mark-y line-height)
-				:ink ink))
-	     (updating-output (pane :cache-value (list cursor-x cursor-y))
-	       (draw-rectangle* pane
-				0 cursor-y
-				cursor-x (+ cursor-y line-height)
-				:ink ink))
-	     (updating-output (pane :cache-value (list mark-y cursor-y width))
-	       (draw-rectangle* pane
-				0 (+ mark-y line-height)
-				width cursor-y
-				:ink ink)))))
-	;; mark and point are both visible, point above mark
-	(t
-	 (let ((width (stream-text-margin pane)))
-	   (updating-output (pane :unique-id -3
-				  :cache-value ink)
-	     (updating-output (pane :cache-value (list cursor-x cursor-y width))
-	       (draw-rectangle* pane
-				cursor-x cursor-y
-				width (+ cursor-y line-height)
-				:ink ink))
-	     (updating-output (pane :cache-value (list mark-x mark-y))
-	       (draw-rectangle* pane
-				0 mark-y
-				mark-x (+ mark-y line-height)
-				:ink ink))
-	     (updating-output (pane :cache-value (list cursor-y mark-y width))
-	       (draw-rectangle* pane
-				0 (+ cursor-y line-height)
-				width mark-y
-				:ink ink)))))))))
-
-(defmethod highlight-region ((pane drei-pane) (mark1 mark) (mark2 mark)
-			     &optional (ink (compose-in +green+ (make-opacity .1))))
-  (highlight-region pane (offset mark1) (offset mark2) ink))
-
-(defmethod highlight-region ((pane drei-pane) (mark1 mark) (offset2 integer)
-			     &optional (ink (compose-in +green+ (make-opacity .1))))
-  (highlight-region pane (offset mark1) offset2 ink))
-
-(defmethod highlight-region ((pane drei-pane) (offset1 integer) (mark2 mark)
-			     &optional (ink (compose-in +green+ (make-opacity .1))))
-  (highlight-region pane offset1 (offset mark2) ink))
+                  (display-line stream view (start-mark (element* lines i))))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; exploit the parse 
 
 ;; do this better
-(defmethod syntax-line-indentation (mark tab-width (syntax fundamental-syntax))
+(defmethod syntax-line-indentation ((syntax fundamental-syntax) mark tab-width)
   0)

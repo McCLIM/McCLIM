@@ -42,23 +42,25 @@ customizable by the different specialized Drei classes.
 We call a specific instance of the Drei editor substrate a @i{Drei
 instance}. A @i{Drei variant} is a specific subclass of @class{drei}
 that implements a specific kind of editor, such as an input-editor or a
-gadget. A given Drei instance has a single buffer associated with it,
-but this buffer need not be unique to the Drei instance, and may be
-changed at any time. The Drei instance has two marks into the buffer,
-called the @i{top} and @i{bottom} mark. These marks delimit the visible
-region of the buffer - for some Drei variants, this is always the entire
-buffer, while others may only have a smaller visible region. Note that
-not all of the visible region necessarily is on display on the screen
-(parts, or all, of it may be hidden due to scrolling, for example), but
-nothing outside the visible region is on display, though remember that
-the same buffer may be used in several Drei instances, and that each of
-these instances may have their own idea about what the visible region
-is. The Drei instance also maintains marks for the current @i{point} and
-@i{mark}. This means that different Drei instances sharing the same
-buffer may have different points and marks. Every Drei instance also has
-a @i{kill ring} object which contains object sequences that have been
-killed from the buffer, and can be yanked back in at the users
-behest. These are generally not shared.
+gadget. A given Drei instance has a single view associated with it, this
+view must be unique to the Drei instance (though this is not enforced),
+but may be changed at any time. The most typical view is one that has a
+buffer and maintains syntax information about the buffer contents. A
+buffer need not be unique to a buffer-view, and may be changed at any
+time. The view instance has two marks into the buffer, called the
+@i{top} and @i{bottom} mark. These marks delimit the visible region of
+the buffer - for some Drei variants, this is always the entire buffer,
+while others may only have a smaller visible region. Note that not all
+of the visible region necessarily is on display on the screen (parts, or
+all, of it may be hidden due to scrolling, for example), but nothing
+outside the visible region is on display, though remember that the same
+buffer may be used in several vires, and that each of these views may
+have their own idea about what the visible region is. Most views also
+maintain marks for the current @i{point} and @i{mark}. This means that
+different views sharing the same buffer may have different points and
+marks. Every Drei instance also has a @i{kill ring} object which
+contains object sequences that have been killed from the buffer, and can
+be yanked back in at the users behest. These are generally not shared.
 
 Every Drei instance is associated with an editor pane - this must be a
 CLIM stream pane that is used for redisplay (@pxref{Redisplay
@@ -100,6 +102,7 @@ The special variables essentially provide all that is needed to access
 all parts of the Drei state, but for convenience, a number of utility
 functions providing access to commonly used objects have been defined.
 
+@include fun-drei-current-view.texi
 @include fun-esa-current-buffer.texi
 @include fun-drei-point.texi
 @include fun-drei-mark.texi
@@ -174,11 +177,11 @@ edited and displayed.  Conceptually, the buffer is a potentially
 large sequence of objects, most of which are expected to be
 characters (the full Unicode character set is supported).  However,
 Drei buffers can contain any Common Lisp objects, as long as the
-syntax module knows how to render them.
+redisplay engine knows how to render them.
 
-The Drei  buffer implementation differs from that of a vector,
-because it allows for very efficient editing operations, such as
-inserting and removing objects at arbitrary offsets.
+The Drei buffer implementation differs from that of a vector, because it
+allows for very efficient editing operations, such as inserting and
+removing objects at arbitrary offsets.
 
 In addition, the Drei buffer protocols defines that concept of a
 mark.
@@ -352,36 +355,15 @@ closed.
 @node Buffer Modification Protocol
 @subsection Buffer Modification Protocol
 
-The buffer maintains two marks, the low mark and the high mark:
+The buffer modification protocol is based on the ESA observer/observable
+facility, which is in return a fairly ordinary Model-View
+implementation.
 
-@include fun-drei-buffer-low-mark.texi
+@include class-drei-buffer-observable-buffer-mixin.texi
 
-@include fun-drei-buffer-high-mark.texi
-
-The low mark is a left-sticky mark and high mark is a right-sticky
-mark.  Whenever a modification is made to the buffer, the offset of
-the low mark is set to the minimum of its current value and the
-position of the modification.  Similarly, whenever a modification is
-made to the buffer, the offset of the high mark is set to the maximum
-of its current value and the position of the modification.
-
-The redisplay module may use these values to determine what part of
-the screen needs to be updated.  These values can also be used to
-update information about syntax highlighting and other cached
-information.
-
-In addition to these marks, the buffer maintains a modification flag
-that determines.  Whether the buffer has been modified since the last
-call to clear-modify.
-
-@include fun-drei-buffer-modified-p.texi
-
-@include fun-drei-buffer-clear-modify.texi
-
-This function is used by the redisplay module after all of the panes
-on display have been redisplayed properly.  A call to this function
-concludes the interaction loop and Drei is again ready to read and
-execute commands.
+Syntax-views use this information to determine what part of the buffer
+needs to be reparsed. This automatically happens whenever a request is
+made for information that might depend on outdated parsing data.
 
 @node DREI-BASE Package
 @subsection DREI-BASE Package

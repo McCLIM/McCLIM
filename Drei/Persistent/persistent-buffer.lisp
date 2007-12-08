@@ -62,10 +62,7 @@
   (setf (slot-value cursor 'pos) position))
 
 (defclass persistent-buffer (buffer)
-  ((low-mark :reader low-mark)
-   (high-mark :reader high-mark)
-   (cursors :accessor cursors :initform nil)
-   (modified :initform nil :reader modified-p))
+  ((cursors :accessor cursors :initform nil))
   (:documentation "The Climacs persistent buffer base class
 \(non-instantiable)."))
 
@@ -195,31 +192,6 @@ suitable for use in a PERSISTENT-BUFFER."))
 	(make-instance 'right-sticky-line-persistent-cursor
 		       :buffer (buffer mark)
 		       :position offset)))
-
-(defmethod initialize-instance :after ((buffer binseq-buffer) &rest args)
-  "Create the low-mark and high-mark."
-  (declare (ignorable args))
-  (with-slots (low-mark high-mark) buffer
-    (setf low-mark (make-instance 'persistent-left-sticky-mark :buffer buffer))
-    (setf high-mark (make-instance 'persistent-right-sticky-mark
-				   :buffer buffer))))
-
-(defmethod initialize-instance :after ((buffer obinseq-buffer) &rest args)
-  "Create the low-mark and high-mark."
-  (declare (ignorable args))
-  (with-slots (low-mark high-mark) buffer
-    (setf low-mark (make-instance 'persistent-left-sticky-mark :buffer buffer))
-    (setf high-mark (make-instance 'persistent-right-sticky-mark
-				   :buffer buffer))))
-
-(defmethod initialize-instance :after ((buffer binseq2-buffer) &rest args)
-  "Create the low-mark and high-mark."
-  (declare (ignorable args))
-  (with-slots (low-mark high-mark) buffer
-    (setf low-mark
-	  (make-instance 'persistent-left-sticky-line-mark :buffer buffer))
-    (setf high-mark
-	  (make-instance 'persistent-right-sticky-line-mark :buffer buffer))))
 
 (defmethod clone-mark ((mark persistent-left-sticky-mark) &optional stick-to)
   (cond
@@ -436,7 +408,7 @@ suitable for use in a PERSISTENT-BUFFER."))
   (assert (<= 0 offset) ()
 	  (make-condition 'offset-before-beginning :offset offset))
   (assert (<= offset (size buffer)) ()
-	  (make-condition 'offset-after-end :offset offset))
+          (make-condition 'offset-after-end :offset offset))
   (setf (slot-value buffer 'contents)
 	(binseq2-insert2 (slot-value buffer 'contents) offset object)))
 
@@ -478,6 +450,8 @@ suitable for use in a PERSISTENT-BUFFER."))
 	  (make-condition 'offset-before-beginning :offset offset))
   (assert (<= offset (size buffer)) ()
 	  (make-condition 'offset-after-end :offset offset))
+  (assert (<= (+ offset n) (size buffer)) ()
+          (make-condition 'offset-after-end :offset (+ offset n)))
   (setf (slot-value buffer 'contents)
 	(binseq-remove* (slot-value buffer 'contents) offset n)))
 
@@ -486,6 +460,8 @@ suitable for use in a PERSISTENT-BUFFER."))
 	  (make-condition 'offset-before-beginning :offset offset))
   (assert (<= offset (size buffer)) ()
 	  (make-condition 'offset-after-end :offset offset))
+  (assert (<= (+ offset n) (size buffer)) ()
+          (make-condition 'offset-after-end :offset (+ offset n)))
   (setf (slot-value buffer 'contents)
 	(obinseq-remove* (slot-value buffer 'contents) offset n)))
 
@@ -494,6 +470,8 @@ suitable for use in a PERSISTENT-BUFFER."))
 	  (make-condition 'offset-before-beginning :offset offset))
   (assert (<= offset (size buffer)) ()
 	  (make-condition 'offset-after-end :offset offset))
+  (assert (<= (+ offset n) (size buffer)) ()
+          (make-condition 'offset-after-end :offset (+ offset n)))
   (setf (slot-value buffer 'contents)
 	(binseq2-remove*2 (slot-value buffer 'contents) offset n)))
 
@@ -639,48 +617,6 @@ suitable for use in a PERSISTENT-BUFFER."))
       (rotatef offset1 offset2))
     (buffer-sequence (buffer mark1) offset1 offset2)))
 
-;;; Buffer modification protocol
-
-(defmethod (setf buffer-object)
-    :before (object (buffer persistent-buffer) offset)
-  (declare (ignore object))
-  (setf (offset (low-mark buffer))
-        (min (offset (low-mark buffer)) offset))
-  (setf (offset (high-mark buffer))
-        (max (offset (high-mark buffer)) offset))
-  (setf (slot-value buffer 'modified) t))
-
-(defmethod insert-buffer-object
-    :before ((buffer persistent-buffer) offset object)
-  (declare (ignore object))
-  (setf (offset (low-mark buffer))
-	(min (offset (low-mark buffer)) offset))
-  (setf (offset (high-mark buffer))
-	(max (offset (high-mark buffer)) offset))
-  (setf (slot-value buffer 'modified) t))
-
-(defmethod insert-buffer-sequence
-    :before ((buffer persistent-buffer) offset sequence)
-  (declare (ignore sequence))
-  (setf (offset (low-mark buffer))
-	(min (offset (low-mark buffer)) offset))
-  (setf (offset (high-mark buffer))
-	(max (offset (high-mark buffer)) offset))
-  (setf (slot-value buffer 'modified) t))
-
-(defmethod delete-buffer-range
-    :before ((buffer persistent-buffer) offset n)
-  (setf (offset (low-mark buffer))
-	(min (offset (low-mark buffer)) offset))
-  (setf (offset (high-mark buffer))
-	(max (offset (high-mark buffer)) (+ offset n)))
-  (setf (slot-value buffer 'modified) t))
-
-(defmethod clear-modify ((buffer persistent-buffer))
-  (beginning-of-buffer (high-mark buffer))
-  (end-of-buffer (low-mark buffer))
-  (setf (slot-value buffer 'modified) nil))
-
 (defmacro filter-and-update (l filter-fn update-fn)
   (let ((prev (gensym))
 	(curr (gensym))
@@ -731,3 +667,10 @@ suitable for use in a PERSISTENT-BUFFER."))
 (defmethod delete-buffer-range
     :after ((buffer persistent-buffer) offset n)
   (adjust-cursors-on-delete buffer offset n))
+
+(defmethod make-buffer-mark ((buffer persistent-buffer)
+                             &optional (offset 0) (stick-to :left))
+  (make-instance (ecase stick-to
+                   (:left 'persistent-left-sticky-mark)
+                   (:right 'persistent-right-sticky-mark))
+   :offset offset :buffer buffer))

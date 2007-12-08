@@ -41,9 +41,17 @@ will probably have the same value as `*application-frame*'.")
 (defgeneric esa-current-buffer (esa)
   (:documentation "Return the current buffer of APPLICATION-FRAME."))
 
+(defgeneric (setf esa-current-buffer) (new-buffer esa)
+  (:documentation "Replace the current buffer of
+APPLICATION-FRAME with NEW-BUFFER."))
+
 (defun current-buffer ()
   "Return the currently active buffer of the running ESA."
   (esa-current-buffer *esa-instance*))
+
+(defun (setf current-buffer) (new-buffer)
+  "Return the currently active buffer of the running ESA."
+  (setf (esa-current-buffer *esa-instance*) new-buffer))
 
 (defgeneric windows (esa)
   (:documentation "Return a list of all the windows of the ESA.")

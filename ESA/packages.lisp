@@ -41,7 +41,12 @@
            #:invoke-with-dynamic-bindings-1
            #:invoke-with-dynamic-bindings
            #:maptree
-           #:subtype-compatible-p))
+           #:subtype-compatible-p
+           #:observable-mixin
+           #:add-observer #:remove-observer
+           #:observer-notified #:notify-observers
+           #:name-mixin #:name
+           #:subscriptable-name-mixin #:subscripted-name #:subscript #:subscript-generator))
 
 (defpackage :esa
   (:use :clim-lisp :clim :esa-utils)

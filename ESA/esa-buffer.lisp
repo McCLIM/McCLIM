@@ -45,10 +45,10 @@ external representation"))
 representation"
   (frame-save-buffer-to-stream *application-frame* buffer stream))
 
-(defclass esa-buffer-mixin ()
+(defclass esa-buffer-mixin (name-mixin)
   ((%filepath :initform nil :accessor filepath)
-   (%name :initarg :name :initform "*scratch*" :accessor name)
    (%needs-saving :initform nil :accessor needs-saving)
    (%file-write-time :initform nil :accessor file-write-time)
    (%file-saved-p :initform nil :accessor file-saved-p)
-   (%read-only-p :initform nil :accessor read-only-p)))
+   (%read-only-p :initform nil :accessor read-only-p))
+  (:default-initargs :name "*scratch*"))

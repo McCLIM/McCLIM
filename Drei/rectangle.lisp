@@ -25,7 +25,7 @@
 (defvar *killed-rectangle* nil
   "The killed rectangle as a list of lines.")
 
-(defun map-rectangle-lines (buffer function start end)
+(defun map-rectangle-lines (view function start end)
   "Map over lines in rectangle, calling `function' for each line.
 
 The rectangle is defined by the marks `start' and `end'. For each
@@ -33,18 +33,15 @@ line, `function' will be called with arguments of a mark situated at
 the beginning of the line, the starting column of the rectangle and
 the ending column of the rectangle. This function returns a list of
 the return values of `function'."
+  (when (mark> start end)
+    (rotatef start end))
   (let ((startcol (column-number start))
         (endcol (column-number end))
-        (mark (clone-mark (point buffer))))
-    (when (> startcol endcol)
-      (rotatef startcol endcol))
-    (when (mark> start end)
-      (rotatef start end))
-    (setf (offset mark) (offset start))
+        (mark (make-buffer-mark (buffer view) (offset start))))
     (loop do (beginning-of-line mark)
-          until (mark> mark end)
-          collect (funcall function (clone-mark mark) startcol endcol)
-          until (not (forward-line mark (syntax buffer) 1 nil)))))
+       until (mark> mark end)
+       collect (funcall function (clone-mark mark) startcol endcol)
+       until (not (forward-line mark (syntax view) 1 nil)))))
 
 (defmacro with-bounding-marks (((start-mark end-mark) mark startcol endcol
                                 &key force-start force-end) &body body)
@@ -125,13 +122,13 @@ inhabited by it with the contents of `string'."
   (with-bounding-marks ((start-mark end-mark) mark startcol endcol :force-start t)
     (insert-sequence start-mark string)))
 
-(defun insert-rectangle-at-mark (buffer mark rectangle)
+(defun insert-rectangle-at-mark (view mark rectangle)
   "Yank the killed rectangle, positioning the upper left corner at
 current point."
   (let ((insert-column (column-number mark)))
     (dolist (line rectangle) 
       (move-to-column mark insert-column t)
       (insert-sequence mark line)
-      (unless (forward-line mark (syntax buffer) 1 nil)
+      (unless (forward-line mark (syntax view) 1 nil)
         (open-line mark)
         (forward-object mark)))))

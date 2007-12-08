@@ -79,7 +79,7 @@ expanded version of the abbrevation is returned."
 	      do (decf offset1))
 	(let ((expansion (expand-abbrev (coerce (buffer-sequence buffer offset1 offset2)
 						'string)
-					(abbrev-expander buffer))))
+					(abbrev-expander (implementation buffer)))))
 	  (when expansion
 	    (delete-buffer-range buffer offset1 (- offset2 offset1))
 	    (insert-buffer-sequence buffer offset1 expansion)))))))

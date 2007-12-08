@@ -34,33 +34,32 @@
 (defmethod shared-initialize :after
     ((obj lisp-syntax) slot-names &key)
   (declare (ignore slot-names))
-  (setf (image obj)
-        (make-instance 'swank-local-image)))
+  (setf (image obj) (make-instance 'swank-local-image)))
 
 (defmethod default-image ()
   (make-instance 'swank-local-image))
 
-(define-command (com-enable-swank-for-buffer :name t :command-table lisp-table)
+(define-command (com-enable-swank-for-view :name t :command-table lisp-table)
     ()
   (unless (find-package :swank)
     (let ((*standard-output* *terminal-io*))
       (handler-case (asdf:oos 'asdf:load-op :swank)
         (asdf:missing-component ()
           (esa:display-message "Swank not available.")))))
-  (setf (image (syntax (current-buffer)))
+  (setf (image (current-syntax))
         (make-instance 'swank-local-image)))
 
-(defmethod compile-string-for-drei ((image swank-local-image) string package buffer buffer-mark)
-  (declare (ignore image))
-  (let* ((buffer-name (name buffer))
-         (buffer-file-name (filepath buffer))
+(defmethod compile-string-for-drei ((image swank-local-image) (string string) package
+                                    (view drei-buffer-view) (buffer-mark mark))
+  (let* ((view-name (name view))
+         (buffer-file-name (filepath (buffer view)))
          ;; swank::compile-string-for-emacs binds *compile-verbose* to t
          ;; so we need to do this to avoid scribbles on the pane
          (*standard-output* *debug-io*)
          (swank::*buffer-package* package)
          (swank::*buffer-readtable* *readtable*))
     (let  ((result (swank::compile-string-for-emacs
-                    string buffer-name (offset buffer-mark) buffer-file-name))
+                    string view-name (offset buffer-mark) buffer-file-name))
            (notes (loop for note in (swank::compiler-notes-for-emacs)
                      collect (make-compiler-note note))))
       (values result notes))))

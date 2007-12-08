@@ -145,7 +145,7 @@ Successive invocations extend the selection."))
                   `(if (plusp count)
                        (,backward (point) (current-syntax))
                        (,forward (point) (current-syntax)))))
-         (,forward (mark) (current-syntax) (current-buffer) count)))))
+         (,forward (mark) (current-syntax) count)))))
 
 (define-mark-unit-command word marking-table)
 (define-mark-unit-command expression marking-table)
@@ -179,7 +179,7 @@ Successive invocations extend the selection."))
 (define-command (com-upcase-word :name t :command-table case-table) ()
   "Convert the characters from point until the next word end to upper case.
 Leave point at the word end."
-  (upcase-word (point) (syntax (current-buffer))))
+  (upcase-word (point) (current-syntax)))
 
 (set-key 'com-upcase-word
 	 'case-table
@@ -188,7 +188,7 @@ Leave point at the word end."
 (define-command (com-downcase-word :name t :command-table case-table) ()
   "Convert the characters from point until the next word end to lower case.
 Leave point at the word end."
-  (downcase-word (point) (syntax (current-buffer))))
+  (downcase-word (point) (current-syntax)))
 
 (set-key 'com-downcase-word
 	 'case-table
@@ -202,7 +202,7 @@ If point is before the start of a word, convert the first character
 of that word to upper case and the rest of the letters to lower case. 
 
 Leave point at the word end."
-  (capitalize-word (point) (syntax (current-buffer))))
+  (capitalize-word (point) (current-syntax)))
 
 (set-key 'com-capitalize-word
 	 'case-table
@@ -221,7 +221,7 @@ Uses TAB-SPACE-COUNT of the STREAM-DEFAULT-VIEW of the pane."
                    (tab-space-count (view *drei-instance*))))
 
 (define-command (com-indent-line :name t :command-table indent-table) ()
-  (indent-current-line *drei-instance* (point)))
+  (indent-current-line (current-view) (point)))
 
 (set-key 'com-indent-line
 	 'indent-table
@@ -234,9 +234,7 @@ Uses TAB-SPACE-COUNT of the STREAM-DEFAULT-VIEW of the pane."
 (define-command (com-newline-and-indent :name t :command-table indent-table) ()
   "Inserts a newline and indents the new line."
   (insert-object (point) #\Newline)
-  (update-syntax (current-buffer)
-                 (syntax (current-buffer)))
-  (indent-current-line *drei-instance* (point)))
+  (indent-current-line (current-view) (point)))
 
 (set-key 'com-newline-and-indent
 	 'indent-table
@@ -245,7 +243,7 @@ Uses TAB-SPACE-COUNT of the STREAM-DEFAULT-VIEW of the pane."
 (define-command (com-indent-region :name t :command-table indent-table) ()
   "Indent every line of the current region as specified by the
 syntax for the buffer."
-  (indent-region *drei-instance* (point) (mark)))
+  (indent-region (current-view) (point) (mark)))
 
 (define-command (com-delete-indentation :name t :command-table indent-table) ()
   "Join current line to previous non-blank line.
@@ -265,15 +263,14 @@ beginning of the buffer at leaves point there."
         (not (auto-fill-mode *drei-instance*))))
 
 (define-command (com-fill-paragraph :name t :command-table fill-table) ()
-  (let* ((syntax (syntax (current-buffer)))
-         (begin-mark (clone-mark (point)))
-         (end-mark (clone-mark (point))))
+  (let ((begin-mark (clone-mark (point)))
+        (end-mark (clone-mark (point))))
     (unless (eql (object-before begin-mark) #\Newline)
-      (backward-paragraph begin-mark syntax))
+      (backward-paragraph begin-mark (current-syntax)))
     (unless (eql (object-after end-mark) #\Newline)
-      (forward-paragraph end-mark syntax))
+      (forward-paragraph end-mark (current-syntax)))
     (do-buffer-region (object offset (current-buffer)
-                       (offset begin-mark) (offset end-mark))
+                              (offset begin-mark) (offset end-mark))
       (when (eql object #\Newline)
         (setf object #\Space)))
     (let ((point-backup (clone-mark (point))))
@@ -298,7 +295,7 @@ beginning of the buffer at leaves point there."
 	 '((:home :control)))
 
 (define-command (com-page-down :name t :command-table movement-table) ()
-  (page-down *drei-instance*))
+  (page-down (current-view)))
 
 (set-key 'com-page-down
 	 'movement-table
@@ -309,7 +306,7 @@ beginning of the buffer at leaves point there."
 	 '((:next)))
 
 (define-command (com-page-up :name t :command-table movement-table) ()
-  (page-up *drei-instance*))
+  (page-up (current-view)))
 
 (set-key 'com-page-up
 	 'movement-table
@@ -343,8 +340,7 @@ beginning of the buffer at leaves point there."
 (define-command (com-back-to-indentation :name t :command-table movement-table) ()
   "Move point to the first non-whitespace object on the current line.
 If there is no non-whitespace object, leaves point at the end of the line."
-  (back-to-indentation (point)
-                       (syntax (current-buffer))))
+  (back-to-indentation (point) (current-syntax)))
 
 (set-key 'com-back-to-indentation
 	 'movement-table
@@ -355,9 +351,7 @@ If there is no non-whitespace object, leaves point at the end of the line."
       'boolean :prompt "Delete backwards only?"))
   "Delete whitespace around point.
 With a numeric argument, only delete whitespace before point."
-  (delete-horizontal-space (point)
-                           (syntax (current-buffer))
-                           backward-only-p))
+  (delete-horizontal-space (point) (current-syntax) backward-only-p))
 
 (set-key `(com-delete-horizontal-space ,*numeric-argument-p*)
 	 'deletion-table
@@ -536,42 +530,41 @@ The default is 5. A number less than 5 will be replaced by 5."
 Search from point (first backward to the beginning of the buffer, 
 then forward) for words for which the word before point is a prefix, 
 inserting each in turn at point as an expansion."
-  (let* ((syntax (syntax (current-buffer))))
-    (with-accessors ((original-prefix original-prefix)
-                     (prefix-start-offset prefix-start-offset)
-                     (dabbrev-expansion-mark dabbrev-expansion-mark)) *drei-instance*
-       (flet ((move () (cond ((beginning-of-buffer-p dabbrev-expansion-mark)
-			      (setf (offset dabbrev-expansion-mark)
-				    (offset (point)))
-			      (forward-word dabbrev-expansion-mark syntax))
-			     ((mark< dabbrev-expansion-mark (point))
-			      (backward-object dabbrev-expansion-mark))
-			     (t (forward-object dabbrev-expansion-mark)))))
-	 (unless (or (beginning-of-buffer-p (point))
-		     (not (constituentp (object-before (point)))))
-	   (unless (and (eq (command-name *previous-command*) 'com-dabbrev-expand)
-			(not (null prefix-start-offset)))
-	     (setf dabbrev-expansion-mark (clone-mark (point)))
-	     (backward-word dabbrev-expansion-mark syntax)
-	     (setf prefix-start-offset (offset dabbrev-expansion-mark))
-	     (setf original-prefix (region-to-sequence prefix-start-offset (point)))
-	     (move))
-	   (loop until (or (end-of-buffer-p dabbrev-expansion-mark)
-			   (and (or (beginning-of-buffer-p dabbrev-expansion-mark)
-				    (not (constituentp (object-before dabbrev-expansion-mark))))
-				(looking-at dabbrev-expansion-mark original-prefix)))
-		 do (move))
-	   (if (end-of-buffer-p dabbrev-expansion-mark)
-	       (progn (delete-region prefix-start-offset (point))
-		      (insert-sequence (point) original-prefix)
-		      (setf prefix-start-offset nil))
-	       (progn (delete-region prefix-start-offset (point))
-		      (insert-sequence (point)
-				       (let ((offset (offset dabbrev-expansion-mark)))
-					 (prog2 (forward-word dabbrev-expansion-mark syntax)
-						(region-to-sequence offset dabbrev-expansion-mark)
-						(setf (offset dabbrev-expansion-mark) offset))))
-		      (move))))))))
+  (with-accessors ((original-prefix original-prefix)
+                   (prefix-start-offset prefix-start-offset)
+                   (dabbrev-expansion-mark dabbrev-expansion-mark)) *drei-instance*
+    (flet ((move () (cond ((beginning-of-buffer-p dabbrev-expansion-mark)
+                           (setf (offset dabbrev-expansion-mark)
+                                 (offset (point)))
+                           (forward-word dabbrev-expansion-mark (current-syntax)))
+                          ((mark< dabbrev-expansion-mark (point))
+                           (backward-object dabbrev-expansion-mark))
+                          (t (forward-object dabbrev-expansion-mark)))))
+      (unless (or (beginning-of-buffer-p (point))
+                  (not (constituentp (object-before (point)))))
+        (unless (and (eq (command-name *previous-command*) 'com-dabbrev-expand)
+                     (not (null prefix-start-offset)))
+          (setf dabbrev-expansion-mark (clone-mark (point)))
+          (backward-word dabbrev-expansion-mark (current-syntax))
+          (setf prefix-start-offset (offset dabbrev-expansion-mark))
+          (setf original-prefix (region-to-sequence prefix-start-offset (point)))
+          (move))
+        (loop until (or (end-of-buffer-p dabbrev-expansion-mark)
+                        (and (or (beginning-of-buffer-p dabbrev-expansion-mark)
+                                 (not (constituentp (object-before dabbrev-expansion-mark))))
+                             (looking-at dabbrev-expansion-mark original-prefix)))
+           do (move))
+        (if (end-of-buffer-p dabbrev-expansion-mark)
+            (progn (delete-region prefix-start-offset (point))
+                   (insert-sequence (point) original-prefix)
+                   (setf prefix-start-offset nil))
+            (progn (delete-region prefix-start-offset (point))
+                   (insert-sequence (point)
+                                    (let ((offset (offset dabbrev-expansion-mark)))
+                                      (prog2 (forward-word dabbrev-expansion-mark (current-syntax))
+                                          (region-to-sequence offset dabbrev-expansion-mark)
+                                        (setf (offset dabbrev-expansion-mark) offset))))
+                   (move)))))))
 
 (set-key 'com-dabbrev-expand
 	 'editing-table
@@ -587,14 +580,13 @@ surrounding page. When no page delimeters are found,
 leave point at the beginning and mark at the end of the buffer. 
 
 A page is delimited by the sequence #\Newline #\Page."
-  (let* ((syntax (syntax (current-buffer))))
-    (cond ((and numargp (/= 0 count))
-	   (if (plusp count)
-	       (forward-page (point) syntax count)
-	       (backward-page (point) syntax (1+ count))))
-	  (t (backward-page (point) syntax count)))
-    (setf (offset (mark)) (offset (point)))
-    (forward-page (mark) syntax 1)))
+  (cond ((and numargp (/= 0 count))
+         (if (plusp count)
+             (forward-page (point) (current-syntax) count)
+             (backward-page (point) (current-syntax) (1+ count))))
+        (t (backward-page (point) (current-syntax) count)))
+  (setf (offset (mark)) (offset (point)))
+  (forward-page (mark) (current-syntax) 1))
 
 (set-key `(com-mark-page ,*numeric-argument-marker* ,*numeric-argument-p*)
 	 'marking-table
@@ -606,7 +598,7 @@ A page is delimited by the sequence #\Newline #\Page."
 
 ;;; figure out how to make commands without key bindings accept numeric arguments. 
 (define-command (com-comment-region :name t :command-table comment-table) ()
-  (comment-region (syntax (current-buffer)) (point) (mark)))
+  (comment-region (current-syntax) (point) (mark)))
 
 ;; (defparameter *insert-pair-alist*
 ;; 	      '((#\( #\)) (#\[ #\]) (#\{ #\}) (#\< #\>) (#\" #\") (#\' #\') (#\` #\')))
@@ -623,7 +615,7 @@ forward (backward if negative).
 
 FIXME: no it doesn't."
   (unless wrap-p (setf count 0))
-  (insert-parentheses (point) (syntax (current-buffer)) count))
+  (insert-parentheses (point) (current-syntax) count))
 
 (set-key `(com-insert-parentheses ,*numeric-argument-marker* ,*numeric-argument-p*)
 	 'editing-table
@@ -646,7 +638,7 @@ The rectangle will be put in a rectangle kill buffer, from which it can
 later be yanked with Yank Rectangle. This kill buffer is completely
 disjunct from the standard kill ring and can only hold a single rectangle at a time."
   (setf *killed-rectangle*
-        (map-rectangle-lines (current-buffer)
+        (map-rectangle-lines (current-view)
                              #'extract-and-delete-rectangle-line
                              (point)
                              (mark))))
@@ -660,7 +652,7 @@ disjunct from the standard kill ring and can only hold a single rectangle at a t
   "Delete the rectangle bounded by current point and mark.
 
 The rectangle will be deleted and NOT put in the kill buffer."
-  (map-rectangle-lines (current-buffer)
+  (map-rectangle-lines (current-view)
                        #'extract-and-delete-rectangle-line
                        (point)
                        (mark)))
@@ -675,7 +667,7 @@ The rectangle will be deleted and NOT put in the kill buffer."
 
 The rectangle kill buffer will not be emptied, so it is possible to yank
 the same rectangle several times."
-  (insert-rectangle-at-mark (current-buffer)
+  (insert-rectangle-at-mark (current-view)
                             (point)
                             *killed-rectangle*))
 
@@ -686,7 +678,7 @@ the same rectangle several times."
 (define-command (com-clear-rectangle :name t :command-table deletion-table)
     ()
   "Clear the rectangle bounded by current point and mark by filling it with spaces."
-  (map-rectangle-lines (current-buffer)
+  (map-rectangle-lines (current-view)
                        #'clear-rectangle-line
                        (point)
                        (mark)))
@@ -701,7 +693,7 @@ the same rectangle several times."
 
 The rectangle will not be deleted, but instead pushed to the right, with
 the area previously inhabited by it filled with spaces."
-  (map-rectangle-lines (current-buffer)
+  (map-rectangle-lines (current-view)
                        #'open-rectangle-line
                        (point)
                        (mark)))
@@ -715,7 +707,7 @@ the area previously inhabited by it filled with spaces."
   "Replace each line of the rectangle bounded by current point of mark with `string'.
 
 The length of the string need not be equal to the width of the rectangle."
-  (map-rectangle-lines (current-buffer)
+  (map-rectangle-lines (current-view)
                        #'(lambda (mark startcol endcol)
                            (replace-rectangle-line mark startcol endcol string))
                        (point)
@@ -730,7 +722,7 @@ The length of the string need not be equal to the width of the rectangle."
   "Insert `string' in each line of the rectangle bounded by current point of mark.
 
 Text in the rectangle will be shifted right."
-  (map-rectangle-lines (current-buffer)
+  (map-rectangle-lines (current-view)
                        #'(lambda (mark startcol endcol)
                            (insert-in-rectangle-line mark startcol endcol string))
                        (point)
@@ -738,7 +730,7 @@ Text in the rectangle will be shifted right."
 
 (define-command (com-delete-whitespace-rectangle :name t :command-table editing-table)
     ()
-  (map-rectangle-lines (current-buffer)
+  (map-rectangle-lines (current-view)
                        #'delete-rectangle-line-whitespace
                        (point)
                        (mark)))

@@ -23,23 +23,12 @@
 (in-package :drei-buffer)
 
 (defclass delegating-buffer (buffer)
-  ((implementation :initarg :implementation :reader implementation))
-  (:documentation "Buffer class that delegates the buffer protocol
-functionality to a buffer implementation object stored in the
-IMPLEMENTATION slot. Do not bind it directly to a mark. Instead, bind
-the buffer from the IMPLEMENTATION slot."))
-
-(defmethod low-mark ((buffer delegating-buffer))
-  (low-mark (implementation buffer)))
-
-(defmethod high-mark ((buffer delegating-buffer))
-  (high-mark (implementation buffer)))
-
-(defmethod modified-p ((buffer delegating-buffer))
-  (modified-p (implementation buffer)))
-
-(defmethod clear-modify ((buffer delegating-buffer))
-  (clear-modify (implementation buffer)))
+  ((%implementation :reader implementation
+                    :initform (error "A delegating buffer must have an implementation")
+                    :initarg :implementation))
+  (:documentation "Buffer class that delegates the buffer
+protocol functionality to a buffer implementation object stored
+in the `implementation' slot."))
 
 (defmethod size ((buffer delegating-buffer))
   (size (implementation buffer)))
@@ -70,3 +59,57 @@ the buffer from the IMPLEMENTATION slot."))
 
 (defmethod buffer-column-number ((buffer delegating-buffer) offset)
   (buffer-column-number (implementation buffer) offset))
+
+(defclass delegating-mark (mark-mixin)
+  ((%implementation :reader implementation
+                    :initform (error "A delegating mark must have an implementation")
+                    :initarg :implementation))
+  (:documentation "Superclass for classes suitable for use in a
+`delegating-buffer'."))
+
+(defmethod offset ((mark delegating-mark))
+  (offset (implementation mark)))
+
+(defmethod (setf offset) (new-value (mark delegating-mark))
+  (setf (offset (implementation mark)) new-value))
+
+(defclass delegating-left-sticky-mark (left-sticky-mark delegating-mark)
+  ()
+  (:documentation "A `left-sticky-mark' subclass suitable for use
+in a `delegating-buffer'."))
+ 
+(defclass delegating-right-sticky-mark (right-sticky-mark delegating-mark)
+  ()
+  (:documentation "A `right-sticky-mark' subclass suitable for
+use in a `delegating-buffer'."))
+
+(defmethod clone-mark ((mark delegating-left-sticky-mark) &optional stick-to)
+  (cond ((or (null stick-to) (eq stick-to :left))
+	 (make-instance 'delegating-left-sticky-mark
+          :implementation (clone-mark (implementation mark) :left)
+          :buffer (buffer mark)))
+	((eq stick-to :right)
+	 (make-instance 'delegating-right-sticky-mark
+          :implementation (clone-mark (implementation mark) :right)
+          :buffer (buffer mark)))
+	(t (error "invalid value for stick-to"))))
+
+(defmethod clone-mark ((mark delegating-right-sticky-mark) &optional stick-to)
+  (cond ((or (null stick-to) (eq stick-to :right))
+         (make-instance 'delegating-right-sticky-mark
+          :implementation (clone-mark (implementation mark) :right)
+          :buffer (buffer mark)))
+	((eq stick-to :left)
+	 (make-instance 'delegating-left-sticky-mark
+          :implementation (clone-mark (implementation mark) :left)
+          :buffer (buffer mark)))
+	(t (error "invalid value for stick-to"))))
+
+(defmethod make-buffer-mark ((buffer delegating-buffer)
+                             &optional (offset 0) (stick-to :left))
+  (make-instance (ecase stick-to
+                   (:left 'delegating-left-sticky-mark)
+                   (:right 'delegating-right-sticky-mark))
+                 :implementation (make-buffer-mark (implementation buffer)
+                                                   offset stick-to)
+                 :buffer buffer))

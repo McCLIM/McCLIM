@@ -28,8 +28,8 @@ buffer-streams related tests." :in drei-tests)
 (in-suite buffer-streams-tests)
 
 (defun whole-buffer-stream (buffer)
-  (let ((mark1 (clone-mark (low-mark buffer)))
-        (mark2 (clone-mark (low-mark buffer))))
+  (let ((mark1 (clone-mark (make-buffer-mark buffer)))
+        (mark2 (clone-mark (make-buffer-mark buffer))))
     (beginning-of-buffer mark1)
     (end-of-buffer mark2)
     (make-buffer-stream :buffer buffer
@@ -37,8 +37,8 @@ buffer-streams related tests." :in drei-tests)
                         :end-mark mark2)))
 
 (defun delimited-buffer-stream (buffer start-offset end-offset)
-  (let ((mark1 (clone-mark (low-mark buffer)))
-        (mark2 (clone-mark (low-mark buffer))))
+  (let ((mark1 (clone-mark (make-buffer-mark buffer)))
+        (mark2 (clone-mark (make-buffer-mark buffer))))
     (setf (offset mark1) start-offset)
     (setf (offset mark2) end-offset)
     (make-buffer-stream :buffer buffer
@@ -49,8 +49,8 @@ buffer-streams related tests." :in drei-tests)
   (with-drei-environment (:initial-contents "foo bar baz")
     (let ((stream (make-buffer-stream
                    :buffer (current-buffer)
-                   :start-mark (clone-mark (low-mark (current-buffer)) :right)
-                   :end-mark (clone-mark (low-mark (current-buffer)) :left))))
+                   :start-mark (clone-mark (point) :right)
+                   :end-mark (clone-mark (point) :left))))
       (is (typep (start-mark stream) 'left-sticky-mark))
       (is (typep (end-mark stream) 'right-sticky-mark)))))
 

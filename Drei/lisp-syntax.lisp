@@ -51,27 +51,33 @@
 ;;; the syntax object
 
 (define-syntax lisp-syntax (lr-syntax-mixin fundamental-syntax)
-  ((package-list :accessor package-list
-                 :documentation "An alist mapping the end offset
+  ((%package-list :accessor package-list
+                  :documentation "An alist mapping the end offset
 of (in-package) forms to a string of the package designator in
 the form. The list is sorted with the earliest (in-package) forms
 last (descending offset).")
-   (base :initform nil
-         :documentation "The base which numbers in the buffer are
+   (%base :initform nil
+          :documentation "The base which numbers in the buffer are
 expected to be in. If the provided value is NIL, the value of
 `*read-base*' will be used."
-         :type (or null (integer 2 36)))
-   (option-specified-package :accessor option-specified-package
-                             :initform nil
-                             :documentation "The package
+          :type (or null (integer 2 36)))
+   (%option-specified-package :accessor option-specified-package
+                              :initform nil
+                              :documentation "The package
 specified in the attribute line (may be overridden
 by (in-package) forms). This may be either a string (the name of
 the intended package) or a package object.")
-   (image :accessor image
-          :initform nil
-          :documentation "An image object (or NIL) that
+   (%image :accessor image
+           :initform nil
+           :documentation "An image object (or NIL) that
 determines where and how Lisp code in the buffer of the
-syntax should be run."))
+syntax should be run.")
+   (%form-before-cache :accessor form-before-cache
+                       :initform (make-hash-table :test #'equal))
+   (%form-after-cache :accessor form-after-cache
+                      :initform (make-hash-table :test #'equal))
+   (%form-around-cache :accessor form-around-cache
+                       :initform (make-hash-table :test #'equal)))
   (:name "Lisp")
   (:pathname-types "lisp" "lsp" "cl")
   (:command-table lisp-table)
@@ -81,11 +87,11 @@ syntax should be run."))
   (:documentation "Get the base `syntax' should interpret numbers
   in.")
   (:method ((syntax lisp-syntax))
-    (or (slot-value syntax 'base)
+    (or (slot-value syntax '%base)
         *read-base*)))
 
 (defmethod (setf base) (base (syntax lisp-syntax))
-  (setf (slot-value syntax 'base) base))
+  (setf (slot-value syntax '%base) base))
 
 (define-option-for-syntax lisp-syntax "Package" (syntax package-name)
   (let ((specified-package (find-package package-name)))
@@ -108,14 +114,14 @@ syntax should be run."))
                                               0)))))
         (cons :base (format nil "~A" (base syntax)))))
 
-(defmethod name-for-info-pane ((syntax lisp-syntax) &key pane)
+(defmethod name-for-info-pane ((syntax lisp-syntax) &key view)
   (format nil "Lisp~@[:~(~A~)~]"
-          (provided-package-name-at-mark syntax (point pane))))
+          (provided-package-name-at-mark syntax (point view))))
 
-(defmethod display-syntax-name ((syntax lisp-syntax) (stream extended-output-stream) &key pane)
+(defmethod display-syntax-name ((syntax lisp-syntax) (stream extended-output-stream) &key view)
   (princ "Lisp:" stream)                ; FIXME: should be `present'ed
                                         ; as something.
-  (let ((package-name (provided-package-name-at-mark syntax (point pane))))
+  (let ((package-name (provided-package-name-at-mark syntax (point view))))
     (if (find-package package-name)
         (with-output-as-presentation (stream (find-package package-name) 'expression)
           (princ package-name stream))
@@ -155,27 +161,26 @@ is returned: The result of evaluating `string'.")
     (declare (ignore image))
     (eval form)))
 
-(defgeneric compile-string-for-drei (image string package buffer buffer-mark)
+(defgeneric compile-string-for-drei (image string package syntax buffer-mark)
   (:documentation "Compile and evaluate `string' in
 `package'. Two values are returned: The result of evaluating
 `string' and a list of compiler notes. `Buffer' and `buffer-mark'
 will be used for hyperlinking the compiler notes to the source
 code.")
-  (:method (image string package buffer buffer-mark)
-    (declare (ignore image string package buffer buffer-mark))
+  (:method (image string package syntax buffer-mark)
     (error "Backend insufficient for this operation")))
 
-(defgeneric compile-form-for-drei (image form buffer buffer-mark)
+(defgeneric compile-form-for-drei (image form syntax buffer-mark)
   (:documentation "Compile and evaluate `form', which must be a
 valid Lisp form. Two values are returned: The result of
 evaluating `string' and a list of compiler notes. `Buffer' and
 `buffer-mark' will be used for hyperlinking the compiler notes to
 the source code.")
-  (:method (image form buffer buffer-mark)
+  (:method (image form syntax buffer-mark)
     (compile-string-for-drei image
-                                (let ((*print-base* (base (syntax buffer))))
-                                  (write-to-string form))
-                                *package* buffer buffer-mark)))
+                             (let ((*print-base* (base syntax)))
+                               (write-to-string form))
+                             *package* syntax buffer-mark)))
 
 (defgeneric compile-file-for-drei (image filepath package &optional load-p)
   (:documentation "Compile the file at `filepath' in
@@ -1112,9 +1117,6 @@ along with any default values) that can be used in a
 ;;;
 ;;; update syntax
 
-(defmethod update-syntax-for-display (buffer (syntax lisp-syntax) top bot)
-  nil)
-
 (defun package-at-mark (syntax mark-or-offset)
   "Get the specified Lisp package for the syntax. First, an
 attempt will be made to find the package specified in
@@ -1123,18 +1125,19 @@ found, return the package specified in the attribute list. If no
 package can be found at all, or the otherwise found packages are
 invalid, return the value of `*package*'."
   (as-offsets ((offset mark-or-offset))
-   (let* ((designator (rest (find offset (package-list syntax)
-                                  :key #'first
-                                  :test #'>=))))
-     (or (handler-case (find-package designator)
-           (type-error ()
-             nil))
-         (let ((osp (option-specified-package syntax)))
-          (typecase osp
-            (package osp)
-            (string (find-package osp))))
-         (find-package (option-specified-package syntax))
-         *package*))))
+    (update-parse syntax 0 offset)
+    (let* ((designator (rest (find offset (package-list syntax)
+                              :key #'first
+                              :test #'>=))))
+      (or (handler-case (find-package designator)
+            (type-error ()
+              nil))
+          (let ((osp (option-specified-package syntax)))
+            (typecase osp
+              (package osp)
+              (string (find-package osp))))
+          (find-package (option-specified-package syntax))
+          *package*))))
 
 (defun provided-package-name-at-mark (syntax mark-or-offset)
   "Get the name of the specified Lisp package for the
@@ -1166,9 +1169,9 @@ list. If no such package is specified, return \"CLIM-USER\"."
   `(let ((*package* (package-at-mark ,syntax ,offset)))
      ,@body))
 
-(defun need-to-update-package-list-p (buffer syntax)
-  (let ((low-mark-offset (offset (low-mark buffer)))
-        (high-mark-offset (offset (high-mark buffer))))
+(defun need-to-update-package-list-p (prefix-size suffix-size syntax)
+  (let ((low-mark-offset prefix-size)
+        (high-mark-offset (- (size (buffer syntax)) suffix-size)))
     (flet ((test (x)
              (let ((start-offset (start-offset x))
                    (end-offset (end-offset x)))
@@ -1195,19 +1198,18 @@ list. If no such package is specified, return \"CLIM-USER\"."
                                             :no-error t)
                            'cl:in-package)))))))
       (with-slots (stack-top) syntax
-        (or (not (slot-boundp syntax 'package-list))
+        (or (not (slot-boundp syntax '%package-list))
             (loop
                for child in (children stack-top)
                when (test child)
                do (return t))
             (loop
                for (offset . nil) in (package-list syntax)
-               unless (and (>= (size buffer) offset)
+               unless (and (>= (size (buffer syntax)) offset)
                            (form-list-p (form-around syntax offset)))
                do (return t)))))))
 
-(defun update-package-list (buffer syntax)
-  (declare (ignore buffer))
+(defun update-package-list (syntax)
   (setf (package-list syntax) nil)
   (flet ((test (x)
            (when (form-list-p x)
@@ -1227,9 +1229,14 @@ list. If no such package is specified, return \"CLIM-USER\"."
                         (extract child))
                   (package-list syntax))))))
 
-(defmethod update-syntax :after (buffer (syntax lisp-syntax))
-  (when (need-to-update-package-list-p buffer syntax)
-      (update-package-list buffer syntax)))
+(defmethod update-syntax :after ((syntax lisp-syntax) prefix-size suffix-size
+                                 &optional begin end)
+  (declare (ignore begin end))
+  (setf (form-before-cache syntax) (make-hash-table :test #'equal)
+        (form-after-cache syntax) (make-hash-table :test #'equal)
+        (form-around-cache syntax) (make-hash-table :test #'equal))
+  (when (need-to-update-package-list-p prefix-size suffix-size syntax)
+    (update-package-list syntax)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -1470,113 +1477,55 @@ and move `mark' to after `string'. If there is no symbol at
 ;;;
 ;;; display
 
-(defvar *white-space-start* nil)
-
-(defvar *current-line* 0)
-
-(defparameter *standard-faces*
-  `((:error ,+red+ nil)
-    (:string ,+rosy-brown+ ,(make-text-style nil :italic nil))
-    (:keyword ,+orchid+ nil)
-    (:macro ,+purple+ nil)
-    (:special-form ,+purple+ nil)
-    (:lambda-list-keyword ,+dark-green+ nil)
-    (:comment ,+maroon+ nil)
-    (:reader-conditional ,+gray50+ nil)))
-
 (defparameter *reader-conditional-faces*
-  `((:error ,+red+ nil)
-    (:string ,+gray50+ ,(make-text-style nil :italic nil))
-    (:keyword ,+gray50+ nil)
-    (:macro ,+gray50+ nil)
-    (:special-form ,+gray50+ nil)
-    (:lambda-list-keyword ,+gray50+ nil)
-    (:comment ,+gray50+ nil)
-    (:reader-conditional ,+gray50+ nil)))
+  (list (make-face :error +red+)
+        (make-face :string +gray50+ (make-text-style nil :italic nil))
+        (make-face :keyword +gray50+)
+        (make-face :macro +gray50+)
+        (make-face :special-form +gray50+)
+        (make-face :lambda-list-keyword +gray50+)
+        (make-face :comment +gray50+)
+        (make-face :reader-conditional +gray50+)))
 
-(defvar *current-faces* nil)
+(define-standard-faces lisp-syntax
+  (make-face :error +red+)
+  (make-face :string +rosy-brown+ (make-text-style nil :italic nil))
+  (make-face :keyword +orchid+)
+  (make-face :macro +purple+)
+  (make-face :special-form +purple+)
+  (make-face :lambda-list-keyword +dark-green+)
+  (make-face :comment +maroon+)
+  (make-face :reader-conditional +gray50+))
 
-(defun face-colour (type)
-  (first (cdr (assoc type *current-faces*))))
-
-(defun face-style (type)
-  (second (cdr (assoc type *current-faces*))))
-
-(defmacro with-face ((face &optional (stream-symbol 'stream)) &body body)
-  `(with-drawing-options (,stream-symbol :ink (face-colour ,face)
-                                         :text-style (face-style ,face))
-     ,@body))
-
-(defun handle-whitespace (pane buffer start end)
-  (let ((space-width (space-width pane))
-        (tab-width (tab-width pane)))
-    (with-sheet-medium (medium pane)
-      (with-accessors ((cursor-positions cursor-positions)) (syntax buffer)
-        (loop while (< start end)
-           do (case (buffer-object buffer start)
-                (#\Newline (record-line-vertical-offset pane (syntax buffer) (incf *current-line*))
-                           (terpri pane)
-                           (stream-increment-cursor-position
-                            pane (first (aref cursor-positions 0)) 0))
-                ((#\Page #\Return #\Space) (stream-increment-cursor-position
-                                            pane space-width 0))
-                (#\Tab (when (plusp tab-width)
-                         (let ((x (stream-cursor-position pane)))
-                           (stream-increment-cursor-position
-                            pane (- tab-width (mod x tab-width)) 0)))))
-           (incf start))))))
-
-(defgeneric display-parse-tree (parse-symbol stream drei syntax)
-  (:documentation "Display the given parse-symbol on the supplied
-  stream, assuming `drei' to be the relevant Drei instance and
-  `syntax' being the syntax object responsible for the parse
-  symbol."))
-
-(defmethod display-parse-tree ((parse-symbol (eql nil)) stream (drei drei)
+(defmethod display-parse-tree ((parse-symbol (eql nil)) stream (view textual-drei-syntax-view)
                                (syntax lisp-syntax))
   nil)
 
-(defmethod display-parse-tree :around (parse-symbol stream (drei drei)
-                                                    (syntax lisp-syntax))
-  (with-slots (top bot) drei
-    (when (and (start-offset parse-symbol)
-               (mark< (start-offset parse-symbol) bot)
-               (mark> (end-offset parse-symbol) top))
-      (call-next-method))))
-
-(defmethod display-parse-tree (parse-symbol stream (drei drei)
-                               (syntax lisp-syntax))
-  (with-slots (top bot) drei
-    (loop for child in (children parse-symbol)
-       when (and (start-offset child)
-                 (mark> (end-offset child) top))
-         do (if (mark< (start-offset child) bot)
-                (display-parse-tree child stream drei syntax)
-                (return)))))
-
-(defmethod display-parse-tree ((parse-symbol error-symbol) stream (drei drei)
-                               (syntax lisp-syntax))
+(defmethod display-parse-tree ((parse-symbol error-symbol) stream
+                               (view textual-drei-syntax-view) (syntax lisp-syntax))
   (let ((children (children parse-symbol)))
     (loop until (or (null (cdr children))
 		    (typep (parser-state (cadr children)) 'error-state))
-	  do (display-parse-tree (pop children) stream drei syntax))
+	  do (display-parse-tree (pop children) stream view syntax))
     (if (and (null (cdr children))
 	     (not (typep (parser-state parse-symbol) 'error-state)))
-	(display-parse-tree (car children) stream drei syntax)
+	(display-parse-tree (car children) stream view syntax)
 	(with-face (:error)
 	  (loop for child in children
-		do (display-parse-tree child stream drei syntax))))))
+		do (display-parse-tree child stream view syntax))))))
 
-(defmethod display-parse-tree ((parse-symbol error-lexeme) stream (drei drei) (syntax lisp-syntax))
+(defmethod display-parse-tree ((parse-symbol error-lexeme) stream
+                               (view textual-drei-syntax-view) (syntax lisp-syntax))
   (with-face (:error)
     (call-next-method)))
 
 (defmethod display-parse-tree ((parse-symbol unmatched-right-parenthesis-lexeme)
-			       stream (drei drei) (syntax lisp-syntax))
+			       stream (view textual-drei-syntax-view) (syntax lisp-syntax))
   (with-face (:error)
     (call-next-method)))
 
-(defmethod display-parse-tree ((parse-symbol token-mixin) stream (drei drei) (syntax lisp-syntax))
+(defmethod display-parse-tree ((parse-symbol token-mixin) stream
+                               (view textual-drei-syntax-view) (syntax lisp-syntax))
   (if (> (the fixnum (end-offset parse-symbol)) (the fixnum (start-offset parse-symbol)))
       (let ((symbol (form-to-object syntax parse-symbol :no-error t)))
         (with-output-as-presentation (stream symbol 'symbol :single-box :highlighting)
@@ -1599,17 +1548,17 @@ and move `mark' to after `string'. If there is no symbol at
                 (t (call-next-method)))))
       (call-next-method)))
 
-(defmethod display-parse-tree ((parser-symbol literal-object-form) stream (drei drei)
+(defmethod display-parse-tree ((parser-symbol literal-object-form) stream (view textual-drei-syntax-view)
                                (syntax lisp-syntax))
   (updating-output
-      (stream :unique-id (list drei parser-symbol)
+      (stream :unique-id (list view parser-symbol)
               :id-test #'equal
               :cache-value parser-symbol
               :cache-test #'eql)
     (let ((object (form-to-object syntax parser-symbol)))
       (present object (presentation-type-of object) :stream stream))))
 
-(defmethod display-parse-tree ((parser-symbol lisp-lexeme) stream (drei drei)
+(defmethod display-parse-tree ((parser-symbol lisp-lexeme) stream (view textual-drei-syntax-view)
                                (syntax lisp-syntax))
   (flet ((cache-test (t1 t2)
            (and (eq t1 t2)
@@ -1618,7 +1567,7 @@ and move `mark' to after `string'. If there is no symbol at
                 (eq (slot-value t1 'face)
                     (text-style-face (medium-text-style (sheet-medium stream)))))))
     (updating-output
-        (stream :unique-id (list drei parser-symbol)
+        (stream :unique-id (list view parser-symbol)
                 :id-test #'equal
                 :cache-value parser-symbol
                 :cache-test #'cache-test)
@@ -1627,15 +1576,11 @@ and move `mark' to after `string'. If there is no symbol at
               face (text-style-face (medium-text-style (sheet-medium stream))))
         (write-string (form-string syntax parser-symbol) stream)))))
 
-(defmethod display-parse-tree :before ((parse-symbol lisp-lexeme) stream (drei drei)
-                                       (syntax lisp-syntax))
-  (handle-whitespace stream (buffer drei) *white-space-start* (start-offset parse-symbol))
-  (setf *white-space-start* (end-offset parse-symbol)))
-
 (define-presentation-type lisp-string ()
                           :description "lisp string")
 
-(defmethod display-parse-tree ((parse-symbol complete-string-form) stream (drei drei) (syntax lisp-syntax))
+(defmethod display-parse-tree ((parse-symbol complete-string-form) stream
+                               (view textual-drei-syntax-view) (syntax lisp-syntax))
   (let ((children (children parse-symbol)))
     (if (third children)
         (let ((string (buffer-substring (buffer syntax)
@@ -1644,15 +1589,16 @@ and move `mark' to after `string'. If there is no symbol at
           (with-output-as-presentation (stream string 'lisp-string
                                                :single-box :highlighting)
             (with-face (:string)
-              (display-parse-tree (pop children) stream drei syntax)
+              (display-parse-tree (pop children) stream view syntax)
 	      (loop until (null (cdr children))
-                 do (display-parse-tree (pop children) stream drei syntax))
-              (display-parse-tree (pop children) stream drei syntax))))
+                 do (display-parse-tree (pop children) stream view syntax))
+              (display-parse-tree (pop children) stream view syntax))))
         (with-face (:string)
-         (progn (display-parse-tree (pop children) stream drei syntax)
-                (display-parse-tree (pop children) stream drei syntax))))))
+         (progn (display-parse-tree (pop children) stream view syntax)
+                (display-parse-tree (pop children) stream view syntax))))))
 
-(defmethod display-parse-tree ((parse-symbol incomplete-string-form) stream (drei drei) (syntax lisp-syntax))
+(defmethod display-parse-tree ((parse-symbol incomplete-string-form) stream
+                               (view textual-drei-syntax-view) (syntax lisp-syntax))
   (let ((children (children parse-symbol)))
     (if (second children)
         (let ((string (buffer-substring (buffer syntax)
@@ -1661,22 +1607,24 @@ and move `mark' to after `string'. If there is no symbol at
           (with-output-as-presentation (stream string 'lisp-string
                                                :single-box :highlighting)
             (with-face (:string)
-              (display-parse-tree (pop children) stream drei syntax)
+              (display-parse-tree (pop children) stream view syntax)
               (loop until (null children)
-                 do (display-parse-tree (pop children) stream drei syntax)))))
+                 do (display-parse-tree (pop children) stream view syntax)))))
         (with-face (:string)
-         (display-parse-tree (pop children) stream drei syntax)))))
+         (display-parse-tree (pop children) stream view syntax)))))
 
-(defmethod display-parse-tree ((parse-symbol line-comment-form) stream (drei drei) (syntax lisp-syntax))
+(defmethod display-parse-tree ((parse-symbol line-comment-form) stream
+                               (view textual-drei-syntax-view) (syntax lisp-syntax))
   (with-face (:comment)
     (call-next-method)))
 
-(defmethod display-parse-tree ((parse-symbol long-comment-form) stream (drei drei) (syntax lisp-syntax))
+(defmethod display-parse-tree ((parse-symbol long-comment-form) stream
+                               (view textual-drei-syntax-view) (syntax lisp-syntax))
   (with-face (:comment)
     (call-next-method)))
 
 (defmethod display-parse-tree ((parse-symbol reader-conditional-positive-form)
-			       stream (drei drei) (syntax lisp-syntax))
+			       stream (view textual-drei-syntax-view) (syntax lisp-syntax))
   (let ((conditional (second-noncomment (children parse-symbol))))
     (if (eval-feature-conditional conditional syntax)
 	(call-next-method)
@@ -1685,7 +1633,7 @@ and move `mark' to after `string'. If there is no symbol at
 	    (call-next-method))))))
 
 (defmethod display-parse-tree ((parse-symbol reader-conditional-negative-form)
-				stream (drei drei) (syntax lisp-syntax))
+				stream (view textual-drei-syntax-view) (syntax lisp-syntax))
   (let ((conditional (second-noncomment (children parse-symbol))))
     (if (eval-feature-conditional conditional syntax)
 	(let ((*current-faces* *reader-conditional-faces*))
@@ -1729,72 +1677,61 @@ and move `mark' to after `string'. If there is no symbol at
 		    (funcall #'(lambda (f l) (not (apply f l)))
 			     #'eval-fc conditionals)))))))))
 
-(defmethod display-parse-tree ((parse-symbol complete-list-form) stream (drei drei) (syntax lisp-syntax))
+(defmethod display-parse-tree ((parse-symbol complete-list-form) stream
+                               (view textual-drei-syntax-view) (syntax lisp-syntax))
   (let* ((children (children parse-symbol))
-         (point-offset (the fixnum (offset (point drei))))
-         ;; The following is set to true if the location if the point
+         (point-offset (the fixnum (offset (point view))))
+         ;; The following is true if the location if the point
          ;; warrants highlighting of a set of matching parentheses.
-         (should-highlight (and (active drei)
+         (should-highlight (and (active view)
                                 (or (= (the fixnum (end-offset parse-symbol)) point-offset)
                                     (= (the fixnum (start-offset parse-symbol)) point-offset)))))
     (if should-highlight
         (with-text-face (stream :bold)
-          (display-parse-tree (car children) stream drei syntax))
-        (display-parse-tree (car children) stream drei syntax))
+          (display-parse-tree (car children) stream view syntax))
+        (display-parse-tree (car children) stream view syntax))
     (loop for child-list on (cdr children)
        if (and should-highlight (null (cdr child-list))) do
        (with-text-face (stream :bold)
-         (display-parse-tree (car child-list) stream drei syntax))
+         (display-parse-tree (car child-list) stream view syntax))
        else do
-       (display-parse-tree (car child-list) stream drei syntax))))
+       (display-parse-tree (car child-list) stream view syntax))))
 
-(defmethod display-parse-tree ((parse-symbol incomplete-list-form) stream (drei drei) (syntax lisp-syntax))
+(defmethod display-parse-tree ((parse-symbol incomplete-list-form) stream
+                               (view textual-drei-syntax-view) (syntax lisp-syntax))
+  (update-parse syntax)
   (let* ((children (children parse-symbol))
-         (point-offset (the fixnum (offset (point drei))))
+         (point-offset (the fixnum (offset (point view))))
          ;; The following is set to true if the location if the point
          ;; warrants highlighting of the beginning parenthesis
-         (should-highlight (and (active drei)
+         (should-highlight (and (active view)
                                 (= (the fixnum (start-offset parse-symbol)) point-offset))))
     (with-face (:error)
       (if should-highlight
           (with-text-face (stream :bold)
-            (display-parse-tree (car children) stream drei syntax))
-          (display-parse-tree (car children) stream drei syntax)))
+            (display-parse-tree (car children) stream view syntax))
+          (display-parse-tree (car children) stream view syntax)))
     (loop for child in (cdr children) do
-      (display-parse-tree child stream drei syntax))))
-
-(defmethod display-drei-contents ((stream clim-stream-pane) (drei drei) (syntax lisp-syntax))
-  (with-slots (top bot) drei
-    (with-accessors ((cursor-positions cursor-positions)) syntax
-      ;; There must always be room for at least one element of line
-      ;; information.
-      (setf cursor-positions (make-array (1+ (number-of-lines-in-region top bot))
-                                         :initial-element nil)
-            *current-line* 0
-            (aref cursor-positions 0) (multiple-value-list
-                                       (stream-cursor-position stream))))
-    (setf *white-space-start* (offset top)))
-  (let ((*current-faces* *standard-faces*))
-    (with-slots (stack-top) syntax
-      (display-parse-tree stack-top stream drei syntax))))
+      (display-parse-tree child stream view syntax))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; exploit the parse
 
-(defun form-before-in-children (children offset)
+(defun form-before-in-children (syntax children offset)
+  (update-parse syntax 0 offset)
   (loop for (first . rest) on children
      if (formp first)
      do
      (cond ((< (start-offset first) offset (end-offset first))
             (return (if (null (children first))
                         nil
-                        (form-before-in-children (children first) offset))))
+                        (form-before-in-children syntax (children first) offset))))
            ((and (>= offset (end-offset first))
                  (or (null (first-form rest))
                      (<= offset (start-offset (first-form rest)))))
             (return (let ((potential-form
-                           (form-before-in-children (children (fully-unquoted-form first)) offset)))
+                           (form-before-in-children syntax (children (fully-unquoted-form first)) offset)))
                       (if (not (null potential-form))
                           (if (or (<= (end-offset first)
                                       (end-offset potential-form))
@@ -1810,21 +1747,25 @@ and move `mark' to after `string'. If there is no symbol at
           "Offset past buffer end")
   (assert (>= offset 0) nil
           "Offset before buffer start")
-  (with-slots (stack-top) syntax
-    (if (or (null (start-offset stack-top))
-	    (<= offset (start-offset stack-top)))
-	nil
-	(form-before-in-children (children stack-top) offset))))
+  (update-parse syntax 0 offset)
+  (or (gethash offset (form-before-cache syntax))
+      (setf (gethash offset (form-before-cache syntax))
+            (with-slots (stack-top) syntax
+              (if (or (null (start-offset stack-top))
+                      (<= offset (start-offset stack-top)))
+                  nil
+                  (form-before-in-children syntax (children stack-top) offset))))))
 
-(defun form-after-in-children (children offset)
+(defun form-after-in-children (syntax children offset)
+  (update-parse syntax 0 offset)
   (loop for child in children
      if (formp child)
      do (cond ((< (start-offset child) offset (end-offset child))
                (return (if (null (children child))
                            nil
-                           (form-after-in-children (children child) offset))))
+                           (form-after-in-children syntax (children child) offset))))
               ((<= offset (start-offset child))
-               (return (let ((potential-form (form-after-in-children (children child) offset)))
+               (return (let ((potential-form (form-after-in-children syntax (children child) offset)))
                          (if (not (null potential-form))
                              (if (<= (start-offset child)
                                      (start-offset potential-form))
@@ -1839,13 +1780,17 @@ and move `mark' to after `string'. If there is no symbol at
           "Offset past buffer end")
   (assert (>= offset 0) nil
           "Offset before buffer start")
-  (with-slots (stack-top) syntax
-    (if (or (null (start-offset stack-top))
-	    (>= offset (end-offset stack-top)))
-	nil
-	(form-after-in-children (children stack-top) offset))))
+  (update-parse syntax 0 offset)
+  (or (gethash offset (form-after-cache syntax))
+      (setf (gethash offset (form-after-cache syntax))
+            (with-slots (stack-top) syntax
+              (if (or (null (start-offset stack-top))
+                      (>= offset (end-offset stack-top)))
+                  nil
+                  (form-after-in-children syntax (children stack-top) offset))))))
 
-(defun form-around-in-children (children offset)
+(defun form-around-in-children (syntax children offset)
+  (update-parse syntax 0 offset)
   (loop for child in children
      if (formp child)
      do (cond ((or (<= (start-offset child) offset (end-offset child))
@@ -1853,7 +1798,7 @@ and move `mark' to after `string'. If there is no symbol at
                    (= offset (start-offset child)))
                (return (if (null (first-form (children child)))
                            child
-                           (or (form-around-in-children (children child) offset)
+                           (or (form-around-in-children syntax (children child) offset)
                                child))))
               ((< offset (start-offset child))
                (return nil))
@@ -1864,12 +1809,15 @@ and move `mark' to after `string'. If there is no symbol at
           "Offset past buffer end")
   (assert (>= offset 0) nil
           "Offset before buffer start")
-  (with-slots (stack-top) syntax
-    (if (or (null (start-offset stack-top))
-	    (> offset (end-offset stack-top))
-	    (< offset (start-offset stack-top)))
-	nil
-	(form-around-in-children (children stack-top) offset))))
+  (update-parse syntax 0 offset)
+  (or (gethash offset (form-around-cache syntax))
+      (setf (gethash offset (form-around-cache syntax))
+            (with-slots (stack-top) syntax
+              (if (or (null (start-offset stack-top))
+                      (> offset (end-offset stack-top))
+                      (< offset (start-offset stack-top)))
+                  nil
+                  (form-around-in-children syntax (children stack-top) offset))))))
 
 (defun find-list-parent-offset (form fn)
   "Find a list parent of `form' and return `fn' applied to this
@@ -2402,8 +2350,7 @@ should be assumed as the result of the form-conversion."))
 (defun invoke-reader (syntax form)
   "Use the system reader to handle `form' and signal a
 `reader-invoked' condition with the resulting data."
-  (let* ((start-mark (clone-mark (high-mark (buffer syntax)))))
-    (setf (offset start-mark) (start-offset form))
+  (let* ((start-mark (make-buffer-mark (buffer syntax) (start-offset form))))
     (let* ((stream (make-buffer-stream :buffer (buffer syntax)
                                        :start-mark start-mark))
            (object (read-preserving-whitespace stream)))
@@ -2618,8 +2565,7 @@ will be signalled for incomplete forms.")
                         (unless no-error
                           (error e))))))
              (let ((*form-to-object-depth* (1+ *form-to-object-depth*))
-                   (*package* (or package (package-at-mark
-                                           syntax (start-offset form)))))
+                   (*package* (or package (package-at-mark syntax (start-offset form)))))
                (if (= *form-to-object-depth* 1)
                    (let ((*labels->placeholders* nil)
                          (*label-placeholders->objects* nil))
@@ -4073,7 +4019,8 @@ lambda list parameter objects to symbols or lists."))
 	  do (incf (offset mark2))
           finally (return column))))
 
-(defmethod syntax-line-indentation (mark tab-width (syntax lisp-syntax))
+(defmethod syntax-line-indentation ((syntax lisp-syntax) mark tab-width)
+  (update-parse syntax 0 (offset mark))
   (setf mark (clone-mark mark))
   (beginning-of-line mark)
   (with-slots (stack-top) syntax

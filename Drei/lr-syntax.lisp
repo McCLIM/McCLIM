@@ -38,8 +38,9 @@
 
 (defmethod initialize-instance :after ((syntax lr-syntax-mixin) &rest args)
   (declare (ignore args))
-  (with-slots (buffer scan) syntax
-     (setf scan (clone-mark (low-mark buffer) :left))))
+  (with-accessors ((buffer buffer) (scan scan)) syntax
+    (setf scan (make-buffer-mark buffer 0 :left))
+    (update-syntax syntax 0 0)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -291,13 +292,12 @@
 ;;;
 ;;; update syntax
 
-(defmethod update-syntax-for-display (buffer (syntax lr-syntax-mixin) top bot)
-  nil)
-
-(defmethod update-syntax (buffer (syntax lr-syntax-mixin))
-  (let* ((low-mark (low-mark buffer))
-	 (high-mark (high-mark buffer)))
-    (when (mark<= low-mark high-mark)
+(defmethod update-syntax ((syntax lr-syntax-mixin) prefix-size suffix-size
+                          &optional begin end)
+  (declare (ignore begin end))
+  (let* ((low-mark-offset prefix-size)
+	 (high-mark-offset (- (size (buffer syntax)) suffix-size)))
+    (when (<= low-mark-offset high-mark-offset)
       (catch 'done
 	(with-slots (current-state stack-top scan potentially-valid-trees
 				   initial-state) syntax
@@ -305,8 +305,8 @@
                 (if (null stack-top)
                     nil
                     (find-first-potentially-valid-lexeme (children stack-top)
-                                                         (offset high-mark))))
-          (setf stack-top (find-last-valid-lexeme stack-top (offset low-mark)))
+                                                         high-mark-offset)))
+          (setf stack-top (find-last-valid-lexeme stack-top low-mark-offset))
           (setf (offset scan) (if (null stack-top) 0 (end-offset stack-top))
                 current-state (if (null stack-top)
 				  initial-state
@@ -315,3 +315,87 @@
                                              stack-top)))
           (loop do (parse-patch syntax)))))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Redisplay. This is just some minor conveniences, not an actual
+;;; generic redisplay implementation for LR syntaxes.
+
+(defvar *current-faces* nil
+  "The current faces used by the syntax for redisplay. Will be
+bound during redisplay.")
+
+(defstruct (face (:type list)
+                 (:constructor make-face (name colour &optional style)))
+  name colour (style nil))
+
+(defgeneric get-faces (syntax)
+  (:documentation "Return a list of all the defined standard
+faces of `syntax'.")
+  (:method ((syntax lr-syntax-mixin))
+    '()))
+
+(defun get-face (name)
+  "Retrieve face named `name' from `*current-faces*'."
+  (find name *current-faces* :key #'face-name))
+
+(defmacro define-standard-faces (syntax &body faces)
+  "Define the list of standard faces used by `syntax' to be
+`faces', which must be a sequence of forms evaluating to
+face-values ((name, colour, style)-triples)."
+  `(let ((faces-list (list ,@faces)))
+     (defmethod get-faces ((syntax ,syntax))
+       faces-list)))
+
+(defmacro with-face ((face &optional (stream-symbol 'stream)) &body body)
+  `(with-drawing-options (,stream-symbol :ink (face-colour (get-face ,face))
+                                         :text-style (face-style (get-face ,face)))
+     ,@body))
+
+(defgeneric display-parse-tree (parse-symbol stream view syntax)
+  (:documentation "Display the given parse-symbol on `stream',
+assuming `view' to be the relevant Drei vire and `syntax' being
+the syntax object responsible for the parse symbol."))
+
+(defmethod display-parse-tree :before ((parse-symbol lexeme)
+                                       stream (view textual-drei-syntax-view)
+                                       (syntax lr-syntax-mixin))
+  (handle-whitespace stream view (buffer view)
+                     *white-space-start* (start-offset parse-symbol))
+  (setf *white-space-start* (end-offset parse-symbol)))
+
+(defmethod display-parse-tree :around ((parse-symbol parser-symbol)
+                                       stream (view textual-drei-syntax-view)
+                                       (syntax lr-syntax-mixin))
+  (with-accessors ((top top) (bot bot)) view
+    (when (and (start-offset parse-symbol)
+               (mark< (start-offset parse-symbol) bot)
+               (mark> (end-offset parse-symbol) top))
+      (call-next-method))))
+
+(defmethod display-parse-tree ((parse-symbol parser-symbol)
+                               stream (view textual-drei-syntax-view)
+                               (syntax lr-syntax-mixin))
+  (with-accessors ((top top) (bot bot)) view
+    (loop for child in (children parse-symbol)
+       when (and (start-offset child)
+                 (mark> (end-offset child) top))
+       do (if (mark< (start-offset child) bot)
+              (display-parse-tree child stream view syntax)
+              (return)))))
+
+(defmethod display-syntax-view ((stream clim-stream-pane) (view textual-drei-syntax-view)
+                                (syntax lr-syntax-mixin))
+  (update-parse syntax)
+  (with-accessors ((top top) (bot bot)) view
+    (with-accessors ((cursor-positions cursor-positions)) view
+      ;; There must always be room for at least one element of line
+      ;; information.
+      (setf cursor-positions (make-array (1+ (number-of-lines-in-region top bot))
+                              :initial-element nil)
+            *current-line* 0
+            (aref cursor-positions 0) (multiple-value-list
+                                       (stream-cursor-position stream))))
+    (setf *white-space-start* (offset top)))
+  (let ((*current-faces* (get-faces syntax)))
+    (with-slots (stack-top) syntax
+      (display-parse-tree stack-top stream view syntax))))

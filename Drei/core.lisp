@@ -13,22 +13,29 @@
 
 (in-package :drei-core)
 
+(defgeneric proper-line-indentation (view mark)
+  (:documentation "Return the offset to which `mark' should
+ideally be indented to according to `view'."))
+
+(defmethod proper-line-indentation ((view drei-syntax-view) (mark mark))
+  (syntax-line-indentation (syntax view) mark (tab-space-count view)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 
 ;;; Misc stuff
 
 (defun possibly-fill-line ()
-  (when (auto-fill-mode *drei-instance*)
-    (let* ((fill-column (auto-fill-column *drei-instance*))
+  (when (auto-fill-mode (current-view))
+    (let* ((fill-column (auto-fill-column (current-view)))
            (offset (offset (point)))
-           (tab-width (tab-space-count (view *drei-instance*))))
-      (when (>= (buffer-display-column (current-buffer) offset tab-width)
+           (tab-space-count (tab-space-count (current-view))))
+      (when (>= (buffer-display-column (current-buffer) offset tab-space-count)
                 (1- fill-column))
         (fill-line (point)
                    (lambda (mark)
-                     (syntax-line-indentation mark tab-width (current-syntax)))
+                     (proper-line-indentation (current-view) mark))
                    fill-column
-                   tab-width
+                   tab-space-count
                    (current-syntax))))))
 
 (defun back-to-indentation (mark syntax)
@@ -40,9 +47,9 @@
 (defun insert-character (char)
   (unless (constituentp char)
     (possibly-expand-abbrev (point)))
-  (when (whitespacep (syntax (current-buffer)) char)
+  (when (whitespacep (current-syntax) char)
     (possibly-fill-line))
-  (if (and (slot-value *drei-instance* 'overwrite-mode)
+  (if (and (overwrite-mode (current-view))
            (not (end-of-line-p (point))))
       (progn
         (delete-range (point))
@@ -60,15 +67,10 @@
 	    do (forward-object mark2)))
     (delete-region mark mark2)))
 
-(defun indent-current-line (drei point)
-  (let* ((buffer (buffer drei))
-         (view (view drei))
-         (tab-space-count (tab-space-count view))
-         (indentation (syntax-line-indentation point
-                                               tab-space-count
-                                               (syntax buffer))))
-    (indent-line point indentation (and (indent-tabs-mode buffer)
-                                        tab-space-count))))
+(defun indent-current-line (view point)
+  (indent-line point (proper-line-indentation view point)
+               (and (indent-tabs-mode (buffer view))
+                    (tab-space-count view))))
 
 (defun insert-pair (mark syntax &optional (count 0) (open #\() (close #\)))
   (cond ((> count 0)
@@ -94,8 +96,7 @@
   (setf (offset mark) pos))
 
 (defun goto-line (mark line-number)
-  (loop with m = (clone-mark (low-mark (buffer mark))
-		       :right)
+  (loop with m = (clone-mark mark :right)
 	initially (beginning-of-buffer m)
        	repeat (1- line-number)
 	until (end-of-buffer-p m)
@@ -159,34 +160,20 @@ using the case of those objects if USE-REGION-CASE is true."
 ;;; 
 ;;; Indentation
 
-(defun indent-region (drei mark1 mark2)
+(defun indent-region (view mark1 mark2)
   "Indent all lines in the region delimited by `mark1' and
 `mark2' according to the rules of the active syntax in
 `drei'. `Mark1' and `mark2' will not be modified by this
 function."
-  (let* ((buffer (buffer drei))
-         (view (view drei))
-         (tab-space-count (tab-space-count view))
-         (tab-width (and (indent-tabs-mode buffer)
-                         tab-space-count))
-         (syntax (syntax buffer)))
-    (do-buffer-region-lines (line mark1 mark2)
-      (let ((indentation (syntax-line-indentation
-                          line
-                          tab-space-count
-                          syntax)))
-        (indent-line line indentation tab-width))
-      ;; We need to update the syntax every time we perform an
-      ;; indentation, so that subsequent indentations will be
-      ;; correctly indented (this matters in list forms). FIXME: This
-      ;; should probably happen automatically.
-      (update-syntax buffer syntax))))
+  (do-buffer-region-lines (line mark1 mark2)
+    (let ((indentation (proper-line-indentation view line)))
+      (indent-line line indentation (tab-space-count view)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 
 ;;; Auto fill
 
-(defun fill-line (mark syntax-line-indentation-function fill-column tab-width syntax
+(defun fill-line (mark line-indentation-function fill-column tab-width syntax
 		  &optional (compress-whitespaces t))
   "Breaks the contents of line pointed to by MARK up to MARK into
 multiple lines such that none of them is longer than FILL-COLUMN. If
@@ -224,7 +211,7 @@ compression means just the deletion of trailing whitespaces."
                (insert-object begin-mark #\Newline)
                (incf (offset begin-mark))
                (let ((indentation
-                      (funcall syntax-line-indentation-function begin-mark)))
+                      (funcall line-indentation-function begin-mark)))
                  (indent-line begin-mark indentation tab-width))
                (beginning-of-line begin-mark)
                (setf line-beginning-offset (offset begin-mark))
@@ -232,7 +219,7 @@ compression means just the deletion of trailing whitespaces."
                (setf column 0))
              (incf (offset walking-mark)))))
 
-(defun fill-region (mark1 mark2 syntax-line-indentation-function fill-column tab-width syntax
+(defun fill-region (mark1 mark2 line-indentation-function fill-column tab-width syntax
                     &optional (compress-whitespaces t))
   "Fill the region delimited by `mark1' and `mark2'. `Mark1' must be
 mark<= `mark2.'"
@@ -244,7 +231,7 @@ mark<= `mark2.'"
     (when (>= (buffer-display-column buffer (offset mark2) tab-width)
               (1- fill-column))
       (fill-line mark2
-                 syntax-line-indentation-function
+                 line-indentation-function
                  fill-column
                  tab-width
                  syntax
@@ -322,20 +309,24 @@ is."))
 ;;; 
 ;;; Syntax handling
 
-(defgeneric set-syntax (buffer syntax))
+(defgeneric set-syntax (view syntax)
+  (:documentation "Set the syntax for the provided view to the
+specified syntax. `syntax' may be a string containing the name of
+a known syntax."))
 
-(defmethod set-syntax ((buffer drei-buffer) (syntax syntax))
-  (setf (syntax buffer) syntax))
+(defmethod set-syntax ((view textual-drei-syntax-view) (syntax syntax))
+  (setf (syntax view) syntax))
 
-;;FIXME - what should this specialise on?
-(defmethod set-syntax ((buffer drei-buffer) syntax)
-  (set-syntax buffer (make-instance syntax :buffer buffer)))
+(defmethod set-syntax ((view textual-drei-syntax-view) (syntax symbol))
+  (set-syntax view (make-syntax-for-view view syntax)))
 
-(defmethod set-syntax ((buffer drei-buffer) (syntax string))
+(defmethod set-syntax ((view textual-drei-syntax-view) (syntax class))
+  (set-syntax view (make-syntax-for-view view syntax)))
+
+(defmethod set-syntax ((view textual-drei-syntax-view) (syntax string))
   (let ((syntax-class (syntax-from-name syntax)))
     (cond (syntax-class
-	   (set-syntax buffer (make-instance syntax-class
-                                             :buffer buffer)))
+	   (set-syntax view (make-syntax-for-view view syntax-class)))
 	  (t
 	   (beep)
 	   (display-message "No such syntax: ~A." syntax)))))
@@ -359,23 +350,23 @@ meaning \"beginning/end of buffer\" (as appropriate) and
   ;; Excessive protection, because ending up with narrowed marks is no
   ;; fun.
   (when soft
-    (dolist (mark (list (point drei) (mark drei)))
+    (dolist (mark (list (point (view drei)) (mark (view drei))))
       (cond ((mark> low-mark mark)
              (setf (offset mark) (offset low-mark)))
             ((mark> mark high-mark)
              (setf (offset mark) (offset high-mark))))))
-  (narrow-mark (point drei) low-mark high-mark)
-  (unwind-protect (progn (narrow-mark (mark drei) low-mark high-mark)
+  (narrow-mark (point (view drei)) low-mark high-mark)
+  (unwind-protect (progn (narrow-mark (mark (view drei)) low-mark high-mark)
                          (unwind-protect (funcall continuation)
-                           (unnarrow-mark (mark drei))))
-    (unnarrow-mark (point drei))))
+                           (unnarrow-mark (mark (view drei)))))
+    (unnarrow-mark (point (view drei)))))
 
 (defmethod invoke-with-narrowed-buffer ((drei drei)
                                         (low-mark integer)
                                         (high-mark t)
                                         (continuation function)
                                         &optional soft)
-  (let ((new-low-mark (clone-mark (point drei) :left)))
+  (let ((new-low-mark (clone-mark (point (view drei)) :left)))
     (setf (offset new-low-mark) low-mark)
     (invoke-with-narrowed-buffer drei new-low-mark high-mark continuation soft)))
 
@@ -384,7 +375,7 @@ meaning \"beginning/end of buffer\" (as appropriate) and
                                         (high-mark integer)
                                         (continuation function)
                                         &optional soft)
-  (let ((new-high-mark (clone-mark (point drei) :right)))
+  (let ((new-high-mark (clone-mark (point (view drei)) :right)))
     (setf (offset new-high-mark) high-mark)
     (invoke-with-narrowed-buffer drei low-mark new-high-mark continuation soft)))
 
@@ -393,7 +384,7 @@ meaning \"beginning/end of buffer\" (as appropriate) and
                                         (high-mark t)
                                         (continuation function)
                                         &optional soft)
-  (let ((new-low-mark (clone-mark (point drei) :left)))
+  (let ((new-low-mark (clone-mark (point (view drei)) :left)))
     (beginning-of-buffer new-low-mark)
     (invoke-with-narrowed-buffer drei new-low-mark high-mark continuation soft)))
 
@@ -402,7 +393,7 @@ meaning \"beginning/end of buffer\" (as appropriate) and
                                         (high-mark (eql t))
                                         (continuation function)
                                         &optional soft)
-  (let ((new-high-mark (clone-mark (point drei) :right)))
+  (let ((new-high-mark (clone-mark (point (view drei)) :right)))
     (end-of-buffer new-high-mark)
     (invoke-with-narrowed-buffer drei low-mark new-high-mark continuation soft)))
 
@@ -411,7 +402,7 @@ meaning \"beginning/end of buffer\" (as appropriate) and
                                         (high-mark t)
                                         (continuation function)
                                         &optional soft)
-  (let ((new-low-mark (clone-mark (point drei) :left)))
+  (let ((new-low-mark (clone-mark (point (view drei)) :left)))
     (invoke-with-narrowed-buffer drei new-low-mark high-mark continuation soft)))
 
 (defmethod invoke-with-narrowed-buffer ((drei drei)
@@ -419,7 +410,7 @@ meaning \"beginning/end of buffer\" (as appropriate) and
                                         (high-mark null)
                                         (continuation function)
                                         &optional soft)
-  (let ((new-high-mark (clone-mark (point drei) :right)))
+  (let ((new-high-mark (clone-mark (point (view drei)) :right)))
     (invoke-with-narrowed-buffer drei low-mark new-high-mark continuation soft)))
 
 (defmacro with-narrowed-buffer ((drei low-limit high-limit &optional soft) &body body)

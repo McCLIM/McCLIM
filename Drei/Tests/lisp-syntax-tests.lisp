@@ -38,20 +38,22 @@ self-compilation test, of course).")
 
 (defmacro testing-lisp-syntax ((buffer-contents &rest options) &body body)
   (assert (evenp (length options)))
-  (with-gensyms (buffer drei)
-    `(with-buffer (,buffer :initial-contents ,buffer-contents :syntax 'lisp-syntax)
-       ,@(loop for (option value) on options by #'cddr
-            collecting `(eval-option (syntax ,buffer) ,option ,value))
-       (let ((,drei (make-instance 'test-drei :buffer ,buffer)))
-         (with-bound-drei-special-variables (,drei :minibuffer nil)
-           (labels ((get-form ()
-                      (first (drei-lisp-syntax::children
-                              (slot-value (current-syntax)
-                                          'drei-lisp-syntax::stack-top))))
-                    (get-object (&rest args)
-                      (apply #'form-to-object (current-syntax)
-                             (get-form) args)))
-             ,@body))))))
+  (with-gensyms (buffer view drei)
+    `(with-buffer (,buffer :initial-contents ,buffer-contents)
+       (with-view (,view :buffer ,buffer :syntax 'lisp-syntax)
+         ,@(loop for (option value) on options by #'cddr
+              collecting `(eval-option (syntax ,view) ,option ,value))
+         (let ((,drei (make-instance 'test-drei :view ,view)))
+           (with-bound-drei-special-variables (,drei :minibuffer nil)
+             (labels ((get-form ()
+                        (update-parse (current-syntax))
+                        (first (drei-lisp-syntax::children
+                                (slot-value (current-syntax)
+                                            'drei-lisp-syntax::stack-top))))
+                      (get-object (&rest args)
+                        (apply #'form-to-object (current-syntax)
+                               (get-form) args)))
+               ,@body)))))))
 
 (defmacro swine-test (name &body body)
   `(test ,name
@@ -178,16 +180,13 @@ correct, even counting packages that cannot be found."
             (drei-lisp-syntax::package-at-mark (current-syntax) 23)))
     (delete-buffer-range (current-buffer) 0 (size (current-buffer)))
     (insert-buffer-sequence (current-buffer) 0 "(in-package :cl-userr)  ")
-    (update-syntax (current-buffer) (current-syntax))
     (is (eq *package*
             (drei-lisp-syntax::package-at-mark (current-syntax) 24)))
     (insert-buffer-sequence (current-buffer) 24 "(in-package :drei-lisp-syntax)  ")
-    (update-syntax (current-buffer) (current-syntax))
     (is (eq (find-package :drei-lisp-syntax)
             (drei-lisp-syntax::package-at-mark (current-syntax) 54)))
     (delete-buffer-range (current-buffer) 0 23)
     (insert-buffer-sequence (current-buffer) 0 "(in-package :clim-user)")
-    (update-syntax (current-buffer) (current-syntax))
     (is (eq (find-package :clim-user)
             (drei-lisp-syntax::package-at-mark (current-syntax) 26)))))
 
@@ -1426,13 +1425,13 @@ of lambda expressions."
   `(swine-test ,name
      (macrolet ((test-indentation (string)
                   `(testing-lisp-syntax (,string)
-                     (let ((start (clone-mark (point (current-window))))
-                           (end (clone-mark (point (current-window)))))
+                     (let ((start (clone-mark (point)))
+                           (end (clone-mark (point))))
                        (beginning-of-buffer start)
                        (end-of-buffer end)
                        (do-buffer-region-lines (line start end)
                          (delete-indentation (current-syntax) line))
-                       (indent-region (current-window) start end)
+                       (indent-region (current-view) start end)
                        (buffer-is ,string)))))
        (macrolet ((test-indentations (&rest strings)
                     `(progn
@@ -1788,8 +1787,8 @@ self-compilation test.")
         (format t "Re-evaluating Drei code using the Lisp syntax parser~%")
         (dolist (pathname pathnames)
           (testing-lisp-syntax ((slurp-file pathname))
-            ; Rebind because the `(current-syntax)' variable will be
-            ; clobbered during the test.
+            ;; Rebind because the `(current-syntax)' variable will be
+            ;; clobbered during the test.
             (let ((syntax (current-syntax)))
               (mapcar #'(lambda (form)
                           (when (drei-lisp-syntax::formp form)

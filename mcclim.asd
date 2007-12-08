@@ -284,19 +284,20 @@
                          (:file "editing" :depends-on ("packages" "buffer" "syntax" "motion" "kill-ring"))
                          (:file "base" :depends-on ("packages" "buffer" "persistent-buffer" "kill-ring"))
                          (:file "syntax" :depends-on ("packages" "buffer" "base"))
-                         (:file "drei" :depends-on ("packages" "syntax" "buffer" "base"
-                                                               "persistent-undo" "persistent-buffer" "abbrev"
-                                                               "delegating-buffer" "undo" "motion" "editing"))
+                         (:file "views" :depends-on ("packages" "buffer" "base" "syntax" "persistent-undo"
+                                                                "persistent-buffer" "undo" "abbrev"
+                                                                "delegating-buffer"))
+                         (:file "drei" :depends-on ("packages" "views" "motion" "editing"))
                          (:file "drei-clim" :depends-on ("drei"))
                          (:file "drei-redisplay" :depends-on ("drei-clim"))
                          (:file "input-editor" :depends-on ("drei-redisplay" "lisp-syntax" "core"))
-                         (:file "fundamental-syntax" :depends-on ("packages" "drei-redisplay"))
                          (:file "abbrev" :depends-on ("packages"))
                          (:file "kill-ring" :depends-on ("packages"))
                          (:file "undo" :depends-on ("packages"))
                          (:file "delegating-buffer" :depends-on ("packages" "buffer"))
                          (:file "basic-commands" :depends-on ("drei-clim" "motion" "editing"))
                          (:file "core" :depends-on ("drei"))
+                         (:file "fundamental-syntax" :depends-on ("packages" "drei-redisplay" "core"))
                          (:file "buffer-streams" :depends-on ("core"))
                          (:file "rectangle" :depends-on ("core"))
                          (:file "targets" :depends-on ("core"))

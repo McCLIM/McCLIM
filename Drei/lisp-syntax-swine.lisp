@@ -564,6 +564,7 @@ not within a form, everything will be bound to nil. The values
 provided are, in order: the form, the forms operator, the indices
 to the operand at `offset', or the indices to an operand entered
 at that position if none is there, and the operands in the form."
+  (update-parse syntax 0 offset)
   (let* ((form
           ;; Find a form with a valid (fboundp) operator.
           (let ((immediate-form

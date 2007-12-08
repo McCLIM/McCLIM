@@ -77,23 +77,23 @@ instantiated."))
                                      *pointer-documentation-output*)
                      :allow-other-keys t
 		     args)))
-      (update-syntax (buffer (drei-instance obj))
-                     (syntax (buffer (drei-instance obj))))
       ;; XXX Really add it here?
       (stream-add-output-record stream (drei-instance obj))
       (display-drei (drei-instance obj)))))
 
 (defmethod stream-insertion-pointer
     ((stream drei-input-editing-mixin))
-  (offset (point (drei-instance stream))))
+  (offset (point (view (drei-instance stream)))))
 
 (defmethod (setf stream-insertion-pointer)
     ((new-value integer) (stream drei-input-editing-mixin))
-  (let* ((drei (drei-instance stream)))
-    (setf (offset (point drei)) new-value)))
+  (setf (offset (point (view (drei-instance stream)))) new-value))
 
 (defmethod cursor-visibility ((stream drei-input-editing-mixin))
-  (active (point-cursor (drei-instance stream))))
+  (if (point-cursor (drei-instance stream))
+      (active (point-cursor (drei-instance stream)))
+      ;; Uh... no I guess?
+      nil))
 
 (defmethod (setf cursor-visibility)
     (visibility (stream drei-input-editing-mixin))
@@ -125,7 +125,7 @@ by the input-editor gesture reader. They should not be used
 outside the input editor."))
 
 (define-presentation-method present ((object noise-string) (type noise-string)
-                                     stream (view drei-textual-view) &key &allow-other-keys)
+                                     stream (view textual-view) &key &allow-other-keys)
   (with-text-style (stream (text-style object))
     (princ (noisy-string object) stream)))
 
@@ -142,7 +142,7 @@ while in an input context for the input-editor. They should not
 be used outside the input-editor."))
 
 (define-presentation-method present (object (type accept-result) stream
-                                            (view drei-textual-view) &rest args
+                                            (view textual-view) &rest args
                                             &key)
   (apply #'present (object object) (result-type object) :stream stream :view view args))
 
@@ -163,7 +163,7 @@ be used outside the input-editor."))
     ;; ignored anyway, but we need to be ahead to set the input
     ;; position properly (ie. after the prompt).
     (loop
-       with buffer = (buffer (drei-instance stream))
+       with buffer = (buffer (view (drei-instance stream)))
        until (>= (stream-scan-pointer stream) (size buffer))
        while (or (typep #1=(buffer-object buffer (stream-scan-pointer stream)) 'noise-string)
                  (delimiter-gesture-p #1#))
@@ -173,7 +173,7 @@ be used outside the input-editor."))
 (defmethod stream-accept :after ((stream drei-input-editing-mixin) type &key &allow-other-keys)
   ;; If we end up asking for more input using the stream, we do not
   ;; want to permit the user to undo input for this context.
-  (clear-undo-history (buffer (drei-instance stream))))
+  (clear-undo-history (buffer (view (drei-instance stream)))))
 
 (defun buffer-array-mismatch (sequence1 sequence2 
                               &key (from-end nil)
@@ -219,7 +219,7 @@ contents of the array to the Drei buffer. This will set the
 contents of the buffer to the contents of the array up to the
 fill pointer."
   (with-accessors ((array input-buffer-array)) stream
-    (let ((buffer (buffer (drei-instance stream))))
+    (let ((buffer (buffer (view (drei-instance stream)))))
       (when array
         ;; Attempt to minimise the changes to the buffer, so the
         ;; position of marks will not be changed too much. Find the
@@ -253,8 +253,6 @@ fill pointer."
               ;; Insert from the mismatch to end mismatch from the
               ;; array into the buffer.
               (insert-buffer-sequence buffer index (subseq array index array-end))
-              ;; We also need to update the syntax.
-              (update-syntax buffer (syntax buffer))
               ;; Finally, see if it is possible to maintain the old
               ;; position of the insertion pointer.
               (setf (stream-insertion-pointer stream)
@@ -265,7 +263,7 @@ fill pointer."
 contents of the Drei buffer to the array. The fill pointer of the
 array will point to after the last element."
   (with-accessors ((array input-buffer-array)) stream
-    (let ((buffer (buffer (drei-instance stream))))
+    (let ((buffer (buffer (view (drei-instance stream)))))
       (when array
         (let ((new-array (buffer-sequence buffer 0 (size buffer))))
           (setf array
@@ -282,7 +280,7 @@ the contents of the buffer to the contents of the array up to the
 fill pointer. Changes to the buffer will be recordes as
 undoable. When this function returns, the `input-buffer-array' of
 `stream' will be NIL. Also, the syntax will be up-to-date."
-  (with-undo ((list (buffer (drei-instance stream))))
+  (with-undo ((list (buffer (view (drei-instance stream)))))
     (synchronize-drei-buffer stream))
   (setf (input-buffer-array stream) nil))
 
@@ -322,19 +320,19 @@ undoable. When this function returns, the `input-buffer-array' of
   ;; buffer before we do anything.
   (synchronize-drei-buffer stream)
   (let* ((drei (drei-instance stream))
+         (view (view drei))
          (new-contents (subseq new-input start end))
-         (old-contents (buffer-sequence (buffer drei)
+         (old-contents (buffer-sequence (buffer view)
                                         buffer-start
                                         (stream-scan-pointer stream)))
          (equal (and (= (length new-contents)
                         (length old-contents))
                      (every #'equal new-contents old-contents))))
-    (let ((begin-mark (clone-mark (point drei))))
+    (let ((begin-mark (clone-mark (point view))))
       (unless equal
         (setf (offset begin-mark) buffer-start)
         (delete-region begin-mark (stream-scan-pointer stream))
         (insert-sequence begin-mark new-contents)
-        (update-syntax (buffer drei) (syntax (buffer drei)))
         ;; Make the buffer reflect the changes in the array.
         (synchronize-input-buffer-array stream))
       (display-drei drei)
@@ -480,7 +478,7 @@ input-editing-stream. Bound when executing a command.")
     (with-accessors ((insertion-pointer stream-insertion-pointer)
                      (scan-pointer stream-scan-pointer)
                      (activation-gesture activation-gesture)) stream
-      (let ((buffer (buffer (drei-instance stream))))
+      (let ((buffer (buffer (view (drei-instance stream)))))
         (loop
            (loop
               while (< scan-pointer insertion-pointer)
@@ -557,7 +555,6 @@ the gesture that will be read in the first call to
 `stream'. The second return value of this function will be `type'
 if stuff is inserted after the insertion pointer."
   (let* ((drei (drei-instance stream))
-         (buffer (buffer drei))
          (*command-processor* drei)
          (was-directly-processing (directly-processing-p drei))
          (minibuffer (or (minibuffer drei) *minibuffer*))
@@ -593,10 +590,9 @@ if stuff is inserted after the insertion pointer."
                        (when was-directly-processing
                          (display-message "Aborted")))))))
         (update-drei-buffer stream))
-      ;; Will also take care of redisplaying minibuffer.
-      (display-drei drei)
-      (let ((first-mismatch (offset (high-mark buffer))))
-        (clear-modify buffer)
+      (let ((first-mismatch (prefix-size (view drei))))
+        ;; Will also take care of redisplaying minibuffer.
+        (display-drei drei)
         (cond ((null first-mismatch)
                ;; No change actually took place, even though IP may
                ;; have moved.
@@ -625,9 +621,9 @@ if stuff is inserted after the insertion pointer."
                  (climi::gesture-match gesture *help-gestures*)
                  (climi::gesture-match gesture *possibilities-gestures*))
              (directly-processing-p (drei-instance stream)))
-    (end-of-buffer (point (drei-instance stream)))
+    (end-of-buffer (point (view (drei-instance stream))))
     (unless (= (stream-scan-pointer stream)
-               (size (buffer (drei-instance stream))))
+               (size (buffer (view (drei-instance stream)))))
       (queue-rescan stream))
     (setf (activation-gesture stream) gesture)
     (rescan-if-necessary stream)
@@ -694,13 +690,12 @@ CL:SUBSEQ into the sequence indicating where processing stopped."
     ;; actually noise-strings. FIXME.
     (loop for (seq . rest) on (split-sequence #\Newline output)
        when (plusp (length seq))
-       do (insert-object (point drei) (make-instance 'noise-string
+       do (insert-object (point (view drei)) (make-instance 'noise-string
                                                      :string seq))
        unless (null rest)
-       do (insert-object (point drei) #\Newline))
+       do (insert-object (point (view drei)) #\Newline))
     ;; Since everything inserted with this method is noise strings, we
     ;; do not bother to modify the scan pointer or queue rescans.
-    (update-syntax (buffer drei) (syntax (buffer drei)))
     (display-drei drei)))
 
 (defmethod redraw-input-buffer ((stream drei-input-editing-mixin)
@@ -798,7 +793,8 @@ to an `extended-output-stream' while `body' is being evaluated."
                       :syntax "Lisp"
                       :keep-syntax t)
     (redraw-input-buffer stream)
-    (call-next-method)))
+    (call-next-method))
+  (call-next-method))
 
 (define-presentation-method accept ((type expression)
                                     (stream drei-input-editing-mixin)
@@ -810,7 +806,7 @@ to an `extended-output-stream' while `body' is being evaluated."
       (loop
          named control-loop
          with drei = (drei-instance stream)
-         with syntax = (syntax (buffer drei))
+         with syntax = (syntax (view drei))
          ;; The input context permits the user to mouse-select displayed
          ;; Lisp objects and put them into the input buffer as literal
          ;; objects.
@@ -831,7 +827,7 @@ to an `extended-output-stream' while `body' is being evaluated."
          ;; just retrieved from the buffer during a rescan.
          for freshly-inserted = (and (plusp (stream-scan-pointer stream))
                                      (not (equal (buffer-object
-                                                  (buffer drei)
+                                                  (buffer (view drei))
                                                   (1- (stream-scan-pointer stream)))
                                                  gesture)))
          for form = (drei-lisp-syntax::form-after syntax (input-position stream))
@@ -850,19 +846,19 @@ to an `extended-output-stream' while `body' is being evaluated."
          do (with-activation-gestures (nil :override t)
               (stream-process-gesture stream gesture nil))
          finally (unread-gesture gesture :stream stream)
-           (let* ((object (handler-case
-                              (drei-lisp-syntax:form-to-object syntax form
-                                                               :read t
-                                                               :package *package*)
-                            (drei-lisp-syntax:form-conversion-error (e)
-                              ;; Move point to the problematic form
-                              ;; and signal a rescan.
-                              (setf (activation-gesture stream) nil)
-                              (handle-drei-condition drei e)
-                              (display-drei drei)
-                              (immediate-rescan stream))))
-                  (ptype (presentation-type-of object)))
-             (return-from control-loop
-               (values object
-                       (if (presentation-subtypep ptype 'expression)
-                           ptype 'expression))))))))
+         (let* ((object (handler-case
+                            (drei-lisp-syntax:form-to-object syntax form
+                             :read t
+                             :package *package*)
+                          (drei-lisp-syntax:form-conversion-error (e)
+                            ;; Move point to the problematic form
+                            ;; and signal a rescan.
+                            (setf (activation-gesture stream) nil)
+                            (handle-drei-condition drei e)
+                            (display-drei drei)
+                            (immediate-rescan stream))))
+                (ptype (presentation-type-of object)))
+           (return-from control-loop
+             (values object
+                     (if (presentation-subtypep ptype 'expression)
+                         ptype 'expression))))))))

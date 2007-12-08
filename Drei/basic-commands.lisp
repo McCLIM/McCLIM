@@ -91,7 +91,7 @@ With a numeric argument N, move point forward by N " plural ".
 With a negative argument -N, move point backward by N " plural ".")
            (handling-motion-limit-errors (,plural)
              (,forward (point)
-                       (SYNTAX (current-buffer))
+                       (current-syntax)
                        COUNT)))
          (DEFINE-COMMAND (,com-backward
                           :NAME T
@@ -102,7 +102,7 @@ With a numeric argument N, move point backward by N " plural ".
 With a negative argument -N, move point forward by N " plural ".")
            (handling-motion-limit-errors (,plural)
              (,backward (point)
-                        (SYNTAX (current-buffer))
+                        (current-syntax)
                         COUNT)))))))
 
 ;;; Manually define some commands
@@ -286,7 +286,7 @@ that many " plural ".
 Successive kills append to the kill ring.")
              (handling-motion-limit-errors (,plural)
                (,forward-kill (point)
-                              (syntax (current-buffer))
+                              (current-syntax)
                               count
                               (eq (command-name *previous-command*) ',com-kill))))
 
@@ -302,7 +302,7 @@ that many " plural ".
 Successive kills append to the kill ring.")
              (handling-motion-limit-errors (,plural)
                (,backward-kill (point)
-                               (syntax (current-buffer))
+                               (current-syntax)
                                count
                                (eq (command-name *previous-command*) ',com-backward-kill))))
 
@@ -311,14 +311,14 @@ Successive kills append to the kill ring.")
                ((count 'integer :prompt ,(concat "Number of " plural)))
              ,(concat "Delete from point until the next " noun " end.
 With a positive numeric argument, delete that many " plural " forward.")
-             (,backward-delete (point) (syntax (current-buffer)) count))
+             (,backward-delete (point) (current-syntax) count))
 
            ;; Backward Delete Unit
            (define-command (,com-backward-delete :name t :command-table ,command-table)
                ((count 'integer :prompt ,(concat "Number of " plural)))
              ,(concat "Delete from point until the previous " noun " beginning.
 With a positive numeric argument, delete that many " plural " backward.")
-             (,backward-delete (point) (syntax (current-buffer)) count)))))))
+             (,backward-delete (point) (current-syntax) count)))))))
 
 (defmacro define-editing-commands (unit command-table &key
                                    noun
@@ -350,8 +350,7 @@ transpose that " noun " with the next one. With point
 before the first " noun " of the buffer, transpose the
 first two " plural " of the buffer.")
            (handling-motion-limit-errors (,plural)
-             (,transpose (point)
-                         (syntax (current-buffer)))))))))
+             (,transpose (point) (current-syntax))))))))
 
 ;;; Some manually defined commands
 

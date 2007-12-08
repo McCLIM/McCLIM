@@ -23,18 +23,28 @@
 (in-package :drei-syntax)
 
 (defclass syntax (name-mixin)
-  ((buffer :initarg :buffer :reader buffer)
-   (command-table :initarg :command-table
-                  :initform (error "A command table has not been provided for this syntax")
-                  :reader command-table)
-   (%cursor-positions :accessor cursor-positions
-                      :initform nil))
+  ((%buffer :initarg :buffer :reader buffer)
+   (%command-table :initarg :command-table
+                   :initform (error "A command table has not been provided for this syntax")
+                   :reader command-table)
+   (%updater-fns :initarg :updater-fns
+                 :initform '()
+                 :accessor updater-fns))
   (:documentation "The base class for all syntaxes."))
 
 (defun syntaxp (object)
   "Return T if `object' is an instance of a syntax, NIL
   otherwise."
   (typep object 'syntax))
+
+(defun update-parse (syntax &optional (begin 0)
+                     (end (size (buffer syntax))))
+  "Make sure the parse for `syntax' from offset `begin' to `end'
+is up to date. `Begin' and `end' default to 0 and the size of the
+buffer of `syntax', respectively."
+  (map nil #'(lambda (updater)
+               (funcall updater begin end))
+       (updater-fns syntax)))
 
 (define-condition no-such-operation (simple-error)
   ()
@@ -52,19 +62,16 @@ made to execute an operation that is unavailable for the particular syntax" ))
   (:documentation "This condition is signaled whenever an attempt is
 made to execute a by-experssion motion command and no expression is available." ))
 
-(defgeneric update-syntax (buffer syntax)
+(defgeneric update-syntax (syntax unchanged-prefix unchanged-suffix
+                                  &optional begin end)
   (:documentation "Inform the syntax module that it must update
-its view of the buffer The low-mark and the high-mark of the
-buffer indicate what region has been updated."))
-
-(defgeneric update-syntax-for-display (buffer syntax from to)
-  (:documentation "Inform the syntax module that it must update
-its syntactic analysis to cover the region between the two marks
-from and to."))
-
-(defgeneric syntax-line-indentation (mark tab-width syntax)
-  (:documentation "Return the correct indentation for the line containing
-the mark, according to the specified syntax."))
+its view of the buffer. `Unchanged-prefix' `unchanged-suffix'
+indicate what parts of the buffer has not been changed. `Begin'
+and `end' are offsets specifying the minimum region of the buffer
+that must have an up-to-date parse, defaulting to 0 and the size
+of the buffer respectively. It is perfectly valid for a syntax to
+ignore these hints and just make sure the entire syntax tree is
+up to date."))
 
 (defgeneric eval-defun (mark syntax))
 
@@ -207,7 +214,7 @@ in the specific syntax.")
 
 (defgeneric display-syntax-name (syntax stream &key &allow-other-keys)
   (:documentation "Draw the name of the syntax `syntax' to
-  `stream'. This is meant to be called for the info-pane.")
+`stream'. This is meant to be called for the info-pane.")
   (:method (syntax stream &rest args &key)
     (princ (apply #'name-for-info-pane syntax args) stream)))
 
@@ -865,7 +872,7 @@ internal state of the parser.  Do not alter it!"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; Querying
+;;; Syntax querying functions.
 
 (defgeneric word-constituentp (syntax obj)
   (:documentation "Return T if `obj' is a word constituent
@@ -895,3 +902,7 @@ internal state of the parser.  Do not alter it!"
   deliminter in `syntax'.")
   (:method ((syntax syntax))
     '(#\Newline #\Newline)))
+
+(defgeneric syntax-line-indentation (syntax mark tab-width)
+  (:documentation "Return the correct indentation for the line
+containing the mark, according to the specified syntax."))

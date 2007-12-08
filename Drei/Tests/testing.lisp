@@ -61,12 +61,18 @@ substituted for a right sticky mark class."
                 result))))
     (list* 'progn result)))
 
-(defmacro with-buffer ((buffer &key (syntax ''drei-fundamental-syntax:fundamental-syntax)
-                               (initial-contents "")) &body body)
-  `(let ((,buffer (make-instance 'drei-buffer :syntax ,syntax
-                                 :initial-contents ,initial-contents)))
-     (update-syntax ,buffer (syntax ,buffer))
+(defmacro with-buffer ((buffer &key (initial-contents "")) &body body)
+  `(let ((,buffer (make-instance 'drei-buffer :initial-contents ,initial-contents)))
      ,@body))
+
+(defmacro with-view ((view &key (buffer (make-instance 'drei-buffer))
+                           (syntax ''drei-fundamental-syntax:fundamental-syntax))
+                     &body body)
+  (once-only (buffer)
+    `(let ((,view (make-instance 'textual-drei-syntax-view
+                   :buffer ,buffer)))
+      (setf (syntax ,view) (make-syntax-for-view ,view ,syntax))
+       ,@body)))
 
 (defun buffer-contents (&optional (buffer (current-buffer)))
   "The contents of `(current-buffer)' as a string."
@@ -81,17 +87,18 @@ subsequence delimited by `begin-offset' and `end-offset'."
 (defclass test-drei (drei)
   ()
   (:documentation "An instantiable Drei variant with no
-display. Used for testing."))
+display. Used for testing.")
+  (:default-initargs :no-cursors t))
 
 (defmacro with-drei-environment ((&key (initial-contents "")
                                        (syntax ''drei-fundamental-syntax:fundamental-syntax))
                                  &body body)
-  (with-gensyms (buffer drei)
-    `(with-buffer (,buffer :initial-contents ,initial-contents
-                           :syntax ,syntax)
-       (let ((,drei (make-instance 'test-drei :buffer ,buffer)))
-         (with-bound-drei-special-variables (,drei :minibuffer nil)
-           ,@body)))))
+  (with-gensyms (buffer view drei)
+    `(with-buffer (,buffer :initial-contents ,initial-contents)
+       (with-view (,view :buffer ,buffer :syntax ,syntax)
+         (let ((,drei (make-instance 'test-drei :view ,view)))
+           (with-bound-drei-special-variables (,drei :minibuffer nil)
+             ,@body))))))
 
 (def-suite drei-tests :description "The test suite for all Drei
 test cases. Has nested test suites for the actual tests.")

@@ -55,23 +55,17 @@
     ()
   "Fill paragraph at point. Will have no effect unless there is a
 string at point."
-  (let* ((buffer-implementation (implementation (current-buffer)))
-         (token (form-around (current-syntax) (offset (point))))
-         (fill-column (auto-fill-column *drei-instance*))
-         (tab-width (tab-space-count (view *drei-instance*))))
+  (let* ((token (form-around (current-syntax) (offset (point))))
+         (fill-column (auto-fill-column *drei-instance*)))
     (when (form-string-p token)
       (with-accessors ((offset1 start-offset) 
                        (offset2 end-offset)) token
-        (fill-region (make-instance 'standard-right-sticky-mark
-                                    :buffer buffer-implementation
-                                    :offset offset1)
-                     (make-instance 'standard-right-sticky-mark
-                                    :buffer buffer-implementation
-                                    :offset offset2)
+        (fill-region (make-buffer-mark (current-buffer) offset1 :right)
+                     (make-buffer-mark (current-buffer) offset2 :right)
                      #'(lambda (mark)
-                         (syntax-line-indentation mark tab-width (current-syntax)))
+                         (proper-line-indentation (current-view) mark))
                      fill-column
-                     tab-width
+                     (tab-space-count (view *drei-instance*))
                      (current-syntax)
                      t)))))
 
@@ -81,7 +75,7 @@ string at point."
     (if (plusp count)
         (loop repeat count do (forward-expression mark (current-syntax)))
         (loop repeat (- count) do (backward-expression mark (current-syntax))))
-    (indent-region *drei-instance* (point) mark)))
+    (indent-region (current-view) (point) mark)))
 
 (define-command (com-lookup-arglist-for-this-symbol :command-table lisp-table)
     ()
@@ -103,7 +97,6 @@ string at point."
   ;; We must update the syntax in order to reflect any changes to
   ;; the parse tree our insertion of a space character may have
   ;; done.
-  (update-syntax (current-buffer) (current-syntax))
   (show-arglist-for-form-at-mark (point) (current-syntax))
   (clear-completions))
 
@@ -134,7 +127,7 @@ First indents the line.  If the line was already indented,
 completes the symbol.  If there's no symbol at the point, shows
 the arglist for the most recently enclosed operator."
   (let ((old-offset (offset (point))))
-    (indent-current-line *drei-instance* (point))
+    (indent-current-line (current-view) (point))
     (when (= old-offset
              (offset (point)))
       (or (complete-symbol-at-mark (current-syntax) (point) nil)
