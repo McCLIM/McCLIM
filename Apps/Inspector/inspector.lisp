@@ -71,7 +71,8 @@ their specific print lengths, if they have one.")
 	(clim-sys:make-process #'run
 			       :name (format nil "Inspector Clouseau: ~S"
 					     obj))
-	(run))))
+	(run))
+    obj))
 
 (defparameter *inspected-objects* '()
   "A list of objects which are currently being inspected with
