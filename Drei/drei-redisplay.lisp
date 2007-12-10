@@ -178,7 +178,7 @@ forth. `Line-number' should be >= 1."))
                  (* text-style-height
                     (- line-number (1- found-line-number))))))))))
 
-(defun offset-x-displacement (pane line-beg-mark offset)
+(defun offset-x-displacement (pane view line-beg-mark offset)
   (with-sheet-medium (medium pane)
     (let ((displacement 0)
           (style (medium-text-style pane)))
@@ -205,7 +205,7 @@ forth. `Line-number' should be >= 1."))
            while go-again
            if (eql object #\Tab)
            do (progn (incf displacement (string-size array))
-                     (incf displacement (tab-width pane))
+                     (incf displacement (tab-width pane view))
                      (setf (fill-pointer array) 0))
            else if (and (characterp object)
                         (not (eql object #\Tab)))
@@ -238,7 +238,7 @@ and T if offset is after the end of the screen."))
               (descent (text-style-descent style pane))
               (height (+ ascent descent))
               (y (line-vertical-offset pane view line-number))
-              (x (offset-x-displacement pane line-beg offset)))
+              (x (offset-x-displacement pane view line-beg offset)))
          (values x y height style-width))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
