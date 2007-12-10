@@ -103,17 +103,17 @@ is *guaranteed* to not return NIL or T.")
              (letf (((stream-default-view stream) view))
                (call-next-method)))))
 
-(defmethod display-drei-view-cursor ((stream extended-output-stream) (view textual-drei-syntax-view)
+(defmethod display-drei-view-cursor ((stream extended-output-stream)
+                                     (view drei-view)
                                      (cursor drei-cursor))
-  (let ((mark (mark cursor)))
-    (multiple-value-bind (cursor-x cursor-y line-height)
-	(offset-to-screen-position stream view (offset mark))
-      (updating-output (stream :unique-id (list stream :cursor)
-                               :cache-value (list* cursor-x cursor-y line-height))
-	(draw-rectangle* stream
-			 (1- cursor-x) cursor-y
-			 (+ cursor-x 2) (+ cursor-y line-height)
-			 :ink (ink cursor))))))
+  (multiple-value-bind (cursor-x cursor-y line-height)
+      (offset-to-screen-position stream view (offset (mark cursor)))
+    (updating-output (stream :unique-id (list stream :cursor)
+                             :cache-value (list* cursor-x cursor-y line-height))
+      (draw-rectangle* stream
+                       (1- cursor-x) cursor-y
+                       (+ cursor-x 2) (+ cursor-y line-height)
+                       :ink (ink cursor)))))
 
 (defmethod display-drei-view-cursor :after ((stream extended-output-stream) (view drei-view)
                                             (cursor point-cursor))
@@ -431,14 +431,15 @@ reposition the pane if point is outside the visible area."
         (setf (offset (point view)) (offset bot))
         (beginning-of-line (point view))))))
 
-(defgeneric fix-pane-viewport (pane))
+(defgeneric fix-pane-viewport (pane view)
+  (:documentation "Fix the size and scrolling of `pane', which
+has `view'."))
 
-(defmethod fix-pane-viewport ((pane drei-pane))
+(defmethod fix-pane-viewport ((pane drei-pane) (view drei-view))
   (let* ((output-width (bounding-rectangle-width (stream-current-output-record pane)))
          (viewport (pane-viewport pane))
          (viewport-width (and viewport (bounding-rectangle-width viewport)))
-         (pane-width (bounding-rectangle-width pane))
-         (view (view pane)))
+         (pane-width (bounding-rectangle-width pane)))
     ;; If the width of the output is greater than the width of the
     ;; sheet, make the sheet wider. If the sheet is wider than the
     ;; viewport, but doesn't really need to be, make it thinner.
@@ -446,42 +447,53 @@ reposition the pane if point is outside the visible area."
               (and viewport
                    (> pane-width viewport-width)
                    (>= viewport-width output-width)))
-      (change-space-requirements pane :width output-width))
-    (when (and viewport (active pane))
-      (multiple-value-bind (cursor-x cursor-y) (offset-to-screen-position pane view (offset (point view)))
-        (declare (ignore cursor-y))
-        (let ((x-position (abs (transform-position (sheet-transformation pane) 0 0)))
-              (viewport-width (bounding-rectangle-width (or (pane-viewport pane) pane))))
-          (cond ((> cursor-x (+ x-position viewport-width))
-                 (move-sheet pane (round (- (- cursor-x viewport-width))) 0))
-                ((> x-position cursor-x)
-                 (move-sheet pane (if (> viewport-width cursor-x)
-                                      0
-                                      (round (- cursor-x)))
-                             0))))))))
+      (change-space-requirements pane :width output-width))))
+
+(defmethod fix-pane-viewport :after ((pane drei-pane) (view point-mark-view))
+  (when (and (pane-viewport pane) (active pane))
+    (multiple-value-bind (cursor-x cursor-y) (offset-to-screen-position pane view (offset (point view)))
+      (declare (ignore cursor-y))
+      (let ((x-position (abs (transform-position (sheet-transformation pane) 0 0)))
+            (viewport-width (bounding-rectangle-width (or (pane-viewport pane) pane))))
+        (cond ((> cursor-x (+ x-position viewport-width))
+               (move-sheet pane (round (- (- cursor-x viewport-width))) 0))
+              ((> x-position cursor-x)
+               (move-sheet pane (if (> viewport-width cursor-x)
+                                    0
+                                    (round (- cursor-x)))
+                           0)))))))
 
 (defmethod handle-repaint :before ((pane drei-pane) region)
   (declare (ignore region))
   (redisplay-frame-pane (pane-frame pane) pane))
+
+(defgeneric fully-redisplay-pane (pane view)
+  (:documentation "Fully redisplay `pane' showing `view', finally
+setting the `full-redisplay-p' flag to false.")
+  (:method :after (pane (view drei-view))
+    (setf (full-redisplay-p view) nil)))
+
+(defmethod fully-redisplay-pane ((drei-pane drei-pane)
+                                 (view point-mark-view))
+  (reposition-pane drei-pane)
+  (adjust-pane-bot drei-pane)
+  (setf (full-redisplay-p view) nil))
 
 (defun display-drei-pane (frame drei-pane)
   "Display `pane'. If `pane' has focus, `current-p' should be
 non-NIL."
   (declare (ignore frame))
   (let ((view (view drei-pane)))
-    (with-accessors ((buffer buffer) (top top) (bot bot)) (view drei-pane)
-      (if (full-redisplay-p view)
-          (progn (reposition-pane drei-pane)
-                 (adjust-pane-bot drei-pane)
-                 (setf (full-redisplay-p view) nil))
-          (adjust-pane drei-pane))
-      #+nil(update-syntax-for-display buffer syntax top bot)
+    (with-accessors ((buffer buffer) (top top) (bot bot)) view
+      (when (typep view 'point-mark-view)
+        (if (full-redisplay-p view)
+            (fully-redisplay-pane drei-pane view)
+            (adjust-pane drei-pane)))
       (display-drei-view-contents drei-pane view)
       ;; Point must be on top of all other cursors.
-      (display-drei-view-cursor drei-pane view (point-cursor drei-pane))
       (dolist (cursor (cursors drei-pane))
         (display-drei-view-cursor drei-pane view cursor))
-      (fix-pane-viewport drei-pane))))
+      (fix-pane-viewport drei-pane (view drei-pane)))))
 
 (defgeneric full-redisplay (pane)
   (:documentation "Queue a full redisplay for `pane'."))

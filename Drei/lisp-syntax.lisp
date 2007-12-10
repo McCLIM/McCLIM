@@ -116,12 +116,16 @@ syntax should be run.")
 
 (defmethod name-for-info-pane ((syntax lisp-syntax) &key view)
   (format nil "Lisp~@[:~(~A~)~]"
-          (provided-package-name-at-mark syntax (point view))))
+          (provided-package-name-at-mark syntax (if (typep view 'point-mark-view)
+                                                    (point view)
+                                                    0))))
 
 (defmethod display-syntax-name ((syntax lisp-syntax) (stream extended-output-stream) &key view)
   (princ "Lisp:" stream)                ; FIXME: should be `present'ed
                                         ; as something.
-  (let ((package-name (provided-package-name-at-mark syntax (point view))))
+  (let ((package-name (provided-package-name-at-mark syntax (if (typep view 'point-mark-view)
+                                                                (point view)
+                                                                0))))
     (if (find-package package-name)
         (with-output-as-presentation (stream (find-package package-name) 'expression)
           (princ package-name stream))

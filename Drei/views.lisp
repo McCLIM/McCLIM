@@ -142,7 +142,7 @@ position at which the undo operation is to be executed."))
 buffer contents at a specific offset."))
 
 (defclass insert-record (simple-undo-record)
-  ((objects :initarg :objects
+ ((objects :initarg :objects
             :documentation "The sequence of objects that are to
 be inserted whenever flip-undo-record is called on an instance of
 insert-record."))
@@ -421,7 +421,21 @@ set to false.")
                 :initarg :no-cursors
                 :initform nil
                 :documentation "True if the view does not display
-cursors."))
+cursors.")
+   (%full-redisplay-p :accessor full-redisplay-p
+                      :initform nil
+                      :documentation "True if the view should be
+fully redisplayed the next time it is redisplayed.")
+   (%use-editor-commands :accessor use-editor-commands-p
+                         :initarg :use-editor-commands
+                         :initform nil
+                         :documentation "If the view is supposed
+to support standard editor commands (for inserting objects,
+moving cursor, etc), this will be true. If you want your view to
+support standard editor commands, you should *not* inherit from
+`editor-table' - the command tables containing the editor
+commands will be added automatically, as long as this value is
+true."))
   (:documentation "The base class for all Drei views. A view
 observes some other object and provides a visual representation
 for Drei.")
@@ -432,6 +446,13 @@ for Drei.")
 observation - what exactly this entails, and what keyword
 arguments are supported, is up to the individual view
 subclass."))
+
+(defgeneric view-command-tables (view)
+  (:documentation "Return a list of command tables containing
+commands relevant for `view'.")
+  (:method-combination append)
+  (:method append ((view drei-view))
+    '()))
 
 (defgeneric create-view-cursors (output-stream view)
   (:documentation "Create cursors for `view' that are to be
@@ -464,8 +485,9 @@ been defined that should be appropriate for most view classes.")
                       nconc (list slot-initarg (slot-value view slot-name)))))))
 
 (defclass drei-buffer-view (drei-view)
-  ((%buffer :initform (make-instance 'drei-buffer)
-            :initarg :buffer :accessor buffer
+  ((%buffer :accessor buffer
+            :initform (make-instance 'drei-buffer)
+            :initarg :buffer
             :type drei-buffer
             :accessor buffer)
    (%top :accessor top
@@ -557,6 +579,11 @@ buffer."))
                            suffix-size)
           (modified-p view) t)))
 
+(defmethod synchronize-view :around ((view drei-syntax-view) &key)
+  ;; If nothing changed, then don't call the other methods.
+  (unless (= (prefix-size view) (suffix-size view) (size (buffer view)))
+    (call-next-method)))
+
 (defmethod synchronize-view ((view drei-syntax-view)
                              &key (begin 0) (end (size (buffer view))))
   "Synchronize the syntax view with the underlying
@@ -565,13 +592,12 @@ the buffer that must be synchronised, defaulting to 0 and the
 size of the buffer respectively."
   (let ((prefix-size (prefix-size view))
         (suffix-size (suffix-size view)))
-    (unless (= prefix-size suffix-size (size (buffer view)))
-      ;; Reset here so if `update-syntax' calls `update-parse' itself,
-      ;; we won't end with infinite recursion.
-      (setf (prefix-size view) (size (buffer view))
-            (suffix-size view) (size (buffer view)))
-      (update-syntax (syntax view) prefix-size suffix-size
-                     begin end))))
+    ;; Reset here so if `update-syntax' calls `update-parse' itself,
+    ;; we won't end with infinite recursion.
+    (setf (prefix-size view) (size (buffer view))
+          (suffix-size view) (size (buffer view)))
+    (update-syntax (syntax view) prefix-size suffix-size
+                   begin end)))
 
 (defun make-syntax-for-view (view syntax-symbol &rest args)
   (apply #'make-instance syntax-symbol
@@ -580,28 +606,13 @@ size of the buffer respectively."
                         (synchronize-view view :begin begin :end end)))
    args))
 
-(defclass textual-drei-syntax-view (drei-syntax-view textual-view)
+(defclass point-mark-view (drei-buffer-view)
   ((%point :initform nil :initarg :point :accessor point-of)
-   (%mark :initform nil :initarg :mark :accessor mark-of)
-   (%auto-fill-mode :initform nil :accessor auto-fill-mode)
-   (%auto-fill-column :initform 70 :accessor auto-fill-column)
-   (%region-visible-p :initform nil :accessor region-visible-p)
-   (%full-redisplay-p :initform nil :accessor full-redisplay-p)
-   ;; for next-line and previous-line commands
-   (%goal-column :initform nil :accessor goal-column)
-   ;; for dynamic abbrev expansion
-   (%original-prefix :initform nil :accessor original-prefix)
-   (%prefix-start-offset :initform nil :accessor prefix-start-offset)
-   (%dabbrev-expansion-mark :initform nil :accessor dabbrev-expansion-mark)
-   (%overwrite-mode :initform nil :accessor overwrite-mode)
-   (%point-cursor :accessor point-cursor
-                  :initarg :point-cursor
-                  :type drei-cursor
-                  :documentation "The cursor object associated
-with point. This is guaranteed to be displayed
-on top of all other cursors.")))
+   (%mark :initform nil :initarg :mark :accessor mark-of))
+  (:documentation "A view class containing a point and a mark
+into its buffer."))
 
-(defmethod initialize-instance :after ((view textual-drei-syntax-view)
+(defmethod initialize-instance :after ((view point-mark-view)
                                        &rest args)
   (declare (ignore args))
   (with-accessors ((point point) (mark mark)
@@ -609,19 +620,38 @@ on top of all other cursors.")))
     (setf point (clone-mark (point buffer)))
     (setf mark (clone-mark (point buffer)))))
 
-(defmethod (setf buffer) :before ((buffer drei-buffer) (view textual-drei-syntax-view))
+(defmethod (setf buffer) :before ((buffer drei-buffer) (view point-mark-view))
   ;; Set the point of the old buffer to the current point of the view,
   ;; so the next time the buffer is revealed, it will remember its
   ;; point.
   (setf (point (buffer view)) (point view)))
 
-(defmethod (setf buffer) :after ((buffer drei-buffer) (view textual-drei-syntax-view))
+(defmethod (setf buffer) :after ((buffer drei-buffer) (view point-mark-view))
   (with-accessors ((point point) (mark mark)) view
     (setf point (clone-mark (point buffer))
           mark (clone-mark (point buffer) :right))))
 
+(defclass textual-drei-syntax-view (drei-syntax-view point-mark-view textual-view)
+  ((%auto-fill-mode :initform nil :accessor auto-fill-mode)
+   (%auto-fill-column :initform 70 :accessor auto-fill-column)
+   (%region-visible-p :initform nil :accessor region-visible-p)
+   ;; for next-line and previous-line commands
+   (%goal-column :initform nil :accessor goal-column)
+   ;; for dynamic abbrev expansion
+   (%original-prefix :initform nil :accessor original-prefix)
+   (%prefix-start-offset :initform nil :accessor prefix-start-offset)
+   (%dabbrev-expansion-mark :initform nil :accessor dabbrev-expansion-mark)
+   (%overwrite-mode :initform nil :accessor overwrite-mode))
+  (:default-initargs :use-editor-commands t))
+
 (defmethod create-view-cursors nconc ((output-stream extended-output-stream)
                                       (view textual-drei-syntax-view))
   (unless (no-cursors view)
-    (list (make-instance 'mark-cursor :view view :output-stream output-stream)
-          (make-instance 'point-cursor :view view :output-stream output-stream))))
+    (list (make-instance 'point-cursor :view view :output-stream output-stream)
+          (make-instance 'mark-cursor :view view :output-stream output-stream))))
+
+(defmethod view-command-tables append ((view textual-drei-syntax-view))
+  (list (command-table (syntax view))))
+
+(defmethod use-editor-commands-p ((view textual-drei-syntax-view))
+  t)

@@ -138,7 +138,7 @@ characters."))
 (defpackage :drei-syntax
   (:use :clim-lisp :clim :drei-buffer :drei-base :flexichain :esa-utils)
   (:export #:syntax #:update-parse #:syntaxp #:define-syntax #:*default-syntax* #:cursor-positions
-           #:syntax-command-table #:use-editor-commands-p #:additional-command-tables #:define-syntax-command-table
+           #:syntax-command-table #:additional-command-tables #:define-syntax-command-table
            #:eval-option
            #:define-option-for-syntax
            #:current-attributes-for-syntax
@@ -210,6 +210,7 @@ characters."))
            #:drei-view #:modified-p #:no-cursors
            #:drei-buffer-view #:buffer #:top #:bot
            #:drei-syntax-view #:syntax
+           #:point-mark-view
            #:textual-drei-syntax-view
            #:tab-space-count #:space-width #:tab-width
            #:auto-fill-mode #:auto-fill-column
@@ -221,7 +222,10 @@ characters."))
            #:prefix-start-offset
            #:overwrite-mode
            #:goal-column
-           
+
+           #:view-command-tables
+           #:use-editor-commands-p
+           #:synchronize-view
            #:create-view-cursors
            #:clone-view
            #:make-syntax-for-view

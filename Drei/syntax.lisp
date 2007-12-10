@@ -88,20 +88,6 @@ to. For example, the Return From Definition command should be
 available when Lisp syntax is used in Climacs (or another
 editor), but not anywhere else."))
 
-(defgeneric use-editor-commands-p (command-table)
-  (:documentation "If `command-table' is supposed to include
-standard editor commands (for inserting objects, moving cursor,
-etc), this function will return T (the default). If you want your
-syntax to use standard editor commands, you should *not* inherit
-from `editor-table' - the command tables containing the editor
-commands will be added automatically, as long as this function
-returns true. For most syntax command tables, you do not need to
-define a method for this generic function, you really do want the
-standard editor commands for all but the most esoteric
-syntaxes.")
-  (:method ((command-table standard-command-table))
-    t))
-
 (defgeneric additional-command-tables (editor command-table)
   (:method-combination append)
   (:documentation "Return a list of additional command tables

@@ -210,11 +210,10 @@ and specialise a method for it."
   (additional-command-tables *drei-instance* command-table))
 
 (defmethod command-table-inherit-from ((table drei-command-table))
-  (let ((syntax-table (command-table (current-syntax))))
-    (append `(,syntax-table)
-            (additional-command-tables *drei-instance* table)
-            (when (use-editor-commands-p syntax-table)
-              '(editor-table)))))
+  (append (view-command-tables (current-view))
+          (additional-command-tables *drei-instance* table)
+          (when (use-editor-commands-p (current-view))
+            '(editor-table))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

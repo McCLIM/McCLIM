@@ -325,16 +325,16 @@ is."))
 specified syntax. `syntax' may be a string containing the name of
 a known syntax."))
 
-(defmethod set-syntax ((view textual-drei-syntax-view) (syntax syntax))
+(defmethod set-syntax ((view drei-syntax-view) (syntax syntax))
   (setf (syntax view) syntax))
 
-(defmethod set-syntax ((view textual-drei-syntax-view) (syntax symbol))
+(defmethod set-syntax ((view drei-syntax-view) (syntax symbol))
   (set-syntax view (make-syntax-for-view view syntax)))
 
-(defmethod set-syntax ((view textual-drei-syntax-view) (syntax class))
+(defmethod set-syntax ((view drei-syntax-view) (syntax class))
   (set-syntax view (make-syntax-for-view view syntax)))
 
-(defmethod set-syntax ((view textual-drei-syntax-view) (syntax string))
+(defmethod set-syntax ((view drei-syntax-view) (syntax string))
   (let ((syntax-class (syntax-from-name syntax)))
     (cond (syntax-class
 	   (set-syntax view (make-syntax-for-view view syntax-class)))

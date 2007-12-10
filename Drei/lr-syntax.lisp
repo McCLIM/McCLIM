@@ -39,8 +39,7 @@
 (defmethod initialize-instance :after ((syntax lr-syntax-mixin) &rest args)
   (declare (ignore args))
   (with-accessors ((buffer buffer) (scan scan)) syntax
-    (setf scan (make-buffer-mark buffer 0 :left))
-    (update-syntax syntax 0 0)))
+    (setf scan (make-buffer-mark buffer 0 :left))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
