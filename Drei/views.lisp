@@ -47,7 +47,7 @@ invoking the debugger)."))
   "If non-NIL, use tabs when indenting lines. Otherwise, use spaces.")
 
 (defclass tabify-mixin ()
-  ((%tab-space-count :initform nil
+  ((%tab-space-count :initform 8
                      :accessor tab-space-count
                      :initarg :tab-space-count)
    ;; We save the old values for performance. Doesn't take text-style
