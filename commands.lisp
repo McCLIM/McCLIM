@@ -96,8 +96,22 @@
 (defparameter *command-tables* (make-hash-table :test #'eq))
 
 (define-condition command-table-error (simple-error)
-  ()
+  ((command-table-name :reader error-command-table-name
+                       :initform nil
+                       :initarg :command-table-name))
   (:default-initargs :format-control "" :format-arguments nil))
+
+(defmethod print-object ((object command-table-error) stream)
+  (print-unreadable-object (object stream :type t :identity t)
+    (when (error-command-table-name object)
+      (princ (error-command-table-name object) stream))))
+
+(defun command-table-designator-as-name (designator)
+  "Return the name of `designator' if it is a command table,
+`designator' otherwise."
+  (if (typep designator 'standard-command-table)
+      (command-table-name designator)
+      designator))
 
 (define-condition command-table-not-found (command-table-error)
   ())
@@ -117,7 +131,7 @@
 (defun find-command-table (name &key (errorp t))
   (cond ((command-table-p name) name)
 	((gethash name *command-tables*))
-	(errorp (error 'command-table-not-found))
+	(errorp (error 'command-table-not-found :command-table-name name))
 	(t nil)))
 
 (define-presentation-method present (object (type command-table) stream
@@ -164,7 +178,7 @@
   (unless inherit-from
     (setq inherit-from '(global-command-table)))
   (if (and name errorp (gethash name *command-tables*))
-      (error 'command-table-already-exists)
+      (error 'command-table-already-exists :command-table-name name)
       (let ((result (make-instance 'standard-command-table :name name
 	                 :inherit-from inherit-from
 	                 :menu (menu-items-from-list menu))))
@@ -194,7 +208,7 @@
 	 (item (gethash command-name (commands table))))
     (if (null item)
 	(when errorp
-	  (error 'command-not-present))
+	  (error 'command-not-present :command-table-name (command-table-name command-table)))
 	(progn 
 	  (when (typep item '%menu-item)
 	    (remove-menu-item-from-command-table table
@@ -243,7 +257,7 @@
 				      :command-line-name name)))
 	     (after (getf menu-options :after)))
 	(when (and errorp (gethash command-name (commands table)))
-	  (error 'command-already-present))
+	  (error 'command-already-present :command-table-name command-table))
 	(remove-command-from-command-table command-name table :errorp nil)
 	(setf (gethash command-name (commands table)) item)
 	(when name
@@ -304,7 +318,7 @@
 	     (values value table)))))
    (find-command-table command-table))
   (if errorp
-      (error 'command-not-accessible)))
+      (error 'command-not-accessible :command-table-name command-table)))
 
 (defun command-line-name-for-command (command-name command-table
 				      &key (errorp t))
@@ -317,7 +331,8 @@
   (cond ((eq errorp :create)
 	 (command-name-from-symbol command-name))
 	(errorp
-	 (error 'command-not-accessible))
+	 (error 'command-not-accessible :command-table-name
+                (command-table-designator-as-name table)))
 	(t nil)))
 
 (defun find-menu-item (menu-name command-table &key (errorp t))
@@ -325,7 +340,8 @@
 	 (mem (member menu-name (slot-value table 'menu)
 		      :key #'command-menu-item-name :test #'string-equal)))
     (cond (mem (values (car mem) command-table))
-	  (errorp (error 'command-not-accessible))
+	  (errorp (error 'command-not-accessible :command-table-name
+                         (command-table-designator-as-name table)))
 	  (t nil))))
 
 (defun remove-menu-item-from-command-table (command-table string
@@ -334,7 +350,8 @@
 	(item (find-menu-item string command-table :errorp nil)))
     (with-slots (menu) table
       (if (and errorp (not item))
-	  (error 'command-not-present)
+	  (error 'command-not-present :command-table-name
+                 (command-table-designator-as-name table))
 	  (setf menu (delete string menu
 			     :key #'command-menu-item-name
 			     :test #'string-equal))))))
@@ -388,7 +405,8 @@
   (let* ((table (find-command-table command-table))
 	 (old-item (find-menu-item string command-table :errorp nil)))
     (cond ((and errorp old-item)
-	   (error 'command-already-present))
+	   (error 'command-already-present :command-table-name
+                  (command-table-designator-as-name table)))
 	  (old-item
 	   (remove-menu-item-from-command-table command-table string))
 	  (t nil))
@@ -417,7 +435,8 @@
                         (multiple-value-list (realize-gesture-spec :keyboard gesture))))
            (in-table (position gesture keystroke-accelerators :test #'equal)))
       (when (and in-table errorp)
-        (error 'command-already-present))
+        (error 'command-already-present :command-table-name
+               (command-table-designator-as-name table)))
       (if in-table
 	  (setf (nth in-table keystroke-items) item)
 	  (progn
@@ -454,7 +473,8 @@
 		  (setf (cdr accel-tail) (cddr accel-tail))
 		  (setf (cdr items-tail) (cddr items-tail))))
 	    (when errorp
-	      (error 'command-not-present))))))
+	      (error 'command-not-present :command-table-name
+                     (command-table-designator-as-name table)))))))
   nil)
 
 (defun map-over-command-table-keystrokes (function command-table)
@@ -478,7 +498,8 @@
 	  if (funcall test gesture keystroke)
 	  do (return-from find-keystroke-item (values item command-table)))
     (if errorp
-	(error 'command-not-present)
+	(error 'command-not-present :command-table-name
+               (command-table-designator-as-name table))
 	nil)))
 
 (defun lookup-keystroke-item (gesture command-table
@@ -504,7 +525,8 @@
 (defun partial-command-from-name (command-name)
   (let ((parser (gethash command-name *command-parser-table*)))
     (if (null parser)
-        (error 'command-not-present)
+        (error 'command-not-present :command-table-name
+               (command-table-designator-as-name table))
         (cons command-name
               (mapcar #'(lambda (foo)
                           (declare (ignore foo))
