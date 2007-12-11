@@ -28,6 +28,11 @@
 (defclass swank-local-image ()
   ())
 
+;; We need these modules loaded.
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (load (swank::find-module "swank-c-p-c"))
+  (load (swank::find-module "swank-arglists")))
+
 ;; If this file is loaded, make local Swank the default way of
 ;; interacting with the image.
 
@@ -59,7 +64,7 @@
          (swank::*buffer-package* package)
          (swank::*buffer-readtable* *readtable*))
     (let  ((result (swank::compile-string-for-emacs
-                    string view-name (offset buffer-mark) buffer-file-name))
+                    string view-name (offset buffer-mark) (princ-to-string buffer-file-name)))
            (notes (loop for note in (swank::compiler-notes-for-emacs)
                      collect (make-compiler-note note))))
       (values result notes))))

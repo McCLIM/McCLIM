@@ -165,26 +165,27 @@ is returned: The result of evaluating `string'.")
     (declare (ignore image))
     (eval form)))
 
-(defgeneric compile-string-for-drei (image string package syntax buffer-mark)
+(defgeneric compile-string-for-drei (image string package view buffer-mark)
   (:documentation "Compile and evaluate `string' in
 `package'. Two values are returned: The result of evaluating
 `string' and a list of compiler notes. `Buffer' and `buffer-mark'
 will be used for hyperlinking the compiler notes to the source
 code.")
-  (:method (image string package syntax buffer-mark)
+  (:method (image (string string) package (view drei-buffer-view)
+            (buffer-mark mark))
     (error "Backend insufficient for this operation")))
 
-(defgeneric compile-form-for-drei (image form syntax buffer-mark)
+(defgeneric compile-form-for-drei (image form view buffer-mark)
   (:documentation "Compile and evaluate `form', which must be a
 valid Lisp form. Two values are returned: The result of
 evaluating `string' and a list of compiler notes. `Buffer' and
 `buffer-mark' will be used for hyperlinking the compiler notes to
 the source code.")
-  (:method (image form syntax buffer-mark)
+  (:method (image form (view drei-syntax-view) (buffer-mark mark))
     (compile-string-for-drei image
-                             (let ((*print-base* (base syntax)))
+                             (let ((*print-base* (base (syntax view))))
                                (write-to-string form))
-                             *package* syntax buffer-mark)))
+                             *package* view buffer-mark)))
 
 (defgeneric compile-file-for-drei (image filepath package &optional load-p)
   (:documentation "Compile the file at `filepath' in
