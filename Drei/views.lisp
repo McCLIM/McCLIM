@@ -560,15 +560,17 @@ buffer."))
           bot (make-buffer-mark buffer (size buffer) :right))
     ;; We resynchronize here, instead of delaying a potentially large
     ;; reparse until the next time some hapless command (or redisplay
-    ;; function) needs a parse tree.
-    (synchronize-view view)))
+    ;; function) needs a parse tree. Force the resynchronisation so
+    ;; that even if the buffer is empty, `update-syntax' will still be
+    ;; called.
+    (synchronize-view view :force-p t)))
 
 (defmethod (setf syntax) :after (syntax (view drei-syntax-view))
   ;; We need to reparse the buffer completely. Might as well do it
   ;; now.
   (setf (prefix-size view) 0
         (suffix-size view) 0)
-  (synchronize-view view))
+  (synchronize-view view :force-p t))
 
 (defmethod observer-notified ((view drei-syntax-view) (buffer drei-buffer)
                               changed-region)
@@ -579,9 +581,11 @@ buffer."))
                            suffix-size)
           (modified-p view) t)))
 
-(defmethod synchronize-view :around ((view drei-syntax-view) &key)
+(defmethod synchronize-view :around ((view drei-syntax-view) &key
+                                     force-p)
   ;; If nothing changed, then don't call the other methods.
-  (unless (= (prefix-size view) (suffix-size view) (size (buffer view)))
+  (unless (and (= (prefix-size view) (suffix-size view) (size (buffer view)))
+               (not force-p))
     (call-next-method)))
 
 (defmethod synchronize-view ((view drei-syntax-view)
