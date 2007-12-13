@@ -1152,6 +1152,7 @@ package specified in that form does not exist. If no (in-package)
 form can be found, return the package specified in the attribute
 list. If no such package is specified, return \"CLIM-USER\"."
   (as-offsets ((offset mark-or-offset))
+    (update-parse syntax 0 mark-or-offset)
     (flet ((normalise (designator)
              (typecase designator
                (symbol
@@ -1160,12 +1161,12 @@ list. If no such package is specified, return \"CLIM-USER\"."
                 designator)
                (package
                 (package-name designator)))))
-     (let* ((designator (rest (find offset (package-list syntax)
-                                    :key #'first
-                                    :test #'>=))))
-       (normalise (or designator
-                      (option-specified-package syntax)
-                      :clim-user))))))
+      (let* ((designator (rest (find offset (package-list syntax)
+                                :key #'first
+                                :test #'>=))))
+        (normalise (or designator
+                       (option-specified-package syntax)
+                       :clim-user))))))
 
 (defmacro with-syntax-package ((syntax offset) &body
                                body)
