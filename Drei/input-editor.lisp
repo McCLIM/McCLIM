@@ -805,6 +805,7 @@ to an `extended-output-stream' while `body' is being evaluated."
     (with-delimiter-gestures (nil :override t)
       (loop
          named control-loop
+         with start-scan-pointer = (stream-scan-pointer stream)
          with drei = (drei-instance stream)
          with syntax = (syntax (view drei))
          ;; The input context permits the user to mouse-select displayed
@@ -836,8 +837,18 @@ to an `extended-output-stream' while `body' is being evaluated."
          ;; #\Newline characters in the input will not cause premature
          ;; activation.
          until (and (activation-gesture-p gesture)
-                    freshly-inserted
-                    (drei-lisp-syntax::form-complete-p form))
+                    (or (and freshly-inserted
+                             (drei-lisp-syntax::form-complete-p form))))
+         when (and (activation-gesture-p gesture)
+                   (null form))
+         do ;; We have to remove the buffer contents (whitespace,
+            ;; comments or error states, if this happens) or code
+            ;; above us will not believe us when we tell them that the
+            ;; input is empty
+           (delete-buffer-range (buffer (view drei)) start-scan-pointer
+                                (stream-scan-pointer stream))
+           (setf (stream-scan-pointer stream) start-scan-pointer)
+           (simple-parse-error "Empty input")
          ;; We only want to process the gesture if it is fresh, because
          ;; if it isn't, it has already been processed at some point in
          ;; the past.

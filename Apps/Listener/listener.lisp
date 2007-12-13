@@ -137,7 +137,7 @@
   "Specialized for the listener, read a lisp form to eval, or a command."
   (multiple-value-bind (object type)
       (let ((*command-dispatchers* '(#\,)))
-        (accept 'command-or-form :stream stream :prompt nil))
+        (accept 'command-or-form :stream stream :prompt nil :default nil))
     (if (presentation-subtypep type 'command)
         object
         `(com-eval ,object))))
