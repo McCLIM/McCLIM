@@ -441,6 +441,10 @@ observes some other object and provides a visual representation
 for Drei.")
   (:default-initargs :name "*scratch*"))
 
+(defmethod print-object ((view drei-view) stream)
+  (print-unreadable-object (view stream :type t :identity t)
+    (format stream "name: ~a ~a" (name view) (subscript view))))
+
 (defgeneric synchronize-view (view &key &allow-other-keys)
   (:documentation "Synchronize the view with the object under
 observation - what exactly this entails, and what keyword
