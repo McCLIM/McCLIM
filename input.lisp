@@ -88,7 +88,6 @@
 
 (defmethod event-queue-read-with-timeout ((eq standard-event-queue)
                                           timeout wait-function)
-  (declare (ignore wait-function))	
   (let ((lock (event-queue-lock eq)))
     (with-lock-held (lock)
       (loop
@@ -96,7 +95,8 @@
 	 (let ((res (event-queue-read-no-hang/locked eq)))
 	   (when res
 	     (return res))
-	   (warn "event-queue-read-with-timeout ignoring predicate")
+	   (when wait-function
+	     (warn "event-queue-read-with-timeout ignoring predicate"))
 	   (condition-wait (event-queue-processes eq) lock timeout))))))
 
 (defmethod event-queue-append ((eq standard-event-queue) item)
