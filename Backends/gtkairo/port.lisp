@@ -71,6 +71,7 @@
   (setf (events-head port) (list nil))
   (setf (events-tail port) (events-head port))
   (setf (port-pointer port) (make-instance 'gtkairo-pointer :port port))
+  (push (make-graft port) (climi::port-grafts port))
   ;; FIXME: it seems bizarre for this to be necessary
   (push (make-instance 'gtkairo-frame-manager :port port)
 	(slot-value port 'climi::frame-managers))
