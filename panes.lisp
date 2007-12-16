@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.184 2007/08/21 21:45:49 thenriksen Exp $
+;;; $Id: panes.lisp,v 1.185 2007/12/16 14:27:22 thenriksen Exp $
 
 (in-package :clim-internals)
 
@@ -2334,7 +2334,7 @@ order to produce a double-click")
           (t
            (incf w m0)
            (incf w m0)
-           (let ((sr1 (make-space-requirement :width w :min-width w :max-width w
+           (let ((sr1 (make-space-requirement :width w :min-width w
                                               :height h :min-height h :max-height h)))
              (when (sheet-children pane)
                (let ((sr2 (compose-space (first (sheet-children pane)))))
