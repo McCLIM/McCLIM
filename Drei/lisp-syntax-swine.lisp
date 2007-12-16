@@ -67,6 +67,8 @@
 
 (defgeneric parameter-match-p (parameter arg-indices &key &allow-other-keys)
   (:method ((parameter parameter) (arg-indices list) &key)
+    nil)
+  (:method :around ((parameter parameter) (arg-indices null) &key)
     nil))
 
 (defmethod parameter-match-p ((parameter named-parameter) (arg-indices list) &key)
