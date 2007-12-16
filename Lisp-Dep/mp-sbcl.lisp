@@ -202,11 +202,12 @@
   (if timeout
       (handler-case 
 	  (sb-ext:with-timeout timeout
-	    (sb-thread:condition-wait cv lock))
+	    (sb-thread:condition-wait cv lock)
+	    t)
 	(sb-ext:timeout (c)
 	  (declare (ignore c))
 	  nil))
-      (sb-thread:condition-wait cv lock)))
+      (progn (sb-thread:condition-wait cv lock) t)))
 
 (defun condition-notify (cv)
   (sb-thread:condition-notify cv))

@@ -97,7 +97,8 @@
 	     (return res))
 	   (when wait-function
 	     (warn "event-queue-read-with-timeout ignoring predicate"))
-	   (condition-wait (event-queue-processes eq) lock timeout))))))
+	   (unless (condition-wait (event-queue-processes eq) lock timeout)
+	     (return)))))))
 
 (defmethod event-queue-append ((eq standard-event-queue) item)
   "Append the item at the end of the queue. Does event compression."
