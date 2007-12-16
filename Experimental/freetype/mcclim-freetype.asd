@@ -28,7 +28,7 @@ your lisp's init file:
   "lisp")
 
 (defsystem :mcclim-freetype
-  :depends-on (:clim-clx)
+  :depends-on (:clim-clx :mcclim)
   :serial t
   :components
   ((:file "freetype-package")
