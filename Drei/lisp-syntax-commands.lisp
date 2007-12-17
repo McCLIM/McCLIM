@@ -56,7 +56,7 @@
   "Fill paragraph at point. Will have no effect unless there is a
 string at point."
   (let* ((token (form-around (current-syntax) (offset (point))))
-         (fill-column (auto-fill-column *drei-instance*)))
+         (fill-column (auto-fill-column (current-view))))
     (when (form-string-p token)
       (with-accessors ((offset1 start-offset) 
                        (offset2 end-offset)) token

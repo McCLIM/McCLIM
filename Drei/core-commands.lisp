@@ -48,7 +48,7 @@ In both cases point is positioned after the new object."
 
 (defun set-fill-column (column)
   (if (> column 1)
-      (setf (auto-fill-column *drei-instance*) column)
+      (setf (auto-fill-column (current-view)) column)
       (progn (beep) (display-message "Set Fill Column requires an explicit argument."))))
 
 (define-command (com-set-fill-column :name t :command-table fill-table)
