@@ -259,8 +259,9 @@ beginning of the buffer at leaves point there."
 	 '((#\^ :shift :meta)))
 
 (define-command (com-auto-fill-mode :name t :command-table fill-table) ()
-  (setf (auto-fill-mode *drei-instance*)
-        (not (auto-fill-mode *drei-instance*))))
+  (let ((view (current-view)))
+    (setf (auto-fill-mode view)
+          (not (auto-fill-mode view)))))
 
 (define-command (com-fill-paragraph :name t :command-table fill-table) ()
   (let ((begin-mark (clone-mark (point)))
