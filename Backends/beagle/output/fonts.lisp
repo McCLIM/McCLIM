@@ -226,11 +226,11 @@ Width    = width
   (text-size medium (string s) :text-style text-style :start start :end end))
 
 (defmethod text-size ((medium beagle-medium) (string string)
-		      &key (text-style (medium-text-style medium))
-		      (start 0)
-		      ( end (length string)))
+		      &key text-style (start 0) end)
   (declare (special *default-text-style*))
   ;; Check for 'empty string' case
+  (unless end (setf end (length string)))
+  (unless text-style (setf text-style (medium-text-style medium)))
   (when (>= start end)
     ;; XXX is 0 value for the baseline correct?
     (return-from text-size (values 0 0 0 0 0)))

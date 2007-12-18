@@ -234,3 +234,11 @@ not initialised, we'll just get \":screen NIL\" in that case."
   (declare (ignore port))
   nil)
 
+(defmethod port-frame-keyboard-input-focus ((port beagle-port) frame)
+  (declare (ignore frame))
+  (beagle-port-key-focus port))
+
+(defmethod (setf port-frame-keyboard-input-focus)
+    (focus (port beagle-port) frame)
+  (declare (ignore frame))
+  (%set-port-keyboard-focus port focus))

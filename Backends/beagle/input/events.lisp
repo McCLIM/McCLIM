@@ -28,7 +28,7 @@
 
 #||
 
-$Id: events.lisp,v 1.11 2006/03/24 11:18:27 tmoore Exp $
+$Id: events.lisp,v 1.12 2007/12/18 10:54:21 rschlatte Exp $
 
 Events in Cocoa
 ---------------
@@ -162,9 +162,8 @@ signals the port event semaphore when a notification is added to the queue."
 ;;; (there is no event process calling process-next-event).
 #-(and)
 (defmethod get-next-event ((port beagle-port) &key wait-function (timeout nil))
-  (declare (special *mcclim-event-queue* *beagle-port*)
+  (declare (special *mcclim-event-queue*)
 	   (ignore wait-function))
-  (setf *beagle-port* port)  ; TODO: don't think this <- is needed.
   ;; When event queue is empty, wait for an event to be posted.
   (if (eq timeout nil)
       (ccl:wait-on-semaphore (beagle-port-event-semaphore port))
@@ -571,9 +570,11 @@ not a mouse event)."
 		    (frame (pane-frame target-sheet))
 		    ;; Works out which sheet *should* be the focus, not which
 		    ;; is currently... or at least, so I think.
-		    (focus (climi::keyboard-input-focus frame)))
+		    (focus (port-frame-keyboard-input-focus *beagle-port*
+                                                            frame)))
 	       (unless (null target-sheet)
-		 (setf (port-keyboard-input-focus *beagle-port*) focus))))
+		 (setf (port-frame-keyboard-input-focus *beagle-port* frame)
+                       focus))))
 	   nil)
 	  ((eq :did-expose n-type)
 	   (make-instance 'window-repaint-event

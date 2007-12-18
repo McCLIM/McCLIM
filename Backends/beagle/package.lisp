@@ -1,5 +1,7 @@
-
 ;;; -*- Mode: Lisp; Package: COMMON-LISP-USER -*-
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (require :cocoa))
 
 ;;; START - Cribbed from framework/cocoa-support.lisp
 (in-package "CCL")
@@ -24,7 +26,6 @@
 
                 #:port-event-process
                 #:port-grafts
-                #:%set-port-keyboard-focus
                 #:set-sheet-pointer-cursor
                 ;;
                 #:update-mirror-geometry
@@ -63,7 +64,6 @@
                 #:width                 ;dito
                 #:coordinate=
                 #:get-transformation
-                #:keyboard-input-focus
                 #:port-grab-pointer
                 #:port-ungrab-pointer
                 ;;
@@ -100,4 +100,3 @@
 				#:with-nsstr)
   (:export #:beagle-standard-frame-manager
 	   #:beagle-aqua-frame-manager))
-		
