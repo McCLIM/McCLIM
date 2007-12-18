@@ -57,7 +57,10 @@ invoking the debugger)."))
    (%tab-width :accessor recorded-tab-width
                :initform nil)
    (%recorded-stream :accessor recorded-stream
-                     :initform nil)))
+                     :initform nil)
+   (%use-tabs :accessor use-tabs
+              :initform *use-tabs-for-indentation*
+              :initarg :use-tabs)))
 
 (defun maybe-update-recordings (stream tabify)
   (with-accessors ((space-width recorded-space-width)
@@ -368,10 +371,7 @@ single-line buffer."))
 
 (defclass drei-buffer (delegating-buffer esa-buffer-mixin
                                          observable-buffer-mixin)
-  ((point :initarg :point :initform nil :accessor point-of)
-   (indent-tabs-mode :initarg :indent-tabs-mode
-                              :initform *use-tabs-for-indentation*
-                              :accessor indent-tabs-mode))
+  ((point :initarg :point :initform nil :accessor point-of))
   (:default-initargs :implementation (make-instance 'extended-standard-buffer)))
 
 (defmethod initialize-instance :after ((buffer drei-buffer) &rest args

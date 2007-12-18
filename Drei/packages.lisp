@@ -185,7 +185,6 @@ characters."))
            #:display-drei #:display-drei-pane #:display-drei-area #:full-redisplay
            #:offset-to-screen-position
            #:page-down #:page-up
-           #:indent-tabs-mode
            #:isearch-state #:search-string #:search-mark #:search-buffer
            #:search-forward-p #:search-success-p
            #:query-replace-state #:string1 #:string2 #:targets #:occurrences
@@ -212,7 +211,7 @@ characters."))
            #:drei-syntax-view #:syntax
            #:point-mark-view
            #:textual-drei-syntax-view
-           #:tab-space-count #:space-width #:tab-width
+           #:tab-space-count #:space-width #:tab-width #:use-tabs
            #:auto-fill-mode #:auto-fill-column
            #:isearch-mode #:isearch-states #:isearch-previous-string
            #:query-replace-mode
