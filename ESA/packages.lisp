@@ -59,7 +59,7 @@
            #:esa-pane-mixin #:previous-command
            #:info-pane #:master-pane
            #:esa-frame-mixin #:recordingp #:executingp
-           #:*esa-abort-gestures* #:*numeric-argument-p* #:*current-gesture* #:*command-processor*
+           #:*esa-abort-gestures* #:*current-gesture* #:*command-processor*
            #:unbound-gesture-sequence #:gestures
            #:command-processor #:instant-macro-execution-mixin
            #:asynchronous-command-processor #:command-loop-command-processor
