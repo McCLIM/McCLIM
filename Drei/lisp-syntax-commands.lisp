@@ -70,7 +70,7 @@ string at point."
                      t)))))
 
 (define-command (com-indent-expression :name t :command-table lisp-table)
-    ((count 'integer :prompt "Number of expressions"))
+    ((count 'integer :prompt "Number of expressions" :default 1))
   (let ((mark (point)))
     (if (plusp count)
         (loop repeat count do (forward-expression mark (current-syntax)))
@@ -150,7 +150,7 @@ the arglist for the most recently enclosed operator."
     (eval-region mark point (current-syntax))))
 
 (define-command (com-eval-last-expression :name t :command-table pane-lisp-table)
-    ((insertp 'boolean :prompt "Insert?"))
+    ((insertp 'boolean :prompt "Insert?" :default nil))
   "Evaluate the expression before point in the local Lisp image."
   (let ((token (form-before (current-syntax) (offset (point)))))
     (if token
@@ -240,7 +240,7 @@ the arglist for the most recently enclosed operator."
          'pane-lisp-table
          '((#\c :control) (#\r :control)))
 
-(set-key `(com-eval-last-expression ,*numeric-argument-p*)
+(set-key `(com-eval-last-expression ,*numeric-argument-marker*)
          'pane-lisp-table
          '((#\c :control) (#\e :control)))
 

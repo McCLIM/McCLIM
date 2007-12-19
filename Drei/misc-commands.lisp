@@ -32,7 +32,7 @@
 
 (define-command (com-eval-expression :name t :command-table editor-table)
     ((exp 'expression :prompt "Eval")
-     (insertp 'boolean :prompt "Insert?"))
+     (insertp 'boolean :prompt "Insert?" :default nil))
   "Prompt for and evaluate a lisp expression.
 With a numeric argument inserts the result at point as a string; 
 otherwise prints the result."
@@ -66,7 +66,7 @@ Also prints the number of objects (as 'o character[s]')."
 	  (chars (abs (- (offset (point)) (offset (mark))))))
     (display-message "Region has ~D line~:P, ~D character~:P." (1+ lines) chars)))
 
-(set-key `(com-eval-expression ,*unsupplied-argument-marker* ,*numeric-argument-p*)
+(set-key `(com-eval-expression ,*unsupplied-argument-marker* ,*numeric-argument-marker*)
 	 'editor-table
 	 '((#\: :shift :meta)))
 

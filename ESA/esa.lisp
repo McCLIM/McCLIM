@@ -353,8 +353,6 @@ on the `format-string' and the `format-args'."
   "While a command is being run, this symbol will be dynamically
 bound to the current command processor.")
 
-(defvar *numeric-argument-p* (list nil))
-
 (defun find-gestures (gestures start-table)
   (loop with table = (find-command-table start-table)
 	for (gesture . rest) on gestures
@@ -623,9 +621,6 @@ of a prefix arg returns 1 (and nil)."
 	  (t (values 1 nil (when first-gesture
                              (cons first-gesture gestures)))))))
 
-(defun substitute-numeric-argument-p (command numargp)
-  (substitute numargp *numeric-argument-p* command :test #'eq))
-
 (defgeneric process-gestures (command-processor)
   (:documentation "Process the gestures accumulated in
 `command-processor', returning T if there are no gestures
@@ -655,14 +650,14 @@ never refer to a command."))
                       (*current-gesture* (first (last gestures))))
                   (unless (consp command)
                     (setf command (list command)))
-                  (setf command (substitute-numeric-argument-marker command prefix-arg))
-                  (setf command (substitute-numeric-argument-p command prefix-p))
-                  (unwind-protect (when (member *unsupplied-argument-marker* command :test #'eq)
-                                    (setq command
-                                          (funcall
-                                           *partial-command-parser*
-                                           (command-table command-processor)
-                                           *standard-input* command 0)))
+                  ;; Call `*partial-command-parser*' to handle numeric
+                  ;; argument.
+                  (unwind-protect (setq command
+                                        (funcall
+                                         *partial-command-parser*
+                                         (command-table command-processor)
+                                         *standard-input* command 0 (when prefix-p
+                                                                      prefix-arg)))
                     ;; If we are macrorecording, store whatever the user
                     ;; did to invoke this command.
                     (when (recordingp command-processor)
@@ -1316,8 +1311,7 @@ First ask if modified buffers should be saved. If you decide not to save a modif
 	       (mapcar #'(lambda (arg)
                            (cond ((eq arg *unsupplied-argument-marker*)
                                   "unsupplied-argument")
-                                 ((or (eq arg *numeric-argument-marker*)
-                                      (eq arg *numeric-argument-p*))
+                                 ((eq arg *numeric-argument-marker*)
                                   "numeric-argument")
                                  (t arg))) command-args)))
       (terpri stream)
@@ -1402,7 +1396,7 @@ Without a numeric prefix, sorts the list by command name. With a numeric prefix,
 			   #'sort-by-keystrokes
 			   #'sort-by-name))))
 
-(set-key `(com-describe-bindings ,*numeric-argument-p*) 'help-table '((#\h :control) (#\b)))
+(set-key `(com-describe-bindings ,*numeric-argument-marker*) 'help-table '((#\h :control) (#\b)))
 
 (define-command (com-describe-key :name t :command-table help-table)
     ()

@@ -99,7 +99,7 @@ If a string of length >1, uses the first character of the string."
 	 '((#\z :meta)))
 
 (define-command (com-open-line :name t :command-table editing-table)
-    ((numarg 'integer :prompt "How many lines?"))
+    ((numarg 'integer :prompt "How many lines?" :default 1))
   "Insert a #\Newline and leave point before it.
 With a numeric argument greater than 1, insert that many #\Newlines."
   (open-line (point) numarg))
@@ -125,7 +125,7 @@ With a numeric argument greater than 1, insert that many #\Newlines."
       `(define-command (,(symbol "COM-MARK-" unit)
                          :name t
                          :command-table ,command-table)
-           ((count 'integer :prompt ,(concat "Number of " plural)))
+           ((count 'integer :prompt ,(concat "Number of " plural) :default 1))
          ,(if (not (null move-point))
               (concat "Place point and mark around the current " noun ".
 Put point at the beginning of the current " noun ", and mark at the end. 
@@ -349,17 +349,17 @@ If there is no non-whitespace object, leaves point at the end of the line."
 
 (define-command (com-delete-horizontal-space :name t :command-table deletion-table)
     ((backward-only-p
-      'boolean :prompt "Delete backwards only?"))
+      'boolean :prompt "Delete backwards only?" :default nil))
   "Delete whitespace around point.
 With a numeric argument, only delete whitespace before point."
   (delete-horizontal-space (point) (current-syntax) backward-only-p))
 
-(set-key `(com-delete-horizontal-space ,*numeric-argument-p*)
+(set-key `(com-delete-horizontal-space ,*numeric-argument-marker*)
 	 'deletion-table
 	 '((#\\ :meta)))
 
 (define-command (com-just-one-space :name t :command-table deletion-table)
-    ((count 'integer :prompt "Number of spaces"))
+    ((count 'integer :prompt "Number of spaces" :default 1))
   "Delete whitespace around point, leaving a single space.
 With a positive numeric argument, leave that many spaces.
 
@@ -402,7 +402,7 @@ point at the beginning of the last line of the buffer."
 	 '((#\x :control) (#\x :control)))
 
 (define-command (com-sort-lines :name t :command-table editing-table)
-    ((sort-ascending 'boolean :prompt "Sort in ascending order"))
+    ((sort-ascending 'boolean :prompt "Sort in ascending order" :default nil))
   "Sort the lines in the region delimited by current point and
 mark. The lines will be lexicographically sorted, ignoring all
 non-character objects in the lines. When the command is run, it
@@ -481,7 +481,7 @@ objects in the kill ring."
 	 '((#\y :meta)))
 
 (define-command (com-resize-kill-ring :name t :command-table editing-table) 
-    ((size 'integer :prompt "New kill ring size"))
+    ((size 'integer :prompt "New kill ring size" :default 5))
   "Prompt for a new size for the kill ring.
 The default is 5. A number less than 5 will be replaced by 5."
      (setf (kill-ring-max-size *kill-ring*) size))
@@ -572,8 +572,8 @@ inserting each in turn at point as an expansion."
 	 '((#\/ :meta)))
 
 (define-command (com-mark-page :name t :command-table marking-table)
-    ((count 'integer :prompt "Move how many pages")
-     (numargp 'boolean :prompt "Move to another page?"))
+    ((count 'integer :prompt "Move how many pages" :default 1)
+     (numargp 'boolean :prompt "Move to another page?" :default nil))
   "Place point and mark around the current page.
 With a numeric argument, move point that many 
 pages forward (backward if negative) before marking the 
@@ -589,7 +589,7 @@ A page is delimited by the sequence #\Newline #\Page."
   (setf (offset (mark)) (offset (point)))
   (forward-page (mark) (current-syntax) 1))
 
-(set-key `(com-mark-page ,*numeric-argument-marker* ,*numeric-argument-p*)
+(set-key `(com-mark-page ,*numeric-argument-marker* ,*numeric-argument-marker*)
 	 'marking-table
 	 '((#\x :control) (#\p :control)))
 
@@ -608,15 +608,15 @@ A page is delimited by the sequence #\Newline #\Page."
   (insert-pair mark syntax count #\( #\)))
 
 (define-command (com-insert-parentheses :name t :command-table editing-table)
-    ((count 'integer :prompt "Number of expressions")
-     (wrap-p 'boolean :prompt "Wrap expressions?"))
+    ((count 'integer :prompt "Number of expressions" :default 1)
+     (wrap-p 'boolean :prompt "Wrap expressions?" :default nil))
   "Insert a pair of parentheses, leaving point in between.
 With a numeric argument, enclose that many expressions 
 forward (backward if negative)."
   (unless wrap-p (setf count 0))
   (insert-parentheses (point) (current-syntax) count))
 
-(set-key `(com-insert-parentheses ,*numeric-argument-marker* ,*numeric-argument-p*)
+(set-key `(com-insert-parentheses ,*numeric-argument-marker* ,*numeric-argument-marker*)
 	 'editing-table
 	 '((#\( :meta)))
 

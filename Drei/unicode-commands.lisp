@@ -34,7 +34,7 @@
            'self-insert-table (list (code-char i))))
 
 (define-command (com-insert-charcode :name t :command-table self-insert-table)
-    ((code 'integer :prompt "Code point") (count 'integer))
+    ((code 'integer :prompt "Code point") (count 'integer :default 1))
   (let ((char (code-char code)))
     (loop repeat count do (insert-character char))))
 

@@ -85,7 +85,7 @@ true (the default)."
       `(PROGN
          (DEFINE-COMMAND (,com-forward :NAME T
                                        :COMMAND-TABLE ,command-table)
-             ((COUNT 'INTEGER :PROMPT ,(concat "Number of " plural)))
+             ((COUNT 'INTEGER :PROMPT ,(concat "Number of " plural) :default 1))
            ,(concat "Move point forward by one " noun ".
 With a numeric argument N, move point forward by N " plural ".
 With a negative argument -N, move point backward by N " plural ".")
@@ -93,10 +93,9 @@ With a negative argument -N, move point backward by N " plural ".")
              (,forward (point)
                        (current-syntax)
                        COUNT)))
-         (DEFINE-COMMAND (,com-backward
-                          :NAME T
+         (DEFINE-COMMAND (,com-backward :NAME T
                           :COMMAND-TABLE ,command-table)
-             ((COUNT 'INTEGER :PROMPT ,(concat "Number of " plural)))
+             ((COUNT 'INTEGER :PROMPT ,(concat "Number of " plural) :default 1))
            ,(concat "Move point backward by one " noun ".
 With a numeric argument N, move point backward by N " plural ".
 With a negative argument -N, move point forward by N " plural ".")
@@ -119,7 +118,7 @@ With a negative argument -N, move point forward by N " plural ".")
 ;; and BACKWARD-OBJECT is part of the buffer protocol, not the
 ;; high-level motion abstraction.
 (define-command (com-forward-object :name t :command-table movement-table)
-    ((count 'integer :prompt "Number of objects"))
+    ((count 'integer :prompt "Number of objects" :default 1))
   "Move point forward by one object.
 With a numeric argument N, move point forward by N objects.
 With a negative argument -N, move point backward by M objects."
@@ -128,7 +127,7 @@ With a negative argument -N, move point backward by M objects."
                     count)))
 
 (define-command (com-backward-object :name t :command-table movement-table)
-    ((count 'integer :prompt "number of objects"))
+    ((count 'integer :prompt "number of objects" :default 1))
   "Move point backward by one object.
 With a numeric argument N, move point backward by N objects.
 With a negative argument -N, move point forward by N objects."
@@ -278,7 +277,7 @@ With a negative argument -N, move point forward by N objects."
            ;; Kill Unit
            (define-command (,com-kill :name t
                                       :command-table ,command-table)
-               ((count 'integer :prompt ,(concat "Number of " plural)))
+               ((count 'integer :prompt ,(concat "Number of " plural) :default 1))
              ,(concat "Kill " plural " up to the next " noun " end.
 With a numeric argument, kill forward (backward if negative) 
 that many " plural ".
@@ -294,7 +293,7 @@ Successive kills append to the kill ring.")
            (define-command (,com-backward-kill
                             :name t
                             :command-table ,command-table)
-               ((count 'integer :prompt ,(concat "Number of " plural)))
+               ((count 'integer :prompt ,(concat "Number of " plural) :default 1))
              ,(concat "Kill from point until the previous " noun " beginning.
 With a numeric argument, kill backward (forward, if negative) 
 that many " plural ".
@@ -308,14 +307,14 @@ Successive kills append to the kill ring.")
 
            ;; Delete Unit
            (define-command (,com-delete :name t :command-table ,command-table)
-               ((count 'integer :prompt ,(concat "Number of " plural)))
+               ((count 'integer :prompt ,(concat "Number of " plural) :default 1))
              ,(concat "Delete from point until the next " noun " end.
 With a positive numeric argument, delete that many " plural " forward.")
              (,backward-delete (point) (current-syntax) count))
 
            ;; Backward Delete Unit
            (define-command (,com-backward-delete :name t :command-table ,command-table)
-               ((count 'integer :prompt ,(concat "Number of " plural)))
+               ((count 'integer :prompt ,(concat "Number of " plural) :default 1))
              ,(concat "Delete from point until the previous " noun " beginning.
 With a positive numeric argument, delete that many " plural " backward.")
              (,backward-delete (point) (current-syntax) count)))))))
@@ -363,8 +362,8 @@ the first object of that line to the end of the previous line."
   (transpose-objects (point)))
 
 (define-command (com-delete-object :name t :command-table deletion-table)
-    ((count 'integer :prompt "Number of Objects")
-     (killp 'boolean :prompt "Kill?"))
+    ((count 'integer :prompt "Number of Objects" :default 1)
+     (killp 'boolean :prompt "Kill?" :default nil))
   "Delete the object after point.
 With a numeric argument, kill that many objects 
 after (or before, if negative) point."
@@ -374,8 +373,8 @@ after (or before, if negative) point."
         (forward-delete-object (point) count))))
 
 (define-command (com-backward-delete-object :name t :command-table deletion-table)
-    ((count 'integer :prompt "Number of Objects")
-     (killp 'boolean :prompt "Kill?"))
+    ((count 'integer :prompt "Number of Objects" :default 1)
+     (killp 'boolean :prompt "Kill?" :default nil))
   "Delete the object before point.
 With a numeric argument, kills that many objects 
 before (or after, if negative) point."
@@ -415,8 +414,8 @@ before (or after, if negative) point."
       (delete-region start mark))))
 
 (define-command (com-kill-line :name t :command-table deletion-table)
-    ((numarg 'integer :prompt "Kill how many lines?")
-     (numargp 'boolean :prompt "Kill entire lines?"))
+    ((numarg 'integer :prompt "Kill how many lines?" :default 1)
+     (numargp 'boolean :prompt "Kill entire lines?" :default nil))
   "Kill the objects on the current line after point.
 When at the end of a line, kill the #\\Newline. 
 With a numeric argument of 0, kill the objects on the current line before point.
@@ -456,17 +455,17 @@ Successive kills append to the kill ring."
 	 '((#\x :control) (#\t :control)))
 
 (set-key `(com-delete-object ,*numeric-argument-marker*
-			     ,*numeric-argument-p*)
+			     ,*numeric-argument-marker*)
 	 'deletion-table
 	 '(#\Rubout))
 
 (set-key `(com-delete-object ,*numeric-argument-marker*
-			     ,*numeric-argument-p*)
+			     ,*numeric-argument-marker*)
 	 'deletion-table
 	 '((#\d :control)))
 
 (set-key `(com-backward-delete-object ,*numeric-argument-marker*
-				      ,*numeric-argument-p*)
+				      ,*numeric-argument-marker*)
 	 'deletion-table
 	 '(#\Backspace))
 
@@ -474,7 +473,7 @@ Successive kills append to the kill ring."
 	 'editing-table
 	 '((#\t :control)))
 
-(set-key `(com-kill-line ,*numeric-argument-marker* ,*numeric-argument-p*)
+(set-key `(com-kill-line ,*numeric-argument-marker* ,*numeric-argument-marker*)
 	 'deletion-table
 	 '((#\k :control)))
 
@@ -485,7 +484,7 @@ Successive kills append to the kill ring."
 ;;; These are what do the basic keypress->character inserted in buffer
 ;;; mapping.
 
-(define-command com-self-insert ((count 'integer))
+(define-command com-self-insert ((count 'integer :default 1))
   (loop repeat count do (insert-character *current-gesture*)))
 
 (loop for code from (char-code #\Space) to (char-code #\~)

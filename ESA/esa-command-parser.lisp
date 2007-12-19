@@ -89,7 +89,8 @@
                 (push (esa-parse-one-arg stream name ptype args) result)
                 (maybe-clear-input)))))))))
 
-(defun esa-partial-command-parser (command-table stream command position)
+(defun esa-partial-command-parser (command-table stream command position
+                                   &optional numeric-argument)
   (declare (ignore command-table position))
   (let ((command-name (car command))
 	(command-args (cdr command)))
@@ -114,8 +115,10 @@
                   (command-arg (car command-args) (car command-args)))
                  ((null required-args) (cons command-name (nreverse result)))
               (destructuring-bind (name ptype &rest args) arg
-                (push (if (eq command-arg *unsupplied-argument-marker*)
-                          (esa-parse-one-arg stream name ptype args)
-                          command-arg)
+                (push (cond ((eq command-arg *unsupplied-argument-marker*)
+                             (esa-parse-one-arg stream name ptype args))
+                            ((eq command-arg *numeric-argument-marker*)
+                             (or numeric-argument (getf args :default)))
+                            (t command-arg))
                       result)
                 (maybe-clear-input)))))))))

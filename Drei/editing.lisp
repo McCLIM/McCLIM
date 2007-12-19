@@ -254,7 +254,7 @@
 (defun backward-kill-object (mark &optional (count 1) concatenate-p limit-action)
   "Kill `count' objects backwards beginning from `mark'."
   (let ((start (offset mark)))
-    (handler-case (progn (forward-object mark count)
+    (handler-case (progn (backward-object mark count)
                          (if concatenate-p
                              (if (plusp count)
                                  (kill-ring-concatenating-push
