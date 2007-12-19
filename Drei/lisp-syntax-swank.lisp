@@ -30,8 +30,8 @@
 
 ;; We need these modules loaded.
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (swank:swank-require "swank-c-p-c")
-  (swank:swank-require "swank-arglists"))
+  (swank:swank-require :swank-c-p-c)
+  (swank:swank-require :swank-arglists))
 
 ;; If this file is loaded, make local Swank the default way of
 ;; interacting with the image.
