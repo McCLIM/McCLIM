@@ -520,7 +520,11 @@ at the beginning of the buffer.")
    (%suffix-size :accessor suffix-size
                  :initform 0
                  :documentation  "The number of unchanged objects
-at the end of the buffer."))
+at the end of the buffer.")
+   (%recorded-buffer-size :accessor buffer-size
+                          :initform 0
+                          :documentation "The size of the buffer
+the last time the view was synchronized."))
   (:documentation "A buffer-view that maintains a parse tree of
 the buffer, or otherwise pays attention to the syntax of the
 buffer."))
@@ -552,6 +556,7 @@ buffer."))
                    (point point) (mark mark)
                    (suffix-size suffix-size)
                    (prefix-size prefix-size)
+                   (buffer-size buffer-size)
                    (bot bot) (top top)) view
     (setf point (clone-mark (point buffer))
           mark (clone-mark (point buffer) :right)
@@ -559,6 +564,7 @@ buffer."))
           view-syntax (make-syntax-for-view view (class-of view-syntax))
           prefix-size 0
           suffix-size 0
+          buffer-size (size buffer)
           ;; Also set the top and bot marks.
           top (make-buffer-mark buffer 0 :left)
           bot (make-buffer-mark buffer (size buffer) :right))
@@ -573,7 +579,8 @@ buffer."))
   ;; We need to reparse the buffer completely. Might as well do it
   ;; now.
   (setf (prefix-size view) 0
-        (suffix-size view) 0)
+        (suffix-size view) 0
+        (buffer-size view) (size (buffer view)))
   (synchronize-view view :force-p t))
 
 (defmethod observer-notified ((view drei-syntax-view) (buffer drei-buffer)
@@ -588,7 +595,8 @@ buffer."))
 (defmethod synchronize-view :around ((view drei-syntax-view) &key
                                      force-p)
   ;; If nothing changed, then don't call the other methods.
-  (unless (and (= (prefix-size view) (suffix-size view) (size (buffer view)))
+  (unless (and (= (prefix-size view) (suffix-size view)
+                  (size (buffer view)) (buffer-size view))
                (not force-p))
     (call-next-method)))
 
@@ -603,7 +611,8 @@ size of the buffer respectively."
     ;; Reset here so if `update-syntax' calls `update-parse' itself,
     ;; we won't end with infinite recursion.
     (setf (prefix-size view) (size (buffer view))
-          (suffix-size view) (size (buffer view)))
+          (suffix-size view) (size (buffer view))
+          (buffer-size view) (size (buffer view)))
     (update-syntax (syntax view) prefix-size suffix-size
                    begin end)))
 

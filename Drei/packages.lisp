@@ -492,11 +492,48 @@ editing plain text."))
         :drei-syntax :drei-fundamental-syntax :flexichain :drei
         :drei-motion :drei-editing :esa-utils :esa :drei-core :esa-io
 	:drei-lr-syntax)
-  (:export #:lisp-syntax
+  (:export #:lisp-syntax #:lisp-table
            #:lisp-string
            #:edit-definition
            #:form
            #:form-to-object
+
+           ;; Selecting forms based on mark
+           #:form-around #:form-before #:form-after
+           #:expression-at-mark
+           #:definition-at-mark
+           #:symbol-at-mark
+           #:fully-quoted-form
+           #:fully-unquoted-form
+           #:this-form
+
+           ;; Querying forms
+           #:formp #:form-list-p
+           #:form-incomplete-p #:form-complete-p
+           #:form-token-p #:form-string-p
+           #:form-quoted-p
+           #:form-comma-p #:form-comma-at-p #:form-comma-dot-p
+           #:form-character-p
+           #:form-simple-vector-p
+           #:comment-p
+           #:form-at-top-level-p
+
+           ;; Querying form data
+           #:form-children
+           #:form-operator #:form-operands
+           #:form-toplevel
+           #:form-operator-p
+
+           ;; Querying about state at mark
+           #:in-string-p
+           #:in-comment-p
+           #:in-character-p
+           #:location-at-beginning-of-form
+           #:location-at-end-of-form
+           #:at-beginning-of-list-p
+           #:at-end-of-list-p
+           #:at-beginning-of-string-p
+           #:at-end-of-string-p
 
            ;; Lambda list classes.
            #:lambda-list

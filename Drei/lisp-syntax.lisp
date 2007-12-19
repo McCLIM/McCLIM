@@ -1315,6 +1315,10 @@ stripping leading non-forms."
   "Returns the third formw in list."
   (nth-form 2 list))
 
+(defun form-children (form)
+  "Return the children of `form' that are themselves forms."
+  (remove-if-not #'formp (children form)))
+
 (defgeneric form-operator (syntax form)
   (:documentation "Return the operator of `form' as a
   token. Returns nil if none can be found.")
@@ -1448,6 +1452,9 @@ the form that `token' quotes, peeling away all quote forms."
 (define-form-predicate form-comma-p (comma-form))
 (define-form-predicate form-comma-at-p (comma-at-form))
 (define-form-predicate form-comma-dot-p (comma-dot-form))
+(define-form-predicate form-character-p (complete-character-lexeme
+                                         incomplete-character-lexeme))
+(define-form-predicate form-simple-vector-p (simple-vector-form))
 
 (define-form-predicate comment-p (comment))
 
@@ -1457,6 +1464,176 @@ the form that `token' quotes, peeling away all quote forms."
   (:method ((form parser-symbol))
     (or (typep (parent form) 'form*)
         (null (parent form)))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Asking about parse state at some point
+
+(defun in-type-p-in-children (children offset type)
+  (loop for child in children
+     do (cond ((<= (start-offset child) offset (end-offset child))
+               (return (if (typep child type)
+                           child
+                           (in-type-p-in-children (children child) offset type))))
+              ((<= offset (start-offset child))
+               (return nil))
+              (t nil))))
+
+(defun in-type-p (syntax mark-or-offset type)
+  (as-offsets ((offset mark-or-offset))
+    (update-parse syntax 0 offset)
+    (with-slots (stack-top) syntax
+      (if (or (null (start-offset stack-top))
+              (> offset (end-offset stack-top))
+              (< offset (start-offset stack-top)))
+          nil
+          (in-type-p-in-children (children stack-top) offset type)))))
+
+(defun in-string-p (syntax mark-or-offset)
+  "Return true if `mark-or-offset' is inside a Lisp string."
+  (as-offsets ((offset mark-or-offset))
+    (let ((string (in-type-p syntax offset 'string-form)))
+      (and string
+           (< (start-offset string) offset)
+           (< offset (end-offset string))))))
+
+(defun in-comment-p (syntax mark-or-offset)
+  "Return true if `mark-or-offset' is inside a Lisp
+comment (line-based or long form)."
+  (as-offsets ((offset mark-or-offset))
+    (let ((comment (in-type-p syntax mark-or-offset 'comment)))
+      (and comment
+           (or (when (typep comment 'line-comment-form)
+                 (< (start-offset comment) offset))
+               (when (typep comment 'complete-long-comment-form)
+                 (< (1+ (start-offset comment) ) offset
+                    (1- (end-offset comment))))
+               (when (typep comment 'incomplete-long-comment-form)
+                 (< (1+ (start-offset comment)) offset)))))))
+
+(defun in-character-p (syntax mark-or-offset)
+  "Return true if `mark-or-offset' is inside a Lisp character lexeme."
+  (as-offsets ((offset mark-or-offset))
+    (let ((form (form-around syntax offset)))
+      (typecase form
+        (complete-character-lexeme
+         (> (end-offset form) offset (+ (start-offset form) 1)))
+        (incomplete-character-lexeme
+         (= offset (end-offset form)))))))
+
+(defgeneric at-beginning-of-form-p (syntax form offset)
+  (:documentation "Return true if `offset' is at the beginning of
+the list-like `form', false otherwise. \"Beginning\" is defined
+at the earliest point the contents could be entered, for example
+right after the opening parenthesis for a list.")
+  (:method ((syntax lisp-syntax) (form form) (offset integer))
+    nil)
+  (:method :before ((syntax lisp-syntax) (form form) (offset integer))
+   (update-parse syntax 0 offset)))
+
+(defgeneric at-end-of-form-p (syntax form offset)
+  (:documentation "Return true if `offset' is at the end of the
+list-like `form', false otherwise.")
+  (:method ((syntax lisp-syntax) (form form) (offset integer))
+    nil)
+  (:method :before ((syntax lisp-syntax) (form form) (offset integer))
+   (update-parse syntax 0 offset)))
+
+(defmethod at-beginning-of-form-p ((syntax lisp-syntax) (form list-form)
+                                   (offset integer))
+  (= offset (1+ (start-offset form))))
+
+(defmethod at-end-of-form-p ((syntax lisp-syntax) (form list-form)
+                             (offset integer))
+  (= offset (1- (end-offset form))))
+
+(defmethod at-beginning-of-form-p ((syntax lisp-syntax) (form string-form)
+                                   (offset integer))
+  (= offset (1+ (start-offset form))))
+
+(defmethod at-end-of-form-p ((syntax lisp-syntax) (form string-form)
+                             (offset integer))
+  (= offset (1- (end-offset form))))
+
+(defmethod at-beginning-of-form-p ((syntax lisp-syntax) (form simple-vector-form)
+                                   (offset integer))
+  (= offset (+ 2 (start-offset form))))
+
+(defmethod at-end-of-form-p ((syntax lisp-syntax) (form simple-vector-form)
+                             (offset integer))
+  (= offset (1- (end-offset form))))
+
+(defun location-at-beginning-of-form (syntax mark-or-offset)
+  "Return true if the position `mark-or-offset' is at the
+beginning of some structural form, false otherwise. \"Beginning\"
+is defined by what type of form is at `mark-or-offset', but for a
+list form, it would be right after the opening parenthesis."
+  (as-offsets ((offset mark-or-offset))
+    (update-parse syntax 0 offset)
+    (let ((form-around (form-around syntax offset)))
+      (when form-around
+        (labels ((recurse (form)
+                   (or (at-beginning-of-form-p syntax form offset)
+                       (unless (form-at-top-level-p form)
+                         (recurse (parent form))))))
+          (recurse form-around))))))
+
+(defun location-at-end-of-form (syntax mark-or-offset)
+  "Return true if the position `mark-or-offset' is at the
+end of some structural form, false otherwise. \"End\"
+is defined by what type of form is at `mark-or-offset', but for a
+list form, it would be right before the closing parenthesis."
+  (as-offsets ((offset mark-or-offset))
+    (update-parse syntax 0 offset)
+    (let ((form-around (form-around syntax offset)))
+      (when form-around
+        (labels ((recurse (form)
+                   (or (at-end-of-form-p syntax form offset)
+                       (unless (form-at-top-level-p form)
+                         (recurse (parent form))))))
+          (recurse form-around))))))
+
+(defun at-beginning-of-list-p (syntax mark-or-offset)
+  "Return true if the position `mark-or-offset' is at the
+beginning of a list-like form, false otherwise. \"Beginning\" is
+defined as the earliest point the contents could be entered, for
+example right after the opening parenthesis for a list."
+  (as-offsets ((offset mark-or-offset))
+    (update-parse syntax 0 offset)
+    (let ((form-around (form-around syntax offset)))
+      (when (form-list-p form-around)
+        (at-beginning-of-form-p syntax form-around offset)))))
+
+(defun at-end-of-list-p (syntax mark-or-offset)
+  "Return true if the position `mark-or-offset' is at the end of
+a list-like form, false otherwise. \"End\" is defined as the
+latest point the contents could be entered, for example right
+before the closing parenthesis for a list."
+  (as-offsets ((offset mark-or-offset))
+    (update-parse syntax 0 offset)
+    (let ((form-around (form-around syntax offset)))
+      (when (form-list-p form-around)
+        (at-end-of-form-p syntax (form-around syntax offset) offset)))))
+
+(defun at-beginning-of-string-p (syntax mark-or-offset)
+  "Return true if the position `mark-or-offset' is at the
+beginning of a string form, false otherwise. \"Beginning\" is
+right after the opening double-quote."
+  (as-offsets ((offset mark-or-offset))
+    (update-parse syntax 0 offset)
+    (let ((form-around (form-around syntax offset)))
+      (when (form-string-p form-around)
+        (at-beginning-of-form-p syntax form-around offset)))))
+
+(defun at-end-of-string-p (syntax mark-or-offset)
+  "Return true if the position `mark-or-offset' is at the end of
+a list-like form, false otherwise. \"End\" is right before the
+ending double-quote."
+  (as-offsets ((offset mark-or-offset))
+    (update-parse syntax 0 offset)
+    (let ((form-around (form-around syntax offset)))
+      (when (form-string-p form-around)
+        (at-end-of-form-p syntax form-around offset)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -1832,7 +2009,7 @@ when applied to a token (eg. `start-offset' or `end-offset'). If
 a list parent cannot be found, return nil"
   (let ((parent (parent form)))
     (typecase parent
-      (list-form (funcall fn form))
+      (list-form (funcall fn parent))
       ((or form* null) nil)
       (t (find-list-parent-offset parent fn)))))
 
@@ -1955,31 +2132,6 @@ successful, or NIL if the buffer limit was reached."))
                  (mark< mark (end-offset form)))
        do (setf (offset mark) (end-offset form))
        and do (return t))))
-
-(defun in-type-p-in-children (children offset type)
-  (loop for child in children
-     do (cond ((< (start-offset child) offset (end-offset child))
-               (return (if (typep child type)
-                           child
-                           (in-type-p-in-children (children child) offset type))))
-              ((<= offset (start-offset child))
-               (return nil))
-              (t nil))))
-
-(defun in-type-p (mark-or-offset syntax type)
-  (as-offsets ((offset mark-or-offset))
-    (with-slots (stack-top) syntax
-      (if (or (null (start-offset stack-top))
-              (>= offset (end-offset stack-top))
-              (<= offset (start-offset stack-top)))
-          nil)
-      (in-type-p-in-children (children stack-top) offset type))))
-
-(defun in-string-p (mark-or-offset syntax)
-  (in-type-p mark-or-offset syntax 'string-form))
-
-(defun in-comment-p (mark-or-offset syntax)
-  (in-type-p mark-or-offset syntax 'comment))
 
 (defmethod eval-defun ((mark mark) (syntax lisp-syntax))
   (with-slots (stack-top) syntax

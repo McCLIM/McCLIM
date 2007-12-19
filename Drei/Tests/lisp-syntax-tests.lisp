@@ -834,7 +834,10 @@ mark."
 
 (motion-fun-one-test up (nil nil (13 14 12)
                              "(defun list () (&rest elements)
-(append elements nil))" :syntax lisp-syntax))
+(append elements nil))" :syntax lisp-syntax)
+                        (nil nil (17 19 12)
+                             "(defun list (x y z)
+(list x y z))" :syntax lisp-syntax))
 
 (motion-fun-one-test definition (51 52 (35 51 0)
                                     "(defun list (&rest elements)
@@ -844,12 +847,12 @@ mark."
 (test in-string-p
   "Test the `in-string-p' function of Lisp syntax."
   (testing-lisp-syntax (" \"foobar!\" ")
-    (is-false (drei-lisp-syntax::in-string-p 0 (current-syntax)))
-    (is-false (drei-lisp-syntax::in-string-p 1 (current-syntax)))
-    (is-true (drei-lisp-syntax::in-string-p 2 (current-syntax)))
-    (is-true (drei-lisp-syntax::in-string-p 6 (current-syntax)))
-    (is-true (drei-lisp-syntax::in-string-p 9 (current-syntax)))
-    (is-false (drei-lisp-syntax::in-string-p 10 (current-syntax)))))
+    (is-false (in-string-p (current-syntax) 0))
+    (is-false (in-string-p (current-syntax) 1))
+    (is-true (in-string-p (current-syntax) 2))
+    (is-true (in-string-p (current-syntax) 6))
+    (is-true (in-string-p (current-syntax) 9))
+    (is-false (in-string-p (current-syntax) 10))))
 
 (test in-comment-p
   "Test the `in-comment-p' function of Lisp syntax."
@@ -858,17 +861,98 @@ mark."
 #| I'm a
 - BLOCK -
 comment |#")
-    (is-false (drei-lisp-syntax::in-comment-p 0 (current-syntax)))
-    (is-false (drei-lisp-syntax::in-comment-p 1 (current-syntax)))
-    (is-true (drei-lisp-syntax::in-comment-p 2 (current-syntax)))
-    (is-false (drei-lisp-syntax::in-comment-p 16 (current-syntax)))
-    (is-false (drei-lisp-syntax::in-comment-p 17 (current-syntax)))
-    (is-true (drei-lisp-syntax::in-comment-p 18 (current-syntax)))
-    (is-false (drei-lisp-syntax::in-comment-p 40 (current-syntax)))
-    (is-true (drei-lisp-syntax::in-comment-p 41 (current-syntax)))
-    (is-true (drei-lisp-syntax::in-comment-p 50 (current-syntax)))
-    (is-true (drei-lisp-syntax::in-comment-p 60 (current-syntax)))
-    (is-false (drei-lisp-syntax::in-comment-p 69 (current-syntax)))))
+    (is-false (in-comment-p (current-syntax) 0))
+    (is-false (in-comment-p (current-syntax) 1))
+    (is-true (in-comment-p (current-syntax) 2))
+    (is-true (in-comment-p (current-syntax) 16))
+    (is-false (in-comment-p (current-syntax) 17))
+    (is-true (in-comment-p (current-syntax) 18))
+    (is-false (in-comment-p (current-syntax) 40))
+    (is-false (in-comment-p (current-syntax) 41))
+    (is-true (in-comment-p (current-syntax) 50))
+    (is-true (in-comment-p (current-syntax) 60))
+    (is-false (in-comment-p (current-syntax) 68))
+    (is-false (in-comment-p (current-syntax) 69))))
+
+(test in-character-p
+  "Test the `in-character-p' function of Lisp syntax."
+  (testing-lisp-syntax ("#\\C #\\(
+#\\#
+#\\ 
+hello")
+    (is-false (in-character-p (current-syntax) 0))
+    (is-false (in-character-p (current-syntax) 1))
+    (is-true (in-character-p (current-syntax) 2))
+    (is-false (in-character-p (current-syntax) 4))
+    (is-false (in-character-p (current-syntax) 5))
+    (is-true (in-character-p (current-syntax) 6))
+    (is-true (in-character-p (current-syntax) 10))
+    (is-true (in-character-p (current-syntax) 14))
+    (is-false (in-character-p (current-syntax) 16))))
+
+(test location-at-beginning-of-form-list
+  "Test the `location-at-beginning-of-form' function for lists."
+  (testing-lisp-syntax ("(a b c (d e f)   g")
+    (is-false (location-at-beginning-of-form (current-syntax) 0))
+    (is-true (location-at-beginning-of-form (current-syntax) 1))
+    (is-false (location-at-beginning-of-form (current-syntax) 2))
+    (is-false (location-at-beginning-of-form (current-syntax) 7))
+    (is-true (location-at-beginning-of-form (current-syntax) 8))))
+
+(test location-at-end-of-form-list
+  "Test the `location-at-end-of-form' function for lists."
+  (testing-lisp-syntax ("(a b c (d e f) g)")
+    (is-false (location-at-end-of-form (current-syntax) 0))
+    (is-false (location-at-end-of-form (current-syntax) 1))
+    (is-false (location-at-end-of-form (current-syntax) 12))
+    (is-true (location-at-end-of-form (current-syntax) 13))
+    (is-false (location-at-end-of-form (current-syntax) 14))
+    (is-true (location-at-end-of-form (current-syntax) 16))))
+
+(test location-at-beginning-of-form-string
+  "Test the `location-at-beginning-of-form' function for strings."
+  (testing-lisp-syntax ("\"a b c \"d e f\"   g")
+    (is-false (location-at-beginning-of-form (current-syntax) 0))
+    (is-true (location-at-beginning-of-form (current-syntax) 1))
+    (is-false (location-at-beginning-of-form (current-syntax) 2))
+    (is-false (location-at-beginning-of-form (current-syntax) 7))
+    (is-false (location-at-beginning-of-form (current-syntax) 8))
+    (is-true (location-at-beginning-of-form (current-syntax) 14))
+    (is-false (location-at-beginning-of-form (current-syntax) 15))))
+
+(test location-at-end-of-form-string
+  "Test the `location-at-end-of-form' function for strings."
+  (testing-lisp-syntax ("\"a b c \"d e f\" g)\"")
+    (is-false (location-at-end-of-form (current-syntax) 0))
+    (is-false (location-at-end-of-form (current-syntax) 1))
+    (is-false (location-at-end-of-form (current-syntax) 6))
+    (is-true (location-at-end-of-form (current-syntax) 7))
+    (is-false (location-at-end-of-form (current-syntax) 8))
+    (is-false (location-at-end-of-form (current-syntax) 16))
+    (is-true (location-at-end-of-form (current-syntax) 17))
+    (is-false (location-at-end-of-form (current-syntax) 18))))
+
+(test location-at-beginning-of-form-simple-vector
+  "Test the `location-at-beginning-of-form' function for simple
+vectors."
+  (testing-lisp-syntax ("#(a b c #(d e f)   g")
+    (is-false (location-at-beginning-of-form (current-syntax) 0))
+    (is-false (location-at-beginning-of-form (current-syntax) 1))
+    (is-true (location-at-beginning-of-form (current-syntax) 2))
+    (is-false (location-at-beginning-of-form (current-syntax) 3))
+    (is-false (location-at-beginning-of-form (current-syntax) 9))
+    (is-true (location-at-beginning-of-form (current-syntax) 10))))
+
+(test location-at-end-of-form-simple-vector
+  "Test the `location-at-end-of-form' function for simple-vectors."
+  (testing-lisp-syntax ("#(a b c #(d e f) g)")
+    (is-false (location-at-end-of-form (current-syntax) 0))
+    (is-false (location-at-end-of-form (current-syntax) 1))
+    (is-false (location-at-end-of-form (current-syntax) 2))
+    (is-false (location-at-end-of-form (current-syntax) 14))
+    (is-true (location-at-end-of-form (current-syntax) 15))
+    (is-false (location-at-end-of-form (current-syntax) 16))
+    (is-true (location-at-end-of-form (current-syntax) 18))))
 
 ;; For some tests, we need various functions, classes and
 ;; macros. Define them here and pray we don't clobber anything

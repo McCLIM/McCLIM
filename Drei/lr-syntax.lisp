@@ -84,7 +84,7 @@
 
 (defclass parser-symbol ()
   ((start-mark :initform nil :initarg :start-mark :reader start-mark)
-   (size :initform nil :initarg :size)
+   (size :initform nil :initarg :size :reader size)
    (parent :initform nil :accessor parent)
    (children :initform '() :initarg :children :reader children)
    (preceding-parse-tree :initform nil :reader preceding-parse-tree)
