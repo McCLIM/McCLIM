@@ -69,7 +69,7 @@ ideally be indented to according to `view'."))
 
 (defun indent-current-line (view point)
   (indent-line point (proper-line-indentation view point)
-               (and (indent-tabs-mode (buffer view))
+               (and (use-tabs view)
                     (tab-space-count view))))
 
 (defun insert-pair (mark syntax &optional (count 0) (open #\() (close #\)))
@@ -178,7 +178,8 @@ using the case of those objects if USE-REGION-CASE is true."
 function."
   (do-buffer-region-lines (line mark1 mark2)
     (let ((indentation (proper-line-indentation view line)))
-      (indent-line line indentation (tab-space-count view)))))
+      (indent-line line indentation (and (use-tabs view)
+                                         (tab-space-count view))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 
