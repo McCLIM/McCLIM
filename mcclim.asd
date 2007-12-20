@@ -286,9 +286,11 @@
    (:module "Drei" :depends-on ("cl-automaton" "Persistent")
             :components ((:file "packages")
                          (:file "buffer" :depends-on ("packages"))
+                         (:file "delegating-buffer" :depends-on ("packages" "buffer"))
                          (:file "motion" :depends-on ("packages" "buffer" "syntax"))
                          (:file "editing" :depends-on ("packages" "buffer" "syntax" "motion" "kill-ring"))
-                         (:file "base" :depends-on ("packages" "buffer" "persistent-buffer" "kill-ring"))
+                         (:file "base" :depends-on ("packages" "buffer" "persistent-buffer" "kill-ring"
+                                                               "delegating-buffer"))
                          (:file "syntax" :depends-on ("packages" "buffer" "base"))
                          (:file "views" :depends-on ("packages" "buffer" "base" "syntax" "persistent-undo"
                                                                 "persistent-buffer" "undo" "abbrev"
@@ -300,7 +302,6 @@
                          (:file "abbrev" :depends-on ("packages"))
                          (:file "kill-ring" :depends-on ("packages"))
                          (:file "undo" :depends-on ("packages"))
-                         (:file "delegating-buffer" :depends-on ("packages" "buffer"))
                          (:file "basic-commands" :depends-on ("drei-clim" "motion" "editing"))
                          (:file "core" :depends-on ("drei"))
                          (:file "fundamental-syntax" :depends-on ("packages" "drei-redisplay" "core"))
