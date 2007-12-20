@@ -47,7 +47,7 @@ their specific print lengths, if they have one.")
 	:display-function 'display-app)
    (int :interactor :width 600 :height 100 :max-height 100))
   (:layouts
-   (default (vertically () (scrolling () app) int))))
+   (default (vertically () (scrolling () app) #+nil int))))
 
 (defmethod initialize-instance :after ((frame inspector) &rest args)
   (declare (ignore args))

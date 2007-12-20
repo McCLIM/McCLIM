@@ -2103,11 +2103,14 @@ successful, or NIL if the buffer limit was reached."))
 
 (defun up-list (mark syntax fn)
   (let ((form (form-around syntax (offset mark))))
-    (when form
-      (let ((new-offset (find-list-parent-offset form fn)))
-        (when new-offset
-          (setf (offset mark) new-offset)
-          t)))))
+    (when (if (and (form-list-p form)
+                   (/= (start-offset form) (offset mark))
+                   (/= (end-offset form) (offset mark)))
+              (setf (offset mark) (funcall fn form))
+              (let ((new-offset (find-list-parent-offset form fn)))
+                (when new-offset
+                  (setf (offset mark) new-offset))))
+      t)))
 
 (defmethod backward-one-up (mark (syntax lisp-syntax))
   (up-list mark syntax #'start-offset))
