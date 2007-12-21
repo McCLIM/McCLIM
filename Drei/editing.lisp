@@ -82,8 +82,9 @@
              (mark syntax &optional (count 1)
               (limit-action #'error-limit-action))
            (let ((mark2 (clone-mark mark)))
-             (,forward mark2 syntax count limit-action)
-             (delete-region mark mark2)))
+             (when (,forward mark2 syntax count limit-action)
+               (delete-region mark mark2)
+               t)))
          (defmethod ,forward-delete :around
              (mark syntax &optional (count 1)
                    (limit-action #'error-limit-action))
@@ -100,8 +101,9 @@
              (mark syntax &optional (count 1)
               (limit-action #'error-limit-action))
            (let ((mark2 (clone-mark mark)))
-             (,backward mark2 syntax count limit-action)
-             (delete-region mark mark2)))
+             (when (,backward mark2 syntax count limit-action)
+               (delete-region mark mark2)
+               t)))
          (defmethod ,backward-delete :around
              (mark syntax &optional (count 1)
                    (limit-action #'error-limit-action))
@@ -128,7 +130,8 @@
                                                              (region-to-sequence start mark)))
                    (kill-ring-standard-push *kill-ring*
                                             (region-to-sequence start mark)))
-               (delete-region start mark))))
+               (delete-region start mark)
+               t)))
          (defmethod ,forward-kill :around
              (mark syntax &optional (count 1) concatenate-p
                    (limit-action #'error-limit-action))
@@ -156,7 +159,8 @@
                                                              (region-to-sequence start mark)))
                    (kill-ring-standard-push *kill-ring*
                                             (region-to-sequence start mark)))
-               (delete-region start mark))))
+               (delete-region start mark)
+               t)))
          (defmethod ,backward-kill :around
              (mark syntax &optional (count 1) concatenate-p
                    (limit-action #'error-limit-action))

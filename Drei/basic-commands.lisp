@@ -310,14 +310,16 @@ Successive kills append to the kill ring.")
                ((count 'integer :prompt ,(concat "Number of " plural) :default 1))
              ,(concat "Delete from point until the next " noun " end.
 With a positive numeric argument, delete that many " plural " forward.")
-             (,backward-delete (point) (current-syntax) count))
+             (handling-motion-limit-errors (,plural)
+              (,backward-delete (point) (current-syntax) count)))
 
            ;; Backward Delete Unit
            (define-command (,com-backward-delete :name t :command-table ,command-table)
                ((count 'integer :prompt ,(concat "Number of " plural) :default 1))
              ,(concat "Delete from point until the previous " noun " beginning.
 With a positive numeric argument, delete that many " plural " backward.")
-             (,backward-delete (point) (current-syntax) count)))))))
+             (handling-motion-limit-errors (,plural)
+               (,backward-delete (point) (current-syntax) count))))))))
 
 (defmacro define-editing-commands (unit command-table &key
                                    noun
