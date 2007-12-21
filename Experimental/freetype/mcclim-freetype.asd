@@ -28,12 +28,17 @@ your lisp's init file:
   "lisp")
 
 (defsystem :mcclim-freetype
-  :depends-on (:clim-clx :mcclim)
+  :depends-on (:clim-clx :mcclim #-sbcl :cffi)
   :serial t
   :components
+  #+sbcl
   ((:file "freetype-package")
    (:uncompiled-cl-source-file "freetype-ffi")
-   (:file "freetype-fonts")))
+   (:file "freetype-fonts"))
+  #-sbcl
+  ((:file "freetype-package-cffi")
+   (:uncompiled-cl-source-file "freetype-cffi")
+   (:file "freetype-fonts-cffi")))
 
 
 ;;; Freetype autodetection
@@ -75,4 +80,16 @@ your lisp's init file:
 
 #-sbcl
 (defmethod perform :after ((o load-op) (s (eql (asdf:find-system :mcclim-freetype))))
-  (warn-about-unset-font-path))
+  (unless
+      (setf (symbol-value (intern "*FREETYPE-FONT-PATH*" :mcclim-freetype))
+	    (find-bitstream-fonts))
+    (warn-about-unset-font-path)))
+
+#-sbcl
+(defun find-bitstream-fonts ()
+  (with-input-from-string
+      (s (with-output-to-string (asdf::*verbose-out*)
+	   (let ((code (asdf:run-shell-command "fc-match -v Bitstream Vera")))
+	     (unless (zerop code)
+	       (warn "~&fc-match failed with code ~D.~%" code)))))
+    (parse-fontconfig-output s)))
