@@ -500,8 +500,10 @@ editing plain text."))
 
            ;; Selecting forms based on mark
            #:form-around #:form-before #:form-after
+           #:find-list-parent
            #:expression-at-mark
            #:definition-at-mark
+           #:list-at-mark
            #:symbol-at-mark
            #:fully-quoted-form
            #:fully-unquoted-form

@@ -1386,6 +1386,16 @@ is returned. Otherwise, the top-level-form following
 `mark-or-offset' is returned."
   (form-toplevel syntax (expression-at-mark syntax mark-or-offset)))
 
+(defun list-at-mark (syntax mark-or-offset)
+  "Return the list form that `mark-or-offset' is inside, or NIL
+if no such form exists."
+  (as-offsets ((offset mark-or-offset))
+    (let ((form-around (form-around syntax offset)))
+      (if (and (form-list-p form-around)
+               (> offset (start-offset form-around)))
+          form-around
+          (find-list-parent form-around)))))
+
 (defun symbol-at-mark (syntax mark-or-offset
                        &optional (form-fetcher 'expression-at-mark))
   "Return a symbol token at `mark-or-offset'. This function will
@@ -2002,16 +2012,23 @@ and move `mark' to after `string'. If there is no symbol at
                   nil
                   (form-around-in-children syntax (children stack-top) offset))))))
 
+(defun find-list-parent (form)
+  "Find a list parent of `form' and return it. If a list parent
+cannot be found, return nil"
+  (let ((parent (parent form)))
+    (typecase parent
+      (list-form parent)
+      ((or form* null) nil)
+      (t (find-list-parent-offset parent)))))
+
 (defun find-list-parent-offset (form fn)
   "Find a list parent of `form' and return `fn' applied to this
 parent token. `Fn' should be a function that returns an offset
 when applied to a token (eg. `start-offset' or `end-offset'). If
 a list parent cannot be found, return nil"
-  (let ((parent (parent form)))
-    (typecase parent
-      (list-form (funcall fn parent))
-      ((or form* null) nil)
-      (t (find-list-parent-offset parent fn)))))
+  (let ((list-parent (find-list-parent form)))
+    (when list-parent
+      (funcall fn list-parent))))
 
 (defun find-list-child-offset (form fn &optional (min-offset 0))
   "Find a list child of `token' with a minimum start
@@ -2032,6 +2049,7 @@ be found, return nil."
         (funcall fn list-child)))))
 
 (defmethod backward-one-expression (mark (syntax lisp-syntax))
+  (update-syntax syntax 0 0)
   (let ((potential-form (or (form-before syntax (offset mark))
 			    (form-around syntax (offset mark)))))
     (when (and (not (null potential-form))
@@ -2039,6 +2057,7 @@ be found, return nil."
 	(setf (offset mark) (start-offset potential-form)))))
 
 (defmethod forward-one-expression (mark (syntax lisp-syntax))
+  (update-parse syntax 0 (offset mark))
   (let ((potential-form (or (form-after syntax (offset mark))
 			    (form-around syntax (offset mark)))))
     (when (and (not (null potential-form))
@@ -2050,6 +2069,7 @@ be found, return nil."
 Return T if successful, or NIL if the buffer limit was reached."))
 
 (defmethod forward-one-list (mark (syntax lisp-syntax))
+  (update-parse syntax 0 (offset mark))
   (loop for start = (offset mark)
      then (end-offset potential-form)
      for potential-form = (or (form-after syntax start)
@@ -2067,6 +2087,7 @@ Return T if successful, or NIL if the buffer limit was reached."))
 successful, or NIL if the buffer limit was reached."))
 
 (defmethod backward-one-list (mark (syntax lisp-syntax))
+  (update-parse syntax 0 (offset mark))
   (loop for start = (offset mark)
      then (start-offset potential-form)
      for potential-form = (or (form-before syntax start)
@@ -2082,6 +2103,7 @@ successful, or NIL if the buffer limit was reached."))
 (drei-motion:define-motion-fns list)
 
 (defun down-list (mark syntax selector next-offset-fn target-offset-fn)
+  (update-parse syntax 0 (offset mark))
   (labels ((find-offset (potential-form)
              (typecase potential-form
                (list-form (funcall target-offset-fn potential-form))
@@ -2094,14 +2116,17 @@ successful, or NIL if the buffer limit was reached."))
         t))))
 
 (defmethod forward-one-down ((mark mark) (syntax lisp-syntax))
+  (update-parse syntax 0 (offset mark))
   (when (down-list mark syntax #'form-after #'end-offset #'start-offset)
     (forward-object mark)))
 
 (defmethod backward-one-down ((mark mark) (syntax lisp-syntax))
+  (update-parse syntax 0 (offset mark))
   (when (down-list mark syntax #'form-before #'start-offset #'end-offset)
     (backward-object mark)))
 
 (defun up-list (mark syntax fn)
+  (update-parse syntax 0 (offset mark))
   (let ((form (form-around syntax (offset mark))))
     (when (if (and (form-list-p form)
                    (/= (start-offset form) (offset mark))
@@ -2113,12 +2138,15 @@ successful, or NIL if the buffer limit was reached."))
       t)))
 
 (defmethod backward-one-up (mark (syntax lisp-syntax))
+  (update-parse syntax 0 (offset mark))
   (up-list mark syntax #'start-offset))
 
 (defmethod forward-one-up (mark (syntax lisp-syntax))
+  (update-parse syntax 0 (offset mark))
   (up-list mark syntax #'end-offset))
 
 (defmethod backward-one-definition ((mark mark) (syntax lisp-syntax))
+  (update-parse syntax 0 (offset mark))
   (with-slots (stack-top) syntax
     ;; FIXME? This conses! I'm over it already. I don't think it
     ;; matters much, but if someone is bored, please profile it.
@@ -2129,6 +2157,7 @@ successful, or NIL if the buffer limit was reached."))
        and do (return t))))
 
 (defmethod forward-one-definition ((mark mark) (syntax lisp-syntax))
+  (update-parse syntax 0 (offset mark))
   (with-slots (stack-top) syntax
     (loop for form in (children stack-top)
        when (and (formp form)
@@ -2137,6 +2166,7 @@ successful, or NIL if the buffer limit was reached."))
        and do (return t))))
 
 (defmethod eval-defun ((mark mark) (syntax lisp-syntax))
+  (update-parse syntax 0 (offset mark))
   (with-slots (stack-top) syntax
      (loop for form in (children stack-top)
 	   when (and (mark<= (start-offset form) mark)
