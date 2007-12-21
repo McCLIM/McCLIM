@@ -1152,7 +1152,7 @@ package specified in that form does not exist. If no (in-package)
 form can be found, return the package specified in the attribute
 list. If no such package is specified, return \"CLIM-USER\"."
   (as-offsets ((offset mark-or-offset))
-    (update-parse syntax 0 mark-or-offset)
+    (update-parse syntax 0 offset)
     (flet ((normalise (designator)
              (typecase designator
                (symbol
