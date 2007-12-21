@@ -543,7 +543,7 @@
 		 ;; null backend
 		 :clim-null
                  )
-    :components (#-(or clim-gtkairo clim-graphic-forms)
+    :components (#-(or clim-gtkairo clim-graphic-forms clim-beagle)
 		 (:file "Looks/pixie"
                         :pathname #.(make-pathname :directory '(:relative "Looks") :name "pixie" :type "lisp"))))
 
