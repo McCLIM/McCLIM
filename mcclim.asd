@@ -62,7 +62,7 @@
 	(extensions:without-package-locks
 	 (load "gray-streams:gray-streams-library"))
       (load "gray-streams:gray-streams-library")))
-  #-(or clx gtkairo clim-graphic-forms)
+  #-(or clx clim-gtkairo clim-graphic-forms)
   (require :clx)
   #+mp (when (eq mp::*initial-process* mp::*current-process*)
 	 (format t "~%~%You need to run (mp::startup-idle-and-top-level-loops) to start up the multiprocessing support.~%~%")))
@@ -530,20 +530,20 @@
                  ;; If we're on an implementation that ships CLX, use
                  ;; it. Same if the user has loaded CLX already.
                  #+(and (or sbcl scl openmcl ecl clx allegro)
-			(not (or gtkairo clim-graphic-forms clim-beagle)))
+			(not (or clim-gtkairo clim-graphic-forms clim-beagle)))
 		 :clim-clx
                  #+clim-graphic-forms             :clim-graphic-forms
-                 #+gl                        :clim-opengl
+                 #+clim-gl                        :clim-opengl
                  ;; OpenMCL and MCL support the beagle backend (native
                  ;; OS X look&feel on OS X).
                  #+clim-beagle :clim-beagle
 
-		 #+gtkairo :clim-gtkairo
+		 #+clim-gtkairo :clim-gtkairo
 
 		 ;; null backend
 		 :clim-null
                  )
-    :components (#-(or gtkairo clim-graphic-forms)
+    :components (#-(or clim-gtkairo clim-graphic-forms)
 		 (:file "Looks/pixie"
                         :pathname #.(make-pathname :directory '(:relative "Looks") :name "pixie" :type "lisp"))))
 
