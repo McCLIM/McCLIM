@@ -83,7 +83,7 @@
     :class requireable-system))
 
 ;;; Required for the beagle backend (not activated by default)
-#+clozure-common-lisp
+#+clim-beagle
 (progn
   (require :cocoa)
   (require :objc-support))
@@ -530,16 +530,13 @@
                  ;; If we're on an implementation that ships CLX, use
                  ;; it. Same if the user has loaded CLX already.
                  #+(and (or sbcl scl openmcl ecl clx allegro)
-			(not (or gtkairo clim-graphic-forms)))
+			(not (or gtkairo clim-graphic-forms clim-beagle)))
 		 :clim-clx
                  #+clim-graphic-forms             :clim-graphic-forms
                  #+gl                        :clim-opengl
                  ;; OpenMCL and MCL support the beagle backend (native
                  ;; OS X look&feel on OS X).
-
-                 ;; But until it's ready, it's no use forcing users to
-                 ;; cope with possible bugs.
-                 ;; #+(or openmcl mcl)          :clim-beagle
+                 #+clim-beagle :clim-beagle
 
 		 #+gtkairo :clim-gtkairo
 
