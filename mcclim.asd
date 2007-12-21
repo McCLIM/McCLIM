@@ -383,6 +383,19 @@
                (:file "medium" :depends-on ("port" "keysyms" "package"))
                (:file "graft" :depends-on ("port" "package"))
                (:file "frame-manager" :depends-on ("medium" "port" "package"))))))
+#+clisp
+(defmethod asdf::traverse :around ((op compile-op) (c (eql (find-system :clim-clx))))
+  ;; Just some random symbol I know is unexported in CLISP's CLX.
+  (if (eq (nth-value 1 (find-symbol "SET-SELECTION-OWNER" :xlib))
+       :external)
+      (call-next-method)
+      (restart-case (error "Your CLX is not capable of running the McCLIM CLX backend")
+        (load-clx-via-asdf ()
+         :report "Try replacing your CLX with a CLX loaded through ASDF, hopefully this will be Telent CLX."
+         (ext:without-package-lock ("XLIB")
+           (delete-package :xlib)
+           (asdf:oos 'asdf:load-op :clx))
+         (call-next-method)))))
 
 (defsystem :clim-beagle
   :depends-on (clim)
