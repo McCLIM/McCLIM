@@ -223,8 +223,8 @@ keyboard focus"))
   ;; literal objects. We return a string if we can, an array
   ;; otherwise. This is a bit slow, as we cons up the array and then
   ;; probably a new one for the string, most of the time.
-  (let ((contents (buffer-sequence (buffer gadget)
-                                   0 (size (buffer gadget)))))
+  (let ((contents (buffer-sequence (buffer (view gadget))
+                                   0 (size (buffer (view gadget))))))
     (if (every #'characterp contents)
         (coerce contents 'string)
         contents)))
