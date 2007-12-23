@@ -1390,11 +1390,13 @@ is returned. Otherwise, the top-level-form following
   "Return the list form that `mark-or-offset' is inside, or NIL
 if no such form exists."
   (as-offsets ((offset mark-or-offset))
+    (update-parse syntax 0 offset)
     (let ((form-around (form-around syntax offset)))
-      (if (and (form-list-p form-around)
-               (> offset (start-offset form-around)))
-          form-around
-          (find-list-parent form-around)))))
+      (when form-around
+        (if (and (form-list-p form-around)
+                 (> offset (start-offset form-around)))
+            form-around
+            (find-list-parent form-around))))))
 
 (defun symbol-at-mark (syntax mark-or-offset
                        &optional (form-fetcher 'expression-at-mark))
@@ -1644,6 +1646,40 @@ ending double-quote."
     (let ((form-around (form-around syntax offset)))
       (when (form-string-p form-around)
         (at-end-of-form-p syntax form-around offset)))))
+
+(defun at-beginning-of-children-p (form mark-or-offset)
+  "Return true if `mark-or-offset' structurally is at the
+beginning of (precedes) the children of `form'. True if `form'
+has no children."
+  (as-offsets ((offset mark-or-offset))
+    (let ((first-child (first (form-children form))))
+      (and (null first-child)
+           (>= (start-offset first-child) offset)))))
+
+(defun at-end-of-children-p (form mark-or-offset)
+  "Return true if `mark-or-offset' structurally is at the end
+of (is preceded by) the children of `form'. True if `form' has no
+children."
+  (as-offsets ((offset mark-or-offset))
+    (let ((last-child (first (last (form-children form)))))
+      (or (null last-child)
+          (>= offset (end-offset last-child))))))
+
+(defun structurally-at-beginning-of-list-p (syntax mark-or-offset)
+  "Return true if `mark-or-offset' structurally is at the
+beginning of (precedes) the children of the enclosing list. False
+if there is no enclosing list. True if the list has no children."
+  (as-offsets ((offset mark-or-offset))
+   (let ((enclosing-list (list-at-mark syntax offset)))
+     (and enclosing-list (at-beginning-of-children-p enclosing-list offset)))))
+
+(defun structurally-at-end-of-list-p (syntax mark-or-offset)
+  "Return true if `mark-or-offset' structurally is at the end
+of (is preceded by) the children of the enclosing list. False if
+there is no enclosing list. True of the list has no children."
+  (as-offsets ((offset mark-or-offset))
+   (let ((enclosing-list (list-at-mark syntax offset)))
+     (and enclosing-list (at-end-of-children-p enclosing-list offset)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -2063,6 +2099,61 @@ be found, return nil."
     (when (and (not (null potential-form))
                (not (= (offset mark) (end-offset potential-form))))
 	(setf (offset mark) (end-offset potential-form)))))
+
+(defmethod forward-delete-expression (mark (syntax lisp-syntax) &optional (count 1)
+                                      (limit-action #'error-limit-action))
+  (let ((mark2 (clone-mark mark)))
+    (when (and (not (structurally-at-end-of-list-p (current-syntax) mark))
+               (forward-expression mark2 syntax count limit-action))
+      (delete-region mark mark2)
+      t)))
+
+(defmethod backward-delete-expression (mark (syntax lisp-syntax) &optional (count 1)
+                                       (limit-action #'error-limit-action))
+  (let ((mark2 (clone-mark mark)))
+    (when (and (not (structurally-at-end-of-list-p (current-syntax) mark))
+               (backward-expression mark2 syntax count limit-action))
+      (delete-region mark mark2)
+      t)))
+
+(defmethod forward-kill-expression (mark (syntax lisp-syntax) &optional (count 1) concatenate-p
+                                    (limit-action #'error-limit-action))
+  (let ((start (offset mark)))
+    (forward-expression mark syntax count limit-action)
+    (unless (mark= mark start)
+      (if concatenate-p
+          (if (plusp count)
+              (kill-ring-concatenating-push
+               *kill-ring*
+               (region-to-sequence start
+                                   mark))
+              (kill-ring-reverse-concatenating-push
+               *kill-ring*
+               (region-to-sequence
+                start mark)))
+          (kill-ring-standard-push
+           *kill-ring*
+           (region-to-sequence start mark)))
+      (delete-region start mark)
+      t)))
+
+(defmethod backward-kill-expression (mark (syntax lisp-syntax) &optional (count 1) concatenate-p
+                                     (limit-action #'error-limit-action))
+  (let ((start (offset mark)))
+    (backward-expression mark syntax count limit-action)
+    (unless (mark= mark start)
+      (if concatenate-p
+          (if (plusp count)
+              (kill-ring-concatenating-push *kill-ring*
+                                            (region-to-sequence start
+                                                                mark))
+              (kill-ring-reverse-concatenating-push *kill-ring*
+                                                    (region-to-sequence
+                                                     start mark)))
+          (kill-ring-standard-push *kill-ring*
+                                   (region-to-sequence start mark)))
+      (delete-region start mark)
+      t)))
 
 (defgeneric forward-one-list (mark syntax)
   (:documentation "Move `mark' forward by one list.
