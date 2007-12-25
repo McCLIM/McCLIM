@@ -64,7 +64,7 @@
 ;;; Convenience stuff.
 
 (defvar *drei-instance* nil
-  "The currently running Drei instance.  The value is a subclass of pane.")
+  "The currently running Drei instance.")
 
 (defun current-view (&optional (object *drei-instance*))
   "Return the view of the provided object. If no object is
