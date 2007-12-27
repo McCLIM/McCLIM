@@ -85,7 +85,8 @@ buffer having the associated file name."))
   (make-pathname
    :directory
    (pathname-directory
-    (or (filepath (current-buffer))
+    (or (and (current-buffer)
+             (filepath (current-buffer)))
         (user-homedir-pathname)))))
 
 (define-command (com-find-file :name t :command-table esa-io-table) 
