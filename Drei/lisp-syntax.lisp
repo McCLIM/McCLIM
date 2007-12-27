@@ -1469,6 +1469,8 @@ the form that `token' quotes, peeling away all quote forms."
 (define-form-predicate form-simple-vector-p (simple-vector-form))
 
 (define-form-predicate comment-p (comment))
+(define-form-predicate line-comment-p (line-comment-form))
+(define-form-predicate long-comment-p (long-comment-form))
 
 (defgeneric form-at-top-level-p (form)
   (:documentation "Return NIL if `form' is not a top-level-form,
@@ -1522,6 +1524,25 @@ comment (line-based or long form)."
                     (1- (end-offset comment))))
                (when (typep comment 'incomplete-long-comment-form)
                  (< (1+ (start-offset comment)) offset)))))))
+
+(defun in-line-comment-p (syntax mark-or-offset)
+  "Return true if `mark-or-offset' is inside a Lisp line
+comment."
+  (as-offsets ((offset mark-or-offset))
+    (let ((comment (in-type-p syntax mark-or-offset 'line-comment-form)))
+      (when comment
+        (< (start-offset comment) offset)))))
+
+(defun in-long-comment-p (syntax mark-or-offset)
+  "Return true if `mark-or-offset' is inside a Lisp
+long comment."
+  (as-offsets ((offset mark-or-offset))
+    (let ((comment (in-type-p syntax mark-or-offset 'long-comment-form)))
+      (and comment
+           (or (if (typep comment 'complete-long-comment-form)
+                   (< (1+ (start-offset comment)) offset
+                      (1- (end-offset comment)))
+                   (< (1+ (start-offset comment)) offset)))))))
 
 (defun in-character-p (syntax mark-or-offset)
   "Return true if `mark-or-offset' is inside a Lisp character lexeme."
@@ -1670,16 +1691,20 @@ children."
 beginning of (precedes) the children of the enclosing list. False
 if there is no enclosing list. True if the list has no children."
   (as-offsets ((offset mark-or-offset))
-   (let ((enclosing-list (list-at-mark syntax offset)))
-     (and enclosing-list (at-beginning-of-children-p enclosing-list offset)))))
+    (let ((enclosing-list (list-at-mark syntax offset)))
+      (and enclosing-list (at-beginning-of-children-p enclosing-list offset)))))
 
 (defun structurally-at-end-of-list-p (syntax mark-or-offset)
   "Return true if `mark-or-offset' structurally is at the end
 of (is preceded by) the children of the enclosing list. False if
 there is no enclosing list. True of the list has no children."
   (as-offsets ((offset mark-or-offset))
-   (let ((enclosing-list (list-at-mark syntax offset)))
-     (and enclosing-list (at-end-of-children-p enclosing-list offset)))))
+    (let ((enclosing-list (list-at-mark syntax offset)))
+      (and enclosing-list (at-end-of-children-p enclosing-list offset)))))
+
+(defun comment-at-mark (syntax mark-or-offset)
+  "Return the comment at `mark-or-offset'."
+  (in-type-p syntax mark-or-offset 'comment))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

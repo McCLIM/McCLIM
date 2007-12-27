@@ -518,7 +518,7 @@ editing plain text."))
            #:form-comma-p #:form-comma-at-p #:form-comma-dot-p
            #:form-character-p
            #:form-simple-vector-p
-           #:comment-p
+           #:comment-p #:line-comment-p #:long-comment-p
            #:form-at-top-level-p
 
            ;; Querying form data
@@ -530,6 +530,8 @@ editing plain text."))
            ;; Querying about state at mark
            #:in-string-p
            #:in-comment-p
+           #:in-line-comment-p
+           #:in-long-comment-p
            #:in-character-p
            #:location-at-beginning-of-form
            #:location-at-end-of-form
@@ -537,6 +539,11 @@ editing plain text."))
            #:at-end-of-list-p
            #:at-beginning-of-string-p
            #:at-end-of-string-p
+           #:at-beginning-of-children-p
+           #:at-end-of-children-p
+           #:structurally-at-beginning-of-children-p
+           #:structurally-at-end-of-children-p
+           #:comment-at-mark
 
            ;; Lambda list classes.
            #:lambda-list
