@@ -104,6 +104,7 @@ not user-oriented at all."))
            #:constituentp
            #:just-n-spaces
            #:move-to-column
+           #:kill-region
            #:buffer-whitespacep
            #:buffer-region-case
            #:buffer-looking-at #:looking-at
@@ -491,7 +492,7 @@ editing plain text."))
   (:use :clim-lisp :clim :clim-extensions :drei-buffer :drei-base 
         :drei-syntax :drei-fundamental-syntax :flexichain :drei
         :drei-motion :drei-editing :esa-utils :esa :drei-core :esa-io
-	:drei-lr-syntax)
+	:drei-lr-syntax :drei-kill-ring)
   (:export #:lisp-syntax #:lisp-table
            #:lisp-string
            #:edit-definition

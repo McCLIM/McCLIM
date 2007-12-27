@@ -373,6 +373,14 @@ spaces. `Mark' will be moved to after any spaces inserted."
       (insert-sequence mark (make-string (- column set-column)
                              :initial-element #\Space)))))
 
+(defun kill-region (mark1 mark2)
+  "Kill the objects between `mark1' and `mark2', one of which may optionally be an offset.
+That is, push the objects of the delimited region onto
+`*kill-ring*', and delete them from the buffer."
+  (kill-ring-standard-push
+   *kill-ring* (region-to-sequence mark1 mark2))
+  (delete-region mark1 mark2))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 
 ;;; Character case

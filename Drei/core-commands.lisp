@@ -441,9 +441,7 @@ will ask whether to sort in ascending or descending order."
 (define-command (com-kill-region :name t :command-table editing-table) ()
   "Kill the objects between point and mark.
 That is, push them onto the kill ring, and delete them from the buffer."
-  (kill-ring-standard-push
-   *kill-ring* (region-to-sequence (mark) (point)))
-  (delete-region (mark) (point)))
+  (kill-region (mark) (point)))
 
 (set-key 'com-kill-region
 	 'editing-table
