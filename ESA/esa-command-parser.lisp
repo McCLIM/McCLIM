@@ -102,23 +102,27 @@
                  (read-gesture :stream stream)))))
       (with-delimiter-gestures (*command-argument-delimiters* :override t)
         ;; FIXME, except we can't: use of CLIM-INTERNALS.
-        (let* ((info (gethash command-name climi::*command-parser-table*))
-               (required-args (climi::required-args info))
-               (keyword-args (climi::keyword-args info)))
-          ;; keyword arguments not yet supported
-          (declare (ignore keyword-args))
-          (let (result)
-            ;; only required args for now.
-            (do* ((required-args required-args (cdr required-args))
-                  (arg (car required-args) (car required-args))
-                  (command-args command-args (cdr command-args))
-                  (command-arg (car command-args) (car command-args)))
-                 ((null required-args) (cons command-name (nreverse result)))
-              (destructuring-bind (name ptype &rest args) arg
-                (push (cond ((eq command-arg *unsupplied-argument-marker*)
-                             (esa-parse-one-arg stream name ptype args))
-                            ((eq command-arg *numeric-argument-marker*)
-                             (or numeric-argument (getf args :default)))
-                            (t command-arg))
-                      result)
-                (maybe-clear-input)))))))))
+        (let ((info (gethash command-name climi::*command-parser-table*)))
+          (if (null info)
+              ;; `command' is not a real command! Well, we can still
+              ;; replace numeric argument markers.
+              (substitute-numeric-argument-marker command numeric-argument)
+              (let ((required-args (climi::required-args info))
+                    (keyword-args (climi::keyword-args info)))
+                ;; keyword arguments not yet supported
+                (declare (ignore keyword-args))
+                (let (result)
+                  ;; only required args for now.
+                  (do* ((required-args required-args (cdr required-args))
+                        (arg (car required-args) (car required-args))
+                        (command-args command-args (cdr command-args))
+                        (command-arg (car command-args) (car command-args)))
+                       ((null required-args) (cons command-name (nreverse result)))
+                    (destructuring-bind (name ptype &rest args) arg
+                      (push (cond ((eq command-arg *unsupplied-argument-marker*)
+                                   (esa-parse-one-arg stream name ptype args))
+                                  ((eq command-arg *numeric-argument-marker*)
+                                   (or numeric-argument (getf args :default)))
+                                  (t command-arg))
+                            result)
+                      (maybe-clear-input)))))))))))
