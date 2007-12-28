@@ -219,7 +219,7 @@ and specialise a method for it."
 ;;;
 ;;; The basic Drei class.
 
-(defclass drei ()
+(defclass drei (modual-mixin)
   ((%view :initform (make-instance 'textual-drei-syntax-view)
           :initarg :view
           :accessor view
@@ -287,6 +287,25 @@ its view is active."
 
 (defmethod (setf active) (new-val (drei drei))
   (setf (active (view drei)) new-val))
+
+(defmethod available-modes append ((modual drei))
+  (available-modes (view modual)))
+
+(defmethod mode-applicable-p or ((modual drei) mode-name)
+  (mode-applicable-p (view modual) mode-name))
+
+(defmethod mode-enabled-p or ((modual drei) mode-name)
+  (mode-enabled-p (view modual) mode-name))
+
+(defmethod enable-mode ((modual drei) mode-name &rest initargs)
+  (if (mode-applicable-p (view modual) mode-name)
+      (apply #'enable-mode (view modual) mode-name initargs)
+      (call-next-method)))
+
+(defmethod disable-mode ((modual drei) mode-name)
+  (if (mode-applicable-p (view modual) mode-name)
+      (disable-mode (view modual) mode-name)
+      (call-next-method)))
 
 (defun add-view-cursors (drei)
   "Add the cursors desired by the Drei view to the editor-pane of

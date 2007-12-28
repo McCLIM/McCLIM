@@ -22,7 +22,7 @@
 
 (in-package :drei-syntax)
 
-(defclass syntax (name-mixin)
+(defclass syntax (name-mixin modual-mixin)
   ((%buffer :initarg :buffer :reader buffer)
    (%command-table :initarg :command-table
                    :initform (error "A command table has not been provided for this syntax")
@@ -31,6 +31,13 @@
                  :initform '()
                  :accessor updater-fns))
   (:documentation "The base class for all syntaxes."))
+
+(defgeneric syntax-command-tables (syntax)
+  (:documentation "Returns additional command tables provided by
+`syntax'.")
+  (:method-combination append)
+  (:method append ((syntax syntax))
+           (list (command-table syntax))))
 
 (defun syntaxp (object)
   "Return T if `object' is an instance of a syntax, NIL

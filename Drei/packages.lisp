@@ -138,7 +138,8 @@ characters."))
 
 (defpackage :drei-syntax
   (:use :clim-lisp :clim :drei-buffer :drei-base :flexichain :esa-utils)
-  (:export #:syntax #:update-parse #:syntaxp #:define-syntax #:*default-syntax* #:cursor-positions
+  (:export #:syntax #:syntax-command-tables #:update-parse #:syntaxp
+           #:define-syntax #:*default-syntax* #:cursor-positions
            #:syntax-command-table #:additional-command-tables #:define-syntax-command-table
            #:eval-option
            #:define-option-for-syntax
@@ -277,7 +278,12 @@ characters."))
            #:*foreground-color*
            #:*background-color*
            #:*show-mark*
-           #:*use-tabs-for-indentation*))
+           #:*use-tabs-for-indentation*
+
+           #:view-mode #:syntax-mode
+           #:applicable-modes
+           #:define-mode #:define-view-mode #:define-syntax-mode
+           #:define-mode-toggle-commands))
 
 (defpackage :drei-motion
   (:use :clim-lisp :drei-base :drei-buffer :drei-syntax)

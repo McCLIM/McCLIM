@@ -403,7 +403,7 @@ single-line buffer."))
 ;;;
 ;;; View classes.
 
-(defclass drei-view (tabify-mixin subscriptable-name-mixin)
+(defclass drei-view (tabify-mixin subscriptable-name-mixin modual-mixin)
   ((%active :accessor active
             :initform t
             :initarg :active
@@ -444,6 +444,12 @@ for Drei.")
 (defmethod print-object ((view drei-view) stream)
   (print-unreadable-object (view stream :type t :identity t)
     (format stream "name: ~a ~a" (name view) (subscript view))))
+
+(defmethod available-modes append ((modual drei-view))
+  *global-modes*)
+
+(defmethod mode-applicable-p or ((modual drei-view) mode-name)
+  (mode-applicable-p (syntax modual) mode-name))
 
 (defgeneric synchronize-view (view &key &allow-other-keys)
   (:documentation "Synchronize the view with the object under
@@ -583,6 +589,19 @@ buffer."))
         (buffer-size view) (size (buffer view)))
   (synchronize-view view :force-p t))
 
+(defmethod mode-enabled-p or ((modual drei-syntax-view) mode-name)
+  (mode-enabled-p (syntax modual) mode-name))
+
+(defmethod enable-mode ((modual drei-syntax-view) mode-name &rest initargs)
+  (if (mode-applicable-p (syntax modual) mode-name)
+      (apply #'enable-mode (syntax modual) mode-name initargs)
+      (call-next-method)))
+
+(defmethod disable-mode ((modual drei-syntax-view) mode-name)
+  (if (mode-applicable-p (syntax modual) mode-name)
+      (disable-mode (syntax modual) mode-name)
+      (call-next-method)))
+
 (defmethod observer-notified ((view drei-syntax-view) (buffer drei-buffer)
                               changed-region)
   (with-accessors ((prefix-size prefix-size)
@@ -668,7 +687,7 @@ into its buffer."))
           (make-instance 'mark-cursor :view view :output-stream output-stream))))
 
 (defmethod view-command-tables append ((view textual-drei-syntax-view))
-  (list (command-table (syntax view))))
+  (syntax-command-tables (syntax view)))
 
 (defmethod use-editor-commands-p ((view textual-drei-syntax-view))
   t)

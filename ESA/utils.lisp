@@ -213,6 +213,12 @@ specifiers."
   (some (lambda (x)
           (subtypep x `(and ,@types))) types))
 
+(defun capitalize (string)
+  "Return `string' with the first character
+capitalized (destructively modified)."
+  (setf (elt string 0) (char-upcase (elt string 0)))
+  string)
+
 (defclass observable-mixin ()
   ((%observers :accessor observers
                :initform '()))
@@ -308,3 +314,165 @@ buffers with the same name)."))
 (defmethod (setf name) :after (new-name (name-mixin subscriptable-name-mixin))
   (setf (subscript name-mixin)
         (funcall (subscript-generator name-mixin) new-name)))
+
+;;; "Modes" are a generally useful concept, so let's define some
+;;; primitives for them here.
+
+(defclass mode ()
+  ()
+  (:documentation "A superclass for all modes."))
+
+(defclass modual-mixin ()
+  ((%original-class-name :accessor original-class-name
+                         :documentation "The original name of the
+class the `modual-mixin' is part of, the actual name will change
+as modes are added and removed."))
+  (:documentation "A mixin for objects supporting modes."))
+
+(defmethod initialize-instance :after ((object modual-mixin) &rest initargs)
+  (declare (ignore initargs))
+  (setf (original-class-name object) (class-name (class-of object))))
+
+(defgeneric available-modes (modual)
+  (:documentation "Return all available modes for `modual'. Not
+all of the modes may be applicable, use the `applicable-modes'
+function if you're only interested in these.")
+  (:method-combination append)
+  (:method append ((modual modual-mixin))
+    '()))
+
+(defgeneric mode-directly-applicable-p (modual mode-name)
+  (:documentation "Return true if the mode of the name
+`mode-name' can be directly enabled for `modual'. If the mode of
+name `mode-name' is unapplicable, an error of type
+`nonapplicable-mode' will be signalled. This allows a sort of
+\"opt-out\" where a mode can forcefully prevent another specific
+mode from being enabled. ")
+  (:method-combination or)
+  (:method or ((modual modual-mixin) mode-name)
+     nil))
+
+(defgeneric mode-applicable-p (modual mode-name)
+  (:documentation "Return true if the mode of the name
+`mode-name' can be enabled for `modual' or some sub-object of
+`modual'. If the mode of name `mode-name' is unapplicable, an
+error of type `nonapplicable-mode' will be signalled. This allows
+a sort of \"opt-out\" where a mode can forcefully prevent another
+specific mode from being enabled. ")
+  (:method-combination or)
+  (:method or ((modual modual-mixin) mode-name)
+     (mode-directly-applicable-p modual mode-name)))
+
+(defgeneric enabled-modes (modual)
+  (:documentation "Return a list of the names of the modes
+directly enabled for `modual'.")
+  (:method-combination append)
+  (:method append ((modual modual-mixin))
+     '()))
+
+(defgeneric mode-enabled-p (modual mode-name)
+  (:documentation "Return true if `mode-name' is enabled for
+`modual' or any modual \"sub-objects\"." )
+  (:method-combination or)
+  (:method or ((modual modual-mixin) mode-name)
+     (member mode-name (enabled-modes modual) :test #'equal)))
+
+(define-condition nonapplicable-mode (error)
+  ((%modual :accessor modual
+            :initarg :modual
+            :initform (error "The modual used in the error-causing operation must be supplied")
+            :documentation "The modual that the mode is attempted to be enabled for")
+   (%mode-name :accessor mode-name
+               :initarg :mode-name
+               :initform (error "The name of the problematic mode must be supplied")
+               :documentation "The name of the mode that cannot be enabled for the view"))
+  (:documentation "This error is signalled if a mode is attempted
+enabled for a modual that the mode is not applicable to.")
+  (:report (lambda (condition stream)
+             (format
+              stream "The mode ~A is not applicable for ~A"
+              (mode-name condition) (modual condition)))))
+
+(defun nonapplicable-mode (modual mode-name)
+  "Signal an error of type `nonapplicable-mode' with `modual' and
+`mode-name' as arguments."
+  (error 'nonapplicable-mode :modual modual :mode-name mode-name))
+
+(defgeneric enable-mode (modual mode-name &rest initargs)
+  (:documentation "Enable the mode of the name `mode-name' for
+`modual', using `initargs' as options for the mode. If the mode
+is already enabled, do nothing. If the mode is not applicable to
+`modual', signal an `nonapplicable-mode' error.")
+  (:method :around ((modual modual-mixin) mode-name &rest initargs)
+     (declare (ignore initargs))
+     (unless (mode-enabled-p modual mode-name)
+       (call-next-method))))
+
+(defgeneric disable-mode (modual mode-name)
+  (:documentation "Disable the mode of the name `mode-name' for
+`modual'. If a mode of the provided name is not enabled, do
+nothing.")
+  (:method :around ((modual modual-mixin) mode-name)
+     (when (mode-enabled-p modual mode-name)
+       (call-next-method))))
+
+;;; In a perfect world, we would just combine `change-class' with
+;;; anonymous classes to transparently add and remove mode classes
+;;; (the "stealth mixin" concept). However, anonymous classes are the
+;;; ugly child of CL, not well supported at all, so we'll have to do
+;;; some ugly hacks involving the `eval'ing of constructed `defclass'
+;;; forms, and caching the created classes to prevent memory leaking.
+
+(defvar *class-cache* (make-hash-table :test #'equal)
+  "A hash table mapping the name of a \"modual\" class to a
+second hash table. This second hash table maps a list of mode
+names to a class implementing this particular set of modes for
+the modual class. Note that the order in which the modes appear
+in the list is significant.")
+
+(defun make-class-implementing-modes (modual modes)
+  "Generate a class that is a subclass of `modual' that
+implements all the modes listed as names in `modes'."
+  ;; Avert thine eyes, thy of gentle spirit.
+  (if (null modes)
+      (find-class modual)
+      (eval `(defclass ,(gensym) (,modual ,@modes) ()))))
+
+(defun find-class-implementing-modes (modual modes)
+  "Find, possibly create, the class implementing `modual' (a
+class name) with `modes' (a list of mode names) as the enabled
+modes."
+  (let* ((modual-cache-hit (gethash modual *class-cache*))
+         (modes-cache-hit (and modual-cache-hit
+                               (gethash modes modual-cache-hit))))
+    (or modes-cache-hit
+        (setf (gethash modes
+                       (or modual-cache-hit
+                           (setf (gethash modual *class-cache*) 
+                                 (make-hash-table :test #'equal))))
+              (make-class-implementing-modes modual modes)))))
+
+(defun change-class-for-enabled-mode (modual mode-name &rest initargs)
+  "Change the class of `modual' so that it has a mode of name
+`mode-name', created with the provided `initargs'."
+  (apply #'change-class modual (find-class-implementing-modes
+                                (original-class-name modual)
+                                (cons mode-name (enabled-modes modual)))
+         initargs))
+
+(defun change-class-for-disabled-mode (modual mode-name)
+  "Change the class of `modual' so that it does not have a mode
+of name `mode-name'."
+  (change-class modual (find-class-implementing-modes
+                        (original-class-name modual)
+                        (remove mode-name (enabled-modes modual)
+                         :test #'equal))))
+
+(defmethod enable-mode ((modual modual-mixin) mode-name &rest initargs)
+  (if (mode-directly-applicable-p modual mode-name)
+      (apply #'change-class-for-enabled-mode modual mode-name initargs)
+      (nonapplicable-mode modual mode-name)))
+
+(defmethod disable-mode ((modual modual-mixin) mode-name)
+  (when (mode-directly-applicable-p modual mode-name)
+    (change-class-for-disabled-mode modual mode-name)))

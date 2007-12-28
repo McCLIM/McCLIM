@@ -292,9 +292,10 @@
                          (:file "base" :depends-on ("packages" "buffer" "persistent-buffer" "kill-ring"
                                                                "delegating-buffer"))
                          (:file "syntax" :depends-on ("packages" "buffer" "base"))
+                         (:file "modes" :depends-on ("packages" "syntax"))
                          (:file "views" :depends-on ("packages" "buffer" "base" "syntax" "persistent-undo"
                                                                 "persistent-buffer" "undo" "abbrev"
-                                                                "delegating-buffer"))
+                                                                "delegating-buffer" "modes"))
                          (:file "drei" :depends-on ("packages" "views" "motion" "editing"))
                          (:file "drei-clim" :depends-on ("drei"))
                          (:file "drei-redisplay" :depends-on ("drei-clim"))

@@ -42,11 +42,21 @@
            #:invoke-with-dynamic-bindings
            #:maptree
            #:subtype-compatible-p
+           #:capitalize
            #:observable-mixin
            #:add-observer #:remove-observer
            #:observer-notified #:notify-observers
            #:name-mixin #:name
-           #:subscriptable-name-mixin #:subscripted-name #:subscript #:subscript-generator))
+           #:subscriptable-name-mixin #:subscripted-name #:subscript #:subscript-generator
+           #:mode #:modual-mixin
+           #:available-modes
+           #:mode-directly-applicable-p #:mode-applicable-p
+           #:mode-enabled-p
+           #:enabled-modes
+           #:nonapplicable-mode
+           #:change-class-for-enabled-mode
+           #:change-class-for-disabled-mode
+           #:enable-mode #:disable-mode))
 
 (defpackage :esa
   (:use :clim-lisp :clim :esa-utils)
