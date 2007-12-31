@@ -158,13 +158,14 @@
                           port
                           frame-manager
                           (process-name "Listener"))  
-  (let* ((fm (or frame-manager
-                 (find-frame-manager :port (or port (find-port)))))
+  (let* ((fm (or frame-manager (find-frame-manager :port (or port (find-port)))))
          (frame (make-application-frame 'listener
                                        :frame-manager fm
                                        :width width
                                        :height height)))
-    (flet ((run () (run-frame-top-level frame)))
+    (flet ((run () 
+             (unwind-protect (run-frame-top-level frame)
+               (disown-frame fm frame))))
       (if new-process
           (values (clim-sys:make-process #'run :name process-name)
                   frame)
