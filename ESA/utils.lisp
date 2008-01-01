@@ -219,6 +219,20 @@ capitalized (destructively modified)."
   (setf (elt string 0) (char-upcase (elt string 0)))
   string)
 
+(defun ensure-array-size (array min-size new-elem-fn)
+  "Ensure that `array' is at least of size `min-size'. If `array'
+needs to be resized, call `new-elem-fn' with no arguments to
+generate the elements of the new cells in the array. Returns
+`array'. Currently, this function only works when `array' is a
+vector."
+  (when (< (length array) min-size)
+    (let ((old-length (length array)))
+      (setf array (adjust-array array
+                                (max (* old-length 2) min-size)))
+      (loop for i from old-length below (length array)
+         do (setf (elt array i) (funcall new-elem-fn)))))
+  array)
+
 (defclass observable-mixin ()
   ((%observers :accessor observers
                :initform '()))

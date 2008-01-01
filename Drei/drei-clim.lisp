@@ -76,8 +76,8 @@ drawn when its associated Drei instance is drawn. When it is not
 enabled, it will simply be ignored during redisplay.")
    (%active-ink :accessor active-ink
                 :initarg :active-ink
-                :initform +red+
-                :type color
+                :initform +flipping-ink+
+                :type design
                 :documentation "The ink used to draw the cursor
 when it is active.")
    (%inactive-ink :accessor inactive-ink
@@ -179,6 +179,9 @@ command loop completely."))
   (<= (offset (top view))
       (offset (mark cursor))
       (offset (bot view))))
+
+(defmethod (setf view) :after (new-val (drei drei-pane))
+  (window-clear drei))
 
 (defmethod note-sheet-grafted :after ((pane drei-pane))
   (setf (stream-default-view pane) (view pane)))

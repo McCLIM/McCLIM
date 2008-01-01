@@ -37,7 +37,8 @@ of objects are separated by newline characters.  The last object
 of the buffer is not necessarily a newline character."))
 
 (defclass standard-buffer (buffer)
-  ((contents :initform (make-instance 'standard-cursorchain)))
+  ((contents :initform (make-instance 'standard-cursorchain)
+             :reader contents))
   (:documentation "The standard instantiable class for buffers."))
 
 (defgeneric buffer (mark)
@@ -231,7 +232,7 @@ right-sticky mark should be created."))
   (:documentation "Return the number of objects in the buffer."))
 
 (defmethod size ((buffer standard-buffer))
-  (nb-elements (slot-value buffer 'contents)))
+  (nb-elements (contents buffer)))
 
 (defgeneric number-of-lines (buffer)
   (:documentation "Return the number of lines of the buffer, or really the number of
@@ -473,7 +474,7 @@ inserted object."))
 	  (make-condition 'offset-before-beginning :offset offset))
   (assert (<= offset (size buffer)) ()
 	  (make-condition 'offset-after-end :offset offset))
-  (insert* (slot-value buffer 'contents) offset object))
+  (insert* (contents buffer) offset object))
 
 (defgeneric insert-buffer-sequence (buffer offset sequence)
   (:documentation "Like calling insert-buffer-object on each of
@@ -484,7 +485,7 @@ the objects in the sequence."))
 	  (make-condition 'offset-before-beginning :offset offset))
   (assert (<= offset (size buffer)) ()
 	  (make-condition 'offset-after-end :offset offset))
-  (insert-vector* (slot-value buffer 'contents) offset sequence))
+  (insert-vector* (contents buffer) offset sequence))
 
 (defgeneric insert-object (mark object)
   (:documentation "Insert the object at the mark.  This function
@@ -516,7 +517,7 @@ signaled."))
   (assert (<= (+ offset n) (size buffer)) ()
           (make-condition 'offset-after-end :offset (+ offset n)))
   (loop repeat n
-     do (delete* (slot-value buffer 'contents) offset)))
+     do (delete* (contents buffer) offset)))
 
 (defgeneric delete-range (mark &optional n)
   (:documentation "Delete `n' objects after `(if n > 0)' or
@@ -566,7 +567,7 @@ greater than or equal to the size of the buffer, a
 	  (make-condition 'offset-before-beginning :offset offset))
   (assert (<= offset (1- (size buffer))) ()
 	  (make-condition 'offset-after-end :offset offset))
-  (element* (slot-value buffer 'contents) offset))
+  (element* (contents buffer) offset))
 
 (defgeneric (setf buffer-object) (object buffer offset)
   (:documentation "Set the object at the offset in the
@@ -579,7 +580,7 @@ zero or greater than or equal to the size of the buffer, a
           (make-condition 'offset-before-beginning :offset offset))
   (assert (<= offset (1- (size buffer))) ()
           (make-condition 'offset-after-end :offset offset))
-  (setf (element* (slot-value buffer 'contents) offset) object))
+  (setf (element* (contents buffer) offset) object))
 
 (defgeneric buffer-sequence (buffer offset1 offset2)
   (:documentation "Return the contents of the buffer starting at

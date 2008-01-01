@@ -139,7 +139,7 @@ characters."))
 (defpackage :drei-syntax
   (:use :clim-lisp :clim :drei-buffer :drei-base :flexichain :esa-utils)
   (:export #:syntax #:syntax-command-tables #:update-parse #:syntaxp
-           #:define-syntax #:*default-syntax* #:cursor-positions
+           #:define-syntax #:*default-syntax*
            #:syntax-command-table #:additional-command-tables #:define-syntax-command-table
            #:eval-option
            #:define-option-for-syntax
@@ -187,7 +187,7 @@ characters."))
            #:display-drei #:display-drei-pane #:display-drei-area #:full-redisplay
            #:offset-to-screen-position
            #:page-down #:page-up
-           #:isearch-state #:search-string #:search-mark #:search-buffer
+           #:isearch-state #:search-string #:search-mark
            #:search-forward-p #:search-success-p
            #:query-replace-state #:string1 #:string2 #:targets #:occurrences
 

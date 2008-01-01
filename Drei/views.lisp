@@ -455,7 +455,9 @@ for Drei.")
   (:documentation "Synchronize the view with the object under
 observation - what exactly this entails, and what keyword
 arguments are supported, is up to the individual view
-subclass."))
+subclass.")
+  (:method ((view drei-view) &key)
+    nil))
 
 (defgeneric view-command-tables (view)
   (:documentation "Return a list of command tables containing
@@ -506,8 +508,28 @@ is, the mark indicating the first visible object in the buffer.")
    (%bot :accessor bot
          :documentation "The bottom of the displayed buffer, that
 is, the mark indicating the last visible object in the buffer.")
-   (%cursor-positions :accessor cursor-positions
-                      :initform nil))
+   (%cache-string :reader cache-string
+                  :initform (make-array 0 :element-type 'character
+                                          :adjustable t
+                                          :fill-pointer 0)
+                  :documentation "A string used during redisplay
+to reduce consing. Instead of consing up a new string every time
+we need to pull out a buffer region, we put it in this
+string. The fill pointer is automatically set to zero whenever
+the string is accessed through the reader.")
+   (%displayed-lines :accessor displayed-lines
+                     :initform (make-array 0 :element-type 'displayed-line
+                                           :initial-element (make-displayed-line))
+                     :type array
+                     :documentation "An array of the
+`displayed-line' objects displayed by the view. Not all of these
+are live.")
+   (%displayed-lines-count :accessor displayed-lines-count
+                           :initform 0
+                           :type integer
+                           :documentation "The number of lines in
+the views `displayed-lines' array that are actually live, that
+is, used for display right now."))
   (:documentation "A view that contains a `drei-buffer'
 object."))
 
@@ -516,6 +538,33 @@ object."))
   (with-accessors ((top top) (bot bot) (buffer buffer)) view
     (setf top (make-buffer-mark buffer 0 :left)
           bot (make-buffer-mark buffer (size buffer) :right))))
+
+(defmethod (setf top) :after (new-value (view drei-buffer-view))
+  (invalidate-all-strokes view))
+
+(defmethod (setf bot) :after (new-value (view drei-buffer-view))
+  (invalidate-all-strokes view))
+
+(defmethod (setf buffer) :after (new-value (view drei-buffer-view))
+  (invalidate-all-strokes view))
+
+(defmethod cache-string :around ((view drei-buffer-view))
+  (let ((string (call-next-method)))
+    (setf (fill-pointer string) 0)
+    string))
+
+(defmethod observer-notified ((view drei-buffer-view) (buffer drei-buffer)
+                              changed-region)
+  (with-accessors ((prefix-size prefix-size)
+                   (suffix-size suffix-size)) view
+    (setf prefix-size (min (car changed-region) prefix-size)
+          suffix-size (min (- (size buffer) (cdr changed-region))
+                           suffix-size)
+          (modified-p view) t)
+    (dotimes (i (displayed-lines-count view))
+      (let ((line (line-information view i)))
+        (when (<= (car changed-region) (line-end-offset line))
+          (invalidate-line-strokes line :modified t))))))
 
 (defclass drei-syntax-view (drei-buffer-view)
   ((%syntax :accessor syntax)
@@ -602,15 +651,6 @@ buffer."))
       (disable-mode (syntax modual) mode-name)
       (call-next-method)))
 
-(defmethod observer-notified ((view drei-syntax-view) (buffer drei-buffer)
-                              changed-region)
-  (with-accessors ((prefix-size prefix-size)
-                   (suffix-size suffix-size)) view
-    (setf prefix-size (min (car changed-region) prefix-size)
-          suffix-size (min (- (size buffer) (cdr changed-region))
-                           suffix-size)
-          (modified-p view) t)))
-
 (defmethod synchronize-view :around ((view drei-syntax-view) &key
                                      force-p)
   ;; If nothing changed, then don't call the other methods.
@@ -633,7 +673,8 @@ size of the buffer respectively."
           (suffix-size view) (size (buffer view))
           (buffer-size view) (size (buffer view)))
     (update-syntax (syntax view) prefix-size suffix-size
-                   begin end)))
+                   begin end)
+    (call-next-method)))
 
 (defun make-syntax-for-view (view syntax-symbol &rest args)
   (apply #'make-instance syntax-symbol

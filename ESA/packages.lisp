@@ -43,6 +43,7 @@
            #:maptree
            #:subtype-compatible-p
            #:capitalize
+           #:ensure-array-size
            #:observable-mixin
            #:add-observer #:remove-observer
            #:observer-notified #:notify-observers
