@@ -364,7 +364,7 @@ documentation produced by presentations.")
 (defmethod frame-exit ((frame standard-application-frame))
   (if (eq *application-frame* frame)
       (signal 'frame-exit :frame frame)
-    (disown-frame (frame-manager frame) frame)))
+      (disown-frame (frame-manager frame) frame)))
 
 (defmethod frame-exit-frame ((c frame-exit))
   (%frame-exit-frame c))
@@ -447,11 +447,11 @@ documentation produced by presentations.")
 			       (call-next-method)))
 		 (frame-layout-changed () nil)))
       (let ((fm (frame-manager frame)))
-	(case original-state
-	  (:disabled
-	   (disable-frame frame))
-	  (:disowned
-	   (disown-frame fm frame)))))))
+        (case original-state
+          (:disabled
+           (disable-frame frame))
+          (:disowned
+           (disown-frame fm frame)))))))
 
 (defparameter +default-prompt-style+ (make-text-style :fix :italic :normal))
 
@@ -643,7 +643,10 @@ documentation produced by presentations.")
   (note-frame-enabled (frame-manager frame) frame))
 
 (defmethod disable-frame ((frame application-frame))
-  (setf (sheet-enabled-p (frame-top-level-sheet frame)) nil)
+  (let ((t-l-s (frame-top-level-sheet frame)))
+    (setf (sheet-enabled-p t-l-s) nil)
+    (when (port t-l-s)
+      (port-force-output (port t-l-s))))
   (setf (slot-value frame 'state) :disabled)
   (note-frame-disabled (frame-manager frame) frame))
 
