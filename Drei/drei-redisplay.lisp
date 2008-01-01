@@ -952,7 +952,6 @@ setting the `full-redisplay-p' flag to false.")
 (defmethod fully-redisplay-pane ((drei-pane drei-pane)
                                  (view point-mark-view))
   (reposition-pane drei-pane)
-  (adjust-pane-bot drei-pane)
   (setf (full-redisplay-p view) nil))
 
 (defmethod fully-redisplay-pane :after ((drei-pane drei-pane)
