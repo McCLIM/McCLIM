@@ -64,28 +64,12 @@ your lisp's init file:
   location of the Bitstream Vera family of fonts on disk. If you
   don't have them, get them from http://www.gnome.org/fonts/~%~%~%"))
 
-#+sbcl
-(defmethod perform :after ((o load-op) (s (eql (asdf:find-system :mcclim-freetype))))
-  (let ((fc-match  (sb-ext:find-executable-in-search-path "fc-match")))
-    (if (null fc-match)
-        (warn-about-unset-font-path)
-        (let* ((process (sb-ext:run-program fc-match `("-v" "Bitstream Vera")
-                                            :output :stream
-                                            :input nil))
-               (font-path (parse-fontconfig-output (sb-ext:process-output process))))
-          (if (null font-path)
-              (warn-about-unset-font-path)
-              (setf (symbol-value (intern "*FREETYPE-FONT-PATH*" :mcclim-freetype))
-                    font-path))))))
-
-#-sbcl
 (defmethod perform :after ((o load-op) (s (eql (asdf:find-system :mcclim-freetype))))
   (unless
       (setf (symbol-value (intern "*FREETYPE-FONT-PATH*" :mcclim-freetype))
 	    (find-bitstream-fonts))
     (warn-about-unset-font-path)))
 
-#-sbcl
 (defun find-bitstream-fonts ()
   (with-input-from-string
       (s (with-output-to-string (asdf::*verbose-out*)
