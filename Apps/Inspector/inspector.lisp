@@ -58,7 +58,7 @@ their specific print lengths, if they have one.")
   (declare (ignore force-p))
   ;; `Make-clim-stream-pane' creates bizarro object hierarchies, so
   ;; getting the actual scrollable is not obvious.
-  (let* ((scrollable-pane (sheet-parent (sheet-parent (find-pane-named frame 'app))))
+  (let* ((scrollable-pane (sheet-parent (find-pane-named frame 'app)))
          (viewport (pane-viewport scrollable-pane)))
     (multiple-value-bind (x-displacement y-displacement)
         (transform-position (sheet-transformation scrollable-pane) 0 0)

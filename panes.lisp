@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.185 2007/12/16 14:27:22 thenriksen Exp $
+;;; $Id: panes.lisp,v 1.186 2008/01/01 23:23:07 thenriksen Exp $
 
 (in-package :clim-internals)
 
@@ -2784,13 +2784,10 @@ to computed distance to scroll in response to mouse wheel events."))
 			    (unless borderp
 			      user-sr))))
 	(when borderp
-	  (setq pane (make-pane 'border-pane
-				:border-width border-width
-				:contents (list pane)))
-	  ;; bright, I begin to hate the border-pane
-	  (setf pane (apply #'make-pane 'vrack-pane
-			    :contents (list pane)
-			    user-sr)))
+	  (setq pane (apply #'make-pane 'border-pane
+                      :border-width border-width
+                      :contents (list pane)
+                      user-sr)))
 	pane))))
 
 (defun make-clim-interactor-pane (&rest options)
