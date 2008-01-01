@@ -646,7 +646,9 @@ function is the drawing function for the chunk."
               (incf cursor-y line-height))
          when (or (>= (y2 (line-dimensions line)) pane-height)
                   (= (line-end-offset line) (size (buffer view))))
-         return (clear-stale-lines pane view)))))
+         return (progn
+                  (setf (offset (bot view)) (line-end-offset line))
+                  (clear-stale-lines pane view))))))
 
 (defun offset-in-stroke-position (stream view stroke offset)
   "Calculate the position in device units of `offset' in
@@ -855,36 +857,15 @@ the end of the buffer."))
 ;;;
 ;;; Drei pane redisplay.
 
-(defun nb-lines-in-pane (pane)
-  (let* ((medium (sheet-medium pane))
-	 (style (medium-text-style medium))
-	 (height (text-style-height style medium)))
-    (multiple-value-bind (x y w h) (bounding-rectangle* pane)
-      (declare (ignore x y w))
-      (max 1 (floor h (+ height (stream-vertical-spacing pane)))))))
-
-(defun adjust-pane-bot (drei-pane)
-  "Make the region on display fit the size of the pane as closely
-as possible by adjusting bot leaving top intact."
-  (let* ((nb-lines-in-pane (nb-lines-in-pane drei-pane))
-         (view (view drei-pane)))
-    (with-accessors ((top top) (bot bot)) view
-      (setf (offset bot) (offset top))
-      (end-of-line bot)
-      (loop until (end-of-buffer-p bot)
-         repeat (1- nb-lines-in-pane)
-         do (forward-object bot)
-         (end-of-line bot)))))
-
 (defun reposition-pane (drei-pane)
   "Try to put point close to the middle of the pane by moving top
 half a pane-size up."
-  (let ((nb-lines-in-pane (nb-lines-in-pane drei-pane))
-        (view (view drei-pane)))
+  (let* ((view (view drei-pane))
+         (nb-lines-in-pane (number-of-lines-in-region (top view) (bot view))))
     (with-accessors ((top top) (point point)) view
       (setf (offset top) (offset point))
       (beginning-of-line top)
-      #+nil(loop do (beginning-of-line top)
+      (loop do (beginning-of-line top)
          repeat (floor nb-lines-in-pane 2)
          until (beginning-of-buffer-p top)
          do (decf (offset top))
@@ -896,14 +877,10 @@ half a pane-size up."
 reposition the pane if point is outside the visible area."
   (with-accessors ((buffer buffer) (top top) (bot bot)
                    (point point)) (view drei-pane)
-    (let ((nb-lines-in-pane (nb-lines-in-pane drei-pane)))
-      (beginning-of-line top)
-      (end-of-line bot)
-      (when (or (mark< point top)
-                (>= (number-of-lines-in-region top point)
-                    nb-lines-in-pane))
-        (reposition-pane drei-pane))))
-  (adjust-pane-bot drei-pane))
+    (beginning-of-line top)
+    (when (or (mark< point top)
+              (mark> point bot))
+      (reposition-pane drei-pane))))
 
 (defun page-down (view)
   (with-accessors ((top top) (bot bot)) view
@@ -916,16 +893,9 @@ reposition the pane if point is outside the visible area."
 (defun page-up (view)
   (with-accessors ((top top) (bot bot)) view
     (when (> (offset top) 0)
-      (let ((nb-lines-in-region (number-of-lines-in-region top bot)))
-        (setf (offset bot) (offset top))
-        (end-of-line bot)
-        (loop repeat nb-lines-in-region
-           while (> (offset top) 0)
-           do (decf (offset top))
-           (beginning-of-line top))
-        (setf (offset (point view)) (offset bot))
-        (beginning-of-line (point view))
-        (invalidate-all-strokes view)))))
+      (setf (offset (point view)) (offset top))
+      (backward-object (point view))
+      (beginning-of-line (point view)))))
 
 (defgeneric fix-pane-viewport (pane view)
   (:documentation "Fix the size and scrolling of `pane', which
@@ -946,18 +916,24 @@ has `view'."))
       (change-space-requirements pane :width output-width))))
 
 (defmethod fix-pane-viewport :after ((pane drei-pane) (view point-mark-view))
+  (declare (optimize (debug 3)))
   (when (and (pane-viewport pane) (active pane))
-    (multiple-value-bind (cursor-x cursor-y) (offset-to-screen-position pane view (offset (point view)))
-      (declare (ignore cursor-y))
-      (let ((x-position (abs (transform-position (sheet-transformation pane) 0 0)))
-            (viewport-width (bounding-rectangle-width (or (pane-viewport pane) pane))))
-        (cond ((> cursor-x (+ x-position viewport-width))
-               (move-sheet pane (round (- (- cursor-x viewport-width))) 0))
-              ((> x-position cursor-x)
-               (move-sheet pane (if (> viewport-width cursor-x)
-                                    0
-                                    (round (- cursor-x)))
-                           0)))))))
+    (multiple-value-bind (cursor-x cursor-y line-height object-width)
+        (offset-to-screen-position pane view (offset (point view)))
+      (multiple-value-bind (x-position y-position) (transform-position (sheet-transformation pane) 0 0)
+        (let ((viewport-width (bounding-rectangle-width (or (pane-viewport pane) pane)))
+              (viewport-height (bounding-rectangle-height (or (pane-viewport pane) pane))))
+          (cond ((> (+ cursor-x object-width) (+ x-position viewport-width))
+                 (move-sheet pane (round (- (- cursor-x viewport-width))) 0))
+                ((> x-position (+ cursor-x object-width))
+                 (move-sheet pane (if (> viewport-width cursor-x)
+                                      0
+                                      (round (- cursor-x)))
+                             0)))
+          (when (> (+ cursor-y line-height) (+ y-position viewport-height))
+            (next-line (top view))
+            ;; We start all over!
+            (display-drei-pane (pane-frame pane) pane)))))))
 
 (defmethod handle-repaint ((pane drei-pane) region)
   (declare (ignore region))
