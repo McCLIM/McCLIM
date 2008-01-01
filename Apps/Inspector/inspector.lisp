@@ -53,6 +53,24 @@ their specific print lengths, if they have one.")
   (declare (ignore args))
   (setf (gethash (obj frame) (dico frame)) t))
 
+;; Remember the scrolling state between redisplays.
+(defmethod redisplay-frame-panes :around ((frame inspector) &key force-p)
+  (declare (ignore force-p))
+  ;; `Make-clim-stream-pane' creates bizarro object hierarchies, so
+  ;; getting the actual scrollable is not obvious.
+  (let* ((scrollable-pane (sheet-parent (sheet-parent (find-pane-named frame 'app))))
+         (viewport (pane-viewport scrollable-pane)))
+    (multiple-value-bind (x-displacement y-displacement)
+        (transform-position (sheet-transformation scrollable-pane) 0 0)
+      (call-next-method)
+      (scroll-extent scrollable-pane
+                     (min (- x-displacement)
+                          (- (bounding-rectangle-width scrollable-pane)
+                             (bounding-rectangle-width viewport)))
+                     (min (- y-displacement)
+                          (- (bounding-rectangle-height scrollable-pane)
+                             (bounding-rectangle-height viewport)))))))
+
 (defmethod redisplay-frame-pane :after ((frame inspector)
 					(pane application-pane)
 					&key force-p)
