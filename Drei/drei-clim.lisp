@@ -151,13 +151,13 @@ false.")
 (defclass drei-pane (drei application-pane)
   ()
   (:default-initargs
-   :incremental-redisplay t
-    :end-of-line-action :scroll
-    :background *background-color*
-    :foreground *foreground-color*
-    :display-function 'display-drei-pane
-    :width 900
-    :active nil)
+   :incremental-redisplay nil
+   :end-of-line-action :scroll
+   :background *background-color*
+   :foreground *foreground-color*
+   :display-function 'display-drei-pane
+   :width 900
+   :active nil)
   (:documentation "An actual, instantiable Drei pane that
 permits (and requires) the host application to control the
 command loop completely."))
