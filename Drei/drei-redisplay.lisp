@@ -400,7 +400,7 @@ will be cleared before any actual output takes place."
                                                 (text-size stream stroke-string
                                                  :text-style (merge-text-styles
                                                               (face-style (drawing-options-face drawing-options))
-                                                              (medium-default-text-style stream)))
+                                                              (medium-merged-text-style (sheet-medium stream))))
                                                 (values (- x2 x1) (- y2 y1)))
           (clear-rectangle* stream cursor-x cursor-y
                             (+ cursor-x width) (+ cursor-y height
@@ -488,9 +488,9 @@ with, and draw them on `stream'. The line is set to start at the
 buffer offset `start-offset', and will be drawn starting
 at (`cursor-x', `cursor-y')"
   (let* ((line (line-information view (displayed-lines-count view)))
-         (orig-x-offset cursor-x)
          (old-line-height (dimensions-height (line-dimensions line)))
-         (old-line-width (dimensions-width (line-dimensions line))))
+         (old-line-width (dimensions-width (line-dimensions line)))
+         (orig-x-offset cursor-x))
     (setf (line-start-offset line) start-offset
           (line-stroke-count line) 0)
     (loop for index from 0
@@ -662,7 +662,7 @@ is an absolute offset into the buffer of `view',"
                 (face-style
                  (drawing-options-face
                   (stroke-drawing-options stroke)))
-                (medium-default-text-style stream))))
+                (medium-merged-text-style (sheet-medium stream)))))
 
 (defgeneric offset-to-screen-position (pane view offset)
   (:documentation "Returns the position of offset as a screen
@@ -687,10 +687,9 @@ the end of the buffer."))
                             (return-from worker
                               (values (x1 stroke-dimensions) (y1 stroke-dimensions)
                                       (dimensions-height line-dimensions)
-                                      (- (if (= end-offset (1+ start-offset))
-                                             (x2 stroke-dimensions)
-                                             (offset-in-stroke-position pane view stroke (1+ offset)))
-                                         (x1 stroke-dimensions)))))
+                                      (if (= end-offset (1+ start-offset))
+                                          (dimensions-width stroke-dimensions)
+                                          (offset-in-stroke-position pane view stroke (1+ offset))))))
                            ((and (<= start-offset offset)
                                  (< offset end-offset))
                             (return-from worker
@@ -706,7 +705,9 @@ the end of the buffer."))
                   worker (values (x2 line-dimensions) (y1 line-dimensions)
                                  (dimensions-height line-dimensions))))))))
     (with-accessors ((buffer buffer) (top top) (bot bot)) view
-      (let ((default-object-width (text-style-width (medium-default-text-style pane) pane)))
+      (let ((default-object-width
+             (text-style-width
+              (medium-merged-text-style (sheet-medium pane)) pane)))
         (cond
           ((< offset (offset top)) nil)
           ((< (offset bot) offset) t)
