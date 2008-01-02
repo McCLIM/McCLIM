@@ -2110,7 +2110,7 @@ be found, return nil."
         (funcall fn list-child)))))
 
 (defmethod backward-one-expression (mark (syntax lisp-syntax))
-  (update-parse syntax 0 0)
+  (update-parse syntax 0 (offset mark))
   (let ((potential-form (or (form-before syntax (offset mark))
 			    (form-around syntax (offset mark)))))
     (when (and (not (null potential-form))
