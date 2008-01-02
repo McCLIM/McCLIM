@@ -294,6 +294,7 @@
 (defmethod update-syntax ((syntax lr-syntax-mixin) prefix-size suffix-size
                           &optional begin end)
   (declare (ignore begin end))
+  (call-next-method)
   (let* ((low-mark-offset prefix-size)
 	 (high-mark-offset (- (size (buffer syntax)) suffix-size)))
     (when (<= low-mark-offset high-mark-offset)

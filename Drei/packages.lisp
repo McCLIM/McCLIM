@@ -105,6 +105,12 @@ not user-oriented at all."))
            #:just-n-spaces
            #:move-to-column
            #:kill-region
+           #:in-place-buffer-substring
+           #:fill-string-from-buffer
+           #:buffer-find-nonchar
+           #:offset-beginning-of-line-p
+           #:offset-end-of-line-p
+           #:end-of-line-offset
            #:buffer-whitespacep
            #:buffer-region-case
            #:buffer-looking-at #:looking-at
@@ -211,6 +217,8 @@ characters."))
            #:drei-view #:modified-p #:no-cursors
            #:drei-buffer-view #:buffer #:top #:bot
            #:drei-syntax-view #:syntax
+           #:pump-state-for-offset-with-syntax
+           #:stroke-pump-with-syntax
            #:point-mark-view
            #:textual-drei-syntax-view
            #:tab-space-count #:space-width #:tab-width #:use-tabs
@@ -243,8 +251,17 @@ characters."))
            #:drei #:drei-pane #:drei-gadget-pane #:drei-area
            #:handling-drei-conditions #:handle-drei-condition
            #:execute-drei-command
-           #:display-drei-view-contents #:display-syntax-view
-           #:display-drei-view-cursor
+           #:display-drei-view-contents #:display-drei-view-cursor
+
+           #:face #:make-face #:face-ink #:face-style
+           #:drawing-options #:make-drawing-options
+           #:drawing-options-face #:drawing-options-function
+           #:drawing-options-equal #:+default-drawing-options+
+           #:stroke-start-offset #:stroke-end-offset
+           #:stroke-drawing-options
+           
+           #:pump-state-for-offset #:stroke-pump
+           #:object-drawer #:*maximum-chunk-size*
            #:with-drei-options
            #:performing-drei-operations #:invoke-performing-drei-operations
            #:with-bound-drei-special-variables

@@ -381,6 +381,56 @@ That is, push the objects of the delimited region onto
    *kill-ring* (region-to-sequence mark1 mark2))
   (delete-region mark1 mark2))
 
+(defun in-place-buffer-substring (buffer string offset1 offset2)
+  "Copy from `offset1' to `offset2' in `buffer' to `string',
+which must be an adjustable vector of characters with a fill
+pointer. All objects in the buffer range must be
+characters. Returns `string'."
+  (loop for offset from offset1 below offset2
+     for i upfrom 0
+     do (vector-push-extend (buffer-object buffer offset) string)
+     finally (return string)))
+
+(defun fill-string-from-buffer (buffer string offset1 offset2)
+  "Copy from `offset1' to `offset2' in `buffer' to `string',
+which must be an adjustable vector of characters with a fill
+pointer. Once the buffer region has been copied to `string', or a
+non-character object has been encountered in the buffer, the
+number of characters copied to `string' will be returned."
+  (loop for offset from offset1 below offset2
+     for i upfrom 0
+     if (characterp (buffer-object buffer offset))
+     do (vector-push-extend (buffer-object buffer offset) string)
+     else do (loop-finish)
+     finally (return i)))
+
+(defun buffer-find-nonchar (buffer start-offset max-offset)
+  "Search through `buffer' from `start-offset', returning the
+first offset at which a non-character object is found, or
+`max-offset', whichever comes first."
+  (loop for offset from start-offset below max-offset
+     unless (characterp (buffer-object buffer offset))
+     do (loop-finish)
+     finally (return offset)))
+
+(defun offset-beginning-of-line-p (buffer offset)
+  "Return true if `offset' is at the beginning of a line in
+`buffer' or at the beginning of `buffer'."
+  (or (zerop offset) (eql (buffer-object buffer (1- offset)) #\Newline)))
+
+(defun offset-end-of-line-p (buffer offset)
+  "Return true if `offset' is at the end of a line in
+`buffer' or at the end of `buffer'."
+  (or (= (size buffer) offset)
+      (eql (buffer-object buffer offset) #\Newline)))
+
+(defun end-of-line-offset (buffer start-offset)
+  "Return the offset of the end of the line of `buffer'
+containing `start-offset'."
+  (loop for offset from start-offset
+     until (offset-end-of-line-p buffer offset)
+     finally (return offset)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 
 ;;; Character case

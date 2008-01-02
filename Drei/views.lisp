@@ -683,6 +683,25 @@ size of the buffer respectively."
                         (synchronize-view view :begin begin :end end)))
    args))
 
+(defgeneric pump-state-for-offset-with-syntax (view syntax offset)
+  (:documentation "Return a pump state that will enable pumping
+strokes from `offset' in the buffer of `view' as specified by
+`syntax' (via `stroke-pump-for-syntax'). The pump state is not
+guaranteed to be valid past the next call to
+`stroke-pump-for-syntax' or `synchronize-view'. The results are
+undefined if `offset' is not at the beginning of a line."))
+
+(defgeneric stroke-pump-with-syntax (view syntax stroke pump-state)
+  (:documentation "Put stroke information in `stroke' as
+specified by `syntax', returns new pump-state. `Pump-state' must
+either be the result of a call to
+`pump-state-for-offset-with-syntax' or be the return value of an
+earlier call to `stroke-pump-with-syntax'. A pump state is not
+guaranteed to be valid past the next call to
+`stroke-pump-with-syntax' or `synchronize-view'. It is
+permissible for `pump-state' to be destructively modified by this
+function."))
+
 (defclass point-mark-view (drei-buffer-view)
   ((%point :initform nil :initarg :point :accessor point-of)
    (%mark :initform nil :initarg :mark :accessor mark-of))

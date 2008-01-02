@@ -80,8 +80,7 @@ to use the ink specified by `cursor' to perform the drawing, if
 applicable. This method will only be called by the Drei redisplay
 engine when the cursor is active and the buffer position it
 refers to is on display - therefore, `offset-to-screen-position'
-is *guaranteed* to not return NIL or T. This function will return
-either the output record of the cursor, or NIL.")
+is *guaranteed* to not return NIL or T.")
   (:method :around ((stream extended-output-stream) (view drei-view)
                     (cursor drei-cursor))
            (when (visible cursor view)
@@ -198,39 +197,58 @@ line."
   (:documentation "Return a pump state that will enable pumping
 strokes from `offset' in the buffer of `view' (via
 `stroke-pump'). The pump state is not guaranteed to be valid past
-the next call to `stroke-pump' or `synchronize-view'."))
+the next call to `stroke-pump' or `synchronize-view'. The results
+are undefined if `offset' is not at the beginning of a line.")
+  (:method ((view drei-syntax-view) (offset integer))
+    (pump-state-for-offset-with-syntax view (syntax view) offset)))
 
 (defgeneric stroke-pump (view stroke pump-state)
-  (:documentation "Put stroke information in `stroke'. Returns
-new pump-state."))
-
-(defun in-place-buffer-substring (buffer string offset1 offset2)
-  "Copy from `offset1' to `offset2' in `buffer' to `string',
-which must be an adjustable vector of characters with a fill
-pointer. All objects in the buffer range must be
-characters. Returns `string'."
-  (loop for offset from offset1 below offset2
-     for i upfrom 0
-     do (vector-push-extend (buffer-object buffer offset) string)
-     finally (return string)))
-
-(defun fill-string-from-buffer (buffer string offset1 offset2)
-  "Copy from `offset1' to `offset2' in `buffer' to `string',
-which must be an adjustable vector of characters with a fill
-pointer. Once the buffer region has been copied to `string', or a
-non-character object has been encountered in the buffer, the
-number of characters copied to `string' will be returned."
-  (loop for offset from offset1 below offset2
-     for i upfrom 0
-     if (characterp (buffer-object buffer offset))
-     do (vector-push-extend (buffer-object buffer offset) string)
-     else do (loop-finish)
-     finally (return i)))
+  (:documentation "Put stroke information in `stroke', returns
+new pump-state. `Pump-state' must either be the result of a call
+to `pump-state-for-offset' or be the return value of an earlier
+call to `stroke-pump'.  A pump state is not guaranteed to be
+valid past the next call to `stroke-pump' or
+`synchronize-view'. It is permissible for `pump-state' to be
+destructively modified by this function.")
+  (:method :around ((view drei-buffer-view) stroke pump-state)
+    ;; `call-next-method' for the next pump state, and compare
+    ;; the new stroke data with the old one. If it has changed,
+    ;; mark the stroke as dirty and modified.
+    (let ((old-start-offset (stroke-start-offset stroke))
+          (old-end-offset (stroke-end-offset stroke))
+          (old-drawing-options (stroke-drawing-options stroke))
+          (new-pump-state (call-next-method)))
+      (unless (and old-start-offset
+                   (= old-start-offset (stroke-start-offset stroke))
+                   (= old-end-offset (stroke-end-offset stroke))
+                   (drawing-options-equal old-drawing-options
+                                          (stroke-drawing-options stroke)))
+        (invalidate-stroke stroke :modified t))
+      new-pump-state))
+  (:method ((view drei-syntax-view) stroke pump-state)
+    (stroke-pump-with-syntax view (syntax view) stroke pump-state)))
 
 (defun clear-rectangle* (stream x1 y1 x2 y2)
   "Draw on `stream' from (x1,y1) to (x2,y2) with the background
 ink for the stream."
   (draw-rectangle* stream x1 y1 x2 y2 :ink +background-ink+))
+
+(defun invalidate-stroke (stroke &key modified cleared)
+  "Invalidate `stroke' by setting its dirty-bit to true. If
+`modified' or `cleared' is true, also set the modified-bit to
+true. If `cleared' is true, inform the stroke that its previous
+output has been cleared by someone, and that it does not need to
+clear it itself during its next redisplay."
+  (setf (stroke-dirty stroke) t
+        (stroke-modified stroke)
+        (or (stroke-modified stroke)
+            modified
+            cleared))
+  (when cleared
+    (setf (x1 (stroke-dimensions stroke)) 0
+          (y1 (stroke-dimensions stroke)) 0
+          (x2 (stroke-dimensions stroke)) 0
+          (y2 (stroke-dimensions stroke)) 0)))
 
 (defun invalidate-line-strokes (line &key modified cleared)
   "Invalidate all the strokes of `line' by setting their
@@ -240,17 +258,8 @@ strokes that their previous output has been cleared by someone,
 and that they do not need to clear it themselves during their
 next redisplay."
   (loop for stroke across (line-strokes line)
-     do (setf (stroke-dirty stroke) t
-              (stroke-modified stroke)
-              (or (stroke-modified stroke)
-                  modified
-                  cleared))
-     when cleared
-     do (let ((dimensions (stroke-dimensions stroke)))
-          (setf (x1 dimensions) 0
-                (y1 dimensions) 0
-                (x2 dimensions) 0
-                (y2 dimensions) 0))))
+     do (invalidate-stroke stroke :modified modified
+                                  :cleared cleared)))
 
 (defun invalidate-all-strokes (view &key modified cleared)
   "Invalidate all the strokes of `view' by setting their
@@ -560,33 +569,6 @@ type (found via `presentation-type-of') to generate output."
 the buffer determining where the next stroke should start."
   offset)
 
-(defun buffer-find-nonchar (buffer start-offset max-offset)
-  "Search through `buffer' from `start-offset', returning the
-first offset at which a non-character object is found, or
-`max-offset', whichever comes first."
-  (loop for offset from start-offset below max-offset
-     unless (characterp (buffer-object buffer offset))
-     do (loop-finish)
-     finally (return offset)))
-
-(defun offset-beginning-of-line-p (buffer offset)
-  "Return true if `offset' is at the beginning of a line in
-`buffer' or at the beginning of `buffer'."
-  (or (zerop offset) (eql (buffer-object buffer (1- offset)) #\Newline)))
-
-(defun offset-end-of-line-p (buffer offset)
-  "Return true if `offset' is at the end of a line in
-`buffer' or at the end of `buffer'."
-  (or (= (size buffer) offset)
-      (eql (buffer-object buffer offset) #\Newline)))
-
-(defun end-of-line-offset (buffer start-offset)
-  "Return the offset of the end of the line of `buffer'
-containing `start-offset'."
-  (loop for offset from start-offset
-     until (offset-end-of-line-p buffer offset)
-     finally (return offset)))
-
 (defun fetch-chunk (buffer chunk-start-offset)
   "Retrieve a chunk from `buffer', with the chunk starting at
 `chunk-start-offset'. The chunk is a cons, with the car being the
@@ -617,16 +599,9 @@ function is the drawing function for the chunk."
          (actual-end-offset (if (functionp (cdr chunk))
                                 (1+ (car chunk))
                                 (cdr chunk))))
-    (unless (and (stroke-start-offset stroke)
-                 (= (stroke-start-offset stroke) (car chunk))
-                 (= (stroke-end-offset stroke) actual-end-offset)
-                 (drawing-options-equal (stroke-drawing-options stroke)
-                                        drawing-options))
-      (setf (stroke-start-offset stroke) (car chunk)
-            (stroke-end-offset stroke) actual-end-offset
-            (stroke-modified stroke) t
-            (stroke-dirty stroke) t
-            (stroke-drawing-options stroke) drawing-options))
+    (setf (stroke-start-offset stroke) (car chunk)
+          (stroke-end-offset stroke) actual-end-offset
+          (stroke-drawing-options stroke) drawing-options)
     (if (offset-end-of-line-p (buffer view) actual-end-offset)
         (1+ actual-end-offset)
         actual-end-offset)))
@@ -673,7 +648,6 @@ screen. `Object-width' may be an approximation if `offset' is at
 the end of the buffer."))
 
 (defmethod offset-to-screen-position ((pane clim-stream-pane) (view drei-view) (offset number))
-  (declare (optimize (debug 3)))
   (flet ((worker ()
            (do-displayed-lines (line view)
              (when (<= (line-start-offset line) offset (line-end-offset line))
@@ -728,33 +702,29 @@ the end of the buffer."))
                                              (view drei-buffer-view)
                                              (cursor drei-cursor))
   (when (<= (offset (top view)) (offset (mark cursor)) (offset (bot view)))
-    (let ((cursor-output-record (call-next-method)))
-      (when cursor-output-record
-        (with-bounding-rectangle* (x1 y1 x2 y2) cursor-output-record
-          (do-displayed-lines (line view)
-            (cond ((> (y1 (line-dimensions line)) y2)
-                   (return))
-                  ((coordinates-intersects-dimensions
-                    (line-dimensions line) x1 y1 x2 y2)
-                   (block stroke-loop
-                     (do-displayed-line-strokes (stroke line)
-                       (cond ((> (x1 (stroke-dimensions stroke)) x2)
-                              (return-from stroke-loop))
-                             ((coordinates-intersects-dimensions
-                               (stroke-dimensions stroke) x1 y1 x2 y2)
-                              (setf (stroke-dirty stroke) t)
-                              (setf (stroke-modified stroke) t)))))))))))))
+    (clear-output-record cursor)
+    (prog1 (call-next-method)
+      (with-bounding-rectangle* (x1 y1 x2 y2) cursor
+        (do-displayed-lines (line view)
+          (cond ((> (y1 (line-dimensions line)) y2)
+                 (return))
+                ((coordinates-intersects-dimensions
+                  (line-dimensions line) x1 y1 x2 y2)
+                 (block stroke-loop
+                   (do-displayed-line-strokes (stroke line)
+                     (cond ((> (x1 (stroke-dimensions stroke)) x2)
+                            (return-from stroke-loop))
+                           ((coordinates-intersects-dimensions
+                             (stroke-dimensions stroke) x1 y1 x2 y2)
+                            (setf (stroke-dirty stroke) t)
+                            (setf (stroke-modified stroke) t))))))))))))
 
 (defmethod display-drei-view-cursor ((stream extended-output-stream)
                                      (view drei-buffer-view)
                                      (cursor drei-cursor))
   (multiple-value-bind (cursor-x cursor-y line-height object-width)
       (offset-to-screen-position stream view (offset (mark cursor)))
-    (updating-output (stream :unique-id (list* stream view cursor)
-                             :id-test #'equal
-                             :cache-value (list* cursor-x cursor-y line-height object-width)
-                             :cache-test #'equal
-                             :all-new t)
+    (letf (((stream-current-output-record stream) cursor))
       (draw-rectangle* stream
                        cursor-x cursor-y
                        (+ cursor-x object-width) (+ cursor-y line-height)
@@ -917,7 +887,6 @@ has `view'."))
       (change-space-requirements pane :width output-width))))
 
 (defmethod fix-pane-viewport :after ((pane drei-pane) (view point-mark-view))
-  (declare (optimize (debug 3)))
   (when (and (pane-viewport pane) (active pane))
     (multiple-value-bind (cursor-x cursor-y line-height object-width)
         (offset-to-screen-position pane view (offset (point view)))

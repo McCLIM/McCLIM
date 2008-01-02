@@ -34,7 +34,8 @@
 ;;; The syntax object and misc stuff.
 
 (define-syntax fundamental-syntax (syntax)
-  ((lines :initform (make-instance 'standard-flexichain))
+  ((lines :initform (make-instance 'standard-flexichain)
+          :reader lines)
    (scan :accessor scan))
   (:command-table fundamental-table)
   (:name "Fundamental"))
@@ -51,24 +52,54 @@
 ;;; update syntax
 
 (defclass line-object ()
-  ((start-mark :initarg :start-mark :reader start-mark)))
+  ((%start-mark :reader start-mark
+                :initarg :start-mark)
+   (%chunks :accessor chunks
+            :initform (make-array 5
+                       :adjustable t
+                       :fill-pointer 0))))
 
-(defmethod update-syntax-for-display (buffer (syntax fundamental-syntax) top bot)
-  nil)
+(defun get-chunk (buffer chunk-start-offset line-end-offset)
+  (let* ((chunk-end-offset (buffer-find-nonchar
+                            buffer chunk-start-offset
+                            (min (+ *maximum-chunk-size*
+                                    chunk-start-offset)
+                                 line-end-offset))))
+    (cond ((= chunk-start-offset line-end-offset)
+           (cons chunk-end-offset nil))
+          ((or (not (= chunk-end-offset chunk-start-offset))
+               (and (offset-beginning-of-line-p buffer chunk-start-offset)
+                    (offset-end-of-line-p buffer chunk-end-offset)))
+           (cons chunk-end-offset nil))
+          ((not (characterp (buffer-object buffer chunk-end-offset)))
+           (cons (1+ chunk-end-offset) t)))))
+
+(defmethod initialize-instance :after ((line line-object)
+                                       &rest initargs)
+  (declare (ignore initargs))
+  (loop with buffer = (buffer (start-mark line))
+     with chunk-start-offset = (offset (start-mark line))
+     with line-end-offset = (end-of-line-offset buffer (offset (start-mark line)))
+     for chunk-info = (get-chunk (buffer (start-mark line))
+                                 chunk-start-offset line-end-offset)
+     do (vector-push-extend chunk-info (chunks line))
+     (setf chunk-start-offset (car chunk-info))
+     when (= chunk-start-offset line-end-offset)
+     do (loop-finish)))
 
 (defmethod update-syntax ((syntax fundamental-syntax) prefix-size suffix-size
                           &optional begin end)
   (declare (ignore begin end))
-  (let ((low-mark (clone-mark (scan syntax) :left))
-        (high-mark (clone-mark (scan syntax) :left)))
-    (setf (offset low-mark) prefix-size
-          (offset high-mark) (- (size (buffer syntax)) suffix-size))
+  (let ((low-mark (make-buffer-mark (buffer syntax) prefix-size :left))
+        (high-mark (make-buffer-mark
+                    (buffer syntax) (- (size (buffer syntax)) suffix-size) :left)))
     (when (mark<= low-mark high-mark)
       (beginning-of-line low-mark)
       (end-of-line high-mark)
       (with-slots (lines scan) syntax
         (let ((low-index 0)
               (high-index (nb-elements lines)))
+          ;; Binary search for the start of changed lines.
           (loop while (< low-index high-index)
              do (let* ((middle (floor (+ low-index high-index) 2))
                        (line-start (start-mark (element* lines middle))))
@@ -76,139 +107,91 @@
                          (setf low-index (1+ middle)))
                         (t
                          (setf high-index middle)))))
-          ;; discard lines that have to be re-analyzed
+          ;; Discard lines that have to be re-analyzed.
           (loop while (and (< low-index (nb-elements lines))
                            (mark<= (start-mark (element* lines low-index))
                                    high-mark))
              do (delete* lines low-index))
-          ;; analyze new lines
+          ;; Analyze new lines.
           (setf (offset scan) (offset low-mark))
-          (loop while (and (mark<= scan high-mark)
-                           (not (end-of-buffer-p scan)))
+          (loop while (mark<= scan high-mark)
              for i from low-index
              do (progn (insert* lines i (make-instance
                                          'line-object
                                          :start-mark (clone-mark scan)))
                        (end-of-line scan)
-                       (unless (end-of-buffer-p scan)
-                         ;; skip newline
-                         (forward-object scan)))))))))
+                       (if (end-of-buffer-p scan)
+                           (loop-finish)
+                           ;; skip newline
+                           (forward-object scan)))))))))
 		
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; display
 
-(defvar *white-space-start* nil)
+(defstruct (pump-state
+             (:constructor make-pump-state
+                           (line-index offset chunk-index))) 
+  "A pump state object used in the fundamental syntax. `Line' is
+the line object `offset' is in, and `line-index' is the index of
+`line' in the list of lines maintained by the syntax that created
+this pump state."
+  line-index
+  offset
+  chunk-index)
 
-(defvar *current-line* 0)
+(defmethod pump-state-for-offset-with-syntax ((view textual-drei-syntax-view)
+                                              (syntax fundamental-syntax) (offset integer))
+  (update-parse syntax 0 offset)
+  ;; Perform binary search looking for line starting with `offset'.
+  (with-accessors ((lines lines)) syntax
+    (loop with low-index = 0
+       with high-index = (nb-elements lines)
+       for middle = (floor (+ low-index high-index) 2)
+       for line-start = (start-mark (element* lines middle))
+       do (cond ((mark> offset line-start)
+                 (setf low-index (1+ middle)))
+                ((mark< offset line-start)
+                 (setf high-index middle))
+                ((mark= offset line-start)
+                 (loop-finish)))
+       finally (return (make-pump-state middle offset 0)))))
 
-(defun handle-whitespace (pane view buffer start end)
-  (let ((space-width (space-width pane view))
-        (tab-width (tab-width pane view)))
-    (with-sheet-medium (medium pane)
-      (with-accessors ((cursor-positions cursor-positions)) view
-        (loop while (< start end)
-           do (case (buffer-object buffer start)
-                (#\Newline (record-line-vertical-offset pane view (incf *current-line*))
-                           (terpri pane)
-                           (stream-increment-cursor-position
-                            pane (first (aref cursor-positions 0)) 0))
-                ((#\Page #\Return #\Space) (stream-increment-cursor-position
-                                            pane space-width 0))
-                (#\Tab (when (plusp tab-width)
-                         (let ((x (stream-cursor-position pane)))
-                           (stream-increment-cursor-position
-                            pane (- tab-width (mod x tab-width)) 0)))))
-           (incf start))))))
+(defun fetch-chunk (line chunk-index)
+  "Retrieve the `chunk-index'th chunk from `line'. The return
+value is either an integer, in which case it specifies the
+end-offset of a string chunk, or a function, in which case it is
+the drawing function for a single-object non-character chunk."
+  (destructuring-bind (chunk-end-offset . objectp)
+      (aref (chunks line) chunk-index)
+    (if objectp (object-drawer) chunk-end-offset)))
 
-(defmethod display-line ((stream clim-stream-pane) (view textual-drei-syntax-view) mark)
-  (let ((mark (clone-mark mark)))
-    (let ((saved-offset nil)
-          (id 0)
-          (space-width (space-width stream view))
-          (tab-width (tab-width stream view)))
-      (flet ((output-word ()
-               (unless (null saved-offset)
-                 (let ((contents (coerce (region-to-sequence
-                                          saved-offset
-                                          mark)
-                                         'string)))
-                   (updating-output (stream :unique-id (cons view (incf id))
-                                            :id-test #'equal
-                                            :cache-value contents
-                                            :cache-test #'equal)
-                     (unless (null contents)
-                       (present contents 'string :stream stream))))
-                 (setf saved-offset nil))))
-        (loop
-           until (end-of-line-p mark)
-           do (let ((obj (object-after mark)))
-                (cond ((eql obj #\Space)
-                       (output-word)
-                       (stream-increment-cursor-position stream space-width 0))
-                      ((eql obj #\Tab)
-                       (output-word)
-                       (let ((x (stream-cursor-position stream)))
-                         (stream-increment-cursor-position
-                          stream (- tab-width (mod x tab-width)) 0)))
-                      ((constituentp obj)
-                       (when (null saved-offset)
-                         (setf saved-offset (offset mark))))
-                      ((characterp obj)
-                       (output-word)
-                       (updating-output (stream :unique-id (cons stream (incf id))
-                                                :id-test #'equal
-                                                :cache-value obj)
-                         (present obj 'character :stream stream)))
-                      (t
-                       (output-word)
-                       (updating-output (stream :unique-id (cons stream (incf id))
-                                                :id-test #'equal
-                                                :cache-value obj
-                                                :cache-test #'eq)
-                         (present obj (presentation-type-of obj)
-                          :stream stream)))))
-           do (forward-object mark)
-           finally
-           (output-word)
-           (unless (end-of-buffer-p mark)
-             (terpri stream)))))))
-
-(defmethod display-syntax-view ((stream clim-stream-pane) (view textual-drei-syntax-view)
-                                (syntax fundamental-syntax))
-  (update-parse syntax)
-  (with-accessors ((top top) (bot bot)) view
-    (with-accessors ((cursor-positions cursor-positions)) view
-      (setf cursor-positions (make-array (1+ (number-of-lines-in-region top bot))
-                              :initial-element nil
-                              :fill-pointer 1
-                              :adjustable t)
-            *current-line* 0
-            (aref cursor-positions 0) (multiple-value-list (stream-cursor-position stream))))
-    (setf *white-space-start* (offset top))
-    (with-slots (lines scan) syntax
-      (let ((low-index 0)
-            (high-index (nb-elements lines)))
-        (loop while (< low-index high-index)
-           do (let* ((middle (floor (+ low-index high-index) 2))
-                     (line-start (start-mark (element* lines middle))))
-                (cond ((mark> top line-start)
-                       (setf low-index (1+ middle)))
-                      ((mark< top line-start)
-                       (setf high-index middle))
-                      (t
-                       (setf low-index middle
-                             high-index middle)))))
-        (loop for i from low-index
-           while (and (< i (nb-elements lines))
-                      (mark< (start-mark (element* lines i))
-                             bot))
-           do (let ((line (element* lines i)))
-                (updating-output (stream :unique-id (cons view i)
-                                         :id-test #'equal
-                                         :cache-value line
-                                         :cache-test #'equal)
-                  (display-line stream view (start-mark (element* lines i))))))))))
+(defmethod stroke-pump-with-syntax ((view textual-drei-syntax-view)
+                                    (syntax fundamental-syntax) stroke
+                                    (pump-state pump-state))
+  ;; `Pump-state' will be destructively modified.
+  (prog1 pump-state
+    (with-accessors ((line-index pump-state-line-index)
+                     (offset pump-state-offset)
+                     (chunk-index pump-state-chunk-index)) pump-state
+      (update-parse syntax 0 offset)
+      (let* ((chunk (fetch-chunk
+                     (element* (lines syntax) line-index) chunk-index))
+             (drawing-options (if (functionp chunk)
+                                  (make-drawing-options :function chunk)
+                                  +default-drawing-options+))
+             (end-offset (if (functionp chunk)
+                             (1+ offset)
+                             chunk)))
+        (setf (stroke-start-offset stroke) offset
+              (stroke-end-offset stroke) end-offset
+              (stroke-drawing-options stroke) drawing-options)
+        (if (offset-end-of-line-p (buffer view) end-offset)
+            (setf line-index (1+ line-index)
+                  chunk-index 0
+                  offset (1+ end-offset))
+            (setf chunk-index (1+ chunk-index)
+                  offset end-offset))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
