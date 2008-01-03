@@ -139,11 +139,15 @@ string with the default foreground color.")
 
 (defstruct (dimensions :conc-name)
   "A simple mutable rectangle structure. The coordinates should
-be absolute coordinates in the coordinate system of a sheet."
+be absolute coordinates in the coordinate system of a sheet. A
+special `center' slot is also provided to enable the recording of
+what might be considered a *logical* centre of the dimensions on
+the vertical axis."
   (x1 0)
   (y1 0)
   (x2 0)
-  (y2 0))
+  (y2 0)
+  (center 0))
 
 (defun dimensions-height (dimensions)
   "Return the width of the provided `dimensions' object."
@@ -377,7 +381,8 @@ some point)."
       (incf (line-stroke-count line))
       (setf (line-end-offset line) (stroke-end-offset stroke)))))
 
-(defun record-stroke (stroke x1 y1 x2 y2)
+(defun record-stroke (stroke x1 y1 x2 y2
+                      &optional (center (/ (- y2 y1) 2)))
   "Record the fact that `stroke' has been drawn, and that it
 covers the specified area on screen. Updates the dirty- and
 modified-bits of `stroke' as well as the dimensions."
@@ -387,7 +392,8 @@ modified-bits of `stroke' as well as the dimensions."
           (x1 dimensions) x1
           (y1 dimensions) y1
           (x2 dimensions) x2
-          (y2 dimensions) y2)))
+          (y2 dimensions) y2
+          (center dimensions) center)))
 
 (defun stroke-drawing-fn (stream view stroke cursor-x cursor-y)
   "Draw `stroke' to `stream' at the position (`cursor-x',
@@ -403,26 +409,31 @@ will be cleared before any actual output takes place."
                    (drawing-options stroke-drawing-options)) stroke
     (let* ((stroke-string (in-place-buffer-substring
                            (buffer view) (cache-string view)
-                           start-offset end-offset)))
-      (with-accessors ((x1 x1) (y1 y1) (x2 x2) (y2 y2)) dimensions
-        (multiple-value-bind (width height) (if (stroke-modified stroke)
-                                                (text-size stream stroke-string
-                                                 :text-style (merge-text-styles
-                                                              (face-style (drawing-options-face drawing-options))
-                                                              (medium-merged-text-style (sheet-medium stream))))
-                                                (values (- x2 x1) (- y2 y1)))
+                           start-offset end-offset))
+           (merged-text-style (merge-text-styles
+                               (face-style (drawing-options-face drawing-options))
+                               (medium-merged-text-style (sheet-medium stream))))
+           (text-style-ascent (text-style-ascent merged-text-style (sheet-medium stream)))
+           (text-style-descent (text-style-descent merged-text-style (sheet-medium stream)))
+           (text-style-height (+ text-style-ascent text-style-descent)))
+      (with-accessors ((x1 x1) (y1 y1) (x2 x2) (y2 y2) (center center)) dimensions
+        (multiple-value-bind (width ignore1 ignore2 ignore3 baseline)
+            (if (stroke-modified stroke)
+                (text-size stream stroke-string
+                 :text-style merged-text-style)
+                (values (- x2 x1) (- y2 y1) nil nil center))
+          (declare (ignore ignore1 ignore2 ignore3))
           (clear-rectangle* stream cursor-x cursor-y
-                            (+ cursor-x width) (+ cursor-y height
-                                                  (stream-vertical-spacing stream)))
-          (draw-text* stream stroke-string cursor-x cursor-y
-           :text-style (face-style (drawing-options-face drawing-options))
+                            (+ cursor-x width) (+ cursor-y text-style-height))
+          (draw-text* stream stroke-string cursor-x (+ cursor-y
+                                                       (- text-style-ascent
+                                                          baseline))
+           :text-style merged-text-style
            :ink (face-ink (drawing-options-face drawing-options))
            :align-y :top)
-          (record-stroke stroke cursor-x cursor-y (+ width cursor-x)
-                         (+ (if (zerop height)
-                                (text-style-height (medium-text-style stream) stream)
-                                height)
-                            cursor-y)))))))
+          (record-stroke stroke cursor-x cursor-y
+                         (+ width cursor-x) (+ text-style-height cursor-y)
+                         baseline))))))
 
 (defun draw-stroke (stream view stroke cursor-x cursor-y line-height)
   "Draw `stroke' on `stream' at (`cursor-x', `cursor-y'). Nothing
@@ -618,7 +629,7 @@ function is the drawing function for the chunk."
                 (draw-line-strokes pane view pump-state start-offset cursor-x cursor-y)
               (setf pump-state new-pump-state
                     start-offset (1+ (line-end-offset line)))
-              (incf cursor-y line-height))
+              (incf cursor-y (+ line-height (stream-vertical-spacing pane))))
          when (or (>= (y2 (line-dimensions line)) pane-height)
                   (= (line-end-offset line) (size (buffer view))))
          return (progn
