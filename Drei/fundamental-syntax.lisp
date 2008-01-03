@@ -59,37 +59,50 @@
    (%chunks :accessor chunks
             :initform (make-array 5
                        :adjustable t
-                       :fill-pointer 0))))
+                       :fill-pointer 0)
+            :documentation "A list of cons-cells, with the car
+being a buffer offset relative to the `start-mark' of the line,
+and the cdr being T if the chunk covers a non-character, and NIL
+if it covers a character sequence.")))
 
 (defun line-end-offset (line)
   "Return the end buffer offset of `line'."
   (+ (offset (start-mark line)) (line-length line)))
 
-(defun get-chunk (buffer chunk-start-offset line-end-offset)
+(defun get-chunk (buffer line-start-offset chunk-start-offset line-end-offset)
+  "Return a chunk in the form of a cons cell. The chunk will
+start at `chunk-start-offset' and extend no further than
+`line-end-offset'."
   (let* ((chunk-end-offset (buffer-find-nonchar
                             buffer chunk-start-offset
                             (min (+ *maximum-chunk-size*
                                     chunk-start-offset)
                                  line-end-offset))))
     (cond ((= chunk-start-offset line-end-offset)
-           (cons chunk-end-offset nil))
+           (cons (- chunk-end-offset
+                    line-start-offset) nil))
           ((or (not (= chunk-end-offset chunk-start-offset))
                (and (offset-beginning-of-line-p buffer chunk-start-offset)
                     (offset-end-of-line-p buffer chunk-end-offset)))
-           (cons chunk-end-offset nil))
+           (cons (- chunk-end-offset
+                    line-start-offset) nil))
           ((not (characterp (buffer-object buffer chunk-end-offset)))
-           (cons (1+ chunk-end-offset) t)))))
+           (cons (- (1+ chunk-end-offset)
+                    line-start-offset) t)))))
 
 (defmethod initialize-instance :after ((line line-object)
                                        &rest initargs)
   (declare (ignore initargs))
   (loop with buffer = (buffer (start-mark line))
-     with chunk-start-offset = (offset (start-mark line))
-     with line-end-offset = (end-of-line-offset buffer (offset (start-mark line)))
-     for chunk-info = (get-chunk (buffer (start-mark line))
+     with line-start-offset = (offset (start-mark line))
+     with line-end-offset = (+ line-start-offset (line-length line))
+     with chunk-start-offset = line-start-offset
+     for chunk-info = (get-chunk buffer
+                                 line-start-offset
                                  chunk-start-offset line-end-offset)
      do (vector-push-extend chunk-info (chunks line))
-     (setf chunk-start-offset (car chunk-info))
+     (setf chunk-start-offset (+ (car chunk-info)
+                                 line-start-offset))
      when (= chunk-start-offset line-end-offset)
      do (loop-finish)))
 
@@ -168,11 +181,13 @@ this pump state."
 (defun fetch-chunk (line chunk-index)
   "Retrieve the `chunk-index'th chunk from `line'. The return
 value is either an integer, in which case it specifies the
-end-offset of a string chunk, or a function, in which case it is
-the drawing function for a single-object non-character chunk."
-  (destructuring-bind (chunk-end-offset . objectp)
+end-offset of a string chunk relative to the start of the line,
+or a function, in which case it is the drawing function for a
+single-object non-character chunk."
+  (destructuring-bind (relative-chunk-end-offset . objectp)
       (aref (chunks line) chunk-index)
-    (if objectp (object-drawer) chunk-end-offset)))
+    (if objectp (object-drawer) (+ relative-chunk-end-offset
+                                   (offset (start-mark line))))))
 
 (defmethod stroke-pump-with-syntax ((view textual-drei-syntax-view)
                                     (syntax fundamental-syntax) stroke
