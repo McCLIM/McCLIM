@@ -54,10 +54,16 @@
 (defclass line-object ()
   ((%start-mark :reader start-mark
                 :initarg :start-mark)
+   (%line-length :reader line-length
+                 :initarg :line-length)
    (%chunks :accessor chunks
             :initform (make-array 5
                        :adjustable t
                        :fill-pointer 0))))
+
+(defun line-end-offset (line)
+  "Return the end buffer offset of `line'."
+  (+ (offset (start-mark line)) (line-length line)))
 
 (defun get-chunk (buffer chunk-start-offset line-end-offset)
   (let* ((chunk-end-offset (buffer-find-nonchar
@@ -116,14 +122,16 @@
           (setf (offset scan) (offset low-mark))
           (loop while (mark<= scan high-mark)
              for i from low-index
-             do (progn (insert* lines i (make-instance
-                                         'line-object
-                                         :start-mark (clone-mark scan)))
-                       (end-of-line scan)
-                       (if (end-of-buffer-p scan)
-                           (loop-finish)
-                           ;; skip newline
-                           (forward-object scan)))))))))
+             do (progn (let ((line-start-mark (clone-mark scan)))
+                         (insert* lines i (make-instance
+                                           'line-object
+                                           :start-mark line-start-mark
+                                           :line-length (- (offset (end-of-line scan))
+                                                           (offset line-start-mark))))
+                         (if (end-of-buffer-p scan)
+                             (loop-finish)
+                             ;; skip newline
+                             (forward-object scan))))))))))
 		
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -195,7 +203,32 @@ the drawing function for a single-object non-character chunk."
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; exploit the parse 
+;;; exploit the parse
+
+(defun offset-in-line-p (line offset)
+  "Return true if `offset' is in the buffer region delimited by
+`line'."
+  (<= (offset (start-mark line)) offset
+      (line-end-offset line)))
+
+(defun line-containing-offset (syntax mark-or-offset)
+  "Return the line `mark-or-offset' is in for `syntax'. `Syntax'
+must be a `fundamental-syntax' object."
+  ;; Perform binary search looking for line containing `offset1'.
+  (as-offsets ((offset mark-or-offset))
+    (with-accessors ((lines lines)) syntax
+      (loop with low-index = 0
+         with high-index = (nb-elements lines)
+         for middle = (floor (+ low-index high-index) 2)
+         for this-line = (element* lines middle)
+         for line-start = (start-mark this-line)
+         do (cond ((offset-in-line-p this-line offset)
+                   (loop-finish))
+                  ((mark> offset line-start)
+                   (setf low-index (1+ middle)))
+                  ((mark< offset line-start)
+                   (setf high-index middle)))
+         finally (return this-line)))))
 
 ;; do this better
 (defmethod syntax-line-indentation ((syntax fundamental-syntax) mark tab-width)

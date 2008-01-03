@@ -169,8 +169,6 @@ characters."))
            #:display-syntax-name
            #:syntax-line-indentation
            #:eval-defun
-           #:record-line-vertical-offset
-           #:line-vertical-offset
            #:syntax-line-comment-string
            #:line-comment-region #:comment-region
            #:line-uncomment-region #:uncomment-region
@@ -487,13 +485,15 @@ syntax-specific, core functionality of Drei."))
   (:use :clim-lisp :clim :drei-buffer :drei-base 
         :drei-syntax :flexichain :drei :drei-core)
   (:export #:fundamental-syntax #:scan
-           #:*current-line* #:*white-space-start* #:handle-whitespace)
+           #:start-mark #:line-length #:line-end-offset
+           #:line-containing-offset #:offset-in-line-p)
   (:documentation "Implementation of the basic syntax module for
 editing plain text."))
 
 (defpackage :drei-lr-syntax
   (:use :clim-lisp :clim :clim-extensions :drei-buffer :drei-base
-	:drei-syntax :drei :drei-core :drei-fundamental-syntax)
+        :drei-syntax :drei :drei-core :drei-fundamental-syntax
+        :esa-utils)
   (:export #:lr-syntax-mixin #:stack-top #:initial-state
 	   #:skip-inter #:lex #:define-lexer-state
 	   #:lexer-toplevel-state #:lexer-error-state
@@ -505,10 +505,8 @@ editing plain text."))
 	   #:action #:new-state #:done
 	   #:reduce-fixed-number #:reduce-until-type #:reduce-all 
 	   #:error-state #:error-reduce-state
-           #:*current-faces*
-           #:make-face #:face-name #:face-colour #:face-style
-           #:get-faces #:define-standard-faces #:with-face
-           #:display-parse-tree)
+           #:make-syntax-highlighting-rules
+           #:syntax-highlighting-rules)
   (:documentation "Underlying LR parsing functionality."))
 
 (defpackage :drei-lisp-syntax
@@ -564,8 +562,6 @@ editing plain text."))
            #:at-end-of-string-p
            #:at-beginning-of-children-p
            #:at-end-of-children-p
-           #:structurally-at-beginning-of-children-p
-           #:structurally-at-end-of-children-p
            #:comment-at-mark
 
            ;; Lambda list classes.

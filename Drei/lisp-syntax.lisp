@@ -147,6 +147,9 @@ syntax should be run.")
     (or (image syntax)
         (default-image))))
 
+(defconstant +keyword-package+ (find-package :keyword)
+  "The KEYWORD package.")
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Swank interface functions.
@@ -1479,6 +1482,39 @@ the form that `token' quotes, peeling away all quote forms."
     (or (typep (parent form) 'form*)
         (null (parent form)))))
 
+(defgeneric eval-feature-conditional (conditional-form syntax))
+
+(defmethod eval-feature-conditional (conditional-form (syntax lisp-syntax))
+  nil)
+
+;; Adapted from slime.el
+
+(defmethod eval-feature-conditional ((conditional token-mixin) (syntax lisp-syntax))
+  (let* ((string (form-string syntax conditional))
+	 (symbol (parse-symbol string :package +keyword-package+)))
+    (member symbol *features*)))
+
+(defmethod eval-feature-conditional ((conditional list-form) (syntax lisp-syntax))
+  (let ((children (children conditional)))
+    (when (third-noncomment children)
+      (flet ((eval-fc (conditional)
+	       (funcall #'eval-feature-conditional conditional syntax)))
+	(let* ((type (second-noncomment children))
+	       (conditionals  (butlast
+			       (nthcdr
+				2
+				(remove-if
+				 #'comment-p
+				 children))))
+	       (type-string (form-string syntax type))
+	       (type-symbol (parse-symbol type-string :package +keyword-package+)))
+	  (case type-symbol
+	    (:and (funcall #'every #'eval-fc conditionals))
+	    (:or (funcall #'some #'eval-fc conditionals))
+	    (:not (when conditionals
+		    (funcall #'(lambda (f l) (not (apply f l)))
+			     #'eval-fc conditionals)))))))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Asking about parse state at some point
@@ -1731,242 +1767,22 @@ and move `mark' to after `string'. If there is no symbol at
 ;;;
 ;;; display
 
-(defparameter *reader-conditional-faces*
-  (list (make-face :error +red+)
-        (make-face :string +gray50+ (make-text-style nil :italic nil))
-        (make-face :keyword +gray50+)
-        (make-face :macro +gray50+)
-        (make-face :special-form +gray50+)
-        (make-face :lambda-list-keyword +gray50+)
-        (make-face :comment +gray50+)
-        (make-face :reader-conditional +gray50+)))
+;; Note that we do not colour keyword symbols or special forms yet,
+;; that is because the only efficient way to do so is to mark them as
+;; interesting in the parser itself, it is too slow to check for it in
+;; highlighting rules.
+(make-syntax-highlighting-rules emacs-style-highlighting
+  (error-symbol (:face :ink +red+))
+  (string-form (:face :ink +rosy-brown+
+                      :style (make-text-style nil :italic nil)))
+  (comment (:face :ink +maroon+ :style (make-text-style :serif :bold :large))))
 
-(define-standard-faces lisp-syntax
-  (make-face :error +red+)
-  (make-face :string +rosy-brown+ (make-text-style nil :italic nil))
-  (make-face :keyword +orchid+)
-  (make-face :macro +purple+)
-  (make-face :special-form +purple+)
-  (make-face :lambda-list-keyword +dark-green+)
-  (make-face :comment +maroon+)
-  (make-face :reader-conditional +gray50+))
+(defparameter *syntax-highlighting-rules* 'emacs-style-highlighting
+  "The syntax highlighting rules used for highlighting Lisp
+syntax.")
 
-(defmethod display-parse-tree ((parse-symbol (eql nil)) stream (view textual-drei-syntax-view)
-                               (syntax lisp-syntax))
-  nil)
-
-(defmethod display-parse-tree ((parse-symbol error-symbol) stream
-                               (view textual-drei-syntax-view) (syntax lisp-syntax))
-  (let ((children (children parse-symbol)))
-    (loop until (or (null (cdr children))
-		    (typep (parser-state (cadr children)) 'error-state))
-	  do (display-parse-tree (pop children) stream view syntax))
-    (if (and (null (cdr children))
-	     (not (typep (parser-state parse-symbol) 'error-state)))
-	(display-parse-tree (car children) stream view syntax)
-	(with-face (:error)
-	  (loop for child in children
-		do (display-parse-tree child stream view syntax))))))
-
-(defmethod display-parse-tree ((parse-symbol error-lexeme) stream
-                               (view textual-drei-syntax-view) (syntax lisp-syntax))
-  (with-face (:error)
-    (call-next-method)))
-
-(defmethod display-parse-tree ((parse-symbol unmatched-right-parenthesis-lexeme)
-			       stream (view textual-drei-syntax-view) (syntax lisp-syntax))
-  (with-face (:error)
-    (call-next-method)))
-
-(defmethod display-parse-tree ((parse-symbol token-mixin) stream
-                               (view textual-drei-syntax-view) (syntax lisp-syntax))
-  (if (> (the fixnum (end-offset parse-symbol)) (the fixnum (start-offset parse-symbol)))
-      (let ((symbol (form-to-object syntax parse-symbol :no-error t)))
-        (with-output-as-presentation (stream symbol 'symbol :single-box :highlighting)
-          (cond ((eql (buffer-object (buffer syntax) (start-offset parse-symbol)) #\:)
-                 (with-face (:keyword)
-                   (call-next-method)))
-                ((eql (buffer-object (buffer syntax) (start-offset parse-symbol)) #\&)
-                 (with-face (:lambda-list-keyword)
-                   (call-next-method)))
-                ((and (symbolp symbol)
-                      (macro-function symbol)
-                      (form-operator-p syntax parse-symbol))
-                 (with-face (:macro)
-                   (call-next-method)))
-                ((and (symbolp symbol)
-                      (special-operator-p symbol)
-                      (form-operator-p syntax parse-symbol))
-                 (with-face (:special-form)
-                   (call-next-method)))
-                (t (call-next-method)))))
-      (call-next-method)))
-
-(defmethod display-parse-tree ((parser-symbol literal-object-form) stream (view textual-drei-syntax-view)
-                               (syntax lisp-syntax))
-  (updating-output
-      (stream :unique-id (list view parser-symbol)
-              :id-test #'equal
-              :cache-value parser-symbol
-              :cache-test #'eql)
-    (let ((object (form-to-object syntax parser-symbol)))
-      (present object (presentation-type-of object) :stream stream))))
-
-(defmethod display-parse-tree ((parser-symbol lisp-lexeme) stream (view textual-drei-syntax-view)
-                               (syntax lisp-syntax))
-  (flet ((cache-test (t1 t2)
-           (and (eq t1 t2)
-                (eq (slot-value t1 'ink)
-                    (medium-ink (sheet-medium stream)))
-                (eq (slot-value t1 'face)
-                    (text-style-face (medium-text-style (sheet-medium stream)))))))
-    (updating-output
-        (stream :unique-id (list view parser-symbol)
-                :id-test #'equal
-                :cache-value parser-symbol
-                :cache-test #'cache-test)
-      (with-slots (ink face) parser-symbol
-        (setf ink (medium-ink (sheet-medium stream))
-              face (text-style-face (medium-text-style (sheet-medium stream))))
-        (write-string (form-string syntax parser-symbol) stream)))))
-
-(define-presentation-type lisp-string ()
-                          :description "lisp string")
-
-(defmethod display-parse-tree ((parse-symbol complete-string-form) stream
-                               (view textual-drei-syntax-view) (syntax lisp-syntax))
-  (let ((children (children parse-symbol)))
-    (if (third children)
-        (let ((string (buffer-substring (buffer syntax)
-                                        (start-offset (second children))
-                                        (end-offset (car (last children 2))))))
-          (with-output-as-presentation (stream string 'lisp-string
-                                               :single-box :highlighting)
-            (with-face (:string)
-              (display-parse-tree (pop children) stream view syntax)
-	      (loop until (null (cdr children))
-                 do (display-parse-tree (pop children) stream view syntax))
-              (display-parse-tree (pop children) stream view syntax))))
-        (with-face (:string)
-         (progn (display-parse-tree (pop children) stream view syntax)
-                (display-parse-tree (pop children) stream view syntax))))))
-
-(defmethod display-parse-tree ((parse-symbol incomplete-string-form) stream
-                               (view textual-drei-syntax-view) (syntax lisp-syntax))
-  (let ((children (children parse-symbol)))
-    (if (second children)
-        (let ((string (buffer-substring (buffer syntax)
-                                        (start-offset (second children))
-                                        (end-offset (car (last children))))))
-          (with-output-as-presentation (stream string 'lisp-string
-                                               :single-box :highlighting)
-            (with-face (:string)
-              (display-parse-tree (pop children) stream view syntax)
-              (loop until (null children)
-                 do (display-parse-tree (pop children) stream view syntax)))))
-        (with-face (:string)
-         (display-parse-tree (pop children) stream view syntax)))))
-
-(defmethod display-parse-tree ((parse-symbol line-comment-form) stream
-                               (view textual-drei-syntax-view) (syntax lisp-syntax))
-  (with-face (:comment)
-    (call-next-method)))
-
-(defmethod display-parse-tree ((parse-symbol long-comment-form) stream
-                               (view textual-drei-syntax-view) (syntax lisp-syntax))
-  (with-face (:comment)
-    (call-next-method)))
-
-(defmethod display-parse-tree ((parse-symbol reader-conditional-positive-form)
-			       stream (view textual-drei-syntax-view) (syntax lisp-syntax))
-  (let ((conditional (second-noncomment (children parse-symbol))))
-    (if (eval-feature-conditional conditional syntax)
-	(call-next-method)
-	(let ((*current-faces* *reader-conditional-faces*))
-	  (with-face (:reader-conditional)
-	    (call-next-method))))))
-
-(defmethod display-parse-tree ((parse-symbol reader-conditional-negative-form)
-				stream (view textual-drei-syntax-view) (syntax lisp-syntax))
-  (let ((conditional (second-noncomment (children parse-symbol))))
-    (if (eval-feature-conditional conditional syntax)
-	(let ((*current-faces* *reader-conditional-faces*))
-	  (with-face (:reader-conditional)
-	    (call-next-method)))
-	(call-next-method))))
-
-(defgeneric eval-feature-conditional (conditional-form syntax))
-
-(defmethod eval-feature-conditional (conditional-form (syntax lisp-syntax))
-  nil)
-
-;; Adapted from slime.el
-
-(defconstant +keyword-package+ (find-package :keyword)
-  "The KEYWORD package.")
-
-(defmethod eval-feature-conditional ((conditional token-mixin) (syntax lisp-syntax))
-  (let* ((string (form-string syntax conditional))
-	 (symbol (parse-symbol string :package +keyword-package+)))
-    (member symbol *features*)))
-
-(defmethod eval-feature-conditional ((conditional list-form) (syntax lisp-syntax))
-  (let ((children (children conditional)))
-    (when (third-noncomment children)
-      (flet ((eval-fc (conditional)
-	       (funcall #'eval-feature-conditional conditional syntax)))
-	(let* ((type (second-noncomment children))
-	       (conditionals  (butlast
-			       (nthcdr
-				2
-				(remove-if
-				 #'comment-p
-				 children))))
-	       (type-string (form-string syntax type))
-	       (type-symbol (parse-symbol type-string :package +keyword-package+)))
-	  (case type-symbol
-	    (:and (funcall #'every #'eval-fc conditionals))
-	    (:or (funcall #'some #'eval-fc conditionals))
-	    (:not (when conditionals
-		    (funcall #'(lambda (f l) (not (apply f l)))
-			     #'eval-fc conditionals)))))))))
-
-(defmethod display-parse-tree ((parse-symbol complete-list-form) stream
-                               (view textual-drei-syntax-view) (syntax lisp-syntax))
-  (let* ((children (children parse-symbol))
-         (point-offset (the fixnum (offset (point view))))
-         ;; The following is true if the location if the point
-         ;; warrants highlighting of a set of matching parentheses.
-         (should-highlight (and (active view)
-                                (or (= (the fixnum (end-offset parse-symbol)) point-offset)
-                                    (= (the fixnum (start-offset parse-symbol)) point-offset)))))
-    (if should-highlight
-        (with-text-face (stream :bold)
-          (display-parse-tree (car children) stream view syntax))
-        (display-parse-tree (car children) stream view syntax))
-    (loop for child-list on (cdr children)
-       if (and should-highlight (null (cdr child-list))) do
-       (with-text-face (stream :bold)
-         (display-parse-tree (car child-list) stream view syntax))
-       else do
-       (display-parse-tree (car child-list) stream view syntax))))
-
-(defmethod display-parse-tree ((parse-symbol incomplete-list-form) stream
-                               (view textual-drei-syntax-view) (syntax lisp-syntax))
-  (update-parse syntax)
-  (let* ((children (children parse-symbol))
-         (point-offset (the fixnum (offset (point view))))
-         ;; The following is set to true if the location if the point
-         ;; warrants highlighting of the beginning parenthesis
-         (should-highlight (and (active view)
-                                (= (the fixnum (start-offset parse-symbol)) point-offset))))
-    (with-face (:error)
-      (if should-highlight
-          (with-text-face (stream :bold)
-            (display-parse-tree (car children) stream view syntax))
-          (display-parse-tree (car children) stream view syntax)))
-    (loop for child in (cdr children) do
-      (display-parse-tree child stream view syntax))))
+(defmethod syntax-highlighting-rules ((syntax lisp-syntax))
+  *syntax-highlighting-rules*)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

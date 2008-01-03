@@ -28,7 +28,8 @@
 (in-package :drei-lr-syntax)
 
 (defclass lr-syntax-mixin () 
-     ((stack-top :initform nil)
+     ((stack-top :initform nil
+                 :accessor stack-top)
       (potentially-valid-trees)
       (lookahead-lexeme :initform nil :accessor lookahead-lexeme)
       (current-state)
@@ -289,6 +290,66 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
+;;; Utility functions
+
+(defun invoke-do-parse-symbols-forward (start-offset nearby-symbol fn)
+  "Loop across the parse symbols of the syntax, calling `fn' on
+any parse symbol that starts at or after
+`start-offset'. `Nearby-symbol' is the symbol at which the
+iteration will start. First, if `nearby-symbol' is at or after
+`start-offset', `fn' will be called on
+`nearby-symbol'. Afterwards, the children of `nearby-symbol' will
+be looped over. Finally, the process will be repeated for each
+sibling of `nearby-symbol'. It is guaranteed that `fn' will not
+be called twice for the same parser symbol."
+  (labels ((act (parse-symbol previous)
+             (when (>= (end-offset parse-symbol) start-offset)
+               (when (>= (start-offset parse-symbol) start-offset)
+                 (funcall fn parse-symbol))
+               (loop for child in (children parse-symbol)
+                  unless (eq child previous)
+                  do (act child parse-symbol)))
+             (unless (or (null (parent parse-symbol))
+                         (eq (parent parse-symbol) previous))
+               (act (parent parse-symbol) parse-symbol))))
+    (act nearby-symbol nearby-symbol)))
+
+(defmacro do-parse-symbols-forward ((symbol start-offset enclosing-symbol)
+                                    &body body)
+  "Loop across the parse symbols of the syntax, evaluating `body'
+with `symbol' bound for each parse symbol that starts at or after
+`start-offset'. `enclosing-symbol' is the symbol at which the
+iteration will start. First, if `enclosing-symbol' is at or after
+`start-offset', `symbol' will be bound to
+`enclosing-symbol'. Afterwards, the children of
+`enclosing-symbol' will be looped over. Finally, the process will
+be repeated for each sibling of `nearby-symbol'. It is guaranteed
+that `symbol' will not bound to the same parser symbol twice."
+  `(invoke-do-parse-symbols-forward ,start-offset ,enclosing-symbol
+                                    #'(lambda (,symbol)
+                                        ,@body)))
+
+(defun parser-symbol-containing-offset (syntax offset)
+  "Find the most specific (leaf) parser symbol in `syntax' that
+contains `offset'. If there is no such parser symbol, return the
+stack-top of `syntax'."
+  (labels ((check (parser-symbol)
+             (cond ((or (and (<= (start-offset parser-symbol) offset)
+                             (< offset (end-offset parser-symbol)))
+                        (= offset (start-offset parser-symbol)))
+                    (return-from parser-symbol-containing-offset
+                      (if (null (children parser-symbol))
+                          parser-symbol
+                          (or (check-children (children parser-symbol))
+                              parser-symbol))))
+                   (t nil)))
+           (check-children (children)
+             (find-if #'check children)))
+    (or (check-children (children (stack-top syntax)))
+        (stack-top syntax))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
 ;;; update syntax
 
 (defmethod update-syntax ((syntax lr-syntax-mixin) prefix-size suffix-size
@@ -317,85 +378,182 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; Redisplay. This is just some minor conveniences, not an actual
-;;; generic redisplay implementation for LR syntaxes.
+;;; General redisplay for LR syntaxes, subclasses of `lr-syntax-mixin'
+;;; should be able to easily define some syntax rules, and need not
+;;; bother with all this complexity.
+;;;
+;;;          _______________
+;;;         /               \
+;;;        /                 \
+;;;       /                   \
+;;;       |   XXXX     XXXX   |
+;;;       |   XXXX     XXXX   |
+;;;       |   XXX       XXX   |
+;;;       |         X         |
+;;;       \__      XXX      __/
+;;;         |\     XXX     /|
+;;;         | |           | |
+;;;         | I I I I I I I |
+;;;         |  I I I I I I  |
+;;;         \_             _/
+;;;           \_         _/
+;;;             \_______/
+;;;     XXX                    XXX
+;;;    XXXXX                  XXXXX
+;;;    XXXXXXXXX         XXXXXXXXXX
+;;;           XXXXX   XXXXX
+;;;              XXXXXXX
+;;;           XXXXX   XXXXX
+;;;    XXXXXXXXX         XXXXXXXXXX
+;;;    XXXXX                  XXXXX
+;;;     XXX                    XXX
 
-(defvar *current-faces* nil
-  "The current faces used by the syntax for redisplay. Will be
-bound during redisplay.")
+(defmacro make-syntax-highlighting-rules (name &body rules)
+  "Define a set of rules for highlighting a syntax. `Name', which
+must be a symbol, is the name of this set of rules, and will be
+bound to a function implementing the rules. `Rules' is a list of
+rules of the form `(parser-symbol (type args...))', where
+`parser-symbol' is a type that might be encountered in a parse
+tree for the syntax. The rule specifies how to highlight that
+kind of object (and all its children). `Type' can be one of three
+symbols.
 
-(defstruct (face (:type list)
-                 (:constructor make-face (name colour &optional style)))
-  name colour (style nil))
+  `:face', in which case `args' will be used as arguments to a
+  call to `make-face'. The resulting face will be used to draw
+  the parsersymbol.
 
-(defgeneric get-faces (syntax)
-  (:documentation "Return a list of all the defined standard
-faces of `syntax'.")
+  `:options', in which case `args' will be used as arguments to
+  `make-drawing-options'. The resulting options will be used to
+  draw the parser symbol.
+
+  `:function', in which case `args' must be a single element, a
+  function that takes two arguments. These arguments are the
+  syntax and the parser symbol, and the return value of this
+  function is the `drawing-options' object that will be used to
+  draw the parser-symbol."
+  (check-type name symbol)
+  `(progn
+     (fmakunbound ',name)
+     (defgeneric ,name (syntax parser-symbol)
+       (:method (syntax (parser-symbol parser-symbol))
+         nil))
+     ,@(flet ((make-rule-exp (type args)
+                             (ecase type
+                               (:face `#'(lambda (syntax parser-symbol)
+                                           (declare (ignore syntax parser-symbol))
+                                           (make-drawing-options :face (make-face ,@args))))
+                               (:options `#'(lambda (syntax parser-symbol)
+                                              (declare (ignore syntax parser-symbol))
+                                              (make-drawing-options ,@args)))
+                               (:function (first args)))))
+             (loop for (parser-symbol (type . args)) in rules
+                collect `(let ((rule ,(make-rule-exp type args)))
+                           (defmethod ,name (syntax (parser-symbol ,parser-symbol))
+                             (funcall rule syntax parser-symbol)))))))
+
+(make-syntax-highlighting-rules default-syntax-highlighting)
+
+(defgeneric syntax-highlighting-rules (syntax)
+  (:documentation "Return the drawing options that should be used
+for displaying `parser-symbol's for `syntax'. A method should be
+defined on this function for any syntax that wants syntax
+highlighting.")
   (:method ((syntax lr-syntax-mixin))
-    '()))
+    'default-syntax-highlighting))
 
-(defun get-face (name)
-  "Retrieve face named `name' from `*current-faces*'."
-  (find name *current-faces* :key #'face-name))
+(defun get-drawing-options (highlighting-rules syntax parse-symbol)
+  "Get the drawing options with which `parse-symbol' should be
+drawn. If `parse-symbol' is NIL, return NIL."
+  (when parse-symbol
+    (funcall highlighting-rules syntax parse-symbol)))
 
-(defmacro define-standard-faces (syntax &body faces)
-  "Define the list of standard faces used by `syntax' to be
-`faces', which must be a sequence of forms evaluating to
-face-values ((name, colour, style)-triples)."
-  `(let ((faces-list (list ,@faces)))
-     (defmethod get-faces ((syntax ,syntax))
-       faces-list)))
+(defstruct (pump-state
+             (:constructor make-pump-state
+                           (parser-symbol offset drawing-options
+                                          highlighting-rules)))
+  "A pump state object used in the LR syntax
+module. `parser-symbol' is the a parse symbol object `offset' is
+in. `Drawing-options' is a stack with elements `(end-offset
+drawing-options)', where `end-offset' specifies there the drawing
+options specified by `drawing-options' stop. `Highlighting-rules'
+is the rules that are used for syntax highlighting."
+  parser-symbol offset
+  drawing-options highlighting-rules)
 
-(defmacro with-face ((face &optional (stream-symbol 'stream)) &body body)
-  `(with-drawing-options (,stream-symbol :ink (face-colour (get-face ,face))
-                                         :text-style (face-style (get-face ,face)))
-     ,@body))
+(defmethod pump-state-for-offset-with-syntax ((view textual-drei-syntax-view)
+                                              (syntax lr-syntax-mixin) (offset integer))
+  (update-parse syntax 0 offset)
+  (let ((parser-symbol (parser-symbol-containing-offset syntax offset))
+        (highlighting-rules (syntax-highlighting-rules syntax)))
+    (labels ((initial-drawing-options (parser-symbol)
+               (if (null parser-symbol)
+                   (cons (size (buffer view)) +default-drawing-options+)
+                   (let ((drawing-options
+                          (get-drawing-options highlighting-rules syntax parser-symbol)))
+                     (if (null drawing-options)
+                         (initial-drawing-options (parent parser-symbol))
+                         (cons (end-offset parser-symbol) drawing-options))))))
+      (make-pump-state parser-symbol offset
+                       (list (initial-drawing-options parser-symbol)
+                             (cons (1+ (size (buffer view))) +default-drawing-options+))
+                       highlighting-rules))))
 
-(defgeneric display-parse-tree (parse-symbol stream view syntax)
-  (:documentation "Display the given parse-symbol on `stream',
-assuming `view' to be the relevant Drei vire and `syntax' being
-the syntax object responsible for the parse symbol."))
+(defun find-next-stroke-end (syntax pump-state)
+  "Assuming that `pump-state' contains the previous pump state,
+find out where the next stroke should end, and possibly push some
+drawing options onto `pump-state'."
+  (with-accessors ((start-symbol pump-state-parser-symbol)
+                   (offset pump-state-offset)
+                   (drawing-options pump-state-drawing-options)
+                   (highlighting-rules pump-state-highlighting-rules))
+      pump-state
+    (let ((line (line-containing-offset syntax offset)))
+      (flet ((finish (offset symbol &optional stroke-drawing-options)
+               (setf start-symbol symbol)
+               (loop until (> (car (first drawing-options)) offset)
+                  do (pop drawing-options))
+               (unless (null stroke-drawing-options)
+                 (push (cons (end-offset symbol) stroke-drawing-options)
+                       drawing-options))
+               (return-from find-next-stroke-end
+                 offset)))
+        (if (null start-symbol)
+            ;; This means that all remaining lines are blank.
+            (finish (line-end-offset line) nil)
+            (or (do-parse-symbols-forward (symbol offset start-symbol)
+                  (let ((symbol-drawing-options
+                         (get-drawing-options highlighting-rules syntax symbol)))
+                    (cond ((> (start-offset symbol) (line-end-offset line))
+                           (finish (line-end-offset line) start-symbol))
+                          ((and (> (start-offset symbol) offset)
+                                (not (drawing-options-equal (or symbol-drawing-options
+                                                                +default-drawing-options+)
+                                                            (cdr (first drawing-options)))))
+                           (finish (start-offset symbol) symbol symbol-drawing-options))
+                          ((and (= (start-offset symbol) offset)
+                                (offset-beginning-of-line-p (buffer syntax) offset)
+                                (and symbol-drawing-options
+                                     (not (drawing-options-equal symbol-drawing-options
+                                                                 (cdr (first drawing-options))))))
+                           (finish (start-offset symbol) symbol symbol-drawing-options)))))
+                ;; If there are no more parse symbols, we just go
+                ;; line-by-line from here. This should mean that all
+                ;; remaining lines are blank.
+                (finish (line-end-offset line) nil)))))))
 
-(defmethod display-parse-tree :before ((parse-symbol lexeme)
-                                       stream (view textual-drei-syntax-view)
-                                       (syntax lr-syntax-mixin))
-  (handle-whitespace stream view (buffer view)
-                     *white-space-start* (start-offset parse-symbol))
-  (setf *white-space-start* (end-offset parse-symbol)))
-
-(defmethod display-parse-tree :around ((parse-symbol parser-symbol)
-                                       stream (view textual-drei-syntax-view)
-                                       (syntax lr-syntax-mixin))
-  (with-accessors ((top top) (bot bot)) view
-    (when (and (start-offset parse-symbol)
-               (mark< (start-offset parse-symbol) bot)
-               (mark> (end-offset parse-symbol) top))
-      (call-next-method))))
-
-(defmethod display-parse-tree ((parse-symbol parser-symbol)
-                               stream (view textual-drei-syntax-view)
-                               (syntax lr-syntax-mixin))
-  (with-accessors ((top top) (bot bot)) view
-    (loop for child in (children parse-symbol)
-       when (and (start-offset child)
-                 (mark> (end-offset child) top))
-       do (if (mark< (start-offset child) bot)
-              (display-parse-tree child stream view syntax)
-              (return)))))
-
-(defmethod display-syntax-view ((stream clim-stream-pane) (view textual-drei-syntax-view)
-                                (syntax lr-syntax-mixin))
-  (update-parse syntax)
-  (with-accessors ((top top) (bot bot)) view
-    (with-accessors ((cursor-positions cursor-positions)) view
-      ;; There must always be room for at least one element of line
-      ;; information.
-      (setf cursor-positions (make-array (1+ (number-of-lines-in-region top bot))
-                              :initial-element nil)
-            *current-line* 0
-            (aref cursor-positions 0) (multiple-value-list
-                                       (stream-cursor-position stream))))
-    (setf *white-space-start* (offset top)))
-  (let ((*current-faces* (get-faces syntax)))
-    (with-slots (stack-top) syntax
-      (display-parse-tree stack-top stream view syntax))))
+(defmethod stroke-pump-with-syntax ((view textual-drei-syntax-view)
+                                    (syntax lr-syntax-mixin) stroke
+                                    (pump-state pump-state))
+  ;; `Pump-state' will be destructively modified.
+  (prog1 pump-state
+    (with-accessors ((offset pump-state-offset)
+                     (current-drawing-options pump-state-drawing-options))
+        pump-state
+      (let ((old-drawing-options (cdr (first current-drawing-options)))
+            (end-offset (find-next-stroke-end syntax pump-state)))
+        (setf (stroke-start-offset stroke) offset
+              (stroke-end-offset stroke) end-offset
+              (stroke-drawing-options stroke) old-drawing-options
+              offset (if (offset-end-of-line-p (buffer view) end-offset)
+                         (1+ end-offset)
+                         end-offset))))))
