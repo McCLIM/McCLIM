@@ -91,6 +91,10 @@
    (preceding-parse-tree :initform nil :reader preceding-parse-tree)
    (parser-state :initform nil :initarg :parser-state :reader parser-state)))
 
+(defclass literal-object-mixin () ()
+  (:documentation "Mixin for parser symbols representing
+literal (non-character) objects in the buffer."))
+
 (defmethod start-offset ((state parser-symbol))
   (let ((mark (start-mark state)))
     (when mark
@@ -517,29 +521,39 @@ drawing options onto `pump-state'."
                        drawing-options))
                (return-from find-next-stroke-end
                  offset)))
-        (if (null start-symbol)
-            ;; This means that all remaining lines are blank.
-            (finish (line-end-offset line) nil)
-            (or (do-parse-symbols-forward (symbol offset start-symbol)
-                  (let ((symbol-drawing-options
-                         (get-drawing-options highlighting-rules syntax symbol)))
-                    (cond ((> (start-offset symbol) (line-end-offset line))
-                           (finish (line-end-offset line) start-symbol))
-                          ((and (> (start-offset symbol) offset)
-                                (not (drawing-options-equal (or symbol-drawing-options
-                                                                +default-drawing-options+)
-                                                            (cdr (first drawing-options)))))
-                           (finish (start-offset symbol) symbol symbol-drawing-options))
-                          ((and (= (start-offset symbol) offset)
-                                (offset-beginning-of-line-p (buffer syntax) offset)
-                                (and symbol-drawing-options
-                                     (not (drawing-options-equal symbol-drawing-options
-                                                                 (cdr (first drawing-options))))))
-                           (finish (start-offset symbol) symbol symbol-drawing-options)))))
-                ;; If there are no more parse symbols, we just go
-                ;; line-by-line from here. This should mean that all
-                ;; remaining lines are blank.
-                (finish (line-end-offset line) nil)))))))
+        (cond ((null start-symbol)
+               ;; This means that all remaining lines are blank.
+               (finish (line-end-offset line) nil))
+              ((and (typep start-symbol 'literal-object-mixin)
+                    (= offset (start-offset start-symbol)))
+               (finish (end-offset start-symbol) start-symbol nil))
+              (t
+               (or (do-parse-symbols-forward (symbol offset start-symbol)
+                     (let ((symbol-drawing-options
+                            (get-drawing-options highlighting-rules syntax symbol)))
+                       (cond ((> (start-offset symbol) (line-end-offset line))
+                              (finish (line-end-offset line) start-symbol))
+                             ((and (typep symbol 'literal-object-mixin))
+                              (finish (start-offset symbol) symbol
+                                      (or (get-drawing-options highlighting-rules syntax symbol)
+                                          (make-drawing-options :function (object-drawer)))))
+                             ((and (> (start-offset symbol) offset)
+                                   (not (drawing-options-equal (or symbol-drawing-options
+                                                                   +default-drawing-options+)
+                                                               (cdr (first drawing-options))))
+                                   (if (null symbol-drawing-options)
+                                       (>= (start-offset symbol) (car (first drawing-options)))
+                                       t))
+                              (finish (start-offset symbol) symbol symbol-drawing-options))
+                             ((and (= (start-offset symbol) offset)
+                                   symbol-drawing-options
+                                   (not (drawing-options-equal symbol-drawing-options
+                                                               (cdr (first drawing-options)))))
+                              (finish (start-offset symbol) symbol symbol-drawing-options)))))
+                   ;; If there are no more parse symbols, we just go
+                   ;; line-by-line from here. This should mean that all
+                   ;; remaining lines are blank.
+                   (finish (line-end-offset line) nil))))))))
 
 (defmethod stroke-pump-with-syntax ((view textual-drei-syntax-view)
                                     (syntax lr-syntax-mixin) stroke

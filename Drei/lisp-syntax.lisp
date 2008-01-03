@@ -275,6 +275,7 @@ along with any default values) that can be used in a
    (face)))
 
 (defclass error-lexeme (lisp-lexeme) ())
+(defclass literal-object-lexeme (lisp-lexeme literal-object-mixin) ())
 (defclass left-parenthesis-lexeme (lisp-lexeme) ())
 (defclass simple-vector-start-lexeme (lisp-lexeme) ())
 (defclass right-parenthesis-lexeme (lisp-lexeme) ())
@@ -295,6 +296,7 @@ along with any default values) that can be used in a
 (defclass string-end-lexeme (lisp-lexeme) ())
 (defclass word-lexeme (lisp-lexeme) ())
 (defclass delimiter-lexeme (lisp-lexeme) ())
+(defclass literal-object-delimiter-lexeme (delimiter-lexeme literal-object-lexeme) ())
 (defclass text-lexeme (lisp-lexeme) ())
 (defclass sharpsign-equals-lexeme (lisp-lexeme) ())
 (defclass sharpsign-sharpsign-form (form-lexeme complete-form-mixin) ())
@@ -309,7 +311,7 @@ along with any default values) that can be used in a
 (defclass bit-vector-form (form-lexeme complete-form-mixin) ())
 (defclass number-lexeme (complete-token-lexeme) ())
 (defclass token-mixin () ())
-(defclass literal-object-form (form-lexeme complete-form-mixin) ())
+(defclass literal-object-form (form-lexeme complete-form-mixin literal-object-mixin) ())
 (defclass complete-token-lexeme (token-mixin form-lexeme complete-form-mixin) ())
 (defclass multiple-escape-start-lexeme (lisp-lexeme) ())
 (defclass multiple-escape-end-lexeme (lisp-lexeme) ())
@@ -473,7 +475,10 @@ along with any default values) that can be used in a
 			     (not (constituentp (object-after scan))))
 		   do (fo))
 	     (make-instance 'word-lexeme))
-	    (t (fo) (make-instance 'delimiter-lexeme))))))
+	    (t (fo) (make-instance
+                     (if (characterp object)
+                         'delimiter-lexeme
+                         'literal-object-delimiter-lexeme)))))))
 
 (defmethod lex ((syntax lisp-syntax) (state lexer-long-comment-state) scan)
   (flet ((fo () (forward-object scan)))
@@ -495,7 +500,10 @@ along with any default values) that can be used in a
 			     (not (constituentp (object-after scan))))
 		   do (fo))
 	     (make-instance 'word-lexeme))
-	    (t (fo) (make-instance 'delimiter-lexeme))))))
+	    (t (fo) (make-instance
+                     (if (characterp object)
+                         'delimiter-lexeme
+                         'literal-object-delimiter-lexeme)))))))
 
 (defmethod skip-inter ((syntax lisp-syntax) (state lexer-line-comment-state) scan)
   (macrolet ((fo () `(forward-object scan)))
@@ -513,7 +521,10 @@ along with any default values) that can be used in a
 			   (not (constituentp (object-after scan))))
 		 do (fo))
 	   (make-instance 'word-lexeme))
-	  (t (fo) (make-instance 'delimiter-lexeme)))))
+	  (t (fo) (make-instance
+                   (if (characterp (object-before scan))
+                       'delimiter-lexeme
+                       'literal-object-delimiter-lexeme))))))
 
 (defun lex-token (syntax scan)
   ;; May need more work. Can recognize symbols and numbers. This can
@@ -1775,7 +1786,8 @@ and move `mark' to after `string'. If there is no symbol at
   (error-symbol (:face :ink +red+))
   (string-form (:face :ink +rosy-brown+
                       :style (make-text-style nil :italic nil)))
-  (comment (:face :ink +maroon+ :style (make-text-style :serif :bold :large))))
+  (comment (:face :ink +maroon+ :style (make-text-style :serif :bold :large)))
+  (literal-object-form (:options :function (object-drawer))))
 
 (defparameter *syntax-highlighting-rules* 'emacs-style-highlighting
   "The syntax highlighting rules used for highlighting Lisp
