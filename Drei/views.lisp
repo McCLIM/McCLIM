@@ -555,16 +555,10 @@ object."))
 
 (defmethod observer-notified ((view drei-buffer-view) (buffer drei-buffer)
                               changed-region)
-  (with-accessors ((prefix-size prefix-size)
-                   (suffix-size suffix-size)) view
-    (setf prefix-size (min (car changed-region) prefix-size)
-          suffix-size (min (- (size buffer) (cdr changed-region))
-                           suffix-size)
-          (modified-p view) t)
-    (dotimes (i (displayed-lines-count view))
-      (let ((line (line-information view i)))
-        (when (<= (car changed-region) (line-end-offset line))
-          (invalidate-line-strokes line :modified t))))))
+  (dotimes (i (displayed-lines-count view))
+    (let ((line (line-information view i)))
+      (when (<= (car changed-region) (line-end-offset line))
+        (invalidate-line-strokes line :modified t)))))
 
 (defclass drei-syntax-view (drei-buffer-view)
   ((%syntax :accessor syntax)
@@ -651,6 +645,16 @@ buffer."))
       (disable-mode (syntax modual) mode-name)
       (call-next-method)))
 
+(defmethod observer-notified ((view drei-syntax-view) (buffer drei-buffer)
+                              changed-region)
+  (with-accessors ((prefix-size prefix-size)
+                   (suffix-size suffix-size)) view
+    (setf prefix-size (min (car changed-region) prefix-size)
+          suffix-size (min (- (size buffer) (cdr changed-region))
+                           suffix-size)
+          (modified-p view) t))
+  (call-next-method))
+
 (defmethod synchronize-view :around ((view drei-syntax-view) &key
                                      force-p)
   ;; If nothing changed, then don't call the other methods.
@@ -672,8 +676,7 @@ size of the buffer respectively."
     (setf (prefix-size view) (size (buffer view))
           (suffix-size view) (size (buffer view))
           (buffer-size view) (size (buffer view)))
-    (update-syntax (syntax view) prefix-size suffix-size
-                   begin end)
+    (update-syntax (syntax view) prefix-size suffix-size begin end)
     (call-next-method)))
 
 (defun make-syntax-for-view (view syntax-symbol &rest args)
