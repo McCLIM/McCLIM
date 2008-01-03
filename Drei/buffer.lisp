@@ -690,3 +690,11 @@ buffer denoting the region that has been modified."))
 
 (defmethod (setf buffer-object) :after (object (buffer observable-buffer-mixin) offset)
   (notify-observers buffer (constantly (cons offset (1+ offset)))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Print method for ease of debugging
+
+(defmethod print-object ((object buffer) stream)
+  (print-unreadable-object (object stream :type t :identity t)
+    (format stream "size:~A" (size object))))
