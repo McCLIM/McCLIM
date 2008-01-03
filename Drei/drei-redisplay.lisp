@@ -424,7 +424,8 @@ will be cleared before any actual output takes place."
                 (values (- x2 x1) (- y2 y1) nil nil center))
           (declare (ignore ignore1 ignore2 ignore3))
           (clear-rectangle* stream cursor-x cursor-y
-                            (+ cursor-x width) (+ cursor-y text-style-height))
+                            (+ cursor-x width) (+ cursor-y text-style-height
+                                                  (stream-vertical-spacing stream)))
           (draw-text* stream stroke-string cursor-x (+ cursor-y
                                                        (- text-style-ascent
                                                           baseline))
@@ -482,7 +483,8 @@ of the sheet."
           (when (> line-height (dimensions-height stroke-dimensions))
             (clear-rectangle* stream stroke-x1 stroke-y2
                               stroke-x2 (+ stroke-y2 (- line-height
-                                                        (dimensions-height stroke-dimensions))))))))
+                                                        (dimensions-height stroke-dimensions))
+                                           (stream-vertical-spacing stream)))))))
     ;; Reset the dimensions of undisplayed lines.
     (do-undisplayed-line-strokes (stroke line)
       (let ((stroke-dimensions (stroke-dimensions stroke)))
