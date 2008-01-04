@@ -1827,7 +1827,7 @@ macro or special form."
       (macro-drawing-options (make-drawing-options :face (make-face :ink +purple+)))
       (bound-drawing-options (make-drawing-options :face (make-face :ink +darkgoldenrod+))))
   (make-syntax-highlighting-rules emacs-style-highlighting
-    (error-symbol (:face :ink +red+))
+    (error-lexeme (:face :ink +red+))
     (string-form (:face :ink +rosy-brown+
                         :style (make-text-style nil :italic nil)))
     (comment (:face :ink +maroon+ :style (make-text-style :serif :bold :large)))
