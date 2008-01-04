@@ -91,6 +91,10 @@
    (preceding-parse-tree :initform nil :reader preceding-parse-tree)
    (parser-state :initform nil :initarg :parser-state :reader parser-state)))
 
+(defmethod print-object ((object parser-symbol) stream)
+  (print-unreadable-object (object stream :type t :identity t)
+    (format stream "~s ~s" (start-offset object) (end-offset object))))
+
 (defclass literal-object-mixin () ()
   (:documentation "Mixin for parser symbols representing
 literal (non-character) objects in the buffer."))
@@ -117,10 +121,6 @@ literal (non-character) objects in the buffer."))
      (defvar ,name (make-instance ',name))))
 
 (defclass lexeme (parser-symbol) ())
-
-(defmethod print-object ((lexeme lexeme) stream)
-  (print-unreadable-object (lexeme stream :type t :identity t)
-    (format stream "~s ~s" (start-offset lexeme) (end-offset lexeme))))
 
 (defclass nonterminal (parser-symbol) ())
 
@@ -467,8 +467,8 @@ highlighting.")
 
 (defun get-drawing-options (highlighting-rules syntax parse-symbol)
   "Get the drawing options with which `parse-symbol' should be
-drawn. If `parse-symbol' is NIL, return NIL."
-  (when parse-symbol
+drawn. If `parse-symbol' or the stack-top of syntax, return NIL."
+  (when (and parse-symbol (not (eq (stack-top syntax) parse-symbol)))
     (funcall highlighting-rules syntax parse-symbol)))
 
 (defstruct (pump-state
@@ -535,7 +535,7 @@ drawing options onto `pump-state'."
                               (finish (line-end-offset line) start-symbol))
                              ((and (typep symbol 'literal-object-mixin))
                               (finish (start-offset symbol) symbol
-                                      (or (get-drawing-options highlighting-rules syntax symbol)
+                                      (or symbol-drawing-options
                                           (make-drawing-options :function (object-drawer)))))
                              ((and (> (start-offset symbol) offset)
                                    (not (drawing-options-equal (or symbol-drawing-options
