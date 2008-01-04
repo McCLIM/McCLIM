@@ -309,10 +309,10 @@ along with any default values) that can be used in a
 (defclass pathname-start-lexeme (lisp-lexeme) ())
 (defclass undefined-reader-macro-lexeme (lisp-lexeme) ())
 (defclass bit-vector-form (form-lexeme complete-form-mixin) ())
-(defclass number-lexeme (complete-token-lexeme) ())
 (defclass token-mixin () ())
+(defclass number-lexeme (token-mixin form-lexeme complete-form-mixin) ())
 (defclass literal-object-form (form-lexeme complete-form-mixin literal-object-mixin) ())
-(defclass complete-token-lexeme (token-mixin form-lexeme complete-form-mixin) ())
+(defclass complete-token-lexeme (token-mixin lisp-lexeme) ())
 (defclass multiple-escape-start-lexeme (lisp-lexeme) ())
 (defclass multiple-escape-end-lexeme (lisp-lexeme) ())
 (defclass incomplete-lexeme (lisp-lexeme incomplete-form-mixin) ())
@@ -845,15 +845,24 @@ along with any default values) that can be used in a
 
 ;;; parse trees
 (defclass token-form (form token-mixin) ())
-(defclass complete-token-form (token-form complete-form-mixin) ())
+(defclass complete-token-form (token-form complete-form-mixin)
+  ((%keyword-symbol-p :accessor keyword-symbol-p)
+   (%macroboundp :accessor macroboundp)
+   (%global-boundp :accessor global-boundp)))
 (defclass incomplete-token-form (token-form incomplete-form-mixin) ())
 
+(define-parser-state | complete-lexeme | (lexer-list-state parser-state) ())
 (define-parser-state | m-e-start text* | (lexer-escaped-token-state parser-state) ())
 (define-parser-state | m-e-start text* m-e-end | (lexer-toplevel-state parser-state) ())
 
+(define-new-lisp-state (form-may-follow complete-token-lexeme) | complete-lexeme |)
 (define-new-lisp-state (form-may-follow multiple-escape-start-lexeme) | m-e-start text* |)
 (define-new-lisp-state (| m-e-start text* | text-lexeme) | m-e-start text* |)
 (define-new-lisp-state (| m-e-start text* | multiple-escape-end-lexeme) | m-e-start text* m-e-end |)
+
+;;; reduce according to the rule form -> complete-lexeme
+(define-lisp-action (| complete-lexeme | t)
+  (reduce-until-type complete-token-form complete-token-lexeme))
 
 ;;; reduce according to the rule form -> m-e-start text* m-e-end
 (define-lisp-action (| m-e-start text* m-e-end | t)
@@ -1778,16 +1787,71 @@ and move `mark' to after `string'. If there is no symbol at
 ;;;
 ;;; display
 
-;; Note that we do not colour keyword symbols or special forms yet,
-;; that is because the only efficient way to do so is to mark them as
-;; interesting in the parser itself, it is too slow to check for it in
-;; highlighting rules.
-(make-syntax-highlighting-rules emacs-style-highlighting
-  (error-symbol (:face :ink +red+))
-  (string-form (:face :ink +rosy-brown+
-                      :style (make-text-style nil :italic nil)))
-  (comment (:face :ink +maroon+ :style (make-text-style :serif :bold :large)))
-  (literal-object-form (:options :function (object-drawer))))
+(defun cache-symbol-info (syntax symbol-form)
+  "Cache information about the symbol `symbol-form' represents,
+so that it can be quickly looked up later."
+  ;; We don't use `form-to-object' as we want to retrieve information
+  ;; even about symbol that are not interned.
+  (multiple-value-bind (symbol package)
+      (parse-symbol (form-string syntax symbol-form) :package *package*)
+    (setf (keyword-symbol-p symbol-form) (eq package +keyword-package+)
+          (macroboundp symbol-form) (or (special-operator-p symbol)
+                                        (macro-function symbol))
+          (global-boundp symbol-form) (and (boundp symbol)
+                                           (not (constantp symbol))))))
+
+(defun symbol-form-is-keyword-p (syntax symbol-form)
+  "Return true if `symbol-form' represents a keyword symbol."
+  (if (slot-boundp symbol-form '%keyword-symbol-p)
+      (keyword-symbol-p symbol-form)
+      (progn (cache-symbol-info syntax symbol-form)
+             (keyword-symbol-p symbol-form))))
+
+(defun symbol-form-is-macrobound-p (syntax symbol-form)
+  "Return true if `symbol-form' represents a symbol bound to a
+macro or special form."
+  (if (slot-boundp symbol-form '%macroboundp)
+      (macroboundp symbol-form)
+      (progn (cache-symbol-info syntax symbol-form)
+             (macroboundp symbol-form))))
+
+(defun symbol-form-is-boundp (syntax symbol-form)
+  "Return true if `symbol-form' represents a symbol that is
+`boundp' and is not a constant."
+  (if (slot-boundp symbol-form '%global-boundp)
+      (global-boundp symbol-form)
+      (progn (cache-symbol-info syntax symbol-form)
+             (global-boundp symbol-form))))
+
+(let ((keyword-drawing-options (make-drawing-options :face (make-face :ink +orchid+)))
+      (macro-drawing-options (make-drawing-options :face (make-face :ink +purple+)))
+      (bound-drawing-options (make-drawing-options :face (make-face :ink +darkgoldenrod+))))
+  (make-syntax-highlighting-rules emacs-style-highlighting
+    (error-symbol (:face :ink +red+))
+    (string-form (:face :ink +rosy-brown+
+                        :style (make-text-style nil :italic nil)))
+    (comment (:face :ink +maroon+ :style (make-text-style :serif :bold :large)))
+    (literal-object-form (:options :function (object-drawer)))
+    (complete-token-form (:function #'(lambda (syntax form)
+                                        (cond ((symbol-form-is-keyword-p syntax form)
+                                               keyword-drawing-options)
+                                              ((symbol-form-is-macrobound-p syntax form)
+                                               macro-drawing-options)
+                                              ((symbol-form-is-boundp syntax form)
+                                               bound-drawing-options)
+                                              (t +default-drawing-options+)))))))
+
+(let ((macro-drawing-options (make-drawing-options :face (make-face :style (make-text-style nil :bold nil)))))
+  (make-syntax-highlighting-rules retro-highlighting
+    (error-symbol (:face :ink +red+))
+    (string-form (:face :style (make-text-style nil :italic nil)))
+    (comment (:face :style (make-text-style nil nil nil)
+                    :ink +dimgray+))
+    (literal-object-form (:options :function (object-drawer)))
+    (complete-token-form (:function #'(lambda (syntax form)
+                                        (cond ((symbol-form-is-macrobound-p syntax form)
+                                               macro-drawing-options)
+                                              (t +default-drawing-options+)))))))
 
 (defparameter *syntax-highlighting-rules* 'emacs-style-highlighting
   "The syntax highlighting rules used for highlighting Lisp
@@ -2797,16 +2861,6 @@ will be signalled for incomplete forms.")
         obj)))
 
 ;;; The atom(-ish) forms.
-
-(defmethod form-to-object ((syntax lisp-syntax) (form complete-token-lexeme)
-                           &key read (case (readtable-case *readtable*))
-                           &allow-other-keys)
-  (multiple-value-bind (symbol package status)
-      (parse-symbol (form-string syntax form)
-                    :package *package* :case case)
-    (values (cond ((and read (null status))
-                   (intern (symbol-name symbol) package))
-                  (t symbol)))))
 
 (defmethod form-to-object ((syntax lisp-syntax) (form complete-token-form)
                            &key read (case (readtable-case *readtable*))

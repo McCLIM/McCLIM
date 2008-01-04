@@ -608,7 +608,12 @@ editing plain text."))
 
            ;; Conditions.
            #:form-conversion-error
-           #:invalid-lambda-list)
+           #:invalid-lambda-list
+
+           ;; Configuration
+           #:*syntax-highlighting-rules*
+           #:emacs-style-highlighting
+           #:retro-highlighting)
   (:shadow clim:form)
   (:documentation "Implementation of the syntax module used for
 editing Common Lisp code."))
