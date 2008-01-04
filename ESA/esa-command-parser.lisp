@@ -123,6 +123,6 @@
                                    (esa-parse-one-arg stream name ptype args))
                                   ((eq command-arg *numeric-argument-marker*)
                                    (or numeric-argument (getf args :default)))
-                                  (t command-arg))
+                                  (t (eval command-arg)))
                             result)
                       (maybe-clear-input)))))))))))
