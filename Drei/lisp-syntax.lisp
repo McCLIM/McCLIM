@@ -270,9 +270,7 @@ along with any default values) that can be used in a
 
 (defclass comment (lisp-nonterminal) ())
 
-(defclass lisp-lexeme (lexeme)
-  ((ink)
-   (face)))
+(defclass lisp-lexeme (lexeme) ())
 
 (defclass error-lexeme (lisp-lexeme) ())
 (defclass literal-object-lexeme (lisp-lexeme literal-object-mixin) ())
