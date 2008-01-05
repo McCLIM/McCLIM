@@ -306,7 +306,6 @@
   (defmethod clim-clx::font-draw-glyphs ((font freetype-face) mirror gc x y string &key start end translate)
     (declare (optimize (speed 3)))
     (when (< (length buffer) (- end start))
-      (hef:debugf "fuck!")
       (setf buffer (make-array (* 256 (ceiling (- end start) 256))
                                :element-type '(unsigned-byte 32)
                                :adjustable nil :fill-pointer nil)))
