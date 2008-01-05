@@ -274,6 +274,7 @@ along with any default values) that can be used in a
 
 (defclass error-lexeme (lisp-lexeme) ())
 (defclass literal-object-lexeme (lisp-lexeme literal-object-mixin) ())
+(defclass literal-object-error-lexeme (lisp-lexeme literal-object-mixin) ())
 (defclass left-parenthesis-lexeme (lisp-lexeme) ())
 (defclass simple-vector-start-lexeme (lisp-lexeme) ())
 (defclass right-parenthesis-lexeme (lisp-lexeme) ())
@@ -619,9 +620,13 @@ along with any default values) that can be used in a
 
 (defmethod lex ((syntax lisp-syntax) (state lexer-error-state) scan)
   (macrolet ((fo () `(forward-object scan)))
-    (loop until (end-of-line-p scan)
-	  do (fo))
-    (make-instance 'error-lexeme)))
+    (cond ((not (or (end-of-buffer-p scan)
+                    (characterp (object-after scan))))
+           (fo)
+           (make-instance 'literal-object-error-lexeme))
+          (t (loop until (end-of-line-p scan)
+                do (fo))
+             (make-instance 'error-lexeme)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
