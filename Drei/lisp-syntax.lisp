@@ -2012,9 +2012,13 @@ be found, return nil."
   (update-parse syntax 0 (offset mark))
   (let ((potential-form (or (form-before syntax (offset mark))
 			    (form-around syntax (offset mark)))))
-    (when (and (not (null potential-form))
-               (not (= (offset mark) (start-offset potential-form))))
-	(setf (offset mark) (start-offset potential-form)))))
+    (loop until (null potential-form)
+       do (cond ((= (offset mark) (start-offset potential-form))
+                 (setf potential-form
+                       (unless (form-at-top-level-p potential-form)
+                         (parent potential-form))))
+                (t (setf (offset mark) (start-offset potential-form))
+                   (return t))))))
 
 (defmethod forward-one-expression (mark (syntax lisp-syntax))
   (update-parse syntax 0 (offset mark))
@@ -2022,7 +2026,7 @@ be found, return nil."
 			    (form-around syntax (offset mark)))))
     (when (and (not (null potential-form))
                (not (= (offset mark) (end-offset potential-form))))
-	(setf (offset mark) (end-offset potential-form)))))
+      (setf (offset mark) (end-offset potential-form)))))
 
 (defmethod forward-delete-expression (mark (syntax lisp-syntax) &optional (count 1)
                                       (limit-action #'error-limit-action))

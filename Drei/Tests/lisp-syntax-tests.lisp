@@ -823,7 +823,11 @@ mark."
 (motion-fun-one-test (expression lisp-syntax)
   (51 0 (11 28 7)
       "(defun list (&rest elements)
-(append elements nil))"))
+(append elements nil))")
+  (nil nil (5 18 9)
+      "#+nil (list 1 2 3)")
+  (nil nil (0 5 nil)
+      "#+nil (list 1 2 3)"))
 
 (motion-fun-one-test (list lisp-syntax)
   (64 4 (22 41 11)
