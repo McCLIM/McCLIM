@@ -24,7 +24,7 @@
 
 (in-package :MCCLIM-FREETYPE)
 
-(declaim (optimize (speed 3) (safety 3) (debug 1) (space 3)))
+(declaim (optimize (speed 1) (safety 3) (debug 1) (space 0)))
 
 ;;;; Notes
 
@@ -34,6 +34,9 @@
 (defclass vague-font ()
   ((lib :initarg :lib)
    (filename :initarg :filename)))
+
+;;; I can't say I understand this vague vs. concrete font distinction,
+;;; but I'll leave it around. -Hefner
 
 (defparameter *vague-font-hash* (make-hash-table :test #'equal))
 
@@ -52,6 +55,10 @@
 
 (defparameter *concrete-font-hash* (make-hash-table :test #'equal))
 
+;;; One "concrete font" is shared for a given face, regardless of text size,
+;;; presumably to conserve resources. Therefore, we must configure it for
+;;; the correct text size with set-concrete-font-size before using it.
+
 (defun make-concrete-font (vague-font size &key (dpi *dpi*))
   (with-slots (lib filename) vague-font
     (let* ((key (cons lib filename))
@@ -63,12 +70,12 @@
               (setf val (setf (gethash key *concrete-font-hash*)
                               (deref facef)))
               (error "Freetype error in make-concrete-font"))))
-      (let ((face val))
-        (declare (type (alien freetype:face) face))
-        (freetype:set-char-size face 0 (round (* size 64)) (round dpi) (round dpi))
-        face))))
+      val)))
 
-(declaim (inline make-concrete-font))
+(defun set-concrete-font-size (face size dpi)
+  (declare (type (alien freetype:face) face))
+  (freetype:set-char-size face 0 (round (* size 64)) (round dpi) (round dpi))
+  face)
 
 (defun glyph-pixarray (face char)
   (declare (optimize (speed 3) (debug 1))
@@ -100,26 +107,19 @@
        (/ (slot (slot glyph 'freetype:advance) 'freetype:x) 64)
        (/ (slot (slot glyph 'freetype:advance) 'freetype:y) 64)))))
 
-(defun glyph-advance (face char)
-  (freetype:load-glyph face (freetype:get-char-index face (char-code char)) 0)
-  (let* ((glyph (slot face 'freetype:glyph)))
-    (values
-     (/ (slot (slot glyph 'freetype:advance) 'freetype:x) 64)
-     (/ (slot (slot glyph 'freetype:advance) 'freetype:y) 64))))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun display-glyph-cache (display)
-  (or (getf (xlib:display-plist display) 'glyph-cache)
-      (setf (getf (xlib:display-plist display) 'glyph-cache)
-            (make-hash-table :test #'equalp))))
-
-(defun display-the-glyph-set (display)
-  (or (getf (xlib:display-plist display) 'the-glyph-set)
-      (setf (getf (xlib:display-plist display) 'the-glyph-set)
-            (xlib::render-create-glyph-set
-             (first (xlib::find-matching-picture-formats display
-                                                         :alpha 8 :red 0 :green 0 :blue 0))))))
+(let ((lookaside nil))
+  (defun display-the-glyph-set (display)
+    (if (eq (car lookaside) display)
+        (cdr lookaside)
+        (let ((glyph-set (or (getf (xlib:display-plist display) 'the-glyph-set)
+                             (setf (getf (xlib:display-plist display) 'the-glyph-set)
+                                   (xlib::render-create-glyph-set
+                                    (first (xlib::find-matching-picture-formats display 
+                                            :alpha 8 :red 0 :green 0 :blue 0)))))))
+          (setf lookaside (cons display glyph-set))
+          glyph-set))))
 
 (defun display-free-glyph-ids (display)
   (getf (xlib:display-plist display) 'free-glyph-ids))
@@ -137,23 +137,36 @@
   (or (pop (display-free-glyph-ids display))
       (incf (display-free-glyph-id-counter display))))
 
-(defun display-get-glyph (display font matrix glyph-index)
-  (or (gethash (list font matrix glyph-index) (display-glyph-cache display))
-      (setf (gethash (list font matrix glyph-index) (display-glyph-cache display))
-            (display-generate-glyph display font matrix glyph-index))))
-
 (defvar *font-hash*
   (make-hash-table :test #'equalp))
 
-(defun display-generate-glyph (display font matrix glyph-index)
-  (let* ((glyph-id (display-draw-glyph-id display))
-         (font (or (gethash font *font-hash*)
-		   (setf (gethash font *font-hash*)
-			 (make-vague-font font))))
-         (face (make-concrete-font font matrix)))
+(defstruct (glyph-info (:constructor glyph-info (id width height left right top)))
+  id                                    ; FIXME: Types?
+  width height
+  left right top)
+
+(defun font-generate-glyph (font glyph-index)
+  (let* ((display (freetype-face-display font))
+         (glyph-id (display-draw-glyph-id display))
+         (face (freetype-face-concrete-font font)))
+    (set-concrete-font-size face (freetype-face-matrix font) *dpi*)
     (multiple-value-bind (arr left top dx dy) (glyph-pixarray face (code-char glyph-index))
+      (with-slots (fixed-width) font
+        (when (and (numberp fixed-width)
+                   (/= fixed-width dx))
+          (setf fixed-width t)
+          (warn "Font ~A is fixed width, but the glyph width appears to vary.
+ Disabling fixed width optimization for this font. ~A vs ~A" 
+                 font dx fixed-width))
+        (unless (or fixed-width
+                    (zerop (logand (slot face 'freetype:face-flags)
+                                   4)))    ; FT_FACE_FLAG_FIXED_WIDTH
+          (setf fixed-width dx)))
+          
       (when (= (array-dimension arr 0) 0)
-        (setf arr (make-array (list 1 1) :element-type '(unsigned-byte 8) :initial-element 0)))
+        (setf arr (make-array (list 1 1)
+                              :element-type '(unsigned-byte 8)
+                              :initial-element 0)))
       (xlib::render-add-glyph (display-the-glyph-set display) glyph-id
                               :data arr
                               :x-origin (- left)
@@ -161,51 +174,108 @@
                               :x-advance dx
                               :y-advance dy)
       (let ((right (+ left (array-dimension arr 1))))
-        (list glyph-id dx dy left right top)))))
+        (glyph-info glyph-id dx dy left right top)))))
 
 ;;;;;;; mcclim interface
 
 (defclass freetype-face ()
-  ((display :initarg :display)
-   (font :initarg :font)
-   (matrix :initarg :matrix)
-   (ascent :initarg :ascent)
-   (descent :initarg :descent)))
+  ((display :initarg :display :reader freetype-face-display)
+   (font   :initarg :font :reader freetype-face-name)
+   (matrix :initarg :matrix :reader freetype-face-matrix)
+   (ascent :initarg :ascent :reader freetype-face-ascent)
+   (descent :initarg :descent :reader freetype-face-descent)
+   (concrete-font :initarg :concrete-font :reader freetype-face-concrete-font)
+   (fixed-width :initform nil)
+   (glyph-id-cache :initform (make-gcache))
+   (glyph-width-cache :initform (make-gcache))
+   (char->glyph-info :initform (make-hash-table :size 256))))
+
+(defmethod print-object ((object freetype-face) stream)
+  (print-unreadable-object (object stream :type t :identity nil)
+    (with-slots (font matrix ascent descent) object
+      (format stream "~A size=~A ~A/~A" font matrix ascent descent))))
+
+(defun font-glyph-info (font character)
+  (with-slots (char->glyph-info) font
+    (or (gethash character char->glyph-info)
+        (setf (gethash character char->glyph-info) 
+              (font-generate-glyph font (char-code character))))))
+
+(defun font-glyph-id (font character)
+  (glyph-info-id (font-glyph-info font character)))
 
 (defmethod clim-clx::font-ascent ((font freetype-face))
-  (with-slots (ascent) font
-    ascent))
+  (freetype-face-ascent font))
 
 (defmethod clim-clx::font-descent ((font freetype-face))
-  (with-slots (descent) font
-    descent))
+  (freetype-face-descent font))
 
 (defmethod clim-clx::font-glyph-width ((font freetype-face) char)
-  (with-slots (display font matrix) font
-    (nth 1 (display-get-glyph display font matrix char))))
+  (glyph-info-width (font-glyph-info font char)))
+
 (defmethod clim-clx::font-glyph-left ((font freetype-face) char)
-  (with-slots (display font matrix) font
-    (nth 3 (display-get-glyph display font matrix char))))
+  (glyph-info-left (font-glyph-info font char)))
+
 (defmethod clim-clx::font-glyph-right ((font freetype-face) char)
-  (with-slots (display font matrix) font
-    (nth 4 (display-get-glyph display font matrix char))))
+  (glyph-info-right (font-glyph-info font char)))
+
+
+(defun make-gcache () 
+  (let ((array (make-array 512 :adjustable nil :fill-pointer nil)))
+    (loop for i from 0 below 256 do (setf (aref array i) (1+ i)))
+    array))
+
+(declaim (inline gcache-get))
+
+(defun gcache-get (cache key-number)  
+  (declare (optimize (speed 3))
+           (type (simple-array t (512))))
+  (let ((hash (logand (the fixnum key-number) #xFF))) ; best hash function ever.
+    (and (= key-number (the fixnum (svref cache hash))) ; I <3 fixnums
+         (svref cache (+ 256 hash)))))
+
+(defun gcache-set (cache key-number value)
+  (let ((hash (logand key-number #xFF)))
+    (setf (svref cache hash) key-number
+          (svref cache (+ 256 hash)) value)))
 
 ;;; this is a hacky copy of XLIB:TEXT-EXTENTS
 (defmethod clim-clx::font-text-extents ((font freetype-face) string
                                         &key (start 0) (end (length string)) translate)
   ;; -> (width ascent descent left right
   ;; font-ascent font-descent direction
-  ;; first-not-done)
-  translate
-  (let ((width (loop for i from start below end 
-                     sum (clim-clx::font-glyph-width font (char-code (aref string i))))))
+  ;; first-not-done)  
+  (declare (optimize (speed 3)))
+  translate                             ; ???
+  (let ((width
+         ;; We could work a little harder and maybe get the generic arithmetic
+         ;; out of here, but I doubt it would shave more than a few percent
+         ;; off a draw-text benchmark.
+         (macrolet ((compute ()
+                      `(loop with cache = (slot-value font 'glyph-width-cache)
+                          for i from start below end
+                          as char = (aref string i)
+                          as code = (char-code char)
+                          sum (or (gcache-get cache code)
+                                  (gcache-set cache code (clim-clx::font-glyph-width font char)))
+                            #+NIL (clim-clx::font-glyph-width font char))))
+           (if (numberp (slot-value font 'fixed-width))
+               (* (slot-value font 'fixed-width) (length string))
+               (typecase string 
+                 (simple-string 
+                  (locally (declare (type simple-string string))
+                    (compute)))
+                 (string 
+                  (locally (declare (type string string))
+                    (compute)))
+                 (t (compute)))))))
     (values
      width
      (clim-clx::font-ascent font)
      (clim-clx::font-descent font)
-     (clim-clx::font-glyph-left font (char-code (char string start)))
-     (- width (- (clim-clx::font-glyph-width font (char-code (char string (1- end))))
-                 (clim-clx::font-glyph-right font (char-code (char string (1- end))))))
+     (clim-clx::font-glyph-left font (char string start))
+     (- width (- (clim-clx::font-glyph-width font (char string (1- end)))
+                 (clim-clx::font-glyph-right font (char string (1- end)))))
      (clim-clx::font-ascent font)
      (clim-clx::font-descent font)
      0 end)))
@@ -231,29 +301,45 @@
                 :repeat :on)
                pixmap)))))
 
-(defmethod clim-clx::font-draw-glyphs ((font freetype-face) mirror gc x y string &key start end translate)
-  (let ((display (xlib:drawable-display mirror)))
-    (with-slots (font matrix) font
+(let ((buffer (make-array 1024 :element-type '(unsigned-byte 32) ; TODO: thread safety
+                               :adjustable nil :fill-pointer nil)))
+  (defmethod clim-clx::font-draw-glyphs ((font freetype-face) mirror gc x y string &key start end translate)
+    (declare (optimize (speed 3)))
+    (when (< (length buffer) (- end start))
+      (hef:debugf "fuck!")
+      (setf buffer (make-array (* 256 (ceiling (- end start) 256))
+                               :element-type '(unsigned-byte 32)
+                               :adjustable nil :fill-pointer nil)))
+    (let ((display (xlib:drawable-display mirror)))
       (destructuring-bind (source-picture source-pixmap) (gcontext-picture mirror gc)
-        (let ((fg (xlib:gcontext-foreground gc)))
+        (let* ((fg (xlib:gcontext-foreground gc))
+               (cache (slot-value font 'glyph-id-cache))
+               (glyph-ids buffer))
+          (loop
+             for i from start below end ; TODO: Read optimization notes. Fix. Repeat.
+             for i* upfrom 0
+             as char = (aref string i)
+             as code = (char-code char)
+             do (setf (aref buffer i*)
+                      (or (gcache-get cache code)
+                          (gcache-set cache code (font-glyph-id font char)))))
+
           (xlib::render-fill-rectangle source-picture
                                        :src
                                        (list (ash (ldb (byte 8 16) fg) 8)
                                              (ash (ldb (byte 8 8) fg) 8)
                                              (ash (ldb (byte 8 0) fg) 8)
                                              #xFFFF)
-                                       0 0 1 1))
-        (setf (xlib::picture-clip-mask (drawable-picture mirror))
-              (xlib::gcontext-clip-mask gc))
-        (xlib::render-composite-glyphs
-         (drawable-picture mirror)
-         (display-the-glyph-set display)
-         source-picture
-         x y
-         (map 'vector (lambda (x)
-                        (first
-                         (display-get-glyph display font matrix (char-code x))))
-              (subseq string start end)))))))
+                                       0 0 1 1)
+          (setf (xlib::picture-clip-mask (drawable-picture mirror))
+                (xlib::gcontext-clip-mask gc))
+          (xlib::render-composite-glyphs
+           (drawable-picture mirror)
+           (display-the-glyph-set display)
+           source-picture
+           x y       
+           glyph-ids
+           :end (- end start)))))))
 
 (let ((cache (make-hash-table :test #'equal)))
   (defun make-free-type-face (display font size)
@@ -264,10 +350,12 @@
                                        (make-vague-font font))))
                      (f (make-concrete-font f.font size)))
                 (declare (type (alien freetype:face) f))
+                (set-concrete-font-size f size *dpi*)
                 (make-instance 'freetype-face
                                :display display
                                :font font
                                :matrix size
+                               :concrete-font f
                                :ascent  (/ (slot (slot (slot f 'freetype:size_s) 'freetype:metrics) 'freetype:ascender) 64)
                                :descent (/ (slot (slot (slot f 'freetype:size_s) 'freetype:metrics) 'freetype:descender) -64)))))))
 
@@ -297,6 +385,28 @@
     ((:sans-serif (:italic :bold)) . "VeraBI.ttf")
     ((:sans-serif :bold) . "VeraBd.ttf")))
 
+;;; Here are alternate mappings for the DejaVu family of fonts, which
+;;; are a derivative of Vera with improved unicode coverage.
+
+#+NIL
+(defparameter *families/faces* 
+  '(((:FIX :ROMAN) . "DejaVuSansMono.ttf") 
+    ((:FIX :ITALIC) . "DejaVuSansMono-Oblique.ttf")
+    ((:FIX (:BOLD :ITALIC)) . "DejaVuSansMono-BoldOblique.ttf")
+    ((:FIX (:ITALIC :BOLD)) . "DejaVuSansMono-BoldOblique.ttf") 
+    ((:FIX :BOLD) . "DejaVuSansMono-Bold.ttf")
+    ((:SERIF :ROMAN) . "DejaVuSerif.ttf") 
+    ((:SERIF :ITALIC) . "DejaVuSerif-Oblique.ttf")
+    ((:SERIF (:BOLD :ITALIC)) . "DejaVuSerif-BoldOblique.ttf")
+    ((:SERIF (:ITALIC :BOLD)) . "DejaVuSerif-BoldOblique.ttf") 
+    ((:SERIF :BOLD) . "DejaVuSerif-Bold.ttf")
+    ((:SANS-SERIF :ROMAN) . "DejaVuSans.ttf") 
+    ((:SANS-SERIF :ITALIC) . "DejaVuSans-Oblique.ttf")
+    ((:SANS-SERIF (:BOLD :ITALIC)) . "DejaVuSans-BoldOblique.ttf")
+    ((:SANS-SERIF (:ITALIC :BOLD)) . "DejaVuSans-BoldOblique.ttf")
+    ((:SANS-SERIF :BOLD) . "DejaVuSans-Bold.ttf")))
+
+
 (defvar *freetype-font-path*)
 
 (fmakunbound 'clim-clx::text-style-to-x-font)
@@ -317,6 +427,7 @@
     ((port clim-clx::clx-port) (text-style climi::device-font-text-style)
      &optional character-set)
   (values (gethash text-style (clim-clx::port-text-style-mappings port))))
+
 (defmethod (setf text-style-mapping) :around
     (value 
      (port clim-clx::clx-port) 
@@ -326,25 +437,31 @@
 
 (defparameter *free-type-face-hash* (make-hash-table :test #'equal))
 
-(defmethod clim-clx::text-style-to-X-font :around ((port clim-clx::clx-port) (text-style standard-text-style))
-  (multiple-value-bind (family face size) 
-      (clim:text-style-components text-style)
-    (let ((display (clim-clx::clx-port-display port)))
-      (setf face (or face :roman))
-      (setf size (or size :normal))
-      (cond (size
-	     (setf size (getf *sizes* size size))
-	     (let ((val (gethash (list display family face size) *free-type-face-hash*)))
-	       (if val val
-		   (setf (gethash (list display family face size) *free-type-face-hash*)
-			 (let* ((font-path-relative (cdr (assoc (list family face) *families/faces*
-								:test #'equal)))
-				(font-path (namestring (merge-pathnames font-path-relative *freetype-font-path*))))
-			   (if (and font-path (probe-file font-path))
-			       (make-free-type-face display font-path size)
-			       (call-next-method)))))))
-	    (t
-	     (call-next-method))))))
+(let (lookaside)
+  (defmethod clim-clx::text-style-to-X-font :around ((port clim-clx::clx-port) (text-style standard-text-style))
+    (flet ((f ()
+             (multiple-value-bind (family face size) 
+                 (clim:text-style-components text-style)
+            
+               (let ((display (clim-clx::clx-port-display port)))
+                 (setf face (or face :roman))
+                 (setf size (or size :normal))
+                 (cond (size
+                        (setf size (getf *sizes* size size))
+                        (let ((val (gethash (list display family face size) *free-type-face-hash*)))
+                          (if val val
+                              (setf (gethash (list display family face size) *free-type-face-hash*)
+                                    (let* ((font-path-relative (cdr (assoc (list family face) *families/faces*
+                                                                           :test #'equal)))
+                                           (font-path (namestring (merge-pathnames font-path-relative *freetype-font-path*))))
+                                      (if (and font-path (probe-file font-path))
+                                          (make-free-type-face display font-path size)
+                                          (call-next-method)))))))
+                       (t
+                        (call-next-method)))))))      
+      (if (eq (car lookaside) text-style)
+          (cdr lookaside)
+          (cdr (setf lookaside (cons text-style (f))))))))
 
 (defmethod clim-clx::text-style-to-X-font ((port clim-clx::clx-port) text-style)
   (error "You lost: ~S." text-style))
@@ -366,7 +483,7 @@
     (+ (clim-clx::font-ascent font) (clim-clx::font-descent font))))
 
 (defmethod text-style-character-width (text-style (medium clx-medium) char)
-  (clim-clx::font-glyph-width (text-style-to-X-font (port medium) text-style) (char-code char)))
+  (clim-clx::font-glyph-width (text-style-to-X-font (port medium) text-style) char))
 
 (defmethod text-style-width (text-style (medium clx-medium))
   (text-style-character-width text-style medium #\m))
