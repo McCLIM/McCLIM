@@ -431,6 +431,12 @@ containing `start-offset'."
      until (offset-end-of-line-p buffer offset)
      finally (return offset)))
 
+(defun extract-region (mark-or-offset1 mark-or-offset2)
+  "Delete the region delimited by `mark-or-offset1' and
+`mark-or-offset2', returning the extracted sequence of objects."
+  (prog1 (region-to-sequence mark-or-offset1 mark-or-offset2)
+    (delete-region mark-or-offset1 mark-or-offset2)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 
 ;;; Character case

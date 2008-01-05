@@ -365,7 +365,8 @@ Third line.")
 (transposition-test word
                     ("words Many, great words!")
                     ("")
-                    ((8 "Many great, words words!"))
+                    ((8 "Many great, words words!")
+                     (10 "Many great, words words!"))
                     "Many words, great words!")
 
 (transposition-test page

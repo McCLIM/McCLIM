@@ -267,24 +267,24 @@ being called until either `motor' succeeds or `fiddler' fails."
 Return T if successful, or NIL if the buffer limit was reached."))
 
 (defmethod forward-one-word (mark syntax)
-  (forward-to-word-boundary mark syntax)
-  (and (not (end-of-buffer-p mark))
-       (loop until (end-of-buffer-p mark)
-          while (word-constituentp syntax (object-after mark))
-          do (forward-object mark)
-          finally (return t))))
+  (unless (end-of-buffer-p mark)
+    (forward-to-word-boundary mark syntax)
+    (loop until (end-of-buffer-p mark)
+       while (word-constituentp syntax (object-after mark))
+       do (forward-object mark)
+       finally (return t))))
 
 (defgeneric backward-one-word (mark syntax)
   (:documentation "Move MARK backward over the previous word.
 Return T if successful, or NIL if the buffer limit was reached."))
 
 (defmethod backward-one-word (mark syntax)
-  (backward-to-word-boundary mark syntax)
-  (and (not (beginning-of-buffer-p mark))
-       (loop until (beginning-of-buffer-p mark)
-          while (word-constituentp syntax (object-before mark))
-          do (backward-object mark)
-          finally (return t))))
+  (unless (beginning-of-buffer-p mark)
+    (backward-to-word-boundary mark syntax)
+    (loop until (beginning-of-buffer-p mark)
+       while (word-constituentp syntax (object-before mark))
+       do (backward-object mark)
+       finally (return t))))
 
 (define-motion-fns word)
 

@@ -111,6 +111,7 @@ not user-oriented at all."))
            #:offset-beginning-of-line-p
            #:offset-end-of-line-p
            #:end-of-line-offset
+           #:extract-region
            #:buffer-whitespacep
            #:buffer-region-case
            #:buffer-looking-at #:looking-at
