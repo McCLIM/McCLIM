@@ -166,7 +166,8 @@ table, possibly using INSPECTOR-TABLE-ROW."
 	   (,evaluated-object ,object))
       (with-output-as-presentation
 	  (pane ,evaluated-object
-		(presentation-type-of ,evaluated-object))
+		(presentation-type-of ,evaluated-object)
+                :single-box t)
 	(formatting-table (,evaluated-pane)
 	  (formatting-column (,evaluated-pane)
 	    (formatting-cell (,evaluated-pane)
