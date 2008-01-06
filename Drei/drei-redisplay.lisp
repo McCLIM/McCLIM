@@ -623,9 +623,9 @@ function is the drawing function for the chunk."
   (setf (displayed-lines-count view) 0)
   (multiple-value-bind (cursor-x cursor-y) (stream-cursor-position pane)
     (with-output-recording-options (pane :record nil :draw t)
-      (loop with start-offset = (offset (top view))
-         with pump-state = (pump-state-for-offset view (offset (top view)))
-         with pane-height = (bounding-rectangle-height pane)
+      (loop with start-offset = (offset (beginning-of-line (top view)))
+         with pump-state = (pump-state-for-offset view start-offset)
+         with pane-height = (bounding-rectangle-height (or (pane-viewport pane) pane))
          for line = (line-information view (displayed-lines-count view))
          do (multiple-value-bind (new-pump-state line-height)
                 (draw-line-strokes pane view pump-state start-offset cursor-x cursor-y)
@@ -857,14 +857,15 @@ half a pane-size up."
       (invalidate-all-strokes view :modified t))))
 
 (defun adjust-pane (drei-pane)
-  "Adjust the bottom and top marks of the pane to be correct, and
-reposition the pane if point is outside the visible area."
+  "Reposition the pane if point is outside the region delimited
+by the top/bot marks of its view. Returns true if adjustment was
+needed."
   (with-accessors ((buffer buffer) (top top) (bot bot)
                    (point point)) (view drei-pane)
-    (beginning-of-line top)
     (when (or (mark< point top)
               (mark> point bot))
-      (reposition-pane drei-pane))))
+      (reposition-pane drei-pane)
+      t)))
 
 (defun page-down (view)
   (with-accessors ((top top) (bot bot)) view
@@ -914,7 +915,7 @@ has `view'."))
                                       (round (- cursor-x)))
                              0)))
           (when (> (+ cursor-y line-height) (+ y-position viewport-height))
-            (next-line (top view))
+            (full-redisplay pane)
             ;; We start all over!
             (display-drei-pane (pane-frame pane) pane)))))))
 
@@ -934,8 +935,7 @@ setting the `full-redisplay-p' flag to false.")
 
 (defmethod fully-redisplay-pane ((drei-pane drei-pane)
                                  (view point-mark-view))
-  (reposition-pane drei-pane)
-  (setf (full-redisplay-p view) nil))
+  (reposition-pane drei-pane))
 
 (defmethod fully-redisplay-pane :after ((drei-pane drei-pane)
                                         (view drei-buffer-view))
@@ -944,19 +944,20 @@ setting the `full-redisplay-p' flag to false.")
 (defun display-drei-pane (frame drei-pane)
   "Display `pane'. If `pane' has focus, `current-p' should be
 non-NIL."
-  (declare (ignore frame))
   (let ((view (view drei-pane)))
     (with-accessors ((buffer buffer)) view
       (when (typep view 'point-mark-view)
-        (if (full-redisplay-p view)
-            (fully-redisplay-pane drei-pane view)
-            (adjust-pane drei-pane)))
+        (when (full-redisplay-p view)
+          (fully-redisplay-pane drei-pane view)))
       (setf (stream-cursor-position drei-pane) (values 0 0))
       (display-drei-view-contents drei-pane view)
-      ;; Point must be on top of all other cursors.
-      (dolist (cursor (cursors drei-pane))
-        (display-drei-view-cursor drei-pane view cursor))
-      (fix-pane-viewport drei-pane (view drei-pane)))))
+      (if (adjust-pane drei-pane)
+          (display-drei-pane frame drei-pane)
+          ;; Point must be on top of all other cursors.
+          (progn
+            (dolist (cursor (cursors drei-pane))
+              (display-drei-view-cursor drei-pane view cursor))
+            (fix-pane-viewport drei-pane (view drei-pane)))))))
 
 (defgeneric full-redisplay (pane)
   (:documentation "Queue a full redisplay for `pane'."))
