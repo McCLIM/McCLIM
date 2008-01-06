@@ -574,7 +574,7 @@ Extensions/Images. It will depend on the ASDF systems listed in
   `(progn ,@(loop for (format . depends-on) in formats
                collecting `(support-format ,format ,@depends-on))))
 
-(support-formats ("gif" :skippy) ("xpm"))
+(support-formats ("gif" :skippy) ("xpm") ("jpeg" :cl-jpeg))
 
 ;;; The actual McCLIM system that people should to use in their ASDF
 ;;; package dependency lists.

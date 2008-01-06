@@ -43,14 +43,12 @@
 ;;; medium, so that mediums can put their own data into them.
 
 (defclass rgb-image-design (design)
-    ((medium :initarg :medium)
+    ((medium :initform nil :initarg :medium)
      (image :initarg :image)
      (medium-data :initform nil)))
 
-(defun make-rgb-image-design (medium image)
-  (make-instance 'rgb-image-design
-    :medium medium
-    :image image))
+(defun make-rgb-image-design (image)
+  (make-instance 'rgb-image-design :image image))
 
 
 ;;; Protocol to free cached data
@@ -65,8 +63,13 @@
 
 (defgeneric medium-draw-image-design* (medium design x y))
 
-(defmethod medium-draw-image-design* :before (medium design x y)
-  (assert (eq medium (slot-value design 'medium))))
+(defmethod medium-draw-image-design* :before (current-medium design x y)
+  (with-slots (medium medium-data) design
+    (unless (eq medium current-medium)
+      (when medium
+	(medium-free-image-design medium design))
+      (setf medium current-medium)
+      (setf medium-data nil))))
 
 
 ;;; Fetching protocol
@@ -88,3 +91,17 @@
 	:alphap alphap))))
 
 (defgeneric sheet-rgb-data (port sheet &key x y width height))
+
+
+;;; Output recording
+
+(defun draw-image-design*
+    (medium design &rest options &key x y &allow-other-keys)
+  (unless (and x y)
+    (setf (values x y) (clim:stream-cursor-position medium)))
+  (climi::with-medium-options (medium options)
+    (medium-draw-image-design* (sheet-medium medium) design x y)))
+
+(defmethod draw-design
+    (medium (design rgb-image-design) &rest options &key &allow-other-keys)
+  (apply #'draw-image-design* medium design options))
