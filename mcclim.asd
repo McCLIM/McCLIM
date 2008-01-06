@@ -548,6 +548,34 @@
 		 (:file "Looks/pixie"
                         :pathname #.(make-pathname :directory '(:relative "Looks") :name "pixie" :type "lisp"))))
 
+(defsystem :mcclim-images
+           :depends-on (:clim)
+           :components ((:module "Extensions/Images"
+                         :pathname #.(make-pathname :directory '(:relative "Extensions" "Images"))
+                         :components ((:file "package")
+                                      (:file "images")))))
+
+(defmacro support-format (format &rest depends-on)
+  "Generate the ASDF `defsystem' form for a single-file system
+consisting of a file with the name `format' in
+Extensions/Images. It will depend on the ASDF systems listed in
+`depends-on' as well as MCCLIM-IMAGES."
+  `(defsystem ,(intern (format nil "MCCLIM-IMAGES-~A" (string-upcase format))
+                       (find-package :keyword))
+    :depends-on (:mcclim-images ,@depends-on)
+    :components
+    ((:file ,format
+      :pathname ,(make-pathname :directory '(:relative "Extensions" "Images")
+                                :name format)))))
+
+(defmacro support-formats (&rest formats)
+  "Generate the ASDF `defsystem' forms for supporting
+`formats'."
+  `(progn ,@(loop for (format . depends-on) in formats
+               collecting `(support-format ,format ,@depends-on))))
+
+(support-formats ("gif" :skippy) ("xpm"))
+
 ;;; The actual McCLIM system that people should to use in their ASDF
 ;;; package dependency lists.
 (defsystem :mcclim
