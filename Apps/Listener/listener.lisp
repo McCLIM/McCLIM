@@ -153,7 +153,7 @@
   (get-frame-pane frame 'interactor))
 
 (defun run-listener (&key (new-process nil)
-                          (width 760)
+                          (width 790)
                           (height 550)
                           port
                           frame-manager

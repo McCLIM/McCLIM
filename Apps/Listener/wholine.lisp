@@ -79,13 +79,18 @@
 		       #-(or allegro cmu scl) (getenv "USER")
                        "luser"))  ; sorry..
          (sitename (machine-instance))
+         ;; :sans-serif :roman :small is the best looking jaggy font.
+         ;; But :small looks awful using freetype, perhaps because the
+         ;; fonts are, for whatever reason, slightly smaller.
+         ;; Very distressing.
+         (text-size (if (find-package :mcclim-freetype) :normal :small))
          (memusage #+(or cmu scl) (lisp::dynamic-usage)
                    #+sbcl  (sb-kernel:dynamic-usage)
                    #+lispworks (getf (system:room-values) :total-allocated)
 		   #+openmcl (+ (ccl::%usedbytes) (ccl::%freebytes))
                    #+clisp (values (sys::%room))
                    #-(or cmu scl sbcl lispworks openmcl clisp) 0))
-    (with-text-style (t (make-text-style :sans-serif :roman :small))
+    (with-text-style (t (make-text-style :sans-serif :roman text-size))
       (formatting-table (t :x-spacing '(3 :character))
         (formatting-row (t)                        
           (macrolet ((cell ((align-x) &body body)                         
