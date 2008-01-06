@@ -458,9 +458,9 @@
                                           (call-next-method)))))))
                        (t
                         (call-next-method)))))))      
-      (if (eq (car lookaside) text-style)
-          (cdr lookaside)
-          (cdr (setf lookaside (cons text-style (f))))))))
+      (cdr (if (eq (car lookaside) text-style)
+               lookaside
+               (setf lookaside (cons text-style (f))))))))
 
 (defmethod clim-clx::text-style-to-X-font ((port clim-clx::clx-port) text-style)
   (error "You lost: ~S." text-style))
@@ -569,7 +569,7 @@
   (let* ((drawable (sheet-mirror (medium-sheet medium)))
          (port (port medium)))
     (let ((gc (xlib:create-gcontext :drawable drawable)))
-      (Let ((fn (text-style-to-X-font port text-style)))
+      (let ((fn (text-style-to-X-font port text-style)))
         (if (typep fn 'xlib:font)
             (setf (xlib:gcontext-font gc) fn)))
       (setf 
@@ -622,48 +622,6 @@
             (when (typep fn 'xlib:font)
               (setf (xlib:gcontext-font gc)
                     fn))))))))
-
-(defmethod medium-gcontext ((medium clx-medium) (ink color))
-  (let* ((port (port medium))
-	 (mirror (port-lookup-mirror port (medium-sheet medium)))
-	 (line-style (medium-line-style medium)))
-    (with-slots (gc) medium
-      (unless gc
-	(setq gc (xlib:create-gcontext :drawable mirror))
-	;; this is kind of false, since the :unit should be taken
-	;; into account -RS 2001-08-24
-	(setf (xlib:gcontext-line-width gc) (line-style-thickness line-style)
-	      (xlib:gcontext-cap-style gc) (line-style-cap-shape line-style)
-	      (xlib:gcontext-join-style gc) (line-style-joint-shape line-style))
-	(let ((dashes (line-style-dashes line-style)))
-	  (unless (null dashes)
-	    (setf (xlib:gcontext-line-style gc) :dash
-		  (xlib:gcontext-dashes gc) (if (eq dashes t) 3
-						dashes)))))
-      (setf (xlib:gcontext-function gc) boole-1)
-      (let ((fn (text-style-to-X-font port (medium-text-style medium))))
-        (when (typep fn 'xlib:font)
-          (setf (xlib:gcontext-font gc) fn)))
-      (setf (xlib:gcontext-foreground gc) (X-pixel port ink)
-	    (xlib:gcontext-background gc) (X-pixel port (medium-background medium)))
-      ;; Here is a bug with regard to clipping ... ;-( --GB )
-      #-nil ; being fixed at the moment, a bit twitchy though -- BTS
-      (let ((clipping-region (medium-device-region medium)))
-        (if (region-equal clipping-region +nowhere+)
-	    (setf (xlib:gcontext-clip-mask gc) #())
-	    (let ((rect-seq (clipping-region->rect-seq clipping-region)))
-	      (when rect-seq
-		#+nil
-		;; ok, what McCLIM is generating is not :yx-banded...
-		;; (currently at least)
-		(setf (xlib:gcontext-clip-mask gc :yx-banded) rect-seq)
-		#-nil
-		;; the region code doesn't support yx-banding...
-		;; or does it? what does y-banding mean in this implementation?
-		;; well, apparantly it doesn't mean what y-sorted means
-		;; to clx :] we stick with :unsorted until that can be sorted out
-		(setf (xlib:gcontext-clip-mask gc :unsorted) rect-seq)))))
-      gc)))
 
 ;;;
 ;;; This fixes the worst offenders making the assumption that drawing

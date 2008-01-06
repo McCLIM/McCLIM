@@ -37,6 +37,9 @@
 (defclass clx-medium (basic-medium)
   ((gc :initform nil)
    (picture :initform nil)
+   (clipping-region-tmp :initform (vector 0 0 0 0)
+     :documentation "This object is reused to avoid consing in the
+ most common case when configuring the clipping region.")
    (buffer :initform nil :accessor medium-buffer)))
 
 #+CLX-EXT-RENDER
@@ -100,25 +103,40 @@
 		  ((t nil) 3)
 		  (otherwise (line-style-dashes line-style)))))))))
 
+(defun %set-gc-clipping-region (medium gc)
+  (declare (type clx-medium medium))
+  (let ((clipping-region (medium-device-region medium))
+        (tmp (slot-value medium 'clipping-region-tmp))
+        (port (port medium)))
+    (cond 
+      ((region-equal clipping-region +nowhere+)
+       (setf (xlib:gcontext-clip-mask gc) #()))
+      ((typep clipping-region 'standard-rectangle)
+       (multiple-value-bind (x1 y1 width height)
+           (region->clipping-values clipping-region)
+         (setf (aref tmp 0) x1
+               (aref tmp 1) y1
+               (aref tmp 2) width
+               (aref tmp 3) height
+               (xlib:gcontext-clip-mask gc :unsorted) tmp)))
+      (t
+        (let ((rect-seq (clipping-region->rect-seq clipping-region)))
+          (when rect-seq
+            #+nil
+            ;; ok, what McCLIM is generating is not :yx-banded...
+            ;; (currently at least)
+            (setf (xlib:gcontext-clip-mask gc :yx-banded) rect-seq)
+            #-nil
+            ;; the region code doesn't support yx-banding...
+            ;; or does it? what does y-banding mean in this implementation?
+            ;; well, apparantly it doesn't mean what y-sorted means
+            ;; to clx :] we stick with :unsorted until that can be sorted out
+            (setf (xlib:gcontext-clip-mask gc :unsorted) rect-seq)))))))
+
 (defmethod (setf medium-clipping-region) :after (region (medium clx-medium))
   (declare (ignore region))
   (with-slots (gc) medium
-    (when gc
-      (let ((clipping-region (medium-device-region medium)))
-        (if (region-equal clipping-region +nowhere+)
-	    (setf (xlib:gcontext-clip-mask gc) #())
-	    (let ((rect-seq (clipping-region->rect-seq clipping-region)))
-	      (when rect-seq
-		#+nil
-		;; ok, what McCLIM is generating is not :yx-banded...
-		;; (currently at least)
-		(setf (xlib:gcontext-clip-mask gc :yx-banded) rect-seq)
-		#-nil
-		;; the region code doesn't support yx-banding...
-		;; or does it? what does y-banding mean in this implementation?
-		;; well, apparantly it doesn't mean what y-sorted means
-		;; to clx :] we stick with :unsorted until that can be sorted out
-		(setf (xlib:gcontext-clip-mask gc :unsorted) rect-seq))))))))
+    (when gc (%set-gc-clipping-region medium gc))))
   
 
 (defgeneric medium-gcontext (medium ink))
@@ -133,6 +151,7 @@
              (setf (xlib:gcontext-fill-style gc) :solid))))))
 
 (defmethod medium-gcontext ((medium clx-medium) (ink color))
+  (declare (optimize (debug 3)))
   (let* ((port (port medium))
 	 (mirror (port-lookup-mirror port (medium-sheet medium)))
 	 (line-style (medium-line-style medium)))
@@ -151,26 +170,12 @@
 		  (xlib:gcontext-dashes gc) (if (eq dashes t) 3
 						dashes)))))
       (setf (xlib:gcontext-function gc) boole-1)
-      (setf (xlib:gcontext-font gc) (text-style-to-X-font port (medium-text-style medium)))
       (setf (xlib:gcontext-foreground gc) (X-pixel port ink)
 	    (xlib:gcontext-background gc) (X-pixel port (medium-background medium)))
-      ;; Here is a bug with regard to clipping ... ;-( --GB )
-      #-nil ; being fixed at the moment, a bit twitchy though -- BTS
-      (let ((clipping-region (medium-device-region medium)))
-        (if (region-equal clipping-region +nowhere+)
-	    (setf (xlib:gcontext-clip-mask gc) #())
-	    (let ((rect-seq (clipping-region->rect-seq clipping-region)))
-	      (when rect-seq
-		#+nil
-		;; ok, what McCLIM is generating is not :yx-banded...
-		;; (currently at least)
-		(setf (xlib:gcontext-clip-mask gc :yx-banded) rect-seq)
-		#-nil
-		;; the region code doesn't support yx-banding...
-		;; or does it? what does y-banding mean in this implementation?
-		;; well, apparantly it doesn't mean what y-sorted means
-		;; to clx :] we stick with :unsorted until that can be sorted out
-		(setf (xlib:gcontext-clip-mask gc :unsorted) rect-seq)))))
+      (let ((fn (text-style-to-X-font port (medium-text-style medium))))
+        (when (typep fn 'xlib:font)
+          (setf (xlib:gcontext-font gc) fn)))
+      (%set-gc-clipping-region medium gc)
       gc)))
 
 (defmethod medium-gcontext ((medium clx-medium) (ink (eql +transparent-ink+)))
@@ -569,22 +574,28 @@
                        (round (rectangle-width rectangle))
                        (round (rectangle-height rectangle)))))
 
+(defun region->clipping-values (region)
+  (with-bounding-rectangle* (min-x min-y max-x max-y) region
+    (let ((clip-x (round-coordinate min-x))
+          (clip-y (round-coordinate min-y)))
+      (values clip-x
+              clip-y
+              (- (round-coordinate max-x) clip-x)
+              (- (round-coordinate max-y) clip-y)))))
+
 ; this seems to work, but find out why all of these +nowhere+s are coming from
 ; and kill them at the source...
 #-nil
 (defun clipping-region->rect-seq (clipping-region)
-  (loop
-     for region in (nreverse (mapcan
-			      (lambda (v) (unless (eq v +nowhere+) (list v)))
-			      (region-set-regions clipping-region
-						  :normalize :y-banding)))
-     as rectangle = (bounding-rectangle region)
-     for clip-x = (round-coordinate (rectangle-min-x rectangle))
-     for clip-y = (round-coordinate (rectangle-min-y rectangle))
-     nconcing (list clip-x
-		    clip-y
-		    (- (round-coordinate (rectangle-max-x rectangle)) clip-x)
-		    (- (round-coordinate (rectangle-max-y rectangle)) clip-y))))
+  (typecase clipping-region 
+    (area (multiple-value-list (region->clipping-values clipping-region)))
+    (t (loop 
+          for region in (nreverse (mapcan
+                                   (lambda (v) (unless (eq v +nowhere+) (list v)))
+                                   (region-set-regions clipping-region
+                                                       :normalize :y-banding)))
+          nconcing (multiple-value-list (region->clipping-values region))))))
+    
 
 (defmacro with-clx-graphics ((medium) &body body)
   `(let* ((port (port ,medium))
