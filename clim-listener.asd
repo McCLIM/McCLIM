@@ -6,7 +6,7 @@
 (in-package :clim-listener.system)
 
 (defsystem :clim-listener
-    :depends-on (:mcclim #+sbcl :sb-posix)
+    :depends-on (:mcclim #+sbcl :sb-posix :mcclim-images :mcclim-images-xpm)
     :components
     ((:file "Experimental/xpm"
             :pathname #.(make-pathname :directory '(:relative "Experimental") :name "xpm" :type "lisp"))

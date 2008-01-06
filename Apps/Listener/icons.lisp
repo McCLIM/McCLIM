@@ -34,7 +34,7 @@
 
 (defmacro deficon (var pathname)
   `(eval-when (:load-toplevel :execute)
-     (defparameter ,var (climi::xpm-parse-file ,(merge-pathnames pathname *icon-path*)))))
+     (defparameter ,var (mcclim-images:load-image ,(merge-pathnames pathname *icon-path*)))))
 
 (defvar *icon-cache* (make-hash-table  :test #'equal))
 
@@ -42,8 +42,9 @@
   "Loads an icon from the *icon-path*, caching it by name in *icon-cache*"
   (or (gethash filename *icon-cache*)
       (setf (gethash filename *icon-cache*)
-            (climi::xpm-parse-file (merge-pathnames (parse-namestring filename)
-                                                    *icon-path*)))))
+            (mcclim-images:load-image
+             (merge-pathnames (parse-namestring filename)
+                              *icon-path*)))))
 
 ;; Don't particularly need these any more..
 (deficon *folder-icon*   #P"folder.xpm")
