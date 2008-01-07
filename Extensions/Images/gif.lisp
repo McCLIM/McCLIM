@@ -26,10 +26,13 @@
          (pattern-array (make-array (list (skippy:height first-image)
                                           (skippy:width first-image))))
          (designs (coerce (loop with color-table = (skippy:color-table data-stream)
-                             for i below 255
-                             collecting (multiple-value-bind (r g b) 
-                                            (skippy:color-rgb (skippy:color-table-entry color-table i))
-                                          (make-rgb-color (/ r 255) (/ g 255) (/ b 255))))
+                             for i below (skippy:color-table-size color-table)
+                             when (= i (skippy:transparency-index first-image))
+                             collect +transparent-ink+
+                             else collect
+                             (multiple-value-bind (r g b) 
+                                 (skippy:color-rgb (skippy:color-table-entry color-table i))
+                               (make-rgb-color (/ r 255) (/ g 255) (/ b 255))))
                           'vector)))
     (dotimes (y (array-dimension pattern-array 0))
       (dotimes (x (array-dimension pattern-array 1))
