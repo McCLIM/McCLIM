@@ -436,22 +436,18 @@ will be cleared before any actual output takes place."
                          (+ width cursor-x) (+ text-style-height cursor-y)
                          baseline))))))
 
-(defun draw-stroke (stream view stroke cursor-x cursor-y line-height)
+(defun draw-stroke (stream view stroke cursor-x cursor-y)
   "Draw `stroke' on `stream' at (`cursor-x', `cursor-y'). Nothing
 will be done unless `stroke' is dirty. Will use the function
 specified in the drawing-options of `stroke' to carry out the
 actual drawing."
   (let* ((drawing-options (stroke-drawing-options stroke)))
+    (unless (and (= cursor-x (x1 (stroke-dimensions stroke)))
+                 (= cursor-y (y1 (stroke-dimensions stroke))))
+      (invalidate-stroke stroke :modified t))
     (when (stroke-dirty stroke)
-      (let ((old-dimensions (stroke-dimensions stroke)))
-        (with-accessors ((x1 x1) (y1 y1) (x2 x2) (y2 y2)) old-dimensions
-          (unless (or (= x1 y1 x2 y2 0))
-            ;; Take care not to clear any previously drawn strokes.
-            (clear-rectangle* stream (max cursor-x x1) (max cursor-y y1)
-                              (max x2 cursor-x) (+ (max (+ (max cursor-y y1) line-height) y2)
-                                                   (stream-vertical-spacing stream))))
-          (funcall (drawing-options-function drawing-options) stream view stroke
-                   cursor-x cursor-y #'stroke-drawing-fn))))))
+      (funcall (drawing-options-function drawing-options) stream view stroke
+               cursor-x cursor-y #'stroke-drawing-fn))))
 
 (defun end-line (line x1 y1 line-width line-height)
   "End the addition of strokes to `line' for now, and update the
@@ -520,7 +516,7 @@ at (`cursor-x', `cursor-y')"
        for stroke-dimensions = (stroke-dimensions stroke)
        for pump-state = (put-stroke view line initial-pump-state) then
        (put-stroke view line pump-state)
-       do (draw-stroke stream view stroke cursor-x cursor-y line-height)
+       do (draw-stroke stream view stroke cursor-x cursor-y)
        (setf cursor-x (x2 stroke-dimensions))
        maximizing (dimensions-height stroke-dimensions) into line-height
        summing (- (x2 stroke-dimensions)
