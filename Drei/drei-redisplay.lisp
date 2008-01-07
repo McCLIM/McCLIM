@@ -395,6 +395,10 @@ modified-bits of `stroke' as well as the dimensions."
           (y2 dimensions) y2
           (center dimensions) center)))
 
+(defconstant +roman-face-style+ (make-text-style nil :roman nil)
+  "A text style specifying a roman face, but with unspecified
+family and size.")
+
 (defun stroke-drawing-fn (stream view stroke cursor-x cursor-y)
   "Draw `stroke' to `stream' at the position (`cursor-x',
 `cursor-y'). `View' is the view object that `stroke' belongs
@@ -413,8 +417,13 @@ will be cleared before any actual output takes place."
            (merged-text-style (merge-text-styles
                                (face-style (drawing-options-face drawing-options))
                                (medium-merged-text-style (sheet-medium stream))))
-           (text-style-ascent (text-style-ascent merged-text-style (sheet-medium stream)))
-           (text-style-descent (text-style-descent merged-text-style (sheet-medium stream)))
+           ;; Ignore face when computing height, otherwise we get
+           ;; bouncy lines when things like parenmatching bolds parts
+           ;; of the line.
+           (roman-text-style (merge-text-styles +roman-face-style+
+                                                merged-text-style))
+           (text-style-ascent (text-style-ascent roman-text-style (sheet-medium stream)))
+           (text-style-descent (text-style-descent roman-text-style (sheet-medium stream)))
            (text-style-height (+ text-style-ascent text-style-descent)))
       (with-accessors ((x1 x1) (y1 y1) (x2 x2) (y2 y2) (center center)) dimensions
         (multiple-value-bind (width ignore1 ignore2 ignore3 baseline)
