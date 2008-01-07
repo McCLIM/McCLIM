@@ -1835,7 +1835,7 @@ macro or special form."
       (macro-drawing-options (make-drawing-options :face (make-face :ink +purple+)))
       (bound-drawing-options (make-drawing-options :face (make-face :ink +darkgoldenrod+)))
       (highlighted-parenthesis-options (make-drawing-options :face (make-face :style (make-text-style nil :bold nil)))))
-  (make-syntax-highlighting-rules emacs-style-highlighting
+  (define-syntax-highlighting-rules emacs-style-highlighting
     (error-lexeme (:face :ink +red+))
     (string-form (:face :ink +rosy-brown+
                         :style (make-text-style nil :italic nil)))
@@ -1858,7 +1858,7 @@ macro or special form."
                                            +default-drawing-options+))))))
 
 (let ((macro-drawing-options (make-drawing-options :face (make-face :style (make-text-style nil :bold nil)))))
-  (make-syntax-highlighting-rules retro-highlighting
+  (define-syntax-highlighting-rules retro-highlighting
     (error-symbol (:face :ink +red+))
     (string-form (:face :style (make-text-style nil :italic nil)))
     (comment (:face :style (make-text-style nil nil nil)

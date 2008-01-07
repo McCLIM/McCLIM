@@ -507,7 +507,7 @@ editing plain text."))
 	   #:action #:new-state #:done
 	   #:reduce-fixed-number #:reduce-until-type #:reduce-all 
 	   #:error-state #:error-reduce-state
-           #:make-syntax-highlighting-rules
+           #:define-syntax-highlighting-rules
            #:syntax-highlighting-rules)
   (:documentation "Underlying LR parsing functionality."))
 

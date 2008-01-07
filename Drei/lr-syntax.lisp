@@ -412,7 +412,7 @@ stack-top of `syntax'."
 ;;;    XXXXX                  XXXXX
 ;;;     XXX                    XXX
 
-(defmacro make-syntax-highlighting-rules (name &body rules)
+(defmacro define-syntax-highlighting-rules (name &body rules)
   "Define a set of rules for highlighting a syntax. `Name', which
 must be a symbol, is the name of this set of rules, and will be
 bound to a function implementing the rules. `Rules' is a list of
@@ -456,7 +456,7 @@ symbols.
                            (defmethod ,name (view (parser-symbol ,parser-symbol))
                              (funcall rule view parser-symbol)))))))
 
-(make-syntax-highlighting-rules default-syntax-highlighting)
+(define-syntax-highlighting-rules default-syntax-highlighting)
 
 (defgeneric syntax-highlighting-rules (syntax)
   (:documentation "Return the drawing options that should be used
