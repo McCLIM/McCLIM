@@ -1854,7 +1854,7 @@ macro or special form."
 
 (define-syntax-highlighting-rules retro-highlighting
   (error-symbol (*error-drawing-options*))
-  (string-form (:face :style +italic-face-style+))
+  (string-form (:options :face +italic-face+))
   (comment (:face :ink +dimgray+))
   (literal-object-form (:options :function (object-drawer)))
   (complete-token-form (:function #'(lambda (syntax form)

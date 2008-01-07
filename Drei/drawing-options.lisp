@@ -80,7 +80,7 @@ should probably be used for global variables or similar.")
 
 (defvar *string-drawing-options* (make-drawing-options
                                   :face (make-face :ink +rosy-brown+
-                                                   :style +italic-face-style+))
+                                                   :style (make-text-style nil :italic nil)))
   "The drawing options used for syntax-highlighting strings.")
 
 (defvar *comment-drawing-options* (make-drawing-options
