@@ -25,7 +25,7 @@
 (define-image-reader "jpeg" (pathname)
   (with-open-file (stream pathname :direction :input)
     (multiple-value-bind (rgb height width)
-        (jpeg:decode-image stream)
+        (jpeg::decode-image stream)
       (let* ((rgb-image-data (make-array (list height width)
 					 :element-type '(unsigned-byte 32)))
              (rgb-image (make-instance 'clim-internals::rgb-image
@@ -40,3 +40,6 @@
                                     (dpb grey (byte 8 16)
                                          (dpb (- 255 0) (byte 8 24) 0))))))))
         (clim-internals::make-rgb-image-design rgb-image)))))
+
+(define-image-reader "jpg" (pathname)
+  (load-image-of-format "jpeg" pathname))
