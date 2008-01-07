@@ -275,9 +275,10 @@ along with any default values) that can be used in a
 (defclass error-lexeme (lisp-lexeme) ())
 (defclass literal-object-lexeme (lisp-lexeme literal-object-mixin) ())
 (defclass literal-object-error-lexeme (lisp-lexeme literal-object-mixin) ())
-(defclass left-parenthesis-lexeme (lisp-lexeme) ())
+(defclass parenthesis-lexeme (lisp-lexeme) ())
+(defclass left-parenthesis-lexeme (parenthesis-lexeme) ())
 (defclass simple-vector-start-lexeme (lisp-lexeme) ())
-(defclass right-parenthesis-lexeme (lisp-lexeme) ())
+(defclass right-parenthesis-lexeme (parenthesis-lexeme) ())
 (defclass quote-lexeme (lisp-lexeme) ())
 (defclass backquote-lexeme (lisp-lexeme) ())
 (defclass comma-lexeme (lisp-lexeme) ())
@@ -1832,7 +1833,8 @@ macro or special form."
 
 (let ((keyword-drawing-options (make-drawing-options :face (make-face :ink +orchid+)))
       (macro-drawing-options (make-drawing-options :face (make-face :ink +purple+)))
-      (bound-drawing-options (make-drawing-options :face (make-face :ink +darkgoldenrod+))))
+      (bound-drawing-options (make-drawing-options :face (make-face :ink +darkgoldenrod+)))
+      (highlighted-parenthesis-options (make-drawing-options :face (make-face :style (make-text-style nil :bold nil)))))
   (make-syntax-highlighting-rules emacs-style-highlighting
     (error-lexeme (:face :ink +red+))
     (string-form (:face :ink +rosy-brown+
@@ -1846,7 +1848,15 @@ macro or special form."
                                                macro-drawing-options)
                                               ((symbol-form-is-boundp syntax form)
                                                bound-drawing-options)
-                                              (t +default-drawing-options+)))))))
+                                              (t +default-drawing-options+)))))
+    (parenthesis-lexeme (:function #'(lambda (syntax form)
+                                       (declare (ignore syntax))
+                                       ;; XXX: Using (point) here may be hacky.
+                                       (if (and (or (mark= (point) (start-offset (parent form)))
+                                                    (mark= (point) (end-offset (parent form))))
+                                                (form-complete-p (parent form)))
+                                           highlighted-parenthesis-options
+                                           +default-drawing-options+))))))
 
 (let ((macro-drawing-options (make-drawing-options :face (make-face :style (make-text-style nil :bold nil)))))
   (make-syntax-highlighting-rules retro-highlighting
