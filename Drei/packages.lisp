@@ -246,12 +246,12 @@ characters."))
 
            #:minibuffer
 
-           ;; DREI interface stuff.
            #:drei #:drei-pane #:drei-gadget-pane #:drei-area
            #:handling-drei-conditions #:handle-drei-condition
            #:execute-drei-command
-           #:display-drei-view-contents #:display-drei-view-cursor
 
+           ;; Redisplay engine.
+           #:display-drei-view-contents #:display-drei-view-cursor
            #:face #:make-face #:face-ink #:face-style
            #:drawing-options #:make-drawing-options
            #:drawing-options-face #:drawing-options-function
@@ -261,6 +261,17 @@ characters."))
            
            #:pump-state-for-offset #:stroke-pump
            #:object-drawer #:*maximum-chunk-size*
+
+           #:+roman-face+ #:+roman-face-drawing-options+
+           #:+italic-face+ #:+italic-face-drawing-options+
+           #:+bold-face+ #:+bold-face-drawing-options+
+           #:+bold-italic-face+ #:+bold-italic-drawing-options+
+
+           #:*keyword-drawing-options*
+           #:*special-operator-drawing-options*
+           #:*special-variable-drawing-options*
+
+           ;; DREI program interface stuff.
            #:with-drei-options
            #:performing-drei-operations #:invoke-performing-drei-operations
            #:with-bound-drei-special-variables

@@ -1831,43 +1831,37 @@ macro or special form."
       (progn (cache-symbol-info syntax symbol-form)
              (global-boundp symbol-form))))
 
-(let ((keyword-drawing-options (make-drawing-options :face (make-face :ink +orchid+)))
-      (macro-drawing-options (make-drawing-options :face (make-face :ink +purple+)))
-      (bound-drawing-options (make-drawing-options :face (make-face :ink +darkgoldenrod+)))
-      (highlighted-parenthesis-options (make-drawing-options :face (make-face :style (make-text-style nil :bold nil)))))
-  (define-syntax-highlighting-rules emacs-style-highlighting
-    (error-lexeme (:face :ink +red+))
-    (string-form (:face :ink +rosy-brown+
-                        :style (make-text-style nil :italic nil)))
-    (comment (:face :ink +maroon+ :style (make-text-style :serif :bold :large)))
-    (literal-object-form (:options :function (object-drawer)))
-    (complete-token-form (:function #'(lambda (view form)
-                                        (cond ((symbol-form-is-keyword-p (syntax view) form)
-                                               keyword-drawing-options)
-                                              ((symbol-form-is-macrobound-p (syntax view) form)
-                                               macro-drawing-options)
-                                              ((symbol-form-is-boundp (syntax view) form)
-                                               bound-drawing-options)
-                                              (t +default-drawing-options+)))))
-    (parenthesis-lexeme (:function #'(lambda (view form)
-                                       (if (and (typep view 'point-mark-view)
-                                                (or (mark= (point view) (start-offset (parent form)))
-                                                    (mark= (point view) (end-offset (parent form))))
-                                                (form-complete-p (parent form)))
-                                           highlighted-parenthesis-options
-                                           +default-drawing-options+))))))
+(define-syntax-highlighting-rules emacs-style-highlighting
+  (error-lexeme (:face :ink +red+))
+  (string-form (:face :ink +rosy-brown+
+                      :style +italic-face-style+))
+  (comment (:face :ink +maroon+ :style (make-text-style :serif :bold :large)))
+  (literal-object-form (:options :function (object-drawer)))
+  (complete-token-form (:function #'(lambda (view form)
+                                      (cond ((symbol-form-is-keyword-p (syntax view) form)
+                                             *keyword-drawing-options*)
+                                            ((symbol-form-is-macrobound-p (syntax view) form)
+                                             *special-operator-drawing-options*)
+                                            ((symbol-form-is-boundp (syntax view) form)
+                                             *special-variable-drawing-options*)
+                                            (t +default-drawing-options+)))))
+  (parenthesis-lexeme (:function #'(lambda (view form)
+                                     (if (and (typep view 'point-mark-view)
+                                              (or (mark= (point view) (start-offset (parent form)))
+                                                  (mark= (point view) (end-offset (parent form))))
+                                              (form-complete-p (parent form)))
+                                         +bold-face-drawing-options+
+                                         +default-drawing-options+)))))
 
-(let ((macro-drawing-options (make-drawing-options :face (make-face :style (make-text-style nil :bold nil)))))
-  (define-syntax-highlighting-rules retro-highlighting
-    (error-symbol (:face :ink +red+))
-    (string-form (:face :style (make-text-style nil :italic nil)))
-    (comment (:face :style (make-text-style nil nil nil)
-                    :ink +dimgray+))
-    (literal-object-form (:options :function (object-drawer)))
-    (complete-token-form (:function #'(lambda (syntax form)
-                                        (cond ((symbol-form-is-macrobound-p syntax form)
-                                               macro-drawing-options)
-                                              (t +default-drawing-options+)))))))
+(define-syntax-highlighting-rules retro-highlighting
+  (error-symbol (:face :ink +red+))
+  (string-form (:face :style +italic-face-style+))
+  (comment (:face :ink +dimgray+))
+  (literal-object-form (:options :function (object-drawer)))
+  (complete-token-form (:function #'(lambda (syntax form)
+                                      (cond ((symbol-form-is-macrobound-p syntax form)
+                                             +bold-face-drawing-options+)
+                                            (t +default-drawing-options+))))))
 
 (defparameter *syntax-highlighting-rules* 'emacs-style-highlighting
   "The syntax highlighting rules used for highlighting Lisp
