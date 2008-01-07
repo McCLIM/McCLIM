@@ -431,29 +431,30 @@ symbols.
   draw the parser symbol.
 
   `:function', in which case `args' must be a single element, a
-  function that takes two arguments. These arguments are the
-  syntax and the parser symbol, and the return value of this
-  function is the `drawing-options' object that will be used to
-  draw the parser-symbol."
+  function that takes two arguments. These arguments are the view
+  of the syntax and the parser symbol, and the return value of
+  this function is the `drawing-options' object that will be used
+  to draw the parser-symbol."
   (check-type name symbol)
   `(progn
      (fmakunbound ',name)
-     (defgeneric ,name (syntax parser-symbol)
-       (:method (syntax (parser-symbol parser-symbol))
+     (defgeneric ,name (view parser-symbol)
+       (:method (view (parser-symbol parser-symbol))
          nil))
      ,@(flet ((make-rule-exp (type args)
                              (ecase type
-                               (:face `#'(lambda (syntax parser-symbol)
-                                           (declare (ignore syntax parser-symbol))
-                                           (make-drawing-options :face (make-face ,@args))))
-                               (:options `#'(lambda (syntax parser-symbol)
-                                              (declare (ignore syntax parser-symbol))
+                               (:face `(let ((options (make-drawing-options :face (make-face ,@args))))
+                                         #'(lambda (view parser-symbol)
+                                             (declare (ignore view parser-symbol))
+                                             options)))
+                               (:options `#'(lambda (view parser-symbol)
+                                              (declare (ignore view parser-symbol))
                                               (make-drawing-options ,@args)))
                                (:function (first args)))))
              (loop for (parser-symbol (type . args)) in rules
                 collect `(let ((rule ,(make-rule-exp type args)))
-                           (defmethod ,name (syntax (parser-symbol ,parser-symbol))
-                             (funcall rule syntax parser-symbol)))))))
+                           (defmethod ,name (view (parser-symbol ,parser-symbol))
+                             (funcall rule view parser-symbol)))))))
 
 (make-syntax-highlighting-rules default-syntax-highlighting)
 
@@ -465,11 +466,13 @@ highlighting.")
   (:method ((syntax lr-syntax-mixin))
     'default-syntax-highlighting))
 
-(defun get-drawing-options (highlighting-rules syntax parse-symbol)
+(defun get-drawing-options (highlighting-rules view parse-symbol)
   "Get the drawing options with which `parse-symbol' should be
-drawn. If `parse-symbol' or the stack-top of syntax, return NIL."
-  (when (and parse-symbol (not (eq (stack-top syntax) parse-symbol)))
-    (funcall highlighting-rules syntax parse-symbol)))
+drawn. If `parse-symbol' or the stack-top of syntax, return
+NIL. `View' must be a `drei-syntax-view' containing a syntax that
+`highlighting-rules' supports."
+  (when (and parse-symbol (not (eq (stack-top (syntax view)) parse-symbol)))
+    (funcall highlighting-rules view parse-symbol)))
 
 (defstruct (pump-state
              (:constructor make-pump-state
@@ -493,7 +496,7 @@ is the rules that are used for syntax highlighting."
                (if (null parser-symbol)
                    (cons (size (buffer view)) +default-drawing-options+)
                    (let ((drawing-options
-                          (get-drawing-options highlighting-rules syntax parser-symbol)))
+                          (get-drawing-options highlighting-rules view parser-symbol)))
                      (if (null drawing-options)
                          (initial-drawing-options (parent parser-symbol))
                          (cons (end-offset parser-symbol) drawing-options))))))
@@ -502,7 +505,7 @@ is the rules that are used for syntax highlighting."
                              (cons (1+ (size (buffer view))) +default-drawing-options+))
                        highlighting-rules))))
 
-(defun find-next-stroke-end (syntax pump-state)
+(defun find-next-stroke-end (view pump-state)
   "Assuming that `pump-state' contains the previous pump state,
 find out where the next stroke should end, and possibly push some
 drawing options onto `pump-state'."
@@ -511,7 +514,7 @@ drawing options onto `pump-state'."
                    (drawing-options pump-state-drawing-options)
                    (highlighting-rules pump-state-highlighting-rules))
       pump-state
-    (let ((line (line-containing-offset syntax offset)))
+    (let ((line (line-containing-offset (syntax view) offset)))
       (flet ((finish (offset symbol &optional stroke-drawing-options)
                (setf start-symbol symbol)
                (loop until (> (car (first drawing-options)) offset)
@@ -530,7 +533,7 @@ drawing options onto `pump-state'."
               (t
                (or (do-parse-symbols-forward (symbol offset start-symbol)
                      (let ((symbol-drawing-options
-                            (get-drawing-options highlighting-rules syntax symbol)))
+                            (get-drawing-options highlighting-rules view symbol)))
                        (cond ((> (start-offset symbol) (line-end-offset line))
                               (finish (line-end-offset line) start-symbol))
                              ((and (typep symbol 'literal-object-mixin))
@@ -564,7 +567,7 @@ drawing options onto `pump-state'."
                      (current-drawing-options pump-state-drawing-options))
         pump-state
       (let ((old-drawing-options (cdr (first current-drawing-options)))
-            (end-offset (find-next-stroke-end syntax pump-state)))
+            (end-offset (find-next-stroke-end view pump-state)))
         (setf (stroke-start-offset stroke) offset
               (stroke-end-offset stroke) end-offset
               (stroke-drawing-options stroke) old-drawing-options
