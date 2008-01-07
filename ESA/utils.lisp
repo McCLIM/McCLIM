@@ -233,6 +233,34 @@ vector."
          do (setf (elt array i) (funcall new-elem-fn)))))
   array)
 
+(define-method-combination values-max-min
+    (&optional (order ':most-specific-last))
+  ((around (:around))
+   (before (:before))
+   (after (:after))
+   (primary (values-max-min) :order order :required t))
+  (flet ((call-methods (methods)
+	   (mapcar (lambda (m) `(call-method ,m)) methods))
+	 (call-vmm-methods (methods)
+	   `(multiple-value-bind (max min)
+	        (call-method ,(first methods))
+              (progn
+                ,@(loop for m in (rest methods)
+                     collect `(multiple-value-bind (mmax mmin)
+                                  (call-method ,m)
+                                (setq max (max max mmax)
+                                      min (min min mmin)))))
+              (values max min))))
+    (let ((form (if (or around before after (rest primary))
+		    `(multiple-value-prog1 
+                         (progn ,@(call-methods before)
+                                ,(call-vmm-methods primary))
+                       (progn ,@(call-methods (reverse after))))
+		    `(call-method ,(first primary)))))
+      (if around
+	  `(call-method ,(first around) (,@(rest around) (make-method ,form)))
+	  form))))
+
 (defclass observable-mixin ()
   ((%observers :accessor observers
                :initform '()))

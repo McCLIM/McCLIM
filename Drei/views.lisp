@@ -659,12 +659,14 @@ buffer."))
   (call-next-method))
 
 (defmethod synchronize-view :around ((view drei-syntax-view) &key
-                                     force-p)
+                                     force-p (begin 0) (end (size (buffer view))))
   ;; If nothing changed, then don't call the other methods.
-  (unless (and (= (prefix-size view) (suffix-size view)
-                  (size (buffer view)) (buffer-size view))
-               (not force-p))
-    (call-next-method)))
+  (let ((high-offset (- (size (buffer view)) (suffix-size view))))
+    (when (or (and (>= begin (prefix-size view))
+                   (>= high-offset end))
+              (/= (size (buffer view)) (buffer-size view))
+              force-p)
+      (call-next-method))))
 
 (defmethod synchronize-view ((view drei-syntax-view)
                              &key (begin 0) (end (size (buffer view))))
@@ -674,12 +676,21 @@ the buffer that must be synchronised, defaulting to 0 and the
 size of the buffer respectively."
   (let ((prefix-size (prefix-size view))
         (suffix-size (suffix-size view)))
-    ;; Reset here so if `update-syntax' calls `update-parse' itself,
-    ;; we won't end with infinite recursion.
-    (setf (prefix-size view) (size (buffer view))
-          (suffix-size view) (size (buffer view))
+    ;; Set some minimum values here so if `update-syntax' calls
+    ;; `update-parse' itself, we won't end with infinite recursion.
+    (setf (prefix-size view) (if (> begin prefix-size)
+                                 prefix-size
+                                 end)
+          (suffix-size view) (if (>= end (- (size (buffer view)) suffix-size))
+                                 (- (size (buffer view)) (prefix-size view))
+                                 suffix-size)
           (buffer-size view) (size (buffer view)))
-    (update-syntax (syntax view) prefix-size suffix-size begin end)
+    (multiple-value-bind (parsed-start parsed-end)
+        (update-syntax (syntax view) prefix-size suffix-size begin end)
+      ;; Not set the proper new values for prefix-size and
+      ;; suffix-size.
+      (setf (prefix-size view) parsed-end
+            (suffix-size view) (- (size (buffer view)) parsed-start)))
     (call-next-method)))
 
 (defun make-syntax-for-view (view syntax-symbol &rest args)

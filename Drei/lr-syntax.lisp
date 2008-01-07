@@ -356,10 +356,9 @@ stack-top of `syntax'."
 ;;;
 ;;; update syntax
 
-(defmethod update-syntax ((syntax lr-syntax-mixin) prefix-size suffix-size
-                          &optional begin end)
+(defmethod update-syntax values-max-min ((syntax lr-syntax-mixin) prefix-size suffix-size
+                                         &optional begin end)
   (declare (ignore begin end))
-  (call-next-method)
   (let* ((low-mark-offset prefix-size)
 	 (high-mark-offset (- (size (buffer syntax)) suffix-size)))
     (when (<= low-mark-offset high-mark-offset)
@@ -378,7 +377,8 @@ stack-top of `syntax'."
                                   (new-state syntax
                                              (parser-state stack-top)
                                              stack-top)))
-          (loop do (parse-patch syntax)))))))
+          (loop do (parse-patch syntax))))))
+  (values 0 (size (buffer syntax))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

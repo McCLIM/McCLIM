@@ -44,6 +44,7 @@
            #:subtype-compatible-p
            #:capitalize
            #:ensure-array-size
+           #:values-max-min
            #:observable-mixin
            #:add-observer #:remove-observer
            #:observer-notified #:notify-observers

@@ -90,24 +90,8 @@ start at `chunk-start-offset' and extend no further than
            (cons (- (1+ chunk-end-offset)
                     line-start-offset) t)))))
 
-(defmethod initialize-instance :after ((line line-object)
-                                       &rest initargs)
-  (declare (ignore initargs))
-  (loop with buffer = (buffer (start-mark line))
-     with line-start-offset = (offset (start-mark line))
-     with line-end-offset = (+ line-start-offset (line-length line))
-     with chunk-start-offset = line-start-offset
-     for chunk-info = (get-chunk buffer
-                                 line-start-offset
-                                 chunk-start-offset line-end-offset)
-     do (vector-push-extend chunk-info (chunks line))
-     (setf chunk-start-offset (+ (car chunk-info)
-                                 line-start-offset))
-     when (= chunk-start-offset line-end-offset)
-     do (loop-finish)))
-
-(defmethod update-syntax ((syntax fundamental-syntax) prefix-size suffix-size
-                          &optional begin end)
+(defmethod update-syntax values-max-min ((syntax fundamental-syntax) prefix-size suffix-size
+                                         &optional begin end)
   (declare (ignore begin end))
   (let ((low-mark (make-buffer-mark (buffer syntax) prefix-size :left))
         (high-mark (make-buffer-mark
@@ -144,7 +128,25 @@ start at `chunk-start-offset' and extend no further than
                          (if (end-of-buffer-p scan)
                              (loop-finish)
                              ;; skip newline
-                             (forward-object scan))))))))))
+                             (forward-object scan))))))))
+    ;; Fundamental syntax always parses the entire buffer.
+    (values 0 (size (buffer syntax)))))
+
+(defmethod initialize-instance :after ((line line-object)
+                                       &rest initargs)
+  (declare (ignore initargs))
+  (loop with buffer = (buffer (start-mark line))
+     with line-start-offset = (offset (start-mark line))
+     with line-end-offset = (+ line-start-offset (line-length line))
+     with chunk-start-offset = line-start-offset
+     for chunk-info = (get-chunk buffer
+                                 line-start-offset
+                                 chunk-start-offset line-end-offset)
+     do (vector-push-extend chunk-info (chunks line))
+     (setf chunk-start-offset (+ (car chunk-info)
+                                 line-start-offset))
+     when (= chunk-start-offset line-end-offset)
+     do (loop-finish)))
 		
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

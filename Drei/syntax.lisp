@@ -78,7 +78,15 @@ and `end' are offsets specifying the minimum region of the buffer
 that must have an up-to-date parse, defaulting to 0 and the size
 of the buffer respectively. It is perfectly valid for a syntax to
 ignore these hints and just make sure the entire syntax tree is
-up to date."))
+up to date, but it *must* make sure at at least the region
+delimited by `begin' and `end' has an up to date parse. Returns
+two values, offsets into the buffer of the syntax, denoting the
+buffer region thas has an up to date parse.")
+  (:method-combination values-max-min)
+  (:method values-max-min ((syntax syntax) (unchanged-prefix integer)
+                           (unchanged-suffix integer) &optional (begin 0)
+                           (end (- (size (buffer syntax)) unchanged-suffix)))
+    (values begin end)))
 
 (defgeneric eval-defun (mark syntax))
 

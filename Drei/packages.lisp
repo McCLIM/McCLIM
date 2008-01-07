@@ -484,7 +484,7 @@ syntax-specific, core functionality of Drei."))
 
 (defpackage :drei-fundamental-syntax
   (:use :clim-lisp :clim :drei-buffer :drei-base 
-        :drei-syntax :flexichain :drei :drei-core)
+        :drei-syntax :flexichain :drei :drei-core :esa-utils)
   (:export #:fundamental-syntax #:scan
            #:start-mark #:line-length #:line-end-offset
            #:line-containing-offset #:offset-in-line-p)
