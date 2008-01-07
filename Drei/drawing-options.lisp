@@ -57,7 +57,9 @@ unspecified family and size.")
 
 ;;; Some drawing options for specific syntactical elements,
 ;;; approximately like GNU Emacs. These are not constants, as users
-;;; may want to change them to fit their colour scheme.
+;;; may want to change them to fit their colour scheme. Of course,
+;;; syntax highlighting rules are free to ignore these, but I think
+;;; the default rules should at least use these.
 
 (defvar *keyword-drawing-options* (make-drawing-options :face (make-face :ink +orchid+))
   "The drawing options used for drawing the syntactical
@@ -75,3 +77,17 @@ probably be used for language keywords.")
 somehow special. In Lisp, this is used for globally bound
 non-constant variables with dynamic scope. In other language, it
 should probably be used for global variables or similar.")
+
+(defvar *string-drawing-options* (make-drawing-options
+                                  :face (make-face :ink +rosy-brown+
+                                                   :style +italic-face-style+))
+  "The drawing options used for syntax-highlighting strings.")
+
+(defvar *comment-drawing-options* (make-drawing-options
+                                   :face (make-face :ink +maroon+
+                                                    :style (make-text-style nil :bold nil)))
+  "The drawing options used for drawing comments in source
+code.")
+
+(defvar *error-drawing-options* (make-drawing-options :face (make-face :ink +red+))
+  "The drawing options used for drawing syntax errors.")

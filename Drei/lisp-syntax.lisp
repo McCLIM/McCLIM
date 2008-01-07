@@ -1832,10 +1832,9 @@ macro or special form."
              (global-boundp symbol-form))))
 
 (define-syntax-highlighting-rules emacs-style-highlighting
-  (error-lexeme (:face :ink +red+))
-  (string-form (:face :ink +rosy-brown+
-                      :style +italic-face-style+))
-  (comment (:face :ink +maroon+ :style (make-text-style :serif :bold :large)))
+  (error-lexeme (*error-drawing-options*))
+  (string-form (*string-drawing-options*))
+  (comment (*comment-drawing-options*))
   (literal-object-form (:options :function (object-drawer)))
   (complete-token-form (:function #'(lambda (view form)
                                       (cond ((symbol-form-is-keyword-p (syntax view) form)
@@ -1854,14 +1853,22 @@ macro or special form."
                                          +default-drawing-options+)))))
 
 (define-syntax-highlighting-rules retro-highlighting
-  (error-symbol (:face :ink +red+))
+  (error-symbol (*error-drawing-options*))
   (string-form (:face :style +italic-face-style+))
   (comment (:face :ink +dimgray+))
   (literal-object-form (:options :function (object-drawer)))
   (complete-token-form (:function #'(lambda (syntax form)
                                       (cond ((symbol-form-is-macrobound-p syntax form)
                                              +bold-face-drawing-options+)
-                                            (t +default-drawing-options+))))))
+                                            (t +default-drawing-options+)))))
+  ;; XXX: Ugh, copied from above.
+  (parenthesis-lexeme (:function #'(lambda (view form)
+                                     (if (and (typep view 'point-mark-view)
+                                              (or (mark= (point view) (start-offset (parent form)))
+                                                  (mark= (point view) (end-offset (parent form))))
+                                              (form-complete-p (parent form)))
+                                         +bold-face-drawing-options+
+                                         +default-drawing-options+)))))
 
 (defparameter *syntax-highlighting-rules* 'emacs-style-highlighting
   "The syntax highlighting rules used for highlighting Lisp

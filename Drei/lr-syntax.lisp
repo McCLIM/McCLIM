@@ -420,7 +420,7 @@ rules of the form `(parser-symbol (type args...))', where
 `parser-symbol' is a type that might be encountered in a parse
 tree for the syntax. The rule specifies how to highlight that
 kind of object (and all its children). `Type' can be one of three
-symbols.
+special symbols.
 
   `:face', in which case `args' will be used as arguments to a
   call to `make-face'. The resulting face will be used to draw
@@ -434,7 +434,11 @@ symbols.
   function that takes two arguments. These arguments are the view
   of the syntax and the parser symbol, and the return value of
   this function is the `drawing-options' object that will be used
-  to draw the parser-symbol."
+  to draw the parser-symbol.
+
+Alternatively, `type' can be any object (usually a dynamically
+bound symbol), in which case it will be evaluated to get the
+drawing options."
   (check-type name symbol)
   `(progn
      (fmakunbound ',name)
@@ -442,7 +446,7 @@ symbols.
        (:method (view (parser-symbol parser-symbol))
          nil))
      ,@(flet ((make-rule-exp (type args)
-                             (ecase type
+                             (case type
                                (:face `(let ((options (make-drawing-options :face (make-face ,@args))))
                                          #'(lambda (view parser-symbol)
                                              (declare (ignore view parser-symbol))
@@ -450,7 +454,10 @@ symbols.
                                (:options `#'(lambda (view parser-symbol)
                                               (declare (ignore view parser-symbol))
                                               (make-drawing-options ,@args)))
-                               (:function (first args)))))
+                               (:function (first args))
+                               (t `#'(lambda (view parser-symbol)
+                                       (declare (ignore view parser-symbol))
+                                       ,type)))))
              (loop for (parser-symbol (type . args)) in rules
                 collect `(let ((rule ,(make-rule-exp type args)))
                            (defmethod ,name (view (parser-symbol ,parser-symbol))

@@ -270,6 +270,9 @@ characters."))
            #:*keyword-drawing-options*
            #:*special-operator-drawing-options*
            #:*special-variable-drawing-options*
+           #:*string-drawing-options*
+           #:*comment-drawing-options*
+           #:*error-drawing-options*
 
            ;; DREI program interface stuff.
            #:with-drei-options
