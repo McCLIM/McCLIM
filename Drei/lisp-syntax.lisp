@@ -1209,31 +1209,32 @@ list. If no such package is specified, return \"CLIM-USER\"."
 (defun need-to-update-package-list-p (prefix-size suffix-size syntax)
   (let ((low-mark-offset prefix-size)
         (high-mark-offset (- (size (buffer syntax)) suffix-size)))
+    (update-parse syntax)
     (flet ((test (x)
              (let ((start-offset (start-offset x))
                    (end-offset (end-offset x)))
-              (when (and (or (<= start-offset
-                                 low-mark-offset
-                                 end-offset
-                                 high-mark-offset)
-                             (<= low-mark-offset
-                                 start-offset
-                                 high-mark-offset
-                                 end-offset)
-                             (<= low-mark-offset
-                                 start-offset
-                                 end-offset
-                                 high-mark-offset)
-                             (<= start-offset
-                                 low-mark-offset
-                                 high-mark-offset
-                                 end-offset))
-                         (typep x 'complete-list-form))
-                (let ((candidate (first-form (children x))))
-                  (and (form-token-p candidate)
-                       (eq (form-to-object syntax candidate
-                                            :no-error t)
-                           'cl:in-package)))))))
+               (when (and (or (<= start-offset
+                                  low-mark-offset
+                                  end-offset
+                                  high-mark-offset)
+                              (<= low-mark-offset
+                                  start-offset
+                                  high-mark-offset
+                                  end-offset)
+                              (<= low-mark-offset
+                                  start-offset
+                                  end-offset
+                                  high-mark-offset)
+                              (<= start-offset
+                                  low-mark-offset
+                                  high-mark-offset
+                                  end-offset))
+                          (typep x 'complete-list-form))
+                 (let ((candidate (first-form (children x))))
+                   (and (form-token-p candidate)
+                        (eq (form-to-object syntax candidate
+                             :no-error t)
+                            'cl:in-package)))))))
       (with-slots (stack-top) syntax
         (or (not (slot-boundp syntax '%package-list))
             (loop
@@ -1272,9 +1273,8 @@ list. If no such package is specified, return \"CLIM-USER\"."
   (setf (form-before-cache syntax) (make-hash-table :test #'equal)
         (form-after-cache syntax) (make-hash-table :test #'equal)
         (form-around-cache syntax) (make-hash-table :test #'equal))
-  #+nil(when (need-to-update-package-list-p prefix-size suffix-size syntax)
-         (update-package-list syntax))
-  (setf (package-list syntax) nil))
+  (when (need-to-update-package-list-p prefix-size suffix-size syntax)
+    (update-package-list syntax)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
