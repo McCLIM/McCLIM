@@ -1272,8 +1272,9 @@ list. If no such package is specified, return \"CLIM-USER\"."
   (setf (form-before-cache syntax) (make-hash-table :test #'equal)
         (form-after-cache syntax) (make-hash-table :test #'equal)
         (form-around-cache syntax) (make-hash-table :test #'equal))
-  (when (need-to-update-package-list-p prefix-size suffix-size syntax)
-    (update-package-list syntax)))
+  #+nil(when (need-to-update-package-list-p prefix-size suffix-size syntax)
+         (update-package-list syntax))
+  (setf (package-list syntax) nil))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

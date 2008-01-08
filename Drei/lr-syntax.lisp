@@ -267,30 +267,31 @@ literal (non-character) objects in the buffer."))
   (print-unreadable-object (mark stream :type t :identity t)
     (format stream "~s" (offset mark))))
 
-(defun parse-patch (syntax)
+(defun parse-patch (syntax begin end)
+  (declare (ignore begin))
   (with-slots (current-state stack-top scan potentially-valid-trees) syntax
-     (parser-step syntax)
-     (finish-output *trace-output*)
-     (cond ((parse-tree-equal stack-top potentially-valid-trees)
-	    (unless (or (null (parent potentially-valid-trees))
-			(eq potentially-valid-trees
-			    (car (last (children (parent potentially-valid-trees))))))
-	      (loop for tree = (cadr (member potentially-valid-trees
-					     (children (parent potentially-valid-trees))
-					     :test #'eq))
-		      then (car (children tree))
-		    until (null tree)
-		    do (setf (slot-value tree 'preceding-parse-tree)
-			     stack-top))
-	      (setf stack-top (prev-tree (parent potentially-valid-trees))))
-	    (setf potentially-valid-trees (parent potentially-valid-trees))
-	    (setf current-state (new-state syntax (parser-state stack-top) stack-top))
-	    (setf (offset scan) (end-offset stack-top)))
-	   (t (loop until (or (null potentially-valid-trees)
-			      (>= (start-offset potentially-valid-trees)
-				  (end-offset stack-top)))
-		    do (setf potentially-valid-trees
-			     (next-tree potentially-valid-trees)))))))
+    (parser-step syntax)
+    (finish-output *trace-output*)
+    (cond ((parse-tree-equal stack-top potentially-valid-trees)
+           (unless (or (null (parent potentially-valid-trees))
+                       (eq potentially-valid-trees
+                           (car (last (children (parent potentially-valid-trees))))))
+             (loop for tree = (cadr (member potentially-valid-trees
+                                            (children (parent potentially-valid-trees))
+                                            :test #'eq))
+                then (car (children tree))
+                until (null tree)
+                do (setf (slot-value tree 'preceding-parse-tree)
+                         stack-top))
+             (setf stack-top (prev-tree (parent potentially-valid-trees))))
+           (setf potentially-valid-trees (parent potentially-valid-trees))
+           (setf current-state (new-state syntax (parser-state stack-top) stack-top))
+           (setf (offset scan) (end-offset stack-top)))
+          (t (loop until (or (null potentially-valid-trees)
+                             (>= (start-offset potentially-valid-trees)
+                                 (end-offset stack-top)))
+                do (setf potentially-valid-trees
+                         (next-tree potentially-valid-trees)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -357,8 +358,7 @@ stack-top of `syntax'."
 ;;; update syntax
 
 (defmethod update-syntax values-max-min ((syntax lr-syntax-mixin) prefix-size suffix-size
-                                         &optional begin end)
-  (declare (ignore begin end))
+                                         &optional (begin 0) (end (size (buffer syntax))))
   (let* ((low-mark-offset prefix-size)
 	 (high-mark-offset (- (size (buffer syntax)) suffix-size)))
     (when (<= low-mark-offset high-mark-offset)
@@ -377,8 +377,8 @@ stack-top of `syntax'."
                                   (new-state syntax
                                              (parser-state stack-top)
                                              stack-top)))
-          (loop do (parse-patch syntax))))))
-  (values 0 (size (buffer syntax))))
+          (loop do (parse-patch syntax begin end)))))
+    (values 0 end)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -496,7 +496,7 @@ is the rules that are used for syntax highlighting."
 
 (defmethod pump-state-for-offset-with-syntax ((view textual-drei-syntax-view)
                                               (syntax lr-syntax-mixin) (offset integer))
-  (update-parse syntax 0 offset)
+  (update-parse syntax 0 (size (buffer view)))
   (let ((parser-symbol (parser-symbol-containing-offset syntax offset))
         (highlighting-rules (syntax-highlighting-rules syntax)))
     (labels ((initial-drawing-options (parser-symbol)
