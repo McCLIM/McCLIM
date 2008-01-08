@@ -616,24 +616,15 @@ buffer."))
           view-syntax (make-syntax-for-view view (class-of view-syntax))
           prefix-size 0
           suffix-size 0
-          buffer-size (size buffer)
+          buffer-size -1 ; For reparse even if buffer is empty.
           ;; Also set the top and bot marks.
           top (make-buffer-mark buffer 0 :left)
-          bot (make-buffer-mark buffer (size buffer) :right))
-    ;; We resynchronize here, instead of delaying a potentially large
-    ;; reparse until the next time some hapless command (or redisplay
-    ;; function) needs a parse tree. Force the resynchronisation so
-    ;; that even if the buffer is empty, `update-syntax' will still be
-    ;; called.
-    (synchronize-view view :force-p t)))
+          bot (make-buffer-mark buffer (size buffer) :right))))
 
 (defmethod (setf syntax) :after (syntax (view drei-syntax-view))
-  ;; We need to reparse the buffer completely. Might as well do it
-  ;; now.
   (setf (prefix-size view) 0
         (suffix-size view) 0
-        (buffer-size view) (size (buffer view)))
-  (synchronize-view view :force-p t))
+        (buffer-size view) -1))
 
 (defmethod mode-enabled-p or ((modual drei-syntax-view) mode-name)
   (mode-enabled-p (syntax modual) mode-name))
@@ -660,10 +651,14 @@ buffer."))
 
 (defmethod synchronize-view :around ((view drei-syntax-view) &key
                                      force-p (begin 0) (end (size (buffer view))))
+  (assert (>= end begin))
   ;; If nothing changed, then don't call the other methods.
   (let ((high-offset (- (size (buffer view)) (suffix-size view))))
-    (when (or (and (>= begin (prefix-size view))
-                   (>= high-offset end))
+    (when (or (and (> begin (prefix-size view))
+                   (> high-offset begin))
+              (and (> end (prefix-size view))
+                   (or (> end high-offset)
+                       (>= (prefix-size view) begin)))
               (/= (size (buffer view)) (buffer-size view))
               force-p)
       (call-next-method))))
@@ -687,10 +682,17 @@ size of the buffer respectively."
           (buffer-size view) (size (buffer view)))
     (multiple-value-bind (parsed-start parsed-end)
         (update-syntax (syntax view) prefix-size suffix-size begin end)
-      ;; Not set the proper new values for prefix-size and
+      (assert (>= parsed-end parsed-start))
+      ;; Now set the proper new values for prefix-size and
       ;; suffix-size.
-      (setf (prefix-size view) parsed-end
-            (suffix-size view) (- (size (buffer view)) parsed-start)))
+      (setf (prefix-size view) (max (if (>= prefix-size parsed-start)
+                                        parsed-end
+                                        prefix-size)
+                                    prefix-size)
+            (suffix-size view) (max (if (>= parsed-end (- (size (buffer view)) suffix-size))
+                                        (- (size (buffer view)) parsed-start)
+                                        suffix-size)
+                                    suffix-size)))
     (call-next-method)))
 
 (defun make-syntax-for-view (view syntax-symbol &rest args)
