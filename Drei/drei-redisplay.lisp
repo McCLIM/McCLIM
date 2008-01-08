@@ -191,7 +191,7 @@ strokes. `Stroke-count' tells how many of the stroke objects in
 `stroke' are actually live, and how many are old, stale objects
 to prevent the need for consing if new strokes are added to the
 line."
-  (start-offset)
+  (start-offset 0)
   (end-offset)
   (dimensions (make-dimensions))
   (strokes (make-array 0 :adjustable t))
@@ -214,21 +214,6 @@ call to `stroke-pump'.  A pump state is not guaranteed to be
 valid past the next call to `stroke-pump' or
 `synchronize-view'. It is permissible for `pump-state' to be
 destructively modified by this function.")
-  (:method :around ((view drei-buffer-view) stroke pump-state)
-    ;; `call-next-method' for the next pump state, and compare
-    ;; the new stroke data with the old one. If it has changed,
-    ;; mark the stroke as dirty and modified.
-    (let ((old-start-offset (stroke-start-offset stroke))
-          (old-end-offset (stroke-end-offset stroke))
-          (old-drawing-options (stroke-drawing-options stroke))
-          (new-pump-state (call-next-method)))
-      (unless (and old-start-offset
-                   (= old-start-offset (stroke-start-offset stroke))
-                   (= old-end-offset (stroke-end-offset stroke))
-                   (drawing-options-equal old-drawing-options
-                                          (stroke-drawing-options stroke)))
-        (invalidate-stroke stroke :modified t))
-      new-pump-state))
   (:method ((view drei-syntax-view) stroke pump-state)
     (stroke-pump-with-syntax view (syntax view) stroke pump-state)))
 
@@ -372,12 +357,23 @@ a single stroke on display, as long as it has been redislayed at
 some point)."
   (aref (line-strokes line) (1- (line-stroke-count line))))
 
-(defun put-stroke (view line pump-state)
+(defun put-stroke (view line pump-state line-change)
   "Use `stroke-pump' with `pump-state' to get a new stroke for
 `view', and add it to the sequence of displayed strokes in
-`line'."
-  (let* ((stroke (line-stroke-information line (line-stroke-count line))))
+`line'. `Line-change' should be a relative offset specifying how
+much the start-offset of `line' has changed since the last time
+it was redisplayed."
+  (let* ((stroke (line-stroke-information line (line-stroke-count line)))
+         (old-start-offset (stroke-start-offset stroke))
+         (old-end-offset (stroke-end-offset stroke))
+         (old-drawing-options (stroke-drawing-options stroke)))
     (prog1 (stroke-pump view stroke pump-state)
+      (unless (and old-end-offset
+                   (= (+ old-start-offset line-change) (stroke-start-offset stroke))
+                   (= (+ old-end-offset line-change) (stroke-end-offset stroke))
+                   (drawing-options-equal old-drawing-options
+                                          (stroke-drawing-options stroke)))
+        (invalidate-stroke stroke :modified t))
       (incf (line-stroke-count line))
       (setf (line-end-offset line) (stroke-end-offset stroke)))))
 
@@ -517,14 +513,15 @@ at (`cursor-x', `cursor-y')"
   (let* ((line (line-information view (displayed-lines-count view)))
          (old-line-height (dimensions-height (line-dimensions line)))
          (old-line-width (dimensions-width (line-dimensions line)))
-         (orig-x-offset cursor-x))
+         (orig-x-offset cursor-x)
+         (offset-change (- start-offset (line-start-offset line))))
     (setf (line-start-offset line) start-offset
           (line-stroke-count line) 0)
     (loop for index from 0
        for stroke = (line-stroke-information line index)
        for stroke-dimensions = (stroke-dimensions stroke)
-       for pump-state = (put-stroke view line initial-pump-state) then
-       (put-stroke view line pump-state)
+       for pump-state = (put-stroke view line initial-pump-state offset-change) then
+       (put-stroke view line pump-state offset-change)
        do (draw-stroke stream view stroke cursor-x cursor-y)
        (setf cursor-x (x2 stroke-dimensions))
        maximizing (dimensions-height stroke-dimensions) into line-height
