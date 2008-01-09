@@ -992,6 +992,11 @@ position for the character."
 
 ;;;;
 
+(defmethod draw-design (medium (pattern pattern) &key clipping-region transformation
+                        &allow-other-keys)
+  (draw-pattern* medium pattern 0 0
+   :clipping-region clipping-region :transformation transformation))
+
 (defun draw-pattern* (medium pattern x y &key clipping-region transformation)
   ;; Note: I believe the sample implementation in the spec is incorrect.
   ;; --GB
