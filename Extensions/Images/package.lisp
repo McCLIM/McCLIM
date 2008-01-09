@@ -24,4 +24,5 @@
   (:use :clim-lisp :clim)
   (:export :export #:image-format-supported
            #:load-image #:load-image-of-format
-           #:unsupported-image-format #:image-format))
+           #:unsupported-image-format #:image-format
+           #:image-viewer #:image-viewer-pane))
