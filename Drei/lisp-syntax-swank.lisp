@@ -33,8 +33,8 @@
   ;; Oh my! This is so we "gracefully" handle older Swanks that do not
   ;; have `swank-require'. We just hope they have the symbols we need
   ;; anyway.
-  (ignore-errors (swank:swank-require :swank-c-p-c)
-                 (swank:swank-require :swank-arglists)))
+  (ignore-errors (swank::swank-require :swank-c-p-c)
+                 (swank::swank-require :swank-arglists)))
 
 ;; If this file is loaded, make local Swank the default way of
 ;; interacting with the image.
