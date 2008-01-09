@@ -26,8 +26,9 @@
          (pattern-array (make-array (list (skippy:height first-image)
                                           (skippy:width first-image))))
          (designs (coerce (loop with color-table = (skippy:color-table data-stream)
+                               with transparency-index = (skippy:transparency-index first-image)
                              for i below (skippy:color-table-size color-table)
-                             when (= i (skippy:transparency-index first-image))
+                             when (and transparency-index (= i transparency-index))
                              collect +transparent-ink+
                              else collect
                              (multiple-value-bind (r g b) 
