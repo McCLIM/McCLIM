@@ -267,8 +267,7 @@ literal (non-character) objects in the buffer."))
   (print-unreadable-object (mark stream :type t :identity t)
     (format stream "~s" (offset mark))))
 
-(defun parse-patch (syntax begin end)
-  (declare (ignore begin))
+(defun parse-patch (syntax)
   (with-slots (current-state stack-top scan potentially-valid-trees) syntax
     (parser-step syntax)
     (finish-output *trace-output*)
@@ -359,12 +358,13 @@ stack-top of `syntax'."
 
 (defmethod update-syntax values-max-min ((syntax lr-syntax-mixin) prefix-size suffix-size
                                          &optional (begin 0) (end (size (buffer syntax))))
+  (declare (ignore begin end))
   (let* ((low-mark-offset prefix-size)
 	 (high-mark-offset (- (size (buffer syntax)) suffix-size)))
     (when (<= low-mark-offset high-mark-offset)
       (catch 'done
-	(with-slots (current-state stack-top scan potentially-valid-trees
-				   initial-state) syntax
+        (with-slots (current-state stack-top scan potentially-valid-trees
+                                   initial-state) syntax
           (setf potentially-valid-trees
                 (if (null stack-top)
                     nil
@@ -373,12 +373,12 @@ stack-top of `syntax'."
           (setf stack-top (find-last-valid-lexeme stack-top low-mark-offset))
           (setf (offset scan) (if (null stack-top) 0 (end-offset stack-top))
                 current-state (if (null stack-top)
-				  initial-state
+                                  initial-state
                                   (new-state syntax
                                              (parser-state stack-top)
                                              stack-top)))
-          (loop do (parse-patch syntax begin end)))))
-    (values 0 end)))
+          (loop do (parse-patch syntax)))))
+    (values 0 (offset (scan syntax)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

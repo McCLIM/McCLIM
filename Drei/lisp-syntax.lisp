@@ -1209,7 +1209,6 @@ list. If no such package is specified, return \"CLIM-USER\"."
 (defun need-to-update-package-list-p (prefix-size suffix-size syntax)
   (let ((low-mark-offset prefix-size)
         (high-mark-offset (- (size (buffer syntax)) suffix-size)))
-    (update-parse syntax)
     (flet ((test (x)
              (let ((start-offset (start-offset x))
                    (end-offset (end-offset x)))
@@ -1249,17 +1248,18 @@ list. If no such package is specified, return \"CLIM-USER\"."
 
 (defun update-package-list (syntax)
   (setf (package-list syntax) nil)
+  (update-parse syntax)
   (flet ((test (x)
            (when (form-list-p x)
              (let ((candidate (first-form (children x))))
                (and (form-token-p candidate)
                     (eq (form-to-object syntax candidate
-                                         :no-error t)
+                         :no-error t)
                         'cl:in-package)))))
          (extract (x)
            (let ((designator (second-form (children x))))
              (form-to-object syntax designator
-                              :no-error t))))
+              :no-error t))))
     (with-slots (stack-top) syntax
       (loop for child in (children stack-top)
          when (test child)
