@@ -234,7 +234,7 @@ vector."
   array)
 
 (define-method-combination values-max-min
-    (&optional (order ':most-specific-last))
+    (&optional (order ':most-specific-first))
   ((around (:around))
    (before (:before))
    (after (:after))
