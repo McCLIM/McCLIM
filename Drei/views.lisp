@@ -574,7 +574,7 @@ at the beginning of the buffer.")
                  :documentation  "The number of unchanged objects
 at the end of the buffer.")
    (%recorded-buffer-size :accessor buffer-size
-                          :initform 0
+                          :initform -1
                           :documentation "The size of the buffer
 the last time the view was synchronized."))
   (:documentation "A buffer-view that maintains a parse tree of
