@@ -588,7 +588,7 @@ at that position if none is there, and the operands in the form."
          (operands (when (and form (form-list-p form))
                      (mapcar #'(lambda (operand)
                                  (when operand
-                                   (form-to-object syntax operand)))
+                                   (form-to-object syntax operand :no-error t)))
                              (form-operands syntax form))))
          (current-operand-indices (when form
                                     (find-operand-info syntax offset form))))

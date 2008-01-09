@@ -515,7 +515,7 @@ editing plain text."))
 	   #:parser-symbol #:parent #:children
 	   #:start-offset #:end-offset #:parser-state
 	   #:preceding-parse-tree
-           #:literal-object-mixin
+           #:literal-object-mixin #:literal-object-p
 	   #:define-parser-state
 	   #:lexeme #:nonterminal
 	   #:action #:new-state #:done

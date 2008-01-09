@@ -99,6 +99,11 @@
   (:documentation "Mixin for parser symbols representing
 literal (non-character) objects in the buffer."))
 
+(defun literal-object-p (parser-symbol)
+  "Return true if `parser-symbol' is of type
+`literal-object-mixin'."
+  (typep parser-symbol 'literal-object-mixin))
+
 (defmethod start-offset ((state parser-symbol))
   (let ((mark (start-mark state)))
     (when mark
@@ -378,7 +383,7 @@ stack-top of `syntax'."
                                              (parser-state stack-top)
                                              stack-top)))
           (loop do (parse-patch syntax)))))
-    (values 0 (offset (scan syntax)))))
+    (values 0 (size (buffer syntax)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

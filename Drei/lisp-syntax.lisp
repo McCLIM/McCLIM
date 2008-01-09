@@ -2571,9 +2571,11 @@ should be assumed as the result of the form-conversion."))
 (defun invoke-reader (syntax form)
   "Use the system reader to handle `form' and signal a
 `reader-invoked' condition with the resulting data."
-  (let* ((start-mark (make-buffer-mark (buffer syntax) (start-offset form))))
+  (let* ((start-mark (make-buffer-mark (buffer syntax) (start-offset form)))
+         (end-mark (make-buffer-mark (buffer syntax) (end-offset form))))
     (let* ((stream (make-buffer-stream :buffer (buffer syntax)
-                                       :start-mark start-mark))
+                                       :start-mark start-mark
+                                       :end-mark end-mark))
            (object (read-preserving-whitespace stream)))
       (signal 'reader-invoked :end-mark (point stream) :object object))))
 
@@ -2920,7 +2922,10 @@ will be signalled for incomplete forms.")
 
 (defmethod form-to-object ((syntax lisp-syntax) (form complete-string-form)
                            &key &allow-other-keys)
-  (invoke-reader syntax form))
+  (if (notany #'literal-object-p (children form))
+      (invoke-reader syntax form)
+      (form-conversion-error
+       syntax form "String form contains non-character element")))
 
 (defmethod form-to-object ((syntax lisp-syntax) (form function-form) &rest args)
   (list 'cl:function (apply #'form-to-object syntax (second (children form)) args)))
