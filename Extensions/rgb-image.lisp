@@ -56,6 +56,9 @@
 
 (defgeneric medium-free-image-design (medium design))
 
+(defmethod medium-free-image-design ((sheet sheet-with-medium-mixin) design)
+  (medium-free-image-design (sheet-medium sheet) design))
+
 (defun free-image-design (design)
   (medium-free-image-design (slot-value design 'medium) design))
 
@@ -129,8 +132,6 @@
 
 (defmethod draw-design
     (medium (design rgb-image-design) &rest options
-     &key x y &allow-other-keys)
-  (unless (and x y)
-    (setf (values x y) (stream-cursor-position medium)))
+     &key (x 0) (y 0) &allow-other-keys)
   (with-medium-options (medium options)
     (medium-draw-image-design* medium design x y)))
