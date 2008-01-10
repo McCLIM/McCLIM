@@ -53,6 +53,7 @@ self-compilation test, of course).")
                       (get-object (&rest args)
                         (apply #'form-to-object (current-syntax)
                                (get-form) args)))
+               (update-parse (current-syntax))
                ,@body)))))))
 
 (defmacro swine-test (name &body body)
