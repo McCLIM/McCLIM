@@ -1212,28 +1212,28 @@ list. If no such package is specified, return \"CLIM-USER\"."
     (flet ((test (x)
              (let ((start-offset (start-offset x))
                    (end-offset (end-offset x)))
-               (when (and (or (<= start-offset
-                                  low-mark-offset
-                                  end-offset
-                                  high-mark-offset)
-                              (<= low-mark-offset
-                                  start-offset
-                                  high-mark-offset
-                                  end-offset)
-                              (<= low-mark-offset
-                                  start-offset
-                                  end-offset
-                                  high-mark-offset)
-                              (<= start-offset
-                                  low-mark-offset
-                                  high-mark-offset
-                                  end-offset))
-                          (typep x 'complete-list-form))
-                 (let ((candidate (first-form (children x))))
-                   (and (form-token-p candidate)
-                        (eq (form-to-object syntax candidate
-                             :no-error t)
-                            'cl:in-package)))))))
+              (when (and (or (<= start-offset
+                                 low-mark-offset
+                                 end-offset
+                                 high-mark-offset)
+                             (<= low-mark-offset
+                                 start-offset
+                                 high-mark-offset
+                                 end-offset)
+                             (<= low-mark-offset
+                                 start-offset
+                                 end-offset
+                                 high-mark-offset)
+                             (<= start-offset
+                                 low-mark-offset
+                                 high-mark-offset
+                                 end-offset))
+                         (typep x 'complete-list-form))
+                (let ((candidate (first-form (children x))))
+                  (and (form-token-p candidate)
+                       (eq (form-to-object syntax candidate
+                                            :no-error t)
+                           'cl:in-package)))))))
       (with-slots (stack-top) syntax
         (or (not (slot-boundp syntax '%package-list))
             (loop
@@ -1248,18 +1248,17 @@ list. If no such package is specified, return \"CLIM-USER\"."
 
 (defun update-package-list (syntax)
   (setf (package-list syntax) nil)
-  (update-parse syntax)
   (flet ((test (x)
            (when (form-list-p x)
              (let ((candidate (first-form (children x))))
                (and (form-token-p candidate)
                     (eq (form-to-object syntax candidate
-                         :no-error t)
+                                         :no-error t)
                         'cl:in-package)))))
          (extract (x)
            (let ((designator (second-form (children x))))
              (form-to-object syntax designator
-              :no-error t))))
+                              :no-error t))))
     (with-slots (stack-top) syntax
       (loop for child in (children stack-top)
          when (test child)
@@ -1351,26 +1350,26 @@ stripping leading non-forms."
   "Return the children of `form' that are themselves forms."
   (remove-if-not #'formp (children form)))
 
-(defgeneric form-operator (syntax form)
+(defgeneric form-operator (form)
   (:documentation "Return the operator of `form' as a
-  token. Returns nil if none can be found.")
-  (:method (form syntax) nil))
+token. Returns nil if none can be found.")
+  (:method (form) nil))
 
-(defmethod form-operator (syntax (form list-form))
+(defmethod form-operator ((form list-form))
   (first-form (rest (children form))))
 
-(defmethod form-operator (syntax (form complete-quote-form))
+(defmethod form-operator ((form complete-quote-form))
   (first-form (rest (children (second (children form))))))
 
-(defmethod form-operator (syntax (form complete-backquote-form))
+(defmethod form-operator ((form complete-backquote-form))
   (first-form (rest (children (second (children form))))))
 
-(defgeneric form-operands (syntax form)
+(defgeneric form-operands (form)
   (:documentation "Returns the operands of `form' as a list of
   tokens. Returns nil if none can be found.")
-  (:method (form syntax) nil))
+  (:method (syntax) nil))
 
-(defmethod form-operands (syntax (form list-form))
+(defmethod form-operands ((form list-form))
   (remove-if-not #'formp (rest-forms (children form))))
 
 (defun form-toplevel (syntax form)
@@ -2341,15 +2340,16 @@ indicating whether the symbol was found in the package. Note that
 a symbol and a package may be returned even if it was not found
 in a package, for example if you do `foo-pkg::bar', where
 `foo-pkg' is an existing package but `bar' isn't interned in
-it. If the package cannot be found, NIL will be returned in its
-place."
+it. If the package cannot be found, its name as a string will be
+returned in its place."
   (multiple-value-bind (symbol-name package-name)
       (parse-token string case)
     (let ((package (cond ((string= package-name "") +keyword-package+)
-                         (package-name              (find-package package-name))
+                         (package-name              (or (find-package package-name)
+                                                        package-name))
                          (t                         package))))
       (multiple-value-bind (symbol status)
-          (when package
+          (when (packagep package)
             (find-symbol symbol-name package))
         (if (or symbol status)
             (values symbol package status)
@@ -2571,11 +2571,9 @@ should be assumed as the result of the form-conversion."))
 (defun invoke-reader (syntax form)
   "Use the system reader to handle `form' and signal a
 `reader-invoked' condition with the resulting data."
-  (let* ((start-mark (make-buffer-mark (buffer syntax) (start-offset form)))
-         (end-mark (make-buffer-mark (buffer syntax) (end-offset form))))
+  (let* ((start-mark (make-buffer-mark (buffer syntax) (start-offset form))))
     (let* ((stream (make-buffer-stream :buffer (buffer syntax)
-                                       :start-mark start-mark
-                                       :end-mark end-mark))
+                                       :start-mark start-mark))
            (object (read-preserving-whitespace stream)))
       (signal 'reader-invoked :end-mark (point stream) :object object))))
 
@@ -2892,7 +2890,7 @@ will be signalled for incomplete forms.")
   (multiple-value-bind (symbol package status)
       (parse-symbol (form-string syntax form)
                     :package *package* :case case)
-    (values (cond ((and read (null status))
+    (values (cond ((and read (null status) (packagep package))
                    (intern (symbol-name symbol) package))
                   (t symbol)))))
 
@@ -2922,10 +2920,7 @@ will be signalled for incomplete forms.")
 
 (defmethod form-to-object ((syntax lisp-syntax) (form complete-string-form)
                            &key &allow-other-keys)
-  (if (notany #'literal-object-p (children form))
-      (invoke-reader syntax form)
-      (form-conversion-error
-       syntax form "String form contains non-character element")))
+  (invoke-reader syntax form))
 
 (defmethod form-to-object ((syntax lisp-syntax) (form function-form) &rest args)
   (list 'cl:function (apply #'form-to-object syntax (second (children form)) args)))
@@ -3026,6 +3021,51 @@ will be signalled for incomplete forms.")
                         (cons (length contents) goal))))))
       (make-array (dimensions rank array-contents)
                   :initial-contents array-contents))))
+
+(defgeneric form-equal (syntax form1 form2)
+  (:documentation "Compare the objects that `form1' and `form2'
+represent, which must be forms of `syntax', for equality under
+the same rules as `equal'. This function does not have
+side-effects. The semantics of this function are thus equivalent
+to a side-effect-less version of (equal (form-to-object syntax
+form1 :read t) (form-to-object syntax form2 :read t)). `Form1'
+and `form2' may also be strings, in which case they are taken to
+be a readable representation of some object.")
+  (:method ((syntax lisp-syntax) (form1 string) (form2 string))
+    ;; Not strictly correct, but good enough for now.
+    (string= form1 form2))
+  (:method ((syntax lisp-syntax) (form1 string) (form2 form))
+    (form-equal syntax form2 form1))
+  (:method ((syntax lisp-syntax) (form1 form) (form2 form))
+    nil)
+  (:method ((syntax lisp-syntax) (form1 form) (form2 string))
+    nil))
+  
+(defmethod form-equal ((syntax lisp-syntax)
+                       (form1 complete-token-form) (form2 complete-token-form))
+  (multiple-value-bind (symbol1 package1 status1)
+      (parse-symbol (form-string syntax form1)
+       :package (package-at-mark syntax (start-offset form1)))
+    (declare (ignore status1))
+    (multiple-value-bind (symbol2 package2 status2)
+        (parse-symbol (form-string syntax form2)
+         :package (package-at-mark syntax (start-offset form2)))
+      (declare (ignore status2))
+      (and (string= symbol1 symbol2)
+           (equal package1 package2)))))
+
+(defmethod form-equal ((syntax lisp-syntax)
+                       (form1 complete-token-form) (form2 string))
+  (multiple-value-bind (symbol1 package1 status1)
+      (parse-symbol (form-string syntax form1)
+       :package (package-at-mark syntax (start-offset form1)))
+    (declare (ignore status1))
+    (multiple-value-bind (symbol2 package2 status2)
+        (parse-symbol form2
+         :package (package-at-mark syntax (start-offset form1)))
+      (declare (ignore status2))
+      (and (string= symbol1 symbol2)
+           (equal package1 package2)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

@@ -566,7 +566,7 @@ not within a form, everything will be bound to nil. The values
 provided are, in order: the form, the forms operator, the indices
 to the operand at `offset', or the indices to an operand entered
 at that position if none is there, and the operands in the form."
-  (update-parse syntax)
+  (update-parse syntax 0 offset)
   (let* ((form
           ;; Find a form with a valid (fboundp) operator.
           (let ((immediate-form
@@ -584,12 +584,12 @@ at that position if none is there, and the operands in the form."
          ;; If we cannot find a form, there's no point in looking
          ;; up any of this stuff.
          (operator (when (and form (form-list-p form))
-                     (form-to-object syntax (form-operator syntax form))))
+                     (form-to-object syntax (form-operator form))))
          (operands (when (and form (form-list-p form))
                      (mapcar #'(lambda (operand)
                                  (when operand
-                                   (form-to-object syntax operand :no-error t)))
-                             (form-operands syntax form))))
+                                   (form-to-object syntax operand)))
+                             (form-operands form))))
          (current-operand-indices (when form
                                     (find-operand-info syntax offset form))))
     (funcall continuation form operator current-operand-indices operands)))

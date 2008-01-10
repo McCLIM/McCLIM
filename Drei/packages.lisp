@@ -515,7 +515,7 @@ editing plain text."))
 	   #:parser-symbol #:parent #:children
 	   #:start-offset #:end-offset #:parser-state
 	   #:preceding-parse-tree
-           #:literal-object-mixin #:literal-object-p
+           #:literal-object-mixin
 	   #:define-parser-state
 	   #:lexeme #:nonterminal
 	   #:action #:new-state #:done
@@ -534,7 +534,7 @@ editing plain text."))
            #:lisp-string
            #:edit-definition
            #:form
-           #:form-to-object
+           #:form-to-object #:form-equal
 
            ;; Selecting forms based on mark
            #:form-around #:form-before #:form-after
