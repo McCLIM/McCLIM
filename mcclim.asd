@@ -554,7 +554,8 @@
            :components ((:module "Extensions/Images"
                          :pathname #.(make-pathname :directory '(:relative "Extensions" "Images"))
                          :components ((:file "package")
-                                      (:file "images")))))
+                                      (:file "images" :depends-on ("package"))
+                                      (:file "image-viewer" :depends-on ("images"))))))
 
 (defmacro support-format (format &rest depends-on)
   "Generate the ASDF `defsystem' form for a single-file system
