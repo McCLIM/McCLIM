@@ -1161,7 +1161,7 @@ found, return the package specified in the attribute list. If no
 package can be found at all, or the otherwise found packages are
 invalid, return the value of `*package*'."
   (as-offsets ((offset mark-or-offset))
-    (update-parse syntax 0 offset)
+    (update-parse syntax)
     (let* ((designator (rest (find offset (package-list syntax)
                               :key #'first
                               :test #'>=))))
@@ -1183,7 +1183,7 @@ package specified in that form does not exist. If no (in-package)
 form can be found, return the package specified in the attribute
 list. If no such package is specified, return \"CLIM-USER\"."
   (as-offsets ((offset mark-or-offset))
-    (update-parse syntax 0 offset)
+    (update-parse syntax)
     (flet ((normalise (designator)
              (typecase designator
                (symbol
@@ -1421,7 +1421,7 @@ is returned. Otherwise, the top-level-form following
   "Return the list form that `mark-or-offset' is inside, or NIL
 if no such form exists."
   (as-offsets ((offset mark-or-offset))
-    (update-parse syntax 0 offset)
+    (update-parse syntax)
     (let ((form-around (form-around syntax offset)))
       (when form-around
         (if (and (form-list-p form-around)
@@ -1559,7 +1559,7 @@ the form that `token' quotes, peeling away all quote forms."
 
 (defun in-type-p (syntax mark-or-offset type)
   (as-offsets ((offset mark-or-offset))
-    (update-parse syntax 0 offset)
+    (update-parse syntax)
     (with-slots (stack-top) syntax
       (if (or (null (start-offset stack-top))
               (> offset (end-offset stack-top))
@@ -1626,7 +1626,7 @@ right after the opening parenthesis for a list.")
   (:method ((syntax lisp-syntax) (form form) (offset integer))
     nil)
   (:method :before ((syntax lisp-syntax) (form form) (offset integer))
-   (update-parse syntax 0 offset)))
+   (update-parse syntax)))
 
 (defgeneric at-end-of-form-p (syntax form offset)
   (:documentation "Return true if `offset' is at the end of the
@@ -1634,7 +1634,7 @@ list-like `form', false otherwise.")
   (:method ((syntax lisp-syntax) (form form) (offset integer))
     nil)
   (:method :before ((syntax lisp-syntax) (form form) (offset integer))
-   (update-parse syntax 0 offset)))
+   (update-parse syntax)))
 
 (defmethod at-beginning-of-form-p ((syntax lisp-syntax) (form list-form)
                                    (offset integer))
@@ -1666,7 +1666,7 @@ beginning of some structural form, false otherwise. \"Beginning\"
 is defined by what type of form is at `mark-or-offset', but for a
 list form, it would be right after the opening parenthesis."
   (as-offsets ((offset mark-or-offset))
-    (update-parse syntax 0 offset)
+    (update-parse syntax)
     (let ((form-around (form-around syntax offset)))
       (when form-around
         (labels ((recurse (form)
@@ -1681,7 +1681,7 @@ end of some structural form, false otherwise. \"End\"
 is defined by what type of form is at `mark-or-offset', but for a
 list form, it would be right before the closing parenthesis."
   (as-offsets ((offset mark-or-offset))
-    (update-parse syntax 0 offset)
+    (update-parse syntax)
     (let ((form-around (form-around syntax offset)))
       (when form-around
         (labels ((recurse (form)
@@ -1696,7 +1696,7 @@ beginning of a list-like form, false otherwise. \"Beginning\" is
 defined as the earliest point the contents could be entered, for
 example right after the opening parenthesis for a list."
   (as-offsets ((offset mark-or-offset))
-    (update-parse syntax 0 offset)
+    (update-parse syntax)
     (let ((form-around (form-around syntax offset)))
       (when (form-list-p form-around)
         (at-beginning-of-form-p syntax form-around offset)))))
@@ -1707,7 +1707,7 @@ a list-like form, false otherwise. \"End\" is defined as the
 latest point the contents could be entered, for example right
 before the closing parenthesis for a list."
   (as-offsets ((offset mark-or-offset))
-    (update-parse syntax 0 offset)
+    (update-parse syntax)
     (let ((form-around (form-around syntax offset)))
       (when (form-list-p form-around)
         (at-end-of-form-p syntax (form-around syntax offset) offset)))))
@@ -1717,7 +1717,7 @@ before the closing parenthesis for a list."
 beginning of a string form, false otherwise. \"Beginning\" is
 right after the opening double-quote."
   (as-offsets ((offset mark-or-offset))
-    (update-parse syntax 0 offset)
+    (update-parse syntax)
     (let ((form-around (form-around syntax offset)))
       (when (form-string-p form-around)
         (at-beginning-of-form-p syntax form-around offset)))))
@@ -1727,7 +1727,7 @@ right after the opening double-quote."
 a list-like form, false otherwise. \"End\" is right before the
 ending double-quote."
   (as-offsets ((offset mark-or-offset))
-    (update-parse syntax 0 offset)
+    (update-parse syntax)
     (let ((form-around (form-around syntax offset)))
       (when (form-string-p form-around)
         (at-end-of-form-p syntax form-around offset)))))
@@ -1882,7 +1882,7 @@ syntax.")
 ;;; exploit the parse
 
 (defun form-before-in-children (syntax children offset)
-  (update-parse syntax 0 offset)
+  (update-parse syntax)
   (loop for (first . rest) on children
      if (formp first)
      do
@@ -1910,7 +1910,7 @@ syntax.")
           "Offset past buffer end")
   (assert (>= offset 0) nil
           "Offset before buffer start")
-  (update-parse syntax 0 offset)
+  (update-parse syntax)
   (or (gethash offset (form-before-cache syntax))
       (setf (gethash offset (form-before-cache syntax))
             (with-slots (stack-top) syntax
@@ -1920,7 +1920,7 @@ syntax.")
                   (form-before-in-children syntax (children stack-top) offset))))))
 
 (defun form-after-in-children (syntax children offset)
-  (update-parse syntax 0 offset)
+  (update-parse syntax)
   (loop for child in children
      if (formp child)
      do (cond ((< (start-offset child) offset (end-offset child))
@@ -1943,7 +1943,7 @@ syntax.")
           "Offset past buffer end")
   (assert (>= offset 0) nil
           "Offset before buffer start")
-  (update-parse syntax 0 offset)
+  (update-parse syntax)
   (or (gethash offset (form-after-cache syntax))
       (setf (gethash offset (form-after-cache syntax))
             (with-slots (stack-top) syntax
@@ -1953,7 +1953,7 @@ syntax.")
                   (form-after-in-children syntax (children stack-top) offset))))))
 
 (defun form-around-in-children (syntax children offset)
-  (update-parse syntax 0 offset)
+  (update-parse syntax)
   (loop for child in children
      if (formp child)
      do (cond ((or (<= (start-offset child) offset (end-offset child))
@@ -1972,7 +1972,7 @@ syntax.")
           "Offset past buffer end")
   (assert (>= offset 0) nil
           "Offset before buffer start")
-  (update-parse syntax 0 offset)
+  (update-parse syntax)
   (or (gethash offset (form-around-cache syntax))
       (setf (gethash offset (form-around-cache syntax))
             (with-slots (stack-top) syntax
