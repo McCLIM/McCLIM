@@ -158,6 +158,7 @@ false.")
    :display-function 'display-drei-pane
    :width 900
    :active nil)
+  (:metaclass modual-class)
   (:documentation "An actual, instantiable Drei pane that
 permits (and requires) the host application to control the
 command loop completely."))
@@ -209,6 +210,7 @@ command loop completely."))
    (%previous-focus :accessor previous-focus :initform nil
                     :documentation "The pane that previously had
 keyboard focus"))
+  (:metaclass modual-class)
   (:default-initargs :command-executor 'execute-drei-command)
   (:documentation "An actual, instantiable Drei gadget with
  event-based command processing."))
@@ -336,6 +338,7 @@ scrolling arrangement.")
 editing area in the coordinate system of the encapsulated
 stream. An (X,Y) list, not necessarily the same as the position
 of the associated output record."))
+  (:metaclass modual-class)
   (:default-initargs :command-executor 'execute-drei-command)
   (:documentation "A Drei editable area implemented as an output
 record."))

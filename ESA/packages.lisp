@@ -23,7 +23,7 @@
 ;;; Package definitions for ESA.
 
 (defpackage :esa-utils
-  (:use :clim-lisp)
+  (:use :clim-lisp :clim-mop)
   (:export #:with-gensyms
            #:once-only
            #:unlisted
@@ -50,7 +50,7 @@
            #:observer-notified #:notify-observers
            #:name-mixin #:name
            #:subscriptable-name-mixin #:subscripted-name #:subscript #:subscript-generator
-           #:mode #:modual-mixin
+           #:mode #:modual-class
            #:available-modes
            #:mode-directly-applicable-p #:mode-applicable-p
            #:mode-enabled-p
@@ -58,7 +58,8 @@
            #:nonapplicable-mode
            #:change-class-for-enabled-mode
            #:change-class-for-disabled-mode
-           #:enable-mode #:disable-mode))
+           #:enable-mode #:disable-mode
+           #:add-default-modes #:remove-default-modes))
 
 (defpackage :esa
   (:use :clim-lisp :clim :esa-utils)

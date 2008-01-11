@@ -88,6 +88,7 @@ subsequence delimited by `begin-offset' and `end-offset'."
   ()
   (:documentation "An instantiable Drei variant with no
 display. Used for testing.")
+  (:metaclass modual-class)
   (:default-initargs :no-cursors t))
 
 (defmacro with-drei-environment ((&key (initial-contents "")

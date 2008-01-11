@@ -22,7 +22,7 @@
 
 (in-package :drei-syntax)
 
-(defclass syntax (name-mixin modual-mixin)
+(defclass syntax (name-mixin)
   ((%buffer :initarg :buffer :reader buffer)
    (%command-table :initarg :command-table
                    :initform (error "A command table has not been provided for this syntax")
@@ -30,6 +30,7 @@
    (%updater-fns :initarg :updater-fns
                  :initform '()
                  :accessor updater-fns))
+  (:metaclass modual-class)
   (:documentation "The base class for all syntaxes."))
 
 (defgeneric syntax-command-tables (syntax)
@@ -287,6 +288,7 @@ mandated by file types or attribute lists.")
                                    ;; It must be just a command table.
                                    (find-command-table ,command-table))))))
                   default-initargs)
+         (:metaclass modual-class)
          ,@defclass-options))))
 
 (defgeneric eval-option (syntax name value)

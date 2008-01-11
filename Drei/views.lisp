@@ -403,7 +403,7 @@ single-line buffer."))
 ;;;
 ;;; View classes.
 
-(defclass drei-view (tabify-mixin subscriptable-name-mixin modual-mixin)
+(defclass drei-view (tabify-mixin subscriptable-name-mixin)
   ((%active :accessor active
             :initform t
             :initarg :active
@@ -436,6 +436,7 @@ support standard editor commands, you should *not* inherit from
 `editor-table' - the command tables containing the editor
 commands will be added automatically, as long as this value is
 true."))
+  (:metaclass modual-class)
   (:documentation "The base class for all Drei views. A view
 observes some other object and provides a visual representation
 for Drei.")
@@ -530,6 +531,7 @@ are live.")
                            :documentation "The number of lines in
 the views `displayed-lines' array that are actually live, that
 is, used for display right now."))
+  (:metaclass modual-class)
   (:documentation "A view that contains a `drei-buffer'
 object."))
 
@@ -577,6 +579,7 @@ at the end of the buffer.")
                           :initform -1
                           :documentation "The size of the buffer
 the last time the view was synchronized."))
+  (:metaclass modual-class)
   (:documentation "A buffer-view that maintains a parse tree of
 the buffer, or otherwise pays attention to the syntax of the
 buffer."))
@@ -725,6 +728,7 @@ function."))
 (defclass point-mark-view (drei-buffer-view)
   ((%point :initform nil :initarg :point :accessor point-of)
    (%mark :initform nil :initarg :mark :accessor mark-of))
+  (:metaclass modual-class)
   (:documentation "A view class containing a point and a mark
 into its buffer."))
 
@@ -758,6 +762,7 @@ into its buffer."))
    (%prefix-start-offset :initform nil :accessor prefix-start-offset)
    (%dabbrev-expansion-mark :initform nil :accessor dabbrev-expansion-mark)
    (%overwrite-mode :initform nil :accessor overwrite-mode))
+  (:metaclass modual-class)
   (:default-initargs :use-editor-commands t))
 
 (defmethod create-view-cursors nconc ((output-stream extended-output-stream)

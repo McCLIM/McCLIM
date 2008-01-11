@@ -90,6 +90,7 @@
 (defclass drei-editor-substrate (drei:drei-gadget-pane
                                  editor-substrate-mixin)
   ()
+  (:metaclass esa-utils:modual-class)
   (:documentation "A class for Drei-based editor substrates."))
 
 (defmethod (setf gadget-value) :after (value (gadget drei-editor-substrate)
@@ -101,6 +102,7 @@
 (defclass drei-text-field-substrate (text-field-substrate-mixin
                                      drei-editor-substrate)
   ()
+  (:metaclass esa-utils:modual-class)
   (:documentation "The class for Drei-based text field substrates."))
 
 (defmethod drei:handle-gesture ((drei drei-text-field-substrate) gesture)
@@ -123,6 +125,7 @@
 (defclass drei-text-editor-substrate (text-editor-substrate-mixin
                                       drei-editor-substrate)
   ()
+  (:metaclass esa-utils:modual-class)
   (:documentation "The class for Drei-based text editor substrates."))
 
 (defmethod compose-space ((pane drei-text-editor-substrate) &key width height)

@@ -364,23 +364,61 @@ buffers with the same name)."))
   ()
   (:documentation "A superclass for all modes."))
 
-(defclass modual-mixin ()
-  ((%original-class-name :accessor original-class-name
-                         :documentation "The original name of the
-class the `modual-mixin' is part of, the actual name will change
-as modes are added and removed."))
-  (:documentation "A mixin for objects supporting modes."))
+(defconstant +default-modes-plist-symbol+ 'modual-class-default-modes
+  "The symbol that is pushed onto the property list of the name
+of a class to contain the list of default modes for the class.")
 
-(defmethod initialize-instance :after ((object modual-mixin) &rest initargs)
+(defun default-modes (modual-class)
+  "Return the list of default modes for `modual-class', which
+must be a symbol and the name of a modual class. The modes are
+returned as a list of conses, with the car of each cons being the
+name of the mode as a symbol, and the cdr of each cons being a
+list of initargs"
+  (getf (symbol-plist modual-class) +default-modes-plist-symbol+))
+
+(defun (setf default-modes) (new-default-modes modual-class)
+  "Set the list of default modes for `modual-class', which must
+be a symbol and the name of a modual class. The modes should be
+given as a list of conses, with the car of each cons being the
+name of the mode as a symbol, and the cdr of each cons being a
+list of initargs"
+  (setf (getf (symbol-plist modual-class) +default-modes-plist-symbol+)
+        new-default-modes))
+
+(defclass modual-class (standard-class)
+  ()
+  (:documentation "A metaclass for defining classes supporting
+changing of modes."))
+
+(defmethod validate-superclass ((c1 modual-class) (c2 standard-class))
+  t)
+
+(defmethod compute-slots ((c modual-class))
+  (append (call-next-method)
+          (list (make-instance 'standard-effective-slot-definition
+                 :name '%original-class-name
+                 :allocation :instance
+                 :documentation "The original name of the class
+the `modual-mixin' is part of, the actual name will change as
+modes are added and removed."))))
+
+(defmethod make-instance ((class modual-class) &rest initargs)
   (declare (ignore initargs))
-  (setf (original-class-name object) (class-name (class-of object))))
+  (let ((instance (call-next-method)))
+    (setf (slot-value instance '%original-class-name)
+          (class-name class))
+    (dolist (class (reverse (class-precedence-list class)) instance)
+      (when (symbolp (class-name class))
+        (dolist (mode-and-initargs (default-modes (class-name class)))
+          (apply #'enable-mode instance (first mode-and-initargs)
+                 (rest mode-and-initargs)))))))
 
 (defgeneric available-modes (modual)
   (:documentation "Return all available modes for `modual'. Not
 all of the modes may be applicable, use the `applicable-modes'
 function if you're only interested in these.")
   (:method-combination append)
-  (:method append ((modual modual-mixin))
+  (:method append ((modual t))
     '()))
 
 (defgeneric mode-directly-applicable-p (modual mode-name)
@@ -391,7 +429,7 @@ name `mode-name' is unapplicable, an error of type
 \"opt-out\" where a mode can forcefully prevent another specific
 mode from being enabled. ")
   (:method-combination or)
-  (:method or ((modual modual-mixin) mode-name)
+  (:method or ((modual t) mode-name)
      nil))
 
 (defgeneric mode-applicable-p (modual mode-name)
@@ -402,21 +440,21 @@ error of type `nonapplicable-mode' will be signalled. This allows
 a sort of \"opt-out\" where a mode can forcefully prevent another
 specific mode from being enabled. ")
   (:method-combination or)
-  (:method or ((modual modual-mixin) mode-name)
+  (:method or ((modual t) mode-name)
      (mode-directly-applicable-p modual mode-name)))
 
 (defgeneric enabled-modes (modual)
   (:documentation "Return a list of the names of the modes
 directly enabled for `modual'.")
   (:method-combination append)
-  (:method append ((modual modual-mixin))
+  (:method append ((modual t))
      '()))
 
 (defgeneric mode-enabled-p (modual mode-name)
   (:documentation "Return true if `mode-name' is enabled for
 `modual' or any modual \"sub-objects\"." )
   (:method-combination or)
-  (:method or ((modual modual-mixin) mode-name)
+  (:method or ((modual t) mode-name)
      (member mode-name (enabled-modes modual) :test #'equal)))
 
 (define-condition nonapplicable-mode (error)
@@ -445,7 +483,7 @@ enabled for a modual that the mode is not applicable to.")
 `modual', using `initargs' as options for the mode. If the mode
 is already enabled, do nothing. If the mode is not applicable to
 `modual', signal an `nonapplicable-mode' error.")
-  (:method :around ((modual modual-mixin) mode-name &rest initargs)
+  (:method :around ((modual t) mode-name &rest initargs)
      (declare (ignore initargs))
      (unless (mode-enabled-p modual mode-name)
        (call-next-method))))
@@ -454,7 +492,7 @@ is already enabled, do nothing. If the mode is not applicable to
   (:documentation "Disable the mode of the name `mode-name' for
 `modual'. If a mode of the provided name is not enabled, do
 nothing.")
-  (:method :around ((modual modual-mixin) mode-name)
+  (:method :around ((modual t) mode-name)
      (when (mode-enabled-p modual mode-name)
        (call-next-method))))
 
@@ -478,7 +516,8 @@ implements all the modes listed as names in `modes'."
   ;; Avert thine eyes, thy of gentle spirit.
   (if (null modes)
       (find-class modual)
-      (eval `(defclass ,(gensym) (,modual ,@modes) ()))))
+      (eval `(defclass ,(gensym) (,modual ,@modes) ()
+               (:metaclass modual-class)))))
 
 (defun find-class-implementing-modes (modual modes)
   "Find, possibly create, the class implementing `modual' (a
@@ -498,7 +537,7 @@ modes."
   "Change the class of `modual' so that it has a mode of name
 `mode-name', created with the provided `initargs'."
   (apply #'change-class modual (find-class-implementing-modes
-                                (original-class-name modual)
+                                (slot-value modual '%original-class-name)
                                 (cons mode-name (enabled-modes modual)))
          initargs))
 
@@ -506,15 +545,44 @@ modes."
   "Change the class of `modual' so that it does not have a mode
 of name `mode-name'."
   (change-class modual (find-class-implementing-modes
-                        (original-class-name modual)
+                        (slot-value modual '%original-class-name)
                         (remove mode-name (enabled-modes modual)
                          :test #'equal))))
 
-(defmethod enable-mode ((modual modual-mixin) mode-name &rest initargs)
+(defmethod enable-mode ((modual t) mode-name &rest initargs)
   (if (mode-directly-applicable-p modual mode-name)
       (apply #'change-class-for-enabled-mode modual mode-name initargs)
       (nonapplicable-mode modual mode-name)))
 
-(defmethod disable-mode ((modual modual-mixin) mode-name)
+(defmethod disable-mode ((modual t) mode-name)
   (when (mode-directly-applicable-p modual mode-name)
     (change-class-for-disabled-mode modual mode-name)))
+
+(defmacro add-default-modes (modual-class &body modes)
+  "Add `modes' to the list of default modes for
+`modual-class'. Will not replace any already existing modes. The
+elements in `modes' can either be a single symbol, the name of a
+mode, or a cons of the name of a mode and a list of initargs for
+the mode. In the former case, no initargs will be given. Please
+do not use default modes as a programming tool, they should be
+reserved for user-oriented functionality."
+  (dolist (mode modes)
+    (let ((mode-name (unlisted mode)))
+      (check-type mode-name symbol)
+      ;; Take care not to add the same mode twice, this is risky enough
+      ;; as it is.
+      (setf (default-modes modual-class)
+            (cons (listed mode)
+                  (delete mode-name (default-modes modual-class) :key #'first))))))
+
+(defmacro remove-default-modes (modual-class &body modes)
+  "Remove `modes' from the list of default modes for
+`modual-class'. `Modes' must be a list of names of modes in the
+form of symbols. If a provided mode is not set as a default mode,
+nothing will be done."
+  (dolist (mode modes)
+    (check-type mode symbol)
+    ;; Take care not to add the same mode twice, this is risky enough
+    ;; as it is.
+    (setf (default-modes modual-class)
+          (delete mode (default-modes modual-class) :key #'first))))

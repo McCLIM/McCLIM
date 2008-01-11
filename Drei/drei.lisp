@@ -219,7 +219,7 @@ and specialise a method for it."
 ;;;
 ;;; The basic Drei class.
 
-(defclass drei (modual-mixin)
+(defclass drei ()
   ((%view :initform (make-instance 'textual-drei-syntax-view)
           :initarg :view
           :accessor view
@@ -274,6 +274,7 @@ cursors-list.")
    (%isearch-previous-string :initform nil :accessor isearch-previous-string)
    (%query-replace-mode :initform nil :accessor query-replace-mode)
    (%query-replace-state :initform nil :accessor query-replace-state))
+  (:metaclass modual-class)
   (:default-initargs :active t :editable-p t)
   (:documentation "The abstract Drei class that maintains
 standard Drei editor state. It should not be directly
