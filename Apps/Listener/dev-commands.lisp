@@ -1424,7 +1424,7 @@
   (if (probe-file image-pathname)
       (handler-case 
           (with-room-for-graphics ()
-            (draw-design *standard-output* (mcclim-images:load-image image-pathname)))
+            (mcclim-images:draw-image *standard-output* (mcclim-images:load-image image-pathname)))
         (mcclim-images:unsupported-image-format (c)
           (format t "Image format ~A not recognized" (mcclim-images:image-format c))))
       (format t "No such file: ~A" image-pathname)))

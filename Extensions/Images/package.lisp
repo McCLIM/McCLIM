@@ -22,7 +22,9 @@
 
 (defpackage :mcclim-images
   (:use :clim-lisp :clim)
-  (:export :export #:image-format-supported
+  (:export #:image-format-supported-p
+           #:image #:image-width #:image-height
+           #:draw-image
            #:load-image #:load-image-of-format
            #:unsupported-image-format #:image-format
            #:image-viewer #:image-viewer-pane))

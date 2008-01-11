@@ -442,7 +442,10 @@
 
 (define-image-reader "xpm" (pathname &key)
   (with-open-file (input pathname :element-type '(unsigned-byte 8))
-    (xpm-parse-stream input)))
+    (let ((pattern (xpm-parse-stream input)))
+      (make-image pattern
+                  (pattern-height pattern)
+                  (pattern-width pattern)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

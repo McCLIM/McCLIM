@@ -45,6 +45,10 @@ value of the gadget is the image being displayed."))
   ;; Clear the old image.
   (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)    
     (draw-rectangle* (sheet-medium pane) x1 y1 x2 y2 :ink +background-ink+))
-  ;; Draw the new one, if there is one.
   (when (gadget-value pane)
-    (draw-design pane (gadget-value pane))))
+    ;; Try to ensure there is room for the new image.
+    (change-space-requirements pane
+     :height (image-height (gadget-value pane))
+     :width (image-width (gadget-value pane)))
+    ;; Draw the new one, if there is one.
+    (draw-image pane (gadget-value pane))))

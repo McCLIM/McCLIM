@@ -31,15 +31,18 @@
              (rgb-image (make-instance 'clim-internals::rgb-image
 				       :width width :height height :alphap nil
 				       :data rgb-image-data)))
-        (loop for y from (1- height) downto 0 do
-             (loop for x from (1- width) downto 0 do
-                  (let ((grey (svref rgb (+ x (* y width)))))
-                    (setf (aref rgb-image-data y x)
-                          (dpb grey (byte 8 0)
-                               (dpb grey (byte 8 8)
-                                    (dpb grey (byte 8 16)
-                                         (dpb (- 255 0) (byte 8 24) 0))))))))
-        (clim-internals::make-rgb-image-design rgb-image)))))
+        (dotimes (x width)
+          (dotimes (y height)
+            (let ((blue (aref rgb (+ (* x 3) (* y width 3))))
+                  (green (aref rgb (+ (* x 3) (* y width 3) 1)))
+                  (red (aref rgb (+ (* x 3) (* y width 3) 2))))
+              (setf (aref rgb-image-data y x)
+                    (dpb red (byte 8 0)
+                         (dpb green (byte 8 8)
+                              (dpb blue (byte 8 16)
+                                   (dpb (- 255 0) (byte 8 24) 0))))))))
+        (make-image (clim-internals::make-rgb-image-design rgb-image)
+                    height width)))))
 
 (define-image-reader "jpg" (pathname)
   (load-image-of-format "jpeg" pathname))
