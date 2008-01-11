@@ -1200,10 +1200,10 @@
 				   :clip-x x
 				   :clip-y (- y height))
 		(xlib:copy-area pixmap gcontext 0 0 width height
-				da x (- y height))))
+				da x y)))
 	    (t
 	      (xlib:copy-area pixmap gcontext 0 0 width height
-			      da x (- y height)))))))))
+			      da x y))))))))
 
 (defmethod climi::medium-free-image-design
     ((medium clx-medium) (design climi::rgb-image-design))
