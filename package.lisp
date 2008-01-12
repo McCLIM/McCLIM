@@ -873,6 +873,8 @@
    #:line-style-unit                    ;generic function
    #:linep                              ;predicate
    #:list-pane                          ;class
+   #:list-pane-view                     ;class
+   #:+list-pane-view+                   ;constant
    #:lookup-keystroke-command-item      ;function
    #:lookup-keystroke-item              ;function
    #:make-3-point-transformation        ;function
@@ -1039,6 +1041,8 @@
    #:open-stream-p                      ;generic function
    #:open-window-stream                 ;function
    #:option-pane                        ;class
+   #:option-pane-view                   ;class
+   #:+option-pane-view+                 ;constant
    #:or                                 ;presentation type
    #:oriented-gadget-mixin              ;class
    #:outlined-pane                      ;pane
@@ -1167,6 +1171,8 @@
    #:propagate-output-record-changes-p  ;generic function
    #:push-button                        ;class
    #:push-button-pane                   ;class
+   #:push-button-view                   ;class
+   #:+push-button-view+                 ;constant
    #:push-button-show-as-default        ;generic function
    #:queue-event                        ;generic function
    #:queue-repaint                      ;generic function
@@ -1175,6 +1181,8 @@
    #:radio-box-current-selection        ;generic function
    #:radio-box-pane                     ;class
    #:radio-box-selections               ;generic function
+   #:radio-box-view                     ;class
+   #:+radio-box-view+                   ;class
    #:raise-frame                        ;generic function
    #:raise-mirror                       ;generic function
    #:raise-sheet                        ;generic function
@@ -1313,6 +1321,8 @@
    #:slider                             ;class
    #:slider-drag-callback               ;generic function
    #:slider-pane                        ;class
+   #:slider-view                        ;slider-view
+   #:+slider-view+                      ;constant
    #:space-requirement                  ;class
    #:space-requirement+                 ;function
    #:space-requirement+*                ;function
@@ -1464,6 +1474,8 @@
    #:text-displayed-output-record-string ;generic function
    #:text-editor                        ;class
    #:text-editor-pane                   ;class
+   #:text-editor-view                   ;class
+   #:+text-editor-view+                 ;constant
    #:text-field                         ;class
    #:text-field-pane                    ;class
    #:text-field-view                    ;class (Franz User's Guide)
@@ -1489,6 +1501,8 @@
    #:toggle-button                      ;class
    #:toggle-button-indicator-type       ;generic function
    #:toggle-button-pane                 ;class
+   #:toggle-button-view                 ;class
+   #:+toggle-button-view+               ;constant
    #:token-or-type                      ;presentation type abbrev
    #:tracking-pointer                   ;macro
    #:transform-distance                 ;generic function
