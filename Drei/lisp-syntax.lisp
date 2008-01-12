@@ -2036,7 +2036,12 @@ be found, return nil."
 			    (form-around syntax (offset mark)))))
     (when (and (not (null potential-form))
                (not (= (offset mark) (end-offset potential-form))))
-      (setf (offset mark) (end-offset potential-form)))))
+      (typecase potential-form
+        (reader-conditional-form
+         (setf (offset mark) (end-offset
+                              (or (first-form (children potential-form))
+                                  potential-form))))
+        (t (setf (offset mark) (end-offset potential-form)))))))
 
 (defmethod forward-delete-expression (mark (syntax lisp-syntax) &optional (count 1)
                                       (limit-action #'error-limit-action))
