@@ -61,33 +61,37 @@ unspecified family and size.")
 ;;; syntax highlighting rules are free to ignore these, but I think
 ;;; the default rules should at least use these.
 
-(defvar *keyword-drawing-options* (make-drawing-options :face (make-face :ink +orchid+))
+(defvar *keyword-drawing-options*
+  (make-drawing-options :face (make-face :ink +red3+))
   "The drawing options used for drawing the syntactical
 equivalent of keyword symbols. In Lisp, this is used for keyword
 symbols.")
 
-(defvar *special-operator-drawing-options* (make-drawing-options :face (make-face :ink +purple+))
+(defvar *special-operator-drawing-options*
+  (make-drawing-options :face (make-face :ink +steel-blue+
+                                         :style (make-text-style nil :bold nil)))
   "The drawing options used for drawing the syntactical
 equivalent of special operators. In Lisp, this is used for macros
 and special operators, in most other languages, it should
 probably be used for language keywords.")
 
-(defvar *special-variable-drawing-options* (make-drawing-options :face (make-face :ink +darkgoldenrod+))
+(defparameter *special-variable-drawing-options*
+  (make-drawing-options :face (make-face :ink +darkgoldenrod4+))
   "The drawing options used for drawing variables that are
 somehow special. In Lisp, this is used for globally bound
 non-constant variables with dynamic scope. In other language, it
 should probably be used for global variables or similar.")
 
-(defvar *string-drawing-options* (make-drawing-options
-                                  :face (make-face :ink +rosy-brown+
-                                                   :style (make-text-style nil :italic nil)))
+(defvar *string-drawing-options*
+  (make-drawing-options :face (make-face :ink +green4+))
   "The drawing options used for syntax-highlighting strings.")
 
-(defvar *comment-drawing-options* (make-drawing-options
-                                   :face (make-face :ink +maroon+
-                                                    :style (make-text-style nil :bold nil)))
+(defvar *comment-drawing-options*
+  (make-drawing-options :face (make-face :ink +maroon+
+                                         :style (make-text-style nil :bold nil)))
   "The drawing options used for drawing comments in source
 code.")
 
-(defvar *error-drawing-options* (make-drawing-options :face (make-face :ink +red+))
+(defvar *error-drawing-options*
+  (make-drawing-options :face (make-face :ink +red+))
   "The drawing options used for drawing syntax errors.")
