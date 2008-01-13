@@ -2,7 +2,7 @@
 
 ;;;  (c) copyright 2006 by
 ;;;           Robert Strandh (strandh@labri.fr)
-;;;  (c) copyright 2007 by
+;;;  (c) copyright 2007-2008 by
 ;;;           Troels Henriksen (athas@sigkill.dk)
 
 ;;; This library is free software; you can redistribute it and/or
@@ -29,8 +29,44 @@ fresh buffer created from the file, else return a new empty
 buffer having the associated file name."))
 (defgeneric frame-find-file-read-only (application-frame file-path))
 (defgeneric frame-set-visited-file-name (application-frame filepath buffer))
+(defgeneric check-buffer-writability (application-frame filepath buffer)
+  (:documentation "Check that `buffer' can be written to
+`filepath', which can be an arbitrary pathname. If there is a
+problem, an error that is a subclass of
+`buffer-writing-error'should be signalled."))
 (defgeneric frame-save-buffer (application-frame buffer))
 (defgeneric frame-write-buffer (application-frame filepath buffer))
+
+(define-condition buffer-writing-error (error)
+  ((%buffer :reader buffer
+            :initarg :buffer
+            :initform (error "A buffer must be provided")
+            :documentation "The buffer that was attempted written when this error occured.")
+   (%filepath :reader filepath
+              :initarg :filepath
+              :initform (error "A filepath must be provided")
+              :documentation "The filepath that the buffer was attempted to be saved to when this error occured"))
+  (:report (lambda (condition stream)
+             (format stream "~A could not be saved to ~A"
+                     (name (buffer condition)) (filepath condition))))
+  (:documentation "An error that is a subclass of
+`buffer-writing-error' will be signalled when a buffer is
+attempted saved to a file, but something goes wrong. Not all
+error cases will result in the signalling of a
+`buffer-writing-error', but some defined cases will."))
+
+(define-condition filepath-is-directory (buffer-writing-error)
+  ()
+  (:report (lambda (condition stream)
+             (format stream "Cannot save buffer ~A to just a directory"
+                     (name (buffer condition)))))
+  (:documentation "This error is signalled when a buffer is
+attempted saved to a directory."))
+
+(defun filepath-is-directory (buffer filepath)
+  "Signal an error of type `filepath-is-directory' with the
+buffer `buffer' and the filepath `filepath'."
+  (error 'filepath-is-directory :buffer buffer :filepath filepath))
 
 (defun find-file (file-path)
   (frame-find-file *application-frame* file-path))
@@ -170,6 +206,12 @@ The next time the buffer is saved it will be saved to a file with
 that filename."
   (set-visited-file-name filename (current-buffer)))
 
+(defmethod check-buffer-writability (application-frame (filepath pathname)
+                                     (buffer esa-buffer-mixin))
+  ;; Cannot write to a directory.
+  (when (directory-pathname-p filepath)
+    (filepath-is-directory buffer filepath)))
+
 (defun extract-version-number (pathname)
   "Extracts the emacs-style version-number from a pathname."
   (let* ((type (pathname-type pathname))
@@ -208,27 +250,23 @@ to overwrite."
 (defmethod frame-save-buffer (application-frame buffer)
   (let ((filepath (or (filepath buffer)
                       (accept 'pathname :prompt "Save Buffer to File"))))
-    (cond
-      ((directory-pathname-p filepath)
-       (display-message "~A is a directory." filepath)
-       (beep))
-      (t
-       (unless (check-file-times buffer filepath "Overwrite" "written")
-	 (return-from frame-save-buffer))
-       (when (and (probe-file filepath) (not (file-saved-p buffer)))
-         (let ((backup-name (pathname-name filepath))
-               (backup-type (format nil "~A~~~D~~"
-				    (pathname-type filepath)
-				    (1+ (version-number filepath)))))
-           (rename-file filepath (make-pathname :name backup-name
-                                                :type backup-type))))
-       (with-open-file (stream filepath :direction :output :if-exists :supersede)
-         (save-buffer-to-stream buffer stream))
-       (setf (filepath buffer) filepath
-             (file-write-time buffer) (file-write-date filepath)
-             (name buffer) (filepath-filename filepath))
-       (display-message "Wrote: ~a" (filepath buffer))
-       (setf (needs-saving buffer) nil)))))
+    (check-buffer-writability application-frame filepath buffer)
+    (unless (check-file-times buffer filepath "Overwrite" "written")
+      (return-from frame-save-buffer))
+    (when (and (probe-file filepath) (not (file-saved-p buffer)))
+      (let ((backup-name (pathname-name filepath))
+            (backup-type (format nil "~A~~~D~~"
+                                 (pathname-type filepath)
+                                 (1+ (version-number filepath)))))
+        (rename-file filepath (make-pathname :name backup-name
+                                             :type backup-type))))
+    (with-open-file (stream filepath :direction :output :if-exists :supersede)
+      (save-buffer-to-stream buffer stream))
+    (setf (filepath buffer) filepath
+          (file-write-time buffer) (file-write-date filepath)
+          (name buffer) (filepath-filename filepath))
+    (display-message "Wrote: ~a" (filepath buffer))
+    (setf (needs-saving buffer) nil)))
 
 (define-command (com-save-buffer :name t :command-table esa-io-table) ()
     "Write the contents of the buffer to a file.
@@ -237,22 +275,23 @@ file, replacing its contents. If not, prompt for a filename."
   (let ((buffer (current-buffer)))
     (if (or (null (filepath buffer))
             (needs-saving buffer))
-        (save-buffer buffer)
+        (handler-case (save-buffer buffer)
+          (buffer-writing-error (e)
+            (with-minibuffer-stream (minibuffer)
+              (let ((*print-escape* nil))
+                (print-object e minibuffer)))))
         (display-message "No changes need to be saved from ~a" (name buffer)))))
 
 (set-key 'com-save-buffer 'esa-io-table '((#\x :control) (#\s :control)))
 
 (defmethod frame-write-buffer (application-frame filepath buffer)
-  (cond
-    ((directory-pathname-p filepath)
-     (display-message "~A is a directory name." filepath))
-    (t
-     (with-open-file (stream filepath :direction :output :if-exists :supersede)
-       (save-buffer-to-stream buffer stream))
-     (setf (filepath buffer) filepath
-           (name buffer) (filepath-filename filepath)
-           (needs-saving buffer) nil)
-     (display-message "Wrote: ~a" (filepath buffer)))))
+  (check-buffer-writability application-frame filepath buffer)
+  (with-open-file (stream filepath :direction :output :if-exists :supersede)
+    (save-buffer-to-stream buffer stream))
+  (setf (filepath buffer) filepath
+        (name buffer) (filepath-filename filepath)
+        (needs-saving buffer) nil)
+  (display-message "Wrote: ~a" (filepath buffer)))
 
 (define-command (com-write-buffer :name t :command-table esa-io-table) 
     ((filepath 'pathname :prompt "Write Buffer to File: " :prompt-mode :raw
@@ -261,7 +300,11 @@ file, replacing its contents. If not, prompt for a filename."
     "Prompt for a filename and write the current buffer to it.
 Changes the file visted by the buffer to the given file."
   (let ((buffer (current-buffer)))
-    (write-buffer filepath buffer)))
+    (handler-case (write-buffer filepath buffer)
+      (buffer-writing-error (e)
+        (with-minibuffer-stream (minibuffer)
+          (let ((*print-escape* nil))
+            (print-object e minibuffer)))))))
 
 (set-key `(com-write-buffer ,*unsupplied-argument-marker*)
          'esa-io-table '((#\x :control) (#\w :control)))

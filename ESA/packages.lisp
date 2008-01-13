@@ -2,7 +2,7 @@
 
 ;;;  (c) copyright 2004-2006 by
 ;;;           Robert Strandh (strandh@labri.fr)
-;;;  (c) copyright 2006 by
+;;;  (c) copyright 2006-2008 by
 ;;;           Troels Henriksen (athas@sigkill.dk)
 
 ;;; This library is free software; you can redistribute it and/or
@@ -106,8 +106,11 @@
   (:export #:frame-find-file #:find-file
            #:frame-find-file-read-only #:find-file-read-only
            #:frame-set-visited-file-name #:set-visited-filename
+           #:check-buffer-writability
            #:frame-save-buffer #:save-buffer
            #:frame-write-buffer #:write-buffer
+           #:buffer-writing-error #:buffer #:filepath
+           #:filepath-is-directory
            #:esa-io-table))
 
 #-(or mcclim building-mcclim)
