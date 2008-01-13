@@ -176,13 +176,18 @@ something has obscured or scribbled over the part of the screen
 area taken up by the stroke. If `modified' is true, this stroke
 object might output something different than the last time it was
 redisplayed, and should thus update any caches or similar. When
-`modified' is set, `dirty' probably also should be set."
+`modified' is set, `dirty' probably also should be set.
+`widths' is an array of cumulative screen-resolution widths of
+the `parts', being a run of characters or a non-graphic character:
+see ANALYSE-STROKE-STRING."
   (start-offset)
   (end-offset)
   (drawing-options +default-drawing-options+)
   (dirty t)
   (modified t)
-  (dimensions (make-dimensions)))
+  (dimensions (make-dimensions))
+  (widths)
+  (parts))
 
 (defstruct (displayed-line (:conc-name line-))
   "A line on display. A line delimits a buffer region (always
@@ -377,15 +382,18 @@ it was redisplayed."
       (incf (line-stroke-count line))
       (setf (line-end-offset line) (stroke-end-offset stroke)))))
 
-(defun record-stroke (stroke x1 y1 x2 y2
+(defun record-stroke (stroke parts widths x1 y1 x2 y2
                       &optional (center (/ (- y2 y1) 2)))
-  "Record the fact that `stroke' has been drawn, and that it
+  "Record the fact that `stroke' has been drawn, that it consists
+of parts `parts' with the widths `widths', and that it
 covers the specified area on screen. Updates the dirty- and
 modified-bits of `stroke' as well as the dimensions."
   (let ((dimensions (stroke-dimensions stroke)))
     (setf (stroke-dirty stroke) nil
           (stroke-modified stroke) nil
-          (x1 dimensions) x1
+	  (stroke-parts stroke) parts
+          (stroke-widths stroke) widths
+	  (x1 dimensions) x1
           (y1 dimensions) y1
           (x2 dimensions) x2
           (y2 dimensions) y2
@@ -394,6 +402,39 @@ modified-bits of `stroke' as well as the dimensions."
 (defconstant +roman-face-style+ (make-text-style nil :roman nil)
   "A text style specifying a roman face, but with unspecified
 family and size.")
+
+(defun analyse-stroke-string (string)
+  "Return a list of parts of `string', where each part is a continuous
+run of graphic characters or a single non-graphic character. Each element
+in the list is of the form START, END, and one of NIL (meaning a run
+of graphic characters) or an object representing the non-graphic char."
+  (loop with len = (length string)
+	for left = 0 then (+ right 1)
+	for right = (or (position-if-not #'graphic-char-p string :start left)
+			len)
+	unless (= left right)
+	  collect (list left right)
+	  into parts
+	until (>= right len)
+	collect (list right 
+		      (+ right 1) 
+		      (non-graphic-char-rep (aref string right)))
+	  into parts
+	finally (return parts)))
+
+(defun non-graphic-char-rep (object)
+  "Return the appropriate representation of `object', a non-graphic char.
+This will be a string of the format \"^[letter]\" for non-graphic chars
+with a char-code of less than #o200, \"\\[octal code]\" for those above
+#o200, and the #\\Tab character in the case of a #\\Tab.
+NOTE: Assumes an ASCII/Unicode character encoding."
+  (let ((code (char-code object)))
+    (cond ((eql object #\Tab)
+	   object)
+	  ((< code #o200)
+	   (format nil "^~C" (code-char (+ code (char-code #\@)))))
+	  (t
+	   (format nil "\\~O" code)))))
 
 (defun stroke-drawing-fn (stream view stroke cursor-x cursor-y)
   "Draw `stroke' to `stream' at the position (`cursor-x',
@@ -406,7 +447,9 @@ will be cleared before any actual output takes place."
   (with-accessors ((start-offset stroke-start-offset)
                    (end-offset stroke-end-offset)
                    (dimensions stroke-dimensions)
-                   (drawing-options stroke-drawing-options)) stroke
+                   (drawing-options stroke-drawing-options)
+		   (widths stroke-widths)
+		   (parts stroke-parts)) stroke
     (let* ((stroke-string (in-place-buffer-substring
                            (buffer view) (cache-string view)
                            start-offset end-offset))
@@ -421,25 +464,66 @@ will be cleared before any actual output takes place."
            (text-style-ascent (text-style-ascent roman-text-style (sheet-medium stream)))
            (text-style-descent (text-style-descent roman-text-style (sheet-medium stream)))
            (text-style-height (+ text-style-ascent text-style-descent)))
-      (with-accessors ((x1 x1) (y1 y1) (x2 x2) (y2 y2) (center center)) dimensions
-        (multiple-value-bind (width ignore1 ignore2 ignore3 baseline)
-            (if (stroke-modified stroke)
-                (text-size stream stroke-string
-                 :text-style merged-text-style)
-                (values (- x2 x1) (- y2 y1) nil nil center))
-          (declare (ignore ignore1 ignore2 ignore3))
-          (clear-rectangle* stream cursor-x cursor-y
-                            (+ cursor-x width) (+ cursor-y text-style-height
-                                                  (stream-vertical-spacing stream)))
-          (draw-text* stream stroke-string cursor-x (+ cursor-y
-                                                       (- text-style-ascent
-                                                          baseline))
-           :text-style merged-text-style
-           :ink (face-ink (drawing-options-face drawing-options))
-           :align-y :top)
-          (record-stroke stroke cursor-x cursor-y
-                         (+ width cursor-x) (+ text-style-height cursor-y)
-                         baseline))))))
+      (with-accessors ((x1 x1) (x2 x2) (center center)) dimensions
+        (multiple-value-bind (stroke-parts width baseline part-widths)
+	    (if (stroke-modified stroke)
+		(loop with parts = (analyse-stroke-string stroke-string)
+		      with width = 0
+		      with baseline = 0
+		      with widths = (make-array 1 :adjustable t :fill-pointer t)
+		      with tab-width
+		      for (start end object) in parts
+		      do (cond ((and object (eql object #\Tab))
+				(incf width 
+				      (- (or tab-width (setf tab-width (tab-width stream view)))
+					 (mod (+ width cursor-x) tab-width)))
+				(vector-push-extend width widths))
+			       (object
+				(multiple-value-bind (w ignore1 ignore2 ignore3 b)
+				    (text-size stream object
+					       :text-style merged-text-style)
+				  (declare (ignore ignore1 ignore2 ignore3))
+				  (incf width w)
+				  (setf baseline (max baseline b))
+				  (vector-push-extend width widths)))
+			       (t
+				(multiple-value-bind (w ignore1 ignore2 ignore3 b)
+				    (text-size stream stroke-string
+					       :start start :end end
+					       :text-style merged-text-style)
+				  (declare (ignore ignore1 ignore2 ignore3))
+				  (incf width w)
+				  (setf baseline (max baseline b))
+				  (vector-push-extend width widths))))
+		      finally (return (values parts width baseline widths)))
+		(values parts (- x2 x1) center widths))
+	  (clear-rectangle* stream cursor-x cursor-y
+			    (+ cursor-x width) (+ cursor-y text-style-height
+						  (stream-vertical-spacing stream)))
+	  (loop for (start end object) in stroke-parts
+		for width across part-widths
+		do (cond ((and object (eq object #\Tab))
+			  nil)
+			 (object
+			  (draw-text* stream object (+ cursor-x width)
+				      (+ cursor-y
+					 (- text-style-ascent
+					    baseline))
+				      :text-style merged-text-style
+				      :ink +darkblue+
+				      :align-y :top))
+			 (t
+			  (draw-text* stream stroke-string (+ cursor-x width)
+				      (+ cursor-y
+					 (- text-style-ascent
+					    baseline))
+				      :start start :end end
+				      :text-style merged-text-style
+				      :ink (face-ink (drawing-options-face drawing-options))
+				      :align-y :top))))
+	  (record-stroke stroke stroke-parts part-widths cursor-x cursor-y
+			 (+ width cursor-x) (+ text-style-height cursor-y)
+			 baseline))))))
 
 (defun draw-stroke (stream view stroke cursor-x cursor-y)
   "Draw `stroke' on `stream' at (`cursor-x', `cursor-y'). Nothing
@@ -551,7 +635,9 @@ character is encountered.")
 expects its stroke to cover a single-object non-character buffer
 region, which will be presented with its appropriate presentation
 type (found via `presentation-type-of') to generate output."
-  (let (output-record)
+  (let (output-record
+	(widths (make-array 2 :initial-contents (list 0 0)))
+	(parts (list 0 1)))
     #'(lambda (stream view stroke cursor-x cursor-y
                default-drawing-fn)
         (declare (ignore default-drawing-fn))
@@ -573,7 +659,9 @@ type (found via `presentation-type-of') to generate output."
                                 (+ cursor-x width) (+ cursor-y height
                                                       (stream-vertical-spacing stream)))
               (replay output-record stream)
-              (record-stroke stroke cursor-x cursor-y (+ width cursor-x)
+	      (setf (aref widths 1) width)
+              (record-stroke stroke parts widths
+			     cursor-x cursor-y (+ width cursor-x)
                              (+ (if (zerop height)
                                     (text-style-height (medium-text-style stream) stream)
                                     height)
@@ -644,15 +732,25 @@ function is the drawing function for the chunk."
   "Calculate the position in device units of `offset' in
 `stroke', relative to the starting position of `stroke'. `Offset'
 is an absolute offset into the buffer of `view',"
-  (text-size stream (in-place-buffer-substring
-                     (buffer view) (cache-string view)
-                     (stroke-start-offset stroke) offset)
-   :end (- offset (stroke-start-offset stroke))
-   :text-style (merge-text-styles
-                (face-style
-                 (drawing-options-face
-                  (stroke-drawing-options stroke)))
-                (medium-merged-text-style (sheet-medium stream)))))
+  (let ((string (in-place-buffer-substring
+		 (buffer view) (cache-string view)
+		 (stroke-start-offset stroke) offset)))
+    (loop with pos = (- offset (stroke-start-offset stroke))
+	  for width across (stroke-widths stroke)
+	  for next upfrom 1
+	  for (start end object) in (stroke-parts stroke)
+	  when (and object (= pos end))
+	    do (return (aref (stroke-widths stroke) next))
+	  when (<= start pos end)
+	    do (return (+ width
+			  (text-size stream string
+				     :start start
+				     :end pos
+				     :text-style (merge-text-styles
+						  (face-style
+						   (drawing-options-face
+						    (stroke-drawing-options stroke)))
+						  (medium-merged-text-style (sheet-medium stream)))))))))
 
 (defgeneric offset-to-screen-position (pane view offset)
   (:documentation "Returns the position of offset as a screen
