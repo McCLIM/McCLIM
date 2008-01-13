@@ -137,7 +137,7 @@
   (or (pop (display-free-glyph-ids display))
       (incf (display-free-glyph-id-counter display))))
 
-(defvar *font-hash*
+(defparameter *font-hash*
   (make-hash-table :test #'equalp))
 
 (defstruct (glyph-info (:constructor glyph-info (id width height left right top)))
@@ -386,7 +386,6 @@
 
 ;;; Here are alternate mappings for the DejaVu family of fonts, which
 ;;; are a derivative of Vera with improved unicode coverage.
-
 #+NIL
 (defparameter *families/faces* 
   '(((:FIX :ROMAN) . "DejaVuSansMono.ttf") 
@@ -436,6 +435,24 @@
 
 (defparameter *free-type-face-hash* (make-hash-table :test #'equal))
 
+(define-condition missing-font (simple-error)
+  ((filename :reader missing-font-filename :initarg :filename))
+  (:report (lambda (condition stream)
+             (format stream  "Cannot access ~W~%Your *freetype-font-path* is currently ~W~%The following files should exist:~&~{  ~A~^~%~}"
+                     (missing-font-filename condition)
+                     *freetype-font-path*
+                     (mapcar #'cdr *families/faces*)))))
+
+(defun invoke-with-freetype-path-restart (continuation)
+  (restart-case (funcall continuation)
+    (change-font-path (new-path)
+      :report (lambda (stream) (format stream "Retry with alternate freetype font path"))
+      :interactive (lambda ()
+                     (format t "Enter new value: ")
+                     (list (read-line)))
+      (setf *freetype-font-path* new-path)
+      (invoke-with-freetype-path-restart continuation))))
+
 (let (lookaside)
   (defmethod clim-clx::text-style-to-X-font :around ((port clim-clx::clx-port) (text-style standard-text-style))
     (flet ((f ()
@@ -453,14 +470,18 @@
                                     (let* ((font-path-relative (cdr (assoc (list family face) *families/faces*
                                                                            :test #'equal)))
                                            (font-path (namestring (merge-pathnames font-path-relative *freetype-font-path*))))
+                                      (unless (and font-path (probe-file font-path))
+                                        (error 'missing-font :filename font-path))
+                                      #+NIL
                                       (if (and font-path (probe-file font-path))
                                           (make-free-type-face display font-path size)
-                                          (call-next-method)))))))
+                                          (call-next-method))
+                                      (make-free-type-face display font-path size))))))
                        (t
-                        (call-next-method)))))))      
+                        (call-next-method)))))))
       (cdr (if (eq (car lookaside) text-style)
                lookaside
-               (setf lookaside (cons text-style (f))))))))
+               (setf lookaside (cons text-style (invoke-with-freetype-path-restart #'f))))))))
 
 (defmethod clim-clx::text-style-to-X-font ((port clim-clx::clx-port) text-style)
   (error "You lost: ~S." text-style))
