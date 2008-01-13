@@ -461,6 +461,7 @@
             
                (let ((display (clim-clx::clx-port-display port)))
                  (setf face (or face :roman))
+                 (setf family (or family :fix))
                  (setf size (or size :normal))
                  (cond (size
                         (setf size (getf *sizes* size size))
