@@ -50,9 +50,13 @@
   "Make sure the parse for `syntax' from offset `begin' to `end'
 is up to date. `Begin' and `end' default to 0 and the size of the
 buffer of `syntax', respectively."
-  (map nil #'(lambda (updater)
-               (funcall updater begin end))
-       (updater-fns syntax)))
+  (if (null (updater-fns syntax))
+      ;; Just call `update-syntax' manually. We assume the entire
+      ;; buffer has changed.
+      (update-syntax syntax 0 0 begin end)
+      (map nil #'(lambda (updater)
+                   (funcall updater begin end))
+           (updater-fns syntax))))
 
 (define-condition no-such-operation (simple-error)
   ()
