@@ -838,6 +838,12 @@ mark."
 (motion-fun-one-test (down lisp-syntax)
   (1 53 (15 16 13)
      "(defun list () (&rest elements)
+(append elements nil))")
+  (2 54 (16 17 14)
+     "'(defun list () (&rest elements)
+(append elements nil))")
+  (3 55 (17 18 15)
+     "#'(defun list () (&rest elements)
 (append elements nil))"))
 
 (motion-fun-one-test (up lisp-syntax)

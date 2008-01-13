@@ -1984,7 +1984,7 @@ syntax.")
 
 (defun find-list-parent (form)
   "Find a list parent of `form' and return it. If a list parent
-cannot be found, return nil"
+cannot be found, return nil."
   (let ((parent (parent form)))
     (typecase parent
       (list-form parent)
@@ -2000,23 +2000,23 @@ a list parent cannot be found, return nil"
     (when list-parent
       (funcall fn list-parent))))
 
-(defun find-list-child-offset (form fn &optional (min-offset 0))
-  "Find a list child of `token' with a minimum start
-offset of `min-offset' and return `fn' applied to this child token.
-`Fn' should be a function that returns an offset when applied to a
-token (eg. `start-offset' or `end-offset'). If a list child cannot
-be found, return nil."
-  (labels ((has-list-child (form)
-              (some #'(lambda (child)
-                                   (if (and (form-list-p child)
-                                            (>= (start-offset child)
-                                                min-offset))
-                                       child
-                                       (has-list-child child)))
-                               (children form))))
-    (let ((list-child (has-list-child form)))
-      (when (not (null list-child))
-        (funcall fn list-child)))))
+(defun find-list-child (form)
+  "Find the first list child of `form' and return it. If a list
+child cannot be found, return nil."
+  (find-if #'(lambda (child)
+               (typecase child
+                 (list-form child)
+                 (form (find-list-child child))))
+           (children form)))
+
+(defun find-list-child-offset (form fn)
+  "Find a list child of `form' and return `fn' applied to this child.
+`Fn' should be a function that returns an offset when applied to
+a form (eg. `start-offset' or `end-offset'). If a list child
+cannot be found, return nil."
+  (let ((list-child (find-list-child form)))
+    (when list-child
+      (funcall fn list-child))))
 
 (defmethod backward-one-expression (mark (syntax lisp-syntax))
   (update-parse syntax 0 (offset mark))
@@ -2137,12 +2137,16 @@ successful, or NIL if the buffer limit was reached."))
 
 (defun down-list (mark syntax selector next-offset-fn target-offset-fn)
   (update-parse syntax 0 (offset mark))
-  (labels ((find-offset (potential-form)
+  (labels ((next (continue-from)
+             (find-offset (funcall selector syntax
+                                   (funcall next-offset-fn continue-from))))
+           (find-offset (potential-form)
              (typecase potential-form
                (list-form (funcall target-offset-fn potential-form))
+               (form (or (find-list-child-offset potential-form target-offset-fn)
+                         (next potential-form)))
                (null nil)
-               (t (find-offset (funcall selector syntax
-                                        (funcall next-offset-fn potential-form)))))))
+               (t (next potential-form)))))
     (let ((new-offset (find-offset (funcall selector syntax (offset mark)))))
       (when new-offset
         (setf (offset mark) new-offset)
