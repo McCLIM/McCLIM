@@ -65,7 +65,8 @@ be yanked back in at the users behest. These are generally not shared.
 Every Drei instance is associated with an editor pane - this must be a
 CLIM stream pane that is used for redisplay (@pxref{Redisplay
 Protocol}). This is not necessarily the same object as the Drei instance
-itself, but it can be.
+itself, but it can be. (With a little work, the editor pane can be
+@cl{NIL}, which is useful for resting.)
 
 For each Drei instance, Drei attempts to simulate an application
 top-level loop with something called a @i{pseudo command loop}, and
@@ -163,6 +164,7 @@ protocols. This section lists some of them.
 * Buffer Modification Protocol::  
 * DREI-BASE Package::           
 * Syntax Protocol::             
+* View Protocol::             
 * Unit Protocol::               
 * Redisplay Protocol::          
 * Undo Protocol::               
@@ -478,9 +480,9 @@ where n is the number of lines in the buffer.
 @node Syntax Protocol
 @subsection Syntax Protocol
 
-A buffer always has a syntax module associated with it.  The syntax
-module usually consists of an incremental parser that analyzes the
-contents of the buffer and creates some kind of parse tree or other
+A syntax module is an object that can be associated with a buffer. The
+syntax module usually consists of an incremental parser that analyzes
+the contents of the buffer and creates some kind of parse tree or other
 representation of the contents in order that it can be exploited by the
 redisplay module and by user commands.
 
@@ -518,43 +520,46 @@ syntax, such as expressions, statements, or paragraphs,
 @item etc.
 @end itemize
 
-The view that the syntax module has of the buffer is updated only when
-needed, and then only for the parts of the buffer that are needed.
-Most syntax modules (such as for programming languages) need to
-compute their representations from the beginning of the buffer up to a
-particular point beyond which the structure of the buffer does not
-need to be known.
+The ideal is that the view that the syntax module has of the buffer is
+updated only when needed, and then only for the parts of the buffer that
+are needed, though implementing this in practise is decidedly
+nontrivial.  Most syntax modules (such as for programming languages)
+need to compute their representations from the beginning of the buffer
+up to a particular point beyond which the structure of the buffer does
+not need to be known.
 
-There are three situations where updating might be needed:
+There are two primary situations where updating might be needed:
 
 @itemize @bullet
-@item once, before any panes are displayed to inform the syntax module
-that some part of the buffer has been altered,
-@item once for each pane on display, before redisplay is about to show
-the contents of part of the buffer in a pane to inform the syntax
+@item Before redisplay is about to show
+the contents of part of the buffer in a pane, to inform the syntax
 module that its syntax must be valid in the particular region on
 display,
 @item as a result of a command that exploits the syntactic entities of
 the buffer contents.
 @end itemize
 
-The first case is handled by the redisplay invoking the following
-generic function:
+These two cases do boil down to ``whenever there is need for the syntax
+information to be correct'', however.
+
+The first case is handled by the invocation of a single generic function:
 
 @include fun-drei-syntax-update-syntax.texi
 
-The second case is handled by the following generic function:
-
-@include fun-drei-syntax-update-syntax-for-display.texi
-
-The third case is handled by the syntax module itself when needed in
-order to correctly compute the effects of a command.
-
 It is important to realize that the syntax module is not directly
 involved in displaying buffer contents in a pane.  In fact, the syntax
-module should work even if there is no graphic user interface
-present, and it should be exploitable by several, potentially totally
-different, display units.
+module should work even if there is no graphic user interface present,
+and it should be exploitable by several, potentially totally different,
+display units.
+
+The second case is slightly trickier, as any views of the syntax should
+be informed that it has reparsed some part of the buffer. Since
+@cl{update-syntax} is only called by views, the view can easily record
+the fact that some part of the buffer has an up-to-date parse. Thus,
+functions accessing syntax information must go to some length to make
+sure that the view of the syntax is notified of any reparses.
+
+@include fun-drei-syntax-update-parse.texi
 
 @node Incremental Parsing Framework
 @subsubsection Incremental Parsing Framework
@@ -683,6 +688,40 @@ If the @var{body} is absent, it is the same as if a body of the form
 The body can also be a sequence of forms, the first one of which must be
 a symbol.  These forms typically contain initargs, and will be passed as
 additional arguments to @code{(make-instance '@var{symbol})}.
+
+@node View Protocol
+@subsection View Protocol
+@cindex view protocol
+@cindex views
+
+Drei extends CLIMs concept of ``views'' to be more than just a manner
+for determining the user interface for accepting values from the
+user. Instead, the view is what controls the user interface of the Drei
+instance the user is interacting with. To simplify the discussion, this
+section assumes that the view is always associated with a single
+buffer. A buffer does not have to be associated with a view, and may be
+associated with many views, though each view may only have a single
+buffer. The view controls how the buffer is displayed to the user, and
+which commands are available to the user for modifying the buffer. A
+view may use a syntax module to maintain syntactical information about
+the buffer contents, and use the resulting information to highlight
+parts of the buffer based on its syntactical value (``syntax
+highlighting'').
+
+@include class-drei-drei-view.texi
+
+@include class-drei-drei-buffer-view.texi
+
+@include method-drei-buffer-buffer-nil-drei-buffer-view.texi
+
+@include class-drei-drei-syntax-view.texi
+
+@include class-drei-point-mark-view.texi
+
+The @cl{synchronize-view} generic function is the heart of all view
+functionality.
+
+@include fun-drei-synchronize-view.texi
 
 @node Unit Protocol
 @subsection Unit Protocol
@@ -821,31 +860,23 @@ using the macro @cl{define-motion-commands} (@pxref{Generator Macros}).
 
 A buffer can be on display in several panes, possibly by being located
 in several Drei instances. Thus, the buffer does not concern itself with
-redisplay, but assumes that its host Drei instance will redisplay when
+redisplay, but assumes that whatever is using it will redisplay when
 appropriate. There is no predictable definitive rule for when a Drei
-will be redisplayed, but when it is, it will be done by calling the
-following generic function.
+instance will be redisplayed, but when it is, it will be done by calling
+the following generic function.
 
-@deffn {Generic Function} {display-drei} frame drei
-@findex display-drei
+@include fun-drei-display-drei.texi
 
-@var{Drei} must be an object of type @class{drei} and @var{frame} must
-be a CLIM frame containing the editor pane of @var{drei}. If you define
-a new subclass of @var{drei}, you must define a method for this generic
-function. In most cases, methods defined on this function will merely be
-a trampoline to a function specific to the given Drei.
-@end deffn
+The redisplay engine supports view-specific customization of the display
+in order to facilitate such functionality as syntax highlighting. This
+is done through the following two generic functions, both of which have
+sensible default methods defined by @class{drei-buffer-view} and
+@class{drei-syntax-view}, so if your view is a subclass of either of
+these, you do not need to define them yourself.
 
-The redisplay engine supports syntax-specific customization of the
-display in order to facilitate such functionality as syntax
-highlighting. This is done through the following two generic functions,
-both of which have sensible default methods defined by the Fundamental
-syntax, so if your syntax is a subclass of @class{fundamental-syntax},
-you do not need to define them.
+@include fun-drei-display-drei-view-contents.texi
 
-@include fun-drei-display-drei-contents.texi
-
-@include fun-drei-display-drei-cursor.texi
+@include fun-drei-display-drei-view-cursor.texi
 
 @node Undo Protocol
 @subsection Undo Protocol
@@ -1229,8 +1260,6 @@ When providing a @var{:command-table} argument to
 of the syntax command table will be used for the syntax.
 
 @include class-drei-syntax-syntax-command-table.texi
-
-@include fun-drei-syntax-use-editor-commands-p.texi
 
 @include fun-drei-syntax-additional-command-tables.texi
 

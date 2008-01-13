@@ -502,7 +502,9 @@ been defined that should be appropriate for most view classes.")
             :initform (make-instance 'drei-buffer)
             :initarg :buffer
             :type drei-buffer
-            :accessor buffer)
+            :accessor buffer
+            :documentation "The buffer that is observed by this
+buffer view.")
    (%top :accessor top
          :documentation "The top of the displayed buffer, that
 is, the mark indicating the first visible object in the buffer.")
@@ -533,7 +535,9 @@ the views `displayed-lines' array that are actually live, that
 is, used for display right now."))
   (:metaclass modual-class)
   (:documentation "A view that contains a `drei-buffer'
-object."))
+object. The buffer is displayed on a simple line-by-line basis,
+with top and bot marks delimiting the visible region. These marks
+are automatically set if applicable."))
 
 (defmethod initialize-instance :after ((view drei-buffer-view) &rest initargs)
   (declare (ignore initargs))
@@ -566,7 +570,9 @@ object."))
         (invalidate-line-strokes line :modified t)))))
 
 (defclass drei-syntax-view (drei-buffer-view)
-  ((%syntax :accessor syntax)
+  ((%syntax :accessor syntax
+            :documentation "An instance of the syntax class used
+for this syntax view.")
    (%prefix-size :accessor prefix-size
                  :initform 0
                  :documentation "The number of unchanged objects
@@ -763,7 +769,11 @@ into its buffer."))
    (%dabbrev-expansion-mark :initform nil :accessor dabbrev-expansion-mark)
    (%overwrite-mode :initform nil :accessor overwrite-mode))
   (:metaclass modual-class)
-  (:default-initargs :use-editor-commands t))
+  (:default-initargs :use-editor-commands t)
+  (:documentation "The \"default\" Drei view class. It displays a
+textual representation of the buffer, possibly with syntax
+highlighting, and maintains point and mark marks into the buffer,
+in order to permit useful editing commands."))
 
 (defmethod create-view-cursors nconc ((output-stream extended-output-stream)
                                       (view textual-drei-syntax-view))

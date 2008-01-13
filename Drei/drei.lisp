@@ -345,7 +345,12 @@ the Drei instance."
 
 ;; Main redisplay entry point.
 (defgeneric display-drei (drei)
-  (:documentation "Display the given Drei instance."))
+  (:documentation "`Drei' must be an object of type `drei' and
+`frame' must be a CLIM frame containing the editor pane of
+`drei'. If you define a new subclass of `drei', you must define a
+method for this generic function. In most cases, methods defined
+on this function will merely be a trampoline to a function
+specific to the given Drei variant."))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

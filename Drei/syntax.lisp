@@ -29,7 +29,14 @@
                    :reader command-table)
    (%updater-fns :initarg :updater-fns
                  :initform '()
-                 :accessor updater-fns))
+                 :accessor updater-fns
+                 :documentation "A list of functions that are
+called whenever a syntax function needs up-to-date syntax
+information. `Update-syntax' is never called directly by syntax
+commands. Each function should take two arguments, integer
+offsets into the buffer of the syntax delimiting the region that
+must have an up-to-date parse. These arguments should be passed
+on to a call to `update-syntax'."))
   (:metaclass modual-class)
   (:documentation "The base class for all syntaxes."))
 

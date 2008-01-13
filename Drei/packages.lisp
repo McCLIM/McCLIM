@@ -145,7 +145,7 @@ characters."))
 
 (defpackage :drei-syntax
   (:use :clim-lisp :clim :drei-buffer :drei-base :flexichain :esa-utils)
-  (:export #:syntax #:syntax-command-tables #:update-parse #:syntaxp
+  (:export #:syntax #:syntax-command-tables #:updater-fns #:update-parse #:syntaxp
            #:define-syntax #:*default-syntax*
            #:syntax-command-table #:additional-command-tables #:define-syntax-command-table
            #:eval-option
