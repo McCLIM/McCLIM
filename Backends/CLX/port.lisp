@@ -167,8 +167,7 @@
    (selection-timestamp :initform nil :accessor selection-timestamp)
    (font-families :accessor font-families)))
 
-(defun parse-clx-server-path (path)
-  (pop path)
+(defun automagic-clx-server-path ()
   (let ((name (get-environment-variable "DISPLAY")))
     (assert name (name)
             "Environment variable DISPLAY is not set")
@@ -178,13 +177,13 @@
            (decnet-colon-p (eql (elt name (1+ colon-i)) #\:))
            (host (subseq name (1+ slash-i) colon-i))
            (dot-i (and colon-i (position #\. name :start colon-i)))
-           (display (when colon-i
+           (display (and colon-i
                       (parse-integer name
                                      :start (if decnet-colon-p
                                                 (+ colon-i 2)
                                                 (1+ colon-i))
                                      :end dot-i)))
-           (screen (when dot-i
+           (screen (and dot-i
                      (parse-integer name :start (1+ dot-i))))
            (protocol
             (cond ((or (string= host "") (string-equal host "unix")) :local)
@@ -194,10 +193,20 @@
                                    :keyword))
                   (t :internet))))
       (list :clx
-            :host (getf path :host host)
-            :display-id (getf path :display-id (or display 0))
-            :screen-id (getf path :screen-id (or screen 0))
-            :protocol protocol))))
+	    :host host
+	    :display-id (or display 0)
+	    :screen-id (or screen 0)
+	    :protocol protocol))))
+
+(defun parse-clx-server-path (path)
+  (pop path)
+  (if path
+      (list :clx
+	    :host       (getf path :host "localhost")
+	    :display-id (getf path :display-id 0)
+	    :screen-id  (getf path :screen-id 0)
+	    :protocol   (getf path :protocol :internet))
+      (automagic-clx-server-path)))
 
 (setf (get :x11 :port-type) 'clx-port)
 (setf (get :x11 :server-path-parser) 'parse-clx-server-path)
