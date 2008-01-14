@@ -58,10 +58,8 @@
 
 (defun draw-icon (stream pattern &key (extra-spacing 0) )
   (let ((stream (if (eq stream t) *standard-output* stream)))
-    (multiple-value-bind (x y)
-        (stream-cursor-position stream)
-      (draw-pattern* stream pattern x y)
-      (stream-increment-cursor-position stream (+ (pattern-width pattern) extra-spacing) 0))))
+    (mcclim-images:draw-image stream pattern)
+    (stream-increment-cursor-position stream (+ (mcclim-images:image-width pattern) extra-spacing) 0)))
 
 (defun precache-icons ()
   (let ((pathnames (remove-if #'directoryp
