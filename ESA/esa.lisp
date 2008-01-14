@@ -1542,7 +1542,7 @@ Use C-x ( to start recording a macro, and C-x e to run it."
 (define-command (com-call-last-kbd-macro
 		 :name t
 		 :command-table keyboard-macro-table)
-    ((count 'integer :prompt "How many times?"))
+    ((count 'integer :prompt "How many times?" :default 1))
   "Run the last keyboard macro that was defined.
 Use C-x ( to start and C-x ) to finish recording a keyboard macro."
   (setf (remaining-keys *command-processor*)
