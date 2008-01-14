@@ -383,13 +383,16 @@ it was redisplayed."
       (setf (line-end-offset line) (stroke-end-offset stroke)))))
 
 (defun record-stroke (stroke parts widths x1 y1 x2 y2
-                      &optional (center (/ (- y2 y1) 2)))
-  "Record the fact that `stroke' has been drawn, that it consists
-of parts `parts' with the widths `widths', and that it
-covers the specified area on screen. Updates the dirty- and
-modified-bits of `stroke' as well as the dimensions."
+                      &optional (drawn t) (center (/ (- y2 y1) 2)))
+  "Record the fact that `stroke' has been drawn (if `drawn' is
+true), that it consists of parts `parts' with the widths
+`widths', and that it covers the specified area on screen. Sets
+the dirty-bit of `stroke' to false if `drawn' is true, and always
+sets the modified-bit of `stroke' to false, as it updates the
+dimensions."
   (let ((dimensions (stroke-dimensions stroke)))
-    (setf (stroke-dirty stroke) nil
+    (setf (stroke-dirty stroke) (and (stroke-dirty stroke)
+                                     (not drawn))
           (stroke-modified stroke) nil
 	  (stroke-parts stroke) parts
           (stroke-widths stroke) widths
@@ -436,6 +439,44 @@ NOTE: Assumes an ASCII/Unicode character encoding."
 	  (t
 	   (format nil "\\~O" code)))))
 
+(defun calculate-stroke-width (stroke-string text-style stream x-position)
+  "Calculate the width information of `stroke-string' when
+displayed with `text-style' (which must be fully specified) on
+`stream', starting at the horizontal device unit offset
+`x-position'. Four values will be returned: the total width of
+the stroke, the baseline, the parts of the stroke and the widths
+of the parts of the stroke."
+  (loop with parts = (analyse-stroke-string stroke-string)
+     with width = 0
+     with baseline = 0
+     with widths = (make-array (length parts) :adjustable t :fill-pointer t)
+     with tab-width
+     for (start end object) in parts
+     do (cond ((and object (eql object #\Tab))
+               (incf width 
+                     (- (or tab-width
+                            (setf tab-width (tab-width stream (stream-default-view stream))))
+                        (mod (+ width x-position) tab-width)))
+               (vector-push-extend width widths))
+              (object
+               (multiple-value-bind (w ignore1 ignore2 ignore3 b)
+                   (text-size stream object
+                    :text-style text-style)
+                 (declare (ignore ignore1 ignore2 ignore3))
+                 (incf width w)
+                 (setf baseline (max baseline b))
+                 (vector-push-extend width widths)))
+              (t
+               (multiple-value-bind (w ignore1 ignore2 ignore3 b)
+                   (text-size stream stroke-string
+                    :start start :end end
+                    :text-style text-style)
+                 (declare (ignore ignore1 ignore2 ignore3))
+                 (incf width w)
+                 (setf baseline (max baseline b))
+                 (vector-push-extend width widths))))
+     finally (return (values width baseline parts widths))))
+
 (defun stroke-drawing-fn (stream view stroke cursor-x cursor-y)
   "Draw `stroke' to `stream' at the position (`cursor-x',
 `cursor-y'). `View' is the view object that `stroke' belongs
@@ -465,38 +506,10 @@ will be cleared before any actual output takes place."
            (text-style-descent (text-style-descent roman-text-style (sheet-medium stream)))
            (text-style-height (+ text-style-ascent text-style-descent)))
       (with-accessors ((x1 x1) (x2 x2) (center center)) dimensions
-        (multiple-value-bind (stroke-parts width baseline part-widths)
+        (multiple-value-bind (width baseline stroke-parts part-widths)
 	    (if (stroke-modified stroke)
-		(loop with parts = (analyse-stroke-string stroke-string)
-		      with width = 0
-		      with baseline = 0
-		      with widths = (make-array 1 :adjustable t :fill-pointer t)
-		      with tab-width
-		      for (start end object) in parts
-		      do (cond ((and object (eql object #\Tab))
-				(incf width 
-				      (- (or tab-width (setf tab-width (tab-width stream view)))
-					 (mod (+ width cursor-x) tab-width)))
-				(vector-push-extend width widths))
-			       (object
-				(multiple-value-bind (w ignore1 ignore2 ignore3 b)
-				    (text-size stream object
-					       :text-style merged-text-style)
-				  (declare (ignore ignore1 ignore2 ignore3))
-				  (incf width w)
-				  (setf baseline (max baseline b))
-				  (vector-push-extend width widths)))
-			       (t
-				(multiple-value-bind (w ignore1 ignore2 ignore3 b)
-				    (text-size stream stroke-string
-					       :start start :end end
-					       :text-style merged-text-style)
-				  (declare (ignore ignore1 ignore2 ignore3))
-				  (incf width w)
-				  (setf baseline (max baseline b))
-				  (vector-push-extend width widths))))
-		      finally (return (values parts width baseline widths)))
-		(values parts (- x2 x1) center widths))
+		(calculate-stroke-width stroke-string merged-text-style stream cursor-x)
+		(values (- x2 x1) center parts widths))
 	  (clear-rectangle* stream cursor-x cursor-y
 			    (+ cursor-x width) (+ cursor-y text-style-height
 						  (stream-vertical-spacing stream)))
@@ -523,7 +536,7 @@ will be cleared before any actual output takes place."
 				      :align-y :top))))
 	  (record-stroke stroke stroke-parts part-widths cursor-x cursor-y
 			 (+ width cursor-x) (+ text-style-height cursor-y)
-			 baseline))))))
+			 t baseline))))))
 
 (defun draw-stroke (stream view stroke cursor-x cursor-y)
   "Draw `stroke' on `stream' at (`cursor-x', `cursor-y'). Nothing
