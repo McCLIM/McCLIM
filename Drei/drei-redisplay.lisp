@@ -822,9 +822,12 @@ the end of the buffer."))
                                             (- (x2 stroke-dimensions) absolute-x-position)
                                             (- (offset-in-stroke-position pane view stroke (1+ offset))
                                                relative-x-position)))))))))
-                 (return-from
-                  worker (values (x2 line-dimensions) (y1 line-dimensions)
-                                 (dimensions-height line-dimensions))))))))
+                 ;; If we reach this point, we are just past the last
+                 ;; stroke, so let's extract information from it.
+                 (let ((stroke-dimensions (stroke-dimensions (line-last-stroke line))))
+                   (return-from
+                    worker (values (x2 stroke-dimensions) (y1 stroke-dimensions)
+                                   (dimensions-height stroke-dimensions)))))))))
     (with-accessors ((buffer buffer) (top top) (bot bot)) view
       (let ((default-object-width
              (text-style-width
