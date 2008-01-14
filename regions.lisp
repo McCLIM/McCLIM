@@ -4,7 +4,7 @@
 ;;;   Created: 1998-12-02 19:26
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: regions.lisp,v 1.34 2007/02/05 03:07:22 ahefner Exp $
+;;;       $Id: regions.lisp,v 1.35 2008/01/14 07:03:18 ahefner Exp $
 ;;; --------------------------------------------------------------------------------------
 ;;;  (c) copyright 1998,1999,2001 by Gilbert Baumann
 ;;;  (c) copyright 2001 by Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
@@ -81,8 +81,8 @@
 
 (in-package :clim-internals)
 
-(defclass nowhere-region (region) ())
-(defclass everywhere-region (region) ())
+(defclass nowhere-region (region nowhere-mixin) ())
+(defclass everywhere-region (region everywhere-mixin) ())
 
 ;; coordinate is defined in coordinates.lisp
 

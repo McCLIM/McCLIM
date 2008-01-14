@@ -47,6 +47,8 @@
 ;;
 ;; --GB
 
+;; I agree with this interpretation. -Hefner
+
 ;; It might be handy to have the equivalent of parent-relative
 ;; backgrounds. We can specify new indirect inks:
 ;;
@@ -283,13 +285,26 @@
 
 ||#
 
+;;;; Design <-> Region Equivalences
+
+;;; As Gilbert points in his notes, transparent ink is in every
+;;; respect interchangable with the nowhere region, and likewise
+;;; foreground ink is interchangable with the everywhere region.
+;;; By defining the following mixins and adding them to the
+;;; appropriate ink/region class pairs, we can reduce the number
+;;; of methods necessary. 
+
+(defclass everywhere-mixin () ())
+(defclass nowhere-mixin    () ()) 
 ;;;;
 ;;;; 13.6 Indirect Inks
 ;;;;
 
 (defclass indirect-ink (design) ())
 
-(defvar +foreground-ink+ (make-instance 'indirect-ink))
+(defclass %foreground-ink (indirect-ink everywhere-mixin) ())
+
+(defvar +foreground-ink+ (make-instance '%foreground-ink))
 (defvar +background-ink+ (make-instance 'indirect-ink))
 
 (defmethod print-object ((ink (eql +foreground-ink+)) stream)
@@ -313,15 +328,25 @@
           :type (real 0 1)
           :reader opacity-value)))
 
-(defvar +transparent-ink+ 
-    (make-instance 'standard-opacity :value 0))
+(defclass %transparent-ink (standard-opacity nowhere-mixin)
+  ()
+  (:default-initargs :value 0))
+
+(defvar +transparent-ink+
+  (make-instance '%transparent-ink :value 0))
+
+(defmethod opacity-value ((region everywhere-mixin))
+  (declare (ignore region))
+  1.0)
+
+(defmethod opacity-value ((region nowhere-mixin))
+  (declare (ignore region))
+  0.0)
 
 (defun make-opacity (value)
   (setf value (clamp value 0 1))        ;defensive programming
-  (cond ((= value 0)
-         +transparent-ink+)
-        ((= value 1)
-         +foreground-ink+)
+  (cond ((= value 0) +transparent-ink+)
+        ((= value 1) +everywhere+)      ; used to say +foreground-ink+
         (t
          (make-instance 'standard-opacity :value value))))
 
@@ -427,10 +452,6 @@
     :initarg :design
     :reader transformed-design-design)))
 
-#+NIL
-;; Commeted out because CLOS bites here. Ellipises will be transformed
-;; by this method. No idea why.
-;; --GB 2003-05-28
 (defmethod transform-region (transformation (design design))
   (make-instance 'transformed-design
                  :transformation transformation
@@ -456,33 +477,42 @@
 
 ;;;
 
-(defclass in-compositum (design)
+(defclass masked-compositum (design)
   ((ink  :initarg :ink  :reader compositum-ink)
    (mask :initarg :mask :reader compositum-mask)))
 
-(defmethod print-object ((object in-compositum) stream)
-  (print-unreadable-object (object stream :identity nil :type t)
+(defmethod print-object ((object masked-compositum) stream)
+  (print-unreadable-object (object stream :identity nil :type t)    
     (format stream "~S ~S ~S ~S"
-            :ink (compositum-ink object)
+            :ink  (compositum-ink object)
             :mask (compositum-mask object))))
 
-(defclass uniform-compositum (in-compositum)
-  ;; we use this class to represent rgbo values
-  ())
-
-(defclass over-compositum (design)
-  ((foreground :initarg :foreground :reader compositum-foreground)
-   (background :initarg :background :reader compositum-background)))
+(defclass in-compositum (masked-compositum) ())
 
 (defmethod compose-in ((ink design) (mask design))
   (make-instance 'in-compositum
     :ink ink
     :mask mask))
 
+(defclass out-compositum (masked-compositum) ())
+
+(defmethod compose-out ((ink design) (mask design))
+  (make-instance 'out-compositum
+    :ink ink
+    :mask mask))
+
+(defclass over-compositum (design)
+  ((foreground :initarg :foreground :reader compositum-foreground)
+   (background :initarg :background :reader compositum-background)))
+
 (defmethod compose-over ((foreground design) (background design))
   (make-instance 'over-compositum
     :foreground foreground
     :background background))
+
+(defclass uniform-compositum (in-compositum)
+  ;; we use this class to represent rgbo values
+  ())
 
 ;;;
 ;;; color
@@ -541,6 +571,14 @@
 
 (defmethod compose-in ((ink color) (mask uniform-compositum))
   (make-uniform-compositum ink (opacity-value mask)))
+
+(defmethod compose-in ((design design) (mask everywhere-mixin))
+  (declare (ignore mask))
+  design)
+
+(defmethod compose-in ((design design) (mask nowhere-mixin))
+  (declare (ignore design mask))
+  +nowhere+)
 
 ;;; IN-COMPOSITUM
 
@@ -648,6 +686,29 @@
 
 ;;;; ------------------------------------------------------------------------------------------
 ;;;;
+;;;;  Compose-Out
+;;;;
+
+(defmethod compose-out ((design design) (mask everywhere-mixin))
+  (declare (ignore design mask))
+  +nowhere+)
+
+(defmethod compose-out ((design design) (mask nowhere-mixin))
+  (declare (ignore mask))
+  design)
+
+(defmethod compose-out ((design design) (mask color))
+  (declare (ignore design mask))
+  +nowhere+)
+
+(defmethod compose-out ((design design) (mask uniform-compositum))
+  (compose-in design (make-opacity (- 1.0 (compositum-mask (opacity-value mask))))))
+
+(defmethod compose-out ((design design) (mask standard-opacity))
+  (compose-in design (make-opacity (- 1.0 (opacity-value mask)))))
+
+;;;; ------------------------------------------------------------------------------------------
+;;;;
 ;;;;  Compose-Over
 ;;;;
 
@@ -702,7 +763,6 @@
   (multiple-value-bind (r g b o)
       (multiple-value-call #'color-blend-function
         (color-rgb foreground)
-        1
         (color-rgb (compositum-ink background))
         (opacity-value (compositum-mask background)))
     (make-uniform-compositum
