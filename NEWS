@@ -6,6 +6,10 @@
    applications.
 ** New extension: MCCLIM-IMAGES. This extension makes it easy to use
    McCLIM for loading and displaying images of various formats.
+** Drei improvements
+*** New redisplay engine that is faster and has more features.
+*** Support for "views" concept.
+*** Support for modes a la Emacs "mini-modes".
 
 * Changes in mcclim-0.9.5 relative to 0.9.4:
 ** Installation: the systems clim-listener, clim-examples,
