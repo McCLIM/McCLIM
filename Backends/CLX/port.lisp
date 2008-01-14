@@ -279,7 +279,7 @@
         #'clx-error-handler)
 
       #+nil ;; Uncomment this when debugging CLX backend if asynchronous errors become troublesome..
-      (setf (xlib:display-after-function (clx-port-display port)) #'xlib:display-force-output))
+      (setf (xlib:display-after-function (clx-port-display port)) #'xlib:display-finish-output))
       
     
     (setf (clx-port-screen port) (nth (getf options :screen-id)
