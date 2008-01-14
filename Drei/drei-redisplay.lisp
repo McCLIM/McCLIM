@@ -594,17 +594,12 @@ of the sheet."
         (with-accessors ((stroke-x1 x1) (stroke-y1 y1)
                          (stroke-x2 x2) (stroke-y2 y2)) stroke-dimensions
           (setf stroke-x1 0 stroke-y1 0
-                stroke-x2 0 stroke-y2 0))))
-    ;; Clear from end of line to end of sheet.
-    (clear-rectangle* stream line-x2 line-y1
-                      (bounding-rectangle-width stream)
-                      (+ line-y1 (max line-height old-line-height)
-                         (stream-vertical-spacing stream)))))
+                stroke-x2 0 stroke-y2 0))))))
 
-(defun draw-line-strokes (stream view initial-pump-state
+(defun draw-line-strokes (pane view initial-pump-state
                           start-offset cursor-x cursor-y)
   "Pump strokes from `view', using `initial-pump-state' to begin
-with, and draw them on `stream'. The line is set to start at the
+with, and draw them on `pane'. The line is set to start at the
 buffer offset `start-offset', and will be drawn starting
 at (`cursor-x', `cursor-y')."
   (let* ((line (line-information view (displayed-lines-count view)))
@@ -612,7 +607,7 @@ at (`cursor-x', `cursor-y')."
          (old-line-width (dimensions-width (line-dimensions line)))
          (orig-x-offset cursor-x)
          (offset-change (- start-offset (line-start-offset line)))
-         (line-spacing (stream-vertical-spacing stream)))
+         (line-spacing (stream-vertical-spacing pane)))
     (setf (line-start-offset line) start-offset
           (line-stroke-count line) 0)
     ;; So yeah, this is fairly black magic, but it's not actually
@@ -624,29 +619,38 @@ at (`cursor-x', `cursor-y')."
            for stroke-dimensions = (stroke-dimensions stroke)
            for pump-state = (put-stroke view line initial-pump-state offset-change) then
            (put-stroke view line pump-state offset-change)
-           do (update-stroke-dimensions stream view stroke cursor-x cursor-y)
+           do (update-stroke-dimensions pane view stroke cursor-x cursor-y)
            (setf cursor-x (x2 stroke-dimensions))
            maximizing (dimensions-height stroke-dimensions) into line-height
            maximizing (+ (center stroke-dimensions) cursor-y) into baseline
            summing (dimensions-width stroke-dimensions) into line-width
            when (stroke-at-end-of-line (buffer view) stroke)
            return (values line-width line-height baseline pump-state))
+      ;; Loop over the strokes and clear the parts of the pane that
+      ;; has to be redrawn, trying to minimise the number of calls to
+      ;; `clear-rectangle*'..
+      (flet ((maybe-clear (x1 x2)
+               (unless (= x1 x2)
+                 (clear-rectangle* pane x1 cursor-y x2
+                                   (+ cursor-y line-height line-spacing)))))
+        (loop with last-clear-x = orig-x-offset
+           for stroke-index below (line-stroke-count line)
+           for stroke = (aref (line-strokes line) stroke-index)
+           for stroke-dimensions = (stroke-dimensions stroke)
+           do (unless (= baseline (+ cursor-y (center stroke-dimensions)))
+                (invalidate-stroke stroke))
+           (unless (stroke-dirty stroke)
+             (maybe-clear last-clear-x (x1 stroke-dimensions))
+             (setf last-clear-x (x2 stroke-dimensions)))
+           ;; This clears from end of line to the end of the sheet.
+           finally (maybe-clear last-clear-x (bounding-rectangle-width pane))))
       ;; Now actually draw them in a way that makes sure they all
       ;; touch the bottom of the line.
-      (loop with last-clear-x = orig-x-offset
-         for stroke-index below (line-stroke-count line)
+      (loop for stroke-index below (line-stroke-count line)
          for stroke = (aref (line-strokes line) stroke-index)
          for stroke-dimensions = (stroke-dimensions stroke)
-         do (unless (= baseline (+ cursor-y (center stroke-dimensions)))
-              (invalidate-stroke stroke))
-         (when (stroke-dirty stroke)
-           (clear-rectangle* stream (x1 stroke-dimensions) cursor-y
-                             (x2 stroke-dimensions)
-                             (+ cursor-y line-height line-spacing))
-           (setf last-clear-x (x2 stroke-dimensions)))
-         (draw-stroke stream view stroke
-                      (x1 stroke-dimensions) baseline)
-         finally (progn (end-line-cleaning-up stream line orig-x-offset cursor-y
+         do (draw-stroke pane view stroke (x1 stroke-dimensions) baseline)
+         finally (progn (end-line-cleaning-up pane line orig-x-offset cursor-y
                                               line-width old-line-width
                                               line-height old-line-height)
                         (incf (displayed-lines-count view))
