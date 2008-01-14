@@ -875,10 +875,11 @@ the end of the buffer."))
   (multiple-value-bind (cursor-x cursor-y stroke-height object-width)
       (offset-to-screen-position stream view (offset (mark cursor)))
     (letf (((stream-current-output-record stream) cursor))
-      (draw-rectangle* stream
-                       cursor-x cursor-y
-                       (+ cursor-x object-width) (+ cursor-y stroke-height)
-                       :ink (ink cursor)))))
+      (unless (zerop (* object-width stroke-height))
+        (draw-rectangle* stream
+                         cursor-x cursor-y
+                         (+ cursor-x object-width) (+ cursor-y stroke-height)
+                         :ink (ink cursor))))))
 
 (defmethod display-drei-view-cursor :after ((stream extended-output-stream) (view drei-view)
                                             (cursor point-cursor))
