@@ -71,7 +71,7 @@ string at point."
 
 (define-command (com-indent-expression :name t :command-table lisp-table)
     ((count 'integer :prompt "Number of expressions" :default 1))
-  (let ((mark (point)))
+  (let ((mark (clone-mark (point))))
     (if (plusp count)
         (loop repeat count do (forward-expression mark (current-syntax)))
         (loop repeat (- count) do (backward-expression mark (current-syntax))))

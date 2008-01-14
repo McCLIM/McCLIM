@@ -117,7 +117,7 @@ The body is executed for each element, with object being the current object
          (as-region (,mark-sym ,mark2-sym)
            (loop while (and (mark<= ,mark-sym ,mark2-sym)
                             (not (end-of-buffer-p ,mark-sym)))
-              do              
+              do
               (let ((,line-var (clone-mark ,mark-sym)))
                 ,@body)
               (end-of-line ,mark-sym)
