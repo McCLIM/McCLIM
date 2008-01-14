@@ -100,11 +100,12 @@ text style whenever it needs to be used."
   (style nil))
 
 (defconstant +default-stroke-drawer-dispatcher+
-  #'(lambda (stream view stroke cursor-x cursor-y default-drawing-fn)
-      (funcall default-drawing-fn stream view stroke cursor-x cursor-y))
-  "A simple function of six arguments that simply calls the first
-argument as a function with the remaining five arguments. Used as
-the default drawing-function of `drawing-options' objects.")
+  #'(lambda (stream view stroke cursor-x cursor-y default-drawing-fn draw)
+      (funcall default-drawing-fn stream view stroke cursor-x cursor-y draw))
+  "A simple function of seven arguments that simply calls the
+first argument as a function with the remaining sex
+arguments. Used as the default drawing-function of
+`drawing-options' objects.")
 
 (defstruct drawing-options
   "A set of options for how to display a stroke."
@@ -142,7 +143,7 @@ string with the default foreground color.")
 be absolute coordinates in the coordinate system of a sheet. A
 special `center' slot is also provided to enable the recording of
 what might be considered a *logical* centre of the dimensions on
-the vertical axis."
+the vertical axis. `Center' should be relative to `y1'."
   (x1 0)
   (y1 0)
   (x2 0)
@@ -188,6 +189,13 @@ see ANALYSE-STROKE-STRING."
   (dimensions (make-dimensions))
   (widths)
   (parts))
+
+(defun stroke-at-end-of-line (buffer stroke)
+  "Return true if the end offset of `stroke' is at the end of a
+line in `buffer'. Otherwise, return nil. The end offset of
+`stroke' must be a valid offset for `buffer' or an error will be
+signalled."
+  (offset-end-of-line-p buffer (stroke-end-offset stroke)))
 
 (defstruct (displayed-line (:conc-name line-))
   "A line on display. A line delimits a buffer region (always
@@ -391,8 +399,7 @@ the dirty-bit of `stroke' to false if `drawn' is true, and always
 sets the modified-bit of `stroke' to false, as it updates the
 dimensions."
   (let ((dimensions (stroke-dimensions stroke)))
-    (setf (stroke-dirty stroke) (and (stroke-dirty stroke)
-                                     (not drawn))
+    (setf (stroke-dirty stroke) (and (stroke-dirty stroke) (not drawn))
           (stroke-modified stroke) nil
 	  (stroke-parts stroke) parts
           (stroke-widths stroke) widths
@@ -443,12 +450,11 @@ NOTE: Assumes an ASCII/Unicode character encoding."
   "Calculate the width information of `stroke-string' when
 displayed with `text-style' (which must be fully specified) on
 `stream', starting at the horizontal device unit offset
-`x-position'. Four values will be returned: the total width of
-the stroke, the baseline, the parts of the stroke and the widths
-of the parts of the stroke."
+`x-position'. Three values will be returned: the total width of
+the stroke, the parts of the stroke and the widths of the parts
+of the stroke."
   (loop with parts = (analyse-stroke-string stroke-string)
      with width = 0
-     with baseline = 0
      with widths = (make-array (length parts) :adjustable t :fill-pointer t)
      with tab-width
      for (start end object) in parts
@@ -459,32 +465,32 @@ of the parts of the stroke."
                         (mod (+ width x-position) tab-width)))
                (vector-push-extend width widths))
               (object
-               (multiple-value-bind (w ignore1 ignore2 ignore3 b)
+               (multiple-value-bind (w ignore1 ignore2 ignore3 ignore4)
                    (text-size stream object
                     :text-style text-style)
-                 (declare (ignore ignore1 ignore2 ignore3))
+                 (declare (ignore ignore1 ignore2 ignore3 ignore4))
                  (incf width w)
-                 (setf baseline (max baseline b))
                  (vector-push-extend width widths)))
               (t
-               (multiple-value-bind (w ignore1 ignore2 ignore3 b)
+               (multiple-value-bind (w ignore1 ignore2 ignore3 ignore4)
                    (text-size stream stroke-string
                     :start start :end end
                     :text-style text-style)
-                 (declare (ignore ignore1 ignore2 ignore3))
+                 (declare (ignore ignore1 ignore2 ignore3 ignore4))
                  (incf width w)
-                 (setf baseline (max baseline b))
                  (vector-push-extend width widths))))
-     finally (return (values width baseline parts widths))))
+     finally (return (values width parts widths))))
 
-(defun stroke-drawing-fn (stream view stroke cursor-x cursor-y)
-  "Draw `stroke' to `stream' at the position (`cursor-x',
+(defun stroke-drawing-fn (stream view stroke cursor-x cursor-y draw)
+  "Draw `stroke' to `stream' baseline-adjusted at the position (`cursor-x',
 `cursor-y'). `View' is the view object that `stroke' belongs
-to. It is assumed that the buffer region delimited by `stroke'
-only contains characters. `Stroke' is drawn with face given by
-the drawing options of `stroke', using the default text style of
-`stream' to fill out any holes. The screen area beneath `stroke'
-will be cleared before any actual output takes place."
+to. If `draw' is true, actually draw the stroke to `stream',
+otherwise, just calculate its size. It is assumed that the buffer
+region delimited by `stroke' only contains characters. `Stroke'
+is drawn with face given by the drawing options of `stroke',
+using the default text style of `stream' to fill out any
+holes. The screen area beneath `stroke' will be cleared before
+any actual output takes place."
   (with-accessors ((start-offset stroke-start-offset)
                    (end-offset stroke-end-offset)
                    (dimensions stroke-dimensions)
@@ -500,56 +506,56 @@ will be cleared before any actual output takes place."
            ;; Ignore face when computing height, otherwise we get
            ;; bouncy lines when things like parenmatching bolds parts
            ;; of the line.
-           (roman-text-style (merge-text-styles +roman-face-style+
-                                                merged-text-style))
+           (roman-text-style (merge-text-styles +roman-face-style+ merged-text-style))
            (text-style-ascent (text-style-ascent roman-text-style (sheet-medium stream)))
-           (text-style-descent (text-style-descent roman-text-style (sheet-medium stream)))
-           (text-style-height (+ text-style-ascent text-style-descent)))
+           (text-style-descent (text-style-descent roman-text-style (sheet-medium stream))))
       (with-accessors ((x1 x1) (x2 x2) (center center)) dimensions
-        (multiple-value-bind (width baseline stroke-parts part-widths)
+        (multiple-value-bind (width stroke-parts part-widths)
 	    (if (stroke-modified stroke)
 		(calculate-stroke-width stroke-string merged-text-style stream cursor-x)
-		(values (- x2 x1) center parts widths))
-	  (clear-rectangle* stream cursor-x cursor-y
-			    (+ cursor-x width) (+ cursor-y text-style-height
-						  (stream-vertical-spacing stream)))
-	  (loop for (start end object) in stroke-parts
-		for width across part-widths
-		do (cond ((and object (eq object #\Tab))
-			  nil)
-			 (object
-			  (draw-text* stream object (+ cursor-x width)
-				      (+ cursor-y
-					 (- text-style-ascent
-					    baseline))
-				      :text-style merged-text-style
-				      :ink +darkblue+
-				      :align-y :top))
-			 (t
-			  (draw-text* stream stroke-string (+ cursor-x width)
-				      (+ cursor-y
-					 (- text-style-ascent
-					    baseline))
-				      :start start :end end
-				      :text-style merged-text-style
-				      :ink (face-ink (drawing-options-face drawing-options))
-				      :align-y :top))))
-	  (record-stroke stroke stroke-parts part-widths cursor-x cursor-y
-			 (+ width cursor-x) (+ text-style-height cursor-y)
-			 t baseline))))))
+		(values (- x2 x1) parts widths))
+          (when draw
+            (loop for (start end object) in stroke-parts
+               for width across part-widths
+               do (cond ((and object (eq object #\Tab))
+                         nil)
+                        (object
+                         (draw-text* stream object (+ cursor-x width)
+                                     cursor-y
+                                     :text-style merged-text-style
+                                     :ink +darkblue+
+                                     :align-y :baseline))
+                        (t
+                         (draw-text* stream stroke-string (+ cursor-x width)
+                                     cursor-y
+                                     :start start :end end
+                                     :text-style merged-text-style
+                                     :ink (face-ink (drawing-options-face drawing-options))
+                                     :align-y :baseline)))))
+	  (record-stroke stroke stroke-parts part-widths
+                         cursor-x (- cursor-y text-style-ascent)
+			 (+ width cursor-x) (+ cursor-y text-style-descent)
+			 draw text-style-ascent))))))
+
+(defun update-stroke-dimensions (stream view stroke cursor-x cursor-y)
+  "Calculate the dimensions of `stroke' on `stream'
+at (`cursor-x', `cursor-y'), but without actually drawing
+anything. Will use the function specified in the drawing-options
+of `stroke' to carry out the actual calculations."
+  (unless (= cursor-x (x1 (stroke-dimensions stroke)))
+    (invalidate-stroke stroke :modified t))
+  (when (stroke-dirty stroke)
+    (funcall (drawing-options-function (stroke-drawing-options stroke)) stream view stroke
+             cursor-x cursor-y #'stroke-drawing-fn nil)))
 
 (defun draw-stroke (stream view stroke cursor-x cursor-y)
-  "Draw `stroke' on `stream' at (`cursor-x', `cursor-y'). Nothing
-will be done unless `stroke' is dirty. Will use the function
-specified in the drawing-options of `stroke' to carry out the
-actual drawing."
-  (let* ((drawing-options (stroke-drawing-options stroke)))
-    (unless (and (= cursor-x (x1 (stroke-dimensions stroke)))
-                 (= cursor-y (y1 (stroke-dimensions stroke))))
-      (invalidate-stroke stroke :modified t))
-    (when (stroke-dirty stroke)
-      (funcall (drawing-options-function drawing-options) stream view stroke
-               cursor-x cursor-y #'stroke-drawing-fn))))
+  "Draw `stroke' on `stream' with a baseline at
+`cursor-y'. Drawing starts at the horizontal offset
+`cursor-x'. Stroke must thus have updated dimensional
+informational. Nothing will be done unless `stroke' is dirty."
+  (when (stroke-dirty stroke)
+    (funcall (drawing-options-function (stroke-drawing-options stroke))
+             stream view stroke cursor-x cursor-y #'stroke-drawing-fn t)))
 
 (defun end-line (line x1 y1 line-width line-height)
   "End the addition of strokes to `line' for now, and update the
@@ -568,21 +574,20 @@ dimensions of `line'. Update all undisplayed lines to have no
 associated dimensions. Also clear from the bottom of strokes to
 the bottom of the line, and from the end of the line to the end
 of the sheet."
+  (declare (ignore old-line-width))
   (end-line line line-x1 line-y1 line-width line-height)
   (with-accessors ((line-x1 x1) (line-y1 y1)
                    (line-x2 x2) (line-y2 y2)) (line-dimensions line)
-    ;; If a has a lesser height than the line, clear from the bottom
-    ;; of the stroke to the bottom of the line, to avoid artifacts
-    ;; left over from prefvious redisplays.
+    ;; If a has a lesser height than the line, clear from the top of
+    ;; the line stroke to the top of the stroke, to avoid artifacts
+    ;; left over from previous redisplays.
     (do-displayed-line-strokes (stroke line)
       (let ((stroke-dimensions (stroke-dimensions stroke)))
         (with-accessors ((stroke-x1 x1) (stroke-y1 y1)
                          (stroke-x2 x2) (stroke-y2 y2)) stroke-dimensions
           (when (> line-height (dimensions-height stroke-dimensions))
-            (clear-rectangle* stream stroke-x1 stroke-y2
-                              stroke-x2 (+ stroke-y2 (- line-height
-                                                        (dimensions-height stroke-dimensions))
-                                           (stream-vertical-spacing stream)))))))
+            (clear-rectangle* stream stroke-x1 line-y1
+                              stroke-x2 stroke-y1)))))
     ;; Reset the dimensions of undisplayed lines.
     (do-undisplayed-line-strokes (stroke line)
       (let ((stroke-dimensions (stroke-dimensions stroke)))
@@ -594,43 +599,58 @@ of the sheet."
     (clear-rectangle* stream line-x2 line-y1
                       (bounding-rectangle-width stream)
                       (+ line-y1 (max line-height old-line-height)
-                         (stream-vertical-spacing stream)))
-    (when (or (> old-line-height line-height)
-              (> old-line-width line-width))
-      (clear-rectangle* stream line-x1 (+ line-y1 line-height)
-                        (+ line-x1 (max old-line-width line-width))
-                        (+ line-y1 (max old-line-height line-height))))))
+                         (stream-vertical-spacing stream)))))
 
 (defun draw-line-strokes (stream view initial-pump-state
                           start-offset cursor-x cursor-y)
   "Pump strokes from `view', using `initial-pump-state' to begin
 with, and draw them on `stream'. The line is set to start at the
 buffer offset `start-offset', and will be drawn starting
-at (`cursor-x', `cursor-y')"
+at (`cursor-x', `cursor-y')."
   (let* ((line (line-information view (displayed-lines-count view)))
          (old-line-height (dimensions-height (line-dimensions line)))
          (old-line-width (dimensions-width (line-dimensions line)))
          (orig-x-offset cursor-x)
-         (offset-change (- start-offset (line-start-offset line))))
+         (offset-change (- start-offset (line-start-offset line)))
+         (line-spacing (stream-vertical-spacing stream)))
     (setf (line-start-offset line) start-offset
           (line-stroke-count line) 0)
-    (loop for index from 0
-       for stroke = (line-stroke-information line index)
-       for stroke-dimensions = (stroke-dimensions stroke)
-       for pump-state = (put-stroke view line initial-pump-state offset-change) then
-       (put-stroke view line pump-state offset-change)
-       do (draw-stroke stream view stroke cursor-x cursor-y)
-       (setf cursor-x (x2 stroke-dimensions))
-       maximizing (dimensions-height stroke-dimensions) into line-height
-       summing (- (x2 stroke-dimensions)
-                  (x1 stroke-dimensions)) into line-width
-       when (or (= (stroke-end-offset stroke) (size (buffer view)))
-                (eql (buffer-object (buffer view) (stroke-end-offset stroke)) #\Newline))
-       return (progn (end-line-cleaning-up stream line orig-x-offset cursor-y
-                                           line-width old-line-width
-                                           line-height old-line-height)
-                     (incf (displayed-lines-count view))
-                     (values pump-state line-height)))))
+    ;; So yeah, this is fairly black magic, but it's not actually
+    ;; ugly, just complex.
+    (multiple-value-bind (line-width line-height baseline pump-state)
+        ;; Pump all the line strokes and calculate their dimensions.
+        (loop for index from 0
+           for stroke = (line-stroke-information line index)
+           for stroke-dimensions = (stroke-dimensions stroke)
+           for pump-state = (put-stroke view line initial-pump-state offset-change) then
+           (put-stroke view line pump-state offset-change)
+           do (update-stroke-dimensions stream view stroke cursor-x cursor-y)
+           (setf cursor-x (x2 stroke-dimensions))
+           maximizing (dimensions-height stroke-dimensions) into line-height
+           maximizing (+ (center stroke-dimensions) cursor-y) into baseline
+           summing (dimensions-width stroke-dimensions) into line-width
+           when (stroke-at-end-of-line (buffer view) stroke)
+           return (values line-width line-height baseline pump-state))
+      ;; Now actually draw them in a way that makes sure they all
+      ;; touch the bottom of the line.
+      (loop with last-clear-x = orig-x-offset
+         for stroke-index below (line-stroke-count line)
+         for stroke = (aref (line-strokes line) stroke-index)
+         for stroke-dimensions = (stroke-dimensions stroke)
+         do (unless (= baseline (+ cursor-y (center stroke-dimensions)))
+              (invalidate-stroke stroke))
+         (when (stroke-dirty stroke)
+           (clear-rectangle* stream (x1 stroke-dimensions) cursor-y
+                             (x2 stroke-dimensions)
+                             (+ cursor-y line-height line-spacing))
+           (setf last-clear-x (x2 stroke-dimensions)))
+         (draw-stroke stream view stroke
+                      (x1 stroke-dimensions) baseline)
+         finally (progn (end-line-cleaning-up stream line orig-x-offset cursor-y
+                                              line-width old-line-width
+                                              line-height old-line-height)
+                        (incf (displayed-lines-count view))
+                        (return (values pump-state line-height)))))))
 
 (defun clear-stale-lines (pane view)
   "Clear from the last displayed line to the end of `pane'."
@@ -652,7 +672,7 @@ type (found via `presentation-type-of') to generate output."
 	(widths (make-array 2 :initial-contents (list 0 0)))
 	(parts (list 0 1)))
     #'(lambda (stream view stroke cursor-x cursor-y
-               default-drawing-fn)
+               default-drawing-fn draw)
         (declare (ignore default-drawing-fn))
         (with-accessors ((start-offset stroke-start-offset)
                          (drawing-options stroke-drawing-options)) stroke
@@ -665,20 +685,17 @@ type (found via `presentation-type-of') to generate output."
             ;; like the changing position is ignored. So add some
             ;; minuscule amount to it, and all will be well. 0.1
             ;; device units shouldn't even be visible.
-            (setf (output-record-position output-record) (values (+ cursor-x 0.1) cursor-y))
             (let ((width (bounding-rectangle-width output-record))
                   (height (bounding-rectangle-height output-record)))
-              (clear-rectangle* stream cursor-x cursor-y
-                                (+ cursor-x width) (+ cursor-y height
-                                                      (stream-vertical-spacing stream)))
-              (replay output-record stream)
+              (setf (output-record-position output-record)
+                    (values (+ cursor-x 0.1) (- cursor-y height)))
+              (when draw
+                (replay output-record stream))
 	      (setf (aref widths 1) width)
               (record-stroke stroke parts widths
-			     cursor-x cursor-y (+ width cursor-x)
-                             (+ (if (zerop height)
-                                    (text-style-height (medium-text-style stream) stream)
-                                    height)
-                                cursor-y))))))))
+                             cursor-x (- cursor-y height)
+                             (+ width cursor-x) cursor-y
+                             draw height)))))))
 
 (defmethod pump-state-for-offset ((view drei-buffer-view) (offset integer))
   "For a `drei-buffer-view' a pump-state is merely an offset into
@@ -767,7 +784,7 @@ is an absolute offset into the buffer of `view',"
 
 (defgeneric offset-to-screen-position (pane view offset)
   (:documentation "Returns the position of offset as a screen
-position.  Returns `x', `y', `line-height', `OBJECT-WIDTH' as
+position.  Returns `x', `y', `stroke-height', `object-width' as
 values if offset is on the screen, NIL if offset is before the
 beginning of the screen, and T if offset is after the end of the
 screen. `Object-width' may be an approximation if `offset' is at
@@ -786,7 +803,7 @@ the end of the buffer."))
                                  (/= start-offset end-offset))
                             (return-from worker
                               (values (x1 stroke-dimensions) (y1 stroke-dimensions)
-                                      (dimensions-height line-dimensions)
+                                      (dimensions-height stroke-dimensions)
                                       (if (= end-offset (1+ start-offset))
                                           (dimensions-width stroke-dimensions)
                                           (offset-in-stroke-position pane view stroke (1+ offset))))))
@@ -796,7 +813,7 @@ the end of the buffer."))
                               (let* ((relative-x-position (offset-in-stroke-position pane view stroke offset))
                                      (absolute-x-position (+ (x1 stroke-dimensions) relative-x-position)))
                                 (values absolute-x-position (y1 stroke-dimensions)
-                                        (dimensions-height line-dimensions)
+                                        (dimensions-height stroke-dimensions)
                                         (if (= (1+ offset) end-offset)
                                             (- (x2 stroke-dimensions) absolute-x-position)
                                             (- (offset-in-stroke-position pane view stroke (1+ offset))
@@ -815,9 +832,9 @@ the end of the buffer."))
            ;; Search through strokes, returning when we find one that
            ;; `offset' is in. Strokes with >1 object are assumed to be
            ;; strings.
-           (multiple-value-bind (x y line-height object-width) (worker)
-             (if (and x y line-height)
-                 (values x y line-height (or object-width default-object-width))
+           (multiple-value-bind (x y stroke-height object-width) (worker)
+             (if (and x y stroke-height)
+                 (values x y stroke-height (or object-width default-object-width))
                  (let* ((first-line (aref (displayed-lines view) 0))
                         (dimensions (line-dimensions first-line)))
                    (values (x1 dimensions) (y1 dimensions)
@@ -848,12 +865,12 @@ the end of the buffer."))
 (defmethod display-drei-view-cursor ((stream extended-output-stream)
                                      (view drei-buffer-view)
                                      (cursor drei-cursor))
-  (multiple-value-bind (cursor-x cursor-y line-height object-width)
+  (multiple-value-bind (cursor-x cursor-y stroke-height object-width)
       (offset-to-screen-position stream view (offset (mark cursor)))
     (letf (((stream-current-output-record stream) cursor))
       (draw-rectangle* stream
                        cursor-x cursor-y
-                       (+ cursor-x object-width) (+ cursor-y line-height)
+                       (+ cursor-x object-width) (+ cursor-y stroke-height)
                        :ink (ink cursor)))))
 
 (defmethod display-drei-view-cursor :after ((stream extended-output-stream) (view drei-view)
