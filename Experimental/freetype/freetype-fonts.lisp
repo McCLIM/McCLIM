@@ -252,15 +252,15 @@
          ;; out of here, but I doubt it would shave more than a few percent
          ;; off a draw-text benchmark.
          (macrolet ((compute ()
-                      `(loop with cache = (slot-value font 'glyph-width-cache)
+                      `(loop with width-cache = (slot-value font 'glyph-width-cache)
                           for i from start below end
                           as char = (aref string i)
                           as code = (char-code char)
-                          sum (or (gcache-get cache code)
-                                  (gcache-set cache code (clim-clx::font-glyph-width font char)))
+                          sum (or (gcache-get width-cache code)
+                                  (gcache-set width-cache code (clim-clx::font-glyph-width font char)))
                             #+NIL (clim-clx::font-glyph-width font char))))
            (if (numberp (slot-value font 'fixed-width))
-               (* (slot-value font 'fixed-width) (length string))
+               (* (slot-value font 'fixed-width) (- end start))
                (typecase string 
                  (simple-string 
                   (locally (declare (type simple-string string))
