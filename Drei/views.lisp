@@ -435,7 +435,14 @@ moving cursor, etc), this will be true. If you want your view to
 support standard editor commands, you should *not* inherit from
 `editor-table' - the command tables containing the editor
 commands will be added automatically, as long as this value is
-true."))
+true.")
+   (%extend-pane-bottom :accessor extend-pane-bottom
+                        :initarg :extend-pane-bottom
+                        :initform nil
+                        :documentation "Resize the output pane
+vertically during redisplay (using `change-space-requirements'),
+in order to fit the whole buffer. If this value is false,
+redisplay will stop when the bottom of the pane is reached."))
   (:metaclass modual-class)
   (:documentation "The base class for all Drei views. A view
 observes some other object and provides a visual representation

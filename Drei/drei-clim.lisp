@@ -346,8 +346,12 @@ record."))
 (defmethod initialize-instance :after ((area drei-area)
 				       &key)
   (setf (input-editor-position area)
-        (multiple-value-list (output-record-position area)))
+        (multiple-value-list (output-record-position area))
+        (extend-pane-bottom (view area)) t)
   (tree-recompute-extent area))
+
+(defmethod (setf view) :after ((new-view drei-view) (drei drei-area))
+  (setf (extend-pane-bottom new-view) t))
 
 (defmethod esa-current-window ((drei drei-area))
   (editor-pane drei))

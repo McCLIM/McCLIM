@@ -556,6 +556,9 @@ information. Nothing will be done unless `stroke' is dirty."
     (when (> (x2 (stroke-dimensions stroke))
              (bounding-rectangle-width pane))
       (change-space-requirements pane :width (x2 (stroke-dimensions stroke))))
+    (when (> (y2 (stroke-dimensions stroke))
+             (bounding-rectangle-height pane))
+      (change-space-requirements pane :height (y2 (stroke-dimensions stroke))))
     (funcall (drawing-options-function (stroke-drawing-options stroke))
              pane view stroke cursor-x cursor-y #'stroke-drawing-fn t)))
 
@@ -744,7 +747,8 @@ function is the drawing function for the chunk."
         actual-end-offset)))
 
 (defmethod display-drei-view-contents ((pane basic-pane) (view drei-buffer-view))
-  (setf (displayed-lines-count view) 0)
+  (setf (displayed-lines-count view) 0
+        (max-line-width view) 0)
   (multiple-value-bind (cursor-x cursor-y) (stream-cursor-position pane)
     (with-output-recording-options (pane :record nil :draw t)
       (loop with start-offset = (offset (beginning-of-line (top view)))
@@ -756,7 +760,8 @@ function is the drawing function for the chunk."
               (setf pump-state new-pump-state
                     start-offset (1+ (line-end-offset line)))
               (incf cursor-y (+ line-height (stream-vertical-spacing pane))))
-         when (or (>= (y2 (line-dimensions line)) pane-height)
+         when (or (and (not (extend-pane-bottom view))
+                       (>= (y2 (line-dimensions line)) pane-height))
                   (= (line-end-offset line) (size (buffer view))))
          return (progn
                   (setf (offset (bot view)) (line-end-offset line))
@@ -848,6 +853,30 @@ the end of the buffer."))
                            (- (y2 dimensions) (y1 dimensions))
                            default-object-width))))))))))
 
+(defmethod display-drei-view-cursor :around ((pane extended-output-stream)
+                                             (view point-mark-view)
+                                             (cursor drei-cursor))
+  ;; Try to draw the cursor...
+  (call-next-method)
+  ;; If it is the point, and there was no space for it...
+  (when (and (eq (mark cursor) (point view))
+             (or (> (bounding-rectangle-max-x cursor)
+                    (bounding-rectangle-max-x pane))
+                 (> (if (extend-pane-bottom view)
+                        (bounding-rectangle-max-y cursor)
+                        0)
+                    (bounding-rectangle-max-y pane))))
+    ;; Embiggen the sheet.
+    (change-space-requirements pane
+     :width (max (bounding-rectangle-max-x cursor)
+                 (bounding-rectangle-max-x pane))
+     :width (max (if (extend-pane-bottom view)
+                     (bounding-rectangle-max-y cursor)
+                     0)
+                 (bounding-rectangle-max-y pane)))
+    ;; And draw the cursor again.
+    (call-next-method)))
+
 (defmethod display-drei-view-cursor :around ((stream extended-output-stream)
                                              (view drei-buffer-view)
                                              (cursor drei-cursor))
@@ -881,13 +910,6 @@ the end of the buffer."))
                          (+ cursor-x object-width) (+ cursor-y stroke-height)
                          :ink (ink cursor))))))
 
-(defmethod display-drei-view-cursor :after ((stream extended-output-stream) (view drei-view)
-                                            (cursor point-cursor))
-  ;; Make sure there is room for the cursor.
-  (let ((br-height (bounding-rectangle-height (bounding-rectangle cursor))))
-    (when (> br-height (bounding-rectangle-height stream))
-      (change-space-requirements stream :height br-height))))
-
 (defmethod bounding-rectangle* ((view drei-buffer-view))
   "Return the bounding rectangle of the visual appearance of
 `view' as four values, just as `bounding-rectangle*'. Will return
@@ -895,14 +917,10 @@ the end of the buffer."))
   (if (zerop (displayed-lines-count view))
       (values 0 0 0 0)
       (let ((first-line (aref (displayed-lines view) 0))
-            (last-line (last-displayed-line view))
-            (max-x2 0))
-        (do-displayed-lines (line view)
-          (setf max-x2 (max max-x2
-                            (x2 (line-dimensions line)))))
+            (last-line (last-displayed-line view)))
         (values (x1 (line-dimensions first-line))
                 (y1 (line-dimensions first-line))
-                max-x2
+                (max-line-width view)
                 (y2 (line-dimensions last-line))))))
 
 (defmethod bounding-rectangle-width ((view drei-buffer-view))
@@ -1070,34 +1088,33 @@ needed."
 has `view'."))
 
 (defmethod fix-pane-viewport ((pane drei-pane) (view drei-view))
-  (let* ((output-width (bounding-rectangle-width view))
+  (let* ((output-width (drei-bounding-rectangle-width pane))
          (viewport (pane-viewport pane))
          (viewport-width (and viewport (bounding-rectangle-width viewport)))
          (pane-width (bounding-rectangle-width pane)))
     ;; If the width of the output is greater than the width of the
     ;; sheet, make the sheet wider. If the sheet is wider than the
     ;; viewport, but doesn't really need to be, make it thinner.
-    (when (or (> output-width pane-width)
-              (and viewport
-                   (> pane-width viewport-width)
-                   (>= viewport-width output-width)))
+    (when (and viewport
+               (> pane-width viewport-width)
+               (>= viewport-width output-width))
       (change-space-requirements pane :width output-width))))
 
 (defmethod fix-pane-viewport :after ((pane drei-pane) (view point-mark-view))
   (when (and (pane-viewport pane) (active pane))
-    (multiple-value-bind (cursor-x cursor-y line-height object-width)
-        (offset-to-screen-position pane view (offset (point view)))
+    (with-bounding-rectangle* (x1 y1 x2 y2) (point-cursor pane)
+      (declare (ignore y1))
       (multiple-value-bind (x-position y-position) (transform-position (sheet-transformation pane) 0 0)
         (let ((viewport-width (bounding-rectangle-width (or (pane-viewport pane) pane)))
               (viewport-height (bounding-rectangle-height (or (pane-viewport pane) pane))))
-          (cond ((> (+ cursor-x object-width) (+ x-position viewport-width))
-                 (move-sheet pane (round (- (- cursor-x viewport-width))) 0))
-                ((> x-position (+ cursor-x object-width))
-                 (move-sheet pane (if (> viewport-width cursor-x)
-                                      0
-                                      (round (- cursor-x)))
-                             0)))
-          (when (> (+ cursor-y line-height) (+ y-position viewport-height))
+          (cond ((> x2 (+ (abs x-position) viewport-width))
+                 (scroll-extent pane (round (- x2 viewport-width)) 0))
+                ((> (abs x-position) x2)
+                 (scroll-extent pane (if (> viewport-width x1)
+                                         0
+                                         (round x1))
+                                0)))
+          (when (> y2 (+ y-position viewport-height))
             (full-redisplay pane)
             ;; We start all over!
             (display-drei-pane (pane-frame pane) pane)))))))
