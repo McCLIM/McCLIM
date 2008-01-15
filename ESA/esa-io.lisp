@@ -269,18 +269,22 @@ to overwrite."
     (setf (needs-saving buffer) nil)))
 
 (define-command (com-save-buffer :name t :command-table esa-io-table) ()
-    "Write the contents of the buffer to a file.
+  "Write the contents of the buffer to a file.
 If there is filename associated with the buffer, write to that
 file, replacing its contents. If not, prompt for a filename."
   (let ((buffer (current-buffer)))
-    (if (or (null (filepath buffer))
-            (needs-saving buffer))
-        (handler-case (save-buffer buffer)
-          (buffer-writing-error (e)
-            (with-minibuffer-stream (minibuffer)
-              (let ((*print-escape* nil))
-                (print-object e minibuffer)))))
-        (display-message "No changes need to be saved from ~a" (name buffer)))))
+    (if (null (filepath buffer))
+        (com-write-buffer (accept 'pathname :prompt "Write Buffer to File: "
+                                            :prompt-mode :raw
+                                            :default (directory-of-current-buffer) :insert-default t
+                                            :default-type 'pathname))
+        (if (needs-saving buffer)
+            (handler-case (save-buffer buffer)
+              (buffer-writing-error (e)
+                (with-minibuffer-stream (minibuffer)
+                  (let ((*print-escape* nil))
+                    (print-object e minibuffer)))))
+            (display-message "No changes need to be saved from ~a" (name buffer))))))
 
 (set-key 'com-save-buffer 'esa-io-table '((#\x :control) (#\s :control)))
 
