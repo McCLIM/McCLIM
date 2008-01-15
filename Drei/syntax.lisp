@@ -94,11 +94,7 @@ up to date, but it *must* make sure at at least the region
 delimited by `begin' and `end' has an up to date parse. Returns
 two values, offsets into the buffer of the syntax, denoting the
 buffer region thas has an up to date parse.")
-  (:method-combination values-max-min :most-specific-last)
-  (:method values-max-min ((syntax syntax) (unchanged-prefix integer)
-                           (unchanged-suffix integer) &optional (begin 0)
-                           (end (- (size (buffer syntax)) unchanged-suffix)))
-    (values begin end)))
+  (:method-combination values-max-min :most-specific-last))
 
 (defgeneric eval-defun (mark syntax))
 
