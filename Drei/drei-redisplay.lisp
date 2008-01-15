@@ -455,7 +455,7 @@ the stroke, the parts of the stroke and the widths of the parts
 of the stroke."
   (loop with parts = (analyse-stroke-string stroke-string)
      with width = 0
-     with widths = (make-array (length parts) :adjustable t :fill-pointer t)
+     with widths = (make-array 1 :adjustable t :fill-pointer t)
      with tab-width
      for (start end object) in parts
      do (cond ((and object (eql object #\Tab))
@@ -567,14 +567,12 @@ dimensions of `line'."
           (y2 dimensions) (+ y1 line-height))))
 
 (defun end-line-cleaning-up (stream line line-x1 line-y1
-                             line-width old-line-width
-                             line-height old-line-height)
+                             line-width line-height)
   "End the addition of strokes to `line' for now, and update the
 dimensions of `line'. Update all undisplayed lines to have no
 associated dimensions. Also clear from the bottom of strokes to
 the bottom of the line, and from the end of the line to the end
 of the sheet."
-  (declare (ignore old-line-width))
   (end-line line line-x1 line-y1 line-width line-height)
   (with-accessors ((line-x1 x1) (line-y1 y1)
                    (line-x2 x2) (line-y2 y2)) (line-dimensions line)
@@ -603,8 +601,6 @@ with, and draw them on `pane'. The line is set to start at the
 buffer offset `start-offset', and will be drawn starting
 at (`cursor-x', `cursor-y')."
   (let* ((line (line-information view (displayed-lines-count view)))
-         (old-line-height (dimensions-height (line-dimensions line)))
-         (old-line-width (dimensions-width (line-dimensions line)))
          (orig-x-offset cursor-x)
          (offset-change (- start-offset (line-start-offset line)))
          (line-spacing (stream-vertical-spacing pane)))
@@ -651,8 +647,7 @@ at (`cursor-x', `cursor-y')."
          for stroke-dimensions = (stroke-dimensions stroke)
          do (draw-stroke pane view stroke (x1 stroke-dimensions) baseline)
          finally (progn (end-line-cleaning-up pane line orig-x-offset cursor-y
-                                              line-width old-line-width
-                                              line-height old-line-height)
+                                              line-width line-height)
                         (incf (displayed-lines-count view))
                         (return (values pump-state line-height)))))))
 
