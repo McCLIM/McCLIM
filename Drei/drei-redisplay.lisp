@@ -465,18 +465,16 @@ of the stroke."
                         (mod (+ width x-position) tab-width)))
                (vector-push-extend width widths))
               (object
-               (multiple-value-bind (w ignore1 ignore2 ignore3 ignore4)
+               (multiple-value-bind (w)
                    (text-size stream object
                     :text-style text-style)
-                 (declare (ignore ignore1 ignore2 ignore3 ignore4))
                  (incf width w)
                  (vector-push-extend width widths)))
               (t
-               (multiple-value-bind (w ignore1 ignore2 ignore3 ignore4)
+               (multiple-value-bind (w)
                    (text-size stream stroke-string
                     :start start :end end
                     :text-style text-style)
-                 (declare (ignore ignore1 ignore2 ignore3 ignore4))
                  (incf width w)
                  (vector-push-extend width widths))))
      finally (return (values width parts widths))))
