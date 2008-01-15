@@ -547,14 +547,17 @@ of `stroke' to carry out the actual calculations."
     (funcall (drawing-options-function (stroke-drawing-options stroke)) stream view stroke
              cursor-x cursor-y #'stroke-drawing-fn nil)))
 
-(defun draw-stroke (stream view stroke cursor-x cursor-y)
-  "Draw `stroke' on `stream' with a baseline at
+(defun draw-stroke (pane view stroke cursor-x cursor-y)
+  "Draw `stroke' on `pane' with a baseline at
 `cursor-y'. Drawing starts at the horizontal offset
 `cursor-x'. Stroke must thus have updated dimensional
-informational. Nothing will be done unless `stroke' is dirty."
+information. Nothing will be done unless `stroke' is dirty."
   (when (stroke-dirty stroke)
+    (when (> (x2 (stroke-dimensions stroke))
+             (bounding-rectangle-width pane))
+      (change-space-requirements pane :width (x2 (stroke-dimensions stroke))))
     (funcall (drawing-options-function (stroke-drawing-options stroke))
-             stream view stroke cursor-x cursor-y #'stroke-drawing-fn t)))
+             pane view stroke cursor-x cursor-y #'stroke-drawing-fn t)))
 
 (defun end-line (line x1 y1 line-width line-height)
   "End the addition of strokes to `line' for now, and update the
@@ -565,7 +568,7 @@ dimensions of `line'."
           (x2 dimensions) (+ x1 line-width)
           (y2 dimensions) (+ y1 line-height))))
 
-(defun end-line-cleaning-up (stream line line-x1 line-y1
+(defun end-line-cleaning-up (view pane line line-x1 line-y1
                              line-width line-height)
   "End the addition of strokes to `line' for now, and update the
 dimensions of `line'. Update all undisplayed lines to have no
@@ -575,6 +578,9 @@ of the sheet."
   (end-line line line-x1 line-y1 line-width line-height)
   (with-accessors ((line-x1 x1) (line-y1 y1)
                    (line-x2 x2) (line-y2 y2)) (line-dimensions line)
+    (setf (max-line-width view)
+          (max (max-line-width view)
+               (dimensions-width (line-dimensions line))))
     ;; If a has a lesser height than the line, clear from the top of
     ;; the line stroke to the top of the stroke, to avoid artifacts
     ;; left over from previous redisplays.
@@ -583,7 +589,7 @@ of the sheet."
         (with-accessors ((stroke-x1 x1) (stroke-y1 y1)
                          (stroke-x2 x2) (stroke-y2 y2)) stroke-dimensions
           (when (> line-height (dimensions-height stroke-dimensions))
-            (clear-rectangle* stream stroke-x1 line-y1
+            (clear-rectangle* pane stroke-x1 line-y1
                               stroke-x2 stroke-y1)))))
     ;; Reset the dimensions of undisplayed lines.
     (do-undisplayed-line-strokes (stroke line)
@@ -645,7 +651,7 @@ at (`cursor-x', `cursor-y')."
          for stroke = (aref (line-strokes line) stroke-index)
          for stroke-dimensions = (stroke-dimensions stroke)
          do (draw-stroke pane view stroke (x1 stroke-dimensions) baseline)
-         finally (progn (end-line-cleaning-up pane line orig-x-offset cursor-y
+         finally (progn (end-line-cleaning-up view pane line orig-x-offset cursor-y
                                               line-width line-height)
                         (incf (displayed-lines-count view))
                         (return (values pump-state line-height)))))))
@@ -882,6 +888,54 @@ the end of the buffer."))
     (when (> br-height (bounding-rectangle-height stream))
       (change-space-requirements stream :height br-height))))
 
+(defmethod bounding-rectangle* ((view drei-buffer-view))
+  "Return the bounding rectangle of the visual appearance of
+`view' as four values, just as `bounding-rectangle*'. Will return
+0, 0, 0, 0 when `view' has not been redisplayed."
+  (if (zerop (displayed-lines-count view))
+      (values 0 0 0 0)
+      (let ((first-line (aref (displayed-lines view) 0))
+            (last-line (last-displayed-line view))
+            (max-x2 0))
+        (do-displayed-lines (line view)
+          (setf max-x2 (max max-x2
+                            (x2 (line-dimensions line)))))
+        (values (x1 (line-dimensions first-line))
+                (y1 (line-dimensions first-line))
+                max-x2
+                (y2 (line-dimensions last-line))))))
+
+(defmethod bounding-rectangle-width ((view drei-buffer-view))
+  (multiple-value-bind (x1 y1 x2)
+      (bounding-rectangle* view)
+    (declare (ignore y1))
+    (- x2 x1)))
+
+(defun drei-bounding-rectangle* (drei-instance)
+  "Return the bounding rectangle of the visual appearance of
+`drei-instance' as four values, just as
+`bounding-rectangle*'. Takes the cursors of `drei-instance' into
+account."
+  (multiple-value-bind (x1 y1 x2 y2)
+      (view-bounding-rectangle* (view drei-instance))
+    (dolist (cursor (cursors drei-instance))
+      (multiple-value-bind (cursor-x1 cursor-y1 cursor-x2 cursor-y2)
+          (bounding-rectangle* cursor)
+        (unless (= cursor-x1 cursor-y1 cursor-x2 cursor-y2 0)
+          (setf x1 (min x1 cursor-x1)
+                y1 (min y1 cursor-y1)
+                x2 (max x2 cursor-x2)
+                y2 (max y2 cursor-y2)))))
+    (values x1 y1 x2 y2)))
+
+(defun drei-bounding-rectangle-width (drei-instance)
+  "Return the width of the bounding rectangle of `drei-instance',
+calculated by `drei-bounding-rectangle*'."
+  (multiple-value-bind (x1 y1 x2)
+      (drei-bounding-rectangle* drei-instance)
+    (declare (ignore y1))
+    (- x2 x1)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Drei area redisplay.
@@ -903,13 +957,14 @@ the end of the buffer."))
            (height (+ ascent descent)))
       (multiple-value-bind (x1 y1 x2 y2)
           (call-next-method)
-        (values x1 y1 (max x2 (+ x1 style-width)
-                           (cond ((numberp min-width)
-                                  (+ x1 min-width))
-                                 ;; Must be T, then.
-                                 ((pane-viewport pane)
-                                  (+ x1 (bounding-rectangle-width (pane-viewport-region pane))))
-                                 (t 0)))
+        (values x1 y1
+                (max x2 (+ x1 style-width)
+                     (cond ((numberp min-width)
+                            (+ x1 min-width))
+                           ;; Must be T, then.
+                           ((pane-viewport pane)
+                            (+ x1 (bounding-rectangle-width (pane-viewport-region pane))))
+                           (t 0)))
                 (max y2 (+ y1 height)))))))
 
 ;; XXX: Full redraw for every replay, should probably use the `region'
@@ -949,25 +1004,21 @@ the end of the buffer."))
 (defun display-drei-area (drei)
   (with-accessors ((stream editor-pane) (view view)) drei
     (replay drei stream)
-    (with-bounding-rectangle* (dx1 dy1 dx2 dy2) drei
-      (declare (ignore dx1 dy1 dy2))
-      (when (point-cursor drei)
-        (with-bounding-rectangle* (x1 y1 x2 y2) (point-cursor drei)
-          (apply #'change-space-requirements stream (when (> x2 dx2)
-                                                      (list :width x2)))
-          (when (pane-viewport stream)
-            (let* ((viewport (pane-viewport stream))
-                   (viewport-height (bounding-rectangle-height viewport))
-                   (viewport-width (bounding-rectangle-width viewport))
-                   (viewport-region (pane-viewport-region stream)))
-              ;; Scroll if point went outside the visible area.
-              (when (and (active drei)
-                         (pane-viewport stream)
-                         (not (and (region-contains-position-p viewport-region x2 y2)
-                                   (region-contains-position-p viewport-region x1 y1))))
-                (scroll-extent stream
-                               (max 0 (- x2 viewport-width))
-                               (max 0 (- y2 viewport-height)))))))))))
+    (when (point-cursor drei)
+      (with-bounding-rectangle* (x1 y1 x2 y2) (point-cursor drei)
+        (when (pane-viewport stream)
+          (let* ((viewport (pane-viewport stream))
+                 (viewport-height (bounding-rectangle-height viewport))
+                 (viewport-width (bounding-rectangle-width viewport))
+                 (viewport-region (pane-viewport-region stream)))
+            ;; Scroll if point went outside the visible area.
+            (when (and (active drei)
+                       (pane-viewport stream)
+                       (not (and (region-contains-position-p viewport-region x2 y2)
+                                 (region-contains-position-p viewport-region x1 y1))))
+              (scroll-extent stream
+                             (max 0 (- x2 viewport-width))
+                             (max 0 (- y2 viewport-height))))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -1019,7 +1070,7 @@ needed."
 has `view'."))
 
 (defmethod fix-pane-viewport ((pane drei-pane) (view drei-view))
-  (let* ((output-width (bounding-rectangle-width (stream-current-output-record pane)))
+  (let* ((output-width (bounding-rectangle-width view))
          (viewport (pane-viewport pane))
          (viewport-width (and viewport (bounding-rectangle-width viewport)))
          (pane-width (bounding-rectangle-width pane)))

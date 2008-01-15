@@ -532,7 +532,12 @@ are live.")
                            :type integer
                            :documentation "The number of lines in
 the views `displayed-lines' array that are actually live, that
-is, used for display right now."))
+is, used for display right now.")
+   (%max-line-width :accessor max-line-width
+                    :initform 0
+                    :type integer
+                    :documentation "The width of the longest
+displayed line in device units."))
   (:metaclass modual-class)
   (:documentation "A view that contains a `drei-buffer'
 object. The buffer is displayed on a simple line-by-line basis,
@@ -561,13 +566,6 @@ are automatically set if applicable."))
   (let ((string (call-next-method)))
     (setf (fill-pointer string) 0)
     string))
-
-(defmethod observer-notified ((view drei-buffer-view) (buffer drei-buffer)
-                              changed-region)
-  (dotimes (i (displayed-lines-count view))
-    (let ((line (line-information view i)))
-      (when (<= (car changed-region) (line-end-offset line))
-        (invalidate-line-strokes line :modified t)))))
 
 (defclass drei-syntax-view (drei-buffer-view)
   ((%syntax :accessor syntax
