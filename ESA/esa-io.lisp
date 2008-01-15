@@ -236,7 +236,7 @@ returns highest X."
 (defun check-file-times (buffer filepath question answer)
   "Return NIL if filepath newer than buffer and user doesn't want
 to overwrite."
-  (let ((f-w-d (file-write-date filepath))
+  (let ((f-w-d (and (probe-file filepath) (file-write-date filepath)))
 	(f-w-t (file-write-time buffer)))
     (if (and f-w-d f-w-t (> f-w-d f-w-t))
 	(if (accept 'boolean
