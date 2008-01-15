@@ -409,9 +409,19 @@ dimensions."
           (y2 dimensions) y2
           (center dimensions) center)))
 
-(defconstant +roman-face-style+ (make-text-style nil :roman nil)
-  "A text style specifying a roman face, but with unspecified
-family and size.")
+(defun non-graphic-char-rep (object)
+  "Return the appropriate representation of `object', a non-graphic char.
+This will be a string of the format \"^[letter]\" for non-graphic chars
+with a char-code of less than #o200, \"\\[octal code]\" for those above
+#o200, and the #\\Tab character in the case of a #\\Tab.
+NOTE: Assumes an ASCII/Unicode character encoding."
+  (let ((code (char-code object)))
+    (cond ((eql object #\Tab)
+	   object)
+	  ((< code #o200)
+	   (format nil "^~C" (code-char (+ code (char-code #\@)))))
+	  (t
+	   (format nil "\\~O" code)))))
 
 (defun analyse-stroke-string (string)
   "Return a list of parts of `string', where each part is a continuous
@@ -432,20 +442,6 @@ of graphic characters) or an object representing the non-graphic char."
 	  into parts
 	finally (return parts)))
 
-(defun non-graphic-char-rep (object)
-  "Return the appropriate representation of `object', a non-graphic char.
-This will be a string of the format \"^[letter]\" for non-graphic chars
-with a char-code of less than #o200, \"\\[octal code]\" for those above
-#o200, and the #\\Tab character in the case of a #\\Tab.
-NOTE: Assumes an ASCII/Unicode character encoding."
-  (let ((code (char-code object)))
-    (cond ((eql object #\Tab)
-	   object)
-	  ((< code #o200)
-	   (format nil "^~C" (code-char (+ code (char-code #\@)))))
-	  (t
-	   (format nil "\\~O" code)))))
-
 (defun calculate-stroke-width (stroke-string text-style stream x-position)
   "Calculate the width information of `stroke-string' when
 displayed with `text-style' (which must be fully specified) on
@@ -458,7 +454,7 @@ of the stroke."
      with widths = (make-array 1 :adjustable t :fill-pointer t)
      with tab-width
      for (start end object) in parts
-     do (cond ((and object (eql object #\Tab))
+     do (cond ((eql object #\Tab)
                (incf width 
                      (- (or tab-width
                             (setf tab-width (tab-width stream (stream-default-view stream))))
@@ -478,6 +474,10 @@ of the stroke."
                  (incf width w)
                  (vector-push-extend width widths))))
      finally (return (values width parts widths))))
+
+(defconstant +roman-face-style+ (make-text-style nil :roman nil)
+  "A text style specifying a roman face, but with unspecified
+family and size.")
 
 (defun stroke-drawing-fn (stream view stroke cursor-x cursor-y draw)
   "Draw `stroke' to `stream' baseline-adjusted at the position (`cursor-x',
@@ -515,7 +515,7 @@ any actual output takes place."
           (when draw
             (loop for (start end object) in stroke-parts
                for width across part-widths
-               do (cond ((and object (eq object #\Tab))
+               do (cond ((eql object #\Tab)
                          nil)
                         (object
                          (draw-text* stream object (+ cursor-x width)
@@ -540,7 +540,8 @@ any actual output takes place."
 at (`cursor-x', `cursor-y'), but without actually drawing
 anything. Will use the function specified in the drawing-options
 of `stroke' to carry out the actual calculations."
-  (unless (= cursor-x (x1 (stroke-dimensions stroke)))
+  (unless (and (= cursor-x (x1 (stroke-dimensions stroke)))
+               (not (stroke-dirty stroke)))
     (invalidate-stroke stroke :modified t))
   (when (stroke-dirty stroke)
     (funcall (drawing-options-function (stroke-drawing-options stroke)) stream view stroke
