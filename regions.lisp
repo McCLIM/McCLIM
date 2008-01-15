@@ -4,7 +4,7 @@
 ;;;   Created: 1998-12-02 19:26
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: regions.lisp,v 1.35 2008/01/14 07:03:18 ahefner Exp $
+;;;       $Id: regions.lisp,v 1.36 2008/01/15 15:45:17 crhodes Exp $
 ;;; --------------------------------------------------------------------------------------
 ;;;  (c) copyright 1998,1999,2001 by Gilbert Baumann
 ;;;  (c) copyright 2001 by Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
@@ -552,8 +552,8 @@
             (and end-angle (* (/ 180 pi) end-angle))
             tr)))
 
-(defclass standard-ellipse (ellipse elliptical-thing) ())
-(defclass standard-elliptical-arc (elliptical-arc elliptical-thing) ())
+(defclass standard-ellipse (elliptical-thing ellipse) ())
+(defclass standard-elliptical-arc (elliptical-thing elliptical-arc) ())
 
 ;;; ---- 2.5.6.1 Constructor Functions for Ellipses and Elliptical Arcs in CLIM  ---------
 
