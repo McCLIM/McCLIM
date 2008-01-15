@@ -935,7 +935,7 @@ the end of the buffer."))
 `bounding-rectangle*'. Takes the cursors of `drei-instance' into
 account."
   (multiple-value-bind (x1 y1 x2 y2)
-      (view-bounding-rectangle* (view drei-instance))
+      (bounding-rectangle* (view drei-instance))
     (dolist (cursor (cursors drei-instance))
       (multiple-value-bind (cursor-x1 cursor-y1 cursor-x2 cursor-y2)
           (bounding-rectangle* cursor)
