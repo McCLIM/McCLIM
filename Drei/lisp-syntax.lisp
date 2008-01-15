@@ -2133,8 +2133,6 @@ successful, or NIL if the buffer limit was reached."))
      do (setf (offset mark) (start-offset potential-form))
      (return t)))
 
-(drei-motion:define-motion-fns list)
-
 (defun down-list (mark syntax selector next-offset-fn target-offset-fn)
   (update-parse syntax 0 (offset mark))
   (labels ((next (continue-from)
