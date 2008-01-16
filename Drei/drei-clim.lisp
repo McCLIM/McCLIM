@@ -344,9 +344,10 @@ of the associated output record."))
 record."))
 
 (defmethod initialize-instance :after ((area drei-area)
-				       &key)
-  (setf (input-editor-position area)
-        (multiple-value-list (output-record-position area))
+				       &key x-position y-position)
+  (check-type x-position integer)
+  (check-type y-position integer)
+  (setf (input-editor-position area) (list x-position y-position)
         (extend-pane-bottom (view area)) t)
   (tree-recompute-extent area))
 
