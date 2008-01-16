@@ -990,19 +990,9 @@ calculated by `drei-bounding-rectangle*'."
 (defmethod replay-output-record ((drei drei-area) (stream extended-output-stream) &optional
                                  (x-offset 0) (y-offset 0) (region +everywhere+))
   (declare (ignore x-offset y-offset region))
-  (letf (((stream-current-output-record stream) drei)
-         ((stream-cursor-position stream) (values-list (input-editor-position drei))))
-    ;; XXX: If the display begins with a blank area - for example
-    ;; spaces - CLIM will (rightly) think the output records
-    ;; position is at the first output. This is not good, because
-    ;; it means that the output record will "walk" across the
-    ;; screen if the buffer starts with blanks. Therefore, we make
-    ;; sure that an output record exists at the very beginning of
-    ;; the output.
-    (with-new-output-record (stream 'standard-sequence-output-record record)
-      (invalidate-all-strokes (view drei))
-      (display-drei-view-contents stream (view drei))
-      (setf (output-record-position record) (values-list (input-editor-position drei))))))
+  (letf (((stream-cursor-position stream) (values-list (input-editor-position drei))))
+    (invalidate-all-strokes (view drei))
+    (display-drei-view-contents stream (view drei))))
 
 (defmethod replay-output-record :after ((drei drei-area) (stream extended-output-stream) &optional
                                         (x-offset 0) (y-offset 0) (region +everywhere+))
@@ -1014,10 +1004,9 @@ calculated by `drei-bounding-rectangle*'."
                                          (x-offset 0) (y-offset 0) (region +everywhere+))
   (declare (ignore x-offset y-offset region))
   (clear-output-record cursor)
-  (when (active cursor)
-    (with-output-recording-options (stream :record t :draw nil)
-      (letf (((stream-current-output-record stream) cursor))
-        (display-drei-view-cursor stream (view cursor) cursor)))))
+  (with-output-recording-options (stream :record t :draw nil)
+    (when (active cursor)
+      (display-drei-view-cursor stream (view cursor) cursor))))
 
 (defun display-drei-area (drei)
   (with-accessors ((stream editor-pane) (view view)) drei
