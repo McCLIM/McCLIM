@@ -954,7 +954,12 @@ calculated by `drei-bounding-rectangle*'."
            (descent (text-style-descent style pane))
            (height (+ ascent descent)))
       (multiple-value-bind (x1 y1 x2 y2)
-          (call-next-method)
+          (drei-bounding-rectangle* drei)
+        (when (= x1 y1 x2 y2 0)
+          ;; It hasn't been displayed yet, so stuff the position into
+          ;; it...
+          (setf x1 (first (input-editor-position drei))
+                y1 (second (input-editor-position drei))))
         (values x1 y1
                 (max x2 (+ x1 style-width)
                      (cond ((numberp min-width)
@@ -964,6 +969,10 @@ calculated by `drei-bounding-rectangle*'."
                             (+ x1 (bounding-rectangle-width (pane-viewport-region pane))))
                            (t 0)))
                 (max y2 (+ y1 height)))))))
+
+(defmethod bounding-rectangle ((drei drei-area))
+  (with-bounding-rectangle* (x1 y1 x2 y2) drei
+    (make-rectangle* x1 y1 x2 y2)))
 
 ;; XXX: Full redraw for every replay, should probably use the `region'
 ;; parameter to only invalidate some strokes.
@@ -986,7 +995,12 @@ calculated by `drei-bounding-rectangle*'."
 
 (defun display-drei-area (drei)
   (with-accessors ((stream editor-pane) (view view)) drei
+    (clear-output-record drei)
     (replay drei stream)
+    (with-bounding-rectangle* (x1 y1 x2 y2) drei
+      (letf (((stream-current-output-record stream) drei))
+        ;; XXX: This sets the size of the output record.
+        (draw-rectangle* stream x1 y1 x2 y2 :ink +transparent-ink+)))
     (when (point-cursor drei)
       (with-bounding-rectangle* (x1 y1 x2 y2) (point-cursor drei)
         (when (pane-viewport stream)
@@ -1120,10 +1134,9 @@ non-NIL."
       (if (adjust-pane drei-pane)
           (display-drei-pane frame drei-pane)
           ;; Point must be on top of all other cursors.
-          (progn
-            (dolist (cursor (cursors drei-pane))
-              (display-drei-view-cursor drei-pane view cursor))
-            (fix-pane-viewport drei-pane (view drei-pane)))))))
+          (dolist (cursor (cursors drei-pane)
+                   (fix-pane-viewport drei-pane (view drei-pane)))
+            (replay cursor drei-pane))))))
 
 (defgeneric full-redisplay (pane)
   (:documentation "Queue a full redisplay for `pane'."))
