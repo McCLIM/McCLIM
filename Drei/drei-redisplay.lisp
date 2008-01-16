@@ -972,19 +972,15 @@ calculated by `drei-bounding-rectangle*'."
   (declare (ignore x-offset y-offset region))
   (letf (((stream-cursor-position stream) (values-list (input-editor-position drei))))
     (invalidate-all-strokes (view drei))
-    (display-drei-view-contents stream (view drei))))
-
-(defmethod replay-output-record :after ((drei drei-area) (stream extended-output-stream) &optional
-                                        (x-offset 0) (y-offset 0) (region +everywhere+))
-  (declare (ignore x-offset y-offset region))
+    (display-drei-view-contents stream (view drei)))
   (dolist (cursor (cursors drei))
     (replay cursor stream)))
 
-(defmethod replay-output-record :before ((cursor drei-cursor) stream &optional
-                                         (x-offset 0) (y-offset 0) (region +everywhere+))
+(defmethod replay-output-record ((cursor drei-cursor) stream &optional
+                                 (x-offset 0) (y-offset 0) (region +everywhere+))
   (declare (ignore x-offset y-offset region))
   (clear-output-record cursor)
-  (with-output-recording-options (stream :record t :draw nil)
+  (with-output-recording-options (stream :record nil :draw t)
     (when (active cursor)
       (display-drei-view-cursor stream (view cursor) cursor))))
 
