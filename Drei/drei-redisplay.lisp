@@ -541,7 +541,9 @@ at (`cursor-x', `cursor-y'), but without actually drawing
 anything. Will use the function specified in the drawing-options
 of `stroke' to carry out the actual calculations."
   (unless (and (= cursor-x (x1 (stroke-dimensions stroke)))
-               (not (stroke-dirty stroke)))
+               (= cursor-y (y1 (stroke-dimensions stroke)))
+               (not (stroke-dirty stroke))
+               (mark<= (stroke-end-offset stroke) (bot view)))
     (invalidate-stroke stroke :modified t))
   (when (stroke-dirty stroke)
     (funcall (drawing-options-function (stroke-drawing-options stroke)) stream view stroke
@@ -571,36 +573,14 @@ dimensions of `line'."
           (x2 dimensions) (+ x1 line-width)
           (y2 dimensions) (+ y1 line-height))))
 
-(defun end-line-cleaning-up (view pane line line-x1 line-y1
+(defun end-line-cleaning-up (view line line-x1 line-y1
                              line-width line-height)
   "End the addition of strokes to `line' for now, and update the
-dimensions of `line'. Update all undisplayed lines to have no
-associated dimensions. Also clear from the bottom of strokes to
-the bottom of the line, and from the end of the line to the end
-of the sheet."
+dimensions of `line'."
   (end-line line line-x1 line-y1 line-width line-height)
-  (with-accessors ((line-x1 x1) (line-y1 y1)
-                   (line-x2 x2) (line-y2 y2)) (line-dimensions line)
-    (setf (max-line-width view)
-          (max (max-line-width view)
-               (dimensions-width (line-dimensions line))))
-    ;; If a has a lesser height than the line, clear from the top of
-    ;; the line stroke to the top of the stroke, to avoid artifacts
-    ;; left over from previous redisplays.
-    (do-displayed-line-strokes (stroke line)
-      (let ((stroke-dimensions (stroke-dimensions stroke)))
-        (with-accessors ((stroke-x1 x1) (stroke-y1 y1)
-                         (stroke-x2 x2) (stroke-y2 y2)) stroke-dimensions
-          (when (> line-height (dimensions-height stroke-dimensions))
-            (clear-rectangle* pane stroke-x1 line-y1
-                              stroke-x2 stroke-y1)))))
-    ;; Reset the dimensions of undisplayed lines.
-    (do-undisplayed-line-strokes (stroke line)
-      (let ((stroke-dimensions (stroke-dimensions stroke)))
-        (with-accessors ((stroke-x1 x1) (stroke-y1 y1)
-                         (stroke-x2 x2) (stroke-y2 y2)) stroke-dimensions
-          (setf stroke-x1 0 stroke-y1 0
-                stroke-x2 0 stroke-y2 0))))))
+  (setf (max-line-width view)
+        (max (max-line-width view)
+             (dimensions-width (line-dimensions line)))))
 
 (defun draw-line-strokes (pane view initial-pump-state
                           start-offset cursor-x cursor-y)
@@ -654,7 +634,7 @@ at (`cursor-x', `cursor-y')."
          for stroke = (aref (line-strokes line) stroke-index)
          for stroke-dimensions = (stroke-dimensions stroke)
          do (draw-stroke pane view stroke (x1 stroke-dimensions) baseline)
-         finally (progn (end-line-cleaning-up view pane line orig-x-offset cursor-y
+         finally (progn (end-line-cleaning-up view line orig-x-offset cursor-y
                                               line-width line-height)
                         (incf (displayed-lines-count view))
                         (return (values pump-state line-height)))))))
@@ -1103,7 +1083,8 @@ has `view'."))
                                          0
                                          (round x1))
                                 0)))
-          (when (> y2 (+ y-position viewport-height))
+          (when (and (> y2 (+ y-position viewport-height))
+                     (not (end-of-buffer-p (bot view))))
             (full-redisplay pane)
             ;; We start all over!
             (display-drei-pane (pane-frame pane) pane)))))))
