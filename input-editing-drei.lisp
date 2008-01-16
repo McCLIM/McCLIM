@@ -101,15 +101,6 @@ activated with GESTURE"))
 (define-condition rescan-condition (condition)
   ())
 
-(defun reposition-stream-cursor (stream)
-  "Moves the cursor somewhere clear of the editing area."
-  (let ((max-y 0))
-    (map-over-output-records #'(lambda (r)
-                                 (setf max-y (max max-y (bounding-rectangle-max-y r))))
-                             (stream-output-history stream))
-    (setf (stream-cursor-position stream)
-          (values 0 max-y))))
-
 (defgeneric finalize (editing-stream input-sensitizer)
   (:documentation "Do any cleanup on an editing stream, like turning off the
   cursor, etc."))
@@ -127,7 +118,8 @@ activated with GESTURE"))
                    (stream-add-output-record real-stream record)
                    (when (stream-drawing-p real-stream)
                      (replay record real-stream)))))
-    (reposition-stream-cursor real-stream)))
+    (setf (stream-cursor-position real-stream)
+          (values 0 (nth-value 3 (input-editing-stream-bounding-rectangle stream))))))
 
 (defgeneric invoke-with-input-editing
     (stream continuation input-sensitizer initial-contents class))
@@ -189,7 +181,7 @@ activated with GESTURE"))
     (immediate-rescan stream)))
 
 (defmethod input-editing-stream-bounding-rectangle ((stream standard-input-editing-stream))
-  (bounding-rectangle* (drei:drei-instance stream)))
+  (bounding-rectangle* (view (drei:drei-instance stream))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 

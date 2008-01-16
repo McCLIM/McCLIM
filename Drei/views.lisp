@@ -542,7 +542,7 @@ the views `displayed-lines' array that are actually live, that
 is, used for display right now.")
    (%max-line-width :accessor max-line-width
                     :initform 0
-                    :type integer
+                    :type number
                     :documentation "The width of the longest
 displayed line in device units."))
   (:metaclass modual-class)
