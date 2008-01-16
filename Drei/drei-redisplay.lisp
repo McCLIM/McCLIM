@@ -980,7 +980,7 @@ calculated by `drei-bounding-rectangle*'."
                                  (x-offset 0) (y-offset 0) (region +everywhere+))
   (declare (ignore x-offset y-offset region))
   (clear-output-record cursor)
-  (with-output-recording-options (stream :record nil :draw t)
+  (with-output-recording-options (stream :record t :draw t)
     (when (active cursor)
       (display-drei-view-cursor stream (view cursor) cursor))))
 
