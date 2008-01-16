@@ -343,6 +343,10 @@ the Drei instance."
 (defmethod esa-current-window ((drei drei))
   drei)
 
+(defmethod print-object ((object drei) stream)
+  (print-unreadable-object (object stream :type t :identity t)
+    (format stream "~A" (type-of (view object)))))
+
 ;; Main redisplay entry point.
 (defgeneric display-drei (drei)
   (:documentation "`Drei' must be an object of type `drei' and
