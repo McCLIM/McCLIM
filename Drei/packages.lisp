@@ -302,9 +302,7 @@ characters."))
            #:mark #:mark-of
            #:current-syntax
            #:current-view
-
-           ;; Info variables.
-           #:*drei-instance*
+           #:drei-instance #:drei-instance-of
 
            ;; Configuration.
            #:*foreground-color*

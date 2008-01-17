@@ -39,7 +39,7 @@ When overwrite is on, an object entered on the keyboard
 will replace the object after the point. 
 When overwrite is off (the default), objects are inserted at point. 
 In both cases point is positioned after the new object."
-  (with-slots (overwrite-mode) *drei-instance*
+  (with-slots (overwrite-mode) (current-view)
     (setf overwrite-mode (not overwrite-mode))))
 
 (set-key 'com-overwrite-mode
@@ -212,13 +212,13 @@ Leave point at the word end."
   "Replace runs of spaces with tabs in region where possible.
 Uses TAB-SPACE-COUNT of the STREAM-DEFAULT-VIEW of the pane."
   (tabify-region (mark) (point)
-                 (tab-space-count (view *drei-instance*))))
+                 (tab-space-count (current-view))))
 
 (define-command (com-untabify-region :name t :command-table editing-table) ()
   "Replace tabs with equivalent runs of spaces in the region.
 Uses TAB-SPACE-COUNT of the STREAM-DEFAULT-VIEW of the pane."
   (untabify-region (mark) (point)
-                   (tab-space-count (view *drei-instance*))))
+                   (tab-space-count (current-view))))
 
 (define-command (com-indent-line :name t :command-table indent-table) ()
   (indent-current-line (current-view) (point)))
@@ -531,7 +531,7 @@ then forward) for words for which the word before point is a prefix,
 inserting each in turn at point as an expansion."
   (with-accessors ((original-prefix original-prefix)
                    (prefix-start-offset prefix-start-offset)
-                   (dabbrev-expansion-mark dabbrev-expansion-mark)) *drei-instance*
+                   (dabbrev-expansion-mark dabbrev-expansion-mark)) (current-view)
     (flet ((move () (cond ((beginning-of-buffer-p dabbrev-expansion-mark)
                            (setf (offset dabbrev-expansion-mark)
                                  (offset (point)))
@@ -620,8 +620,8 @@ forward (backward if negative)."
 
 (define-command (com-visible-region :name t :command-table marking-table) ()
   "Toggle the visibility of the region in the current pane."
-  (setf (region-visible-p *drei-instance*)
-        (not (region-visible-p *drei-instance*))))
+  (setf (region-visible-p (current-view))
+        (not (region-visible-p (current-view)))))
 
 (define-command (com-move-past-close-and-reindent :name t :command-table editing-table)
     ()

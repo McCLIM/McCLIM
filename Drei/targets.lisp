@@ -27,7 +27,7 @@
 (in-package :drei-core)
 
 (defclass target-specification ()
-  ((%drei :reader drei-instance
+  ((%drei :reader drei-instance-of
           :initarg :drei-instance
           :initform (error "A Drei instance must be provided for a target specification")))
   (:documentation "The base class for target specifications,

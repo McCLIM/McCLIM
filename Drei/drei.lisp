@@ -63,16 +63,26 @@
 ;;;
 ;;; Convenience stuff.
 
-(defvar *drei-instance* nil
-  "The currently running Drei instance.")
+(defgeneric drei-instance-of (object)
+  (:documentation "Return the Drei instance of `object'. For an
+editor frame, this would be the active editor instance. If
+`object' itself is a Drei instance, this function should just
+return `object'."))
 
-(defun current-view (&optional (object *drei-instance*))
+(defun drei-instance (&optional (object *esa-instance*))
+  "Return the currently running Drei instance. This function
+calls `drei-instance-of' on its argument."
+  (drei-instance-of object))
+
+(defun (setf drei-instance) (new-instance &optional (object *esa-instance*))
+  (setf (drei-instance-of object) new-instance))
+
+(defun current-view (&optional (object (drei-instance)))
   "Return the view of the provided object. If no object is
-provided, the currently running Drei instance (`*drei-instance*')
-will be used."
+provided, the currently running Drei instance will be used."
   (view object))
 
-(defun (setf current-view) (new-view &optional (object *drei-instance*))
+(defun (setf current-view) (new-view &optional (object (drei-instance)))
   (setf (view object) new-view))
 
 (defun point (&optional (object (current-view)))
@@ -183,14 +193,14 @@ instances."))
   "Prompt for a command name and arguments, then run it."
   (let ((item (handler-case
                   (accept
-                   `(command :command-table ,(command-table *drei-instance*))
+                   `(command :command-table ,(command-table (drei-instance)))
                    ;; this gets erased immediately anyway
                    :prompt "" :prompt-mode :raw)
                 ((or command-not-accessible command-not-present) ()
                   (beep)
                   (display-message "No such command")
                   (return-from com-drei-extended-command nil)))))
-    (execute-drei-command *drei-instance* item)))
+    (execute-drei-command (drei-instance) item)))
 
 (set-key 'com-drei-extended-command
          'exclusive-gadget-table
@@ -207,11 +217,11 @@ Drei. Commands should *NOT* be added to it."))
   "This method allows users of Drei to extend syntaxes with new,
 app-specific commands, as long as they inherit from a Drei class
 and specialise a method for it."
-  (additional-command-tables *drei-instance* command-table))
+  (additional-command-tables (drei-instance) command-table))
 
 (defmethod command-table-inherit-from ((table drei-command-table))
   (append (view-command-tables (current-view))
-          (additional-command-tables *drei-instance* table)
+          (additional-command-tables (drei-instance) table)
           (when (use-editor-commands-p (current-view))
             '(editor-table))))
 
@@ -343,6 +353,9 @@ the Drei instance."
 (defmethod esa-current-window ((drei drei))
   drei)
 
+(defmethod drei-instance-of ((object drei))
+  object)
+
 (defmethod print-object ((object drei) stream)
   (print-unreadable-object (object stream :type t :identity t)
     (format stream "~A" (type-of (view object)))))
@@ -404,21 +417,21 @@ debugger."
   ;; at, for example, the buffer level, after all.
   `(handler-case (progn ,@body)
      (user-condition-mixin (c)
-       (handle-drei-condition *drei-instance* c))
+       (handle-drei-condition (drei-instance) c))
      (offset-before-beginning (c)
-       (handle-drei-condition *drei-instance* c))
+       (handle-drei-condition (drei-instance) c))
      (offset-after-end (c)
-       (handle-drei-condition *drei-instance* c))
+       (handle-drei-condition (drei-instance) c))
      (motion-before-beginning (c)
-       (handle-drei-condition *drei-instance* c))
+       (handle-drei-condition (drei-instance) c))
      (motion-after-end (c)
-       (handle-drei-condition *drei-instance* c))
+       (handle-drei-condition (drei-instance) c))
      (no-expression (c)
-       (handle-drei-condition *drei-instance* c))
+       (handle-drei-condition (drei-instance) c))
      (no-such-operation (c)
-       (handle-drei-condition *drei-instance* c))
+       (handle-drei-condition (drei-instance) c))
      (buffer-read-only (c)
-       (handle-drei-condition *drei-instance* c))))
+       (handle-drei-condition (drei-instance) c))))
 
 (defmacro with-bound-drei-special-variables ((drei-instance &key
                                                             (kill-ring nil kill-ring-p)
@@ -429,7 +442,7 @@ debugger."
                                                             (prompt nil prompt-p))
                                              &body body)
   "Evaluate `body' with a set of Drei special
-variables (`*drei-instance*', `*kill-ring*', `*minibuffer*',
+variables (`(drei-instance)', `*kill-ring*', `*minibuffer*',
 `*command-parser*', `*partial-command-parser*',
 `*previous-command*', `*extended-command-prompt*') bound to their
 proper values, taken from `drei-instance'. The keyword arguments
@@ -438,18 +451,17 @@ for the respective special variables, instead of finding their
 value in `drei-instance'. This macro binds all of the usual Drei
 special variables, but also some CLIM special variables needed
 for ESA-style command parsing."
-  `(let* ((*drei-instance* ,drei-instance)
-          (*esa-instance* *drei-instance*)
+  `(let* ((*esa-instance* ,drei-instance)
           (*kill-ring* ,(if kill-ring-p kill-ring
-                            `(kill-ring *drei-instance*)))
+                            `(kill-ring (drei-instance))))
           (*minibuffer* ,(if minibuffer-p minibuffer
-                             `(or (minibuffer *drei-instance*) *minibuffer*)))
+                             `(or (minibuffer (drei-instance)) *minibuffer*)))
           (*command-parser* ,(if command-parser-p command-parser
                                  ''esa-command-parser))
           (*partial-command-parser* ,(if partial-command-parser-p partial-command-parser
                                          ''esa-partial-command-parser))
           (*previous-command* ,(if previous-command-p previous-command
-                                   `(previous-command *drei-instance*)))
+                                   `(previous-command (drei-instance))))
           (*extended-command-prompt* ,(if prompt-p prompt
                                           "Extended command: ")))
      ,@body))

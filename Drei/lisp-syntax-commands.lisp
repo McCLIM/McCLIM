@@ -65,7 +65,7 @@ string at point."
                      #'(lambda (mark)
                          (proper-line-indentation (current-view) mark))
                      fill-column
-                     (tab-space-count (view *drei-instance*))
+                     (tab-space-count (current-view))
                      (current-syntax)
                      t)))))
 

@@ -33,7 +33,7 @@
 ;; `drei-input-editing-mixin' class does not have a scan pointer. We
 ;; assume that the subclass defines a scan pointer.
 (defclass drei-input-editing-mixin ()
-  ((%drei-instance :accessor drei-instance
+  ((%drei-instance :accessor drei-instance-of
                    :initarg :drei-instance)
    (%input-position :accessor input-position
                     :initform 0)
