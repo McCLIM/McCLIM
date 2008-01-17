@@ -319,7 +319,7 @@ modifier key."))
                                              (table drei-command-table))
   `(exclusive-gadget-table))
 
-(defclass drei-area (drei standard-sequence-output-record
+(defclass drei-area (drei displayed-output-record region
                           command-processor
                           instant-macro-execution-mixin)
   ((%background-ink :initarg :background-ink
@@ -332,12 +332,17 @@ modifier key."))
 editable area. Should be an integer >= 0 or T, meaning that it
 will extend to the end of the viewport, if the Drei area is in a
 scrolling arrangement.")
-   (%drei-position :accessor input-editor-position
-                   :initarg :input-editor-position
-                   :documentation "The position of the Drei
+   (%position :accessor area-position
+              :initarg :area-position
+              :documentation "The position of the Drei
 editing area in the coordinate system of the encapsulated
 stream. An (X,Y) list, not necessarily the same as the position
-of the associated output record."))
+of the associated output record.")
+   (%parent-output-record :accessor output-record-parent
+                          :initarg :parent
+                          :initform nil
+                          :documentation "The parent output
+record of the Drei area instance."))
   (:metaclass modual-class)
   (:default-initargs :command-executor 'execute-drei-command)
   (:documentation "A Drei editable area implemented as an output
@@ -347,9 +352,8 @@ record."))
 				       &key x-position y-position)
   (check-type x-position number)
   (check-type y-position number)
-  (setf (input-editor-position area) (list x-position y-position)
-        (extend-pane-bottom (view area)) t)
-  (tree-recompute-extent area))
+  (setf (area-position area) (list x-position y-position)
+        (extend-pane-bottom (view area)) t))
 
 (defmethod (setf view) :after ((new-view drei-view) (drei drei-area))
   (setf (extend-pane-bottom new-view) t))
@@ -359,6 +363,97 @@ record."))
 
 (defmethod display-drei ((drei drei-area))
   (display-drei-area drei))
+
+;;; Implementation of the displayed-output-record and region protocol
+;;; for Drei areas. The redisplay-related stuff is in
+;;; drei-redisplay.lisp.
+
+(defmethod output-record-position ((record drei-area))
+  (values-list (area-position record)))
+
+(defmethod (setf output-record-position) ((new-x number) (new-y number)
+                                          (record drei-area))
+  (setf (area-position record) (list new-x new-y)))
+
+(defmethod output-record-start-cursor-position ((record drei-area))
+  (output-record-position record))
+
+(defmethod (setf output-record-start-cursor-position) ((new-x number) (new-y number)
+                                                       (record drei-area))
+  (setf (output-record-position record) (list new-x new-y)))
+
+(defmethod output-record-hit-detection-rectangle* ((record drei-area))
+  (bounding-rectangle* record))
+
+(defmethod output-record-refined-position-test ((record drei-area) x y)
+  t)
+
+(defmethod displayed-output-record-ink ((record drei-area))
+  +foreground-ink+)
+
+(defmethod output-record-children ((record drei-area))
+  '())
+
+(defmethod output-record-count ((record drei-area))
+  0)
+
+(defmethod map-over-output-records-containing-position
+    (function (record drei-area) x y
+     &optional (x-offset 0) (y-offset 0)
+     &rest function-args)
+  (declare (ignore function x y x-offset y-offset function-args))
+  nil)
+
+(defmethod map-over-output-records-overlapping-region
+    (function (record drei-area) region
+     &optional (x-offset 0) (y-offset 0)
+     &rest function-args)
+  (declare (ignore function region x-offset y-offset function-args))
+  nil)
+
+(defmethod bounding-rectangle* ((drei drei-area))
+  (with-accessors ((pane editor-pane)
+                   (min-width min-width)) drei
+    (let* ((style (medium-text-style pane))
+           (style-width (text-style-width style pane))
+           (height (text-style-height style pane)))
+      (multiple-value-bind (x1 y1 x2 y2)
+          (drei-bounding-rectangle* drei)
+        (when (= x1 y1 x2 y2 0)
+          ;; It hasn't been displayed yet, so stuff the position into
+          ;; it...
+          (setf x1 (first (area-position drei))
+                y1 (second (area-position drei))))
+        (values x1 y1
+                (max x2 (+ x1 style-width)
+                     (cond ((numberp min-width)
+                            (+ x1 min-width))
+                           ;; Must be T, then.
+                           ((pane-viewport pane)
+                            (+ x1 (bounding-rectangle-width (pane-viewport-region pane))))
+                           (t 0)))
+                (max y2 (+ y1 height)))))))
+
+(defmethod rectangle-edges* ((rectangle drei-area))
+  (bounding-rectangle* rectangle))
+
+(defmethod region-union ((region1 drei-area) region2)
+  (region-union (bounding-rectangle region1) region2))
+
+(defmethod region-union (region1 (region2 drei-area))
+  (region-union region1 (bounding-rectangle region2)))
+
+(defmethod region-intersection ((region1 drei-area) region2)
+  (region-intersection (bounding-rectangle region1) region2))
+
+(defmethod region-intersection (region1 (region2 drei-area))
+  (region-intersection region1 (bounding-rectangle region2)))
+
+(defmethod region-difference ((region1 drei-area) region2)
+  (region-difference (bounding-rectangle region1) region2))
+
+(defmethod region-difference (region1 (region2 drei-area))
+  (region-difference region1 (bounding-rectangle region2)))
 
 ;; For areas, we need to switch to ESA abort gestures after we have
 ;; left the CLIM gesture reading machinery, but before we start doing

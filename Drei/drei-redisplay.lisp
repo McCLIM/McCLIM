@@ -955,41 +955,12 @@ calculated by `drei-bounding-rectangle*'."
            (when errorp-supplied
              errorp))))
 
-(defmethod bounding-rectangle* ((drei drei-area))
-  (with-accessors ((pane editor-pane)
-                   (min-width min-width)) drei
-    (let* ((style (medium-text-style pane))
-           (style-width (text-style-width style pane))
-           (ascent (text-style-ascent style pane))
-           (descent (text-style-descent style pane))
-           (height (+ ascent descent)))
-      (multiple-value-bind (x1 y1 x2 y2)
-          (drei-bounding-rectangle* drei)
-        (when (= x1 y1 x2 y2 0)
-          ;; It hasn't been displayed yet, so stuff the position into
-          ;; it...
-          (setf x1 (first (input-editor-position drei))
-                y1 (second (input-editor-position drei))))
-        (values x1 y1
-                (max x2 (+ x1 style-width)
-                     (cond ((numberp min-width)
-                            (+ x1 min-width))
-                           ;; Must be T, then.
-                           ((pane-viewport pane)
-                            (+ x1 (bounding-rectangle-width (pane-viewport-region pane))))
-                           (t 0)))
-                (max y2 (+ y1 height)))))))
-
-(defmethod bounding-rectangle ((drei drei-area))
-  (with-bounding-rectangle* (x1 y1 x2 y2) drei
-    (make-rectangle* x1 y1 x2 y2)))
-
 ;; XXX: Full redraw for every replay, should probably use the `region'
 ;; parameter to only invalidate some strokes.
 (defmethod replay-output-record ((drei drei-area) (stream extended-output-stream) &optional
                                  (x-offset 0) (y-offset 0) (region +everywhere+))
   (declare (ignore x-offset y-offset region))
-  (letf (((stream-cursor-position stream) (values-list (input-editor-position drei))))
+  (letf (((stream-cursor-position stream) (output-record-start-cursor-position drei)))
     (invalidate-all-strokes (view drei))
     (display-drei-view-contents stream (view drei)))
   (dolist (cursor (cursors drei))
@@ -1005,12 +976,13 @@ calculated by `drei-bounding-rectangle*'."
 
 (defun display-drei-area (drei)
   (with-accessors ((stream editor-pane) (view view)) drei
-    (clear-output-record drei)
-    (replay drei stream)
-    (with-bounding-rectangle* (x1 y1 x2 y2) drei
-      (letf (((stream-current-output-record stream) drei))
-        ;; XXX: This sets the size of the output record.
-        (draw-rectangle* stream x1 y1 x2 y2 :ink +transparent-ink+)))
+    (with-bounding-rectangle* (old-x1 old-y1 old-x2 old-y2) drei
+      (replay drei stream)
+      (with-bounding-rectangle* (new-x1 new-y1 new-x2 new-y2) drei
+        (unless (and (= new-x1 old-x1) (= new-y1 old-y2)
+                     (= new-x2 old-x2) (= new-y2 old-y2))
+          (recompute-extent-for-changed-child (output-record-parent drei) drei
+                                              old-x1 old-y1 old-x2 old-y2))))
     (when (point-cursor drei)
       (with-bounding-rectangle* (x1 y1 x2 y2) (point-cursor drei)
         (when (pane-viewport stream)
