@@ -167,7 +167,7 @@
    (selection-timestamp :initform nil :accessor selection-timestamp)
    (font-families :accessor font-families)))
 
-(defun automagic-clx-server-path ()
+(defun automagic-clx-server-path ()  
   (let ((name (get-environment-variable "DISPLAY")))
     (assert name (name)
             "Environment variable DISPLAY is not set")
@@ -198,6 +198,12 @@
 	    :screen-id (or screen 0)
 	    :protocol protocol))))
 
+(defun helpfully-automagic-clx-server-path ()
+  (restart-case (automagic-clx-server-path)
+    (use-localhost ()
+      :report "Use local unix display"
+      (parse-clx-server-path '(:clx :host "" :protocol :unix)))))
+
 (defun parse-clx-server-path (path)
   (pop path)
   (if path
@@ -206,7 +212,7 @@
 	    :display-id (getf path :display-id 0)
 	    :screen-id  (getf path :screen-id 0)
 	    :protocol   (getf path :protocol :internet))
-      (automagic-clx-server-path)))
+      (helpfully-automagic-clx-server-path)))
 
 (setf (get :x11 :port-type) 'clx-port)
 (setf (get :x11 :server-path-parser) 'parse-clx-server-path)
