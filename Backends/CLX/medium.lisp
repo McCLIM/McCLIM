@@ -321,7 +321,7 @@
                               (:msbfirst #'identity))
                             (loop for i from 0 below num-bytes collect i)))))
 
-(defun generate-indexed-converter-expr (rgb-masks num-bytes byte-order)
+(defun generate-indexed-converter-expr (rgb-masks byte-order num-bytes)
   `(lambda (image-array converted-data mask-data width height inks)  
     (declare (optimize (speed 3)
                        (safety 0)
@@ -409,13 +409,27 @@
 
 (defparameter *pixel-converter-cache* (make-hash-table :test 'equal))
 
-(defun get-indexed-converter (visual-info byte-order bytes-per-pixel)
-  (let* ((rgb-masks (list (xlib:visual-info-red-mask visual-info)
-                          (xlib:visual-info-green-mask visual-info)
-                          (xlib:visual-info-blue-mask visual-info)))
-         (key (list rgb-masks byte-order bytes-per-pixel)))
+(defun ensure-indexed-converter (rgb-masks byte-order bytes-per-pixel)
+  (let ((key (list rgb-masks byte-order bytes-per-pixel)))
     (symbol-macrolet ((fn (gethash key *pixel-converter-cache*)))
-        (or fn (setf fn (compile nil (generate-indexed-converter-expr rgb-masks bytes-per-pixel byte-order)))))))
+        (or fn (setf fn (compile nil (generate-indexed-converter-expr rgb-masks byte-order bytes-per-pixel)))))))
+
+(defun visual-get-indexed-converter (visual-info byte-order bytes-per-pixel)
+  (let ((rgb-masks (list (xlib:visual-info-red-mask visual-info)
+                         (xlib:visual-info-green-mask visual-info)
+                         (xlib:visual-info-blue-mask visual-info))))
+    (ensure-indexed-converter rgb-masks byte-order bytes-per-pixel)))
+
+(defparameter *typical-pixel-formats* 
+  '(((#xFF0000 #xFF00 #xFF) :LSBFIRST 4)
+    ((#xFF0000 #xFF00 #xFF) :MSBFIRST 4))
+  "This is a table of the most likely pixel formats. Converters for
+these should be compiled in advance. Compiling the indexed->rgba 
+converter in advance will eliminate the pause observable the first
+time an indexed pattern is drawn.")
+
+(dolist (format *typical-pixel-formats*)  
+  (apply 'ensure-indexed-converter format))
 
 (defun fill-pixmap-indexed (visual-info depth byte-order array pm pm-gc mask mask-gc w h inks)
   (assert (= (array-total-size array) (* w h)))
@@ -432,7 +446,8 @@
          
     (if (and bytes-per-pixel
              (member byte-order '(:lsbfirst :msbfirst))
-             (setf pixel-converter (get-indexed-converter visual-info byte-order bytes-per-pixel)))
+             (setf pixel-converter (visual-get-indexed-converter 
+                                    visual-info byte-order bytes-per-pixel)))
         ;; Fast path - Image upload
         (let ((converted-data (make-array (* bytes-per-pixel (array-total-size array)) :element-type 'xlib:card8)))
           ;; Fill the pixel arrays
