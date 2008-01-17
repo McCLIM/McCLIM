@@ -381,7 +381,7 @@ it was redisplayed."
          (old-end-offset (stroke-end-offset stroke))
          (old-drawing-options (stroke-drawing-options stroke)))
     (prog1 (stroke-pump view stroke pump-state)
-      (unless (and old-end-offset
+      (unless (and old-start-offset
                    (= (+ old-start-offset line-change) (stroke-start-offset stroke))
                    (= (+ old-end-offset line-change) (stroke-end-offset stroke))
                    (drawing-options-equal old-drawing-options
@@ -580,7 +580,15 @@ dimensions of `line'."
   (end-line line line-x1 line-y1 line-width line-height)
   (setf (max-line-width view)
         (max (max-line-width view)
-             (dimensions-width (line-dimensions line)))))
+             (dimensions-width (line-dimensions line))))
+  ;; This way, strokes that have at one point been left undisplayed
+  ;; will always be considered modified when they are filled
+  ;; again. The return is for optimisation, we know that an unused
+  ;; stroke can only be followed by other unused strokes.
+  (do-undisplayed-line-strokes (stroke line)
+    (if (null (stroke-start-offset stroke))
+        (return)
+        (setf (stroke-start-offset stroke) nil))))
 
 (defun draw-line-strokes (pane view initial-pump-state
                           start-offset cursor-x cursor-y)
