@@ -75,7 +75,7 @@ equivalent of special operators. In Lisp, this is used for macros
 and special operators, in most other languages, it should
 probably be used for language keywords.")
 
-(defparameter *special-variable-drawing-options*
+(defvar *special-variable-drawing-options*
   (make-drawing-options :face (make-face :ink +darkgoldenrod4+))
   "The drawing options used for drawing variables that are
 somehow special. In Lisp, this is used for globally bound
