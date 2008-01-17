@@ -6,6 +6,7 @@
 ;;;   License: LGPL (See file COPYING for details).
 ;;; ---------------------------------------------------------------------------
 ;;;  (c) copyright 2003 by Gilbert Baumann
+;;;  (c) copyright 2008 by Andy Hefner
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -177,7 +178,6 @@
         (glyph-info glyph-id dx dy left right top)))))
 
 ;;;;;;; mcclim interface
-
 (defclass freetype-face ()
   ((display :initarg :display :reader freetype-face-display)
    (font   :initarg :font :reader freetype-face-name)
@@ -367,7 +367,7 @@
     :very-large 18
     :huge 24))
 
-(defparameter *families/faces*
+(defparameter *vera-families/faces*
   '(((:fix :roman) . "VeraMono.ttf")
     ((:fix :italic) . "VeraMoIt.ttf")
     ((:fix (:bold :italic)) . "VeraMoBI.ttf")
@@ -386,8 +386,7 @@
 
 ;;; Here are alternate mappings for the DejaVu family of fonts, which
 ;;; are a derivative of Vera with improved unicode coverage.
-#+NIL
-(defparameter *families/faces* 
+(defparameter *dejavu-families/faces* 
   '(((:FIX :ROMAN) . "DejaVuSansMono.ttf") 
     ((:FIX :ITALIC) . "DejaVuSansMono-Oblique.ttf")
     ((:FIX (:BOLD :ITALIC)) . "DejaVuSansMono-BoldOblique.ttf")
@@ -404,8 +403,9 @@
     ((:SANS-SERIF (:ITALIC :BOLD)) . "DejaVuSans-BoldOblique.ttf")
     ((:SANS-SERIF :BOLD) . "DejaVuSans-Bold.ttf")))
 
+(defvar *families/faces* *vera-families/faces*)
 
-(defvar *freetype-font-path*)
+(defparameter *freetype-font-path* #p"/usr/share/fonts/truetype/ttf-dejavu/")
 
 (fmakunbound 'clim-clx::text-style-to-x-font)
 
