@@ -411,15 +411,38 @@
 
 (defstruct freetype-device-font-name
   (font-file (error "missing argument"))
-  (size (error "missing argument")))
+  (size      (error "missing argument")))
 
-(defmethod clim-clx::text-style-to-X-font :around 
+(defstruct fontconfig-font-name
+  (string (error "missing argument"))
+  (size   (error "missing argument"))
+  (options nil)
+  (device-name nil))
+
+(defmethod clim-clx::text-style-to-X-font :around
     ((port clim-clx::clx-port) (text-style climi::device-font-text-style))
   (let ((display (slot-value port 'clim-clx::display))
         (font-name (climi::device-font-name text-style)))
-    (make-free-type-face display
-                         (freetype-device-font-name-font-file font-name)
-                         (freetype-device-font-name-size font-name))))
+    (typecase font-name
+      (freetype-device-font-name
+       (make-free-type-face display
+                            (namestring (freetype-device-font-name-font-file font-name))
+                            (freetype-device-font-name-size font-name)))
+      (fontconfig-font-name        
+       (clim-clx::text-style-to-X-font
+        port
+        (or (fontconfig-font-name-device-name font-name)
+            (setf (fontconfig-font-name-device-name font-name)
+                  (make-device-font-text-style
+                   port
+                   (make-freetype-device-font-name 
+                    :font-file (find-bitstream-font
+                                (format nil "~A-~A~{:~A~}"
+                                        (namestring (fontconfig-font-name-string font-name))
+                                        (fontconfig-font-name-size font-name)
+                                        (fontconfig-font-name-options font-name)))
+                    :size (fontconfig-font-name-size font-name))))))))))
+
 
 (defmethod text-style-mapping :around
     ((port clim-clx::clx-port) (text-style climi::device-font-text-style)
