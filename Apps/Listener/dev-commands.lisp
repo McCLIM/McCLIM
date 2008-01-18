@@ -675,9 +675,10 @@
                                       :command-table show-commands
                                       :menu "Class Slots"
                                       :provide-output-destination-keyword t)
-    ((class-name 'clim:symbol :prompt "class name"))
+    ((class-name 'clim:symbol :prompt "class name"))  
   (let* ((class (find-class class-name nil))
          (finalized-p (and class
+                           (typep class 'standard-class)
                            (progn
                              (clim-mop:finalize-inheritance class)
                              (clim-mop:class-finalized-p class))))
@@ -685,6 +686,8 @@
     (cond
      ((null class)
       (note "~A is not a defined class.~%" class-name))
+     ((not (typep class 'standard-class))
+      (note "Class ~A is not a STANDARD-CLASS.~%" class-name))
      ((not finalized-p)
       (note "Class ~A is not finalized." class-name))
      ((null slots)
