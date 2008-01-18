@@ -137,10 +137,35 @@ With a negative argument -N, move point forward by N objects."
 
 ;;; Autogenerate commands
 (define-motion-commands word movement-table)
-(define-motion-commands line movement-table)
 (define-motion-commands page movement-table)
 (define-motion-commands paragraph movement-table)
 (define-motion-commands sentence movement-table)
+
+;;; Lines have goal-columns, so we have to define the commands
+;;; manually.
+(define-command (com-forward-line :name t :command-table movement-table)
+    ((count 'integer :prompt "number of lines" :default 1))
+  "move point forward by one line.
+with a numeric argument n, move point forward by n lines.
+with a negative argument -n, move point backward by n lines."
+  (handling-motion-limit-errors ("lines")
+    (unless (member (unlisted (previous-command (drei-instance)))
+                    '(com-forward-line com-backward-line))
+      (setf (goal-column (current-view)) (column-number (point))))
+    (forward-line (point) (current-syntax) count)
+    (setf (column-number (point)) (goal-column (current-view)))))
+
+(define-command (com-backward-line :name t :command-table movement-table)
+    ((count 'integer :prompt "number of lines" :default 1))
+  "move point backward by one line.
+with a numeric argument n, move point backward by n lines.
+with a negative argument -n, move point forward by n lines."
+  (handling-motion-limit-errors ("lines")
+    (unless (member (unlisted (previous-command (drei-instance)))
+                    '(com-forward-line com-backward-line))
+      (setf (goal-column (current-view)) (column-number (point))))
+    (backward-line (point) (current-syntax) count)
+    (setf (column-number (point)) (goal-column (current-view)))))
 
 ;;; Bind gestures to commands
 (set-key `(com-forward-object ,*numeric-argument-marker*)

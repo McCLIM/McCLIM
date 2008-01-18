@@ -734,7 +734,10 @@ function."))
 
 (defclass point-mark-view (drei-buffer-view)
   ((%point :initform nil :initarg :point :accessor point-of)
-   (%mark :initform nil :initarg :mark :accessor mark-of))
+   (%mark :initform nil :initarg :mark :accessor mark-of)
+   (%goal-column :initform nil :accessor goal-column
+                 :documentation "The column that point will be
+attempted to be positioned in when moving by line."))
   (:metaclass modual-class)
   (:documentation "A view class containing a point and a mark
 into its buffer."))
@@ -762,8 +765,6 @@ into its buffer."))
   ((%auto-fill-mode :initform nil :accessor auto-fill-mode)
    (%auto-fill-column :initform 70 :accessor auto-fill-column)
    (%region-visible-p :initform nil :accessor region-visible-p)
-   ;; for next-line and previous-line commands
-   (%goal-column :initform nil :accessor goal-column)
    ;; for dynamic abbrev expansion
    (%original-prefix :initform nil :accessor original-prefix)
    (%prefix-start-offset :initform nil :accessor prefix-start-offset)
