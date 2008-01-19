@@ -82,32 +82,33 @@ malfunction.
 * Access Functions::
 @end menu
 
+@node Access Functions
+@subsection Access Functions
+
+The access functions are the primary interface to Drei state, and should
+be used to access the various parts. It is not recommended to save the
+return value of these functions, as they are by nature ephemeral, and
+may change over the course of a command.
+
+@include fun-drei-drei-instance.texi
+@include fun-drei-current-view.texi
+@include fun-esa-current-buffer.texi
+@include fun-drei-point.texi
+@include fun-drei-mark.texi
+@include fun-drei-current-syntax.texi
+
 @node Special Variables
 @subsection Special Variables
 
-Drei uses a number of special variables to provide access to data
-structures. These are described below.
+Drei uses only a few special variables to provide access to data
+structures.
 
-@include var-drei-star-drei-instance-star.texi
 @include var-drei-kill-ring-star-kill-ring-star.texi
 
 Additionally, a number of ESA special variables are used in Drei.
 
 @include var-esa-star-minibuffer-star.texi
 @include var-esa-star-previous-command-star.texi
-
-@node Access Functions
-@subsection Access Functions
-
-The special variables essentially provide all that is needed to access
-all parts of the Drei state, but for convenience, a number of utility
-functions providing access to commonly used objects have been defined.
-
-@include fun-drei-current-view.texi
-@include fun-esa-current-buffer.texi
-@include fun-drei-point.texi
-@include fun-drei-mark.texi
-@include fun-drei-current-syntax.texi
 
 @node External API
 @section External API

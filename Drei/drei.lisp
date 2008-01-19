@@ -70,8 +70,8 @@ editor frame, this would be the active editor instance. If
 return `object'."))
 
 (defun drei-instance (&optional (object *esa-instance*))
-  "Return the currently running Drei instance. This function
-calls `drei-instance-of' on its argument."
+  "Return the Drei instance of `object'. If `object' is not
+provided, the currently running Drei instance will be returned."
   (drei-instance-of object))
 
 (defun (setf drei-instance) (new-instance &optional (object *esa-instance*))
