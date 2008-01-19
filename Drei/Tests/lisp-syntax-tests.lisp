@@ -828,7 +828,9 @@ mark."
   (nil nil (5 18 2)
       "#+nil (list 1 2 3)")
   (nil nil (0 2 nil)
-      "#+nil (list 1 2 3)"))
+      "#+nil (list 1 2 3)")
+  (nil nil (6 7 3)
+      "  (nil)  "))
 
 (motion-fun-one-test (list lisp-syntax)
   (64 4 (22 41 11)

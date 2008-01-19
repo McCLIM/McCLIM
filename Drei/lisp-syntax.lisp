@@ -2034,13 +2034,17 @@ cannot be found, return nil."
   (update-parse syntax 0 (offset mark))
   (let ((potential-form (or (form-after syntax (offset mark))
 			    (form-around syntax (offset mark)))))
-    (when (and (not (null potential-form))
-               (not (= (offset mark) (end-offset potential-form))))
-      (typecase potential-form
-        (reader-conditional-form
-         (setf (offset mark) (or (start-offset (first-form (children potential-form)))
-                                 (end-offset potential-form))))
-        (t (setf (offset mark) (end-offset potential-form)))))))
+    (when (not (null potential-form))
+      (when (and (not (form-at-top-level-p potential-form))
+                 (= (offset mark) (end-offset potential-form)))
+        (setf potential-form (parent potential-form)))
+      (when (and (not (null potential-form))
+                 (not (= (offset mark) (end-offset potential-form))))
+        (typecase potential-form
+          (reader-conditional-form
+           (setf (offset mark) (or (start-offset (first-form (children potential-form)))
+                                   (end-offset potential-form))))
+          (t (setf (offset mark) (end-offset potential-form))))))))
 
 (defmethod forward-delete-expression (mark (syntax lisp-syntax) &optional (count 1)
                                       (limit-action #'error-limit-action))
