@@ -549,20 +549,35 @@ of `stroke' to carry out the actual calculations."
     (funcall (drawing-options-function (stroke-drawing-options stroke)) stream view stroke
              cursor-x cursor-y #'stroke-drawing-fn nil)))
 
+(defvar *highlight-strokes* nil
+  "If true, draw a box around all strokes and a line through
+their baseline..")
+
+(defvar *stroke-boundary-ink* +red+
+  "The ink with which stroke boundaries will be highlighted when
+`*highlight-strokes* is true.")
+
+(defvar *stroke-baseline-ink* +blue+
+  "The ink with which stroke baselines will be highlighted when
+`*highlight-strokes* is true.")
+
 (defun draw-stroke (pane view stroke cursor-x cursor-y)
   "Draw `stroke' on `pane' with a baseline at
 `cursor-y'. Drawing starts at the horizontal offset
 `cursor-x'. Stroke must thus have updated dimensional
 information. Nothing will be done unless `stroke' is dirty."
   (when (stroke-dirty stroke)
-    (when (> (x2 (stroke-dimensions stroke))
-             (bounding-rectangle-width pane))
-      (change-space-requirements pane :width (x2 (stroke-dimensions stroke))))
-    (when (> (y2 (stroke-dimensions stroke))
-             (bounding-rectangle-height pane))
-      (change-space-requirements pane :height (y2 (stroke-dimensions stroke))))
-    (funcall (drawing-options-function (stroke-drawing-options stroke))
-             pane view stroke cursor-x cursor-y #'stroke-drawing-fn t)))
+    (with-accessors ((x1 x1) (y1 y1) (x2 x2) (y2 y2)
+                     (center center)) (stroke-dimensions stroke)
+      (when (> x2 (bounding-rectangle-width pane))
+        (change-space-requirements pane :width x2))
+      (when (> y2 (bounding-rectangle-height pane))
+        (change-space-requirements pane :height y2))
+      (funcall (drawing-options-function (stroke-drawing-options stroke))
+               pane view stroke cursor-x cursor-y #'stroke-drawing-fn t)
+      (when *highlight-strokes*
+        (draw-rectangle* pane x1 y1 x2 (1- y2) :filled nil :ink *stroke-boundary-ink*)
+        (draw-line* pane x1 (+ y1 center) x2 (+ y1 center) :ink *stroke-baseline-ink*)))))
 
 (defun end-line (line x1 y1 line-width line-height)
   "End the addition of strokes to `line' for now, and update the
@@ -637,7 +652,7 @@ at (`cursor-x', `cursor-y')."
                (maybe-clear last-clear-x (x1 stroke-dimensions))
                (setf last-clear-x (x2 stroke-dimensions)))
              ;; This clears from end of line to the end of the sheet.
-             finally (maybe-clear last-clear-x (bounding-rectangle-width pane))))
+             finally (maybe-clear (1+ last-clear-x) (bounding-rectangle-width pane))))
         ;; Now actually draw them in a way that makes sure they all
         ;; touch the bottom of the line.
         (loop for stroke-index below (line-stroke-count line)

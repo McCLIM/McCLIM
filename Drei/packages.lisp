@@ -276,6 +276,10 @@ characters."))
            #:*comment-drawing-options*
            #:*error-drawing-options*
 
+           #:*highlight-strokes*
+           #:*stroke-boundary-ink*
+           #:*stroke-baseline-ink*
+
            ;; DREI program interface stuff.
            #:with-drei-options
            #:performing-drei-operations #:invoke-performing-drei-operations
