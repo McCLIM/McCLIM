@@ -43,7 +43,12 @@
 					 input-editing-stream
 					 standard-encapsulating-stream)
   ((scan-pointer :accessor stream-scan-pointer :initform 0)
-   (rescan-queued :accessor rescan-queued :initform nil)))
+   (rescan-queued :accessor rescan-queued :initform nil))
+  (:documentation "The instantiable class that implements CLIM's
+standard input editor. This is the class of stream created by
+calling `with-input-editing'.
+
+Members of this class are mutable."))
 
 (defmethod stream-accept ((stream standard-input-editing-stream) type
 			  &rest args

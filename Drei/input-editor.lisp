@@ -732,7 +732,10 @@ CL:SUBSEQ into the sequence indicating where processing stopped."
 
 (defun add-input-editor-command (gestures function)
   "Set up Drei so performing `gestures' will result in the
-invocation of `function' "
+invocation of `function'. Only works for Drei-based input-editing
+streams. `Function' will be called with four arguments: the
+input-editing stream, the input buffer, the gesture used to
+invoke the command, and the accumulated numeric argument."
   (set-key `(,(lambda (numeric-argument)
                       (funcall function *drei-input-editing-stream*
                                (stream-input-buffer *drei-input-editing-stream*)

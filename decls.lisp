@@ -528,7 +528,6 @@
 
 (defgeneric stream-input-buffer (stream))
 (defgeneric (setf stream-input-buffer) (buffer stream))
-(defgeneric stream-pointer-position (stream &key pointer))
 ;; (defgeneric (setf* stream-pointer-position))
 (defgeneric stream-set-input-focus (stream))
 (defgeneric stream-read-gesture 
@@ -555,28 +554,96 @@
 
 ;;; 24.1 The Input Editor
 
-(defgeneric input-editor-format (stream format-string &rest args))
-(defgeneric redraw-input-buffer (stream &optional start-from))
+(defgeneric input-editor-format (stream format-string &rest args)
+  (:documentation "This function is like `format', except that it
+is intended to be called on input editing streams. It arranges to
+insert \"noise strings\" in the input editor's input
+buffer. Programmers can use this to display in-line prompts in
+`accept' methods.
+
+If `stream' is a stream that is not an input editing stream, then
+`input-editor-format' is equivalent to format."))
+
+
+(defgeneric redraw-input-buffer (stream &optional start-from)
+  (:documentation "Displays the input editor's buffer starting at
+the position `start-position' on the interactive stream that is
+encapsulated by the input editing stream `stream'."))
 
 ;;; 24.1.1 The Input Editing Stream Protocol
 
-(defgeneric stream-insertion-pointer (stream))
-(defgeneric (setf stream-insertion-pointer) (pointer stream))
-(defgeneric stream-scan-pointer (stream))
-(defgeneric (setf stream-scan-pointer) (pointer stream))
-(defgeneric stream-rescanning-p (stream))
-(defgeneric reset-scan-pointer (stream &optional scan-pointer))
-(defgeneric immediate-rescan (stream))
-(defgeneric queue-rescan (stream))
-(defgeneric rescan-if-necessary (stream &optional inhibit-activation))
-(defgeneric erase-input-buffer (stream &optional start-position))
+(defgeneric stream-insertion-pointer (stream)
+  (:documentation "Returns an integer corresponding to the
+current input position in the input editing stream `stream's
+buffer, that is, the point in the buffer at which the next user
+input gesture will be inserted. The insertion pointer will always
+be less than (fill-pointer (stream-input-buffer stream)). The
+insertion pointer can also be thought of as an editing cursor."))
+
+(defgeneric (setf stream-insertion-pointer) (pointer stream)
+  (:documentation "Changes the input position of the input
+editing stream `stream' to `pointer'. `Pointer' is an integer,
+and must be less than (fill-pointer (stream-input-buffer stream))"))
+
+(defgeneric stream-scan-pointer (stream)
+  (:documentation "Returns an integer corresponding to the
+current scan pointer in the input editing stream `stream's
+buffer, that is, the point in the buffer at which calls to
+`accept' have stopped parsing input. The scan pointer will always
+be less than or equal to (stream-insertion-pointer stream)."))
+
+(defgeneric (setf stream-scan-pointer) (pointer stream)
+  (:documentation "Changes the scan pointer of the input editing
+stream `stream' to `pointer'. `Pointer' is an integer, and must
+be less than or equal to (stream-insertion-pointer stream)"))
+
+(defgeneric stream-rescanning-p (stream)
+  (:documentation "Returns the state of the input editing stream
+`stream's \"rescan in progress\" flag, which is true if stream is
+performing a rescan operation, otherwise it is false. All
+extended input streams must implement a method for this, but
+non-input editing streams will always returns false."))
+
+(defgeneric reset-scan-pointer (stream &optional scan-pointer)
+  (:documentation "Sets the input editing stream stream's scan
+pointer to `scan-pointer', and sets the state of
+`stream-rescanning-p' to true."))
+
+(defgeneric immediate-rescan (stream)
+  (:documentation "Invokes a rescan operation immediately by
+\"throwing\" out to the most recent invocation of
+`with-input-editing'."))
+
+(defgeneric queue-rescan (stream)
+  (:documentation "Indicates that a rescan operation on the input
+editing stream `stream' should take place after the next
+non-input editing gesture is read by setting the \"rescan
+queued\" flag to true. "))
+
+(defgeneric rescan-if-necessary (stream &optional inhibit-activation)
+  (:documentation "Invokes a rescan operation on the input
+editing stream `stream' if `queue-rescan' was called on the same
+stream and no intervening rescan operation has taken
+place. Resets the state of the \"rescan queued\" flag to false.
+
+If `inhibit-activation' is false, the input line will not be
+activated even if there is an activation character in it."))
+
+(defgeneric erase-input-buffer (stream &optional start-position)
+  (:documentation "Erases the part of the display that
+corresponds to the input editor's buffer starting at the position
+`start-position'."))
 
 ;;; McCLIM relies on a text editor class (by default
 ;;; DREI-INPUT-EDITING-MIXIN) to perform the user interaction and
 ;;; display for input editing. Also, that class must update the stream
 ;;; buffer and the insertion pointer, cause rescans to happen, and
 ;;; handle activation gestures.
-(defgeneric stream-process-gesture (stream gesture type))
+(defgeneric stream-process-gesture (stream gesture type)
+  (:documentation "If gesture is an input editing command,
+stream-process-gesture performs the input editing operation on
+the input editing stream `stream' and returns NIL. Otherwise, it
+returns the two values gesture and type."))
 
 ;;; 24.4 Reading and Writing of Tokens
 

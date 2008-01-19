@@ -31,10 +31,22 @@
   "I true, use the Goatee editing component instead of Drei. The
 Goatee component is faster and more mature than Drei.")
 
-(defvar *activation-gestures* nil)
-(defvar *standard-activation-gestures* '(:newline :return))
+(defvar *activation-gestures* nil
+  "The set of currently active activation gestures. The global
+value of this must be NIL. The exact format of
+`*activation-gestures*' is unspecified. `*activation-gestures*'
+and the elements in it may have dynamic extent.")
 
-(defvar *delimiter-gestures* nil)
+(defvar *standard-activation-gestures* '(:newline :return)
+  "The default set of activation gestures. The exact set of
+standard activation is unspecified, but must include the gesture
+that corresponds to the #\Newline character. ")
+
+(defvar *delimiter-gestures* nil
+  "The set of currently active delimiter gestures. The global
+value of this must be NIL. The exact format of
+`*delimiter-gestures*' is unspecified. `*delimiter-gestures*' and
+the elements in it may have dynamic extent.")
 
 ;;; These helper functions take the arguments of ACCEPT so that they
 ;;; can be used directly by ACCEPT.
@@ -63,6 +75,19 @@ Goatee component is faster and more mature than Drei.")
 	(t existing-delimiter-gestures)))
 
 (defmacro with-activation-gestures ((gestures &key override) &body body)
+  "Specifies a list of gestures that terminate input during the
+execution of `body'. `Body' may have zero or more declarations as
+its first forms. `Gestures' must be either a single gesture name
+or a form that evaluates to a list of gesture names.
+
+If the boolean `override' is true, then `gestures' will override
+the current activation gestures. If it is false (the default),
+then gestures will be added to the existing set of activation
+gestures. `with-activation-gestures' must bind
+`*activation-gestures*' to the new set of activation gestures.
+
+See also the `:activation-gestures' and
+`:additional-activation-gestures' options to `accept'."
   ;; XXX Guess this implies that gestures need to be defined at
   ;; compile time.  Sigh.  We permit both CLIM 2.0-style gesture names
   ;; and CLIM 2.2 style characters.
@@ -83,6 +108,21 @@ Goatee component is faster and more mature than Drei.")
        ,@body)))
 
 (defmacro with-delimiter-gestures ((gestures &key override) &body body)
+  "Specifies a list of gestures that terminate an individual
+token, but not the entire input, during the execution of
+`body'. `Body' may have zero or more declarations as its first
+forms. `Gestures' must be either a single gesture name or a form
+that evaluates to a list of gesture names.
+
+If the boolean `override' is true, then `gestures' will override
+the current delimiter gestures. If it is false (the default),
+then gestures will be added to the existing set of delimiter
+gestures. `With-delimiter-gestures' must bind
+`*delimiter-gestures*' to the new set of delimiter
+gestures.
+
+See also the `:delimiter-gestures' and
+`:additional-delimiter-gestures' options to `accept'."
   ;; XXX Guess this implies that gestures need to be defined at
   ;; compile time.  Sigh.  We permit both CLIM 2.0-style gesture names
   ;; and CLIM 2.2 style characters.
@@ -103,12 +143,16 @@ Goatee component is faster and more mature than Drei.")
        ,@body)))
 
 (defun activation-gesture-p (gesture)
+  "Returns true if the gesture object `gesture' is an activation
+gesture, otherwise returns false."
   (loop for gesture-name in *activation-gestures*
 	when (gesture-matches-spec-p gesture gesture-name)
 	do (return t)
 	finally (return nil)))
 
 (defun delimiter-gesture-p (gesture)
+  "Returns true if the gesture object `gesture' is a delimiter
+gesture, otherwise returns false."
   (loop for gesture-name in *delimiter-gestures*
 	when (gesture-matches-spec-p gesture gesture-name)
 	do (return t)
@@ -119,6 +163,32 @@ Goatee component is faster and more mature than Drei.")
 			       &key input-sensitizer (initial-contents "")
 			       (class ''standard-input-editing-stream class-provided-p))
 			      &body body)
+  "Establishes a context in which the user can edit the input
+typed in on the interactive stream `stream'. `Body' is then
+executed in this context, and the values returned by `body' are
+returned as the values of `with-input-editing'. `Body' may have
+zero or more declarations as its first forms.
+
+The stream argument is not evaluated, and must be a symbol that
+is bound to an input stream. If stream is T (the default),
+`*standard-input*' is used. If stream is a stream that is not an
+interactive stream, then `with-input-editing' is equivalent to
+progn.
+
+`input-sensitizer', if supplied, is a function of two arguments,
+a stream and a continuation function; the function has dynamic
+extent. The continuation, supplied by CLIM, is responsible for
+displaying output corresponding to the user's input on the
+stream. The input-sensitizer function will typically call
+`with-output-as-presentation' in order to make the output
+produced by the continuation sensitive.
+
+If `initial-contents' is supplied, it must be either a string or
+a list of two elements, an object and a presentation type. If it
+is a string, the string will be inserted into the input buffer
+using `replace-input'. If it is a list, the printed
+representation of the object will be inserted into the input
+buffer using `presentation-replace-input'."
   (setq stream (stream-designator-symbol stream '*standard-input*))
   (with-keywords-removed (args (:input-sensitizer :initial-contents :class))
     `(invoke-with-input-editing ,stream
@@ -184,6 +254,21 @@ used by the command processing code for layout."))
 		   (pointer-button-press-handler
 		    *pointer-button-press-handler*)
 		   click-only)
+  "Reads characters from the interactive stream `stream' until it
+encounters a delimiter or activation gesture, or a pointer
+gesture. Returns the accumulated string that was delimited by the
+delimiter or activation gesture, leaving the delimiter
+unread.
+
+If the first character of typed input is a quotation mark (#\"),
+then `read-token' will ignore delimiter gestures until another
+quotation mark is seen. When the closing quotation mark is seen,
+`read-token' will proceed as above.
+
+`Click-only' is ignored for now.
+
+`Input-wait-handler' and `pointer-button-press-handler' are as
+for 34stream-read-gesture"
   (declare (ignore click-only))		;XXX For now
   (let ((result (make-array 1
 			    :adjustable t
@@ -222,6 +307,15 @@ used by the command processing code for layout."))
 		    (return (subseq result 0))))))
 
 (defun write-token (token stream &key acceptably)
+  "This function is the opposite of `read-token' given the string
+token, it writes it to the interactive stream stream. If
+`acceptably' is true and there are any characters in the token
+that are delimiter gestures (see the macro
+`with-delimiter-gestures'), then `write-token' will surround the
+token with quotation marks (#\").
+
+Typically, `present' methods will use `write-token' instead of
+`write-string'."
   (let ((put-in-quotes (and acceptably (some #'delimiter-gesture-p token))))
     (when put-in-quotes
       (write-char #\" stream))
@@ -232,9 +326,18 @@ used by the command processing code for layout."))
 ;;; Signalling Errors Inside present (sic)
 
 (define-condition simple-parse-error (simple-condition parse-error)
-  ())
+  ()
+  (:documentation "The error that is signalled by
+`simple-parse-error'. This is a subclass of `parse-error'.
+
+This condition handles two initargs, `:format-string' and
+`:format-arguments', which are used to specify a control string
+and arguments for a call to `format'."))
 
 (defun simple-parse-error (format-string &rest format-args)
+  "Signals a `simple-parse-error' error while parsing an input
+token. Does not return. `Format-string' and `format-args' are as
+for format."
   (error 'simple-parse-error
 	 :format-control format-string :format-arguments format-args))
 
@@ -244,20 +347,50 @@ used by the command processing code for layout."))
   (:report (lambda (condition stream)
 	     (format stream "Input ~S is not of required type ~S"
 		     (not-required-type-string condition)
-		     (not-required-type-type condition)))))
+		     (not-required-type-type condition))))
+  (:documentation "The error that is signalled by
+`input-not-of-required-type'. This is a subclass of
+`parse-error'.
+
+This condition handles two initargs, `:string' and `:type', which
+specify a string to be used in an error message and the expected
+presentation type."))
 
 (defun input-not-of-required-type (object type)
+  "Reports that input does not satisfy the specified type by
+signalling an `input-not-of-required-type' error. `Object' is a
+parsed object or an unparsed token (a string). `Type' is a
+presentation type specifier. Does not return."
   (error 'input-not-of-required-type :string object :type type))
 
 ;;; 24.5 Completion
 
-(defvar *completion-gestures* '(:complete))
-(defvar *help-gestures* '(:help))
-(defvar *possibilities-gestures* '(:possibilities))
+(defvar *completion-gestures* '(:complete)
+  "A list of the gesture names that cause `complete-input' to
+complete the user's input as fully as possible. The exact global
+contents of this list is unspecified, but must include the
+`:complete' gesture name.")
+
+(defvar *help-gestures* '(:help)
+  "A list of the gesture names that cause `accept' and
+`complete-input' to display a (possibly input context-sensitive)
+help message, and for some presentation types a list of
+possibilities as well. The exact global contents of this list is
+unspecified, but must include the `:help' gesture name.")
+
+(defvar *possibilities-gestures* '(:possibilities)
+  "A list of the gesture names that cause `complete-input' to
+display a (possibly input context-sensitive) help message and a
+list of possibilities. The exact global contents of this list is
+unspecified, but must include the `:possibilities' gesture
+name.")
 
 (define-condition simple-completion-error (simple-parse-error)
   ((input-so-far :reader completion-error-input-so-far
-		 :initarg :input-so-far)))
+		 :initarg :input-so-far))
+  (:documentation "The error that is signalled by
+`complete-input' when no completion is found. This is a subclass
+of `simple-parse-error'."))
 
 ;;; wrapper around event-matches-gesture-name-p to match against characters too.
 
@@ -584,11 +717,34 @@ used by the command processing code for layout."))
 			     :predicate predicate)))
 
 (defun suggest (completion object)
+  "Specifies one possibility for
+`completing-from-suggestions'. `Completion' is a string, the
+printed representation of object. `Object' is the internal
+representation.
+
+Calling this function outside of the body of
+`completing-from-suggestions' is an error."
   (declare (ignore completion object))
   (error
    "SUGGEST called outside of lexical scope of COMPLETING-FROM-SUGGESTIONS" ))
 
 (defmacro completing-from-suggestions ((stream &rest args) &body body)
+  "Reads input from the input editing stream `stream', completing
+over a set of possibilities generated by calls to `suggest'
+within `body'. `Body' may have zero or more declarations as its
+first forms.
+
+`Completing-from-suggestions' returns three values, `object',
+`success', and `string'.
+
+The stream argument is not evaluated, and must be a symbol that
+is bound to a stream. If `stream' t is (the default),
+`*standard-input*' is used. `Partial-completers',
+`allow-any-input', and `possibility-printer' are as for
+`complete-input'.
+
+Implementations will probably use `complete-from-generator' to
+implement this."
   (when (eq stream t)
     (setq stream '*standard-input*))
   (let ((generator (gensym "GENERATOR"))
