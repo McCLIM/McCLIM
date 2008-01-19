@@ -643,7 +643,7 @@ corresponds to the input editor's buffer starting at the position
   (:documentation "If gesture is an input editing command,
 stream-process-gesture performs the input editing operation on
 the input editing stream `stream' and returns NIL. Otherwise, it
-returns the two values gesture and type."))
+returns the two values `gesture' and `type'."))
 
 ;;; 24.4 Reading and Writing of Tokens
 
