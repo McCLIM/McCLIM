@@ -1254,7 +1254,8 @@ list. If no such package is specified, return \"CLIM-USER\"."
                (and (form-token-p candidate)
                     (eq (form-to-object syntax candidate
                                          :no-error t)
-                        'cl:in-package)))))
+                        'cl:in-package)
+                    (second-form (children x))))))
          (extract (x)
            (let ((designator (second-form (children x))))
              (form-to-object syntax designator
