@@ -82,7 +82,7 @@
            #:convert-to-gesture #:gesture-name
            #:global-esa-table #:keyboard-macro-table
            #:help-table
-	   #:help-stream
+	   #:invoke-with-help-stream #:with-help-stream
            #:set-key
            #:find-applicable-command-table
            #:esa-command-parser

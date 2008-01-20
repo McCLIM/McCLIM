@@ -504,6 +504,14 @@ been defined that should be appropriate for most view classes.")
                       when (and slot-initarg slot-boundp)
                       nconc (list slot-initarg (slot-value view slot-name)))))))
 
+(defgeneric page-down (pane view)
+  (:documentation "Scroll `view', which is displayed on `pane', a
+page up."))
+
+(defgeneric page-up (pane view)
+  (:documentation "Scroll `view', which is displayed on `pane', a
+page up."))
+
 (defclass drei-buffer-view (drei-view)
   ((%buffer :accessor buffer
             :initform (make-instance 'drei-buffer)
@@ -573,6 +581,10 @@ are automatically set if applicable."))
   (let ((string (call-next-method)))
     (setf (fill-pointer string) 0)
     string))
+
+(defun buffer-view-p (view)
+  "Return true if `view' is a `drei-buffer-view'."
+  (typep view 'drei-buffer-view))
 
 (defclass drei-syntax-view (drei-buffer-view)
   ((%syntax :accessor syntax

@@ -296,7 +296,7 @@ beginning of the buffer at leaves point there."
 	 '((:home :control)))
 
 (define-command (com-page-down :name t :command-table movement-table) ()
-  (page-down (current-view)))
+  (page-down (editor-pane (drei-instance)) (current-view)))
 
 (set-key 'com-page-down
 	 'movement-table
@@ -307,7 +307,7 @@ beginning of the buffer at leaves point there."
 	 '((:next)))
 
 (define-command (com-page-up :name t :command-table movement-table) ()
-  (page-up (current-view)))
+  (page-up (editor-pane (drei-instance)) (current-view)))
 
 (set-key 'com-page-up
 	 'movement-table

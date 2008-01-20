@@ -1048,15 +1048,29 @@ First ask if modified buffers should be saved. If you decide not to save a modif
 ;;; 
 ;;; Help
 
-(defgeneric help-stream (frame title))
+(defgeneric invoke-with-help-stream (esa title continuation)
+  (:documentation "Invoke `continuation' with a single argument -
+a stream for writing on-line help for `esa' onto. The stream
+should have the title, or name, `title' (a string), but the
+specific meaning of this is left to the respective ESA."))
 
-(defmethod help-stream (frame title)
-  (open-window-stream
-   :label title
-   :input-buffer (#+(or mcclim building-mcclim) climi::frame-event-queue
-                    #-(or mcclim building-mcclim) silica:frame-input-buffer
-                    *application-frame*)
-   :width 400))
+(defmethod invoke-with-help-stream (frame title continuation)
+  (funcall continuation
+           (open-window-stream
+            :label title
+            :input-buffer (#+(or mcclim building-mcclim) climi::frame-event-queue
+                             #-(or mcclim building-mcclim) silica:frame-input-buffer
+                             *application-frame*)
+            :width 400)))
+
+(defmacro with-help-stream ((stream title) &body body)
+  "Evaluate `body' with `stream' bound to a stream suitable for
+writing help information on. `Title' must evaluate to a string,
+and will be used for naming the resulting stream, if that makes
+sense for the ESA."
+  `(invoke-with-help-stream *esa-instance* ,title
+                            #'(lambda (,stream)
+                                ,@body)))
 
 (defun read-gestures-for-help (command-table)
   (with-input-focus (t)
@@ -1389,12 +1403,12 @@ First ask if modified buffers should be saved. If you decide not to save a modif
     ((sort-by-keystrokes 'boolean :prompt "Sort by keystrokes?"))
   "Show which keys invoke which commands.
 Without a numeric prefix, sorts the list by command name. With a numeric prefix, sorts by key."
-  (let ((stream (help-stream *application-frame* (format nil "Help: Describe Bindings")))
-        (command-table (find-applicable-command-table *application-frame*)))
-    (describe-bindings stream command-table
-		       (if sort-by-keystrokes
-			   #'sort-by-keystrokes
-			   #'sort-by-name))))
+  (let ((command-table (find-applicable-command-table *application-frame*)))
+    (with-help-stream (stream (format nil "Help: Describe Bindings"))
+      (describe-bindings stream command-table
+                         (if sort-by-keystrokes
+                             #'sort-by-keystrokes
+                             #'sort-by-name)))))
 
 (set-key `(com-describe-bindings ,*numeric-argument-marker*) 'help-table '((#\h :control) (#\b)))
 
@@ -1412,12 +1426,10 @@ documentation and other details will be displayed in a typeout pane."
       (let ((gesture-name (format nil "~{~A~#[~; ~; ~]~}"
                                   (mapcar #'gesture-name gestures))))
         (if command
-            (let ((out-stream
-		   (help-stream *application-frame*
-				(format nil "~10THelp: Describe Key for ~A" gesture-name))))
+            (with-help-stream (out-stream (format nil "~10THelp: Describe Key for ~A" gesture-name))
               (describe-command-binding-to-stream gesture-name command
-                                                  :command-table command-table
-                                                  :stream out-stream))
+               :command-table command-table
+               :stream out-stream))
             (display-message "Unbound gesture: ~A" gesture-name))))))
 
 (set-key 'com-describe-key
@@ -1427,15 +1439,14 @@ documentation and other details will be displayed in a typeout pane."
 (define-command (com-describe-command :name t :command-table help-table)
     ((command 'command-name :prompt "Describe command"))
   "Display documentation for the given command."
-  (let* ((command-table (find-applicable-command-table *application-frame*))
-	 (out-stream (help-stream *application-frame*
-				  (format nil "~10THelp: Describe Command for ~A"
+  (let ((command-table (find-applicable-command-table *application-frame*)))
+    (with-help-stream (out-stream (format nil "~10THelp: Describe Command for ~A"
 					  (command-line-name-for-command command
 									 command-table
-									 :errorp nil)))))
-    (describe-command-to-stream command
-                                :command-table command-table
-                                :stream out-stream)))
+									 :errorp nil)))
+      (describe-command-to-stream command
+       :command-table command-table
+       :stream out-stream))))
 
 (set-key `(com-describe-command ,*unsupplied-argument-marker*)
          'help-table
@@ -1480,30 +1491,28 @@ Words are comma delimited. When more than two words are given, the documentation
 			    collect (cons function keys))))
       (if (null results)
 	  (display-message "No results for ~{~A~^, ~}" words)
-	  (let ((out-stream (help-stream *application-frame*
-					 (format nil "~10THelp: Apropos ~{~A~^, ~}"
-						 words))))
-	    (loop for (command . keys) in results
-		  for documentation = (or (documentation command 'function)
-					  "Not documented.")
-		  do (with-text-style (out-stream '(:sans-serif :bold nil))
-		       (present command
-				`(command-name :command-table ,command-table)
-				:stream out-stream))
-		     (with-drawing-options (out-stream :ink +dark-blue+
-						       :text-style '(:fix nil nil))
-		       (format out-stream "~30T~:[M-x ... RETURN~;~:*~{~A~^, ~}~]"
-			       (mapcar (lambda (keystrokes)
-					 (format nil "~{~A~^ ~}"
-						 (mapcar #'gesture-name (reverse keystrokes))))
-				       (car keys))))
-		     (with-text-style (out-stream '(:sans-serif nil nil))
-		       (format out-stream "~&~2T~A~%"
-			       (subseq documentation 0 (position #\Newline documentation))))
-		  count command into length
-		  finally (change-space-requirements out-stream
-				 :height (* length (stream-line-height out-stream)))
-			  (scroll-extent out-stream 0 0)))))))
+          (with-help-stream (out-stream (format nil "~10THelp: Apropos ~{~A~^, ~}" words))
+            (loop for (command . keys) in results
+                  for documentation = (or (documentation command 'function)
+                                          "Not documented.")
+                  do (with-text-style (out-stream '(:sans-serif :bold nil))
+                       (present command
+                                `(command-name :command-table ,command-table)
+                                :stream out-stream))
+                  (with-drawing-options (out-stream :ink +dark-blue+
+                                                    :text-style '(:fix nil nil))
+                    (format out-stream "~30T~:[M-x ... RETURN~;~:*~{~A~^, ~}~]"
+                            (mapcar (lambda (keystrokes)
+                                      (format nil "~{~A~^ ~}"
+                                              (mapcar #'gesture-name (reverse keystrokes))))
+                                    (car keys))))
+                  (with-text-style (out-stream '(:sans-serif nil nil))
+                    (format out-stream "~&~2T~A~%"
+                            (subseq documentation 0 (position #\Newline documentation))))
+                  count command into length
+                  finally (change-space-requirements out-stream
+                           :height (* length (stream-line-height out-stream)))
+                  (scroll-extent out-stream 0 0)))))))
 
 (set-key `(com-apropos-command ,*unsupplied-argument-marker*)
 	 'help-table

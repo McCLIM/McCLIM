@@ -216,7 +216,7 @@ characters."))
 
            ;; Views and their facilities.
            #:drei-view #:modified-p #:no-cursors
-           #:drei-buffer-view #:buffer #:top #:bot
+           #:drei-buffer-view #:buffer #:top #:bot #:buffer-view-p
            #:drei-syntax-view #:syntax
            #:pump-state-for-offset-with-syntax
            #:stroke-pump-with-syntax
@@ -248,12 +248,14 @@ characters."))
 
            #:minibuffer
 
-           #:drei #:drei-pane #:drei-gadget-pane #:drei-area
+           #:drei #:editor-pane
+           #:drei-pane #:drei-gadget-pane #:drei-area
            #:handling-drei-conditions #:handle-drei-condition
            #:execute-drei-command
 
            ;; Redisplay engine.
            #:display-drei-view-contents #:display-drei-view-cursor
+           #:handle-redisplay
            #:face #:make-face #:face-ink #:face-style
            #:drawing-options #:make-drawing-options
            #:drawing-options-face #:drawing-options-function

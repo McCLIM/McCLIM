@@ -652,7 +652,7 @@ at (`cursor-x', `cursor-y')."
                (maybe-clear last-clear-x (x1 stroke-dimensions))
                (setf last-clear-x (x2 stroke-dimensions)))
              ;; This clears from end of line to the end of the sheet.
-             finally (maybe-clear (1+ last-clear-x) (bounding-rectangle-width pane))))
+             finally (maybe-clear last-clear-x (bounding-rectangle-width pane))))
         ;; Now actually draw them in a way that makes sure they all
         ;; touch the bottom of the line.
         (loop for stroke-index below (line-stroke-count line)
@@ -994,8 +994,9 @@ calculated by `drei-bounding-rectangle*'."
     (with-bounding-rectangle* (old-x1 old-y1 old-x2 old-y2) drei
       (replay drei stream)
       (with-bounding-rectangle* (new-x1 new-y1 new-x2 new-y2) drei
-        (unless (and (= new-x1 old-x1) (= new-y1 old-y2)
-                     (= new-x2 old-x2) (= new-y2 old-y2))
+        (unless (or (and (= new-x1 old-x1) (= new-y1 old-y2)
+                         (= new-x2 old-x2) (= new-y2 old-y2))
+                    (null (output-record-parent drei)))
           (recompute-extent-for-changed-child (output-record-parent drei) drei
                                               old-x1 old-y1 old-x2 old-y2))))
     (when (point-cursor drei)
@@ -1018,6 +1019,22 @@ calculated by `drei-bounding-rectangle*'."
 ;;;
 ;;; Drei pane redisplay.
 
+(defgeneric handle-redisplay (pane view region)
+  (:documentation "Handle redisplay of `view' upon `pane' (which
+is a Drei pane) in the given region. Methods defined on this
+function should mark their redisplay information as dirty based
+on `region' and call the default method, which will in turn call
+`display-drei' on `pane'.")
+  (:method ((pane drei-pane) (view drei-view) (region region))
+    (display-drei pane)))
+
+(defmethod handle-repaint ((pane drei-pane) region)
+  (handle-redisplay pane (view pane) region))
+
+(defmethod handle-redisplay ((pane drei-pane) (view drei-buffer-view) (region region))
+  (invalidate-all-strokes (view pane) :cleared t)
+  (call-next-method))
+
 (defun reposition-pane (drei-pane)
   "Try to put point close to the middle of the pane by moving top
 half a pane-size up."
@@ -1037,14 +1054,15 @@ half a pane-size up."
   "Reposition the pane if point is outside the region delimited
 by the top/bot marks of its view. Returns true if adjustment was
 needed."
-  (with-accessors ((buffer buffer) (top top) (bot bot)
-                   (point point)) (view drei-pane)
-    (when (or (mark< point top)
-              (mark> point bot))
-      (reposition-pane drei-pane)
-      t)))
+  (when (typep (view drei-pane) 'point-mark-view)
+    (with-accessors ((buffer buffer) (top top) (bot bot)
+                     (point point)) (view drei-pane)
+      (when (or (mark< point top)
+                (mark> point bot))
+        (reposition-pane drei-pane)
+        t))))
 
-(defun page-down (view)
+(defmethod page-down (pane (view drei-buffer-view))
   (with-accessors ((top top) (bot bot)) view
     (when (mark> (size (buffer bot)) bot)
       (setf (offset top) (offset bot))
@@ -1052,7 +1070,7 @@ needed."
       (setf (offset (point view)) (offset top))
       (invalidate-all-strokes view))))
 
-(defun page-up (view)
+(defmethod page-up (pane (view drei-buffer-view))
   (with-accessors ((top top) (bot bot)) view
     (when (> (offset top) 0)
       (setf (offset (point view)) (offset top))
@@ -1095,11 +1113,6 @@ has `view'."))
             (full-redisplay pane)
             ;; We start all over!
             (display-drei-pane (pane-frame pane) pane)))))))
-
-(defmethod handle-repaint ((pane drei-pane) region)
-  (declare (ignore region))
-  (invalidate-all-strokes (view pane) :cleared t)
-  (redisplay-frame-pane (pane-frame pane) pane))
 
 (defmethod pane-needs-redisplay :around ((pane drei-pane))
   (values (call-next-method) nil))
