@@ -4,7 +4,7 @@
 ;;;   Created: 1998-12-02 19:26
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: regions.lisp,v 1.36 2008/01/15 15:45:17 crhodes Exp $
+;;;       $Id: regions.lisp,v 1.37 2008/01/21 01:34:13 ahefner Exp $
 ;;; --------------------------------------------------------------------------------------
 ;;;  (c) copyright 1998,1999,2001 by Gilbert Baumann
 ;;;  (c) copyright 2001 by Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
@@ -2213,7 +2213,8 @@
   (not (region-equal +nowhere+ (region-intersection a b))))
 
 (defmethod region-contains-region-p ((a region) (b region))
-  (region-equal +nowhere+ (region-difference b a)))
+  (or (eq a b)
+      (region-equal +nowhere+ (region-difference b a))))
   
 ;;;; ====================================================================================================
 
