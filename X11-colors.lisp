@@ -59,8 +59,6 @@
 (defconstant +LavenderBlush+ (make-named-color "LavenderBlush" 1.0000 0.9412 0.9608))
 (defconstant +misty-rose+ (make-named-color "misty-rose" 1.0000 0.8941 0.8824))
 (defconstant +MistyRose+ (make-named-color "MistyRose" 1.0000 0.8941 0.8824))
-(defconstant +white+ (make-named-color "white" 1.0000 1.0000 1.0000))
-(defconstant +black+ (make-named-color "black" 0.0000 0.0000 0.0000))
 (defconstant +dark-slate-gray+ (make-named-color "dark-slate-gray" 0.1843 0.3098 0.3098))
 (defconstant +DarkSlateGray+ (make-named-color "DarkSlateGray" 0.1843 0.3098 0.3098))
 (defconstant +dark-slate-grey+ (make-named-color "dark-slate-grey" 0.1843 0.3098 0.3098))

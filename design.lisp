@@ -917,6 +917,11 @@
 	   (= g1 g2)
 	   (= b1 b2)))))
 
+;;; The two default colors
+
+(defconstant +white+ (make-named-color "white" 1.0000 1.0000 1.0000))
+(defconstant +black+ (make-named-color "black" 0.0000 0.0000 0.0000))
+
 ;;; Color utilities
 
 (defgeneric highlight-shade (ink)
