@@ -70,6 +70,24 @@
 	     (clim-extensions:lowering ()
 	       (scrolling (:scroll-bar :vertical :height 200) description)))))))))
 
+(defun misc-test-postscript (test &optional filename)
+  (let* ((test (if (stringp test) (gethash test *misc-tests*) test))
+         (test-name (misc-test-name test))
+         (filename (or filename (format nil "/tmp/~A.eps"
+                                        test-name))))
+    (with-open-file (out filename :direction :output :if-exists :supersede)
+      (with-output-to-postscript-stream (stream out :device-type :eps)
+        #+NIL
+        (with-text-style (stream (make-text-style :sans-serif :roman :normal))
+          (format stream "~&~A: ~A~%" test-name (misc-test-description test)))
+        (funcall (misc-test-drawer test) stream)))))
+
+(defun run-all-postscript-tests ()
+  (loop for test being the hash-values of *misc-tests* do
+       (restart-case (misc-test-postscript test)
+         (:skip ()
+           :report (lambda (stream) (format stream "Skip ~A" (misc-test-name test)))))))
+
 (define-misc-test "Empty Records 1" (stream)                                          
     "Tests the effect of empty output records on their parent's bounding rectangle. If successful, you will see a circle enclosed in a square. The square should tightly fit the circle. If the rectangle extends all the way to the top/left edges of the pane, McCLIM is not handling this correctly. This specifically exercises addition of empty children in recompute-extent-for-new-child."
   (surrounding-output-with-border (stream :shape :rectangle)
@@ -134,7 +152,7 @@
     (format stream "~&We all live in a yellow subroutine.~%")))
 
 (define-misc-test "Transparent Ink Test" (stream)
-    "Drawing with transparent ink can be useful as a way of reserving space as padding around the visible part of a drawing. This test checks that the medium supports drawing in transparent ink, and that it is recorded with the expected bounding rectangle. It will draw two tables, which should format identically except for one square, which will be transparent in the first table and blue in the second. If the in absence of the blue square its row and column collapse to a small size, the bounding rectangle for the transparent squares is probably wrong. Light gray circles will be drawn in the backgroud, and should show through the empty row/column of the table."
+    "Drawing with transparent ink can be useful as a way of reserving space as padding around the visible part of a drawing. This test checks that the medium supports drawing in transparent ink, and that it is recorded with the expected bounding rectangle. It will draw two tables, which should format identically except for one square, which will be transparent in the first table and blue in the second. If the in absence of the blue square its row and column collapse to a small size, the bounding rectangle for the transparent squares is probably wrong. Light gray circles will be drawn in the background, and should show through the empty row/column of the table."
   (let ((table '((1 1 1 0 1)
                  (1 1 1 0 1)
                  (1 1 1 0 1)
@@ -218,5 +236,26 @@
       (lambda (obj)
         (if (listp obj) (rest obj) nil))
       :stream stream)))
+
+(define-misc-test "Line Widths" (stream)
+    "Hi there."
+  (formatting-table (stream)
+    (loop for scale-expt from 0 upto 2
+          as scale = (expt 2 scale-expt) do
+         (with-scaling (stream scale)
+           (formatting-row (stream)
+             (loop for thickness from 1 upto 25 by 5
+                   with width = 40
+                   with width/2 = (/ width 2) do
+                  (formatting-cell (stream)
+                    (draw-rectangle* stream 0 (- width/2) width width/2 :line-thickness thickness :filled nil :ink +red+ :line-unit :coordinate)
+                    (draw-circle* stream width/2 0 width/2 :line-thickness thickness :filled nil :ink +blue+ :line-unit :coordinate)
+                    (draw-line* stream 0 0 width 0
+                                :line-thickness thickness
+                                :line-cap-shape :round
+                                :line-unit :coordinate)
+                    #+NIL
+                    (draw-rectangle* stream 0 (- width/2) width width/2 :filled nil :ink +white+))))))))
+
 
     
