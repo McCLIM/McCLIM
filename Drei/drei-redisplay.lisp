@@ -576,7 +576,7 @@ information. Nothing will be done unless `stroke' is dirty."
       (funcall (drawing-options-function (stroke-drawing-options stroke))
                pane view stroke cursor-x cursor-y #'stroke-drawing-fn t)
       (when *highlight-strokes*
-        (draw-rectangle* pane x1 y1 x2 (1- y2) :filled nil :ink *stroke-boundary-ink*)
+        (draw-rectangle* pane x1 y1 (1- x2) (1- y2) :filled nil :ink *stroke-boundary-ink*)
         (draw-line* pane x1 (+ y1 center) x2 (+ y1 center) :ink *stroke-baseline-ink*)))))
 
 (defun end-line (line x1 y1 line-width line-height)
