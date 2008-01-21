@@ -295,26 +295,26 @@ beginning of the buffer at leaves point there."
 	 'movement-table
 	 '((:home :control)))
 
-(define-command (com-page-down :name t :command-table movement-table) ()
+(define-command (com-page-down :name t :command-table view-table) ()
   (page-down (editor-pane (drei-instance)) (current-view)))
 
 (set-key 'com-page-down
-	 'movement-table
+	 'view-table
 	 '((#\v :control)))
 
 (set-key 'com-page-down
-	 'movement-table
+	 'view-table
 	 '((:next)))
 
-(define-command (com-page-up :name t :command-table movement-table) ()
+(define-command (com-page-up :name t :command-table view-table) ()
   (page-up (editor-pane (drei-instance)) (current-view)))
 
 (set-key 'com-page-up
-	 'movement-table
+	 'view-table
 	 '((#\v :meta)))
 
 (set-key 'com-page-up
-	 'movement-table
+	 'view-table
 	 '((:prior)))
 
 (define-command (com-end-of-buffer :name t :command-table movement-table) ()

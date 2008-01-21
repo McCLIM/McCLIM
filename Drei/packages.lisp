@@ -244,6 +244,7 @@ characters."))
            #:comment-table #:deletion-table #:editing-table
            #:fill-table #:indent-table #:marking-table #:case-table
            #:movement-table #:search-table #:info-table #:self-insert-table
+           #:view-table
            #:editor-table #:exclusive-gadget-table #:exclusive-input-editor-table
 
            #:minibuffer

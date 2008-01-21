@@ -162,6 +162,8 @@ instances."))
 (make-command-table 'info-table :errorp nil)
 ;;; Self-insertion.
 (make-command-table 'self-insert-table :errorp nil)
+;;; View stuff (scrolling, etc)
+(make-command-table 'view-table :errorp nil)
 
 ;;; Command table for concrete editor stuff.
 (define-syntax-command-table editor-table
