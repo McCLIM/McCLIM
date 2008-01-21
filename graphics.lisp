@@ -89,26 +89,29 @@
         (changed-line-style line-style-p)
         (changed-text-style text-style-p))
     (unwind-protect
-	(progn
+        (progn
           (when (eq ink old-ink) (setf ink nil))
           
-	  (if ink
+	  (when ink
 	      (setf (medium-ink medium) ink))
-	  (if transformation
+	  (when transformation
 	      (setf (medium-transformation medium)
 		(compose-transformations old-transform transformation)))
 
           (when (and clipping-region old-clip
-                     (region-equal clipping-region old-clip))
-            (setf clipping-region nil))                   
+                     (or (eq clipping-region +everywhere+)
+                         (eq clipping-region old-clip)
+                         (region-contains-region-p clipping-region old-clip))
+                     #+NIL (region-equal clipping-region old-clip))
+            (setf clipping-region nil))
 
-          (if clipping-region
-	      (setf (medium-clipping-region medium)
-		(region-intersection (if transformation
-                                         (transform-region transformation old-clip)
-                                       old-clip)
-				     clipping-region)))
-          (if (null line-style)              
+          (when clipping-region
+            (setf (medium-clipping-region medium)
+                  (region-intersection (if transformation
+                                           (transform-region transformation old-clip)
+                                           old-clip)
+                                       clipping-region)))
+          (when (null line-style)
               (setf line-style old-line-style))
 	  (when (or line-unit line-thickness dashes-p line-joint-shape line-cap-shape)
             (setf changed-line-style t)
@@ -128,7 +131,7 @@
 	  (if text-style-p
 	      (setf text-style (merge-text-styles text-style
 						  (medium-merged-text-style medium)))
-	    (setf text-style (medium-merged-text-style medium)))
+              (setf text-style (medium-merged-text-style medium)))
 	  (when (or text-family-p text-face-p text-size-p)
             (setf changed-text-style t)
             (setf text-style (merge-text-styles (make-text-style text-family

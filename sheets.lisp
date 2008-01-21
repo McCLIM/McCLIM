@@ -643,8 +643,8 @@ that this might be different from the sheet's native region."
   (update-mirror-geometry sheet))
 
 (defmethod sheet-native-region ((sheet mirrored-sheet-mixin))
-  (with-slots (native-region) sheet
-    (unless native-region
+  (with-slots (native-region) sheet     
+    (unless native-region      
       (let ((this-region (transform-region (sheet-native-transformation sheet)
 					   (sheet-region sheet)))
 	    (parent (sheet-parent sheet)))

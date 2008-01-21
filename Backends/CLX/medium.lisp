@@ -37,6 +37,7 @@
 (defclass clx-medium (basic-medium)
   ((gc :initform nil)
    (picture :initform nil)
+   (clipping-region-dirty :initform t)
    (clipping-region-tmp :initform (vector 0 0 0 0)
      :documentation "This object is reused to avoid consing in the
  most common case when configuring the clipping region.")
@@ -108,7 +109,7 @@
   (let ((clipping-region (medium-device-region medium))
         (tmp (slot-value medium 'clipping-region-tmp))
         (port (port medium)))
-    (cond 
+    (cond
       ((region-equal clipping-region +nowhere+)
        (setf (xlib:gcontext-clip-mask gc) #()))
       ((typep clipping-region 'standard-rectangle)
@@ -135,8 +136,9 @@
 
 (defmethod (setf medium-clipping-region) :after (region (medium clx-medium))
   (declare (ignore region))
-  (with-slots (gc) medium
-    (when gc (%set-gc-clipping-region medium gc))))
+  (with-slots (#|gc|# clipping-region-dirty) medium
+    (setf clipping-region-dirty t)
+    #+NIL (when gc (%set-gc-clipping-region medium gc))))
   
 
 (defgeneric medium-gcontext (medium ink))
@@ -155,7 +157,7 @@
   (let* ((port (port medium))
 	 (mirror (port-lookup-mirror port (medium-sheet medium)))
 	 (line-style (medium-line-style medium)))
-    (with-slots (gc) medium
+    (with-slots (gc clipping-region-dirty) medium
       (unless gc
 	(setq gc (xlib:create-gcontext :drawable mirror))
 	;; this is kind of false, since the :unit should be taken
@@ -175,7 +177,9 @@
       (let ((fn (text-style-to-X-font port (medium-text-style medium))))
         (when (typep fn 'xlib:font)
           (setf (xlib:gcontext-font gc) fn)))
-      (%set-gc-clipping-region medium gc)
+      (when clipping-region-dirty
+        (%set-gc-clipping-region medium gc)
+        (setf clipping-region-dirty nil))
       gc)))
 
 (defmethod medium-gcontext ((medium clx-medium) (ink (eql +transparent-ink+)))
@@ -620,7 +624,7 @@ time an indexed pattern is drawn.")
 	     (ink        (medium-ink ,medium))
 	     (gc         (medium-gcontext ,medium ink)))
 	line-style ink
-	(unwind-protect             
+	(unwind-protect
 	     (unless (eql ink +transparent-ink+)
                (progn ,@body))
 	  #+ignore(xlib:free-gcontext gc))))))

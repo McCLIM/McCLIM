@@ -199,7 +199,8 @@
 (defun device-font-text-style-p (s)
   (typep s 'device-font-text-style))
 
-(defmethod text-style-equalp ((style1 device-font-text-style) (style2 device-font-text-style))
+(defmethod text-style-equalp ((style1 device-font-text-style) 
+                              (style2 device-font-text-style))
   (eq style1 style2))
 
 (defmethod text-style-mapping ((port basic-port) text-style
@@ -236,6 +237,10 @@
 ;;; Text-style utilities
 
 (defmethod merge-text-styles (s1 s2)
+  (when (and (typep s1 'text-style)
+             (typep s2 'text-style)
+             (eq s1 s2))
+    (return-from merge-text-styles s1))
   (setq s1 (parse-text-style s1))
   (setq s2 (parse-text-style s2))
   (if (and (not (device-font-text-style-p s1))
@@ -398,7 +403,7 @@
 
 (defmethod (setf medium-clipping-region) :after (region (medium medium))
   (declare (ignore region))
-  (let ((sheet (medium-sheet medium)))
+  (let ((sheet (medium-sheet medium)))    
     (when sheet
       (invalidate-cached-regions sheet))))
 

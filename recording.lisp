@@ -518,6 +518,7 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
          ;; since an enqueued repaint does not occur immediately, and highlight
          ;; rectangles are not recorded, newer highlighting gets wiped out
          ;; shortly after being drawn. So, we aren't ready for this yet.
+         ;; ..Actually, it isn't necessarily faster. Depends on the app.
          #+NIL
 	 (queue-repaint stream (make-instance 'window-repaint-event
 					      :sheet stream
@@ -1030,15 +1031,21 @@ were added."
     (apply function (tree-output-record-entry-record child) function-args)))
 
 (defmethod map-over-output-records-1 (function (record standard-tree-output-record) function-args)
-  (map-over-tree-output-records function record (%record-to-spatial-tree-rectangle record) :most-recent-last
+  (map-over-tree-output-records function record 
+    (%record-to-spatial-tree-rectangle record) :most-recent-last
                                 function-args))
 
-(defmethod map-over-output-records-containing-position (function (record standard-tree-output-record) x y &optional x-offset y-offset &rest function-args)
+(defmethod map-over-output-records-containing-position 
+    (function (record standard-tree-output-record) x y 
+     &optional x-offset y-offset &rest function-args)
   (declare (ignore x-offset y-offset))
-  (map-over-tree-output-records function record (rectangles:make-rectangle :lows `(,x ,y) :highs `(,x ,y)) :most-recent-first
+  (map-over-tree-output-records function record 
+    (rectangles:make-rectangle :lows `(,x ,y) :highs `(,x ,y)) :most-recent-first
                                 function-args)) 
 
-(defmethod map-over-output-records-overlapping-region (function (record standard-tree-output-record) region &optional x-offset y-offset &rest function-args)
+(defmethod map-over-output-records-overlapping-region
+    (function (record standard-tree-output-record) region 
+     &optional x-offset y-offset &rest function-args)
   (declare (ignore x-offset y-offset))
   (typecase region
     (everywhere-region (map-over-output-records-1 function record function-args))
@@ -1122,8 +1129,12 @@ were added."
 (defmethod replay-output-record :around
     ((record gs-clip-mixin) stream &optional region x-offset y-offset)
   (declare (ignore region x-offset y-offset))
-  (with-drawing-options (stream :clipping-region (graphics-state-clip record))
-    (call-next-method)))
+  (let ((clipping-region (graphics-state-clip record)))
+    (if (or (eq clipping-region +everywhere+) ; !!!
+            (region-contains-region-p clipping-region (medium-clipping-region stream)))
+        (call-next-method)
+        (with-drawing-options (stream :clipping-region (graphics-state-clip record))
+          (call-next-method)))))
 
 (defrecord-predicate gs-clip-mixin ((:clipping-region clip))
   (if-supplied (clip)
@@ -1719,7 +1730,7 @@ were added."
        (:bottom (incf top (- point-y descent))
                 (incf bottom (- point-y descent)))
        (:center (incf top (+ point-y (ceiling (- ascent descent) 2)))
-                (incf bottom (+ point-y (ceiling (- ascent descent) 2)))))
+                (incf bottom (+ point-xy (ceiling (- ascent descent) 2)))))
      (values left top right bottom))))
 
 (defmethod* (setf output-record-position) :around
@@ -1875,6 +1886,11 @@ were added."
                  ;; the styled strings here not simply be output
                  ;; records?  Then we could just replay them and all
                  ;; would be well.  -- CSR, 20060528.
+                 ;; But then we'd have to implement the output record
+                 ;; protocols for them. Are we allowed no internal
+                 ;; structure of our own? -- Hefner, 20080118
+
+                 ;; Some optimization might be possible here. 
                  (with-drawing-options (stream 
                                         :ink (graphics-state-ink substring)
                                         :clipping-region (graphics-state-clip substring)
@@ -2131,6 +2147,7 @@ were added."
      line
      string-width
      &optional (start 0) end)
+
   (when (and (stream-recording-p stream)
              (slot-value stream 'local-record-p))
     (let* ((medium (sheet-medium stream))
@@ -2150,9 +2167,10 @@ were added."
 							 :text-style text-style))
 				    height
 				    ascent))))
+
   (when (stream-drawing-p stream)
     (without-local-recording stream
-                             (call-next-method))))
+      (call-next-method))))
 
 #+nil
 (defmethod stream-write-char :around ((stream standard-output-recording-stream) char)
