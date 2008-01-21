@@ -1730,7 +1730,7 @@ were added."
        (:bottom (incf top (- point-y descent))
                 (incf bottom (- point-y descent)))
        (:center (incf top (+ point-y (ceiling (- ascent descent) 2)))
-                (incf bottom (+ point-xy (ceiling (- ascent descent) 2)))))
+                (incf bottom (+ point-y (ceiling (- ascent descent) 2)))))
      (values left top right bottom))))
 
 (defmethod* (setf output-record-position) :around
