@@ -111,6 +111,8 @@
     :initarg  :ascent
     :reader   fontset-width)))
 
+(defvar *fontset* nil)
+
 (defmethod print-object ((object fontset) stream)
   (format stream "#<fontset ~A>" (fontset-name object)))
 
@@ -681,6 +683,8 @@
 ;; pointer-event-buttons slot to pointer events. -- moore
 ;; 
 
+(defvar *clx-port*)
+
 (defun event-handler (&key display window event-key code state mode time
 		      type width height x y root-x root-y
 		      data override-redirect-p send-event-p hint-p
@@ -688,7 +692,6 @@
                       request first-keycode count
                       &allow-other-keys)
   (declare (ignore display request first-keycode count))
-  (declare (special *clx-port*))
   (let ((sheet (and window (port-lookup-sheet *clx-port* window))))
     (when sheet
       (case event-key
@@ -878,7 +881,6 @@
   (declare (ignore wait-function))
   (let* ((*clx-port* port)
          (display    (clx-port-display port)))
-    (declare (special *clx-port*))
     (unless (xlib:event-listen display)
       (xlib:display-finish-output (clx-port-display port)))
     ; temporary solution
@@ -958,8 +960,6 @@
     (if fonts
 	(xlib:open-font display (first fonts))
         (xlib:open-font display "fixed"))))
-
-(defvar *fontset* nil)
 
 (defmethod text-style-mapping ((port clx-port) text-style
                                &optional character-set)
