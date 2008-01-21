@@ -38,6 +38,7 @@
 
 (define-application-frame font-selector ()
     ((font-selector-port :initarg :font-selector-port
+                         :initform (find-port)
                          :accessor font-selector-port)
      (font-selector-text-style :accessor font-selector-text-style))
   (:menu-bar nil)
