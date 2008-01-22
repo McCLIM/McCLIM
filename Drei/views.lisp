@@ -616,9 +616,7 @@ and `end' has been modified."
                    ;; If start/end is wholly before (first list), push
                    ;; on a new region.
                    ((< start (car (first list)))
-                    (setf (first list)
-                          (cons (cons start end) (first list)))
-                    list)
+                    (cons (cons start end) (first list)))
                    ;; If start/end is wholly before (first list), go
                    ;; further down list. If at end of list, add new
                    ;; element.
