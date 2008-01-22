@@ -521,13 +521,14 @@ documentation produced by presentations.")
       (object)
       (call-next-method)
     (menu-item
-     (let ((command (command-menu-item-value object)))
+     (let ((command (command-menu-item-value object))
+           (table (frame-command-table frame)))
        (unless (listp command)
-	 (setq command (partial-command-from-name command)))
+	 (setq command (partial-command-from-name command table)))
        (if (and (typep stream 'interactor-pane)
 		(partial-command-p command))
 	   (command-line-read-remaining-arguments-for-partial-command
-	    (frame-command-table frame) stream command 0)
+	    table stream command 0)
 	   command)))))
 
 (defmethod read-frame-command ((frame application-frame)

@@ -332,7 +332,7 @@
 	 (command-name-from-symbol command-name))
 	(errorp
 	 (error 'command-not-accessible :command-table-name
-                (command-table-designator-as-name table)))
+                (command-table-designator-as-name command-table)))
 	(t nil)))
 
 (defun find-menu-item (menu-name command-table &key (errorp t))
@@ -436,7 +436,7 @@
            (in-table (position gesture keystroke-accelerators :test #'equal)))
       (when (and in-table errorp)
         (error 'command-already-present :command-table-name
-               (command-table-designator-as-name table)))
+               (command-table-designator-as-name command-table)))
       (if in-table
 	  (setf (nth in-table keystroke-items) item)
 	  (progn
@@ -474,7 +474,7 @@
 		  (setf (cdr items-tail) (cddr items-tail))))
 	    (when errorp
 	      (error 'command-not-present :command-table-name
-                     (command-table-designator-as-name table)))))))
+                     (command-table-designator-as-name command-table)))))))
   nil)
 
 (defun map-over-command-table-keystrokes (function command-table)
@@ -499,7 +499,7 @@
 	  do (return-from find-keystroke-item (values item command-table)))
     (if errorp
 	(error 'command-not-present :command-table-name
-               (command-table-designator-as-name table))
+               (command-table-designator-as-name command-table))
 	nil)))
 
 (defun lookup-keystroke-item (gesture command-table
@@ -522,11 +522,11 @@
 		   (values sub-item sub-command-table))))))
        command-table))))
 
-(defun partial-command-from-name (command-name)
+(defun partial-command-from-name (command-name command-table)
   (let ((parser (gethash command-name *command-parser-table*)))
     (if (null parser)
         (error 'command-not-present :command-table-name
-               (command-table-designator-as-name table))
+               (command-table-designator-as-name command-table))
         (cons command-name
               (mapcar #'(lambda (foo)
                           (declare (ignore foo))
@@ -549,7 +549,7 @@
     (if item
 	(let* ((value (command-menu-item-value item))
 	       (command (case (command-menu-item-type item)
-			 (:command
+                          (:command
 			  value)
 			 (:function
 			  (funcall value gesture numeric-arg))
@@ -558,7 +558,7 @@
 	  (if command
               ; Return a literal command, or create a partial command from a command-name
 	      (substitute-numeric-argument-marker (if (symbolp command)
-                                                      (partial-command-from-name command)
+                                                      (partial-command-from-name command command-table)
                                                       command)
                                                   numeric-arg)
 	      gesture))
