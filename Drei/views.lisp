@@ -552,7 +552,13 @@ is, used for display right now.")
                     :initform 0
                     :type number
                     :documentation "The width of the longest
-displayed line in device units."))
+displayed line in device units.")
+   (%changed-regions :accessor changed-regions
+                     :initform nil
+                     :documentation "A list of (start . end) conses
+of buffer offsets, delimiting the regions of the buffer that have
+changed since the last redisplay. The regions are not
+overlapping, and are sorted in ascending order."))
   (:metaclass modual-class)
   (:documentation "A view that contains a `drei-buffer'
 object. The buffer is displayed on a simple line-by-line basis,
@@ -585,6 +591,47 @@ are automatically set if applicable."))
 (defun buffer-view-p (view)
   "Return true if `view' is a `drei-buffer-view'."
   (typep view 'drei-buffer-view))
+
+(defun overlaps (x1 x2 y1 y2)
+  "Return true if the x1/x2 region overlaps with y1/y2."
+  (or (<= x1 y1 x2)
+      (<= y1 x1 y2)
+      (<= y1 x1 x2 y2)
+      (<= x1 y1 y1 x2)))
+
+(defun remember-changed-region (view start end)
+  "Note that the buffer region delimited by the offset `start'
+and `end' has been modified."
+  (labels ((worker (list)
+             ;; Return a new changed-regions list. Try to extend old
+             ;; regions instead of adding new ones.
+             (cond ((null list)
+                    (list (cons start end)))
+                   ;; If start/end overlaps with (first list), extend
+                   ;; (first list)
+                   ((overlaps start end (car (first list)) (cdr (first list)))
+                    (setf (car (first list)) (min start (car (first list)))
+                          (cdr (first list)) (max end (cdr (first list))))
+                    list)
+                   ;; If start/end is wholly before (first list), push
+                   ;; on a new region.
+                   ((< start (car (first list)))
+                    (setf (first list)
+                          (cons (cons start end) (first list)))
+                    list)
+                   ;; If start/end is wholly before (first list), go
+                   ;; further down list. If at end of list, add new
+                   ;; element.
+                   ((< (cdr (first list)) end)
+                    (setf (rest list) (worker (rest list)))
+                    list))))
+    (setf (changed-regions view) (worker (changed-regions view)))))
+
+(defmethod observer-notified ((view drei-buffer-view) (buffer drei-buffer)
+                              changed-region)
+  ;; If something has been redisplayed, and there have been changes to
+  ;; some of those lines, mark them as dirty.
+  (remember-changed-region view (car changed-region) (cdr changed-region)))
 
 (defclass drei-syntax-view (drei-buffer-view)
   ((%syntax :accessor syntax
@@ -675,48 +722,49 @@ buffer."))
           (modified-p view) t))
   (call-next-method))
 
-(defmethod synchronize-view :around ((view drei-syntax-view) &key
-                                     force-p (begin 0) (end (size (buffer view))))
-  (assert (>= end begin))
-  ;; If nothing changed, then don't call the other methods.
-  (when (or (not (= (prefix-size view) (suffix-size view)
-                    (buffer-size view) (size (buffer view))))
-            force-p)
-    (call-next-method)))
+(defun needs-resynchronization (view)
+  "Return true if the the view of the buffer of `view' is
+potentially out of date. Return false otherwise."
+  (not (= (prefix-size view) (suffix-size view)
+          (buffer-size view) (size (buffer view)))))
 
 (defmethod synchronize-view ((view drei-syntax-view)
-                             &key (begin 0) (end (size (buffer view))))
+                             &key (begin 0) (end (size (buffer view)))
+                             force-p)
   "Synchronize the syntax view with the underlying
 buffer. `Begin' and `end' are offsets specifying the region of
 the buffer that must be synchronised, defaulting to 0 and the
 size of the buffer respectively."
-  (let ((prefix-size (prefix-size view))
-        (suffix-size (suffix-size view)))
-    ;; Set some minimum values here so if `update-syntax' calls
-    ;; `update-parse' itself, we won't end with infinite recursion.
-    (setf (prefix-size view) (max (if (> begin prefix-size)
-                                      prefix-size
-                                      end)
-                                  prefix-size)
-          (suffix-size view) (max (if (>= end (- (size (buffer view)) suffix-size))
-                                      (max (- (size (buffer view)) begin) suffix-size)
-                                      suffix-size)
-                                  suffix-size)
-          (buffer-size view) (size (buffer view)))
-    (multiple-value-bind (parsed-start parsed-end)
-        (update-syntax (syntax view) prefix-size suffix-size begin end)
-      (assert (>= parsed-end parsed-start))
-      ;; Now set the proper new values for prefix-size and
-      ;; suffix-size.
-      (setf (prefix-size view) (max (if (>= prefix-size parsed-start)
-                                        parsed-end
-                                        prefix-size)
+  (assert (>= end begin))
+  ;; If nothing changed, then don't call the other methods.
+  (when (or (needs-resynchronization view) force-p)
+    (let ((prefix-size (prefix-size view))
+          (suffix-size (suffix-size view)))
+      ;; Set some minimum values here so if `update-syntax' calls
+      ;; `update-parse' itself, we won't end with infinite recursion.
+      (setf (prefix-size view) (max (if (> begin prefix-size)
+                                        prefix-size
+                                        end)
                                     prefix-size)
-            (suffix-size view) (max (if (>= parsed-end (- (size (buffer view)) suffix-size))
-                                        (- (size (buffer view)) parsed-start)
+            (suffix-size view) (max (if (>= end (- (size (buffer view)) suffix-size))
+                                        (max (- (size (buffer view)) begin) suffix-size)
                                         suffix-size)
-                                    suffix-size)))
-    (call-next-method)))
+                                    suffix-size)
+            (buffer-size view) (size (buffer view)))
+      (multiple-value-bind (parsed-start parsed-end)
+          (update-syntax (syntax view) prefix-size suffix-size begin end)
+        (assert (>= parsed-end parsed-start))
+        ;; Now set the proper new values for prefix-size and
+        ;; suffix-size.
+        (setf (prefix-size view) (max (if (>= prefix-size parsed-start)
+                                          parsed-end
+                                          prefix-size)
+                                      prefix-size)
+              (suffix-size view) (max (if (>= parsed-end (- (size (buffer view)) suffix-size))
+                                          (- (size (buffer view)) parsed-start)
+                                          suffix-size)
+                                      suffix-size)))))
+  (call-next-method))
 
 (defun make-syntax-for-view (view syntax-symbol &rest args)
   (apply #'make-instance syntax-symbol

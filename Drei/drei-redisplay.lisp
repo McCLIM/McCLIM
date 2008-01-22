@@ -330,6 +330,31 @@ NIL."
                        (end-offset (stroke-end-offset stroke))))
           (return stroke))))))
 
+(defun find-index-of-line-containing-offset (view offset)
+  "Return the index of the line containing `offset'. If `offset'
+is before the displayed lines, return 0. If `offset' is after the
+displayed lines, return the index of the last line."
+  (with-accessors ((lines displayed-lines)) view
+    (cond ((< offset (line-start-offset (aref lines 0)))
+           0)
+          ((> offset (line-end-offset (last-displayed-line view)))
+           (1- (displayed-lines-count view)))
+          (t
+           ;; Binary search for the line.
+           (loop with low-index = 0
+              with high-index = (displayed-lines-count view)
+              for middle = (floor (+ low-index high-index) 2)
+              for this-line = (aref lines middle)
+              for line-start = (line-start-offset this-line)
+              for line-end = (line-end-offset this-line)
+              do (cond ((<= line-start offset line-end)
+                        (loop-finish))
+                       ((mark> offset line-start)
+                        (setf low-index (1+ middle)))
+                       ((mark< offset line-start)
+                        (setf high-index middle)))
+              finally (return middle))))))
+
 (defun ensure-line-information-size (view min-size)
   "Ensure that the array of lines for `view' contains at least
 `min-size' elements."
@@ -379,14 +404,24 @@ it was redisplayed."
   (let* ((stroke (line-stroke-information line (line-stroke-count line)))
          (old-start-offset (stroke-start-offset stroke))
          (old-end-offset (stroke-end-offset stroke))
-         (old-drawing-options (stroke-drawing-options stroke)))
+         (old-drawing-options (stroke-drawing-options stroke))
+         (changed-region (first (changed-regions view))))
     (prog1 (stroke-pump view stroke pump-state)
       (unless (and old-start-offset
                    (= (+ old-start-offset line-change) (stroke-start-offset stroke))
                    (= (+ old-end-offset line-change) (stroke-end-offset stroke))
                    (drawing-options-equal old-drawing-options
-                                          (stroke-drawing-options stroke)))
+                                          (stroke-drawing-options stroke))
+                   (or (null changed-region)
+                       (not (overlaps (stroke-start-offset stroke) (stroke-end-offset stroke)
+                                      (car changed-region) (cdr changed-region)))))
         (invalidate-stroke stroke :modified t))
+      ;; Move to the next changed region, if it is not possible for
+      ;; more stroks to overlap with the current one.
+      (when (and changed-region
+                 (>= (stroke-end-offset stroke)
+                     (cdr changed-region)))
+        (pop (changed-regions view)))
       (incf (line-stroke-count line))
       (setf (line-end-offset line) (stroke-end-offset stroke)))))
 
