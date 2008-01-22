@@ -1832,6 +1832,17 @@ macro or special form."
       (progn (cache-symbol-info syntax symbol-form)
              (global-boundp symbol-form))))
 
+(defun parenthesis-highlighter (view form)
+  "Return the drawing style with which the parenthesis lexeme
+`form' should be highlighted."
+  (if (and (typep view 'point-mark-view)
+           (active view)
+           (or (mark= (point view) (start-offset (parent form)))
+               (mark= (point view) (end-offset (parent form))))
+           (form-complete-p (parent form)))
+      +bold-face-drawing-options+
+      +default-drawing-options+))
+
 (define-syntax-highlighting-rules emacs-style-highlighting
   (error-lexeme (*error-drawing-options*))
   (string-form (*string-drawing-options*))
@@ -1845,13 +1856,7 @@ macro or special form."
                                             ((symbol-form-is-boundp (syntax view) form)
                                              *special-variable-drawing-options*)
                                             (t +default-drawing-options+)))))
-  (parenthesis-lexeme (:function #'(lambda (view form)
-                                     (if (and (typep view 'point-mark-view)
-                                              (or (mark= (point view) (start-offset (parent form)))
-                                                  (mark= (point view) (end-offset (parent form))))
-                                              (form-complete-p (parent form)))
-                                         +bold-face-drawing-options+
-                                         +default-drawing-options+)))))
+  (parenthesis-lexeme (:function #'parenthesis-highlighter)))
 
 (define-syntax-highlighting-rules retro-highlighting
   (error-symbol (*error-drawing-options*))
@@ -1863,13 +1868,7 @@ macro or special form."
                                              +bold-face-drawing-options+)
                                             (t +default-drawing-options+)))))
   ;; XXX: Ugh, copied from above.
-  (parenthesis-lexeme (:function #'(lambda (view form)
-                                     (if (and (typep view 'point-mark-view)
-                                              (or (mark= (point view) (start-offset (parent form)))
-                                                  (mark= (point view) (end-offset (parent form))))
-                                              (form-complete-p (parent form)))
-                                         +bold-face-drawing-options+
-                                         +default-drawing-options+)))))
+  (parenthesis-lexeme (:function #'parenthesis-highlighter)))
 
 (defparameter *syntax-highlighting-rules* 'emacs-style-highlighting
   "The syntax highlighting rules used for highlighting Lisp
