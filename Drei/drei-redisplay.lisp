@@ -960,7 +960,7 @@ the end of the buffer."))
             (last-line (last-displayed-line view)))
         (values (x1 (line-dimensions first-line))
                 (y1 (line-dimensions first-line))
-                (max-line-width view)
+                (+ (x1 (line-dimensions first-line)) (max-line-width view))
                 (y2 (line-dimensions last-line))))))
 
 (defmethod bounding-rectangle-width ((view drei-buffer-view))
