@@ -4,7 +4,7 @@
 ;;;   Created: 1998-12-02 19:26
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: regions.lisp,v 1.37 2008/01/21 01:34:13 ahefner Exp $
+;;;       $Id: regions.lisp,v 1.38 2008/01/23 22:37:08 thenriksen Exp $
 ;;; --------------------------------------------------------------------------------------
 ;;;  (c) copyright 1998,1999,2001 by Gilbert Baumann
 ;;;  (c) copyright 2001 by Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
@@ -633,15 +633,17 @@
                       (xn (- (/ yc d)))
                       (yn (/ xc d)))
                  (transform-distance tr xn yn)))))
-      (multiple-value-bind (vdx vdy) (contact-radius* 1 0)
-        (declare (ignore vdx))
-        (multiple-value-bind (hdx hdy) (contact-radius* 0 1)
-          (declare (ignore hdy))
-          (multiple-value-bind (cx cy) (ellipse-center-point* region)
-            (let ((rx (abs hdx))
-                  (ry (abs vdy)))
-              (values (- cx rx) (- cy ry)
-                      (+ cx rx) (+ cy ry)))))))))
+      (multiple-value-bind (cx cy) (ellipse-center-point* region)
+        (if (zerop (ellipse-radii region))
+            (values cx cy cx cy)
+            (multiple-value-bind (vdx vdy) (contact-radius* 1 0)
+              (declare (ignore vdx))
+              (multiple-value-bind (hdx hdy) (contact-radius* 0 1)
+                (declare (ignore hdy))
+                (let ((rx (abs hdx))
+                      (ry (abs vdy)))
+                  (values (- cx rx) (- cy ry)
+                          (+ cx rx) (+ cy ry))))))))))
 
 (defun intersection-line/unit-circle (x1 y1 x2 y2)
   "Computes the intersection of the line from (x1,y1) to (x2,y2) and the unit circle.
