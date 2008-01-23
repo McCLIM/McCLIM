@@ -320,6 +320,9 @@
        status)))
   (:top-level (default-frame-top-level :prompt 'clim-fig-prompt)))
 
+(defmethod frame-standard-output ((frame clim-fig))
+  (find-pane-named frame 'canvas))
+
 (define-presentation-to-command-translator add-figure
     (blank-area com-add-figure clim-fig
                 :gesture :select ; XXX
@@ -338,7 +341,8 @@
 (defmethod generate-panes :after (frame-manager (frame clim-fig))
   (declare (ignore frame-manager))
   (setf (clim-fig-output-record frame)
-	(stream-current-output-record (frame-standard-input frame))
+        ;; *standard-output* not bound to the canvas pane yet.
+	(stream-current-output-record (frame-standard-output frame))
 	(clim-fig-status frame)
 	(find-pane-named frame 'status)))
 
