@@ -155,8 +155,7 @@ be used outside the input-editor."))
   ;; already at the input position or if we are rescanning. This is so
   ;; we can support fancy accept methods such as the one for
   ;; `command-or-form'
-  (unless (or (stream-rescanning-p stream)
-              (= (stream-scan-pointer stream) (input-position stream)))
+  (unless (stream-rescanning-p stream)
     (call-next-method)
     ;; We skip ahead of any noise strings to put us past the
     ;; prompt. This is safe, because the noise strings are to be
@@ -478,7 +477,8 @@ input-editing-stream. Bound when executing a command.")
     (with-accessors ((insertion-pointer stream-insertion-pointer)
                      (scan-pointer stream-scan-pointer)
                      (activation-gesture activation-gesture)) stream
-      (let ((buffer (buffer (view (drei-instance stream)))))
+      (let ((buffer (buffer (view (drei-instance stream))))
+            (last-was-noisy nil)) ; T if last passed gesture is noise-string
         (loop
            (loop
               while (< scan-pointer insertion-pointer)
@@ -486,7 +486,8 @@ input-editing-stream. Bound when executing a command.")
               do (let ((gesture (buffer-object buffer scan-pointer)))
                    ;; Skip noise strings.
                    (cond ((typep gesture 'noise-string)
-                          (incf scan-pointer))
+                          (incf scan-pointer)
+                          (setf last-was-noisy t))
                          ((and (not peek-p)
                                (typep gesture 'accept-result))
                           (incf scan-pointer)
@@ -512,8 +513,10 @@ input-editing-stream. Bound when executing a command.")
                           (unless peek-p
                             (incf scan-pointer))
                           (return-from stream-read-gesture gesture))
-                         (t (incf scan-pointer)))))
-           (setf (stream-rescanning stream) nil)
+                         (t (incf scan-pointer)
+                            (setf last-was-noisy nil)))))
+           (unless last-was-noisy ; This prevents double-prompting.
+             (setf (stream-rescanning stream) nil))
            (when activation-gesture
              (return-from stream-read-gesture
                (prog1 activation-gesture
