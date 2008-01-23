@@ -616,7 +616,7 @@ and `end' has been modified."
                    ;; If start/end is wholly before (first list), push
                    ;; on a new region.
                    ((< start (car (first list)))
-                    (cons (cons start end) (first list)))
+                    (cons (cons start end) list))
                    ;; If start/end is wholly before (first list), go
                    ;; further down list. If at end of list, add new
                    ;; element.
@@ -696,6 +696,10 @@ buffer."))
   (setf (prefix-size view) 0
         (suffix-size view) 0
         (buffer-size view) -1))
+
+(defun syntax-view-p (view)
+  "Return true if `view' is a `drei-syntax-view'."
+  (typep view 'drei-syntax-view))
 
 (defmethod mode-enabled-p or ((modual drei-syntax-view) mode-name)
   (mode-enabled-p (syntax modual) mode-name))
@@ -818,6 +822,10 @@ into its buffer."))
   (with-accessors ((point point) (mark mark)) view
     (setf point (clone-mark (point buffer))
           mark (clone-mark (point buffer) :right))))
+
+(defun point-mark-view-p (view)
+  "Return true if `view' is a `point-mark-view'"
+  (typep view 'point-mark-view))
 
 (defclass textual-drei-syntax-view (drei-syntax-view point-mark-view textual-view)
   ((%auto-fill-mode :initform nil :accessor auto-fill-mode)

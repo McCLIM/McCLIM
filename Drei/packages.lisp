@@ -217,10 +217,10 @@ characters."))
            ;; Views and their facilities.
            #:drei-view #:modified-p #:no-cursors
            #:drei-buffer-view #:buffer #:top #:bot #:buffer-view-p
-           #:drei-syntax-view #:syntax
+           #:drei-syntax-view #:syntax #:syntax-view-p
            #:pump-state-for-offset-with-syntax
            #:stroke-pump-with-syntax
-           #:point-mark-view
+           #:point-mark-view #:point-mark-view-p
            #:textual-drei-syntax-view
            #:tab-space-count #:space-width #:tab-width #:use-tabs
            #:auto-fill-mode #:auto-fill-column
