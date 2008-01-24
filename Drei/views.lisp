@@ -259,7 +259,8 @@ preventing the undoing to before the state of whatever
 
 (defmethod clear-undo-history ((undo-maintainer undo-mixin))
   (setf (slot-value undo-maintainer 'tree)
-        (make-instance 'standard-undo-tree)))
+        (make-instance 'standard-undo-tree)
+        (undo-accumulate undo-maintainer) '()))
 
 ;;; undo-mixin delegation (here because of the package)
 
