@@ -205,7 +205,7 @@ characters."))
            #:insert-record
            #:delete-record
            #:compound-record
-           #:with-undo
+           #:with-undo #:clear-undo-history
            
            #:drei-buffer
 
