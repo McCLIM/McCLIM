@@ -37,7 +37,7 @@
 (defclass clx-medium (basic-medium)
   ((gc :initform nil)
    (picture :initform nil)
-   (clipping-region-dirty :initform t)
+   (last-medium-device-region :initform nil)
    (clipping-region-tmp :initform (vector 0 0 0 0)
      :documentation "This object is reused to avoid consing in the
  most common case when configuring the clipping region.")
@@ -134,12 +134,6 @@
             ;; to clx :] we stick with :unsorted until that can be sorted out
             (setf (xlib:gcontext-clip-mask gc :unsorted) rect-seq)))))))
 
-(defmethod (setf medium-clipping-region) :after (region (medium clx-medium))
-  (declare (ignore region))
-  (with-slots (#|gc|# clipping-region-dirty) medium
-    (setf clipping-region-dirty t)
-    #+NIL (when gc (%set-gc-clipping-region medium gc))))
-  
 
 (defgeneric medium-gcontext (medium ink))
 
@@ -157,7 +151,7 @@
   (let* ((port (port medium))
 	 (mirror (port-lookup-mirror port (medium-sheet medium)))
 	 (line-style (medium-line-style medium)))
-    (with-slots (gc clipping-region-dirty) medium
+    (with-slots (gc last-medium-device-region) medium
       (unless gc
 	(setq gc (xlib:create-gcontext :drawable mirror))
 	;; this is kind of false, since the :unit should be taken
@@ -177,9 +171,9 @@
       (let ((fn (text-style-to-X-font port (medium-text-style medium))))
         (when (typep fn 'xlib:font)
           (setf (xlib:gcontext-font gc) fn)))
-      (when clipping-region-dirty
-        (%set-gc-clipping-region medium gc)
-        (setf clipping-region-dirty nil))
+      (unless (eq last-medium-device-region (medium-device-region medium))
+        (setf last-medium-device-region (medium-device-region medium))
+        (%set-gc-clipping-region medium gc))
       gc)))
 
 (defmethod medium-gcontext ((medium clx-medium) (ink (eql +transparent-ink+)))
