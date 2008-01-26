@@ -332,7 +332,7 @@ If found, leaves point before the word. If not, leaves point where it is."
 (defun query-replace-find-next-match (state)
   (with-accessors ((string string1)
                    (targets targets)) state
-    (let* ((mark (point (drei-instance (targets state))))
+    (let* ((mark (point (view (drei-instance (targets state)))))
            (offset-before (offset mark)))
       (search-forward mark string :test (case-relevant-test string))
       (if (= (offset mark) offset-before)
@@ -400,7 +400,7 @@ If found, leaves point before the word. If not, leaves point where it is."
                      (occurrences occurrences)
                      (targets targets)) state
       (let ((string1-length (length string1))
-            (mark (point (drei-instance targets))))
+            (mark (point (view (drei-instance targets)))))
         (backward-object mark string1-length)
         (replace-one-string mark
                             string1-length
