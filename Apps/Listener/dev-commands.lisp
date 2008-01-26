@@ -1285,11 +1285,7 @@
              (mv-or
               (when mime-type (mime-type-to-command mime-type pathname))
               (when command
-                (values command doc pointer-doc))
-              (when (and mime-type (subtypep mime-type 'text))
-                (values `(com-edit-file ,pathname)
-                        "Edit File"
-                        (format nil "Edit ~A" pathname))) ))))))
+                (values command doc pointer-doc))))))))
 
 (define-presentation-translator automagic-pathname-translator
   (clim:pathname clim:command filesystem-commands
@@ -1399,9 +1395,6 @@
   ((pathname 'pathname  :prompt "pathname"))
   (clim-sys:make-process (lambda () (ed pathname))))
 
-;; Leave this translator disabled for now, the automagic translator will now produce
-;; com-edit-file where there is not a more specific handler for a text mime type.
-#+IGNORE
 (define-presentation-to-command-translator edit-file
   (clim:pathname com-edit-file filesystem-commands :gesture :select
 		 :pointer-documentation ((object stream)
@@ -1410,7 +1403,9 @@
 		 :tester ((object)
 			  (and (not (wild-pathname-p object))
                                (probe-file object)
-                               (pathname-name object))))
+                               (pathname-name object)
+                               (let ((mime-type (pathname-mime-type object)))
+                                 (and mime-type (subtypep mime-type 'text))))))
   (object)
   (list object))
 
@@ -1419,6 +1414,20 @@
 			       :provide-output-destination-keyword t)
   ((object 'pathname :prompt "pathname"))
   (show-file object))
+
+(define-presentation-to-command-translator show-file
+  (clim:pathname com-show-file filesystem-commands :gesture :select
+		 :pointer-documentation ((object stream)
+					 (format stream "Show ~A" object))
+		 :documentation ((stream) (format stream "Show File"))
+		 :tester ((object)
+			  (and (not (wild-pathname-p object))
+                               (probe-file object)
+                               (pathname-name object)
+                               (let ((mime-type (pathname-mime-type object)))
+                                 (and mime-type (subtypep mime-type 'text))))))
+  (object)
+  (list object))
 
 (define-command (com-display-image :name t :command-table filesystem-commands
                                            :menu t)
@@ -1448,10 +1457,8 @@
   (list object))
 		   
 
-;; CLIM:OPEN-WINDOW-STREAM seems to be broken.
-;; Less broken since I hacked on it, but still bad..
 (defun show-file (pathname)
-  (let ( #+ignore(*standard-output* (open-window-stream :scroll-bars :both)) )
+  (let ((*standard-output* (open-window-stream :scroll-bars :both)) )
     (with-open-file (in pathname)
       (loop for line = (read-line in nil)
 	while line
