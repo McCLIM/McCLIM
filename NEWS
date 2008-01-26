@@ -15,6 +15,9 @@
 *** Improvement: Goal-columns for line movement.
 *** Improvement: More Emacs-like expression movement for Lisp syntax.
 ** Bug fix: label panes no longer have a restrictive maximum width.
+** Bug fix: ellipses with a zero radius no longer cause errors.
+** Bug fix: bezier drawing in CLIM-FIG less likely to cause errors.
+** Bug fix: restored somewhat working undo in CLIM-FIG.
 
 * Changes in mcclim-0.9.5 relative to 0.9.4:
 ** Installation: the systems clim-listener, clim-examples,
