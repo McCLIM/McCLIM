@@ -516,8 +516,7 @@ signaled."))
 	  (make-condition 'offset-after-end :offset offset))
   (assert (<= (+ offset n) (size buffer)) ()
           (make-condition 'offset-after-end :offset (+ offset n)))
-  (loop repeat n
-     do (delete* (contents buffer) offset)))
+  (delete-elements* (contents buffer) offset n))
 
 (defgeneric delete-range (mark &optional n)
   (:documentation "Delete `n' objects after `(if n > 0)' or
