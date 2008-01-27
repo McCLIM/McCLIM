@@ -281,6 +281,11 @@ list.")
 considered the primary user-oriented cursor, most probably the
 cursor for the editor point. Note that this cursor is also in the
 cursors-list.")
+   (%cursors-visible :accessor cursors-visible
+                     :initform t
+                     :initarg :cursors-visible
+                     :documentation "If true, the cursors of this
+Drei instance will be visible. If false, they will not.")
    (%isearch-mode :initform nil :accessor isearch-mode)
    (%isearch-states :initform '() :accessor isearch-states)
    (%isearch-previous-string :initform nil :accessor isearch-previous-string)
@@ -300,6 +305,10 @@ its view is active."
 
 (defmethod (setf active) (new-val (drei drei))
   (setf (active (view drei)) new-val))
+
+(defmethod (setf cursors-visible) :after (new-val (drei drei))
+  (dolist (cursor (cursors drei))
+    (setf (enabled cursor) new-val)))
 
 (defmethod available-modes append ((modual drei))
   (available-modes (view modual)))
@@ -325,7 +334,7 @@ its view is active."
 the Drei instance."
   (setf (cursors drei) (nreverse (create-view-cursors (editor-pane drei) (view drei))))
   (dolist (cursor (cursors drei))
-    (stream-add-output-record (editor-pane drei) cursor))
+    (setf (enabled cursor) (cursors-visible drei)))
   ;; We define the point cursor to be the first point-cursor object
   ;; in the list of cursors.
   (setf (point-cursor drei)
@@ -346,7 +355,10 @@ the Drei instance."
     (add-view-cursors drei)))
 
 (defmethod (setf view) :after (new-val (drei drei))
-  ;; We have some new cursors.
+  ;; Delete the old cursors, then add the new ones, provided the
+  ;; setting of the view is successful.
+  (dolist (cursor (cursors drei))
+    (delete-output-record cursor (output-record-parent cursor) nil))
   (add-view-cursors drei))
 
 (defmethod esa-current-buffer ((drei drei))

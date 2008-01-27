@@ -83,7 +83,7 @@ refers to is on display - therefore, `offset-to-screen-position'
 is *guaranteed* to not return NIL or T.")
   (:method :around ((stream extended-output-stream) (view drei-view)
                     (cursor drei-cursor))
-           (when (visible cursor view)
+           (when (visible-p cursor)
              (letf (((stream-default-view stream) view))
                (call-next-method)))))
 
@@ -1003,7 +1003,7 @@ calculated by `drei-bounding-rectangle*'."
   (dolist (cursor (cursors drei))
     (apply #'erase-output-record cursor stream
            (when errorp-supplied
-             errorp))))
+             (list errorp)))))
 
 ;; XXX: Full redraw for every replay, should probably use the `region'
 ;; parameter to only invalidate some strokes.
@@ -1021,7 +1021,7 @@ calculated by `drei-bounding-rectangle*'."
   (declare (ignore x-offset y-offset region))
   (clear-output-record cursor)
   (with-output-recording-options (stream :record t :draw t)
-    (when (active cursor)
+    (when (visible-p cursor)
       (display-drei-view-cursor stream (view cursor) cursor))))
 
 (defun display-drei-area (drei)

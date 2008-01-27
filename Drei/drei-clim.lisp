@@ -55,6 +55,12 @@
 ;;; CLIM cursors, though perhaps this facility should be built on top
 ;;; of what CLIM already provides. That seemed a bit (=a lot) hairy,
 ;;; though.
+
+;;; Cursors are output records. When a cursor is created, it adds
+;;; itself to its output stream. The owner of the cursor (a Drei
+;;; instance) is responsible for removing the cursor once it is done
+;;; with it. Cursors can be active/inactive and enabled/disabled and
+;;; have the same activity-status as their associated view.
 (defclass drei-cursor (standard-sequence-output-record)
   ((%view :reader view
           :initarg :view
@@ -90,6 +96,10 @@ when it is inactive."))
 Drei buffer. The most important role for instances of subclasses
 of this class is to visually represent the position of point."))
 
+(defmethod initialize-instance :after ((object drei-cursor) &rest initargs)
+  (declare (ignore initargs))
+  (stream-add-output-record (output-stream object) object))
+
 (defmethod active ((cursor drei-cursor))
   "Whether the cursor is active or
 not. An active cursor is drawn using the active ink, and an
@@ -105,9 +115,6 @@ will be active when the associated Drei view has focus."
   (if (active cursor)
       (active-ink cursor)
       (inactive-ink cursor)))
-
-(defmethod (setf enabled) ((new-value null) (cursor drei-cursor))
-  (erase-output-record cursor (output-stream cursor) nil))
 
 (defclass point-cursor (drei-cursor)
   ()
@@ -136,7 +143,7 @@ representation of the mark of a Drei instance."))
 (defmethod enabled ((cursor mark-cursor))
   *show-mark*)
 
-(defgeneric visible (cursor view)
+(defgeneric visible-1 (cursor view)
   (:documentation "Is `cursor', associated with `view', visible?
 If this function returns true, it is assumed that it is safe to
 display `cursor' to the editor stream. If just one of the
@@ -145,6 +152,12 @@ false.")
   (:method-combination and)
   (:method and (cursor view)
     (enabled cursor)))
+
+(defun visible-p (cursor)
+  "Return true if `cursor' is visible. This is a trampoline
+function that calls `visible-1' with `cursor' and the view of
+`cursor'."
+  (visible-1 cursor (view cursor)))
 
 ;;; Drei instances.
 
@@ -174,7 +187,7 @@ command loop completely."))
   ;; display surface.
   drei)
 
-(defmethod visible and (cursor (view drei-view))
+(defmethod visible-1 and (cursor (view drei-buffer-view))
   ;; We should only redisplay when the cursor is on display, or
   ;; `offset-to-screen-position' will return a non-number.
   (<= (offset (top view))

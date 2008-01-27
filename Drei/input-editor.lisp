@@ -97,7 +97,8 @@ instantiated."))
 
 (defmethod (setf cursor-visibility)
     (visibility (stream drei-input-editing-mixin))
-  (setf (active (drei-instance stream)) visibility))
+  (setf (active (drei-instance stream)) visibility
+        (cursors-visible (drei-instance stream)) visibility))
 
 (defclass drei-unselectable-presentation (presentation)
   ()
