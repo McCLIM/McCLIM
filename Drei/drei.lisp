@@ -358,7 +358,8 @@ the Drei instance."
   ;; Delete the old cursors, then add the new ones, provided the
   ;; setting of the view is successful.
   (dolist (cursor (cursors drei))
-    (delete-output-record cursor (output-record-parent cursor) nil))
+    (when (output-record-parent cursor)
+      (delete-output-record cursor (output-record-parent cursor) nil)))
   (add-view-cursors drei))
 
 (defmethod esa-current-buffer ((drei drei))
