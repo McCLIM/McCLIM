@@ -920,7 +920,7 @@ the end of the buffer."))
 (defmethod display-drei-view-cursor :around ((stream extended-output-stream)
                                              (view drei-buffer-view)
                                              (cursor drei-cursor))
-  (when (<= (offset (top view)) (offset (mark cursor)) (offset (bot view)))
+  (when (visible-p cursor)
     (clear-output-record cursor)
     (prog1 (call-next-method)
       (with-bounding-rectangle* (x1 y1 x2 y2) cursor
@@ -1021,8 +1021,7 @@ calculated by `drei-bounding-rectangle*'."
   (declare (ignore x-offset y-offset region))
   (clear-output-record cursor)
   (with-output-recording-options (stream :record t :draw t)
-    (when (visible-p cursor)
-      (display-drei-view-cursor stream (view cursor) cursor))))
+    (display-drei-view-cursor stream (view cursor) cursor)))
 
 (defun display-drei-area (drei)
   (with-accessors ((stream editor-pane) (view view)) drei

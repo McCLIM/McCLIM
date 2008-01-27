@@ -189,10 +189,12 @@ command loop completely."))
 
 (defmethod visible-1 and (cursor (view drei-buffer-view))
   ;; We should only redisplay when the cursor is on display, or
-  ;; `offset-to-screen-position' will return a non-number.
-  (<= (offset (top view))
-      (offset (mark cursor))
-      (offset (bot view))))
+  ;; `offset-to-screen-position' will return a non-number. Also don't
+  ;; display if the view hasn't been displayed yet.
+  (and (<= (offset (top view))
+           (offset (mark cursor))
+           (offset (bot view)))
+       (plusp (displayed-lines-count view))))
 
 (defmethod (setf view) :after (new-val (drei drei-pane))
   (window-clear drei))
