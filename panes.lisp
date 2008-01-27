@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.186 2008/01/01 23:23:07 thenriksen Exp $
+;;; $Id: panes.lisp,v 1.187 2008/01/27 22:24:07 thenriksen Exp $
 
 (in-package :clim-internals)
 
@@ -2732,9 +2732,19 @@ to computed distance to scroll in response to mouse wheel events."))
 
 (defparameter *default-pointer-documentation-background* +black+)
 (defparameter *default-pointer-documentation-foreground* +white+)
+(defvar *background-message-minimum-lifetime* 1
+  "The amount of seconds a background message will be kept
+alive.")
 
 (defclass pointer-documentation-pane (clim-stream-pane)
-  ()
+  ((background-message :initform nil
+                       :accessor background-message
+                       :documentation "An output record, or NIL, that will
+be shown when there is no pointer documentation to show.")
+   (background-message-time :initform 0
+                            :accessor background-message-time
+                            :documentation "The universal time at which the
+current background message was set."))
   (:default-initargs 
    :display-time nil
    :scroll-bars nil
@@ -2747,6 +2757,12 @@ to computed distance to scroll in response to mouse wheel events."))
    :background *default-pointer-documentation-background*
    :end-of-line-action :allow
    :end-of-page-action :allow))
+
+(defmethod stream-accept :before ((stream pointer-documentation-pane) type
+                                  &rest args)
+  (declare (ignore args))
+  (setf (background-message stream) nil)
+  (redisplay-frame-pane (pane-frame stream) stream :force-p t))
 
 ;;; CONSTRUCTORS
 

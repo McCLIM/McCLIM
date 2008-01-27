@@ -1115,6 +1115,15 @@ documentation produced by presentations.")
   (declare (ignore input-context stream))
   (equal old-state new-state))
 
+(defun record-on-display (stream record)
+  "Return true if `record' is part of the output history of
+`stream', false otherwise."
+  (labels ((worker (record)
+             (or (eq record (stream-output-history stream))
+                 (and (not (null (output-record-parent record)))
+                      (worker (output-record-parent record))))))
+    (worker record)))
+
 (defgeneric frame-print-pointer-documentation
     (frame input-context stream state event))
 
@@ -1127,71 +1136,82 @@ documentation produced by presentations.")
     (let ((x (device-event-x event))
 	  (y (device-event-y event))
 	  (pstream *pointer-documentation-output*))
-      (loop for (button presentation translator context)
-	    in new-translators
-	    for name = (cadr (assoc button +button-documentation+))
-	    for first-one = t then nil
-	    do (progn
-		 (unless first-one
-		   (write-string "; " pstream))
-		 (unless (zerop current-modifier)
-		   (print-modifiers pstream current-modifier :short)
-		   (write-string "-" pstream))
-		 (format pstream "~A: " name)
-		 (document-presentation-translator translator
-						   presentation
-						   (input-context-type context)
-						   *application-frame*
-						   event
-						   stream
-						   x y
-						   :stream pstream
-						   :documentation-type
-						   :pointer))
-	    finally (when new-translators
-		      (write-char #\. pstream)))
+      (if (null new-translators)
+          (when (and (background-message pstream)
+                     (not (record-on-display pstream (background-message pstream))))
+            (cond ((> (get-universal-time)
+                      (+ (background-message-time pstream)
+                         *background-message-minimum-lifetime*))
+                   (setf (background-message pstream) nil))
+                  (t
+                   (setf (output-record-parent (background-message pstream)) nil)
+                   (stream-add-output-record pstream (background-message pstream))
+                   (replay (background-message pstream) pstream))))
+          (loop for (button presentation translator context)
+                in new-translators
+                for name = (cadr (assoc button +button-documentation+))
+                for first-one = t then nil
+                do (progn
+                     (unless first-one
+                       (write-string "; " pstream))
+                     (unless (zerop current-modifier)
+                       (print-modifiers pstream current-modifier :short)
+                       (write-string "-" pstream))
+                     (format pstream "~A: " name)
+                     (document-presentation-translator translator
+                                                       presentation
+                                                       (input-context-type context)
+                                                       *application-frame*
+                                                       event
+                                                       stream
+                                                       x y
+                                                       :stream pstream
+                                                       :documentation-type
+                                                       :pointer))
+                finally (when new-translators
+                          (write-char #\. pstream))))
       ;; Wasteful to do this after doing
       ;; find-innermost-presentation-context above... look at doing this
       ;; first and then doing the innermost test.
       (let ((all-translators (find-applicable-translators
-			      (stream-output-history stream)
-			      input-context
-			      *application-frame*
-			      stream
-			      x y
-			      :for-menu t))
-	    (other-modifiers nil))
-	(loop for (translator) in all-translators
-	      for gesture = (gesture translator)
-	      unless (eq gesture t)
-	      do (loop for (name type modifier) in gesture
-		       unless (eql modifier current-modifier)
-		       do (pushnew modifier other-modifiers)))
-	(when other-modifiers
-	  (setf other-modifiers (sort other-modifiers #'cmp-modifiers))
-	  (terpri pstream)
-	  (write-string "To see other commands, press "	pstream)
-	  (loop for modifier-tail on other-modifiers
-		for (modifier) = modifier-tail
-		for count from 0
-		do (progn
-		     (if (null (cdr modifier-tail))
-			 (progn
-			   (when (> count 1)
-			     (write-char #\, pstream))
-			   (when (> count 0)
-			     (write-string " or " pstream)))
-			 (when (> count 0)
-			   (write-string ", " pstream)))
-		     (print-modifiers pstream modifier :long)))
-	  (write-char #\. pstream))))))
+                              (stream-output-history stream)
+                              input-context
+                              *application-frame*
+                              stream
+                              x y
+                              :for-menu t))
+            (other-modifiers nil))
+        (loop for (translator) in all-translators
+              for gesture = (gesture translator)
+              unless (eq gesture t)
+              do (loop for (name type modifier) in gesture
+                       unless (eql modifier current-modifier)
+                       do (pushnew modifier other-modifiers)))
+        (when other-modifiers
+          (setf other-modifiers (sort other-modifiers #'cmp-modifiers))
+          (terpri pstream)
+          (write-string "To see other commands, press "	pstream)
+          (loop for modifier-tail on other-modifiers
+                for (modifier) = modifier-tail
+                for count from 0
+                do (progn
+                     (if (null (cdr modifier-tail))
+                         (progn
+                           (when (> count 1)
+                             (write-char #\, pstream))
+                           (when (> count 0)
+                             (write-string " or " pstream)))
+                         (when (> count 0)
+                           (write-string ", " pstream)))
+                     (print-modifiers pstream modifier :long)))
+          (write-char #\. pstream))))))
 
 (defmethod frame-update-pointer-documentation
     ((frame standard-application-frame) input-context stream event)
   (when *pointer-documentation-output*
     (with-accessors ((frame-documentation-state frame-documentation-state)
 		     (documentation-record documentation-record))
-      frame
+        frame
       (setf frame-documentation-state
 	    (frame-compute-pointer-documentation-state frame
 						       input-context
@@ -1206,63 +1226,55 @@ documentation produced by presentations.")
 	    (%event% event))
 	(declare (special %input-context% %stream% %doc-state% %event&))
 	(if (and documentation-record
-		 (output-record-parent documentation-record))
+                 (output-record-parent documentation-record))
 	    (redisplay documentation-record *pointer-documentation-output*)
 	    (progn
-	      (window-clear *pointer-documentation-output*)
+              (window-clear *pointer-documentation-output*)
 	      (setf documentation-record
-		    (updating-output (*pointer-documentation-output*)
-		      (updating-output (*pointer-documentation-output*
-					:cache-value %doc-state%
-					:cache-test
-					#'equal)
-			(frame-print-pointer-documentation frame
-							   %input-context%
-							   %stream%
-							   %doc-state%
-							   %event%))))))))))
-    
-#-(and)
-(defmethod frame-update-pointer-documentation
-    ((frame standard-application-frame) input-context stream event)
-  (when *pointer-documentation-output*
-    (with-accessors ((frame-documentation-state frame-documentation-state))
-	frame
-      (let ((new-state (frame-compute-pointer-documentation-state frame
-								  input-context
-								  stream
-								  event)))
-	(unless (frame-compare-pointer-documentation-state
-		 frame
-		 input-context
-		 stream
-		 frame-documentation-state
-		 new-state)
-	  (window-clear *pointer-documentation-output*)
-	  (frame-print-pointer-documentation frame
-					     input-context
-					     stream
-					     new-state
-					     event)
-	  (setq frame-documentation-state new-state))))))
+                    (updating-output (*pointer-documentation-output*)
+                      (updating-output (*pointer-documentation-output*
+                                        :cache-value %doc-state%
+                                        :cache-test #'equal)
+                        (frame-print-pointer-documentation frame
+                                                           %input-context%
+                                                           %stream%
+                                                           %doc-state%
+                                                           %event%))))))))))
+
+(defgeneric invoke-with-output-to-pointer-documentation (frame continuation)
+  (:documentation "Invoke `continuation' with a single argument -
+a stream that the continuation can write to, the output of which
+will be used as the background message of the pointer
+documentation pane of `frame'. If the pointer-documentation of
+`frame' is not a `pointer-documentation-pane', `continuation'
+will not be called."))
+
+(defmethod invoke-with-output-to-pointer-documentation
+    ((frame standard-application-frame) continuation)
+  (with-accessors ((pointer-documentation frame-pointer-documentation-output)) frame
+    (when (typep pointer-documentation 'pointer-documentation-pane)
+      (setf (background-message pointer-documentation)
+            (with-output-to-output-record (pointer-documentation)
+              (funcall continuation pointer-documentation))
+            (background-message-time pointer-documentation) (get-universal-time)))))
+
+(defmacro with-output-to-pointer-documentation ((stream frame) &body body)
+  "Bind `stream' to the pointer-documentation pane of `frame' and
+capture the output of `body' on `stream' as the background
+message of the pointer documentation pane. If `frame' does not
+have a `pointer-documentation-pane' as pointer documentation,
+`body' will not be evaluated."
+  `(invoke-with-output-to-pointer-documentation
+    ,frame #'(lambda (,stream)
+               ,@body)))
 
 ;;; A hook for applications to draw random strings in the
 ;;; *pointer-documentation-output* without screwing up the real pointer
 ;;; documentation too badly.
 
-(defgeneric frame-display-pointer-documentation-string
-    (frame documentation-stream string))
-
-(defmethod frame-display-pointer-documentation-string
-    ((frame standard-application-frame) documentation-stream string)
-  (when *pointer-documentation-output*
-    (with-accessors ((frame-documentation-state frame-documentation-state))
-        frame
-      (unless (frame-compare-pointer-documentation-state
-	       frame nil documentation-stream frame-documentation-state string)
-	(window-clear documentation-stream)
-	(write-string string documentation-stream)
-	(setq frame-documentation-state string)))))
+(defun frame-display-pointer-documentation-string (frame string)
+  (with-output-to-pointer-documentation (stream frame)
+    (write-string string stream)))
 
 (defmethod frame-input-context-track-pointer
     ((frame standard-application-frame)

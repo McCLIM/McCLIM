@@ -1935,6 +1935,8 @@
    #:compose-space-aux
    #:simple-event-loop
    #:pointer-motion-hint-event
+   #:invoke-with-output-to-pointer-documentation
+   #:with-output-to-pointer-documentation
    #:frame-display-pointer-documentation-string
    #:list-pane-items
    

@@ -218,41 +218,52 @@
     (let ((x (device-event-x event))
 	  (y (device-event-y event))
 	  (pstream *pointer-documentation-output*))
-      (loop for (button presentation translator context)
-	    in new-translators
-	    for name = (cadr (assoc button +button-documentation+))
-	    for first-one = t then nil
-	    do (progn
-		 (unless first-one
-		   (stream-increment-cursor-position pstream 12 0)
-		   #+nil(write-string "; " pstream))
-		 (unless (zerop current-modifier)
-		   (print-modifiers pstream current-modifier :short)
-		   (write-string "-" pstream))
+      (if (null new-translators)
+          (when (and (background-message pstream)
+                     (not (record-on-display pstream (background-message pstream))))
+            (cond ((> (get-universal-time)
+                      (+ (background-message-time pstream)
+                         *background-message-minimum-lifetime*))
+                   (setf (background-message pstream) nil))
+                  (t
+                   (setf (output-record-parent (background-message pstream)) nil)
+                   (stream-add-output-record pstream (background-message pstream))
+                   (replay (background-message pstream) pstream))))
+          (loop for (button presentation translator context)
+                in new-translators
+                for name = (cadr (assoc button +button-documentation+))
+                for first-one = t then nil
+                do (progn
+                     (unless first-one
+                       (stream-increment-cursor-position pstream 12 0)
+                       #+nil(write-string "; " pstream))
+                     (unless (zerop current-modifier)
+                       (print-modifiers pstream current-modifier :short)
+                       (write-string "-" pstream))
 
-		 ;; Hefner's pointer-documentation hack.
-		 (setf name (cond 
-			      ((eql button +pointer-left-button+)   *icon-mouse-left*)
-			      ((eql button +pointer-middle-button+) *icon-mouse-middle*)
-			      ((eql button +pointer-right-button+)  *icon-mouse-right*)
-			      (t name)))
-		 (if (not (typep name 'indexed-pattern))  (format pstream "~A: " name)
-		   (multiple-value-bind (x y)  (stream-cursor-position pstream)
-		     (draw-pattern* pstream name x y)
-		     (stream-increment-cursor-position pstream 24 0)))
-		   
-		 (document-presentation-translator translator
-						   presentation
-						   (input-context-type context)
-						   *application-frame*
-						   event
-						   stream
-						   x y
-						   :stream pstream
-						   :documentation-type
-						   :pointer))   )
-	    ;finally nil #+nil (when new-translators
-		;		(write-char #\. pstream)))
+                     ;; Hefner's pointer-documentation hack.
+                     (setf name (cond 
+                                  ((eql button +pointer-left-button+)   *icon-mouse-left*)
+                                  ((eql button +pointer-middle-button+) *icon-mouse-middle*)
+                                  ((eql button +pointer-right-button+)  *icon-mouse-right*)
+                                  (t name)))
+                     (if (not (typep name 'indexed-pattern))  (format pstream "~A: " name)
+                         (multiple-value-bind (x y)  (stream-cursor-position pstream)
+                           (draw-pattern* pstream name x y)
+                           (stream-increment-cursor-position pstream 24 0)))
+           	   
+                     (document-presentation-translator translator
+                                                       presentation
+                                                       (input-context-type context)
+                                                       *application-frame*
+                                                       event
+                                                       stream
+                                                       x y
+                                                       :stream pstream
+                                                       :documentation-type
+                                                       :pointer))   ))
+                                        ;finally nil #+nil (when new-translators
+                                        ;		(write-char #\. pstream)))
       ;; Wasteful to do this after doing
       ;; find-innermost-presentation-context above... look at doing this
       ;; first and then doing the innermost test.
