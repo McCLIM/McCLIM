@@ -106,8 +106,6 @@
 	              :initarg  :type-of-condition)
    (condition-extra :accessor condition-extra
 	            :initarg  :condition-extra)
-   (condition-references :accessor condition-references
-	                 :initarg  :condition-references)
    (restarts :accessor restarts
 	     :initarg :restarts)
    (backtrace :accessor backtrace
@@ -273,10 +271,6 @@
                                                             pane)))
       (when (condition-extra (condition-info pane))
         (std-form pane "Extra:" (condition-extra (condition-info pane))
-                  :family :fix))
-      (when (condition-references (condition-info pane))
-        (std-form pane "References:" (condition-references (condition-info
-                                                            pane))
                   :family :fix)))
     (fresh-line)
     
@@ -389,7 +383,6 @@
 	      :type-of-condition    (type-of condition)
 	      :condition-message    (swank::safe-condition-message condition)
 	      :condition-extra      (swank::condition-extras       condition)
-	      :condition-references (swank::condition-references   condition)
 	      :restarts             (compute-restarts)
 	      :backtrace            (compute-backtrace 0 20)))
 	    (run-debugger-frame))
