@@ -700,10 +700,21 @@ at (`cursor-x', `cursor-y')."
                           (return (values pump-state line-height))))))))
 
 (defun clear-stale-lines (pane view)
-  "Clear from the last displayed line to the end of `pane'."
+  "Clear from the last displayed line to the end of `pane' and
+mark undisplayed line objects as dirty."
   (let ((line-dimensions (line-dimensions (last-displayed-line view))))
     (clear-rectangle* pane (x1 line-dimensions) (y2 line-dimensions)
-                      (bounding-rectangle-width pane) (bounding-rectangle-height pane))))
+                      (bounding-rectangle-width pane) (bounding-rectangle-height pane)))
+  ;; This way, strokes of lines that have at one point been left
+  ;; undisplayed will always be considered modified when they are
+  ;; filled again. The return is for optimisation, we know that an
+  ;; unused stroke can only be followed by other unused strokes.
+  (do-undisplayed-lines (line view)
+    (setf (line-stroke-count line) 0)
+    (do-undisplayed-line-strokes (stroke line)
+      (if (null (stroke-start-offset stroke))
+          (return)
+          (setf (stroke-start-offset stroke) nil)))))
 
 (defvar *maximum-chunk-size* 100
   "The maximum amount of objects put into a stroke by a
