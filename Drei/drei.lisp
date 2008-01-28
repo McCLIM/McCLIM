@@ -179,7 +179,8 @@ instances."))
                     search-table
                     info-table
                     self-insert-table
-                    keyboard-macro-table))
+                    keyboard-macro-table)
+    :menu '(("Commenting" :menu comment-table)))
 
 ;; Command table for commands that are only available when Drei is a
 ;; gadget. There is no pane-exclusive table because the Drei pane is
@@ -286,6 +287,14 @@ cursors-list.")
                      :initarg :cursors-visible
                      :documentation "If true, the cursors of this
 Drei instance will be visible. If false, they will not.")
+   (%redisplay-minibuffer :accessor redisplay-minibuffer
+                          :initform nil
+                          :initarg :redisplay-minibuffer
+                          :documentation "If true, the minibuffer
+associated with this Drei instance will be redisplayed as the
+last part of the Drei redisplay process. If false, it is the task
+of the Drei-using application to make sure the minibuffer is
+redisplayed as appropriate.")
    (%isearch-mode :initform nil :accessor isearch-mode)
    (%isearch-states :initform '() :accessor isearch-states)
    (%isearch-previous-string :initform nil :accessor isearch-previous-string)

@@ -226,7 +226,9 @@ command loop completely."))
                     :documentation "The pane that previously had
 keyboard focus"))
   (:metaclass modual-class)
-  (:default-initargs :command-executor 'execute-drei-command)
+  (:default-initargs
+   :command-executor 'execute-drei-command
+   :redisplay-minibuffer t)
   (:documentation "An actual, instantiable Drei gadget with
  event-based command processing."))
 
@@ -359,7 +361,9 @@ of the associated output record.")
                           :documentation "The parent output
 record of the Drei area instance."))
   (:metaclass modual-class)
-  (:default-initargs :command-executor 'execute-drei-command)
+  (:default-initargs
+   :command-executor 'execute-drei-command
+    :redisplay-minibuffer t)
   (:documentation "A Drei editable area implemented as an output
 record."))
 
@@ -500,7 +504,8 @@ record."))
   a minibuffer."))
 
 (defmethod display-drei :after ((drei drei))
-  (when (and *minibuffer* (not (eq *minibuffer* (editor-pane drei))))
+  (when (and *minibuffer* (not (eq *minibuffer* (editor-pane drei)))
+             (redisplay-minibuffer drei))
     ;; We need to use :force-p t to remove any existing output from
     ;; the pane.
     (redisplay-frame-pane (pane-frame *minibuffer*) *minibuffer* :force-p t)))
