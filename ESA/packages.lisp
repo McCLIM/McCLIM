@@ -80,8 +80,6 @@
            #:*extended-command-prompt*
            #:define-esa-top-level #:esa-top-level #:simple-command-loop
            #:convert-to-gesture #:gesture-name
-           #:global-esa-table #:keyboard-macro-table
-           #:help-table
 	   #:invoke-with-help-stream #:with-help-stream
            #:set-key
            #:find-applicable-command-table
@@ -90,7 +88,23 @@
 
            #:gesture-matches-gesture-name-p #:meta-digit
            #:proper-gesture-p
-           #:universal-argument #:meta-minus))
+           #:universal-argument #:meta-minus
+
+           ;; General commands
+           #:global-esa-table
+           #:com-quit #:com-extended-command
+
+           ;; Help commands
+           #:help-table
+           #:com-describe-key-briefly #:com-where-is
+           #:com-describe-bindings
+           #:com-describe-key #:com-describe-command
+           #:com-apropos-command
+
+           ;; Keyboard macro commands
+           #:keyboard-macro-table
+           #:com-start-macro #:com-end-macro
+           #:com-call-last-macro))
 
 (defpackage :esa-buffer
   (:use :clim-lisp :clim :esa :esa-utils)
@@ -111,7 +125,10 @@
            #:frame-write-buffer #:write-buffer
            #:buffer-writing-error #:buffer #:filepath
            #:filepath-is-directory
-           #:esa-io-table))
+           #:esa-io-table
+           #:com-find-file #:com-find-file-read-only
+           #:com-read-only #:com-set-visited-file-name
+           #:com-save-buffer #:com-write-buffer))
 
 #-(or mcclim building-mcclim)
 (defpackage :clim-extensions

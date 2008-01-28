@@ -733,11 +733,10 @@ corresponding commands in `command-table' and invoke them using
          (setq command (list command)))       
        (when (member *unsupplied-argument-marker* command :test #'eq)
          (setq command
-               (funcall 
+               (funcall
                 *partial-command-parser*
-                (frame-command-table command-processor)
-                (frame-standard-input command-processor)
-                command 0)))
+                (command-table command-processor)
+                *standard-input* command 0)))
        (funcall (command-executor command-processor)
                 command-processor command)))))
 
