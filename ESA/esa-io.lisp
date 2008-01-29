@@ -313,3 +313,11 @@ Changes the file visted by the buffer to the given file."
 (set-key `(com-write-buffer ,*unsupplied-argument-marker*)
          'esa-io-table '((#\x :control) (#\w :control)))
 
+(define-menu-table esa-io-menu-table (esa-io-table global-esa-table)
+  `(com-find-file ,*unsupplied-argument-marker*)
+  `(com-find-file-read-only ,*unsupplied-argument-marker*)
+  'com-save-buffer
+  `(com-write-buffer ,*unsupplied-argument-marker*)
+  `(com-set-visited-file-name ,*unsupplied-argument-marker*)
+  :divider
+  'com-quit)

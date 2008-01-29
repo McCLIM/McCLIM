@@ -1518,6 +1518,14 @@ Words are comma delimited. When more than two words are given, the documentation
 	 'help-table
 	 '((#\h :control) (#\a)))
 
+(define-menu-table help-menu-table (help-table)
+  'com-where-is
+  '(com-describe-bindings nil)
+  '(com-describe-bindings t)
+  'com-describe-key
+  `(com-describe-command ,*unsupplied-argument-marker*)
+  `(com-apropos-command ,*unsupplied-argument-marker*))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 
 ;;; Keyboard macros
@@ -1560,6 +1568,11 @@ Use C-x ( to start and C-x ) to finish recording a keyboard macro."
 
 (set-key `(com-call-last-kbd-macro ,*numeric-argument-marker*)
          'keyboard-macro-table '((#\x :control) #\e))
+
+(define-menu-table keyboard-macro-menu-table (keyboard-macro-table)
+  'com-start-kbd-macro
+  'com-end-kbd-macro
+  `(com-call-last-kbd-macro ,*unsupplied-argument-marker*))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 

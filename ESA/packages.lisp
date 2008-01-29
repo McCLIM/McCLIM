@@ -23,7 +23,7 @@
 ;;; Package definitions for ESA.
 
 (defpackage :esa-utils
-  (:use :clim-lisp :clim-mop)
+  (:use :clim-lisp :clim-mop :clim)
   (:export #:with-gensyms
            #:once-only
            #:unlisted
@@ -45,6 +45,7 @@
            #:capitalize
            #:ensure-array-size
            #:values-max-min
+           #:build-menu #:define-menu-table
            #:observable-mixin
            #:add-observer #:remove-observer
            #:observer-notified #:notify-observers
@@ -95,14 +96,14 @@
            #:com-quit #:com-extended-command
 
            ;; Help commands
-           #:help-table
+           #:help-table #:help-menu-table
            #:com-describe-key-briefly #:com-where-is
            #:com-describe-bindings
            #:com-describe-key #:com-describe-command
            #:com-apropos-command
 
            ;; Keyboard macro commands
-           #:keyboard-macro-table
+           #:keyboard-macro-table #:keyboard-macro-menu-table
            #:com-start-macro #:com-end-macro
            #:com-call-last-macro))
 
@@ -125,7 +126,7 @@
            #:frame-write-buffer #:write-buffer
            #:buffer-writing-error #:buffer #:filepath
            #:filepath-is-directory
-           #:esa-io-table
+           #:esa-io-table #:esa-io-menu-table
            #:com-find-file #:com-find-file-read-only
            #:com-read-only #:com-set-visited-file-name
            #:com-save-buffer #:com-write-buffer))
