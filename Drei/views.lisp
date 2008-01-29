@@ -584,6 +584,9 @@ are automatically set if applicable."))
 (defmethod (setf syntax) :after (new-value (view drei-buffer-view))
   (invalidate-all-strokes view :modified t))
 
+(defmethod (setf view) :after ((view drei-buffer-view) (object drei))
+  (invalidate-all-strokes view))
+
 (defmethod cache-string :around ((view drei-buffer-view))
   (let ((string (call-next-method)))
     (setf (fill-pointer string) 0)
