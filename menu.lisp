@@ -125,15 +125,25 @@
   ()
   (:default-initargs :border-width 2 :background *3d-normal-color*))
 
+(defun make-menu-buttons (command-table-name client)
+  "Map over the available menu items in the command table with
+name `command-table-name', taking inherited menu items into
+account, and create a list of menu buttons."
+  (let ((menu-buttons '()))
+    (map-over-command-table-menu-items
+     #'(lambda (name gesture item)
+         (declare (ignore name gesture))
+         (push (make-menu-button-from-menu-item
+                item client :command-table command-table-name :vertical t)
+               menu-buttons))
+     command-table-name)
+    (nreverse menu-buttons)))
+
 (defun create-substructure (sub-menu client)
   (let* ((frame *application-frame*)
 	 (manager (frame-manager frame))
 	 (command-table-name (slot-value sub-menu 'command-table))
-	 (items (mapcar #'(lambda (item)
-			    (make-menu-button-from-menu-item
-			     item client :command-table command-table-name :vertical t))
-			(slot-value (find-command-table command-table-name)
-				    'menu)))
+	 (items (make-menu-buttons command-table-name client))
 	 (rack (make-pane-1 manager frame 'vrack-pane
 			    :background *3d-normal-color* :contents items))
 	 (raised (make-pane-1 manager frame 'submenu-border :contents (list rack))))

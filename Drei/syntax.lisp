@@ -134,7 +134,8 @@ list.")
   "Fetch extra command tables to inherit from (using
 `additional-command-tables') as well as the command tables
 `table' actually directly inherits from."
-  (append (additional-command-tables *application-frame* table)
+  (append (mapcar #'find-command-table
+                  (additional-command-tables *application-frame* table))
           (call-next-method)))
 
 (defmacro define-syntax-command-table (name &rest args &key &allow-other-keys)
@@ -152,7 +153,7 @@ specified in the usual way with :inherit-from."
   `(progn (make-command-table ',name ,@args)
           (defclass ,name (syntax-command-table)
             ())
-          (defmethod command-table-inherit-from :around ((table ,name))
+          (defmethod command-table-inherit-from ((table ,name))
             (append (call-next-method)
                     '(,name)
                     (command-table-inherit-from (find-command-table ',name))))))

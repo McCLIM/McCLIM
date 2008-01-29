@@ -77,6 +77,13 @@
 		       :initform (make-hash-table :test #'equal))
    (presentation-translators :reader presentation-translators
 			     :initform (make-instance 'translator-table))
+   (inherit-menu :reader inherit-menu
+                 :initform nil
+                 ;; We interpret :menu to mean "inherit menu items
+                 ;; without keystrokes" and :keystrokes to mean
+                 ;; "inherit menu items with keystrokes".
+                 :type (member nil t :menu :keystrokes)
+                 :initarg :inherit-menu)
    (menu :initarg :menu :initform '())
    (keystroke-accelerators :initform nil)
    (keystroke-items :initform nil)))
@@ -85,6 +92,12 @@
   (print-unreadable-object (table stream :identity t :type t)
     (format stream "~S" (command-table-name table))))
 
+;;; We store command-table designators, but this function should
+;;; return command table objects.
+(defmethod command-table-inherit-from :around
+    ((command-table standard-command-table))
+  (mapcar #'find-command-table (call-next-method)))
+
 ;;; Franz user manual says that this slot is setf-able
 (defgeneric (setf command-table-inherit-from) (inherit-from table))
 
@@ -92,6 +105,20 @@
     (inherit (table standard-command-table))
   (invalidate-translator-caches)
   (setf (slot-value table 'inherit-from) inherit))
+
+(defun inherit-keystrokes (command-table)
+  "Return true if `command-table' (which must be a command table
+designator) inherits keystrokes."
+  (let ((inherit-menu (inherit-menu (find-command-table command-table))))
+    (or (eq inherit-menu t)
+        (eq inherit-menu :keystrokes))))
+
+(defun inherit-menu-items (command-table)
+  "Return true if `command-table' (which must be a command table
+designator) inherits menu items."
+  (let ((inherit-menu (inherit-menu (find-command-table command-table))))
+    (or (inherit-keystrokes command-table)
+        (eq inherit-menu :menu))))
 
 (defparameter *command-tables* (make-hash-table :test #'eq))
 
@@ -174,13 +201,14 @@
 		     :menu nil))
 
 ; adjusted to allow anonymous command-tables for menu-bars
-(defun make-command-table (name &key inherit-from menu (errorp t))
+(defun make-command-table (name &key inherit-from menu inherit-menu (errorp t))
   (unless inherit-from
     (setq inherit-from '(global-command-table)))
   (if (and name errorp (gethash name *command-tables*))
       (error 'command-table-already-exists :command-table-name name)
       (let ((result (make-instance 'standard-command-table :name name
 	                 :inherit-from inherit-from
+                         :inherit-menu inherit-menu
 	                 :menu (menu-items-from-list menu))))
         (when name
           (setf (gethash name *command-tables*) result))
@@ -188,7 +216,7 @@
 
 (make-command-table 'user-command-table)
 
-(defmacro define-command-table (name &key inherit-from menu)
+(defmacro define-command-table (name &key inherit-from menu inherit-menu)
   `(let ((old-table (gethash ',name *command-tables* nil))
 	 (inherit-from-arg (or ',inherit-from '(global-command-table))))
      (if old-table
@@ -198,6 +226,7 @@
 	   old-table)
 	 (make-command-table ',name
 			     :inherit-from inherit-from-arg
+                             :inherit-menu ,inherit-menu
 			     :menu ',menu
 			     :errorp nil))))
 
@@ -338,11 +367,15 @@
 (defun find-menu-item (menu-name command-table &key (errorp t))
   (let* ((table (find-command-table command-table))
 	 (mem (member menu-name (slot-value table 'menu)
-		      :key #'command-menu-item-name :test #'string-equal)))
-    (cond (mem (values (car mem) command-table))
-	  (errorp (error 'command-not-accessible :command-table-name
-                         (command-table-designator-as-name table)))
-	  (t nil))))
+               :key #'command-menu-item-name :test #'string-equal)))
+    (if mem
+        (values (car mem) command-table)
+        (or (find-if #'(lambda (table)
+                         (find-menu-item menu-name table :errorp nil))
+                     (command-table-inherit-from table))
+            (when errorp
+              (error 'command-not-accessible :command-table-name
+                     (command-table-designator-as-name table)))))))
 
 (defun remove-menu-item-from-command-table (command-table string
 					    &key (errorp t))
@@ -415,14 +448,34 @@
 		    after)))
 
 (defun map-over-command-table-menu-items (function command-table)
-  (mapc #'(lambda (item)
- 	    (with-slots (menu-name keystroke) item
- 	      (funcall function
-		       menu-name
-		       (and (slot-boundp item 'keystroke) keystroke)
-		       item)))
-	(slot-value (find-command-table command-table) 'menu))
-  (values))
+  "Applies function to all of the items in `command-table's
+menu. `Command-table' must be a command table or the name of a
+command table. `Function' must be a function of three arguments,
+the menu name, the keystroke accelerator gesture (which will be
+NIL if there is none), and the command menu item; it has dynamic
+extent. The command menu items are mapped over in the order
+specified by `add-menu-item-to-command-table'. `Command-table' is
+a command table designator. Any inherited menu items will be
+mapped over after `command-table's own menu items.
+
+`Map-over-command-table-menu-items' does not descend into
+sub-menus. If the programmer requires this behavior, he should
+examine the type of the command menu item to see if it is
+`:menu'."
+  (let ((table-object (find-command-table command-table)))
+    (flet ((map-table-entries (table)
+             (mapc #'(lambda (item)
+                       (with-slots (menu-name keystroke) item
+                         (funcall function
+                                  menu-name
+                                  (and (slot-boundp item 'keystroke) keystroke)
+                                  item)))
+                   (slot-value table 'menu))))
+      (map-table-entries table-object)
+      (when (inherit-menu-items table-object)
+        (dolist (table (command-table-inherit-from table-object))
+          (map-over-command-table-menu-items function table))))
+    (values)))
 
 ;; At this point we should still see the gesture name as supplied by the
 ;; programmer in 'gesture'
