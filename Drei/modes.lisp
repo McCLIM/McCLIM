@@ -70,8 +70,6 @@ applicable to anything."
       (defclass ,name (,@superclasses mode)
         (,@slot-specs)
         ,@actual-options)
-      (defmethod enabled-modes append ((modual ,name))
-        '(,name))
       ,(when global `(push ',name *global-modes*)))))
 
 (defmacro define-view-mode (name (&rest superclasses)

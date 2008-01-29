@@ -446,9 +446,8 @@ specific mode from being enabled. ")
 (defgeneric enabled-modes (modual)
   (:documentation "Return a list of the names of the modes
 directly enabled for `modual'.")
-  (:method-combination append)
-  (:method append ((modual t))
-     '()))
+  (:method ((modual t))
+    '()))
 
 (defgeneric mode-enabled-p (modual mode-name)
   (:documentation "Return true if `mode-name' is enabled for
@@ -516,7 +515,11 @@ implements all the modes listed as names in `modes'."
   ;; Avert thine eyes, thy of gentle spirit.
   (if (null modes)
       (find-class modual)
-      (eval `(defclass ,(gensym) (,modual ,@modes) ()
+      ;; We're kind and put the active modes into the class name.
+      (eval `(defclass ,(gensym (format nil "~A~{-~A~}" (string modual) modes))
+                 (,modual ,@modes)
+               ((%enabled-modes :reader enabled-modes
+                                :initform ',modes))
                (:metaclass modual-class)))))
 
 (defun find-class-implementing-modes (modual modes)
