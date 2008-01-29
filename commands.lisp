@@ -70,7 +70,8 @@
   ((name :initarg :name :reader command-table-name)
    (inherit-from :initarg :inherit-from
 		 :initform '()
-		 :reader command-table-inherit-from)
+		 :reader command-table-inherit-from
+                 :type list)
    (commands  :accessor commands :initarg :commands
 	     :initform (make-hash-table :test #'eq))
    (command-line-names :accessor command-line-names
