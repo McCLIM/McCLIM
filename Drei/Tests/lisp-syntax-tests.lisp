@@ -1861,13 +1861,12 @@ baz
 
 (defgeneric find-pathnames (module)
   (:documentation "Get a list of the pathnames of the files
-making up an ASDF module/system/component.")
-  (:method-combination nconc))
+making up an ASDF module/system/component."))
 
-(defmethod find-pathnames nconc ((module asdf:module))
+(defmethod find-pathnames ((module asdf:module))
   (mapcan #'find-pathnames (asdf:module-components module)))
 
-(defmethod find-pathnames nconc ((module asdf:source-file))
+(defmethod find-pathnames ((module asdf:source-file))
   (list (asdf:component-pathname module)))
 
 ;; Thank you Mr. Insane 3000!
