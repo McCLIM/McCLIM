@@ -100,12 +100,13 @@ of this class is to visually represent the position of point."))
   (declare (ignore initargs))
   (stream-add-output-record (output-stream object) object))
 
-(defmethod active ((cursor drei-cursor))
-  "Whether the cursor is active or
+(defgeneric active (cursor)
+  (:documentation "Whether the cursor is active or
 not. An active cursor is drawn using the active ink, and an
 inactive is drawn using the inactive ink. Typically, a cursor
-will be active when the associated Drei view has focus."
-  (active (view cursor)))
+will be active when the associated Drei view has focus.")
+  (:method ((cursor drei-cursor))
+    (active (view cursor))))
 
 (defgeneric ink (cursor)
   (:documentation "Return the ink object that should be used for
@@ -115,6 +116,9 @@ will be active when the associated Drei view has focus."
   (if (active cursor)
       (active-ink cursor)
       (inactive-ink cursor)))
+
+(defmethod (setf enabled) :after ((new-val null) (cursor drei-cursor))
+  (clear-output-record cursor))
 
 (defclass point-cursor (drei-cursor)
   ()
@@ -141,7 +145,7 @@ representation of the mark of a Drei instance."))
   (mark (view cursor)))
 
 (defmethod enabled ((cursor mark-cursor))
-  *show-mark*)
+  (and (call-next-method) *show-mark*))
 
 (defgeneric visible-1 (cursor view)
   (:documentation "Is `cursor', associated with `view', visible?
