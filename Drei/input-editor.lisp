@@ -793,7 +793,7 @@ to an `extended-output-stream' while `body' is being evaluated."
    view &key)
   (with-drei-options ((drei-instance stream)
                       :syntax "Lisp"
-                      :keep-syntax nil)
+                      :keep-syntax t)
     (call-next-method)))
 
 (define-presentation-method accept :around
