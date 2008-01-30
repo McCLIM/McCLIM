@@ -179,7 +179,8 @@ command loop completely."))
 (defmethod stream-default-view ((stream drei-pane))
   (view stream))
 
-(defmethod display-drei ((drei drei-pane))
+(defmethod display-drei ((drei drei-pane) &rest args)
+  (declare (ignore args))
   (redisplay-frame-pane (pane-frame drei) drei))
 
 (defmethod editor-pane ((drei drei-pane))
@@ -227,8 +228,7 @@ command loop completely."))
 keyboard focus"))
   (:metaclass modual-class)
   (:default-initargs
-   :command-executor 'execute-drei-command
-   :redisplay-minibuffer t)
+   :command-executor 'execute-drei-command)
   (:documentation "An actual, instantiable Drei gadget with
  event-based command processing."))
 
@@ -285,26 +285,20 @@ modifier key."))
 (defmethod handle-gesture ((drei drei-gadget-pane) gesture)
   (let ((*command-processor* drei)
         (*abort-gestures* *esa-abort-gestures*))
-    ;; It is important that the minibuffer of the Drei object is
-    ;; actually the minibuffer that will be used for output, or it
-    ;; will not be properly redisplayed by `display-drei'.
     (accepting-from-user (drei)
-      (letf (((minibuffer drei) (or (minibuffer drei) *minibuffer*
-                                    (unless (eq drei *standard-input*)
-                                      *standard-input*))))
-        (handler-case (process-gesture drei gesture)
-          (unbound-gesture-sequence (c)
-            (display-message "~A is unbound" (gesture-name (gestures c))))
-          (abort-gesture ()
-            (display-message "Aborted")))
-        (display-drei drei)
-        (when (modified-p (view drei))
-          (when (gadget-value-changed-callback drei)
-            (value-changed-callback drei
-                                    (gadget-client drei)
-                                    (gadget-id drei)
-                                    (gadget-value drei)))
-          (setf (modified-p (view drei)) nil))))))
+      (handler-case (process-gesture drei gesture)
+        (unbound-gesture-sequence (c)
+          (display-message "~A is unbound" (gesture-name (gestures c))))
+        (abort-gesture ()
+          (display-message "Aborted")))
+      (display-drei drei :redisplay-minibuffer t)
+      (when (modified-p (view drei))
+        (when (gadget-value-changed-callback drei)
+          (value-changed-callback drei
+                                  (gadget-client drei)
+                                  (gadget-id drei)
+                                  (gadget-value drei)))
+        (setf (modified-p (view drei)) nil)))))
 
 ;;; This is the method that functions as the entry point for all Drei
 ;;; gadget logic.
@@ -314,8 +308,7 @@ modifier key."))
       (let ((gesture (convert-to-gesture event)))
         (when (proper-gesture-p gesture)
           (with-bound-drei-special-variables (gadget :prompt (format nil "~A " (gesture-name gesture)))
-            (let ((*standard-input* (or *minibuffer* *standard-input*)))
-              (handle-gesture gadget gesture))))))))
+            (handle-gesture gadget gesture)))))))
 
 (defmethod handle-event :before 
     ((gadget drei-gadget-pane) (event pointer-button-press-event))
@@ -362,8 +355,7 @@ of the associated output record.")
 record of the Drei area instance."))
   (:metaclass modual-class)
   (:default-initargs
-   :command-executor 'execute-drei-command
-    :redisplay-minibuffer t)
+   :command-executor 'execute-drei-command)
   (:documentation "A Drei editable area implemented as an output
 record."))
 
@@ -380,7 +372,8 @@ record."))
 (defmethod esa-current-window ((drei drei-area))
   (editor-pane drei))
 
-(defmethod display-drei ((drei drei-area))
+(defmethod display-drei ((drei drei-area) &rest args)
+  (declare (ignore args))
   (display-drei-area drei))
 
 ;;; Implementation of the displayed-output-record and region protocol
@@ -503,9 +496,8 @@ record."))
   (:documentation "A constellation of a Drei gadget instance and
   a minibuffer."))
 
-(defmethod display-drei :after ((drei drei))
-  (when (and *minibuffer* (not (eq *minibuffer* (editor-pane drei)))
-             (redisplay-minibuffer drei))
+(defmethod display-drei :after ((drei drei) &key redisplay-minibuffer)
+  (when (and *minibuffer* redisplay-minibuffer)
     ;; We need to use :force-p t to remove any existing output from
     ;; the pane.
     (redisplay-frame-pane (pane-frame *minibuffer*) *minibuffer* :force-p t)))

@@ -167,7 +167,7 @@ characters."))
            #:parse-stack-top #:target-parse-tree #:parse-state-empty-p
            #:parse-stack-next #:parse-stack-symbol
            #:parse-stack-parse-trees #:map-over-parse-trees
-           #:no-such-operation #:no-expression
+           #:no-such-operation
            #:name-for-info-pane
            #:display-syntax-name
            #:syntax-line-indentation
@@ -213,6 +213,7 @@ characters."))
            #:user-condition-mixin
            #:buffer-read-only
            #:buffer-single-line
+           #:no-available-minibuffer
 
            ;; Views and their facilities.
            #:drei-view #:modified-p #:no-cursors
@@ -289,6 +290,7 @@ characters."))
            #:performing-drei-operations #:invoke-performing-drei-operations
            #:with-bound-drei-special-variables
            #:accepting-from-user #:invoke-accepting-from-user
+           #:require-minibuffer
 
            ;; Gadget interface stuff.
            #:handle-gesture

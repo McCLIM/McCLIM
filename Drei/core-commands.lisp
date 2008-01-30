@@ -67,6 +67,7 @@ The default fill column is 70."
 (define-command (com-zap-to-object :name t :command-table deletion-table) ()
   "Prompt for an object and kill to the next occurence of that object after point.
 Characters can be entered in #\ format."
+  (require-minibuffer)
   (let* ((item (handler-case (accept 't :prompt "Zap to Object")
 		(error () (progn (beep)
 				 (display-message "Not a valid object")
@@ -81,6 +82,7 @@ Characters can be entered in #\ format."
 FIXME: Accepts a string (that is, zero or more characters) 
 terminated by a #\NEWLINE. If a zero length string signals an error. 
 If a string of length >1, uses the first character of the string."
+  (require-minibuffer)
   (let* ((item-string (handler-case (accept 'string :prompt "Zap to Character") ; Figure out how to get #\d and d.  (or 'string 'character)?
 		(error () (progn (beep)
 				 (display-message "Not a valid string. ")

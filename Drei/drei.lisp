@@ -194,6 +194,7 @@ instances."))
 (define-command (com-drei-extended-command :command-table exclusive-gadget-table)
     ()
   "Prompt for a command name and arguments, then run it."
+  (require-minibuffer)
   (let ((item (handler-case
                   (accept
                    `(command :command-table ,(command-table (drei-instance)))
@@ -287,14 +288,6 @@ cursors-list.")
                      :initarg :cursors-visible
                      :documentation "If true, the cursors of this
 Drei instance will be visible. If false, they will not.")
-   (%redisplay-minibuffer :accessor redisplay-minibuffer
-                          :initform nil
-                          :initarg :redisplay-minibuffer
-                          :documentation "If true, the minibuffer
-associated with this Drei instance will be redisplayed as the
-last part of the Drei redisplay process. If false, it is the task
-of the Drei-using application to make sure the minibuffer is
-redisplayed as appropriate.")
    (%isearch-mode :initform nil :accessor isearch-mode)
    (%isearch-states :initform '() :accessor isearch-states)
    (%isearch-previous-string :initform nil :accessor isearch-previous-string)
@@ -388,13 +381,37 @@ the Drei instance."
     (format stream "~A" (type-of (view object)))))
 
 ;; Main redisplay entry point.
-(defgeneric display-drei (drei)
+(defgeneric display-drei (drei &key redisplay-minibuffer)
   (:documentation "`Drei' must be an object of type `drei' and
 `frame' must be a CLIM frame containing the editor pane of
 `drei'. If you define a new subclass of `drei', you must define a
 method for this generic function. In most cases, methods defined
 on this function will merely be a trampoline to a function
-specific to the given Drei variant."))
+specific to the given Drei variant.
+
+If `redisplay-minibuffer' is true, also redisplay `*minibuffer*'
+if it is non-NIL."))
+
+(define-condition no-available-minibuffer (user-condition-mixin error)
+  ((%drei :reader drei
+          :initarg :drei
+          :initform (error "A drei instance must be provided")
+          :documentation "The Drei instance that does not have an
+available minibuffer."))
+  (:documentation "This error is signalled when a command wants
+to use the minibuffer, but none is available."))
+
+(defun no-available-minibuffer (drei-instance)
+  "Signal an `no-available-minibuffer' error for
+`drei-instance'."
+  (error 'no-available-minibuffer :drei drei-instance))
+
+(defun require-minibuffer (&optional (drei-instance (drei-instance)))
+  "Check that the provided Drei instance (defaulting to the one
+currently running) has an available minibuffer. If not, signal an
+error of type `no-available-minibuffer'."
+  (unless *minibuffer*
+    (no-available-minibuffer drei-instance)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -418,9 +435,6 @@ first argument, and the condition as the second argument."))
 
 (defmethod handle-drei-condition (drei (condition motion-after-end))
   (beep) (display-message "End of buffer"))
-
-(defmethod handle-drei-condition (drei (condition no-expression))
-  (beep) (display-message "No expression around point"))
 
 (defmethod handle-drei-condition (drei (condition no-such-operation))
   (beep) (display-message "Operation unavailable for syntax"))
@@ -453,12 +467,26 @@ debugger."
        (handle-drei-condition (drei-instance) c))
      (motion-after-end (c)
        (handle-drei-condition (drei-instance) c))
-     (no-expression (c)
-       (handle-drei-condition (drei-instance) c))
      (no-such-operation (c)
-       (handle-drei-condition (drei-instance) c))
-     (buffer-read-only (c)
        (handle-drei-condition (drei-instance) c))))
+
+(defun find-available-minibuffer (drei-instance)
+  "Find a pane usable as the minibuffer for `drei-instance'. The
+default will be to use the minibuffer specified for
+`drei-instance' (if there is one), secondarily the value of
+`*minibuffer*' will be used. Thirdly, the value of
+`*pointer-documentation-output*' will be used. If the found panes
+are not available (for example, if they are the editor-panes of
+`drei-instance'), it is possible for this function to return
+NIL."
+  (flet ((available-minibuffer-p (pane)
+           (and (or (typep pane 'minibuffer-pane)
+                    (typep pane 'pointer-documentation-pane))
+                (not (eq pane (editor-pane drei-instance))))))
+    (find-if #'available-minibuffer-p
+             (list (minibuffer drei-instance)
+                   *minibuffer*
+                   *pointer-documentation-output*))))
 
 (defmacro with-bound-drei-special-variables ((drei-instance &key
                                                             (kill-ring nil kill-ring-p)
@@ -482,7 +510,7 @@ for ESA-style command parsing."
           (*kill-ring* ,(if kill-ring-p kill-ring
                             `(kill-ring (drei-instance))))
           (*minibuffer* ,(if minibuffer-p minibuffer
-                             `(or (minibuffer (drei-instance)) *minibuffer*)))
+                             `(find-available-minibuffer (drei-instance))))
           (*command-parser* ,(if command-parser-p command-parser
                                  ''esa-command-parser))
           (*partial-command-parser* ,(if partial-command-parser-p partial-command-parser
@@ -490,7 +518,8 @@ for ESA-style command parsing."
           (*previous-command* ,(if previous-command-p previous-command
                                    `(previous-command (drei-instance))))
           (*extended-command-prompt* ,(if prompt-p prompt
-                                          "Extended command: ")))
+                                          "Extended command: "))
+          (*standard-input* (or *minibuffer* *standard-input*)))
      ,@body))
 
 (defgeneric invoke-performing-drei-operations (drei continuation &key with-undo redisplay)
@@ -510,7 +539,7 @@ the given Drei instance."))
         (pane
          (redisplay-frame-pane *application-frame* drei))
         (t
-         (display-drei drei))))))
+         (display-drei drei :redisplay-minibuffer t))))))
 
 (defmacro performing-drei-operations ((drei &rest args &key with-undo
                                             (redisplay t))
@@ -581,9 +610,7 @@ expands into a call to `invoke-accepting-from-user'."
   `(invoke-accepting-from-user ,drei #'(lambda () ,@body)))
 
 ;;; Plain `execute-frame-command' is not good enough for us. Our
-;;; event-handler method uses this function to invoke commands, note
-;;; that it is also responsible for updating the syntax of the buffer
-;;; in the pane.
+;;; event-handler method uses this function to invoke commands.
 (defgeneric execute-drei-command (drei-instance command)
   (:documentation "Execute `command' for `drei'. This is the
 standard function for executing Drei commands - it will take care
@@ -592,9 +619,8 @@ the syntax, setting the `previous-command' of `drei' and
 recording the operations performed by `command' for undo."))
 
 (defmethod execute-drei-command ((drei drei) command)
-  (let ((*standard-input* (or *minibuffer* *standard-input*)))
-    (performing-drei-operations (drei :redisplay nil
-                                      :with-undo t)
-      (handling-drei-conditions
-        (apply (command-name command) (command-arguments command)))
-      (setf (previous-command drei) command))))
+  (performing-drei-operations (drei :redisplay nil
+                                    :with-undo t)
+    (handling-drei-conditions
+      (apply (command-name command) (command-arguments command)))
+    (setf (previous-command drei) command)))

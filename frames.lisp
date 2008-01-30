@@ -1229,7 +1229,6 @@ documentation produced by presentations.")
                  (output-record-parent documentation-record))
 	    (redisplay documentation-record *pointer-documentation-output*)
 	    (progn
-              (window-clear *pointer-documentation-output*)
 	      (setf documentation-record
                     (updating-output (*pointer-documentation-output*)
                       (updating-output (*pointer-documentation-output*

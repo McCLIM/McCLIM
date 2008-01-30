@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.187 2008/01/27 22:24:07 thenriksen Exp $
+;;; $Id: panes.lisp,v 1.188 2008/01/30 11:48:40 thenriksen Exp $
 
 (in-package :clim-internals)
 
@@ -2761,8 +2761,19 @@ current background message was set."))
 (defmethod stream-accept :before ((stream pointer-documentation-pane) type
                                   &rest args)
   (declare (ignore args))
-  (setf (background-message stream) nil)
-  (redisplay-frame-pane (pane-frame stream) stream :force-p t))
+  (window-clear stream)
+  (when (background-message stream)
+    (setf (background-message stream) nil)
+    (redisplay-frame-pane (pane-frame stream) stream)))
+
+(defmethod stream-accept :around ((pane pointer-documentation-pane) type &rest args)
+  (declare (ignore args))
+  (unwind-protect (loop
+                   (handler-case
+                       (with-input-focus (pane)
+                         (return (call-next-method)))
+                     (parse-error () nil)))
+    (window-clear pane)))
 
 ;;; CONSTRUCTORS
 

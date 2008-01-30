@@ -73,8 +73,6 @@ instantiated."))
 		     :y-position cy
 		     :active cursor-visibility
 		     :max-width max-width
-                     :minibuffer (or *minibuffer*
-                                     *pointer-documentation-output*)
                      :allow-other-keys t
 		     args)))
       ;; XXX Really add it here?
@@ -561,19 +559,8 @@ if stuff is inserted after the insertion pointer."
   (let* ((drei (drei-instance stream))
          (*command-processor* drei)
          (was-directly-processing (directly-processing-p drei))
-         (minibuffer (or (minibuffer drei) *minibuffer*))
          (*drei-input-editing-stream* stream))
-    (with-bound-drei-special-variables (drei
-                                        ;; If the minibuffer is the
-                                        ;; stream we are encapsulating
-                                        ;; for the
-                                        ;; input-editing-stream, we
-                                        ;; don't want to use it as a
-                                        ;; minibuffer.
-                                        :minibuffer (if (eq minibuffer *standard-input*)
-                                                        *pointer-documentation-output*
-                                                        minibuffer)
-                                        :prompt "M-x ")
+    (with-bound-drei-special-variables (drei :prompt "M-x ")
       (update-drei-buffer stream)
       ;; Commands are permitted to signal immediate rescans, but
       ;; we may need to do some stuff first.
@@ -589,14 +576,13 @@ if stuff is inserted after the insertion pointer."
                  (abort-gesture (c)
                    (if (member (abort-gesture-event c)
                                *abort-gestures*
-                               :test #'event-matches-gesture-name-p)
+                        :test #'event-matches-gesture-name-p)
                        (signal 'abort-gesture :event (abort-gesture-event c))
                        (when was-directly-processing
                          (display-message "Aborted")))))))
         (update-drei-buffer stream))
       (let ((first-mismatch (prefix-size (view drei))))
-        ;; Will also take care of redisplaying minibuffer.
-        (display-drei drei)
+        (display-drei drei :redisplay-minibuffer t)
         (cond ((null first-mismatch)
                ;; No change actually took place, even though IP may
                ;; have moved.
@@ -873,7 +859,7 @@ to an `extended-output-stream' while `body' is being evaluated."
                             ;; and signal a rescan.
                             (setf (activation-gesture stream) nil)
                             (handle-drei-condition drei e)
-                            (display-drei drei)
+                            (display-drei drei :redisplay-minibuffer t)
                             (immediate-rescan stream))))
                 (ptype (presentation-type-of object)))
            (return-from control-loop

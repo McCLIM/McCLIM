@@ -309,6 +309,7 @@ If found, leaves point before the word. If not, leaves point where it is."
 (define-command (com-replace-string :name t :command-table search-table)
     ()
   "Replace all occurrences of `string' with `newstring'."
+  (require-minibuffer)
   ;; We have to do it this way if we want to refer to STRING in NEWSTRING
   (let* ((string (accept 'string :prompt "Replace String"))
 	 (newstring (accept'string :prompt (format nil "Replace ~A with" string))))
@@ -343,6 +344,7 @@ If found, leaves point before the word. If not, leaves point where it is."
         t))))
 
 (define-command (com-query-replace :name t :command-table search-table) ()
+  (require-minibuffer)
   (let* ((drei (drei-instance))
          (old-state (query-replace-state drei))
          (old-string1 (when old-state (string1 old-state)))
@@ -493,6 +495,7 @@ If found, leaves point before the word. If not, leaves point where it is."
 	    do (princ char result))))
 
 (define-command (com-regex-search-forward :name t :command-table search-table) ()
+  (require-minibuffer)
   (let ((string (accept 'string :prompt "RE search"
 			:delimiter-gestures nil
 			:activation-gestures
@@ -502,6 +505,7 @@ If found, leaves point before the word. If not, leaves point where it is."
                             (re-search-forward mark (normalise-minibuffer-regex string))))))
 
 (define-command (com-regex-search-backward :name t :command-table search-table) ()
+  (require-minibuffer)
   (let ((string (accept 'string :prompt "RE search backward"
 			:delimiter-gestures nil
 			:activation-gestures

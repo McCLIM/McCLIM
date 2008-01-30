@@ -73,14 +73,6 @@ buffer of `syntax', respectively."
   (:documentation "This condition is signaled whenever an attempt is
 made to execute an operation that is unavailable for the particular syntax" ))
 
-(define-condition no-expression (simple-error)
-  ()
-  (:report (lambda (condition stream)
-	     (declare (ignore condition))
-	     (format stream "No expression at point")))
-  (:documentation "This condition is signaled whenever an attempt is
-made to execute a by-experssion motion command and no expression is available." ))
-
 (defgeneric update-syntax (syntax unchanged-prefix unchanged-suffix
                                   &optional begin end)
   (:documentation "Inform the syntax module that it must update
