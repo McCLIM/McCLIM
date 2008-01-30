@@ -369,7 +369,10 @@ the Drei instance."
   (dolist (cursor (cursors drei))
     (when (output-record-parent cursor)
       (delete-output-record cursor (output-record-parent cursor) nil)))
-  (add-view-cursors drei))
+  (add-view-cursors drei)
+  ;; Finally make sure it doesn't remember anything from a potential
+  ;; traumatic past.
+  (clear-redisplay-information new-val))
 
 (defmethod esa-current-buffer ((drei drei))
   (buffer (view drei)))

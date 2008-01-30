@@ -485,6 +485,11 @@ displayed on `output-stream'.")
              (call-next-method)))
   (:method-combination nconc))
 
+(defgeneric clear-redisplay-information (view)
+  (:documentation "Clear any redisplay information `view' may
+retain, so that a full redisplay will be performed the next time
+it is redisplayed."))
+
 (defgeneric clone-view (view &rest initargs)
   (:documentation "Clone the view object `view'. `Initargs' can
 be used to supply different values to the initargs of the
@@ -584,9 +589,6 @@ are automatically set if applicable."))
 (defmethod (setf syntax) :after (new-value (view drei-buffer-view))
   (invalidate-all-strokes view :modified t))
 
-(defmethod (setf view) :after ((view drei-buffer-view) (object drei))
-  (invalidate-all-strokes view))
-
 (defmethod cache-string :around ((view drei-buffer-view))
   (let ((string (call-next-method)))
     (setf (fill-pointer string) 0)
@@ -595,6 +597,9 @@ are automatically set if applicable."))
 (defun buffer-view-p (view)
   "Return true if `view' is a `drei-buffer-view'."
   (typep view 'drei-buffer-view))
+
+(defmethod clear-redisplay-information ((view drei-buffer-view))
+  (invalidate-all-strokes view))
 
 (defun overlaps (x1 x2 y1 y2)
   "Return true if the x1/x2 region overlaps with y1/y2."

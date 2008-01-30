@@ -237,6 +237,7 @@ characters."))
            #:use-editor-commands-p
            #:synchronize-view
            #:create-view-cursors
+           #:clear-redisplay-information
            #:clone-view
            #:make-syntax-for-view
            
