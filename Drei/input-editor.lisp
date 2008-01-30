@@ -53,7 +53,7 @@ instantiated."))
 
 (defmethod initialize-instance :after ((obj drei-input-editing-mixin)
 				       &rest args
-				       &key stream (initial-contents "")
+				       &key stream
 				       (cursor-visibility t)
                                        (min-width 0))
   (check-type min-width (or (integer 0) (eql t)))
@@ -66,9 +66,6 @@ instantiated."))
 	      (apply #'make-instance
 		     'drei-area
 		     :editor-pane stream
-		     :buffer (make-instance 'drei-buffer
-                                            :name "Input-editor buffer"
-                                            :initial-contents initial-contents)
 		     :x-position cx
 		     :y-position cy
 		     :active cursor-visibility
@@ -76,8 +73,10 @@ instantiated."))
                      :allow-other-keys t
 		     args)))
       ;; XXX Really add it here?
-      (stream-add-output-record stream (drei-instance obj))
-      (display-drei (drei-instance obj)))))
+      (stream-add-output-record stream (drei-instance obj)))))
+
+(defmethod stream-default-view ((stream drei-input-editing-mixin))
+  (view (drei-instance stream)))
 
 (defmethod stream-insertion-pointer
     ((stream drei-input-editing-mixin))
@@ -155,17 +154,23 @@ be used outside the input-editor."))
   ;; we can support fancy accept methods such as the one for
   ;; `command-or-form'
   (unless (stream-rescanning-p stream)
-    (call-next-method)
+    ;; Put the prompt in the proper place, but be super careful not to
+    ;; mess with the insertion pointer.
+    (let ((ip-clone (clone-mark (point (view (drei-instance stream))))))
+      (unwind-protect (progn (setf (stream-insertion-pointer stream)
+                                   (stream-scan-pointer stream))
+                             (call-next-method))
+        (setf (stream-insertion-pointer stream) (offset ip-clone)))
+      (redraw-input-buffer stream))
     ;; We skip ahead of any noise strings to put us past the
     ;; prompt. This is safe, because the noise strings are to be
     ;; ignored anyway, but we need to be ahead to set the input
     ;; position properly (ie. after the prompt).
-    (loop
-       with buffer = (buffer (view (drei-instance stream)))
-       until (>= (stream-scan-pointer stream) (size buffer))
-       while (or (typep #1=(buffer-object buffer (stream-scan-pointer stream)) 'noise-string)
-                 (delimiter-gesture-p #1#))
-       do (incf (stream-scan-pointer stream)))
+    (loop with buffer = (buffer (view (drei-instance stream)))
+          until (>= (stream-scan-pointer stream) (size buffer))
+          while (or (typep #1=(buffer-object buffer (stream-scan-pointer stream)) 'noise-string)
+                    (delimiter-gesture-p #1#))
+          do (incf (stream-scan-pointer stream)))
     (setf (input-position stream) (stream-scan-pointer stream))))
 
 (defmethod stream-accept :after ((stream drei-input-editing-mixin) type &key &allow-other-keys)
@@ -670,6 +675,9 @@ CL:SUBSEQ into the sequence indicating where processing stopped."
 (defmethod input-editor-format ((stream drei-input-editing-mixin)
 				format-string
 				&rest format-args)
+  "Insert a noise string at the insertion-pointer of `stream'."
+  ;; Since everything inserted with this method is noise strings, we
+  ;; do not bother to modify the scan pointer or queue rescans.
   (let* ((drei (drei-instance stream))
          (output (apply #'format nil format-string format-args)))
     (when (or (stream-rescanning-p stream)
@@ -679,14 +687,12 @@ CL:SUBSEQ into the sequence indicating where processing stopped."
     ;; malfunction. Of course, the newlines inserted this way aren't
     ;; actually noise-strings. FIXME.
     (loop for (seq . rest) on (split-sequence #\Newline output)
-       when (plusp (length seq))
-       do (insert-object (point (view drei)) (make-instance 'noise-string
-                                                     :string seq))
-       unless (null rest)
-       do (insert-object (point (view drei)) #\Newline))
-    ;; Since everything inserted with this method is noise strings, we
-    ;; do not bother to modify the scan pointer or queue rescans.
-    (display-drei drei)))
+          when (plusp (length seq))
+          do (insert-object (point (view drei))
+                            (make-instance 'noise-string
+                             :string seq))
+          unless (null rest)
+          do (insert-object (point (view drei)) #\Newline))))
 
 (defmethod redraw-input-buffer ((stream drei-input-editing-mixin)
                                 &optional (start-position 0))

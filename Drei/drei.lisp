@@ -234,8 +234,7 @@ and specialise a method for it."
 ;;; The basic Drei class.
 
 (defclass drei ()
-  ((%view :initform (make-instance 'textual-drei-syntax-view)
-          :initarg :view
+  ((%view :initarg :view
           :accessor view
           :documentation "The CLIM view that will be used
 whenever this Drei is being displayed. During redisplay, the
@@ -345,16 +344,18 @@ the Drei instance."
                  (cursors drei))))
 
 (defmethod initialize-instance :after ((drei drei) &rest args &key
-                                       active single-line (editable-p t)
-                                       no-cursors)
+                                       view active single-line (editable-p t)
+                                       no-cursors initial-contents)
   (declare (ignore args))
-  (with-accessors ((buffer buffer)
-                   (point point) (mark mark)) (view drei)
-    (setf (active (view drei)) active)
-    (setf (single-line-p (implementation buffer)) single-line)
-    (setf (read-only-p buffer) (not editable-p))
-    (setf (no-cursors (view drei)) no-cursors)
-    (add-view-cursors drei)))
+  (unless view             ; Unless a view object has been provided...
+    ;; Create it with the provided initargs.
+    (setf (view drei) (make-instance 'textual-drei-syntax-view
+                       :active active
+                       :single-line single-line
+                       :read-only (not editable-p)
+                       :no-cursors no-cursors
+                       :initial-contents initial-contents)))
+  (add-view-cursors drei))
 
 (defmethod (setf view) :after (new-val (drei drei))
   ;; Delete the old cursors, then add the new ones, provided the

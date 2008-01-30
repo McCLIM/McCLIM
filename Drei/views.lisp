@@ -287,7 +287,9 @@ preventing the undoing to before the state of whatever
 ;;; Readonly
 
 (defclass read-only-mixin ()
-  ((read-only-p :initform nil :accessor read-only-p)))
+  ((read-only-p :initform nil
+                :accessor read-only-p
+                :initarg :read-only)))
 
 (define-condition buffer-read-only (user-condition-mixin simple-error)
   ((buffer :reader condition-buffer :initarg :buffer))
@@ -376,13 +378,17 @@ single-line buffer."))
   (:default-initargs :implementation (make-instance 'extended-standard-buffer)))
 
 (defmethod initialize-instance :after ((buffer drei-buffer) &rest args
-                                       &key initial-contents)
+                                       &key read-only single-line
+                                       initial-contents)
   (declare (ignore args))
-  (with-accessors ((point point)) buffer
+  (with-accessors ((point point)
+                   (implementation implementation)) buffer
     (when initial-contents
       (check-type initial-contents array)
       (insert-buffer-sequence buffer 0 initial-contents))
-    (setf point (make-buffer-mark buffer 0 :right))
+    (setf point (make-buffer-mark buffer (size buffer) :right))
+    (setf (read-only-p implementation) read-only
+          (single-line-p implementation) single-line)
     ;; Hack: we need to be told whenever the undo facilities in the
     ;; implementation buffer changes the buffer contents.
     (add-observer (implementation buffer) buffer)))
@@ -520,7 +526,6 @@ page up."))
 
 (defclass drei-buffer-view (drei-view)
   ((%buffer :accessor buffer
-            :initform (make-instance 'drei-buffer)
             :initarg :buffer
             :type drei-buffer
             :accessor buffer
@@ -571,11 +576,20 @@ object. The buffer is displayed on a simple line-by-line basis,
 with top and bot marks delimiting the visible region. These marks
 are automatically set if applicable."))
 
-(defmethod initialize-instance :after ((view drei-buffer-view) &rest initargs)
+(defmethod initialize-instance :after ((view drei-buffer-view) &rest initargs
+                                       &key buffer single-line read-only
+                                       initial-contents)
   (declare (ignore initargs))
-  (with-accessors ((top top) (bot bot) (buffer buffer)) view
-    (setf top (make-buffer-mark buffer 0 :left)
-          bot (make-buffer-mark buffer (size buffer) :right))))
+  (with-accessors ((top top) (bot bot)) view
+    (unless buffer
+      ;; So many fun things are defined on (setf buffer) that we use
+      ;; slot-value here. This is just a glorified initform anyway.
+      (setf (slot-value view '%buffer) (make-instance 'drei-buffer
+                                        :single-line single-line
+                                        :read-only read-only
+                                        :initial-contents initial-contents)))
+    (setf top (make-buffer-mark (buffer view) 0 :left)
+          bot (make-buffer-mark (buffer view) (size (buffer view)) :right))))
 
 (defmethod (setf top) :after (new-value (view drei-buffer-view))
   (invalidate-all-strokes view))

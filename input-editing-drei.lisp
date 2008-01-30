@@ -154,18 +154,23 @@ activated with GESTURE"))
 				      initial-contents
 				      class)
   (let ((editing-stream (make-instance class
-                                       :stream stream
-                                       :initial-contents initial-contents)))
+                         :stream stream)))
+    (if (stringp initial-contents)
+        (replace-input editing-stream initial-contents)
+        (presentation-replace-input editing-stream
+                                    (first initial-contents)
+                                    (second initial-contents)
+                                    (stream-default-view editing-stream)))
     (unwind-protect
          (loop
-            (block rescan
-              (handler-bind ((rescan-condition
-                              #'(lambda (c)
-                                  (declare (ignore c))
-                                  (reset-scan-pointer editing-stream)
-                                  (return-from rescan nil))))
-                (return-from invoke-with-input-editing
-                  (funcall continuation editing-stream)))))
+          (block rescan
+            (handler-bind ((rescan-condition
+                            #'(lambda (c)
+                                (declare (ignore c))
+                                (reset-scan-pointer editing-stream)
+                                (return-from rescan nil))))
+              (return-from invoke-with-input-editing
+                (funcall continuation editing-stream)))))
       (finalize editing-stream input-sensitizer))))
 
 (defmethod immediate-rescan ((stream standard-input-editing-stream))

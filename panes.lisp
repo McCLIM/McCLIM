@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.188 2008/01/30 11:48:40 thenriksen Exp $
+;;; $Id: panes.lisp,v 1.189 2008/01/30 21:21:44 thenriksen Exp $
 
 (in-package :clim-internals)
 
@@ -2527,6 +2527,9 @@ to computed distance to scroll in response to mouse wheel events."))
   (:documentation
    "This class implements a pane that supports the CLIM graphics,
     extended input and output, and output recording protocols."))
+
+(defmethod interactive-stream-p ((stream clim-stream-pane))
+  t)
 
 (defun invoke-display-function (frame pane)
   (let ((display-function (pane-display-function pane)))

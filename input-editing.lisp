@@ -55,9 +55,7 @@ the elements in it may have dynamic extent.")
     (fmakunbound 'interactive-stream-p))
   (defgeneric interactive-stream-p (stream)
     (:method (stream)
-      (cl:interactive-stream-p stream))
-    (:method ((stream clim-stream-pane))
-      t)))
+      (cl:interactive-stream-p stream))))
 
 ;;; These helper functions take the arguments of ACCEPT so that they
 ;;; can be used directly by ACCEPT.
