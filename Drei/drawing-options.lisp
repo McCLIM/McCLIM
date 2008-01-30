@@ -25,34 +25,34 @@
 
 ;;; Some general styles.
 
-(defconstant +roman-face+ (make-face :style (make-text-style nil :roman nil))
+(defvar +roman-face+ (make-face :style (make-text-style nil :roman nil))
   "A face specifying a roman style, but with unspecified family
 and size.")
 
-(defconstant +italic-face+ (make-face :style (make-text-style nil :italic nil))
+(defvar +italic-face+ (make-face :style (make-text-style nil :italic nil))
   "A face specifying an italic style, but with unspecified
 family and size.")
 
-(defconstant +bold-face+ (make-face :style (make-text-style nil :bold nil))
+(defvar +bold-face+ (make-face :style (make-text-style nil :bold nil))
   "A face specifying a boldface style, but with unspecified
 family and size.")
 
-(defconstant +bold-italic-face+ (make-face :style (make-text-style nil :bold nil))
+(defvar +bold-italic-face+ (make-face :style (make-text-style nil :bold nil))
   "A face specifying an italic boldface style, but with
 unspecified family and size.")
 
 ;;; ...and their drawing options.
 
-(defconstant +roman-face-drawing-options+ (make-drawing-options :face +roman-face+)
+(defvar +roman-face-drawing-options+ (make-drawing-options :face +roman-face+)
   "Options used for drawing with a roman face.")
 
-(defconstant +italic-face-drawing-options+ (make-drawing-options :face +italic-face+)
+(defvar +italic-face-drawing-options+ (make-drawing-options :face +italic-face+)
   "Options used for drawing with an italic face.")
 
-(defconstant +bold-face-drawing-options+ (make-drawing-options :face +bold-face+)
+(defvar +bold-face-drawing-options+ (make-drawing-options :face +bold-face+)
   "Options used for drawing with boldface.")
 
-(defconstant +bold-italic-face-drawing-options+ (make-drawing-options :face +bold-italic-face+)
+(defvar +bold-italic-face-drawing-options+ (make-drawing-options :face +bold-italic-face+)
   "Options used for drawing with italic boldface.")
 
 ;;; Some drawing options for specific syntactical elements,

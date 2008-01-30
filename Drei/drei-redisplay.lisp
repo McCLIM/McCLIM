@@ -91,14 +91,13 @@ is *guaranteed* to not return NIL or T.")
 ;;;
 ;;; The standard redisplay implementation for buffer views.
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (defstruct face
-    "A face is a description of how to draw (primarily) text, it
+(defstruct face
+  "A face is a description of how to draw (primarily) text, it
 consists of an ink (a colour) and a text style. The text style
 may be incomplete, in which case it is merged with the default
 text style whenever it needs to be used."
-    (ink +foreground-ink+)
-    (style nil)))
+  (ink +foreground-ink+)
+  (style nil))
 
 (defconstant +default-stroke-drawer-dispatcher+
   #'(lambda (stream view stroke cursor-x cursor-y default-drawing-fn draw)
@@ -108,11 +107,10 @@ first argument as a function with the remaining sex
 arguments. Used as the default drawing-function of
 `drawing-options' objects.")
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (defstruct drawing-options
-    "A set of options for how to display a stroke."
-    (face (make-face))
-    (function +default-stroke-drawer-dispatcher+)))
+(defstruct drawing-options
+  "A set of options for how to display a stroke."
+  (face (make-face))
+  (function +default-stroke-drawer-dispatcher+))
 
 (defun drawing-options-equal (o1 o2)
   "Return true if `o1' and `o2' are equal, that is, they specify
@@ -134,7 +132,7 @@ a `drawing-options' with a `stroke-drawing-fn' drawing function."
              (eq (drawing-options-function o1)
                  +default-stroke-drawer-dispatcher+)))))
 
-(defconstant +default-drawing-options+ (make-drawing-options)
+(defvar +default-drawing-options+ (make-drawing-options)
   "The default set of drawing options used for strokes when
 nothing else has been specified, or when the default is good
 enough. Under these options, the region will be printed as a
@@ -512,7 +510,7 @@ of the stroke."
                  (vector-push-extend width widths))))
      finally (return (values width parts widths))))
 
-(defconstant +roman-face-style+ (make-text-style nil :roman nil)
+(defvar +roman-face-style+ (make-text-style nil :roman nil)
   "A text style specifying a roman face, but with unspecified
 family and size.")
 
