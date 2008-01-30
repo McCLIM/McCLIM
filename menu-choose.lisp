@@ -226,9 +226,7 @@
                                (if default-item-p
                                    default-item
                                    (first items))
-                               :item-printer (if printer
-                                                 (lambda (item stream)
-                                                   (funcall printer (menu-item-display item) stream))
+                               :item-printer (or printer
                                                  #'print-menu-item)
                                :max-width max-width
                                :max-height max-height
