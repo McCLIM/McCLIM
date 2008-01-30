@@ -418,10 +418,10 @@ it was redisplayed."
         (invalidate-stroke stroke :modified t))
       ;; Move to the next changed region, if it is not possible for
       ;; more stroks to overlap with the current one.
-      (when (and changed-region
-                 (>= (stroke-end-offset stroke)
-                     (cdr changed-region)))
-        (pop (changed-regions view)))
+      (loop while (and (first (changed-regions view))
+                       (>= (stroke-end-offset stroke)
+                           (cdr (first (changed-regions view)))))
+            do (pop (changed-regions view)))
       (incf (line-stroke-count line))
       (setf (line-end-offset line) (stroke-end-offset stroke)))))
 
