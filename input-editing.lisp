@@ -230,10 +230,36 @@ buffer using `presentation-replace-input'."
        (return-from input-editing-rescan-loop
 	 (funcall continuation editing-stream))))))
 
+(defgeneric invoke-with-input-editing
+    (stream continuation input-sensitizer initial-contents class)
+  (:documentation "Implements `with-input-editing'. `Class' is
+the class of the input-editing stream to create, if necessary."))
+
 (defmethod invoke-with-input-editing
     (stream continuation input-sensitizer initial-contents class)
   (declare (ignore input-sensitizer initial-contents class))
   (funcall continuation stream))
+
+(defmethod invoke-with-input-editing ((stream input-editing-stream)
+                                      continuation input-sensitizer
+                                      initial-contents class)
+  (let ((start-scan-pointer (stream-scan-pointer stream)))
+    (if (stringp initial-contents)
+        (replace-input stream initial-contents)
+        (presentation-replace-input stream
+                                    (first initial-contents)
+                                    (second initial-contents)
+                                    (stream-default-view stream)))
+    (unwind-protect
+         (loop (block rescan
+                 (handler-bind ((rescan-condition
+                                 #'(lambda (c)
+                                     (declare (ignore c))
+                                     (reset-scan-pointer stream
+                                                         start-scan-pointer)
+                                     (return-from rescan nil))))
+                   (return-from invoke-with-input-editing
+                     (funcall continuation stream))))))))
 
 (defgeneric input-editing-stream-bounding-rectangle (stream)
   (:documentation "Return the bounding rectangle of `stream' as

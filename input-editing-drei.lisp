@@ -124,9 +124,6 @@ activated with GESTURE"))
     (setf (stream-cursor-position real-stream)
           (values 0 (nth-value 3 (input-editing-stream-bounding-rectangle stream))))))
 
-(defgeneric invoke-with-input-editing
-    (stream continuation input-sensitizer initial-contents class))
-
 (defmethod invoke-with-input-editing :around ((stream extended-output-stream)
 					      continuation
 					      input-sensitizer
@@ -153,24 +150,12 @@ activated with GESTURE"))
 				      input-sensitizer
 				      initial-contents
 				      class)
-  (let ((editing-stream (make-instance class
-                         :stream stream)))
-    (if (stringp initial-contents)
-        (replace-input editing-stream initial-contents)
-        (presentation-replace-input editing-stream
-                                    (first initial-contents)
-                                    (second initial-contents)
-                                    (stream-default-view editing-stream)))
-    (unwind-protect
-         (loop
-          (block rescan
-            (handler-bind ((rescan-condition
-                            #'(lambda (c)
-                                (declare (ignore c))
-                                (reset-scan-pointer editing-stream)
-                                (return-from rescan nil))))
-              (return-from invoke-with-input-editing
-                (funcall continuation editing-stream)))))
+  (let ((editing-stream (make-instance class :stream stream)))
+    (unwind-protect (with-input-editing (editing-stream
+                                         :input-sensitizer input-sensitizer
+                                         :initial-contents initial-contents
+                                         :class class)
+                      (funcall continuation editing-stream))
       (finalize editing-stream input-sensitizer))))
 
 (defmethod immediate-rescan ((stream standard-input-editing-stream))
