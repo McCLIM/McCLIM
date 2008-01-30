@@ -494,11 +494,16 @@ of `simple-parse-error'."))
 
 (defun possibilities-for-menu (possibilities)
   (loop for p in possibilities
-	for (display . object) = p
-	if (listp object)
-	  collect `(,display :value ,object)
-	else
-	  collect p))
+        for (display . object) = p
+        collect `(,display :value ,object)))
+
+(defun possibility-printer (possibility ptype stream)
+  "A default function for printing a possibility. Suitable for
+used as value of `:possibility-printer' in calls to
+`complete-input'"
+  (destructuring-bind (string object) possibility
+    (with-output-as-presentation (stream object ptype)
+      (write-string string stream))))
 
 ;;; Helper returns gesture (or nil if gesture shouldn't be part of the input)
 ;;; and completion mode, if any.
@@ -537,9 +542,9 @@ of `simple-parse-error'."))
 (defparameter *trace-complete-input* nil)
 
 (defun complete-input (stream func &key
-		       partial-completers allow-any-input possibility-printer
+		       partial-completers allow-any-input
+                       (possibility-printer #'possibility-printer)
 		       (help-displays-possibilities t))
-  (declare (ignore possibility-printer))
   (let ((so-far (make-array 1 :element-type 'character :adjustable t
 			    :fill-pointer 0))
 	(*accelerator-gestures* (append *help-gestures*
@@ -585,8 +590,17 @@ of `simple-parse-error'."))
                    (when (and (> nmatches 0) (eq mode :possibilities))
                      (multiple-value-bind (menu-object item event)
                          (menu-choose (possibilities-for-menu possibilities)
-                                      :label "Possibilities"
-                                      :n-columns 1)
+                          :label "Possibilities"
+                          :n-columns 1
+                          :printer #'(lambda (possibility stream)
+                                       ;; We have to get a
+                                       ;; presentation type from
+                                       ;; somewhere...
+                                       (destructuring-bind (string &key value) possibility
+                                           (funcall possibility-printer
+                                                    (list string value)
+                                                    (presentation-type-of value)
+                                                    stream))))
                        (declare (ignore event))
                        (if item
                            (setf (values input success object nmatches)

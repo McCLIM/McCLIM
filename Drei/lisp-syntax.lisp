@@ -2613,8 +2613,9 @@ parameters."
   (with-minibuffer-stream (minibuffer)
     (let ((*print-escape* nil))
       (princ condition minibuffer)))
-  (setf (offset (point drei))
-        (start-offset (form condition))))
+  (when (point-mark-view-p (view drei))
+    (setf (offset (point (view drei)))
+          (start-offset (form condition)))))
 
 ;;; Handling labels (#n= and #n#) takes a fair bit of machinery, most
 ;;; of which is located here. We follow an approach similar to that
