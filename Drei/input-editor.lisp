@@ -783,6 +783,28 @@ to an `extended-output-stream' while `body' is being evaluated."
 ;;; 
 ;;; Presentation type specialization.
 
+;;; When starting out with reading `command-or-form', we use Lisp
+;;; syntax, so things like Structedit works. If it turns out to be a
+;;; command, switch back to Fundamental.
+
+(define-presentation-method accept :around
+  ((type command-or-form)
+   (stream drei-input-editing-mixin)
+   view &key)
+  (with-drei-options ((drei-instance stream)
+                      :syntax "Lisp"
+                      :keep-syntax nil)
+    (call-next-method)))
+
+(define-presentation-method accept :around
+  ((type command)
+   (stream drei-input-editing-mixin)
+   view &key)
+  (with-drei-options ((drei-instance stream)
+                      :syntax "Fundamental"
+                      :keep-syntax nil)
+    (call-next-method)))
+
 (define-presentation-method accept :around
   ((type expression)
    (stream drei-input-editing-mixin)
