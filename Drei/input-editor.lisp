@@ -760,9 +760,9 @@ stream to do input-editor-typeout on."))
 (defmethod invoke-with-input-editor-typeout ((stream drei-input-editing-mixin)
                                              (continuation function) &key erase)
   (declare (ignore erase))
-  (let ((drei (drei-instance stream)))
-    (when (minibuffer drei)
-      (funcall continuation (minibuffer drei)))))
+  (with-bound-drei-special-variables ((drei-instance stream))
+    (with-minibuffer-stream (minibuffer)
+      (funcall continuation minibuffer))))
 
 (defmacro with-input-editor-typeout ((&optional (stream t) &rest args
                                                 &key erase)
