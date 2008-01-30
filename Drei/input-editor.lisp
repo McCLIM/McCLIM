@@ -786,8 +786,7 @@ to an `extended-output-stream' while `body' is being evaluated."
                       :syntax "Lisp"
                       :keep-syntax t)
     (redraw-input-buffer stream)
-    (call-next-method))
-  (call-next-method))
+    (call-next-method)))
 
 (define-presentation-method accept ((type expression)
                                     (stream drei-input-editing-mixin)
