@@ -220,15 +220,17 @@ buffer using `presentation-replace-input'."
        ,@body)))
 
 (defun input-editing-rescan-loop (editing-stream continuation)
-  (loop
-   (block rescan
-     (handler-bind ((rescan-condition
-                     #'(lambda (c)
-                         (declare (ignore c))
-                         (reset-scan-pointer editing-stream)
-                         (return-from rescan nil))))
-       (return-from input-editing-rescan-loop
-	 (funcall continuation editing-stream))))))
+  (let ((start-scan-pointer (stream-scan-pointer editing-stream)))
+    (loop
+     (block rescan
+       (handler-bind ((rescan-condition
+                       #'(lambda (c)
+                           (reset-scan-pointer editing-stream start-scan-pointer)
+                           ;; Input-editing contexts above may be interested...
+                           (signal c)
+                           (return-from rescan nil))))
+         (return-from input-editing-rescan-loop
+           (funcall continuation editing-stream)))))))
 
 (defgeneric invoke-with-input-editing
     (stream continuation input-sensitizer initial-contents class)
@@ -243,23 +245,14 @@ the class of the input-editing stream to create, if necessary."))
 (defmethod invoke-with-input-editing ((stream input-editing-stream)
                                       continuation input-sensitizer
                                       initial-contents class)
-  (let ((start-scan-pointer (stream-scan-pointer stream)))
+  (unless (stream-rescanning-p stream)
     (if (stringp initial-contents)
         (replace-input stream initial-contents)
         (presentation-replace-input stream
                                     (first initial-contents)
                                     (second initial-contents)
-                                    (stream-default-view stream)))
-    (unwind-protect
-         (loop (block rescan
-                 (handler-bind ((rescan-condition
-                                 #'(lambda (c)
-                                     (declare (ignore c))
-                                     (reset-scan-pointer stream
-                                                         start-scan-pointer)
-                                     (return-from rescan nil))))
-                   (return-from invoke-with-input-editing
-                     (funcall continuation stream))))))))
+                                    (stream-default-view stream))))
+  (input-editing-rescan-loop stream continuation))
 
 (defgeneric input-editing-stream-bounding-rectangle (stream)
   (:documentation "Return the bounding rectangle of `stream' as
