@@ -37,6 +37,9 @@
    (rescanning-p :reader stream-rescanning-p :initform nil)
    (activation-gesture :accessor activation-gesture :initform nil)))
 
+(defmethod interactive-stream-p ((stream goatee-input-editing-stream))
+  t)
+
 (defmethod stream-accept ((stream goatee-input-editing-stream) type
 			  &rest args
 			  &key (view (stream-default-view stream))

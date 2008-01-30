@@ -48,6 +48,17 @@ value of this must be NIL. The exact format of
 `*delimiter-gestures*' is unspecified. `*delimiter-gestures*' and
 the elements in it may have dynamic extent.")
 
+(with-system-redefinition-allowed
+  (when (and (fboundp 'interactive-stream-p)
+             (not (typep (fdefinition 'interactive-stream-p)
+                         'generic-function)))
+    (fmakunbound 'interactive-stream-p))
+  (defgeneric interactive-stream-p (stream)
+    (:method (stream)
+      (cl:interactive-stream-p stream))
+    (:method ((stream clim-stream-pane))
+      t)))
+
 ;;; These helper functions take the arguments of ACCEPT so that they
 ;;; can be used directly by ACCEPT.
 

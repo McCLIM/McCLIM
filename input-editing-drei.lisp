@@ -25,15 +25,6 @@
 
 (in-package :clim-internals)
 
-(with-system-redefinition-allowed
-  (when (and (fboundp 'interactive-stream-p)
-             (not (typep (fdefinition 'interactive-stream-p)
-                         'generic-function)))
-    (fmakunbound 'interactive-stream-p))
-  (defgeneric interactive-stream-p (stream)
-    (:method (stream)
-      (cl:interactive-stream-p stream))))
-
 (defclass empty-input-mixin ()
   ()
   (:documentation "A mixin class used for detecting empty input"))
@@ -49,6 +40,9 @@ standard input editor. This is the class of stream created by
 calling `with-input-editing'.
 
 Members of this class are mutable."))
+
+(defmethod interactive-stream-p ((stream standard-input-editing-stream))
+  t)
 
 (defmethod stream-accept ((stream standard-input-editing-stream) type
 			  &rest args
