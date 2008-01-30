@@ -1211,7 +1211,7 @@ time an indexed pattern is drawn.")
 	      (xlib:with-gcontext (gcontext 
 				   :clip-mask mask
 				   :clip-x x
-				   :clip-y (- y height))
+				   :clip-y y)
 		(xlib:copy-area pixmap gcontext 0 0 width height
 				da x y)))
 	    (t
