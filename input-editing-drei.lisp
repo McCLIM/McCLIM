@@ -109,14 +109,18 @@ activated with GESTURE"))
   (setf (cursor-visibility stream) nil)
   (let ((real-stream (encapsulating-stream-stream stream))
 	(record (drei:drei-instance stream)))
-    (when input-sensitizer
-      (erase-output-record record real-stream)
-      (funcall input-sensitizer
-               real-stream
-               #'(lambda ()
-                   (stream-add-output-record real-stream record)
-                   (when (stream-drawing-p real-stream)
-                     (replay record real-stream)))))
+    (cond (input-sensitizer
+           (erase-output-record record real-stream)
+           (funcall input-sensitizer
+                    real-stream
+                    #'(lambda ()
+                        (stream-add-output-record real-stream record)
+                        (when (stream-drawing-p real-stream)
+                          (replay record real-stream)))))
+          ;; We still want to replay it for the cursor visibility
+          ;; change...
+          ((stream-drawing-p real-stream)
+           (replay record real-stream) ))
     (setf (stream-cursor-position real-stream)
           (values 0 (nth-value 3 (input-editing-stream-bounding-rectangle stream))))))
 
