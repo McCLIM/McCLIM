@@ -387,14 +387,14 @@ record."))
 (defmethod output-record-position ((record drei-area))
   (values-list (area-position record)))
 
-(defmethod (setf output-record-position) ((new-x number) (new-y number)
-                                          (record drei-area))
+(defmethod* (setf output-record-position) ((new-x number) (new-y number)
+                                           (record drei-area))
   (setf (area-position record) (list new-x new-y)))
 
 (defmethod output-record-start-cursor-position ((record drei-area))
   (output-record-position record))
 
-(defmethod (setf output-record-start-cursor-position) ((new-x number) (new-y number)
+(defmethod* (setf output-record-start-cursor-position) ((new-x number) (new-y number)
                                                        (record drei-area))
   (setf (output-record-position record) (list new-x new-y)))
 

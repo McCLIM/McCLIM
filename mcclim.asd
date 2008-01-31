@@ -218,8 +218,8 @@
   :depends-on (:clim-basic :goatee-core :clim-postscript)
   :components ((:file "text-formatting")
                (:file "defresource")
-               (:file "input-editing")
                (:file "presentations")
+               (:file "input-editing" :depends-on ("presentations"))
                (:file "pointer-tracking" :depends-on ("input-editing"))
                (:file "graph-formatting")
                (:file "frames" :depends-on ("commands" "presentations" "presentation-defs"

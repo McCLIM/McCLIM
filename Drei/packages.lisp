@@ -184,7 +184,7 @@ characters."))
   contents."))
 
 (defpackage :drei
-  (:use :clim-lisp :clim :drei-buffer :drei-base :drei-abbrev
+  (:use :clim-lisp :clim-sys :clim :drei-buffer :drei-base :drei-abbrev
         :drei-syntax :flexichain :drei-undo :esa-buffer :esa-io :esa
         :esa-utils :drei-kill-ring)
   (:export #:drei-buffer #:needs-saving

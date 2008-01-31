@@ -392,40 +392,6 @@ otherwise return false."
     (type-key parameters options object type stream view
      &key &allow-other-keys))
 
-(defmacro with-output-as-presentation ((stream object type
-					       &rest key-args
-					       &key modifier single-box
-					       (allow-sensitive-inferiors t)
-					       parent
-					       (record-type
-						''standard-presentation)
-					       &allow-other-keys)
-				       &body body)
-  (declare (ignore parent single-box modifier))
-  (setq stream (stream-designator-symbol stream '*standard-output*))
-  (multiple-value-bind (decls with-body)
-      (get-body-declarations body)
-    (with-gensyms (record-arg continuation)
-      (with-keywords-removed (key-args (:record-type
-					:allow-sensitive-inferiors))
-	`(flet ((,continuation ()
-		  ,@decls
-		  ,@with-body))
-	   (declare (dynamic-extent #'continuation))
-	   (if (and (output-recording-stream-p ,stream)
-		    *allow-sensitive-inferiors*)
-	       (with-new-output-record
-		   (,stream ,record-type ,record-arg
-			    :object ,object
-			    :type (expand-presentation-type-abbreviation
-				   ,type)
-			    ,@key-args)
-		 (let ((*allow-sensitive-inferiors*
-			,allow-sensitive-inferiors))
-		   (,continuation)))
-	       (,continuation)))))))
-
-
 (defun present (object &optional (type (presentation-type-of object))
 		&key
 		(stream *standard-output*)
