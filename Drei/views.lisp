@@ -386,7 +386,7 @@ single-line buffer."))
     (when initial-contents
       (check-type initial-contents array)
       (insert-buffer-sequence buffer 0 initial-contents))
-    (setf point (make-buffer-mark buffer (size buffer) :right))
+    (setf point (make-buffer-mark buffer 0 :right))
     (setf (read-only-p implementation) read-only
           (single-line-p implementation) single-line)
     ;; Hack: we need to be told whenever the undo facilities in the
