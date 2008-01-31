@@ -83,7 +83,7 @@
          ;; But :small looks awful using freetype, perhaps because the
          ;; fonts are, for whatever reason, slightly smaller.
          ;; Very distressing.
-         (text-size (if (find-package :mcclim-freetype) :normal :small))
+         (text-size (if (find-package :mcclim-truetype) :normal :small))
          (memusage #+(or cmu scl) (lisp::dynamic-usage)
                    #+sbcl  (sb-kernel:dynamic-usage)
                    #+lispworks (getf (system:room-values) :total-allocated)
