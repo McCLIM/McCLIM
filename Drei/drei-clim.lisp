@@ -389,14 +389,20 @@ record."))
 
 (defmethod* (setf output-record-position) ((new-x number) (new-y number)
                                            (record drei-area))
-  (setf (area-position record) (list new-x new-y)))
+  (multiple-value-bind (old-x old-y) (output-record-position record)
+    (setf (area-position record) (list new-x new-y))
+    (dolist (cursor (cursors record))
+      (multiple-value-bind (cursor-x cursor-y) (output-record-position cursor)
+        (setf (output-record-position cursor)
+              (values (+ (- cursor-x old-x) new-x)
+                      (+ (- cursor-y old-y) new-y)))))))
 
 (defmethod output-record-start-cursor-position ((record drei-area))
   (output-record-position record))
 
 (defmethod* (setf output-record-start-cursor-position) ((new-x number) (new-y number)
                                                        (record drei-area))
-  (setf (output-record-position record) (list new-x new-y)))
+  (setf (output-record-position record) (values new-x new-y)))
 
 (defmethod output-record-hit-detection-rectangle* ((record drei-area))
   (bounding-rectangle* record))

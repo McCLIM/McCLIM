@@ -46,7 +46,13 @@
                         :initform nil
                         :documentation "After a command has been
 executed, the contents of the Drei area instance shall be
-replaced by the contents of this array, if non-NIL."))
+replaced by the contents of this array, if non-NIL.")
+   (%typeout-record :accessor typeout-record
+                    :initform nil
+                    :documentation "The output record (if any)
+that is the typeout information for this Drei-based
+input-editing-stream. `With-input-editor-typeout' manages this
+output record."))
   (:documentation "An mixin that helps in implementing Drei-based
 input-editing streams. This class should not be directly
 instantiated."))
@@ -763,12 +769,39 @@ invoke the command, and the accumulated numeric argument."
   (:documentation "Call `continuation' with a single argument, a
 stream to do input-editor-typeout on."))
 
-(defmethod invoke-with-input-editor-typeout ((stream drei-input-editing-mixin)
+(defmethod invoke-with-input-editor-typeout ((editing-stream drei-input-editing-mixin)
                                              (continuation function) &key erase)
-  (declare (ignore erase))
-  (with-bound-drei-special-variables ((drei-instance stream))
-    (with-minibuffer-stream (minibuffer)
-      (funcall continuation minibuffer))))
+  (let* ((encapsulated-stream (encapsulating-stream-stream editing-stream))
+         (new-typeout-record (with-output-to-output-record (encapsulated-stream)
+                               (funcall continuation encapsulated-stream)))
+         (editor-record (drei-instance editing-stream)))
+    (with-accessors ((stream-typeout-record typeout-record)) editing-stream
+      (with-sheet-medium (medium encapsulated-stream)
+        (with-bounding-rectangle* (x1 y1 x2 y2) editor-record
+          ;; Clear the input-editor display.
+          (draw-rectangle* medium x1 y1 x2 y2 :ink +background-ink+)
+          (setf (output-record-position new-typeout-record)
+                (output-record-position (or stream-typeout-record editor-record))
+                (output-record-position editor-record)
+                (values x1 (+ y1 (- (bounding-rectangle-height new-typeout-record)
+                                    (if stream-typeout-record
+                                        (bounding-rectangle-height stream-typeout-record)
+                                        0)))))
+          (when erase
+            (with-bounding-rectangle* (x1 y1 x2 y2) new-typeout-record
+              (draw-rectangle* medium x1 y1 x2 y2 :ink +background-ink+)))
+          ;; Reuse the old stream-typeout-record, if any.
+          (cond (stream-typeout-record
+                 ;; Blank the old one.
+                 (with-bounding-rectangle* (x1 y1 x2 y2) stream-typeout-record
+                   (draw-rectangle* medium x1 y1 (1+ x2) y2 :ink +background-ink+))
+                 (clear-output-record stream-typeout-record)
+                 (add-output-record new-typeout-record stream-typeout-record))
+                (t
+                 (stream-add-output-record encapsulated-stream new-typeout-record)
+                 (setf stream-typeout-record new-typeout-record)))
+          ;; Now, let there be light!
+          (replay new-typeout-record encapsulated-stream))))))
 
 (defmacro with-input-editor-typeout ((&optional (stream t) &rest args
                                                 &key erase)
@@ -778,12 +811,12 @@ default), `*standard-input*' will be used. `Stream' will be bound
 to an `extended-output-stream' while `body' is being evaluated."
   (declare (ignore erase))
   (check-type stream symbol)
-  (let ((stream (if (eq stream t) *standard-input* stream)))
-    `(apply #'invoke-with-input-editor-typeout
-            ,stream
-            #'(lambda (,stream)
-                ,@body)
-            ,args)))
+  (let ((stream (if (eq stream t) '*standard-output* stream)))
+    `(invoke-with-input-editor-typeout
+      ,stream
+      #'(lambda (,stream)
+          ,@body)
+      ,@args)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 
