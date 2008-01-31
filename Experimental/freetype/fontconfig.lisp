@@ -22,7 +22,9 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-(in-package :MCCLIM-FREETYPE)
+;;; Who originally wrote this? I want to put them in the file header. -Hefner
+
+(in-package :mcclim-truetype)
 
 (defparameter *family-names*
   '((:serif      . "Serif")
@@ -59,7 +61,7 @@
   location of the Bitstream Vera family of fonts on disk. If you
   don't have them, get them from http://www.gnome.org/fonts/~%"))
 
-(defun find-bitstream-font (font-fc-name)
+(defun find-fontconfig-font (font-fc-name)
   (with-input-from-string
       (s (with-output-to-string (asdf::*verbose-out*)
 	   (let ((code (asdf:run-shell-command "fc-match -v \"~A\"" font-fc-name)))
@@ -73,7 +75,7 @@
 (defun build-font/family-map (&optional (families *family-names*))
   (loop for family in families nconcing
     (loop for face in *fontconfig-faces* 
-          as filename = (find-bitstream-font (fontconfig-name (cdr family) (cdr face)))
+          as filename = (find-fontconfig-font (fontconfig-name (cdr family) (cdr face)))
           when (null filename) do (return-from build-font/family-map nil)
           collect
           (cons (list (car family) (car face)) filename))))

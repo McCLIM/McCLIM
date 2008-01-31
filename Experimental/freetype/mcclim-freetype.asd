@@ -1,12 +1,23 @@
 ;;;; -*- Lisp -*-
 
 #|
-To autoload mcclim-freetype after mcclim, link this file to a
+
+Mcclim-freetype adds truetype font support to the CLX backend
+using libfreetype. 
+
+To autoload mcclim-truetype after mcclim, link this file to a
 directory in your asdf:*central-registry* and add the following to
 your lisp's init file:
 
- (defmethod asdf:perform :after ((o asdf:load-op) (s (eql (asdf:find-system :clim-clx))))
+ (defmethod asdf:perform :after ((o asdf:load-op) 
+                                 (s (eql (asdf:find-system :clim-clx))))
    (asdf:oos 'asdf:load-op :mcclim-freetype))
+
+By default, the native 'Alien' FFI is used on CMUCL, SBCL, and SBCL, while
+CFFI is used on other lisps. To force the use of CFFI, load the 
+:mcclim-freetype-cffi system instead. This shouldn't be necessary except
+for testing the CFFI code.
+
 |#
 
 (defpackage :mcclim-freetype-system (:use :cl :asdf))
@@ -28,60 +39,40 @@ your lisp's init file:
   "lisp")
 
 (defsystem :mcclim-freetype
-  :depends-on (:clim-clx :mcclim #-sbcl :cffi)
+  :depends-on (:clim-clx :mcclim #-(or sbcl cmucl scl) :cffi)
   :serial t
   :components
-  #+sbcl
-  ((:file "freetype-package")
+  #+(or cmucl sbcl scl)
+  ((:file "truetype-package")
+   (:file "xrender-fonts")
    (:uncompiled-cl-source-file "freetype-ffi")
-   (:file "freetype-fonts")
+   (:file "freetype-fonts-alien")
    (:file "fontconfig"))
-  #-sbcl
-  ((:file "freetype-package-cffi")
+  #-(or cmucl sbcl scl)
+  ((:file "truetype-package")
+   (:file "xrender-fonts")
+   (:file "freetype-package-cffi")
    (:uncompiled-cl-source-file "freetype-cffi")
+   (:file "fontconfig")
+   (:file "freetype-fonts-cffi")))
+
+(defsystem :mcclim-freetype-cffi
+  :depends-on (:clim-clx :mcclim :cffi)
+  :serial t
+  :components
+  ((:file "truetype-package")
+   (:file "xrender-fonts")
+   (:file "freetype-package-cffi")
+   (:uncompiled-cl-source-file "freetype-cffi")
+   (:file "fontconfig")
    (:file "freetype-fonts-cffi")))
 
 
-#+sbcl
 (defmethod perform :after ((o load-op) (s (eql (asdf:find-system :mcclim-freetype))))
   "Detect fonts using fc-match"
-  (funcall (find-symbol (symbol-name '#:autoconfigure-fonts) :mcclim-freetype)))
+  (funcall (find-symbol (symbol-name '#:autoconfigure-fonts) :mcclim-truetype)))
 
 
-;;; Freetype autodetection
-#-sbcl
-(progn
-  (defun parse-fontconfig-output (s)
-    (let* ((match-string (concatenate 'string (string #\Tab) "file:"))
-	   (matching-line
-	    (loop for l = (read-line s nil nil)
-	       while l
-	       if (= (mismatch l match-string) (length match-string))
-	       do (return l)))
-	   (filename (when matching-line
-		       (probe-file
-			(subseq matching-line
-				(1+ (position #\" matching-line :from-end nil :test #'char=))
-				(position #\" matching-line :from-end t   :test #'char=))))))
-      (when filename
-	(make-pathname :directory (pathname-directory filename)))))
-
-  (defun warn-about-unset-font-path ()
-    (warn "~%~%NOTE:~%~
-* Remember to set mcclim-freetype:*freetype-font-path* to the
-  location of the Bitstream Vera family of fonts on disk. If you
-  don't have them, get them from http://www.gnome.org/fonts/~%~%~%"))
-
-  (defmethod perform :after ((o load-op) (s (eql (asdf:find-system :mcclim-freetype))))
-    (unless
-	(setf (symbol-value (intern "*FREETYPE-FONT-PATH*" :mcclim-freetype))
-	      (find-bitstream-fonts))
-      (warn-about-unset-font-path)))
-
-  (defun find-bitstream-fonts ()
-    (with-input-from-string
-	(s (with-output-to-string (asdf::*verbose-out*)
-	     (let ((code (asdf:run-shell-command "fc-match -v Bitstream Vera")))
-	       (unless (zerop code)
-		 (warn "~&fc-match failed with code ~D.~%" code)))))
-      (parse-fontconfig-output s))))
+(defmethod perform :after ((o load-op) (s (eql (asdf:find-system :mcclim-freetype-cffi))))
+  "Detect fonts using fc-match"
+  (funcall (find-symbol (symbol-name '#:autoconfigure-fonts) :mcclim-truetype)))
