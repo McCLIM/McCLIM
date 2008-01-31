@@ -555,9 +555,9 @@
          (initfunc (clim-mop:slot-definition-initfunction slot))
          (initform (clim-mop:slot-definition-initform slot))
          (direct-slots (direct-slot-definitions class name))
-         (readers (reduce #'append (filtermap direct-slots #'clim-mop:slot-definition-readers)))
-         (writers (reduce #'append (filtermap direct-slots #'clim-mop:slot-definition-writers)))
-         (documentation (first (filtermap direct-slots (lambda (x) (documentation x t)))))
+         (readers (mapcan #'clim-mop:slot-definition-readers direct-slots))
+         (writers (mapcan #'clim-mop:slot-definition-writers direct-slots))
+         (documentation (first (mapcan (lambda (x) (list (documentation x t))) direct-slots)))
          (*standard-output* stream))
 
   (macrolet ((with-ink ((var) &body body)
@@ -1146,7 +1146,7 @@
             (format t " (only files of type ~a)" (pathname-type pathname)))))
     
       (when (parent-directory pathname)
-        (with-output-as-presentation (t (strip-filespec (parent-directory pathname)) 'clim:pathname :single-box t)
+        (with-output-as-presentation (t (parent-directory pathname) 'clim:pathname :single-box t)
           (draw-icon t (standard-icon "up-folder.xpm") :extra-spacing 3)
           (format t "Parent Directory~%")))
 

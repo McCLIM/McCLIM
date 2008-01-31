@@ -20,11 +20,6 @@
 ;;; Boston, MA  02111-1307  USA.
 
 
-
-(defun filtermap (list func &optional (filter #'null))
-  (declare (type (function (t) t) func))
-  (delete-if filter (mapcar func list)))
-
 ;(defmacro multiple-value-prog2 (&body body)  `(progn ,(first body) (multiple-value-prog1 ,@(rest body))))
 
 ;; multiple-value-or, ugh. Normal OR drops values except from the last form.
@@ -275,14 +270,15 @@ this point, increment it by SPACING, which defaults to zero."
 		 #+scl :query #+scl nil
 		 :defaults pathname))
 
-;; Oops, should I be doing something with relative pathnames here?
 (defun parent-directory (pathname)
   "Returns a pathname designating the directory 'up' from PATHNAME"
-  (let ((dir (pathname-directory (truename (strip-filespec pathname)))))
+  (let ((dir (pathname-directory (truename pathname))))
     (when (and (eq (first dir) :absolute)
-               (not (zerop (length (rest dir)))))
-      (make-pathname :directory `(:absolute ,@(nreverse (rest (reverse (rest dir)))))
-		     :defaults pathname))))
+               (rest dir))
+      ;; merge-pathnames merges :back, but not :up
+      (strip-filespec
+       (merge-pathnames (make-pathname :directory '(:relative :back))
+                        (truename pathname))))))
 
 
 ;;;; Abbreviating item formatter
